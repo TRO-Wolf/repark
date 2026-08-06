@@ -19,12 +19,21 @@
 
 mod backend;
 mod catalog_config;
+mod catalog_state;
+mod time_travel;
 
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 
-// --- Catalog configuration. ---
+// --- Catalog configuration + engine-side registry (hoisted). ---
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
+pub use catalog_state::{CatalogRegistry, LocationPolicy};
+
+// --- Time travel (hoisted): spec + parsers + the reader-options path. ---
+pub use time_travel::{
+    TimeTravelSpec, parse_timestamp_to_ms, parse_version_value, read_table_at, resolve_snapshot_id,
+    snapshot_id_as_of_time,
+};
 
 // --- Error surface: the seed re-export (bindings import one crate). ---
 pub use repark_common::{Error, ErrorClass, Result};

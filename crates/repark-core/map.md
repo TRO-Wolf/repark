@@ -10,7 +10,8 @@ path (distribution is deferred). SQL routing and session-build registration are 
 (`SqlDialect` / `SessionExtension`) so the phase-2 doors plug in without touching this crate.
 
 > **Port status (PR-C, staged-then-wired):** the session module tree lands commit-by-commit so
-> every commit compiles. Wired now: `backend`, `catalog_config`. Staged (present, not yet
+> every commit compiles. Wired now: `backend`, `catalog_config`, `catalog_state`,
+> `time_travel`. Staged (present, not yet
 > declared in `src/lib.rs` — awaiting the design-§5 forced edits): `session.rs`, `error_map.rs`,
 > `idents.rs`, `object_store_s3.rs`, `read_options.rs`. This note is deleted when the wiring
 > completes.
@@ -18,8 +19,9 @@ path (distribution is deferred). SQL routing and session-build registration are 
 ## Contents
 
 - `Cargo.toml` — depends on `repark-common` (error seed), `repark-iceberg` (catalog builders +
-  write knob installers), `datafusion`, `arrow`, `iceberg`, and the S3-read stack
-  (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`).
+  write knob installers), `datafusion`, `arrow`, `iceberg`, `iceberg-datafusion` (the hoisted
+  `read_table_at` static provider), `chrono` (the hoisted `TIMESTAMP AS OF` parser), and the
+  S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`).
 - `src/session.rs` — `ReparkSession` + `ReparkSessionBuilder`: knob surface
   (`config`/`configs`, memory limit with the 1 MiB floor / 8 GiB `FairSpillPool` default,
   `batch_size`, `target_partitions`), sync `build()` + async

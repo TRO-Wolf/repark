@@ -8,8 +8,9 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 `s3://`/`s3a://` reads route through `object_store_s3`. See [../map.md](../map.md).
 
 > **Port status (PR-C, staged-then-wired):** wired in `lib.rs` now: `backend.rs`,
-> `catalog_config.rs`. The other files below are staged (present, not yet declared) until the
-> design-§5 forced edits land. This note is deleted when the wiring completes.
+> `catalog_config.rs`, `catalog_state.rs`, `time_travel.rs`. The other files below are staged
+> (present, not yet declared) until the design-§5 forced edits land. This note is deleted when
+> the wiring completes.
 
 ## Contents
 
@@ -71,6 +72,14 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   puts one store under BOTH `s3://bucket` and `s3a://bucket`; `parse_s3_bucket` /
   `is_s3_scheme` route paths. Tests register an `InMemory` store to prove routing AWS-free.
 - `backend.rs` — the `ExecutionBackend` seam (distribution deferred) + `SingleNodeBackend`.
+- `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
+  `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
+  `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the temp root resolves once
+  at registration, never at query time). Hoisted MOVE-ONLY from the v1 SQL crate.
+- `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
+  (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, and `read_table_at`
+  (snapshot-pinned static provider via `iceberg-datafusion`). Hoisted MOVE-ONLY from the v1 SQL
+  crate; the SQL-text rewrite half stays deferred with the phase-2 router.
 - `session/tests.rs` — in-crate unit test battery (file-backed; lands with the PR-C test-audit
   commit; names port under the declared-rename map — see the deferred-test manifest for the
   not-yet-ported subset).
