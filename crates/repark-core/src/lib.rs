@@ -20,10 +20,12 @@
 mod backend;
 mod catalog_config;
 mod catalog_state;
+mod dialect;
 mod time_travel;
 
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};
+pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
 
 // --- Catalog configuration + engine-side registry (hoisted). ---
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};

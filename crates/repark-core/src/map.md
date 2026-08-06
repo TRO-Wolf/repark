@@ -8,9 +8,10 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 `s3://`/`s3a://` reads route through `object_store_s3`. See [../map.md](../map.md).
 
 > **Port status (PR-C, staged-then-wired):** wired in `lib.rs` now: `backend.rs`,
-> `catalog_config.rs`, `catalog_state.rs`, `time_travel.rs`. The other files below are staged
-> (present, not yet declared) until the design-§5 forced edits land. This note is deleted when
-> the wiring completes.
+> `catalog_config.rs`, `catalog_state.rs`, `time_travel.rs`, `dialect.rs`. The other files
+> below are staged (present, not yet declared) until the design-§5 forced edits land —
+> `extension.rs` waits with them because its tests drive `ReparkSession`. This note is deleted
+> when the wiring completes.
 
 ## Contents
 
@@ -72,6 +73,14 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   puts one store under BOTH `s3://bucket` and `s3a://bucket`; `parse_s3_bucket` /
   `is_s3_scheme` route paths. Tests register an `InMemory` store to prove routing AWS-free.
 - `backend.rs` — the `ExecutionBackend` seam (distribution deferred) + `SingleNodeBackend`.
+- `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
+  (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set) + `SqlDialect` +
+  `DataFusionDialect` (the phase-1 default: plain `SessionContext::sql`). UNSTABLE until the
+  phase-2 doors land.
+- `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
+  `SessionExtension` with two defaulted hooks (`configure` pre-assembly, `register`
+  post-context) at v1's inline registration positions; `NoopSessionExtension` is the
+  no-extension baseline.
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the temp root resolves once

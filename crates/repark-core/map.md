@@ -11,7 +11,7 @@ path (distribution is deferred). SQL routing and session-build registration are 
 
 > **Port status (PR-C, staged-then-wired):** the session module tree lands commit-by-commit so
 > every commit compiles. Wired now: `backend`, `catalog_config`, `catalog_state`,
-> `time_travel`. Staged (present, not yet
+> `time_travel`, `dialect`. Staged (present, not yet
 > declared in `src/lib.rs` — awaiting the design-§5 forced edits): `session.rs`, `error_map.rs`,
 > `idents.rs`, `object_store_s3.rs`, `read_options.rs`. This note is deleted when the wiring
 > completes.
@@ -58,6 +58,8 @@ path (distribution is deferred). SQL routing and session-build registration are 
 | Tune memory/spill/batch/partition defaults | `src/session.rs` (`FairSpillPool`, `target_partitions`, batch size) |
 | Change error classification | `src/error_map.rs` (`engine_err` / `classify_datafusion_error`) |
 | Add the distribution backend (later) | implement `ExecutionBackend` in a new crate |
+| Plug a statement router / SQL front end | implement `SqlDialect` (`src/dialect.rs`) |
+| Install door registrations at build time | implement `SessionExtension` (`src/extension.rs`) |
 
 ## Pointers
 
