@@ -20,7 +20,8 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 
 | Workflow | What |
 |---|---|
-| `ci.yml` | Rust (fmt + clippy `-D warnings` + panic-ban + check + `cargo test --locked --workspace`), run through the Makefile targets (`make rust-fmt-check` … `rust-test`) so the clippy/panic-ban split applies identically local and CI; repo guards (`scripts/check_map_md.sh` + `scripts/check_workflows_parse.py` + `scripts/check_crate_dag.sh` + `scripts/check_lib_rs.sh`); Python (ruff check + format). Always-on. The v1 diff-classifier (`detect`) that path-filtered the heavy jobs stays deferred — it returns when rust-test exceeds ~3 min. |
+| `ci.yml` | Rust (fmt + clippy `-D warnings` + panic-ban + check + `cargo test --locked --workspace`), run through the Makefile targets (`make rust-fmt-check` … `rust-test`) so the clippy/panic-ban split applies identically local and CI; the rust job restores the Swatinem rust-cache under the family prefix-keys `v2-df54` / `v2-df54-test` (must match `cache-warm.yml` — bump both in the same change); repo guards (`scripts/check_map_md.sh` + `scripts/check_workflows_parse.py` + `scripts/check_crate_dag.sh` + `scripts/check_lib_rs.sh`); Python (ruff check + format). Always-on. The v1 diff-classifier (`detect`) that path-filtered the heavy jobs stays deferred — it returns when rust-test exceeds ~3 min. |
+| `cache-warm.yml` | Swatinem rust-cache pre-warm OFF the PR critical path: every push to main (+ weekly cron safety net) builds lint (`v2-df54`) and test (`v2-df54-test`) artifacts under the same prefix-keys the `ci.yml` rust job restores, so PR jobs start hot even right after a dependency-family bump. |
 | `cargo-deny.yml` | Rust license / banned / duplicate checks ([../../deny.toml](../../deny.toml)). |
 | `audit.yml` | cargo-audit RustSec CVE scan over the Cargo dependency tree; weekly schedule + Cargo.toml/Cargo.lock path triggers; pin matches Makefile `CARGO_AUDIT_VERSION`. |
 | `typos.yml` | Spell-check ([../../.typos.toml](../../.typos.toml)); uvx-pinned, same version as `make spell-check`. |
@@ -31,9 +32,6 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 
 - The `ci.yml` diff-classifier (`detect`) — deferred; **trigger: returns when rust-test exceeds
   ~3 min** (phase-1 decision, recorded here per the execution brief).
-- `cache-warm.yml` — rust-cache pre-warm on main pushes. Deferred to PR-B **together with the
-  ci.yml rust-cache restore steps** (warming a cache nothing restores is waste; the heavy
-  dependency graph arrives with repark-iceberg).
 - `pip-audit.yml` — Python CVE scan; returns with the Python packages (phase 3).
 - `parity-live.yml` — live PySpark oracle tier (needs a JVM); phase 3.
 - `wheels.yml` — wheel build + import smoke + packaged-wheel facade suite; phase 3.
