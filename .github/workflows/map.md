@@ -20,8 +20,8 @@ carry a 7-day `cooldown`. No `pull_request_target` anywhere; top-level
 
 | Workflow | What |
 |---|---|
-| `ci.yml` | Rust (fmt + clippy `-D warnings` + check + `cargo test --locked --workspace`); repo guards (`scripts/check_map_md.sh` + `scripts/check_workflows_parse.py`); Python (ruff check + format). Always-on: the phase-0 workspace is empty, so every job is cheap. v1's diff-classifier path filtering for heavy jobs returns with phase 1. |
-| `cargo-deny.yml` | Rust license / banned / duplicate checks ([../../deny.toml](../../deny.toml)). |
+| `ci.yml` | Rust (fmt + clippy `-D warnings` + panic-ban + check + `cargo test --locked --workspace`), run through the guarded Makefile targets (`make rust-fmt-check` … `rust-test`) so the phase-0 empty-workspace guard and the clippy/panic-ban split apply identically local and CI; repo guards (`scripts/check_map_md.sh` + `scripts/check_workflows_parse.py`); Python (ruff check + format). Always-on: the phase-0 workspace is empty, so every job is cheap. v1's diff-classifier path filtering for heavy jobs returns with phase 1. |
+| `cargo-deny.yml` | Rust license / banned / duplicate checks ([../../deny.toml](../../deny.toml)); carries the same phase-0 empty-workspace guard as `make rust-deny`. |
 | `typos.yml` | Spell-check ([../../.typos.toml](../../.typos.toml)); uvx-pinned, same version as `make spell-check`. |
 | `taplo.yml` | TOML format + lint ([../../.taplo.toml](../../.taplo.toml)); uvx-pinned, same version as `make toml-check`. |
 | `zizmor.yml` | Workflow security analysis; **blocking** — fails on any finding not suppressed in [../zizmor.yml](../zizmor.yml) (currently none); uploads SARIF as an artifact (`if: always()`). uvx-pinned, same version as `make workflows-lint`. |
@@ -66,5 +66,6 @@ carry a 7-day `cooldown`. No `pull_request_target` anywhere; top-level
 | zizmor red | `make workflows-lint` — same pinned zizmor; fix the workflow or suppress with rationale in [../zizmor.yml](../zizmor.yml) |
 
 First checks: reproduce with `make preflight` (the full CI surface; `make ci` for the core gate).
-Note `ci.yml` runs **raw commands**, never `make ci` — a new gate needs **dual** Makefile + ci.yml
-wiring. Escalate to: [../map.md#debug](../map.md).
+Note `ci.yml`'s Rust job calls the individual Makefile targets (never `make ci` wholesale); the
+non-Rust steps are raw commands — a new gate still needs **dual** Makefile + ci.yml wiring.
+Escalate to: [../map.md#debug](../map.md).

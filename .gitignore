@@ -26,4 +26,5 @@ build/
 .DS_Store
 *.swp
 
-# Note: Cargo.lock and uv.lock ARE checked in (binary workspace + reproducible Python env).
+# Note: Cargo.lock IS checked in (binary workspace). uv.lock is checked in from phase 3, when
+# the uv workspace members land (no uv project exists at the root until then).

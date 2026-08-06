@@ -78,7 +78,7 @@ rust-clippy: ## clippy with -D warnings
 	fi
 
 .PHONY: rust-panic-ban
-rust-panic-ban: ## Panic ban + async cancel-safety ban (mirrors ci.yml rust-lint panic-ban step)
+rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust job runs this same target)
 	# Production only (`--lib --bins`): disallowed-methods has no allow-in-tests.
 	# This is the ONLY gate where clippy.toml's `disallowed-methods` list is live (the general
 	# rust-clippy target passes -A clippy::disallowed_methods on purpose). It enforces BOTH
@@ -174,7 +174,9 @@ workflows-lint: workflows-parse ## zizmor over .github/workflows — BLOCKING, l
 workflows-parse: ## Every workflow must be parseable YAML (zizmor SKIPS files it cannot parse)
 	# zizmor reports "collection yielded no auditable inputs" and exits 0 on unparsable YAML,
 	# so a broken workflow would pass the security gate while GitHub silently never runs it.
-	@uv run --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
+	# --no-project: the repo root is not a uv project until phase 3; without it uv would
+	# materialize a stray uv.lock at the root and warn about a missing requires-python.
+	@uv run --no-project --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
 
 # ------------------------------------------------------------------------------------------------
 # Autofix + hooks

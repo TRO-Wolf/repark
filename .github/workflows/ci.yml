@@ -19,8 +19,10 @@ permissions:
   contents: read
 
 concurrency:
+  # Supersede in-flight runs for the same PR; never cancel a main-branch run, so main keeps an
+  # unbroken record (same convention as the sibling workflows).
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   rust:
@@ -36,14 +38,20 @@ jobs:
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
+      # Dual-wired through the Makefile targets so local == CI by construction: the targets carry
+      # the phase-0 empty-workspace guard (loud no-op until the first crate lands) and the
+      # deliberate clippy split (general gate with -A clippy::disallowed_methods; the panic-ban
+      # target is the only place clippy.toml's disallowed-methods list is live, --lib --bins).
       - name: rustfmt
-        run: cargo fmt --check
+        run: make rust-fmt-check
       - name: clippy
-        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+        run: make rust-clippy
+      - name: panic-ban
+        run: make rust-panic-ban
       - name: check
-        run: cargo check --locked --workspace
+        run: make rust-check
       - name: test
-        run: cargo test --locked --workspace
+        run: make rust-test
 
   guards:
     name: Repo guards (map.md + workflow parse)
@@ -63,7 +71,7 @@ jobs:
       # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
       # Mirrors `make workflows-parse`.
       - name: workflow parse guard
-        run: uv run --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
+        run: uv run --no-project --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
 
   python:
     name: Python (ruff)

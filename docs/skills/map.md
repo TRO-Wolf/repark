@@ -16,6 +16,15 @@ Not ported yet (returns with phase 1, alongside the code it governs): `trait-wra
 silent-default gap when wrapping a trait (enumerate + forward every method, defaults included;
 both-sides audit method). It lives in the private v1 repository until crate code lands here.
 
+## I want to...
+
+| I want to... | go to |
+| --- | --- |
+| Read the full engineering contract for a session | [Opus.md](Opus.md) |
+| Brief a delegated implementation agent (Sonnet tier) | [Sonnet.md](Sonnet.md) |
+| Brief a narrow/mechanical agent (Haiku tier) | [Haiku.md](Haiku.md) |
+| Find the trait-wrapping skill | private v1 repository until phase 1 (see above) |
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

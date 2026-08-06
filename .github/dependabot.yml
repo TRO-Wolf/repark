@@ -17,15 +17,9 @@ updates:
       cargo:
         patterns: ["*"]
 
-  - package-ecosystem: uv
-    directory: /
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
-    groups:
-      python:
-        patterns: ["*"]
+  # The `uv` package-ecosystem entry returns in phase 3, when the uv workspace members and the
+  # checked-in uv.lock land — until then Dependabot would error weekly on a repo with no uv
+  # dependency file.
 
   - package-ecosystem: github-actions
     directory: /
