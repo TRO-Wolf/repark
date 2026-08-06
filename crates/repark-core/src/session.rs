@@ -54,6 +54,7 @@ use repark_common::{Error, Result};
 
 use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
+use crate::extension::{NoopSessionExtension, SessionExtension};
 use crate::time_travel::TimeTravelSpec;
 
 /// ===========================================================================================
@@ -167,6 +168,9 @@ pub struct ReparkSessionBuilder {
     target_partitions: Option<usize>,
     /// The session-default [`SqlDialect`] (phase-cut seam slot). `None` → [`DataFusionDialect`].
     sql_dialect: Option<Arc<dyn SqlDialect>>,
+    /// The build-time [`SessionExtension`] (phase-cut seam slot). `None` → no-op hooks (the
+    /// pure-DataFusion baseline).
+    extension: Option<Arc<dyn SessionExtension>>,
     /// The full Spark-style `.config(key, value)` map. Engine knobs above are set through the typed
     /// setters; this map additionally drives `spark.sql.catalog.<name>.*` catalog registration at
     /// session construction (see [`ReparkSession::register_configured_catalogs`]). Non-catalog keys
@@ -194,6 +198,18 @@ impl ReparkSessionBuilder {
     #[must_use]
     pub fn with_sql_dialect(mut self, dialect: Arc<dyn SqlDialect>) -> Self {
         self.sql_dialect = Some(dialect);
+        self
+    }
+
+    /// Install the build-time [`SessionExtension`] (phase-cut seam, design §3): `build()` runs
+    /// its two hooks at v1's inline registration positions — `configure` on the `SessionConfig`
+    /// before the runtime/context are assembled, `register` on the freshly built
+    /// `SessionContext`. Unset → the defaulted no-op hooks. Phase-2 repark-spark ships one
+    /// extension holding exactly what v1 inlined (function registry + analyzer rules + TA UDFs
+    /// + cardinality config).
+    #[must_use]
+    pub fn with_extension(mut self, extension: Arc<dyn SessionExtension>) -> Self {
+        self.extension = Some(extension);
         self
     }
 
@@ -320,10 +336,12 @@ impl ReparkSessionBuilder {
         // MERGE target-scan file concurrency (session conf only). Unset = fork num_cpus default.
         let scan_concurrency = repark_iceberg::write::scan_concurrency_from_config_map(&self.config)
             .map_err(|error| Error::Config(error.to_string()))?;
-        // r24 SB1: plan-time expansion ceilings + local-filesystem DDL gate (defaults in extension).
-        let repark_sql_settings =
-            repark_functions::cardinality::repark_sql_settings_from_config_map(&self.config)
-                .map_err(|error| Error::Config(error.to_string()))?;
+        // The build-time extension (phase-cut inversion, design §3): its two hooks replace v1's
+        // inline phase-2 registrations at the SAME positions in this construction order.
+        let ext: Arc<dyn SessionExtension> = self
+            .extension
+            .clone()
+            .unwrap_or_else(|| Arc::new(NoopSessionExtension));
         let mut config = SessionConfig::new();
         // DF 54.1 REGRESSION GUARD: the new default-on physical uncorrelated-scalar-subquery
         // path (`ScalarSubqueryExec` wrapping) drops the query's top-level Sort — `SELECT …
@@ -337,7 +355,6 @@ impl ReparkSessionBuilder {
             .enable_physical_uncorrelated_scalar_subquery = false;
         config = repark_iceberg::write::with_merge_session_knobs(config, scan_pruning, file_scoped_rewrite);
         config = repark_iceberg::write::with_scan_concurrency(config, scan_concurrency);
-        config = repark_functions::cardinality::with_repark_sql_config(config, repark_sql_settings);
         if let Some(rows) = self.batch_size {
             config = config.with_batch_size(rows);
         }
@@ -345,6 +362,11 @@ impl ReparkSessionBuilder {
             config = config.with_target_partitions(partitions);
         }
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
+        // Extension hook 1 of 2 — CONFIGURE, at v1's inline position (after the engine knobs are
+        // installed as ConfigExtensions, before the RuntimeEnv is assembled). v1 inlined the
+        // cardinality/`repark.sql.*` ConfigExtension here (r24 SB1); the phase-2 Spark
+        // extension re-homes it onto this hook, parsing the same builder config map.
+        config = ext.configure(&self.config, config).map_err(engine_err)?;
 
         let mut runtime = RuntimeEnvBuilder::new();
         // Default 8 GiB FairSpillPool when unset (C1-Q-002). Explicit Some(0) opts out (unbounded).
@@ -365,16 +387,11 @@ impl ReparkSessionBuilder {
         let runtime = runtime.build_arc().map_err(engine_err)?;
 
         let context = SessionContext::new_with_config_rt(config, runtime);
-        repark_functions::register_all(&context);
-        // The Spark expression-semantics analyzer rules (integer `/` → double, div/mod-by-zero
-        // → NULL, 0-based `[]` array subscript) — appended after DataFusion's built-in rules so
-        // they see type-coerced plans; they apply to every plan, SQL and DataFrame alike.
-        for rule in repark_functions::analyzer_rules() {
-            context.add_analyzer_rule(rule);
-        }
-        // The TA window UDFs (`ta_ema`, `ta_adx`, `ta_bbands_*`, …) — stateful full-series kernels
-        // callable from SQL `OVER (…)` and the DataFrame API.
-        repark_ta::udf::register_all(&context);
+        // Extension hook 2 of 2 — REGISTER, at v1's inline position (immediately after context
+        // creation). v1 inlined the Spark function registry, the expression-semantics analyzer
+        // rules (appended after DataFusion's built-ins so they see type-coerced plans), and the
+        // TA window UDFs here; the phase-2 Spark extension re-homes all three onto this hook.
+        ext.register(&context).map_err(engine_err)?;
 
         Ok(ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
