@@ -15,6 +15,7 @@
 resolver = "3"
 members = [
   "crates/repark-common",
+  "crates/repark-iceberg",
 ]
 
 [workspace.package]
@@ -59,6 +60,9 @@ async-trait = "0.1"
 # commit operation-ids (ENGINE_CONTRACT §8 stamping). v4: pure-random, no clock dependency.
 futures = "0.3"
 uuid = { version = "1", features = ["v4"] }
+# Catalog-edge / write-path spans and warnings (`tracing::warn!` on failed scratch-table
+# deregister). Ratified addition (orchestrator ruling R3, 2026-08-06).
+tracing = "0.1"
 # Foundation — one unified version family (DataFusion 54.1 / Arrow 58.4).
 datafusion = "54.1.0"
 datafusion-spark = "54.1.0"
@@ -76,6 +80,15 @@ object_store = { version = "0.13", features = ["aws"] }
 aws-config = "1"
 aws-credential-types = "1"
 url = "2"
+# Foundation — the iceberg 0.9.1 family, one version with the DataFusion 54.1 / Arrow 58.4 pins.
+iceberg = "0.9.1"
+iceberg-datafusion = "0.9.1"
+iceberg-catalog-glue = "0.9.1"
+iceberg-catalog-s3tables = "0.9.1"
+# The fork's OpenDAL-backed object storage — the S3-capable `FileIO` factory the Glue /
+# S3 Tables catalogs use internally; consumed directly (with `opendal-s3`) for scheme-based
+# FileIO selection.
+iceberg-storage-opendal = "0.9.1"
 # Internal crates. Each entry carries `version` + `default-features = false`.
 # `default-features = false` is the one-way door: retrofitting it after internal feature flags
 # proliferate is a workspace-wide breaking change (rust-lang/cargo#11329), so it lands now
@@ -83,15 +96,21 @@ url = "2"
 # `[workspace.package] version` above and buys forward-compat only: the workspace is
 # `publish = false`, so it is not a publishability claim.
 repark-common = { path = "crates/repark-common", version = "0.0.0", default-features = false }
+repark-iceberg = { path = "crates/repark-iceberg", version = "0.0.0", default-features = false }
 
 # -------------------------------------------------------------------------------------------
-# The iceberg* family (iceberg, iceberg-datafusion, iceberg-catalog-glue,
-# iceberg-catalog-s3tables, iceberg-storage-opendal) and its `[patch.crates-io]` fork pin are
-# DELIBERATELY DEFERRED to the PR that lands `crates/repark-iceberg`: the workspace never names
-# an iceberg version without the owned-fork patch in the same manifest, so no iceberg crate can
-# ever resolve unpatched from the registry (ADR-0001 / ADR-0002). Land the five
-# `[workspace.dependencies]` entries and the five `[patch.crates-io]` lines together.
+# The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose
+# main has been the owned 0.9.1 base (same DF 54.1 / arrow 58.4 family). The rev is pinned;
+# bump it together with datafusion/arrow/parquet per the version-pin contract.
+# iceberg-catalog-glue / -s3tables are patched for family consistency and consumed by the
+# repark-iceberg catalog module (Glue primary + S3 Tables secondary builders).
 # -------------------------------------------------------------------------------------------
+[patch.crates-io]
+iceberg = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "b009ac158f7584a956fa9292c0e9675a411ecf0d" }
+iceberg-datafusion = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "b009ac158f7584a956fa9292c0e9675a411ecf0d" }
+iceberg-catalog-glue = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "b009ac158f7584a956fa9292c0e9675a411ecf0d" }
+iceberg-catalog-s3tables = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "b009ac158f7584a956fa9292c0e9675a411ecf0d" }
+iceberg-storage-opendal = { git = "https://github.com/TRO-Wolf/iceberg-rust", rev = "b009ac158f7584a956fa9292c0e9675a411ecf0d" }
 
 # -------------------------------------------------------------------------------------------
 # Build profiles (carried from the private v1 repository). Profiles are architecture — every

@@ -6,8 +6,9 @@ RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceb
 with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). This is the
 front-door navigation map. See [README.md](README.md) for the overview and
 [AGENTS.md](AGENTS.md) for the agent contract. The repo is at
-**phase 1** of the port: the engine core is arriving — the workspace has its first member
-(`crates/repark-common`).
+**phase 1** of the port: the engine core is arriving — the workspace carries
+`crates/repark-common` (error seed) and `crates/repark-iceberg` (catalog + write over the owned
+iceberg-rust fork, `[patch.crates-io]`-pinned).
 
 ## Contents
 

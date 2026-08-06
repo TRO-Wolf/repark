@@ -1,7 +1,20 @@
 # cargo-audit configuration (read by the audit gates; see the Makefile `rust-audit` target).
 # Keep the ignore list in sync with deny.toml's [advisories].ignore — both gates scan the same
-# tree. Empty at phase 0 (no dependencies yet); any ignore added later must name the advisory,
-# the reason, and the revisit trigger, mirrored in deny.toml.
+# tree. Any ignore must name the advisory, the reason, and the revisit trigger, mirrored in
+# deny.toml. Entries below returned with the repark-iceberg dependency graph (flagged by the
+# gate, v1's justified wording).
 
 [advisories]
-ignore = []
+ignore = [
+  # `paste` (proc-macro) is unmaintained but not vulnerable; pulled transitively by arrow/datafusion.
+  # See deny.toml for the full rationale. Revisit if a real CVE lands or the upstream tree drops it.
+  "RUSTSEC-2024-0436",
+  # quick-xml DoS advisories (quadratic duplicate-attribute check / unbounded namespace allocation).
+  # Fix is >=0.41.0, semver-unreachable from here: object_store 0.12.5 (pinned by the DataFusion 52
+  # family) requires ^0.38, and reqsign 0.16.5 (via the fork's opendal storage) requires ^0.37. In
+  # this tree quick-xml only parses S3 API responses (AWS-originated XML), never attacker-controlled
+  # input. See deny.toml for the full rationale. Revisit at the next DataFusion-family bump.
+  # (2026-08-06: this graph resolves 0.38.4 via object_store 0.13.1 and 0.37.5 via reqsign 0.16.5.)
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
+]
