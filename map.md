@@ -22,8 +22,9 @@ front-door navigation map. See [README.md](README.md) for the overview and
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
   oracle; `make install-hooks` wires it).
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
-- `docs/` — contracts, ADRs, and the port plan. `task/` — todo + lessons trackers. `briefs/` —
-  versioned delegated-agent slate briefs. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
+- `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
+  trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
+  plane. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
   orientation. `AGENTS.md` — the authoritative agent contract. `CONTRIBUTING.md` /
   `SECURITY.md` — public-repo policy.
 
@@ -36,6 +37,8 @@ front-door navigation map. See [README.md](README.md) for the overview and
 | Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |
 | Read/extend the testing contract | [docs/testing.md](docs/testing.md) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
+| Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
+| Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
 | Read the phase-0 brief | [briefs/map.md](briefs/map.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
