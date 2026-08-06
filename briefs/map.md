@@ -14,6 +14,11 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   gates before code — testing contract, mechanical gates, map.md discipline, agent contracts,
   SEPMO, tier-1 CI, ported and green on an empty workspace; five workstreams, five commits,
   panel verification. In-repo copy ends above the execution-local appendix by design.
+- [phase-1-engine-core.md](phase-1-engine-core.md) — the phase-1 engine-core brief (2026-08-06):
+  the three-PR slate (PR-A workspace arming + repark-common + gates; PR-B repark-iceberg;
+  PR-C repark-core) executing the settled design in
+  [../docs/design/session-api.md](../docs/design/session-api.md); port-source pin, copy-then-
+  re-home rules, relocation discipline, fleet plan, phase-1 acceptance.
 
 ## I want to... → go to
 
@@ -23,6 +28,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 | Find the standing rules briefs inherit | [../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules" |
 | Write a new brief | copy the newest brief's structure; standing rules by reference, not restatement |
 | See the port phases a brief executes against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
+| Read the design a phase-1 PR implements | [../docs/design/session-api.md](../docs/design/session-api.md) |
 
 ## Pointers
 

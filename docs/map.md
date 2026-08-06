@@ -2,13 +2,17 @@
 
 ## Purpose
 
-Engineering contracts, decision records, and operating documentation for this repo.
+Engineering contracts, decision records, settled designs, the port plan, release-engineering
+notes, and per-tier operating manuals for this repo.
 
 ## Contents
 
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
+- [design/](design/map.md) — settled design documents, one per deliberate design pass
+  ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
+  seams, forced-edit ledger, omissions ledger, server landing map).
 - [port/](port/map.md) — the V2 port plan ([port/PLAN.md](port/PLAN.md)): copy-then-re-home
   rules, the four phases, the census multiset acceptance gate, the v1-freeze trigger.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
@@ -22,6 +26,7 @@ Engineering contracts, decision records, and operating documentation for this re
 | ...do this | go to |
 |---|---|
 | Understand the testing rules | [testing.md](testing.md) |
+| Understand the phase-1 crate layout / Session API | [design/session-api.md](design/session-api.md) |
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
 | Read the manual for your tier | [skills/map.md](skills/map.md) |
@@ -35,5 +40,4 @@ Engineering contracts, decision records, and operating documentation for this re
 ## Debug
 
 First checks: if a rule is unclear, [testing.md](testing.md) + [../AGENTS.md](../AGENTS.md) are
-authoritative. Escalate to:
-[../map.md#debug](../map.md).
+authoritative. Escalate to: [../map.md#debug](../map.md).
