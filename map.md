@@ -4,7 +4,8 @@
 
 RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceberg-rust fork,
 with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). This is the
-front-door navigation map. See [README.md](README.md) for the overview. The repo is at
+front-door navigation map. See [README.md](README.md) for the overview and
+[AGENTS.md](AGENTS.md) for the agent contract. The repo is at
 **phase 0** of the port: gates before code — the workspace is intentionally empty of crates.
 
 ## Contents
@@ -21,11 +22,17 @@ front-door navigation map. See [README.md](README.md) for the overview. The repo
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
   oracle; `make install-hooks` wires it).
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
+- `docs/` — contracts and ADRs. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
+  orientation. `AGENTS.md` — the authoritative agent contract. `CONTRIBUTING.md` /
+  `SECURITY.md` — public-repo policy.
 
 ## I want to...
 
 | ...do this | go to |
 |---|---|
+| Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
+| Follow the agent rules | [AGENTS.md](AGENTS.md) |
+| Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
