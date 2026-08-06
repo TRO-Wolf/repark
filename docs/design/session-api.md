@@ -182,6 +182,15 @@ Product-code deltas from v1, in full — everything else is re-home:
 5. Mechanical renames: `repark_catalog::` → `repark_iceberg::catalog::`, `repark_write::` →
    `repark_iceberg::write::`, `repark_core::` (v1) → `repark_common::`, `repark_session::` →
    `repark_core::` — the four prefix rules that also generate the census rename map.
+6. **Test-harness merge (added 2026-08-06, PR-B assembly STOP):** merging two v1 crates into one
+   test binary breaks the per-binary global-tracing-subscriber invariant both v1 harnesses
+   relied on. Fix: one shared `cfg(test)` tracing harness installing a single global subscriber
+   carrying BOTH layers (catalog span capture + merge span recorder); exactly the two v1 install
+   call sites edited to use it; all test assertions byte-unchanged. Same-class hazard applies to
+   the PR-C session tests — audit for global installs before assembly.
+   Procedural companion ruling: where a prefix rewrite pushes a v1 line past 100 columns, run
+   the fidelity check pre-fmt (recorded), then `cargo fmt`; enumerate every reflow site in the
+   unit ledger.
 
 Deferred with their crates (v1 stays authoritative): `read_excel`/`read_postgres` + their error
 folds, postgres catalog registration body, SQL-text time-travel rewriting, the whole v1
@@ -204,7 +213,8 @@ success criterion this design was checked against.
 
 ## 7. Census accounting and the port procedure
 
-- Phase-1 ported tier-1 tests: repark-common 2 + repark-iceberg 243 (catalog 51, write 192) +
+- Phase-1 ported tier-1 tests: repark-common 2 + repark-iceberg 241 (catalog 50, write 191;
+  corrected 2026-08-06 from grep-based recon counts by the generated `--list` at the pin) +
   the hoisted read_table_at/registry tests + the untangled session subset (audit below).
 - The crate merges ship as **declared-rename units** with a **mechanically generated** old→new
   test-name map: `cargo test --workspace -- --list` at the pinned v1 SHA → apply the four prefix

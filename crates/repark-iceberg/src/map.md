@@ -14,6 +14,9 @@ Source for `repark-iceberg` — two independent module trees ported from v1 crat
   session-refresh adapter (`catalog_ops.rs`). See [catalog/map.md](catalog/map.md).
 - `write/` — MERGE INTO / append / overwrite / ALTER / snapshot refs over the owned fork.
   See [write/map.md](write/map.md).
+- `fork_pin_tests.rs` — `cfg(test)`-only fork-pin proof (ADR-0001): names + exercises
+  fork-only public API (`iceberg::plan_commit_base_load` / `CommitBaseLoadPlan`), so the test
+  target compile-fails on a silent crates.io registry fallback.
 - `test_tracing.rs` — `cfg(test)`-only shared tracing harness (one global subscriber, both
   cohorts' capture layers; forced-edit class 6 — see docs/design/session-api.md §5).
 

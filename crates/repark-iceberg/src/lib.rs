@@ -17,6 +17,11 @@ pub mod write;
 #[cfg(test)]
 mod test_tracing;
 
+/// Fork-pin proof (ADR-0001): names + exercises fork-only public API, so the test target
+/// compile-fails on a silent crates.io registry fallback.
+#[cfg(test)]
+mod fork_pin_tests;
+
 // v1 repark-catalog crate-root surface (names unchanged).
 pub use catalog::{
     CATALOG_LISTING_STRATEGY, MetadataProjectionSchemaProvider, NAMESPACE_LOCATION_PROPERTY,

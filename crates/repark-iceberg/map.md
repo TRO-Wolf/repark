@@ -58,7 +58,7 @@ v1 crate-root re-export lists.
 |---|---|
 | Catalog registration / listing / staleness issues | [src/catalog/map.md](src/catalog/map.md#debug) |
 | MERGE / append / overwrite / ALTER issues | [src/write/map.md](src/write/map.md#debug) |
-| Fork-pin doubt (crates.io fallback?) | the fork-patch proof test in `src/catalog/tests.rs` names a fork-only public symbol — it cannot compile against crates.io iceberg 0.9.1 |
+| Fork-pin doubt (crates.io fallback?) | `src/fork_pin_tests.rs` (exercises fork-only `plan_commit_base_load`) + the ported name-only proof in `src/catalog/tests.rs` — neither compiles against crates.io iceberg 0.9.1 |
 
 First checks: `cargo test -p repark-iceberg` (all AWS-free on `MemoryCatalog`). Escalate to:
 [../map.md#debug](../map.md).

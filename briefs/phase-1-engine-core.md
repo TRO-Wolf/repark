@@ -81,8 +81,23 @@ tree.
   anyway this phase — removing it is an unforced delta — but record in the omissions ledger);
   re-run the trait-wrapping both-sides audit on the namespace-scoped catalog wrapper and attach
   it to the PR.
-- Tests: 243 (catalog 51 + write 192) under the generated rename map; sorted `--list` diff
-  against the map must be empty. Census note in the PR body.
+- Tests: **241** (catalog 50 + write 191) under the generated rename map; sorted `--list` diff
+  against the map must be empty. Census note in the PR body. *(Corrected 2026-08-06: the recon
+  grep over-counted by 2 — doc-comment `#[tokio::test]` mentions; `cargo test --list` at the pin
+  is ground truth. 243 = this cohort + repark-common's 2, which landed in PR-A.)*
+- Forbidden-literal ruling (2026-08-06): the `s3tables:us-east-2` pattern is narrowed to the
+  real-account ARN form — v1's catalog tests carry AWS's synthetic example-account fixture ARN,
+  which is safe and byte-fidelity-protected; the standalone account-number and bucket-name
+  patterns remain and catch any genuine leak.
+- STOP resolution (2026-08-06): the crate merge collides the two v1 global tracing-subscriber
+  installs in one test binary. Sanctioned fix = design forced-edit class 6 (shared cfg(test)
+  harness, both layers, two call sites edited, assertions unchanged), landing INSIDE the
+  declared-rename commit so every commit stays green; the ledger documents both edited spans and
+  the fidelity script lists them as declared-edit files. Rustfmt reflow of over-100-col rewrite
+  sites is sanctioned: fidelity pre-fmt (recorded) → cargo fmt → enumerate sites in the ledger.
+  Commit 3 additionally syncs the in-repo docs: this brief and
+  docs/design/session-api.md pick up the census correction (241/50/191), the ARN ruling, and
+  forced-edit class 6.
 - deny/audit advisory entries return only if `cargo deny`/`cargo audit` actually flag the new
   dependency graph (each entry justified in-line, v1 wording).
 

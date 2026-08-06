@@ -12,6 +12,9 @@ repository's `task/` directory).
   state only (phase definitions live in [../docs/port/PLAN.md](../docs/port/PLAN.md)).
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
   delete). Seeded 2026-08-06 from v1.
+- [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md) — unit ledger for phase-1 PR-B
+  (repark-iceberg declared-rename unit: fidelity + census evidence, forced-edit class 6 spans,
+  fork-audit findings, deny/audit restorations).
 - [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md) — unit ledger for phase-1
   PR-A (workspace arming + repark-common + gate arming): scope, commit plan, gate results,
   provocation proofs.
@@ -26,6 +29,7 @@ repository's `task/` directory).
 | See what's in flight | [todo.md](todo.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
 | See PR-A's gate evidence / provocation proofs | [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md) |
+| See PR-B's fidelity / census / fork-audit evidence | [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md) |
 | See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |
 | Read the port plan behind the backlog | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 | Read the brief driving phase 1 | [../briefs/phase-1-engine-core.md](../briefs/phase-1-engine-core.md) |
