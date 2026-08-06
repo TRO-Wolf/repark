@@ -11,10 +11,9 @@ Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 |---|---|
 | [repark-common](repark-common/map.md) | Shared error-seed types (`Error` / `ErrorClass` / `Result`). Bottom of the DAG. |
 | [repark-iceberg](repark-iceberg/map.md) | Iceberg surface (tier 1): Glue + S3 Tables catalog wiring for DataFusion (`catalog/`) + the Spark-semantics write adapter — MERGE INTO, append, overwrite, ALTER — over the owned fork (`write/`). Carries the `[patch.crates-io]` fork pin's consumers. |
+| [repark-core](repark-core/map.md) | The Session-centric engine API (tier 2): `ReparkSession` over a DataFusion `SessionContext` + the `ExecutionBackend` / `SqlDialect` / `SessionExtension` seams (phase-1 PR-C, landing commit-by-commit). |
 
-Phase-1 crate still to land (see `docs/design/session-api.md`): `repark-core` (the
-`ReparkSession` engine API, tier 2). DAG target: `repark-core → {repark-iceberg, repark-common}`,
-`repark-iceberg → repark-common`.
+DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`.
 
 > **The layering SSOT is [`../scripts/check_crate_dag.py`](../scripts/check_crate_dag.py)** —
 > it holds the tier map and is enforced by `make check-crate-dag`, and crate-root thinness by
@@ -38,6 +37,7 @@ Phase-1 crate still to land (see `docs/design/session-api.md`): `repark-core` (t
 |---|---|
 | Add an error variant / shared seed type | [repark-common/map.md](repark-common/map.md) |
 | Catalog wiring / MERGE / append / overwrite / ALTER | [repark-iceberg/map.md](repark-iceberg/map.md) |
+| Add a `ReparkSession` method / session knob / reader | [repark-core/map.md](repark-core/map.md) |
 | See where the next crates land | `../docs/design/session-api.md` |
 
 ## Pointers

@@ -1,0 +1,41 @@
+[package]
+name = "repark-core"
+description = "The Session-centric engine API: DataFusion SessionContext construction + the backend seam."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Error seed (re-exported so bindings and doors import one crate).
+repark-common.workspace = true
+# Catalog builders/registration + the write knob installers (ConfigExtensions) + snapshot-ref
+# test seams — the v1 repark-catalog + repark-write surface under one crate.
+repark-iceberg.workspace = true
+datafusion.workspace = true
+arrow.workspace = true
+# The session holds the iceberg Catalog handles (the CatalogRegistry the SQL/write path needs) and
+# exposes catalog/namespace registration.
+iceberg.workspace = true
+# `s3://` / `s3a://` Parquet reads: `object_store` (AWS S3 store) is registered on the DataFusion
+# `RuntimeEnv`; `aws-config` resolves the credential chain (env → shared file → IMDS) + region, and
+# `aws-credential-types` is the credential type bridged into `object_store::CredentialProvider`.
+# `async-trait` implements that trait (it is `#[async_trait]`) and the SqlDialect seam; `url`
+# builds the per-bucket store URLs.
+object_store.workspace = true
+aws-config.workspace = true
+aws-credential-types.workspace = true
+async-trait.workspace = true
+url.workspace = true
+
+[dev-dependencies]
+# `#[tokio::test]` drives the async session API; `parquet` writes a fixture for the read_parquet
+# test; `tempfile` is the warehouse for the end-to-end in-memory-catalog CTAS test.
+tokio.workspace = true
+parquet.workspace = true
+tempfile = "3"
