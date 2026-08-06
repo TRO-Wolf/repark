@@ -22,7 +22,8 @@ front-door navigation map. See [README.md](README.md) for the overview and
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
   oracle; `make install-hooks` wires it).
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
-- `docs/` — contracts and ADRs. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
+- `docs/` — contracts, ADRs, and the port plan. `task/` — todo + lessons trackers. `briefs/` —
+  versioned delegated-agent slate briefs. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
   orientation. `AGENTS.md` — the authoritative agent contract. `CONTRIBUTING.md` /
   `SECURITY.md` — public-repo policy.
 
@@ -32,7 +33,11 @@ front-door navigation map. See [README.md](README.md) for the overview and
 |---|---|
 | Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
 | Follow the agent rules | [AGENTS.md](AGENTS.md) |
+| Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |
+| Read/extend the testing contract | [docs/testing.md](docs/testing.md) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
+| See in-flight work / lessons | [task/map.md](task/map.md) |
+| Read the phase-0 brief | [briefs/map.md](briefs/map.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
@@ -50,4 +55,4 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 |---|---|
 | A cargo target loudly no-ops | Expected at phase 0 — the workspace has no members; the guard is documented in the Makefile header |
 | Pre-commit hook rejects a commit | `bash scripts/check_map_md.sh` — the touched directory's map.md must be staged in the same commit |
-| A gate is unclear | `make help` |
+| A gate is unclear | `make help`; [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) are authoritative |
