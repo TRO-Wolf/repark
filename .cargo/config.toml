@@ -1,0 +1,8 @@
+# Workspace-wide cargo config.
+#
+# PyO3's build script defaults to `/usr/bin/python`, which doesn't exist on systems that ship only
+# `python3`. Point it at `python3` (resolved from PATH) so `cargo check`/`clippy`/`test` build the
+# `repark-python` cdylib everywhere — local dev and CI alike. maturin overrides this with the
+# wheel's target interpreter when building distributions, so it does not affect wheel builds.
+[env]
+PYO3_PYTHON = "python3"

@@ -1,0 +1,7 @@
+# cargo-audit configuration (read by the audit gates; see the Makefile `rust-audit` target).
+# Keep the ignore list in sync with deny.toml's [advisories].ignore — both gates scan the same
+# tree. Empty at phase 0 (no dependencies yet); any ignore added later must name the advisory,
+# the reason, and the revisit trigger, mirrored in deny.toml.
+
+[advisories]
+ignore = []

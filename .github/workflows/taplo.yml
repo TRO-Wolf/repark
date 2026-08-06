@@ -1,0 +1,34 @@
+# TOML format + lint check (config in .taplo.toml). Runs the same uvx-pinned taplo as
+# `make toml-check` — bump the version here and in the Makefile pin in the same change.
+name: taplo
+
+on:
+  push:
+    branches: [main]  # PR coverage comes from `pull_request`; this avoids the double run
+    paths: ["**/*.toml", ".taplo.toml", ".github/workflows/taplo.yml"]
+  pull_request:
+    paths: ["**/*.toml", ".taplo.toml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Supersede in-flight runs for the same PR; never cancel a main-branch or scheduled run, so
+  # main keeps an unbroken record. Without this, three quick pushes stacked three full runs.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  taplo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+      - name: taplo format --check
+        run: uvx taplo@0.9.3 format --check
+      - name: taplo lint
+        run: uvx taplo@0.9.3 lint

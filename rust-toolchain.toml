@@ -1,0 +1,6 @@
+# Pin the exact toolchain so local dev and CI build identically (not just an MSRV floor).
+# Bump in lockstep with the DataFusion/iceberg-rust pin recorded in AGENTS.md.
+[toolchain]
+channel = "1.96.0"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

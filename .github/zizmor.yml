@@ -1,0 +1,8 @@
+# zizmor configuration — https://docs.zizmor.sh/configuration/
+#
+# The zizmor gate (`.github/workflows/zizmor.yml` and `make workflows-lint`) is BLOCKING: any
+# finding not listed here fails the job. Accepted-risk suppressions are documented below, each
+# with its rationale — a new finding (new rule, or the same rule on a different workflow) still
+# blocks. Currently there are no suppressions.
+
+rules: {}
