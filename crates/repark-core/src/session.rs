@@ -40,9 +40,10 @@ pub(crate) use read_options::{
 };
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
 use arrow::array::RecordBatch;
+use aws_config::{BehaviorVersion, SdkConfig};
 use datafusion::datasource::MemTable;
 use datafusion::execution::memory_pool::FairSpillPool;
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
@@ -119,6 +120,13 @@ impl TimeTravelOpts {
 }
 
 const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
+
+/// The explicit AWS-use opt-in conf (E-2). A session with no AWS-backed catalog spec and no S3
+/// region conf can still signal AWS use — e.g. plain `s3://` bronze reads on an otherwise-local
+/// session — with `.config("repark.aws.enable", "true")`; `register_configured_catalogs()` then
+/// resolves the AWS SDK chain once at finalize. Without any signal, finalize never touches the
+/// chain (no IMDS probe for offline sessions).
+pub const AWS_ENABLE_CONFIG_KEY: &str = "repark.aws.enable";
 
 /// Smallest non-zero `memory_limit_bytes` accepted by [`ReparkSessionBuilder::build`].
 /// Explicit `0` still opts out (unbounded). Pathological 1-byte budgets thrash the spill pool
@@ -261,6 +269,18 @@ impl ReparkSessionBuilder {
         // The optional `s3://`/`s3a://` read region override (else the aws-config chain resolves
         // it). Both spellings are accepted; identical values collapse, different values fail loud.
         let s3_region_override = resolve_s3_region_override(&self.config)?;
+        // E-2: does this session SIGNAL AWS use? An AWS-backed catalog spec, the S3-region conf
+        // (either spelling), or the explicit opt-in. Recorded at build; consumed by the finalize
+        // (`register_configured_catalogs`), which resolves the AWS SDK chain once IF signaled —
+        // offline sessions never pay the chain resolution / IMDS probe.
+        let aws_signaled = catalog_specs
+            .iter()
+            .any(|spec| matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables))
+            || s3_region_override.is_some()
+            || self
+                .config
+                .get(AWS_ENABLE_CONFIG_KEY)
+                .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"));
         // Write-path concurrency (session conf only — never a table property). Fail loud on a
         // non-integer or `< 1` value so a typo cannot silently fall back to serial or unbounded.
         let write_concurrency = repark_iceberg::write::concurrency_from_config_map(&self.config)
@@ -335,6 +355,8 @@ impl ReparkSessionBuilder {
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
             postgres_catalog_names: Arc::new(RwLock::new(HashSet::new())),
+            aws_signaled,
+            aws_sdk_config: Arc::new(OnceLock::new()),
         })
     }
 }
@@ -368,6 +390,15 @@ pub struct ReparkSession {
     /// config); `None` means the aws-config chain resolves the region. Shared (`Arc`) so the session
     /// stays cheap to clone.
     s3_region_override: Arc<Option<String>>,
+    /// E-2: whether this session signaled AWS use at build time (an AWS-backed catalog spec, an
+    /// S3-region conf, or the [`AWS_ENABLE_CONFIG_KEY`] opt-in). Consumed by the finalize pair,
+    /// which resolves the AWS SDK chain only when this is set.
+    aws_signaled: bool,
+    /// E-2: the AWS SDK config resolved ONCE at finalize (`register_configured_catalogs` /
+    /// `register_late_configured_catalogs`) — never lazily at S3 path-read time (v1's query-time
+    /// env read, removed). Shared across session clones; an S3-path read on a session that never
+    /// resolved fails loud naming the missing step.
+    aws_sdk_config: Arc<OnceLock<SdkConfig>>,
 }
 
 impl ReparkSession {
@@ -476,10 +507,33 @@ impl ReparkSession {
     /// Returns [`Error::DataFusion`] if a configured catalog cannot be built or registered (e.g. a
     /// required builder property is missing, or the catalog's namespaces cannot be loaded).
     pub async fn register_configured_catalogs(&self) -> Result<()> {
+        // E-2: conditional finalize-time AWS resolution. Resolve the AWS SDK chain ONCE, here —
+        // never lazily at S3 path-read time — and only when the session signaled AWS use at
+        // build. Offline sessions skip this entirely (no IMDS probe).
+        self.resolve_aws_sdk_config_if(self.aws_signaled).await;
         for spec in self.catalog_specs.iter() {
             self.register_catalog_spec(spec).await?;
         }
         Ok(())
+    }
+
+    /// E-2: resolve + store the session-held AWS SDK config when `signaled` (idempotent — the
+    /// `OnceLock` keeps the first resolution). Catalog credentials are NOT this config: the
+    /// fork's Glue / S3 Tables builders resolve their own chain at registration, per-session
+    /// (v1 behavior, unchanged). This config serves the `s3://`/`s3a://` PATH-read stores.
+    async fn resolve_aws_sdk_config_if(&self, signaled: bool) {
+        if signaled && self.aws_sdk_config.get().is_none() {
+            let sdk_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+            // A racing clone may have set it first; the first resolution wins (identical chain).
+            let _ = self.aws_sdk_config.set(sdk_config);
+        }
+    }
+
+    /// Test-only observability for the E-2 gate: whether the finalize step resolved the
+    /// session-held AWS SDK config.
+    #[cfg(test)]
+    pub(crate) fn testing_aws_sdk_config_resolved(&self) -> bool {
+        self.aws_sdk_config.get().is_some()
     }
 
     /// ===========================================================================================
@@ -501,6 +555,17 @@ impl ReparkSession {
         config: &HashMap<String, String>,
     ) -> Result<(Vec<String>, Vec<String>)> {
         let specs = catalog_config::parse_catalog_specs(config)?;
+        // E-2: the late config map can introduce the session's FIRST AWS signal (a late Glue /
+        // S3 Tables catalog on a previously offline session) — same conditional resolution as
+        // the build-time finalize, still never at path-read time.
+        let late_aws_signaled = specs
+            .iter()
+            .any(|spec| matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables))
+            || config
+                .get(AWS_ENABLE_CONFIG_KEY)
+                .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"));
+        self.resolve_aws_sdk_config_if(self.aws_signaled || late_aws_signaled)
+            .await;
         let mut added = Vec::new();
         let mut skipped = Vec::new();
         for spec in &specs {
@@ -1285,9 +1350,26 @@ impl ReparkSession {
         {
             return Ok(());
         }
-        let store =
-            object_store_s3::build_amazon_s3_store(bucket, self.s3_region_override.as_deref())
-                .await?;
+        // E-2 gate: the store build consumes the FINALIZE-resolved SDK config — an S3-path read
+        // on a session that never resolved fails loud naming the missing step, never a silent
+        // lazy chain resolution (v1's query-time env read, removed).
+        let Some(sdk_config) = self.aws_sdk_config.get() else {
+            return Err(Error::DataFusion(format!(
+                "S3 read for bucket '{bucket}' refused: this session never resolved its AWS SDK \
+                 config. Call register_configured_catalogs() after signaling AWS use — an \
+                 AWS-backed catalog (spark.sql.catalog.*), the \
+                 '{}' / '{}' region conf, or the explicit opt-in \
+                 `{AWS_ENABLE_CONFIG_KEY}=true`.",
+                object_store_s3::REPARK_S3A_REGION_CONFIG_KEY,
+                object_store_s3::S3A_REGION_CONFIG_KEY,
+            )));
+        };
+        let store = object_store_s3::build_amazon_s3_store(
+            bucket,
+            self.s3_region_override.as_deref(),
+            sdk_config,
+        )
+        .await?;
         let mut registered = self
             .registered_s3_buckets
             .lock()
@@ -1319,6 +1401,9 @@ impl std::fmt::Debug for ReparkSession {
         f.debug_struct("ReparkSession").finish_non_exhaustive()
     }
 }
+
+#[cfg(test)]
+mod aws_gate_tests;
 
 #[cfg(test)]
 mod tests;

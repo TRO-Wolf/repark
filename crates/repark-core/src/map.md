@@ -11,7 +11,8 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 > `catalog_config.rs`, `catalog_state.rs`, `time_travel.rs`, `dialect.rs`. The other files
 > below are staged (present, not yet declared) until the design-§5 forced edits land —
 > `extension.rs` waits with them because its tests drive `ReparkSession`. This note is deleted
-> when the wiring completes.
+> when the wiring completes. Forced-edit progress on the staged files: E-2 (conditional
+> finalize-time AWS resolution + `session/aws_gate_tests.rs`) applied.
 
 ## Contents
 
@@ -89,9 +90,10 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, and `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`). Hoisted MOVE-ONLY from the v1 SQL
   crate; the SQL-text rewrite half stays deferred with the phase-2 router.
-- `session/tests.rs` — in-crate unit test battery (file-backed; lands with the PR-C test-audit
-  commit; names port under the declared-rename map — see the deferred-test manifest for the
-  not-yet-ported subset).
+- `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins,
+  AWS-free) and `tests.rs` (the ported v1 battery; lands with the PR-C test-audit commit; names
+  port under the declared-rename map — see the deferred-test manifest for the not-yet-ported
+  subset).
 
 ## Pointers
 

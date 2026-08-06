@@ -23,7 +23,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use aws_config::BehaviorVersion;
+use aws_config::SdkConfig;
 use aws_credential_types::provider::{ProvideCredentials, SharedCredentialsProvider};
 use datafusion::prelude::SessionContext;
 use object_store::CredentialProvider;
@@ -114,26 +114,28 @@ impl CredentialProvider for AwsConfigCredentialProvider {
 }
 
 /// ===========================================================================================
-/// Build an [`AmazonS3`](object_store::aws::AmazonS3) store for `bucket`, authenticated through the
-/// aws-config default chain.
+/// Build an [`AmazonS3`](object_store::aws::AmazonS3) store for `bucket`, authenticated through
+/// `sdk_config` — the session-held AWS SDK config the FINALIZE step resolved (E-2: the chain is
+/// resolved once in `register_configured_catalogs`, never here at path-read time).
 ///
 /// Region resolves from `region_override` (the session's `spark.hadoop.fs.s3a.endpoint.region`
-/// config) when set, else from the aws-config chain (env `AWS_REGION`/`AWS_DEFAULT_REGION` → shared
-/// config file → IMDS). Credentials are bridged via [`AwsConfigCredentialProvider`].
+/// config) when set, else from `sdk_config` (env `AWS_REGION`/`AWS_DEFAULT_REGION` → shared
+/// config file → IMDS, resolved at finalize). Credentials are bridged via
+/// [`AwsConfigCredentialProvider`].
 ///
-/// This is the only function that touches AWS; it is deliberately separated from
-/// [`register_bucket_store`] so tests register an in-memory store and never reach here.
+/// This function no longer touches AWS itself (the chain is pre-resolved); it is still
+/// separated from [`register_bucket_store`] so tests register an in-memory store and never
+/// need an SDK config.
 ///
 /// # Errors
-/// Returns [`Error::DataFusion`] if no region can be resolved, the chain yields no credentials
-/// provider, or the `object_store` builder rejects the configuration.
+/// Returns [`Error::DataFusion`] if no region can be resolved, the resolved config carries no
+/// credentials provider, or the `object_store` builder rejects the configuration.
 /// ===========================================================================================
 pub(crate) async fn build_amazon_s3_store(
     bucket: &str,
     region_override: Option<&str>,
+    sdk_config: &SdkConfig,
 ) -> Result<Arc<dyn ObjectStore>> {
-    let sdk_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
-
     let region = region_override
         .map(str::to_string)
         .or_else(|| {
