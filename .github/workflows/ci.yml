@@ -1,0 +1,83 @@
+# Main PR gate (tier 1: every PR, no secrets, GitHub-hosted, read-only token).
+# Rust (fmt + clippy + check + test), Python (ruff), and the repo guards (map.md + workflow parse).
+# Note on `cargo test --locked --workspace` (not `--all-features`): `--all-features` would enable
+# the repark-python `extension-module` feature, which tells PyO3 not to link libpython — fine for
+# a wheel, but it breaks linking a standalone test binary. See AGENTS.md "PyO3 build notes"
+# (applies from phase 3; the rule is enforced from day one so it never regresses).
+#
+# Phase-0 shape: the workspace has no members yet, so every job is cheap and always-on. v1's
+# diff-classifier (`detect`) that path-filtered the heavy jobs returns with phase 1, when
+# crates/** exists and rust-test becomes expensive.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust (fmt + clippy + check + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags), so a floating ref would
+      # run unreviewed action code forever. The `toolchain:` input below selects the compiler.
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+          components: rustfmt, clippy
+      - name: rustfmt
+        run: cargo fmt --check
+      - name: clippy
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - name: check
+        run: cargo check --locked --workspace
+      - name: test
+        run: cargo test --locked --workspace
+
+  guards:
+    name: Repo guards (map.md + workflow parse)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+          python-version: "3.12"
+          enable-cache: true
+      - name: map.md guard
+        run: bash scripts/check_map_md.sh
+      # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
+      # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
+      # Mirrors `make workflows-parse`.
+      - name: workflow parse guard
+        run: uv run --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
+
+  python:
+    name: Python (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+          python-version: "3.12"
+          enable-cache: true
+      - name: ruff check
+        run: uvx ruff@0.15.22 check .
+      - name: ruff format --check
+        run: uvx ruff@0.15.22 format --check .

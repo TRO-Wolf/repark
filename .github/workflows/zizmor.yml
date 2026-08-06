@@ -1,0 +1,42 @@
+# Static security analysis of the GitHub Actions workflows themselves (zizmor). Publishes SARIF
+# as a build artifact for triage.
+name: zizmor
+
+on:
+  push:
+    branches: [main]  # PR coverage comes from `pull_request`; this avoids the double run
+    paths: [".github/workflows/**", ".github/zizmor.yml"]
+  pull_request:
+    paths: [".github/workflows/**", ".github/zizmor.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  # Supersede in-flight runs for the same PR; never cancel a main-branch or scheduled run, so
+  # main keeps an unbroken record. Without this, three quick pushes stacked three full runs.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+      - name: Run zizmor
+        # BLOCKING: any finding fails the job. Accepted-risk suppressions (if any) live in
+        # `.github/zizmor.yml` — currently none; a new finding still fails here. All third-party
+        # actions are SHA-pinned. Same zizmor pin as the Makefile (`make workflows-lint`).
+        # `--format sarif` exits non-zero on findings and still writes the SARIF (uploaded below
+        # via `if: always()`).
+        run: uvx zizmor@1.26.1 --format sarif . > zizmor.sarif
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        if: always()  # upload the SARIF for triage even when the gate fails
+        with:
+          name: zizmor-sarif
+          path: zizmor.sarif

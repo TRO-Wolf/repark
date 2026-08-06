@@ -17,14 +17,15 @@ front-door navigation map. See [README.md](README.md) for the overview and
 - `pyproject.toml`, `.python-version` — Python tooling config (Ruff, line 100). The uv workspace
   member list arrives with phase 3.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
-  `make verify` = ci + test; `make preflight` mirrors the full CI surface.
+  `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
+  workflow pins.
 - `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
   oracle; `make install-hooks` wires it).
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
 - `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
-  plane. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
+  plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
   orientation. `AGENTS.md` — the authoritative agent contract. `CONTRIBUTING.md` /
   `SECURITY.md` — public-repo policy.
 
@@ -40,6 +41,7 @@ front-door navigation map. See [README.md](README.md) for the overview and
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
+| Touch CI | [.github/map.md](.github/map.md) |
 | Read the phase-0 brief | [briefs/map.md](briefs/map.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |

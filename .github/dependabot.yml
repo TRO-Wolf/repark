@@ -1,0 +1,38 @@
+# Weekly grouped dependency PRs (security advisories open same-day). Docker is added when the
+# deferred distributed images land. See SECURITY.md for the vuln-reporting policy.
+#
+# DataFusion-family rule: never merge a Dependabot cargo group that bundles a safe bump with a
+# DataFusion/Arrow MAJOR bump — the whole `datafusion` + `datafusion-spark` + `iceberg*` family
+# is pinned to one DataFusion version and must be bumped together, deliberately. Split the group
+# and land targeted bumps instead.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      cargo:
+        patterns: ["*"]
+
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
