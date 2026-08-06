@@ -13,7 +13,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
   opt-in without finalize still refuses (no lazy query-time resolution).
-- `tests.rs` — the ported v1 session test battery (lands with the test-audit commit).
+- `tests.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
+  subset is in `task/port/deferred-tests.md`).
 
 ## Pointers
 

@@ -46,10 +46,14 @@ copy-then-re-home, every commit green; deferred tests tracked in
       generated rename map, diff empty; forced-edit class 6 shared tracing harness; orchestrator
       carve-outs LANDED on the branch as `340211a` (cache-warm.yml + ci.yml rust-cache
       restore steps); awaiting panel verification.
-- [ ] PR-C — `repark-core` (QUEUED, after PR-B): v1 repark-session re-homed (Session,
-      builder, two-phase lifecycle), the three repark-sql hoists, the `SqlDialect` /
-      `SessionExtension` seams + seam tests, the four forced edits (E-2, dialect inversion,
-      extension inversion, E-4), session-test audit + deferred manifest reconciliation.
+- [ ] **PR-C — `repark-core` (IN FLIGHT — assembled 2026-08-06, branch `phase-1/pr-c`,
+      ledger: [p1c-repark-core-ledger.md](p1c-repark-core-ledger.md))**: v1 repark-session
+      re-homed (Session, builder, two-phase lifecycle), the three repark-sql hoists, the
+      `SqlDialect` / `SessionExtension` seams + seam tests, the four forced edits (E-2,
+      dialect inversion, extension hooks, E-4 `TempFallbackAllowed { root }`); session-test
+      audit landed: 68 port-now + 18 deferred (= 86 at the pin, manifest reconciled),
+      workspace `--list` 321 (244 PR-B + 68 + 2 hoisted + 7 new seam/gate tests), zero
+      `#[ignore]`; awaiting panel verification.
 - [ ] Phase close: acceptance per the brief §4 (gates armed + provocation proofs recorded,
       census subset reconciles, omissions ledger in place); dated retrospective note here per
       SEPMO.

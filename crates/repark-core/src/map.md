@@ -7,16 +7,6 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 `spark.sql.catalog.<name>.*` config path (`catalog_config` → `register_configured_catalogs`);
 `s3://`/`s3a://` reads route through `object_store_s3`. See [../map.md](../map.md).
 
-> **Port status (PR-C, staged-then-wired):** wired in `lib.rs` now: `backend.rs`,
-> `catalog_config.rs`, `catalog_state.rs`, `time_travel.rs`, `dialect.rs`. The other files
-> below are staged (present, not yet declared) until the design-§5 forced edits land —
-> `extension.rs` waits with them because its tests drive `ReparkSession`. This note is deleted
-> when the wiring completes. Forced-edit progress on the staged files: E-2 (conditional
-> finalize-time AWS resolution + `session/aws_gate_tests.rs`) and the dialect inversion (`sql`/`sql_with`
-> route through the session-default `SqlDialect`) and the extension hooks (build() runs
-> `configure`/`register` at v1's inline positions) applied; the residual phase-2 sweep + the
-> E-4 call site are in — the staged tree is edit-complete and wires up with the test-audit
-> commit.
 
 ## Contents
 
@@ -95,9 +85,9 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   (snapshot-pinned static provider via `iceberg-datafusion`). Hoisted MOVE-ONLY from the v1 SQL
   crate; the SQL-text rewrite half stays deferred with the phase-2 router.
 - `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins,
-  AWS-free) and `tests.rs` (the ported v1 battery; lands with the PR-C test-audit commit; names
-  port under the declared-rename map — see the deferred-test manifest for the not-yet-ported
-  subset).
+  AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
+  under the declared-rename map — the 18-test deferred subset is in
+  `task/port/deferred-tests.md`).
 
 ## Pointers
 

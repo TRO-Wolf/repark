@@ -9,12 +9,6 @@ trait — the seam that lets a future distributed coordinator slot in without re
 path (distribution is deferred). SQL routing and session-build registration are seam-inverted
 (`SqlDialect` / `SessionExtension`) so the phase-2 doors plug in without touching this crate.
 
-> **Port status (PR-C, staged-then-wired):** the session module tree lands commit-by-commit so
-> every commit compiles. Wired now: `backend`, `catalog_config`, `catalog_state`,
-> `time_travel`, `dialect`. Staged (present, not yet
-> declared in `src/lib.rs` — awaiting the design-§5 forced edits): `session.rs`, `error_map.rs`,
-> `idents.rs`, `object_store_s3.rs`, `read_options.rs`. This note is deleted when the wiring
-> completes.
 
 ## Contents
 

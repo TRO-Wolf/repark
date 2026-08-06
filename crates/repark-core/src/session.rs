@@ -39,6 +39,13 @@ use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionExtension};
 use crate::time_travel::{self, TimeTravelSpec};
+// v1's two test-only re-exports, re-homed with the test module (they rode the v1 crate root,
+// which the module split made this file's parent — `use super::*;` in `session/tests.rs`
+// resolves through here).
+#[cfg(test)]
+pub(crate) use crate::error_map::{EngineErrorKind, classify_datafusion_error};
+#[cfg(test)]
+pub(crate) use crate::idents::reject_path_escape_segment;
 use crate::{
     csv_read_options_from_map, csv_utf8_schema_from_path, engine_err, iceberg_err,
     json_read_options_from_map, object_store_s3, parse_table_identifier_segments,
