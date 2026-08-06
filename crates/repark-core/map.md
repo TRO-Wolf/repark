@@ -40,6 +40,16 @@ path (distribution is deferred). SQL routing and session-build registration are 
   `AwsConfigCredentialProvider` (aws-config default chain → `object_store::CredentialProvider`),
   `build_amazon_s3_store`, `register_bucket_store` (one store under BOTH scheme URLs),
   `parse_s3_bucket` / `is_s3_scheme`.
+- `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
+- `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
+  default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,
+  `NoopSessionExtension`).
+- `src/catalog_state.rs` — the hoisted `CatalogRegistry` + `LocationPolicy` (E-4 temp-root
+  resolution at registration).
+- `src/time_travel.rs` — the hoisted `TimeTravelSpec` parsers + `read_table_at`
+  (snapshot-pinned static provider).
+- `src/map.md` — the per-file source inventory (authoritative detail for everything above, plus
+  the file-backed test module dirs).
 
 ## I want to...
 
@@ -58,6 +68,7 @@ path (distribution is deferred). SQL routing and session-build registration are 
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- Down: [src/map.md](src/map.md) (per-file source inventory).
 - Related: [../repark-iceberg/map.md](../repark-iceberg/map.md) (catalog builders + write knobs),
   [../repark-common/map.md](../repark-common/map.md) (error seed).
 

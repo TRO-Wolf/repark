@@ -631,11 +631,13 @@ impl ReparkSession {
     ) -> Result<(Vec<String>, Vec<String>)> {
         let specs = catalog_config::parse_catalog_specs(config)?;
         // E-2: the late config map can introduce the session's FIRST AWS signal (a late Glue /
-        // S3 Tables catalog on a previously offline session) — same conditional resolution as
-        // the build-time finalize, still never at path-read time.
+        // S3 Tables catalog on a previously offline session) — the same three-class signal set
+        // as `build()` (AWS-backed catalog spec, S3-region conf in either spelling, explicit
+        // opt-in), resolved conditionally here and still never at path-read time.
         let late_aws_signaled = specs
             .iter()
             .any(|spec| matches!(spec.kind, CatalogKind::Glue | CatalogKind::S3Tables))
+            || resolve_s3_region_override(config)?.is_some()
             || config
                 .get(AWS_ENABLE_CONFIG_KEY)
                 .is_some_and(|value| value.trim().eq_ignore_ascii_case("true"));
@@ -717,8 +719,9 @@ impl ReparkSession {
     /// then re-register the provider so the new namespace is visible to queries.
     ///
     /// A `location` property is mirrored onto `location_uri` before the create
-    /// (`repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional, never overwriting an
-    /// explicitly-set key), so the canonical Glue `locationUri` field is set whichever property
+    /// (`repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional, never
+    /// overwriting an explicitly-set key), so the canonical Glue `locationUri` field is set
+    /// whichever property
     /// key the catalog implementation maps (the fork maps `location_uri`; Java's `GlueCatalog`
     /// maps `location` — audit BUG-001 / U2). This is the chokepoint for the PyO3
     /// `create_namespace` and the facade `spark.create_namespace(..., location=…)` paths.
@@ -813,6 +816,7 @@ impl ReparkSession {
     ///
     /// # Errors
     /// Unknown catalog, create failure, or invalid warehouse path → classified [`Error`].
+    #[doc(hidden)]
     pub async fn testing_oob_create_table(
         &self,
         catalog_name: &str,
@@ -851,6 +855,7 @@ impl ReparkSession {
     ///
     /// # Errors
     /// Unknown catalog or drop failure → classified [`Error`].
+    #[doc(hidden)]
     pub async fn testing_oob_drop_table(
         &self,
         catalog_name: &str,
@@ -1300,6 +1305,7 @@ impl ReparkSession {
     ///
     /// # Errors
     /// Unknown catalog/table, unknown snapshot, or ref already exists → classified [`Error`].
+    #[doc(hidden)]
     pub async fn testing_create_ref(
         &self,
         table_name: &str,
@@ -1358,6 +1364,7 @@ impl ReparkSession {
     ///
     /// # Errors
     /// Unknown catalog/table → classified [`Error`].
+    #[doc(hidden)]
     pub async fn testing_list_snapshots(&self, table_name: &str) -> Result<Vec<(i64, i64)>> {
         let parts = parse_table_identifier_segments(table_name).map_err(|message| {
             Error::Analysis(format!(

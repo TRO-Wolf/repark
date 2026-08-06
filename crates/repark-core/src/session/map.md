@@ -12,7 +12,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `aws_gate_tests.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
-  opt-in without finalize still refuses (no lazy query-time resolution).
+  opt-in without finalize still refuses (no lazy query-time resolution); the late config map's
+  region-conf signal class is consulted (dual-spelling conflict fails loud pre-resolution).
 - `tests.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
   subset is in `task/port/deferred-tests.md`).
 

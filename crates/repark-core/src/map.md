@@ -84,8 +84,8 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, and `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`). Hoisted MOVE-ONLY from the v1 SQL
   crate; the SQL-text rewrite half stays deferred with the phase-2 router.
-- `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins,
-  AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
+- `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
+  incl. the late-config region-signal pin, AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
   `task/port/deferred-tests.md`).
 

@@ -78,20 +78,25 @@ OK, exit 0** (backend, catalog_config, read_options, idents, object_store_s3, er
 byte-identical). Rustfmt reflow sites (prefix rewrite pushed v1 lines past 100 cols; patch 04):
 `session.rs` — `scan_pruning`/`file_scoped_rewrite`/`scan_concurrency` binding splits,
 `with_merge_session_knobs(...)` multi-line call, `testing_create_ref(...)` multi-line call,
-`sql_with` signature compaction, `mirror_namespace_location_keys` doc-comment wrap.
+`sql_with` signature compaction. (Correction, verification pass: the
+`mirror_namespace_location_keys` doc comment was previously listed here as a rustfmt wrap —
+rustfmt does not wrap comments, so the prefix rewrite left that doc line >100 cols; it was
+hand-wrapped in the verification-fix commit.)
 
 ## Census
 
-- Full-workspace `cargo test --locked --workspace -- --list` = **321**:
+- Full-workspace `cargo test --locked --workspace -- --list` = **322** (321 at the audit
+  commit; +1 verification-fix gate test):
   - PR-B baseline 244 (repark-common 2 + repark-iceberg catalog 50 + write 191 + fork-pin 1)
   - + 68 ported session tier (session::tests 38 + catalog_config 26 + object_store_s3 4)
   - + 2 hoisted time_travel parser/resolution pins
-  - + 7 NEW additive seam/gate tests (dialect 2, extension 2, session::aws_gate_tests 3).
+  - + 8 NEW additive seam/gate tests (dialect 2, extension 2, session::aws_gate_tests 4 —
+    the 4th is the verification-fix late-config region-signal pin).
 - Name-by-name: {v1 session-tier names at the pin − 18 deferred} under the prefix rules diffs
   **EMPTY** against this repo's `--list` (generated, never hand-written).
 - Deferred: 18 names with target phases in `task/port/deferred-tests.md`; (68 ∪ 18) = 86 =
   the v1 session tier at the pin. Zero `#[ignore]`, zero skipped-in-CI.
-- Test run: 321/321 pass (`make test`); class-6 span tests (repark-iceberg tracing harness)
+- Test run: 322/322 pass (`make test`); class-6 span tests (repark-iceberg tracing harness)
   pass in the full workspace run.
 
 ## Gates
@@ -117,3 +122,9 @@ byte-identical). Rustfmt reflow sites (prefix rewrite pushed v1 lines past 100 c
   seed list had trimmed; needed by ported doc comments).
 - Test-body prefix renames extended to the two `repark_catalog::memory_catalog` sites (same
   mechanical class as the staged probes note; without them the ported test cannot compile).
+- Verification-fix commit (post-selfcheck deltas in `session.rs`, all defect-driven): the four
+  ported `testing_` seams gained the `#[doc(hidden)]` design §3 owed them; the late-catalog
+  AWS signal gained the missing S3-region conf class (`resolve_s3_region_override`, matching
+  `build()`'s three-class set) + a 4th AWS-free gate test; the
+  `mirror_namespace_location_keys` doc line hand-wrapped to ≤100 cols (see the reflow-record
+  correction above).

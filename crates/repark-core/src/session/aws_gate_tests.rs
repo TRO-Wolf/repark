@@ -66,6 +66,40 @@ async fn unfinalized_s3_read_fails_loud_naming_the_finalize_step() {
     );
 }
 
+/// GATE (late signal side, AWS-free) — the LATE config map's S3-region conf belongs to the
+/// late AWS-signal set exactly as it does at `build()`: a conflicting dual-spelling pair fails
+/// loud (naming both keys) BEFORE any chain resolution, proving
+/// `register_late_configured_catalogs` consults the region-conf signal class. The single-key
+/// positive side is not driven end-to-end here for the same reason as the build-time tests —
+/// a signaled finalize would touch the real credential chain.
+#[tokio::test]
+async fn late_config_region_conf_is_consulted_as_an_aws_signal() {
+    let session = ReparkSession::new().unwrap();
+    session.register_configured_catalogs().await.unwrap();
+    let late = std::collections::HashMap::from([
+        (
+            "repark.hadoop.fs.s3a.endpoint.region".to_string(),
+            "us-east-1".to_string(),
+        ),
+        (
+            "spark.hadoop.fs.s3a.endpoint.region".to_string(),
+            "us-west-2".to_string(),
+        ),
+    ]);
+    let error = session
+        .register_late_configured_catalogs(&late)
+        .await
+        .expect_err("a conflicting dual-spelling region pair must fail loud in the late path");
+    assert!(
+        error.to_string().contains("conflicting S3 region config"),
+        "the refusal must be the dual-key conflict error, got: {error}"
+    );
+    assert!(
+        !session.testing_aws_sdk_config_resolved(),
+        "the conflict must refuse before any AWS SDK chain resolution"
+    );
+}
+
 /// GATE (signal side, still AWS-free) — the explicit opt-in conf counts as an AWS signal: the
 /// builder records it, and the UNFINALIZED read still refuses (resolution happens only at
 /// finalize, never lazily at read time). The finalize itself is NOT run here — it would touch
