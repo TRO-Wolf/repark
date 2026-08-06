@@ -15,14 +15,17 @@ ANSI/Trino-style `repark.sql()`, and a **near-drop-in PySpark facade** whose `.s
 dialect. Built on Apache DataFusion + Arrow + our **owned `iceberg-rust` fork** (see the hard rules
 below), with native PyO3 Python bindings. See [README.md](README.md).
 
-**Phase-0 reality:** the Cargo workspace is empty (`members = []`); governance, testing contract,
-mechanical gates, and tier-1 CI run green on the empty tree. Code arrives by porting the private v1
-repository — copy-then-re-home, four phases — per [docs/port/PLAN.md](docs/port/PLAN.md).
+**Current reality (phase 1 in flight):** phase-0 bootstrap is complete — governance, testing
+contract, mechanical gates, and tier-1 CI run green. Phase-1 PR-A armed the workspace: the first
+member is `crates/repark-common` (the error seed), with the crate-DAG and lib.rs guards live.
+Code arrives by porting the private v1 repository — copy-then-re-home, four phases — per
+[docs/port/PLAN.md](docs/port/PLAN.md).
 
 ## Target crate map — where a change will go
 
-The skeleton below is the **target**, documented now so every phase ports into the right home. None
-of these crates exist yet; do not create one ahead of its phase.
+The skeleton below is the **target**, documented so every phase ports into the right home. Only
+`crates/repark-common` (shared error-seed types, landed phase-1 PR-A) exists so far; do not create
+a crate ahead of its phase.
 
 | You will want to change… | Target home | Arrives |
 |---|---|---|
@@ -91,10 +94,11 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     `tokio::spawn`/`spawn_blocking`). Escape = per-call-site
     `#[expect(clippy::disallowed_methods, reason = …)]` stating the lifecycle; never a
     file/crate-wide allow.
-  - The remaining structure gates from v1 (crate layering / `check_crate_dag`, crate-root manifests /
-    `check_lib_rs`, Python thinness / `check_lib_py`, build profiles) **return with the code they
-    gate** in phase 1+ — see [docs/port/PLAN.md](docs/port/PLAN.md). Do not re-invent them ahead of
-    the port; re-home v1's scripts.
+  - *Crate layering* (`scripts/check_crate_dag.py` — the tier-map SSOT) and *crate-root manifests*
+    (`scripts/check_lib_rs.py` — ceilings + EXCEPTIONS SSOT) are **armed** since phase-1 PR-A,
+    dual-wired Makefile + ci.yml. The remaining v1 gates (Python thinness / `check_lib_py`, build
+    profiles) **return with the code they gate** — see [docs/port/PLAN.md](docs/port/PLAN.md).
+    Do not re-invent them ahead of the port; re-home v1's scripts.
 - **`unsafe_code = "forbid"` everywhere except the future `crates/repark-python`**, which will set a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;

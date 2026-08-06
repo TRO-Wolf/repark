@@ -25,10 +25,12 @@ Two user-facing **doors**, no blended parser:
 
 The Iceberg machinery (commit semantics, MERGE, snapshots, evolution) is shared beneath both doors.
 
-**Current state: phase 0 of the port** — governance, testing contract, mechanical gates, and tier-1
-CI are in place on an **empty Cargo workspace**. No crates exist yet. The crate skeleton below is
-the *target*; code arrives by porting the private v1 repository phase by phase — see
-[docs/port/PLAN.md](docs/port/PLAN.md).
+**Current state: phase 1 of the port — engine core (in flight).** Phase 0 (bootstrap) is complete:
+governance, testing contract, mechanical gates, and tier-1 CI are in place and green. Phase-1 PR-A
+armed the Cargo workspace with its first member, `crates/repark-common` (the error seed), plus the
+crate-DAG and lib.rs guards; `repark-iceberg` (PR-B) and `repark-core` (PR-C) follow. The crate
+skeleton below remains the *target*; code arrives by porting the private v1 repository phase by
+phase — see [docs/port/PLAN.md](docs/port/PLAN.md).
 
 <read_order>
 
@@ -172,8 +174,8 @@ tests, `// TODO: add test`, `assert!(is_ok())` as the whole body, `--skip` in CI
 ## Repo layout
 
 - [README.md](README.md) — overview. [AGENTS.md](AGENTS.md) — authoritative agent contract.
-- `crates/` — the Cargo workspace (arrives phase 1; empty members list today). Target skeleton in
-  [AGENTS.md](AGENTS.md) "Target crate map".
+- `crates/` — the Cargo workspace (first member `repark-common` landed in phase-1 PR-A). Target
+  skeleton in [AGENTS.md](AGENTS.md) "Target crate map".
 - `python/` — the `repark` package (arrives phase 3).
 - [docs/](docs/) — [testing.md](docs/testing.md), [port/PLAN.md](docs/port/PLAN.md),
   [adr/](docs/adr/), per-tier manuals in [docs/skills/](docs/skills/),
@@ -188,9 +190,9 @@ tests, `// TODO: add test`, `assert!(is_ok())` as the whole body, `--skip` in CI
 Rustfmt (`max_width=100`, `edition=2024`) + Clippy `all`+`pedantic`, `-D warnings`, `unsafe_code=forbid`
 (except the future `repark-python`). `thiserror` for libs, `anyhow` for binaries; `tracing` for logs;
 no panics in prod — no `unwrap`/`expect` (`with_context()?` / `.ok_or_else(…)?`). The panic/async-spawn
-bans are mechanical (`clippy.toml` `disallowed-methods`); further structure gates (crate layering,
-crate-root manifests, Python thinness) return with the code they gate in phase 1+ — see
-[docs/port/PLAN.md](docs/port/PLAN.md). **House style:** section-function `///` doc blocks
+bans are mechanical (`clippy.toml` `disallowed-methods`); crate layering (`check_crate_dag`) and
+crate-root manifests (`check_lib_rs`) are armed since phase-1 PR-A; Python thinness (`check_lib_py`)
+returns with the Python code in phase 3 — see [docs/port/PLAN.md](docs/port/PLAN.md). **House style:** section-function `///` doc blocks
 banner-wrapped with `///` + space + **91** `=` characters (95 cols); ONE blank line between top-level
 items; banners are hand-authored (rustfmt preserves but never generates them). `Cargo.lock` checked in.
 
