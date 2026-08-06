@@ -2,13 +2,14 @@
 
 ## Purpose
 
-CI/CD and dependency automation. Phase 0 carries only tier 1 (every PR, no secrets,
-GitHub-hosted, read-only token); tier 2 (live AWS, merged code only) and tier 3 (benchmarks)
-land in later phases.
+CI/CD and dependency automation. Phase 1 carries tier 1 (every PR, no secrets, GitHub-hosted,
+read-only token); tier 2 (live AWS, merged code only) and tier 3 (benchmarks) land in later
+phases.
 
 ## Contents
 
-- [workflows/](workflows/map.md) — GitHub Actions (the gates).
+- [workflows/](workflows/map.md) — GitHub Actions (the gates; now includes `audit.yml`
+  cargo-audit CVE scanning; `cache-warm.yml` arrives with PR-B).
 - `dependabot.yml` — weekly grouped dependency PRs (cargo + uv + github-actions; docker added
   later). Carries the DataFusion-family rule: never merge a bundled DF/Arrow major bump — split
   it.
