@@ -1,14 +1,14 @@
 # cargo-deny configuration — license compliance, security advisories, banned/duplicate crates,
 # and source restrictions. Enforced in CI by .github/workflows/cargo-deny.yml.
 # The eventual AWS SDK + arrow + parquet + iceberg dependency tree is large; this is the guard
-# that keeps a GPL-contaminated or yanked transitive dep from sneaking in. Phase 0 has an empty
-# workspace — the config is live so the gate is wired before the first crate lands.
+# that keeps a GPL-contaminated or yanked transitive dep from sneaking in. The config was wired
+# in phase 0, before the first crate landed; the workspace is armed as of phase-1 PR-A.
 
 [advisories]
 version = 2
 # `cargo audit` is the dedicated CVE gate; cargo-deny also checks here.
 yanked = "deny"
-# Empty at phase 0 (no dependencies yet). Any ignore added later must name the advisory, the
+# Empty so far. Any ignore added later must name the advisory, the
 # reason it is unreachable/acceptable, and the revisit trigger — and be mirrored in
 # .cargo/audit.toml (both gates scan the same tree).
 ignore = []

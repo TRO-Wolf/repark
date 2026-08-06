@@ -35,7 +35,9 @@ copy-then-re-home, every commit green; deferred tests tracked in
       ledger: [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md))**:
       `[workspace.dependencies]` pins, `crates/repark-common` (error seed, 2 tests),
       CARGO_EMPTY guard removal, crate-DAG + lib-rs gates with provocation proofs,
-      audit/cache-warm workflows return, design doc + this slate's docs in-repo.
+      audit.yml workflow returns (cache-warm.yml deferred to PR-B together with the ci.yml
+      rust-cache restore steps — see `.github/workflows/map.md`), design doc + this slate's
+      docs in-repo.
 - [ ] PR-B — `repark-iceberg` (QUEUED): fork `[patch.crates-io]` pin + fork-pin proof test;
       v1 catalog → `src/catalog/`, v1 write → `src/write/`; declared-rename unit, 243 tests
       under the generated rename map.

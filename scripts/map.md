@@ -29,7 +29,8 @@ Repository helper scripts wired into the dev workflow.
   `#[cfg(test)] mod {…}` (file-backed only; same-line `#[cfg(test)] mod … {` also fails);
   non-test line ceilings with an EXCEPTIONS-with-reason table in the `.py` (SSOT; ratchet down
   only; empty at phase-1 PR-A). Dual-wired: `make check-lib-rs` (in `make ci`) AND a ci.yml
-  `guards`-job step; pre-commit via `install-hooks`. Pure text — sub-second. EXCEPTIONS reason
+  `guards`-job step; pre-commit via `install-hooks` and `.pre-commit-config.yaml`
+  (`lib-rs-guard`). Pure text — sub-second. EXCEPTIONS reason
   strings stay ≤100 cols (ruff E501; keep ruff-format clean).
 
 Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/port/PLAN.md)):

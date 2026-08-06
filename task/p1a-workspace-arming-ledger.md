@@ -21,7 +21,7 @@ the same PR:
   provocation proof.
 - Docs: `docs/design/session-api.md` + map, `briefs/phase-1-engine-core.md` + map,
   `task/port/deferred-tests.md` scaffold, todo.md phase-1 entries, this ledger; map.md lockstep.
-- CI: audit.yml + cache-warm.yml return.
+- CI: audit.yml returns. (cache-warm.yml deferred to PR-B — see Deviations D-1.)
 
 Out of scope: the fork `[patch.crates-io]` pin (PR-B), any session/catalog/write code (PR-B/C).
 
@@ -33,14 +33,18 @@ Out of scope: the fork `[patch.crates-io]` pin (PR-B), any session/catalog/write
    ported + wired.
 3. **Docs + ledgers** — design doc, brief, manifests, todo, map.md lockstep.
 
-*(Integrator records actual SHAs and any split/merge of the series here.)*
+**Actual series (five commits over `main`):** the three planned commits landed as
+`475c975` (literal copy + workspace arming), `e5348ae` (crate-DAG + lib.rs manifest gates),
+`110bdf8` (design doc, brief, manifests, ledgers); the orchestrator then applied two carve-out
+commits: `68d1ed7` (gate arming — CARGO_EMPTY guard removal, Makefile/ci.yml wiring, audit.yml)
+and `52a5289` (AGENTS.md target-map correction + brief status sync). See Deviations D-3.
 
 ## Gate results (integrator fills)
 
 | Gate | Result | Evidence |
 |---|---|---|
-| `make ci` per commit | PASS (rc=0 on all three commits) | integrator run, 2026-08-06; CARGO_EMPTY guard auto-activated real cargo gates once `repark-common` joined the workspace |
-| `make preflight` (PR head) | PASS (rc=0) | integrator run, 2026-08-06, pre-carve-out Makefile |
+| `make ci` per commit | PASS (rc=0 on all five commits) | integrator run 2026-08-06 on `475c975`/`e5348ae`/`110bdf8` (CARGO_EMPTY guard auto-activated real cargo gates once `repark-common` joined the workspace); fixer run 2026-08-06 on `68d1ed7` (detached worktree, rc=0, post-carve-out Makefile) and at PR head |
+| `make preflight` (PR head) | PASS (rc=0) | integrator run 2026-08-06 (pre-carve-out Makefile); fixer re-run 2026-08-06 at PR head on the carve-out (post-`68d1ed7`) Makefile, rc=0 |
 | `cargo test --workspace` (2 tests, renamed) | PASS — 2 passed / 0 failed | `repark_common` unit tests via file-backed `src/tests.rs` |
 | forbidden-literal sweep (tree + `git log -p`) | CLEAN (0 hits) | case-insensitive grep over each staged diff and `git log -p main..HEAD` |
 | map.md lockstep (`check_map_md.sh`) | PASS | pre-commit hook fired on every commit |
@@ -58,7 +62,22 @@ Per docs/testing.md: each armed gate demonstrated firing on a deliberately-broke
 
 ## Deviations / STOPs
 
-*(none recorded yet)*
+- **D-1 (scope): cache-warm.yml deferred to PR-B.** Warming a cache nothing restores is waste;
+  the ci.yml rust-cache restore steps and the heavy dependency graph both arrive with
+  repark-iceberg in PR-B, so cache-warm.yml moves there with them. Decision recorded in
+  `.github/workflows/map.md` ("Not ported yet"); brief §2 PR-A and todo.md carry the same note.
+- **D-2 (pin fidelity): two sanitization edits beyond the crate-prefix rename** in
+  `crates/repark-common`: (a) `Cargo.toml` `description` rewritten from v1's
+  "Shared domain + error types for the repark engine." to
+  "Shared error-seed types (Error / ErrorClass / Result) for the repark engine." — v1's crate
+  carried more than the error seed; the ported crate does not, and the V2 target map reserves
+  the broader description for later crates; (b) `src/map.md` drops v1's "(r26 LR1 hoist)"
+  annotation — a v1-internal slate reference with no referent in this repo. Both deliberate;
+  no code content diverges from the pin.
+- **D-3 (process): the planned three-commit series shipped as five** — the two orchestrator
+  carve-out commits (`68d1ed7` gate arming, `52a5289` AGENTS/brief sync) landed on the branch
+  rather than as separate integrator pushes. Every-commit-green evidenced for all five (gate
+  table above).
 
 ## Retrospective
 

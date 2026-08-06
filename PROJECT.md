@@ -107,9 +107,11 @@ tasks. The PySpark facade's year-one job: migrate existing pipelines without rew
 
 ## Current state (2026-08-06)
 
-**Phase 0 of the port — bootstrap.** The public repo carries governance, the testing contract,
-mechanical gates, map.md discipline, SEPMO, and tier-1 CI, all green on an **empty Cargo
-workspace**. No crates yet. Code arrives by porting the private v1 repository copy-then-re-home in
+**Phase 1 of the port — engine core (in flight).** Phase 0 (bootstrap) is complete: governance,
+the testing contract, mechanical gates, map.md discipline, SEPMO, and tier-1 CI are in place and
+green. Phase-1 PR-A armed the Cargo workspace: `crates/repark-common` (the error seed) is the
+first member, with the crate-DAG and lib.rs guards live. `repark-iceberg` (PR-B) and
+`repark-core` (PR-C) follow. Code arrives by porting the private v1 repository copy-then-re-home in
 four phases (0 bootstrap → 1 engine core → 2 the two SQL doors → 3 Python facade + parity =
 milestone one); v1 freezes to bugfix-only at milestone one. **Public ≠ released:** the API-forever
 clock starts at the first tagged PyPI release, held until milestone one. See

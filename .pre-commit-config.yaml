@@ -34,3 +34,8 @@ repos:
         entry: scripts/check_crate_dag.sh
         language: script
         pass_filenames: false
+      - id: lib-rs-guard
+        name: lib.rs thinness guard
+        entry: scripts/check_lib_rs.sh
+        language: script
+        pass_filenames: false

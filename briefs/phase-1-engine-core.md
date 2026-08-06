@@ -61,7 +61,10 @@ tree.
   ADR-0005 pointer if wanted, AGENTS.md exec/io target-map correction + todo.md check_lib_py
   phase fix (orchestrator applies), deferred-test manifest scaffold at
   `task/port/deferred-tests.md`, task/todo.md phase-1 unit entries, map.md lockstep everywhere.
-- CI: audit.yml + cache-warm.yml return (workflows/map.md promise); ci.yml detect classifier
+- CI: audit.yml returns (workflows/map.md promise). *Deviation, recorded in the PR-A ledger:*
+  cache-warm.yml is deferred to PR-B together with the ci.yml rust-cache restore steps (warming
+  a cache nothing restores is waste; the heavy dependency graph arrives with repark-iceberg —
+  see `.github/workflows/map.md`). ci.yml detect classifier
   stays deferred until rust jobs are actually slow (record in workflows/map.md with a trigger:
   "returns when rust-test exceeds ~3 min").
 

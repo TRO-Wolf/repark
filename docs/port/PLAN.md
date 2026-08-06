@@ -19,7 +19,7 @@ increments on top of a faithful copy, never as a rewrite. Two invariants:
 
 ## The four phases
 
-- **Phase 0 — bootstrap (this phase).** Gates before code: testing contract, mechanical gates,
+- **Phase 0 — bootstrap (complete).** Gates before code: testing contract, mechanical gates,
   map.md discipline, agent contracts, SEPMO, tier-1 CI — ported and green on an empty workspace.
   Post-merge: branch protection with required checks; registry-side trusted-publisher
   configuration (maintainer action, `docs/release.md`).
