@@ -95,9 +95,9 @@ tree.
   declared-rename commit so every commit stays green; the ledger documents both edited spans and
   the fidelity script lists them as declared-edit files. Rustfmt reflow of over-100-col rewrite
   sites is sanctioned: fidelity pre-fmt (recorded) → cargo fmt → enumerate sites in the ledger.
-  Commit 3 additionally syncs the in-repo docs: this brief and
-  docs/design/session-api.md pick up the census correction (241/50/191), the ARN ruling, and
-  forced-edit class 6.
+  Commit 3 additionally syncs the in-repo docs: docs/design/session-api.md picks up the
+  census correction (241/50/191) and forced-edit class 6; the ARN ruling is recorded in this
+  brief only (the ruling bullet above is its home).
 - deny/audit advisory entries return only if `cargo deny`/`cargo audit` actually flag the new
   dependency graph (each entry justified in-line, v1 wording).
 

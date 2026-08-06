@@ -29,7 +29,12 @@ docs/testing.md relocation discipline; the old→new map was generated from `--l
    prefix rewrite (`repark_catalog::` call → `crate::catalog::`) and imports narrowed to the
    direct set (`DataFusionError` not imported; the ported `# Errors` intra-doc link is kept
    verbatim and did not lint under the `make ci` surface). Re-exported at module + crate root.
-3. (this commit) — fork-pin proof test + ledgers + brief/design census sync.
+3. `e757f92` — test(iceberg): fork-pin proof test; ledgers, deferred-test manifest, brief
+   census correction.
+4. `340211a` — ci: rust-cache restore + cache-warm pre-warmer (the PR-B pairing). Orchestrator
+   carve-out commit (`.github/workflows/cache-warm.yml` new, `ci.yml` rust-cache restore steps,
+   both `.github/` map.md files); deferred from PR-A, landed 2026-08-06 17:08 after assembly
+   close.
 
 Every commit: `make ci` green + pre-commit hook green.
 
@@ -91,8 +96,12 @@ right-hand column: **EMPTY**. Zero deferred, zero `#[ignore]`. Commit 3 then add
 
 ## Gate results
 
-- [x] `make ci` per commit: green (commits 1–3).
-- [x] `make preflight` at PR head: green (recorded at assembly close).
+- [x] `make ci` per commit: green (commits 1–3); re-run green at the true branch head
+      (2026-08-06 verification pass, includes `340211a`).
+- [x] `make preflight` green at assembly close (commit 3, 2026-08-06 17:06 — BEFORE `340211a`
+      landed at 17:08). Head coverage for the workflow-only commit 4: `make workflows-lint`
+      (parse + zizmor over all workflows, incl. `cache-warm.yml` + edited `ci.yml`) re-run
+      green at the verification pass, 2026-08-06.
 - [x] Forbidden-literal sweep (tree + `git log -p` of the series): zero hits (narrowed ARN
       pattern per the 2026-08-06 ruling; the synthetic example-account fixture ARN in
       `catalog/tests.rs` is sanctioned and untouched).
