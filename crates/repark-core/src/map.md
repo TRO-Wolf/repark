@@ -12,7 +12,8 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 > below are staged (present, not yet declared) until the design-§5 forced edits land —
 > `extension.rs` waits with them because its tests drive `ReparkSession`. This note is deleted
 > when the wiring completes. Forced-edit progress on the staged files: E-2 (conditional
-> finalize-time AWS resolution + `session/aws_gate_tests.rs`) applied.
+> finalize-time AWS resolution + `session/aws_gate_tests.rs`) and the dialect inversion (`sql`/`sql_with`
+> route through the session-default `SqlDialect`) applied.
 
 ## Contents
 

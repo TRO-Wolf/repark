@@ -11,8 +11,9 @@
 //! All execution routes through the [`ExecutionBackend`] seam, so a future distributed coordinator
 //! can slot in without reworking the write path (distribution is deferred — see [`backend`]).
 //!
-//! `sql` routes through `repark-sql`, which intercepts the Iceberg-write forms (today: CTAS,
-//! decomposed into create + insert) and passes everything else to DataFusion. Catalogs configure
+//! `sql` routes through the session-default [`SqlDialect`] (phase-cut inversion, design §3 —
+//! plain DataFusion in phase 1; the Spark door's statement router returns as a phase-2 dialect
+//! impl on the same seam). Catalogs configure
 //! two ways: directly (`register_iceberg_catalog` with a `repark-catalog` builder — memory, Glue,
 //! S3 Tables) or through Spark-style `spark.sql.catalog.<name>.*` config on the builder
 //! ([`catalog_config`] parses; [`ReparkSession::register_configured_catalogs`] registers).
@@ -50,7 +51,10 @@ use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_common::{Error, Result};
-use repark_sql::{CatalogRegistry, LocationPolicy, TimeTravelSpec};
+
+use crate::catalog_state::{CatalogRegistry, LocationPolicy};
+use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
+use crate::time_travel::TimeTravelSpec;
 
 /// ===========================================================================================
 /// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
@@ -156,11 +160,13 @@ const DEFAULT_MEMORY_LIMIT_BYTES: usize = 8 * BYTES_PER_GB;
 /// [`.memory_limit_bytes(n)`](Self::memory_limit_bytes) at build). `n = 0` opts out (unbounded
 /// pool). Other unset knobs use DataFusion's defaults.
 /// ===========================================================================================
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct ReparkSessionBuilder {
     memory_limit_bytes: Option<usize>,
     batch_size: Option<usize>,
     target_partitions: Option<usize>,
+    /// The session-default [`SqlDialect`] (phase-cut seam slot). `None` → [`DataFusionDialect`].
+    sql_dialect: Option<Arc<dyn SqlDialect>>,
     /// The full Spark-style `.config(key, value)` map. Engine knobs above are set through the typed
     /// setters; this map additionally drives `spark.sql.catalog.<name>.*` catalog registration at
     /// session construction (see [`ReparkSession::register_configured_catalogs`]). Non-catalog keys
@@ -168,7 +174,29 @@ pub struct ReparkSessionBuilder {
     config: HashMap<String, String>,
 }
 
+impl std::fmt::Debug for ReparkSessionBuilder {
+    /// Manual, non-leaking `Debug` (the seam slots are `dyn` trait objects): knob fields only.
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReparkSessionBuilder")
+            .field("memory_limit_bytes", &self.memory_limit_bytes)
+            .field("batch_size", &self.batch_size)
+            .field("target_partitions", &self.target_partitions)
+            .field("config", &self.config)
+            .finish_non_exhaustive()
+    }
+}
+
 impl ReparkSessionBuilder {
+    /// Install the session-default [`SqlDialect`] (phase-cut seam, design §3): every
+    /// [`ReparkSession::sql`] call routes through it. Unset → [`DataFusionDialect`] (plain
+    /// `SessionContext::sql`). A door with its own statement router installs its dialect here;
+    /// [`ReparkSession::sql_with`] runs a one-off dialect without changing the session default.
+    #[must_use]
+    pub fn with_sql_dialect(mut self, dialect: Arc<dyn SqlDialect>) -> Self {
+        self.sql_dialect = Some(dialect);
+        self
+    }
+
     /// Record a single Spark-style `.config(key, value)` pair (PySpark `.config`). Catalog keys
     /// (`spark.sql.catalog.<name>.*`) are consumed at [`build`](Self::build); other keys are kept
     /// for potential future use and otherwise ignored.
@@ -350,6 +378,9 @@ impl ReparkSessionBuilder {
 
         Ok(ReparkSession {
             backend: Arc::new(SingleNodeBackend::new(context)),
+            dialect: self
+                .sql_dialect
+                .unwrap_or_else(|| Arc::new(DataFusionDialect)),
             catalogs: Arc::new(RwLock::new(CatalogRegistry::new())),
             catalog_specs: Arc::new(catalog_specs),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
@@ -370,6 +401,9 @@ impl ReparkSessionBuilder {
 #[derive(Clone)]
 pub struct ReparkSession {
     backend: Arc<dyn ExecutionBackend>,
+    /// The session-default [`SqlDialect`] every [`sql`](Self::sql) call routes through
+    /// (phase-cut inversion, design §3). [`DataFusionDialect`] unless the builder installed one.
+    dialect: Arc<dyn SqlDialect>,
     /// iceberg `Catalog` handles by registered name. Shared (the session is cheaply cloned) and
     /// interior-mutable so catalogs can be registered after construction. Read as a cheap clone per
     /// `sql` call so no lock is held across an `await`.
@@ -422,10 +456,11 @@ impl ReparkSession {
         self.backend.session_context()
     }
 
-    /// Run a Spark-SQL string and return the resulting [`DataFrame`] (PySpark `spark.sql`).
+    /// Run a SQL string and return the resulting [`DataFrame`] (PySpark `spark.sql`).
     ///
-    /// Routes through `repark-sql`, which intercepts the Iceberg-write forms (today: CTAS,
-    /// decomposed into create + insert) and passes everything else to DataFusion.
+    /// Routes through the session-default [`SqlDialect`] (the phase-cut inversion, design §3):
+    /// [`DataFusionDialect`] unless the builder installed one. The phase-2 Spark door's dialect
+    /// restores v1's statement interception (CTAS, MERGE INTO, ALTER, …) on this same seam.
     ///
     /// # Errors
     /// Returns the classified [`Error`]: [`Error::Parse`] on a syntax error, [`Error::Analysis`]
@@ -433,10 +468,34 @@ impl ReparkSession {
     /// [`Error::NotImplemented`] on a deterministic scope gate, [`Error::Iceberg`] on another
     /// iceberg-origin failure (kind-first message), [`Error::DataFusion`] on execution failure.
     pub async fn sql(&self, query: &str) -> Result<DataFrame> {
+        let dialect = Arc::clone(&self.dialect);
+        self.sql_with(&dialect, query).await
+    }
+
+    /// Run a SQL string under an EXPLICIT dialect, leaving the session default untouched — two
+    /// doors sharing one session (ADR-0002 "one test row per door"). The dialect receives the
+    /// same per-call [`EngineContext`] snapshot `sql` builds.
+    ///
+    /// # Errors
+    /// Identical classification to [`Self::sql`] — the [`engine_err`] fold is session-side, so
+    /// every dialect gets the same error taxonomy.
+    pub async fn sql_with(
+        &self,
+        dialect: &Arc<dyn SqlDialect>,
+        query: &str,
+    ) -> Result<DataFrame> {
         // Clone the registry (cheap — keys + `Arc`s) so no lock is held across the `await`.
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
-        repark_sql::execute_with_read_only(self.context(), &catalogs, query, &read_only)
+        dialect
+            .execute(
+                EngineContext {
+                    ctx: self.context(),
+                    catalogs: &catalogs,
+                    read_only: &read_only,
+                },
+                query,
+            )
             .await
             .map_err(engine_err)
     }
