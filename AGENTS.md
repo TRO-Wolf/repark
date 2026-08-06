@@ -27,8 +27,8 @@ of these crates exist yet; do not create one ahead of its phase.
 | You will want to change… | Target home | Arrives |
 |---|---|---|
 | Lazy-frame IR, planning, optimizer hooks, `Session` | `crates/repark-core` | phase 1 |
-| Execution config, spill, out-of-core | `crates/repark-exec` | phase 1 |
-| Inference readers (CSV, Excel, JSON) | `crates/repark-io` | phase 1 |
+| Execution config, spill, out-of-core | `crates/repark-exec` | later — extracted when its code arrives |
+| Inference readers (CSV, Excel, JSON) | `crates/repark-io` | later — extracted when its code arrives |
 | Catalogs (Glue, S3 Tables) + Iceberg DML + maintenance; adapter over the owned fork | `crates/repark-iceberg` | phase 1 |
 | Postgres / MSSQL connectivity | `crates/repark-connect` | later |
 | ANSI SQL front end (native dialect) | `crates/repark-sql` | phase 2 |
@@ -42,6 +42,11 @@ of these crates exist yet; do not create one ahead of its phase.
 v1 crates re-home rather than rewrite (catalog + write → `repark-iceberg`; the Spark parts of the v1
 functions/sql crates → `repark-spark`; the smart CSV reader → `repark-io`). DataFusion remains the
 engine under everything.
+
+*Correction (2026-08-06):* `repark-exec` and `repark-io` were originally listed as phase 1. The
+settled phase-1 design ([docs/design/session-api.md](docs/design/session-api.md) §1) deliberately
+does not create them — no v1 code exists for either (execution config is ~40 lines inside the
+Session builder). Each is extracted later, when its code actually arrives.
 
 ## Verify before "done"
 

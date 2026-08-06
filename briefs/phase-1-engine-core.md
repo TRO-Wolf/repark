@@ -1,7 +1,7 @@
 # Phase-1 execution brief — RePark V2 (engine core)
 
-**Date:** 2026-08-06 · **Status:** DRAFT, awaiting operator approval of (a) the design doc and
-(b) the port-source pin. No implementation runs until both are settled.
+**Date:** 2026-08-06 · **Status:** IN EXECUTION — design approved and port-source pin resolved
+2026-08-06; PR-A in flight.
 
 Phase 1 lands the engine core in the public repo per
 [docs/design/session-api.md](../docs/design/session-api.md) (the settled Session-API design):
