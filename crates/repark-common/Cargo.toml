@@ -1,0 +1,15 @@
+[package]
+name = "repark-common"
+description = "Shared error-seed types (Error / ErrorClass / Result) for the repark engine."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror.workspace = true

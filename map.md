@@ -6,14 +6,16 @@ RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceb
 with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). This is the
 front-door navigation map. See [README.md](README.md) for the overview and
 [AGENTS.md](AGENTS.md) for the agent contract. The repo is at
-**phase 0** of the port: gates before code — the workspace is intentionally empty of crates.
+**phase 1** of the port: the engine core is arriving — the workspace has its first member
+(`crates/repark-common`).
 
 ## Contents
 
 - `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
-  `.cargo/` — Rust workspace + tooling. `members = []` until phase 1; workspace lints
-  (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans are already in
-  force for the first crate that lands.
+  `.cargo/` — Rust workspace + tooling. `[workspace.dependencies]` is the single version table;
+  workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
+  are in force.
+- `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version` — Python tooling config (Ruff, line 100). The uv workspace
   member list arrives with phase 3.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
@@ -42,7 +44,8 @@ front-door navigation map. See [README.md](README.md) for the overview and
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
 | Touch CI | [.github/map.md](.github/map.md) |
-| Read the phase-0 brief | [briefs/map.md](briefs/map.md) |
+| Read the phase briefs | [briefs/map.md](briefs/map.md) |
+| Navigate the engine crates | [crates/map.md](crates/map.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
@@ -58,6 +61,6 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 
 | Symptom | First check |
 |---|---|
-| A cargo target loudly no-ops | Expected at phase 0 — the workspace has no members; the guard is documented in the Makefile header |
+| A cargo target loudly no-ops | Should no longer happen — the workspace has members; see the Makefile header |
 | Pre-commit hook rejects a commit | `bash scripts/check_map_md.sh` — the touched directory's map.md must be staged in the same commit |
 | A gate is unclear | `make help`; [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) are authoritative |

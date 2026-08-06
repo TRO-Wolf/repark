@@ -5,16 +5,17 @@
 # DataFusion + Arrow + the owned iceberg-rust fork. See README.md for the front door and
 # docs/port/PLAN.md for the port plan.
 #
-# Phase 0: the workspace is deliberately EMPTY — gates before code. Members arrive in phase 1
-# (target skeleton: repark-core, repark-exec, repark-io, repark-iceberg, repark-connect,
-# repark-sql, repark-spark, repark-ml, repark-python). The [workspace.dependencies] table and
-# the [patch.crates-io] fork pin for the iceberg* family return with the first crate; one
-# DataFusion version is pinned across the datafusion + datafusion-spark + iceberg* family.
+# Phase 1 (in progress): members arrive crate by crate (target skeleton: repark-common,
+# repark-iceberg, repark-core this phase; repark-connect, repark-sql, repark-spark, repark-ml,
+# repark-python in later phases). One DataFusion version is pinned across the
+# datafusion + datafusion-spark + iceberg* family.
 # ===========================================================================================
 
 [workspace]
 resolver = "3"
-members = []
+members = [
+  "crates/repark-common",
+]
 
 [workspace.package]
 edition = "2024"
@@ -35,6 +36,62 @@ unsafe_code = "forbid"
 [workspace.lints.clippy]
 all = { level = "warn", priority = -1 }
 pedantic = { level = "warn", priority = -1 }
+
+# -------------------------------------------------------------------------------------------
+# Shared dependencies. One DataFusion version across datafusion + datafusion-spark + iceberg*.
+# Pins carried from the private v1 repository (verified there against crates.io for the
+# iceberg 0.9.1 release line and the DF 54.1 / Arrow 58.4 family catch-up); live pins below
+# are the SSOT:
+#   iceberg 0.9.1            → arrow-* ^58.4, parquet ^58.4  (via owned fork rev)
+#   iceberg-datafusion 0.9.1 → datafusion ^54.1, parquet ^58.4
+#   datafusion 54.1.0        → arrow ^58.4, parquet ^58.4
+#   datafusion-spark 54.1.0  → datafusion ^54.1
+# See AGENTS.md "Version-pin contract" for the bump procedure. Heavy entries stay inert until a
+# crate references them with `<dep>.workspace = true`.
+# -------------------------------------------------------------------------------------------
+[workspace.dependencies]
+# Error handling: thiserror for libs.
+thiserror = "2"
+# Async.
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+async-trait = "0.1"
+# Streams (collecting iceberg scan streams) + unique names for scratch tables / data files /
+# commit operation-ids (ENGINE_CONTRACT §8 stamping). v4: pure-random, no clock dependency.
+futures = "0.3"
+uuid = { version = "1", features = ["v4"] }
+# Foundation — one unified version family (DataFusion 54.1 / Arrow 58.4).
+datafusion = "54.1.0"
+datafusion-spark = "54.1.0"
+arrow = "58.4"
+arrow-array = "58.4"
+arrow-schema = "58.4"
+parquet = "58.4"
+# S3 object-store reads (`s3://` warehouses + `s3a://` Spark bronze). `object_store` is
+# DataFusion's object-store abstraction: it MUST stay at the DataFusion 54.1 family's version
+# (lockfile-resolved), so the version is workspace-pinned; the `aws` feature adds the S3 client
+# DataFusion does not enable itself. `aws-config` + `aws-credential-types` bridge the AWS
+# default credential chain into an `object_store` `CredentialProvider` — `from_env` alone
+# can't read a shared-credentials file.
+object_store = { version = "0.13", features = ["aws"] }
+aws-config = "1"
+aws-credential-types = "1"
+url = "2"
+# Internal crates. Each entry carries `version` + `default-features = false`.
+# `default-features = false` is the one-way door: retrofitting it after internal feature flags
+# proliferate is a workspace-wide breaking change (rust-lang/cargo#11329), so it lands now
+# while the internal feature surface is empty. The `version` matches
+# `[workspace.package] version` above and buys forward-compat only: the workspace is
+# `publish = false`, so it is not a publishability claim.
+repark-common = { path = "crates/repark-common", version = "0.0.0", default-features = false }
+
+# -------------------------------------------------------------------------------------------
+# The iceberg* family (iceberg, iceberg-datafusion, iceberg-catalog-glue,
+# iceberg-catalog-s3tables, iceberg-storage-opendal) and its `[patch.crates-io]` fork pin are
+# DELIBERATELY DEFERRED to the PR that lands `crates/repark-iceberg`: the workspace never names
+# an iceberg version without the owned-fork patch in the same manifest, so no iceberg crate can
+# ever resolve unpatched from the registry (ADR-0001 / ADR-0002). Land the five
+# `[workspace.dependencies]` entries and the five `[patch.crates-io]` lines together.
+# -------------------------------------------------------------------------------------------
 
 # -------------------------------------------------------------------------------------------
 # Build profiles (carried from the private v1 repository). Profiles are architecture — every
