@@ -30,6 +30,7 @@ use iceberg::{Catalog, NamespaceIdent};
 // === r24 P7: incremental catalog provider =====================================================
 // PERF-07 hook API (invalidate / rebuild). OBS1 may instrument later — additive only.
 mod builders;
+mod catalog_ops;
 mod location;
 mod metadata_projection;
 mod provider;
@@ -39,6 +40,9 @@ pub use provider::{
     ReparkCatalogProvider, drop_catalog_namespace_from_provider, invalidate_catalog_namespaces,
     rebuild_catalog_provider,
 };
+// Hoisted from v1 repark-sql/catalog_ops.rs (phase-1 PR-B, move-only): the session
+// `refresh_catalog_provider` escape hatch's engine-side adapter.
+pub use catalog_ops::reregister_catalog_provider;
 // r25 T2 item 0: projection wrap for fork metadata-table providers (registered via provider).
 pub use builders::{glue_catalog, memory_catalog, s3tables_catalog};
 pub use location::{

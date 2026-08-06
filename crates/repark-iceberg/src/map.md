@@ -10,7 +10,8 @@ Source for `repark-iceberg` — two independent module trees ported from v1 crat
 - `lib.rs` — thin manifest: `pub mod catalog; pub mod write;` + the union of the two v1
   crate-root re-export lists (public names unchanged).
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
-  registration, scheme-based `FileIO` selection. See [catalog/map.md](catalog/map.md).
+  registration, scheme-based `FileIO` selection, and the hoisted `reregister_catalog_provider`
+  session-refresh adapter (`catalog_ops.rs`). See [catalog/map.md](catalog/map.md).
 - `write/` — MERGE INTO / append / overwrite / ALTER / snapshot refs over the owned fork.
   See [write/map.md](write/map.md).
 - `test_tracing.rs` — `cfg(test)`-only shared tracing harness (one global subscriber, both

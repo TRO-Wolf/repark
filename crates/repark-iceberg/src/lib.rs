@@ -24,8 +24,8 @@ pub use catalog::{
     build_iceberg_catalog_provider, drop_catalog_namespace_from_provider, file_io_for_location,
     glue_catalog, invalidate_catalog_namespaces, list_namespace_names, list_table_names,
     memory_catalog, mirror_namespace_location_keys, rebuild_catalog_provider,
-    register_iceberg_catalog, resolve_namespace_location, s3tables_catalog,
-    storage_factory_for_location,
+    register_iceberg_catalog, reregister_catalog_provider, resolve_namespace_location,
+    s3tables_catalog, storage_factory_for_location,
 };
 
 // v1 repark-write crate-root surface (names unchanged).

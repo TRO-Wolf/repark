@@ -14,6 +14,12 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   O(1) via `invalidate_catalog_namespaces`). Live list-on-access helpers `list_table_names` /
   `list_namespace_names` (no DF snapshot; `CATALOG_LISTING_STRATEGY = "list-on-access"`) power
   the Spark Catalog facade. Module decls + the public re-export list (names unchanged from v1).
+- `catalog_ops.rs` — `reregister_catalog_provider(ctx, catalog, name)`: the session
+  `refresh_catalog_provider` escape hatch's engine-side adapter (full O(databases) rebuild via
+  `rebuild_catalog_provider`). Hoisted MOVE-ONLY from v1 `repark-sql/src/catalog_ops.rs`; the
+  rest of that v1 file (P11 refusals, namespace resolution, O(1) reregister helpers) ports with
+  the SQL layer in phase 2. No direct tests here — v1 coverage is session-level and ports in
+  PR-C.
 - `builders.rs` — `memory_catalog(warehouse)` (AWS-free in-memory catalog over a local-FS
   warehouse), `glue_catalog(props)` (primary; `warehouse` required), `s3tables_catalog(props)`
   (secondary; `table_bucket_arn` required) — both AWS builders validate the required prop
