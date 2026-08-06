@@ -123,15 +123,15 @@ impl CredentialProvider for AwsConfigCredentialProvider {
 /// config file → IMDS, resolved at finalize). Credentials are bridged via
 /// [`AwsConfigCredentialProvider`].
 ///
-/// This function no longer touches AWS itself (the chain is pre-resolved); it is still
-/// separated from [`register_bucket_store`] so tests register an in-memory store and never
-/// need an SDK config.
+/// This function no longer touches AWS itself (the chain is pre-resolved, so it is sync now);
+/// it is still separated from [`register_bucket_store`] so tests register an in-memory store
+/// and never need an SDK config.
 ///
 /// # Errors
 /// Returns [`Error::DataFusion`] if no region can be resolved, the resolved config carries no
 /// credentials provider, or the `object_store` builder rejects the configuration.
 /// ===========================================================================================
-pub(crate) async fn build_amazon_s3_store(
+pub(crate) fn build_amazon_s3_store(
     bucket: &str,
     region_override: Option<&str>,
     sdk_config: &SdkConfig,

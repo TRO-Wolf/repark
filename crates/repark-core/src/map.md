@@ -14,7 +14,9 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 > when the wiring completes. Forced-edit progress on the staged files: E-2 (conditional
 > finalize-time AWS resolution + `session/aws_gate_tests.rs`) and the dialect inversion (`sql`/`sql_with`
 > route through the session-default `SqlDialect`) and the extension hooks (build() runs
-> `configure`/`register` at v1's inline positions) applied.
+> `configure`/`register` at v1's inline positions) applied; the residual phase-2 sweep + the
+> E-4 call site are in — the staged tree is edit-complete and wires up with the test-audit
+> commit.
 
 ## Contents
 

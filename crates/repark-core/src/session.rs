@@ -1,44 +1,25 @@
 //! The `ReparkSession` equivalent.
 //!
-//! Constructs the DataFusion [`SessionContext`], configures the memory pool, registers the
-//! Spark-compatible functions (`repark-functions`) and the TA window UDFs (`repark-ta` — `ta_ema`,
-//! `ta_adx`, `ta_bbands_*`, … callable from SQL `OVER (…)` / the `DataFrame` API), holds the iceberg
-//! `Catalog` handles
+//! Constructs the DataFusion [`SessionContext`] (memory pool, batch size, partitions, the write
+//! knobs as `ConfigExtension`s), runs the [`SessionExtension`] hooks at v1's inline registration
+//! positions, holds the iceberg `Catalog` handles
 //! ([`CatalogRegistry`]), and exposes the near-drop-in PySpark entrypoints: `sql`,
 //! `register_iceberg_catalog` (+ the `register_memory_catalog` convenience), `create_namespace`,
 //! `create_or_replace_temp_view` (batches) / `create_or_replace_temp_view_from` (a plan),
 //! `drop_temp_view`, `table_exists`, `read_parquet`, `read_csv`, `read_json`.
 //! All execution routes through the [`ExecutionBackend`] seam, so a future distributed coordinator
-//! can slot in without reworking the write path (distribution is deferred — see [`backend`]).
+//! can slot in without reworking the write path (distribution is deferred — see
+//! [`backend`](crate::ExecutionBackend)).
 //!
 //! `sql` routes through the session-default [`SqlDialect`] (phase-cut inversion, design §3 —
 //! plain DataFusion in phase 1; the Spark door's statement router returns as a phase-2 dialect
 //! impl on the same seam). Catalogs configure
-//! two ways: directly (`register_iceberg_catalog` with a `repark-catalog` builder — memory, Glue,
-//! S3 Tables) or through Spark-style `spark.sql.catalog.<name>.*` config on the builder
-//! ([`catalog_config`] parses; [`ReparkSession::register_configured_catalogs`] registers).
-//! `read_parquet` routes `s3://`/`s3a://` paths through the [`object_store_s3`] registration.
-//! The rest of the Spark-SQL surface lands per `docs/spark-sql-iceberg-parity.md`.
-
-mod backend;
-mod catalog_config;
-mod error_map;
-mod idents;
-mod object_store_s3;
-mod read_options;
-
-pub use backend::{ExecutionBackend, SingleNodeBackend};
-pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
-pub use error_map::engine_err;
-#[cfg(test)]
-pub(crate) use error_map::{EngineErrorKind, classify_datafusion_error};
-pub(crate) use error_map::{excel_err, iceberg_err, postgres_err, resolve_s3_region_override};
-pub(crate) use idents::parse_table_identifier_segments;
-#[cfg(test)]
-pub(crate) use idents::reject_path_escape_segment;
-pub(crate) use read_options::{
-    csv_read_options_from_map, csv_utf8_schema_from_path, json_read_options_from_map,
-};
+//! two ways: directly (`register_iceberg_catalog` with a `repark_iceberg::catalog` builder —
+//! memory, Glue, S3 Tables) or through Spark-style `spark.sql.catalog.<name>.*` config on the
+//! builder ([`crate::parse_catalog_specs`] parses;
+//! [`ReparkSession::register_configured_catalogs`] registers).
+//! `read_parquet` routes `s3://`/`s3a://` paths through the [`crate::object_store_s3`]
+//! registration, against the FINALIZE-resolved AWS SDK config (E-2).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
@@ -52,10 +33,17 @@ use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionC
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_common::{Error, Result};
 
+use crate::backend::{ExecutionBackend, SingleNodeBackend};
+use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionExtension};
-use crate::time_travel::TimeTravelSpec;
+use crate::time_travel::{self, TimeTravelSpec};
+use crate::{
+    csv_read_options_from_map, csv_utf8_schema_from_path, engine_err, iceberg_err,
+    json_read_options_from_map, object_store_s3, parse_table_identifier_segments,
+    resolve_s3_region_override,
+};
 
 /// ===========================================================================================
 /// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
@@ -329,13 +317,16 @@ impl ReparkSessionBuilder {
         // non-integer or `< 1` value so a typo cannot silently fall back to serial or unbounded.
         let write_concurrency = repark_iceberg::write::concurrency_from_config_map(&self.config)
             .map_err(|error| Error::Config(error.to_string()))?;
-        let scan_pruning = repark_iceberg::write::scan_prune::scan_pruning_from_config_map(&self.config)
-            .map_err(|error| Error::Config(error.to_string()))?;
-        let file_scoped_rewrite = repark_iceberg::write::file_scoped_rewrite_from_config_map(&self.config)
-            .map_err(|error| Error::Config(error.to_string()))?;
+        let scan_pruning =
+            repark_iceberg::write::scan_prune::scan_pruning_from_config_map(&self.config)
+                .map_err(|error| Error::Config(error.to_string()))?;
+        let file_scoped_rewrite =
+            repark_iceberg::write::file_scoped_rewrite_from_config_map(&self.config)
+                .map_err(|error| Error::Config(error.to_string()))?;
         // MERGE target-scan file concurrency (session conf only). Unset = fork num_cpus default.
-        let scan_concurrency = repark_iceberg::write::scan_concurrency_from_config_map(&self.config)
-            .map_err(|error| Error::Config(error.to_string()))?;
+        let scan_concurrency =
+            repark_iceberg::write::scan_concurrency_from_config_map(&self.config)
+                .map_err(|error| Error::Config(error.to_string()))?;
         // The build-time extension (phase-cut inversion, design §3): its two hooks replace v1's
         // inline phase-2 registrations at the SAME positions in this construction order.
         let ext: Arc<dyn SessionExtension> = self
@@ -353,7 +344,11 @@ impl ReparkSessionBuilder {
             .options_mut()
             .optimizer
             .enable_physical_uncorrelated_scalar_subquery = false;
-        config = repark_iceberg::write::with_merge_session_knobs(config, scan_pruning, file_scoped_rewrite);
+        config = repark_iceberg::write::with_merge_session_knobs(
+            config,
+            scan_pruning,
+            file_scoped_rewrite,
+        );
         config = repark_iceberg::write::with_scan_concurrency(config, scan_concurrency);
         if let Some(rows) = self.batch_size {
             config = config.with_batch_size(rows);
@@ -364,7 +359,7 @@ impl ReparkSessionBuilder {
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
         // Extension hook 1 of 2 — CONFIGURE, at v1's inline position (after the engine knobs are
         // installed as ConfigExtensions, before the RuntimeEnv is assembled). v1 inlined the
-        // cardinality/`repark.sql.*` ConfigExtension here (r24 SB1); the phase-2 Spark
+        // cardinality/`repark.sql.*` `ConfigExtension` here (r24 SB1); the phase-2 Spark
         // extension re-homes it onto this hook, parsing the same builder config map.
         config = ext.configure(&self.config, config).map_err(engine_err)?;
 
@@ -426,7 +421,8 @@ pub struct ReparkSession {
     /// `sql` call so no lock is held across an `await`.
     catalogs: Arc<RwLock<CatalogRegistry>>,
     /// Names of registered postgres read catalogs (`SessionContext` only — not in `CatalogRegistry`).
-    /// Threaded into `repark_sql::execute_with_read_only` for P11 DML direction-notes.
+    /// Threaded into the [`SqlDialect`] seam's `EngineContext::read_only` for P11 DML
+    /// direction-notes (v1: the positional `execute_with_read_only` argument).
     postgres_catalog_names: Arc<RwLock<HashSet<String>>>,
     /// The catalogs configured via `spark.sql.catalog.<name>.*`, parsed at build time and registered
     /// (async) by [`register_configured_catalogs`](Self::register_configured_catalogs). Shared
@@ -496,11 +492,7 @@ impl ReparkSession {
     /// # Errors
     /// Identical classification to [`Self::sql`] — the [`engine_err`] fold is session-side, so
     /// every dialect gets the same error taxonomy.
-    pub async fn sql_with(
-        &self,
-        dialect: &Arc<dyn SqlDialect>,
-        query: &str,
-    ) -> Result<DataFrame> {
+    pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
         // Clone the registry (cheap — keys + `Arc`s) so no lock is held across the `await`.
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
@@ -695,57 +687,16 @@ impl ReparkSession {
                 )
                 .await
             }
-            CatalogKind::Postgres => self.register_postgres_catalog_spec(spec),
-        }
-    }
-
-    /// Register a postgres catalog **only** on `SessionContext` (never `CatalogRegistry` — P2).
-    fn register_postgres_catalog_spec(&self, spec: &CatalogSpec) -> Result<()> {
-        use repark_postgres::{
-            PostgresCatalogProvider, apply_properties, parse_jdbc_or_postgres_url,
-        };
-
-        // Refuse split-brain: name already an Iceberg CatalogRegistry entry, or already postgres.
-        if self.catalog_handle(&spec.name).is_ok() {
-            return Err(Error::Config(format!(
-                "catalog '{}' is already registered as an Iceberg catalog — \
-                 cannot also register as postgres (pick a different name)",
+            // Phase cut (design §2): the spec still PARSES (config fidelity — a v1 config map
+            // builds unchanged), but registration fails loud until the postgres connector crate
+            // (repark-connect) lands. The v1 registration body re-homes with that crate.
+            CatalogKind::Postgres => Err(Error::NotImplemented(format!(
+                "postgres catalog '{}' registration is not available in the phase-1 engine core \
+                 — it returns with the postgres connector crate (the spec parsed; nothing was \
+                 registered)",
                 spec.name
-            )));
+            ))),
         }
-        if self
-            .postgres_catalog_names
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .contains(&spec.name)
-        {
-            return Err(Error::Config(format!(
-                "catalog '{}' is already registered as a postgres catalog — \
-                 re-registering is not supported in v1",
-                spec.name
-            )));
-        }
-
-        let url = spec.props.get("url").map(String::as_str).ok_or_else(|| {
-            Error::Config(format!(
-                "postgres catalog '{}' requires property `url`",
-                spec.name
-            ))
-        })?;
-        let mut config = parse_jdbc_or_postgres_url(url).map_err(postgres_err)?;
-        apply_properties(&mut config, &spec.props).map_err(postgres_err)?;
-        let provider =
-            PostgresCatalogProvider::try_new(&spec.name, config).map_err(postgres_err)?;
-        // register_catalog returns the replaced provider (if any); no error path.
-        let _replaced = self.context().register_catalog(
-            spec.name.clone(),
-            Arc::new(provider) as Arc<dyn datafusion::catalog::CatalogProvider>,
-        );
-        self.postgres_catalog_names
-            .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .insert(spec.name.clone());
-        Ok(())
     }
 
     fn postgres_catalog_names_snapshot(&self) -> HashSet<String> {
@@ -841,7 +792,9 @@ impl ReparkSession {
     /// Unknown catalog or provider rebuild failure → [`Error::DataFusion`].
     pub async fn refresh_catalog_provider(&self, catalog: &str) -> Result<()> {
         let handle = self.catalog_handle(catalog)?;
-        repark_sql::reregister_catalog_provider(self.context(), handle, catalog)
+        // v1 call preserved: `reregister_catalog_provider` (the catalog crate's full-provider
+        // rebuild wrapper, hoisted into `repark_iceberg::catalog::catalog_ops` in PR-B).
+        repark_iceberg::catalog::reregister_catalog_provider(self.context(), handle, catalog)
             .await
             .map_err(engine_err)
     }
@@ -1179,11 +1132,15 @@ impl ReparkSession {
             .await
             .map_err(engine_err)?;
         // The in-memory / LocalFs catalog keeps the offline temp-location fallback for CTAS into a
-        // namespace with no `location` property (real warehouses fail loud instead).
+        // namespace with no `location` property (real warehouses fail loud instead). E-4: the
+        // fallback ROOT is resolved here, once, at registration time — the CTAS consumer reads
+        // the policy's `root` and never touches the process environment at query time.
         self.register_iceberg_catalog_with_policy(
             name,
             catalog,
-            LocationPolicy::TempFallbackAllowed,
+            LocationPolicy::TempFallbackAllowed {
+                root: std::env::temp_dir(),
+            },
         )
         .await?;
         // SEC-02 grandfather: COPY TO / CREATE EXTERNAL under this warehouse stay allowed.
@@ -1227,7 +1184,7 @@ impl ReparkSession {
     /// path cannot be read or planned.
     pub async fn read_parquet(&self, path: &str) -> Result<DataFrame> {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
-            self.ensure_s3_bucket_registered(&bucket).await?;
+            self.ensure_s3_bucket_registered(&bucket)?;
         }
         self.context()
             .read_parquet(path, ParquetReadOptions::default())
@@ -1251,7 +1208,7 @@ impl ReparkSession {
         options: &HashMap<String, String>,
     ) -> Result<DataFrame> {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
-            self.ensure_s3_bucket_registered(&bucket).await?;
+            self.ensure_s3_bucket_registered(&bucket)?;
         }
         let mut csv_options = csv_read_options_from_map(options)?;
         // nullValue: force all-Utf8 schema so the scan path never type-parses null tokens
@@ -1285,7 +1242,7 @@ impl ReparkSession {
         options: &HashMap<String, String>,
     ) -> Result<DataFrame> {
         if let Some((_scheme, bucket)) = object_store_s3::parse_s3_bucket(path) {
-            self.ensure_s3_bucket_registered(&bucket).await?;
+            self.ensure_s3_bucket_registered(&bucket)?;
         }
         let json_options = json_read_options_from_map(options)?;
         self.context()
@@ -1320,7 +1277,7 @@ impl ReparkSession {
             None => self.sql(&format!("SELECT * FROM {table_name}")).await,
             Some(spec) => {
                 let catalogs = self.catalogs_snapshot();
-                repark_sql::read_table_at(self.context(), &catalogs, &parts, &spec)
+                time_travel::read_table_at(self.context(), &catalogs, &parts, &spec)
                     .await
                     .map_err(engine_err)
             }
@@ -1364,16 +1321,26 @@ impl ReparkSession {
         };
         let handle = self.catalog_handle(catalog_name)?;
         let ident = TableIdent::new(NamespaceIdent::new(namespace.clone()), table.clone());
-        repark_iceberg::write::testing_create_ref(handle.as_ref(), &ident, kind, ref_name, snapshot_id)
-            .await
-            .map_err(iceberg_err)?;
+        repark_iceberg::write::testing_create_ref(
+            handle.as_ref(),
+            &ident,
+            kind,
+            ref_name,
+            snapshot_id,
+        )
+        .await
+        .map_err(iceberg_err)?;
         // Re-register so any catalog-provider snapshot of refs is refreshed (defensive; reads use
         // load_table + Static provider and do not require the catalog provider for refs).
         let catalogs = self.catalogs_snapshot();
         if let Some(catalog) = catalogs.get(catalog_name) {
-            repark_sql::reregister_catalog_provider(self.context(), catalog.clone(), catalog_name)
-                .await
-                .map_err(engine_err)?;
+            repark_iceberg::catalog::reregister_catalog_provider(
+                self.context(),
+                catalog.clone(),
+                catalog_name,
+            )
+            .await
+            .map_err(engine_err)?;
         }
         Ok(())
     }
@@ -1407,17 +1374,19 @@ impl ReparkSession {
     }
 
     /// Ensure an authenticated S3 object store for `bucket` is registered on the `RuntimeEnv` under
-    /// both the `s3://` and `s3a://` URL forms — building it (via the aws-config credential chain)
-    /// at most once per bucket for the session's lifetime.
+    /// both the `s3://` and `s3a://` URL forms — building it (from the FINALIZE-resolved AWS SDK
+    /// config, E-2) at most once per bucket for the session's lifetime.
     ///
-    /// The AWS store build runs OUTSIDE the `Mutex` (it awaits the aws-config chain), then a brief
-    /// re-lock records the bucket and registers the store. Two racing callers each build a store,
+    /// The store build runs OUTSIDE the `Mutex` (E-2 made it sync — the chain is pre-resolved, so
+    /// nothing awaits here anymore), then a brief re-lock records the bucket and registers the
+    /// store. Two racing callers each build a store,
     /// but `HashSet::insert` gates registration so exactly one wins and the loser's store is dropped
     /// — DataFusion registration is idempotent regardless.
     ///
     /// # Errors
-    /// Returns [`Error::DataFusion`] if the S3 store cannot be built or registered.
-    async fn ensure_s3_bucket_registered(&self, bucket: &str) -> Result<()> {
+    /// Returns [`Error::DataFusion`] if the session never resolved its SDK config (the E-2 gate,
+    /// naming the finalize step) or the S3 store cannot be built or registered.
+    fn ensure_s3_bucket_registered(&self, bucket: &str) -> Result<()> {
         if self
             .registered_s3_buckets
             .lock()
@@ -1444,8 +1413,7 @@ impl ReparkSession {
             bucket,
             self.s3_region_override.as_deref(),
             sdk_config,
-        )
-        .await?;
+        )?;
         let mut registered = self
             .registered_s3_buckets
             .lock()
