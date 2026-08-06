@@ -1,0 +1,46 @@
+# map — repository root
+
+## Purpose
+
+RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceberg-rust fork,
+with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). This is the
+front-door navigation map. See [README.md](README.md) for the overview. The repo is at
+**phase 0** of the port: gates before code — the workspace is intentionally empty of crates.
+
+## Contents
+
+- `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
+  `.cargo/` — Rust workspace + tooling. `members = []` until phase 1; workspace lints
+  (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans are already in
+  force for the first crate that lands.
+- `pyproject.toml`, `.python-version` — Python tooling config (Ruff, line 100). The uv workspace
+  member list arrives with phase 3.
+- `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
+  `make verify` = ci + test; `make preflight` mirrors the full CI surface.
+- `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
+  tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
+  oracle; `make install-hooks` wires it).
+- `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
+
+## I want to...
+
+| ...do this | go to |
+|---|---|
+| Run the canonical gate | `make ci` (see `make help`) |
+| Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
+| Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
+
+## Pointers
+
+- Up: — (repository root)
+- Related: the private v1 repository is the port source; this repo is the public V2 target.
+
+## Debug
+
+First checks: `make ci`, then `make help` for the full target list. CI mirrors `make ci`.
+
+| Symptom | First check |
+|---|---|
+| A cargo target loudly no-ops | Expected at phase 0 — the workspace has no members; the guard is documented in the Makefile header |
+| Pre-commit hook rejects a commit | `bash scripts/check_map_md.sh` — the touched directory's map.md must be staged in the same commit |
+| A gate is unclear | `make help` |

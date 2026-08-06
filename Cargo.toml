@@ -1,0 +1,87 @@
+# ===========================================================================================
+# repark — Cargo workspace root.
+#
+# A pure-Rust, no-JVM lazy-DataFrame + SQL engine over Apache Iceberg, built ON Apache
+# DataFusion + Arrow + the owned iceberg-rust fork. See README.md for the front door and
+# docs/port/PLAN.md for the port plan.
+#
+# Phase 0: the workspace is deliberately EMPTY — gates before code. Members arrive in phase 1
+# (target skeleton: repark-core, repark-exec, repark-io, repark-iceberg, repark-connect,
+# repark-sql, repark-spark, repark-ml, repark-python). The [workspace.dependencies] table and
+# the [patch.crates-io] fork pin for the iceberg* family return with the first crate; one
+# DataFusion version is pinned across the datafusion + datafusion-spark + iceberg* family.
+# ===========================================================================================
+
+[workspace]
+resolver = "3"
+members = []
+
+[workspace.package]
+edition = "2024"
+version = "0.0.0"
+license = "Apache-2.0"
+rust-version = "1.96"
+repository = "https://github.com/TRO-Wolf/repark"
+publish = false
+
+# -------------------------------------------------------------------------------------------
+# Workspace lints — applied to every member via `[lints] workspace = true`.
+# `repark-python` (the PyO3 cdylib, phase 3) will NOT inherit these; it spells out its own
+# lints with `unsafe_code = "allow"` because PyO3 macro expansion emits `unsafe`.
+# -------------------------------------------------------------------------------------------
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# -------------------------------------------------------------------------------------------
+# Build profiles (carried from the private v1 repository). Profiles are architecture — every
+# knob below names the workload it serves so a later round tunes from a recorded rationale,
+# not a guess. `dev` and `release` are the two Cargo invokes by default; `ci` and `profiling`
+# are opt-in shapes selected with `--profile <name>`.
+# -------------------------------------------------------------------------------------------
+
+# Dev/test profile (cargo test, maturin develop). Trim debuginfo to line tables: in v1 the
+# cdylib was ~828 MB (≈74% full DWARF), so line-tables-only keeps file:line backtraces while
+# cutting artifact size + link time sharply. Full variable-level DWARF isn't needed for this
+# engine's test/print-debug workflow.
+[profile.dev]
+debug = "line-tables-only"
+
+# Batch-build profile for a CI runner. A runner builds each crate once from a restored cache and
+# then throws the tree away, so the two dev conveniences are pure cost there: `incremental =
+# false` drops the incremental bookkeeping, and `debug = false` drops the line tables.
+# `[profile.ci.package."*"]` repeats `debug = false` for DEPENDENCIES specifically: they are
+# where the debuginfo volume lives, so the strip survives a later edit that turns workspace
+# debuginfo back on for backtraces.
+#
+# DORMANT: nothing invokes `--profile ci`. Measured in v1: the cold-build win was under the
+# adoption bar and warm rebuilds were slower (`incremental = false`); what it buys is artifact
+# weight. Re-measure before wiring; do not wire on this comment.
+[profile.ci]
+inherits = "dev"
+incremental = false
+debug = false
+
+[profile.ci.package."*"]
+debug = false
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+# Flamegraph / perf profile: release codegen that a profiler can still read. `debug = true` asks
+# for the DWARF perf needs to resolve frames, and `strip = false` pins that it survives — the pin
+# is what makes the pair robust, since `strip` follows `debug` by default and an inherited or
+# later-added `strip` in `release` would otherwise silently turn this profile back into a wall
+# of `[unknown]`. `lto = false` and `codegen-units = 16` stop cross-crate inlining from erasing
+# the very frames being measured, and cut the link time of a build that is thrown away after one
+# run. Not a shipping profile: use `release` for artifacts.
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = false
+lto = false
+codegen-units = 16

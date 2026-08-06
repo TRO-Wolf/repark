@@ -1,0 +1,84 @@
+# Fine-grained clippy tuning. Kept minimal — only what a specific lint genuinely needs.
+#
+# `doc-valid-idents` extends (via `..`) clippy's default all-caps/acronym allowlist so that domain
+# proper nouns don't have to be backticked in every doc comment to satisfy `clippy::doc_markdown`.
+# Add a term here when it is a real product/type name, not when prose is just sloppy.
+doc-valid-idents = [
+  "..",
+  "DataFusion",
+  "PySpark",
+  "PyO3",
+  "SparkSession",
+  "ReparkSession",
+  "GlueCatalog",
+  "S3TablesCatalog",
+  "CatalogProvider",
+  "SchemaProvider",
+  "SessionContext",
+  "TableProvider",
+  "OpenDAL",
+  "ExecutionBackend",
+  "RecordBatch",
+  "MERGE",
+]
+
+# ===========================================================================================
+# Mechanical panic ban (carried from the private v1 repository).
+#
+# Production code must not call unwrap/expect (or panic!/todo!/unimplemented!/unreachable!).
+#
+# `disallowed_methods` is **warn** under `clippy::all` / `clippy::style`. Listing unwrap/expect
+# here would therefore red the ordinary all-targets `-D warnings` gate on every test. The gates
+# therefore split:
+#   * general clippy gate (`make rust-clippy`): `-A clippy::disallowed_methods` (list inert
+#     for tests)
+#   * panic-ban gate (`make rust-panic-ban`): `--lib --bins` + `-D clippy::disallowed_methods`
+#     (+ unwrap_used / expect_used / panic / todo / unimplemented / unreachable)
+# `--lib --bins` excludes `#[cfg(test)]` (not compiled) — both-ways scoping without mass-allow.
+# `allow-*-in-tests` still covers the restriction lints if enabled with `--all-targets` locally.
+# When `repark-python` (the PyO3 cdylib) lands, it gets a carve-out: `disallowed-methods`
+# false-fires on `pyo3::create_exception!` (Result::expect in the macro expansion); that package
+# is gated with unwrap_used/expect_used only.
+# ===========================================================================================
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+allow-panic-in-tests = true
+
+disallowed-methods = [
+  { path = "std::option::Option::unwrap", reason = "no Option::unwrap in production — use ? / ok_or_else / with_context" },
+  { path = "std::option::Option::expect", reason = "no Option::expect in production — use ? / ok_or_else / with_context" },
+  { path = "std::result::Result::unwrap", reason = "no Result::unwrap in production — use ? / map_err / with_context" },
+  { path = "std::result::Result::expect", reason = "no Result::expect in production — use ? / map_err / with_context" },
+  { path = "core::option::Option::unwrap", reason = "no Option::unwrap in production — use ? / ok_or_else / with_context" },
+  { path = "core::option::Option::expect", reason = "no Option::expect in production — use ? / ok_or_else / with_context" },
+  { path = "core::result::Result::unwrap", reason = "no Result::unwrap in production — use ? / map_err / with_context" },
+  { path = "core::result::Result::expect", reason = "no Result::expect in production — use ? / map_err / with_context" },
+
+  # =========================================================================================
+  # Async cancel-safety ban (carried from the private v1 repository).
+  #
+  # A detached `tokio::spawn` outlives the caller's cancellation: dropping the future that
+  # started it does NOT stop it, so a task can keep holding a client/lock/connection after the
+  # request that owns it is gone. Every spawn in this workspace must be a deliberate, tracked,
+  # abortable lifecycle — not an incidental fire-and-forget. `spawn_blocking` is banned by the
+  # same rule (an unbounded blocking pool is the other half of the cancel-safety story).
+  #
+  # Escape hatch is per call site, never a file- or crate-wide allow:
+  #   #[expect(clippy::disallowed_methods, reason = "<why this task is tracked/abortable>")]
+  #
+  # Clippy matches DEFINITION paths. Verified by provocation in v1: a call written as the
+  # `tokio::spawn` re-export is reported by clippy as `tokio::task::spawn` — the two entries
+  # below therefore resolve to the SAME DefId and one overwrites the other in clippy's map, so
+  # their `reason` strings are kept WORD-IDENTICAL and it does not matter which wins. Both
+  # spellings stay listed as documentation of intent. Enforced by `make rust-panic-ban` and the
+  # ci workflow's panic-ban step (`--lib --bins` — test-only spawns are out of scope by
+  # construction, as intended).
+  #
+  # Considered and STRUCK: `Instant::now` / `SystemTime::now`. The engine legitimately stamps
+  # Iceberg commit timestamps and tracing spans, so a blanket ban would be all escapes and no
+  # signal.
+  # =========================================================================================
+  { path = "tokio::spawn", reason = "no detached task spawn in production — a spawned task survives caller cancellation; track it (abortable handle) or #[expect] with the lifecycle stated" },
+  { path = "tokio::task::spawn", reason = "no detached task spawn in production — a spawned task survives caller cancellation; track it (abortable handle) or #[expect] with the lifecycle stated" },
+  { path = "tokio::task::spawn_blocking", reason = "no ad-hoc spawn_blocking in production — unbounded blocking-pool work is not cancel-safe; bound it and #[expect] with the lifecycle stated" },
+]

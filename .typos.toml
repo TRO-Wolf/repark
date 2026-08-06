@@ -1,0 +1,16 @@
+# Spell-check config for crate-ci/typos (CI: .github/workflows/typos.yml).
+# Add real domain terms here when typos flags them; do not silence genuine misspellings.
+
+[files]
+extend-exclude = ["*.lock", "target/", ".venv/", "*.svg"]
+
+[default.extend-identifiers]
+# Identifiers (code symbols) that are not typos.
+repark = "repark"
+
+[default.extend-words]
+# Words that look like typos but are intentional in this domain.
+mis = "mis" # the `mis-` prefix (mis-placement / mis-wired) in prose — typos splits on the hyphen
+MoR = "MoR" # merge-on-read
+ser = "ser" # serialize (serde idiom)
+TRO = "TRO" # TRO-Wolf org / owned iceberg-rust fork (typos splits TRO-Wolf → TRO)

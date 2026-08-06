@@ -1,0 +1,15 @@
+# TOML format + lint config for taplo (CI: .github/workflows/taplo.yml).
+# Two-space indent + 100-column width to match the Rust/Python column budget. Keys are NOT
+# reordered (Cargo.toml section order is meaningful and hand-arranged).
+
+include = ["**/*.toml"]
+exclude = ["target/**", ".venv/**"]
+
+[formatting]
+align_entries = false
+array_auto_expand = true
+array_auto_collapse = false
+column_width = 100
+indent_string = "  "
+reorder_keys = false
+reorder_arrays = false

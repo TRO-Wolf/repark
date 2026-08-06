@@ -1,1 +1,29 @@
+# Editor / IDE
 .vscode/
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+# Compiled native extension modules (built by maturin into the package tree)
+*.so
+*.pyd
+
+# Parity golden fixtures are tracked; local scratch is not
+/python/repark-parity/.scratch/
+
+# Editor / OS
+.DS_Store
+*.swp
+
+# Note: Cargo.lock and uv.lock ARE checked in (binary workspace + reproducible Python env).

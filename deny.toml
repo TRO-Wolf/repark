@@ -1,0 +1,50 @@
+# cargo-deny configuration — license compliance, security advisories, banned/duplicate crates,
+# and source restrictions. Enforced in CI by .github/workflows/cargo-deny.yml.
+# The eventual AWS SDK + arrow + parquet + iceberg dependency tree is large; this is the guard
+# that keeps a GPL-contaminated or yanked transitive dep from sneaking in. Phase 0 has an empty
+# workspace — the config is live so the gate is wired before the first crate lands.
+
+[advisories]
+version = 2
+# `cargo audit` is the dedicated CVE gate; cargo-deny also checks here.
+yanked = "deny"
+# Empty at phase 0 (no dependencies yet). Any ignore added later must name the advisory, the
+# reason it is unreachable/acceptable, and the revisit trigger — and be mirrored in
+# .cargo/audit.toml (both gates scan the same tree).
+ignore = []
+
+[licenses]
+version = 2
+# Permissive licenses compatible with the project's Apache-2.0 posture.
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "CC0-1.0",
+]
+confidence-threshold = 0.9
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# Internal workspace crates are local `{ path = ... }` deps with no version (publish = false),
+# which would otherwise read as wildcards. Exempt path deps; still ban wildcard versions on externals.
+allow-wildcard-paths = true
+allow = []
+deny = []
+skip = []
+skip-tree = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# The owned iceberg-rust fork — the [patch.crates-io] source for the iceberg* family once the
+# engine crates land (phase 1). The ONLY sanctioned git source; anything else stays denied.
+allow-git = ["https://github.com/TRO-Wolf/iceberg-rust"]

@@ -1,0 +1,20 @@
+# Python tooling config for the repark repository root. Phase 0 carries ONLY the tooling that
+# works today: Ruff (the single lint+format tool). The uv workspace member list (python/repark,
+# python/repark-parity) and the dependency groups return in phase 3 with the Python packages;
+# uv.lock is checked in from that point. Python floor 3.12 (.python-version).
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# Pragmatic-but-strict default. Annotations (ANN) enforce the "type hints on every signature"
+# convention; pyupgrade (UP), bugbear (B), simplify (SIM), pathlib (PTH), naming (N) cover the rest.
+select = ["E", "F", "I", "W", "UP", "B", "SIM", "C4", "PTH", "RUF", "N", "ANN", "TID"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["ANN201", "ANN202", "ANN001", "S101"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["repark", "repark_parity"]
