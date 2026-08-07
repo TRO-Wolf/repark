@@ -2,14 +2,15 @@
 
 ## Purpose
 
-CI/CD and dependency automation. Phase 1 carries tier 1 (every PR, no secrets, GitHub-hosted,
-read-only token); tier 2 (live AWS, merged code only) and tier 3 (benchmarks) land in later
-phases.
+CI/CD, dependency automation, and the rust-cache pre-warmer that keeps PR jobs hot off the
+critical path. Phase 1 carries tier 1 (every PR, no secrets, GitHub-hosted, read-only token);
+tier 2 (live AWS, merged code only) and tier 3 (benchmarks) land in later phases.
 
 ## Contents
 
-- [workflows/](workflows/map.md) — GitHub Actions (the gates; now includes `audit.yml`
-  cargo-audit CVE scanning; `cache-warm.yml` arrives with PR-B).
+- [workflows/](workflows/map.md) — GitHub Actions (the gates; includes `audit.yml` cargo-audit
+  CVE scanning and `cache-warm.yml`, the rust-cache pre-warmer paired with the `ci.yml`
+  restore keys).
 - `dependabot.yml` — weekly grouped dependency PRs (cargo + uv + github-actions; docker added
   later). Carries the DataFusion-family rule: never merge a bundled DF/Arrow major bump — split
   it.

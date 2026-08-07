@@ -39,6 +39,19 @@ jobs:
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
+      # rust-cache restore (arrives with the repark-iceberg dependency graph — restoring an
+      # empty-workspace cache was waste before PR-B). Prefix-keyed per dependency family: a
+      # stale prefix-fallback restore would lay a whole previous-family target under the new
+      # build — two dependency trees on one disk. New prefix = clean slate per family.
+      # The keys MUST match the cache-warm.yml warm jobs (v2-df54 / v2-df54-test); v1 split
+      # lint and test into two jobs with one key each — this combined rust job restores both
+      # so neither warm save is orphaned (the post-job saves converge on the full artifact set).
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          prefix-key: "v2-df54"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          prefix-key: "v2-df54-test"
       # Dual-wired through the Makefile targets so local == CI by construction: the targets carry
       # the deliberate clippy split (general gate with -A clippy::disallowed_methods; the
       # panic-ban target is the only place clippy.toml's disallowed-methods list is live,

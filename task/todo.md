@@ -38,9 +38,14 @@ copy-then-re-home, every commit green; deferred tests tracked in
       audit.yml workflow returns (cache-warm.yml deferred to PR-B together with the ci.yml
       rust-cache restore steps — see `.github/workflows/map.md`), design doc + this slate's
       docs in-repo.
-- [ ] PR-B — `repark-iceberg` (QUEUED): fork `[patch.crates-io]` pin + fork-pin proof test;
-      v1 catalog → `src/catalog/`, v1 write → `src/write/`; declared-rename unit, 243 tests
-      under the generated rename map.
+- [ ] **PR-B — `repark-iceberg` (IN FLIGHT — assembled 2026-08-06, branch `phase-1/pr-b`,
+      ledger: [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md))**: fork
+      `[patch.crates-io]` pin + fork-pin proof test; v1 catalog → `src/catalog/`, v1 write →
+      `src/write/`; declared-rename unit, 241 ported tests (catalog 50 + write 191; corrected
+      from the brief's grep-based 243 — `--list` at the pin is ground truth) under the
+      generated rename map, diff empty; forced-edit class 6 shared tracing harness; orchestrator
+      carve-outs LANDED on the branch as `340211a` (cache-warm.yml + ci.yml rust-cache
+      restore steps); awaiting panel verification.
 - [ ] PR-C — `repark-core` (QUEUED, after PR-B): v1 repark-session re-homed (Session,
       builder, two-phase lifecycle), the three repark-sql hoists, the `SqlDialect` /
       `SessionExtension` seams + seam tests, the four forced edits (E-2, dialect inversion,

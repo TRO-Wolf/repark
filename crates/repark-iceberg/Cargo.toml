@@ -1,0 +1,50 @@
+[package]
+name = "repark-iceberg"
+description = "Iceberg surface: Glue + S3 Tables catalog wiring for DataFusion, and Spark-semantics write extensions (MERGE INTO, append, overwrite, ALTER, merge-on-read)."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Error seed: the write half re-exports `repark_common::{Error, Result}` for MERGE / append.
+# The catalog half stays DataFusion/iceberg-native (`datafusion::error::Result`) — the fold to
+# `repark_common::Error` happens in repark-core.
+repark-common.workspace = true
+# Catalog + write both drive iceberg-rust's public `Transaction` / `Catalog` / scan / writer
+# APIs; the Glue / S3 Tables builders are thin wrappers over the fork's `iceberg-catalog-*`
+# crates (which carry the `aws-sdk-*` chain internally) — no cargo feature gate: Glue is the
+# primary product surface.
+iceberg.workspace = true
+iceberg-datafusion.workspace = true
+iceberg-catalog-glue.workspace = true
+iceberg-catalog-s3tables.workspace = true
+# The fork's OpenDAL S3 `FileIO` factory (`opendal-s3`) for scheme-based FileIO selection
+# (`s3://`/`s3a://` warehouses → S3 storage).
+iceberg-storage-opendal = { workspace = true, features = ["opendal-s3"] }
+datafusion.workspace = true
+# MERGE INTO: the join/clause computation runs on DataFusion SQL over a scratch MemTable; the
+# rewritten files are written with iceberg's Parquet writer stack (parquet::WriterProperties).
+parquet.workspace = true
+# `TableProvider` / `SchemaProvider` projection wrap uses `#[async_trait]`.
+async-trait.workspace = true
+# Scan-stream collection + unique scratch-table/file/operation-id names.
+futures.workspace = true
+uuid.workspace = true
+# Catalog-edge spans; failed MERGE scratch-table deregister surfaces via `tracing::warn!`.
+tracing.workspace = true
+
+[dev-dependencies]
+# In-memory Iceberg catalog + temp warehouse for AWS-free CTAS/read + transaction tests.
+tokio.workspace = true
+tempfile = "3"
+# Span-capture pin (crate-level pin shape; not workspace.dependencies).
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+  "registry",
+  "std",
+] }

@@ -8,10 +8,30 @@
 version = 2
 # `cargo audit` is the dedicated CVE gate; cargo-deny also checks here.
 yanked = "deny"
-# Empty so far. Any ignore added later must name the advisory, the
-# reason it is unreachable/acceptable, and the revisit trigger — and be mirrored in
-# .cargo/audit.toml (both gates scan the same tree).
-ignore = []
+# Any ignore here must name the advisory, the reason it is unreachable/acceptable, and the
+# revisit trigger — and be mirrored in .cargo/audit.toml (both gates scan the same tree).
+# Entries below returned with the repark-iceberg dependency graph (flagged by the gate, v1's
+# justified wording).
+ignore = [
+  # `paste` (proc-macro, pulled transitively by the arrow/datafusion tree) is unmaintained but has
+  # no known vulnerability and no drop-in successor the ecosystem has migrated to. Informational
+  # only — revisit if arrow/datafusion drop it or a CVE is filed. Mirrored in .cargo/audit.toml.
+  "RUSTSEC-2024-0436",
+  # quick-xml DoS advisories, 2026-06-29 (RUSTSEC-2026-0194 quadratic duplicate-attribute check;
+  # RUSTSEC-2026-0195 unbounded namespace-declaration allocation in `NsReader`). The fixed version
+  # (>=0.41.0) is semver-unreachable: quick-xml enters the tree twice, as 0.38.x via
+  # object_store 0.12.5 (which requires ^0.38 and is itself pinned by the DataFusion 52 family) and
+  # as 0.37.x via reqsign 0.16.5 (which requires ^0.37; pulled by the owned fork's opendal storage
+  # layer). Exposure is DoS-only and the parser here only ever sees S3 API responses — XML authored
+  # by AWS endpoints, not attacker-controlled input. Revisit at the next DataFusion-family bump
+  # (object_store moves past 0.12) and when the fork bumps opendal/reqsign. Tracked in task/todo.md.
+  # Mirrored in .cargo/audit.toml.
+  # (2026-08-06: in this phase-1 graph the two entry paths resolve as quick-xml 0.38.4 via
+  # object_store 0.13.1 / DataFusion 54.1 family and 0.37.5 via reqsign 0.16.5 — same
+  # semver-unreachable situation, versions updated.)
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
+]
 
 [licenses]
 version = 2
@@ -26,6 +46,14 @@ allow = [
   "Unicode-3.0",
   "Zlib",
   "CC0-1.0",
+  # Community Data License Agreement Permissive 2.0 — `webpki-roots` (the Mozilla CA trust-store
+  # bundle, pulled by aws-config's rustls stack) relicensed to it from MPL-2.0; it covers the root
+  # certificate DATA, and permissively. Replaces the former MPL-2.0 allowance, which that
+  # relicensing left unmatched (cargo-deny fails on unused allowances).
+  "CDLA-Permissive-2.0",
+  # The permissive bzip2/libbzip2 license (BSD-style, Apache-compatible). Pulled by `libbz2-rs-sys`
+  # via datafusion's default compression codecs.
+  "bzip2-1.0.6",
 ]
 confidence-threshold = 0.9
 exceptions = []

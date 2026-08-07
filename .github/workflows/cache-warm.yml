@@ -1,0 +1,75 @@
+# Pre-warms the Swatinem rust-cache OFF the PR critical path: every push to main (and a
+# weekly safety net) builds the workspace under the same prefix-keys ci.yml restores, so PR
+# jobs start from a hot cache even right after a dependency-family bump.
+# Saves live in GitHub's Actions cache (10 GB repo cap, LRU) — zero local disk impact.
+# (Adapted from the private v1 repository: no setup-python step — the PyO3 cdylib does not
+# exist until phase 3.)
+name: Cache warm
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * 1"  # Mondays 05:17 UTC — safety net if main is quiet
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cache-warm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  warm-lint:
+    name: Warm lint cache
+    runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/share/swift \
+            /usr/local/share/powershell /usr/share/miniconda
+          df -h /
+      # SHA-pinned (see ci.yml note).
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+          components: clippy
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          prefix-key: "v2-df54"  # MUST match the ci.yml rust-job restore when it is wired
+      - name: build lint artifacts
+        run: cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods
+
+  warm-test:
+    name: Warm test cache
+    runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/share/swift \
+            /usr/local/share/powershell /usr/share/miniconda
+          df -h /
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          prefix-key: "v2-df54-test"  # MUST match the ci.yml rust-job restore when it is wired
+      - name: build test artifacts (no run)
+        run: cargo test --locked --workspace --no-run

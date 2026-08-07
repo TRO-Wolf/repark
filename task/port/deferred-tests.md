@@ -22,9 +22,14 @@ v1 phase-1-cone totals at the pin (from the brief/design census):
 | v1 crate | tests |
 |---|---|
 | repark-core (error seed) | 2 |
-| repark-catalog | 51 |
-| repark-write | 192 |
+| repark-catalog | 50 |
+| repark-write | 191 |
 | repark-session cone (session 49 + catalog-config 26 + object-store 4, + hoisted repark-sql tests + ta_window) | audited in PR-C |
+
+*(Corrected 2026-08-06 at PR-B: the brief's original 51/192 came from a grep over test
+attributes, which counted two doc-comment `#[tokio::test]` mentions — v1
+`repark-catalog/src/tests.rs:1783` and `repark-write/src/merge/mod.rs:425`; `cargo test
+-- --list` at the pin is ground truth.)*
 
 ## Deferred entries
 
@@ -38,11 +43,12 @@ the test — PR-B (repark-iceberg) and PR-C (repark-core session-test audit); em
 
 ### repark-iceberg — catalog/ (from v1 repark-catalog)
 
-*(PR-B fills)*
+**Deferred: NONE** (PR-B, 2026-08-06). All 50 port under the generated rename map.
 
 ### repark-iceberg — write/ (from v1 repark-write)
 
-*(PR-B fills)*
+**Deferred: NONE** (PR-B, 2026-08-06). All 191 port under the generated rename map
+(split `merge/` shape). Zero `#[ignore]`, zero skipped-in-CI.
 
 ### repark-core — session (from v1 repark-session + hoisted repark-sql subset)
 
@@ -54,4 +60,10 @@ group deferred whole)*
 Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, this repo's
 `--list` count, the deferred count, and the empty-diff confirmation.
 
-*(none yet)*
+- **2026-08-06 — PR-B (repark-iceberg):** v1 `cargo test -p repark-catalog -p repark-write
+  -- --list` at pin `fc3f48102e437e2843ded460bc161edb434dac93` = 241 (catalog 50 + write 191);
+  this repo's sorted per-package `--list` = 243 (241 `repark_iceberg::*` +
+  2 `repark_common::*` from PR-A); diff against the generated rename map: **EMPTY**.
+  (ported 241 ∪ deferred 0) = v1 PR-B cone total 241. Evidence:
+  [../p1b-repark-iceberg-ledger.md](../p1b-repark-iceberg-ledger.md). PR-B additionally adds
+  one NEW fork-pin proof test (not a ported name; outside the census).

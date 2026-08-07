@@ -10,10 +10,10 @@ Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 | Crate | Responsibility |
 |---|---|
 | [repark-common](repark-common/map.md) | Shared error-seed types (`Error` / `ErrorClass` / `Result`). Bottom of the DAG. |
+| [repark-iceberg](repark-iceberg/map.md) | Iceberg surface (tier 1): Glue + S3 Tables catalog wiring for DataFusion (`catalog/`) + the Spark-semantics write adapter — MERGE INTO, append, overwrite, ALTER — over the owned fork (`write/`). Carries the `[patch.crates-io]` fork pin's consumers. |
 
-Phase-1 crates still to land (see `docs/design/session-api.md`): `repark-iceberg` (catalog +
-write over the owned iceberg-rust fork, tier 1) and `repark-core` (the `ReparkSession` engine
-API, tier 2). DAG target: `repark-core → {repark-iceberg, repark-common}`,
+Phase-1 crate still to land (see `docs/design/session-api.md`): `repark-core` (the
+`ReparkSession` engine API, tier 2). DAG target: `repark-core → {repark-iceberg, repark-common}`,
 `repark-iceberg → repark-common`.
 
 > **The layering SSOT is [`../scripts/check_crate_dag.py`](../scripts/check_crate_dag.py)** —
@@ -37,6 +37,7 @@ API, tier 2). DAG target: `repark-core → {repark-iceberg, repark-common}`,
 | ...do this | go to |
 |---|---|
 | Add an error variant / shared seed type | [repark-common/map.md](repark-common/map.md) |
+| Catalog wiring / MERGE / append / overwrite / ALTER | [repark-iceberg/map.md](repark-iceberg/map.md) |
 | See where the next crates land | `../docs/design/session-api.md` |
 
 ## Pointers
