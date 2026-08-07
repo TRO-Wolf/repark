@@ -15,6 +15,9 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —
   all on memory/local catalogs (AWS-free).
+- [dml_sessions.rs](dml_sessions.rs) — deferred row #3 (phase-2 PR-3b):
+  `session_sql_bare_dml_applies_eagerly` — the F-BR-2 bare-`INSERT` eager-apply trap through
+  `session.sql` (memory catalog, AWS-free).
 
 ## I want to...
 

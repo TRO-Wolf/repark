@@ -5,12 +5,8 @@
 //! parses the statement with DataFusion's `sqlparser`, intercepts the forms DataFusion cannot
 //! execute against an Iceberg catalog, and passes everything else straight through.
 //!
-//! **PR-3a restores the DDL half** — CTAS, column-def CREATE TABLE, DROP TABLE, namespace DDL,
-//! and ALTER run their v1 handlers. The remaining handler modules — MERGE INTO, INSERT
-//! OVERWRITE, CALL, and branch/tag ref DDL — land in phase-2 PR-3b; until then their router
-//! arms refuse loudly with [`DataFusionError::NotImplemented`] naming the construct (see
-//! [`refuse_pending`]). The v1 write-to-branch sniff (`ref_ddl::sniff_write_to_branch`) is a
-//! declared TEMPORARY omission restored with `ref_ddl` in PR-3b.
+//! **PR-3b completes the router** — the full v1 execute family is live (MERGE INTO, INSERT
+//! OVERWRITE, CALL, branch/tag ref DDL, and the r25 T2 write-to-branch sniff restored).
 //!
 //! Intercepted (live in this build):
 //! - **CTAS** (`CREATE TABLE … AS SELECT`) — lowered onto the fork's `StagedTableTransaction`
@@ -26,6 +22,14 @@
 //!   `DataSourceV2` oracle).
 //! - **`SHOW {NAMESPACES|SCHEMAS|DATABASES}`** — list a catalog's namespaces as Spark's
 //!   one-column `namespace` frame (Group AB; same oracle, incl. `LIKE`-pattern semantics).
+//! - **`MERGE INTO`** — lowered in [`crate::merge`] and executed by
+//!   `repark_iceberg::write::merge` (COW **and** merge-on-read; fork `ENGINE_CONTRACT` §6).
+//! - **`INSERT OVERWRITE`** — empty: probe → plan/type-validate → provider self-scan wipe
+//!   (C1-Q-001); non-empty (r23 OV1): stream → staged files →
+//!   `commit_overwrite_replace_all` (stage-then-swap; see [`crate::insert_overwrite`]).
+//! - **`CALL`** — Iceberg maintenance procedures via [`crate::call`] (I3; LOCAL catalogs only).
+//! - **Snapshot-ref DDL** (I5) — `CREATE|DROP|REPLACE BRANCH|TAG` via [`crate::ref_ddl`], plus
+//!   the r25 T2 write-to-branch STOP (`ref_ddl::sniff_write_to_branch`).
 //! - **Metadata tables** (I2) — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`.
 //! - **Time travel** (I1) — `VERSION AS OF` / `TIMESTAMP AS OF` / `FOR SYSTEM_*` rewritten to
 //!   snapshot-pinned static providers before normal routing.
@@ -41,33 +45,34 @@ use std::collections::HashSet;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
-use datafusion::sql::sqlparser::dialect::DatabricksDialect;
-use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 use repark_core::CatalogRegistry;
 
-use crate::catalog_ops::{
-    passthrough_after_p11, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
-};
-use crate::normalize::{
-    MorDmlKind, delete_target_object_name, object_name_from_table_with_joins,
-    parse_single_normalized, refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
-    starts_with_branch_or_tag_ddl, starts_with_merge,
-};
 use crate::{
-    alter, build_ctas, create_table, describe_show, execute_create_namespace, execute_ctas,
-    execute_drop_namespace, execute_drop_table, metadata_tables, spark_ast, time_travel,
-    try_parse_create_namespace,
+    MorDmlKind, alter, build_ctas, call, create_table, delete_target_object_name, describe_show,
+    execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
+    execute_insert_overwrite, merge, metadata_tables, object_name_from_table_with_joins,
+    parse_single_normalized, passthrough_after_p11, ref_ddl,
+    refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
+    refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
+    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace,
 };
 
 /// ===========================================================================================
 /// Execute one Spark-SQL statement against `ctx`, routing the Iceberg DDL/write forms to their
 /// handlers and passing everything else (reads, `INSERT INTO`, …) to DataFusion.
 ///
-/// PR-3a: interception is live for CTAS (decomposed), column-def CREATE TABLE, DROP TABLE,
-/// CREATE/DROP NAMESPACE|DATABASE, ALTER TABLE (I6/I7), DESCRIBE/SHOW namespace forms, metadata
-/// tables, time travel, TRUNCATE (targeted refuse), and the DML passthrough guards; the MERGE /
-/// INSERT OVERWRITE / CALL / ref-DDL handlers refuse loudly until phase-2 PR-3b restores them
-/// (see the module docs).
+/// Intercepted today: CTAS (`CREATE TABLE … AS SELECT`, decomposed), **column-def**
+/// `CREATE TABLE … (cols) USING iceberg` (I5 schema-only staged create), `DROP TABLE`,
+/// `CREATE` / `DROP NAMESPACE | DATABASE`, `ALTER TABLE` (SET/UNSET TBLPROPERTIES, RENAME TO,
+/// ADD/DROP/RENAME COLUMN + stretch ALTER COLUMN — I6, + the I7 partition-field DDL),
+/// **`CREATE|DROP BRANCH|TAG`** (I5 → fork `ManageSnapshots`; REPLACE still loud),
+/// `MERGE INTO` (COW + merge-on-read), **empty** `INSERT OVERWRITE` (probe + plan/type-validate +
+/// provider wipe — C1-Q-001; fork empty-overwrite short-circuit is fixed on the pin),
+/// `CALL` (I3: three maintenance procs; unknown/deferred refuse listing supported),
+/// `TRUNCATE TABLE` (loud `NotImplemented` — C4-L-001),
+/// `DESCRIBE {NAMESPACE|DATABASE|SCHEMA}` (Group Z) and
+/// `SHOW {NAMESPACES|SCHEMAS|DATABASES}` (Group AB).
+/// Non-empty `INSERT [OVERWRITE]` / `DELETE` / `UPDATE` pass through to the fork provider's DML.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -95,12 +100,26 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     // (thread_local would race under multi-thread Tokio — C1-Q-001).
     let mut catalogs = catalogs.clone();
     catalogs.set_read_only_catalogs(read_only_catalogs.iter().cloned().collect());
-    // TEMPORARY (declared PR-2, still open at PR-3a): v1 runs the r25 T2 write-to-branch STOP
-    // here via
-    // `ref_ddl::sniff_write_to_branch`. The `ref_ddl` module lands in phase-2 PR-3b; the sniff
-    // is restored verbatim with it (ledger-declared omission — branch-suffixed write targets
-    // fall through to planning's own "table not found" until then).
-    //
+    // r25 T2: write-to-branch STOP — refuse before metadata rewrite / main-branch fallthrough.
+    // Fork FastAppend always SetSnapshotRef MAIN_BRANCH (no to_branch commit target).
+    // Two-part `a.branch_x` is ambiguous with a REAL `schema.branch_x` table (morning critic):
+    // refuse only when the full name does not resolve but the prefix does (Spark's
+    // `t.branch_<name>` spelling); neither resolving falls through to planning's own
+    // "table not found", which is the more informative error.
+    if let Some(sniff) = ref_ddl::sniff_write_to_branch(sql) {
+        let refuse = match &sniff {
+            ref_ddl::WriteToBranchSniff::MultiPart => true,
+            ref_ddl::WriteToBranchSniff::TwoPart { parts } => {
+                let full =
+                    datafusion::sql::TableReference::partial(parts[0].as_str(), parts[1].as_str());
+                let prefix = datafusion::sql::TableReference::bare(parts[0].as_str());
+                !ctx.table_exist(full).unwrap_or(false) && ctx.table_exist(prefix).unwrap_or(false)
+            }
+        };
+        if refuse {
+            return Err(ref_ddl::refuse_write_to_branch());
+        }
+    }
     // I2 / R-METADATA-TABLES — Spark `cat.ns.tbl.snapshots` → fork `cat.ns.tbl$snapshots`
     // (iceberg-datafusion schema provider). Real tables named e.g. `files` win; DML + AS OF
     // composition refuse loud. Kept out of `execute_inner` (clippy `too_many_lines`).
@@ -132,17 +151,6 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     execute_inner(ctx, &catalogs, sql_storage.as_ref()).await
 }
 
-/// TEMPORARY (PR-2 refuse-arm class, PR-3a residue): a loud `NotImplemented` for a router arm
-/// whose handler module arrives in phase-2 PR-3b (MERGE, INSERT OVERWRITE, CALL, ref DDL).
-/// Every call site names the construct and the restoring PR; each arm carries a refuse test in
-/// `router/tests.rs`.
-fn refuse_pending(construct: &str, restoring_pr: &str) -> DataFusionError {
-    DataFusionError::NotImplemented(format!(
-        "{construct} is not available in this build yet — the handler lands in phase-2 \
-         {restoring_pr}"
-    ))
-}
-
 async fn execute_inner(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -151,8 +159,7 @@ async fn execute_inner(
     // r22 A2 / BUG-010: refuse genuine multi-statement scripts before any intercept/passthrough.
     // Trailing `;` / whitespace / comments after a single statement remain allowed (Spark oracle).
     refuse_multi_statement_sql(sql)?;
-    // Pre-parse recognizers (alter I7/I6-residual, create-namespace, describe/show) + the PR-3b
-    // pre-parse refuse set (see `try_preparse_intercepts`).
+    // Pre-parse recognizers for forms stock sqlparser cannot model (or would drop clauses from).
     if let Some(frame) = try_preparse_intercepts(ctx, catalogs, sql).await {
         return frame;
     }
@@ -191,16 +198,27 @@ async fn execute_inner(
             alter::execute_alter_table(ctx, catalogs, &alter_table.name, &alter_table.operations)
                 .await
         }
-        // TEMPORARY refuse arms (PR-3a residue): the DML/ref handlers land in PR-3b.
-        Statement::Merge(_) => Err(refuse_pending("MERGE INTO", "PR-3b (merge)")),
-        Statement::Insert(insert) if insert.overwrite => Err(refuse_pending(
-            "INSERT OVERWRITE",
-            "PR-3b (insert_overwrite)",
-        )),
-        Statement::Call(_) => Err(refuse_pending(
-            "CALL (Iceberg maintenance procedures)",
-            "PR-3b (call)",
-        )),
+        Statement::Merge(merge) => {
+            if merge.output.is_some() {
+                return Err(DataFusionError::NotImplemented(
+                    "MERGE OUTPUT/RETURNING clauses are not supported".to_string(),
+                ));
+            }
+            merge::execute_merge(
+                ctx,
+                catalogs,
+                &merge.table,
+                &merge.source,
+                &merge.on,
+                &merge.clauses,
+            )
+            .await
+        }
+        // INSERT OVERWRITE: empty → probe/validate/self-scan provider wipe (C1-Q-001; not DELETE
+        // — BUG-003). Non-empty → OV1 stage-then-swap (stream + commit_overwrite_replace_all).
+        Statement::Insert(insert) if insert.overwrite => {
+            execute_insert_overwrite(ctx, catalogs, sql, insert).await
+        }
         // Non-overwrite INSERT would otherwise passthrough to DF and miss P11 for pg targets.
         Statement::Insert(insert) => {
             let refusal = match &insert.table {
@@ -238,6 +256,10 @@ async fn execute_inner(
                 .await?;
             spark_ast::execute_passthrough(ctx, catalogs, sql).await
         }
+        // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
+        // Three procedures v1 (expire_snapshots / rewrite_data_files / rollback_to_snapshot);
+        // unknown + remove_orphan_files refuse loud listing the supported set (C3-L-001 residual).
+        Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
         // `TRUNCATE TABLE` is planned (parity §2.3) but not wired — fail loud with a targeted
         // message rather than DF's opaque Unsupported (C4-L-001). Prefer empty INSERT OVERWRITE
         // (provider wipe) until a dedicated truncate action lands.
@@ -252,27 +274,12 @@ async fn execute_inner(
 }
 
 /// Pre-`parse_single_normalized` intercepts: ALTER (I6 residual + I7), CREATE/DESCRIBE/SHOW
-/// namespace, plus the PR-3a-residue refuse for snapshot-ref DDL (I5 — the `ref_ddl` module
-/// lands in PR-3b, so its statement shapes refuse loudly here; TEMPORARY refuse-arm class).
+/// namespace, and snapshot-ref DDL (I5).
 async fn try_preparse_intercepts(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
 ) -> Option<Result<DataFrame>> {
-    // Snapshot-ref DDL (I5) — `CREATE|DROP|REPLACE BRANCH|TAG` forms, both top-level and
-    // ALTER-scoped (PR-3b). Checked FIRST so the ref-DDL shapes name their construct instead of
-    // reaching the live ALTER handlers. The bare `REPLACE BRANCH|TAG` form (v1:
-    // `ref_ddl::try_parse_ref_ddl`) is sniffed explicitly — the normalize sniff covers only the
-    // CREATE/DROP and ALTER-scoped shapes.
-    if starts_with_branch_or_tag_ddl(sql)
-        || starts_with_keywords(sql, &["REPLACE", "BRANCH"])
-        || starts_with_keywords(sql, &["REPLACE", "TAG"])
-    {
-        return Some(Err(refuse_pending(
-            "CREATE/DROP/REPLACE BRANCH|TAG (snapshot-ref DDL)",
-            "PR-3b (ref_ddl)",
-        )));
-    }
     // I7 — ADD/DROP/REPLACE PARTITION FIELD + REPLACE COLUMNS (stock sqlparser cannot model).
     if let Some(parsed) = alter::try_parse_iceberg_alter_ddl(sql) {
         return Some(match parsed {
@@ -312,24 +319,14 @@ async fn try_preparse_intercepts(
             Err(error) => Err(error),
         });
     }
+    // Snapshot-ref DDL (I5) — not modelled by stock sqlparser.
+    if let Some(parsed) = ref_ddl::try_parse_ref_ddl(sql) {
+        return Some(match parsed {
+            Ok(ddl) => ref_ddl::execute_ref_ddl(ctx, catalogs, ddl).await,
+            Err(error) => Err(error),
+        });
+    }
     None
-}
-
-/// Token-level "statement starts with these keyword words" sniff (case-insensitive, tolerant of
-/// leading whitespace/comments — the `starts_with_merge` pattern). PR-3b refuse-arm recognizer (ref DDL).
-fn starts_with_keywords(sql: &str, keywords: &[&str]) -> bool {
-    let Ok(tokens) = Tokenizer::new(&DatabricksDialect {}, sql).tokenize() else {
-        return false;
-    };
-    let mut words = tokens.iter().filter_map(|token| match token {
-        Token::Word(word) => Some(word.value.as_str()),
-        _ => None,
-    });
-    keywords.iter().all(|keyword| {
-        words
-            .next()
-            .is_some_and(|word| word.eq_ignore_ascii_case(keyword))
-    })
 }
 
 /// Fall-through when `parse_single_normalized` returns `None` (MERGE / residual BRANCH|TAG / DF).
@@ -339,14 +336,19 @@ async fn execute_unparsable_fallthrough(
     sql: &str,
 ) -> Result<DataFrame> {
     if starts_with_merge(sql) {
-        return Err(refuse_pending("MERGE INTO", "PR-3b (merge)"));
+        return Err(DataFusionError::Plan(
+            "could not parse this MERGE INTO form (the supported surface + v1 limits are \
+             tracked in docs/spark-sql-iceberg-parity.md §2.3 / task/todo.md)"
+                .to_string(),
+        ));
     }
-    // Residual BRANCH|TAG shapes reaching here — v1's defense-in-depth arm, kept so an
-    // unparsable ref-DDL form never falls through to an opaque DataFusion parse error.
+    // Residual BRANCH|TAG shapes the dedicated parser missed — still fail loud (not ParserError).
     if starts_with_branch_or_tag_ddl(sql) {
-        return Err(refuse_pending(
-            "CREATE/DROP/REPLACE BRANCH|TAG (snapshot-ref DDL)",
-            "PR-3b (ref_ddl)",
+        return Err(DataFusionError::NotImplemented(
+            "this CREATE/DROP/REPLACE BRANCH|TAG form is not supported yet — supported: \
+             ALTER TABLE t CREATE|DROP BRANCH|TAG [AS OF VERSION n] and CREATE|DROP BRANCH|TAG \
+             name IN t (docs/spark-sql-iceberg-parity.md §2.2 / I5)"
+                .to_string(),
         ));
     }
     spark_ast::execute_passthrough(ctx, catalogs, sql).await

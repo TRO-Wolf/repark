@@ -49,6 +49,7 @@ use iceberg::writer::file_writer::location_generator::{
 };
 use iceberg::writer::file_writer::rolling_writer::RollingFileWriterBuilder;
 use iceberg::writer::{IcebergWriter, IcebergWriterBuilder};
+use iceberg::{Catalog, TableIdent};
 use uuid::Uuid;
 
 use crate::write::concurrency::WriteConcurrency;
@@ -285,6 +286,97 @@ async fn write_position_deletes_for_partition(
         ));
     }
     Ok(files)
+}
+
+/// Which SQL DML verb is being gated for the BUG-001 merge-on-read multi-spec hazard.
+#[derive(Debug, Clone, Copy)]
+pub enum MorDmlKind {
+    /// SQL `DELETE` (gated via `write.delete.mode`).
+    Delete,
+    /// SQL `UPDATE` (gated via `write.update.mode`).
+    Update,
+}
+
+impl MorDmlKind {
+    /// The table property naming the write mode this verb consults.
+    #[must_use]
+    pub const fn mode_property(self) -> &'static str {
+        match self {
+            Self::Delete => "write.delete.mode",
+            Self::Update => "write.update.mode",
+        }
+    }
+
+    /// The SQL verb, for refuse messages.
+    #[must_use]
+    pub const fn verb(self) -> &'static str {
+        match self {
+            Self::Delete => "DELETE",
+            Self::Update => "UPDATE",
+        }
+    }
+}
+
+/// ===========================================================================================
+/// BUG-001 P0 valve (r22 A2): SQL `DELETE`/`UPDATE` via iceberg-datafusion merge-on-read stamps
+/// every position delete with `partition_key = None` when the **current default** partition
+/// spec is unpartitioned — after partition-spec evolution that leaves older data files under
+/// prior specs, deletes can commit while rows remain visible (fork
+/// `physical_plan/delete.rs` unpartitioned fast path; `ENGINE_CONTRACT` §7a).
+///
+/// Refuse when **all** of: (1) `write.{delete,update}.mode = merge-on-read`, (2) current default
+/// spec is unpartitioned, (3) table metadata carries more than one partition spec in history.
+/// Over-refuse is OK; under-refuse is not. **`MERGE` is never gated here** (repark-owned
+/// merge-on-read writer is fixed).
+///
+/// Hoisted from the v1 SQL crate's `normalize` module (phase-2 PR-3b declared rename): this is
+/// the catalog-handle half of the valve — it lives beside the position-delete path whose fork
+/// hazard it gates. The SQL door keeps the [`ObjectName`]-resolution wrapper and calls here;
+/// `table_sql` is the caller's display form of the target for the refuse message.
+///
+/// # Errors
+/// [`DataFusionError::Plan`] naming the fork hazard and copy-on-write / `MERGE` workarounds.
+/// ===========================================================================================
+pub async fn refuse_mor_unpartitioned_multi_spec_dml(
+    catalog: &dyn Catalog,
+    ident: &TableIdent,
+    table_sql: &str,
+    kind: MorDmlKind,
+) -> Result<()> {
+    let Ok(table) = catalog.load_table(ident).await else {
+        // Missing table → DF/path will raise; not our refuse.
+        return Ok(());
+    };
+    let metadata = table.metadata();
+    // Case/trim tolerant: under-refuse on `Merge-on-Read` / padded values would re-open the
+    // silent under-delete path (critic-octo C3). Over-refuse of odd spellings is OK.
+    let is_merge_on_read = metadata
+        .properties()
+        .get(kind.mode_property())
+        .is_some_and(|mode| mode.trim().eq_ignore_ascii_case("merge-on-read"));
+    if !is_merge_on_read {
+        return Ok(());
+    }
+    if !metadata.default_partition_spec().is_unpartitioned() {
+        return Ok(());
+    }
+    let spec_count = metadata.partition_specs_iter().len();
+    if spec_count <= 1 {
+        return Ok(());
+    }
+    Err(DataFusionError::Plan(format!(
+        "refusing SQL {} on Iceberg table `{table_sql}`: write mode is merge-on-read, the \
+         current partition spec is unpartitioned, and the table has {spec_count} partition \
+         specs in history — the iceberg-datafusion MoR position-delete path stamps deletes \
+         with partition_key=None for unpartitioned current specs without looking up each data \
+         file's real (spec_id, partition), which can silently under-delete after partition-spec \
+         evolution (owned fork issue: integrations/datafusion physical_plan/delete.rs \
+         write_position_deletes unpartitioned fast path; ENGINE_CONTRACT §7a). Workarounds: \
+         set {}='copy-on-write' (or unset for COW default), or use MERGE INTO (RePark-owned MoR \
+         writer stamps per-file partitions correctly)",
+        kind.verb(),
+        kind.mode_property(),
+    )))
 }
 
 #[cfg(test)]

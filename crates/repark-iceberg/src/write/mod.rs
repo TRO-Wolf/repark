@@ -80,6 +80,7 @@ pub use overwrite::{
     parse_overwrite_isolation, positional_map_overwrite_batch,
     write_overwrite_staged_files_from_stream,
 };
+pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,

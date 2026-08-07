@@ -2,11 +2,11 @@
 
 ## Purpose
 
-File-backed tests for the statement router (`../router.rs`): one refuse test per remaining TEMPORARY
-refuse arm (MERGE, INSERT OVERWRITE, CALL, branch/tag ref DDL — PR-3b; the PR-3a arms'
-refuse tests were deleted when their handlers landed), the v1 TRUNCATE targeted-refuse pin, passthrough
-sanity, the BUG-010 ordering pin, and the P11 read-only threading pin. PR-2-native tests — the
-ported v1 lib-root battery rides PR-3b.
+File-backed tests for the statement router (`../router.rs`): the v1 TRUNCATE targeted-refuse
+pin, passthrough sanity, the BUG-010 ordering pin, and the P11 read-only threading pin.
+PR-2-native (outside the ported census). All TEMPORARY refuse arms are restored as of PR-3b;
+their refuse tests were deleted with the arms. The ported v1 lib-root battery lives in
+`../tests.rs` (`crate::tests`).
 
 ## Contents
 
@@ -20,6 +20,6 @@ ported v1 lib-root battery rides PR-3b.
 
 | Symptom | First check |
 |---|---|
-| A refuse test fails after landing a PR-3x handler | Delete that arm's refuse test in the same change that restores the handler (ledger row closes) |
+| A routing regression on an intercepted form | The lib-root battery (`cargo test -p repark-spark tests::`) pins every arm end to end |
 
 First checks: `cargo test -p repark-spark router::`. Escalate to: [../map.md#debug](../map.md).

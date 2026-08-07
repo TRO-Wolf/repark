@@ -100,9 +100,10 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
 - [ ] **PR-3a — repark-spark DDL (IN FLIGHT)**: ctas, create_table, namespace_ddl,
       catalog_ops, local_fs_ddl, alter. Unblocks the CTAS-blocked deferred rows (#2, #4–#7)
       (ledger: [p2c-spark-ddl-ledger.md](p2c-spark-ddl-ledger.md)).
-- [ ] **PR-3b — repark-spark DML + refs**: merge, insert_overwrite, ref_ddl, call + MoR-valve
-      hoist; census closes (342-name empty sorted-diff, `repark_sql::` → `repark_spark::`).
-      Unblocks deferred #3.
+- [ ] **PR-3b — repark-spark DML + refs (IN FLIGHT)**: merge, insert_overwrite, ref_ddl, call
+      + MoR-valve hoist; census closed (334 ported names empty sorted-diff under
+      `repark_sql::` → `repark_spark::`; 342 − 6 postgres_p11 − 2 phase-1 time-travel hoists).
+      Deferred #3 landed (ledger: [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md)).
 - [ ] **PR-4 — repark-ta (CONFIRMED in scope 2026-08-07)**: kernels + goldens + `TaExtension`;
       Spark extension composes it; TA census generated + empty-diff. Unblocks deferred #8–#14.
 - [ ] **PR-5 — repark-sql ANSI M1**: `AnsiDialect` delegation core, guard set, wrong-door
