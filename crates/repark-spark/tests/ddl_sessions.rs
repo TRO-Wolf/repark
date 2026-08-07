@@ -2,8 +2,8 @@
 //! the DDL half of the Spark door — CTAS lowering, namespace `location` handling, and the
 //! catalog metadata surface — exercised end-to-end through `session.sql` on a real session
 //! built with the door installed (`SparkExtension` + `SparkDialect`). Landed phase-2 PR-3a per
-//! `task/port/deferred-tests.md`; row #3 (`session_sql_bare_dml_applies_eagerly`) stays
-//! deferred to PR-3b (eager-DML routing).
+//! `task/port/deferred-tests.md`; row #3 (`session_sql_bare_dml_applies_eagerly`) landed at
+//! PR-3b in `dml_sessions.rs` (eager-DML routing).
 
 use std::collections::HashMap;
 use std::sync::Arc;

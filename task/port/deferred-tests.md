@@ -62,7 +62,7 @@ uncertain ⇒ deferred — no test guessed green.
 |---|---|---|
 | ~~tests::temp_view_then_sql_runs_the_spark_function_shim~~ | **LANDED phase-2 PR-2** (`repark-spark/tests/session_extension.rs`, real Session + `SparkExtension` + `SparkDialect`) | ~~spark functions shim (SessionExtension)~~ |
 | ~~tests::ctas_end_to_end_through_spark_sql~~ | **LANDED phase-2 PR-3a** (`repark-spark/tests/ddl_sessions.rs`) | ~~CTAS lowering (SQL interception) + functions~~ |
-| tests::session_sql_bare_dml_applies_eagerly | 2 (Spark door — phase-2 PR-3b) | CTAS setup now available (PR-3a); eager-DML routing still behind the PR-3b INSERT/DML arm — stays deferred (re-verified at PR-3a) |
+| ~~tests::session_sql_bare_dml_applies_eagerly~~ | **LANDED phase-2 PR-3b** (`repark-spark/tests/dml_sessions.rs`) | ~~eager-DML routing (PR-3b DML arm)~~ |
 | ~~tests::create_namespace_with_location_lets_ctas_succeed_on_strict_catalog~~ | **LANDED phase-2 PR-3a** (`repark-spark/tests/ddl_sessions.rs`) | ~~CTAS lowering~~ |
 | ~~tests::create_namespace_with_location_stores_both_location_keys~~ | **LANDED phase-2 PR-3a** (`repark-spark/tests/ddl_sessions.rs`) | ~~CTAS end-to-end arm~~ |
 | ~~tests::catalog_surface_table_exists_and_temp_views~~ | **LANDED phase-2 PR-3a** (`repark-spark/tests/ddl_sessions.rs`) | ~~CTAS mid-flow~~ |
@@ -85,17 +85,28 @@ phase-2 PR (2 / 3a / 3b per the blocking surface); the 7 ta rows land with phase
 [../todo.md](../todo.md) — decision 2026-08-07, brief
 [../../briefs/phase-2-sql-doors.md](../../briefs/phase-2-sql-doors.md) §4.)*
 
-Also deferred with the phase-2 statement router (hoist-adjacent, from the v1 SQL crate's
+~~Also deferred with the phase-2 statement router (hoist-adjacent, from the v1 SQL crate's
 `time_travel` module — the SQL-TEXT half that did not hoist): the token-scan / SQL-rewrite
 tests (`detects_spark_and_system_spellings`, `find_spans_*`,
-`comments_do_not_false_positive_time_travel`, `system_version_string_ref_span`). They belong to
-the v1 repark-sql cone (phase-2), not the session tier, and are listed here as a pointer only.
+`comments_do_not_false_positive_time_travel`, `system_version_string_ref_span`).~~ CLOSED
+(phase-2 PR-3b census): these are v1 repark-sql census names; they landed in
+`repark-spark/src/time_travel.rs` with the PR-2 spine and are covered by the PR-3b 334-name
+empty sorted-diff (they were a pointer only — never session-tier rows).
 
 Row-close note (2026-08-07 — phase-2 PR-2): deferred row #1 landed as
 `repark-spark/tests/session_extension.rs::temp_view_then_sql_runs_the_spark_function_shim`
 against the real `Session + SparkExtension + SparkDialect`; the repark-spark census itself
 stays open until PR-3b (partial; closes PR-3b —
 [../p2b-spark-skeleton-ledger.md](../p2b-spark-skeleton-ledger.md)).
+
+Row-close note (2026-08-07 — phase-2 PR-3b): deferred row #3
+(`session_sql_bare_dml_applies_eagerly`) landed as
+`repark-spark/tests/dml_sessions.rs::session_sql_bare_dml_applies_eagerly` (same real-session
+assembly as `ddl_sessions.rs`; memory catalog only — AWS-free; v1 body faithful with
+`ReparkSession::new()` → the door-installed builder). With the repark-sql census closed at
+PR-3b (334 ported names, empty sorted diff — [../p2d-spark-dml-ledger.md](../p2d-spark-dml-ledger.md)),
+the manifest remainder is exactly: 7 ta rows (phase-2 PR-4) + 4 post-milestone-one
+postgres/excel rows.
 
 Row-close note (2026-08-07 — phase-2 PR-3a): deferred rows #2, #4, #5, #6, #7 landed together
 as `repark-spark/tests/ddl_sessions.rs` (same real-session assembly pattern as
