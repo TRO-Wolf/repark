@@ -13,4 +13,5 @@ repark = "repark"
 mis = "mis" # the `mis-` prefix (mis-placement / mis-wired) in prose — typos splits on the hyphen
 MoR = "MoR" # merge-on-read
 ser = "ser" # serialize (serde idiom)
+hel = "hel" # substr('hello', …) expected-value fixture in the Spark substring parity tests
 TRO = "TRO" # TRO-Wolf org / owned iceberg-rust fork (typos splits TRO-Wolf → TRO)

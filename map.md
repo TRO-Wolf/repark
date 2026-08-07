@@ -9,7 +9,9 @@ front-door navigation map. See [README.md](README.md) for the overview and
 **phase 1** of the port: the engine core is arriving — the workspace carries
 `crates/repark-common` (error seed), `crates/repark-iceberg` (catalog + write over the owned
 iceberg-rust fork, `[patch.crates-io]`-pinned), and `crates/repark-core` (the `ReparkSession`
-engine API, landing commit-by-commit in PR-C).
+engine API, landing commit-by-commit in PR-C). Phase 2 (SQL doors) has begun:
+`crates/repark-functions` (Spark-semantics scalar/aggregate function shims, tier 3) is the first
+ported crate.
 
 ## Contents
 

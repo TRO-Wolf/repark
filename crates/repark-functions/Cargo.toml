@@ -1,0 +1,31 @@
+[package]
+name = "repark-functions"
+description = "Spark-compatible function registry: datafusion-spark plus a Spark-semantics date shim."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# DataFusion-native crate: registration + UDFs speak `datafusion::error::Result` directly, so this
+# crate does not depend on repark-core (the DataFusionError -> repark_core::Error conversion
+# happens one layer up, in repark-session). See map.md.
+datafusion.workspace = true
+datafusion-spark.workspace = true
+arrow.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+# `#[tokio::test]` — the date-shim tests register the UDFs into a SessionContext and run SQL.
+tokio.workspace = true
+# PERF-10 (r24 G10): ratio micro-benches — pin at crate level (never workspace.dependencies).
+criterion = { version = "0.5.1", features = ["async_tokio", "html_reports"] }
+
+[[bench]]
+name = "ratio_string_datetime"
+harness = false
