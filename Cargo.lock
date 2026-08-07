@@ -4433,6 +4433,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "repark-spark"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "datafusion",
+ "iceberg",
+ "iceberg-datafusion",
+ "regex",
+ "repark-core",
+ "repark-functions",
+ "repark-iceberg",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "reqsign"
 version = "0.16.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
