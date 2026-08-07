@@ -11,6 +11,10 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 - [session_extension.rs](session_extension.rs) — deferred test #1
   (`temp_view_then_sql_runs_the_spark_function_shim`): temp view + `session.sql` reaches the
   Spark date shim (`year`, `weekofyear`) through the installed extension + dialect.
+- [ddl_sessions.rs](ddl_sessions.rs) — deferred rows #2, #4, #5, #6, #7 (phase-2 PR-3a): CTAS
+  end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
+  property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —
+  all on memory/local catalogs (AWS-free).
 
 ## I want to...
 
@@ -30,7 +34,9 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 
 ## Debug
 
-- `cargo test -p repark-spark --test session_extension` runs just this file. Never
-  `--all-features` (AGENTS.md PyO3 note).
+- `cargo test -p repark-spark --test session_extension` (or `--test ddl_sessions`) runs one
+  file. Never `--all-features` (AGENTS.md PyO3 note).
+- `ddl_sessions.rs` failures usually mean a PR-3a handler regressed (ctas / namespace_ddl /
+  catalog_ops), not the session seams — reproduce via the equivalent `session.sql` statement.
 - Week-53 assertion is ISO-week semantics (2021-01-01 → ISO week 53 of 2020) — a failure there
   is the date shim regressing, not the fixture.

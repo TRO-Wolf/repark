@@ -1,7 +1,8 @@
-//! Router-spine tests: one refuse test per TEMPORARY PR-2 refuse arm (each arm is restored by
-//! the named phase-2 PR), plus passthrough sanity. The v1 lib-root integration battery (200
-//! tests) rides PR-3b when the router completes — these tests are PR-2-native and pin only the
-//! refuse surface this PR introduces.
+//! Router-spine tests: one refuse test per remaining TEMPORARY refuse arm (each arm is restored
+//! by phase-2 PR-3b), plus passthrough sanity. The PR-3a arms' refuse tests were deleted with
+//! their arms when the DDL handlers landed. The v1 lib-root integration battery (200 tests)
+//! rides PR-3b when the router completes — these tests pin only the refuse surface still in
+//! force.
 
 use datafusion::prelude::SessionContext;
 use repark_core::CatalogRegistry;
@@ -32,73 +33,6 @@ async fn assert_refuses(sql: &str, construct_fragment: &str, restoring_pr: &str)
         error.contains("lands in phase-2"),
         "error must mark the refusal as temporary: {error}"
     );
-}
-
-#[tokio::test]
-async fn refuses_ctas_until_pr3a() {
-    assert_refuses(
-        "CREATE TABLE ice.ns.t AS SELECT 1 AS v",
-        "CREATE TABLE … AS SELECT (CTAS)",
-        "PR-3a",
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn refuses_column_def_create_table_until_pr3a() {
-    assert_refuses(
-        "CREATE TABLE ice.ns.t (id BIGINT) USING iceberg",
-        "column-def CREATE TABLE",
-        "PR-3a",
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn refuses_drop_table_until_pr3a() {
-    assert_refuses("DROP TABLE ice.ns.t", "DROP TABLE", "PR-3a").await;
-}
-
-#[tokio::test]
-async fn refuses_drop_namespace_until_pr3a() {
-    assert_refuses(
-        "DROP SCHEMA ice.ns",
-        "DROP NAMESPACE | DATABASE | SCHEMA",
-        "PR-3a",
-    )
-    .await;
-    assert_refuses(
-        "DROP DATABASE ice.ns",
-        "DROP NAMESPACE | DATABASE | SCHEMA",
-        "PR-3a",
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn refuses_create_namespace_spellings_until_pr3a() {
-    for sql in [
-        "CREATE NAMESPACE ice.ns",
-        "CREATE SCHEMA ice.ns",
-        "CREATE DATABASE ice.ns",
-        "CREATE NAMESPACE IF NOT EXISTS ice.ns LOCATION '/tmp/x'",
-    ] {
-        assert_refuses(sql, "CREATE NAMESPACE | DATABASE | SCHEMA", "PR-3a").await;
-    }
-}
-
-#[tokio::test]
-async fn refuses_alter_forms_until_pr3a() {
-    // Parseable ALTER TABLE, the I7 partition-field form, and an I6 residual all refuse via the
-    // one pre-parse ALTER sniff (their v1 recognizers live in the PR-3a `alter` module).
-    for sql in [
-        "ALTER TABLE ice.ns.t SET TBLPROPERTIES ('k'='v')",
-        "ALTER TABLE ice.ns.t ADD PARTITION FIELD month(ts)",
-        "ALTER TABLE ice.ns.t WRITE ORDERED BY id",
-        "alter table ice.ns.t RENAME TO ice.ns.u",
-    ] {
-        assert_refuses(sql, "ALTER TABLE", "PR-3a").await;
-    }
 }
 
 #[tokio::test]

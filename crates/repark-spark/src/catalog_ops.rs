@@ -1,21 +1,55 @@
-//! Catalog lookup, P11 read-only DML refuse, and error mapping.
+//! Catalog lookup, P11 read-only DML refuse, re-register helpers, and error mapping.
 //!
-//! Extracted MOVE-ONLY from the v1 SQL crate's `lib.rs` (r25 T0 DataFusion-style reorg). PR-2
-//! PARTIAL rider: this port carries the subset the spine consumes. The v1 helpers serving the
-//! PR-3a/PR-3b handler modules — `reject_path_escape_ident`, `sqlparser_err`, the r24 P7
-//! `reregister*` provider-invalidation family, and `namespace_schema_name` — return verbatim
-//! with those modules (ledger-declared).
+//! Extracted MOVE-ONLY from `lib.rs` (r25 T0 DataFusion-style reorg). Zero behavior change.
 
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{FromTable, ObjectName};
-use iceberg::Catalog;
+use datafusion::sql::sqlparser::parser::ParserError;
+use iceberg::{Catalog, NamespaceIdent};
+
 use repark_core::CatalogRegistry;
 
 use crate::normalize::object_name_from_table_with_joins;
 use crate::spark_ast;
+
+/// Reject identifier segments that could escape a warehouse root via `..` or path separators
+/// when composed into `LocalFs` / object-store paths
+/// (C2-SEC-003 / CALL table identity C1-SEC-001 / O3-C4-SEC-001 path-escape mirror).
+///
+/// Needles live in [`repark_iceberg::write::idents::path_escape_kind`] (r23 QI1 single-source); empty
+/// segments are refused here at compose-time only.
+pub(crate) fn reject_path_escape_ident(segment: &str, kind: &str) -> Result<()> {
+    if segment.is_empty() {
+        return Err(DataFusionError::Plan(format!(
+            "{kind} identifier must not be empty"
+        )));
+    }
+    match repark_iceberg::write::idents::path_escape_kind(segment) {
+        Some(repark_iceberg::write::idents::PathEscapeKind::Traversal) => {
+            Err(DataFusionError::Plan(format!(
+                "{kind} identifier {segment:?} must not contain path traversal ('..')"
+            )))
+        }
+        Some(repark_iceberg::write::idents::PathEscapeKind::Separator) => {
+            Err(DataFusionError::Plan(format!(
+                "{kind} identifier {segment:?} must not contain path separators"
+            )))
+        }
+        None => Ok(()),
+    }
+}
+
+/// Fold a sqlparser error into a plan-class [`DataFusionError`] (create-namespace parse errors join
+/// the existing create-namespace / N5 errors as `Plan`, classified `AnalysisException` by WG-3).
+// By-value to stay a clean `.map_err(sqlparser_err)` adapter (the `engine_err` pattern,
+// lessons 2026-06-05: prefer `allow` over reshaping for a clippy-only lint).
+#[allow(clippy::needless_pass_by_value)]
+pub(crate) fn sqlparser_err(err: ParserError) -> DataFusionError {
+    DataFusionError::Plan(format!("could not parse CREATE NAMESPACE: {err}"))
+}
 
 /// Look up a registered Iceberg catalog handle by name, or emit the P11 direction-note when
 /// `name` is a known postgres (read-only) catalog on this registry snapshot.
@@ -109,6 +143,73 @@ pub(crate) fn name_parts(name: &ObjectName) -> Vec<String> {
         .iter()
         .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
         .collect()
+}
+
+// === r24 P7: catalog-provider rebuild path ====================================================
+// PERF-07: product DDL invalidates the touched namespace only (O(1)); full rebuild is the
+// explicit refresh / OOB escape hatch. Do not expand into SB1 DDL-gate or free-SQL cardinality.
+// ==============================================================================================
+
+/// Invalidate the DF catalog-provider name directory for `namespace` after a product DDL mutation.
+///
+/// O(1) listing cost via [`repark_iceberg::catalog::invalidate_catalog_namespaces`] (PERF-07). Prefer this
+/// over [`reregister_catalog_provider`] for CREATE/DROP TABLE, CTAS, ALTER RENAME, etc.
+pub(crate) async fn reregister(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    namespace: &str,
+) -> Result<()> {
+    reregister_namespaces(ctx, catalog, catalog_name, &[namespace]).await
+}
+
+/// Invalidate one or more namespaces (e.g. ALTER TABLE RENAME across namespaces).
+pub(crate) async fn reregister_namespaces(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    namespaces: &[&str],
+) -> Result<()> {
+    repark_iceberg::catalog::invalidate_catalog_namespaces(ctx, catalog, catalog_name, namespaces)
+        .await
+}
+
+/// Drop a namespace entry from the DF provider after product `DROP NAMESPACE` (no listing).
+pub(crate) async fn reregister_drop_namespace(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    namespace: &str,
+) -> Result<()> {
+    repark_iceberg::catalog::drop_catalog_namespace_from_provider(
+        ctx,
+        catalog,
+        catalog_name,
+        namespace,
+    )
+    .await
+}
+
+/// Full provider rebuild — explicit session refresh / free-SQL OOB recovery (ADR-0004).
+///
+/// # Errors
+/// Provider build / registration failures as [`DataFusionError`].
+pub async fn reregister_catalog_provider(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    name: &str,
+) -> Result<()> {
+    // Full O(databases) path — session `refresh_catalog_provider` and test helpers only.
+    repark_iceberg::catalog::rebuild_catalog_provider(ctx, catalog, name).await
+}
+
+/// Leaf schema name for a [`NamespaceIdent`] (top-level two-part model).
+pub(crate) fn namespace_schema_name(namespace: &NamespaceIdent) -> String {
+    namespace
+        .as_ref()
+        .last()
+        .cloned()
+        .unwrap_or_else(|| namespace.to_url_string())
 }
 
 /// Fold an iceberg error into a DataFusion error (the session layer carries one engine error type).

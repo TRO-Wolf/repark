@@ -2,9 +2,9 @@
 
 ## Purpose
 
-File-backed tests for the statement router (`../router.rs`): one refuse test per PR-2 TEMPORARY
-refuse arm (CTAS, column-def CREATE, DROP TABLE/NAMESPACE, CREATE NAMESPACE, ALTER, MERGE,
-INSERT OVERWRITE, CALL, branch/tag ref DDL), the v1 TRUNCATE targeted-refuse pin, passthrough
+File-backed tests for the statement router (`../router.rs`): one refuse test per remaining TEMPORARY
+refuse arm (MERGE, INSERT OVERWRITE, CALL, branch/tag ref DDL — PR-3b; the PR-3a arms'
+refuse tests were deleted when their handlers landed), the v1 TRUNCATE targeted-refuse pin, passthrough
 sanity, the BUG-010 ordering pin, and the P11 read-only threading pin. PR-2-native tests — the
 ported v1 lib-root battery rides PR-3b.
 

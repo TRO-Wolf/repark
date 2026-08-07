@@ -7,7 +7,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, Statement, TableFactor, TableWithJoins, Value,
 };
-use datafusion::sql::sqlparser::dialect::DatabricksDialect;
+use datafusion::sql::sqlparser::dialect::{DatabricksDialect, GenericDialect};
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::parser::{Parser, ParserError};
 use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
@@ -16,6 +16,7 @@ use iceberg::{NamespaceIdent, TableIdent};
 
 use repark_core::CatalogRegistry;
 
+use crate::alter;
 use crate::catalog_ops::{iceberg_err, name_parts};
 
 /// True when the statement's first keyword token is `MERGE` — tokenizer-based (the same pattern
@@ -164,13 +165,26 @@ pub(crate) fn parse_single_normalized(
         (tokens, partitioning) = extract_partitioned_by(&tokens)?;
     }
     tokens = rewrite_namespace_to_schema(&tokens);
-    // TEMPORARY (phase-2 PR-2): v1 runs the ALTER token rewrites (`rewrite_unset_tblproperties`,
-    // `rewrite_add_columns_plural`, `rewrite_drop_columns_plural`), the MERGE star-form rewrite
-    // (`merge::rewrite_merge_stars`), and the GenericDialect switch for ALTER TABLE here. Their
-    // home modules (`alter`, `merge`) land in phase-2 PR-3a/PR-3b, and the router refuses ALTER
-    // and MERGE loudly until then, so the rewrites are unreachable in this build. Restored
-    // verbatim with those modules (PR-3a: alter rewrites + dialect switch; PR-3b: merge stars).
-    let Ok(mut statements) = Parser::new(&dialect).with_tokens(tokens).parse_statements() else {
+    tokens = alter::rewrite_unset_tblproperties(&tokens);
+    tokens = alter::rewrite_add_columns_plural(&tokens);
+    tokens = alter::rewrite_drop_columns_plural(&tokens);
+    // TEMPORARY (phase-2 PR-3a): v1 additionally runs `merge::rewrite_merge_stars` here when
+    // `is_merge(&tokens)`. The `merge` module lands in phase-2 PR-3b, and the router refuses
+    // MERGE loudly until then, so that rewrite is unreachable in this build; restored verbatim
+    // with `merge` in PR-3b.
+    // ALTER TABLE uses GenericDialect so Spark `ADD COLUMN … FIRST|AFTER x` fills
+    // `MySQLColumnPosition` (Databricks dialect leaves those tokens unparsed — I6).
+    let generic = GenericDialect {};
+    let parse_dialect: &dyn datafusion::sql::sqlparser::dialect::Dialect =
+        if alter::tokens_are_alter_table(&tokens) {
+            &generic
+        } else {
+            &dialect
+        };
+    let Ok(mut statements) = Parser::new(parse_dialect)
+        .with_tokens(tokens)
+        .parse_statements()
+    else {
         return Ok(None);
     };
     // BUG-010 defense-in-depth: multi-statement after normalisers still refuse as Parse.
@@ -517,9 +531,6 @@ impl PartitionFieldSpec {
 /// table is created, never a panic); the temporal transforms (`year[s]`/`month[s]`/`day[s]`/
 /// `hour[s]`) and `identity` take a single column. An unknown transform name, a wrong argument
 /// count, or a non-numeric/`<= 0` width is a loud typed error naming the offending form.
-// TEMPORARY (PR-2): sole consumers are the CTAS/CREATE handlers landing in phase-2 PR-3a;
-// the expect self-cleans (unfulfilled-expectation warning) when they return.
-#[expect(dead_code)]
 pub(crate) fn build_transform_field(name: &str, args: &[String]) -> Result<PartitionFieldSpec> {
     let lower = name.to_ascii_lowercase();
     let arity_err = |want: &str| {
@@ -822,9 +833,6 @@ pub(crate) fn rewrite_namespace_to_schema(tokens: &[Token]) -> Vec<Token> {
 }
 
 /// Render a `TBLPROPERTIES` value (a string literal in Spark) to its plain string.
-// TEMPORARY (PR-2): sole consumers are the CTAS/CREATE handlers landing in phase-2 PR-3a;
-// the expect self-cleans (unfulfilled-expectation warning) when they return.
-#[expect(dead_code)]
 pub(crate) fn property_value(value: &Expr) -> String {
     match value {
         Expr::Value(spanned) => match &spanned.value {
@@ -852,9 +860,6 @@ pub(crate) fn property_value(value: &Expr) -> String {
 /// (Java's "Cannot find source column" class); a duplicate partition-field name is rejected by
 /// the fork's builder ("Cannot use partition name more than once"). Bucket/truncate width `<= 0`
 /// is rejected EARLIER, at parse time in [`build_transform_field`], so no table is ever created.
-// TEMPORARY (PR-2): sole consumers are the CTAS/CREATE handlers landing in phase-2 PR-3a;
-// the expect self-cleans (unfulfilled-expectation warning) when they return.
-#[expect(dead_code)]
 pub(crate) fn build_partition_spec(
     schema: &iceberg::spec::Schema,
     partition_fields: &[PartitionFieldSpec],
