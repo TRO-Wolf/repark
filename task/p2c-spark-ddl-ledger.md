@@ -43,6 +43,11 @@ run on memory/local catalogs; acceptance env vars NEVER set).
 2. **Prefix renames (mechanical)** — crate-internal `repark_sql` → `repark_spark`;
    `repark_write::`/`repark_catalog::` → `repark_iceberg::write::`/`repark_iceberg::catalog::`;
    `repark_core::` → `repark_common::`; `repark_session::` → `repark_core::`.
+   **2b (verify-panel addendum, 2026-08-07)** — v1 in-crate `crate::` types that moved to
+   repark-core in phase 1 retargeted (`crate::CatalogRegistry` / `crate::LocationPolicy` →
+   `repark_core::{CatalogRegistry, LocationPolicy}`); rustfmt rewrap of call sites lengthened
+   by the prefix map accepted. Diff vs the pin under the sed map is therefore mechanical, not
+   byte-empty.
 3. **Refuse-arm restoration** — a PR-2 TEMPORARY arm replaced by the v1 arm VERBATIM, its
    refuse test deleted in the same commit (the inverse of p2b edit class 3).
 4. **Deferred-test session adaptation** (ddl_sessions.rs only) — v1 `ReparkSession::new()` →
@@ -98,7 +103,15 @@ census names, landed at their manifest rows).
 
 ## Deviations / STOPs
 
-*(none recorded yet)*
+- **WS1 map.md lockstep miss (2026-08-07):** the handler workstream omitted the
+  `router/map.md` + `dialect/map.md` lockstep updates; the integrator folded them into the
+  handler commit before landing (guard caught it pre-commit — no post-land fix needed).
+- **WS1 mid-flight build blockers (2026-08-07):** an E0533 pattern-path error and a rustfmt
+  failure surfaced during the handler port and were fixed before the commit landed; per-commit
+  greenness preserved.
+- **Verify-panel doc findings (2026-08-07):** two LOW ledger-completeness findings (missing
+  edit class 2b declaration; this Deviations section empty) — fixed in the follow-up
+  `fix(pr-3a)` commit; no code change.
 
 ## Retrospective
 
