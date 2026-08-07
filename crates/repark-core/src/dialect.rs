@@ -45,6 +45,25 @@ pub struct EngineContext<'a> {
     pub read_only: &'a HashSet<String>,
 }
 
+impl<'a> EngineContext<'a> {
+    /// Assemble a context from the three v1 positional arguments. `#[non_exhaustive]` forbids
+    /// literal construction outside this crate, and door crates build a context in their own
+    /// tests — this is the one sanctioned way (added phase-2 PR-2; new seam inputs land as
+    /// defaulted builder-style setters beside it, never as `new` signature changes).
+    #[must_use]
+    pub fn new(
+        ctx: &'a SessionContext,
+        catalogs: &'a CatalogRegistry,
+        read_only: &'a HashSet<String>,
+    ) -> Self {
+        Self {
+            ctx,
+            catalogs,
+            read_only,
+        }
+    }
+}
+
 /// ===========================================================================================
 /// A statement front end: parse, route, and execute ONE SQL string against an [`EngineContext`].
 ///

@@ -25,6 +25,8 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 - Up: [../map.md](../map.md)
 - Unit-level batteries live beside their modules under [../src/](../src/map.md); this
   directory is only for whole-session assemblies.
+- `session_extension.rs` is deferred test #1 un-deferred (row closed in
+  `task/port/deferred-tests.md`, phase-2 PR-2).
 
 ## Debug
 

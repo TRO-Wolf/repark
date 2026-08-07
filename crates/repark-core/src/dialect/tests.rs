@@ -66,3 +66,21 @@ async fn engine_context_constructs_with_explicit_fields() {
     assert_eq!(frame.schema().fields().len(), 1);
     assert_eq!(frame.schema().field(0).name(), "answer");
 }
+
+/// PIN (phase-2 PR-2) — `EngineContext::new` is the sanctioned DOWNSTREAM constructor:
+/// `#[non_exhaustive]` forbids literal construction outside this crate, so door crates
+/// (repark-spark's dialect tests) assemble the context through `new` with v1's three
+/// positional arguments. Field mapping is pinned by executing through it.
+#[tokio::test]
+async fn engine_context_new_is_the_downstream_constructor() {
+    let ctx = SessionContext::new();
+    let catalogs = CatalogRegistry::new();
+    let read_only: HashSet<String> = HashSet::from(["ro_pg".to_string()]);
+    let cx = EngineContext::new(&ctx, &catalogs, &read_only);
+    assert!(cx.read_only.contains("ro_pg"));
+    let frame = DataFusionDialect
+        .execute(cx, "SELECT 7 AS seven")
+        .await
+        .expect("a `new`-constructed context executes");
+    assert_eq!(frame.schema().field(0).name(), "seven");
+}

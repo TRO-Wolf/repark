@@ -37,3 +37,6 @@ pub use metadata_tables::{
 // The v1 domain-module re-export lists (handler `pub(crate) use` groups + the lib-root test
 // cohort's `#[cfg(test)]` describe/show re-exports) return with their consumers in phase-2
 // PR-3a/PR-3b (the lib-root battery rides PR-3b).
+
+mod extension;
+pub use extension::SparkExtension;

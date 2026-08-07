@@ -1041,3 +1041,20 @@ async fn session_sql_unknown_table_is_analysis() {
         "message must name the table: {err}"
     );
 }
+
+/// G8 (phase-2 design): the DF-54.1 uncorrelated-scalar-subquery regression guard lives in
+/// core session defaults, NOT in a door extension — a bare `build()` with no extension must
+/// carry it, so extension-less native sessions keep the pre-54 `ScalarSubqueryToJoin` rewrite
+/// (fuzzer repros fuzz-42-1/2: the 54.1 physical path drops the query's top-level Sort).
+/// Mutation-proof: hoisting the flag into an extension flips this test red.
+#[tokio::test]
+async fn bare_session_without_extension_carries_df_54_1_subquery_guard() {
+    let session = ReparkSession::new().unwrap();
+    let options = session.context().copied_config().options().clone();
+    assert!(
+        !options
+            .optimizer
+            .enable_physical_uncorrelated_scalar_subquery,
+        "a no-extension session must force the pre-54 scalar-subquery rewrite (DF-54.1 guard)"
+    );
+}

@@ -13,8 +13,10 @@ classes only: prefix renames, PR-2 refuse arms, seam adaptation).
   [router/map.md](router/map.md) for the tests).
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into v1's positional `execute_with_read_only` call). Tests: [dialect/map.md](dialect/map.md).
-- `extension.rs` — `SparkExtension: repark_core::SessionExtension` (v1 `build()` registrations;
-  repark-ta rider returns PR-4). Tests: [extension/map.md](extension/map.md).
+- `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
+  `repark.sql.*` config; `register` = `repark_functions::register_all` + analyzer rules; the
+  DF-54.1 subquery guard stays a core session default, G8; repark-ta rider returns PR-4).
+  Tests: [extension/map.md](extension/map.md).
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`), statement sniffers, multi-statement refuse (BUG-010), MoR multi-spec
   DML gate (BUG-001). The ALTER/MERGE token rewrites return with their modules (PR-3a/3b).
