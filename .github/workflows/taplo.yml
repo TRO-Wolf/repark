@@ -7,7 +7,9 @@ on:
     branches: [main]  # PR coverage comes from `pull_request`; this avoids the double run
     paths: ["**/*.toml", ".taplo.toml", ".github/workflows/taplo.yml"]
   pull_request:
-    paths: ["**/*.toml", ".taplo.toml"]
+    # No `paths:` filter — required status check; a path-filtered required check never runs on
+    # non-matching PRs, leaving them permanently BLOCKED (task/lessons.md 2026-08-07). The
+    # `push` trigger above stays filtered: main-branch runs are record-keeping, not merge gates.
 
 permissions:
   contents: read

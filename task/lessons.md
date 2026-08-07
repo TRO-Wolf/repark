@@ -36,9 +36,12 @@ there the hard way and bind here from day one.
   name (the required-contexts list matches on the job's display name).
 - **DO NOT make a path-filtered workflow a required status check.** A required check whose
   workflow trigger carries a `paths:` filter never runs on non-matching PRs — GitHub reports
-  the PR permanently BLOCKED with all other checks green (observed on PR #6: zizmor was
-  required but only triggered on `.github/workflows/**`). Required workflows must be
-  always-run on `pull_request`; keep path filters for record-keeping triggers (`push`) only.
+  the PR permanently BLOCKED with all other checks green. Observed TWICE in one day: #6
+  (zizmor, filtered to `.github/workflows/**`), then the close-out PR #7 itself (cargo-deny +
+  taplo, filtered to Cargo/TOML paths — every prior PR had happened to touch a `.toml`, so a
+  docs-only diff was the first to expose them). Required workflows must be always-run on
+  `pull_request`; keep path filters for record-keeping triggers (`push`) only, and for
+  non-required workflows (`audit.yml` is the correct pattern: path-filtered AND not required).
 - **DO retarget a stacked PR's dependent BEFORE merging its base and deleting the branch.**
   When `phase-1/pr-b` was deleted at #4's merge, GitHub auto-closed dependent PR #5; a closed
   PR whose base branch is gone can be neither retargeted (HTTP 422) nor reopened — the only

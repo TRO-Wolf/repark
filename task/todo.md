@@ -73,9 +73,10 @@ missing E-2 signal class on the late-catalog path. Stacked branches + pre-staged
 carried the work through a ~7-hour GitHub Actions outage with zero rework. The
 `cache-warm.yml` / `ci.yml` rust-cache pairing proved out: Rust job 8m02s cold → 55s warm.
 **What hurt** (rules now in [lessons.md](lessons.md) 2026-08-07): a CI job rename silently
-broke branch protection's required contexts (#3 blocked green); the path-filtered zizmor
-workflow was a required check, making #6 structurally unmergeable (fixed in this close-out:
-zizmor is now always-run on PRs); deleting a stacked PR's base branch auto-closed the
+broke branch protection's required contexts (#3 blocked green); path-filtered required checks
+made PRs structurally unmergeable — zizmor blocked #6, then cargo-deny + taplo blocked the
+close-out #7 itself, the first docs-only diff (fixed in this close-out: all three are now
+always-run on PRs); deleting a stacked PR's base branch auto-closed the
 dependent PR unrecoverably (#5 → resubmitted as #6).
 
 Note (2026-08-06): the earlier "re-arm the phase-1+ mechanical gates" line item mislabeled

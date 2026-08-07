@@ -22,10 +22,10 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 |---|---|
 | `ci.yml` | Rust (fmt + clippy `-D warnings` + panic-ban + check + `cargo test --locked --workspace`), run through the Makefile targets (`make rust-fmt-check` … `rust-test`) so the clippy/panic-ban split applies identically local and CI; the rust job restores the Swatinem rust-cache under the family prefix-keys `v2-df54` / `v2-df54-test` (must match `cache-warm.yml` — bump both in the same change); repo guards (`scripts/check_map_md.sh` + `scripts/check_workflows_parse.py` + `scripts/check_crate_dag.sh` + `scripts/check_lib_rs.sh`); Python (ruff check + format). Always-on. The v1 diff-classifier (`detect`) that path-filtered the heavy jobs stays deferred — it returns when rust-test exceeds ~3 min. |
 | `cache-warm.yml` | Swatinem rust-cache pre-warm OFF the PR critical path: every push to main (+ weekly cron safety net) builds lint (`v2-df54`) and test (`v2-df54-test`) artifacts under the same prefix-keys the `ci.yml` rust job restores, so PR jobs start hot even right after a dependency-family bump. |
-| `cargo-deny.yml` | Rust license / banned / duplicate checks ([../../deny.toml](../../deny.toml)). |
+| `cargo-deny.yml` | Rust license / banned / duplicate checks ([../../deny.toml](../../deny.toml)). **Always-run on PRs** — required check; see the zizmor row. |
 | `audit.yml` | cargo-audit RustSec CVE scan over the Cargo dependency tree; weekly schedule + Cargo.toml/Cargo.lock path triggers; pin matches Makefile `CARGO_AUDIT_VERSION`. |
 | `typos.yml` | Spell-check ([../../.typos.toml](../../.typos.toml)); uvx-pinned, same version as `make spell-check`. |
-| `taplo.yml` | TOML format + lint ([../../.taplo.toml](../../.taplo.toml)); uvx-pinned, same version as `make toml-check`. |
+| `taplo.yml` | TOML format + lint ([../../.taplo.toml](../../.taplo.toml)); uvx-pinned, same version as `make toml-check`. **Always-run on PRs** — required check; see the zizmor row. |
 | `zizmor.yml` | Workflow security analysis; **blocking** — fails on any finding not suppressed in [../zizmor.yml](../zizmor.yml) (currently none); uploads SARIF as an artifact (`if: always()`). uvx-pinned, same version as `make workflows-lint`. **Always-run on PRs** (no `paths:` filter on `pull_request`): it is a required status check, and a path-filtered required check deadlocks every PR that doesn't match the filter (lesson 2026-08-07). |
 
 **Not ported yet** (return in later phases; the v1 assets are the templates):
