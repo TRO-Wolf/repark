@@ -7,7 +7,11 @@ on:
     branches: [main]  # PR coverage comes from `pull_request`; this avoids the double run
     paths: [".github/workflows/**", ".github/zizmor.yml"]
   pull_request:
-    paths: [".github/workflows/**", ".github/zizmor.yml"]
+    # No `paths:` filter — this is a REQUIRED status check, and a required check whose workflow
+    # is path-filtered never runs on non-matching PRs, leaving them permanently BLOCKED with
+    # every other check green (observed on PR #6, 2026-08-07 — task/lessons.md). The job costs
+    # ~10s; always-run is the price of being required. The `push` trigger above stays filtered:
+    # main-branch runs are record-keeping only, not merge gates.
 
 permissions:
   contents: read

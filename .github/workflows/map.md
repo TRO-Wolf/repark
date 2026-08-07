@@ -26,7 +26,7 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 | `audit.yml` | cargo-audit RustSec CVE scan over the Cargo dependency tree; weekly schedule + Cargo.toml/Cargo.lock path triggers; pin matches Makefile `CARGO_AUDIT_VERSION`. |
 | `typos.yml` | Spell-check ([../../.typos.toml](../../.typos.toml)); uvx-pinned, same version as `make spell-check`. |
 | `taplo.yml` | TOML format + lint ([../../.taplo.toml](../../.taplo.toml)); uvx-pinned, same version as `make toml-check`. |
-| `zizmor.yml` | Workflow security analysis; **blocking** — fails on any finding not suppressed in [../zizmor.yml](../zizmor.yml) (currently none); uploads SARIF as an artifact (`if: always()`). uvx-pinned, same version as `make workflows-lint`. |
+| `zizmor.yml` | Workflow security analysis; **blocking** — fails on any finding not suppressed in [../zizmor.yml](../zizmor.yml) (currently none); uploads SARIF as an artifact (`if: always()`). uvx-pinned, same version as `make workflows-lint`. **Always-run on PRs** (no `paths:` filter on `pull_request`): it is a required status check, and a path-filtered required check deadlocks every PR that doesn't match the filter (lesson 2026-08-07). |
 
 **Not ported yet** (return in later phases; the v1 assets are the templates):
 
@@ -67,6 +67,7 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 | lib.rs thinness guard red | `make check-lib-rs` — inline test module or a root over its ceiling (SSOT: `scripts/check_lib_rs.py`) |
 | workflow parse guard red | `make workflows-parse` — zizmor skips unparseable YAML, so this guard blocks it |
 | zizmor red | `make workflows-lint` — same pinned zizmor; fix the workflow or suppress with rationale in [../zizmor.yml](../zizmor.yml) |
+| PR BLOCKED with every check green | a *required* check never ran — usually a path-filtered or renamed workflow job vs. the branch-protection contexts (`gh api repos/{owner}/{repo}/branches/main/protection/required_status_checks`); required workflows must be always-run, and job renames must update the contexts in the same change (task/lessons.md 2026-08-07) |
 
 First checks: reproduce with `make preflight` (the full CI surface; `make ci` for the core gate).
 Note `ci.yml`'s Rust job calls the individual Makefile targets (never `make ci` wholesale); the

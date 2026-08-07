@@ -1,6 +1,6 @@
 # Phase-1 PR-B ledger — repark-iceberg (declared-rename unit)
 
-Status: ASSEMBLED 2026-08-06 (branch `phase-1/pr-b`).
+Status: MERGED 2026-08-07 (PR #4, `4e3887b`).
 Port-Source: `fc3f48102e437e2843ded460bc161edb434dac93`.
 Fork rev audited/pinned: `b009ac158f7584a956fa9292c0e9675a411ecf0d`.
 

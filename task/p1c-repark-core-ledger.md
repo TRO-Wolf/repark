@@ -1,6 +1,6 @@
 # Phase-1 PR-C ledger — repark-core (Session)
 
-Status: ASSEMBLED 2026-08-06 (branch `phase-1/pr-c`).
+Status: MERGED 2026-08-07 (PR #6, `c05bc31`; #5 auto-closed at #4's branch deletion).
 Port-Source: `fc3f48102e437e2843ded460bc161edb434dac93` (v1 main, #141 squash).
 Depends on PR-A (workspace + repark-common) and PR-B (repark-iceberg, branch base `ffee1d0`).
 

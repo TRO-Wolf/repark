@@ -3,7 +3,7 @@
 **Unit:** phase-1 PR-A · **Brief:**
 [../briefs/phase-1-engine-core.md](../briefs/phase-1-engine-core.md) §2 "PR-A" · **Design:**
 [../docs/design/session-api.md](../docs/design/session-api.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** IN FLIGHT
+`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #3, `5eba40a`)
 
 ## Scope
 
