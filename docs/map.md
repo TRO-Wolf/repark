@@ -12,7 +12,9 @@ notes, and per-tier operating manuals for this repo.
   relocation discipline, the forbidden list). Read before any code change.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
-  seams, forced-edit ledger, omissions ledger, server landing map).
+  seams, forced-edit ledger, omissions ledger, server landing map;
+  [design/sql-doors.md](design/sql-doors.md): the phase-2 two-SQL-doors design —
+  delegate-first crate layout, Q1–Q15 ANSI rulings, seam freeze, census + matrix discipline).
 - [port/](port/map.md) — the V2 port plan ([port/PLAN.md](port/PLAN.md)): copy-then-re-home
   rules, the four phases, the census multiset acceptance gate, the v1-freeze trigger.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
@@ -27,6 +29,7 @@ notes, and per-tier operating manuals for this repo.
 |---|---|
 | Understand the testing rules | [testing.md](testing.md) |
 | Understand the phase-1 crate layout / Session API | [design/session-api.md](design/session-api.md) |
+| Understand the phase-2 SQL doors / ANSI surface | [design/sql-doors.md](design/sql-doors.md) |
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
 | Read the manual for your tier | [skills/map.md](skills/map.md) |

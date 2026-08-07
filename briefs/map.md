@@ -19,6 +19,11 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   PR-C repark-core) executing the settled design in
   [../docs/design/session-api.md](../docs/design/session-api.md); port-source pin, copy-then-
   re-home rules, relocation discipline, fleet plan, phase-1 acceptance.
+- [phase-2-sql-doors.md](phase-2-sql-doors.md) — the phase-2 two-SQL-doors brief (2026-08-07):
+  the seven-PR slate (PR-1 repark-functions + docs; PR-2 repark-spark skeleton; PR-3a DDL;
+  PR-3b DML + refs + census close; PR-4 repark-ta; PR-5/PR-6 the ANSI door) executing the
+  settled design in [../docs/design/sql-doors.md](../docs/design/sql-doors.md); deliverables,
+  ordering, acceptance, and the 2026-08-07 decisions record.
 
 ## I want to... → go to
 
@@ -29,6 +34,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 | Write a new brief | copy the newest brief's structure; standing rules by reference, not restatement |
 | See the port phases a brief executes against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 | Read the design a phase-1 PR implements | [../docs/design/session-api.md](../docs/design/session-api.md) |
+| Read the design a phase-2 PR implements | [../docs/design/sql-doors.md](../docs/design/sql-doors.md) |
 
 ## Pointers
 
