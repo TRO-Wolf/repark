@@ -346,7 +346,9 @@ impl ReparkSessionBuilder {
         // WHERE x < (SELECT …) ORDER BY …` returns unsorted rows (fuzzer repros fuzz-42-1/2,
         // 2026-08-01; minimal: no `SortExec` in the physical plan). Force the pre-54 rewrite
         // (`ScalarSubqueryToJoin`) until upstream fixes; re-enable is gated on the banked
-        // repros passing WITH the flag on.
+        // repros passing WITH the flag on. Phase-2 design G8: this guard is a CORE session
+        // default, never a door-extension knob — an extension-less native session must carry
+        // it (pinned by `bare_session_without_extension_carries_df_54_1_subquery_guard`).
         config
             .options_mut()
             .optimizer

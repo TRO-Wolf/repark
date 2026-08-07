@@ -19,6 +19,7 @@ v1 census).
 
 | Symptom | First check |
 |---|---|
-| A statement the Spark door handled fails here | Phase-1 default is plain DataFusion (`DataFusionDialect`); Spark interception returns as the phase-2 dialect impl. |
+| A statement the Spark door handled fails here | Phase-1 default is plain DataFusion (`DataFusionDialect`); Spark interception lives in `repark-spark`'s `SparkDialect`. |
+| Downstream dialect crate can't build an `EngineContext` | `EngineContext` is `#[non_exhaustive]`; construct via `EngineContext::new` (pinned by `engine_context_new_is_the_downstream_constructor`). |
 
 First checks: `cargo test -p repark-core dialect`. Escalate to: [../map.md#debug](../map.md).

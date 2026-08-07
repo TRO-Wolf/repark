@@ -93,8 +93,10 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
 - [ ] **PR-1 — repark-functions + docs (IN FLIGHT)**: verbatim port (crate name kept, 62-test
       battery, identity census map), DAG TIERS rows pre-declared for all four new crates,
       design doc + brief in-repo (ledger: [p2a-functions-ledger.md](p2a-functions-ledger.md)).
-- [ ] **PR-2 — repark-spark skeleton**: router spine + guards + time-travel scanner +
-      `SparkDialect` + `SparkExtension`; DF-54.1 guard hoist rides. Unblocks deferred #1.
+- [ ] **PR-2 — repark-spark skeleton (IN FLIGHT)**: router spine + guards + time-travel
+      scanner + `SparkDialect` + `SparkExtension`; DF-54.1 guard hoist rides (G8 — the guard
+      sits in core `build()` since PR-C; PR-2 adds the bare-Session pin). Unblocks deferred #1
+      (ledger: [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md)).
 - [ ] **PR-3a — repark-spark DDL**: ctas, create_table, namespace_ddl, catalog_ops,
       local_fs_ddl, alter. Unblocks the CTAS-blocked deferred rows (#2, #4–#7).
 - [ ] **PR-3b — repark-spark DML + refs**: merge, insert_overwrite, ref_ddl, call + MoR-valve

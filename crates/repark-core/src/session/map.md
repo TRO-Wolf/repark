@@ -26,5 +26,6 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 | Symptom | First check |
 |---|---|
 | `S3 read … refused: this session never resolved its AWS SDK config` | Call `register_configured_catalogs()` after signaling AWS use (AWS-backed catalog spec, S3-region conf, or `repark.aws.enable=true`). |
+| Uncorrelated scalar subquery misplans on a bare session | The DF-54.1 guard (`enable_physical_uncorrelated_scalar_subquery = false`) is a core session default (G8), pinned by `bare_session_without_extension_carries_df_54_1_subquery_guard`. |
 
 First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug](../map.md).

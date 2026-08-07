@@ -69,7 +69,8 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   `is_s3_scheme` route paths. Tests register an `InMemory` store to prove routing AWS-free.
 - `backend.rs` — the `ExecutionBackend` seam (distribution deferred) + `SingleNodeBackend`.
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
-  (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set) + `SqlDialect` +
+  (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
+  is the sanctioned downstream constructor, added phase-2 PR-2) + `SqlDialect` +
   `DataFusionDialect` (the phase-1 default: plain `SessionContext::sql`). UNSTABLE until the
   phase-2 doors land.
 - `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
@@ -87,7 +88,9 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 - `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
   incl. the late-config region-signal pin, AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
-  `task/port/deferred-tests.md`).
+  `task/port/deferred-tests.md`; plus the phase-2 PR-2 G8 pin
+  `bare_session_without_extension_carries_df_54_1_subquery_guard`, NEW — outside the ported
+  census).
 
 ## Pointers
 

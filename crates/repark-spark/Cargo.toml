@@ -1,0 +1,37 @@
+[package]
+name = "repark-spark"
+description = "The Spark SQL door: v1 repark-sql ported — statement router, SparkDialect, SparkExtension."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# DataFusion/iceberg-native: the front end parses with DataFusion's re-exported sqlparser and
+# reaches Iceberg through the fork family. `repark-iceberg` carries the catalog wiring + the
+# table-mutating primitives the router delegates to (namespace invalidation now; ALTER + MERGE
+# with PR-3a/PR-3b).
+datafusion.workspace = true
+iceberg.workspace = true
+iceberg-datafusion.workspace = true
+repark-iceberg.workspace = true
+# The phase-1 seams this door plugs into: `SqlDialect`/`EngineContext` (SparkDialect),
+# `SessionExtension` (SparkExtension), and the hoisted `CatalogRegistry` + time-travel pin half.
+repark-core.workspace = true
+# `analyze_eagerly` — the one blessed way to analyze a plan before its schema crosses a
+# boundary (the passthrough's eager analysis) — plus the SEC-02 `repark.sql.*` settings reader.
+repark-functions.workspace = true
+# `SqlDialect` is an async trait (phase-1 seam contract).
+async-trait.workspace = true
+# `SHOW NAMESPACES … LIKE` — Spark's `StringUtils.filterPattern` compiles each `|`-separated
+# alternative as a Java regex (after `*` → `.*`), so `filter_pattern_matches` needs a real engine.
+regex.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+tempfile = "3"

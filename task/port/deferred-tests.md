@@ -60,7 +60,7 @@ uncertain ⇒ deferred — no test guessed green.
 
 | v1 test | Target phase | Blocking surface |
 |---|---|---|
-| tests::temp_view_then_sql_runs_the_spark_function_shim | 2 (Spark door — phase-2 PR-2) | spark functions shim (SessionExtension) |
+| ~~tests::temp_view_then_sql_runs_the_spark_function_shim~~ | **LANDED phase-2 PR-2** (`repark-spark/tests/session_extension.rs`, real Session + `SparkExtension` + `SparkDialect`) | ~~spark functions shim (SessionExtension)~~ |
 | tests::ctas_end_to_end_through_spark_sql | 2 (Spark door — phase-2 PR-3a) | CTAS lowering (SQL interception) + functions |
 | tests::session_sql_bare_dml_applies_eagerly | 2 (Spark door — phase-2 PR-3b) | CTAS setup + eager-DML routing |
 | tests::create_namespace_with_location_lets_ctas_succeed_on_strict_catalog | 2 (Spark door — phase-2 PR-3a) | CTAS lowering |
@@ -90,6 +90,12 @@ Also deferred with the phase-2 statement router (hoist-adjacent, from the v1 SQL
 tests (`detects_spark_and_system_spellings`, `find_spans_*`,
 `comments_do_not_false_positive_time_travel`, `system_version_string_ref_span`). They belong to
 the v1 repark-sql cone (phase-2), not the session tier, and are listed here as a pointer only.
+
+Row-close note (2026-08-07 — phase-2 PR-2): deferred row #1 landed as
+`repark-spark/tests/session_extension.rs::temp_view_then_sql_runs_the_spark_function_shim`
+against the real `Session + SparkExtension + SparkDialect`; the repark-spark census itself
+stays open until PR-3b (partial; closes PR-3b —
+[../p2b-spark-skeleton-ledger.md](../p2b-spark-skeleton-ledger.md)).
 
 ## Reconciliation runs
 
