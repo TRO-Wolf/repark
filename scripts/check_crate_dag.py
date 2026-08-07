@@ -32,6 +32,7 @@ TIER_NAMES: dict[int, str] = {
     0: "foundation",
     1: "table service",
     2: "engine session",
+    3: "spark surface",
 }
 
 # The tier map. A new `repark-*` crate MUST be added here or this guard fails loudly —
@@ -46,6 +47,11 @@ TIERS: dict[str, int] = {
     "repark-common": 0,
     "repark-iceberg": 1,
     "repark-core": 2,
+    # Phase 2 (spark surface) — pre-declared; crates not yet in the workspace are skipped.
+    "repark-functions": 3,
+    "repark-ta": 3,
+    "repark-spark": 3,
+    "repark-sql": 3,
 }
 
 

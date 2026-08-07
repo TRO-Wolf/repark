@@ -20,7 +20,8 @@ Repository helper scripts wired into the dev workflow.
   same-tier edges are ALLOWED. NORMAL edges only — dev/build deps excluded, third-party out of
   scope. `check_crate_dag.py` is the layering **SSOT**: prose points here and never restates
   the map (phase-1 target: `repark-common` tier 0, `repark-iceberg` tier 1, `repark-core`
-  tier 2; mapped crates that have not landed yet are simply not inspected). A new `repark-*`
+  tier 2; phase-2 pre-declares tier 3 "spark surface": `repark-functions`, `repark-ta`,
+  `repark-spark`, `repark-sql`; mapped crates that have not landed yet are simply not inspected). A new `repark-*`
   crate that is not in `TIERS` fails the guard. Wired into `make check-crate-dag` (in the
   `make ci` chain), `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the

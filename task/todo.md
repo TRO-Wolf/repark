@@ -84,13 +84,32 @@ Note (2026-08-06): the earlier "re-arm the phase-1+ mechanical gates" line item 
 **phase 3**. Phase 1 re-arms the Rust gates only (crate-DAG guard, `check_lib_rs`,
 `trait-wrapping.md` manual).
 
-## Phase 2 — the two SQL doors (BACKLOG)
+## Phase 2 — the two SQL doors (IN FLIGHT, brief: [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md), design: [../docs/design/sql-doors.md](../docs/design/sql-doors.md))
 
-- [ ] `repark-spark` — Spark-dialect door, ported (implements `SqlDialect` + the
-      `SessionExtension` with v1's registration code).
-- [ ] `repark-sql` — ANSI/Trino-style native dialect; Iceberg DDL design pass.
-- [ ] Dual-spelling rule live: new SQL surface lands with both spellings + one test row per door.
-- [ ] `dbt-repark` may start in parallel once this phase lands (separate package).
+Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-source pin unchanged
+(v1 `main` @ `fc3f48102`). Seven PRs; deferred-test obligations close per
+[port/deferred-tests.md](port/deferred-tests.md).
+
+- [ ] **PR-1 — repark-functions + docs (IN FLIGHT)**: verbatim port (crate name kept, 62-test
+      battery, identity census map), DAG TIERS rows pre-declared for all four new crates,
+      design doc + brief in-repo (ledger: [p2a-functions-ledger.md](p2a-functions-ledger.md)).
+- [ ] **PR-2 — repark-spark skeleton**: router spine + guards + time-travel scanner +
+      `SparkDialect` + `SparkExtension`; DF-54.1 guard hoist rides. Unblocks deferred #1.
+- [ ] **PR-3a — repark-spark DDL**: ctas, create_table, namespace_ddl, catalog_ops,
+      local_fs_ddl, alter. Unblocks the CTAS-blocked deferred rows (#2, #4–#7).
+- [ ] **PR-3b — repark-spark DML + refs**: merge, insert_overwrite, ref_ddl, call + MoR-valve
+      hoist; census closes (342-name empty sorted-diff, `repark_sql::` → `repark_spark::`).
+      Unblocks deferred #3.
+- [ ] **PR-4 — repark-ta (CONFIRMED in scope 2026-08-07)**: kernels + goldens + `TaExtension`;
+      Spark extension composes it; TA census generated + empty-diff. Unblocks deferred #8–#14.
+- [ ] **PR-5 — repark-sql ANSI M1**: `AnsiDialect` delegation core, guard set, wrong-door
+      sniff, CTAS `WITH (…)` vocab + `extra_properties` + Q15 routing, schema DDL, surfaces
+      registry + matrix seeded; R1/R2 spikes day 1. May start once PR-1 merges.
+- [ ] **PR-6 — repark-sql ANSI M2**: ALTER evolution, MERGE lowering, `FOR … AS OF` scanner +
+      pin set, branch/tag ALTER DDL, full refuse set, cross-door two-session equivalence rows,
+      matrix completion, session-api.md seam-freeze edits.
+- [ ] Phase close: acceptance per the brief §3; `dbt-repark` may start after PR-6
+      (separate package).
 
 ## Phase 3 — Python facade + parity = milestone one (BACKLOG)
 
@@ -103,6 +122,13 @@ Note (2026-08-06): the earlier "re-arm the phase-1+ mechanical gates" line item 
 - [ ] Tier-2 CI (live AWS, merged code only, OIDC) + live oracle tier.
 - [ ] v1 freezes to bugfix-only at acceptance; first tagged PyPI release gated on milestone one
       (`docs/release.md`).
+
+## Post-milestone-one (BACKLOG)
+
+- [ ] `repark-postgres` + `repark-excel` — read connectors (v1 `read_postgres` / `read_excel`
+      surfaces); explicitly scheduled post-milestone-one (decision 2026-08-07, recorded in
+      [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §4). The 4 deferred-test
+      manifest rows re-point here ([port/deferred-tests.md](port/deferred-tests.md)).
 
 ## Open items
 

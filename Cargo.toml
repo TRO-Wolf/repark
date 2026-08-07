@@ -17,6 +17,7 @@ members = [
   "crates/repark-common",
   "crates/repark-iceberg",
   "crates/repark-core",
+  "crates/repark-functions",
 ]
 
 [workspace.package]

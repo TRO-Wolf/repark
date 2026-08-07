@@ -30,6 +30,11 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # Keys sorted alphabetically. Ceilings ratchet DOWN only. Empty at phase-1 PR-A (only
     # repark-common exists, well under the default); entries are added with a measured count
     # and reason in the same change that makes a crate root exceed the default.
+    "repark-functions": (
+        166,  # measured 151
+        "register_all / analyzer_rules registration glue is root-legitimate; "
+        "RATCHET: if registration moves",
+    ),
 }
 
 # Matches both:

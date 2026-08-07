@@ -60,24 +60,30 @@ uncertain ⇒ deferred — no test guessed green.
 
 | v1 test | Target phase | Blocking surface |
 |---|---|---|
-| tests::temp_view_then_sql_runs_the_spark_function_shim | 2 (Spark door) | spark functions shim (SessionExtension) |
-| tests::ctas_end_to_end_through_spark_sql | 2 (Spark door) | CTAS lowering (SQL interception) + functions |
-| tests::session_sql_bare_dml_applies_eagerly | 2 (Spark door) | CTAS setup + eager-DML routing |
-| tests::create_namespace_with_location_lets_ctas_succeed_on_strict_catalog | 2 (Spark door) | CTAS lowering |
-| tests::create_namespace_with_location_stores_both_location_keys | 2 (Spark door) | CTAS end-to-end arm |
-| tests::catalog_surface_table_exists_and_temp_views | 2 (Spark door) | CTAS mid-flow |
-| tests::config_driven_memory_catalog_registers_and_runs | 2 (Spark door) | CTAS lowering |
-| tests::read_postgres_dbtable_query_mutex_is_config | 2+ (postgres/connect) | read_postgres + PostgresReadOptions |
-| tests::read_postgres_num_partitions_cap_is_not_implemented | 2+ (postgres/connect) | read_postgres |
-| tests::read_postgres_sslmode_require_attempts_tls | 2+ (postgres/connect) | read_postgres TLS path |
-| tests::read_excel_basic_fixture_round_trips | 2+ (excel) | repark-excel crate + fixture |
-| ta_window::sql_route_single_series_kernels_match_the_kernel | 2 (ta) | ta kernels + SQL route |
-| ta_window::sql_route_scalar_param_kernels_match_the_kernel | 2 (ta) | ta kernels + SQL route |
-| ta_window::sql_route_multi_series_kernels_match_the_kernel | 2 (ta) | ta kernels + SQL route |
-| ta_window::sql_route_parked_four_match_the_kernel | 2 (ta) | ta kernels + SQL route |
-| ta_window::sql_route_partition_by_scopes_the_series | 2 (ta) | ta kernels + SQL route |
-| ta_window::sql_route_multi_batch_partition_matches_the_kernel | 2 (ta) | ta kernels + SQL route |
-| ta_window::sql_route_rejects_a_non_literal_period | 2 (ta) | ta period validation (SQL route) |
+| tests::temp_view_then_sql_runs_the_spark_function_shim | 2 (Spark door — phase-2 PR-2) | spark functions shim (SessionExtension) |
+| tests::ctas_end_to_end_through_spark_sql | 2 (Spark door — phase-2 PR-3a) | CTAS lowering (SQL interception) + functions |
+| tests::session_sql_bare_dml_applies_eagerly | 2 (Spark door — phase-2 PR-3b) | CTAS setup + eager-DML routing |
+| tests::create_namespace_with_location_lets_ctas_succeed_on_strict_catalog | 2 (Spark door — phase-2 PR-3a) | CTAS lowering |
+| tests::create_namespace_with_location_stores_both_location_keys | 2 (Spark door — phase-2 PR-3a) | CTAS end-to-end arm |
+| tests::catalog_surface_table_exists_and_temp_views | 2 (Spark door — phase-2 PR-3a) | CTAS mid-flow |
+| tests::config_driven_memory_catalog_registers_and_runs | 2 (Spark door — phase-2 PR-3a) | CTAS lowering |
+| tests::read_postgres_dbtable_query_mutex_is_config | post-milestone-one (decision 2026-08-07) | read_postgres + PostgresReadOptions |
+| tests::read_postgres_num_partitions_cap_is_not_implemented | post-milestone-one (decision 2026-08-07) | read_postgres |
+| tests::read_postgres_sslmode_require_attempts_tls | post-milestone-one (decision 2026-08-07) | read_postgres TLS path |
+| tests::read_excel_basic_fixture_round_trips | post-milestone-one (decision 2026-08-07) | repark-excel crate + fixture |
+| ta_window::sql_route_single_series_kernels_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
+| ta_window::sql_route_scalar_param_kernels_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
+| ta_window::sql_route_multi_series_kernels_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
+| ta_window::sql_route_parked_four_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
+| ta_window::sql_route_partition_by_scopes_the_series | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
+| ta_window::sql_route_multi_batch_partition_matches_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
+| ta_window::sql_route_rejects_a_non_literal_period | 2 (ta — phase-2 PR-4) | ta period validation (SQL route) |
+
+*(Re-pointed 2026-08-07 with the phase-2 slate settled: the 7 Spark-door rows carry their
+phase-2 PR (2 / 3a / 3b per the blocking surface); the 7 ta rows land with phase-2 PR-4; the
+3 read_postgres + 1 read_excel rows move to the explicit post-milestone-one bucket in
+[../todo.md](../todo.md) — decision 2026-08-07, brief
+[../../briefs/phase-2-sql-doors.md](../../briefs/phase-2-sql-doors.md) §4.)*
 
 Also deferred with the phase-2 statement router (hoist-adjacent, from the v1 SQL crate's
 `time_travel` module — the SQL-TEXT half that did not hoist): the token-scan / SQL-rewrite
