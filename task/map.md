@@ -22,6 +22,10 @@ repository's `task/` directory).
 - [p2a-functions-ledger.md](p2a-functions-ledger.md) — unit ledger for phase-2 PR-1
   (repark-functions verbatim port + phase-2 docs): scope, declared edit classes, the 62-test
   identity-map census obligation; IN FLIGHT.
+- [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) — unit ledger for phase-2 PR-2
+  (repark-spark skeleton: spine port, temporary refuse arms, `SparkDialect`/`SparkExtension`
+  seams, G8 subquery-guard pin, deferred-#1 landing; census PARTIAL — closes PR-3b); IN
+  FLIGHT.
 - [port/](port/map.md) — port-execution accounting
   ([port/deferred-tests.md](port/deferred-tests.md): the deferred-test manifest and its
   reconciliation rule).
@@ -35,6 +39,7 @@ repository's `task/` directory).
 | See PR-A's gate evidence / provocation proofs | [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md) |
 | See PR-B's fidelity / census / fork-audit evidence | [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md) |
 | See the phase-2 PR-1 scope / edit classes | [p2a-functions-ledger.md](p2a-functions-ledger.md) |
+| See the phase-2 PR-2 scope / refuse-arm riders | [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) |
 | Read the brief driving phase 2 | [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) |
 | See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |
 | Read the port plan behind the backlog | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
