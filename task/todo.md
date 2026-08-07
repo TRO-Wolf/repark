@@ -97,8 +97,9 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       scanner + `SparkDialect` + `SparkExtension`; DF-54.1 guard hoist rides (G8 — the guard
       sits in core `build()` since PR-C; PR-2 adds the bare-Session pin). Unblocks deferred #1
       (ledger: [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md)).
-- [ ] **PR-3a — repark-spark DDL**: ctas, create_table, namespace_ddl, catalog_ops,
-      local_fs_ddl, alter. Unblocks the CTAS-blocked deferred rows (#2, #4–#7).
+- [ ] **PR-3a — repark-spark DDL (IN FLIGHT)**: ctas, create_table, namespace_ddl,
+      catalog_ops, local_fs_ddl, alter. Unblocks the CTAS-blocked deferred rows (#2, #4–#7)
+      (ledger: [p2c-spark-ddl-ledger.md](p2c-spark-ddl-ledger.md)).
 - [ ] **PR-3b — repark-spark DML + refs**: merge, insert_overwrite, ref_ddl, call + MoR-valve
       hoist; census closes (342-name empty sorted-diff, `repark_sql::` → `repark_spark::`).
       Unblocks deferred #3.
