@@ -4,9 +4,9 @@
 # CI-enforced tool runs here too, version-pinned identically — nothing silently skips when a
 # tool is absent (uvx provisions the pinned tool on demand).
 #
-# Phase 0: the Cargo workspace is empty (gates before code). Targets whose subject does not
-# exist yet (parity, census, maturin/wheels, crate-DAG and thinness guards, Python tests, the
-# uv lock gate) return with their phase — see docs/port/PLAN.md.
+# Phase 1: the workspace has members; the phase-0 empty-workspace guard is gone. Targets whose
+# subject does not exist yet (parity, census, maturin/wheels, Python thinness, Python tests,
+# the uv lock gate) return with their phase — see docs/port/PLAN.md.
 #
 # Note: Rust uses `cargo test --locked --workspace` (NOT `--all-features`) on purpose — `--all-features`
 # enables repark-python's `extension-module`, which breaks linking a standalone test binary.
@@ -19,7 +19,7 @@
 #   ruff/taplo/typos/zizmor — uvx pins in ci/taplo/typos/zizmor.yml
 #   UV_VERSION              — setup-uv `version:` in every setup-uv job
 #   CARGO_DENY_VERSION      — taiki-e install-action tool: cargo-deny@… in cargo-deny.yml
-#   CARGO_AUDIT_VERSION     — cargo install pin in the rust-audit target
+#   CARGO_AUDIT_VERSION     — cargo install pin in the rust-audit target + audit.yml
 RUFF   := uvx ruff@0.15.22
 TAPLO  := uvx taplo@0.9.3
 TYPOS  := uvx typos@1.47.2
@@ -27,13 +27,6 @@ ZIZMOR := uvx zizmor@1.26.1
 CARGO_DENY_VERSION := 0.19.9
 CARGO_AUDIT_VERSION := 0.22.1
 UV_VERSION := 0.9.5
-
-# Phase-0 empty-workspace guard. cargo refuses EVERY build/fmt/clippy/test command on a virtual
-# manifest with zero members ("contains no package"), so until phase 1 lands the first crate the
-# Rust targets probe the workspace with `cargo metadata --locked` (which still validates the
-# manifest + Cargo.lock) and LOUDLY no-op when it is empty — never silently. DELETE this guard
-# (and the $(CARGO_EMPTY) branches below) in the same change that adds the first member.
-CARGO_EMPTY = cargo metadata --no-deps --format-version 1 --locked | grep -q '"workspace_members":\[\]'
 
 .PHONY: help
 help: ## List available targets
@@ -45,7 +38,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban rust-check py-lint py-format-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs rust-check py-lint py-format-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 .PHONY: test
 test: rust-test ## All tests (Rust only until the Python packages land in phase 3)
@@ -64,18 +57,14 @@ audit: rust-audit rust-deny ## Security gates (cargo-audit + cargo-deny; pip-aud
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: rust-fmt-check
-rust-fmt-check: ## cargo fmt --check (phase-0 guard: see CARGO_EMPTY above)
-	@if $(CARGO_EMPTY); then echo "rust-fmt-check: workspace has no members yet (phase 0) — manifest+lock validated, nothing to format"; else \
-		cargo fmt --check; \
-	fi
+rust-fmt-check: ## cargo fmt --check
+	cargo fmt --check
 
 .PHONY: rust-clippy
 rust-clippy: ## clippy with -D warnings
 	# disallowed_methods list is active only in rust-panic-ban (lib/bin);
 	# keep the general gate inert for test unwrap (clippy folds the lint into `all`).
-	@if $(CARGO_EMPTY); then echo "rust-clippy: workspace has no members yet (phase 0) — manifest+lock validated, nothing to lint"; else \
-		cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods; \
-	fi
+	cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods
 
 .PHONY: rust-panic-ban
 rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust job runs this same target)
@@ -86,28 +75,35 @@ rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust job runs t
 	# escapes are per-call-site #[expect(clippy::disallowed_methods, reason=…)]. When
 	# repark-python lands (phase 3) it is excluded here and gated separately with
 	# unwrap_used/expect_used only (PyO3 create_exception! macro expect) — see clippy.toml.
-	@if $(CARGO_EMPTY); then echo "rust-panic-ban: workspace has no members yet (phase 0) — manifest+lock validated, nothing to lint"; else \
-		cargo clippy --locked --workspace --lib --bins -- \
-			-D clippy::disallowed_methods \
-			-D clippy::unwrap_used \
-			-D clippy::expect_used \
-			-D clippy::panic \
-			-D clippy::todo \
-			-D clippy::unimplemented \
-			-D clippy::unreachable; \
-	fi
+	cargo clippy --locked --workspace --lib --bins -- \
+		-D clippy::disallowed_methods \
+		-D clippy::unwrap_used \
+		-D clippy::expect_used \
+		-D clippy::panic \
+		-D clippy::todo \
+		-D clippy::unimplemented \
+		-D clippy::unreachable
+
+.PHONY: check-crate-dag
+check-crate-dag: ## Crate-DAG layering guard (no edge to a strictly higher tier)
+	@# The tier map is the SSOT in scripts/check_crate_dag.py — prose points there, never restates.
+	@# DUAL-WIRED: the `crate-DAG layering guard` step in ci.yml's guards job mirrors this
+	@# target. Change one, change the other.
+	@./scripts/check_crate_dag.sh
+
+.PHONY: check-lib-rs
+check-lib-rs: ## lib.rs thinness guard (no inline tests; line ceilings)
+	@# Ceilings + EXCEPTIONS SSOT: scripts/check_lib_rs.py — dual-wired with ci.yml's guards job.
+	@# Mirrors make check-crate-dag (dual-wire lesson: Makefile AND ci.yml, never one alone).
+	@./scripts/check_lib_rs.sh
 
 .PHONY: rust-check
-rust-check: ## cargo check (phase-0 guard: see CARGO_EMPTY above)
-	@if $(CARGO_EMPTY); then echo "rust-check: workspace has no members yet (phase 0) — manifest+lock validated, nothing to check"; else \
-		cargo check --locked --workspace; \
-	fi
+rust-check: ## cargo check
+	cargo check --locked --workspace
 
 .PHONY: rust-test
 rust-test: ## cargo test (workspace; see note above re: --all-features)
-	@if $(CARGO_EMPTY); then echo "rust-test: workspace has no members yet (phase 0) — manifest+lock validated, nothing to test"; else \
-		cargo test --locked --workspace; \
-	fi
+	cargo test --locked --workspace
 
 # ------------------------------------------------------------------------------------------------
 # Python
@@ -160,11 +156,7 @@ rust-deny: ## cargo deny check all — licenses/bans/sources (deny.toml; mirrors
 	@# (cargo-deny@$(CARGO_DENY_VERSION)).
 	@[ "$$(cargo-deny --version 2>/dev/null | awk '{print $$2}')" = "$(CARGO_DENY_VERSION)" ] \
 		|| cargo install cargo-deny --locked --version $(CARGO_DENY_VERSION) --force
-	@# cargo-deny runs `cargo metadata` WITH deps, which errors on a memberless virtual
-	@# manifest — same phase-0 guard as the Rust targets above.
-	@if $(CARGO_EMPTY); then echo "rust-deny: workspace has no members yet (phase 0) — nothing to scan"; else \
-		cargo deny check all; \
-	fi
+	cargo deny check all
 
 .PHONY: workflows-lint
 workflows-lint: workflows-parse ## zizmor over .github/workflows — BLOCKING, like CI (mirrors zizmor.yml)
@@ -184,7 +176,7 @@ workflows-parse: ## Every workflow must be parseable YAML (zizmor SKIPS files it
 
 .PHONY: format
 format: ## Autoformat Rust + Python
-	@if $(CARGO_EMPTY); then echo "format: no Rust members yet (phase 0) — skipping cargo fmt"; else cargo fmt; fi
+	cargo fmt
 	$(RUFF) format .
 	$(RUFF) check --fix .
 
@@ -194,12 +186,10 @@ lint: ## Clippy + ruff (autofix Python)
 	$(RUFF) check --fix .
 
 .PHONY: install-hooks
-install-hooks: ## Wire .git/hooks/pre-commit to the map.md guard + cargo fmt + taplo + typos
-	@# Hook budget is < 1 s total (check_map_md.sh set the precedent in v1); the crate-DAG and
-	@# thinness guards rejoin the hook when they are ported (phase 1+).
-	@# The cargo-fmt hook line carries the phase-0 empty-workspace guard too (cargo fmt errors
-	@# outright on a memberless virtual manifest); it collapses to plain `cargo fmt --check`
-	@# when the guard is deleted in phase 1.
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nif %s; then true; else cargo fmt --check; fi\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' '$(subst ','"'"',$(CARGO_EMPTY))' > .git/hooks/pre-commit
+install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs guards + cargo fmt + taplo + typos
+	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast
+	@# (sub-second: a `cargo metadata` read and a pure text scan). Hook budget stays < 1 s
+	@# beyond cargo fmt; check_lib_py.sh rejoins when it is ported (phase 3).
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"
