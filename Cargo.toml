@@ -16,6 +16,7 @@ resolver = "3"
 members = [
   "crates/repark-common",
   "crates/repark-iceberg",
+  "crates/repark-core",
 ]
 
 [workspace.package]
@@ -80,6 +81,9 @@ object_store = { version = "0.13", features = ["aws"] }
 aws-config = "1"
 aws-credential-types = "1"
 url = "2"
+# TIMESTAMP AS OF string → epoch ms (UTC wall-clock parse) — the hoisted time_travel parsers.
+# Line verbatim from the v1 root manifest at the port-source pin.
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 # Foundation — the iceberg 0.9.1 family, one version with the DataFusion 54.1 / Arrow 58.4 pins.
 iceberg = "0.9.1"
 iceberg-datafusion = "0.9.1"
@@ -97,6 +101,7 @@ iceberg-storage-opendal = "0.9.1"
 # `publish = false`, so it is not a publishability claim.
 repark-common = { path = "crates/repark-common", version = "0.0.0", default-features = false }
 repark-iceberg = { path = "crates/repark-iceberg", version = "0.0.0", default-features = false }
+repark-core = { path = "crates/repark-core", version = "0.0.0", default-features = false }
 
 # -------------------------------------------------------------------------------------------
 # The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose

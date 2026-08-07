@@ -7,8 +7,9 @@ with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). 
 front-door navigation map. See [README.md](README.md) for the overview and
 [AGENTS.md](AGENTS.md) for the agent contract. The repo is at
 **phase 1** of the port: the engine core is arriving — the workspace carries
-`crates/repark-common` (error seed) and `crates/repark-iceberg` (catalog + write over the owned
-iceberg-rust fork, `[patch.crates-io]`-pinned).
+`crates/repark-common` (error seed), `crates/repark-iceberg` (catalog + write over the owned
+iceberg-rust fork, `[patch.crates-io]`-pinned), and `crates/repark-core` (the `ReparkSession`
+engine API, landing commit-by-commit in PR-C).
 
 ## Contents
 

@@ -1,0 +1,46 @@
+[package]
+name = "repark-core"
+description = "The Session-centric engine API: DataFusion SessionContext construction, the catalog registry, readers and temp views, and the SqlDialect / SessionExtension seams."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# The error seed (v1 `repark-core`, renamed): `Error` / `ErrorClass` / `Result`, re-exported at
+# this crate's root so bindings and doors import one crate.
+repark-common.workspace = true
+# Catalog builders + provider registration (catalog half) and the write-knob ConfigExtension
+# installers `build()` threads (write half) — the v1 repark-catalog / repark-write surfaces.
+repark-iceberg.workspace = true
+datafusion.workspace = true
+arrow.workspace = true
+# The session holds the iceberg Catalog handles (the CatalogRegistry the SQL/write path needs) and
+# exposes catalog/namespace registration.
+iceberg.workspace = true
+# Hoisted `read_table_at` (I1 time travel): the fork's snapshot-pinned static table provider.
+iceberg-datafusion.workspace = true
+# `s3://` / `s3a://` Parquet reads: `object_store` (AWS S3 store) is registered on the DataFusion
+# `RuntimeEnv`; `aws-config` resolves the credential chain (env → shared file → IMDS) + region —
+# at `register_configured_catalogs` time only (E-2) — and `aws-credential-types` is the credential
+# type bridged into `object_store::CredentialProvider`. `async-trait` implements that trait (and
+# the `SqlDialect` seam); `url` builds the per-bucket store URLs.
+object_store.workspace = true
+aws-config.workspace = true
+aws-credential-types.workspace = true
+async-trait.workspace = true
+url.workspace = true
+# Hoisted `parse_timestamp_to_ms` (TIMESTAMP AS OF string → epoch ms; UTC wall clock).
+chrono.workspace = true
+
+[dev-dependencies]
+# `#[tokio::test]` drives the async session API; `parquet` writes a fixture for the read_parquet
+# test; `tempfile` is the warehouse for the in-memory-catalog session tests.
+tokio.workspace = true
+parquet.workspace = true
+tempfile = "3"

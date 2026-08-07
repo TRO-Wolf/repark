@@ -16,6 +16,7 @@ doc-valid-idents = [
   "SchemaProvider",
   "SessionContext",
   "TableProvider",
+  "PostgreSQL",
   "OpenDAL",
   "ExecutionBackend",
   "RecordBatch",
