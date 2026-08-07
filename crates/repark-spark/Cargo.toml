@@ -33,5 +33,9 @@ async-trait.workspace = true
 regex.workspace = true
 
 [dev-dependencies]
+# The ported v1 lib-root battery streams fork scans (`try_collect`) and builds timestamp
+# fixtures — dev-only here (the production stream map lives in repark-iceberg, as in v1).
+chrono.workspace = true
+futures.workspace = true
 tokio.workspace = true
 tempfile = "3"

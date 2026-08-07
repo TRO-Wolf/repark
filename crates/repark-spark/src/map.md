@@ -56,8 +56,14 @@ wrapper.
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate (r24 SB1); 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape reject, the
   r24 P7 `reregister*` provider-invalidation family (complete — PR-2 PARTIAL rider closed).
-- `lib.rs` — manifest: module decls, `execute`/`SparkDialect`/`SparkExtension` re-exports, and
-  the v1 domain-module `pub(crate) use` groups.
+- `lib.rs` — manifest: module decls, `execute`/`SparkDialect`/`SparkExtension` re-exports, the
+  v1 domain-module `pub(crate) use` groups, and the `#[cfg(test)]` root imports that
+  reconstruct v1's crate-root scope for the battery's `use super::*`.
+- `tests.rs` — the ported v1 lib-root battery (move-only identity unit, 334 census names:
+  342 at the pin − 6 `postgres_p11_tests` (post-milestone-one) − 2 time-travel parser pins
+  hoisted to repark-core in phase 1). Includes the `bug001_*` MoR-valve set and the
+  `partitioned_ctas` / `partitioned_merge` / `transform_overwrite` / `service_managed_ctas`
+  groups.
 
 ## I want to...
 
@@ -72,7 +78,8 @@ wrapper.
 | Column-def CREATE / type mapping | `create_table.rs` |
 | ALTER TABLE / token rewrites | `alter.rs` |
 | Namespace / DROP TABLE DDL | `namespace_ddl.rs` |
-| Pin a refuse message | `router/tests.rs` |
+| Pin a router behavior end to end | `tests.rs` (lib-root battery) |
+| Pin a door-native gate (TRUNCATE/P11/BUG-010) | `router/tests.rs` |
 | ORDER BY / eager-command passthrough semantics | `spark_ast.rs` |
 | Namespace introspection rendering | `describe_show.rs` |
 | Time-travel span scanning | `time_travel.rs` (pin half: `repark-core/src/time_travel.rs`) |

@@ -11,19 +11,19 @@ execute against Iceberg, and passes everything else through the Spark passthroug
 v1 `build()` registrations (function registry + analyzer rules + cardinality/`repark.sql.*`
 config) via `repark_core::SessionExtension`.
 
-**PR-2 ports the SPINE only.** Live: DESCRIBE/SHOW namespace (Groups Z + AB), metadata tables
-(I2), the time-travel scanner (I1 — the pin half lives in `repark_core::time_travel`), the
-multi-statement / P11 / MoR-valve / SEC-02 guards, TRUNCATE targeted refuse, and the DML
-passthrough. TEMPORARY refuse arms (loud `NotImplemented` naming construct + restoring PR):
-CTAS, column-def CREATE TABLE, DROP TABLE, CREATE/DROP NAMESPACE, ALTER (PR-3a); MERGE,
-INSERT OVERWRITE, CALL, branch/tag ref DDL (PR-3b). The v1 lib-root integration battery
-(200 tests) and the census close ride PR-3b. `repark-ta` registration in `SparkExtension` is a
-declared temporary omission restored in PR-4.
+**The v1 port is COMPLETE as of phase-2 PR-3b.** Live: CTAS + column-def CREATE TABLE, DROP
+TABLE, namespace DDL, ALTER (I6/I7), MERGE INTO, INSERT OVERWRITE (empty + r23 OV1), CALL
+(I3), branch/tag ref DDL (I5) + the write-to-branch sniff, DESCRIBE/SHOW namespace (Groups
+Z + AB), metadata tables (I2), the time-travel scanner (I1 — the pin half lives in
+`repark_core::time_travel`), the multi-statement / P11 / MoR-valve / SEC-02 guards, TRUNCATE
+targeted refuse, and the DML passthrough. The v1 lib-root battery is ported intact
+(`src/tests.rs`; census closed at 334 ported names — see the p2d ledger). `repark-ta`
+registration in `SparkExtension` is a declared temporary omission restored in PR-4.
 
 ## Contents
 
 - `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, datafusion + fork family,
-  regex (SHOW … LIKE), async-trait (dialect seam).
+  regex (SHOW … LIKE), async-trait (dialect seam); dev-deps add chrono + futures (battery).
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests (Session + SparkExtension + SparkDialect;
   deferred test #1 lives here).

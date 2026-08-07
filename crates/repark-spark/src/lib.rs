@@ -51,7 +51,13 @@ pub(crate) use ctas::{
     CreatePlan, build_ctas, execute_ctas, refuse_unsupported_create_table_clauses,
     resolve_create_plan_for,
 };
+#[cfg(test)]
+pub(crate) use describe_show::{
+    DescribeNamespace, describe_namespace_batch, quoted_namespace, show_namespace_rows,
+};
 pub(crate) use insert_overwrite::execute_insert_overwrite;
+#[cfg(test)]
+pub(crate) use insert_overwrite::{logical_plan_has_unsafe_cast, tighten_batch_nullability};
 pub(crate) use namespace_ddl::{
     execute_create_namespace, execute_drop_namespace, execute_drop_table,
     try_parse_create_namespace,
@@ -65,3 +71,25 @@ pub(crate) use normalize::{
 
 mod extension;
 pub use extension::SparkExtension;
+
+// The ported v1 lib-root battery (`src/tests.rs`, move-only identity unit) reaches the v1
+// crate-root scope through `use super::*`; these test-only imports reconstruct that scope
+// (v1's root `use` lines + the types that moved to repark-core in phase 1).
+#[cfg(test)]
+use std::collections::HashMap;
+#[cfg(test)]
+use std::sync::Arc;
+
+#[cfg(test)]
+use datafusion::error::DataFusionError;
+#[cfg(test)]
+use datafusion::prelude::SessionContext;
+#[cfg(test)]
+use datafusion::sql::sqlparser::ast::Statement;
+#[cfg(test)]
+use iceberg::Catalog;
+#[cfg(test)]
+use repark_core::{CatalogRegistry, LocationPolicy};
+
+#[cfg(test)]
+mod tests;
