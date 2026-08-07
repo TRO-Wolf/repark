@@ -26,3 +26,24 @@ there the hard way and bind here from day one.
   co-author trailers, no session identifiers or links in commits or PR bodies.
 - **DO NOT trust checkboxes as ground truth when scoping work.** v1's ledgers repeatedly carried
   stale `[ ]` boxes for shipped work; grep the source and git history before scoping a unit.
+
+## 2026-08-07 — phase 1 (engine core)
+
+- **DO update branch-protection required contexts in the same change as a CI job rename.**
+  PR-A renamed the guards job; protection still required the old name, so PR #3 sat BLOCKED
+  with every visible check green. A job rename is not done until
+  `gh api repos/{owner}/{repo}/branches/main/protection/required_status_checks` lists the new
+  name (the required-contexts list matches on the job's display name).
+- **DO NOT make a path-filtered workflow a required status check.** A required check whose
+  workflow trigger carries a `paths:` filter never runs on non-matching PRs — GitHub reports
+  the PR permanently BLOCKED with all other checks green. Observed TWICE in one day: #6
+  (zizmor, filtered to `.github/workflows/**`), then the close-out PR #7 itself (cargo-deny +
+  taplo, filtered to Cargo/TOML paths — every prior PR had happened to touch a `.toml`, so a
+  docs-only diff was the first to expose them). Required workflows must be always-run on
+  `pull_request`; keep path filters for record-keeping triggers (`push`) only, and for
+  non-required workflows (`audit.yml` is the correct pattern: path-filtered AND not required).
+- **DO retarget a stacked PR's dependent BEFORE merging its base and deleting the branch.**
+  When `phase-1/pr-b` was deleted at #4's merge, GitHub auto-closed dependent PR #5; a closed
+  PR whose base branch is gone can be neither retargeted (HTTP 422) nor reopened — the only
+  recovery is a fresh PR (#6). Order of operations for a stack: change the child's base to
+  `main` first, then merge the parent.
