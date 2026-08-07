@@ -126,7 +126,7 @@ pub(crate) fn try_parse_describe_namespace(sql: &str) -> Option<Result<DescribeN
 /// | `Properties` | `EXTENDED` only — always emitted then, `""` when there is nothing to show |
 ///
 /// **Missing namespace** raises the oracle's class: the existence check fails with a
-/// [`DataFusionError::Plan`], which `repark_session::engine_err` classifies `Analysis` →
+/// [`DataFusionError::Plan`], which `repark_core::engine_err` classifies `Analysis` →
 /// `repark.errors.AnalysisException`, matching live pyspark's `AnalysisException` /
 /// `SCHEMA_NOT_FOUND` (SQLSTATE 42704). The check is explicit rather than relying on the catalog
 /// returning `ErrorKind::NamespaceNotFound`, so the class holds for every catalog implementation.
@@ -285,7 +285,7 @@ pub(crate) fn render_namespace_properties(properties: &HashMap<String, String>) 
 /// `AWS_ACCESS_KEY_ID` — are NOT redacted by Spark either. `RePark` matches the oracle exactly rather
 /// than over-redacting, so the parity claim stays true; a caller who wants those covered must widen
 /// the pattern in Spark too. (This predicate is therefore deliberately NARROWER than
-/// `repark_session::catalog_config`'s redaction set, which guards a different surface — logged
+/// `repark_core::catalog_config`'s redaction set, which guards a different surface — logged
 /// catalog config — and answers to no oracle.)
 pub(crate) fn property_is_redacted(key: &str, value: &str) -> bool {
     redaction_pattern_matches(key) || redaction_pattern_matches(value)

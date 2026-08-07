@@ -56,5 +56,6 @@ classes only: prefix renames, PR-2 refuse arms, seam adaptation).
 | Statement unexpectedly passes to DataFusion | `router.rs` arm order; `normalize::parse_single_normalized` returned `None` |
 | Time-travel clause not rewritten | `time_travel::sql_has_time_travel` span scan (comments/strings never match) |
 | P11 refusal missing | read-only set threading: `execute_with_read_only` → registry snapshot |
+| Doc comment names a crate that doesn't exist | v1-port doc text re-homes to `repark_core` (verify-panel fix); report any straggler |
 
 First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#debug](../map.md).

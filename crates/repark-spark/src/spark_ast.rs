@@ -157,7 +157,7 @@ mod tests {
     use crate::execute;
 
     /// A context whose `v` table carries (2, NULL, 1) — the null-placement fixture — wired the
-    /// way `repark-session` builds sessions (Spark analyzer rules installed).
+    /// way `repark-core` builds sessions (Spark analyzer rules installed).
     fn ctx() -> (SessionContext, CatalogRegistry) {
         let ctx = SessionContext::new();
         for rule in repark_functions::analyzer_rules() {

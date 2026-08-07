@@ -134,18 +134,21 @@ map; NEW (outside the census): the refuse-arm tests, the two `SparkExtension` se
 
 | Gate | Result | Evidence |
 |---|---|---|
-| `make ci` per commit | | |
-| `make preflight` (PR head) | | |
-| spine module batteries green (`cargo test -p repark-spark`, never `--all-features`) | | |
-| `cargo test -p repark-core` (incl. the G8 pin) | | |
-| refuse test per temporary arm | | |
-| deferred-#1 row closed in manifest | | |
-| forbidden-literal sweep (tree + `git log -p`) | | |
-| map.md lockstep (`check_map_md.sh`) | | |
+| `make ci` per commit | PASS | exit 0 at each commit; commit 1 additionally checked out detached (fmt + canonical clippy + panic-ban green); verify panel re-ran per-commit |
+| `make preflight` (PR head) | PASS | exit 0 at PR head (zizmor: no findings, 7 workflows parse) |
+| spine module batteries green (`cargo test -p repark-spark`, never `--all-features`) | PASS | 58 lib + 1 integration, 0 failed; counts match v1 pin batteries under the prefix map |
+| `cargo test -p repark-core` (incl. the G8 pin) | PASS | 80 passed incl. `bare_session_without_extension_carries_df_54_1_subquery_guard` |
+| refuse test per temporary arm | PASS | router/tests.rs: one refuse test per TEMPORARY arm (CTAS, CREATE, DROP table/ns spellings, ALTER, MERGE, INSERT OVERWRITE, CALL, ref-DDL) + TRUNCATE verbatim pin |
+| deferred-#1 row closed in manifest | PASS | row removed from task/port/deferred-tests.md; test lands as `session_extension::temp_view_then_sql_runs_the_spark_function_shim` |
+| forbidden-literal sweep (tree + `git log -p`) | PASS | 0 hits over full PR diff and all commit messages (13-term case-insensitive list) |
+| map.md lockstep (`check_map_md.sh`) | PASS | exit 0 at PR head; map updates ride the code commits |
 
 ## Deviations / STOPs
 
-*(record as they occur)*
+- Verify-panel fix: 3 doc-comment sites in ported modules still named the v1 `repark-session`
+  crate (`describe_show.rs` ×2, `spark_ast.rs` ×1) — edit-class 2 prefix rename applied to
+  doc text (`repark_session::` → `repark_core::`); widens the doc-re-home rider beyond the
+  repark-functions map references.
 
 ## Retrospective
 
