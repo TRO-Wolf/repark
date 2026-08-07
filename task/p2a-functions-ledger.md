@@ -58,6 +58,20 @@ against this repo's `--list` is **EMPTY**; reconciliation entry appended to
 
 *(record as they occur)*
 
+## Follow-up riders (from PR-1 verify panel)
+
+Logged here so they are not lost; NOT fixed in PR-1 because the sources are pinned verbatim
+for census identity (edit-class 1) and changing them would break the declared port contract.
+
+1. **Doc-comment re-home (rider on PR-2/PR-3b).** Stale v1 crate references inside the
+   ported crate: `repark-sql::spark_ast` mentions in `crates/repark-functions/map.md` and
+   `src/map.md` (in this repo's settled design, `spark_ast` lands in **repark-spark** and
+   `repark-sql` names the new ANSI door), plus `repark-session` prose refs in the crate's
+   `Cargo.toml`, `map.md`, `src/map.md`, `src/lib.rs`, `analyzer.rs`, `cardinality.rs`,
+   `string.rs`. Re-home these doc comments when repark-spark actually lands.
+2. **Benches map.md jargon.** `crates/repark-functions/benches/map.md` carries v1-internal
+   round jargon; reword whenever the benches CI workflow is ported.
+
 ## Retrospective
 
 *(filled at unit close, per SEPMO)*
