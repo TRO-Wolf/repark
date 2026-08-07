@@ -18,6 +18,7 @@ use repark_core::CatalogRegistry;
 
 use crate::alter;
 use crate::catalog_ops::{iceberg_err, name_parts};
+use crate::merge;
 
 /// True when the statement's first keyword token is `MERGE` — tokenizer-based (the same pattern
 /// as `is_create_table`), so leading whitespace/comments and multi-byte text are handled without
@@ -168,10 +169,9 @@ pub(crate) fn parse_single_normalized(
     tokens = alter::rewrite_unset_tblproperties(&tokens);
     tokens = alter::rewrite_add_columns_plural(&tokens);
     tokens = alter::rewrite_drop_columns_plural(&tokens);
-    // TEMPORARY (phase-2 PR-3a): v1 additionally runs `merge::rewrite_merge_stars` here when
-    // `is_merge(&tokens)`. The `merge` module lands in phase-2 PR-3b, and the router refuses
-    // MERGE loudly until then, so that rewrite is unreachable in this build; restored verbatim
-    // with `merge` in PR-3b.
+    if is_merge(&tokens) {
+        tokens = merge::rewrite_merge_stars(&tokens);
+    }
     // ALTER TABLE uses GenericDialect so Spark `ADD COLUMN … FIRST|AFTER x` fills
     // `MySQLColumnPosition` (Databricks dialect leaves those tokens unparsed — I6).
     let generic = GenericDialect {};
@@ -264,28 +264,10 @@ pub(crate) fn multi_statement_parse_error() -> DataFusionError {
     )
 }
 
-/// Which SQL DML verb is being gated for the BUG-001 merge-on-read multi-spec hazard.
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum MorDmlKind {
-    Delete,
-    Update,
-}
-
-impl MorDmlKind {
-    const fn mode_property(self) -> &'static str {
-        match self {
-            Self::Delete => "write.delete.mode",
-            Self::Update => "write.update.mode",
-        }
-    }
-
-    const fn verb(self) -> &'static str {
-        match self {
-            Self::Delete => "DELETE",
-            Self::Update => "UPDATE",
-        }
-    }
-}
+// BUG-001 valve verb enum — hoisted to repark-iceberg beside the position-delete path it
+// gates (phase-2 PR-3b declared rename); re-exported so sibling `crate::normalize::MorDmlKind`
+// paths stay stable (MOVE-ONLY surface).
+pub(crate) use repark_iceberg::write::MorDmlKind;
 
 /// [`ObjectName`] from a `TableWithJoins` primary relation (strips aliases — BUG-001 under-refuse fix).
 pub(crate) fn object_name_from_table_with_joins(table: &TableWithJoins) -> Option<&ObjectName> {
@@ -311,16 +293,11 @@ pub(crate) fn delete_target_object_name(
 }
 
 /// ===========================================================================================
-/// BUG-001 P0 valve (r22 A2): SQL `DELETE`/`UPDATE` via iceberg-datafusion merge-on-read stamps
-/// every position delete with `partition_key = None` when the **current default** partition
-/// spec is unpartitioned — after partition-spec evolution that leaves older data files under
-/// prior specs, deletes can commit while rows remain visible (fork
-/// `physical_plan/delete.rs` unpartitioned fast path; `ENGINE_CONTRACT` §7a).
-///
-/// Refuse when **all** of: (1) `write.{delete,update}.mode = merge-on-read`, (2) current default
-/// spec is unpartitioned, (3) table metadata carries more than one partition spec in history.
-/// Over-refuse is OK; under-refuse is not. **`MERGE` is never gated here** (repark-owned
-/// merge-on-read writer is fixed).
+/// BUG-001 P0 valve (r22 A2) — the SQL-door resolution wrapper. Resolves the DML target's
+/// [`ObjectName`] to a registered catalog handle + [`TableIdent`] and delegates the hazard
+/// predicate to the hoisted valve beside the fork position-delete path it gates
+/// ([`repark_iceberg::write::position_delete::refuse_mor_unpartitioned_multi_spec_dml`],
+/// phase-2 PR-3b declared rename — refuse conditions and message live there).
 ///
 /// Uses [`ObjectName`] parts (not Display) so table aliases cannot soft-pass the hazard gate.
 /// Nested namespaces (`catalog.ns1.ns2.table`) resolve via [`NamespaceIdent::from_vec`].
@@ -353,41 +330,13 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
         return Ok(());
     };
     let ident = TableIdent::new(namespace, table_leaf);
-    let Ok(table) = catalog.load_table(&ident).await else {
-        // Missing table → DF/path will raise; not our refuse.
-        return Ok(());
-    };
-    let metadata = table.metadata();
-    // Case/trim tolerant: under-refuse on `Merge-on-Read` / padded values would re-open the
-    // silent under-delete path (critic-octo C3). Over-refuse of odd spellings is OK.
-    let is_merge_on_read = metadata
-        .properties()
-        .get(kind.mode_property())
-        .is_some_and(|mode| mode.trim().eq_ignore_ascii_case("merge-on-read"));
-    if !is_merge_on_read {
-        return Ok(());
-    }
-    if !metadata.default_partition_spec().is_unpartitioned() {
-        return Ok(());
-    }
-    let spec_count = metadata.partition_specs_iter().len();
-    if spec_count <= 1 {
-        return Ok(());
-    }
-    let table_sql = table_name.to_string();
-    Err(DataFusionError::Plan(format!(
-        "refusing SQL {} on Iceberg table `{table_sql}`: write mode is merge-on-read, the \
-         current partition spec is unpartitioned, and the table has {spec_count} partition \
-         specs in history — the iceberg-datafusion MoR position-delete path stamps deletes \
-         with partition_key=None for unpartitioned current specs without looking up each data \
-         file's real (spec_id, partition), which can silently under-delete after partition-spec \
-         evolution (owned fork issue: integrations/datafusion physical_plan/delete.rs \
-         write_position_deletes unpartitioned fast path; ENGINE_CONTRACT §7a). Workarounds: \
-         set {}='copy-on-write' (or unset for COW default), or use MERGE INTO (RePark-owned MoR \
-         writer stamps per-file partitions correctly)",
-        kind.verb(),
-        kind.mode_property(),
-    )))
+    repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
+        catalog.as_ref(),
+        &ident,
+        &table_name.to_string(),
+        kind,
+    )
+    .await
 }
 
 /// True if the token stream begins a `CREATE [OR REPLACE] [TEMPORARY] TABLE …` statement.

@@ -1,8 +1,7 @@
-//! Router-spine tests: one refuse test per remaining TEMPORARY refuse arm (each arm is restored
-//! by phase-2 PR-3b), plus passthrough sanity. The PR-3a arms' refuse tests were deleted with
-//! their arms when the DDL handlers landed. The v1 lib-root integration battery (200 tests)
-//! rides PR-3b when the router completes — these tests pin only the refuse surface still in
-//! force.
+//! Router-spine tests: passthrough/gate sanity checks that are NEW outside the ported v1
+//! census (the ported lib-root battery lives in `crate::tests`). The PR-2/PR-3a TEMPORARY
+//! refuse arms are all restored as of phase-2 PR-3b; their refuse tests were deleted with the
+//! arms, per the p2b/p2c/p2d ledgers.
 
 use datafusion::prelude::SessionContext;
 use repark_core::CatalogRegistry;
@@ -12,78 +11,6 @@ use crate::execute;
 /// A bare context + empty registry — the refuse arms fire before any catalog lookup.
 fn ctx() -> (SessionContext, CatalogRegistry) {
     (SessionContext::new(), CatalogRegistry::new())
-}
-
-/// Assert `sql` refuses loudly, naming both the construct fragment and the restoring PR.
-async fn assert_refuses(sql: &str, construct_fragment: &str, restoring_pr: &str) {
-    let (ctx, catalogs) = ctx();
-    let error = execute(&ctx, &catalogs, sql)
-        .await
-        .expect_err("the PR-2 refuse arm must fire")
-        .to_string();
-    assert!(
-        error.contains(construct_fragment),
-        "error must name the construct {construct_fragment:?}: {error}"
-    );
-    assert!(
-        error.contains(restoring_pr),
-        "error must name the restoring PR {restoring_pr:?}: {error}"
-    );
-    assert!(
-        error.contains("lands in phase-2"),
-        "error must mark the refusal as temporary: {error}"
-    );
-}
-
-#[tokio::test]
-async fn refuses_merge_until_pr3b() {
-    // Parseable MERGE hits the statement arm; the star form (unparsable without the PR-3b
-    // rewrite) hits the fallthrough — both name the same construct + PR.
-    assert_refuses(
-        "MERGE INTO ice.ns.t AS t USING ice.ns.s AS s ON t.id = s.id \
-         WHEN MATCHED THEN UPDATE SET v = s.v",
-        "MERGE INTO",
-        "PR-3b",
-    )
-    .await;
-    assert_refuses(
-        "MERGE INTO ice.ns.t AS t USING ice.ns.s AS s ON t.id = s.id \
-         WHEN NOT MATCHED THEN INSERT *",
-        "MERGE INTO",
-        "PR-3b",
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn refuses_insert_overwrite_until_pr3b() {
-    assert_refuses(
-        "INSERT OVERWRITE ice.ns.t SELECT * FROM ice.ns.s",
-        "INSERT OVERWRITE",
-        "PR-3b",
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn refuses_call_until_pr3b() {
-    assert_refuses(
-        "CALL ice.system.expire_snapshots(table => 'ns.t')",
-        "CALL",
-        "PR-3b",
-    )
-    .await;
-}
-
-#[tokio::test]
-async fn refuses_branch_tag_ddl_until_pr3b() {
-    for sql in [
-        "CREATE BRANCH audit IN ice.ns.t",
-        "DROP TAG v1 IN ice.ns.t",
-        "REPLACE BRANCH audit IN ice.ns.t",
-    ] {
-        assert_refuses(sql, "BRANCH|TAG", "PR-3b").await;
-    }
 }
 
 #[tokio::test]

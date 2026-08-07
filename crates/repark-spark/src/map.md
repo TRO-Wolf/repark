@@ -4,16 +4,26 @@
 
 Source for the Spark SQL door. `lib.rs` is a manifest (check_lib_rs); the router body lives in
 `router.rs`. Module bodies are ported from v1 `repark-sql` at the port-source pin (declared edit
-classes only: prefix renames, the remaining PR-3b refuse arms, seam adaptation). PR-3a restored
-the DDL handler modules (`ctas`, `create_table`, `alter`, `namespace_ddl`) and completed
-`catalog_ops`/`normalize`.
+classes only: prefix renames, seam adaptation). PR-3a restored the DDL handler modules
+(`ctas`, `create_table`, `alter`, `namespace_ddl`) and completed `catalog_ops`/`normalize`;
+PR-3b restored the DML/ref modules (`merge`, `insert_overwrite`, `ref_ddl`, `call`) — the
+router now matches v1's execute family end-to-end. The MoR BUG-001 valve predicate is hoisted
+to `repark_iceberg::write` (PR-3b declared rename); `normalize.rs` keeps the resolution
+wrapper.
 
 ## Contents
 
 - `router.rs` — `execute` / `execute_with_read_only` / `execute_inner` + pre-parse intercepts
-  (alter I6/I7, create-namespace, describe/show) and the remaining PR-3b TEMPORARY refuse arms
-  (MERGE / INSERT OVERWRITE / CALL / ref DDL — each names its construct + restoring PR;
-  [router/map.md](router/map.md) for the tests).
+  (alter I6/I7, create-namespace, describe/show, ref DDL) + the r25 T2 write-to-branch sniff;
+  full v1 arm set ([router/map.md](router/map.md) for the tests).
+- `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
+  star-sentinel rewrite); 10 in-module tests.
+- `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
+  non-empty r23 OV1 stage-then-swap; 2 in-module tests (`assignment_type_unit_tests`).
+- `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
+  write-to-branch sniff; 14 in-module tests.
+- `call.rs` — I3 maintenance `CALL` procedures (expire_snapshots / rewrite_data_files /
+  rollback_to_snapshot; LOCAL catalogs only); 3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
@@ -31,8 +41,9 @@ the DDL handler modules (`ctas`, `create_table`, `alter`, `namespace_ddl`) and c
   Tests: [extension/map.md](extension/map.md).
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
-  multi-statement refuse (BUG-010), MoR multi-spec DML gate (BUG-001), partition-spec builders.
-  The MERGE star rewrite returns with `merge` (PR-3b).
+  multi-statement refuse (BUG-010), the MoR multi-spec DML gate's resolution wrapper (BUG-001
+  — predicate hoisted to `repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml`),
+  the MERGE star rewrite call, partition-spec builders.
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call. 6 in-module tests.
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
@@ -46,13 +57,17 @@ the DDL handler modules (`ctas`, `create_table`, `alter`, `namespace_ddl`) and c
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape reject, the
   r24 P7 `reregister*` provider-invalidation family (complete — PR-2 PARTIAL rider closed).
 - `lib.rs` — manifest: module decls, `execute`/`SparkDialect`/`SparkExtension` re-exports, and
-  the v1 domain-module `pub(crate) use` groups for the landed handler modules.
+  the v1 domain-module `pub(crate) use` groups.
 
 ## I want to...
 
 | ...do this | go to |
 |---|---|
-| Trace statement routing / refuse arms | `router.rs` |
+| Trace statement routing / targeted refusals | `router.rs` |
+| MERGE lowering / star sentinel | `merge.rs` |
+| INSERT OVERWRITE probe / OV1 swap | `insert_overwrite.rs` |
+| Branch/tag DDL, write-to-branch sniff | `ref_ddl.rs` |
+| Maintenance CALL procedures | `call.rs` |
 | CTAS lowering / location policy | `ctas.rs` |
 | Column-def CREATE / type mapping | `create_table.rs` |
 | ALTER TABLE / token rewrites | `alter.rs` |

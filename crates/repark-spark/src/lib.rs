@@ -6,21 +6,24 @@
 //! router to the phase-1 `repark_core::SqlDialect` seam; the companion `SparkExtension`
 //! (`extension` module, PR-2 WS2) installs the Spark function registry + analyzer rules.
 //!
-//! **PR-2 ports the SPINE** — normalize, `spark_ast`, describe/show, metadata tables, the
-//! time-travel scanner, the P11/MoR/SEC-02 guards, and the router itself. Handler modules for
-//! CTAS / CREATE / DROP / ALTER / MERGE / INSERT OVERWRITE / CALL / ref DDL land in phase-2
-//! PR-3a/PR-3b; their router arms refuse loudly until then (see [`router`]).
+//! **PR-3b completes the port** — every v1 handler module is live (CTAS / CREATE / DROP /
+//! ALTER / MERGE / INSERT OVERWRITE / CALL / ref DDL) and the router matches v1's execute
+//! family end-to-end (see [`router`]).
 
 mod alter;
+mod call;
 mod catalog_ops;
 mod create_table;
 mod ctas;
 mod describe_show;
 mod dialect;
+mod insert_overwrite;
 mod local_fs_ddl;
+mod merge;
 mod metadata_tables;
 mod namespace_ddl;
 mod normalize;
+mod ref_ddl;
 mod router;
 mod spark_ast;
 mod time_travel;
@@ -38,25 +41,26 @@ pub use metadata_tables::{
 };
 
 // Domain-module re-exports — keep sibling `use crate::{…}` paths stable (MOVE-ONLY surface).
-// Restored with their PR-3a consumers; the `insert_overwrite` group + the lib-root test
-// cohort's `#[cfg(test)]` describe/show re-exports return in phase-2 PR-3b (the lib-root
-// battery rides PR-3b).
 pub use catalog_ops::reregister_catalog_provider;
 pub(crate) use catalog_ops::{
-    catalog_handle, iceberg_err, name_parts, namespace_schema_name, reject_path_escape_ident,
+    catalog_handle, iceberg_err, name_parts, namespace_schema_name, passthrough_after_p11,
+    refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, reject_path_escape_ident,
     reregister, reregister_namespaces,
 };
 pub(crate) use ctas::{
     CreatePlan, build_ctas, execute_ctas, refuse_unsupported_create_table_clauses,
     resolve_create_plan_for,
 };
+pub(crate) use insert_overwrite::execute_insert_overwrite;
 pub(crate) use namespace_ddl::{
     execute_create_namespace, execute_drop_namespace, execute_drop_table,
     try_parse_create_namespace,
 };
 pub(crate) use normalize::{
-    PartitionFieldSpec, PartitionedByElement, build_partition_spec, build_transform_field,
-    property_value,
+    MorDmlKind, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
+    build_transform_field, delete_target_object_name, object_name_from_table_with_joins,
+    parse_single_normalized, property_value, refuse_mor_unpartitioned_multi_spec_dml,
+    refuse_multi_statement_sql, starts_with_branch_or_tag_ddl, starts_with_merge,
 };
 
 mod extension;

@@ -55,11 +55,17 @@ repark-core's error map.
 - `name_resolution.rs` (crate-private) — the shared case-insensitive by-name column resolver
   (Spark `spark.sql.caseSensitive=false` conform semantics); used by both `append` conform and
   merge star expansion so the two surfaces cannot drift.
-- `position_delete.rs` (crate-private) — merge-on-read WRITE primitive: turn `(_file, _pos)`
-  pairs into committable position-delete `DataFile`s by driving the fork's production
-  `PositionDeleteFileWriter`. Owns sort order (ascending `(file_path, pos)`) and partition
-  stamping (each delete file carries the `(spec_id, partition)` of the data file it deletes
-  from, resolved from the snapshot's DATA manifests — never the table's current default spec).
+- `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
+  WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
+  driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending
+  `(file_path, pos)`) and partition stamping (each delete file carries the `(spec_id,
+  partition)` of the data file it deletes from, resolved from the snapshot's DATA manifests —
+  never the table's current default spec). Also hosts the BUG-001 P0 valve
+  (`MorDmlKind` + `refuse_mor_unpartitioned_multi_spec_dml`, hoisted from the v1 SQL crate in
+  phase-2 PR-3b): refuse merge-on-read SQL DELETE/UPDATE when the current default spec is
+  unpartitioned and multi-spec history exists — the fork position-delete fast-path under-delete
+  hazard this file's stamping discipline exists to avoid. The SQL door resolves the target and
+  calls it; the door's `bug001_*` battery pins it end to end.
 - `idents.rs` — shared Spark/DF `quote_ident_spark` + path-escape needles + `probes` tables
   (single source; MERGE `quote_ident` delegates here).
 - `writer_props.rs` — Parquet `WriterProperties` from Iceberg

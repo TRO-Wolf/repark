@@ -1,6 +1,6 @@
 //! [`SparkDialect`] seam-adaptation tests: installed on a [`ReparkSession`] via
 //! `with_sql_dialect`, the dialect routes every `sql()` call through the ported v1 router —
-//! the Spark ORDER BY defaults and the PR-2 refuse arms are observable end to end. The P11
+//! the Spark ORDER BY defaults and the router's targeted refusals are observable end to end. The P11
 //! `read_only` field adaptation is pinned router-side (`router/tests.rs` pins the message; the
 //! session threads its postgres snapshot into `EngineContext::read_only` — core session tests).
 
@@ -49,19 +49,20 @@ async fn dialect_execute_runs_the_spark_router() {
     assert!(column.is_null(0), "Spark ASC default is NULLS FIRST");
 }
 
-/// The remaining TEMPORARY refuse arms (PR-3b) are reachable through the seam (the dialect
-/// passes the SQL through unmodified — no shadow routing) and survive the session's error fold.
-/// (PR-3a: the CTAS probe this test used became a live handler; repointed to a PR-3b arm.)
+/// The router's targeted refusals are reachable through the seam (the dialect passes the SQL
+/// through unmodified — no shadow routing) and survive the session's error fold.
+/// (PR-3a: the CTAS probe this test used became a live handler; PR-3b: the MERGE refuse arm
+/// became the live handler; repointed to the permanent TRUNCATE targeted refuse — C4-L-001.)
 #[tokio::test]
 async fn dialect_surfaces_router_refusals() {
     let session = spark_session();
     let error = session
-        .sql(
-            "MERGE INTO ice.ns.t AS t USING ice.ns.s AS s ON t.id = s.id \
-             WHEN MATCHED THEN UPDATE SET v = s.v",
-        )
+        .sql("TRUNCATE TABLE ice.ns.t")
         .await
-        .expect_err("MERGE refuses until PR-3b")
+        .expect_err("TRUNCATE refuses loud (C4-L-001)")
         .to_string();
-    assert!(error.contains("lands in phase-2 PR-3b"), "{error}");
+    assert!(
+        error.contains("TRUNCATE TABLE is not supported yet"),
+        "{error}"
+    );
 }

@@ -4,8 +4,8 @@
 
 File-backed tests for `SparkDialect` (`../dialect.rs`): installed on a `ReparkSession` via
 `with_sql_dialect`, the seam adapter routes `sql()` through the ported router (Spark ORDER BY
-defaults observable end to end; refuse arms survive the session error fold — the refusal
-probe pins MERGE since PR-3a landed the CTAS handler).
+defaults observable end to end; targeted refusals survive the session error fold — the
+refusal probe pins TRUNCATE (C4-L-001) since PR-3b landed the MERGE handler).
 
 ## Contents
 
