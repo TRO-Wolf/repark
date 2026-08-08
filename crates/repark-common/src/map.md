@@ -7,6 +7,16 @@ Source for `repark-common` — shared types + the `Error` enum. See [../map.md](
 ## Contents
 - `tests.rs` — unit tests for Error / ErrorClass
 
+- `surfaces.rs` — the dialect-neutral **SQL surface registry** (design
+  `docs/design/sql-doors.md` §2 Q13, graft G2): 43 capability IDs (`CTAS`, `MERGE`,
+  `TABLE_OPTION_PARTITIONING`, `GUARD_MULTI_STATEMENT`, …) named by CAPABILITY rather than by
+  spelling, so one ID covers the ANSI `WITH (…)` form and the Spark `TBLPROPERTIES` form; plus
+  `ALL` (the audit's universe), `Row { Tested { test, profile } | DeliberatelyAbsent { reason,
+  adr } }`, `SessionProfile { Unit, Native, SparkExtended, TwoSession }` (graft G5 — evidence
+  is only meaningful when the session profile is explicit) and `audit()`, which each door's
+  `matrix.rs` calls from a `#[test]`. It lives here, at tier 0, because both tier-3 doors must
+  reach it without a door→door edge (design §1). Tests: [surfaces/map.md](surfaces/map.md).
+
 - `lib.rs` — `Error` (variants: `NotImplemented(String)` — the deterministic scope-gate /
   unsupported-feature class (U4: no longer a scaffolding placeholder; `engine_err` folds
   `DataFusionError::NotImplemented` + iceberg `FeatureUnsupported` into it, verbatim `{0}`);

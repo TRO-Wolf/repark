@@ -7,6 +7,8 @@
 //!
 //! Domain types and error variants land alongside the code that needs them.
 
+pub mod surfaces;
+
 use thiserror::Error;
 
 /// ===========================================================================================
