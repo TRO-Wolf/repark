@@ -3,7 +3,7 @@
 **Unit:** phase-2 PR-1 · **Brief:**
 [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-1" · **Design:**
 [../docs/design/sql-doors.md](../docs/design/sql-doors.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** IN FLIGHT
+`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #8)
 
 ## Scope
 

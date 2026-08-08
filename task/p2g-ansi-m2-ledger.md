@@ -3,7 +3,7 @@
 **Unit:** phase-2 PR-6 · **Brief:**
 [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-6" · **Design:**
 [../docs/design/sql-doors.md](../docs/design/sql-doors.md) (LAW for this unit) · **Predecessor:**
-[p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) (PR-5 / M1) · **Status:** IN FLIGHT
+[p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) (PR-5 / M1) · **Status:** MERGED 2026-08-08 (PR #14)
 
 This is the **single home** for PR-6's per-Q delivery record. `docs/design/sql-doors.md` is not
 annotated with delivery notes — it stays the design, and points here (no duplication; the design

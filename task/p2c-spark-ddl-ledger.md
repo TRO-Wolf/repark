@@ -3,7 +3,7 @@
 **Unit:** phase-2 PR-3a · **Brief:**
 [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-3a" · **Design:**
 [../docs/design/sql-doors.md](../docs/design/sql-doors.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** IN FLIGHT · **Stacked on:** phase-2 PR-2
+`fc3f48102` · **Status:** MERGED 2026-08-08 (PR #10) · **Stacked on:** phase-2 PR-2
 ([p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md))
 
 ## Scope
