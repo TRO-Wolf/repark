@@ -31,7 +31,9 @@ Ported verbatim from the v1 engine at the phase-3 port pin — see
 
 - Up: [../map.md](../map.md)
 - Design: [../../docs/design/python-facade.md](../../docs/design/python-facade.md) (§1 edit
-  classes — this crate is `none (verbatim)`; §2.1 tier row; §4 Q3 in-scope ruling)
+  classes — this crate is EC-7 on **this file only**, every `.rs` / `Cargo.toml` verbatim; §2.1
+  tier row; §3 EC-6 second rider — the four `docs/ml-design.md` dead pointers still in the sources,
+  discharged in PR-3; §4 Q3 in-scope ruling)
 - Brief: [../../briefs/phase-3-python-facade.md](../../briefs/phase-3-python-facade.md) §1 "PR-2"
 - Ledger: [../../task/p3b-ml-ledger.md](../../task/p3b-ml-ledger.md)
 

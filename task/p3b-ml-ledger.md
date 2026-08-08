@@ -11,8 +11,10 @@
 
 Land `crates/repark-ml` — the native ML estimator kernels the phase-3 binding (PR-3) and the ML
 facade package (PR-5) both require — as a **verbatim** port with an **identity census**. Design §1
-assigns this crate **no edit classes at all**: the acceptance claim is an empty `diff -r` against
-the pin plus an empty sorted `--list` diff.
+assigns this crate exactly one edit class, **EC-7 (crate `map.md` only)**; the acceptance claim is
+an empty `diff -r` against the pin **excluding `crates/repark-ml/map.md`**, plus an empty sorted
+`--list` diff. (§1 originally read `none (verbatim)`; the design and this ledger were reconciled in
+the fix commit — see "Verifier findings" F-1 below.)
 
 - **Crate copy, byte-identical.** `cp -a` of `v1-pin/crates/repark-ml` → `crates/repark-ml`.
   `diff -r` against the pin reports **no differences at all** at copy time: 8 files
@@ -108,12 +110,100 @@ Both run in the PR worktree, `--workspace`, never `--all-features`, never `--no-
 - Public hygiene: both mandated passes (staged diff vs `main`, and the commit-metadata log pass)
   returned **0** matches against the forbidden-pattern list.
 
+## Verifier findings and their disposition (fix commit 2)
+
+The adversarial verifier confirmed two MED findings. Both are claim-integrity / disclosure
+findings; neither is a correctness defect, and **no `.rs` or `Cargo.toml` byte changed in the fix
+commit** — the census above stands unchanged (34 = 34, empty diff).
+
+### F-1 (MED) — the acceptance oracle was asserted and then knowingly broken
+
+**Reproduction.**
+
+```
+$ diff -r --exclude=target <v1-pin>/crates/repark-ml <wt-pr2>/crates/repark-ml
+diff -r .../crates/repark-ml/map.md .../crates/repark-ml/map.md
+5,9c5,11 … 25,26c27,28 … 31,33c33,36     (3 hunks, map.md only)
+EXIT=1
+$ grep -n 'repark-ml' docs/design/python-facade.md   # §1 row
+63:| `crates/repark-ml` | … | none (verbatim) |
+```
+
+The crate `map.md` was rewritten (EC-7 in spirit) while design §1 assigned the crate `none
+(verbatim)` and this ledger claimed an empty `diff -r` — the criterion was asserted and then
+broken, hedged as "no differences **at copy time**".
+
+**Fix — the design is amended, the map rewrite stands (declared deviation).** The alternative,
+reverting `map.md` to byte-identical, would knowingly ship a `map.md` with five links to
+nonexistent paths, violating CLAUDE.md's hard map.md-accuracy rule; and design §3 **EC-7** already
+exists for exactly this ("stale v1 `map.md` files are rewritten to the true tree rather than ported
+stale"). So the design was corrected to say what the port actually needs, rather than the port bent
+to a cell that was wrong:
+
+- `docs/design/python-facade.md` §1: the `crates/repark-ml` row now reads **"EC-7 (crate `map.md`
+  only) — every `.rs` and `Cargo.toml` verbatim"**.
+- `docs/design/python-facade.md` §9 PR-2: the oracle is restated as "`diff -r` empty **excluding**
+  `crates/repark-ml/map.md`", with the reason and the scope of what stays byte-identical.
+- `briefs/phase-3-python-facade.md` §1 PR-2 row: same restatement, so brief and design agree.
+- This ledger's Scope paragraph (above) now states the amended oracle.
+
+**Proof.** The oracle now holds as written:
+
+```
+$ diff -r --exclude=target --exclude=map.md <v1-pin>/crates/repark-ml <wt-pr2>/crates/repark-ml
+$ echo $?
+0
+```
+
+(`src/map.md` is byte-identical and is *not* what the exclusion covers — it is excluded only
+incidentally by name; verified separately with `md5sum`, unchanged.) The design's other PR-2
+acceptance statements (§6.6 item 4, §6 census table row "none expected") were already `--list`-based
+and needed no edit.
+
+### F-2 (MED) — four verbatim `docs/ml-design.md` pointers, one of them user-visible, undisclosed
+
+**Reproduction.**
+
+```
+$ ls docs/ml-design.md
+ls: cannot access 'docs/ml-design.md': No such file or directory
+$ grep -rn 'docs/ml-design.md' crates/repark-ml/
+crates/repark-ml/Cargo.toml:6
+crates/repark-ml/src/lib.rs:3
+crates/repark-ml/src/error.rs:52          ← inside an #[error(...)] format string
+crates/repark-ml/src/logistic_regression.rs:199
+```
+
+`error.rs:52` is the `Error::Singular` message, so the dead pointer is emitted to end users at
+runtime. The verifier's charge is fair and is accepted in full: the same stale reference was treated
+as rewrite-worthy in `map.md` and left invisible in the sources.
+
+**Fix — disclosed and assigned, not silently carried (declared deferral).** The four sites stay
+byte-identical in this PR: editing them would break the crate's verbatim/identity claim — the whole
+product of a slim-tier port — for a pointer that is unreachable from any user surface until PR-3
+wires the binding (there is no `repark-python`, no wheel, and no Python caller in the tree today).
+Instead the defect gets an owner and a gate:
+
+- `docs/design/python-facade.md` §3 **EC-6** (the doc-drift-rider class) gains a second rider
+  naming all four sites, flagging `error.rs:52` as user-visible, and assigning discharge to **PR-3**
+  — repoint at the in-repo ML authority (`docs/design/python-facade.md` §4 Q3) or drop the pointer,
+  plus a test pinning the `Singular` message.
+- `briefs/phase-3-python-facade.md` §1 PR-3 row carries the same obligation, so the slate cannot
+  reach PR-5 (the first honestly taggable wheel, §9) with the rider open.
+
+**Proof.** The sites are still verbatim (F-1's `diff -r` proof covers them: zero `.rs` /
+`Cargo.toml` hunks), and the deferral is now recorded in the design, the brief, and this ledger —
+grep `docs/ml-design.md` in `docs/design/python-facade.md` returns the rider.
+
+No LOW findings were reported, so none were skipped.
+
 ## Notes for the verifier
 
-1. The one judgement call in this PR is the `crates/repark-ml/map.md` rewrite. It is deliberate,
-   argued from design §3 EC-7's stated principle and the repo's hard map.md-accuracy rule, and it
-   touches **no `.rs` byte**. If the verifier prefers a byte-identical map with five dead links,
-   that is a one-file revert.
+1. **RESOLVED in fix commit 2 (F-1).** The one judgement call in this PR is the
+   `crates/repark-ml/map.md` rewrite. It is deliberate, argued from design §3 EC-7's stated
+   principle and the repo's hard map.md-accuracy rule, and it touches **no `.rs` byte**. It is now
+   granted explicitly: design §1 assigns this crate EC-7 (crate `map.md` only) and §9 PR-2 states
+   the oracle as an empty `diff -r` excluding that one file.
 2. `map.md` "tier-1" in the v1 text meant the M3 estimator tier of the v1 ML roadmap, not the
    crate-DAG tier; the two collided in one word, and the rewrite disambiguates to the crate-DAG
    tier 3 that `scripts/check_crate_dag.py` (the SSOT) assigns.
