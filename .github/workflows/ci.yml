@@ -59,10 +59,13 @@ jobs:
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
-      # Prefix-keyed per dependency family; MUST match cache-warm.yml's warm-lint job.
+      # Prefix-keyed per dependency family. `shared-key` is load-bearing: rust-cache otherwise
+      # mixes the JOB ID into the key, so cache-warm.yml's warm-lint saves would land under keys
+      # this job never restores. prefix-key AND shared-key MUST match warm-lint.
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
           prefix-key: "v2-df54"
+          shared-key: "lint"
       # Dual-wired through the Makefile targets so local == CI by construction: the targets carry
       # the deliberate clippy split (general gate with -A clippy::disallowed_methods; the
       # panic-ban target is the only place clippy.toml's disallowed-methods list is live,
@@ -105,9 +108,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
         with:
           toolchain: "1.96.0"
+      # prefix-key AND shared-key MUST match cache-warm.yml's warm-test job (see rust-lint note).
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
           prefix-key: "v2-df54-test"
+          shared-key: "test"
       - name: test
         run: make rust-test
       - name: disk after

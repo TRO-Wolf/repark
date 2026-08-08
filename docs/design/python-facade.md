@@ -61,7 +61,7 @@ verification panel; everything else gets the slim tier.
 | Artifact | Shape at the pin | Edit classes applied |
 |---|---|---|
 | `crates/repark-ml` | 1,703 lines, five modules, one third-party dep (`thiserror`), no internal deps | none (verbatim) |
-| `crates/repark-python` | ~6,653 lines Rust, flat six-module `src/` + `tests/bindings.rs`; 3 pyclasses, 5 exceptions, 3 ML pyfunctions | EC-1, EC-2, EC-3, EC-5, EC-6 |
+| `crates/repark-python` | ~6,653 lines Rust, flat six-module `src/` + `tests/bindings.rs`; 3 pyclasses, 5 exceptions, 3 ML pyfunctions | EC-1, EC-2, EC-3, EC-5, EC-6, EC-10 |
 | `python/repark` (the wheel) | 53 modules / ~46 KLOC source + 127 test files | EC-4 (tests only), EC-7 (map.md), EC-9 (hygiene) |
 | `python/repark-parity` | 85-line comparison core + 58 unit tests + `compat/` census machinery + `bench/` | none (verbatim) + NEW comparator |
 | uv workspace | virtual root, two members, one `uv.lock`, four load-bearing ruff per-file-ignore blocks | none (verbatim) |
@@ -605,7 +605,7 @@ is a failure of the phase, not a rounding error.
 6. `PLAN.md`'s baseline table replaced by the recorded-run pointer (F2).
 7. `make preflight` green; every `map.md` in lockstep; zero `#[ignore]`, zero skipped-in-CI, zero
    `--skip`.
-8. The retrospective, and the named user-side items still open (§8).
+8. The retrospective, and the named user-side items still open (§11).
 
 ---
 
@@ -622,7 +622,7 @@ three disk-exhaustion and linker-signal incidents — and it has no Python setup
 
 | Change | Lands in | Required check? |
 |---|---|---|
-| Split `rust` → `rust-lint` + `rust-test`; add setup-python 3.12 to both (libpython); add the free-disk step and the debug/incremental env; re-key both caches | PR-1 | yes — replaces one context with two, pushed to branch protection in the same change |
+| Split `rust` → `rust-lint` + `rust-test`; add setup-python 3.12 to both (libpython); add the free-disk step and the debug/incremental env; align the cache keys with `cache-warm.yml` (prefix-key kept, `shared-key` per family added on both sides — without it rust-cache mixes the job id into the key and warm saves are never restored) | PR-1 | yes — replaces one context with two, pushed to branch protection in the same change |
 | Panic-ban carve-out: workspace invocation excludes the binding; a second invocation runs it `--lib` without the disallowed-methods lint (the exception macro expands to `expect` at five sites) | PR-3 (with the crate) | covered by `rust-lint` |
 | `ci.yml` `python` job extended: `uv lock --locked`, the parity-harness pytest; renamed from "Python (ruff)" | PR-4 | yes — rename updates protection in the same change |
 | `pip-audit.yml` ported as-is (weekly cron + path-filtered) | PR-4 | no — path-filtered checks must never be required |

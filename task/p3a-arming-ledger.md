@@ -22,9 +22,17 @@ Arm phase 3 before any phase-3 code lands, in one PR with no new code surface:
   fresh disk each (free-disk step), setup-python 3.12 on both (libpython for the cdylib link
   from PR-3 on), no debuginfo/incremental. Design §7.1: this must precede the binding crate.
 - Riders: docs/testing.md row-2 spelling note (design Q1 — `repark.sql()` is the *target*
-  spelling; the release-prep gate makes the deferral mechanical); the
+  spelling); **docs/release.md gains the "Hard blockers" section** landing the release-prep
+  gate the note cites (the first tag fails while `repark.sql` is still a module) — added after
+  the slim verifier flagged the gate as stated-but-nonexistent; the
   `crates/repark-spark/src/dialect.rs` module-doc drift fix (`with_dialect` →
-  `with_sql_dialect`, EC-6; comment-only).
+  `with_sql_dialect`, EC-6; comment-only); root `map.md` phase banner refreshed (was stale at
+  "phase 1"); `docs/map.md` design/ enumeration + phase-3 row (verifier finding).
+- Cache-key fix (verifier MED): `shared-key: lint` / `shared-key: test` added to BOTH ci.yml's
+  rust jobs and cache-warm.yml's warm jobs — rust-cache mixes the job id into the key when
+  `shared-key` is absent, so the warm saves (warm-lint/warm-test) were landing under keys the
+  PR jobs (rust-lint/rust-test) never restore. Pre-existing defect (v1 has the same shape);
+  fixed here because this PR is the one arming the jobs.
 
 Out of scope: every crate and Python file of the port (PR-2..PR-5), wheels/parity-live/tier-2
 workflows (PR-5/PR-6), Makefile target additions (they land with the code they gate).
@@ -38,9 +46,13 @@ green `rust-test` run.)
 ## Required-check transition (operator step at merge)
 
 The split replaces the required context `Rust (fmt + clippy + check + test)` with two:
-`Rust lint (fmt + clippy + check)` and `Rust test (workspace)`. Branch protection must accept the
-new contexts **before this PR can merge** (phase-1 lesson: a renamed job's old context blocks
-green PRs). The PR body carries the exact `gh api` command; the operator applies it.
+`Rust lint (fmt + clippy + check)` and `Rust test (workspace)`. Branch protection must **add the
+two new contexts AND remove the old one in the same update** — adding alone leaves this PR
+blocked forever on a job that no longer exists (phase-1 lesson: a renamed job's old context
+blocks green PRs). The PATCH in the PR body does both at once (its `contexts` array is the
+complete replacement list). Any other PR open at that moment, with a head still on the combined
+job, goes pending on the two new contexts until rebased — none exists in the strictly-ordered
+slate, but the hazard is recorded.
 
 ## Gate results
 

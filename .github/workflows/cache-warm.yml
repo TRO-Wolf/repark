@@ -42,9 +42,13 @@ jobs:
         with:
           toolchain: "1.96.0"
           components: clippy
+      # prefix-key AND shared-key MUST match ci.yml's rust-lint restore. shared-key is
+      # load-bearing: without it rust-cache mixes the JOB ID (warm-lint vs rust-lint) into the
+      # key and these saves are never restored by the PR jobs.
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          prefix-key: "v2-df54"  # MUST match the ci.yml rust-job restore when it is wired
+          prefix-key: "v2-df54"
+          shared-key: "lint"
       - name: build lint artifacts
         run: cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods
 
@@ -68,8 +72,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
         with:
           toolchain: "1.96.0"
+      # prefix-key AND shared-key MUST match ci.yml's rust-test restore (see warm-lint note).
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
-          prefix-key: "v2-df54-test"  # MUST match the ci.yml rust-job restore when it is wired
+          prefix-key: "v2-df54-test"
+          shared-key: "test"
       - name: build test artifacts (no run)
         run: cargo test --locked --workspace --no-run

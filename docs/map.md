@@ -14,14 +14,18 @@ notes, and per-tier operating manuals for this repo.
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;
   [design/sql-doors.md](design/sql-doors.md): the phase-2 two-SQL-doors design —
-  delegate-first crate layout, Q1–Q15 ANSI rulings, seam freeze, census + matrix discipline).
+  delegate-first crate layout, Q1–Q15 ANSI rulings, seam freeze, census + matrix discipline;
+  [design/python-facade.md](design/python-facade.md): the phase-3 Python binding + facade +
+  census design — ten edit classes, Q1–Q10 rulings, the census/acceptance procedure, the
+  seven-PR slate).
 - [port/](port/map.md) — the V2 port plan ([port/PLAN.md](port/PLAN.md)): copy-then-re-home
   rules, the four phases, the census multiset acceptance gate, the v1-freeze trigger.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
   iceberg-rust fork, the two SQL doors, the copy-then-re-home port, server-prep disciplines.
 - [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
 - [release.md](release.md) — release engineering (documentation only this phase): PyPI /
-  crates.io trusted publishing setup, bootstrap-token revocation, open items.
+  crates.io trusted publishing setup, bootstrap-token revocation, the first-tag hard blockers
+  (incl. the `repark.sql` re-home gate), open items.
 
 ## I want to...
 
@@ -30,6 +34,7 @@ notes, and per-tier operating manuals for this repo.
 | Understand the testing rules | [testing.md](testing.md) |
 | Understand the phase-1 crate layout / Session API | [design/session-api.md](design/session-api.md) |
 | Understand the phase-2 SQL doors / ANSI surface | [design/sql-doors.md](design/sql-doors.md) |
+| Understand the phase-3 port / census gate / edit classes | [design/python-facade.md](design/python-facade.md) |
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
 | Read the manual for your tier | [skills/map.md](skills/map.md) |

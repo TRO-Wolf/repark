@@ -50,16 +50,18 @@ TIERS: dict[str, int] = {
     "repark-common": 0,
     "repark-iceberg": 1,
     "repark-core": 2,
-    # Phase 2 (spark surface) — pre-declared; crates not yet in the workspace are skipped.
+    # Phase 2 (surface crates) — pre-declared; crates not yet in the workspace are skipped.
     "repark-functions": 3,
     "repark-ta": 3,
     "repark-spark": 3,
     "repark-sql": 3,
     # Phase 3 (docs/design/python-facade.md §2.1) — pre-declared. `repark-ml` is a
     # capability leaf beside functions/ta (zero internal edges); `repark-python` is the
-    # PyO3 cdylib, the only tier-4 crate, and may name only repark-core, repark-functions,
-    # repark-ta, repark-spark, and repark-ml (deliberate non-edges: repark-sql,
-    # repark-iceberg — the binding reaches Iceberg only through ReparkSession and SQL text).
+    # PyO3 cdylib and the only tier-4 crate. The design's dep contract for it (only
+    # repark-core, repark-functions, repark-ta, repark-spark, repark-ml; deliberate
+    # non-edges repark-sql + repark-iceberg) is enforced by REVIEW, not by this guard —
+    # the guard only bans upward edges, and a tier-4 crate may legally name anything below
+    # it. See docs/design/python-facade.md §2.2.
     "repark-ml": 3,
     "repark-python": 4,
 }

@@ -73,8 +73,10 @@ CI, never delegated to agents with env-var access, artifacts committed as eviden
 
 ## 3. Acceptance (phase close = milestone one)
 
-1. Comparator: four cohorts, empty diffs (or attribution table where every row names a deferred
-   surface), matching denominators, environment manifests equal, exit 0.
+1. Comparator: four cohorts with environment manifests equal and matching denominators —
+   either empty diffs (exit 0) or, per design §6.4/§6.6, an attributed-movement table where
+   every row names a deferred surface (the comparator exits non-zero on any movement; the
+   attribution table is the phase-close evidence that the movement is enumerated, not waved).
 2. Identity diffs: `--list` empty for repark-ml + repark-python; `--collect-only` empty for the
    facade after the declared deferral subtraction.
 3. Reconciliation append foots: ported ∪ deferred = v1 pin totals, all three populations.

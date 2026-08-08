@@ -23,6 +23,8 @@ Repository helper scripts wired into the dev workflow.
   tier 2; phase-2 pre-declares tier 3 "surface crates": `repark-functions`, `repark-ta`,
   `repark-spark`, `repark-sql`; phase-3 pre-declares `repark-ml` at tier 3 and
   `repark-python` at tier 4 "bindings" — the only tier-4 crate, nothing may depend on it;
+  NOTE the binding's dep contract — only core/functions/ta/spark/ml, non-edges repark-sql +
+  repark-iceberg — is enforced by review, not by this guard, which only bans upward edges;
   mapped crates that have not landed yet are simply not inspected). A new `repark-*`
   crate that is not in `TIERS` fails the guard. Wired into `make check-crate-dag` (in the
   `make ci` chain), `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
