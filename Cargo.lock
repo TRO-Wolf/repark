@@ -4443,8 +4443,23 @@ dependencies = [
  "iceberg",
  "iceberg-datafusion",
  "regex",
+ "repark-common",
  "repark-core",
  "repark-functions",
+ "repark-iceberg",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
+name = "repark-sql"
+version = "0.0.0"
+dependencies = [
+ "async-trait",
+ "datafusion",
+ "iceberg",
+ "repark-common",
+ "repark-core",
  "repark-iceberg",
  "tempfile",
  "tokio",

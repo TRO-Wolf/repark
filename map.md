@@ -11,8 +11,10 @@ front-door navigation map. See [README.md](README.md) for the overview and
 iceberg-rust fork, `[patch.crates-io]`-pinned), and `crates/repark-core` (the `ReparkSession`
 engine API, landing commit-by-commit in PR-C). Phase 2 (SQL doors) has begun:
 `crates/repark-functions` (Spark-semantics scalar/aggregate function shims, tier 3) is the first
-ported crate, and `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
-`SparkExtension`) carries the ported repark-sql spine with declared refuse-arms for PR-3a/3b.
+ported crate, `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
+`SparkExtension`) carries the ported repark-sql spine with declared refuse-arms for PR-3a/3b,
+and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard set + wrong-door
+sniff + the curated `WITH (…)` vocabulary) is NEW code at milestone 1.
 
 ## Contents
 
