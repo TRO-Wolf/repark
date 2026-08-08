@@ -136,6 +136,50 @@ names unchanged. The UDFs reach the session through `SparkExtension`'s composed
 (2026-08-07, brief §4): the 3 `read_postgres_*` rows + `read_excel_basic_fixture_round_trips`.
 Every phase-2 row is closed. Ledger: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).
 
+### Python — the facade suite (from v1 `python/repark/tests`)
+
+**PR-5 cohort (2026-08-08): 12 deferred** of the 2,509 collected facade node ids at the pin.
+Machine-readable allowlist (the ONLY subtraction input the census comparator accepts):
+[deferred-python-tests.txt](deferred-python-tests.txt). The two files are bound by
+`python/repark-parity/tests/test_deferred_ledger.py` (EC-4's "a ledger that can drift from the
+gate it feeds is not a ledger").
+
+**Generated empirically, never transcribed by file** (design §3 EC-4): every candidate file was
+run against the **built wheel** with the EC-3 refuse-arms in place, and a test defers only if its
+failure traces to a deferred surface — the criterion is *where the exception is raised*,
+hand-adjudicated per node. Both judge-verified directions were confirmed rather than assumed:
+
+* **Under-deferral direction (the priors held).** Most offline `test_pg_jdbc_options.py` pins
+  raise their `IllegalArgumentException` **facade-side**, before any native reader is reached —
+  11 of the 13 nodes across the two pg files PASS and port normally.
+* **Over-deferral direction (the priors were narrowed by evidence).** The design record
+  anticipated "the pg catalog-config registration **tests**" plural; empirically **one** node
+  defers. `test_postgres_catalog_requires_url_at_build` refuses at spec parse and passes here, so
+  deferring the file would have withheld a green test.
+* **Env-gated pg/aws tests SKIP and port normally** — a skip is an outcome, not a deferral.
+
+| v1 node id | Target phase | Blocking surface (where the exception is raised) |
+|---|---|---|
+| `tests/test_excel_reader.py::test_excel_basic_types_header_and_values` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_dates_serial_1900_trap` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_default_sheet_is_first` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_empty_sheet_zero_rows` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_formulas_cached_values` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_missing_sheet_loud` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) — the refusal replaces the "sheet not found" message the test pins |
+| `tests/test_excel_reader.py::test_excel_no_header_c_names` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_sheet_names` | post-milestone-one | binding `excel_sheet_names` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_sheet_name_select` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_excel_reader.py::test_excel_skip_rows` | post-milestone-one | binding `read_excel` refuse-arm (EC-3) |
+| `tests/test_pg_catalog.py::test_postgres_catalog_config_redacts_in_engine_errors` | post-milestone-one | repark-core `CatalogKind::Postgres` `NotImplemented` registration — the session is refused at native construction |
+| `tests/test_pg_jdbc_options.py::test_jdbc_num_partitions_above_cap_is_unsupported` | post-milestone-one | binding `read_postgres` refuse-arm (EC-3) pre-empts the engine's `num_partitions` cap error, so the pinned cap value is never produced |
+
+Every test in `test_excel_reader.py` defers, so the **whole file** is withheld (the file-level
+rule applies only when it is true of every test in it — verified, 10/10). The two pg rows are
+**node-level** excisions inside otherwise-ported files.
+
+These 12 join the four existing Rust rows (3 `read_postgres_*` + 1 `read_excel`) under one
+reconciliation rule and one post-milestone-one bucket.
+
 ## Deferred testing-contract obligations (NOT v1 test names)
 
 This section is deliberately **outside** the reconciliation arithmetic above: the rows here are
@@ -151,6 +195,19 @@ recorded here, with an owner, or it is invisible.
 
 **PR-5's acceptance is blocked on this row.** If PR-5 lands without a wheel-crossing test, this
 row does not close and the phase-3 retrospective must carry it forward with a named owner.
+
+**DISCHARGED 2026-08-08 — phase-3 PR-5.** The wheel is built by `maturin build` from
+`python/repark` and the whole facade suite is executed against it in a **bare interpreter outside
+the uv workspace**, installed by explicit file path — producer and consumer no longer compile
+together, which is the exact structural gap the rule names. Evidence in
+[../p3e-facade-ledger.md](../p3e-facade-ledger.md): the import smoke, the recorded
+`(node id → outcome)` multiset over 2,505 JUnit rows, and behavior across the boundary on the
+Arrow C-stream export path (`to_arrow` / `collect` value-and-type assertions run inside the
+2,459 passing rows, not merely `show`). The obligation closes with **no residual open item**:
+the one engine regression this coverage surfaced — finding **B-1**
+(`datafusion.runtime.memory_limit` refused at session build, a repark-core defect from the
+phase-2 P2G R2 config-plumbing fix) — was FIXED on this branch in commit `20d1665`, and the
+suite is green (exit 0). Nothing is carried into the phase-3 retrospective from this row.
 
 ## Reconciliation runs
 
@@ -184,3 +241,20 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   outside the ported census. Plus the 7 `ta_window::sql_route_*` rows ported into
   `repark-spark/tests/ta_window.rs` (names unchanged, all passing). Deferred remainder: 4
   (post-milestone-one). Zero `#[ignore]`. Evidence: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).
+- **2026-08-08 — phase-3 PR-5 (python/repark facade suite):** v1 `pytest --collect-only -q` at
+  pin `fc3f48102` = **2,509** node ids (the recorded oracle,
+  `task/census/baseline-fc3f48102/facade/collected.txt`); this repo's collection against the
+  installed wheel = **2,497**; deferred = **12** ([deferred-python-tests.txt](deferred-python-tests.txt)).
+  (2,497 ported ∪ 12 deferred) = 2,509 — disjoint by construction and mechanically checked by
+  `test_deferred_ledger.py`. Sorted diff of the two collections is **exactly the 12 deferred ids,
+  baseline side only** — no id appears on both sides, none on neither. Outcome multiset:
+  baseline 2,517 JUnit rows (2,471 passed + 46 skipped); this repo 2,505 (**2,459 passed +
+  46 skipped + 0 failed**, exit 0). The 12 deferred ids were all *passing* at the pin, so the
+  expected delta is 2,471 → 2,459 — which is what the branch measures. (The builder's first run
+  read 2,458 + 1 failed; that one attributed movement was finding B-1,
+  `datafusion.runtime.memory_limit` — a repark-core regression from the phase-2 P2G R2
+  config-plumbing fix, NOT a deferred surface and NOT deferrable — and it was fixed in commit
+  `20d1665` on this branch, closing the movement.) Skip count unchanged (46 → 46). The
+  `--junit` comparator run over these two reports, with this ledger as its only subtraction
+  input, is byte-identical and exits 0. Zero `#[ignore]`, zero `--skip`, zero commented-out
+  tests. Evidence: [../p3e-facade-ledger.md](../p3e-facade-ledger.md).

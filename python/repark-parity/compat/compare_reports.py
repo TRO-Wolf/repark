@@ -166,6 +166,29 @@ def load_ledger(path: Path | None) -> list[str]:
     return entries
 
 
+def junit_node_id(node_id: str) -> str:
+    """Canonicalize a collect-only node id into the JUnit id space.
+
+    A ledger is written in the id form a human can check against the tree —
+    ``tests/test_excel_reader.py::test_excel_skip_rows`` — while JUnit XML carries the
+    ``classname``/``name`` pair, which this module keys as
+    ``tests.test_excel_reader::test_excel_skip_rows``. Without a translation the ledger
+    subtracts nothing in ``--junit`` mode, which is precisely the drift EC-4 forbids.
+
+    The translation runs in this direction on purpose: *path → dotted module* is total and
+    injective (strip ``.py``, ``/`` → ``.``), whereas *dotted → path* is ambiguous — nothing in
+    ``tests.test_facade.TestX`` says where the module ends and the class begins. Ids already in
+    the JUnit form (no ``::``, or a left side that is not a ``.py`` path) are returned unchanged,
+    so the function is idempotent and safe to apply to any ledger.
+    """
+    path, separator, remainder = node_id.partition("::")
+    if not separator or not path.endswith(".py"):
+        return node_id
+    module = path[: -len(".py")].replace("/", ".")
+    *classes, name = remainder.split("::")
+    return ".".join([module, *classes]) + "::" + name
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     if not path.is_file():
         raise ComparatorError(f"report not found: {path}")
@@ -238,7 +261,9 @@ def load_junit_report(path: Path, *, label: str, manifest: dict[str, str]) -> Si
     """Load a pytest JUnit XML into a comparison side.
 
     Node ids are reconstructed as ``classname::name`` — the only node-identifying pair JUnit
-    XML carries without a pytest plugin, and stable across two identical trees.
+    XML carries without a pytest plugin, and stable across two identical trees. Ledger ids,
+    which are written in collect-only ``path::name`` form, are translated into this same space
+    by :func:`junit_node_id` before subtraction.
     """
     if not path.is_file():
         raise ComparatorError(f"report not found: {path}")
@@ -621,6 +646,13 @@ def compare(
 
     check_recorded_denominators(baseline, junit=junit)
     check_recorded_denominators(candidate, junit=junit)
+
+    if junit:
+        # The checked-in ledgers are written in collect-only id form; JUnit rows are keyed
+        # ``classname::name``. Canonicalize the ledger side ONCE, here, so a ledger cannot
+        # silently subtract nothing (EC-4).
+        deferred = [junit_node_id(entry) for entry in deferred]
+        quarantined = [junit_node_id(entry) for entry in quarantined]
 
     baseline_rows, candidate_rows, echo = apply_ledgers(
         baseline, candidate, deferred=deferred, quarantined=quarantined

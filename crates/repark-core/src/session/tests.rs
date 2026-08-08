@@ -1299,3 +1299,39 @@ async fn show_tables_still_refuses_without_the_information_schema_conf() {
         "the refusal must name the conf that enables it: {error}"
     );
 }
+
+/// B-1 (p3e ledger): the repark-owned pseudo-key `datafusion.runtime.memory_limit` shares the
+/// `datafusion.` prefix but is NOT a DataFusion `ConfigOptions` key — at the port pin it is the
+/// facade's LIVE resize knob, applied after build. The build-time sweep must skip it (a builder
+/// carrying it must construct), and it must stay in the kept config map for downstream readers.
+#[tokio::test]
+async fn builder_pseudo_key_datafusion_runtime_memory_limit_builds() {
+    ReparkSession::builder()
+        .config("datafusion.runtime.memory_limit", "256M")
+        .build()
+        .expect("the repark-owned pseudo-key must not be swept into ConfigOptions at build");
+}
+
+/// The exclusion is EXACT-KEY: a typo of the pseudo-key is an unknown DataFusion key and must
+/// still fail loud — prefix-scoped exclusion would silently re-create the inert-conf defect
+/// this sweep exists to fix. Two fixtures discriminate the two wrong implementations: the
+/// truncated form catches a namespace-prefix exclusion, and the EXTENDED form (the pseudo-key
+/// plus a suffix) catches a `starts_with(pseudo_key)` exclusion — either wrong shape lets one
+/// of these build silently.
+#[tokio::test]
+async fn builder_pseudo_key_typo_still_fails_loud() {
+    for typo in [
+        "datafusion.runtime.memory_limt",
+        "datafusion.runtime.memory_limit2",
+    ] {
+        let error = ReparkSession::builder()
+            .config(typo, "256M")
+            .build()
+            .expect_err("a typo of the pseudo-key is an unknown DataFusion key: loud, never inert");
+        let message = error.to_string();
+        assert!(
+            message.contains(typo),
+            "the refusal must name the offending key: {message}"
+        );
+    }
+}

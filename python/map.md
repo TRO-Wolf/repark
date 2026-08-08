@@ -8,20 +8,20 @@ declared in the root [`pyproject.toml`](../pyproject.toml), sharing one `uv.lock
 
 ## Contents
 
+- [repark/](repark/map.md) — the PySpark facade wheel: maturin backend over
+  `crates/repark-python`, 53 source modules (the `repark.sql` alias package, the r26 `session/`
+  and `dataframe/` region splits, `repark.ml`) and the 126-file facade suite (127 at the pin minus the whole-file excel deferral). Landed in phase-3
+  PR-5; it is the full-extras facade census cohort (`docs/design/python-facade.md` §6.3).
 - [repark-parity/](repark-parity/map.md) — the Spark-parity differential harness (pure-pyarrow
   comparison core, no Spark and no JVM), the `compat/` PySpark-suite census machinery **including
   the report comparator that is the port's acceptance gate**, and `bench/` (TPC-H / TPC-DS / write
   / fuzz measurement scripts). Landed in phase-3 PR-4.
 
-Arriving later in phase 3: `repark/` — the PySpark facade wheel (maturin backend over
-`crates/repark-python`, `repark.sql` alias package, `repark.ml`). It joins the workspace member
-list in the facade PR; the parity package lands **first** because nine facade test files import
-it and the wheel smoke step installs it explicitly.
-
 ## I want to...
 
 | ...do this | go to |
 |---|---|
+| Build + run the facade wheel suite | [repark/map.md](repark/map.md) + `docs/design/python-facade.md` §6.3 |
 | Run the parity harness | `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q` |
 | Compare two census reports (the acceptance gate) | [repark-parity/compat/map.md](repark-parity/compat/map.md) |
 | Read the recorded census procedure | [../docs/port/census.md](../docs/port/census.md) |
@@ -37,7 +37,7 @@ it and the wheel smoke step installs it explicitly.
 
 | Symptom | First check |
 |---|---|
-| `uv lock` fails naming a missing member | The member list may only name directories that exist — the facade joins in its own PR |
+| `uv lock` fails naming a missing member | The member list may only name directories that exist |
 | `ModuleNotFoundError: repark_parity` | `PYTHONPATH` must include `python/repark-parity/src` (and `python/repark-parity` for `compat.*`) |
 
 First checks: `uv lock --locked`, then the package's own `map.md`. Escalate to:

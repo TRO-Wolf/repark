@@ -1,0 +1,36 @@
+# Deferred facade-suite node ids — phase-3 EC-4 (docs/design/python-facade.md §3).
+#
+# THIS FILE IS THE ALLOWLIST. It is the ONLY subtraction input to the census comparator
+# (`compat/compare_reports.py --deferred task/port/deferred-python-tests.txt`), subtracted from
+# the BASELINE (v1 pin) side only. There is no flag, env var, or config path by which a row is
+# excluded without appearing here. The human summary lives in deferred-tests.md; the two are
+# reconciled by python/repark-parity/tests/test_deferred_ledger.py, which also pins that every
+# id below is a pin-collected name that is genuinely absent from the ported tree.
+#
+# Generated EMPIRICALLY at phase-3 PR-5 (never transcribed by file): every candidate file was run
+# against the built wheel with the EC-3 refuse-arms in place, and a test defers only if its
+# failure traces to a deferred surface — the criterion is WHERE THE EXCEPTION IS RAISED.
+# Adjudication table (per node, with the raising frame): task/p3e-facade-ledger.md.
+#
+# Format: one pytest node id per line, relative to python/repark (the rootdir of the recorded
+# collection). Blank lines and `#` comments are ignored by the comparator's ledger loader.
+#
+# Blocking surface A — the binding's `read_excel` / `excel_sheet_names` refuse-arms (EC-3),
+# backed by the un-ported `repark-excel` crate. Every test in test_excel_reader.py defers, so the
+# whole file is withheld.
+tests/test_excel_reader.py::test_excel_basic_types_header_and_values
+tests/test_excel_reader.py::test_excel_dates_serial_1900_trap
+tests/test_excel_reader.py::test_excel_default_sheet_is_first
+tests/test_excel_reader.py::test_excel_empty_sheet_zero_rows
+tests/test_excel_reader.py::test_excel_formulas_cached_values
+tests/test_excel_reader.py::test_excel_missing_sheet_loud
+tests/test_excel_reader.py::test_excel_no_header_c_names
+tests/test_excel_reader.py::test_excel_sheet_names
+tests/test_excel_reader.py::test_excel_sheet_name_select
+tests/test_excel_reader.py::test_excel_skip_rows
+# Blocking surface B — repark-core's `CatalogKind::Postgres` NotImplemented registration: the
+# session is refused at native construction, so the test never reaches its assertion.
+tests/test_pg_catalog.py::test_postgres_catalog_config_redacts_in_engine_errors
+# Blocking surface C — the binding's `read_postgres` refuse-arm (EC-3) pre-empts the engine's
+# num_partitions cap error, so the cap value the test pins is never produced.
+tests/test_pg_jdbc_options.py::test_jdbc_num_partitions_above_cap_is_unsupported

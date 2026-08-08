@@ -20,6 +20,8 @@
 #   UV_VERSION              — setup-uv `version:` in every setup-uv job
 #   CARGO_DENY_VERSION      — taiki-e install-action tool: cargo-deny@… in cargo-deny.yml
 #   CARGO_AUDIT_VERSION     — cargo install pin in the rust-audit target + audit.yml
+REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+MATURIN := uvx maturin@1.14.1
 RUFF   := uvx ruff@0.15.22
 TAPLO  := uvx taplo@0.9.3
 TYPOS  := uvx typos@1.47.2
@@ -38,7 +40,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs rust-check py-lint py-format-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 .PHONY: test
 test: rust-test ## All tests (Rust only until the Python packages land in phase 3)
@@ -50,7 +52,7 @@ verify: ci test ## ci + test — full local verification
 preflight: verify audit workflows-lint ## The pre-PR gate: everything CI runs
 
 .PHONY: audit
-audit: rust-audit rust-deny ## Security gates (cargo-audit + cargo-deny; pip-audit returns in phase 3)
+audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
 
 # ------------------------------------------------------------------------------------------------
 # Rust
@@ -145,9 +147,39 @@ py-lock-check: ## uv lock --locked — RED if uv.lock lags its pyproject floors 
 
 .PHONY: census
 census: ## Hermetic Apache-suite census (classic/expand/expand2); local+slate only, never CI-wired
-	@# Needs the facade package (python/repark, lands PR-5) — inert until then. SSOT:
-	@# docs/port/census.md; the classic cohort runs via the additive --classic flag (F1).
+	@# SSOT: docs/port/census.md; the classic cohort runs via the additive --classic flag (F1).
 	@./scripts/run_census.sh
+
+.PHONY: check-lib-py
+check-lib-py: ## Python thinness guard (line ceilings + no-stub)
+	@# Ceilings + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.
+	@./scripts/check_lib_py.sh
+
+.PHONY: develop
+develop: ## Build + install the native module editable into the root .venv (maturin develop)
+	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
+
+.PHONY: py-test-facade
+py-test-facade: ## Facade tests against the real native module (builds it first via maturin)
+	@# `--no-project` makes the maturin step AUTHORITATIVE: without it, `uv run` prefers the
+	@# PROJECT's environment over VIRTUAL_ENV — in a linked worktree it silently built a second
+	@# `.venv` from source (the maturin install above went unused), and everywhere it could
+	@# re-sync over maturin's editable install. Fresh setup: `uv sync` once at the repo root
+	@# provisions pytest (root `dev` group) into `.venv`; this target does not install deps.
+	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
+	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
+		uv run --no-project python -m pytest python/repark/tests -q
+
+.PHONY: py-audit
+py-audit: ## Python dependency CVE scan (mirrors pip-audit.yml)
+	@# --no-emit-workspace drops the local workspace packages; pip-audit scans published deps.
+	uv export --frozen --no-emit-workspace --format requirements-txt > requirements-audit.txt
+	uvx pip-audit --strict -r requirements-audit.txt
+	@rm -f requirements-audit.txt
+
+.PHONY: build-wheel
+build-wheel: ## Build the repark release wheel with maturin
+	cd python/repark && $(MATURIN) build --release
 
 # ------------------------------------------------------------------------------------------------
 # TOML + spelling (uvx-provisioned — always run, same pinned version as CI)
@@ -218,10 +250,10 @@ lint: ## Clippy + ruff (autofix Python)
 	$(RUFF) check --fix .
 
 .PHONY: install-hooks
-install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs guards + cargo fmt + taplo + typos
+install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + Python thinness guards + cargo fmt + taplo + typos
 	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast
 	@# (sub-second: a `cargo metadata` read and a pure text scan). Hook budget stays < 1 s
-	@# beyond cargo fmt; check_lib_py.sh rejoins when it is ported (phase 3).
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class).
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_lib_py.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"

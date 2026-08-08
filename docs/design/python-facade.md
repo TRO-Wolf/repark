@@ -662,8 +662,11 @@ py-test-facade` remains the fast local loop.
 minutes, split it — import smoke stays required, and the facade suite moves to a develop-based job
 that also becomes required, with the packaged-wheel facade run moving to push-on-main and tags.
 
-Required checks after phase 3: `rust-lint`, `rust-test`, `guards`, `python`, `cargo-deny`, `taplo`,
-`typos`, `zizmor`, and the wheels `smoke` job — nine, all always-run on `pull_request`.
+Required checks after phase 3 — nine, all always-run on `pull_request`, listed by the exact
+GitHub **context strings** branch protection matches (display names, not job ids):
+`Rust lint (fmt + clippy + check)`, `Rust test (workspace)`,
+`Repo guards (map.md + workflow parse + crate-DAG + lib.rs)`, `Python`, `cargo-deny`, `taplo`,
+`typos`, `zizmor`, and `build + import smoke (debug, host)` (the wheels smoke job).
 
 ### 7.4 Tier-2 live AWS — net-new design
 

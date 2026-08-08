@@ -133,6 +133,18 @@ const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
 /// are unchanged (design §3 seam freeze).
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
 
+/// Repark-owned pseudo-keys that share the `datafusion.` prefix but are NOT DataFusion
+/// `ConfigOptions` keys, excluded from [`apply_datafusion_config_keys`]'s build-time sweep.
+///
+/// `datafusion.runtime.memory_limit` is the port source's facade-only LIVE memory-pool resize
+/// knob: at the pin it never reached `ConfigOptions` at build (the facade forwards it onto the
+/// live session after construction), and pushing it through `options_mut().set` fails loud on a
+/// key that is legal everywhere else in the product. Found by the phase-3 PR-5 census gate
+/// (ported facade pin `test_builder_datafusion_memory_limit_alone_applies` red on arrival —
+/// p3e ledger B-1). The exclusion is EXACT-KEY, never a prefix: a typo of the pseudo-key must
+/// still fail loud, which is this function's whole reason to exist.
+pub const REPARK_OWNED_DATAFUSION_PSEUDO_KEYS: &[&str] = &["datafusion.runtime.memory_limit"];
+
 /// ===========================================================================================
 /// Apply every `datafusion.*` key from the builder config map onto `config`.
 ///
@@ -150,7 +162,10 @@ fn apply_datafusion_config_keys(
 ) -> Result<()> {
     let mut keys: Vec<&String> = map
         .keys()
-        .filter(|key| key.starts_with(DATAFUSION_CONFIG_PREFIX))
+        .filter(|key| {
+            key.starts_with(DATAFUSION_CONFIG_PREFIX)
+                && !REPARK_OWNED_DATAFUSION_PSEUDO_KEYS.contains(&key.as_str())
+        })
         .collect();
     keys.sort();
     for key in keys {

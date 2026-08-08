@@ -1,0 +1,1394 @@
+# map — python/repark/tests
+
+## Purpose
+
+Facade tests for the `repark` wheel — they require the compiled native module and exercise the
+real boundary end to end. See [../map.md](../map.md).
+
+**This suite IS the full-extras facade census cohort** (`docs/design/python-facade.md` §6.3): the
+recorded acceptance run installs the built **wheel** by explicit file path into a bare interpreter
+outside the workspace, with `numpy`/`pandas`/`polars`/`ml-ext` present, `pyspark` and `duckdb`
+absent, no JVM on `PATH`, and every `REPARK_*` gate variable unset by name. A `maturin develop`
+run is the fast local loop, never the acceptance artifact (design §8, the real-artifact rule).
+
+**Ported minus the declared EC-4 deferral list** —
+[../../../task/port/deferred-python-tests.txt](../../../task/port/deferred-python-tests.txt) (12
+node ids: the whole `test_excel_reader.py` file plus one node each in `test_pg_catalog.py` and
+`test_pg_jdbc_options.py`). Each entry is annotated in place below. A test that is missing and
+NOT in that file is a defect, not a decision.
+
+## Contents
+
+- `test_t0_df_regions_import_freeze.py` — r27 T0 Q7 import freeze pins (r27 T0 overload)
+
+- `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
+
+- ~~`test_excel_reader.py`~~ — **NOT PORTED (phase-3 EC-4 deferral, whole file).** All ten
+  r25 T5 `session.read.excel` / `sheet_names` pins fail against the binding's refuse-arms
+  (`repark-excel` is post-milestone-one), so every test in the file defers by node id:
+  [../../../task/port/deferred-python-tests.txt](../../../task/port/deferred-python-tests.txt).
+  It returns with the connector crate, unchanged.
+
+- `test_a3_cast_vocab.py` — **r24 A3 QUAL-03:** parametrized cast/try_cast over every
+  (octo C4-Q-001: try_cast byte/short overflow → NULL; strict cast fail-loud);
+  `types.py` primitive that claims cast + aliases; native residual → `AnalysisException`.
+- `test_a3_secrets_redaction.py` — **r24 A3 SEC-04:** `_secrets.prop_key_is_secret` needles
+  (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
+  getAll isolation pin (octo C2-Q-002);
+  `getAll` redacts; `get(explicit)` unchanged.
+- `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`:
+  nested struct-in-struct; null parent/mid struct → NULL not zero; list-of-struct;
+  multi-list serial explode order; list explode in-place column order;
+  struct-in-list-in-struct; null-typed list drop;
+  explode null/empty array value row-drop; max_depth LOUD refuse; bool flag type gates;
+  name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
+  in-place column order;
+  idempotence on already-flat; both method names; custom separator; explode_lists=False;
+  schema-walk + plan-build collect/count/to_arrow spy pin. Arrow value+type pins. (octo: trailing newline W292.)
+- `test_qi1_idents.py` — **r23 QI1 / CQ-006/007:** `_idents` SSOT pins (always-quote vs
+  quote-if-needed classes; injection-probe battery with independent oracle equality / under-escape
+  mutation pin; path-escape + probe-table freeze lockstep with Rust probes;
+  re-export identity for session/dataframe/catalog/column/functions/merge).
+- `test_catalog_staleness.py` — **T6 / CQ-008 / BUG-007:** list-on-access `listTables` sees
+  out-of-band Catalog-API create; OOB drop absent not phantom (never-in-DF **and** DF-known
+  product CREATE → OOB drop — F-T6-PIN-DROP-A / F-T6-PHANTOM-A); temps still appended after
+  Iceberg OOB clean (F-T6-TEMP-A); `refresh_catalog_provider` escape hatch for free-SQL residual.
+- `test_c4_expand2_facade.py` — **C4 expand2:** `PySparkAssertionError` under repark tree
+  (check_error isinstance + `__all__` export pin); `repartition`/`repartitionByRange`/
+  `repartitionById` Spark errorClass validation + single-node no-op (incl. sole-arg list/bool
+  `NOT_COLUMN_OR_STR`); fillna list/subset/None/tuple errorClass pins.
+- `test_c5_census_r7.py` — **C5 / r22 census-r7:** `Column.getItem`/`getField`/`__getattr__`
+  nested access (array/map/struct) Arrow value+type; `try_cast` display + null-on-fail +
+  LongType Arrow int64; `cast`/`try_cast` `NOT_DATATYPE_OR_STR`; `transform` chain +
+  `NOT_CALLABLE`/`NOT_COLUMN` gates; `F.when` + chained `.when` str→`NOT_COLUMN`;
+  `DataFrame.sameSemantics`/`same_semantics` non-DF→`NOT_DATAFRAME` + handle-identity pins.
+  (**octo C1:** type gates + missing pins + sameSemantics honesty; **octo C2:** getItem
+  Arrow int/string type pins.)
+- `test_udf.py` / `test_udf_oracle.py` / `udf_oracle_funcs.py` — **U8 classic scalar Python
+  udf**: `F.udf` / `@udf` / `spark.udf.register` / SELECT-list SQL rewrite; per-row cost pin;
+  null + returnType coercion; composition refuse; Java register loud;
+  live 4.1.2 oracle (importorskip without JVM). **octo C1:** string/comment registry-scan
+  ignore pins; WHERE-string false-positive pin; register name simple-ident refuse.
+  **octo C2:** qualified-col SQL arg; nested-subquery message; decimal float coerce.
+  **octo C3:** case-insensitive register overwrite; sql()-time UDF snapshot pin.
+  **octo C4:** comment-between-name-paren SQL; join/union after udf.
+  **octo C5:** UDF+engine-func sibling without AS; VALUES FROM.
+  **octo C6:** multi-arg null propagation; pure mask/strip helper unit pins.
+  **U9:** expression-wrap (`+1`, CAST, abs), nested `f(g(x))`, WITH/CTE body, DISTINCT,
+  ORDER BY alias (no `__repark_sql_udf_*` leak), decorator
+  `returnType=` / `useArrow=` / duck-typed DataType, `registerJavaUDAF` loud pin.
+  **U9 octo C1:** unaliased wrap/nested anti-leak schema pins; CTE non-pollution of
+  pre-existing temp views (snapshot/restore); star (`*`) + UDF clean refuse.
+  **U9 octo C2:** `count` UDF does not break engine `count(*)`; set-op refuse message.
+  **U9 octo C3:** user UDF raise surfaces PySparkException (not rewrite UOE); fresh CTE
+  name not left in catalog after WITH.
+  **U9 octo C4:** ORDER BY NULLS FIRST/LAST after UDF refuses loud (no silent ignore).
+  **U9 octo C5:** Spark optional-AS ``udf(col) alias``; multi-arg UDF + literal SQL pin.
+  **U9 octo C6:** CTE column-list rename ``WITH c(z) AS``; SORT/DISTRIBUTE/CLUSTER BY refuse.
+  **U9 octo C7:** no-FROM ``SELECT udf(lit)``; QUALIFY refuse with set of post-SELECT clauses.
+  **U9 octo C8:** regression battery clean (S3-only); ruff format pass.
+  **U10 / r21 T7:** WHERE UDF rewrite; GROUP BY alias/matching expr (keys-only);
+  HAVING on alias; SELECT+WHERE UDF; GROUP BY+aggregate refuse-loud no leak;
+  JOIN ON refuse-loud no leak. **octo C1:** compound WHERE base-column residual
+  pin; aggregate HAVING refuse-loud no leak (no plan-garbage).
+  **octo C2:** GROUP BY/HAVING UDF expr whitespace match pin.
+  **octo C3:** WHERE UDF + subquery residual refuse-loud pin
+  (`test_sql_udf_where_subquery_refuses_loud_no_leak`).
+  **octo C5:** register reserved `__repark_sql_udf*` prefix refuse pin.
+  **octo C6:** WHERE CAST residual type-token pin.
+  **EXTRA F-E1-1:** IS DISTINCT FROM / trim(BOTH…FROM) / substring(FROM…FOR) /
+  extract(YEAR FROM) + UDF WHERE pins (no bare keyword identity-project).
+  **EXTRA F-E1-2:** compound WHERE columns named date/double/string/end + quoted
+  `"from"` project; no `__repark_sql_udf_*` leak.
+  **r22 U11 residual poles:** INTERVAL `'1' DAY` residual pin; INTERVAL
+  `DAY TO SECOND` / `YEAR TO MONTH` multi-unit pin (octo U11 C1); typed
+  `DATE`/`TIMESTAMP` literal residual pin (octo U11 C2); quoted `"and"` /
+  `"or"` filter-boolean-steal pins; bare `when` pin-refuse (quoted works; no leak).
+- `test_udtf.py` — **r23 C6 / U12 UDTF scalar-arg phase-2 core:** `@udtf` /
+  lit-call multi-row expand (Arrow value+type); `spark.udtf.register` +
+  `SELECT * FROM name(lit_args)` rewrite; column-subset SELECT; LATERAL /
+  non-literal / table-arg refuse-loud; validation errorClasses held
+  (`INVALID_UDTF_*` / `CANNOT_REGISTER_UDTF`); reserved name refuse;
+  `functions.udtf` export; empty-eval empty schema; half-wired scalar guard.
+  **octo C1 pins:** name-in-string/comment no-hijack; JOIN table-factor refuse;
+  unclosed SQL string refuse; eval arity mismatch; multi-arg/NULL/TRUE/FALSE/case
+  SQL; zero-arg + bad register name.
+  **octo C2 pins:** SQL `1e2` scientific; trailing-comma refuse; start() failure
+  still calls terminate(); bare yield None refuse.
+  **octo C5 pins:** UDTF name colliding with SQL `max`/`abs` must not break
+  SELECT-list calls; comma multi-FROM still refuse-loud.
+- `test_c6_census_r8.py` — **r23 C6 census-r8:** `Catalog.registerFunction` /
+  `register_function` → SQL + DF callable; `functionExists` registry probe
+  (multipart + dbName signature); `UserDefinedFunction.deterministic` default
+  True + `asNondeterministic` False + register preserves flag.
+- `test_t7_census_r6.py` — **r21 T7 census:** `isStreaming` always False;
+  `Column.substr` (int + Column args); `F.array_contains` values.
+- `test_alter_table.py` — I6 / R-ALTER-TABLE: ADD/DROP/RENAME COLUMN schema-eq + read-after
+  (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE widen + narrow-refuse twin
+  (int→long + float→double + decimal — octo C3), case-insensitive DROP (octo C5), DROP NOT NULL,
+  loud refuse REPLACE COLUMNS / partition evolution / ADD NOT NULL. FQ `mem.ns.table` only (no
+  bare-name dependency).
+- `test_alter_table.py` — I6 / R-ALTER-TABLE + I7 partition evolution: ADD/DROP/RENAME COLUMN
+  schema-eq + read-after (added→NULL, rename data intact), ADD COLUMNS plural + FIRST, TYPE
+  widen + narrow-refuse twin (int→long + float→double + decimal — octo C3), case-insensitive
+  DROP (octo C5), DROP NOT NULL; I7 ADD/DROP PARTITION FIELD + write-after-evo + VERSION AS OF
+  pre-evo pin (octo I7-C5) + case-insensitive DROP name, REPLACE PARTITION FIELD, REPLACE
+  COLUMNS promote + identity-trap twin; residual refuse ADD NOT NULL.
+  FQ `mem.ns.table` only (no bare-name dependency).
+- `test_ml_feature_oracle.py` — R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
+  OHE sparse, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode/**median**,
+  Tokenizer, **RegexTokenizer**, StopWordsRemover, SQLTransformer, Binarizer, PolynomialExpansion,
+  **RobustScaler**, **QuantileDiscretizer**, **CountVectorizer+IDF**, pipeline e2e, live label oracle;
+  STOP pins replaced (no dual-pin); octo c5 OHE all-null; octo c2–c4: StopWordsRemover unnest, Pipeline save/load, outputCol collision, foreign fit refuse; octo c1: SQLTransformer SELECT-only refuse + StandardScaler n=1 std pin.
+- `test_e1_errorclass.py` — E1 R-CENSUS-ERRORCLASS: PySparkRuntimeError hierarchy, interval
+  constructors, facade errorClass pre-checks, alias(metadata=), Column.__getitem__/__iter__,
+  native surface shim; **octo C1 Fixer:** int element extract (not slice/fail-open), str
+  field native eval, free-SQL quoted hostile idents; **octo C2 Fixer:** Column-key /
+  non-int/non-str getitem not parent (`test_column_getitem_column_key_not_parent`,
+  `test_column_getitem_non_int_non_str_not_parent`); **octo C3 Fixer:** open-bound slice
+  no invented substr defaults (`test_column_getitem_open_bound_slice_no_invented_defaults`)
+  + step → `SLICE_WITH_STEP`; **octo C4 Fixer:** map str getitem value pin
+  (`test_column_getitem_map_str_key_extracts_value` — createDataFrame map Row `d["k"]`
+  → value; does **not** invent `test_field_accessor` PASS); **octo C7 Fixer:** YearMonth
+  invalid-constructor pins mirror DayTime (`123` / `(YEAR, 321)` — C7-Q-001);
+  getitem closed-slice Spark substr value pin
+  (`test_column_getitem_slice_substr_spark_semantics` — C7-L-001).
+- `test_f1_sql_expander.py` — F1 R-CENSUS-R3-EC + **G1 UPDATE/DELETE:** free-SQL bare-name
+  expander Path A (INSERT/SELECT/CTAS/MERGE + UPDATE/DELETE statement forms + e2e bare
+  SELECT/INSERT/CTAS/UPDATE/DELETE; temp-view prefer on FROM; VIEW/TEMP TABLE non-rewrite;
+  auto-memory spark_catalog qualify; EXTRACT FROM non-table; CTE name non-expand;
+  **octo C1–C6** as before; **G1:** UPDATE/DELETE identifier scan, WHERE-subquery FROM,
+  SET body never regexed, leading trivia; **octo C1:** table name ending in `set`, refuse
+  eating SET keyword as table when target missing).
+- `test_g2_window_rand_sampleby.py` — G2 R-CENSUS-R5: Window rowsBetween/rangeBetween +
+  ranks; XORShift rand/randn; sampleBy seed-0 **exact XORShift key set** (not band);
+  eagerEval repr/html + **HTML escape XSS pins**; RANGE non-numeric refuse + without
+  ORDER BY; finite float frame bounds refuse; randn(0)/rand(0) sequence pins
+  (**octo C1**); multi-ORDER RANGE refuse + ranking requires ORDER BY (**octo C2**);
+  inverted frame start>end refuse (**octo C3**); ruff format/E501 XORShift helper
+  wrap (octo gates).
+- `test_g1_stat_and_expander.py` — G1 R-CENSUS-R4: `DataFrame.stat` property +
+  corr/cov/crosstab/sampleBy/approxQuantile value+type pins; freqItems loud residual;
+  Group H self-join attempt; **H1 r20:** condition-join / self-join_II–IV / AMBIGUOUS_REFERENCE
+  / drop-by-Column / select parent Columns both sides / select_join_keys all how (STOP pin
+  flipped to green); **octo H1-C1:** select-star multi-name, chained condition join,
+  filter/orderBy parent Columns (value pin desc), select cast parent Column; **octo H1-C2:**
+  withColumnRenamed / dropna / fillna / when on multi-name joins; **octo H1-C3:**
+  toDF/alias/union/sample multi-name identity; **octo H1-C4:** withColumns/describe/dropDuplicates/intersect; **octo H1-C5/C6:** rename map/replace/randomSplit/dtypes overlay;
+  **octo H1-C7:** selectExpr(\"*\"); bare
+  UPDATE/DELETE e2e;
+  **octo C1:** sampleBy fraction [0,1]+NaN; approxQuantile relativeError; join no-alias
+  when column sets disjoint; **octo C2:** relativeError NaN; probability domain ValueError;
+  **octo C3:** join(on=[]) crossJoin gate.
+- `test_h2_group_h2.py` — **H2 r22** Group H long tail: non-origin dup projection multi-name
+  map (cast/year/`sum,sum` display overlay); same-object self-join equi sugar + multi-token
+  arm loud refuse + alias workaround; `Column.round` / wrap-display collapse;
+  `spark.app.name==repark` bare getOrCreate verify pin (critic-octo C1 pins).
+- `test_f1_errorclass.py` — F1 true-EC residual: array.array unsupported →
+  CANNOT_INFER_TYPE_FOR_FIELD; make_interval collect → PySparkNotImplementedError;
+  `_merge_type` / `_make_type_verifier` class+param keys.
+- `test_f2_fail_value.py` — F2 R-CENSUS-R3-VALUE: nested tuple struct + name pad + map
+  collect dict; scalar DoubleType CDF; csc/sec Inf at 0 (Arrow float64) + bare div NULL
+  pin; overlay display -1; regexp_replace global; mixed lit list string coerce;
+  `str(df)` / dtypes non-ascii; `printSchema(level)` tree depth (value+type pins);
+  **octo C1:** Apache map null-before-int order; overlay `-1` value==omit + SQL; nested
+  array-of-maps collect dicts; lit int+float float promote; **octo C2:** empty DoubleType
+  keeps double + csc empty; overlay float pos type error; **octo C3:** mutation-proof
+  combo (map+empty scalar+overlay+F1 nested WITH); **octo C4/C5:** lit numpy Integral/Real
+  + homogeneous np.int64 list normalize; **octo C8:** ruff format pin asserts.
+- `test_e2_readwriter.py` — E2 R-CENSUS-READWRITER: bare-name resolution
+  (`resolve_table_name` / saveAsTable / table / writeTo / insertInto / MERGE /
+  DROP TABLE SQL expander), `spark.sql.defaultNamespace` seed, parquet save/load +
+  loud unsupported formats, ndarray lit dtypes + uint refuse + COLUMN_IN_LIST;
+  **F1:** SELECT/INSERT expander pins now expect qualification (no longer residual);
+  **octo C1 Fixer:** `spark_catalog` alias on `tableExists`/`databaseExists`,
+  action-time writeTo/MERGE re-resolve after `setCurrentDatabase`, DROP expander
+  non-rewrite pins (SELECT/INSERT/DROP VIEW/script), bare insertInto + MERGE e2e;
+  **octo C2 Fixer:** quoted-dotted segment rejoin pin (C2-SEC-001),
+  `listTables("spark_catalog.default")` alias (C2-Q-002), `table()` temp-view prefer
+  e2e over catalog shadow (C2-Q-003), bare `read.option(snapshot-id).table` resolve
+  (C2-Q-001);
+  **octo C3 Fixer:** `test_save_unsupported_format_loud` requires
+  `DATA_SOURCE_NOT_FOUND` (not format-name-only OR) — R1 retargeted to `orc`;
+  **octo C4 Fixer:** `test_format_iceberg_load_does_not_prefer_temp_view` (C4-L-001),
+  `test_write_csv_json_*` (C4-Q-002) **superseded by R1 round-trip pins**, ndarray dtype pins also
+  assert Arrow `to_pylist` values (C4-Q-001);
+- `test_t4_csv_smart.py` — **r25 T4** smartCsv + Q1 inference protocol: pure rung pins,
+  messy preamble/BOM/ragged fixtures, value+type Arrow path (bool/int32/int64/decimal/date/
+  timestamp/float64/string), `describe_ingest` diagnostics, opt-in header case normalize,
+  default `.csv` r20-R1 regression guards.
+- `test_r1_read_formats.py` — R1 CSV/JSON read+write: header/inferSchema/schema/sep/nullValue/
+  multiLine readers; format().load; write→read Arrow value+type (flat + nested JSON); empty
+  overwrite; unsupported parse options + orc DATA_SOURCE_NOT_FOUND; **octo:** numeric nullValue,
+  default `_cN`, empty+sep, gzip RT, multiLine object loud / empty-array ok, bool loud,
+  **partitionBy path wires hive dirs (R2; was refuse-loud)**, JSON schema null-fill, semantic
+  options on `.csv()` shorthand.
+- `test_r2_read_formats2.py` — R2 writer option matrix / path modes / partitionBy: quoteAll /
+  escapeQuotes wired; dateFormat/timestampFormat refuse-loud; parquet compression; path
+  mode overwrite/append/error/ignore; partitionBy hive layout + multi-col + append merge +
+  unknown-col loud; **octo fix half:** root `read.parquet(partitioned)` no null-fill /
+  no empty root part (C3-001/C6-001), duplicate partitionBy loud (C3-002), append col-set +
+  type mismatch refuse (C2-001/C6-002/C7-002), append-onto-file + overwrite-symlink
+  AnalysisException (C2-002/C2-003); residual read encoding/timestampFormat pins
+  (divergences.md = D3).
+  **octo C5 Fixer:** `test_spark_catalog_alias_writer_paths` e2e saveAsTable/writeTo/
+  insertInto/MERGE with `spark_catalog.*` (C5-Q-001); DROP expander positive pins
+  exact rewritten SQL + multi-name sole-target (C5-Q-002);
+  **octo C6 Fixer:** `test_lit_object_ndarray_unsupported` +
+  `test_lit_bytes_ndarray_unsupported` refuse with `UNSUPPORTED_NUMPY_ARRAY_SCALAR`
+  (C6-Q-001 — no object/|S → array<string>).
+- `test_pyspark_compat_smoke.py` — C2/X1 / R-PYSPARK-COMPAT: pinned Apache PASS tests via
+  `repark-parity/compat` harness + meta-pins (redirect, no JVM, known-FAIL classified);
+  X1 grows pin list to all tip PASSes (functions+column + still-green types/dataframe
+  incl. `test_range`; octo C4: +hour/minute/second → 40 pins); **E1 +13 → 92 pins**;
+  **E2 ndarray +4 → 96 pins**; meta known-fail = `test_field_accessor` (F2 moved wall off
+  `test_lit_list` mixed-cast PASS; pin list / exact-count untouched).
+  Unit pins for classify/fetch live in
+  [`../../repark-parity/tests/test_compat_harness.py`](../../repark-parity/tests/test_compat_harness.py).
+- `test_session_range.py` — X1: `SparkSession.range` Apache count pins + step/float/numPartitions;
+  octo C1: empty/neg-step multisets, bool reject, numPartitions < 1;
+  octo C2: float step int() truncation + Arrow int64 physical / facade dtypes int;
+  octo C3: range after stop raises.
+- `test_column_x1_census.py` — X1: Column between/pow/string/bitwise/eqNullSafe/lit temporal + trig;
+  octo C1: bitwiseOR/XOR values, lit(time)/lit(list)/empty array, hypot 3-4-5, dayname(date);
+  octo C2: eqNullSafe(None), between inclusive/inverted;
+  octo C3: hour/minute/second on Time + Timestamp, date_add/add_months str count col, LongType API;
+  octo C5: __ror__ values, F.array column-name strings;
+  octo C6: hypot/pow Apache lit-second forms;
+  octo C7: Enum→tuple/list lit, acos/asin domain pins.
+- `test_types_x2_census.py` — X2: Row + createDataFrame nested/LongType census pins.
+- `test_dataframe_x3_census.py` — X3 + octo X3: error-class seed (immutable params), drop(Column),
+  join/conf + builder gate, sample overload/seed mix, randomSplit seed, count star + struct
+  field names, explain extended hang budget, table, show, StorageLevel, toDF, dropDuplicates [].
+- `test_ml_boost_oracle.py` — M4 R-ML-BOOST + **M5 booster-bytes** + **M6 CV parallelism** + **M8 every-ext save/load-or-pin-refuse**: `repark.ml.ext` bare import + ImportError pin, XGBoostRegressor E2E + lib-direct parity, **XGBoostRegressorModel + ClassifierModel save/load predict-parity** (M1 envelope + `booster.raw` via `save_raw`; atomic M7 overwrite; library-major version guard; octo M5 C1/C2 path/params pins), **LightGBM* model_to_string save/load**, **sklearn RF* pin-refuse** exact `pickle forbidden (arbitrary code execution on load)` (save/write/**load/read** — octo M8 C1), matrix completeness pin, no-pickle hygiene grep, **octo M8 C1** classifier-flag mismatch + `num_features<=0` refuse pins, ParamGridBuilder + CrossValidator (LR + XGB grid; best-map selection pins) + **parallelism=1 vs 4 avgMetrics determinism** (M6), OHE plural inputCols/outputCols, PipelineModel.save STOP-loud for ext (no hollow ext publish), training-row re-hold pins, ext MemTable GC ownership, sparse+dense densify 4096 cap, multiclass f1 loud refuse, stretch Classifier/LightGBM/RF lib-direct, numpy not at repark.ml top-level grep-gate; octo C2–C7 pins retained.
+- `test_ml_estimators_oracle.py` — R-ML-ESTIMATORS (M3): LinearRegression OLS (perfect line,
+  multi-feature, no-intercept, singular/elastic/standardization loud), RegressionEvaluator RMSE,
+  BinaryClassification accuracy + **areaUnderROC rank-sum** (M5; ties midrank; non-binary refuse octo M5 C1; raw prefers over prediction octo M5 C3) + **areaUnderPR score-group AP (M6; ties order-independent octo M6 C3)** + **dense list rawPrediction extract (M6)** + short-vector loud refuse (octo M6 C4) + **M7 sparse VectorUDT rawPrediction extract** (missing index → 0.0; size&lt;2 refuse; inverted+both-index mutation pins; null-cell not densify-to-0; non-vector Map refuse; native sparse densify disclosure), LogisticRegression IRLS, KMeans default-init refuse +
+  random init, save-path no training rows, live pyspark 1e-6 rel parity, numpy import grep-gate (native only; M4 ext carve-out);
+  octo C2: model `copy()` isolation (LR/logistic/k-means), `maxIter=0` cold-start/init-only + num_rows;
+  octo C3: transform width-mismatch loud; empty-feature intercept-only mean;
+  octo C4: num_features/coefficients desync refuse; octo C5: empty evaluator refuse;
+  octo C6: predictionCol collision refuse on transform; octo C7: MSE/MAE/R2 hand pins.
+- `test_ml_feature_oracle.py` — R-ML-FEATURE (M2): VectorAssembler (+ **M7 sparseOutput**), StringIndexer/IndexToString,
+  OHE sparse, **M7 SI keep × OHE dropLast matrix**, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode + median STOP,
+  Tokenizer, StopWordsRemover, SQLTransformer, Binarizer, PolynomialExpansion, pipeline e2e, live label oracle;
+  quantile STOP stubs; octo c5 OHE all-null; octo c2–c4: StopWordsRemover unnest, Pipeline save/load, outputCol collision, foreign fit refuse; octo c1: SQLTransformer SELECT-only refuse + StandardScaler n=1 std pin.
+- `test_ml_skeleton_oracle.py` — R-ML-SKELETON (M1): Param/explainParams, Pipeline fit/transform
+  ordering, uid shape, repark-ml v1 persistence (+ no training rows) + **M7 atomic overwrite** + race aside cleanup + file-target overwrite, dense FixedSizeList +
+  sparse struct createDataFrame round-trip, mixed-width AnalysisException, fit/transform
+  foreign-frame refuse, live pyspark uid/explain importorskip.
+- `test_select_global_agg.py` — R-SELECT-GLOBAL-AGG pins (select≡agg, MISSING_GROUP_BY, empty
+  count, sticky `_is_aggregate` cast/binary/null/when/coalesce/abs, `sum+1`/`cast(sum)`/
+  `abs(sum)`/`round(sum)` 1-row, `sum+lit` allowed, composed-agg+bare + nested free
+  (`sum+id`, `coalesce(sum,id)`, `when(id,sum)`) → MISSING_GROUP_BY, hostile
+  `lit("count(Int64(1))")` uncorrupted; C3: `sum(x+1)+lit`, `current_timestamp` companion,
+  alias-then-compose/cast, quoted hostile count, case-preserved sum+lit, structural
+  sql_expr mutation pins; **C4:** case-preserved sum.alias / alias+lit rebind, batch-4
+  structural sql_expr + case-preserved stddev, asc/desc sql_expr, first(ignorenulls)
+  SQL path, collect_list null/empty SQL, isnull+date_* sticky MISSING_GROUP_BY;
+  **C5:** case-preserved pure rebind for first/last/collect_*/count_distinct/corr/covar,
+  last IGNORE NULLS value pin, collect_set null-exclude+empty [], multi count_distinct
+  SQL null-if-any pack ≡ native; **C6:** free-OR `_scalar`/`concat`/`greatest` select
+  boundary + metadata, `sum+row_number().over` → MISSING_GROUP_BY (pure_global
+  aggregate|foldable), case-preserved pure `sum(col+1)` ≡ SQL, pure collect_set nulls,
+  polars `_sort_key` sql_expr; **C7:** `select(sum, rand)` / nested `sum+rand` →
+  MISSING_GROUP_BY (nullary non-foldable + ungroupable; current_date still foldable),
+  nested `sum+over` / `coalesce(sum,window)` / `when(sum).otherwise(window)` →
+  MISSING_GROUP_BY via sticky `_has_ungroupable`; octo C1–C7; **combine C1:**
+  select(explode, sum) → MISSING_GROUP_BY before generator short-circuit;
+  **combine C3:** rebind sort sticky sql_expr/AF/generator + cube(`order`.asc);
+  withColumns/withColumn sticky aggregate → `[INVALID_USAGE_OF_AGGREGATE]`;
+  **combine C4:** `_grouping_col_sql` always `_quote_ident` + hostile-quote cube keys;
+  **combine C5:** cube/rollup agg AS alias names + MIA plan-stable cube pin;
+  **combine C6:** polars `_sort_key` generator sticky + orderBy/pl.sort refuse;
+  non-finite float lit CAST embeds on select-global-agg).
+- `test_pivot.py` — R-PIVOT pins (values/inferred/multi values/null IS NULL/count/
+  alias/cap/limit-then-sort/cube refuse/countDistinct refuse/avg-min-max values/
+  non-simple refuse/first-last ignorenulls partitions=1; c3: values order,
+  distinct-before-limit, REPEATED_CLAUSE, bool true/false, cast values, NaN;
+  c4: BIGINT key outside int32; digit-named measure count non-null not row-count;
+  c5: count(\"1\") non-null not row-count; pivotMaxValues equality boundary;
+  c6: count(cast/abs/coalesce) refuse not row-count; sum/avg/min/max/first/last
+  lit(1) refuse on digit-named measure frame;
+  c7: first/last .alias Arrow values; count(distinct_id)/count(distinct) non-null;
+  c8: values-list ignores pivotMaxValues (list len>max succeeds; inferred still overflows)).
+
+- `test_select_global_agg.py` — R-SELECT-GLOBAL-AGG pins (select≡agg, MISSING_GROUP_BY, empty count).
+- `test_iceberg_hygiene.py` — I5 R-ICEBERG-HYGIENE: column-def CREATE schema-eq vs CTAS twin
+  (Arrow names+types); PARTITIONED BY + TBLPROPERTIES; CTAS+cols rejection pin (Spark message +
+  no orphan); CREATE/DROP BRANCH|TAG via SQL DDL + VERSION AS OF time-travel pins; default AS OF
+  = current; DROP main / kind mismatch refuse; DEFAULT column option refuse; trailing AS OF
+  misspelled RETENTION refuse; **r25 T2** `test_ref_ddl_replace_and_retain` (CREATE OR REPLACE
+  lands + misspelled RETENTION still loud); octo C8 py-lint line wrap on NOT NULL create. No AWS.
+- `test_stream_ipc_ingest.py` — I4 R-STREAM-IPC-INGEST named oracle: native
+  `register_arrow_stream_as_temp_view` round-trip values/types + empty schema-only + non-exporter
+  TypeError; bare `arrow_array_stream` PyCapsule path; exporter raise preserves exception type;
+  mid-stream C-stream fail → no partial view + session usable; nested repark-stream re-entry
+  must not process-abort (octo C1-SAF-001); mapInArrow C-stream primary path; C-stream vs IPC
+  fallback row/schema multiset equivalence; mid-stream user exception → PySparkException +
+  session usable; structural prefer-cstream-not-ipc pin. Companion: untouched-green
+  `test_mapinarrow.py`.
+- `test_mapinarrow.py` — U-SPIKE-MAPINARROW pins (values, empty, schema mismatch name/type detail, re-run, cache, unpersist re-run, SMALLINT/TINYINT/FLOAT widths, incremental IPC, upstream close-on-fail, MIA hide/GC, peek isEmpty/take/show, mapInPandas; C2: identity no-ops, selectExpr/alias/sample/union/crossJoin/summary, parquet write, cache+filter+unpersist, traceback both halves; C3: write then collect/write call-counter + temp-view keeps bridge; register track-before-sql / drop-on-fail; mapInPandas None loud; C4: parent re-run after filter/select, show peek max_output_rows, set-op/crossJoin left-staging drop on right fail; C5: upstream input pull-order (not collect-all), groupBy/agg multiset, plan-child MIA view reuse bound; C6: mapInPandas empty wrong-name/type loud + empty correct schema ok; C7: unpersist clears plan-ready so post-unpersist plan children rematerialize; unpersist+action then plan child / na._type_keys / groupBy not dangling; C8: mapInPandas yield-before-consume + empty-prefix-then-consume preserve input multiset; **combine C1:** mapInArrow→select(explode)/withColumn(explode) materializes bridge values not empty placeholder; **combine C2:** mapInArrow→select(sum,lit)/cast(sum)/sum+1 single prepare + Arrow sum pins ≡ pure AF; **combine C3:** mapInArrow→groupBy.pivot.sum Arrow values + call-count pin (F2xS1); **combine C4:** selectExpr `_plan()` post-prepare call-count + value agreement with select/filter; **combine C5:** alias/sample/randomSplit/summary/set-ops/crossJoin/unpivot + cube.agg plan-stable post-prepare call-count/value pins; cube AS alias column names; **combine C6:** mapInArrow→select(explode)/withColumn(explode) non-idempotent calls[n]==1 + tag values; **combine C7:** identity no-ops copy `_mia_plan_ready` post-prepare call-count/value pins; polars.join `_plan()` post-prepare vs DataFrame.join (C7-Q-001 / C7-Q-002)).
+- `test_mapinarrow_oracle.py (+ mapinarrow_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 mapInArrow oracle (named deliverable).
+- `test_applyinpandas.py` — U6 R-APPLYINPANDAS pins: single/multi-key values, null keys, empty input, global groupBy, StructType schema, schema name/type mismatch loud, empty wrong/partial/extra columns loud + zero-column empty ok (octo C1), user raise + traceback + cause + KeyboardInterrupt not wrapped, None return, non-callable, lazy until action + re-run, cache pins once, expression group key refused, cube/pivot refused, boundary-stitch multi-batch + null-type promote + empty-batch mid-stitch, engine orderBy key-contiguous stream seam, e2e multi-batch group calls-once, schema cast overflow names column, empty group result schema ok, snake_alias, string schema types, multi-key null+empty-string.
+- `test_applyinpandas_oracle.py (+ applyinpandas_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 applyInPandas oracle (named deliverable): values, multi-key, null keys, empty input, global groupBy, schema-mismatch class, empty-wrong-columns class; skips cleanly without JVM.
+- `test_pandas_udf.py` — U7 + **M5/M6** `@pandas_udf` pins: SCALAR select/withColumn + multi-UDF one-pass + octo C1–C8 harden pins retained; **SCALAR_ITER** basic/multi-arg/pass-through/wrong-batch-count + dual-UDF streams (octo M5 C5); **pure GROUPED_AGG** mean/global/multi-key+multi-arg + large-group stitch (octo M5 C7); **M6 mixed UDF+builtin** order-independent + global crossJoin + **null group-key null-safe join** (octo M6 C1); cube/rollup refuse (octo M5 C6) + hostile returnType refuse (octo M5 C1) + GROUPED_AGG-in-select refuse + SCALAR-in-agg refuse; **M6 windowed GROUPED_AGG** unbounded `partitionBy` + **null partition keys** + **select alias overwrite** last-wins (octo M6 C1/C2); **M7** ordered default frame (UNBOUNDED PRECEDING→CURRENT ROW running agg) + duck-typed `_frame_start`/`_frame_end` rowsBetween; GROUPED_MAP/WINDOW functionType tag still loud; PandasUDFType ints match PySpark 4.1.2 (200/201/202/204).
+- `test_pandas_udf_oracle.py (+ pandas_udf_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 pandas_udf oracle (named deliverable): SCALAR values/nulls/coercion/multi-arg/string/error/withColumn + **M5 SCALAR_ITER + pure GROUPED_AGG**; skips cleanly without JVM. Not Apache `test_pandas_udf*` census.
+- `test_explode_rewrite.py` — R-EXPLODE-REWRITE pins (null/empty, one-generator, posexplode*
+  STOP, str ColumnOrName, cast sticky, withColumn unnest, pre-aliased AS strip, multi-array
+  exact type bind; octo c2: pre-aliased sibling, Timestamp outer type, reserved/mixed-case
+  idents, hostile name quote, asc/desc sticky, alone-select outer; octo c3: compound
+  mixed-case sibling, nested-list outer type, fn-call/subquery ColumnOrName not SQL inject,
+  array-of-struct explode, coalesce outer type, size sibling; octo c4: sql.functions
+  __all__/identity + posexplode STOP path, nested generator refuse, hostile cast reject;
+  octo c5: F.size/coalesce/when/str refuse generator, nested explode refuse, chained cast
+  compose, generator select dup-name preflight; octo c6: aggregate wrappers refuse,
+  filter/orderBy/groupBy/agg refuse, nested array_length empty guards; octo c7: date
+  wrappers + `.dt` refuse, Window.partitionBy/orderBy refuse, cube/rollup/groupingSets
+  + SQL agg path refuse; **combine C1:** select(explode,sum/count) → MISSING_GROUP_BY
+  before unnest; generator-only / generator+id still unnest; **combine C4:**
+  explode(collect_list)/explode(array_repeat(sum)) + synthetic generator+agg select →
+  MISSING_GROUP_BY; **combine C5:** generator alias/cast keep sticky aggregate bits so
+  select(synth.alias/cast) still MISSING_GROUP_BY).
+
+- **R-TPCH-V3 (W1):** SF10 disk gate / DIED exit 6 / subprocess signal→DIED /
+  iceberg_wall vs parquet-not-Iceberg column pins; query_result JSON round-trip;
+  octo C1/C2 lint: DIED outranks TIMEOUT in exit_code pin.
+
+- **extra-octo E7:** private default cache root; refuse dir symlink data_root.
+
+- **extra-octo E2:** timeout-then-ERROR priority; exit_code_for_board pins 0/3/4/5; cache symlink/zero refuse pins.
+
+- **extra-octo E1:** private SF0.01 cache; bool≠int; first-timeout drain; multi-payload WRONG; exit codes.
+
+- **octo C5:** TPC-H mutable-box SIGALRM keep + repark mid-repeat TIMEOUT→WRONG-RESULT pin.
+
+- `test_catalog_hygiene.py` — #100 fast-follow: bare-session listTables lists temps,
+  never SCHEMA_NOT_FOUND (explicit missing names still raise).
+- `test_tpch_smoke.py` — **R-TPCH-HARNESS**: SF0.01 DuckDB-diff pins for all 22 TPC-H queries
+  against `python/repark-parity/bench/tpch/sf1_status_ledger.json` (OK → value match;
+  ERROR → EXPECTED-ERROR class (requires error_class); TIMEOUT still SF0.01 DuckDB-diff OK;
+  silent fix/regression both red). `importorskip("duckdb")`; tpch extension INSTALL try →
+  skip if unreachable.
+  Duckdb hard-provisioned in root `dev` group (scoreboard guard; polars/pandas skip precedent
+  unchanged for *their* tests).
+- `test_tpch_compare_unit.py` — TPC-H compare kernel + **V3** unit pins (int/float/Decimal
+  off-by-one; mid-repeat; SF10 disk gate skip FINDING; DIED exit 6; subprocess SIGKILL→DIED;
+  iceberg_wall column; parquet-not-Iceberg must not flip wall header; CLI SF>100 refuse) +
+  **r24 G10:** baseline-ratios gate (`check_baseline_ratios` within/over ceiling, WRONG-RESULT,
+  committed 22-query ceilings file; critic-octo empty/partial/zero-ok_checked fail-closed;
+  full-22 under/over against committed baseline; NaN/inf ratio refuse) +
+  **B1** pins (120s→300s Slow/hung timeout retry; merge_three_way; worse_status; CLI
+  --engine/--timeout-retry; sail_engine import without pysail; octo B1-C1..C7: subject_label,
+  sail unavailable skipped, no double-run, status coerce, kill-group, SF10 hard wall,
+  Sail original_sql, per-engine DIED, gRPC disclose only when Sail ran, default engine repark).
+- `test_tpcds_smoke.py` — **R-TPCDS-HARNESS** (D1) + **D2** pins: SF0.01 DuckDB-diff against
+  `bench/tpcds/sf1_status_ledger.json` (OK → value match; ERROR → EXPECTED-ERROR class;
+  TIMEOUT/DIED still SF0.01 correctness). Curated list includes Q5/Q80/Q84 (D2
+  `SparkConcat` Utf8 fix, ledger OK);
+  `test_curated_smoke_pins_d2_concat_fixed_queries` membership pin. Full 99 behind
+  `REPARK_TPCDS_FULL=1`. `importorskip("duckdb")` only for missing duckdb/extension.
+- `test_tpcds_compare_unit.py` — TPC-DS compare + runner unit pins (ordered vs multiset;
+  120s→300s Slow vs hung; SF1 disk gate; exit codes 0/3/4/5/6; CLI SF>100 refuse;
+  ROLLUP classify; gap census; **octo:** Exception≠EXCEPT classify; greylight hard wall;
+  unknown status exit 4; InvalidPayload walls; ORDER BY strip literals/comments;
+  t300_wall vs t300_budget; ledger expect 99; empty --queries refuse).
+- `test_fuzz_smoke.py` — **R-SQL-FUZZER** (D3): seed-42 / 200-query always-on differential
+  smoke vs DuckDB (`bench/fuzz/`); determinism + null-density + compare (Decimal exact,
+  float tol) unit pins; aggregate `ord_tie` total-order; minimizer leftmost ORDER BY drop
+  (mutation-proof max_steps=2 vs rightmost counterfactual) + heal-reject; bank JSON ROW
+  fixture round-trip + pin replay; banked repro xfail pins (empty corpus OK); long-pass
+  generator n=5000 determinism; negative seed reject; multiline compare sanitize; bank
+  sequence continue + no-overwrite; corpus index full scan; minimizer join-drop clears
+  WHERE; bank `has_order_by` header; JSON seed artifact pin; budget &lt;60s. Ledger:
+  `task/d3-sql-fuzzer-ledger.md`.
+- `test_write_bench_unit.py` — **R-WRITE-BENCH (W1 + r22 extension)**: pure helper pins
+  for `bench/write/` (file-size parse, verdict classes NO_DATA / NO_K_BENEFIT /
+  NO_STALL / PARTIAL_SCALING_PLATEAU, release-build probe, expected 2x rows helper,
+  markdown scale/local-fs/INSERT-K disclosure, CLI empty-K + K=0 usage,
+  datagen unknown-table refuse; **r22:** merge source-plan / expected-rows, synthetic
+  narrow/wide parquet (**write I/O pin `importorskip("polars")`**; width/rows validated
+  before polars import so bad-width/nonpositive pins green without optional polars),
+  MERGE/OW markdown disclosures + rule-10 pin constants, CLI extension width/K guards).
+  No SF1/1M wall in CI.
+- ruff format lockstep (W4 functions.py).
+- `test_df_batch2.py` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census;
+  **combine C5:** cube/rollup AS alias column `c` + values; unpivot hostile quote pins;
+  **combine C6:** cube first(lit('count(Int64(1))')) uncorrupted + GroupedData.count
+  structural shortcut (C6-SAF-001).
+- ruff format lockstep (W7 gate).
+
+- `test_facade_hygiene.py` — R-FACADE-HYGIENE (W7) cdf hide/GC, fillna, dropDuplicates, OOS.
+
+- `test_df_batch2.py (lint: functions_api not F; N802 sampleBy)` — R-DF-BATCH2 cube/rollup/unpivot/explain + loud census + C5 unpivot quote / cube alias.
+- `test_polars_ns.py` — R-POLARS-NS str/dt/fill_null + differential. (rider: dt test sorts client-side — UNION ALL order flake)
+- `test_polars_ns.py (skeptic fix: real-path starts_with/slice + quote pin; full census)` — R-POLARS-NS str/dt/fill_null + differential.
+- `test_pg_jdbc_options.py` — PG2 offline option pins (jdbc overloads, format aliases, XOR/caps).
+  Ported minus **one** node (EC-4): `test_jdbc_num_partitions_above_cap_is_unsupported` — the
+  `read_postgres` refuse-arm pre-empts the engine's cap error. The other offline pins raise their
+  `IllegalArgumentException` **facade-side**, before any native reader, and port green.
+- `test_pg_jdbc_oracle.py` — PG2 named oracle (SKIP-LOUD without `REPARK_PG_DSN`; DuckDB skip-loud).
+
+- octo-extra C5: concat sql_expr null-propagation guard
+
+- octo-extra C4: cast/concat MERGE embed pins
+
+- **octo-extra C3: MERGE lit embed pins for != / CASE**
+
+- **octo-extra C2: cache transform pin; bare summary refuse**
+
+- **octo-extra C1 (2026-07-30):** pins for take materialize; multiset *All refuse; schema evo loud
+
+- `test_polars_core.py` — R-POLARS-CORE (importorskip polars; pl accessor; reject real Expr).
+- `test_polars_differential.py` — R-POLARS-CORE rider: differential pins vs REAL polars
+  (aligned pipelines byte-equal; divergences pinned: all-NULL sum NULL-vs-0, join collision
+  loud-not-suffixed; repo-ruff strict: zip strict=, raw match patterns, pinned-ruff 0.15.22 format).
+
+- `test_df_easy.py` — **R-DF-EASY**: selectExpr/toDF/dtypes/printSchema/set-ops/crossJoin/offset/alias/describe/summary/replace/sample/randomSplit/colRegex/no-ops.
+- `test_cache_persist.py` — **R-PERF-CACHE** + **r23 CACHE1**: cache/persist self + is_cached + storageLevel;
+  second action after cache cheap; derived after materialize; unpersist; localCheckpoint;
+  clearCache real drop (live + orphan GC path + leaves `__repark_ckpt_*`); StorageLevel cosmetic
+  warn-once; `repark.cache.max_bytes` refuse / zero-off / invalid+>u64 conf / builder.config path /
+  conf.unset tomb (no builder resurrect); cache entry-point vs VALUES temp-view branch pin;
+  localCheckpoint-after-cache truncates lineage; child-plan cache sharing OUT pin;
+  object-identity only; type error on bad level.
+- `test_merge_into.py` — **R-MERGEINTO**: builder upsert equals SQL-MERGE (COW + MoR); delete /
+  partial update / insert dict; Column condition; temp-view cleanup (success + failure);
+  no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource` engine reject; type errors;
+  `withSchemaEvolution` returns self; equi-join sugar unit pin. Arrow path for row sets.
+- **octo-extra C3: format= refuse surface**
+
+- **octo-extra C2: __all__ / export coverage**
+
+- **octo-extra C1 (2026-07-30):** test_fn_batch1 pins ln/log10 + from_unixtime string type
+
+- `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud).
+- `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **Q1** flips
+  `percentile_approx`/`approx_percentile` LOUD → bounds-window + SQL alias pins;
+  octo c1 adds bool reject, SQL centroids 3-arg pin, Imputer NaN/missingValue,
+  RegexTokenizer order, CV fractional minTF, fit temp-view cleanup;
+  octo c2 UNION ALL token/id association pin + Imputer same-col in-place;
+  octo c3 MinMax/MaxAbs NaN-tolerant fit pin;
+  octo c7 StringIndexer fit temp-view cleanup pin
+  (+ array-percentage STOP seed).
+- `test_fn_batch3.py` — R-FN-BATCH3 datetime + Chrono≠Java + loud census.
+- `test_fn_batch2.py` (octo C1: exact overlay/slice pins)` — **R-FN-BATCH2**: strings/collection value+type+null pins; loud census
+  (soundex/sentences/arrays_zip/map_from_arrays/locate pos / array_join null_replacement).
+
+- `test_repark_log_subscriber.py` — R-TRACE-SUBSCRIBER: subprocess MoR MERGE with
+  `REPARK_LOG=info` asserts all five `merge.*` phase names + CLOSE timings on stderr; without
+  env asserts none (subscriber inert). Process isolation required (global `try_init`).
+- `test_types_simple_string.py` — R-PARITY-NITS / X2 simpleString/typeName/json/fromDDL/
+  StructType.add / ArrayType / MapType / collation / toInternal pins.
+- `test_types_x2_census.py` — X2 census: Row empty/unnamed repr + factory arity;
+  createDataFrame LongType schema, nested list/struct/map, variable int arrays;
+  **octo:** explicit nested StructType/MapType/ArrayType(String) Arrow values (not
+  stringify), DDL nested array, map int keys, tuple/dict→struct, sparse exact keys.
+- `test_sliding_avg_parity.py` — R-RETRACT-SHIM rider: live-oracle sliding-avg pins (NULL
+  frames, collect values + to_arrow types; oracle verbatim in the X2 ledger).
+- `conftest.py` — autouse fixture clearing the process-wide `getOrCreate` active-session
+  registry around every test (WU-4 isolation).
+- `test_create_dataframe_materialize.py` — R-PERF-VALUES / R-PERF-ARROW-CDF / **P1a** /
+  **P2a**: createDataFrame materializes once (list/Row/pandas/polars/schema=int32; second
+  action cheap; count correct); structural pins prefer `register_arrow_stream_as_temp_view`
+  over IPC for tuples+pandas+polars+empty typed; IPC fallback when C-stream symbol absent;
+  SAF-001 pins drop orphan MemTable when sql-after-register fails on C-stream, IPC, and
+  untyped VALUES materialize paths; C-stream runtime error does not IPC-fallback
+  (shared `_NativeRegisterProxy`). **P2a:** native-path spies assert pandas uses
+  `_arrow_table_from_pandas` (not `_rows_from_pandas`) and polars uses
+  `_arrow_table_from_polars` (not `_rows_from_polars`). **critic-octo C1:** typed
+  StructType Double/Float refuse ±inf on native pandas/polars; native Decimal envelope
+  raises PySparkValueError (parity with list path, not bare ArrowInvalid).
+  **critic-octo C2:** duplicate pandas column names → PySparkValueError; object all-NaT
+  + DoubleType schema → PySparkTypeError (not raw ArrowNotImplementedError).
+  **critic-octo C4:** empty pandas/polars + StructType keeps declared Arrow types (0-row).
+- `test_t1_cdf_ingest.py` — **r21 T1** createDataFrame ingestion parity: dict key-union
+  order (3 oracle cases) + empty-first dict null-fill (octo C4) + type widening + synthetic
+  Orders-shaped (Legs list<map> type honesty — octo C5) + residual int+str refuse +
+  name-list length-bind pins (octo C6) + StructType; lint E501 wrap (octo C8)
+  null-fill/drop extras; nested ArrayType(StructType) schema value+type (octo C3); Row
+  mismatch refuse retained; Boolean/Long/Double/Decimal/Date/Timestamp pairwise merge
+  refuse (scalar + list-of-scalar + map values — critic-octo C1/C2 + EXTRA XC1-L1..L4 +
+  XC2-L1..L3); polars List(Struct)/Struct + pandas ArrowDtype list-struct
+  collect/to_arrow value+type; Binary/Time refuse retained; wrapped `{"Orders":[...]}`
+  via `json.load` + dict path chain.
+- `test_n1_nested_dict_struct.py` — **r23b N1** `inferNestedDictAsStruct.enabled`: conf
+  default/builder/set entry points; Q8 conf-false map byte-identity + sparse-vector
+  conf-invariant; conf-true list-of-dict / unnested cell / dict-in-dict / ragged
+  null-fill / field-order / non-string keys; row-dict key-union conf-invariant (Q6);
+  explicit schema wins (Q11); Orders shape Legs/ConditionalOrders array<struct> under
+  conf true (Q10). Value+type on collect/to_arrow both conf states.
+  **octo C1:** non-sparse struct with `indices` field keeps all fields; sparse super-set
+  keeps `extra`; null-only key / all-empty / long+string / long+double refuse; nested
+  list multi-row union; None key refuse.
+  **octo C2:** list<list<dict>> field union (single + multi-row); conf strip truthiness;
+  bool+long CANNOT_MERGE pin.
+  **octo C3:** empty-list field then list-of-dict keeps array<struct>; string+struct
+  CANNOT_MERGE pin.
+- `test_select_naming.py` — **Group H** select/projection display naming vs live PySpark 4.1.2:
+  full matrix (`(x + 1)`, cast-of-attr → child name, cast-of-compound → `CAST(...)`,
+  cast-into-binary dual-slot, `negative(x)`, CASE/coalesce/concat/lit/date fns, alias wins,
+  `<=`/`>=`/`isNotNull`, withColumn unaffected); value+Arrow pins (arith/cast/neg/when/
+  coalesce/mod); mutation proofs (drop `for_select` → Int64/`t.` leak only; unstable cast →
+  CAST text); agg CAST embed; string lit unquoted; **H2 multi-name map** for non-origin
+  dup projection names (`select(x, x.cast)` / lit+s) + AMBIGUOUS getitem + `.alias`
+  disambiguation; bare `select("X")` / `F.col("X")` keep requested spelling `X` (not schema
+  collapse); `select("X","x")` dual names; CI getitem composition is NamedExpression not Alias
+  (`df["X"]+1` → `(X + 1)`, not `x AS X`; octo r2 C3-L-005); H2 wrap collapses user
+  `.alias("z")+1` → `(z + 1)` while agg keeps `sum(x AS y)`; requested-spelling projection
+  is re-selectable (`select("X").select("X")` / `F.col` / getitem + mixed-case `alias("Total")`
+  — octo r3 C3-L-007); residual sinks after `select("X")` — filter/where SQL, fillna/na.drop,
+  dropDuplicates, withColumnRenamed/withColumnsRenamed, F.sum("X")/shortcuts/dict agg
+  (octo r4 C3-L-008); `select("*", expr)` expands star; all 13 date projection names;
+  `F.expr("1 + 1")` → `(1 + 1)`; `current_timestamp()` display.
+- `test_session.py` — import smoke (`import repark`, `from repark import ReparkSession` — plus the
+  `SparkSession` drop-in and `ReParkSession` pre-rename aliases, identity-asserted); the
+  builder chain (`builder…getOrCreate()`, both snake_case and camelCase, fresh-per-access);
+  **C3:** `getActiveSession`/`active`/`newSession`/context-manager/`getAll`/`isModifiable`/
+  conf get-without-default raise / set(None) refuse / soft conf fold on getOrCreate reuse /
+  createDataFrame promotes active; **octo C3 C1:** newSession BaseException restore pin +
+  static conf set refuse + getAll copy isolation; **octo C3 C2:** foreign-active newSession
+  pin + getOrCreate reuse skips static conf + type-error createDataFrame still promotes;
+  **octo C3 C3:** conf.unset clears builder fallback (tombstone);
+  **octo C3 C4:** soft-fold after unset + static unapplied-silence pin;
+  **octo C3 C6:** SparkSession alias getActiveSession/active pin;
+  **octo C3 C7:** CM enter does not promote active; ruff-clean noqa+format;
+  **WU-4:** `getOrCreate` returns the identical object twice; differing builder config warns and
+  returns the active session; `stop()` then `getOrCreate` builds fresh; stopped-session ops raise
+  a named `RuntimeError`; engine-knob dual-spelling policy (identical values OK; conflicting ints
+  raise naming both keys; unparsable int raises); a `sql("SELECT 1 AS a, 'x' AS b")` round-trip
+  to `to_arrow` / `collect` / Polars with correct values; `count`; `pyarrow.table(df)` consuming
+  the Arrow PyCapsule directly; `show` logging; that `repark.__version__` is exposed (the attribute
+  the wheel import-smoke prints); `to_pandas` + the `toPandas` alias (values, column order, alias
+  identity); and `to_numpy` (numeric matrix dtype/values, null→NaN, mixed-type object promotion,
+  zero-row shape); WU-4 fidelity: show stdout/truncate, collect→Row, columns/schema
+  (metadata-no-execution pin: an un-runnable `CAST('abc' AS INT)` plan resolves its schema so
+  `columns`/`schema` succeed while `collect` on the same df raises — N4), `limit`+show row cap
+  (the rendered grid is parsed: exactly two data rows, rows 3..10 absent — N3),
+  select("*"), createDataFrame, read.parquet, isNull/isNotNull/when, F.expr substr-0 parity.
+- `test_getorcreate_catalogs.py` — **R-GETORCREATE (dogfood 2026-07-28)**: `getOrCreate` on a
+  LIVE session registers newly-configured catalogs (silent when the whole delta applied),
+  repeat same-builder calls don't re-warn, same-name-different-config warns naming the kept
+  catalog while the ORIGINAL registration keeps serving, malformed late blocks raise like
+  the build path.
+- `test_dataframe_actions.py` — **R-TAIL** DataFrame action surface vs live PySpark 4.1.2
+  (zulu-17 oracle 2026-07-28; ruff line-length/format clean): `take`/`head`/`first`/`tail`/
+  `isEmpty`/`toLocalIterator`
+  return types (`list[Row]` / `Row|None` / `bool` / iterator), `n=0` / oversize / empty-frame
+  matrix, negative-`n` (`take`/`head` → `AnalysisException`
+  `[INVALID_LIMIT_LIKE_EXPRESSION.IS_NEGATIVE]`; `tail(-1)` → `[]` — live Spark does not
+  raise), non-int `PySparkTypeError` (incl. **bool domain** — `take`/`head`/`tail` reject
+  both `True` and `False` (C8-Q-001; `False` alone would silent-`[]` under truthy-only
+  bool guards), plus EDGE `None`/`float` — `take(None)`/`tail(None)`/`take(1.5)`/
+  `head(1.5)`/`tail(1.5)` raise matching `num` (C8-Q-002); `head(None)` is **OK** → first
+  `Row` / empty→`None`, not a reject), `head(1)` is `list[Row]` not `Row` (polymorphism pin
+  vs no-arg `head()`), tail≠limit mutation guard, stopped-session pin for `tail(0)`/`tail(-1)`
+  (must raise, not silent `[]`), **and** `take(0)`/`head(0)` after stop (C5-Q-001 —
+  zero short-circuit before limit/collect would silent-`[]` while live-frame zero and
+  tail-stop pins stay green), **and** `isEmpty`/`toLocalIterator`/`first`/bare `head()`
+  after stop (C6-Q-002 — lifecycle parity; those entry points were unpinned while take/
+  head(n)/tail stop pins stayed green), Arrow value+type on the take/limit path. **P2b:**
+  streaming `toLocalIterator` value+type vs collect, partial-consume iterator pin,
+  `to_arrow_batches`/`toArrowBatches` concat≡`to_arrow`, empty-frame **schema-bearing**
+  zero-row batch (octo C1), multi-batch orderBy concat≡`to_arrow` + stream≡collect,
+  maps/nulls/nested array-map stream≡collect, partial-abandon then full action,
+  mid-stream `to_arrow_batches` → `PySparkException` (parity with `to_arrow`), repeated
+  schema/columns stability post-stream (SchemaRef cache); **octo C2:** collect batch-wise ≡
+  stream under orderBy, decimal/struct/date/ts/null-struct collect≡stream, dual interleaved
+  iterators, `range(0)` empty schema batch; **octo C3:** cache+stream/collect/batches +
+  unpersist re-run, collect mid-stream `PySparkException` parity with stream; **octo C4:**
+  empty nested (array/struct/decimal/ts/map) + wide-empty schema-bearing batch.
+  **r22 P5:** primitive fast-path collect ≡ to_arrow value+type; map/array-map convert;
+  duplicate display-name positional `_rows_from_arrow_table`; empty/zero-col bulk assembly;
+  schema classifiers (identity vs map-convert vs calendar-interval);
+  **octo C1:** nested empty map value → `{}`; NaN/None identity pin; nested MonthDayNano
+  refuse (list/struct/map); zero-col n-row live collect.
+  Never only `show`.
+- `test_builder_config_map.py` — **R-TAIL** `Builder.config(map=…)` PySpark 3.4+ form:
+  multi-key map, int→str coerce, Spark `to_str` bool/None on **map, kv, and conf** arms
+  (`True`→`"true"`, `None` stays `None` — not bare `str()`; conf arm load-bearing
+  `True` → `IllegalArgumentException` so `int(True)==1` cannot silently build), empty map,
+  map↔kv same-key overwrite (retained pins), **sequential map/conf update-merge** into
+  existing `builder._config` (C4-Q-001: disjoint-key kv→map / map→map / kv→conf keep+add;
+  empty `map={}` and empty conf `getAll()` must not clear prior keys — wholesale
+  `self._config={…}` replace fails), **sequential conf same-key overwrite** (C7-Q-001:
+  kv→conf / map→conf / conf→conf assign — `setdefault` / insert-if-missing on conf keeps
+  prior values while C4 disjoint merge stays green),
+  map+key together (map wins, no error; exclusive apply pinned with
+  **non-overlapping** keys so merge-then-overwrite fails), non-mapping `map` →
+  `AttributeError` on `.items()`, **conf missing `getAll`** → `AttributeError` matching
+  `getAll` (C8-Q-003: `conf=object()` and same-call `map={…}, conf=object()` must raise,
+  not soft-empty / fall-through), duck-typed `conf.getAll()`, conf≻map **and** conf≻kv
+  precedence,
+  **empty conf + map same-call** exclusive conf≻map (C5-Q-002: `getAll()==[]` still
+  ignores map; non-empty conf≻map alone is a hollow pin for fall-through-to-map),
+  **empty map={} + kv** and **empty conf + kv** same-call exclusive (C6-Q-001: empty
+  container still excludes key/value; non-empty map≻kv / conf≻kv alone are hollow pins for
+  fall-through-to-kv),
+  load-bearing shuffle=0 via map still raises `IllegalArgumentException`,
+  `**dict` unpacking is NOT the API (`TypeError`). Positional kv regression kept green.
+- `test_t3_ux_polish.py` — **r21 T3** (2026-08-03): display_style conf.set→show + property/conf
+  lockstep + module `repark.display_style` refuse-loud; **F-T3-001** conf.unset resets
+  live style + conf.get to default `spark` (show spark-like; no split-brain); default
+  `spark.app.name`=`repark`; `Column.round` + windowed TA chain; H1 bare-join export naming
+  overlay on collect/to_arrow/to_polars/to_pandas (display names, dups positional, no
+  `__repark_*` leak); **F-T3-002** multi-name Row pickle round-trip via `from_ordered_fields`.
+- `test_display_styles.py` — **R-DISPLAY** (2026-07-28): opt-in `DataFrame.show()` styles via
+  Combine note (R-TAIL x R-DISPLAY): the pre-combine `test_no_public_dataframe_tail`
+  ownership pin is superseded by `test_public_tail_and_preview_tail_coexist_and_agree`
+  — public `tail` (PySpark-parity full-collect) and `_preview_tail_rows` (bounded
+  `limit_with_skip` display path) coexist by design and must agree.
+  `repark.display.style` builder config + runtime `session.display_style` (`spark` default /
+  `polars` / `duckdb`). Pins: default spark grid byte-identical golden; each style's exact
+  rendering on a fixed 12-row ordered fixture (polars head5+tail5 with `…`; duckdb box + type
+  row + `(N shown)` footer); NaN/null/truncation cells; empty + 1-row frames; invalid style
+  refuses with `IllegalArgumentException`; private `_preview_tail_rows` returns last n via
+  engine skip+fetch (no full collect); spark path does not call `count()`, styled paths do
+  (extra scan disclosed). MUTATION: force default to polars → default golden reds.
+- `test_display_styles.py` — **R-DISPLAY** (2026-07-28; harden cycle-1..8 2026-07-28): opt-in
+  `DataFrame.show()` styles via `repark.display.style` builder config + runtime
+  `session.display_style` (`spark` default / `polars` / `duckdb`). Pins: default spark grid
+  byte-identical golden; each style's exact rendering on a fixed 12-row ordered fixture
+  (polars head5+tail5 with `…`; duckdb box + type row + `(N shown)` footer); NaN/null/truncation
+  cells; empty + 1-row frames; invalid style refuses with `IllegalArgumentException`; private
+  `_preview_tail_rows` returns last n via engine skip+fetch; spark path does not call `count()`,
+  styled paths do (extra scan disclosed); **`show(n)` keep-set** (polars `show(0)`/`show(1)`
+  must not over-show; duckdb `show(1)` keeps first row not last-only and forbids body `·` when
+  `tail_n=0` — C8-Q-001; duckdb `show(0)` footers `(0 shown)`); **`show` rejects bool `n`**
+  (`PySparkTypeError` — C8-L-001; ORDER BY fixture so `show(1)` first-row fence is
+  deterministic); **no public `DataFrame.tail`** (R-TAIL ownership); **partial-
+  collect discipline** (`limit_with_skip(skip=total-fetch)` + no
+  `collect`/`to_polars` + no root facade **or native** `__arrow_c_stream__`/`to_arrow` unlimited
+  export + lws return must be the streamed plan + per-`to_arrow` row caps); boolean cells
+  lowercase `true`/`false`; dtype row uses precise Arrow widths (TINYINT→i8/int8,
+  SMALLINT→i16/int16, FLOAT→f32/float); `show(0)` logs `show(0 rows)`; **getOrCreate reuse**
+  applies explicit `repark.display.style` (no false "may not apply" on pure style delta;
+  case-insensitive key on build+reuse) and leaves style alone when the key is absent;
+  **`truncate<=0`** shows full cells (Spark parity);
+  **dual-cased last-wins** (C7-Q-001/C7-L-001: later mixed-case override + invalid last refuses;
+  resolve-time last-wins when dual aliases present); **`total <= fetch`** tail short-circuit
+  (C7-Q-002: no `limit_with_skip` / no negative skip).
+  MUTATION: force default to polars → default golden reds; full collect+slice / root
+  `pa.table(self)` / `pa.table(self._inner)` / decoy `limit_with_skip` → no-full-collect +
+  `limit_with_skip` pins red; duckdb show(0) without `(0 shown)` → zero-footer pin red; duckdb
+  show(1) middle `·` with empty tail → C8-Q-001 pin red; drop bool-`n` guard → C8-L-001 pin red;
+  public `DataFrame.tail` → no-public-tail pin red; drop reuse apply → reuse pin reds; pure-style
+  reuse still warns / no `_builder_config` sync → C6-Q-001 pin red; drop key `.lower()` →
+  C6-Q-002 pins red; exact/first CI wins dual-case → C7-Q-001 pins red; drop `total <= fetch`
+  short-circuit → C7-Q-002 pin red; `cap=int(truncate)` for `0` → C6-L-001 pin red;
+  `str(bool)` → boolean pin reds; collapsed logical types → narrow-type pin reds.
+- `test_session_config_knobs.py` — **audit G3 (SAF-006 / SAF-007)**: engine-knob `.config(...)`
+  range validation pinned at the REAL user entry point
+  (`ReparkSession.builder.config(k, v).getOrCreate()` — the Rust builder and `PyReparkSession::new`
+  pins are not the user surface), for all three key families and **both spellings each**.
+  Per-key policy, oracle = live PySpark 4.1.2 (zulu-17, re-run during the G3 remediation pass) +
+  the `SQLConf` shipped in
+  `spark-catalyst_2.13-4.1.2.jar`: `spark.sql.execution.arrow.maxRecordsPerBatch` has NO
+  `checkValue` and documents "If set to zero or negative there is no limit" (live: `getOrCreate`
+  OK, `conf.get` → `'0'`, query runs; also does not raise on the reuse path), so `0`/`-1` are
+  ACCEPTED — the session builds and runs on
+  the `to_arrow` path (value + Arrow type) with a warn-once disclosure that repark cannot emit
+  unbounded batches; `spark.sql.shuffle.partitions` declares `checkValue(_ > 0, …)`, so `0`/`-1`
+  raise `IllegalArgumentException` here with live 4.1.2's message VERBATIM, asserted by string
+  EQUALITY plus the
+  `PySparkException`/`RuntimeError` parents and the not-`ValueError`/not-`OverflowError` negatives;
+  `repark.memory.limit.gb` keeps `0` as the bounded-pool opt-out (still builds + runs) and refuses
+  negatives. **Recorded message deltas vs live Spark 4.1.2** (captured verbatim in the module
+  docstring — `[INVALID_CONF_VALUE.REQUIREMENT] The value '0' in the config
+  "spark.sql.shuffle.partitions" is invalid. The value of spark.sql.shuffle.partitions must be
+  positive SQLSTATE: 22022`): repark drops the `SQLSTATE: 22022` suffix (no repark error carries
+  SQLSTATE), the repark-native key spellings have no Spark counterpart so the same shape is
+  emitted with the repark key substituted, and on the reuse path repark validates but does not
+  *apply* the knob (PySpark's `getOrCreate` really applies builder options — captured 200 → 7).
+  **Both `getOrCreate` paths are pinned per key family**: the fresh build AND the `_active_session`
+  REUSE path (a session is established first — the autouse `conftest` fixture otherwise clears the
+  registry and hides that path), including that a LEGAL value on reuse still returns the same
+  object and that the batch-sentinel disclosure is not swallowed there. Timing is a disclosed
+  divergence: repark raises eagerly at `getOrCreate` where a FRESH PySpark process returns OK and
+  raises at the first `sessionState` touch (live-verified). Also pins the layer boundary — BOTH
+  `_native.PyReparkSession(batch_size=0)` and `_native.PyReparkSession(target_partitions=0)` still
+  refuse (the sentinel is a FACADE translation, not an engine relaxation) — and that
+  `memory_limit_gb=1`,
+  the smallest non-zero budget this entry point can express, is far above the engine's 1 MiB floor
+  (SAF-007 is unreachable from Python; the arithmetic is pinned Rust-side by
+  `memory_limit_gb_never_lands_below_the_floor`).
+- `test_t2_sort_memory.py` — **r21 T2 sort-memory:** measure-first FairSpillPool pressure
+  diagnosis (synthetic OHLCV + 17 float cols; ExternalSorter *or* SortPreservingMergeExec);
+  `spark.conf.set("datafusion.*")` get/set round-trip + SHOW ALL engine pin;
+  unknown/malformed/non-canonical (mixed-case, padded, trailing-newline) key refuse-loud +
+  no store (+ no engine mutation for trailing-`\n` twin — extra-octo T2 E1-1);
+  value quote-escape / injection fail-closed pin; builder `datafusion.runtime.memory_limit`
+  alone; dual `repark.memory.limit.gb` + `datafusion.runtime.memory_limit` refuse; runtime
+  `conf.set("repark.memory.limit.gb")` refuse (build-time only); OOM `to_arrow`/`collect` →
+  `PySparkException` with DF message + REPARK conf hint (no pyarrow dynamic-source wrapper);
+  unit pin for `_export_engine_error` noise strip; reverse-sort succeeds after pool raise
+  via conf.
+- `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
+  `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
+  NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
+  (absent property → omitted row, never `''`), the `EXTENDED` `Properties` rendering
+  `((Amid,vm), (k1,v1), (k2,v2))`, the 14-row **redaction truth table** (Spark's `Utils.redact`
+  matches the key OR the value against BOTH default patterns —
+  `(?i)secret|password|token|access[.]?key` and `(?i)url` — so `{"innocent": "my password is
+  hunter2"}` redacts on its VALUE, while `access_key`/`ACCESS-KEY` are shown by both engines),
+  `.show()` rendering, the missing-namespace
+  `AnalysisException` **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND`), and the Z6
+  regression that `DESCRIBE <table>` — including a view literally named `namespace` — is not
+  shadowed.
+- `test_show_namespaces.py` — Group AB: `SHOW NAMESPACES` + the `SCHEMAS`/`DATABASES` synonyms and
+  the `FROM` spelling through the facade. Pins the Arrow schema (ONE column `namespace`, `string`,
+  **NOT NULL**, no field metadata — the live v2 oracle's verbatim shape) AND values from
+  `to_arrow()`, the `NamespaceHelper.quoted` row rendering (`ab space` → `` `ab space` ``), that
+  `LIKE` is Spark's `StringUtils.filterPattern` and NOT SQL `LIKE` (full match not substring,
+  case-insensitive, `|` alternation, `%`/`_` literal, the `LIKE` keyword optional, the pattern
+  matched against the QUOTED row), `.show()` rendering, the unknown-catalog `AnalysisException`
+  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the two disclosed divergences
+  failing LOUD (no current catalog → `IN` mandatory; no nested `cat.ns` listing), and that a
+  relation named `namespaces`/`schemas` is not shadowed (Spark has no `SHOW <relation>` form).
+- `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
+  live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
+  `from_mapping`, mixed args+kwargs → `PySparkValueError` `[CANNOT_SET_TOGETHER]`;
+  single list/tuple arg kept as one value — octo C1-L-002; user fields `_fields`/`_values`
+  attr access returns column values not internal storage — C1-L-001);
+  `__getitem__` int/negative/OOB `IndexError`/str/slice→`tuple`; E8 classes — missing str
+  and wrong-typed key → `PySparkValueError` (not `KeyError`/`TypeError`); `__contains__`
+  field names only; `__fields__` list copy; iteration values; `asDict` flat + recursive
+  nested Row/list/dict; value-only equality (incl. vs tuple) + hash equal to plain
+  tuple (`hash(row)==hash((…))`, set/dict interop — octo C2-Q-001); missing attr →
+  `PySparkAttributeError` `[ATTRIBUTE_NOT_SUPPORTED]`; collect surface end-to-end. Out of
+  charter: pickling, `Row("name","age")` factory. Select-display residue (ROW-003) is
+  already closed on main by Group H (`test_select_naming.py`) — verified, no invented work.
+- `test_errors.py` — the WG-3/U4 error-taxonomy matrix, end to end through the public facade: the
+  subclass tree (`ParseException` ⊂ `AnalysisException` ⊂ `PySparkException` ⊂ `RuntimeError`,
+  `UnsupportedOperationException` ⊂ `PySparkException`; Group S reparents Parse under Analysis for
+  PySpark parity — the other leaves stay distinct) + re-export identity
+  (`repark.errors.X is repark._native.X`); then, per entry
+  point, {parse → `ParseException`, analysis → `AnalysisException`, execution → base} pinned on
+  `spark.sql` (syntax / unknown-table with the table name preserved in `str` / an un-runnable
+  `CAST('abc' AS INT)` execution error → base, not analysis), `F.expr` (syntax / unresolved-column),
+  and DataFrame ops (`filter("a +")` syntax / `select("no_col")` analysis / a doomed `cast` at
+  `collect` → base); the U4 pins (audit CQ-002/CQ-015, OTH-009) — the MoR-mode scope gate raises
+  `UnsupportedOperationException` (message preserved, still `PySparkException`; the former
+  partitioned-MERGE gate was RETIRED by A4 — `test_merge_partitioned_target_gate_retired_now_runs`
+  pins that it now runs. **Group T NARROWED the MoR probe** and **Group Y moved it again**:
+  merge-on-read `MERGE INTO` now runs on transform-partitioned tables too, so the surviving
+  `NotImplemented` on `write.merge.mode` is an UNRECOGNISED VALUE — both probes here
+  (`test_merge_mor_mode_gate_raises_unsupported_operation_exception` and the `RuntimeError`
+  near-drop-in pin) set `TBLPROPERTIES ('write.merge.mode' = 'merge-on-write')`, a permanent gate
+  rather than a scope boundary a later group will retire), a duplicate `CREATE NAMESPACE` and a `DROP TABLE` on a missing table raise
+  `AnalysisException` with the iceberg kind (`NamespaceAlreadyExists`/`TableNotFound`) visible in
+  `str(exc)` (Spark parity: those exception families extend `AnalysisException`); the
+  near-drop-in pin — `except RuntimeError` still catches the typed
+  exceptions, the MoR gate included; and the **Group X leaf-type pins** (derived from a LIVE
+  pyspark 4.0.0 JVM oracle, not from memory) — an invalid `spark.sql.catalog.<n>.type` raises
+  `IllegalArgumentException` with key+value preserved in `str(exc)`, the engine and facade config
+  paths raise the SAME class, `df.select/filter/drop(123)` + `F.sum(123)` raise
+  `PySparkTypeError`, `df.sort()`/`dropna(how=…)`/`createDataFrame([])` raise `PySparkValueError`,
+  `df.nosuchattr` raises `PySparkAttributeError` (with `hasattr` still working), each asserting
+  BOTH PySpark parents; plus
+  `test_python_arg_errors_runtime_error_divergence_is_deliberate`, which pins the known
+  `RuntimeError` divergence so it stays visible rather than accidental; **G-ROW**
+  `test_row_missing_key_and_bad_index_raise_pyspark_value_error` closes the Group X Row
+  residuals (`row["zz"]` / `row[object()]` → `PySparkValueError`, missing attr →
+  `PySparkAttributeError`, mixed ctor → `PySparkValueError`) with existing leaves only
+  (`PySparkKeyError` still deferred — no reachable malformed-Row raise). (`test_columns.py`'s `test_expr_referencing_a_column_raises`
+  moved from `ValueError`
+  to `AnalysisException` in the same change — the PySpark-faithful type.) The two execution-error
+  CAST pins (`test_sql_execution_error_raises_base_exception` +
+  `test_dataframe_collect_execution_error_raises_base_exception`) carry a **KNOWN-DIVERGENCE**
+  cross-reference (F-BR-6) to the parity backlog (`docs/spark-sql-iceberg-parity.md` §7): Spark
+  non-ANSI returns NULL where repark raises, so a future CAST-parity unit **updates** them, not obeys.
+- `test_catalog_flow.py` — the `process_silver.py` publish path end to end from Python (the
+  acceptance kernel): memory catalog + namespace, temp view → `tableExists` gate → CTAS
+  (`USING iceberg` + `TBLPROPERTIES` incl. `format-version`) → `MERGE … UPDATE SET * / INSERT *`
+  → `dropTempView`/`clearCache` → row oracle; the U1 facade pin
+  `test_ctas_partitioned_by_end_to_end` (audit P0-1: `spark.sql` CTAS with `PARTITIONED BY` →
+  value AND Arrow type via `to_arrow`, a partition-filtered read, and
+  read-back-after-reregister — previously the clause was silently dropped); plus temp-view
+  replace/drop semantics,
+  `tableExists` semantics (absent table/namespace → False, unregistered catalog → error,
+  one-part = temp views), and camelCase↔snake_case alias identity. WG2: the config-driven publish
+  flow — the measured `process_silver.py` `spark.sql.catalog.glue_alt.*` block (`type = memory` for
+  AWS-free use, `io-impl` present-and-dropped, no `register_memory_catalog` call) registers the
+  catalog at `getOrCreate` and drives namespace → CTAS → MERGE round-trip; plus a malformed catalog
+  block raising at `getOrCreate`. NR-1 (2026-07-12): a `repark.sql.catalog.<name>.*`-prefixed block
+  registers identically (CTAS round-trip), and the same property under both spellings with
+  different values raises the fail-loud conflict (error names both keys; raw values absent). WG-2
+  (ADV-1): `spark.create_namespace(catalog, namespace, location=…)` places a CTAS's data under the
+  set `location` (proving the facade → PyO3 → session → catalog path threads the property — the
+  rglob is empty if the location is dropped). WG-5 (ADV-2 residual):
+  `test_sql_create_namespace_location_places_ctas_data_there` — SQL `CREATE NAMESPACE … LOCATION`
+  through `spark.sql` now sets the location too (previously only the programmatic call could); a CTAS
+  lands under it, value + Arrow type checked on `to_arrow` + `.parquet` placement (empty rglob ⟺ the
+  SQL LOCATION was dropped). U2 (audit BUG-001):
+  `test_ctas_into_location_uri_only_namespace_places_data_there` — a `location_uri`-ONLY namespace
+  (the pre-existing real-Glue-DB shape, built via `WITH DBPROPERTIES`) resolves for CTAS through
+  the facade: data lands under it (empty rglob ⟺ the fallback read is gone and the memory catalog
+  silently fell back to $TMPDIR), value + Arrow type on `to_arrow`.
+- (combine 2026-07-29: match= patterns raw-stringed, RUF043)
+- `test_interchange_parity.py` — **G-INT** interchange battery (oracle = live PySpark 4.1.2 /
+  zulu-17 / UTC / arrow.pyspark.enabled=true, measured 2026-07-27). **INT-001** `to_pandas` /
+  `toPandas` + `to_arrow`: full value AND type matrix for int32/int64/float/decimal/string/bool/
+  date/timestamp with and without nulls (nulls → float64/object promotion, matching live Spark;
+  every column's Arrow + pandas cells pinned on all three rows — C1-Q-004). **INT-002**
+  `createDataFrame` from dicts / tuples / Rows / namedtuple+NamedTuple `_fields` (C3-Q-002) +
+  schema reorder-by-name + partial-overlap fail (C6-L-001) /
+  pandas (Int64+NaN→null; Timestamp/datetime64 tz+naive — C2-Q-001; typed all-null Int64/float/
+  bool/string/ts preserve Arrow types — C3-Q-001; Int32/16/8 all-null==non-null int64 width —
+  C4-Q-001; ArrowDtype ts/date/double all-null — C4-L-002; date/decimal all-null — C4-Q-003) /
+  polars (typed all-null + Date/Datetime/Decimal + Int32/16/8 width-stable — C3-Q-001/C4-*) /
+  list/dict/Row all-NaN→float64 + all-NaT→timestamp (C4-L-001) /
+  `numpy.datetime64[ns]`→TIMESTAMP not int / calendar-unit `D|W|M|Y` all-null+non-null DATE
+  occupancy-stable (C3-Q-001) / date+timestamp+Decimal literals —
+  value AND Arrow type via `to_arrow` (never only `show`); **r21 T1:** dict key-union null-fill
+  (not missing/extra refuse); Row still fail-loud; polars Binary/Time refuse retained
+  (nested List/Struct accepted — see `test_t1_cdf_ingest.py`); pandas Arrow time/binary
+  refuse retained; str-as-row, schema=str / set / dict / non-str names (C3-Q-003/C3-SAF-001),
+  ragged widths, empty pandas/polars CANNOT_INFER_EMPTY_SCHEMA (polars +schema too), inf float /
+  Timedelta + all-null timedelta/Duration (C4-Q-002) / `numpy.timedelta64` refuse (C3-L-001) /
+  pandas IntervalDtype refuse (C3-L-002) / polars Binary|Time all-null refuse (C3-L-003; r21 T1:
+  List|Struct|Array accepted via Arrow — see `test_t1_cdf_ingest.py`) / pandas PeriodDtype+Period
+  refuse (C4-Q-002) / categorical int|str null-occupancy
+  stable (C4-Q-003) / datetime64[ms|us|ns|s] all-null TIMESTAMP pin (C4-Q-001) / pandas
+  ArrowDtype time|binary all-null refuse (C4-Q-004; nested list/struct accepted r21 T1) /
+  datetime64 minute ``m`` ≠
+  month ``M`` case-sensitive unit pin (C5-Q-001/C5-L-001) / complex64|128 refuse all-null+cells
+  (C5-Q-002) / Sparse[int64]|Sparse[bool]|Sparse[object] null-occupancy stable
+  (C5-Q-003/C5-SAF-002/C6-Q-001) / object-dtype NaN→DOUBLE + NaT→TIMESTAMP witnesses + pure-None
+  VARCHAR (C5-SAF-001); schema pure rename positional + pure reorder by-name across
+  pandas/dict/Row/polars/namedtuple/NamedTuple (C2-L-001/C6-L-001, no value swap);
+  schema subset/partial-overlap fail loud; empty list+names / pure-None all-null columns pin
+  non-Null Arrow string types (C2-L-003); tz-aware→UTC; Decimal scientific fixed-point + refuse
+  under-scale/over-magnitude (C2-L-002); quote/escape (multi-quote).
+  **INT-003** `to_polars` value+dtype matrix **with and without nulls** (C1-Q-005); round-trip
+  `to_polars` → `createDataFrame` value identity for int64/string/float/bool/date; disclosed
+  `_divergence` pins for int32→int64 widen and Decimal(10,2)→Decimal(38,18) on the VALUES path
+  (dtype asserted, not just value).
+- `test_catalog_surface.py` — **R-CURCAT-FACADE** (closes G-INT INT-004 follow-up). Pins
+  `tableExists` (3-part + **2-part under currentCatalog** + 1-part under currentDatabase + temps),
+  `currentCatalog`/`setCurrentCatalog`/`currentDatabase`/`setCurrentDatabase`,
+  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists` (+ snake_case), namedtuple field
+  shapes (`Database`/`Table`/`CatalogMetadata`), `spark.sql.defaultCatalog` seed, CATALOG_NOT_FOUND
+  / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`), multi-catalog
+  isolation, non-str → PySparkTypeError. Remaining divergences: `SHOW TABLES IN` still
+  unsupported; Database `description`/`locationUri` are None. SQL sibling smoke: `SHOW
+  NAMESPACES IN` (full pin in `test_show_namespaces.py`).
+- `test_parity3.py` — **R-PARITY3**: `createDataFrame(schema=StructType|DDL)` preserves int32;
+  `show(vertical=True)` real `-RECORD` layout + only-showing-top-n. Row factory/pickle pins in
+  `test_row.py`.
+- `test_sql_alias.py` — **R-SQLALIAS** `repark.sql` package. Pins `is` identity for every
+  aliased name vs canonical `repark.*`, loud AttributeError/ImportError for absent pyspark.sql
+  names (never stubs), sed-swap smoke of the live-parity harness import block and
+  process_silver-style multi-imports.
+- `test_catalog_surface.py` — **G-INT INT-004** Catalog surface. Pins the implemented facade
+  (`tableExists` 3-part + temp view + unknown catalog raise; camelCase/snake_case aliases;
+  `clearCache`/`dropTempView`). Disclosed divergences (never silent): missing
+  `listDatabases`/`listTables`/`currentCatalog`/`currentDatabase`/`listCatalogs`/`databaseExists`
+  → AttributeError; two-part `tableExists("ns.table")` raises (repark is three-part Iceberg /
+  bare temp-view only); `SHOW TABLES IN` → UnsupportedOperationException. SQL sibling smoke:
+  `SHOW NAMESPACES IN` lists namespaces (full pin in `test_show_namespaces.py`). Live V2 shapes
+  recorded in the module docstring + `task/todo.md` G-INT ledger.
+- `test_sql_dml_eager.py` — WG-1 (F-BR-2): bare `spark.sql` DML executes **eagerly**, PySpark
+  parity. A bare `INSERT`/`DELETE`/`UPDATE` whose returned DataFrame is never collected still
+  applies the write (pre-fix: a silent no-op); collecting the returned DataFrame does not re-apply
+  (exactly-once); a runtime DML failure surfaces at `sql()` time as the base `PySparkException`
+  (NOT Analysis/Parse — WG-3). Every value check is on the `to_arrow` export path with the Arrow
+  **type** pinned too (never `show`). **r25 T2:** `test_bare_sql_branch_tag_replace_round_trip`
+  (CREATE OR REPLACE / bare REPLACE BRANCH|TAG success on facade; supersedes refuse-loud pin).
+- `test_case_insensitive_conform.py` — WG-4 (BUG-007): case-insensitive by-name column conform
+  through the real facade. A `MERGE … UPDATE SET * / INSERT *` whose source frame spells its columns
+  in a different case than the target conforms by name (value AND Arrow type via `to_arrow`); two
+  source columns colliding on one target raise a loud ambiguous error naming both. (The `ON`
+  predicate/explicit references are DataFusion-resolved — a disclosed follow-up; the source column is
+  named explicitly in `ON` here so the test pins the CONFORM, not that resolution.)
+- `test_filter_predicate_rewrite.py` — **audit G2**: the SQL-string filter-predicate identifier
+  rewriter (`DataFrame._quote_filter_sql_identifiers`), pinned through BOTH entry points
+  (`.filter` and `.where`, parametrized) on the `to_arrow` path, value AND Arrow type. Three
+  behaviours + their discriminators: (1) a casefold collision (`id`/`ID`) refuses **at the
+  reference** — `filter("other > 0")` on that frame still runs (the over-refusal regression),
+  every spelling of the colliding name raises `AnalysisException` naming both candidates (never
+  last-write-wins, P4C5-Q-001), and the name inside a single-quoted literal is data, not a
+  reference; (2) a token followed by `(` is a function call — `year(ts)` plans on a frame with a
+  `year` column, and the **case-differing** shape (column `YEAR`, call `year(ts)`) is the true
+  discriminator since DataFusion resolves function names case-sensitively (`"YEAR"(ts)` →
+  `Invalid function`), while bare `year`/`YEAR` on the same frame still rewrites (P5C5-Q-001);
+  (3) **all three** members of `_SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
+  that actually carries a column of that name — `["true","b"]`, `["false","b"]`, `["null","b"]` —
+  each with the suppressed rewrite asserted to fail (`"true"` / `"false"` → non-boolean predicate;
+  `b IS NOT "null"` → `ParseException`). Plus the upstream guard behind
+  `_by_name_casefold_map`'s exact-duplicate branch: DataFusion rejects duplicate output names at
+  frame construction on both paths (`createDataFrame` and `spark.sql`), so that branch is
+  defensive, not facade-reachable. Every behaviour is mutation-proven (each of the four rewriter
+  rules reverted → this module reds; dropping any single keyword from the set reds it too).
+  **Error shape:** the refusal is Spark's verbatim `[AMBIGUOUS_REFERENCE] Reference \`id\` is
+  ambiguous, could be: [\`id\`, \`ID\`].`, asserted by string EQUALITY. Two recorded, deliberate
+  differences from live Spark 4.1.2: repark lists the *actual* colliding columns where Spark
+  echoes the reference spelling once per candidate, and repark omits the `SQLSTATE: 42704` suffix
+  (no repark error carries SQLSTATE).
+  **Oracle basis:** every golden was derived from live PySpark 4.1.2 during audit G2. Two recipes
+  carry standing live legs in `_live_parity.py` (`filter_unambiguous_on_case_colliding_frame`,
+  `filter_keyword_literal_false_column`) and all three disclosed divergences carry live
+  `DISCLOSURES` legs; the remaining goldens (function-call skip, `null` keyword, mixed-case
+  survival) are **hand-derived from that same oracle session with no standing live leg**.
+  **Disclosed divergences characterized here** (behaviour fixes are out of charter): the `Column`
+  entry point (`df.filter(df["id"] > 0)`) does NOT refuse — it resolves exact-case-first — and an
+  explicitly double-quoted `'"ID" > 1'` resolves case-*sensitively* in DataFusion, while live
+  Spark raises `AMBIGUOUS_REFERENCE` / `CAST_INVALID_INPUT` respectively; backtick-quoted idents
+  are NOT a protected span, so `` filter("`x` > 0") `` is corrupted into `No field named
+  \"\"\"x\"\"\"` (PRE-EXISTING, main had none either — fix + pin belong in a follow-up unit);
+  and exact duplicate column names are rejected at construction by DataFusion where Spark accepts
+  them and refuses only at the reference.
+- `test_dropin_disclosure.py` — (+ Group F review 2026-07-21: withColumns lateral-alias divergence pin; + SEC-008 2026-07-24: `show()` logs a row-count breadcrumb at INFO but NOT row data — full render is DEBUG-only; + r23 CACHE1: `clearCache` is a real MemTable drop — no-warn disclosure pin only, behavior in `test_cache_persist.py`) WG-4 Clause 2 (OTH-010): the drop-in no-op / accepted-ignored
+  surface. `clearCache()` no longer a silent no-op (CACHE1 Q11); `show(vertical=True)` and
+  `master(url)` warn once per process (warn-once re-armed per test via the modules'
+  `_reset_dropin_warnings_for_tests`). Group F adds `setLogLevel` silent no-op + `spark.version`
+  repark-prefix disclosure pins. Rationale table: `docs/spark-sql-iceberg-parity.md` §8.
+- `test_dogfood_gaps.py` — Group F (2026-07-21 dogfood): F1 `current_timestamp` µs/UTC Arrow +
+  Iceberg v2 CTAS regression; F2/F3 `sparkContext`/`version`; F4 `withColumns` atomic +
+  `withColumnsRenamed` (+ duplicate-name fail-loud); F5 `transform` signature/error class; F6
+  DIVERGENCE-1 timestamp-LTZ collect passthrough disclosure (JVM-free). Oracles from live
+  PySpark 4.1.2.
+- `test_column_access.py` — (+ 2026-07-21 review pins: getitem requested-spelling naming, copy no-recursion) **Group G1** column-access sugar (2026-07-21; octo R1 Half B + R2
+  Half B S1 CI getitem; **Group H octo r2** NamedExpression display): `df.x` / `__getattr__`
+  (success, missing `[ATTRIBUTE_NOT_SUPPORTED]` AttributeError naming the column, method
+  precedence over a column named `count`, **case-sensitive** attr, underscore column,
+  existing-type dunder resolution + missing dunder → ATTRIBUTE_NOT_SUPPORTED, `repr`/`str`
+  on getattr/getitem entry); `df["x"]` / `__getitem__` (str → Column; **case-insensitive**
+  str resolve so `df["X"]` works when col is `x` (C2-L-001/002) with display/`repr`/`+1`
+  NamedExpression `X` not `x AS X`; CI ambiguity → AnalysisException; int positional
+  ±IndexError, Column → filter with schema equality, list|tuple → select with schema
+  equality (C2-Q-002), missing str → eager `AnalysisException` with type-identity +
+  `RuntimeError` hierarchy, bad type → TypeError); held-DF stop pins (`df.x` / `df["x"]` /
+  `df[0]` / Column-filter / list-select / `df[1.5]` all prefer-stop `RuntimeError`);
+  `Column.__neg__` (int64+nullable values, NULL rows, float64 values+type+nullable+null
+  rows (C2-Q-003), `select` columns `negative(x)`, `str`/`repr` `Column<'negative(x)'>`,
+  `F.sum(-df.x)` → `sum(negative(x))`, double `negative(negative(x))`, nested
+  `sum(negative((x + 1)))` display **and** values). JVM-free pins from live PySpark 4.1.2.
+- `test_columns.py` — the Column / expression surface (WG1): the seven `types` objects → engine
+  strings; `col`/`lit`/`expr` construction (incl. the column-referencing `expr` boundary raising);
+  arithmetic/comparison/logical operators; the Python-boolean misuse guards (`bool()`, `and`/`or`,
+  `if`, and `in` on a Column raise PySpark's ValueError instead of silently dropping predicates);
+  `alias`; `cast` (each type object + string spec +
+  decimal precision/scale + the `long`/`bigint`→Int64 spellings with float-truncation, R2 enabler);
+  `coalesce`/`concat`/`current_timestamp`; **D2** SQL-path `concat(coalesce(NULL,''),…)`
+  Utf8 (not string_view) + SQL any-NULL → NULL + multi-row SQL null + non-string stringify
+  pins (TPC-DS Q5/Q80/Q84 class); the DataFrame ops
+  `withColumn`, `filter`/`where` (Column + SQL string), `select`, `drop`, `orderBy`/`sort`
+  (asc/desc/nulls-ordering/`ascending`), `join` (inner/left, name/list/Column condition); an
+  end-to-end chain; and `test_parity_*` cases run through the real `repark_parity` differential core
+  against goldens recorded from **live PySpark 4.1.2** (zulu-17). Parity inputs are built with
+  `createDataFrame` so BOTH engines infer the pinned type + nullability — an inline SQL `VALUES`
+  fixture would pin repark's own int64/nullable/double shape as "Spark" (cycle-2 C1; `end_to_end_chain`
+  registers its two frames as temp views so the by-name join gets distinct qualifiers).
+- `test_sql_passthrough_parity.py` — the AR-WG-SQL adversarial corpus (C-AR-005): raw
+  `spark.sql()` strings — no DataFrame-API mediation — pinning the audit's live-proven
+  divergence classes on their exact inputs: integer `/` always-double (the S0 `5/2`),
+  divide/modulo-by-zero → NULL (Spark non-ANSI; literal and column divisors), decimal ÷ decimal
+  stays decimal, ORDER BY null-placement defaults (asc/desc/explicit override/the LIMIT
+  row-changing case/window `OVER (ORDER BY …)`), 0-based `[]` subscript + 1-based `element_at`
+  (arrays incl. the index-0 error, maps), and the `substr`/`substring` position-edge matrix.
+  Ends with the **divergence corpus × entry-point matrix** (added 2026-07-13 after the F.expr
+  bit-reinterpretation regression): a seven-class corpus (division, div/mod-by-zero, substr
+  edges, element_at, 0-based subscript) pinned through BOTH `spark.sql` and `F.expr` on the
+  Arrow path, value and type — new expression entry points must join the matrix.
+  Hand-computed Spark goldens through `assert_frames_equal` (real pyspark still not runnable
+  here — tracked in `task/todo.md`). The module docstring flags the one non-ANSI CAST divergence
+  NOT in the corpus (F-BR-6 backlog, `docs/spark-sql-iceberg-parity.md` §7): repark raises on
+  `CAST('abc' AS INT)` where Spark returns NULL, so it is green-only-excluded, not a corpus row.
+- `test_functions_dates.py` — WG2: `Window`/`row_number` (order, partition restart, Int32 type,
+  over-on-non-window error, spec immutability), the `%` operator, and the 13 date functions
+  (extractors incl. the `dayofweek` 1=Sunday trap, `last_day`/`add_months` month-end clamp AND the
+  end-of-month-preservation disambiguator (2015-02-28 +1 → 2015-03-31)/`date_add`,
+  `date_format` Java patterns + unsupported-letter raise, `trunc`/`date_trunc` granularities + the
+  `'Q'`→NULL / format-first cases); `test_parity_*` through the differential core (goldens recorded
+  from live PySpark 4.1.2 — pin column name + Arrow type + **field nullability** + bit-exact values;
+  nullability is part of the parity contract; the `row_number` non-null pin is a live assertion). The
+  parity date goldens carry `nullable=True`, so `_date_spine` builds a **nullable** `calendar_date`
+  via `createDataFrame` + `cast(DateType())` (both engines agree; an inline non-null `VALUES (DATE …)`
+  spine would pin repark's nullable date-function outputs as "Spark" — cycle-2 C1). Ends with the
+  acceptance kernel reproducing the `silver_dim_jobs.py` dim-dates transform shape with exact rows.
+- `test_metadata_tables.py` — **I2 / R-METADATA-TABLES** named oracle: Spark
+  `cat.ns.tbl.snapshots` (+ history/files/manifests/partitions/refs/entries/
+  metadata_log_entries/all_* family) + `spark.table("…files")`; schema pins from fork
+  inspect sources; row sanity on ≥3-snapshot fixture; real table named `files` wins; DML
+  + AS OF composition loud; unpartitioned empty-`partition` + readable_metrics-by-name
+  divergence pins (R142). Octo C1: FQ column named `files` not rewritten; UPDATE/CTAS
+  DML refuse; paren AS OF refuse; metadata of real `files` table; tight readable_metrics
+  interior pin (no hollow `len>=0`). Octo C2: JOIN metadata; TRUNCATE refuse; real
+  `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF refuse.
+  Octo C5: CREATE VIEW meta refuse. Octo C6: DROP/ALTER meta refuse.
+  Octo C8: ruff-format final; OCTO-CONVERGED.
+- `test_time_travel.py` — **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
+  append + MERGE) + tag/branch via `_testing_create_ref`; SQL `VERSION AS OF` /
+  `TIMESTAMP AS OF` / `FOR SYSTEM_*` (incl. latest-`<=` at s2/s3_ts + mid-interval — octo
+  C1-Q-001/L-001/L-002); reader options `snapshot-id` / `as-of-timestamp` /
+  `branch` / `tag` (all mutex pairs + residual incremental denylist); filter/projection
+  composition; current-read unaffected; write-to-branch/tag loud; `__repark_tt_*` hidden from
+  listTables; two-part AS OF fail-loud; unary-minus snapshot id named in error; multi-table
+  JOIN dual VERSION AS OF (octo C2); RFC3339 Zulu TIMESTAMP; direct read_iceberg_table
+  mutex kwargs; empty branch/tag loud (octo C3); schema-at-snapshot vs current after RTAS
+  widen (static provider, not post-hoc filter — octo C4); SYSTEM_VERSION string ref;
+  parquet+TT option loud; INSERT…SELECT AS OF; subquery AS OF; SNAPSHOT-ID case;
+  branch option trims whitespace (octo C5); CTAS/MERGE USING AS OF source (octo C6);
+  CTE AS OF; snapshot-id i64 overflow → AnalysisException (octo C7); triple mutex pin
+  (octo C8). Arrow multiset **and** schema pins via
+  `to_arrow`. Fork cites in module docstring (pin `4723104b`).
+- `test_facade_polish.py` — aggregate **compound display naming** (live-recorded PySpark 4.1.2
+  matrix: `sum((x + 1))`, `sum(CAST(x AS DOUBLE))`, `sum(abs(x))` **incl. negatives**, `sum(x AS y)`,
+  reflected-op commuting `2 * x` → `sum((x * 2))` + float-literal `2.0` (2026-07-21 review pins;
+  ruff: `match=` patterns carrying `|` must be raw strings — RUF043),
+  user `.alias` wins; comparison/logical: `sum(CAST((x > 0) AS INT))`, `NOT (x = n)`, `AND`/`OR`,
+  `IS NULL`/`IS NOT NULL`, multi-arm `CASE WHEN` values+names, `coalesce`/`concat` arity,
+  when-after-otherwise reject, residual semantic-option denylist pins; I1: time-travel options
+  no longer denylisted on iceberg, rejected on parquet) +
+  `spark.read` expansion (quote-aware `.table` ids, SQL-fragment reject, `.format`/`.load`,
+  `.option("path")` case-insensitive last-wins, semantic options fail loud on load/parquet/table,
+  format case-insensitivity, load-arg beats option
+  path, unknown-key tolerate, missing format/path → `AnalysisException`, `.schema` disclosed
+  `UnsupportedOperationException` (C1-Q-007)). JVM-free pins; mutation-proof.
+- `test_group_agg.py` — **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
+  (2026-07-22 review: ruff-formatted — the unit left the format gate red at tip)
+  PySpark 4.1.2 (run locally under Java 17 — `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`). `groupBy`/`agg`
+  (Column + dict form), the shortcuts (`count`/`sum`/`avg`/`min`/`max`), and the aggregate functions;
+  output-name parity (`count`, `count(1)`, `sum(x)`, `avg(x)`, `count(DISTINCT x)`); and the mandatory
+  edge pins through `assert_frames_equal` (value + Arrow type + nullability): sum/count/avg skip NULLs,
+  `count(*)` counts rows vs `count(col)` skips (non-nullable bigint), `sum(int32)`→long widening,
+  `first`/`last` with `ignorenulls` (deterministic under a single partition + an order-independent
+  unique-non-null pin), empty-group→0-rows vs empty-df global→1-NULL-row, and an unresolvable-column
+  `AnalysisException` (E8). **Group J:** `collect_list`/`collect_set` (NULL exclusion, empty→`[]`,
+  sorted-contents pins — order nondeterministic; string empty-vs-NULL pin; dict form with **value**
+  pins for list/set and multi-key dict; global `df.agg` list+set values; signed-zero collect_set
+  + multi-col countDistinct divergence pin vs Spark; dict reducer names case-insensitive
+  (`COLLECT_LIST`/`Collect_Set` — camelCase still rejected); empty-string multi-cd pin); multi-col
+  `countDistinct` 2-col/3-col
+  (name `count(DISTINCT a, b)`, LongType non-null, any-NULL-row exclusion; 3-col uses a
+  within-group-varying third column — not the grouping key; empty-frame → 0); cross-engine e2e vs
+  live PySpark (forces zulu-17 when present; skips on JVM gateway failure — never hard-fails
+  routine suite); mutation proofs (set≠list routing; multi-col≠first-col-only; null-if-any struct
+  pack; third-col-matters). **R3 (remediation):**
+  the zero-arg shortcuts (`groupBy(g).sum()` /
+  `.min()` full frame-equal goldens + avg/mean/max naming + the string-column exclusion) aggregate
+  every numeric column including the grouping key (`[g, sum(g), sum(x), sum(y)]`, oracle-verified).
+- `test_union_distinct.py` — **Group E (E3/E4)**: `union`/`unionAll` (UNION ALL by position, keeps
+  left names); int+double→double type coercion as a GENUINE parity golden — inputs built with
+  `createDataFrame` so both engines infer type+nullability identically (F1 remediation: the prior
+  fixture used inline SQL `VALUES (1)`/`VALUES (2.5)` and pinned repark's own `double`/nullable output
+  as the "Spark" golden, but Spark parses `2.5` as DECIMAL(2,1) → `decimal128(11,1)` non-null, so the
+  pin was repark-vs-repark); that inline-decimal-literal divergence is now DISCLOSED and pinned in
+  `test_union_inline_decimal_literal_diverges_from_spark` (repark's actual `double` output asserted;
+  the real Spark DECIMAL golden asserted NON-equal, load-bearing). Count-mismatch raises; `unionByName`
+  (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
+  golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
+  deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
+  (remediation):** the `allowMissingColumns` + `dropDuplicates(subset)` parity goldens now build
+  their inputs with `createDataFrame` (not inline `VALUES`) so both engines infer int64/nullable
+  identically — GENUINE parity, re-recorded from PySpark 4.1.2 (the inline-`VALUES` fixtures pinned
+  repark's own int64/nullable as "Spark" where live Spark is int32/non-null). **R5 (disclosure):**
+  `test_union_int_string_coerces_to_string_diverges_from_ansi_spark` — repark coerces `int UNION
+  string` → string (lossless), ANSI Spark 4 raises `CAST_INVALID_INPUT`; load-bearing. **R6:**
+  `dropDuplicates` subset accepts list/tuple, rejects a bare `str` (PySpark-shaped `TypeError`).
+- `test_na_rename.py` — **Group E (E5)**: `withColumnRenamed` (present + missing-is-noop); `fillna`
+  dict (parity golden) + dict-miss→`AnalysisException` (mandatory edge), scalar numeric (value+type;
+  the filled-column nullability is a disclosed Spark-inconsistency divergence, not pinned), `na.fill`
+  string (parity golden), subset, type-family separation (bool/numeric/string); `dropna`
+  `any`/`all`/`thresh`/`subset` and `na.drop`. Null-string fixtures use `createDataFrame` so the
+  Arrow type is `string` (not `string_view`) and nullability matches Spark. **R2 (remediation):**
+  `fillna(float)` into an integer column keeps the INTEGER dtype and fills the TRUNCATED value
+  (`2.5`→`2`, scalar + dict + int32-width-preservation + the float-into-double control; value+type
+  pins, oracle-verified). **R6:** `fillna`/`dropna` subset accept a `str`/tuple (not char-iterated),
+  wrong-type → PySpark-shaped `TypeError`.
+- (2026-07-23 review: RUF043 raw-string + format debt cleared) `test_writer.py` — **Group E (E6)**: `DataFrame.write` end to end against the in-memory Iceberg
+  catalog. `saveAsTable` create (CTAS) / append / overwrite / error(+errorifexists, the default) /
+  ignore; position-based `insertInto` (+ overwrite); identity `partitionBy` (partition-filtered
+  read-back); and `format`/`mode` validation (non-iceberg + bad mode reject loudly — **Group X**:
+  `test_mode_rejects_invalid` now pins `AnalysisException` + `[INVALID_SAVE_MODE]`, flipped from
+  `ValueError` per the live pyspark 4.0.0 oracle). **C1-SEC-001:**
+  malicious table names (`t; DROP`) raise `AnalysisException` on `saveAsTable` / `insertInto` /
+  `writeTo`; path-escape segments (`".."` / `"a/b"`) reject at `_sql_table_ref` (O3-C4-SEC-001);
+  valid multipart names still round-trip. Routes only
+  through CTAS / `INSERT INTO` / `INSERT OVERWRITE` — no new commit machinery. **R1 (remediation):**
+  `saveAsTable` into an existing table resolves columns BY NAME — a reordered same-typed append
+  lands correctly (parity readback value+type), an extra/missing source column raises
+  `AnalysisException`, and the insertInto-positional-vs-saveAsTable-by-name discriminator pins the
+  two writers genuinely diverge on a reordered frame (oracle-verified on PySpark 4.1.2).
+- `test_ctas_division_writeback.py` — **Group L-write**: CTAS integer-division type-derivation at
+  the facade boundary. `ReparkSession.sql` CTAS into an in-memory Iceberg catalog, then read the
+  written table back on the Arrow path (`to_arrow`), value + Arrow type: the load-bearing
+  union-of-division (`SELECT 5/2 AS q UNION ALL SELECT 7/2` → double `{2.5, 3.5}`, the shape that
+  failed at the parquet writer pre-fix), a bare division control, and a zero-divisor (`5/0` → NULL
+  double, non-ANSI). Oracle: live PySpark 4.1.2 (non-ANSI), re-derived for the unit.
+- `_live_parity.py` — the **live oracle tier** shared registry (27 scenarios; NOT a `test_` module — a helper,
+  never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
+  `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
+  (`Engine` abstraction wraps `session`/`functions`/`types`/`Window` + `to_arrow` vs PySpark's
+  `toArrow`). `SCENARIOS` = the 27-golden coverage floor (Group E group-agg/na/union + columns +
+  dates + the two Group L-write division goldens `division_union` / `division_bare` + the two
+  audit-G2 filter-rewriter goldens `filter_unambiguous_on_case_colliding_frame` /
+  `filter_keyword_literal_false_column`);
+  `DISCLOSURES` = the four load-bearing recorded divergences (`int_union_string`,
+  `fillna_scalar_numeric_nullability`, and the two audit-G2 filter ones
+  `filter_case_collision_bypasses` / `filter_backtick_identifier` — see
+  `test_filter_predicate_rewrite.py` below). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
+  `build_spark_engine()` imports pyspark **lazily** (never at module load → collects with no JVM)
+  and pins the recorded Spark 4.1.2 basis (`local[2]`, ANSI on, `timeZone=UTC`). VERIFIED against
+  live PySpark 4.1.2, not guessed.
+- `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
+  PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` runs each recipe on repark and
+  asserts `repark == golden` — the no-JVM home of the shared recipes. Live
+  (`REPARK_PARITY_LIVE=1`, `parity-live.yml` / `make parity-live`): one shared session-scoped
+  SparkSession; `test_live_scenario_matches_repark_golden_and_spark` re-derives each golden from
+  live Spark and asserts **repark == pinned golden == live Spark** (value + Arrow type/nullability);
+  `test_live_disclosure_still_diverges` re-asserts each recorded divergence STILL holds on both
+  engines (silent convergence → RED). Flag unset → every live test SKIPs with a visible reason
+  (`test_live_flag_predicate_gates_on_exact_env_value` pins the gate). Catches golden drift + oracle
+  drift the JVM-free suite cannot see (docs/testing.md "The live oracle tier").
+- `test_ta.py` — T1b + T2 batches 1–2 + WG2–WG5 + T3: the `repark.ta` DataFrame route. The 5000-row
+  OHLC golden fixture (`crates/repark-ta/tests/goldens/*.bin`, columns
+  `ts`/`open`/`high`/`low`/`close`/`periods`)
+  is written to Parquet and `read_parquet`-ed, then each indicator (`ta.ema(...).over(...)`, plus
+  `sma`/`rsi`/`adx` multi-input/`stddev` nbdev/`correl` two-series/`linearreg_angle`/`min`/`max`/
+  `sum`, the WG1 overlap-MA family `wma`/`dema`/`tema`/`trima` odd+even/`kama`/`t3` two vfactors/
+  `midpoint`/`midprice` two-series/the three split `bbands`, the WG2 batch — the ROC family,
+  `willr`/`cci`/`cmo`, `bop` four-series, `apo`/`ppo` at matype 0 **and 7**, `ma`/`macdext` matype 7,
+  split `aroon_down`/`aroon_up` +
+  `aroonosc`, `trix`, `ultosc`, and the WG3 directional family `dx`/`adxr`/`plus_di`/`minus_di`/
+  `plus_dm`/`minus_dm`, the split `macd`/`macdfix`/`macdext` outputs, the `ma` selector at
+  matype 0/1, the WG4 split stochastics `stoch_slowk`/`_slowd`/`stochf_fastk`/`_fastd`/
+  `stochrsi_fastk`/`_fastd` **and matype-7 all 8 golden bins** via the kwargs that route MAMA
+  (`stoch_type7_{slowk,slowd}` all-MAMA on both facades; `stoch_mixed_7_0_{slowk,slowd}`;
+  `stochf_type7_{fastk,fastd}` with `fastd_matype=7`; `stochrsi_type7_{fastk,fastd}` with
+  `fastd_matype=7`), the WG5 sweep-up `natr`/`beta` + the O/H/L/C price transforms
+  `avgprice`/`medprice`/`typprice`/`wclprice`, and the T3 parked four — the split `mama`/`fama`,
+  `sar`/`sarext` H/L, and `mavp` over the `periods` column at matype 0 + 1) is asserted
+  `to_bits`-identical to the recorded C-TA-Lib golden = the kernel output (C TA-Lib is the parity
+  oracle here; no goldens re-recorded). Plus call-site checks (Column-returns, string-vs-Column-form
+  agree, `MIN`/`MAX`/`SUM` alias identity, unknown-name error).
+  **G-NAN:** `null_lookback` opt-in pins — default `False` (and omitted kwarg) keeps lookback
+  prefix as **valid kernel NaN** slots (`is_valid`, `isnan`, `null_count==0`) *and* bit-exact
+  vs goldens (C5-Q-001: Arrow path, not numpy-only — so always-wrap cannot hide as NaN↔NaN);
+  with `True`, ema/rsi/bbands_upper null-prefix matches the polars_talib null pattern (lookback
+  lengths 20/14/19) and dense suffix stays bit-exact; mid-series NaN (injected past EMA
+  lookback) stays a valid NaN slot (never SQL NULL); keyword-only enforced via TypeError.
+  **r21 T4 ta-etl:** `over_columns` type guards; `withColumns(over_columns(...))` → one
+  `WindowAggExec` + Arrow bit-exact vs sequential `withColumn`; **r23b N2:** sequential same-spec
+  independent `withColumn` also merges to one `WindowAggExec` (was N-stack anti-pattern pin).
+- `test_n2_plan_collapse.py` — **r23b N2** plan-collapse pins: stage (a) logical alias-chain squash
+  (no `ts AS ts AS ts`); stage (b) adjacent same-spec withColumns/withColumn merge → 1
+  `WindowAggExec` + Arrow bit-exact vs single fused call; dependent `tr`→`etr5` keeps stacking;
+  filter / drop / select-subset / cache intervene (Q15 + octo C2 cache mark); `.round(4)` /
+  `.alias` same-layer wrap merges; overwrite-base-name then re-read stacks; different WindowSpec
+  no-merge; operator 4-chain → 1. Synthetic OHLCV only. **octo C1:** drop/select/alias/overwrite
+  pins. **octo C2:** cache blocks merge.
+  **r25 T3:** double-`.alias` repeated-alias peel (`… AS name AS name` absent); rename double-alias
+  → single; distinct rename chain `alias("a").alias("b")` → `… AS b` (octo C1-Q-006); operator-shaped
+  17-TA chain ≤1 `WindowAggExec` + Arrow to_bits parity vs fused `withColumns`.
+- `_acceptance.py` — WG4 shared helpers for the real-AWS acceptance harness (NOT a `test_` module,
+  so pytest never collects it): the `process_silver.py`-shaped constants (bronze bucket/prefix,
+  `glue_catalog`, `s3://` warehouse, scratch namespace `testing_repark_acceptance`, the real
+  `format-version 2` + copy-on-write + target-file-size `TBLPROPERTIES`) and pure builders
+  (`bronze_path` s3a, `glue_catalog_config`, `fq_table`, `ctas_sql`, `merge_sql`,
+  `acceptance_namespace_location` = `<warehouse>/<namespace>` — the ADV-1 programmatic namespace
+  location) + the `deduplicate` row_number transform. **A2 second bullet:** `s3tables_catalog_config`
+  (S3TablesCatalog impl, ARN as `warehouse` → RePark's `table_bucket_arn`) + the non-secret
+  `S3TABLES_CATALOG` name — the table-bucket ARN is a RUNTIME arg from `TABLE_BUCKET_ARN`, never a
+  committed literal.
+- `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
+  (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
+  shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
+  under the Glue warehouse without doubling a trailing slash — ADV-1), the scratch-≠-production
+  namespace guard, a structural guard that `test_aws_acceptance.py` carries no `DROP TABLE`/`DELETE
+  FROM`/`DROP NAMESPACE`, and the `deduplicate` transform against a memory session (newest row per id).
+- `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
+  `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
+  stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
+  `process_silver.py`: a Glue-`catalog-impl` session via `.config(...)`, bronze `s3a://` read
+  (entity/ds/id-col from `REPARK_ACCEPT_ENTITY`/`_DS`/`_ID_COL`), the dedup transform, then
+  namespace-create (programmatic `spark.create_namespace(..., location=…)` — ADV-1, since SQL
+  `CREATE NAMESPACE` without `LOCATION` would omit the `location` a real Glue catalog requires (SQL `LOCATION` works too since WG-5); idempotent on an
+  "already exists") → `tableExists`→CTAS-or-MERGE → idempotent second MERGE into `testing_repark_acceptance`.
+  Oracles: bronze rows > 0, published == deduped (fresh CTAS), second pass count unchanged. NO
+  DROP/DELETE of any AWS object — cleanup is the user's manual call. **A2 second bullet
+  (`test_process_silver_acceptance_against_s3tables`):** the same shared publish path
+  (`_bronze_dedup_publish_idempotent`) against an **S3 Tables** catalog — additionally gated on
+  `TABLE_BUCKET_ARN` (SKIP, not fail, when absent, so a Glue-only run is unaffected); ARN read from
+  env, never logged; namespace created WITHOUT a `location` (S3 Tables provides storage via the
+  table bucket). Runbook: `REPARK_AWS_ACCEPTANCE=1 TABLE_BUCKET_ARN=<us-east-2 ARN> AWS_REGION=us-east-2`.
+
+## I want to...
+
+| ...do this | go to |
+|---|---|
+| Add a `DataFrame.mergeInto` builder pin (R-MERGEINTO) | `test_merge_into.py` |
+| Add a cache/persist pin (R-PERF-CACHE) | `test_cache_persist.py` |
+| Add easy DataFrame lowering pins (R-DF-EASY) | `test_df_easy.py` |
+| Add a facade behavior test | `test_session.py` |
+| Add smartCsv / inference protocol pins (r25 T4) | `test_t4_csv_smart.py` |
+| Add an engine-knob `.config(...)` range/validation test (batch size / partitions / memory) | `test_session_config_knobs.py` (per-key Spark rules — SAF-006/SAF-007) |
+| Add an error-taxonomy / exception-type test | `test_errors.py` |
+| Add a `Row` API / collect-row parity test (G-ROW) | `test_row.py` |
+| Add a select/projection display-naming test (Group H) | `test_select_naming.py` |
+| Add H2 Group H long-tail / wrap-display / same-object self-join pins | `test_h2_group_h2.py` |
+| Add a catalog / publish-path test | `test_catalog_flow.py` |
+| Add interchange (`toPandas` / `createDataFrame` / `to_polars`) parity | `test_interchange_parity.py` (G-INT) |
+| Add a Catalog API surface / missing-method divergence pin | `test_catalog_surface.py` (G-INT) |
+| Add a `DESCRIBE NAMESPACE` / namespace-metadata-readback test | `test_describe_namespace.py` |
+| Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
+| Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
+| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse |
+| Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
+| Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |
+| Add a Column / functions / types / DataFrame-op test | `test_columns.py` |
+| Add a `filter`/`where` SQL-string predicate rewriting / ambiguity test | `test_filter_predicate_rewrite.py` |
+| Add a groupBy / agg / aggregate-function test | `test_group_agg.py` |
+| Add a union / distinct / dropDuplicates test | `test_union_distinct.py` |
+| Add a withColumnRenamed / na (fillna/dropna) test | `test_na_rename.py` |
+| Add a `DataFrame.write` (saveAsTable/insertInto) test | `test_writer.py` |
+| Add a CTAS write-path type-derivation test (division/write-schema) | `test_ctas_division_writeback.py` |
+| Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; overwritePartitions now a LOUD gate — raise + target untouched, both spellings (the empty-wipe pin replaced); C1-Q-005 option warn-once; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
+| Add a Window / date-function / row_number test | `test_functions_dates.py` |
+| Add a `repark.ta` indicator test | `test_ta.py` |
+| Add / extend a live-oracle golden (repark == pin == live Spark) | `_live_parity.py` (`SCENARIOS`) + `test_parity_live.py` |
+| Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
+| Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
+| Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
+| Run the suite | `uv run maturin develop` then `uv run pytest python/repark/tests` |
+
+## Pointers
+
+- Up: [../map.md](../map.md)
+- Code under test: [../src/repark/map.md](../src/repark/map.md).
+
+## Debug
+
+- ruff format lockstep (octo C8).
+
+
+(2026-07-31 R-EXPLODE-REWRITE octo c1 pins in `test_explode_rewrite.py`: str ColumnOrName,
+cast sticky, withColumn unnest, pre-aliased AS strip, multi-array exact type, posexplode_outer.)
+(2026-07-31 R-EXPLODE-REWRITE octo c2 pins: pre-aliased sibling no double-AS, Timestamp outer,
+reserved/mixed-case idents, hostile ColumnOrName quote, asc/desc sticky, alone outer.)
+(2026-07-31 R-EXPLODE-REWRITE octo c3 pins: compound mixed-case, nested-list outer, hostile
+ColumnOrName, array-of-struct, coalesce outer type, size sibling.)
+(2026-07-31 R-EXPLODE-REWRITE octo c4 pins: sql.functions export, nested generator refuse,
+hostile cast reject.)
+(2026-07-31 R-EXPLODE-REWRITE octo c5 pins: F.size/coalesce/when/str refuse generator, nested
+explode refuse, chained cast compose, generator select dup-name preflight.)
+(2026-07-31 R-EXPLODE-REWRITE octo c6 pins: F.count/sum/avg refuse generator; filter/orderBy/
+groupBy/agg refuse; nested `[[]]` top-level array_length not cardinality product.)
+(2026-07-31 R-EXPLODE-REWRITE octo c7 pins: F.year/date_*/.dt refuse generator;
+Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explode refuse.)
+
+| Symptom | First check |
+|---|---|
+| `ModuleNotFoundError: repark._native` | Run `uv run maturin develop` first |
+| `test_to_polars` skipped | expected unless the `polars` extra is installed (`importorskip`) |
+| `test_parity_live.py` live tests SKIPPED | expected unless `REPARK_PARITY_LIVE=1` + a JVM (`make parity-live`); routine CI is JVM-free by design |
+| live tier RED | triage per docs/testing.md: golden leg only → golden drift (fix pin); live-Spark diverges from an unchanged pin → oracle drift; a disclosure reds → engines converged |
+
+First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).
+
+<!-- 2026-07-14: lint-pass doc touch for staged CTAS / metadata schema -->
+
+- ACC remediation: F6 tick-identity LTZ pin (Q-001); withColumns TypeError before alias (Q-002).
+
+- Octo C1: SQL current_timestamp residual pin; CTAS unit==us; rename chain; default master.
+- Octo C2–C4: CTAS tz pin; not-null current_timestamp; empty withColumns; transform *args.
+- Octo C5–C8: stop() blocks sparkContext/version; CTAS tz UTC pin.
+
+- Octo r2 C1: config spark.master OTH-010 warn; held SparkContext stop; withColumns str keys; F1 near-now + F.expr ns residual pins.
+- Octo r2 C2–C5: master warn on getOrCreate reuse; SQL CTAS ns residual fail pin; empty rename map.
+- Octo r2 C6–C8: dual-spell withColumns identity pin; F4 atomicity re-attested.
+
+- Octo r3 C1: DF liveness token on stop; empty col names rejected; case-insensitive spark.master warn; cast(TimestampType) tz-strip pin.
+- Octo r3 C2–C5: insertInto/stop gate; singular empty names; CTAS near-now value; columns/schema/transform after stop.
+- Octo r3 C6–C8: held saveAsTable after stop pin; mutation re-attestation CLEAN@S1.
+
+- `test_pg_catalog.py` — PG3 catalog config + skip-loud live. Ported minus **one** node (EC-4):
+  `test_postgres_catalog_config_redacts_in_engine_errors` — it is the only case here that reaches
+  repark-core's `CatalogKind::Postgres` `NotImplemented` registration, which refuses the session at
+  native construction. The parse-level pins (`…requires_url_at_build`) port green.
+
+- `test_pg_acceptance.py` — PG4 battery + report SKIP-LOUD/live.
+
+- **skeptic fix:** dbtable-from-props pin; scale no silent cap; catalog.schema.table live pin.
+
+- **octo-extra c1:** bad partition int → IllegalArgumentException pin.
+<!--(combine rider: dash normalization, pinned ruff) 2026-08-01 -->
+
+- `test_scalar_subquery_sort_pin.py` — DF54.1 Sort-loss regression pins (fuzz-42-1/2 class);
+  re-enable done-signal for the physical scalar-subquery flag.
+
+- 2026-08-01 style rider: `test_ml_feature_oracle.py` reformatted (ruff format at tip).
+
+- 2026-08-01 rider: `test_pyspark_compat_smoke.py` is now a subprocess WRAPPER over
+  `repark-parity/compat/smoke_suite.py` (union-run JVM/namespace isolation).
+
+<!-- 2026-08-02: r16 combine rider — stale pins updated to X2/X3 surfaces: bigint dtypes, error-class regexes, lit(list) now legal -->
+
+<!-- 2026-08-02: r16 rider — compat-smoke wrapper importorskips pyspark itself (wheel-smoke CI has no pyspark; inner-suite skip → pytest exit 5 misread as failure) -->
+
+<!-- 2026-08-03: R-AUTO-MEMCAT — test_auto_memory_catalog.py: bare round trip, suppression (config/knob/foreign default), stop() warehouse cleanup, :memory: isolation across sessions -->
+
+<!-- 2026-08-03: R-AUTO-MEMCAT style rider — RUF043 raw regex + doc-line wrap in test_auto_memory_catalog.py -->
+- M7 format/lint gate clean (ruff format + py-lint).
+
+<!-- 2026-08-03 (r21 combine rider 3): test_t1_cdf_ingest.py + two-mode legacy-conf coerce/refuse pin. -->
+
+<!-- 2026-08-03 (r21 combine): annotation fix in legacy-conf pin (ReparkSession, ruff F821). -->
+
+<!-- 2026-08-03 (r21 combine rider): T2 OOM tests made box-deterministic — pin datafusion.execution.target_partitions=128 so spill reservations exceed the pool regardless of core count (CI wheel-smoke DID-NOT-RAISE fix); verified under taskset 2-CPU. -->
+
+<!-- 2026-08-04 (r23 combine rider): catalog surface pin += registerFunction/functionExists (+snake twins) — C6 additions. -->
+<!-- (pin content landed this commit) -->
+
+- `test_sec_boundaries.py` — **r24 SB1:** SEC-01 facade+free-SQL `maxArrayElements` ceilings; SEC-02 `allowLocalFilesystemDDL` COPY TO refuse/allow pins.
+
+<!-- 2026-08-04 (r24 combine rider): cast-refusal pins renamed with their assertion (rule 11) —
+  test_cast_unknown_type_raises_parse_exception_at_facade_allowlist; four hostile-token pins in
+  test_explode_rewrite.py moved to ParseException with the allowlist untouched. -->
+
+<!-- 2026-08-04 (r24 combine rider): test_sec_boundaries.py += Python-side grandfather pin
+  (COPY TO under a registered memory-catalog warehouse allowed; sibling path refused) and the
+  fail-closed pin (runtime conf.set cannot loosen the gate in either spelling). Readback-lie on
+  conf.set is a documented r25 seed in task/sb1-boundaries-ledger.md. -->
+
+<!-- 2026-08-04 (r24 combine rider): test_sec_boundaries.py += typed-writer regression pin —
+  df.write works with the gate at default while free SQL to a SIBLING path still refuses
+  (guards against re-widening the grant to destination.parent). -->
+- r25 morning critic pins: facade metadata-table `.count()`/styled `.show()`/partial
+  projection (test_metadata_tables.py); `CREATE OR REPLACE TAG … IN <table>` spelling kept
+  in the round-trip loop (test_sql_dml_eager.py).
+
+- octo C1: option-map samplingRows pin
+
+- octo C2: samplingRows empty/non-integral refuse pins
+- octo C3 commit 2026-08-05T23:29:11Z: order-independent decimal union
+- octo C4: t2 ledger reader.py SSOT; bool samplingRows pin
+
+## I want to... → go to
+
+| I want to... | go to |
+|---|---|
+| Find the test for a facade surface | grep this file for the surface name, then the annotated bullet |
+| Understand why a test is absent | [../../../task/port/deferred-python-tests.txt](../../../task/port/deferred-python-tests.txt) + [../../../task/port/deferred-tests.md](../../../task/port/deferred-tests.md) |
+| Reproduce the recorded cohort run | `docs/design/python-facade.md` §6.3 (environment clauses) |
+| See the port record for this suite | [../../../task/p3e-facade-ledger.md](../../../task/p3e-facade-ledger.md) |
+
+## Pointers
+
+- Up: [../map.md](../map.md)
+- The package under test: [../src/repark/map.md](../src/repark/map.md).
+- The parity harness nine of these files import:
+  [../../repark-parity/tests/test_compat_harness.py](../../repark-parity/tests/test_compat_harness.py).
+
+## Debug
+
+| Symptom | First check |
+|---|---|
+| `ModuleNotFoundError: repark._native` | The wheel is not installed in the running interpreter |
+| `ModuleNotFoundError: repark_parity` | Install `python/repark-parity` by path — a bare interpreter outside the uv workspace does not resolve it implicitly |
+| A pyspark/duckdb-gated module runs instead of skipping | The cohort requires both ABSENT; an unstated venv changes the denominator |
+| A gated AWS/PG test runs | A `REPARK_*` gate variable leaked into the environment — the cohort requires every one unset by name |
+| Outcome moved vs `task/census/baseline-fc3f48102/facade/` | Do not "fix" it — attribute it. Unattributed movement fails the phase (design §6.4) |
+
+First checks: rebuild the wheel and reinstall by path. Escalate to: [../map.md#debug](../map.md).
