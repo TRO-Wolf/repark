@@ -35,6 +35,16 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "RATCHET: if registration moves",
     ),
+    "repark-python": (
+        190,  # measured 180 (EC-10; ratcheted 230 -> 190 when the taxonomy moved out)
+        "the PyO3 crate root is a MANIFEST, not logic: doc lines, six `mod` decls, the "
+        "`pub use` re-exports (incl. the exception taxonomy re-export), the two `to_py_err` "
+        "folds, the env-gated tracing init, and the `#[pymodule]` registration. The "
+        "`create_exception!` taxonomy lives file-backed in src/exceptions.rs (the recorded "
+        "RATCHET fired at PR-3: the module-scoped disallowed_methods expectation needed a "
+        "module, so it became a file and the ceiling ratcheted 230 -> 190). Already uses the "
+        "sanctioned file-backed test module (`#[cfg(test)] mod tests;` -> src/tests.rs)",
+    ),
     "repark-ta": (
         260,  # measured 249 (49 doc lines + the `TaError` enum + the kernel re-export block)
         "verbatim port of the v1 kernel crate root: the crate-wide `TaError` enum (the kernel "

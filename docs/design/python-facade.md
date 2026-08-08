@@ -161,9 +161,11 @@ quietly re-point the text-stable lines.
 `ReparkSession::builder()…​.with_sql_dialect(Arc::new(SparkDialect)).with_extension(Arc::new(SparkExtension)).build()`.
 A bare builder yields stock DataFusion. This is the standing edit class already recorded from phases
 1 and 2; phase 3 is where it finally bites at the user-visible boundary (§5, F3).
-**Explicit non-sites:** the column module's five throwaway `SessionContext` provisionings (the
-standalone-Column analysis contexts that call `register_all` + `analyzer_rules` directly) port
-**verbatim** and are NOT door-install sites — the door-neutral function registry retains all three
+**Explicit non-sites:** the column module's four throwaway `SessionContext` provisionings — the
+standalone-Column analysis contexts that call `register_all` + `analyzer_rules` directly (one
+production site + three test sites; the count was verified against the pin at PR-3, correcting an
+earlier draft's "five") — plus the dataframe module's three plain test fixtures, all port
+**verbatim** and are NOT door-install sites: the door-neutral function registry retains all three
 symbols, and mechanically applying EC-2 there would change standalone-Column semantics. A reviewer
 applying "every bare construction becomes a door-installed builder" must stop at session
 construction sites.
@@ -632,7 +634,7 @@ three disk-exhaustion and linker-signal incidents — and it has no Python setup
 | Change | Lands in | Required check? |
 |---|---|---|
 | Split `rust` → `rust-lint` + `rust-test`; add setup-python 3.12 to both (libpython); add the free-disk step and the debug/incremental env; align the cache keys with `cache-warm.yml` (prefix-key kept, `shared-key` per family added on both sides — without it rust-cache mixes the job id into the key and warm saves are never restored) | PR-1 | yes — replaces one context with two, pushed to branch protection in the same change |
-| Panic-ban carve-out: workspace invocation excludes the binding; a second invocation runs it `--lib` without the disallowed-methods lint (the exception macro expands to `expect` at five sites) | PR-3 (with the crate) | covered by `rust-lint` |
+| Panic-ban carve-out: workspace invocation excludes the binding; a second invocation runs it `--lib` with the FULL deny list — the five exception-macro sites carry a module-scoped `#![expect(clippy::disallowed_methods)]` (per-call-site cannot reach a macro expansion), keeping the spawn ban live for the binding | PR-3 (with the crate) | covered by `rust-lint` |
 | `ci.yml` `python` job extended: `uv lock --locked`, the parity-harness pytest; renamed from "Python (ruff)" | PR-4 | yes — rename updates protection in the same change |
 | `pip-audit.yml` ported as-is (weekly cron + path-filtered) | PR-4 | no — path-filtered checks must never be required |
 | `wheels.yml`: job `smoke` = debug host build (no manylinux container), venv import smoke, **and the full facade suite against the packaged wheel**; always-run on `pull_request` with **no paths filter** (a path-filtered required check deadlocks PRs — twice, historically). Lands **with the wheel package, never before it** — a required check whose working directory does not exist reds `main` on merge | PR-5 | **yes** |

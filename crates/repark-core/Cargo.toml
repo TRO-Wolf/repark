@@ -37,10 +37,14 @@ async-trait.workspace = true
 url.workspace = true
 # Hoisted `parse_timestamp_to_ms` (TIMESTAMP AS OF string → epoch ms; UTC wall clock).
 chrono.workspace = true
+# `EngineRuntime` (EC-5 / design §4 Q7) NAMES the embedding's Tokio runtime handle. Core never
+# constructs or blocks on one — the type only exists so an embedding (the PyO3 binding today, a
+# Flight SQL handler later) has a shared vocabulary for the executor it owns. No new resolved
+# package: DataFusion already pulls tokio into the lock.
+tokio.workspace = true
 
 [dev-dependencies]
 # `#[tokio::test]` drives the async session API; `parquet` writes a fixture for the read_parquet
 # test; `tempfile` is the warehouse for the in-memory-catalog session tests.
-tokio.workspace = true
 parquet.workspace = true
 tempfile = "3"

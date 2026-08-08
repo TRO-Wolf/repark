@@ -17,8 +17,9 @@ shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router + `SparkDialec
 `SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional window-UDF
 layer, tier 3), and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard
 set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has landed
-`crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and still owes
-`crates/repark-python` (tier 4) and the `python/` tree.
+`crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and
+`crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**, ported in PR-3 under design §3's
+edit classes), and still owes the `python/` tree — no wheel is buildable yet and none is claimed.
 
 ## Contents
 

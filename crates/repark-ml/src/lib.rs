@@ -1,6 +1,6 @@
 //! Native tier-1 ML estimators for repark (M3).
 //!
-//! ## Design (docs/ml-design.md)
+//! ## Design (docs/design/python-facade.md §4 Q3)
 //!
 //! * **Fit** may be multi-pass / multi-iter **Rust scans over Arrow batches** via the session
 //!   stream. Peak held state is `O(p²)` (normal equations / IRLS weights) or `O(k·p)` (centers)

@@ -1,0 +1,93 @@
+[package]
+name = "repark-python"
+description = "PyO3 bindings (cdylib) exposing the repark engine to Python as `repark._native`."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+name = "_native"
+crate-type = ["cdylib", "rlib"]
+
+# This crate deliberately does NOT use `[lints] workspace = true`. PyO3's `#[pymodule]` /
+# `#[pyfunction]` macros expand to `unsafe extern "C"` code, which the workspace-wide
+# `unsafe_code = "forbid"` would reject. We allow `unsafe` HERE ONLY (the FFI boundary) and keep
+# clippy all + pedantic. See this crate's map.md for the rationale.
+[lints.rust]
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+[dependencies]
+pyo3.workspace = true
+# Arrow with the `ffi` feature → `FFI_ArrowArrayStream`, the engine of the zero-copy Arrow PyCapsule
+# handoff (`__arrow_c_stream__`). We deliberately do NOT enable arrow's `pyarrow` feature: it pulls in
+# `arrow-pyarrow`, which carries its own `pyo3` pin and risks linking two pyo3 versions. The PyCapsule
+# path is pyo3-version-independent and is exactly what `pyarrow.table(...)` / `polars.from_arrow(...)`
+# consume. See this crate's map.md ("Arrow handoff").
+# `ipc` — R-PERF-ARROW-CDF: decode Arrow IPC streams from Python createDataFrame into MemTable.
+arrow = { workspace = true, features = ["ffi", "prettyprint", "ipc"] }
+# Needed only to *name* the `DataFrame` type that `repark_core::ReparkSession::sql` returns
+# (it is `datafusion::prelude::DataFrame`). No DataFusion logic is built here — wrapping only.
+datafusion.workspace = true
+# EC-1 (docs/design/python-facade.md §2.2, §3): v1's `repark-core` (the error seed) and
+# `repark-session` (the session API) COLLAPSE into this ONE entry. `repark-core` re-exports
+# `Error` / `ErrorClass` / `Result` from `repark-common`, so v1's textually-identical
+# `repark_core::Error` lines now resolve through this crate — naming both would collide.
+# A compile-time type-identity test (`src/tests.rs`) pins that re-export.
+repark-core.workspace = true
+# The Spark date-function `Expr` builders (`repark_functions::expr_fn`) that `PyColumn` composes so a
+# standalone column expression carries the exact UDF the session registers for the SQL path.
+repark-functions.workspace = true
+# The TA window UDFs (`repark_ta::udf`): `PyColumn.ta_window` builds a DataFrame-API window
+# expression carrying the same UDF the session registers for the SQL path.
+repark-ta = { workspace = true, features = ["datafusion"] }
+# M3 native estimators: streaming OLS / IRLS / Lloyd kernels (thiserror-only crate).
+repark-ml.workspace = true
+# EC-2 (design §3, §5 F3): the Spark DOOR. v1's session crate inlined the Spark registry,
+# analyzer rules and statement router into `build()`; phase 1 inverted both into seams, so a bare
+# builder yields stock DataFusion. `PyReparkSession::__new__` installs `SparkDialect` +
+# `SparkExtension` explicitly, and this is the dep that makes them nameable. Deliberate
+# NON-edges (design §2.2): `repark-sql` (no ANSI door from Python — §4 Q2) and `repark-iceberg`
+# (the binding reaches Iceberg only through `ReparkSession` and SQL text).
+repark-spark.workspace = true
+# A multi-thread tokio runtime owned by `PyReparkSession`, so the synchronous Python API can
+# `block_on` the engine's async `sql` / `read_parquet`.
+tokio = { workspace = true }
+# `StreamExt::next` to poll a DataFusion `SendableRecordBatchStream` one batch at a time in the
+# streaming Arrow export (`__arrow_c_stream__`). DataFusion does not re-export the `Stream`
+# extension trait, so this direct dep is required. Already a workspace dep (repark-spark /
+# repark-iceberg use it) and already resolved in `Cargo.lock` — wiring it here adds only the
+# dependency edge (no new crate, no version resolved).
+futures = { workspace = true }
+# QUAL-05 / OBS1: PyO3 entry-point family spans (workspace pin only — no new package version).
+tracing.workspace = true
+# R-TRACE-SUBSCRIBER: env-gated `tracing` subscriber for live MERGE phase profiles through the
+# wheel. Feature-lean (`fmt` + `env-filter` only). Absent `REPARK_LOG`/`RUST_LOG` → never installed.
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+  "fmt",
+  "env-filter",
+  "std",
+  "ansi",
+] }
+
+[dev-dependencies]
+# EC-1 type-identity guard (`src/tests.rs`): naming `repark_common::Error` alongside
+# `repark_core::Error` is what makes "the same type, re-exported" a COMPILE error to break. It is
+# deliberately a DEV dep — the binding's product dependency list stays the five crates design
+# §2.2 names, and the crate-DAG guard ignores dev edges by design.
+repark-common.workspace = true
+# `auto-initialize` lets `Python::attach` boot an embedded interpreter so the Rust integration
+# tests can drive the pyclasses without a built wheel. It is a *dev* dependency: maturin builds the
+# wheel without dev-deps, so the shipped extension module never carries `auto-initialize`.
+pyo3 = { workspace = true, features = ["auto-initialize"] }
+
+[features]
+# Enabled by maturin when building the wheel (links against libpython via the stable ABI).
+# OFF by default so `cargo check` / `cargo test` build the crate without needing to link libpython.
+extension-module = ["pyo3/extension-module"]

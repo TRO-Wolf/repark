@@ -61,7 +61,8 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
 - **Server-prep disciplines from day one** (everything-through-Session, bindings-as-thin-adapter) —
   [docs/adr/0004-server-prep-disciplines.md](docs/adr/0004-server-prep-disciplines.md).
 - **No PyIceberg in any form**; **no Sail / pysail**. Own-the-stack.
-- **`unsafe_code = "forbid"`** workspace-wide EXCEPT the future `crates/repark-python`.
+- **`unsafe_code = "forbid"`** workspace-wide EXCEPT `crates/repark-python` (landed phase-3 PR-3;
+  the crate sets a local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`).
 - **Tests land with the code** (same commit); `cargo test --workspace` is the test command.
 - **`map.md` in every directory, in lockstep** with code changes.
 - **Pin one DataFusion family** across all DF-touching crates; `Cargo.toml` is the SSOT;

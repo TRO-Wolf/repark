@@ -3,7 +3,8 @@
 #
 # Hand-rolled linear algebra (Cholesky) + streaming fit accumulators. Zero new crates.io
 # deps beyond workspace `thiserror` — no ndarray / nalgebra / linfa. Python never trains;
-# models hold params only. See docs/ml-design.md (Rust-rule amendment for multi-pass fit).
+# models hold params only. See docs/design/python-facade.md §4 Q3 (the in-repo ML authority:
+# scope, the Rust-rule amendment for multi-pass fit, and this crate's phase-3 scheduling).
 # ===========================================================================================
 
 [package]
