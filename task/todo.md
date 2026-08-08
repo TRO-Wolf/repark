@@ -104,7 +104,7 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       + MoR-valve hoist; census closed (334 ported names empty sorted-diff under
       `repark_sql::` → `repark_spark::`; 342 − 6 postgres_p11 − 2 phase-1 time-travel hoists).
       Deferred #3 landed (ledger: [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md)).
-- [ ] **PR-4 — repark-ta (IN FLIGHT)**: kernels + goldens (148 `.bin`) ported verbatim +
+- [x] **PR-4 — repark-ta (DONE)**: kernels + goldens (148 `.bin`) ported verbatim +
       NEW `TaExtension`; `SparkExtension` composes it at v1's registration position (p2b rider
       #1 DISCHARGED). TA census generated at the pin and empty-diff (146/146 default features;
       178→180 with `--features datafusion`, +2 = the door-native `TaExtension` tests).

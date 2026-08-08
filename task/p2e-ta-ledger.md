@@ -13,8 +13,10 @@ and re-attach it to the Spark door at v1's registration position:
 
 - Port `crates/repark-ta` from the pin **VERBATIM** — all `src/`, `tests/` (`contract.rs`,
   `goldens.rs`, `p1c_microbench.rs`), the 148 `.bin` goldens + `manifest.json`, `NOTICE`, and
-  the four `map.md` files. `diff -r` against the pin was empty before the two declared manifest
-  edits below; no kernel byte was touched.
+  the four `map.md` files. `diff -r` against the pin reports **only** the declared deltas of
+  classes 2, 3 and 5 below — `Cargo.toml`, two `map.md` dead-link fixes, the new
+  `src/extension.rs` + `src/extension/`, and the 4-line `mod extension` wiring in `src/lib.rs`.
+  No kernel byte and no test byte was touched; all 148 goldens are md5-identical.
 - NEW (the only non-ported code): `src/extension.rs` — `TaExtension`, a thin
   `repark_core::SessionExtension` whose `register` forwards to `udf::register_all` and whose
   `configure` stays at the trait default. Feature-gated behind `datafusion` alongside `udf`.
@@ -45,7 +47,8 @@ runs on in-memory `SessionContext`s / local fixtures; acceptance env vars NEVER 
    `serde_json = "1"` hoisted to `[workspace.dependencies]` (line carried from the v1 root
    manifest at the pin — repark-ta's `serde_json.workspace = true` dev-dep needs it).
 3. **NEW door-native code** — `src/extension.rs` + `src/extension/tests.rs`, banner style, with
-   its tests in the same commit.
+   its tests in the same commit; plus the minimal 4-line `mod extension` / `pub use` wiring in
+   `src/lib.rs` that the new module requires (the only edit to a ported source file).
 4. **Deferred-test session adaptation** (`ta_window.rs`, exactly as p2c class 4 declares) — v1
    `ReparkSession::new()` → the door-installed builder (`with_extension(SparkExtension)` +
    `with_sql_dialect(SparkDialect)`), three construction sites; plus the class-2 prefix map
