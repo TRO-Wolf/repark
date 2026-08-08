@@ -1,4 +1,5 @@
 use super::*;
+use pyo3::exceptions::PyRuntimeError;
 use repark_core::Error;
 
 /// The taxonomy end to end at the PyO3 boundary: each `Error` class maps to its PySpark

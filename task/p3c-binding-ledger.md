@@ -504,3 +504,35 @@ by the brief; the builder correctly did not touch them (it did fix the analogous
    time-travel leak is untouched (§4 Q8) — a ported test pins its presence.
 7. Building in the v1 pin worktree created only its gitignored `target/`; no tracked file there was
    modified, and nothing was fetched or pushed.
+
+## Orchestrator pass (post-fixer): P-5 adopted, contracts updated
+
+- **The panic-ban gap is CLOSED, not recorded-as-cost.** The fixer's P-5 remedy is landed: the
+  five `create_exception!` sites now sit in `mod exceptions` with a module-scoped
+  `#![expect(clippy::disallowed_methods, reason = …)]` (re-exported at the crate root — no
+  path changes), and the Makefile's second invocation now denies the FULL list including
+  `disallowed_methods`. Proof: general clippy green; panic-ban green; a planted
+  `Runtime::new().unwrap()` + `rt.spawn` in the binding reds the gate (7 disallowed-methods
+  errors) and greens again on revert. P-2's hole (spawn ban dark on the FFI crate) no longer
+  exists.
+- **AGENTS.md** (carve-out): future-tense repark-python line → landed/present; ML target-map
+  row → "phase 3 (landed PR-2)"; the panic-ban escape rule records the ONE sanctioned
+  module-scoped `#![expect]` (macro-expansion case, per-call-site proven unreachable, P-4)
+  while keeping "never a file/crate-wide allow". **CLAUDE.md** mirrored (the two files must
+  not drift). `clippy.toml`'s known-cost paragraph replaced by the landed-remedy paragraph.
+  `ci.yml` dual-wire comment updated. `lib.rs`'s dead `repark_write` log-filter example →
+  `repark_core` (same dead-pointer class as EC-6).
+- **Ledger corrections (panel LOW findings):** the EC-1 transcript's `wc -l` figure was written
+  as 7; the reproducible count is **9 raw / 8 in `.rs` files (4 doc mentions + 4 code sites)**
+  — the re-home itself was and is complete (zero `repark_session` residue). Note 2's "three
+  refuse-arm tests use let-else" is corrected to **two** (`excel_sheet_names` uses
+  `expect_err` legitimately — its Ok type is `Debug`).
+- **Accepted (recorded, not changed):** the door pin's statement half proves routing via the
+  Spark router's refusal text — honest, catalog-free evidence; a positive-route strengthening
+  is welcome alongside PR-5's facade fixtures if wanted. The two deliberate non-edges remain
+  review-enforced (comment + design §2.2), per the design's own text.
+- **check_lib_rs ratchet fired:** the P-5 module wrapper pushed lib.rs to 237 (ceiling 230);
+  the exception row's own recorded ratchet ("if the exception taxonomy moves to its own
+  module") resolved it — the taxonomy now lives file-backed in `src/exceptions.rs` (60 lines,
+  re-exported at the crate root, no path changes), lib.rs is 180 lines, and the ceiling
+  ratcheted 230 → 190. Guard green; maps updated (src/map.md, crate map.md, scripts/map.md).

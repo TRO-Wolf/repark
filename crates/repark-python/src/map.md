@@ -74,10 +74,15 @@ Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crat
 - `column.rs` — `PyColumn.call_scalar` (R-FN-BATCH1/2 DataFusion expr_fn dispatch) +
   Q1 `approx_percentile_cont`.
 
+- `exceptions.rs` — the five-member `create_exception!` taxonomy in its own file-backed module
+  (the `check_lib_rs` RATCHET fired at PR-3): carries the module-scoped
+  `#![expect(clippy::disallowed_methods)]` escape so the panic/spawn ban stays LIVE for the rest
+  of the crate (p3c ledger P-4/P-5); re-exported at the crate root, so `crate::…Exception` paths
+  are unchanged.
 - `lib.rs` — the `#[pymodule] _native` entry point; **R-TRACE-SUBSCRIBER** `try_init_repark_tracing`
   (env-gated `tracing_subscriber::fmt` on import — `REPARK_LOG` preferred, else `RUST_LOG`;
   `FmtSpan::CLOSE` for phase timings; `try_init` never panics); registers `PyReparkSession` + `PyDataFrame` +
-  `PyColumn` and the WG-3/U4 error taxonomy (`create_exception!` — base `PySparkException`
+  `PyColumn` and re-exports the WG-3/U4 error taxonomy from `exceptions.rs` — base `PySparkException`
   (subclass of `RuntimeError`) ⊃ `AnalysisException` ⊃ `ParseException` (Group S: PySpark parity —
   `pyspark.errors` defines `ParseException(AnalysisException)`, so `except AnalysisException`
   catches parse errors), `UnsupportedOperationException`, and — **Group X** —

@@ -37,25 +37,15 @@ doc-valid-idents = [
 #     (+ unwrap_used / expect_used / panic / todo / unimplemented / unreachable)
 # `--lib --bins` excludes `#[cfg(test)]` (not compiled) — both-ways scoping without mass-allow.
 # `allow-*-in-tests` still covers the restriction lints if enabled with `--all-targets` locally.
-# `repark-python` (the PyO3 cdylib) LANDED in phase-3 PR-3 and carries a carve-out, because
-# `disallowed-methods` false-fires on `pyo3::create_exception!` (a `Result::expect` in the macro
-# expansion, at five sites in `crates/repark-python/src/lib.rs`). As landed, `make rust-panic-ban`
-# `--exclude`s that package from the workspace invocation and re-gates it with a second
-# `-p repark-python --lib` invocation denying SIX lints — unwrap_used, expect_used, panic, todo,
-# unimplemented, unreachable — but NOT `disallowed_methods`.
-#
-# KNOWN COST, recorded rather than papered over (phase-3 PR-3 verify panel; see
-# `task/p3c-binding-ledger.md` "Provocation proofs" + "Findings"): dropping
-# `-D clippy::disallowed_methods` for that one package also drops the **async cancel-safety** half
-# of the list below (`tokio::spawn` / `spawn_blocking`) for the crate that owns the process-wide
-# runtime. Provoked: a `tokio::spawn` + `spawn_blocking` pair added to
-# `crates/repark-python/src/session.rs` passes the landed second invocation with exit 0.
-#
-# The narrow remedy is proven and pending an orchestrator (Makefile-owning) change: a `mod
-# exceptions { #![expect(clippy::disallowed_methods, reason = …)] … }` around exactly the five
-# macro sites, plus restoring `-D clippy::disallowed_methods` on the second invocation. A
-# per-invocation-site `#[expect]` (outer attribute on the `create_exception!` call) does NOT work —
-# the lint level is not carried into the macro expansion; only the module-scoped inner attribute is.
+# `repark-python` (the PyO3 cdylib, landed phase-3 PR-3): `disallowed-methods` false-fires on
+# `pyo3::create_exception!` (a `Result::expect` inside the macro expansion, five sites in
+# `crates/repark-python/src/lib.rs`). The escape is the NARROWEST that works: those five sites
+# sit in a module carrying `#![expect(clippy::disallowed_methods, reason = …)]`, and
+# `make rust-panic-ban`'s second invocation (`-p repark-python --lib`) denies the FULL list —
+# disallowed_methods included — so the async cancel-safety ban (`tokio::spawn`/`spawn_blocking`)
+# is LIVE for the crate that owns the process-wide runtime. A per-call-site `#[expect]` on the
+# macro invocation does NOT work (the lint level is not carried into the expansion); provocations
+# P-2/P-4/P-5 + the spawn-plant red are recorded in `task/p3c-binding-ledger.md`.
 # ===========================================================================================
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true

@@ -36,7 +36,7 @@ a crate ahead of its phase.
 | Postgres / MSSQL connectivity | `crates/repark-connect` | later |
 | ANSI SQL front end (native dialect) | `crates/repark-sql` | phase 2 |
 | Spark semantics: function shims, Spark SQL dialect, the parity surface | `crates/repark-spark` | phase 2 |
-| ML: Arrow→DMatrix handoff, out-of-core training | `crates/repark-ml` | later |
+| ML: native estimator kernels (Cholesky/OLS/IRLS/Lloyd) | `crates/repark-ml` | phase 3 (landed PR-2) |
 | PyO3 bindings: thin adapter over the internal engine API | `crates/repark-python` | phase 3 |
 | Native lazy API + `repark.sql()` (Python) | `python/repark` | phase 3 |
 | The PySpark facade | `python/repark/spark` | phase 3 |
@@ -93,13 +93,16 @@ never silently skip locally (uvx provisions the pinned tool on demand).
   - *Panic + async bans*: `clippy.toml` `disallowed-methods` (unwrap/expect +
     `tokio::spawn`/`spawn_blocking`). Escape = per-call-site
     `#[expect(clippy::disallowed_methods, reason = …)]` stating the lifecycle; never a
-    file/crate-wide allow.
+    file/crate-wide allow. One recorded module-scoped `#![expect]` exists — the binding's
+    exception-taxonomy module (`crates/repark-python/src/lib.rs`), because a per-call-site
+    `#[expect]` cannot reach inside `pyo3::create_exception!`'s macro expansion (proven both
+    ways, p3c ledger P-4/P-5); the lint stays live for the rest of that crate.
   - *Crate layering* (`scripts/check_crate_dag.py` — the tier-map SSOT) and *crate-root manifests*
     (`scripts/check_lib_rs.py` — ceilings + EXCEPTIONS SSOT) are **armed** since phase-1 PR-A,
     dual-wired Makefile + ci.yml. The remaining v1 gates (Python thinness / `check_lib_py`, build
     profiles) **return with the code they gate** — see [docs/port/PLAN.md](docs/port/PLAN.md).
     Do not re-invent them ahead of the port; re-home v1's scripts.
-- **`unsafe_code = "forbid"` everywhere except the future `crates/repark-python`**, which will set a
+- **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;
   `logging`; f-strings; never bare `except`; Ruff `line-length=100`.

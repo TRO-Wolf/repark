@@ -27,7 +27,7 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   `repark-common` edge that exists solely so the EC-1 type-identity guard in `src/tests.rs` can name
   both paths to the same `Error` type. Spells out its own lints with `unsafe_code = "allow"`
   (it does NOT inherit `[lints] workspace = true`; the workspace root reserves the carve-out).
-  `scripts/check_lib_rs.py` carries a `repark-python` EXCEPTIONS row (EC-10: the 217-line root is a
+  `scripts/check_lib_rs.py` carries a `repark-python` EXCEPTIONS row (EC-10: the 180-line root is a
   manifest and already uses the sanctioned file-backed test module). The off-by-default `extension-module` feature stays OFF for
   `cargo test` (so libpython links).
 - `src/lib.rs` — the `#[pymodule] _native` entry point + `to_py_err` (engine `Error` → `RuntimeError`)

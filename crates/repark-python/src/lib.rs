@@ -31,7 +31,6 @@ mod ml;
 mod session;
 
 use datafusion::error::DataFusionError;
-use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use repark_core::ErrorClass;
 
@@ -54,50 +53,13 @@ pub use session::PyReparkSession;
 // `PySparkAttributeError`) are raised by the pure-Python facade only and are defined in
 // `python/repark/src/repark/errors.py` — they need MULTIPLE bases (`PySparkException` + the
 // builtin), which `pyo3::create_exception!` cannot express.
-pyo3::create_exception!(
-    repark._native,
-    PySparkException,
-    PyRuntimeError,
-    "Base class for engine exceptions raised by repark. Subclasses RuntimeError so existing \
-     `except RuntimeError` code keeps working after migrating from PySpark."
-);
-pyo3::create_exception!(
-    repark._native,
-    AnalysisException,
-    PySparkException,
-    "A query analysis/planning failure: an unresolved table or column, a type error, an invalid \
-     plan. The PySpark name; subclasses PySparkException (hence RuntimeError)."
-);
-pyo3::create_exception!(
-    repark._native,
-    ParseException,
-    AnalysisException,
-    "A SQL or expression syntax error. The PySpark name; subclasses AnalysisException (PySpark \
-     parity — `pyspark.errors` defines `ParseException(AnalysisException)`, so `except \
-     AnalysisException` catches parse errors), hence PySparkException and RuntimeError."
-);
-pyo3::create_exception!(
-    repark._native,
+/// The exception taxonomy lives in [`exceptions`] (file-backed; see its module doc for the
+/// module-scoped `disallowed_methods` expectation and the P-4/P-5 provocation record).
+mod exceptions;
+pub use exceptions::{
+    AnalysisException, IllegalArgumentException, ParseException, PySparkException,
     UnsupportedOperationException,
-    PySparkException,
-    "An operation the engine deterministically does not support: the documented scope gates \
-     (an unrecognised write.merge.mode, merge-on-read MERGE on a non-V2 table, a non-Parquet \
-     write format, ...) and unsupported iceberg features. The PySpark name \
-     (pyspark.errors.UnsupportedOperationException — what PySpark raises for a JVM \
-     UnsupportedOperationException); subclasses PySparkException (hence RuntimeError)."
-);
-pyo3::create_exception!(
-    repark._native,
-    IllegalArgumentException,
-    PySparkException,
-    "An illegal or inappropriate argument reached the engine — today, an invalid `.config(...)` \
-     key/value the session cannot map to a valid engine/catalog configuration. The PySpark name \
-     (pyspark.errors.IllegalArgumentException — what PySpark raises for a JVM \
-     IllegalArgumentException; live pyspark 4.0.0 raises it for an invalid SQLConf value). \
-     Subclasses PySparkException (hence RuntimeError). NOTE: PySpark's \
-     `NumberFormatException(IllegalArgumentException)` leaf is deliberately NOT defined here — \
-     repark has no reachable raise for it (Group X)."
-);
+};
 
 /// ===========================================================================================
 /// Convert a crate-wide [`repark_core::Error`] into the matching PySpark-shaped Python exception.
@@ -139,7 +101,7 @@ pub(crate) fn datafusion_to_py_err(err: DataFusionError) -> PyErr {
 ///
 /// Prefer `REPARK_LOG` (repark-native; does not fight host `RUST_LOG` tooling). Fall back to
 /// `RUST_LOG` when `REPARK_LOG` is unset/empty so existing docs that say
-/// `RUST_LOG=repark_write=info` keep working once the wheel loads.
+/// `RUST_LOG=repark_core=info` keep working once the wheel loads.
 ///
 /// - Absent both env vars → **no** subscriber (zero overhead; `tracing` macros stay no-ops).
 /// - Set → `tracing_subscriber::fmt` on stderr with `EnvFilter` + [`FmtSpan::CLOSE`] so each
