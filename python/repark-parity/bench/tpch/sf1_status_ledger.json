@@ -1,0 +1,72 @@
+{
+  "numeric_tolerance": "1e-6 relative (floats/decimals only; ints exact)",
+  "queries": {
+    "1": {
+      "status": "OK"
+    },
+    "10": {
+      "status": "OK"
+    },
+    "11": {
+      "status": "OK"
+    },
+    "12": {
+      "status": "OK"
+    },
+    "13": {
+      "status": "OK"
+    },
+    "14": {
+      "status": "OK"
+    },
+    "15": {
+      "status": "OK"
+    },
+    "16": {
+      "status": "OK"
+    },
+    "17": {
+      "status": "OK"
+    },
+    "18": {
+      "status": "OK"
+    },
+    "19": {
+      "status": "OK"
+    },
+    "2": {
+      "status": "OK"
+    },
+    "20": {
+      "status": "OK"
+    },
+    "21": {
+      "status": "OK"
+    },
+    "22": {
+      "status": "OK"
+    },
+    "3": {
+      "status": "OK"
+    },
+    "4": {
+      "status": "OK"
+    },
+    "5": {
+      "status": "OK"
+    },
+    "6": {
+      "status": "OK"
+    },
+    "7": {
+      "status": "OK"
+    },
+    "8": {
+      "status": "OK"
+    },
+    "9": {
+      "status": "OK"
+    }
+  },
+  "scale_factor": 1.0
+}

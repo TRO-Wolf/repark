@@ -1,0 +1,401 @@
+{
+  "notes": [
+    "D2 2026-07-31: Q5/Q80/Q84 ERROR\u2192OK via repark-functions SparkConcat Utf8 shim (Utf8View plan/kernel fix). Evidence scale: SF0.01 DuckDB ordered differential + curated smoke (schema/type failure is scale-independent); full SF1 board not re-run for this flip."
+  ],
+  "numeric_tolerance": "1e-6 relative (floats/decimals only; ints exact)",
+  "queries": {
+    "1": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "10": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "11": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "12": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "13": {
+      "status": "OK"
+    },
+    "14": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "15": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "16": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "17": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "18": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "19": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "2": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "20": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "21": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "22": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "23": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "24": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "25": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "26": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "27": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "28": {
+      "status": "OK"
+    },
+    "29": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "3": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "30": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "31": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "32": {
+      "status": "OK"
+    },
+    "33": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "34": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "35": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "36": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "37": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "38": {
+      "status": "OK"
+    },
+    "39": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "4": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "40": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "41": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "42": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "43": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "44": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "45": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "46": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "47": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "48": {
+      "status": "OK"
+    },
+    "49": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "5": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "50": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "51": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "52": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "53": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "54": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "55": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "56": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "57": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "58": {
+      "error_class": "WrongResult",
+      "ordered_compare": "true",
+      "status": "WRONG-RESULT"
+    },
+    "59": {
+      "error_class": "WrongResult",
+      "ordered_compare": "true",
+      "status": "WRONG-RESULT"
+    },
+    "6": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "60": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "61": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "62": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "63": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "64": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "65": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "66": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "67": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "68": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "69": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "7": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "70": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "71": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "72": {
+      "error_class": "WorkerTimeout",
+      "ordered_compare": "true",
+      "status": "DIED"
+    },
+    "73": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "74": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "75": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "76": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "77": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "78": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "79": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "8": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "80": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "81": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "82": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "83": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "84": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "85": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "86": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "87": {
+      "status": "OK"
+    },
+    "88": {
+      "status": "OK"
+    },
+    "89": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "9": {
+      "status": "OK"
+    },
+    "90": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "91": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "92": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "93": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "94": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "95": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "96": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "97": {
+      "status": "OK"
+    },
+    "98": {
+      "ordered_compare": "true",
+      "status": "OK"
+    },
+    "99": {
+      "ordered_compare": "true",
+      "status": "OK"
+    }
+  },
+  "query_count": 99,
+  "query_provenance": "DuckDB tpcds extension tpcds_queries()",
+  "scale_factor": 1.0
+}

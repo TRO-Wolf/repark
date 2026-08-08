@@ -2,7 +2,16 @@
 # Add real domain terms here when typos flags them; do not silence genuine misspellings.
 
 [files]
-extend-exclude = ["*.lock", "target/", ".venv/", "*.svg"]
+extend-exclude = [
+  "*.lock",
+  "target/",
+  ".venv/",
+  "*.svg",
+  # Recorded census evidence (task/census/**): report/junit/freeze artifacts embed verbatim
+  # Apache-suite tracebacks and third-party identifiers (`tpe`, …). Evidence is never
+  # hand-edited, so it is excluded rather than "fixed" (phase-3 PR-4).
+  "task/census/",
+]
 
 [default.extend-identifiers]
 # Identifiers (code symbols) that are not typos.

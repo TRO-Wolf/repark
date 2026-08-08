@@ -28,6 +28,10 @@ repository's `task/` directory).
 - [p3b-ml-ledger.md](p3b-ml-ledger.md) — unit ledger for phase-3 PR-2 (`repark-ml` verbatim
   port + workspace wiring + the EC-7 map rewrite): scope, the 34-test identity census with its
   empty `--list` diff, gate results; IN FLIGHT.
+- [p3d-parity-ledger.md](p3d-parity-ledger.md) — unit ledger for phase-3 PR-4
+  (`python/repark-parity` verbatim port + the additive `--classic` cohort + the NEW report
+  comparator + `docs/port/census.md` + the uv workspace return): scope, the collect-only
+  verbatim-port census obligation, the declared new tests, gate results; IN FLIGHT.
 - [p3c-binding-ledger.md](p3c-binding-ledger.md) — unit ledger for phase-3 PR-3
   (`crates/repark-python`, the PyO3 binding): the six applied edit classes with their per-class
   file lists (EC-1 re-home + dep collapse + the type-identity guard, EC-2 the door-installed
@@ -81,6 +85,8 @@ repository's `task/` directory).
 | See the phase-2 PR-6 per-Q delivery record / cross-door session profiles / final matrix counts | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) |
 | Find out why `information_schema` used to be off, and what fixed it | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) "The R2 core fix" |
 | See the phase-3 PR-2 `repark-ml` identity census / map-rewrite rationale | [p3b-ml-ledger.md](p3b-ml-ledger.md) |
+| See the phase-3 PR-4 parity port census / comparator design record | [p3d-parity-ledger.md](p3d-parity-ledger.md) |
+| Run or compare a census | [../docs/port/census.md](../docs/port/census.md) |
 | See the phase-3 PR-3 binding edit classes / the two identity censuses / the panic-ban carve-out commands | [p3c-binding-ledger.md](p3c-binding-ledger.md) |
 | Find out why `read_excel` / `read_postgres` refuse | [p3c-binding-ledger.md](p3c-binding-ledger.md) "EC-3" |
 | Read the brief driving phase 3 | [../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) |

@@ -19,7 +19,9 @@ layer, tier 3), and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDia
 set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has landed
 `crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and
 `crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**, ported in PR-3 under design §3's
-edit classes), and still owes the `python/` tree — no wheel is buildable yet and none is claimed.
+edit classes) and `python/repark-parity` (the parity harness + the census machinery + the NEW
+report comparator that is the port's acceptance gate, PR-4); it still owes the facade wheel
+`python/repark` — no wheel is buildable yet and none is claimed.
 
 ## Contents
 
@@ -28,8 +30,11 @@ edit classes), and still owes the `python/` tree — no wheel is buildable yet a
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
   are in force.
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
-- `pyproject.toml`, `.python-version` — Python tooling config (Ruff, line 100). The uv workspace
-  member list arrives with phase 3.
+- `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
+  itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
+  Members are staged across phase 3 — `python/repark-parity` is declared today, the facade joins
+  with the wheel PR (declaring a member whose directory does not exist fails `uv lock`).
+  `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
   workflow pins.
@@ -40,6 +45,8 @@ edit classes), and still owes the `python/` tree — no wheel is buildable yet a
   (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
   port-source pin's own config, never invented to silence a real misspelling.
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
+- `python/` — the uv workspace members (the parity harness today; the facade wheel later). See
+  [python/map.md](python/map.md).
 - `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
   plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
@@ -61,6 +68,8 @@ edit classes), and still owes the `python/` tree — no wheel is buildable yet a
 | Touch CI | [.github/map.md](.github/map.md) |
 | Read the phase briefs | [briefs/map.md](briefs/map.md) |
 | Navigate the engine crates | [crates/map.md](crates/map.md) |
+| Navigate the Python tree | [python/map.md](python/map.md) |
+| Run or compare a census | [docs/port/census.md](docs/port/census.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |

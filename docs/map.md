@@ -19,7 +19,11 @@ notes, and per-tier operating manuals for this repo.
   census design — ten edit classes, Q1–Q10 rulings, the census/acceptance procedure, the
   seven-PR slate).
 - [port/](port/map.md) — the V2 port plan ([port/PLAN.md](port/PLAN.md)): copy-then-re-home
-  rules, the four phases, the census multiset acceptance gate, the v1-freeze trigger.
+  rules, the four phases, the census multiset acceptance gate, the v1-freeze trigger; and the
+  recorded census procedure ([port/census.md](port/census.md)): the environment recipe, both
+  sides' cohort argument vectors, the mandatory stability run + quarantine rule, the full-extras
+  facade cohort definition, the comparator + attribution rule, and the golden-corpus `basis:`
+  designations.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
   iceberg-rust fork, the two SQL doors, the copy-then-re-home port, server-prep disciplines.
 - [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
@@ -36,6 +40,7 @@ notes, and per-tier operating manuals for this repo.
 | Understand the phase-2 SQL doors / ANSI surface | [design/sql-doors.md](design/sql-doors.md) |
 | Understand the phase-3 port / census gate / edit classes | [design/python-facade.md](design/python-facade.md) |
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
+| Run a census / compare two runs | [port/census.md](port/census.md) |
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
 | Read the manual for your tier | [skills/map.md](skills/map.md) |
 | Set up trusted publishing / plan a release | [release.md](release.md) |

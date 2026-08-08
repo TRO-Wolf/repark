@@ -45,10 +45,22 @@ Repository helper scripts wired into the dev workflow.
   (`lib-rs-guard`). Pure text — sub-second. EXCEPTIONS reason
   strings stay ≤100 cols (ruff E501; keep ruff-format clean).
 
+- `run_census.sh` — one-command census gate (classic + expand + expand2): provisions a scratch
+  venv, builds the native module, then runs the three cohorts and writes JSON + markdown reports.
+  Not CI-wired (~20 min wall per module). Ported with **one** behavioral change (phase-3 EC-8):
+  the classic cohort runs `--classic`, never `--stretch` — `--stretch` appends the C3 modules and
+  blends them into the classic /345 denominator. Report output paths are unchanged in shape.
+  Second declared change: the run's **environment is recorded, not assumed** — a verbatim
+  `pip freeze` (empty = fatal) plus `census-manifest.json` carrying the versions the comparator
+  gates (`python_version`, `pyspark_version`, `pandas_version`, `pyarrow_version`), and the run
+  aborts outright under pandas ≥ 3. Artifacts are then redacted via `python -m compat.redact`
+  (through each format's parser), never `sed`. The
+  script needs the facade package at `python/repark`, which arrives with the facade PR; the
+  recorded procedure it implements is [../docs/port/census.md](../docs/port/census.md).
+
 Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/port/PLAN.md)):
-`check_lib_py.sh`/`.py` (Python thinness guard, phase 3), `run_census.sh` (Apache-suite census,
-phase 3), `test_lock_gate.sh` (uv lock-gate detector self-test, phase 3),
-`generate_excel_fixtures.py` (synthetic .xlsx fixtures, phase 1+).
+`check_lib_py.sh`/`.py` (Python thinness guard, phase 3), `test_lock_gate.sh` (uv lock-gate
+detector self-test, phase 3), `generate_excel_fixtures.py` (synthetic .xlsx fixtures, phase 1+).
 
 ## I want to...
 
@@ -59,6 +71,7 @@ phase 3), `test_lock_gate.sh` (uv lock-gate detector self-test, phase 3),
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Install the pre-commit hook | `make install-hooks` |
+| Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
 
 ## Pointers
 
@@ -77,6 +90,9 @@ phase 3), `test_lock_gate.sh` (uv lock-gate detector self-test, phase 3),
 | `lib-rs: … inline #[cfg(test)] mod` | Move the test body to a file-backed module (`src/<name>.rs` + `#[cfg(test)] mod <name>;`) |
 | `lib-rs: … lines (ceiling …)` | Extract production code into a named module, or add an `EXCEPTIONS` entry with a reason (ratchet down only) |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
+| `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
+| A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
+| `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `make workflows-parse`. Escalate to: [../map.md#debug](../map.md).
