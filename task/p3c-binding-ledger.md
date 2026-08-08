@@ -304,11 +304,178 @@ the carved-out target will do.
 | map.md lockstep | pre-commit hook (`scripts/check_map_md.sh`) | passed on the single commit |
 | hygiene | both mandated forbidden-pattern passes (staged diff vs `main`; commit-metadata log) | **0** matches |
 
+> **This table proves green-on-a-clean-tree only, which docs/testing.md says proves nothing about
+> detection.** The detection evidence for the two gates this PR ADDS is in "Provocation proofs"
+> below (added by the 2026-08-08 fix pass); read that section, not this table, when asking whether
+> a gate works.
+
 `cargo test --locked --workspace`: `repark-python` **33** unit + **21** `tests/bindings.rs` = 54,
 matching the `--list` census; `repark-ml` **35**; `repark-core` **88** + 1 doc-test; every other
 crate unchanged from PR-2's recorded run. Every reported line `0 failed; 0 ignored`. The
 `bindings.rs` suite boots a real embedded CPython 3.12 through the `auto-initialize` dev-dep — no
 wheel involved, and none is claimed by this PR.
+
+## Provocation proofs
+
+Added 2026-08-08 by the fix pass (verify-panel F-5). Required by docs/testing.md "Gate provocation
+proofs": *"A new mechanical gate … is not 'done' because it runs green — green on a clean tree
+proves nothing about detection… A gate with no recorded provocation is treated as unproven — same
+standing as an untested behavior."* The "Gate results" table above records only green-on-clean-tree
+runs, which is exactly what that rule says proves nothing. **Every provocation below was reverted;
+no provocation identifier (`_provocation`, `inline_probe`, `ceiling provocation`) exists in the
+tree** — confirm with `grep -rn '_provocation\|inline_probe\|ceiling provocation' crates/ scripts/`
+(exit 1).
+
+This PR adds two mechanical gates: **(G1)** the new `cargo clippy -p repark-python --lib`
+invocation in `make rust-panic-ban` (orchestrator commit `344cde2`, mirrored by ci.yml's
+`rust-lint` job), and **(G2)** the new `repark-python` row in `scripts/check_lib_rs.py`'s
+`EXCEPTIONS` table (ceiling 230).
+
+### G1 — the `repark-python` panic-ban invocation
+
+| # | provocation | command | result |
+|---|---|---|---|
+| **P-1 (must-FAIL, control)** | `let _provocation: i32 = "1".parse::<i32>().unwrap();` inserted into `deferred_reader_error` (`src/session.rs`, a production `--lib` path) | `cargo clippy --locked -p repark-python --lib -- -D clippy::unwrap_used -D clippy::expect_used -D clippy::panic -D clippy::todo -D clippy::unimplemented -D clippy::unreachable` | **exit 101** — ``error: used `unwrap()` on a `Result` value`` → ``error: could not compile `repark-python` (lib) due to 1 previous error``. The panic half of the ban detects. |
+| **P-2 (must-FAIL, and it does NOT)** | `fn _provocation_spawn() { let _ = tokio::spawn(async {}); let _ = tokio::task::spawn_blocking(\|\| 1); }` inserted into `src/session.rs` | same command as P-1 | **exit 0** — ``warning: `repark-python` (lib) generated 9 warnings`` / ``Finished `dev` profile``. **The async cancel-safety half of the ban does not detect.** This is the recorded cost of the carve-out; see F-2 below. |
+| **P-3 (must-PASS)** | none — clean tree | same command as P-1 | exit 0, 5 `create_exception!` warnings (the false-fire the carve-out exists for) |
+
+### G1 remedy — what was tried, and what actually works
+
+The panel proposed the narrow fix as *"keep `-D clippy::disallowed_methods` and put
+`#[expect(clippy::disallowed_methods, reason=…)]` on the five `create_exception!` sites"*. That was
+tried and **disproved**:
+
+| # | form | command | result |
+|---|---|---|---|
+| **P-4** | outer `#[expect(clippy::disallowed_methods, reason = …)]` on each of the 5 `pyo3::create_exception!(` invocations in `src/lib.rs` | `cargo clippy --locked -p repark-python --lib -- -D clippy::disallowed_methods …` | **exit 101**, all five still error: ``error: use of a disallowed method `core::result::Result::expect` --> crates/repark-python/src/lib.rs:119:1`` … ``note: this error originates in the macro `$crate::create_exception_type_object```. A lint level on a macro *invocation* is not carried into the expansion — **the per-call-site form does not work here.** |
+| **P-5** | `mod exceptions { #![expect(clippy::disallowed_methods, reason = …)] … }` wrapping exactly the five macro sites (inner attribute), + `pub use exceptions::{…};` | same command, with P-2's spawns still present | **exit 101 with only the two spawn errors left** — ``error: use of a disallowed method `tokio::task::spawn_blocking` --> crates/repark-python/src/session.rs:55:13`` and its `tokio::spawn` sibling; **zero** `create_exception!` errors. **The module-scoped inner attribute is the form that works**, and it restores the spawn ban. |
+
+P-5 was **not landed** by this fix pass: it only takes effect paired with restoring
+`-D clippy::disallowed_methods` on the second `make rust-panic-ban` invocation, and the Makefile is
+an orchestrator-only carve-out file (brief §"Carve-outs"). Landing the `lib.rs` half alone would be
+a non-verbatim structural edit to ported bytes with **zero** observable effect. Both halves are
+handed to the orchestrator as one change — see F-1/F-2.
+
+### G2 — the `check_lib_rs.py` EXCEPTIONS row (`repark-python`, ceiling 230)
+
+| # | provocation | command | result |
+|---|---|---|---|
+| **P-6 (must-FAIL, ceiling rule)** | 20 comment lines appended to `crates/repark-python/src/lib.rs` (218 → 238) | `./scripts/check_lib_rs.sh` | **exit 1** — `ERROR: repark-python src/lib.rs is 238 lines (ceiling 230). Reason on file: … Sanctioned outs: (1) move production code into a named module with pub use re-exports, or (2) edit EXCEPTIONS in scripts/check_lib_rs.py with a reason (ceilings ratchet down only).` / `lib-rs: FAIL — 1 violation(s) across 9 crate roots`. **The row raises the ceiling, it does not disable the rule.** |
+| **P-7 (must-FAIL, inline-test rule)** | `#[cfg(test)] mod inline_probe { #[test] fn t() {} }` appended to the same root | `./scripts/check_lib_rs.sh` | **exit 1** — `ERROR: repark-python src/lib.rs:220: inline #[cfg(test)] mod inline_probe { … } is forbidden — move the body to src/inline_probe.rs and leave `#[cfg(test)] mod inline_probe;` (file-backed only).` **The EXCEPTIONS row buys ceiling slack only; rule 1 still bites the exempted crate.** |
+| **P-8 (must-PASS)** | none — clean tree | `./scripts/check_lib_rs.sh` | exit 0 — `lib-rs: 9 crate roots clean (no inline test modules; ceilings held)` |
+
+P-6 also corrected a stale number: the row's `# measured 217` comment (and `scripts/map.md`'s
+"217-line PyO3 crate root") were off by one against the landed file. Measured is **218**; both are
+now 218. The ceiling is unchanged at 230 and still ratchets down only.
+
+## Findings from the verify panel (2026-08-08)
+
+Nine MED findings; dispositions below. **F-1, F-2, F-8 and the AGENTS.md half of F-9 are
+ORCHESTRATOR ACTIONS** — they live in `AGENTS.md` / `CLAUDE.md` / `Makefile`, which the brief
+(§"Carve-outs") makes orchestrator-only and which the fix pass is forbidden to touch. They are
+itemized here, with the evidence already gathered, so the orchestrator can land them in one commit
+on this branch.
+
+### FIXED in this pass
+
+**F-3 — `impl From<Arc<Runtime>> for EngineRuntime` was untested public engine API.**
+*Reproduced:* `grep -rn 'EngineRuntime' crates/ --include=*.rs` → the impl at `runtime.rs:72` has
+**zero** callers; no `.into()` / `From::from` construction exists anywhere; `runtime/tests.rs`
+exercises only `new` / `clone` / `runtime()` / `block_on`. *Fixed:* the impl is **deleted**. EC-5
+requires the type, not the conversion; design §8 forbids defensible-but-avoidable additions in a
+fidelity phase; docs/testing.md requires a test per behavior. The module doc now states the surface
+is exactly one constructor + one accessor + `block_on` and why, and
+`crates/repark-core/src/map.md` records the removal so it is not re-added by reflex. *Proved:*
+`cargo test --locked -p repark-core` green; the ledger's EC-5 paragraph ("one constructor that
+takes an `Arc<Runtime>`") and `runtime/map.md`'s Debug row ("the only constructor takes an
+`Arc<Runtime>`") — both previously **wrong** — are now literally true.
+
+**F-4 — `read_postgres`'s no-credential-echo pin covered only `url`.**
+*Reproduced:* the claim (code comment `session.rs:339`, the EC-3 ledger text, and
+`src/map.md:293`) names **two** vectors, `url` AND `properties`; the test passed
+`properties=None`. Mutation B — replace the refusal with
+`UnsupportedOperationException::new_err(format!("… props={}", format!("{properties:?}")))` — was
+**GREEN**: `test session::tests::read_postgres_refuses_with_named_unsupported_operation ... ok`. A
+properties-only leak shipped undetected. *Fixed:* the pin now passes
+`Some(HashMap::from([("password".to_owned(), "sentinel-property-secret".to_owned())]))` and adds a
+second negative assertion. Two **distinct** sentinels (rather than reusing `sentinel-secret`) so a
+leak of either vector is pinned independently rather than by accident of a shared substring.
+*Proved:* clean tree GREEN; Mutation B re-applied → **RED** with
+`a refusal must never echo the connection PROPERTIES — they may carry credentials: … props=Some({"password": "sentinel-property-secret"})`; mutation reverted. Product code was already
+safe (`let _ = (…)` binds and drops without formatting) — it was the pin that was short.
+
+**F-5 — two mechanical gates landed with no provocation proofs.**
+*Reproduced:* `grep -in "provocation\|provoke" task/p3c-binding-ledger.md` → **exit 1, zero hits**,
+against `task/p3a-arming-ledger.md:62` and `task/p1a-workspace-arming-ledger.md:52` which both
+carry the section. *Fixed:* the "Provocation proofs" section above, with eight recorded
+provocations (P-1…P-8) covering both gates in both directions. *Proved:* P-2 is the concrete cost
+F-5 predicted — an unprovoked gate hid a real hole for a full review cycle.
+
+**F-6 — real-artifact deferral recorded nowhere in the testing contract.**
+*Reproduced:* `grep -n "real-artifact\|wheel\|boundary" task/port/deferred-tests.md` → no matching
+obligation row; `docs/testing.md:114` carries no PR-3 carve-out. The design waives it (§9 PR-5) but
+CLAUDE.md's precedence chain puts docs/testing.md **above** a design document, so a design waiver
+does not discharge a contract obligation. *Fixed:* new section **"Deferred testing-contract
+obligations (NOT v1 test names)"** in `task/port/deferred-tests.md`, deliberately outside the
+`(ported ∪ deferred)` arithmetic (it is an obligation, not a v1 test name), with owner (PR-3),
+creditor (`docs/testing.md:114`), discharger (PR-5) and the blocking clause: *PR-5's acceptance is
+blocked on this row.* *Proved:* the row is now greppable from the manifest a future agent actually
+reads, and the deferral has a named owner instead of living only in a design §.
+
+**F-7 — `clippy.toml:40-42` described the carve-out in future tense AND misstated it.**
+*Reproduced:* `sed -n '40,42p' clippy.toml` → "When `repark-python` … **lands**, it gets a
+carve-out … that package **is gated with unwrap_used/expect_used only**", while the landed second
+invocation denies **six** lints. `clippy.toml` is not on the carve-out list (ledger line 24), so it
+was always the builder's to fix. *Fixed:* the block now states the crate LANDED in phase-3 PR-3,
+enumerates all six denied lints, names the omitted one (`disallowed_methods`), and records the
+**known cost** (the spawn ban is off for this crate — P-2) plus the proven remedy and the disproof
+of the per-call-site form (P-4/P-5). *Proved:* every claim in the new text is one of the recorded
+provocations above; `cargo clippy` behavior unchanged (comment-only edit).
+
+**F-9 (PROJECT.md half) — `PROJECT.md:64` still called `repark-python` "the future crate".**
+*Reproduced:* `grep -n 'repark-python' PROJECT.md` → `64:- **\`unsafe_code = "forbid"\`**
+workspace-wide EXCEPT the future \`crates/repark-python\`.` The crate is in the tree and already
+sets the allow (`crates/repark-python/Cargo.toml:19-20`). `PROJECT.md` is **not** on the carve-out
+list, so this half is the builder's. *Fixed:* the line now reads "EXCEPT `crates/repark-python`
+(landed phase-3 PR-3; the crate sets a local `unsafe_code = "allow"` …)". *Proved:*
+`grep -n 'future .crates/repark-python' PROJECT.md` → exit 1. The `AGENTS.md:102` /
+`CLAUDE.md:122` halves remain — see F-9-ORCH.
+
+### ORCHESTRATOR ACTIONS — not fixable from this branch's builder surface
+
+**F-1 / F-2 (one change, two findings) — the panic-ban carve-out is a crate-wide escape, and it
+disarms the spawn ban.** `AGENTS.md`'s hard rule reads *"Escape = per-call-site
+`#[expect(clippy::disallowed_methods, reason = ...)]` stating the lifecycle; never a file/crate-wide
+allow"*, and `clippy.toml`'s own text says the same. The landed gate does exactly that at gate
+level. Evidence and remedy are fully worked out above: **P-2** proves the hole (exit 0 with a
+detached `tokio::spawn` + an unbounded `spawn_blocking` in the crate that owns the process-wide
+runtime and does GIL-releasing `block_on`); **P-4** disproves the panel's suggested per-call-site
+form; **P-5** proves the working one. The single orchestrator change is:
+
+1. `crates/repark-python/src/lib.rs` — wrap exactly the five `pyo3::create_exception!` invocations
+   in `mod exceptions { #![expect(clippy::disallowed_methods, reason = "…")] … }` + `pub use`
+   (declared EC-1-adjacent deviation from verbatim; cite design §7.2).
+2. `Makefile` — drop `--exclude repark-python` from the workspace invocation, or restore
+   `-D clippy::disallowed_methods` on the `-p repark-python --lib` one.
+3. `.github/workflows/ci.yml` — mirror, per the dual-wiring rule.
+4. `AGENTS.md` — either amend the hard rule or (preferred, and what P-5 enables) leave it intact
+   because the escape is no longer crate-wide.
+
+Re-run P-2 afterwards: it must flip from exit 0 to exit 101. Until then `clippy.toml` carries the
+cost in writing, which is the most this branch can do.
+
+**F-8 — `AGENTS.md` / `PROJECT.md` still describe `repark-python` as future and `repark-ml` as
+"later".** The `PROJECT.md` half is FIXED above (F-9 disposition). Remaining, orchestrator-only:
+`AGENTS.md:102` (the "future `crates/repark-python`" invariant) and the crate table row
+`| ML: … | crates/repark-ml | later |` (`AGENTS.md` ~36-44), which design §4 Q3 requires to read
+"phase 3" now that PR-2 landed the crate.
+
+**F-9-ORCH — `AGENTS.md:102` and `CLAUDE.md:122` call `repark-python` "the future crate" that
+"will set" a local unsafe allow.** Both are false as of this PR
+(`crates/repark-python/Cargo.toml:19-20` sets `unsafe_code = "allow"` today), and `CLAUDE.md:122`
+sits inside the `<non_negotiable_invariants>` load-bearing region. Both files are orchestrator-only
+by the brief; the builder correctly did not touch them (it did fix the analogous line it owned —
+`git diff main...HEAD -- Cargo.toml` shows "will NOT inherit these" → "does NOT inherit these").
 
 ## Notes for the verify panel
 

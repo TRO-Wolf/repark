@@ -85,7 +85,11 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   `Default`, and never blocks on its own behalf; the process-wide INSTANCE is the binding's
   `OnceLock<EngineRuntime>` in `repark-python`. Honors the phase-1 omissions ledger's recorded
   resolution rather than reversing it, and gives a second embedding (a Flight SQL handler is the
-  anticipated one) a named type instead of a convention.
+  anticipated one) a named type instead of a convention. **Exactly one constructor**
+  (`EngineRuntime::new`): the verify panel removed a caller-less, test-less
+  `impl From<Arc<Runtime>> for EngineRuntime` — a fidelity phase does not ship untested public
+  API (design §8, "do not clean up on the way past"; docs/testing.md "every behavior gets a test").
+  Re-add it only with a test and a caller.
 - `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
   `SessionExtension` with two defaulted hooks (`configure` pre-assembly, `register`
   post-context) at v1's inline registration positions; `NoopSessionExtension` is the

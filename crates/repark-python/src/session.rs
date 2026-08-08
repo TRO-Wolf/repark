@@ -1090,7 +1090,11 @@ mod tests {
     }
 
     /// EC-3: `read_postgres` — the nine-argument jdbc surface refuses with its own name, and the
-    /// refusal must NOT echo the connection URL (it can carry a password / DSN).
+    /// refusal must NOT echo **either** credential-bearing argument the claim names: the
+    /// connection `url` OR the `properties` map (both can carry a password / DSN). Each vector
+    /// carries its own sentinel so a leak of either one is pinned independently — passing
+    /// `properties=None` would leave half the claim unpinned (docs/testing.md, "Pin every class
+    /// the claim names").
     #[test]
     fn read_postgres_refuses_with_named_unsupported_operation() {
         Python::attach(|py| {
@@ -1100,7 +1104,10 @@ mod tests {
                 "postgresql://user:sentinel-secret@host:5432/db",
                 Some("public.t"),
                 None,
-                None,
+                Some(HashMap::from([(
+                    "password".to_owned(),
+                    "sentinel-property-secret".to_owned(),
+                )])),
                 None,
                 None,
                 None,
@@ -1125,6 +1132,11 @@ mod tests {
                 !message.contains("sentinel-secret") && !message.contains("postgresql://"),
                 "a refusal must never echo the connection URL — it may carry credentials: \
                  {message}"
+            );
+            assert!(
+                !message.contains("sentinel-property-secret") && !message.contains("password"),
+                "a refusal must never echo the connection PROPERTIES — they may carry \
+                 credentials: {message}"
             );
         });
     }

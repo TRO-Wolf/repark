@@ -37,9 +37,25 @@ doc-valid-idents = [
 #     (+ unwrap_used / expect_used / panic / todo / unimplemented / unreachable)
 # `--lib --bins` excludes `#[cfg(test)]` (not compiled) — both-ways scoping without mass-allow.
 # `allow-*-in-tests` still covers the restriction lints if enabled with `--all-targets` locally.
-# When `repark-python` (the PyO3 cdylib) lands, it gets a carve-out: `disallowed-methods`
-# false-fires on `pyo3::create_exception!` (Result::expect in the macro expansion); that package
-# is gated with unwrap_used/expect_used only.
+# `repark-python` (the PyO3 cdylib) LANDED in phase-3 PR-3 and carries a carve-out, because
+# `disallowed-methods` false-fires on `pyo3::create_exception!` (a `Result::expect` in the macro
+# expansion, at five sites in `crates/repark-python/src/lib.rs`). As landed, `make rust-panic-ban`
+# `--exclude`s that package from the workspace invocation and re-gates it with a second
+# `-p repark-python --lib` invocation denying SIX lints — unwrap_used, expect_used, panic, todo,
+# unimplemented, unreachable — but NOT `disallowed_methods`.
+#
+# KNOWN COST, recorded rather than papered over (phase-3 PR-3 verify panel; see
+# `task/p3c-binding-ledger.md` "Provocation proofs" + "Findings"): dropping
+# `-D clippy::disallowed_methods` for that one package also drops the **async cancel-safety** half
+# of the list below (`tokio::spawn` / `spawn_blocking`) for the crate that owns the process-wide
+# runtime. Provoked: a `tokio::spawn` + `spawn_blocking` pair added to
+# `crates/repark-python/src/session.rs` passes the landed second invocation with exit 0.
+#
+# The narrow remedy is proven and pending an orchestrator (Makefile-owning) change: a `mod
+# exceptions { #![expect(clippy::disallowed_methods, reason = …)] … }` around exactly the five
+# macro sites, plus restoring `-D clippy::disallowed_methods` on the second invocation. A
+# per-invocation-site `#[expect]` (outer attribute on the `create_exception!` call) does NOT work —
+# the lint level is not carried into the macro expansion; only the module-scoped inner attribute is.
 # ===========================================================================================
 allow-unwrap-in-tests = true
 allow-expect-in-tests = true

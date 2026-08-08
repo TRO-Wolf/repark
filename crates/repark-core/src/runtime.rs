@@ -11,6 +11,10 @@
 //! `EngineRuntime` can only be built by an embedder handing in a runtime it already owns. A
 //! second embedding (a Flight SQL handler is the anticipated one) gets a named type to hold
 //! rather than a convention to rediscover.
+//!
+//! The surface is deliberately the minimum EC-5 requires: **one** constructor ([`EngineRuntime::new`]),
+//! one accessor, one `block_on`. No `From<Arc<Runtime>>` convenience conversion — design §8 ("do
+//! not clean up on the way past") rules out API this phase has no caller and no test for.
 
 use std::sync::Arc;
 
@@ -66,12 +70,6 @@ impl EngineRuntime {
     /// ===========================================================================================
     pub fn block_on<F: std::future::Future>(&self, future: F) -> F::Output {
         self.runtime.block_on(future)
-    }
-}
-
-impl From<Arc<Runtime>> for EngineRuntime {
-    fn from(runtime: Arc<Runtime>) -> Self {
-        Self::new(runtime)
     }
 }
 

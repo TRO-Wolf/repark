@@ -36,7 +36,7 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "RATCHET: if registration moves",
     ),
     "repark-python": (
-        230,  # measured 217 (EC-10, docs/design/python-facade.md §3)
+        230,  # measured 218 (EC-10, docs/design/python-facade.md §3)
         "the PyO3 crate root is a MANIFEST, not logic: ~25 doc lines, five `mod` decls, three "
         "`pub use` re-exports, the five-member `create_exception!` taxonomy (each carrying its "
         "own PySpark-parity docstring), the two `to_py_err` folds, the env-gated tracing init, "

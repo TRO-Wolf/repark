@@ -291,6 +291,11 @@ import smoke; `PYO3_PYTHON` set via `.cargo/config.toml`. Escalate to: [../map.m
   its nine-argument port-pin signature and raises `UnsupportedOperationException`; `repark-postgres`
   is scheduled post-milestone-one (`task/todo.md` backlog). The refusal never echoes the connection
   URL or properties — pin `read_postgres_refuses_with_named_unsupported_operation` asserts that.
+  The pin carries **two distinct sentinels, one per vector** (`sentinel-secret` inside the `url`,
+  `sentinel-property-secret` inside a non-`None` `properties` map), because the claim names both:
+  passing `properties=None` left the properties half unpinned and a properties-only leak stayed
+  green (phase-3 PR-3 verify panel, F-4; docs/testing.md "Pin every class the claim names"). If a
+  third credential-bearing argument is ever added, it gets its own sentinel here.
 
 ## DF 54.1 note (2026-08-01)
 as_any trait methods removed (DF54 trait upcasting); Cast uses field-aware API where touched.
