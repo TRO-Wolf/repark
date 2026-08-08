@@ -203,9 +203,11 @@ together, which is the exact structural gap the rule names. Evidence in
 [../p3e-facade-ledger.md](../p3e-facade-ledger.md): the import smoke, the recorded
 `(node id → outcome)` multiset over 2,505 JUnit rows, and behavior across the boundary on the
 Arrow C-stream export path (`to_arrow` / `collect` value-and-type assertions run inside the
-2,458 passing rows, not merely `show`). The obligation closes; the residual open item is the
-engine regression recorded as finding **B-1** in the same ledger, which is a repark-core defect
-surfaced BY this coverage, not a gap in it.
+2,459 passing rows, not merely `show`). The obligation closes with **no residual open item**:
+the one engine regression this coverage surfaced — finding **B-1**
+(`datafusion.runtime.memory_limit` refused at session build, a repark-core defect from the
+phase-2 P2G R2 config-plumbing fix) — was FIXED on this branch in commit `20d1665`, and the
+suite is green (exit 0). Nothing is carried into the phase-3 retrospective from this row.
 
 ## Reconciliation runs
 
@@ -246,10 +248,13 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   (2,497 ported ∪ 12 deferred) = 2,509 — disjoint by construction and mechanically checked by
   `test_deferred_ledger.py`. Sorted diff of the two collections is **exactly the 12 deferred ids,
   baseline side only** — no id appears on both sides, none on neither. Outcome multiset:
-  baseline 2,517 JUnit rows (2,471 passed + 46 skipped); this repo 2,505 (2,458 passed +
-  46 skipped + **1 failed**). The 12 deferred ids were all *passing* at the pin, so the expected
-  delta is 2,471 → 2,459; the observed 2,458 + 1 failure is **one attributed movement**, recorded
-  as finding B-1 (`datafusion.runtime.memory_limit` — a repark-core regression from the phase-2
-  P2G R2 config-plumbing fix, NOT a deferred surface and NOT deferrable). Skip count unchanged
-  (46 → 46). Zero `#[ignore]`, zero `--skip`, zero commented-out tests. Evidence:
-  [../p3e-facade-ledger.md](../p3e-facade-ledger.md).
+  baseline 2,517 JUnit rows (2,471 passed + 46 skipped); this repo 2,505 (**2,459 passed +
+  46 skipped + 0 failed**, exit 0). The 12 deferred ids were all *passing* at the pin, so the
+  expected delta is 2,471 → 2,459 — which is what the branch measures. (The builder's first run
+  read 2,458 + 1 failed; that one attributed movement was finding B-1,
+  `datafusion.runtime.memory_limit` — a repark-core regression from the phase-2 P2G R2
+  config-plumbing fix, NOT a deferred surface and NOT deferrable — and it was fixed in commit
+  `20d1665` on this branch, closing the movement.) Skip count unchanged (46 → 46). The
+  `--junit` comparator run over these two reports, with this ledger as its only subtraction
+  input, is byte-identical and exits 0. Zero `#[ignore]`, zero `--skip`, zero commented-out
+  tests. Evidence: [../p3e-facade-ledger.md](../p3e-facade-ledger.md).

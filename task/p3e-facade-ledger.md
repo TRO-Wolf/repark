@@ -358,3 +358,156 @@ and finding B-1's consequence for the arming order.
   shadowing found at the baseline runs, which v1's `--find-links … repark` form is exposed to);
   ci.yml python job gains the `check_lib_py` step; Makefile gains `check-lib-py` / `develop` /
   `py-test-facade` / `build-wheel` and `install-hooks` wires `check_lib_py.sh`.
+
+## Fixer pass (2026-08-08) — confirmed panel findings, dispositions
+
+One commit. Every fix below was reproduced first, fixed minimally, and re-proved. Baseline
+artifacts under `task/census/baseline-fc3f48102/` were **not** touched — they are recorded
+evidence.
+
+### FIXED — the deferral ledger did not subtract in `--junit` mode (HIGH, census lens)
+
+`compat/compare_reports.py` keyed JUnit rows as `classname::name`
+(`tests.test_excel_reader::test_excel_skip_rows`) while `task/port/deferred-python-tests.txt`
+carries collect-only node ids (`tests/test_excel_reader.py::test_excel_skip_rows`). The two id
+spaces never met, so the ledger subtracted **nothing** in the only mode the facade cohort can
+run in, and the documented acceptance invocation (`docs/port/census.md` §5, §7 item 3) could
+never exit 0 — precisely the drift EC-4 forbids ("a ledger that can drift from the gate it feeds
+is not a ledger", design §3 EC-4; the comparator's contract is §6.4).
+
+Reproduced at HEAD, ledger unchanged: `deferred_subtracted: 0`,
+`deferred_not_present_in_baseline: 12`, `vanished (only in v1): 12`,
+`pass: v1=2471 v2=2459 <== DIFFERS`, **exit 1**.
+
+Fix (declared deviation, NEW code — `compare_reports.py` is new in this repository, not a
+verbatim port): one new pure function `junit_node_id()`, applied in `compare()` to the deferred
+and quarantine lists **once**, only when `junit=True`. The translation runs *collect-only →
+JUnit* on purpose: path→dotted is total and injective (strip `.py`, `/`→`.`), whereas
+dotted→path is ambiguous — nothing in `tests.test_facade.TestX` says where the module ends and
+the class begins, so normalizing inside `load_junit_report` (the other candidate site) would
+mis-handle class-based ids. The function is idempotent, so it is safe over a ledger already
+written in either form. Measured over the recorded baseline XML: classname dot-count histogram
+`{1: 2509, 0: 8}` — zero class-based tests in this cohort, the 8 zero-dot rows are module-level
+collection rows and are left untouched.
+
+Re-proved with the two real reports (recorded pin XML vs a fresh HEAD run):
+`deferred_subtracted: 12`, `deferred_not_present_in_baseline: 0`,
+`pass: v1=2459 v2=2459`, `all_collected: v1=2505 v2=2505`, all five delta directions 0,
+**sorted-rendering byte comparison: IDENTICAL — exit 0**.
+
+Tests land with the code (docs/testing.md hard block):
+
+- `test_deferred_ledger.py::test_every_deferred_id_subtracts_through_the_junit_loader` — the
+  assertion the panel named as the one that would have caught this: every ledger id must resolve
+  to a row of the recorded baseline JUnit XML **through `load_junit_report`**, not through the
+  collect-only oracle.
+- `test_compare_reports.py::test_junit_node_id_translates_ledger_ids_into_the_junit_id_space` —
+  6 parametrized cases: plain, parametrized `[suffix]`, class-based, nested directories, and
+  both idempotence forms.
+- `test_compare_reports.py::test_junit_deferred_ledger_in_collect_only_form_actually_subtracts` —
+  the end-to-end regression through `main()`: a collect-only ledger id must remove the matching
+  JUnit row (`deferred_subtracted: 1`, `vanished … 0`, exit 0). It fails on the pre-fix code.
+
+`compat/map.md` and `tests/map.md` updated in the same change (lockstep rule).
+
+### FIXED — `task/pg-integration-report.md` was a tracked test output (MED, fidelity)
+
+`python/repark/tests/test_pg_acceptance.py` rewrites this file on every facade run at a
+CWD-relative path, so the suite mutated a **tracked** file — and the new `wheels.yml` smoke job
+runs the suite from the repo root, so CI would too (with a live DSN it writes timing content and
+dirties the tree). It appeared in no declared edit class and `task/map.md` never listed it, so
+the lockstep truth rule was unmet either way.
+
+Disposition: it is a run output, not a record. `git rm --cached` + a `/task/pg-integration-report.md`
+entry in `.gitignore` with the reason, + a `task/map.md` Debug note so a reader who sees it
+locally knows not to `git add` it. Proved: after a full facade run from the repo root,
+`git status --porcelain` shows the file neither modified nor untracked. (The v1 pin tracks it;
+carrying a generated artifact forward is a wart the port need not inherit — design §8 forbids
+cleaning up ported *code* on the way past, not adopting a generated file as a record.)
+
+### FIXED — `task/port/deferred-tests.md` was stale at HEAD (MED ×2, testing + census lens)
+
+The checked-in reconciliation record — the phase-boundary SSOT, required by
+`docs/port/census.md` §7 item 5 — still described the builder's pre-fix run
+("2,458 passed … **1 failed**", "the residual open item is … **B-1**") after B-1 was fixed in
+`20d1665` on this same branch. Only `p3e-facade-ledger.md` had received the orchestrator
+addendum. Both clauses corrected to the measured branch state (**2,459 passed + 46 skipped +
+0 failed, exit 0**), with the pre-fix reading kept as parenthetical history rather than deleted,
+and the `--junit` comparator verdict added. The arithmetic clause (2,497 ported ∪ 12 deferred =
+2,509) was already correct and is unchanged.
+
+### RECORDED, not fixed here — the B-2 literal is already published (MED, hygiene)
+
+The B-2 forward-scrub cleaned the branch tip only. The scrubbed fragment is **already reachable
+on the public remote** (`origin` = `git@github.com:TRO-Wolf/repark.git`): `main` and
+`origin/main` are the same commit, the earliest carrier is `e3e8131`, and that commit is
+contained in `origin/main` plus roughly eight stale merged `origin/phase-2/*` branches. The
+Tier-2 rule ("fix content in a new commit; never rewrite history") is what was followed and
+remains correct for this branch — but it does not by itself close the exposure, and the ledger
+previously recorded no disclosure decision.
+
+This is an **operator decision, not a fixer edit**: the remediation options are (a) accept —
+the fragment is a private team/bucket-name string with no credential, no account number and no
+real ARN (verified during B-2), so the residual risk is name disclosure only; (b) delete the
+stale merged `origin/phase-2/*` branches, which removes the easy-to-find copies but not
+`origin/main`'s history; (c) a history rewrite of the public repo, which breaks every existing
+clone and is out of scope for any PR. **Recommendation: (a) + (b)**, decided by the user, since
+only the user can authorize a remote-branch deletion (CLAUDE.md "Destructive / outward-facing
+operations"). Nothing in this commit acts on the remote.
+
+### NOTES FOR THE ORCHESTRATOR — findings in files this fixer must not touch
+
+`.github/` and the `Makefile` are outside the fixer's write set, so these four confirmed
+findings are handed over rather than fixed. All were reproduced.
+
+1. **HIGH — `.github/workflows/wheels.yml` line 85: the facade step's `file://` URL is built
+   from a RELATIVE wheel path**, so pip hard-errors before installing and the job the design
+   makes a required, un-path-filtered check is red on every PR (and would red `main` on merge —
+   the §7.2 failure class). `WHEEL=$(ls python/repark/dist/repark-*.whl)` then
+   `pip install "repark[pandas] @ file://$WHEEL"` yields netloc `python`:
+   `ValueError: non-local file URIs are not supported on this platform`. Reproduced on pip 24.0
+   and 26.2.1 (the step upgrades pip first, so it gets the new one). The earlier import-smoke
+   step (line 72, bare `pip install "$WHEEL"`) is fine — only the `file://` composition is
+   broken, and it is introduced by declared change #2, not inherited. Fix: `file://$PWD/$WHEEL`,
+   or drop the scheme entirely (`"./$WHEEL[pandas]"`). **This must land before the `smoke`
+   context is made required.**
+2. **MED — the required `smoke` job installs `repark[pandas]` only**, so 67 tests that pass in
+   the design §6.3 four-extras acceptance cohort never execute in CI: measured full-extras
+   2,459 passed / 46 skipped vs CI-shaped 2,392 passed / 97 skipped, the delta being 21
+   `test_ml_boost_oracle`, 13 `test_interchange_parity`, 13 `test_polars_differential`, 6
+   `test_create_dataframe_materialize`, 5 `test_polars_core`, 3 `test_polars_ns`, 3
+   `test_t1_cdf_ingest`, 1 each in `test_session` / `test_t3_ux_polish` /
+   `test_write_bench_unit`. §6.3: "a cohort that lets an install decision change its denominator
+   is not a gate", and §7.3 declines a separate `facade` job precisely because "the packaged-wheel
+   run is the one that must be required". The step's comment ("polars is left out deliberately —
+   its facade test self-skips", singular) understates it: three whole polars modules plus 24
+   polars-gated cases in six others, and the entire ml-ext delegated-backend surface. CI is
+   green today; this is gate strength, not a red build. Fix: install
+   `repark[numpy,pandas,polars,ml-ext]`.
+3. **MED — the `smoke` required-check transition is documented by JOB ID only.** Branch
+   protection matches on the job's **display name**, which here is
+   `build + import smoke (debug, host)` — a string that appears in no document in the repo
+   (`grep -rn 'build + import smoke' --include='*.md' .` → nothing). `task/lessons.md` records
+   this deadlock class twice; a required context that never reports blocks every PR forever.
+   The same defect applies to the design's list at `docs/design/python-facade.md:665`, which
+   names `rust-lint` / `rust-test` / `guards` (job ids) where the display names are
+   `Rust lint (fmt + clippy + check)` / `Rust test (workspace)` / `Repo guards (…)`; only
+   `python` coincides.
+4. **MED — `check-lib-py` and `py-lock-check` are not wired into `make ci`**, while ci.yml's
+   `python` job runs both, so the canonical local gate is green on a change that reds CI. The
+   port source's `make ci` includes both. Design §7.5 requires each returning target to be
+   dual-wired with the CI step it mirrors, and the Makefile's own new comment already claims the
+   dual wiring. Related §7.5 gap (PR-4 scope): `py-audit`, the mirror of the landed
+   `pip-audit.yml`, has no Makefile target at all.
+
+### Fixer gate results
+
+| gate | result |
+|---|---|
+| `make ci` | **exit 0** — ruff check + `ruff format --check` (237 files) clean, crate-dag, lib-rs, taplo, typos |
+| `make test` | **exit 0** — `cargo test --workspace`, **1,268 passed / 0 failed / 0 ignored** |
+| `make py-test` | **exit 0** — **143 passed** (135 + the 8 new fixer tests) |
+| facade suite vs the wheel (§6.3 venv) | **exit 0** — **2,459 passed / 46 skipped / 0 failed** in 74s; tree clean afterwards |
+| `--junit` acceptance comparator (pin XML vs fresh run, ledger as the only subtraction input) | **exit 0** — byte-identical, `deferred_subtracted: 12` |
+| hygiene pass 1 — forbidden-pattern list vs ADDED lines | **zero hits** (all 15 patterns, this commit's diff and the whole branch) |
+| hygiene pass 2 — ADDED-LINES content semantics | clean — no private names, paths, hosts, or account identifiers; every added line is comparator code, test code, ledger prose, or a `.gitignore`/map note |

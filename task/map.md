@@ -35,10 +35,12 @@ repository's `task/` directory).
 - [p3e-facade-ledger.md](p3e-facade-ledger.md) — unit ledger for phase-3 PR-5 (`python/repark`,
   the facade wheel + its 127-file suite): the two-commit plan, the line-by-line **EC-9 hygiene
   scrub** table, the per-node **EC-4 adjudication** (where each exception is raised), the
-  collect-only identity census with its verbatim diff, the §6.3 wheel-proof clause table, and
+  collect-only identity census with its verbatim diff, the §6.3 wheel-proof clause table,
   **finding B-1** — one attributed pass→fail movement (`datafusion.runtime.memory_limit` refused
-  at session build) reported and root-caused but deliberately NOT fixed, because it is a
-  repark-core regression outside this unit's scope; IN FLIGHT.
+  at session build), root-caused to a repark-core regression and FIXED in the orchestrator pass —
+  and the **fixer pass** (the `--junit` ledger id-space fix, the untracked pg run-output, the
+  refreshed reconciliation record, the published-literal disclosure decision, and the four
+  `.github/`/Makefile findings handed to the orchestrator); IN FLIGHT.
 - [p3c-binding-ledger.md](p3c-binding-ledger.md) — unit ledger for phase-3 PR-3
   (`crates/repark-python`, the PyO3 binding): the six applied edit classes with their per-class
   file lists (EC-1 re-home + dep collapse + the type-identity guard, EC-2 the door-installed
@@ -113,6 +115,9 @@ repository's `task/` directory).
 
 ## Debug
 
+- `pg-integration-report.md` may appear here untracked: `python/repark/tests/test_pg_acceptance.py`
+  writes it (CWD-relative) on every facade run. It is gitignored on purpose — a run output, not a
+  record. Do not `git add` it.
 - If work and trackers disagree, the code is truth — update the tracker.
 - Stale checkboxes are a known failure mode (lessons.md, 2026-08-06): verify against source and
   git history before scoping from todo.md alone.

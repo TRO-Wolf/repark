@@ -22,6 +22,11 @@ build/
 # Parity golden fixtures are tracked; local scratch is not
 /python/repark-parity/.scratch/
 
+# Test-GENERATED artifact: python/repark/tests/test_pg_acceptance.py rewrites this on every
+# facade run, at a path relative to the invocation CWD. Tracking it makes the suite dirty the
+# tree (and CI mutate a checked-in file), so it is a run output, not a record.
+/task/pg-integration-report.md
+
 # Editor / OS
 .DS_Store
 *.swp

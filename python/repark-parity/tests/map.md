@@ -65,7 +65,10 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
   and must be **absent from the ported tree** (over-subtraction — listed AND ported means a row is
   subtracted from the baseline while still running here). Absence is checked statically via `ast`,
   so the test needs no wheel and runs in the ordinary `make py-test` loop. Also pins that the
-  prose ledger names every machine-readable id, so the two halves cannot drift.
+  prose ledger names every machine-readable id, so the two halves cannot drift. **PR-5 fixer:**
+  a third direction is closed — every deferred id must resolve to a row of the recorded baseline
+  JUnit XML *through `load_junit_report`*, the loader the facade cohort's `--junit` gate actually
+  uses; the id-space mismatch that assertion catches made the ledger subtract nothing.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an
@@ -91,6 +94,7 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
 | `test_deferred_ledger` reds on "ALSO ported" | A node id is in the txt AND still defined in `python/repark/tests` — excise the test or drop the row |
 | `test_deferred_ledger` reds on "absent from the recorded pin collection" | The id does not name a real v1 node; check it against `task/census/baseline-fc3f48102/facade/collected.txt` |
 | `test_deferred_ledger` reds on the human summary | `task/port/deferred-tests.md` must name every id in the txt verbatim |
+| `test_deferred_ledger` reds on "would subtract nothing" | The id does not survive `junit_node_id` into a row of `…/facade/facade.xml`; check the id form, not the XML (the XML is recorded evidence — never hand-edit it) |
 
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.
 Escalate to: [../map.md#debug](../map.md).

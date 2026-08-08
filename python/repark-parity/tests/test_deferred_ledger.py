@@ -13,7 +13,11 @@ EC-4 names — over-deferral and under-deferral are both gate failures:
 * every deferred id must be a **pin-collected** name (it exists on the baseline side, so the
   subtraction actually removes something); and
 * every deferred id must be **absent from the ported tree** (a test that is both listed and
-  ported would be subtracted from the baseline while still running here — a silent gate hole).
+  ported would be subtracted from the baseline while still running here — a silent gate hole);
+  and
+* every deferred id must resolve to a baseline row **through the loader the facade cohort's own
+  mode uses** (``--junit``), because a ledger that parses but subtracts nothing in the mode that
+  runs it is exactly the drift EC-4 forbids.
 
 Absence is checked statically (the file is gone, or the file carries no such `def`), so this test
 needs no wheel and runs in the ordinary `make py-test` loop.
@@ -33,13 +37,15 @@ _PARITY_ROOT = Path(__file__).resolve().parents[1]
 if str(_PARITY_ROOT) not in sys.path:
     sys.path.insert(0, str(_PARITY_ROOT))
 
-from compat.compare_reports import load_ledger  # noqa: E402
+from compat.compare_reports import junit_node_id, load_junit_report, load_ledger  # noqa: E402
 
 _REPO = Path(__file__).resolve().parents[3]
 LEDGER_PATH = _REPO / "task" / "port" / "deferred-python-tests.txt"
 HUMAN_LEDGER_PATH = _REPO / "task" / "port" / "deferred-tests.md"
 FACADE_TESTS = _REPO / "python" / "repark" / "tests"
-PIN_COLLECTED = _REPO / "task" / "census" / "baseline-fc3f48102" / "facade" / "collected.txt"
+_PIN_FACADE = _REPO / "task" / "census" / "baseline-fc3f48102" / "facade"
+PIN_COLLECTED = _PIN_FACADE / "collected.txt"
+PIN_JUNIT = _PIN_FACADE / "facade.xml"
 
 # `path::name` — the node-id shape the recorded collection emits (no parametrized ids are
 # deferred; a `[param]` suffix would still parse, and is allowed).
@@ -89,6 +95,25 @@ def test_every_deferred_id_is_a_pin_collected_name() -> None:
     missing = [node_id for node_id in _ledger_ids() if node_id not in collected]
     assert not missing, (
         f"deferred ids absent from the recorded pin collection {PIN_COLLECTED}: {missing}"
+    )
+
+
+def test_every_deferred_id_subtracts_through_the_junit_loader() -> None:
+    """The gate the facade cohort actually runs is ``--junit`` — the ledger must bite THERE.
+
+    The collect-only oracle above proves the ids name real pin rows, but the facade cohort has
+    no census-JSON mode: PR-7 compares two JUnit XMLs. JUnit keys rows ``classname::name``
+    (``tests.test_excel_reader::test_excel_skip_rows``) while the ledger is written in
+    collect-only ``path::name`` form, so an untranslated ledger subtracts NOTHING and the
+    acceptance invocation can never exit 0. This asserts the translation against the recorded
+    baseline XML *through the loader that mode uses* — the assertion that catches that drift.
+    """
+    side = load_junit_report(PIN_JUNIT, label="v1", manifest={})
+    assert side.classes, "the recorded pin JUnit report is the oracle; it must not be empty"
+    missing = [node_id for node_id in _ledger_ids() if junit_node_id(node_id) not in side.classes]
+    assert not missing, (
+        f"deferred ids that do not resolve to a row of the recorded pin JUnit report "
+        f"{PIN_JUNIT} — in --junit mode they would subtract nothing: {missing}"
     )
 
 

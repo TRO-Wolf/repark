@@ -32,6 +32,7 @@ from compat.compare_reports import (  # noqa: E402
     ComparatorError,
     build_parser,
     compute_delta,
+    junit_node_id,
     load_ledger,
     main,
     render_side,
@@ -670,6 +671,71 @@ def test_junit_identical_exits_zero(tmp_path, capsys) -> None:
     )
     assert code == EXIT_IDENTICAL
     assert "junit mode" in out
+
+
+@pytest.mark.parametrize(
+    ("collect_id", "expected"),
+    [
+        # plain module-level test — the facade cohort's only shape
+        (
+            "tests/test_excel_reader.py::test_excel_skip_rows",
+            "tests.test_excel_reader::test_excel_skip_rows",
+        ),
+        # parametrized: the `[param]` suffix rides on `name` verbatim, as JUnit records it
+        ("tests/test_types.py::test_cast[decimal]", "tests.test_types::test_cast[decimal]"),
+        # class-based: every class segment joins the classname, the test name stays the name
+        ("tests/test_facade.py::TestX::test_one", "tests.test_facade.TestX::test_one"),
+        # nested directories collapse to dots
+        ("tests/sub/dir/test_deep.py::test_x", "tests.sub.dir.test_deep::test_x"),
+        # already JUnit-form / not a node id — returned unchanged (idempotent)
+        ("tests.test_facade.TestX::test_one", "tests.test_facade.TestX::test_one"),
+        ("tests.test_udf_oracle", "tests.test_udf_oracle"),
+    ],
+)
+def test_junit_node_id_translates_ledger_ids_into_the_junit_id_space(
+    collect_id: str, expected: str
+) -> None:
+    """EC-4: a ledger written in collect-only ids must still subtract in ``--junit`` mode."""
+    assert junit_node_id(collect_id) == expected
+    assert junit_node_id(junit_node_id(collect_id)) == expected
+
+
+def test_junit_deferred_ledger_in_collect_only_form_actually_subtracts(tmp_path, capsys) -> None:
+    """The regression itself: a collect-only ledger id must remove the matching JUnit row.
+
+    Before the translation this echoed ``deferred_subtracted: 0`` and the run exited 1 on a
+    phantom ``vanished`` row — a ledger that silently subtracts nothing.
+    """
+    left_manifest, right_manifest = _junit_manifests(tmp_path)
+    deferred_row = "tests.test_excel_reader::test_excel_skip_rows"
+    v1 = _junit(tmp_path / "a.xml", {**_JUNIT_ROWS, deferred_row: "passed"})
+    v2 = _junit(tmp_path / "b.xml", dict(_JUNIT_ROWS))
+    ledger = tmp_path / "deferred.txt"
+    ledger.write_text(
+        "# collect-only id form, as the checked-in ledger is written\n"
+        "tests/test_excel_reader.py::test_excel_skip_rows\n",
+        encoding="utf-8",
+    )
+    code, out, _ = _run(
+        [
+            "--junit",
+            "--baseline",
+            str(v1),
+            "--candidate",
+            str(v2),
+            "--deferred",
+            str(ledger),
+            "--manifest-baseline",
+            str(left_manifest),
+            "--manifest-candidate",
+            str(right_manifest),
+        ],
+        capsys,
+    )
+    assert code == EXIT_IDENTICAL
+    assert "deferred_subtracted: 1" in out
+    assert "deferred_not_present_in_baseline: 0" in out
+    assert "vanished (only in v1): 0" in out
 
 
 def test_junit_skip_state_change_is_detected(tmp_path, capsys) -> None:
