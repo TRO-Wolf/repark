@@ -155,8 +155,9 @@ paths. Read source assets from the v1 repo. Return a report: `files` (repo-relat
   copy re-homed commit by commit; every intermediate state runnable), the four phases with
   their contents, the acceptance gate (census multiset byte-flat across repos: classic 135/345,
   expand 42/171, expand2 41/167, plus the full-extras facade count; tests port with their
-  names), v1-freeze trigger, public ≠ released, and the cutover open item (single-writer-per-
-  table during parallel-run).
+  names — these numerators were re-baselined at milestone one to 142/345 · 44/171 · 87/167 ·
+  facade 2,509, see `docs/port/PLAN.md`), v1-freeze trigger, public ≠ released, and the cutover
+  open item (single-writer-per-table during parallel-run).
 - `briefs/phase-0-bootstrap.md` + `briefs/map.md` — this brief **with everything from the
   Appendix strip-marker down removed**, so the in-repo copy carries no local paths or literal
   grep patterns.
