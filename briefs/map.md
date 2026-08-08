@@ -24,6 +24,11 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   PR-3b DML + refs + census close; PR-4 repark-ta; PR-5/PR-6 the ANSI door) executing the
   settled design in [../docs/design/sql-doors.md](../docs/design/sql-doors.md); deliverables,
   ordering, acceptance, and the 2026-08-07 decisions record.
+- [phase-3-python-facade.md](phase-3-python-facade.md) — the phase-3 brief (2026-08-08): the
+  seven-PR slate (arming; repark-ml; repark-python; parity + census baseline; facade + wheel;
+  tier-2 CI; phase close) executing the settled design in
+  [../docs/design/python-facade.md](../docs/design/python-facade.md); execution pattern
+  (actor/critic model tiers), acceptance checklist, and the decisions record.
 
 ## I want to... → go to
 
@@ -35,6 +40,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 | See the port phases a brief executes against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 | Read the design a phase-1 PR implements | [../docs/design/session-api.md](../docs/design/session-api.md) |
 | Read the design a phase-2 PR implements | [../docs/design/sql-doors.md](../docs/design/sql-doors.md) |
+| Read the design a phase-3 PR implements | [../docs/design/python-facade.md](../docs/design/python-facade.md) |
 
 ## Pointers
 

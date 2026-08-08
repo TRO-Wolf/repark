@@ -1,6 +1,6 @@
 # Main PR gate (tier 1: every PR, no secrets, GitHub-hosted, read-only token).
-# Rust (fmt + clippy + check + test), Python (ruff), and the repo guards (map.md + workflow parse
-# + crate-DAG layering + lib.rs thinness).
+# Rust lint (fmt + clippy + check) + Rust test (workspace) as separate jobs, Python (ruff), and
+# the repo guards (map.md + workflow parse + crate-DAG layering + lib.rs thinness).
 # Note on `cargo test --locked --workspace` (not `--all-features`): `--all-features` would enable
 # the repark-python `extension-module` feature, which tells PyO3 not to link libpython — fine for
 # a wheel, but it breaks linking a standalone test binary. See AGENTS.md "PyO3 build notes"
@@ -26,32 +26,43 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  rust:
-    name: Rust (fmt + clippy + check + test)
+  # Phase-3 arming (docs/design/python-facade.md §7): lint and test are SPLIT into two jobs with
+  # one cache prefix each and a fresh disk each — the combined job restoring both prefixes onto
+  # one runner disk is the exact configuration v1 outgrew (ENOSPC + ld SIGBUS, three incidents).
+  # Both jobs install Python 3.12 (libpython) so the PyO3 cdylib links the day repark-python
+  # lands. No debuginfo, no incremental: CI never reuses it and it ~doubles artifact size.
+  rust-lint:
+    name: Rust lint (fmt + clippy + check)
     runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+      - name: free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/share/swift \
+            /usr/local/share/powershell /usr/share/miniconda
+          sudo docker system prune -af --volumes >/dev/null 2>&1 || true
+          df -h /
+      # Provides a Python 3.12 with libpython so the PyO3 cdylib links (from phase 3 on).
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
       # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags), so a floating ref would
       # run unreviewed action code forever. The `toolchain:` input below selects the compiler.
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
-      # rust-cache restore (arrives with the repark-iceberg dependency graph — restoring an
-      # empty-workspace cache was waste before PR-B). Prefix-keyed per dependency family: a
-      # stale prefix-fallback restore would lay a whole previous-family target under the new
-      # build — two dependency trees on one disk. New prefix = clean slate per family.
-      # The keys MUST match the cache-warm.yml warm jobs (v2-df54 / v2-df54-test); v1 split
-      # lint and test into two jobs with one key each — this combined rust job restores both
-      # so neither warm save is orphaned (the post-job saves converge on the full artifact set).
+      # Prefix-keyed per dependency family; MUST match cache-warm.yml's warm-lint job.
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
         with:
           prefix-key: "v2-df54"
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
-        with:
-          prefix-key: "v2-df54-test"
       # Dual-wired through the Makefile targets so local == CI by construction: the targets carry
       # the deliberate clippy split (general gate with -A clippy::disallowed_methods; the
       # panic-ban target is the only place clippy.toml's disallowed-methods list is live,
@@ -64,8 +75,44 @@ jobs:
         run: make rust-panic-ban
       - name: check
         run: make rust-check
+      - name: disk after
+        if: always()
+        run: df -h /
+
+  rust-test:
+    name: Rust test (workspace)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/.ghcup /usr/share/swift \
+            /usr/local/share/powershell /usr/share/miniconda
+          sudo docker system prune -af --volumes >/dev/null 2>&1 || true
+          df -h /
+      # Provides a Python 3.12 with libpython so the PyO3 cdylib links during `cargo test`.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
+      # SHA-pinned (see rust-lint).
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+        with:
+          prefix-key: "v2-df54-test"
       - name: test
         run: make rust-test
+      - name: disk after
+        if: always()
+        run: df -h /
 
   guards:
     name: Repo guards (map.md + workflow parse + crate-DAG + lib.rs)

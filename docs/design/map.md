@@ -18,6 +18,12 @@ design pass, not an in-place edit.
   delegate-first architecture (verbatim Spark-door port, NEW ANSI door), the four tier-3
   crates + three hoists (§1), the Q1–Q15 ANSI rulings (§2), the seam freeze (§3), census +
   matrix testing discipline (§4), the sequencing fidelity gate (§5), and top risks (§6).
+- [python-facade.md](python-facade.md) — the phase-3 Python binding + facade + census design
+  (settled 2026-08-08, competition-synthesized): census-first verbatim port, the ten edit
+  classes (§3), the Q1–Q10 rulings incl. the deferred `repark.sql` re-home with its
+  release-prep gate (§4), the three hard findings handled (§5), the end-to-end census +
+  acceptance procedure with the stability run and the report comparator (§6), the CI delta
+  incl. the net-new tier-2 live-AWS design (§7), and the seven-PR slate (§9).
 
 ## I want to...
 
@@ -27,8 +33,10 @@ design pass, not an in-place edit.
 | See exactly which product-code edits the port makes | [session-api.md](session-api.md) §5 |
 | Check why an improvement was deliberately resisted | [session-api.md](session-api.md) §8 |
 | Understand the phase-2 doors / ANSI rulings | [sql-doors.md](sql-doors.md) |
+| Understand the phase-3 port / census gate / edit classes | [python-facade.md](python-facade.md) |
 | Read the brief that executes the phase-1 design | [../../briefs/phase-1-engine-core.md](../../briefs/phase-1-engine-core.md) |
 | Read the brief that executes the phase-2 design | [../../briefs/phase-2-sql-doors.md](../../briefs/phase-2-sql-doors.md) |
+| Read the brief that executes the phase-3 design | [../../briefs/phase-3-python-facade.md](../../briefs/phase-3-python-facade.md) |
 | See the port phases the design fits into | [../port/PLAN.md](../port/PLAN.md) |
 
 ## Pointers

@@ -32,7 +32,10 @@ TIER_NAMES: dict[int, str] = {
     0: "foundation",
     1: "table service",
     2: "engine session",
-    3: "spark surface",
+    3: "surface crates",
+    # Tier 4 exists so this guard states the real rule: no engine crate may ever reach the
+    # bindings adapter. `repark-python` is the only member and nothing may depend on it.
+    4: "bindings",
 }
 
 # The tier map. A new `repark-*` crate MUST be added here or this guard fails loudly —
@@ -52,6 +55,13 @@ TIERS: dict[str, int] = {
     "repark-ta": 3,
     "repark-spark": 3,
     "repark-sql": 3,
+    # Phase 3 (docs/design/python-facade.md §2.1) — pre-declared. `repark-ml` is a
+    # capability leaf beside functions/ta (zero internal edges); `repark-python` is the
+    # PyO3 cdylib, the only tier-4 crate, and may name only repark-core, repark-functions,
+    # repark-ta, repark-spark, and repark-ml (deliberate non-edges: repark-sql,
+    # repark-iceberg — the binding reaches Iceberg only through ReparkSession and SQL text).
+    "repark-ml": 3,
+    "repark-python": 4,
 }
 
 

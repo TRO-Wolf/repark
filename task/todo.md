@@ -171,14 +171,36 @@ sibling-union) held. Day-1 spikes validated their existence: R2 found a real cor
 — the audit proves absence is *recorded*, not *true*; ephemeral provider lifecycle (the
 time-travel view leak — ANSI fixed, Spark-door inherits v1's copy as tracked debt below).
 
-## Phase 3 — Python facade + parity = milestone one (BACKLOG)
+## Phase 3 — Python facade + parity = milestone one (IN PROGRESS 2026-08-08)
+
+Design SETTLED 2026-08-08 (competition-synthesized): `docs/design/python-facade.md`; brief:
+`briefs/phase-3-python-facade.md`. The seven-PR slate (order 1 → 2 → (3 ∥ 4) → 5 → 6 → 7):
+
+- [ ] PR-1 arming — design + brief in-repo; crate-DAG tier rows (`repark-ml` 3, `repark-python`
+      4 "bindings") pre-declared; rust CI job split (lint/test, setup-python, free-disk);
+      testing.md row-2 spelling note; dialect doc rider. Ledger: `task/p3a-arming-ledger.md`.
+- [ ] PR-2 `repark-ml` — verbatim, identity census. Ledger: `task/p3b-ml-ledger.md`.
+- [ ] PR-3 `crates/repark-python` — door wiring + dep collapse + refuse-arms + EngineRuntime +
+      edit classes EC-1/2/3/5/6/10. Ledger: `task/p3c-binding-ledger.md`.
+- [ ] PR-4 `python/repark-parity` + census foundation — comparator, additive `--classic`,
+      v1-pin baseline + stability self-diff. Ledger: `task/p3d-parity-ledger.md`.
+- [ ] PR-5 `python/repark` facade + suite + wheels.yml (real-artifact rule discharges here);
+      EC-4 deferral ledger + EC-9 hygiene ledger. Ledger: `task/p3e-facade-ledger.md`.
+- [ ] PR-6 tier-2 CI — parity-live armed + net-new `aws-acceptance.yml` (OIDC, env-gated,
+      no-delete IAM). Ledger: `task/p3f-tier2-ledger.md`.
+- [ ] PR-7 phase close — v2 census run, comparator ×4, reconciliation, PLAN re-baseline,
+      retrospective, operator cutover note. Ledger: `task/p3g-close-ledger.md`.
+
+Standing acceptance rows (discharged across the slate):
 
 - [ ] `repark-python` thin adapter + PySpark facade; PyO3/maturin build surface returns
       (boundary real-artifact test rule arms — `docs/testing.md`); `check_lib_py` gate returns
       with it.
 - [ ] Parity harness + census machinery port; uv workspace members land.
-- [ ] Acceptance gate: census multiset byte-flat across repos (classic 135/345, expand 42/171,
-      expand2 41/167, plus the full-extras facade count) — see `docs/port/PLAN.md`.
+- [ ] Acceptance gate: census multiset byte-flat across repos — baselines re-recorded at the
+      pin by the PR-4 procedure (the historical PLAN.md numbers were stale; see
+      `docs/design/python-facade.md` §5 F2) — plus the full-extras facade cohort, defined in
+      the design §6.3.
 - [ ] Tier-2 CI (live AWS, merged code only, OIDC) + live oracle tier.
 - [ ] v1 freezes to bugfix-only at acceptance; first tagged PyPI release gated on milestone one
       (`docs/release.md`).

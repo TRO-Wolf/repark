@@ -34,7 +34,9 @@ wrapper.
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`.
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
-  into v1's positional `execute_with_read_only` call). Tests: [dialect/map.md](dialect/map.md).
+  into v1's positional `execute_with_read_only` call; install with
+  `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`). Tests:
+  [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
   `repark.sql.*` config; `register` = `repark_functions::register_all` + analyzer rules + the
   composed `repark_ta::TaExtension`, in v1 `build()`'s order; the DF-54.1 subquery guard stays a
