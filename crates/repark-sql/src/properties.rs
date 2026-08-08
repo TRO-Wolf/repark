@@ -82,7 +82,7 @@ pub(crate) fn parse_with_options(options: &[SqlOption], form: &str) -> Result<Ta
         seen.push(name.clone());
 
         match name.as_str() {
-            "format" => validate_format(&string_value(value, &name, form)?, form)?,
+            "format" => refuse_format_value(&string_value(value, &name, form)?, form)?,
             "format_version" => validate_format_version(&scalar_value(value, &name, form)?, form)?,
             "location" => properties.location = Some(string_value(value, &name, form)?),
             "partitioning" => properties.partitioning = parse_partitioning(value, form)?,
@@ -117,7 +117,7 @@ fn refuse_unknown_key(key: &str, form: &str) -> DataFusionError {
 }
 
 /// G9 reserved refusal: hold the spelling, refuse loud, NAME THE TRIGGER.
-fn refuse_sorted_by(form: &str) -> DataFusionError {
+pub(crate) fn refuse_sorted_by(form: &str) -> DataFusionError {
     DataFusionError::NotImplemented(format!(
         "{form} WITH: `sorted_by` is a reserved property that is not implemented yet — the \
          spelling is held so it cannot be reused for anything else. Iceberg sort orders are not \
@@ -131,7 +131,7 @@ fn refuse_sorted_by(form: &str) -> DataFusionError {
 /// `format` vocabulary: PARQUET only. ORC/AVRO are the second G9 reserved refusal — they are
 /// real Iceberg formats, so the message must say we understood the request and why the answer is
 /// no, plus what would change it.
-fn validate_format(value: &str, form: &str) -> Result<()> {
+pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
     match value.trim().to_ascii_uppercase().as_str() {
         "PARQUET" => Ok(()),
         other @ ("ORC" | "AVRO") => Err(DataFusionError::NotImplemented(format!(
@@ -182,7 +182,7 @@ fn parse_partitioning(value: &Expr, form: &str) -> Result<Vec<PartitionTransform
 
 /// `extra_properties = MAP(ARRAY['k', …], ARRAY['v', …])` — the G4 escape hatch, in Trino's own
 /// spelling so a Trino/dbt user's SQL transfers unchanged.
-fn parse_extra_properties(value: &Expr, form: &str) -> Result<HashMap<String, String>> {
+pub(crate) fn parse_extra_properties(value: &Expr, form: &str) -> Result<HashMap<String, String>> {
     let shape = || {
         DataFusionError::Plan(format!(
             "{form} WITH: `extra_properties` must be MAP(ARRAY['key', …], ARRAY['value', …]) \
@@ -257,7 +257,7 @@ fn literal_string(expr: &Expr) -> Option<String> {
 }
 
 /// A property value that must be a string literal.
-fn string_value(value: &Expr, key: &str, form: &str) -> Result<String> {
+pub(crate) fn string_value(value: &Expr, key: &str, form: &str) -> Result<String> {
     literal_string(value).ok_or_else(|| {
         DataFusionError::Plan(format!(
             "{form} WITH: property `{key}` must be a string literal (got `{value}`)"

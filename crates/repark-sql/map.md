@@ -11,15 +11,17 @@ DataFusion, which is why cross-door equivalence must run two sessions (extension
 session-scoped).
 
 Design SSOT: [../../docs/design/sql-doors.md](../../docs/design/sql-doors.md) §2 (Q1–Q15).
-Milestone ledger: [../../task/p2f-ansi-m1-ledger.md](../../task/p2f-ansi-m1-ledger.md).
+Milestone ledgers: [../../task/p2f-ansi-m1-ledger.md](../../task/p2f-ansi-m1-ledger.md) (M1 /
+PR-5) and [../../task/p2g-ansi-m2-ledger.md](../../task/p2g-ansi-m2-ledger.md) (M2 / PR-6).
 
-**M1 (PR-5) is what is live here:** the crate spine + `AnsiDialect`, the guard set
+**The door is CLOSED as of M2 (PR-6).** M1 landed the crate spine + `AnsiDialect`, the guard set
 (multi-statement FIRST, P11 read-only-catalog DML, write-to-branch, SEC-02 local-filesystem),
 the error-path wrong-door sniff, the `CREATE TABLE` family (CTAS + column-def) with the curated
 `WITH (…)` vocabulary, `extra_properties`, partitioning and Q15 loud-refuse routing,
-`CREATE`/`DROP SCHEMA` and `DROP TABLE`. **M2 (PR-6)** adds ALTER, MERGE, `FOR … AS OF` time
-travel, branch/tag DDL, the full refuse set and the cross-door rows — each already carried as a
-typed absence row in `src/matrix.rs`.
+`CREATE`/`DROP SCHEMA` and `DROP TABLE`. M2 added ALTER (+ `SET PROPERTIES`, `RENAME TO`), the
+MERGE lowering, `FOR … AS OF` time travel, the ALTER-scoped branch/tag DDL, the completed refuse
+set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now reads 39 tested /
+4 deliberately absent, and every remaining absence is a standing design ruling, not a deferral.
 
 ## Contents
 
@@ -27,9 +29,13 @@ typed absence row in `src/matrix.rs`.
   `iceberg` (staged create/replace types) and `async-trait` (the seam is an async trait).
   **No direct `sqlparser`** (types come only through `datafusion::sql::sqlparser`) and **no
   `datafusion-spark`** — the design's hard constraint, so this door cannot reach Spark semantics
-  through a crate edge.
+  through a crate edge. **Dev-dependencies only:** `repark-spark` (the two-session cross-door
+  protocol needs both doors in one test binary) and `repark-ta` (the Q11 toll). The crate-DAG
+  guard scopes layering to NORMAL edges, so neither is a product edge — nothing in `src/` may
+  name them.
 - [src/map.md](src/map.md) — module-by-module navigation.
-- [tests/map.md](tests/map.md) — integration tests (the R1 parser-production pins).
+- [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
+  two-session `cross_door.rs` rows, Q8 `introspection.rs`, the Q11 `ta_toll.rs`.
 
 ## I want to...
 
@@ -57,7 +63,7 @@ typed absence row in `src/matrix.rs`.
 | `unknown table property` on a create | The curated set is in `src/properties.rs`; dotted Iceberg keys go through `extra_properties = MAP(…)` |
 | `cannot resolve a storage location` | The schema has no `location` property and the catalog is `RequireExplicitLocation` — set it on the schema or per-table |
 | An error suddenly mentions Spark | The wrong-door sniff fired on the ERROR path (`src/sniff.rs`); the original error is still the first line |
-| `SHOW TABLES` / `information_schema` empty or missing | `information_schema` must be enabled on the DataFusion config — see the R2 spike note in the ledger (a repark-core gap, not a door gap) |
-| A `FOR … AS OF` query fails to parse | Time travel is PR-6 (`TIME_TRAVEL` is an absence row in `src/matrix.rs`) |
+| `SHOW TABLES` / `information_schema` empty or missing | Build the session with `.config("datafusion.catalog.information_schema", "true")` — the builder now carries `datafusion.*` keys through to `SessionConfig` (PR-6 R2 fix); without the conf the refusal is DataFusion's own |
+| A `FOR … AS OF` query fails to parse | The scanner runs AFTER the multi-statement refuse and BEFORE the parse (`src/time_travel.rs`); bare `VERSION AS OF` (no `FOR`) is the Spark spelling and steers |
 
 First checks: `cargo test -p repark-sql`. Escalate to: [../map.md#debug](../map.md).

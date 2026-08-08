@@ -61,9 +61,11 @@ wrapper.
 - `matrix.rs` — the Q13 surface matrix (`#[cfg(test)]`, design `docs/design/sql-doors.md` §2
   Q13 / graft G2): every `repark_common::surfaces` ID mapped to `Row::Tested { test, profile }`
   or `Row::DeliberatelyAbsent { reason, adr }`, plus the compile-run audit that fails on an
-  unmapped surface. 38 tested / 5 deliberately absent (sort order + unknown-key refuse are
-  ANSI-only; the wrong-door sniff points AT this door; TA composes at PR-4; cross-door rows are
-  PR-6's two-session protocol). 3 tests.
+  unmapped surface. **40 tested / 3 deliberately absent** as of PR-6 (sort order + unknown-key
+  refuse are ANSI-only; the wrong-door sniff points AT this door). `CROSS_DOOR_EQUIVALENCE` is
+  `Tested` under the `TwoSession` profile, and its evidence deliberately lives in the OTHER
+  crate's test binary — `crates/repark-sql/tests/cross_door.rs`, the only place a dev-dependency
+  may put both doors in one process; `cargo test -p repark-spark` alone will not run it. 3 tests.
 - `lib.rs` — manifest: module decls, `execute`/`SparkDialect`/`SparkExtension` re-exports, the
   v1 domain-module `pub(crate) use` groups, and the `#[cfg(test)]` root imports that
   reconstruct v1's crate-root scope for the battery's `use super::*`.

@@ -1077,3 +1077,480 @@ async fn mor_unpartitioned_multi_spec_dml_refuses() {
         .await;
     door.ok("DELETE FROM ice.sales.plain WHERE id = 1").await;
 }
+
+// === M2: ALTER TABLE ========================================================================
+
+/// Schema evolution round-trips on the Arrow path: after ADD / RENAME / DROP COLUMN the SELECT
+/// that reads the table sees the new shape, with the right names AND types — and the old rows are
+/// still there, because Iceberg schema evolution rewrites no data.
+#[tokio::test]
+async fn alter_add_drop_rename_column_round_trips() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.evo AS SELECT 1 AS id, 'a' AS label")
+        .await;
+
+    door.ok("ALTER TABLE ice.sales.evo ADD COLUMN amount INT")
+        .await;
+    door.ok("ALTER TABLE ice.sales.evo RENAME COLUMN label TO name")
+        .await;
+
+    let (schema, batches) = door
+        .ok_typed("SELECT id, name, amount FROM ice.sales.evo")
+        .await;
+    assert_eq!(schema.field(0).name(), "id");
+    assert_eq!(schema.field(1).name(), "name", "the rename is visible");
+    assert_eq!(schema.field(2).name(), "amount");
+    assert_eq!(schema.field(2).data_type(), &DataType::Int32, "added type");
+    assert!(schema.field(2).is_nullable(), "an added column is optional");
+
+    let names = batches[0]
+        .column(1)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .expect("Utf8 name");
+    assert_eq!(names.value(0), "a", "existing rows survive evolution");
+    assert!(
+        batches[0].column(2).is_null(0),
+        "the added column reads back NULL"
+    );
+
+    // DROP removes it from the read schema.
+    door.ok("ALTER TABLE ice.sales.evo DROP COLUMN amount")
+        .await;
+    let (schema, _) = door.ok_typed("SELECT * FROM ice.sales.evo").await;
+    assert_eq!(schema.fields().len(), 2, "amount is gone: {schema:?}");
+    assert!(
+        door.err("SELECT amount FROM ice.sales.evo")
+            .await
+            .contains("amount"),
+        "the dropped column no longer resolves"
+    );
+}
+
+/// Several ops in ONE statement commit as one transaction, and `IF NOT EXISTS` / `IF EXISTS` are
+/// idempotent rather than errors.
+#[tokio::test]
+async fn alter_batches_ops_and_honours_if_exists() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.batch AS SELECT 1 AS id")
+        .await;
+    door.ok("ALTER TABLE ice.sales.batch ADD COLUMN a INT, ADD COLUMN b INT")
+        .await;
+
+    let schema_count = door
+        .table("sales", "batch")
+        .await
+        .metadata()
+        .schemas_iter()
+        .count();
+    let (schema, _) = door.ok_typed("SELECT id, a, b FROM ice.sales.batch").await;
+    assert_eq!(schema.fields().len(), 3);
+
+    // A second ADD IF NOT EXISTS / DROP IF EXISTS is a no-op, not a failure — and adds no schema.
+    door.ok("ALTER TABLE ice.sales.batch ADD COLUMN IF NOT EXISTS a INT")
+        .await;
+    door.ok("ALTER TABLE ice.sales.batch DROP COLUMN IF EXISTS nope")
+        .await;
+    assert_eq!(
+        door.table("sales", "batch")
+            .await
+            .metadata()
+            .schemas_iter()
+            .count(),
+        schema_count,
+        "an idempotent no-op must not commit a new schema"
+    );
+}
+
+/// `ALTER COLUMN … SET DATA TYPE` performs an Iceberg promotion (metadata-only), and the
+/// narrowing direction refuses BEFORE any transaction opens.
+#[tokio::test]
+async fn alter_column_set_data_type_promotes_and_refuses_narrowing() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.promo (id INT, amount INT)")
+        .await;
+    door.ok("ALTER TABLE ice.sales.promo ALTER COLUMN amount SET DATA TYPE BIGINT")
+        .await;
+
+    let (schema, _) = door.ok_typed("SELECT amount FROM ice.sales.promo").await;
+    assert_eq!(
+        schema.field(0).data_type(),
+        &DataType::Int64,
+        "int → bigint is a promotion"
+    );
+
+    let err = door
+        .err("ALTER TABLE ice.sales.promo ALTER COLUMN amount SET DATA TYPE INT")
+        .await;
+    assert!(err.contains("not an Iceberg promotion target"), "{err}");
+    assert!(err.contains("Narrowing"), "names the rule: {err}");
+
+    // A required ADD is an incompatible change and says so.
+    let required = door
+        .err("ALTER TABLE ice.sales.promo ADD COLUMN who VARCHAR NOT NULL")
+        .await;
+    assert!(required.contains("incompatible change"), "{required}");
+}
+
+/// `RENAME TO` moves the table in the catalog and the new name becomes queryable in the same
+/// session (the provider is re-registered), while the old name stops resolving.
+#[tokio::test]
+async fn alter_table_rename_to_moves_the_table() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.beforerename AS SELECT 7 AS id")
+        .await;
+    door.ok("ALTER TABLE ice.sales.beforerename RENAME TO ice.sales.afterrename")
+        .await;
+
+    assert!(door.table_exists("sales", "afterrename").await);
+    assert!(!door.table_exists("sales", "beforerename").await);
+    let batches = door.ok("SELECT id FROM ice.sales.afterrename").await;
+    let ids = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("Int64 id");
+    assert_eq!(ids.value(0), 7);
+    assert!(
+        !door
+            .err("SELECT id FROM ice.sales.beforerename")
+            .await
+            .is_empty(),
+        "the old name must stop resolving"
+    );
+}
+
+/// Trino `SET PROPERTIES` reaches real Iceberg table properties through the G4 hatch, and the
+/// dotted-key `= DEFAULT` spelling is the round trip that removes them again.
+#[tokio::test]
+async fn alter_set_properties_round_trips_raw_keys() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.props AS SELECT 1 AS id")
+        .await;
+    door.ok(
+        "ALTER TABLE ice.sales.props SET PROPERTIES (extra_properties = \
+         MAP(ARRAY['write.merge.mode'], ARRAY['merge-on-read']))",
+    )
+    .await;
+    assert_eq!(
+        door.table("sales", "props")
+            .await
+            .metadata()
+            .properties()
+            .get("write.merge.mode")
+            .map(String::as_str),
+        Some("merge-on-read"),
+        "the raw key must land in table metadata"
+    );
+
+    door.ok("ALTER TABLE ice.sales.props SET PROPERTIES (\"write.merge.mode\" = DEFAULT)")
+        .await;
+    assert!(
+        !door
+            .table("sales", "props")
+            .await
+            .metadata()
+            .properties()
+            .contains_key("write.merge.mode"),
+        "DEFAULT must remove the property"
+    );
+}
+
+// === M2: MERGE INTO =========================================================================
+
+/// `MERGE INTO` upserts through this door: matched rows update, unmatched rows insert, and the
+/// result reads back on the Arrow path with the right values AND types.
+#[tokio::test]
+async fn merge_into_upserts_through_the_door() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.mtarget AS SELECT 1 AS id, 10 AS amount \
+         UNION ALL SELECT 2 AS id, 20 AS amount",
+    )
+    .await;
+    door.ok(
+        "CREATE TABLE ice.sales.msource AS SELECT 2 AS id, 99 AS amount \
+         UNION ALL SELECT 3 AS id, 30 AS amount",
+    )
+    .await;
+
+    door.ok(
+        "MERGE INTO ice.sales.mtarget AS t USING ice.sales.msource AS s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET amount = s.amount \
+         WHEN NOT MATCHED THEN INSERT (id, amount) VALUES (s.id, s.amount)",
+    )
+    .await;
+
+    let (schema, batches) = door
+        .ok_typed("SELECT id, amount FROM ice.sales.mtarget ORDER BY id")
+        .await;
+    assert_eq!(schema.field(1).data_type(), &DataType::Int64, "amount type");
+    assert_eq!(rows_of(&batches), vec![(1, 10), (2, 99), (3, 30)]);
+}
+
+/// Read `(id, amount)` pairs out of a two-Int64-column result, in batch order.
+fn rows_of(batches: &[RecordBatch]) -> Vec<(i64, i64)> {
+    let mut rows = Vec::new();
+    for batch in batches {
+        let left = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64 column 0");
+        let right = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64 column 1");
+        for row in 0..batch.num_rows() {
+            rows.push((left.value(row), right.value(row)));
+        }
+    }
+    rows
+}
+
+/// MERGE `OUTPUT` / `RETURNING` refuses loud rather than silently dropping the clause.
+#[tokio::test]
+async fn merge_output_clause_refuses() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.mo AS SELECT 1 AS id").await;
+    let err = door
+        .err(
+            "MERGE INTO ice.sales.mo AS t USING ice.sales.mo AS s ON t.id = s.id \
+             WHEN MATCHED THEN DELETE RETURNING t.id",
+        )
+        .await;
+    assert!(err.contains("OUTPUT/RETURNING"), "{err}");
+}
+
+// === M2: time travel ========================================================================
+
+/// `FOR VERSION AS OF` reads a PINNED snapshot: the rows are the ones from before the second
+/// write, not the current ones. The type is asserted too — a pinned read must not quietly change
+/// the schema.
+#[tokio::test]
+async fn time_travel_reads_a_pinned_snapshot() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.tt AS SELECT 1 AS id").await;
+    let first = door
+        .table("sales", "tt")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("the CTAS must commit a snapshot");
+
+    door.ok("INSERT INTO ice.sales.tt VALUES (2)").await;
+    let now = door.ok("SELECT id FROM ice.sales.tt").await;
+    assert_eq!(
+        now.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        2,
+        "the current table has both rows"
+    );
+
+    let (schema, pinned) = door
+        .ok_typed(&format!(
+            "SELECT id FROM ice.sales.tt FOR VERSION AS OF {first} ORDER BY id"
+        ))
+        .await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64, "pinned type");
+    assert_eq!(
+        pinned.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1,
+        "the pinned read must see only the first write"
+    );
+    let ids = pinned[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("Int64 id");
+    assert_eq!(ids.value(0), 1);
+}
+
+/// A string version is a branch/tag REF, resolved through the same pin path.
+#[tokio::test]
+async fn time_travel_by_ref_name_reads_the_ref() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.ttref AS SELECT 1 AS id")
+        .await;
+    door.ok("ALTER TABLE ice.sales.ttref CREATE TAG v1").await;
+    door.ok("INSERT INTO ice.sales.ttref VALUES (2)").await;
+
+    let pinned = door
+        .ok("SELECT id FROM ice.sales.ttref FOR VERSION AS OF 'v1'")
+        .await;
+    assert_eq!(
+        pinned.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1,
+        "the tag still points at the first snapshot"
+    );
+    // `main` is the live ref, so it sees both rows — proving the ref name is really resolved.
+    let live = door
+        .ok("SELECT id FROM ice.sales.ttref FOR VERSION AS OF 'main'")
+        .await;
+    assert_eq!(live.iter().map(RecordBatch::num_rows).sum::<usize>(), 2);
+}
+
+/// An unresolvable pin refuses loud rather than silently reading the current snapshot — and the
+/// multi-statement guard still beats the scanner (the BUG-010 ordering rule).
+#[tokio::test]
+async fn time_travel_refuses_an_unresolvable_pin() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.ttbad AS SELECT 1 AS id")
+        .await;
+
+    assert!(
+        !door
+            .err("SELECT id FROM ice.sales.ttbad FOR VERSION AS OF 424242")
+            .await
+            .is_empty(),
+        "an unknown snapshot must refuse, never fall back to current"
+    );
+
+    let ref_err = door
+        .err("SELECT id FROM ice.sales.ttbad FOR VERSION AS OF 'no_such_ref'")
+        .await;
+    assert!(ref_err.contains("no_such_ref"), "{ref_err}");
+
+    let script = door
+        .err("SELECT 1; SELECT id FROM ice.sales.ttbad FOR VERSION AS OF 1")
+        .await;
+    assert!(
+        script.contains("[PARSE_SYNTAX_ERROR]"),
+        "the guard must beat the scanner (BUG-010 ordering): {script}"
+    );
+}
+
+// === M2: branch / tag DDL ===================================================================
+
+/// Branch and tag DDL round-trips through the tier-1 `ManageSnapshots` seams: the ref appears in
+/// table metadata, `CREATE OR REPLACE` re-pins it, and `DROP` removes it.
+#[tokio::test]
+async fn branch_and_tag_ddl_round_trips() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.refsddl AS SELECT 1 AS id")
+        .await;
+    let first = door
+        .table("sales", "refsddl")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("snapshot");
+
+    door.ok("ALTER TABLE ice.sales.refsddl CREATE BRANCH audit")
+        .await;
+    door.ok("ALTER TABLE ice.sales.refsddl CREATE TAG v1 RETAIN 7 DAYS")
+        .await;
+    let table = door.table("sales", "refsddl").await;
+    assert_eq!(
+        table
+            .metadata()
+            .snapshot_for_ref("audit")
+            .map(|snapshot| snapshot.snapshot_id()),
+        Some(first)
+    );
+    assert!(table.metadata().snapshot_for_ref("v1").is_some());
+
+    // A second write moves `main`; CREATE OR REPLACE re-pins the branch onto it.
+    door.ok("INSERT INTO ice.sales.refsddl VALUES (2)").await;
+    let second = door
+        .table("sales", "refsddl")
+        .await
+        .metadata()
+        .current_snapshot_id()
+        .expect("snapshot");
+    assert_ne!(first, second, "fixture: the insert must move main");
+    door.ok("ALTER TABLE ice.sales.refsddl CREATE OR REPLACE BRANCH audit")
+        .await;
+    assert_eq!(
+        door.table("sales", "refsddl")
+            .await
+            .metadata()
+            .snapshot_for_ref("audit")
+            .map(|snapshot| snapshot.snapshot_id()),
+        Some(second),
+        "OR REPLACE must re-pin"
+    );
+
+    // DROP, then IF EXISTS is idempotent while a bare DROP of a missing ref still refuses.
+    door.ok("ALTER TABLE ice.sales.refsddl DROP BRANCH audit")
+        .await;
+    assert!(
+        door.table("sales", "refsddl")
+            .await
+            .metadata()
+            .snapshot_for_ref("audit")
+            .is_none()
+    );
+    door.ok("ALTER TABLE ice.sales.refsddl DROP BRANCH IF EXISTS audit")
+        .await;
+    assert!(
+        !door
+            .err("ALTER TABLE ice.sales.refsddl DROP BRANCH audit")
+            .await
+            .is_empty(),
+        "a bare DROP of a missing ref still refuses"
+    );
+}
+
+/// A ref cannot be created on a table with no snapshot without an explicit pin — refusing names
+/// the fix instead of committing a ref that points at nothing.
+#[tokio::test]
+async fn branch_ddl_on_an_empty_table_requires_an_explicit_pin() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.emptyrefs (id INT)").await;
+    let err = door
+        .err("ALTER TABLE ice.sales.emptyrefs CREATE BRANCH audit")
+        .await;
+    assert!(err.contains("AS OF VERSION"), "{err}");
+}
+
+/// Writing to a ref stays refused (the fork's append always sets `main`) — landing branch DDL
+/// does not open a branch WRITE path.
+#[tokio::test]
+async fn writing_to_a_ref_still_refuses_after_branch_ddl() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.wb AS SELECT 1 AS id").await;
+    door.ok("ALTER TABLE ice.sales.wb CREATE BRANCH audit")
+        .await;
+    let err = door
+        .err("INSERT INTO ice.sales.wb.branch_audit VALUES (2)")
+        .await;
+    assert!(err.contains("snapshot ref"), "{err}");
+}
+
+// === M2: the refuse set =====================================================================
+
+/// Every deliberately-absent statement shape refuses LOUD through the door, naming what to do
+/// instead — never a silent success, never a raw parser error. The last assertion is the one that
+/// matters: the table is untouched by all four.
+#[tokio::test]
+async fn the_refuse_set_refuses_loud_through_the_door() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.refset AS SELECT 1 AS id")
+        .await;
+
+    let overwrite = door
+        .err("INSERT OVERWRITE ice.sales.refset SELECT 2 AS id")
+        .await;
+    assert!(
+        overwrite.contains("INSERT OVERWRITE is not supported"),
+        "{overwrite}"
+    );
+    assert!(overwrite.contains("dbt-trino"), "{overwrite}");
+
+    let call = door
+        .err("CALL ice.system.rewrite_data_files(table => 'ice.sales.refset')")
+        .await;
+    assert!(call.contains("CALLABLE OPERATION"), "{call}");
+
+    let execute = door
+        .err("ALTER TABLE ice.sales.refset EXECUTE optimize")
+        .await;
+    assert!(execute.contains("reserved"), "{execute}");
+
+    let truncate = door.err("TRUNCATE TABLE ice.sales.refset").await;
+    assert!(truncate.contains("no truncate primitive"), "{truncate}");
+
+    let batches = door.ok("SELECT id FROM ice.sales.refset").await;
+    assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 1);
+}

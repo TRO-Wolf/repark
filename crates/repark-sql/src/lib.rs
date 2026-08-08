@@ -12,20 +12,28 @@
 //! and execution on the delegation path; the wrong-door sniff runs on the ERROR path only, so the
 //! happy path pays nothing for it and string literals can never trigger it.
 //!
-//! Milestone scope (PR-5 / M1): the crate spine, the guard set, the wrong-door sniff, the
+//! Milestone scope. PR-5 (M1) landed the crate spine, the guard set, the wrong-door sniff, the
 //! `CREATE TABLE` family with its `WITH (…)` vocabulary and Q15 routing, `CREATE`/`DROP SCHEMA`,
-//! and `DROP TABLE`. `MERGE`, `ALTER`, `FOR … AS OF` time travel and branch/tag DDL land in PR-6
-//! — each recorded as a typed absence row in the surface matrix, never as silence.
+//! and `DROP TABLE`. PR-6 (M2) completes the door: `ALTER TABLE` schema evolution + Trino
+//! `SET PROPERTIES`, the `MERGE INTO` lowering, `FOR … AS OF` time travel, branch/tag DDL, and
+//! the refuse set (`INSERT OVERWRITE`, `CALL`, `ALTER TABLE … EXECUTE`, `TRUNCATE`). What remains
+//! absent is absent BY RULING, and every one of those is a typed row in the surface matrix with
+//! its design/ADR citation — never silence.
 
+mod alter;
 mod create_table;
 mod dialect;
 mod guards;
+mod merge;
 mod partitioning;
 mod properties;
+mod ref_ddl;
+mod refusals;
 mod router;
 mod scan;
 mod schema_ddl;
 mod sniff;
+mod time_travel;
 
 // --- The phase-1 seam adapter: this crate's product surface. ---
 pub use dialect::AnsiDialect;

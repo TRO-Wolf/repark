@@ -57,11 +57,11 @@ pub(crate) struct CreateTarget {
 }
 
 impl CreateTarget {
-    fn ident(&self) -> TableIdent {
+    pub(crate) fn ident(&self) -> TableIdent {
         TableIdent::new(self.namespace.clone(), self.table.clone())
     }
 
-    fn schema_name(&self) -> String {
+    pub(crate) fn schema_name(&self) -> String {
         self.namespace
             .as_ref()
             .last()
@@ -628,6 +628,43 @@ async fn column_def_schema(
         })
         .collect::<Vec<_>>();
     Ok(Arc::new(ArrowSchema::new(fields)))
+}
+
+/// ===========================================================================================
+/// Resolve ONE declared SQL type to its Iceberg type, through the same route
+/// [`column_def_schema`] uses for a whole column list.
+///
+/// Shared with [`crate::alter`], whose `ADD COLUMN` / `SET DATA TYPE` need exactly this mapping.
+/// Routing it through DataFusion's planner rather than a hand-written match is the same decision
+/// for the same reason: a second sqlparser-type → Iceberg-type table in this door would drift
+/// from the one the engine actually plans with.
+/// ===========================================================================================
+///
+/// # Errors
+/// A type DataFusion cannot resolve, or one Arrow→Iceberg conversion rejects.
+pub(crate) async fn sql_type_to_iceberg(
+    ctx: &SessionContext,
+    data_type: &datafusion::sql::sqlparser::ast::DataType,
+    form: &str,
+) -> Result<iceberg::spec::Type> {
+    let plan = ctx
+        .state()
+        .create_logical_plan(&format!("SELECT CAST(NULL AS {data_type}) AS c"))
+        .await
+        .map_err(|err| {
+            DataFusionError::Plan(format!(
+                "{form}: could not resolve type `{data_type}` ({err})"
+            ))
+        })?;
+    let arrow_type = plan.schema().field(0).data_type().clone();
+    let schema = ArrowSchema::new(vec![Field::new("c", arrow_type, true)]);
+    let iceberg_schema = arrow_schema_to_schema_auto_assign_ids(&schema).map_err(iceberg_err)?;
+    let field = iceberg_schema
+        .as_struct()
+        .fields()
+        .first()
+        .ok_or_else(|| DataFusionError::Plan(format!("{form}: type `{data_type}` is empty")))?;
+    Ok(field.field_type.as_ref().clone())
 }
 
 #[cfg(test)]

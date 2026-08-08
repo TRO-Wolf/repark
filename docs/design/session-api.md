@@ -120,8 +120,8 @@ pub struct EngineContext<'a> {
 }
 #[async_trait]
 pub trait SqlDialect: Send + Sync {
-    // Field set mirrors v1 execute_with_read_only(ctx, catalogs, query, read_only) exactly;
-    // contract documented UNSTABLE until the phase-2 doors land.
+    // Field set mirrors v1 execute_with_read_only(ctx, catalogs, query, read_only) exactly.
+    // FROZEN 2026-08-08 (phase-2 PR-6) — see "Seam freeze" below.
     async fn execute(&self, cx: EngineContext<'_>, query: &str)
         -> datafusion::error::Result<DataFrame>;
 }
@@ -140,6 +140,35 @@ trait-wrapping both-sides audit applies). Phase-2 repark-spark ships one extensi
 exactly what v1 inlined (function registry + analyzer rules + TA UDFs + cardinality config).
 Consequence, stated plainly: the phase-1 native core has DataFusion semantics — Spark semantics
 are the Spark door's extension by definition.
+
+### Seam freeze (2026-08-08, phase-2 PR-6)
+
+`SqlDialect::execute(EngineContext<'_>, &str)` and `SessionExtension` are **FROZEN** as shipped
+in phase 1 — the status flips from UNSTABLE here, per
+[sql-doors.md](sql-doors.md) §3. Both phase-2 doors (`repark-spark`, `repark-sql`) implement them
+unchanged; there are no core-side pre-execution hooks, and guards are door-called. `EngineContext`
+is `#[non_exhaustive]`, so adding a field stays non-breaking; changing or removing a method or an
+existing field now requires a superseding design note.
+
+**Extensions are session-scoped, not dialect-scoped.** A Spark-extended session has Spark
+expression semantics through **every** door, including the ANSI one — the extension's function
+registry and analyzer rules are installed on the `SessionContext`, which every dialect receives.
+Three consequences, all load-bearing:
+
+1. Cross-door equivalence evidence needs **two sessions** (design §2 Q13 / graft G5) — a native,
+   extension-less session driven through `AnsiDialect` and a Spark-extended session driven
+   through `SparkDialect` — compared on the Arrow path, value AND type. `sql_with` on one session
+   is legal only for surfaces the analyzer/UDF layer cannot touch (pure DDL/catalog ops).
+2. A door's own matrix row may not claim evidence gathered on a session carrying another door's
+   extension; both doors' matrices enforce this in a test.
+3. Door-neutral extensions compose the same way: `repark_ta::TaExtension` on a NATIVE session
+   makes the `ta_*` window UDFs callable through the ANSI door (design §2 Q11).
+
+Pinned by `crates/repark-sql/tests/cross_door.rs::extensions_are_session_scoped_not_dialect_scoped`.
+
+The R2 config-plumbing fix that PR-6 landed in `repark-core` (the builder's `datafusion.*` keys
+reaching `SessionConfig`, so `information_schema` is enable-able) is **not** a seam change: it
+touches neither trait, and both doors reach it only as ordinary session configuration.
 
 **The rest of the surface ports verbatim** (bodies byte-faithful, call paths re-prefixed):
 lifecycle (`builder()`, `new()`, finalize pair, `context()` escape hatch — kept public, the

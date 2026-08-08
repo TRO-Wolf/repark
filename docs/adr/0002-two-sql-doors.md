@@ -43,3 +43,30 @@ silent wrong answers on the strings where the dialects disagree.
   matrix in [../testing.md](../testing.md) makes this mechanical rather than optional.
 - **Guard:** any proposal to "just accept both dialects in one parser" contradicts this ADR and
   needs a superseding ADR, not a code change.
+
+## Discharge note — decision 5, the deliberate design pass (2026-08-08)
+
+Decision 5's obligation is **discharged**. The artifact is
+[../design/sql-doors.md](../design/sql-doors.md) — a settled design (2026-08-07) produced by a
+three-design adversarial review scored by a three-judge panel, ruling Q1–Q15 over the ANSI door's
+Iceberg DDL: properties vocabulary, partitioning, spec evolution, MERGE, time travel, branch/tag
+DDL, maintenance, introspection, `INSERT OVERWRITE`, wrong-door ergonomics, TA functions, guard
+rails, the test matrix, the parser choice, and CTAS routing. It landed BEFORE the first public
+commit of that surface (phase-2 PR-5/PR-6), which is what decision 5 requires.
+
+Decision 4's "one test row per door" is likewise mechanical rather than aspirational now: the
+`repark_common::surfaces` registry plus each door's `matrix.rs` and its compile-run `audit` make
+**absence typed and build-enforced** — every surface ID must be either a `Tested` row naming its
+test and session profile, or a `DeliberatelyAbsent` row naming its reason and the design/ADR
+section that decided it. The two matrices are therefore the durable artifact of this ADR, and the
+surface set cannot grow without both doors answering for it.
+
+Cross-door equivalence (the "no silent divergence" claim in Consequences) is pinned under the
+two-session protocol — `crates/repark-sql/tests/cross_door.rs`; see
+[../design/session-api.md](../design/session-api.md) "Seam freeze" for why one session cannot
+prove it.
+
+Not discharged by this note, and deliberately still open: the maintenance-as-callable-ops pin
+(decision 1's last clause), which sql-doors.md §2 Q7 keeps standing with a named trigger — a
+statement-shaped need demonstrated by dbt-repark post-hooks would require a **superseding ADR
+note first**, then the surface.
