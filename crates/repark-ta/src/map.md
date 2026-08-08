@@ -142,6 +142,17 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   output via `Float64Builder`. Kernels themselves are untouched (goldens absolute; scout
   #28 forbidden).
 
+- `extension.rs` — **feature `datafusion`** — `TaExtension`, a thin
+  `repark_core::SessionExtension` whose `register` forwards to `udf::register_all` and whose
+  `configure` stays at the trait default (TA installs no `ConfigExtension` and reads no conf key).
+  Design SSOT: `docs/design/sql-doors.md` Q11 — the TA set is owned by **neither** SQL door, so
+  the crate ships the extension and consumers compose it (`repark-spark`'s `SparkExtension` calls
+  it at v1's exact registration position; a native session installs it directly). Tests
+  (`extension/tests.rs`): the register side is bit-exact SQL-vs-kernel (`to_bits`) plus a
+  whole-registry name-set assertion; the configure side is the trait-wrapping both-sides audit
+  (config returned untouched). This is the one module that is NOT a v1 port — it is new at
+  phase-2 PR-4 and pulls the crate's only internal dep (`repark-core`, feature-tied).
+
 Scalar period args are coerced via fallible `period(f64)`: non-integral finite values fail loud
 (`NonIntegralPeriod`, no silent truncate); negatives/NaN saturate then `check_period` rejects.
 Period arguments are validated against `min..=MAX_PERIOD` (TA-Lib's documented 100 000
@@ -160,6 +171,7 @@ empty/short, nullable multi-output, sliced borrow, kernel-error leaves cache emp
 |---|---|
 | Add a kernel | New fn in the matching category module + re-export in `lib.rs` + golden series in the recorder + `tests/goldens.rs` case — one commit |
 | Expose a kernel as a window UDF | Add a `(name, TaFn)` row + `TaFn` arm in `udf.rs` (feature `datafusion`) |
+| Install every TA UDF on a session | `extension.rs` — `TaExtension`; do NOT add a second registration path |
 | Change error behavior | `lib.rs` (`TaError`) — mirror TA-Lib `TA_BAD_PARAM` semantics only |
 | Touch any arithmetic | Re-read the numerics contract in `lib.rs` first; then `cargo test -p repark-ta` |
 

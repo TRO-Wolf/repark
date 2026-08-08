@@ -50,6 +50,8 @@
 
 use thiserror::Error;
 
+#[cfg(feature = "datafusion")]
+pub mod extension;
 pub mod math_operator;
 pub mod momentum;
 pub mod overlap;
@@ -59,6 +61,8 @@ pub mod statistic;
 pub mod udf;
 pub mod volatility;
 
+#[cfg(feature = "datafusion")]
+pub use extension::TaExtension;
 pub use math_operator::{max, min, sum};
 pub use momentum::{
     adx, adxr, apo, aroon, aroonosc, bop, cci, cmo, dx, macd, macdext, macdfix, minus_di, minus_dm,

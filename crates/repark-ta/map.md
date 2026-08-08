@@ -10,15 +10,16 @@ manifest), independently publishable. **64 public kernel functions** (the full f
 T3 landed the last four: MAMA, SAR, SAREXT, MAVP). The optional `datafusion` feature adds the
 window-UDF wrapper layer (`udf` module — **77 `WindowUDF`s**: one per entry point, so the
 multi-output kernels — BBANDS, MAMA, AROON, the MACD family, the stochastics — are split one UDF
-per output). Consumers: `repark-spark` (the Spark door, SQL) and, in phase 3, `repark-python`
-(DataFrame API — the `repark.ta` Python namespace is built on it).
-**64/64 functions, 77/77 entry points.**
+per output) plus the door-neutral `TaExtension`. Consumers: `repark-spark` (the Spark door
+composes `TaExtension` at v1's registration position) and, in phase 3, `repark-python` (DataFrame
+API — the `repark.ta` Python namespace is built on it). **64/64 functions, 77/77 entry points.**
 
 ## Contents
 
-- `Cargo.toml` — workspace member; runtime dep `thiserror` + optional `datafusion` (behind the
-  `datafusion` feature that turns on the `udf` wrapper module), dev-dep `serde_json`. Workspace
-  lints (`unsafe_code = "forbid"`, clippy pedantic) apply.
+- `Cargo.toml` — workspace member; runtime dep `thiserror` + optional `datafusion` and
+  `repark-core` (both behind the `datafusion` feature, which turns on the `udf` wrapper module
+  and the `extension` module), dev-deps `serde_json` + `tokio`. Workspace lints
+  (`unsafe_code = "forbid"`, clippy pedantic) apply.
 - `NOTICE` — TA-Lib BSD-3-Clause attribution (algorithms ported by reference; carry this into
   any distribution).
 - [src/](src/map.md) — the kernels, grouped by TA-Lib category. C-mirrored `*_idx` local names
@@ -34,6 +35,7 @@ per output). Consumers: `repark-spark` (the Spark door, SQL) and, in phase 3, `r
 | Understand the numerics contract (no FMA, incremental accumulators, …) | `src/lib.rs` crate docs |
 | Re-record or extend the goldens | `python/repark-parity/record_ta_goldens.py` → [tests/map.md](tests/map.md) |
 | Call an indicator from Rust | `repark_ta::{sma, ema, rsi, adx, atr, bbands, mama, sar, sarext, mavp, apo, ppo, macdext, stoch, …}` (64 kernels; `ma(_, _, 7)` / APO·PPO·MACDEXT·STOCH* matype 7 = MAMA) |
+| Install the TA UDFs on a session | `extension` module (feature `datafusion`): `TaExtension` — a `repark_core::SessionExtension`; `SparkExtension` composes it, native sessions install it directly |
 | Call an indicator from SQL / DataFrame | `udf` module (feature `datafusion`): `ta_ema(close, 21) OVER (…)`; Python `repark.ta.ema(...)` — see [src/map.md](src/map.md) |
 
 ## Pointers

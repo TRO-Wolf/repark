@@ -4456,8 +4456,10 @@ name = "repark-ta"
 version = "0.0.0"
 dependencies = [
  "datafusion",
+ "repark-core",
  "serde_json",
  "thiserror 2.0.19",
+ "tokio",
 ]
 
 [[package]]

@@ -4,8 +4,8 @@
 # Bit-exact ports of the TA-Lib C 0.4.0 reference algorithms (no C linkage, no vendored
 # code — hand-ported, golden-gated). Dependency-light by design — the kernel core's only
 # runtime dep is `thiserror`, so the crate stays independently publishable; the optional
-# `datafusion` feature (T1b, landed) adds the window-UDF wrapper layer (`udf` module) that the
-# Spark door enables to register the TA UDFs at session build.
+# `datafusion` feature (T1b, landed) adds the window-UDF wrapper layer (`udf` module) plus the
+# thin `TaExtension` that the Spark door composes to register the TA UDFs at session build.
 # ===========================================================================================
 
 [package]
@@ -23,13 +23,21 @@ workspace = true
 
 [features]
 # `datafusion` turns on the window-UDF wrapper layer (`udf` module): the kernels exposed as
-# DataFusion `WindowUDF`s callable from SQL (`ta_ema(close, 21) OVER (…)`) and the DataFrame API.
-# Kept optional so the kernel core stays dependency-light and independently publishable.
-datafusion = ["dep:datafusion"]
+# DataFusion `WindowUDF`s callable from SQL (`ta_ema(close, 21) OVER (…)`) and the DataFrame API,
+# plus the `extension` module (`TaExtension`, the `repark_core::SessionExtension` wrapper — hence
+# `dep:repark-core` rides the same flag). Kept optional so the kernel core stays dependency-light
+# and independently publishable.
+datafusion = ["dep:datafusion", "dep:repark-core"]
 
 [dependencies]
 thiserror.workspace = true
 datafusion = { workspace = true, optional = true }
+# The phase-1 registration seam (`SessionExtension`) that `TaExtension` implements. Optional and
+# feature-tied: the kernel core must not pull the engine in (tier 3 → tier 2 edge, DAG-legal).
+repark-core = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde_json.workspace = true
+# `#[tokio::test]` — the `TaExtension` test registers the UDFs on a `SessionContext` and runs
+# the SQL window route, so it needs a runtime (the kernel batteries stay sync).
+tokio.workspace = true
