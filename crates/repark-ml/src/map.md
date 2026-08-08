@@ -9,7 +9,7 @@ Kernel sources for native estimators: pure math + streaming accumulators.
 | Path | Role |
 |---|---|
 | `lib.rs` | Crate root; re-exports; `MAX_FEATURES = 4096` |
-| `error.rs` | `MlError` / `Result` (thiserror) |
+| `error.rs` | `MlError` / `Result` (thiserror). Phase-3 PR-3 (EC-6 rider) repointed the user-visible `Singular` message from v1's `docs/ml-design.md` to `docs/design/python-facade.md` §4 Q3, and added the file's `#[cfg(test)] mod tests` pinning that text |
 | `cholesky.rs` | In-place Cholesky + fallible forward/back solve; **SAF-006** `checked_mul` on dimension² |
 | `linear_regression.rs` | Streaming `XᵀX`/`Xᵀy` OLS + param gates |
 | `logistic_regression.rs` | IRLS passes reusing Cholesky; `max_iter=0` = cold-start zeros |

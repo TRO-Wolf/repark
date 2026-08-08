@@ -49,7 +49,7 @@ pub enum MlError {
     #[error(
         "repark.ml: singular or ill-conditioned design matrix (Cholesky failed at pivot {pivot}: \
          {detail}). repark refuses pseudoinverse / silent regularization (divergence vs Spark \
-         solver path — see docs/ml-design.md)"
+         solver path — see docs/design/python-facade.md §4 Q3)"
     )]
     Singular {
         /// Zero-based pivot index where the diagonal was non-positive / below threshold.
@@ -104,3 +104,44 @@ pub enum MlError {
 
 /// Crate-local result alias.
 pub type Result<T> = std::result::Result<T, MlError>;
+
+#[cfg(test)]
+mod tests {
+    use super::MlError;
+
+    /// EC-6 rider discharge (design §3, second rider; raised as p3b F-2). Four sources named
+    /// `docs/ml-design.md`, a v1-only path with no counterpart in this repository — and ONE of
+    /// them, this `Singular` variant, is inside an `#[error(...)]` format string, so the dead
+    /// pointer is emitted to end users at runtime the moment PR-3 wires the binding. PR-2 kept
+    /// all four byte-identical to protect a verbatim/identity port claim and assigned the fix
+    /// here; the pointer now names the in-repo ML authority.
+    ///
+    /// The test pins the message's NEW text — the rider is only discharged if the thing users
+    /// read actually changed, and nothing else in this repo would notice a silent revert.
+    #[test]
+    fn singular_message_points_at_the_in_repo_ml_authority() {
+        let rendered = MlError::Singular {
+            pivot: 2,
+            detail: "pivot 3.0e-18 below PIVOT_ABS_EPS".to_string(),
+        }
+        .to_string();
+
+        assert!(
+            rendered.contains("docs/design/python-facade.md §4 Q3"),
+            "the user-visible message must point at the in-repo ML authority: {rendered}"
+        );
+        assert!(
+            !rendered.contains("ml-design.md"),
+            "the v1-only docs/ml-design.md path must not survive in a user-visible string: \
+             {rendered}"
+        );
+        // The diagnostic content around the pointer is unchanged — this is a repoint, not a
+        // rewrite: the refusal still names the pivot, the detail, and WHY repark refuses.
+        assert!(
+            rendered.contains("Cholesky failed at pivot 2")
+                && rendered.contains("pivot 3.0e-18 below PIVOT_ABS_EPS")
+                && rendered.contains("refuses pseudoinverse / silent regularization"),
+            "the repoint must not disturb the diagnostic: {rendered}"
+        );
+    }
+}

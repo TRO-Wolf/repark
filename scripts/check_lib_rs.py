@@ -35,6 +35,16 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "RATCHET: if registration moves",
     ),
+    "repark-python": (
+        230,  # measured 217 (EC-10, docs/design/python-facade.md §3)
+        "the PyO3 crate root is a MANIFEST, not logic: ~25 doc lines, five `mod` decls, three "
+        "`pub use` re-exports, the five-member `create_exception!` taxonomy (each carrying its "
+        "own PySpark-parity docstring), the two `to_py_err` folds, the env-gated tracing init, "
+        "and the `#[pymodule]` registration — none of which can move out without splitting the "
+        "module entry point from the exceptions the module registers. Already uses the "
+        "sanctioned file-backed test module (`#[cfg(test)] mod tests;` -> src/tests.rs); "
+        "RATCHET: if the exception taxonomy moves to its own module",
+    ),
     "repark-ta": (
         260,  # measured 249 (49 doc lines + the `TaError` enum + the kernel re-export block)
         "verbatim port of the v1 kernel crate root: the crate-wide `TaError` enum (the kernel "

@@ -22,6 +22,7 @@ mod extension;
 mod idents;
 mod object_store_s3;
 mod read_options;
+mod runtime;
 mod session;
 mod time_travel;
 
@@ -33,6 +34,10 @@ pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder,
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
 pub use extension::SessionExtension;
+
+// --- The embedding's executor handle (EC-5 / design §4 Q7). Additive: the TYPE is named here;
+// core never constructs one and never blocks — the INSTANCE lives in the embedding.
+pub use runtime::EngineRuntime;
 
 // --- Catalog configuration + engine-side registry (hoisted). ---
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
