@@ -16,8 +16,9 @@ front-door navigation map. See [README.md](README.md) for the overview and
 shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
 `SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional window-UDF
 layer, tier 3), and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard
-set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 adds `crates/repark-ml`,
-`crates/repark-python` (tier 4), and the `python/` tree.
+set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has landed
+`crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and still owes
+`crates/repark-python` (tier 4) and the `python/` tree.
 
 ## Contents
 

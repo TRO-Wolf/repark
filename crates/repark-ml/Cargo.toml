@@ -1,0 +1,23 @@
+# ===========================================================================================
+# repark-ml — native tier-1 estimators (M3).
+#
+# Hand-rolled linear algebra (Cholesky) + streaming fit accumulators. Zero new crates.io
+# deps beyond workspace `thiserror` — no ndarray / nalgebra / linfa. Python never trains;
+# models hold params only. See docs/ml-design.md (Rust-rule amendment for multi-pass fit).
+# ===========================================================================================
+
+[package]
+name = "repark-ml"
+description = "Native ML estimators for repark (streaming OLS / IRLS / Lloyd; params-only models)."
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror.workspace = true

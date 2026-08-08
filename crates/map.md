@@ -16,13 +16,16 @@ Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 | [repark-ta](repark-ta/map.md) | Technical-analysis kernels (tier 3): bit-exact TA-Lib 0.4.0 hand-ports, golden-gated, plus the optional `datafusion` feature's window-UDF layer and the door-neutral `TaExtension`. |
 | [repark-spark](repark-spark/map.md) | The Spark SQL door (tier 3): v1 `repark-sql` ported — statement router + `SparkDialect`/`SparkExtension` over the phase-1 seams. PR-2 ships the spine; DDL/DML handlers land PR-3a/PR-3b. |
 | [repark-sql](repark-sql/map.md) | The **ANSI/Trino-flavoured SQL door** (tier 3): NEW code — `AnsiDialect` over the frozen seam, delegating to DataFusion and intercepting only the Iceberg catalog DDL it cannot express. No `SessionExtension` (native semantics ARE stock DataFusion), no `sqlparser` or `datafusion-spark` dep. PR-5 ships M1 (guards, wrong-door sniff, CREATE TABLE family + `WITH (…)`, schema DDL); PR-6 adds ALTER/MERGE/time travel. |
+| [repark-ml](repark-ml/map.md) | Native ML estimator kernels (tier 3): hand-rolled Cholesky + streaming fit accumulators (OLS, IRLS logistic, Lloyd k-means). A capability leaf with **no internal deps** and one third-party dep (`thiserror`); models hold params only. Ported verbatim at the phase-3 port pin (phase-3 PR-2). |
 
 DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`;
 `repark-functions` is a tier-3 leaf with no internal deps (speaks `datafusion::error::Result`);
 `repark-ta → repark-core` **only under the `datafusion` feature** (the `TaExtension` wrapper — the
 kernel core stays dependency-light); `repark-spark → {repark-core, repark-iceberg,
 repark-functions, repark-ta}` (tier-3 door; same-tier edges to repark-functions and repark-ta are
-legal); `repark-sql → {repark-core, repark-iceberg, repark-common}` (the other tier-3 door).
+legal); `repark-sql → {repark-core, repark-iceberg, repark-common}` (the other tier-3 door);
+`repark-ml` is a tier-3 leaf with no internal deps at all (pure math + accumulators — the PyO3
+binding, phase-3 PR-3, is what streams rows into it).
 **There is no door→door edge, ever** (design §1): the two doors share machinery only through
 tiers 0–1, which is what keeps each free to have its own grammar.
 
@@ -52,6 +55,7 @@ tiers 0–1, which is what keeps each free to have its own grammar.
 | Add/fix a Spark function or date-shim UDF | [repark-functions/map.md](repark-functions/map.md) |
 | Add / fix a TA indicator, or its SQL window UDF | [repark-ta/map.md](repark-ta/map.md) |
 | Spark-SQL statement routing / dialect / extension | [repark-spark/map.md](repark-spark/map.md) |
+| Change an ML solver / estimator kernel | [repark-ml/map.md](repark-ml/map.md) |
 | See where the next crates land | `../docs/design/session-api.md` |
 
 ## Pointers

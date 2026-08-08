@@ -5,9 +5,9 @@
 # DataFusion + Arrow + the owned iceberg-rust fork. See README.md for the front door and
 # docs/port/PLAN.md for the port plan.
 #
-# Phase 1 (in progress): members arrive crate by crate (target skeleton: repark-common,
-# repark-iceberg, repark-core this phase; repark-connect, repark-sql, repark-spark, repark-ml,
-# repark-python in later phases). One DataFusion version is pinned across the
+# Members arrive crate by crate: repark-common, repark-iceberg, repark-core (phase 1);
+# repark-functions, repark-ta, repark-spark, repark-sql (phase 2); repark-ml, repark-python
+# (phase 3, docs/design/python-facade.md). One DataFusion version is pinned across the
 # datafusion + datafusion-spark + iceberg* family.
 # ===========================================================================================
 
@@ -21,6 +21,7 @@ members = [
   "crates/repark-ta",
   "crates/repark-spark",
   "crates/repark-sql",
+  "crates/repark-ml",
 ]
 
 [workspace.package]
@@ -117,6 +118,7 @@ repark-functions = { path = "crates/repark-functions", version = "0.0.0", defaul
 repark-ta = { path = "crates/repark-ta", version = "0.0.0", default-features = false }
 repark-spark = { path = "crates/repark-spark", version = "0.0.0", default-features = false }
 repark-sql = { path = "crates/repark-sql", version = "0.0.0", default-features = false }
+repark-ml = { path = "crates/repark-ml", version = "0.0.0", default-features = false }
 
 # -------------------------------------------------------------------------------------------
 # The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose
