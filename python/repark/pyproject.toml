@@ -1,0 +1,39 @@
+# The user-facing package: `pip install repark`. Built by maturin from the repark-python
+# cdylib crate; the pure-Python facade lives under src/repark and imports the compiled
+# `repark._native` module. Arrow is the interchange format across the boundary.
+
+[build-system]
+requires = ["maturin>=1.14.1,<2"]
+build-backend = "maturin"
+
+[project]
+name = "repark"
+version = "0.0.0"
+description = "Near-drop-in PySpark API on a pure-Rust, no-JVM Apache Iceberg engine."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = ["pyarrow>=25.0.0"]
+
+[project.optional-dependencies]
+# numpy is its own extra: pyarrow>=18 no longer hard-depends on numpy, so to_numpy() cannot
+# assume it arrives transitively (pandas and pyarrow<18 do still bring it).
+numpy = ["numpy>=1.26"]
+pandas = ["pandas>=2.1"]
+polars = ["polars>=1.0"]
+# M4 delegated ML backends (xgboost / lightgbm / sklearn). NEVER hard deps — lazy import
+# in repark.ml.ext only. Product ImportError names this extra; tests use importorskip.
+ml-ext = [
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "xgboost>=2.0",
+  "lightgbm>=4.0",
+  "scikit-learn>=1.3",
+]
+
+[tool.maturin]
+# The cdylib lives in the Cargo workspace; point maturin at it and build the abi3 extension module.
+manifest-path = "../../crates/repark-python/Cargo.toml"
+module-name = "repark._native"
+python-source = "src"
+features = ["extension-module"]

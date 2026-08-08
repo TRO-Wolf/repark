@@ -20,8 +20,9 @@ set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has lande
 `crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and
 `crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**, ported in PR-3 under design §3's
 edit classes) and `python/repark-parity` (the parity harness + the census machinery + the NEW
-report comparator that is the port's acceptance gate, PR-4); it still owes the facade wheel
-`python/repark` — no wheel is buildable yet and none is claimed.
+report comparator that is the port's acceptance gate, PR-4) and `python/repark` (the PySpark
+facade wheel — 53 source modules and the 127-file suite, ported verbatim under design §3's
+EC-4/EC-7/EC-9 in PR-5). A wheel is buildable from PR-5 onward; it is not yet tagged.
 
 ## Contents
 
@@ -32,8 +33,9 @@ report comparator that is the port's acceptance gate, PR-4); it still owes the f
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
-  Members are staged across phase 3 — `python/repark-parity` is declared today, the facade joins
-  with the wheel PR (declaring a member whose directory does not exist fails `uv lock`).
+  Both members are declared (`python/repark`, `python/repark-parity`); the three facade
+  per-file-ignore blocks (`ml/**`, `session/**`, `dataframe/**`) are **load-bearing**, not style —
+  they are how the r26 region splits keep their pre-split import paths (design §2.3).
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
@@ -45,8 +47,8 @@ report comparator that is the port's acceptance gate, PR-4); it still owes the f
   (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
   port-source pin's own config, never invented to silence a real misspelling.
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
-- `python/` — the uv workspace members (the parity harness today; the facade wheel later). See
-  [python/map.md](python/map.md).
+- `python/` — the uv workspace members: the facade wheel (`repark`) and the parity harness
+  (`repark-parity`). See [python/map.md](python/map.md).
 - `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
   plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
@@ -69,6 +71,7 @@ report comparator that is the port's acceptance gate, PR-4); it still owes the f
 | Read the phase briefs | [briefs/map.md](briefs/map.md) |
 | Navigate the engine crates | [crates/map.md](crates/map.md) |
 | Navigate the Python tree | [python/map.md](python/map.md) |
+| Build the wheel / run the facade suite | [python/repark/map.md](python/repark/map.md) |
 | Run or compare a census | [docs/port/census.md](docs/port/census.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |

@@ -58,9 +58,20 @@ Repository helper scripts wired into the dev workflow.
   script needs the facade package at `python/repark`, which arrives with the facade PR; the
   recorded procedure it implements is [../docs/port/census.md](../docs/port/census.md).
 
+- `check_lib_py.sh` + `check_lib_py.py` — the **Python** thinness guard, sibling of
+  `check_lib_rs` and the SSOT for facade file size (ported verbatim at phase-3 PR-5 with the
+  facade package it inspects). Over every `*.py` under `python/repark/src/repark/**`: a per-file
+  line ceiling (default 2500) with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN
+  only; four rows at the pin — `dataframe/core.py`, `functions.py`,
+  `ml/feature/_transformers.py`, `session/_funcs.py`), plus the no-stub rule (a module whose body
+  is only a docstring + imports/re-exports/`__all__`/`pass` must open its docstring with the
+  exact substring `re-export binding`; package `__init__.py` files are exempt from the no-stub
+  rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
+  `make check-lib-py` and the ci.yml `python` job in the same PR.
+
 Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/port/PLAN.md)):
-`check_lib_py.sh`/`.py` (Python thinness guard, phase 3), `test_lock_gate.sh` (uv lock-gate
-detector self-test, phase 3), `generate_excel_fixtures.py` (synthetic .xlsx fixtures, phase 1+).
+`test_lock_gate.sh` (uv lock-gate detector self-test, phase 3),
+`generate_excel_fixtures.py` (synthetic .xlsx fixtures, phase 1+).
 
 ## I want to...
 
@@ -69,6 +80,7 @@ detector self-test, phase 3), `generate_excel_fixtures.py` (synthetic .xlsx fixt
 | Understand why a commit was blocked on map.md | `check_map_md.sh` |
 | Change or inspect the crate tier map | `check_crate_dag.py` (`TIERS` — the SSOT) |
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
+| Raise/lower a facade `.py` line ceiling | `check_lib_py.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
@@ -89,10 +101,13 @@ detector self-test, phase 3), `generate_excel_fixtures.py` (synthetic .xlsx fixt
 | `crate-dag inspected zero internal crates/edges` | `cargo metadata` returned nothing internal — wrong manifest path or a broken workspace (a single-crate workspace with zero edges is fine) |
 | `lib-rs: … inline #[cfg(test)] mod` | Move the test body to a file-backed module (`src/<name>.rs` + `#[cfg(test)] mod <name>;`) |
 | `lib-rs: … lines (ceiling …)` | Extract production code into a named module, or add an `EXCEPTIONS` entry with a reason (ratchet down only) |
+| `lib-py: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_lib_py.py` with a reason (ceilings ratchet down only) |
+| `lib-py: … re-export-only module must start its docstring …` | Open the module docstring's FIRST line with the exact substring `re-export binding`, or give the module real content |
+| `lib-py: python/repark/src/repark not found` | The guard runs from the repo root and needs the facade package present |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
 | `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
-`bash scripts/check_lib_rs.sh`, `make workflows-parse`. Escalate to: [../map.md#debug](../map.md).
+`bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `make workflows-parse`. Escalate to: [../map.md#debug](../map.md).

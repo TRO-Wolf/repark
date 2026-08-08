@@ -1,23 +1,19 @@
 # uv workspace root (virtual — not itself a package). Members are the Python projects under
 # python/. One shared uv.lock + .venv. Python floor 3.12 (.python-version). Ruff is the single
 # lint+format tool.
-#
-# Phase 3 stages the member list: `python/repark-parity` joins here (the parity PR), and the
-# facade `python/repark` joins with the wheel PR. Declaring a member whose directory does not
-# exist fails `uv lock`, so the list only ever names what is on disk.
 
 [tool.uv.workspace]
-members = ["python/repark-parity"]
+members = ["python/repark", "python/repark-parity"]
 
 [dependency-groups]
-# pandas is here so the facade's toPandas/to_pandas tests run when the facade lands; numpy
-# arrives via pyarrow/pandas. duckdb backs the bench comparison scripts.
+# pandas is here so the facade's toPandas/to_pandas tests run; numpy arrives via pyarrow/pandas.
+# duckdb backs the bench comparison scripts.
 dev = ["ruff>=0.15.22,<0.16", "pytest>=9.1.1", "maturin>=1.14.1,<2", "pandas>=2.1", "duckdb==1.5.5"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["python/repark-parity/src"]
+src = ["python/repark/src", "python/repark-parity/src"]
 
 [tool.ruff.lint]
 # Pragmatic-but-strict default. Annotations (ANN) enforce the "type hints on every signature"
@@ -27,6 +23,13 @@ ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["ANN201", "ANN202", "ANN001", "S101"]
+# repark.ml mirrors pyspark.ml camelCase API (toArray, saveImpl, getOrDefault, …)
+# and Spark-shaped Generic type vars; do not rename for PEP8.
+"python/repark/src/repark/ml/**" = ["N802", "UP046"]
+# r26 T1 package split: free funcs + class modules use dynamic name binding /
+# intentional re-exports; import * and F821 are load-bearing.
+"python/repark/src/repark/session/**" = ["F401", "F821", "E402", "I001", "F403", "F405"]
+"python/repark/src/repark/dataframe/**" = ["F401", "F403", "F405"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["repark", "repark_parity"]
