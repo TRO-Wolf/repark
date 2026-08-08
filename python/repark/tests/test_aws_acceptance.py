@@ -1,0 +1,190 @@
+"""Env-gated real-AWS acceptance harness — the ``process_silver.py`` publish path against Glue.
+
+This module mirrors ``process_silver.py``: a session configured
+with a Glue ``catalog-impl`` + an ``s3://`` warehouse, a bronze ``s3a://`` Parquet read, the
+``row_number`` dedup transform, then the ``tableExists`` → CTAS → MERGE publish loop into a
+**scratch** namespace.
+
+The whole module is gated by a **module-level** ``pytest.mark.skipif`` on ``REPARK_AWS_ACCEPTANCE``:
+it is collected and **skipped** by default so CI stays AWS-free, and opens a network connection to
+AWS only when the gate is explicitly set to ``"1"``. This is the single sanctioned real-AWS
+execution and it is owned by the **Fable audit** — do not run it during routine development.
+
+The pure helpers it uses (path/config/SQL builders, the ``deduplicate`` transform) live in the
+non-collected ``_acceptance`` module and are unit-tested AWS-free (everywhere) in
+``test_acceptance_helpers.py``.
+
+--------------------------------------------------------------------------------------------------
+CLEANUP IS THE USER'S MANUAL CALL.
+This harness NEVER drops or deletes any AWS object. It creates (namespace / table) and upserts
+into the scratch namespace ``testing_repark_acceptance`` only (tables carry a ``testing_`` prefix
+too); it never touches production ``example_silver``.
+There is no teardown against AWS. If the scratch tables should be removed after a run, the user
+does that by hand — the harness deliberately has no DROP/DELETE path (``dropTempView`` drops only
+a session-local view, never an AWS object).
+--------------------------------------------------------------------------------------------------
+"""
+
+from __future__ import annotations
+
+import os
+
+import pytest
+from _acceptance import (
+    ACCEPTANCE_NAMESPACE,
+    ACCEPTANCE_TABLE_PREFIX,
+    GLUE_WAREHOUSE,
+    S3TABLES_CATALOG,
+    SILVER_CATALOG,
+    TEMP_VIEW,
+    acceptance_namespace_location,
+    bronze_path,
+    ctas_sql,
+    deduplicate,
+    fq_table,
+    glue_catalog_config,
+    merge_sql,
+    s3tables_catalog_config,
+)
+
+from repark import ReparkSession
+
+# Module-level gate: the entire module is skipped unless REPARK_AWS_ACCEPTANCE=1.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("REPARK_AWS_ACCEPTANCE") != "1",
+    reason=(
+        "real-AWS acceptance harness: set REPARK_AWS_ACCEPTANCE=1 to run "
+        "(owned by the Fable audit — the single sanctioned real-AWS execution)"
+    ),
+)
+
+
+def _require_env(name: str) -> str:
+    """Return env var ``name`` or fail loudly (only reached when the gate is on)."""
+    value = os.environ.get(name)
+    if not value:
+        pytest.fail(
+            f"{name} is required when REPARK_AWS_ACCEPTANCE=1 "
+            "(the acceptance harness needs a real bronze entity/ds + id column)."
+        )
+    return value
+
+
+def _table_row_count(spark: ReparkSession, table: str) -> int:
+    return spark.sql(f"SELECT * FROM {table}").count()
+
+
+def _bronze_dedup_publish_idempotent(
+    spark: ReparkSession, table: str, entity: str, ds: str, id_col: str
+) -> None:
+    """The catalog-agnostic process_silver publish path + oracles (shared by Glue and S3 Tables).
+
+    Bronze (s3a) read → dedup → CTAS-if-fresh / MERGE-if-exists → a second identical MERGE that must
+    be idempotent. The only thing that differs between catalogs is session/namespace setup (done by
+    the caller); the publish semantics are identical, so both surfaces exercise the same path here.
+    """
+    bronze = spark.read_parquet(bronze_path(entity, ds))
+    raw_count = bronze.count()
+    assert raw_count > 0, "bronze read returned zero rows"
+
+    deduped = deduplicate(bronze, id_col=id_col)
+    deduped_count = deduped.count()
+    assert 0 < deduped_count <= raw_count
+
+    # --- publish pass 1: ensure table (CTAS) or upsert (MERGE) ------------------------------------
+    was_fresh = not spark.catalog.tableExists(table)
+    deduped.createOrReplaceTempView(TEMP_VIEW)
+    if was_fresh:
+        spark.sql(ctas_sql(table, TEMP_VIEW))
+    else:
+        spark.sql(merge_sql(table, TEMP_VIEW, id_col))
+    spark.catalog.clearCache()
+    spark.catalog.dropTempView(TEMP_VIEW)
+
+    count_after_first = _table_row_count(spark, table)
+    if was_fresh:
+        assert count_after_first == deduped_count  # CTAS wrote exactly the deduped set
+    else:
+        assert count_after_first >= deduped_count  # MERGE upserted into a prior run's table
+
+    # --- publish pass 2: MERGE the identical deduped data → must be idempotent --------------------
+    deduped.createOrReplaceTempView(TEMP_VIEW)
+    spark.sql(merge_sql(table, TEMP_VIEW, id_col))
+    spark.catalog.clearCache()
+    spark.catalog.dropTempView(TEMP_VIEW)
+
+    count_after_second = _table_row_count(spark, table)
+    assert count_after_second == count_after_first, "second publish pass was not idempotent"
+
+
+def test_process_silver_acceptance_against_glue() -> None:
+    """Mirror process_silver.py end to end against real Glue + S3, into the scratch namespace.
+
+    entity/ds/id-column come from env (``REPARK_ACCEPT_ENTITY`` / ``REPARK_ACCEPT_DS`` /
+    ``REPARK_ACCEPT_ID_COL``). Oracles: bronze rows > 0; the published table holds the deduped set;
+    a second publish pass is idempotent (row count unchanged).
+    """
+    entity = _require_env("REPARK_ACCEPT_ENTITY")
+    ds = _require_env("REPARK_ACCEPT_DS")
+    id_col = _require_env("REPARK_ACCEPT_ID_COL")
+
+    builder = ReparkSession.builder.appName("process-silver-acceptance")
+    for key, value in glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    # Scratch namespace only — create if missing, NEVER touch production silver. Programmatic
+    # create_namespace (ADV-1) so the namespace carries a `location`: on real Glue
+    # (RequireExplicitLocation) a location-less namespace makes the CTAS below fail loud (N5), and
+    # SQL `CREATE NAMESPACE … LOCATION` (WG-5) can also set it; the programmatic call is kept for
+    # the ADV-1 pin lineage. Idempotent across runs — a scratch namespace
+    # left by a prior run already carries its location, so an "already exists" error is expected.
+    try:
+        spark.create_namespace(
+            SILVER_CATALOG,
+            ACCEPTANCE_NAMESPACE,
+            location=acceptance_namespace_location(GLUE_WAREHOUSE),
+        )
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    table = fq_table(SILVER_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
+    _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
+
+
+def test_process_silver_acceptance_against_s3tables() -> None:
+    """Mirror process_silver.py end to end against real **S3 Tables** + S3, scratch namespace only.
+
+    A2's SECOND bullet (the Glue bullet is already discharged). Additionally gated on the
+    ``TABLE_BUCKET_ARN`` env var (a us-east-2 table-bucket ARN, set by the user) — SKIPPED, not
+    failed, when absent, so a Glue-only acceptance run is unaffected. The ARN is read from the
+    environment and never logged. entity/ds/id-column come from the same ``REPARK_ACCEPT_*`` env.
+
+    S3 Tables difference vs Glue: the table bucket **is** the storage, so the namespace is created
+    WITHOUT an explicit ``location`` (unlike Glue's RequireExplicitLocation). The publish
+    semantics (bronze → dedup → CTAS/MERGE → idempotent) are identical and shared.
+    """
+    arn = os.environ.get("TABLE_BUCKET_ARN")
+    if not arn:
+        pytest.skip(
+            "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
+            "absent → skip so the Glue bullet is unaffected"
+        )
+    entity = _require_env("REPARK_ACCEPT_ENTITY")
+    ds = _require_env("REPARK_ACCEPT_DS")
+    id_col = _require_env("REPARK_ACCEPT_ID_COL")
+
+    builder = ReparkSession.builder.appName("process-silver-acceptance-s3tables")
+    for key, value in s3tables_catalog_config(S3TABLES_CATALOG, arn).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    # Scratch namespace only — no `location`: S3 Tables provides storage via the table bucket
+    # itself. Idempotent across runs — "already exists" from a prior run's namespace is expected.
+    try:
+        spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
+    _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)

@@ -32,6 +32,13 @@ repository's `task/` directory).
   (`python/repark-parity` verbatim port + the additive `--classic` cohort + the NEW report
   comparator + `docs/port/census.md` + the uv workspace return): scope, the collect-only
   verbatim-port census obligation, the declared new tests, gate results; IN FLIGHT.
+- [p3e-facade-ledger.md](p3e-facade-ledger.md) — unit ledger for phase-3 PR-5 (`python/repark`,
+  the facade wheel + its 127-file suite): the two-commit plan, the line-by-line **EC-9 hygiene
+  scrub** table, the per-node **EC-4 adjudication** (where each exception is raised), the
+  collect-only identity census with its verbatim diff, the §6.3 wheel-proof clause table, and
+  **finding B-1** — one attributed pass→fail movement (`datafusion.runtime.memory_limit` refused
+  at session build) reported and root-caused but deliberately NOT fixed, because it is a
+  repark-core regression outside this unit's scope; IN FLIGHT.
 - [p3c-binding-ledger.md](p3c-binding-ledger.md) — unit ledger for phase-3 PR-3
   (`crates/repark-python`, the PyO3 binding): the six applied edit classes with their per-class
   file lists (EC-1 re-home + dep collapse + the type-identity guard, EC-2 the door-installed
@@ -86,6 +93,8 @@ repository's `task/` directory).
 | Find out why `information_schema` used to be off, and what fixed it | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) "The R2 core fix" |
 | See the phase-3 PR-2 `repark-ml` identity census / map-rewrite rationale | [p3b-ml-ledger.md](p3b-ml-ledger.md) |
 | See the phase-3 PR-4 parity port census / comparator design record | [p3d-parity-ledger.md](p3d-parity-ledger.md) |
+| See the phase-3 PR-5 facade port: hygiene scrub, deferral adjudication, wheel proof | [p3e-facade-ledger.md](p3e-facade-ledger.md) |
+| Find out why a facade test is missing | [port/deferred-python-tests.txt](port/deferred-python-tests.txt) + [p3e-facade-ledger.md](p3e-facade-ledger.md) "EC-4" |
 | Run or compare a census | [../docs/port/census.md](../docs/port/census.md) |
 | See the phase-3 PR-3 binding edit classes / the two identity censuses / the panic-ban carve-out commands | [p3c-binding-ledger.md](p3c-binding-ledger.md) |
 | Find out why `read_excel` / `read_postgres` refuse | [p3c-binding-ledger.md](p3c-binding-ledger.md) "EC-3" |

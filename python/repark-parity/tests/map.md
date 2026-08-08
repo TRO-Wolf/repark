@@ -56,6 +56,16 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
   absence); and each report's own recorded denominator block is validated against its own rows —
   including the case where both sides are byte-identical *and* identically wrong, which the
   post-subtraction re-assert alone cannot catch.
+- `test_deferred_ledger.py` — **phase-3 PR-5 (EC-4)**: the harness that binds the checked-in
+  deferral ledger to the comparator's allowlist. There is exactly one file
+  (`task/port/deferred-python-tests.txt`), so byte-identity is pinned by proving the single-file
+  property — the comparator's documented acceptance invocation names that path, and its own
+  `load_ledger` is what parses it here. Both EC-4 failure directions are closed: every deferred id
+  must be a **pin-collected** name (under-subtraction — a row that names nothing removes nothing)
+  and must be **absent from the ported tree** (over-subtraction — listed AND ported means a row is
+  subtracted from the baseline while still running here). Absence is checked statically via `ast`,
+  so the test needs no wheel and runs in the ordinary `make py-test` loop. Also pins that the
+  prose ledger names every machine-readable id, so the two halves cannot drift.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an
@@ -75,6 +85,12 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
   CARRIED — matching the real v1 expand artifact.
 
 ## Debug
+
+| Symptom | First check |
+|---|---|
+| `test_deferred_ledger` reds on "ALSO ported" | A node id is in the txt AND still defined in `python/repark/tests` — excise the test or drop the row |
+| `test_deferred_ledger` reds on "absent from the recorded pin collection" | The id does not name a real v1 node; check it against `task/census/baseline-fc3f48102/facade/collected.txt` |
+| `test_deferred_ledger` reds on the human summary | `task/port/deferred-tests.md` must name every id in the txt verbatim |
 
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.
 Escalate to: [../map.md#debug](../map.md).
