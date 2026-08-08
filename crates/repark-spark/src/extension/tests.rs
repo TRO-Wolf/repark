@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
-use datafusion::arrow::array::{Float64Array, Int32Array};
+use datafusion::arrow::array::{Array, Float64Array, Int32Array, Int64Array, RecordBatch};
+use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::SessionExtension;
 use repark_functions::cardinality::ReparkSqlConfig;
@@ -90,4 +92,69 @@ async fn register_installs_spark_integer_division_semantics() {
         .downcast_ref::<Float64Array>()
         .expect("Spark semantics: integer / must produce Float64");
     assert!((quotients.value(0) - 2.5).abs() < f64::EPSILON);
+}
+
+/// PR-4 rider restoration (p2b rider #1): `register` composes [`repark_ta::TaExtension`] at v1's
+/// position, so a Spark-extended session has the TA window UDFs — the v1 `build()` behaviour this
+/// door owes. Bit-exact against the kernel the repark-ta goldens gate, not an approximate compare.
+#[tokio::test]
+async fn register_composes_the_ta_extension_window_udfs() {
+    let close: Vec<f64> = vec![
+        10.0, 10.5, 11.25, 10.75, 12.0, 12.5, 11.5, 13.0, 13.75, 13.25,
+    ];
+    let ts: Vec<i64> = (0..close.len())
+        .map(|i| i64::try_from(i).expect("ts fits i64"))
+        .collect();
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("ts", DataType::Int64, false),
+        Field::new("close", DataType::Float64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int64Array::from(ts)),
+            Arc::new(Float64Array::from(close.clone())),
+        ],
+    )
+    .unwrap();
+    let ctx = SessionContext::new();
+    ctx.register_batch("bars", batch).unwrap();
+    assert!(
+        ctx.sql("SELECT ta_ema(close, 3) OVER (ORDER BY ts) FROM bars")
+            .await
+            .is_err(),
+        "stock context must not know ta_ema"
+    );
+
+    SparkExtension.register(&ctx).unwrap();
+    let batches = ctx
+        .sql("SELECT ta_ema(close, 3) OVER (ORDER BY ts) AS v FROM bars ORDER BY ts")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let mut engine = Vec::new();
+    for batch in &batches {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .expect("v is Float64");
+        for i in 0..column.len() {
+            engine.push(if column.is_null(i) {
+                f64::NAN
+            } else {
+                column.value(i)
+            });
+        }
+    }
+    let kernel = repark_ta::ema(&close, 3).unwrap();
+    assert_eq!(engine.len(), kernel.len());
+    for (i, (a, b)) in engine.iter().zip(&kernel).enumerate() {
+        assert!(
+            (a.is_nan() && b.is_nan()) || a.to_bits() == b.to_bits(),
+            "bit mismatch at row {i}: engine {a:?} vs kernel {b:?}"
+        );
+    }
 }

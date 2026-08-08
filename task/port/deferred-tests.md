@@ -71,13 +71,13 @@ uncertain ⇒ deferred — no test guessed green.
 | tests::read_postgres_num_partitions_cap_is_not_implemented | post-milestone-one (decision 2026-08-07) | read_postgres |
 | tests::read_postgres_sslmode_require_attempts_tls | post-milestone-one (decision 2026-08-07) | read_postgres TLS path |
 | tests::read_excel_basic_fixture_round_trips | post-milestone-one (decision 2026-08-07) | repark-excel crate + fixture |
-| ta_window::sql_route_single_series_kernels_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
-| ta_window::sql_route_scalar_param_kernels_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
-| ta_window::sql_route_multi_series_kernels_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
-| ta_window::sql_route_parked_four_match_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
-| ta_window::sql_route_partition_by_scopes_the_series | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
-| ta_window::sql_route_multi_batch_partition_matches_the_kernel | 2 (ta — phase-2 PR-4) | ta kernels + SQL route |
-| ta_window::sql_route_rejects_a_non_literal_period | 2 (ta — phase-2 PR-4) | ta period validation (SQL route) |
+| ~~ta_window::sql_route_single_series_kernels_match_the_kernel~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta kernels + SQL route~~ |
+| ~~ta_window::sql_route_scalar_param_kernels_match_the_kernel~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta kernels + SQL route~~ |
+| ~~ta_window::sql_route_multi_series_kernels_match_the_kernel~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta kernels + SQL route~~ |
+| ~~ta_window::sql_route_parked_four_match_the_kernel~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta kernels + SQL route~~ |
+| ~~ta_window::sql_route_partition_by_scopes_the_series~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta kernels + SQL route~~ |
+| ~~ta_window::sql_route_multi_batch_partition_matches_the_kernel~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta kernels + SQL route~~ |
+| ~~ta_window::sql_route_rejects_a_non_literal_period~~ | **LANDED phase-2 PR-4** (`repark-spark/tests/ta_window.rs`) | ~~ta period validation (SQL route)~~ |
 
 *(Re-pointed 2026-08-07 with the phase-2 slate settled: the 7 Spark-door rows carry their
 phase-2 PR (2 / 3a / 3b per the blocking surface); the 7 ta rows land with phase-2 PR-4; the
@@ -120,6 +120,22 @@ pins is the PR-3b DML arm. Session-tier remainder: 1 Spark-door row (#3, PR-3b) 
 (PR-4) + 4 post-milestone-one rows. Ledger:
 [../p2c-spark-ddl-ledger.md](../p2c-spark-ddl-ledger.md).
 
+Row-close note (2026-08-08 — phase-2 PR-4): deferred rows #8-#14 (the seven `ta_window::sql_route_*`
+cases) landed together as `repark-spark/tests/ta_window.rs`, ported from v1
+`crates/repark-session/tests/ta_window.rs` with the file shape kept and two declared edit classes:
+the class-2 prefix map (`arrow::` → `datafusion::arrow::` — the door crate has no direct arrow
+dev-dep; `repark_session::ReparkSession` → `repark_core::ReparkSession`) and the class-4
+deferred-test session adaptation (`ReparkSession::new()` → the door-installed builder,
+`with_extension(SparkExtension)` + `with_sql_dialect(SparkDialect)`, three construction sites).
+The goldens path needed NO fix: `$CARGO_MANIFEST_DIR/../repark-ta/tests/goldens` resolves in this
+workspace exactly as it did in v1 (repark-ta is the same sibling of the door crate). All 7 PASS;
+names unchanged. The UDFs reach the session through `SparkExtension`'s composed
+`repark_ta::TaExtension` — the PR-2 TA-omission rider, discharged.
+
+**Manifest remainder is now exactly 4 rows**, all post-milestone-one by explicit decision
+(2026-08-07, brief §4): the 3 `read_postgres_*` rows + `read_excel_basic_fixture_round_trips`.
+Every phase-2 row is closed. Ledger: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).
+
 ## Reconciliation runs
 
 Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, this repo's
@@ -142,3 +158,13 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   + 68 ported + 2 hoisted time_travel parser pins + 7 NEW seam/gate tests (dialect 2,
   extension 2, aws_gate 3 — additive, outside the ported census). Zero `#[ignore]`.
   Evidence: [../p1c-repark-core-ledger.md](../p1c-repark-core-ledger.md).
+- **2026-08-08 — phase-2 PR-4 (repark-ta):** v1 `cargo test -p repark-ta -- --list` at pin
+  `fc3f48102e437e2843ded460bc161edb434dac93` = **146**; this repo's = **146**; sorted diff:
+  **EMPTY**. The crate carries an optional `datafusion` feature, so a second pass pins the
+  feature-gated surface: v1 `--features datafusion` = **178**, this repo's = **180**; delta =
+  ADDED 2 / REMOVED 0, both the NEW door-native `TaExtension` tests
+  (`extension::tests::ta_extension_register_installs_the_whole_ta_udf_set_bit_exact`,
+  `extension::tests::ta_extension_configure_is_the_trait_default_pass_through`) — additive,
+  outside the ported census. Plus the 7 `ta_window::sql_route_*` rows ported into
+  `repark-spark/tests/ta_window.rs` (names unchanged, all passing). Deferred remainder: 4
+  (post-milestone-one). Zero `#[ignore]`. Evidence: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).

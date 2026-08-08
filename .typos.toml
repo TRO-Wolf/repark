@@ -10,8 +10,11 @@ repark = "repark"
 
 [default.extend-words]
 # Words that look like typos but are intentional in this domain.
-mis = "mis" # the `mis-` prefix (mis-placement / mis-wired) in prose — typos splits on the hyphen
-MoR = "MoR" # merge-on-read
-ser = "ser" # serialize (serde idiom)
-hel = "hel" # substr('hello', …) expected-value fixture in the Spark substring parity tests
-TRO = "TRO" # TRO-Wolf org / owned iceberg-rust fork (typos splits TRO-Wolf → TRO)
+mis = "mis"   # the `mis-` prefix (mis-placement / mis-wired) in prose — typos splits on the hyphen
+MoR = "MoR"   # merge-on-read
+ser = "ser"   # serialize (serde idiom)
+hel = "hel"   # substr('hello', …) expected-value fixture in the Spark substring parity tests
+tema = "tema" # TA-Lib TEMA (triple exponential moving average)
+TEMA = "TEMA" # TA-Lib TEMA (triple exponential moving average)
+CMO = "CMO"   # TA-Lib CMO (Chande momentum oscillator)
+TRO = "TRO"   # TRO-Wolf org / owned iceberg-rust fork (typos splits TRO-Wolf → TRO)

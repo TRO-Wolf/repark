@@ -29,7 +29,9 @@ Repository helper scripts wired into the dev workflow.
 - `check_lib_rs.sh` + `check_lib_rs.py` — the lib.rs thinness guard. No inline
   `#[cfg(test)] mod {…}` (file-backed only; same-line `#[cfg(test)] mod … {` also fails);
   non-test line ceilings with an EXCEPTIONS-with-reason table in the `.py` (SSOT; ratchet down
-  only; empty at phase-1 PR-A). Dual-wired: `make check-lib-rs` (in `make ci`) AND a ci.yml
+  only; empty at phase-1 PR-A; rows so far: `repark-functions` — registration glue, and
+  `repark-ta` — the verbatim-ported kernel root's `TaError` contract + flat re-export surface).
+  Dual-wired: `make check-lib-rs` (in `make ci`) AND a ci.yml
   `guards`-job step; pre-commit via `install-hooks` and `.pre-commit-config.yaml`
   (`lib-rs-guard`). Pure text — sub-second. EXCEPTIONS reason
   strings stay ≤100 cols (ruff E501; keep ruff-format clean).

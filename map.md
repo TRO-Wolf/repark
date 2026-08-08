@@ -11,8 +11,10 @@ front-door navigation map. See [README.md](README.md) for the overview and
 iceberg-rust fork, `[patch.crates-io]`-pinned), and `crates/repark-core` (the `ReparkSession`
 engine API, landing commit-by-commit in PR-C). Phase 2 (SQL doors) has begun:
 `crates/repark-functions` (Spark-semantics scalar/aggregate function shims, tier 3) is the first
-ported crate, and `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
-`SparkExtension`) carries the ported repark-sql spine with declared refuse-arms for PR-3a/3b.
+ported crate, `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
+`SparkExtension`) carries the ported repark-sql spine, and `crates/repark-ta` (bit-exact TA-Lib
+kernels + the optional window-UDF layer, tier 3) is the door-neutral function set the Spark door
+composes.
 
 ## Contents
 
@@ -28,7 +30,10 @@ ported crate, and `crates/repark-spark` (the Spark-SQL door: router + `SparkDial
   workflow pins.
 - `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
-  oracle; `make install-hooks` wires it).
+  oracle; `make install-hooks` wires it). `.typos.toml`'s `extend-words` carries the domain
+  vocabulary the checker would otherwise "correct" — including the TA-Lib indicator names
+  (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
+  port-source pin's own config, never invented to silence a real misspelling.
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
 - `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control

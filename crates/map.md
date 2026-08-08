@@ -13,12 +13,15 @@ Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 | [repark-iceberg](repark-iceberg/map.md) | Iceberg surface (tier 1): Glue + S3 Tables catalog wiring for DataFusion (`catalog/`) + the Spark-semantics write adapter — MERGE INTO, append, overwrite, ALTER — over the owned fork (`write/`). Carries the `[patch.crates-io]` fork pin's consumers. |
 | [repark-core](repark-core/map.md) | The Session-centric engine API (tier 2): `ReparkSession` over a DataFusion `SessionContext` + the `ExecutionBackend` / `SqlDialect` / `SessionExtension` seams (phase-1 PR-C, landing commit-by-commit). |
 | [repark-functions](repark-functions/map.md) | Spark-compatible function registry (tier 3): `datafusion-spark` registration + the Spark-semantics date shim + analyzer rules. DataFusion-native — no `repark-core` dep. |
+| [repark-ta](repark-ta/map.md) | Technical-analysis kernels (tier 3): bit-exact TA-Lib 0.4.0 hand-ports, golden-gated, plus the optional `datafusion` feature's window-UDF layer and the door-neutral `TaExtension`. |
 | [repark-spark](repark-spark/map.md) | The Spark SQL door (tier 3): v1 `repark-sql` ported — statement router + `SparkDialect`/`SparkExtension` over the phase-1 seams. PR-2 ships the spine; DDL/DML handlers land PR-3a/PR-3b. |
 
 DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`;
 `repark-functions` is a tier-3 leaf with no internal deps (speaks `datafusion::error::Result`);
-`repark-spark → {repark-core, repark-iceberg, repark-functions}` (tier-3 door; same-tier edge to
-repark-functions is legal).
+`repark-ta → repark-core` **only under the `datafusion` feature** (the `TaExtension` wrapper — the
+kernel core stays dependency-light); `repark-spark → {repark-core, repark-iceberg,
+repark-functions, repark-ta}` (tier-3 door; same-tier edges to repark-functions and repark-ta are
+legal).
 
 > **The layering SSOT is [`../scripts/check_crate_dag.py`](../scripts/check_crate_dag.py)** —
 > it holds the tier map and is enforced by `make check-crate-dag`, and crate-root thinness by
@@ -44,6 +47,7 @@ repark-functions is legal).
 | Catalog wiring / MERGE / append / overwrite / ALTER | [repark-iceberg/map.md](repark-iceberg/map.md) |
 | Add a `ReparkSession` method / session knob / reader | [repark-core/map.md](repark-core/map.md) |
 | Add/fix a Spark function or date-shim UDF | [repark-functions/map.md](repark-functions/map.md) |
+| Add / fix a TA indicator, or its SQL window UDF | [repark-ta/map.md](repark-ta/map.md) |
 | Spark-SQL statement routing / dialect / extension | [repark-spark/map.md](repark-spark/map.md) |
 | See where the next crates land | `../docs/design/session-api.md` |
 

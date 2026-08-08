@@ -26,6 +26,10 @@ repark-core.workspace = true
 # `analyze_eagerly` — the one blessed way to analyze a plan before its schema crosses a
 # boundary (the passthrough's eager analysis) — plus the SEC-02 `repark.sql.*` settings reader.
 repark-functions.workspace = true
+# The TA window UDFs: `SparkExtension` composes `TaExtension` at v1's registration position, so a
+# Spark-extended session keeps `ta_ema(close, 21) OVER (…)` callable (design Q11 — the TA set is
+# door-neutral; this crate is a consumer, not its owner). Same-tier edge (both tier 3), DAG-legal.
+repark-ta = { workspace = true, features = ["datafusion"] }
 # `SqlDialect` is an async trait (phase-1 seam contract).
 async-trait.workspace = true
 # `SHOW NAMESPACES … LIKE` — Spark's `StringUtils.filterPattern` compiles each `|`-separated
