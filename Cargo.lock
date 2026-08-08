@@ -4462,6 +4462,8 @@ dependencies = [
  "repark-common",
  "repark-core",
  "repark-iceberg",
+ "repark-spark",
+ "repark-ta",
  "tempfile",
  "tokio",
 ]

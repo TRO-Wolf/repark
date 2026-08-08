@@ -15,7 +15,7 @@
 
 use repark_common::surfaces::{self, Row, SessionProfile, SurfaceId};
 
-use SessionProfile::{SparkExtended, Unit};
+use SessionProfile::{SparkExtended, TwoSession, Unit};
 
 /// Shorthand for a shipped surface.
 const fn t(test: &'static str, profile: SessionProfile) -> Row {
@@ -31,11 +31,11 @@ const fn absent(reason: &'static str, adr: &'static str) -> Row {
 /// The Spark door's disposition of every surface ID.
 ///
 /// The door is a VERBATIM port of v1 `repark-sql` (design §0: delegate-first, no half-file
-/// surgery), so almost every row is `Tested` and names a ported battery test. The five absences
-/// are structural, not gaps: two are ANSI-only ergonomics (`sorted_by` / unknown-key refuse have
-/// no Spark spelling to guard), one is the wrong-door sniff (this IS the Spark door), one is
-/// PR-4's `TaExtension` composition, and one is the two-session cross-door protocol that PR-6
-/// owns — faking it single-session is explicitly forbidden (graft G5).
+/// surgery), so almost every row is `Tested` and names a ported battery test. The three
+/// remaining absences are structural, not gaps: two are ANSI-only ergonomics (`sorted_by` /
+/// unknown-key refuse have no Spark spelling to guard) and one is the wrong-door sniff (this IS
+/// the Spark door). `TA_FUNCTIONS` flipped at PR-4 (`TaExtension` composition) and
+/// `CROSS_DOOR_EQUIVALENCE` at PR-6, when the two-session protocol was actually run.
 /// ===========================================================================================
 const ROWS: &[(SurfaceId, Row)] = &[
     // --- Statement forms ---
@@ -316,12 +316,14 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::CROSS_DOOR_EQUIVALENCE,
-        absent(
-            "Cross-door rows require TWO sessions (native/no-extension vs Spark-extended), each \
-             driven through its OWN door, compared on the Arrow path. A single-session row here \
-             would prove nothing — extensions are session-scoped, so a Spark-extended session \
-             has Spark semantics through every door. PR-6 owns the protocol.",
-            "docs/design/sql-doors.md §2 Q13 / §0 G5",
+        // The evidence lives in the OTHER crate's test binary
+        // (`crates/repark-sql/tests/cross_door.rs`), and that is the honest place for it: the
+        // protocol needs both doors in one process, and only a dev-dependency may cross the
+        // door boundary. This row cites it with its crate so the reference is followable —
+        // running `cargo test -p repark-spark` alone will not execute it.
+        t(
+            "repark-sql tests/cross_door.rs::cross_door_ctas_produces_the_same_table_content_and_schema",
+            TwoSession,
         ),
     ),
 ];
@@ -345,12 +347,12 @@ fn matrix_maps_every_surface() {
 }
 
 /// The Spark door is a verbatim port of a shipped v1 engine, so the shipped/absent split is
-/// itself a fact worth pinning: five deliberate absences, every one of them named above. A
-/// sixth absence appearing without a reviewer noticing is exactly how "typed absence" rots into
-/// "typed excuse".
+/// itself a fact worth pinning: three deliberate absences after PR-6, every one of them named
+/// above. A fourth absence appearing without a reviewer noticing is exactly how "typed absence"
+/// rots into "typed excuse".
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
 #[test]
-fn spark_door_absences_are_the_five_declared_ones() {
+fn spark_door_absences_are_the_three_declared_ones() {
     let absent_ids: Vec<SurfaceId> = ROWS
         .iter()
         .filter(|(_, row)| !row.is_tested())
@@ -362,23 +364,28 @@ fn spark_door_absences_are_the_five_declared_ones() {
             surfaces::TABLE_OPTION_SORT_ORDER,
             surfaces::TABLE_OPTION_UNKNOWN_KEY_REFUSE,
             surfaces::WRONG_DOOR_SNIFF,
-            surfaces::CROSS_DOOR_EQUIVALENCE,
         ],
         "the Spark door's deliberate absences changed — update this pin AND the ledger"
     );
-    assert_eq!(ROWS.len() - absent_ids.len(), 39, "shipped-surface count");
+    assert_eq!(ROWS.len() - absent_ids.len(), 40, "shipped-surface count");
 }
 
-/// No `Tested` row claims the `TwoSession` profile. That profile means the two-session
-/// cross-door protocol ran (graft G5); a single-door battery cannot produce it, and letting a
-/// row claim it here would launder exactly the evidence PR-6 has to gather.
+/// `TwoSession` may be claimed by exactly ONE row — `CROSS_DOOR_EQUIVALENCE` — and only because
+/// PR-6 actually ran the protocol. The failure this prevents is the original one restated: a
+/// single-door battery cannot produce cross-door evidence, so letting an ordinary ported test
+/// claim the profile would launder exactly what the protocol exists to establish.
+/// MUTATION: mark any other row `TwoSession` → this REDs.
 #[test]
-fn no_row_claims_the_two_session_profile() {
+fn only_the_cross_door_row_claims_the_two_session_profile() {
     for (id, row) in ROWS {
-        if let Row::Tested { profile, .. } = row {
-            assert_ne!(
-                *profile,
-                SessionProfile::TwoSession,
+        if let Row::Tested {
+            profile: SessionProfile::TwoSession,
+            ..
+        } = row
+        {
+            assert_eq!(
+                *id,
+                surfaces::CROSS_DOOR_EQUIVALENCE,
                 "{id}: cross-door evidence cannot come from a single-door test"
             );
         }

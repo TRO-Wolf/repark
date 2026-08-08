@@ -42,3 +42,14 @@ async-trait.workspace = true
 # results back on the Arrow path (value AND type).
 tokio.workspace = true
 tempfile = "3"
+# DEV-ONLY, and deliberately so. `scripts/check_crate_dag.py` scopes the layering rule to NORMAL
+# edges (dev-/build-dependencies are excluded by design — same carve-out repark-spark's dev-dep on
+# repark-common already rides), so these do NOT create the forbidden door→door product edge:
+#  * `repark-spark` — the Q13/G5 CROSS-DOOR two-session protocol needs the OTHER door's dialect
+#    and extension in one test binary. There is no other way to compare two doors, and the design
+#    mandates the comparison (§2 Q13). Nothing in `src/` may name this crate.
+#  * `repark-ta` (feature `datafusion`) — the Q11 ANSI toll: `TaExtension` installed on a NATIVE
+#    session, one kernel driven through THIS door's SQL, compared `f64::to_bits` against the
+#    kernel the goldens gate. The TA set is owned by neither door (design §2 Q11).
+repark-spark.workspace = true
+repark-ta = { workspace = true, features = ["datafusion"] }

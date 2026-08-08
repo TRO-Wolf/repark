@@ -77,7 +77,11 @@ reach delegation through the ordinary arm.
   `ALTER TABLE … EXECUTE` (pre-parse recognizer), `TRUNCATE TABLE`. Every message names a
   replacement and, where the design gives one, a trigger. Tests: [refusals/map.md](refusals/map.md).
 - `matrix.rs` (`#[cfg(test)]`) — this door's disposition of every `repark_common::surfaces` ID,
-  with the compile-run audit that fails on an unmapped surface (Q13/G2).
+  with the compile-run audit that fails on an unmapped surface (Q13/G2). **39 tested / 4
+  deliberately absent** as of PR-6 (the door is closed; the `M2` deferral const is gone, so every
+  remaining absence is a standing ruling: Q3 partitioning, Q9 `INSERT OVERWRITE`, `TRUNCATE`,
+  Q7 maintenance). Each row also carries its session profile, and a test forbids this door from
+  ever claiming `SparkExtended` evidence.
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a NATIVE session (no extension),
   asserted on the Arrow path, value AND type.
 
