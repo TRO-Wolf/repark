@@ -1,0 +1,97 @@
+# Tier-2 live-AWS acceptance — the ONLY workflow that touches real AWS, designed net-new at
+# phase-3 PR-6 (docs/design/python-facade.md §7.4; no port-source template exists — the source
+# repo only ever ran this suite locally behind the gate variable).
+#
+# Contract (AGENTS.md "Tier-2 CI"): nightly on the default branch + manual dispatch, OIDC only,
+# MERGED CODE ONLY, GitHub-hosted runners, no secrets in tier 1, never a required check.
+#
+# Security posture, each line load-bearing:
+#   - `environment: aws-acceptance` — deployment protection: a manual dispatch still requires the
+#     environment's human approval before credentials can be minted.
+#   - The IAM role's trust policy (operator-side, docs/tier2-aws.md) constrains the OIDC subject
+#     to BOTH this repo's default branch AND this environment — a compromised workflow file on a
+#     topic branch cannot assume the role.
+#   - NEVER-TEARDOWN AS A PERMISSIONS FACT: the role's policy grants no table-delete and no
+#     object-delete permission of any kind. Scratch accumulation is handled by an S3 lifecycle
+#     expiry configured once by a human, outside this workflow (never a delete path in CI).
+#   - The job runs the acceptance MODULE ONLY, never the full facade suite (blast radius + minutes).
+#   - The ref guard below refuses any non-default-branch dispatch mechanically: `contents: read`
+#     on a dispatch does not by itself constrain the ref.
+#
+# Inputs (operator-side setup in docs/tier2-aws.md): repository VARIABLES `AWS_ACCEPTANCE_ROLE_ARN`,
+# `AWS_ACCEPTANCE_REGION`, `REPARK_ACCEPT_DS`, `REPARK_ACCEPT_ENTITY`, `REPARK_ACCEPT_ID_COL`;
+# repository SECRET `TABLE_BUCKET_ARN` (account-identifying; this repo is public — absent secret ⇒
+# the S3 Tables leg SKIPs, exactly as the test module behaves).
+#
+# NOTE (honest disclosure): runner behaviour (OIDC exchange, environment gating, cron) cannot be
+# exercised locally; the local proof is `make workflows-lint` + this file's parse, and the first
+# `workflow_dispatch` run is the operator's post-merge acceptance step (design §11).
+name: aws-acceptance
+
+on:
+  schedule:
+    - cron: "43 8 * * *"  # nightly ~08:43 UTC — offset from the parity cron (07:17)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aws-acceptance-${{ github.workflow }}
+  cancel-in-progress: false  # never cancel a live-AWS run mid-commit; runs serialize instead
+
+jobs:
+  live-aws:
+    name: tier-2 live AWS acceptance (Glue + S3 Tables, create-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: aws-acceptance
+    permissions:
+      id-token: write   # OIDC exchange — scoped to this job only
+      contents: read
+    steps:
+      - name: refuse non-default-branch refs (merged code only)
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "tier-2 runs against merged code only; refusing ref '${GITHUB_REF}'" >&2
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c  # v6.2.3
+        with:
+          role-to-assume: ${{ vars.AWS_ACCEPTANCE_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
+          role-session-name: repark-tier2-acceptance
+      # Python 3.12 WITH libpython so the PyO3 cdylib links during `maturin develop`.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c  # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+          python-version: "3.12"
+          enable-cache: true
+      - name: sync + build native module
+        run: |
+          uv sync
+          (cd python/repark && uvx maturin@1.14.1 develop)
+      # The acceptance MODULE only. The harness is create-only into the scratch namespace with a
+      # scratch table prefix and has NO teardown path (and the role has no delete permission — the
+      # posture is enforced twice). The S3 Tables leg self-skips when TABLE_BUCKET_ARN is unset.
+      - name: acceptance module (REPARK_AWS_ACCEPTANCE=1)
+        env:
+          REPARK_AWS_ACCEPTANCE: "1"
+          REPARK_ACCEPT_DS: ${{ vars.REPARK_ACCEPT_DS }}
+          REPARK_ACCEPT_ENTITY: ${{ vars.REPARK_ACCEPT_ENTITY }}
+          REPARK_ACCEPT_ID_COL: ${{ vars.REPARK_ACCEPT_ID_COL }}
+          TABLE_BUCKET_ARN: ${{ secrets.TABLE_BUCKET_ARN }}
+        # `--no-project` + VIRTUAL_ENV makes the maturin develop install AUTHORITATIVE (the
+        # py-test-facade pattern): a plain `uv run` would re-sync the project env over it.
+        run: >
+          VIRTUAL_ENV="$PWD/.venv"
+          uv run --no-project python -m pytest python/repark/tests/test_aws_acceptance.py -q

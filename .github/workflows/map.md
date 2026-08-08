@@ -25,6 +25,8 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 | `cargo-deny.yml` | Rust license / banned / duplicate checks ([../../deny.toml](../../deny.toml)). **Always-run on PRs** — required check; see the zizmor row. |
 | `audit.yml` | cargo-audit RustSec CVE scan over the Cargo dependency tree; weekly schedule + Cargo.toml/Cargo.lock path triggers; pin matches Makefile `CARGO_AUDIT_VERSION`. |
 | `wheels.yml` | Two paths (ported at PR-5): `smoke` (PRs + main; **REQUIRED check**, deliberately UN-path-filtered) = host debug wheel via maturin-action + venv import smoke + the FULL facade suite against the packaged wheel (the real-artifact rule's CI home); `release-wheels` (tags only) = manylinux `--release` + artifact upload. **No rust-cache anywhere** (tag-triggered ⇒ zizmor cache-poisoning); wheels install by EXPLICIT file path, never bare `repark` (a PyPI name-reservation package outversions local 0.0.0 wheels). |
+| `parity-live.yml` | Live PySpark oracle tier (ported + ARMED at PR-6): nightly cron 07:17 UTC + `workflow_dispatch`, NEVER `pull_request` (tier-2 = merged code only, docs/testing.md); Temurin 17 + setup-python 3.12 + rust + uv, `uv sync --extra record` (pyspark 4.1.2) + maturin develop, full facade suite with `REPARK_PARITY_LIVE=1`. Mirrors `make parity-live`. Not a required check. |
+| `aws-acceptance.yml` | Tier-2 live AWS (NET-NEW at PR-6, design §7.4): nightly 08:43 UTC + dispatch, `environment: aws-acceptance` (human approval), OIDC (`id-token: write` job-scoped, role/region from repo VARIABLES, `TABLE_BUCKET_ARN` as SECRET), mechanical non-main ref refusal, acceptance MODULE only, create-only + no-delete IAM posture (docs/tier2-aws.md). Not a required check. |
 | `pip-audit.yml` | Python dependency CVE scan (ported at PR-4): `uv export --frozen --no-emit-workspace` → `uvx pip-audit --strict`; weekly cron + pyproject/uv.lock path triggers. **Path-filtered ⇒ must never be a required check** (task/lessons.md). |
 | `typos.yml` | Spell-check ([../../.typos.toml](../../.typos.toml)); uvx-pinned, same version as `make spell-check`. |
 | `taplo.yml` | TOML format + lint ([../../.taplo.toml](../../.taplo.toml)); uvx-pinned, same version as `make toml-check`. **Always-run on PRs** — required check; see the zizmor row. |
@@ -35,7 +37,6 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 - The `ci.yml` diff-classifier (`detect`) — deferred; **trigger: returns when rust-test exceeds
   ~3 min** (phase-1 decision, recorded here per the execution brief).
 
-- `parity-live.yml` — live PySpark oracle tier (needs a JVM); phase 3 (PR-6).
 - `benches.yml`, `tpch-sf1.yml` — tier-3 benchmark ratio gates; later phases.
 - `codeql.yml` — CodeQL security-extended matrix; later phases.
 - `release.yml` — lands at the first tagged release, not before; see

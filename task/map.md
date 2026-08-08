@@ -32,6 +32,9 @@ repository's `task/` directory).
   (`python/repark-parity` verbatim port + the additive `--classic` cohort + the NEW report
   comparator + `docs/port/census.md` + the uv workspace return): scope, the collect-only
   verbatim-port census obligation, the declared new tests, gate results; IN FLIGHT.
+- [p3f-tier2-ledger.md](p3f-tier2-ledger.md) — unit ledger for phase-3 PR-6 (tier-2 CI:
+  parity-live ported+armed, aws-acceptance net-new with the OIDC/environment/no-delete posture,
+  docs/tier2-aws.md runbook): scope, out-of-scope operator items, gate results.
 - [p3e-facade-ledger.md](p3e-facade-ledger.md) — unit ledger for phase-3 PR-5 (`python/repark`,
   the facade wheel + its 126-file suite): the two-commit plan, the line-by-line **EC-9 hygiene
   scrub** table, the per-node **EC-4 adjudication** (where each exception is raised), the
