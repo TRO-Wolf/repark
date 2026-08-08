@@ -1,0 +1,205 @@
+//! Recognizer pins for the ALTER-scoped branch/tag grammar (design §2 Q6, graft G6).
+//!
+//! The executor half is the tier-1 `ManageSnapshots` seam, which carries its own battery; what is
+//! pinned here is exactly what this door adds — which statements it claims, what it parses them
+//! into, and which shapes it refuses loud instead of leaving to an opaque parse error.
+
+use super::*;
+
+fn parsed(sql: &str) -> RefDdl {
+    try_parse_ref_ddl(sql)
+        .unwrap_or_else(|| panic!("`{sql}` must be recognized"))
+        .unwrap_or_else(|err| panic!("`{sql}` must parse: {err}"))
+}
+
+fn refused(sql: &str) -> String {
+    try_parse_ref_ddl(sql)
+        .unwrap_or_else(|| panic!("`{sql}` must be recognized"))
+        .expect_err("must refuse")
+        .to_string()
+}
+
+/// The plain create forms, for both ref kinds, with and without an explicit pin.
+#[test]
+fn parses_create_branch_and_tag() {
+    assert_eq!(
+        parsed("ALTER TABLE ice.sales.orders CREATE BRANCH audit"),
+        RefDdl {
+            table_parts: vec!["ice".into(), "sales".into(), "orders".into()],
+            op: RefOp::Create {
+                kind: SnapshotRefKind::Branch,
+                name: "audit".into(),
+                as_of_version: None,
+                or_replace: false,
+                retention: SnapshotRefRetention::default(),
+            },
+        }
+    );
+    assert_eq!(
+        parsed("ALTER TABLE ice.sales.orders CREATE TAG v1 AS OF VERSION 42"),
+        RefDdl {
+            table_parts: vec!["ice".into(), "sales".into(), "orders".into()],
+            op: RefOp::Create {
+                kind: SnapshotRefKind::Tag,
+                name: "v1".into(),
+                as_of_version: Some(42),
+                or_replace: false,
+                retention: SnapshotRefRetention::default(),
+            },
+        }
+    );
+}
+
+/// Snapshot ids are signed `i64`, so a negative pin must parse (the tokenizer splits the minus).
+#[test]
+fn parses_negative_snapshot_pin() {
+    let RefOp::Create { as_of_version, .. } =
+        parsed("ALTER TABLE ice.sales.orders CREATE TAG v1 AS OF VERSION -9223372036854775807").op
+    else {
+        panic!("expected a create");
+    };
+    assert_eq!(as_of_version, Some(-9_223_372_036_854_775_807));
+}
+
+/// `CREATE OR REPLACE` is a distinct op (create-if-absent vs create-only), so it must survive
+/// into the parse rather than being folded into plain CREATE.
+#[test]
+fn parses_create_or_replace() {
+    let RefOp::Create {
+        or_replace, name, ..
+    } = parsed("ALTER TABLE ice.sales.orders CREATE OR REPLACE BRANCH audit").op
+    else {
+        panic!("expected a create");
+    };
+    assert!(or_replace);
+    assert_eq!(name, "audit");
+}
+
+/// Both retention clauses map onto the tier-1 retention fields, including the SNAPSHOTS count
+/// form (which is a different field from the duration form).
+#[test]
+fn parses_retention_clauses() {
+    let RefOp::Create { retention, .. } = parsed(
+        "ALTER TABLE ice.sales.orders CREATE BRANCH audit RETAIN 7 DAYS \
+         WITH SNAPSHOT RETENTION 3 SNAPSHOTS",
+    )
+    .op
+    else {
+        panic!("expected a create");
+    };
+    assert_eq!(retention.max_ref_age_ms, Some(7 * 86_400_000));
+    assert_eq!(retention.min_snapshots_to_keep, Some(3));
+    assert_eq!(retention.max_snapshot_age_ms, None);
+
+    let RefOp::Create { retention, .. } = parsed(
+        "ALTER TABLE ice.sales.orders CREATE BRANCH audit \
+         WITH SNAPSHOT RETENTION 12 HOURS",
+    )
+    .op
+    else {
+        panic!("expected a create");
+    };
+    assert_eq!(retention.max_snapshot_age_ms, Some(12 * 3_600_000));
+    assert_eq!(retention.min_snapshots_to_keep, None);
+}
+
+/// Per-branch snapshot retention on a TAG is meaningless (a tag pins one snapshot), and refusing
+/// here is better than letting the fork reject it with a lower-level message.
+#[test]
+fn snapshot_retention_on_a_tag_refuses() {
+    let err =
+        refused("ALTER TABLE ice.sales.orders CREATE TAG v1 WITH SNAPSHOT RETENTION 3 SNAPSHOTS");
+    assert!(err.contains("BRANCHES only"), "{err}");
+    assert!(err.contains("RETAIN"), "steers to the tag clause: {err}");
+}
+
+/// The drop forms, with and without `IF EXISTS`.
+#[test]
+fn parses_drop_branch_and_tag() {
+    assert_eq!(
+        parsed("ALTER TABLE ice.sales.orders DROP BRANCH audit").op,
+        RefOp::Drop {
+            kind: SnapshotRefKind::Branch,
+            name: "audit".into(),
+            if_exists: false,
+        }
+    );
+    assert_eq!(
+        parsed("ALTER TABLE ice.sales.orders DROP TAG IF EXISTS v1").op,
+        RefOp::Drop {
+            kind: SnapshotRefKind::Tag,
+            name: "v1".into(),
+            if_exists: true,
+        }
+    );
+}
+
+/// ANSI quoting: `"audit"` is an identifier and unquotes into the ref name; a keyword-shaped
+/// name is usable when quoted, because a quoted token never matches a keyword.
+#[test]
+fn double_quoted_names_are_identifiers() {
+    let ddl = parsed(r#"ALTER TABLE ice."sales"."orders" CREATE BRANCH "audit branch""#);
+    assert_eq!(
+        ddl.table_parts,
+        vec!["ice".to_string(), "sales".to_string(), "orders".to_string()]
+    );
+    let RefOp::Create { name, .. } = ddl.op else {
+        panic!("expected a create");
+    };
+    assert_eq!(name, "audit branch");
+}
+
+/// Statements this recognizer must NOT claim — the supported ALTER ops, the Spark-only top-level
+/// spelling (which stays a wrong-door sniff steer), and ordinary SQL mentioning `branch`.
+#[test]
+fn does_not_claim_other_statements() {
+    for sql in [
+        "ALTER TABLE ice.sales.orders ADD COLUMN c INT",
+        "ALTER TABLE ice.sales.orders RENAME TO ice.sales.o2",
+        "ALTER TABLE ice.sales.orders SET PROPERTIES (format = 'PARQUET')",
+        // Spark-only top-level form: not this door's grammar.
+        "CREATE BRANCH audit IN ice.sales.orders",
+        "DROP BRANCH audit IN ice.sales.orders",
+        "SELECT branch, tag FROM ice.sales.orders",
+        "CREATE TABLE ice.sales.branch AS SELECT 1 AS a",
+    ] {
+        assert!(try_parse_ref_ddl(sql).is_none(), "must not claim `{sql}`");
+    }
+}
+
+/// A recognized-but-malformed statement refuses with a targeted message. Silence here would hand
+/// the user `Expected: ADD, RENAME, … found: CREATE`, which describes nothing they wrote.
+#[test]
+fn malformed_forms_refuse_loud() {
+    let trailing = refused("ALTER TABLE ice.sales.orders CREATE BRANCH audit SOMETHING ELSE");
+    assert!(trailing.contains("trailing clause"), "{trailing}");
+
+    let bad_pin = refused("ALTER TABLE ice.sales.orders CREATE TAG v1 AS OF VERSION 'main'");
+    assert!(bad_pin.contains("snapshot id"), "{bad_pin}");
+
+    let half_pin = refused("ALTER TABLE ice.sales.orders CREATE TAG v1 AS OF 42");
+    assert!(half_pin.contains("AS OF VERSION"), "{half_pin}");
+
+    let bad_unit = refused("ALTER TABLE ice.sales.orders CREATE BRANCH audit RETAIN 7 FORTNIGHTS");
+    assert!(bad_unit.contains("unknown time unit"), "{bad_unit}");
+
+    let zero = refused("ALTER TABLE ice.sales.orders CREATE BRANCH audit RETAIN 0 DAYS");
+    assert!(zero.contains("must be positive"), "{zero}");
+
+    let bad_retention = refused("ALTER TABLE ice.sales.orders CREATE BRANCH a WITH RETENTION 3");
+    assert!(
+        bad_retention.contains("WITH SNAPSHOT RETENTION"),
+        "{bad_retention}"
+    );
+}
+
+/// A ref name is part of a metadata key, so it gets the same path-escape hygiene every other
+/// identifier segment in this door gets.
+#[test]
+fn path_escaping_ref_names_refuse() {
+    let err = refused("ALTER TABLE ice.sales.orders CREATE BRANCH \"../escape\"");
+    assert!(
+        err.to_lowercase().contains("snapshot ref"),
+        "names the segment kind: {err}"
+    );
+}

@@ -155,6 +155,34 @@ fn is_ident_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'$'
 }
 
+/// ===========================================================================================
+/// Every identifier-ish word in already-scrubbed text as `(start, end, word)` BYTE spans.
+///
+/// The spans index the scrubbed string, which is byte-length-identical to the input, so they are
+/// valid offsets into the ORIGINAL SQL too. That is the whole point: a pre-parse recognizer can
+/// locate a keyword and edit the user's text at that offset while remaining structurally blind to
+/// string literals, quoted identifiers, and comments.
+/// ===========================================================================================
+pub(crate) fn word_spans(scrubbed: &str) -> Vec<(usize, usize, &str)> {
+    let mut spans = Vec::new();
+    let mut start: Option<usize> = None;
+    for (index, ch) in scrubbed.char_indices() {
+        let is_word = ch.is_ascii_alphanumeric() || ch == '_' || ch == '$';
+        match (is_word, start) {
+            (true, None) => start = Some(index),
+            (false, Some(begin)) => {
+                spans.push((begin, index, &scrubbed[begin..index]));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(begin) = start {
+        spans.push((begin, scrubbed.len(), &scrubbed[begin..]));
+    }
+    spans
+}
+
 /// The first significant word of a statement (uppercased), skipping comments/whitespace.
 /// `None` for an empty / comment-only string.
 pub(crate) fn leading_keyword(scrubbed: &str) -> Option<String> {
@@ -258,6 +286,28 @@ mod tests {
     fn contains_word_treats_dollar_as_ident() {
         assert!(!contains_word("SELECT * FROM t$files", "t"));
         assert!(contains_word("SELECT * FROM t", "t"));
+    }
+
+    /// Word spans index the SCRUBBED text, and those offsets are valid in the original SQL —
+    /// which is what lets a pre-parse recognizer edit at an offset without seeing into literals.
+    #[test]
+    fn word_spans_offsets_are_valid_in_the_original_sql() {
+        let sql = "ALTER TABLE t SET PROPERTIES (a = 'SET PROPERTIES')";
+        let scrubbed = blank_out_quoted_and_comments(sql);
+        let spans = word_spans(&scrubbed);
+        let words: Vec<&str> = spans.iter().map(|(_, _, word)| *word).collect();
+        assert_eq!(
+            words,
+            vec!["ALTER", "TABLE", "t", "SET", "PROPERTIES", "a"],
+            "the literal's words must be invisible"
+        );
+        let (start, end, word) = spans[4];
+        assert_eq!(word, "PROPERTIES");
+        assert_eq!(
+            &sql[start..end],
+            "PROPERTIES",
+            "offset maps to the original"
+        );
     }
 
     /// The leading keyword skips comments and whitespace.

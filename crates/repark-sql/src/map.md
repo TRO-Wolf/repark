@@ -7,9 +7,12 @@ Source for the ANSI SQL door. `lib.rs` is a manifest (check_lib_rs); the router 
 refusal) carries its own test in the same change.
 
 The router's ORDER is the design's, and each position is load-bearing: text guards run first
-(multi-statement before anything else), then the async BUG-001 MoR valve, then a stock parse,
-then the statement match, then delegation with the SEC-02 plan guard between planning and
-execution. The wrong-door sniff runs on the ERROR path only. There is deliberately NO pre-parse
+(multi-statement before anything else), then the async BUG-001 MoR valve, then the PRE-PARSE
+stage (the `ALTER … EXECUTE` refusal, the branch/tag recognizer, the `SET PROPERTIES` rewrite,
+the `FOR … AS OF` rewrite), then a stock parse, then the statement match, then delegation with
+the SEC-02 plan guard between planning and execution. The pre-parse stage sits AFTER the
+multi-statement refuse on purpose — that is the BUG-010 ordering rule: no recognizer may ever
+see, or rewrite, the second statement of a script. The wrong-door sniff runs on the ERROR path only. There is deliberately NO pre-parse
 `$` passthrough — one existed and routed `CREATE TABLE … AS SELECT … FROM x$snapshots` past the
 Q15 target check into a silent `MemTable`; the stock parser handles `$`, so metadata references
 reach delegation through the ordinary arm.
@@ -54,6 +57,25 @@ reach delegation through the ordinary arm.
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
+- `alter.rs` — `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
+  TYPE`, `RENAME TO`) through the tier-1 `repark_iceberg::write::alter` seams, plus Trino
+  `SET PROPERTIES` and its ONE pre-parse recognizer (blank the word `PROPERTIES`, let the stock
+  parser read `SET (…)`). Curated vocabulary; `partitioning` is the pre-designated future
+  spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
+- `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec` (~200 lines of mapping).
+  Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
+  (parse-level absent here); OUTPUT/RETURNING refuses. Tests: [merge/map.md](merge/map.md).
+- `time_travel.rs` — the `FOR VERSION|TIMESTAMP AS OF` token-scan rewrite (Q5/G7): recognize,
+  resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register
+  an ephemeral pinned view, splice its name in, THEN parse. `FOR` is mandatory; `"` quotes
+  identifiers and `'` quotes strings, which is the whole difference from the Spark door's
+  scanner. Tests: [time_travel/map.md](time_travel/map.md).
+- `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
+  precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
+  spelling stays Spark-only. Tests: [ref_ddl/map.md](ref_ddl/map.md).
+- `refusals.rs` — the completed refuse set (Q7/Q9 + TRUNCATE): `INSERT OVERWRITE`, `CALL`,
+  `ALTER TABLE … EXECUTE` (pre-parse recognizer), `TRUNCATE TABLE`. Every message names a
+  replacement and, where the design gives one, a trigger. Tests: [refusals/map.md](refusals/map.md).
 - `matrix.rs` (`#[cfg(test)]`) — this door's disposition of every `repark_common::surfaces` ID,
   with the compile-run audit that fails on an unmapped surface (Q13/G2).
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a NATIVE session (no extension),
@@ -67,6 +89,11 @@ reach delegation through the ordinary arm.
 | Add a curated table property | `properties.rs` + a row in `properties/tests.rs` + an e2e row in `tests.rs` |
 | Add a partition transform | `partitioning.rs` + `partitioning/tests.rs` |
 | Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface |
+| Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` |
+| Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
+| Change what MERGE lowers to | `merge.rs` — the target type is shared with the Spark door, so a change there is a cross-door contract change |
+| Change the time-travel grammar | `time_travel.rs` `clause_kind_at` / `parse_as_of_value`, then the pin set in `time_travel/tests.rs` |
+| Add a refusal | `refusals.rs` + `refusals/tests.rs` + a `DeliberatelyAbsent` matrix row citing the ruling |
 | Record a surface this door will not have | `matrix.rs` (`DeliberatelyAbsent` with reason + ADR) |
 
 ## Pointers
@@ -82,5 +109,9 @@ reach delegation through the ordinary arm.
 | The wrong-door sniff fired on ANSI-legal SQL | `sniff.rs` `scope_for` / `Scope::Leading` — tokens with an ANSI reading (`USING`, `NAMESPACE`, `BRANCH`/`TAG`) fire only under their leading keyword |
 | The matrix audit RED after adding a surface ID | Add a `Tested` or `DeliberatelyAbsent` row in `matrix.rs`; the failure names the ID |
 | `m1_ships_the_briefed_scope` RED | A surface changed disposition — update the pin AND the ledger, in the same change |
+| `FOR … AS OF` produced a raw parser error | The scanner only claims `FOR VERSION\|TIMESTAMP AS OF`; `SYSTEM_*` and the FOR-less forms are sniff steers by design (`time_travel.rs` module doc) |
+| A time-travel read saw CURRENT rows | The rewrite must have been skipped — check `find_time_travel_spans` produced a span; a resolved span always registers a snapshot-pinned provider |
+| `SET PROPERTIES` reached the parser unrewritten | `alter::rewrite_set_properties` only fires on a statement LEADING with `ALTER TABLE`; a `PROPERTIES` inside a literal is invisible by design |
+| Branch DDL was not recognized | `ref_ddl::try_parse_ref_ddl` takes ALTER-scoped forms only; the top-level `CREATE BRANCH b IN t` is Spark-door surface |
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).
