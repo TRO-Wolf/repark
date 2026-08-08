@@ -121,18 +121,26 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       tested / 4 absent (TA_FUNCTIONS flipped in the sync), ANSI M1 29 tested / 14 absent (delegated `INSERT`/`DELETE`/`UPDATE` ship
       with M1 because the delegation core ships them, each with a round-trip row and the BUG-001
       MoR valve wired over them); R1/R2 spikes recorded day 1
-      (ledger: [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md)). **R2 filed a core gap:**
-      `ReparkSession` cannot enable `information_schema` (the builder config map never reaches
-      `SessionConfig`), so `SHOW TABLES`/`DESCRIBE` are dead in BOTH doors and Q8's "delegate"
-      delegates to nothing — fix core-side before Q8 is declared delivered.
-- [ ] **PR-6 — repark-sql ANSI M2**: ALTER evolution, MERGE lowering, `FOR … AS OF` scanner +
-      pin set, branch/tag ALTER DDL, full refuse set, cross-door two-session equivalence rows,
-      matrix completion: of the 14 ANSI absence rows, nine are M2 deferrals that flip to `Tested`
-      (the eight citing the `M2` const plus `BRANCH_TAG_DDL`, whose reason is M2 under a §2 Q6
-      cite), and Q11/`TA_FUNCTIONS` flips once PR-4 lands the extension this door composes; the
-      three standing decisions (Q3, Q7, Q9) stay absent by ruling, and Q8/`INTROSPECTION` stays
-      absent until the core `information_schema` gap is fixed. Plus `session-api.md`
-      seam-freeze edits.
+      (ledger: [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md)). **R2 filed a core gap —
+      RESOLVED in PR-6:** `ReparkSession` could not enable `information_schema` (the builder
+      config map never reached `SessionConfig`), so `SHOW TABLES`/`DESCRIBE` were dead in BOTH
+      doors and Q8's "delegate" delegated to nothing. Fixed core-side by
+      `repark_core::session::apply_datafusion_config_keys` (every `datafusion.*` builder key now
+      reaches `SessionConfig`; unknown key = loud `Error::Config`); Q8 is delivered, with the
+      `$`-metadata-table filtering question carried forward as an open fork/core rider — see
+      [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md).
+- [ ] **PR-6 — repark-sql ANSI M2 (IN FLIGHT — the door closes)**: ALTER evolution +
+      `SET PROPERTIES` + `RENAME TO`, MERGE lowering, `FOR … AS OF` scanner + the double-quote
+      pin set, branch/tag ALTER DDL (Q6 — NOT deferred; the SCOPE contingency never fired), the
+      full refuse set (`INSERT OVERWRITE` / `CALL` / `ALTER … EXECUTE` / `TRUNCATE`), the Q11 TA
+      toll, Q8 introspection (unblocked by the R2 core fix above), and the Q13/G5 **two-session**
+      cross-door rows (CTAS, INSERT, ALTER, MERGE, time travel, case folding — each running a
+      native ANSI session against a Spark-extended Spark session, compared on the Arrow path).
+      Matrix: ANSI 39 tested / 4 absent (ten rows flipped; the `M2` const deleted — every
+      remaining absence is a standing ruling: Q3, Q9, TRUNCATE, Q7), Spark 40 tested / 3 absent
+      (`CROSS_DOOR_EQUIVALENCE` flipped). Plus the `session-api.md` seam freeze (UNSTABLE →
+      FROZEN + the extensions-are-session-scoped line) and the ADR-0002 design-pass discharge
+      note. Ledger: [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md).
 - [ ] Phase close: acceptance per the brief §3; `dbt-repark` may start after PR-6
       (separate package).
 

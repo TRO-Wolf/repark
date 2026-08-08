@@ -38,6 +38,11 @@ repository's `task/` directory).
   door, milestone 1: NEW code — no census; `AnsiDialect` + guard set + wrong-door sniff + the
   curated `WITH (…)` vocabulary + Q15 routing; the R1/R2 day-1 spikes; the Q13 surface registry
   and both doors' matrix row counts); IN FLIGHT.
+- [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) — unit ledger for phase-2 PR-6 (the ANSI
+  door, milestone 2 — the door CLOSES: ALTER/MERGE/time-travel/branch-tag DDL/the refuse set;
+  the repark-core R2 config fix that unblocks Q8 introspection; the Q11 TA toll; the Q13/G5
+  two-session cross-door protocol; the `session-api.md` seam freeze and the ADR-0002
+  design-pass discharge; final matrix counts for BOTH doors); IN FLIGHT.
 - [p2e-ta-ledger.md](p2e-ta-ledger.md) — unit ledger for phase-2 PR-4 (repark-ta: verbatim
   crate port incl. the 148 `.bin` goldens, NEW `TaExtension`, `SparkExtension` composition
   restoring the p2b TA-omission rider, two-pass TA census, deferred rows #8–#14 landing —
@@ -60,6 +65,8 @@ repository's `task/` directory).
 | See the phase-2 PR-3b census close / exclusions | [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md) |
 | See the phase-2 PR-5 design-ruling application / spike results / surface-matrix counts | [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) |
 | See the phase-2 PR-4 TA census / rider discharge | [p2e-ta-ledger.md](p2e-ta-ledger.md) |
+| See the phase-2 PR-6 per-Q delivery record / cross-door session profiles / final matrix counts | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) |
+| Find out why `information_schema` used to be off, and what fixed it | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) "The R2 core fix" |
 | Read the brief driving phase 2 | [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) |
 | See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |
 | Read the port plan behind the backlog | [../docs/port/PLAN.md](../docs/port/PLAN.md) |

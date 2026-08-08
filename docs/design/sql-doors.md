@@ -56,6 +56,12 @@ call it); DF 54.1 subquery guard → repark-core session defaults (G8); a `stamp
 helper beside CatalogRegistry (both doors do v1's clone+stamp dance through it). The
 `surfaces` const ID list (G2) lives in repark-common (tier 0, dialect-neutral vocabulary).
 
+> **Delivery record (2026-08-08).** The ANSI door closed at phase-2 PR-6. The per-Q "what
+> actually shipped, and what it cost" record has ONE home — [../../task/p2g-ansi-m2-ledger.md](../../task/p2g-ansi-m2-ledger.md)
+> (PR-6) and [../../task/p2f-ansi-m1-ledger.md](../../task/p2f-ansi-m1-ledger.md) (PR-5). This
+> file stays the DESIGN: the rulings below are what was decided, not a changelog of what was
+> built. Read them together; do not annotate this file with delivery notes.
+
 ## 2. Q1–Q15 rulings (the ANSI door)
 
 - **Q1 properties**: curated Trino names — `format` ('PARQUET'; ORC/AVRO refuse-loud w/
