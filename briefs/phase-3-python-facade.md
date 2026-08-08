@@ -14,7 +14,7 @@ Census ground truth: every gating count is **generated** (`cargo test --workspac
 `pytest --collect-only -q`; JUnit XML), never hand-written. Baseline numbers recorded at the pin by
 the PR-4 procedure; the stale PLAN.md table is replaced at phase close. Static orientation counts:
 binding ~6,653 lines Rust; facade 53 modules / ~46 KLOC / 127 test files (~2,350 static `def
-test_`); parity core 85 lines + 58 unit tests + census machinery; `repark-ml` 1,703 lines.
+test_`); parity core 85 lines + 64 generated test names (corrected from the static 58 at PR-4) + census machinery; `repark-ml` 1,703 lines.
 
 ## 0. Deliverables
 

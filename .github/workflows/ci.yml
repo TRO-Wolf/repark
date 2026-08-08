@@ -155,7 +155,9 @@ jobs:
         run: uv run --no-project --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
 
   python:
-    name: Python (ruff)
+    # Renamed from "Python (ruff)" at phase-3 PR-4 (the job now also gates the lockfile and
+    # the parity harness) — the required-status context updates in the same change.
+    name: Python
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -170,3 +172,14 @@ jobs:
         run: uvx ruff@0.15.22 check .
       - name: ruff format --check
         run: uvx ruff@0.15.22 format --check .
+      # Lockfile-freshness gate (mirrors `make py-lock-check`): RED if uv.lock lags its
+      # pyproject floors. Validates only — never rewrites the lock.
+      - name: uv lock --locked
+        run: uv lock --locked
+      # Parity-harness tests (mirrors `make py-test`): the comparison core + census-machinery
+      # unit tests. Cheap enough to run on every event.
+      - name: parity-harness tests
+        run: >
+          PYTHONPATH=python/repark-parity/src
+          uv run --no-project --with pyarrow --with pytest
+          pytest python/repark-parity/tests -q

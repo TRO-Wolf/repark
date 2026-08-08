@@ -1,0 +1,4 @@
+python: Python 3.12.3
+build-mode: maturin develop (debug)
+rustc: rustc 1.96.0 (ac68faa20 2026-05-25)
+pin: fc3f48102

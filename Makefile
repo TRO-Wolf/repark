@@ -117,6 +117,25 @@ py-lint: ## ruff check
 py-format-check: ## ruff format --check
 	$(RUFF) format --check .
 
+.PHONY: py-test
+py-test: ## Parity-harness tests (isolated env; no native build) — mirrors ci.yml python step
+	PYTHONPATH=python/repark-parity/src \
+		uv run --no-project --with pyarrow --with pytest \
+		pytest python/repark-parity/tests -q
+
+.PHONY: parity
+parity: py-test ## Run the Spark-parity differential harness (alias)
+
+.PHONY: py-lock-check
+py-lock-check: ## uv lock --locked — RED if uv.lock lags its pyproject floors (mirrors ci.yml step)
+	uv lock --locked
+
+.PHONY: census
+census: ## Hermetic Apache-suite census (classic/expand/expand2); local+slate only, never CI-wired
+	@# Needs the facade package (python/repark, lands PR-5) — inert until then. SSOT:
+	@# docs/port/census.md; the classic cohort runs via the additive --classic flag (F1).
+	@./scripts/run_census.sh
+
 # ------------------------------------------------------------------------------------------------
 # TOML + spelling (uvx-provisioned — always run, same pinned version as CI)
 # ------------------------------------------------------------------------------------------------

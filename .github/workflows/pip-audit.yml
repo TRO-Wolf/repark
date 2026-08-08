@@ -1,0 +1,38 @@
+# Python dependency CVE scan. Runs weekly and whenever the Python dependency surface changes.
+name: pip-audit
+
+on:
+  push:
+    branches: [main]  # PR coverage comes from `pull_request`; this avoids the double run
+    paths: ["**/pyproject.toml", "uv.lock", ".github/workflows/pip-audit.yml"]
+  pull_request:
+    paths: ["**/pyproject.toml", "uv.lock"]
+  schedule:
+    - cron: "0 6 * * 1" # weekly, Monday 06:00 UTC
+
+permissions:
+  contents: read
+
+concurrency:
+  # Supersede in-flight runs for the same PR; never cancel a main-branch or scheduled run, so
+  # main keeps an unbroken record. Without this, three quick pushes stacked three full runs.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+          python-version: "3.12"
+      - name: Export resolved requirements
+        # --no-emit-workspace drops our local workspace packages (repark, repark-parity);
+        # pip-audit can only scan published, versioned third-party deps.
+        run: uv export --frozen --no-emit-workspace --format requirements-txt > requirements-audit.txt
+      - name: pip-audit
+        run: uvx pip-audit --strict -r requirements-audit.txt

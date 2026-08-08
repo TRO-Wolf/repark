@@ -1,0 +1,8 @@
+python: Python 3.12.3
+wheel: repark-0.0.0-cp312-abi3-manylinux_2_39_x86_64.whl
+build-mode: debug
+extras: numpy,pandas,polars,ml-ext
+java-on-path: /usr/lib/jvm/java-11-openjdk-amd64/bin/java
+gates-unset: all REPARK_* + TABLE_BUCKET_ARN
+pin: fc3f48102
+install: local wheel by explicit path (PyPI name-reservation repark==0.0.1 excluded)

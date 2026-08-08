@@ -259,3 +259,42 @@ Also deferred by design, not omitted: `make census` stays local + slate-run and 
 5. `--stretch` is byte-identical on purpose. If a reviewer's instinct is "just fix
    `STRETCH_MODULES`", the trap pin (`test_stretch_blends_c3_into_the_classic_denominator`) is
    what stops that, and design §5 F1 is why.
+
+## Baseline artifacts + carve-outs (orchestrator commit)
+
+**The freeze-point baseline is COMMITTED** at `task/census/baseline-fc3f48102/` (procedure
+run 2026-08-08 at the pin, per docs/port/census.md):
+
+- classic **142/345** — run TWICE, `stability-self-diff.txt` ZERO rows (nothing quarantined);
+- expand **44/171**; expand2 **87/167**;
+- facade pair: **2,509 collected / 2,517 junit outcomes** (2,471 passed + 46 skipped, exit 0,
+  debug wheel). The 8-count delta is reconciled by name: junit records module-level skip
+  entries for the eight pyspark/duckdb-gated modules (compat smoke, four oracle modules,
+  tpch/tpcds/fuzz smoke) that never reach per-test collection — the environment clauses
+  (pyspark ABSENT, duckdb ABSENT) working as designed. The v2 acceptance run must reproduce
+  the same pair shape.
+- Design F2 empirically closed: PLAN.md's 135/345 and 41/167 were stale; the recorded runs
+  above are the baseline. PLAN.md's table is replaced at phase close (PR-7), per the design.
+
+**Recorded mechanical transform (public hygiene):** every absolute scratch path inside the
+artifacts (pip-freeze editable URLs, report metadata, junit traces) is redacted to
+`<v1-pin>` / `<baseline>` / `<scratch>` before commit. The identical transform applies to the
+v2-side artifacts before manifest comparison. Rows/classes are untouched — paths do not
+participate in the multiset.
+
+**Operational finding (release-relevant):** the first facade-leg run installed
+`repark==0.0.1` FROM PYPI — the name-reservation placeholder — because `uv` preferred the
+higher index version over the local 0.0.0 wheel under `--find-links`. Rule from here on:
+local wheels are installed **by explicit file path only**. docs/release.md's PyPI
+pending-publisher wording needs the existing-project correction before the release PR
+(carried as an open note).
+
+**Carve-outs landed in this commit (orchestrator):** ci.yml `python` job renamed
+"Python (ruff)" → "Python" + `uv lock --locked` + parity-harness pytest steps (required
+context updates in the same change — command in the PR body); `pip-audit.yml` ported
+(path-filtered, never required); Makefile `py-test` / `parity` / `py-lock-check` / `census`
+(census inert until PR-5's facade, noted in-target).
+
+**Builder-flagged count correction:** design/brief said "58 unit tests" for the parity
+package; the generated count at the pin is **64** (53 static `def test_` + parametrization).
+Both documents corrected in this PR; the port census is 64 = 64 + 36 declared additions.

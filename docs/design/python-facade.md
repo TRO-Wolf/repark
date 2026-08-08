@@ -63,7 +63,7 @@ verification panel; everything else gets the slim tier.
 | `crates/repark-ml` | 1,703 lines, five modules, one third-party dep (`thiserror`), no internal deps | EC-7 (crate `map.md` only) — every `.rs` and `Cargo.toml` verbatim |
 | `crates/repark-python` | ~6,653 lines Rust, flat six-module `src/` + `tests/bindings.rs`; 3 pyclasses, 5 exceptions, 3 ML pyfunctions | EC-1, EC-2, EC-3, EC-5, EC-6, EC-10 |
 | `python/repark` (the wheel) | 53 modules / ~46 KLOC source + 127 test files | EC-4 (tests only), EC-7 (map.md), EC-9 (hygiene) |
-| `python/repark-parity` | 85-line comparison core + 58 unit tests + `compat/` census machinery + `bench/` | none (verbatim) + NEW comparator |
+| `python/repark-parity` | 85-line comparison core + 64 generated unit-test names (static `def test_` is 53; parametrization brings the collected count to 64 — corrected at PR-4 from the recon's static 58) + `compat/` census machinery + `bench/` | none (verbatim) + NEW comparator |
 | uv workspace | virtual root, two members, one `uv.lock`, four load-bearing ruff per-file-ignore blocks | none (verbatim) |
 | Mechanical gates | `check_lib_py` returns; crate-DAG rows; panic-ban carve-out | none (port) |
 | CI | wheels, pip-audit, parity-live ported; rust job split; live-AWS net-new | §7 |
@@ -766,7 +766,7 @@ package, never before it** (a required check whose working directory does not ex
    additive, + the instance here), EC-10 (`check_lib_rs` exception row), the error type-identity
    test, the panic-ban carve-out invocation, refuse-arm tests. No wheel is buildable yet and none is
    claimed. *Full panel.*
-4. **`python/repark-parity` + census foundation** — comparison core + 58 unit tests + `compat/` +
+4. **`python/repark-parity` + census foundation** — comparison core + its 64-name generated test census + `compat/` +
    `bench/` verbatim; the additive `--classic` fix + the `--stretch` blending pin (EC-8); the new
    report comparator + its unit tests; `docs/port/census.md`; the uv workspace root **declaring the
    parity member only** (the facade member joins in PR-5 — declaring a missing member fails the
