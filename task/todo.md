@@ -84,27 +84,27 @@ Note (2026-08-06): the earlier "re-arm the phase-1+ mechanical gates" line item 
 **phase 3**. Phase 1 re-arms the Rust gates only (crate-DAG guard, `check_lib_rs`,
 `trait-wrapping.md` manual).
 
-## Phase 2 — the two SQL doors (IN FLIGHT, brief: [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md), design: [../docs/design/sql-doors.md](../docs/design/sql-doors.md))
+## Phase 2 — the two SQL doors (DONE 2026-08-08, brief: [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md), design: [../docs/design/sql-doors.md](../docs/design/sql-doors.md))
 
 Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-source pin unchanged
 (v1 `main` @ `fc3f48102`). Seven PRs; deferred-test obligations close per
 [port/deferred-tests.md](port/deferred-tests.md).
 
-- [ ] **PR-1 — repark-functions + docs (IN FLIGHT)**: verbatim port (crate name kept, 62-test
+- [x] **PR-1 — repark-functions + docs (MERGED #8)**: verbatim port (crate name kept, 62-test
       battery, identity census map), DAG TIERS rows pre-declared for all four new crates,
       design doc + brief in-repo (ledger: [p2a-functions-ledger.md](p2a-functions-ledger.md)).
-- [ ] **PR-2 — repark-spark skeleton (IN FLIGHT)**: router spine + guards + time-travel
+- [x] **PR-2 — repark-spark skeleton (MERGED #9)**: router spine + guards + time-travel
       scanner + `SparkDialect` + `SparkExtension`; DF-54.1 guard hoist rides (G8 — the guard
       sits in core `build()` since PR-C; PR-2 adds the bare-Session pin). Unblocks deferred #1
       (ledger: [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md)).
-- [ ] **PR-3a — repark-spark DDL (IN FLIGHT)**: ctas, create_table, namespace_ddl,
+- [x] **PR-3a — repark-spark DDL (MERGED #10)**: ctas, create_table, namespace_ddl,
       catalog_ops, local_fs_ddl, alter. Unblocks the CTAS-blocked deferred rows (#2, #4–#7)
       (ledger: [p2c-spark-ddl-ledger.md](p2c-spark-ddl-ledger.md)).
-- [ ] **PR-3b — repark-spark DML + refs (IN FLIGHT)**: merge, insert_overwrite, ref_ddl, call
+- [x] **PR-3b — repark-spark DML + refs (MERGED #11)**: merge, insert_overwrite, ref_ddl, call
       + MoR-valve hoist; census closed (334 ported names empty sorted-diff under
       `repark_sql::` → `repark_spark::`; 342 − 6 postgres_p11 − 2 phase-1 time-travel hoists).
       Deferred #3 landed (ledger: [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md)).
-- [x] **PR-4 — repark-ta (DONE)**: kernels + goldens (148 `.bin`) ported verbatim +
+- [x] **PR-4 — repark-ta (MERGED #12)**: kernels + goldens (148 `.bin`) ported verbatim +
       NEW `TaExtension`; `SparkExtension` composes it at v1's registration position (p2b rider
       #1 DISCHARGED). TA census generated at the pin and empty-diff (146/146 default features;
       178→180 with `--features datafusion`, +2 = the door-native `TaExtension` tests).
@@ -114,7 +114,7 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       refuse rows (design Q11 toll) land PR-6 — `repark-sql` does not exist yet. The Spark
       door's `TA_FUNCTIONS` matrix row flipped `DeliberatelyAbsent` → `Tested` in PR-5's
       sync merge (the row rode PR-5's matrix machinery).
-- [ ] **PR-5 — repark-sql ANSI M1 (IN FLIGHT)**: `AnsiDialect` delegation core, guard set
+- [x] **PR-5 — repark-sql ANSI M1 (MERGED #13)**: `AnsiDialect` delegation core, guard set
       (multi-statement FIRST, P11, SEC-02, write-to-branch), wrong-door sniff, CTAS `WITH (…)`
       vocab + `extra_properties` + Q15 loud-refuse routing, schema DDL; `repark_common::surfaces`
       (43 capability IDs) + `matrix.rs` in BOTH doors with the compile-run audit — Spark 39
@@ -129,7 +129,7 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       reaches `SessionConfig`; unknown key = loud `Error::Config`); Q8 is delivered, with the
       `$`-metadata-table filtering question carried forward as an open fork/core rider — see
       [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md).
-- [ ] **PR-6 — repark-sql ANSI M2 (IN FLIGHT — the door closes)**: ALTER evolution +
+- [x] **PR-6 — repark-sql ANSI M2 (MERGED #14)**: ALTER evolution +
       `SET PROPERTIES` + `RENAME TO`, MERGE lowering, `FOR … AS OF` scanner + the double-quote
       pin set, branch/tag ALTER DDL (Q6 — NOT deferred; the SCOPE contingency never fired), the
       full refuse set (`INSERT OVERWRITE` / `CALL` / `ALTER … EXECUTE` / `TRUNCATE`), the Q11 TA
@@ -141,8 +141,35 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       (`CROSS_DOOR_EQUIVALENCE` flipped). Plus the `session-api.md` seam freeze (UNSTABLE →
       FROZEN + the extensions-are-session-scoped line) and the ADR-0002 design-pass discharge
       note. Ledger: [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md).
-- [ ] Phase close: acceptance per the brief §3; `dbt-repark` may start after PR-6
-      (separate package).
+- [x] Phase close: acceptance per the brief §3 met (program census reconciled below; matrix
+      audits green both doors; manifest at 4 post-milestone-one rows; `make preflight` green);
+      `dbt-repark` may now start (separate package). Retrospective below.
+
+### Retrospective (2026-08-08, per SEPMO)
+
+Seven PRs (#8–#14), all merged 2026-08-07 → 2026-08-08. Workspace at close: **1170 tests, 0
+failed, 0 ignored** across seven crates. **Program census reconciles and foots** (brief §3
+identity): v1 pin names 342 (repark-sql) + 62 (repark-functions) + 146 (repark-ta, default
+features) = 550; ported 334 (repark-spark) + 62 + 146 + 2 (time-travel parser pins, attributed
+to repark-core where phase 1 hoisted them) = 544; unported = exactly the 6 `postgres_p11`
+names, scheduled with their crate post-milestone-one. Surface matrices: ANSI 39 Tested / 4
+Absent, Spark 40 / 3 — every absence a standing ruling with its design/ADR citation, every
+cited test mechanically verified against `--list`. Both seams FROZEN (session-api.md), the
+ADR-0002 design-pass obligation discharged.
+**What worked:** the recon → design-competition → synthesis pipeline priced the architecture
+correctly (delegate-first kept every port census empty-diff while the ANSI door stayed ~thin);
+verification tiers matched risk — slim (builder + one adversarial verifier) sufficed for the
+three mechanical ports, while the full 4-lens panel caught HIGH defects on ALL THREE new-code
+PRs (the `$`-passthrough silent-MemTable hole, false-absence matrix rows over live delegated
+DML with the MoR valve unwired, the EXECUTE-recognizer false refusals, branch-DDL trailing-
+token acceptance, and the time-travel temp-view leak — each empirically reproduced before
+fixing, each fix reproduction-pinned); sibling-PR parallelism (PR-4 ∥ PR-5) worked because the
+crate footprints were disjoint by design; the two sync recipes (stacked-after-squash vs
+sibling-union) held. Day-1 spikes validated their existence: R2 found a real core gap
+(`information_schema` unreachable) early enough to fix in-phase.
+**What hurt** (rules in [lessons.md](lessons.md) 2026-08-08): typed absence rows can be false
+— the audit proves absence is *recorded*, not *true*; ephemeral provider lifecycle (the
+time-travel view leak — ANSI fixed, Spark-door inherits v1's copy as tracked debt below).
 
 ## Phase 3 — Python facade + parity = milestone one (BACKLOG)
 
@@ -164,6 +191,15 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       manifest rows re-point here ([port/deferred-tests.md](port/deferred-tests.md)).
 
 ## Open items
+
+- [ ] **Spark-door time-travel temp-view leak (inherited from v1)** — `repark-spark`'s
+      time_travel apply-half registers pinned views and never deregisters (v1's own behavior at
+      the pin). The ANSI door fixed its copy in PR-6 (`PinnedViews` released on every exit
+      path); the Spark door's fix is a **declared divergence-with-issue** (port fidelity says
+      never fix silently): apply the same release idiom + a divergence note, ideally alongside
+      the matching v1 bugfix. Found by the PR-6 verify panel (p2g ledger).
+- [ ] **`$`-metadata-table filtering in introspection** — carried forward as an open fork/core
+      rider from PR-6's Q8 delivery (see p2g ledger).
 
 - [ ] Cutover sequencing during parallel-run (single-writer-per-table) — settle before
       milestone one (`docs/port/PLAN.md` "Open item: cutover").

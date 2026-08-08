@@ -3,7 +3,7 @@
 **Unit:** phase-2 PR-5 · **Brief:**
 [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-5" · **Design:**
 [../docs/design/sql-doors.md](../docs/design/sql-doors.md) (LAW for this unit) · **Status:**
-IN FLIGHT · **Parallel with:** phase-2 PR-4 (repark-ta)
+MERGED 2026-08-08 (PR #13) · **Parallel with:** phase-2 PR-4 (repark-ta)
 
 **This is NEW code, not a port.** There is no census, no rename map, no pin to diff against.
 The discipline that replaces them is [../docs/testing.md](../docs/testing.md)'s native rule:

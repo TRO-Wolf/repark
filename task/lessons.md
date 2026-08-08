@@ -47,3 +47,22 @@ there the hard way and bind here from day one.
   PR whose base branch is gone can be neither retargeted (HTTP 422) nor reopened — the only
   recovery is a fresh PR (#6). Order of operations for a stack: change the child's base to
   `main` first, then merge the parent.
+
+## 2026-08-08 — phase 2 (the two SQL doors)
+
+- **DO probe absence claims empirically — the matrix audit proves an absence is RECORDED, not
+  that it is TRUE.** A `DeliberatelyAbsent` row over a delegating router can be false: the
+  ANSI door's INSERT/DELETE/UPDATE rows claimed M2 absence while the delegate path was
+  live-writing Iceberg, untested and unguarded. The verify panel found it only by executing
+  the statements. A row's truth is a behavior; behaviors get tests — refusal rows included.
+- **DO release ephemeral providers on every exit path.** `FOR … AS OF` pinned temp views
+  leaked into the session catalog and surfaced in `information_schema` — the exact
+  introspection surface the same PR enabled. Deregister-after-use (the insert_overwrite
+  idiom), routed so early returns and `?` can't skip it. The Spark door carries v1's copy of
+  the same leak: fix it as a DECLARED divergence-with-issue, never silently in a fidelity port.
+- **DO pick the sync recipe by branch relationship.** Stacked branch after a squash-merge:
+  verify the squash tree equals the prior branch head (empty diff), then blanket `--ours` is
+  provably correct. SIBLING branches: union-merge by hand, then re-check semantic riders (a
+  matrix row whose truth changed when the sibling landed — `TA_FUNCTIONS` — and the absence
+  pins/counts), then full re-gate. Blanket `--ours` on a sibling merge silently discards the
+  sibling's work.
