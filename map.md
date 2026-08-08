@@ -17,8 +17,10 @@ shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router + `SparkDialec
 `SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional window-UDF
 layer, tier 3), and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard
 set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has landed
-`crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and still owes
-`crates/repark-python` (tier 4) and the `python/` tree.
+`crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and
+`python/repark-parity` (the parity harness + the census machinery + the NEW report comparator
+that is the port's acceptance gate, PR-4); it still owes `crates/repark-python` (tier 4) and the
+facade wheel `python/repark`.
 
 ## Contents
 
@@ -27,8 +29,11 @@ set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has lande
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
   are in force.
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
-- `pyproject.toml`, `.python-version` — Python tooling config (Ruff, line 100). The uv workspace
-  member list arrives with phase 3.
+- `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
+  itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
+  Members are staged across phase 3 — `python/repark-parity` is declared today, the facade joins
+  with the wheel PR (declaring a member whose directory does not exist fails `uv lock`).
+  `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
   workflow pins.
@@ -39,6 +44,8 @@ set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has lande
   (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
   port-source pin's own config, never invented to silence a real misspelling.
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
+- `python/` — the uv workspace members (the parity harness today; the facade wheel later). See
+  [python/map.md](python/map.md).
 - `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
   plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
@@ -60,6 +67,8 @@ set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has lande
 | Touch CI | [.github/map.md](.github/map.md) |
 | Read the phase briefs | [briefs/map.md](briefs/map.md) |
 | Navigate the engine crates | [crates/map.md](crates/map.md) |
+| Navigate the Python tree | [python/map.md](python/map.md) |
+| Run or compare a census | [docs/port/census.md](docs/port/census.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |

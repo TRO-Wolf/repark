@@ -1,11 +1,23 @@
-# Python tooling config for the repark repository root. Phase 0 carries ONLY the tooling that
-# works today: Ruff (the single lint+format tool). The uv workspace member list (python/repark,
-# python/repark-parity) and the dependency groups return in phase 3 with the Python packages;
-# uv.lock is checked in from that point. Python floor 3.12 (.python-version).
+# uv workspace root (virtual — not itself a package). Members are the Python projects under
+# python/. One shared uv.lock + .venv. Python floor 3.12 (.python-version). Ruff is the single
+# lint+format tool.
+#
+# Phase 3 stages the member list: `python/repark-parity` joins here (the parity PR), and the
+# facade `python/repark` joins with the wheel PR. Declaring a member whose directory does not
+# exist fails `uv lock`, so the list only ever names what is on disk.
+
+[tool.uv.workspace]
+members = ["python/repark-parity"]
+
+[dependency-groups]
+# pandas is here so the facade's toPandas/to_pandas tests run when the facade lands; numpy
+# arrives via pyarrow/pandas. duckdb backs the bench comparison scripts.
+dev = ["ruff>=0.15.22,<0.16", "pytest>=9.1.1", "maturin>=1.14.1,<2", "pandas>=2.1", "duckdb==1.5.5"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+src = ["python/repark-parity/src"]
 
 [tool.ruff.lint]
 # Pragmatic-but-strict default. Annotations (ANN) enforce the "type hints on every signature"

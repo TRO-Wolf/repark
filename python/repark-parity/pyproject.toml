@@ -1,0 +1,22 @@
+# The Spark-parity differential test harness. Compares repark output against a reference
+# (recorded Spark "golden" fixtures in routine CI; live PySpark when refreshing goldens). The
+# comparison core is pure pyarrow and needs neither Spark nor a JVM, so it runs in CI.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "repark-parity"
+version = "0.0.0"
+description = "Spark-parity differential test harness for repark (null-aware Arrow comparison)."
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = ["pyarrow>=25.0.0"]
+
+[project.optional-dependencies]
+# Heavyweight + needs a JVM; used only to (re)record golden fixtures, never in routine CI.
+record = ["pyspark>=3.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repark_parity"]
