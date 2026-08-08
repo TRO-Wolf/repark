@@ -35,6 +35,13 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "RATCHET: if registration moves",
     ),
+    "repark-ta": (
+        260,  # measured 249 (49 doc lines + the `TaError` enum + the kernel re-export block)
+        "verbatim port of the v1 kernel crate root: the crate-wide `TaError` enum (the kernel "
+        "contract every module returns) plus the flat `pub use` re-export surface — splitting "
+        "either would break the port's identity diff against the pin; "
+        "RATCHET: if `TaError` moves to its own module",
+    ),
 }
 
 # Matches both:
