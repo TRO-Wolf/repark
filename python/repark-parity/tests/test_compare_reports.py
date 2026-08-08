@@ -884,3 +884,38 @@ def test_duplicate_test_id_without_quarantine_still_refuses(
     )
     assert code == 2
     assert "duplicate test id" in err
+
+
+def test_added_cell_present_on_candidate_side_only_passes(tmp_path, capsys) -> None:
+    """A v2-only test is absent from the pin by design: subtract from the CANDIDATE only, pass.
+
+    The mirror of `test_deferred_cell_present_on_one_side_only_passes`: the reconciliation
+    identity `(candidate minus added) union deferred = baseline` holds when an added row is
+    subtracted."""
+    added_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_v2_only"
+    right = {**_BASE_ROWS, added_id: "PASS"}
+    v1, v2 = _pair(tmp_path, dict(_BASE_ROWS), right)
+    ledger = tmp_path / "added.txt"
+    ledger.write_text(f"# tier-2 AWS guard, v2-only\n{added_id}\n", encoding="utf-8")
+    code, out, _ = _run(
+        ["--baseline", str(v1), "--candidate", str(v2), "--added", str(ledger)], capsys
+    )
+    assert code == EXIT_IDENTICAL
+    assert "added_subtracted: 1" in out
+    assert added_id in out
+
+
+def test_added_does_not_subtract_from_the_baseline_side(tmp_path, capsys) -> None:
+    """An "added" id that shows up at the pin is a finding, not a free pass — the mirror of the
+    deferred-does-not-subtract-from-candidate guard."""
+    added_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_v2_only"
+    left = {**_BASE_ROWS, added_id: "PASS"}
+    v1, v2 = _pair(tmp_path, left, dict(_BASE_ROWS))
+    ledger = tmp_path / "added.txt"
+    ledger.write_text(f"{added_id}\n", encoding="utf-8")
+    code, out, _ = _run(
+        ["--baseline", str(v1), "--candidate", str(v2), "--added", str(ledger)], capsys
+    )
+    assert code == EXIT_DIFFERENT
+    assert "vanished (only in v1): 1" in out
+    assert "added_present_in_baseline: 1" in out

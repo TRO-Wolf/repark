@@ -1,0 +1,235 @@
+{
+  "denominators": {
+    "all_collected": 14,
+    "engine_relevant": 14,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 0,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 1,
+    "pass_over_all": 0.07142857142857142,
+    "pass_over_engine_relevant": 0.07142857142857142
+  },
+  "findings": [
+    "FAIL-VALUE: 12 test(s) \u2014 measurement only (C3 expand cohort; own denoms, never /345)",
+    "FAIL-MISSING: 1 test(s) \u2014 measurement only (C3 expand cohort; own denoms, never /345)"
+  ],
+  "generated_at": "2026-08-08T23:31:32Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_catalog",
+      "module": "test_catalog",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 5.679694004356861e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.00219538202509284,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 28, in test_current_database\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 26, in test_current_database\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_current_database"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.003382671973668039,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 55, in test_database_exists\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 53, in test_database_exists\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_database_exists"
+        },
+        {
+          "cause": "SQL error: ParserError(\"Expected: (, found: AS at Line: 1, Column: 23\")",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py:325 in test_function_exists",
+          "duration_s": 0.001064209034666419,
+          "error_type": "ParseException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 325, in test_function_exists\n    spark.sql(\"CREATE FUNCTION func1 AS 'org.apache.spark.data.bricks'\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.ParseException: SQL error: ParserError(\"Expected: (, found: AS at Line: 1, Column: 23\")\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_function_exists"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0006373230135068297,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 63, in test_get_database\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 62, in test_get_database\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_get_database"
+        },
+        {
+          "cause": "SQL error: ParserError(\"Expected: (, found: AS at Line: 1, Column: 23\")",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py:334 in test_get_function",
+          "duration_s": 0.0008760329801589251,
+          "error_type": "ParseException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 334, in test_get_function\n    spark.sql(\"CREATE FUNCTION func1 AS 'org.apache.spark.data.bricks'\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.ParseException: SQL error: ParserError(\"Expected: (, found: AS at Line: 1, Column: 23\")\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_get_function"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0006604860536754131,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 472, in test_get_table\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 471, in test_get_table\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_get_table"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0006906329654157162,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 347, in test_list_columns\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 346, in test_list_columns\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_list_columns"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0019373350078240037,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 42, in test_list_databases\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 39, in test_list_databases\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_list_databases"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0007538920035585761,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 248, in test_list_functions\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 247, in test_list_functions\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_list_functions"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0007225139997899532,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 73, in test_list_tables\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 72, in test_list_tables\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_list_tables"
+        },
+        {
+          "cause": "This feature is not implemented: CREATE TABLE \u2026 LOCATION is not supported for Iceberg column-def CREATE yet \u2014 table location is derived from the namespace warehouse (or service-managed catalog)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py:486 in test_refresh_table",
+          "duration_s": 0.0012695559998974204,
+          "error_type": "UnsupportedOperationException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 486, in test_refresh_table\n    spark.sql(\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.UnsupportedOperationException: This feature is not implemented: CREATE TABLE \u2026 LOCATION is not supported for Iceberg column-def CREATE yet \u2014 table location is derived from the namespace warehouse (or service-managed catalog)\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_refresh_table"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0007895600283518434,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 425, in test_table_cache\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 424, in test_table_cache\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_table_cache"
+        },
+        {
+          "cause": "Error during planning: expected a two-part `catalog.namespace` name, got `some_db`",
+          "divergent_frame": "<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py:116 in database",
+          "duration_s": 0.0006829689955338836,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_catalog",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 116, in database\n    yield\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 454, in test_table_exists\n    spark.sql(\"CREATE DATABASE some_db\")\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_catalog.py\", line 453, in test_table_exists\n    with self.database(\"some_db\"):\n  File \"/usr/lib/python3.12/contextlib.py\", line 158, in __exit__\n    self.gen.throw(value)\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/sqlutils.py\", line 119, in database\n    self.spark.sql(\"DROP DATABASE IF EXISTS %s CASCADE\" % db)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: expected a two-part `catalog.namespace` name, got `some_db`\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_catalog.CatalogTests.test_table_exists"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.05326633306685835
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for CatalogTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for CatalogTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "FAIL-VALUE",
+      12
+    ],
+    [
+      "FAIL-MISSING",
+      1
+    ],
+    [
+      "PASS",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

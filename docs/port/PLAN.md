@@ -38,18 +38,26 @@ increments on top of a faithful copy, never as a rewrite. Two invariants:
 
 The port's completion claim is mechanical, not narrative. The pyspark-compat census — the same
 runner, the same module cohorts — must produce **byte-flat multiset-compared results across the
-two repos**:
+two repos**.
 
-| Cohort | Baseline |
+**Baseline = the recorded freeze-point run**, not a remembered number. The pin baseline is
+committed under `task/census/baseline-fc3f48102/` and the v2 acceptance run under
+`task/census/v2-<sha>/`; the comparator (`python/repark-parity/compat/compare_reports.py`)
+subtracts the deferred ledger from the baseline side and the additions ledger from the candidate
+side and requires a byte-flat diff. The recorded freeze-point counts (the earlier hand-written
+`135/345 · 42/171 · 41/167` here were stale — design §5 F2):
+
+| Cohort | Freeze-point count (pin) |
 |---|---|
-| classic | 135/345 |
-| expand | 42/171 |
-| expand2 | 41/167 |
-| full-extras facade cohort | its recorded v1 count at the freeze point |
+| classic | 142/345 |
+| expand | 44/171 |
+| expand2 | 87/167 |
+| full-extras facade cohort | 2,509 collected / 2,471 passed + 46 skipped (2,517 junit outcomes) |
 
-Cohort denominators are never blended. Zero pass↔fail movement is the bar; any movement is a
-finding to resolve, not noise to wave through. Because tests port with their names (relocation
-discipline), the multiset comparison is well-defined.
+Cohort denominators are never blended. The reconciliation identity is
+`(v2_collected − added) ∪ deferred = pin_collected`; zero *unattributed* movement is the bar
+(movement is acceptable only when it maps by name to a deferred or added ledger entry). Because
+tests port with their names (relocation discipline), the multiset comparison is well-defined.
 
 ## v1 freeze and release posture
 

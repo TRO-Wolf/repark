@@ -1,0 +1,228 @@
+{
+  "denominators": {
+    "all_collected": 13,
+    "engine_relevant": 11,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 2,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 9,
+    "pass_over_all": 0.6923076923076923,
+    "pass_over_engine_relevant": 0.8181818181818182
+  },
+  "findings": [
+    "NEEDS-JVM: 2 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "FAIL-ERROR-CLASS: 1 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "FAIL-VALUE: 1 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)"
+  ],
+  "generated_at": "2026-08-08T23:31:45Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_serde",
+      "module": "test_serde",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.003882806049659848,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_BinaryType_serialization"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 3.2612006179988384e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0033526860643178225,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_bytes_as_binary_type"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.008323014015331864,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_datetime_at_epoch"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.018624300020746887,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_decimal"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.051552570075728,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_filter_with_datetime"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.03579641098622233,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_filter_with_datetime_timezone"
+        },
+        {
+          "cause": "repark SparkContext has no attribute 'parallelize' (only setLogLevel / applicationId / master are implemented; full SparkContext is out of scope)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py:140 in test_int_array_serialization",
+          "duration_s": 0.002176315989345312,
+          "error_type": "AttributeError",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py\", line 140, in test_int_array_serialization\n    data = self.spark.sparkContext.parallelize([[1, 2, 3, 4]] * 100, numSlices=12)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/builder_conf.py\", line 81, in __getattr__\n    raise AttributeError(\nAttributeError: repark SparkContext has no attribute 'parallelize' (only setLogLevel / applicationId / master are implemented; full SparkContext is out of scope)\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_int_array_serialization"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 7.092405576258898e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_ntz_from_internal"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.00439832906704396,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_select_null_literal"
+        },
+        {
+          "cause": "repark SparkContext has no attribute 'parallelize' (only setLogLevel / applicationId / master are implemented; full SparkContext is out of scope)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py:33 in test_serialize_nested_array_and_map",
+          "duration_s": 0.0007872249698266387,
+          "error_type": "AttributeError",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py\", line 33, in test_serialize_nested_array_and_map\n    rdd = self.sc.parallelize(d)\n          ^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/builder_conf.py\", line 81, in __getattr__\n    raise AttributeError(\nAttributeError: repark SparkContext has no attribute 'parallelize' (only setLogLevel / applicationId / master are implemented; full SparkContext is out of scope)\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_serialize_nested_array_and_map"
+        },
+        {
+          "cause": "unhashable type: 'dict'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py:59 in test_struct_in_map",
+          "duration_s": 0.005676350090652704,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py\", line 59, in test_struct_in_map\n    k, v = list(df.head().m.items())[0]\n                ^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6478, in head\n    rows = self.head(1)\n           ^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6480, in head\n    return self.take(n)\n           ^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6458, in take\n    return self.limit(limit_count).collect()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6424, in collect\n    rows.extend(DataFrame._rows_from_arrow_table(batch))\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6677, in _rows_from_arrow_table\n    [_arrow_cell_to_spark_python(cell, column_type) for cell in raw_values]\n     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 74, in _arrow_cell_to_spark_python\n    _arrow_cell_to_spark_python(key, key_type): _arrow_cell_to_spark_python(item, item_type)\nTypeError: unhashable type: 'dict'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_struct_in_map"
+        },
+        {
+          "cause": "datet[18 chars] 8, 8, 19, 31, 45, 230997) != datet[18 chars] 8, 8, 23, 31, 45, 230997, tzinfo=zoneinfo.ZoneInfo(key='UTC'))",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py:94 in test_time_with_timezone",
+          "duration_s": 0.004469944047741592,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_serde",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_serde.py\", line 94, in test_time_with_timezone\n    self.assertEqual(now, utcnow1)\nAssertionError: datet[18 chars] 8, 8, 19, 31, 45, 230997) != datet[18 chars] 8, 8, 23, 31, 45, 230997, tzinfo=zoneinfo.ZoneInfo(key='UTC'))\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_serde.SerdeTests.test_time_with_timezone"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.16532539704348892
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for SerdeTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for SerdeTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "PASS",
+      9
+    ],
+    [
+      "NEEDS-JVM",
+      2
+    ],
+    [
+      "FAIL-ERROR-CLASS",
+      1
+    ],
+    [
+      "FAIL-VALUE",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

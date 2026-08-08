@@ -171,39 +171,75 @@ sibling-union) held. Day-1 spikes validated their existence: R2 found a real cor
 — the audit proves absence is *recorded*, not *true*; ephemeral provider lifecycle (the
 time-travel view leak — ANSI fixed, Spark-door inherits v1's copy as tracked debt below).
 
-## Phase 3 — Python facade + parity = milestone one (IN PROGRESS 2026-08-08)
+## Phase 3 — Python facade + parity = MILESTONE ONE (DONE 2026-08-08)
 
 Design SETTLED 2026-08-08 (competition-synthesized): `docs/design/python-facade.md`; brief:
 `briefs/phase-3-python-facade.md`. The seven-PR slate (order 1 → 2 → (3 ∥ 4) → 5 → 6 → 7):
 
-- [ ] PR-1 arming — design + brief in-repo; crate-DAG tier rows (`repark-ml` 3, `repark-python`
+- [x] PR-1 arming — design + brief in-repo; crate-DAG tier rows (`repark-ml` 3, `repark-python`
       4 "bindings") pre-declared; rust CI job split (lint/test, setup-python, free-disk);
       testing.md row-2 spelling note; dialect doc rider. Ledger: `task/p3a-arming-ledger.md`.
-- [ ] PR-2 `repark-ml` — verbatim, identity census. Ledger: `task/p3b-ml-ledger.md`.
-- [ ] PR-3 `crates/repark-python` — door wiring + dep collapse + refuse-arms + EngineRuntime +
+- [x] PR-2 `repark-ml` — verbatim, identity census. Ledger: `task/p3b-ml-ledger.md`.
+- [x] PR-3 `crates/repark-python` — door wiring + dep collapse + refuse-arms + EngineRuntime +
       edit classes EC-1/2/3/5/6/10. Ledger: `task/p3c-binding-ledger.md`.
-- [ ] PR-4 `python/repark-parity` + census foundation — comparator, additive `--classic`,
+- [x] PR-4 `python/repark-parity` + census foundation — comparator, additive `--classic`,
       v1-pin baseline + stability self-diff. Ledger: `task/p3d-parity-ledger.md`.
-- [ ] PR-5 `python/repark` facade + suite + wheels.yml (real-artifact rule discharges here);
+- [x] PR-5 `python/repark` facade + suite + wheels.yml (real-artifact rule discharges here);
       EC-4 deferral ledger + EC-9 hygiene ledger. Ledger: `task/p3e-facade-ledger.md`.
-- [ ] PR-6 tier-2 CI — parity-live armed + net-new `aws-acceptance.yml` (OIDC, env-gated,
+- [x] PR-6 tier-2 CI — parity-live armed + net-new `aws-acceptance.yml` (OIDC, env-gated,
       no-delete IAM). Ledger: `task/p3f-tier2-ledger.md`.
-- [ ] PR-7 phase close — v2 census run, comparator ×4, reconciliation, PLAN re-baseline,
+- [x] PR-7 phase close — v2 census run, comparator ×4, reconciliation, PLAN re-baseline,
       retrospective, operator cutover note. Ledger: `task/p3g-close-ledger.md`.
 
 Standing acceptance rows (discharged across the slate):
 
-- [ ] `repark-python` thin adapter + PySpark facade; PyO3/maturin build surface returns
+- [x] `repark-python` thin adapter + PySpark facade; PyO3/maturin build surface returns
       (boundary real-artifact test rule arms — `docs/testing.md`); `check_lib_py` gate returns
       with it.
-- [ ] Parity harness + census machinery port; uv workspace members land.
-- [ ] Acceptance gate: census multiset byte-flat across repos — baselines re-recorded at the
+- [x] Parity harness + census machinery port; uv workspace members land.
+- [x] Acceptance gate: census multiset byte-flat across repos — baselines re-recorded at the
       pin by the PR-4 procedure (the historical PLAN.md numbers were stale; see
       `docs/design/python-facade.md` §5 F2) — plus the full-extras facade cohort, defined in
       the design §6.3.
-- [ ] Tier-2 CI (live AWS, merged code only, OIDC) + live oracle tier.
-- [ ] v1 freezes to bugfix-only at acceptance; first tagged PyPI release gated on milestone one
+- [x] Tier-2 CI (live AWS, merged code only, OIDC) + live oracle tier.
+- [x] v1 freezes to bugfix-only at acceptance; first tagged PyPI release gated on milestone one
       (`docs/release.md`).
+
+### Phase-3 retrospective (SEPMO, 2026-08-08) — MILESTONE ONE
+
+**Acceptance is mechanical and PASSED.** All four census cohorts byte-flat across repos through
+the comparator (the port's own instrument), exit 0 each: classic 142/345, expand 44/171,
+expand2 87/167, facade `(v2 2,499 collected − 2 added) ∪ 12 deferred = pin 2,509`
+(2,459 passed + 46 skipped, IDENTICAL). Recorded runs: `task/census/baseline-fc3f48102/` (pin)
++ `task/census/v2-a5be8a7/` (v2). The whole Python surface is ported: `crates/repark-python`
+(binding), `crates/repark-ml`, `python/repark` (46-KLOC facade + ~2,459-pass suite),
+`python/repark-parity` (harness + the NEW report comparator). 1,268 Rust tests + the facade
+suite green; nine required checks + tier-2 workflows landed.
+
+**What worked.** The byte-flat census gate is not a ritual — it caught a REAL engine regression
+on the facade's arrival (B-1: phase-2's config sweep vs v1's `datafusion.runtime.memory_limit`
+pseudo-key), exposed named rather than waved. The empirical EC-4 deferral (adjudicate by where
+the exception is raised, against a built wheel) matched the design competition's predictions.
+The mandated SECURITY lens on the net-new AWS workflow found four HIGH exposures I'd introduced
+(credentials-before-build, placeholder-bucket signing, an unmatchable OIDC sub, unenforced branch
+binding) — every one before the PR opened. The comparator hardened under its own verification
+(manifest-augment-not-override, ledger-only-subtraction, carried-rows denominators, junit id
+translation, and now the `--added` mirror).
+
+**What hurt.** My own orchestrator carve-outs were the recurring defect source: sed-based
+redaction corrupted the first baseline (677 eaten JSON escapes → format-aware `compat.redact`);
+a relative `file://` wheel URL would have redded the required smoke check on every PR; the
+pandas-major clause was mis-scoped until a run proved the facade fails under pandas 2. Each was
+caught by the verification tier, never by luck. A newly-extended forbidden-pattern also surfaced
+21 pre-existing private literals on public main (scrubbed forward, Tier-2 rule; hygiene content
+passes are added-lines-only from here). The PyPI `repark` name is already reserved (our own
+placeholder) — local wheels install by explicit path forever.
+
+**Open debt** (below): the Spark-door time-travel view leak (declared divergence, fix with the
+v1 pair); the `$`-metadata introspection rider. **User-side milestone-one actions** (p3g ledger
+§"Milestone-one declaration"): declare v1 bugfix-only; settle cutover sequencing; the first
+tagged release (trusted publishers + the `repark.sql`-module release gate + the reserved-name
+existing-project flow); the first dispatch of each tier-2 workflow.
 
 ## Post-milestone-one (BACKLOG)
 

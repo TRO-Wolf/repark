@@ -53,6 +53,12 @@ stability run and quarantine rule, the full-extras facade cohort, the attributio
 - A report's recorded denominator block is validated against its rows AS CARRIED (duplicates
   included, `Side.carried_statuses`); the deduped `classes` drive the comparison.
 
+### PR-7: --added (milestone one)
+- The comparator gains `--added` — the mirror of `--deferred`: a checked-in v2-only-additions
+  ledger (`task/port/added-python-tests.txt`) subtracted from the CANDIDATE side, echoed,
+  junit-canonicalized, in the frozen option set. Identity `(candidate - added) U deferred =
+  baseline`. First consumer: the PR-7 facade acceptance comparison.
+
 ## Debug
 
 | Symptom | First check |

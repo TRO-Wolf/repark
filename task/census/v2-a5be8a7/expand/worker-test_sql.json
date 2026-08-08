@@ -1,0 +1,194 @@
+{
+  "denominators": {
+    "all_collected": 11,
+    "engine_relevant": 11,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 0,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 3,
+    "pass_over_all": 0.2727272727272727,
+    "pass_over_engine_relevant": 0.2727272727272727
+  },
+  "findings": [
+    "FAIL-ERROR-CLASS: 8 test(s) \u2014 measurement only (C3 expand cohort; own denoms, never /345)"
+  ],
+  "generated_at": "2026-08-08T23:31:32Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_sql",
+      "module": "test_sql",
+      "rows": [
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'args'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:33 in test_args_dict",
+          "duration_s": 0.002377626020461321,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 33, in test_args_dict\n    df = self.spark.sql(\n         ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'args'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_args_dict"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'args'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:48 in test_args_list",
+          "duration_s": 0.0013058640761300921,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 48, in test_args_list\n    df = self.spark.sql(\n         ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'args'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_args_list"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 2.8342939913272858e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'df'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:94 in test_kwargs_dataframe",
+          "duration_s": 0.0011114570079371333,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 94, in test_kwargs_dataframe\n    df1 = self.spark.sql(\n          ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'df'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_kwargs_dataframe"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'df'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:106 in test_kwargs_dataframe_with_column",
+          "duration_s": 0.0011364839738234878,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 106, in test_kwargs_dataframe_with_column\n    df1 = self.spark.sql(\n          ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'df'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_kwargs_dataframe_with_column"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'args'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:64 in test_kwargs_literal",
+          "duration_s": 0.0013058639597147703,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 64, in test_kwargs_literal\n    df = self.spark.sql(\n         ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'args'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_kwargs_literal"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'args'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:81 in test_kwargs_literal_multiple_ref",
+          "duration_s": 0.0012535249115899205,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 81, in test_kwargs_literal_multiple_ref\n    df = self.spark.sql(\n         ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'args'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_kwargs_literal_multiple_ref"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.005587922991253436,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_lit_time"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'args'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:140 in test_nested_dataframe",
+          "duration_s": 0.0013250299962237477,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 140, in test_nested_dataframe\n    df1 = self.spark.sql(\n          ^^^^^^^^^^^^^^^\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'args'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_nested_dataframe"
+        },
+        {
+          "cause": "ReparkSession.sql() got an unexpected keyword argument 'args'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py:120 in test_nested_view",
+          "duration_s": 0.0013149710139259696,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_sql.py\", line 120, in test_nested_view\n    self.spark.sql(\nTypeError: ReparkSession.sql() got an unexpected keyword argument 'args'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_nested_view"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.003156085032969713,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_sql",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_sql.SQLTests.test_simple"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.046919608023017645
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for SQLTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for SQLTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "FAIL-ERROR-CLASS",
+      8
+    ],
+    [
+      "PASS",
+      3
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}
