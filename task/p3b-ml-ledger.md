@@ -209,3 +209,18 @@ No LOW findings were reported, so none were skipped.
    tier 3 that `scripts/check_crate_dag.py` (the SSOT) assigns.
 3. Building in the v1 pin worktree created only its gitignored `target/`; no tracked file there
    was modified.
+
+### LOW findings — orchestrator disposition (post-fixer)
+
+The slim workflow routes only HIGH/MED findings to the fixer; the verifier's three LOWs were
+dispositioned by the orchestrator:
+
+- **L-1 (lib.rs/Cargo.toml "tier-1" vs map.md "tier 3" self-contradiction)** — FIXED, doc-only:
+  the crate `map.md` now states explicitly that "tier-1" inside the verbatim sources is the
+  source repo's M3 estimator-tier vocabulary, unrelated to the crate-DAG tier. Sources stay
+  byte-identical.
+- **L-2 (docs/port/PLAN.md phase-3 bullet omitted repark-ml)** — FIXED: the bullet now names
+  `repark-ml` with the design §4 Q3 citation.
+- **L-3 (inert `[workspace.dependencies] repark-ml` entry)** — ACCEPTED advisory: the entry
+  mirrors the v1 pin's shape and is consumed by PR-3's binding; recorded here so its
+  inertness until then is a stated fact, not an oversight.

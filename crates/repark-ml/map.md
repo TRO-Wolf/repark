@@ -2,7 +2,10 @@
 
 ## Purpose
 
-Native ML estimator kernels (crate-DAG tier 3, a capability leaf with **no internal deps**):
+Native ML estimator kernels (crate-DAG tier 3, a capability leaf with **no internal deps**;
+NOTE: "tier-1" wording inside the verbatim-ported sources — `Cargo.toml` description,
+`src/lib.rs` doc — is the source repo's M3 *estimator-tier* vocabulary, unrelated to the
+crate-DAG tier this map cites):
 hand-rolled Cholesky + streaming fit accumulators for LinearRegression (must-land),
 LogisticRegression (IRLS), and KMeans (Lloyd, initMode=random only). **Zero new crates.io deps**
 (runtime: `thiserror` only). Models hold params only — never training rows. Fit streams

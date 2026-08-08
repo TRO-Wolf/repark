@@ -29,7 +29,9 @@ increments on top of a faithful copy, never as a rewrite. Two invariants:
 - **Phase 2 — the two SQL doors.** `repark-spark` (Spark-dialect, ported) + `repark-sql`
   (ANSI/Trino-style native dialect — the Iceberg DDL design pass). `dbt-repark` can start in
   parallel once this lands.
-- **Phase 3 — Python facade + parity = milestone one.** `repark-python` as a thin adapter, the
+- **Phase 3 — Python facade + parity = milestone one.** `repark-ml` (the native estimator
+  kernels the ML facade binds — scheduled into phase 3 by the settled design,
+  `docs/design/python-facade.md` §4 Q3), `repark-python` as a thin adapter, the
   PySpark facade, the parity harness, and the census machinery. Gate: v1's full suite green on V2.
 
 ## The acceptance gate: census multiset, byte-flat
