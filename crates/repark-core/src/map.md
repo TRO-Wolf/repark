@@ -113,6 +113,12 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 
 - Up: [../map.md](../map.md)
 
+### P3E B-1 (2026-08-08)
+- `session.rs` gains `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` — the exact-key exclusion set for
+  facade-owned `datafusion.`-prefixed pseudo-keys the build-time sweep must skip
+  (`datafusion.runtime.memory_limit`, the LIVE resize knob). Typos of the pseudo-key still
+  fail loud; both directions pinned in `session/tests.rs`.
+
 ## Debug
 
 | Symptom | First check |
@@ -125,3 +131,7 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 | `$`-suffixed metadata tables show up in `SHOW TABLES` | Current, known behavior (`information_schema_still_exposes_the_dollar_metadata_tables`); whether `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the open product question in `task/p2g-ansi-m2-ledger.md`. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).
+
+- **EC-9 scrub (2026-08-08, phase-3 PR-5):** pre-existing private fixture/doc literals
+  (a team/bucket name fragment) replaced with `example-team` equivalents — outcome-neutral
+  (fixtures and their oracles changed together); enumerated in task/p3e-facade-ledger.md.
