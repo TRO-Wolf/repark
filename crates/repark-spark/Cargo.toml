@@ -37,6 +37,12 @@ async-trait.workspace = true
 regex.workspace = true
 
 [dev-dependencies]
+# `repark_common::surfaces` — the dialect-neutral surface registry the Q13 matrix audits this
+# door against (design `docs/design/sql-doors.md` §2 Q13). A DEV dependency because the only
+# consumer is `src/matrix.rs`, which is `#[cfg(test)]` audit evidence: nothing in the shipped
+# crate reads the registry. It graduates to a regular dependency the day product code does
+# (design §1 lists repark-common in this door's dep set for exactly that reason).
+repark-common.workspace = true
 # The ported v1 lib-root battery streams fork scans (`try_collect`) and builds timestamp
 # fixtures — dev-only here (the production stream map lives in repark-iceberg, as in v1).
 chrono.workspace = true

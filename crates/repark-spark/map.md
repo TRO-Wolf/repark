@@ -26,7 +26,9 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 
 - `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, repark-ta (feature
   `datafusion`, for the composed `TaExtension`), datafusion + fork family, regex (SHOW … LIKE),
-  async-trait (dialect seam); dev-deps add chrono + futures (battery).
+  async-trait (dialect seam); dev-deps add chrono + futures (battery) and repark-common (the
+  `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door against — dev-only because
+  no shipped code reads it).
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests (Session + SparkExtension + SparkDialect;
   deferred test #1 lives here; `ta_window.rs` = deferred #8-#14, ported at PR-4).

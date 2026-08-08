@@ -1,0 +1,63 @@
+# map — repark-sql
+
+## Purpose
+
+The **ANSI/Trino-flavoured SQL door** (tier 3) — NEW code, not a port. `AnsiDialect` implements
+the frozen phase-1 `repark_core::SqlDialect` seam and routes one statement at a time. The door
+**delegates** wherever DataFusion is already right (reads, `information_schema`, temp views, the
+fork `TableProvider`'s DML) and intercepts only the Iceberg catalog DDL DataFusion cannot
+express. There is deliberately **no `SessionExtension`**: native/ANSI semantics ARE stock
+DataFusion, which is why cross-door equivalence must run two sessions (extensions are
+session-scoped).
+
+Design SSOT: [../../docs/design/sql-doors.md](../../docs/design/sql-doors.md) §2 (Q1–Q15).
+Milestone ledger: [../../task/p2f-ansi-m1-ledger.md](../../task/p2f-ansi-m1-ledger.md).
+
+**M1 (PR-5) is what is live here:** the crate spine + `AnsiDialect`, the guard set
+(multi-statement FIRST, P11 read-only-catalog DML, write-to-branch, SEC-02 local-filesystem),
+the error-path wrong-door sniff, the `CREATE TABLE` family (CTAS + column-def) with the curated
+`WITH (…)` vocabulary, `extra_properties`, partitioning and Q15 loud-refuse routing,
+`CREATE`/`DROP SCHEMA` and `DROP TABLE`. **M2 (PR-6)** adds ALTER, MERGE, `FOR … AS OF` time
+travel, branch/tag DDL, the full refuse set and the cross-door rows — each already carried as a
+typed absence row in `src/matrix.rs`.
+
+## Contents
+
+- `Cargo.toml` — deps: `repark-core`, `repark-iceberg`, `repark-common`, `datafusion`, plus
+  `iceberg` (staged create/replace types) and `async-trait` (the seam is an async trait).
+  **No direct `sqlparser`** (types come only through `datafusion::sql::sqlparser`) and **no
+  `datafusion-spark`** — the design's hard constraint, so this door cannot reach Spark semantics
+  through a crate edge.
+- [src/map.md](src/map.md) — module-by-module navigation.
+- [tests/map.md](tests/map.md) — integration tests (the R1 parser-production pins).
+
+## I want to...
+
+| ...do this | go to |
+|---|---|
+| Follow a statement through the door | [src/map.md](src/map.md) → `router.rs` |
+| Change what `WITH (…)` accepts on CREATE TABLE | `src/properties.rs` |
+| Change partition-transform parsing / validation | `src/partitioning.rs` |
+| Understand why an unqualified CREATE TABLE refuses | `src/create_table.rs` (Q15 routing) |
+| Add or adjust a guard | `src/guards.rs` |
+| Add a Spark-ism to the wrong-door steer | `src/sniff.rs` |
+| See what this door does NOT do, and why | `src/matrix.rs` (typed absence rows) |
+
+## Pointers
+
+- Up: [../map.md](../map.md). Sibling door: [../repark-spark/map.md](../repark-spark/map.md)
+  (no door→door dependency edge, ever — design §1).
+- Surface registry (shared, tier 0): `repark_common::surfaces`.
+
+## Debug
+
+| Symptom | First check |
+|---|---|
+| `CREATE TABLE … is not a qualified Iceberg table name` | Q15: the leading segment must be a REGISTERED Iceberg catalog; the message lists them |
+| `unknown table property` on a create | The curated set is in `src/properties.rs`; dotted Iceberg keys go through `extra_properties = MAP(…)` |
+| `cannot resolve a storage location` | The schema has no `location` property and the catalog is `RequireExplicitLocation` — set it on the schema or per-table |
+| An error suddenly mentions Spark | The wrong-door sniff fired on the ERROR path (`src/sniff.rs`); the original error is still the first line |
+| `SHOW TABLES` / `information_schema` empty or missing | `information_schema` must be enabled on the DataFusion config — see the R2 spike note in the ledger (a repark-core gap, not a door gap) |
+| A `FOR … AS OF` query fails to parse | Time travel is PR-6 (`TIME_TRAVEL` is an absence row in `src/matrix.rs`) |
+
+First checks: `cargo test -p repark-sql`. Escalate to: [../map.md#debug](../map.md).

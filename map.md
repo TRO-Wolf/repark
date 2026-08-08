@@ -12,9 +12,10 @@ iceberg-rust fork, `[patch.crates-io]`-pinned), and `crates/repark-core` (the `R
 engine API, landing commit-by-commit in PR-C). Phase 2 (SQL doors) has begun:
 `crates/repark-functions` (Spark-semantics scalar/aggregate function shims, tier 3) is the first
 ported crate, `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
-`SparkExtension`) carries the ported repark-sql spine, and `crates/repark-ta` (bit-exact TA-Lib
+`SparkExtension`) carries the ported repark-sql spine, `crates/repark-ta` (bit-exact TA-Lib
 kernels + the optional window-UDF layer, tier 3) is the door-neutral function set the Spark door
-composes.
+composes, and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard set +
+wrong-door sniff + the curated `WITH (…)` vocabulary) is NEW code at milestone 1.
 
 ## Contents
 

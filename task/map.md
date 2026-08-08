@@ -34,6 +34,10 @@ repository's `task/` directory).
   (repark-spark DML + refs: merge/insert_overwrite/ref_ddl/call, MoR-valve hoist to
   repark-iceberg, lib-root battery move-only port, 334-name census CLOSE, deferred row #3);
   IN FLIGHT.
+- [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) — unit ledger for phase-2 PR-5 (the ANSI
+  door, milestone 1: NEW code — no census; `AnsiDialect` + guard set + wrong-door sniff + the
+  curated `WITH (…)` vocabulary + Q15 routing; the R1/R2 day-1 spikes; the Q13 surface registry
+  and both doors' matrix row counts); IN FLIGHT.
 - [p2e-ta-ledger.md](p2e-ta-ledger.md) — unit ledger for phase-2 PR-4 (repark-ta: verbatim
   crate port incl. the 148 `.bin` goldens, NEW `TaExtension`, `SparkExtension` composition
   restoring the p2b TA-omission rider, two-pass TA census, deferred rows #8–#14 landing —
@@ -54,6 +58,7 @@ repository's `task/` directory).
 | See the phase-2 PR-2 scope / refuse-arm riders | [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) |
 | See the phase-2 PR-3a restoration checklist | [p2c-spark-ddl-ledger.md](p2c-spark-ddl-ledger.md) |
 | See the phase-2 PR-3b census close / exclusions | [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md) |
+| See the phase-2 PR-5 design-ruling application / spike results / surface-matrix counts | [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) |
 | See the phase-2 PR-4 TA census / rider discharge | [p2e-ta-ledger.md](p2e-ta-ledger.md) |
 | Read the brief driving phase 2 | [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) |
 | See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |

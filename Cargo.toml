@@ -20,6 +20,7 @@ members = [
   "crates/repark-functions",
   "crates/repark-ta",
   "crates/repark-spark",
+  "crates/repark-sql",
 ]
 
 [workspace.package]
@@ -115,6 +116,7 @@ repark-core = { path = "crates/repark-core", version = "0.0.0", default-features
 repark-functions = { path = "crates/repark-functions", version = "0.0.0", default-features = false }
 repark-ta = { path = "crates/repark-ta", version = "0.0.0", default-features = false }
 repark-spark = { path = "crates/repark-spark", version = "0.0.0", default-features = false }
+repark-sql = { path = "crates/repark-sql", version = "0.0.0", default-features = false }
 
 # -------------------------------------------------------------------------------------------
 # The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose

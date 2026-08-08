@@ -91,5 +91,11 @@ use iceberg::Catalog;
 #[cfg(test)]
 use repark_core::{CatalogRegistry, LocationPolicy};
 
+// The Q13 surface matrix: this door's disposition of every `repark_common::surfaces` ID, with
+// the compile-run audit that fails on an unmapped surface (design `docs/design/sql-doors.md`
+// §2 Q13, graft G2). Test-only — audit evidence, not product code.
+#[cfg(test)]
+mod matrix;
+
 #[cfg(test)]
 mod tests;

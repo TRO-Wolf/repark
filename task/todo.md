@@ -111,13 +111,28 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       Deferred #8–#14 landed as `repark-spark/tests/ta_window.rs` (7/7 green) — the deferred
       manifest is now exactly 4 rows, all post-milestone-one. Ledger:
       [p2e-ta-ledger.md](p2e-ta-ledger.md). Rider: the ANSI TA smoke + non-literal-period
-      refuse rows (design Q11 toll) land PR-6 — `repark-sql` does not exist yet.
-- [ ] **PR-5 — repark-sql ANSI M1**: `AnsiDialect` delegation core, guard set, wrong-door
-      sniff, CTAS `WITH (…)` vocab + `extra_properties` + Q15 routing, schema DDL, surfaces
-      registry + matrix seeded; R1/R2 spikes day 1. May start once PR-1 merges.
+      refuse rows (design Q11 toll) land PR-6 — `repark-sql` does not exist yet. The Spark
+      door's `TA_FUNCTIONS` matrix row flipped `DeliberatelyAbsent` → `Tested` in PR-5's
+      sync merge (the row rode PR-5's matrix machinery).
+- [ ] **PR-5 — repark-sql ANSI M1 (IN FLIGHT)**: `AnsiDialect` delegation core, guard set
+      (multi-statement FIRST, P11, SEC-02, write-to-branch), wrong-door sniff, CTAS `WITH (…)`
+      vocab + `extra_properties` + Q15 loud-refuse routing, schema DDL; `repark_common::surfaces`
+      (43 capability IDs) + `matrix.rs` in BOTH doors with the compile-run audit — Spark 39
+      tested / 4 absent (TA_FUNCTIONS flipped in the sync), ANSI M1 29 tested / 14 absent (delegated `INSERT`/`DELETE`/`UPDATE` ship
+      with M1 because the delegation core ships them, each with a round-trip row and the BUG-001
+      MoR valve wired over them); R1/R2 spikes recorded day 1
+      (ledger: [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md)). **R2 filed a core gap:**
+      `ReparkSession` cannot enable `information_schema` (the builder config map never reaches
+      `SessionConfig`), so `SHOW TABLES`/`DESCRIBE` are dead in BOTH doors and Q8's "delegate"
+      delegates to nothing — fix core-side before Q8 is declared delivered.
 - [ ] **PR-6 — repark-sql ANSI M2**: ALTER evolution, MERGE lowering, `FOR … AS OF` scanner +
       pin set, branch/tag ALTER DDL, full refuse set, cross-door two-session equivalence rows,
-      matrix completion, session-api.md seam-freeze edits.
+      matrix completion: of the 14 ANSI absence rows, nine are M2 deferrals that flip to `Tested`
+      (the eight citing the `M2` const plus `BRANCH_TAG_DDL`, whose reason is M2 under a §2 Q6
+      cite), and Q11/`TA_FUNCTIONS` flips once PR-4 lands the extension this door composes; the
+      three standing decisions (Q3, Q7, Q9) stay absent by ruling, and Q8/`INTROSPECTION` stays
+      absent until the core `information_schema` gap is fixed. Plus `session-api.md`
+      seam-freeze edits.
 - [ ] Phase close: acceptance per the brief §3; `dbt-repark` may start after PR-6
       (separate package).
 
