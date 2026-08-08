@@ -34,8 +34,8 @@ test_`); parity core 85 lines + 58 unit tests + census machinery; `repark-ml` 1,
 | PR | Scope | Verify | Ledger |
 |---|---|---|---|
 | 1 arming | design+brief in-repo; DAG tier rows + provocations; rust split + contexts; testing.md row-2 note; dialect doc rider | slim | `task/p3a-arming-ledger.md` |
-| 2 repark-ml | verbatim crate, identity census (empty `--list` diff) | slim | `task/p3b-ml-ledger.md` |
-| 3 repark-python | whole crate; door wiring pin FIRST; dep collapse; refuse-arms; EngineRuntime (type→core, instance→binding); check_lib_rs row; type-identity test; panic-ban carve-out | FULL panel | `task/p3c-binding-ledger.md` |
+| 2 repark-ml | verbatim crate, identity census (empty `--list` diff); `diff -r` empty **except crate `map.md`** (EC-7, five dead v1 links) | slim | `task/p3b-ml-ledger.md` |
+| 3 repark-python | whole crate; door wiring pin FIRST; dep collapse; refuse-arms; EngineRuntime (type→core, instance→binding); check_lib_rs row; type-identity test; panic-ban carve-out; **discharge the PR-2 `docs/ml-design.md` dead-pointer rider (EC-6, 4 sites incl. a runtime error string)** | FULL panel | `task/p3c-binding-ledger.md` |
 | 4 parity+census | parity pkg verbatim; `--classic` additive + `--stretch` pin; comparator+tests; census.md; uv root (parity member only); python job extend+rename; pip-audit; **v1 baseline + stability self-diff committed** | slim port / full lens on comparator+flag+baseline | `task/p3d-parity-ledger.md` |
 | 5 facade+wheel | 53 modules verbatim; tests minus generated deferral ledger; EC-9 hygiene ledger; uv member+lock; check_lib_py; map regen; wheels.yml (smoke→required) | FULL on edit classes; census lens (collect-only identity) | `task/p3e-facade-ledger.md` |
 | 6 tier-2 CI | parity-live armed (nightly+dispatch only); aws-acceptance net-new (OIDC, env-gated, no-delete IAM) | FULL + security lens | `task/p3f-tier2-ledger.md` |

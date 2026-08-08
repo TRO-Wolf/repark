@@ -25,6 +25,9 @@ repository's `task/` directory).
 - [p3a-arming-ledger.md](p3a-arming-ledger.md) — unit ledger for phase-3 PR-1 (design + brief
   in-repo, crate-DAG tier-4 pre-declaration, rust CI job split, testing.md row-2 note,
   dialect doc rider): scope, required-check transition, provocation proofs.
+- [p3b-ml-ledger.md](p3b-ml-ledger.md) — unit ledger for phase-3 PR-2 (`repark-ml` verbatim
+  port + workspace wiring + the EC-7 map rewrite): scope, the 34-test identity census with its
+  empty `--list` diff, gate results; IN FLIGHT.
 - [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) — unit ledger for phase-2 PR-2
   (repark-spark skeleton: spine port, temporary refuse arms, `SparkDialect`/`SparkExtension`
   seams, G8 subquery-guard pin, deferred-#1 landing; census PARTIAL — closes PR-3b); IN
@@ -70,6 +73,8 @@ repository's `task/` directory).
 | See the phase-2 PR-4 TA census / rider discharge | [p2e-ta-ledger.md](p2e-ta-ledger.md) |
 | See the phase-2 PR-6 per-Q delivery record / cross-door session profiles / final matrix counts | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) |
 | Find out why `information_schema` used to be off, and what fixed it | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) "The R2 core fix" |
+| See the phase-3 PR-2 `repark-ml` identity census / map-rewrite rationale | [p3b-ml-ledger.md](p3b-ml-ledger.md) |
+| Read the brief driving phase 3 | [../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) |
 | Read the brief driving phase 2 | [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) |
 | See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |
 | Read the port plan behind the backlog | [../docs/port/PLAN.md](../docs/port/PLAN.md) |

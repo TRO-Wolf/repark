@@ -60,7 +60,7 @@ verification panel; everything else gets the slim tier.
 
 | Artifact | Shape at the pin | Edit classes applied |
 |---|---|---|
-| `crates/repark-ml` | 1,703 lines, five modules, one third-party dep (`thiserror`), no internal deps | none (verbatim) |
+| `crates/repark-ml` | 1,703 lines, five modules, one third-party dep (`thiserror`), no internal deps | EC-7 (crate `map.md` only) — every `.rs` and `Cargo.toml` verbatim |
 | `crates/repark-python` | ~6,653 lines Rust, flat six-module `src/` + `tests/bindings.rs`; 3 pyclasses, 5 exceptions, 3 ML pyfunctions | EC-1, EC-2, EC-3, EC-5, EC-6, EC-10 |
 | `python/repark` (the wheel) | 53 modules / ~46 KLOC source + 127 test files | EC-4 (tests only), EC-7 (map.md), EC-9 (hygiene) |
 | `python/repark-parity` | 85-line comparison core + 58 unit tests + `compat/` census machinery + `bench/` | none (verbatim) + NEW comparator |
@@ -201,6 +201,15 @@ behavior, same pin test name (`sequential_sessions_share_one_tokio_runtime`). Ra
 
 **EC-6 — doc-drift rider.** `crates/repark-spark/src/dialect.rs` tells readers to install the dialect
 with `with_dialect`; the method is `with_sql_dialect`. Fixed in the PR that first wires the door.
+**Second rider, declared by PR-2 and discharged in PR-3:** `crates/repark-ml` carries four verbatim
+references to `docs/ml-design.md`, a v1-only path with no counterpart here — `Cargo.toml:6`,
+`src/lib.rs:3`, `src/logistic_regression.rs:199` (comments), and `src/error.rs:52`, which is inside
+an `#[error(...)]` format string and is therefore **user-visible at runtime**. PR-2 left all four
+byte-identical to keep the crate's verbatim/identity claim intact and to keep the fix out of a slim
+port; they become reachable from Python only when PR-3 wires the binding, so PR-3 repoints them at
+the in-repo ML authority (`docs/design/python-facade.md` §4 Q3) or drops the pointer, and pins the
+`Singular` message with a test. Neither the rider nor its deferral may go unrecorded: it is entered
+in `task/p3b-ml-ledger.md` and must be closed in `task/p3c-*` before phase close.
 
 **EC-7 — map.md regeneration.** Stale v1 `map.md` files are rewritten to the true tree rather than
 ported stale. Every new directory gets one in the same change.
@@ -748,7 +757,10 @@ package, never before it** (a required check whose working directory does not ex
    pre-declared with provocation proofs; the rust job split (lint/test, setup-python on both,
    free-disk, cache re-key) with the protection-context swap; the testing-contract row-2 annotation
    (Q1); the dialect-module doc-drift rider (EC-6). No new code surface. *Slim.*
-2. **`repark-ml`** — verbatim, identity census, empty sorted `--list` diff. *Slim.*
+2. **`repark-ml`** — verbatim, identity census, empty sorted `--list` diff. The `diff -r` oracle
+   against the port pin is **empty excluding `crates/repark-ml/map.md`**, which is regenerated
+   under EC-7 (§1, §3) because five of its v1 links name paths that do not exist in this
+   repository; `src/map.md` and every `.rs` / `Cargo.toml` byte are unchanged. *Slim.*
 3. **`crates/repark-python`** — the whole crate in one PR (it cannot compile in halves): EC-1/2/3
    with the door-wiring pin test written first, EC-5 (the `EngineRuntime` type in `repark-core`,
    additive, + the instance here), EC-10 (`check_lib_rs` exception row), the error type-identity

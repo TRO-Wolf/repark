@@ -4433,6 +4433,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "repark-ml"
+version = "0.0.0"
+dependencies = [
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "repark-spark"
 version = "0.0.0"
 dependencies = [
