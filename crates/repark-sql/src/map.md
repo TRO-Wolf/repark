@@ -117,5 +117,8 @@ reach delegation through the ordinary arm.
 | A time-travel read saw CURRENT rows | The rewrite must have been skipped — check `find_time_travel_spans` produced a span; a resolved span always registers a snapshot-pinned provider |
 | `SET PROPERTIES` reached the parser unrewritten | `alter::rewrite_set_properties` only fires on a statement LEADING with `ALTER TABLE`; a `PROPERTIES` inside a literal is invisible by design |
 | Branch DDL was not recognized | `ref_ddl::try_parse_ref_ddl` takes ALTER-scoped forms only; the top-level `CREATE BRANCH b IN t` is Spark-door surface |
+| A legal `ALTER TABLE` was refused as `… EXECUTE …` | The recognizer is ANCHORED to the verb slot after the table name (`refusals::verb_slot_after_table_name`); a column may legally be named `execute` |
+| A branch/tag statement ran with a clause we did not read | It cannot — `ref_ddl::reject_trailing` refuses on ANY leftover token, numbers and punctuation included (only a trailing `;` is dropped) |
+| `SHOW TABLES` listed a `__repark_ansi_tt_*` relation | The router releases every `time_travel::PinnedViews` name after planning; a leak means an exit path skipped `pinned.release` |
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).

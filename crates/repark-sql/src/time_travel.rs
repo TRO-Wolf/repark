@@ -88,9 +88,38 @@ pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
 }
 
 /// ===========================================================================================
+/// The ephemeral names one statement's rewrite registered, so the router can take them back off
+/// the session once the statement has been PLANNED.
+/// ===========================================================================================
+///
+/// Without this the pinned views accumulate forever — one per `FOR … AS OF` relation per query,
+/// on a session that may live for hours — and, since PR-6 also turns on `information_schema`,
+/// they are USER-VISIBLE: `SHOW TABLES` listed `__repark_ansi_tt_1`, `…_2`, `…_3` after three
+/// pinned reads. The registration only has to survive planning: DataFusion resolves the relation
+/// into a `TableScan` that owns the provider, so the returned `DataFrame` still collects
+/// correctly after the name is gone.
+#[derive(Debug, Default)]
+pub(crate) struct PinnedViews {
+    names: Vec<String>,
+}
+
+impl PinnedViews {
+    /// Deregister everything this statement registered. Best-effort by design: a name that is
+    /// already gone is not an error worth failing a successful statement over.
+    pub(crate) fn release(&self, ctx: &datafusion::prelude::SessionContext) {
+        for name in &self.names {
+            let _ = ctx.deregister_table(name.as_str());
+        }
+    }
+}
+
+/// ===========================================================================================
 /// Rewrite every `FOR … AS OF` relation in `sql` to an ephemeral snapshot-pinned temp view,
 /// returning the rewritten SQL. `Ok(None)` means there was nothing to rewrite.
 /// ===========================================================================================
+///
+/// Every name registered is recorded in `pinned` — including on the error paths, so a statement
+/// that fails half-way through a multi-relation rewrite still cleans up after itself.
 ///
 /// # Errors
 /// A recognized-but-malformed clause (an AS OF value this door cannot read, a name that is not
@@ -99,6 +128,7 @@ pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
 pub(crate) async fn prepare_time_travel_sql(
     cx: &EngineContext<'_>,
     sql: &str,
+    pinned: &mut PinnedViews,
 ) -> Result<Option<String>> {
     let Ok(tokens) = Tokenizer::new(&GenericDialect {}, sql).tokenize() else {
         // A tokenizer failure is the parser's error to report, with the sniff on top.
@@ -112,7 +142,7 @@ pub(crate) async fn prepare_time_travel_sql(
     // Resolve + register right-to-left so earlier token indices stay valid across the splices.
     let mut tokens = tokens;
     for span in spans.into_iter().rev() {
-        let name = register_pinned_view(cx, &span).await?;
+        let name = register_pinned_view(cx, &span, pinned).await?;
         let replacement = Token::Word(Word {
             value: name,
             quote_style: None,
@@ -132,7 +162,11 @@ pub(crate) async fn prepare_time_travel_sql(
 /// metadata and builds the fork's `IcebergStaticTableProvider` — a real pinned scan, never a
 /// post-hoc filter over the current snapshot. Re-registering its frame as a view is what gives
 /// the rewrite a NAME to splice into the statement.
-async fn register_pinned_view(cx: &EngineContext<'_>, span: &TimeTravelSpan) -> Result<String> {
+async fn register_pinned_view(
+    cx: &EngineContext<'_>,
+    span: &TimeTravelSpan,
+    pinned: &mut PinnedViews,
+) -> Result<String> {
     if span.table_parts.len() != 3 {
         return Err(DataFusionError::Plan(format!(
             "time travel requires a three-part `catalog.schema.table` name, got `{}`",
@@ -144,7 +178,8 @@ async fn register_pinned_view(cx: &EngineContext<'_>, span: &TimeTravelSpan) -> 
         "__repark_ansi_tt_{}",
         TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed)
     );
-    let _ = cx.ctx.deregister_table(name.as_str());
+    // Recorded BEFORE the registration attempt: `register_table` can fail after taking the name.
+    pinned.names.push(name.clone());
     cx.ctx
         .register_table(name.as_str(), frame.into_view())
         .map_err(|error| {

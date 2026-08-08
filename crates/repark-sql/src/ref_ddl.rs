@@ -70,7 +70,9 @@ enum Sig {
     Quoted(String),
     Period,
     Number(String),
-    Other,
+    /// Anything else, carrying its source text so a leftover can be NAMED in a refusal rather
+    /// than silently dropped.
+    Other(String),
 }
 
 impl Sig {
@@ -79,6 +81,17 @@ impl Sig {
         match self {
             Self::Word(value) | Self::Quoted(value) => Some(value),
             _ => None,
+        }
+    }
+
+    /// How this token is quoted back to the user in a refusal. Every variant is printable —
+    /// that is what makes "refuse rather than ignore it" true for punctuation and numbers.
+    fn text(&self) -> &str {
+        match self {
+            Self::Word(value) | Self::Quoted(value) | Self::Number(value) | Self::Other(value) => {
+                value
+            }
+            Self::Period => ".",
         }
     }
 
@@ -320,7 +333,7 @@ fn to_ms(amount: i64, unit: &str, form: &str) -> Result<i64> {
 fn signed_number(tokens: &[Sig], index: usize) -> Option<(String, usize)> {
     match tokens.get(index)? {
         Sig::Number(text) => Some((text.clone(), index + 1)),
-        Sig::Other if matches!(tokens.get(index + 1), Some(Sig::Number(_))) => {
+        Sig::Other(_) if matches!(tokens.get(index + 1), Some(Sig::Number(_))) => {
             // `Other` covers the `-` token; only accept it when a number follows.
             let Some(Sig::Number(text)) = tokens.get(index + 1) else {
                 return None;
@@ -332,18 +345,23 @@ fn signed_number(tokens: &[Sig], index: usize) -> Option<(String, usize)> {
 }
 
 /// Anything left over is a clause this door did not understand — refuse rather than ignore it.
+///
+/// EVERY leftover token counts, not just identifiers. Filtering the tail through [`Sig::ident`]
+/// made `… DROP BRANCH audit 5` and `… CREATE BRANCH audit AS OF VERSION 7 99` succeed with the
+/// trailing token silently dropped, which is exactly the "ignore it" this function exists to
+/// prevent — a user who wrote a retention clause we misread would have gotten a snapshot
+/// operation they did not ask for.
 fn reject_trailing(tokens: &[Sig], index: usize, form: &str) -> Result<()> {
-    let rest: Vec<&str> = tokens[index.min(tokens.len())..]
-        .iter()
-        .filter_map(Sig::ident)
-        .collect();
-    if rest.is_empty() {
+    let Some(leftover) = tokens
+        .get(index.min(tokens.len())..)
+        .and_then(<[Sig]>::first)
+    else {
         return Ok(());
-    }
+    };
     Err(DataFusionError::Plan(format!(
         "{form}: unsupported trailing clause starting at `{}` — the supported clauses are \
          AS OF VERSION <id>, RETAIN <n> <unit>, and WITH SNAPSHOT RETENTION <n> <unit>",
-        rest[0]
+        leftover.text()
     )))
 }
 
@@ -361,24 +379,31 @@ fn dotted_name(tokens: &[Sig], index: usize) -> Option<(Vec<String>, usize)> {
 /// Tokenize with the stock Generic dialect, dropping whitespace and comments. `"x"` is an
 /// identifier (ANSI) and lands as [`Sig::Quoted`]; `'x'` is a STRING and is therefore not usable
 /// as a name here at all (it falls into [`Sig::Other`]).
+///
+/// A statement terminator at the very END is dropped: `ALTER TABLE t DROP BRANCH b;` is one
+/// statement (the router's multi-statement guard has already refused genuine scripts), and now
+/// that [`reject_trailing`] refuses non-identifier leftovers the `;` would otherwise be read as
+/// an unsupported trailing clause.
 fn tokenize_significant(sql: &str) -> Option<Vec<Sig>> {
     let tokens = Tokenizer::new(&GenericDialect {}, sql).tokenize().ok()?;
-    Some(
-        tokens
-            .into_iter()
-            .filter(|token| !matches!(token, Token::Whitespace(_) | Token::EOF))
-            .map(|token| match token {
-                // sqlparser hands back a QUOTED identifier as a `Word` carrying its quote style —
-                // there is no separate token for it on a dialect where `"` quotes identifiers. The
-                // distinction is load-bearing here: `"branch"` must be a NAME, never the keyword.
-                Token::Word(word) if word.quote_style.is_some() => Sig::Quoted(word.value),
-                Token::Word(word) => Sig::Word(word.value),
-                Token::Number(text, _) => Sig::Number(text),
-                Token::Period => Sig::Period,
-                _ => Sig::Other,
-            })
-            .collect(),
-    )
+    let mut significant: Vec<Sig> = tokens
+        .into_iter()
+        .filter(|token| !matches!(token, Token::Whitespace(_) | Token::EOF))
+        .map(|token| match token {
+            // sqlparser hands back a QUOTED identifier as a `Word` carrying its quote style —
+            // there is no separate token for it on a dialect where `"` quotes identifiers. The
+            // distinction is load-bearing here: `"branch"` must be a NAME, never the keyword.
+            Token::Word(word) if word.quote_style.is_some() => Sig::Quoted(word.value),
+            Token::Word(word) => Sig::Word(word.value),
+            Token::Number(text, _) => Sig::Number(text),
+            Token::Period => Sig::Period,
+            other => Sig::Other(other.to_string()),
+        })
+        .collect();
+    while significant.last().is_some_and(|last| last.text() == ";") {
+        significant.pop();
+    }
+    Some(significant)
 }
 
 // === Execution ==============================================================================

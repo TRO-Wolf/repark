@@ -76,6 +76,14 @@ pub(crate) fn truncate(target: &str) -> DataFusionError {
 /// ===========================================================================================
 /// The pre-parse recognizer for `ALTER TABLE <name> EXECUTE <procedure>`, which stock sqlparser
 /// cannot reach. `None` when the statement is not that shape.
+///
+/// The `EXECUTE` test is **anchored to the verb slot** — the first word after the (possibly
+/// dotted, possibly quoted) table name — never a free search of the statement. An unanchored
+/// search made every legal `ALTER TABLE` that merely CONTAINS the bare word `execute` refuse:
+/// `ALTER TABLE ice.s.t ADD COLUMN execute BIGINT` came back as "ALTER TABLE … EXECUTE BIGINT is
+/// not supported yet", and because the recognizer runs pre-parse nothing downstream could
+/// recover it. A column may legally be named `execute`; only the VERB position means the
+/// reserved maintenance spelling.
 /// ===========================================================================================
 pub(crate) fn recognize_alter_table_execute(sql: &str) -> Option<DataFusionError> {
     let scrubbed = blank_out_quoted_and_comments(sql);
@@ -86,15 +94,57 @@ pub(crate) fn recognize_alter_table_execute(sql: &str) -> Option<DataFusionError
     if !words.get(1)?.2.eq_ignore_ascii_case("TABLE") {
         return None;
     }
-    // Skip the (possibly dotted) table name: the first word after it is the operation.
-    let index = words
-        .iter()
-        .position(|(_, _, word)| word.eq_ignore_ascii_case("EXECUTE"))?;
-    if index < 3 {
+    let verb = verb_slot_after_table_name(&scrubbed, &words)?;
+    if !words.get(verb)?.2.eq_ignore_ascii_case("EXECUTE") {
         return None;
     }
-    let procedure = words.get(index + 1).map_or("<procedure>", |(_, _, w)| *w);
+    let procedure = words.get(verb + 1).map_or("<procedure>", |(_, _, w)| *w);
     Some(alter_table_execute(procedure))
+}
+
+/// The index in `words` of the first word AFTER the table name of an `ALTER TABLE <name> …`.
+///
+/// Walks OFFSETS rather than word indices, because a `"quoted"` name part contributes no word at
+/// all (its content is blanked by [`blank_out_quoted_and_comments`], only the delimiters
+/// survive). Consumes `part ('.' part)*` from just past the `TABLE` keyword, where a part is
+/// either a `"…"` run or a bare word, then returns the word starting at the next offset. `None`
+/// when the shape does not fit — a missed refusal falls through to the parser and the wrong-door
+/// sniff, which is the safe direction.
+fn verb_slot_after_table_name(scrubbed: &str, words: &[(usize, usize, &str)]) -> Option<usize> {
+    let bytes = scrubbed.as_bytes();
+    let skip_ws = |bytes: &[u8], mut at: usize| {
+        while bytes.get(at).is_some_and(u8::is_ascii_whitespace) {
+            at += 1;
+        }
+        at
+    };
+    let mut pos = words.get(1)?.1;
+    loop {
+        pos = skip_ws(bytes, pos);
+        if bytes.get(pos) == Some(&b'"') {
+            let close = bytes.iter().skip(pos + 1).position(|byte| *byte == b'"')?;
+            pos = pos + 1 + close + 1;
+        } else {
+            let start = pos;
+            while bytes
+                .get(pos)
+                .is_some_and(|byte| byte.is_ascii_alphanumeric() || *byte == b'_' || *byte == b'$')
+            {
+                pos += 1;
+            }
+            if pos == start {
+                return None;
+            }
+        }
+        let after = skip_ws(bytes, pos);
+        if bytes.get(after) == Some(&b'.') {
+            pos = after + 1;
+        } else {
+            pos = after;
+            break;
+        }
+    }
+    words.iter().position(|(start, _, _)| *start == pos)
 }
 
 #[cfg(test)]

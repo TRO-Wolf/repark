@@ -26,7 +26,9 @@ belongs out here is what must be observed from outside the crate.
   (`.config("datafusion.catalog.information_schema", "true")` — the repark-core R2 fix PR-6
   landed). Carries the negative half (without the conf the same door refuses, so the delivery is
   attributable to the fix) and the honest caveat row (`$`-suffixed metadata tables currently
-  enumerate; the filter decision is an open fork/core product question, not a door parser).
+  enumerate; the filter decision is an open fork/core product question, not a door parser). Also
+  carries the leak pin: a `FOR … AS OF` read must leave no `__repark_ansi_tt_*` relation behind,
+  which only became observable once this PR turned `information_schema` on.
 
 - `ta_toll.rs` (PR-6, Q11) — `TaExtension` on a **native** session, one kernel driven through
   ANSI-door SQL as a window function and compared `f64::to_bits` against the recorded C TA-Lib

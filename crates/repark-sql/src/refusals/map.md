@@ -20,6 +20,7 @@ it names the shape, and it names what to do instead — not by its exact wording
 | Symptom | First check |
 |---|---|
 | A refusal message changed and a test broke | the assertions pin the STEER and the trigger, not the prose; if the steer changed, the ruling changed too |
-| The `EXECUTE` recognizer fired on a supported ALTER | `alter_execute_recognizer_does_not_fire_on_other_statements` enumerates the shapes it must ignore |
+| The `EXECUTE` recognizer fired on a supported ALTER | `alter_execute_recognizer_does_not_fire_on_other_statements` enumerates the shapes it must ignore; `alter_execute_recognizer_is_anchored_to_the_verb_slot` pins that a COLUMN named `execute` is legal |
+| The `EXECUTE` recognizer missed a real `ALTER … EXECUTE` | The verb slot is found by walking the dotted/quoted name — `alter_execute_recognizer_finds_the_verb_after_any_name_spelling` covers each spelling |
 
 First checks: `cargo test -p repark-sql refusals::`. Escalate to: [../map.md#debug](../map.md).

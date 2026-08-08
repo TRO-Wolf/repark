@@ -97,3 +97,50 @@ fn alter_execute_recognizer_does_not_fire_on_other_statements() {
         );
     }
 }
+
+/// The recognizer is ANCHORED to the VERB slot — the word right after the table name — so a
+/// legal `ALTER TABLE` that merely CONTAINS the bare word `execute` is left alone.
+///
+/// This is a regression pin. An unanchored search of the whole statement refused
+/// `ALTER TABLE ice.sales.orders ADD COLUMN execute BIGINT` with "ALTER TABLE … EXECUTE BIGINT is
+/// not supported yet" — a legal schema-evolution statement rejected, naming the column's TYPE as
+/// the "procedure", and because the recognizer runs pre-parse nothing downstream recovered it.
+/// `execute` is not a reserved word for a column.
+///
+/// Mutation: restore the free `position(|w| w == "EXECUTE")` search → every row below reds.
+#[test]
+fn alter_execute_recognizer_is_anchored_to_the_verb_slot() {
+    for sql in [
+        "ALTER TABLE ice.sales.orders ADD COLUMN execute BIGINT",
+        "ALTER TABLE ice.sales.orders DROP COLUMN execute",
+        "ALTER TABLE ice.sales.orders RENAME COLUMN a TO execute",
+        "ALTER TABLE ice.sales.orders ALTER COLUMN execute SET DATA TYPE BIGINT",
+        "ALTER TABLE ice.sales.orders SET PROPERTIES (execute = 'no')",
+        // The table itself may be named `execute`; the VERB after it is what decides.
+        "ALTER TABLE ice.sales.execute ADD COLUMN c INT",
+    ] {
+        assert!(
+            recognize_alter_table_execute(sql).is_none(),
+            "the verb slot is not EXECUTE, so this legal statement must pass through: `{sql}`"
+        );
+    }
+}
+
+/// …and the anchor still finds the verb across every way the name can be spelled: one-, two- and
+/// three-part, quoted parts (blanked to nothing by the scrubber), and spaces around the dots.
+#[test]
+fn alter_execute_recognizer_finds_the_verb_after_any_name_spelling() {
+    for sql in [
+        "ALTER TABLE orders EXECUTE optimize",
+        "ALTER TABLE sales.orders EXECUTE optimize",
+        "ALTER TABLE ice.sales.orders EXECUTE optimize",
+        "ALTER TABLE \"ice\".\"sales\".\"orders\" EXECUTE optimize",
+        "ALTER TABLE ice.\"my orders\".t EXECUTE optimize",
+        "ALTER TABLE ice . sales . orders EXECUTE optimize",
+    ] {
+        let message = recognize_alter_table_execute(sql)
+            .unwrap_or_else(|| panic!("must be recognized: `{sql}`"))
+            .to_string();
+        assert!(message.contains("optimize"), "{message}");
+    }
+}

@@ -22,5 +22,6 @@ half is the tier-1 `ManageSnapshots` seam, pinned end to end in `../tests.rs`.
 |---|---|
 | A statement was not recognized | `does_not_claim_other_statements` lists what must NOT be claimed; the top-level `CREATE BRANCH b IN t` is Spark-door surface |
 | A quoted ref name matched a keyword | it must not — a quoted identifier becomes `Sig::Quoted`, and `Sig::keyword` matches bare words only |
+| A statement ran with a clause the recognizer did not read | `reject_trailing` refuses on ANY leftover token (`trailing_non_identifier_tokens_refuse_too`); the ONE exception is a trailing `;` (`a_trailing_semicolon_is_not_a_trailing_clause`) |
 
 First checks: `cargo test -p repark-sql ref_ddl::`. Escalate to: [../map.md#debug](../map.md).

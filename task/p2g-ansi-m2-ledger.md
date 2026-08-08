@@ -210,6 +210,29 @@ surprised: `cargo test -p repark-spark` alone does not execute that row's eviden
    `RENAME TO` with an old-name-is-gone assertion); the evidence is shared, as it already is for
    the Spark door's `TABLE_OPTION_FORMAT` / `TABLE_OPTION_RAW_PROPERTIES` pair.
 
+## Verify-panel findings (post-assembly fix pass)
+
+Four independent verify panels re-ran every gate on the assembled branch and reproduced the
+integrator's numbers. Three defects survived reproduction; all three are in the NEW ANSI door and
+all three are fixed in `fix(pr-6): address verify-panel findings`, each with a regression pin that
+was confirmed RED against the pre-fix source before it went green.
+
+| # | Defect | Reproduction | Fix | Pin |
+|---|---|---|---|---|
+| 1 | `refusals::recognize_alter_table_execute` searched the WHOLE statement for the bare word `EXECUTE`, so `ALTER TABLE ice.sales.orders ADD COLUMN execute BIGINT` refused as "ALTER TABLE … EXECUTE BIGINT is not supported yet" — a legal schema-evolution statement rejected pre-parse, with the column's TYPE named as the "procedure" | probe on the recognizer; also `RENAME COLUMN a TO execute` | the test is ANCHORED to the verb slot — the word after the (dotted / quoted) table name — via `verb_slot_after_table_name`, which walks OFFSETS because a quoted name part contributes no word | `refusals::tests::alter_execute_recognizer_is_anchored_to_the_verb_slot` (6 legal statements) + `…_finds_the_verb_after_any_name_spelling` (6 name spellings) |
+| 2 | `ref_ddl::reject_trailing` filtered the leftover tail through `Sig::ident`, so trailing NUMBER / punctuation tokens were SILENTLY DROPPED — `… DROP BRANCH audit 5` dropped the branch and `… CREATE BRANCH audit AS OF VERSION 7 99` created it — the exact "ignore it" the fn doc forbids | probe through `try_parse_ref_ddl` | `Sig::Other` now carries its source text, `reject_trailing` refuses on ANY leftover and NAMES it; a trailing `;` is stripped in `tokenize_significant` (one statement is still one statement) | `ref_ddl::tests::trailing_non_identifier_tokens_refuse_too` + `…::a_trailing_semicolon_is_not_a_trailing_clause` |
+| 3 | `time_travel::register_pinned_view` registered `__repark_ansi_tt_<n>` and never deregistered it: one permanent relation per `FOR … AS OF` relation per query on a long-lived session, AND user-visible in `SHOW TABLES` / `information_schema.tables` — the very surface the R2 fix in this PR turns on. (The `deregister_table` on the old line 147 was dead: the name comes from a monotonic counter and can never pre-exist.) | 3 pinned reads on one session → `information_schema.tables` listed `__repark_ansi_tt_1|2|3` | a `PinnedViews` record threaded through the rewrite; `router::execute` splits the post-rewrite pipeline into `execute_time_travelled` so `pinned.release(cx.ctx)` runs on EVERY exit path, including the `?` ones. Safe because planning resolves the relation into a `TableScan` that owns the provider — the returned `DataFrame` still collects | `tests/introspection.rs::time_travel_pinned_views_do_not_leak_into_the_introspection_surface` (asserts both halves: no leftover row, and the pinned read still returns its row + Arrow type) |
+
+Rejected panel items, with reasons:
+
+- **"stale local `main`" (orchestration).** Correct observation, not a repo defect: this
+  worktree's `main` ref is behind `origin/main`. Both hygiene passes were re-run against the
+  stated base `e953bdf` explicitly rather than against `main`, and the superset scoping is also
+  clean. Nothing to change in the branch; the integrator must not read `main..HEAD` counts here.
+- **"a second agent is writing to this worktree live."** That was the verify panels' own
+  throwaway probes (`crates/repark-sql/tests/zz_probe.rs`, transient edits to two test modules)
+  appearing and being reverted while the panels ran concurrently. No source change.
+
 ## Riders carried forward
 
 1. **OPEN (fork/core, low severity):** whether `repark_iceberg::catalog`'s
@@ -223,6 +246,15 @@ surprised: `cargo test -p repark-spark` alone does not execute that row's eviden
 3. **Case folding vs Apache Spark** (see Q13 result 1): a real divergence, currently inherited
    engine-wide. If it is ever to be fixed, it is a Spark-door resolution decision, not a matrix
    row.
+4. **NEW, from the verify pass — the SPARK door has the same time-travel view leak.**
+   `crates/repark-spark/src/time_travel.rs` registers `__repark_tt_<n>` and never deregisters it,
+   exactly as the ANSI door did (finding 3 above). It is PRE-EXISTING — phase-1 code, not
+   PR-6's — but this PR is what makes it visible, because the R2 fix lets ANY session enable
+   `information_schema`. Left out of the fix commit deliberately: the Spark router's
+   time-travel call sits inside a different pipeline shape, and re-plumbing it is a behavioural
+   change to a door this PR was not scoped to touch. The ANSI-side fix is the template
+   (`PinnedViews` + release after planning). File it as the first rider of the next Spark-door
+   unit.
 
 ## Gate table
 
@@ -231,9 +263,9 @@ surprised: `cargo test -p repark-spark` alone does not execute that row's eviden
 | repark-core unit tests | `cargo test -p repark-core --lib` | 87 passed / 0 failed / 0 ignored (80 before; +7 R2/Q8) |
 | Crate-DAG layering | `make check-crate-dag` | 11 internal edges clean across 7 of 7 mapped crates (dev-deps correctly excluded) |
 | ANSI matrix audit | `cargo test -p repark-sql --lib matrix` | 4 passed |
-| Spark matrix audit | `cargo test -p repark-spark --lib matrix` | 3 matrix tests passed |
-| Q8 door battery | `cargo test -p repark-sql --test introspection` | 4 passed |
+| Spark matrix audit | `cargo test -p repark-spark --lib matrix` | 6 passed (3 matrix audits + 3 profile/registry pins) |
+| Q8 door battery | `cargo test -p repark-sql --test introspection` | 5 passed (4 + the time-travel leak pin from the fix pass) |
 | Q11 TA toll | `cargo test -p repark-sql --test ta_toll` | 3 passed |
 | Cross-door protocol | `cargo test -p repark-sql --test cross_door` | 8 passed |
-| Workspace tests | `cargo test --workspace` (NEVER `--all-features`) | see the integrator's assembled run |
+| Workspace tests | `cargo test --workspace` (NEVER `--all-features`) | 1175 passed / 0 failed / 0 ignored (1170 before the fix pass; +5 regression pins) |
 | Fast gate / full CI | `make ci` / `make preflight` | see the integrator's assembled run |

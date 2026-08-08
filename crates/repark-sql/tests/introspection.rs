@@ -227,6 +227,58 @@ async fn introspection_still_refuses_without_the_information_schema_conf() {
     );
 }
 
+/// The time-travel rewrite's ephemeral pinned relations must NOT survive the statement — neither
+/// as an unbounded per-query accumulation on a long-lived session nor as rows in the very
+/// introspection surface this file exists to prove.
+///
+/// Regression pin: before the fix, three pinned reads left `__repark_ansi_tt_1|2|3` registered
+/// forever and `information_schema.tables` listed all three. The other half of the claim is that
+/// releasing the name does not break the read — the `DataFrame` is collected AFTER `execute`
+/// returned (the plan owns its provider), and it still returns the pinned rows.
+///
+/// Mutation: drop the `pinned.release(cx.ctx)` in `router::execute` → the leftover assertion reds.
+#[tokio::test]
+async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
+    let warehouse_dir = TempDir::new().expect("warehouse");
+    let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
+    let session = introspective_ansi_session(&warehouse).await;
+    seed(&session, &warehouse).await;
+
+    let history = session
+        .testing_list_snapshots("ice.sales.orders")
+        .await
+        .expect("snapshot history");
+    let snapshot = history.first().expect("one snapshot after CTAS").0;
+
+    for _ in 0..3 {
+        let frame = session
+            .sql(&format!(
+                "SELECT id, label FROM ice.sales.orders FOR VERSION AS OF {snapshot}"
+            ))
+            .await
+            .expect("pinned read must plan");
+        // Collected after `execute` returned — i.e. after the temp name was released.
+        let batches = frame.collect().await.expect("pinned read must execute");
+        assert_eq!(
+            batches.iter().map(RecordBatch::num_rows).sum::<usize>(),
+            1,
+            "the pinned read must still return its row once the ephemeral name is gone"
+        );
+        assert_eq!(batches[0].column(0).data_type(), &DataType::Int64);
+    }
+
+    let leftover = utf8_column(
+        &session,
+        "SELECT table_name FROM information_schema.tables \
+         WHERE table_name LIKE '__repark_ansi_tt%'",
+    )
+    .await;
+    assert!(
+        leftover.is_empty(),
+        "time-travel temp views must be released, not left on the session: {leftover:?}"
+    );
+}
+
 /// The HONEST caveat, pinned: the fork's `$`-suffixed metadata tables enumerate alongside the
 /// real table. Trino hides these from `SHOW TABLES`; we do not, today. Whether
 /// `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the OPEN

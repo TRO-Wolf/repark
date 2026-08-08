@@ -193,6 +193,64 @@ fn malformed_forms_refuse_loud() {
     );
 }
 
+/// EVERY leftover token refuses, not just identifiers — numbers and punctuation included.
+///
+/// Regression pin. `reject_trailing` used to filter the tail through `Sig::ident`, so a trailing
+/// NUMBER or a stray symbol was silently DROPPED and the statement executed anyway: `… DROP
+/// BRANCH audit 5` dropped a branch, and `… CREATE BRANCH audit AS OF VERSION 7 99` created one
+/// pinned at 7. A user who meant `RETAIN 5 DAYS` and mistyped it got a snapshot operation they
+/// did not ask for — precisely the "refuse rather than ignore it" this function names.
+///
+/// Mutation: restore the `filter_map(Sig::ident)` → the first four rows red.
+#[test]
+fn trailing_non_identifier_tokens_refuse_too() {
+    for (sql, leftover) in [
+        ("ALTER TABLE ice.sales.orders DROP BRANCH audit 5", "5"),
+        (
+            "ALTER TABLE ice.sales.orders CREATE BRANCH audit AS OF VERSION 7 99",
+            "99",
+        ),
+        ("ALTER TABLE ice.sales.orders DROP TAG v1 ,", ","),
+        (
+            "ALTER TABLE ice.sales.orders CREATE BRANCH audit RETAIN 7 DAYS )",
+            ")",
+        ),
+        (
+            "ALTER TABLE ice.sales.orders CREATE BRANCH audit SOMETHING",
+            "SOMETHING",
+        ),
+    ] {
+        let message = refused(sql);
+        assert!(
+            message.contains("trailing clause") && message.contains(leftover),
+            "`{sql}` must refuse and NAME the leftover `{leftover}`: {message}"
+        );
+    }
+}
+
+/// …but a single trailing statement terminator is not a leftover. One statement ending in `;` is
+/// still one statement (the router's multi-statement guard is the authority on scripts), so it
+/// must still execute rather than trip the refusal above.
+#[test]
+fn a_trailing_semicolon_is_not_a_trailing_clause() {
+    assert_eq!(
+        parsed("ALTER TABLE ice.sales.orders DROP BRANCH audit;"),
+        RefDdl {
+            table_parts: vec!["ice".into(), "sales".into(), "orders".into()],
+            op: RefOp::Drop {
+                kind: SnapshotRefKind::Branch,
+                name: "audit".into(),
+                if_exists: false,
+            },
+        }
+    );
+    assert!(
+        try_parse_ref_ddl("ALTER TABLE ice.sales.orders CREATE TAG v1 AS OF VERSION 42 ;  ")
+            .expect("recognized")
+            .is_ok()
+    );
+}
+
 /// A ref name is part of a metadata key, so it gets the same path-escape hygiene every other
 /// identifier segment in this door gets.
 #[test]

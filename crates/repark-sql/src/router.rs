@@ -77,9 +77,27 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
         Some(rewritten) => Cow::Owned(rewritten),
         None => Cow::Borrowed(sql),
     };
-    let sql = match time_travel::prepare_time_travel_sql(&cx, &sql).await? {
+    // The `FOR … AS OF` rewrite registers ephemeral pinned relations on the session; they are
+    // released again as soon as the statement has been planned, so a long-lived session neither
+    // accumulates them nor shows them in `SHOW TABLES` / `information_schema.tables` (the
+    // introspection surface this same PR enabled). The plan owns its provider, so the returned
+    // `DataFrame` still collects after the name is gone.
+    let mut pinned = time_travel::PinnedViews::default();
+    let result = execute_time_travelled(&cx, &sql, &mut pinned).await;
+    pinned.release(cx.ctx);
+    result
+}
+
+/// The rest of the pipeline, from the `FOR … AS OF` rewrite onward. Split out purely so
+/// [`execute`] can release `pinned` on EVERY exit path — including the `?` ones.
+async fn execute_time_travelled(
+    cx: &EngineContext<'_>,
+    sql: &str,
+    pinned: &mut time_travel::PinnedViews,
+) -> Result<DataFrame> {
+    let sql = match time_travel::prepare_time_travel_sql(cx, sql, pinned).await? {
         Some(rewritten) => Cow::Owned(rewritten),
-        None => sql,
+        None => Cow::Borrowed(sql),
     };
     let sql: &str = &sql;
 
@@ -90,11 +108,11 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     let DFStatement::Statement(statement) = statement else {
         // DataFusion's own parser extensions (COPY, CREATE EXTERNAL TABLE, …) — delegate, where
         // the SEC-02 guard sees the resulting plan.
-        return delegate(&cx, sql).await;
+        return delegate(cx, sql).await;
     };
 
     match statement.as_ref() {
-        Statement::CreateTable(create) => create_table::execute_create_table(&cx, create).await,
+        Statement::CreateTable(create) => create_table::execute_create_table(cx, create).await,
         Statement::CreateSchema {
             schema_name,
             if_not_exists,
@@ -102,7 +120,7 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
             ..
         } => {
             schema_ddl::execute_create_schema(
-                &cx,
+                cx,
                 schema_object_name(schema_name)?,
                 *if_not_exists,
                 with.as_ref(),
@@ -114,16 +132,16 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
             names,
             if_exists,
             ..
-        } => schema_ddl::execute_drop_table(&cx, names, *if_exists).await,
+        } => schema_ddl::execute_drop_table(cx, names, *if_exists).await,
         Statement::Drop {
             object_type: ObjectType::Schema | ObjectType::Database,
             names,
             if_exists,
             cascade,
             ..
-        } => schema_ddl::execute_drop_schema(&cx, names, *if_exists, *cascade).await,
-        Statement::AlterTable(alter) => alter::execute_alter_table(&cx, alter).await,
-        Statement::Merge(merge) => merge::execute_merge(&cx, merge).await,
+        } => schema_ddl::execute_drop_schema(cx, names, *if_exists, *cascade).await,
+        Statement::AlterTable(alter) => alter::execute_alter_table(cx, alter).await,
+        Statement::Merge(merge) => merge::execute_merge(cx, merge).await,
         // --- The refuse set (design §2 Q7 / Q9). ---
         Statement::Insert(insert) if insert.overwrite => {
             Err(refusals::insert_overwrite(&insert.table.to_string()))
@@ -135,7 +153,7 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
                 .first()
                 .map_or_else(|| "<table>".to_string(), |target| target.name.to_string()),
         )),
-        _ => delegate(&cx, sql).await,
+        _ => delegate(cx, sql).await,
     }
 }
 
