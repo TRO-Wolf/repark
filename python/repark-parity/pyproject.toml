@@ -16,7 +16,7 @@ dependencies = ["pyarrow>=25.0.0"]
 
 [project.optional-dependencies]
 # Heavyweight + needs a JVM; used only to (re)record golden fixtures, never in routine CI.
-record = ["pyspark>=3.5"]
+record = ["pyspark==4.1.2"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/repark_parity"]

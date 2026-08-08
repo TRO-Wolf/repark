@@ -1,0 +1,72 @@
+# Live PySpark oracle tier — the drift detector for the record-then-pin parity discipline. Routine
+# CI is JVM-free and never re-checks the pinned goldens; this workflow spins up real Spark 4.1.2,
+# re-derives every mandated golden, and asserts repark == pinned golden == live Spark (value AND
+# Arrow-path type), catching golden drift (a stale / hand-edited pin) and oracle drift (a Spark bump
+# that changes semantics under a still-green pin). It mirrors `make parity-live` step for step.
+# No secrets, no AWS.
+#
+# Ported from the port source at phase-3 PR-6 and ARMED: nightly cron + manual dispatch. The port
+# source's `pull_request` paths trigger is deliberately DROPPED (not paused): the testing contract
+# runs tier-2 workflows against MERGED CODE ONLY (docs/testing.md "live oracle tier"). NOT a
+# required check.
+#
+# NOTE (honest disclosure): GitHub-Actions runtime behaviour — setup-java on the runner, the cron
+# firing — cannot be exercised locally. The local proof is `make parity-live` running the identical
+# commands + `make workflows-lint` (zizmor); the first `workflow_dispatch` run is the post-merge
+# acceptance step (operator-side, design §11).
+name: parity-live
+
+on:
+  schedule:
+    - cron: "17 7 * * *"  # nightly ~07:17 UTC (off the hour to dodge the cron stampede)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: parity-live-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live-oracle:
+    name: live PySpark oracle (facade + REPARK_PARITY_LIVE)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      # Java 17 (Temurin) — Spark 4.1.2 requires it. SHA-pinned like every third-party action.
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95  # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "17"
+      # Python 3.12 WITH libpython so the PyO3 cdylib links during `maturin develop`.
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
+      # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags); the `toolchain:` input
+      # below selects the compiler. Needed because `maturin develop` compiles the cdylib.
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c  # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+        with:
+          version: "0.9.5"  # Makefile UV_VERSION
+          python-version: "3.12"
+          enable-cache: true
+      # `make parity-live`, step for step: provision pyspark 4.1.2 (the `record` extra, pinned in
+      # uv.lock) and build the native module (`maturin` pin == Makefile MATURIN).
+      - name: sync record extra (pyspark 4.1.2) + build native module
+        run: |
+          uv sync --extra record
+          (cd python/repark && uvx maturin@1.14.1 develop)
+      # The full facade suite AND the live oracle tier. REPARK_PARITY_LIVE=1 arms the live tests;
+      # setup-java put a JVM on PATH, so they run (rather than skip). SPARK_LOCAL_IP keeps the local
+      # driver deterministic on the runner.
+      - name: facade suite + live oracle tier (REPARK_PARITY_LIVE=1)
+        env:
+          REPARK_PARITY_LIVE: "1"
+          SPARK_LOCAL_IP: "127.0.0.1"
+        run: uv run --extra record pytest python/repark/tests -q

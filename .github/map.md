@@ -3,8 +3,10 @@
 ## Purpose
 
 CI/CD, dependency automation, and the rust-cache pre-warmer that keeps PR jobs hot off the
-critical path. Phase 1 carries tier 1 (every PR, no secrets, GitHub-hosted, read-only token);
-tier 2 (live AWS, merged code only) and tier 3 (benchmarks) land in later phases.
+critical path. Tier 1 (every PR, no secrets, GitHub-hosted, read-only token) landed in phase 1;
+**tier 2 (live oracle + live AWS, merged code only) landed at phase-3 PR-6** (`parity-live.yml`,
+`aws-acceptance.yml` — nightly + dispatch, never `pull_request`, never required); tier 3
+(benchmarks) lands in later phases.
 
 ## Contents
 

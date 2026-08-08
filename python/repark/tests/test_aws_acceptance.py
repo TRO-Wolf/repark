@@ -38,6 +38,7 @@ from _acceptance import (
     SILVER_CATALOG,
     TEMP_VIEW,
     acceptance_namespace_location,
+    assert_real_buckets_configured,
     bronze_path,
     ctas_sql,
     deduplicate,
@@ -124,6 +125,7 @@ def test_process_silver_acceptance_against_glue() -> None:
     ``REPARK_ACCEPT_ID_COL``). Oracles: bronze rows > 0; the published table holds the deduped set;
     a second publish pass is idempotent (row count unchanged).
     """
+    assert_real_buckets_configured()
     entity = _require_env("REPARK_ACCEPT_ENTITY")
     ds = _require_env("REPARK_ACCEPT_DS")
     id_col = _require_env("REPARK_ACCEPT_ID_COL")
@@ -170,6 +172,7 @@ def test_process_silver_acceptance_against_s3tables() -> None:
             "S3 Tables acceptance needs TABLE_BUCKET_ARN (a us-east-2 table-bucket ARN); "
             "absent → skip so the Glue bullet is unaffected"
         )
+    assert_real_buckets_configured()
     entity = _require_env("REPARK_ACCEPT_ENTITY")
     ds = _require_env("REPARK_ACCEPT_DS")
     id_col = _require_env("REPARK_ACCEPT_ID_COL")

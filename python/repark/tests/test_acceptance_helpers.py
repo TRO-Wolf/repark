@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pathlib
 
+import pytest
 from _acceptance import (
     ACCEPTANCE_NAMESPACE,
     ACCEPTANCE_TABLE_PREFIX,
@@ -159,3 +160,26 @@ def test_deduplicate_keeps_the_newest_row_per_id() -> None:
     out = deduplicate(df, id_col="id")
     got = {r["id"]: r["name"] for r in out.to_arrow().to_pylist()}
     assert got == {1: "new", 2: "only"}
+
+
+def test_placeholder_buckets_refuse_a_real_aws_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The committed defaults are placeholders; `assert_real_buckets_configured` must refuse them
+    by name so a credentialed job never issues signed requests against squattable global names."""
+    import _acceptance
+
+    monkeypatch.setattr(_acceptance, "BRONZE_BUCKET", _acceptance._PLACEHOLDER_BRONZE_BUCKET)
+    monkeypatch.setattr(_acceptance, "GLUE_WAREHOUSE", _acceptance._PLACEHOLDER_WAREHOUSE)
+    with pytest.raises(RuntimeError) as excinfo:
+        _acceptance.assert_real_buckets_configured()
+    message = str(excinfo.value)
+    assert "REPARK_ACCEPT_BRONZE_BUCKET" in message
+    assert "REPARK_ACCEPT_WAREHOUSE" in message
+
+
+def test_operator_buckets_pass_the_guard(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Real operator-supplied buckets (non-placeholder) satisfy the guard."""
+    import _acceptance
+
+    monkeypatch.setattr(_acceptance, "BRONZE_BUCKET", "acme-bronze-real")
+    monkeypatch.setattr(_acceptance, "GLUE_WAREHOUSE", "s3://acme-warehouse-real/")
+    _acceptance.assert_real_buckets_configured()  # must not raise

@@ -55,6 +55,10 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 - Up: [../map.md](../map.md)
 - Related: the testing contract is [../../docs/testing.md](../../docs/testing.md).
 
+### PR-6 note
+- The `record` extra is PINNED `pyspark==4.1.2` (was `>=3.5` — the live-oracle drift detector's
+  own oracle must not float; the goldens are recorded under 4.1.2). Bump deliberately + re-lock.
+
 ## Debug
 
 | Symptom | First check |

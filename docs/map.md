@@ -27,6 +27,9 @@ notes, and per-tier operating manuals for this repo.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
   iceberg-rust fork, the two SQL doors, the copy-then-re-home port, server-prep disciplines.
 - [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
+- [tier2-aws.md](tier2-aws.md) — operator runbook for the tier-2 live-AWS workflow: environment,
+  the repo+branch+environment-scoped OIDC trust policy, the create-only/no-delete IAM posture,
+  the S3 lifecycle expiry, variable/secret names, first-dispatch acceptance.
 - [release.md](release.md) — release engineering (documentation only this phase): PyPI /
   crates.io trusted publishing setup, bootstrap-token revocation, the first-tag hard blockers
   (incl. the `repark.sql` re-home gate), open items.

@@ -29,6 +29,10 @@ ZIZMOR := uvx zizmor@1.26.1
 CARGO_DENY_VERSION := 0.19.9
 CARGO_AUDIT_VERSION := 0.22.1
 UV_VERSION := 0.9.5
+# Local JVM for `make parity-live` (Spark 4.1.2 needs Java 17; CI uses Temurin 17 via setup-java).
+# Defaults to the caller's JAVA_HOME so no machine-specific path is committed; set it to a Java 17
+# home if your default JAVA_HOME is a different major: `make parity-live PARITY_LIVE_JAVA_HOME=...`.
+PARITY_LIVE_JAVA_HOME ?= $(JAVA_HOME)
 
 .PHONY: help
 help: ## List available targets
@@ -169,6 +173,17 @@ py-test-facade: ## Facade tests against the real native module (builds it first 
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
 		uv run --no-project python -m pytest python/repark/tests -q
+
+.PHONY: parity-live
+parity-live: ## Live PySpark oracle tier: re-derive every pinned golden from real Spark 4.1.2 (needs a JVM; JVM-free `ci`/`verify` are unaffected)
+	@# Mirrors .github/workflows/parity-live.yml step for step. Provisions pyspark 4.1.2 (the
+	@# `record` extra, pinned in uv.lock), builds the native module, then runs the full facade
+	@# suite AND the live tier (REPARK_PARITY_LIVE=1) so it asserts repark == pinned golden ==
+	@# live Spark. Flag unset (ci/verify) → the live tests SKIP; this target arms them.
+	uv sync --extra record
+	cd python/repark && $(MATURIN) develop
+	JAVA_HOME=$(PARITY_LIVE_JAVA_HOME) SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 \
+		uv run --extra record pytest python/repark/tests -q
 
 .PHONY: py-audit
 py-audit: ## Python dependency CVE scan (mirrors pip-audit.yml)

@@ -1,0 +1,13 @@
+# Declared v2-only facade-census ADDITIONS — the mirror of deferred-python-tests.txt.
+# These node ids exist in v2 but NOT at the v1 port pin, so the facade collect-only diff against
+# the baseline shows them as "appeared (only in v2)". Each is a test for a v2-only capability the
+# pin has no equivalent for; the phase-close comparator subtracts this list from the CANDIDATE
+# (v2) side, exactly as it subtracts deferred-python-tests.txt from the baseline side. The
+# reconciliation identity becomes: (v2_collected − added) ∪ deferred = pin_collected.
+# One full pytest node id per line; blanks and '#'-comments ignored.
+#
+# 2026-08-08 (phase-3 PR-6): the tier-2 AWS workflow is a v2-only artifact (no pin equivalent);
+# its security guard `assert_real_buckets_configured` (refuses signed requests to the committed
+# placeholder buckets) lands with two always-run unit pins in test_acceptance_helpers.py.
+tests/test_acceptance_helpers.py::test_placeholder_buckets_refuse_a_real_aws_run
+tests/test_acceptance_helpers.py::test_operator_buckets_pass_the_guard
