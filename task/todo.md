@@ -104,8 +104,14 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       + MoR-valve hoist; census closed (334 ported names empty sorted-diff under
       `repark_sql::` → `repark_spark::`; 342 − 6 postgres_p11 − 2 phase-1 time-travel hoists).
       Deferred #3 landed (ledger: [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md)).
-- [ ] **PR-4 — repark-ta (CONFIRMED in scope 2026-08-07)**: kernels + goldens + `TaExtension`;
-      Spark extension composes it; TA census generated + empty-diff. Unblocks deferred #8–#14.
+- [ ] **PR-4 — repark-ta (IN FLIGHT)**: kernels + goldens (148 `.bin`) ported verbatim +
+      NEW `TaExtension`; `SparkExtension` composes it at v1's registration position (p2b rider
+      #1 DISCHARGED). TA census generated at the pin and empty-diff (146/146 default features;
+      178→180 with `--features datafusion`, +2 = the door-native `TaExtension` tests).
+      Deferred #8–#14 landed as `repark-spark/tests/ta_window.rs` (7/7 green) — the deferred
+      manifest is now exactly 4 rows, all post-milestone-one. Ledger:
+      [p2e-ta-ledger.md](p2e-ta-ledger.md). Rider: the ANSI TA smoke + non-literal-period
+      refuse rows (design Q11 toll) land PR-6 — `repark-sql` does not exist yet.
 - [ ] **PR-5 — repark-sql ANSI M1**: `AnsiDialect` delegation core, guard set, wrong-door
       sniff, CTAS `WITH (…)` vocab + `extra_properties` + Q15 routing, schema DDL, surfaces
       registry + matrix seeded; R1/R2 spikes day 1. May start once PR-1 merges.

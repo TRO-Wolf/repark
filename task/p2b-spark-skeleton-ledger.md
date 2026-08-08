@@ -60,9 +60,17 @@ No other edit class is authorized; anything else is a STOP.
 
 ## Riders (declared temporary omissions / deviations)
 
-1. **TA registration OMITTED from `SparkExtension.register`** — v1 `build()` also ran
+1. ~~**TA registration OMITTED from `SparkExtension.register`**~~ — v1 `build()` also ran
    `repark_ta::udf::register_all`; the `repark-ta` crate lands PR-4, where `SparkExtension`
    composes `TaExtension`. TEMPORARY, restored in PR-4 (brief §1).
+   **DISCHARGED phase-2 PR-4 (2026-08-08):** `SparkExtension.register` now calls
+   `repark_ta::TaExtension.register(ctx)` as its last step — v1 `build()`'s exact order
+   (function registry → analyzer rules → TA UDFs, `v1-pin/crates/repark-session/src/lib.rs:320-329`).
+   The door **composes** the owning crate's extension rather than calling `udf::register_all`
+   itself, per design Q11 (the TA set is door-neutral). Pinned by
+   `repark_spark::extension::tests::register_composes_the_ta_extension_window_udfs` (bit-exact)
+   and the 7 ported `ta_window::sql_route_*` rows. Ledger:
+   [p2e-ta-ledger.md](p2e-ta-ledger.md).
 2. **Write-knob split (conformance note, not an omission)** — v1 `build()`'s engine write
    knobs (`with_merge_session_knobs`, scan/write concurrency) re-homed into the phase-1 core
    `build()` itself (PR-C), so `SparkExtension.configure` carries only the
