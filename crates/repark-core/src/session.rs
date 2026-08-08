@@ -121,6 +121,49 @@ impl TimeTravelOpts {
 
 const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
 
+/// The builder-config prefix that reaches DataFusion's own [`SessionConfig`] options
+/// (`datafusion.catalog.information_schema`, `datafusion.execution.batch_size`, …).
+///
+/// Phase-2 P2G R2 fix: before this, the builder's `.config(k, v)` map was repark/spark-shaped only
+/// (consumed by [`crate::parse_catalog_specs`], the concurrency/scan readers, the S3-region
+/// resolver and the extension `configure` hook) and NOTHING in it ever reached DataFusion — so
+/// `datafusion.catalog.information_schema = true` was silently inert and `SHOW TABLES` /
+/// `DESCRIBE` / `information_schema.*` were dead in BOTH SQL doors (design §2 Q8; the P2F ledger's
+/// filed core gap). This is config plumbing only: the [`SqlDialect`] / [`SessionExtension`] seams
+/// are unchanged (design §3 seam freeze).
+pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
+
+/// ===========================================================================================
+/// Apply every `datafusion.*` key from the builder config map onto `config`.
+///
+/// Keys without the [`DATAFUSION_CONFIG_PREFIX`] are left alone (they belong to the catalog
+/// parser, the write-knob readers or the extension hook). Applied in sorted key order so a build
+/// is deterministic, and AFTER the typed setters + core defaults so an explicit conf wins over
+/// both — including the DF-54.1 subquery guard, which a user can knowingly re-enable.
+///
+/// An unknown or unparsable `datafusion.*` key fails loud ([`Error::Config`]) rather than being
+/// dropped: a silently-inert conf key is exactly the defect this function exists to fix.
+/// ===========================================================================================
+fn apply_datafusion_config_keys(
+    config: &mut SessionConfig,
+    map: &HashMap<String, String>,
+) -> Result<()> {
+    let mut keys: Vec<&String> = map
+        .keys()
+        .filter(|key| key.starts_with(DATAFUSION_CONFIG_PREFIX))
+        .collect();
+    keys.sort();
+    for key in keys {
+        let value = &map[key];
+        config.options_mut().set(key, value).map_err(|error| {
+            Error::Config(format!(
+                "invalid DataFusion session config '{key}' = '{value}': {error}"
+            ))
+        })?;
+    }
+    Ok(())
+}
+
 /// The explicit AWS-use opt-in conf (E-2). A session with no AWS-backed catalog spec and no S3
 /// region conf can still signal AWS use — e.g. plain `s3://` bronze reads on an otherwise-local
 /// session — with `.config("repark.aws.enable", "true")`; `register_configured_catalogs()` then
@@ -168,8 +211,10 @@ pub struct ReparkSessionBuilder {
     extension: Option<Arc<dyn SessionExtension>>,
     /// The full Spark-style `.config(key, value)` map. Engine knobs above are set through the typed
     /// setters; this map additionally drives `spark.sql.catalog.<name>.*` catalog registration at
-    /// session construction (see [`ReparkSession::register_configured_catalogs`]). Non-catalog keys
-    /// are ignored here, matching PySpark's tolerance of unknown `.config` keys.
+    /// session construction (see [`ReparkSession::register_configured_catalogs`]) and, since the
+    /// P2G R2 fix, carries [`DATAFUSION_CONFIG_PREFIX`] keys through to the DataFusion
+    /// `SessionConfig`. Other non-catalog keys are ignored here, matching PySpark's tolerance of
+    /// unknown `.config` keys.
     config: HashMap<String, String>,
 }
 
@@ -209,8 +254,10 @@ impl ReparkSessionBuilder {
     }
 
     /// Record a single Spark-style `.config(key, value)` pair (PySpark `.config`). Catalog keys
-    /// (`spark.sql.catalog.<name>.*`) are consumed at [`build`](Self::build); other keys are kept
-    /// for potential future use and otherwise ignored.
+    /// (`spark.sql.catalog.<name>.*`) are consumed at [`build`](Self::build); keys prefixed
+    /// [`DATAFUSION_CONFIG_PREFIX`] are applied to the DataFusion [`SessionConfig`] (an unknown
+    /// one fails loud — see [`apply_datafusion_config_keys`]); other keys are kept for the
+    /// extension hook and otherwise ignored, matching PySpark's tolerance of unknown keys.
     #[must_use]
     pub fn config(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.config.insert(key.into(), value.into());
@@ -366,6 +413,12 @@ impl ReparkSessionBuilder {
             config = config.with_target_partitions(partitions);
         }
         config = repark_iceberg::write::with_write_concurrency(config, write_concurrency);
+        // P2G R2: the builder's `datafusion.*` keys reach `SessionConfig` here — after the typed
+        // setters and the core defaults (so an explicit conf wins), before the extension hook (so
+        // an extension still sees the final DataFusion options it is configuring against). This
+        // is what makes `datafusion.catalog.information_schema = true` real, and with it Q8's
+        // delegated `SHOW TABLES` / `DESCRIBE` / `information_schema.*` in BOTH doors.
+        apply_datafusion_config_keys(&mut config, &self.config)?;
         // Extension hook 1 of 2 — CONFIGURE, at v1's inline position (after the engine knobs are
         // installed as ConfigExtensions, before the RuntimeEnv is assembled). v1 inlined the
         // cardinality/`repark.sql.*` `ConfigExtension` here (r24 SB1); the phase-2 Spark

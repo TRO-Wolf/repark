@@ -13,7 +13,13 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 - `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). Builder collects
   the Spark-style `.config(...)` map (`config(key, value)` / `configs(map)`); sync `build()`
   validates knobs, parses the config's `spark.sql.catalog.<name>.*` /
-  `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), installs a
+  `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), threads every
+  `datafusion.*` key from the same map onto the `SessionConfig` via
+  `apply_datafusion_config_keys` (P2G R2 — `DATAFUSION_CONFIG_PREFIX`; applied after the typed
+  setters + core defaults so an explicit conf wins, before the extension hook; an unknown key is
+  an `Error::Config`, never silently inert — this is what makes
+  `datafusion.catalog.information_schema = true` real and Q8's `SHOW TABLES` / `DESCRIBE` /
+  `information_schema.*` live in BOTH SQL doors), installs a
   default 8 GiB `FairSpillPool` when memory is unset (`memory_limit_bytes(0)` /
   `memory_limit_gb(0)` opt out to Infinite; non-zero budgets below 1 MiB refuse at build;
   `batch_size(0)` / `target_partitions(0)` refuse at build), attaches the write/scan knobs as
@@ -103,5 +109,8 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 | `read_parquet("s3://…")` errors: no region / no credentials | Region from the aws-config chain or the `repark.hadoop.fs.s3a.endpoint.region` / `spark.hadoop.fs.s3a.endpoint.region` config; creds from the default chain. `object_store_s3.rs`. |
 | `s3a://` path not found but `s3://` works | Both schemes must be registered per bucket (`register_bucket_store` does both); DataFusion looks up `scheme://bucket` verbatim. |
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
+| `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
+| A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
+| `$`-suffixed metadata tables show up in `SHOW TABLES` | Current, known behavior (`information_schema_still_exposes_the_dollar_metadata_tables`); whether `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the open product question in `task/p2g-ansi-m2-ledger.md`. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).

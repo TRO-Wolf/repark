@@ -1058,3 +1058,244 @@ async fn bare_session_without_extension_carries_df_54_1_subquery_guard() {
         "a no-extension session must force the pre-54 scalar-subquery rewrite (DF-54.1 guard)"
     );
 }
+
+// === P2G R2: builder `datafusion.*` config reaches SessionConfig (design §2 Q8) ==============
+
+/// The R2 core gap, pinned at its narrowest: a builder-set `datafusion.*` key LANDS in the
+/// session's `SessionConfig`. Before the fix the builder map was repark/spark-shaped only and
+/// this key was silently inert (P2F ledger, R2 spike). Bare session — no dialect, no extension —
+/// so this is core plumbing, not door behavior.
+#[tokio::test]
+async fn builder_datafusion_config_key_reaches_session_config() {
+    let session = ReparkSession::builder()
+        .config("datafusion.catalog.information_schema", "true")
+        .config("datafusion.execution.collect_statistics", "false")
+        .build()
+        .unwrap();
+    let options = session.context().copied_config().options().clone();
+    assert!(
+        options.catalog.information_schema,
+        "a builder-set `datafusion.catalog.information_schema` must reach SessionConfig"
+    );
+    assert!(
+        !options.execution.collect_statistics,
+        "a second `datafusion.*` key must land too (the whole prefixed subset is applied)"
+    );
+}
+
+/// A key WITHOUT the `datafusion.` prefix is still ignored (PySpark tolerance) — the fix widens
+/// the map's reach, it does not turn every unknown `.config` key into a build error.
+#[tokio::test]
+async fn builder_non_datafusion_config_keys_stay_ignored() {
+    let session = ReparkSession::builder()
+        .config("spark.sql.some.unknown.knob", "whatever")
+        .config("repark.not.a.real.key", "1")
+        .build()
+        .unwrap();
+    assert!(
+        !session
+            .context()
+            .copied_config()
+            .options()
+            .catalog
+            .information_schema,
+        "unprefixed keys must not touch DataFusion options (information_schema stays off)"
+    );
+}
+
+/// A MISSPELLED `datafusion.*` key fails the build loud, naming the key — a silently-inert conf
+/// key is the exact defect the R2 fix removes, so the fix must not reintroduce it one typo over.
+#[tokio::test]
+async fn builder_unknown_datafusion_config_key_fails_loud() {
+    let error = ReparkSession::builder()
+        .config("datafusion.catalog.information_schemaa", "true")
+        .build()
+        .unwrap_err();
+    assert!(
+        matches!(error, Error::Config(_)),
+        "expected Error::Config, got {error:?}"
+    );
+    let message = error.to_string();
+    assert!(
+        message.contains("datafusion.catalog.information_schemaa"),
+        "the message must name the offending key: {message}"
+    );
+}
+
+/// An explicit `datafusion.*` conf wins over the core default it addresses — the keys are applied
+/// AFTER the defaults. Pinned on the G8 DF-54.1 guard because that is the one core default a user
+/// might knowingly re-enable; `bare_session_without_extension_carries_df_54_1_subquery_guard`
+/// still pins the unset case, so the two together fix the ordering.
+#[tokio::test]
+async fn explicit_datafusion_config_overrides_a_core_default() {
+    let session = ReparkSession::builder()
+        .config(
+            "datafusion.optimizer.enable_physical_uncorrelated_scalar_subquery",
+            "true",
+        )
+        .build()
+        .unwrap();
+    assert!(
+        session
+            .context()
+            .copied_config()
+            .options()
+            .optimizer
+            .enable_physical_uncorrelated_scalar_subquery,
+        "an explicit datafusion.* conf must be applied after (and therefore over) the default"
+    );
+}
+
+/// Q8 delivery, core half: with `information_schema` enabled through the BUILDER, a registered
+/// Iceberg catalog enumerates through stock DataFusion — `SHOW TABLES` and `DESCRIBE` plan and
+/// execute, and `information_schema.tables` lists the created table. This is the enumeration
+/// verification design §2 Q8 asks for, run on the PRODUCT path (`ReparkSession`), not a raw
+/// `SessionContext`. AWS-free (memory catalog over a temp warehouse).
+#[tokio::test]
+async fn information_schema_enumerates_a_registered_iceberg_catalog_through_the_session() {
+    use tempfile::TempDir;
+
+    let warehouse = TempDir::new().unwrap();
+    let session = ReparkSession::builder()
+        .config("datafusion.catalog.information_schema", "true")
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session
+        .create_namespace("ice", "sales", HashMap::new())
+        .await
+        .unwrap();
+    // Create through the Catalog API, not SQL: repark-core has no CTAS door (that is a door
+    // crate's job), so the table is created the way core itself can, then the provider is
+    // rebuilt so the name directory is current.
+    session
+        .testing_oob_create_table("ice", "sales", "orders", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session.refresh_catalog_provider("ice").await.unwrap();
+
+    // Namespace enumeration.
+    let schemata = session
+        .sql(
+            "SELECT schema_name FROM information_schema.schemata \
+             WHERE catalog_name = 'ice' AND schema_name = 'sales'",
+        )
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        schemata.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1,
+        "the registered catalog's namespace must enumerate in information_schema.schemata"
+    );
+
+    // Table enumeration, on the Arrow path (value AND type).
+    let tables = session
+        .sql(
+            "SELECT table_name FROM information_schema.tables \
+             WHERE table_catalog = 'ice' AND table_schema = 'sales' AND table_name = 'orders'",
+        )
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        tables[0].column(0).data_type(),
+        &DataType::Utf8,
+        "information_schema.tables.table_name is Utf8"
+    );
+    let names = tables[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<StringArray>()
+        .unwrap();
+    assert_eq!(names.value(0), "orders");
+
+    // Stock `SHOW TABLES` + `DESCRIBE` now PLAN (they refused outright before the fix).
+    let shown = session.sql("SHOW TABLES").await.unwrap().collect().await;
+    assert!(shown.is_ok(), "SHOW TABLES must work: {:?}", shown.err());
+    let described = session
+        .sql("DESCRIBE ice.sales.orders")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        described.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1,
+        "DESCRIBE must report the created table's single column"
+    );
+}
+
+/// The HONEST caveat on the Q8 delivery above, pinned rather than prose: the fork's `$`-suffixed
+/// metadata tables enumerate alongside the real table (Trino hides them from `SHOW TABLES`). This
+/// is the P2F R2 spike's "product question", still OPEN — whether
+/// `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is a fork/core
+/// decision, not a door parser. The test asserts the CURRENT behavior so the decision cannot be
+/// made silently: filtering them later flips this red, which is the point.
+#[tokio::test]
+async fn information_schema_still_exposes_the_dollar_metadata_tables() {
+    use tempfile::TempDir;
+
+    let warehouse = TempDir::new().unwrap();
+    let session = ReparkSession::builder()
+        .config("datafusion.catalog.information_schema", "true")
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session
+        .create_namespace("ice", "sales", HashMap::new())
+        .await
+        .unwrap();
+    session
+        .testing_oob_create_table("ice", "sales", "orders", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session.refresh_catalog_provider("ice").await.unwrap();
+
+    let rows = session
+        .sql(
+            "SELECT count(*) AS n FROM information_schema.tables \
+             WHERE table_catalog = 'ice' AND table_schema = 'sales' \
+             AND table_name LIKE 'orders$%'",
+        )
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let counts = rows[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<arrow::array::Int64Array>()
+        .unwrap();
+    assert!(
+        counts.value(0) > 0,
+        "metadata tables currently enumerate (open product question — see the P2G ledger); \
+         got {}",
+        counts.value(0)
+    );
+}
+
+/// The negative half of the row above: WITHOUT the conf, `SHOW TABLES` still refuses with
+/// DataFusion's own message. This is what makes the Q8 delivery attributable to the builder key
+/// rather than to a defaulted-on `information_schema`.
+#[tokio::test]
+async fn show_tables_still_refuses_without_the_information_schema_conf() {
+    let session = ReparkSession::new().unwrap();
+    let error = session.sql("SHOW TABLES").await.unwrap_err();
+    assert!(
+        error.to_string().contains("information_schema"),
+        "the refusal must name the conf that enables it: {error}"
+    );
+}

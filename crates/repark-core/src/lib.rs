@@ -27,7 +27,7 @@ mod time_travel;
 
 // --- The Session surface (v1 names, courtesy `Session` alias). ---
 pub use session::ReparkSession as Session;
-pub use session::{ReparkSession, ReparkSessionBuilder, TimeTravelOpts};
+pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, TimeTravelOpts};
 
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};
