@@ -596,6 +596,12 @@ mismatched environment manifests → loud failure) and the full verification pan
 | Rust — `repark-python` | `cargo test -- --list`, identity map (crate name and module paths unchanged) | none expected |
 | Python — facade suite | `pytest --collect-only -q` | `task/port/deferred-python-tests.txt` |
 
+The facade population also admits **declared v2-only additions**
+(`task/port/added-python-tests.txt`) — tests for capabilities the pin has no equivalent for
+(the first: the tier-2 AWS workflow's placeholder-bucket guard, PR-6). The identity is then
+`(v2_collected − added) ∪ deferred = pin_collected`; the comparator subtracts the additions from
+the candidate side exactly as it subtracts the deferred list from the baseline side.
+
 Both Rust populations port under an **identity** map: the crate names and module paths are unchanged,
 so relocation discipline's move-only shape applies and the sorted `--list` diff must be empty with no
 declared renames. The Python population is move-only in the same sense — every ported test keeps its
@@ -699,9 +705,14 @@ only, merged code only, no self-hosted runners.
 - **Scope:** the job runs the acceptance test module only — never the full facade suite. Blast
   radius and runner minutes both.
 - **Inputs:** the acceptance gate variable set to exactly `"1"`; the three entity/date/id-column
-  values as repository variables; the S3 Tables bucket ARN as a repository **secret**, because it is
-  account-identifying and this repository is public. Absent secret ⇒ that leg skips, exactly as the
-  ported test module already behaves.
+  values as repository variables; the S3 Tables bucket ARN AND the role ARN as repository **secrets**, because both are
+  account-identifying and this repository is public; the bronze bucket + warehouse the harness
+  reads/writes are repository **variables** (`REPARK_ACCEPT_BRONZE_BUCKET` / `_WAREHOUSE`) that the
+  operator MUST set to buckets they own — the committed defaults are synthetic placeholders the
+  harness refuses to sign requests against. Absent `TABLE_BUCKET_ARN` ⇒ that leg skips, exactly as
+  the ported test module already behaves. The OIDC trust sub is a SINGLE environment-form claim in
+  GitHub's immutable subject format (one sub per run); branch binding comes from the environment's
+  deployment-branch policy, not the sub — full shape in `docs/tier2-aws.md`.
 - **Scratch accumulation:** a nightly create-only job accumulates scratch tables. Handled outside
   the workflow entirely: an S3 lifecycle expiry on the scratch prefix, configured once by a human —
   neither a delete path in CI nor a human remembering to reap. Glue scratch-database entries are

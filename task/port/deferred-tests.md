@@ -258,3 +258,14 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   `--junit` comparator run over these two reports, with this ledger as its only subtraction
   input, is byte-identical and exits 0. Zero `#[ignore]`, zero `--skip`, zero commented-out
   tests. Evidence: [../p3e-facade-ledger.md](../p3e-facade-ledger.md).
+
+
+## Declared facade-census ADDITIONS (v2-only tests)
+
+Symmetric to the deferred list: `task/port/added-python-tests.txt` names facade tests that exist
+in v2 but NOT at the pin, so the collect-only diff shows them as "appeared". The phase-close
+reconciliation identity is therefore `(v2_collected − added) ∪ deferred = pin_collected`, and the
+comparator subtracts the additions list from the CANDIDATE side (the `--added` handling lands in
+PR-7, where the real v2 census run first consumes it). Current additions (2, phase-3 PR-6): the
+two `assert_real_buckets_configured` pins for the tier-2 AWS workflow's placeholder-bucket refusal
+— a v2-only capability (the pin has no public AWS workflow).

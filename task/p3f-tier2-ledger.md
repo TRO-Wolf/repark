@@ -35,8 +35,13 @@ workflow is ever required).
 
 ## Census obligation
 
-None — workflow + doc files only; no test names created, moved, or removed. `cargo test --
---list` and `pytest --collect-only` unchanged by construction.
+The security-panel fix (below) required a source guard in the facade tree, so this unit is NOT
+census-neutral after all: two always-run pins were ADDED to `test_acceptance_helpers.py`
+(`test_placeholder_buckets_refuse_a_real_aws_run`, `test_operator_buckets_pass_the_guard`).
+They are declared v2-only facade-census additions in `task/port/added-python-tests.txt`
+(the facade collect-only count goes 2,497 → 2,499); the reconciliation identity becomes
+`(v2_collected − added) ∪ deferred = pin_collected`, and PR-7's comparator subtracts the
+additions list from the candidate side. Rust `-- --list` unchanged.
 
 ## Gate results
 
@@ -44,3 +49,37 @@ Recorded at push time: workflows parse (11 files), zizmor clean (`make workflows
 `make ci` + `make test` green, both hygiene passes 0 (added-lines content semantics).
 Honest disclosure: neither workflow's runtime behaviour is locally provable — the first
 `workflow_dispatch` of each is the operator's post-merge acceptance step.
+
+
+## Security-panel fixes (orchestrator, post-verification)
+
+The three-lens panel (SECURITY lens mandated) returned 4 HIGH + 4 MED on the net-new AWS
+workflow — every one real, every one fixed:
+
+- **Credentials mint LAST** (HIGH): `configure-aws-credentials` moved to immediately before the
+  pytest step, after checkout/toolchains/uv-sync/maturin — no third-party build script or PyPI
+  download runs inside the credentialed window. The rust-cache restore is likewise pre-credential
+  now (subsumes the "cache inside credentialed job" LOW).
+- **Placeholder-bucket refusal** (HIGH ×2, security+design): the EC-9-scrubbed `example-*` bucket
+  constants in `_acceptance.py` are now `os.environ`-overridable (defaulting to the placeholders,
+  so local runs are unaffected) and a new `assert_real_buckets_configured()` FAILS LOUD when a
+  real-AWS run still targets a placeholder — a signed request to a squattable global name would
+  disclose the assumed-role ARN + account id. Wired into both gated tests + two always-run pins;
+  operator supplies `REPARK_ACCEPT_BRONZE_BUCKET`/`_WAREHOUSE` as repository variables.
+- **OIDC sub corrected** (HIGH): GitHub sends ONE sub per run; with `environment:` set it is the
+  environment form, and this repo uses the immutable subject format — the runbook now prescribes a
+  single `StringEquals` on `repo:TRO-Wolf@64240326/repark@1325259325:environment:aws-acceptance`
+  (the old ref+environment "AND" was unmatchable, and its "OR" workaround weaker). design §7.4 +
+  the workflow header corrected to match.
+- **Branch binding is the environment's deployment-branch policy** (HIGH): runbook §1 now
+  instructs Selected-branches → `main` (the in-file ref guard is defence-in-depth only; the IAM
+  sub can't pin the branch).
+- **`mask-aws-account-id: true`** (MED) + role ARN promoted to a SECRET (public run logs).
+- **IAM policy given resource-ARN shapes** (MED): explicit per-service ARNs, `Resource: "*"` banned,
+  the bronze-read grant the harness actually needs, all delete actions banned.
+- **pyspark pinned** (design HIGH, PR-4-owned file fixed here): `record = ["pyspark==4.1.2"]` +
+  re-lock (was `>=3.5` resolving 4.2.0 — the drift detector's own oracle was unpinned); the
+  parity-live/Makefile/map "4.1.2 pinned in uv.lock" claims are now true.
+- Maps: parent `.github/map.md` + workflows-map tiering paragraphs updated (tier-2 landed here).
+- Makefile `PARITY_LIVE_JAVA_HOME` defaults to `$(JAVA_HOME)` (no machine-specific committed path);
+  parity-live timeout removed (fidelity to the verbatim port).

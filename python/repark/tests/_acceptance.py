@@ -10,6 +10,8 @@ These mirror the shape of ``process_silver.py``.
 
 from __future__ import annotations
 
+import os
+
 from repark import Window
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.dataframe import DataFrame
@@ -18,14 +20,49 @@ from repark.dataframe import DataFrame
 # Constants — mirrored from the real process_silver.py config block
 # ==============================================================================================
 # Bronze reads use the s3a scheme; the Glue warehouse uses s3. Both must resolve (WG3).
-BRONZE_BUCKET = "example-bronze-bucket-v1"
+#
+# The bucket + warehouse are RUNTIME-OVERRIDABLE, defaulting to synthetic placeholders. This is
+# load-bearing security, not convenience: the committed defaults are `example-*` placeholders the
+# maintainer does not own, so a real-AWS run MUST supply the operator's own buckets via
+# `REPARK_ACCEPT_BRONZE_BUCKET` / `REPARK_ACCEPT_WAREHOUSE` (repository VARIABLES in
+# `aws-acceptance.yml`; docs/tier2-aws.md §4). Without them the credentialed job would issue
+# SigV4-signed requests against globally-squattable placeholder names — so the harness fails loud
+# (below) when `REPARK_AWS_ACCEPTANCE=1` is set but the buckets are still the placeholders.
+BRONZE_BUCKET = os.environ.get("REPARK_ACCEPT_BRONZE_BUCKET", "example-bronze-bucket-v1")
 BRONZE_PREFIX = "bronze"
 
 # The real script's config block names the catalog ``glue_alt`` but publishes via ``glue_catalog``
 # (the cluster spark-defaults supply that name on Glue/EMR). The harness configures the name it
 # actually uses for the publish path.
 SILVER_CATALOG = "glue_catalog"
-GLUE_WAREHOUSE = "s3://example-warehouse/"
+GLUE_WAREHOUSE = os.environ.get("REPARK_ACCEPT_WAREHOUSE", "s3://example-warehouse/")
+
+# The placeholder values the committed defaults carry — a real-AWS run must not use these.
+_PLACEHOLDER_BRONZE_BUCKET = "example-bronze-bucket-v1"
+_PLACEHOLDER_WAREHOUSE = "s3://example-warehouse/"
+
+
+def assert_real_buckets_configured() -> None:
+    """Fail loud if a real-AWS run still targets the synthetic placeholder buckets.
+
+    Called by the gated harness once ``REPARK_AWS_ACCEPTANCE=1``. A signed request to a
+    placeholder bucket discloses the assumed-role ARN + account id to whoever owns that global
+    name (and could feed attacker-controlled Parquet into the reader), so this is a hard refusal,
+    never a skip.
+    """
+    unset = []
+    if BRONZE_BUCKET == _PLACEHOLDER_BRONZE_BUCKET:
+        unset.append("REPARK_ACCEPT_BRONZE_BUCKET")
+    if GLUE_WAREHOUSE == _PLACEHOLDER_WAREHOUSE:
+        unset.append("REPARK_ACCEPT_WAREHOUSE")
+    if unset:
+        raise RuntimeError(
+            "real-AWS acceptance targets synthetic placeholder buckets; set "
+            + " and ".join(unset)
+            + " to buckets you own (docs/tier2-aws.md §4). Refusing to issue signed requests "
+            "against squattable placeholder names."
+        )
+
 
 # S3 Tables (A2 second bullet). A NON-secret catalog name only; the table-bucket ARN is an
 # account-specific value passed at RUNTIME from the `TABLE_BUCKET_ARN` env var — NEVER hardcoded

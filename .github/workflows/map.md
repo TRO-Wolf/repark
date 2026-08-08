@@ -16,6 +16,12 @@ set `persist-credentials: false`. CI cargo steps use `--locked`. `cargo-deny` / 
 Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; top-level
 `permissions: contents: read` in every workflow.
 
+> **Tiering (updated PR-6):** the PR gate is tier 1 (`ci.yml` + the always-run siblings —
+> every PR, no secrets, GitHub-hosted, read-only token). Tier 2 (`parity-live.yml`,
+> `aws-acceptance.yml`) is **merged-code-only** — nightly cron + manual dispatch, never
+> `pull_request`, never a required check; `aws-acceptance.yml` is the ONE workflow that touches
+> real AWS (OIDC, environment-gated, no secrets in tier 1). Not everything here runs locally.
+
 ## Contents
 
 | Workflow | What |

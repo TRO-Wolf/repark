@@ -1258,6 +1258,14 @@ NOT in that file is a defect, not a decision.
 - Up: [../map.md](../map.md)
 - Code under test: [../src/repark/map.md](../src/repark/map.md).
 
+### PR-6 tier-2 AWS security guard (2026-08-08)
+- `_acceptance.py` gained `assert_real_buckets_configured()` + env-overridable BRONZE_BUCKET /
+  GLUE_WAREHOUSE (default to synthetic placeholders): a real-AWS run refuses the committed
+  placeholders. Two always-run pins in `test_acceptance_helpers.py`
+  (`test_placeholder_buckets_refuse_a_real_aws_run`, `test_operator_buckets_pass_the_guard`) are
+  declared v2-only facade-census ADDITIONS (`task/port/added-python-tests.txt`); the gated
+  `test_aws_acceptance.py` calls the guard before any AWS touch.
+
 ## Debug
 
 - ruff format lockstep (octo C8).

@@ -22,6 +22,11 @@ across phases (as opposed to the plan itself, which lives in
   appearing here. Its prose half is the "Python — the facade suite" section of
   [deferred-tests.md](deferred-tests.md); the two are bound by
   `python/repark-parity/tests/test_deferred_ledger.py`.
+- [added-python-tests.txt](added-python-tests.txt) — the mirror ADDITIONS allowlist (phase-3
+  PR-6): facade node ids that exist in v2 but NOT at the pin (v2-only capabilities), subtracted
+  from the CANDIDATE side. Reconciliation identity `(v2_collected − added) ∪ deferred =
+  pin_collected`. First entries: the two tier-2 AWS placeholder-bucket-guard pins. The
+  comparator's `--added` handling lands in PR-7 (its first census-comparison consumer).
 
 ## I want to...
 

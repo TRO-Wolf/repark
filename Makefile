@@ -30,7 +30,9 @@ CARGO_DENY_VERSION := 0.19.9
 CARGO_AUDIT_VERSION := 0.22.1
 UV_VERSION := 0.9.5
 # Local JVM for `make parity-live` (Spark 4.1.2 needs Java 17; CI uses Temurin 17 via setup-java).
-PARITY_LIVE_JAVA_HOME ?= /usr/lib/jvm/zulu-17-amd64
+# Defaults to the caller's JAVA_HOME so no machine-specific path is committed; set it to a Java 17
+# home if your default JAVA_HOME is a different major: `make parity-live PARITY_LIVE_JAVA_HOME=...`.
+PARITY_LIVE_JAVA_HOME ?= $(JAVA_HOME)
 
 .PHONY: help
 help: ## List available targets
