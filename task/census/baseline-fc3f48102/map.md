@@ -46,8 +46,13 @@ exits 0 **through the comparator**.
 - `classic-run1/`, `classic-run2/` — classic cohort ×2 (stability): **142/345 both runs**, self-diff ZERO rows (`stability-self-diff.txt`).
 - `expand/` — **44/171**. `expand2/` — **87/167**.
 - `facade/` — full-extras facade cohort pair (2,509 collected / 2,517 junit outcomes).
-- `census-env-manifest.txt` + `census-venv-freeze.txt`; `facade-env-manifest.txt` + `facade-venv-freeze.txt` — the environments ARE part of the pin (pyspark 4.1.2, pandas<3, debug build; facade venv: full extras, pyspark+duckdb ABSENT, all gates unset, wheel installed by explicit path).
-- `stability-self-diff.txt` — empty (zero unstable rows; nothing quarantined).
+- `census-env-manifest.txt` + `census-venv-freeze.txt`; `facade-env-manifest.txt` + `facade-venv-freeze.txt` — the environments ARE part of the pin (pyspark 4.1.2, pandas<3, debug build; facade venv: full extras, **pandas major 3** — the major v1's own CI is green under; a pandas-2.3.3 run fails `test_to_pandas_with_nulls_values_and_dtypes`, recorded in the ledger — pyspark+duckdb ABSENT, JVM-free PATH verified, all gates unset by name, wheel installed by explicit path).
+- `stability-self-diff.txt` — empty (zero unstable rows).
+- `quarantine.txt` — two ids: the v1 runner's duplicate emissions in the expand cohort
+  (`test_udf.UDFInitializationTests.*` pair, conflicting classes in one run) — excluded from
+  the gate by name on both sides, echoed separately by the comparator.
+- `census-manifest.json` + `facade/facade-manifest.json` — the external manifest halves the
+  comparator gates on (pandas/pyarrow versions; the report JSONs carry the rest).
 - `quarantine.txt` — the quarantined-unstable ledger, **empty of entries by result**. The
   documented acceptance command passes `--quarantine`, and a missing ledger file is exit 2 by
   design: recording zero quarantined rows requires an empty file, not an absent one. Re-derive it

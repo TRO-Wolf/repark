@@ -47,6 +47,12 @@ stability run and quarantine rule, the full-extras facade cohort, the attributio
 - Procedure: [`../../../docs/port/census.md`](../../../docs/port/census.md);
   design: [`../../../docs/design/python-facade.md`](../../../docs/design/python-facade.md) §5 F1, §6
 
+### Comparator duplicate/denominator semantics (PR-4 orchestrator pass)
+- Duplicate `test_id`s refuse loudly with ONE escape: ids named in the quarantine ledger may
+  repeat (first row wins; the v1 runner's expand `test_udf` pair is the recorded case).
+- A report's recorded denominator block is validated against its rows AS CARRIED (duplicates
+  included, `Side.carried_statuses`); the deduped `classes` drive the comparison.
+
 ## Debug
 
 | Symptom | First check |

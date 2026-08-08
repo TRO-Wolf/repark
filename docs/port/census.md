@@ -201,7 +201,15 @@ with the evidence that it held:
   `REPARK_PG_DSN`, `REPARK_PG_SCALE`, `REPARK_PARITY_LIVE`, `REPARK_TPCDS_FULL`,
   `REPARK_WRITE_BENCH_RELEASE`, `REPARK_ML_FORMAT`, `REPARK_ML_VERSION`, `REPARK_LOG`, and
   `TABLE_BUCKET_ARN`. Verification is by absence check only — **the procedure never sets one.**
-- **No JVM on `PATH`.** pyspark-gated tests must skip for the recorded reason, not accidentally run.
+- **No JVM on `PATH`.** pyspark-gated tests must skip for the recorded reason, not accidentally
+  run. (Where java shares a directory with core tools, a symlink-shim PATH minus `java*` is the
+  recorded mechanism — see the baseline's facade manifest.)
+- **pandas major 3 — for THIS cohort only.** The `<3` pin above applies to the Apache census
+  cohorts (their helpers import a pandas-2 internal). The facade suite is the opposite: v1's
+  own CI installs extras fresh (pandas 3.x) and is green there, and a facade run under pandas
+  2.3.3 FAILS `test_interchange_parity.py::test_to_pandas_with_nulls_values_and_dtypes`
+  (measured at the pin, 2026-08-08). The comparator's `pandas_version` manifest gate holds
+  both sides to the recorded version either way.
 - **pyspark ABSENT** from the interpreter. Ten `importorskip` sites would otherwise silently change
   outcome class.
 - **duckdb ABSENT.** Three `importorskip` sites; duckdb is a dev-group dependency rather than an
@@ -223,6 +231,14 @@ exactly the paths a partial install silently skips. **A cohort that lets an inst
 its denominator is not a gate.**
 
 ---
+
+### Quarantined duplicate ids
+
+The v1 runner emits DUPLICATE rows with conflicting classes for two `test_udf` ids in the
+expand cohort (pin behavior). Ids named in the quarantine ledger are the ONLY ids allowed to
+repeat inside a report: the loader keeps the first row, the gate excludes them on both sides,
+and the echo reports them separately. A report's recorded denominator block is validated
+against its rows AS CARRIED (duplicates included) — the deduped rows drive the comparison.
 
 ## 5. The comparator
 

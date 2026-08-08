@@ -142,6 +142,10 @@ class Side:
     manifest: dict[str, str]
     classes: dict[str, str]
     recorded_denominators: dict[str, Any] = field(default_factory=dict)
+    # The raw status multiset as CARRIED by the report, duplicates included — the recorded
+    # denominator block is validated against this, while `classes` (deduped; quarantined ids
+    # may repeat at load) drives the comparison. None for junit sides.
+    carried_statuses: list[str] | None = None
 
 
 def load_ledger(path: Path | None) -> list[str]:
@@ -174,24 +178,35 @@ def _read_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def load_census_report(path: Path, *, label: str) -> Side:
-    """Load a ``compat.runner`` JSON report into a comparison side."""
+def load_census_report(path: Path, *, label: str, quarantine: frozenset[str] = frozenset()) -> Side:
+    """Load a ``compat.runner`` JSON report into a comparison side.
+
+    A duplicate ``test_id`` is a loud refusal — a report with duplicate keys cannot be
+    multiset-compared — with exactly one escape: ids named in the QUARANTINE ledger may appear
+    more than once (the source repo's runner emits duplicate rows with conflicting classes for
+    a known pair of ids; quarantined rows are excluded from the gate and echoed separately, so
+    keeping the first row is sufficient and the conflict never reaches the comparison).
+    """
     payload = _read_json(path)
     manifest = {key: str(payload.get(key, "")) for key in MANIFEST_KEYS}
     modules = payload.get("modules")
     if not isinstance(modules, list):
         raise ComparatorError(f"{path}: report has no 'modules' list")
     classes: dict[str, str] = {}
+    carried: list[str] = []
     for module in modules:
         for row in module.get("rows") or []:
             test_id = str(row.get("test_id", "")).strip()
             status = str(row.get("status", "")).strip()
             if not test_id:
                 raise ComparatorError(f"{path}: a census row has no test_id")
+            carried.append(status)
             if test_id in classes:
+                if test_id in quarantine:
+                    continue
                 raise ComparatorError(
                     f"{path}: duplicate test id {test_id!r} — a report with duplicate keys "
-                    f"cannot be multiset-compared"
+                    f"cannot be multiset-compared (only QUARANTINED ids may repeat)"
                 )
             classes[test_id] = status
     recorded = payload.get("denominators")
@@ -201,6 +216,7 @@ def load_census_report(path: Path, *, label: str) -> Side:
         manifest=manifest,
         classes=classes,
         recorded_denominators=recorded if isinstance(recorded, dict) else {},
+        carried_statuses=carried,
     )
 
 
@@ -373,7 +389,10 @@ def check_recorded_denominators(side: Side, *, junit: bool) -> None:
     """
     if junit or not side.recorded_denominators:
         return
-    actual = compute_denominators(side.classes, junit=False)
+    carried = (
+        side.carried_statuses if side.carried_statuses is not None else list(side.classes.values())
+    )
+    actual = compute_denominators(dict(enumerate(carried)), junit=False)
     mismatches: list[str] = []
     for key in GATED_DENOMINATOR_KEYS:
         if key not in side.recorded_denominators:
@@ -730,8 +749,11 @@ def _load_sides(args: argparse.Namespace) -> tuple[Side, Side]:
             args.candidate, label=args.label_candidate, manifest=external_candidate
         )
         return baseline, candidate
-    baseline = load_census_report(args.baseline, label=args.label_baseline)
-    candidate = load_census_report(args.candidate, label=args.label_candidate)
+    quarantine = frozenset(load_ledger(args.quarantine))
+    baseline = load_census_report(args.baseline, label=args.label_baseline, quarantine=quarantine)
+    candidate = load_census_report(
+        args.candidate, label=args.label_candidate, quarantine=quarantine
+    )
     baseline.manifest = merge_external_manifest(
         baseline.manifest,
         external_baseline,

@@ -1,0 +1,15 @@
+iniconfig==2.3.0
+numpy==2.5.1
+packaging==26.3
+pandas==2.3.3
+pluggy==1.6.0
+py4j==0.10.9.9
+pyarrow==25.0.0
+pygments==2.20.0
+pyspark==4.1.2
+pytest==9.1.1
+python-dateutil==2.9.0.post0
+pytz==2026.3.post1
+-e file://<repo>/python/repark
+six==1.17.0
+tzdata==2026.3

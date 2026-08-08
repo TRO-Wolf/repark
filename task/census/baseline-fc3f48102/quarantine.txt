@@ -12,3 +12,8 @@
 # The recorded run at pin fc3f48102 self-differed on zero rows (`stability-self-diff.txt` is
 # empty). This list must be RE-DERIVED, not carried forward, when the baseline is regenerated
 # (see map.md "Regeneration required").
+# v1-runner duplicate emissions (pin behavior, expand cohort): the runner writes two rows with
+# conflicting classes for these two ids in a single run. Quarantined by name — excluded from
+# the gate on both sides, echoed separately; see the comparator's quarantined-duplicate escape.
+pyspark.sql.tests.test_udf.UDFInitializationTests.test_err_parse_type_when_no_sc
+pyspark.sql.tests.test_udf.UDFInitializationTests.test_udf_init_should_not_initialize_context

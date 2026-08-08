@@ -68,6 +68,12 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
 
 - Up: [../map.md](../map.md)
 
+### PR-4 orchestrator additions
+- `test_duplicate_test_id_loads_when_quarantined` / `…_without_quarantine_still_refuses` —
+  both directions of the comparator's one duplicate escape (quarantined ids may repeat,
+  first row wins), with the fixture recomputing the recorded denominator block over rows AS
+  CARRIED — matching the real v1 expand artifact.
+
 ## Debug
 
 First checks: `PYTHONPATH=python/repark-parity/src pytest python/repark-parity/tests -q`.

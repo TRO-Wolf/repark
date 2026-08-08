@@ -735,3 +735,86 @@ def test_junit_without_manifests_is_a_loud_failure(tmp_path, capsys) -> None:
 def test_comparator_error_is_raised_not_swallowed(tmp_path) -> None:
     with pytest.raises(ComparatorError):
         load_ledger(tmp_path / "missing.txt")
+
+
+def _inject_duplicate(payload: dict[str, Any], test_id: str, status: str) -> dict[str, Any]:
+    """Append a second row for an EXISTING test_id (a dict-of-rows fixture cannot express a
+    duplicate, so the raw modules list is edited the way the source runner actually emits it).
+    The recorded denominator block is recomputed over the rows AS CARRIED — duplicates
+    included — matching the real artifact, whose recorded counts cover every emitted row."""
+    for module in payload["modules"]:
+        for row in module["rows"]:
+            if row["test_id"] == test_id:
+                dup = dict(row)
+                dup["status"] = status
+                module["rows"].append(dup)
+                carried = [
+                    CensusRow(test_id=f"carried.{i}", module="", status=r["status"])
+                    for m in payload["modules"]
+                    for i, r in enumerate(m["rows"])
+                ]
+                payload["denominators"] = denominators(
+                    [
+                        CensusRow(test_id=f"{r.test_id}.{i}", module="", status=r.status)
+                        for i, r in enumerate(carried)
+                    ]
+                )
+                return payload
+    raise AssertionError(f"fixture has no row {test_id!r}")
+
+
+def test_duplicate_test_id_loads_when_quarantined(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The one escape from the duplicate-id refusal: ids named in the QUARANTINE ledger may
+    repeat (the source runner emits a known duplicate pair with conflicting classes). The first
+    row wins at load, the id is excluded from the gate and echoed under quarantined, and
+    self-comparison exits 0."""
+    dup_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_a"
+    payload = _inject_duplicate(_report(dict(_BASE_ROWS)), dup_id, "FAIL-MISSING")
+    path = _write(tmp_path / "dup.json", payload)
+    empty = tmp_path / "deferred.txt"
+    empty.write_text("", encoding="utf-8")
+    ledger = tmp_path / "quarantine.txt"
+    ledger.write_text(f"{dup_id}\n", encoding="utf-8")
+    code, out, _ = _run(
+        [
+            "--baseline",
+            str(path),
+            "--candidate",
+            str(path),
+            "--deferred",
+            str(empty),
+            "--quarantine",
+            str(ledger),
+        ],
+        capsys,
+    )
+    assert code == 0
+    assert dup_id in out
+
+
+def test_duplicate_test_id_without_quarantine_still_refuses(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The contrast pin: the same duplicate WITHOUT a quarantine entry is a loud exit 2."""
+    dup_id = "pyspark.sql.tests.test_functions.FunctionsTests.test_a"
+    payload = _inject_duplicate(_report(dict(_BASE_ROWS)), dup_id, "FAIL-MISSING")
+    path = _write(tmp_path / "dup.json", payload)
+    empty = tmp_path / "empty.txt"
+    empty.write_text("", encoding="utf-8")
+    code, _, err = _run(
+        [
+            "--baseline",
+            str(path),
+            "--candidate",
+            str(path),
+            "--deferred",
+            str(empty),
+            "--quarantine",
+            str(empty),
+        ],
+        capsys,
+    )
+    assert code == 2
+    assert "duplicate test id" in err

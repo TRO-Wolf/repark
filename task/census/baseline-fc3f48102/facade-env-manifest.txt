@@ -1,8 +1,13 @@
 python: Python 3.12.3
-wheel: repark-0.0.0-cp312-abi3-manylinux_2_39_x86_64.whl
+wheel: repark-0.0.0-cp312-abi3-manylinux_2_39_x86_64.whl (installed by explicit file path — PyPI name-reservation excluded)
 build-mode: debug
-extras: numpy,pandas,polars,ml-ext
-java-on-path: /usr/lib/jvm/java-11-openjdk-amd64/bin/java
-gates-unset: all REPARK_* + TABLE_BUCKET_ARN
+extras present: numpy, pandas, polars, ml-ext
+pandas: 3.0.5
+numpy: 2.5.1
+polars: 1.43.2
+pyarrow: 25.0.0
+pyspark: ABSENT (verified in freeze)
+duckdb: ABSENT (verified in freeze)
+java-on-path: absent (PATH filtered; verified)
+gates-unset (verified absent, by name): REPARK_AWS_ACCEPTANCE REPARK_ACCEPT_DS REPARK_ACCEPT_ENTITY REPARK_ACCEPT_ID_COL REPARK_PARITY_LIVE REPARK_PG_DSN REPARK_PG_SCALE REPARK_PYSPARK_COMPAT REPARK_COMPAT_SCRATCH REPARK_COMPAT_SERIES REPARK_TPCDS_FULL REPARK_ML_FORMAT REPARK_ML_VERSION REPARK_LOG REPARK_WAREHOUSE REPARK_CATALOG_PREFIX TABLE_BUCKET_ARN
 pin: fc3f48102
-install: local wheel by explicit path (PyPI name-reservation repark==0.0.1 excluded)

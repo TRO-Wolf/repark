@@ -2508,4 +2508,4 @@ tests/test_writer_v2.py::test_write_csv_json_round_trip
 tests/test_writer_v2.py::test_write_orc_loud
 tests/test_writer_v2.py::test_mini_dogfood_write_to_production_snippet
 
-2509 tests collected in 6.78s
+2509 tests collected in 2.16s

@@ -13,8 +13,8 @@ pyarrow==25.0.0
 pygments==2.20.0
 pytest==9.1.1
 python-dateutil==2.9.0.post0
-repark @ file://<baseline>/wheels/repark-0.0.0-cp312-abi3-manylinux_2_39_x86_64.whl
-repark-parity @ file://<v1-pin>/python/repark-parity
+repark @ file://<scratch>/wheels/repark-0.0.0-cp312-abi3-manylinux_2_39_x86_64.whl
+repark-parity @ file://<repo>/python/repark-parity
 scikit-learn==1.9.0
 scipy==1.18.0
 six==1.17.0

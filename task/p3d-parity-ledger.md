@@ -380,3 +380,36 @@ clock), exactly as its generation was.
 - The corrected procedure now requires `--manifest-baseline` / `--manifest-candidate` in census
   mode as well as junit mode; any orchestrator runbook that reproduces census.md §5's older
   four-flag invocation should be updated with it.
+
+## Baseline REGENERATED (orchestrator, post-verification)
+
+The verify lenses found the first committed baseline unusable (sed-corrupted JSON escapes ×677,
+XML-hostile placeholder tokens, 0-byte census freeze, un-conforming facade env) — every defect
+in the ORCHESTRATOR's assembly commit, none in the builder's. Regeneration record:
+
+- **Redaction is now the format-aware `compat.redact`** (fixer-built, unit-tested, wired into
+  run_census.sh): JSON rewritten through the JSON parser, XML through the XML parser, validity
+  re-asserted before write. Tokens `<repo>` / `<scratch>` / `<home>`. Both corruption modes are
+  pinned as explicit test contrasts. All committed artifacts re-validated: every JSON loads,
+  the junit XML parses, both freezes non-empty, zero forbidden-pattern hits.
+- **Census freeze recorded** (pandas 2.3.3 / pyarrow 25.0.0 / pyspark 4.1.2 — the venv was
+  conforming all along; only the recording had failed), manifest enriched with the load-bearing
+  versions + gate variables enumerated by name. `census-manifest.json` + `facade-manifest.json`
+  carry the external halves the comparator gates on.
+- **Facade cohort re-run TWICE, and the second run was evidence:** under the recipe's literal
+  pandas<3 (2.3.3) the suite FAILS one test (`test_to_pandas_with_nulls_values_and_dtypes`) —
+  v1's own CI is green under pandas 3 (extras resolve fresh). The clause was wrong, not the
+  run: census.md now scopes `<3` to the Apache cohorts and records pandas major 3 for the
+  facade cohort, with this measurement as the citation. Final recorded run: pandas 3.0.5,
+  JVM-free PATH (symlink-shim, verified), 2,509 collected / 2,517 outcomes (2,471 passed +
+  46 skipped, exit 0).
+- **Expand duplicate ids quarantined** (the runner emits two `test_udf` rows twice with
+  conflicting classes — pin behavior): `quarantine.txt` names them with the reason; the
+  comparator's duplicate refusal gained its ONE escape (quarantined ids may repeat; first row
+  wins; excluded + echoed), and the recorded-denominator gate validates against rows AS
+  CARRIED (duplicates included). Both directions pinned by new tests (128 total now).
+- **The gate has now actually RUN on the committed artifacts:** classic-run1 vs classic-run2 →
+  exit 0 (the stability claim, through the real instrument); expand and expand2 self-checks →
+  exit 0 with the quarantine ledger; facade junit self-check → exit 0. Command lines as in
+  census.md §5.
+- EC-7 map-count correction: 10 rewritten map.md files, not 11 (src/map.md ported verbatim).

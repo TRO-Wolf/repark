@@ -17,4 +17,4 @@ Recorded evidence for the full-extras facade cohort at the v1 pin (design §6.3)
 - Up: [../map.md](../map.md)
 
 ## Debug
-- Paths inside artifacts are mechanically redacted (`<v1-pin>`, `<baseline>`, `<scratch>`); same transform applies to the v2 side.
+- Paths inside artifacts are redacted via `compat.redact` (`<repo>` / `<scratch>` / `<home>`); the identical tool applies to the v2 side. The junit XML parses clean by construction (the redactor rewrites through the XML parser).
