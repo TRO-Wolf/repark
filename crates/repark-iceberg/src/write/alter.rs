@@ -482,7 +482,7 @@ mod tests {
         let (catalog, ident) = setup(&wh).await;
 
         let props = HashMap::from([
-            ("team".to_string(), "vital-fold".to_string()),
+            ("team".to_string(), "example-team".to_string()),
             ("write.format.default".to_string(), "parquet".to_string()),
         ]);
         set_table_properties(catalog.as_ref(), &ident, &props)
@@ -491,7 +491,7 @@ mod tests {
 
         let table = catalog.load_table(&ident).await.unwrap();
         let after = table.metadata().properties();
-        assert_eq!(after.get("team").map(String::as_str), Some("vital-fold"));
+        assert_eq!(after.get("team").map(String::as_str), Some("example-team"));
         assert_eq!(
             after.get("write.format.default").map(String::as_str),
             Some("parquet")

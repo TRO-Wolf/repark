@@ -1,0 +1,116 @@
+# Build the repark wheel and smoke-test that it imports — catches PyO3/ABI/compile breakage early
+# (the main CI Rust jobs do not build the cdylib as a wheel). Two paths, tuned for cost:
+#
+#   - smoke (PRs + main): a fast DEBUG wheel built on the host (no manylinux container), then
+#     `import repark` + the full facade suite against the packaged wheel (the real-artifact rule's
+#     standing home — docs/testing.md). **No Swatinem/rust-cache** here: this workflow is also
+#     tag-triggered, so zizmor treats a restore/write cache step as `cache-poisoning` unless it is
+#     fully disabled. `lookup-only: true` is *not* a restore (existence probe only) and still
+#     defaults `save-if` to true (write on miss) — so it is neither warm nor write-safe; the step
+#     is omitted instead. Smoke proves the cdylib compiles + imports + behaves (not a release LTO
+#     manylinux build).
+#   - release-wheels (tags only): the real optimized manylinux wheel (`--release`), uploaded as an
+#     artifact. Rare, so the heavy build is acceptable there. **No shared build-cache restore** on
+#     this path (zizmor `cache-poisoning`): `sccache: "false"`; no rust-cache step. Published
+#     wheels must not rebuild from prior CI cache state.
+#
+# Ported from the port source at phase-3 PR-5 with two deliberate changes:
+#   1. NO `paths:` filter on the pull_request trigger — the `smoke` job is a REQUIRED check, and a
+#      path-filtered required check deadlocks non-matching PRs (task/lessons.md).
+#   2. Wheels install by EXPLICIT FILE PATH, never `--find-links … repark` by bare name: a PyPI
+#      name-reservation package (`repark==0.0.1`) outversions every local 0.0.0 wheel and silently
+#      shadows it (found live during the phase-3 baseline runs).
+name: wheels
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wheels-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: build + import smoke (debug, host)
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+        with:
+          python-version: "3.12"
+      # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags), so a floating ref would
+      # run unreviewed action code forever. The `toolchain:` input below selects the compiler.
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+        with:
+          toolchain: "1.96.0"
+      # No Swatinem/rust-cache: workflow is tag-triggered overall → zizmor `cache-poisoning` on any
+      # restore path; `lookup-only` does not download/restore and still allows save-on-miss. Cold
+      # host debug maturin is acceptable for smoke (import + facade only).
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1
+        with:
+          maturin-version: "v1.14.1"  # Makefile MATURIN pin
+          command: build
+          # Debug build on the host (no --release, no manylinux container).
+          args: --out dist
+          working-directory: python/repark
+          container: "off"
+      - name: import smoke test
+        run: |
+          python3 -m venv /tmp/wheeltest
+          /tmp/wheeltest/bin/pip install --upgrade pip
+          # Explicit wheel path — never resolve `repark` by name (PyPI name-reservation shadowing).
+          WHEEL=$(ls python/repark/dist/repark-*.whl)
+          /tmp/wheeltest/bin/pip install "$WHEEL"
+          /tmp/wheeltest/bin/python -c "import repark; print('repark', repark.__version__)"
+      - name: facade tests against the built wheel
+        # The wheel is already built above, so the full facade pytest suite (the CI home of
+        # `make py-test-facade` — a facade regression must not pass CI on an import smoke alone)
+        # costs only the test runtime. pandas comes via the wheel's own declared extra (so the
+        # packaged version constraint applies); `polars` is left out deliberately (its facade
+        # test self-skips), keeping the job lean. `python/repark-parity` (pure-Python, pyarrow
+        # only) is the differential-comparison core the parity-style facade tests import — in
+        # the uv workspace it resolves as a member, but this bare wheel-test venv must install
+        # it explicitly. pyspark and duckdb stay ABSENT (their gated tests must skip).
+        run: |
+          WHEEL=$(ls python/repark/dist/repark-*.whl)
+          /tmp/wheeltest/bin/pip install "repark[pandas] @ file://$WHEEL" pytest ./python/repark-parity
+          /tmp/wheeltest/bin/python -m pytest python/repark/tests -q
+
+  release-wheels:
+    name: manylinux release wheels (tags)
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1
+        with:
+          maturin-version: "v1.14.1"  # Makefile MATURIN pin
+          command: build
+          args: --release --out dist
+          working-directory: python/repark
+          manylinux: auto
+          # Explicitly off: tag-triggered artifact publish must not restore shared build cache
+          # (zizmor cache-poisoning). Cold manylinux builds are rare and acceptable.
+          sccache: "false"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
+        with:
+          name: wheels-linux
+          path: python/repark/dist/*.whl
+      - name: import smoke test
+        run: |
+          python3 -m venv /tmp/wheeltest
+          /tmp/wheeltest/bin/pip install --upgrade pip
+          WHEEL=$(ls python/repark/dist/repark-*.whl)
+          /tmp/wheeltest/bin/pip install "$WHEEL"
+          /tmp/wheeltest/bin/python -c "import repark; print('repark', repark.__version__)"

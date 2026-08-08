@@ -135,3 +135,4 @@ First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map
 - **EC-9 scrub (2026-08-08, phase-3 PR-5):** pre-existing private fixture/doc literals
   (a team/bucket name fragment) replaced with `example-team` equivalents — outcome-neutral
   (fixtures and their oracles changed together); enumerated in task/p3e-facade-ledger.md.
+- **B-2 scrub sites in this crate (2026-08-08):** `catalog_config.rs` (doc header + fixtures) and `object_store_s3.rs` (fixtures) carry the `example-team` replacements enumerated in task/p3e-facade-ledger.md.

@@ -231,8 +231,11 @@ mod tests {
             Some(("s3".to_string(), "warehouse-bucket".to_string()))
         );
         assert_eq!(
-            parse_s3_bucket("s3a://vital-fold-bronze-bucket-v1/bronze/e/2026-07-09.parquet"),
-            Some(("s3a".to_string(), "vital-fold-bronze-bucket-v1".to_string()))
+            parse_s3_bucket("s3a://example-team-bronze-bucket-v1/bronze/e/2026-07-09.parquet"),
+            Some((
+                "s3a".to_string(),
+                "example-team-bronze-bucket-v1".to_string()
+            ))
         );
     }
 

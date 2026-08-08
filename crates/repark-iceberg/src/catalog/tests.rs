@@ -367,7 +367,7 @@ async fn s3tables_catalog_constructs_and_passes_props_through() {
 #[test]
 fn classify_s3_scheme_selects_object_store() {
     assert_eq!(
-        classify_location_backend("s3://vital-fold-bucket/warehouse/ns/t").unwrap(),
+        classify_location_backend("s3://example-team-bucket/warehouse/ns/t").unwrap(),
         LocationBackend::ObjectStoreS3 {
             configured_scheme: "s3".to_string()
         }
@@ -378,7 +378,7 @@ fn classify_s3_scheme_selects_object_store() {
 #[test]
 fn classify_s3a_scheme_selects_object_store() {
     assert_eq!(
-        classify_location_backend("s3a://vital-fold-bucket/warehouse/ns/t").unwrap(),
+        classify_location_backend("s3a://example-team-bucket/warehouse/ns/t").unwrap(),
         LocationBackend::ObjectStoreS3 {
             configured_scheme: "s3a".to_string()
         }

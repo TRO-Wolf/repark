@@ -6,7 +6,7 @@
 //! ```text
 //! spark.sql.catalog.glue_alt              = org.apache.iceberg.spark.SparkCatalog
 //! spark.sql.catalog.glue_alt.catalog-impl = org.apache.iceberg.aws.glue.GlueCatalog
-//! spark.sql.catalog.glue_alt.warehouse    = s3://vital-fold-spark-iceberg-glue-v1/
+//! spark.sql.catalog.glue_alt.warehouse    = s3://example-team-spark-iceberg-glue-v1/
 //! spark.sql.catalog.glue_alt.io-impl      = org.apache.iceberg.aws.s3.S3FileIO
 //! ```
 //!
@@ -440,7 +440,7 @@ mod tests {
             ),
             (
                 "spark.sql.catalog.glue_alt.warehouse".to_string(),
-                "s3://vital-fold-spark-iceberg-glue-v1/".to_string(),
+                "s3://example-team-spark-iceberg-glue-v1/".to_string(),
             ),
             (
                 "spark.sql.catalog.glue_alt.io-impl".to_string(),
@@ -460,7 +460,7 @@ mod tests {
         assert_eq!(spec.kind, CatalogKind::Glue);
         assert_eq!(
             spec.props.get(WAREHOUSE_PROP).map(String::as_str),
-            Some("s3://vital-fold-spark-iceberg-glue-v1/"),
+            Some("s3://example-team-spark-iceberg-glue-v1/"),
             "warehouse passes through verbatim"
         );
         assert!(
@@ -488,7 +488,7 @@ mod tests {
         assert_eq!(specs[0].kind, CatalogKind::Glue);
         assert_eq!(
             specs[0].props.get(WAREHOUSE_PROP).map(String::as_str),
-            Some("s3://vital-fold-spark-iceberg-glue-v1/"),
+            Some("s3://example-team-spark-iceberg-glue-v1/"),
         );
     }
 
@@ -629,7 +629,7 @@ mod tests {
     /// key the `repark-catalog` builder requires), while `warehouse` stays as a harmless passthrough.
     #[test]
     fn s3tables_warehouse_arn_is_carried_into_table_bucket_arn() {
-        let arn = "arn:aws:s3tables:us-east-1:123456789012:bucket/vital-fold";
+        let arn = "arn:aws:s3tables:us-east-1:123456789012:bucket/example-team";
         let config = HashMap::from([
             (
                 "spark.sql.catalog.tb.type".to_string(),
@@ -714,7 +714,7 @@ mod tests {
             ),
             (
                 "spark.sql.catalog.tb.warehouse".to_string(),
-                "s3://vital-fold-spark-iceberg-glue-v1/".to_string(),
+                "s3://example-team-spark-iceberg-glue-v1/".to_string(),
             ),
         ]);
         let msg = parse_catalog_specs(&config).unwrap_err().to_string();

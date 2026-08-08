@@ -741,7 +741,7 @@ async fn ctas_parses_using_and_threads_tblproperties() {
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.props USING iceberg \
-             TBLPROPERTIES('write.format.default'='parquet', 'team'='vital-fold') \
+             TBLPROPERTIES('write.format.default'='parquet', 'team'='example-team') \
              AS SELECT * FROM src",
     )
     .await
@@ -752,7 +752,7 @@ async fn ctas_parses_using_and_threads_tblproperties() {
     );
     let table = catalogs["ice"].load_table(&ident).await.unwrap();
     let props = table.metadata().properties();
-    assert_eq!(props.get("team").map(String::as_str), Some("vital-fold"));
+    assert_eq!(props.get("team").map(String::as_str), Some("example-team"));
     assert_eq!(
         props.get("write.format.default").map(String::as_str),
         Some("parquet")
@@ -778,7 +778,7 @@ async fn ctas_format_version_two_consumed_others_rejected() {
         &ctx,
         &catalogs,
         "CREATE TABLE ice.sales.v2 USING iceberg \
-             TBLPROPERTIES('format-version' = 2, 'team'='vital-fold') AS SELECT * FROM src",
+             TBLPROPERTIES('format-version' = 2, 'team'='example-team') AS SELECT * FROM src",
     )
     .await;
     let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v2".to_string());
@@ -791,7 +791,7 @@ async fn ctas_format_version_two_consumed_others_rejected() {
             .properties()
             .get("team")
             .map(String::as_str),
-        Some("vital-fold")
+        Some("example-team")
     );
 
     let err = execute(
@@ -1507,14 +1507,14 @@ async fn sql_create_namespace_with_dbproperties_round_trips() {
         &catalogs,
         &format!(
             "CREATE NAMESPACE glue_like.silver \
-                 WITH DBPROPERTIES ('location' = '{location}', 'owner' = 'vital-fold')"
+                 WITH DBPROPERTIES ('location' = '{location}', 'owner' = 'example-team')"
         ),
     )
     .await
     .unwrap();
 
     let props = namespace_props(&catalogs, "silver").await;
-    assert_eq!(props.get("owner").map(String::as_str), Some("vital-fold"));
+    assert_eq!(props.get("owner").map(String::as_str), Some("example-team"));
     assert_eq!(
         props.get("location").map(String::as_str),
         Some(location.as_str())
@@ -2840,13 +2840,13 @@ async fn alter_set_tblproperties() {
     execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.t SET TBLPROPERTIES('owner' = 'vital-fold', 'pii' = 'false')",
+        "ALTER TABLE ice.sales.t SET TBLPROPERTIES('owner' = 'example-team', 'pii' = 'false')",
     )
     .await
     .unwrap();
 
     let props = table_props(&catalogs, "t").await;
-    assert_eq!(props.get("owner").map(String::as_str), Some("vital-fold"));
+    assert_eq!(props.get("owner").map(String::as_str), Some("example-team"));
     assert_eq!(props.get("pii").map(String::as_str), Some("false"));
 }
 
@@ -2861,7 +2861,7 @@ async fn alter_unset_tblproperties() {
     execute(
         &ctx,
         &catalogs,
-        "ALTER TABLE ice.sales.t SET TBLPROPERTIES('owner' = 'vital-fold', 'pii' = 'false')",
+        "ALTER TABLE ice.sales.t SET TBLPROPERTIES('owner' = 'example-team', 'pii' = 'false')",
     )
     .await
     .unwrap();

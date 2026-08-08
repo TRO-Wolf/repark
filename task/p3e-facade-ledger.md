@@ -333,3 +333,28 @@ tag-only `release-wheels` job with no rust-cache step), the `check_lib_py` step 
 `python` job, and the Makefile targets (`check-lib-py`, `py-test-facade`, `build-wheel`,
 `develop`). Branch protection gains the `smoke` context in the same change. See design §7.2/§7.5 —
 and finding B-1's consequence for the arming order.
+
+## Orchestrator pass: B-1 FIXED, B-2 scrubbed, carve-outs landed
+
+- **B-1 (census-gate catch) FIXED in repark-core**, not deferred and not waved: phase-2's
+  `apply_datafusion_config_keys` sweep now excludes the port source's facade-owned pseudo-key
+  `datafusion.runtime.memory_limit` via an EXACT-KEY const (`REPARK_OWNED_DATAFUSION_PSEUDO_KEYS`)
+  — never a prefix, so a typo of the pseudo-key still fails loud (both directions pinned:
+  `builder_pseudo_key_datafusion_runtime_memory_limit_builds` +
+  `builder_pseudo_key_typo_still_fails_loud`; repark-core 90 passed). Boundary proof through the
+  REBUILT wheel in a §6.3-conforming venv: the red node
+  `test_builder_datafusion_memory_limit_alone_applies` passes, and the full suite foots exactly —
+  **2,459 passed + 46 skipped (= baseline 2,471 − 12 deferred), 2,497 collected (= 2,509 − 12),
+  exit 0.** No other movement.
+- **B-2 (pre-existing literals on main) scrubbed forward** per the Tier-2 rule (fix content in a
+  new commit; never rewrite history): 21 sites across 5 already-merged Rust files — every one the
+  same private team/bucket-name fragment (now on the forbidden list; deliberately not spelled
+  here) in doc comments / test fixtures (verified: no account number, no
+  real ARN — the arn: hits are shape prefixes with the sanctioned fixture account) — replaced
+  uniformly with `example-team`; fixtures and oracles changed together; 690 affected-crate tests
+  green. The forbidden-pattern list gained the fragment (2026-08-08), which is what surfaced these.
+- **Carve-outs**: `wheels.yml` ported with two declared changes (PR trigger UN-path-filtered —
+  required-check rule; wheel installs by EXPLICIT file path — the PyPI name-reservation
+  shadowing found at the baseline runs, which v1's `--find-links … repark` form is exposed to);
+  ci.yml python job gains the `check_lib_py` step; Makefile gains `check-lib-py` / `develop` /
+  `py-test-facade` / `build-wheel` and `install-hooks` wires `check_lib_py.sh`.
