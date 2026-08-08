@@ -19,14 +19,20 @@
 //!   repark-core's session tests.
 //! - The engine write knobs (`with_merge_session_knobs`, concurrency, scan pruning) — those
 //!   stayed in the phase-1 core `build()` (they are engine-tier, not door-tier).
-//! - The TA window UDFs (`repark_ta::udf::register_all`) — TEMPORARY OMISSION, restored in
-//!   phase-2 PR-4 when the `repark-ta` crate lands and this extension composes `TaExtension`
-//!   (ledger rider in `task/p2b-spark-skeleton-ledger.md`).
+//!
+//! Composed, not re-implemented:
+//!
+//! - The TA window UDFs — `register` delegates to [`repark_ta::TaExtension`] at v1's exact
+//!   position (straight after the analyzer rules). The TA set is door-neutral (design Q11), so
+//!   this door **composes** the owning crate's extension rather than calling
+//!   `repark_ta::udf::register_all` itself; a native session installs `TaExtension` directly.
+//!   (Restores the PR-2 rider in `task/p2b-spark-skeleton-ledger.md`.)
 
 use std::collections::HashMap;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::SessionExtension;
+use repark_ta::TaExtension;
 
 /// ===========================================================================================
 /// The Spark door's session extension: v1's inline build-time registrations as one unit.
@@ -56,18 +62,19 @@ impl SessionExtension for SparkExtension {
     }
 
     /// v1 position: immediately after `SessionContext::new_with_config_rt` — the Spark
-    /// function registry + the expression-semantics analyzer rules (integer `/` → double,
-    /// div/mod-by-zero → NULL, 0-based `[]` array subscript).
+    /// function registry, then the expression-semantics analyzer rules (integer `/` → double,
+    /// div/mod-by-zero → NULL, 0-based `[]` array subscript), then the TA window UDFs. The
+    /// order is v1 `build()`'s, verbatim.
     ///
     /// # Errors
-    /// None today — registration is infallible; the seam's `Result` is kept for the PR-4
-    /// TA composition.
+    /// Whatever the composed [`TaExtension`] returns (infallible today); the Spark-side
+    /// registrations cannot fail.
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         repark_functions::register_all(ctx);
         for rule in repark_functions::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
-        Ok(())
+        TaExtension.register(ctx)
     }
 }
 

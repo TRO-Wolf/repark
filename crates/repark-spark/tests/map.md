@@ -18,6 +18,12 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 - [dml_sessions.rs](dml_sessions.rs) — deferred row #3 (phase-2 PR-3b):
   `session_sql_bare_dml_applies_eagerly` — the F-BR-2 bare-`INSERT` eager-apply trap through
   `session.sql` (memory catalog, AWS-free).
+- [ta_window.rs](ta_window.rs) — deferred rows #8-#14 (phase-2 PR-4): the seven
+  `sql_route_*` cases, ported from v1 `repark-session/tests/ta_window.rs`. Proves the TA window
+  UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the
+  `repark_ta` kernels on the crate's own 5000-row OHLC goldens (`../../repark-ta/tests/goldens/*.bin`
+  — read, never re-recorded), across single/scalar-param/multi-series/parked-four families,
+  `PARTITION BY` scoping, a 12k multi-batch partition, and the non-literal-period refuse.
 
 ## I want to...
 
@@ -26,6 +32,7 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 | See the door-installed session end-to-end pin | [session_extension.rs](session_extension.rs) |
 | See which deferred rows land where | [../../../task/port/deferred-tests.md](../../../task/port/deferred-tests.md) |
 | Read the extension under test | [../src/extension.rs](../src/extension.rs) |
+| See the TA SQL route pinned bit-exact | [ta_window.rs](ta_window.rs) |
 
 ## Pointers
 
@@ -41,5 +48,9 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   file. Never `--all-features` (AGENTS.md PyO3 note).
 - `ddl_sessions.rs` failures usually mean a PR-3a handler regressed (ctas / namespace_ddl /
   catalog_ops), not the session seams — reproduce via the equivalent `session.sql` statement.
+- `ta_window.rs` "missing fixture …" means the goldens moved: the path is
+  `$CARGO_MANIFEST_DIR/../repark-ta/tests/goldens`, i.e. repark-ta's sibling position in the
+  workspace. A *bit* mismatch is an engine/UDF regression, never a goldens edit — see
+  [../../repark-ta/map.md#debug](../../repark-ta/map.md).
 - Week-53 assertion is ISO-week semantics (2021-01-01 → ISO week 53 of 2020) — a failure there
   is the date shim regressing, not the fixture.

@@ -9,7 +9,8 @@ execute against Iceberg, and passes everything else through the Spark passthroug
 (`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands).
 `SparkDialect` adapts the router to `repark_core::SqlDialect`; `SparkExtension` installs the
 v1 `build()` registrations (function registry + analyzer rules + cardinality/`repark.sql.*`
-config) via `repark_core::SessionExtension`.
+config) via `repark_core::SessionExtension`, and **composes `repark_ta::TaExtension`** for the
+TA window UDFs at v1's exact registration position.
 
 **The v1 port is COMPLETE as of phase-2 PR-3b.** Live: CTAS + column-def CREATE TABLE, DROP
 TABLE, namespace DDL, ALTER (I6/I7), MERGE INTO, INSERT OVERWRITE (empty + r23 OV1), CALL
@@ -17,18 +18,20 @@ TABLE, namespace DDL, ALTER (I6/I7), MERGE INTO, INSERT OVERWRITE (empty + r23 O
 Z + AB), metadata tables (I2), the time-travel scanner (I1 — the pin half lives in
 `repark_core::time_travel`), the multi-statement / P11 / MoR-valve / SEC-02 guards, TRUNCATE
 targeted refuse, and the DML passthrough. The v1 lib-root battery is ported intact
-(`src/tests.rs`; census closed at 334 ported names — see the p2d ledger). `repark-ta`
-registration in `SparkExtension` is a declared temporary omission restored in PR-4.
+(`src/tests.rs`; census closed at 334 ported names — see the p2d ledger). The PR-2 `repark-ta`
+omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
+`repark_ta::TaExtension` (p2e ledger).
 
 ## Contents
 
-- `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, datafusion + fork family,
-  regex (SHOW … LIKE), async-trait (dialect seam); dev-deps add chrono + futures (battery) and
-  repark-common (the `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door
-  against — dev-only because no shipped code reads it).
+- `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, repark-ta (feature
+  `datafusion`, for the composed `TaExtension`), datafusion + fork family, regex (SHOW … LIKE),
+  async-trait (dialect seam); dev-deps add chrono + futures (battery) and repark-common (the
+  `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door against — dev-only because
+  no shipped code reads it).
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests (Session + SparkExtension + SparkDialect;
-  deferred test #1 lives here).
+  deferred test #1 lives here; `ta_window.rs` = deferred #8-#14, ported at PR-4).
 
 ## I want to...
 
@@ -51,5 +54,6 @@ registration in `SparkExtension` is a declared temporary omission restored in PR
 | `NotImplemented … lands in phase-2 PR-3a/3b` | Expected in PR-2 — the handler module has not landed yet (see src/router.rs refuse arms) |
 | Spark ORDER BY nulls in the wrong place | The session must route through `SparkDialect` (plain `DataFusionDialect` keeps DF defaults) |
 | Spark function unknown (`weekofyear`, …) | The session must install `SparkExtension` (register hook) |
+| `ta_ema`/`ta_adx`/… unknown | Same hook — `SparkExtension` composes `repark_ta::TaExtension`; a bare `SessionContext` has no TA UDFs |
 
 First checks: `cargo test -p repark-spark`. Escalate to: [../map.md#debug](../map.md).

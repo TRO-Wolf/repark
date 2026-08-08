@@ -18,6 +18,7 @@ members = [
   "crates/repark-iceberg",
   "crates/repark-core",
   "crates/repark-functions",
+  "crates/repark-ta",
   "crates/repark-spark",
   "crates/repark-sql",
 ]
@@ -57,6 +58,9 @@ pedantic = { level = "warn", priority = -1 }
 [workspace.dependencies]
 # Error handling: thiserror for libs.
 thiserror = "2"
+# Test-only JSON (the repark-ta goldens manifest). Line carried from the v1 root manifest
+# at the port-source pin.
+serde_json = "1"
 # Async.
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 async-trait = "0.1"
@@ -110,6 +114,7 @@ repark-common = { path = "crates/repark-common", version = "0.0.0", default-feat
 repark-iceberg = { path = "crates/repark-iceberg", version = "0.0.0", default-features = false }
 repark-core = { path = "crates/repark-core", version = "0.0.0", default-features = false }
 repark-functions = { path = "crates/repark-functions", version = "0.0.0", default-features = false }
+repark-ta = { path = "crates/repark-ta", version = "0.0.0", default-features = false }
 repark-spark = { path = "crates/repark-spark", version = "0.0.0", default-features = false }
 repark-sql = { path = "crates/repark-sql", version = "0.0.0", default-features = false }
 

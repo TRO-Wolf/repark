@@ -144,7 +144,7 @@ untraceable row (a `Tested` with no test name, a `DeliberatelyAbsent` with no re
 **The Spark door's 5 absences** — `TABLE_OPTION_SORT_ORDER` and
 `TABLE_OPTION_UNKNOWN_KEY_REFUSE` (no Spark spelling exists to guard: `TBLPROPERTIES` is a raw
 map), `WRONG_DOOR_SNIFF` (the sniff points AT this door), `TA_FUNCTIONS` (PR-4 composes
-`TaExtension`; the row flips there — **sequencing, and the integrator should expect PR-4 to
+`TaExtension`; the row FLIPPED to `Tested` in the PR-4→PR-5 sync merge — **sequencing done, and PR-4 was expected to
 change it**), `CROSS_DOOR_EQUIVALENCE` (PR-6's two-session protocol).
 
 **The ANSI door's 14 absences** break down as nine M2 deferrals, three standing decisions,

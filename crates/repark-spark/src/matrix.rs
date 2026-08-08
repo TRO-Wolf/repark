@@ -302,11 +302,9 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::TA_FUNCTIONS,
-        absent(
-            "`repark-ta` + `TaExtension` land in PR-4, where `SparkExtension` composes them and \
-             the TA census closes (brief §1 PR-4; the extension.rs rider note says the same). \
-             This row flips to `Tested` in that PR — it is sequencing, not a scope decision.",
-            "docs/design/sql-doors.md §2 Q11",
+        t(
+            "ta_window::sql_route_single_series_kernels_match_the_kernel",
+            SparkExtended,
         ),
     ),
     (
@@ -364,12 +362,11 @@ fn spark_door_absences_are_the_five_declared_ones() {
             surfaces::TABLE_OPTION_SORT_ORDER,
             surfaces::TABLE_OPTION_UNKNOWN_KEY_REFUSE,
             surfaces::WRONG_DOOR_SNIFF,
-            surfaces::TA_FUNCTIONS,
             surfaces::CROSS_DOOR_EQUIVALENCE,
         ],
         "the Spark door's deliberate absences changed — update this pin AND the ledger"
     );
-    assert_eq!(ROWS.len() - absent_ids.len(), 38, "shipped-surface count");
+    assert_eq!(ROWS.len() - absent_ids.len(), 39, "shipped-surface count");
 }
 
 /// No `Tested` row claims the `TwoSession` profile. That profile means the two-session

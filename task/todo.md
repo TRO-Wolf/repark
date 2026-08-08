@@ -104,15 +104,21 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       + MoR-valve hoist; census closed (334 ported names empty sorted-diff under
       `repark_sql::` → `repark_spark::`; 342 − 6 postgres_p11 − 2 phase-1 time-travel hoists).
       Deferred #3 landed (ledger: [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md)).
-- [ ] **PR-4 — repark-ta (CONFIRMED in scope 2026-08-07)**: kernels + goldens + `TaExtension`;
-      Spark extension composes it; TA census generated + empty-diff. Unblocks deferred #8–#14.
-      Rider: the Spark door's `TA_FUNCTIONS` matrix row (`crates/repark-spark/src/matrix.rs`)
-      flips `DeliberatelyAbsent` → `Tested` when the extension composes.
+- [x] **PR-4 — repark-ta (DONE)**: kernels + goldens (148 `.bin`) ported verbatim +
+      NEW `TaExtension`; `SparkExtension` composes it at v1's registration position (p2b rider
+      #1 DISCHARGED). TA census generated at the pin and empty-diff (146/146 default features;
+      178→180 with `--features datafusion`, +2 = the door-native `TaExtension` tests).
+      Deferred #8–#14 landed as `repark-spark/tests/ta_window.rs` (7/7 green) — the deferred
+      manifest is now exactly 4 rows, all post-milestone-one. Ledger:
+      [p2e-ta-ledger.md](p2e-ta-ledger.md). Rider: the ANSI TA smoke + non-literal-period
+      refuse rows (design Q11 toll) land PR-6 — `repark-sql` does not exist yet. The Spark
+      door's `TA_FUNCTIONS` matrix row flipped `DeliberatelyAbsent` → `Tested` in PR-5's
+      sync merge (the row rode PR-5's matrix machinery).
 - [ ] **PR-5 — repark-sql ANSI M1 (IN FLIGHT)**: `AnsiDialect` delegation core, guard set
       (multi-statement FIRST, P11, SEC-02, write-to-branch), wrong-door sniff, CTAS `WITH (…)`
       vocab + `extra_properties` + Q15 loud-refuse routing, schema DDL; `repark_common::surfaces`
-      (43 capability IDs) + `matrix.rs` in BOTH doors with the compile-run audit — Spark 38
-      tested / 5 absent, ANSI M1 29 tested / 14 absent (delegated `INSERT`/`DELETE`/`UPDATE` ship
+      (43 capability IDs) + `matrix.rs` in BOTH doors with the compile-run audit — Spark 39
+      tested / 4 absent (TA_FUNCTIONS flipped in the sync), ANSI M1 29 tested / 14 absent (delegated `INSERT`/`DELETE`/`UPDATE` ship
       with M1 because the delegation core ships them, each with a round-trip row and the BUG-001
       MoR valve wired over them); R1/R2 spikes recorded day 1
       (ledger: [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md)). **R2 filed a core gap:**
