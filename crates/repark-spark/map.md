@@ -23,7 +23,9 @@ registration in `SparkExtension` is a declared temporary omission restored in PR
 ## Contents
 
 - `Cargo.toml` — deps: repark-core, repark-iceberg, repark-functions, datafusion + fork family,
-  regex (SHOW … LIKE), async-trait (dialect seam); dev-deps add chrono + futures (battery).
+  regex (SHOW … LIKE), async-trait (dialect seam); dev-deps add chrono + futures (battery) and
+  repark-common (the `surfaces` registry the `#[cfg(test)]` Q13 matrix audits this door
+  against — dev-only because no shipped code reads it).
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests (Session + SparkExtension + SparkDialect;
   deferred test #1 lives here).

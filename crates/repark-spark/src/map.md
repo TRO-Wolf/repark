@@ -56,6 +56,12 @@ wrapper.
 - `local_fs_ddl.rs` — SEC-02 local-filesystem DDL gate (r24 SB1); 9 in-module tests.
 - `catalog_ops.rs` — catalog lookup, P11 refusals, `iceberg_err`, path-escape reject, the
   r24 P7 `reregister*` provider-invalidation family (complete — PR-2 PARTIAL rider closed).
+- `matrix.rs` — the Q13 surface matrix (`#[cfg(test)]`, design `docs/design/sql-doors.md` §2
+  Q13 / graft G2): every `repark_common::surfaces` ID mapped to `Row::Tested { test, profile }`
+  or `Row::DeliberatelyAbsent { reason, adr }`, plus the compile-run audit that fails on an
+  unmapped surface. 38 tested / 5 deliberately absent (sort order + unknown-key refuse are
+  ANSI-only; the wrong-door sniff points AT this door; TA composes at PR-4; cross-door rows are
+  PR-6's two-session protocol). 3 tests.
 - `lib.rs` — manifest: module decls, `execute`/`SparkDialect`/`SparkExtension` re-exports, the
   v1 domain-module `pub(crate) use` groups, and the `#[cfg(test)]` root imports that
   reconstruct v1's crate-root scope for the battery's `use super::*`.
@@ -83,6 +89,7 @@ wrapper.
 | ORDER BY / eager-command passthrough semantics | `spark_ast.rs` |
 | Namespace introspection rendering | `describe_show.rs` |
 | Time-travel span scanning | `time_travel.rs` (pin half: `repark-core/src/time_travel.rs`) |
+| See what this door ships vs deliberately does NOT | `matrix.rs` (the Q13 surface matrix) |
 
 ## Pointers
 
@@ -95,6 +102,7 @@ wrapper.
 | Statement unexpectedly passes to DataFusion | `router.rs` arm order; `normalize::parse_single_normalized` returned `None` |
 | Time-travel clause not rewritten | `time_travel::sql_has_time_travel` span scan (comments/strings never match) |
 | P11 refusal missing | read-only set threading: `execute_with_read_only` → registry snapshot |
+| `matrix::matrix_maps_every_surface` RED | a surface ID was added to `repark_common::surfaces::ALL` with no row here — add `Tested`/`DeliberatelyAbsent` |
 | Doc comment names a crate that doesn't exist | v1-port doc text re-homes to `repark_core` (verify-panel fix); report any straggler |
 
 First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#debug](../map.md).

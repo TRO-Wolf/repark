@@ -46,6 +46,8 @@ wrong-door sniff runs on the ERROR path only.
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
   shared catalog-handle / name-parts / identifier-hygiene helpers.
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
+- `matrix.rs` (`#[cfg(test)]`) — this door's disposition of every `repark_common::surfaces` ID,
+  with the compile-run audit that fails on an unmapped surface (Q13/G2).
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a NATIVE session (no extension),
   asserted on the Arrow path, value AND type.
 
@@ -57,6 +59,7 @@ wrong-door sniff runs on the ERROR path only.
 | Add a curated table property | `properties.rs` + a row in `properties/tests.rs` + an e2e row in `tests.rs` |
 | Add a partition transform | `partitioning.rs` + `partitioning/tests.rs` |
 | Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface |
+| Record a surface this door will not have | `matrix.rs` (`DeliberatelyAbsent` with reason + ADR) |
 
 ## Pointers
 
@@ -68,5 +71,7 @@ wrong-door sniff runs on the ERROR path only.
 |---|---|
 | A guard fired on text inside a string literal | It cannot — the guards read `scan::blank_out_quoted_and_comments` output; check the scrubber's tests |
 | A statement was delegated that should have been intercepted | `router.rs` match arms, and whether `references_metadata_table` diverted it |
+| The matrix audit RED after adding a surface ID | Add a `Tested` or `DeliberatelyAbsent` row in `matrix.rs`; the failure names the ID |
+| `m1_ships_the_briefed_scope` RED | A surface changed disposition — update the pin AND the ledger, in the same change |
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).

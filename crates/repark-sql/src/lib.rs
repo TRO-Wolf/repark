@@ -33,6 +33,12 @@ pub use dialect::AnsiDialect;
 // --- The router entry point, for an embedder that holds an `EngineContext` directly. ---
 pub use router::execute;
 
+// The Q13 surface matrix: this door's disposition of every `repark_common::surfaces` ID, with
+// the compile-run audit that fails on an unmapped surface (design `docs/design/sql-doors.md`
+// §2 Q13, graft G2). Test-only — audit evidence, not product code.
+#[cfg(test)]
+mod matrix;
+
 // End-to-end door tests on a NATIVE session (no extension installed) — the profile every ANSI
 // matrix row claims. File-backed per the crate-root thinness guard.
 #[cfg(test)]
