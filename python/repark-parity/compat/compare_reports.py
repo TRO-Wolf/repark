@@ -14,14 +14,22 @@ Two modes:
 Procedure, in order (each step is a hard gate):
 
 1. **Environment manifests are compared FIRST** and any difference is a loud failure — the
-   comparator refuses to diff two runs that are not the same measurement (§6.1).
+   comparator refuses to diff two runs that are not the same measurement (§6.1). Two
+   properties make that gate real rather than nominal: an external manifest may only
+   **augment** a report's own manifest (a contradiction is a loud failure, so the CLI cannot
+   fabricate agreement), and the keys that decide the measurement — ``python_version``,
+   ``pandas_version``, and ``pyspark_version`` in census mode — must be **recorded**, because
+   a key nobody records compares equal by absence.
 2. The deferred ledger is subtracted **from the baseline (v1) side only**, and the
    subtraction is **echoed** so the reconciliation identity is visible.
 3. Quarantined-unstable rows are excluded on **both** sides and reported separately.
 4. The two sides are rendered sorted and compared **byte for byte** — no fuzzy matching, no
    aggregate-only comparison, no per-class tolerance.
 5. Both denominators (``pass / all_collected`` and ``pass / engine_relevant``) are
-   re-asserted over the compared row sets; any difference fails.
+   re-asserted over the compared row sets; any difference fails. Separately — and this is the
+   half the byte comparison does not already imply — each report's **own recorded**
+   denominator block is validated against the rows that report carries; a disagreement is a
+   malformed report and a loud failure.
 6. The delta is grouped by direction (pass→fail, fail→pass, class-change, appeared,
    vanished) and the process exits non-zero on **any** difference. An empty diff is the only
    pass.
@@ -67,7 +75,27 @@ MANIFEST_KEYS: tuple[str, ...] = (
     "pyspark_version",
     "spark_tag",
     "spark_commit_sha",
+    "pandas_version",
+    "pyarrow_version",
 )
+# Manifest keys that must be RECORDED (present and non-empty) on both sides, per mode. A key
+# that nobody records compares equal-by-absence, which is how an unrecorded environment
+# sneaks past an equality gate — design §5 F2: "a baseline whose environment is not recorded
+# is not a baseline". ``pandas_version`` is required in both modes because the pandas major
+# changes the measurement (docs/port/census.md §1); ``pyspark_version`` is required in census
+# mode only — the facade cohort is defined by pyspark being ABSENT (§4).
+REQUIRED_MANIFEST_KEYS_CENSUS: tuple[str, ...] = (
+    "python_version",
+    "pyspark_version",
+    "pandas_version",
+)
+REQUIRED_MANIFEST_KEYS_JUNIT: tuple[str, ...] = (
+    "python_version",
+    "pandas_version",
+)
+# The denominator keys re-asserted over the compared rows AND validated against each
+# report's own recorded block.
+GATED_DENOMINATOR_KEYS: tuple[str, ...] = ("pass", "all_collected", "engine_relevant")
 # Keys deliberately NOT part of the manifest, each with its reason. They are echoed in the
 # report for the human reader but never gate the comparison.
 MANIFEST_EXCLUDED: dict[str, str] = {
@@ -231,6 +259,52 @@ def load_manifest_file(path: Path | None) -> dict[str, str]:
     return {str(key): str(value) for key, value in payload.items()}
 
 
+def merge_external_manifest(
+    manifest: dict[str, str], external: dict[str, str], *, label: str, source: Path | None
+) -> dict[str, str]:
+    """Merge an external manifest INTO a report's own manifest — augment only, never override.
+
+    The external file carries the half of the environment the JSON report does not (the
+    ``pip freeze``: pandas, pyarrow, …). It may **fill** a key the report does not record, and
+    it may **restate** a key with the same value; it may never *change* one. Overwriting is
+    how a CLI flag would silently defeat the comparator's first gate — two runs from
+    genuinely different interpreters would render an identical, fabricated manifest and exit
+    0. A contradiction is therefore a loud failure, named key by key.
+    """
+    merged = dict(manifest)
+    conflicts: list[str] = []
+    for key in sorted(external):
+        value = external[key]
+        recorded = merged.get(key, "")
+        if recorded and recorded != value:
+            conflicts.append(f"  {key}: report={recorded!r}  external={value!r}")
+            continue
+        merged[key] = value
+    if conflicts:
+        raise ComparatorError(
+            f"EXTERNAL MANIFEST CONTRADICTS THE {label} REPORT — an external manifest may "
+            f"only supply keys the report does not record, never overwrite one "
+            f"({source}). Refusing to diff.\n" + "\n".join(conflicts)
+        )
+    return merged
+
+
+def check_manifest_recorded(manifest: dict[str, str], *, label: str, junit: bool) -> None:
+    """Fail loudly when a required environment key is not recorded at all.
+
+    Equality alone is not a gate: a key that neither side records compares equal by absence.
+    """
+    required = REQUIRED_MANIFEST_KEYS_JUNIT if junit else REQUIRED_MANIFEST_KEYS_CENSUS
+    missing = [key for key in required if not manifest.get(key, "").strip()]
+    if missing:
+        raise ComparatorError(
+            f"ENVIRONMENT NOT RECORDED on the {label} side: {', '.join(missing)} "
+            f"(missing or empty). A run whose environment is not recorded is not a baseline "
+            f"(design §5 F2); supply the pip-freeze half via --manifest-baseline / "
+            f"--manifest-candidate. Refusing to diff."
+        )
+
+
 def compare_manifests(
     baseline: dict[str, str],
     candidate: dict[str, str],
@@ -285,6 +359,35 @@ def compute_denominators(classes: dict[str, str], *, junit: bool) -> dict[str, A
         "engine_relevant": n_engine,
         "pass_over_engine_relevant": (n_pass_engine / n_engine) if n_engine else 0.0,
     }
+
+
+def check_recorded_denominators(side: Side, *, junit: bool) -> None:
+    """Validate a report's OWN recorded denominators against its own rows (census mode).
+
+    The post-subtraction re-assert in :func:`compare` is implied by the byte comparison — two
+    row sets that render identically necessarily produce identical denominators — so on its
+    own it can never catch a report whose *recorded* counts disagree with the rows it ships.
+    That is the failure this gate exists for: a report that claims 171 collected while
+    carrying 169 rows is malformed, and a malformed report is a loud failure (exit 2), not a
+    silent baseline.
+    """
+    if junit or not side.recorded_denominators:
+        return
+    actual = compute_denominators(side.classes, junit=False)
+    mismatches: list[str] = []
+    for key in GATED_DENOMINATOR_KEYS:
+        if key not in side.recorded_denominators:
+            continue
+        recorded = side.recorded_denominators[key]
+        if not isinstance(recorded, int) or recorded != actual[key]:
+            mismatches.append(
+                f"  {key}: recorded={recorded!r}  actual over its own rows={actual[key]}"
+            )
+    if mismatches:
+        raise ComparatorError(
+            f"{side.path}: the report's recorded denominators disagree with the rows it "
+            f"carries — the report is malformed and cannot anchor a gate.\n" + "\n".join(mismatches)
+        )
 
 
 def _is_pass(value: str, *, junit: bool) -> bool:
@@ -483,6 +586,8 @@ def compare(
     Raises :class:`ComparatorError` (a loud failure) when the environment manifests differ —
     before any row is looked at.
     """
+    check_manifest_recorded(baseline.manifest, label=baseline.label, junit=junit)
+    check_manifest_recorded(candidate.manifest, label=candidate.label, junit=junit)
     manifest_differences = compare_manifests(
         baseline.manifest,
         candidate.manifest,
@@ -494,6 +599,9 @@ def compare(
             "ENVIRONMENT MANIFESTS DIFFER — the two runs are not the same measurement, "
             "so they are not comparable. Refusing to diff.\n" + "\n".join(manifest_differences)
         )
+
+    check_recorded_denominators(baseline, junit=junit)
+    check_recorded_denominators(candidate, junit=junit)
 
     baseline_rows, candidate_rows, echo = apply_ledgers(
         baseline, candidate, deferred=deferred, quarantined=quarantined
@@ -624,8 +732,18 @@ def _load_sides(args: argparse.Namespace) -> tuple[Side, Side]:
         return baseline, candidate
     baseline = load_census_report(args.baseline, label=args.label_baseline)
     candidate = load_census_report(args.candidate, label=args.label_candidate)
-    baseline.manifest.update(external_baseline)
-    candidate.manifest.update(external_candidate)
+    baseline.manifest = merge_external_manifest(
+        baseline.manifest,
+        external_baseline,
+        label=args.label_baseline,
+        source=args.manifest_baseline,
+    )
+    candidate.manifest = merge_external_manifest(
+        candidate.manifest,
+        external_candidate,
+        label=args.label_candidate,
+        source=args.manifest_candidate,
+    )
     return baseline, candidate
 
 

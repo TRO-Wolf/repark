@@ -44,7 +44,12 @@ Repository helper scripts wired into the dev workflow.
   venv, builds the native module, then runs the three cohorts and writes JSON + markdown reports.
   Not CI-wired (~20 min wall per module). Ported with **one** behavioral change (phase-3 EC-8):
   the classic cohort runs `--classic`, never `--stretch` — `--stretch` appends the C3 modules and
-  blends them into the classic /345 denominator. Report output paths are unchanged in shape. The
+  blends them into the classic /345 denominator. Report output paths are unchanged in shape.
+  Second declared change: the run's **environment is recorded, not assumed** — a verbatim
+  `pip freeze` (empty = fatal) plus `census-manifest.json` carrying the versions the comparator
+  gates (`python_version`, `pyspark_version`, `pandas_version`, `pyarrow_version`), and the run
+  aborts outright under pandas ≥ 3. Artifacts are then redacted via `python -m compat.redact`
+  (through each format's parser), never `sed`. The
   script needs the facade package at `python/repark`, which arrives with the facade PR; the
   recorded procedure it implements is [../docs/port/census.md](../docs/port/census.md).
 
@@ -82,6 +87,7 @@ detector self-test, phase 3), `generate_excel_fixtures.py` (synthetic .xlsx fixt
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
+| `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `make workflows-parse`. Escalate to: [../map.md#debug](../map.md).

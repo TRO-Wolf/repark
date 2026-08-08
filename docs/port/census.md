@@ -43,13 +43,31 @@ always-green pin list for exactly this reason). **A census run under pandas 3 is
 measurement, not a noisier one.** Two runs that disagree on the pandas major are not comparable, and
 the comparator refuses to diff them.
 
+**How that refusal is actually mechanized** (it is a gate, not a wish). The `compat.runner` JSON
+report does not carry a pandas key, so the version travels in the run's machine manifest —
+`census-manifest.json`, written by `scripts/run_census.sh` alongside the freeze — and reaches the
+comparator through `--manifest-baseline` / `--manifest-candidate`. Three properties make it bite:
+
+- `pandas_version` is a **gated** manifest key: differing majors are exit 2 before any row is read.
+- `pandas_version` is a **required** key in both modes: a run that does not record it is exit 2 as
+  well, because a key nobody records compares equal by absence — which is precisely how an
+  unrecorded environment slips past an equality gate.
+- An external manifest may only **augment** a report's own manifest, never overwrite it. A
+  contradiction between the two is exit 2, so the flags cannot be used to manufacture agreement
+  between two runs that really did differ.
+
+`run_census.sh` additionally **aborts** the run outright under pandas ≥ 3 rather than producing an
+artifact that has to be caught downstream.
+
 **The Apache test tree is never committed.** `compat.fetch.ensure_spark_tests` sparse-clones the
 Spark tag at run time into `~/.cache/repark-pyspark-tests/<tag>/`. Nothing from that tree enters
 either repository.
 
 **The full `pip freeze` of the scratch interpreter is recorded verbatim** alongside the run, as the
 run's environment manifest. The comparator compares manifests **first** and fails loudly on any
-difference rather than diffing anyway (§5).
+difference rather than diffing anyway (§5). An **empty** freeze is not a recorded environment: a
+zero-byte manifest file is the same evidentiary state as no file at all, and `run_census.sh` exits
+non-zero rather than continue with one.
 
 ---
 
@@ -103,7 +121,10 @@ never a write to a tracked file:
 
 1. **Provision the scratch interpreter.** Create the venv, install the facade editable plus the
    pinned oracle stack (§1), then `maturin develop`. Record `pip freeze` verbatim as the run's
-   environment manifest.
+   environment manifest, **and** the machine manifest `census-manifest.json`
+   (`python_version`, `pyspark_version`, `pandas_version`, `pyarrow_version`) that the comparator
+   reads. A freeze that is empty, or a manifest missing any of those keys, fails the run here
+   rather than producing an artifact that cannot anchor a gate.
 2. **Stability run — first, and mandatory.** Run the **classic cohort twice** and diff the two JSON
    outputs *against each other* before anything is compared across repositories. The Apache suite
    touches the filesystem, the clock, and a network-fetched source tree. **A row that is not stable
@@ -117,9 +138,37 @@ never a write to a tracked file:
 3. **classic**, **expand**, **expand2** — the v1 argument vectors from §2.
 4. **full-extras facade** — §4.
 
-The four JSON reports, the four markdown reports, the stability self-diff, the quarantine list, and
-the freeze manifest are committed **here** under `task/census/baseline-<pin>/`. They are **evidence,
+5. **Redact absolute paths — through each artifact's parser.** The artifacts are committed into a
+   public repository, so scratch paths (pip-freeze editable URLs, report metadata, traceback
+   frames, JUnit skip messages) are replaced by stable tokens, and **both sides apply the identical
+   transform** before anything is compared. The transform is code, not a `sed` line:
+
+   ```
+   PYTHONPATH=python/repark-parity python -m compat.redact \
+       --map "$SCRATCH=<scratch>" --map "$PWD=<repo>" --map "$HOME=<home>" \
+       <scratch>/*/compat-report.json <scratch>/census-venv-freeze.txt \
+       <scratch>/census-manifest.json
+   ```
+
+   The tokens are exactly `<scratch>` / `<repo>` / `<home>`, longest prefix first, and nothing
+   else. **Why it must go through the parser:** a path inside a census report lives inside a JSON
+   string (escape-encoded) and a path inside a JUnit XML lives in character data
+   (entity-encoded). A textual substitution over those bytes destroys the encoding — an
+   angle-bracketed token becomes an element start tag, a `\"`-delimited traceback path loses its
+   escaping — and the artifact stops parsing, at which point the comparator exits 2 on the very
+   baseline it is meant to anchor. `compat.redact` loads, rewrites string *values*, re-serializes,
+   and re-asserts validity before writing. Rows and classes are untouched: paths do not
+   participate in the multiset.
+
+The four JSON reports, the four markdown reports, the stability self-diff, the quarantine list
+(empty if nothing was quarantined — an empty ledger is a result, an absent one is exit 2), and the
+freeze manifest are committed **here** under `task/census/baseline-<pin>/`. They are **evidence,
 not source**: never hand-edited, and a re-run replaces the whole directory in one commit.
+
+**Every committed artifact must parse.** Before the commit, assert it mechanically — every
+`compat-report.json` loads with `json.load`, every JUnit XML parses with `ElementTree.parse`, the
+freeze is non-empty, and the comparator run of `classic-run1` against `classic-run2` exits 0. An
+artifact that its own comparator refuses is not evidence.
 
 `PLAN.md`'s historical numeric table is replaced at phase close by a pointer to this recorded run —
 a stale baseline table invites comparison against the table instead of against the measurement.
@@ -182,23 +231,34 @@ this repository (the port source emits reports; nothing in either repository jud
 
 ```
 PYTHONPATH=python/repark-parity python -m compat.compare_reports \
-    --baseline  task/census/baseline-<pin>/classic.json \
-    --candidate task/census/v2-<sha>/classic.json \
+    --baseline  task/census/baseline-<pin>/classic-run1/compat-report.json \
+    --candidate task/census/v2-<sha>/classic/compat-report.json \
     --deferred  task/port/deferred-python-tests.txt \
-    --quarantine task/census/baseline-<pin>/quarantine.txt
+    --quarantine task/census/baseline-<pin>/quarantine.txt \
+    --manifest-baseline  task/census/baseline-<pin>/census-manifest.json \
+    --manifest-candidate task/census/v2-<sha>/census-manifest.json
 ```
 
-For the facade cohort, add `--junit` and pass the two JUnit XMLs plus
-`--manifest-baseline` / `--manifest-candidate` (JUnit XML carries no environment, and a run whose
-environment is not recorded is not comparable — so junit mode **requires** the manifests).
+The two `--manifest-*` files are **required in census mode too**, not only in junit mode: they
+carry the freeze half of the environment (notably `pandas_version`, §1), and the comparator
+refuses a run whose pandas major is unrecorded. For the facade cohort, add `--junit` and pass the
+two JUnit XMLs plus the facade manifests (JUnit XML carries no environment at all).
 
 What it does, in order — every step a hard gate:
 
 1. **Environment manifests first.** Any difference is a loud failure (exit **2**) *before any row is
    looked at*. The gated keys are `python_version`, `pyspark_version`, `spark_tag`,
-   `spark_commit_sha`, plus every key of any external manifest supplied. `generated_at` and
-   `repark_version` are deliberately **not** gated (they differ by construction) and are echoed as
-   such.
+   `spark_commit_sha`, `pandas_version`, `pyarrow_version`, plus every key of any external manifest
+   supplied. `generated_at` and `repark_version` are deliberately **not** gated (they differ by
+   construction) and are echoed as such. Two further properties keep the gate from being nominal:
+   - **Required keys.** `python_version` + `pandas_version` (+ `pyspark_version` in census mode;
+     the facade cohort is *defined* by pyspark being absent) must be present and non-empty on both
+     sides. A key that neither side records compares equal by absence, so absence is its own
+     failure.
+   - **External manifests augment, never override.** An external file may fill a key the report
+     does not record, or restate one with the same value; if it *contradicts* a key the report
+     records, that is exit 2. Otherwise `--manifest-baseline`/`--manifest-candidate` would be a CLI
+     path to fabricated agreement between two genuinely different environments.
 2. **Ledger subtraction, echoed.** The deferred ledger is subtracted from the **baseline (v1) side
    only**; the quarantine ledger is excluded on **both** sides. Everything removed — and every
    ledger entry that matched nothing, and every "deferred" id that nonetheless appears on the
@@ -208,7 +268,12 @@ What it does, in order — every step a hard gate:
    no per-class tolerance.
 4. **Both denominators re-asserted** — `pass / all_collected` and `pass / engine_relevant` —
    recomputed over the compared rows using `compat.classify.denominators` itself (so the comparator
-   cannot drift from the runner's definition). Any difference fails.
+   cannot drift from the runner's definition). Any difference fails. Note what that re-assert alone
+   *cannot* catch: two row sets that render identically necessarily produce identical denominators,
+   so the post-subtraction check is implied by step 3. The independent half is that **each report's
+   own recorded denominator block is validated against the rows that report carries** — a report
+   claiming 171 collected while shipping 169 rows is malformed and is a loud failure (exit 2),
+   not a silently accepted baseline.
 5. **Delta grouped by direction:** pass→fail, fail→pass, class-change, appeared, vanished, with both
    classifications per cell.
 6. **Exit non-zero on any difference.** Empty diff is the only pass. Exit codes: `0` identical,

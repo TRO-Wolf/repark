@@ -49,6 +49,20 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
   distinguished from skip, manifests required); and the **provoked undeclared subtraction** that
   proves the checked-in ledger file is the only way a row leaves the diff (five plausible
   environment variables set, an `--exclude` flag attempted, the frozen option set asserted).
+  Also pins the three properties that keep the manifest gate from being nominal: an external
+  `--manifest-*` file may not overwrite a key the report records (the shared-manifest attack that
+  makes two different environments render identical); `pandas_version` is refused when it
+  **differs** and equally when it is **unrecorded** (a key nobody records compares equal by
+  absence); and each report's own recorded denominator block is validated against its own rows —
+  including the case where both sides are byte-identical *and* identically wrong, which the
+  post-subtraction re-assert alone cannot catch.
+- `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
+  Its one hard property is that the artifact still parses afterwards, so the two regressions are
+  explicit contrasts: a naive text substitution over a traceback-bearing census report emits an
+  unescaped quote and stops being JSON, and one over a JUnit XML turns `<scratch>` into an element
+  start tag; the parser-based transform cannot do either. Plus key redaction, non-string scalars
+  untouched, XML attributes, longest-prefix-wins ordering, malformed-input loud failures, plain
+  text passthrough, in-place rewrite idempotence, and the CLI exit codes.
 
 ## Pointers
 

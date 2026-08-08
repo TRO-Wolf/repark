@@ -56,13 +56,17 @@ PYTHONPATH=python/repark-parity/src uv run --no-project --with pyarrow --with py
   pytest python/repark-parity/tests -q --collect-only | grep '::' | sort
 
 v1 pin : 64 names   (tests/test_compare.py 9  +  tests/test_compat_harness.py 55)
-this PR: 100 names  (64 identical + 36 declared new)
+this PR: 126 names  (64 identical + 36 declared new + 26 from the fixer pass)
 
 $ diff pin.txt v2.txt | grep '^<'      # names REMOVED or RENAMED
 (nothing)
 $ diff pin.txt v2.txt | grep '^>' | wc -l
-36
+62
 ```
+
+The 26 fixer-pass additions are enumerated in "Adversarial-review remediation" below; they are
+new names in `test_compare_reports.py` (+9) and the new `test_redact.py` (+17). The ported half
+remains an identity map: zero ported names removed, renamed, or moved.
 
 **Zero ported names removed, zero renamed, zero moved between files.** The 64 ported names are
 byte-identical to the pin, so the ported half is an identity map and no rename declaration is
@@ -198,9 +202,12 @@ link in the ported tree now resolves to a file that exists.
 
 Run in the PR worktree. `--workspace`, never `--all-features`, never `--no-verify`.
 
-- **Parity harness — 100 passed.**
+- **Parity harness — 126 passed.**
   `PYTHONPATH=python/repark-parity/src uv run --no-project --with pyarrow --with pytest pytest
-  python/repark-parity/tests -q` → `100 passed in 0.28s` (64 ported + 36 declared new).
+  python/repark-parity/tests -q` → `126 passed` (64 ported + 36 declared new + **26 from the
+  fixer pass**: 9 more comparator tests over the two defeated gates, and 17 for the new
+  `compat/redact.py`). Generated per file: `test_compare.py` 9, `test_compat_harness.py` 61,
+  `test_compare_reports.py` 39, `test_redact.py` 17.
   The `PYTHONPATH` prefix mirrors the port source's own `py-test` recipe — without it
   `test_compare.py` cannot import `repark_parity`.
 - **`uvx ruff@0.15.22 check .`** → `All checks passed!`;
@@ -298,3 +305,78 @@ context updates in the same change — command in the PR body); `pip-audit.yml` 
 **Builder-flagged count correction:** design/brief said "58 unit tests" for the parity
 package; the generated count at the pin is **64** (53 static `def test_` + parametrization).
 Both documents corrected in this PR; the port census is 64 = 64 + 36 declared additions.
+
+## Adversarial-review remediation (fixer pass)
+
+Two lenses (`port-process`, `design-census`) returned overlapping HIGH/MED findings against the
+baseline-artifact commit and the comparator. They split cleanly into **code/procedure defects,
+fixed here** and **artifact defects, which are evidence and are therefore handed back as a
+regeneration obligation**.
+
+### Fixed in code (with tests)
+
+| # | Finding | Fix | Pinned by |
+|---|---|---|---|
+| 1 | **The manifest gate — the comparator's FIRST hard gate — was defeatable from the CLI.** `_load_sides` did `baseline.manifest.update(external_baseline)`, so `--manifest-baseline` / `--manifest-candidate` *overwrote* the reports' own gated keys. Two runs from genuinely different environments, handed one shared external manifest, printed "environment manifest (identical — gate passed)" over fabricated values and exited **0**. | External manifests now **augment only** (`merge_external_manifest`): they may fill a key the report does not record or restate one identically; a contradiction is a loud exit 2 naming every conflicting key. This is also what census.md §5 always claimed ("plus every key of any external manifest supplied"). | `test_external_manifest_cannot_overwrite_a_key_the_report_records`, `test_external_manifest_may_fill_a_key_the_report_does_not_record`, `test_restating_a_recorded_key_with_the_same_value_is_allowed` |
+| 2 | **Nothing could detect a pandas-major difference**, though census.md:43 asserted "the comparator refuses to diff them" and design §6.1 calls the major non-negotiable. No pandas key existed in the report JSON or in `MANIFEST_KEYS`. | `pandas_version` + `pyarrow_version` added to `MANIFEST_KEYS`; **and** a required-key gate (`check_manifest_recorded`) — `python_version` + `pandas_version` (+ `pyspark_version` in census mode; the facade cohort is *defined* by pyspark being absent) must be present and non-empty on both sides. Equality alone was never a gate here: a key that neither side records compares equal by absence. `run_census.sh` now emits `census-manifest.json` with those versions and **aborts** under pandas ≥ 3. | `test_a_pandas_major_difference_is_refused`, `test_an_unrecorded_pandas_major_is_a_loud_failure`, `test_junit_mode_requires_the_pandas_major_but_not_pyspark`, `test_manifest_keys_are_the_documented_set` |
+| 3 | **The denominator re-assert was tautological.** Denominators were recomputed over the same post-subtraction row dicts the byte comparison already compares, so `denominator_differences` could never be non-empty unless `byte_identical` was already `False`. A report whose *recorded* counts were wrong sailed through unremarked — which the real `expand` baseline exhibits (recorded `all_collected` 171 vs 169 actual unique ids). | The post-subtraction re-assert stays (design §6.4 (f) requires it), and the independent half is added: `check_recorded_denominators` validates **each report's own recorded block against the rows that report carries**, loud exit 2 on disagreement. Judgement call #2 below is amended accordingly. | `test_recorded_denominators_are_validated_against_the_reports_own_rows`, `test_the_recorded_denominator_gate_is_not_implied_by_the_byte_comparison`, `test_a_report_without_a_recorded_denominator_block_still_compares` |
+| 4 | **The path-redaction transform was a mandatory procedure step that existed nowhere.** Not implemented in the repo, absent from census.md, and the token set documented in the baseline `map.md` (`<v1-pin>`/`<baseline>`/`<scratch>`) did not match the tokens actually applied (`<home>` 410×, `<baseline>` 290×, `<v1-pin>` 217×, `<scratch>` 0×). A v2 runner could not reproduce it — which is *how* it silently corrupted five artifacts. | **NEW `compat/redact.py`**: format-aware redaction **through each artifact's parser** (JSON loaded → string values rewritten → re-serialized; XML likewise; everything else plain text), with validity re-asserted before writing, longest-prefix-first mapping, and a loud failure on unparsable input. Tokens fixed at `<scratch>` / `<repo>` / `<home>`. Wired into `run_census.sh`; recorded as §3 step 5 of census.md; the baseline `map.md` token claim corrected. | `tests/test_redact.py` (18 tests) — including the two regressions stated as explicit contrasts: naive substitution over a traceback-bearing report emits an unescaped quote and stops being JSON, and over a JUnit XML turns `<scratch>` into a start tag |
+| 5 | **No quarantine ledger was committed**, so census.md §5's own acceptance command fails: a missing ledger file is exit 2 by design, and "recording zero quarantined rows is a result" requires an empty file, not an absent one. | `task/census/baseline-fc3f48102/quarantine.txt` added — a ledger with a header and zero entries, matching the recorded (empty) stability self-diff, and flagged to be **re-derived** at regeneration rather than carried forward. Verified: the documented invocation now loads it and exits 0. | exercised by the documented invocation; ledger parsing itself is pinned by `test_ledger_parsing_ignores_comments_and_blanks` |
+
+Also recorded: `run_census.sh` now fails the run at provisioning time on an empty `pip freeze`
+or a missing gated version, so the "0-byte manifest" state cannot recur silently, and census.md
+§3 gains a mandatory pre-commit assertion set (every JSON loads, every XML parses, the freeze is
+non-empty, `classic-run1` vs `classic-run2` exits 0 **through the comparator**).
+
+**Amendment to judgement call #2 above.** "Denominators are recomputed over the compared rows,
+not read from the report" remains correct as the *comparison* rule — subtracting the deferred
+ledger legitimately changes the recorded numbers. What was wrong was inferring from that that the
+recorded block needs no checking at all. It is now checked against its own rows (an intra-report
+consistency property, unaffected by subtraction), and only the cross-report comparison uses the
+recomputed values.
+
+### Handed back: the baseline artifacts must be regenerated (NOT fixed here)
+
+`task/census/baseline-fc3f48102/` is **evidence**, and the contract is explicit that evidence is
+never hand-edited — a re-run replaces the whole directory in one commit. The corruption is not
+losslessly reversible in any case: the textual transform collapsed escaped `\"` and genuine
+string-terminating `"` into the same character, so a blanket un-escape breaks the other case.
+The defects are enumerated with reproductions in
+[`task/census/baseline-fc3f48102/map.md`](census/baseline-fc3f48102/map.md) "REGENERATION
+REQUIRED", and in summary:
+
+1. All four `compat-report.json` files are **invalid JSON** (214/214/137/110 broken escape sites);
+   the comparator exits 2 on every one, so the "stability empty diff, exit 0" claim was never
+   produced through the instrument that gates the phase. Repairing the escapes in a scratch copy
+   *does* reproduce the empty diff at 142/345 both sides — the stability result stands, the
+   artifact does not.
+2. `facade/facade.xml` is **not well-formed** (46 raw `<v1-pin>` tokens in character data); junit
+   acceptance cannot run even against itself.
+3. `census-venv-freeze.txt` is **0 bytes**; the three Apache cohorts' pandas major is recorded
+   nowhere. Design §5 F2: a baseline whose environment is not recorded is not a baseline. With
+   fix #2 above, the regenerated baseline cannot pass the gate without it.
+4. `expand/compat-report.json` has **duplicate `test_id`s with conflicting statuses** (two
+   `UDFInitializationTests` rows), refused by design, plus recorded 171 vs 169 actual unique ids.
+5. **The facade cohort violated two clauses of its own definition** (§6.3): pandas **3.0.5**
+   against the mandated `pandas>=2.1,<3`, and a **JVM on PATH** (`java-11-openjdk`, not the pinned
+   Temurin 17). Neither was declared as a deviation in this ledger — they are declared here now.
+   The manifest also summarises gate variables as "all `REPARK_*` + `TABLE_BUCKET_ARN`" where
+   §6.3 requires each of the thirteen names listed individually, and never states the
+   pyspark-ABSENT / duckdb-ABSENT clauses. Mitigating and verified: pyspark and duckdb *are*
+   genuinely absent and the skips fired for the recorded reason, and all four extras are present.
+
+**Consequence for the phase.** Design §6.6 items 1 and 3 take this directory as the gate input at
+phase close. Until it is re-run under the corrected procedure it cannot serve that role, and no
+comparator invocation against it can be cited as evidence. The regeneration is an
+operator/orchestrator procedure (scratch interpreters, network sparse clone, hours of wall
+clock), exactly as its generation was.
+
+### Notes for the orchestrator (not edited here, by instruction)
+
+- Nothing in `Makefile` or `.github/` required a change for these findings. Worth considering at
+  regeneration time: a cheap `make` / CI check that every committed `task/census/**/*.json` loads
+  and every `*.xml` parses would have caught findings 1 and 2 at commit time for ~1 second of
+  wall clock. Not added here since Makefile/workflow edits are carve-outs.
+- The corrected procedure now requires `--manifest-baseline` / `--manifest-candidate` in census
+  mode as well as junit mode; any orchestrator runbook that reproduces census.md §5's older
+  four-flag invocation should be updated with it.

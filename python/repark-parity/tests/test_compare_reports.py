@@ -22,6 +22,7 @@ if str(_PARITY_ROOT) not in sys.path:
     sys.path.insert(0, str(_PARITY_ROOT))
 
 from compat import compare_reports  # noqa: E402
+from compat.classify import CensusRow, denominators  # noqa: E402
 from compat.compare_reports import (  # noqa: E402
     EXIT_DIFFERENT,
     EXIT_IDENTICAL,
@@ -41,7 +42,20 @@ _MANIFEST: dict[str, str] = {
     "pyspark_version": "4.1.2",
     "spark_tag": "v4.1.2",
     "spark_commit_sha": "deadbeefcafe",
+    "pandas_version": "2.2.3",
+    "pyarrow_version": "25.0.0",
 }
+
+
+def _honest_denominators(rows: dict[str, str]) -> dict[str, Any]:
+    """The denominator block a real runner would write for exactly these rows.
+
+    The comparator validates a report's recorded block against its own rows, so a fixture
+    that records a fictitious block is a malformed report — which is a different test.
+    """
+    return denominators(
+        [CensusRow(test_id=test_id, module="", status=status) for test_id, status in rows.items()]
+    )
 
 
 def _report(rows: dict[str, str], **manifest_overrides: str) -> dict[str, Any]:
@@ -68,7 +82,7 @@ def _report(rows: dict[str, str], **manifest_overrides: str) -> dict[str, Any]:
         "generated_at": "2026-08-08T00:00:00+00:00",
         "repark_version": "0.0.0",
         **manifest,
-        "denominators": {"pass": 0, "all_collected": len(rows)},
+        "denominators": _honest_denominators(rows),
         "ranked_census": [],
         "patch_log": [],
         "findings": [],
@@ -383,13 +397,166 @@ def test_external_manifest_files_are_compared_too(tmp_path, capsys) -> None:
     assert "pandas" in err
 
 
-def test_manifest_keys_are_the_documented_four() -> None:
+def test_manifest_keys_are_the_documented_set() -> None:
     assert MANIFEST_KEYS == (
         "python_version",
         "pyspark_version",
         "spark_tag",
         "spark_commit_sha",
+        "pandas_version",
+        "pyarrow_version",
     )
+
+
+def _manifest_pair(tmp_path: Path, left: dict[str, str], right: dict[str, str]) -> list[str]:
+    (tmp_path / "e1.json").write_text(json.dumps(left), encoding="utf-8")
+    (tmp_path / "e2.json").write_text(json.dumps(right), encoding="utf-8")
+    return [
+        "--manifest-baseline",
+        str(tmp_path / "e1.json"),
+        "--manifest-candidate",
+        str(tmp_path / "e2.json"),
+    ]
+
+
+def test_external_manifest_cannot_overwrite_a_key_the_report_records(tmp_path, capsys) -> None:
+    """The first gate must not be defeatable from the CLI.
+
+    Two reports from genuinely different environments, plus one shared external manifest
+    handed to both sides: if the external file were allowed to overwrite, the manifests would
+    render identical, the gate would print "identical — gate passed", and two incomparable
+    runs would exit 0.
+    """
+    v1 = _write(tmp_path / "v1.json", _report(_BASE_ROWS))
+    v2 = _write(tmp_path / "v2.json", _report(dict(_BASE_ROWS), pyspark_version="4.0.0"))
+    shared = {"pyspark_version": "4.1.2", "pandas_version": "2.2.3"}
+    code, out, err = _run(
+        ["--baseline", str(v1), "--candidate", str(v2), *_manifest_pair(tmp_path, shared, shared)],
+        capsys,
+    )
+    assert code == EXIT_LOUD_FAIL
+    assert "EXTERNAL MANIFEST CONTRADICTS" in err
+    assert "pyspark_version" in err
+    assert out == ""
+    assert "gate passed" not in out
+
+
+def test_external_manifest_may_fill_a_key_the_report_does_not_record(tmp_path, capsys) -> None:
+    """Augmenting is the legitimate use: the pip-freeze half the JSON report never carries."""
+    v1, v2 = _pair(tmp_path, _BASE_ROWS, dict(_BASE_ROWS))
+    freeze = {"pandas_version": "2.2.3", "polars_version": "1.35.0"}
+    code, out, _ = _run(
+        ["--baseline", str(v1), "--candidate", str(v2), *_manifest_pair(tmp_path, freeze, freeze)],
+        capsys,
+    )
+    assert code == EXIT_IDENTICAL
+    assert "polars_version: 1.35.0" in out
+
+
+def test_restating_a_recorded_key_with_the_same_value_is_allowed(tmp_path, capsys) -> None:
+    v1, v2 = _pair(tmp_path, _BASE_ROWS, dict(_BASE_ROWS))
+    same = {"pyspark_version": "4.1.2"}
+    code, _, _ = _run(
+        ["--baseline", str(v1), "--candidate", str(v2), *_manifest_pair(tmp_path, same, same)],
+        capsys,
+    )
+    assert code == EXIT_IDENTICAL
+
+
+def test_a_pandas_major_difference_is_refused(tmp_path, capsys) -> None:
+    """docs/port/census.md §1, made executable: the pandas major is a different measurement."""
+    # The JSON report itself carries no pandas key — the freeze half arrives externally.
+    v1 = _write(tmp_path / "v1.json", _report(_BASE_ROWS, pandas_version=""))
+    v2 = _write(tmp_path / "v2.json", _report(dict(_BASE_ROWS), pandas_version=""))
+    code, out, err = _run(
+        [
+            "--baseline",
+            str(v1),
+            "--candidate",
+            str(v2),
+            *_manifest_pair(tmp_path, {"pandas_version": "2.2.3"}, {"pandas_version": "3.0.5"}),
+        ],
+        capsys,
+    )
+    assert code == EXIT_LOUD_FAIL
+    assert "ENVIRONMENT MANIFESTS DIFFER" in err
+    assert "pandas_version" in err
+    assert out == ""
+
+
+def test_an_unrecorded_pandas_major_is_a_loud_failure(tmp_path, capsys) -> None:
+    """A key nobody records compares equal by absence — so absence must be its own failure."""
+    v1 = _write(tmp_path / "v1.json", _report(_BASE_ROWS, pandas_version=""))
+    v2 = _write(tmp_path / "v2.json", _report(dict(_BASE_ROWS), pandas_version=""))
+    code, out, err = _run(["--baseline", str(v1), "--candidate", str(v2)], capsys)
+    assert code == EXIT_LOUD_FAIL
+    assert "ENVIRONMENT NOT RECORDED" in err
+    assert "pandas_version" in err
+    assert out == ""
+
+
+def test_junit_mode_requires_the_pandas_major_but_not_pyspark(tmp_path, capsys) -> None:
+    """The facade cohort is DEFINED by pyspark being absent, so only pandas is required."""
+    v1 = _junit(tmp_path / "a.xml", _JUNIT_ROWS)
+    v2 = _junit(tmp_path / "b.xml", dict(_JUNIT_ROWS))
+    without_pandas = {"python_version": "3.12.7", "extras": "numpy,pandas,polars,ml-ext"}
+    code, _, err = _run(
+        [
+            "--junit",
+            "--baseline",
+            str(v1),
+            "--candidate",
+            str(v2),
+            *_manifest_pair(tmp_path, without_pandas, dict(without_pandas)),
+        ],
+        capsys,
+    )
+    assert code == EXIT_LOUD_FAIL
+    assert "ENVIRONMENT NOT RECORDED" in err
+    assert "pandas_version" in err
+    assert "pyspark_version" not in err
+
+
+# ---------------------------------------------------------------------------
+# Recorded denominators — the half the byte comparison cannot imply
+# ---------------------------------------------------------------------------
+
+
+def test_recorded_denominators_are_validated_against_the_reports_own_rows(tmp_path, capsys) -> None:
+    """The expand-baseline shape: a report claiming more collected rows than it carries."""
+    payload = _report(_BASE_ROWS)
+    payload["denominators"] = {"pass": 2, "all_collected": 171, "engine_relevant": 3}
+    v1 = _write(tmp_path / "v1.json", payload)
+    v2 = _write(tmp_path / "v2.json", _report(dict(_BASE_ROWS)))
+    code, out, err = _run(["--baseline", str(v1), "--candidate", str(v2)], capsys)
+    assert code == EXIT_LOUD_FAIL
+    assert "recorded denominators disagree with the rows it carries" in err
+    assert "all_collected: recorded=171" in err
+    assert out == ""
+
+
+def test_the_recorded_denominator_gate_is_not_implied_by_the_byte_comparison(
+    tmp_path, capsys
+) -> None:
+    """Both sides byte-identical AND identically wrong — the post-subtraction re-assert alone
+    passes this, which is exactly why the recorded block is validated separately."""
+    lying = _report(_BASE_ROWS)
+    lying["denominators"] = {"pass": 999, "all_collected": 1, "engine_relevant": 0}
+    v1 = _write(tmp_path / "v1.json", lying)
+    v2 = _write(tmp_path / "v2.json", json.loads(json.dumps(lying)))
+    code, out, err = _run(["--baseline", str(v1), "--candidate", str(v2)], capsys)
+    assert code == EXIT_LOUD_FAIL
+    assert "malformed" in err
+    assert out == ""
+
+
+def test_a_report_without_a_recorded_denominator_block_still_compares(tmp_path, capsys) -> None:
+    payload = _report(_BASE_ROWS)
+    del payload["denominators"]
+    v1 = _write(tmp_path / "v1.json", payload)
+    v2 = _write(tmp_path / "v2.json", _report(dict(_BASE_ROWS)))
+    code, _, _ = _run(["--baseline", str(v1), "--candidate", str(v2)], capsys)
+    assert code == EXIT_IDENTICAL
 
 
 # ---------------------------------------------------------------------------
@@ -463,7 +630,13 @@ def _junit(path: Path, cases: dict[str, str]) -> Path:
 def _junit_manifests(tmp_path: Path) -> tuple[Path, Path]:
     left = tmp_path / "jm1.json"
     right = tmp_path / "jm2.json"
-    payload = json.dumps({"python": "3.12.7", "extras": "numpy,pandas,polars,ml-ext"})
+    payload = json.dumps(
+        {
+            "python_version": "3.12.7",
+            "pandas_version": "2.2.3",
+            "extras": "numpy,pandas,polars,ml-ext",
+        }
+    )
     left.write_text(payload, encoding="utf-8")
     right.write_text(payload, encoding="utf-8")
     return left, right

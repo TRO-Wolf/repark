@@ -1,0 +1,14 @@
+# Quarantined-unstable rows — the ONLY mechanism by which a row leaves the census gate.
+#
+# Format: one census test id per line; `#` comments and blank lines ignored. Entries are
+# excluded on BOTH sides of every comparison and counted separately in the comparator's
+# echo, so a quarantine is visible in the diff forever.
+#
+# Populated from the stability run (docs/port/census.md §3 step 2): the classic cohort is run
+# twice and every row that self-differs is named here. Recording ZERO quarantined rows is a
+# result — which is why this file exists and is empty rather than absent: the acceptance
+# command passes `--quarantine`, and a missing ledger file is exit 2 by design.
+#
+# The recorded run at pin fc3f48102 self-differed on zero rows (`stability-self-diff.txt` is
+# empty). This list must be RE-DERIVED, not carried forward, when the baseline is regenerated
+# (see map.md "Regeneration required").
