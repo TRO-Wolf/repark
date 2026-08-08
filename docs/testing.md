@@ -25,6 +25,13 @@ RePark exposes every behavior through up to three user entry points:
 | 2 | **ANSI SQL door** | native `repark.sql()` — ANSI/Trino-style dialect |
 | 3 | **Spark facade** | facade `.sql()` (Spark dialect) + PySpark-shaped DataFrame API |
 
+> **Row-2 spelling note (phase 3, 2026-08-08).** `repark.sql()` names the *target* spelling. Until
+> the post-milestone-one re-home, the shipped tree occupies `repark.sql` with the ported
+> pyspark-alias *package*, and the ANSI door is reachable from Rust only
+> (docs/design/python-facade.md Q1/Q2). `docs/release.md` "Hard blockers" fails the first tag
+> while `repark.sql` is still a module, so the target spelling cannot silently become an
+> API-forever promise.
+
 The matrix rule: **every behavior and every divergence class is a row per entry point it is
 reachable from.** New SQL surface lands with both SQL spellings and at least one test row per door
 (the two-doors rule — see `docs/adr/0002-two-sql-doors.md`). A claim tested through one entry

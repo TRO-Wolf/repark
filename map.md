@@ -6,16 +6,18 @@ RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceb
 with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). This is the
 front-door navigation map. See [README.md](README.md) for the overview and
 [AGENTS.md](AGENTS.md) for the agent contract. The repo is at
-**phase 1** of the port: the engine core is arriving — the workspace carries
-`crates/repark-common` (error seed), `crates/repark-iceberg` (catalog + write over the owned
-iceberg-rust fork, `[patch.crates-io]`-pinned), and `crates/repark-core` (the `ReparkSession`
-engine API, landing commit-by-commit in PR-C). Phase 2 (SQL doors) has begun:
-`crates/repark-functions` (Spark-semantics scalar/aggregate function shims, tier 3) is the first
-ported crate, `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
-`SparkExtension`) carries the ported repark-sql spine, `crates/repark-ta` (bit-exact TA-Lib
-kernels + the optional window-UDF layer, tier 3) is the door-neutral function set the Spark door
-composes, and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard set +
-wrong-door sniff + the curated `WITH (…)` vocabulary) is NEW code at milestone 1.
+**phase 3** of the port (Python binding + facade + parity = milestone one; design
+[docs/design/python-facade.md](docs/design/python-facade.md), slate in
+[task/todo.md](task/todo.md)). Phases 1–2 are complete — the workspace carries
+`crates/repark-common` (error seed + the surface-matrix registry), `crates/repark-iceberg`
+(catalog + write over the owned iceberg-rust fork, `[patch.crates-io]`-pinned),
+`crates/repark-core` (the `ReparkSession` engine API + the frozen `SqlDialect` /
+`SessionExtension` seams), `crates/repark-functions` (Spark-semantics scalar/aggregate function
+shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
+`SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional window-UDF
+layer, tier 3), and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard
+set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 adds `crates/repark-ml`,
+`crates/repark-python` (tier 4), and the `python/` tree.
 
 ## Contents
 

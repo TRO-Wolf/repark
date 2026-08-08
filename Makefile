@@ -67,7 +67,7 @@ rust-clippy: ## clippy with -D warnings
 	cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods
 
 .PHONY: rust-panic-ban
-rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust job runs this same target)
+rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust-lint job runs this same target)
 	# Production only (`--lib --bins`): disallowed-methods has no allow-in-tests.
 	# This is the ONLY gate where clippy.toml's `disallowed-methods` list is live (the general
 	# rust-clippy target passes -A clippy::disallowed_methods on purpose). It enforces BOTH

@@ -22,6 +22,9 @@ repository's `task/` directory).
 - [p2a-functions-ledger.md](p2a-functions-ledger.md) — unit ledger for phase-2 PR-1
   (repark-functions verbatim port + phase-2 docs): scope, declared edit classes, the 62-test
   identity-map census obligation; IN FLIGHT.
+- [p3a-arming-ledger.md](p3a-arming-ledger.md) — unit ledger for phase-3 PR-1 (design + brief
+  in-repo, crate-DAG tier-4 pre-declaration, rust CI job split, testing.md row-2 note,
+  dialect doc rider): scope, required-check transition, provocation proofs.
 - [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) — unit ledger for phase-2 PR-2
   (repark-spark skeleton: spine port, temporary refuse arms, `SparkDialect`/`SparkExtension`
   seams, G8 subquery-guard pin, deferred-#1 landing; census PARTIAL — closes PR-3b); IN
