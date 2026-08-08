@@ -136,6 +136,22 @@ names unchanged. The UDFs reach the session through `SparkExtension`'s composed
 (2026-08-07, brief §4): the 3 `read_postgres_*` rows + `read_excel_basic_fixture_round_trips`.
 Every phase-2 row is closed. Ledger: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).
 
+## Deferred testing-contract obligations (NOT v1 test names)
+
+This section is deliberately **outside** the reconciliation arithmetic above: the rows here are
+obligations owed to [../../docs/testing.md](../../docs/testing.md), not v1 tests awaiting a port,
+so they are never counted in `(ported ∪ deferred)`. They exist because
+[../../CLAUDE.md](../../CLAUDE.md)'s precedence chain puts the testing contract **above** any
+design document — a design that waives a contract rule does not discharge it; the waiver has to be
+recorded here, with an owner, or it is invisible.
+
+| obligation | owed by | owed to | discharged by | recorded |
+|---|---|---|---|---|
+| **Real-artifact coverage for `crates/repark-python`** — docs/testing.md "Boundary changes need a real-artifact test (applies from phase 3)": the whole crate is boundary code (PyO3 seams, Arrow C-stream export, IPC ingest, abi3 surface). PR-3 lands it with **in-process** coverage only: `crates/repark-python/tests/bindings.rs` boots embedded CPython through the `auto-initialize` dev-dep in the SAME build, which is structurally the case that rule exists to exclude ("when producer and consumer compile together … layout, symbol, and lifecycle mismatches are structurally invisible"). No wheel is buildable from PR-3 — `python/repark` does not exist until PR-5 — so the obligation cannot be discharged in PR-3 by construction. | phase-3 PR-3 (`crates/repark-python`, whole crate) | docs/testing.md:114 | phase-3 **PR-5** (the wheel): `docs/design/python-facade.md` §9 PR-5, "The real-artifact rule is discharged here for the first time" — at minimum the built-wheel import smoke, plus a behavior test through the installed wheel for the Arrow C-stream export path | 2026-08-08, phase-3 PR-3 verify panel. Ledger: [../p3c-binding-ledger.md](../p3c-binding-ledger.md) "Findings from the verify panel", F-7 |
+
+**PR-5's acceptance is blocked on this row.** If PR-5 lands without a wheel-crossing test, this
+row does not close and the phase-3 retrospective must carry it forward with a named owner.
+
 ## Reconciliation runs
 
 Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, this repo's

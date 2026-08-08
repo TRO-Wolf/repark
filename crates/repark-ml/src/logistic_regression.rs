@@ -196,7 +196,7 @@ impl LogisticIrlsAccumulator {
 /// Run IRLS with a caller-provided `stream_pass` that feeds one [`LogisticIrlsAccumulator`].
 ///
 /// The closure is invoked once per iteration; it must re-stream all training rows into `acc`.
-/// This is the multi-pass Rust fit seam (docs/ml-design.md).
+/// This is the multi-pass Rust fit seam (docs/design/python-facade.md §4 Q3).
 ///
 /// # Errors
 /// Propagates stream / Cholesky failures from each IRLS pass.

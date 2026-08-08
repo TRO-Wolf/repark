@@ -15,7 +15,9 @@ path (distribution is deferred). SQL routing and session-build registration are 
 - `Cargo.toml` — depends on `repark-common` (error seed), `repark-iceberg` (catalog builders +
   write knob installers), `datafusion`, `arrow`, `iceberg`, `iceberg-datafusion` (the hoisted
   `read_table_at` static provider), `chrono` (the hoisted `TIMESTAMP AS OF` parser), and the
-  S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`).
+  S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`), plus
+  `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
+  runtime and never blocks. No new package resolves: DataFusion already pulls tokio into the lock.
 - `src/session.rs` — `ReparkSession` + `ReparkSessionBuilder`: knob surface
   (`config`/`configs`, memory limit with the 1 MiB floor / 8 GiB `FairSpillPool` default,
   `batch_size`, `target_partitions`), sync `build()` + async
@@ -27,6 +29,9 @@ path (distribution is deferred). SQL routing and session-build registration are 
   Excel/postgres readers are deferred with their crates.
 - `src/backend.rs` — `ExecutionBackend` seam + `SingleNodeBackend` (the default; distribution
   deferred).
+- `src/runtime.rs` (+ `src/runtime/`) — `EngineRuntime`, the embedding's executor handle
+  (phase-3 PR-3, EC-5 / design §4 Q7): additive, tier-legal, constructed only from an
+  `Arc<Runtime>` the embedder owns. The process-wide instance lives in `repark-python`.
 - `src/catalog_config.rs` — `spark.sql.catalog.<name>.*` / `repark.sql.catalog.<name>.*` →
   `Vec<CatalogSpec>` (glue / s3tables / memory) parser; dual-prefix conflict fail-loud (keys
   only, never values); S3 Tables ARN shape check; `CatalogSpec` hand-written `Debug` redacts

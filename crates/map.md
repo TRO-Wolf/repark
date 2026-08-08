@@ -17,6 +17,7 @@ Apache DataFusion + iceberg-rust + Arrow. One-directional dependency DAG.
 | [repark-spark](repark-spark/map.md) | The Spark SQL door (tier 3): v1 `repark-sql` ported — statement router + `SparkDialect`/`SparkExtension` over the phase-1 seams. PR-2 ships the spine; DDL/DML handlers land PR-3a/PR-3b. |
 | [repark-sql](repark-sql/map.md) | The **ANSI/Trino-flavoured SQL door** (tier 3): NEW code — `AnsiDialect` over the frozen seam, delegating to DataFusion and intercepting only the Iceberg catalog DDL it cannot express. No `SessionExtension` (native semantics ARE stock DataFusion), no `sqlparser` or `datafusion-spark` dep. PR-5 ships M1 (guards, wrong-door sniff, CREATE TABLE family + `WITH (…)`, schema DDL); PR-6 adds ALTER/MERGE/time travel. |
 | [repark-ml](repark-ml/map.md) | Native ML estimator kernels (tier 3): hand-rolled Cholesky + streaming fit accumulators (OLS, IRLS logistic, Lloyd k-means). A capability leaf with **no internal deps** and one third-party dep (`thiserror`); models hold params only. Ported verbatim at the phase-3 port pin (phase-3 PR-2). |
+| [repark-python](repark-python/map.md) | The PyO3 `cdylib` (**tier 4 "bindings"** — the only tier-4 crate, and nothing may ever depend on it): `repark._native`, a thin adapter exposing `PyReparkSession` / `PyDataFrame` / `PyColumn`, the PySpark exception taxonomy, and the M3 ML fit binder. Data crosses as Arrow via the PyCapsule interface, zero-copy. **The only crate allowed `unsafe`**, and the only one that opts out of `[lints] workspace = true`. Ported at the phase-3 port pin under design §3's edit classes EC-1/2/3/5/6/10 (phase-3 PR-3). |
 
 DAG: `repark-core → {repark-iceberg, repark-common}`, `repark-iceberg → repark-common`;
 `repark-functions` is a tier-3 leaf with no internal deps (speaks `datafusion::error::Result`);
@@ -25,7 +26,12 @@ kernel core stays dependency-light); `repark-spark → {repark-core, repark-iceb
 repark-functions, repark-ta}` (tier-3 door; same-tier edges to repark-functions and repark-ta are
 legal); `repark-sql → {repark-core, repark-iceberg, repark-common}` (the other tier-3 door);
 `repark-ml` is a tier-3 leaf with no internal deps at all (pure math + accumulators — the PyO3
-binding, phase-3 PR-3, is what streams rows into it).
+binding is what streams rows into it); `repark-python → {repark-core, repark-functions, repark-ta
+(feature `datafusion`), repark-spark, repark-ml}` — five edges, tier 4 reaching down, plus the two
+**deliberate non-edges** review enforces (design §2.2): no `repark-sql` (zero ANSI surface from
+Python) and no `repark-iceberg` (the binding reaches Iceberg only through `ReparkSession` and SQL
+text). Its `repark-common` edge is **dev-only** (the EC-1 type-identity guard) and is invisible to
+the DAG guard by design.
 **There is no door→door edge, ever** (design §1): the two doors share machinery only through
 tiers 0–1, which is what keeps each free to have its own grammar.
 
@@ -56,6 +62,7 @@ tiers 0–1, which is what keeps each free to have its own grammar.
 | Add / fix a TA indicator, or its SQL window UDF | [repark-ta/map.md](repark-ta/map.md) |
 | Spark-SQL statement routing / dialect / extension | [repark-spark/map.md](repark-spark/map.md) |
 | Change an ML solver / estimator kernel | [repark-ml/map.md](repark-ml/map.md) |
+| Add/change a Python-visible method, class or exception | [repark-python/map.md](repark-python/map.md) |
 | See where the next crates land | `../docs/design/session-api.md` |
 
 ## Pointers
@@ -66,7 +73,8 @@ tiers 0–1, which is what keeps each free to have its own grammar.
 
 | Symptom | First check |
 |---|---|
-| `unsafe` lint error | Only `repark-python` (phase 3) may use `unsafe`; move FFI there |
+| `unsafe` lint error | Only `repark-python` may use `unsafe`; move FFI there |
+| `cargo test --all-features` fails to link | Never use `--all-features`: it turns on `repark-python`'s `extension-module`, which tells PyO3 not to link libpython — see [repark-python/map.md#debug](repark-python/map.md) |
 | Version-resolution conflict | Pin one DataFusion across `datafusion`/`datafusion-spark`/`iceberg*` (see AGENTS.md) |
 | `crate-dag: layering inversion` | A new dep points UP a tier — see [../scripts/map.md#debug](../scripts/map.md) |
 

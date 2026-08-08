@@ -32,6 +32,13 @@ repository's `task/` directory).
   (`python/repark-parity` verbatim port + the additive `--classic` cohort + the NEW report
   comparator + `docs/port/census.md` + the uv workspace return): scope, the collect-only
   verbatim-port census obligation, the declared new tests, gate results; IN FLIGHT.
+- [p3c-binding-ledger.md](p3c-binding-ledger.md) — unit ledger for phase-3 PR-3
+  (`crates/repark-python`, the PyO3 binding): the six applied edit classes with their per-class
+  file lists (EC-1 re-home + dep collapse + the type-identity guard, EC-2 the door-installed
+  builder and its explicit non-sites, EC-3 the three refuse-arms, EC-5 `EngineRuntime`
+  type→core/instance→binding, EC-6 the discharged `docs/ml-design.md` rider, EC-10 the
+  `check_lib_rs` row), the two `--list` identity censuses with their verbatim diffs and six
+  declared additions, and the gate table including BOTH panic-ban halves; IN FLIGHT.
 - [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) — unit ledger for phase-2 PR-2
   (repark-spark skeleton: spine port, temporary refuse arms, `SparkDialect`/`SparkExtension`
   seams, G8 subquery-guard pin, deferred-#1 landing; census PARTIAL — closes PR-3b); IN
@@ -80,6 +87,8 @@ repository's `task/` directory).
 | See the phase-3 PR-2 `repark-ml` identity census / map-rewrite rationale | [p3b-ml-ledger.md](p3b-ml-ledger.md) |
 | See the phase-3 PR-4 parity port census / comparator design record | [p3d-parity-ledger.md](p3d-parity-ledger.md) |
 | Run or compare a census | [../docs/port/census.md](../docs/port/census.md) |
+| See the phase-3 PR-3 binding edit classes / the two identity censuses / the panic-ban carve-out commands | [p3c-binding-ledger.md](p3c-binding-ledger.md) |
+| Find out why `read_excel` / `read_postgres` refuse | [p3c-binding-ledger.md](p3c-binding-ledger.md) "EC-3" |
 | Read the brief driving phase 3 | [../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) |
 | Read the brief driving phase 2 | [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) |
 | See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |

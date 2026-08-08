@@ -119,8 +119,8 @@ The locked decisions a new session is most likely to accidentally violate. Ratio
 - **No Sail / pysail dependency.** Own-the-stack was chosen; Sail is reference/prior-art only.
 - **Distribution is deferred** behind the `ExecutionBackend` seam. Single-node DataFusion is the
   target; the posture is fleet-parallel → server mode → distributed only if a query outgrows one box.
-- **`unsafe_code = "forbid"` workspace-wide, EXCEPT the future `crates/repark-python`** (PyO3 macros
-  expand to `unsafe`; that crate will set a local `allow`). Do not introduce `unsafe` anywhere else.
+- **`unsafe_code = "forbid"` workspace-wide, EXCEPT `crates/repark-python`** (landed phase-3 PR-3;
+  PyO3 macros expand to `unsafe`; that crate sets a local `allow`). Do not introduce `unsafe` anywhere else.
 - **Test with `cargo test --workspace`, NEVER the all-features flag.** Enabling every feature turns
   on the cdylib's `extension-module`, which tells PyO3 not to link libpython and breaks a standalone
   test binary (applies from phase 3; the rule is in force now so it is never re-litigated). See
@@ -188,7 +188,7 @@ tests, `// TODO: add test`, `assert!(is_ok())` as the whole body, `--skip` in CI
 ## Rust conventions
 
 Rustfmt (`max_width=100`, `edition=2024`) + Clippy `all`+`pedantic`, `-D warnings`, `unsafe_code=forbid`
-(except the future `repark-python`). `thiserror` for libs, `anyhow` for binaries; `tracing` for logs;
+(except `repark-python`). `thiserror` for libs, `anyhow` for binaries; `tracing` for logs;
 no panics in prod — no `unwrap`/`expect` (`with_context()?` / `.ok_or_else(…)?`). The panic/async-spawn
 bans are mechanical (`clippy.toml` `disallowed-methods`); crate layering (`check_crate_dag`) and
 crate-root manifests (`check_lib_rs`) are armed since phase-1 PR-A; Python thinness (`check_lib_py`)

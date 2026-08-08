@@ -72,10 +72,23 @@ rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust-lint job r
 	# This is the ONLY gate where clippy.toml's `disallowed-methods` list is live (the general
 	# rust-clippy target passes -A clippy::disallowed_methods on purpose). It enforces BOTH
 	# lists: unwrap/expect AND the tokio::spawn / spawn_blocking cancel-safety ban. Sanctioned
-	# escapes are per-call-site #[expect(clippy::disallowed_methods, reason=…)]. When
-	# repark-python lands (phase 3) it is excluded here and gated separately with
-	# unwrap_used/expect_used only (PyO3 create_exception! macro expect) — see clippy.toml.
-	cargo clippy --locked --workspace --lib --bins -- \
+	# escapes are per-call-site #[expect(clippy::disallowed_methods, reason=…)].
+	# repark-python (phase 3): EXCLUDED from the workspace invocation only because its second
+	# invocation below must drop -D expect_used for the five create_exception! macro sites —
+	# but disallowed_methods (and with it the tokio spawn/spawn_blocking cancel-safety ban)
+	# STAYS LIVE for the crate: the macro sites sit inside a module-scoped
+	# #![expect(clippy::disallowed_methods, reason=…)] (the narrowest escape that works —
+	# a per-call-site #[expect] cannot reach inside the macro expansion; provocations
+	# P-2/P-4/P-5 in task/p3c-binding-ledger.md).
+	cargo clippy --locked --workspace --lib --bins --exclude repark-python -- \
+		-D clippy::disallowed_methods \
+		-D clippy::unwrap_used \
+		-D clippy::expect_used \
+		-D clippy::panic \
+		-D clippy::todo \
+		-D clippy::unimplemented \
+		-D clippy::unreachable
+	cargo clippy --locked -p repark-python --lib -- \
 		-D clippy::disallowed_methods \
 		-D clippy::unwrap_used \
 		-D clippy::expect_used \
