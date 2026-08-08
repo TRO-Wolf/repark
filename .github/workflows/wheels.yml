@@ -74,15 +74,18 @@ jobs:
       - name: facade tests against the built wheel
         # The wheel is already built above, so the full facade pytest suite (the CI home of
         # `make py-test-facade` — a facade regression must not pass CI on an import smoke alone)
-        # costs only the test runtime. pandas comes via the wheel's own declared extra (so the
-        # packaged version constraint applies); `polars` is left out deliberately (its facade
-        # test self-skips), keeping the job lean. `python/repark-parity` (pure-Python, pyarrow
-        # only) is the differential-comparison core the parity-style facade tests import — in
-        # the uv workspace it resolves as a member, but this bare wheel-test venv must install
-        # it explicitly. pyspark and duckdb stay ABSENT (their gated tests must skip).
+        # costs only the test runtime. ALL FOUR extras install (numpy, pandas, polars, ml-ext)
+        # so CI runs the same 2,459-pass surface as the design §6.3 full-extras cohort — a
+        # pandas-only install silently skips 67 acceptance passes (the whole ml-ext delegated
+        # backend + polars interop surface). `python/repark-parity` (pure-Python, pyarrow only)
+        # is the differential-comparison core the parity-style facade tests import — in the uv
+        # workspace it resolves as a member, but this bare wheel-test venv must install it
+        # explicitly. pyspark and duckdb stay ABSENT (their gated tests must skip).
         run: |
-          WHEEL=$(ls python/repark/dist/repark-*.whl)
-          /tmp/wheeltest/bin/pip install "repark[pandas] @ file://$WHEEL" pytest ./python/repark-parity
+          # ABSOLUTE file:// URL — pip rejects a relative-path file URI ("non-local file URIs
+          # are not supported"), which would red this required job on every PR.
+          WHEEL=$(ls "$PWD"/python/repark/dist/repark-*.whl)
+          /tmp/wheeltest/bin/pip install "repark[numpy,pandas,polars,ml-ext] @ file://$WHEEL" pytest ./python/repark-parity
           /tmp/wheeltest/bin/python -m pytest python/repark/tests -q
 
   release-wheels:

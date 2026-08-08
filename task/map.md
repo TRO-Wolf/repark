@@ -33,7 +33,7 @@ repository's `task/` directory).
   comparator + `docs/port/census.md` + the uv workspace return): scope, the collect-only
   verbatim-port census obligation, the declared new tests, gate results; IN FLIGHT.
 - [p3e-facade-ledger.md](p3e-facade-ledger.md) — unit ledger for phase-3 PR-5 (`python/repark`,
-  the facade wheel + its 127-file suite): the two-commit plan, the line-by-line **EC-9 hygiene
+  the facade wheel + its 126-file suite): the two-commit plan, the line-by-line **EC-9 hygiene
   scrub** table, the per-node **EC-4 adjudication** (where each exception is raised), the
   collect-only identity census with its verbatim diff, the §6.3 wheel-proof clause table,
   **finding B-1** — one attributed pass→fail movement (`datafusion.runtime.memory_limit` refused

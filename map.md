@@ -21,7 +21,7 @@ set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has lande
 `crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**, ported in PR-3 under design §3's
 edit classes) and `python/repark-parity` (the parity harness + the census machinery + the NEW
 report comparator that is the port's acceptance gate, PR-4) and `python/repark` (the PySpark
-facade wheel — 53 source modules and the 127-file suite, ported verbatim under design §3's
+facade wheel — 53 source modules and the 126-file suite (127 at the pin minus the whole-file excel deferral), ported verbatim under design §3's
 EC-4/EC-7/EC-9 in PR-5). A wheel is buildable from PR-5 onward; it is not yet tagged.
 
 ## Contents

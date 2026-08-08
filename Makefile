@@ -40,7 +40,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs rust-check py-lint py-format-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 .PHONY: test
 test: rust-test ## All tests (Rust only until the Python packages land in phase 3)
@@ -52,7 +52,7 @@ verify: ci test ## ci + test — full local verification
 preflight: verify audit workflows-lint ## The pre-PR gate: everything CI runs
 
 .PHONY: audit
-audit: rust-audit rust-deny ## Security gates (cargo-audit + cargo-deny; pip-audit returns in phase 3)
+audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)
 
 # ------------------------------------------------------------------------------------------------
 # Rust
@@ -169,6 +169,13 @@ py-test-facade: ## Facade tests against the real native module (builds it first 
 	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
 	PYTHONPATH=python/repark-parity/src VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" \
 		uv run --no-project python -m pytest python/repark/tests -q
+
+.PHONY: py-audit
+py-audit: ## Python dependency CVE scan (mirrors pip-audit.yml)
+	@# --no-emit-workspace drops the local workspace packages; pip-audit scans published deps.
+	uv export --frozen --no-emit-workspace --format requirements-txt > requirements-audit.txt
+	uvx pip-audit --strict -r requirements-audit.txt
+	@rm -f requirements-audit.txt
 
 .PHONY: build-wheel
 build-wheel: ## Build the repark release wheel with maturin
