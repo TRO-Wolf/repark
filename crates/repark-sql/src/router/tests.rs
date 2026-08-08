@@ -53,25 +53,14 @@ async fn select_delegates_to_datafusion() {
     assert_eq!(answer.value(0), 42, "value");
 }
 
-/// A `$`-suffixed metadata-table reference is routed to delegation, NOT to the statement match.
+/// A `$`-suffixed metadata-table reference reaches delegation through the ordinary `_ =>` arm —
+/// the stock parser accepts `$` in an identifier, so no pre-parse passthrough is needed.
 ///
 /// Asserted through the routing OUTCOME rather than a mock: with no such table registered, the
 /// delegated plan fails with DataFusion's table-not-found error. A statement-match route would
 /// have produced a different error entirely (or silently done nothing).
 #[tokio::test]
 async fn metadata_dollar_form_passes_through() {
-    assert!(
-        references_metadata_table("SELECT * FROM ice.sales.orders$snapshots"),
-        "a `$` name must route to delegation"
-    );
-    // …and a `$` inside a literal must NOT hijack the routing decision.
-    assert!(
-        !references_metadata_table(
-            "CREATE TABLE ice.s.t WITH (location = 'file:///w/a$b') AS SELECT 1 AS a"
-        ),
-        "a `$` inside a literal must not route a CREATE away from its handler"
-    );
-
     let ctx = native_ctx();
     let err = run(&ctx, "SELECT * FROM ice.sales.orders$snapshots")
         .await
@@ -80,6 +69,42 @@ async fn metadata_dollar_form_passes_through() {
     assert!(
         err.contains("orders$snapshots"),
         "the delegated planner error must name the metadata table: {err}"
+    );
+}
+
+/// A `$` ANYWHERE in a statement must not route a `CREATE TABLE` away from its handler.
+///
+/// The regression this pins: a pre-parse "`$` → delegate" passthrough sent `CREATE TABLE t AS
+/// SELECT … FROM x$snapshots` into DataFusion's own CTAS, which happily built a session-local
+/// `MemTable` — the silent-fallthrough failure graft G1 forbids, on a statement (CTAS from a
+/// metadata table) users really write. Here the target is unregistered, so the Q15 routing check
+/// must REFUSE it, not create anything.
+#[tokio::test]
+async fn metadata_reference_does_not_bypass_the_create_handler() {
+    let ctx = native_ctx();
+    let err = run(
+        &ctx,
+        "CREATE TABLE snapbak AS SELECT * FROM ice.sales.orders$snapshots",
+    )
+    .await
+    .expect_err("an unregistered CTAS target must refuse even when the query names `$`")
+    .to_string();
+    assert!(
+        err.contains("qualify") || err.contains("registered"),
+        "must be the Q15 routing refusal, not a MemTable: {err}"
+    );
+    assert!(
+        !ctx.table_exist("snapbak").unwrap_or(false),
+        "nothing may be created in the session"
+    );
+    // The same holds for a DROP whose name carries `$`: it reaches the DROP handler.
+    let err = run(&ctx, "DROP TABLE nosuch$x")
+        .await
+        .expect_err("an unregistered DROP target must refuse")
+        .to_string();
+    assert!(
+        err.contains("qualify") || err.contains("registered"),
+        "DROP must reach its handler too: {err}"
     );
 }
 

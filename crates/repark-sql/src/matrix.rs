@@ -5,8 +5,10 @@
 //! with each ID, and [`matrix_maps_every_surface`] fails the build if any ID has no row.
 //!
 //! This door is NEW code, so the matrix does double duty: it is the audit, and it is the
-//! milestone boundary. PR-5 (M1) ships the delegation core, the guard set, the wrong-door sniff,
-//! the CTAS/`WITH (…)` vocabulary and the schema DDL; PR-6 (M2) ships ALTER, MERGE, `FOR … AS
+//! milestone boundary. PR-5 (M1) ships the delegation core (reads, metadata tables, and the
+//! `INSERT`/`DELETE`/`UPDATE` the fork's `TableProvider` services — with the BUG-001 merge-on-read valve
+//! wired over them), the guard set, the wrong-door sniff, the CTAS/`WITH (…)` vocabulary and the
+//! schema DDL; PR-6 (M2) ships ALTER, MERGE, `FOR … AS
 //! OF`, branch/tag DDL, the full refuse set and the cross-door rows. Every M2 surface is a
 //! `DeliberatelyAbsent` row here naming PR-6 — **sequencing recorded as a decision**, which is
 //! exactly what design §6 R5 asks for (no deferral without its equivalent and its trigger).
@@ -143,14 +145,11 @@ const ROWS: &[(SurfaceId, Row)] = &[
             "docs/design/sql-doors.md §2 Q3",
         ),
     ),
+    // --- Delegated DML: shipped by M1 because delegation ships it (ADR-0003). These are WRITE
+    // surfaces, so each carries a round-trip row and the MoR valve below is wired over them.
     (
         surfaces::INSERT_INTO,
-        absent(
-            "DML delegation (INSERT/DELETE/UPDATE through the fork's `TableProvider`, ADR-0003) \
-             lands with the M2 DML set, behind the same guard set M1 installs. M1's scope is the \
-             delegation core plus DDL (brief §1 PR-5).",
-            M2,
-        ),
+        t("tests::insert_into_iceberg_table_round_trips", Native),
     ),
     (
         surfaces::INSERT_OVERWRITE,
@@ -164,11 +163,14 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::DELETE,
-        absent("Same M2 DML set as INSERT_INTO above.", M2),
+        t(
+            "tests::delete_from_iceberg_table_removes_matching_rows",
+            Native,
+        ),
     ),
     (
         surfaces::UPDATE,
-        absent("Same M2 DML set as INSERT_INTO above.", M2),
+        t("tests::update_iceberg_table_rewrites_matching_rows", Native),
     ),
     (
         surfaces::MERGE,
@@ -315,14 +317,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::GUARD_MOR_MULTI_SPEC_DML,
-        absent(
-            "The hoisted BUG-001 valve gates DML, and this door's DML rows are M2 — the guard \
-             is wired at the same time as the statements it can fire on. Wiring it against \
-             statements that all refuse would produce a test that proves the refuse, not the \
-             valve (design §2 Q12; the valve itself is tier-1 and already tested in \
-             repark-iceberg).",
-            M2,
-        ),
+        t("tests::mor_unpartitioned_multi_spec_dml_refuses", Native),
     ),
     // --- Ergonomics + seams ---
     (
@@ -352,7 +347,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::SQL_DIALECT_SEAM,
         t(
-            "dialect::tests::ansi_dialect_execute_runs_the_router",
+            "session_wiring::ansi_dialect_on_a_repark_session_runs_the_door",
             Native,
         ),
     ),
@@ -427,6 +422,9 @@ fn m1_ships_the_briefed_scope() {
             surfaces::CREATE_SCHEMA,
             surfaces::DROP_SCHEMA,
             surfaces::METADATA_TABLES,
+            surfaces::INSERT_INTO,
+            surfaces::DELETE,
+            surfaces::UPDATE,
             surfaces::TABLE_OPTION_FORMAT,
             surfaces::TABLE_OPTION_FORMAT_VERSION,
             surfaces::TABLE_OPTION_PARTITIONING,
@@ -441,10 +439,11 @@ fn m1_ships_the_briefed_scope() {
             surfaces::GUARD_READ_ONLY_CATALOG,
             surfaces::GUARD_LOCAL_FILESYSTEM,
             surfaces::GUARD_WRITE_TO_BRANCH,
+            surfaces::GUARD_MOR_MULTI_SPEC_DML,
             surfaces::WRONG_DOOR_SNIFF,
             surfaces::SQL_DIALECT_SEAM,
         ],
         "the ANSI door's M1 surface set changed — update this pin AND task/p2f-ansi-m1-ledger.md"
     );
-    assert_eq!(ROWS.len() - tested.len(), 18, "deliberate-absence count");
+    assert_eq!(ROWS.len() - tested.len(), 14, "deliberate-absence count");
 }

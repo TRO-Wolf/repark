@@ -10,9 +10,17 @@
 //! **native equivalent**, and the **Spark door**. Three properties fall out of the error-path
 //! placement, and all three are why it is placed there:
 //! * **Zero happy-path cost** — no scan runs on a statement that worked.
-//! * **No false positives that matter** — a successful statement is never second-guessed, so the
-//!   sniff cannot break working SQL. (It also scans SCRUBBED text, so `SELECT 'USING'` and
-//!   `-- USING` are invisible even on the error path.)
+//! * **Bounded false positives** — a successful statement is never second-guessed, so the sniff
+//!   cannot break working SQL. (It also scans SCRUBBED text, so `SELECT 'USING'` and `-- USING`
+//!   are invisible even on the error path.)
+//!
+//! "Never breaks working SQL" is not the same as "never misleads". Several of the tokens below
+//! are ALSO ordinary ANSI SQL: `USING` is a join clause, and `tag` / `branch` / `namespace` /
+//! `database` are perfectly good column names. A `SELECT tag FROM t` that fails because `t` does
+//! not exist must not be answered with "this looks like Spark SQL". So every rule whose token has
+//! an ANSI-legal reading carries a **leading-keyword scope** ([`Scope::Leading`]): it fires only
+//! when the statement's first keyword is one the Spark-ism could actually belong to. Tokens with
+//! no ANSI reading (`TBLPROPERTIES`, `LATERAL VIEW`, backticks, …) stay unscoped.
 //! * **No grammar commitment** — the door does not have to *parse* Spark to *recognize* it.
 //!
 //! **Case rules.** The sniff matches tokens case-insensitively. Separately, and worth stating
@@ -24,7 +32,30 @@
 
 use datafusion::error::DataFusionError;
 
-use crate::scan::{blank_out_quoted_and_comments, contains_word};
+use crate::scan::{blank_out_quoted_and_comments, contains_word, leading_keyword};
+
+/// Where a rule is allowed to fire.
+#[derive(Clone, Copy)]
+enum Scope {
+    /// The token has no ANSI-legal reading — match it wherever it appears.
+    Anywhere,
+    /// The token is ALSO ordinary ANSI SQL, so match it only when the statement's leading
+    /// keyword is one of these (uppercase).
+    Leading(&'static [&'static str]),
+}
+
+impl Scope {
+    /// True when this scope admits a statement whose leading keyword is `leading`.
+    fn admits(self, leading: Option<&str>) -> bool {
+        match self {
+            Self::Anywhere => true,
+            Self::Leading(keywords) => leading.is_some_and(|word| keywords.contains(&word)),
+        }
+    }
+}
+
+/// The DDL verbs a catalog/namespace Spark-ism can lead with.
+const DDL_VERBS: &[&str] = &["CREATE", "DROP", "ALTER", "SHOW", "USE", "DESCRIBE", "DESC"];
 
 /// One recognizable Spark-ism: the token, and the steer.
 #[derive(Clone, Copy)]
@@ -53,6 +84,20 @@ pub(crate) fn upgrade_error(sql: &str, original: DataFusionError) -> DataFusionE
          (`SparkDialect` / `SparkExtension`), or route this one statement through it.",
         sniff.token, sniff.equivalent
     ))
+}
+
+/// The scope of a single-token rule, keyed by its needle. Kept beside the table rather than in
+/// it so the table stays a table; every needle NOT listed here is [`Scope::Anywhere`].
+///
+/// * `USING` — ANSI join clause (`JOIN b USING (id)`); Spark-ism only in `CREATE TABLE … USING`.
+/// * `NAMESPACE` / `DATABASE` / `DBPROPERTIES` — ordinary column and alias names; Spark-isms only
+///   as catalog DDL.
+fn scope_for(needle: &str) -> Scope {
+    match needle {
+        "USING" => Scope::Leading(&["CREATE"]),
+        "NAMESPACE" | "DATABASE" | "DBPROPERTIES" => Scope::Leading(DDL_VERBS),
+        _ => Scope::Anywhere,
+    }
 }
 
 /// The single-token Spark-isms, as a table: token → steer. Ordered most-specific first, so a
@@ -150,18 +195,19 @@ fn sniff(scrubbed: &str) -> Option<SparkIsm> {
         });
     }
 
+    let leading = leading_keyword(scrubbed);
     for (needle, ism) in RULES {
-        if contains_word(scrubbed, needle) {
+        if contains_word(scrubbed, needle) && scope_for(needle).admits(leading.as_deref()) {
             return Some(*ism);
         }
     }
-    sniff_composite_forms(scrubbed)
+    sniff_composite_forms(scrubbed, leading.as_deref())
 }
 
 /// The Spark-isms that need more than a single token to recognize — a keyword PAIR whose ANSI
 /// spelling differs only by a missing `FOR`, and two multi-word statement shapes. Split out of
 /// [`sniff`] so the token table above stays a table.
-fn sniff_composite_forms(scrubbed: &str) -> Option<SparkIsm> {
+fn sniff_composite_forms(scrubbed: &str, leading: Option<&str>) -> Option<SparkIsm> {
     // `VERSION AS OF` / `TIMESTAMP AS OF` WITHOUT the mandatory `FOR` — the single most common
     // Spark→ANSI time-travel mistake, and one the parser can only report as nonsense.
     if (contains_word(scrubbed, "VERSION AS OF") || contains_word(scrubbed, "TIMESTAMP AS OF"))
@@ -175,8 +221,11 @@ fn sniff_composite_forms(scrubbed: &str) -> Option<SparkIsm> {
         });
     }
 
-    // Top-level snapshot-ref DDL (`CREATE BRANCH b IN t`) — the Spark-only spelling.
-    if contains_word(scrubbed, "BRANCH") || contains_word(scrubbed, "TAG") {
+    // Top-level snapshot-ref DDL (`CREATE BRANCH b IN t`) — the Spark-only spelling. Scoped to
+    // the DDL verbs: `branch` and `tag` are ordinary column names in a query.
+    if Scope::Leading(DDL_VERBS).admits(leading)
+        && (contains_word(scrubbed, "BRANCH") || contains_word(scrubbed, "TAG"))
+    {
         return Some(SparkIsm {
             token: "BRANCH/TAG DDL",
             equivalent: "Branch and tag DDL is scoped to the table: ALTER TABLE t CREATE BRANCH b (the \
@@ -184,8 +233,9 @@ fn sniff_composite_forms(scrubbed: &str) -> Option<SparkIsm> {
         });
     }
 
-    // `CALL cat.system.<proc>(…)` — maintenance procedures.
-    if contains_word(scrubbed, "CALL") && contains_word(scrubbed, "system") {
+    // `CALL cat.system.<proc>(…)` — maintenance procedures. The statement must LEAD with CALL:
+    // `system` is a plausible identifier, and `call` a plausible column name.
+    if leading == Some("CALL") && contains_word(scrubbed, "system") {
         return Some(SparkIsm {
             token: "CALL <catalog>.system.<procedure>",
             equivalent: "Maintenance runs as a callable operation on the session, not as a SQL statement \

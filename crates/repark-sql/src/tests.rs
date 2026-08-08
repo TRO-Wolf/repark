@@ -905,3 +905,175 @@ async fn column_def_types_are_not_widened() {
     }
     assert_eq!(batches.iter().map(RecordBatch::num_rows).sum::<usize>(), 0);
 }
+
+// === Delegated DML (fork `TableProvider`, ADR-0003) =========================================
+
+/// `INSERT INTO` an Iceberg table delegates to the fork's `TableProvider` and really commits:
+/// the new row reads back through a FRESH catalog load, not just through the session.
+///
+/// This is a WRITE surface, so it is pinned rather than assumed. (An earlier revision marked it
+/// `DeliberatelyAbsent` while it was live — the exact false-absence the surface matrix exists to
+/// prevent.)
+#[tokio::test]
+async fn insert_into_iceberg_table_round_trips() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.ins AS SELECT 1 AS id, 'a' AS label")
+        .await;
+    door.ok("INSERT INTO ice.sales.ins VALUES (2, 'b')").await;
+
+    let (schema, batches) = door
+        .ok_typed("SELECT id, label FROM ice.sales.ins ORDER BY id")
+        .await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64, "id type");
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8, "label type");
+    let ids: Vec<i64> = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .expect("Int64 id")
+                .values()
+                .to_vec()
+        })
+        .collect();
+    assert_eq!(ids, vec![1, 2], "the inserted row must be visible");
+
+    // …and it is a COMMITTED Iceberg row: the table now carries a second snapshot.
+    let table = door.table("sales", "ins").await;
+    assert!(
+        table.metadata().snapshots().count() >= 2,
+        "the insert must have committed its own snapshot"
+    );
+}
+
+/// `DELETE FROM` delegates and removes exactly the matching rows (copy-on-write default).
+#[tokio::test]
+async fn delete_from_iceberg_table_removes_matching_rows() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.del AS SELECT 1 AS id, 'a' AS label \
+         UNION ALL SELECT 2 AS id, 'b' AS label",
+    )
+    .await;
+    door.ok("DELETE FROM ice.sales.del WHERE id = 1").await;
+
+    let (schema, batches) = door.ok_typed("SELECT id, label FROM ice.sales.del").await;
+    assert_eq!(schema.field(0).data_type(), &DataType::Int64, "id type");
+    let rows: usize = batches.iter().map(RecordBatch::num_rows).sum();
+    assert_eq!(rows, 1, "exactly one row must survive");
+    let ids = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("Int64 id");
+    assert_eq!(ids.value(0), 2, "the non-matching row must survive");
+}
+
+/// `UPDATE … SET` delegates and rewrites exactly the matching rows, types intact.
+#[tokio::test]
+async fn update_iceberg_table_rewrites_matching_rows() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.upd AS SELECT 1 AS id, 'a' AS label \
+         UNION ALL SELECT 2 AS id, 'b' AS label",
+    )
+    .await;
+    door.ok("UPDATE ice.sales.upd SET label = 'z' WHERE id = 1")
+        .await;
+
+    let (schema, batches) = door
+        .ok_typed("SELECT id, label FROM ice.sales.upd ORDER BY id")
+        .await;
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8, "label type");
+    let mut pairs: Vec<(i64, String)> = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64 id");
+        let labels = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("Utf8 label");
+        for row in 0..batch.num_rows() {
+            pairs.push((ids.value(row), labels.value(row).to_string()));
+        }
+    }
+    pairs.sort();
+    assert_eq!(
+        pairs,
+        vec![(1, "z".to_string()), (2, "b".to_string())],
+        "only the matching row may change"
+    );
+}
+
+/// BUG-001 valve, wired: `DELETE`/`UPDATE` against a merge-on-read table whose CURRENT spec is
+/// unpartitioned while its history carries an earlier spec REFUSES rather than silently
+/// under-deleting (the fork's unpartitioned position-delete fast path, `ENGINE_CONTRACT` §7a).
+///
+/// The fixture is built through this door plus the tier-1 spec-evolution helper, because that is
+/// the only way to reach the hazard shape in M1: create merge-on-read AND partitioned (the
+/// `extra_properties` hatch + `partitioning`), then drop the partition field so the current spec
+/// is unpartitioned and the history has two specs.
+#[tokio::test]
+async fn mor_unpartitioned_multi_spec_dml_refuses() {
+    use iceberg::spec::Transform;
+    use repark_iceberg::write::alter::{PartitionSpecChange, apply_partition_spec_changes};
+
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.morevo WITH (\
+             partitioning = ARRAY['bucket(4, id)'], \
+             extra_properties = MAP(ARRAY['write.delete.mode', 'write.update.mode'], \
+                                    ARRAY['merge-on-read', 'merge-on-read'])) \
+         AS SELECT 1 AS id, 'a' AS label")
+        .await;
+
+    // Evolve the spec away: current spec becomes unpartitioned, history keeps the bucket spec.
+    apply_partition_spec_changes(
+        door.catalog.as_ref(),
+        &TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "morevo".to_string(),
+        ),
+        &[PartitionSpecChange::RemoveFieldByTransform {
+            source_name: "id".to_string(),
+            transform: Transform::Bucket(4),
+        }],
+    )
+    .await
+    .expect("dropping the partition field must commit");
+
+    let table = door.table("sales", "morevo").await;
+    assert!(
+        table.metadata().default_partition_spec().is_unpartitioned(),
+        "fixture: the current spec must be unpartitioned"
+    );
+    assert!(
+        table.metadata().partition_specs_iter().len() > 1,
+        "fixture: the history must carry more than one spec"
+    );
+
+    for sql in [
+        "DELETE FROM ice.sales.morevo WHERE id = 1",
+        "UPDATE ice.sales.morevo SET label = 'z' WHERE id = 1",
+    ] {
+        let err = door.err(sql).await;
+        assert!(
+            err.contains("merge-on-read") && err.contains("partition specs in history"),
+            "`{sql}` must hit the BUG-001 valve: {err}"
+        );
+        assert!(
+            err.contains("copy-on-write") || err.contains("MERGE INTO"),
+            "`{sql}` must name a workaround: {err}"
+        );
+    }
+
+    // The valve is TARGETED, not a blanket DML refuse: an ordinary table still deletes.
+    door.ok("CREATE TABLE ice.sales.plain AS SELECT 1 AS id")
+        .await;
+    door.ok("DELETE FROM ice.sales.plain WHERE id = 1").await;
+}

@@ -18,12 +18,19 @@ mapping. Arrow-path assertions (value AND type), never `show` alone. The matrix 
 - `AnsiDialect: SqlDialect` over the FROZEN phase-1 seam (`execute(EngineContext<'_>, &str)` —
   design §3; no core-side hooks, guards are door-called).
 - Router order, exactly as ruled: multi-statement refuse FIRST (quote-aware; double-quote
-  strings, no backticks) → metadata/`$` passthrough → parse via stock DataFusion parser
+  strings, no backticks) → the async BUG-001 MoR valve → parse via stock DataFusion parser
   machinery (Generic dialect, Q14) → statement match → **on parse/plan FAILURE ONLY** the
   wrong-door sniff (Q10 / graft G3). `FOR …` time travel is PR-6 and is deliberately not
-  scanned here.
+  scanned here. The metadata/`$` stage the ruling names is **implemented as "nothing"**: the
+  stock parser accepts `$` in identifiers, so a metadata reference reaches delegation through
+  the ordinary `_ =>` arm. A pre-parse `$` passthrough was written first and REMOVED at the
+  verify-panel fix pass — see "Verify-panel fixes" below.
 - Guard set at the router head (Q12): multi-statement, P11 read-only-catalog DML refuse
-  (generic message), SEC-02 local-filesystem plan refuse, write-to-branch sniff.
+  (generic message), the BUG-001 MoR valve over delegated DELETE/UPDATE, SEC-02
+  local-filesystem plan refuse, write-to-branch sniff.
+- Delegated DML: `INSERT` / `DELETE` / `UPDATE` reach the fork's `TableProvider` (ADR-0003)
+  through the delegation core, so M1 SHIPS them — with round-trip rows and the MoR valve wired
+  over them. `MERGE` lowering remains M2.
 - CTAS / `CREATE TABLE … WITH (…)`: the curated vocabulary (`format`, `format_version`,
   `partitioning`, `location`) + the FUNCTIONAL `extra_properties = MAP(ARRAY[…], ARRAY[…])`
   hatch (graft G4) + the two reserved refusals (`sorted_by`, ORC/AVRO — graft G9) + the
@@ -38,7 +45,7 @@ mapping. Arrow-path assertions (value AND type), never `show` alone. The matrix 
 
 Out of scope (M2 / PR-6, each row present in the matrix as a typed absence): ALTER handlers,
 MERGE lowering, `FOR … AS OF` + the double-quote pin set, branch/tag ALTER DDL, the full refuse
-set, DML delegation rows, the cross-door two-session equivalence rows, `session-api.md`
+set, `MERGE` lowering, the cross-door two-session equivalence rows, `session-api.md`
 seam-freeze edits.
 
 ## Decisions applied (design § cited)
@@ -58,6 +65,7 @@ seam-freeze edits.
 | Typed surface registry + per-door matrix + compile-run audit | `repark-common` + both doors | §2 Q13 / G2 |
 | Cross-door rows need TWO sessions — not faked at M1 | matrix absence rows | §2 Q13 / G5 |
 | Every deferral names its equivalent + trigger | matrix absence rows | §6 R5 |
+| MoR valve (BUG-001) is in the ANSI guard set | `guards::refuse_mor_multi_spec_dml` | §2 Q12 |
 
 ## Day-1 spikes (design §6 R1 / R2)
 
@@ -131,7 +139,7 @@ untraceable row (a `Tested` with no test name, a `DeliberatelyAbsent` with no re
 | Door | Tested | DeliberatelyAbsent |
 |---|---|---|
 | `repark-spark` | 38 | 5 |
-| `repark-sql` (M1) | 25 | 18 |
+| `repark-sql` (M1) | 29 | 14 |
 
 **The Spark door's 5 absences** — `TABLE_OPTION_SORT_ORDER` and
 `TABLE_OPTION_UNKNOWN_KEY_REFUSE` (no Spark spelling exists to guard: `TBLPROPERTIES` is a raw
@@ -139,8 +147,8 @@ map), `WRONG_DOOR_SNIFF` (the sniff points AT this door), `TA_FUNCTIONS` (PR-4 c
 `TaExtension`; the row flips there — **sequencing, and the integrator should expect PR-4 to
 change it**), `CROSS_DOOR_EQUIVALENCE` (PR-6's two-session protocol).
 
-**The ANSI door's 18 absences** break down as 13 M2 deferrals, three standing decisions,
-`TA_FUNCTIONS`, and one filed core gap. The 13 M2 deferrals are the 12 rows citing the `M2`
+**The ANSI door's 14 absences** break down as nine M2 deferrals, three standing decisions,
+`TA_FUNCTIONS`, and one filed core gap. The nine M2 deferrals are the eight rows citing the `M2`
 const plus `BRANCH_TAG_DDL`, whose reason is M2 but which cites §2 Q6 (the ruling that names it
 the first deferral candidate if M2 overruns). The three standing decisions — absent by ruling,
 not by sequencing — are `ALTER_TABLE_PARTITION_FIELDS` (Q3 — deferred from SQL entirely, the
@@ -163,9 +171,90 @@ door. Neither door may claim the `TwoSession` profile before PR-6.
 | repark-common lints | `cargo clippy -p repark-common --all-targets` | clean |
 | Spark-door matrix audit | `cargo test -p repark-spark --lib matrix` | 3 passed |
 | ANSI-door matrix audit | `cargo test -p repark-sql --lib matrix` | 3 passed |
-| repark-sql full battery | `cargo test -p repark-sql` | _WS1 / integrator_ |
-| Workspace | `make verify` / `make preflight` | _integrator_ |
-| map.md lockstep | `scripts/check_map_md.sh` | new dir `crates/repark-common/src/surfaces/` carries its `map.md` |
+| repark-sql full battery | `cargo test -p repark-sql` | 144 lib + 3 `parser_productions` + 2 `session_wiring` passed, 0 failed, 0 ignored |
+| Workspace tests | `cargo test --workspace` (NEVER `--all-features`) | EXIT=0 — **900 passed / 0 failed / 0 ignored** |
+| Fast gate | `make ci` | EXIT=0 (fmt, clippy `-D warnings`, panic-ban, crate-dag, lib-rs, check, ruff, taplo, typos) |
+| Full CI surface | `make preflight` | EXIT=0 — cargo-deny advisories/bans/licenses/sources ok, 7 workflows parse, zizmor clean |
+| Crate-DAG layering | `./scripts/check_crate_dag.sh` | 9 internal edges clean across 6 of 7 mapped crates (`repark-sql` tier 3 → core/iceberg/common only) |
+| `lib.rs` manifests | `./scripts/check_lib_rs.sh` | 6 crate roots clean |
+| map.md lockstep | `scripts/check_map_md.sh` | clean; new dir `crates/repark-common/src/surfaces/` carries its `map.md` |
+| Matrix audits (both doors) | `cargo test -p repark-spark --lib matrix` / `-p repark-sql --lib matrix` | 3 + 3 passed; mutation-verified (an unmapped ID REDs both) |
+
+The **full panel** above ran on the post-fix tree — no §-substitution, no gate skipped. Every
+commit on the branch is green under `make ci`.
+
+## Verify-panel fixes (post-assembly, four lenses)
+
+Four verification lenses ran against the assembled branch. What they found, and what changed —
+each defect is pinned by a test that RED-ed before the fix.
+
+1. **HIGH — the pre-parse `$` passthrough was a Q15/G1 hole (three lenses reproduced it).** The
+   router short-circuited to `delegate()` whenever the SCRUBBED text contained a `$`, BEFORE the
+   statement match. So `CREATE TABLE snapbak AS SELECT * FROM ice.sales.orders$snapshots` never
+   reached `create_table`: DataFusion's own CTAS built a session-local `MemTable` that read back
+   for the rest of the session and vanished with it — verbatim the failure the door's own
+   refusal text forbids. The qualified form was broken differently (`register_table does not
+   support tables with data`), and `DROP TABLE`/`CREATE SCHEMA` carrying a `$` were delegated
+   past their handlers too. **Fix: the passthrough is deleted, not moved.** The stage was
+   unnecessary from the start — the stock Generic dialect parses `$` inside an identifier
+   (verified: `SELECT … FROM t$snapshots`, `CREATE TABLE … AS SELECT … FROM t$snapshots` and
+   `DROP TABLE t$x` all parse), so metadata references reach delegation through the ordinary
+   `_ =>` arm. Pin: `router::tests::metadata_reference_does_not_bypass_the_create_handler`.
+2. **HIGH — `INSERT_INTO` / `DELETE` / `UPDATE` were false absence rows.** They were marked
+   `DeliberatelyAbsent` ("lands with the M2 DML set") while the surfaces were LIVE and mutating:
+   the delegation core hands them to the fork's `TableProvider` (ADR-0003), so `INSERT INTO …
+   VALUES` committed a snapshot and `DELETE`/`UPDATE` rewrote rows — three Iceberg WRITE surfaces
+   shipping with zero tests. That is precisely the failure Q13's typed absence exists to prevent.
+   **Fix: the rows are `Tested`,** with round-trip evidence on the Arrow path (value AND type,
+   plus a committed-snapshot assertion for INSERT).
+3. **HIGH — the BUG-001 MoR valve was unwired (consequence of 2).** `GUARD_MOR_MULTI_SPEC_DML`'s
+   deferral rested on "this door's DML rows are M2", which was false; Q12 lists the valve in this
+   door's guard set, and M1's `extra_properties` hatch is exactly what makes a merge-on-read
+   table creatable here. **Fix: `guards::refuse_mor_multi_spec_dml`** — the ANSI resolution
+   wrapper over the tier-1 predicate, called at the router head (async, so it sits beside
+   `run_text_guards` rather than inside it). Pinned end to end on a REAL hazard fixture
+   (`tests::mor_unpartitioned_multi_spec_dml_refuses`: create merge-on-read + bucket-partitioned
+   through this door, drop the partition field via the tier-1 evolution helper, then DELETE and
+   UPDATE both refuse) plus every pass-through branch of the wrapper
+   (`guards::tests::mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate`).
+4. **MEDIUM — the wrong-door sniff false-positived on ANSI-legal SQL (two lenses).** `USING` was
+   a bare token, so `SELECT * FROM a JOIN b USING (id)` failing for an unrelated reason (missing
+   table) was answered with "this looks like Spark SQL… Drop it" — advice that would break a
+   standard ANSI join. Same class for `tag` / `branch` / `namespace` / `database` as ordinary
+   column names. The module doc claimed "no false positives that matter" and the only pin was
+   four hand-picked non-SQL strings. **Fix: leading-keyword scoping** (`Scope::Leading`) for every
+   token with an ANSI reading — `USING` under `CREATE`, the namespace family and BRANCH/TAG under
+   the DDL verbs, `CALL … system` only when the statement LEADS with `CALL`. The doc claim is
+   downgraded to "bounded false positives" and pinned by
+   `sniff::tests::ansi_legal_statements_are_never_steered_to_the_spark_door`, with
+   `scoped_rules_still_fire_in_their_own_statement_shapes` proving the scoping did not disarm the
+   rules.
+5. **MEDIUM — `SQL_DIALECT_SEAM` was evidence that did not match its claim.** The registry defines
+   that ID as "the door is reachable through a SESSION"; the cited test called
+   `AnsiDialect.execute(EngineContext::new(…))` on a bare `SessionContext`, and nothing anywhere
+   installed the dialect on a `ReparkSession` — the door was not shown wired into the product at
+   all. **Fix: `crates/repark-sql/tests/session_wiring.rs`**, mirroring the Spark door's
+   `*_sessions.rs` precedent: `ReparkSessionBuilder::with_sql_dialect(AnsiDialect)`, then schema
+   DDL + CTAS + INSERT + a typed read through `session.sql`, plus a second test proving a door
+   REFUSAL survives the session boundary. The matrix row now cites it.
+6. **LOW — SEC-02 scope was unstated.** `refuse_local_filesystem_plan` runs only in `delegate()`
+   and matches only `CreateExternalTable` / `Copy`, so an intercepted `CREATE TABLE … WITH
+   (location = 'file:///…')` never reaches it. That is intended — an intercepted create makes an
+   ICEBERG table, whose placement is governed by the catalog's `LocationPolicy` (a stricter,
+   per-catalog rule) — but nothing said so. **Fix: documented** in `guards.rs` and
+   `src/map.md`. No behavior change.
+
+**Rejected, with reasons:**
+
+- *"`audit()` should verify the named test EXISTS"* (two lenses; renaming a cited test leaves the
+  audit green). Real decay risk, correctly described — but not fixable in-process: a Rust test
+  binary cannot enumerate its own test names, so the check needs a harness-level gate
+  (`cargo test -- --list` diffed against the matrix) living in the Makefile / `.github/`, which
+  are orchestrator-only carve-outs for this PR. Recorded here as a PR-6/orchestrator item rather
+  than half-built. All 63 `Tested` names across both doors reconcile against `--list` today (two
+  lenses verified this independently).
+- *"the workspace test count is 890, not 891"* — a counting artifact, not a defect. The current
+  count is recorded in the gate table below.
 
 ## Deviations
 

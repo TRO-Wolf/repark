@@ -112,15 +112,17 @@ Design settled 2026-08-07 (delegate-first, no shared-lowering crate); port-sourc
       (multi-statement FIRST, P11, SEC-02, write-to-branch), wrong-door sniff, CTAS `WITH (…)`
       vocab + `extra_properties` + Q15 loud-refuse routing, schema DDL; `repark_common::surfaces`
       (43 capability IDs) + `matrix.rs` in BOTH doors with the compile-run audit — Spark 38
-      tested / 5 absent, ANSI M1 25 tested / 18 absent; R1/R2 spikes recorded day 1
+      tested / 5 absent, ANSI M1 29 tested / 14 absent (delegated `INSERT`/`DELETE`/`UPDATE` ship
+      with M1 because the delegation core ships them, each with a round-trip row and the BUG-001
+      MoR valve wired over them); R1/R2 spikes recorded day 1
       (ledger: [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md)). **R2 filed a core gap:**
       `ReparkSession` cannot enable `information_schema` (the builder config map never reaches
       `SessionConfig`), so `SHOW TABLES`/`DESCRIBE` are dead in BOTH doors and Q8's "delegate"
       delegates to nothing — fix core-side before Q8 is declared delivered.
 - [ ] **PR-6 — repark-sql ANSI M2**: ALTER evolution, MERGE lowering, `FOR … AS OF` scanner +
       pin set, branch/tag ALTER DDL, full refuse set, cross-door two-session equivalence rows,
-      matrix completion: of the 18 ANSI absence rows, 13 are M2 deferrals that flip to `Tested`
-      (the 12 citing the `M2` const plus `BRANCH_TAG_DDL`, whose reason is M2 under a §2 Q6
+      matrix completion: of the 14 ANSI absence rows, nine are M2 deferrals that flip to `Tested`
+      (the eight citing the `M2` const plus `BRANCH_TAG_DDL`, whose reason is M2 under a §2 Q6
       cite), and Q11/`TA_FUNCTIONS` flips once PR-4 lands the extension this door composes; the
       three standing decisions (Q3, Q7, Q9) stay absent by ruling, and Q8/`INTROSPECTION` stays
       absent until the core `information_schema` gap is fixed. Plus `session-api.md`

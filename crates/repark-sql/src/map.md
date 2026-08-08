@@ -7,20 +7,28 @@ Source for the ANSI SQL door. `lib.rs` is a manifest (check_lib_rs); the router 
 refusal) carries its own test in the same change.
 
 The router's ORDER is the design's, and each position is load-bearing: text guards run first
-(multi-statement before anything else), then metadata passthrough, then a stock parse, then the
-statement match, then delegation with the SEC-02 plan guard between planning and execution. The
-wrong-door sniff runs on the ERROR path only.
+(multi-statement before anything else), then the async BUG-001 MoR valve, then a stock parse,
+then the statement match, then delegation with the SEC-02 plan guard between planning and
+execution. The wrong-door sniff runs on the ERROR path only. There is deliberately NO pre-parse
+`$` passthrough — one existed and routed `CREATE TABLE … AS SELECT … FROM x$snapshots` past the
+Q15 target check into a silent `MemTable`; the stock parser handles `$`, so metadata references
+reach delegation through the ordinary arm.
 
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
-- `router.rs` — the statement router (guards → metadata passthrough → parse → match →
-  delegate) and the delegation path that carries the SEC-02 guard.
+- `router.rs` — the statement router (text guards → MoR valve → parse → match → delegate) and
+  the delegation path that carries the SEC-02 guard. Delegation covers reads, the fork's
+  metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's `TableProvider` (ADR-0003).
   Tests: [router/map.md](router/map.md).
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately). In-module tests.
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
-  catalog DML (generic message), write-to-branch, and the SEC-02 local-filesystem plan gate.
+  catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
+  tier-1 predicate, gating delegated DELETE/UPDATE), and the SEC-02 local-filesystem plan gate.
+  SEC-02 scope: it gates DataFusion's own filesystem-as-data DDL (`CREATE EXTERNAL TABLE`,
+  `COPY TO`), NOT an intercepted `CREATE TABLE … WITH (location = …)`, which the catalog's
+  `LocationPolicy` governs instead.
   The last two are RE-IMPLEMENTED from the Spark door's contract (not shared): both live behind
   private modules in `repark-spark`, and `repark-sql` must not take a door→door edge, nor the
   `repark-functions` edge the Spark gate uses to read its conf. Same conf key, same grandfather
@@ -70,7 +78,8 @@ wrong-door sniff runs on the ERROR path only.
 | Symptom | First check |
 |---|---|
 | A guard fired on text inside a string literal | It cannot — the guards read `scan::blank_out_quoted_and_comments` output; check the scrubber's tests |
-| A statement was delegated that should have been intercepted | `router.rs` match arms, and whether `references_metadata_table` diverted it |
+| A statement was delegated that should have been intercepted | `router.rs` match arms — and check nothing short-circuits BEFORE the statement match (a `$`-text passthrough once did) |
+| The wrong-door sniff fired on ANSI-legal SQL | `sniff.rs` `scope_for` / `Scope::Leading` — tokens with an ANSI reading (`USING`, `NAMESPACE`, `BRANCH`/`TAG`) fire only under their leading keyword |
 | The matrix audit RED after adding a surface ID | Add a `Tested` or `DeliberatelyAbsent` row in `matrix.rs`; the failure names the ID |
 | `m1_ships_the_briefed_scope` RED | A surface changed disposition — update the pin AND the ledger, in the same change |
 

@@ -234,7 +234,38 @@ async fn ordinary_writes_pass_branch_guard() {
     }
 }
 
-// === Guard 4 — SEC-02 local filesystem ======================================================
+// === Guard 4 — BUG-001 MoR valve (resolution wrapper) =======================================
+
+/// The wrapper's non-firing branches, each of which would otherwise be a place the valve could
+/// silently stop gating: a non-DML statement, a verb the valve does not cover (`INSERT` writes no
+/// position deletes; `MERGE` uses the RePark-owned writer), a name too short to resolve, and an
+/// unregistered catalog. The FIRING branch is pinned end to end on a real evolved table by
+/// `tests::mor_unpartitioned_multi_spec_dml_refuses`.
+#[tokio::test]
+async fn mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate() {
+    let ctx = SessionContext::new();
+    let catalogs = CatalogRegistry::new();
+    let read_only = HashSet::new();
+    let cx = repark_core::EngineContext::new(&ctx, &catalogs, &read_only);
+    for sql in [
+        // Not DML at all.
+        "SELECT * FROM ice.sales.t",
+        // DML the valve deliberately does not cover.
+        "INSERT INTO ice.sales.t VALUES (1)",
+        "MERGE INTO ice.sales.t USING s ON t.id = s.id WHEN MATCHED THEN DELETE",
+        // Too few name parts to resolve without a session default catalog.
+        "DELETE FROM t WHERE id = 1",
+        "UPDATE sales.t SET a = 1",
+        // Three-part name, but no such catalog is registered.
+        "DELETE FROM nosuch.sales.t WHERE id = 1",
+    ] {
+        refuse_mor_multi_spec_dml(&cx, sql)
+            .await
+            .unwrap_or_else(|err| panic!("`{sql}` must pass the MoR valve: {err}"));
+    }
+}
+
+// === Guard 5 — SEC-02 local filesystem ======================================================
 
 async fn plan_of(ctx: &SessionContext, sql: &str) -> LogicalPlan {
     ctx.state().create_logical_plan(sql).await.unwrap()

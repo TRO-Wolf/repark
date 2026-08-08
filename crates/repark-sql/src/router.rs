@@ -5,16 +5,26 @@
 //! 1. **Text guards, multi-statement FIRST** ([`crate::guards`]). Refusing a script before
 //!    anything else runs is what stops a second statement from being rewritten or sniffed — the
 //!    ordering-defect class the design's judges called out explicitly.
-//! 2. **Metadata (`$`) passthrough.** The fork's schema provider already registers
-//!    `t$snapshots`, `t$files`, … as real tables, so a metadata query needs no interception at
-//!    all — it needs to be kept AWAY from the statement match, whose `CREATE`/`DROP` arms have
-//!    nothing to say about it.
+//! 2. **The merge-on-read valve** ([`guards::refuse_mor_multi_spec_dml`], BUG-001) — async,
+//!    because it has to load the target table's metadata, so it cannot ride the text-guard fn.
+//!    Still at the router head, still before any parse (design §2 Q12 puts it in this guard set).
 //! 3. **Parse, with stock DataFusion parser machinery on the Generic dialect** (design §2 Q14 —
 //!    no bespoke `Dialect` impl in phase 2).
 //! 4. **Statement match.** Only the Iceberg catalog DDL DataFusion cannot express is
 //!    intercepted: `CREATE TABLE` (both forms), `DROP TABLE`, `CREATE SCHEMA`, `DROP SCHEMA`.
 //! 5. **Delegate.** Everything else is planned and executed by DataFusion, with the SEC-02
-//!    local-filesystem guard between planning and execution.
+//!    local-filesystem guard between planning and execution. That includes reads of the fork's
+//!    metadata tables (`t$snapshots`, `t$files`, …), which the fork's schema provider registers
+//!    as real tables, and `INSERT`/`DELETE`/`UPDATE`, which the fork's `TableProvider` services
+//!    (ADR-0003).
+//!
+//! There is deliberately **no pre-parse `$` passthrough**. An earlier revision short-circuited to
+//! delegation whenever the scrubbed text contained a `$`, which routed `CREATE TABLE t AS SELECT
+//! … FROM x$snapshots` past the Q15 target check and into DataFusion's own CTAS — a session-local
+//! `MemTable` that reads back all session and is gone tomorrow, the exact failure graft G1
+//! exists to forbid. The stock parser handles `$` in an identifier, so a metadata reference
+//! reaches delegation through the ordinary `_ =>` arm and a metadata reference inside a CTAS
+//! reaches its handler like any other query.
 //!
 //! On a parse OR plan failure — and only then — the error goes through the wrong-door sniff
 //! ([`crate::sniff`]).
@@ -29,7 +39,6 @@ use datafusion::sql::parser::Statement as DFStatement;
 use datafusion::sql::sqlparser::ast::{ObjectType, Statement};
 use repark_core::EngineContext;
 
-use crate::scan::blank_out_quoted_and_comments;
 use crate::{create_table, guards, schema_ddl, sniff};
 
 /// The dialect handed to DataFusion's parser. Stock `Generic`, deliberately — NOT DataFusion's
@@ -46,12 +55,7 @@ const PARSER_DIALECT: datafusion::config::Dialect = datafusion::config::Dialect:
 /// Spark-ism), or any iceberg / execution error from an intercepted handler.
 pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     guards::run_text_guards(&cx, sql)?;
-
-    // Metadata tables are already real tables on the fork's schema provider — delegate directly
-    // rather than letting the statement match consider them.
-    if references_metadata_table(sql) {
-        return delegate(&cx, sql).await;
-    }
+    guards::refuse_mor_multi_spec_dml(&cx, sql).await?;
 
     let statement = match cx.ctx.state().sql_to_statement(sql, &PARSER_DIALECT) {
         Ok(statement) => statement,
@@ -125,12 +129,6 @@ fn schema_object_name(
             ))
         }
     }
-}
-
-/// True when the statement references an Iceberg metadata table (`t$snapshots`, …). Checked on
-/// scrubbed text so a `$` inside a string literal cannot route a statement away from its handler.
-fn references_metadata_table(sql: &str) -> bool {
-    blank_out_quoted_and_comments(sql).contains('$')
 }
 
 #[cfg(test)]

@@ -214,6 +214,53 @@ fn call_system_procedure_is_recognized() {
     assert_steer(&message, "CALL", "callable operation");
 }
 
+/// The scoping property, stated as its counterexamples: ANSI-LEGAL SQL that merely failed for an
+/// unrelated reason (a missing table) is never answered with "this looks like Spark SQL".
+///
+/// Each row here is a real false positive the unscoped token table produced: `USING` is the ANSI
+/// join clause, and `tag` / `branch` / `namespace` / `database` / `call` are ordinary column
+/// names. The doc-comment claim ("bounded false positives") is only worth what these pin.
+#[test]
+fn ansi_legal_statements_are_never_steered_to_the_spark_door() {
+    for sql in [
+        "SELECT * FROM a JOIN b USING (id)",
+        "SELECT a.id FROM a INNER JOIN b USING (id) WHERE a.id > 1",
+        "SELECT tag FROM t",
+        "SELECT branch, tag FROM t ORDER BY branch",
+        "SELECT namespace FROM t",
+        "SELECT database FROM t",
+        "SELECT call FROM system",
+        "DELETE FROM t WHERE tag = 1",
+    ] {
+        assert_eq!(
+            upgrade_error(sql, original()).to_string(),
+            original().to_string(),
+            "`{sql}` is ANSI-legal and must be returned untouched"
+        );
+    }
+}
+
+/// …and the scoping does not disarm the rules: the same tokens, in the statement shapes that
+/// really ARE Spark-isms, still steer.
+#[test]
+fn scoped_rules_still_fire_in_their_own_statement_shapes() {
+    assert_steer(
+        &upgraded("CREATE TABLE c.s.t USING iceberg AS SELECT 1 AS a"),
+        "USING",
+        "there is no USING clause",
+    );
+    assert_steer(
+        &upgraded("DROP NAMESPACE ice.sales"),
+        "NAMESPACE",
+        "CREATE SCHEMA c.s WITH (location",
+    );
+    assert_steer(
+        &upgraded("DROP BRANCH audit IN ice.sales.orders"),
+        "BRANCH",
+        "ALTER TABLE t CREATE BRANCH",
+    );
+}
+
 /// Token matching is case-insensitive but boundary-aware — `using_col` is not `USING`.
 #[test]
 fn matching_is_case_insensitive_and_boundary_aware() {

@@ -13,9 +13,18 @@
 //! 3. [`refuse_write_to_branch`] — writes targeting a branch-suffixed name; the fork's append
 //!    always sets `main`, so a branch-targeted write would silently land on `main`.
 //!
-//! The fourth, [`refuse_local_filesystem_plan`] (SEC-02), needs a `LogicalPlan`, so it runs in the
+//! A fourth text-level guard, [`refuse_mor_multi_spec_dml`] (the hoisted BUG-001 valve), also
+//! runs at the router head but is `async` — it has to load the target table's Iceberg metadata to
+//! decide — so the router calls it immediately after [`run_text_guards`] rather than from inside
+//! it. It gates the `DELETE` / `UPDATE` this door delegates to the fork's `TableProvider`.
+//!
+//! The fifth, [`refuse_local_filesystem_plan`] (SEC-02), needs a `LogicalPlan`, so it runs in the
 //! delegation path immediately after planning and before execution — the same position the Spark
-//! door's passthrough uses.
+//! door's passthrough uses. Note its scope: it gates the surfaces DataFusion's own DDL would use
+//! to read/write the local filesystem as data (`CREATE EXTERNAL TABLE`, `COPY TO`). An
+//! INTERCEPTED `CREATE TABLE … WITH (location = 'file:///…')` is NOT in scope — that path creates
+//! an Iceberg table under a warehouse root and is governed by the catalog's
+//! [`repark_core::LocationPolicy`], which is a different (and stricter, per-catalog) rule.
 //!
 //! **Guard provenance (design §5 / the PR-5 ruling).** The Spark door's `local_fs_ddl` and
 //! `ref_ddl::sniff_write_to_branch` are `pub(crate)`/private inside `repark-spark`, and this
@@ -28,7 +37,9 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::parser::ParserError;
+use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext};
+use repark_iceberg::write::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 
@@ -250,7 +261,56 @@ pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Re
     Ok(())
 }
 
-// === Guard 4 — SEC-02 local-filesystem plans (runs after planning) ==========================
+// === Guard 4 — BUG-001 MoR valve (async; runs at the router head) ===========================
+
+/// ===========================================================================================
+/// Refuse a delegated `DELETE` / `UPDATE` against a merge-on-read table whose CURRENT partition
+/// spec is unpartitioned while its metadata carries more than one spec in history.
+///
+/// This door delegates DML to the fork's `TableProvider` (ADR-0003), which is exactly the path
+/// the hoisted valve gates: the fork's unpartitioned fast path stamps every position delete with
+/// `partition_key = None`, so after partition-spec evolution a delete can commit while rows
+/// remain visible. The valve is tier-1 (`repark_iceberg::write`); this function is the ANSI
+/// door's resolution wrapper — the twin of the Spark door's `ObjectName` wrapper, reading its
+/// target from the same scrubbed text the other guards use.
+///
+/// `INSERT` is not gated (it writes no position deletes) and `MERGE` is never gated (the
+/// RePark-owned merge-on-read writer stamps per-file partitions correctly).
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::Plan`] from the tier-1 valve, naming the fork hazard and the workarounds.
+pub(crate) async fn refuse_mor_multi_spec_dml(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
+    let scrubbed = blank_out_quoted_and_comments(sql);
+    let Some((verb, target)) = dml_target(&scrubbed) else {
+        return Ok(());
+    };
+    let kind = match verb {
+        "DELETE" => MorDmlKind::Delete,
+        "UPDATE" => MorDmlKind::Update,
+        // INSERT writes no position deletes; MERGE runs the RePark-owned writer.
+        _ => return Ok(()),
+    };
+    let parts: Vec<String> = target
+        .split('.')
+        .map(|part| part.trim_matches('"').to_string())
+        .collect();
+    // catalog.namespace….table — a shorter name cannot be resolved without a session default
+    // catalog, and the planner's own error is the better one.
+    if parts.len() < 3 {
+        return Ok(());
+    }
+    let Some(catalog) = cx.catalogs.get(&parts[0]) else {
+        return Ok(());
+    };
+    let Ok(namespace) = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()) else {
+        return Ok(());
+    };
+    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
+    refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
+}
+
+// === Guard 5 — SEC-02 local-filesystem plans (runs after planning) ==========================
 
 /// ===========================================================================================
 /// Refuse a planned `CREATE EXTERNAL TABLE … LOCATION` / `COPY … TO` that targets the local
