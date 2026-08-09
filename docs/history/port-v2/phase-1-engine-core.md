@@ -1,10 +1,16 @@
 # Phase-1 execution brief — RePark V2 (engine core)
 
-**Date:** 2026-08-06 · **Status:** IN EXECUTION — design approved and port-source pin resolved
-2026-08-06; PR-A in flight.
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
+**Date:** 2026-08-06 · **Status:** DELIVERED — phase 1 closed 2026-08-07 (PRs #3, #4,
+#6, close-out #7); archived 2026-08-09.
 
 Phase 1 lands the engine core in the public repo per
-[docs/design/session-api.md](../docs/design/session-api.md) (the settled Session-API design):
+[docs/design/session-api.md](../../design/session-api.md) (the settled Session-API design):
 `repark-common` + `repark-iceberg` + `repark-core`, the iceberg-rust fork pin, and the Rust
 unit-test tier — copy-then-re-home, every commit green, delivered as three PRs.
 

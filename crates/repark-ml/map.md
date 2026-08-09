@@ -60,8 +60,8 @@ Ported verbatim from the v1 engine at the phase-3 port pin — see
   (`docs/design/python-facade.md` §4 Q3); the new message is pinned by
   `error::tests::singular_message_points_at_the_in_repo_ml_authority`, the crate's only
   post-PR-2 census addition; §4 Q3 in-scope ruling)
-- Brief: [../../briefs/phase-3-python-facade.md](../../briefs/phase-3-python-facade.md) §1 "PR-2"
-- Ledger: [../../task/p3b-ml-ledger.md](../../task/p3b-ml-ledger.md)
+- Brief: [phase-3-python-facade.md](../../docs/history/port-v2/phase-3-python-facade.md) §1 "PR-2"
+- Ledger: [p3b-ml-ledger.md](../../docs/history/port-v2/p3b-ml-ledger.md)
 
 ## Debug
 

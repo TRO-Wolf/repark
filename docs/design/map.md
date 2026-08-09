@@ -42,9 +42,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
 | Understand the phase-2 doors / ANSI rulings | [sql-doors.md](sql-doors.md) |
 | Understand the phase-3 port / census gate / edit classes | [python-facade.md](python-facade.md) |
 | Understand the Agent-Agnostic Front-Door campaign | [agent-agnostic-frontdoor.md](agent-agnostic-frontdoor.md) |
-| Read the brief that executes the phase-1 design | [../../briefs/phase-1-engine-core.md](../../briefs/phase-1-engine-core.md) |
-| Read the brief that executes the phase-2 design | [../../briefs/phase-2-sql-doors.md](../../briefs/phase-2-sql-doors.md) |
-| Read the brief that executes the phase-3 design | [../../briefs/phase-3-python-facade.md](../../briefs/phase-3-python-facade.md) |
+| Read the brief that executed the phase-1 design | [docs/history/port-v2/phase-1-engine-core.md](../history/port-v2/phase-1-engine-core.md) |
+| Read the brief that executed the phase-2 design | [docs/history/port-v2/phase-2-sql-doors.md](../history/port-v2/phase-2-sql-doors.md) |
+| Read the brief that executed the phase-3 design | [docs/history/port-v2/phase-3-python-facade.md](../history/port-v2/phase-3-python-facade.md) |
 | See the port phases the design fits into | [../port/PLAN.md](../port/PLAN.md) |
 
 ## Pointers

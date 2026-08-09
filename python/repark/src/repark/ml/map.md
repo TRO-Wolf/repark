@@ -48,7 +48,7 @@ see [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) 
 Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) §4 Q3.
 Oracles: `test_ml_skeleton_oracle.py`, `test_ml_feature_oracle.py`, `test_ml_estimators_oracle.py`,
 `test_ml_boost_oracle.py` (M4).
-Campaign: [briefs/phase-3-python-facade.md](../../../../../briefs/phase-3-python-facade.md).
+Campaign: [phase-3-python-facade.md](../../../../../docs/history/port-v2/phase-3-python-facade.md).
 
 ## Debug
 

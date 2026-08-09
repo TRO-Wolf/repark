@@ -1,11 +1,17 @@
 # Unit ledger — P3C: `crates/repark-python` (the PyO3 binding port)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-3 PR-3 · **Brief:**
-[../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) §1 "PR-3" · **Design:**
-[../docs/design/python-facade.md](../docs/design/python-facade.md) §1 (edit classes
+[phase-3-python-facade.md](phase-3-python-facade.md) §1 "PR-3" · **Design:**
+[docs/design/python-facade.md](../../design/python-facade.md) §1 (edit classes
 `EC-1, EC-2, EC-3, EC-5, EC-6, EC-10`), §2.1 (tier-4 row), §2.2 (dep edges + the two deliberate
 non-edges), §3 (the edit-class definitions), §4 Q7 (`EngineRuntime` home), §5 F3 (the door-wiring
-inversion), §9 PR-3 · **Port-Source:** v1 `main` @ `fc3f48102` · **Status:** IN FLIGHT ·
+inversion), §9 PR-3 · **Port-Source:** v1 `main` @ `fc3f48102` · **Status:** DELIVERED — merged 2026-08-08 (#19); archived 2026-08-09 ·
 **Stacked on:** phase-3 PR-2 ([p3b-ml-ledger.md](p3b-ml-ledger.md))
 
 ## Scope

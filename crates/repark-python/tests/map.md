@@ -67,8 +67,8 @@ pyo3 `auto-initialize` **dev**-dependency) and drive the pyclasses directly — 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Design: [../../docs/design/python-facade.md](../../docs/design/python-facade.md) §9 PR-3;
-  ledger [../../task/p3c-binding-ledger.md](../../task/p3c-binding-ledger.md)
+- Design: [docs/design/python-facade.md](../../../docs/design/python-facade.md) §9 PR-3;
+  ledger [p3c-binding-ledger.md](../../../docs/history/port-v2/p3c-binding-ledger.md)
 
 ## Debug
 

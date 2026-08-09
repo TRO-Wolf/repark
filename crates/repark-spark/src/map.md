@@ -115,4 +115,4 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
 
 - **EC-9 scrub (2026-08-08, phase-3 PR-5):** pre-existing private fixture/doc literals
   (a team/bucket name fragment) replaced with `example-team` equivalents — outcome-neutral
-  (fixtures and their oracles changed together); enumerated in task/p3e-facade-ledger.md.
+  (fixtures and their oracles changed together); enumerated in docs/history/port-v2/p3e-facade-ledger.md.

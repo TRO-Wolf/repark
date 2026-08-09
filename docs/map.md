@@ -26,6 +26,12 @@ notes, and per-tier operating manuals for this repo.
   designations.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
   iceberg-rust fork, the two SQL doors, the copy-then-re-home port, server-prep disciplines.
+- [history/](history/map.md) — the **archive**: closed campaigns, off the normal read path, each
+  admitted only after a promotion audit proved every rule it carries also lives in a current
+  document. Today it holds [history/port-v2/](history/port-v2/map.md) — the v1 → v2 port's four
+  phase briefs, seventeen unit ledgers, execution log with its retrospectives, and the
+  [promotion ledger](history/port-v2/promotion-ledger.md). Nothing here has to be read to work in
+  this repository.
 - [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
 - [tier2-aws.md](tier2-aws.md) — operator runbook for the tier-2 live-AWS workflow: environment,
   the repo+branch+environment-scoped OIDC trust policy, the create-only/no-delete IAM posture,
@@ -47,6 +53,8 @@ notes, and per-tier operating manuals for this repo.
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
 | Read the manual for your tier | [skills/map.md](skills/map.md) |
 | Set up trusted publishing / plan a release | [release.md](release.md) |
+| Find out how the engine got here (the port record) | [history/port-v2/README.md](history/port-v2/README.md) |
+| Check where a rule from an archived document lives now | [history/port-v2/promotion-ledger.md](history/port-v2/promotion-ledger.md) |
 
 ## Pointers
 

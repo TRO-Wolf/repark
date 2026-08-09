@@ -1,6 +1,13 @@
 # Phase-3 execution brief — Python binding, facade, parity = milestone one
 
-Status: **SETTLED 2026-08-08.** Companion to the settled design (`DESIGN-python-facade.md`; lands
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
+Status: **DELIVERED** — phase 3 closed 2026-08-08 = milestone one
+(PRs #16, #18-#23); archived 2026-08-09. Slate settled 2026-08-08. Companion to the settled design (`DESIGN-python-facade.md`; lands
 in-repo as `docs/design/python-facade.md` via PR-1 alongside this brief as
 `briefs/phase-3-python-facade.md`). Port source: the private v1 engine repository at the frozen pin
 `fc3f48102` (== that repository's `main`, zero drift, re-verified 2026-08-08). Base: public `main`

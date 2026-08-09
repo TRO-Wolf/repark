@@ -1,0 +1,44 @@
+# map — docs/history/
+
+## Purpose
+
+The **archive**: completed campaigns, kept for provenance and deliberately off the normal read path.
+Material lands here only after a promotion audit proves that every rule it carries also lives in a
+current document — so nothing here has to be read in order to work in this repository.
+
+Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../AGENTS.md).
+
+## Contents
+
+- [port-v2/](port-v2/map.md) — the v1 → v2 port (2026-08-06 → 2026-08-08, closed at milestone one):
+  the four phase briefs, the seventeen unit ledgers, the port execution log with its three
+  retrospectives, and the [promotion ledger](port-v2/promotion-ledger.md) that made the archival
+  lossless. Start at [port-v2/README.md](port-v2/README.md).
+
+## I want to...
+
+| ...do this | go to |
+|---|---|
+| Know the current state / what happens next | [../../STATUS.md](../../STATUS.md) |
+| Understand how the engine got here | [port-v2/README.md](port-v2/README.md) |
+| Check that an archived rule still binds — and where it lives now | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) |
+| Find a unit's gate evidence / provocation proofs / census arithmetic | the unit's ledger in [port-v2/](port-v2/map.md) |
+| Archive a completed campaign | run its promotion audit first, then `git mv` into a new `docs/history/<campaign>/` with its own `README.md` + `map.md` |
+
+## Pointers
+
+- Up: [../map.md](../map.md)
+- Archived material is **immutable** except link repair and dated corrections; archived status claims
+  carry an effective date. The full rule set is in
+  [port-v2/README.md](port-v2/README.md) "Rules for this directory".
+- Evidence that is still an **input** to a gate does not belong here: the census artifacts
+  ([task/census/](../../task/census/map.md)) and the deferred/added test ledgers
+  ([task/port/](../../task/port/map.md)) stay live.
+
+## Debug
+
+| Symptom | First check |
+|---|---|
+| A rule seems to exist only in an archived file | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) names its current home; if it does not, that is a real gap — fix the current document, never the archive |
+| A link into `task/p*-ledger.md` or `briefs/phase-*.md` does not resolve | Those moved here on 2026-08-09 (same basename) — see [port-v2/README.md](port-v2/README.md) "Where the ledgers used to live" |
+| An archived claim contradicts today's behavior | The archive is dated; [STATUS.md](../../STATUS.md) wins |

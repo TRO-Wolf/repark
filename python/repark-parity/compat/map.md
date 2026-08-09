@@ -43,7 +43,7 @@ stability run and quarantine rule, the full-extras facade cohort, the attributio
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Unit ledger: [`../../../task/p3d-parity-ledger.md`](../../../task/p3d-parity-ledger.md)
+- Unit ledger: [p3d-parity-ledger.md](../../../docs/history/port-v2/p3d-parity-ledger.md)
 - Procedure: [`../../../docs/port/census.md`](../../../docs/port/census.md);
   design: [`../../../docs/design/python-facade.md`](../../../docs/design/python-facade.md) §5 F1, §6
 

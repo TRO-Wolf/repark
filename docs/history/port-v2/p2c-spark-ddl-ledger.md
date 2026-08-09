@@ -1,9 +1,15 @@
 # Unit ledger — P2C: repark-spark DDL (the PR-3a restoration)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-2 PR-3a · **Brief:**
-[../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-3a" · **Design:**
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** MERGED 2026-08-08 (PR #10) · **Stacked on:** phase-2 PR-2
+[phase-2-sql-doors.md](phase-2-sql-doors.md) §1 "PR-3a" · **Design:**
+[docs/design/sql-doors.md](../../design/sql-doors.md) · **Port-Source:** v1 `main` @
+`fc3f48102` · **Status:** MERGED 2026-08-08 (PR #10; archived 2026-08-09) · **Stacked on:** phase-2 PR-2
 ([p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md))
 
 ## Scope
@@ -27,7 +33,7 @@ for — plus the deferred-test rows those handlers unblock:
 - Deferred-test rows #2, #4, #5, #6, #7 land as
   `crates/repark-spark/tests/ddl_sessions.rs` (session-assembly pattern of PR-2's
   `session_extension.rs`; manifest rows closed —
-  [port/deferred-tests.md](port/deferred-tests.md)). Row #3 re-verified and kept (PR-3b).
+  [task/port/deferred-tests.md](../../../task/port/deferred-tests.md)). Row #3 re-verified and kept (PR-3b).
 - Each restored module's battery rides with it (`alter::tests`,
   `create_table::type_mapping_tests`, the namespace/catalog_ops in-module sets, restored
   normalize tests).

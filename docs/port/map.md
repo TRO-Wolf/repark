@@ -20,7 +20,7 @@ phase by phase, and what "done" means mechanically.
 
 | ...do this | go to |
 |---|---|
-| See what phase we're in and what's next | [PLAN.md](PLAN.md) + [../../task/todo.md](../../task/todo.md) |
+| See what phase we're in and what's next | [../../STATUS.md](../../STATUS.md) (the status SSOT) |
 | Check the port's acceptance gate | [PLAN.md](PLAN.md) "The acceptance gate" |
 | Run a census cohort / compare two runs | [census.md](census.md) |
 | Find out why a run was refused as incomparable | [census.md](census.md) §1, §5 |
@@ -29,7 +29,8 @@ phase by phase, and what "done" means mechanically.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- The phase-0 execution brief: [../../briefs/phase-0-bootstrap.md](../../briefs/phase-0-bootstrap.md)
+- The archived port record — briefs, unit ledgers, retrospectives:
+  [../history/port-v2/README.md](../history/port-v2/README.md)
 - ADR for the port shape: [../adr/0003-copy-then-rehome-port.md](../adr/0003-copy-then-rehome-port.md)
 
 ## Debug

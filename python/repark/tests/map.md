@@ -1380,7 +1380,7 @@ First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../ma
 | Find the test for a facade surface | grep this file for the surface name, then the annotated bullet |
 | Understand why a test is absent | [../../../task/port/deferred-python-tests.txt](../../../task/port/deferred-python-tests.txt) + [../../../task/port/deferred-tests.md](../../../task/port/deferred-tests.md) |
 | Reproduce the recorded cohort run | `docs/design/python-facade.md` §6.3 (environment clauses) |
-| See the port record for this suite | [../../../task/p3e-facade-ledger.md](../../../task/p3e-facade-ledger.md) |
+| See the port record for this suite | [p3e-facade-ledger.md](../../../docs/history/port-v2/p3e-facade-ledger.md) |
 
 ## Pointers
 

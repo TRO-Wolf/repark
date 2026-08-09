@@ -1,12 +1,18 @@
 # Unit ledger — P2F: the ANSI door, milestone 1 (PR-5)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-2 PR-5 · **Brief:**
-[../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-5" · **Design:**
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) (LAW for this unit) · **Status:**
-MERGED 2026-08-08 (PR #13) · **Parallel with:** phase-2 PR-4 (repark-ta)
+[phase-2-sql-doors.md](phase-2-sql-doors.md) §1 "PR-5" · **Design:**
+[docs/design/sql-doors.md](../../design/sql-doors.md) (LAW for this unit) · **Status:**
+MERGED 2026-08-08 (PR #13; archived 2026-08-09) · **Parallel with:** phase-2 PR-4 (repark-ta)
 
 **This is NEW code, not a port.** There is no census, no rename map, no pin to diff against.
-The discipline that replaces them is [../docs/testing.md](../docs/testing.md)'s native rule:
+The discipline that replaces them is [docs/testing.md](../../testing.md)'s native rule:
 test-per-change, in the same commit — every handler branch, every refusal, every property
 mapping. Arrow-path assertions (value AND type), never `show` alone. The matrix audit
 (design §2 Q13) is the structural backstop: a surface cannot go missing quietly.

@@ -49,7 +49,14 @@ workspace reserves `repark-core` for the Session crate.)
 - **Test strategy:** file-backed `tests.rs` — exhaustive exception-class routing + message-preservation
   pins; `surfaces/tests.rs` inventory audit.
 - **Known limitations:** must stay dependency-light — pulling in a heavier crate would risk
-  reintroducing a cycle.
+  reintroducing a cycle. **The surface-matrix audit cannot verify that a cited test NAME still
+  exists**: each door's `matrix.rs` audit runs *inside* a Rust test binary, and a test binary
+  cannot enumerate its own test names, so renaming or deleting a cited test leaves the audit green
+  while the evidence is gone. The audit still catches an unmapped, stale, duplicated or
+  untraceable ID — the missing half is name liveness. Closing it needs a harness-level gate
+  (`cargo test -- --list` diffed against the matrices' cited names) wired like the other
+  mechanical guards in `scripts/`; every cited name was reconciled by hand at the ANSI door's
+  close. Until then, a matrix row's test name is checked by review, not by CI.
 
 ## Pointers
 

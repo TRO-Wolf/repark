@@ -1,9 +1,15 @@
 # Unit ledger — P2E: repark-ta (the PR-4 port + `TaExtension`)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-2 PR-4 · **Brief:**
-[../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-4" · **Design:**
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) Q11 · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** MERGED 2026-08-08 (PR #12) · **Stacked on:** phase-2 PR-3b
+[phase-2-sql-doors.md](phase-2-sql-doors.md) §1 "PR-4" · **Design:**
+[docs/design/sql-doors.md](../../design/sql-doors.md) Q11 · **Port-Source:** v1 `main` @
+`fc3f48102` · **Status:** MERGED 2026-08-08 (PR #12; archived 2026-08-09) · **Stacked on:** phase-2 PR-3b
 ([p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md))
 
 ## Scope

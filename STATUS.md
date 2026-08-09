@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-08._
+_Last updated: 2026-08-09._
 
 ## Release state
 
@@ -41,18 +41,44 @@ differential harness); a wheel is buildable but not yet tagged.
 and the facade cohort `(2,499 − 2 added) ∪ 12 deferred = pin 2,509`. Census procedure:
 [docs/port/census.md](docs/port/census.md); evidence:
 [task/census/baseline-fc3f48102](task/census/) and [task/census/v2-a5be8a7](task/census/); deferred
-acceptance inputs: [task/port/](task/port/).
+and added acceptance inputs (live ledgers, still consumed by the comparator):
+[task/port/](task/port/). The port's full record — the four phase briefs, the seventeen unit
+ledgers, the retrospectives — is archived at
+[docs/history/port-v2/](docs/history/port-v2/README.md).
 
 ## Current milestone
 
-**Milestone one is COMPLETE.** There is no in-flight *port* work; the phase ledgers under
-[task/](task/) (`p1*`…`p3*`) are the delivered record. What comes next is a **user-side
-milestone-one declaration**, then the post-milestone campaign below. The declaration checklist:
+**Milestone one is COMPLETE.** There is no in-flight *port* work; the delivered record — briefs,
+unit ledgers, retrospectives — is archived at
+[docs/history/port-v2/](docs/history/port-v2/README.md).
 
-- Declare v1 (the private source) **bugfix-only** from this milestone.
-- Settle the single-writer-per-table cutover.
-- Cut the **first tagged PyPI release** (starts the API-forever clock).
-- First `workflow_dispatch` of the parity-live and aws-acceptance (tier-2 live-AWS) workflows.
+**Standing decision: the private v1 predecessor is bugfix-only, and this repository is the sole
+forward target.** New engine work happens here. v1 receives fixes only, and a defect both engines
+share is fixed there and re-ported rather than patched only here.
+
+What happens next, in order:
+
+1. **Finish the Agent-Agnostic Front-Door campaign** — in flight; see Active workstreams below.
+2. **V2 Engine Hardening** — the next campaign: full optimization *and* the verification that
+   proves it, across the native door, the Spark facade, and the write path. Not yet drawn up;
+   nothing in it is in flight. The engineering items parked below (spill coverage, the
+   `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its natural inputs.
+3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
+   order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
+   both), with the rollback story for each. Carried from the port
+   ([docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover").
+4. **The first tagged release** — **held by the owner**, not blocked by engineering. It starts the
+   "API is forever" clock; mechanics and hard blockers: [docs/release.md](docs/release.md).
+
+Owner-side actions that ride this sequence rather than gate it: the first `workflow_dispatch` of the
+parity-live and aws-acceptance (tier-2, live-AWS) workflows. On repository housekeeping, none
+remains: the stale merged `phase-2/*` branches that once carried easy-to-find copies of pre-scrub
+content are already gone from the remote. Per the forward-scrub rule (fix content in a new commit,
+never rewrite published history), pre-scrub content remains reachable in already-published history —
+including `main`'s own — an exposure reviewed and **accepted by explicit decision** rather than by
+history-rewrite; provenance and the options weighed:
+[docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
+("the B-2 literal is already published").
 
 ## Active workstreams
 
@@ -75,9 +101,19 @@ Carried debt from the port; each is a real defect, honestly tracked, not a block
 above.
 
 - **Spark-door time-travel view leak** — a declared divergence inherited verbatim from v1; the
-  v1 source wants the same bugfix, so it is fixed there and re-ported, not patched only here.
-- **The `$`-metadata introspection rider** — the metadata-column introspection behavior carried
-  as a known rider on the Spark door.
+  v1 source wants the same bugfix, so it is fixed there and re-ported, not patched only here. The
+  ANSI door's fix (`PinnedViews`, released on every exit path) is the template.
+- **The `$`-metadata introspection rider** — the fork's `$`-suffixed metadata tables enumerate as
+  ordinary tables in `SHOW TABLES` / `information_schema.tables`, where Trino hides them. Whether
+  `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is a fork/core
+  decision, not a door parser; current behavior is pinned by tests on the ANSI door and on the
+  bare-session core path (`crates/repark-sql/tests/introspection.rs`,
+  `crates/repark-core/src/session/tests.rs`), so changing it reds a test on purpose.
+- **Identifier case folding diverges from Apache Spark.** Both doors resolve a *quoted* identifier
+  case-**sensitively** (stock DataFusion resolution); Spark resolves `` `ID` `` case-insensitively
+  by default. Unquoted identifiers agree. This is inherited engine-wide, not introduced by either
+  door, and is pinned by the cross-door case-folding test; fixing it would be a deliberate
+  Spark-door resolution decision, not a bug fix.
 
 ## Architectural risks
 
@@ -91,12 +127,31 @@ Design-honesty items — accurate today, with a scheduled correction where noted
 
 ## Deferred capabilities
 
+Recorded, not built. Each names the trigger that would start it.
+
 - **Internal `ReparkSession` decomposition** — driver-gated: executed only when a concrete driver
   arrives (PyO3 pressure, a second `ExecutionBackend`, cancellation, or server-protocol needs), not
-  on a schedule. Recorded, not built.
-- **`postgres_p11` connectivity** — 6 census names, deferred to post-milestone-one.
+  on a schedule.
+- **`repark-postgres` + `repark-excel` read connectors** — the v1 `read_postgres` / `read_excel`
+  surfaces. Scheduled post-milestone-one by explicit decision (2026-08-07). The Python binding
+  answers all three entry points (`read_excel`, `excel_sheet_names`, `read_postgres`) with a loud
+  refusal naming the surface and this schedule; the withheld tests are the 4 Rust rows + 12 facade
+  node ids in [task/port/deferred-tests.md](task/port/deferred-tests.md). The `postgres_p11`
+  connectivity count (6 names, same bucket) is tracked in
+  [crates/repark-spark/src/map.md](crates/repark-spark/src/map.md); the names themselves live in
+  the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
+- **Never-OOM (spill coverage)** — the goal in [PROJECT.md](PROJECT.md) is stated honestly as
+  *pending a spill-coverage spike*; the spike is a natural V2 Engine Hardening input.
+- **Dead doc-pointer sweep in ported sources** — eight ported `python/repark/src` modules (nine
+  citations, one inside a runtime f-string) still cite a v1-only design path, and eight comment
+  sites in `crates/repark-functions` (its `Cargo.toml` and Rust sources) still cite the v1 crate
+  name `repark-session`. Left byte-identical during the port to protect the census identity; a
+  comment-only sweep can land any time now that the census is closed. (The four `map.md` sites of
+  the same class were corrected at FD-4 — maps are live navigation, not port fidelity surface.)
 
 ## Release blockers
 
 **None technical.** The engine, tests, and gates are green on `main`. The first tagged release is a
-**user-side action** (the milestone-one declaration checklist above), not an engineering blocker.
+**user-side action, held by the owner** (step 4 of the sequence in "Current milestone"), not an
+engineering blocker. The release-side hard blockers — the ones that fail a tag rather than delay
+one — are in [docs/release.md](docs/release.md).

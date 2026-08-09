@@ -1,6 +1,12 @@
 # Phase-0 bootstrap brief — RePark V2
 
-**Date:** 2026-08-06 · **Target:** the public repo `TRO-Wolf/repark` · **Status:** in execution
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
+**Date:** 2026-08-06 · **Target:** the public repo `TRO-Wolf/repark` · **Status:** DELIVERED — phase 0 closed 2026-08-06; archived 2026-08-09
 
 Phase 0 of the V2 port: **gates before code.** Every process asset that governs how work lands —
 the testing contract, mechanical gates, map.md discipline, the agent contracts, SEPMO, tier-1

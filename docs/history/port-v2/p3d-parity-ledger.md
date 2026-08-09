@@ -1,10 +1,16 @@
 # Unit ledger — P3D: `python/repark-parity` + the census foundation (PR-4)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-3 PR-4 · **Brief:**
-[../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) §1 "PR-4" · **Design:**
-[../docs/design/python-facade.md](../docs/design/python-facade.md) §1 (`none (verbatim)` + NEW
+[phase-3-python-facade.md](phase-3-python-facade.md) §1 "PR-4" · **Design:**
+[docs/design/python-facade.md](../../design/python-facade.md) §1 (`none (verbatim)` + NEW
 comparator), §3 EC-8/EC-9, §5 F1, §6 (the census procedure end to end), §9 PR-4 ·
-**Port-Source:** the private v1 engine repository at the frozen port pin · **Status:** IN FLIGHT ·
+**Port-Source:** the private v1 engine repository at the frozen port pin · **Status:** DELIVERED — merged 2026-08-08 (#20); archived 2026-08-09 ·
 **Runs parallel to:** phase-3 PR-3 (disjoint footprint: crate tree vs Python-harness tree)
 
 ## Scope
@@ -342,7 +348,7 @@ never hand-edited — a re-run replaces the whole directory in one commit. The c
 losslessly reversible in any case: the textual transform collapsed escaped `\"` and genuine
 string-terminating `"` into the same character, so a blanket un-escape breaks the other case.
 The defects are enumerated with reproductions in
-[`task/census/baseline-fc3f48102/map.md`](census/baseline-fc3f48102/map.md) "REGENERATION
+[`task/census/baseline-fc3f48102/map.md`](../../../task/census/baseline-fc3f48102/map.md) "REGENERATION
 REQUIRED", and in summary:
 
 1. All four `compat-report.json` files are **invalid JSON** (214/214/137/110 broken escape sites);

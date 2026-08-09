@@ -178,7 +178,7 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
 - Spark door: [../repark-spark/map.md](../repark-spark/map.md) (`SparkDialect` + `SparkExtension`).
 - Design: [../../docs/design/python-facade.md](../../docs/design/python-facade.md)
   (§2.2 dep edges, §3 EC-1/2/3/5/6/10, §4 Q7, §5 F3, §9 PR-3);
-  ledger [../../task/p3c-binding-ledger.md](../../task/p3c-binding-ledger.md).
+  ledger [p3c-binding-ledger.md](../../docs/history/port-v2/p3c-binding-ledger.md).
 - Related: built into a wheel by `python/repark` (maturin) — **that package lands phase-3 PR-5**;
   no wheel is buildable from this PR and none is claimed.
 

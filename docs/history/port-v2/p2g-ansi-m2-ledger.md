@@ -1,9 +1,15 @@
 # Unit ledger — P2G: the ANSI door, milestone 2 (PR-6) — the door closes
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-2 PR-6 · **Brief:**
-[../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-6" · **Design:**
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) (LAW for this unit) · **Predecessor:**
-[p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) (PR-5 / M1) · **Status:** MERGED 2026-08-08 (PR #14)
+[phase-2-sql-doors.md](phase-2-sql-doors.md) §1 "PR-6" · **Design:**
+[docs/design/sql-doors.md](../../design/sql-doors.md) (LAW for this unit) · **Predecessor:**
+[p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) (PR-5 / M1) · **Status:** MERGED 2026-08-08 (PR #14; archived 2026-08-09)
 
 This is the **single home** for PR-6's per-Q delivery record. `docs/design/sql-doors.md` is not
 annotated with delivery notes — it stays the design, and points here (no duplication; the design

@@ -10,25 +10,6 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
-- [phase-0-bootstrap.md](phase-0-bootstrap.md) — the phase-0 bootstrap brief (2026-08-06):
-  gates before code — testing contract, mechanical gates, map.md discipline, agent contracts,
-  SEPMO, tier-1 CI, ported and green on an empty workspace; five workstreams, five commits,
-  panel verification. In-repo copy ends above the execution-local appendix by design.
-- [phase-1-engine-core.md](phase-1-engine-core.md) — the phase-1 engine-core brief (2026-08-06):
-  the three-PR slate (PR-A workspace arming + repark-common + gates; PR-B repark-iceberg;
-  PR-C repark-core) executing the settled design in
-  [../docs/design/session-api.md](../docs/design/session-api.md); port-source pin, copy-then-
-  re-home rules, relocation discipline, fleet plan, phase-1 acceptance.
-- [phase-2-sql-doors.md](phase-2-sql-doors.md) — the phase-2 two-SQL-doors brief (2026-08-07):
-  the seven-PR slate (PR-1 repark-functions + docs; PR-2 repark-spark skeleton; PR-3a DDL;
-  PR-3b DML + refs + census close; PR-4 repark-ta; PR-5/PR-6 the ANSI door) executing the
-  settled design in [../docs/design/sql-doors.md](../docs/design/sql-doors.md); deliverables,
-  ordering, acceptance, and the 2026-08-07 decisions record.
-- [phase-3-python-facade.md](phase-3-python-facade.md) — the phase-3 brief (2026-08-08): the
-  seven-PR slate (arming; repark-ml; repark-python; parity + census baseline; facade + wheel;
-  tier-2 CI; phase close) executing the settled design in
-  [../docs/design/python-facade.md](../docs/design/python-facade.md); execution pattern
-  (actor/critic model tiers), acceptance checklist, and the decisions record.
 - [frontdoor-campaign.md](frontdoor-campaign.md) — the Agent-Agnostic Front-Door campaign slate
   (2026-08-08): the first post-milestone campaign — five independently mergeable, behavior-preserving
   units (FD-1 truthful front door / FD-2 neutral contract / FD-3 mechanize structure / FD-4 reduce
@@ -36,24 +17,29 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md);
   documentation + mechanical-gate work only, no engine code change.
 
+**Closed campaigns are archived, not kept here.** The four port briefs (`phase-0`…`phase-3`,
+2026-08-06 → 2026-08-08) moved to
+[../docs/history/port-v2/](../docs/history/port-v2/map.md) on 2026-08-09 with the unit ledgers they
+drove; this directory holds the slates of campaigns that are still running.
+
 ## I want to... → go to
 
 | I want to... | go to |
 |---|---|
-| See what a delivered unit was ASKED to do | the dated brief for its slate |
+| See what a delivered unit was ASKED to do | the dated brief for its slate — in this directory while the campaign runs, in [../docs/history/](../docs/history/map.md) once it closes |
 | Find the standing rules briefs inherit | [../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules" |
 | Write a new brief | copy the newest brief's structure; standing rules by reference, not restatement |
-| See the port phases a brief executes against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
-| Read the design a phase-1 PR implements | [../docs/design/session-api.md](../docs/design/session-api.md) |
-| Read the design a phase-2 PR implements | [../docs/design/sql-doors.md](../docs/design/sql-doors.md) |
-| Read the design a phase-3 PR implements | [../docs/design/python-facade.md](../docs/design/python-facade.md) |
+| Read the port briefs (phases 0–3) | [../docs/history/port-v2/README.md](../docs/history/port-v2/README.md) |
+| See the port phases those briefs executed against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 | Read the design the Front-Door campaign implements | [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) |
+| Read the settled designs the port phases implemented | [../docs/design/map.md](../docs/design/map.md) |
 
 ## Pointers
 
-- Briefs are operational documents, subordinate to the engineering contracts
-  ([CLAUDE.md](../CLAUDE.md) precedence chain). A brief may narrow scope; it never
-  relaxes a contract rule.
+- Up: [../map.md](../map.md)
+- Briefs are operational documents, subordinate to the engineering contracts (the precedence chain
+  in [../AGENTS.md](../AGENTS.md) "Precedence"). A brief may narrow scope; it never relaxes a
+  contract rule.
 - **Import gate:** anything added here must pass the repository's forbidden-content greps (no
   account ids, ARNs, bucket names, credentials, personal identifiers, local absolute paths,
   session identifiers). Env-var NAMES are fine; values never. Execution-local appendices are
@@ -61,7 +47,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Debug
 
-- A brief referencing a rule that contradicts AGENTS.md/CLAUDE.md: the contract wins
+- A brief referencing a rule that contradicts [../AGENTS.md](../AGENTS.md): the contract wins
   (SEPMO doctrine D1 — surface the conflict, don't silently follow the brief).
 - A brief's execution details seem missing: execution-local appendices (paths, grep lists) are
   deliberately stripped from repo copies; the decision record, if any, lives with the

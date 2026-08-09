@@ -1,9 +1,15 @@
 # Unit ledger — P3A: phase-3 arming (design + brief + tier rows + rust CI split)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-3 PR-1 · **Brief:**
-[../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) §1 "PR-1" · **Design:**
-[../docs/design/python-facade.md](../docs/design/python-facade.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** IN FLIGHT
+[phase-3-python-facade.md](phase-3-python-facade.md) §1 "PR-1" · **Design:**
+[docs/design/python-facade.md](../../design/python-facade.md) · **Port-Source:** v1 `main` @
+`fc3f48102` · **Status:** DELIVERED — merged 2026-08-08 (#16); archived 2026-08-09
 
 ## Scope
 
