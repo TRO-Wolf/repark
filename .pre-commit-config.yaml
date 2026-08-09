@@ -30,8 +30,13 @@ repos:
         language: script
         pass_filenames: false
       - id: crate-dag-guard
-        name: crate-DAG layering guard
+        name: crate dependency-policy guard
         entry: scripts/check_crate_dag.sh
+        language: script
+        pass_filenames: false
+      - id: manifest-guard
+        name: structural-manifest guard
+        entry: scripts/check_manifest.sh
         language: script
         pass_filenames: false
       - id: lib-rs-guard

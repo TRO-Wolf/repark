@@ -79,6 +79,11 @@ repository's `task/` directory).
   crate port incl. the 148 `.bin` goldens, NEW `TaExtension`, `SparkExtension` composition
   restoring the p2b TA-omission rider, two-pass TA census, deferred rows #8–#14 landing —
   manifest remainder 4); IN FLIGHT.
+- [fd3-ledger.md](fd3-ledger.md) — unit ledger for **FD-3** of the Agent-Agnostic Front-Door
+  campaign (mechanize structural truth: `repo-manifest.toml` + the `check_manifest` validator,
+  the crate-DAG upgrade to explicit allowed edges with dependency kinds, and the manifest↔map
+  consistency rule): scope, design decisions, gate results, and the provocation proofs for both
+  new/upgraded gates.
 - [port/](port/map.md) — port-execution accounting
   ([port/deferred-tests.md](port/deferred-tests.md): the deferred-test manifest and its
   reconciliation rule).
@@ -89,6 +94,7 @@ repository's `task/` directory).
 |---|---|
 | See what's in flight | [todo.md](todo.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
+| See why a dependency edge or a manifest field is gated, and the proofs it fires | [fd3-ledger.md](fd3-ledger.md) |
 | See PR-A's gate evidence / provocation proofs | [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md) |
 | See PR-B's fidelity / census / fork-audit evidence | [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md) |
 | See the phase-2 PR-1 scope / edit classes | [p2a-functions-ledger.md](p2a-functions-ledger.md) |

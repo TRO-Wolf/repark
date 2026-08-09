@@ -2,7 +2,8 @@
 
 ## Purpose
 
-The Session-centric engine API: construct the DataFusion `SessionContext`, configure the memory
+The Session-centric engine API (crate-DAG **tier 2**, the engine session both doors and the
+bindings plug into): construct the DataFusion `SessionContext`, configure the memory
 pool, register catalogs, hold the `CatalogRegistry`, and expose the engine entrypoints (`sql`,
 readers, temp views, namespace/catalog ops). Execution routes through an `ExecutionBackend`
 trait — the seam that lets a future distributed coordinator slot in without reworking the write

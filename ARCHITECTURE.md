@@ -31,14 +31,20 @@ edge, bindings reach inward only.
 
 Rules that hold at every tier (the enforced ones point at their SSOT — prose never restates it):
 
-- **No `repark-*` crate depends on a strictly higher tier; same-tier edges are allowed.** The tier
-  map and allowed edges are enforced by `scripts/check_crate_dag.py` (`make check-crate-dag`, in
-  `make ci` + the pre-commit hook). That script is the SSOT — read it for the exact edges; when
-  you add a crate or an edge, change the script, not this file.
+- **Every internal edge is declared, with its kind; and no `repark-*` crate depends on a strictly
+  higher tier (same-tier edges are allowed).** The tier map, the crate roles, and the explicit
+  allowed-edge table — each edge with the dependency kinds it may take (`normal` / `optional` /
+  `dev` / `build`) and why it exists — are enforced by `scripts/check_crate_dag.py`
+  (`make check-crate-dag`, in `make ci` + the pre-commit hook). That script is the SSOT — read it
+  for the exact edges; when you add a crate or an edge, change the script, not this file. A new
+  edge fails the gate until it is declared, *including* a same-tier one the layering rule alone
+  would wave through, and the structural rules below are re-applied to the declaration itself, so
+  a forbidden edge cannot be legalized by writing it down.
 - **No door ↔ door edge, ever.** `repark-spark` and `repark-sql` never depend on each other; they
   share machinery only through tiers 0–1. That is what lets each door keep its own grammar. (Their
-  test binaries may cross for cross-door equivalence — a dev-only edge, invisible to the product
-  DAG.)
+  test binaries may cross for cross-door equivalence: that edge is declared in the policy as a
+  `dev` edge — permitted for a test binary, forbidden as a product edge. Kinds are what let the
+  policy say that in one row.)
 - **Bindings depend inward only.** `repark-python` reaches down to `repark-core` /
   `repark-functions` / `repark-ta` / `repark-spark` / `repark-ml`; nothing depends on it. It
   deliberately does **not** edge to `repark-sql` (no ANSI surface from Python) or `repark-iceberg`
@@ -178,6 +184,9 @@ this seam is tracked in [STATUS.md](STATUS.md) "Architectural risks".
 ## Onward
 
 - Current state (release, delivered/deferred, known issues): [STATUS.md](STATUS.md).
+- The machine-readable inventory of the components described above (path / layer / delivery
+  status, validated against the workspace by `make check-manifest`):
+  [repo-manifest.toml](repo-manifest.toml).
 - Per-crate component contracts: each crate's `map.md` "Component contract" section, indexed from
   [crates/map.md](crates/map.md).
 - The rules governing a change: [AGENTS.md](AGENTS.md). Load-bearing decisions:

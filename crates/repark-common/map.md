@@ -3,9 +3,9 @@
 ## Purpose
 
 Shared error-seed types, the workspace-wide `Error` enum, and the dialect-neutral SQL **surface
-registry** both SQL doors are audited against. Depends on nothing else in the
-workspace — the bottom of the dependency DAG, which is what keeps the higher engine crates
-acyclic. (Ported from the private v1 repository's error-seed crate; renamed because this
+registry** both SQL doors are audited against (crate-DAG **tier 0**, the foundation). Depends on
+nothing else in the workspace — the bottom of the dependency DAG, which is what keeps the higher
+engine crates acyclic. (Ported from the private v1 repository's error-seed crate; renamed because this
 workspace reserves `repark-core` for the Session crate.)
 
 ## Contents

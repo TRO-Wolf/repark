@@ -101,3 +101,14 @@ there the hard way and bind here from day one.
   lines legitimately contain the old forbidden literals; a whole-diff grep makes any scrub
   unpushable (and the local pre-push hook too). `git log -p | grep '^+'` for content; full
   metadata for messages/identity.
+
+## 2026-08-09 — front-door campaign
+
+- **DO name the model actually running in the `Authored-By` trailer — read it from the live
+  session environment at commit time, never from a role assignment or a remembered constant.**
+  Supersedes the 2026-08-06 entry on the model name only; the shape — `Authored-By: Claude
+  (<model>) <noreply@anthropic.com>`, nothing else, no session identifiers — stands. Cause: a
+  session's runtime model can change mid-session without ceremony, and a trailer stamped from a
+  role's constant keeps asserting the old name; the FD-1 squash (`4cc6bf7`, #24) is misattributed
+  `claude-fable-5` for work committed under `claude-opus-4-8`. Merged history stays as-is
+  (forward-only); this rule prevents the recurrence.

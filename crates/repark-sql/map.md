@@ -30,9 +30,11 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
   **No direct `sqlparser`** (types come only through `datafusion::sql::sqlparser`) and **no
   `datafusion-spark`** — the design's hard constraint, so this door cannot reach Spark semantics
   through a crate edge. **Dev-dependencies only:** `repark-spark` (the two-session cross-door
-  protocol needs both doors in one test binary) and `repark-ta` (the Q11 toll). The crate-DAG
-  guard scopes layering to NORMAL edges, so neither is a product edge — nothing in `src/` may
-  name them.
+  protocol needs both doors in one test binary) and `repark-ta` (the Q11 toll). Both are
+  **declared in the dependency policy as `dev` edges** (`scripts/check_crate_dag.py`
+  `ALLOWED_EDGES`): visible and reasoned about, exempt from the layering rule, and RED the moment
+  either is promoted to `normal` — `repark-sql → repark-spark` as a product edge is precisely the
+  forbidden door→door edge. Nothing in `src/` may name them.
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
   two-session `cross_door.rs` rows, Q8 `introspection.rs`, the Q11 `ta_toll.rs`.

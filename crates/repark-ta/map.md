@@ -2,7 +2,8 @@
 
 ## Purpose
 
-RePark's own pure-Rust technical-analysis kernels: bit-exact hand-ports of the TA-Lib C 0.4.0
+RePark's own pure-Rust technical-analysis kernels (crate-DAG tier 3, a door-neutral capability
+crate): bit-exact hand-ports of the TA-Lib C 0.4.0
 algorithms (no C compiled/linked/vendored, no third-party TA crate — decision trail in
 task/todo.md T0). This is the kernel layer only — plain `&[f64]` in → `Vec<f64>` out,
 dependency-light (runtime dep: `thiserror`; dev-dep: `serde_json` for the goldens

@@ -80,7 +80,8 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
 # EC-1 type-identity guard (`src/tests.rs`): naming `repark_common::Error` alongside
 # `repark_core::Error` is what makes "the same type, re-exported" a COMPILE error to break. It is
 # deliberately a DEV dep — the binding's product dependency list stays the five crates design
-# §2.2 names, and the crate-DAG guard ignores dev edges by design.
+# §2.2 names. The crate-DAG guard declares this edge with kind `dev`: it is inspected like every
+# other edge, and exempt only from the layering rule (a test-only edge is not a layering claim).
 repark-common.workspace = true
 # `auto-initialize` lets `Python::attach` boot an embedded interpreter so the Rust integration
 # tests can drive the pyclasses without a built wheel. It is a *dev* dependency: maturin builds the

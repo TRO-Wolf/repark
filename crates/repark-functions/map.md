@@ -2,7 +2,8 @@
 
 ## Purpose
 
-The Spark-compatible function registry **and the Spark expression-semantics layer**: wire
+The Spark-compatible function registry **and the Spark expression-semantics layer** (crate-DAG
+tier 3, a capability leaf with no internal deps — the doors consume it, never the reverse): wire
 `datafusion-spark` into a session, hand-implement the Spark functions it lacks (date / string /
 collection shims), and carry the analyzer rule that rewrites raw DataFusion operator semantics
 (integer `/`, div-by-zero, `[]` subscript) to Spark's — the AR-WG-SQL fidelity layer.

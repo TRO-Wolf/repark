@@ -30,17 +30,28 @@ binding is what streams rows into it); `repark-python → {repark-core, repark-f
 (feature `datafusion`), repark-spark, repark-ml}` — five edges, tier 4 reaching down, plus the two
 **deliberate non-edges** review enforces (design §2.2): no `repark-sql` (zero ANSI surface from
 Python) and no `repark-iceberg` (the binding reaches Iceberg only through `ReparkSession` and SQL
-text). Its `repark-common` edge is **dev-only** (the EC-1 type-identity guard) and is invisible to
-the DAG guard by design.
+text). Its `repark-common` edge is **dev-only** (the EC-1 type-identity guard) — declared in the
+policy as a `dev` edge, so it is visible and reasoned about, but exempt from the layering rule
+(a test-only edge is not a layering statement).
 **There is no door→door edge, ever** (design §1): the two doors share machinery only through
-tiers 0–1, which is what keeps each free to have its own grammar.
+tiers 0–1, which is what keeps each free to have its own grammar. The one crossing —
+`repark-sql → repark-spark`, the cross-door test protocol — is declared `dev`; the same edge as
+`normal` is exactly what the policy forbids.
 
-> **The layering SSOT is [`../scripts/check_crate_dag.py`](../scripts/check_crate_dag.py)** —
-> it holds the tier map and is enforced by `make check-crate-dag`, and crate-root thinness by
-> `make check-lib-rs`, both in the `make ci` chain and the pre-commit hook. The rule: no
-> `repark-*` crate depends on a **strictly higher** tier; same-tier edges are allowed. The prose
-> above is **orientation only** — read the script for the truth, and when adding a crate or an
-> edge, change the script, not this file.
+> **The dependency-policy SSOT is
+> [`../scripts/check_crate_dag.py`](../scripts/check_crate_dag.py)** — it holds the tier map,
+> the crate **roles**, and the **explicit allowed-edge table** (every internal edge with the
+> dependency KINDS it may take: `normal` / `optional` / `dev` / `build`). Enforced by
+> `make check-crate-dag`, and crate-root thinness by `make check-lib-rs`, both in the `make ci`
+> chain and the pre-commit hook. The rules: every internal edge must be **declared** with its
+> kind and a reason (a new same-tier edge reds until it is); no door → door edge outside `dev`;
+> nothing depends on the bindings crate; `repark-common` depends on nothing internal; a
+> capability crate never depends on a door; and no PRODUCT edge points at a **strictly higher**
+> tier (same-tier edges are allowed). The prose above is **orientation only** — read the script
+> for the truth, and when adding a crate or an edge, change the script, not this file. Each
+> crate's path / layer / delivery status is additionally declared in
+> [`../repo-manifest.toml`](../repo-manifest.toml), whose `layer` values `make check-manifest`
+> cross-checks against this same script.
 
 > **Internal deps are declared once, in the root `[workspace.dependencies]`**, each as
 > `{ path = …, version = "0.0.0", default-features = false }`; members write

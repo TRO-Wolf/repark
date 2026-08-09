@@ -2,7 +2,8 @@
 
 ## Purpose
 
-The PyO3 `cdylib` that exposes the engine to Python as the `repark._native` module. The pure-
+The PyO3 `cdylib` that exposes the engine to Python as the `repark._native` module (crate-DAG
+**tier 4**, the bindings adapter — it reaches down; nothing depends on it). The pure-
 Python `repark` package imports from here. Rows cross the boundary as Apache Arrow via the **Arrow
 PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crate allowed to use
 `unsafe`** (the PyO3 / Arrow-FFI boundary).
@@ -25,7 +26,9 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   `fmt` + `env-filter` + `std` + `ansi` — env-gated live phase profiles through the wheel). Dev-dep
   `pyo3` with `auto-initialize` so the Rust tests can boot an embedded interpreter, plus a dev-only
   `repark-common` edge that exists solely so the EC-1 type-identity guard in `src/tests.rs` can name
-  both paths to the same `Error` type. Spells out its own lints with `unsafe_code = "allow"`
+  both paths to the same `Error` type (declared in `scripts/check_crate_dag.py` `ALLOWED_EDGES`
+  with kind `dev` — inspected like every other edge, exempt only from the layering rule).
+  Spells out its own lints with `unsafe_code = "allow"`
   (it does NOT inherit `[lints] workspace = true`; the workspace root reserves the carve-out).
   `scripts/check_lib_rs.py` carries a `repark-python` EXCEPTIONS row (EC-10: the 180-line root is a
   manifest and already uses the sanctioned file-backed test module). The off-by-default `extension-module` feature stays OFF for

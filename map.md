@@ -37,6 +37,13 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
   workflow pins.
+- `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
+  (path / layer / status for every crate, delivered and planned), the current phase, the
+  canonical gate commands, and the documentation index. It is a validated MIRROR, never a second
+  source of truth — `scripts/check_manifest.py` (`make check-manifest`, in `make ci`) checks
+  every field against the Cargo workspace, the Makefile, STATUS.md, the declared documents and
+  the crate-root `map.md` files, and cross-checks each `layer` against the dependency-policy
+  SSOT in `scripts/check_crate_dag.py`. Structural drift is a red gate, not a stale sentence.
 - `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
   oracle; `make install-hooks` wires it). `.typos.toml`'s `extend-words` carries the domain
@@ -83,6 +90,7 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 | Build the wheel / run the facade suite | [python/repark/map.md](python/repark/map.md) |
 | Run or compare a census | [docs/port/census.md](docs/port/census.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
+| Declare a new crate / doc / gate command structurally | [repo-manifest.toml](repo-manifest.toml) (validated by `make check-manifest`) |
 | Understand the mechanical guards | [scripts/map.md](scripts/map.md) |
 | Understand the cargo tooling config | [.cargo/map.md](.cargo/map.md) |
 
@@ -100,3 +108,4 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 | A cargo target loudly no-ops | Should no longer happen — the workspace has members; see the Makefile header |
 | Pre-commit hook rejects a commit | `bash scripts/check_map_md.sh` — the touched directory's map.md must be staged in the same commit |
 | A gate is unclear | `make help`; [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) are authoritative |
+| `manifest: FAIL …` | `bash scripts/check_manifest.sh` — [repo-manifest.toml](repo-manifest.toml) disagrees with the workspace, a doc, a make target, STATUS.md, or a crate map ([scripts/map.md#debug](scripts/map.md) has the per-message table) |

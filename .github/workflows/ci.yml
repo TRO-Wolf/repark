@@ -1,6 +1,7 @@
 # Main PR gate (tier 1: every PR, no secrets, GitHub-hosted, read-only token).
 # Rust lint (fmt + clippy + check) + Rust test (workspace) as separate jobs, Python (ruff), and
-# the repo guards (map.md + workflow parse + crate-DAG layering + lib.rs thinness).
+# the repo guards (map.md + workflow parse + crate dependency policy + lib.rs thinness +
+# the structural manifest).
 # Note on `cargo test --locked --workspace` (not `--all-features`): `--all-features` would enable
 # the repark-python `extension-module` feature, which tells PyO3 not to link libpython — fine for
 # a wheel, but it breaks linking a standalone test binary. See AGENTS.md "PyO3 build notes"
@@ -138,12 +139,19 @@ jobs:
           enable-cache: true
       - name: map.md guard
         run: bash scripts/check_map_md.sh
-      # Crate-DAG layering guard: a ~0.07 s `cargo metadata` read with no build, so a layering
-      # inversion fails in seconds rather than after minutes of compilation. Dual-wired with
-      # `make check-crate-dag` (ci.yml runs raw commands and never invokes `make ci`, so the
-      # gate needs wiring in both places). Tier map SSOT: scripts/check_crate_dag.py.
+      # Crate dependency-policy guard: a ~0.07 s `cargo metadata` read with no build, so an
+      # undeclared edge, a wrong dependency kind or a layering inversion fails in seconds rather
+      # than after minutes of compilation. Dual-wired with `make check-crate-dag` (ci.yml runs
+      # raw commands and never invokes `make ci`, so the gate needs wiring in both places).
+      # Tier map + roles + allowed-edge table SSOT: scripts/check_crate_dag.py.
       - name: crate-DAG layering guard
         run: ./scripts/check_crate_dag.sh
+      # Structural-manifest guard: repo-manifest.toml must agree with the Cargo workspace, the
+      # declared documents, the canonical make targets, STATUS.md and the crate-root map.md
+      # files. Pure text (no cargo, no network). Dual-wired with `make check-manifest`.
+      # SSOT: repo-manifest.toml + scripts/check_manifest.py.
+      - name: repo-manifest guard (check_manifest)
+        run: ./scripts/check_manifest.sh
       # lib.rs thinness (no inline #[cfg(test)] mod {…}; line ceilings).
       # Dual-wired with `make check-lib-rs` / `make ci`. SSOT: scripts/check_lib_rs.py.
       - name: lib.rs thinness guard (check_lib_rs)
