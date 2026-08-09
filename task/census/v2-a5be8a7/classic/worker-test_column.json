@@ -1,0 +1,413 @@
+{
+  "denominators": {
+    "all_collected": 28,
+    "engine_relevant": 25,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 3,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 15,
+    "pass_over_all": 0.5357142857142857,
+    "pass_over_engine_relevant": 0.6
+  },
+  "findings": [
+    "FAIL-ERROR-CLASS: 5 test(s) \u2014 measurement only (C2 zero-fix)",
+    "FAIL-VALUE: 3 test(s) \u2014 measurement only (C2 zero-fix)",
+    "NEEDS-JVM: 3 test(s) \u2014 measurement only (C2 zero-fix)",
+    "FAIL-MISSING: 2 test(s) \u2014 measurement only (C2 zero-fix)"
+  ],
+  "generated_at": "2026-08-08T23:31:24Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_column",
+      "module": "test_column",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.00047867302782833576,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_access_column"
+        },
+        {
+          "cause": "[ATTRIBUTE_NOT_SUPPORTED] Attribute `withMetadata` is not supported.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:255 in test_alias_metadata",
+          "duration_s": 0.007140313042327762,
+          "error_type": "PySparkAttributeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 255, in test_alias_metadata\n    df = df.withMetadata(\"a\", {\"foo\": \"bar\"})\n         ^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 3446, in __getattr__\n    raise PySparkAttributeError(\nrepark.errors.PySparkAttributeError: [ATTRIBUTE_NOT_SUPPORTED] Attribute `withMetadata` is not supported.\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_alias_metadata"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0018633059225976467,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_alias_negative"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.028958167997188866,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_and_in_expression"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 3.697001375257969e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "AssertionError",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:191 in test_bitwise_operations",
+          "duration_s": 0.01609380601439625,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 191, in test_bitwise_operations\n    result = df.select(functions.bitwiseNOT(df.b)).collect()[0].asDict()\n                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 282, in wrapped\n    return f(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 3723, in bitwiseNOT\n    return bitwise_not(col)\n           ^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 282, in wrapped\n    return f(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 3762, in bitwise_not\n    return _invoke_function_over_columns(\"bitwise_not\", col)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 122, in _invoke_function_over_columns\n    return _invoke_function(name, *(_to_java_column(col) for col in cols))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 110, in _invoke_function\n    assert SparkContext._active_spark_context is not None\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_bitwise_operations"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0021114940755069256,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_cast_negative"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.00020911404862999916,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_cast_str_representation"
+        },
+        {
+          "cause": "'Column' object is not callable",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:373 in test_col_field_ops_representation",
+          "duration_s": 0.001104293973185122,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 373, in test_col_field_ops_representation\n    str(c.withField(\"x\", sf.col(\"y\"))),\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'Column' object is not callable\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_col_field_ops_representation"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0001928440760821104,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_column_accessor"
+        },
+        {
+          "cause": "Error during planning: Invalid function 'time'. Did you mean 'size'?",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:125 in test_column_date_time_op",
+          "duration_s": 0.0024030739441514015,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 125, in test_column_date_time_op\n    df = self.spark.sql(query)\n         ^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: Invalid function 'time'.\nDid you mean 'size'?\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_column_date_time_op"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0015763340052217245,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_column_name_encoding"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.008207364939153194,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_column_name_with_non_ascii"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0010040539782494307,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_column_operators"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.012130677932873368,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_column_select"
+        },
+        {
+          "cause": "'Column' object is not callable",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:227 in test_drop_fields",
+          "duration_s": 0.002195522072724998,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 227, in test_drop_fields\n    self.assertIsInstance(df[\"a\"].dropFields(\"b\"), Column)\n                          ^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'Column' object is not callable\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_drop_fields"
+        },
+        {
+          "cause": "[NOT_COLUMN_OR_INT] arg_name='startPos', arg_type='IntEnum'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:472 in test_enum_literals",
+          "duration_s": 0.0015029959613457322,
+          "error_type": "PySparkTypeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 472, in test_enum_literals\n    (s.substr(IntEnum.X, IntEnum.Y), \"1\"),\n     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/column.py\", line 576, in substr\n    raise PySparkTypeError(\nrepark.errors.PySparkTypeError: [NOT_COLUMN_OR_INT] arg_name='startPos', arg_type='IntEnum'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_enum_literals"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.010321173933334649,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_eqnullsafe_classmethod_usage"
+        },
+        {
+          "cause": "Schema error: No field named foo.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:317 in test_expr_str_representation",
+          "duration_s": 0.0026488580042496324,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 317, in test_expr_str_representation\n    expression = sf.expr(\"foo\")\n                 ^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/functions.py\", line 368, in expr\n    _native.PyColumn.sql(sql),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Schema error: No field named foo.\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_expr_str_representation"
+        },
+        {
+          "cause": "A column with name `r.a` cannot be resolved; available columns: ['l', 'r', 'd']",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:175 in test_field_accessor",
+          "duration_s": 0.013592897914350033,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 175, in test_field_accessor\n    self.assertEqual(1, df.select(df[\"r.a\"]).first()[0])\n                                  ~~^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 3899, in __getitem__\n    return self._bind_schema_column(item)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 3715, in _bind_schema_column\n    canonical = self._resolve_getitem_column_name(name)\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 3491, in _resolve_getitem_column_name\n    raise AnalysisException(\nrepark.errors.AnalysisException: A column with name `r.a` cannot be resolved; available columns: ['l', 'r', 'd']\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_field_accessor"
+        },
+        {
+          "cause": "[SESSION_OR_CONTEXT_NOT_EXISTS] SparkContext or SparkSession should be created first.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:246 in test_getitem_column",
+          "duration_s": 0.00036974705290049314,
+          "error_type": "PySparkRuntimeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 246, in test_getitem_column\n    mapping_expr = sf.create_map([sf.lit(x) for x in chain(*mapping.items())])\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 282, in wrapped\n    return f(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 18300, in create_map\n    return _invoke_function_over_seq_of_columns(\"map\", cols)  # type: ignore[arg-type]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 132, in _invoke_function_over_seq_of_columns\n    sc = _get_active_spark_context()\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 339, in get_active_spark_context\n    raise PySparkRuntimeError(\npyspark.errors.exceptions.base.PySparkRuntimeError: [SESSION_OR_CONTEXT_NOT_EXISTS] SparkContext or SparkSession should be created first.\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_getitem_column"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.001776972902007401,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_isinstance_dataframe"
+        },
+        {
+          "cause": "lit() supports None, bool, int, float, str, date, datetime, time, list, tuple, ndarray, or Enum; got timedelta",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:417 in test_lit_delta_representation",
+          "duration_s": 0.00023754802532494068,
+          "error_type": "PySparkTypeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 417, in test_lit_delta_representation\n    s = str(sf.lit(delta))\n            ^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/functions.py\", line 125, in lit\n    raise PySparkTypeError(\nrepark.errors.PySparkTypeError: lit() supports None, bool, int, float, str, date, datetime, time, list, tuple, ndarray, or Enum; got timedelta\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_lit_delta_representation"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.004438163945451379,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_lit_time_representation"
+        },
+        {
+          "cause": "'int' object has no attribute '_validate_at_over'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:301 in test_over_negative",
+          "duration_s": 0.002172699081711471,
+          "error_type": "AttributeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 301, in test_over_negative\n    self.spark.range(1).id.over(123)\n  File \"<repo>/python/repark/src/repark/column.py\", line 1308, in over\n    window._validate_at_over()\n    ^^^^^^^^^^^^^^^^^^^^^^^^\nAttributeError: 'int' object has no attribute '_validate_at_over'\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_over_negative"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.011944366036914289,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_transform"
+        },
+        {
+          "cause": "[SESSION_OR_CONTEXT_NOT_EXISTS] SparkContext or SparkSession should be created first.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:51 in test_validate_column_types",
+          "duration_s": 0.0005197200225666165,
+          "error_type": "PySparkRuntimeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 51, in test_validate_column_types\n    self.assertTrue(\"Column\" in _to_java_column(\"a\").getClass().toString())\n                                ^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/classic/column.py\", line 69, in _to_java_column\n    jcol = _create_column_from_name(col)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/classic/column.py\", line 61, in _create_column_from_name\n    sc = get_active_spark_context()\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 339, in get_active_spark_context\n    raise PySparkRuntimeError(\npyspark.errors.exceptions.base.PySparkRuntimeError: [SESSION_OR_CONTEXT_NOT_EXISTS] SparkContext or SparkSession should be created first.\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_validate_column_types"
+        },
+        {
+          "cause": "'Column' object is not callable",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py:200 in test_with_field",
+          "duration_s": 0.0017265179194509983,
+          "error_type": "TypeError",
+          "harness_justification": "",
+          "module": "test_column",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_column.py\", line 200, in test_with_field\n    self.assertIsInstance(df[\"a\"].withField(\"b\", lit(3)), Column)\n                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nTypeError: 'Column' object is not callable\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_column.ColumnTests.test_with_field"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.1731682140380144
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for ColumnTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for ColumnTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "PASS",
+      15
+    ],
+    [
+      "FAIL-ERROR-CLASS",
+      5
+    ],
+    [
+      "FAIL-VALUE",
+      3
+    ],
+    [
+      "NEEDS-JVM",
+      3
+    ],
+    [
+      "FAIL-MISSING",
+      2
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

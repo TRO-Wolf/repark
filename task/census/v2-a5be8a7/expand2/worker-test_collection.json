@@ -1,0 +1,256 @@
+{
+  "denominators": {
+    "all_collected": 15,
+    "engine_relevant": 13,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 1,
+    "excluded_skip_upstream": 1,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 6,
+    "pass_over_all": 0.4,
+    "pass_over_engine_relevant": 0.46153846153846156
+  },
+  "findings": [
+    "FAIL-VALUE: 5 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "FAIL-MISSING: 2 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "NEEDS-JVM: 1 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)"
+  ],
+  "generated_at": "2026-08-08T23:31:39Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_collection",
+      "module": "test_collection",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 5.7658995501697063e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.017333656083792448,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_collect_time"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.012167777982540429,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_local_iterator"
+        },
+        {
+          "cause": "repark SparkContext has no attribute '_jvm' (only setLogLevel / applicationId / master are implemented; full SparkContext is out of scope)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:350 in test_to_local_iterator_not_fully_consumed",
+          "duration_s": 0.0010927709518000484,
+          "error_type": "AttributeError",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 350, in test_to_local_iterator_not_fully_consumed\n    with self.quiet():\n         ^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/utils.py\", line 314, in quiet\n    return QuietTest(self.sc)\n           ^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/utils.py\", line 261, in __init__\n    self.log4j = sc._jvm.org.apache.log4j\n                 ^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/builder_conf.py\", line 81, in __getattr__\n    raise AttributeError(\nAttributeError: repark SparkContext has no attribute '_jvm' (only setLogLevel / applicationId / master are implemented; full SparkContext is out of scope)\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_local_iterator_not_fully_consumed"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.007274485076777637,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_local_iterator_prefetch"
+        },
+        {
+          "cause": "dtype('<M8[us]') != 'datetime64[ns]'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:107 in test_to_pandas",
+          "duration_s": 0.0058299700031057,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 107, in test_to_pandas\n    self.assertEqual(types[5], \"datetime64[ns]\")\nAssertionError: dtype('<M8[us]') != 'datetime64[ns]'\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.003338378039188683,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_avoid_astype"
+        },
+        {
+          "cause": "<class 'numpy.ndarray'> != <class 'list'>",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:277 in test_to_pandas_for_array_of_struct",
+          "duration_s": 0.008708881912752986,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 277, in test_to_pandas_for_array_of_struct\n    self.check_to_pandas_for_array_of_struct(is_arrow_enabled)\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 295, in check_to_pandas_for_array_of_struct\n    self.assertEqual(type(pdf[\"array_struct_col\"][0]), list)\nAssertionError: <class 'numpy.ndarray'> != <class 'list'>\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_for_array_of_struct"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.042303408961743116,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_for_empty_df_with_nested_array_columns"
+        },
+        {
+          "cause": "This feature is not implemented: Unsupported SQL type TIMESTAMP_NTZ",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:173 in test_to_pandas_from_empty_dataframe",
+          "duration_s": 0.0034443188924342394,
+          "error_type": "UnsupportedOperationException",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 173, in test_to_pandas_from_empty_dataframe\n    self.check_to_pandas_from_empty_dataframe()\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 194, in check_to_pandas_from_empty_dataframe\n    dtypes_when_nonempty_df = self.spark.sql(sql).toPandas().dtypes\n                              ^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.UnsupportedOperationException: This feature is not implemented: Unsupported SQL type TIMESTAMP_NTZ\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_from_empty_dataframe"
+        },
+        {
+          "cause": "Schema error: No field named col1. Did you mean 'column1'?.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:243 in test_to_pandas_from_mixed_dataframe",
+          "duration_s": 0.00979950895998627,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 243, in test_to_pandas_from_mixed_dataframe\n    self.check_to_pandas_from_mixed_dataframe()\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 266, in check_to_pandas_from_mixed_dataframe\n    pdf_with_some_nulls = self.spark.sql(sql).toPandas()\n                          ^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Schema error: No field named col1. Did you mean 'column1'?.\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_from_mixed_dataframe"
+        },
+        {
+          "cause": "This feature is not implemented: Unsupported SQL type TIMESTAMP_NTZ",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:203 in test_to_pandas_from_null_dataframe",
+          "duration_s": 0.0032202759757637978,
+          "error_type": "UnsupportedOperationException",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 203, in test_to_pandas_from_null_dataframe\n    self.check_to_pandas_from_null_dataframe()\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 224, in check_to_pandas_from_null_dataframe\n    pdf = self.spark.sql(sql).toPandas()\n          ^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.UnsupportedOperationException: This feature is not implemented: Unsupported SQL type TIMESTAMP_NTZ\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_from_null_dataframe"
+        },
+        {
+          "cause": "Error during planning: Invalid function 'explode'. Did you mean 'encode'?",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:131 in test_to_pandas_on_cross_join",
+          "duration_s": 0.0031370690558105707,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 131, in test_to_pandas_on_cross_join\n    self.check_to_pandas_on_cross_join()\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 144, in check_to_pandas_on_cross_join\n    df = self.spark.sql(sql)\n         ^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: Invalid function 'explode'.\nDid you mean 'encode'?\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_on_cross_join"
+        },
+        {
+          "cause": "Required Pandas was found.",
+          "divergent_frame": "",
+          "duration_s": 1.0048970580101013e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "",
+          "status": "SKIP-UPSTREAM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_required_pandas_not_found"
+        },
+        {
+          "cause": "Error during planning: Projections require unique expression names but the expression \"Int64(1) AS v\" at position 0 and \"Int64(1) AS v\" at position 1 have the same name. Consider aliasing (\"AS\") one of them.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py:115 in test_to_pandas_with_duplicated_column_names",
+          "duration_s": 0.0005713979480788112,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_collection",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 115, in test_to_pandas_with_duplicated_column_names\n    self.check_to_pandas_with_duplicated_column_names()\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_collection.py\", line 121, in check_to_pandas_with_duplicated_column_names\n    df = self.spark.sql(sql)\n         ^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: Projections require unique expression names but the expression \"Int64(1) AS v\" at position 0 and \"Int64(1) AS v\" at position 1 have the same name. Consider aliasing (\"AS\") one of them.\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_collection.DataFrameCollectionTests.test_to_pandas_with_duplicated_column_names"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.14633302099537104
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for DataFrameCollectionTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for DataFrameCollectionTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "PASS",
+      6
+    ],
+    [
+      "FAIL-VALUE",
+      5
+    ],
+    [
+      "FAIL-MISSING",
+      2
+    ],
+    [
+      "NEEDS-JVM",
+      1
+    ],
+    [
+      "SKIP-UPSTREAM",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

@@ -1,0 +1,139 @@
+{
+  "denominators": {
+    "all_collected": 6,
+    "engine_relevant": 6,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 0,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 4,
+    "pass_over_all": 0.6666666666666666,
+    "pass_over_engine_relevant": 0.6666666666666666
+  },
+  "findings": [
+    "FAIL-MISSING: 1 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "FAIL-VALUE: 1 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)"
+  ],
+  "generated_at": "2026-08-08T23:31:43Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_stat",
+      "module": "test_stat",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 5.71379205211997e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_stat",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_stat.DataFrameStatTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.16384632606059313,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_stat",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_stat.DataFrameStatTests.test_dropna"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.07757887593470514,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_stat",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_stat.DataFrameStatTests.test_fillna"
+        },
+        {
+          "cause": "DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_stat.py:40 in test_freqItems",
+          "duration_s": 0.006365910987369716,
+          "error_type": "UnsupportedOperationException",
+          "harness_justification": "",
+          "module": "test_stat",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_stat.py\", line 40, in test_freqItems\n    items = df.stat.freqItems((\"a\", \"b\"), 0.4).collect()[0]\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 1385, in freqItems\n    raise UnsupportedOperationException(\nrepark.errors.UnsupportedOperationException: DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_stat.DataFrameStatTests.test_freqItems"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.019906339002773166,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_stat",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_stat.DataFrameStatTests.test_melt_groupby"
+        },
+        {
+          "cause": "Arrow error: Cast error: Cannot cast string 'Alice' to value of Int64 type",
+          "divergent_frame": "<repo>/python/repark/src/repark/dataframe/core.py:6771 in to_arrow_batches",
+          "duration_s": 0.01309998705983162,
+          "error_type": "PySparkException",
+          "harness_justification": "",
+          "module": "test_stat",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6771, in to_arrow_batches\n    for batch in reader:\n  File \"pyarrow/ipc.pxi\", line 757, in pyarrow.lib.RecordBatchReader.__next__\n  File \"pyarrow/ipc.pxi\", line 791, in pyarrow.lib.RecordBatchReader.read_next_batch\n  File \"pyarrow/error.pxi\", line 92, in pyarrow.lib.check_status\npyarrow.lib.ArrowInvalid: External error: Arrow error: Cast error: Cannot cast string 'Alice' to value of Int64 type\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_stat.py\", line 226, in test_replace\n    row = self.spark.createDataFrame([(\"Alice\", 10, 10.0)], schema).replace(10, 20).first()\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6488, in first\n    return self.head()\n           ^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6478, in head\n    rows = self.head(1)\n           ^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6480, in head\n    return self.take(n)\n           ^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6458, in take\n    return self.limit(limit_count).collect()\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6423, in collect\n    for batch in self.to_arrow_batches():\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6775, in to_arrow_batches\n    raise _export_engine_error(arrow_error) from arrow_error\nrepark.errors.PySparkException: Arrow error: Cast error: Cannot cast string 'Alice' to value of Int64 type\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_stat.DataFrameStatTests.test_replace"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.4210882909828797
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for DataFrameStatTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for DataFrameStatTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "PASS",
+      4
+    ],
+    [
+      "FAIL-MISSING",
+      1
+    ],
+    [
+      "FAIL-VALUE",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

@@ -113,6 +113,7 @@ FROZEN_OPTIONS: tuple[str, ...] = (
     "--baseline",
     "--candidate",
     "--deferred",
+    "--added",
     "--quarantine",
     "--manifest-baseline",
     "--manifest-candidate",
@@ -495,20 +496,27 @@ def apply_ledgers(
     candidate: Side,
     *,
     deferred: Sequence[str],
+    added: Sequence[str],
     quarantined: Sequence[str],
 ) -> tuple[dict[str, str], dict[str, str], dict[str, list[str]]]:
     """Subtract the ledgers and return ``(baseline_rows, candidate_rows, echo)``.
 
-    Deferred entries are removed from the **baseline side only** (they are v1 tests this
-    repository deliberately did not port). Quarantined-unstable entries are removed from
-    **both** sides. Everything removed is echoed.
+    Deferred entries are removed from the **baseline side only** (v1 tests this repository
+    deliberately did not port). Added entries are removed from the **candidate side only**
+    (v2-only tests for capabilities the pin has no equivalent for — the mirror of deferred).
+    Quarantined-unstable entries are removed from **both** sides. The reconciliation identity is
+    `(candidate minus added) union deferred = baseline`. Everything removed is echoed.
     """
     deferred_set = set(deferred)
+    added_set = set(added)
     quarantine_set = set(quarantined)
     echo: dict[str, list[str]] = {
         "deferred_subtracted": sorted(deferred_set & set(baseline.classes)),
         "deferred_not_present_in_baseline": sorted(deferred_set - set(baseline.classes)),
         "deferred_present_in_candidate": sorted(deferred_set & set(candidate.classes)),
+        "added_subtracted": sorted(added_set & set(candidate.classes)),
+        "added_not_present_in_candidate": sorted(added_set - set(candidate.classes)),
+        "added_present_in_baseline": sorted(added_set & set(baseline.classes)),
         "quarantined_baseline": sorted(quarantine_set & set(baseline.classes)),
         "quarantined_candidate": sorted(quarantine_set & set(candidate.classes)),
         "quarantined_not_present": sorted(
@@ -523,7 +531,7 @@ def apply_ledgers(
     candidate_rows = {
         test_id: status
         for test_id, status in candidate.classes.items()
-        if test_id not in quarantine_set
+        if test_id not in added_set and test_id not in quarantine_set
     }
     return baseline_rows, candidate_rows, echo
 
@@ -539,6 +547,9 @@ def _echo_lines(echo: dict[str, list[str]]) -> list[str]:
         "deferred_subtracted",
         "deferred_not_present_in_baseline",
         "deferred_present_in_candidate",
+        "added_subtracted",
+        "added_not_present_in_candidate",
+        "added_present_in_baseline",
         "quarantined_baseline",
         "quarantined_candidate",
         "quarantined_not_present",
@@ -622,6 +633,7 @@ def compare(
     candidate: Side,
     *,
     deferred: Sequence[str],
+    added: Sequence[str] = (),
     quarantined: Sequence[str],
     junit: bool,
 ) -> ComparisonResult:
@@ -652,10 +664,11 @@ def compare(
         # ``classname::name``. Canonicalize the ledger side ONCE, here, so a ledger cannot
         # silently subtract nothing (EC-4).
         deferred = [junit_node_id(entry) for entry in deferred]
+        added = [junit_node_id(entry) for entry in added]
         quarantined = [junit_node_id(entry) for entry in quarantined]
 
     baseline_rows, candidate_rows, echo = apply_ledgers(
-        baseline, candidate, deferred=deferred, quarantined=quarantined
+        baseline, candidate, deferred=deferred, added=added, quarantined=quarantined
     )
 
     rendered_baseline = render_side(baseline_rows)
@@ -737,6 +750,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="checked-in deferred-node-id ledger; subtracted from the BASELINE side only",
     )
     parser.add_argument(
+        "--added",
+        type=Path,
+        default=None,
+        help="checked-in added-node-id ledger (v2-only tests); subtracted from the CANDIDATE "
+        "side only — the mirror of --deferred",
+    )
+    parser.add_argument(
         "--quarantine",
         type=Path,
         default=None,
@@ -807,11 +827,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         baseline, candidate = _load_sides(args)
         deferred = load_ledger(args.deferred)
+        added = load_ledger(args.added)
         quarantined = load_ledger(args.quarantine)
         result = compare(
             baseline,
             candidate,
             deferred=deferred,
+            added=added,
             quarantined=quarantined,
             junit=bool(args.junit),
         )

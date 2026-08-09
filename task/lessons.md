@@ -66,3 +66,38 @@ there the hard way and bind here from day one.
   matrix row whose truth changed when the sibling landed — `TA_FUNCTIONS` — and the absence
   pins/counts), then full re-gate. Blanket `--ours` on a sibling merge silently discards the
   sibling's work.
+
+## 2026-08-08 — phase 3 (Python facade + parity = milestone one)
+
+- **DO stop-and-report when a ported test reds; never defer or silently fix it.** The
+  byte-flat census gate's whole value is exposing regressions on arrival. A facade test red on
+  arrival (`datafusion.runtime.memory_limit`) traced to a real phase-2 engine bug (the config
+  sweep vs a facade-owned pseudo-key), not port infidelity — deferring it would have been a
+  gate hole, silently fixing it would have hidden the bug. Root-cause, fix at the source with a
+  named test, prove through the real artifact, foot the census arithmetic exactly.
+- **DO generate deferral decisions empirically, by where the exception is raised.** A by-file
+  deferral list is wrong in both directions: most offline JDBC-options tests refuse at the
+  FACADE (they port and PASS); the pg catalog-registration test defers at the engine's
+  NotImplemented. Run the candidates against a built wheel and adjudicate per node. Over- and
+  under-deferral are both invisible to `ported ∪ deferred = pin` — the ledger must match reality.
+- **DO give the census a mirror ADDITIONS ledger.** `ported ∪ deferred = pin` breaks the moment
+  a v2-only test lands (a new capability the pin has no equivalent for — e.g. a public-repo AWS
+  workflow's guard). The identity is `(v2_collected − added) ∪ deferred = pin_collected`; the
+  additions ledger subtracts from the CANDIDATE side, the exact mirror of deferred. Any new test
+  in the facade tree perturbs the collect-only baseline — track it, don't hand-wave it.
+- **DO redact evidence artifacts THROUGH each format's parser, never sed.** A naive path
+  substitution ate escaped quotes in traceback-bearing JSON (677 sites → invalid JSON) and
+  injected `<token>` angle-brackets into JUnit XML (unparsable). `compat.redact` loads JSON as
+  JSON and XML as XML, rewrites string values, re-asserts validity before writing. The comparator
+  refusing its own corrupt baseline is the instrument working.
+- **DO route every AWS/OIDC workflow through an adversarial SECURITY lens before it ships.** A
+  net-new credentialed workflow had four HIGH exposures at once: credentials minted before the
+  build steps (supply-chain payload runs with a live session), scrubbed-placeholder buckets that
+  would sign requests to squattable global names, an OIDC trust sub that could never match (one
+  sub per run; immutable subject format), and branch binding that lived only in an in-file guard
+  the attacker would be editing. Mint credentials LAST; make never-teardown a PERMISSIONS fact;
+  bind the branch at the environment's deployment policy, not the IAM sub or the workflow file.
+- **DO measure the hygiene content pass on ADDED lines only.** A forward-scrub commit's removed
+  lines legitimately contain the old forbidden literals; a whole-diff grep makes any scrub
+  unpushable (and the local pre-push hook too). `git log -p | grep '^+'` for content; full
+  metadata for messages/identity.

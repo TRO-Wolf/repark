@@ -1,0 +1,271 @@
+{
+  "denominators": {
+    "all_collected": 16,
+    "engine_relevant": 15,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 1,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 6,
+    "pass_over_all": 0.375,
+    "pass_over_engine_relevant": 0.4
+  },
+  "findings": [
+    "FAIL-MISSING: 5 test(s) \u2014 measurement only (C2 zero-fix)",
+    "FAIL-ERROR-CLASS: 2 test(s) \u2014 measurement only (C2 zero-fix)",
+    "FAIL-VALUE: 2 test(s) \u2014 measurement only (C2 zero-fix)",
+    "NEEDS-JVM: 1 test(s) \u2014 measurement only (C2 zero-fix)"
+  ],
+  "generated_at": "2026-08-08T23:31:26Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_readwriter",
+      "module": "test_readwriter",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 6.57540513202548e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "b'hello' is not an instance of <class 'bytearray'>",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:278 in test_binary_type",
+          "duration_s": 0.02107801998499781,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 278, in test_binary_type\n    self.assertIsInstance(row.bin, expected_type)\nAssertionError: b'hello' is not an instance of <class 'bytearray'>\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_binary_type"
+        },
+        {
+          "cause": "'DataFrameWriter' object has no attribute 'bucketBy'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:129 in test_bucketed_write",
+          "duration_s": 0.002771919942460954,
+          "error_type": "AttributeError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 129, in test_bucketed_write\n    df.write.bucketBy(3, \"x\").mode(\"overwrite\").saveAsTable(\"pyspark_bucket\")\n    ^^^^^^^^^^^^^^^^^\nAttributeError: 'DataFrameWriter' object has no attribute 'bucketBy'\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_bucketed_write"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.07017128996085376,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_cached_table"
+        },
+        {
+          "cause": "'DataFrameWriter' object has no attribute 'clusterBy'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:182 in test_cluster_by",
+          "duration_s": 0.002559659071266651,
+          "error_type": "AttributeError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 182, in test_cluster_by\n    df.write.clusterBy(\"x\").mode(\"overwrite\").saveAsTable(table_name)\n    ^^^^^^^^^^^^^^^^^^\nAttributeError: 'DataFrameWriter' object has no attribute 'clusterBy'\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_cluster_by"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.4018692380050197,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_insert_into"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.00020502693951129913,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_save"
+        },
+        {
+          "cause": "DataFrameWriter.json option 'noUse' is not supported yet (would silently change write semantics if ignored)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:56 in test_save_and_load",
+          "duration_s": 0.07443619600962847,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 56, in test_save_and_load\n    df.write.save(\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 433, in save\n    self._apply_path_write(path, stored_as=self._format.upper())\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 490, in _apply_path_write\n    options_clause = self._copy_options_sql(stored_as)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 800, in _copy_options_sql\n    raise AnalysisException(\nrepark.errors.AnalysisException: DataFrameWriter.json option 'noUse' is not supported yet (would silently change write semantics if ignored)\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_save_and_load"
+        },
+        {
+          "cause": "DataFrameWriter.json option 'noUse' is not supported yet (would silently change write semantics if ignored)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:95 in test_save_and_load_builder",
+          "duration_s": 0.03125189698766917,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 95, in test_save_and_load_builder\n    ).option(\"noUse\", \"this option will not be used in save.\").format(\"json\").save(\n                                                                              ^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 433, in save\n    self._apply_path_write(path, stored_as=self._format.upper())\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 490, in _apply_path_write\n    options_clause = self._copy_options_sql(stored_as)\n                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 800, in _copy_options_sql\n    raise AnalysisException(\nrepark.errors.AnalysisException: DataFrameWriter.json option 'noUse' is not supported yet (would silently change write semantics if ignored)\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterTests.test_save_and_load_builder"
+        },
+        {
+          "cause": "<repark.dataframe.writer_readwriter.DataFrameWriterV2 object at 0x752f46484630> is not an instance of <class 'pyspark.sql.readwriter.DataFrameWriterV2'>",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:299 in test_api",
+          "duration_s": 0.00024241802748292685,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 299, in test_api\n    self.check_api(DataFrameWriterV2)\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 304, in check_api\n    self.assertIsInstance(writer, tpe)\nAssertionError: <repark.dataframe.writer_readwriter.DataFrameWriterV2 object at 0x752f46484630> is not an instance of <class 'pyspark.sql.readwriter.DataFrameWriterV2'>\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_api"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 2.680998295545578e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_assert_classic_mode"
+        },
+        {
+          "cause": "repark.writeTo supports only using('iceberg'), got 'parquet'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:398 in test_cluster_by",
+          "duration_s": 0.0016247560270130634,
+          "error_type": "PySparkValueError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 398, in test_cluster_by\n    df.writeTo(table_name).using(\"parquet\").clusterBy(\"x\").create()\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 1086, in using\n    raise PySparkValueError(\nrepark.errors.PySparkValueError: repark.writeTo supports only using('iceberg'), got 'parquet'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_cluster_by"
+        },
+        {
+          "cause": "repark.writeTo supports only using('iceberg'), got 'parquet'",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:366 in test_create",
+          "duration_s": 0.0005864260019734502,
+          "error_type": "PySparkValueError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 366, in test_create\n    df.writeTo(\"test_table\").using(\"parquet\").create()\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 1086, in using\n    raise PySparkValueError(\nrepark.errors.PySparkValueError: repark.writeTo supports only using('iceberg'), got 'parquet'\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_create"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.0764629109762609,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_create_without_provider"
+        },
+        {
+          "cause": "[SESSION_OR_CONTEXT_NOT_EXISTS] SparkContext or SparkSession should be created first.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:313 in test_partitioning_functions",
+          "duration_s": 0.0069091960322111845,
+          "error_type": "PySparkRuntimeError",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 313, in test_partitioning_functions\n    self.check_partitioning_functions(DataFrameWriterV2)\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 326, in check_partitioning_functions\n    self.assertIsInstance(writer.partitionedBy(years(\"ts\")), tpe)\n                                               ^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 297, in wrapped\n    return f(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/partitioning.py\", line 71, in years\n    return _invoke_function_over_columns(\"years\", col)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 122, in _invoke_function_over_columns\n    return _invoke_function(name, *(_to_java_column(col) for col in cols))\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/functions/builtin.py\", line 122, in <genexpr>\n    return _invoke_function(name, *(_to_java_column(col) for col in cols))\n                                    ^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/classic/column.py\", line 69, in _to_java_column\n    jcol = _create_column_from_name(col)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/classic/column.py\", line 61, in _create_column_from_name\n    sc = get_active_spark_context()\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/sql/utils.py\", line 339, in get_active_spark_context\n    raise PySparkRuntimeError(\npyspark.errors.exceptions.base.PySparkRuntimeError: [SESSION_OR_CONTEXT_NOT_EXISTS] SparkContext or SparkSession should be created first.\n",
+          "status": "NEEDS-JVM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_partitioning_functions"
+        },
+        {
+          "cause": "DataFrameWriterV2.overwrite(condition) is not supported \u2014 no engine path for conditional overwrite (Group I disclosure). Use createOrReplace() for a deliberate full rebuild, or DELETE + append.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py:378 in test_table_overwrite",
+          "duration_s": 0.00033226702362298965,
+          "error_type": "UnsupportedOperationException",
+          "harness_justification": "",
+          "module": "test_readwriter",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_readwriter.py\", line 378, in test_table_overwrite\n    df.writeTo(\"test_table\").overwrite(lit(True))\n  File \"<repo>/python/repark/src/repark/dataframe/writer_readwriter.py\", line 1224, in overwrite\n    raise UnsupportedOperationException(\nrepark.errors.UnsupportedOperationException: DataFrameWriterV2.overwrite(condition) is not supported \u2014 no engine path for conditional overwrite (Group I disclosure). Use createOrReplace() for a deliberate full rebuild, or DELETE + append.\n",
+          "status": "FAIL-MISSING",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_readwriter.ReadwriterV2Tests.test_table_overwrite"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.7256267860066146
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for ReadwriterTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for ReadwriterTests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for ReadwriterV2Tests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for ReadwriterV2Tests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "PASS",
+      6
+    ],
+    [
+      "FAIL-MISSING",
+      5
+    ],
+    [
+      "FAIL-ERROR-CLASS",
+      2
+    ],
+    [
+      "FAIL-VALUE",
+      2
+    ],
+    [
+      "NEEDS-JVM",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

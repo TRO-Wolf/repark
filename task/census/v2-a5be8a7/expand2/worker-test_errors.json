@@ -1,0 +1,139 @@
+{
+  "denominators": {
+    "all_collected": 6,
+    "engine_relevant": 6,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 0,
+    "excluded_skip_upstream": 0,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 1,
+    "pass_over_all": 0.16666666666666666,
+    "pass_over_engine_relevant": 0.16666666666666666
+  },
+  "findings": [
+    "FAIL-VALUE: 3 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "FAIL-ERROR-CLASS: 2 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)"
+  ],
+  "generated_at": "2026-08-08T23:31:42Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_errors",
+      "module": "test_errors",
+      "rows": [
+        {
+          "cause": "ArithmeticException not raised",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py:30 in test_arithmetic_exception",
+          "duration_s": 0.007852355018258095,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_errors",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py\", line 30, in test_arithmetic_exception\n    with self.assertRaises(ArithmeticException):\nAssertionError: ArithmeticException not raised\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_errors.ErrorsTests.test_arithmetic_exception"
+        },
+        {
+          "cause": "ArrayIndexOutOfBoundsException not raised",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py:35 in test_array_index_out_of_bounds_exception",
+          "duration_s": 0.006072496995329857,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_errors",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py\", line 35, in test_array_index_out_of_bounds_exception\n    with self.assertRaises(ArrayIndexOutOfBoundsException):\nAssertionError: ArrayIndexOutOfBoundsException not raised\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_errors.ErrorsTests.test_array_index_out_of_bounds_exception"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 3.2550888136029243e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_errors",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_errors.ErrorsTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "Error during planning: Invalid function 'unix_timestamp'. Did you mean 'to_timestamp'?",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py:42 in test_date_time_exception",
+          "duration_s": 0.0030889890622347593,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_errors",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py\", line 42, in test_date_time_exception\n    self.spark.sql(\"select unix_timestamp('2023-01-01', 'dd-MM-yyyy')\").show()\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 185, in sql\n    return DataFrame(inner.sql(expanded), inner, self._alive_token)\n                     ^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: Invalid function 'unix_timestamp'.\nDid you mean 'to_timestamp'?\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_errors.ErrorsTests.test_date_time_exception"
+        },
+        {
+          "cause": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast string 'abc' to value of Float64 type",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py:47 in test_number_format_exception",
+          "duration_s": 0.0035437470069155097,
+          "error_type": "PySparkException",
+          "harness_justification": "",
+          "module": "test_errors",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py\", line 47, in test_number_format_exception\n    self.spark.sql(\"select cast('abc' as double)\").show()\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6171, in show\n    table = self.limit(limit).to_arrow()\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6735, in to_arrow\n    table = pa.table(self)\n            ^^^^^^^^^^^^^^\n  File \"pyarrow/table.pxi\", line 6250, in pyarrow.lib.table\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6108, in __arrow_c_stream__\n    return self._action_inner().__arrow_c_stream__(requested_schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nrepark.errors.PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast string 'abc' to value of Float64 type\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_errors.ErrorsTests.test_number_format_exception"
+        },
+        {
+          "cause": "datafusion engine error: Optimizer rule 'simplify_expressions' failed caused by Arrow error: Cast error: Cannot cast value 'abc' to value of Boolean type",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py:52 in test_spark_runtime_exception",
+          "duration_s": 0.001667235977947712,
+          "error_type": "PySparkException",
+          "harness_justification": "",
+          "module": "test_errors",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_errors.py\", line 52, in test_spark_runtime_exception\n    self.spark.sql(\"select cast('abc' as boolean)\").show()\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6171, in show\n    table = self.limit(limit).to_arrow()\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6735, in to_arrow\n    table = pa.table(self)\n            ^^^^^^^^^^^^^^\n  File \"pyarrow/table.pxi\", line 6250, in pyarrow.lib.table\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 6108, in __arrow_c_stream__\n    return self._action_inner().__arrow_c_stream__(requested_schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nrepark.errors.PySparkException: datafusion engine error: Optimizer rule 'simplify_expressions' failed\ncaused by\nArrow error: Cast error: Cannot cast value 'abc' to value of Boolean type\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_errors.ErrorsTests.test_spark_runtime_exception"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.05046764307189733
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for ErrorsTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for ErrorsTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "FAIL-VALUE",
+      3
+    ],
+    [
+      "FAIL-ERROR-CLASS",
+      2
+    ],
+    [
+      "PASS",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

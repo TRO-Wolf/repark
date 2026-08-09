@@ -1,0 +1,239 @@
+{
+  "denominators": {
+    "all_collected": 14,
+    "engine_relevant": 13,
+    "excluded_harness": 0,
+    "excluded_needs_jvm": 0,
+    "excluded_skip_upstream": 1,
+    "module_timeout_in_engine_relevant": 0,
+    "pass": 4,
+    "pass_over_all": 0.2857142857142857,
+    "pass_over_engine_relevant": 0.3076923076923077
+  },
+  "findings": [
+    "FAIL-ERROR-CLASS: 6 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)",
+    "FAIL-VALUE: 3 test(s) \u2014 measurement only (C4 expand2 cohort; own denoms, never /345 or C3)"
+  ],
+  "generated_at": "2026-08-08T23:31:43Z",
+  "modules": [
+    {
+      "error": null,
+      "import_name": "pyspark.sql.tests.test_creation",
+      "module": "test_creation",
+      "rows": [
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 5.9021986089646816e-05,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_assert_classic_mode"
+        },
+        {
+          "cause": "createDataFrame does not support non-finite Decimal values (got NaN)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:168 in test_check_decimal_nan",
+          "duration_s": 0.002768042031675577,
+          "error_type": "PySparkTypeError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 168, in test_check_decimal_nan\n    self.spark.createDataFrame(data=data, schema=schema)\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 1183, in create_dataframe\n    return _create_dataframe_from_rows(self, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3052, in _create_dataframe_from_rows\n    return _create_dataframe_from_rows_inner(session, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3280, in _create_dataframe_from_rows_inner\n    arrow_table = _arrow_table_from_tuples(\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 4997, in _arrow_table_from_tuples\n    _validate_decimal_envelope(cell)\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3440, in _validate_decimal_envelope\n    raise PySparkTypeError(\nrepark.errors.PySparkTypeError: createDataFrame does not support non-finite Decimal values (got NaN)\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_check_decimal_nan"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.005013638990931213,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_from_array_of_long"
+        },
+        {
+          "cause": "StringType() is not an instance of <class 'repark.types.TimeType'>",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:84 in test_create_dataframe_from_datetime_time",
+          "duration_s": 0.0014364600647240877,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 84, in test_create_dataframe_from_datetime_time\n    self.assertIsInstance(df.schema[\"t\"].dataType, TimeType)\nAssertionError: StringType() is not an instance of <class 'repark.types.TimeType'>\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_from_datetime_time"
+        },
+        {
+          "cause": "createDataFrame does not support pandas timedelta/duration dtypes yet (got dtype timedelta64[ns])",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:154 in test_create_dataframe_from_pandas_with_day_time_interval",
+          "duration_s": 0.0019298120168969035,
+          "error_type": "PySparkTypeError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 154, in test_create_dataframe_from_pandas_with_day_time_interval\n    df = self.spark.createDataFrame(pd.DataFrame({\"a\": [timedelta(microseconds=123)]}))\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 1183, in create_dataframe\n    return _create_dataframe_from_rows(self, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3052, in _create_dataframe_from_rows\n    return _create_dataframe_from_rows_inner(session, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3088, in _create_dataframe_from_rows_inner\n    arrow_table = _session_pkg._arrow_table_from_pandas(data, schema, engine_types=engine_types)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 4387, in _arrow_table_from_pandas\n    _null_sql_for_pandas_dtype(dtype)\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 2094, in _null_sql_for_pandas_dtype\n    raise PySparkTypeError(\nrepark.errors.PySparkTypeError: createDataFrame does not support pandas timedelta/duration dtypes yet (got dtype timedelta64[ns])\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_from_pandas_with_day_time_interval"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.008105333079583943,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_from_pandas_with_dst"
+        },
+        {
+          "cause": "TimestampType() is not an instance of <class 'repark.types.TimestampNTZType'>",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:105 in test_create_dataframe_from_pandas_with_timestamp",
+          "duration_s": 0.008725072024390101,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 105, in test_create_dataframe_from_pandas_with_timestamp\n    self.assertIsInstance(df.schema[\"ts\"].dataType, TimestampNTZType)\nAssertionError: TimestampType() is not an instance of <class 'repark.types.TimestampNTZType'>\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_from_pandas_with_timestamp"
+        },
+        {
+          "cause": "Required Pandas was found.",
+          "divergent_frame": "",
+          "duration_s": 8.535920642316341e-06,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "",
+          "status": "SKIP-UPSTREAM",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_dataframe_required_pandas_not_found"
+        },
+        {
+          "cause": "createDataFrame schema string must be a DDL field list like 'a INT, b STRING' (got 'decimal'; a bare non-DDL string would be character-iterated into column names)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:160 in test_create_nan_decimal_dataframe",
+          "duration_s": 0.00026828597765415907,
+          "error_type": "PySparkTypeError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 160, in test_create_nan_decimal_dataframe\n    self.spark.createDataFrame(data=[Decimal(\"NaN\")], schema=\"decimal\").collect(),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 1183, in create_dataframe\n    return _create_dataframe_from_rows(self, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3052, in _create_dataframe_from_rows\n    return _create_dataframe_from_rows_inner(session, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3069, in _create_dataframe_from_rows_inner\n    schema_names, engine_types = _parse_create_dataframe_schema(schema)\n                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 1769, in _parse_create_dataframe_schema\n    raise PySparkTypeError(\nrepark.errors.PySparkTypeError: createDataFrame schema string must be a DDL field list like 'a INT, b STRING' (got 'decimal'; a bare non-DDL string would be character-iterated into column names)\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_nan_decimal_dataframe"
+        },
+        {
+          "cause": "",
+          "divergent_frame": "",
+          "duration_s": 0.00634540303144604,
+          "error_type": "",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "",
+          "status": "PASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_create_str_from_dict"
+        },
+        {
+          "cause": "createDataFrame Decimal value 1.2339999999999999857891452847979962825775146484375 is outside DECIMAL(38, 18) scale (fractional digits beyond 18 are not representable without rounding; refuse rather than silent zero/round)",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:171 in test_decimal_round",
+          "duration_s": 0.0007999989902600646,
+          "error_type": "PySparkValueError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 171, in test_decimal_round\n    df = self.spark.createDataFrame([(Decimal(1.234),)], [\"d\"])\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/session_core.py\", line 1183, in create_dataframe\n    return _create_dataframe_from_rows(self, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3052, in _create_dataframe_from_rows\n    return _create_dataframe_from_rows_inner(session, data, schema)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3280, in _create_dataframe_from_rows_inner\n    arrow_table = _arrow_table_from_tuples(\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 4997, in _arrow_table_from_tuples\n    _validate_decimal_envelope(cell)\n  File \"<repo>/python/repark/src/repark/session/_funcs.py\", line 3456, in _validate_decimal_envelope\n    raise PySparkValueError(\nrepark.errors.PySparkValueError: createDataFrame Decimal value 1.2339999999999999857891452847979962825775146484375 is outside DECIMAL(38, 18) scale (fractional digits beyond 18 are not representable without rounding; refuse rather than silent zero/round)\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_decimal_round"
+        },
+        {
+          "cause": "'NOT_LIST_OR_NONE_OR_STRUCT' != None : Expected error class was 'NOT_LIST_OR_NONE_OR_STRUCT', got 'None'.",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:179 in test_invalid_argument_create_dataframe",
+          "duration_s": 0.00020447594579309225,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 179, in test_invalid_argument_create_dataframe\n    self.check_error(\n  File \"<scratch>/census-venv/lib/python3.12/site-packages/pyspark/testing/utils.py\", line 401, in check_error\n    self.assertEqual(\nAssertionError: 'NOT_LIST_OR_NONE_OR_STRUCT' != None : Expected error class was 'NOT_LIST_OR_NONE_OR_STRUCT', got 'None'.\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_invalid_argument_create_dataframe"
+        },
+        {
+          "cause": "PySparkValueError not raised",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:195 in test_partial_inference_failure",
+          "duration_s": 0.0024662729119881988,
+          "error_type": "AssertionError",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 195, in test_partial_inference_failure\n    with self.assertRaises(PySparkValueError) as pe:\nAssertionError: PySparkValueError not raised\n",
+          "status": "FAIL-ERROR-CLASS",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_partial_inference_failure"
+        },
+        {
+          "cause": "Error during planning: Execution error: Function '__repark_get_item__' user-defined coercion failed with: Error during planning: '__repark_get_item__' expects an array or map first argument, got Struct(\"first\": Float64, \"second\": Float64...",
+          "divergent_frame": "<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py:223 in test_schema_inference_from_pandas_with_dict",
+          "duration_s": 0.004949578898958862,
+          "error_type": "AnalysisException",
+          "harness_justification": "",
+          "module": "test_creation",
+          "raw_traceback": "Traceback (most recent call last):\n  File \"/usr/lib/python3.12/unittest/case.py\", line 58, in testPartExecutor\n    yield\n  File \"/usr/lib/python3.12/unittest/case.py\", line 634, in run\n    self._callTestMethod(testMethod)\n  File \"/usr/lib/python3.12/unittest/case.py\", line 589, in _callTestMethod\n    if method() is not None:\n       ^^^^^^^^\n  File \"<home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests/test_creation.py\", line 223, in test_schema_inference_from_pandas_with_dict\n    sdf.withColumn(\"test\", F.col(\"dict_col\")[F.col(\"str_col\")]).collect(),\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 2720, in with_column\n    return self.with_columns({col_name: column})\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 2819, in with_columns\n    child = self.select(*projected)\n            ^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<repo>/python/repark/src/repark/dataframe/core.py\", line 3167, in select\n    child = self._spawn(self._plan().select(natives))\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nrepark.errors.AnalysisException: Error during planning: Execution error: Function '__repark_get_item__' user-defined coercion failed with: Error during planning: '__repark_get_item__' expects an array or map first argument, got Struct(\"first\": Float64, \"second\": Float64). No function matches the given name and argument types '__repark_get_item__(Struct(\"first\": Float64, \"second\": Float64), Utf8)'. You might need to add explicit type casts.\n\tCandidate functions:\n\t__repark_get_item__(UserDefined)\n",
+          "status": "FAIL-VALUE",
+          "tags": [],
+          "test_id": "pyspark.sql.tests.test_creation.DataFrameCreationTests.test_schema_inference_from_pandas_with_dict"
+        }
+      ],
+      "timed_out": false,
+      "wall_s": 0.11982619797345251
+    }
+  ],
+  "patch_log": [
+    "replace: pyspark.sql.SparkSession \u2192 repark.session.SparkSession",
+    "replace: pyspark.sql.{DataFrame,Row,Column,Window} \u2192 repark",
+    "replace: pyspark.sql.column.Column \u2192 repark",
+    "replace: pyspark.sql.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.dataframe.DataFrame \u2192 repark",
+    "replace: pyspark.sql.classic.column.Column \u2192 repark",
+    "overlay: pyspark.sql.types \u2190 repark.types (28 names)",
+    "replace: pyspark.sql.types._merge_type \u2192 repark.types._merge_type",
+    "replace: pyspark.sql.types._make_type_verifier \u2192 repark.types._make_type_verifier",
+    "replace: pyspark.storagelevel.StorageLevel \u2192 repark.storage.StorageLevel",
+    "overlay: pyspark.sql.functions \u2190 repark.functions (207 names)",
+    "overlay: pyspark.errors \u2190 repark.errors (11 names)",
+    "overlay: pyspark.errors.exceptions.base \u2190 repark.errors (11 names)",
+    "factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle",
+    "inject-package: loaded pyspark.sql.tests from <home>/.cache/repark-pyspark-tests/v4.1.2/python/pyspark/sql/tests",
+    "factory: ReusedPySparkTestCase.setUpClass skipped JVM for DataFrameCreationTests",
+    "factory: ReusedSQLTestCase.setUpClass \u2192 ReparkSession for DataFrameCreationTests"
+  ],
+  "pyspark_version": "4.1.2",
+  "python_version": "3.12.3",
+  "ranked_census": [
+    [
+      "FAIL-ERROR-CLASS",
+      6
+    ],
+    [
+      "PASS",
+      4
+    ],
+    [
+      "FAIL-VALUE",
+      3
+    ],
+    [
+      "SKIP-UPSTREAM",
+      1
+    ]
+  ],
+  "repark_version": "0.0.0",
+  "spark_commit_sha": "f0bb2e6a47d0ebda424ffd633fcea8644a597954",
+  "spark_tag": "v4.1.2"
+}

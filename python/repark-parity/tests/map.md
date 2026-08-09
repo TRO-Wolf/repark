@@ -87,6 +87,11 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
   first row wins), with the fixture recomputing the recorded denominator block over rows AS
   CARRIED — matching the real v1 expand artifact.
 
+### PR-7: --added tests
+- `test_added_cell_present_on_candidate_side_only_passes` / `test_added_does_not_subtract_from_the_baseline_side`
+  — both directions of the additions mirror (candidate-side subtraction), plus the frozen-option
+  pin now includes `--added`.
+
 ## Debug
 
 | Symptom | First check |

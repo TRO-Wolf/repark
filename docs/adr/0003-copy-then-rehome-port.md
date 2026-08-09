@@ -36,6 +36,13 @@ sensitive operator data has ever existed in this git history, by construction.
    (classic 135 files / 345 tests, expand 42/171, expand2 41/167, plus the full-extras facade
    count) must be reproduced exactly by the ported tree; a missing or renamed test is a gate
    failure, not a footnote.
+
+   > **Correction (2026-08-08, milestone one).** The illustrative numerators above were stale
+   > (design §F2). The recorded freeze-point baseline is classic **142/345**, expand **44/171**,
+   > expand2 **87/167**, facade **2,509 collected / 2,471 passed + 46 skipped**; the current gate
+   > and its recorded runs live in `docs/port/PLAN.md` + `task/census/`. The gate PASSED at
+   > milestone one (all four cohorts byte-flat, exit 0). This ADR is left otherwise unedited as a
+   > point-in-time record.
 4. **v1 freezes to bugfix-only at milestone one** (end of phase 3 — the full v1 suite green on V2,
    not merely the Rust core), so there is never a window where neither repo can serve production;
    all feature work then moves here.

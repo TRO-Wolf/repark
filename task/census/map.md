@@ -4,7 +4,8 @@
 Recorded census runs for the acceptance gate (docs/port/PLAN.md; procedure docs/port/census.md). One subdirectory per recorded run; baselines are named by the commit they measure.
 
 ## Contents
-- [baseline-fc3f48102/](baseline-fc3f48102/map.md) — the freeze-point v1-pin baseline (classic ×2 + stability, expand, expand2, facade pair, environment manifests). **Currently DEFECTIVE and pending regeneration** — its JSON reports do not parse, its facade JUnit XML is not well-formed, and its census freeze is empty; see that directory's map.md "Regeneration required" before using it as a gate input.
+- [v2-a5be8a7/](v2-a5be8a7/map.md) — the **v2 acceptance run** (phase-3 PR-7 = milestone one): four cohorts, byte-flat vs the baseline through the comparator (exit 0 each). THE milestone-one evidence.
+- [baseline-fc3f48102/](baseline-fc3f48102/map.md) — the freeze-point v1-pin baseline (classic ×2 + stability, expand, expand2, facade pair, environment manifests).. Valid gate input (regenerated PR-4; every JSON parses, the JUnit XML is well-formed, freezes non-empty).
 
 ## I want to... → go to
 | I want to... | go to |
