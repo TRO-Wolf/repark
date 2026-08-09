@@ -6,8 +6,11 @@ The Session-centric engine API (crate-DAG **tier 2**, the engine session both do
 bindings plug into): construct the DataFusion `SessionContext`, configure the memory
 pool, register catalogs, hold the `CatalogRegistry`, and expose the engine entrypoints (`sql`,
 readers, temp views, namespace/catalog ops). Execution routes through an `ExecutionBackend`
-trait — the seam that lets a future distributed coordinator slot in without reworking the write
-path (distribution is deferred). SQL routing and session-build registration are seam-inverted
+trait — today a local execution-context holder over in-process DataFusion, whose *boundary* (not
+its minimal surface) is what would let a future distributed coordinator be introduced without
+reworking the write path; distribution is deferred by decision, and the seam would have to widen
+first ([../../ARCHITECTURE.md](../../ARCHITECTURE.md) "`ExecutionBackend` — what the seam is,
+honestly"). SQL routing and session-build registration are seam-inverted
 (`SqlDialect` / `SessionExtension`) so the phase-2 doors plug in without touching this crate.
 
 
@@ -28,8 +31,10 @@ path (distribution is deferred). SQL routing and session-build registration are 
   `refresh_catalog_provider`), readers (`read_parquet`/`read_csv`/`read_json`,
   `read_iceberg_table` + `TimeTravelOpts`), the temp-view family, and the `testing_` seams.
   Excel/postgres readers are deferred with their crates.
-- `src/backend.rs` — `ExecutionBackend` seam + `SingleNodeBackend` (the default; distribution
-  deferred).
+- `src/backend.rs` — the `ExecutionBackend` seam (one method returning the concrete DataFusion
+  `SessionContext`; a local execution-context holder + deliberately-minimal extension point) +
+  `SingleNodeBackend`, the only implementation. Distribution is deferred by decision
+  ([../../docs/adr/0004-server-prep-disciplines.md](../../docs/adr/0004-server-prep-disciplines.md)).
 - `src/runtime.rs` (+ `src/runtime/`) — `EngineRuntime`, the embedding's executor handle
   (phase-3 PR-3, EC-5 / design §4 Q7): additive, tier-legal, constructed only from an
   `Arc<Runtime>` the embedder owns. The process-wide instance lives in `repark-python`.
@@ -67,7 +72,7 @@ path (distribution is deferred). SQL routing and session-build registration are 
 | Change `s3://` / `s3a://` read routing or the AWS credential bridge | `src/object_store_s3.rs` |
 | Tune memory/spill/batch/partition defaults | `src/session.rs` (`FairSpillPool`, `target_partitions`, batch size) |
 | Change error classification | `src/error_map.rs` (`engine_err` / `classify_datafusion_error`) |
-| Add the distribution backend (later) | implement `ExecutionBackend` in a new crate |
+| Add the distribution backend (later) | [../../ARCHITECTURE.md](../../ARCHITECTURE.md) first — the seam's surface (and its call sites) widens before a new-crate `impl` is the work |
 | Plug a statement router / SQL front end | implement `SqlDialect` (`src/dialect.rs`) |
 | Install door registrations at build time | implement `SessionExtension` (`src/extension.rs`) |
 
@@ -90,13 +95,19 @@ path (distribution is deferred). SQL routing and session-build registration are 
   tokio). No edge up to any door.
 - **Failure model:** folds `DataFusionError` / `iceberg::Error` into `repark_common::Error` at the
   session boundary (`engine_err`); config errors fail loud at build.
-- **Extension points:** implement `ExecutionBackend` (distribution, new crate); `SqlDialect` (a door
-  front end); `SessionExtension` (build-time registrations).
+- **Extension points:** `SqlDialect` (a door front end) and `SessionExtension` (build-time
+  registrations) are ready seams — a door plugs in without touching this crate. `ExecutionBackend`
+  is a *future* extension point, not a ready one: its one-method surface hands back a concrete
+  DataFusion `SessionContext`, so distribution means widening the trait and moving its call sites,
+  not adding a second `impl`.
 - **Test strategy:** `cargo test -p repark-core` — AWS-free; catalog / session / reader unit +
   file-backed modules.
 - **Known limitations:** `SingleNodeBackend` is the only backend and the `ExecutionBackend` surface
-  is minimal (see [../../ARCHITECTURE.md](../../ARCHITECTURE.md)); `ReparkSession` is a growing policy
-  object whose decomposition is deferred ([../../STATUS.md](../../STATUS.md)).
+  is deliberately minimal (honest framing:
+  [../../ARCHITECTURE.md](../../ARCHITECTURE.md); current state:
+  [../../STATUS.md](../../STATUS.md) "Architectural risks"); `ReparkSession` is a growing policy
+  object whose internal decomposition is deferred and driver-gated
+  ([../../docs/adr/0005-defer-session-decomposition.md](../../docs/adr/0005-defer-session-decomposition.md)).
 
 ## Pointers
 

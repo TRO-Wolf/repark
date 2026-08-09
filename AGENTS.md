@@ -208,9 +208,10 @@ swallowed-override bug:
 
 - **PyIceberg** — neither the Python lib nor the `pyiceberg_core` crate. Iceberg = `iceberg-rust` only.
 - **Sail / pysail** — own-the-stack was chosen; no dependency on it.
-- **Distributed cluster** — design the `ExecutionBackend` seam; posture is fleet-parallel → server
-  mode → distributed only if a query outgrows one box. Do not build Ballista-for-writes (it cannot
-  serialize Iceberg write/commit plan nodes).
+- **Distributed cluster** — the `ExecutionBackend` seam marks the boundary, with its honest scope
+  documented (see [ARCHITECTURE.md](ARCHITECTURE.md) "what the seam is, honestly"); posture is
+  fleet-parallel → server mode → distributed only if a query outgrows one box. Do not build
+  Ballista-for-writes (it cannot serialize Iceberg write/commit plan nodes).
 - **External code PRs during the port** — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Upstream contribution policy

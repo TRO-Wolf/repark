@@ -177,9 +177,16 @@ the write path), **not** its current surface.
 It is **not** evidence that distribution needs no wider change. Because the method returns a
 `SessionContext` by reference, callers today can and do use single-node DataFusion facilities
 directly; a real distributed backend would require widening this surface (and revisiting those
-call sites), not merely adding a second `impl`. Distribution is deferred by decision (ADR-0004);
-single-node DataFusion is the v1 target and handles the intended workload. The honest-doc status of
-this seam is tracked in [STATUS.md](STATUS.md) "Architectural risks".
+call sites), not merely adding a second `impl`. Distribution is deferred by decision
+([ADR-0004](docs/adr/0004-server-prep-disciplines.md)); single-node DataFusion is the v1 target and
+handles the intended workload. The seam's doc-comments in `crates/repark-core` say exactly this —
+the paragraph above is their source; the current-state entry is [STATUS.md](STATUS.md)
+"Architectural risks".
+
+The session *behind* the seam has the companion honesty entry: `ReparkSession` accretes session
+policy, and its decomposition into named internal services is deferred and **driver-gated** — a
+second `ExecutionBackend` is one of the named triggers, which is why the two entries move together
+([ADR-0005](docs/adr/0005-defer-session-decomposition.md)).
 
 ## Onward
 

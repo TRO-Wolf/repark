@@ -21,6 +21,10 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
 - [0004-server-prep-disciplines.md](0004-server-prep-disciplines.md) — everything-through-Session +
   bindings-as-thin-adapter; the three deferred server problems (credential vending, Python UDFs,
   resource policy); distribution deferred behind the `ExecutionBackend` seam.
+- [0005-defer-session-decomposition.md](0005-defer-session-decomposition.md) — **Deferred**: the
+  internal `ReparkSession` decomposition into named services is driver-gated (PyO3 pressure, a
+  second `ExecutionBackend`, cancellation / per-query resource policy, server-protocol needs),
+  never scheduled; the intended shape and the discharge-note requirement are recorded there.
 
 ## I want to...
 
@@ -30,6 +34,7 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
 | Understand the two SQL dialects / add SQL surface | [0002-two-sql-doors.md](0002-two-sql-doors.md) |
 | Understand the port sequencing + its acceptance gate | [0003-copy-then-rehome-port.md](0003-copy-then-rehome-port.md) (+ [../port/PLAN.md](../port/PLAN.md)) |
 | Understand Session/bindings rules or the distributed posture | [0004-server-prep-disciplines.md](0004-server-prep-disciplines.md) |
+| Know whether to refactor `ReparkSession` (and what would unlock it) | [0005-defer-session-decomposition.md](0005-defer-session-decomposition.md) |
 | Record a new load-bearing decision | add `NNNN-slug.md` here (Status/Context/Decision/Consequences) + a Contents row |
 | See the project intent these decisions serve | [../../PROJECT.md](../../PROJECT.md) |
 

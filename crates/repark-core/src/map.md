@@ -3,7 +3,9 @@
 ## Purpose
 
 Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` + the
-`ExecutionBackend` seam. Catalogs come in two ways: direct builder registration or the Spark
+`ExecutionBackend` seam (a local execution-context holder and future extension point, *not* a
+distribution abstraction — see [../../../ARCHITECTURE.md](../../../ARCHITECTURE.md), "what the
+seam is, honestly"). Catalogs come in two ways: direct builder registration or the Spark
 `spark.sql.catalog.<name>.*` config path (`catalog_config` → `register_configured_catalogs`);
 `s3://`/`s3a://` reads route through `object_store_s3`. See [../map.md](../map.md).
 
@@ -43,7 +45,11 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   `read_csv` / `read_json` (Spark-style option maps), `read_iceberg_table` + `TimeTravelOpts`
   (snapshot-id / as-of-timestamp / branch / tag, mutual exclusion), and the `testing_` seams
   (`testing_create_ref` / `testing_list_snapshots` / `testing_oob_create_table` /
-  `testing_oob_drop_table`). Excel/postgres readers are deferred with their crates.
+  `testing_oob_drop_table`). Excel/postgres readers are deferred with their crates. The file's
+  accretion of session policy is deliberate (everything-through-Session); its decomposition into
+  named internal services is **deferred and driver-gated** —
+  [../../../docs/adr/0005-defer-session-decomposition.md](../../../docs/adr/0005-defer-session-decomposition.md)
+  names the triggers, so do not split it opportunistically.
 - `error_map.rs` — `engine_err` (pub — the single `DataFusionError → repark_common::Error`
   classifier): `SQL` → `Parse`, `Plan`/`SchemaError` → `Analysis`, `NotImplemented` →
   `NotImplemented`, `External` downcast to a live `iceberg::Error` → classified by its
@@ -73,7 +79,11 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
   region + credentials into an `AmazonS3` (the ONLY AWS-touching fn); `register_bucket_store`
   puts one store under BOTH `s3://bucket` and `s3a://bucket`; `parse_s3_bucket` /
   `is_s3_scheme` route paths. Tests register an `InMemory` store to prove routing AWS-free.
-- `backend.rs` — the `ExecutionBackend` seam (distribution deferred) + `SingleNodeBackend`.
+- `backend.rs` — the `ExecutionBackend` seam + `SingleNodeBackend`, its only implementation. One
+  method, returning the concrete DataFusion `SessionContext`: the **trait boundary** is the
+  load-bearing part, not the surface, which would have to widen (with its call sites) before a
+  distributed backend could exist. Distribution is deferred by decision
+  ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2) + `SqlDialect` +
