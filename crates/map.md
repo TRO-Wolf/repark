@@ -68,6 +68,10 @@ tiers 0–1, which is what keeps each free to have its own grammar.
 ## Pointers
 
 - Up: [../map.md](../map.md)
+- Architecture (crate DAG + the three runtime flows): [../ARCHITECTURE.md](../ARCHITECTURE.md).
+- Each crate-root `map.md` carries a standardized `## Component contract` section (Owns /
+  Does-not-own / inputs / outputs / lifecycle / allowed deps / failure model / extension points /
+  test strategy / limitations) — the per-crate contract detail ARCHITECTURE.md indexes.
 
 ## Debug
 

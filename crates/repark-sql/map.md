@@ -49,6 +49,31 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
 | Add a Spark-ism to the wrong-door steer | `src/sniff.rs` |
 | See what this door does NOT do, and why | `src/matrix.rs` (typed absence rows) |
 
+## Component contract
+
+- **Owns:** the ANSI/Trino-flavoured SQL door (NEW code) — `AnsiDialect`, the guard set
+  (multi-statement first, P11 read-only DML, write-to-branch, SEC-02 local-filesystem), the wrong-door
+  sniff, the Iceberg catalog DDL it intercepts (CREATE TABLE family + curated `WITH (…)`, schema DDL,
+  ALTER, MERGE lowering, `FOR … AS OF` time travel), and the typed-absence matrix.
+- **Does not own:** Spark semantics (deliberately no `datafusion-spark`, no `SessionExtension` —
+  native = stock DataFusion); the shared Iceberg machinery; the Spark door.
+- **Public inputs:** a `SessionContext` + `CatalogRegistry` + ANSI SQL text (one statement at a time).
+- **Public outputs:** DataFusion `DataFrame`s; intercepted Iceberg DDL commits; loud refusals for
+  out-of-scope forms.
+- **State & lifecycle:** per-call routing; `FOR … AS OF` registers ephemeral pinned relations released
+  right after planning (they never accumulate, never appear in `SHOW TABLES`).
+- **Allowed internal deps:** `repark-core`, `repark-iceberg`, `repark-common`. **No `sqlparser` /
+  `datafusion-spark`.** Dev-only: `repark-spark` + `repark-ta` (cross-door tests + the Q11 toll) —
+  not product edges; nothing in `src/` may name them.
+- **Failure model:** `DataFusionError`; on a parse / plan failure the wrong-door sniff upgrades the
+  error (the original stays the first line).
+- **Extension points:** change the `WITH (…)` vocabulary (`properties.rs`); partition parsing
+  (`partitioning.rs`); a guard (`guards.rs`); a wrong-door steer (`sniff.rs`).
+- **Test strategy:** `cargo test -p repark-sql` — R1 parser-production pins, the two-session
+  `cross_door.rs` rows, Q8 introspection, the Q11 ta-toll.
+- **Known limitations:** `matrix.rs` reads 39 tested / 4 deliberately absent; every remaining absence
+  is a standing design ruling, not a deferral.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Sibling door: [../repark-spark/map.md](../repark-spark/map.md)

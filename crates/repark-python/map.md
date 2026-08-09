@@ -138,6 +138,36 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
 | Cross Arrow data to Python | `__arrow_c_stream__` in `src/dataframe.rs` — zero-copy |
 | Fence a panic at a new entry point | wrap the body in `fenced!("Type.method", { … })` (`src/fence.rs`); an FFI-callback poll uses `fence_stream_poll` |
 
+## Component contract
+
+- **Owns:** the PyO3 cdylib (`repark._native`) — a thin adapter exposing `PyReparkSession` /
+  `PyDataFrame` / `PyColumn`, the PySpark exception taxonomy, the SAF-007 panic fence, the M3 ML fit
+  binder, and the zero-copy Arrow C-stream handoff (`__arrow_c_stream__`). The **only** crate allowed
+  `unsafe`.
+- **Does not own:** engine logic (it wraps `ReparkSession` + `DataFrame`); SQL semantics (the doors);
+  the wheel (`python/repark` via maturin).
+- **Public inputs:** Python calls — session build, `sql`, readers, DataFrame actions, Column methods,
+  `fit_*`.
+- **Public outputs:** pyclasses; Arrow record batches streamed zero-copy via the PyCapsule interface;
+  PySpark-typed exceptions.
+- **State & lifecycle:** holds the process-wide tokio `Runtime` (as a `repark_core::EngineRuntime`)
+  and `block_on`s the async engine; installs the Spark door (`SparkDialect` + `SparkExtension`) before
+  `build()`; streaming export is O(one batch) peak memory.
+- **Allowed internal deps:** `repark-core`, `repark-functions`, `repark-ta` (feature `datafusion`),
+  `repark-spark`, `repark-ml` — five inward (tier-4→down) edges. Deliberate non-edges: `repark-sql`,
+  `repark-iceberg`. Dev-only `repark-common` (the EC-1 type-identity guard).
+- **Failure model:** engine `Error` → `RuntimeError` / the PySpark taxonomy (`to_py_err`); a Rust
+  panic is caught by the fence and re-raised as `PySparkException` (never an uncatchable abort); a
+  mid-stream execution error rides the Arrow error channel.
+- **Extension points:** expose a class / function (`lib.rs`); add a session method (`session.rs`), a
+  DataFrame action (`dataframe.rs`), or a Column method (`column.rs`); fence a new entry point
+  (`fenced!`).
+- **Test strategy:** `cargo test -p repark-python` (embedded interpreter via the `auto-initialize`
+  dev-dep) + `maturin develop` import smoke; `extension-module` stays OFF for tests.
+- **Known limitations:** SIGINT during a stream poll is deferred (cooperative cancel parked);
+  `read_excel` / `read_postgres` are EC-3 loud refuse-arms (post-milestone-one); must never build with
+  `--all-features`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

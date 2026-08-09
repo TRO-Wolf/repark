@@ -22,7 +22,7 @@ agent runs *under* — they bind to, and defer to, the repo's engineering contra
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../CLAUDE.md](../CLAUDE.md) (read-order + `## Precedence`).
+- Related: [../AGENTS.md](../AGENTS.md) (the authoritative contract + its `## Precedence` chain).
 
 ## Debug
 

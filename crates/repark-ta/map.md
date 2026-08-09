@@ -38,6 +38,29 @@ API — the `repark.ta` Python namespace is built on it). **64/64 functions, 77/
 | Install the TA UDFs on a session | `extension` module (feature `datafusion`): `TaExtension` — a `repark_core::SessionExtension`; `SparkExtension` composes it, native sessions install it directly |
 | Call an indicator from SQL / DataFrame | `udf` module (feature `datafusion`): `ta_ema(close, 21) OVER (…)`; Python `repark.ta.ema(...)` — see [src/map.md](src/map.md) |
 
+## Component contract
+
+- **Owns:** pure-Rust bit-exact TA-Lib 0.4.0 kernels (64 functions); under the optional `datafusion`
+  feature, the window-UDF wrapper layer (77 `WindowUDF`s — one per entry point) + the door-neutral
+  `TaExtension`.
+- **Does not own:** the session install position (the Spark door composes `TaExtension`); the Python
+  `repark.ta` namespace (repark-python builds on this).
+- **Public inputs:** `&[f64]` slices (kernels); a session (`TaExtension` install); `ta_*(col, period)
+  OVER (…)` (window UDFs).
+- **Public outputs:** `Vec<f64>` kernel results; registered TA window UDFs; a `SessionExtension`.
+- **State & lifecycle:** kernels are stateless (`&[f64]` in → `Vec<f64>` out); the optional UDF layer
+  holds a thread-local multi-output cache so split siblings share one kernel run.
+- **Allowed internal deps:** `repark-core` **only under the `datafusion` feature** (the `TaExtension`);
+  the kernel core is dependency-light (runtime dep `thiserror`).
+- **Failure model:** `thiserror` kernel errors; a non-integral window period fails loud (no silent
+  truncation).
+- **Extension points:** add / fix a kernel (port from the C reference, mind the numerics contract);
+  add its window UDF.
+- **Test strategy:** `cargo test -p repark-ta` — the golden bit-exactness gate (oracle = bundled C
+  TA-Lib 0.4.0) + lib unit + numerics-contract tests.
+- **Known limitations:** `linearreg_angle` may differ by a few ulp off glibc-x86-64 (`atan` is not
+  required to be correctly rounded); goldens are recorded on glibc x86-64.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

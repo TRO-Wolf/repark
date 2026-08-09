@@ -47,6 +47,32 @@ v1 crate-root re-export lists.
 | Wire DELETE/UPDATE/INSERT OVERWRITE | nothing here — DataFusion plans them onto the fork's `TableProvider` |
 | Change credential handling | not here — AWS SDK default chain *inside the fork* |
 
+## Component contract
+
+- **Owns:** the Iceberg surface — Glue (primary) + S3 Tables (secondary) catalog wiring for
+  DataFusion (`catalog/`); the thin Spark-semantics write adapter over the owned fork (`write/`:
+  RePark-owned MERGE INTO, bulk `append`, stage-then-swap `INSERT OVERWRITE`, `ALTER` primitives); the
+  `[patch.crates-io]` fork-pin consumers.
+- **Does not own:** the table-format engine (write actions, evolution, snapshots, maintenance — those
+  live **in the fork**); DELETE / UPDATE / INSERT (planned onto the fork's `TableProvider`); the
+  session + error fold (repark-core).
+- **Public inputs:** a DataFusion `SessionContext` + catalog config; write plans / batches from the
+  session; MERGE / append / overwrite calls.
+- **Public outputs:** registered `CatalogProvider`s (three-part names resolve); committed snapshots;
+  the union of the two v1 crates' re-exports (`catalog::*`, `write::*`).
+- **State & lifecycle:** catalog handles held per session; writes are optimistic-commit transactions
+  over the fork; no long-lived mutable global.
+- **Allowed internal deps:** `repark-common` (write half). The catalog half is the **only** module
+  tree that depends on the AWS SDK. Third-party: the `iceberg*` fork family + datafusion + parquet.
+- **Failure model:** catalog half stays `datafusion::error::Result`; write half re-exports
+  `repark_common::Error`; the fold to the session taxonomy lives in repark-core.
+- **Extension points:** add a catalog builder (`src/catalog/`); add / adjust a write action
+  (`src/write/`, minding the fork `ENGINE_CONTRACT`). MERGE stays RePark-owned.
+- **Test strategy:** `cargo test -p repark-iceberg` — all AWS-free on `MemoryCatalog`; fork-pin proofs
+  that will not compile against crates.io iceberg 0.9.1.
+- **Known limitations:** the merge-on-read unpartitioned multi-spec edge is guarded loud (a fork
+  fast-path defect); credential handling lives inside the fork.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -1,11 +1,48 @@
-# AGENTS.md — operating contract for agents working in this repo
+# AGENTS.md — the authoritative contributor contract
 
-This is the **authoritative project contract** for repark. [CLAUDE.md](CLAUDE.md) and
-[docs/skills/Opus.md](docs/skills/Opus.md) carry the reusable *engineering conventions* (map.md
-discipline, testing hard-block, Rust/Python house style, verification gates) — follow those. The two
-contracts must not drift: same rules, AGENTS.md authoritative, CLAUDE.md the session-orientation view.
-On any conflict the precedence chain in [CLAUDE.md](CLAUDE.md) `## Precedence` wins — that chain has
-exactly one home; this file points at it, never restates it.
+This is the **single authoritative project contract** for repark, written for **any contributor —
+human or automated agent**, naming no tool or model. It holds the precedence chain, the
+architectural invariants, the change-location guide, required verification, and the safety
+boundaries. When a rule changes, it changes **here**; other files point at this contract, they do
+not restate it.
+
+Tool-specific onboarding lives in clearly-labelled **adapter** files that carry no authoritative
+facts (so they cannot drift): [CLAUDE.md](CLAUDE.md) and [.agent/](.agent/map.md). Deleting any
+adapter loses no project knowledge.
+
+## Read first
+
+The read path before touching code — the same for a human and an agent:
+
+1. [README.md](README.md) — what repark is, one screen.
+2. [STATUS.md](STATUS.md) — current state (release, delivered crates, active/deferred work); the
+   status source of truth.
+3. [ARCHITECTURE.md](ARCHITECTURE.md) — component boundaries, the crate DAG, the three runtime
+   flows.
+4. [DEVELOPMENT.md](DEVELOPMENT.md) — local setup, the `make` targets, the CI surface,
+   troubleshooting.
+5. **This contract (AGENTS.md)** — the rules that govern any change.
+6. [docs/testing.md](docs/testing.md) — the mandatory testing-discipline contract; read it before
+   any code change.
+
+Then the `map.md` of every directory your task will touch (see "`map.md` in every directory" below).
+
+## Precedence
+
+The authority chain on any conflict, highest first. **This section is the chain's single home** —
+every other file ([CLAUDE.md](CLAUDE.md), [PROJECT.md](PROJECT.md),
+[skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md)) points here, never restates
+it.
+
+> **[AGENTS.md](AGENTS.md)** (the authoritative contract) **>** [PROJECT.md](PROJECT.md) (north-star
+> intent) **>** [STATUS.md](STATUS.md) (status SSOT) **>** engineering conventions
+> ([DEVELOPMENT.md](DEVELOPMENT.md) + [docs/testing.md](docs/testing.md); the per-tier manuals in
+> [docs/skills/](docs/skills/) are one model family's view of these same conventions) **>** SEPMO
+> ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md) — lifecycle/orchestration only).
+
+SEPMO governs *how work flows* (scope audit → Actor–Critic → PR → delivery → retrospective); it
+never overrides an engineering rule. When SEPMO and this contract appear to conflict, the contract
+wins and the conflict becomes a clarifying question (SEPMO doctrine D1).
 
 ## What repark is
 
@@ -151,6 +188,14 @@ with `apache/iceberg-rust` is **not a constraint** — upstreaming a primitive i
 **optional/opportunistic**, not an obligation. We still **cherry-pick upstream improvements** into
 the fork when useful.
 
+## Safety — destructive / outward-facing operations
+
+The engine touches AWS (Glue, S3 Tables, S3). **Never drop or delete a Glue table, an S3 Tables
+table, or S3 data, and never mutate IAM, without explicit user action** — if such an operation
+seems needed, stop and ask. AWS writes go only through the engine's sanctioned catalog/write paths
+(`repark-iceberg`). **Commit or push only when the user asks.** These approval boundaries bind every
+contributor and every delegated work unit; a delegated unit may narrow them, never relax them.
+
 ## Delegated-agent standing rules
 
 The rules every delegated work unit (slates, sub-agent briefs) inherits — briefs in
@@ -179,20 +224,23 @@ never relax them.
 - **Never:** AWS credentials/envs, `Cargo.toml [patch]` changes, `.github/` changes,
   secrets in any output. Clean STOP states only — a dirty worktree is not a delivered unit.
 
-## Agent tiering
+## Delegated work
 
-Opus orchestrates and owns architecture. Delegated fan-out (search, mechanical edits, narrow
-implementation) defaults to Sonnet or Haiku — see [docs/skills/Sonnet.md](docs/skills/Sonnet.md) and
-[docs/skills/Haiku.md](docs/skills/Haiku.md). Do not spawn Opus sub-agents without an explicit request.
+Single-agent-in-the-main-thread is the default. The orchestrating agent owns architecture and
+assembly; delegated fan-out is for **search, mechanical edits, and narrow, well-scoped
+implementation**, never for architectural judgement. Every delegated unit inherits the standing
+rules above and the approval boundaries in "Destructive / outward-facing operations" — a delegated
+unit may narrow those, never relax them. Any capability-tier choices for delegated agents (which
+model does what, when a stronger tier needs an explicit request) are **tool mechanics**, recorded in
+the relevant tool adapter ([CLAUDE.md](CLAUDE.md) / [.agent/](.agent/map.md)), not here.
 
 ## Process governance (SEPMO)
 
 Lifecycle/orchestration for non-trivial work runs under the **SEPMO control plane**
 ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md)): scope audit (proposition-ledger gate: every clause
 `PROVEN`, zero `OPEN`/`REJECTED`) → adversarial Actor–Critic →
-per-PR delivery → retrospective. SEPMO governs **only how work flows** and **cedes every engineering
-decision to this contract** — on any conflict the precedence chain in [CLAUDE.md](CLAUDE.md)
-`## Precedence` wins. SEPMO's abstract roles bind to this repo through
+per-PR delivery → retrospective. SEPMO governs **only how work flows** and **cedes every
+engineering decision to this contract** — on any conflict the precedence chain in
+[`## Precedence`](#precedence) above wins. SEPMO's abstract roles bind to this repo through
 [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Its Actor–Critic runs
-**single-session by default** (sequential phases); sub-agent fan-out follows "Agent tiering" above
-(Opus sub-agents need an explicit, tier-naming request).
+**single-session by default** (sequential phases); sub-agent fan-out follows "Delegated work" above.

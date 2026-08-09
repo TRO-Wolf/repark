@@ -70,6 +70,33 @@ path (distribution is deferred). SQL routing and session-build registration are 
 | Plug a statement router / SQL front end | implement `SqlDialect` (`src/dialect.rs`) |
 | Install door registrations at build time | implement `SessionExtension` (`src/extension.rs`) |
 
+## Component contract
+
+- **Owns:** `ReparkSession` + builder (the engine API); the `ExecutionBackend` / `SqlDialect` /
+  `SessionExtension` seams; catalog & namespace ops; readers (parquet / csv / json / iceberg + time
+  travel); temp views; `*.sql.catalog.*` config parsing; `s3://` / `s3a://` read routing + the AWS
+  credential bridge; the error fold (`engine_err`).
+- **Does not own:** SQL grammar / routing (the doors, via `SqlDialect`); the write engine + catalog
+  internals (repark-iceberg + the fork); Spark functions (repark-functions); the Python surface.
+- **Public inputs:** builder knobs (config map, memory / batch / partition); SQL text via `sql()`; a
+  door's `SqlDialect` / `SessionExtension`; catalogs registered at runtime.
+- **Public outputs:** a `ReparkSession`; DataFusion `DataFrame`s; an `EngineContext` snapshot for
+  dialects; registered catalog providers.
+- **State & lifecycle:** two-phase — sync `build()` (no I/O) then async
+  `register_configured_catalogs()`. Config / runtime / dialect / extension are immutable after build;
+  the `CatalogRegistry` stays mutable (RwLock, snapshotted per query — no lock held across `.await`).
+- **Allowed internal deps:** `repark-common`, `repark-iceberg` (+ datafusion / iceberg / arrow / AWS /
+  tokio). No edge up to any door.
+- **Failure model:** folds `DataFusionError` / `iceberg::Error` into `repark_common::Error` at the
+  session boundary (`engine_err`); config errors fail loud at build.
+- **Extension points:** implement `ExecutionBackend` (distribution, new crate); `SqlDialect` (a door
+  front end); `SessionExtension` (build-time registrations).
+- **Test strategy:** `cargo test -p repark-core` — AWS-free; catalog / session / reader unit +
+  file-backed modules.
+- **Known limitations:** `SingleNodeBackend` is the only backend and the `ExecutionBackend` surface
+  is minimal (see [../../ARCHITECTURE.md](../../ARCHITECTURE.md)); `ReparkSession` is a growing policy
+  object whose decomposition is deferred ([../../STATUS.md](../../STATUS.md)).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

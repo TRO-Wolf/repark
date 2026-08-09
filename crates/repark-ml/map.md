@@ -30,6 +30,25 @@ Ported verbatim from the v1 engine at the phase-3 port pin — see
 | Wire fit from Python | [`../repark-python/src/map.md`](../repark-python/src/map.md) `ml.rs` (streams batches into accumulators; landed phase-3 PR-3) |
 | Facade Estimator API | `python/repark` `ml/` package — **lands phase-3 PR-5**, not in the tree yet |
 
+## Component contract
+
+- **Owns:** native ML estimator kernels — Cholesky + streaming fit accumulators (OLS, IRLS logistic,
+  Lloyd k-means with `initMode=random`). Models hold params only.
+- **Does not own:** row extraction (the PyO3 binder streams Arrow batches in); the facade Estimator
+  API (Python `repark` `ml/`); transform (plan-built on the facade).
+- **Public inputs:** streamed feature / label rows (from repark-python `ml.rs`); solver params.
+- **Public outputs:** fitted params — never training rows.
+- **State & lifecycle:** streaming accumulators; params-only results; no full-row materialization.
+- **Allowed internal deps:** **none internal** (a capability leaf). Third-party runtime: `thiserror`
+  only — zero new crates.io deps.
+- **Failure model:** `thiserror` estimator errors (`Singular`, `FeatureDimTooLarge`,
+  `KMeansInitModeDefault`, `ElasticNetUnsupported`, `StandardizationUnsupported`).
+- **Extension points:** change a solver (`linear_regression.rs` / `cholesky.rs` /
+  `logistic_regression.rs` / `kmeans.rs`); fit is wired from Python in repark-python `ml.rs`.
+- **Test strategy:** `cargo test -p repark-ml` — solver unit tests + the `error`-message pin.
+- **Known limitations:** `elasticNetParam != 0`, StandardScaler, and non-random KMeans init are out
+  (M4 / upstream); `MAX_FEATURES = 4096`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

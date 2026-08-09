@@ -256,7 +256,7 @@ This step is part of "Reason Before You Act" (§1) and "Read Before Write" (Core
 1. Read the `map.md` of the directory you are about to touch.
 2. Use its `I want to... → go to` table to choose the file or subdirectory; follow `Pointers` to move between directories.
 3. Read the `map.md` of every directory your task will touch — not just the first.
-4. `map.md` is authoritative for **what lives in its directory** — file roles, entry points, intent. If the code and `map.md` disagree, **the code is truth** and the `map.md` is stale. If your change makes a `map.md` inaccurate, update it **only when it is listed in your plan** (add it to the plan first); otherwise do not touch it — flag the drift in your report and in `task/lessons.md`. This preserves §6 (modify only planned files). *(Repo override: [CLAUDE.md](../../CLAUDE.md) `<map_md_navigation>` tightens this to "update the touched directory's `map.md` in the same change, always in scope" — CLAUDE.md wins.)*
+4. `map.md` is authoritative for **what lives in its directory** — file roles, entry points, intent. If the code and `map.md` disagree, **the code is truth** and the `map.md` is stale. If your change makes a `map.md` inaccurate, update it **only when it is listed in your plan** (add it to the plan first); otherwise do not touch it — flag the drift in your report and in `task/lessons.md`. This preserves §6 (modify only planned files). *(Repo override: [AGENTS.md](../../AGENTS.md) hard rule "`map.md` in every directory, updated in the same change" tightens this to "update the touched directory's `map.md` in the same change, always in scope" — the repo contract wins.)*
 5. When you create a new directory containing source, create its `map.md` in the same change.
 
 ### Debug with `map.md#debug`

@@ -42,6 +42,31 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 | Change what the extension registers | `src/extension.rs` |
 | See why a construct refuses with "lands in phase-2 PR-3x" | `src/router.rs` (TEMPORARY refuse arms) |
 
+## Component contract
+
+- **Owns:** the Spark SQL door — the statement router (`execute` / `execute_with_read_only`),
+  `SparkDialect` (adapts to `repark_core::SqlDialect`), `SparkExtension` (installs the function
+  registry + analyzer rules + cardinality config, and composes `repark_ta::TaExtension`), the
+  Spark-ism normalizers + the `spark_ast` passthrough.
+- **Does not own:** the shared Iceberg machinery (repark-iceberg); the function / analyzer
+  implementations (repark-functions); TA kernels (repark-ta); the ANSI door (no door↔door edge).
+- **Public inputs:** a `SessionContext` + `CatalogRegistry` + Spark-dialect SQL text; via the seams, a
+  session at build time.
+- **Public outputs:** DataFusion `DataFrame`s; the installed Spark semantics on a session.
+- **State & lifecycle:** per-call routing over an `EngineContext` snapshot; registrations installed
+  once at build via `SparkExtension`.
+- **Allowed internal deps:** `repark-core`, `repark-iceberg`, `repark-functions`, `repark-ta` (feature
+  `datafusion`) — same-tier edges to functions / ta are legal. Dev-only: `repark-common` (surface
+  matrix).
+- **Failure model:** `DataFusionError` propagation + targeted loud refusals for unsupported / wrong-form
+  statements; folds to the session taxonomy in core.
+- **Extension points:** add / adjust a Spark-ism normalizer (`normalize.rs`); change what the
+  extension registers (`extension.rs`); add a router arm (`router.rs` + a handler module).
+- **Test strategy:** `cargo test -p repark-spark` — Session + `SparkExtension` + `SparkDialect`
+  integration; the v1 lib-root battery; the Q13 surface-matrix audit.
+- **Known limitations:** carried v1 divergences — the time-travel view leak + the `$`-metadata rider
+  ([../../STATUS.md](../../STATUS.md) "Known correctness issues").
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Design: `../../docs/design/sql-doors.md`; brief:

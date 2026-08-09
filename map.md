@@ -50,8 +50,15 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
   plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
-  work). `CLAUDE.md` — session orientation. `AGENTS.md` — the authoritative agent contract.
+  work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
+  chain, invariants, safety boundaries; written for any human or agent, names no tool).
+  `ARCHITECTURE.md` — component boundaries, the crate DAG, and the three runtime flows.
+  `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
+  `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
+- `.agent/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
+  `cursor.md` stubs); each is a thin pointer into the spine, carrying no authoritative facts. See
+  [.agent/map.md](.agent/map.md).
 
 ## I want to...
 
@@ -59,7 +66,10 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 |---|---|
 | Know the current state (release / delivery / what's next) | [STATUS.md](STATUS.md) |
 | Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
-| Follow the agent rules | [AGENTS.md](AGENTS.md) |
+| Follow the authoritative contributor contract | [AGENTS.md](AGENTS.md) |
+| Understand the architecture / crate DAG / runtime flows | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Build / test / verify locally (setup, `make` targets, CI) | [DEVELOPMENT.md](DEVELOPMENT.md) |
+| Onboard as an agent (any tool) | [.agent/map.md](.agent/map.md) |
 | Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |
 | Read/extend the testing contract | [docs/testing.md](docs/testing.md) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
