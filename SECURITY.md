@@ -34,7 +34,7 @@ runs only against merged code via OIDC role assumption — never against unmerge
 
 The engine reads AWS credentials only through the standard AWS SDK chain (environment → shared
 profile → instance/task role); credentials are never hardcoded and never logged. AWS SDK usage is
-confined to the Iceberg catalog/IO crate (`crates/repark-iceberg` in the target skeleton). Scope
+confined to the Iceberg catalog/IO crate (`crates/repark-iceberg`). Scope
 the IAM principal to the minimum needed for Glue + S3 Tables + the warehouse / read S3 buckets.
 
 ### Accepted single-user credential posture

@@ -106,20 +106,13 @@ dbt)**. Load-bearing surfaces, in order: (1) the SQL engine with Iceberg DML, (2
 (engine embedded in the dbt process — dbt-duckdb precedent), (3) the lazy DataFrame API for Airflow
 tasks. The PySpark facade's year-one job: migrate existing pipelines without rewrites.
 
-## Current state (2026-08-06)
+## Current state
 
-**Phase 1 of the port — engine core (in flight).** Phase 0 (bootstrap) is complete: governance,
-the testing contract, mechanical gates, map.md discipline, SEPMO, and tier-1 CI are in place and
-green. Phase-1 PR-A armed the Cargo workspace: `crates/repark-common` (the error seed) is the
-first member, with the crate-DAG and lib.rs guards live. `repark-iceberg` (PR-B) and
-`repark-core` (PR-C) follow. Code arrives by porting the private v1 repository copy-then-re-home in
-four phases (0 bootstrap → 1 engine core → 2 the two SQL doors → 3 Python facade + parity =
-milestone one); v1 freezes to bugfix-only at milestone one. **Public ≠ released:** the API-forever
-clock starts at the first tagged PyPI release, held until milestone one. See
+**Status is tracked in [STATUS.md](STATUS.md)** — the single source of truth for release state,
+delivered capabilities, active workstreams, and deferred work. PROJECT.md states intent only; it
+does not restate current state. The port that stood this repository up is recorded in
 [docs/port/PLAN.md](docs/port/PLAN.md) and
 [docs/adr/0003-copy-then-rehome-port.md](docs/adr/0003-copy-then-rehome-port.md).
-
-See [task/todo.md](task/todo.md) + [task/lessons.md](task/lessons.md) for live state.
 
 ## Conventions (summary; see [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md) for the full contract)
 

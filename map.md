@@ -4,25 +4,22 @@
 
 RePark: a pure-Rust, no-JVM data engine over DataFusion + Arrow + the owned iceberg-rust fork,
 with two SQL doors (native ANSI/Trino-style and a near-drop-in PySpark facade). This is the
-front-door navigation map. See [README.md](README.md) for the overview and
-[AGENTS.md](AGENTS.md) for the agent contract. The repo is at
-**phase 3** of the port (Python binding + facade + parity = milestone one; design
-[docs/design/python-facade.md](docs/design/python-facade.md), slate in
-[task/todo.md](task/todo.md)). Phases 1–2 are complete — the workspace carries
-`crates/repark-common` (error seed + the surface-matrix registry), `crates/repark-iceberg`
-(catalog + write over the owned iceberg-rust fork, `[patch.crates-io]`-pinned),
-`crates/repark-core` (the `ReparkSession` engine API + the frozen `SqlDialect` /
-`SessionExtension` seams), `crates/repark-functions` (Spark-semantics scalar/aggregate function
-shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router + `SparkDialect` +
-`SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional window-UDF
-layer, tier 3), and `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` + guard
-set + wrong-door sniff + the curated `WITH (…)` vocabulary). Phase 3 has landed
-`crates/repark-ml` (native ML estimator kernels, tier 3, ported verbatim in PR-2) and
-`crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**, ported in PR-3 under design §3's
-edit classes) and `python/repark-parity` (the parity harness + the census machinery + the NEW
-report comparator that is the port's acceptance gate, PR-4) and `python/repark` (the PySpark
-facade wheel — 53 source modules and the 126-file suite (127 at the pin minus the whole-file excel deferral), ported verbatim under design §3's
-EC-4/EC-7/EC-9 in PR-5). A wheel is buildable from PR-5 onward; it is not yet tagged.
+front-door navigation map. See [README.md](README.md) for the overview,
+[AGENTS.md](AGENTS.md) for the agent contract, and **[STATUS.md](STATUS.md) for current state**
+(release state, delivery, active workstreams — the single source of truth; do not restate it here).
+
+The workspace carries nine delivered crates: `crates/repark-common` (error seed + the
+surface-matrix registry), `crates/repark-iceberg` (catalog + write over the owned iceberg-rust
+fork, `[patch.crates-io]`-pinned), `crates/repark-core` (the `ReparkSession` engine API + the
+frozen `SqlDialect` / `SessionExtension` seams), `crates/repark-functions` (Spark-semantics
+scalar/aggregate function shims, tier 3), `crates/repark-spark` (the Spark-SQL door: router +
+`SparkDialect` + `SparkExtension`), `crates/repark-ta` (bit-exact TA-Lib kernels + the optional
+window-UDF layer, tier 3), `crates/repark-sql` (the ANSI/Trino-flavoured door: `AnsiDialect` +
+guard set + wrong-door sniff + the curated `WITH (…)` vocabulary), `crates/repark-ml` (native ML
+estimator kernels, tier 3), and `crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**).
+The Python tree ships `python/repark-parity` (the parity harness + census machinery + report
+comparator) and `python/repark` (the PySpark facade wheel). A wheel is buildable; it is not yet
+tagged (see [STATUS.md](STATUS.md) "Release state").
 
 ## Contents
 
@@ -51,14 +48,16 @@ EC-4/EC-7/EC-9 in PR-5). A wheel is buildable from PR-5 onward; it is not yet ta
   (`repark-parity`). See [python/map.md](python/map.md).
 - `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
   trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
-  plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `CLAUDE.md` — session
-  orientation. `AGENTS.md` — the authoritative agent contract. `CONTRIBUTING.md` /
-  `SECURITY.md` — public-repo policy.
+  plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
+  single source of truth for current state (release state, delivery, active workstreams, deferred
+  work). `CLAUDE.md` — session orientation. `AGENTS.md` — the authoritative agent contract.
+  `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
 
 ## I want to...
 
 | ...do this | go to |
 |---|---|
+| Know the current state (release / delivery / what's next) | [STATUS.md](STATUS.md) |
 | Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
 | Follow the agent rules | [AGENTS.md](AGENTS.md) |
 | Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |

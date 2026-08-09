@@ -25,12 +25,8 @@ Two user-facing **doors**, no blended parser:
 
 The Iceberg machinery (commit semantics, MERGE, snapshots, evolution) is shared beneath both doors.
 
-**Current state: phase 1 of the port — engine core (in flight).** Phase 0 (bootstrap) is complete:
-governance, testing contract, mechanical gates, and tier-1 CI are in place and green. Phase-1 PR-A
-armed the Cargo workspace with its first member, `crates/repark-common` (the error seed), plus the
-crate-DAG and lib.rs guards; `repark-iceberg` (PR-B) and `repark-core` (PR-C) follow. The crate
-skeleton below remains the *target*; code arrives by porting the private v1 repository phase by
-phase — see [docs/port/PLAN.md](docs/port/PLAN.md).
+**Current state lives in [STATUS.md](STATUS.md)** — the single source of truth for release state,
+delivered crates, active workstreams, and deferred work. (Do not restate status here; point at it.)
 
 <read_order>
 
@@ -42,7 +38,7 @@ phase — see [docs/port/PLAN.md](docs/port/PLAN.md).
    [Haiku.md](docs/skills/Haiku.md). Read the one matching the model you are running as.
 3. **[docs/testing.md](docs/testing.md)** — the mandatory testing-discipline contract. Tests-with-code
    is a hard block. Read it before any code change.
-4. **[AGENTS.md](AGENTS.md)** — the authoritative project contract (target crate map, PyO3 build notes,
+4. **[AGENTS.md](AGENTS.md)** — the authoritative project contract (crate map, PyO3 build notes,
    the version-pin contract, what's out of scope).
 5. **[skills/sepmo/SKILL.md](skills/sepmo/SKILL.md)** — the SEPMO v2 control plane (lifecycle/orchestration:
    proposition-ledger scope audit → adversarial Actor–Critic → per-PR delivery → retrospective; the spine
@@ -62,8 +58,8 @@ files ([AGENTS.md](AGENTS.md), [skills/sepmo/binding-manifest.md](skills/sepmo/b
 here, never restate it.
 
 > [CLAUDE.md](CLAUDE.md) = [AGENTS.md](AGENTS.md) (the two authoritative contracts, kept in sync) **>**
-> [PROJECT.md](PROJECT.md) (north-star intent) **>** Status SSOT (PROJECT.md "Current state" /
-> [task/todo.md](task/todo.md)) **>** engineering contract ([docs/skills/Opus.md](docs/skills/Opus.md) +
+> [PROJECT.md](PROJECT.md) (north-star intent) **>** Status SSOT ([STATUS.md](STATUS.md)) **>**
+> engineering contract ([docs/skills/Opus.md](docs/skills/Opus.md) +
 > [docs/testing.md](docs/testing.md)) **>** SEPMO ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md) —
 > lifecycle/orchestration only).
 
@@ -163,7 +159,7 @@ tests, `// TODO: add test`, `assert!(is_ok())` as the whole body, `--skip` in CI
 - **Engine**: Apache DataFusion + iceberg-rust + iceberg-datafusion; `datafusion-spark` for
   Spark-compatible functions behind the facade door.
 - **Data format**: Apache Arrow throughout; zero-copy across the PyO3 boundary (Arrow C Data Interface).
-- **Python**: PyO3 cdylib built by **maturin** (arrives phase 3); native lazy API + PySpark facade.
+- **Python**: PyO3 cdylib built by **maturin**; native lazy API + PySpark facade.
 - **Catalogs**: AWS Glue (primary) + S3 Tables (secondary) via iceberg-rust native catalogs; AWS SDK
   credential chain (SigV4 automatic).
 - **Tooling**: Ruff (lint+format, line 100), Rustfmt (`max_width=100`), Clippy `all`+`pedantic`
@@ -174,9 +170,9 @@ tests, `// TODO: add test`, `assert!(is_ok())` as the whole body, `--skip` in CI
 ## Repo layout
 
 - [README.md](README.md) — overview. [AGENTS.md](AGENTS.md) — authoritative agent contract.
-- `crates/` — the Cargo workspace (first member `repark-common` landed in phase-1 PR-A). Target
-  skeleton in [AGENTS.md](AGENTS.md) "Target crate map".
-- `python/` — the `repark` package (arrives phase 3).
+- `crates/` — the Cargo workspace (nine delivered crates). See [AGENTS.md](AGENTS.md) "Crate map"
+  and [crates/map.md](crates/map.md).
+- `python/` — the `repark` facade wheel + the `repark-parity` harness.
 - [docs/](docs/) — [testing.md](docs/testing.md), [port/PLAN.md](docs/port/PLAN.md),
   [adr/](docs/adr/), per-tier manuals in [docs/skills/](docs/skills/),
   [release.md](docs/release.md).
