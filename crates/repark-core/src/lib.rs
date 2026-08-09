@@ -5,7 +5,9 @@
 //! ([`CatalogRegistry`]) with their [`LocationPolicy`], and exposes the near-drop-in PySpark
 //! entrypoints: `sql`, catalog/namespace registration, the reader family
 //! (`read_parquet`/`read_csv`/`read_json`/`read_iceberg_table`), the temp-view family, and the
-//! listing helpers. All execution routes through the [`ExecutionBackend`] seam.
+//! listing helpers. All execution routes through the [`ExecutionBackend`] seam — today a local
+//! execution-context holder over in-process DataFusion, whose minimal surface is a future
+//! extension point rather than a distribution abstraction (`backend.rs` doc / `ARCHITECTURE.md`).
 //!
 //! The two phase-cut seams are the crate's only inversions of v1 (design §3): [`SqlDialect`]
 //! (how a statement front end plugs into `sql` — [`DataFusionDialect`] is the phase-1 default)

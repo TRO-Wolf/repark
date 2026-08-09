@@ -25,7 +25,8 @@ notes, and per-tier operating manuals for this repo.
   facade cohort definition, the comparator + attribution rule, and the golden-corpus `basis:`
   designations.
 - [adr/](adr/map.md) — Architecture Decision Records (dated, append-only "why" docs): the owned
-  iceberg-rust fork, the two SQL doors, the copy-then-re-home port, server-prep disciplines.
+  iceberg-rust fork, the two SQL doors, the copy-then-re-home port, server-prep disciplines, the
+  deferred session decomposition.
 - [history/](history/map.md) — the **archive**: closed campaigns, off the normal read path, each
   admitted only after a promotion audit proved every rule it carries also lives in a current
   document. Today it holds [history/port-v2/](history/port-v2/map.md) — the v1 → v2 port's four

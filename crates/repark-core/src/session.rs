@@ -7,9 +7,18 @@
 //! `register_iceberg_catalog` (+ the `register_memory_catalog` convenience), `create_namespace`,
 //! `create_or_replace_temp_view` (batches) / `create_or_replace_temp_view_from` (a plan),
 //! `drop_temp_view`, `table_exists`, `read_parquet`, `read_csv`, `read_json`.
-//! All execution routes through the [`ExecutionBackend`] seam, so a future distributed coordinator
-//! can slot in without reworking the write path (distribution is deferred — see
-//! [`backend`](crate::ExecutionBackend)).
+//! All execution routes through the [`ExecutionBackend`] seam — today a local execution-context
+//! holder over in-process DataFusion. The trait boundary is the commitment (it is what would let a
+//! future distributed coordinator be introduced without reworking the write path); its surface is
+//! deliberately minimal and would itself have to widen first, so the seam is not proof that
+//! distribution needs no wider change. Distribution is deferred by decision
+//! (`docs/adr/0004-server-prep-disciplines.md`); the honest framing is in `ARCHITECTURE.md`,
+//! "`ExecutionBackend` — what the seam is, honestly".
+//!
+//! This type deliberately accretes session policy (runtime construction, catalog registration,
+//! object-store wiring, temp views, query routing). A principled internal decomposition into named
+//! services is **deferred and driver-gated**, not scheduled —
+//! `docs/adr/0005-defer-session-decomposition.md`.
 //!
 //! `sql` routes through the session-default [`SqlDialect`] (phase-cut inversion, design §3 —
 //! plain DataFusion in phase 1; the Spark door's statement router returns as a phase-2 dialect

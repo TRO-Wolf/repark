@@ -117,21 +117,31 @@ above.
 
 ## Architectural risks
 
-Design-honesty items — accurate today, with a scheduled correction where noted.
+Design-honesty items — accurate today; each says where the honest description now lives.
 
-- **`ExecutionBackend` exposes a concrete DataFusion `SessionContext`.** The seam is documented as
-  more abstract than it currently is; an honest-doc correction is scheduled (Front-Door FD-5,
-  doc/comment only — no signature change).
+- **`ExecutionBackend` exposes a concrete DataFusion `SessionContext`.** The risk is unchanged —
+  callers reach single-node DataFusion facilities through the seam, so a distributed backend would
+  require widening the surface, not merely a second `impl`. **The docs now say so** (2026-08-09):
+  the trait, module, and crate doc-comments in `crates/repark-core` match
+  [ARCHITECTURE.md](ARCHITECTURE.md) "`ExecutionBackend` — what the seam is, honestly". No
+  correction is outstanding; distribution stays deferred by decision
+  ([docs/adr/0004-server-prep-disciplines.md](docs/adr/0004-server-prep-disciplines.md)).
 - **`ReparkSession` is a growing internal policy object.** It accretes session policy; a principled
-  internal decomposition is deferred and driver-gated (see below).
+  internal decomposition is deferred and driver-gated —
+  [docs/adr/0005-defer-session-decomposition.md](docs/adr/0005-defer-session-decomposition.md)
+  records the intended shape, the exact triggers, and the discharge-note requirement (see also
+  Deferred capabilities below).
 
 ## Deferred capabilities
 
 Recorded, not built. Each names the trigger that would start it.
 
 - **Internal `ReparkSession` decomposition** — driver-gated: executed only when a concrete driver
-  arrives (PyO3 pressure, a second `ExecutionBackend`, cancellation, or server-protocol needs), not
-  on a schedule.
+  arrives (PyO3 pressure, a second `ExecutionBackend`, cancellation / per-query resource policy, or
+  server-protocol needs), not on a schedule. Recorded as
+  [docs/adr/0005-defer-session-decomposition.md](docs/adr/0005-defer-session-decomposition.md)
+  (status **Deferred**, 2026-08-09) — the intended internal services, the precise trigger
+  conditions, and the rule that the unit appends a discharge note naming the driver that fired.
 - **`repark-postgres` + `repark-excel` read connectors** — the v1 `read_postgres` / `read_excel`
   surfaces. Scheduled post-milestone-one by explicit decision (2026-08-07). The Python binding
   answers all three entry points (`read_excel`, `excel_sheet_names`, `read_postgres`) with a loud
