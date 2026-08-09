@@ -14,22 +14,49 @@ Repository helper scripts wired into the dev workflow.
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would
   pass the blocking lint gate while GitHub silently never runs it. Wired as a prerequisite of
   `make workflows-lint`.
-- `check_crate_dag.sh` + `check_crate_dag.py` — the crate-DAG layering guard. The `.sh` runs
-  `cargo metadata --format-version 1 --no-deps --locked` and pipes it to the `.py`, which holds
-  the **tier map** and the rule: no `repark-*` crate may depend on a **strictly higher** tier;
-  same-tier edges are ALLOWED. NORMAL edges only — dev/build deps excluded, third-party out of
-  scope. `check_crate_dag.py` is the layering **SSOT**: prose points here and never restates
-  the map (phase-1 target: `repark-common` tier 0, `repark-iceberg` tier 1, `repark-core`
-  tier 2; phase-2 pre-declares tier 3 "surface crates": `repark-functions`, `repark-ta`,
-  `repark-spark`, `repark-sql`; phase-3 pre-declares `repark-ml` at tier 3 and
-  `repark-python` at tier 4 "bindings" — the only tier-4 crate, nothing may depend on it;
-  NOTE the binding's dep contract — only core/functions/ta/spark/ml, non-edges repark-sql +
-  repark-iceberg — is enforced by review, not by this guard, which only bans upward edges;
-  mapped crates that have not landed yet are simply not inspected). A new `repark-*`
-  crate that is not in `TIERS` fails the guard. Wired into `make check-crate-dag` (in the
-  `make ci` chain), `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
+- `check_crate_dag.sh` + `check_crate_dag.py` — the crate **dependency-policy** guard. The `.sh`
+  runs `cargo metadata --format-version 1 --no-deps --locked` and pipes it to the `.py`, which
+  holds three tables and is the **SSOT** for all three: the **tier map** (`TIERS`), the crate
+  **roles** (`ROLES` — foundation / table service / engine / capability / door / bindings), and
+  the explicit **allowed-edge table** (`ALLOWED_EDGES`: every internal edge, the dependency
+  KINDS it may take, and why it exists). Prose points here and never restates them. Four rules,
+  in order: (1) the declared policy must itself obey the structural rules — a forbidden edge
+  cannot be legalized by writing it down; (2) every observed `repark-*` edge must be DECLARED,
+  with its kind (`normal` / `optional` / `dev` / `build`) permitted for that pair — a new
+  same-tier edge reds until it is declared with a reason, and a stale row whose edge is gone
+  reds too; (3) the structural rules over roles — no door → door edge outside `dev`, nothing may
+  depend on the bindings adapter, the foundation crate depends on nothing internal, a capability
+  crate never depends on a door; (4) layering — no PRODUCT edge (`normal`/`optional`) may point
+  at a strictly higher tier, same-tier edges ALLOWED. Kinds are what let the cross-door
+  `repark-sql → repark-spark` test edge be permitted as `dev` while the same edge as `normal`
+  is the forbidden door→door product edge. Third-party crates are out of scope (internal = any
+  Cargo workspace member — membership, not the `repark-` name, is the test); a new workspace
+  member missing from `TIERS`/`ROLES` fails the guard; mapped crates that have not landed yet are
+  simply not inspected. NOTE the binding's deliberate **non-edges** (no `repark-sql`, no
+  `repark-iceberg`) are still enforced by review, not here — this guard bans edges, it never
+  requires one. Wired into `make check-crate-dag` (in the `make ci` chain),
+  `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`.
   **Dual-wired:** the `crate-DAG layering guard` step in the ci.yml `guards` job mirrors the
   Makefile target — change one, change the other.
+
+- `check_manifest.sh` + `check_manifest.py` — the **structural-manifest** guard (FD-3), which
+  makes [`../repo-manifest.toml`](../repo-manifest.toml) true instead of decorative. Pure text
+  (no cargo, no network): it reads `Cargo.toml`, the `Makefile`, `STATUS.md`, the declared
+  documents and the crate-root `map.md` files. Nine rules — inventory both ways (every Cargo
+  member is declared; every `delivered` component is a member at that exact path), delivered
+  components exist (`<path>/Cargo.toml`), `planned` paths must NOT exist (planned ≠ delivered),
+  layers are recognized **and equal the tier name `check_crate_dag.py` assigns** (imported, not
+  copied — the manifest mirrors the dependency-policy SSOT and can never override it), every
+  delivered crate is covered by `TIERS` + `ROLES`, the `[project.gates]` commands name live
+  `make` targets, every `[documentation]` path exists, `STATUS.md` states the manifest's
+  phase/release words (`## Current milestone` / `## Release state`), and each delivered
+  component's crate-root `map.md` exists at the declared path, names the component in its
+  heading and names its layer as `tier N`. That last rule is the **only** `map.md` automation in
+  the repository and it **checks** a hand-written file — it never generates, scaffolds or
+  rewrites one. Wired into `make check-manifest` (in the `make ci` chain),
+  `.pre-commit-config.yaml`, and the hook installed by `make install-hooks`. **Dual-wired:** the
+  `repo-manifest guard (check_manifest)` step in the ci.yml `guards` job mirrors the Makefile
+  target.
 - `check_lib_rs.sh` + `check_lib_rs.py` — the lib.rs thinness guard. No inline
   `#[cfg(test)] mod {…}` (file-backed only; same-line `#[cfg(test)] mod … {` also fails);
   non-test line ceilings with an EXCEPTIONS-with-reason table in the `.py` (SSOT; ratchet down
@@ -79,6 +106,8 @@ Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/p
 |---|---|
 | Understand why a commit was blocked on map.md | `check_map_md.sh` |
 | Change or inspect the crate tier map | `check_crate_dag.py` (`TIERS` — the SSOT) |
+| Add / remove an internal crate dependency | `check_crate_dag.py` (`ALLOWED_EDGES` — declare the edge, its kind and a reason) |
+| Declare a new crate, doc, or gate command | [`../repo-manifest.toml`](../repo-manifest.toml), then `bash scripts/check_manifest.sh` |
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
 | Raise/lower a facade `.py` line ceiling | `check_lib_py.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Validate workflow YAML locally | `make workflows-parse` |
@@ -88,7 +117,9 @@ Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/p
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../.pre-commit-config.yaml](../.pre-commit-config.yaml), [../Makefile](../Makefile).
+- Related: [../.pre-commit-config.yaml](../.pre-commit-config.yaml), [../Makefile](../Makefile),
+  [../repo-manifest.toml](../repo-manifest.toml) (the structural facts `check_manifest.py`
+  validates).
 
 ## Debug
 
@@ -97,7 +128,16 @@ Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/p
 | Guard blocks a commit | Add/update the `map.md` in the directory of the staged code |
 | Guard not running | `make install-hooks` (or use the `pre-commit` framework) |
 | `crate-dag: layering inversion …` | The named edge points UP a tier. Either the edge is wrong (remove it) or the tier map is wrong — fix `check_crate_dag.py` `TIERS` and say why in the commit |
-| `… is not in the tier map` | A new `repark-*` crate was added; classify it in `check_crate_dag.py` `TIERS` |
+| `ERROR: undeclared dependency edge …` | A new internal dependency landed without a policy row — declare it in `check_crate_dag.py` `ALLOWED_EDGES` with its kind and a reason, or drop the dependency |
+| `ERROR: dependency kind not permitted …` | The edge exists in the policy but not in this kind (the classic case: a `dev`-only cross-door edge promoted to `normal`) |
+| `ERROR: forbidden edge …` / `the policy DECLARES a forbidden edge` | A structural rule fired (door→door, anything→bindings, foundation→internal, capability→door). The second form means the *table* was edited to legalize it — the rule fires on the declaration too |
+| `ERROR: stale policy row …` | An `ALLOWED_EDGES` row survives an edge that was removed; delete the row |
+| `… is not in the tier map` | A new `repark-*` crate was added; classify it in `check_crate_dag.py` `TIERS` (and `ROLES`) |
+| `manifest: … is not declared in repo-manifest.toml` | A new Cargo member landed; add its `[components.<name>]` entry (path, layer, status) |
+| `manifest: … declared delivered, but …` / `declared planned, but … exists` | The manifest and the tree disagree about what exists; fix whichever is stale — a component is delivered exactly when its code is there |
+| `manifest: … layer … disagrees with the dependency-policy SSOT` | `repo-manifest.toml` mirrors `check_crate_dag.py`; change the tier map there, then the mirror |
+| `manifest: … map.md never names its layer` | Say the crate's tier in its crate-root `map.md` (hand-written — the guard never writes one) |
+| `manifest: … STATUS.md … does not state …` | STATUS.md is the status SSOT; the phase moved in one file and not the other |
 | `crate-dag inspected zero internal crates/edges` | `cargo metadata` returned nothing internal — wrong manifest path or a broken workspace (a single-crate workspace with zero edges is fine) |
 | `lib-rs: … inline #[cfg(test)] mod` | Move the test body to a file-backed module (`src/<name>.rs` + `#[cfg(test)] mod <name>;`) |
 | `lib-rs: … lines (ceiling …)` | Extract production code into a named module, or add an `EXCEPTIONS` entry with a reason (ratchet down only) |
@@ -110,4 +150,5 @@ Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/p
 | `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
-`bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `make workflows-parse`. Escalate to: [../map.md#debug](../map.md).
+`bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `bash scripts/check_manifest.sh`,
+`make workflows-parse`. Escalate to: [../map.md#debug](../map.md).

@@ -44,7 +44,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py check-manifest rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 .PHONY: test
 test: rust-test ## All tests (Rust only until the Python packages land in phase 3)
@@ -104,8 +104,9 @@ rust-panic-ban: ## Panic ban + async cancel-safety ban (ci.yml's rust-lint job r
 		-D clippy::unreachable
 
 .PHONY: check-crate-dag
-check-crate-dag: ## Crate-DAG layering guard (no edge to a strictly higher tier)
-	@# The tier map is the SSOT in scripts/check_crate_dag.py — prose points there, never restates.
+check-crate-dag: ## Crate dependency-policy guard (declared edges + kinds; no edge to a higher tier)
+	@# The tier map, the crate roles and the allowed-edge table are the SSOT in
+	@# scripts/check_crate_dag.py — prose points there, never restates.
 	@# DUAL-WIRED: the `crate-DAG layering guard` step in ci.yml's guards job mirrors this
 	@# target. Change one, change the other.
 	@./scripts/check_crate_dag.sh
@@ -213,6 +214,14 @@ spell-check: ## typos (mirrors typos.yml)
 # Repo-structure guards
 # ------------------------------------------------------------------------------------------------
 
+.PHONY: check-manifest
+check-manifest: ## Structural-manifest guard (repo-manifest.toml vs workspace, docs, gates, maps)
+	@# SSOT: repo-manifest.toml (the structural facts) + scripts/check_manifest.py (the rules);
+	@# layers are cross-checked against scripts/check_crate_dag.py, never restated.
+	@# DUAL-WIRED: the `repo-manifest guard` step in ci.yml's guards job mirrors this target.
+	@# Change one, change the other.
+	@./scripts/check_manifest.sh
+
 .PHONY: check-map-md
 check-map-md: ## map.md lockstep guard over staged changes (also wired into the pre-commit hook)
 	bash scripts/check_map_md.sh
@@ -265,10 +274,11 @@ lint: ## Clippy + ruff (autofix Python)
 	$(RUFF) check --fix .
 
 .PHONY: install-hooks
-install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + Python thinness guards + cargo fmt + taplo + typos
+install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + Python thinness + manifest guards + cargo fmt + taplo + typos
 	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast
 	@# (sub-second: a `cargo metadata` read and a pure text scan). Hook budget stays < 1 s
-	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class).
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_lib_py.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class), and
+	@# check_manifest.sh joined at FD-3 (pure text: no cargo, no network).
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_lib_py.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"

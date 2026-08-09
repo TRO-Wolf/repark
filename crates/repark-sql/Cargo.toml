@@ -42,9 +42,10 @@ async-trait.workspace = true
 # results back on the Arrow path (value AND type).
 tokio.workspace = true
 tempfile = "3"
-# DEV-ONLY, and deliberately so. `scripts/check_crate_dag.py` scopes the layering rule to NORMAL
-# edges (dev-/build-dependencies are excluded by design — same carve-out repark-spark's dev-dep on
-# repark-common already rides), so these do NOT create the forbidden door→door product edge:
+# DEV-ONLY, and deliberately so. `scripts/check_crate_dag.py` declares both edges with kind `dev`
+# and scopes the layering rule to PRODUCT edges (normal/optional), so these do NOT create the
+# forbidden door→door product edge — and promoting either to a normal dependency turns the guard
+# RED, naming the source, target and kind:
 #  * `repark-spark` — the Q13/G5 CROSS-DOOR two-session protocol needs the OTHER door's dialect
 #    and extension in one test binary. There is no other way to compare two doors, and the design
 #    mandates the comparison (§2 Q13). Nothing in `src/` may name this crate.

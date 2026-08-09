@@ -2,7 +2,8 @@
 
 ## Purpose
 
-The Iceberg surface, merged from two v1 crates as two independent module trees:
+The Iceberg surface (crate-DAG **tier 1**, the table service both doors reach through the
+session), merged from two v1 crates as two independent module trees:
 
 - `src/catalog/` — build AWS Glue (primary) and S3 Tables (secondary) Iceberg catalogs and
   register them as DataFusion `CatalogProvider`s, so three-part names

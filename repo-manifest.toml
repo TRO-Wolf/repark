@@ -1,0 +1,123 @@
+# ===========================================================================================
+# repo-manifest.toml — the machine-readable structural facts about this repository.
+#
+# What lives here: the facts a tool (or a contributor arriving cold) needs in order to know
+# what this repository CONTAINS and how it is checked — the component inventory, the current
+# phase, the canonical gate commands, and the documentation index. Every field below is
+# mechanically validated by `scripts/check_manifest.py` (`make check-manifest`, in the
+# `make ci` chain and the ci.yml guards job), so a structural claim here cannot go stale
+# quietly: a new Cargo member, a renamed `make` target, a moved document, a phase that STATUS.md
+# has moved past, or a component whose crate-root `map.md` disagrees all fail the gate.
+#
+# What does NOT live here — this file is a MIRROR, never a second source of truth:
+#   * the dependency policy (tiers, roles, allowed edges + kinds) is owned by
+#     `scripts/check_crate_dag.py`; the `layer` field below is checked FOR AGREEMENT against
+#     that script's tier map, so the two cannot drift;
+#   * current state (release state, what is in flight, known issues) is owned by `STATUS.md`;
+#     `[project]` carries only the phase/release words the validator matches against it;
+#   * prose — rationale, boundaries, runtime flows — is owned by the documents indexed under
+#     `[documentation]` and by each directory's hand-written `map.md`. Nothing here is
+#     generated, and nothing here generates a `map.md`.
+# ===========================================================================================
+
+[project]
+name = "repark"
+# The current delivery phase, as STATUS.md states it. The validator requires the sentence
+# "<phase> is <phase_state>" to appear in STATUS.md's "## Current milestone" section, and
+# `release_status` to appear in its "## Release state" section — so moving the milestone
+# forward in STATUS.md without updating this file is a red gate, and vice versa. (Substring
+# agreement: it proves the claim is PRESENT in the SSOT, not that a newer claim is absent —
+# retiring the old sentence in STATUS.md is what makes a stale manifest red.)
+phase = "milestone one"
+phase_state = "complete"
+release_status = "pre-alpha"
+
+# The three canonical gate commands. Each must name a `make` target that exists in the
+# Makefile — a renamed or deleted target fails the gate instead of rotting in the docs.
+# What each one covers is documented in DEVELOPMENT.md, not restated here.
+[project.gates]
+canonical = "make ci"
+completion = "make verify"
+pre_pr = "make preflight"
+
+# The documentation spine. Each path must exist; archiving or moving one of these documents
+# without updating this index is a red gate.
+[documentation]
+contract = "AGENTS.md"
+architecture = "ARCHITECTURE.md"
+development = "DEVELOPMENT.md"
+status = "STATUS.md"
+testing = "docs/testing.md"
+
+# ---------------------------------------------------------------------------------------
+# Components.
+#
+#   path    where the component lives, relative to the repository root.
+#   layer   the crate's layer, spelled exactly as `scripts/check_crate_dag.py` names its tier.
+#           Required for `delivered`; ABSENT for `planned` — a layer claim is a delivered-crate
+#           fact, and the dependency-policy SSOT assigns it when the crate actually lands.
+#   status  `delivered` (it exists, it is a workspace member, it is built and gated) or
+#           `planned` (a named home whose code has not arrived; nothing may exist at its path).
+#
+# Every Cargo workspace member must appear here, and every `delivered` component must be a
+# Cargo workspace member — the inventory cannot drift from the workspace in either direction.
+# The `planned` rows mirror AGENTS.md's change-location guide: they are extracted only when
+# their code arrives, never created ahead of a driver.
+# ---------------------------------------------------------------------------------------
+
+[components.repark-common]
+path = "crates/repark-common"
+layer = "foundation"
+status = "delivered"
+
+[components.repark-iceberg]
+path = "crates/repark-iceberg"
+layer = "table service"
+status = "delivered"
+
+[components.repark-core]
+path = "crates/repark-core"
+layer = "engine session"
+status = "delivered"
+
+[components.repark-functions]
+path = "crates/repark-functions"
+layer = "surface crates"
+status = "delivered"
+
+[components.repark-ta]
+path = "crates/repark-ta"
+layer = "surface crates"
+status = "delivered"
+
+[components.repark-ml]
+path = "crates/repark-ml"
+layer = "surface crates"
+status = "delivered"
+
+[components.repark-spark]
+path = "crates/repark-spark"
+layer = "surface crates"
+status = "delivered"
+
+[components.repark-sql]
+path = "crates/repark-sql"
+layer = "surface crates"
+status = "delivered"
+
+[components.repark-python]
+path = "crates/repark-python"
+layer = "bindings"
+status = "delivered"
+
+[components.repark-exec]
+path = "crates/repark-exec"
+status = "planned"
+
+[components.repark-io]
+path = "crates/repark-io"
+status = "planned"
+
+[components.repark-connect]
+path = "crates/repark-connect"
+status = "planned"

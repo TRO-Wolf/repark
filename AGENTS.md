@@ -63,8 +63,11 @@ The change-location guide: which home owns which kind of change. `Status: delive
 today; `Status: deferred` homes do **not** exist yet and are extracted only when their code arrives
 — do not create one ahead of its driver. The nine delivered crates (including `repark-common`,
 `repark-functions`, `repark-ta`, which are not change-destination rows here) are inventoried in the
-live workspace `Cargo.toml` (the authoritative list); see [STATUS.md](STATUS.md) for delivery state
-and [crates/map.md](crates/map.md) for navigation.
+live workspace `Cargo.toml` (the authoritative list) and mirrored — path, layer and delivery status,
+mechanically kept honest by `make check-manifest` — in [repo-manifest.toml](repo-manifest.toml); see
+[STATUS.md](STATUS.md) for delivery state and [crates/map.md](crates/map.md) for navigation. The three
+`crates/` `deferred` rows below are the manifest's `planned` components: the gate reds if anything
+appears at their path while they are still declared planned.
 
 | You will want to change… | Home | Status |
 |---|---|---|
@@ -122,7 +125,10 @@ never silently skip locally (uvx provisions the pinned tool on demand).
   (`collect`/`to_arrow`, value AND type — never only `show`); one representative case is not the
   claim. Full contract: [docs/testing.md](docs/testing.md).
 - **`map.md` in every directory, updated in the same change.** Enforced by
-  `scripts/check_map_md.sh` (pre-commit). New directory → new `map.md`, no judgment call.
+  `scripts/check_map_md.sh` (pre-commit). New directory → new `map.md`, no judgment call. Maps
+  are **hand-written**: there is no generator, and the one piece of `map.md` automation
+  (`check_manifest.py`'s crate-root consistency rule) only *checks* that a map exists and agrees
+  with `repo-manifest.toml` — it never writes, scaffolds, or rewrites one.
 - **Rust house style:** 91-`=` banner doc blocks on section fns; one blank line between top-level
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
@@ -136,11 +142,25 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     exception-taxonomy module (`crates/repark-python/src/lib.rs`), because a per-call-site
     `#[expect]` cannot reach inside `pyo3::create_exception!`'s macro expansion (proven both
     ways, p3c ledger P-4/P-5); the lint stays live for the rest of that crate.
-  - *Crate layering* (`scripts/check_crate_dag.py` — the tier-map SSOT) and *crate-root manifests*
+  - *Crate dependency policy* (`scripts/check_crate_dag.py` — the SSOT for the tier map, the
+    crate roles, and the explicit allowed-edge table: every internal edge with the dependency
+    kinds it may take and why it exists; an undeclared edge, a promoted kind, or a forbidden
+    shape — door↔door, anything→bindings, foundation→internal, capability→door — is red, and the
+    rules re-apply to the declaration itself so writing a forbidden edge down cannot legalize it)
+    and *crate-root manifests*
     (`scripts/check_lib_rs.py` — ceilings + EXCEPTIONS SSOT) are **armed** since phase-1 PR-A,
-    dual-wired Makefile + ci.yml. The remaining v1 gates (Python thinness / `check_lib_py`, build
-    profiles) **return with the code they gate** — see [docs/port/PLAN.md](docs/port/PLAN.md).
-    Do not re-invent them ahead of the port; re-home v1's scripts.
+    dual-wired Makefile + ci.yml.
+  - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
+    inventory, phase, canonical gate commands and documentation index are machine-readable and
+    validated against the workspace, the Makefile, STATUS.md, the declared documents and the
+    crate-root `map.md` files. Adding a Cargo member without declaring it, letting a declared
+    document or `make` target rot, or moving the milestone in STATUS.md alone is a red gate. The
+    manifest is a MIRROR — its `layer` values are checked against the crate-DAG SSOT, never the
+    other way round — and its `map.md` rule **checks** hand-written maps; nothing generates one.
+  - The few v1 helper scripts not yet re-homed are listed in [scripts/map.md](scripts/map.md)
+    "Not ported yet"; each **returns with the code it gates** (see
+    [docs/port/PLAN.md](docs/port/PLAN.md)). Do not re-invent one ahead of its driver; re-home
+    v1's script.
 - **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;
