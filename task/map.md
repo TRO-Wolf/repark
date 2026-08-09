@@ -2,128 +2,68 @@
 
 ## Purpose
 
-Session-start state: in-flight work and the DO / DO-NOT rules in force. Edit these as work
-lands; per-unit ledgers accumulate here as units execute (same contract as the private v1
-repository's `task/` directory).
+Working state for **current** work: the rules in force, the ledger of each unit in flight, and the
+acceptance inputs that gates still read. Finished campaigns do not accumulate here — they are
+archived under [../docs/history/](../docs/history/map.md) once their rules have been promoted to a
+current document.
+
+Current state (release, delivered surface, what happens next) is **[../STATUS.md](../STATUS.md)**,
+not this directory.
 
 ## Contents
 
-- [todo.md](todo.md) — the phase-2 slate in flight plus the phase-3 and post-milestone-one
-  backlog; execution state only (phase definitions live in
-  [../docs/port/PLAN.md](../docs/port/PLAN.md)).
+- [todo.md](todo.md) — a **pointer only**: the live backlog is [../STATUS.md](../STATUS.md), and a
+  unit's working plan is its own ledger. The file keeps its name because live code, docs and one
+  runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
-  delete). Seeded 2026-08-06 from v1.
-- [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md) — unit ledger for phase-1 PR-B
-  (repark-iceberg declared-rename unit: fidelity + census evidence, forced-edit class 6 spans,
-  fork-audit findings, deny/audit restorations).
-- [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md) — unit ledger for phase-1
-  PR-A (workspace arming + repark-common + gate arming): scope, commit plan, gate results,
-  provocation proofs.
-- [p2a-functions-ledger.md](p2a-functions-ledger.md) — unit ledger for phase-2 PR-1
-  (repark-functions verbatim port + phase-2 docs): scope, declared edit classes, the 62-test
-  identity-map census obligation; IN FLIGHT.
-- [p3a-arming-ledger.md](p3a-arming-ledger.md) — unit ledger for phase-3 PR-1 (design + brief
-  in-repo, crate-DAG tier-4 pre-declaration, rust CI job split, testing.md row-2 note,
-  dialect doc rider): scope, required-check transition, provocation proofs.
-- [p3b-ml-ledger.md](p3b-ml-ledger.md) — unit ledger for phase-3 PR-2 (`repark-ml` verbatim
-  port + workspace wiring + the EC-7 map rewrite): scope, the 34-test identity census with its
-  empty `--list` diff, gate results; IN FLIGHT.
-- [p3d-parity-ledger.md](p3d-parity-ledger.md) — unit ledger for phase-3 PR-4
-  (`python/repark-parity` verbatim port + the additive `--classic` cohort + the NEW report
-  comparator + `docs/port/census.md` + the uv workspace return): scope, the collect-only
-  verbatim-port census obligation, the declared new tests, gate results; IN FLIGHT.
-- [p3g-close-ledger.md](p3g-close-ledger.md) — unit ledger for phase-3 PR-7 (MILESTONE ONE):
-  the v2 acceptance census, the four byte-flat comparator verdicts, the reconciliation, and the
-  user-side milestone-one declaration items.
-- [p3f-tier2-ledger.md](p3f-tier2-ledger.md) — unit ledger for phase-3 PR-6 (tier-2 CI:
-  parity-live ported+armed, aws-acceptance net-new with the OIDC/environment/no-delete posture,
-  docs/tier2-aws.md runbook): scope, out-of-scope operator items, gate results.
-- [p3e-facade-ledger.md](p3e-facade-ledger.md) — unit ledger for phase-3 PR-5 (`python/repark`,
-  the facade wheel + its 126-file suite): the two-commit plan, the line-by-line **EC-9 hygiene
-  scrub** table, the per-node **EC-4 adjudication** (where each exception is raised), the
-  collect-only identity census with its verbatim diff, the §6.3 wheel-proof clause table,
-  **finding B-1** — one attributed pass→fail movement (`datafusion.runtime.memory_limit` refused
-  at session build), root-caused to a repark-core regression and FIXED in the orchestrator pass —
-  and the **fixer pass** (the `--junit` ledger id-space fix, the untracked pg run-output, the
-  refreshed reconciliation record, the published-literal disclosure decision, and the four
-  `.github/`/Makefile findings handed to the orchestrator); IN FLIGHT.
-- [p3c-binding-ledger.md](p3c-binding-ledger.md) — unit ledger for phase-3 PR-3
-  (`crates/repark-python`, the PyO3 binding): the six applied edit classes with their per-class
-  file lists (EC-1 re-home + dep collapse + the type-identity guard, EC-2 the door-installed
-  builder and its explicit non-sites, EC-3 the three refuse-arms, EC-5 `EngineRuntime`
-  type→core/instance→binding, EC-6 the discharged `docs/ml-design.md` rider, EC-10 the
-  `check_lib_rs` row), the two `--list` identity censuses with their verbatim diffs and six
-  declared additions, and the gate table including BOTH panic-ban halves; IN FLIGHT.
-- [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) — unit ledger for phase-2 PR-2
-  (repark-spark skeleton: spine port, temporary refuse arms, `SparkDialect`/`SparkExtension`
-  seams, G8 subquery-guard pin, deferred-#1 landing; census PARTIAL — closes PR-3b); IN
-  FLIGHT.
-- [p2c-spark-ddl-ledger.md](p2c-spark-ddl-ledger.md) — unit ledger for phase-2 PR-3a
-  (repark-spark DDL restoration: ctas/create_table/alter/namespace_ddl handlers, catalog_ops
-  TRIM restoration, refuse-arm replacement, deferred rows #2/#4–#7 landing; staged census —
-  closes PR-3b); IN FLIGHT.
-- [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md) — unit ledger for phase-2 PR-3b
-  (repark-spark DML + refs: merge/insert_overwrite/ref_ddl/call, MoR-valve hoist to
-  repark-iceberg, lib-root battery move-only port, 334-name census CLOSE, deferred row #3);
-  IN FLIGHT.
-- [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) — unit ledger for phase-2 PR-5 (the ANSI
-  door, milestone 1: NEW code — no census; `AnsiDialect` + guard set + wrong-door sniff + the
-  curated `WITH (…)` vocabulary + Q15 routing; the R1/R2 day-1 spikes; the Q13 surface registry
-  and both doors' matrix row counts); IN FLIGHT.
-- [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) — unit ledger for phase-2 PR-6 (the ANSI
-  door, milestone 2 — the door CLOSES: ALTER/MERGE/time-travel/branch-tag DDL/the refuse set;
-  the repark-core R2 config fix that unblocks Q8 introspection; the Q11 TA toll; the Q13/G5
-  two-session cross-door protocol; the `session-api.md` seam freeze and the ADR-0002
-  design-pass discharge; final matrix counts for BOTH doors); IN FLIGHT.
-- [p2e-ta-ledger.md](p2e-ta-ledger.md) — unit ledger for phase-2 PR-4 (repark-ta: verbatim
-  crate port incl. the 148 `.bin` goldens, NEW `TaExtension`, `SparkExtension` composition
-  restoring the p2b TA-omission rider, two-pass TA census, deferred rows #8–#14 landing —
-  manifest remainder 4); IN FLIGHT.
+  delete). Seeded 2026-08-06 from the private v1 repository.
 - [fd3-ledger.md](fd3-ledger.md) — unit ledger for **FD-3** of the Agent-Agnostic Front-Door
   campaign (mechanize structural truth: `repo-manifest.toml` + the `check_manifest` validator,
   the crate-DAG upgrade to explicit allowed edges with dependency kinds, and the manifest↔map
   consistency rule): scope, design decisions, gate results, and the provocation proofs for both
   new/upgraded gates.
-- [port/](port/map.md) — port-execution accounting
-  ([port/deferred-tests.md](port/deferred-tests.md): the deferred-test manifest and its
-  reconciliation rule).
+- [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
+  reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
+  deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
+  mirror additions ledger ([port/added-python-tests.txt](port/added-python-tests.txt)). The census
+  comparator still subtracts these, so they are not history.
+- [census/](census/map.md) — **evidence**: the recorded census runs, `baseline-fc3f48102/` (the port
+  pin) and `v2-a5be8a7/` (the acceptance run). Never hand-edited; a re-run replaces a whole
+  directory in one commit.
+
+## Where the port ledgers went
+
+The seventeen `p1*` / `p2*` / `p3*` unit ledgers, the four phase briefs and the port's `todo.md`
+execution log moved to [../docs/history/port-v2/](../docs/history/port-v2/map.md) on **2026-08-09**
+(Front-Door FD-4), keeping their basenames. A citation of `task/p3e-facade-ledger.md` — a few
+survive in Rust doc comments — means
+[../docs/history/port-v2/p3e-facade-ledger.md](../docs/history/port-v2/p3e-facade-ledger.md), and so
+on. Nothing was lost in the move; the audit is
+[../docs/history/port-v2/promotion-ledger.md](../docs/history/port-v2/promotion-ledger.md).
 
 ## I want to...
 
 | ...do this | go to |
 |---|---|
-| See what's in flight | [todo.md](todo.md) |
+| See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
+| Start a new unit's ledger | copy the shape of [fd3-ledger.md](fd3-ledger.md); link it from this map in the same commit |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [fd3-ledger.md](fd3-ledger.md) |
-| See PR-A's gate evidence / provocation proofs | [p1a-workspace-arming-ledger.md](p1a-workspace-arming-ledger.md) |
-| See PR-B's fidelity / census / fork-audit evidence | [p1b-repark-iceberg-ledger.md](p1b-repark-iceberg-ledger.md) |
-| See the phase-2 PR-1 scope / edit classes | [p2a-functions-ledger.md](p2a-functions-ledger.md) |
-| See the phase-2 PR-2 scope / refuse-arm riders | [p2b-spark-skeleton-ledger.md](p2b-spark-skeleton-ledger.md) |
-| See the phase-2 PR-3a restoration checklist | [p2c-spark-ddl-ledger.md](p2c-spark-ddl-ledger.md) |
-| See the phase-2 PR-3b census close / exclusions | [p2d-spark-dml-ledger.md](p2d-spark-dml-ledger.md) |
-| See the phase-2 PR-5 design-ruling application / spike results / surface-matrix counts | [p2f-ansi-m1-ledger.md](p2f-ansi-m1-ledger.md) |
-| See the phase-2 PR-4 TA census / rider discharge | [p2e-ta-ledger.md](p2e-ta-ledger.md) |
-| See the phase-2 PR-6 per-Q delivery record / cross-door session profiles / final matrix counts | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) |
-| Find out why `information_schema` used to be off, and what fixed it | [p2g-ansi-m2-ledger.md](p2g-ansi-m2-ledger.md) "The R2 core fix" |
-| See the phase-3 PR-2 `repark-ml` identity census / map-rewrite rationale | [p3b-ml-ledger.md](p3b-ml-ledger.md) |
-| See the phase-3 PR-4 parity port census / comparator design record | [p3d-parity-ledger.md](p3d-parity-ledger.md) |
-| See the phase-3 PR-5 facade port: hygiene scrub, deferral adjudication, wheel proof | [p3e-facade-ledger.md](p3e-facade-ledger.md) |
-| Find out why a facade test is missing | [port/deferred-python-tests.txt](port/deferred-python-tests.txt) + [p3e-facade-ledger.md](p3e-facade-ledger.md) "EC-4" |
+| See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
+| Feed the census comparator its allowlists | [port/map.md](port/map.md) |
 | Run or compare a census | [../docs/port/census.md](../docs/port/census.md) |
-| See the phase-3 PR-3 binding edit classes / the two identity censuses / the panic-ban carve-out commands | [p3c-binding-ledger.md](p3c-binding-ledger.md) |
-| Find out why `read_excel` / `read_postgres` refuse | [p3c-binding-ledger.md](p3c-binding-ledger.md) "EC-3" |
-| Read the brief driving phase 3 | [../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) |
-| Read the brief driving phase 2 | [../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) |
-| See which v1 tests are deferred | [port/deferred-tests.md](port/deferred-tests.md) |
-| Read the port plan behind the backlog | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
-| Read the brief driving phase 1 | [../briefs/phase-1-engine-core.md](../briefs/phase-1-engine-core.md) |
+| Read the port's record (briefs, unit ledgers, retrospectives) | [../docs/history/port-v2/README.md](../docs/history/port-v2/README.md) |
+| Read the port plan the phases executed | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../AGENTS.md](../AGENTS.md) (durable contract); these trackers are the moving state.
-- Unit ledgers: one `<unit>-ledger.md` per delivered unit, with gate evidence and provocation
-  proofs per [../docs/testing.md](../docs/testing.md), linked from this map in the same commit.
+- Related: [../AGENTS.md](../AGENTS.md) (the durable contract) and [../STATUS.md](../STATUS.md)
+  (current state); this directory holds the moving parts of work in flight.
+- Unit ledgers: one `<unit>-ledger.md` per delivered unit, with gate evidence and provocation proofs
+  per [../docs/testing.md](../docs/testing.md), linked from this map in the same commit. When a
+  campaign closes, its ledgers are archived under [../docs/history/](../docs/history/map.md) after a
+  promotion audit — never deleted.
 
 ## Debug
 
@@ -131,5 +71,7 @@ repository's `task/` directory).
   writes it (CWD-relative) on every facade run. It is gitignored on purpose — a run output, not a
   record. Do not `git add` it.
 - If work and trackers disagree, the code is truth — update the tracker.
-- Stale checkboxes are a known failure mode (lessons.md, 2026-08-06): verify against source and
-  git history before scoping from todo.md alone.
+- A link into `task/p*-ledger.md` fails: see "Where the port ledgers went" above.
+- Looking for a backlog item that is not in [../STATUS.md](../STATUS.md)? Check
+  [../docs/history/port-v2/promotion-ledger.md](../docs/history/port-v2/promotion-ledger.md) — if it
+  was live at archival, that table says where it went.

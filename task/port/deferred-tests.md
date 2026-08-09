@@ -83,7 +83,7 @@ uncertain ⇒ deferred — no test guessed green.
 phase-2 PR (2 / 3a / 3b per the blocking surface); the 7 ta rows land with phase-2 PR-4; the
 3 read_postgres + 1 read_excel rows move to the explicit post-milestone-one bucket in
 [../todo.md](../todo.md) — decision 2026-08-07, brief
-[../../briefs/phase-2-sql-doors.md](../../briefs/phase-2-sql-doors.md) §4.)*
+[phase-2-sql-doors.md](../../docs/history/port-v2/phase-2-sql-doors.md) §4.)*
 
 ~~Also deferred with the phase-2 statement router (hoist-adjacent, from the v1 SQL crate's
 `time_travel` module — the SQL-TEXT half that did not hoist): the token-scan / SQL-rewrite
@@ -97,14 +97,14 @@ Row-close note (2026-08-07 — phase-2 PR-2): deferred row #1 landed as
 `repark-spark/tests/session_extension.rs::temp_view_then_sql_runs_the_spark_function_shim`
 against the real `Session + SparkExtension + SparkDialect`; the repark-spark census itself
 stays open until PR-3b (partial; closes PR-3b —
-[../p2b-spark-skeleton-ledger.md](../p2b-spark-skeleton-ledger.md)).
+[docs/history/port-v2/p2b-spark-skeleton-ledger.md](../../docs/history/port-v2/p2b-spark-skeleton-ledger.md)).
 
 Row-close note (2026-08-07 — phase-2 PR-3b): deferred row #3
 (`session_sql_bare_dml_applies_eagerly`) landed as
 `repark-spark/tests/dml_sessions.rs::session_sql_bare_dml_applies_eagerly` (same real-session
 assembly as `ddl_sessions.rs`; memory catalog only — AWS-free; v1 body faithful with
 `ReparkSession::new()` → the door-installed builder). With the repark-sql census closed at
-PR-3b (334 ported names, empty sorted diff — [../p2d-spark-dml-ledger.md](../p2d-spark-dml-ledger.md)),
+PR-3b (334 ported names, empty sorted diff — [docs/history/port-v2/p2d-spark-dml-ledger.md](../../docs/history/port-v2/p2d-spark-dml-ledger.md)),
 the manifest remainder is exactly: 7 ta rows (phase-2 PR-4) + 4 post-milestone-one
 postgres/excel rows.
 
@@ -118,7 +118,7 @@ door-installed builder and `repark_catalog::memory_catalog` →
 STAYS deferred: its CTAS setup is now unblocked, but the bare-`INSERT` eager-DML routing it
 pins is the PR-3b DML arm. Session-tier remainder: 1 Spark-door row (#3, PR-3b) + 7 ta rows
 (PR-4) + 4 post-milestone-one rows. Ledger:
-[../p2c-spark-ddl-ledger.md](../p2c-spark-ddl-ledger.md).
+[docs/history/port-v2/p2c-spark-ddl-ledger.md](../../docs/history/port-v2/p2c-spark-ddl-ledger.md).
 
 Row-close note (2026-08-08 — phase-2 PR-4): deferred rows #8-#14 (the seven `ta_window::sql_route_*`
 cases) landed together as `repark-spark/tests/ta_window.rs`, ported from v1
@@ -134,7 +134,7 @@ names unchanged. The UDFs reach the session through `SparkExtension`'s composed
 
 **Manifest remainder is now exactly 4 rows**, all post-milestone-one by explicit decision
 (2026-08-07, brief §4): the 3 `read_postgres_*` rows + `read_excel_basic_fixture_round_trips`.
-Every phase-2 row is closed. Ledger: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).
+Every phase-2 row is closed. Ledger: [docs/history/port-v2/p2e-ta-ledger.md](../../docs/history/port-v2/p2e-ta-ledger.md).
 
 ### Python — the facade suite (from v1 `python/repark/tests`)
 
@@ -184,14 +184,14 @@ reconciliation rule and one post-milestone-one bucket.
 
 This section is deliberately **outside** the reconciliation arithmetic above: the rows here are
 obligations owed to [../../docs/testing.md](../../docs/testing.md), not v1 tests awaiting a port,
-so they are never counted in `(ported ∪ deferred)`. They exist because
-[../../CLAUDE.md](../../CLAUDE.md)'s precedence chain puts the testing contract **above** any
+so they are never counted in `(ported ∪ deferred)`. They exist because the precedence chain in
+[../../AGENTS.md](../../AGENTS.md) puts the testing contract **above** any
 design document — a design that waives a contract rule does not discharge it; the waiver has to be
 recorded here, with an owner, or it is invisible.
 
 | obligation | owed by | owed to | discharged by | recorded |
 |---|---|---|---|---|
-| **Real-artifact coverage for `crates/repark-python`** — docs/testing.md "Boundary changes need a real-artifact test (applies from phase 3)": the whole crate is boundary code (PyO3 seams, Arrow C-stream export, IPC ingest, abi3 surface). PR-3 lands it with **in-process** coverage only: `crates/repark-python/tests/bindings.rs` boots embedded CPython through the `auto-initialize` dev-dep in the SAME build, which is structurally the case that rule exists to exclude ("when producer and consumer compile together … layout, symbol, and lifecycle mismatches are structurally invisible"). No wheel is buildable from PR-3 — `python/repark` does not exist until PR-5 — so the obligation cannot be discharged in PR-3 by construction. | phase-3 PR-3 (`crates/repark-python`, whole crate) | docs/testing.md:114 | phase-3 **PR-5** (the wheel): `docs/design/python-facade.md` §9 PR-5, "The real-artifact rule is discharged here for the first time" — at minimum the built-wheel import smoke, plus a behavior test through the installed wheel for the Arrow C-stream export path | 2026-08-08, phase-3 PR-3 verify panel. Ledger: [../p3c-binding-ledger.md](../p3c-binding-ledger.md) "Findings from the verify panel", F-7 |
+| **Real-artifact coverage for `crates/repark-python`** — docs/testing.md "Boundary changes need a real-artifact test (applies from phase 3)": the whole crate is boundary code (PyO3 seams, Arrow C-stream export, IPC ingest, abi3 surface). PR-3 lands it with **in-process** coverage only: `crates/repark-python/tests/bindings.rs` boots embedded CPython through the `auto-initialize` dev-dep in the SAME build, which is structurally the case that rule exists to exclude ("when producer and consumer compile together … layout, symbol, and lifecycle mismatches are structurally invisible"). No wheel is buildable from PR-3 — `python/repark` does not exist until PR-5 — so the obligation cannot be discharged in PR-3 by construction. | phase-3 PR-3 (`crates/repark-python`, whole crate) | docs/testing.md:114 | phase-3 **PR-5** (the wheel): `docs/design/python-facade.md` §9 PR-5, "The real-artifact rule is discharged here for the first time" — at minimum the built-wheel import smoke, plus a behavior test through the installed wheel for the Arrow C-stream export path | 2026-08-08, phase-3 PR-3 verify panel. Ledger: [docs/history/port-v2/p3c-binding-ledger.md](../../docs/history/port-v2/p3c-binding-ledger.md) "Findings from the verify panel", F-7 |
 
 **PR-5's acceptance is blocked on this row.** If PR-5 lands without a wheel-crossing test, this
 row does not close and the phase-3 retrospective must carry it forward with a named owner.
@@ -200,7 +200,7 @@ row does not close and the phase-3 retrospective must carry it forward with a na
 `python/repark` and the whole facade suite is executed against it in a **bare interpreter outside
 the uv workspace**, installed by explicit file path — producer and consumer no longer compile
 together, which is the exact structural gap the rule names. Evidence in
-[../p3e-facade-ledger.md](../p3e-facade-ledger.md): the import smoke, the recorded
+[docs/history/port-v2/p3e-facade-ledger.md](../../docs/history/port-v2/p3e-facade-ledger.md): the import smoke, the recorded
 `(node id → outcome)` multiset over 2,505 JUnit rows, and behavior across the boundary on the
 Arrow C-stream export path (`to_arrow` / `collect` value-and-type assertions run inside the
 2,459 passing rows, not merely `show`). The obligation closes with **no residual open item**:
@@ -219,7 +219,7 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   this repo's sorted per-package `--list` = 243 (241 `repark_iceberg::*` +
   2 `repark_common::*` from PR-A); diff against the generated rename map: **EMPTY**.
   (ported 241 ∪ deferred 0) = v1 PR-B cone total 241. Evidence:
-  [../p1b-repark-iceberg-ledger.md](../p1b-repark-iceberg-ledger.md). PR-B additionally adds
+  [docs/history/port-v2/p1b-repark-iceberg-ledger.md](../../docs/history/port-v2/p1b-repark-iceberg-ledger.md). PR-B additionally adds
   one NEW fork-pin proof test (not a ported name; outside the census).
 - **2026-08-06 — PR-C (repark-core):** v1 session-tier total at pin
   `fc3f48102e437e2843ded460bc161edb434dac93` = 86 (tests.rs 49 + catalog_config 26 +
@@ -230,7 +230,7 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   repo's `--list` session cone: **EMPTY**. Full-workspace `--list` = **321** = PR-B's 244
   + 68 ported + 2 hoisted time_travel parser pins + 7 NEW seam/gate tests (dialect 2,
   extension 2, aws_gate 3 — additive, outside the ported census). Zero `#[ignore]`.
-  Evidence: [../p1c-repark-core-ledger.md](../p1c-repark-core-ledger.md).
+  Evidence: [docs/history/port-v2/p1c-repark-core-ledger.md](../../docs/history/port-v2/p1c-repark-core-ledger.md).
 - **2026-08-08 — phase-2 PR-4 (repark-ta):** v1 `cargo test -p repark-ta -- --list` at pin
   `fc3f48102e437e2843ded460bc161edb434dac93` = **146**; this repo's = **146**; sorted diff:
   **EMPTY**. The crate carries an optional `datafusion` feature, so a second pass pins the
@@ -240,7 +240,7 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   `extension::tests::ta_extension_configure_is_the_trait_default_pass_through`) — additive,
   outside the ported census. Plus the 7 `ta_window::sql_route_*` rows ported into
   `repark-spark/tests/ta_window.rs` (names unchanged, all passing). Deferred remainder: 4
-  (post-milestone-one). Zero `#[ignore]`. Evidence: [../p2e-ta-ledger.md](../p2e-ta-ledger.md).
+  (post-milestone-one). Zero `#[ignore]`. Evidence: [docs/history/port-v2/p2e-ta-ledger.md](../../docs/history/port-v2/p2e-ta-ledger.md).
 - **2026-08-08 — phase-3 PR-5 (python/repark facade suite):** v1 `pytest --collect-only -q` at
   pin `fc3f48102` = **2,509** node ids (the recorded oracle,
   `task/census/baseline-fc3f48102/facade/collected.txt`); this repo's collection against the
@@ -257,7 +257,7 @@ Each phase-1 PR appends a dated entry here: the pinned-SHA v1 `--list` count, th
   `20d1665` on this branch, closing the movement.) Skip count unchanged (46 → 46). The
   `--junit` comparator run over these two reports, with this ledger as its only subtraction
   input, is byte-identical and exits 0. Zero `#[ignore]`, zero `--skip`, zero commented-out
-  tests. Evidence: [../p3e-facade-ledger.md](../p3e-facade-ledger.md).
+  tests. Evidence: [docs/history/port-v2/p3e-facade-ledger.md](../../docs/history/port-v2/p3e-facade-ledger.md).
 
 
 ## Declared facade-census ADDITIONS (v2-only tests)

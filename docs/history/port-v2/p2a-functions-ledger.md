@@ -1,9 +1,15 @@
 # Unit ledger — P2A: repark-functions + phase-2 docs
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-2 PR-1 · **Brief:**
-[../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-1" · **Design:**
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #8)
+[phase-2-sql-doors.md](phase-2-sql-doors.md) §1 "PR-1" · **Design:**
+[docs/design/sql-doors.md](../../design/sql-doors.md) · **Port-Source:** v1 `main` @
+`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #8; archived 2026-08-09)
 
 ## Scope
 
@@ -39,10 +45,10 @@ No other edit class is authorized; anything else is a STOP.
 ## Census obligation
 
 62 test names at the pin (`cargo test -p repark-functions -- --list`, regenerated per
-[../docs/testing.md](../docs/testing.md) — never hand-written). Identity map:
+[docs/testing.md](../../testing.md) — never hand-written). Identity map:
 `repark_functions::` prefix unchanged. Acceptance: name-by-name sorted diff of the pin list
 against this repo's `--list` is **EMPTY**; reconciliation entry appended to
-[port/deferred-tests.md](port/deferred-tests.md).
+[task/port/deferred-tests.md](../../../task/port/deferred-tests.md).
 
 ## Gate results (integrator fills)
 

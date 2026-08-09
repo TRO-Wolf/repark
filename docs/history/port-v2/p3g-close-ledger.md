@@ -1,9 +1,16 @@
 # Unit ledger — P3G: phase-3 close = milestone one
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-3 PR-7 · **Brief:**
-[../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) §1 "PR-7" · **Design:**
-[../docs/design/python-facade.md](../docs/design/python-facade.md) §6.6 · **Port-Source:** v1
-`main` @ `fc3f48102` · **Status:** IN FLIGHT (acceptance PASSED — all four cohorts byte-flat, exit 0)
+[phase-3-python-facade.md](phase-3-python-facade.md) §1 "PR-7" · **Design:**
+[docs/design/python-facade.md](../../design/python-facade.md) §6.6 · **Port-Source:** v1
+`main` @ `fc3f48102` · **Status:** DELIVERED — merged 2026-08-08 (#23);
+acceptance PASSED — all four cohorts byte-flat, exit 0; archived 2026-08-09
 
 ## Scope
 

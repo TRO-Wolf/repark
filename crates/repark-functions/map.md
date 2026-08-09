@@ -25,7 +25,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
-  `spark_date_shim_functions()` + `analyzer_rules()` (installed by `repark-session` on every
+  `spark_date_shim_functions()` + `analyzer_rules()` (installed by the session's
+  `SessionExtension` hook on every
   context) + the shared `shim_udf_boilerplate!` macro.
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
@@ -70,7 +71,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 | Check what datafusion-spark already provides | its installed source (`hour`/`last_day`/`date_add`/…); don't duplicate |
 | Fix a Spark-semantics mismatch in a *function* | the matching shim module; lean on `datafusion-spark` where it is correct |
 | Tune plan-time array expansion ceiling / local DDL conf | `src/cardinality.rs` (`ReparkSqlSettings`, `MAX_ARRAY_ELEMENTS_KEY`)
-| Fix a Spark-semantics mismatch in an *operator* (`/`, `%`, `[]`, ORDER BY defaults) | `src/analyzer.rs` (plan-level, type-aware) — ORDER BY defaults live in `repark-sql::spark_ast` (AST-level) |
+| Fix a Spark-semantics mismatch in an *operator* (`/`, `%`, `[]`, ORDER BY defaults) | `src/analyzer.rs` (plan-level, type-aware) — ORDER BY defaults live in `repark-spark::spark_ast` (AST-level) |
 
 ## Component contract
 

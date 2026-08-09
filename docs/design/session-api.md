@@ -268,7 +268,7 @@ success criterion this design was checked against.
 | O-6 | Frame-handle newtype over DataFusion `DataFrame` | first tagged release (API-forever clock) |
 | O-7 | Fully-async one-phase `build()` | server milestone, only if session-open latency demands it |
 
-## 9. Open items carried into the execution brief ([briefs/phase-1-engine-core.md](../../briefs/phase-1-engine-core.md))
+## 9. Open items carried into the execution brief ([phase-1-engine-core.md](../history/port-v2/phase-1-engine-core.md), archived)
 
 - **Port-source pin (R-1):** v1 main vs the r27 branch differ in the phase-1 cone only by the
   move-only merge-module split; the design assumes the split shape. The brief pins one SHA before

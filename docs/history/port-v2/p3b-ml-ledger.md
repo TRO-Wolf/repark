@@ -1,10 +1,16 @@
 # Unit ledger — P3B: repark-ml (the PR-2 verbatim port + identity census)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-3 PR-2 · **Brief:**
-[../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) §1 "PR-2" · **Design:**
-[../docs/design/python-facade.md](../docs/design/python-facade.md) §1 (edit classes: `none
+[phase-3-python-facade.md](phase-3-python-facade.md) §1 "PR-2" · **Design:**
+[docs/design/python-facade.md](../../design/python-facade.md) §1 (edit classes: `none
 (verbatim)`), §2.1 (tier row), §4 Q3 (in-scope ruling), §9 PR-2 · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** IN FLIGHT · **Stacked on:** phase-3 PR-1
+`fc3f48102` · **Status:** DELIVERED — merged 2026-08-08 (#18); archived 2026-08-09 · **Stacked on:** phase-3 PR-1
 ([p3a-arming-ledger.md](p3a-arming-ledger.md))
 
 ## Scope

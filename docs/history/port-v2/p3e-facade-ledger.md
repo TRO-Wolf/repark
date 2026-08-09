@@ -1,12 +1,18 @@
 # Unit ledger — P3E: `python/repark` (the facade wheel + its suite) (PR-5)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-3 PR-5 · **Brief:**
-[../briefs/phase-3-python-facade.md](../briefs/phase-3-python-facade.md) §1 "PR-5" · **Design:**
-[../docs/design/python-facade.md](../docs/design/python-facade.md) §2.3 (the Python tree + the
+[phase-3-python-facade.md](phase-3-python-facade.md) §1 "PR-5" · **Design:**
+[docs/design/python-facade.md](../../design/python-facade.md) §2.3 (the Python tree + the
 load-bearing ruff ignores), §3 EC-4 / EC-7 / EC-9, §6.3 (the full-extras facade cohort), §6.5
 (reconciliation), §8 (testing discipline), §9 PR-5 · **Port-Source:** the private v1 engine
-repository at the frozen port pin `fc3f48102` (read-only worktree) · **Status:** IN FLIGHT —
-**carries one BLOCKING finding (B-1) for the panel** · **Depends on:** PR-3 (the binding) and
+repository at the frozen port pin `fc3f48102` (read-only worktree) · **Status:** DELIVERED — merged 2026-08-08 (#21); B-1 was
+root-caused and FIXED before the merge (see "Orchestrator pass"); archived 2026-08-09 · **Depends on:** PR-3 (the binding) and
 PR-4 (the parity package + the recorded baseline).
 
 ## Scope
@@ -97,8 +103,8 @@ raised*. Verdicts:
 | `test_pg_acceptance.py`, `test_aws_acceptance.py` | **PORT (skip)** | Env-gated; skip for the recorded reason with every gate variable unset. |
 
 **Result: 12 deferred node ids.** Allowlist:
-[port/deferred-python-tests.txt](port/deferred-python-tests.txt); prose:
-[port/deferred-tests.md](port/deferred-tests.md) "Python — the facade suite". EC-4 requires the
+[port/deferred-python-tests.txt](../../../task/port/deferred-python-tests.txt); prose:
+[task/port/deferred-tests.md](../../../task/port/deferred-tests.md) "Python — the facade suite". EC-4 requires the
 two to be one record, so `python/repark-parity/tests/test_deferred_ledger.py` (7 tests) pins:
 the ledger path is the one the comparator's documented invocation names; it parses through the
 comparator's own `load_ledger`; every id is a **pin-collected** name (under-subtraction guard);

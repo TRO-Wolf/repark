@@ -1,9 +1,15 @@
 # Unit ledger — P2B: repark-spark skeleton (router spine + door seams)
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-2 PR-2 · **Brief:**
-[../briefs/phase-2-sql-doors.md](../briefs/phase-2-sql-doors.md) §1 "PR-2" · **Design:**
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #9)
+[phase-2-sql-doors.md](phase-2-sql-doors.md) §1 "PR-2" · **Design:**
+[docs/design/sql-doors.md](../../design/sql-doors.md) · **Port-Source:** v1 `main` @
+`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #9; archived 2026-08-09)
 
 ## Scope
 
@@ -29,7 +35,7 @@ Land the Spark door's spine and its two session seams in one PR:
 - Deferred test #1 (`temp_view_then_sql_runs_the_spark_function_shim`) lands as
   `crates/repark-spark/tests/session_extension.rs` against the real
   `Session + SparkExtension + SparkDialect`; its manifest row closes
-  ([port/deferred-tests.md](port/deferred-tests.md)).
+  ([task/port/deferred-tests.md](../../../task/port/deferred-tests.md)).
 - Module test batteries ride WITH their modules (metadata_tables 15, time_travel 10,
   spark_ast 6, normalize/describe in-module sets) + one refuse test per temporary refuse arm
   + the two NEW seam tests above.

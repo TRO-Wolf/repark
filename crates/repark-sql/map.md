@@ -11,8 +11,8 @@ DataFusion, which is why cross-door equivalence must run two sessions (extension
 session-scoped).
 
 Design SSOT: [../../docs/design/sql-doors.md](../../docs/design/sql-doors.md) §2 (Q1–Q15).
-Milestone ledgers: [../../task/p2f-ansi-m1-ledger.md](../../task/p2f-ansi-m1-ledger.md) (M1 /
-PR-5) and [../../task/p2g-ansi-m2-ledger.md](../../task/p2g-ansi-m2-ledger.md) (M2 / PR-6).
+Milestone ledgers: [p2f-ansi-m1-ledger.md](../../docs/history/port-v2/p2f-ansi-m1-ledger.md) (M1 /
+PR-5) and [p2g-ansi-m2-ledger.md](../../docs/history/port-v2/p2g-ansi-m2-ledger.md) (M2 / PR-6).
 
 **The door is CLOSED as of M2 (PR-6).** M1 landed the crate spine + `AnsiDialect`, the guard set
 (multi-statement FIRST, P11 read-only-catalog DML, write-to-branch, SEC-02 local-filesystem),

@@ -72,7 +72,21 @@ v1 crate-root re-export lists.
 - **Test strategy:** `cargo test -p repark-iceberg` — all AWS-free on `MemoryCatalog`; fork-pin proofs
   that will not compile against crates.io iceberg 0.9.1.
 - **Known limitations:** the merge-on-read unpartitioned multi-spec edge is guarded loud (a fork
-  fast-path defect); credential handling lives inside the fork.
+  fast-path defect); credential handling lives inside the fork. Two fork-coupled gaps are carried
+  deliberately, and **both are re-verified at every fork repin**
+  ([../../AGENTS.md](../../AGENTS.md) "Version-pin contract"):
+  - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) forwards only the required `Catalog`
+    methods.** All 16 defaulted methods fall to trait defaults with no omission comments — the
+    both-sides trait-wrapping audit is unmet here. `publish_replace_table` is the HIGH one: the
+    default answers `FeatureUnsupported`, swallowing a real inner-catalog override. The views
+    family and the namespace-property setters are the same shape at lower severity, and the
+    wrapper's own "all other methods fully delegate" banner is inaccurate. Closing it means
+    explicit forwards (or a stated omission per method) plus a wrapper-level test.
+  - **The metadata-projection shim (`src/catalog/metadata_projection.rs`) is still required.** The
+    fork's metadata-table `scan` ignores `projection`; the shim goes only when a fork rev honors
+    it, empty-projection case included. The gap is not yet filed in the fork's own
+    `docs/parity/GAP_MATRIX.md` — filing it there is the fork-side follow-up (capability status
+    lives ONLY in the fork).
 
 ## Pointers
 

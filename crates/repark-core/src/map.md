@@ -128,11 +128,11 @@ Source for `repark-core` — `ReparkSession` over a DataFusion `SessionContext` 
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
 | `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
-| `$`-suffixed metadata tables show up in `SHOW TABLES` | Current, known behavior (`information_schema_still_exposes_the_dollar_metadata_tables`); whether `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the open product question in `task/p2g-ansi-m2-ledger.md`. |
+| `$`-suffixed metadata tables show up in `SHOW TABLES` | Current, known behavior (`information_schema_still_exposes_the_dollar_metadata_tables`); whether `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the open product question in `docs/history/port-v2/p2g-ansi-m2-ledger.md`. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).
 
 - **EC-9 scrub (2026-08-08, phase-3 PR-5):** pre-existing private fixture/doc literals
   (a team/bucket name fragment) replaced with `example-team` equivalents — outcome-neutral
-  (fixtures and their oracles changed together); enumerated in task/p3e-facade-ledger.md.
-- **B-2 scrub sites in this crate (2026-08-08):** `catalog_config.rs` (doc header + fixtures) and `object_store_s3.rs` (fixtures) carry the `example-team` replacements enumerated in task/p3e-facade-ledger.md.
+  (fixtures and their oracles changed together); enumerated in docs/history/port-v2/p3e-facade-ledger.md.
+- **B-2 scrub sites in this crate (2026-08-08):** `catalog_config.rs` (doc header + fixtures) and `object_store_s3.rs` (fixtures) carry the `example-team` replacements enumerated in docs/history/port-v2/p3e-facade-ledger.md.

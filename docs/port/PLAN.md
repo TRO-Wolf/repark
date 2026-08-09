@@ -3,6 +3,14 @@
 How the private v1 repository's engine becomes this repo's engine. Settled 2026-08-06; this file
 is the single home for the port's phases, rules, and acceptance gate.
 
+> **Status note, 2026-08-09.** The port is **COMPLETE** (milestone one, 2026-08-08). This file
+> stays live because the relocation discipline and the census acceptance gate are still defined
+> against it, and because the acceptance identity below is how a future census is judged. Current
+> state — including what happens next — is [STATUS.md](../../STATUS.md); the port's execution
+> record (briefs, unit ledgers, retrospectives) is archived at
+> [../history/port-v2/](../history/port-v2/README.md). The "Open item: cutover" below is now
+> carried forward as the production-pipeline cutover inventory in STATUS.md "Current milestone".
+
 ## The shape: copy-then-re-home
 
 Each code phase starts from a **literal copy** of the relevant v1 crates/packages, then re-homes

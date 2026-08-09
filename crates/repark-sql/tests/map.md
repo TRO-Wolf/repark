@@ -45,8 +45,8 @@ belongs out here is what must be observed from outside the crate.
 
 ## Pointers
 
-- Up: [../map.md](../map.md). Spike record: `../../../task/p2f-ansi-m1-ledger.md`;
-  PR-6 record: `../../../task/p2g-ansi-m2-ledger.md`. Seam freeze + the session-scope rule:
+- Up: [../map.md](../map.md). Spike record: `../../../docs/history/port-v2/p2f-ansi-m1-ledger.md`;
+  PR-6 record: `../../../docs/history/port-v2/p2g-ansi-m2-ledger.md`. Seam freeze + the session-scope rule:
   `docs/design/session-api.md`.
 
 ## Debug

@@ -1,9 +1,15 @@
 # Unit ledger — P1A: workspace arming + repark-common + gates
 
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
 **Unit:** phase-1 PR-A · **Brief:**
-[../briefs/phase-1-engine-core.md](../briefs/phase-1-engine-core.md) §2 "PR-A" · **Design:**
-[../docs/design/session-api.md](../docs/design/session-api.md) · **Port-Source:** v1 `main` @
-`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #3, `5eba40a`)
+[phase-1-engine-core.md](phase-1-engine-core.md) §2 "PR-A" · **Design:**
+[docs/design/session-api.md](../../design/session-api.md) · **Port-Source:** v1 `main` @
+`fc3f48102` · **Status:** MERGED 2026-08-07 (PR #3, `5eba40a`; archived 2026-08-09)
 
 ## Scope
 

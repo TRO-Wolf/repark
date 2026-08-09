@@ -1,6 +1,12 @@
 # Phase-1 PR-C ledger — repark-core (Session)
 
-Status: MERGED 2026-08-07 (PR #6, `c05bc31`; #5 auto-closed at #4's branch deletion).
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
+Status: MERGED 2026-08-07 (PR #6, `c05bc31`; #5 auto-closed at #4's branch deletion; archived 2026-08-09).
 Port-Source: `fc3f48102e437e2843ded460bc161edb434dac93` (v1 main, #141 squash).
 Depends on PR-A (workspace + repark-common) and PR-B (repark-iceberg, branch base `ffee1d0`).
 

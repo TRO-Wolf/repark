@@ -10,7 +10,8 @@
 # Generated EMPIRICALLY at phase-3 PR-5 (never transcribed by file): every candidate file was run
 # against the built wheel with the EC-3 refuse-arms in place, and a test defers only if its
 # failure traces to a deferred surface — the criterion is WHERE THE EXCEPTION IS RAISED.
-# Adjudication table (per node, with the raising frame): task/p3e-facade-ledger.md.
+# Adjudication table (per node, with the raising frame):
+#   docs/history/port-v2/p3e-facade-ledger.md (archived 2026-08-09; was task/p3e-facade-ledger.md).
 #
 # Format: one pytest node id per line, relative to python/repark (the rootdir of the recorded
 # collection). Blank lines and `#` comments are ignored by the comparator's ledger loader.

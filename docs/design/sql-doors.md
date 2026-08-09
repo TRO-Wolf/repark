@@ -5,7 +5,7 @@ three-design adversarial review (three independent design attempts scored by a t
 panel) over a phase-2 recon corpus. **The delegate-first architecture anchors the synthesis**
 (judged the only realistic one-phase scope, with the strongest port-fidelity score), with ten
 grafts from the other two attempts recorded below where they land. Companion execution brief:
-[../../briefs/phase-2-sql-doors.md](../../briefs/phase-2-sql-doors.md). Builds on the phase-1
+[the archived phase-2 brief](../history/port-v2/phase-2-sql-doors.md). Builds on the phase-1
 design in [session-api.md](session-api.md); deferred-test obligations live in
 [../../task/port/deferred-tests.md](../../task/port/deferred-tests.md).
 
@@ -57,8 +57,9 @@ helper beside CatalogRegistry (both doors do v1's clone+stamp dance through it).
 `surfaces` const ID list (G2) lives in repark-common (tier 0, dialect-neutral vocabulary).
 
 > **Delivery record (2026-08-08).** The ANSI door closed at phase-2 PR-6. The per-Q "what
-> actually shipped, and what it cost" record has ONE home — [../../task/p2g-ansi-m2-ledger.md](../../task/p2g-ansi-m2-ledger.md)
-> (PR-6) and [../../task/p2f-ansi-m1-ledger.md](../../task/p2f-ansi-m1-ledger.md) (PR-5). This
+> actually shipped, and what it cost" record has ONE home — the archived unit ledgers
+> [p2g-ansi-m2-ledger.md](../history/port-v2/p2g-ansi-m2-ledger.md) (PR-6) and
+> [p2f-ansi-m1-ledger.md](../history/port-v2/p2f-ansi-m1-ledger.md) (PR-5). This
 > file stays the DESIGN: the rulings below are what was decided, not a changelog of what was
 > built. Read them together; do not annotate this file with delivery notes.
 

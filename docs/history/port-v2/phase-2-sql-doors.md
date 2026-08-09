@@ -1,12 +1,19 @@
 # Phase-2 execution brief — the two SQL doors
 
-Status: SETTLED 2026-08-07. Operator confirmed: (a) repark-ta IS phase-2 scope (PR-4);
+> **ARCHIVED 2026-08-09** (Front-Door FD-4) — a historical record of the v1 → v2 port, kept for
+> provenance and **not a source of live rules**: every rule still in force was promoted to a
+> current document first ([promotion-ledger.md](promotion-ledger.md)). Relative links were
+> repaired for this location on the same date; nothing else changed. Current state:
+> [STATUS.md](../../../STATUS.md).
+
+Status: DELIVERED — phase 2 closed 2026-08-08 (PRs #8-#14, close-out #15);
+archived 2026-08-09. Slate settled 2026-08-07. Operator confirmed: (a) repark-ta IS phase-2 scope (PR-4);
 (b) repark-postgres/repark-excel → explicit POST-MILESTONE-ONE bucket in
-[../task/todo.md](../task/todo.md) (the 4 manifest rows re-point there). Design SSOT:
-[../docs/design/sql-doors.md](../docs/design/sql-doors.md) (a three-design adversarial review;
+[port-execution-log.md](port-execution-log.md) (the 4 manifest rows re-point there). Design SSOT:
+[docs/design/sql-doors.md](../../design/sql-doors.md) (a three-design adversarial review;
 lands in-repo with PR-1). Port-source pin unchanged: v1 `main` @ `fc3f48102`. Census ground
 truth: 342 repark-sql + 62 repark-functions test names at the pin — the lists are regenerated
-from `cargo test -- --list` at the pin per [../docs/testing.md](../docs/testing.md), never
+from `cargo test -- --list` at the pin per [docs/testing.md](../../testing.md), never
 hand-written; the repark-ta census is generated at its PR.
 
 ## 0. Deliverables
@@ -16,7 +23,7 @@ Four crates (all tier 3): `repark-functions` (verbatim port), `repark-ta` (port 
 `repark-sql` (NEW ANSI door per the design). Three hoists (declared-rename): MoR valve →
 repark-iceberg; DF-54.1 subquery guard → repark-core defaults; `stamp_read_only` →
 repark-core. Plus: `repark-common::surfaces` ID list, per-door `matrix.rs` + audit test,
-[../docs/design/session-api.md](../docs/design/session-api.md) seam-freeze edits
+[docs/design/session-api.md](../../design/session-api.md) seam-freeze edits
 (UNSTABLE→frozen + extension-session-scoped line), deferred-manifest reconciliation (14/18
 zero; 4 escalated to an explicit scheduling note in todo.md).
 
@@ -61,7 +68,7 @@ Order: 1 → 2 → 3a → 3b (port spine); 4 after 2; 5 after 1 (pipeline-parall
 Staged delegated workstreams → assemble/integrate → orchestrator carve-outs → verification
 panel (four lenses: port-fidelity/census, design-conformance, testing-discipline,
 public-hygiene) → fixer → orchestrator push/PR. Isolated worktrees per workstream. All
-standing rules carry ([../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules"): no AWS
+standing rules carry ([AGENTS.md](../../../AGENTS.md) "Delegated-agent standing rules"): no AWS
 calls or acceptance env vars from delegated agents; the forbidden-content greps before every
 push; v1 repo read-only (worktree at the pin, never push/fetch); never `--all-features`;
 carve-outs orchestrator-only.
@@ -78,6 +85,6 @@ retrospective + lessons per SEPMO.
 
 1. **repark-ta**: IN phase 2 (PR-4) — operator-confirmed.
 2. **repark-postgres / repark-excel**: post-milestone-one bucket, recorded in
-   [../task/todo.md](../task/todo.md); the 4 manifest rows re-point there —
+   [port-execution-log.md](port-execution-log.md); the 4 manifest rows re-point there —
    operator-confirmed.
 3. **PR slate**: as §1 (7 PRs, 3a/3b split mandatory).

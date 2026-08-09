@@ -70,7 +70,7 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 ## Pointers
 
 - Up: [../map.md](../map.md). Design: `../../docs/design/sql-doors.md`; brief:
-  `../../briefs/phase-2-sql-doors.md`.
+  `../../docs/history/port-v2/phase-2-sql-doors.md`.
 
 ## Debug
 

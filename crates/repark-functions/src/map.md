@@ -27,11 +27,12 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (the Spark semantics rules `repark-session` installs on every context) +
+  `analyzer_rules()` (the Spark semantics rules the session installs on every context via the
+  `SessionExtension` hook) +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by
-  `repark-sql::spark_ast` and `repark-python::column::sql`) + the
+  `repark-spark::spark_ast` and `repark-python::column::sql`) + the
   `shim_udf_boilerplate!` macro every shim `ScalarUDFImpl` shares.
 - `random.rs` — **r20 G2:** Spark `XORShiftRandom` + MurmurHash3 `hashSeed`; `rand`/`randn`
   ScalarUDFs (seed + partitionIndex=0; sequential within batch). Pins: first `rand(0)` value,

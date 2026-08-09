@@ -70,7 +70,7 @@ becomes the facade; `repark.sql` becomes a callable). The target maps in `AGENTS
   the ML kernels are [../../crates/repark-ml/map.md](../../crates/repark-ml/map.md).
 - Design: [../../docs/design/python-facade.md](../../docs/design/python-facade.md) (§2.3 the tree
   and the load-bearing ruff ignores; §3 EC-4/EC-7/EC-9; §6.3 the facade cohort).
-- Ledger: [../../task/p3e-facade-ledger.md](../../task/p3e-facade-ledger.md).
+- Ledger: [p3e-facade-ledger.md](../../docs/history/port-v2/p3e-facade-ledger.md).
 
 ## Debug
 

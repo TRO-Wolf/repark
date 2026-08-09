@@ -1,9 +1,10 @@
 # Unit ledger — FD-3: mechanize structural truth
 
-**Unit:** Front-Door FD-3 · **Slate:** the Front-Door campaign brief, unit "FD-3" · **Design:**
-the campaign design, §3 (recommendations 3, 4, 6). The brief and design are execution records,
-not live rules — they land in-repo with the campaign's closing archival under `docs/history/` ·
-**Status:** IN FLIGHT
+**Unit:** Front-Door FD-3 · **Slate:**
+[../briefs/frontdoor-campaign.md](../briefs/frontdoor-campaign.md), unit "FD-3" · **Design:**
+[../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) §3
+(recommendations 3, 4, 6) — both in-repo since FD-1 · **Status:** DELIVERED — merged 2026-08-09
+(#26)
 
 Goal: **structural documentation drift becomes a CI failure.** Documentation + mechanical-gate
 work only — zero `.rs` changes, no engine behavior touched.

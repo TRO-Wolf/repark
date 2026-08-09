@@ -23,9 +23,11 @@ Maintainer setup (registry-side, one-time, done when `release.yml` lands):
    - Workflow name: `release.yml`
    - Environment: `release` (recommended — bind the publisher to a GitHub environment so
      publishing can carry required reviewers / deployment protection)
-3. If the project does not exist yet, use **pending publishers** (PyPI account → Publishing →
-   "Add a pending publisher") with the same values; the first trusted-publish then creates the
-   project.
+3. The `repark` project **already exists** on PyPI (the 0.0.1 name reservation — see
+   [STATUS.md](../STATUS.md) "Release state"), so the publisher is added on the **existing
+   project** (project → Settings → Publishing), not as a pending publisher — pending publishers
+   are only for names that do not exist yet. *(Corrected 2026-08-09; the earlier wording
+   described the pending-publisher flow.)*
 
 The publishing job in `release.yml` (when it exists) needs `permissions: id-token: write` on the
 publish job only, and uses `pypa/gh-action-pypi-publish` (SHA-pinned, like every action here).

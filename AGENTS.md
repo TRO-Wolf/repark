@@ -140,8 +140,9 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     `#[expect(clippy::disallowed_methods, reason = …)]` stating the lifecycle; never a
     file/crate-wide allow. One recorded module-scoped `#![expect]` exists — the binding's
     exception-taxonomy module (`crates/repark-python/src/lib.rs`), because a per-call-site
-    `#[expect]` cannot reach inside `pyo3::create_exception!`'s macro expansion (proven both
-    ways, p3c ledger P-4/P-5); the lint stays live for the rest of that crate.
+    `#[expect]` cannot reach inside `pyo3::create_exception!`'s macro expansion (proven both ways —
+    [docs/history/port-v2/p3c-binding-ledger.md](docs/history/port-v2/p3c-binding-ledger.md)
+    P-4/P-5); the lint stays live for the rest of that crate.
   - *Crate dependency policy* (`scripts/check_crate_dag.py` — the SSOT for the tier map, the
     crate roles, and the explicit allowed-edge table: every internal edge with the dependency
     kinds it may take and why it exists; an undeclared edge, a promoted kind, or a forbidden
@@ -191,6 +192,17 @@ rev to a newer fork commit, together with `datafusion` + `datafusion-spark` + `a
 bumps (e.g. a Dependabot DataFusion major) are **skipped** until the fork moves its base — record a
 dated take/skip decision per release. Never merge a Dependabot PR that bundles a safe bump with a
 DataFusion/arrow family major — split it.
+
+**Every fork repin also re-verifies what we built on top of the old rev** — a fork fix silently
+makes a local workaround dead code, and a fork trait gaining a defaulted method silently reopens a
+swallowed-override bug:
+
+- Re-check the **metadata-projection shim**'s removal criterion: it goes only when a fork rev's
+  metadata-table `scan` honors `projection`, including the empty-projection case.
+- **Re-enumerate the wrapped catalog's trait surface** — a `Catalog` method that newly falls to a
+  trait default is a new latent gap, not a no-op (the both-sides trait-wrapping audit).
+- Both duties, and the defects that motivate them, are recorded against the crate that owns the
+  code: [crates/repark-iceberg/map.md](crates/repark-iceberg/map.md) "Known limitations".
 
 ## Explicitly out of scope (do not reintroduce without a decision)
 

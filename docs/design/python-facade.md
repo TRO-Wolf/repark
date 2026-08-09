@@ -12,7 +12,7 @@ Port source: the private v1 engine repository at the frozen
 port pin `fc3f48102` — verified byte-identical to that repository's `main` across the whole tree,
 zero commits of drift. Base: public `main` at the phase-2 close.
 
-Companion execution brief: `briefs/phase-3-python-facade.md`. Census procedure and recorded
+Companion execution brief: `docs/history/port-v2/phase-3-python-facade.md`. Census procedure and recorded
 baselines: `docs/port/census.md` + `task/census/`. Deferred obligations:
 [../../task/port/deferred-tests.md](../../task/port/deferred-tests.md).
 
@@ -211,7 +211,8 @@ byte-identical to keep the crate's verbatim/identity claim intact and to keep th
 port; they become reachable from Python only when PR-3 wires the binding, so PR-3 repoints them at
 the in-repo ML authority (`docs/design/python-facade.md` §4 Q3) or drops the pointer, and pins the
 `Singular` message with a test. Neither the rider nor its deferral may go unrecorded: it is entered
-in `task/p3b-ml-ledger.md` and must be closed in `task/p3c-*` before phase close.
+in `docs/history/port-v2/p3b-ml-ledger.md` and was closed in
+`docs/history/port-v2/p3c-binding-ledger.md` before phase close.
 
 **EC-7 — map.md regeneration.** Stale v1 `map.md` files are rewritten to the true tree rather than
 ported stale. Every new directory gets one in the same change.

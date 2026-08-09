@@ -12,7 +12,8 @@ across phases (as opposed to the plan itself, which lives in
   v1 test not yet ported, with its target phase, under the hard reconciliation rule
   (ported ∪ deferred) = v1 totals at the pinned SHA. PR-B/PR-C filled the per-crate sections;
   re-pointed 2026-08-07 to the phase-2 PR slate (rows carry PR-2/3a/3b/4 targets; the 4
-  postgres/excel rows moved to the post-milestone-one bucket in [../todo.md](../todo.md)).
+  postgres/excel rows moved to the post-milestone-one bucket now recorded in
+  [../../STATUS.md](../../STATUS.md) "Deferred capabilities").
 
 - [deferred-python-tests.txt](deferred-python-tests.txt) — the **machine-readable** deferral
   allowlist for the Python facade suite (phase-3 PR-5, EC-4): one pytest node id per line, `#`

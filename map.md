@@ -53,9 +53,12 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
 - `python/` — the uv workspace members: the facade wheel (`repark`) and the parity harness
   (`repark-parity`). See [python/map.md](python/map.md).
-- `docs/` — contracts, ADRs, the port plan, and per-tier manuals. `task/` — todo + lessons
-  trackers. `briefs/` — versioned delegated-agent slate briefs. `skills/` — the SEPMO control
-  plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
+- `docs/` — contracts, ADRs, the port plan, per-tier manuals, and `docs/history/` (the archive of
+  closed campaigns — off the normal read path; see [docs/history/map.md](docs/history/map.md)).
+  `task/` — the rules in force (`lessons.md`), the ledger of each unit in flight, and the live
+  acceptance inputs (`task/port/`, `task/census/`); the backlog itself lives in
+  [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are still running.
+  `skills/` — the SEPMO control plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
   work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
   chain, invariants, safety boundaries; written for any human or agent, names no tool).
@@ -83,8 +86,9 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
+| Read how the engine got here (the archived port record) | [docs/history/port-v2/README.md](docs/history/port-v2/README.md) |
 | Touch CI | [.github/map.md](.github/map.md) |
-| Read the phase briefs | [briefs/map.md](briefs/map.md) |
+| Read a running campaign's slate brief | [briefs/map.md](briefs/map.md) |
 | Navigate the engine crates | [crates/map.md](crates/map.md) |
 | Navigate the Python tree | [python/map.md](python/map.md) |
 | Build the wheel / run the facade suite | [python/repark/map.md](python/repark/map.md) |
