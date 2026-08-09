@@ -15,32 +15,34 @@ ANSI/Trino-style `repark.sql()`, and a **near-drop-in PySpark facade** whose `.s
 dialect. Built on Apache DataFusion + Arrow + our **owned `iceberg-rust` fork** (see the hard rules
 below), with native PyO3 Python bindings. See [README.md](README.md).
 
-**Current reality (phase 1 in flight):** phase-0 bootstrap is complete — governance, testing
-contract, mechanical gates, and tier-1 CI run green. Phase-1 PR-A armed the workspace: the first
-member is `crates/repark-common` (the error seed), with the crate-DAG and lib.rs guards live.
-Code arrives by porting the private v1 repository — copy-then-re-home, four phases — per
-[docs/port/PLAN.md](docs/port/PLAN.md).
+**Current state lives in [STATUS.md](STATUS.md)** — the single source of truth for release state,
+delivered crates, active workstreams, and deferred work. The port that stood this repository up
+(copy-then-re-home, four phases) is recorded in [docs/port/PLAN.md](docs/port/PLAN.md). Do not
+restate status here; point at STATUS.md.
 
-## Target crate map — where a change will go
+## Crate map — where a change will go
 
-The skeleton below is the **target**, documented so every phase ports into the right home. Only
-`crates/repark-common` (shared error-seed types, landed phase-1 PR-A) exists so far; do not create
-a crate ahead of its phase.
+The change-location guide: which home owns which kind of change. `Status: delivered` homes exist
+today; `Status: deferred` homes do **not** exist yet and are extracted only when their code arrives
+— do not create one ahead of its driver. The nine delivered crates (including `repark-common`,
+`repark-functions`, `repark-ta`, which are not change-destination rows here) are inventoried in the
+live workspace `Cargo.toml` (the authoritative list); see [STATUS.md](STATUS.md) for delivery state
+and [crates/map.md](crates/map.md) for navigation.
 
-| You will want to change… | Target home | Arrives |
+| You will want to change… | Home | Status |
 |---|---|---|
-| Lazy-frame IR, planning, optimizer hooks, `Session` | `crates/repark-core` | phase 1 |
-| Execution config, spill, out-of-core | `crates/repark-exec` | later — extracted when its code arrives |
-| Inference readers (CSV, Excel, JSON) | `crates/repark-io` | later — extracted when its code arrives |
-| Catalogs (Glue, S3 Tables) + Iceberg DML + maintenance; adapter over the owned fork | `crates/repark-iceberg` | phase 1 |
-| Postgres / MSSQL connectivity | `crates/repark-connect` | later |
-| ANSI SQL front end (native dialect) | `crates/repark-sql` | phase 2 |
-| Spark semantics: function shims, Spark SQL dialect, the parity surface | `crates/repark-spark` | phase 2 |
-| ML: native estimator kernels (Cholesky/OLS/IRLS/Lloyd) | `crates/repark-ml` | phase 3 (landed PR-2) |
-| PyO3 bindings: thin adapter over the internal engine API | `crates/repark-python` | phase 3 |
-| Native lazy API + `repark.sql()` (Python) | `python/repark` | phase 3 |
-| The PySpark facade | `python/repark/spark` | phase 3 |
-| The dbt adapter | `dbt-repark` (separate package) | later |
+| Lazy-frame IR, planning, optimizer hooks, `Session` | `crates/repark-core` | delivered |
+| Execution config, spill, out-of-core | `crates/repark-exec` | deferred — extracted when its code arrives |
+| Inference readers (CSV, Excel, JSON) | `crates/repark-io` | deferred — extracted when its code arrives |
+| Catalogs (Glue, S3 Tables) + Iceberg DML + maintenance; adapter over the owned fork | `crates/repark-iceberg` | delivered |
+| Postgres / MSSQL connectivity | `crates/repark-connect` | deferred |
+| ANSI SQL front end (native dialect) | `crates/repark-sql` | delivered |
+| Spark semantics: function shims, Spark SQL dialect, the parity surface | `crates/repark-spark` | delivered |
+| ML: native estimator kernels (Cholesky/OLS/IRLS/Lloyd) | `crates/repark-ml` | delivered |
+| PyO3 bindings: thin adapter over the internal engine API | `crates/repark-python` | delivered |
+| Native lazy API + `repark.sql()` (Python) | `python/repark` | delivered |
+| The PySpark facade | `python/repark/spark` | delivered |
+| The dbt adapter | `dbt-repark` (separate package) | deferred (parked lane) |
 
 v1 crates re-home rather than rewrite (catalog + write → `repark-iceberg`; the Spark parts of the v1
 functions/sql crates → `repark-spark`; the smart CSV reader → `repark-io`). DataFusion remains the

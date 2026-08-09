@@ -29,6 +29,12 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   tier-2 CI; phase close) executing the settled design in
   [../docs/design/python-facade.md](../docs/design/python-facade.md); execution pattern
   (actor/critic model tiers), acceptance checklist, and the decisions record.
+- [frontdoor-campaign.md](frontdoor-campaign.md) — the Agent-Agnostic Front-Door campaign slate
+  (2026-08-08): the first post-milestone campaign — five independently mergeable, behavior-preserving
+  units (FD-1 truthful front door / FD-2 neutral contract / FD-3 mechanize structure / FD-4 reduce
+  doc weight / FD-5 seam honesty), executing the settled design in
+  [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md);
+  documentation + mechanical-gate work only, no engine code change.
 
 ## I want to... → go to
 
@@ -41,6 +47,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 | Read the design a phase-1 PR implements | [../docs/design/session-api.md](../docs/design/session-api.md) |
 | Read the design a phase-2 PR implements | [../docs/design/sql-doors.md](../docs/design/sql-doors.md) |
 | Read the design a phase-3 PR implements | [../docs/design/python-facade.md](../docs/design/python-facade.md) |
+| Read the design the Front-Door campaign implements | [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) |
 
 ## Pointers
 
