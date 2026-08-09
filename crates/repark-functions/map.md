@@ -71,6 +71,30 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 | Tune plan-time array expansion ceiling / local DDL conf | `src/cardinality.rs` (`ReparkSqlSettings`, `MAX_ARRAY_ELEMENTS_KEY`)
 | Fix a Spark-semantics mismatch in an *operator* (`/`, `%`, `[]`, ORDER BY defaults) | `src/analyzer.rs` (plan-level, type-aware) — ORDER BY defaults live in `repark-sql::spark_ast` (AST-level) |
 
+## Component contract
+
+- **Owns:** the Spark-compatible function registry (`register_all`) — `datafusion-spark` wiring +
+  hand-rolled shims (date / string / collection) + the Spark expression-semantics analyzer rules (int
+  `/` → double, div / mod-by-zero → NULL, 0-based `[]`); the plan-time array-cardinality ceiling +
+  the `repark.sql.*` config extension.
+- **Does not own:** session construction (repark-core installs these via a `SessionExtension`); SQL
+  routing (the doors); TA / ML kernels.
+- **Public inputs:** a DataFusion `SessionContext` (`register_all(ctx)`); `analyzer_rules()`; `Expr`
+  builder calls.
+- **Public outputs:** registered scalar / aggregate UDFs + aliases; analyzer rules; logical-`Expr`
+  builders (consumed by the Spark door + the Python bindings).
+- **State & lifecycle:** stateless registration; idempotent analyzer rules.
+- **Allowed internal deps:** **none internal** — speaks `datafusion::error::Result` (no `repark-core`
+  dep). Third-party: datafusion + datafusion-spark + arrow + chrono.
+- **Failure model:** `datafusion::error::Result`; a missing function gets a Rust shim or a LOUD
+  unsupported error — never Python compute.
+- **Extension points:** add a Spark date / non-date function (a shim module + register from
+  `lib.rs`); fix an operator-semantics mismatch in `analyzer.rs`.
+- **Test strategy:** `cargo test -p repark-functions` — golden unit tests per function (ISO-8601 basis,
+  matching Spark); env-gated micro-benches.
+- **Known limitations:** session-timezone semantics for tz-timestamp extractors are a follow-up; the
+  analyzer rule runs after `TypeCoercion`, so single-analyze *schema* consumers must reach the fixpoint.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

@@ -30,6 +30,27 @@ workspace reserves `repark-core` for the Session crate.)
 | Add a shared domain type | `src/lib.rs` (it must not pull in heavier crates) |
 | Add / rename a SQL surface ID | `src/surfaces.rs` (const + `ALL`), the inventory in `src/surfaces/tests.rs`, then a row in EACH door's `matrix.rs` |
 
+## Component contract
+
+- **Owns:** the workspace `Error` / `ErrorClass` / `Result` seed; the dialect-neutral SQL **surface
+  registry** (`surfaces`: the 43-ID capability vocabulary, `Row` / `SessionProfile`, `audit()`).
+- **Does not own:** any engine / session / IO logic; error *folding* (that happens at the
+  session / PyO3 boundary); door-specific matrices (each door owns its `matrix.rs`).
+- **Public inputs:** none at runtime — a leaf of pure types; doors call `surfaces::audit()` in tests.
+- **Public outputs:** `Error` / `ErrorClass` / `Result`, re-exported workspace-wide; the `surfaces`
+  vocabulary + `audit()`.
+- **State & lifecycle:** stateless — pure value types + const tables.
+- **Allowed internal deps:** none (bottom of the DAG). Third-party: `thiserror` only.
+- **Failure model:** defines the taxonomy; typed `Error` variants, no catch-all `String`. Not every
+  crate returns it end-to-end — intermediate layers surface `iceberg::Result` / `DataFusionError`
+  and fold higher (C1-CRATE-001).
+- **Extension points:** add an `Error` variant / shared seed type; add a SQL surface ID (const +
+  `ALL` + a row in each door's `matrix.rs`).
+- **Test strategy:** file-backed `tests.rs` — exhaustive exception-class routing + message-preservation
+  pins; `surfaces/tests.rs` inventory audit.
+- **Known limitations:** must stay dependency-light — pulling in a heavier crate would risk
+  reintroducing a cycle.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

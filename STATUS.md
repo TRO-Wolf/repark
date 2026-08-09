@@ -3,7 +3,8 @@
 > **This file is the single source of truth for RePark's *present* state** — release state,
 > what is delivered, what is in flight, and what is deferred. Intent and the "why" live in
 > [PROJECT.md](PROJECT.md) (product charter) and [docs/adr/](docs/adr/) (load-bearing decisions);
-> the day-to-day contract is [AGENTS.md](AGENTS.md) + [CLAUDE.md](CLAUDE.md). When a current-state
+> the day-to-day contract is [AGENTS.md](AGENTS.md) (with [CLAUDE.md](CLAUDE.md) and
+> [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
 _Last updated: 2026-08-08._

@@ -1,10 +1,10 @@
 # PROJECT.md — RePark (project intent & north star)
 
 > **Purpose of this file.** Orient any agent or contributor to *what RePark is, why it exists, and
-> the decisions that must not be undone*. The day-to-day execution contract is
-> [CLAUDE.md](CLAUDE.md) + [AGENTS.md](AGENTS.md) (authoritative, must stay in sync), with a
-> `map.md` in every directory. **This file states INTENT; those state MECHANICS** — if they
-> conflict, reconcile, never silently discard intent.
+> the decisions that must not be undone*. The single authoritative day-to-day contract is
+> [AGENTS.md](AGENTS.md) (which holds the precedence chain; [CLAUDE.md](CLAUDE.md) is a thin
+> tool adapter), with a `map.md` in every directory. **This file states INTENT; the contract states
+> MECHANICS** — if they conflict, reconcile, never silently discard intent.
 
 ## What RePark is
 
@@ -68,8 +68,9 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
 - **Pin one DataFusion family** across all DF-touching crates; `Cargo.toml` is the SSOT;
   `Cargo.lock` checked in.
 - **Distribution is deferred** behind the `ExecutionBackend` seam.
-- **[CLAUDE.md](CLAUDE.md) and [AGENTS.md](AGENTS.md) are the authoritative contracts and must not
-  drift from each other.**
+- **[AGENTS.md](AGENTS.md) is the single authoritative contract** (it holds the precedence chain);
+  tool adapters ([CLAUDE.md](CLAUDE.md), [.agent/](.agent/map.md)) carry no authoritative facts and
+  cannot drift.
 
 ## Target architecture (crate skeleton — the port's destination)
 
@@ -114,7 +115,7 @@ does not restate current state. The port that stood this repository up is record
 [docs/port/PLAN.md](docs/port/PLAN.md) and
 [docs/adr/0003-copy-then-rehome-port.md](docs/adr/0003-copy-then-rehome-port.md).
 
-## Conventions (summary; see [CLAUDE.md](CLAUDE.md) / [AGENTS.md](AGENTS.md) for the full contract)
+## Conventions (summary; see [AGENTS.md](AGENTS.md) + [DEVELOPMENT.md](DEVELOPMENT.md) for the full contract)
 
 Rust: rustfmt `max_width=100`, edition 2024, clippy `all`+`pedantic` `-D warnings`, 91-`=` banner
 doc blocks on section functions, `thiserror`/`anyhow`, no panics in prod (no `unwrap`/`expect`).

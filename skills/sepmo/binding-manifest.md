@@ -21,11 +21,11 @@ chain — this manifest points there and never restates it.
 ## Role bindings
 | SEPMO role | Canonical home in this repo | Mode | Relationship |
 |---|---|---|---|
-| Engineering contract | [AGENTS.md](../../AGENTS.md) (authoritative) + [docs/skills/Opus.md](../../docs/skills/Opus.md) / [Sonnet.md](../../docs/skills/Sonnet.md) / [Haiku.md](../../docs/skills/Haiku.md) (tier manuals) + [CLAUDE.md](../../CLAUDE.md) conventions (rustfmt/clippy/ruff configs) | BIND | Actor binds — defers entirely |
+| Engineering contract | [AGENTS.md](../../AGENTS.md) (authoritative) + [DEVELOPMENT.md](../../DEVELOPMENT.md) (build/test/verify + tool configs) + [docs/skills/Opus.md](../../docs/skills/Opus.md) / [Sonnet.md](../../docs/skills/Sonnet.md) / [Haiku.md](../../docs/skills/Haiku.md) (one model family's view of these) | BIND | Actor binds — defers entirely |
 | Risk lens | [docs/skills/Opus.md](../../docs/skills/Opus.md) `<risk_first>` + its project risk-surface table; the attack taxonomy ([references/05-critic.md](references/05-critic.md)) as the systematic basis | BIND | Critic uses as attack basis |
 | Done gate | [docs/testing.md](../../docs/testing.md) + `make verify` (= `make ci` + `make test`); pre-merge (R7): `make preflight` — see `green_commands` below; test with `cargo test --workspace`, **never** `--all-features`; new behavior pins per the entry-point matrix (native DataFrame / ANSI SQL / Spark facade) once those surfaces exist | BIND | Delivery invokes |
 | Plan-of-record | [PROJECT.md](../../PROJECT.md) (north-star charter + locked invariants) + [docs/port/PLAN.md](../../docs/port/PLAN.md) (the four-phase port plan and its acceptance gates) | BIND | Orchestrator derives the charter |
-| Status SSOT | [PROJECT.md](../../PROJECT.md) "Current state" + [task/todo.md](../../task/todo.md) checkboxes | BIND | Delivery updates; never restated |
+| Status SSOT | [STATUS.md](../../STATUS.md) | BIND | Delivery updates; never restated |
 | PR-unit grouping | BIND-and-map: delegated slate work arrives as versioned briefs in [briefs/](../../briefs/map.md); otherwise DEFAULT SEPMO PR units — sized by logical coherence + reviewability | BIND-and-map | Orchestrator maps to it |
 | Active plan tracking | [task/todo.md](../../task/todo.md) | BIND | Orchestrator writes the working plan here; no parallel tracker |
 | Memory / lessons | [task/lessons.md](../../task/lessons.md) (DO/DO-NOT, date-stamped, supersede-don't-delete) + [docs/adr/](../../docs/adr/map.md) (decision records) | BIND | Retrospective runs the learning pass |
@@ -55,8 +55,8 @@ changes wait for the project boundary.
 | `taxonomy_extensions` | **None** — the ten spine categories as canon defines them. | Extend-only; an extension widens the Critic's attestation duty on every subsequent unit — add deliberately, via feed-forward. |
 
 ## Pointers
-Up: [CLAUDE.md](../../CLAUDE.md) (read-order + `## Precedence`) and [AGENTS.md](../../AGENTS.md) (the
-authoritative contract). Related: [SKILL.md](SKILL.md) (the spine);
+Up: [AGENTS.md](../../AGENTS.md) (the authoritative contract + its `## Precedence` chain).
+Related: [SKILL.md](SKILL.md) (the spine);
 [references/map.md](references/map.md) (the canonical instrument homes); [../map.md](../map.md)
 (the `skills/` container).
 
@@ -64,7 +64,7 @@ authoritative contract). Related: [SKILL.md](SKILL.md) (the spine);
 - A SEPMO behavior contradicts the engineering contract → the contract wins; fix the manifest/usage,
   never the spine or references (they are portable canon; D2 — file defects back to the user).
 - The same status appears twice → de-duplication breach (spine Global conventions / Invariant V); the
-  Status SSOT (PROJECT.md "Current state" / task/todo.md) is the only home.
+  Status SSOT ([STATUS.md](../../STATUS.md)) is the only home.
 - A row points at a missing file → manifest is stale; fix the row.
 - SEPMO's Actor–Critic seems to need sub-agents → it does **not** by default here: run the procedural
   context break per `context_break_mechanics` above. Fan out to real sub-agents **only** on an explicit
