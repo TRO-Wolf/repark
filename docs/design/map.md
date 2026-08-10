@@ -25,6 +25,16 @@ changing a decision here means a new dated design pass, not an in-place edit.
   release-prep gate (§4), the three hard findings handled (§5), the end-to-end census +
   acceptance procedure with the stability run and the report comparator (§6), the CI delta
   incl. the net-new tier-2 live-AWS design (§7), and the seven-PR slate (§9).
+- [v2-engine-hardening.md](v2-engine-hardening.md) — the **V2 Engine Hardening** campaign design
+  (settled 2026-08-09, addendum 2026-08-10, landed at kickoff 2026-08-10): the campaign running
+  now, and the first since the port to touch engine code. Goal and the five done-criteria (§1),
+  the ground truth it is scoped against — the three known correctness issues, the verification
+  surface, the already-existing performance instruments (§2) — the six phases H-0…H-5 (§3), the
+  dated decisions D1–D9 (§4), the north-star workload W1 with its absolute sanitization rule (§5),
+  the delegated external lanes (§6), the one held owner gate and the one discharged before kickoff
+  (§7), non-goals (§8). Executed by the
+  slate in [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md).
+
 **A campaign design leaves this directory when its campaign closes.** The Agent-Agnostic Front-Door
 design (settled 2026-08-08, implemented by FD-1…FD-5) moved to
 [../history/frontdoor/agent-agnostic-frontdoor.md](../history/frontdoor/agent-agnostic-frontdoor.md)
@@ -40,6 +50,8 @@ above stay live because the engine still obeys them.
 | Check why an improvement was deliberately resisted | [session-api.md](session-api.md) §8 |
 | Understand the phase-2 doors / ANSI rulings | [sql-doors.md](sql-doors.md) |
 | Understand the phase-3 port / census gate / edit classes | [python-facade.md](python-facade.md) |
+| Understand the V2 Engine Hardening campaign (running) | [v2-engine-hardening.md](v2-engine-hardening.md) |
+| See what a hardening unit must do and how it is accepted | [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md) |
 | Understand the Agent-Agnostic Front-Door campaign | [../history/frontdoor/README.md](../history/frontdoor/README.md) (archived 2026-08-10) |
 | Read the brief that executed the phase-1 design | [docs/history/port-v2/phase-1-engine-core.md](../history/port-v2/phase-1-engine-core.md) |
 | Read the brief that executed the phase-2 design | [docs/history/port-v2/phase-2-sql-doors.md](../history/port-v2/phase-2-sql-doors.md) |
