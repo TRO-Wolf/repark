@@ -165,3 +165,27 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   off a hand-maintained table must validate that table's key space as one of its own rules.
   *Detector:* landed for that gate (the role/tier vocabularies plus workspace-membership scope,
   proven by its P-8/P-9 provocations); this entry is the standing rule for the next one.
+
+## 2026-08-10 — tier-2 live bring-up
+
+- **DO trace the full consumer chain when fixing environment provisioning — a sync fix alone can
+  be a no-op.** The parity-live target's `uv sync` was corrected to provision the four facade
+  extras, but the very next line's `uv run` re-syncs the project environment by default and would
+  have stripped them straight back out; `uv run` also has no `--no-install-package` escape, so
+  `--no-sync` on the consumer is the only way to keep an explicitly provisioned environment
+  intact. A provisioning fix is not done until every downstream invocation in the same recipe is
+  audited for implicit re-provisioning.
+- **DO fail loud when adopting pre-existing cloud state; never let IAM be the only stop.** The
+  acceptance harness's idempotent namespace-create silently adopted a stale Glue namespace whose
+  location pointed at a different warehouse bucket, and table writes followed it — the create-only
+  role's missing grant was the sole thing that prevented a cross-bucket write. Adopted state must
+  be verified against the configured intent (here: the namespace location falls under the
+  configured warehouse) with a loud mismatch error; the guard unit is filed with the hardening
+  campaign. IAM is defence in depth, not the design.
+- **DO NOT let a "mirrors X step for step" claim live only in a comment — assert it mechanically
+  or name it as reviewer burden in both halves.** The parity-live workflow's mirror claim was
+  true at porting time and silently false for two green nightlies once the environments' sync
+  behavior mattered; nothing red because nothing checked. Until a dual-wire checker exists (a
+  candidate mechanical gate: compare the Makefile target's uv/maturin/pytest flag sets against
+  the workflow's steps), every dual-wired pair must carry the keep-identical instruction in BOTH
+  files, and a change to either half is not done until the other half is diffed by hand.

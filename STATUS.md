@@ -80,13 +80,17 @@ What happens next, in order:
 4. **The first tagged release** — **held by the owner**, not blocked by engineering. It starts the
    "API is forever" clock; mechanics and hard blockers: [docs/release.md](docs/release.md).
 
-Owner-side actions that ride this sequence rather than gate it: the aws-acceptance (tier-2,
-live-AWS) workflow's first successful run — its AWS-side configuration (OIDC role, repository
-variables/secrets per [docs/tier2-aws.md](docs/tier2-aws.md)) is in progress; the workflow fails
-safely at the credentials step until it lands. The parity-live half of this item is **discharged**:
-the armed nightly has run green on merged `main` (first runs 2026-08-09/10), so the live-oracle
-first-run evidence exists without a manual dispatch. On repository housekeeping, none
-remains: the stale merged `phase-2/*` branches that once carried easy-to-find copies of pre-scrub
+Owner-side actions that rode this sequence rather than gating it are **DISCHARGED — no owner-side
+tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) workflow's first dispatch ran
+**green on 2026-08-10**, with **both catalog legs — Glue and S3 Tables — passing** under the
+create-only OIDC role; its AWS-side configuration (OIDC role, variables/secrets per
+[docs/tier2-aws.md](docs/tier2-aws.md)) is in place, and what that bring-up taught is folded back
+into that runbook (the catalog-wide Glue LIST statement that registration's provider walk
+requires, the environment-scoped secret preference, the stale-namespace pre-check). The
+parity-live half was **discharged** earlier: the armed nightly has run green on merged `main`
+(first runs 2026-08-09/10), so the live-oracle first-run evidence exists without a manual
+dispatch. On repository housekeeping, none remains: the stale merged `phase-2/*` branches that
+once carried easy-to-find copies of pre-scrub
 content are already gone from the remote. Per the forward-scrub rule (fix content in a new commit,
 never rewrite published history), pre-scrub content remains reachable in already-published history —
 including `main`'s own — an exposure reviewed and **accepted by explicit decision** rather than by

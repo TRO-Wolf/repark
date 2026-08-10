@@ -82,7 +82,9 @@ jobs:
       # Build BEFORE credentials exist — a supply-chain payload in this step has no AWS session.
       - name: sync + build native module
         run: |
-          uv sync
+          # --locked: uv.lock is an INPUT, never an output — a bare sync may rewrite the
+          # checked-in lockfile as a side effect of a CI run (same rule as parity-live.yml).
+          uv sync --locked
           (cd python/repark && uvx maturin@1.14.1 develop)
       # Credentials mint HERE, last, immediately before the only step that needs them.
       - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c  # v6.2.3
