@@ -66,7 +66,9 @@ What happens next, in order:
    process metrics are in [task/metrics.md](task/metrics.md).
 2. **V2 Engine Hardening** — the next campaign, and the active one: full optimization *and* the
    verification that proves it, across the native door, the Spark facade, and the write path.
-   Reconnaissance is complete; the campaign's in-repo slate lands with its kickoff unit. One preparatory
+   Reconnaissance is complete, and the campaign's design and slate are in-repo
+   ([docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md),
+   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md)). One preparatory
    sweep has already landed from it (#30, 2026-08-10 — the dead doc-pointer sweep in ported
    sources, which closed the deferral of the same name). The engineering items parked below (spill
    coverage, the `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its
@@ -78,8 +80,12 @@ What happens next, in order:
 4. **The first tagged release** — **held by the owner**, not blocked by engineering. It starts the
    "API is forever" clock; mechanics and hard blockers: [docs/release.md](docs/release.md).
 
-Owner-side actions that ride this sequence rather than gate it: the first `workflow_dispatch` of the
-parity-live and aws-acceptance (tier-2, live-AWS) workflows. On repository housekeeping, none
+Owner-side actions that ride this sequence rather than gate it: the aws-acceptance (tier-2,
+live-AWS) workflow's first successful run — its AWS-side configuration (OIDC role, repository
+variables/secrets per [docs/tier2-aws.md](docs/tier2-aws.md)) is in progress; the workflow fails
+safely at the credentials step until it lands. The parity-live half of this item is **discharged**:
+the armed nightly has run green on merged `main` (first runs 2026-08-09/10), so the live-oracle
+first-run evidence exists without a manual dispatch. On repository housekeeping, none
 remains: the stale merged `phase-2/*` branches that once carried easy-to-find copies of pre-scrub
 content are already gone from the remote. Per the forward-scrub rule (fix content in a new commit,
 never rewrite published history), pre-scrub content remains reachable in already-published history —
@@ -90,11 +96,13 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
-- **V2 Engine Hardening** (next campaign; recon complete, kickoff unit in preparation — its slate
-  lands in `briefs/` at kickoff) — the first campaign to touch
-  engine code since the port: optimization across the native door, the Spark facade and the write
-  path, together with the verification that proves each improvement. Reconnaissance is complete;
-  the slate lands in [briefs/](briefs/map.md) at kickoff. One unit has already merged ahead of it
+- **V2 Engine Hardening** (active; recon complete, design and slate landed) — the first campaign to
+  touch engine code since the port: optimization across the native door, the Spark facade and the
+  write path, together with the verification that proves each improvement. Its design is
+  [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md) (goal, the six phases
+  H-0…H-5, the dated decisions) and its execution slate is
+  [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
+  acceptance gates). One unit has already merged ahead of it
   (#30, the dead doc-pointer sweep in ported sources).
 
 The **Agent-Agnostic Front-Door campaign** closed on 2026-08-10 — five units merged 2026-08-09,
