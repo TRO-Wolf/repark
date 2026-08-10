@@ -112,6 +112,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, and `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`). Hoisted MOVE-ONLY from the v1 SQL
   crate; the SQL-text rewrite half stays deferred with the phase-2 router.
+- `session_time_zone.rs` (+ `session_time_zone/tests.rs`) — the session timezone
+  (`spark.sql.session.timeZone`). Holds the **one** authoritative spelling of that conf key
+  (`SESSION_TIME_ZONE_KEY` — no alternate spelling exists, deliberately), the validated
+  `SessionTimeZone` value type (IANA id or fixed offset, checked against Arrow's zone database),
+  the `UTC` default (a DECLARED divergence from Spark's JVM-local default: reproducible, and no
+  host-environment read), and `resolve_session_time_zone`, which `session.rs`'s `build()` calls
+  ONCE so an unresolvable zone fails at construction rather than at query time. The value is
+  carried on the session (`ReparkSession::session_time_zone`); timestamp EXTRACTION does not
+  consume it yet — that is H-1a split B, and nothing in this module changes an evaluated result.
 - `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
   incl. the late-config region-signal pin, AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
@@ -138,6 +147,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
 | `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
+| `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Correct, and known: this unit landed the CONF surface only — extraction still resolves in the stored zone. The divergence is recorded row by row in `python/repark/tests/test_session_timezone_parity.py` (recorded against live PySpark) and flips to equality when H-1a split B lands. |
+| A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): it must be an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob — there is exactly one spelling. |
 | `$`-suffixed metadata tables show up in `SHOW TABLES` | Current, known behavior (`information_schema_still_exposes_the_dollar_metadata_tables`); whether `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the open product question in `docs/history/port-v2/p2g-ansi-m2-ledger.md`. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).

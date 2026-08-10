@@ -26,6 +26,15 @@ not this directory.
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
   shipped, environment drift events). Append a section per campaign; never rewrite an earlier one.
   Created 2026-08-10 with the Front-Door campaign's numbers.
+- [h1a-ledger.md](h1a-ledger.md) — unit ledger for **H-1a split A** of the V2 Engine Hardening
+  campaign (session-timezone conf surface + the live registry's per-scenario session-conf override
+  + the recorded G1/G16 differential rows). Carries the split's decisions with rationale, the
+  acceptance-gate evidence, verbatim gate output, the both-ways provocations for its detection
+  claims, and the ready-to-paste divergence-registry rows this unit produced for H-1d
+  (which owns `docs/spark-sql-iceberg-parity.md` and merges first). **§8 is the adversarial
+  panel's fix pass** — every MAJOR/NIT with the action taken, the provocations added or re-run,
+  the post-fix gate output, and the deviations from the dispositions stated rather than absorbed.
+  Its "§ Split B (reserved)" section is where the extraction fix's half appends.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -59,6 +68,7 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 | Check a rule before acting | [lessons.md](lessons.md) |
 | Start a new unit's ledger | copy the shape of [h1d-ledger.md](h1d-ledger.md) (or the archived [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
 | See how a divergence gets declared, pinned and mirrored | [h1d-ledger.md](h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
+| Read why the session timezone is a build-time knob with one spelling, and what split B still owes | [h1a-ledger.md](h1a-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |

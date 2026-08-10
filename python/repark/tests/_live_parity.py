@@ -23,18 +23,25 @@ neither pyspark nor a JVM installed (the routine-CI contract, L3).
 Session config (VERIFIED against live PySpark 4.1.2, not guessed): the Group E / columns / date
 goldens were recorded under Spark 4.1.2 defaults — **ANSI mode ON** (Spark 4 default; the
 int-UNION-string disclosure literally depends on it) — so `build_spark_engine` pins
-`spark.sql.ansi.enabled=true` explicitly. `spark.sql.session.timeZone` is pinned to `UTC` for
-determinism across runners; every golden here is timezone-insensitive (all `date32`, no
-timestamps), verified to reproduce identically under UTC. `master("local[2]")` per the plan.
+`spark.sql.ansi.enabled=true` explicitly. The registry's **default** session zone is `UTC` for
+determinism across runners. `master("local[2]")` per the plan.
+
+**Per-scenario session-conf override (H-1a).** A registry pinned to one session zone is
+structurally incapable of catching a session-timezone divergence — the whole class is invisible to
+it. `Scenario.session_conf` therefore carries conf pairs applied to BOTH engines for that scenario
+only: the oracle takes them through `spark_session_conf` (set, run, restore), and repark takes them
+by BUILDING a session with them, because repark resolves the session zone once at session
+construction. Scenarios that declare no override behave exactly as before.
 """
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import os
 import uuid
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from typing import Any
 
 import pyarrow as pa
@@ -66,6 +73,24 @@ LIVE = live_enabled()
 
 
 # ==================================================================================================
+# Per-scenario session-conf override (H-1a)
+# ==================================================================================================
+
+# Conf pairs as a TUPLE of pairs, not a dict: `Scenario` is a frozen dataclass and the override is
+# part of a scenario's identity, so it must be hashable and immutable like the rest of it.
+SessionConf = tuple[tuple[str, str], ...]
+
+# The ONE session-timezone conf key (mirrors `repark.session.session_time_zone`; PySpark's own
+# spelling, so the identical pair configures both engines).
+SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"
+
+# The registry's default oracle zone, and the two non-UTC zones scenarios override it with.
+DEFAULT_SESSION_TIME_ZONE = "UTC"
+ZONE_NEW_YORK = "America/New_York"
+ZONE_TOKYO = "Asia/Tokyo"
+
+
+# ==================================================================================================
 # Engine abstraction — one recipe, two engines
 # ==================================================================================================
 
@@ -88,14 +113,28 @@ class Engine:
     arrow_of: Callable[[Any], pa.Table]
 
 
-def build_repark_engine() -> Engine:
-    """A fresh repark engine (cheap — no JVM)."""
+def build_repark_engine(session_conf: SessionConf = ()) -> Engine:
+    """A fresh repark engine (cheap — no JVM).
+
+    `session_conf` is applied at BUILD time, because repark resolves build-time knobs (the session
+    timezone among them) once at `getOrCreate` — a runtime `conf.set` of one would move the facade
+    and leave the live engine session where it was. When an override is requested, an already-active
+    session is stopped first so `getOrCreate` cannot hand back a session carrying the previous
+    scenario's conf. With no override the call is byte-for-byte the pre-H-1a behavior.
+    """
     import repark
     from repark import Window
     from repark import functions as rfunctions
     from repark import types as rtypes
 
-    session = repark.ReparkSession.builder.appName("repark-parity-live").getOrCreate()
+    builder = repark.ReparkSession.builder.appName("repark-parity-live")
+    if session_conf:
+        active = repark.ReparkSession.getActiveSession()
+        if active is not None:
+            active.stop()
+        for key, value in session_conf:
+            builder = builder.config(key, value)
+    session = builder.getOrCreate()
     return Engine(
         name="repark",
         session=session,
@@ -117,7 +156,8 @@ def build_spark_engine() -> Engine:
         SparkSession.builder.master("local[2]")
         .appName("repark-parity-live-oracle")
         .config("spark.sql.ansi.enabled", "true")  # Spark 4 default; the goldens' recorded basis
-        .config("spark.sql.session.timeZone", "UTC")  # deterministic; goldens are tz-insensitive
+        # The registry DEFAULT zone; a scenario overrides it per run via `spark_session_conf`.
+        .config(SESSION_TIME_ZONE_KEY, DEFAULT_SESSION_TIME_ZONE)
         .config("spark.sql.shuffle.partitions", "2")  # tiny fixtures — keep shuffles cheap
         .config("spark.ui.enabled", "false")
         .getOrCreate()
@@ -131,6 +171,28 @@ def build_spark_engine() -> Engine:
         window=Window,
         arrow_of=lambda df: df.toArrow(),
     )
+
+
+@contextlib.contextmanager
+def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[None]:
+    """Apply `session_conf` to the SHARED live oracle session, then restore it.
+
+    The oracle session is session-scoped (one JVM per pytest run), so a scenario override must be
+    reversible or it would leak into every later scenario. PySpark's `conf.set` is live for the
+    session-timezone key, which is exactly why the two engines need different application
+    mechanisms for the same override.
+    """
+    if not session_conf:
+        yield
+        return
+    previous = {key: engine.session.conf.get(key) for key, _ in session_conf}
+    try:
+        for key, value in session_conf:
+            engine.session.conf.set(key, value)
+        yield
+    finally:
+        for key, value in previous.items():
+            engine.session.conf.set(key, value)
 
 
 def run_scenario(scenario: Scenario, engine: Engine) -> pa.Table:
@@ -170,12 +232,14 @@ def _date_spine(engine: Engine, dates: list[str]) -> Any:
 class Scenario:
     """A named golden: an engine-agnostic `recipe` and the pinned `golden` it must reproduce on
     BOTH engines. `order_sensitive` mirrors the source pin (True where an ``ORDER BY`` is under
-    test)."""
+    test). `session_conf` is the per-scenario override (H-1a): conf pairs applied to both engines
+    for this scenario only — empty for every scenario recorded under the registry default."""
 
     name: str
     recipe: Callable[[Engine], Any]
     golden: pa.Table
     order_sensitive: bool = False
+    session_conf: SessionConf = field(default=())
 
 
 # ----- Group E: group-by / aggregate (7) ---------------------------------------------------------
@@ -400,6 +464,35 @@ def _sc_filter_keyword_literal_false_column(engine: Engine) -> Any:
     the boolean literal, so the result is EMPTY (not a bind to the int column)."""
     src = engine.session.createDataFrame([(1, 2), (3, 4)], ["false", "b"])
     return src.filter("false")
+
+
+# ----- Non-UTC oracle session (2, H-1a) ----------------------------------------------------------
+#
+# The first scenarios in this registry that run the ORACLE under a non-UTC session zone — the
+# reason `Scenario.session_conf` exists. Both assert a real invariant: a DATE carries no instant,
+# so DATE extraction and DATE arithmetic must NOT move with the session zone. That is what makes
+# them safe to assert as EQUALITY today (the session-timezone extraction gap is a TIMESTAMP gap)
+# and load-bearing tomorrow: a fix that pushed the session zone into the DATE path reds here.
+# The divergent TIMESTAMP rows for the same class live in test_session_timezone_parity.py as
+# recorded disclosures until that fix lands.
+
+
+def _sc_date_extractor_under_new_york_session(engine: Engine) -> Any:
+    """DATE extraction under an `America/New_York` oracle session — zone-independent by contract."""
+    return engine.session.sql(
+        "SELECT year(to_date('2024-02-29')) AS year_part, "
+        "month(to_date('2024-02-29')) AS month_part, "
+        "dayofmonth(to_date('2024-02-29')) AS day_part"
+    )
+
+
+def _sc_date_math_under_tokyo_session(engine: Engine) -> Any:
+    """Leap-day DATE arithmetic under an `Asia/Tokyo` oracle session — the other side of UTC."""
+    return engine.session.sql(
+        "SELECT last_day(to_date('2024-02-01')) AS month_end, "
+        "trunc(to_date('2024-02-29'), 'YEAR') AS year_start, "
+        "datediff(to_date('2024-03-01'), to_date('2024-02-01')) AS february_days"
+    )
 
 
 SCENARIOS: list[Scenario] = [
@@ -782,6 +875,45 @@ SCENARIOS: list[Scenario] = [
                 ]
             ),
         ),
+    ),
+    # ----- non-UTC oracle session (H-1a) -----
+    Scenario(
+        "date_extractor_under_new_york_session",
+        _sc_date_extractor_under_new_york_session,
+        pa.table(
+            [
+                pa.array([2024], pa.int32()),
+                pa.array([2], pa.int32()),
+                pa.array([29], pa.int32()),
+            ],
+            schema=pa.schema(
+                [
+                    pa.field("year_part", pa.int32(), nullable=True),
+                    pa.field("month_part", pa.int32(), nullable=True),
+                    pa.field("day_part", pa.int32(), nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "date_math_under_tokyo_session",
+        _sc_date_math_under_tokyo_session,
+        pa.table(
+            [
+                pa.array([dt.date(2024, 2, 29)], pa.date32()),
+                pa.array([dt.date(2024, 1, 1)], pa.date32()),
+                pa.array([29], pa.int32()),
+            ],
+            schema=pa.schema(
+                [
+                    pa.field("month_end", pa.date32(), nullable=True),
+                    pa.field("year_start", pa.date32(), nullable=True),
+                    pa.field("february_days", pa.int32(), nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
     ),
 ]
 

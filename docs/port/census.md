@@ -336,8 +336,12 @@ state and is **not** phase-3 work: it changes goldens, which changes results, wh
 movement. It is scheduled post-milestone-one, gated on the live oracle tier having run green at
 least once on merged code, and it ships **alone** as a golden-changing (declared-rename-free) unit.
 
-The two guard tests that hard-assert the live registry's scenario count (**27**) and its disclosure
-name set port unchanged and must only ever move deliberately.
+The two guard tests that hard-assert the live registry's scenario count and its disclosure
+name set port unchanged and must only ever move deliberately. The count was **27** at the port pin
+and is **29** since 2026-08-10, when H-1a added the two non-UTC-oracle scenarios
+(`date_extractor_under_new_york_session`, `date_math_under_tokyo_session`) and moved the size and
+uniqueness pins in the same diff — the deliberate move this rule asks for. The disclosure name set
+is unchanged.
 
 ---
 

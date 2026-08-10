@@ -154,6 +154,15 @@ moving it. Nothing is described in both places.
   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) §3 row ID-1. It stays listed
   here because it remains a real difference a migrating workload can hit; it is not scheduled for a
   fix, and revisiting it needs a new dated decision.
+- **Timestamp extraction ignores the session timezone** — **BACKLOG, fix in flight
+  (2026-08-10)**: the campaign's CRITICAL G1 class. The conf surface, the non-UTC oracle
+  scenarios and the recorded disclosure corpus are delivered (H-1a split A); the extraction fix
+  and its Rust pins are the in-flight split B, which also flips the disclosures to equality rows.
+  Semantics: registry §7 rows TZ-1 (extraction) and TZ-4 (tz-naive Arrow export).
+- **`CAST(TIMESTAMP AS BIGINT)` returns nanoseconds, not seconds** — **BACKLOG, open
+  (2026-08-10)**: a silently-wrong-result class (a 10⁹ factor on every timestamp→integer cast),
+  found while authoring the timezone corpus; not a zone bug, and it gets its own unit rather than
+  a fold into the extraction fix. Semantics + pin: registry §7 row TZ-5.
 
 ## Architectural risks
 

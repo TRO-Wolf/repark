@@ -57,8 +57,13 @@ def spark_engine() -> Iterator[lp.Engine]:
 @pytest.mark.parametrize("scenario", lp.SCENARIOS, ids=[s.name for s in lp.SCENARIOS])
 def test_scenario_recipe_matches_golden_on_repark(scenario: lp.Scenario) -> None:
     """Every registry recipe produces its pinned golden on repark — no JVM. This is the routine-CI
-    home of the shared recipes (proves them before the live tier layers Spark on top)."""
-    engine = lp.build_repark_engine()
+    home of the shared recipes (proves them before the live tier layers Spark on top).
+
+    A scenario's `session_conf` is applied by BUILDING the repark session with it (repark resolves
+    build-time knobs once at `getOrCreate`), so the JVM-free leg runs under the same session
+    configuration the oracle leg will.
+    """
+    engine = lp.build_repark_engine(scenario.session_conf)
     actual = lp.run_scenario(scenario, engine)
     assert_frames_equal(actual, scenario.golden, order_sensitive=scenario.order_sensitive)
 
@@ -79,12 +84,14 @@ def test_live_scenario_matches_repark_golden_and_spark(
     """
     order = scenario.order_sensitive
 
-    # repark == pinned golden
-    repark_out = lp.run_scenario(scenario, lp.build_repark_engine())
+    # repark == pinned golden (the scenario's session conf is applied at session BUILD)
+    repark_out = lp.run_scenario(scenario, lp.build_repark_engine(scenario.session_conf))
     assert_frames_equal(repark_out, scenario.golden, order_sensitive=order)
 
-    # pinned golden == LIVE Spark (the leg routine CI can never run) — re-derived, not re-asserted
-    spark_out = lp.run_scenario(scenario, spark_engine)
+    # pinned golden == LIVE Spark (the leg routine CI can never run) — re-derived, not re-asserted.
+    # The oracle session is shared, so the scenario's conf is set around this leg and restored.
+    with lp.spark_session_conf(spark_engine, scenario.session_conf):
+        spark_out = lp.run_scenario(scenario, spark_engine)
     assert_frames_equal(spark_out, scenario.golden, order_sensitive=order)
 
 
@@ -117,19 +124,79 @@ def test_live_flag_predicate_gates_on_exact_env_value() -> None:
 def test_registry_covers_the_mandated_golden_family() -> None:
     """Guard against accidental registry shrinkage: the mandated coverage floor is the 23-golden
     family (Group E group-agg/na/union + columns + dates + compound-agg display name) plus the two
-    Group L-write division goldens (union + bare) plus the two audit-G2 filter-rewriter goldens,
-    plus the four load-bearing disclosures.
+    Group L-write division goldens (union + bare) plus the two audit-G2 filter-rewriter goldens
+    plus the two H-1a non-UTC-oracle goldens, plus the four load-bearing disclosures.
+
+    The size moved 27 -> 29 DELIBERATELY in the same diff as the two scenarios it counts.
     """
-    assert len(lp.SCENARIOS) == 27, (
-        "the 23-golden family + 2 Group L-write division goldens + 2 audit-G2 filter goldens"
+    assert len(lp.SCENARIOS) == 29, (
+        "the 23-golden family + 2 Group L-write division goldens + 2 audit-G2 filter goldens "
+        "+ 2 H-1a non-UTC-oracle goldens"
     )
-    assert len({s.name for s in lp.SCENARIOS}) == 27, "scenario names are unique"
+    assert len({s.name for s in lp.SCENARIOS}) == 29, "scenario names are unique"
     assert {d.name for d in lp.DISCLOSURES} == {
         "int_union_string",
         "fillna_scalar_numeric_nullability",
         "filter_case_collision_bypasses",
         "filter_backtick_identifier",
     }, "every load-bearing disclosure is present"
+
+
+def test_registry_runs_at_least_two_scenarios_under_a_non_utc_oracle() -> None:
+    """H-1a acceptance: the registry can put the ORACLE in a non-UTC session, and does.
+
+    A registry pinned to one zone is structurally incapable of catching a session-timezone
+    divergence — so the count is a pin, not a comment. Every override names the ONE session
+    timezone key spelling; a second spelling would fail here rather than quietly configure nothing.
+    """
+    overridden = [scenario for scenario in lp.SCENARIOS if scenario.session_conf]
+    assert len(overridden) >= 2, "at least two scenarios must run under a non-UTC oracle session"
+    zones = {
+        value
+        for scenario in overridden
+        for key, value in scenario.session_conf
+        if key == lp.SESSION_TIME_ZONE_KEY
+    }
+    assert zones == {lp.ZONE_NEW_YORK, lp.ZONE_TOKYO}, (
+        "the overrides must span both sides of UTC, so a sign error cannot pass both"
+    )
+    assert lp.DEFAULT_SESSION_TIME_ZONE not in zones, "an override to UTC is not an override"
+    for scenario in overridden:
+        assert all(key == lp.SESSION_TIME_ZONE_KEY for key, _ in scenario.session_conf), (
+            "session-timezone overrides use the one authoritative key spelling"
+        )
+
+
+def test_build_repark_engine_override_stops_the_active_session_and_rebuilds() -> None:
+    """The `active.stop()` branch inside `build_repark_engine`, exercised directly (JVM-free).
+
+    Every scenario runs behind conftest's `_isolate_active_session`, which clears the process-wide
+    registry before each test — so under the suite the branch never fires and the override looks
+    load-bearing without being covered. It IS load-bearing: repark resolves the session zone once
+    at construction, so with a session already active `getOrCreate` would hand that one back and
+    the scenario would silently run under the PREVIOUS zone with only the soft
+    "some configuration may not..." warning. This test creates that state on purpose.
+
+    Reds if the stop is removed (the returned engine reports `UTC`) or if the override stops
+    reaching the builder.
+    """
+    import repark
+
+    first = lp.build_repark_engine()
+    assert first.session.conf.get(lp.SESSION_TIME_ZONE_KEY) == lp.DEFAULT_SESSION_TIME_ZONE
+    assert repark.ReparkSession.getActiveSession() is first.session
+
+    second = lp.build_repark_engine(((lp.SESSION_TIME_ZONE_KEY, lp.ZONE_TOKYO),))
+    assert second.session is not first.session, "an override must BUILD, never reuse"
+    assert second.session.conf.get(lp.SESSION_TIME_ZONE_KEY) == lp.ZONE_TOKYO, (
+        "the override zone must reach the freshly built session"
+    )
+    assert repark.ReparkSession.getActiveSession() is second.session
+
+    # The documented cost (ledger residual 5): the previous handle is STOPPED, not left alive.
+    with pytest.raises(Exception, match=r"stopped|SparkSession|alive"):
+        first.session.sql("SELECT 1").to_arrow()
+    second.session.stop()
 
 
 # ==================================================================================================
