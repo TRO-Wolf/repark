@@ -1,13 +1,21 @@
 # BRIEF — the Agent-Agnostic Front-Door campaign (execution slate)
 
-**Status:** In-repo campaign slate · **Design:**
-[../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) ·
+> **ARCHIVED 2026-08-10** (Front-Door close-out) — a historical record of the Agent-Agnostic
+> Front-Door campaign, kept for provenance and **not a source of live rules**: every rule still in
+> force lives in a current document ([retrospective.md](retrospective.md) "Promotion check").
+> Relative links were repaired for this location on the same date; nothing else changed. Current
+> state: [STATUS.md](../../../STATUS.md).
+
+**Status:** DELIVERED — all five units merged 2026-08-09 (#24, #25, #26, #28, #29); campaign closed
+2026-08-10 · **Design:**
+[agent-agnostic-frontdoor.md](agent-agnostic-frontdoor.md) ·
 **Date:** 2026-08-08 · **Target repo:** `github.com/TRO-Wolf/repark` (public)
 
 This is the per-PR slate. Five units (FD-1…FD-5), each independently mergeable, each leaving `main`
 green. **No engine code changes**; FD-3 changes mechanical-gate tooling only. In-repo, the design lives
-at [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) and this
-brief at `briefs/frontdoor-campaign.md` (landed with FD-1, the same pattern the port phases used).
+at [agent-agnostic-frontdoor.md](agent-agnostic-frontdoor.md) and this
+brief at `briefs/frontdoor-campaign.md` (landed with FD-1, the same pattern the port phases used;
+both moved here at close-out).
 
 ---
 
@@ -188,3 +196,11 @@ All five units merged; DESIGN §6 definition-of-success items 1–8 each demonst
 can execute a bounded change from `README → STATUS → ARCHITECTURE → DEVELOPMENT → AGENTS.md` with no
 model-tier or porting vocabulary in the path. Campaign retrospective appended to the (now-condensed)
 STATUS/history, and this brief + design archived under `docs/history/` as the campaign's own record.
+
+**DISCHARGED 2026-08-10** (dated correction, per this directory's rules). All five units merged
+2026-08-09. Two clauses were **not** met at the fifth merge and were closed by the close-out unit,
+which is what this archival is part of: item 2 (three stale current-state claims survived outside
+the status SSOT — `CONTRIBUTING.md`, `docs/skills/map.md`, `AGENTS.md`) and item 8 (the read path
+was declared but never signposted from `README.md`, and no cold-read trial had been run). Both are
+recorded, with the correction and the trial transcript, in [retrospective.md](retrospective.md)
+§3 and §7.

@@ -17,7 +17,9 @@ and dated corrections (see [README.md](README.md) "Rules for this directory").
   port-era decisions are still **current** ADRs.
 - [promotion-ledger.md](promotion-ledger.md) — the lossless-archival audit: every rule in every file
   below, classified HOMED / PROMOTED / SUPERSEDED / HISTORICAL, with its authoritative home today,
-  plus the eleven promotions FD-4 landed and the recorded residue.
+  plus the thirteen promotions FD-4 landed — eleven before the `git mv`, two more found at its
+  adversarial review — and the recorded residue. *(Count corrected 2026-08-10; it read "eleven",
+  which is the pre-move subset, not the total the ledger states.)*
 - **Execution briefs** (what a phase was asked to do): [phase-0-bootstrap.md](phase-0-bootstrap.md),
   [phase-1-engine-core.md](phase-1-engine-core.md), [phase-2-sql-doors.md](phase-2-sql-doors.md),
   [phase-3-python-facade.md](phase-3-python-facade.md).

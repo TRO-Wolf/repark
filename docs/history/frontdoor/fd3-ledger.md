@@ -1,10 +1,16 @@
 # Unit ledger — FD-3: mechanize structural truth
 
+> **ARCHIVED 2026-08-10** (Front-Door close-out) — a historical record of the Agent-Agnostic
+> Front-Door campaign, kept for provenance and **not a source of live rules**: every rule still in
+> force lives in a current document ([retrospective.md](retrospective.md) "Promotion check").
+> Relative links were repaired for this location on the same date; nothing else changed. Current
+> state: [STATUS.md](../../../STATUS.md).
+
 **Unit:** Front-Door FD-3 · **Slate:**
-[../briefs/frontdoor-campaign.md](../briefs/frontdoor-campaign.md), unit "FD-3" · **Design:**
-[../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) §3
-(recommendations 3, 4, 6) — both in-repo since FD-1 · **Status:** DELIVERED — merged 2026-08-09
-(#26)
+[frontdoor-campaign.md](frontdoor-campaign.md), unit "FD-3" · **Design:**
+[agent-agnostic-frontdoor.md](agent-agnostic-frontdoor.md) §3
+(recommendations 3, 4, 6) — both in-repo since FD-1, both archived here at close-out ·
+**Status:** DELIVERED — merged 2026-08-09 (#26); archived 2026-08-10
 
 Goal: **structural documentation drift becomes a CI failure.** Documentation + mechanical-gate
 work only — zero `.rs` changes, no engine behavior touched.
@@ -168,3 +174,10 @@ lands its test surface as the table above plus the CI/Makefile/pre-commit wiring
   (the `Authored-By` trailer names the model actually running, read from the live session at
   commit time — never a role constant): an incident record from FD-1's merged squash, folded
   into the next PR per the forward-only rule rather than shipped as its own commit.
+
+**Final dispositions (dated correction, 2026-08-10 — campaign close-out).** O-1 **STILL ACCEPTED**:
+the two-vocabulary split survives; recorded as a shipped flag in
+[../../../task/metrics.md](../../../task/metrics.md) and recommended for the next manifest touch.
+O-2 **CLOSED**: the `guards` job kept its name, so no branch-protection change was owed. O-3
+**CLOSED**: no advisory materialized; the unit touched no Rust dependency. R-1 **DISCHARGED**: the
+entry is live in [../../../task/lessons.md](../../../task/lessons.md) under 2026-08-09.

@@ -12,9 +12,13 @@ the model you are running as.
 - [Sonnet.md](Sonnet.md) — delegated-implementation tier posture + non-negotiables.
 - [Haiku.md](Haiku.md) — narrow/mechanical tier posture + non-negotiables.
 
-Not ported yet (returns with phase 1, alongside the code it governs): `trait-wrapping.md` — the
-silent-default gap when wrapping a trait (enumerate + forward every method, defaults included;
-both-sides audit method). It lives in the private v1 repository until crate code lands here.
+**`trait-wrapping.md` was never ported, and no longer needs to be** (recorded 2026-08-10). The
+manual it would have carried — the silent-default gap when wrapping a trait: enumerate and forward
+every method, defaults included, audited from both sides — is now a **rule in force**, not a skill
+file: the audit duty is in [../../AGENTS.md](../../AGENTS.md) "Version-pin contract" (re-enumerate
+the wrapped catalog's trait surface at every fork repin), and the one open instance of the gap is a
+named component limitation in
+[../../crates/repark-iceberg/map.md](../../crates/repark-iceberg/map.md) "Known limitations".
 
 ## I want to...
 
@@ -23,7 +27,7 @@ both-sides audit method). It lives in the private v1 repository until crate code
 | Read the full engineering contract for a session | [Opus.md](Opus.md) |
 | Brief a delegated implementation agent (Sonnet tier) | [Sonnet.md](Sonnet.md) |
 | Brief a narrow/mechanical agent (Haiku tier) | [Haiku.md](Haiku.md) |
-| Find the trait-wrapping skill | private v1 repository until phase 1 (see above) |
+| Apply the trait-wrapping both-sides audit | [../../AGENTS.md](../../AGENTS.md) "Version-pin contract" (see above) |
 
 ## Pointers
 

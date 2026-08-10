@@ -38,12 +38,13 @@ Dependabot entries carry a 7-day `cooldown`. No `pull_request_target` anywhere; 
 | `taplo.yml` | TOML format + lint ([../../.taplo.toml](../../.taplo.toml)); uvx-pinned, same version as `make toml-check`. **Always-run on PRs** — required check; see the zizmor row. |
 | `zizmor.yml` | Workflow security analysis; **blocking** — fails on any finding not suppressed in [../zizmor.yml](../zizmor.yml) (currently none); uploads SARIF as an artifact (`if: always()`). uvx-pinned, same version as `make workflows-lint`. **Always-run on PRs** (no `paths:` filter on `pull_request`): it is a required status check, and a path-filtered required check deadlocks every PR that doesn't match the filter (lesson 2026-08-07). |
 
-**Not ported yet** (return in later phases; the v1 assets are the templates):
+**Not re-homed** (each returns with a concrete driver; the v1 assets are the templates):
 
 - The `ci.yml` diff-classifier (`detect`) — deferred; **trigger: returns when rust-test exceeds
   ~3 min** (phase-1 decision, recorded here per the execution brief).
 
-- `benches.yml`, `tpch-sf1.yml` — tier-3 benchmark ratio gates; later phases.
+- `benches.yml`, `tpch-sf1.yml` — tier-3 benchmark ratio gates; slated for the V2 Engine
+  Hardening campaign's performance-baseline work.
 - `codeql.yml` — CodeQL security-extended matrix; later phases.
 - `release.yml` — lands at the first tagged release, not before; see
   [../../docs/release.md](../../docs/release.md).

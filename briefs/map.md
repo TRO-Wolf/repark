@@ -10,17 +10,17 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
-- [frontdoor-campaign.md](frontdoor-campaign.md) — the Agent-Agnostic Front-Door campaign slate
-  (2026-08-08): the first post-milestone campaign — five independently mergeable, behavior-preserving
-  units (FD-1 truthful front door / FD-2 neutral contract / FD-3 mechanize structure / FD-4 reduce
-  doc weight / FD-5 seam honesty), executing the settled design in
-  [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md);
-  documentation + mechanical-gate work only, no engine code change.
+**No campaign is running, so this directory holds only this map** (2026-08-10). That is the
+steady state between campaigns, not a gap: a slate lands here when its campaign starts and leaves
+when the campaign closes.
 
 **Closed campaigns are archived, not kept here.** The four port briefs (`phase-0`…`phase-3`,
-2026-08-06 → 2026-08-08) moved to
-[../docs/history/port-v2/](../docs/history/port-v2/map.md) on 2026-08-09 with the unit ledgers they
-drove; this directory holds the slates of campaigns that are still running.
+2026-08-06 → 2026-08-08) moved to [../docs/history/port-v2/](../docs/history/port-v2/map.md) on
+2026-08-09 with the unit ledgers they drove; the Agent-Agnostic Front-Door slate
+(`frontdoor-campaign.md`, 2026-08-08 → 2026-08-10) moved to
+[../docs/history/frontdoor/](../docs/history/frontdoor/map.md) at that campaign's close-out, with
+its design and its one unit ledger. Where the next campaign stands is
+[../STATUS.md](../STATUS.md) "Active workstreams".
 
 ## I want to... → go to
 
@@ -28,10 +28,10 @@ drove; this directory holds the slates of campaigns that are still running.
 |---|---|
 | See what a delivered unit was ASKED to do | the dated brief for its slate — in this directory while the campaign runs, in [../docs/history/](../docs/history/map.md) once it closes |
 | Find the standing rules briefs inherit | [../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules" |
-| Write a new brief | copy the newest brief's structure; standing rules by reference, not restatement |
+| Write a new brief | copy the newest archived brief's structure; standing rules by reference, not restatement |
 | Read the port briefs (phases 0–3) | [../docs/history/port-v2/README.md](../docs/history/port-v2/README.md) |
 | See the port phases those briefs executed against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
-| Read the design the Front-Door campaign implements | [../docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) |
+| Read the Front-Door campaign's slate, design and retrospective | [../docs/history/frontdoor/README.md](../docs/history/frontdoor/README.md) |
 | Read the settled designs the port phases implemented | [../docs/design/map.md](../docs/design/map.md) |
 
 ## Pointers

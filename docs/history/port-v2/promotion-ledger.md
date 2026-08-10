@@ -1,8 +1,8 @@
 # Promotion ledger — what every archived file still binds, and where that rule lives now
 
 **Date:** 2026-08-09 · **Unit:** Front-Door FD-4 · **Design:**
-[../../design/agent-agnostic-frontdoor.md](../../design/agent-agnostic-frontdoor.md) §7 ·
-**Slate:** [../../../briefs/frontdoor-campaign.md](../../../briefs/frontdoor-campaign.md) "FD-4"
+[../frontdoor/agent-agnostic-frontdoor.md](../frontdoor/agent-agnostic-frontdoor.md) §7 ·
+**Slate:** [../frontdoor/frontdoor-campaign.md](../frontdoor/frontdoor-campaign.md) "FD-4"
 
 This is the audit that made the archival in this directory **lossless**. Every file moved here was
 read end to end; every rule, constraint, standing decision and lesson it carries was classified; and

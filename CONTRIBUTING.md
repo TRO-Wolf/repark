@@ -1,7 +1,8 @@
 # Contributing to RePark
 
-RePark is **source-open, contribution-gated** while the port from the private v1 repository is in
-progress.
+RePark is **source-open, contribution-gated** while the engine is pre-alpha and nothing is
+released. Current state — what is delivered, what is deferred, and release state — is
+[STATUS.md](STATUS.md); it is the source of truth, and this file does not restate it.
 
 ## What is welcome now
 
@@ -13,10 +14,12 @@ progress.
 
 ## What is not accepted yet
 
-**External code pull requests are not accepted during the port.** The project is being ported phase
-by phase from a private v1 codebase under a strict internal process; unsolicited PRs will be closed
-with thanks. This policy will be revisited after the port's milestone one (the full v1 test suite
-green on the new skeleton).
+**External code pull requests are not accepted yet.** Work here runs under a strict internal
+process (see below); unsolicited PRs will be closed with thanks. The port that stood this
+repository up is complete, so the gate is no longer the port — it is the pre-alpha state itself:
+no API is stable and no release is tagged. The policy is revisited by the maintainer on the way to
+the first tagged release; [STATUS.md](STATUS.md) "Current milestone" is where that path is
+recorded.
 
 ## Maintainer-side process (for context)
 
