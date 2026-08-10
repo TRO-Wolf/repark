@@ -65,7 +65,11 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 - **Test strategy:** `cargo test -p repark-spark` — Session + `SparkExtension` + `SparkDialect`
   integration; the v1 lib-root battery; the Q13 surface-matrix audit.
 - **Known limitations:** carried v1 divergences — the time-travel view leak + the `$`-metadata rider
-  ([../../STATUS.md](../../STATUS.md) "Known correctness issues").
+  ([../../STATUS.md](../../STATUS.md) "Known correctness issues"). Every divergence that has been
+  *disposed of* — declared, or backlogged with an intent to fix — has its semantics, its pin and
+  its rationale in the divergence registry
+  ([../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md)); this door's
+  statement-surface gaps are its §2. Link, never restate.
 
 ## Pointers
 

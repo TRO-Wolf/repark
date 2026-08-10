@@ -41,13 +41,16 @@ completion = "make verify"
 pre_pr = "make preflight"
 
 # The documentation spine. Each path must exist; archiving or moving one of these documents
-# without updating this index is a red gate.
+# without updating this index is a red gate. `divergences` is indexed here because ~16 live
+# sources (Rust refusal messages, facade docstrings, facade tests) cite that path by name: a move
+# or a rename would break every one of them silently, and this row makes it a red gate instead.
 [documentation]
 contract = "AGENTS.md"
 architecture = "ARCHITECTURE.md"
 development = "DEVELOPMENT.md"
 status = "STATUS.md"
 testing = "docs/testing.md"
+divergences = "docs/spark-sql-iceberg-parity.md"
 
 # ---------------------------------------------------------------------------------------
 # Components.

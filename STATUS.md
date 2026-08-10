@@ -126,20 +126,34 @@ Parked lanes (drawn up, not started; they conflict with nothing and can interlea
 Carried debt from the port; each is a real defect, honestly tracked, not a blocker for the state
 above.
 
-- **Spark-door time-travel view leak** — a declared divergence inherited verbatim from v1; the
-  v1 source wants the same bugfix, so it is fixed there and re-ported, not patched only here. The
-  ANSI door's fix (`PinnedViews`, released on every exit path) is the template.
+**Where each fact lives.** This section is the authoritative home for an issue that has **no
+disposition yet** — its state *and* enough description to be understood. Once an issue is *disposed
+of* as a **divergence** — DECLARED (a permanent difference) or BACKLOG (a difference we intend to
+close) — its semantics move to the divergence registry,
+[docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md), and this file keeps one line
+of state plus a link. A known **defect with its fix scheduled** is not a divergence and gets no
+row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
+moving it. Nothing is described in both places.
+
+- **Spark-door time-travel view leak** — a known **defect**, not a declared divergence: the fix is
+  scheduled (campaign decision D1, unit H-1b) and it is inherited verbatim from v1, so under the
+  v1-first rule it is fixed in the v1 source and re-ported rather than patched only here. The ANSI
+  door's fix (`PinnedViews`, released on every exit path) is the template. It has no registry row
+  and no pin today; H-1b's re-port lands both the fix and the pin, and retires this entry.
 - **The `$`-metadata introspection rider** — the fork's `$`-suffixed metadata tables enumerate as
-  ordinary tables in `SHOW TABLES` / `information_schema.tables`, where Trino hides them. Whether
-  `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is a fork/core
-  decision, not a door parser; current behavior is pinned by tests on the ANSI door and on the
-  bare-session core path (`crates/repark-sql/tests/introspection.rs`,
-  `crates/repark-core/src/session/tests.rs`), so changing it reds a test on purpose.
-- **Identifier case folding diverges from Apache Spark.** Both doors resolve a *quoted* identifier
-  case-**sensitively** (stock DataFusion resolution); Spark resolves `` `ID` `` case-insensitively
-  by default. Unquoted identifiers agree. This is inherited engine-wide, not introduced by either
-  door, and is pinned by the cross-door case-folding test; fixing it would be a deliberate
-  Spark-door resolution decision, not a bug fix.
+  ordinary tables in `SHOW TABLES` / `information_schema.tables`, where Trino hides them. **No
+  disposition yet** (campaign decision D2 rules on it in unit H-1c), which is why it is described
+  here rather than in the registry: whether `repark_iceberg::catalog`'s
+  `SchemaProvider::table_names` should filter them is a fork/core decision, not a door parser.
+  Current behavior is pinned by tests on the ANSI door and on the bare-session core path
+  (`crates/repark-sql/tests/introspection.rs`, `crates/repark-core/src/session/tests.rs`), so
+  changing it reds a test on purpose. If H-1c rules "keep and declare", the semantics move to the
+  registry in that change.
+- **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
+  is the divergence registry's first declared row, with its behavior, its rationale and its pin:
+  [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) §3 row ID-1. It stays listed
+  here because it remains a real difference a migrating workload can hit; it is not scheduled for a
+  fix, and revisiting it needs a new dated decision.
 
 ## Architectural risks
 

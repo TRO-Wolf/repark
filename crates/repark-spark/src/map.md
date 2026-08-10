@@ -75,7 +75,23 @@ wrapper.
   342 at the pin − 6 `postgres_p11_tests` (post-milestone-one) − 2 time-travel parser pins
   hoisted to repark-core in phase 1). Includes the `bug001_*` MoR-valve set and the
   `partitioned_ctas` / `partitioned_merge` / `transform_overwrite` / `service_managed_ctas`
-  groups.
+  groups. Plus the **declared-divergence pin**
+  `ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud` (H-1d, 2026-08-10): the
+  `IF EXISTS` / `IF NOT EXISTS` spellings and every other trailing clause refuse loud on
+  snapshot-ref DDL, and the refusal still cites the registry row it defends. Its leftover-token
+  assertion binds the **dynamic** `(got word "…")` span, never the bare word — the message's
+  constant tail already contains `NOT` and `EXISTS`, so a bare substring check would be a
+  tautology for two of the three cases.
+  `metadata_tables_spark_dot_form_and_guards` likewise exercises **all ten** write forms registry
+  row MT-2 names (INSERT / UPDATE / DELETE / MERGE / CTAS / CREATE OR REPLACE / TRUNCATE /
+  CREATE VIEW / DROP / ALTER), because a row may not assert more than its pin proves.
+
+**Where the refusal messages point.** Several modules here name
+`docs/spark-sql-iceberg-parity.md` (the **divergence registry**) in their loud-refusal text —
+`router.rs`, `normalize.rs`, `metadata_tables.rs`, `ref_ddl.rs`, `insert_overwrite.rs`. The
+registry holds the semantics of each of those gaps (repark's behavior, Apache Spark's, the pin,
+the rationale); this map links, it does not restate. A refusal message that cites a section is
+part of that section's pin — changing either one changes both.
 
 ## I want to...
 
@@ -91,6 +107,7 @@ wrapper.
 | ALTER TABLE / token rewrites | `alter.rs` |
 | Namespace / DROP TABLE DDL | `namespace_ddl.rs` |
 | Pin a router behavior end to end | `tests.rs` (lib-root battery) |
+| Find why a statement form refuses, and whether it is declared | `../../../docs/spark-sql-iceberg-parity.md` §2 |
 | Pin a door-native gate (TRUNCATE/P11/BUG-010) | `router/tests.rs` |
 | ORDER BY / eager-command passthrough semantics | `spark_ast.rs` |
 | Namespace introspection rendering | `describe_show.rs` |

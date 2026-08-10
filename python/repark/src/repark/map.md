@@ -831,16 +831,13 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   repark lists the *actual* colliding columns where Spark echoes the reference spelling once per
   candidate, and omits Spark's `SQLSTATE: 42704` suffix (no repark error carries SQLSTATE).
   **Disclosed divergences — the refusal covers the bare SQL-string form ONLY, and the
-  protected-span list is NOT exhaustive** (all characterized in
-  `tests/test_filter_predicate_rewrite.py`, re-derived nightly by the `_live_parity.py`
-  `filter_case_collision_bypasses` / `filter_backtick_identifier` disclosures): (a) the `Column`
-  form `df.filter(df["id"] > 0)` never reaches the rewriter and resolves **exact-case-first**,
-  returning rows where Spark raises `AMBIGUOUS_REFERENCE`; (b) an explicitly double-quoted
-  `'"ID" > 0'` is a protected span DataFusion resolves case-**sensitively**, while Spark reads
-  `"ID"` as a string *literal* (`CAST_INVALID_INPUT` under ANSI); (c) **backtick**-quoted idents —
-  Spark's own quoting spelling — are NOT protected, so `` filter("`x` > 0") `` is corrupted into
-  `Schema error: No field named \"\"\"x\"\"\"` (PRE-EXISTING, not an audit-G2 regression; the
-  protect-and-split fix + its pin belong in a follow-up unit)),
+  protected-span list is NOT exhaustive.** Both are registry rows, not restated here:
+  [`docs/spark-sql-iceberg-parity.md`](../../../../docs/spark-sql-iceberg-parity.md) §3 **ID-2**
+  (the spellings that bypass the refusal) and §7 **BL-2** (backticks are not a protected span).
+  Each row holds repark's behavior, Spark's, its pin in
+  `tests/test_filter_predicate_rewrite.py`, and the rationale; both are re-derived nightly by the
+  `_live_parity.py` `filter_case_collision_bypasses` / `filter_backtick_identifier`
+  disclosures),
   `select` (**Group H**: applies each column's
   `_projection_name` via `Column.for_select()` so compound projections match live PySpark
   names — `(x + 1)`, `negative(x)`, `CASE WHEN …` — never DataFusion `Int64(1)` text; plain

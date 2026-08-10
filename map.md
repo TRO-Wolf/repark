@@ -42,7 +42,9 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
   `--extra` silently uninstalls a facade extra and the suite skips those tests instead of failing).
 - `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
   (path / layer / status for every crate, delivered and planned), the current phase, the
-  canonical gate commands, and the documentation index. It is a validated MIRROR, never a second
+  canonical gate commands, and the documentation index (which carries `divergences` →
+  `docs/spark-sql-iceberg-parity.md`, the divergence registry, because ~16 live sources cite that
+  path by name). It is a validated MIRROR, never a second
   source of truth — `scripts/check_manifest.py` (`make check-manifest`, in `make ci`) checks
   every field against the Cargo workspace, the Makefile, STATUS.md, the declared documents and
   the crate-root `map.md` files, and cross-checks each `layer` against the dependency-policy
@@ -88,6 +90,7 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 | Onboard as an agent (any tool) | [.agent/map.md](.agent/map.md) |
 | Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |
 | Read/extend the testing contract | [docs/testing.md](docs/testing.md) |
+| Find how repark differs from Apache Spark, and why | [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) (the divergence registry) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |

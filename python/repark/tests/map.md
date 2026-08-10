@@ -796,8 +796,10 @@ NOT in that file is a defect, not a decision.
   to `AnalysisException` in the same change — the PySpark-faithful type.) The two execution-error
   CAST pins (`test_sql_execution_error_raises_base_exception` +
   `test_dataframe_collect_execution_error_raises_base_exception`) carry a **KNOWN-DIVERGENCE**
-  cross-reference (F-BR-6) to the parity backlog (`docs/spark-sql-iceberg-parity.md` §7): Spark
-  non-ANSI returns NULL where repark raises, so a future CAST-parity unit **updates** them, not obeys.
+  cross-reference (F-BR-6) to the parity backlog — registry
+  [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §7 row
+  **BL-1**, which holds the semantics and the intent-to-fix; a future CAST-parity unit **updates**
+  these pins rather than obeying them.
 - `test_catalog_flow.py` — the source publish job's path end to end from Python (the
   acceptance kernel): memory catalog + namespace, temp view → `tableExists` gate → CTAS
   (`USING iceberg` + `TBLPROPERTIES` incl. `format-version`) → `MERGE … UPDATE SET * / INSERT *`
@@ -930,13 +932,12 @@ NOT in that file is a defect, not a decision.
   `filter_keyword_literal_false_column`) and all three disclosed divergences carry live
   `DISCLOSURES` legs; the remaining goldens (function-call skip, `null` keyword, mixed-case
   survival) are **hand-derived from that same oracle session with no standing live leg**.
-  **Disclosed divergences characterized here** (behaviour fixes are out of charter): the `Column`
-  entry point (`df.filter(df["id"] > 0)`) does NOT refuse — it resolves exact-case-first — and an
-  explicitly double-quoted `'"ID" > 1'` resolves case-*sensitively* in DataFusion, while live
-  Spark raises `AMBIGUOUS_REFERENCE` / `CAST_INVALID_INPUT` respectively; backtick-quoted idents
-  are NOT a protected span, so `` filter("`x` > 0") `` is corrupted into `No field named
-  \"\"\"x\"\"\"` (PRE-EXISTING, main had none either — fix + pin belong in a follow-up unit);
-  and exact duplicate column names are rejected at construction by DataFusion where Spark accepts
+  **Disclosed divergences characterized here** (behaviour fixes are out of charter) — the
+  semantics live in the divergence registry, this map links:
+  [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3
+  **ID-2** (the two spellings that bypass the case-collision refusal) and §7 **BL-2**
+  (backtick-quoted idents are not a protected span). Also characterized here, and *not* a registry
+  row: exact duplicate column names are rejected at construction by DataFusion where Spark accepts
   them and refuses only at the reference.
 - `test_dropin_disclosure.py` — (+ Group F review 2026-07-21: withColumns lateral-alias divergence pin; + SEC-008 2026-07-24: `show()` logs a row-count breadcrumb at INFO but NOT row data — full render is DEBUG-only; + r23 CACHE1: `clearCache` is a real MemTable drop — no-warn disclosure pin only, behavior in `test_cache_persist.py`) WG-4 Clause 2 (OTH-010): the drop-in no-op / accepted-ignored
   surface. `clearCache()` no longer a silent no-op (CACHE1 Q11); `show(vertical=True)` and
@@ -993,8 +994,9 @@ NOT in that file is a defect, not a decision.
   Arrow path, value and type — new expression entry points must join the matrix.
   Hand-computed Spark goldens through `assert_frames_equal` (real pyspark still not runnable
   here — tracked in `task/todo.md`). The module docstring flags the one non-ANSI CAST divergence
-  NOT in the corpus (F-BR-6 backlog, `docs/spark-sql-iceberg-parity.md` §7): repark raises on
-  `CAST('abc' AS INT)` where Spark returns NULL, so it is green-only-excluded, not a corpus row.
+  NOT in the corpus — registry
+  [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §7 row
+  **BL-1** (F-BR-6) — as green-only-excluded rather than a corpus row.
 - `test_functions_dates.py` — WG2: `Window`/`row_number` (order, partition restart, Int32 type,
   over-on-non-window error, spec immutability), the `%` operator, and the 13 date functions
   (extractors incl. the `dayofweek` 1=Sunday trap, `last_day`/`add_months` month-end clamp AND the
@@ -1142,6 +1144,16 @@ NOT in that file is a defect, not a decision.
   engines (silent convergence → RED). Flag unset → every live test SKIPs with a visible reason
   (`test_live_flag_predicate_gates_on_exact_env_value` pins the gate). Catches golden drift + oracle
   drift the JVM-free suite cannot see (docs/testing.md "The live oracle tier").
+  **The registry mirror (H-1d, 2026-08-10):** `test_disclosures_mirror_the_registry` is always-on
+  (JVM-free) and checks `_live_parity.DISCLOSURES` against the divergence registry
+  `docs/spark-sql-iceberg-parity.md` in **both** directions — a registry row that opts in with a
+  `` `live-mirror: <name>` `` bullet must have a `Disclosure` of that name, and every `Disclosure`
+  must be claimed by a row. The registry is the SSOT for divergence *semantics*; this list is the
+  checked mirror (registry §6). A RED means one side moved without the other; fix the wrong side,
+  never the assertion. **Fail-closed on a near-miss:** any `-` bullet mentioning `live-mirror` that
+  does not match the exact spelling reds loud naming the line, rather than reading as zero matches
+  — otherwise a row could advertise a drift detector nobody checks. Registry §6 documents that
+  spelling for row authors; the regex and the doc move together.
 - `test_ta.py` — T1b + T2 batches 1–2 + WG2–WG5 + T3: the `repark.ta` DataFrame route. The 5000-row
   OHLC golden fixture (`crates/repark-ta/tests/goldens/*.bin`, columns
   `ts`/`open`/`high`/`low`/`close`/`periods`)
@@ -1248,6 +1260,7 @@ NOT in that file is a defect, not a decision.
 | Add a Window / date-function / row_number test | `test_functions_dates.py` |
 | Add a `repark.ta` indicator test | `test_ta.py` |
 | Add / extend a live-oracle golden (repark == pin == live Spark) | `_live_parity.py` (`SCENARIOS`) + `test_parity_live.py` |
+| Record a divergence from Apache Spark (behavior, pin, rationale) | `../../../docs/spark-sql-iceberg-parity.md` — the registry; add the `Disclosure` too when the live tier can express it (§6) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1291,6 +1304,7 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | `ModuleNotFoundError: repark._native` | Run `uv run maturin develop` first |
 | `test_to_polars` skipped | expected unless the `polars` extra is installed (`importorskip`) |
 | `test_parity_live.py` live tests SKIPPED | expected unless `REPARK_PARITY_LIVE=1` + a JVM (`make parity-live`); routine CI is JVM-free by design |
+| `test_disclosures_mirror_the_registry` RED | `DISCLOSURES` and `docs/spark-sql-iceberg-parity.md` disagree. The failure names which side is orphaned: a registry-only name means the `Disclosure` was deleted (the row lost its drift detector); a disclosure-only name means the row was never written. Fix the side that moved |
 | live tier RED | triage per docs/testing.md: golden leg only → golden drift (fix pin); live-Spark diverges from an unchanged pin → oracle drift; a disclosure reds → engines converged |
 
 First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).
