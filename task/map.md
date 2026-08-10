@@ -17,6 +17,10 @@ not this directory.
   runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
   delete). Seeded 2026-08-06 from the private v1 repository.
+- [h1d-ledger.md](h1d-ledger.md) — **V2 Engine Hardening H-1d** (the divergence registry): the
+  re-verified citation inventory, the eight design decisions (including D-6, the ruling that the
+  live-tier `DISCLOSURES` list becomes a machine-checked mirror of the registry's live-mirrored
+  rows), the gate results, and the mirror check's provocation proofs.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
@@ -53,7 +57,8 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
-| Start a new unit's ledger | copy the shape of [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md); link it from this map in the same commit |
+| Start a new unit's ledger | copy the shape of [h1d-ledger.md](h1d-ledger.md) (or the archived [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
+| See how a divergence gets declared, pinned and mirrored | [h1d-ledger.md](h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
@@ -81,7 +86,8 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 - A link into `task/p*-ledger.md` or `task/fd3-ledger.md` fails: see "Where the closed campaigns'
   ledgers went" above — same basename, under [../docs/history/](../docs/history/map.md).
 - No `<unit>-ledger.md` in this directory is the steady state between campaigns, not a missing
-  file; the ledger of a closed campaign lives with that campaign's archive.
+  file; the ledger of a closed campaign lives with that campaign's archive. A campaign IS running
+  (V2 Engine Hardening), so its delivered units' ledgers accumulate here until close-out.
 - Looking for a backlog item that is not in [../STATUS.md](../STATUS.md)? Check
   [../docs/history/port-v2/promotion-ledger.md](../docs/history/port-v2/promotion-ledger.md) — if it
   was live at archival, that table says where it went.

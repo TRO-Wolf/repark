@@ -578,6 +578,19 @@ async fn cross_door_time_travel_pins_the_same_snapshot_content() {
 /// against stock DataFusion, which is a decision, not a bug fix. An untested claim about folding
 /// would be worse than none — if either behavior changes, this REDs and the doc line moves with
 /// it.
+///
+/// # This is a DECLARED-DIVERGENCE test
+///
+/// The row it defends is **`docs/spark-sql-iceberg-parity.md` §3 row ID-1**, the divergence
+/// registry's first declared row (campaign decision D3, 2026-08-10). The registry holds the
+/// semantics — repark's behavior, Apache Spark's behavior, this pin, and the rationale for
+/// declaring rather than fixing; `STATUS.md` holds only the issue's state and links there.
+///
+/// The declaration is what makes the *failure* direction load-bearing: this test reds if the
+/// divergence silently DISAPPEARS (a quoted wrong-case identifier starting to resolve) exactly as
+/// it reds if the agreeing half breaks. Either RED means the registry row and this test move in
+/// the same change — a divergence must never stop being true quietly, and it must never be
+/// laundered into "parity" by a green suite.
 #[tokio::test]
 async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted() {
     let ansi = native_ansi_door().await;
@@ -603,21 +616,42 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
     assert_eq!(ansi_rows, vec![(1, "a".to_string())]);
 
     // Quoted, wrong case: both doors refuse. The divergence recorded here is repark-vs-SPARK,
-    // not door-vs-door — Apache Spark would resolve the backticked form.
-    let ansi_quoted = ansi
+    // not door-vs-door — Apache Spark would resolve the backticked form. The error TEXT is
+    // asserted, not merely `is_err`, so the row stays attributable to identifier resolution
+    // rather than to any other failure that happens to make the statement error. Both halves of
+    // the needle are load-bearing: `No field named` is the resolution-failure class, and the
+    // quoted `"ID"` is the identifier itself — a bare `contains("ID")` would also be satisfied by
+    // ordinary error vocabulary (`INVALID`, `UUID`), which is not attribution.
+    let ansi_quoted = match ansi
         .session
         .sql(r#"SELECT "ID" FROM ice.sales.orders"#)
-        .await;
+        .await
+    {
+        Err(error) => error.to_string(),
+        Ok(_) => panic!(
+            "ANSI door: a double-quoted identifier is case-SENSITIVE, so \"ID\" must not resolve \
+             to a column stored as `id`. If it now resolves, repark has CONVERGED on Apache \
+             Spark and docs/spark-sql-iceberg-parity.md §3 row ID-1 must be retired, not this \
+             assertion relaxed."
+        ),
+    };
     assert!(
-        ansi_quoted.is_err(),
-        "ANSI door: a double-quoted identifier is case-SENSITIVE, so \"ID\" must not resolve to \
-         a column stored as `id`"
+        ansi_quoted.contains("No field named") && ansi_quoted.contains("\"ID\""),
+        "the ANSI refusal must be a resolution failure naming the unresolved identifier as \
+         `\"ID\"` (row ID-1): {ansi_quoted}"
     );
-    let spark_quoted = spark.session.sql("SELECT `ID` FROM ice.sales.orders").await;
+    let spark_quoted = match spark.session.sql("SELECT `ID` FROM ice.sales.orders").await {
+        Err(error) => error.to_string(),
+        Ok(_) => panic!(
+            "Spark door: the backticked form is ALSO case-sensitive today (stock DataFusion \
+             resolution) — a divergence from Apache Spark, inherited engine-wide rather than \
+             introduced by either door. If this ever starts resolving, retire \
+             docs/spark-sql-iceberg-parity.md §3 row ID-1 in the same change."
+        ),
+    };
     assert!(
-        spark_quoted.is_err(),
-        "Spark door: the backticked form is ALSO case-sensitive today (stock DataFusion \
-         resolution) — a divergence from Apache Spark, inherited engine-wide rather than \
-         introduced by either door. If this ever starts resolving, update the doc line."
+        spark_quoted.contains("No field named") && spark_quoted.contains("\"ID\""),
+        "the Spark-door refusal must be a resolution failure naming the unresolved identifier as \
+         `\"ID\"` (row ID-1): {spark_quoted}"
     );
 }

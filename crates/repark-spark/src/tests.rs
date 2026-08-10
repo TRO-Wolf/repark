@@ -7107,6 +7107,102 @@ async fn write_to_branch_refuses_loud_naming_fork_gap() {
     );
 }
 
+/// DECLARED-DIVERGENCE pin for **`docs/spark-sql-iceberg-parity.md` §2.2 row REF-2** — the
+/// idempotent `IF EXISTS` / `IF NOT EXISTS` spellings, and every other trailing clause, stay out
+/// of the snapshot-ref DDL surface and refuse LOUD.
+///
+/// The divergence: Apache Spark's Iceberg extension accepts `CREATE BRANCH IF NOT EXISTS` and
+/// `DROP BRANCH IF EXISTS`; this door refuses them. What the row exists to prevent is the
+/// fail-open alternative — silently DROPPING the trailing clause, which inverts the statement's
+/// meaning in both directions (an ignored `IF NOT EXISTS` turns a no-op into a hard failure; an
+/// ignored `IF EXISTS` turns a tolerated miss into one).
+///
+/// This pin reds if the divergence silently disappears: every spelling below must still be an
+/// error, and the three `ALTER TABLE` forms must still name the registry section in the message, so
+/// implementing the forms (or dropping the doc pointer) forces this test and the registry row to
+/// move together.
+///
+/// The leftover-token assertion binds the **dynamic** `(got word "…")` span, never the bare word:
+/// the message's constant tail already contains `NOT` and `EXISTS`, so a bare `contains(leftover)`
+/// would be satisfied by the static grammar text and would stay green if the interpolation were
+/// deleted. Asserting the rendered span means redacting the interpolation reds every case.
+#[tokio::test]
+async fn ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.refdecl AS SELECT * FROM src",
+    )
+    .await;
+
+    // The ALTER TABLE forms reach the ref-DDL parser's trailing-token rejection, so their message
+    // carries the supported grammar AND the registry pointer.
+    for (sql, leftover) in [
+        (
+            "ALTER TABLE ice.sales.refdecl CREATE BRANCH IF NOT EXISTS b1",
+            "NOT",
+        ),
+        (
+            "ALTER TABLE ice.sales.refdecl DROP BRANCH IF EXISTS b1",
+            "EXISTS",
+        ),
+        (
+            "ALTER TABLE ice.sales.refdecl CREATE TAG t1 AS OF VERSION 1 RETAIN 7 DAYS EXTRA",
+            "EXTRA",
+        ),
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a trailing clause must refuse, never be dropped silently")
+            .to_string();
+        assert!(
+            error.contains("trailing clause after the supported form"),
+            "the refusal must name the trailing clause ({sql}): {error}"
+        );
+        let rendered_leftover = format!("(got word {leftover:?})");
+        assert!(
+            error.contains(&rendered_leftover),
+            "the refusal must name the leftover token in its dynamic slot, \
+             {rendered_leftover} ({sql}): {error}"
+        );
+        assert!(
+            error.contains("IF EXISTS / IF NOT EXISTS stay out"),
+            "the refusal must name the known-but-unsupported spellings ({sql}): {error}"
+        );
+        assert!(
+            error.contains("docs/spark-sql-iceberg-parity.md §2.2"),
+            "the refusal must cite the registry row it defends ({sql}): {error}"
+        );
+    }
+
+    // The top-level `… IN t` spellings break on the same clause earlier, in the `IN` requirement —
+    // still a loud refusal naming the supported shape, never a silent create/drop.
+    for sql in [
+        "CREATE BRANCH IF NOT EXISTS b2 IN ice.sales.refdecl",
+        "DROP TAG IF EXISTS t2 IN ice.sales.refdecl",
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("the top-level IF-EXISTS spellings must refuse too")
+            .to_string();
+        assert!(
+            error.contains("IN catalog.namespace.table"),
+            "the refusal must name the supported shape ({sql}): {error}"
+        );
+    }
+
+    // …and nothing was created or dropped by any of the refused statements.
+    let refs = rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.refdecl.refs WHERE name <> 'main'",
+    )
+    .await;
+    assert_eq!(refs, 0, "a refused ref DDL must not create or drop a ref");
+}
+
 /// r25 morning critic: a REAL two-part table literally named `branch_*` must not
 /// false-refuse as write-to-branch; the `t.branch_x` form with a resolvable bare prefix
 /// still STOPs loud (disambiguation by resolution, not raw-SQL shape).
@@ -8601,6 +8697,31 @@ async fn metadata_tables_spark_dot_form_and_guards() {
         cor_msg.contains("read-only") || cor_msg.contains("metadata table"),
         "CREATE OR REPLACE error must name metadata read-only, got: {cor_msg}"
     );
+
+    // H-1d: registry §2.1 row MT-2 enumerates TEN statement forms as refusing with a read-only
+    // error. Four of them are pinned above (INSERT / UPDATE / TRUNCATE / CREATE OR REPLACE); the
+    // remaining six were prose until this loop existed. A row may not assert more than its pin
+    // proves, so every form the row names is exercised here — all ten reach the same
+    // `is_write_target_context` guard, and the refusal is what keeps a write to a metadata table
+    // from falling through to the planner.
+    for sql in [
+        "DELETE FROM ice.sales.mt.snapshots WHERE snapshot_id = 1",
+        "MERGE INTO ice.sales.mt.snapshots t USING ice.sales.mt s ON true \
+         WHEN MATCHED THEN UPDATE SET *",
+        "CREATE TABLE ice.sales.mt.snapshots AS SELECT 1 AS id",
+        "CREATE VIEW ice.sales.mt.snapshots AS SELECT 1 AS id",
+        "DROP TABLE ice.sales.mt.snapshots",
+        "ALTER TABLE ice.sales.mt.snapshots ADD COLUMN extra INT",
+    ] {
+        let error = execute(&ctx, &catalogs, sql)
+            .await
+            .expect_err("a write targeting a metadata table must refuse, never fall through")
+            .to_string();
+        assert!(
+            error.contains("metadata table") && error.contains("read-only"),
+            "the refusal must name metadata read-only, not merely error ({sql}): {error}"
+        );
+    }
 
     // C2-L-001: multi-span rewrite produces two `$` forms.
     let multi = metadata_tables::prepare_metadata_table_sql(

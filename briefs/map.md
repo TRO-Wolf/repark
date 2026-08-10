@@ -18,7 +18,12 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   H-5's verification close. Executes the design in
   [../docs/design/v2-engine-hardening.md](../docs/design/v2-engine-hardening.md). The first slate
   since the port whose units change engine code, so the testing contract is restated as binding
-  and every unit declares its verification panel.
+  and every unit declares its verification panel. **Amended in flight** (2026-08-10, H-1d's fix
+  pass): H-1b's edit list presupposed a registry row H-1d's own admission rule forbade it to write
+  (an issue with no disposition and no pin gets no row), so that line now tells H-1b to *create*
+  the row if the re-port leaves a residual difference — the conflict and its resolution are
+  recorded in [../task/h1d-ledger.md](../task/h1d-ledger.md). A brief is amended in place, dated
+  and traceable, never silently rewritten.
 
 A slate lands here when its campaign starts and leaves when the campaign closes; between
 campaigns this directory holds only its map.

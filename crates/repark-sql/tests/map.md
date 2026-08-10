@@ -43,6 +43,16 @@ belongs out here is what must be observed from outside the crate.
   session cannot do this job. Needs the `repark-spark` dev-dep — the ONLY place either door may
   name the other, and legal because the crate-DAG guard scopes layering to normal edges.
 
+  Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
+  is a **declared-divergence test** as of H-1d (2026-08-10): it names the registry row it defends
+  — [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3
+  row ID-1, the registry's first declared row (decision D3) — and asserts the refusal *text*, not
+  merely that an error occurred (`No field named` **and** the quoted `"ID"`: the class of failure
+  and the identifier, because a bare `contains("ID")` also matches `INVALID` / `UUID` and would
+  attribute nothing), so the row stays attributable to identifier resolution. It reds
+  if the divergence silently disappears, which is the point: the registry holds the semantics and
+  this test holds the registry honest.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Spike record: `../../../docs/history/port-v2/p2f-ansi-m1-ledger.md`;
@@ -58,6 +68,7 @@ belongs out here is what must be observed from outside the crate.
 | `session_wiring` RED on the catalog-visible read | The dialect is probably not installed (session default fell back to `DataFusionDialect`, whose CTAS makes a `MemTable`) |
 | `introspection` RED with "not supported unless information_schema is enabled" | The repark-core builder→`SessionConfig` plumbing (`apply_datafusion_config_keys`) regressed; check `cargo test -p repark-core --lib builder_datafusion` first |
 | `cross_door` RED on ONE door only | The doors' lowerings drifted — that is the row doing its job (design §6 R3). Compare the two handlers, do not relax the assertion |
+| `cross_door_identifier_case_folding_*` RED because a quoted wrong-case identifier now RESOLVES | repark has CONVERGED on Apache Spark. Retire `docs/spark-sql-iceberg-parity.md` §3 row ID-1 in the same change (a new dated decision supersedes D3) — never relax the assertion |
 | `extensions_are_session_scoped_not_dialect_scoped` RED | Extension scoping changed. Every `TwoSession` matrix row in BOTH doors needs re-reading before anything else |
 | `ta_toll` RED on bit-exactness | Compare against `crates/repark-ta/tests/goldens.rs` first — if THAT is green, the divergence is in the window-UDF wrapper or the door, not the kernel |
 

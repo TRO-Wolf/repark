@@ -196,7 +196,13 @@ therefore has a precondition it does not itself satisfy: the predecessor's fix e
 - **Pins on both doors and the facade**: an ephemeral view created by a time-travel rewrite is gone
   after the statement completes, and gone after the statement *fails*.
 - **Move the issue's STATUS row** from "Known correctness issues" to fixed in the same PR, and
-  update the registry row H-1d created.
+  handle the registry side: **create the registry row — H-1d seeds only *disposed* issues, and
+  this defect has no disposition and no pin, so H-1d deliberately left it rowless — and update
+  STATUS**. (Brief-internal conflict, resolved 2026-08-10 at H-1d's fix pass: this line as first
+  written presupposed a row H-1d's own rule forbade. See `task/h1d-ledger.md` D-2 and the fix-pass
+  section.) If the re-ported fix closes the defect outright, the honest outcome is **no row at
+  all** — a fixed defect is not a divergence; the row exists only if the re-port leaves a residual,
+  declared difference, and then it lands with the pin that holds it.
 
 **Acceptance gate**
 - The unit ledger names the predecessor commit the fix was re-ported from, and records that the

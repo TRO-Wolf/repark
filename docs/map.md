@@ -10,6 +10,17 @@ notes, and per-tier operating manuals for this repo.
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
+- [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
+  single home for how repark differs from Apache Spark. Four fields per row (repark's behavior,
+  Spark's behavior with its oracle basis, the `path::test_name` that pins it, the rationale) and
+  two classes — DECLARED (§2 statement-surface gaps by surface, §3 identifier resolution, §4 type
+  and value semantics, §5 facade drop-in semantics) and BACKLOG (§7 "Known Spark-parity
+  divergences"). §6 is the lifecycle: how a row is added, mirrored and retired, and the boundary
+  with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
+  neither restates the other. §8 is the drop-in disclosure rationale table. Cited by name from
+  ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in
+  [../repo-manifest.toml](../repo-manifest.toml) so a move is a red gate. A row without a live pin
+  is not admitted.
 - [design/](design/map.md) — settled design documents, one per deliberate design pass
   ([design/session-api.md](design/session-api.md): the phase-1 Session API — crate layout,
   seams, forced-edit ledger, omissions ledger, server landing map;
@@ -54,6 +65,8 @@ notes, and per-tier operating manuals for this repo.
 | ...do this | go to |
 |---|---|
 | Understand the testing rules | [testing.md](testing.md) |
+| Find out how repark differs from Apache Spark, and why | [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) |
+| Record a divergence (or retire one) | [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §6 |
 | Understand the phase-1 crate layout / Session API | [design/session-api.md](design/session-api.md) |
 | Understand the phase-2 SQL doors / ANSI surface | [design/sql-doors.md](design/sql-doors.md) |
 | Understand the phase-3 port / census gate / edit classes | [design/python-facade.md](design/python-facade.md) |
@@ -75,3 +88,8 @@ notes, and per-tier operating manuals for this repo.
 
 First checks: if a rule is unclear, [testing.md](testing.md) + [../AGENTS.md](../AGENTS.md) are
 authoritative. Escalate to: [../map.md#debug](../map.md).
+
+| Symptom | First check |
+|---|---|
+| A refusal message cites a `spark-sql-iceberg-parity.md` section you cannot find | The citing site and the registry drifted. The document is indexed in `repo-manifest.toml`, so it exists; re-read [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §1 for the section layout and fix whichever side is wrong |
+| A divergence is described in two places | One of them is wrong by construction — [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §6 states the boundary: STATUS holds state, the registry holds semantics |

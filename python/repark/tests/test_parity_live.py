@@ -11,13 +11,20 @@ Two layers over the shared scenario registry in :mod:`_live_parity`:
   divergence (disclosure) STILL diverges. With the flag unset every live test SKIPs with a visible
   reason — it never silently passes.
 
+A third, always-on layer sits beside them: ``test_disclosures_mirror_the_registry`` checks the
+``DISCLOSURES`` list against the divergence registry (``docs/spark-sql-iceberg-parity.md`` §6),
+which is the SSOT for divergence *semantics*. The list is the machine-checked mirror of the
+registry rows that claim one — never the other way round.
+
 Pyspark is imported lazily (inside the session fixture), so this file collects on a runner with no
 pyspark and no JVM (the routine-CI contract, L3).
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
+from pathlib import Path
 
 import _live_parity as lp
 import pytest
@@ -123,3 +130,74 @@ def test_registry_covers_the_mandated_golden_family() -> None:
         "filter_case_collision_bypasses",
         "filter_backtick_identifier",
     }, "every load-bearing disclosure is present"
+
+
+# ==================================================================================================
+# The divergence registry mirror — `DISCLOSURES` is the machine-checked mirror of the registry rows
+# that declare a live mirror (docs/spark-sql-iceberg-parity.md §6). JVM-free: always runs.
+# ==================================================================================================
+
+#: The divergence registry — the SSOT for divergence *semantics* (this list mirrors it, never
+#: the other way round). Resolved from this file so the check is cwd-independent.
+_REGISTRY = Path(__file__).resolve().parents[3] / "docs" / "spark-sql-iceberg-parity.md"
+
+#: A registry row opts into the live tier with a `live-mirror: <name>` bullet on its own line.
+#: The backticks and the line anchor are load-bearing: prose that merely *mentions* the field
+#: (the §1 and §6 explanations write `` `live-mirror: <name>` `` with a placeholder) must not
+#: register as a row. This exact spelling is documented for row authors in the registry's §6
+#: ("The exact spelling this gate parses") — the two must move together.
+_LIVE_MIRROR_RE = re.compile(r"(?m)^- `live-mirror: ([a-z0-9_]+)`$")
+
+#: The fail-closed half of the strict pattern above. A strict-only match is silently satisfied by
+#: ZERO matches, so a row whose bullet is *nearly* right (bolded, indented, hyphenated name,
+#: trailing comment) would claim a mirror that is never checked — and if the named ``Disclosure``
+#: does not exist, nothing reds. Every ``-`` bullet that mentions the field is therefore probed
+#: first and must satisfy the strict form. Restricted to ``-`` bullets on purpose: §1's
+#: ``**`live-mirror:`**`` heading starts with ``*`` and §6's prose lines start with words, so
+#: neither is a candidate.
+_LIVE_MIRROR_PROBE = re.compile(r"(?m)^[ \t]*-.*live-mirror.*$")
+
+
+def test_disclosures_mirror_the_registry() -> None:
+    """Every registry row that claims a live mirror has a ``Disclosure`` of that name, and every
+    ``Disclosure`` is claimed by a row. Both directions, because both failures are real: a row
+    whose mirror was deleted quietly loses its drift detector (the divergence could converge and
+    nothing would red), and a disclosure with no row is a divergence the registry does not
+    describe — the exact "no discoverable list" state this registry exists to end.
+
+    The registry is the SSOT for the *semantics*; this list is the checked mirror
+    (``docs/spark-sql-iceberg-parity.md`` §6). Fix a RED by editing whichever side is wrong — never
+    by relaxing this assertion.
+
+    The check is **fail-closed on a near-miss**: a bullet that mentions ``live-mirror`` but does
+    not match the exact spelling is a loud failure naming the line, not a silent zero-match. A
+    near-miss is otherwise invisible in exactly the case that matters — the row advertises a drift
+    detector it does not have.
+    """
+    assert _REGISTRY.is_file(), (
+        f"the divergence registry is missing at {_REGISTRY} — every citation in this repository "
+        "resolves to it, and this mirror cannot be checked without it"
+    )
+    registry_text = _REGISTRY.read_text(encoding="utf-8")
+    malformed = [
+        line
+        for line in _LIVE_MIRROR_PROBE.findall(registry_text)
+        if _LIVE_MIRROR_RE.fullmatch(line) is None
+    ]
+    assert not malformed, (
+        "a registry bullet claims a live mirror in a spelling this gate does not parse, so the "
+        "row would advertise a drift detector that is never checked. The exact required form is "
+        'a top-level bullet: "- " then `live-mirror: <name>` in backticks, <name> matching '
+        f"[a-z0-9_]+, nothing before or after it on the line. Offending line(s): {malformed}"
+    )
+    declared = _LIVE_MIRROR_RE.findall(registry_text)
+    assert len(declared) == len(set(declared)), (
+        f"a live-mirror name is claimed by two registry rows: {sorted(declared)}"
+    )
+
+    disclosed = {d.name for d in lp.DISCLOSURES}
+    assert set(declared) == disclosed, (
+        "the registry's live-mirrored rows and the DISCLOSURES list disagree — "
+        f"registry-only: {sorted(set(declared) - disclosed)}; "
+        f"disclosure-only: {sorted(disclosed - set(declared))}"
+    )
