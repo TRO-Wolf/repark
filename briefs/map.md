@@ -10,9 +10,18 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
-**No campaign is running, so this directory holds only this map** (2026-08-10). That is the
-steady state between campaigns, not a gap: a slate lands here when its campaign starts and leaves
-when the campaign closes.
+- [v2-engine-hardening.md](v2-engine-hardening.md) — the **V2 Engine Hardening** slate
+  (2026-08-10, running): the campaign's per-unit definitions and acceptance gates — H-1's four
+  correctness units (the divergence registry, session timezone, the time-travel view leak, the
+  `$`-metadata ruling), H-2's parity deepening with the ranked gap list it clears, H-3's
+  performance instrument, baseline and spill matrix, H-4's evidence-only optimization rules, and
+  H-5's verification close. Executes the design in
+  [../docs/design/v2-engine-hardening.md](../docs/design/v2-engine-hardening.md). The first slate
+  since the port whose units change engine code, so the testing contract is restated as binding
+  and every unit declares its verification panel.
+
+A slate lands here when its campaign starts and leaves when the campaign closes; between
+campaigns this directory holds only its map.
 
 **Closed campaigns are archived, not kept here.** The four port briefs (`phase-0`…`phase-3`,
 2026-08-06 → 2026-08-08) moved to [../docs/history/port-v2/](../docs/history/port-v2/map.md) on
@@ -26,6 +35,8 @@ its design and its one unit ledger. Where the next campaign stands is
 
 | I want to... | go to |
 |---|---|
+| Read the running campaign's slate | [v2-engine-hardening.md](v2-engine-hardening.md) |
+| See what the running campaign DECIDED and why | [../docs/design/v2-engine-hardening.md](../docs/design/v2-engine-hardening.md) |
 | See what a delivered unit was ASKED to do | the dated brief for its slate — in this directory while the campaign runs, in [../docs/history/](../docs/history/map.md) once it closes |
 | Find the standing rules briefs inherit | [../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules" |
 | Write a new brief | copy the newest archived brief's structure; standing rules by reference, not restatement |

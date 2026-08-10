@@ -59,8 +59,8 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
   `task/` — the rules in force (`lessons.md`), the process metrics ledger (`metrics.md`), the
   ledger of each unit in flight, and the live acceptance inputs (`task/port/`, `task/census/`); the
   backlog itself lives in [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are
-  still running (holding only its `map.md` between campaigns; a closed campaign's slate is
-  archived with it).
+  still running (currently the V2 Engine Hardening slate; a closed campaign's slate is archived
+  with it, and between campaigns the directory holds only its `map.md`).
   `skills/` — the SEPMO control plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
   work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
