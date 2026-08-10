@@ -49,7 +49,7 @@ pyo3 `auto-initialize` **dev**-dependency) and drive the pyclasses directly — 
   `distinct_dedups_and_distinct_on_keeps_one_per_key`, and
   `with_column_renamed_renames_present_and_noops_absent`.
   WG2 config mapping: `config_driven_memory_catalog_registers_through_the_constructor` passes a
-  `process_silver.py`-shaped `spark.sql.catalog.glue_alt.*` block (`type=memory`, AWS-free) as the
+  source-publish-job-shaped `spark.sql.catalog.glue_alt.*` block (`type=memory`, AWS-free) as the
   constructor's `config` dict → the catalog registers → namespace (`create_namespace(py, cat, ns,
   location=None)` — the optional `location` is `None` here; the memory catalog's temp fallback
   applies) + CTAS + `table_exists` succeed, and a malformed block (`type=hive`) raises at
@@ -74,3 +74,11 @@ pyo3 `auto-initialize` **dev**-dependency) and drive the pyclasses directly — 
 
 First checks: `cargo test -p repark-python` (NOT `--all-features` — that enables `extension-module` and
 breaks linking the standalone test binary). Escalate to: [../map.md#debug](../map.md).
+
+- **Neutral-fixture scrub (2026-08-10, hardening-prep):** an owner-approved, forward-only,
+  comment-and-fixture-only pass moved this directory's doc text and example literals to
+  neutral placeholders — the upstream job the acceptance shape mirrors is named generically
+  ("the source publish job"), and example table/view/entity names are placeholders carrying no
+  domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
+  that read it. Sites here: `bindings.rs` and the WG2 config-mapping entry
+  above (doc text only; no fixture in this directory changed).

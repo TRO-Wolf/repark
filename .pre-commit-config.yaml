@@ -24,6 +24,18 @@ repos:
         language: system
         types: [rust]
         pass_filenames: false
+      - id: taplo-format
+        name: taplo format --check
+        entry: uvx taplo@0.9.3 format --check
+        language: system
+        types: [toml]
+        pass_filenames: false
+      - id: taplo-lint
+        name: taplo lint
+        entry: uvx taplo@0.9.3 lint
+        language: system
+        types: [toml]
+        pass_filenames: false
       - id: map-md-guard
         name: map.md lockstep guard
         entry: scripts/check_map_md.sh
@@ -42,5 +54,10 @@ repos:
       - id: lib-rs-guard
         name: lib.rs thinness guard
         entry: scripts/check_lib_rs.sh
+        language: script
+        pass_filenames: false
+      - id: lib-py-guard
+        name: facade .py thinness guard
+        entry: scripts/check_lib_py.sh
         language: script
         pass_filenames: false

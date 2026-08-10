@@ -763,7 +763,7 @@ async fn ctas_parses_using_and_threads_tblproperties() {
     );
 }
 
-/// The reserved `format-version` TBLPROPERTY (the `process_silver.py` CTAS carries
+/// The reserved `format-version` TBLPROPERTY (the source publish job's CTAS carries
 /// `'format-version' = 2`): '2' is consumed — iceberg-rust rejects reserved keys as plain
 /// properties and the engine's created tables are format v2 already — while any other
 /// version is rejected up front, never silently ignored.
@@ -5038,7 +5038,7 @@ fn tighten_batch_nullability_preserves_field_and_schema_metadata() {
     assert_eq!(out_null[0].schema().field(0).metadata(), &field_meta);
 }
 
-/// Spark's `INSERT OVERWRITE TABLE t …` keyword form (what `process_silver.py`-era jobs emit)
+/// Spark's `INSERT OVERWRITE TABLE t …` keyword form (what legacy publish jobs emit)
 /// works identically to the bare form.
 #[tokio::test]
 async fn insert_overwrite_table_keyword_form() {
@@ -9748,7 +9748,7 @@ async fn id_file_pairs(catalogs: &CatalogRegistry, table: &str) -> Vec<(i32, Str
     pairs
 }
 
-/// The classic upsert (the `process_silver.py` MERGE shape): matched rows take the source
+/// The classic upsert (the source publish job's MERGE shape): matched rows take the source
 /// values, unmatched source rows are inserted, untouched target rows survive — one commit.
 #[tokio::test]
 async fn merge_upsert_updates_and_inserts() {
@@ -9782,7 +9782,7 @@ async fn merge_upsert_updates_and_inserts() {
     );
 }
 
-/// The literal `process_silver.py` MERGE text — `UPDATE SET *` / `INSERT *` — end to end:
+/// The literal source publish job MERGE text — `UPDATE SET *` / `INSERT *` — end to end:
 /// stars expand to every target column by name from the source (extra source columns
 /// ignored), producing the same upsert as the explicit form.
 #[tokio::test]
@@ -9812,12 +9812,12 @@ async fn merge_star_forms_upsert() {
         ],
     )
     .unwrap();
-    ctx.register_batch("iv_temp_data", batch).unwrap();
+    ctx.register_batch("staging_view", batch).unwrap();
 
     run(
         &ctx,
         &catalogs,
-        "MERGE INTO ice.sales.t AS Target USING iv_temp_data AS Source \
+        "MERGE INTO ice.sales.t AS Target USING staging_view AS Source \
              ON Target.id = Source.id \
              WHEN MATCHED THEN UPDATE SET * \
              WHEN NOT MATCHED THEN INSERT *",
@@ -11889,7 +11889,7 @@ mod partitioned_merge {
         );
     }
 
-    /// WG1-P8 — the `UPDATE SET *` / `INSERT *` star forms (the `process_silver.py` MERGE
+    /// WG1-P8 — the `UPDATE SET *` / `INSERT *` star forms (the source publish job's MERGE
     /// shape) on a partitioned target: star resolution feeds the fanout exactly like the
     /// explicit-column forms, so partition values are still stamped. Risk: the star-expanded
     /// batch loses a column or bypasses the partitioned writer.

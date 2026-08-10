@@ -116,3 +116,11 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
 - **EC-9 scrub (2026-08-08, phase-3 PR-5):** pre-existing private fixture/doc literals
   (a team/bucket name fragment) replaced with `example-team` equivalents — outcome-neutral
   (fixtures and their oracles changed together); enumerated in docs/history/port-v2/p3e-facade-ledger.md.
+
+- **Neutral-fixture scrub (2026-08-10, hardening-prep):** an owner-approved, forward-only,
+  comment-and-fixture-only pass moved this directory's doc text and example literals to
+  neutral placeholders — the upstream job the acceptance shape mirrors is named generically
+  ("the source publish job"), and example table/view/entity names are placeholders carrying no
+  domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
+  that read it. Sites here: `tests.rs` (five doc comments + the MERGE source-view fixture in
+  `merge_star_forms_upsert`, now `staging_view`) and `merge.rs` (two doc comments).

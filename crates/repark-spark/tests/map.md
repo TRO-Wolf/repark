@@ -54,3 +54,11 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   [../../repark-ta/map.md#debug](../../repark-ta/map.md).
 - Week-53 assertion is ISO-week semantics (2021-01-01 → ISO week 53 of 2020) — a failure there
   is the date shim regressing, not the fixture.
+
+- **Neutral-fixture scrub (2026-08-10, hardening-prep):** an owner-approved, forward-only,
+  comment-and-fixture-only pass moved this directory's doc text and example literals to
+  neutral placeholders — the upstream job the acceptance shape mirrors is named generically
+  ("the source publish job"), and example table/view/entity names are placeholders carrying no
+  domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
+  that read it. Sites here: `ddl_sessions.rs` — two doc comments, and the temp-view fixture in
+  `catalog_surface_table_exists_and_temp_views`, now `staging_view`.

@@ -1,4 +1,4 @@
-"""The `process_silver.py` publish path, end to end from Python — the acceptance kernel.
+"""The source publish job's path, end to end from Python — the acceptance kernel.
 
 Mirrors the real script's ``ensure_silver_table_exists`` + ``upsert_silver_df`` flow against the
 in-memory Iceberg catalog: temp view → ``tableExists`` → CTAS (``USING iceberg`` +
@@ -40,27 +40,27 @@ def _rows(spark: ReparkSession) -> list[dict[str, object]]:
 def test_silver_publish_flow(spark: ReparkSession) -> None:
     # --- ensure_silver_table_exists: temp view + tableExists gate + CTAS -----------------------
     df = spark.sql("SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2, 'b'")
-    df.createOrReplaceTempView("iv_temp_data")
+    df.createOrReplaceTempView("staging_view")
     assert not spark.catalog.tableExists(FQ_TABLE)
     spark.sql(
         f"CREATE TABLE IF NOT EXISTS {FQ_TABLE} USING iceberg "
-        f"TBLPROPERTIES ({ICEBERG_TABLE_PROPERTIES}) AS SELECT * FROM iv_temp_data"
+        f"TBLPROPERTIES ({ICEBERG_TABLE_PROPERTIES}) AS SELECT * FROM staging_view"
     )
     spark.catalog.clearCache()
     assert spark.catalog.tableExists(FQ_TABLE)
-    assert spark.catalog.dropTempView("iv_temp_data")
+    assert spark.catalog.dropTempView("staging_view")
 
     # --- upsert_silver_df: the literal MERGE text the script generates -------------------------
     updates = spark.sql("SELECT 2 AS id, 'bee' AS name UNION ALL SELECT 3, 'c'")
-    updates.createOrReplaceTempView("iv_temp_data")
+    updates.createOrReplaceTempView("staging_view")
     spark.sql(
-        f"MERGE INTO {FQ_TABLE} AS Target USING iv_temp_data AS Source "
+        f"MERGE INTO {FQ_TABLE} AS Target USING staging_view AS Source "
         "ON Target.id = Source.id "
         "WHEN MATCHED THEN UPDATE SET * "
         "WHEN NOT MATCHED THEN INSERT *"
     )
     spark.catalog.clearCache()
-    assert spark.catalog.dropTempView("iv_temp_data")
+    assert spark.catalog.dropTempView("staging_view")
     spark.catalog.clearCache()
 
     assert _rows(spark) == [
@@ -108,7 +108,7 @@ def test_merge_partitioned_by_end_to_end(spark: ReparkSession) -> None:
     # WG-1 (A4): `MERGE INTO` an identity-partitioned table through the public `spark.sql` facade —
     # the v1 scope gate is retired. Pinned on the Arrow export path (value AND Arrow type via
     # to_arrow, never a display path): a matched UPDATE and a not-matched INSERT (the star forms,
-    # the process_silver shape) commit through the fanout, with a partition-predicate read proving
+    # the publish-job shape) commit through the fanout, with a partition-predicate read proving
     # the inserted row is correctly partitioned.
     table_name = "glue_catalog.example_silver.part_entity"
     spark.sql(
@@ -177,7 +177,7 @@ def test_snake_case_spellings_match(spark: ReparkSession) -> None:
 
 
 def test_config_driven_catalog_publish_flow(tmp_path: Path) -> None:
-    """The `process_silver.py` config block drives the catalog via `.config(...)` alone.
+    """The source publish job's config block drives the catalog via `.config(...)` alone.
 
     Mirrors the measured block shape (bare `SparkCatalog` class key, `catalog-impl`/warehouse/
     `io-impl`) but swaps `type = memory` for the real Glue `catalog-impl` so the whole path runs
@@ -198,27 +198,27 @@ def test_config_driven_catalog_publish_flow(tmp_path: Path) -> None:
 
     # ensure_silver_table_exists: temp view + tableExists gate + CTAS.
     spark.sql("SELECT 1 AS id, 'a' AS name UNION ALL SELECT 2, 'b'").createOrReplaceTempView(
-        "iv_temp_data"
+        "staging_view"
     )
     assert not spark.catalog.tableExists(table)
     spark.sql(
         f"CREATE TABLE IF NOT EXISTS {table} USING iceberg "
-        f"TBLPROPERTIES ({ICEBERG_TABLE_PROPERTIES}) AS SELECT * FROM iv_temp_data"
+        f"TBLPROPERTIES ({ICEBERG_TABLE_PROPERTIES}) AS SELECT * FROM staging_view"
     )
     assert spark.catalog.tableExists(table)
-    assert spark.catalog.dropTempView("iv_temp_data")
+    assert spark.catalog.dropTempView("staging_view")
 
     # upsert_silver_df: the literal MERGE star text the script generates.
     spark.sql("SELECT 2 AS id, 'bee' AS name UNION ALL SELECT 3, 'c'").createOrReplaceTempView(
-        "iv_temp_data"
+        "staging_view"
     )
     spark.sql(
-        f"MERGE INTO {table} AS Target USING iv_temp_data AS Source "
+        f"MERGE INTO {table} AS Target USING staging_view AS Source "
         "ON Target.id = Source.id "
         "WHEN MATCHED THEN UPDATE SET * "
         "WHEN NOT MATCHED THEN INSERT *"
     )
-    assert spark.catalog.dropTempView("iv_temp_data")
+    assert spark.catalog.dropTempView("staging_view")
 
     rows = spark.sql(f"SELECT id, name FROM {table} ORDER BY id").to_arrow().to_pylist()
     assert rows == [

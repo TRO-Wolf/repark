@@ -408,7 +408,7 @@ mod tests {
         (merge.table, merge.source, *merge.on, merge.clauses)
     }
 
-    /// The `process_silver.py` shape: aliased target + source, one UPDATE, one INSERT — lowers
+    /// The source publish job's shape: aliased target + source, one UPDATE, one INSERT — lowers
     /// with aliases, ON text, ordered clauses, and rendered expressions intact.
     #[test]
     fn lowers_classic_upsert() {
@@ -500,7 +500,7 @@ mod tests {
         assert!(err.to_string().contains("NOT MATCHED BY SOURCE"));
     }
 
-    /// The star forms (`UPDATE SET *` / `INSERT *` — the `process_silver.py` upsert shape) are
+    /// The star forms (`UPDATE SET *` / `INSERT *` — the source publish job's upsert shape) are
     /// token-rewritten into a parseable sentinel and lowered to the typed star markers.
     #[test]
     fn star_forms_lower_to_markers() {

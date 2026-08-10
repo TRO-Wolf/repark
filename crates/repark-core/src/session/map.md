@@ -35,3 +35,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 | A builder `datafusion.*` key seems ignored | It is not (P2G R2) — `apply_datafusion_config_keys` applies it and an unknown key is a build error, with ONE exact-key exclusion: `datafusion.runtime.memory_limit` is the facade-owned LIVE resize pseudo-key (`REPARK_OWNED_DATAFUSION_PSEUDO_KEYS`, P3E B-1) and is deliberately not swept at build. The typo pin carries TWO fixtures — truncated (catches a namespace-prefix exclusion) and extended (catches a `starts_with(pseudo_key)` exclusion). If the value did not take, check ordering: the extension `configure` hook runs AFTER, so an extension can still overwrite. Pin: `builder_datafusion_config_key_reaches_session_config`. |
 
 First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug](../map.md).
+
+- **Neutral-fixture scrub (2026-08-10, hardening-prep):** an owner-approved, forward-only,
+  comment-and-fixture-only pass moved this directory's doc text and example literals to
+  neutral placeholders — the upstream job the acceptance shape mirrors is named generically
+  ("the source publish job"), and example table/view/entity names are placeholders carrying no
+  domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
+  that read it. Sites here: `tests.rs` — the doc comment on
+  `late_catalog_registration_adds_new_names_and_skips_existing`.

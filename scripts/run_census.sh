@@ -2,7 +2,7 @@
 # One-command census gate (classic + expand + expand2). SSOT procedure for the port's
 # acceptance runs. Not CI-wired (Actions-minutes; ~20 min wall per module).
 #
-# Ported from the port source with TWO declared changes:
+# Ported from the port source with THREE declared changes:
 #
 # 1. (phase-3 EC-8, design §5 F1) the classic cohort is run with `--classic`, never
 #    `--stretch`. `--stretch` APPENDS the C3 expand modules to night-1, which blends the C3
@@ -14,6 +14,12 @@
 #    in particular changes the measurement (docs/port/census.md §1). The comparator now
 #    REFUSES to diff a run whose pandas major is unrecorded, so the manifest is an input to
 #    the gate, not documentation.
+# 3. the markdown reports default to a GITIGNORED directory (`target/census-reports/`), not
+#    `task/`. A run is a run OUTPUT until it is curated: landing look-alike markdown beside the
+#    committed evidence under `task/census/<run>/` let an uncommitted local run be mistaken for
+#    recorded evidence, and left untracked noise in every `git status`. Override with
+#    `CENSUS_REPORT_DIR=…`. Promoting a run TO evidence stays a deliberate copy into
+#    `task/census/<run>/` in the commit that records it (docs/port/census.md §3).
 #
 # Requires the facade package at `python/repark`; it arrives with the phase-3 facade PR, so
 # this script is runnable in this repository from that point on. The recorded procedure —
@@ -25,7 +31,8 @@ cd "$REPO_ROOT"
 DATE_STAMP="${CENSUS_DATE:-$(date -u +%Y-%m-%d)}"
 SCRATCH="${REPARK_CENSUS_SCRATCH:-/tmp/repark-census-${DATE_STAMP}}"
 VENV="${CENSUS_VENV:-$SCRATCH/venv}"
-REPORT_DIR="${CENSUS_REPORT_DIR:-$REPO_ROOT/task}"
+# Default is gitignored (`/target/` in .gitignore) — see declared change 3 in the header.
+REPORT_DIR="${CENSUS_REPORT_DIR:-$REPO_ROOT/target/census-reports}"
 mkdir -p "$SCRATCH" "$REPORT_DIR"
 
 if [[ ! -d "$VENV" ]]; then

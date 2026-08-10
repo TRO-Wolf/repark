@@ -121,7 +121,7 @@ def test_sed_swap_harness_import_block_execs() -> None:
 
 
 def test_sed_swap_process_silver_style_imports() -> None:
-    """process_silver-style multi-line imports survive sed pyspark→repark."""
+    """Publish-job-style multi-line imports survive sed pyspark→repark."""
     block = textwrap.dedent(
         """\
         from pyspark.sql import SparkSession, DataFrame, Row, Column, Window

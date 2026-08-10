@@ -51,8 +51,8 @@ fn config_driven_memory_catalog_registers_through_the_constructor() {
     Python::attach(|py| {
         let warehouse = std::env::temp_dir().join(format!("repark_cfg_{}", std::process::id()));
         std::fs::create_dir_all(&warehouse).expect("warehouse dir");
-        // The `process_silver.py` config block shape, AWS-free (`type = memory`); the whole map is
-        // passed to the native constructor exactly as the facade passes it.
+        // The source publish job's config block shape, AWS-free (`type = memory`); the whole
+        // map is passed to the native constructor exactly as the facade passes it.
         let config = HashMap::from([
             (
                 "spark.sql.catalog.glue_alt".to_string(),

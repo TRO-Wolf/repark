@@ -31,8 +31,10 @@ No JVM is needed for the normal build/test/verify loop. A Java 17 home is needed
 | Command | What it does |
 |---|---|
 | `make ci` | **The canonical fast gate.** fmt-check + clippy + panic/async bans + crate dependency policy + lib.rs/lib.py thinness + structural manifest + `cargo check` + ruff lint/format + uv-lock check + toml + spell. Mirrors the CI `ci.yml` job. |
-| `make test` | The test suites (`cargo test --locked --workspace`). |
+| `make test` | The **Rust workspace** suite (`cargo test --locked --workspace`) — and that is deliberately all of it. The Python suites need something `cargo test` cannot give them (see below). |
 | `make verify` | `ci` + `test` — full local verification. **A change is not done until `make verify` is green** and the touched directories' `map.md` files are current. |
+| `make py-test-facade` | The **facade** suite (`python/repark/tests`) against the real native module: provisions the four declared extras (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`, runs `maturin develop`, then pytest. Run it when you touch the facade — `make verify` does not. |
+| `make py-test` | The **parity** harness (`python/repark-parity/tests`) — pure pyarrow, no native build, no JVM. Mirrors the CI step. |
 | `make preflight` | The pre-PR gate: `verify` + the security audits + workflow lint. If `preflight` is green, the PR checks are green. Run it before opening a PR. |
 | `make format` | Autoformat Rust + Python (`cargo fmt`, `ruff format`). |
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
@@ -47,6 +49,14 @@ all-features flag turns on `repark-python`'s `extension-module`, which tells PyO
 libpython and breaks a standalone test binary. The Makefile, CI, and this rule all agree. See
 [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) "PyO3 build notes". The cdylib is
 validated separately via the maturin wheel + an import smoke test, not via `cargo test`.
+
+**Where each suite runs.** `make test` (and so `make verify`) is JVM-free and native-build-free on
+purpose, which is why it covers the **Rust workspace only** — not because the Python side is
+unfinished. The **facade** suite needs the compiled native module, so it lives behind a build
+step: locally `make py-test-facade`, and in CI the `wheels.yml` **smoke** job, which runs that same
+suite against the *packaged wheel* with the four extras installed (a facade regression must not
+pass CI on an import smoke alone). The **parity** harness runs in `ci.yml` (and `make py-test`).
+The **live-Spark oracle** tier needs a JVM: `make parity-live` / `parity-live.yml` only.
 
 The testing **contract** (tests land in the same commit as the code; test-per-change; the
 entry-point matrix; divergence-class claims) is in [docs/testing.md](docs/testing.md) — read it
@@ -87,7 +97,7 @@ Tier-2 (live AWS / real Spark) **never runs against unmerged code** — nightly 
 | `manifest: FAIL` | `repo-manifest.toml` disagrees with reality — a Cargo member is undeclared, a declared doc or `make` target is gone, STATUS.md moved the milestone, or a crate map lags. `make check-manifest` names the field. |
 | `unsafe` lint fires | Only `repark-python` may use `unsafe`; keep FFI there. |
 | `uv lock --locked` is RED | `uv.lock` lags a `pyproject.toml` floor bump — run `uv lock` and commit the result. |
-| A `make` target loudly no-ops | Some targets return with the code they gate (see the Makefile header + [docs/port/PLAN.md](docs/port/PLAN.md)); check the header note. |
+| The facade suite is green but a polars / ML path was never exercised | The `.venv` is missing an extra, and `importorskip` turns a missing extra into a silent **skip**. `make py-test-facade` provisions all four (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`; a bare `uv sync` provisions only the root `dev` group. Compare the polars/ML skip *deltas* against the recorded full-extras cohort ([docs/port/census.md](docs/port/census.md) §4) — a developer `.venv` also carries the `dev` group's duckdb, which §4 requires absent, so the absolute counts will differ by those sites; the extras delta is the load-bearing number. |
 | A lint passes locally but fails in CI (or vice-versa) | Tool pins drifted — Makefile pins must equal the workflow pins; bump both in one change. |
 | PyO3 build can't find Python | `.cargo/config.toml` sets `PYO3_PYTHON`; confirm a `python3` with `libpython3.x` is on PATH. |
 

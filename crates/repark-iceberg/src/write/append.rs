@@ -1648,7 +1648,7 @@ mod tests {
     async fn append_a1_acceptance_identity_partitioned_end_to_end() {
         let warehouse = TempDir::new().expect("temp warehouse");
         let catalog = memory_catalog(&warehouse).await;
-        let ident = create_table(&catalog, "clinic_metrics", false, true, HashMap::new()).await;
+        let ident = create_table(&catalog, "t", false, true, HashMap::new()).await;
 
         // Bulk: several unsorted batches, three partitions.
         append(

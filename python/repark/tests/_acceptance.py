@@ -5,7 +5,7 @@ Kept in a non-``test_`` module (pytest does not collect it) so both the gated ha
 one definition. Nothing here touches AWS or constructs a session — just constants and pure
 builders, plus the ``deduplicate`` transform (which operates on an already-constructed DataFrame).
 
-These mirror the shape of ``process_silver.py``.
+These mirror the shape of the source publish job.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...fu
 from repark.dataframe import DataFrame
 
 # ==============================================================================================
-# Constants — mirrored from the real process_silver.py config block
+# Constants — mirrored from the real source publish job's config block
 # ==============================================================================================
 # Bronze reads use the s3a scheme; the Glue warehouse uses s3. Both must resolve (WG3).
 #
@@ -75,7 +75,7 @@ ACCEPTANCE_NAMESPACE = "testing_repark_acceptance"
 ACCEPTANCE_TABLE_PREFIX = "testing_"
 PRODUCTION_NAMESPACE = "example_silver"  # named here solely to assert we never touch it
 
-TEMP_VIEW = "iv_temp_data"
+TEMP_VIEW = "staging_view"
 
 # The real TBLPROPERTIES block: format-version 2, copy-on-write for every write mode, target file
 # size. (The script carries a trailing ``-- 256 MiB`` inline comment; dropped here as cosmetic.)
@@ -113,7 +113,7 @@ def acceptance_namespace_location(warehouse: str) -> str:
 
 
 def glue_catalog_config(catalog_name: str, warehouse: str) -> dict[str, str]:
-    """The ``spark.sql.catalog.<name>.*`` block for a Glue catalog (process_silver.py shape).
+    """The ``spark.sql.catalog.<name>.*`` block for a Glue catalog (source publish job shape).
 
     Includes ``io-impl`` verbatim from the real script — the WG2 mapping recognises and **drops**
     it (iceberg-rust FileIO is not pluggable by classname), so it is carried for fidelity.
@@ -128,7 +128,7 @@ def glue_catalog_config(catalog_name: str, warehouse: str) -> dict[str, str]:
 
 
 def s3tables_catalog_config(catalog_name: str, table_bucket_arn: str) -> dict[str, str]:
-    """The ``spark.sql.catalog.<name>.*`` block for an **S3 Tables** catalog (process_silver shape).
+    """The ``spark.sql.catalog.<name>.*`` block for an **S3 Tables** catalog (publish job shape).
 
     S3 Tables addresses its virtual bucket by **ARN**, passed as the ``warehouse`` — RePark's
     ``catalog_config`` carries an S3 Tables block's ``warehouse`` into the ``table_bucket_arn`` the
@@ -171,7 +171,7 @@ def deduplicate(
     id_col: str,
     timestamp_col: str = "ingestion_timestamp",
 ) -> DataFrame:
-    """Keep the newest row per ``id_col`` (mirrors ``process_silver.deduplicate_silver_df``).
+    """Keep the newest row per ``id_col`` (mirrors the source publish job's dedup step).
 
     ``row_number()`` over ``partitionBy(id_col).orderBy(timestamp_col DESC)`` → keep ``rn == 1`` →
     drop the helper column.
