@@ -1,6 +1,6 @@
-"""Env-gated real-AWS acceptance harness — the ``process_silver.py`` publish path against Glue.
+"""Env-gated real-AWS acceptance harness — the source publish job's path against Glue.
 
-This module mirrors ``process_silver.py``: a session configured
+This module mirrors the source publish job: a session configured
 with a Glue ``catalog-impl`` + an ``s3://`` warehouse, a bronze ``s3a://`` Parquet read, the
 ``row_number`` dedup transform, then the ``tableExists`` → CTAS → MERGE publish loop into a
 **scratch** namespace.
@@ -78,7 +78,7 @@ def _table_row_count(spark: ReparkSession, table: str) -> int:
 def _bronze_dedup_publish_idempotent(
     spark: ReparkSession, table: str, entity: str, ds: str, id_col: str
 ) -> None:
-    """The catalog-agnostic process_silver publish path + oracles (shared by Glue and S3 Tables).
+    """The catalog-agnostic publish path + oracles (shared by Glue and S3 Tables).
 
     Bronze (s3a) read → dedup → CTAS-if-fresh / MERGE-if-exists → a second identical MERGE that must
     be idempotent. The only thing that differs between catalogs is session/namespace setup (done by
@@ -119,7 +119,7 @@ def _bronze_dedup_publish_idempotent(
 
 
 def test_process_silver_acceptance_against_glue() -> None:
-    """Mirror process_silver.py end to end against real Glue + S3, into the scratch namespace.
+    """Mirror the source publish job end to end against real Glue + S3, into the scratch namespace.
 
     entity/ds/id-column come from env (``REPARK_ACCEPT_ENTITY`` / ``REPARK_ACCEPT_DS`` /
     ``REPARK_ACCEPT_ID_COL``). Oracles: bronze rows > 0; the published table holds the deduped set;
@@ -155,7 +155,7 @@ def test_process_silver_acceptance_against_glue() -> None:
 
 
 def test_process_silver_acceptance_against_s3tables() -> None:
-    """Mirror process_silver.py end to end against real **S3 Tables** + S3, scratch namespace only.
+    """Mirror the source publish job end to end against real **S3 Tables** + S3, scratch only.
 
     A2's SECOND bullet (the Glue bullet is already discharged). Additionally gated on the
     ``TABLE_BUCKET_ARN`` env var (a us-east-2 table-bucket ARN, set by the user) — SKIPPED, not

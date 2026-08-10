@@ -151,6 +151,13 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     and *crate-root manifests*
     (`scripts/check_lib_rs.py` — ceilings + EXCEPTIONS SSOT) are **armed** since phase-1 PR-A,
     dual-wired Makefile + ci.yml.
+  - *Facade `.py` thinness* (`scripts/check_lib_py.py` — the Python sibling of `check_lib_rs` and
+    the SSOT for facade file size: per-file line ceilings with an EXCEPTIONS-with-reason table that
+    **ratchets DOWN only**, plus the no-stub rule — a re-export-only module must open its docstring
+    with the exact substring `re-export binding`) is **armed** since phase-3 PR-5 over
+    `python/repark/src/repark/**`, dual-wired `make check-lib-py` (in the `make ci` chain) +
+    ci.yml's `python` job, and in both pre-commit paths (`make install-hooks` +
+    `.pre-commit-config.yaml`).
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
     inventory, phase, canonical gate commands and documentation index are machine-readable and
     validated against the workspace, the Makefile, STATUS.md, the declared documents and the

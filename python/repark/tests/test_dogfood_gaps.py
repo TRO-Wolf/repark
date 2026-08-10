@@ -1,6 +1,6 @@
 """Group F — production-job gaps from the 2026-07-21 dogfood run.
 
-Closes the six shims that `process_silver.py` needed on RePark (recorded in the dogfood
+Closes the six shims that the source publish job needed on RePark (recorded in the dogfood
 report for that run). Every behavioral pin is
 recorded from live PySpark 4.1.2 (`JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`,
 `SPARK_LOCAL_IP=127.0.0.1`); oracle values live in the test docstrings.

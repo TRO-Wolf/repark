@@ -378,7 +378,7 @@ def test_acceptance_dim_dates_transform_shape(spark: ReparkSession) -> None:
     exact output rows.
 
     A date spine → a surrogate ``date_key`` (``row_number`` over a ``Window`` ordered by the date,
-    the ``process_silver.py`` pattern) + the dim-dates date columns: ``date_format`` keys/names,
+    the source publish job's pattern) + the dim-dates date columns: ``date_format`` keys/names,
     ``year``/``quarter``/``month``, the ``dayofweek``→ISO arithmetic (``(dayofweek + 5) % 7 + 1``,
     verbatim from the script), ``trunc``/``date_trunc``/``last_day``/``add_months``/``date_add``
     period boundaries. Goldens are hand-computed from Spark's documented calendar semantics.

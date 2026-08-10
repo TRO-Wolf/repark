@@ -34,19 +34,19 @@ _TESTS_DIR = pathlib.Path(__file__).resolve().parent
 
 def test_bronze_path_is_the_s3a_parquet_path() -> None:
     assert (
-        bronze_path("appointment", "2026-07-01")
-        == "s3a://example-bronze-bucket-v1/bronze/appointment/2026-07-01.parquet"
+        bronze_path("entity_a", "2026-07-01")
+        == "s3a://example-bronze-bucket-v1/bronze/entity_a/2026-07-01.parquet"
     )
 
 
 def test_bronze_path_uses_the_s3a_scheme_not_s3() -> None:
     # The script reads bronze via s3a (Hadoop FS), distinct from the s3 warehouse scheme.
-    assert bronze_path("clinic", "2026-01-01").startswith("s3a://")
+    assert bronze_path("entity_b", "2026-01-01").startswith("s3a://")
 
 
 def test_fq_table_is_three_part() -> None:
-    assert fq_table("glue_catalog", "testing_repark_acceptance", "survey") == (
-        "glue_catalog.testing_repark_acceptance.survey"
+    assert fq_table("glue_catalog", "testing_repark_acceptance", "entity_a") == (
+        "glue_catalog.testing_repark_acceptance.entity_a"
     )
 
 
@@ -112,19 +112,19 @@ def test_iceberg_table_properties_carry_the_real_block() -> None:
 
 
 def test_ctas_sql_shape() -> None:
-    table = "glue_catalog.testing_repark_acceptance.testing_appointment"
-    sql = ctas_sql(table, "iv_temp_data")
+    table = "glue_catalog.testing_repark_acceptance.testing_entity_a"
+    sql = ctas_sql(table, "staging_view")
     assert sql.startswith(f"CREATE TABLE IF NOT EXISTS {table}")
     assert "USING iceberg" in sql
-    assert "AS SELECT * FROM iv_temp_data" in sql
+    assert "AS SELECT * FROM staging_view" in sql
     assert "'format-version' = 2" in sql
 
 
 def test_merge_sql_shape_keys_on_the_id_column() -> None:
-    table = "glue_catalog.testing_repark_acceptance.testing_appointment"
-    sql = merge_sql(table, "iv_temp_data", "appointment_id")
+    table = "glue_catalog.testing_repark_acceptance.testing_entity_a"
+    sql = merge_sql(table, "staging_view", "entity_a_id")
     assert sql.startswith(f"MERGE INTO {table} AS Target")
-    assert "ON Target.appointment_id = Source.appointment_id" in sql
+    assert "ON Target.entity_a_id = Source.entity_a_id" in sql
     assert "WHEN MATCHED THEN UPDATE SET *" in sql
     assert "WHEN NOT MATCHED THEN INSERT *" in sql
 

@@ -55,7 +55,7 @@ def _rows(spark: ReparkSession, table: str = FQ) -> list[dict[str, object]]:
 
 
 def test_merge_into_upsert_equals_sql_merge(spark: ReparkSession) -> None:
-    """Builder upsert equals the process_silver SQL-MERGE row set (Arrow path)."""
+    """Builder upsert equals the publish job's SQL-MERGE row set (Arrow path)."""
     _seed(spark)
     updates = spark.sql("SELECT 2 AS id, 'bee' AS name UNION ALL SELECT 3, 'c'")
 

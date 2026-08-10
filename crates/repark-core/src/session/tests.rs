@@ -596,7 +596,7 @@ async fn read_parquet_routes_both_s3_schemes_to_the_registered_store() {
 }
 
 /// `.config(...)` collects into the builder and drives catalog registration: a
-/// `process_silver.py`-shaped block with `type = memory` (the AWS-free `RePark` form) builds the
+/// source-publish-job-shaped block with `type = memory` (the AWS-free `RePark` form) builds the
 /// session, and `register_configured_catalogs` wires the catalog so a CTAS round-trips —
 /// proving the config path (not just an explicit `register_memory_catalog` call) drives a real
 /// catalog. AWS-free by construction (`memory` kind only).

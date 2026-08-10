@@ -74,16 +74,25 @@ Repository helper scripts wired into the dev workflow.
 
 - `run_census.sh` — one-command census gate (classic + expand + expand2): provisions a scratch
   venv, builds the native module, then runs the three cohorts and writes JSON + markdown reports.
-  Not CI-wired (~20 min wall per module). Ported with **one** behavioral change (phase-3 EC-8):
-  the classic cohort runs `--classic`, never `--stretch` — `--stretch` appends the C3 modules and
-  blends them into the classic /345 denominator. Report output paths are unchanged in shape.
-  Second declared change: the run's **environment is recorded, not assumed** — a verbatim
-  `pip freeze` (empty = fatal) plus `census-manifest.json` carrying the versions the comparator
-  gates (`python_version`, `pyspark_version`, `pandas_version`, `pyarrow_version`), and the run
-  aborts outright under pandas ≥ 3. Artifacts are then redacted via `python -m compat.redact`
-  (through each format's parser), never `sed`. The
-  script needs the facade package at `python/repark`, which arrives with the facade PR; the
-  recorded procedure it implements is [../docs/port/census.md](../docs/port/census.md).
+  Not CI-wired (~20 min wall per module). Ported with **three** declared changes, each stated in
+  the script header:
+  1. (phase-3 EC-8) the classic cohort runs `--classic`, never `--stretch` — `--stretch` appends
+     the C3 modules and blends them into the classic /345 denominator. Report output paths are
+     unchanged in shape.
+  2. the run's **environment is recorded, not assumed** — a verbatim `pip freeze` (empty = fatal)
+     plus `census-manifest.json` carrying the versions the comparator gates (`python_version`,
+     `pyspark_version`, `pandas_version`, `pyarrow_version`), and the run aborts outright under
+     pandas ≥ 3.
+  3. the markdown reports default to the **gitignored** `target/census-reports/` (not `task/`).
+     A run is a run OUTPUT until it is curated, so it must not land look-alike markdown beside
+     the committed evidence in `task/census/<run>/`, nor dirty `git status`. Override with
+     `CENSUS_REPORT_DIR=…`; promotion to evidence stays a deliberate copy into
+     `task/census/<run>/` in the commit that records it.
+
+  Artifacts are then redacted via `python -m compat.redact` (through each format's parser), never
+  `sed`. The script needs the facade package at `python/repark`, which arrives with the facade
+  PR; the recorded procedure it implements is
+  [../docs/port/census.md](../docs/port/census.md).
 
 - `check_lib_py.sh` + `check_lib_py.py` — the **Python** thinness guard, sibling of
   `check_lib_rs` and the SSOT for facade file size (ported verbatim at phase-3 PR-5 with the
@@ -149,6 +158,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
 | `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
+| A census run's markdown reports are "missing" from `task/` | They are not written there: the default `CENSUS_REPORT_DIR` is the gitignored `target/census-reports/` (declared change 3). The final line of the run echoes the directory it wrote |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `bash scripts/check_manifest.sh`,
