@@ -18,7 +18,8 @@ TABLE, namespace DDL, ALTER (I6/I7), MERGE INTO, INSERT OVERWRITE (empty + r23 O
 Z + AB), metadata tables (I2), the time-travel scanner (I1 — the pin half lives in
 `repark_core::time_travel`), the multi-statement / P11 / MoR-valve / SEC-02 guards, TRUNCATE
 targeted refuse, and the DML passthrough. The v1 lib-root battery is ported intact
-(`src/tests.rs`; census closed at 334 ported names — see the p2d ledger). The PR-2 `repark-ta`
+(`src/tests/` — G-4 split from the former `src/tests.rs` monolith; census closed at 334
+ported names — see the p2d ledger; navigation [src/tests/map.md](src/tests/map.md)). The PR-2 `repark-ta`
 omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 `repark_ta::TaExtension` (p2e ledger).
 

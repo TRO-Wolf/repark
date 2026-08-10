@@ -100,7 +100,7 @@ exists to prevent, and every refusal message names the section it is recorded in
   deliberately **not** caught by this guard.
 - **Apache Spark** — accepts the dotted metadata-table reference as a queryable relation.
   *(oracle: documented — the claim here is the refusal, not a value.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::metadata_tables_spark_dot_form_and_guards`
+- **Pin** — `crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_spark_dot_form_and_guards`
 - **Rationale** — DECLARED. The composition would have to resolve a snapshot for a relation that
   is itself derived from the snapshot log; getting that wrong silently returns a *plausible* wrong
   history, which is worse than a refusal. Revisit when a workload needs it.
@@ -120,7 +120,7 @@ differs is *which* refusal the user sees.
   point in analysis. *(oracle: documented — Spark's and Iceberg's documented read-only treatment
   of metadata tables. The refusal, not a value, is the whole claim on the Spark side; this row
   makes no claim about Spark's message text.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::metadata_tables_spark_dot_form_and_guards`
+- **Pin** — `crates/repark-spark/src/tests/metadata_tables.rs::metadata_tables_spark_dot_form_and_guards`
 - **Rationale** — DECLARED and intentionally permanent. It is recorded because the guard is
   load-bearing for MT-1's sibling paths and because a *silent* fall-through — a write to
   `t.snapshots` reaching the planner and failing with something opaque, or worse, rewriting to
@@ -147,7 +147,7 @@ Supported surface, for reference:
 > (`ref_ddl::try_parse_ref_ddl`) accept the same shapes, and the parser answers every shape it
 > declines with an error of its own — so a statement reaching the residual guard would mean the
 > two drifted apart. The recognizer's own boundary is pinned by
-> `crates/repark-spark/src/tests.rs::branch_sniff_skips_table_name_segments` (true positives and
+> `crates/repark-spark/src/tests/ref_ddl.rs::branch_sniff_skips_table_name_segments` (true positives and
 > the table-name false positives); REF-2's pin holds the parser's answer for the trailing-token
 > shapes. A row lands here the day the guard becomes reachable, with the pin that reaches it.
 
@@ -159,7 +159,7 @@ Supported surface, for reference:
   path for refs.
 - **Apache Spark** — the Iceberg extension writes to the named ref.
   *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::write_to_branch_refuses_loud_naming_fork_gap`
+- **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
 - **Rationale** — DECLARED, and it is not RePark's fix to make: the pinned iceberg-rust fork's
   snapshot-producing actions always emit the ref update on the main branch, with no commit-target
   API to aim them elsewhere. The alternative to refusing is writing to `main` while the statement
@@ -173,7 +173,7 @@ Supported surface, for reference:
   `IF EXISTS` / `IF NOT EXISTS` are the named, known-but-unsupported spellings and stay out.
 - **Apache Spark** — accepts `IF NOT EXISTS` on `CREATE BRANCH|TAG` and `IF EXISTS` on
   `DROP BRANCH|TAG`. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud`
+- **Pin** — `crates/repark-spark/src/tests/ref_ddl.rs::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud`
 - **Rationale** — DECLARED for now. Silently dropping a trailing clause is the fail-open class
   this door was built to avoid — an ignored `IF NOT EXISTS` turns a no-op into a hard failure,
   and an ignored `IF EXISTS` turns a tolerated miss into one. Refusing keeps the statement's meaning
@@ -188,8 +188,8 @@ Supported surface, for reference:
   clause) is supported and is a whole-table replace.
 - **Apache Spark** — performs a partition-scoped overwrite.
   *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::empty_insert_overwrite_partition_refuses_full_wipe`
-  and `crates/repark-spark/src/tests.rs::insert_overwrite_partition_nonempty_refuses_whole_table_replace`
+- **Pin** — `crates/repark-spark/src/tests/insert_overwrite.rs::empty_insert_overwrite_partition_refuses_full_wipe`
+  and `crates/repark-spark/src/tests/insert_overwrite.rs::insert_overwrite_partition_nonempty_refuses_whole_table_replace`
 - **Rationale** — DECLARED until a partition-scoped write path exists. Both degradations are
   destructive and neither is detectable from the result: an empty source would wipe sibling
   partitions, and a non-empty source would silently become a whole-table replace. The documented
@@ -200,7 +200,7 @@ Supported surface, for reference:
 - **repark** — refuses with a targeted message naming the substitutes
   (`INSERT OVERWRITE … SELECT … WHERE false`, or `DELETE FROM <table>` with no predicate).
 - **Apache Spark** — truncates the table. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::truncate_table_refuses_loud_naming_gap`
+- **Pin** — `crates/repark-spark/src/tests/router.rs::truncate_table_refuses_loud_naming_gap`
 - **Rationale** — DECLARED until a dedicated truncate action lands. The refusal exists so the
   statement does not fall through to the planner's opaque "unsupported" diagnostic, which tells a
   migrating user nothing about what to write instead.
@@ -210,7 +210,7 @@ Supported surface, for reference:
 - **repark** — a `MERGE INTO` shape the door cannot parse refuses with a targeted error pointing
   at this section, rather than surfacing a raw parser error.
 - **Apache Spark** — parses the full `MERGE INTO` grammar. *(oracle: documented.)*
-- **Pin** — `crates/repark-spark/src/tests.rs::merge_unparsable_form_gets_targeted_error`
+- **Pin** — `crates/repark-spark/src/tests/merge.rs::merge_unparsable_form_gets_targeted_error`
 - **Rationale** — DECLARED as a *boundary*, not as a permanent gap: `MERGE` is RePark-owned and
   its supported surface grows. The row exists so the boundary is a stated, tested thing instead
   of an accident of the parser.

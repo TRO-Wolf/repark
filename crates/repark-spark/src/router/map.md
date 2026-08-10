@@ -6,7 +6,7 @@ File-backed tests for the statement router (`../router.rs`): the v1 TRUNCATE tar
 pin, passthrough sanity, the BUG-010 ordering pin, and the P11 read-only threading pin.
 PR-2-native (outside the ported census). All TEMPORARY refuse arms are restored as of PR-3b;
 their refuse tests were deleted with the arms. The ported v1 lib-root battery lives in
-`../tests.rs` (`crate::tests`).
+`../tests/` (`crate::tests`; see [../tests/map.md](../tests/map.md)).
 
 ## Contents
 
