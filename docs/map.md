@@ -37,8 +37,14 @@ notes, and per-tier operating manuals for this repo.
   read to work in this repository.
 - [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
 - [tier2-aws.md](tier2-aws.md) — operator runbook for the tier-2 live-AWS workflow: environment,
-  the repo+branch+environment-scoped OIDC trust policy, the create-only/no-delete IAM posture,
-  the S3 lifecycle expiry, variable/secret names, first-dispatch acceptance.
+  the repo+branch+environment-scoped OIDC trust policy, the create-only/no-delete IAM posture
+  (§2 — including the **separate catalog-wide read-only `glue:GetDatabases`/`glue:GetTables`
+  statement** that registration's provider walk requires, which cannot be scratch-scoped),
+  the S3 lifecycle expiry, variable/secret names (§4 — **environment scope preferred**,
+  repository level equivalent), first-dispatch acceptance (§5 — including the stale-namespace
+  pre-check: an existing scratch database is adopted idempotently and keeps its OLD
+  `LocationUri`). Corrections carried back from the first green live run, 2026-08-10; the run's
+  status itself lives in [../STATUS.md](../STATUS.md).
 - [release.md](release.md) — release engineering (documentation only this phase): PyPI /
   crates.io trusted publishing setup, bootstrap-token revocation, the first-tag hard blockers
   (incl. the `repark.sql` re-home gate), open items.

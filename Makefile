@@ -181,10 +181,30 @@ parity-live: ## Live PySpark oracle tier: re-derive every pinned golden from rea
 	@# `record` extra, pinned in uv.lock), builds the native module, then runs the full facade
 	@# suite AND the live tier (REPARK_PARITY_LIVE=1) so it asserts repark == pinned golden ==
 	@# live Spark. Flag unset (ci/verify) → the live tests SKIP; this target arms them.
-	uv sync --extra record
-	cd python/repark && $(MATURIN) develop
+	@# Every sync flag below is load-bearing, because `uv sync` is EXACT — it uninstalls whatever
+	@# the requested extras do not name:
+	@#   --locked : uv.lock is an INPUT here, never an output. A bare `uv sync` may rewrite the
+	@#     checked-in lockfile as a side effect of a test run.
+	@#   --extra numpy/pandas/polars/ml-ext : the four facade extras (docs/port/census.md §4).
+	@#     Without them a run that touches an already-provisioned .venv REMOVES polars, xgboost,
+	@#     lightgbm and scikit-learn, and the facade suite then silently SKIPs every polars/ML
+	@#     test — a green live tier over a shrunken denominator, which is not a gate.
+	@#   --no-install-package repark : keeps the `maturin develop` below AUTHORITATIVE; otherwise
+	@#     uv installs repark from source and shadows maturin's editable build of the cdylib.
+	@# The pytest step uses `uv run --locked --no-sync` for the same two reasons: `uv run` re-syncs
+	@# the project environment by default (undoing both of the above), and it has no
+	@# --no-install-package escape — --no-sync is the only way to keep an explicitly provisioned
+	@# environment intact (`--locked` there is inert while --no-sync is present; kept as a guard
+	@# should --no-sync ever be dropped). The VIRTUAL_ENV pin below matches the other Python
+	@# targets: `uv` ignores a foreign active virtualenv (with a warning) while `maturin` honors
+	@# it — unpinned, the two would target DIFFERENT environments under an activated unrelated
+	@# venv. Keep the uv/maturin/pytest flags identical in parity-live.yml (dual-wired).
+	VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" uv sync --locked --extra record \
+		--extra numpy --extra pandas --extra polars --extra ml-ext \
+		--no-install-package repark
+	cd python/repark && VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" $(MATURIN) develop
 	JAVA_HOME=$(PARITY_LIVE_JAVA_HOME) SPARK_LOCAL_IP=127.0.0.1 REPARK_PARITY_LIVE=1 \
-		uv run --extra record pytest python/repark/tests -q
+		VIRTUAL_ENV="$${VIRTUAL_ENV:-$(REPO_ROOT)/.venv}" uv run --locked --no-sync pytest python/repark/tests -q
 
 .PHONY: py-audit
 py-audit: ## Python dependency CVE scan (mirrors pip-audit.yml)

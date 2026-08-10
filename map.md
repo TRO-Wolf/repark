@@ -36,7 +36,10 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
-  workflow pins.
+  workflow pins. The tier-2 `parity-live` target is dual-wired with
+  [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
+  its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing
+  `--extra` silently uninstalls a facade extra and the suite skips those tests instead of failing).
 - `repo-manifest.toml` — the **machine-readable structural facts**: the component inventory
   (path / layer / status for every crate, delivered and planned), the current phase, the
   canonical gate commands, and the documentation index. It is a validated MIRROR, never a second
