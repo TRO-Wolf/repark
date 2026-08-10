@@ -85,6 +85,13 @@ wrapper.
   `metadata_tables_spark_dot_form_and_guards` likewise exercises **all ten** write forms registry
   row MT-2 names (INSERT / UPDATE / DELETE / MERGE / CTAS / CREATE OR REPLACE / TRUNCATE /
   CREATE VIEW / DROP / ALTER), because a row may not assert more than its pin proves.
+  `metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door` (H-1c,
+  2026-08-10) is this door's half of
+  [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md): the fork's
+  synthesized `$`-metadata names do not enumerate in `information_schema.tables` or its twin
+  `SHOW TABLES`, and **both** spellings still resolve — the door's own `t.snapshots` and the
+  `t$snapshots` it rewrites onto. The decision is made once at the catalog layer, never here; this
+  row proves it reaches this door.
 
 **Where the refusal messages point.** Several modules here name
 `docs/spark-sql-iceberg-parity.md` (the **divergence registry**) in their loud-refusal text —

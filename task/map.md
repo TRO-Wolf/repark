@@ -25,6 +25,16 @@ not this directory.
 - [g5-sweep-ledger.md](g5-sweep-ledger.md) — **G-5 registry sweep**: full inventory triage,
   dispositions, rows added (NS-1/NS-2/ST-1/ID-3/TY-4/TY-5/FA-2/FA-3), open-item rulings, gate
   evidence.
+- [h1c-ledger.md](h1c-ledger.md) — **V2 Engine Hardening H-1c** (the `$`-metadata introspection
+  rider): the evidence that ended the open question (what the fork's schema provider actually
+  synthesizes, what Spark and Trino do, and why the live oracle tier cannot observe either), the
+  ruling — **filter, at the catalog layer** — the five in-unit decisions, the four flagged
+  deviations, the gate results, and the dated **fix pass** that corrected a falsely-green facade
+  gate (a nondeterministic assertion), a 2×-wrong perf number, an overclaimed "drops exactly", a
+  duplicated description across STATUS/registry and a false test-site citation. The decision itself
+  is
+  [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md);
+  the ledger records how it was reached, not what it says.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
@@ -73,6 +83,7 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 | Start a new unit's ledger | copy the shape of [h1d-ledger.md](h1d-ledger.md) (or the archived [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
 | See how a divergence gets declared, pinned and mirrored | [h1d-ledger.md](h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
 | Read why the session timezone is a build-time knob with one spelling, and what split B still owes | [h1a-ledger.md](h1a-ledger.md) |
+| See how an open question gets FIXED instead of declared (and why a fixed defect gets no row) | [h1c-ledger.md](h1c-ledger.md) + [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |

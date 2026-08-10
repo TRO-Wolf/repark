@@ -87,6 +87,19 @@ v1 crate-root re-export lists.
     it, empty-projection case included. The gap is not yet filed in the fork's own
     `docs/parity/GAP_MATRIX.md` — filing it there is the fork-side follow-up (capability status
     lives ONLY in the fork).
+  - **The metadata-table enumeration filter (same module) is coupled to the fork's synthesis.**
+    The fork's `IcebergSchemaProvider::table_names` invents `<base>$<MetadataTableType::as_str()>`
+    for every listed table; `MetadataProjectionSchemaProvider::table_names` drops exactly that set
+    for every base table whose own name contains no `$` — a `$`-in-the-base table (`a$b`) still
+    enumerates its fifteen synthesized names, because the predicate splits on the first `$` exactly
+    as the fork's own resolution does, and all sixteen of those names are unresolvable through the
+    fork either way (fork limitation, ADR-0006 "Residue", ledger F-2)
+    ([ADR-0006](../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)). **Removal
+    criterion:** a fork rev that stops synthesizing those names in `table_names` makes the filter a
+    no-op, and it goes. **Breakage criterion:** a fork rev that changes the synthesized *spelling*
+    silently re-exposes them — re-run the two emptiness pins
+    (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests.rs`) at every
+    repin, not just the compile.
 
 ## Pointers
 

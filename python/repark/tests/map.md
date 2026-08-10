@@ -1026,7 +1026,13 @@ NOT in that file is a defect, not a decision.
   interior pin (no hollow `len>=0`). Octo C2: JOIN metadata; TRUNCATE refuse; real
   `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF refuse.
   Octo C5: CREATE VIEW meta refuse. Octo C6: DROP/ALTER meta refuse.
-  Octo C8: ruff-format final; OCTO-CONVERGED.
+  Octo C8: ruff-format final; OCTO-CONVERGED. **H-1c (2026-08-10,
+  [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)):** the
+  facade half of the enumeration decision — `SHOW TABLES` and `information_schema.tables` list the
+  base table only (`test_metadata_tables_are_hidden_from_enumeration_at_the_facade`), and both
+  spellings of a hidden name still return the same rows
+  (`test_a_hidden_metadata_table_is_still_queryable_at_the_facade`). Hidden from the listing,
+  never removed from the engine.
 - `test_time_travel.py` — **I1 / R-TIME-TRAVEL** named oracle: multi-snapshot fixture (CTAS +
   append + MERGE) + tag/branch via `_testing_create_ref`; SQL `VERSION AS OF` /
   `TIMESTAMP AS OF` / `FOR SYSTEM_*` (incl. latest-`<=` at s2/s3_ts + mid-interval — octo

@@ -8781,6 +8781,127 @@ async fn metadata_tables_spark_dot_form_and_guards() {
     );
 }
 
+/// ADR-0006 (campaign decision D2, unit H-1c) at the **Spark door**: the fork's synthesized
+/// `$`-metadata names do not enumerate, and the Spark dotted spelling that rewrites onto them
+/// still works. The decision is made once at the catalog layer
+/// (`repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names`), never in a door
+/// parser — this row is what proves the single decision reaches THIS door.
+///
+/// Risk pinned: enumeration and resolution are different surfaces, and a filter placed wrong
+/// breaks the second while satisfying the first. Both are asserted here, plus the twin path
+/// (`SHOW TABLES` and `information_schema.tables`) that a fix touching only one of them would
+/// leave inconsistent.
+///
+/// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
+/// emptiness assertions red.
+#[tokio::test]
+async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    // `information_schema` is off by default (repark-core's builder key is the product way to
+    // turn it on); the door tests run on a raw context, so arm it here.
+    ctx.sql("SET datafusion.catalog.information_schema = true")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.hidden AS SELECT * FROM src",
+    )
+    .await;
+
+    // 1. information_schema.tables — the real table only.
+    let listed = execute(
+        &ctx,
+        &catalogs,
+        "SELECT table_name FROM information_schema.tables \
+         WHERE table_catalog = 'ice' AND table_schema = 'sales'",
+    )
+    .await
+    .expect("information_schema must plan through the Spark door")
+    .collect()
+    .await
+    .unwrap();
+    let mut names: Vec<String> = Vec::new();
+    for batch in &listed {
+        let column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::StringArray>()
+            .expect("table_name is Utf8");
+        for row in 0..batch.num_rows() {
+            names.push(column.value(row).to_string());
+        }
+    }
+    names.sort();
+    assert_eq!(
+        names,
+        vec!["hidden".to_string()],
+        "the Spark door must enumerate the catalog's tables, not the fork's synthesized names"
+    );
+
+    // 2. The twin path.
+    let shown = execute(&ctx, &catalogs, "SHOW TABLES")
+        .await
+        .expect("SHOW TABLES must plan through the Spark door")
+        .collect()
+        .await
+        .unwrap();
+    let mut dollar_names: Vec<String> = Vec::new();
+    for batch in &shown {
+        let column = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<datafusion::arrow::array::StringArray>()
+            .expect("table_name is Utf8");
+        for row in 0..batch.num_rows() {
+            if column.value(row).contains('$') {
+                dollar_names.push(column.value(row).to_string());
+            }
+        }
+    }
+    assert!(
+        dollar_names.is_empty(),
+        "SHOW TABLES must not list metadata tables through this door either: {dollar_names:?}"
+    );
+
+    // 3. Hidden, not removed — through the door's OWN spelling (`t.snapshots`, which the door
+    //    rewrites onto the hidden `t$snapshots`) and through the `$` form directly.
+    let dotted = execute(
+        &ctx,
+        &catalogs,
+        "SELECT snapshot_id FROM ice.sales.hidden.snapshots",
+    )
+    .await
+    .expect("the Spark dotted spelling must still resolve")
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(
+        dotted.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1,
+        "one CTAS snapshot must be visible through the dotted spelling"
+    );
+    let dollar = execute(
+        &ctx,
+        &catalogs,
+        "SELECT snapshot_id FROM ice.sales.\"hidden$snapshots\"",
+    )
+    .await
+    .expect("the `$` spelling must still resolve")
+    .collect()
+    .await
+    .unwrap();
+    assert_eq!(
+        dollar.iter().map(RecordBatch::num_rows).sum::<usize>(),
+        1,
+        "the hidden name must stay addressable directly"
+    );
+}
+
 /// r25 T2 item 0: metadata-table projection honor — empty (`count`), partial, full `SELECT *`
 /// parameterized across ALL supported metadata table names (`LocalFS` memory catalog only).
 ///
