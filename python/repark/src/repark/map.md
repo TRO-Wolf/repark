@@ -514,9 +514,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   (`df.select(123)`, `df.sort()`, `df.nosuchattr`). They need MULTIPLE bases, which
   `pyo3::create_exception!` cannot express, and no Rust code raises them — hence Python-side.
   Widening only: `except TypeError`/`ValueError`/`AttributeError` still catches, and a migrated
-  `except PySparkException` now catches too. **Known divergence** (documented + pinned): in
-  PySpark these three are not `RuntimeError`s; here they are, because repark's `PySparkException`
-  is. A leaf type ships only with ≥1 reachable raise (the Group S no-stubs rule).
+  `except PySparkException` now catches too. Exception-class hierarchy vs Spark is registry
+  [FA-3](../../../../docs/spark-sql-iceberg-parity.md#fa-3--python-argument-wrappers-subclass-runtimeerror).
+  A leaf type ships only with ≥1 reachable raise (the Group S no-stubs rule).
 - `session.py` — **getOrCreate reuse path (R-GETORCREATE, 2026-07-28):** a later builder's
   Combine note: `Builder.config` routes conf/map/kv uniformly through
   `_set_config_entry` (display-key case-insensitive last-wins on every form).
@@ -681,10 +681,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   engine-private prefixes `__repark_cdf_*` / `__repark_mia_*` / `__repark_tt_*` (I1 time-travel
   static pins — octo C1-Q-002); two-part `spark_catalog.db` aliases like `tableExists` (octo C2-Q-002).
   Optional list* `pattern` uses Spark filterPattern (`*` / `|`;
-  Python `re` `\A…\Z` anchors — not Rust `\z`). Non-str args → `PySparkTypeError`. Disclosed:
-  `description`/`locationUri` None on Database; `SHOW TABLES IN` still
-  UnsupportedOperationException. Pins in `../../tests/test_catalog_surface.py` (incl. isolation
-  + pattern + type pins from critic-octo) + `test_time_travel.py` (tt hide).
+  Python `re` `\A…\Z` anchors — not Rust `\z`). Non-str args → `PySparkTypeError`. Listing
+  divergences rowed as
+  [FA-2](../../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none) /
+  [ST-1](../../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented).
+  Pins in `../../tests/test_catalog_surface.py` (incl. isolation + pattern + type pins from
+  critic-octo) + `test_time_travel.py` (tt hide).
 - `row.py` — PySpark-compatible `Row` for `DataFrame.collect` (**G-ROW**, live PySpark 4.1.2;
   **r21 T3** `from_ordered_fields` preserves Spark-legal duplicate display names on collect;
   **F-T3-002** `__reduce__` pickles via `from_ordered_fields` so multi-name Rows do not drop

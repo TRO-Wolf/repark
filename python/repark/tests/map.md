@@ -742,8 +742,11 @@ NOT in that file is a defect, not a decision.
   `LIKE` is Spark's `StringUtils.filterPattern` and NOT SQL `LIKE` (full match not substring,
   case-insensitive, `|` alternation, `%`/`_` literal, the `LIKE` keyword optional, the pattern
   matched against the QUOTED row), `.show()` rendering, the unknown-catalog `AnalysisException`
-  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the two disclosed divergences
-  failing LOUD (no current catalog → `IN` mandatory; no nested `cat.ns` listing), and that a
+  **class identity** (live pyspark 4.0.0 `SCHEMA_NOT_FOUND` / 42704), the two registry-rowed
+  refusals
+  ([NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog) /
+  [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
+  failing LOUD, and that a
   relation named `namespaces`/`schemas` is not shadowed (Spark has no `SHOW <relation>` form).
 - `test_row.py` — **G-ROW** (2026-07-27): pure-Python + collect pins for `repark.row.Row` vs
   live PySpark 4.1.2 (zulu-17 oracle first). Construction (keyword order, positional,
@@ -786,8 +789,9 @@ NOT in that file is a defect, not a decision.
   `PySparkTypeError`, `df.sort()`/`dropna(how=…)`/`createDataFrame([])` raise `PySparkValueError`,
   `df.nosuchattr` raises `PySparkAttributeError` (with `hasattr` still working), each asserting
   BOTH PySpark parents; plus
-  `test_python_arg_errors_runtime_error_divergence_is_deliberate`, which pins the known
-  `RuntimeError` divergence so it stays visible rather than accidental; **G-ROW**
+  `test_python_arg_errors_runtime_error_divergence_is_deliberate`, which pins registry
+  [FA-3](../../../docs/spark-sql-iceberg-parity.md#fa-3--python-argument-wrappers-subclass-runtimeerror);
+  **G-ROW**
   `test_row_missing_key_and_bad_index_raise_pyspark_value_error` closes the Group X Row
   residuals (`row["zz"]` / `row[object()]` → `PySparkValueError`, missing attr →
   `PySparkAttributeError`, mixed ctor → `PySparkValueError`) with existing leaves only
@@ -863,18 +867,21 @@ NOT in that file is a defect, not a decision.
   non-Null Arrow string types (C2-L-003); tz-aware→UTC; Decimal scientific fixed-point + refuse
   under-scale/over-magnitude (C2-L-002); quote/escape (multi-quote).
   **INT-003** `to_polars` value+dtype matrix **with and without nulls** (C1-Q-005); round-trip
-  `to_polars` → `createDataFrame` value identity for int64/string/float/bool/date; disclosed
-  `_divergence` pins for int32→int64 widen and Decimal(10,2)→Decimal(38,18) on the VALUES path
-  (dtype asserted, not just value).
+  `to_polars` → `createDataFrame` value identity for int64/string/float/bool/date; registry
+  [TY-4](../../../docs/spark-sql-iceberg-parity.md#ty-4--createdataframe-widens-arrow-int32-to-int64) /
+  [TY-5](../../../docs/spark-sql-iceberg-parity.md#ty-5--createdataframe-widens-decimal-precision-and-scale)
+  pins for int32→int64 and Decimal(10,2)→Decimal(38,18) on the VALUES path (dtype asserted, not
+  just value).
 - `test_catalog_surface.py` — **R-CURCAT-FACADE** (closes G-INT INT-004 follow-up). Pins
   `tableExists` (3-part + **2-part under currentCatalog** + 1-part under currentDatabase + temps),
   `currentCatalog`/`setCurrentCatalog`/`currentDatabase`/`setCurrentDatabase`,
   `listCatalogs`/`listDatabases`/`listTables`/`databaseExists` (+ snake_case), namedtuple field
   shapes (`Database`/`Table`/`CatalogMetadata`), `spark.sql.defaultCatalog` seed, CATALOG_NOT_FOUND
   / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`), multi-catalog
-  isolation, non-str → PySparkTypeError. Remaining divergences: `SHOW TABLES IN` still
-  unsupported; Database `description`/`locationUri` are None. SQL sibling smoke: `SHOW
-  NAMESPACES IN` (full pin in `test_show_namespaces.py`).
+  isolation, non-str → PySparkTypeError. Remaining divergences rowed as
+  [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
+  [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
+  SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_parity3.py` — **R-PARITY3**: `createDataFrame(schema=StructType|DDL)` preserves int32;
   `show(vertical=True)` real `-RECORD` layout + only-showing-top-n. Row factory/pickle pins in
   `test_row.py`.
@@ -882,14 +889,12 @@ NOT in that file is a defect, not a decision.
   aliased name vs canonical `repark.*`, loud AttributeError/ImportError for absent pyspark.sql
   names (never stubs), sed-swap smoke of the live-parity harness import block and
   publish-job-style multi-imports.
-- `test_catalog_surface.py` — **G-INT INT-004** Catalog surface. Pins the implemented facade
-  (`tableExists` 3-part + temp view + unknown catalog raise; camelCase/snake_case aliases;
-  `clearCache`/`dropTempView`). Disclosed divergences (never silent): missing
-  `listDatabases`/`listTables`/`currentCatalog`/`currentDatabase`/`listCatalogs`/`databaseExists`
-  → AttributeError; two-part `tableExists("ns.table")` raises (repark is three-part Iceberg /
-  bare temp-view only); `SHOW TABLES IN` → UnsupportedOperationException. SQL sibling smoke:
-  `SHOW NAMESPACES IN` lists namespaces (full pin in `test_show_namespaces.py`). Live V2 shapes
-  recorded in the module docstring + `task/todo.md` G-INT ledger.
+- `test_catalog_surface.py` — **G-INT INT-004** (historical bullet; current surface is the
+  R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
+  `clearCache`/`dropTempView`. Rowed listing refusals:
+  [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
+  [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
+  SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
 - `test_sql_dml_eager.py` — WG-1 (F-BR-2): bare `spark.sql` DML executes **eagerly**, PySpark
   parity. A bare `INSERT`/`DELETE`/`UPDATE` whose returned DataFrame is never collected still
   applies the write (pre-fix: a silent no-op); collecting the returned DataFrame does not re-apply
@@ -917,11 +922,12 @@ NOT in that file is a defect, not a decision.
   (3) **all three** members of `_SQL_LITERAL_KEYWORDS` keep their grammar meaning against a frame
   that actually carries a column of that name — `["true","b"]`, `["false","b"]`, `["null","b"]` —
   each with the suppressed rewrite asserted to fail (`"true"` / `"false"` → non-boolean predicate;
-  `b IS NOT "null"` → `ParseException`). Plus the upstream guard behind
-  `_by_name_casefold_map`'s exact-duplicate branch: DataFusion rejects duplicate output names at
-  frame construction on both paths (`createDataFrame` and `spark.sql`), so that branch is
-  defensive, not facade-reachable. Every behaviour is mutation-proven (each of the four rewriter
-  rules reverted → this module reds; dropping any single keyword from the set reds it too).
+  `b IS NOT "null"` → `ParseException`). Plus the pin for registry
+  [ID-3](../../../docs/spark-sql-iceberg-parity.md#id-3--exact-duplicate-column-names-are-refused-at-construction)
+  (exact-duplicate output names refused at construction on both paths — also the upstream guard
+  behind `_by_name_casefold_map`'s defensive branch). Every behaviour is mutation-proven (each of
+  the four rewriter rules reverted → this module reds; dropping any single keyword from the set
+  reds it too).
   **Error shape:** the refusal is Spark's verbatim `[AMBIGUOUS_REFERENCE] Reference \`id\` is
   ambiguous, could be: [\`id\`, \`ID\`].`, asserted by string EQUALITY. Two recorded, deliberate
   differences from live Spark 4.1.2: repark lists the *actual* colliding columns where Spark
@@ -935,10 +941,10 @@ NOT in that file is a defect, not a decision.
   **Disclosed divergences characterized here** (behaviour fixes are out of charter) — the
   semantics live in the divergence registry, this map links:
   [`../../../docs/spark-sql-iceberg-parity.md`](../../../docs/spark-sql-iceberg-parity.md) §3
-  **ID-2** (the two spellings that bypass the case-collision refusal) and §7 **BL-2**
-  (backtick-quoted idents are not a protected span). Also characterized here, and *not* a registry
-  row: exact duplicate column names are rejected at construction by DataFusion where Spark accepts
-  them and refuses only at the reference.
+  **ID-2** (the two spellings that bypass the case-collision refusal), §7 **BL-2**
+  (backtick-quoted idents are not a protected span), and §3
+  [ID-3](../../../docs/spark-sql-iceberg-parity.md#id-3--exact-duplicate-column-names-are-refused-at-construction)
+  (exact-duplicate output names refused at construction).
 - `test_dropin_disclosure.py` — (+ Group F review 2026-07-21: withColumns lateral-alias divergence pin; + SEC-008 2026-07-24: `show()` logs a row-count breadcrumb at INFO but NOT row data — full render is DEBUG-only; + r23 CACHE1: `clearCache` is a real MemTable drop — no-warn disclosure pin only, behavior in `test_cache_persist.py`) WG-4 Clause 2 (OTH-010): the drop-in no-op / accepted-ignored
   surface. `clearCache()` no longer a silent no-op (CACHE1 Q11); `show(vertical=True)` and
   `master(url)` warn once per process (warn-once re-armed per test via the modules'
@@ -1013,8 +1019,9 @@ NOT in that file is a defect, not a decision.
   `cat.ns.tbl.snapshots` (+ history/files/manifests/partitions/refs/entries/
   metadata_log_entries/all_* family) + `spark.table("…files")`; schema pins from fork
   inspect sources; row sanity on ≥3-snapshot fixture; real table named `files` wins; DML
-  + AS OF composition loud; unpartitioned empty-`partition` + readable_metrics-by-name
-  divergence pins (R142). Octo C1: FQ column named `files` not rewritten; UPDATE/CTAS
+  + AS OF composition loud; unpartitioned empty-`partition` pin (Java-Iceberg residue, not a
+  registry row — fork-side) + readable_metrics-by-name divergence pins (R142). Octo C1: FQ column
+  named `files` not rewritten; UPDATE/CTAS
   DML refuse; paren AS OF refuse; metadata of real `files` table; tight readable_metrics
   interior pin (no hollow `len>=0`). Octo C2: JOIN metadata; TRUNCATE refuse; real
   `snapshots` wins; all_files ≥ files row bound. Octo C3: TIMESTAMP/SYSTEM_* AS OF refuse.

@@ -367,6 +367,10 @@ The queue was built from `grep -rn "DISCLOSED DIVERGENCE\|KNOWN DIVERGENCE\|DIVE
 and a divergence disposed of without one of those words would not appear. The sweep unit's first
 job is a wider inventory, not this table.
 
+**Closed by G-5 (2026-08-10):** full triage and dispositions in
+[g5-sweep-ledger.md](g5-sweep-ledger.md). The table above stays as the historical seed; G-5 did
+not rewrite its rows.
+
 ## Notes for later units — not registry rows
 
 - **Filed for a future registry-adjacent row (do NOT open a row for it yet):** Iceberg table

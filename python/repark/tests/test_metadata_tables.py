@@ -469,7 +469,10 @@ def test_drop_alter_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str
 def test_unpartitioned_partition_column_divergence(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """Pin fork residue: empty partition column kept on unpartitioned tables (Java drops it)."""
+    """Pin fork residue: empty partition column kept on unpartitioned tables (Java drops it).
+
+    Java-Iceberg parity item, tracked fork-side — not a registry row.
+    """
     _ = multi_snapshot
     files = spark.sql(f"SELECT * FROM {TABLE}.files").to_arrow()
     assert "partition" in _schema_names(files)

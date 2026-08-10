@@ -1490,12 +1490,10 @@ def test_to_polars_round_trip_create_dataframe_value_identity(spark: ReparkSessi
 
 
 def test_to_polars_round_trip_int32_widens_to_int64_divergence(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE: SQL VALUES path cannot preserve Arrow int32 through createDataFrame.
+    """Pin for registry row TY-4 — semantics live only there.
 
-    ``to_polars`` yields Int32; ``createDataFrame`` re-infers Python ``int`` as int64. Value
-    identity holds; dtype does not. Live Spark with IntegerType schema preserves int32 — repark
-    has no StructType-schema createDataFrame yet (VALUES-only).
-
+    See ``docs/spark-sql-iceberg-parity.md`` §4
+    [TY-4](../../../docs/spark-sql-iceberg-parity.md#ty-4--createdataframe-widens-arrow-int32-to-int64).
     Strengthened pin (C1-Q-007): Arrow type on both sides of the round-trip, not only polars dtype.
     """
     pl = pytest.importorskip("polars")
@@ -1516,8 +1514,10 @@ def test_to_polars_round_trip_int32_widens_to_int64_divergence(spark: ReparkSess
 
 
 def test_to_polars_round_trip_decimal_precision_widens_divergence(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE: Decimal(10,2) → createDataFrame → Decimal(38,18) (Spark inference).
+    """Pin for registry row TY-5 — semantics live only there.
 
+    See ``docs/spark-sql-iceberg-parity.md`` §4
+    [TY-5](../../../docs/spark-sql-iceberg-parity.md#ty-5--createdataframe-widens-decimal-precision-and-scale).
     Strengthened pin (C1-Q-007): source Arrow type, polars dtype, and round-trip Arrow+polars
     dtypes are all asserted; numeric value identity is independent of order.
     """

@@ -2,8 +2,9 @@
 
 **What this is.** The place this repository records *how repark differs from Apache Spark* and
 why — the one home a divergence gets once it has been **disposed of**. Every entry is a **row**,
-and a row is only admitted with a live test that pins it. It is **seeded, not swept**: see
-"Scope" below before reading the absence of a row as a claim that no such divergence exists.
+and a row is only admitted with a live test that pins it. It was **swept on 2026-08-10** (see
+"Scope" below): reading the absence of a row is still not a claim that no such divergence exists
+outside the method's stated blind spots.
 
 **What this is not.** It is not a status page and it is not a backlog tracker.
 [../STATUS.md](../STATUS.md) owns the **state** of each known issue (open / fixed / declared);
@@ -54,18 +55,26 @@ spelling this gate parses") — a near-miss is a loud failure, not a silent skip
 field are pinned JVM-free only; that is a property of what the live tier can express, not a
 lesser row.
 
-**Scope — this registry is SEEDED, not swept.** It opened on **2026-08-10** with
+**Scope — swept on 2026-08-10 (method-bounded, not exhaustive).** It opened the same day with
 [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) — quoted-identifier case folding,
 campaign decision D3 — as the first row admitted at seeding, alongside the rows the sixteen live
-citations forced, the cast-failure backlog row, and the four live-tier disclosures. It is **not**
-an exhaustive inventory of this tree's divergences on that date. Several divergences were already
-disposed of and pinned before the registry existed, and their authoritative description still
-lives in a test docstring (`DISCLOSED DIVERGENCE` / `KNOWN DIVERGENCE` / `DIVERGENCE-n`). Each of
-those is a **gap to close**, not a counter-example: the sweep queue is named test-by-test in
-[../task/h1d-ledger.md](../task/h1d-ledger.md) "The sweep queue", carried as a candidate H-2 unit,
-and closing an entry means *moving* its description here, never copying it. §6's
-one-authoritative-description rule accordingly binds every disposition made **from 2026-08-10
-forward**; it is a rule for what happens next, not a claim about what the tree already contained.
+citations forced, the cast-failure backlog row, and the four live-tier disclosures. Unit **G-5**
+then swept the pre-registry disclosures: a wider inventory over `python/repark/` and `crates/`
+(markers and looser phrasing: `divergen`, `disclos`, `differs from Spark`, `unlike Spark`,
+`Spark would`, plus the original `DISCLOSED DIVERGENCE` / `KNOWN DIVERGENCE` / `DIVERGENCE-n`
+spellings), triage of every hit, and a row for every confirmed queue candidate whose pin asserts
+the claim. Full triage and dispositions live in
+[../task/g5-sweep-ledger.md](../task/g5-sweep-ledger.md); the historical seed queue remains in
+[../task/h1d-ledger.md](../task/h1d-ledger.md) "The sweep queue" with a dated G-5 closure line.
+Closing an entry means *moving* its description here, never copying it. §6's
+one-authoritative-description rule binds every disposition made **from 2026-08-10 forward**.
+
+**Stated blind spots of the sweep method.** The inventory is a text search, not a semantic proof
+of the tree: a disposed divergence described without any of the search terms would not appear; a
+comment without a pin cannot become a row (rows require a pin); polars-or-fork-only differences
+are out of this registry's Spark scope; and candidate **#1**
+(`test_dogfood_gaps.py::test_divergence_timestamp_ltz_collect_passthrough` / DIVERGENCE-1) is
+carved out for H-1a split B and was not rowed here.
 
 ---
 
@@ -207,6 +216,46 @@ Supported surface, for reference:
   the "increment roadmap" `crates/repark-spark/src/normalize.rs` points here for; the schedule
   itself lives in [../STATUS.md](../STATUS.md) and the campaign briefs, never in this registry.
 
+### 2.4 Namespace and table listing statements
+
+#### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog
+
+- **repark** — bare `SHOW NAMESPACES` (no `IN` / `FROM` catalog) refuses at planning with an
+  `AnalysisException` whose message requires an explicit catalog. There is no current-catalog
+  fallback for this form.
+- **Apache Spark** — uses the current catalog for the bare form. *(oracle: documented — the claim
+  here is the refusal form, not a value.)*
+- **Pin** — `python/repark/tests/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud`
+  (the no-`IN`/`FROM` arm)
+- **Rationale** — DECLARED. repark has no engine-side current catalog for free SQL; guessing one
+  would silently list the wrong place. The facade's `listDatabases` path always supplies an
+  explicit catalog. Revisit if engine `USE` / current-catalog state lands.
+
+#### NS-2 — nested `SHOW NAMESPACES IN catalog.namespace` is refused
+
+- **repark** — `SHOW NAMESPACES IN cat.ns` refuses with an `AnalysisException` naming the
+  supported one-part `IN <catalog>` form. Nested namespace listing is not implemented.
+- **Apache Spark** — lists children of the nested namespace. *(oracle: documented — the claim
+  here is the refusal form, not a value.)*
+- **Pin** — `python/repark/tests/test_show_namespaces.py::test_show_namespaces_disclosed_divergences_fail_loud`
+  (the nested-`IN` arm)
+- **Rationale** — DECLARED. repark namespaces are single-level today; an empty frame would read as
+  "no children exist" rather than "nested listing is unsupported". Loud refusal keeps that
+  ambiguity from laundering into a false empty result.
+
+#### ST-1 — `SHOW TABLES IN …` is unimplemented
+
+- **repark** — `SHOW TABLES IN <catalog>.…` refuses loud with
+  `UnsupportedOperationException` naming `SHOW TABLES`. The implemented sibling is the Catalog
+  facade method `listTables` (live Iceberg table names + session temp views + DF-schema
+  permanents — **not** a global `information_schema.tables` walk), not this SQL form.
+- **Apache Spark** — accepts `SHOW TABLES IN …` as a catalog SQL form. *(oracle: documented —
+  the claim here is the refusal form, not a value.)*
+- **Pin** — `python/repark/tests/test_catalog_surface.py::test_show_tables_in_not_implemented_divergence`
+- **Rationale** — DECLARED. The facade path is the supported listing surface; a partial SQL
+  implementation that listed the wrong set would be worse than a refusal. `SHOW NAMESPACES IN`
+  remains the implemented SQL listing form for databases.
+
 ---
 
 ## 3. Identifier resolution (DECLARED)
@@ -255,6 +304,20 @@ them, and the document is ordered by surface, never by date.
   declines. Case-colliding frames are legal in both engines; what is recorded here is which
   spellings are guarded.
 
+### ID-3 — exact duplicate column names are refused at construction
+
+- **repark** — both `createDataFrame([(…)], ["id", "id"])` and `SELECT 1 AS id, 2 AS id` refuse
+  at construction / planning with an `AnalysisException` matching `unique expression names`. No
+  frame carrying exact-duplicate output names is ever materialised.
+- **Apache Spark** — accepts both constructions (e.g. `Row(id=1, id=2)`); the ambiguity surfaces
+  later as `AMBIGUOUS_REFERENCE` only when the duplicate name is *referenced*. *(oracle:
+  documented — PySpark 4.1.2 API / analysis semantics for duplicate output names.)*
+- **Pin** — `python/repark/tests/test_filter_predicate_rewrite.py::test_exact_duplicate_column_names_are_rejected_at_frame_construction`
+- **Rationale** — DECLARED. The refusal is inherited from DataFusion's unique-output-name rule
+  and is load-bearing for facade helpers that assume unique names (e.g. the filter rewriter's
+  exact-duplicate defensive branch). Reproducing Spark's late raise would mean allowing illegal
+  frames through the engine.
+
 ---
 
 ## 4. Type and value semantics (DECLARED)
@@ -299,6 +362,37 @@ them, and the document is ordered by surface, never by date.
   faithfully; only inline decimal *literals* differ. The pin asserts repark's actual output **and**
   asserts that the recorded Spark golden still does not match, so a future convergence reds it.
 
+### TY-4 — `createDataFrame` widens Arrow int32 to int64
+
+- **repark** — a frame whose column is Arrow `int32` (e.g. `CAST(… AS INT)` via SQL) exports
+  through `to_polars` as `Int32`, but `createDataFrame` on that polars frame re-infers Python
+  `int` as **int64**: the round-trip Arrow type is `int64` / polars `Int64`. Values are preserved.
+- **Apache Spark** — with an `IntegerType` schema, preserves int32 through the equivalent
+  interchange. *(oracle: documented **value/type** claim under §1's exception — nobody in this
+  repository pins Spark's int32 preservation on a live oracle here. The unit that attaches a real
+  oracle is **H-2 gap G10** — named by the G-5 owner ruling for facade-boundary interchange
+  shapes (G10's slate also budgets map/struct/array container pins); the basis moves to *live*
+  or *recorded* in that change.)*
+- **Pin** — `python/repark/tests/test_interchange_parity.py::test_to_polars_round_trip_int32_widens_to_int64_divergence`
+- **Rationale** — DECLARED until StructType-schema `createDataFrame` (or an equivalent width-
+  preserving path) lands. The SQL VALUES path cannot carry Arrow int32 width through Python
+  inference; the pin holds both sides of the round-trip so a silent preservation reds it.
+
+### TY-5 — `createDataFrame` widens `Decimal` precision and scale
+
+- **repark** — a column of Arrow `decimal128(10, 2)` / polars `Decimal(10, 2)` round-trips through
+  `createDataFrame` as `decimal128(38, 18)` / polars `Decimal(38, 18)`. Numeric values are
+  preserved (scale padded).
+- **Apache Spark** — through an equivalent schema-preserving interchange keeps a `Decimal(10, 2)`
+  (or a precision that is not forced to `(38, 18)` by Python re-inference alone). *(oracle:
+  documented **value/type** claim under §1's exception — no live Spark oracle in this repository
+  asserts the Spark half yet. The unit that attaches a real oracle is **H-2 gap G10** — named by
+  the G-5 owner ruling for facade-boundary interchange shapes; the basis moves to *live* or
+  *recorded* in that change.)*
+- **Pin** — `python/repark/tests/test_interchange_parity.py::test_to_polars_round_trip_decimal_precision_widens_divergence`
+- **Rationale** — DECLARED until a schema-preserving create path exists. Values stay equal; only
+  the container precision/scale widens. The pin asserts source and round-trip Arrow + polars
+  dtypes so a silent preservation reds it.
 ### TZ-2 — the session-timezone default is `UTC`
 
 - **repark** — `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set
@@ -356,6 +450,37 @@ them, and the document is ordered by surface, never by date.
   orders raise, so partial convergence (the forward order starting to work) reds it and forces the
   row and the `withColumns` docstring to be re-recorded together.
 
+### FA-2 — `listDatabases` leaves `description` and `locationUri` as `None`
+
+- **repark** — every `Database` returned by `spark.catalog.listDatabases()` has
+  `description is None` and `locationUri is None`. The facade builds rows from
+  `SHOW NAMESPACES`, which has no location or description column.
+- **Apache Spark** — fills `locationUri` (and may fill `description`) from the catalog metadata
+  for each database. *(oracle: documented — field shape / filled location from the Catalog API.)*
+- **Pin** — `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
+- **Rationale** — DECLARED. Inventing a location would be a silent lie; leaving the fields `None`
+  is honest about what the SHOW primitive carries. Revisit if namespace metadata readback gains a
+  real location source.
+
+### FA-3 — Python-argument wrappers subclass `RuntimeError`
+
+This row is a **diagnostic / exception-class** divergence (the [MT-2](#mt-2--the-read-only-diagnostic-on-a-write-to-a-metadata-table)
+pattern): the claim is about the *error class hierarchy*, not a value.
+
+- **repark** — `PySparkTypeError`, `PySparkValueError`, and `PySparkAttributeError` are
+  subclasses of `RuntimeError` (because `PySparkException` subclasses `RuntimeError`). A
+  facade arg error such as `df.select(123)` is therefore catchable by `except RuntimeError`.
+- **Apache Spark** — in `pyspark.errors` those three wrappers are **not** `RuntimeError`
+  subclasses (`PySparkException` subclasses `Exception` there); a broad `except RuntimeError`
+  does not catch them. *(oracle: documented — the documented class hierarchy of
+  `pyspark.errors`.)*
+- **Pin** — `python/repark/tests/test_errors.py::test_python_arg_errors_runtime_error_divergence_is_deliberate`
+- **Rationale** — DECLARED. The hierarchy is the near-drop-in decision that keeps
+  `except RuntimeError` catching engine failures after migration. The consequence is a strict
+  **superset**: everything PySpark catches, repark catches too; a broad `except RuntimeError`
+  additionally catches facade arg errors. A future unit that decouples `PySparkException` from
+  `RuntimeError` updates this pin — it records today's shape, not a forever contract.
+
 ---
 
 ## 6. How a row is added, mirrored and retired
@@ -374,9 +499,12 @@ every known issue, including issues that have no disposition yet. This registry 
   the unit that fixes it removes them from STATUS rather than moving them here;
 - nothing is stated in both places. For every disposition made **on or after 2026-08-10**, a
   parity grep must find exactly one authoritative description of the divergence, and it must be a
-  row in this file. Dispositions made *before* that date may still be described authoritatively in
-  a test docstring — §1 "Scope" names that queue; closing an entry means moving its description
-  here, not copying it.
+  row in this file. Pre-registry dispositions that were still described only in test docstrings
+  were swept by unit **G-5** (triage and dispositions in
+  [../task/g5-sweep-ledger.md](../task/g5-sweep-ledger.md)); closing an entry means moving its
+  description here, not copying it. Residual pre-registry pins left deliberately unrowed (e.g.
+  DIVERGENCE-1 for H-1a split B) are named in that ledger's carve-outs, not held as a second
+  authoritative home.
 
 **Adding a row.** A row lands with its pin, in the same change, or it does not land. There is no
 TODO row and no "pin to follow": an unpinned divergence is prose, and prose is what this registry

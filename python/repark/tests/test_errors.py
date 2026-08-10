@@ -458,14 +458,9 @@ def test_row_missing_key_and_bad_index_raise_pyspark_value_error() -> None:
 
 
 def test_python_arg_errors_runtime_error_divergence_is_deliberate(spark: ReparkSession) -> None:
-    # KNOWN DIVERGENCE, pinned so it is visible rather than accidental. In `pyspark.errors` the
-    # three Python-argument wrappers are NOT RuntimeErrors (PySparkException subclasses Exception
-    # there). In repark they are, because repark's PySparkException subclasses RuntimeError — the
-    # deliberate near-drop-in decision that keeps `except RuntimeError` catching engine errors.
-    # The consequence is a strict SUPERSET: everything PySpark catches, repark catches too; a
-    # broad `except RuntimeError` additionally catches a facade arg error. Documented in
-    # repark/errors.py. A future unit that decouples PySparkException from RuntimeError UPDATES
-    # this pin — it is a record of today's shape, not a contract.
+    # Pin for registry row FA-3 — semantics live only there
+    # (docs/spark-sql-iceberg-parity.md §5 FA-3). A future unit that decouples
+    # PySparkException from RuntimeError UPDATES this pin with the row.
     df = spark.sql("SELECT 1 AS a")
     with pytest.raises(RuntimeError):
         df.select(123)

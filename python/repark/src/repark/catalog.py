@@ -8,12 +8,13 @@ Python session (dies with ``stop()``), built over existing primitives:
 * Live Iceberg ``list_iceberg_table_names`` + session ``list_temp_view_names`` (default-schema
   directory) → :meth:`listTables` — **not** global ``information_schema.tables`` (that walk
   loads every provider table and hard-fails after OOB drop of a DF-known Iceberg name;
-  T6 F-T6-PHANTOM-A). ``SHOW TABLES IN`` stays loud / unimplemented — engine SQL, not this unit
+  T6 F-T6-PHANTOM-A). ``SHOW TABLES IN`` refuses — registry row ST-1
+  (``docs/spark-sql-iceberg-parity.md`` §2.4)
 * :meth:`tableExists` three-part / bare temp-view (native) plus **two-part** and **one-part**
   resolution under the facade current catalog / database
 
 Engine-side ``USE`` / bare ``SHOW NAMESPACES`` remain out of scope (router state is a later unit —
-do not sniff/rewrite free SQL strings here).
+do not sniff/rewrite free SQL strings here); bare / nested forms are registry NS-1 / NS-2.
 
 Return objects match live PySpark 4.1.2 field shapes (namedtuple-oid ``Database`` / ``Table`` /
 ``CatalogMetadata``). PySpark spells methods camelCase; each is defined snake_case with a
@@ -352,8 +353,8 @@ class Catalog:
         """List namespaces in the current catalog (PySpark ``listDatabases``).
 
         Built over ``SHOW NAMESPACES IN <currentCatalog>`` (+ optional LIKE). Field shapes match
-        live 4.1.2 ``Database``; ``description`` / ``locationUri`` are ``None`` when the SHOW
-        primitive does not carry them (disclosed vs Spark's filled locationUri).
+        live 4.1.2 ``Database``; ``description`` / ``locationUri`` are ``None`` — registry
+        row FA-2 (``docs/spark-sql-iceberg-parity.md`` §5).
         """
         self._session._ensure_alive()
         catalog = self.current_catalog()

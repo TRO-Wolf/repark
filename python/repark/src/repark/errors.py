@@ -40,13 +40,9 @@ engine, and mirrors PySpark's wrapper classes: :class:`PySparkTypeError`,
 ``except ValueError`` / ``except AttributeError`` code keeps working *and* a migrated
 ``except PySparkException`` now catches them too (before, it silently missed).
 
-.. warning::
-   **Known divergence.** In ``pyspark.errors`` these three are *not* :class:`RuntimeError`\\ s;
-   in repark they are, because repark's :class:`PySparkException` subclasses
-   :class:`RuntimeError` (the near-drop-in decision that lets ``except RuntimeError`` keep
-   catching engine errors). So a broad ``except RuntimeError`` around facade calls catches a
-   repark ``PySparkTypeError`` where PySpark would let it propagate. This is a deliberate
-   *superset*: nothing that PySpark catches escapes repark. Pinned in
+.. note::
+   Exception-class hierarchy vs Spark is registry row FA-3
+   (``docs/spark-sql-iceberg-parity.md`` §5). Pin:
    ``tests/test_errors.py::test_python_arg_errors_runtime_error_divergence_is_deliberate``.
 
 They are defined here in Python rather than in the native module because they need **multiple
