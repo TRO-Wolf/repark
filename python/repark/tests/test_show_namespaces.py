@@ -12,12 +12,13 @@ built native module, pinning what a migrated PySpark caller actually sees:
 - an unknown catalog raises :class:`repark.errors.AnalysisException` **by class identity** (AB4) —
   the class live pyspark 4.0.0 raises for ``SHOW NAMESPACES IN nosuchcatalog``
   (``AnalysisException`` / condition ``SCHEMA_NOT_FOUND`` / SQLSTATE 42704);
-- the two disclosed divergences (no current catalog; no nested namespaces) fail LOUD, and no other
-  ``SHOW`` form is shadowed (AB6).
+- the two registry-rowed refusals
+  ([NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog),
+  [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused))
+  fail LOUD, and no other ``SHOW`` form is shadowed (AB6).
 
 The output shape is pinned to a live pyspark 4.0.0 **DataSourceV2** oracle (2026-07-25) — the
-catalog class repark ships, per the Group Z rule. Divergences are disclosed in
-``execute_show_namespaces``'s Rust doc block and in ``task/todo.md``'s GROUP AB ledger.
+catalog class repark ships, per the Group Z rule.
 """
 
 from __future__ import annotations
@@ -125,14 +126,12 @@ def test_show_namespaces_unknown_catalog_raises_analysis_exception(spark: Repark
 
 
 def test_show_namespaces_disclosed_divergences_fail_loud(spark: ReparkSession) -> None:
-    """AB6: the two disclosed divergences name the requirement instead of guessing.
+    """AB6 pin for registry rows NS-1 and NS-2 — semantics live only there.
 
-    1. No ``IN``/``FROM``: Spark uses the current catalog (and — oracle-measured — ignores the
-       current namespace, always listing from the catalog root). repark has no current catalog.
-    2. Nested ``IN cat.ns``: Spark lists the children. repark's namespaces are single-level, so an
-       empty frame would read as "no children exist".
-
-    Both raise ``AnalysisException`` — the family Spark raises too, though not its message.
+    See ``docs/spark-sql-iceberg-parity.md`` §2.4 rows
+    [NS-1](../../../docs/spark-sql-iceberg-parity.md#ns-1--show-namespaces-without-in-from-requires-an-explicit-catalog)
+    and
+    [NS-2](../../../docs/spark-sql-iceberg-parity.md#ns-2--nested-show-namespaces-in-catalognamespace-is-refused).
     """
     with pytest.raises(AnalysisException) as no_catalog:
         spark.sql("SHOW NAMESPACES")

@@ -304,17 +304,21 @@ def test_default_catalog_from_builder_config(tmp_path: Path) -> None:
 
 
 def test_show_tables_in_not_implemented_divergence(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE: SQL sibling SHOW TABLES IN stays unimplemented (engine SQL).
+    """Pin for registry row ST-1 — semantics live only there.
 
-    listTables uses information_schema instead (facade). SHOW NAMESPACES IN is the listDatabases
-    sibling and remains the implemented SQL form.
+    See ``docs/spark-sql-iceberg-parity.md`` §2.4
+    [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented).
     """
     with pytest.raises(UnsupportedOperationException, match="SHOW TABLES"):
         spark.sql("SHOW TABLES IN glue_catalog.ns1")
 
 
 def test_list_databases_location_uri_none_divergence(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE: live Spark fills locationUri; SHOW has no location column."""
+    """Pin for registry row FA-2 — semantics live only there.
+
+    See ``docs/spark-sql-iceberg-parity.md`` §5
+    [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
+    """
     spark.catalog.setCurrentCatalog("glue_catalog")
     for db in spark.catalog.listDatabases():
         assert db.locationUri is None

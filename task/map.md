@@ -20,7 +20,11 @@ not this directory.
 - [h1d-ledger.md](h1d-ledger.md) — **V2 Engine Hardening H-1d** (the divergence registry): the
   re-verified citation inventory, the eight design decisions (including D-6, the ruling that the
   live-tier `DISCLOSURES` list becomes a machine-checked mirror of the registry's live-mirrored
-  rows), the gate results, and the mirror check's provocation proofs.
+  rows), the gate results, and the mirror check's provocation proofs. Sweep queue historically
+  seeded here; **closed by G-5** (see [g5-sweep-ledger.md](g5-sweep-ledger.md)).
+- [g5-sweep-ledger.md](g5-sweep-ledger.md) — **G-5 registry sweep**: full inventory triage,
+  dispositions, rows added (NS-1/NS-2/ST-1/ID-3/TY-4/TY-5/FA-2/FA-3), open-item rulings, gate
+  evidence.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags

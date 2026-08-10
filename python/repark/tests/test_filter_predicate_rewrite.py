@@ -358,14 +358,12 @@ def test_bound_null_column_predicate_is_the_discriminator(spark: ReparkSession) 
 def test_exact_duplicate_column_names_are_rejected_at_frame_construction(
     spark: ReparkSession,
 ) -> None:
-    """``_by_name_casefold_map``'s exact-duplicate refusal is defensive: DataFusion rejects
-    duplicate output names before any frame carrying them exists, on both construction paths. If
-    this ever goes green-with-duplicates, that branch becomes live and needs a facade-level pin.
+    """Pin for registry row ID-3 — semantics live only there.
 
-    DISCLOSED DIVERGENCE: live PySpark 4.1.2 **accepts** both of these (``Row(id=1, id=2)``) and
-    only raises ``AMBIGUOUS_REFERENCE`` when the duplicate name is referenced. This is a
-    construction-time divergence inherited from DataFusion, out of charter for audit G2 — recorded
-    here so the branch's "unreachable" justification is not mistaken for Spark parity.
+    See ``docs/spark-sql-iceberg-parity.md`` §3
+    [ID-3](../../../docs/spark-sql-iceberg-parity.md#id-3--exact-duplicate-column-names-are-refused-at-construction).
+    If this ever goes green-with-duplicates, the filter rewriter's exact-duplicate defensive
+    branch becomes live and needs a facade-level pin in the same change that retires the row.
     """
     with pytest.raises(AnalysisException, match="unique expression names"):
         spark.createDataFrame([(1, 2)], ["id", "id"])
