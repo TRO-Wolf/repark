@@ -146,3 +146,11 @@ First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map
   (a team/bucket name fragment) replaced with `example-team` equivalents — outcome-neutral
   (fixtures and their oracles changed together); enumerated in docs/history/port-v2/p3e-facade-ledger.md.
 - **B-2 scrub sites in this crate (2026-08-08):** `catalog_config.rs` (doc header + fixtures) and `object_store_s3.rs` (fixtures) carry the `example-team` replacements enumerated in docs/history/port-v2/p3e-facade-ledger.md.
+
+- **Neutral-fixture scrub (2026-08-10, hardening-prep):** an owner-approved, forward-only,
+  comment-and-fixture-only pass moved this directory's doc text and example literals to
+  neutral placeholders — the upstream job the acceptance shape mirrors is named generically
+  ("the source publish job"), and example table/view/entity names are placeholders carrying no
+  domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
+  that read it. Sites here: `catalog_config.rs` — the module-doc config-block lead-in, the
+  acceptance-matrix table row, and the `glue_catalog_config` doc line.

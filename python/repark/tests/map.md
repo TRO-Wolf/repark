@@ -798,7 +798,7 @@ NOT in that file is a defect, not a decision.
   `test_dataframe_collect_execution_error_raises_base_exception`) carry a **KNOWN-DIVERGENCE**
   cross-reference (F-BR-6) to the parity backlog (`docs/spark-sql-iceberg-parity.md` §7): Spark
   non-ANSI returns NULL where repark raises, so a future CAST-parity unit **updates** them, not obeys.
-- `test_catalog_flow.py` — the `process_silver.py` publish path end to end from Python (the
+- `test_catalog_flow.py` — the source publish job's path end to end from Python (the
   acceptance kernel): memory catalog + namespace, temp view → `tableExists` gate → CTAS
   (`USING iceberg` + `TBLPROPERTIES` incl. `format-version`) → `MERGE … UPDATE SET * / INSERT *`
   → `dropTempView`/`clearCache` → row oracle; the U1 facade pin
@@ -808,7 +808,7 @@ NOT in that file is a defect, not a decision.
   replace/drop semantics,
   `tableExists` semantics (absent table/namespace → False, unregistered catalog → error,
   one-part = temp views), and camelCase↔snake_case alias identity. WG2: the config-driven publish
-  flow — the measured `process_silver.py` `spark.sql.catalog.glue_alt.*` block (`type = memory` for
+  flow — the measured source publish job's `spark.sql.catalog.glue_alt.*` block (`type = memory`
   AWS-free use, `io-impl` present-and-dropped, no `register_memory_catalog` call) registers the
   catalog at `getOrCreate` and drives namespace → CTAS → MERGE round-trip; plus a malformed catalog
   block raising at `getOrCreate`. NR-1 (2026-07-12): a `repark.sql.catalog.<name>.*`-prefixed block
@@ -879,7 +879,7 @@ NOT in that file is a defect, not a decision.
 - `test_sql_alias.py` — **R-SQLALIAS** `repark.sql` package. Pins `is` identity for every
   aliased name vs canonical `repark.*`, loud AttributeError/ImportError for absent pyspark.sql
   names (never stubs), sed-swap smoke of the live-parity harness import block and
-  process_silver-style multi-imports.
+  publish-job-style multi-imports.
 - `test_catalog_surface.py` — **G-INT INT-004** Catalog surface. Pins the implemented facade
   (`tableExists` 3-part + temp view + unknown catalog raise; camelCase/snake_case aliases;
   `clearCache`/`dropTempView`). Disclosed divergences (never silent): missing
@@ -1183,7 +1183,7 @@ NOT in that file is a defect, not a decision.
   → single; distinct rename chain `alias("a").alias("b")` → `… AS b` (octo C1-Q-006); operator-shaped
   17-TA chain ≤1 `WindowAggExec` + Arrow to_bits parity vs fused `withColumns`.
 - `_acceptance.py` — WG4 shared helpers for the real-AWS acceptance harness (NOT a `test_` module,
-  so pytest never collects it): the `process_silver.py`-shaped constants (bronze bucket/prefix,
+  so pytest never collects it): the source-publish-job-shaped constants (bronze bucket/prefix,
   `glue_catalog`, `s3://` warehouse, scratch namespace `testing_repark_acceptance`, the real
   `format-version 2` + copy-on-write + target-file-size `TBLPROPERTIES`) and pure builders
   (`bronze_path` s3a, `glue_catalog_config`, `fq_table`, `ctas_sql`, `merge_sql`,
@@ -1201,7 +1201,7 @@ NOT in that file is a defect, not a decision.
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
-  `process_silver.py`: a Glue-`catalog-impl` session via `.config(...)`, bronze `s3a://` read
+  the source publish job: a Glue-`catalog-impl` session via `.config(...)`, bronze `s3a://` read
   (entity/ds/id-col from `REPARK_ACCEPT_ENTITY`/`_DS`/`_ID_COL`), the dedup transform, then
   namespace-create (programmatic `spark.create_namespace(..., location=…)` — ADV-1, since SQL
   `CREATE NAMESPACE` without `LOCATION` would omit the `location` a real Glue catalog requires (SQL `LOCATION` works too since WG-5); idempotent on an
@@ -1400,3 +1400,17 @@ First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../ma
 | Outcome moved vs `task/census/baseline-fc3f48102/facade/` | Do not "fix" it — attribute it. Unattributed movement fails the phase (design §6.4) |
 
 First checks: rebuild the wheel and reinstall by path. Escalate to: [../map.md#debug](../map.md).
+
+- **Neutral-fixture scrub (2026-08-10, hardening-prep):** an owner-approved, forward-only,
+  comment-and-fixture-only pass moved this directory's doc text and example literals to
+  neutral placeholders — the upstream job the acceptance shape mirrors is named generically
+  ("the source publish job"), and example table/view/entity names are placeholders carrying no
+  domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
+  that read it. Sites here: `_acceptance.py` (`TEMP_VIEW` is now
+  `staging_view`; docstrings), `test_acceptance_helpers.py` (the example entity strings are
+  now `entity_a`/`entity_b` and the example key column `entity_a_id`, with their assertions),
+  `test_catalog_flow.py`, `test_aws_acceptance.py`, `test_columns.py`, `test_dogfood_gaps.py`,
+  `test_functions_dates.py`, `test_merge_into.py`, `test_sql_alias.py` (docstrings/comments).
+  **Test NAMES were deliberately left alone** — a test rename is a declared-rename unit that
+  ships alone (docs/testing.md "Relocation discipline") and would move the facade census's
+  collected-name multiset.

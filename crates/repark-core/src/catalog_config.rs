@@ -1,7 +1,7 @@
 //! Map Spark `spark.sql.catalog.<name>.*` config keys onto `RePark` catalog registrations.
 //!
 //! PySpark scripts configure an Iceberg catalog with a block of `.config(...)` calls, e.g. the
-//! measured `process_silver.py` block:
+//! measured source publish job's block:
 //!
 //! ```text
 //! spark.sql.catalog.glue_alt              = org.apache.iceberg.spark.SparkCatalog
@@ -427,7 +427,7 @@ fn translate_s3tables_arn(name: &str, props: &mut HashMap<String, String>) -> Re
 mod tests {
     use super::*;
 
-    /// The verbatim measured `process_silver.py` catalog block.
+    /// The verbatim measured source publish job catalog block.
     fn measured_glue_block() -> HashMap<String, String> {
         HashMap::from([
             (
@@ -989,7 +989,7 @@ mod tests {
     /// |---|---|---|
     /// | bare `=memory` + warehouse | Memory | repark short |
     /// | SparkCatalog + `type=memory` + warehouse | Memory | Spark class + type |
-    /// | SparkCatalog + catalog-impl Glue + warehouse | Glue | measured process_silver |
+    /// | SparkCatalog + catalog-impl Glue + warehouse | Glue | measured publish job |
     /// | `type=glue` + warehouse | Glue | short type |
     /// | catalog-impl S3Tables + ARN | S3Tables | impl suffix |
     /// | `type=s3tables` + ARN warehouse | S3Tables | warehouse→table_bucket_arn |

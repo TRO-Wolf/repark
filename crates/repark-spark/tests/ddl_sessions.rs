@@ -210,7 +210,7 @@ async fn create_namespace_with_location_stores_both_location_keys() {
     assert_eq!(total, 1);
 }
 
-/// The `spark.catalog` metadata surface the `process_silver.py` publish path uses:
+/// The `spark.catalog` metadata surface the source publish job uses:
 /// `tableExists` on a three-part name flips false → true across CTAS (and is false for an
 /// absent namespace), a plan registers as a lazy temp view (`createOrReplaceTempView`),
 /// one-part `tableExists` sees it, and `dropTempView` reports existence.
@@ -237,19 +237,19 @@ async fn catalog_surface_table_exists_and_temp_views() {
     // A plan (not batches) as a temp view: the `DataFrame.createOrReplaceTempView` path.
     let frame = spark.sql("SELECT 1 AS id, 'a' AS name").await.unwrap();
     spark
-        .create_or_replace_temp_view_from("iv_temp_data", &frame)
+        .create_or_replace_temp_view_from("staging_view", &frame)
         .unwrap();
-    assert!(spark.table_exists("iv_temp_data").await.unwrap());
+    assert!(spark.table_exists("staging_view").await.unwrap());
 
     spark
-        .sql("CREATE TABLE glue_catalog.silver.t AS SELECT * FROM iv_temp_data")
+        .sql("CREATE TABLE glue_catalog.silver.t AS SELECT * FROM staging_view")
         .await
         .unwrap();
     assert!(spark.table_exists("glue_catalog.silver.t").await.unwrap());
 
-    assert!(spark.drop_temp_view("iv_temp_data").unwrap());
-    assert!(!spark.drop_temp_view("iv_temp_data").unwrap());
-    assert!(!spark.table_exists("iv_temp_data").await.unwrap());
+    assert!(spark.drop_temp_view("staging_view").unwrap());
+    assert!(!spark.drop_temp_view("staging_view").unwrap());
+    assert!(!spark.table_exists("staging_view").await.unwrap());
 
     // T6: temp name directory is a sync SchemaProvider walk (no information_schema load).
     spark
@@ -272,7 +272,7 @@ async fn catalog_surface_table_exists_and_temp_views() {
 }
 
 /// `.config(...)` collects into the builder and drives catalog registration: a
-/// `process_silver.py`-shaped block with `type = memory` (the AWS-free `RePark` form) builds the
+/// source-publish-job-shaped block with `type = memory` (the AWS-free `RePark` form) builds the
 /// session, and `register_configured_catalogs` wires the catalog so a CTAS round-trips —
 /// proving the config path (not just an explicit `register_memory_catalog` call) drives a real
 /// catalog. AWS-free by construction (`memory` kind only).

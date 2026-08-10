@@ -448,7 +448,7 @@ def test_join_rejects_unsupported_how(spark: ReparkSession) -> None:
 
 
 def test_parity_coalesce_cast_chain(spark: ReparkSession) -> None:
-    # Mirrors the process_silver.py withColumns shape: coalesce a nullable column then cast.
+    # Mirrors the source publish job's withColumns shape: coalesce a nullable column then cast.
     # createDataFrame (NOT inline VALUES) so both engines infer id=int64/nullable and
     # name=string/nullable (live PySpark 4.1.2). An inline VALUES source would type id as int32 /
     # non-null on Spark, making the int64/nullable golden a repark-only pin.
