@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-09._
+_Last updated: 2026-08-10._
 
 ## Release state
 
@@ -58,11 +58,19 @@ share is fixed there and re-ported rather than patched only here.
 
 What happens next, in order:
 
-1. **Finish the Agent-Agnostic Front-Door campaign** — in flight; see Active workstreams below.
-2. **V2 Engine Hardening** — the next campaign: full optimization *and* the verification that
-   proves it, across the native door, the Spark facade, and the write path. Not yet drawn up;
-   nothing in it is in flight. The engineering items parked below (spill coverage, the
-   `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its natural inputs.
+1. **Finish the Agent-Agnostic Front-Door campaign** — **DONE (2026-08-10).** All five units
+   merged 2026-08-09 (#24, #25, #26, #28, #29); the two acceptance items still unmet at that point
+   were closed at the campaign's close-out. Its whole record — design, slate, unit ledger and
+   retrospective — is archived at
+   [docs/history/frontdoor/](docs/history/frontdoor/README.md), off the normal read path; the
+   process metrics are in [task/metrics.md](task/metrics.md).
+2. **V2 Engine Hardening** — the next campaign, and the active one: full optimization *and* the
+   verification that proves it, across the native door, the Spark facade, and the write path.
+   Reconnaissance is complete; the campaign's in-repo slate lands with its kickoff unit. One preparatory
+   sweep has already landed from it (#30, 2026-08-10 — the dead doc-pointer sweep in ported
+   sources, which closed the deferral of the same name). The engineering items parked below (spill
+   coverage, the `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its
+   natural inputs.
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -82,11 +90,17 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
-- **The Agent-Agnostic Front-Door campaign** (in flight) — documentation + mechanical-gate work
-  only, no engine-behavior change: a single neutral contributor interface, one status source of
-  truth (this file), a machine-readable structural manifest, and reduced active-doc weight. Design:
-  [docs/design/agent-agnostic-frontdoor.md](docs/design/agent-agnostic-frontdoor.md); slate:
-  [briefs/frontdoor-campaign.md](briefs/frontdoor-campaign.md).
+- **V2 Engine Hardening** (next campaign; recon complete, kickoff unit in preparation — its slate
+  lands in `briefs/` at kickoff) — the first campaign to touch
+  engine code since the port: optimization across the native door, the Spark facade and the write
+  path, together with the verification that proves each improvement. Reconnaissance is complete;
+  the slate lands in [briefs/](briefs/map.md) at kickoff. One unit has already merged ahead of it
+  (#30, the dead doc-pointer sweep in ported sources).
+
+The **Agent-Agnostic Front-Door campaign** closed on 2026-08-10 — five units merged 2026-08-09,
+its two remaining acceptance items discharged at close-out. It is no longer a workstream; its
+record is [docs/history/frontdoor/](docs/history/frontdoor/README.md) and its process metrics are
+[task/metrics.md](task/metrics.md).
 
 Parked lanes (drawn up, not started; they conflict with nothing and can interleave):
 

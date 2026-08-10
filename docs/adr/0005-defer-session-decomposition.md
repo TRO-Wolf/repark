@@ -20,7 +20,7 @@ It is the crate's largest source file, and it grows with each capability.
 
 The Agent-Agnostic Front-Door design review proposed decomposing it into named internal services
 (RuntimeFactory / CatalogManager / ObjectStoreRegistry / TemporaryViewManager / QueryService /
-SemanticProfile) — [../design/agent-agnostic-frontdoor.md](../design/agent-agnostic-frontdoor.md)
+SemanticProfile) — [../history/frontdoor/agent-agnostic-frontdoor.md](../history/frontdoor/agent-agnostic-frontdoor.md)
 §3 row 10.2, deferred there as "Real engineering, not doc/agnostic work," and named again in that
 design's §5 non-goals. Its own recommendation was to wait for a concrete driver. This ADR records that
 ruling — the deferral, its reason, and its exit condition — rather than the refactor.

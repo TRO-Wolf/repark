@@ -54,10 +54,13 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 - `python/` — the uv workspace members: the facade wheel (`repark`) and the parity harness
   (`repark-parity`). See [python/map.md](python/map.md).
 - `docs/` — contracts, ADRs, the port plan, per-tier manuals, and `docs/history/` (the archive of
-  closed campaigns — off the normal read path; see [docs/history/map.md](docs/history/map.md)).
-  `task/` — the rules in force (`lessons.md`), the ledger of each unit in flight, and the live
-  acceptance inputs (`task/port/`, `task/census/`); the backlog itself lives in
-  [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are still running.
+  closed campaigns — the v1 → v2 port and the Agent-Agnostic Front-Door campaign, both off the
+  normal read path; see [docs/history/map.md](docs/history/map.md)).
+  `task/` — the rules in force (`lessons.md`), the process metrics ledger (`metrics.md`), the
+  ledger of each unit in flight, and the live acceptance inputs (`task/port/`, `task/census/`); the
+  backlog itself lives in [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are
+  still running (holding only its `map.md` between campaigns; a closed campaign's slate is
+  archived with it).
   `skills/` — the SEPMO control plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
   work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
@@ -87,6 +90,8 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
 | Read how the engine got here (the archived port record) | [docs/history/port-v2/README.md](docs/history/port-v2/README.md) |
+| Read how the front door got here (the archived campaign record) | [docs/history/frontdoor/README.md](docs/history/frontdoor/README.md) |
+| See what a closed campaign cost, caught and missed | [task/metrics.md](task/metrics.md) |
 | Touch CI | [.github/map.md](.github/map.md) |
 | Read a running campaign's slate brief | [briefs/map.md](briefs/map.md) |
 | Navigate the engine crates | [crates/map.md](crates/map.md) |

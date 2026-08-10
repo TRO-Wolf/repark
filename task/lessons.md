@@ -112,3 +112,56 @@ there the hard way and bind here from day one.
   role's constant keeps asserting the old name; the FD-1 squash (`4cc6bf7`, #24) is misattributed
   `claude-fable-5` for work committed under `claude-opus-4-8`. Merged history stays as-is
   (forward-only); this rule prevents the recurrence.
+
+## 2026-08-10 — front-door close-out
+
+The campaign retrospective's learning pass
+([../docs/history/frontdoor/retrospective.md](../docs/history/frontdoor/retrospective.md) §6), plus
+one rule its promotion check (§8) had to rescue before the campaign's slate was archived to
+[../docs/history/frontdoor/](../docs/history/frontdoor/map.md).
+
+- **DO set a repo-local git identity in every worktree before the first commit — never rely on the
+  global one.** *(Promotion — this rule lived only in the campaign slate.)* This repository is
+  public, so the author identity on every commit is published with it; a machine-global identity is
+  exactly the personal identifier the public-hygiene greps exist to keep out
+  ([../briefs/map.md](../briefs/map.md) "Import gate" enumerates the class). It pairs with the two
+  hygiene passes already in force — added-lines content (2026-08-08) and commit metadata, which is
+  what reads the identity (2026-08-09).
+- **DO verify the attribution trailer on the *merge* commit, not only on the branch commits.**
+  Extends (does not supersede) the 2026-08-09 entry: that rule fixes *which name* the trailer
+  carries; it does not make the trailer survive the squash. Three squashes have now landed with
+  **empty commit bodies** (#25, #26, #30) — the branch-side commits correctly stamped, the merge
+  step dropping them — all three *after* the attribution problem was already known and under
+  attention. Prose does not protect this surface: no unit's own gate can see a squash the unit does
+  not perform. *Detector owed:* a check over `main`'s commit messages (a `push: main` job, or a
+  `make` target run at campaign close-out). While the squash stays owner-manual, that check detects
+  and never prevents — a stated residual risk, not an oversight.
+- **DO NOT scope a consistency sweep to the files the unit is editing.** A gate's population is
+  whatever the gate's own wording declares. A front-door unit's acceptance gate named a grep over
+  `*.md docs/ crates/**/map.md`; the sweep ran over the unit's change set instead, and
+  `CONTRIBUTING.md` — a root `*.md`, linked from the README's own Status section, and the first
+  document an outside contributor reads — went on describing a finished port as in progress. Proven
+  twice: re-running the same sweep over the declared population at close-out found twice as many
+  stale sites as the known list. If a file is out of scope for *editing*, it is not out of scope for
+  *checking* — a hit outside the lane is a finding to route, not a hit to skip.
+- **DO give every unit a unit ledger, not only the units that ship mechanical gates.** One of five
+  units filed the `task/<unit>-ledger.md` the SEPMO binding manifest names as the active-plan home;
+  the other four existed only as PR bodies, so the retrospective had to reconstruct severities and
+  cycle counts from prose and could not recover one unit's finding count at all. A PR body is not an
+  addressable artifact: it is not in the tree, no gate reads it, and it cannot be corrected forward
+  without rewriting a merged PR's narrative.
+- **DO re-verify a cross-reference's *premise* against the tree — not just its target — when
+  sibling units have landed since the citation was drafted.** A unit ledger deliberately wrote
+  non-links, stating that the campaign's brief and design were not yet in the repository and would
+  arrive with the closing archival; both had landed two units earlier. A link checker cannot catch
+  this, because a deliberate non-link is not a broken link. The failure mode is specific to
+  sequenced work: the citation was written against the plan rather than against the tree at the
+  moment it landed.
+- **DO attack a mechanical gate's lookup tables, not only its rules.** Both demonstrated bypasses of
+  the new structural gate were in its *lookup* layer: an unvalidated role vocabulary, and an
+  unvalidated definition of "internal". A rule that reads a hand-maintained table with a default
+  silently returns *permitted* for every key the table does not know — so a one-character typo
+  disables the rule set while the gate still prints its green line. Every gate that keys behavior
+  off a hand-maintained table must validate that table's key space as one of its own rules.
+  *Detector:* landed for that gate (the role/tier vocabularies plus workspace-membership scope,
+  proven by its P-8/P-9 provocations); this entry is the standing rule for the next one.

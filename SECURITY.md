@@ -25,12 +25,13 @@ Defense in depth runs in CI (see [.github/workflows/](.github/workflows/)):
 | Typos / TOML hygiene | `typos`, `taplo` |
 | Dependency freshness | Dependabot — grouped PRs (cargo + actions); same-day for advisories |
 
-Additional gates (cargo-audit on a populated dependency tree, pip-audit, CodeQL) return with the
-code they audit as the port lands crates and Python packages. Lockfiles are checked in for
+The dependency-audit gates run today: cargo-audit (`audit.yml`) and cargo-deny over the Cargo
+tree, and pip-audit (`pip-audit.yml`) over the Python packages — `make audit` mirrors all three
+locally. CodeQL is not yet enabled. Lockfiles are checked in for
 reproducible builds. Tier-1 CI runs with a read-only token and **no secrets**; live-AWS CI (tier 2)
 runs only against merged code via OIDC role assumption — never against unmerged PRs.
 
-## AWS credential handling (applies as the engine lands, phase 1+)
+## AWS credential handling
 
 The engine reads AWS credentials only through the standard AWS SDK chain (environment → shared
 profile → instance/task role); credentials are never hardcoded and never logged. AWS SDK usage is

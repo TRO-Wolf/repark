@@ -106,7 +106,7 @@ never silently skip locally (uvx provisions the pinned tool on demand).
 - **iceberg-rust is forked & owned** (`TRO-Wolf/iceberg-rust`, a sibling sub-project, 1:1 Java
   `iceberg-core` parity). RePark builds on the fork; the table-format engine (write actions,
   evolution, snapshots, views, maintenance) lives **in the fork**. The fork stays a **separate repo,
-  never vendored**. When crates exist (phase 1), `[patch.crates-io]` → the owned fork, rev-pinned.
+  never vendored**. `[patch.crates-io]` sources the `iceberg*` family from the owned fork, rev-pinned.
   The fork's `iceberg-datafusion` is a **supported product surface** RePark consumes
   (DELETE/UPDATE/INSERT via its `TableProvider`); MERGE stays RePark-owned. Fork capability status
   lives ONLY in the fork's `docs/parity/GAP_MATRIX.md` + `docs/ENGINE_CONTRACT.md` — link, never
@@ -159,9 +159,8 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     manifest is a MIRROR — its `layer` values are checked against the crate-DAG SSOT, never the
     other way round — and its `map.md` rule **checks** hand-written maps; nothing generates one.
   - The few v1 helper scripts not yet re-homed are listed in [scripts/map.md](scripts/map.md)
-    "Not ported yet"; each **returns with the code it gates** (see
-    [docs/port/PLAN.md](docs/port/PLAN.md)). Do not re-invent one ahead of its driver; re-home
-    v1's script.
+    "Not re-homed"; each **returns only with a concrete driver** (named per script there). Do not
+    re-invent one ahead of its driver; re-home v1's script.
 - **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;
@@ -170,9 +169,10 @@ never silently skip locally (uvx provisions the pinned tool on demand).
 - **Tier-2 CI (live AWS) never runs against unmerged code**; nightly on `main` + manual dispatch via
   OIDC only. No self-hosted runners in any tier. No secrets in tier-1 workflows.
 
-## PyO3 build notes (apply from phase 3)
+## PyO3 build notes
 
-The bindings crate arrives in phase 3; the rules are recorded now so they are never re-litigated.
+The bindings crate (`crates/repark-python`) is delivered; these rules are recorded here so they are
+never re-litigated.
 
 - The cdylib's `extension-module` feature is **off by default** so `cargo test`/`check` build
   without needing it; it is enabled only when maturin builds the wheel.
@@ -184,7 +184,7 @@ The bindings crate arrives in phase 3; the rules are recorded now so they are ne
 ## Version-pin contract
 
 Pin **one** DataFusion version across `datafusion` + `datafusion-spark` + `iceberg*`, recorded in the
-workspace `Cargo.toml` once phase 1 lands crates. **The live `Cargo.toml` is the SSOT for every
+workspace `Cargo.toml`. **The live `Cargo.toml` is the SSOT for every
 pin** — prose tables are orientation only; verify against `Cargo.toml` before ANY family bump. The
 `iceberg*` family comes from the **owned fork**, so a "bump" is re-pinning the `[patch.crates-io]`
 rev to a newer fork commit, together with `datafusion` + `datafusion-spark` + `arrow*`/`parquet` +
@@ -212,7 +212,8 @@ swallowed-override bug:
   documented (see [ARCHITECTURE.md](ARCHITECTURE.md) "what the seam is, honestly"); posture is
   fleet-parallel → server mode → distributed only if a query outgrows one box. Do not build
   Ballista-for-writes (it cannot serialize Iceberg write/commit plan nodes).
-- **External code PRs during the port** — see [CONTRIBUTING.md](CONTRIBUTING.md).
+- **External code PRs** — not accepted while the engine is pre-alpha; see
+  [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Upstream contribution policy
 

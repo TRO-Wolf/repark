@@ -14,6 +14,11 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
   the four phase briefs, the seventeen unit ledgers, the port execution log with its three
   retrospectives, and the [promotion ledger](port-v2/promotion-ledger.md) that made the archival
   lossless. Start at [port-v2/README.md](port-v2/README.md).
+- [frontdoor/](frontdoor/map.md) — the Agent-Agnostic Front-Door campaign (2026-08-08 → 2026-08-10,
+  the first post-milestone campaign, closed on its own acceptance items): the settled design, the
+  FD-1…FD-5 slate, the one unit ledger the campaign filed, and the
+  [retrospective](frontdoor/retrospective.md) whose "Promotion check" section is this archival's
+  lossless audit. Start at [frontdoor/README.md](frontdoor/README.md).
 
 ## I want to...
 
@@ -21,8 +26,10 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 |---|---|
 | Know the current state / what happens next | [../../STATUS.md](../../STATUS.md) |
 | Understand how the engine got here | [port-v2/README.md](port-v2/README.md) |
-| Check that an archived rule still binds — and where it lives now | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) |
-| Find a unit's gate evidence / provocation proofs / census arithmetic | the unit's ledger in [port-v2/](port-v2/map.md) |
+| Understand how the front door got here | [frontdoor/README.md](frontdoor/README.md) |
+| Check that an archived rule still binds — and where it lives now | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) · [frontdoor/retrospective.md](frontdoor/retrospective.md) "Promotion check" |
+| Find a unit's gate evidence / provocation proofs / census arithmetic | the unit's ledger in [port-v2/](port-v2/map.md) or [frontdoor/](frontdoor/map.md) |
+| See what a closed campaign cost, caught and missed | that campaign's retrospective + [../../task/metrics.md](../../task/metrics.md) |
 | Archive a completed campaign | run its promotion audit first, then `git mv` into a new `docs/history/<campaign>/` with its own `README.md` + `map.md` |
 
 ## Pointers
@@ -41,4 +48,5 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 |---|---|
 | A rule seems to exist only in an archived file | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) names its current home; if it does not, that is a real gap — fix the current document, never the archive |
 | A link into `task/p*-ledger.md` or `briefs/phase-*.md` does not resolve | Those moved here on 2026-08-09 (same basename) — see [port-v2/README.md](port-v2/README.md) "Where the ledgers used to live" |
+| A link into `briefs/frontdoor-campaign.md`, `docs/design/agent-agnostic-frontdoor.md` or `task/fd3-ledger.md` does not resolve | Those moved to [frontdoor/](frontdoor/map.md) on 2026-08-10 (same basename) |
 | An archived claim contradicts today's behavior | The archive is dated; [STATUS.md](../../STATUS.md) wins |

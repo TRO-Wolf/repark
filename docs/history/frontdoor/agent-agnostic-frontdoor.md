@@ -1,7 +1,14 @@
 # DESIGN — the Agent-Agnostic Front-Door campaign
 
-**Status:** Settled — in-repo campaign design · **Date:** 2026-08-08 · **Execution slate:**
-[../../briefs/frontdoor-campaign.md](../../briefs/frontdoor-campaign.md)
+> **ARCHIVED 2026-08-10** (Front-Door close-out) — a historical record of the Agent-Agnostic
+> Front-Door campaign, kept for provenance and **not a source of live rules**: every rule still in
+> force lives in a current document ([retrospective.md](retrospective.md) "Promotion check").
+> Relative links were repaired for this location on the same date; nothing else changed. Current
+> state: [STATUS.md](../../../STATUS.md).
+
+**Status:** IMPLEMENTED — settled 2026-08-08, executed by FD-1…FD-5 (merged 2026-08-09), campaign
+closed 2026-08-10 · **Date:** 2026-08-08 · **Execution slate:**
+[frontdoor-campaign.md](frontdoor-campaign.md)
 **Origin:** the agent-agnostic repository proposal (owner-reviewed).
 **Owner ruling carried in:** keep the universal hand-written `map.md` discipline (proposal §4 REJECTED);
 everything else favorable.
@@ -133,6 +140,14 @@ Adapted from the proposal's "Definition of success," made checkable:
    bounded change using the same docs a human would, starting from `README → STATUS → ARCHITECTURE →
    DEVELOPMENT → AGENTS.md`.
 
+**OUTCOME (dated correction, 2026-08-10).** Assessed item by item in
+[retrospective.md](retrospective.md) §3 against the tree as it stood at the fifth merge: six items
+TRUE outright, item 4 TRUE with the campaign's strongest evidence, item 2 PARTIAL (three stale
+current-state claims survived outside the status SSOT) and item 8 UNDEMONSTRATED (path declared but
+not signposted from `README.md`; no trial run). Items 2 and 8 were closed by the close-out unit —
+the three sites corrected, a `## Where to start` block added to `README.md`, and one cold-read trial
+run and recorded verbatim ([retrospective.md](retrospective.md) §3 item 8).
+
 ---
 
 ## 7. Reconciliation identity for the archival move (FD-4)
@@ -152,8 +167,9 @@ every removed section to its new authoritative or historical home" safeguard dem
 ## 8. Open questions for the owner (none block FD-1)
 
 1. ~~**Authority model (§4):**~~ **RESOLVED — Option A** (single neutral AGENTS.md) confirmed 2026-08-08.
-2. **`.agent/` adapters:** ship codex/cursor stubs now, or claude-only until a second agent actually runs
-   here? (Default: claude adapter real, codex/cursor as one-line stubs.)
+2. ~~**`.agent/` adapters:**~~ **RESOLVED at FD-2** (#25, 2026-08-09, dated correction added
+   2026-08-10) — the default was taken: a real adapter plus one-line stubs pointing inward.
+   Navigation: [.agent/](../../../.agent/map.md).
 3. **Sequencing vs. the two parked lanes:** this campaign is doc/tooling and conflicts with nothing, so
    it can run *before, after, or interleaved with* the `repark.sql` re-home and dbt-repark lane. Default:
    run FD-1…FD-3 first (they make the repo more legible for that lane), FD-4…FD-5 after.

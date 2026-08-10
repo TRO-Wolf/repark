@@ -96,9 +96,10 @@ Repository helper scripts wired into the dev workflow.
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
   `make check-lib-py` and the ci.yml `python` job in the same PR.
 
-Not ported yet (return with their phase — see [../docs/port/PLAN.md](../docs/port/PLAN.md)):
-`test_lock_gate.sh` (uv lock-gate detector self-test, phase 3),
-`generate_excel_fixtures.py` (synthetic .xlsx fixtures, phase 1+).
+Not re-homed (the port is complete — each returns only with a concrete driver):
+`test_lock_gate.sh` (uv lock-gate detector self-test — a lock-gate change that needs it),
+`generate_excel_fixtures.py` (synthetic .xlsx fixtures — the deferred `repark-excel` reader; see
+[../STATUS.md](../STATUS.md) "Deferred capabilities").
 
 ## I want to...
 

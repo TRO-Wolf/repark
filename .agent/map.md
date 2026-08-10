@@ -7,7 +7,7 @@ Tool-neutral and per-tool **adapter** entry points for automated agents. Every f
 ([AGENTS.md](../AGENTS.md) + [STATUS.md](../STATUS.md) + [ARCHITECTURE.md](../ARCHITECTURE.md) +
 [DEVELOPMENT.md](../DEVELOPMENT.md)). Adapters cannot drift, and deleting any one loses no project
 knowledge. The authority move that makes this possible is recorded in
-[docs/design/agent-agnostic-frontdoor.md](../docs/design/agent-agnostic-frontdoor.md) §4.
+[docs/history/frontdoor/agent-agnostic-frontdoor.md](../docs/history/frontdoor/agent-agnostic-frontdoor.md) §4.
 
 ## Contents
 
