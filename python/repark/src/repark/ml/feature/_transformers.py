@@ -2287,7 +2287,7 @@ class QuantileDiscretizer(HasInputCol, HasOutputCol, HasHandleInvalid, Estimator
         num_buckets = int(self.getOrDefault(self.numBuckets))
         if num_buckets < 2:
             raise IllegalArgumentException("QuantileDiscretizer.numBuckets must be >= 2")
-        # relativeError accepted-and-ignored (t-digest; documented in docs/ml-design.md).
+        # relativeError accepted-and-ignored (t-digest has no Greenwald-Khanna accuracy knob).
         _ = self.getOrDefault(self.relativeError)
         input_col = self.getInputCol()
         host, view = _register_temp(frame, "qd")

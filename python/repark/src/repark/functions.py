@@ -4147,8 +4147,8 @@ def percentile_approx(
     oracles pin bounds-windows, never cross-engine exact equality.
 
     ``accuracy`` is **accepted and ignored** (t-digest has no Greenwald-Khanna accuracy
-    knob; divergence disclosed in ``docs/ml-design.md``). Array/list/tuple of percentages
-    is not shipped yet (engine returns a scalar per call) — loud STOP seed.
+    knob). Array/list/tuple of percentages is not shipped yet (engine returns a scalar
+    per call) — loud STOP seed.
     """
     if isinstance(percentage, (list, tuple)):
         from repark.errors import UnsupportedOperationException
@@ -4173,8 +4173,8 @@ def percentile_approx(
         raise IllegalArgumentException(f"percentile_approx percentage must be in [0, 1], got {pct}")
     # accuracy: facade accepts-and-ignores (Spark GK relative-error knob has no t-digest
     # equivalent). Free-SQL `percentile_approx(col, p, n)` is a *different* path: DataFusion
-    # treats the optional third arg as t-digest **centroids**, not Spark accuracy — documented
-    # in docs/ml-design.md (octo F-Q1-001).
+    # treats the optional third arg as t-digest **centroids**, not Spark accuracy
+    # (octo F-Q1-001; dual-path also noted on this module's map entry).
     del accuracy
     column, part = _aggregate_argument(col)
     # Spark display name keeps the user-facing Spark name; SQL path uses the engine name

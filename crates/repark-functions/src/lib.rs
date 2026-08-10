@@ -9,13 +9,14 @@
 //!
 //! Beyond functions, [`analyzer`] carries the Spark **expression-semantics** analyzer rule
 //! (integer `/` → double, divide/modulo-by-zero → NULL, 0-based `[]` array subscript) that
-//! `repark-session` installs on every context — the AR-WG-SQL fidelity layer over raw
-//! DataFusion semantics. [`string`] (`substr`/`substring`) and [`collection`] (`element_at`)
-//! shim the divergent built-ins the same way [`datetime`] shims the date gaps.
+//! the session installs on every context (via the Spark door's `SessionExtension`) — the
+//! AR-WG-SQL fidelity layer over raw DataFusion semantics. [`string`] (`substr`/`substring`)
+//! and [`collection`] (`element_at`) shim the divergent built-ins the same way [`datetime`]
+//! shims the date gaps.
 //!
 //! This crate is DataFusion-native: its public surface speaks `datafusion::error::Result`, so it
 //! does not depend on `repark-core`. The `DataFusionError -> repark_core::Error` conversion
-//! happens one layer up, in `repark-session`.
+//! happens one layer up, in `repark-core`.
 
 /// The `as_any` / `name` / `signature` boilerplate every shim `ScalarUDFImpl` shares. Pairs
 /// with `Signature::user_defined`, which defers coercion to each impl's `coerce_types`, so a
@@ -109,7 +110,7 @@ pub fn register_all(ctx: &SessionContext) {
 }
 
 /// ===========================================================================================
-/// The Spark-semantics + plan-time safety analyzer rules `repark-session` installs on every
+/// The Spark-semantics + plan-time safety analyzer rules the session installs on every
 /// context (after the DataFusion built-ins, so they see type-coerced plans). See [`analyzer`]
 /// and [`cardinality`] (r24 SB1 / SEC-01 expansion ceilings).
 /// ===========================================================================================

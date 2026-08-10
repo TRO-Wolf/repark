@@ -152,12 +152,6 @@ Recorded, not built. Each names the trigger that would start it.
   the archived [p2d ledger](docs/history/port-v2/p2d-spark-dml-ledger.md).
 - **Never-OOM (spill coverage)** — the goal in [PROJECT.md](PROJECT.md) is stated honestly as
   *pending a spill-coverage spike*; the spike is a natural V2 Engine Hardening input.
-- **Dead doc-pointer sweep in ported sources** — eight ported `python/repark/src` modules (nine
-  citations, one inside a runtime f-string) still cite a v1-only design path, and eight comment
-  sites in `crates/repark-functions` (its `Cargo.toml` and Rust sources) still cite the v1 crate
-  name `repark-session`. Left byte-identical during the port to protect the census identity; a
-  comment-only sweep can land any time now that the census is closed. (The four `map.md` sites of
-  the same class were corrected at FD-4 — maps are live navigation, not port fidelity surface.)
 
 ## Release blockers
 

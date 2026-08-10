@@ -28,7 +28,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
   `analyzer_rules()` (the Spark semantics rules the session installs on every context via the
-  `SessionExtension` hook) +
+  Spark door's `SessionExtension` in `repark-spark`; error conversion one layer up is
+  `repark-core`) +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by

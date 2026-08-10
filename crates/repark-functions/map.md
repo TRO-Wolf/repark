@@ -25,9 +25,10 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
-  `spark_date_shim_functions()` + `analyzer_rules()` (installed by the session's
-  `SessionExtension` hook on every
-  context) + the shared `shim_udf_boilerplate!` macro.
+  `spark_date_shim_functions()` + `analyzer_rules()` (installed by the session on every
+  context via the Spark door's `SessionExtension` in `repark-spark`) + the shared
+  `shim_udf_boilerplate!` macro. Error conversion from `DataFusionError` happens one layer
+  up in `repark-core` (this crate stays DataFusion-native).
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.
@@ -100,8 +101,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: registered into the `SessionContext` by the session layer (arrives in a later
-  phase-2 PR; see [../map.md](../map.md)).
+- Related: the Spark door's `SessionExtension` (`crates/repark-spark/src/extension.rs`)
+  calls `register_all` + `analyzer_rules` at session build; `repark-core` owns the
+  `SessionExtension` trait and error conversion layer.
 - Goldens are ISO-8601 (Python `date.isocalendar`) — the same basis Spark uses.
 
 ## Debug

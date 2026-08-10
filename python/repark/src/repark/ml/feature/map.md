@@ -47,7 +47,8 @@ Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../.
 - **Q1:** CountVectorizer transform uses unnest + conditional SUM join (ORDER BY rid); minTF fraction in [0,1).
 - **octo c1 (Q1):** Imputer.missingValue (NaN default) applied in fit/transform via `isnan`/sentinel;
   `_sql_float` embeds for replacements/RobustScaler; fit try/finally drops temp views; RegexTokenizer
-  ORDER BY rid; SQL 3rd-arg = t-digest centroids (docs/design/python-facade.md §4 Q3 dual-path disclosure).
+  ORDER BY rid; SQL 3rd-arg = t-digest centroids (facade dual-path: see
+  `functions.percentile_approx` docstring + parent package map entry).
 - **octo c2 (Q1):** `_materialize_rid_view` cache-pins `row_number` before unnest joins
   (RegexTokenizer/CountVectorizer/StopWordsRemover) — fixes CTE double-scan association (F-Q1-009);
   Imputer same-col in-place (F-Q1-010); StandardScaler `_sql_float` + NaN-aware fit (F-Q1-011).

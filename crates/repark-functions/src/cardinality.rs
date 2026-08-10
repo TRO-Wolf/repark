@@ -582,7 +582,7 @@ fn check_plan_node(plan: LogicalPlan, max: u64) -> Result<Transformed<LogicalPla
     })
 }
 
-/// Analyzer rules this module contributes (installed by `repark-session` with Spark semantics).
+/// Analyzer rules this module contributes (installed by the session with Spark semantics).
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     vec![Arc::new(ArrayCardinalityCeiling)]

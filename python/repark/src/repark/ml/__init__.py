@@ -8,7 +8,9 @@ Import paths mirror ``pyspark.ml`` under the ``repark.ml`` namespace only — th
     from repark.ml.feature import VectorAssembler  # M2
     from repark.ml.regression import LinearRegression  # M3
 
-Design decisions (vector types + parity bar + fit Rust rule) live in ``docs/ml-design.md``.
+Design decisions live in the package modules themselves: vector Arrow layout in
+:mod:`repark.ml.linalg`, the fit/transform Rust rule in :mod:`repark.ml.base`, and
+estimator divergences next to their pins (e.g. :mod:`repark.ml.regression`).
 """
 
 from __future__ import annotations

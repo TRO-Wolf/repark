@@ -5026,7 +5026,7 @@ def _arrow_table_from_tuples(
                         f"{names[column_index]!r} has mixed widths "
                         f"(expected {expected_width}, row {row_index} has {len(cell)}). "
                         f"Do not fall back to List<Float64> — that silently loses the "
-                        f"width guarantee (docs/ml-design.md design decision 1)."
+                        f"width guarantee (dense FixedSizeList only; see repark.ml.linalg)."
                     )
 
                 values[row_index] = [float(item) for item in cell]

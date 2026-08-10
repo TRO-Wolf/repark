@@ -1,11 +1,11 @@
 """Vector types — dense :class:`DenseVector` / sparse :class:`SparseVector` / :class:`Vectors`.
 
-Campaign design decision 1 (docs/ml-design.md):
+Vector Arrow layout (design decision 1 — this module is the home):
 
 * dense → Arrow ``FixedSizeList<float64>[n]`` (fixed width per column)
 * sparse → struct ``{size: int32, indices: list<int32>, values: list<float64>}``
 * mixed dense widths in one column → loud :class:`~repark.errors.AnalysisException`
-  naming the v1 limitation (do **not** fall back to variable ``List<float64>``)
+  naming the fixed-width limitation (do **not** fall back to variable ``List<float64>``)
 
 ``Vectors.dense`` / ``Vectors.sparse`` constructors mirror Spark. ``VectorUDT`` is a
 schema marker for createDataFrame / display parity (simpleString ``vector``).
