@@ -37,6 +37,8 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
   that keeps every ported call site unchanged; the **`--stretch` blending pin** (eleven modules,
   not five — the trap `--classic` exists to avoid, documented in executable form); and the CLI
   wiring pin that `--classic` actually reaches the resolver.
+  **G-6:** `default_markdown_report_path` pin — markdown defaults under gitignored
+  `target/census-reports/` (C-2 alignment), never `task/`.
 - `test_compare_reports.py` — the battery for `compat/compare_reports.py`, the census report
   comparator (NEW code; design §6.4). Over synthetic reports: identical → exit 0; each of the
   five delta directions (pass→fail, fail→pass, class-change, appeared, vanished) named and

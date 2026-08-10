@@ -156,6 +156,13 @@ jobs:
       # Dual-wired with `make check-lib-rs` / `make ci`. SSOT: scripts/check_lib_rs.py.
       - name: lib.rs thinness guard (check_lib_rs)
         run: ./scripts/check_lib_rs.sh
+      # parity-live dual-wire: Makefile `parity-live` ↔ parity-live.yml load-bearing flags must
+      # agree (uv sync extras, --no-install-package, maturin pin, uv run --locked --no-sync,
+      # env pins). Compares the two surfaces to each other — never a third list. Fail-closed.
+      # Dual-wired with `make check-parity-live-dual-wire` / `make ci`.
+      # SSOT: scripts/check_parity_live_dual_wire.py.
+      - name: parity-live dual-wire guard
+        run: ./scripts/check_parity_live_dual_wire.sh
       # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
       # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
       # Mirrors `make workflows-parse`.

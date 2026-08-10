@@ -12,7 +12,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 
 ## Contents
 
-- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). Builder collects
+- `session.rs` — `ReparkSession` + `ReparkSessionBuilder` (file-backed tests). **G-6:** rustdoc
+  intra-links fixed (private helpers named in backticks, not broken `[links]`;
+  `Self::list_iceberg_table_names` for the live list path). Builder collects
   the Spark-style `.config(...)` map (`config(key, value)` / `configs(map)`); sync `build()`
   validates knobs, parses the config's `spark.sql.catalog.<name>.*` /
   `repark.sql.catalog.<name>.*` blocks into `CatalogSpec`s (fail-loud, synchronous), threads every

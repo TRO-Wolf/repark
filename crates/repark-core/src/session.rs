@@ -144,7 +144,7 @@ const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
 
 /// Repark-owned pseudo-keys that share the `datafusion.` prefix but are NOT DataFusion
-/// `ConfigOptions` keys, excluded from [`apply_datafusion_config_keys`]'s build-time sweep.
+/// `ConfigOptions` keys, excluded from `apply_datafusion_config_keys`'s build-time sweep.
 ///
 /// `datafusion.runtime.memory_limit` is the port source's facade-only LIVE memory-pool resize
 /// knob: at the pin it never reached `ConfigOptions` at build (the facade forwards it onto the
@@ -281,7 +281,7 @@ impl ReparkSessionBuilder {
     /// Record a single Spark-style `.config(key, value)` pair (PySpark `.config`). Catalog keys
     /// (`spark.sql.catalog.<name>.*`) are consumed at [`build`](Self::build); keys prefixed
     /// [`DATAFUSION_CONFIG_PREFIX`] are applied to the DataFusion [`SessionConfig`] (an unknown
-    /// one fails loud — see [`apply_datafusion_config_keys`]); other keys are kept for the
+    /// one fails loud — see `apply_datafusion_config_keys`); other keys are kept for the
     /// extension hook and otherwise ignored, matching PySpark's tolerance of unknown keys.
     #[must_use]
     pub fn config(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
@@ -301,7 +301,7 @@ impl ReparkSessionBuilder {
     /// Overrides the default 8 GiB budget applied when memory is left unset. Pass `0` (via
     /// [`Self::memory_limit_bytes`]) to opt out of a bounded pool entirely.
     ///
-    /// Whole-GB budgets can never trip the [`MIN_MEMORY_LIMIT_BYTES`] floor: the smallest non-zero
+    /// Whole-GB budgets can never trip the `MIN_MEMORY_LIMIT_BYTES` floor: the smallest non-zero
     /// `gb` is `1` → 1 GiB, and the conversion `saturating_mul`s (it cannot wrap a huge `gb` back
     /// down into the refused `(0, 1 MiB)` gap). Pinned by
     /// `memory_limit_gb_never_lands_below_the_floor`; the gap is reachable only through
@@ -1015,7 +1015,7 @@ impl ReparkSession {
     ///
     /// Used by facade `listTables` for **non-Iceberg** permanent names so listing never materializes
     /// phantom Iceberg tables in other catalogs (same F-T6-PHANTOM-A root cause). For Iceberg,
-    /// prefer [`list_iceberg_table_names`] (live Catalog API); this path is snapshot-stale.
+    /// prefer [`Self::list_iceberg_table_names`] (live Catalog API); this path is snapshot-stale.
     /// ===========================================================================================
     ///
     /// # Errors
@@ -1300,7 +1300,7 @@ impl ReparkSession {
     ///
     /// An `s3://` (Iceberg warehouse) or `s3a://` (Spark bronze) path triggers a lazy, once-per-
     /// bucket registration of an authenticated S3 object store on the `RuntimeEnv` before planning
-    /// (see [`object_store_s3`]); the scheme is preserved (both are registered), so no path rewrite
+    /// (see `object_store_s3`); the scheme is preserved (both are registered), so no path rewrite
     /// is needed. Non-S3 paths (local, relative) are passed to DataFusion unchanged.
     ///
     /// # Errors

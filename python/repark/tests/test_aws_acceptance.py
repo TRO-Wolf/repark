@@ -38,6 +38,7 @@ from _acceptance import (
     SILVER_CATALOG,
     TEMP_VIEW,
     acceptance_namespace_location,
+    assert_glue_scratch_namespace_location,
     assert_real_buckets_configured,
     bronze_path,
     ctas_sql,
@@ -141,6 +142,8 @@ def test_process_silver_acceptance_against_glue() -> None:
     # SQL `CREATE NAMESPACE … LOCATION` (WG-5) can also set it; the programmatic call is kept for
     # the ADV-1 pin lineage. Idempotent across runs — a scratch namespace
     # left by a prior run already carries its location, so an "already exists" error is expected.
+    # After ensure: fail loud if the adopted Location does not match the intended warehouse path
+    # (docs/tier2-aws.md §5 / G-6). Read path is DESCRIBE NAMESPACE (bounded probe).
     try:
         spark.create_namespace(
             SILVER_CATALOG,
@@ -150,6 +153,7 @@ def test_process_silver_acceptance_against_glue() -> None:
     except RuntimeError as error:
         if "exist" not in str(error).lower():
             raise
+    assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
     table = fq_table(SILVER_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
     _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
 
@@ -184,6 +188,8 @@ def test_process_silver_acceptance_against_s3tables() -> None:
 
     # Scratch namespace only — no `location`: S3 Tables provides storage via the table bucket
     # itself. Idempotent across runs — "already exists" from a prior run's namespace is expected.
+    # S3 Tables namespaces carry no location by design — nothing to compare; the Glue-leg
+    # location-mismatch guard is intentionally not called here.
     try:
         spark.create_namespace(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE)
     except RuntimeError as error:
