@@ -26,11 +26,11 @@
 //!   Spark's default (replace-length / 3-arg). DataFusion's 4-arg `-1` replaces the remainder
 //!   of the string (F2 octo C1-Q-002).
 //!
-//! Registered by `repark-session` *after* the built-in analyzer rules, so it sees type-coerced
-//! plans and must emit exactly-typed expressions — no re-coercion runs afterwards. Every
-//! rewrite is **idempotent**: the passthrough analyzes eagerly (so schema consumers — the PyO3
-//! Arrow export, CTAS schema derivation — see the post-rewrite types) and physical planning
-//! analyzes again.
+//! Registered by the session *after* the built-in analyzer rules (via the Spark door's
+//! `SessionExtension`), so it sees type-coerced plans and must emit exactly-typed expressions —
+//! no re-coercion runs afterwards. Every rewrite is **idempotent**: the passthrough analyzes
+//! eagerly (so schema consumers — the PyO3 Arrow export, CTAS schema derivation — see the
+//! post-rewrite types) and physical planning analyzes again.
 //!
 //! A `get_type` failure on an operand leaves that expression untouched (the `Transformed::no`
 //! bail in [`rewrite_division`] / [`rewrite_modulo`]) rather than failing the plan. That bail is
@@ -295,7 +295,7 @@ mod tests {
     use datafusion::arrow::record_batch::RecordBatch;
     use datafusion::prelude::SessionContext;
 
-    /// A context with the rule installed — the same wiring `repark-session` performs.
+    /// A context with the rule installed — the same wiring the session performs.
     fn ctx() -> SessionContext {
         let ctx = SessionContext::new();
         ctx.add_analyzer_rule(Arc::new(SparkExprSemantics));

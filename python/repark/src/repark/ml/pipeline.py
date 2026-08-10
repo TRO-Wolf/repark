@@ -32,7 +32,7 @@ from repark.ml.util import MLReadable, MLReader, MLWritable, MLWriter
 
 # === r20 M7: PipelineModel atomic save ===
 
-# Format constants (pinned in tests + docs/ml-design.md)
+# Format constants (pinned in python/repark/tests/test_ml_skeleton_oracle.py)
 REPARK_ML_FORMAT = "repark-ml"
 REPARK_ML_VERSION = 1
 

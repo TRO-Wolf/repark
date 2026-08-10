@@ -14,7 +14,7 @@ workspace = true
 [dependencies]
 # DataFusion-native crate: registration + UDFs speak `datafusion::error::Result` directly, so this
 # crate does not depend on repark-core (the DataFusionError -> repark_core::Error conversion
-# happens one layer up, in repark-session). See map.md.
+# happens one layer up, in repark-core). See map.md.
 datafusion.workspace = true
 datafusion-spark.workspace = true
 arrow.workspace = true

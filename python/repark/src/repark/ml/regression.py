@@ -31,7 +31,7 @@ from repark.ml.param import (
     TypeConverters,
 )
 
-# Divergence pins (docs/ml-design.md / oracle)
+# Divergence pins (oracle strings; this module is the home)
 SOLVER_DIVERGENCE = (
     "repark LinearRegression uses streaming normal equations + Cholesky; Spark MLlib uses "
     "normal equations / L-BFGS / OWL-QN depending on params. Singular / ill-conditioned designs "

@@ -1,6 +1,6 @@
 """Estimator / Transformer / Model contracts (PySpark ``ml.base``).
 
-**Design principle (campaign-wide, also in docs/ml-design.md):**
+**Design principle (campaign-wide):**
 
 * Feature ``fit(dataset)`` runs aggregate/distinct **queries** planned through the session.
 * Estimator ``fit`` (M3+) may multi-pass stream Arrow batches in Rust via the session;

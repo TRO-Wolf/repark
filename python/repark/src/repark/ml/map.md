@@ -39,13 +39,16 @@ see [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) 
 | Add evaluator metric | `evaluation.py` |
 | Param grid / cross-validation | `tuning.py` + `test_ml_boost_oracle.py` |
 | Delegated booster (XGBoost/…) | `ext/` + optional extra `repark[ml-ext]` |
-| Change vector Arrow layout | `linalg.py` + `docs/design/python-facade.md` §4 Q3 + session createDataFrame hooks |
+| Change vector Arrow layout | `linalg.py` (layout home) + session `createDataFrame` hooks in `session/_funcs.py` |
 | Change persistence layout | `pipeline.py` constants + greylight Q9 pins in `test_ml_skeleton_oracle.py` |
 | Param / explainParams semantics | `param.py` |
 
 ## Pointers
 
-Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) §4 Q3.
+Up: [../map.md](../map.md). Phase-3 scope of `repark-ml` (crate + facade package):
+[docs/design/python-facade.md](../../../../../docs/design/python-facade.md) §4 Q3.
+Layout / fit-rule / divergence facts live in-module (`linalg.py`, `base.py`,
+`regression.py`, …) — not in that design record.
 Oracles: `test_ml_skeleton_oracle.py`, `test_ml_feature_oracle.py`, `test_ml_estimators_oracle.py`,
 `test_ml_boost_oracle.py` (M4).
 Campaign: [phase-3-python-facade.md](../../../../../docs/history/port-v2/phase-3-python-facade.md).
@@ -54,7 +57,8 @@ Campaign: [phase-3-python-facade.md](../../../../../docs/history/port-v2/phase-3
 
 - `fit` / `transform` reject pandas/pyspark frames → intended (`base._require_repark_dataframe`).
 - Persistence missing `metadata.json` or wrong `format` → `IllegalArgumentException`.
-- Vector createDataFrame mixed widths → `AnalysisException` (v1 fixed-width only).
+- Vector createDataFrame mixed widths → `AnalysisException` (fixed-width dense only;
+  message cites `repark.ml.linalg`; pin `test_mixed_dense_widths_loud`).
 - Stage load fails `_ml_from_save` → stage not registered for persistence yet.
 - `LinearRegression` singular → intended loud refuse (no pinv); Spark may still fit.
 - `KMeans` default initMode → set `initMode="random"` (no fake k-means||).

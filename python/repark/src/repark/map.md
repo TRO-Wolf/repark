@@ -996,8 +996,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   wrappers via `call_scalar`
   (+ loud unsupported for engine gaps; ledger `task/fn-batch2-ledger.md`); **Q1**
   `percentile_approx` / `approx_percentile` ship over `approx_percentile_cont` (facade
-  accuracy accepted-and-ignored; free-SQL 3rd arg = t-digest centroids not GK accuracy;
-  array percentages STOP seed; bool percentage rejected).
+  accuracy accepted-and-ignored — fact lives in the `percentile_approx` docstring; free-SQL
+  3rd arg = t-digest centroids not GK accuracy; array percentages STOP seed; bool percentage
+  rejected).
   **X3:** `struct(...)` via native `make_struct` + `count` star Column forms (`"*"`,
   `col("*")`, `df["*"]`); **octo X3 C4** field names via named_struct path.
 - `functions.py` — the `pyspark.sql.functions` surface. WG1 in-use set: `col` (stable_name),
@@ -1036,11 +1037,10 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - `ml/` — `repark.ml` pipeline skeleton + feature transformers + native estimators +
   M4 tuning (`ParamGridBuilder`/`CrossValidator`) + delegated `ml/ext/` backends
   behind optional `repark[ml-ext]` (R-ML-SKELETON M1 / R-ML-FEATURE M2 /
-  R-ML-ESTIMATORS M3 / R-ML-BOOST M4). See [ml/map.md](ml/map.md)
-  and [docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q3. Feature `fit` = session queries;
-  estimator `fit` = multi-pass Rust Arrow stream (params only); `transform` = plan only;
-  no `pyspark.ml` alias shim tonight. Vectors: dense FixedSizeList / sparse struct;
-  persistence repark-ml v1.
+  R-ML-ESTIMATORS M3 / R-ML-BOOST M4). See [ml/map.md](ml/map.md). Feature `fit` = session
+  queries; estimator `fit` = multi-pass Rust Arrow stream (params only); `transform` = plan
+  only; no `pyspark.ml` alias shim tonight. Vectors: dense FixedSizeList / sparse struct
+  (layout home: `ml/linalg.py`); persistence repark-ml v1 (`pipeline.py` format constants).
 - `ta.py` — the `repark.ta` technical-analysis surface (T1b + T2 batches 1–2 + WG2–WG5 + T3 +
   **G-NAN**): the
   full 77

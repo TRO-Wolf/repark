@@ -6,7 +6,9 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY).
 
 ## Contents
 
-- `_funcs.py` — free functions (shared name binding for class modules)
+- `_funcs.py` — free functions (shared name binding for class modules); includes
+  `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
+  widths refuse loud — layout home `repark.ml.linalg`)
 - `builder_conf.py` — SparkContext, RuntimeConfig
 - `session_core.py` — ReparkSession (sql/catalog methods stay here)
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination)

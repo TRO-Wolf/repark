@@ -457,7 +457,7 @@ mod tests {
         }
         // The analyzer rule is part of the shim's delivery path: the SQL planner embeds the
         // built-in `substr` for the special form, and the rule swaps it over (same wiring as
-        // `repark-session`).
+        // the session).
         for rule in crate::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
