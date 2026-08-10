@@ -7,6 +7,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import Any
 
 from repark.session import _funcs as _session_funcs
+from repark.session.session_time_zone import warn_runtime_session_time_zone_not_applied
 
 for _name in dir(_session_funcs):
     if _name.startswith("__"):
@@ -114,6 +115,15 @@ class RuntimeConfig:
     * Setting **both** ``repark.memory.limit.gb`` and ``datafusion.runtime.memory_limit`` on
       the same builder refuses loud (same pool, ambiguous initial size).
 
+    **The session timezone is build-time too (H-1a), with a different disclosure shape.**
+    ``spark.sql.session.timeZone`` is set on the builder and validated by the engine once at
+    ``getOrCreate``. A runtime ``set`` / ``unset`` of it is **accepted for source compatibility,
+    warned once, and not applied** (the ``.master(...)`` shape, OTH-010) — PySpark's own
+    ``sql_conf`` context manager sets this key, so a raise would break a drop-in script. The value
+    is deliberately NOT stored, so ``spark.conf.get`` keeps reporting the zone the live engine
+    session really has (default ``UTC``). See :mod:`repark.session.session_time_zone` for the
+    evidence behind that choice and the declared divergences.
+
     C3 additive surface: :attr:`getAll`, ``set`` refuses ``None`` / non-scalar Python
     objects, and :meth:`get` without a default raises when the key is unset (Apache
     ``test_conf`` / ``test_get_all``).
@@ -179,6 +189,13 @@ class RuntimeConfig:
         # === r21 T2: sort-memory ===
         # Build-time FairSpillPool size is not runtime-mutable via conf (one truth).
         _refuse_runtime_memory_limit_gb(key)
+        # === H-1a: session timezone ===
+        # The zone is resolved once at session build. A migrated PySpark script (and Apache's own
+        # `sql_conf` context manager) sets this key at runtime, so the call is ACCEPTED — but the
+        # value is deliberately NOT stored, so `conf.get` keeps reporting the zone the live engine
+        # session actually has instead of the one the caller asked for. Disclosure warns once.
+        if warn_runtime_session_time_zone_not_applied(key, stacklevel=3):
+            return
         # datafusion.* namespace: lookalike keys (mixed case / padding) refuse-loud;
         # only the canonical lowercase path is forwarded + stored.
         if _looks_like_datafusion_conf_key(key):
@@ -266,6 +283,12 @@ class RuntimeConfig:
         lockstep (F-T3-001 — no conf-only split-brain after unset).
         """
         self._session._ensure_alive()
+        # === H-1a: session timezone ===
+        # The zone always HAS a value (the engine resolved one at build), so there is nothing to
+        # unset; tombstoning would make conf.get fall back to the default and report a zone the
+        # live session does not have. Accepted, warned once, no state change — same as `set`.
+        if warn_runtime_session_time_zone_not_applied(key, stacklevel=3):
+            return
         if key.lower() == _DISPLAY_STYLE_KEY:
             store = self._store()
             for existing in list(store):

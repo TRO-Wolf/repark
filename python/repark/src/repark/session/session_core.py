@@ -8,6 +8,10 @@ from typing import Any
 
 import repark.session._funcs as _sf
 from repark.session.builder_conf import RuntimeConfig, SparkContext
+from repark.session.session_time_zone import (
+    SESSION_TIME_ZONE_KEYS,
+    normalize_session_time_zone_config,
+)
 
 for _name in dir(_sf):
     if _name.startswith("__"):
@@ -2124,10 +2128,20 @@ class ReparkSession:
             """Return the active session, or build and register one (PySpark ``.getOrCreate``).
 
             If a live session already exists in this process, it is returned. Engine-knob values
-            are still **validated** first, so an out-of-range knob raises on the reuse path exactly
-            as it does on the build path — live PySpark 4.1.2 applies builder options to the
-            existing session (``setConfString``) and raises there, and repark must not be the
-            laxer of the two on the ubiquitous notebook / long-lived-process path (audit G3).
+            whose validation is FACADE-side are still **validated** first, so an out-of-range knob
+            raises on the reuse path exactly as it does on the build path — live PySpark 4.1.2
+            applies builder options to the existing session (``setConfString``) and raises there,
+            and repark must not be the laxer of the two on the ubiquitous notebook /
+            long-lived-process path (audit G3).
+
+            **One knob is carved out of that promise, deliberately (H-1a, D-A1):**
+            ``spark.sql.session.timeZone``. Its validity is not a range check — it needs the
+            engine's zone database — and the repo keeps exactly one validator, in the engine, at
+            session build. On the reuse path no session is built, so an invalid zone is neither
+            validated nor applied: the engine-knob warning below fires and ``conf.get`` keeps
+            reporting the live session's real zone. repark is knowingly laxer than PySpark here,
+            on this key only; pinned by
+            ``test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise``.
 
             **Disclosed divergence on reuse:** PySpark *applies* the builder's options to the live
             session (``.config("spark.sql.shuffle.partitions", "7")`` really changes it to 7);
@@ -2150,6 +2164,12 @@ class ReparkSession:
             # refuses — and would swallow the SAF-006 batch-sentinel disclosure too.
             # === r21 T2: sort-memory === one-truth gate before either reuse or build.
             _refuse_dual_memory_pool_knobs(self._config)
+            # === H-1a: session timezone ===
+            # Whitespace-normalize the zone BEFORE it is stored or forwarded, because the engine
+            # trims before parsing and would otherwise build a session holding a zone string the
+            # facade's own `conf.get` does not report. Normalization only — the engine stays the
+            # SOLE validator of what a zone is.
+            normalize_session_time_zone_config(self._config)
             memory_limit_gb = self._resolve_memory_limit_gb()
             batch_size = self._resolve_batch_size()
             target_partitions = self._resolve_shuffle_partitions()
@@ -2188,6 +2208,11 @@ class ReparkSession:
                         *_MEMORY_LIMIT_KEYS,
                         *_BATCH_SIZE_KEYS,
                         *_TARGET_PARTITIONS_KEYS,
+                        # H-1a: the session zone is fixed at build like the other engine knobs,
+                        # so reuse must NOT fold a new value into the facade conf — it would
+                        # report a zone the live engine session does not have. It falls into
+                        # `unapplied` below and rides the existing engine-knob warning.
+                        *SESSION_TIME_ZONE_KEYS,
                     )
                 }
                 runtime_conf = RuntimeConfig(_sf._active_session)._store()

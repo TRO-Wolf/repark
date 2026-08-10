@@ -17,7 +17,12 @@ honestly"). SQL routing and session-build registration are seam-inverted
 ## Contents
 
 - `Cargo.toml` — depends on `repark-common` (error seed), `repark-iceberg` (catalog builders +
-  write knob installers), `datafusion`, `arrow`, `iceberg`, `iceberg-datafusion` (the hoisted
+  write knob installers), `datafusion`, `arrow` (with the **`chrono-tz` feature declared here**,
+  not inherited: `src/session_time_zone.rs` validates IANA zone ids through `arrow`'s `Tz`, which
+  without that feature accepts only fixed offsets — it reaches this crate today only via
+  `datafusion-functions`, so owning the enable keeps a DataFusion feature change from turning
+  `America/New_York` into a build refusal; `Cargo.lock` is unchanged by the declaration),
+  `iceberg`, `iceberg-datafusion` (the hoisted
   `read_table_at` static provider), `chrono` (the hoisted `TIMESTAMP AS OF` parser), and the
   S3-read stack (`object_store`, `aws-config`, `aws-credential-types`, `async-trait`, `url`), plus
   `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
@@ -126,6 +131,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
 | Same-session `read_parquet` after path overwrite returns old rows | Object-list cache must stay at limit 0 in `src/session.rs` `build()`; stage-swap reuses the destination path. |
 | Catalog dual-prefix conflict / secret-looking error | Conflict messages name keys only (never raw values); see `catalog_config.rs`. |
 | S3 Tables ARN rejected | Warehouse / `table_bucket_arn` must start with `arn:aws:s3tables:`. |
+| Every IANA session zone is suddenly refused, fixed offsets still work | The `chrono-tz` feature on this crate's `arrow` dependency was dropped (`Cargo.toml`): without it `arrow::array::timezone::Tz` parses offsets only. Re-declare it here — never rely on `datafusion`'s feature graph. |
 | `s3a://` path not found but `s3://` works | Both schemes must be registered for the bucket (`register_bucket_store` does both); DataFusion looks up `scheme://bucket` verbatim. |
 
 First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map.md).

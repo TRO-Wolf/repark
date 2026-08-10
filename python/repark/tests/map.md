@@ -1119,21 +1119,58 @@ NOT in that file is a defect, not a decision.
   union-of-division (`SELECT 5/2 AS q UNION ALL SELECT 7/2` → double `{2.5, 3.5}`, the shape that
   failed at the parquet writer pre-fix), a bare division control, and a zero-divisor (`5/0` → NULL
   double, non-ANSI). Oracle: live PySpark 4.1.2 (non-ANSI), re-derived for the unit.
-- `_live_parity.py` — the **live oracle tier** shared registry (27 scenarios; NOT a `test_` module — a helper,
+- `test_session_timezone_parity.py` — the **session-timezone differential corpus** (gap G1) plus
+  the temporal-edge rows (gap G16), landed by H-1a split A. 20 recorded recipes — 18 over scalar
+  literals plus the 2 `column_extract_*` rows over a real tz-aware TIMESTAMP **column** (a two-row
+  in-memory frame registered as a temp view, the brief's own recipe) — recorded in record mode
+  against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.
+  partitions=2`) with `spark.sql.session.timeZone` set to the row's own zone — `America/New_York`
+  and `Asia/Tokyo`, one either side of UTC so a sign error cannot pass both — plus the
+  `current_timestamp` row, whose value is nondeterministic and so is pinned by Arrow TYPE. Most
+  rows are **DISCLOSURES**, not equalities: repark extracts timestamp fields in the STORED zone,
+  so each divergent row pins BOTH halves (repark's actual output AND the recorded Spark output).
+  A failed disclosure is CLASSIFIED before it raises: if repark's live output now equals the
+  recorded Spark golden the message says CONVERGED and says flip-don't-delete; if it matches
+  neither half the message says regression and sends you to record mode. Two control rows assert
+  plain EQUALITY (DATE extraction and leap-day DATE arithmetic are session-zone independent on
+  both engines) so an all-disclosure corpus cannot mask a zone-blind fix. When the extraction fix
+  lands, each divergent row flips to `repark=None`, and that flip is the fix's revert-red
+  evidence. Also carries the conf-surface pins: the `UTC` default, the builder round trip, the
+  accepted-but-neither-validated-nor-applied runtime `conf.set`/`unset` disclosure, the reuse
+  path's deliberate laxness (an invalid zone on a second `getOrCreate` warns, never raises), the
+  whitespace normalization that keeps `conf.get` on the engine's trimmed zone, and the engine's
+  build-time refusal of an unknown or blank zone. Every row goes through the facade `sql()` door;
+  the four-entry-point matrix is **split B's** obligation.
+- `_record_session_timezone_goldens.py` — the **record driver** for the corpus above (NOT a
+  `test_` module; never collected). Imports `ROWS` from the committed test module and re-runs each
+  row's own `run_row` recipe on live PySpark under the row's own zone, so the recorded golden and
+  the asserted recipe are one recipe, not two copies. Exit 0 = every recorded half still
+  reproduces (schema name/type/nullability then values); non-zero prints the live values to paste
+  back after deciding the move is deliberate. It never edits the corpus. Needs a JVM + `pyspark`
+  (`uv sync --extra record`); invocation is in its module docstring and in `task/h1a-ledger.md`.
+- `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
   never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
   `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
   (`Engine` abstraction wraps `session`/`functions`/`types`/`Window` + `to_arrow` vs PySpark's
-  `toArrow`). `SCENARIOS` = the 27-golden coverage floor (Group E group-agg/na/union + columns +
+  `toArrow`). `SCENARIOS` = the 29-golden coverage floor (Group E group-agg/na/union + columns +
   dates + the two Group L-write division goldens `division_union` / `division_bare` + the two
   audit-G2 filter-rewriter goldens `filter_unambiguous_on_case_colliding_frame` /
-  `filter_keyword_literal_false_column`);
+  `filter_keyword_literal_false_column` + the two H-1a non-UTC-oracle goldens
+  `date_extractor_under_new_york_session` / `date_math_under_tokyo_session`);
   `DISCLOSURES` = the four load-bearing recorded divergences (`int_union_string`,
   `fillna_scalar_numeric_nullability`, and the two audit-G2 filter ones
   `filter_case_collision_bypasses` / `filter_backtick_identifier` — see
   `test_filter_predicate_rewrite.py` below). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
   `build_spark_engine()` imports pyspark **lazily** (never at module load → collects with no JVM)
-  and pins the recorded Spark 4.1.2 basis (`local[2]`, ANSI on, `timeZone=UTC`). VERIFIED against
-  live PySpark 4.1.2, not guessed.
+  and pins the recorded Spark 4.1.2 basis (`local[2]`, ANSI on, DEFAULT `timeZone=UTC`). VERIFIED
+  against live PySpark 4.1.2, not guessed.
+  **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` carries conf pairs for
+  one scenario only, applied by each engine's own mechanism — the oracle takes them through
+  `spark_session_conf` (set around the leg, restored after, because the JVM session is shared),
+  repark takes them by BUILDING a session with them (`build_repark_engine(session_conf)`), since
+  repark resolves the session zone once at construction. A registry pinned to a single zone was
+  structurally incapable of catching a session-timezone divergence; the two override scenarios
+  are the first that put the ORACLE in a non-UTC session.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
   PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` runs each recipe on repark and
   asserts `repark == golden` — the no-JVM home of the shared recipes. Live
@@ -1261,6 +1298,9 @@ NOT in that file is a defect, not a decision.
 | Add a `repark.ta` indicator test | `test_ta.py` |
 | Add / extend a live-oracle golden (repark == pin == live Spark) | `_live_parity.py` (`SCENARIOS`) + `test_parity_live.py` |
 | Record a divergence from Apache Spark (behavior, pin, rationale) | `../../../docs/spark-sql-iceberg-parity.md` — the registry; add the `Disclosure` too when the live tier can express it (§6) |
+| Run a live-oracle scenario under a NON-UTC session zone | `Scenario(..., session_conf=((lp.SESSION_TIME_ZONE_KEY, lp.ZONE_TOKYO),))` — and move the size + uniqueness pins in the same diff |
+| Add a session-timezone / temporal-edge differential row | `test_session_timezone_parity.py` (`G1_ROWS` / `G16_ROWS`; record the Spark half with `_record_session_timezone_goldens.py`, never by hand) |
+| Re-derive the recorded Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py` |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1306,6 +1346,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | `test_parity_live.py` live tests SKIPPED | expected unless `REPARK_PARITY_LIVE=1` + a JVM (`make parity-live`); routine CI is JVM-free by design |
 | `test_disclosures_mirror_the_registry` RED | `DISCLOSURES` and `docs/spark-sql-iceberg-parity.md` disagree. The failure names which side is orphaned: a registry-only name means the `Disclosure` was deleted (the row lost its drift detector); a disclosure-only name means the row was never written. Fix the side that moved |
 | live tier RED | triage per docs/testing.md: golden leg only → golden drift (fix pin); live-Spark diverges from an unchanged pin → oracle drift; a disclosure reds → engines converged |
+| a `test_session_timezone_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete the row — flip it to `repark=None` (equality) and record the convergence. That flip is the extraction fix's revert-red evidence. |
+| a row reds saying "moved OFF its pinned disclosure ... regression" | repark matches neither half: re-derive both in record mode (`_record_session_timezone_goldens.py`) before touching the pin. |
+| a live scenario reds only under a non-UTC `session_conf` | the override reached the oracle but not repark (or vice versa): repark takes it at session BUILD, Spark at `conf.set`. Check `build_repark_engine` stopped the previous active session. |
 
 First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).
 

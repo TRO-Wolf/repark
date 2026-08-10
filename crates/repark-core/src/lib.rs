@@ -26,11 +26,19 @@ mod object_store_s3;
 mod read_options;
 mod runtime;
 mod session;
+mod session_time_zone;
 mod time_travel;
 
 // --- The Session surface (v1 names, courtesy `Session` alias). ---
 pub use session::ReparkSession as Session;
 pub use session::{DATAFUSION_CONFIG_PREFIX, ReparkSession, ReparkSessionBuilder, TimeTravelOpts};
+
+// --- Session timezone (`spark.sql.session.timeZone`): the ONE key spelling, its validated
+// value type, and the build-time resolver. Resolved once at construction; carried on the
+// session (`ReparkSession::session_time_zone`).
+pub use session_time_zone::{
+    DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY, SessionTimeZone, resolve_session_time_zone,
+};
 
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};

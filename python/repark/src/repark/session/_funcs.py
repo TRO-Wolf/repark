@@ -83,6 +83,13 @@ from repark.errors import (
     PySparkValueError,
 )
 
+# === H-1a: the session-timezone conf key (ONE spelling; engine-validated at build) ===
+
+from repark.session.session_time_zone import (
+    DEFAULT_SESSION_TIME_ZONE,
+    SESSION_TIME_ZONE_KEY,
+)
+
 
 if TYPE_CHECKING:
     from typing import Self
@@ -111,6 +118,10 @@ _SQLCONF_DEFAULTS: dict[str, str] = {
     # infers StructType for dict-valued *cells* (any nesting depth); row-dicts (r22
     # key-union) are unaffected.
     "spark.sql.pyspark.inferNestedDictAsStruct.enabled": "false",
+    # === H-1a: session timezone (gap G1) ===
+    # Readable back before anything sets it. UTC, not the host zone — a DECLARED divergence
+    # from Spark's JVM-local default (reproducibility; no host-environment read).
+    SESSION_TIME_ZONE_KEY: DEFAULT_SESSION_TIME_ZONE,
 }
 
 

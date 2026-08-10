@@ -19,7 +19,13 @@ repark-common.workspace = true
 # installers `build()` threads (write half) — the v1 repark-catalog / repark-write surfaces.
 repark-iceberg.workspace = true
 datafusion.workspace = true
-arrow.workspace = true
+# `chrono-tz` is declared HERE, not inherited: `session_time_zone.rs` validates
+# `spark.sql.session.timeZone` with `arrow::array::timezone::Tz`, and without the `chrono-tz`
+# feature that parser accepts only fixed offsets and rejects EVERY IANA id (`America/New_York`).
+# The feature is not an arrow default; it reaches this crate today only through
+# `datafusion-functions`, so a DataFusion feature change would silently turn a valid session zone
+# into a hard build refusal. Owning the enable makes the zone database this crate's decision.
+arrow = { workspace = true, features = ["chrono-tz"] }
 # The session holds the iceberg Catalog handles (the CatalogRegistry the SQL/write path needs) and
 # exposes catalog/namespace registration.
 iceberg.workspace = true

@@ -47,6 +47,7 @@ use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionExtension};
+use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::time_travel::{self, TimeTravelSpec};
 // v1's two test-only re-exports, re-homed with the test module (they rode the v1 crate root,
 // which the module split made this file's parent — `use super::*;` in `session/tests.rs`
@@ -376,6 +377,10 @@ impl ReparkSessionBuilder {
         }
 
         let catalog_specs = catalog_config::parse_catalog_specs(&self.config)?;
+        // The session timezone, resolved and VALIDATED here — once, at construction — so no
+        // query-time parse (and no host-environment read) can surprise a running job. Carried
+        // on the session below; timestamp extraction does not consume it yet (H-1a split B).
+        let session_time_zone = resolve_session_time_zone(&self.config)?;
         // The optional `s3://`/`s3a://` read region override (else the aws-config chain resolves
         // it). Both spellings are accepted; identical values collapse, different values fail loud.
         let s3_region_override = resolve_s3_region_override(&self.config)?;
@@ -483,6 +488,7 @@ impl ReparkSessionBuilder {
             catalog_specs: Arc::new(catalog_specs),
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
+            session_time_zone: Arc::new(session_time_zone),
             postgres_catalog_names: Arc::new(RwLock::new(HashSet::new())),
             aws_signaled,
             aws_sdk_config: Arc::new(OnceLock::new()),
@@ -523,6 +529,11 @@ pub struct ReparkSession {
     /// config); `None` means the aws-config chain resolves the region. Shared (`Arc`) so the session
     /// stays cheap to clone.
     s3_region_override: Arc<Option<String>>,
+    /// The session timezone (`spark.sql.session.timeZone`), parsed and validated ONCE at
+    /// [`ReparkSessionBuilder::build`] — never re-read from the process environment at query
+    /// time (`docs/adr/0004-server-prep-disciplines.md`). Shared (`Arc`) so a session clone can
+    /// never disagree with its origin about the zone.
+    session_time_zone: Arc<SessionTimeZone>,
     /// E-2: whether this session signaled AWS use at build time (an AWS-backed catalog spec, an
     /// S3-region conf, or the [`AWS_ENABLE_CONFIG_KEY`] opt-in). Consumed by the finalize pair,
     /// which resolves the AWS SDK chain only when this is set.
@@ -553,6 +564,18 @@ impl ReparkSession {
     #[must_use]
     pub fn context(&self) -> &SessionContext {
         self.backend.session_context()
+    }
+
+    /// ===========================================================================================
+    /// The session timezone this session was built with (`spark.sql.session.timeZone`).
+    ///
+    /// Resolved and validated at [`ReparkSessionBuilder::build`], immutable for the session's
+    /// life. Read it wherever a Spark-semantics zone is needed; do **not** re-read the host
+    /// environment. Timestamp extraction does not consume it yet (H-1a split B).
+    /// ===========================================================================================
+    #[must_use]
+    pub fn session_time_zone(&self) -> &SessionTimeZone {
+        &self.session_time_zone
     }
 
     /// Run a SQL string and return the resulting [`DataFrame`] (PySpark `spark.sql`).

@@ -299,6 +299,46 @@ them, and the document is ordered by surface, never by date.
   faithfully; only inline decimal *literals* differ. The pin asserts repark's actual output **and**
   asserts that the recorded Spark golden still does not match, so a future convergence reds it.
 
+### TZ-2 — the session-timezone default is `UTC`
+
+- **repark** — `spark.conf.get("spark.sql.session.timeZone")` is `UTC` on a session that never set
+  it; the default is a fixed constant, never the host zone.
+- **Apache Spark** — defaults the key to the **JVM's local zone**, so the same job produces
+  different wall-clock values on two hosts. *(oracle: documented — Spark's documented
+  configuration default. Admitted under §1's exception deliberately: pinning the *live* default
+  would pin the CI host's own zone, which is exactly the non-reproducibility this row declares
+  against.)*
+- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_conf_is_readable_back_and_defaults_to_utc`
+  and `crates/repark-core/src/session_time_zone/tests.rs::absent_key_resolves_to_the_utc_default`
+- **Rationale** — DECLARED. A reproducible default beats a host-dependent one, and reading the
+  host zone would be the environment read
+  [adr/0004-server-prep-disciplines.md](adr/0004-server-prep-disciplines.md) forbids. A job that
+  wants host-local behavior sets the key explicitly.
+
+### TZ-3 — a runtime `conf.set` of the session zone is accepted, neither validated nor applied
+
+- **repark** — the call succeeds, warns once (`accepted for source compatibility but NOT
+  applied … its value is NOT validated`) and stores nothing, so `conf.get` keeps reporting the
+  engine's real zone; `conf.unset` behaves the same. The value is not checked at all —
+  `conf.set(key, "Mars/Olympus_Mons")` is swallowed. The disclosure is once per **process**, not
+  per session, so a second session in the same interpreter gets a fully silent no-op. The zone is
+  resolved and validated exactly once, at session build.
+- **Apache Spark** — applies the new zone to the live session immediately, and validates it:
+  the same call raises `[INVALID_CONF_VALUE.TIME_ZONE] … SQLSTATE: 22022`. *(oracle: recorded —
+  observed against live PySpark 4.1.2 while authoring the unit.)*
+- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_runtime_conf_set_of_the_session_zone_is_accepted_but_not_applied`
+  (valid leg, warning text, and the invalid leg under `simplefilter("error")`);
+  `…::test_apache_sql_conf_context_manager_round_trips_the_session_zone`;
+  `…::test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise` (the same laxness on
+  the reuse path)
+- **Rationale** — DECLARED, and evidence-driven: refusing the call reds the pinned Apache drop-in
+  test `test_create_dataframe_from_pandas_with_dst`, which sets this key through PySpark's own
+  `sql_conf` helper. Accepting keeps drop-in source compatibility; not storing keeps `conf.get`
+  honest. The unvalidated half is the accepted cost of keeping exactly **one** validator (the
+  engine, at build) — repark is knowingly laxer than PySpark on this key at runtime, and the
+  warning says so in as many words. Becomes fixable if the extraction unit routes the zone through
+  DataFusion `ConfigOptions` (a live `SET` would then retire this row).
+
 ---
 
 ## 5. Facade drop-in semantics (DECLARED)
@@ -412,6 +452,69 @@ the pin rather than obeying it.
   is a backlog row and not part of
   [ID-2](#id-2--the-case-collision-refusal-covers-the-sql-string-form-only).
   The fix is to treat a backticked span the way a double-quoted span is already treated.
+
+### TZ-1 — timestamp extraction ignores the session zone
+
+- **repark** — `year` / `month` / `dayofmonth` / `hour` / `date_trunc` / `date_format` over a
+  TIMESTAMP resolve in the **stored (UTC) zone**; `spark.sql.session.timeZone` does not move
+  them. Holds over scalar literals and over a tz-aware timestamp **column** alike.
+- **Apache Spark** — resolves every one of them in the **session zone** (the census measured a
+  four-hour silent offset in this class). *(oracle: recorded — goldens re-derivable inside the
+  repo via `python/repark/tests/_record_session_timezone_goldens.py` against live PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_row_matches_spark_or_still_diverges`,
+  the **15 extraction-class disclosure rows** (the module holds 18 disclosure rows + 2 equality
+  controls; of the 18, two are TZ-4 and one is TZ-5) — e.g.
+  `[hour_of_instant_under_new_york_session]`, `[dst_fall_back_repeated_local_hour]`,
+  `[year_boundary_date_trunc_under_tokyo_session]`, and the two column-path rows
+  `[column_extract_under_new_york_session]` / `[column_extract_under_tokyo_session]`.
+- **Rationale** — BACKLOG, **fix in flight** (campaign decision D7; the extraction unit,
+  H-1a split B). Recorded as disclosures so the CRITICAL class is measured while the fix lands;
+  the fix flips every row to an equality assertion, and that flip is its revert-red evidence. A
+  row that instead starts matching the recorded Spark half reds with a CONVERGED /
+  flip-don't-delete message.
+
+### TZ-4 — TIMESTAMP Arrow export is tz-naive
+
+- **repark** — `to_arrow()` yields `timestamp[ns]` (or `timestamp[us]` after `date_trunc`) with
+  **no timezone** on the Arrow type.
+- **Apache Spark** — `toArrow()` yields `timestamp[us, tz=UTC]`. *(oracle: recorded — including
+  the live `current_timestamp` type, `timestamp[us, tz=UTC]`, non-null.)*
+- **Pin** — `[to_timestamp_of_zone_suffixed_string]`, `[tz_aware_to_naive_round_trip]` and
+  `…::test_current_timestamp_type_and_zone_disclosure` in
+  `python/repark/tests/test_session_timezone_parity.py`
+- **Rationale** — BACKLOG, **fix in flight** — the export-**type** half of TZ-1's class. A
+  consumer that localizes a tz-naive column silently shifts it, which is why the Arrow type is
+  asserted and not only the value.
+
+### TZ-5 — `CAST(TIMESTAMP AS BIGINT)` returns nanoseconds
+
+- **repark** — epoch **nanoseconds**: `-1800000000000` for `1969-12-31T23:30:00Z`.
+- **Apache Spark** — epoch **seconds**: `-1800` for the same instant. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_row_matches_spark_or_still_diverges[pre_1970_timestamp_cast_to_bigint]`
+- **Rationale** — BACKLOG, intent to FIX. Found while authoring the timezone corpus but **not a
+  zone bug** — a cast-unit bug, correctly signed before 1970. A 10⁹ factor on every
+  timestamp→integer cast is a silently-wrong-result class in its own right; it gets its own unit
+  rather than a fold into the extraction fix. State: [../STATUS.md](../STATUS.md) "Known
+  correctness issues".
+
+### Surfaced, awaiting pins — not yet rows
+
+Five candidates surfaced by the session-timezone unit carry **no pin yet**, so under §6 they are
+not admitted as rows; they are queued here so the surfacing is on the record, and each becomes a
+row in the change that lands its pin (the unit ledger `task/h1a-ledger.md` §6 carries the full
+observed behavior for each):
+
+- **B-TZ-1** — `unix_timestamp` is not a Spark-door SQL function (the facade `F.unix_timestamp`
+  exists; the SQL spelling does not plan).
+- **B-TZ-2** — `timestamp_seconds` is not a Spark-door SQL function (same shape as B-TZ-1).
+- **B-TZ-3** — `date_add(DATE, <integer literal>)` fails to coerce in the SQL door
+  (`date_add(Date32, Int64)` refuses; the DataFrame spelling works).
+- **B-TZ-4** — `CAST(TIMESTAMP AS STRING)` returns Arrow `string_view` with ISO-`T` formatting in
+  the stored zone, where Spark returns `string` with space-separated formatting in the session
+  zone.
+- **B-TZ-5** — the SQL `SET` door does not reach the `spark.*` conf namespace at all
+  (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
+  than the session zone; it wants its own decision rather than a fold into the extraction unit.
 
 ---
 
