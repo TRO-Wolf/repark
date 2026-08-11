@@ -1,12 +1,19 @@
 # H-1b — the Spark door's time-travel ephemeral-view leak
 
+> **ARCHIVED 2026-08-11** (G-9 — H-1 phase ledger promotion) — a historical record of everything
+> delivered through the H-1 close gate (repark #35–#46), including the parallel G/N corpus units
+> whose gap-map homes are H-2, kept for provenance and **not a source of live rules**: every rule
+> still in force was verified live-elsewhere or promoted first
+> ([promotion-ledger.md](promotion-ledger.md)). Relative links were repaired for this location on
+> the same date; nothing else changed. Current state: [STATUS.md](../../../STATUS.md).
+
 **Campaign:** V2 Engine Hardening. **Unit:** H-1b. **Date:** 2026-08-11.
 **Branch:** `hardening/h1b-tt-leaks`, based at `e239177`.
 
 ## 1. What this unit is, and where its provenance hangs
 
 H-1b **closes an open row that v2 already carried in writing** — it does not open a new one.
-The row is [`../docs/history/port-v2/p2g-ansi-m2-ledger.md`](../docs/history/port-v2/p2g-ansi-m2-ledger.md)
+The row is [`../docs/history/port-v2/p2g-ansi-m2-ledger.md`](../port-v2/p2g-ansi-m2-ledger.md)
 "Riders carried forward" item 4:
 
 > *"NEW, from the verify pass — the SPARK door has the same time-travel view leak.

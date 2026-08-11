@@ -3,9 +3,9 @@
 ## Purpose
 
 Working state for **current** work: the rules in force, the ledger of each unit in flight, and the
-acceptance inputs that gates still read. Finished campaigns do not accumulate here — they are
-archived under [../docs/history/](../docs/history/map.md) once their rules have been promoted to a
-current document.
+acceptance inputs that gates still read. Finished **phases and campaigns** do not accumulate here —
+they are archived under [../docs/history/](../docs/history/map.md) once their rules have been
+promoted to a current document (mid-campaign phase promotions are allowed; see hardening-h1).
 
 Current state (release, delivered surface, what happens next) is **[../STATUS.md](../STATUS.md)**,
 not this directory.
@@ -17,80 +17,11 @@ not this directory.
   runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
   delete). Seeded 2026-08-06 from the private v1 repository.
-- [h1d-ledger.md](h1d-ledger.md) — **V2 Engine Hardening H-1d** (the divergence registry): the
-  re-verified citation inventory, the eight design decisions (including D-6, the ruling that the
-  live-tier `DISCLOSURES` list becomes a machine-checked mirror of the registry's live-mirrored
-  rows), the gate results, and the mirror check's provocation proofs. Sweep queue historically
-  seeded here; **closed by G-5** (see [g5-sweep-ledger.md](g5-sweep-ledger.md)).
-- [g5-sweep-ledger.md](g5-sweep-ledger.md) — **G-5 registry sweep**: full inventory triage,
-  dispositions, rows added (NS-1/NS-2/ST-1/ID-3/TY-4/TY-5/FA-2/FA-3), open-item rulings, gate
-  evidence.
-- [h1c-ledger.md](h1c-ledger.md) — **V2 Engine Hardening H-1c** (the `$`-metadata introspection
-  rider): the evidence that ended the open question (what the fork's schema provider actually
-  synthesizes, what Spark and Trino do, and why the live oracle tier cannot observe either), the
-  ruling — **filter, at the catalog layer** — the five in-unit decisions, the four flagged
-  deviations, the gate results, and the dated **fix pass** that corrected a falsely-green facade
-  gate (a nondeterministic assertion), a 2×-wrong perf number, an overclaimed "drops exactly", a
-  duplicated description across STATUS/registry and a false test-site citation. The decision itself
-  is
-  [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md);
-  the ledger records how it was reached, not what it says.
-- [g6-chores-ledger.md](g6-chores-ledger.md) — **G-6 hardening chores** (four items, one PR):
-  parity-runner markdown default → `target/census-reports/`; four `session.rs` rustdoc
-  intra-link fixes; Glue acceptance location-mismatch fail-loud guard (+ DESCRIBE probe); and
-  the `make parity-live` ↔ `parity-live.yml` dual-wire checker with must-FAIL/must-PASS
-  provocation proofs.
-- [g4-tests-split-ledger.md](g4-tests-split-ledger.md) — **G-4** declared-rename: split
-  `crates/repark-spark/src/tests.rs` → `src/tests/` by production-module alignment; identity
-  gate + name map under `task/g4-artifacts/`.
-- [h1b-ledger.md](h1b-ledger.md) — **V2 Engine Hardening H-1b** (the time-travel ephemeral-view
-  leak): the Spark door's `PinnedViews` ledger + `execute_time_travelled` release split, the two
-  new leak pins with BOTH mutation transcripts (drop the release → both red; release only on `Ok`
-  → the error-path pin alone reds), the repair of the facade pin that ENCODED the leak as its own
-  non-vacuity proof, and the escaped half of the ANSI door's "fixed" claim — the `__repark_tt_<n>`
-  that `repark_core::read_table_at` mints under `__repark_ansi_tt_<n>`, caught RED then fixed.
-  Closes rider 4 of
-  [../docs/history/port-v2/p2g-ansi-m2-ledger.md](../docs/history/port-v2/p2g-ansi-m2-ledger.md)
-  and corrects that ledger's finding 3, both halves. Carries the documented reader-options
-  residual and one flagged deviation (D-2). **§11 is the adversarial panel's fix pass
-  (2026-08-11):** the F-1 counter unification (two process-global `__repark_tt_` minters became
-  one, in repark-core — a Spark-door statement used to destroy a live reader-options
-  registration), its collision pin proven red two ways, D-2's rationale corrected (a flagged
-  deviation justified by a constraint that did not exist — the cautionary tale), and the
-  finding → action table for F-1 … F-20.
-- [g8-file-size-ledger.md](g8-file-size-ledger.md) — **G-8** general Rust file-size gate
-  (`scripts/check_rust_file_size.py`): measurement-seeded default + EXCEPTIONS, dual-wired into
-  `make ci` + ci.yml guards, provocation proofs (must-FAIL / must-PASS).
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
   shipped, environment drift events). Append a section per campaign; never rewrite an earlier one.
   Created 2026-08-10 with the Front-Door campaign's numbers.
-- [h1a-ledger.md](h1a-ledger.md) — unit ledger for **H-1a, BOTH splits**, of the V2 Engine
-  Hardening campaign: split A (session-timezone conf surface + the live registry's per-scenario
-  session-conf override + the recorded G1/G16 differential rows) and **§ Split B** (the extraction
-  fix itself — the coercion path, the invoke-time carrier, the four-entry-point matrix, the eight
-  Rust extractor-family pins, and the flip of thirteen recorded disclosures into equality rows,
-  which is the fix's revert-red evidence). Carries the split's decisions with rationale, the
-  acceptance-gate evidence, verbatim gate output, the both-ways provocations for its detection
-  claims, and the ready-to-paste divergence-registry rows this unit produced for H-1d
-  (which owns `docs/spark-sql-iceberg-parity.md` and merges first). **§8 is the adversarial
-  panel's fix pass** — every MAJOR/NIT with the action taken, the provocations added or re-run,
-  the post-fix gate output, and the deviations from the dispositions stated rather than absorbed.
-  **§ Split B** (2026-08-10) is the extraction fix: its decisions (why
-  `datafusion.execution.time_zone` was measured and rejected; why the zone is read at invoke and
-  not baked in at registration; why TZ-4 split again), the matrix table, the flip inventory, and
-  both provocations — including the one that replays a real over-reach the DATE negative caught
-  mid-fix.
-- [n2-merge-ledger.md](n2-merge-ledger.md) — unit ledger for **N-2 / H-2 gap G3** (MERGE INTO
-  differential corpus, record-side). 10 recorded rows against live PySpark 4.1.2 +
-  `iceberg-spark-runtime-4.1_2.13:1.11.0`, lifecycle helper cleanup proof, ready-to-paste registry
-  rows, deferred Rust pins + live-tier scenarios (declared), octo/overload evidence.
-- [g7-decimal-ledger.md](g7-decimal-ledger.md) — unit ledger for **G-7** (decimal128 differential
-  corpus, Python half; G13 folded). Gap G2 (20-26 rows) + G13 (6-8) + 3 CTAS write-back +
-  committed record driver; budget pin + CONVERGED-flip-don't-delete disclosures; G-7b deferred
-  (Rust bit-exact pins + cross-door rows). Ready-to-paste registry rows live here, never in the
-  registry file (conductor ban).
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -116,26 +47,51 @@ campaign's design, slate and retrospective. Its audit is the retrospective's "Pr
 section, and the one rule it stranded — set a repo-local git identity before the first commit — was
 promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 
+**H-1 phase ledgers** (and the parallel G/N corpus units delivered through the H-1 close gate,
+repark #35–#46) moved on **2026-08-11** by **G-9** — a **mid-campaign** phase promotion, not a
+campaign close-out. Basenames kept under
+[../docs/history/hardening-h1/](../docs/history/hardening-h1/map.md):
+
+| Former `task/` path | Now |
+|---|---|
+| `task/h1d-ledger.md` | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) |
+| `task/h1a-ledger.md` | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) |
+| `task/h1c-ledger.md` | [../docs/history/hardening-h1/h1c-ledger.md](../docs/history/hardening-h1/h1c-ledger.md) |
+| `task/h1b-ledger.md` | [../docs/history/hardening-h1/h1b-ledger.md](../docs/history/hardening-h1/h1b-ledger.md) |
+| `task/g4-tests-split-ledger.md` | [../docs/history/hardening-h1/g4-tests-split-ledger.md](../docs/history/hardening-h1/g4-tests-split-ledger.md) |
+| `task/g4-artifacts/` | [../docs/history/hardening-h1/g4-artifacts/](../docs/history/hardening-h1/g4-artifacts/map.md) |
+| `task/g5-sweep-ledger.md` | [../docs/history/hardening-h1/g5-sweep-ledger.md](../docs/history/hardening-h1/g5-sweep-ledger.md) |
+| `task/g6-chores-ledger.md` | [../docs/history/hardening-h1/g6-chores-ledger.md](../docs/history/hardening-h1/g6-chores-ledger.md) |
+| `task/g7-decimal-ledger.md` | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
+| `task/n2-merge-ledger.md` | [../docs/history/hardening-h1/n2-merge-ledger.md](../docs/history/hardening-h1/n2-merge-ledger.md) |
+| `task/g8-file-size-ledger.md` | [../docs/history/hardening-h1/g8-file-size-ledger.md](../docs/history/hardening-h1/g8-file-size-ledger.md) |
+
+A citation of `task/h1d-ledger.md` (or any row above) means the matching file under
+`docs/history/hardening-h1/`. The audit is
+[../docs/history/hardening-h1/promotion-ledger.md](../docs/history/hardening-h1/promotion-ledger.md).
+
 ## I want to...
 
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
-| Start a new unit's ledger | copy the shape of [h1d-ledger.md](h1d-ledger.md) (or the archived [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
-| See how a divergence gets declared, pinned and mirrored | [h1d-ledger.md](h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
-| Read why the session timezone is a build-time knob with one spelling | [h1a-ledger.md](h1a-ledger.md) |
-| Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [h1a-ledger.md](h1a-ledger.md) "§ Split B" |
-| See how an open question gets FIXED instead of declared (and why a fixed defect gets no row) | [h1c-ledger.md](h1c-ledger.md) + [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) |
-| Find out why a `__repark_tt_*` name is on a session, and which of its three producers put it there | [h1b-ledger.md](h1b-ledger.md), then [../crates/repark-spark/src/map.md](../crates/repark-spark/src/map.md) `## Debug` |
-| See what a two-mutation acceptance looks like (and why the second mutation is the one that matters) | [h1b-ledger.md](h1b-ledger.md) §7c/§7d |
-| Read the MERGE INTO differential corpus (gap G3) ledger + registry paste rows | [n2-merge-ledger.md](n2-merge-ledger.md) |
+| Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
+| See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
+| Read why the session timezone is a build-time knob with one spelling | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) |
+| Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) "§ Split B" |
+| See how an open question gets FIXED instead of declared (and why a fixed defect gets no row) | [../docs/history/hardening-h1/h1c-ledger.md](../docs/history/hardening-h1/h1c-ledger.md) + [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) |
+| Find out why a `__repark_tt_*` name is on a session, and which of its three producers put it there | [../docs/history/hardening-h1/h1b-ledger.md](../docs/history/hardening-h1/h1b-ledger.md), then [../crates/repark-spark/src/map.md](../crates/repark-spark/src/map.md) `## Debug` |
+| See what a two-mutation acceptance looks like (and why the second mutation is the one that matters) | [../docs/history/hardening-h1/h1b-ledger.md](../docs/history/hardening-h1/h1b-ledger.md) §7c/§7d |
+| Read the MERGE INTO differential corpus (gap G3) ledger + registry paste rows | [../docs/history/hardening-h1/n2-merge-ledger.md](../docs/history/hardening-h1/n2-merge-ledger.md) |
+| Read the decimal128 differential corpus ledger | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
 | Feed the census comparator its allowlists | [port/map.md](port/map.md) |
 | Run or compare a census | [../docs/port/census.md](../docs/port/census.md) |
 | Read the port's record (briefs, unit ledgers, retrospectives) | [../docs/history/port-v2/README.md](../docs/history/port-v2/README.md) |
+| Read the H-1 phase archive (mid-campaign) | [../docs/history/hardening-h1/README.md](../docs/history/hardening-h1/README.md) |
 | Read the port plan the phases executed | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 
 ## Pointers
@@ -145,8 +101,8 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
   (current state); this directory holds the moving parts of work in flight.
 - Unit ledgers: one `<unit>-ledger.md` per delivered unit, with gate evidence and provocation proofs
   per [../docs/testing.md](../docs/testing.md), linked from this map in the same commit. When a
-  campaign closes, its ledgers are archived under [../docs/history/](../docs/history/map.md) after a
-  promotion audit — never deleted.
+  **phase or campaign** closes (or is deliberately mid-campaign-promoted), its ledgers are archived
+  under [../docs/history/](../docs/history/map.md) after a promotion audit — never deleted.
 
 ## Debug
 
@@ -156,9 +112,15 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 - If work and trackers disagree, the code is truth — update the tracker.
 - A link into `task/p*-ledger.md` or `task/fd3-ledger.md` fails: see "Where the closed campaigns'
   ledgers went" above — same basename, under [../docs/history/](../docs/history/map.md).
-- No `<unit>-ledger.md` in this directory is the steady state between campaigns, not a missing
-  file; the ledger of a closed campaign lives with that campaign's archive. A campaign IS running
-  (V2 Engine Hardening), so its delivered units' ledgers accumulate here until close-out.
+- A link into `task/h1*-ledger.md`, `task/g4-*-ledger.md`, `task/g5-sweep-ledger.md`,
+  `task/g6-chores-ledger.md`, `task/g7-decimal-ledger.md`, `task/n2-merge-ledger.md`,
+  `task/g8-file-size-ledger.md`, or `task/g4-artifacts/` fails the same way: those moved to
+  [../docs/history/hardening-h1/](../docs/history/hardening-h1/map.md) on **2026-08-11** (G-9).
+- **H-1 phase ledgers were promoted mid-campaign** to
+  [../docs/history/hardening-h1/](../docs/history/hardening-h1/map.md) (2026-08-11). **H-2+ unit
+  ledgers re-accumulate here** until the next promotion. Empty-of-ledgers is again a valid steady
+  state between units (the campaign continues; only the closed H-1 phase record left).
 - Looking for a backlog item that is not in [../STATUS.md](../STATUS.md)? Check
-  [../docs/history/port-v2/promotion-ledger.md](../docs/history/port-v2/promotion-ledger.md) — if it
-  was live at archival, that table says where it went.
+  [../docs/history/port-v2/promotion-ledger.md](../docs/history/port-v2/promotion-ledger.md) or
+  [../docs/history/hardening-h1/promotion-ledger.md](../docs/history/hardening-h1/promotion-ledger.md)
+  — if it was live at archival, that table says where it went.

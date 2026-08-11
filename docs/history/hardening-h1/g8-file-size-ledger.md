@@ -1,5 +1,12 @@
 # G-8 — general Rust file-size gate (check_lib_rs companion)
 
+> **ARCHIVED 2026-08-11** (G-9 — H-1 phase ledger promotion) — a historical record of everything
+> delivered through the H-1 close gate (repark #35–#46), including the parallel G/N corpus units
+> whose gap-map homes are H-2, kept for provenance and **not a source of live rules**: every rule
+> still in force was verified live-elsewhere or promoted first
+> ([promotion-ledger.md](promotion-ledger.md)). Relative links were repaired for this location on
+> the same date; nothing else changed. Current state: [STATUS.md](../../../STATUS.md).
+
 **Date:** 2026-08-11 · **Branch:** `grok/g8-file-size-gate` · **Worktree:** `/tmp/grok-g8` ·
 **Base:** `origin/main` @ G-4 merge `69d1493` · **Charter:**
 `planning/grok/BRIEF-g8-file-size-gate.md` (owner-approved; discharges H-0c open question #4) ·

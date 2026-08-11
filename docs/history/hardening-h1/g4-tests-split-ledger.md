@@ -1,5 +1,12 @@
 # G-4 ledger — split `crates/repark-spark/src/tests.rs` (declared-rename unit)
 
+> **ARCHIVED 2026-08-11** (G-9 — H-1 phase ledger promotion) — a historical record of everything
+> delivered through the H-1 close gate (repark #35–#46), including the parallel G/N corpus units
+> whose gap-map homes are H-2, kept for provenance and **not a source of live rules**: every rule
+> still in force was verified live-elsewhere or promoted first
+> ([promotion-ledger.md](promotion-ledger.md)). Relative links were repaired for this location on
+> the same date; nothing else changed. Current state: [STATUS.md](../../../STATUS.md).
+
 **Date:** 2026-08-10 · **Branch:** `grok/g4-tests-split` · **Base:** `main` @ G-5 squash
 `669f9a3` · **Path:** STANDARD · **critic_engine:** ACC then `/critic-overload` (owner request) ·
 **Charter:** `planning/grok/BRIEF-g4-tests-rs-split.md` + approved cut map

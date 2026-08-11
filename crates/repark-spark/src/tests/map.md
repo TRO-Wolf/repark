@@ -41,8 +41,8 @@ code is not here — only tests, shared fixtures, and the module manifest.
 3. Nested mods lift to sibling files of the same name (path-preserving).
 4. Helpers move byte-identically; only new lines are `mod` decls and `use` adjustments.
 
-Authoritative membership + margin rulings: unit ledger `task/g4-tests-split-ledger.md` and
-planning cut map `G4-CUT-MAP.md`. Generated name map: `task/g4-artifacts/name-map.md`.
+Authoritative membership + margin rulings: unit ledger `docs/history/hardening-h1/g4-tests-split-ledger.md` and
+planning cut map `G4-CUT-MAP.md`. Generated name map: `docs/history/hardening-h1/g4-artifacts/name-map.md`.
 
 ## Pointers
 
@@ -54,7 +54,7 @@ planning cut map `G4-CUT-MAP.md`. Generated name map: `task/g4-artifacts/name-ma
 
 | Symptom | First check |
 |---|---|
-| Identity / rename doubt | `cargo test -p repark-spark --lib -- --list` vs `task/g4-artifacts/`; leaf multiset must match; full paths follow the name map |
+| Identity / rename doubt | `cargo test -p repark-spark --lib -- --list` vs `docs/history/hardening-h1/g4-artifacts/`; leaf multiset must match; full paths follow the name map |
 | Matrix pin string red / stale | `matrix.rs` strings are `--list` names; update with renames only — never re-point a surface |
 | Registry pin path stale | filesystem form `crates/repark-spark/src/tests/<file>.rs::leaf` |
 | Missing `TempDir` / Arrow types in a leaf | `use super::common::*;` (shared re-exports live in `common.rs`) |

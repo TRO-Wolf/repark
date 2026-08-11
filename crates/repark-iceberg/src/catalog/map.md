@@ -89,7 +89,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Hang on Glue/S3 catalog with no logs | enable `RUST_LOG=repark_iceberg=info`; expect `catalog.*` span close timings. Span fields are key names only |
 | `SHOW TABLES` does not list `t$snapshots` | expected since ADR-0006 — hidden from enumeration on purpose, still queryable as `ns."t$snapshots"` (or the Spark door's `ns.t.snapshots`) |
 | A `$`-metadata name reappears in `SHOW TABLES` after a fork repin | the fork changed the synthesized spelling; the filter matches `<base>$<MetadataTableType::as_str()>` exactly. See `crates/repark-iceberg/map.md` "Known limitations" (the repin duty) |
-| `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | known residue, not a regression: the predicate splits on the first `$`, as the fork's own `table()`/`table_exist()` do, so those names cannot be recognised — and `a$b` is unreachable through the fork anyway. ADR-0006 "Residue" + `task/h1c-ledger.md` F-2; pinned by `the_filter_keeps_names_the_fork_did_not_synthesize` |
+| `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | known residue, not a regression: the predicate splits on the first `$`, as the fork's own `table()`/`table_exist()` do, so those names cannot be recognised — and `a$b` is unreachable through the fork anyway. ADR-0006 "Residue" + `docs/history/hardening-h1/h1c-ledger.md` F-2; pinned by `the_filter_keeps_names_the_fork_did_not_synthesize` |
 
 First checks: `cargo test -p repark-iceberg catalog::`. Escalate to: [../../map.md#debug](../../map.md).
 

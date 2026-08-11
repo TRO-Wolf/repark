@@ -67,7 +67,7 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
   integration; the v1 lib-root battery; the Q13 surface-matrix audit.
 - **Known limitations:** the two v1-carried items this row used to name are both CLOSED — the
   time-travel ephemeral-view leak by H-1b (2026-08-11,
-  [../../task/h1b-ledger.md](../../task/h1b-ledger.md); the door's `PinnedViews` release split, and
+  [../../docs/history/hardening-h1/h1b-ledger.md](../../docs/history/hardening-h1/h1b-ledger.md); the door's `PinnedViews` release split, and
   no divergence row, because a fixed defect is not a divergence) and the `$`-metadata rider by
   H-1c (2026-08-10,
   [../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)).
