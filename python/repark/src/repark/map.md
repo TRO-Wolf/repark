@@ -1089,7 +1089,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   table / compound stoch sums via `_ma_lookback`.
   **r21 T4 ta-etl:** `ta.over_columns(window, {name: bare_ta_col, …})` → dict for a single
   `DataFrame.withColumns` (same-spec windows fuse to one DataFusion `WindowAggExec`). Measurement
-  WIN — kernel work dominates; see `task/t4-ta-etl-ledger.md`. Region banner `# === r21 T4: ta-etl ===`.
+  WIN — kernel work dominates; see the private v1 repository's `t4-ta-etl-ledger.md` (v1-era ledger, never ported). Region banner `# === r21 T4: ta-etl ===`.
   **r23b N2 plan-collapse:** adjacent independent same-spec `withColumn`/`withColumns` chains now
   merge into one `WindowAggExec` (sticky layer meta + structural WindowSpec equality; dep on a
   prior-layer name keeps stacking; cache/persist marks block merge — octo C2). Alias-chain squash

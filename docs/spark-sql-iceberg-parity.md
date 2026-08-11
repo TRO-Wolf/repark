@@ -64,8 +64,8 @@ then swept the pre-registry disclosures: a wider inventory over `python/repark/`
 `Spark would`, plus the original `DISCLOSED DIVERGENCE` / `KNOWN DIVERGENCE` / `DIVERGENCE-n`
 spellings), triage of every hit, and a row for every confirmed queue candidate whose pin asserts
 the claim. Full triage and dispositions live in
-[../task/g5-sweep-ledger.md](../task/g5-sweep-ledger.md); the historical seed queue remains in
-[../task/h1d-ledger.md](../task/h1d-ledger.md) "The sweep queue" with a dated G-5 closure line.
+[history/hardening-h1/g5-sweep-ledger.md](history/hardening-h1/g5-sweep-ledger.md); the historical seed queue remains in
+[history/hardening-h1/h1d-ledger.md](history/hardening-h1/h1d-ledger.md) "The sweep queue" with a dated G-5 closure line.
 Closing an entry means *moving* its description here, never copying it. §6's
 one-authoritative-description rule binds every disposition made **from 2026-08-10 forward**.
 
@@ -76,7 +76,7 @@ are out of this registry's Spark scope; and candidate **#1**
 (`test_dogfood_gaps.py::test_divergence_timestamp_ltz_collect_passthrough` / DIVERGENCE-1) was
 carved out for H-1a split B, which **revisited it on 2026-08-10 and left it unrowed** (that
 disposition also carries a dated closure line in the home §6 designates,
-[../task/g5-sweep-ledger.md](../task/g5-sweep-ledger.md)) — its
+[history/hardening-h1/g5-sweep-ledger.md](history/hardening-h1/g5-sweep-ledger.md)) — its
 subject is the `CAST(… AS TimestampType())` passthrough, not extraction, and the class that keeps
 it open is already described by TZ-4 and TZ-6. Its docstring now says so instead of instructing a
 reader not to build the session-tz machinery that has since been built.
@@ -449,7 +449,7 @@ them, and the document is ordered by surface, never by date.
   gate is "exactly one"; and it would retype `current_timestamp` as
   `timestamp[ns, tz=<session zone>]`, moving it *away* from Spark's `timestamp[us, tz=UTC]`
   (TZ-4). This row therefore stands, and the working shown is in
-  [../task/h1a-ledger.md](../task/h1a-ledger.md) decision D-B2 rather than restated here.
+  [history/hardening-h1/h1a-ledger.md](history/hardening-h1/h1a-ledger.md) decision D-B2 rather than restated here.
 
 ---
 
@@ -519,7 +519,7 @@ every known issue, including issues that have no disposition yet. This registry 
   parity grep must find exactly one authoritative description of the divergence, and it must be a
   row in this file. Pre-registry dispositions that were still described only in test docstrings
   were swept by unit **G-5** (triage and dispositions in
-  [../task/g5-sweep-ledger.md](../task/g5-sweep-ledger.md)); closing an entry means moving its
+  [history/hardening-h1/g5-sweep-ledger.md](history/hardening-h1/g5-sweep-ledger.md)); closing an entry means moving its
   description here, not copying it. Residual pre-registry pins left deliberately unrowed (e.g.
   DIVERGENCE-1 for H-1a split B) are named in that ledger's carve-outs, not held as a second
   authoritative home.
@@ -618,7 +618,7 @@ the pin rather than obeying it.
 > arrives here from a wrong wall clock is routed to one of the two, never told the class is shut.
 > The remaining state line is in [../STATUS.md](../STATUS.md); the full account, including the
 > adversarial panel that forced this narrowing, is in
-> [../task/h1a-ledger.md](../task/h1a-ledger.md) "§ Split B".
+> [history/hardening-h1/h1a-ledger.md](history/hardening-h1/h1a-ledger.md) "§ Split B".
 
 ### TZ-4 — TIMESTAMP Arrow export is tz-naive
 
@@ -745,7 +745,7 @@ the pin rather than obeying it.
 
 > **The DEC family (DEC-1 … DEC-9)** landed on 2026-08-11 from the G-7 decimal128 differential
 > corpus (hardening gaps **G2** and **G13**; unit ledger
-> [../task/g7-decimal-ledger.md](../task/g7-decimal-ledger.md)). Oracle basis for every Spark half:
+> [history/hardening-h1/g7-decimal-ledger.md](history/hardening-h1/g7-decimal-ledger.md)). Oracle basis for every Spark half:
 > **recorded** — live PySpark 4.1.2 (ANSI on), re-derivable in-repo via the committed driver
 > `python/repark/tests/_record_decimal128_goldens.py`. Every pin below is a parametrized case of
 > `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges`,
@@ -864,7 +864,7 @@ the pin rather than obeying it.
 
 Five candidates surfaced by the session-timezone unit carry **no pin yet**, so under §6 they are
 not admitted as rows; they are queued here so the surfacing is on the record, and each becomes a
-row in the change that lands its pin (the unit ledger `task/h1a-ledger.md` §6 carries the full
+row in the change that lands its pin (the unit ledger `docs/history/hardening-h1/h1a-ledger.md` §6 carries the full
 observed behavior for each):
 
 - **B-TZ-1** — `unix_timestamp` is not a Spark-door SQL function (the facade `F.unix_timestamp`
