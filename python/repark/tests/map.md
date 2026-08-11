@@ -1205,6 +1205,31 @@ NOT in that file is a defect, not a decision.
   re-derives every Spark half (content / error needle / split success). Exit 0 = bit-for-bit
   reproduce; never edits the corpus. Needs zulu-17 + `uv sync --extra record` + network on first
   Ivy resolve. Invocation in its docstring and `task/n2-merge-ledger.md`.
+- `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
+  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (12 equality
+  controls + 12 disclosures) and 7 G13 rows (raise-class + nullability), recorded in record mode
+  against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`).
+  Every row asserts value AND exact Arrow `decimal128(p,s)` (or `double` for repark's bare-literal
+  / `avg` disclosures) on the `to_arrow` path through `repark_parity.assert_frames_equal` — never
+  `show`. Disclosure classes: bare decimal literal inference (Spark DECIMAL vs repark double),
+  division result `(p,s)`, the 38-digit clamp on add/mul, `avg` of money (decimal vs double), INT
+  x DECIMAL promotion width, ANSI overflow raise vs wrong value, divide-by-zero raise vs NULL,
+  high-scale mul plan refuse, and overflow-capable nullability. A failed disclosure is CLASSIFIED
+  before it raises: CONVERGED (flip-don't-delete to `repark=None`) vs regression (re-derive both
+  halves). Budget pin: G2 20-26, G13 6-8, min 8 equalities, max 20 disclosures so the corpus
+  cannot degenerate to all-disclosures. Class-coverage pins include a **name-gated 38-digit clamp
+  family** (`>=3` rows named `*clamps_scale_in_spark`) so a `DECIMAL(38,…)` equality control alone
+  cannot green the pin. Three CTAS write-back rows (Q1: repark-only Iceberg path; Spark is SELECT
+  oracle when equality holds) prove `decimal128(p,s)` survives CTAS -> memory catalog -> read
+  back. Rust bit-exact pins + cross-door rows are **G-7b** (deferred). Ledger:
+  `task/g7-decimal-ledger.md` (§6 holds paste-true registry rows with full
+  `path::test[case]` node ids; registry file itself is not edited from this unit).
+- `_record_decimal128_goldens.py` — the **record driver** for the decimal128 corpus (NOT a
+  `test_` module; never collected). Imports `ROWS` / `CTAS_ROWS` from the committed test module
+  and re-runs each row's own `run_row` recipe on live PySpark; raise-class rows re-check the
+  exception class still matches. Exit 0 = every recorded half still reproduces; never edits the
+  corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation in its module docstring
+  and in `task/g7-decimal-ledger.md`.
 - `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
   never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
   `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
@@ -1370,6 +1395,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the recorded Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py` |
 | Add a MERGE INTO differential row (gap G3) | `test_merge_differential_parity.py` (`ROWS`; record Spark half with `_record_merge_differential_goldens.py`, never by hand) |
 | Re-derive the MERGE differential Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py` |
+| Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
+| Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1418,6 +1445,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a `test_session_timezone_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete the row — flip it to `repark=None` (equality) and record the convergence. Thirteen rows were flipped exactly this way when the extraction fix landed, and that flip is its revert-red evidence. |
 | an EQUALITY row in that module reds after an engine change | The extraction fix regressed. Check `crates/repark-functions/src/datetime.rs` (the coercion path) and `SparkExtension::configure` (the carrier install) before touching the row — the Rust pins in `crates/repark-spark/tests/session_timezone.rs` localize it faster than the facade does. |
 | a row reds saying "moved OFF its pinned disclosure ... regression" | repark matches neither half: re-derive both in record mode (`_record_session_timezone_goldens.py`) before touching the pin. |
+| a `test_decimal128_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or raises the same ANSI class): do NOT delete — flip to equality / shared-raise and record the convergence. |
+| a decimal128 row reds saying regression | re-derive both halves with `_record_decimal128_goldens.py` before touching the pin. |
+| decimal128 budget pin reds | G2 must stay 20-26, G13 6-8, CTAS exactly 3, min 8 equalities, max 20 disclosures, and ≥3 `*clamps_scale_in_spark` rows; restore the control equalities / clamp family rather than converting them to disclosures or deleting them behind a non-clamp `DECIMAL(38,…)` control. |
 | a live scenario reds only under a non-UTC `session_conf` | the override reached the oracle but not repark (or vice versa): repark takes it at session BUILD, Spark at `conf.set`. Check `build_repark_engine` stopped the previous active session. |
 
 First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).
