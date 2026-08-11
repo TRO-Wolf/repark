@@ -64,6 +64,10 @@ not this directory.
   not baked in at registration; why TZ-4 split again), the matrix table, the flip inventory, and
   both provocations — including the one that replays a real over-reach the DATE negative caught
   mid-fix.
+- [n2-merge-ledger.md](n2-merge-ledger.md) — unit ledger for **N-2 / H-2 gap G3** (MERGE INTO
+  differential corpus, record-side). 10 recorded rows against live PySpark 4.1.2 +
+  `iceberg-spark-runtime-4.1_2.13:1.11.0`, lifecycle helper cleanup proof, ready-to-paste registry
+  rows, deferred Rust pins + live-tier scenarios (declared), octo/overload evidence.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -100,6 +104,7 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 | Read why the session timezone is a build-time knob with one spelling | [h1a-ledger.md](h1a-ledger.md) |
 | Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [h1a-ledger.md](h1a-ledger.md) "§ Split B" |
 | See how an open question gets FIXED instead of declared (and why a fixed defect gets no row) | [h1c-ledger.md](h1c-ledger.md) + [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) |
+| Read the MERGE INTO differential corpus (gap G3) ledger + registry paste rows | [n2-merge-ledger.md](n2-merge-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
