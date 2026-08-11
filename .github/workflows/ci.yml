@@ -1,7 +1,7 @@
 # Main PR gate (tier 1: every PR, no secrets, GitHub-hosted, read-only token).
 # Rust lint (fmt + clippy + check) + Rust test (workspace) as separate jobs, Python (ruff), and
 # the repo guards (map.md + workflow parse + crate dependency policy + lib.rs thinness +
-# the structural manifest).
+# rust file-size + the structural manifest).
 # Note on `cargo test --locked --workspace` (not `--all-features`): `--all-features` would enable
 # the repark-python `extension-module` feature, which tells PyO3 not to link libpython — fine for
 # a wheel, but it breaks linking a standalone test binary. See AGENTS.md "PyO3 build notes"
@@ -156,6 +156,10 @@ jobs:
       # Dual-wired with `make check-lib-rs` / `make ci`. SSOT: scripts/check_lib_rs.py.
       - name: lib.rs thinness guard (check_lib_rs)
         run: ./scripts/check_lib_rs.sh
+      # Per-file crates/**/*.rs line ceilings (default + EXCEPTIONS; ratchet down only).
+      # Dual-wired with `make check-rust-file-size` / `make ci`. SSOT: scripts/check_rust_file_size.py.
+      - name: rust file-size guard (check_rust_file_size)
+        run: ./scripts/check_rust_file_size.sh
       # parity-live dual-wire: Makefile `parity-live` ↔ parity-live.yml load-bearing flags must
       # agree (uv sync extras, --no-install-package, maturin pin, uv run --locked --no-sync,
       # env pins). Compares the two surfaces to each other — never a third list. Fail-closed.
