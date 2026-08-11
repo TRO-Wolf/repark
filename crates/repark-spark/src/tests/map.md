@@ -21,6 +21,17 @@ code is not here — only tests, shared fixtures, and the module manifest.
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):
   `partitioned_ctas`, `partitioned_merge`, `transform_overwrite` (still nests
   `provider_partition_correctness`), `service_managed_ctas`.
+- **Added after the split** — `time_travel.rs` gained the three H-1b ephemeral-view pins
+  (2026-08-11), `time_travel_temp_views_do_not_survive_a_{successful,failed}_statement` and
+  `time_travel_statement_pins_never_collide_with_a_reader_options_view` (the fix-pass collision
+  pin: a reader-options registration made through `repark_core::read_table_at` must SURVIVE a
+  Spark-door `VERSION AS OF` statement, and the door must mint from repark-core's counter — the
+  second assertion is the one that reds whatever the numbers happen to be), beside the twin
+  `time_travel_version_timestamp_branch_tag_and_errors`, plus their three leaf-private helpers
+  (`leftover_time_travel_views`, `setup_time_travel_leak_table`, `temp_view_sequence` — used by
+  that leaf only, so they stay out of `common.rs`). They read the default catalog/schema directly
+  rather than `information_schema`, which this door's `setup` does not enable. Not a relocation:
+  new tests, new names, and the G-4 identity artifacts are unaffected.
 
 ## Mapping rule
 

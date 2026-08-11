@@ -69,7 +69,15 @@ reach delegation through the ordinary arm.
   resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register
   an ephemeral pinned view, splice its name in, THEN parse. `FOR` is mandatory; `"` quotes
   identifiers and `'` quotes strings, which is the whole difference from the Spark door's
-  scanner. Tests: [time_travel/map.md](time_travel/map.md).
+  scanner. **`PinnedViews` records TWO names per relation (H-1b, 2026-08-11):** the
+  `__repark_ansi_tt_<n>` view this door mints AND the `__repark_tt_<n>` `read_table_at` registers
+  underneath it. The second escaped the original ledger — it is minted in repark-core, under a
+  different prefix — and leaked on the door whose fix declared the leak closed; the correction is
+  recorded against the original claim in
+  `docs/history/port-v2/p2g-ansi-m2-ledger.md` (finding 3). The reader-options caller of
+  `read_table_at` is untouched: its registration must survive (it backs the returned frame).
+  Tests: [time_travel/map.md](time_travel/map.md) + the both-prefix leak pin in
+  [../tests/map.md](../tests/map.md).
 - `ref_ddl.rs` — the ALTER-scoped branch/tag grammar (Q6/G6, copied from the Spark door's
   precedent) over the tier-1 `ManageSnapshots` seams. The top-level `CREATE BRANCH b IN t`
   spelling stays Spark-only. Tests: [ref_ddl/map.md](ref_ddl/map.md).
@@ -119,6 +127,7 @@ reach delegation through the ordinary arm.
 | Branch DDL was not recognized | `ref_ddl::try_parse_ref_ddl` takes ALTER-scoped forms only; the top-level `CREATE BRANCH b IN t` is Spark-door surface |
 | A legal `ALTER TABLE` was refused as `… EXECUTE …` | The recognizer is ANCHORED to the verb slot after the table name (`refusals::verb_slot_after_table_name`); a column may legally be named `execute` |
 | A branch/tag statement ran with a clause we did not read | It cannot — `ref_ddl::reject_trailing` refuses on ANY leftover token, numbers and punctuation included (only a trailing `;` is dropped) |
-| `SHOW TABLES` listed a `__repark_ansi_tt_*` relation | The router releases every `time_travel::PinnedViews` name after planning; a leak means an exit path skipped `pinned.release` |
+| `SHOW TABLES` listed a `__repark_ansi_tt_*` relation | The router releases every `time_travel::PinnedViews` name after planning; a leak means a `?` / `return` path was added that skips `pinned.release` (unwind / future-drop bypass it by design — no `Drop` impl, and no cancellation source exists today) |
+| `SHOW TABLES` listed a `__repark_tt_*` relation (no `ansi`) | The CORE half. Each `FOR … AS OF` composes this door's view over `repark_core::read_table_at`, which registers its own `__repark_tt_<n>` — untracked until H-1b, so it escaped a ledger that only knew the `ansi` prefix. `register_pinned_view` now records both names; if one survives, check that record. A leftover on a session that ran NO `FOR … AS OF` is the reader-options residual instead (`spark.read.option("snapshot-id"…)`), which keeps its registration by design |
 
 First checks: `cargo test -p repark-sql --lib`. Escalate to: [../map.md#debug](../map.md).

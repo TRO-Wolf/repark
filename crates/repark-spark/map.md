@@ -65,8 +65,14 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
   extension registers (`extension.rs`); add a router arm (`router.rs` + a handler module).
 - **Test strategy:** `cargo test -p repark-spark` — Session + `SparkExtension` + `SparkDialect`
   integration; the v1 lib-root battery; the Q13 surface-matrix audit.
-- **Known limitations:** carried v1 divergences — the time-travel view leak + the `$`-metadata rider
-  ([../../STATUS.md](../../STATUS.md) "Known correctness issues"). Every divergence that has been
+- **Known limitations:** the two v1-carried items this row used to name are both CLOSED — the
+  time-travel ephemeral-view leak by H-1b (2026-08-11,
+  [../../task/h1b-ledger.md](../../task/h1b-ledger.md); the door's `PinnedViews` release split, and
+  no divergence row, because a fixed defect is not a divergence) and the `$`-metadata rider by
+  H-1c (2026-08-10,
+  [../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)).
+  What remains open for this door is listed in
+  [../../STATUS.md](../../STATUS.md) "Known correctness issues". Every divergence that has been
   *disposed of* — declared, or backlogged with an intent to fix — has its semantics, its pin and
   its rationale in the divergence registry
   ([../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md)); this door's

@@ -98,6 +98,15 @@ pub(crate) fn sql_has_time_travel(sql: &str) -> bool {
 /// pinned reads. The registration only has to survive planning: DataFusion resolves the relation
 /// into a `TableScan` that owns the provider, so the returned `DataFrame` still collects
 /// correctly after the name is gone.
+///
+/// **Two names per relation, since H-1b (2026-08-11).** This door composes its view over
+/// [`read_table_at`], the shared core half, which registers a `__repark_tt_<n>` of its own before
+/// handing back the frame. That one escaped the original ledger (it is minted inside repark-core,
+/// under a DIFFERENT prefix) and leaked on the very door whose fix declared the leak closed —
+/// three `FOR … AS OF` reads left `__repark_tt_1|2|3` behind. [`register_pinned_view`] now records
+/// BOTH names here, so one ledger releases the whole composition. The reader-options caller of
+/// `read_table_at` is untouched by construction: it never reaches this module, and its
+/// registration must survive (it backs the `DataFrame` handed to the user).
 #[derive(Debug, Default)]
 pub(crate) struct PinnedViews {
     names: Vec<String>,
@@ -162,6 +171,12 @@ pub(crate) async fn prepare_time_travel_sql(
 /// metadata and builds the fork's `IcebergStaticTableProvider` — a real pinned scan, never a
 /// post-hoc filter over the current snapshot. Re-registering its frame as a view is what gives
 /// the rewrite a NAME to splice into the statement.
+///
+/// That composition registers TWICE — core's `__repark_tt_<n>` under the frame, this door's
+/// `__repark_ansi_tt_<n>` over it — so BOTH names go into `pinned` (H-1b). Releasing core's name
+/// is safe for exactly the reason releasing this one is: by the time the router releases, the
+/// statement is planned and the `ViewTable` this door registers already owns the resolved
+/// `TableScan`, provider and all — no name is resolved again.
 async fn register_pinned_view(
     cx: &EngineContext<'_>,
     span: &TimeTravelSpan,
@@ -174,6 +189,11 @@ async fn register_pinned_view(
         )));
     }
     let frame = read_table_at(cx.ctx, cx.catalogs, &span.table_parts, &span.spec).await?;
+    // Recorded BEFORE `into_view` consumes the frame — and via the ledger rather than an immediate
+    // `deregister_table`, so a `register_table` failure below drains it too.
+    if let Some(core_name) = core_pinned_name(frame.logical_plan()) {
+        pinned.names.push(core_name);
+    }
     let name = format!(
         "__repark_ansi_tt_{}",
         TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed)
@@ -189,6 +209,33 @@ async fn register_pinned_view(
             ))
         })?;
     Ok(name)
+}
+
+/// The ephemeral name [`read_table_at`] registered under the frame it returned, if that frame is
+/// the plain `TableScan` over it this door always gets back.
+///
+/// Read off the plan rather than returned by `read_table_at` on purpose: the OTHER caller of that
+/// core function is the reader-options path, whose registration must SURVIVE (it backs the frame
+/// handed to the user), so the fix stays on this side of the seam. The prefix test keeps it honest
+/// — anything that is not a core-minted pin is left alone rather than deregistered blind.
+///
+/// **Two residuals, both real, both fenced or named** (H-1b):
+/// 1. This recovery cannot see a name whose registration succeeded inside `read_table_at` but
+///    whose immediately-following `ctx.table(…)` lookup then failed — that function returns `Err`
+///    with the name registered and no frame to read it off. Closing it needs Option 2 of the
+///    re-port map (thread the ledger INTO `read_table_at`), whose blast radius reaches the
+///    reader-options caller; recorded, not silently absorbed.
+/// 2. If this function ever returns `None` for a frame that DID carry a core-minted pin — a
+///    changed plan shape upstream, or a changed prefix — the leak returns silently, because
+///    `None` is also the legitimate answer for a frame this door did not compose. The fence is
+///    the pin's broadened `LIKE '__repark_tt%'` assertion in `tests/introspection.rs`, which reds
+///    on the leftover rather than on the recovery.
+fn core_pinned_name(plan: &datafusion::logical_expr::LogicalPlan) -> Option<String> {
+    let datafusion::logical_expr::LogicalPlan::TableScan(scan) = plan else {
+        return None;
+    };
+    let name = scan.table_name.table();
+    name.starts_with("__repark_tt_").then(|| name.to_string())
 }
 
 // === The scanner ============================================================================

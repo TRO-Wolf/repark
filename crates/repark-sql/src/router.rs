@@ -81,7 +81,10 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     // released again as soon as the statement has been planned, so a long-lived session neither
     // accumulates them nor shows them in `SHOW TABLES` / `information_schema.tables` (the
     // introspection surface this same PR enabled). The plan owns its provider, so the returned
-    // `DataFrame` still collects after the name is gone.
+    // `DataFrame` still collects after the name is gone. The release runs on every `?` / `return`
+    // path of the split below — but NOT on unwind or future-drop: `PinnedViews` carries no `Drop`
+    // impl by design (it would have to own a `SessionContext` clone), and neither source exists
+    // today (panics banned in prod, PyO3 drives this via `block_on`).
     let mut pinned = time_travel::PinnedViews::default();
     let result = execute_time_travelled(&cx, &sql, &mut pinned).await;
     pinned.release(cx.ctx);
@@ -89,7 +92,8 @@ pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
 }
 
 /// The rest of the pipeline, from the `FOR … AS OF` rewrite onward. Split out purely so
-/// [`execute`] can release `pinned` on EVERY exit path — including the `?` ones.
+/// [`execute`] can release `pinned` on every `?` / `return` path of the rewrite — the ones an
+/// inline `?` would have skipped. (Unwind / future-drop bypass it; see the call site.)
 async fn execute_time_travelled(
     cx: &EngineContext<'_>,
     sql: &str,

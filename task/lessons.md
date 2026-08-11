@@ -55,11 +55,14 @@ there the hard way and bind here from day one.
   ANSI door's INSERT/DELETE/UPDATE rows claimed M2 absence while the delegate path was
   live-writing Iceberg, untested and unguarded. The verify panel found it only by executing
   the statements. A row's truth is a behavior; behaviors get tests — refusal rows included.
-- **DO release ephemeral providers on every exit path.** `FOR … AS OF` pinned temp views
-  leaked into the session catalog and surfaced in `information_schema` — the exact
+- **DO release ephemeral providers on every `?` / `return` path.** `FOR … AS OF` pinned temp
+  views leaked into the session catalog and surfaced in `information_schema` — the exact
   introspection surface the same PR enabled. Deregister-after-use (the insert_overwrite
-  idiom), routed so early returns and `?` can't skip it. The Spark door carries v1's copy of
-  the same leak: fix it as a DECLARED divergence-with-issue, never silently in a fidelity port.
+  idiom), routed so early returns and `?` can't skip it. *(Corrected 2026-08-11, H-1b: the
+  original wording "every exit path" overstated the mechanism — unwind and future-drop are not
+  covered, deliberately (no `Drop`); and the Spark door's copy of the leak is now FIXED by
+  H-1b with pins, not declared — a fixed defect gets no registry row. See
+  `task/h1b-ledger.md`.)*
 - **DO pick the sync recipe by branch relationship.** Stacked branch after a squash-merge:
   verify the squash tree equals the prior branch head (empty diff), then blanket `--ours` is
   provably correct. SIBLING branches: union-merge by hand, then re-check semantic riders (a

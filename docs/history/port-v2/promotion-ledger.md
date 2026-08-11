@@ -171,9 +171,9 @@ row back-references another.
 | `datafusion.*` builder keys reach `SessionConfig`; an unknown key fails loud naming the key; `repark.*` / `spark.*` keep their tolerant consumers | HOMED | `crates/repark-core/src/session.rs` + its map + the seven named pins |
 | **OPEN rider:** whether the fork's `$`-suffixed metadata tables should be filtered out of `SHOW TABLES` / `information_schema.tables` (Trino hides them; we do not) — pinned as current behavior in two tests | HOMED | [STATUS.md](../../../STATUS.md) "Known correctness issues" (the `$`-metadata introspection rider) |
 | **OPEN rider:** identifier case folding diverges from Apache Spark (quoted identifiers are case-**sensitive** here, through both doors, inherited from stock DataFusion resolution) | **PROMOTED** | [STATUS.md](../../../STATUS.md) "Known correctness issues" |
-| **OPEN rider:** the Spark door has the same time-travel pinned-view leak the ANSI door fixed | HOMED | [STATUS.md](../../../STATUS.md) "Known correctness issues" |
+| ~~**OPEN rider:**~~ **CLOSED by H-1b (2026-08-11)** — the Spark door had the same time-travel pinned-view leak the ANSI door fixed (and the ANSI door's own fix turned out to be half-done; both closed in that unit) | HOMED, then CLOSED | [task/h1b-ledger.md](../../../task/h1b-ledger.md); the STATUS entry was deleted by the fixing unit, per that section's own rule |
 | **OPEN rider:** the cited-test-name gate (carried from PR-5) | **PROMOTED** | see the p2f row above — [crates/repark-common/map.md](../../../crates/repark-common/map.md) "Known limitations" |
-| Release ephemeral providers on every exit path (`PinnedViews` + release after planning) | HOMED | [task/lessons.md](../../../task/lessons.md) 2026-08-08 (phase 2) + `crates/repark-sql/src/time_travel.rs` |
+| Release ephemeral providers on every `?` / `return` path (`PinnedViews` + release after planning; wording corrected 2026-08-11 by H-1b) | HOMED | [task/lessons.md](../../../task/lessons.md) 2026-08-08 (phase 2, corrected 2026-08-11) + `crates/repark-sql/src/time_travel.rs` |
 | Seam freeze: `SqlDialect` / `SessionExtension` are FROZEN (2026-08-08); `EngineContext` stays `#[non_exhaustive]` | HOMED | [docs/design/session-api.md](../../design/session-api.md) "Seam freeze" |
 | ADR-0002's design-pass obligation is discharged; the maintenance-as-callable-ops pin keeps its trigger | HOMED | [docs/adr/0002-two-sql-doors.md](../../adr/0002-two-sql-doors.md) |
 | Dev-dependencies may cross the door boundary; nothing in `src/` may name the other door | HOMED | `scripts/check_crate_dag.py` `ALLOWED_EDGES` (the SSOT, with the dev-only edge declared as `dev`) |
@@ -270,7 +270,7 @@ The live-backlog condensation. Every unchecked item at the time of archival, and
 | Item (unchecked at archival) | Disposition | Authoritative home today |
 |---|---|---|
 | `repark-postgres` + `repark-excel` read connectors — post-milestone-one | **PROMOTED** | [STATUS.md](../../../STATUS.md) "Deferred capabilities" |
-| Spark-door time-travel temp-view leak (declared divergence, fix paired with the v1 bugfix) | HOMED | [STATUS.md](../../../STATUS.md) "Known correctness issues" |
+| Spark-door time-travel temp-view leak (declared divergence, fix paired with the v1 bugfix) — **CLOSED by H-1b (2026-08-11)**, and NOT as a divergence: a fixed defect gets no registry row | HOMED, then CLOSED | [task/h1b-ledger.md](../../../task/h1b-ledger.md); the STATUS entry was deleted by the fixing unit |
 | `$`-metadata-table filtering in introspection | HOMED | [STATUS.md](../../../STATUS.md) "Known correctness issues" |
 | Cutover sequencing during parallel-run (single-writer-per-table) | **PROMOTED** | [STATUS.md](../../../STATUS.md) "Current milestone" (the production-pipeline cutover inventory) |
 | Never-OOM goal pending a spill-coverage spike | **PROMOTED** | [STATUS.md](../../../STATUS.md) "Deferred capabilities" (scoped into the V2 Engine Hardening campaign) |

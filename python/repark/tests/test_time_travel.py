@@ -286,18 +286,10 @@ def test_write_to_branch_unsupported(
         frame.writeTo(TABLE).option("branch", "branch_s2").append()
 
 
-def test_time_travel_temp_views_hidden_from_list_tables(
-    spark: ReparkSession, multi_snapshot: dict[str, object]
-) -> None:
-    """I1 ephemeral ``__repark_tt_*`` pins must not surface in Catalog.listTables (C1-Q-002).
-
-    Mutation-proof: information_schema still sees the registration (so the pin is not
-    "nothing was registered"); listTables must filter the private prefix.
-    """
-    s1 = multi_snapshot["s1"]
-    _ = spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF {s1}").to_arrow()
+def _tt_registrations(spark: ReparkSession) -> list[str]:
+    """Ephemeral ``__repark_tt_*`` names currently registered on the session."""
     spark._ensure_information_schema()
-    raw_names = (
+    return (
         spark.sql(
             "SELECT table_name FROM information_schema.tables WHERE table_name LIKE '__repark_tt_%'"
         )
@@ -305,9 +297,47 @@ def test_time_travel_temp_views_hidden_from_list_tables(
         .column("table_name")
         .to_pylist()
     )
-    assert raw_names, "expected at least one __repark_tt_* registration after time-travel read"
-    listed = [table.name for table in spark.catalog.listTables("ns")]
-    listed += [table.name for table in spark.catalog.listTables()]
+
+
+def test_time_travel_temp_views_hidden_from_list_tables(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    """I1 ephemeral ``__repark_tt_*`` pins must not surface in Catalog.listTables (C1-Q-002).
+
+    Two halves, because the two producers of the prefix now behave differently:
+
+    * the **SQL rewrite** releases its pins once the statement is planned (the H-1b
+      ephemeral-view leak fix — they used to survive the statement, and survive its failure),
+      so a ``VERSION AS OF`` query adds nothing to the introspection surface at all;
+    * the **reader-options** path (``option("snapshot-id", …)``) still registers one, because
+      that view backs the DataFrame it hands back. That registration is what keeps this pin
+      non-vacuous: listTables must filter a prefix that is really there.
+
+    The final step asserts positive membership of the real table before asserting the absence of
+    the prefix, so an empty listing cannot green the filter assertion.
+    """
+    s1 = multi_snapshot["s1"]
+    before = _tt_registrations(spark)
+
+    _ = spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF {s1}").to_arrow()
+    assert _tt_registrations(spark) == before, (
+        "the SQL time-travel rewrite must release its ephemeral pins once the statement is planned"
+    )
+
+    _ = spark.read.format("iceberg").option("snapshot-id", str(s1)).load(TABLE).to_arrow()
+    after_read = _tt_registrations(spark)
+    assert len(after_read) > len(before), (
+        "the reader-options pin must still be registered — otherwise the listTables assertion "
+        f"below is vacuous (before={before}, after={after_read})"
+    )
+
+    ns_listed = [table.name for table in spark.catalog.listTables("ns")]
+    listed = [*ns_listed, *(table.name for table in spark.catalog.listTables())]
+    # Positive membership FIRST: an empty (or broken) listing would green the leak assertion
+    # below for entirely the wrong reason.
+    assert TABLE.rsplit(".", 1)[-1] in ns_listed, (
+        f"listTables must still list the real table it is filtering around: {ns_listed}"
+    )
     leaked = [name for name in listed if str(name).startswith("__repark_tt_")]
     assert leaked == [], f"time-travel temp views leaked into listTables: {leaked}"
 

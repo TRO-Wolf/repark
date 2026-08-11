@@ -680,6 +680,15 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `list_df_schema_table_names` for non-Iceberg permanents. **listTables** globally hides
   engine-private prefixes `__repark_cdf_*` / `__repark_mia_*` / `__repark_tt_*` (I1 time-travel
   static pins — octo C1-Q-002); two-part `spark_catalog.db` aliases like `tableExists` (octo C2-Q-002).
+  Since **H-1b (2026-08-11)** the `__repark_tt_*` filter's live subject is the **reader-options**
+  registration only (`spark.read.option("snapshot-id", …)`, which keeps its view because that view
+  backs the returned frame): the SQL `VERSION AS OF` rewrite releases its pins once the statement
+  is planned, so it no longer produces anything for this filter to hide. The filter stays — dropping
+  it would expose the reader-options pin — and the test now sources its non-vacuity from that path.
+  That sourcing is only sound because the two paths can no longer collide: until the same unit's
+  fix pass the engine had TWO minters of the prefix, both counting from 1, so a `VERSION AS OF`
+  statement could deregister the very reader-options view this filter hides (engine pin:
+  `repark-spark`'s `time_travel_statement_pins_never_collide_with_a_reader_options_view`).
   Optional list* `pattern` uses Spark filterPattern (`*` / `|`;
   Python `re` `\A…\Z` anchors — not Rust `\z`). Non-str args → `PySparkTypeError`. Listing
   divergences rowed as

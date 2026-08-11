@@ -132,23 +132,43 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
         } else {
             std::borrow::Cow::Borrowed(sql)
         };
+    // The time-travel rewrite registers ephemeral pinned relations on the session; they are
+    // released again as soon as the statement has been PLANNED, so a long-lived session neither
+    // accumulates them nor shows them in the introspection surface (`SHOW TABLES` /
+    // `information_schema.tables`). The plan owns its provider, so the returned `DataFrame` still
+    // collects after the name is gone. The release runs on every `?` / `return` path of the split
+    // below — but NOT on unwind or future-drop: `PinnedViews` carries no `Drop` impl by design (it
+    // would have to own a `SessionContext` clone), and neither source exists today (panics banned
+    // in prod, PyO3 drives this via `block_on`).
+    let mut pinned = time_travel::PinnedViews::default();
+    let result = execute_time_travelled(ctx, &catalogs, sql_after_meta.as_ref(), &mut pinned).await;
+    pinned.release(ctx);
+    result
+}
+
+/// The rest of the router, from the time-travel rewrite onward. Split out purely so
+/// [`execute_with_read_only`] can release `pinned` on every `?` / `return` path of the rewrite —
+/// the ones an inline `?` would have skipped. (Unwind / future-drop bypass it; see the call site.)
+async fn execute_time_travelled(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    pinned: &mut time_travel::PinnedViews,
+) -> Result<DataFrame> {
     // Iceberg time travel (`VERSION AS OF` / `TIMESTAMP AS OF` / `FOR SYSTEM_* AS OF`) is not
     // modelled by Databricks-dialect sqlparser. Rewrite to snapshot-pinned static providers
     // (fork `IcebergStaticTableProvider::try_new_from_table_snapshot`) before normal routing.
     // I1 / R-TIME-TRAVEL — kept out of `execute_inner` so the router stays under clippy
     // `too_many_lines`.
-    let sql_storage: std::borrow::Cow<'_, str> =
-        if time_travel::sql_has_time_travel(sql_after_meta.as_ref()) {
-            match time_travel::prepare_time_travel_sql(ctx, &catalogs, sql_after_meta.as_ref())
-                .await?
-            {
-                Some(rewritten) => std::borrow::Cow::Owned(rewritten),
-                None => sql_after_meta,
-            }
-        } else {
-            sql_after_meta
-        };
-    execute_inner(ctx, &catalogs, sql_storage.as_ref()).await
+    let sql_storage: std::borrow::Cow<'_, str> = if time_travel::sql_has_time_travel(sql) {
+        match time_travel::prepare_time_travel_sql(ctx, catalogs, sql, pinned).await? {
+            Some(rewritten) => std::borrow::Cow::Owned(rewritten),
+            None => std::borrow::Cow::Borrowed(sql),
+        }
+    } else {
+        std::borrow::Cow::Borrowed(sql)
+    };
+    execute_inner(ctx, catalogs, sql_storage.as_ref()).await
 }
 
 async fn execute_inner(
