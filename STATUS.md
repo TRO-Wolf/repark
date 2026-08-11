@@ -173,6 +173,12 @@ moving it. Nothing is described in both places.
   (2026-08-10)**: a silently-wrong-result class (a 10⁹ factor on every timestamp→integer cast),
   found while authoring the timezone corpus; not a zone bug, and it gets its own unit rather than
   a fold into the extraction fix. Semantics + pin: registry §7 row TZ-5.
+- **decimal128 semantics diverge from Apache Spark across nine classes** — **BACKLOG, open
+  (2026-08-11)**: bare-literal inference, division precision/scale, the 38-digit result-type
+  clamp (and its plan-refuse face), `avg`/`INT*DECIMAL` promotion, ANSI overflow and
+  divide-by-zero, and arithmetic nullability — recorded against live PySpark 4.1.2 by the G-7
+  differential corpus (hardening gaps G2 + G13). Semantics + pins: registry §7 rows DEC-1 …
+  DEC-9; the corpus classifies any silent convergence CONVERGED-flip-don't-delete.
 
 **Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
 **2026-08-10** — see

@@ -743,6 +743,123 @@ the pin rather than obeying it.
   changing the representation (TZ-4). Registry queue **B-TZ-3** is the `DATE`-argument sibling of the
   same `date_add` coercion hole.
 
+> **The DEC family (DEC-1 … DEC-9)** landed on 2026-08-11 from the G-7 decimal128 differential
+> corpus (hardening gaps **G2** and **G13**; unit ledger
+> [../task/g7-decimal-ledger.md](../task/g7-decimal-ledger.md)). Oracle basis for every Spark half:
+> **recorded** — live PySpark 4.1.2 (ANSI on), re-derivable in-repo via the committed driver
+> `python/repark/tests/_record_decimal128_goldens.py`. Every pin below is a parametrized case of
+> `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges`,
+> written `[<case>]` for short; each asserts repark's pinned half AND classifies a drift as
+> CONVERGED (flip, don't delete) vs regression.
+
+### DEC-1 — a bare SQL decimal literal infers `double`
+
+- **repark** — `SELECT 1.23 AS v`, `SELECT 0.1 AS v` and `SELECT 123.456 AS v` all yield Arrow
+  `float64` non-null with the binary-float value.
+- **Apache Spark** — infers `decimal128(3,2)` / `decimal128(1,1)` / `decimal128(6,3)` non-null
+  with the exact `Decimal` value. *(oracle: recorded.)*
+- **Pin** — `[literal_1_23_infers_decimal_in_spark_double_in_repark]`,
+  `[literal_0_1_infers_decimal_in_spark_double_in_repark]`,
+  `[literal_123_456_infers_decimal_in_spark_double_in_repark]`
+- **Rationale** — BACKLOG, intent to FIX (gap G2). A money column written from a bare literal is
+  the wrong Arrow type, and `0.1` is the classic binary-float landmine surfaced as a type
+  divergence. This is the SQL `SELECT`-literal sibling of
+  [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES`, DECLARED narrow-impact); a
+  literal-inference fix that lands for G2 revisits TY-3's declaration by a dated decision in the
+  same change, never silently.
+
+### DEC-2 — `DECIMAL / DECIMAL` result precision and scale
+
+- **repark** — `CAST(1.23 AS DECIMAL(10,2)) / CAST(4.56 AS DECIMAL(10,2))` yields
+  `decimal128(16,6)` nullable with rounded value `0.269736`; repeating money division
+  `(10.00)/(3.00)` → `(16,6)` `3.333333`; integer-scale `1/3` at `(10,0)` → `(14,4)` `0.3333`;
+  exact half `5.00/2.00` keeps value `2.5` but lands `(16,6)`.
+- **Apache Spark** — `(10,2)/(10,2)` yields `decimal128(23,13)` nullable `0.2697368421053`;
+  repeating money stays `(23,13)`; integer-scale lands `(21,11)` `0.33333333333`; exact half is
+  `(23,13)` `2.5000000000000`. *(oracle: recorded.)*
+- **Pin** — `[div_same_precision_scale]`, `[div_repeating_money]`, `[div_integer_scales]`,
+  `[div_exact_half_type_only]`
+- **Rationale** — BACKLOG, intent to FIX (gap G2 — Spark-compatible division precision/scale
+  rules). Value AND type diverge on three recipes; the fourth is type-only. A unit-price split is
+  silently short under repark's six fractional digits.
+
+### DEC-3 — the 38-digit result-type clamp on multiply and add
+
+- **repark** — keeps `s1+s2` / `max(s)` without Spark's p≤38 scale clamp:
+  `(38,10)*(38,10)` → `decimal128(38,20)`; `(38,18)+(38,18)` → `(38,18)`;
+  `(38,10)+(38,10)` → `(38,10)`.
+- **Apache Spark** — reduces scale to keep precision ≤ 38: `(38,10)*(38,10)` → `(38,6)`;
+  `(38,18)+(38,18)` → `(38,17)`; `(38,10)+(38,10)` → `(38,9)`. *(oracle: recorded.)*
+- **Pin** — `[mul_38_10_clamps_scale_in_spark]`, `[add_38_18_clamps_scale_in_spark]`,
+  `[add_38_10_clamps_scale_in_spark]`; family coverage is additionally pinned by
+  `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_set_covers_gap_budgets`
+  (≥ 3 rows named `*clamps_scale_in_spark` — a `DECIMAL(38,…)` equality control cannot green it)
+- **Rationale** — BACKLOG, intent to FIX (gap G2 — the 38-digit result-type clamp matching
+  Spark). A high-scale product is the wrong width under repark.
+
+### DEC-4 — `avg(DECIMAL)` promotes to `double`
+
+- **repark** — `avg` over `DECIMAL(10,2)` yields Arrow `float64` nullable with binary residue
+  `1.6500000000000001`.
+- **Apache Spark** — keeps `decimal128(14,6)` nullable with exact `Decimal('1.650000')`.
+  *(oracle: recorded.)*
+- **Pin** — `[avg_money_stays_decimal_in_spark_double_in_repark]`
+- **Rationale** — BACKLOG, intent to FIX (gap G2 — keep `avg` of decimal as decimal). An average
+  unit price is not money-safe under repark's float64 promotion.
+
+### DEC-5 — `INT * DECIMAL` result width and nullability
+
+- **repark** — `5 * CAST(1.50 AS DECIMAL(10,2))` yields `decimal128(31,2)` **non-null** with
+  value `7.50`.
+- **Apache Spark** — yields `decimal128(12,2)` **nullable** with the same value. *(oracle:
+  recorded.)*
+- **Pin** — `[int_times_decimal_promotes_wider_in_repark]`
+- **Rationale** — BACKLOG, intent to FIX (gap G2). Value agrees; precision width and nullability
+  are a schema-level money divergence.
+
+### DEC-6 — max `DECIMAL(38,0) + 1` under ANSI returns a corrupted value
+
+- **repark** — returns a corrupted `decimal128(38,0)` value (no raise) for
+  `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))`.
+- **Apache Spark** — under ANSI raises `ArithmeticException` / `NUMERIC_VALUE_OUT_OF_RANGE`.
+  *(oracle: recorded.)*
+- **Pin** — `[overflow_max_decimal38_plus_one_raises_in_spark]`
+- **Rationale** — BACKLOG, intent to FIX (gap G13 — ANSI overflow raise, or honest NULL under
+  non-ANSI). Silently-wrong-result class on the integrity path.
+
+### DEC-7 — `DECIMAL / 0` under ANSI returns NULL
+
+- **repark** — returns NULL at a decimal result type: `(38,0)/(38,0)` → NULL at
+  `decimal128(38,4)`; small `(2,0)/(2,0)` → NULL at `decimal128(6,4)`.
+- **Apache Spark** — under ANSI raises `ArithmeticException` / `DIVIDE_BY_ZERO` for both recipes.
+  *(oracle: recorded.)*
+- **Pin** — `[div_by_zero_decimal38_raises_in_spark_null_in_repark]`,
+  `[div_by_zero_small_decimal_raises_in_spark_null_in_repark]`
+- **Rationale** — BACKLOG, intent to FIX (gap G13). NULL-vs-raise is an integrity divergence for
+  any consumer that distinguishes error from missing.
+
+### DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` refuses at plan time
+
+- **repark** — refuses with `AnalysisException` (`Cannot get result type for decimal operation …
+  38,20 * 38,20`).
+- **Apache Spark** — clamps the product to `decimal128(38,6)` and succeeds. *(oracle: recorded.)*
+- **Pin** — `[mul_38_20_plans_in_spark_refuses_in_repark]`
+- **Rationale** — BACKLOG, intent to FIX (gap G13; folds into
+  [DEC-3](#dec-3--the-38-digit-result-type-clamp-on-multiply-and-add)'s clamp follow-on — the
+  same missing rule, surfaced as a hard plan failure instead of a wrong width).
+
+### DEC-9 — overflow-capable binary arithmetic is marked non-null
+
+- **repark** — marks small mul/add results **non-null** while values and `(p,s)` agree with
+  Spark: `9*9` → `(3,0)` non-null `81`; `9+9` → `(2,0)` non-null `18`; `999*999` → `(7,0)`
+  non-null `998001`.
+- **Apache Spark** — marks the same results **nullable** (overflow-capable binary arithmetic) at
+  the same types and values. *(oracle: recorded.)*
+- **Pin** — `[mul_single_digit_nullability_differs]`, `[add_single_digit_nullability_differs]`,
+  `[mul_three_digit_capacity_nullability_differs]`
+- **Rationale** — BACKLOG, intent to FIX (gap G13). Nullability-only pin; a schema-sensitive
+  consumer that trusts non-null is wrong under repark's marking.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Five candidates surfaced by the session-timezone unit carry **no pin yet**, so under §6 they are
