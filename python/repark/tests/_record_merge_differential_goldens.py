@@ -17,13 +17,20 @@ Hadoop warehouse catalog.
 Fetched at record time via ``spark.jars.packages``. CI stays JVM-free — this driver is never
 collected by pytest and is not on any CI path.
 
-**Recipe (re-derivable):**
+**Recipe (re-derivable).** First the full parity-live sync line (load-bearing flags; dual-wired
+Makefile ↔ ``parity-live.yml``)::
+
+    uv sync --locked --extra record \\
+        --extra numpy --extra pandas --extra polars --extra ml-ext \\
+        --no-install-package repark
+
+Then the record driver::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py
 
-Requires: Java 17 (zulu-17), ``uv sync --extra record`` (pyspark==4.1.2), network on first
+Requires: Java 17 (zulu-17), the sync above (``record`` extra → pyspark==4.1.2), network on first
 resolve for the Ivy/Maven fetch (then cached under ``~/.ivy2.5.2/jars``).
 
 The driver imports ``ROWS`` from the COMMITTED test module and runs each row's OWN lifecycle
@@ -103,7 +110,7 @@ def _record_content_row(spark: Any, row: MergeDiffRow) -> str | None:
         row,
         catalog=SPARK_CATALOG,
         namespace=SPARK_NAMESPACE,
-        with_cow_props=row.spark_needs_cow_props,
+        with_cow_props=False,  # Spark Iceberg 1.11 accepts MERGE without COW TBLPROPERTIES
     )
     recorded = row.spark
     if _signature(live) == _signature(recorded) and live.equals(recorded):
@@ -128,7 +135,7 @@ def _record_error_row(spark: Any, row: MergeDiffRow) -> str | None:
         row,
         catalog=SPARK_CATALOG,
         namespace=SPARK_NAMESPACE,
-        with_cow_props=row.spark_needs_cow_props,
+        with_cow_props=False,  # Spark Iceberg 1.11 accepts MERGE without COW TBLPROPERTIES
     )
     if row.spark_error_needle in message:
         print(f"[G3] {row.name} [error] PASS ({row.spark_error_needle})")
@@ -151,7 +158,7 @@ def _record_split_row(spark: Any, row: MergeDiffRow) -> str | None:
         row,
         catalog=SPARK_CATALOG,
         namespace=SPARK_NAMESPACE,
-        with_cow_props=row.spark_needs_cow_props,
+        with_cow_props=False,  # Spark Iceberg 1.11 accepts MERGE without COW TBLPROPERTIES
     )
     recorded = row.spark
     if _signature(live) == _signature(recorded) and live.equals(recorded):
@@ -188,7 +195,7 @@ def _assert_warehouse_clean_after_error(spark: Any) -> str | None:
         error_row,
         catalog=SPARK_CATALOG,
         namespace=SPARK_NAMESPACE,
-        with_cow_props=error_row.spark_needs_cow_props,
+        with_cow_props=False,  # Spark Iceberg 1.11 accepts MERGE without COW TBLPROPERTIES
     )
     # listTables via Spark SQL
     try:

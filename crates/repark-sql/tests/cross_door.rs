@@ -26,7 +26,7 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int64Array, StringArray};
+use datafusion::arrow::array::{Array, Decimal128Array, Int64Array, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field};
 use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
@@ -653,5 +653,95 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
         spark_quoted.contains("No field named") && spark_quoted.contains("\"ID\""),
         "the Spark-door refusal must be a resolution failure naming the unresolved identifier as \
          `\"ID\"` (row ID-1): {spark_quoted}"
+    );
+}
+
+// =================================================================================================
+// G-7b — decimal128 cross-door rows (same SQL through both doors; schema + i128 + nullability)
+// =================================================================================================
+
+/// One-column Decimal128 result through a session: `(precision, scale, nullable, i128_or_null)`.
+///
+/// Compared bit-exact across doors. Goldens derive from the Python corpus equality rows
+/// `add_same_precision_scale` / `mul_money_by_quantity` (repark already matches Spark there).
+async fn decimal128_scalar(session: &ReparkSession, sql: &str) -> (u8, i8, bool, Option<i128>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let nullable = field.is_nullable();
+    let (precision, scale) = match field.data_type() {
+        DataType::Decimal128(precision, scale) => (*precision, *scale),
+        other => panic!("expected Decimal128 for `{sql}`, got {other:?}"),
+    };
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Decimal128Array>()
+        .expect("Decimal128Array");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (precision, scale, nullable, value)
+}
+
+/// G-7b cross-door row 1 — money add. Corpus row `add_same_precision_scale`.
+///
+/// Same SQL string through native ANSI (`AnsiDialect`, no extension) and Spark-extended
+/// (`SparkDialect` + `SparkExtension`). Asserts schema `(p,s)` + nullability + raw i128 are
+/// bit-exact equal across doors, and match the corpus golden (11,2) / 579.
+#[tokio::test]
+async fn cross_door_decimal_add_same_precision_scale_bit_exact() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(1.23 AS DECIMAL(10,2)) + CAST(4.56 AS DECIMAL(10,2)) AS v";
+
+    let ansi_pin = decimal128_scalar(&ansi.session, sql).await;
+    let spark_pin = decimal128_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "decimal add must agree across doors (schema + nullability + i128)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (11, 2, false, Some(579)),
+        "shared result must match corpus row add_same_precision_scale"
+    );
+}
+
+/// G-7b cross-door row 2 — money × quantity. Corpus row `mul_money_by_quantity`.
+///
+/// Same two-session protocol as the add row. Golden: decimal128(21,2) non-null i128=5997.
+#[tokio::test]
+async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(19.99 AS DECIMAL(10,2)) * CAST(3 AS DECIMAL(10,0)) AS v";
+
+    let ansi_pin = decimal128_scalar(&ansi.session, sql).await;
+    let spark_pin = decimal128_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "decimal mul must agree across doors (schema + nullability + i128)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (21, 2, false, Some(5997)),
+        "shared result must match corpus row mul_money_by_quantity"
     );
 }

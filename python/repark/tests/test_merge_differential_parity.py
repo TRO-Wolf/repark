@@ -19,22 +19,28 @@ comparator, so schema name, Arrow type and nullability are part of every content
 never ``show``. Error-class rows pin the error *token* both engines raise (honest class compare),
 not a full stack trace.
 
-**Re-deriving the goldens (record mode).** The driver that recorded every Spark half is committed
-beside this module::
+**Re-deriving the goldens (record mode).** Provision the same extras the live parity tier uses
+(parity-live sync line — load-bearing flags; dual-wired Makefile ↔ ``parity-live.yml``)::
+
+    uv sync --locked --extra record \\
+        --extra numpy --extra pandas --extra polars --extra ml-ext \\
+        --no-install-package repark
+
+Then run the record driver (JVM + pinned pyspark from the ``record`` extra; never collected by
+pytest; Iceberg jar is a **record-time** dependency only via ``spark.jars.packages``)::
 
     JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \\
         PYTHONPATH=python/repark-parity/src \\
         .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py
 
 It imports ``ROWS`` from THIS module and runs each row's own lifecycle recipe, so the recorded
-golden and the asserted recipe cannot drift apart. It needs a JVM + ``pyspark``
-(``uv sync --extra record``) and is never collected by pytest. The Iceberg jar is a
-**record-time** dependency only (fetched by coordinates via ``spark.jars.packages``); CI stays
-JVM-free.
+golden and the asserted recipe cannot drift apart. CI stays JVM-free.
 
-**Explicitly deferred (declared, not silent):** the 4 Rust pins (duplicate-source-key detection,
-arm ordering — G-4's file ban on ``crates/repark-spark/src/tests.rs``) and the 2 live-tier
-scenarios (needs ``_live_parity`` + workflow changes). Follow-up after G-4.
+**N-2b status.** The 4 Rust MERGE pins (duplicate-source-key detection, arm ordering + siblings)
+landed in ``crates/repark-spark/src/tests/merge.rs``. The 2 live-tier MERGE scenarios and the
+``_live_parity`` lifecycle abstraction remain **deferred** (see
+``task/n2b-merge-followup-ledger.md`` and ``planning/grok/W2-LIFECYCLE-DESIGN.md``) — not
+implemented in this unit.
 
 **Entry point.** Every content row goes through the facade ``sql()`` door over a real Iceberg
 table (memory catalog). The builder ``mergeInto`` path is already covered by
@@ -44,6 +50,7 @@ table (memory catalog). The builder ``mergeInto`` path is already covered by
 from __future__ import annotations
 
 import contextlib
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -61,13 +68,45 @@ if TYPE_CHECKING:
 # Oracle environment pin (record-time only; never a CI dependency)
 # ==================================================================================================
 
-# Q2 ruling: iceberg-spark-runtime whose Spark minor matches 4.1. Published as 4.1_2.13:1.11.0 —
-# exact minor match under zulu-17 + PySpark 4.1.2. Re-derive command is in the module docstring
-# and in task/n2-merge-ledger.md.
+# Q2 ruling: iceberg-spark-runtime whose Spark minor matches the pinned pyspark major.minor
+# (derived at test time from python/repark-parity/pyproject.toml's record extra — CP-8; never a
+# restated constant). Published artifact uses Scala 2.13. Iceberg runtime version is the pin
+# below; re-derive command is in the module docstring.
 ICEBERG_SPARK_RUNTIME_GAV = "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 ICEBERG_SPARK_RUNTIME_NOTE = (
     "oracle: PySpark 4.1.2 + iceberg-spark-runtime-4.1_2.13:1.11.0 (exact Spark-minor match)"
 )
+
+# Scala binary of the published iceberg-spark-runtime artifact for Spark 4.x (not derived from
+# pyspark — Apache Iceberg publishes _2.13 for this line).
+_ICEBERG_SPARK_SCALA_BINARY = "2.13"
+# Iceberg runtime version coordinate (independent of the Spark-minor match duty).
+_ICEBERG_RUNTIME_VERSION = "1.11.0"
+
+
+def _pinned_pyspark_version() -> str:
+    """Return the exact ``pyspark==X.Y.Z`` pin from repark-parity's ``record`` extra (SSOT).
+
+    Routine CI does not install pyspark, so this reads the declared pin from
+    ``python/repark-parity/pyproject.toml`` rather than ``importlib.metadata``.
+    """
+    pyproject = Path(__file__).resolve().parents[2] / "repark-parity" / "pyproject.toml"
+    text = pyproject.read_text(encoding="utf-8")
+    match = re.search(r"pyspark==([0-9]+\.[0-9]+\.[0-9]+)", text)
+    if match is None:
+        raise AssertionError(
+            f"could not find pyspark==X.Y.Z pin in {pyproject} (record extra SSOT)"
+        )
+    return match.group(1)
+
+
+def _spark_major_minor(pyspark_version: str) -> str:
+    """``4.1.2`` → ``4.1`` — the Spark minor the Iceberg runtime GAV must match (CP-8)."""
+    parts = pyspark_version.split(".")
+    if len(parts) < 2:
+        raise AssertionError(f"pyspark version {pyspark_version!r} has no major.minor")
+    return f"{parts[0]}.{parts[1]}"
+
 
 # repark memory catalog name used by the suite; the record driver uses "local" for Spark's
 # Hadoop catalog. Both are substituted into recipes via the lifecycle helper.
@@ -142,8 +181,9 @@ class MergeDiffRow:
     repark: pa.Table | None = None
     spark_error_needle: str | None = None
     repark_error_needle: str | None = None
-    # When True, Spark needs TBLPROPERTIES on CREATE (repark always sets COW props).
-    spark_needs_cow_props: bool = False
+    # N-2b: the former ``spark_needs_cow_props`` row knob is gone (always False, never wired).
+    # Lifecycle helpers still take ``with_cow_props``: repark callers pass True (COW pin for
+    # determinism); Spark record-mode callers pass False (Iceberg 1.11 accepts MERGE without).
 
 
 # ==================================================================================================
@@ -817,10 +857,27 @@ def test_lifecycle_cleanup_after_failed_merge(
 
 
 def test_iceberg_gav_pin_is_exact_spark_minor() -> None:
-    """The record-time GAV pin is an exact Spark-4.1 runtime (Q2 ruling — no silent mismatch)."""
-    assert "4.1_2.13" in ICEBERG_SPARK_RUNTIME_GAV, (
-        "prefer iceberg-spark-runtime whose Spark minor matches 4.1; if forced to a mismatched "
-        "minor, every golden must carry an oracle-environment caveat — never silent"
+    """Record-time GAV Spark-minor is derived from the pinned pyspark version (CP-8 / N-2b).
+
+    The expected ``{major}.{minor}_{scala}`` token is computed from
+    ``python/repark-parity/pyproject.toml``'s ``pyspark==X.Y.Z`` record-extra pin — never a
+    restated constant that would stay green if the pin and the GAV drifted apart.
+    """
+    pinned = _pinned_pyspark_version()
+    major_minor = _spark_major_minor(pinned)
+    expected_token = f"{major_minor}_{_ICEBERG_SPARK_SCALA_BINARY}"
+    assert expected_token in ICEBERG_SPARK_RUNTIME_GAV, (
+        f"prefer iceberg-spark-runtime whose Spark minor matches pinned pyspark {pinned} "
+        f"(expected token {expected_token!r} in {ICEBERG_SPARK_RUNTIME_GAV!r}); if forced to a "
+        f"mismatched minor, every golden must carry an oracle-environment caveat — never silent"
     )
-    assert ICEBERG_SPARK_RUNTIME_GAV.endswith(":1.11.0")
-    assert "4.1" in ICEBERG_SPARK_RUNTIME_NOTE
+    assert ICEBERG_SPARK_RUNTIME_GAV.endswith(f":{_ICEBERG_RUNTIME_VERSION}"), (
+        f"GAV must pin Iceberg runtime {_ICEBERG_RUNTIME_VERSION}, "
+        f"got {ICEBERG_SPARK_RUNTIME_GAV!r}"
+    )
+    assert major_minor in ICEBERG_SPARK_RUNTIME_NOTE, (
+        f"NOTE must name the derived Spark minor {major_minor!r}: {ICEBERG_SPARK_RUNTIME_NOTE!r}"
+    )
+    assert pinned in ICEBERG_SPARK_RUNTIME_NOTE, (
+        f"NOTE must name the pinned pyspark {pinned!r}: {ICEBERG_SPARK_RUNTIME_NOTE!r}"
+    )
