@@ -35,6 +35,11 @@ not this directory.
   is
   [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md);
   the ledger records how it was reached, not what it says.
+- [g6-chores-ledger.md](g6-chores-ledger.md) — **G-6 hardening chores** (four items, one PR):
+  parity-runner markdown default → `target/census-reports/`; four `session.rs` rustdoc
+  intra-link fixes; Glue acceptance location-mismatch fail-loud guard (+ DESCRIBE probe); and
+  the `make parity-live` ↔ `parity-live.yml` dual-wire checker with must-FAIL/must-PASS
+  provocation proofs.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags

@@ -44,7 +44,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py check-manifest rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py check-manifest check-parity-live-dual-wire rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -126,6 +126,14 @@ check-lib-rs: ## lib.rs thinness guard (no inline tests; line ceilings)
 	@# Ceilings + EXCEPTIONS SSOT: scripts/check_lib_rs.py — dual-wired with ci.yml's guards job.
 	@# Mirrors make check-crate-dag (dual-wire lesson: Makefile AND ci.yml, never one alone).
 	@./scripts/check_lib_rs.sh
+
+.PHONY: check-parity-live-dual-wire
+check-parity-live-dual-wire: ## Fail if make parity-live and parity-live.yml drift (load-bearing flags)
+	@# SSOT: scripts/check_parity_live_dual_wire.py — compares the two surfaces to EACH OTHER,
+	@# never to a third hand-maintained list. Fail-closed on parse miss.
+	@# DUAL-WIRED: the `parity-live dual-wire guard` step in ci.yml's guards job mirrors this
+	@# target. Change one, change the other.
+	@./scripts/check_parity_live_dual_wire.sh
 
 .PHONY: rust-check
 rust-check: ## cargo check

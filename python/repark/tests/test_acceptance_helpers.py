@@ -18,12 +18,15 @@ from _acceptance import (
     PRODUCTION_NAMESPACE,
     TARGET_FILE_SIZE_BYTES,
     acceptance_namespace_location,
+    assert_namespace_location_matches,
     bronze_path,
     ctas_sql,
     deduplicate,
     fq_table,
     glue_catalog_config,
+    location_from_describe_rows,
     merge_sql,
+    normalize_location_uri,
     s3tables_catalog_config,
 )
 
@@ -183,3 +186,171 @@ def test_operator_buckets_pass_the_guard(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(_acceptance, "BRONZE_BUCKET", "acme-bronze-real")
     monkeypatch.setattr(_acceptance, "GLUE_WAREHOUSE", "s3://acme-warehouse-real/")
     _acceptance.assert_real_buckets_configured()  # must not raise
+
+
+# ==============================================================================================
+# Namespace location-mismatch guard (G-6) — pure comparison, no AWS
+# ==============================================================================================
+def test_normalize_location_uri_strips_trailing_slashes_only() -> None:
+    assert normalize_location_uri("s3://bucket/ns/") == "s3://bucket/ns"
+    assert normalize_location_uri("s3://bucket/ns///") == "s3://bucket/ns"
+    # S3 paths are case-sensitive — no rewrite beyond trailing slashes.
+    assert normalize_location_uri("s3://Bucket/NS") == "s3://Bucket/NS"
+
+
+def test_location_guard_match_passes() -> None:
+    expected = acceptance_namespace_location("s3://acme-warehouse/")
+    assert_namespace_location_matches(actual=expected, expected=expected)
+    # Trailing-slash-only difference is still a match.
+    assert_namespace_location_matches(actual=expected + "/", expected=expected)
+
+
+def test_location_guard_mismatch_fails_loud_naming_both_values() -> None:
+    expected = acceptance_namespace_location("s3://acme-warehouse/")
+    stale = "s3://old-hand-test-bucket/testing_repark_acceptance"
+    with pytest.raises(RuntimeError) as excinfo:
+        assert_namespace_location_matches(actual=stale, expected=expected)
+    message = str(excinfo.value)
+    assert "mismatch" in message.lower()
+    assert stale.rstrip("/") in message
+    assert expected.rstrip("/") in message
+    assert "stale namespace" in message.lower()
+
+
+def test_location_guard_no_location_fails_loud() -> None:
+    expected = acceptance_namespace_location("s3://acme-warehouse/")
+    with pytest.raises(RuntimeError) as excinfo:
+        assert_namespace_location_matches(actual=None, expected=expected)
+    message = str(excinfo.value)
+    assert "no Location" in message or "catalog-has-no-location" in message
+    assert expected.rstrip("/") in message
+
+
+def test_location_from_describe_rows_extracts_location() -> None:
+    rows = [
+        ("Catalog Name", "glue_catalog"),
+        ("Namespace Name", "testing_repark_acceptance"),
+        ("Location", "s3://acme-warehouse/testing_repark_acceptance"),
+    ]
+    assert location_from_describe_rows(rows) == "s3://acme-warehouse/testing_repark_acceptance"
+
+
+def test_location_from_describe_rows_absent_is_none() -> None:
+    rows = [
+        ("Catalog Name", "glue_catalog"),
+        ("Namespace Name", "bare"),
+        ("Properties", ""),
+    ]
+    assert location_from_describe_rows(rows) is None
+
+
+def test_probe_namespace_location_via_describe_reads_location_row() -> None:
+    """AWS-free stub: probe drives DESCRIBE SQL + extracts Location from Arrow columns."""
+    import pyarrow as pa
+    from _acceptance import probe_namespace_location_via_describe
+
+    class _FakeFrame:
+        def to_arrow(self) -> pa.Table:
+            return pa.table(
+                {
+                    "info_name": ["Catalog Name", "Namespace Name", "Location"],
+                    "info_value": [
+                        "glue_catalog",
+                        "testing_repark_acceptance",
+                        "s3://acme-warehouse/testing_repark_acceptance",
+                    ],
+                }
+            )
+
+    class _FakeSpark:
+        def __init__(self) -> None:
+            self.last_sql: str | None = None
+
+        def sql(self, statement: str) -> _FakeFrame:
+            self.last_sql = statement
+            return _FakeFrame()
+
+    spark = _FakeSpark()
+    actual = probe_namespace_location_via_describe(
+        spark, "glue_catalog", "testing_repark_acceptance"
+    )
+    assert actual == "s3://acme-warehouse/testing_repark_acceptance"
+    assert spark.last_sql == "DESCRIBE NAMESPACE glue_catalog.testing_repark_acceptance"
+
+
+def test_assert_glue_scratch_namespace_location_composes_probe_and_compare() -> None:
+    """AWS-free: Glue wrapper fails when DESCRIBE Location disagrees with warehouse intent."""
+    import pyarrow as pa
+    from _acceptance import assert_glue_scratch_namespace_location
+
+    class _FakeFrame:
+        def __init__(self, location: str) -> None:
+            self._location = location
+
+        def to_arrow(self) -> pa.Table:
+            return pa.table(
+                {
+                    "info_name": ["Location"],
+                    "info_value": [self._location],
+                }
+            )
+
+    class _FakeSpark:
+        def __init__(self, location: str) -> None:
+            self._location = location
+
+        def sql(self, _statement: str) -> _FakeFrame:
+            return _FakeFrame(self._location)
+
+    expected = acceptance_namespace_location("s3://acme-warehouse/")
+    assert_glue_scratch_namespace_location(_FakeSpark(expected), "s3://acme-warehouse/")
+    with pytest.raises(RuntimeError, match="mismatch"):
+        assert_glue_scratch_namespace_location(
+            _FakeSpark("s3://stale-bucket/testing_repark_acceptance"),
+            "s3://acme-warehouse/",
+        )
+
+
+def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
+    """Structural pin: Glue leg *invokes* the guard; S3 Tables body must not.
+
+    AST-based (comments/strings do not count): the Glue test function must contain a real
+    ``Call`` to ``assert_glue_scratch_namespace_location`` after a real ``create_namespace``
+    call. Commenting the call out must turn this red.
+    """
+    import ast
+
+    source = (_TESTS_DIR / "test_aws_acceptance.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    def _function(name: str) -> ast.FunctionDef:
+        for node in tree.body:
+            if isinstance(node, ast.FunctionDef) and node.name == name:
+                return node
+        raise AssertionError(f"function {name} not found")
+
+    def _call_names(fn: ast.FunctionDef) -> list[tuple[str, int]]:
+        out: list[tuple[str, int]] = []
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Call):
+                func = node.func
+                if isinstance(func, ast.Name):
+                    out.append((func.id, node.lineno))
+                elif isinstance(func, ast.Attribute):
+                    out.append((func.attr, node.lineno))
+        return out
+
+    glue = _function("test_process_silver_acceptance_against_glue")
+    s3 = _function("test_process_silver_acceptance_against_s3tables")
+    glue_calls = _call_names(glue)
+    create_lines = [line for name, line in glue_calls if name == "create_namespace"]
+    guard_lines = [
+        line for name, line in glue_calls if name == "assert_glue_scratch_namespace_location"
+    ]
+    assert create_lines, "Glue leg must call create_namespace"
+    assert guard_lines, "Glue leg must call assert_glue_scratch_namespace_location"
+    assert min(create_lines) < min(guard_lines), "guard must run after ensure-namespace"
+    s3_names = {name for name, _ in _call_names(s3)}
+    assert "assert_glue_scratch_namespace_location" not in s3_names
+    s3_source = ast.get_source_segment(source, s3) or ""
+    assert "S3 Tables namespaces carry no location by design" in s3_source

@@ -791,8 +791,33 @@ def resolve_census_modules(
     return module_names
 
 
+def default_markdown_report_path(
+    worktree: Path,
+    *,
+    c4_expand: bool = False,
+    c3_expand: bool = False,
+    date_stamp: str | None = None,
+) -> Path:
+    """Default markdown report path — C-2 policy: gitignored ``target/census-reports/``.
+
+    Aligns with ``scripts/run_census.sh``'s ``CENSUS_REPORT_DIR`` default. Reports land under
+    the gitignored tree so an uncommitted local run cannot look like committed evidence under
+    ``task/census/<run>/``. Promote to evidence with an explicit copy into ``task/``; pass
+    ``--markdown`` to opt into any other path (including ``task/``).
+    """
+    stamp = date_stamp if date_stamp is not None else datetime.now(UTC).strftime("%Y-%m-%d")
+    report_dir = worktree / "target" / "census-reports"
+    if c4_expand:
+        name = f"pyspark-compat-report-c4-expand2-{stamp}.md"
+    elif c3_expand:
+        name = f"pyspark-compat-report-c3-expand-{stamp}.md"
+    else:
+        name = f"pyspark-compat-report-{stamp}.md"
+    return report_dir / name
+
+
 def render_markdown_report(report: CompatReport, *, series: str = _SERIES_C2) -> str:
-    """Human-readable census report (task/pyspark-compat-report-*.md body).
+    """Human-readable census report (default body under ``target/census-reports/``).
 
     ``series`` labels the scoreboard unit (C2 classic vs C3 expand) so dual denominators
     are never misread as the same /345 series (octo C3 C1-L-001).
@@ -1215,14 +1240,12 @@ def main(argv: list[str] | None = None) -> int:
     LOGGER.info("wrote JSON %s", args.output)
 
     if args.markdown is None:
-        # Default into task/ when running from the worktree.
-        date_stamp = datetime.now(UTC).strftime("%Y-%m-%d")
-        if args.c4_expand:
-            args.markdown = worktree / "task" / f"pyspark-compat-report-c4-expand2-{date_stamp}.md"
-        elif args.c3_expand:
-            args.markdown = worktree / "task" / f"pyspark-compat-report-c3-expand-{date_stamp}.md"
-        else:
-            args.markdown = worktree / "task" / f"pyspark-compat-report-{date_stamp}.md"
+        # C-2: default into gitignored target/census-reports/ (matches scripts/run_census.sh).
+        args.markdown = default_markdown_report_path(
+            worktree,
+            c4_expand=bool(args.c4_expand),
+            c3_expand=bool(args.c3_expand),
+        )
     args.markdown.parent.mkdir(parents=True, exist_ok=True)
     args.markdown.write_text(render_markdown_report(report, series=series), encoding="utf-8")
     LOGGER.info("wrote markdown %s", args.markdown)

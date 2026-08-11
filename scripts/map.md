@@ -105,6 +105,15 @@ Repository helper scripts wired into the dev workflow.
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
   `make check-lib-py` and the ci.yml `python` job in the same PR.
 
+- `check_parity_live_dual_wire.sh` + `check_parity_live_dual_wire.py` — the **parity-live dual-wire**
+  guard (G-6). Compares `make parity-live` and `.github/workflows/parity-live.yml` to **each
+  other** on load-bearing tokens (`uv sync` flag/extra set, `--no-install-package repark`,
+  maturin pin + `develop`, `uv run --locked --no-sync` + pytest path, `REPARK_PARITY_LIVE` /
+  `SPARK_LOCAL_IP`). No third hand-maintained expected-flags list. Fail-closed on a parse miss.
+  Scope is this one pair only (a one-line extensibility comment lives in the `.py`; there is no
+  multi-pair framework). Dual-wired: `make check-parity-live-dual-wire` (in `make ci`) AND the
+  ci.yml `guards`-job step.
+
 Not re-homed (the port is complete — each returns only with a concrete driver):
 `test_lock_gate.sh` (uv lock-gate detector self-test — a lock-gate change that needs it),
 `generate_excel_fixtures.py` (synthetic .xlsx fixtures — the deferred `repark-excel` reader; see
@@ -121,6 +130,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
 | Raise/lower a facade `.py` line ceiling | `check_lib_py.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Validate workflow YAML locally | `make workflows-parse` |
+| Check `make parity-live` still matches `parity-live.yml` | `make check-parity-live-dual-wire` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
 
@@ -159,7 +169,9 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
 | `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
 | A census run's markdown reports are "missing" from `task/` | They are not written there: the default `CENSUS_REPORT_DIR` is the gitignored `target/census-reports/` (declared change 3). The final line of the run echoes the directory it wrote |
+| `parity-live dual-wire: FAIL` / parse incomplete | A load-bearing flag drifted between `Makefile` `parity-live` and `.github/workflows/parity-live.yml` — change one, change the other. A parse miss is also red (fail-closed); fix the surface or the extractor in `check_parity_live_dual_wire.py` |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `bash scripts/check_manifest.sh`,
-`make workflows-parse`. Escalate to: [../map.md#debug](../map.md).
+`bash scripts/check_parity_live_dual_wire.sh`, `make workflows-parse`. Escalate to:
+[../map.md#debug](../map.md).

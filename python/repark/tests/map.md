@@ -1272,7 +1272,12 @@ NOT in that file is a defect, not a decision.
   `format-version 2` + copy-on-write + target-file-size `TBLPROPERTIES`) and pure builders
   (`bronze_path` s3a, `glue_catalog_config`, `fq_table`, `ctas_sql`, `merge_sql`,
   `acceptance_namespace_location` = `<warehouse>/<namespace>` — the ADV-1 programmatic namespace
-  location) + the `deduplicate` row_number transform. **A2 second bullet:** `s3tables_catalog_config`
+  location) + the `deduplicate` row_number transform. **G-6 location-mismatch guard (Glue):**
+  `normalize_location_uri`, `assert_namespace_location_matches` (exact equality after trailing-slash
+  strip; match / mismatch / no-location all fail-loud with both values + the operator fix),
+  `location_from_describe_rows`, `probe_namespace_location_via_describe` (SQL
+  `DESCRIBE NAMESPACE` — the bounded live-read path; zero engine change), and
+  `assert_glue_scratch_namespace_location`. **A2 second bullet:** `s3tables_catalog_config`
   (S3TablesCatalog impl, ARN as `warehouse` → RePark's `table_bucket_arn`) + the non-secret
   `S3TABLES_CATALOG` name — the table-bucket ARN is a RUNTIME arg from `TABLE_BUCKET_ARN`, never a
   committed literal.
@@ -1281,7 +1286,9 @@ NOT in that file is a defect, not a decision.
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
   under the Glue warehouse without doubling a trailing slash — ADV-1), the scratch-≠-production
   namespace guard, a structural guard that `test_aws_acceptance.py` carries no `DROP TABLE`/`DELETE
-  FROM`/`DROP NAMESPACE`, and the `deduplicate` transform against a memory session (newest row per id).
+  FROM`/`DROP NAMESPACE`, the `deduplicate` transform against a memory session (newest row per id),
+  and the G-6 location-mismatch guard's pure comparison edges (match, mismatch naming both values,
+  no-location, DESCRIBE-row extraction).
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
@@ -1289,14 +1296,17 @@ NOT in that file is a defect, not a decision.
   (entity/ds/id-col from `REPARK_ACCEPT_ENTITY`/`_DS`/`_ID_COL`), the dedup transform, then
   namespace-create (programmatic `spark.create_namespace(..., location=…)` — ADV-1, since SQL
   `CREATE NAMESPACE` without `LOCATION` would omit the `location` a real Glue catalog requires (SQL `LOCATION` works too since WG-5); idempotent on an
-  "already exists") → `tableExists`→CTAS-or-MERGE → idempotent second MERGE into `testing_repark_acceptance`.
+  "already exists") → **G-6: `assert_glue_scratch_namespace_location`** (DESCRIBE NAMESPACE read +
+  exact match to the intended warehouse path; fail loud on stale LocationUri) →
+  `tableExists`→CTAS-or-MERGE → idempotent second MERGE into `testing_repark_acceptance`.
   Oracles: bronze rows > 0, published == deduped (fresh CTAS), second pass count unchanged. NO
   DROP/DELETE of any AWS object — cleanup is the user's manual call. **A2 second bullet
   (`test_process_silver_acceptance_against_s3tables`):** the same shared publish path
   (`_bronze_dedup_publish_idempotent`) against an **S3 Tables** catalog — additionally gated on
   `TABLE_BUCKET_ARN` (SKIP, not fail, when absent, so a Glue-only run is unaffected); ARN read from
-  env, never logged; namespace created WITHOUT a `location` (S3 Tables provides storage via the
-  table bucket). Runbook: `REPARK_AWS_ACCEPTANCE=1 TABLE_BUCKET_ARN=<us-east-2 ARN> AWS_REGION=us-east-2`.
+  env, never logged; namespace created WITHOUT a `location` (S3 Tables namespaces carry no location
+  by design — nothing to compare; the Glue location-mismatch guard is intentionally not called).
+  Runbook: `REPARK_AWS_ACCEPTANCE=1 TABLE_BUCKET_ARN=<us-east-2 ARN> AWS_REGION=us-east-2`.
 
 ## I want to...
 

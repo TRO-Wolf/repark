@@ -522,6 +522,49 @@ def test_resolve_census_modules_c3_expand_ignores_night1_and_stretch() -> None:
     assert _DEFAULT_SCRATCH_C3.endswith("c3-expand")
 
 
+def test_default_markdown_report_path_is_under_target_census_reports() -> None:
+    """C-2 / G-6: markdown defaults to gitignored ``target/census-reports/``, never ``task/``.
+
+    Pins the resolved path only (no full census run). Aligns with ``scripts/run_census.sh``'s
+    ``CENSUS_REPORT_DIR`` default; ``task/`` is opt-in via ``--markdown``.
+    """
+    from pathlib import Path
+
+    from compat.runner import default_markdown_report_path
+
+    worktree = Path("/tmp/fake-worktree")
+    classic = default_markdown_report_path(worktree, date_stamp="2026-08-10")
+    assert classic == worktree / "target" / "census-reports" / (
+        "pyspark-compat-report-2026-08-10.md"
+    )
+    assert "task" not in classic.parts
+
+    c3 = default_markdown_report_path(worktree, c3_expand=True, date_stamp="2026-08-10")
+    assert c3.name == "pyspark-compat-report-c3-expand-2026-08-10.md"
+    assert c3.parent == worktree / "target" / "census-reports"
+
+    c4 = default_markdown_report_path(worktree, c4_expand=True, date_stamp="2026-08-10")
+    assert c4.name == "pyspark-compat-report-c4-expand2-2026-08-10.md"
+    assert c4.parent == worktree / "target" / "census-reports"
+
+
+def test_runner_main_wires_default_markdown_through_helper() -> None:
+    """Mutation pin: ``main``'s ``args.markdown is None`` branch calls the helper (not a raw path).
+
+    Reverting the CLI default back to a hard-coded ``task/`` path while leaving the helper
+    green would fail this pin.
+    """
+    from pathlib import Path
+
+    from compat import runner as runner_mod
+
+    source = Path(runner_mod.__file__).read_text(encoding="utf-8")
+    assert "default_markdown_report_path(" in source
+    assert 'worktree / "task" / f"pyspark-compat-report' not in source
+    # The None-branch assignment must invoke the helper by name.
+    assert "args.markdown = default_markdown_report_path(" in source
+
+
 def test_c4_expand_modules_charter_order() -> None:
     """C4 charter: nine expand2 modules in fixed order; never blend with C3 or night-1."""
     assert C4_EXPAND_MODULES == (

@@ -112,6 +112,89 @@ def acceptance_namespace_location(warehouse: str) -> str:
     return f"{warehouse.rstrip('/')}/{ACCEPTANCE_NAMESPACE}"
 
 
+def normalize_location_uri(location: str) -> str:
+    """Slash-normalize a warehouse/namespace location for equality comparison.
+
+    Strips trailing slashes only. S3 paths are case-sensitive — no other rewrite.
+    """
+    return location.rstrip("/")
+
+
+def location_from_describe_rows(
+    rows: list[tuple[str, str | None]],
+) -> str | None:
+    """Extract the ``Location`` value from ``DESCRIBE NAMESPACE`` ``(info_name, info_value)`` rows.
+
+    Returns ``None`` when the row is absent (a property-less / bare namespace). An empty string
+    is treated as present-but-empty and returned as-is so the comparison guard can fail loud.
+    """
+    for name, value in rows:
+        if name == "Location":
+            return value
+    return None
+
+
+def assert_namespace_location_matches(*, actual: str | None, expected: str) -> None:
+    """Fail loud when an adopted namespace's location does not match the intended path.
+
+    Comparison is exact equality after :func:`normalize_location_uri` (trailing-slash only).
+    A missing location (``None``) is the catalog-has-no-location edge and also fails loud —
+    never silently steers table writes to a different warehouse (docs/tier2-aws.md §5).
+
+    The error names both values and the operator fix (delete the stale namespace, or change
+    the target warehouse). IAM remains defence in depth, not the design.
+    """
+    expected_norm = normalize_location_uri(expected)
+    if actual is None:
+        raise RuntimeError(
+            "acceptance namespace has no Location (catalog-has-no-location); expected "
+            f"{expected_norm!r}. Delete the stale namespace or recreate it with the intended "
+            "warehouse location (docs/tier2-aws.md §5)."
+        )
+    actual_norm = normalize_location_uri(actual)
+    if actual_norm != expected_norm:
+        raise RuntimeError(
+            "acceptance namespace Location mismatch: "
+            f"actual={actual_norm!r} expected={expected_norm!r}. "
+            "Delete the stale namespace (owner credentials) or change REPARK_ACCEPT_WAREHOUSE "
+            "to match (docs/tier2-aws.md §5). Refusing to adopt pre-existing cloud state that "
+            "would silently steer table writes to a different warehouse."
+        )
+
+
+def probe_namespace_location_via_describe(
+    spark: object,
+    catalog: str,
+    namespace: str,
+) -> str | None:
+    """Read namespace Location via SQL ``DESCRIBE NAMESPACE`` (harness-local).
+
+    Bounded probe (G-6): the facade ``listDatabases`` path always returns ``locationUri=None``;
+    ``DESCRIBE NAMESPACE`` already yields a ``Location`` row when the property is set. This is
+    the only sanctioned live read path until a ``getDatabase`` facade-parity API lands.
+
+    ``spark`` is duck-typed (``spark.sql(...).to_arrow()``) so unit tests can pass a stub and the
+    real harness can pass a ``ReparkSession``. Zero engine change.
+    """
+    sql = f"DESCRIBE NAMESPACE {catalog}.{namespace}"
+    table = spark.sql(sql).to_arrow()  # type: ignore[attr-defined]
+    names = table.column("info_name").to_pylist()
+    values = table.column("info_value").to_pylist()
+    rows = list(zip(names, values, strict=True))
+    return location_from_describe_rows(rows)
+
+
+def assert_glue_scratch_namespace_location(spark: object, warehouse: str) -> None:
+    """After ensure-namespace on the Glue leg: verify Location matches the intended path.
+
+    Glue-only. S3 Tables namespaces carry no location by design — nothing to compare; that leg
+    must not call this guard.
+    """
+    expected = acceptance_namespace_location(warehouse)
+    actual = probe_namespace_location_via_describe(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE)
+    assert_namespace_location_matches(actual=actual, expected=expected)
+
+
 def glue_catalog_config(catalog_name: str, warehouse: str) -> dict[str, str]:
     """The ``spark.sql.catalog.<name>.*`` block for a Glue catalog (source publish job shape).
 

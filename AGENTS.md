@@ -165,6 +165,12 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     document or `make` target rot, or moving the milestone in STATUS.md alone is a red gate. The
     manifest is a MIRROR — its `layer` values are checked against the crate-DAG SSOT, never the
     other way round — and its `map.md` rule **checks** hand-written maps; nothing generates one.
+  - *parity-live dual-wire* (`scripts/check_parity_live_dual_wire.py` — the SSOT): `make parity-live`
+    and `.github/workflows/parity-live.yml` are compared to **each other** on their load-bearing
+    tokens (`uv sync` flag/extra set, `--no-install-package`, maturin pin + `develop`,
+    `uv run --locked --no-sync` + pytest path, `REPARK_PARITY_LIVE` / `SPARK_LOCAL_IP` env pins).
+    There is no third hand-maintained expected-flags list. Fail-closed on a parse miss. Dual-wired
+    `make check-parity-live-dual-wire` (in the `make ci` chain) + the ci.yml `guards` job.
   - The few v1 helper scripts not yet re-homed are listed in [scripts/map.md](scripts/map.md)
     "Not re-homed"; each **returns only with a concrete driver** (named per script there). Do not
     re-invent one ahead of its driver; re-home v1's script.
