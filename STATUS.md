@@ -145,11 +145,30 @@ moving it. Nothing is described in both places.
   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) §3 row ID-1. It stays listed
   here because it remains a real difference a migrating workload can hit; it is not scheduled for a
   fix, and revisiting it needs a new dated decision.
-- **Timestamp extraction ignores the session timezone** — **BACKLOG, fix in flight
-  (2026-08-10)**: the campaign's CRITICAL G1 class. The conf surface, the non-UTC oracle
-  scenarios and the recorded disclosure corpus are delivered (H-1a split A); the extraction fix
-  and its Rust pins are the in-flight split B, which also flips the disclosures to equality rows.
-  Semantics: registry §7 rows TZ-1 (extraction) and TZ-4 (tz-naive Arrow export).
+- **Timestamp extraction ignores the session timezone** — **PARTIALLY FIXED (2026-08-10), and the
+  remainder is named.** H-1a split A delivered the conf surface, the non-UTC oracle scenarios and
+  the recorded disclosure corpus; split B landed the extraction fix. What is **closed** is the
+  instant-typed half: `year` / `month` / `dayofmonth` / `hour` / `date_trunc` / `date_format`, and
+  this repo's `trunc` / `add_months`, over a TIMESTAMP that already carries the right instant now
+  resolve in `spark.sql.session.timeZone` at all four entry points (SQL door, ANSI door, native
+  `DataFrame` API, facade — the last pinned at both `sql()` and `df.select(F...)`). Registry row
+  TZ-1 was CLOSED IN PART and CONVERTED rather than retired, because two halves are still wrong and
+  a reader arriving from a wrong wall clock must land on one of them:
+  * **[TZ-7](docs/spark-sql-iceberg-parity.md)** — a **zoneless** TIMESTAMP input (a
+    `TIMESTAMP '…'` literal, a zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`, a
+    naive-`datetime` column) is read as UTC rather than as a wall clock in the session zone, so its
+    instant is wrong before any extractor sees it. These shapes **agreed with Spark before the fix
+    and diverge after it** — the disclosed, forced price of reading every TIMESTAMP as an instant.
+  * **[TZ-8](docs/spark-sql-iceberg-parity.md)** — `to_date` / `CAST(ts AS DATE)` / `datediff` still
+    take the date in the stored zone (`last_day` / `date_add` over a TIMESTAMP do not plan at all).
+    Not a regression; a completeness gap, and `CAST(ts AS DATE)` is the commonest partition-key
+    derivation in a migrated job.
+
+  Two further rows carry the type half: **[TZ-4](docs/spark-sql-iceberg-parity.md)** — the tz-naive
+  TIMESTAMP Arrow export, which split off because it is the timestamp *representation* rather than
+  the extractor path — and **TZ-6**, that repark has no `TIMESTAMP_NTZ` distinct from `TIMESTAMP`
+  (re-recorded from the live oracle in the same change). TZ-4's unit is the one that retires TZ-6
+  and TZ-7 with it.
 - **`CAST(TIMESTAMP AS BIGINT)` returns nanoseconds, not seconds** — **BACKLOG, open
   (2026-08-10)**: a silently-wrong-result class (a 10⁹ factor on every timestamp→integer cast),
   found while authoring the timezone corpus; not a zone bug, and it gets its own unit rather than

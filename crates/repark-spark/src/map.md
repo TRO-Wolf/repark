@@ -38,11 +38,18 @@ wrapper.
   `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`). Tests:
   [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
-  `repark.sql.*` config; `register` = `repark_functions::register_all` + analyzer rules + the
-  composed `repark_ta::TaExtension`, in v1 `build()`'s order; the DF-54.1 subquery guard stays a
-  core session default, G8). The TA half is **composed, not re-implemented** — the TA set is
-  door-neutral (design Q11), so this door installs the owning crate's extension.
-  Tests: [extension/map.md](extension/map.md).
+  `repark.sql.*` config **+ the session-timezone carrier**; `register` =
+  `repark_functions::register_all` + analyzer rules + the composed `repark_ta::TaExtension`, in v1
+  `build()`'s order; the DF-54.1 subquery guard stays a core session default, G8). The TA half is
+  **composed, not re-implemented** — the TA set is door-neutral (design Q11), so this door installs
+  the owning crate's extension. **H-1a split B (2026-08-10):** `configure` takes a
+  `repark_core::SessionBuildConf` and installs the zone `build()` already resolved onto the
+  `SessionConfig` (`repark_functions::session_time_zone::with_session_time_zone`), which is how
+  timestamp extraction honors `spark.sql.session.timeZone`. This door is the ONE crossing point:
+  `repark-core` owns the key and may not import `repark-functions` (a forbidden upward edge), and
+  `repark-functions` is a leaf with no engine edge — only this crate depends on both.
+  Tests: [extension/map.md](extension/map.md); end-to-end
+  [../tests/session_timezone.rs](../tests/session_timezone.rs).
 - `normalize.rs` — token normalisers (`USING` strip, `PARTITIONED BY` extraction,
   `NAMESPACE`→`SCHEMA`, the ALTER rewrites + GenericDialect switch), statement sniffers,
   multi-statement refuse (BUG-010), the MoR multi-spec DML gate's resolution wrapper (BUG-001

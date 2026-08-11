@@ -6,20 +6,39 @@
 row's own zone. One SQL string per row runs on BOTH engines, so the recipe under test and the
 recipe the oracle ran are the same string — nothing here is hand-computed.
 
-**Why most rows are DISCLOSURES, not equalities.** This unit ships the session-timezone
-*configuration surface*; the extraction fix is the unit that follows it (the split rule in
-``briefs/v2-engine-hardening.md`` H-1a). Today repark extracts timestamp fields in the STORED
-zone rather than the session zone, so asserting ``repark == Spark`` here would be red on arrival —
-and deleting the rows until the fix lands would hide the class that the census measured as a
-four-hour silent offset. So each divergent row pins BOTH halves:
+**Most rows are now EQUALITY rows, and the flip is the evidence.** Split A shipped the
+session-timezone *configuration surface* and recorded this corpus as DISCLOSURES, because repark
+then extracted timestamp fields in the STORED zone: asserting ``repark == Spark`` would have been
+red on arrival, and deleting the rows until the fix landed would have hidden the class the census
+measured as a four-hour silent offset. Split B landed the extraction fix, so **thirteen** of those
+disclosures are now plain equality rows (``repark=None``) — and that flip is precisely the
+revert-red evidence the testing contract asks for: undo the fix and each one goes red.
 
-* ``repark`` — repark's actual output today (value AND Arrow type), and
-* ``spark`` — the recorded live-Spark output it differs from,
+**The rows that are still disclosures are a different class, named on each row.** Twelve remain,
+and none of them is the *instant-typed* extraction class this unit closed:
 
-and the row asserts that the two still differ. A row that silently CONVERGES goes RED and forces
-the disclosure to be revisited rather than laundered into "parity" — the same discipline
-``docs/testing.md`` puts on the live tier's disclosures. When the extraction fix lands, each
-divergent row flips to ``repark=None`` (equality) and that flip is the fix's revert-red evidence.
+* two are :data:`TZ4` — the Arrow export TYPE (``timestamp[ns]`` / ``timestamp[us]`` with no
+  timezone, where Spark exports ``timestamp[us, tz=UTC]``);
+* four are ``date_trunc`` / ``DataFrame``-API rows whose VALUE converged with the fix while their
+  TYPE did not, so they moved from the extraction class into :data:`TZ4`; their ``repark`` half
+  was recorded in the same change that moved it, which is why they are not silent;
+* one is ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5) — a cast-unit
+  bug this unit deliberately does not fix;
+* three are :data:`TZ7` — a **zoneless** TIMESTAMP input (a ``TIMESTAMP '…'`` literal, a zoneless
+  ``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-datetime column). Spark reads those as a
+  session-zone wall clock; repark's planner stores the digits as UTC ticks under a type that is
+  *byte-identical* to the one a genuine instant gets, so the extractor cannot tell them apart and
+  answers the shifted hour. These rows were GREEN against Spark before this unit and are RED
+  after it — the disclosed price of reading every TIMESTAMP as an instant, recorded here rather
+  than left for a user to find;
+* one is :data:`TZ6` — repark maps ``TimestampNTZType`` and ``TimestampType`` onto the SAME Arrow
+  type, so an NTZ column is indistinguishable from an instant one. Recorded from the live oracle,
+  not asserted from documentation.
+
+A disclosure row pins BOTH halves — repark's actual output (value AND Arrow type) and the
+recorded live-Spark output it differs from — and asserts that the two still differ. A row that
+silently CONVERGES goes RED and forces the disclosure to be revisited rather than laundered into
+"parity", the same discipline ``docs/testing.md`` puts on the live tier's disclosures.
 
 **Rows assert on the Arrow path** (``to_arrow``) through the parity comparator, so schema name,
 Arrow type and nullability are part of every assertion — never ``show``.
@@ -36,10 +55,18 @@ It imports ``ROWS`` from THIS module and runs each row's own recipe under the ro
 the recorded golden and the asserted recipe cannot drift apart. It needs a JVM + ``pyspark``
 (``uv sync --extra record``) and is never collected by pytest.
 
-**Entry points.** Every row here goes through the facade ``sql()`` door — over scalar literals for
-most rows and over a real tz-aware timestamp COLUMN for the ``column_extract_*`` family. The
-four-entry-point matrix the brief mandates (native DataFrame / ANSI door / Spark door / facade)
-is **split B's obligation**, claimed as such in the unit ledger's gate table, not silently.
+**Entry points.** Most rows go through the facade ``sql()`` door — over scalar literals, and over
+a real tz-aware timestamp COLUMN for the ``column_extract_*`` family. The
+``dataframe_api_extract_*`` rows go through the OTHER facade spelling,
+``df.select(F.year(...), ...)``, which crosses PyO3 as a standalone expression with no session
+attached and is a distinct user entry point rather than a synonym for the SQL door. Together they
+are the **facade** cell of the four-entry-point matrix the brief mandates. The other three cells
+are pinned in Rust, against the same instants and the same expectations:
+
+* native DataFrame API and Spark door — ``crates/repark-spark/tests/session_timezone.rs``
+* ANSI door — ``crates/repark-sql/tests/session_timezone_ansi_door.rs`` (it lives in that crate
+  because the crate-DAG policy allows ``repark-sql -> repark-spark`` as a dev edge and nothing
+  the other way).
 """
 
 from __future__ import annotations
@@ -63,8 +90,32 @@ ZONE_TOKYO = "Asia/Tokyo"
 
 SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"
 
-# The in-flight fix every disclosure below names, so a reader of a red row knows what flips it.
+# The fix that closed the extraction class, named by every row it moved so a reader of a red row
+# knows what to look at.
 FIX = "the session-timezone extraction fix (briefs/v2-engine-hardening.md, H-1a split B)"
+# What an equality row is EVIDENCE for: it was a recorded disclosure until the fix landed, so
+# reverting the fix reds it. That is the revert-red half of the testing contract, stated on the
+# row rather than promised in a ledger.
+REVERT = f"reverting {FIX} reds this row."
+# The class the rows that did NOT fully converge still belong to. It is a different mechanism —
+# repark's TIMESTAMP Arrow export carries no timezone — and the registry row says why it splits.
+TZ4 = "registry row TZ-4 (repark's tz-naive TIMESTAMP Arrow export)"
+# The INPUT half of the same representation gap: repark cannot tell a zoneless timestamp literal
+# from a zone-suffixed one, because both land as `timestamp[ns]` holding the same ticks.
+TZ7 = (
+    "registry row TZ-7 (a zoneless TIMESTAMP input is read as UTC, not as a session-zone "
+    "wall clock)"
+)
+# repark spells `TimestampNTZType` but maps it onto the same Arrow type as `TimestampType`.
+TZ6 = "registry row TZ-6 (no TIMESTAMP_NTZ distinct from TIMESTAMP)"
+# What a TZ-7 row costs, stated once: these shapes AGREED with Spark before the extraction fix.
+TZ7_REGRESSION = (
+    "This row was GREEN against Spark before the extraction fix and is RED after it. That is the "
+    "disclosed price of reading every TIMESTAMP as an instant (ledger D-B5): repark's planner "
+    "gives a zoneless literal and a `…Z` one the SAME Arrow type holding the SAME ticks, so no "
+    "rule at the extractor can separate them. Closing it means changing repark's TIMESTAMP "
+    "representation, which is TZ-4's unit."
+)
 
 
 def _table(
@@ -88,8 +139,13 @@ class TimeZoneRow:
     ``repark is not None`` means the row is a DISCLOSURE: repark's actual output is pinned, and
     a convergence onto the recorded Spark output is detected and reported as one.
 
-    ``needs_column_view`` marks the rows whose SQL reads the tz-aware timestamp COLUMN rather than
-    a scalar literal; the runner registers :data:`COLUMN_VIEW` on the session first.
+    ``needs_column_view`` / ``needs_naive_column_view`` / ``needs_ltz_and_ntz_view`` mark the rows
+    whose SQL reads a COLUMN rather than a scalar literal; the runner registers the matching view
+    on the session first.
+
+    ``entry_point`` selects the facade SPELLING: ``"sql"`` runs ``session.sql(row.sql)``;
+    ``"dataframe_api"`` runs :func:`dataframe_api_extraction` and ``sql`` is then documentation of
+    the equivalent projection, not a string anything executes.
     """
 
     name: str
@@ -100,6 +156,9 @@ class TimeZoneRow:
     repark: pa.Table | None
     note: str
     needs_column_view: bool = False
+    needs_naive_column_view: bool = False
+    needs_ltz_and_ntz_view: bool = False
+    entry_point: str = "sql"
 
 
 # ==================================================================================================
@@ -141,6 +200,111 @@ def register_column_view(session: object) -> None:
     frame.createOrReplaceTempView(COLUMN_VIEW)
 
 
+# ----- the NAIVE (zoneless) wall-clock column: the TZ-7 shape a migrated job hits by accident ----
+#
+# `createDataFrame` over naive `datetime` objects is the ordinary way a Python job builds a
+# timestamp column, and BOTH engines type it as a plain default TIMESTAMP — no `TimestampNTZType`
+# anywhere. Spark localizes each wall clock in `spark.sql.session.timeZone` (so `hour` reads back
+# the digits it was given); repark stores the digits as UTC ticks, so `hour` comes back shifted.
+NAIVE_COLUMN_VIEW = "naive_wall_clocks"
+NAIVE_WALL_CLOCKS: tuple[dt.datetime, ...] = (
+    dt.datetime(2024, 6, 15, 12, 0),
+    dt.datetime(2024, 1, 1, 0, 30),
+)
+
+
+def register_naive_column_view(session: object) -> None:
+    """Register :data:`NAIVE_COLUMN_VIEW` — a two-row NAIVE-datetime column — on either engine."""
+    frame = session.createDataFrame(  # type: ignore[attr-defined]
+        [(wall_clock,) for wall_clock in NAIVE_WALL_CLOCKS], ["ts"]
+    )
+    frame.createOrReplaceTempView(NAIVE_COLUMN_VIEW)
+
+
+# ----- the LTZ / NTZ pair: the TZ-6 shape, measured rather than described -----------------------
+LTZ_AND_NTZ_VIEW = "ltz_and_ntz"
+LTZ_AND_NTZ_WALL_CLOCK = dt.datetime(2024, 6, 15, 12, 0)
+
+
+def register_ltz_and_ntz_view(session: object) -> None:
+    """Register one row typed EXPLICITLY as ``TimestampType`` beside ``TimestampNTZType``.
+
+    Both engines are handed the identical schema through the identical spelling, so what the row
+    measures is whether the engine can tell the two Spark types apart at all. Spark exports them
+    as two DIFFERENT Arrow types carrying two different instants; repark exports one type twice.
+    """
+    types = session.__class__.__module__.split(".")[0]  # "pyspark" or "repark"
+    if types == "pyspark":
+        from pyspark.sql.types import (
+            StructField,
+            StructType,
+            TimestampNTZType,
+            TimestampType,
+        )
+    else:
+        from repark.types import (
+            StructField,
+            StructType,
+            TimestampNTZType,
+            TimestampType,
+        )
+    schema = StructType(
+        [
+            StructField("ltz", TimestampType(), True),
+            StructField("ntz", TimestampNTZType(), True),
+        ]
+    )
+    frame = session.createDataFrame(  # type: ignore[attr-defined]
+        [(LTZ_AND_NTZ_WALL_CLOCK, LTZ_AND_NTZ_WALL_CLOCK)], schema
+    )
+    frame.createOrReplaceTempView(LTZ_AND_NTZ_VIEW)
+
+
+# ----- the DataFrame-API spelling: the OTHER facade entry point --------------------------------
+DATAFRAME_API_SPELLING = (
+    "df.orderBy('ts').select(F.year('ts'), F.hour('ts'), "
+    "F.date_format('ts', 'yyyy-MM-dd HH:mm'), F.date_trunc('day', 'ts'))"
+)
+
+
+def dataframe_api_extraction(session: object) -> pa.Table:
+    """The four extractors through ``df.select(F...)`` — spelled ONCE, run on either engine.
+
+    ``F.year(col)`` is a distinct user entry point from ``sql("SELECT year(ts)")``: on repark it
+    builds a standalone expression that crosses PyO3 with no ``SessionContext`` attached, which is
+    exactly the shape a registration-time session zone would miss. The Rust cell
+    (``native_dataframe_api_extracts_in_the_session_zone``) pins the engine-side equivalent; this
+    pins the spelling a user actually writes.
+    """
+    functions = _functions_module(session)
+    frame = session.createDataFrame(  # type: ignore[attr-defined]
+        [(instant,) for instant in COLUMN_INSTANTS], ["ts"]
+    )
+    projected = frame.orderBy("ts").select(
+        functions.year("ts").alias("year_part"),
+        functions.hour("ts").alias("hour_part"),
+        functions.date_format("ts", "yyyy-MM-dd HH:mm").alias("rendered"),
+        functions.date_trunc("day", "ts").alias("day_start"),
+    )
+    to_arrow = getattr(projected, "to_arrow", None) or projected.toArrow
+    return to_arrow()  # type: ignore[no-any-return]
+
+
+def _functions_module(session: object) -> object:
+    """The ``functions`` module belonging to ``session``'s engine — PySpark's or repark's.
+
+    The row must run the SAME recipe on both engines, and the only thing that legitimately differs
+    between them is which package the ``F`` namespace comes from.
+    """
+    if session.__class__.__module__.split(".")[0] == "pyspark":
+        from pyspark.sql import functions as spark_functions
+
+        return spark_functions
+    from repark.sql import functions as repark_functions
+
+    return repark_functions
+
+
 # ==================================================================================================
 # Gap G1 — session timezone / tz-aware timestamps
 # ==================================================================================================
@@ -154,9 +318,10 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT year(to_timestamp('2024-01-01T04:30:00Z')) AS year_part",
         _one_row([("year_part", _INT32, True)], {"year_part": 2023}),
-        _one_row([("year_part", _INT32, True)], {"year_part": 2024}),
-        "the instant is 2023-12-31 23:30 in New York, so Spark's year is 2023; repark extracts "
-        f"in the stored (UTC) zone and answers 2024. Flipped to equality by {FIX}.",
+        None,
+        "the instant is 2023-12-31 23:30 in New York, so Spark's year is 2023 — and so is "
+        f"repark's. Before {FIX} repark extracted in the stored (UTC) zone and answered 2024; "
+        f"{REVERT}",
     ),
     TimeZoneRow(
         "month_of_instant_under_new_york_session",
@@ -164,9 +329,9 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT month(to_timestamp('2024-03-01T02:15:00Z')) AS month_part",
         _one_row([("month_part", _INT32, True)], {"month_part": 2}),
-        _one_row([("month_part", _INT32, True)], {"month_part": 3}),
+        None,
         "2024-02-29 21:15 in New York (a leap day) vs 2024-03-01 in the stored zone — the month "
-        f"boundary moves with the session zone. Flipped to equality by {FIX}.",
+        f"boundary moves with the session zone, and now moves on both engines. {REVERT}",
     ),
     TimeZoneRow(
         "day_of_instant_under_new_york_session",
@@ -174,9 +339,9 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT dayofmonth(to_timestamp('2024-06-15T03:00:00Z')) AS day_part",
         _one_row([("day_part", _INT32, True)], {"day_part": 14}),
-        _one_row([("day_part", _INT32, True)], {"day_part": 15}),
+        None,
         "the day-partition key a migrated job would write: 14 in the session zone, 15 in the "
-        f"stored zone. Flipped to equality by {FIX}.",
+        f"stored zone — repark writes 14 now. {REVERT}",
     ),
     TimeZoneRow(
         "hour_of_instant_under_new_york_session",
@@ -184,9 +349,9 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT hour(to_timestamp('2024-06-15T12:00:00Z')) AS hour_part",
         _one_row([("hour_part", _INT32, True)], {"hour_part": 8}),
-        _one_row([("hour_part", _INT32, True)], {"hour_part": 12}),
-        "the census's four-hour silent offset, isolated: EDT is UTC-4. Flipped to equality by "
-        f"{FIX}.",
+        None,
+        "the census's four-hour silent offset, isolated: EDT is UTC-4. This is the single row "
+        f"the CRITICAL G1 finding was written about. {REVERT}",
     ),
     TimeZoneRow(
         "hour_of_instant_under_tokyo_session",
@@ -194,9 +359,10 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_TOKYO,
         "SELECT hour(to_timestamp('2024-06-15T12:00:00Z')) AS hour_part",
         _one_row([("hour_part", _INT32, True)], {"hour_part": 21}),
-        _one_row([("hour_part", _INT32, True)], {"hour_part": 12}),
-        "the same instant east of UTC (+9): repark answers 12 under BOTH session zones, which is "
-        f"what makes this a session-zone bug rather than an offset-sign bug. Flipped by {FIX}.",
+        None,
+        "the same instant east of UTC (+9). Before the fix repark answered 12 under BOTH session "
+        "zones, which is what made this a session-zone bug rather than an offset-sign bug; the "
+        f"pair now moves in opposite directions, as Spark's does. {REVERT}",
     ),
     TimeZoneRow(
         "year_month_day_of_instant_under_tokyo_session",
@@ -213,16 +379,9 @@ G1_ROWS: list[TimeZoneRow] = [
             ],
             {"year_part": 2024, "month_part": 1, "day_part": 1},
         ),
-        _one_row(
-            [
-                ("year_part", _INT32, True),
-                ("month_part", _INT32, True),
-                ("day_part", _INT32, True),
-            ],
-            {"year_part": 2023, "month_part": 12, "day_part": 31},
-        ),
+        None,
         "all three calendar fields move together across the year boundary (2024-01-01 01:30 in "
-        f"Tokyo); repark reports 2023-12-31 for every one. Flipped by {FIX}.",
+        f"Tokyo); repark reported 2023-12-31 for every one before the fix. {REVERT}",
     ),
     TimeZoneRow(
         "to_timestamp_of_zone_suffixed_string",
@@ -233,8 +392,9 @@ G1_ROWS: list[TimeZoneRow] = [
         _one_row([("ts", pa.timestamp("ns"), True)], {"ts": dt.datetime(2024, 3, 10, 6, 30)}),
         "the INSTANT agrees (06:30Z) — the divergence is the Arrow type on the export path: "
         "Spark's TIMESTAMP is an instant exported as timestamp[us, tz=UTC], repark exports a "
-        f"tz-NAIVE timestamp[ns]. A consumer that localizes the column is silently wrong. {FIX} "
-        "owns the value half; the export type is part of the same class.",
+        f"tz-NAIVE timestamp[ns]. A consumer that localizes the column is silently wrong. {TZ4}: "
+        f"no extractor runs here, so {FIX} does not touch this row — the type gap needs a change "
+        "to repark's TIMESTAMP representation itself, which is a separate unit.",
     ),
     TimeZoneRow(
         "dst_spring_forward_instant_hour",
@@ -242,9 +402,11 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT hour(to_timestamp('2024-03-10T07:00:00Z')) AS hour_part",
         _one_row([("hour_part", _INT32, True)], {"hour_part": 3}),
-        _one_row([("hour_part", _INT32, True)], {"hour_part": 7}),
+        None,
         "the spring-forward instant: 02:00-03:00 local does not exist on 2024-03-10 in New York, "
-        f"so Spark answers 3 (EDT) — repark answers the stored 7. Flipped by {FIX}.",
+        "so the answer is 3 (EDT) and not the stored 7. A fixed-offset implementation of the "
+        f"session zone would answer 2 here, so this row separates zone-aware from offset-aware. "
+        f"{REVERT}",
     ),
     TimeZoneRow(
         "dst_fall_back_repeated_local_hour",
@@ -256,13 +418,10 @@ G1_ROWS: list[TimeZoneRow] = [
             [("before_part", _INT32, True), ("after_part", _INT32, True)],
             {"before_part": 1, "after_part": 1},
         ),
-        _one_row(
-            [("before_part", _INT32, True), ("after_part", _INT32, True)],
-            {"before_part": 5, "after_part": 6},
-        ),
-        "fall-back: two distinct instants share local hour 1 (EDT then EST), so Spark answers "
-        "(1, 1) — repark answers (5, 6) and never collapses the repeated hour. This is the row a "
-        f"dedup-by-hour job depends on. Flipped by {FIX}.",
+        None,
+        "fall-back: two distinct instants share local hour 1 (EDT then EST), so the answer is "
+        "(1, 1). repark answered (5, 6) before the fix and never collapsed the repeated hour — "
+        f"the row a dedup-by-hour job depends on. {REVERT}",
     ),
     TimeZoneRow(
         "tz_aware_to_naive_round_trip",
@@ -281,7 +440,9 @@ G1_ROWS: list[TimeZoneRow] = [
         "timestamp -> string -> timestamp: Spark renders in the session zone (08:00) and parses "
         "back in the session zone, so the instant survives as timestamp[us, tz=UTC]. repark "
         "renders and re-parses in the stored zone and returns a tz-naive timestamp[ns]; the "
-        f"instant survives only because both halves ignore the zone. Flipped by {FIX}.",
+        f"instant survives only because both halves ignore the zone. {TZ4}, plus the CAST "
+        "rendering gap (registry queue B-TZ-4): the fix moves the extractor family, and a CAST "
+        "is not an extractor. Left divergent deliberately rather than half-fixed.",
     ),
     TimeZoneRow(
         "date_trunc_day_across_a_zone_boundary",
@@ -294,11 +455,14 @@ G1_ROWS: list[TimeZoneRow] = [
         ),
         _one_row(
             [("day_start", pa.timestamp("us"), True)],
-            {"day_start": dt.datetime(2024, 6, 15, 0, 0)},
+            {"day_start": dt.datetime(2024, 6, 14, 4, 0)},
         ),
-        "the daily-rollup boundary: Spark truncates to local midnight (2024-06-14 00:00 EDT = "
-        "04:00Z), repark to UTC midnight of the next day. Value AND type diverge, so a daily "
-        f"aggregate lands in the wrong bucket. Flipped by {FIX}.",
+        "the daily-rollup boundary. The VALUE half converged: repark truncates to local midnight "
+        "(2024-06-14 00:00 EDT = 04:00Z) like Spark, where before the fix it truncated to UTC "
+        "midnight of the NEXT day and a daily aggregate landed in the wrong bucket. What is left "
+        f"is the TYPE half, {TZ4} — the ticks are Spark's instant, the tz annotation is not. This "
+        "row therefore stays a disclosure and moves class; reverting the extraction fix reds it "
+        "as a REGRESSION (repark would match neither half).",
     ),
     # ----- the COLUMN family: the same class over a real tz-aware timestamp column ---------------
     # Every row above extracts from a scalar literal. A migrated job extracts from a COLUMN, which
@@ -325,24 +489,11 @@ G1_ROWS: list[TimeZoneRow] = [
                 "hour_part": [23, 8],
             },
         ),
-        _table(
-            [
-                ("year_part", _INT32, True),
-                ("month_part", _INT32, True),
-                ("day_part", _INT32, True),
-                ("hour_part", _INT32, True),
-            ],
-            {
-                "year_part": [2024, 2024],
-                "month_part": [1, 6],
-                "day_part": [1, 15],
-                "hour_part": [4, 12],
-            },
-        ),
+        None,
         "the brief's own recipe, over a COLUMN: all four fields of both instants move to the "
-        "session zone in Spark (2024-01-01T04:30Z is 2023-12-31 23:30 EST, so even the YEAR "
-        "changes), while repark answers the stored zone for every one. The row a partitioned "
-        f"write would get wrong for every row of a real table. Flipped to equality by {FIX}.",
+        "session zone (2024-01-01T04:30Z is 2023-12-31 23:30 EST, so even the YEAR changes). "
+        "repark answered the stored zone for every one before the fix — the row a partitioned "
+        f"write would have got wrong for every row of a real table. {REVERT}",
         needs_column_view=True,
     ),
     TimeZoneRow(
@@ -364,25 +515,241 @@ G1_ROWS: list[TimeZoneRow] = [
                 "hour_part": [13, 21],
             },
         ),
+        None,
+        "the same column east of UTC (+9): the calendar fields happen to AGREE here and only the "
+        "hour moves, which is why the pair is recorded — before the fix repark's answer was "
+        "identical under both zones, so the New York row alone could have been misread as an "
+        f"offset-sign bug rather than a session-zone one. {REVERT}",
+        needs_column_view=True,
+    ),
+    # ----- the ZONELESS-INPUT family: what this unit does NOT fix, measured ----------------------
+    # Every row above hands the engine a `…Z`-suffixed string, i.e. the case where "read every
+    # TIMESTAMP as a UTC instant" is RIGHT. These rows are the same rule applied where it is
+    # WRONG. A corpus that only carried the first kind could not tell the two apart, and that is
+    # precisely how the class was over-claimed on its first pass.
+    TimeZoneRow(
+        "zoneless_timestamp_literal_under_new_york_session",
+        "G1",
+        ZONE_NEW_YORK,
+        "SELECT hour(TIMESTAMP '2024-06-15 12:00:00') AS hour_part, "
+        "year(TIMESTAMP '2024-01-01 00:30:00') AS year_part, "
+        "dayofmonth(TIMESTAMP '2024-01-01 00:30:00') AS day_part, "
+        "date_format(TIMESTAMP '2024-06-15 12:00:00', 'yyyy-MM-dd HH:mm') AS rendered",
+        _one_row(
+            [
+                ("hour_part", _INT32, False),
+                ("year_part", _INT32, False),
+                ("day_part", _INT32, False),
+                ("rendered", pa.string(), False),
+            ],
+            {
+                "hour_part": 12,
+                "year_part": 2024,
+                "day_part": 1,
+                "rendered": "2024-06-15 12:00",
+            },
+        ),
+        _one_row(
+            [
+                ("hour_part", _INT32, True),
+                ("year_part", _INT32, True),
+                ("day_part", _INT32, True),
+                ("rendered", pa.string(), True),
+            ],
+            {
+                "hour_part": 8,
+                "year_part": 2023,
+                "day_part": 31,
+                "rendered": "2024-06-15 08:00",
+            },
+        ),
+        f"a plain Spark TIMESTAMP literal — no NTZ anywhere. Spark parses the digits as a WALL "
+        f"CLOCK in the session zone, so `hour` reads back 12 in every zone and the year-boundary "
+        f"literal stays on 2024-01-01; repark stores them as UTC ticks and answers 8 / 2023-12-31, "
+        f"a whole calendar day out. {TZ7}. {TZ7_REGRESSION}",
+    ),
+    TimeZoneRow(
+        "zoneless_timestamp_input_spellings_under_tokyo_session",
+        "G1",
+        ZONE_TOKYO,
+        "SELECT hour(to_timestamp('2024-06-15 12:00:00')) AS from_to_timestamp, "
+        "hour(CAST('2024-06-15 12:00:00' AS TIMESTAMP)) AS from_cast",
+        _one_row(
+            [("from_to_timestamp", _INT32, True), ("from_cast", _INT32, True)],
+            {"from_to_timestamp": 12, "from_cast": 12},
+        ),
+        _one_row(
+            [("from_to_timestamp", _INT32, True), ("from_cast", _INT32, True)],
+            {"from_to_timestamp": 21, "from_cast": 21},
+        ),
+        f"the other two zoneless spellings, east of UTC so the divergence has the opposite sign "
+        f"(+9 rather than -4) and cannot be mistaken for a fixed offset. Both spellings must move "
+        f"TOGETHER: they land on the identical Arrow type holding the identical ticks, which is "
+        f"why no rule at the extractor can separate them from `to_timestamp('…Z')`. {TZ7}. "
+        f"{TZ7_REGRESSION}",
+    ),
+    TimeZoneRow(
+        "naive_datetime_column_under_new_york_session",
+        "G1",
+        ZONE_NEW_YORK,
+        "SELECT hour(ts) AS hour_part, year(ts) AS year_part, "
+        f"date_format(ts, 'yyyy-MM-dd HH:mm') AS rendered FROM {NAIVE_COLUMN_VIEW} ORDER BY ts",
+        _table(
+            [
+                ("hour_part", _INT32, True),
+                ("year_part", _INT32, True),
+                ("rendered", pa.string(), True),
+            ],
+            {
+                "hour_part": [0, 12],
+                "year_part": [2024, 2024],
+                "rendered": ["2024-01-01 00:30", "2024-06-15 12:00"],
+            },
+        ),
+        _table(
+            [
+                ("hour_part", _INT32, True),
+                ("year_part", _INT32, True),
+                ("rendered", pa.string(), True),
+            ],
+            {
+                "hour_part": [19, 8],
+                "year_part": [2023, 2024],
+                "rendered": ["2023-12-31 19:30", "2024-06-15 08:00"],
+            },
+        ),
+        f"the mainstream COLUMN shape of the same class: `createDataFrame` over naive `datetime` "
+        f"objects, which both engines type as a plain default TIMESTAMP. This is the row a "
+        f"migrated Python job hits without ever writing a literal, and it is why {TZ7} is framed "
+        f"on ZONELESS INPUT rather than on NTZ — no NTZ type appears anywhere here. "
+        f"{TZ7_REGRESSION}",
+        needs_naive_column_view=True,
+    ),
+    TimeZoneRow(
+        "timestamp_ntz_is_indistinguishable_from_timestamp",
+        "G1",
+        ZONE_NEW_YORK,
+        f"SELECT ltz, ntz, hour(ltz) AS ltz_hour, hour(ntz) AS ntz_hour FROM {LTZ_AND_NTZ_VIEW}",
+        _one_row(
+            [
+                ("ltz", pa.timestamp("us", "UTC"), True),
+                ("ntz", pa.timestamp("us"), True),
+                ("ltz_hour", _INT32, True),
+                ("ntz_hour", _INT32, True),
+            ],
+            {
+                "ltz": _utc(2024, 6, 15, 16, 0),
+                "ntz": dt.datetime(2024, 6, 15, 12, 0),
+                "ltz_hour": 12,
+                "ntz_hour": 12,
+            },
+        ),
+        _one_row(
+            [
+                ("ltz", pa.timestamp("us"), True),
+                ("ntz", pa.timestamp("us"), True),
+                ("ltz_hour", _INT32, True),
+                ("ntz_hour", _INT32, True),
+            ],
+            {
+                "ltz": dt.datetime(2024, 6, 15, 12, 0),
+                "ntz": dt.datetime(2024, 6, 15, 12, 0),
+                "ltz_hour": 8,
+                "ntz_hour": 8,
+            },
+        ),
+        f"the same wall clock declared EXPLICITLY as `TimestampType` beside `TimestampNTZType`. "
+        f"Spark gives them two different Arrow types carrying two different instants (the LTZ one "
+        f"localized to 16:00Z, the NTZ one left at 12:00) and reads `hour` as 12 from both; repark "
+        f"maps both Spark types onto one Arrow type, so the two columns are byte-identical and "
+        f"both read 8. {TZ6}, now recorded from the live oracle rather than asserted from "
+        f"documentation — it retires with {TZ4}, whose unit owns the TIMESTAMP representation.",
+        needs_ltz_and_ntz_view=True,
+    ),
+    # ----- the DataFrame-API spelling of the facade cell -----------------------------------------
+    TimeZoneRow(
+        "dataframe_api_extract_under_new_york_session",
+        "G1",
+        ZONE_NEW_YORK,
+        DATAFRAME_API_SPELLING,
         _table(
             [
                 ("year_part", _INT32, True),
-                ("month_part", _INT32, True),
-                ("day_part", _INT32, True),
                 ("hour_part", _INT32, True),
+                ("rendered", pa.string(), True),
+                ("day_start", pa.timestamp("us", "UTC"), True),
+            ],
+            {
+                "year_part": [2023, 2024],
+                "hour_part": [23, 8],
+                "rendered": ["2023-12-31 23:30", "2024-06-15 08:00"],
+                "day_start": [_utc(2023, 12, 31, 5, 0), _utc(2024, 6, 15, 4, 0)],
+            },
+        ),
+        _table(
+            [
+                ("year_part", _INT32, True),
+                ("hour_part", _INT32, True),
+                ("rendered", pa.string(), True),
+                ("day_start", pa.timestamp("us"), True),
+            ],
+            {
+                "year_part": [2023, 2024],
+                "hour_part": [23, 8],
+                "rendered": ["2023-12-31 23:30", "2024-06-15 08:00"],
+                "day_start": [
+                    dt.datetime(2023, 12, 31, 5, 0),
+                    dt.datetime(2024, 6, 15, 4, 0),
+                ],
+            },
+        ),
+        f"the OTHER facade entry point, at the spelling a user writes: `F.year(col)` builds a "
+        f"standalone expression with no session attached, so a session zone baked in at "
+        f"REGISTRATION would reach `sql()` and miss this path entirely. Every VALUE converged — "
+        f"the whole point of the fix — and the only residue is `date_trunc`'s Arrow type, {TZ4}. "
+        f"{REVERT}",
+        entry_point="dataframe_api",
+    ),
+    TimeZoneRow(
+        "dataframe_api_extract_under_tokyo_session",
+        "G1",
+        ZONE_TOKYO,
+        DATAFRAME_API_SPELLING,
+        _table(
+            [
+                ("year_part", _INT32, True),
+                ("hour_part", _INT32, True),
+                ("rendered", pa.string(), True),
+                ("day_start", pa.timestamp("us", "UTC"), True),
             ],
             {
                 "year_part": [2024, 2024],
-                "month_part": [1, 6],
-                "day_part": [1, 15],
-                "hour_part": [4, 12],
+                "hour_part": [13, 21],
+                "rendered": ["2024-01-01 13:30", "2024-06-15 21:00"],
+                "day_start": [_utc(2023, 12, 31, 15, 0), _utc(2024, 6, 14, 15, 0)],
             },
         ),
-        "the same column east of UTC (+9): the calendar fields happen to AGREE here and only the "
-        "hour moves, which is why the pair is recorded — repark's answer is identical under both "
-        "zones, so the New York row alone could be misread as an offset-sign bug rather than a "
-        f"session-zone one. Flipped to equality by {FIX}.",
-        needs_column_view=True,
+        _table(
+            [
+                ("year_part", _INT32, True),
+                ("hour_part", _INT32, True),
+                ("rendered", pa.string(), True),
+                ("day_start", pa.timestamp("us"), True),
+            ],
+            {
+                "year_part": [2024, 2024],
+                "hour_part": [13, 21],
+                "rendered": ["2024-01-01 13:30", "2024-06-15 21:00"],
+                "day_start": [
+                    dt.datetime(2023, 12, 31, 15, 0),
+                    dt.datetime(2024, 6, 14, 15, 0),
+                ],
+            },
+        ),
+        f"the same spelling east of UTC, so the DataFrame-API cell is pinned under BOTH non-UTC "
+        f"zones rather than under one. Values converged; the `date_trunc` type residue is {TZ4}. "
+        f"{REVERT}",
+        entry_point="dataframe_api",
     ),
 ]
 
@@ -409,17 +776,10 @@ G16_ROWS: list[TimeZoneRow] = [
             ],
             {"year_part": 1969, "month_part": 12, "day_part": 31, "hour_part": 18},
         ),
-        _one_row(
-            [
-                ("year_part", _INT32, True),
-                ("month_part", _INT32, True),
-                ("day_part", _INT32, True),
-                ("hour_part", _INT32, True),
-            ],
-            {"year_part": 1969, "month_part": 12, "day_part": 31, "hour_part": 23},
-        ),
-        "a negative epoch instant 30 minutes before 1970: the calendar fields agree, the HOUR "
-        f"does not (18 EST vs the stored 23) — sign handling is fine, the zone is not. {FIX}.",
+        None,
+        "a negative epoch instant 30 minutes before 1970: the calendar fields always agreed and "
+        "the HOUR did not (18 EST vs the stored 23) — sign handling was fine, the zone was not, "
+        f"and the zone is what the fix moved. {REVERT}",
     ),
     TimeZoneRow(
         "pre_1970_timestamp_cast_to_bigint",
@@ -444,10 +804,12 @@ G16_ROWS: list[TimeZoneRow] = [
         ),
         _one_row(
             [("year_start", pa.timestamp("us"), True)],
-            {"year_start": dt.datetime(2023, 1, 1, 0, 0)},
+            {"year_start": dt.datetime(2023, 12, 31, 15, 0)},
         ),
-        "the instant is 2024-01-01 00:00 in Tokyo, so Spark's year start is that same instant; "
-        f"repark truncates the stored 2023-12-31 and lands a whole year earlier. {FIX}.",
+        "the instant is 2024-01-01 00:00 in Tokyo, so the year start is that same instant — and "
+        "repark now returns it, where before the fix it truncated the stored 2023-12-31 and "
+        f"landed a whole year earlier. Like its New York sibling this row's VALUE converged and "
+        f"its TYPE did not ({TZ4}), so it stays a disclosure in the other class.",
     ),
     TimeZoneRow(
         "year_boundary_extract_and_format_under_new_york_session",
@@ -459,13 +821,11 @@ G16_ROWS: list[TimeZoneRow] = [
             [("year_part", _INT32, True), ("local_date", pa.string(), True)],
             {"year_part": 2023, "local_date": "2023-12-31"},
         ),
-        _one_row(
-            [("year_part", _INT32, True), ("local_date", pa.string(), True)],
-            {"year_part": 2024, "local_date": "2024-01-01"},
-        ),
-        "extraction and RENDERING move together in Spark and stay together in repark — both in "
-        f"the wrong zone, so a formatted partition path and an extracted key agree with each "
-        f"other and disagree with Spark. {FIX}.",
+        None,
+        "extraction and RENDERING move together on both engines now. Before the fix they moved "
+        "together in the WRONG zone, which is the nastiest shape this class has: a formatted "
+        "partition path and an extracted partition key that agree with each other and disagree "
+        f"with Spark are self-consistently wrong. {REVERT}",
     ),
     TimeZoneRow(
         "leap_day_extract_under_new_york_session",
@@ -477,12 +837,9 @@ G16_ROWS: list[TimeZoneRow] = [
             [("month_part", _INT32, True), ("day_part", _INT32, True)],
             {"month_part": 2, "day_part": 28},
         ),
-        _one_row(
-            [("month_part", _INT32, True), ("day_part", _INT32, True)],
-            {"month_part": 2, "day_part": 29},
-        ),
-        "the leap day itself: the same instant is 2024-02-28 in New York, so a leap-day filter "
-        f"selects different rows on the two engines. {FIX}.",
+        None,
+        "the leap day itself: the instant is 2024-02-28 in New York, so before the fix a "
+        f"leap-day filter selected different rows on the two engines. {REVERT}",
     ),
     TimeZoneRow(
         "date_extraction_is_session_zone_independent",
@@ -501,8 +858,13 @@ G16_ROWS: list[TimeZoneRow] = [
         ),
         None,
         "the control row, and an invariant in its own right: a DATE carries no instant, so its "
-        "extraction must NOT move with the session zone. Both engines agree today — and the fix "
-        "must keep them agreeing, which is exactly what a zone-blind fix would break.",
+        "extraction must NOT move with the session zone. It was green before the fix and is green "
+        "after it, UNCHANGED — which is the half of the claim an all-disclosure corpus could "
+        "never make. Its Rust sibling "
+        "(crates/repark-spark/tests/session_timezone.rs::date_arguments_never_move_with_the_"
+        "session_zone) caught a real over-reach during the fix: an earlier draft of the coercion "
+        "path was not idempotent under DataFusion's re-analysis and rendered this DATE a day "
+        "early.",
     ),
     TimeZoneRow(
         "leap_day_date_arithmetic_is_session_zone_independent",
@@ -525,8 +887,106 @@ G16_ROWS: list[TimeZoneRow] = [
         ),
         None,
         "the second control row: leap-day date arithmetic under a non-UTC session, agreeing on "
-        "value AND date32 type. It is the pin that would catch a fix that pushed the session zone "
-        "into the DATE path.",
+        "value AND date32 type, and UNCHANGED by the fix. It is the pin that catches a fix that "
+        "pushed the session zone into the DATE path.",
+    ),
+    # ----- COMPOSITION: a DATE or string through `date_trunc` and back into an extractor ---------
+    # `date_trunc`'s output is tz-naive, and the extractor coercion reads a tz-naive timestamp as
+    # a UTC instant. So `date_trunc` must emit an INSTANT on every path, including the DATE/string
+    # path — which is also what Spark does, because its DATE -> TIMESTAMP promotion is a
+    # session-zone localization. A first draft of this unit emitted LOCAL wall-clock ticks there
+    # instead, and every one of these rows was a whole calendar day wrong. The single-hop DATE
+    # control row above cannot see it: it never chains two shims.
+    TimeZoneRow(
+        "date_trunc_of_a_date_composed_under_new_york_session",
+        "G16",
+        ZONE_NEW_YORK,
+        "SELECT year(date_trunc('day', DATE '2024-01-01')) AS year_part, "
+        "month(date_trunc('day', DATE '2024-01-01')) AS month_part, "
+        "dayofmonth(date_trunc('day', DATE '2024-01-01')) AS day_part, "
+        "hour(date_trunc('day', DATE '2024-01-01')) AS hour_part, "
+        "date_format(date_trunc('day', DATE '2024-01-01'), 'yyyy-MM-dd HH:mm') AS rendered",
+        _one_row(
+            [
+                ("year_part", _INT32, True),
+                ("month_part", _INT32, True),
+                ("day_part", _INT32, True),
+                ("hour_part", _INT32, True),
+                ("rendered", pa.string(), True),
+            ],
+            {
+                "year_part": 2024,
+                "month_part": 1,
+                "day_part": 1,
+                "hour_part": 0,
+                "rendered": "2024-01-01 00:00",
+            },
+        ),
+        None,
+        "a DATE truncated to a day and then read back must be that same day at local midnight. "
+        "West of UTC a `date_trunc` that emits local wall-clock ticks under a tz-naive type sends "
+        "every field here back one calendar day (2023-12-31 19:00) — the daily-rollup key of a "
+        "migrated job. Equality on both engines is the claim; the single-hop DATE control row is "
+        "green either way, which is why this row exists.",
+    ),
+    TimeZoneRow(
+        "date_trunc_of_a_string_composed_under_tokyo_session",
+        "G16",
+        ZONE_TOKYO,
+        "SELECT year(date_trunc('day', '2024-01-01')) AS year_part, "
+        "dayofmonth(date_trunc('day', '2024-01-01')) AS day_part, "
+        "date_format(date_trunc('day', '2024-01-01'), 'yyyy-MM-dd HH:mm') AS rendered",
+        _one_row(
+            [
+                ("year_part", _INT32, True),
+                ("day_part", _INT32, True),
+                ("rendered", pa.string(), True),
+            ],
+            {"year_part": 2024, "day_part": 1, "rendered": "2024-01-01 00:00"},
+        ),
+        None,
+        "the STRING twin of the row above, east of UTC: a string argument takes the same zone-free "
+        "path into `date_trunc`, so both must be localized the same way. The Tokyo half is what "
+        "separates 'the promotion is a localization' from 'the promotion happens to be a no-op'.",
+    ),
+    TimeZoneRow(
+        "date_trunc_across_the_fall_back_hour_under_new_york_session",
+        "G16",
+        ZONE_NEW_YORK,
+        "SELECT date_trunc('hour', to_timestamp('2024-11-03T05:30:00Z')) AS before_fall_back, "
+        "date_trunc('hour', to_timestamp('2024-11-03T06:30:00Z')) AS after_fall_back, "
+        "date_trunc('minute', to_timestamp('2024-11-03T06:30:40Z')) AS truncated_minute",
+        _one_row(
+            [
+                ("before_fall_back", pa.timestamp("us", "UTC"), True),
+                ("after_fall_back", pa.timestamp("us", "UTC"), True),
+                ("truncated_minute", pa.timestamp("us", "UTC"), True),
+            ],
+            {
+                "before_fall_back": _utc(2024, 11, 3, 5, 0),
+                "after_fall_back": _utc(2024, 11, 3, 6, 0),
+                "truncated_minute": _utc(2024, 11, 3, 6, 30),
+            },
+        ),
+        _one_row(
+            [
+                ("before_fall_back", pa.timestamp("us"), True),
+                ("after_fall_back", pa.timestamp("us"), True),
+                ("truncated_minute", pa.timestamp("us"), True),
+            ],
+            {
+                "before_fall_back": dt.datetime(2024, 11, 3, 5, 0),
+                "after_fall_back": dt.datetime(2024, 11, 3, 6, 0),
+                "truncated_minute": dt.datetime(2024, 11, 3, 6, 30),
+            },
+        ),
+        f"truncating inside the REPEATED hour. Spark truncates with `ZonedDateTime.truncatedTo`, "
+        f"which preserves the source instant's offset, so the two distinct instants of local hour "
+        f"1 stay distinct and the minute row does not move at all. An implementation that "
+        f"re-resolves the truncated local time to the earliest valid offset collapses the pair "
+        f"onto 05:00Z and puts the minute row an hour early — which is what the first draft of "
+        f"this unit did. The VALUE half is pinned equal here; the residue is `date_trunc`'s Arrow "
+        f"type, {TZ4}.",
     ),
 ]
 
@@ -571,6 +1031,12 @@ def run_row(row: TimeZoneRow, session: object) -> pa.Table:
     """
     if row.needs_column_view:
         register_column_view(session)
+    if row.needs_naive_column_view:
+        register_naive_column_view(session)
+    if row.needs_ltz_and_ntz_view:
+        register_ltz_and_ntz_view(session)
+    if row.entry_point == "dataframe_api":
+        return dataframe_api_extraction(session)
     frame = session.sql(row.sql)  # type: ignore[attr-defined]
     to_arrow = getattr(frame, "to_arrow", None) or frame.toArrow
     return to_arrow()  # type: ignore[no-any-return]
@@ -625,16 +1091,23 @@ def test_session_timezone_row_matches_spark_or_still_diverges(row: TimeZoneRow) 
 def test_session_timezone_row_set_covers_both_gap_budgets() -> None:
     """The pin budget is part of the unit, so the corpus size is pinned, not incidental.
 
-    G1's budget is 10-14 differential rows (13 table rows here — 11 scalar-literal rows plus the
-    2 column-path rows — plus the ``current_timestamp`` row below, whose value is nondeterministic
-    and so is pinned as its own test); G16's is 6-8.
+    The brief's opening budgets were G1 10-14 and G16 6-8, and the rule is that a size pin moves
+    only when the fix FORCES it. It did. An adversarial panel measured three wrong-answer families
+    against live Spark 4.1.2 that this corpus was structurally blind to — every original row hands
+    the engine a ``…Z``-suffixed string, i.e. only the shapes where reading a TIMESTAMP as a UTC
+    instant is right — so the budget is now G1 19 + ``current_timestamp`` and G16 10. What each
+    added row buys is named on the row; the counts are pinned here so growth stays a decision.
     """
     g1 = [row for row in ROWS if row.gap == "G1"]
     g16 = [row for row in ROWS if row.gap == "G16"]
-    assert len(g1) + 1 == 14, (
-        "G1: 11 scalar-literal rows + 2 column-path rows + the current_timestamp row (budget 10-14)"
+    assert len(g1) + 1 == 20, (
+        "G1: 11 scalar-literal + 2 column-path + 4 zoneless-input/NTZ + 2 DataFrame-API rows, "
+        "plus the current_timestamp row"
     )
-    assert len(g16) == 7, "G16: pre-1970, year-boundary and leap-day rows (budget 6-8)"
+    assert len(g16) == 10, (
+        "G16: pre-1970, year-boundary and leap-day rows, plus 2 date_trunc COMPOSITION rows and "
+        "the DST fall-back truncation row"
+    )
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
     assert [row for row in ROWS if row.repark is None], (
         "at least one control row must assert plain equality — an all-disclosure corpus cannot "
@@ -644,6 +1117,60 @@ def test_session_timezone_row_set_covers_both_gap_budgets() -> None:
     assert {row.session_time_zone for row in column_rows} == {ZONE_NEW_YORK, ZONE_TOKYO}, (
         "the brief's recipe is year/month/day/hour over a tz-aware timestamp COLUMN under BOTH "
         "non-UTC session zones — a corpus of scalar literals alone cannot claim it"
+    )
+    dataframe_rows = [row for row in ROWS if row.entry_point == "dataframe_api"]
+    assert {row.session_time_zone for row in dataframe_rows} == {ZONE_NEW_YORK, ZONE_TOKYO}, (
+        "the facade cell has TWO user entry points (`sql()` and `df.select(F...)`); pinning only "
+        "the first would leave the most-used spelling on a Rust proxy"
+    )
+    zoneless_rows = [row for row in ROWS if TZ7 in row.note]
+    assert len(zoneless_rows) == 3 and all(row.repark is not None for row in zoneless_rows), (
+        "the zoneless-input family must stay DISCLOSED (never quietly flipped to equality) until "
+        "repark's TIMESTAMP representation can separate a wall clock from an instant"
+    )
+
+
+def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
+    """The SHAPE of the corpus after the fix, pinned so a later edit cannot quietly reopen it.
+
+    Two failure modes this catches, neither of which the per-row assertions can:
+
+    * an equality row silently reverting to a disclosure (someone "fixes a red row" by pinning
+      repark's new wrong answer instead of the engine) — the equality count drops;
+    * a disclosure being added back into the EXTRACTION class rather than into the class that
+      actually owns it. Every remaining disclosure is named here, one by one, with the registry
+      row that keeps it open, so admitting a new one is an edit a reviewer sees.
+    """
+    equality = {row.name for row in ROWS if row.repark is None}
+    disclosures = {row.name for row in ROWS if row.repark is not None}
+    assert disclosures == {
+        # TZ-4 — the tz-naive Arrow export TYPE (no extractor involved).
+        "to_timestamp_of_zone_suffixed_string",
+        "tz_aware_to_naive_round_trip",
+        # TZ-4 — value converged with the extraction fix, type did not.
+        "date_trunc_day_across_a_zone_boundary",
+        "year_boundary_date_trunc_under_tokyo_session",
+        "date_trunc_across_the_fall_back_hour_under_new_york_session",
+        "dataframe_api_extract_under_new_york_session",
+        "dataframe_api_extract_under_tokyo_session",
+        # TZ-5 — a cast-unit bug (10^9 factor), deliberately out of this unit's scope.
+        "pre_1970_timestamp_cast_to_bigint",
+        # TZ-7 — a ZONELESS timestamp input is read as UTC, not as a session-zone wall clock.
+        # This unit fixed extraction for INSTANT-typed inputs only; these are the other half,
+        # and they are worse after the fix than before it. Disclosed, not laundered.
+        "zoneless_timestamp_literal_under_new_york_session",
+        "zoneless_timestamp_input_spellings_under_tokyo_session",
+        "naive_datetime_column_under_new_york_session",
+        # TZ-6 — repark cannot tell TimestampNTZType from TimestampType.
+        "timestamp_ntz_is_indistinguishable_from_timestamp",
+    }, (
+        "every remaining disclosure must belong to a NAMED class other than the INSTANT-typed "
+        "timestamp extraction this unit closed — if a new one is legitimate, add it here with the "
+        "registry row that owns it"
+    )
+    assert len(equality) == 17, (
+        "13 rows converged with the extraction fix, plus the 2 date_trunc COMPOSITION rows the "
+        "rework added, plus the 2 zone-independent control rows that were equality rows all along"
     )
 
 

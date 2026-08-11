@@ -46,7 +46,7 @@ use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
 use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
-use crate::extension::{NoopSessionExtension, SessionExtension};
+use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
 use crate::time_travel::{self, TimeTravelSpec};
 // v1's two test-only re-exports, re-homed with the test module (they rode the v1 crate root,
@@ -378,8 +378,10 @@ impl ReparkSessionBuilder {
 
         let catalog_specs = catalog_config::parse_catalog_specs(&self.config)?;
         // The session timezone, resolved and VALIDATED here — once, at construction — so no
-        // query-time parse (and no host-environment read) can surprise a running job. Carried
-        // on the session below; timestamp extraction does not consume it yet (H-1a split B).
+        // query-time parse (and no host-environment read) can surprise a running job. Carried on
+        // the session below AND handed to the `configure` hook (H-1a split B), which is how the
+        // Spark door's extractor layer resolves timestamp fields against it; this is the ONE
+        // resolution, never re-parsed by a door.
         let session_time_zone = resolve_session_time_zone(&self.config)?;
         // The optional `s3://`/`s3a://` read region override (else the aws-config chain resolves
         // it). Both spellings are accepted; identical values collapse, different values fail loud.
@@ -452,7 +454,15 @@ impl ReparkSessionBuilder {
         // installed as ConfigExtensions, before the RuntimeEnv is assembled). v1 inlined the
         // cardinality/`repark.sql.*` `ConfigExtension` here (r24 SB1); the phase-2 Spark
         // extension re-homes it onto this hook, parsing the same builder config map.
-        config = ext.configure(&self.config, config).map_err(engine_err)?;
+        config = ext
+            .configure(
+                SessionBuildConf {
+                    conf: &self.config,
+                    session_time_zone: &session_time_zone,
+                },
+                config,
+            )
+            .map_err(engine_err)?;
 
         let mut runtime = RuntimeEnvBuilder::new();
         // Default 8 GiB FairSpillPool when unset (C1-Q-002). Explicit Some(0) opts out (unbounded).

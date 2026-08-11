@@ -149,7 +149,9 @@ helper beside CatalogRegistry (both doors do v1's clone+stamp dance through it).
 Phase-2 start freezes `SqlDialect::execute(EngineContext<'_>, &str)` and
 `SessionExtension` as shipped in phase 1 ([session-api.md](session-api.md) flips UNSTABLE →
 frozen, plus the G5 extension-scope line). No core-side pre-execution hooks; guards are
-door-called.
+door-called. **`SessionExtension::configure`'s signature was superseded on 2026-08-10** —
+[session-extension-conf-seam.md](session-extension-conf-seam.md); `SqlDialect::execute` is
+unchanged.
 
 ## 4. Testing discipline
 

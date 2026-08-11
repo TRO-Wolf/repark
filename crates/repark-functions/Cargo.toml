@@ -17,7 +17,13 @@ workspace = true
 # happens one layer up, in repark-core). See map.md.
 datafusion.workspace = true
 datafusion-spark.workspace = true
-arrow.workspace = true
+# `chrono-tz` is DECLARED, not inherited: `arrow::array::timezone::Tz` accepts only fixed offsets
+# without it, so every IANA zone id would be refused at query time by the session-timezone
+# extraction path (`datetime::extraction_time_zone`). It was already resolved transitively via
+# `datafusion-functions`; owning it here means a DataFusion feature change cannot silently turn
+# `spark.sql.session.timeZone = "America/New_York"` into a hard execution failure. Same reasoning
+# as `repark-core`'s declaration (h1a-ledger.md finding S-6).
+arrow = { workspace = true, features = ["chrono-tz"] }
 chrono.workspace = true
 
 [dev-dependencies]

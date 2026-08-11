@@ -112,8 +112,15 @@ fn ta_extension_configure_is_the_trait_default_pass_through() {
     let mut conf = HashMap::new();
     conf.insert("repark.sql.maxArrayElements".to_string(), "42".to_string());
     let base = SessionConfig::new().with_target_partitions(7);
+    let zone = repark_core::SessionTimeZone::default();
     let out = TaExtension
-        .configure(&conf, base)
+        .configure(
+            repark_core::SessionBuildConf {
+                conf: &conf,
+                session_time_zone: &zone,
+            },
+            base,
+        )
         .expect("the default hook cannot fail");
     assert_eq!(
         out.target_partitions(),

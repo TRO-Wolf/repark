@@ -1,12 +1,12 @@
 //! Hook ORDER pins for [`SessionExtension`] during `ReparkSessionBuilder::build`.
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 
-use super::SessionExtension;
+use super::{SessionBuildConf, SessionExtension};
 use crate::ReparkSession;
+use crate::session_time_zone::SESSION_TIME_ZONE_KEY;
 
 /// Records hook invocation order and leaves an observable mark in each hook position:
 /// `configure` amends the `SessionConfig` (batch size 1234) so its output reaching the live
@@ -19,7 +19,7 @@ struct RecordingExtension {
 impl SessionExtension for RecordingExtension {
     fn configure(
         &self,
-        conf: &HashMap<String, String>,
+        session: SessionBuildConf<'_>,
         config: SessionConfig,
     ) -> datafusion::error::Result<SessionConfig> {
         self.events
@@ -27,10 +27,22 @@ impl SessionExtension for RecordingExtension {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push("configure");
         assert_eq!(
-            conf.get("test.marker").map(String::as_str),
+            session.conf.get("test.marker").map(String::as_str),
             Some("on"),
             "configure must receive the builder's FULL config map (v1 parity: the inline \
              cardinality install parsed the same map)"
+        );
+        // H-1a split B: the hook also receives the zone `build()` already RESOLVED, so a door
+        // never re-parses `spark.sql.session.timeZone`. The builder below sets Asia/Tokyo.
+        assert_eq!(
+            session.session_time_zone.id(),
+            "Asia/Tokyo",
+            "configure must receive the RESOLVED session timezone, not the raw conf string"
+        );
+        assert_eq!(
+            session.conf.get(SESSION_TIME_ZONE_KEY).map(String::as_str),
+            Some("  Asia/Tokyo "),
+            "the raw map is still handed through verbatim — the resolved value is an ADDITION"
         );
         Ok(config.with_batch_size(1234))
     }
@@ -59,6 +71,9 @@ async fn build_runs_configure_then_register_at_the_v1_inline_positions() {
     let events = Arc::new(Mutex::new(Vec::new()));
     let session = ReparkSession::builder()
         .config("test.marker", "on")
+        // Padded on purpose: the hook must see the value the ENGINE resolved (trimmed and
+        // validated), while the raw map keeps the string the caller actually wrote.
+        .config(SESSION_TIME_ZONE_KEY, "  Asia/Tokyo ")
         .with_extension(Arc::new(RecordingExtension {
             events: events.clone(),
         }))
@@ -80,6 +95,11 @@ async fn build_runs_configure_then_register_at_the_v1_inline_positions() {
             .batch_size,
         1234,
         "the configure-amended SessionConfig must be the one the live context was built from"
+    );
+    assert_eq!(
+        session.session_time_zone().id(),
+        "Asia/Tokyo",
+        "the session carries the same ONE resolution the hook was handed"
     );
 }
 

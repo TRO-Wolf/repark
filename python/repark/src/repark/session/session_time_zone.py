@@ -37,8 +37,16 @@ construction — the same shape as the build-time memory-pool knob. It follows t
 produces different wall clocks on two hosts. repark defaults to ``UTC`` for reproducibility (and
 because reading the host zone would be an environment read the server-prep discipline forbids).
 
-Timestamp **extraction** does not honor the session zone yet — that fix and its pins are the second
-half of this unit; this module is the configuration surface only.
+**What the zone reaches, as of 2026-08-10.** Timestamp **extraction** honors it: ``year`` /
+``month`` / ``dayofmonth`` / ``hour`` / ``date_trunc`` / ``date_format`` (and ``trunc`` /
+``add_months``) over an INSTANT-typed TIMESTAMP resolve in this zone, on every entry point.
+Two halves are deliberately NOT closed and are recorded as divergence-registry rows rather than
+left to be discovered: a **zoneless** timestamp input (a ``TIMESTAMP '…'`` literal, a zoneless
+``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-``datetime`` column) is read as UTC rather
+than as a wall clock in this zone (row TZ-7), and ``to_date`` / ``CAST(ts AS DATE)`` / ``datediff``
+still take the date in the stored zone (row TZ-8). Both need repark's TIMESTAMP *representation* to
+change (row TZ-4), not another rule at the extractor. This module remains the configuration surface
+only — nothing here changes an evaluated result.
 """
 
 from __future__ import annotations

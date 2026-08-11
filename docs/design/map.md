@@ -15,6 +15,12 @@ changing a decision here means a new dated design pass, not an in-place edit.
   Session type and two-phase lifecycle, the internal engine API with the `SqlDialect` /
   `SessionExtension` seams, the `ExecutionBackend` boundary, the complete forced-edit ledger
   (§5), census accounting (§7), the omissions ledger (§8), and the server landing map (§6).
+- [session-extension-conf-seam.md](session-extension-conf-seam.md) — the **superseding design
+  note** (settled 2026-08-10) the 2026-08-08 seam freeze requires: `SessionExtension::configure`
+  takes a `SessionBuildConf<'_>` (the builder conf map PLUS the values `build()` already resolved)
+  rather than the bare map, so the validated session timezone reaches the function layer without a
+  second resolution. Prices the break, records the two rejected alternatives, and states what
+  stays frozen (`SqlDialect::execute`, `register`, session-scoped extensions).
 - [sql-doors.md](sql-doors.md) — the phase-2 two-SQL-doors design (settled 2026-08-07):
   delegate-first architecture (verbatim Spark-door port, NEW ANSI door), the four tier-3
   crates + three hoists (§1), the Q1–Q15 ANSI rulings (§2), the seam freeze (§3), census +
@@ -48,6 +54,7 @@ above stay live because the engine still obeys them.
 | Understand the phase-1 crate layout / Session API | [session-api.md](session-api.md) |
 | See exactly which product-code edits the port makes | [session-api.md](session-api.md) §5 |
 | Check why an improvement was deliberately resisted | [session-api.md](session-api.md) §8 |
+| See why the frozen `SessionExtension` seam changed | [session-extension-conf-seam.md](session-extension-conf-seam.md) |
 | Understand the phase-2 doors / ANSI rulings | [sql-doors.md](sql-doors.md) |
 | Understand the phase-3 port / census gate / edit classes | [python-facade.md](python-facade.md) |
 | Understand the V2 Engine Hardening campaign (running) | [v2-engine-hardening.md](v2-engine-hardening.md) |

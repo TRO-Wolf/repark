@@ -19,6 +19,26 @@ use std::collections::HashMap;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 
+use crate::session_time_zone::SessionTimeZone;
+
+/// ===========================================================================================
+/// What `build()` hands the [`configure`](SessionExtension::configure) hook: the raw builder
+/// conf map, plus the session values the engine has ALREADY resolved from it.
+///
+/// The map alone was enough while every extension parsed its own keys. The session timezone is
+/// different in kind: `repark-core` owns its one spelling and resolves it ONCE, at build, and a
+/// door that re-parsed the map would be a second resolution of a value the engine has already
+/// settled. Passing the resolved value keeps "resolved once" literally true and makes the
+/// dependency visible at the seam instead of implicit in a shared key string.
+/// ===========================================================================================
+#[derive(Debug, Clone, Copy)]
+pub struct SessionBuildConf<'a> {
+    /// The builder's full Spark-style `.config(key, value)` map, as before.
+    pub conf: &'a HashMap<String, String>,
+    /// The validated session timezone (`spark.sql.session.timeZone`), resolved once in `build()`.
+    pub session_time_zone: &'a SessionTimeZone,
+}
+
 /// ===========================================================================================
 /// Build-time session extension — two hooks at v1's inline registration positions.
 ///
@@ -27,19 +47,20 @@ use datafusion::prelude::{SessionConfig, SessionContext};
 /// ===========================================================================================
 pub trait SessionExtension: Send + Sync {
     /// Amend the [`SessionConfig`] before the runtime and context are assembled (v1 position:
-    /// the cardinality/`repark.sql.*` `ConfigExtension` install). `conf` is the builder's full
-    /// Spark-style `.config(key, value)` map, so an extension parses its own keys the way v1's
-    /// inline code did.
+    /// the cardinality/`repark.sql.*` `ConfigExtension` install). [`SessionBuildConf::conf`] is
+    /// the builder's full Spark-style `.config(key, value)` map, so an extension parses its own
+    /// keys the way v1's inline code did; [`SessionBuildConf::session_time_zone`] is the value
+    /// `build()` already resolved, for the door that must carry it down to the function layer.
     ///
     /// # Errors
     /// A malformed conf value → [`datafusion::error::DataFusionError`]; `build()` folds it into
     /// the crate [`Error`](crate::Error) via [`engine_err`](crate::engine_err).
     fn configure(
         &self,
-        conf: &HashMap<String, String>,
+        session: SessionBuildConf<'_>,
         config: SessionConfig,
     ) -> datafusion::error::Result<SessionConfig> {
-        let _ = conf;
+        let _ = session;
         Ok(config)
     }
 

@@ -326,7 +326,7 @@ def test_transform_non_dataframe_return_raises_assertion(spark: ReparkSession) -
 
 
 def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_path: Path) -> None:
-    """DIVERGENCE-1 (disclose, do not build session-tz machinery).
+    """DIVERGENCE-1 — the ``CAST(… AS TimestampType())`` passthrough.
 
     Naive parquet timestamps cast via ``TimestampType()``:
 
@@ -336,6 +336,27 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
       local timezone. Recorded dogfood (EDT host): naive parquet ``09:00`` → collect ``05:00``.
       That Spark wall-clock half is recorded below as a constant so a future *EDT-shaped*
       conversion would still fail the tick-identity pin first.
+
+    **Revisited 2026-08-10 (H-1a split B).** This docstring used to read "disclose, do not build
+    session-tz machinery", an instruction campaign decision D7 superseded: the machinery exists
+    now, and `spark.sql.session.timeZone` moves timestamp EXTRACTION at all four entry points
+    (``test_session_timezone_parity.py``). This pin is deliberately unchanged, because a ``CAST``
+    is not an extractor and the fix did not touch the cast path — which is exactly what the
+    assertions below still hold. The classes that keep this row divergent are named in the
+    divergence registry (``docs/spark-sql-iceberg-parity.md`` §7): TZ-4, repark's tz-naive
+    TIMESTAMP Arrow export, and TZ-6, that repark has no ``TIMESTAMP_NTZ`` distinct from
+    ``TIMESTAMP``. The "if these differ, session-tz LTZ may have been introduced" message below is
+    therefore still the right alarm: it guards the CAST path specifically, and a change that made
+    a *cast* shift ticks would be a new decision, not a consequence of this one.
+
+    **What this pin can and cannot detect, stated so the alarm is honest.** It runs on the default
+    ``spark`` fixture, i.e. a ``UTC`` session, so it is **UTC-only by construction**: no
+    session-zone effect can ever appear in it, and it can therefore never fire *because of* TZ-4 or
+    TZ-6. It detects one thing — that a ``CAST`` starts moving ticks — and that is enough, because
+    the classes it names are pinned on value AND type under two non-UTC sessions next door
+    (``test_session_timezone_parity.py``, and ``crates/repark-spark/tests/session_timezone.rs``).
+    A non-UTC leg was considered and deliberately not added: it would duplicate that corpus while
+    weakening this row's single, sharp claim about the cast path.
 
     JVM-free: no live Spark in this test.
     """

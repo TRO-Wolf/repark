@@ -18,6 +18,32 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 - [dml_sessions.rs](dml_sessions.rs) — deferred row #3 (phase-2 PR-3b):
   `session_sql_bare_dml_applies_eagerly` — the F-BR-2 bare-`INSERT` eager-apply trap through
   `session.sql` (memory catalog, AWS-free).
+- [session_timezone.rs](session_timezone.rs) — **H-1a split B (2026-08-10):** the
+  session-timezone extraction class, pinned on real sessions at two non-UTC zones plus a
+  half-hour offset. Eight extractor-family pins (`year`; `month`/`dayofmonth`/`dayofyear`;
+  `hour`/`minute`/`second`; the `dayofweek`/`weekday`/ISO-week/`quarter` family; `date_trunc`;
+  `date_format`; the DST spring-forward and fall-back boundaries; pre-1970 instants), the
+  **native DataFrame API** cell built from `repark_functions::expr_fn` (a standalone `Expr` with
+  no session — the shape the Python facade's `F.year(col)` takes, and the cell a
+  registration-time zone would miss), and the negatives that make the claim falsifiable: `DATE`
+  and `TIME` arguments must not move under ANY zone, the underlying instants must not move at
+  all, and the extractor-layer fallback must equal `repark_core::DEFAULT_SESSION_TIME_ZONE`.
+  Value AND Arrow type on every row. The `DATE` negative caught a real over-reach during the fix
+  (a non-idempotent coercion arm).
+  **Reworked 2026-08-10 after an adversarial panel measured three wrong-answer families against
+  live Spark 4.1.2**, so the file now also pins: `date_trunc` across the DST **fall-back**
+  (`date_trunc_preserves_the_source_offset_across_a_fall_back` — the truncated local time is
+  ambiguous and the source offset must be preserved); `date_trunc` of a `DATE`/string **composed**
+  into every extractor (`date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline` — the
+  single-hop `DATE` negative provably cannot see this); the two reachable DST **gap** zones
+  (`dst_gap_zones_resolve_like_spark` — Lord Howe's 30-minute step, Santiago's midnight
+  transition); the date-valued shims this crate's engine owns
+  (`date_valued_shims_take_the_date_in_the_session_zone` — `trunc`/`add_months`); and two DECLARED
+  divergences pinned as such, `a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark`
+  (registry TZ-7) and `timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone`
+  (registry TZ-8). Every expectation in the file is a live-Spark measurement, not a derivation.
+  The `DATE` negative's CLAIM was also narrowed to match its coverage: `date_trunc(fmt, DATE)` is a
+  session-zone localization in Spark, so it moves and now says so.
 - [ta_window.rs](ta_window.rs) — deferred rows #8-#14 (phase-2 PR-4): the seven
   `sql_route_*` cases, ported from v1 `repark-session/tests/ta_window.rs`. Proves the TA window
   UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the
@@ -33,6 +59,9 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 | See which deferred rows land where | [../../../task/port/deferred-tests.md](../../../task/port/deferred-tests.md) |
 | Read the extension under test | [../src/extension.rs](../src/extension.rs) |
 | See the TA SQL route pinned bit-exact | [ta_window.rs](ta_window.rs) |
+| See the session-timezone class pinned at the Spark door + DataFrame API | [session_timezone.rs](session_timezone.rs) |
+| See the same class at the ANSI door | [../../repark-sql/tests/session_timezone_ansi_door.rs](../../repark-sql/tests/session_timezone_ansi_door.rs) |
+| See the same class at the facade | [../../../python/repark/tests/test_session_timezone_parity.py](../../../python/repark/tests/test_session_timezone_parity.py) |
 
 ## Pointers
 

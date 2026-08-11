@@ -73,8 +73,13 @@ one-authoritative-description rule binds every disposition made **from 2026-08-1
 of the tree: a disposed divergence described without any of the search terms would not appear; a
 comment without a pin cannot become a row (rows require a pin); polars-or-fork-only differences
 are out of this registry's Spark scope; and candidate **#1**
-(`test_dogfood_gaps.py::test_divergence_timestamp_ltz_collect_passthrough` / DIVERGENCE-1) is
-carved out for H-1a split B and was not rowed here.
+(`test_dogfood_gaps.py::test_divergence_timestamp_ltz_collect_passthrough` / DIVERGENCE-1) was
+carved out for H-1a split B, which **revisited it on 2026-08-10 and left it unrowed** (that
+disposition also carries a dated closure line in the home §6 designates,
+[../task/g5-sweep-ledger.md](../task/g5-sweep-ledger.md)) — its
+subject is the `CAST(… AS TimestampType())` passthrough, not extraction, and the class that keeps
+it open is already described by TZ-4 and TZ-6. Its docstring now says so instead of instructing a
+reader not to build the session-tz machinery that has since been built.
 
 ---
 
@@ -431,8 +436,20 @@ them, and the document is ordered by surface, never by date.
   `sql_conf` helper. Accepting keeps drop-in source compatibility; not storing keeps `conf.get`
   honest. The unvalidated half is the accepted cost of keeping exactly **one** validator (the
   engine, at build) — repark is knowingly laxer than PySpark on this key at runtime, and the
-  warning says so in as many words. Becomes fixable if the extraction unit routes the zone through
-  DataFusion `ConfigOptions` (a live `SET` would then retire this row).
+  warning says so in as many words.
+- **The `ConfigOptions` escape was evaluated in H-1a split B and declined, on measurement.** The
+  earlier note here read "becomes fixable if the extraction unit routes the zone through
+  DataFusion `ConfigOptions` (a live `SET` would then retire this row)". The extraction unit did
+  route the zone through `ConfigOptions` — but through a **carrier** whose `set` refuses and whose
+  `entries` are empty, not through `datafusion.execution.time_zone`, for three measured reasons:
+  in DataFusion 54.1 that option drives `now()` / `current_date` / `current_time` and the SQL
+  planner's `TIMESTAMP WITH TIME ZONE` mapping and **not** `date_part`, so it does not fix this
+  class on its own; it is reachable as `.config("datafusion.execution.time_zone", …)` and as
+  `SET datafusion.execution.time_zone`, which is a second live spelling of a knob whose acceptance
+  gate is "exactly one"; and it would retype `current_timestamp` as
+  `timestamp[ns, tz=<session zone>]`, moving it *away* from Spark's `timestamp[us, tz=UTC]`
+  (TZ-4). This row therefore stands, and the working shown is in
+  [../task/h1a-ledger.md](../task/h1a-ledger.md) decision D-B2 rather than restated here.
 
 ---
 
@@ -582,38 +599,56 @@ the pin rather than obeying it.
   [ID-2](#id-2--the-case-collision-refusal-covers-the-sql-string-form-only).
   The fix is to treat a backticked span the way a double-quoted span is already treated.
 
-### TZ-1 — timestamp extraction ignores the session zone
-
-- **repark** — `year` / `month` / `dayofmonth` / `hour` / `date_trunc` / `date_format` over a
-  TIMESTAMP resolve in the **stored (UTC) zone**; `spark.sql.session.timeZone` does not move
-  them. Holds over scalar literals and over a tz-aware timestamp **column** alike.
-- **Apache Spark** — resolves every one of them in the **session zone** (the census measured a
-  four-hour silent offset in this class). *(oracle: recorded — goldens re-derivable inside the
-  repo via `python/repark/tests/_record_session_timezone_goldens.py` against live PySpark 4.1.2.)*
-- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_row_matches_spark_or_still_diverges`,
-  the **15 extraction-class disclosure rows** (the module holds 18 disclosure rows + 2 equality
-  controls; of the 18, two are TZ-4 and one is TZ-5) — e.g.
-  `[hour_of_instant_under_new_york_session]`, `[dst_fall_back_repeated_local_hour]`,
-  `[year_boundary_date_trunc_under_tokyo_session]`, and the two column-path rows
-  `[column_extract_under_new_york_session]` / `[column_extract_under_tokyo_session]`.
-- **Rationale** — BACKLOG, **fix in flight** (campaign decision D7; the extraction unit,
-  H-1a split B). Recorded as disclosures so the CRITICAL class is measured while the fix lands;
-  the fix flips every row to an equality assertion, and that flip is its revert-red evidence. A
-  row that instead starts matching the recorded Spark half reds with a CONVERGED /
-  flip-don't-delete message.
+> **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on
+> 2026-08-10**, when H-1a split B landed the extraction fix (campaign decision D7). It does not
+> simply retire, and the distinction is the point: what closed is the **instant-typed** half —
+> `year` / `month` / `dayofmonth` / `hour` / `date_trunc` / `date_format`, and this repo's
+> `trunc` / `add_months`, over a TIMESTAMP that already carries the right instant now resolve in
+> `spark.sql.session.timeZone`, as Spark does, at all four entry points. The closure paid the
+> price §6 charges: the row's disclosure pins went RED **on purpose** and were flipped to equality
+> rows in the same change, which is what makes them the fix's revert-red evidence; the `date_trunc`
+> rows whose value converged and whose type did not moved to TZ-4 below.
+>
+> **What did NOT close stayed a row rather than becoming a silence.** Two narrower successors carry
+> the remainder, each measured against live Spark 4.1.2 and pinned:
+> [TZ-7](#tz-7--a-zoneless-timestamp-input-is-read-as-utc-not-as-a-session-zone-wall-clock) (a
+> zoneless timestamp INPUT is read as UTC, so its instant is wrong before any extractor sees it)
+> and [TZ-8](#tz-8--timestampdate-outside-this-repos-coercion-path-reads-the-stored-zone)
+> (`to_date` / `CAST(ts AS DATE)` / `datediff` take the date in the stored zone). A reader who
+> arrives here from a wrong wall clock is routed to one of the two, never told the class is shut.
+> The remaining state line is in [../STATUS.md](../STATUS.md); the full account, including the
+> adversarial panel that forced this narrowing, is in
+> [../task/h1a-ledger.md](../task/h1a-ledger.md) "§ Split B".
 
 ### TZ-4 — TIMESTAMP Arrow export is tz-naive
 
 - **repark** — `to_arrow()` yields `timestamp[ns]` (or `timestamp[us]` after `date_trunc`) with
-  **no timezone** on the Arrow type.
-- **Apache Spark** — `toArrow()` yields `timestamp[us, tz=UTC]`. *(oracle: recorded — including
-  the live `current_timestamp` type, `timestamp[us, tz=UTC]`, non-null.)*
-- **Pin** — `[to_timestamp_of_zone_suffixed_string]`, `[tz_aware_to_naive_round_trip]` and
-  `…::test_current_timestamp_type_and_zone_disclosure` in
-  `python/repark/tests/test_session_timezone_parity.py`
-- **Rationale** — BACKLOG, **fix in flight** — the export-**type** half of TZ-1's class. A
-  consumer that localizes a tz-naive column silently shifts it, which is why the Arrow type is
-  asserted and not only the value.
+  **no timezone** on the Arrow type. Nothing distinguishes a Spark `TIMESTAMP` from a
+  `TIMESTAMP_NTZ` on the wire (see TZ-6).
+- **Apache Spark** — `toArrow()` yields `timestamp[us, tz=UTC]`, and does so *whatever* the
+  session zone is — the session zone moves a `TIMESTAMP`'s calendar fields, never its export
+  annotation. *(oracle: recorded — including the live `current_timestamp` type,
+  `timestamp[us, tz=UTC]`, non-null.)*
+- **Pin** — in `python/repark/tests/test_session_timezone_parity.py`:
+  `[to_timestamp_of_zone_suffixed_string]`, `[tz_aware_to_naive_round_trip]`,
+  `[date_trunc_day_across_a_zone_boundary]`, `[year_boundary_date_trunc_under_tokyo_session]`,
+  `[date_trunc_across_the_fall_back_hour_under_new_york_session]`,
+  `[dataframe_api_extract_under_new_york_session]`, `[dataframe_api_extract_under_tokyo_session]`
+  and `…::test_current_timestamp_type_and_zone_disclosure`; the Rust half of the same claim is
+  `crates/repark-spark/tests/session_timezone.rs::date_trunc_truncates_on_the_session_zone_calendar`
+  and `…::date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline`, which assert the
+  naive output type beside the now-correct value on both of `date_trunc`'s paths.
+- **Rationale** — BACKLOG, intent to FIX. **It split from TZ-1 rather than closing with it, on
+  2026-08-10, and the reason is mechanical, not a deferral of convenience:** TZ-1 was a defect in
+  the extractor *coercion path* and was fixed there; TZ-4 is repark's TIMESTAMP *representation* —
+  the unit (`ns` vs Spark's `us`) and the missing `UTC` annotation are produced by
+  `to_timestamp`, by literal planning, by `CAST` and by the Arrow export, none of which is an
+  extractor. Closing it means changing the engine's timestamp type everywhere at once, whose blast
+  radius is the whole facade corpus and the Iceberg write path's `timestamp` / `timestamptz`
+  choice — a unit of its own, not a rider. The two `date_trunc` rows are the visible seam: their
+  **value** converged with the extraction fix and their **type** did not, so their `repark` half
+  was re-recorded in the same change and they moved into this row. Closing TZ-4 is also what would
+  let TZ-6's interpretation be retired.
 
 ### TZ-5 — `CAST(TIMESTAMP AS BIGINT)` returns nanoseconds
 
@@ -625,6 +660,88 @@ the pin rather than obeying it.
   timestamp→integer cast is a silently-wrong-result class in its own right; it gets its own unit
   rather than a fold into the extraction fix. State: [../STATUS.md](../STATUS.md) "Known
   correctness issues".
+
+### TZ-6 — every TIMESTAMP is an instant; there is no `TIMESTAMP_NTZ`
+
+- **repark** — the facade spells `TimestampNTZType`, but it maps to the same Arrow type as
+  `TimestampType` (`python/repark/src/repark/types.py` — both become `timestamp[us]`, tz-naive),
+  so **the engine cannot tell the two apart at all**. Declaring one column of each type and
+  exporting them side by side under an `America/New_York` session gives two byte-identical Arrow
+  columns (`timestamp[us]`, both holding `2024-06-15 12:00`) and `hour` reads `8` from both.
+- **Apache Spark** — the two types are distinct on the wire and in semantics: the same declaration
+  exports `ltz` as `timestamp[us, tz=UTC]` holding `2024-06-15T16:00Z` (the wall clock localized in
+  the session zone) and `ntz` as `timestamp[us]` holding `2024-06-15 12:00`, and `hour` reads `12`
+  from both. Iceberg's `timestamp` (without zone) maps to the NTZ one. *(oracle: **recorded** — live
+  PySpark 4.1.2 on 2026-08-10, re-derivable with the committed record driver.)*
+- **Pin** — `python/repark/tests/test_session_timezone_parity.py::…[timestamp_ntz_is_indistinguishable_from_timestamp]`
+  (both halves, value AND Arrow type, on the Arrow path) plus
+  `crates/repark-spark/tests/session_timezone.rs::a_tz_naive_timestamp_is_read_as_a_utc_instant`
+  (the interpretation, stated as a decision) and `…::date_arguments_never_move_with_the_session_zone`
+  (its boundary: `DATE` and `TIME` carry no instant and never move)
+- **Rationale** — BACKLOG, intent to FIX, and **recorded because H-1a split B is what made it
+  observable**. The alternative was to move only tz-*annotated* timestamps, which would have left
+  the whole scalar-literal family divergent: `to_timestamp('2024-01-01T04:30:00Z')` yields a
+  tz-naive Arrow type holding UTC ticks (that is TZ-4), so a type-driven rule would have read
+  repark's own instants as local wall clocks and closed almost nothing. Reading every TIMESTAMP as
+  an instant matches Spark's *default* type and closes the CRITICAL class.
+  **Corrected on 2026-08-10 (rework).** This row was first admitted under §1's documented-value
+  exception, on the ground that nobody here had run an NTZ column past a live Spark — but the unit
+  that admitted it *ships the oracle that measures it*, so the exception did not apply and the row
+  is now recorded. The correction also narrowed the claim: the divergence is **not confined to
+  NTZ**. A plain default-typed `TimestampType` column built from naive `datetime` objects diverges
+  too, which is a far more common shape than an explicit NTZ column and belongs to
+  [TZ-7](#tz-7--a-zoneless-timestamp-input-is-read-as-utc-not-as-a-session-zone-wall-clock) — a
+  user hitting that would never have found their bug under an NTZ heading. **The unit that retires
+  this row is the TIMESTAMP-representation unit that closes TZ-4** (registry queue B-TZ-4 is part
+  of its surface); at that point the extraction rule becomes purely type-driven and TZ-6 and TZ-7
+  retire together.
+
+### TZ-7 — a zoneless TIMESTAMP input is read as UTC, not as a session-zone wall clock
+
+- **repark** — `TIMESTAMP '2024-06-15 12:00:00'`, `to_timestamp('2024-06-15 12:00:00')` and
+  `CAST('2024-06-15 12:00:00' AS TIMESTAMP)` all plan to `timestamp[ns]` holding those digits as
+  **UTC ticks**, so `hour` reads `8` under `America/New_York` and `21` under `Asia/Tokyo`;
+  `year`/`dayofmonth` of `TIMESTAMP '2024-01-01 00:30:00'` read `2023` / `31`. A naive-`datetime`
+  column built with `createDataFrame` behaves the same way.
+- **Apache Spark** — parses a zoneless timestamp as a **wall clock in
+  `spark.sql.session.timeZone`**, so `hour` reads `12` in every zone and the year-boundary literal
+  stays on 2024-01-01. *(oracle: recorded — live PySpark 4.1.2, 2026-08-10.)*
+- **Pin** — `python/repark/tests/test_session_timezone_parity.py`:
+  `[zoneless_timestamp_literal_under_new_york_session]`,
+  `[zoneless_timestamp_input_spellings_under_tokyo_session]`,
+  `[naive_datetime_column_under_new_york_session]`; Rust:
+  `crates/repark-spark/tests/session_timezone.rs::a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark`
+- **Rationale** — BACKLOG, intent to FIX. **This is the half of TZ-1 that did not close, and it is
+  a REGRESSION direction, stated rather than buried:** before H-1a split B the session zone reached
+  no extractor, so these shapes happened to agree with Spark; after it they do not. That is the
+  disclosed price of reading every TIMESTAMP as an instant (ledger D-B5), and it is forced rather
+  than chosen — measured on 2026-08-10, all four input spellings including the zone-suffixed
+  `to_timestamp('…T12:00:00Z')` produce the **identical Arrow type holding the identical ticks**, so
+  no rule applied at the extractor can separate a wall clock from an instant. The counterfactual is
+  worse: a type-driven rule would leave the whole recorded corpus divergent (see TZ-6's rationale).
+  Closing it means the input paths — literal planning, `to_timestamp`, `CAST` — must produce a type
+  that says which one they made, which is exactly TZ-4's representation change; **TZ-7 retires with
+  TZ-4 and TZ-6.**
+
+### TZ-8 — TIMESTAMP→DATE outside this repo's coercion path reads the stored zone
+
+- **repark** — `to_date(to_timestamp('2024-06-15T03:00:00Z'))` and
+  `CAST(to_timestamp('2024-06-15T03:00:00Z') AS DATE)` both answer `2024-06-15`;
+  `datediff(to_timestamp('2024-06-15T03:00:00Z'), DATE '2024-06-01')` answers `14`. `last_day` and
+  `date_add` over a TIMESTAMP do not plan at all (`coercion from Timestamp(ns) … failed`).
+- **Apache Spark** — takes the date in `spark.sql.session.timeZone`: `2024-06-14` (the instant is
+  23:00 EDT on the 14th), `13`, and `last_day` / `date_add` accept a TIMESTAMP and answer
+  `2024-05-31` / `2024-06-01`. *(oracle: recorded — live PySpark 4.1.2, 2026-08-10.)*
+- **Pin** — `crates/repark-spark/tests/session_timezone.rs::timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone`
+- **Rationale** — BACKLOG, intent to FIX. **Not a regression** — these behaved the same before
+  H-1a split B — but a completeness gap that the class claim would otherwise paper over, and
+  `CAST(ts AS DATE)` is the most common partition-key derivation in a migrated job. The boundary is
+  ownership, not difficulty: this repo's own date-valued shims (`trunc`, `add_months`) reach the
+  date through `repark-functions`' coercion path and were **fixed** in the same rework, while
+  `to_date` / `datediff` come from `datafusion-spark` and `CAST(ts AS DATE)` is arrow's cast kernel,
+  which reads the array's own annotation. Closing those means either shimming the three functions or
+  changing the representation (TZ-4). Registry queue **B-TZ-3** is the `DATE`-argument sibling of the
+  same `date_add` coercion hole.
 
 ### Surfaced, awaiting pins — not yet rows
 

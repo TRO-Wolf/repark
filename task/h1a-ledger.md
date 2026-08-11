@@ -493,6 +493,16 @@ Spark behavior / the pin / rationale). The orchestrator lands them at assembly.
 
 ## 7. Residuals, for the verifier and for split B
 
+> **Disposition, added 2026-08-10 when split B landed** (the list below is split A's record and is
+> not rewritten): **#1** (the four-entry-point matrix) is DISCHARGED — §B.3. **#3** (the plumbing
+> seam) is DISCHARGED — §B.1/§B.2, and the seam chosen is neither of the two this residual named:
+> the zone travels on the session's `ConfigOptions` in a non-settable carrier, installed from the
+> `SparkExtension::configure` hook, because it must be readable at INVOKE time for the DataFrame-API
+> entry point to work at all (§B.2 D-B1). **#4** (DIVERGENCE-1) is DISCHARGED — revisited, left
+> unrowed, docstring corrected (§B.6). **#8** (the SQL `SET` door / B-TZ-5) was RE-EVALUATED and
+> deliberately NOT taken (§B.2 D-B2, rejected alternative). **#2, #5, #6, #7, #9 are untouched** by
+> split B and stand as written.
+
 1. **Four-entry-point matrix is split B's, claimed as split-scope in the §3 gate table.** Split A
    pins ONE cell — the facade `sql()` door — and now pins it over a tz-aware timestamp COLUMN as
    well as over scalar literals. The native-DataFrame / ANSI-door / Spark-door cells are UNPINNED
@@ -753,13 +763,788 @@ $ sha256sum -c (Cargo.lock, taken before the arrow feature declaration) -> Cargo
 
 ---
 
-## § Split B (reserved)
+## § Split B — the extraction fix (2026-08-10)
 
-Deliberately empty. Split B — the extraction fix, its 6–8 Rust extractor-family pins, the
-four-entry-point matrix, and the flip of every disclosure row above into an equality row — appends
-here.
+**Unit:** H-1a **split B** of the V2 Engine Hardening campaign
+([../briefs/v2-engine-hardening.md](../briefs/v2-engine-hardening.md) "H-1a", split rule: *"unit B
+= the extraction fix + its Rust pins"*). Split A changed no evaluated result; **this half changes
+evaluated results on purpose**, and every row it moves is a row split A recorded first.
+
+### B.1 What landed
+
+| Layer | File | What changed |
+|---|---|---|
+| Engine seam | `crates/repark-core/src/extension.rs` | `SessionExtension::configure` now takes a `SessionBuildConf` — the builder conf map PLUS the values `build()` already resolved from it (today, the session timezone) |
+| Engine | `crates/repark-core/src/session.rs` | `build()` hands the ONE resolved `SessionTimeZone` to the hook; it is still resolved exactly once |
+| Carrier | `crates/repark-functions/src/session_time_zone.rs` (NEW, + `session_time_zone/`) | a `ConfigExtension` that carries the resolved zone on the session's `ConfigOptions`, with a `set` that always refuses and empty `entries()` — a channel, not a knob |
+| Semantics | `crates/repark-functions/src/datetime.rs` | the coercion path declares which arguments are INSTANTS; `DatePartUdf`, `DateTrunc` and `DateFormat` resolve those instants in the session zone at invoke |
+| Door | `crates/repark-spark/src/extension.rs` | `configure` installs the carrier — the one crossing point between the crate that owns the key and the crate that owns the extractors |
+| Feature | `crates/repark-functions/Cargo.toml` | `arrow`'s `chrono-tz` DECLARED (same reasoning as split A finding S-6; `Cargo.lock` byte-unchanged) |
+
+**The mechanism, in one paragraph.** Spark's `TIMESTAMP` is an instant and every calendar field it
+exposes over one is read in `spark.sql.session.timeZone`. `coerce_date_arg` /
+`coerce_to_timestamp_micros` now say which arguments are instants by *typing* them: a `Timestamp`
+of any unit and any zone — including **none** — coerces to a `UTC`-annotated timestamp, while
+`Date32` / `Date64` / `Time32` / `Time64` / string arguments keep zone-free types. At invoke the
+extractors read the zone out of `ScalarFunctionArgs::config_options` and resolve only the
+tz-annotated arguments in it: `DatePartUdf` re-annotates the array (metadata only — arrow's ticks
+are epoch-relative either way, so the instant is never moved) and lets `date_part` read the local
+calendar; `DateTrunc` and `DateFormat` go through one shared `invoke_local_micros`, and `date_trunc`
+puts its locally-truncated result back on the timeline with `java.time`'s DST rules (earliest
+offset when the local time is ambiguous, pushed forward across a spring-forward gap).
+
+### B.2 Decisions, with rationale
+
+**D-B1 — The zone is read at INVOKE time, not baked into the UDF at registration. This is the
+decision the whole seam turns on, and it was forced by evidence, not taste.**
+`repark_functions::expr_fn` builds a **standalone** `Expr` that embeds a UDF *instance* — that is
+its documented reason to exist, because `repark-python`'s `PyColumn` has no `SessionContext` to
+resolve a name against. So the obvious design (construct zone-aware UDFs in `register_all`) reaches
+both SQL doors and **misses the DataFrame API entirely** — the exact cell split A's residual §7.1
+says split B owes. `ScalarFunctionArgs::config_options` (DataFusion 54.1) is populated for the
+executing session on both paths, including the constant-folding path
+(`ConstEvaluator::try_new(config_options)` — measured, and 18 of the 20 facade rows are scalar
+literals that fold). `native_dataframe_api_extracts_in_the_session_zone` is the pin that fails if
+this is ever "simplified" back.
+
+**D-B2 — `datafusion.execution.time_zone` was EVALUATED and REJECTED; the carrier is a
+repark-owned `ConfigExtension` whose `set` refuses.** Split A's D-A2 handed split B this choice and
+the brief asked for it to be decided on evidence. Measured, in DataFusion 54.1:
+
+1. *What the option actually drives.* `now()` / `current_timestamp` (its return **type**'s zone),
+   `current_date`, `current_time`, the SQL planner's `TIMESTAMP WITH TIME ZONE` → Arrow type
+   mapping, and `datafusion-spark`'s own `date_trunc` / `cast`. It does **not** drive `date_part`:
+   arrow's calendar kernels read the *array's* zone annotation. Measured directly — a probe run at
+   `datafusion.execution.time_zone = 'Asia/Tokyo'` returned `now()` as
+   `Timestamp(Nanosecond, Some("Asia/Tokyo"))` while `date_part(hour)` over a `timestamp[us, UTC]`
+   array still answered `12` for `2024-06-15T12:00Z`. **So setting it would not have fixed the
+   class**; the extractor change was needed either way.
+2. *It is a second live spelling.* `.config("datafusion.execution.time_zone", …)` reaches
+   `SessionConfig` through `apply_datafusion_config_keys`, and `SET datafusion.execution.time_zone`
+   reaches it through the SQL door. The unit's acceptance gate is "a session-conf grep shows
+   exactly ONE authoritative spelling", and two working spellings is exactly what D-A4 refused.
+3. *It moves `current_timestamp` the wrong way.* Its type would become
+   `timestamp[ns, tz=<session zone>]`; live Spark's is `timestamp[us, tz=UTC]` **whatever** the
+   session zone is (the recorded oracle shows `timestamp[us, tz=UTC]` under an
+   `America/New_York` session). That is further from parity, not closer.
+
+*Rejected alternative, recorded:* a `ConfigExtension` with `PREFIX = "spark"`, which WOULD make
+`SET spark.sql.session.timeZone = '…'` work and would retire registry queue item B-TZ-5 for this
+key. Declined because registering the `spark` namespace changes the error for **every** `spark.*`
+key through the SQL door — B-TZ-5 is explicitly wider than the session zone and "wants its own
+decision" (split A residual §7.8), and quietly making that decision inside an extraction fix is the
+scope creep this ledger exists to prevent.
+
+*What the chosen carrier costs and why it is still not a spelling:* DataFusion resolves an
+extension namespace on the text before the FIRST `.`, so a two-segment `PREFIX` (`repark.session`)
+is unreachable from `SET` — the same accident that already makes the neighbouring `repark.sql`
+extension unreachable, here made deliberate and pinned
+(`the_sql_set_door_cannot_reach_the_carrier`). On top of that the carrier's `set` **always refuses,
+naming `spark.sql.session.timeZone`**, and its `entries()` is empty so it never appears as a
+settable option. The grep still shows one authoritative spelling per language.
+
+**D-B3 — TZ-3 does NOT retire.** It follows from D-B2: a runtime `spark.conf.set` of the zone
+remains accepted-warned-not-stored, because the carrier is deliberately not settable and
+`datafusion.execution.time_zone` was rejected. The registry row now carries the measurement rather
+than the old speculative "becomes fixable if…" sentence. Making `conf.set` real is still possible —
+it needs a session-level re-registration path, not a config key — and it is a decision for the unit
+that owns TZ-4, because that unit is already changing the timestamp representation.
+
+**D-B4 — TZ-4 SPLITS AGAIN, and here is exactly why (the brief demands this be said in words).**
+The fix closes the **value** half of the class and not the **type** half. `date_trunc`'s output
+stays `timestamp[us]` tz-naive; `to_timestamp('…Z')` still yields `timestamp[ns]` tz-naive. The
+reason is mechanical: TZ-1 lived in the extractor *coercion path* and was fixed there, while TZ-4
+is repark's TIMESTAMP **representation** — the unit (`ns` vs Spark's `us`) and the missing `UTC`
+annotation are produced by `to_timestamp`, by literal planning, by `CAST` and by the Arrow export,
+**none of which is an extractor**. Closing it means changing the engine's timestamp type
+everywhere at once; the blast radius includes every facade test that asserts a timestamp type and
+the Iceberg write path's `timestamp` vs `timestamptz` column choice. Two rows make the seam
+visible: `[date_trunc_day_across_a_zone_boundary]` and
+`[year_boundary_date_trunc_under_tokyo_session]` **converged on value and did not converge on
+type**, so their `repark` half was re-recorded in this change and they moved from TZ-1's pin list
+into TZ-4's. They are the honest cost of the split, not a rounding error in it.
+
+**D-B5 — a tz-NAIVE timestamp is read as a UTC INSTANT, and the consequence is disclosed as a new
+registry row (TZ-6).** The type-pure alternative — move only tz-*annotated* timestamps — was
+considered and rejected on measurement: `to_timestamp('2024-01-01T04:30:00Z')` yields a tz-naive
+Arrow type holding UTC ticks (that *is* TZ-4), so a type-pure rule would have read repark's own
+instants as local wall clocks and closed almost none of the recorded corpus. Reading every
+TIMESTAMP as an instant matches Spark's **default** type and closes the CRITICAL class. The cost is
+real and is now a row: repark's facade spells `TimestampNTZType` but maps it to the same Arrow type
+as `TimestampType`, so a column a user means as NTZ moves with the session zone where Spark's would
+not. Registry row **TZ-6**, pinned by `a_tz_naive_timestamp_is_read_as_a_utc_instant`. It retires
+when TZ-4 does — at which point the rule becomes type-driven for free.
+
+**D-B6 — the `configure` hook signature changed rather than the door re-resolving the key.**
+`SparkExtension::configure` already receives the conf map, so it *could* have called
+`repark_core::resolve_session_time_zone` itself. That would have been a second resolution of a value
+the engine had already settled, and split A's headline property is "resolved ONCE, at construction".
+`SessionBuildConf` costs three implementors (`SparkExtension`, `TaExtension`'s defaulted
+pass-through, the core's `RecordingExtension`) and makes the dependency visible at the seam. The
+order pin now sets a **padded** zone (`"  Asia/Tokyo "`) so a door that re-parsed the map instead of
+taking the resolved value would be caught, not merely absent.
+
+**RISK — this seam is FROZEN, and the first pass changed it without saying so.**
+`docs/design/session-api.md` § "Seam freeze (2026-08-08, phase-2 PR-6)" declares `SessionExtension`
+frozen and states its own amendment rule: *"changing or removing a method or an existing field now
+requires a superseding design note."* `docs/design/sql-doors.md` §3 repeats the freeze. This
+decision is exactly that case. The panel caught that no note existed and that the freeze was never
+named here; both are now fixed — the note is
+[`docs/design/session-extension-conf-seam.md`](../docs/design/session-extension-conf-seam.md)
+(dated 2026-08-10), it is linked from both freeze sites, `session-api.md`'s stale signature line is
+corrected, and it records the rejected alternative the panel proposed (a defaulted second hook
+`configure_with`, refused because two configure positions in a one-position seam is a trap: an
+extension implementing only `configure` would silently never see resolved session values).
+`SqlDialect::execute`, `register` and the session-scoped-not-dialect-scoped rule are untouched.
+
+### B.3 The four-entry-point matrix — discharged
+
+The brief narrows `docs/testing.md` matrix row 3 into four cells. Split A pinned one and said so;
+this is the other three, against the same instants and the same expectations.
+
+| Cell | Where | What it asserts |
+|---|---|---|
+| **native DataFrame API** | `crates/repark-spark/tests/session_timezone.rs::native_dataframe_api_extracts_in_the_session_zone` | `expr_fn::year/hour` over a registered tz-aware column, through the DataFusion `DataFrame` API — a standalone `Expr` with no session attached, the shape `F.year(col)` takes. It also asserts the Spark door on the SAME session returns the same rows, so the two cells are pinned to each other rather than to two hand-written expectations. |
+| **Spark door** | the eight family pins in the same file (`session.sql` on a `SparkDialect` session) | value AND Arrow type, two non-UTC zones, DST included |
+| **ANSI door** | `crates/repark-sql/tests/session_timezone_ansi_door.rs::ansi_door_and_spark_door_agree_under_a_non_utc_session` | ONE Spark-extended session at a non-UTC zone: `sql_with(AnsiDialect)` and the Spark door agree, value AND type. It lives in `repark-sql` because the crate-DAG policy allows `repark-sql → repark-spark` as a **dev** edge and nothing the other way, so this is the only binary where the two can meet. |
+| **facade** | `python/repark/tests/test_session_timezone_parity.py` | the recorded corpus, thirteen of whose disclosures are now equality rows |
+
+A **single-session** row is the right shape for the ANSI cell and the file says why: extensions are
+session-scoped, not dialect-scoped, so a two-session comparison would measure the extension (two
+different function registries) rather than the door. The honest negative is pinned beside it —
+an extension-free session is stock DataFusion and reads the stored zone, which is a property of
+that profile and not a Spark divergence.
+
+### B.4 The Rust extractor pins (budget: 6–8; delivered 8, plus 6 boundary negatives and 1 interpretation pin)
+
+All in `crates/repark-spark/tests/session_timezone.rs`, on real sessions, value AND Arrow type,
+under `America/New_York` and `Asia/Tokyo` (plus `Asia/Kolkata` where a half-hour offset is the
+point). The LOCATION RULE was followed: this is a NEW file-backed integration surface;
+`crates/repark-spark/src/tests.rs` was not touched at all (a parallel unit is splitting it).
+
+| # | Family | Pin | What only this row catches |
+|---|---|---|---|
+| 1 | `year` | `year_extractor_resolves_in_the_session_zone` | the calendar YEAR crossing at `2024-01-01T04:30Z` |
+| 2 | `month` / `dayofmonth` / `dayofyear` | `month_and_day_extractors_resolve_in_the_session_zone` | the leap day moving back one, and Tokyo NOT moving — the pair separates a session-zone fix from an offset-sign one |
+| 3 | `hour` / `minute` / `second` | `hour_minute_second_extractors_resolve_in_the_session_zone` | `Asia/Kolkata` (+05:30) moves the MINUTE: a fix that only ever shifts whole hours reds here and nowhere else |
+| 4 | `dayofweek` / `weekday` / `weekofyear` / `yearofweek` / `quarter` | `week_and_quarter_extractors_resolve_in_the_session_zone` | the ISO pair moving a whole YEAR at a New Year boundary |
+| 5 | `date_trunc` | `date_trunc_truncates_on_the_session_zone_calendar` | truncation on the LOCAL calendar put back on the timeline — and the tz-naive output type, asserted so TZ-4 stays visible |
+| 6 | `date_format` | `date_format_renders_in_the_session_zone` | rendering and extraction moving TOGETHER (the self-consistently-wrong partition path) |
+| 7 | DST | `dst_boundaries_resolve_like_spark` | spring-forward → 3 (a fixed-offset implementation answers 2) and fall-back collapsing two instants onto local hour 1; plus that the INSTANTS themselves did not move |
+| 8 | negative epoch | `pre_1970_instants_resolve_in_the_session_zone` | sign handling surviving the zone change, and Tokyo crossing INTO 1970 |
+
+The other half of the claim is **6 boundary negatives + 1 interpretation pin**, and the
+distinction matters because it is the ledger's own test: a *negative* stays GREEN under provocation
+P-B1 (it measures the fix's boundary), an *interpretation pin* reds (it is an extraction claim).
+Boundary negatives: `date_arguments_never_move_with_the_session_zone`,
+`time_arguments_never_move_with_the_session_zone`,
+`default_session_extracts_in_the_core_default_zone` (the cross-crate default agreement),
+`the_carrier_refusal_names_the_engines_own_key` (the one-spelling mirror, checked across the crate
+boundary), and — in `repark-functions` itself —
+`coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date` and
+`only_timestamp_arguments_are_coerced_to_instants`. The interpretation pin is
+`a_tz_naive_timestamp_is_read_as_a_utc_instant` (D-B5 stated as a decision on the record), which
+reds under P-B1 — it was miscounted as a negative in the first pass, and the panel caught it.
+*(The 2026-08-10 rework adds six more Rust rows; see §B.10.)*
+
+**The DATE negative earned its keep during the fix, not after it.** The first working draft mapped
+`Date32 → Timestamp(µs, None)` in `coerce_to_timestamp_micros`; DataFusion coerces at analysis and
+**re-analyzes at physical planning**, so the second pass read that output as "a timestamp" and
+promoted it to an instant. `date_format(DATE '2024-02-29', 'yyyy-MM-dd')` rendered `2024-02-28`
+under `America/New_York` — a silent one-day shift on the exact path the corpus's control rows
+protect. The pin caught it on its first run. The fix was to make every coercion arm a fixed point
+(`Date32 → Date32`, `Utf8 → Utf8`, `Timestamp(µs, UTC) → Timestamp(µs, UTC)`) and widen inside the
+invoke instead, and the property is now pinned directly rather than left as a worked example.
+
+### B.5 The flips (the revert-red evidence split A promised)
+
+Split A recorded 18 disclosure rows + 2 equality controls. After this fix:
+
+- **13 rows flipped to equality** (`repark=None`): the six `year`/`month`/`day`/`hour` rows, both
+  DST rows, both `column_extract_*` rows, the pre-1970 extraction row, the year-boundary
+  extract-and-format row and the leap-day row. Reverting the fix reds every one of them — captured
+  verbatim in §B.7 — which is exactly the evidence `docs/testing.md` rule 3 asks for.
+- **2 rows had their `repark` half RE-RECORDED and stayed disclosures**:
+  `[date_trunc_day_across_a_zone_boundary]` and `[year_boundary_date_trunc_under_tokyo_session]`.
+  Their value converged, their Arrow type did not, so they moved from TZ-1 to TZ-4 (D-B4). This is
+  the one place a recorded half moved, it is a **repark** half and not a Spark half, and it is
+  named here because a silently-edited golden is how a corpus stops being an oracle.
+- **3 rows were untouched**: `[to_timestamp_of_zone_suffixed_string]` and
+  `[tz_aware_to_naive_round_trip]` (TZ-4 — no extractor is involved in either) and
+  `[pre_1970_timestamp_cast_to_bigint]` (TZ-5, a cast-unit bug with its own unit).
+- **The 2 control rows and the 2 live scenarios are UNCHANGED and still green** — the guard against
+  over-reach into the DATE path, and the reason the corpus can tell a zone-aware engine from a
+  zone-drunk one.
+- **No Spark half was re-recorded.** The record driver reproduces all 20 against live PySpark 4.1.2
+  with 0 mismatches both before and after this change (§B.7).
+
+`test_the_extraction_class_converged_and_the_residue_is_named` was added so the SHAPE is pinned too:
+it names every remaining disclosure and the class that owns it, so a future red row cannot be
+"fixed" by quietly pinning repark's new wrong answer, and a new disclosure cannot be smuggled back
+into the extraction class.
+
+### B.6 Registry, STATUS and the DIVERGENCE-1 revisit — in this diff
+
+- **TZ-1 RETIRED** per registry §6 ("a BACKLOG row is retired when the fix lands… the row's pin
+  goes RED on purpose in the same change"). Its fifteen pins reddened deliberately; thirteen became
+  equality rows and two moved to TZ-4. A short dated note stands where the row was, because §6
+  forbids a second authoritative description and a fixed difference is not a divergence.
+- **TZ-4 UPDATED** — pin list grows by the two `date_trunc` rows and the Rust type assertion; the
+  rationale now states, dated, exactly why it split again (D-B4).
+- **TZ-3 UPDATED** — the speculative "becomes fixable if…" sentence replaced by the measurement
+  (D-B2). The row itself stands.
+- **TZ-6 ADDED** — the NTZ consequence of D-B5, with its pin. It is admitted because the fix is
+  what made it observable; it is the only row this unit adds.
+- **STATUS.md** — the timezone bullet now records the class as FIXED and points at the two narrower
+  rows that remain. The fixing unit removed what it fixed.
+- **DIVERGENCE-1 revisited** (split A residual §7.4). `test_divergence_timestamp_ltz_collect_passthrough`
+  said "disclose, do not build session-tz machinery" — an instruction decision D7 superseded. The
+  pin is deliberately **unchanged**, because a `CAST` is not an extractor and this fix did not touch
+  the cast path; its docstring now says so, names TZ-4 and TZ-6 as the classes that keep it
+  divergent, and explains that its "session-tz LTZ may have been introduced" alarm still guards the
+  cast path specifically. The registry's §1 blind-spot note was updated in the same change, so the
+  carve-out no longer reads as open.
+- **The live scenario registry was NOT grown.** The brief says size pins move only if the fix forces
+  it, and it did not: the two non-UTC scenarios pin DATE invariants and are unchanged. Converting
+  the now-converged TIMESTAMP rows into live scenarios is a genuine follow-on (§B.9) and belongs to
+  a unit that owns the registry's size pin.
+
+### B.7 Provocation proofs (verbatim)
+
+Neither provocation is committed. Each was reverted from a pre-provocation copy and the restore
+verified by **sha256** (split A finding S-8: a `git diff` check alone is not enough, because a stale
+pytest assertion-rewrite cache survives a revert); all `*.pyc` under `python/` were deleted before
+the must-PASS legs.
+
+#### P-B1 — reverting the extraction fix reds at least one pin per class
+
+*The provocation is the whole fix, at its narrowest point:* make the carrier reader return the
+default unconditionally, so the resolved zone never reaches an extractor
+(`session_time_zone.rs::session_time_zone_from_options`).
+
+**must-FAIL — the Rust cells (Spark door + native `DataFrame` API):**
+
+```text
+$ cargo test --locked -p repark-spark --test session_timezone
+test year_extractor_resolves_in_the_session_zone ... FAILED
+  left: [2024]                 right: [2023]
+test month_and_day_extractors_resolve_in_the_session_zone ... FAILED
+  left: [2, 3]                 right: [2, 2]        (both instants are February in EST)
+test hour_minute_second_extractors_resolve_in_the_session_zone ... FAILED
+test week_and_quarter_extractors_resolve_in_the_session_zone ... FAILED
+  left: ([2], [0], [1], [2024], [1])   right: ([1], [6], [52], [2023], [4])
+test date_trunc_truncates_on_the_session_zone_calendar ... FAILED
+  left: [1718409600000000]     right: [1718337600000000]
+test date_format_renders_in_the_session_zone ... FAILED
+  left: ["2024-01-01 02:00"]   right: ["2023-12-31 21:00"]
+test dst_boundaries_resolve_like_spark ... FAILED
+  left: [7, 5, 6]              right: [3, 1, 1]
+test pre_1970_instants_resolve_in_the_session_zone ... FAILED
+  left: ([1969], [12], [31], [23])    right: ([1969], [12], [31], [18])
+test native_dataframe_api_extracts_in_the_session_zone ... FAILED
+  left: (2024, 4)              right: (2023, 23)
+test a_tz_naive_timestamp_is_read_as_a_utc_instant ... FAILED
+  left: [12]                   right: [8]
+
+test result: FAILED. 4 passed; 10 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+The 4 that stayed GREEN are the correct 4: `date_arguments_never_move_with_the_session_zone`,
+`time_arguments_never_move_with_the_session_zone`,
+`default_session_extracts_in_the_core_default_zone` and
+`the_carrier_refusal_names_the_engines_own_key` — none of them is an extraction claim, and a
+provocation that reddened them would mean the negatives were measuring the fix rather than its
+boundary.
+
+**must-FAIL — the ANSI-door cell:**
+
+```text
+$ cargo test --locked -p repark-sql --test session_timezone_ansi_door
+test ansi_door_and_spark_door_agree_under_a_non_utc_session ... FAILED
+assertion `left == right` failed: 2024-01-01T04:30Z is 2023-12-31 23:00-ish EST; 2024-06-15T12:00Z is 08:00 EDT
+  left: [[2024, 2024], [4, 12]]
+ right: [[2023, 2024], [23, 8]]
+test result: FAILED. 1 passed; 1 failed; ...
+    (a_native_session_without_the_spark_extension_reads_the_stored_zone stays green — it pins the
+     extension-free profile, which the provocation does not change)
+```
+
+**must-FAIL — the facade cell** (native module rebuilt against the provoked engine):
+
+```text
+$ pytest python/repark/tests/test_session_timezone_parity.py -q
+FAILED ...[year_of_instant_under_new_york_session]
+FAILED ...[month_of_instant_under_new_york_session]
+FAILED ...[day_of_instant_under_new_york_session]
+FAILED ...[hour_of_instant_under_new_york_session]
+FAILED ...[hour_of_instant_under_tokyo_session]
+FAILED ...[year_month_day_of_instant_under_tokyo_session]
+FAILED ...[dst_spring_forward_instant_hour]
+FAILED ...[dst_fall_back_repeated_local_hour]
+FAILED ...[date_trunc_day_across_a_zone_boundary]
+FAILED ...[column_extract_under_new_york_session]
+FAILED ...[column_extract_under_tokyo_session]
+FAILED ...[pre_1970_extract_under_new_york_session]
+FAILED ...[year_boundary_date_trunc_under_tokyo_session]
+FAILED ...[year_boundary_extract_and_format_under_new_york_session]
+FAILED ...[leap_day_extract_under_new_york_session]
+15 failed, 16 passed in 0.73s
+```
+
+Exactly the 13 flipped rows plus the 2 re-recorded `date_trunc` rows. **The two control rows passed
+under the provocation** — checked explicitly, because a provocation that reds the controls too
+would prove nothing about the DATE boundary:
+
+```text
+$ pytest "...[hour_of_instant_under_new_york_session]" "...[date_extraction_is_session_zone_independent]" \
+         "...[leap_day_date_arithmetic_is_session_zone_independent]" "...[date_trunc_day_across_a_zone_boundary]" -q
+2 failed, 2 passed in 0.46s
+
+E   AssertionError: date_trunc_day_across_a_zone_boundary: repark moved OFF its pinned disclosure
+E   and does NOT match the recorded Spark golden either — this is a regression, not a convergence.
+E   Re-derive both halves in record mode (see this module's docstring) before touching the pin. …
+```
+
+That last message is the classifier doing its job on the row whose class moved: with the fix
+reverted the row matches neither half, and the runner says *regression*, not *convergence*.
+
+**must-PASS — restored** (sha256 `3c88292d3be7f457bd569ac0098b443bcc24b4b510d2634669f8ad9d9ee69b39`
+for `session_time_zone.rs`, native module rebuilt, `__pycache__` cold):
+
+```text
+$ cargo test --locked -p repark-spark --test session_timezone       -> ok. 14 passed; 0 failed
+$ cargo test --locked -p repark-sql --test session_timezone_ansi_door -> ok. 2 passed; 0 failed
+$ pytest python/repark/tests/test_session_timezone_parity.py -q     -> 31 passed in 0.54s
+```
+
+#### P-B2 — the DATE negative is load-bearing (the bug that actually happened)
+
+*Claim:* the coercion path's idempotence is what keeps a `DATE` out of the session zone.
+*Provocation:* restore the pre-fix arm (`Date32 | … | Utf8View => Timestamp(µs, None)`), which is
+what the first working draft had.
+
+**must-FAIL — the property, and the behavior it protects:**
+
+```text
+$ cargo test --locked -p repark-functions coercion_is_idempotent
+test datetime::tests::coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date ... FAILED
+assertion `left == right` failed: coerce_to_timestamp_micros is not idempotent on Date32:
+a re-analysis would change the meaning of the argument
+  left: Timestamp(Microsecond, None)
+ right: Timestamp(Microsecond, Some("UTC"))
+
+$ cargo test --locked -p repark-spark --test session_timezone date_arguments
+test date_arguments_never_move_with_the_session_zone ... FAILED
+assertion `left == right` failed: rendering a DATE under America/New_York must not shift it
+  left: ["2024-02-28"]
+ right: ["2024-02-29"]
+```
+
+**must-PASS — restored** (sha256 `24c416c4bdb5a23d5d0b17bcadb91e6ebed6370643f778e664acb7ed18a3eb8f`
+for `datetime.rs`):
+
+```text
+$ cargo test --locked -p repark-functions coercion_is_idempotent   -> ok. 1 passed
+$ cargo test --locked -p repark-spark --test session_timezone      -> ok. 14 passed
+```
+
+This unit adds no new mechanical gate (no lint entry, guard script, CI step or hook), so
+`docs/testing.md` "Gate provocation proofs" does not bind it; both provocations above are here
+because a green run proves nothing about detection.
+
+### B.8 Gate output
+
+```text
+$ make ci
+cargo fmt --check
+cargo clippy … -D warnings                     (clean)
+crate-dag: 20 internal edges clean (4 dev, 15 normal, 1 optional) across 9 of 9 mapped crates
+lib-rs: 9 crate roots clean (no inline test modules; ceilings held)
+lib-py: 54 files clean (ceilings held; no-stub rule held)
+manifest: 12 components (9 delivered, 3 planned) agree with the workspace, the gates, the doc
+          index, the status document and the crate maps
+cargo check --locked --workspace
+uvx ruff@0.15.22 check .            -> All checks passed!
+uvx ruff@0.15.22 format --check .   -> 241 files already formatted
+uv lock --locked                    -> Resolved 29 packages in 1ms
+taplo format --check / lint / typos -> clean
+EXIT=0
+
+NOTE (honest): this was the FOURTH `make ci` of the unit. Run 1 was RED at `rust-fmt-check`
+(a long `strings(...)` call and a trailing blank line in the new integration file); runs 2 and 3
+were RED at `rust-clippy` on `clippy::doc_markdown` — "DataFrame" without backticks, in five doc
+comments across three new/edited files. Fixed, never suppressed; the backticks were NOT applied to
+runtime assertion strings, where they would be noise.
+```
+
+```text
+$ make test                  # cargo test --locked --workspace, never --all-features
+33 `test result` lines (24 test binaries + the doc-test targets), every one `ok`;
+0 `test result: FAILED`; 1306 tests passed.
+
+Split A's tip was 31 lines / 1279 tests, counted the same way. The delta is +2 binaries
+(`repark-spark/tests/session_timezone.rs` = 14 rows, `repark-sql/tests/session_timezone_ansi_door.rs`
+= 2 rows) and +27 tests: those 16, plus 6 carrier pins in `repark-functions`, 2 coercion-property
+pins in `datetime.rs`, 2 carrier-install pins in `repark-spark`, and 1 net elsewhere; the
+extension-hook order pin was amended in place rather than added.
+EXIT=0
+```
+
+```text
+$ PYTHONPATH=python/repark-parity/src .venv/bin/python -m pytest python/repark/tests -q
+2602 passed, 36 skipped, 46 warnings in 138.72s (0:02:18)
+EXIT=0
+    (run against the parity-live provisioning — the four facade extras PLUS `--extra record` — so
+     the pyspark-oracle cohort actually runs rather than skipping)
+
+$ make py-test-facade
+2566 passed, 46 skipped, 37 warnings in 89.73s (0:01:29)
+EXIT=0
+    (this target's `uv sync` is EXACT and does NOT request `--extra record`, so pyspark is
+     uninstalled and the pyspark-oracle cohort skips — the target's normal shape, and split A's
+     ledger records the same 2564/46 split at its tip. +2 here: this unit's new test, and the +1
+     denominator correction measured above.)
+```
+
+**The denominator, measured rather than asserted.** Split A's ledger records `2600 passed, 36
+skipped` for the same command; this tree reports 2602. The difference is NOT this unit adding two
+tests — it adds ONE (`test_the_extraction_class_converged_and_the_residue_is_named`). Collection is
+deterministic from the file tree, so it was measured directly with `--collect-only` on the same
+interpreter, with the two edited modules reverted to `HEAD` and restored by sha256 afterwards:
+
+```text
+$ pytest python/repark/tests -q --collect-only     (this tree)      -> 2638 tests collected
+$ (the two edited test modules at HEAD)                             -> 2637 tests collected
+```
+
+So the pre-change tree is 2601/36 and this one is 2602/36: **+1, exactly the test this unit adds.**
+Split A's recorded 2600 is one low and does not reproduce here — the same class of stale capture
+its own §8.1 finding S-7 corrected once already (2593 → 2594). Recorded rather than explained away.
+
+```text
+$ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src \
+    .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py
+record mode: 20 rows re-derived, 0 mismatch(es)
+EXIT=0
+
+Run TWICE, as the brief asks — once against the pre-edit corpus (`git checkout HEAD --` the module,
+cold `__pycache__`, restored by sha256 afterwards) and once against the edited one. **Both are
+"20 rows re-derived, 0 mismatch(es)", and the AFTER delta is deliberately zero**: the driver
+re-derives the SPARK half of every row, and this change edits only `repark` halves (13 replaced by
+`None`, 2 re-recorded). A non-zero AFTER count would have meant a Spark golden had been touched,
+which is exactly what it is there to catch.
+```
+
+```text
+$ bash scripts/check_map_md.sh
+map_md EXIT=0
+(silent on success; the guard reads the STAGED set. Eleven touched directories' map.md were staged
+alongside their code: crates/repark-core/src, crates/repark-core/src/extension,
+crates/repark-functions, crates/repark-functions/src, crates/repark-functions/src/session_time_zone
+(NEW dir, new map.md with a populated ## Debug), crates/repark-spark/src,
+crates/repark-spark/src/extension, crates/repark-spark/tests, crates/repark-sql/tests,
+crates/repark-ta/src/extension, python/repark/tests.
+
+NOTE (honest): the FIRST run was RED — `crates/repark-spark/src/map.md` had not been updated
+alongside `extension.rs`. The guard did its job; the map now describes the carrier install and
+names why this door is the crossing point.)
+
+$ python3 scripts/check_manifest.py
+manifest: 12 components (9 delivered, 3 planned) agree with the workspace, the gates, the doc index,
+the status document and the crate maps
+manifest EXIT=0
+
+$ grep -rn '"spark.sql.session.timeZone"' crates/ --include=*.rs
+crates/repark-core/src/session_time_zone.rs:37   pub const SESSION_TIME_ZONE_KEY   <- the ONE key
+crates/repark-functions/src/session_time_zone.rs:45  const AUTHORITATIVE_KEY       <- message text
+crates/repark-functions/src/session_time_zone/tests.rs:46  (assertion)
+crates/repark-spark/src/extension/tests.rs:53              (fixture)
+
+$ grep -rn 'spark.sql.session.timeZone' python/repark/src/repark/session/session_time_zone.py
+SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"                 <- the ONE facade key
+
+One authoritative spelling per language, unchanged by this unit. The new `AUTHORITATIVE_KEY` in
+`repark-functions` is **message text, never a lookup** — the crate has no `repark-core` edge, so it
+cannot import the constant, and the duplicate is therefore a CHECKED MIRROR: it is asserted to equal
+`repark_core::SESSION_TIME_ZONE_KEY` from the one crate that can see both
+(`the_carrier_refusal_names_the_engines_own_key`). Nothing is read or written by that string.
+```
+
+### B.9 Residuals
+
+1. **TZ-4 is the next unit, and it is bigger than it looks.** It owns `to_timestamp`'s `ns`, the
+   missing `UTC` annotation, `CAST(TIMESTAMP AS STRING)`'s `string_view` + ISO-`T` rendering
+   (registry queue B-TZ-4), and the Iceberg `timestamp` / `timestamptz` column choice on the write
+   path. Closing it also retires TZ-6 and makes the extraction rule purely type-driven.
+2. **TZ-6 is a disclosed cost, not a discovery to celebrate.** repark cannot distinguish
+   `TIMESTAMP` from `TIMESTAMP_NTZ`; the fix made that observable rather than creating it, and the
+   row says so. The Spark half is a *documented* value claim under registry §1's exception and
+   names the unit expected to attach a real oracle.
+3. **Live-scenario follow-on, deliberately not taken here.** The 13 converged rows are now
+   candidates for the live tier (`repark == pinned golden == live Spark` under a non-UTC oracle),
+   which would give the class drift detection on every nightly run instead of a recorded snapshot.
+   That grows the registry's size pin, and the brief says size pins move only if the fix forces
+   them. It does not. Whoever takes it should take the two `date_trunc` rows as live **disclosures**
+   at the same time.
+4. **`SET spark.sql.session.timeZone` still does not work through the SQL door** (registry queue
+   B-TZ-5), and D-B2 records that making it work was possible in this unit and declined on scope.
+   That decision should be revisited by whoever rules on `spark.*` conf namespacing as a whole.
+5. ~~**`invoke_local_micros`'s spring-forward handling is approximate at the margin.** A
+   nonexistent local time is pushed forward in 15-minute steps up to two hours, which covers every
+   gap in the IANA database (all are one hour)…~~ **CORRECTED AND CLOSED in the 2026-08-10 rework
+   (§B.10 N-1).** The parenthetical was factually wrong — `Australia/Lord_Howe`'s gap is 30 minutes,
+   `Pacific/Apia` 2011-12-30 is 24 hours (the old two-hour bound gave up and returned NULL), and
+   `Africa/Monrovia` 1972-01-07 is 44m30s (not a multiple of 15 minutes, so the old search
+   overshot). The search is gone: `offset_before_gap` reads the offset in force before the
+   transition and the gap resolves to `local − offsetBefore`, which is algebraically what
+   `java.time` computes. What remains bounded, and is now stated as a bound rather than as a fact
+   about the database, is a 26-hour lookback for that offset.
+6. **The `chrono-tz` declaration is now in two crates** (`repark-core` for validation,
+   `repark-functions` for resolution). Both are real enablers of the feature and both say why
+   inline; `Cargo.lock` is byte-unchanged, because the feature was already resolved and only its
+   ownership moved.
+7. **`repark-sql` gained no new dependency for its ANSI-door cell.** The fixtures build their
+   instants with arrow's own string→timestamp cast rather than a date library, so the test binary
+   cannot disagree with the engine about what `2024-06-15T12:00:00Z` means and `Cargo.lock` did not
+   move. The same idiom was adopted in the `repark-spark` file for consistency.
+8. **The registry is high-traffic — rebase before handoff.** This change edits
+   `docs/spark-sql-iceberg-parity.md` §1, §4 (TZ-3), §7 (TZ-1 retirement, TZ-4, the new TZ-6) and
+   `STATUS.md`'s known-issues list, all of which other campaign units also write into. Rebase onto
+   the merged tip and re-read those sections before assembly; the split-A assembly note (§9) records
+   three both-added conflicts from exactly this cause.
 
 ---
+
+---
+
+## § Split B — REWORK after the adversarial panel (2026-08-10)
+
+Two full-panel lenses (mechanism/semantics, corpus/registry) returned **REJECT** on the first pass
+of split B. Both worked from live PySpark 4.1.2 rather than from memory, and between them raised
+3 BLOCKERs, 4 MAJORs and 5 NITs. This section is what changed, why, and the evidence.
+
+**The one sentence that explains all three BLOCKERs.** The first pass had one true idea — a repark
+`TIMESTAMP` is an instant, so resolve its calendar in the session zone — and applied it as if
+"tz-naive timestamp" meant one thing. It means three: an instant that lost its annotation, a
+`DATE`/string promoted to a local wall clock by `date_trunc` itself, and a zoneless input that
+Spark would have read as a wall clock. Reading all three as UTC instants fixed the first and broke
+the other two. The rework separates them by *provenance* where it can (a new `LocalSource`) and
+**declares** the one place it cannot (a zoneless input is byte-identical to a zone-suffixed one).
+
+### B.10 Panel finding → action
+
+| # | Sev | Finding | Action | Evidence |
+|---|---|---|---|---|
+| **B1** | BLOCKER | `date_trunc` across a DST fall-back returned the wrong instant and collapsed the repeated hour's two instants onto one; the doc comment's Spark-semantics rationale was factually wrong | `micros_from_local_datetime` now models `java.time.ZonedDateTime.ofLocal(local, zone, preferred)` arm for arm — **ambiguous → prefer the SOURCE instant's offset**, which is what `ZonedDateTime.truncatedTo` passes. Doc comment rewritten to the measured truth | live Spark: `('minute', 06:30:40Z)`→`06:30Z`, `('hour', 05:30Z/06:30Z)`→`05:00Z`/`06:00Z`, `('day', 06:30Z)`→`04:00Z`. Pin `date_trunc_preserves_the_source_offset_across_a_fall_back` + facade row `[date_trunc_across_the_fall_back_hour_under_new_york_session]`. must-FAIL proven (P-B3) |
+| **B2** | BLOCKER | `date_trunc` of a `DATE`/string wrote LOCAL wall-clock ticks under a tz-naive type; the next extractor read that same type as a UTC instant, so the whole calendar day moved. The `DATE` negative's claim was strictly broader than its coverage | `date_trunc` now puts its truncated result on the timeline **on both paths** — Spark's `DATE`→`TIMESTAMP` promotion is a session-zone localization, so the output has ONE meaning everywhere. `LocalSource` replaced `Option<Tz>` so the two provenances are named rather than inferred. The `DATE` negative's claim was narrowed to what it covers, and the promotion got its own composed pin | live Spark: `date_trunc('day', DATE '2024-01-01')` = `2024-01-01T05:00Z` (NY) / `2023-12-31T15:00Z` (Tokyo); `year|month|dayofmonth|hour` = `2024,1,1,0` and `date_format` = `'2024-01-01 00:00'` in BOTH zones. Pin `date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline` (DATE **and** string legs, both zones) + facade rows `[date_trunc_of_a_date_composed_under_new_york_session]`, `[date_trunc_of_a_string_composed_under_tokyo_session]`. must-FAIL proven (P-B3) |
+| **B3** | BLOCKER | Every zoneless TIMESTAMP input regressed from agreeing with Spark to disagreeing, undisclosed; the corpus was structurally blind (all 20 rows `…Z`-suffixed) and STATUS/TZ-1 declared the class FIXED on that basis | **Decided on measurement, outcome (b): PARTIAL.** See §B.11 for the measurement and why (a) re-opens TZ-4. The class is now declared: registry row **TZ-7**, STATUS says PARTIALLY FIXED and names the remainder, and **TZ-1 CONVERTS** to TZ-7 + TZ-8 instead of retiring | live Spark vs this tree, both zones, four spellings: §B.11's table. Pin `a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark` + facade rows `[zoneless_timestamp_literal_under_new_york_session]`, `[zoneless_timestamp_input_spellings_under_tokyo_session]`, `[naive_datetime_column_under_new_york_session]` — all recorded from the live oracle |
+| **M1** | MAJOR | `SessionExtension` is FROZEN by a live design doc requiring a superseding note; none was written and the freeze was never named | Wrote [`docs/design/session-extension-conf-seam.md`](../docs/design/session-extension-conf-seam.md) (dated 2026-08-10), following the freeze's own amendment rule and `docs/design/map.md`'s "new dated pass, not an in-place edit". Both freeze sites now point at it; `session-api.md`'s stale signature line is corrected; D-B6's risk note names the freeze | The note prices the break (3 in-tree implementors, 0 external) and records the two rejected alternatives, including the defaulted-second-hook option and why it was refused |
+| **M2** | MAJOR | The class was fixed for six functions while `to_date` / `CAST(ts AS DATE)` / `trunc` / `last_day` / `date_add` still read the stored zone | **Measured each, then split on OWNERSHIP.** `trunc` and `add_months` reach the date through this repo's own `coerce_to_date32` + invoke → **FIXED** (plus `add_months` and `datediff`, which the panel did not list, were measured too). `to_date` / `datediff` are `datafusion-spark`'s and `CAST(ts AS DATE)` is arrow's cast kernel → **DECLARED** as registry row TZ-8, pinned with repark's answer beside Spark's | live Spark NY: `trunc(…,'MM')`=`2024-05-01`, `add_months(…,1)`=`2024-06-30`, `to_date`=`2024-06-14`, `CAST AS DATE`=`2024-06-14`, `datediff`=`13`, `last_day`=`2024-05-31`, `date_add`=`2024-06-01`. Pins `date_valued_shims_take_the_date_in_the_session_zone` (fixed half) and `timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone` (declared half) |
+| **M3** | MAJOR | Three statements outside the diff still said extraction does not honor the zone — including the shipped facade docstring | All three rewritten in lockstep, and all three now state the *partial* truth (what is honored, plus TZ-7 and TZ-8): `python/repark/src/repark/session/session_time_zone.py`, `crates/repark-core/src/session_time_zone.rs`, `python/repark/tests/_live_parity.py` | `grep -rn "extraction does not honor\|does not honor it yet"` → 0 hits. The facade one is user-visible, so `python/repark/src/repark/session/map.md` now records it as a standing lockstep obligation |
+| **M4** | MAJOR | TZ-6 was admitted under §1's documented-value exception, but the unit *ships the oracle that measures it* — and when measured the claim is wrong (the divergence is not confined to NTZ) | **Re-recorded from the live oracle.** New corpus row declares `TimestampType` beside `TimestampNTZType` explicitly and pins both halves; the row's behavioural claim is now the measured one; the retiring unit is named (the TIMESTAMP-representation unit that closes TZ-4), and the value divergence on plain LTZ moved to TZ-7 where a user would actually look | live Spark NY: `ltz` = `timestamp[us, tz=UTC]` @ `2024-06-15T16:00Z`, `ntz` = `timestamp[us]` @ `12:00`, `hour` = 12 from both. repark: both `timestamp[us]` @ `12:00`, `hour` = 8 from both. Row `[timestamp_ntz_is_indistinguishable_from_timestamp]`, basis **recorded** |
+| **M5** | MAJOR | The facade's DataFrame-API cell was pinned by a Rust `expr_fn` proxy; `df.select(F.year(...))` — the most-used spelling — was never asserted | Corpus gained an `entry_point` axis and `dataframe_api_extraction`, spelled ONCE and run on both engines (`_functions_module` resolves `F` per engine). Two rows, both non-UTC zones, `F.year` + `F.hour` + `F.date_format` + `F.date_trunc`, value AND Arrow type | live Spark NY `y=[2023,2024] h=[23,8] f=['2023-12-31 23:30','2024-06-15 08:00']`, Tokyo `y=[2024,2024] h=[13,21]`; repark's values match, and the residue is `date_trunc`'s Arrow type (TZ-4) — so the rows land as disclosures naming that class |
+| **N-1** | NIT | "Gaps are an hour in every zone in the IANA database" is false | The bounded 15-minute forward search is **gone**; `offset_before_gap` computes the answer. The comment now names Lord Howe (30 min), Apia (24 h, which the old bound turned into NULL) and Monrovia (44m30s, which the old step size overshot), and states the one thing that IS bounded — a 26-hour lookback — as a bound | Both realistically reachable zones re-measured against live Spark and unchanged: Lord Howe `date_trunc('hour')` → `2024-10-05T15:30Z`, Santiago `date_trunc('day')` → `2024-09-08T04:00Z`. Pin `dst_gap_zones_resolve_like_spark` |
+| **N-2** | NIT | The empty `entries()` also erases the zone from `ScalarFunctionExpr` equality; nowhere stated | Recorded in `session_time_zone.rs` beside the `entries()` rationale, in `crates/repark-functions/src/map.md`, and as risk row R-B1 below | — |
+| **N-3** | NIT | "8 families + 6 negatives" — the list has 7 items and one is not a negative | Corrected to "6 boundary negatives + 1 interpretation pin", with the ledger's own P-B1 test stated as the discriminator (§B.4) | `a_tz_naive_timestamp_is_read_as_a_utc_instant` reds under P-B1; the 6 negatives do not |
+| **N-4** | NIT | DIVERGENCE-1's corrected docstring names classes its pin structurally cannot observe | Docstring now states the limit outright — the pin is **UTC-only by construction**, it detects exactly one thing (a `CAST` starting to move ticks), and the classes it names are pinned under two non-UTC sessions next door. A non-UTC leg was considered and declined, with the reason given | `test_divergence_timestamp_ltz_collect_passthrough` unchanged and green |
+| **N-5** | NIT | The g5 ledger's DIVERGENCE-1 carve-out row had no dated closure line | Added to `task/g5-sweep-ledger.md` — both the blind-spots paragraph and the triage row — and registry §1 now points at that home | Registry §6 designates the g5 ledger as the home; it now reads as closed there, not only in §1 |
+
+### B.11 D-B7 — the naive-input family: measured, then DECLARED (the B3 decision)
+
+The orchestrator's disposition admitted two outcomes and required the choice to be made on
+measurement. It was.
+
+**What was measured** (2026-08-10, this tree vs live PySpark 4.1.2, same session zone both sides):
+
+```text
+SELECT TIMESTAMP '2024-06-15 12:00:00' AS a, to_timestamp('2024-06-15 12:00:00') AS b,
+       CAST('2024-06-15 12:00:00' AS TIMESTAMP) AS c, to_timestamp('2024-06-15T12:00:00Z') AS d
+
+repark:  a,b,c,d all timestamp[ns], all holding 2024-06-15 12:00:00 — IDENTICAL type, IDENTICAL ticks
+```
+
+`d` is a genuine instant and `a`/`b`/`c` are wall clocks Spark would have localized, and **nothing
+downstream can tell them apart**. That is the whole decision. Extraction sees one type and one tick
+value; any rule it applies is right for one half of the family and wrong for the other. Closing the
+input half means literal planning, `to_timestamp` and `CAST` must emit a type that says which one
+they made — i.e. repark's TIMESTAMP *representation*, which is registry row TZ-4's unit, whose blast
+radius (D-B4) is every facade test asserting a timestamp type and the Iceberg `timestamp` /
+`timestamptz` write choice. **So outcome (a) genuinely re-opens TZ-4, and the honest landing is
+outcome (b).**
+
+The consequence, measured on both sides:
+
+| | New_York | | Asia/Tokyo | |
+|---|---|---|---|---|
+| | **Spark** | **repark** | **Spark** | **repark** |
+| `hour(TIMESTAMP '2024-06-15 12:00:00')` | 12 | **8** | 12 | **21** |
+| `hour(to_timestamp('2024-06-15 12:00:00'))` | 12 | **8** | 12 | **21** |
+| `hour(CAST('2024-06-15 12:00:00' AS TIMESTAMP))` | 12 | **8** | 12 | **21** |
+| `year, dayofmonth(TIMESTAMP '2024-01-01 00:30:00')` | 2024, 1 | **2023, 31** | 2024, 1 | 2024, 1 |
+| naive-`datetime` column: `hour`, `year` | [0, 12], [2024, 2024] | **[19, 8], [2023, 2024]** | — | — |
+| `hour(to_timestamp('2024-06-15T12:00:00Z'))` *(control)* | 8 | 8 | 21 | 21 |
+
+**What outcome (b) obliged, all of it done:**
+
+1. **Extraction is claimed for instant-typed inputs only.** STATUS.md says **PARTIALLY FIXED** and
+   names the remainder; the module docs of `datetime.rs`, `repark-core::session_time_zone` and the
+   shipped facade docstring say the same thing in the same words.
+2. **The family is DECLARED with a *recorded* basis**, not a documented one: registry row **TZ-7**,
+   three corpus rows, all re-derived by the committed record driver against live Spark.
+3. **TZ-1 CONVERTS rather than retires.** Its registry block now says CLOSED IN PART and routes a
+   reader to TZ-7 (input half) and TZ-8 (timestamp→DATE half). A reader arriving from a wrong wall
+   clock is never told the class is shut.
+4. **The flipped equality rows still hold, and the double-shift trap was checked**: a `…Z`-suffixed
+   parse is an instant, not a local, so it must NOT be localized. It is not — the control row above
+   and all 13 flips are green, and the record driver re-derives every Spark half with 0 mismatches.
+5. **No previously-correct family regressed.** The rework changed three behaviors (fall-back
+   truncation, `date_trunc` of a `DATE`/string, `trunc`/`add_months` over a TIMESTAMP); each is a
+   convergence onto a measured live-Spark value, each has a pin, and each is proven must-FAIL
+   against the pre-rework code by P-B3.
+
+### B.12 Rework provocation proofs (verbatim)
+
+Neither provocation is committed; both were restored from a pre-provocation copy and verified by
+**sha256** — `datetime.rs` back to `5e9dd8396745284571d52522a0240ff2b4e30ddcd15f539463f772e0de434026`,
+`session_time_zone.rs` back to `a324a4ee56cf6363d4003b25e50ae152df37839e72cff5356ad52bb5aa8b517f`,
+and the rebuilt `_native.abi3.so` back to its exact pre-provocation
+`6d50f5e27ba71b7f8267bd30b1f7ec5724b22b93f2e666545095a15fde217a17` (maturin *is* byte-reproducible
+from identical sources here — the one earlier hash change in this session is fully accounted for by
+doc-comment edits landing in `repark-core` / `repark-functions` between two builds). All `*.pyc`
+under `python/` were deleted before every leg.
+
+#### P-B3 (NEW) — the rework's own pins must red against the PRE-REWORK code
+
+*The provocation is the three semantic changes, replanted exactly as the first pass had them:*
+(1) `micros_from_local_datetime` ignores the preferred offset and always takes the earliest;
+(2) `date_trunc`'s zone-free arm writes naive wall-clock ticks back;
+(3) `coerce_to_date32` maps a `Timestamp` straight to `Date32`.
+
+```text
+$ cargo test --locked -p repark-spark --test session_timezone
+test date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline ... FAILED
+  assertion failed: under America/New_York Spark promotes the DATE to local midnight's INSTANT
+    left: [1704067200000000]        right: [1704085200000000]     (a 5-hour, whole-day error)
+test date_trunc_preserves_the_source_offset_across_a_fall_back ... FAILED
+  assertion failed: truncating to the minute must not move an instant across the DST offset …
+    left: [1730611800000000, 1730611800000000]                     (the repeated hour COLLAPSED)
+   right: [1730611800000000, 1730615400000000]
+test date_valued_shims_take_the_date_in_the_session_zone ... FAILED
+  assertion failed: the instant is 2024-05-31 23:00 EDT, so its month starts in MAY
+    left: [19875]                   right: [19844]                (2024-06-01 vs 2024-05-01)
+
+test result: FAILED. 17 passed; 3 failed
+```
+
+```text
+$ pytest python/repark/tests/test_session_timezone_parity.py -q     (native module rebuilt)
+FAILED …[date_trunc_of_a_date_composed_under_new_york_session]
+FAILED …[date_trunc_of_a_string_composed_under_tokyo_session]
+FAILED …[date_trunc_across_the_fall_back_hour_under_new_york_session]
+3 failed, 37 passed
+```
+
+**Exactly the rework's new BLOCKER pins red, and nothing else does** — including all 20 pre-rework
+rows, the three TZ-7 rows, the TZ-6 row and both `DataFrame`-API rows, which is the check that the
+rework did not quietly re-derive its expectations from its own code.
+
+**must-PASS — restored:** `20 passed` (Rust) / `40 passed` (facade), hashes as above.
+
+#### P-B1 and P-B2 — RE-CAPTURED on the reworked tree
+
+`P-B1` (make the carrier reader return the default unconditionally) and `P-B2` (replant the
+non-idempotent `Date32 → Timestamp(µs, None)` coercion arm) were re-run in full, because the tree
+they were first captured on no longer exists.
+
+```text
+P-B1 $ cargo test --locked -p repark-spark --test session_timezone
+     test result: FAILED. 5 passed; 15 failed          (was 4 passed / 10 failed before the rework)
+     GREEN, correctly: the_carrier_refusal_names_the_engines_own_key,
+       default_session_extracts_in_the_core_default_zone,
+       time_arguments_never_move_with_the_session_zone,
+       date_arguments_never_move_with_the_session_zone,
+       timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone
+     — the 4 original boundary negatives plus the new DECLARED-divergence pin, none of which is an
+       extraction claim. Every added extraction pin reds, including
+       a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark (it pins repark's SHIFTED
+       answer, which only exists when the zone reaches the extractor).
+
+P-B1 $ cargo test --locked -p repark-sql --test session_timezone_ansi_door
+     test result: FAILED. 1 passed; 1 failed          (unchanged)
+
+P-B1 $ pytest python/repark/tests/test_session_timezone_parity.py -q   (native module rebuilt)
+     21 failed, 19 passed                              (was 15 failed / 16 passed)
+     = the 13 flips + the 2 re-recorded date_trunc rows + the 3 TZ-7 rows + the TZ-6 row
+       + the 2 DataFrame-API rows.
+
+P-B2 $ cargo test --locked -p repark-functions coercion_is_idempotent
+     test datetime::tests::coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date … FAILED
+       left: Timestamp(Microsecond, None)   right: Timestamp(Microsecond, Some("UTC"))
+P-B2 $ cargo test --locked -p repark-spark --test session_timezone date_arguments
+     test date_arguments_never_move_with_the_session_zone … FAILED
+       left: ["2024-02-28"]                right: ["2024-02-29"]
+```
+
+**The two provocations are complementary, and the rework made that visible.** P-B1 breaks the
+*carrier*, so the zone reaches nothing and the whole extraction family reds — but the three new
+composition/fall-back rows stay GREEN under it, because at the default `UTC` zone the wrong and the
+right implementations agree. Only P-B3 reds them. A single provocation would have been evidence for
+less than it appeared to be.
+
+**must-PASS — restored:** `1 passed` / `20 passed` / `2 passed` / `40 passed`, all hashes as above.
+
+### B.13 Rework gates
+
+| Gate | Result |
+|---|---|
+| `make ci` | **EXIT 0** — RED four times first (rustfmt ×1; `clippy::map_unwrap_or` ×1; ruff `RUF100` unused-`noqa` + `E501` ×2; ruff-format ×1), all in new code, all fixed, none suppressed |
+| `make test` (`cargo test --locked --workspace`) | **EXIT 0** — 33 `test result: ok` lines, 0 FAILED, **1312 passed** (was 1306; +6 = the six Rust rows §B.10 adds) |
+| full facade suite (record provisioning) | **2611 passed, 36 skipped** (was 2602/36; **+9** = exactly the nine corpus rows added, no other test moved) |
+| record driver, BEFORE row set (the 20 pre-rework rows, on this tree) | **20 rows re-derived, 0 mismatch(es)**, EXIT 0 |
+| record driver, AFTER (all rows) | **29 rows re-derived, 0 mismatch(es)**, EXIT 0 — every Spark half of every NEW row reproduces bit-for-bit from live PySpark 4.1.2, and **no pre-existing Spark half was touched** (a moved one could not pass a live re-derivation without being a genuine re-record, and none is claimed) |
+| P-B3 (new) | must-FAIL 3 Rust + 3 facade rows, must-PASS restored, sha256-verified — §B.12 |
+| P-B1 / P-B2 re-captured | 15+1 / 21 facade / both P-B2 legs red; restored, sha256-verified — §B.12 |
+| `bash scripts/check_map_md.sh` | **EXIT 0**, twice consecutively — RED once (`python/repark/src/repark/session/map.md`, whose product docstring the rework edits); 14 directories' maps staged with their code |
+| `python3 scripts/check_manifest.py` | **EXIT 0**, twice consecutively |
+| one-spelling conf grep | unchanged — one authoritative literal per language; the rework adds no conf key and no second spelling |
+
+```text
+$ grep -rn '"spark.sql.session.timeZone"' crates/ --include=*.rs
+crates/repark-core/src/session_time_zone.rs      pub const SESSION_TIME_ZONE_KEY   <- the ONE key
+crates/repark-functions/src/session_time_zone.rs const AUTHORITATIVE_KEY           <- message text
+crates/repark-functions/src/session_time_zone/tests.rs   (assertion)
+crates/repark-spark/src/extension/tests.rs               (fixture)
+
+$ grep -rn 'spark.sql.session.timeZone' python/repark/src/repark/session/session_time_zone.py
+SESSION_TIME_ZONE_KEY = "spark.sql.session.timeZone"                 <- the ONE facade key
+
+$ grep -rn 'datafusion.execution.time_zone' crates/ python/repark/src --include=*.rs --include=*.py
+(no product-code hits — D-B2 stands)
+```
+
+### B.14 Rework risk rows and residuals
+
+| # | Risk / residual | Disposition |
+|---|---|---|
+| **R-B1** | The carrier's empty `entries()` erases the session zone from `ScalarFunctionExpr` equality, so `year(ts)` built under two different session zones compares EQUAL | **Safe today, unsafe on a stated trigger.** repark has no plan cache and no cross-session expression reuse; the day either lands, return one non-settable descriptive entry and keep `set`'s refusal as the one-spelling gate. Written beside the `entries()` rationale and in the crate map, not only here |
+| **R-B2** | `offset_before_gap`'s 26-hour lookback assumes no zone has two offset transitions inside one 26-hour window | True throughout the IANA database today (the widest single jump, `Pacific/Apia` 2011-12-30, is a lone 24-hour gap). Stated as a bound in the code, not as a fact about the database. Reachable only when a truncated local anchor lands inside a gap |
+| **R-B3** | `SessionBuildConf` is not `#[non_exhaustive]`, so adding a field to it is itself a breaking change | Deliberate — the point of widening the argument was to make the dependency visible. The revisit trigger is written into the superseding design note |
+| **R-B4** | The corpus size pins moved (G1 10–14 → 19+1, G16 6–8 → 10) | A size pin moved because the fix FORCED it: the panel measured three wrong-answer families the original 20 rows were structurally blind to. Both counts are pinned with the reason in the test's own docstring, so the next growth is a decision, not a drift |
+| **R-B5** | TZ-7 and TZ-8 are new BACKLOG rows this unit opens rather than closes | Both are honest narrowings of TZ-1 rather than new discoveries: TZ-7 is the half of TZ-1 the fix did not reach (and made worse), TZ-8 is the half it never claimed. Both retire with the TIMESTAMP-representation unit that closes TZ-4, which is now named in three places |
+| **R-B6** | A DST-gap *string* argument to `date_format` renders the pre-shift wall clock where Spark's promotion would shift it forward | Edge of an edge — a zoneless string whose spelled time falls inside a gap. Not pinned, and it belongs to TZ-7's family (a zoneless input repark cannot localize), not to a separate defect |
+
+### B.15 What the panel got right that did NOT change
+
+Recorded because a rework that only lists its own edits reads as if everything was wrong. Both
+lenses reproduced, independently and against live Spark, the parts of the first pass that hold:
+D-B2's rejection of `datafusion.execution.time_zone` (the option does not drive `date_part`); the
+carrier being unreachable from `SET` through both doors, verified in the vendored `ConfigOptions`
+source and empirically; invoke-time reading being correctly plumbed through `ConstEvaluator` on the
+folding path and `SessionState` on the column path; the coercion path being idempotent on all
+twelve input types; re-annotation being metadata-only across all four `TimeUnit`s; the flip
+inventory being exactly right row-for-row with 0 Spark halves moved; the LOCATION RULE honored; and
+the denominator correction being measured rather than asserted. **The seam design was not the
+problem — the boundary of the claim was**, and that is what this rework moved.
 
 ## 9. Assembly note (orchestrator, 2026-08-10)
 

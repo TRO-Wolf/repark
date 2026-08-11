@@ -98,6 +98,14 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - **Known limitations:** session-timezone semantics for tz-timestamp extractors are a follow-up; the
   analyzer rule runs after `TypeCoercion`, so single-analyze *schema* consumers must reach the fixpoint.
 
+## Dependencies worth knowing
+
+- `arrow` carries an explicitly DECLARED `chrono-tz` feature. Without it
+  `arrow::array::timezone::Tz` accepts only fixed offsets, so every IANA zone id would fail at
+  query time on the session-timezone extraction path. It resolves transitively through
+  `datafusion-functions` anyway; declaring it means a DataFusion feature change cannot silently
+  break `spark.sql.session.timeZone = "America/New_York"`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

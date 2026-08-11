@@ -473,8 +473,10 @@ def _sc_filter_keyword_literal_false_column(engine: Engine) -> Any:
 # so DATE extraction and DATE arithmetic must NOT move with the session zone. That is what makes
 # them safe to assert as EQUALITY today (the session-timezone extraction gap is a TIMESTAMP gap)
 # and load-bearing tomorrow: a fix that pushed the session zone into the DATE path reds here.
-# The divergent TIMESTAMP rows for the same class live in test_session_timezone_parity.py as
-# recorded disclosures until that fix lands.
+# The TIMESTAMP rows of the same class live in test_session_timezone_parity.py; since H-1a split
+# B (2026-08-10) most are EQUALITY rows — the extraction fix landed and they converged. The ones
+# still recorded as disclosures are a different class each (TZ-4 export type, TZ-5 cast unit, TZ-6
+# no NTZ, TZ-7 zoneless input), and each row names its own.
 
 
 def _sc_date_extractor_under_new_york_session(engine: Engine) -> Any:

@@ -24,7 +24,11 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY).
   `_funcs.py` (`_SQLCONF_DEFAULTS` gains the key so `conf.get` reads it back), `builder_conf.py`
   (`RuntimeConfig.set` / `unset` accept-warn-don't-store) and `session_core.py` (the normalization
   call in `get_or_create`, and the key joining the engine-knob set the reuse path must not fold
-  into the live session's conf).
+  into the live session's conf). Its module docstring also carries the **user-visible statement of
+  what the zone reaches** (updated 2026-08-10, H-1a split B rework): extraction over an
+  INSTANT-typed TIMESTAMP honors it; a **zoneless** timestamp input (registry row TZ-7) and
+  `to_date` / `CAST(ts AS DATE)` / `datediff` (row TZ-8) still do not. That paragraph ships in the
+  wheel, so it is a lockstep obligation whenever the engine's coverage changes.
 - `__init__.py` — frozen public re-exports
 
 ## MOVE MAP (Q7)

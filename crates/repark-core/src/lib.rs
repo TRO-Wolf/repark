@@ -43,7 +43,7 @@ pub use session_time_zone::{
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
-pub use extension::SessionExtension;
+pub use extension::{SessionBuildConf, SessionExtension};
 
 // --- The embedding's executor handle (EC-5 / design §4 Q7). Additive: the TYPE is named here;
 // core never constructs one and never blocks — the INSTANCE lives in the embedding.

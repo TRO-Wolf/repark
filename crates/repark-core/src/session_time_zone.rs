@@ -20,9 +20,14 @@
 //! wall-clock values on two hosts. repark defaults to `UTC` so a run is reproducible on any
 //! host; a job that wants host-local behavior sets the key explicitly.
 //!
-//! **Scope of this module (H-1a split A).** The session zone is a *carried, validated* session
-//! value here. Timestamp **extraction** does not honor it yet — that fix, and its extractor
-//! pins, are H-1a split B. Nothing in this module changes an evaluated result.
+//! **Scope of this module.** The session zone is a *carried, validated* session value here, and
+//! nothing in this module changes an evaluated result. Since H-1a split B (2026-08-10) the value
+//! reaches the extractors: `repark-spark`'s `configure` hands it to `repark-functions`' carrier,
+//! and every calendar field of an INSTANT-typed `TIMESTAMP` is resolved in it. What is still NOT
+//! honored is recorded as divergence-registry rows, not left implicit — a **zoneless** timestamp
+//! input is read as UTC rather than as a wall clock in this zone (row TZ-7), and
+//! `to_date` / `CAST(ts AS DATE)` / `datediff` take the date in the stored zone (row TZ-8). Both
+//! wait on repark's TIMESTAMP representation (row TZ-4).
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
