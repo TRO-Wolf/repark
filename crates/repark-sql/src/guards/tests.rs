@@ -520,3 +520,375 @@ async fn multi_statement_refuses_first_and_quote_aware() {
     )
     .expect("a `;` inside a literal is not a script");
 }
+
+// === Guard 6 — G3-E8 subquery-predicate DML valve ===========================================
+
+/// The parsed statement, exactly as the router hands it to the valve — same `Generic` dialect,
+/// same `Statement`. The valve reads BOTH the `WHERE` expression and the target off this tree.
+fn parsed(sql: &str) -> Statement {
+    use datafusion::sql::sqlparser::dialect::GenericDialect;
+    use datafusion::sql::sqlparser::parser::Parser;
+
+    Parser::parse_sql(&GenericDialect {}, sql)
+        .unwrap_or_else(|error| panic!("{sql:?} must parse: {error}"))
+        .remove(0)
+}
+
+/// The valve fires on **every** subquery spelling, at any depth — and on nothing else.
+///
+/// Detection is "a `Query` node under the predicate", not an enumeration of subquery-bearing
+/// `Expr` variants; this pin is what proves the rule reaches the shapes an enumeration would have
+/// to list one by one (and would silently miss after a sqlparser bump).
+#[test]
+fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
+    for sql in [
+        "DELETE FROM t WHERE id IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE id NOT IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE NOT (id IN (SELECT id FROM k))",
+        "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM t WHERE id > ANY (SELECT id FROM k)",
+        "DELETE FROM t WHERE id > ALL (SELECT id FROM k)",
+        "DELETE FROM t WHERE id = (SELECT max(id) FROM k)",
+        "DELETE FROM t WHERE id = 1 OR id IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE id > 1 AND id IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE abs(id - (SELECT max(id) FROM k)) > 1",
+        "DELETE FROM t WHERE CASE WHEN id IN (SELECT id FROM k) THEN true ELSE false END",
+        "DELETE FROM t WHERE id IN (SELECT id FROM (SELECT id FROM k) AS x)",
+        "UPDATE t SET name = 'z' WHERE id IN (SELECT id FROM k)",
+        // Uncorrelated NOT EXISTS, EXISTS over an always-empty subquery, and the aggregate
+        // scalar `IN` — the three spellings the panel found missing from the matrix (F-D).
+        "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k WHERE 1 = 0)",
+        "DELETE FROM t WHERE id IN (SELECT max(id) FROM k)",
+        // A subquery reached only through a CTE-bearing subquery body.
+        "DELETE FROM t WHERE id IN (WITH c AS (SELECT id FROM k) SELECT id FROM c)",
+    ] {
+        let refusal = refuse_dml_subquery_predicate(&parsed(sql))
+            .expect_err(&format!("the valve must fire on {sql:?}"))
+            .to_string();
+        assert!(
+            refusal.contains("subquery predicates are silently mis-executed"),
+            "must name the defect class, sql={sql:?}, got {refusal}"
+        );
+        assert!(
+            refusal.contains("G3-E8") && refusal.contains("MERGE INTO"),
+            "must name the defect id and the workaround, sql={sql:?}, got {refusal}"
+        );
+    }
+
+    for sql in [
+        "DELETE FROM t WHERE id = 2",
+        "DELETE FROM t WHERE id IN (1, 2, 3)",
+        "DELETE FROM t WHERE id BETWEEN 2 AND 3",
+        "DELETE FROM t WHERE name LIKE 'b%' OR id = 3",
+        "DELETE FROM t WHERE abs(id) > 1 AND name IS NOT NULL",
+        "UPDATE t SET name = 'z' WHERE id = 2",
+        // An assignment subquery is deliberately NOT the valve's business: only `selection` is
+        // passed in, and this statement's WHERE is subquery-free.
+        "UPDATE t SET name = (SELECT max(name) FROM k) WHERE id = 2",
+        // No WHERE at all is the provider's genuine match-all — never refused.
+        "DELETE FROM t",
+        // Not DML at all: the valve is statement-shaped now, so it must pass everything else
+        // through untouched (this arm is what the router's `_ =>` fallthrough relies on).
+        "SELECT id FROM t WHERE id IN (SELECT id FROM k)",
+        "INSERT INTO t SELECT id FROM k WHERE id IN (SELECT id FROM k2)",
+    ] {
+        refuse_dml_subquery_predicate(&parsed(sql))
+            .unwrap_or_else(|err| panic!("the valve must NOT fire on {sql:?}: {err}"));
+    }
+}
+
+/// The refusal names the verb it refused, so a user is not told to rewrite the wrong statement.
+#[test]
+fn dml_subquery_refusal_names_its_verb_and_target() {
+    let sql = "DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.k)";
+    let delete = refuse_dml_subquery_predicate(&parsed(sql))
+        .unwrap_err()
+        .to_string();
+    assert!(delete.contains("DELETE with a subquery"), "{delete}");
+    assert!(
+        delete.contains("ice.sales.t"),
+        "must name the target: {delete}"
+    );
+    assert!(delete.contains("delete EVERY row"), "{delete}");
+
+    let sql = "UPDATE ice.sales.t SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.k)";
+    let update = refuse_dml_subquery_predicate(&parsed(sql))
+        .unwrap_err()
+        .to_string();
+    assert!(update.contains("UPDATE with a subquery"), "{update}");
+    assert!(update.contains("update EVERY row"), "{update}");
+    assert!(
+        update.contains("WHEN MATCHED THEN UPDATE SET"),
+        "the workaround must name the UPDATE arm: {update}"
+    );
+}
+
+/// The rendered target comes from the PARSED statement, not from the scrubbed text (F-C).
+///
+/// This door's text scrubber blanks quoted regions, so the previous text-derived target rendered
+/// a quoted table as blanks — and the `MERGE INTO <target>` rewrite the message hands the user
+/// named a table that does not exist. The message has to stay copy-pasteable for every spelling
+/// of the target that reaches the valve, including the FROM-less `DELETE <table>` form.
+#[test]
+fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
+    for (sql, expected) in [
+        (
+            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE id IN (SELECT id FROM ice.sales.k)",
+            "\"ice\".\"sales\".\"t\"",
+        ),
+        (
+            "UPDATE \"ice\".\"sales\".\"t\" SET name = 'z' \
+             WHERE id IN (SELECT id FROM ice.sales.k)",
+            "\"ice\".\"sales\".\"t\"",
+        ),
+        // FROM-less DELETE — the Spark spelling the Spark door's own router parse rejects.
+        (
+            "DELETE ice.sales.t WHERE id IN (SELECT id FROM ice.sales.k)",
+            "ice.sales.t",
+        ),
+        // A comment between the verb and the target used to shift the text scan's word cursor.
+        (
+            "DELETE /* why */ FROM ice.sales.t WHERE id IN (SELECT id FROM ice.sales.k)",
+            "ice.sales.t",
+        ),
+    ] {
+        let refusal = refuse_dml_subquery_predicate(&parsed(sql))
+            .unwrap_err()
+            .to_string();
+        assert!(
+            refusal.contains(&format!("is refused on `{expected}`")),
+            "the refusal must name the parsed target {expected}, sql={sql:?}, got {refusal}"
+        );
+        assert!(
+            refusal.contains(&format!("MERGE INTO {expected} AS target")),
+            "the workaround must be copy-pasteable, sql={sql:?}, got {refusal}"
+        );
+    }
+}
+
+/// A live ANSI door over a memory Iceberg catalog — the harness both end-to-end G3-E8 pins use,
+/// shared so the second one cannot drift from the first one's wiring.
+struct AnsiDoor {
+    ctx: SessionContext,
+    catalogs: CatalogRegistry,
+    read_only: HashSet<String>,
+    catalog: Arc<dyn Catalog>,
+    root: String,
+    _warehouse: TempDir,
+}
+
+impl AnsiDoor {
+    /// A door with catalog `ice` registered over its own temp warehouse and `ice.sales` created.
+    async fn new() -> Self {
+        let warehouse = TempDir::new().unwrap();
+        let root = warehouse.path().to_str().unwrap().to_string();
+        let catalog: Arc<dyn Catalog> = repark_iceberg::catalog::memory_catalog(&root)
+            .await
+            .unwrap();
+        let ctx = SessionContext::new();
+        repark_iceberg::catalog::register_iceberg_catalog(&ctx, "ice", Arc::clone(&catalog))
+            .await
+            .unwrap();
+        let mut catalogs = CatalogRegistry::new();
+        catalogs.insert(
+            "ice".to_string(),
+            Arc::clone(&catalog),
+            LocationPolicy::TempFallbackAllowed {
+                root: warehouse.path().to_path_buf(),
+            },
+        );
+        catalogs.note_local_warehouse_root(&root);
+        let door = Self {
+            ctx,
+            catalogs,
+            read_only: HashSet::new(),
+            catalog,
+            root: root.clone(),
+            _warehouse: warehouse,
+        };
+        door.ok(&format!(
+            "CREATE SCHEMA ice.sales WITH (location = '{root}/sales')"
+        ))
+        .await;
+        door
+    }
+
+    /// Run through the door, returning the first Int64 column (the pins all read `id`).
+    async fn ids(&self, sql: &str) -> datafusion::error::Result<Vec<i64>> {
+        let frame = crate::execute(
+            EngineContext::new(&self.ctx, &self.catalogs, &self.read_only),
+            sql,
+        )
+        .await?;
+        let batches = frame.collect().await?;
+        let mut ids = Vec::new();
+        for batch in &batches {
+            if batch.num_columns() == 0 {
+                continue;
+            }
+            if let Some(column) = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::Int64Array>()
+            {
+                for index in 0..batch.num_rows() {
+                    ids.push(column.value(index));
+                }
+            }
+        }
+        Ok(ids)
+    }
+
+    async fn ok(&self, sql: &str) -> Vec<i64> {
+        self.ids(sql)
+            .await
+            .unwrap_or_else(|error| panic!("`{sql}` must succeed: {error}"))
+    }
+
+    async fn err(&self, sql: &str) -> String {
+        match self.ids(sql).await {
+            Ok(_) => panic!("`{sql}` must refuse"),
+            Err(error) => error.to_string(),
+        }
+    }
+
+    /// The seeded target read back, sorted.
+    async fn target_ids(&self) -> Vec<i64> {
+        let mut ids = self.ok("SELECT id FROM ice.sales.sqtgt ORDER BY id").await;
+        ids.sort_unstable();
+        ids
+    }
+}
+
+/// End to end through THIS door: the statement refuses and the table is left EXACTLY as seeded.
+///
+/// This door delegates DML to the same DataFusion path the Spark door does, so before the valve
+/// this `DELETE` emptied `ice.sales.sqtgt`. The read-back is the assertion that would have caught
+/// the original defect; the adjacent `DELETE` proves the valve did not widen into working SQL.
+///
+/// The FROM-less `DELETE <table> WHERE …` row is here because it is the spelling that bypassed
+/// the SPARK door's router-parse valve (panel L1 M-1): this door parses it fine, so it is pinned
+/// on both doors rather than assumed equivalent.
+#[tokio::test]
+async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
+    let door = AnsiDoor::new().await;
+    door.ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    door.ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
+        .await;
+
+    for sql in [
+        "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT id FROM ice.sales.sqkeys)",
+        "DELETE FROM ice.sales.sqtgt WHERE NOT EXISTS \
+         (SELECT 1 FROM ice.sales.sqkeys k WHERE k.id = ice.sales.sqtgt.id)",
+        "UPDATE ice.sales.sqtgt SET id = 9 WHERE id IN (SELECT id FROM ice.sales.sqkeys)",
+        // The FROM-less spelling (the Spark door's bypass family).
+        "DELETE ice.sales.sqtgt WHERE id IN (SELECT id FROM ice.sales.sqkeys)",
+        // Uncorrelated NOT EXISTS and the aggregate-scalar IN — F-D's added spellings, executed.
+        "DELETE FROM ice.sales.sqtgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.sqkeys)",
+        "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT max(id) FROM ice.sales.sqkeys)",
+    ] {
+        let refusal = door.err(sql).await;
+        assert!(
+            refusal.contains("subquery predicates are silently mis-executed"),
+            "sql={sql:?}, got {refusal}"
+        );
+        assert_eq!(
+            door.target_ids().await,
+            vec![1, 2, 3],
+            "a refused statement must not touch a row, sql={sql:?}"
+        );
+    }
+
+    // Adjacent negative: the subquery-free spelling still delegates and deletes exactly one row.
+    door.ok("DELETE FROM ice.sales.sqtgt WHERE id = 2").await;
+    assert_eq!(door.target_ids().await, vec![1, 3]);
+}
+
+/// Guard ORDER on this door (F-B): a table that trips BOTH data-loss valves reports **G3-E8**,
+/// because the cheap sync AST walk runs before the async Iceberg metadata load. Mirrors the Spark
+/// door's `tests::dml::g3e8_subquery_valve_precedes_the_mor_multi_spec_valve`, including its
+/// control — the non-subquery spelling on the same table must still hit the BUG-001 valve, so the
+/// pin cannot pass by the hazard not existing.
+///
+/// Before this unit the BUG-001 valve ran at the router head, i.e. BEFORE the parse the G3-E8
+/// valve needs, so the doors disagreed about which refusal a doubly-hazardous statement gets.
+#[tokio::test]
+async fn mor_valve_runs_after_the_g3e8_valve() {
+    use iceberg::spec::Transform;
+    use repark_iceberg::write::alter::{PartitionSpecChange, apply_partition_spec_changes};
+
+    let door = AnsiDoor::new().await;
+    door.ok("CREATE TABLE ice.sales.sqtgt WITH (\
+             partitioning = ARRAY['bucket(4, id)'], \
+             extra_properties = MAP(ARRAY['write.delete.mode', 'write.update.mode'], \
+                                    ARRAY['merge-on-read', 'merge-on-read'])) \
+         AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    door.ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
+        .await;
+
+    // Evolve the spec away: the current spec becomes unpartitioned, the history keeps the bucket
+    // spec — the BUG-001 hazard shape.
+    apply_partition_spec_changes(
+        door.catalog.as_ref(),
+        &iceberg::TableIdent::new(
+            iceberg::NamespaceIdent::new("sales".to_string()),
+            "sqtgt".to_string(),
+        ),
+        &[PartitionSpecChange::RemoveFieldByTransform {
+            source_name: "id".to_string(),
+            transform: Transform::Bucket(4),
+        }],
+    )
+    .await
+    .expect("dropping the partition field must commit");
+    assert!(
+        door.root.starts_with('/'),
+        "fixture: the warehouse is a real path"
+    );
+
+    // Control: the non-subquery spelling on this very table still hits the BUG-001 valve.
+    let mor = door.err("DELETE FROM ice.sales.sqtgt WHERE id = 1").await;
+    assert!(
+        mor.contains("merge-on-read") && mor.contains("partition specs in history"),
+        "control must be the BUG-001 message, got {mor}"
+    );
+
+    // The doubly-hazardous statement: G3-E8 wins, and the BUG-001 message is nowhere in it.
+    let both = door
+        .err("DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT id FROM ice.sales.sqkeys)")
+        .await;
+    assert!(
+        both.contains("subquery predicates are silently mis-executed") && both.contains("G3-E8"),
+        "the G3-E8 valve must fire FIRST (cheap, sync), got {both}"
+    );
+    assert!(
+        !both.contains("partition specs in history"),
+        "the BUG-001 valve must not have run, got {both}"
+    );
+    assert_eq!(
+        door.target_ids().await,
+        vec![1, 2, 3],
+        "and nothing may have been written"
+    );
+}
+
+/// The attachment-class regression net for THIS door (F-A's sibling risk). The router parses with
+/// [`PARSER_DIALECT`] and `delegate` re-parses through `create_logical_plan`, which uses the
+/// session's `sql_parser.dialect`. Those are the same parser today — and this pin is what makes
+/// "the same" a checked fact rather than a coincidence: the moment a DataFusion bump changes the
+/// session default, the two parses could disagree and a DML guard wired to the router's parse
+/// would be fail-open exactly the way the Spark door's was.
+#[test]
+fn router_parse_dialect_matches_the_session_default() {
+    let session_default = SessionConfig::new().options().sql_parser.dialect;
+    assert_eq!(
+        crate::router::PARSER_DIALECT,
+        session_default,
+        "this door's router parse and the parse `delegate` plans MUST be the same dialect — \
+         otherwise a statement can be routed by one parser and executed by another"
+    );
+}

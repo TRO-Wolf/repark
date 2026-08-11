@@ -51,10 +51,14 @@ belongs out here is what must be observed from outside the crate.
   catalog, compared on the Arrow path (value AND type). Rows: CTAS, INSERT, ALTER (schema
   evolution + table rename), MERGE, time travel, identifier case folding, the single-session
   legality boundary (pure catalog DDL), the session-scope guard rail that explains why one
-  session cannot do this job, and **G-7b decimal128** (`cross_door_decimal_add_same_precision_scale_bit_exact`,
+  session cannot do this job, **G-7b decimal128** (`cross_door_decimal_add_same_precision_scale_bit_exact`,
   `cross_door_decimal_mul_money_by_quantity_bit_exact` — same SQL through both doors, schema +
   nullability + raw i128 equal; corpus rows `add_same_precision_scale` /
-  `mul_money_by_quantity`). Needs the `repark-spark` dev-dep — the ONLY place either door may
+  `mul_money_by_quantity`), and — added 2026-08-11 —
+  `cross_door_g3e8_refusals_render_identically`, which compares a **rendered refusal string**
+  rather than a result: the G3-E8 valve is implemented twice (no door→door product edge), and
+  this is the only pin that can see the two copies drift, including the rendered TARGET that the
+  per-door message pins cannot. Needs the `repark-spark` dev-dep — the ONLY place either door may
   name the other, and legal because the crate-DAG guard scopes layering to normal edges.
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
@@ -91,6 +95,7 @@ belongs out here is what must be observed from outside the crate.
 | `session_wiring` RED on the catalog-visible read | The dialect is probably not installed (session default fell back to `DataFusionDialect`, whose CTAS makes a `MemTable`) |
 | `introspection` RED with "not supported unless information_schema is enabled" | The repark-core builder→`SessionConfig` plumbing (`apply_datafusion_config_keys`) regressed; check `cargo test -p repark-core --lib builder_datafusion` first |
 | `cross_door` RED on ONE door only | The doors' lowerings drifted — that is the row doing its job (design §6 R3). Compare the two handlers, do not relax the assertion |
+| `cross_door_g3e8_refusals_render_identically` RED | The duplicated G3-E8 valve drifted: one door's message text or its target derivation changed without the other's. Both copies are named in `task/g3e8-guard-ledger.md` D-1; fix the copy, never the assertion (this pin IS the mitigation D-1 accepted the duplication on) |
 | `cross_door_identifier_case_folding_*` RED because a quoted wrong-case identifier now RESOLVES | repark has CONVERGED on Apache Spark. Retire `docs/spark-sql-iceberg-parity.md` §3 row ID-1 in the same change (a new dated decision supersedes D3) — never relax the assertion |
 | `extensions_are_session_scoped_not_dialect_scoped` RED | Extension scoping changed. Every `TwoSession` matrix row in BOTH doors needs re-reading before anything else |
 | `ansi_door_and_spark_door_agree_under_a_non_utc_session` RED on ONE door | The session timezone stopped being session-scoped (it rides `ConfigOptions`, which every door on the session shares). Check `repark_functions::session_time_zone` and `SparkExtension::configure` before touching the row |

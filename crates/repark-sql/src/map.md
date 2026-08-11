@@ -20,15 +20,22 @@ reach delegation through the ordinary arm.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
-- `router.rs` — the statement router (text guards → MoR valve → parse → match → delegate) and
-  the delegation path that carries the SEC-02 guard. Delegation covers reads, the fork's
-  metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's `TableProvider` (ADR-0003).
-  Tests: [router/map.md](router/map.md).
+- `router.rs` — the statement router (text guards → pre-parse stage → parse → match → the two
+  DML valves → delegate) and the delegation path that carries the SEC-02 guard. Delegation
+  covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
+  `TableProvider` (ADR-0003). `DELETE`/`UPDATE` share a NAMED arm on the way to delegation:
+  both DML data-loss valves need the parse, and they run cheap-first — G3-E8 (sync AST walk)
+  then BUG-001 (async metadata load). The BUG-001 valve used to sit at the router head, i.e.
+  before the parse G3-E8 needs, which made the two doors disagree about which refusal a
+  doubly-hazardous statement gets. Tests: [router/map.md](router/map.md).
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
   onto the router, deliberately). In-module tests.
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
-  tier-1 predicate, gating delegated DELETE/UPDATE), and the SEC-02 local-filesystem plan gate.
+  tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and
+  the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate`, called from the
+  router's named `DELETE`/`UPDATE` arm because it needs the PARSED statement — it reads both the
+  `WHERE` expression and the target off the parse tree, so a quoted target renders usably).
   SEC-02 scope: it gates DataFusion's own filesystem-as-data DDL (`CREATE EXTERNAL TABLE`,
   `COPY TO`), NOT an intercepted `CREATE TABLE … WITH (location = …)`, which the catalog's
   `LocationPolicy` governs instead.
@@ -100,7 +107,7 @@ reach delegation through the ordinary arm.
 | Change routing order | `router.rs` (the order is the design's — read the module doc first) |
 | Add a curated table property | `properties.rs` + a row in `properties/tests.rs` + an e2e row in `tests.rs` |
 | Add a partition transform | `partitioning.rs` + `partitioning/tests.rs` |
-| Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface |
+| Add a guard | `guards.rs` + `guards/tests.rs` + a `surfaces` ID if it is a claimed surface (a guard needing the PARSED statement instead of scrubbed text is called from a named `router.rs` arm; unit AND end-to-end pins still live in `guards/tests.rs` — that is what G3-E8 does) |
 | Add an `ALTER TABLE` operation | `alter.rs` `execute_alter_table` + `alter/tests.rs` + an e2e row in `tests.rs` |
 | Add a `SET PROPERTIES` key | `alter.rs` `parse_set_properties` (curated only — dotted keys go through `extra_properties`) |
 | Change what MERGE lowers to | `merge.rs` — the target type is shared with the Spark door, so a change there is a cross-door contract change |
@@ -116,6 +123,7 @@ reach delegation through the ordinary arm.
 
 | Symptom | First check |
 |---|---|
+| A `DELETE`/`UPDATE` with a subquery `WHERE` was refused | By design (G3-E8): `guards::refuse_dml_subquery_predicate`, the twin of the Spark door's valve, same refusal text. Re-implemented rather than shared — door→door product edges are banned |
 | A guard fired on text inside a string literal | It cannot — the guards read `scan::blank_out_quoted_and_comments` output; check the scrubber's tests |
 | A statement was delegated that should have been intercepted | `router.rs` match arms — and check nothing short-circuits BEFORE the statement match (a `$`-text passthrough once did) |
 | The wrong-door sniff fired on ANSI-legal SQL | `sniff.rs` `scope_for` / `Scope::Leading` — tokens with an ANSI reading (`USING`, `NAMESPACE`, `BRANCH`/`TAG`) fire only under their leading keyword |
