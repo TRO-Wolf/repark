@@ -758,3 +758,222 @@ async fn merge_source_with_reserved_flag_column_works() {
         ]
     );
 }
+
+// ================================================================================================
+// N-2b / G3 deferred pins — mirror the Python differential corpus shapes that G-4's file ban
+// blocked from landing with N-2. Sibling of `python/repark/tests/test_merge_differential_parity.py`
+// rows of the same names; Spark-door SQL entry point, Arrow collect path.
+// ================================================================================================
+
+/// G3 pin 1 / N-2b — duplicate source keys under a `WHEN MATCHED` arm raise
+/// `MERGE_CARDINALITY_VIOLATION` (never silent last-writer-wins). Mirrors the Python differential
+/// row `duplicate_source_keys_with_matched_raises` (both engines share the token).
+#[tokio::test]
+async fn merge_duplicate_source_keys_with_matched_raises() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    // Two source rows share id=2 — the match key — under a WHEN MATCHED UPDATE.
+    register_source(&ctx, "updates", &[(2, "x"), (2, "y")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let before = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("MERGE_CARDINALITY_VIOLATION"),
+        "expected MERGE_CARDINALITY_VIOLATION on duplicate source keys with MATCHED, got: {err}"
+    );
+    // Failed MERGE must leave the target untouched (no partial write).
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        before,
+        "cardinality failure must not mutate the target"
+    );
+}
+
+/// G3 pin 2 / N-2b — insert-only MERGE (no `WHEN MATCHED`) does NOT fire the cardinality check:
+/// both source rows with the same unmatched key are inserted. Mirrors
+/// `duplicate_source_keys_insert_only_commits_both`.
+#[tokio::test]
+async fn merge_duplicate_source_keys_insert_only_commits_both() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    // Two unmatched source rows share id=9; no WHEN MATCHED arm ⇒ both insert.
+    register_source(&ctx, "updates", &[(9, "x"), (9, "y")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+    )
+    .await;
+
+    let mut got = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+    // Order by (id, name) so the twin id=9 rows compare stably.
+    got.sort_by(|left, right| left.0.cmp(&right.0).then_with(|| left.1.cmp(&right.1)));
+    assert_eq!(
+        got,
+        vec![
+            (1, "a".to_string()),
+            (2, "b".to_string()),
+            (3, "c".to_string()),
+            (9, "x".to_string()),
+            (9, "y".to_string()),
+        ],
+        "insert-only MERGE must commit BOTH duplicate-key source rows"
+    );
+}
+
+/// G3 pin 3 / N-2b — `WHEN MATCHED AND …` arm ordering is first-match-wins: the conditional
+/// UPDATE captures id=1 (score=10); the unconditional DELETE captures id=2. Mirrors
+/// `matched_and_arm_order_update_then_delete` (UPDATE-then-DELETE shape; the reverse DELETE-then-
+/// UPDATE shape is already pinned by `merge_clause_order_first_match_wins`).
+#[tokio::test]
+async fn merge_matched_and_arm_order_update_then_delete() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.score_t (id INT NOT NULL, score INT NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.score_t VALUES (1, 10), (2, 20)",
+    )
+    .await;
+    // Source carries the same ids with new scores (only the UPDATE arm uses source.score).
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("score", DataType::Int32, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1, 2])),
+            Arc::new(Int32Array::from(vec![100, 200])),
+        ],
+    )
+    .unwrap();
+    ctx.register_batch("updates", batch).unwrap();
+
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.score_t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED AND t.score = 10 THEN UPDATE SET score = s.score \
+             WHEN MATCHED THEN DELETE",
+    )
+    .await;
+
+    assert_eq!(
+        score_table_rows(&ctx, &catalogs, "ice.sales.score_t").await,
+        vec![(1, 100)],
+        "id=1 updates (first arm); id=2 deletes (second arm) — first-match-wins"
+    );
+}
+
+/// G3 pin 4 / N-2b — multi-arm threshold: high scores UPDATE, low scores DELETE, both arms
+/// conditional. Mirrors `matched_and_threshold_update_or_delete` (sibling of the arm-order pin).
+#[tokio::test]
+async fn merge_matched_and_threshold_update_or_delete() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.score_t (id INT NOT NULL, score INT NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.score_t VALUES (1, 10), (2, 20), (3, 5)",
+    )
+    .await;
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new("score", DataType::Int32, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![1, 2, 3])),
+            Arc::new(Int32Array::from(vec![100, 200, 50])),
+        ],
+    )
+    .unwrap();
+    ctx.register_batch("updates", batch).unwrap();
+
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.score_t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED AND t.score >= 15 THEN UPDATE SET score = s.score \
+             WHEN MATCHED AND t.score < 15 THEN DELETE \
+             WHEN NOT MATCHED THEN INSERT (id, score) VALUES (s.id, s.score)",
+    )
+    .await;
+
+    assert_eq!(
+        score_table_rows(&ctx, &catalogs, "ice.sales.score_t").await,
+        vec![(2, 200)],
+        "id=2 (score>=15) updates; id=1 and id=3 (score<15) delete"
+    );
+}
+
+/// Read `(id, score)` pairs sorted by id — local oracle for the two G3 score-arm pins.
+async fn score_table_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<(i32, i32)> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!("SELECT id, score FROM {table} ORDER BY id"),
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        let scores = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        for index in 0..batch.num_rows() {
+            rows.push((ids.value(index), scores.value(index)));
+        }
+    }
+    rows
+}
