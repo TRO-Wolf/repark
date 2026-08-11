@@ -105,6 +105,15 @@ Repository helper scripts wired into the dev workflow.
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
   `make check-lib-py` and the ci.yml `python` job in the same PR.
 
+- `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
+  (G-8 companion to `check_lib_rs`). Over every `*.rs` under `crates/**` (recursive): a per-file
+  line ceiling with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN only). Default
+  and exception numbers live **only** in the `.py` — prose never restates them. Seeded from the
+  post-G-4 measured tree (the former 14.5-KLOC `tests.rs` monolith is gone and is not
+  grandfathered). Fail-closed: unreadable file or empty scan set is an error. Pure text —
+  sub-second. Dual-wired: `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job
+  step; also both pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
+
 - `check_parity_live_dual_wire.sh` + `check_parity_live_dual_wire.py` — the **parity-live dual-wire**
   guard (G-6). Compares `make parity-live` and `.github/workflows/parity-live.yml` to **each
   other** on load-bearing tokens (`uv sync` flag/extra set, `--no-install-package repark`,
@@ -129,6 +138,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Declare a new crate, doc, or gate command | [`../repo-manifest.toml`](../repo-manifest.toml), then `bash scripts/check_manifest.sh` |
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
 | Raise/lower a facade `.py` line ceiling | `check_lib_py.py` (`EXCEPTIONS` — reason required, ratchet down only) |
+| Raise/lower a general Rust file line ceiling | `check_rust_file_size.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Check `make parity-live` still matches `parity-live.yml` | `make check-parity-live-dual-wire` |
 | Install the pre-commit hook | `make install-hooks` |
@@ -164,6 +174,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `lib-py: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_lib_py.py` with a reason (ceilings ratchet down only) |
 | `lib-py: … re-export-only module must start its docstring …` | Open the module docstring's FIRST line with the exact substring `re-export binding`, or give the module real content |
 | `lib-py: python/repark/src/repark not found` | The guard runs from the repo root and needs the facade package present |
+| `rust-file-size: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_rust_file_size.py` with a reason (ceilings ratchet down only) |
+| `rust-file-size: … scan set is empty` | Fail-closed: the guard found zero `crates/**/*.rs` files — fix the tree or the scan root |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |

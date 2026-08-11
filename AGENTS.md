@@ -158,6 +158,12 @@ never silently skip locally (uvx provisions the pinned tool on demand).
     `python/repark/src/repark/**`, dual-wired `make check-lib-py` (in the `make ci` chain) +
     ci.yml's `python` job, and in both pre-commit paths (`make install-hooks` +
     `.pre-commit-config.yaml`).
+  - *Rust file-size* (`scripts/check_rust_file_size.py` — the general companion of `check_lib_rs`
+    and the SSOT for per-file `crates/**/*.rs` line ceilings: a default ceiling with an
+    EXCEPTIONS-with-reason table that **ratchets DOWN only**) is **armed** since G-8, dual-wired
+    `make check-rust-file-size` (in the `make ci` chain) + the ci.yml `guards` job, and in both
+    pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`). Prose points at the
+    script; ceilings are never restated here.
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
     inventory, phase, canonical gate commands and documentation index are machine-readable and
     validated against the workspace, the Makefile, STATUS.md, the declared documents and the

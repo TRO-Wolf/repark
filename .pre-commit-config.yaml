@@ -56,6 +56,11 @@ repos:
         entry: scripts/check_lib_rs.sh
         language: script
         pass_filenames: false
+      - id: rust-file-size-guard
+        name: rust file-size guard
+        entry: scripts/check_rust_file_size.sh
+        language: script
+        pass_filenames: false
       - id: lib-py-guard
         name: facade .py thinness guard
         entry: scripts/check_lib_py.sh

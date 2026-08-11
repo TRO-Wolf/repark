@@ -43,6 +43,9 @@ not this directory.
 - [g4-tests-split-ledger.md](g4-tests-split-ledger.md) — **G-4** declared-rename: split
   `crates/repark-spark/src/tests.rs` → `src/tests/` by production-module alignment; identity
   gate + name map under `task/g4-artifacts/`.
+- [g8-file-size-ledger.md](g8-file-size-ledger.md) — **G-8** general Rust file-size gate
+  (`scripts/check_rust_file_size.py`): measurement-seeded default + EXCEPTIONS, dual-wired into
+  `make ci` + ci.yml guards, provocation proofs (must-FAIL / must-PASS).
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
