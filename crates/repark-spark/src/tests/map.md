@@ -34,6 +34,13 @@ code is not here — only tests, shared fixtures, and the module manifest.
   that leaf only, so they stay out of `common.rs`). They read the default catalog/schema directly
   rather than `information_schema`, which this door's `setup` does not enable. Not a relocation:
   new tests, new names, and the G-4 identity artifacts are unaffected.
+- **N-2b / G3 deferred MERGE pins (2026-08-11)** — `merge.rs` gains four Spark-door SQL pins
+  that mirror the N-2 Python differential corpus shapes G-4's file ban deferred:
+  `merge_duplicate_source_keys_with_matched_raises`,
+  `merge_duplicate_source_keys_insert_only_commits_both`,
+  `merge_matched_and_arm_order_update_then_delete`,
+  `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
+  helper for the two score-arm pins. Not a relocation: new tests, new names.
 
 ## Mapping rule
 

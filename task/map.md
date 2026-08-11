@@ -77,6 +77,12 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 `docs/history/hardening-h1/`. The audit is
 [../docs/history/hardening-h1/promotion-ledger.md](../docs/history/hardening-h1/promotion-ledger.md).
 
+## Live unit ledgers
+
+| Ledger | Unit |
+|---|---|
+| [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — **PARTIAL** (items 1+4 landed; items 2+3 deferred to second PR post design approval). Does **not** claim N-2b closed. |
+
 ## I want to...
 
 | ...do this | go to |
