@@ -1,4 +1,7 @@
-//! RePark-side projection honor for fork metadata-table providers (r25 T2 item 0).
+//! RePark-side policy for the fork's `table$meta` metadata tables — **projection honor** (r25 T2
+//! item 0) and **enumeration hiding** (ADR-0006, campaign decision D2 / unit H-1c).
+//!
+//! ## Projection honor
 //!
 //! The fork's `IcebergMetadataTableProvider::scan` (iceberg-datafusion
 //! `table/metadata_table.rs`) **ignores** the `projection` argument — empty projection
@@ -9,6 +12,30 @@
 //! Fix (tonight): wrap every `table$meta` provider returned from the registered schema provider
 //! so `scan` applies DataFusion's [`ProjectionExec`] over the fork plan (never collect-then-
 //! project). Fork proper fix + shim removal = fork-workstream seed (ledger only).
+//!
+//! ## Enumeration hiding
+//!
+//! The fork's `IcebergSchemaProvider::table_names` (iceberg-datafusion `schema.rs`) does not
+//! return what the catalog holds: for **every** listed base table it also **synthesizes** one
+//! name per [`MetadataTableType`] — fifteen today — so a namespace of N tables enumerates as
+//! 16 N names. Both engines the two SQL doors point at hide those names from enumeration (Apache
+//! Spark's Iceberg extension lists only what `Catalog::list_tables` returns; Trino documents
+//! metadata tables as queryable-but-unlisted), and DataFusion's `information_schema` builders
+//! call `table()` / `table_type()` **per enumerated name**. Resolving one synthesized name costs
+//! TWO `load_table` round-trips in the fork (`IcebergTableProvider::try_new`, then
+//! `metadata_table()`), so leaving them in costs **thirty** extra round-trips per base table on
+//! every introspection query — measured, not argued: a one-base-table namespace ran 31
+//! `load_table` calls before the filter and 1 after.
+//!
+//! [`MetadataProjectionSchemaProvider::table_names`] therefore drops exactly the synthesized names
+//! whose base contains no `$`; a base table with a `$` in its own name still enumerates its fifteen
+//! synthesized names (see [`is_synthesized_metadata_table_name`] — a fork limitation, and those
+//! names are unresolvable through the fork either way).
+//! `table()` / `table_exist()` are deliberately **unchanged**: `t$snapshots` stays
+//! addressable by name (and so does the Spark door's `t.snapshots` spelling, which rewrites onto
+//! it), which is the Trino shape — hidden from the listing, not removed from the engine. The
+//! decision, its rationale and its rejected alternative are in
+//! `docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md`.
 
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -23,6 +50,7 @@ use datafusion::logical_expr::{Expr, TableProviderFilterPushDown};
 use datafusion::physical_expr::expressions::Column;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::physical_plan::projection::{ProjectionExec, ProjectionExpr};
+use iceberg::inspect::MetadataTableType;
 
 // === r25 T2 item 0: metadata-table projection wrap =========================================
 //
@@ -137,9 +165,40 @@ fn apply_projection_exec(
 }
 
 /// ===========================================================================================
-/// Schema-provider decorator: wrap `$`-form metadata table providers with projection honor.
+/// Whether `name` is a metadata-table name the fork's `IcebergSchemaProvider::table_names`
+/// **synthesized** rather than listed: `<base>$<type>` where `<type>` is a known
+/// [`MetadataTableType`] and `<base>` is a table `inner` actually knows.
 ///
-/// Base tables (no `$`) pass through unchanged. All other [`SchemaProvider`] methods delegate.
+/// Both halves are load-bearing. The type check keeps the vocabulary in ONE place — the fork's
+/// own enum, the same source its synthesis reads — so a fork rev that adds a metadata table is
+/// covered without editing a list here. The base-existence check keeps this from hiding a real
+/// table whose name merely contains `$`: **no ordinary table is hidden** — the only names dropped
+/// are ones the wrapped provider resolves as metadata tables — while a `$`-name the provider
+/// cannot resolve is left visible rather than quietly disappeared. (Hidden-*and*-addressable is
+/// the point of ADR-0006, so "nothing is hidden" is never the claim; the claim is that nothing
+/// stops being addressable and nothing ordinary stops being listed.)
+///
+/// Known residue: the split takes the FIRST `$`, so a base table whose own name contains `$`
+/// (`a$b`) yields `a$b$snapshots`, which splits to base `a` / suffix `b$snapshots` — not a
+/// `MetadataTableType`, so all fifteen synthesized names stay listed. `rsplit_once` would not fix
+/// it, because the fork's own `table_exist("a$b")` splits the same way and returns false, so the
+/// base-existence guard could never confirm such a base; `a$b` and its synthesized names are
+/// unresolvable through the fork either way. Fork limitation, pinned below in
+/// `the_filter_keeps_names_the_fork_did_not_synthesize` and flagged F-2 in `task/h1c-ledger.md`.
+/// ===========================================================================================
+fn is_synthesized_metadata_table_name(inner: &dyn SchemaProvider, name: &str) -> bool {
+    let Some((base, metadata_table_type)) = name.split_once('$') else {
+        return false;
+    };
+    MetadataTableType::try_from(metadata_table_type).is_ok() && inner.table_exist(base)
+}
+
+/// ===========================================================================================
+/// Schema-provider decorator: hide synthesized `$`-form metadata tables from ENUMERATION, and
+/// wrap the ones still reached BY NAME with projection honor.
+///
+/// Base tables (no `$`) pass through unchanged in both dimensions. All other [`SchemaProvider`]
+/// methods delegate.
 /// ===========================================================================================
 #[derive(Debug)]
 pub struct MetadataProjectionSchemaProvider {
@@ -147,7 +206,8 @@ pub struct MetadataProjectionSchemaProvider {
 }
 
 impl MetadataProjectionSchemaProvider {
-    /// Wrap `inner` so metadata-table lookups return [`ProjectingMetadataTableProvider`].
+    /// Wrap `inner` so metadata-table lookups return [`ProjectingMetadataTableProvider`] and
+    /// synthesized metadata-table names stay out of [`SchemaProvider::table_names`].
     #[must_use]
     pub fn wrap(inner: Arc<dyn SchemaProvider>) -> Arc<dyn SchemaProvider> {
         Arc::new(Self { inner })
@@ -156,8 +216,16 @@ impl MetadataProjectionSchemaProvider {
 
 #[async_trait]
 impl SchemaProvider for MetadataProjectionSchemaProvider {
+    /// ADR-0006: the listing is the catalog's tables, not the fork's synthesized cross-product.
+    /// `SHOW TABLES` and every `information_schema` view read this method, so hiding here covers
+    /// both doors, the facade and the bare core session at once — and never in a door parser,
+    /// which could only ever cover one of them.
     fn table_names(&self) -> Vec<String> {
-        self.inner.table_names()
+        self.inner
+            .table_names()
+            .into_iter()
+            .filter(|name| !is_synthesized_metadata_table_name(self.inner.as_ref(), name))
+            .collect()
     }
 
     async fn table(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
@@ -197,7 +265,200 @@ impl SchemaProvider for MetadataProjectionSchemaProvider {
 mod tests {
     use super::*;
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
+    use datafusion::datasource::empty::EmptyTable;
     use datafusion::physical_plan::empty::EmptyExec;
+
+    /// ===========================================================================================
+    /// A stand-in for the fork's `IcebergSchemaProvider` that reproduces the one behavior
+    /// ADR-0006 rules on: `table_names` returns each base table PLUS one synthesized
+    /// `<base>$<type>` per [`MetadataTableType`], while `table` / `table_exist` resolve the `$`
+    /// form independently of the listing.
+    ///
+    /// A fake rather than a live catalog on purpose: this pins the decorator's PREDICATE over
+    /// inputs a real catalog cannot easily produce (a real table whose name contains `$`, a
+    /// `$`-name whose base does not exist). The end-to-end behavior over the real fork provider
+    /// is pinned at the doors and the facade, not here: `crates/repark-sql/tests/introspection.rs`
+    /// (ANSI door), `crates/repark-spark/src/tests.rs` (Spark door),
+    /// `crates/repark-core/src/session/tests.rs` (bare session) and
+    /// `python/repark/tests/test_metadata_tables.py` (facade).
+    /// ===========================================================================================
+    #[derive(Debug)]
+    struct ForkShapedSchemaProvider {
+        base_tables: Vec<String>,
+    }
+
+    impl ForkShapedSchemaProvider {
+        fn new(base_tables: &[&str]) -> Self {
+            Self {
+                base_tables: base_tables.iter().map(|name| (*name).to_string()).collect(),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl SchemaProvider for ForkShapedSchemaProvider {
+        fn table_names(&self) -> Vec<String> {
+            self.base_tables
+                .iter()
+                .flat_map(|base| {
+                    [base.clone()].into_iter().chain(
+                        MetadataTableType::all_types()
+                            .map(move |kind| format!("{base}${}", kind.as_str())),
+                    )
+                })
+                .collect()
+        }
+
+        async fn table(&self, name: &str) -> Result<Option<Arc<dyn TableProvider>>> {
+            if !self.table_exist(name) {
+                return Ok(None);
+            }
+            let schema = Arc::new(Schema::new(vec![Field::new("a", DataType::Int64, true)]));
+            Ok(Some(Arc::new(EmptyTable::new(schema))))
+        }
+
+        fn table_exist(&self, name: &str) -> bool {
+            match name.split_once('$') {
+                Some((base, kind)) => {
+                    MetadataTableType::try_from(kind).is_ok()
+                        && self.base_tables.iter().any(|table| table == base)
+                }
+                None => self.base_tables.iter().any(|table| table == name),
+            }
+        }
+    }
+
+    /// ADR-0006's whole claim, at the decorator: a namespace of two base tables enumerates as
+    /// exactly those two names, not as the fork's 2 × (1 + 15) cross-product.
+    ///
+    /// Risk pinned: an introspection surface that buries real tables under synthesized noise and
+    /// pays a `load_table` per synthesized name. Mutation: delete the `.filter(…)` in
+    /// `table_names` → the assertion sees 32 names.
+    #[test]
+    fn table_names_hides_the_forks_synthesized_metadata_names() {
+        let inner: Arc<dyn SchemaProvider> =
+            Arc::new(ForkShapedSchemaProvider::new(&["orders", "customers"]));
+        assert_eq!(
+            inner.table_names().len(),
+            32,
+            "fixture must reproduce the fork's synthesis (2 bases × (1 + 15 metadata types))"
+        );
+
+        let wrapped = MetadataProjectionSchemaProvider::wrap(inner);
+        let mut names = wrapped.table_names();
+        names.sort();
+        assert_eq!(
+            names,
+            vec!["customers".to_string(), "orders".to_string()],
+            "enumeration must list the catalog's tables only"
+        );
+    }
+
+    /// The other half of the Trino shape, and the reason this is a listing decision rather than a
+    /// removal: a hidden name is still ADDRESSABLE. `table()` resolves `orders$snapshots` and
+    /// still wraps it for projection honor; `table_exist` still answers yes.
+    ///
+    /// Risk pinned: a filter written in the wrong method (or pushed into `table` / `table_exist`)
+    /// would break every `SELECT … FROM t$snapshots` and the Spark door's `t.snapshots` rewrite
+    /// that lands on it.
+    #[tokio::test]
+    async fn a_hidden_metadata_table_is_still_resolvable_by_name() {
+        let wrapped =
+            MetadataProjectionSchemaProvider::wrap(Arc::new(ForkShapedSchemaProvider::new(&[
+                "orders",
+            ])));
+        assert!(
+            !wrapped
+                .table_names()
+                .contains(&"orders$snapshots".to_string()),
+            "precondition: the name is hidden from the listing"
+        );
+        assert!(
+            wrapped.table_exist("orders$snapshots"),
+            "a hidden name must still exist for resolution"
+        );
+        let resolved = wrapped
+            .table("orders$snapshots")
+            .await
+            .expect("resolution must not error")
+            .expect("a hidden metadata table must still resolve to a provider");
+        assert_eq!(
+            resolved.schema().fields().len(),
+            1,
+            "the resolved provider is the wrapped metadata provider, not an empty stand-in"
+        );
+    }
+
+    /// The predicate's two guards, stated as inputs. Neither shape is reachable from the fork's
+    /// synthesis, which is exactly why they are tested here: the filter must be narrow enough
+    /// that a name it cannot explain stays visible.
+    ///
+    /// Risk pinned: a `name.contains('$')` filter would hide a real table named `q1$fy26` (a
+    /// silent disappearance from `SHOW TABLES`) and would hide `ghost$snapshots`, a name whose
+    /// base does not exist — leaving a user with no listing and no error.
+    ///
+    /// The last block pins the RESIDUE the narrowness costs, so it is recorded rather than latent:
+    /// a base table whose own name contains `$` still enumerates its fifteen synthesized names,
+    /// because the predicate (like the fork's own `table()` / `table_exist()`) splits on the FIRST
+    /// `$`. Every one of those sixteen names is unresolvable through the fork, so listing them is
+    /// the visible-and-broken side of the trade, not a silent disappearance — ledger flag F-2.
+    #[test]
+    fn the_filter_keeps_names_the_fork_did_not_synthesize() {
+        let inner: Arc<dyn SchemaProvider> = Arc::new(ForkShapedSchemaProvider::new(&["orders"]));
+
+        assert!(
+            !is_synthesized_metadata_table_name(inner.as_ref(), "q1$fy26"),
+            "a real table whose name contains `$` is not a metadata table"
+        );
+        assert!(
+            !is_synthesized_metadata_table_name(inner.as_ref(), "ghost$snapshots"),
+            "a known suffix over an unknown base is not a metadata table"
+        );
+        assert!(
+            !is_synthesized_metadata_table_name(inner.as_ref(), "orders$SNAPSHOTS"),
+            "the fork synthesizes lower-case names only; the filter must match what it emits"
+        );
+        assert!(
+            is_synthesized_metadata_table_name(inner.as_ref(), "orders$snapshots"),
+            "the synthesized shape is the one thing that IS filtered"
+        );
+
+        // Residue: a `$`-in-the-base table. The fork synthesizes `a$b$<type>` for it, and the
+        // first-`$` split makes every one of those names un-filterable — so the listing keeps all
+        // sixteen. Pinned as the known cost of narrowness (F-2), not as desired behavior.
+        let dollar_base: Arc<dyn SchemaProvider> =
+            Arc::new(ForkShapedSchemaProvider::new(&["a$b"]));
+        assert!(
+            !is_synthesized_metadata_table_name(dollar_base.as_ref(), "a$b$snapshots"),
+            "first-`$` split: `a$b$snapshots` reads as base `a` / suffix `b$snapshots`, not a \
+             metadata table — so the filter cannot drop it"
+        );
+        let listed = MetadataProjectionSchemaProvider::wrap(dollar_base).table_names();
+        assert_eq!(
+            listed.len(),
+            16,
+            "a `$`-base still enumerates its fifteen synthesized names plus itself (fork \
+             limitation; all sixteen are unresolvable through the fork): {listed:?}"
+        );
+    }
+
+    /// Vocabulary liveness: the filter must cover **every** type the fork synthesizes, including
+    /// one added by a future fork rev. Both sides read `MetadataTableType`, so this asserts the
+    /// shared-SSOT property rather than a hard-coded list of fifteen.
+    ///
+    /// Risk pinned: a hand-copied name list here would silently stop covering a new fork
+    /// metadata table, which would then reappear in `SHOW TABLES` with nothing red.
+    #[test]
+    fn every_fork_metadata_table_type_is_filtered() {
+        let inner: Arc<dyn SchemaProvider> = Arc::new(ForkShapedSchemaProvider::new(&["orders"]));
+        for metadata_table_type in MetadataTableType::all_types() {
+            let name = format!("orders${}", metadata_table_type.as_str());
+            assert!(
+                is_synthesized_metadata_table_name(inner.as_ref(), &name),
+                "fork metadata table `{name}` must be filtered out of the listing"
+            );
+        }
+    }
 
     #[test]
     fn empty_projection_yields_zero_field_plan() {

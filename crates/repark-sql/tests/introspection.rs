@@ -279,38 +279,84 @@ async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
     );
 }
 
-/// The HONEST caveat, pinned: the fork's `$`-suffixed metadata tables enumerate alongside the
-/// real table. Trino hides these from `SHOW TABLES`; we do not, today. Whether
-/// `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is the OPEN
-/// product question the R2 spike raised and `task/p2g-ansi-m2-ledger.md` carries forward — it is
-/// a fork/core decision, not a door parser, so Q8's door row is scoped to what is proven above
-/// and this row states the rest out loud. Filtering them later flips this red on purpose.
+/// **Pin flipped on purpose (2026-08-10, ADR-0006 / campaign decision D2, unit H-1c).** This row
+/// used to assert the opposite — that the fork's `$`-suffixed metadata tables enumerate alongside
+/// the real table — and it was named `metadata_tables_currently_enumerate_alongside_the_real_table`.
+/// The open product question it carried is now closed: the catalog layer hides them
+/// (`repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names`), matching what both
+/// engines these doors point at do — Apache Spark's Iceberg extension lists only what the catalog
+/// returns, and Trino documents metadata tables as queryable-but-unlisted. The rationale and the
+/// rejected alternative are in `docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md`.
+///
+/// The ANSI door's half of the claim, on the twin introspection paths (`information_schema.tables`
+/// and the `SHOW TABLES` that DataFusion rewrites onto it), plus the half that makes hiding
+/// honest: the hidden table is still queryable BY NAME through this same door.
+///
+/// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
+/// emptiness assertions red.
 #[tokio::test]
-async fn metadata_tables_currently_enumerate_alongside_the_real_table() {
+async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_ansi_door() {
     let warehouse_dir = TempDir::new().expect("warehouse");
     let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
     let session = introspective_ansi_session(&warehouse).await;
     seed(&session, &warehouse).await;
 
-    let batches = session
-        .sql(
-            "SELECT count(*) AS n FROM information_schema.tables \
-             WHERE table_catalog = 'ice' AND table_schema = 'sales' \
-             AND table_name LIKE 'orders$%'",
-        )
+    // 1. `information_schema.tables` — the real table, and nothing synthesized beside it.
+    let listed = utf8_column(
+        &session,
+        "SELECT table_name FROM information_schema.tables \
+         WHERE table_catalog = 'ice' AND table_schema = 'sales'",
+    )
+    .await;
+    assert_eq!(
+        listed,
+        vec!["orders".to_string()],
+        "the namespace must enumerate its one real table, not the fork's synthesized names"
+    );
+
+    // 2. The twin path: `SHOW TABLES` (rewritten onto the same view) must agree.
+    let shown = session
+        .sql("SHOW TABLES")
         .await
-        .expect("plan")
+        .expect("SHOW TABLES must plan")
         .collect()
         .await
-        .expect("collect");
-    let counts = batches[0]
+        .expect("SHOW TABLES must execute");
+    let mut dollar_names: Vec<String> = Vec::new();
+    for batch in &shown {
+        let names = batch
+            .column(2)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("table_name is Utf8");
+        for row in 0..batch.num_rows() {
+            if names.value(row).contains('$') {
+                dollar_names.push(names.value(row).to_string());
+            }
+        }
+    }
+    assert!(
+        dollar_names.is_empty(),
+        "SHOW TABLES must not list metadata tables either: {dollar_names:?}"
+    );
+
+    // 3. Hidden, not removed: the name still resolves and still returns rows through this door.
+    let snapshots = session
+        .sql("SELECT count(*) AS n FROM ice.sales.\"orders$snapshots\"")
+        .await
+        .expect("a hidden metadata table must still plan")
+        .collect()
+        .await
+        .expect("a hidden metadata table must still execute");
+    let counts = snapshots[0]
         .column(0)
         .as_any()
         .downcast_ref::<Int64Array>()
         .expect("count is Int64");
     assert!(
         !counts.is_null(0) && counts.value(0) > 0,
-        "metadata tables currently enumerate (open product question, see the P2G ledger); got {:?}",
+        "the CTAS above committed a snapshot, so the hidden metadata table must return rows; \
+         got {:?}",
         counts.value(0)
     );
 }

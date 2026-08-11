@@ -1234,14 +1234,21 @@ async fn information_schema_enumerates_a_registered_iceberg_catalog_through_the_
     );
 }
 
-/// The HONEST caveat on the Q8 delivery above, pinned rather than prose: the fork's `$`-suffixed
-/// metadata tables enumerate alongside the real table (Trino hides them from `SHOW TABLES`). This
-/// is the P2F R2 spike's "product question", still OPEN — whether
-/// `repark_iceberg::catalog`'s `SchemaProvider::table_names` should filter them is a fork/core
-/// decision, not a door parser. The test asserts the CURRENT behavior so the decision cannot be
-/// made silently: filtering them later flips this red, which is the point.
+/// **Pin flipped on purpose (2026-08-10, ADR-0006 / campaign decision D2, unit H-1c).** This row
+/// used to assert the opposite — that the fork's `$`-suffixed metadata tables enumerate alongside
+/// the real table — and it was named `information_schema_still_exposes_the_dollar_metadata_tables`.
+/// The P2F R2 spike's "product question" is closed: `repark_iceberg::catalog`'s
+/// `MetadataProjectionSchemaProvider::table_names` drops the names the fork SYNTHESIZES, so the
+/// listing is the catalog's tables. Rationale + rejected alternative:
+/// `docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md`.
+///
+/// This is the **bare core session** half of the claim — no door, no facade — which is what makes
+/// the decision attributable to the catalog layer rather than to a SQL front end. The companion
+/// half (hidden, not removed) is asserted below.
+///
+/// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → this reds.
 #[tokio::test]
-async fn information_schema_still_exposes_the_dollar_metadata_tables() {
+async fn information_schema_hides_the_dollar_metadata_tables_on_the_bare_session() {
     use tempfile::TempDir;
 
     let warehouse = TempDir::new().unwrap();
@@ -1279,11 +1286,88 @@ async fn information_schema_still_exposes_the_dollar_metadata_tables() {
         .as_any()
         .downcast_ref::<arrow::array::Int64Array>()
         .unwrap();
-    assert!(
-        counts.value(0) > 0,
-        "metadata tables currently enumerate (open product question — see the P2G ledger); \
-         got {}",
+    assert_eq!(
+        counts.value(0),
+        0,
+        "metadata tables must not enumerate (ADR-0006); got {}",
         counts.value(0)
+    );
+
+    // The real table is still there — the filter must hide the synthesized names, not the listing.
+    let real = session
+        .sql(
+            "SELECT count(*) AS n FROM information_schema.tables \
+             WHERE table_catalog = 'ice' AND table_schema = 'sales' AND table_name = 'orders'",
+        )
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        real[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Int64Array>()
+            .unwrap()
+            .value(0),
+        1,
+        "the base table must still enumerate"
+    );
+}
+
+/// The other half of ADR-0006, on the same bare core session: hidden from the LISTING is not
+/// removed from the ENGINE. `t$snapshots` still resolves by name and still executes.
+///
+/// Risk pinned: a filter written into `SchemaProvider::table` / `table_exist` instead of
+/// `table_names` would hide the name AND break every query that references it — including the
+/// Spark door's `t.snapshots` rewrite, which lands on exactly this name.
+///
+/// Mutation: move the filter from `table_names` into `table` → this reds while the row above
+/// stays green, which is precisely why both halves are pinned.
+#[tokio::test]
+async fn a_hidden_metadata_table_is_still_queryable_on_the_bare_session() {
+    use tempfile::TempDir;
+
+    let warehouse = TempDir::new().unwrap();
+    let session = ReparkSession::builder()
+        .config("datafusion.catalog.information_schema", "true")
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session
+        .create_namespace("ice", "sales", HashMap::new())
+        .await
+        .unwrap();
+    session
+        .testing_oob_create_table("ice", "sales", "orders", warehouse.path().to_str().unwrap())
+        .await
+        .unwrap();
+    session.refresh_catalog_provider("ice").await.unwrap();
+
+    // A freshly created table has committed no snapshot, so the exact expected count is 0 — the
+    // claim is that the name RESOLVES and EXECUTES, and an exact count says so without a
+    // tautology.
+    let rows = session
+        .sql("SELECT count(*) AS n FROM ice.sales.\"orders$snapshots\"")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    assert_eq!(
+        rows[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Int64Array>()
+            .unwrap()
+            .value(0),
+        0,
+        "the hidden metadata table must still resolve and execute (an OOB-created table has \
+         committed no snapshot)"
     );
 }
 

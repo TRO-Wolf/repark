@@ -25,6 +25,12 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
   internal `ReparkSession` decomposition into named services is driver-gated (PyO3 pressure, a
   second `ExecutionBackend`, cancellation / per-query resource policy, server-protocol needs),
   never scheduled; the intended shape and the discharge-note requirement are recorded there.
+- [0006-hide-iceberg-metadata-tables-from-enumeration.md](0006-hide-iceberg-metadata-tables-from-enumeration.md)
+  — the fork's synthesized `$`-metadata names are hidden from `SHOW TABLES` /
+  `information_schema` at the **catalog layer** (`MetadataProjectionSchemaProvider::table_names`),
+  never in a door parser; they stay addressable by name (the Trino shape). Records the evidence
+  (both reference engines hide them; the live tier has no Iceberg and so cannot observe it), the
+  rejected "keep and declare" alternative, and the fork-repin removal/breakage criteria.
 
 ## I want to...
 
@@ -35,6 +41,7 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
 | Understand the port sequencing + its acceptance gate | [0003-copy-then-rehome-port.md](0003-copy-then-rehome-port.md) (+ [../port/PLAN.md](../port/PLAN.md)) |
 | Understand Session/bindings rules or the distributed posture | [0004-server-prep-disciplines.md](0004-server-prep-disciplines.md) |
 | Know whether to refactor `ReparkSession` (and what would unlock it) | [0005-defer-session-decomposition.md](0005-defer-session-decomposition.md) |
+| Understand why `$`-metadata tables do not show in `SHOW TABLES` (and still resolve) | [0006-hide-iceberg-metadata-tables-from-enumeration.md](0006-hide-iceberg-metadata-tables-from-enumeration.md) |
 | Record a new load-bearing decision | add `NNNN-slug.md` here (Status/Context/Decision/Consequences) + a Contents row |
 | See the project intent these decisions serve | [../../PROJECT.md](../../PROJECT.md) |
 

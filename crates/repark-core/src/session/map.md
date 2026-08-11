@@ -19,8 +19,14 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored /
   unknown key fails loud / explicit conf overrides a core default) and the Q8 enumeration pair
   (a registered Iceberg catalog enumerates through `information_schema` + `SHOW TABLES` +
-  `DESCRIBE` on the PRODUCT path; the negative half proves the conf is what enables it; the
-  `$`-metadata-table row pins the open product question).
+  `DESCRIBE` on the PRODUCT path; the negative half proves the conf is what enables it). Since
+  **2026-08-10 (unit H-1c,
+  [ADR-0006](../../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md))** the
+  `$`-metadata rows are the **bare-session** half of the enumeration claim — the synthesized names
+  do not enumerate, the base table still does, and a hidden name still resolves and executes. They
+  replace the former single row that pinned the opposite
+  (`information_schema_still_exposes_the_dollar_metadata_tables`), flipped in the same diff as the
+  behavior.
 
 ## Pointers
 

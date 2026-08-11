@@ -25,8 +25,13 @@ belongs out here is what must be observed from outside the crate.
   through the door, on a session whose `information_schema` was enabled the product way
   (`.config("datafusion.catalog.information_schema", "true")` — the repark-core R2 fix PR-6
   landed). Carries the negative half (without the conf the same door refuses, so the delivery is
-  attributable to the fix) and the honest caveat row (`$`-suffixed metadata tables currently
-  enumerate; the filter decision is an open fork/core product question, not a door parser). Also
+  attributable to the fix) and — since **2026-08-10 (unit H-1c,
+  [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md))** — the
+  ANSI-door half of the metadata-table enumeration claim: `$`-suffixed metadata tables are hidden
+  from `information_schema.tables` **and** from its twin `SHOW TABLES`, while staying queryable as
+  `ns."t$snapshots"`. That row was formerly the opposite assertion
+  (`metadata_tables_currently_enumerate_alongside_the_real_table`), left red-on-purpose so the
+  decision could not be made silently; it was flipped in the same diff as the behavior. Also
   carries the leak pin: a `FOR … AS OF` read must leave no `__repark_ansi_tt_*` relation behind,
   which only became observable once this PR turned `information_schema` on.
 

@@ -12,13 +12,17 @@ Pins:
 - AS OF + metadata composition is out of scope v1 (loud disclose)
 - known fork residues (empty ``partition`` on unpartitioned; readable_metrics by name)
 
-Fork pin ``4723104b``:
-- ``MetadataTableType`` — ``crates/iceberg/src/inspect/metadata_table.rs:35-121``
-- DF ``name.split_once('$')`` — ``integrations/datafusion/src/schema.rs:151-171``
-- snapshots schema — ``inspect/snapshots.rs:49-73``
-- history schema — ``inspect/history.rs:50-63``
-- files/data_file columns — ``inspect/data_file.rs:67-`` + ``files.rs``
-- unpartitioned empty ``partition`` divergence — ``inspect/partitions.rs:31-37`` (R142)
+Fork pin ``b009ac1`` (the rev in the workspace ``[patch.crates-io]``; re-verify on every repin).
+Symbols, not line numbers — the ranges here went stale across one repin already:
+- ``MetadataTableType`` (enum + ``all_types`` + ``TryFrom<&str>``) — ``crates/iceberg/src/inspect/
+  metadata_table.rs``
+- DF ``name.split_once('$')`` in ``IcebergSchemaProvider::{table, table_exist}``, and the
+  ``table_names`` synthesis this module's ADR-0006 pins hide —
+  ``crates/integrations/datafusion/src/schema.rs``
+- snapshots / history schemas — ``inspect/snapshots.rs::SnapshotsTable::schema`` /
+  ``inspect/history.rs::HistoryTable::schema``
+- files/data_file columns — ``inspect/data_file.rs`` + ``inspect/files.rs``
+- unpartitioned empty ``partition`` divergence — ``inspect/partitions.rs`` (R142)
 - readable_metrics by name — ``inspect/readable_metrics.rs`` / entries/files (R142)
 
 Local memory-catalog only (no AWS, no docker).
@@ -483,3 +487,63 @@ def test_unpartitioned_partition_column_divergence(
         "fork keeps empty-struct partition on unpartitioned files table "
         "(inspect/files.rs unpartitioned divergence / R142)"
     )
+
+
+def test_metadata_tables_are_hidden_from_enumeration_at_the_facade(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    """ADR-0006 (campaign decision D2, unit H-1c) at the **facade**.
+
+    The fork's ``IcebergSchemaProvider.table_names`` synthesizes ``<base>$<type>`` for every
+    metadata table type, so a namespace of one table used to enumerate as sixteen names. The
+    catalog layer now drops the synthesized names
+    (``repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names``), matching what
+    both reference engines do: Apache Spark's Iceberg extension lists only what the catalog
+    returns, and Trino documents metadata tables as queryable-but-unlisted.
+
+    Risk pinned: a migrating user's ``SHOW TABLES`` burying real tables under synthesized noise —
+    and, on the other side, a filter placed in the resolution path instead of the listing path,
+    which would break every ``t.snapshots`` query the rest of this module pins. Both halves are
+    asserted, on the twin introspection paths (``SHOW TABLES`` and ``information_schema.tables``).
+    """
+    _ = multi_snapshot
+    spark._ensure_information_schema()
+
+    listed = spark.sql(
+        "SELECT table_name FROM information_schema.tables "
+        "WHERE table_catalog = 'mem' AND table_schema = 'ns'"
+    ).to_arrow()
+    assert listed.column("table_name").to_pylist() == ["events"], (
+        "the facade must enumerate the catalog's tables, not the fork's synthesized names"
+    )
+
+    shown = spark.sql("SHOW TABLES").to_arrow()
+    dollar_names = [name for name in shown.column("table_name").to_pylist() if name and "$" in name]
+    assert dollar_names == [], f"SHOW TABLES must not list metadata tables: {dollar_names}"
+
+
+def test_a_hidden_metadata_table_is_still_queryable_at_the_facade(
+    spark: ReparkSession, multi_snapshot: dict[str, object]
+) -> None:
+    """ADR-0006's other half: hidden from the listing is not removed from the engine.
+
+    Both facade spellings still resolve — the Spark dotted form the door rewrites, and the ``$``
+    form it rewrites onto. Risk pinned: a filter written into ``SchemaProvider::table`` /
+    ``table_exist`` rather than ``table_names`` satisfies the row above and breaks this one.
+
+    The two spellings are compared as SORTED lists, not element-wise: an unordered metadata-table
+    scan has no row order to promise (the fork emits snapshots in whatever order the manifest
+    walk yields, and a re-scan reorders), so an ordered comparison is a coin flip, not a pin.
+    That is this module's own convention for metadata-table row content — see
+    ``test_snapshots_schema_and_count``, which compares the same column as a set. What IS pinned
+    here is that the two spellings resolve to the same table and return the same multiset of
+    snapshot ids.
+    """
+    dotted = spark.sql(f"SELECT snapshot_id FROM {TABLE}.snapshots").to_arrow()
+    assert dotted.num_rows == multi_snapshot["snapshot_count"]
+
+    dollar = spark.sql('SELECT snapshot_id FROM mem.ns."events$snapshots"').to_arrow()
+    assert dollar.num_rows == multi_snapshot["snapshot_count"]
+    assert sorted(dollar.column("snapshot_id").to_pylist()) == sorted(
+        dotted.column("snapshot_id").to_pylist()
+    ), "the `$` spelling and the dotted spelling must resolve to the same metadata table"

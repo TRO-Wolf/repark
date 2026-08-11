@@ -140,15 +140,6 @@ moving it. Nothing is described in both places.
   v1-first rule it is fixed in the v1 source and re-ported rather than patched only here. The ANSI
   door's fix (`PinnedViews`, released on every exit path) is the template. It has no registry row
   and no pin today; H-1b's re-port lands both the fix and the pin, and retires this entry.
-- **The `$`-metadata introspection rider** — the fork's `$`-suffixed metadata tables enumerate as
-  ordinary tables in `SHOW TABLES` / `information_schema.tables`, where Trino hides them. **No
-  disposition yet** (campaign decision D2 rules on it in unit H-1c), which is why it is described
-  here rather than in the registry: whether `repark_iceberg::catalog`'s
-  `SchemaProvider::table_names` should filter them is a fork/core decision, not a door parser.
-  Current behavior is pinned by tests on the ANSI door and on the bare-session core path
-  (`crates/repark-sql/tests/introspection.rs`, `crates/repark-core/src/session/tests.rs`), so
-  changing it reds a test on purpose. If H-1c rules "keep and declare", the semantics move to the
-  registry in that change.
 - **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
   is the divergence registry's first declared row, with its behavior, its rationale and its pin:
   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) §3 row ID-1. It stays listed
@@ -163,6 +154,11 @@ moving it. Nothing is described in both places.
   (2026-08-10)**: a silently-wrong-result class (a 10⁹ factor on every timestamp→integer cast),
   found while authoring the timezone corpus; not a zone bug, and it gets its own unit rather than
   a fold into the extraction fix. Semantics + pin: registry §7 row TZ-5.
+
+**Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
+**2026-08-10** — see
+[docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md).
+Deleted at the campaign's close-out.
 
 ## Architectural risks
 

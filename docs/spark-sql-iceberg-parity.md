@@ -123,8 +123,9 @@ differs is *which* refusal the user sees.
   engines agree about the outcome; keeping the row means the agreement stays pinned.
 
 > The separate question of whether `$`-suffixed metadata tables should *enumerate* in
-> `SHOW TABLES` / `information_schema.tables` is an open issue, not a row: it has no disposition
-> yet, so [../STATUS.md](../STATUS.md) "Known correctness issues" holds it (§6).
+> `SHOW TABLES` / `information_schema.tables` was ruled on **2026-08-10** (unit H-1c): **fixed, not
+> declared — so no row here** (§6). The decision and its evidence:
+> [adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](adr/0006-hide-iceberg-metadata-tables-from-enumeration.md).
 
 ### 2.2 Snapshot-ref DDL (`BRANCH` / `TAG`)
 
