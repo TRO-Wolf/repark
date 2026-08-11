@@ -79,8 +79,8 @@ def _spark_iceberg_session(warehouse: Path) -> Any:
     ``spark.sql.shuffle.partitions=2``, UI off — the same basis the timezone record driver uses —
     plus the Iceberg extensions and a Hadoop catalog rooted at ``warehouse``.
     """
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
     from pyspark.sql import SparkSession
-    from test_merge_differential_parity import ICEBERG_SPARK_RUNTIME_GAV
 
     return (
         SparkSession.builder.master("local[2]")
@@ -214,7 +214,8 @@ def _assert_warehouse_clean_after_error(spark: Any) -> str | None:
 
 def main() -> int:
     """Re-derive every recorded Spark half; return 0 when all of them still reproduce."""
-    from test_merge_differential_parity import ICEBERG_SPARK_RUNTIME_GAV, ROWS
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+    from test_merge_differential_parity import ROWS
 
     warehouse = Path(tempfile.mkdtemp(prefix="repark-merge-diff-record-"))
     print(f"record warehouse = {warehouse}")

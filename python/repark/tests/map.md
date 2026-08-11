@@ -1201,17 +1201,23 @@ NOT in that file is a defect, not a decision.
   match, **derived** from the pinned pyspark version in repark-parity's record extra — CP-8 /
   N-2b; jar is record-time only via `spark.jars.packages`). Split-path convergence is CLASSIFIED
   (CONVERGED → flip to content equality; commit-but-mismatch → regression) when repark stops
-  refusing — not a bare "expected raise". **N-2b (2026-08-11):** GAV pin derives Spark-minor from
-  the pinned pyspark version; dead `spark_needs_cow_props` row knob removed; re-derive recipe
-  quotes the full parity-live sync line. **4 Rust pins landed** in
-  `crates/repark-spark/src/tests/merge.rs`. **Still deferred:** 2 live-tier scenarios +
-  `_live_parity` lifecycle abstraction (design note only; second PR post-approval) — see
+  refusing — not a bare "expected raise". **N-2b (2026-08-11):** GAV + pyspark-version helpers
+  live in `_oracle_pins.py` (one importable home; this module re-exports them). Dead
+  `spark_needs_cow_props` row knob removed; re-derive recipe quotes the full parity-live sync
+  line. **4 Rust pins** in `crates/repark-spark/src/tests/merge.rs`. **Items 2+3** (lifecycle
+  live + 13 timezone live scenarios) land in the second N-2b PR — see
   `task/n2b-merge-followup-ledger.md`. Archive: `docs/history/hardening-h1/n2-merge-ledger.md`.
+- `_oracle_pins.py` — **one importable home** for the Iceberg Spark-runtime GAV + pyspark-version
+  derive helpers (CP-8 / N-2b). Exports `ICEBERG_SPARK_RUNTIME_GAV`, `ICEBERG_SPARK_RUNTIME_NOTE`,
+  `ICEBERG_SPARK_SCALA_BINARY`, `ICEBERG_RUNTIME_VERSION`, `_pinned_pyspark_version`,
+  `_spark_major_minor`. Consumed by the MERGE differential (re-export), the MERGE record driver
+  (GAV only — never from a `test_` module), and `_live_parity.build_spark_iceberg_engine`.
 - `_record_merge_differential_goldens.py` — the **record driver** for the MERGE corpus (NOT a
-  `test_` module; never collected). Provisions Spark with the pinned Iceberg GAV + a local Hadoop
-  warehouse catalog, imports `ROWS` + lifecycle helpers from the committed test module, and
-  re-derives every Spark half (content / error needle / split success). Exit 0 = bit-for-bit
-  reproduce; never edits the corpus. Needs zulu-17 + the full parity-live sync line
+  `test_` module; never collected). Provisions Spark with the pinned Iceberg GAV (imported from
+  `_oracle_pins`, never from the test module) + a local Hadoop warehouse catalog, imports `ROWS`
+  + lifecycle helpers from the committed test module, and re-derives every Spark half (content /
+  error needle / split success). Exit 0 = bit-for-bit reproduce; never edits the corpus. Needs
+  zulu-17 + the full parity-live sync line
   (`uv sync --locked --extra record --extra numpy --extra pandas --extra polars --extra ml-ext
   --no-install-package repark`) + network on first Ivy resolve. Invocation in its docstring and
   `task/n2b-merge-followup-ledger.md` re-derive block.
@@ -1240,39 +1246,38 @@ NOT in that file is a defect, not a decision.
   exception class still matches. Exit 0 = every recorded half still reproduces; never edits the
   corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation in its module docstring
   and in `docs/history/hardening-h1/g7-decimal-ledger.md`.
-- `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
-  never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
-  `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
-  (`Engine` abstraction wraps `session`/`functions`/`types`/`Window` + `to_arrow` vs PySpark's
-  `toArrow`). `SCENARIOS` = the 29-golden coverage floor (Group E group-agg/na/union + columns +
-  dates + the two Group L-write division goldens `division_union` / `division_bare` + the two
-  audit-G2 filter-rewriter goldens `filter_unambiguous_on_case_colliding_frame` /
-  `filter_keyword_literal_false_column` + the two H-1a non-UTC-oracle goldens
-  `date_extractor_under_new_york_session` / `date_math_under_tokyo_session`);
+- `_live_parity.py` — the **live oracle tier** shared registry (NOT a `test_` module — a helper,
+  never collected). Two recipe kinds:
+  1. **Single-shot** (`Scenario` / `SCENARIOS`, **42** goldens): Group E group-agg/na/union +
+     columns + dates + the two Group L-write division goldens `division_union` / `division_bare`
+     + the two audit-G2 filter-rewriter goldens + the two H-1a non-UTC-oracle DATE controls + the
+     **13 G1/G16 extraction-class timezone live rows** (N-2b item 3; size pin 29 → 42). Because
+     repark is a near-drop-in for PySpark, ONE recipe runs on both engines (`Engine` abstraction).
+  2. **Lifecycle** (`LifecycleScenario` / `LIFECYCLE_SCENARIOS`, **2** MERGE rows — N-2b item 2):
+     multi-statement `create → seed → [merge_src] → act → read` with always-cleanup.
+     `live_merge_basic_upsert` (control equality) + `live_merge_matched_arm_order` (arm-order
+     first-match-wins — not the builder upsert twin). `build_spark_iceberg_engine` is a sibling of
+     `build_spark_engine` (option A): GAV from `_oracle_pins`, Hadoop catalog, ANSI on; keeps the
+     default live session Iceberg-free. repark path: `build_repark_engine` +
+     `register_memory_catalog` + `with_cow_props=True`.
   `DISCLOSURES` = the four load-bearing recorded divergences (`int_union_string`,
-  `fillna_scalar_numeric_nullability`, and the two audit-G2 filter ones
-  `filter_case_collision_bypasses` / `filter_backtick_identifier` — see
-  `test_filter_predicate_rewrite.py` below). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
-  `build_spark_engine()` imports pyspark **lazily** (never at module load → collects with no JVM)
-  and pins the recorded Spark 4.1.2 basis (`local[2]`, ANSI on, DEFAULT `timeZone=UTC`). VERIFIED
-  against live PySpark 4.1.2, not guessed.
-  **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` carries conf pairs for
-  one scenario only, applied by each engine's own mechanism — the oracle takes them through
-  `spark_session_conf` (set around the leg, restored after, because the JVM session is shared),
-  repark takes them by BUILDING a session with them (`build_repark_engine(session_conf)`), since
-  repark resolves the session zone once at construction. A registry pinned to a single zone was
-  structurally incapable of catching a session-timezone divergence; the two override scenarios
-  are the first that put the ORACLE in a non-UTC session.
+  `fillna_scalar_numeric_nullability`, `filter_case_collision_bypasses` /
+  `filter_backtick_identifier`). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
+  `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
+  **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
+  conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.
 - `test_parity_live.py` — the **live oracle tier** (L1) + its flag detector (L6a). Routine (every
-  PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` runs each recipe on repark and
-  asserts `repark == golden` — the no-JVM home of the shared recipes. Live
-  (`REPARK_PARITY_LIVE=1`, `parity-live.yml` / `make parity-live`): one shared session-scoped
-  SparkSession; `test_live_scenario_matches_repark_golden_and_spark` re-derives each golden from
-  live Spark and asserts **repark == pinned golden == live Spark** (value + Arrow type/nullability);
+  PR, JVM-free): `test_scenario_recipe_matches_golden_on_repark` +
+  `test_lifecycle_scenario_matches_golden_on_repark` run each recipe on repark and assert
+  `repark == golden`. Live (`REPARK_PARITY_LIVE=1`, `parity-live.yml` / `make parity-live`): one
+  shared session-scoped SparkSession + a separate session-scoped Iceberg-provisioned engine for
+  lifecycle rows; `test_live_scenario_matches_repark_golden_and_spark` /
+  `test_live_lifecycle_scenario_matches_repark_golden_and_spark` re-derive each golden from live
+  Spark and assert **repark == pinned golden == live Spark**;
   `test_live_disclosure_still_diverges` re-asserts each recorded divergence STILL holds on both
-  engines (silent convergence → RED). Flag unset → every live test SKIPs with a visible reason
-  (`test_live_flag_predicate_gates_on_exact_env_value` pins the gate). Catches golden drift + oracle
-  drift the JVM-free suite cannot see (docs/testing.md "The live oracle tier").
+  engines (silent convergence → RED). Size pin `test_registry_covers_the_mandated_golden_family`
+  is **42** (was 29); lifecycle budget pin is **2**. Flag unset → every live test SKIPs with a
+  visible reason. Catches golden drift + oracle drift the JVM-free suite cannot see.
   **The registry mirror (H-1d, 2026-08-10):** `test_disclosures_mirror_the_registry` is always-on
   (JVM-free) and checks `_live_parity.DISCLOSURES` against the divergence registry
   `docs/spark-sql-iceberg-parity.md` in **both** directions — a registry row that opts in with a

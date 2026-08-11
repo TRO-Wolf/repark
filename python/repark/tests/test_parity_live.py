@@ -4,12 +4,14 @@ Two layers over the shared scenario registry in :mod:`_live_parity`:
 
 * **routine (JVM-free, every PR)** — ``test_scenario_recipe_matches_golden_on_repark`` runs each
   engine-agnostic recipe on repark and asserts ``repark == pinned golden``. This gives the shared
-  recipes no-JVM coverage and never touches Spark, so it runs in routine CI.
+  recipes no-JVM coverage and never touches Spark, so it runs in routine CI. Lifecycle siblings
+  (``test_lifecycle_scenario_matches_golden_on_repark``) cover the multi-statement MERGE rows the
+  same way (memory Iceberg catalog, no JVM).
 * **live (``REPARK_PARITY_LIVE=1``, nightly / dispatch / parity-live.yml)** — the ``*_live_*`` tests
-  spin up ONE shared session-scoped local SparkSession and assert the full triple
-  **repark == pinned golden == live Spark** for every scenario, plus that every recorded
-  divergence (disclosure) STILL diverges. With the flag unset every live test SKIPs with a visible
-  reason — it never silently passes.
+  spin up ONE shared session-scoped local SparkSession (and a separate Iceberg-provisioned engine
+  for lifecycle rows) and assert the full triple **repark == pinned golden == live Spark** for
+  every scenario, plus that every recorded divergence (disclosure) STILL diverges. With the flag
+  unset every live test SKIPs with a visible reason — it never silently passes.
 
 A third, always-on layer sits beside them: ``test_disclosures_mirror_the_registry`` checks the
 ``DISCLOSURES`` list against the divergence registry (``docs/spark-sql-iceberg-parity.md`` §6),
@@ -23,6 +25,7 @@ pyspark and no JVM (the routine-CI contract, L3).
 from __future__ import annotations
 
 import re
+import tempfile
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -49,6 +52,28 @@ def spark_engine() -> Iterator[lp.Engine]:
         engine.session.stop()
 
 
+@pytest.fixture(scope="session")
+def spark_iceberg_engine() -> Iterator[lp.Engine]:
+    """Session-scoped Spark + Iceberg engine for lifecycle MERGE live tests (option A).
+
+    Separate from :func:`spark_engine` so the default live session stays JVM-cheap and
+    Iceberg-free. Warehouse is a temp directory removed after the session. Skips when the live
+    flag is unset.
+    """
+    if not lp.LIVE:
+        pytest.skip(lp.LIVE_SKIP_REASON)
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-parity-live-iceberg-"))
+    engine = lp.build_spark_iceberg_engine(warehouse)
+    try:
+        yield engine
+    finally:
+        engine.session.stop()
+        # Best-effort cleanup of the temp warehouse (Iceberg metadata residue is fine to drop).
+        import shutil
+
+        shutil.rmtree(warehouse, ignore_errors=True)
+
+
 # ==================================================================================================
 # Routine (JVM-free) — the shared recipes reproduce the goldens on repark
 # ==================================================================================================
@@ -65,6 +90,23 @@ def test_scenario_recipe_matches_golden_on_repark(scenario: lp.Scenario) -> None
     """
     engine = lp.build_repark_engine(scenario.session_conf)
     actual = lp.run_scenario(scenario, engine)
+    assert_frames_equal(actual, scenario.golden, order_sensitive=scenario.order_sensitive)
+
+
+@pytest.mark.parametrize(
+    "scenario", lp.LIFECYCLE_SCENARIOS, ids=[s.name for s in lp.LIFECYCLE_SCENARIOS]
+)
+def test_lifecycle_scenario_matches_golden_on_repark(
+    scenario: lp.LifecycleScenario, tmp_path: Path
+) -> None:
+    """Every lifecycle recipe produces its pinned golden on repark — no JVM.
+
+    repark path: build with session_conf, register a memory Iceberg catalog, run create→seed→act
+    →read with COW TBLPROPERTIES (with_cow_props=True).
+    """
+    engine = lp.build_repark_engine(scenario.session_conf)
+    engine.session.register_memory_catalog(scenario.catalog, tmp_path)
+    actual = lp.run_lifecycle_scenario(scenario, engine, with_cow_props=True)
     assert_frames_equal(actual, scenario.golden, order_sensitive=scenario.order_sensitive)
 
 
@@ -93,6 +135,40 @@ def test_live_scenario_matches_repark_golden_and_spark(
     with lp.spark_session_conf(spark_engine, scenario.session_conf):
         spark_out = lp.run_scenario(scenario, spark_engine)
     assert_frames_equal(spark_out, scenario.golden, order_sensitive=order)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+@pytest.mark.parametrize(
+    "repark_scenario,spark_scenario",
+    list(zip(lp.LIFECYCLE_SCENARIOS, lp.LIFECYCLE_SCENARIOS_SPARK, strict=True)),
+    ids=[s.name for s in lp.LIFECYCLE_SCENARIOS],
+)
+def test_live_lifecycle_scenario_matches_repark_golden_and_spark(
+    repark_scenario: lp.LifecycleScenario,
+    spark_scenario: lp.LifecycleScenario,
+    spark_iceberg_engine: lp.Engine,
+    tmp_path: Path,
+) -> None:
+    """Lifecycle drift detector: repark == pinned golden == live Spark+Iceberg.
+
+    Uses the dedicated Iceberg-provisioned engine (not the plain spark_engine). repark gets a
+    fresh memory catalog + COW props; Spark runs without COW props (Iceberg 1.11 default).
+    Catalog names differ (mem vs local) but SQL shapes and goldens are identical.
+    """
+    order = repark_scenario.order_sensitive
+    assert repark_scenario.name == spark_scenario.name
+    assert repark_scenario.golden.equals(spark_scenario.golden)
+
+    repark_engine = lp.build_repark_engine(repark_scenario.session_conf)
+    repark_engine.session.register_memory_catalog(repark_scenario.catalog, tmp_path)
+    repark_out = lp.run_lifecycle_scenario(repark_scenario, repark_engine, with_cow_props=True)
+    assert_frames_equal(repark_out, repark_scenario.golden, order_sensitive=order)
+
+    with lp.spark_session_conf(spark_iceberg_engine, spark_scenario.session_conf):
+        spark_out = lp.run_lifecycle_scenario(
+            spark_scenario, spark_iceberg_engine, with_cow_props=False
+        )
+    assert_frames_equal(spark_out, spark_scenario.golden, order_sensitive=order)
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
@@ -125,21 +201,40 @@ def test_registry_covers_the_mandated_golden_family() -> None:
     """Guard against accidental registry shrinkage: the mandated coverage floor is the 23-golden
     family (Group E group-agg/na/union + columns + dates + compound-agg display name) plus the two
     Group L-write division goldens (union + bare) plus the two audit-G2 filter-rewriter goldens
-    plus the two H-1a non-UTC-oracle goldens, plus the four load-bearing disclosures.
+    plus the two H-1a non-UTC-oracle goldens, plus the 13 G1/G16 extraction-class timezone live
+    rows (N-2b item 3), plus the four load-bearing disclosures.
 
-    The size moved 27 -> 29 DELIBERATELY in the same diff as the two scenarios it counts.
+    The size moved 29 -> 42 DELIBERATELY in the same diff as the 13 timezone scenarios it counts
+    (item 3). Prior move 27 -> 29 was the two H-1a non-UTC date controls.
     """
-    assert len(lp.SCENARIOS) == 29, (
+    assert len(lp.SCENARIOS) == 42, (
         "the 23-golden family + 2 Group L-write division goldens + 2 audit-G2 filter goldens "
-        "+ 2 H-1a non-UTC-oracle goldens"
+        "+ 2 H-1a non-UTC-oracle goldens + 13 G1/G16 extraction-class timezone live rows"
     )
-    assert len({s.name for s in lp.SCENARIOS}) == 29, "scenario names are unique"
+    assert len({s.name for s in lp.SCENARIOS}) == 42, "scenario names are unique"
     assert {d.name for d in lp.DISCLOSURES} == {
         "int_union_string",
         "fillna_scalar_numeric_nullability",
         "filter_case_collision_bypasses",
         "filter_backtick_identifier",
     }, "every load-bearing disclosure is present"
+
+
+def test_lifecycle_registry_budget() -> None:
+    """Budget pin: exactly 2 live-tier MERGE lifecycle scenarios (N-2b item 2 / G3 live half)."""
+    assert len(lp.LIFECYCLE_SCENARIOS) == 2, (
+        f"G3 live budget is 2 MERGE lifecycle scenarios (got {len(lp.LIFECYCLE_SCENARIOS)})"
+    )
+    assert len({s.name for s in lp.LIFECYCLE_SCENARIOS}) == 2, "lifecycle names are unique"
+    assert {s.name for s in lp.LIFECYCLE_SCENARIOS} == {
+        "live_merge_basic_upsert",
+        "live_merge_matched_arm_order",
+    }
+    # Spark-facing twin list must mirror names/goldens (catalog differs only).
+    assert len(lp.LIFECYCLE_SCENARIOS_SPARK) == 2
+    assert [s.name for s in lp.LIFECYCLE_SCENARIOS] == [
+        s.name for s in lp.LIFECYCLE_SCENARIOS_SPARK
+    ]
 
 
 def test_registry_runs_at_least_two_scenarios_under_a_non_utc_oracle() -> None:
