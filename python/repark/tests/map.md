@@ -1234,6 +1234,25 @@ NOT in that file is a defect, not a decision.
   exception class still matches. Exit 0 = every recorded half still reproduces; never edits the
   corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation in its module docstring
   and in `docs/history/hardening-h1/g7-decimal-ledger.md`.
+- `test_join_parity.py` — the **joins differential corpus** (H-2 gap G4), landed by W-3. 26 rows
+  (budget 20–28): NULL join keys on every join type (inner/left/right/full — NULL never matches
+  NULL) + null-safe `<=>`; duplicate-key m×n fan-out (order-insensitive); SQL CROSS / LEFT SEMI /
+  LEFT ANTI content equalities + DF `leftsemi`/`leftanti` refuse **splits** (never invent DF
+  support); type-mismatched keys (int/string/decimal + malformed cast error); outer-join schema
+  nullability flips (name-gated `*nullable*`); facade `sql()` primary + ≥2 DataFrame-API
+  `df.join` content rows (CP-11) + `eqNullSafe` condition join. Every content row asserts value
+  AND Arrow type AND nullability on the `to_arrow` path via `repark_parity.assert_frames_equal`
+  — never `show`. Split-path convergence is CLASSIFIED (CONVERGED → flip to content equality;
+  commit-but-mismatch → regression); both classifier arms proven by monkeypatch. Budget pin +
+  name-gated family coverage so a control cannot satisfy NULL-key / nullability / type-mismatch
+  pins. **Out of scope (declared):** fixing divergences; registry file; windows (W-4). Ledger:
+  `task/w3-joins-ledger.md` (§6 holds paste-true registry rows; registry file not edited).
+- `_record_join_goldens.py` — the **record driver** for the joins corpus (NOT a `test_` module;
+  never collected). Imports `ROWS` + lifecycle helpers from the committed test module and
+  re-derives every Spark half (content / error needle / split success) under order-insensitive
+  compare. Exit 0 = every recorded half still reproduces; never edits the corpus. Needs zulu-17
+  + `uv sync --extra record`. Invocation in its docstring and `task/w3-joins-ledger.md`.
+  Serialize with other JVM recorders via `/tmp/grok-jvm-record.lock`.
 - `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
   never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
   `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
@@ -1401,6 +1420,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the MERGE differential Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py` |
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
+| Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
+| Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1452,6 +1473,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a `test_decimal128_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or raises the same ANSI class): do NOT delete — flip to equality / shared-raise and record the convergence. |
 | a decimal128 row reds saying regression | re-derive both halves with `_record_decimal128_goldens.py` before touching the pin. |
 | decimal128 budget pin reds | G2 must stay 20-26, G13 6-8, CTAS exactly 3, min 8 equalities, max 20 disclosures, and ≥3 `*clamps_scale_in_spark` rows; restore the control equalities / clamp family rather than converting them to disclosures or deleting them behind a non-clamp `DECIMAL(38,…)` control. |
+| a `test_join_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or DF semi/anti starts succeeding): do NOT delete — flip to content equality and record the convergence. |
+| a joins row reds saying regression | re-derive both halves with `_record_join_goldens.py` before touching the pin. |
+| joins budget pin reds | G4 must stay 20–28 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥2 DF content rows; restore the name-gated families rather than greening them with controls. |
 | a live scenario reds only under a non-UTC `session_conf` | the override reached the oracle but not repark (or vice versa): repark takes it at session BUILD, Spark at `conf.set`. Check `build_repark_engine` stopped the previous active session. |
 
 First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).

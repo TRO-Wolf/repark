@@ -22,6 +22,9 @@ not this directory.
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
   shipped, environment drift events). Append a section per campaign; never rewrite an earlier one.
   Created 2026-08-10 with the Front-Door campaign's numbers.
+- [w3-joins-ledger.md](w3-joins-ledger.md) — **in flight (W-3 / H-2 gap G4):** joins differential
+  corpus vs live Spark (value AND Arrow type AND nullability); record driver; §6 paste-true
+  registry rows. Does **not** edit `docs/spark-sql-iceberg-parity.md`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
