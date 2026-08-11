@@ -7,31 +7,42 @@ them. Two failure classes are then invisible until a human re-runs the oracle by
 * **golden drift** — a stale or hand-edited pin no longer matches what Spark actually produces;
 * **oracle drift** — a Spark bump silently changes semantics under a still-green pin.
 
-This module is the drift detector's engine. It holds every mandated golden as an *engine-agnostic
-recipe* (`Scenario.recipe`) plus its pinned `golden` table. Because repark is a **near-drop-in for
-PySpark** — the same `createDataFrame` / DataFrame-API / `functions` surface, only the import line
-differs — one recipe runs unchanged on BOTH engines. The live tier
-(`test_parity_live.py`) then asserts the full triple **repark == pinned golden == live Spark**
-(value AND Arrow-path type/nullability) for every scenario; routine CI runs only the JVM-free
-`repark == golden` half of the same recipes (`test_scenario_recipe_matches_golden_on_repark`), so
-the recipes themselves carry no-JVM coverage.
+This module is the drift detector's engine. It holds two recipe kinds:
+
+1. **Single-shot** (``Scenario`` / ``SCENARIOS``) — an engine-agnostic
+   ``recipe: Engine → DataFrame`` plus its pinned ``golden``. Group E / columns / dates /
+   filter-rewriter / non-UTC date controls / the G1 extraction-class timezone live rows. Because
+   repark is a **near-drop-in for PySpark** — the same ``createDataFrame`` / DataFrame-API /
+   ``functions`` surface, only the import line differs — one recipe runs unchanged on BOTH engines.
+2. **Lifecycle** (``LifecycleScenario`` / ``LIFECYCLE_SCENARIOS``) — multi-statement table lifecycle
+   ``create → seed → [register source view] → act → read``, with always-cleanup. Used by the live
+   MERGE drift detector (Iceberg table + optional ``merge_src`` view). repark path uses a memory
+   catalog + COW TBLPROPERTIES; Spark path uses ``build_spark_iceberg_engine`` (Hadoop catalog +
+   the pinned Iceberg GAV from :mod:`_oracle_pins`).
+
+The live tier (``test_parity_live.py``) asserts the full triple **repark == pinned golden == live
+Spark** (value AND Arrow-path type/nullability) for every scenario of both kinds; routine CI runs
+only the JVM-free ``repark == golden`` half of the same recipes, so the recipes themselves carry
+no-JVM coverage.
 
 Nothing here imports pyspark at module load — the pyspark import is deferred into
-`build_spark_engine`, so this module (and the tests that import it) collect cleanly on a runner with
-neither pyspark nor a JVM installed (the routine-CI contract, L3).
+``build_spark_engine`` / ``build_spark_iceberg_engine``, so this module (and the tests that import
+it) collect cleanly on a runner with neither pyspark nor a JVM installed (the routine-CI
+contract, L3).
 
 Session config (VERIFIED against live PySpark 4.1.2, not guessed): the Group E / columns / date
 goldens were recorded under Spark 4.1.2 defaults — **ANSI mode ON** (Spark 4 default; the
-int-UNION-string disclosure literally depends on it) — so `build_spark_engine` pins
-`spark.sql.ansi.enabled=true` explicitly. The registry's **default** session zone is `UTC` for
-determinism across runners. `master("local[2]")` per the plan.
+int-UNION-string disclosure literally depends on it) — so ``build_spark_engine`` pins
+``spark.sql.ansi.enabled=true`` explicitly. The registry's **default** session zone is ``UTC`` for
+determinism across runners. ``master("local[2]")`` per the plan.
 
 **Per-scenario session-conf override (H-1a).** A registry pinned to one session zone is
 structurally incapable of catching a session-timezone divergence — the whole class is invisible to
-it. `Scenario.session_conf` therefore carries conf pairs applied to BOTH engines for that scenario
-only: the oracle takes them through `spark_session_conf` (set, run, restore), and repark takes them
-by BUILDING a session with them, because repark resolves the session zone once at session
-construction. Scenarios that declare no override behave exactly as before.
+it. ``Scenario.session_conf`` (and ``LifecycleScenario.session_conf``) therefore carry conf pairs
+applied to BOTH engines for that scenario only: the oracle takes them through
+``spark_session_conf`` (set, run, restore), and repark takes them by BUILDING a session with them,
+because repark resolves the session zone once at session construction. Scenarios that declare no
+override behave exactly as before.
 """
 
 from __future__ import annotations
@@ -42,6 +53,7 @@ import os
 import uuid
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
@@ -173,6 +185,52 @@ def build_spark_engine() -> Engine:
     )
 
 
+def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) -> Engine:
+    """Live PySpark + Iceberg engine for multi-statement table lifecycle scenarios.
+
+    Sibling of :func:`build_spark_engine` (option A): keeps the default live session JVM-cheap and
+    Iceberg-free; only lifecycle/MERGE live tests request this provisioned engine. Pins the same
+    GAV the MERGE differential record driver uses (from :mod:`_oracle_pins`), a local Hadoop
+    catalog named ``local`` rooted at ``warehouse``, Iceberg session extensions, ANSI on, UTC by
+    default, ``local[2]``. Optional ``session_conf`` is applied at BUILD time (the session is not
+    shared with the plain spark engine, so build-time application is safe).
+    """
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+    from pyspark.sql import SparkSession, Window
+    from pyspark.sql import functions as sfunctions
+    from pyspark.sql import types as stypes
+
+    catalog = LIFECYCLE_SPARK_CATALOG
+    builder = (
+        SparkSession.builder.master("local[2]")
+        .appName("repark-parity-live-iceberg")
+        .config("spark.sql.ansi.enabled", "true")
+        .config(SESSION_TIME_ZONE_KEY, DEFAULT_SESSION_TIME_ZONE)
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.ui.enabled", "false")
+        .config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
+        .config(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"spark.sql.catalog.{catalog}.type", "hadoop")
+        .config(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
+    )
+    for key, value in session_conf:
+        builder = builder.config(key, value)
+    session = builder.getOrCreate()
+    session.sparkContext.setLogLevel("ERROR")
+    return Engine(
+        name="spark-iceberg",
+        session=session,
+        functions=sfunctions,
+        types=stypes,
+        window=Window,
+        arrow_of=lambda df: df.toArrow(),
+    )
+
+
 @contextlib.contextmanager
 def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[None]:
     """Apply `session_conf` to the SHARED live oracle session, then restore it.
@@ -198,6 +256,201 @@ def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[No
 def run_scenario(scenario: Scenario, engine: Engine) -> pa.Table:
     """Execute a scenario's recipe on an engine and return its Arrow output."""
     return engine.arrow_of(scenario.recipe(engine))
+
+
+# ==================================================================================================
+# Lifecycle scenarios — multi-statement table lifecycle (create → seed → act → read)
+# ==================================================================================================
+
+# Catalog names used by lifecycle scenarios. repark registers a memory catalog under
+# LIFECYCLE_REPARK_CATALOG; Spark Hadoop catalog is LIFECYCLE_SPARK_CATALOG (configured in
+# build_spark_iceberg_engine). Each LifecycleScenario carries the catalog name that matches the
+# engine under test — tests build engines and pick the matching scenario list, OR the scenario
+# catalog is rewritten per engine via the per-engine lists below.
+LIFECYCLE_REPARK_CATALOG = "mem"
+LIFECYCLE_SPARK_CATALOG = "local"
+LIFECYCLE_NAMESPACE = "ns"
+
+# Shared COW table properties so repark's merge mode is explicit (matches test_merge_into.py /
+# the MERGE differential corpus). Spark Iceberg 1.11 defaults accept MERGE without these; repark
+# pins COW for determinism. Injected via {cow_props} in create_sql when with_cow_props=True.
+COW_TBLPROPERTIES = (
+    "'format-version' = '2', "
+    "'write.delete.mode' = 'copy-on-write', "
+    "'write.update.mode' = 'copy-on-write', "
+    "'write.merge.mode' = 'copy-on-write'"
+)
+
+# Temp view name for optional MERGE source registration (matches the differential corpus).
+LIFECYCLE_SOURCE_VIEW = "merge_src"
+
+
+@dataclass(frozen=True)
+class LifecycleScenario:
+    """Multi-statement live scenario: setup → act → read, with always-cleanup.
+
+    Engine-agnostic SQL steps over a resolved FQN (``{target}``). Optional ``source_sql``
+    registers a temp view named ``merge_src`` before ``act_sql`` (MERGE needs a source relation).
+    ``error_needle`` is intentionally absent on first landing — error-class twins ship later
+    with ``run_lifecycle_expect_error`` when a consumer exists.
+    """
+
+    name: str
+    catalog: str
+    namespace: str
+    table: str
+    create_sql: str  # may use {target} and {cow_props}
+    seed_sql: str  # may use {target}
+    act_sql: str  # may use {target}
+    read_sql: str  # may use {target}
+    golden: pa.Table
+    order_sensitive: bool = True
+    session_conf: SessionConf = field(default=())
+    source_sql: str | None = None  # optional SELECT registered as merge_src before act
+
+
+def _lifecycle_target(scenario: LifecycleScenario) -> str:
+    """Three-part Iceberg table name both engines accept."""
+    return f"{scenario.catalog}.{scenario.namespace}.{scenario.table}"
+
+
+def _drop_lifecycle_table(session: Any, fq_table: str) -> None:
+    """Drop an Iceberg table if present. Best-effort: a missing table is fine."""
+    with contextlib.suppress(Exception):
+        session.sql(f"DROP TABLE IF EXISTS {fq_table}")
+    with contextlib.suppress(Exception):
+        session.sql(f"DROP TABLE {fq_table}")
+
+
+def _drop_lifecycle_source_view(session: Any) -> None:
+    """Drop the shared lifecycle source temp view if the session still holds it."""
+    drop_temp = getattr(session, "catalog", None)
+    if drop_temp is not None and hasattr(drop_temp, "dropTempView"):
+        with contextlib.suppress(Exception):
+            session.catalog.dropTempView(LIFECYCLE_SOURCE_VIEW)
+    with contextlib.suppress(Exception):
+        session.sql(f"DROP VIEW IF EXISTS {LIFECYCLE_SOURCE_VIEW}")
+
+
+def run_lifecycle_scenario(
+    scenario: LifecycleScenario, engine: Engine, *, with_cow_props: bool
+) -> pa.Table:
+    """create → seed → [register source] → act → read; drop target (+ source view) in finally.
+
+    ``with_cow_props`` is a *caller* choice: repark always wants COW TBLPROPERTIES on CREATE;
+    Spark Iceberg 1.11 does not need them. Encoded here rather than as a per-row dead knob.
+    """
+    session = engine.session
+    fq_table = _lifecycle_target(scenario)
+    cow_props = f" TBLPROPERTIES ({COW_TBLPROPERTIES})" if with_cow_props else ""
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {scenario.catalog}.{scenario.namespace}")
+    _drop_lifecycle_table(session, fq_table)
+    session.sql(scenario.create_sql.format(target=fq_table, cow_props=cow_props))
+    session.sql(scenario.seed_sql.format(target=fq_table))
+    if scenario.source_sql is not None:
+        _drop_lifecycle_source_view(session)
+        frame = session.sql(scenario.source_sql)
+        frame.createOrReplaceTempView(LIFECYCLE_SOURCE_VIEW)
+    try:
+        session.sql(scenario.act_sql.format(target=fq_table))
+        return engine.arrow_of(session.sql(scenario.read_sql.format(target=fq_table)))
+    finally:
+        _drop_lifecycle_table(session, fq_table)
+        if scenario.source_sql is not None:
+            _drop_lifecycle_source_view(session)
+
+
+def _lifecycle_merge_table(
+    fields: list[tuple[str, pa.DataType, bool]], values: dict[str, list[object]]
+) -> pa.Table:
+    """Build a short Arrow golden for a MERGE lifecycle row (name/type/nullability + values)."""
+    schema = pa.schema([pa.field(name, kind, nullable=null) for name, kind, null in fields])
+    return pa.table({name: pa.array(values[name], kind) for name, kind, _ in fields}, schema)
+
+
+_I64 = pa.int64()
+_STR = pa.string()
+
+
+def _merge_lifecycle_rows(*, catalog: str) -> list[LifecycleScenario]:
+    """The 2 live-tier MERGE scenarios, bound to ``catalog`` for the engine under test.
+
+    Chosen pair (see ledger § chosen rows):
+    * ``live_merge_basic_upsert`` — control equality (publish-job upsert shape).
+    * ``live_merge_matched_arm_order`` — first-match-wins UPDATE-then-DELETE (not the builder
+      upsert twin; detects arm-order drift that ``test_merge_into.py`` does not cover).
+
+    Goldens are the recorded Spark halves from the MERGE differential corpus (short tables;
+    duplicated here so ``_live_parity`` never imports the ``test_`` module).
+    """
+    return [
+        LifecycleScenario(
+            name="live_merge_basic_upsert",
+            catalog=catalog,
+            namespace=LIFECYCLE_NAMESPACE,
+            table="live_merge_basic_upsert",
+            create_sql="CREATE TABLE {target} (id BIGINT, name STRING) USING iceberg{cow_props}",
+            seed_sql=(
+                "INSERT INTO {target} "
+                "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name "
+                "UNION ALL SELECT CAST(2 AS BIGINT), 'b'"
+            ),
+            source_sql=(
+                "SELECT CAST(2 AS BIGINT) AS id, 'bee' AS name "
+                "UNION ALL SELECT CAST(3 AS BIGINT), 'c'"
+            ),
+            act_sql=(
+                "MERGE INTO {target} AS target USING merge_src AS source "
+                "ON target.id = source.id "
+                "WHEN MATCHED THEN UPDATE SET * "
+                "WHEN NOT MATCHED THEN INSERT *"
+            ),
+            read_sql="SELECT id, name FROM {target} ORDER BY id",
+            golden=_lifecycle_merge_table(
+                [("id", _I64, True), ("name", _STR, True)],
+                {"id": [1, 2, 3], "name": ["a", "bee", "c"]},
+            ),
+            order_sensitive=True,
+        ),
+        LifecycleScenario(
+            name="live_merge_matched_arm_order",
+            catalog=catalog,
+            namespace=LIFECYCLE_NAMESPACE,
+            table="live_merge_matched_arm_order",
+            create_sql=("CREATE TABLE {target} (id BIGINT, score BIGINT) USING iceberg{cow_props}"),
+            seed_sql=(
+                "INSERT INTO {target} "
+                "SELECT CAST(1 AS BIGINT) AS id, CAST(10 AS BIGINT) AS score "
+                "UNION ALL SELECT CAST(2 AS BIGINT), CAST(20 AS BIGINT)"
+            ),
+            source_sql=(
+                "SELECT CAST(1 AS BIGINT) AS id, CAST(100 AS BIGINT) AS score "
+                "UNION ALL SELECT CAST(2 AS BIGINT), CAST(200 AS BIGINT)"
+            ),
+            act_sql=(
+                "MERGE INTO {target} AS target USING merge_src AS source "
+                "ON target.id = source.id "
+                "WHEN MATCHED AND target.score = 10 THEN UPDATE SET target.score = source.score "
+                "WHEN MATCHED THEN DELETE"
+            ),
+            read_sql="SELECT id, score FROM {target} ORDER BY id",
+            golden=_lifecycle_merge_table(
+                [("id", _I64, True), ("score", _I64, True)],
+                {"id": [1], "score": [100]},
+            ),
+            order_sensitive=True,
+        ),
+    ]
+
+
+# repark-facing list (memory catalog name). Spark-facing list is built with LIFECYCLE_SPARK_CATALOG
+# so FQNs resolve against the Hadoop catalog configured in build_spark_iceberg_engine.
+LIFECYCLE_SCENARIOS: list[LifecycleScenario] = _merge_lifecycle_rows(
+    catalog=LIFECYCLE_REPARK_CATALOG
+)
+LIFECYCLE_SCENARIOS_SPARK: list[LifecycleScenario] = _merge_lifecycle_rows(
+    catalog=LIFECYCLE_SPARK_CATALOG
+)
 
 
 # ==================================================================================================
@@ -486,6 +739,66 @@ def _sc_date_extractor_under_new_york_session(engine: Engine) -> Any:
         "month(to_date('2024-02-29')) AS month_part, "
         "dayofmonth(to_date('2024-02-29')) AS day_part"
     )
+
+
+# ==================================================================================================
+# G1 / G16 extraction-class timezone live rows (N-2b item 3)
+# ==================================================================================================
+#
+# The 13 equality rows that converged with the H-1a-b extraction fix (see
+# test_session_timezone_parity.test_the_extraction_class_converged_and_the_residue_is_named).
+# NOT the 2 composition date_trunc value-converged-but-type-disclosure rows, NOT the 2
+# zone-independent DATE controls, NOT any disclosure (TZ-4 type, TZ-5 cast, TZ-6 NTZ, TZ-7
+# zoneless). Goldens are the recorded Spark halves (equality rows: repark is None).
+
+
+def _utc(*args: int) -> dt.datetime:
+    """A tz-aware UTC instant (what PySpark's Arrow export produces for a TIMESTAMP)."""
+    return dt.datetime(*args, tzinfo=dt.UTC)  # type: ignore[arg-type]
+
+
+# Column-path fixture: same two instants as test_session_timezone_parity.COLUMN_INSTANTS.
+_TZ_COLUMN_VIEW = "tz_aware_instants"
+_TZ_COLUMN_INSTANTS: tuple[dt.datetime, ...] = (
+    _utc(2024, 6, 15, 12, 0),
+    _utc(2024, 1, 1, 4, 30),
+)
+_TZ_COLUMN_SQL = (
+    "SELECT year(ts) AS year_part, month(ts) AS month_part, dayofmonth(ts) AS day_part, "
+    f"hour(ts) AS hour_part FROM {_TZ_COLUMN_VIEW} ORDER BY ts"
+)
+
+
+def register_tz_column_view(engine: Engine) -> None:
+    """Register the tz-aware TIMESTAMP column view used by column-path timezone scenarios.
+
+    ``createDataFrame`` + ``createOrReplaceTempView`` are spelled identically on both engines.
+    Schema is INFERRED deliberately so both engines carry an instant-typed TIMESTAMP.
+    """
+    frame = engine.session.createDataFrame([(instant,) for instant in _TZ_COLUMN_INSTANTS], ["ts"])
+    frame.createOrReplaceTempView(_TZ_COLUMN_VIEW)
+
+
+def _sc_sql(sql: str) -> Callable[[Engine], Any]:
+    """Build a single-shot recipe that runs ``engine.session.sql(sql)``."""
+
+    def recipe(engine: Engine) -> Any:
+        return engine.session.sql(sql)
+
+    return recipe
+
+
+def _sc_column_sql(sql: str) -> Callable[[Engine], Any]:
+    """Build a recipe that registers the tz column view, then runs ``sql``."""
+
+    def recipe(engine: Engine) -> Any:
+        register_tz_column_view(engine)
+        return engine.session.sql(sql)
+
+    return recipe
+
+
+_INT32 = pa.int32()
 
 
 def _sc_date_math_under_tokyo_session(engine: Engine) -> Any:
@@ -916,6 +1229,213 @@ SCENARIOS: list[Scenario] = [
             ),
         ),
         session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    # ----- G1 / G16 extraction-class timezone live rows (N-2b item 3) -----
+    # 13 equality rows that converged with the extraction fix. Size pin 29 -> 42
+    # moved DELIBERATELY in the same diff as these 13 scenarios.
+    Scenario(
+        "tz_live_year_of_instant_under_new_york_session",
+        _sc_sql("SELECT year(to_timestamp('2024-01-01T04:30:00Z')) AS year_part"),
+        pa.table(
+            [pa.array([2023], _INT32)],
+            schema=pa.schema([pa.field("year_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_month_of_instant_under_new_york_session",
+        _sc_sql("SELECT month(to_timestamp('2024-03-01T02:15:00Z')) AS month_part"),
+        pa.table(
+            [pa.array([2], _INT32)],
+            schema=pa.schema([pa.field("month_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_day_of_instant_under_new_york_session",
+        _sc_sql("SELECT dayofmonth(to_timestamp('2024-06-15T03:00:00Z')) AS day_part"),
+        pa.table(
+            [pa.array([14], _INT32)],
+            schema=pa.schema([pa.field("day_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_hour_of_instant_under_new_york_session",
+        _sc_sql("SELECT hour(to_timestamp('2024-06-15T12:00:00Z')) AS hour_part"),
+        pa.table(
+            [pa.array([8], _INT32)],
+            schema=pa.schema([pa.field("hour_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_hour_of_instant_under_tokyo_session",
+        _sc_sql("SELECT hour(to_timestamp('2024-06-15T12:00:00Z')) AS hour_part"),
+        pa.table(
+            [pa.array([21], _INT32)],
+            schema=pa.schema([pa.field("hour_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    Scenario(
+        "tz_live_year_month_day_of_instant_under_tokyo_session",
+        _sc_sql(
+            "SELECT year(to_timestamp('2023-12-31T16:30:00Z')) AS year_part, "
+            "month(to_timestamp('2023-12-31T16:30:00Z')) AS month_part, "
+            "dayofmonth(to_timestamp('2023-12-31T16:30:00Z')) AS day_part"
+        ),
+        pa.table(
+            [
+                pa.array([2024], _INT32),
+                pa.array([1], _INT32),
+                pa.array([1], _INT32),
+            ],
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    Scenario(
+        "tz_live_dst_spring_forward_instant_hour",
+        _sc_sql("SELECT hour(to_timestamp('2024-03-10T07:00:00Z')) AS hour_part"),
+        pa.table(
+            [pa.array([3], _INT32)],
+            schema=pa.schema([pa.field("hour_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_dst_fall_back_repeated_local_hour",
+        _sc_sql(
+            "SELECT hour(to_timestamp('2024-11-03T05:30:00Z')) AS before_part, "
+            "hour(to_timestamp('2024-11-03T06:30:00Z')) AS after_part"
+        ),
+        pa.table(
+            [pa.array([1], _INT32), pa.array([1], _INT32)],
+            schema=pa.schema(
+                [
+                    pa.field("before_part", _INT32, nullable=True),
+                    pa.field("after_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_column_extract_under_new_york_session",
+        _sc_column_sql(_TZ_COLUMN_SQL),
+        pa.table(
+            {
+                "year_part": pa.array([2023, 2024], _INT32),
+                "month_part": pa.array([12, 6], _INT32),
+                "day_part": pa.array([31, 15], _INT32),
+                "hour_part": pa.array([23, 8], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                    pa.field("hour_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        order_sensitive=True,
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_column_extract_under_tokyo_session",
+        _sc_column_sql(_TZ_COLUMN_SQL),
+        pa.table(
+            {
+                "year_part": pa.array([2024, 2024], _INT32),
+                "month_part": pa.array([1, 6], _INT32),
+                "day_part": pa.array([1, 15], _INT32),
+                "hour_part": pa.array([13, 21], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                    pa.field("hour_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        order_sensitive=True,
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    Scenario(
+        "tz_live_pre_1970_extract_under_new_york_session",
+        _sc_sql(
+            "SELECT year(to_timestamp('1969-12-31T23:30:00Z')) AS year_part, "
+            "month(to_timestamp('1969-12-31T23:30:00Z')) AS month_part, "
+            "dayofmonth(to_timestamp('1969-12-31T23:30:00Z')) AS day_part, "
+            "hour(to_timestamp('1969-12-31T23:30:00Z')) AS hour_part"
+        ),
+        pa.table(
+            {
+                "year_part": pa.array([1969], _INT32),
+                "month_part": pa.array([12], _INT32),
+                "day_part": pa.array([31], _INT32),
+                "hour_part": pa.array([18], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                    pa.field("hour_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_year_boundary_extract_and_format_under_new_york_session",
+        _sc_sql(
+            "SELECT year(to_timestamp('2024-01-01T02:00:00Z')) AS year_part, "
+            "date_format(to_timestamp('2024-01-01T02:00:00Z'), 'yyyy-MM-dd') AS local_date"
+        ),
+        pa.table(
+            {
+                "year_part": pa.array([2023], _INT32),
+                "local_date": pa.array(["2023-12-31"], pa.string()),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("local_date", pa.string(), nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_leap_day_extract_under_new_york_session",
+        _sc_sql(
+            "SELECT month(to_timestamp('2024-02-29T02:00:00Z')) AS month_part, "
+            "dayofmonth(to_timestamp('2024-02-29T02:00:00Z')) AS day_part"
+        ),
+        pa.table(
+            {
+                "month_part": pa.array([2], _INT32),
+                "day_part": pa.array([28], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
     ),
 ]
 

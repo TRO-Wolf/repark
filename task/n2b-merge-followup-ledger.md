@@ -1,14 +1,15 @@
-# Unit ledger — N-2b / W-2: MERGE follow-up (PARTIAL)
+# Unit ledger — N-2b / W-2: MERGE follow-up
 
 **Unit:** N-2b (H-2 gap G3 follow-up) · **Date:** 2026-08-11 · **Lane:** W-2 ·
-**Branch:** `grok/w2-n2b-merge-followup` · **Executor:** Grok (grok-4.5)
+**Branches:** `grok/w2-n2b-merge-followup` (items 1+4, PR #50) ·
+`grok/w2-n2b-lifecycle-live` (items 2+3, this PR) · **Executor:** Grok (grok-4.5)
 
-**This ledger does NOT claim N-2b closed.** Items 1 + 4 ship in this PR; items 2 + 3 are
-**explicitly deferred** to a second PR after morning design approval. Design note (item 2
-shape only, no code): `planning/grok/W2-LIFECYCLE-DESIGN.md` (orchestrator planning tree,
-outside this repo).
+**Full N-2b is closed only when both PRs land.** Items 1+4 = PR #50; items 2+3 = this PR
+(stacked on #50). Design note: `planning/grok/W2-LIFECYCLE-DESIGN.md` (orchestrator planning
+tree, outside this repo).
 
-Charter: `planning/grok/BRIEF-w2-n2b-merge-followup.md` + overnight addendum A1.
+Charter: `planning/grok/BRIEF-w2-n2b-merge-followup.md` + overnight addendum A1 + approved
+lifecycle design (option A).
 
 ---
 
@@ -60,19 +61,69 @@ JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 \
 
 ---
 
-## 2. DEFERRED (items 2 + 3) — second PR after morning approval
+## 2. SHIPPED — items 2 + 3 (second PR: `grok/w2-n2b-lifecycle-live`)
 
-| Item | What | Why deferred | Gate for second PR |
+| Item | Artifact | Role |
+|---|---|---|
+| **2 — `_oracle_pins.py`** | [`python/repark/tests/_oracle_pins.py`](../python/repark/tests/_oracle_pins.py) | ONE importable home for GAV + pyspark-version helpers |
+| **2 — LifecycleScenario** | [`python/repark/tests/_live_parity.py`](../python/repark/tests/_live_parity.py) | multi-statement create→seed→act→read; no `error_needle` |
+| **2 — build_spark_iceberg_engine** | same | option A: sibling of `build_spark_engine`; GAV from `_oracle_pins` |
+| **2 — 2 MERGE live rows** | `LIFECYCLE_SCENARIOS` (+ spark twin list) | budget pin == 2 |
+| **2 — lifecycle tests** | [`python/repark/tests/test_parity_live.py`](../python/repark/tests/test_parity_live.py) | repark routine + live triple via `spark_iceberg_engine` fixture |
+| **2 — record driver GAV import** | [`_record_merge_differential_goldens.py`](../python/repark/tests/_record_merge_differential_goldens.py) | GAV from `_oracle_pins` only (never from test module) |
+| **3 — 13 tz live Scenarios** | `_live_parity.SCENARIOS` | extraction-class equality rows with `session_conf` |
+| **3 — size pin** | `test_registry_covers_the_mandated_golden_family` | **29 → 42** (deliberate, same diff) |
+| map lockstep | [`python/repark/tests/map.md`](../python/repark/tests/map.md) + [`task/map.md`](map.md) | new files + status |
+| this ledger | §2 | items 2+3 SHIPPED |
+
+### 2.1 Chosen MERGE live rows + reasons
+
+| Live name | Differential source | Why chosen | Why not alternatives |
 |---|---|---|---|
-| **2 — 2 live-tier MERGE scenarios + `_live_parity` lifecycle abstraction** | create→seed→MERGE→read path on the live oracle tier; abstraction shape for multi-statement table lifecycle | Design surface — note written (`W2-LIFECYCLE-DESIGN.md`); **HALT for orchestrator /grok-qa** before any code. Never invent lifecycle overnight. | Owner approves design; then implement in `_live_parity.py` (+ tests) only after approval |
-| **3 — Live-scenario conversion (G1 class)** | 13 converged timezone rows → live-tier drift scenarios; registry size pin update is code-side (A5) | Depends on item 2's lifecycle / scenario surface | Same second PR (or a follow-on if design splits them) |
+| `live_merge_basic_upsert` | `basic_upsert_update_and_insert` | **Control equality** — publish-job upsert shape (UPDATE * + INSERT *); anchors the live tier against the well-known happy path | — |
+| `live_merge_matched_arm_order` | `matched_and_arm_order_update_then_delete` | **Arm-order first-match-wins** — SQL `WHEN MATCHED AND … UPDATE` then unconditional `DELETE`; detects arm-order drift the builder path does not cover | Not insert-only (builder already has insert shapes; less drift signal); not null-keys (three-valued logic, lower live-drift priority vs arm order); not threshold multi-arm (sibling of arm-order; one arm-order row is enough for the 2-row budget); not cardinality error (no `error_needle` / `run_lifecycle_expect_error` this PR) |
 
-**Hard ban remains for this PR:** no `.github/` edits (parity-live.yml only after morning
-approval); no `docs/spark-sql-iceberg-parity.md`; no engine MERGE production changes; no
-unit-queue / STATUS edits.
+Neither row duplicates builder-path live coverage (`test_merge_into.py` DataFrame API). Both are
+SQL lifecycle shapes that add live Spark+Iceberg drift detection on the facade `sql()` door.
 
-The design note names the abstraction shape, `_live_parity.py` changes, `parity-live.yml`
-changes, and dual-wire impact — **design only, zero implementation**.
+### 2.2 Item 3 — the 13 extraction-class timezone live rows
+
+From `test_session_timezone_parity.test_the_extraction_class_converged` (17 equality = 13
+extraction + 2 composition + 2 zone-independent controls). Converted the **13 pure extraction
+equalities** only — NOT composition (type disclosure residue TZ-4), NOT controls (already
+represented by the H-1a DATE scenarios), NOT disclosures (TZ-4/5/6/7).
+
+| # | Live scenario name | Zone |
+|---|---|---|
+| 1 | `tz_live_year_of_instant_under_new_york_session` | America/New_York |
+| 2 | `tz_live_month_of_instant_under_new_york_session` | America/New_York |
+| 3 | `tz_live_day_of_instant_under_new_york_session` | America/New_York |
+| 4 | `tz_live_hour_of_instant_under_new_york_session` | America/New_York |
+| 5 | `tz_live_hour_of_instant_under_tokyo_session` | Asia/Tokyo |
+| 6 | `tz_live_year_month_day_of_instant_under_tokyo_session` | Asia/Tokyo |
+| 7 | `tz_live_dst_spring_forward_instant_hour` | America/New_York |
+| 8 | `tz_live_dst_fall_back_repeated_local_hour` | America/New_York |
+| 9 | `tz_live_column_extract_under_new_york_session` | America/New_York |
+| 10 | `tz_live_column_extract_under_tokyo_session` | Asia/Tokyo |
+| 11 | `tz_live_pre_1970_extract_under_new_york_session` | America/New_York |
+| 12 | `tz_live_year_boundary_extract_and_format_under_new_york_session` | America/New_York |
+| 13 | `tz_live_leap_day_extract_under_new_york_session` | America/New_York |
+
+Column-path rows use `register_tz_column_view` (same two instants as the differential corpus).
+
+### 2.3 Dual-wire / workflow
+
+**Zero** Makefile / `parity-live.yml` flag changes. Iceberg jar by Maven coordinates only
+(`spark.jars.packages`); no new Python extra. `make check-parity-live-dual-wire` green is the
+required gate.
+
+### 2.4 Hard bans honored
+
+- no `docs/spark-sql-iceberg-parity.md` edit (registry FILE orchestrator-owned; §6 paste below)
+- no `Cargo.lock` / `uv.lock`
+- no unit-queue / STATUS
+- no engine MERGE production code
+- no `error_needle` / `run_lifecycle_expect_error` this PR
 
 ---
 
@@ -92,8 +143,17 @@ attacks the tautology of restating `4.1` next to a constant that already contain
 Iceberg artifact version (`1.11.0`) and Scala binary (`2.13`) remain explicit pins — they are
 not encoded in the pyspark version string.
 
-**D-N2b-4 — Partial ship is the charter, not a shortcut.** A1: items 1+4 now; 2+3 second PR
-post-approval. This ledger never claims N-2b / G3 full budget closed.
+**D-N2b-4 — Partial ship is the charter, not a shortcut.** A1: items 1+4 first PR; 2+3 second
+PR post-approval. Full N-2b closed only when both land.
+
+**D-N2b-5 — LifecycleScenario + separate build_spark_iceberg_engine (option A).** Keeps the
+default live Spark session Iceberg-free; only lifecycle tests request the provisioned engine.
+Approved design.
+
+**D-N2b-6 — GAV one home in `_oracle_pins`.** Record driver and live tier never import GAV from
+a `test_` module. Differential re-exports for its GAV pin test.
+
+**D-N2b-7 — Same PR for items 2+3.** Combined diff reviewable; no split.
 
 ---
 
@@ -122,7 +182,7 @@ pytest python/repark/tests/test_merge_differential_parity.py -q
 EXIT 0
 ```
 
-### 4.3 `make ci`
+### 4.3 `make ci` (items 1+4 PR)
 
 ```
 make ci → EXIT 0
@@ -133,6 +193,39 @@ make ci → EXIT 0
   ruff check + format --check clean
   uv lock --locked / taplo / typos clean
 ```
+
+### 4.4 Items 2+3 (lifecycle + tz live) — JVM-free + dual-wire
+
+```
+make check-parity-live-dual-wire → EXIT 0
+  parity-live dual-wire: OK (maturin@1.14.1, extras=[…], uv-run=[--locked, --no-sync])
+
+pytest test_parity_live.py test_merge_differential_parity.py -q
+  63 passed, 48 skipped  (live legs skip without REPARK_PARITY_LIVE=1)
+  EXIT 0
+  # includes: 42 SCENARIOS repark + 2 LIFECYCLE repark + budget pins + 13 merge differential
+```
+
+### 4.5 `make ci` (items 2+3 PR)
+
+```
+make ci → EXIT 0
+  rust-fmt-check / rust-clippy / rust-panic-ban clean
+  crate-dag / lib-rs / rust-file-size / lib-py / manifest clean
+  parity-live dual-wire: OK
+  cargo check --locked --workspace clean
+  ruff check + format --check clean
+  uv lock --locked / taplo / typos clean
+```
+
+### 4.6 Critic (items 2+3)
+
+| Stage | Label | Detail |
+|---|---|---|
+| ACC-style C1+C2+C4 | **ACC-CONVERGED** | quality/bugs + safety + claims CLEAN |
+| claims inventory | **CLEAN** | see §7.2 |
+| octo cycles=2 early_stop | **OCTO-CONVERGED** | single-session Half-A; no OPEN ≥ S1 |
+| overload | **not run** | A2 |
 
 ---
 
@@ -154,15 +247,46 @@ rg spark_needs_cow_props python/repark/tests/
 
 ---
 
-## 6. Ready-to-paste registry rows
+## 6. Ready-to-paste registry rows (orchestrator-owned file)
 
-None from this partial unit. The NMBS refuse disclosure remains the only G3 registry candidate
-(already noted in the archived N-2 ledger §6 as REG-G3-1). Items 2+3 may produce live-tier
-registry text when they land; orchestrator owns `docs/spark-sql-iceberg-parity.md`.
+Lane does **not** edit `docs/spark-sql-iceberg-parity.md`. Paste candidates for the
+orchestrator when both N-2b PRs are merged:
+
+### REG-N2b-LIVE-1 — live-tier MERGE lifecycle surface
+
+```
+### Live-tier MERGE lifecycle (N-2b item 2 / G3 live half)
+
+- Surface: `_live_parity.LifecycleScenario` + `LIFECYCLE_SCENARIOS` (budget 2)
+- Rows: `live_merge_basic_upsert` (control upsert), `live_merge_matched_arm_order`
+  (first-match-wins UPDATE-then-DELETE)
+- Engine path: repark memory catalog + COW; Spark via `build_spark_iceberg_engine`
+  (GAV `ICEBERG_SPARK_RUNTIME_GAV` from `_oracle_pins`)
+- Tests: `test_lifecycle_scenario_matches_golden_on_repark` (JVM-free) +
+  `test_live_lifecycle_scenario_matches_repark_golden_and_spark` (REPARK_PARITY_LIVE=1)
+- Does not replace the 10-row record-side differential (`test_merge_differential_parity.py`)
+```
+
+### REG-N2b-LIVE-2 — G1 extraction-class timezone live conversion
+
+```
+### G1 / G16 extraction-class live scenarios (N-2b item 3)
+
+- 13 equality rows converted into `_live_parity.SCENARIOS` with `session_conf` zone override
+- Size pin: 29 → 42 (code-side only; this registry file is orchestrator-owned)
+- Prefix: `tz_live_*`; column-path rows register `tz_aware_instants` via `register_tz_column_view`
+- NOT converted: composition date_trunc type disclosures (TZ-4), zone-independent DATE controls
+  (already live as H-1a rows), TZ-5/6/7 disclosures
+```
+
+The NMBS refuse disclosure remains the only G3 *divergence* registry candidate (archived N-2
+ledger §6 as REG-G3-1).
 
 ---
 
 ## 7. Octo / critic
+
+### 7.1 Items 1+4 (PR #50)
 
 | Stage | Label | Detail |
 |---|---|---|
@@ -171,28 +295,36 @@ registry text when they land; orchestrator owns `docs/spark-sql-iceberg-parity.m
 | sepmo-octo | **OCTO-CONVERGED** | cycles=2 requested, early_stop after CLEAN cycle 1 |
 | overload | **not run** | A2: no wave-global overload overnight |
 
-### Critic-4 (claims) null-report
+### 7.2 Items 2+3 (this PR)
+
+| Stage | Label | Detail |
+|---|---|---|
+| procedural ACC-style | **ACC-CONVERGED** | C1 quality/bugs + C2 security/safety + C4 claims — CLEAN |
+| claims inventory | **CLEAN** | see null-report below |
+| sepmo-octo | **OCTO-CONVERGED** | cycles=2 early_stop after CLEAN cycle 1; claims_critic |
+| overload | **not run** | A2 |
+
+#### Critic-4 (claims) null-report — items 2+3
 
 | Class | Inventory | Verdict |
 |---|---|---|
-| CL-MANDATE | items 1+4 claimed done; 2+3 claimed deferred | tree has 4 pin fns + NIT diffs; no item-2/3 code; design note outside repo only |
-| CL-QUANT | "4 Rust pins", "23 passed", "13 passed" | re-ran: 4 new pins green; full `tests::merge::` was 23; differential 13 |
-| CL-STALE | ledger "does NOT claim N-2b closed" | holds; §2 DEFERRED present; W2-COMPLETE PARTIAL |
-| CL-RATIONALE | G-4 file ban as prior deferral reason | historical (archived n2 ledger); G-4 merged; pins now land |
-| CL-TRANSCRIPT | make ci EXIT 0; dual-wire OK | re-ran dual-wire OK; ci log EXIT 0 |
-| CL-COUNT | 4 pins named in map + ledger + code | three homes agree on the four names |
-| CL-DUALHOME | archived n2 ledger still says "0 Rust pins deferred" | **history** under docs/history — not a live claim |
-| CL-VACUOUS | GAV pin derives from pyproject | re-ran `test_iceberg_gav_pin_is_exact_spark_minor` PASS; field `spark_needs_cow_props` absent |
-| CL-GHOST | design note path `planning/grok/W2-LIFECYCLE-DESIGN.md` | exists on planning tree; not a repo path (A11) |
+| CL-MANDATE | items 2+3 claimed SHIPPED | `_oracle_pins`, `LifecycleScenario`, 2 MERGE live rows, 13 `tz_live_*`, size pin 42, tests present |
+| CL-QUANT | "2 lifecycle", "13 tz", "42 scenarios", "63 passed" | LIFECYCLE==2; tz_live count 13; SCENARIOS==42; pytest 63p/48s |
+| CL-STALE | "full N-2b only when both PRs land" | holds; §8 explicit; W2B-COMPLETE does not claim solo close |
+| CL-TRANSCRIPT | dual-wire EXIT 0; make ci EXIT 0 | re-ran both green |
+| CL-COUNT | 2 MERGE names + 13 tz names in ledger/map/code | three homes agree |
+| CL-VACUOUS | no error_needle; dual-wire-neutral | zero Makefile/yml flag deltas; no error_needle field |
+| CL-GHOST | GAV only from `_oracle_pins` in record driver | grepped: record driver imports `_oracle_pins`; test re-exports only |
+| CL-DUALHOME | size pin 29→42 documented deliberate | docstring + ledger + map agree |
 
-OPEN ≥ S1: **none**. Residual notes (below floor): score-arm pins use Int32 (leaf surface) vs Python BIGINT — value semantics match; type pin is the downcast.
+OPEN ≥ S1: **none**.
 
 ---
 
-## 8. Explicit non-claims
+## 8. Explicit non-claims / status
 
-- N-2b is **not closed**.
-- G3 full budget (4 Rust + 2 live + record-side) is **not fully delivered** — live half open.
-- No lifecycle abstraction code lands in this PR.
-- No `.github/workflows/parity-live.yml` edit in this PR.
-- No STATUS / unit-queue / registry file edits.
+- **Full N-2b closed only when both PRs land** (#50 items 1+4 + this PR items 2+3).
+- No `.github/workflows/parity-live.yml` edit (dual-wire-neutral).
+- No STATUS / unit-queue / registry FILE edits.
+- No engine MERGE production changes.
+- No `error_needle` / `run_lifecycle_expect_error` (deferred to a consumer).
