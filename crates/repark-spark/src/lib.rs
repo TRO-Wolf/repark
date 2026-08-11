@@ -72,9 +72,11 @@ pub(crate) use normalize::{
 mod extension;
 pub use extension::SparkExtension;
 
-// The ported v1 lib-root battery (`src/tests.rs`, move-only identity unit) reaches the v1
-// crate-root scope through `use super::*`; these test-only imports reconstruct that scope
-// (v1's root `use` lines + the types that moved to repark-core in phase 1).
+// The ported v1 lib-root battery (`src/tests/`, G-4 split of the former `src/tests.rs`
+// monolith) reaches the v1 crate-root scope through leaf `use super::super::*`; these
+// test-only imports reconstruct that scope (v1's root `use` lines + the types that moved
+// to repark-core in phase 1). Shared external imports for the battery also live as
+// `pub(super)` re-exports in `src/tests/common.rs`.
 #[cfg(test)]
 use std::collections::HashMap;
 #[cfg(test)]

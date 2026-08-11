@@ -1,0 +1,1501 @@
+cargo test --locked --workspace
+   Compiling ciborium-io v0.2.2
+   Compiling clap_lex v1.1.0
+   Compiling plotters-backend v0.3.7
+   Compiling anstyle v1.0.14
+   Compiling itertools v0.10.5
+   Compiling cast v0.3.0
+   Compiling is-terminal v0.4.17
+   Compiling oorandom v11.1.5
+   Compiling anes v0.1.6
+   Compiling repark-ml v0.0.0 (/tmp/grok-g4/crates/repark-ml)
+   Compiling tinytemplate v1.2.1
+   Compiling repark-common v0.0.0 (/tmp/grok-g4/crates/repark-common)
+   Compiling crossbeam-deque v0.8.7
+   Compiling ciborium-ll v0.2.2
+   Compiling pyo3-ffi v0.29.2
+   Compiling repark-functions v0.0.0 (/tmp/grok-g4/crates/repark-functions)
+   Compiling repark-iceberg v0.0.0 (/tmp/grok-g4/crates/repark-iceberg)
+   Compiling clap_builder v4.6.6
+   Compiling plotters-svg v0.3.7
+   Compiling ciborium v0.2.2
+   Compiling rayon-core v1.13.0
+   Compiling plotters v0.3.7
+   Compiling pyo3 v0.29.2
+   Compiling rayon v1.12.0
+   Compiling criterion-plot v0.5.0
+   Compiling clap v4.6.6
+   Compiling criterion v0.5.1
+   Compiling repark-core v0.0.0 (/tmp/grok-g4/crates/repark-core)
+   Compiling repark-ta v0.0.0 (/tmp/grok-g4/crates/repark-ta)
+   Compiling repark-sql v0.0.0 (/tmp/grok-g4/crates/repark-sql)
+   Compiling repark-spark v0.0.0 (/tmp/grok-g4/crates/repark-spark)
+   Compiling repark-python v0.0.0 (/tmp/grok-g4/crates/repark-python)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 46.69s
+     Running unittests src/lib.rs (target/debug/deps/repark_common-6a49bc36a64c6611)
+
+running 13 tests
+test surfaces::tests::all_has_the_reviewed_surface_count ... ok
+test surfaces::tests::all_ids_are_unique_and_named ... ok
+test surfaces::tests::audit_accepts_a_complete_matrix ... ok
+test surfaces::tests::audit_reports_a_duplicate_row ... ok
+test surfaces::tests::audit_reports_an_unmapped_surface ... ok
+test surfaces::tests::audit_reports_untraceable_rows ... ok
+test surfaces::tests::audit_reports_an_unknown_id ... ok
+test surfaces::tests::ids_are_screaming_snake_case ... ok
+test surfaces::tests::ids_are_self_naming ... ok
+test surfaces::tests::is_tested_partitions_the_variants ... ok
+test surfaces::tests::session_profiles_are_distinct ... ok
+test tests::exception_class_routes_every_variant ... ok
+test tests::parse_and_analysis_display_preserve_message ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_core-8ce379131ec8c216)
+
+running 101 tests
+test catalog_config::tests::bare_class_key_alone_is_missing_kind ... ok
+test catalog_config::tests::empty_catalog_name_fails_loud ... ok
+test catalog_config::tests::conflicting_impl_and_type_errors ... ok
+test catalog_config::tests::catalog_spec_debug_redacts_secret_prop_values ... ok
+test catalog_config::tests::memory_with_blank_warehouse_is_rejected ... ok
+test catalog_config::tests::cross_prefix_duplicates_merge_or_fail_loud ... ok
+test catalog_config::tests::memory_without_warehouse_names_the_warehouse_key ... ok
+test catalog_config::tests::i5_catalog_config_acceptance_matrix_loud ... ok
+test catalog_config::tests::i5_catalog_config_acceptance_matrix_ok ... ok
+test catalog_config::tests::missing_kind_names_the_fixing_key ... ok
+test catalog_config::tests::non_catalog_keys_are_ignored ... ok
+test catalog_config::tests::multiple_catalogs_are_sorted_by_name ... ok
+test catalog_config::tests::parses_the_measured_glue_block ... ok
+test catalog_config::tests::postgres_kind_from_type_and_bare_jdbc ... ok
+test catalog_config::tests::postgres_requires_url ... ok
+test catalog_config::tests::repark_only_malformed_type_mentions_repark_spelling ... ok
+test catalog_config::tests::s3tables_catalog_impl_resolves ... ok
+test catalog_config::tests::repark_prefix_parses_identically ... ok
+test catalog_config::tests::s3tables_explicit_arn_wins_over_warehouse ... ok
+test catalog_config::tests::s3tables_explicit_non_arn_is_rejected ... ok
+test catalog_config::tests::s3tables_warehouse_arn_is_carried_into_table_bucket_arn ... ok
+test catalog_config::tests::s3tables_warehouse_s3_uri_is_rejected ... ok
+test catalog_config::tests::s3tables_without_any_arn_source_errors ... ok
+test catalog_config::tests::type_short_forms_resolve_each_kind ... ok
+test catalog_config::tests::unknown_catalog_impl_names_the_key_and_value ... ok
+test catalog_config::tests::unknown_type_names_the_key_and_value ... ok
+test object_store_s3::tests::is_s3_scheme_matches_s3_and_s3a_only ... ok
+test object_store_s3::tests::parse_s3_bucket_ignores_non_s3_paths ... ok
+test object_store_s3::tests::credential_bridge_maps_static_credentials ... ok
+test object_store_s3::tests::parse_s3_bucket_extracts_scheme_and_host ... ok
+test session::tests::builder_rejects_zero_batch_size_and_target_partitions ... ok
+test session::tests::classify_execution_error_is_base ... ok
+test session::tests::classify_not_implemented_is_unsupported_with_message_preserved ... ok
+test session::tests::classify_peels_wrapper_to_iceberg_kind ... ok
+test session::tests::classify_peels_wrapper_to_inner_kind ... ok
+test session::tests::classify_plan_error_is_analysis ... ok
+test session::tests::classify_schema_error_is_analysis ... ok
+test session::tests::classify_sql_syntax_error_is_parse ... ok
+test session::tests::engine_err_iceberg_commit_conflict_classifies_kind_not_stringified ... ok
+test session::tests::iceberg_err_commit_conflict_keeps_kind_visible ... ok
+test session::tests::engine_err_preserves_the_inner_message ... ok
+test session::tests::external_non_iceberg_error_stays_base ... ok
+test session::tests::parse_table_identifier_segments_quote_aware ... ok
+test session::tests::builder_rejects_tiny_nonzero_memory_limit ... ok
+test session::aws_gate_tests::unfinalized_s3_read_fails_loud_naming_the_finalize_step ... ok
+test session::aws_gate_tests::late_config_region_conf_is_consulted_as_an_aws_signal ... ok
+test session::tests::builder_datafusion_config_key_reaches_session_config ... ok
+test session_time_zone::tests::unknown_zone_fails_loud_naming_the_key ... ok
+test session::tests::builder_applies_config_without_error ... ok
+test time_travel::tests::parse_timestamp_ms_and_strings ... ok
+test session::tests::builder_default_installs_eight_gib_fair_spill_pool ... ok
+test session::tests::iceberg_kind_partition_routes_per_oracle ... ok
+test extension::tests::build_runs_configure_then_register_at_the_v1_inline_positions ... ok
+test session::tests::bare_session_without_extension_carries_df_54_1_subquery_guard ... ok
+test session::tests::iceberg_feature_unsupported_classifies_unsupported ... ok
+test session_time_zone::tests::absent_key_resolves_to_the_utc_default ... ok
+test session_time_zone::tests::blank_value_fails_loud_rather_than_falling_back_to_the_default ... ok
+test session_time_zone::tests::fixed_offset_is_accepted ... ok
+test session_time_zone::tests::padded_value_is_trimmed_not_treated_as_a_different_zone ... ok
+test session_time_zone::tests::lookalike_spellings_are_not_a_second_way_to_set_the_zone ... ok
+test session::aws_gate_tests::opt_in_session_still_requires_finalize_before_s3_reads ... ok
+test session_time_zone::tests::iana_zone_id_is_accepted_verbatim ... ok
+test time_travel::tests::parse_version_integer_and_ref ... ok
+test session_time_zone::tests::session_clone_shares_the_resolved_zone ... ok
+test session::tests::session_sql_syntax_error_is_parse ... ok
+test session::tests::register_iceberg_catalog_rejects_duplicate_name ... ok
+test session::tests::show_tables_still_refuses_without_the_information_schema_conf ... ok
+test dialect::tests::engine_context_constructs_with_explicit_fields ... ok
+test session::tests::memory_limit_gb_never_lands_below_the_floor ... ok
+test dialect::tests::engine_context_new_is_the_downstream_constructor ... ok
+test extension::tests::default_hooks_are_noops_and_build_succeeds_without_extension ... ok
+test dialect::tests::datafusion_dialect_passthrough_executes_trivial_query ... ok
+test runtime::tests::engine_runtime_clone_shares_one_executor_and_drives_futures ... ok
+test session::tests::read_json_ndjson_round_trips ... ok
+test session::tests::config_bad_catalog_block_fails_at_build ... ok
+test session::tests::builder_unknown_datafusion_config_key_fails_loud ... ok
+test session::tests::builder_pseudo_key_typo_still_fails_loud ... ok
+test session_time_zone::tests::invalid_zone_fails_the_build_not_a_later_query ... ok
+test session::aws_gate_tests::offline_session_finalize_never_resolves_aws_sdk_config ... ok
+test session::tests::late_catalog_registration_adds_new_names_and_skips_existing ... ok
+test session::tests::read_parquet_routes_both_s3_schemes_to_the_registered_store ... ok
+test session::tests::config_free_build_registers_no_catalogs ... ok
+test session_time_zone::tests::bare_session_carries_the_utc_default ... ok
+test session::tests::builder_explicit_memory_limit_overrides_default ... ok
+test session::tests::builder_zero_memory_limit_gb_opts_out_of_pool ... ok
+test session::tests::builder_non_datafusion_config_keys_stay_ignored ... ok
+test session::tests::builder_pseudo_key_datafusion_runtime_memory_limit_builds ... ok
+test session::tests::explicit_datafusion_config_overrides_a_core_default ... ok
+test session::tests::builder_zero_memory_limit_opts_out_of_pool ... ok
+test session::tests::empty_temp_view_is_an_error ... ok
+test session::tests::materialize_dataframe_as_cache_view_without_budget_pins_memtable ... ok
+test session_time_zone::tests::builder_conf_reaches_the_built_session ... ok
+test session::tests::session_sql_unknown_table_is_analysis ... ok
+test session::tests::s3_region_override_accepts_both_spellings ... ok
+test session::tests::materialize_dataframe_as_cache_view_respects_max_bytes ... ok
+test session::tests::read_parquet_round_trips ... ok
+test session::tests::create_or_replace_temp_view_replaces ... ok
+test session::tests::materialize_dataframe_as_temp_view_is_scan_not_replan ... ok
+test session::tests::information_schema_still_exposes_the_dollar_metadata_tables ... ok
+test session::tests::read_csv_with_header_round_trips ... ok
+test session::tests::information_schema_enumerates_a_registered_iceberg_catalog_through_the_session ... ok
+
+test result: ok. 101 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_functions-f76042f2419c144f)
+
+running 62 tests
+test aggregate::tests::spark_avg_is_overwritten_by_name ... ok
+test aggregate::tests::retract_batch_matches_core_semantics ... ok
+test cardinality::tests::defaults_match_q23_and_q22 ... ok
+test cardinality::tests::config_map_camel_and_snake ... ok
+test cardinality::tests::parse_max_rejects_zero_and_garbage ... ok
+test cardinality::tests::sequence_cardinality_inclusive ... ok
+test cardinality::tests::refuse_array_repeat_literal_over_ceiling ... ok
+test cardinality::tests::under_ceiling_ok ... ok
+test datetime::tests::compile_java_pattern_rejects_unterminated_quote ... ok
+test datetime::tests::compile_java_pattern_renders_dim_date_patterns ... ok
+test datetime::tests::perf_measure_date_format_compile_once ... ok
+test random::tests::hash_seed_zero_matches_spark ... ok
+test random::tests::rand_seed_zero_first_value_matches_spark_docs ... ok
+test random::tests::sample_by_seed_zero_count_in_spark_band ... ok
+test string::tests::perf_measure_substring_char_indices ... ok
+test analyzer::tests::division_rewrite_preserves_field_names ... ok
+test analyzer::tests::array_subscript_accepts_narrow_integer_indices ... ok
+test analyzer::tests::decimal_division_stays_decimal ... ok
+test aggregate::tests::plain_group_by_avg_still_works ... ok
+test analyzer::tests::correlated_outer_ref_division_is_promoted_to_double ... ok
+test analyzer::tests::array_subscript_is_zero_based ... ok
+test aggregate::tests::sliding_avg_over_rows_succeeds_after_shim ... ok
+test aggregate::tests::sum_and_count_sliding_still_work ... ok
+test analyzer::tests::integer_division_is_double ... ok
+test analyzer::tests::all_nondecimal_division_is_double ... ok
+test analyzer::tests::division_by_zero_is_null ... ok
+test string::tests::concat_result_physical_type_is_utf8 ... ok
+test string::tests::concat_any_null_propagates ... ok
+test collection::tests::element_at_array_zero_index_errors ... ok
+test aggregate::tests::percentile_approx_sql_aliases_resolve ... ok
+test analyzer::tests::division_over_subquery_and_column_is_double_matching_spark ... ok
+test datetime::tests::extreme_date32_add_months_and_trunc_null_without_panic ... ok
+test string::tests::concat_basic_and_zero_arg ... ok
+test analyzer::tests::division_result_type_class_matches_spark_decimal_rule ... ok
+test string::tests::concat_coalesce_null_empty_returns_utf8 ... ok
+test string::tests::concat_register_all_overwrites_datafusion_spark ... ok
+test analyzer::tests::modulo_by_zero_is_null_and_keeps_type ... ok
+test string::tests::substring_nulls_and_multibyte ... ok
+test cardinality::tests::analyzer_refuses_sql_array_repeat ... ok
+test datetime::tests::hour_minute_second_accept_time_and_timestamp ... ok
+test cardinality::tests::analyzer_allows_under_ceiling ... ok
+test datetime::tests::trunc_accepts_large_utf8_format_without_panic ... ok
+test datetime::tests::extractors_accept_strings_and_timestamps_like_spark ... ok
+test datetime::tests::extreme_date32_year_extractor_no_panic ... ok
+test analyzer::tests::map_subscript_is_untouched ... ok
+test datetime::tests::dayofweek_and_weekday_use_spark_indexing ... ok
+test analyzer::tests::overlay_len_minus_one_matches_three_arg ... ok
+test datetime::tests::extractors_propagate_null ... ok
+test string::tests::concat_array_any_null_propagates_per_row ... ok
+test cardinality::tests::analyzer_refuses_const_arithmetic_and_cast_counts ... ok
+test datetime::tests::extractors_match_spark_on_a_rich_date ... ok
+test string::tests::substring_spark_edge_positions ... ok
+test collection::tests::element_at_map_returns_plain_value ... ok
+test collection::tests::get_item_array_zero_based_and_map_by_key ... ok
+test collection::tests::element_at_array_is_one_based ... ok
+test datetime::tests::date_trunc_matches_spark ... ok
+test datetime::tests::weekofyear_and_yearofweek_follow_iso_8601 ... ok
+test datetime::tests::chrono_boundary_date32_add_months_computes ... ok
+test datetime::tests::make_date_builds_valid_dates_and_nulls_invalid ... ok
+test datetime::tests::add_months_matches_spark_end_of_month_semantics ... ok
+test datetime::tests::trunc_matches_spark_and_nulls_invalid_formats ... ok
+test datetime::tests::date_format_matches_spark_on_the_dim_dates_patterns ... ok
+
+test result: ok. 62 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_iceberg-f9cf2c9f1e12a085)
+
+running 242 tests
+test catalog::tests::catalog_listing_strategy_is_list_on_access ... ok
+test catalog::tests::classify_absolute_path_with_colon_after_slash_stays_local_fs ... ok
+test catalog::metadata_projection::tests::full_identity_projection_is_noop ... ok
+test catalog::tests::classify_file_scheme_selects_local_fs ... ok
+test catalog::tests::classify_empty_location_fails_loud ... ok
+test catalog::metadata_projection::tests::out_of_range_projection_errors ... ok
+test catalog::tests::classify_bare_path_selects_local_fs ... ok
+test catalog::tests::classify_s3_scheme_selects_object_store ... ok
+test catalog::tests::classify_s3a_scheme_selects_object_store ... ok
+test catalog::metadata_projection::tests::empty_projection_yields_zero_field_plan ... ok
+test catalog::tests::classify_relative_path_fails_loud ... ok
+test catalog::tests::classify_single_slash_s3_scheme_fails_loud ... ok
+test catalog::tests::classify_single_slash_s3a_scheme_fails_loud ... ok
+test catalog::tests::classify_unknown_scheme_fails_loud ... ok
+test catalog::metadata_projection::tests::partial_projection_keeps_named_fields_in_order ... ok
+test catalog::tests::fork_patch_in_effect_deletefilter_is_public ... ok
+test catalog::tests::factory_for_local_is_local_fs ... ok
+test catalog::tests::factory_for_s3_is_opendal_s3 ... ok
+test catalog::metadata_projection::tests::empty_projection_preserves_row_count_over_real_batches ... ok
+test catalog::tests::glue_catalog_blank_warehouse_names_the_key ... ok
+test catalog::tests::glue_catalog_missing_warehouse_names_the_key ... ok
+test catalog::metadata_projection::tests::reordered_scan_schema_still_binds_projected_columns_by_name ... ok
+test catalog::tests::mirror_namespace_location_keys_is_unidirectional_and_non_clobbering ... ok
+test catalog::tests::prop_key_names_sorted_keys_only ... ok
+test catalog::tests::resolve_namespace_location_covers_all_key_shapes ... ok
+test fork_pin_tests::fork_pin_plan_commit_base_load_occ_contract ... ok
+test catalog::tests::drop_namespace_from_provider_is_zero_list ... ok
+test catalog::tests::invalidate_adds_new_namespace_to_df_provider ... ok
+test catalog::tests::catalog_ops_emit_named_spans ... ok
+test catalog::tests::full_rebuild_lists_every_namespace ... ok
+test catalog::tests::empty_invalidate_is_noop_not_full_rebuild ... ok
+test catalog::tests::incremental_provider_preserves_oob_staleness_residual ... ok
+test catalog::tests::datafusion_ctas_with_data_is_rejected_by_iceberg ... ok
+test catalog::tests::invalidate_after_live_table_drop_removes_df_name ... ok
+test catalog::tests::s3tables_catalog_missing_arn_names_the_key ... ok
+test catalog::tests::s3tables_catalog_blank_arn_names_the_key ... ok
+test write::concurrency::tests::config_map_hyphen_and_underscore ... ok
+test write::concurrency::tests::default_is_four ... ok
+test write::concurrency::tests::parse_rejects_zero_and_non_integer ... ok
+test write::file_scoped_rewrite::tests::config_map_default_and_underscore ... ok
+test write::file_scoped_rewrite::tests::filter_tasks_keeps_only_allowlisted_paths ... ok
+test write::file_scoped_rewrite::tests::filter_tasks_nonempty_refuses_allowlist_miss ... ok
+test catalog::tests::rebuild_same_catalog_heals_oob_and_stays_repark_provider ... ok
+test write::file_scoped_rewrite::tests::filter_tasks_nonempty_refuses_partial_allowlist_miss ... ok
+test catalog::tests::invalidate_preserves_sibling_schema_arc_identity ... ok
+test write::file_scoped_rewrite::tests::parse_true_false ... ok
+test write::idents::tests::path_escape_probes_match_shared_table ... ok
+test write::idents::tests::probe_tables_lockstep_frozen_with_python_ssot ... ok
+test write::idents::tests::quote_ident_spark_doubles_embedded_quotes ... ok
+test write::idents::tests::spark_injection_probes_are_single_quoted_tokens ... ok
+test catalog::tests::invalidate_one_namespace_is_o1_not_o_databases ... ok
+test catalog::tests::rebuild_with_different_catalog_arc_rebinds_provider ... ok
+test write::append::tests::append_partitioned_single_value_stamps_datafile_partition ... ok
+test write::append::tests::append_missing_table_errors_loud ... ok
+test catalog::tests::live_list_namespaces_sees_oob_namespace ... ok
+test catalog::tests::oob_namespace_drop_phantoms_until_full_rebuild ... ok
+test write::append::tests::append_schema_mismatch_errors_and_commits_nothing ... ok
+test catalog::tests::invalidate_unregistered_catalog_fails_loud ... ok
+test write::alter::tests::rename_moves_the_table ... ok
+test write::alter::tests::partition_spec_add_unknown_source_refuses ... ok
+test write::alter::tests::schema_injected_commit_failure_leaves_no_partial_state ... ok
+test catalog::tests::invalidate_two_namespaces_is_o_namespaces_not_o_databases ... ok
+test write::merge::parallel_write_tests::max_concurrent_files_zero_is_loud ... ok
+test write::append::tests::append_missing_target_column_rejected_and_commits_nothing ... ok
+test write::alter::tests::schema_make_column_optional ... ok
+test write::append::tests::append_non_parquet_default_rejected ... ok
+test write::append::tests::write_partitioned_data_files_from_stream_aborts_on_midstream_error ... ok
+test write::alter::tests::partition_spec_injected_commit_failure_leaves_no_partial_state ... ok
+test write::alter::tests::partition_spec_add_case_insensitive_source ... ok
+test write::alter::tests::schema_same_batch_add_then_rename_new_column_refuses_loud ... ok
+test write::alter::tests::alter_same_key_set_and_unset_is_atomic_loud ... ok
+test write::alter::tests::schema_multi_change_commits_exactly_once ... ok
+test write::alter::tests::schema_add_column_first_position ... ok
+test write::alter::tests::schema_type_widen_int_to_long_and_narrow_refuses ... ok
+test write::alter::tests::schema_type_widen_float_to_double_and_narrow_refuses ... ok
+test write::append::tests::append_overflowing_cast_rejected_and_commits_nothing ... ok
+test write::alter::tests::unset_absent_key_is_a_no_op ... ok
+test write::alter::tests::schema_type_widen_decimal_precision_and_narrow_refuses ... ok
+test write::alter::tests::partition_spec_multi_change_commits_exactly_once ... ok
+test write::alter::tests::partition_spec_remove_by_transform ... ok
+test catalog::tests::live_list_sees_oob_create_and_drop_while_provider_snapshot_stale ... ok
+test write::alter::tests::partition_spec_double_add_same_field_refuses ... ok
+test write::alter::tests::alter_mixed_injected_second_commit_failure_leaves_no_partial_state ... ok
+test catalog::tests::listing_cost_list_tables_cheaper_than_provider_rebuild ... ok
+test write::alter::tests::alter_mixed_disjoint_set_unset_commits_exactly_once ... ok
+test write::alter::tests::set_then_unset_round_trips ... ok
+test write::alter::tests::partition_spec_drop_replace_field_name_case_insensitive ... ok
+test write::merge::streaming_scan_tests::mor_on_v1_table_is_rejected_before_any_write ... ok
+test write::alter::tests::schema_case_insensitive_rename_and_drop ... ok
+test write::merge::streaming_scan_tests::mor_on_v1_transform_partitioned_table_is_still_rejected ... ok
+test write::alter::tests::schema_add_rename_drop_round_trip ... ok
+test write::append::tests::append_unpartitioned_roundtrip_value_and_type ... ok
+test write::append::tests::append_racing_append_both_land ... ok
+test write::merge::streaming_scan_tests::merge_mode_resolves_from_the_table_property ... ok
+test write::append::tests::append_reordered_widening_batch_conforms_by_name_and_roundtrips ... ok
+test write::alter::tests::partition_spec_add_drop_replace_round_trip ... ok
+test write::append::tests::write_partitioned_data_files_conforms_view_typed_batches ... ok
+test write::append::tests::append_snapshot_stamps_engine_operation_id ... ok
+test write::append::tests::public_append_files_trip_serializable_validation_pinned_before_append ... ok
+test write::merge::streaming_scan_tests::register_streaming_target_is_lazy_and_rescannable ... ok
+test write::merge::streaming_tests::parallel_source_error_does_not_finish_sinks ... ok
+test write::merge::streaming_tests::write_stream_into_interleaves_writes_with_source_production ... ok
+test write::merge::streaming_tests::parallel_worker_error_preferred_over_channel_closed ... ok
+test write::merge::streaming_tests::write_stream_into_parallel_round_robin_finishes_all_workers ... ok
+test write::merge::tests::applies_wraps_predicates_in_coalesce ... ok
+test write::merge::tests::delete_clause_shapes_filter_not_projection ... ok
+test write::merge::tests::consume_matched_work_batch_rejects_null_flag_columns ... ok
+test write::merge::tests::deregister_merge_scratch_succeeds_when_registered_then_warns_on_second ... ok
+test write::merge::tests::deregister_merge_scratch_warns_when_deregister_returns_err ... ok
+test write::append::tests::append_empty_input_commits_empty_append_snapshot_java_parity ... ok
+test write::merge::tests::deregister_merge_scratch_warns_when_table_missing ... ok
+test write::merge::tests::expand_star_clauses_rejects_case_ambiguous_source ... ok
+test write::merge::tests::expand_star_clauses_errors_on_missing_source_column ... ok
+test write::merge::tests::generated_sql_quotes_identifiers ... ok
+test write::merge::tests::insert_projection_case_insensitive_columns ... ok
+test write::merge::tests::expand_star_clauses_resolves_by_name ... ok
+test write::merge::tests::insert_projection_positional ... ok
+test write::merge::tests::insert_projection_rejects_duplicate_columns ... ok
+test write::merge::tests::insert_projection_rejects_unexpanded_star ... ok
+test write::merge::tests::insert_projection_validates_columns ... ok
+test write::merge::tests::insert_sql_uses_clause_id_not_oc2_prior_chain ... ok
+test write::merge::tests::merge_sql_keys_identity_on_file_and_pos ... ok
+test write::merge::tests::qi1_merge_quote_ident_joins_spark_injection_battery ... ok
+test write::merge::tests::require_non_null_i64_rejects_null ... ok
+test write::merge::tests::rewrite_case_encodes_clause_order ... ok
+test write::merge::tests::rewrite_column_case_insensitive_assignment ... ok
+test write::merge::tests::expand_star_clauses_resolves_source_case_insensitively ... ok
+test write::merge::tests::rewrite_sql_drops_in_list_when_allowlisted_else_path_semijoin ... ok
+test write::merge::occ_tests::commit_rewrite_path_rejects_conflicting_concurrent_append ... ok
+test write::merge::tests::sql_literal_escapes_quotes ... ok
+test write::merge::tests::stage_b_path_intern_shares_arc_across_pairs ... ok
+test write::merge::tests::validate_update_columns_case_insensitive ... ok
+test write::merge::tests::validate_update_columns_rejects_case_insensitive_duplicates ... ok
+test write::merge::tests::validate_update_columns_rejects_unexpanded_star ... ok
+test write::name_resolution::tests::absent_target_column_is_missing ... ok
+test write::name_resolution::tests::colliding_source_columns_are_ambiguous_naming_all ... ok
+test write::name_resolution::tests::differently_cased_name_resolves_case_insensitively ... ok
+test catalog::tests::insert_into_precreated_table_round_trips ... ok
+test write::name_resolution::tests::exact_case_name_resolves_uniquely ... ok
+test write::merge::occ_tests::commit_insert_only_rejects_conflicting_concurrent_append ... ok
+test write::append::tests::append_midflight_commit_conflict_retries_and_both_appends_land ... ok
+test write::merge::occ_tests::commit_rewrite_path_no_concurrency_commits ... ok
+test write::merge::occ_tests::commit_rewrite_path_rejects_conflicting_concurrent_delete ... ok
+test write::merge::occ_tests::commit_insert_only_no_concurrency_appends_both_rows ... ok
+test write::append::tests::append_case_insensitive_column_match_conforms_and_roundtrips ... ok
+test write::append::tests::append_duplicate_column_batch_rejected_and_commits_nothing ... ok
+test write::overwrite::tests::parse_isolation_absent_is_snapshot ... ok
+test write::overwrite::tests::positional_map_all_columns_arity_mismatch_refuses ... ok
+test write::append::tests::append_case_ambiguous_columns_rejected_naming_both ... ok
+test write::overwrite::tests::parse_isolation_invalid_is_loud ... ok
+test write::overwrite::tests::positional_map_column_list_ambiguous_field_refuses ... ok
+test write::overwrite::tests::positional_map_column_list_null_fills_unmentioned_optional ... ok
+test write::overwrite::tests::positional_map_column_list_arity_mismatch_refuses ... ok
+test write::overwrite::tests::positional_map_column_list_duplicate_target_refuses ... ok
+test write::overwrite::tests::positional_map_column_list_required_omit_refuses ... ok
+test write::overwrite::tests::positional_map_reordered_columns_keep_permuted_values ... ok
+test write::overwrite::tests::positional_map_column_list_unknown_name_refuses ... ok
+test write::position_delete::tests::sorts_pairs_by_file_then_position ... ok
+test write::position_delete::tests::position_delete_pair_path_is_arc_shared ... ok
+test write::scan_concurrency::tests::config_map_hyphen_and_underscore ... ok
+test write::overwrite::tests::parse_isolation_none_disables_validates ... ok
+test write::scan_concurrency::tests::unset_default_is_none ... ok
+test write::scan_concurrency::tests::parse_rejects_zero_and_non_integer ... ok
+test write::overwrite::tests::parse_isolation_snapshot_case_insensitive ... ok
+test write::scan_prune::tests::expression_only_yields_empty ... ok
+test write::scan_prune::tests::extracts_simple_equality ... ok
+test write::append::tests::append_partitioned_null_key_lands_null_partition_slot ... ok
+test write::overwrite::tests::parse_isolation_serializable ... ok
+test write::scan_prune::tests::extracts_and_chain_skips_expression ... ok
+test write::scan_prune::tests::null_safe_equality_skips_all ... ok
+test write::scan_prune::tests::or_skips_all ... ok
+test write::writer_props::tests::absent_codec_defaults_to_zstd ... ok
+test write::scan_concurrency::tests::extension_round_trip_through_session_config ... ok
+test write::writer_props::tests::accepted_codecs_case_insensitive ... ok
+test write::writer_props::tests::uncompressed_escape_hatch ... ok
+test write::writer_props::tests::bad_level_is_loud ... ok
+test write::writer_props::tests::unknown_codec_is_loud_with_property_and_accepted_set ... ok
+test write::append::tests::append_partitioned_scan_prunes_planned_files_to_matching_partition ... ok
+test write::merge::parallel_write_tests::serial_and_parallel_write_same_row_count ... ok
+test write::writer_props::tests::zstd_level_is_honored_when_present ... ok
+test write::merge::occ_tests::commit_row_delta_rejects_conflicting_concurrent_append ... ok
+test write::writer_props::tests::unknown_codec_on_table_fails_loud_at_write ... ok
+test write::merge::occ_tests::commit_row_delta_commits_deletes_and_data_without_concurrency ... ok
+test write::merge::occ_tests::commit_row_delta_rejects_position_delete_on_a_removed_data_file ... ok
+test write::merge::occ_tests::commit_row_delta_rejects_conflicting_concurrent_delete_file ... ok
+test write::writer_props::tests::merge_data_file_path_carries_codec_in_footer ... ok
+test write::merge::occ_tests::commit_insert_only_allows_nonconflicting_concurrent_delete ... ok
+test catalog::tests::glue_catalog_constructs_and_passes_props_through ... ok
+test write::overwrite::tests::commit_overwrite_invalid_isolation_refuses_before_commit ... ok
+test catalog::tests::s3tables_catalog_constructs_and_passes_props_through ... ok
+test catalog::tests::glue_and_s3tables_spans_never_record_secret_values ... ok
+test write::append::tests::append_partitioned_multi_value_fanout_splits_files_and_roundtrips ... ok
+test catalog::tests::create_empty_then_insert_is_the_working_ctas_path ... ok
+test write::merge::occ_tests::commit_rewrite_path_allows_nonconflicting_concurrent_delete ... ok
+test write::merge::tests::rewrite_projection_20_clauses_100_cols_generation_time ... ok
+test write::append::tests::append_bucket_partition_routes_by_fork_hash ... ok
+test write::writer_props::tests::uncompressed_property_writes_uncompressed_footer ... ok
+test write::writer_props::tests::default_table_writes_zstd_footer_on_append ... ok
+test write::overwrite::tests::commit_overwrite_replace_all_empty_files_wipes ... ok
+test write::writer_props::tests::position_delete_file_carries_codec_in_footer ... ok
+test write::append::tests::append_a1_acceptance_identity_partitioned_end_to_end ... ok
+test write::append::tests::append_commit_seam_racing_append_both_land ... ok
+test write::overwrite::tests::commit_overwrite_replace_all_swaps_rows_and_stamps_op_id ... ok
+test write::merge::streaming_scan_tests::write_position_deletes_sorts_reverse_ordered_pairs_onto_disk ... ok
+test write::overwrite::tests::commit_overwrite_serializable_rejects_concurrent_append ... ok
+test write::writer_props::tests::zstd_and_uncompressed_round_trip_equal_values_and_schema ... ok
+test write::merge::streaming_scan_tests::merge_empty_target_streams_all_inserts ... ok
+test write::overwrite::tests::commit_overwrite_none_commits_without_validates ... ok
+test write::overwrite::tests::commit_overwrite_snapshot_tolerates_concurrent_append ... ok
+test write::merge::streaming_scan_tests::multi_not_matched_clause_first_match_and_3vl ... ok
+test write::writer_props::tests::zstd_file_smaller_than_half_uncompressed_on_synthetic_numeric ... ok
+test write::merge::streaming_scan_tests::mor_equi_key_residual_upsert_correct ... ok
+test write::merge::streaming_tests::parallel_finish_is_faster_than_serial_under_injected_latency ... ok
+test write::merge::streaming_scan_tests::mor_upsert_target_scan_pass_count_is_two ... ok
+test write::merge::streaming_scan_tests::cow_file_scoped_off_does_not_push_residual ... ok
+test write::merge::streaming_scan_tests::mor_merge_emits_five_phase_spans_with_commit_last ... ok
+test write::merge::streaming_scan_tests::merge_bucket_partition_key_changing_update_reroutes_survivor ... ok
+test write::merge::streaming_scan_tests::multi_not_matched_with_partial_target_match ... ok
+test write::merge::streaming_scan_tests::merge_bucket_partitioned_routes_by_fork_hash ... ok
+test write::merge::streaming_scan_tests::mor_not_matched_insert_writes_data_file_and_no_delete_file ... ok
+test write::merge::streaming_scan_tests::mor_matched_delete_position_deletes_row_and_leaves_data_files ... ok
+test write::merge::streaming_scan_tests::scan_pruning_false_does_not_push_residual ... ok
+test write::merge::streaming_scan_tests::mor_matched_update_deletes_old_row_and_writes_new_values ... ok
+test write::merge::streaming_scan_tests::mor_bucket_partitioned_stamps_deletes_with_the_owning_transformed_partition ... ok
+test write::merge::streaming_scan_tests::mor_bucket_partition_key_changing_update_splits_across_old_and_new_buckets ... ok
+test write::merge::streaming_scan_tests::mor_null_partition_source_row_routes_to_the_none_slot ... ok
+test write::merge::streaming_scan_tests::mor_identity_partitioned_stamps_deletes_with_the_owning_partition ... ok
+test write::merge::streaming_scan_tests::cow_equi_key_residual_keeps_colocated_survivors ... ok
+test write::merge::streaming_scan_tests::mor_deletes_scope_to_their_own_data_file_across_a_multi_file_scan ... ok
+test write::merge::streaming_scan_tests::merge_streams_multi_file_target_identity_holds_across_files ... ok
+test write::merge::streaming_scan_tests::position_delete_file_is_sorted_on_disk_and_coalesced ... ok
+test write::merge::streaming_scan_tests::merge_cardinality_uses_file_and_pos_not_file_alone ... ok
+test write::merge::streaming_scan_tests::cow_discovery_path_allocs_scale_with_files_not_matched_rows ... ok
+test write::merge::streaming_scan_tests::resolve_affected_data_files_local_fs_is_sub_10pct_of_merge_budget ... ok
+test write::merge::streaming_scan_tests::multi_clause_first_match_survivors_cow_and_mor ... ok
+test write::merge::streaming_scan_tests::multi_clause_null_predicate_first_match_3vl_cow_and_mor ... ok
+test write::merge::streaming_scan_tests::sequential_cow_path_semijoin_same_session_ctx ... ok
+test write::merge::streaming_scan_tests::sequential_mor_merges_on_a_transform_table_keep_original_ordinals_and_stamps ... ok
+test write::merge::streaming_scan_tests::cow_file_scoped_rewrite_opens_only_affected_files_and_keeps_survivors ... ok
+test write::merge::streaming_scan_tests::mor_and_cow_transform_partitioned_merges_are_scan_equivalent_but_divergent ... ok
+test write::merge::streaming_scan_tests::mor_and_cow_merges_are_scan_equivalent_but_physically_different ... ok
+test write::merge::streaming_scan_tests::sequential_mor_merges_use_original_physical_ordinals ... ok
+
+test result: ok. 242 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.96s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_ml-fb3507ce0905c5ea)
+
+running 35 tests
+test cholesky::tests::cholesky_refuses_buffer_len_mismatch ... ok
+test cholesky::tests::cholesky_refuses_dimension_square_overflow ... ok
+test cholesky::tests::cholesky_refuses_singular ... ok
+test cholesky::tests::cholesky_refuses_zero_dimension ... ok
+test cholesky::tests::cholesky_refuses_short_rhs ... ok
+test cholesky::tests::cholesky_solves_identity ... ok
+test cholesky::tests::cholesky_solves_well_conditioned_2x2 ... ok
+test cholesky::tests::forward_solve_refuses_short_y ... ok
+test error::tests::singular_message_points_at_the_in_repo_ml_authority ... ok
+test kmeans::tests::default_init_mode_errors ... ok
+test kmeans::tests::k_zero_and_k_gt_n_loud ... ok
+test kmeans::tests::max_iter_zero_returns_init_centers ... ok
+test kmeans::tests::nearest_center_empty_loud ... ok
+test kmeans::tests::non_finite_feature_loud ... ok
+test kmeans::tests::random_indices_distinct ... ok
+test kmeans::tests::squared_distance_width_mismatch_loud ... ok
+test linear_regression::tests::elastic_net_and_standardization_gates ... ok
+test kmeans::tests::two_blob_lloyd ... ok
+test kmeans::tests::random_center_indices_k_equals_n_terminates_with_full_cover ... ok
+test linear_regression::tests::empty_stream_loud ... ok
+test linear_regression::tests::intercept_only_recovers_mean ... ok
+test linear_regression::tests::multi_feature_well_conditioned ... ok
+test linear_regression::tests::no_intercept ... ok
+test linear_regression::tests::non_finite_feature_and_label_loud ... ok
+test linear_regression::tests::observe_dense_batch_matches_row_wise ... ok
+test linear_regression::tests::p_cap_loud ... ok
+test linear_regression::tests::perfect_line_with_intercept ... ok
+test linear_regression::tests::singular_duplicate_features_loud ... ok
+test linear_regression::tests::width_mismatch_loud ... ok
+test logistic_regression::tests::label_outside_unit_interval_loud ... ok
+test logistic_regression::tests::max_iter_zero_returns_cold_start ... ok
+test logistic_regression::tests::negative_tol_loud ... ok
+test logistic_regression::tests::non_finite_feature_loud ... ok
+test logistic_regression::tests::width_mismatch_loud ... ok
+test logistic_regression::tests::separable_1d_learns_positive_slope ... ok
+
+test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/_native-b169c75323375285)
+
+running 33 tests
+test column::tests::parse_data_type_rejects_unknown_and_malformed ... ok
+test column::tests::parse_data_type_maps_facade_primitive_cast_vocabulary ... ok
+test column::tests::collapse_identity_alias_chain_peels_same_name_stack ... ok
+test column::tests::collapse_identity_alias_chain_preserves_qualifier_and_metadata ... ok
+test dataframe::tests::arrow_type_key_list_element_simple_string_matches_spark ... ok
+test dataframe::tests::arrow_type_key_deep_list_nesting_is_depth_bounded ... ok
+test dataframe::tests::stream_poll_no_detach_restores_flag_after_panic ... ok
+test fence::tests::fence_stream_poll_passes_through_end_of_stream ... ok
+test fence::tests::fence_stream_poll_converts_panic_to_terminal_arrow_error ... ok
+test fence::tests::fence_with_span_fields_are_static_labels_only ... ok
+test fence::tests::fence_with_span_emits_py_entry_family_and_passes_through ... ok
+test dataframe::tests::analyzed_arrow_schema_native_caches_schema_ref_per_handle ... ok
+test column::expr_tests::expr_sql_substr_zero_matches_spark ... ok
+test column::expr_tests::expr_sql_integer_division_hands_off_float64 ... ok
+test column::expr_tests::call_scalar_substr_zero_matches_spark ... ok
+test fence::tests::fence_converts_string_panic_payload ... ok
+test fence::tests::fence_passes_through_a_non_panicking_body ... ok
+test dataframe::tests::arrow_stream_poll_panic_is_fenced_not_aborting_subprocess_isolated ... ok
+test session::tests::excel_sheet_names_refuses_with_named_unsupported_operation ... ok
+test tests::to_py_err_routes_to_typed_exceptions_subclassing_runtime_error ... ok
+test fence::tests::fence_degrades_non_string_panic_payload_to_stable_label ... ok
+test session::tests::read_excel_refuses_with_named_unsupported_operation ... ok
+test dataframe::tests::streaming_reader_yields_first_batch_before_a_later_error ... ok
+test session::tests::spark_doored_session_resolves_spark_function_and_routes_spark_statement ... ok
+test dataframe::tests::streaming_reader_surfaces_stream_error_with_message_preserved ... ok
+test session::tests::sequential_sessions_share_one_tokio_runtime ... ok
+test session::tests::entry_point_families_emit_py_entry_spans ... ok
+test session::tests::read_postgres_refuses_with_named_unsupported_operation ... ok
+test dataframe::tests::streaming_reader_preserves_multi_batch_values_and_schema ... ok
+test tests::repark_core_error_is_the_repark_common_error_type ... ok
+test fence::tests::fence_converts_str_panic_to_pyspark_exception_with_message_preserved ... ok
+test dataframe::tests::arrow_c_stream_export_is_lazy_and_does_not_materialize_up_front ... ok
+test session::tests::fenced_panic_surfaces_as_pyspark_exception_and_leaves_session_usable ... ok
+
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running tests/bindings.rs (target/debug/deps/bindings-c174538294ff9ee3)
+
+running 21 tests
+test libpython_links ... ok
+test session_constructs_with_builder_knobs ... ok
+test arrow_c_stream_defers_execution_and_does_not_collect_up_front ... ok
+test over_rejects_a_non_window_column ... ok
+test row_number_over_window_numbers_rows_in_order ... ok
+test sql_select_literals_round_trips_and_counts ... ok
+test ta_window_rejects_an_unknown_function ... ok
+test sort_orders_descending_with_nulls_last ... ok
+test arrow_c_stream_streams_values_and_types_end_to_end ... ok
+test aggregate_group_by_sum_names_group_first_then_agg ... ok
+test filter_column_and_filter_sql_keep_matching_rows ... ok
+test arrow_c_stream_exports_a_consumable_stream_with_correct_values ... ok
+test ta_window_ema_over_matches_the_kernel ... ok
+test with_column_applies_a_column_expression ... ok
+test aggregate_count_star_counts_rows_count_col_skips_nulls ... ok
+test with_column_renamed_renames_present_and_noops_absent ... ok
+test date_function_year_extracts_the_calendar_year ... ok
+test join_on_names_merges_the_key_column ... ok
+test config_driven_memory_catalog_registers_through_the_constructor ... ok
+test union_positional_keeps_left_names_by_name_resolves ... ok
+test distinct_dedups_and_distinct_on_keeps_one_per_key ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_spark-a7b93ae97ae5fd12)
+
+running 349 tests
+test alter::tests::is_promotion_target_accepts_long_double_decimal ... ok
+test alter::tests::parse_replace_columns_is_recognized ... ok
+test alter::tests::rewrite_unset_leaves_set_on_table_named_unset ... ok
+test alter::tests::rewrite_unset_still_rewrites_real_unset_tblproperties ... ok
+test alter::tests::generic_dialect_parses_add_column_first_after ... ok
+test alter::tests::rewrite_drop_columns_plural_bare_form ... ok
+test alter::tests::rewrite_drop_columns_plural_paren_form ... ok
+test alter::tests::parse_add_drop_partition_field ... ok
+test alter::tests::rewrite_add_columns_plural_to_multi_add_column ... ok
+test create_table::type_mapping_tests::maps_spark_core_types ... ok
+test call::tests::expr_as_i64_unary_minus_min_refuses_overflow ... ok
+test call::tests::resolve_call_target_requires_system_middle ... ok
+test call::tests::resolve_table_ident_two_and_three_part ... ok
+test create_table::type_mapping_tests::rejects_unsupported_array ... ok
+test insert_overwrite::assignment_type_unit_tests::assignment_types_compatible_matrix ... ok
+test insert_overwrite::assignment_type_unit_tests::cast_may_fail_at_runtime_matrix ... ok
+test extension::tests::configure_installs_repark_sql_config_from_conf_map ... ok
+test extension::tests::configure_refuses_unparsable_conf_value ... ok
+test local_fs_ddl::tests::classifies_local_and_remote ... ok
+test local_fs_ddl::tests::file_url_strips_scheme ... ok
+test create_table::type_mapping_tests::not_null_maps_required_and_default_option_refused ... ok
+test local_fs_ddl::tests::config_map_default_is_false ... ok
+test matrix::matrix_maps_every_surface ... ok
+test matrix::only_the_cross_door_row_claims_the_two_session_profile ... ok
+test matrix::spark_door_absences_are_the_three_declared_ones ... ok
+test merge::tests::keyword_named_column_after_case_then_untouched ... ok
+test merge::tests::defaults_aliases_to_bare_names ... ok
+test merge::tests::lowers_classic_upsert ... ok
+test merge::tests::not_matched_by_source_rejected ... ok
+test merge::tests::quoted_aliases_preserve_quoting ... ok
+test merge::tests::multiplication_star_untouched ... ok
+test merge::tests::star_mixed_with_assignments_rejected ... ok
+test merge::tests::star_forms_lower_to_markers ... ok
+test merge::tests::two_part_target_rejected ... ok
+test metadata_tables::tests::as_of_detected_after_closing_paren ... ok
+test merge::tests::subquery_source_requires_alias ... ok
+test metadata_tables::tests::as_of_timestamp_and_system_forms ... ok
+test metadata_tables::tests::column_ref_is_not_table_reference ... ok
+test metadata_tables::tests::dollar_ident_token_quotes_hostile_names ... ok
+test metadata_tables::tests::describe_is_table_reference_not_write ... ok
+test metadata_tables::tests::dollar_in_base_name_message_shape ... ok
+test metadata_tables::tests::double_quoted_multipart_is_candidate ... ok
+test metadata_tables::tests::candidate_marks_write_and_as_of ... ok
+test metadata_tables::tests::from_list_comma_is_table_reference ... ok
+test metadata_tables::tests::metadata_names_cover_fork_set ... ok
+test metadata_tables::tests::join_and_using_are_table_references ... ok
+test metadata_tables::tests::multi_span_candidates_ordered ... ok
+test metadata_tables::tests::table_ident_from_parts_single_and_nested ... ok
+test metadata_tables::tests::sniff_finds_four_part_and_skips_plain ... ok
+test metadata_tables::tests::truncate_and_create_or_replace_are_write_targets ... ok
+test ref_ddl::tests::empty_ref_name_refuses_loud ... ok
+test ref_ddl::tests::non_ref_returns_none ... ok
+test ref_ddl::tests::parses_alter_create_branch_as_of ... ok
+test ref_ddl::tests::parses_bare_replace_branch ... ok
+test ref_ddl::tests::parses_alter_create_tag_current ... ok
+test ref_ddl::tests::parses_create_or_replace_branch ... ok
+test ref_ddl::tests::parses_retain_and_snapshot_retention ... ok
+test ref_ddl::tests::parses_snapshot_retention_days ... ok
+test ref_ddl::tests::qi1_unquote_ident_undoubles_embedded_quotes ... ok
+test ref_ddl::tests::qi1_ref_name_path_escape_shared_needles ... ok
+test ref_ddl::tests::tag_with_snapshot_retention_refuses ... ok
+test ref_ddl::tests::write_to_branch_sniff_kinds ... ok
+test ref_ddl::tests::write_to_branch_sniff_detects_four_part_insert ... ok
+test ref_ddl::tests::trailing_tokens_after_as_of_or_drop_refuse_loud ... ok
+test router::tests::read_only_set_reaches_p11_refusal ... ok
+test router::tests::multi_statement_still_refuses_before_refuse_arms ... ok
+test dialect::tests::dialect_surfaces_router_refusals ... ok
+test local_fs_ddl::tests::refuses_copy_to_etc_passwd_and_file_scheme_case ... ok
+test tests::ctas::build_ctas_rejects_missing_query_without_panicking ... ok
+test router::tests::select_passthrough_still_executes ... ok
+test extension::tests::register_installs_spark_integer_division_semantics ... ok
+test dialect::tests::dialect_execute_runs_the_spark_router ... ok
+test extension::tests::register_makes_spark_shim_functions_callable ... ok
+test local_fs_ddl::tests::grandfathers_create_external_under_warehouse_root ... ok
+test local_fs_ddl::tests::grandfathers_copy_under_warehouse_root ... ok
+test tests::ctas::ctas_location_check_precedes_source_execution ... ok
+test local_fs_ddl::tests::allow_conf_true_permits_outside ... ok
+test local_fs_ddl::tests::refuses_copy_to_outside_warehouse_by_default ... ok
+test router::tests::truncate_refusal_is_verbatim_v1 ... ok
+test tests::ctas::ctas_explicit_column_list_rejected_spark_parity ... ok
+test extension::tests::register_composes_the_ta_extension_window_udfs ... ok
+test tests::ctas::ctas_location_less_namespace_fails_loud_for_non_memory_catalog ... ok
+test tests::ctas::ctas_malformed_single_slash_namespace_location_fails_loud ... ok
+test tests::ctas::ctas_explicit_column_list_rejected_still_pinned ... ok
+test tests::ctas::ctas_path_escape_table_ident_refuses_on_shipping_path ... ok
+test tests::ctas::ctas_path_escape_namespace_ident_refuses_on_shipping_path ... ok
+test tests::ctas::ctas_multi_batch_midstream_failure_leaves_no_orphan ... ok
+test local_fs_ddl::tests::refuses_create_external_local_outside_warehouse ... ok
+test tests::call::call_unknown_procedure_refuses_loud_listing_supported ... ok
+test tests::ctas::ctas_plain_source_failure_leaves_no_orphan ... ok
+test tests::call::call_mixed_named_and_positional_refuses ... ok
+test tests::call::call_refuses_non_local_catalog ... ok
+test tests::call::call_remove_orphan_files_refuses_loud_with_fork_queue ... ok
+test spark_ast::tests::passthrough_integer_division_is_double ... ok
+test tests::ctas::ctas_column_list_with_partitioned_by_reports_schema_error_first ... ok
+test spark_ast::tests::order_by_limit_returns_spark_rows ... ok
+test spark_ast::tests::order_by_defaults_are_spark ... ok
+test tests::alter::alter_column_drop_not_null ... ok
+test tests::ctas::non_ctas_passes_through ... ok
+test tests::ctas::ctas_empty_select_creates_empty_unpartitioned_table ... ok
+test tests::ctas::select_union_of_integer_division_still_double ... ok
+test spark_ast::tests::window_order_by_gets_spark_default ... ok
+test tests::create_table::column_def_create_partitioned_by_identity ... ok
+test tests::describe_show::describe_namespace_extended_empty_properties_render_as_empty_string ... ok
+test tests::describe_show::describe_namespace_lone_trailing_extended_is_the_name ... ok
+test tests::describe_show::describe_namespace_name_row_is_quoted_like_spark ... ok
+test tests::describe_show::describe_namespace_missing_raises_schema_not_found_as_analysis ... ok
+test tests::describe_show::describe_namespace_extended_redaction_truth_table ... ok
+test tests::describe_show::describe_namespace_extended_renders_property_values_raw ... ok
+test tests::describe_show::show_namespace_rows_are_quoted_like_spark_and_keep_catalog_order ... ok
+test tests::describe_show::describe_namespace_extended_adds_the_properties_row ... ok
+test tests::alter::alter_replace_partition_field_and_transforms ... ok
+test tests::describe_show::describe_namespace_non_two_part_name_fails_loud ... ok
+test spark_ast::tests::passthrough_rewrites_are_idempotent_across_reanalysis ... ok
+test tests::describe_show::describe_database_and_schema_synonyms_are_identical ... ok
+test tests::describe_show::describe_namespace_omits_rows_whose_property_is_absent ... ok
+test tests::describe_show::describe_namespace_unknown_catalog_fails_loud ... ok
+test tests::call::call_rewrite_sort_strategy_refuses_loud ... ok
+test spark_ast::tests::explicit_null_placement_is_honoured ... ok
+test tests::describe_show::describe_namespace_returns_spark_column_shape_and_rows ... ok
+test tests::call::call_expire_retain_last_zero_refuses_loud ... ok
+test tests::alter::alter_set_tblproperties ... ok
+test tests::describe_show::show_namespaces_unknown_catalog_fails_loud ... ok
+test tests::describe_show::show_namespaces_without_a_catalog_or_with_a_nested_name_fails_loud ... ok
+test tests::describe_show::show_namespaces_returns_spark_column_shape_and_real_namespaces ... ok
+test tests::ctas::ctas_format_version_two_consumed_others_rejected ... ok
+test tests::describe_show::show_namespaces_intercept_shadows_no_other_statement ... ok
+test tests::describe_show::describe_table_is_not_shadowed_by_the_namespace_intercept ... ok
+test tests::alter::alter_unsupported_forms_refuse_loud ... ok
+test tests::catalog_ops::drop_table ... ok
+test tests::create_table::column_def_create_schema_equals_ctas_twin ... ok
+test tests::alter::alter_unset_tblproperties ... ok
+test tests::ctas::ctas_parses_using_and_threads_tblproperties ... ok
+test tests::alter::alter_partition_transforms_drop_by_transform_and_replace_required_refuse ... ok
+test tests::call::call_expire_older_than_timestamp_string ... ok
+test tests::describe_show::show_schemas_and_databases_synonyms_are_identical ... ok
+test tests::ctas::ctas_if_not_exists_is_idempotent ... ok
+test tests::ctas::ctas_resolves_location_uri_only_namespace_the_glue_db_shape ... ok
+test tests::alter::alter_rename_table ... ok
+test tests::alter::alter_unsupported_comment_move_and_after_missing_refuse ... ok
+test tests::ctas::ctas_integer_division_lands_as_double ... ok
+test tests::ctas::ctas_multi_batch_source_streams_all_values_and_types ... ok
+test tests::alter::alter_set_tblproperties_not_misclassified_as_branch_ddl ... ok
+test tests::alter::alter_add_column_first ... ok
+test tests::alter::alter_drop_columns_bare_plural_form ... ok
+test tests::alter::alter_add_columns_plural_form ... ok
+test tests::insert_overwrite::empty_insert_overwrite_case_ambiguous_column_refuses ... ok
+test tests::create_table::column_def_temporary_refuse_testing_create_ref_and_types ... ok
+test tests::alter::alter_rename_table_then_add_column_same_statement ... ok
+test tests::ctas::ctas_from_temp_view_into_iceberg_round_trips ... ok
+test tests::ctas::ctas_prefers_location_over_location_uri_when_both_set ... ok
+test tests::describe_show::show_namespaces_like_filters_through_sql ... ok
+test tests::ctas::ctas_or_replace_success_replaces_rows ... ok
+test tests::alter::alter_replace_columns_float_decimal_promote_and_traps ... ok
+test tests::create_table::column_def_or_replace_wipe_if_not_exists_and_like ... ok
+test tests::alter::alter_column_case_insensitive_rename_and_drop ... ok
+test tests::ctas::ctas_bare_integer_division_lands_as_double ... ok
+test tests::create_table::column_def_location_and_ctas_temporary_refuse ... ok
+test tests::ctas::rtas_explicit_column_list_rejected_and_preserves_existing ... ok
+test tests::alter::alter_column_type_widen_and_narrow_refuse ... ok
+test tests::ctas::ctas_union_of_integer_division_lands_as_double ... ok
+test tests::ctas::ctas_partitioned_multi_batch_source_streams_all_rows ... ok
+test tests::dml::bug001_mor_delete_refuses_mixed_case_mode_property ... ok
+test tests::ctas::ctas_union_zero_divisor_is_null_double ... ok
+test tests::alter::alter_if_not_exists_after_case_and_rename_then_set_props ... ok
+test tests::alter::alter_column_type_float_double_and_decimal_widen_twins ... ok
+test tests::ctas::ctas_or_replace_source_failure_leaves_original_intact ... ok
+test tests::insert_overwrite::tighten_batch_nullability_preserves_field_and_schema_metadata ... ok
+test tests::insert_overwrite::empty_insert_overwrite_cast_launder_does_not_wipe ... ok
+test tests::ctas::ctas_or_replace_failed_publish_leaves_original_current ... ok
+test tests::ctas::ctas_union_decimal_division_stays_decimal ... ok
+test tests::call::call_table_three_part_ident ... ok
+test tests::local_fs_ddl::free_sql_array_repeat_over_ceiling_refuses ... ok
+test tests::call::call_rollback_non_ancestor_refuses_loud ... ok
+test tests::alter::alter_replace_columns_promote_and_identity_trap ... ok
+test tests::local_fs_ddl::copy_to_local_outside_warehouse_refuses_by_default ... ok
+test tests::alter::alter_add_rename_drop_column_schema_and_read_after ... ok
+test tests::insert_overwrite::empty_insert_overwrite_partition_refuses_full_wipe ... ok
+test tests::local_fs_ddl::bare_copy_to_applies_without_collect ... ok
+test tests::merge::merge_output_clause_rejected ... ok
+test tests::dml::bug001_mor_delete_refuses_when_table_aliased ... ok
+test tests::ctas::ctas_three_branch_mixed_union_reconciles_to_double ... ok
+test tests::dml::bug001_mor_update_refuses_unpartitioned_after_partition_evolution ... ok
+test tests::insert_overwrite::empty_insert_into_does_not_wipe ... ok
+test tests::call::call_expire_positional_args ... ok
+test tests::local_fs_ddl::copy_to_applies_exactly_once_across_a_later_collect ... ok
+test tests::call::call_expire_snapshots_keeps_branch_reachable ... ok
+test tests::insert_overwrite::empty_insert_overwrite_column_list_incompatible_does_not_wipe ... ok
+test tests::merge::merge_unparsable_form_gets_targeted_error ... ok
+test tests::insert_overwrite::insert_overwrite_partition_nonempty_refuses_whole_table_replace ... ok
+test tests::insert_overwrite::empty_insert_overwrite_runtime_empty_predicate_cast_does_not_wipe ... ok
+test tests::dml::bug001_mor_delete_allows_never_evolved_unpartitioned ... ok
+test tests::namespace_ddl::sql_create_database_synonym_creates_namespace ... ok
+test tests::local_fs_ddl::copy_to_under_warehouse_root_grandfathers ... ok
+test tests::namespace_ddl::create_and_drop_namespace ... ok
+test tests::dml::bug001_mor_delete_refuses_unpartitioned_after_partition_evolution ... ok
+test tests::namespace_ddl::sql_create_namespace_bad_property_value_fails_loud ... ok
+test tests::insert_overwrite::empty_insert_overwrite_aggregate_cast_launder_does_not_wipe ... ok
+test tests::call::call_rollback_to_snapshot_restores_multiset ... ok
+test tests::insert_overwrite::empty_insert_overwrite_join_key_cast_launder_does_not_wipe ... ok
+test tests::namespace_ddl::sql_create_namespace_unsupported_clause_fails_loud ... ok
+test tests::namespace_ddl::sql_create_namespace_comment_round_trips ... ok
+test tests::namespace_ddl::sql_create_namespace_number_property_value_round_trips ... ok
+test tests::normalize::qi1_path_escape_shared_probes_refuse ... ok
+test tests::normalize::reject_path_escape_ident_blocks_dotdot_and_separators ... ok
+test tests::insert_overwrite::empty_insert_overwrite_incompatible_schema_does_not_wipe ... ok
+test tests::dml::delete_all_rows_empties_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_into_keyword_wipes_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_column_list_wipes_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_limit_zero_wipes_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_order_by_limit_zero_wipes_table ... ok
+test tests::ctas::ctas_union_double_stays_double_and_modulo_stays_integer ... ok
+test tests::insert_overwrite::empty_insert_overwrite_scalar_subquery_cast_launder_does_not_wipe ... ok
+test tests::insert_overwrite::empty_insert_overwrite_still_wipes_after_bug001_materialize ... ok
+test tests::merge::merge_star_missing_source_column_errors ... ok
+test tests::dml::bug001_mor_delete_allows_partitioned_after_evolution ... ok
+test tests::partitioned_ctas::ctas_partitioned_by_malformed_clause_shapes_rejected ... ok
+test tests::partitioned_ctas::ctas_partitioned_by_duplicate_column_rejected_loud ... ok
+test tests::partitioned_ctas::ctas_partitioned_by_nested_reference_rejected ... ok
+test tests::alter::alter_add_drop_partition_field_and_write_after_evolution ... ok
+test tests::insert_overwrite::empty_insert_overwrite_column_list_case_insensitive_wipes ... ok
+test tests::partitioned_ctas::ctas_partitioned_by_typed_column_rejected_spark_parity ... ok
+test tests::namespace_ddl::sql_create_namespace_location_stores_both_location_keys ... ok
+test tests::partitioned_ctas::ctas_partitioned_location_check_precedes_source_execution ... ok
+test tests::insert_overwrite::insert_overwrite_source_becomes_empty_between_probe_and_exec_does_not_wipe ... ok
+test tests::partitioned_ctas::ctas_partition_transform_zero_width_and_unknown_rejected ... ok
+test tests::partitioned_ctas::ctas_partitioned_by_unknown_column_rejected_before_source_runs ... ok
+test tests::insert_overwrite::empty_computed_insert_overwrite_into_partitioned_still_wipes ... ok
+test tests::namespace_ddl::sql_create_namespace_explicit_location_uri_is_never_overwritten ... ok
+test tests::dml::delete_merge_on_read_mode ... ok
+test tests::insert_overwrite::empty_insert_overwrite_select_where_false_wipes_table ... ok
+test tests::partitioned_ctas::ctas_partitioned_empty_select_creates_empty_partitioned_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_type_mismatch_same_arity_does_not_wipe ... ok
+test tests::normalize::unsafe_cast_walk_fires_on_fallible_casts_in_every_position ... ok
+test tests::insert_overwrite::empty_insert_overwrite_window_cast_launder_does_not_wipe ... ok
+test tests::namespace_ddl::sql_create_namespace_if_not_exists_is_idempotent ... ok
+test tests::namespace_ddl::sql_create_namespace_with_dbproperties_round_trips ... ok
+test tests::insert_overwrite::empty_insert_overwrite_table_keyword_wipes ... ok
+test tests::insert_overwrite::empty_insert_overwrite_predicate_coercion_cast_still_wipes ... ok
+test tests::insert_overwrite::empty_insert_overwrite_with_cte_wipes_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_self_scan_wipes_table ... ok
+test tests::insert_overwrite::empty_insert_overwrite_mor_table_uses_overwrite_not_delete_shape ... ok
+test tests::namespace_ddl::sql_create_schema_synonym_with_location_round_trips ... ok
+test tests::dml::update_merge_on_read_mode ... ok
+test tests::namespace_ddl::sql_create_namespace_location_lets_ctas_land_under_it ... ok
+test tests::namespace_ddl::sql_create_namespace_with_properties_round_trips ... ok
+test tests::dml::update_where_copy_on_write ... ok
+test tests::ref_ddl::branch_sniff_skips_table_name_segments ... ok
+test tests::dml::delete_where_copy_on_write ... ok
+test tests::partitioned_ctas::ctas_without_partitioned_by_stays_unpartitioned ... ok
+test tests::merge::merge_update_set_casefold_duplicate_errors_without_write ... ok
+test tests::call::call_expire_snapshots_keeps_tag_reachable ... ok
+test tests::router::bug010_multi_statement_refuses_parse_class ... ok
+test tests::ref_ddl::two_part_branch_named_table_write_disambiguates_by_resolution ... ok
+test tests::insert_overwrite::empty_insert_overwrite_projection_coercion_cast_still_wipes ... ok
+test tests::insert_overwrite::empty_insert_overwrite_null_literal_cast_still_wipes ... ok
+test tests::partitioned_ctas::ctas_mixed_identity_and_transform_spec ... ok
+test tests::insert_overwrite::insert_overwrite_replaces_all ... ok
+test tests::partitioned_ctas::ctas_bucket_partition_spec_and_fork_hash_routing ... ok
+test tests::router::erroring_select_resolves_at_sql_and_errors_only_on_collect ... ok
+test tests::insert_overwrite::insert_overwrite_table_keyword_form ... ok
+test tests::partitioned_ctas::ctas_or_replace_without_clause_resets_to_unpartitioned ... ok
+test tests::insert_overwrite::empty_insert_overwrite_stringify_cast_still_wipes ... ok
+test tests::partitioned_ctas::ctas_partitioned_single_column_manifest_pruning_and_rows ... ok
+test tests::partitioned_ctas::ctas_partitioned_on_strict_catalog_lands_under_location ... ok
+test tests::partitioned_ctas::ctas_partitioned_two_columns_spec_and_manifest_values ... ok
+test tests::insert_overwrite::empty_insert_overwrite_try_cast_still_wipes ... ok
+test tests::ref_ddl::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud ... ok
+test tests::router::bug010_trailing_semicolon_whitespace_comments_allowed ... ok
+test tests::partitioned_ctas::ctas_or_replace_carries_new_partition_spec ... ok
+test tests::partitioned_ctas::ctas_partitioned_unsorted_source_fanout_one_file_set_per_partition ... ok
+test tests::partitioned_ctas::ctas_truncate_str_partition_spec_and_routing ... ok
+test tests::insert_overwrite::insert_overwrite_column_list_nonempty_replaces_via_materialize ... ok
+test tests::merge::merge_insert_only_appends_without_rewriting ... ok
+test tests::partitioned_ctas::ctas_partitioned_by_utf8view_key_conforms_and_roundtrips ... ok
+test tests::router::failing_dml_surfaces_its_runtime_error_at_sql_time ... ok
+test tests::ref_ddl::branch_retention_clauses_round_trip ... ok
+test tests::partitioned_ctas::ctas_truncate_int_partition_spec_and_routing ... ok
+test tests::service_managed_ctas::ctas_or_replace_on_service_managed_existing_table_stays_staged_replace ... ok
+test tests::service_managed_ctas::ctas_service_managed_empty_select_creates_table_without_snapshot ... ok
+test tests::router::truncate_table_refuses_loud_naming_gap ... ok
+test tests::ref_ddl::write_to_branch_refuses_loud_naming_fork_gap ... ok
+test time_travel::tests::comments_do_not_false_positive_time_travel ... ok
+test time_travel::tests::detects_spark_and_system_spellings ... ok
+test time_travel::tests::find_spans_extracts_table_and_spec ... ok
+test time_travel::tests::find_spans_double_quoted_table_parts ... ok
+test time_travel::tests::find_spans_multi_relation_join ... ok
+test time_travel::tests::find_spans_negative_snapshot_id ... ok
+test time_travel::tests::system_version_string_ref_span ... ok
+test time_travel::tests::find_spans_ref_name_and_system_time ... ok
+test tests::router::bare_insert_applies_without_collect ... ok
+test tests::service_managed_ctas::ctas_service_managed_commit_failure_drops_the_created_table ... ok
+test tests::service_managed_ctas::ctas_service_managed_creates_first_appends_and_reads_back ... ok
+test tests::ref_ddl::branch_tag_ddl_create_drop_round_trip ... ok
+test tests::router::insert_applies_exactly_once_across_a_later_collect ... ok
+test tests::transform_overwrite::overwrite_partition_clause_on_transform_table_still_rejected ... ok
+test tests::service_managed_ctas::ctas_service_managed_partitioned_fans_out_and_reads_back ... ok
+test tests::ref_ddl::branch_tag_replace_and_or_replace_round_trip ... ok
+test tests::transform_overwrite::empty_overwrite_type_mismatch_on_transform_table_does_not_wipe ... ok
+test tests::router::bare_delete_applies_without_collect ... ok
+test tests::merge::merge_cardinality_violation_errors ... ok
+test tests::transform_overwrite::empty_overwrite_on_transform_table_wipes_and_keeps_spec ... ok
+test tests::merge::merge_into_empty_table_inserts_all ... ok
+test tests::router::bare_update_applies_without_collect ... ok
+test tests::transform_overwrite::fromless_literal_into_optional_partition_column_succeeds ... ok
+test tests::transform_overwrite::provider_partition_correctness::computed_partition_source_insert_into_commits_post_expression_tuple ... ok
+test tests::metadata_tables::metadata_tables_spark_dot_form_and_guards ... ok
+test tests::transform_overwrite::provider_partition_correctness::fromless_literal_into_partitioned_target_succeeds ... ok
+test tests::transform_overwrite::provider_partition_correctness::computed_partition_source_commits_post_expression_tuple ... ok
+test tests::partitioned_ctas::ctas_temporal_partition_spec_and_routing ... ok
+test tests::transform_overwrite::overwrite_days_table_static_replace_and_day_routing ... ok
+test tests::transform_overwrite::provider_partition_correctness::reordered_same_typed_columns_write_the_permuted_values ... ok
+test tests::partitioned_merge::merge_partitioned_insert_only_fans_out ... ok
+test tests::transform_overwrite::overwrite_mixed_identity_and_transform_table_static_replace ... ok
+test tests::transform_overwrite::overwrite_truncate_str_table_static_replace_and_prefix_routing ... ok
+test tests::transform_overwrite::overwrite_bucket_table_static_replace_and_fork_hash_routing ... ok
+test tests::merge::merge_source_with_reserved_flag_column_works ... ok
+test tests::ref_ddl::branch_tag_ddl_edge_matrix_as_of_and_drop_targets ... ok
+test tests::transform_overwrite::provider_partition_correctness::identity_partitioned_computed_source_read_back_matches_expression ... ok
+test tests::merge::merge_stamps_operation_id_in_snapshot_summary ... ok
+test tests::merge::merge_matched_delete_with_predicate ... ok
+test tests::describe_show::show_namespaces_like_truth_table ... ok
+test tests::partitioned_merge::merge_partitioned_insert_only_rejects_conflicting_concurrent_append ... ok
+test tests::merge::bug001_merge_mor_not_blocked_by_delete_update_valve ... ok
+test tests::merge::merge_clause_order_first_match_wins ... ok
+test tests::merge::merge_update_set_unknown_column_errors ... ok
+test tests::merge::merge_quoted_alias_resolves ... ok
+test tests::transform_overwrite::overwrite_identity_and_unpartitioned_regression ... ok
+test tests::merge::merge_upsert_updates_and_inserts ... ok
+test tests::merge::merge_bucket_partitioned_mor_mode_runs_end_to_end ... ok
+test tests::transform_overwrite::overwrite_null_partition_source_lands_in_null_slot ... ok
+test tests::merge::merge_merge_on_read_mode_runs_end_to_end ... ok
+test tests::merge::merge_star_forms_upsert ... ok
+test tests::partitioned_merge::merge_days_partitioned_upsert ... ok
+test tests::call::call_rewrite_data_files_preserves_rows_and_reduces_files ... ok
+test tests::merge::merge_rewrites_only_affected_files ... ok
+test tests::partitioned_merge::merge_days_partitioned_mor_delete_and_insert ... ok
+test tests::partitioned_merge::merge_truncate_partitioned_reroutes_and_inserts ... ok
+test tests::partitioned_merge::merge_partitioned_update_moves_row_to_new_partition ... ok
+test tests::partitioned_merge::merge_partitioned_star_forms_upsert ... ok
+test tests::partitioned_merge::merge_partitioned_multi_partition_unsorted_source ... ok
+test tests::time_travel::time_travel_version_timestamp_branch_tag_and_errors ... ok
+test tests::partitioned_merge::merge_partitioned_mixed_upsert_stamps_partition_values ... ok
+test tests::partitioned_merge::merge_partitioned_rewrite_arm_rejects_conflicting_concurrent_append ... ok
+test tests::partitioned_merge::merge_bucket_partitioned_mor_rejects_conflicting_concurrent_append ... ok
+test tests::partitioned_merge::merge_bucket_partitioned_rewrite_arm_rejects_conflicting_concurrent_append ... ok
+test tests::transform_overwrite::overwrite_fromless_literal_source_succeeds_on_partitioned_table ... ok
+test tests::partitioned_merge::merge_partitioned_tolerates_nonconflicting_concurrent_commit ... ok
+test tests::metadata_tables::metadata_table_projection_honor_all_types ... ok
+
+test result: ok. 349 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.99s
+
+     Running tests/ddl_sessions.rs (target/debug/deps/ddl_sessions-22c7021d58d4fc23)
+
+running 5 tests
+test catalog_surface_table_exists_and_temp_views ... ok
+test create_namespace_with_location_stores_both_location_keys ... ok
+test create_namespace_with_location_lets_ctas_succeed_on_strict_catalog ... ok
+test config_driven_memory_catalog_registers_and_runs ... ok
+test ctas_end_to_end_through_spark_sql ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/dml_sessions.rs (target/debug/deps/dml_sessions-8e6a10db547f885d)
+
+running 1 test
+test session_sql_bare_dml_applies_eagerly ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/session_extension.rs (target/debug/deps/session_extension-f97b526d6b3581f1)
+
+running 1 test
+test temp_view_then_sql_runs_the_spark_function_shim ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/ta_window.rs (target/debug/deps/ta_window-7890591910a7f999)
+
+running 7 tests
+test sql_route_rejects_a_non_literal_period ... ok
+test sql_route_multi_batch_partition_matches_the_kernel ... ok
+test sql_route_partition_by_scopes_the_series ... ok
+test sql_route_parked_four_match_the_kernel ... ok
+test sql_route_scalar_param_kernels_match_the_kernel ... ok
+test sql_route_single_series_kernels_match_the_kernel ... ok
+test sql_route_multi_series_kernels_match_the_kernel ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_sql-0a3822580149bef1)
+
+running 208 tests
+test alter::tests::empty_property_list_refuses ... ok
+test alter::tests::promotion_targets_are_bounded ... ok
+test alter::tests::rewrite_does_not_fire_on_other_statements_or_inside_literals ... ok
+test alter::tests::rewrite_removes_only_the_properties_keyword ... ok
+test alter::tests::default_keyword_recognition_is_quote_sensitive ... ok
+test alter::tests::partitioning_refuses_citing_q3_and_names_the_callable_op ... ok
+test alter::tests::dotted_key_with_default_unsets_a_raw_property ... ok
+test alter::tests::reserved_and_unchangeable_keys_refuse_loud ... ok
+test alter::tests::format_sets_and_resets_the_iceberg_property ... ok
+test alter::tests::extra_properties_sets_raw_iceberg_keys ... ok
+test create_table::tests::only_the_with_option_syntax_is_accepted ... ok
+test create_table::tests::bare_location_refusal_offers_the_property_spelling ... ok
+test alter::tests::unknown_bare_key_refuses_listing_the_supported_set ... ok
+test create_table::tests::schema_source_must_be_unambiguous ... ok
+test create_table::tests::well_formed_creates_pass_the_clause_gate ... ok
+test create_table::tests::silently_droppable_clauses_all_refuse ... ok
+test guards::tests::read_only_guard_ignores_string_literals ... ok
+test guards::tests::reads_and_writable_catalog_dml_pass ... ok
+test guards::tests::read_only_message_is_generic ... ok
+test guards::tests::read_only_catalog_dml_refuses_generically ... ok
+test guards::tests::semicolon_inside_literal_or_comment_is_not_multi_statement ... ok
+test guards::tests::single_statement_with_trailing_noise_is_allowed ... ok
+test guards::tests::two_statements_refuse_with_parse_syntax_error_class ... ok
+test guards::tests::unparsable_second_statement_still_refuses ... ok
+test matrix::ansi_rows_never_claim_a_spark_extended_session ... ok
+test matrix::m2_closes_the_ansi_door ... ok
+test matrix::two_session_rows_name_surfaces_both_doors_have ... ok
+test matrix::matrix_maps_every_surface ... ok
+test merge::tests::degenerate_update_and_insert_shapes_refuse ... ok
+test merge::tests::clause_predicates_and_order_survive ... ok
+test merge::tests::non_three_part_target_refuses ... ok
+test merge::tests::spark_star_forms_do_not_parse_in_this_door ... ok
+test merge::tests::lowers_the_classic_upsert ... ok
+test partitioning::tests::malformed_transform_refuses ... ok
+test merge::tests::subquery_source_requires_an_alias ... ok
+test partitioning::tests::every_supported_transform_parses ... ok
+test merge::tests::invalid_clause_action_pairings_refuse ... ok
+test merge::tests::unaliased_relations_take_their_bare_name_as_the_alias ... ok
+test partitioning::tests::transform_arg_counts_and_bounds_validated ... ok
+test partitioning::tests::empty_transforms_build_no_spec ... ok
+test partitioning::tests::transform_parsing_is_case_and_whitespace_tolerant ... ok
+test partitioning::tests::transform_width_overflow_refuses ... ok
+test partitioning::tests::transform_width_must_be_a_positive_integer ... ok
+test partitioning::tests::unknown_transform_refuses_listing_support ... ok
+test partitioning::tests::unknown_partition_column_refuses_listing_columns ... ok
+test partitioning::tests::transforms_resolve_against_the_schema ... ok
+test properties::tests::curated_keys_compose ... ok
+test properties::tests::empty_extra_property_key_refuses ... ok
+test properties::tests::duplicate_key_refuses ... ok
+test properties::tests::empty_extra_properties_is_legal ... ok
+test properties::tests::location_is_captured ... ok
+test properties::tests::format_version_two_is_accepted_and_consumed ... ok
+test properties::tests::format_parquet_is_accepted ... ok
+test properties::tests::duplicate_extra_property_key_refuses ... ok
+test properties::tests::extra_properties_carries_raw_iceberg_keys ... ok
+test ref_ddl::tests::parses_create_or_replace ... ok
+test ref_ddl::tests::parses_create_branch_and_tag ... ok
+test ref_ddl::tests::parses_drop_branch_and_tag ... ok
+test ref_ddl::tests::path_escaping_ref_names_refuse ... ok
+test ref_ddl::tests::parses_negative_snapshot_pin ... ok
+test ref_ddl::tests::parses_retention_clauses ... ok
+test ref_ddl::tests::malformed_forms_refuse_loud ... ok
+test properties::tests::sorted_by_refuses_with_a_named_trigger ... ok
+test ref_ddl::tests::snapshot_retention_on_a_tag_refuses ... ok
+test refusals::tests::alter_execute_recognizer_does_not_fire_on_other_statements ... ok
+test refusals::tests::alter_execute_recognizer_finds_the_verb_after_any_name_spelling ... ok
+test refusals::tests::alter_execute_recognizer_fires_on_the_statement_shape ... ok
+test ref_ddl::tests::trailing_non_identifier_tokens_refuse_too ... ok
+test refusals::tests::alter_execute_recognizer_is_anchored_to_the_verb_slot ... ok
+test refusals::tests::alter_execute_refusal_declares_itself_the_future_spelling ... ok
+test refusals::tests::call_refusal_steers_to_callable_ops_and_names_the_trigger ... ok
+test refusals::tests::insert_overwrite_refusal_steers_three_ways_and_cites_the_evidence ... ok
+test refusals::tests::truncate_refusal_names_both_meanings ... ok
+test guards::tests::mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate ... ok
+test properties::tests::unknown_bare_key_refuses_listing_the_set ... ok
+test dialect::tests::dialect_carries_the_guard_set ... ok
+test guards::tests::four_part_target_refuses_for_tag_spelling_too ... ok
+test properties::tests::no_properties_is_the_default ... ok
+test guards::tests::multi_statement_refuses_first_and_quote_aware ... ok
+test ref_ddl::tests::does_not_claim_other_statements ... ok
+test guards::tests::ordinary_writes_pass_branch_guard ... ok
+test properties::tests::non_v2_format_version_refuses ... ok
+test properties::tests::orc_and_avro_refuse_with_a_named_trigger ... ok
+test properties::tests::non_map_extra_properties_refuses ... ok
+test scan::tests::blanks_double_quoted_identifier_content ... ok
+test scan::tests::blanks_string_literal_content_only ... ok
+test scan::tests::contains_word_is_boundary_aware ... ok
+test scan::tests::contains_word_treats_dollar_as_ident ... ok
+test scan::tests::leading_keyword_skips_comments ... ok
+test scan::tests::preserves_byte_length_across_multibyte_literals ... ok
+test ref_ddl::tests::double_quoted_names_are_identifiers ... ok
+test scan::tests::unterminated_literal_blanks_to_end ... ok
+test scan::tests::word_spans_offsets_are_valid_in_the_original_sql ... ok
+test schema_ddl::tests::name_parts_reads_dotted_and_quoted_identifiers ... ok
+test ref_ddl::tests::a_trailing_semicolon_is_not_a_trailing_clause ... ok
+test schema_ddl::tests::namespace_resolution_requires_qualification ... ok
+test schema_ddl::tests::read_only_catalog_gets_the_direction_note ... ok
+test properties::tests::unknown_format_refuses ... ok
+test properties::tests::reserved_format_version_through_the_hatch_refuses ... ok
+test properties::tests::partitioning_shape_refuses ... ok
+test schema_ddl::tests::unknown_schema_property_refuses_listing_support ... ok
+test sniff::tests::bare_as_of_without_for_is_recognized ... ok
+test sniff::tests::ansi_legal_statements_are_never_steered_to_the_spark_door ... ok
+test scan::tests::backticks_are_not_quoting ... ok
+test properties::tests::wrong_value_shape_refuses ... ok
+test sniff::tests::call_system_procedure_is_recognized ... ok
+test sniff::tests::correct_for_spelling_is_not_flagged_as_spark ... ok
+test properties::tests::mismatched_extra_properties_arrays_refuse ... ok
+test sniff::tests::lateral_view_is_recognized ... ok
+test sniff::tests::insert_overwrite_is_recognized ... ok
+test scan::tests::blanks_comments ... ok
+test sniff::tests::matching_is_case_insensitive_and_boundary_aware ... ok
+test sniff::tests::literals_and_comments_do_not_trigger_the_sniff ... ok
+test scan::tests::honours_doubled_single_quote_escape ... ok
+test sniff::tests::namespace_spellings_are_recognized ... ok
+test sniff::tests::non_spark_errors_are_untouched ... ok
+test schema_ddl::tests::escaping_identifiers_are_rejected ... ok
+test schema_ddl::tests::duplicate_schema_property_refuses ... ok
+test sniff::tests::backticks_are_recognized ... ok
+test sniff::tests::original_error_is_preserved ... ok
+test sniff::tests::partitioned_by_is_recognized ... ok
+test schema_ddl::tests::no_properties_is_legal ... ok
+test sniff::tests::scoped_rules_still_fire_in_their_own_statement_shapes ... ok
+test schema_ddl::tests::location_property_is_accepted ... ok
+test sniff::tests::spark_isms_upgrade_the_parse_error ... ok
+test sniff::tests::system_time_travel_spellings_are_recognized ... ok
+test sniff::tests::tblproperties_is_recognized ... ok
+test sniff::tests::top_level_branch_ddl_is_recognized ... ok
+test schema_ddl::tests::non_literal_property_value_refuses ... ok
+test router::tests::plan_failure_is_upgraded_by_the_sniff ... ok
+test router::tests::guards_run_before_parsing ... ok
+test guards::tests::ordinary_select_is_untouched ... ok
+test router::tests::metadata_reference_does_not_bypass_the_create_handler ... ok
+test router::tests::metadata_dollar_form_passes_through ... ok
+test dialect::tests::ansi_dialect_execute_runs_the_router ... ok
+test router::tests::select_delegates_to_datafusion ... ok
+test time_travel::tests::clause_without_a_relation_refuses ... ok
+test tests::path_escaping_identifiers_are_rejected ... ok
+test time_travel::tests::comments_and_string_literals_do_not_false_positive ... ok
+test time_travel::tests::double_quoted_table_parts_are_identifiers ... ok
+test time_travel::tests::negative_snapshot_id_is_scanned ... ok
+test time_travel::tests::multi_relation_join_yields_one_span_per_relation ... ok
+test time_travel::tests::recognized_clause_with_a_bad_value_refuses_loud ... ok
+test time_travel::tests::recognizes_only_the_ansi_for_spellings ... ok
+test time_travel::tests::span_extracts_table_and_spec ... ok
+test time_travel::tests::version_ref_string_and_timestamp_values ... ok
+test tests::tblproperties_on_create_refuses_with_a_steer ... ok
+test tests::location_less_schema_fails_loud_on_a_strict_catalog ... ok
+test guards::tests::path_traversal_out_of_warehouse_refuses ... ok
+test guards::tests::missing_conf_extension_is_closed ... ok
+test guards::tests::real_table_named_branch_something_is_not_refused ... ok
+test guards::tests::conf_true_opens_the_gate ... ok
+test guards::tests::path_under_warehouse_root_is_grandfathered ... ok
+test guards::tests::write_to_branch_refuses ... ok
+test router::tests::create_schema_authorization_refuses ... ok
+test guards::tests::remote_locations_are_not_gated ... ok
+test router::tests::parse_failure_is_upgraded_by_the_sniff ... ok
+test guards::tests::two_part_branch_refuses_only_when_ambiguity_resolves_to_a_ref ... ok
+test tests::writing_to_a_ref_still_refuses_after_branch_ddl ... ok
+test tests::ddl_against_a_read_only_catalog_refuses_with_the_direction_note ... ok
+test tests::drop_table_unqualified_refuses ... ok
+test tests::with_sorted_by_refuses_loud_naming_the_trigger ... ok
+test router::tests::datafusion_extension_statements_reach_the_local_filesystem_guard ... ok
+test guards::tests::sensitive_path_and_file_scheme_case_variants_refuse ... ok
+test tests::ctas_unregistered_target_refuses_requiring_qualification ... ok
+test guards::tests::create_external_table_outside_warehouse_refuses ... ok
+test guards::tests::local_filesystem_plan_refuses ... ok
+test tests::unknown_bare_property_refuses_listing_the_curated_set ... ok
+test tests::create_schema_unknown_property_refuses ... ok
+test tests::create_table_shape_refusals ... ok
+test router::tests::temp_views_delegate ... ok
+test tests::native_session_keeps_ansi_expression_semantics ... ok
+test tests::drop_schema_drops_the_namespace ... ok
+test tests::ctas_missing_schema_segment_names_the_gap ... ok
+test tests::alter_set_properties_round_trips_raw_keys ... ok
+test tests::branch_ddl_on_an_empty_table_requires_an_explicit_pin ... ok
+test tests::column_def_types_are_not_widened ... ok
+test tests::create_table_column_def_creates_iceberg_table ... ok
+test tests::create_schema_creates_the_namespace ... ok
+test tests::empty_ctas_still_creates_the_table ... ok
+test tests::location_less_schema_falls_back_on_a_temp_fallback_catalog ... ok
+test tests::alter_column_set_data_type_promotes_and_refuses_narrowing ... ok
+test tests::create_schema_with_location_stores_both_keys ... ok
+test tests::with_extra_properties_map_passes_raw_iceberg_keys ... ok
+test tests::merge_output_clause_refuses ... ok
+test tests::with_format_version_sets_the_table_format_version ... ok
+test tests::time_travel_refuses_an_unresolvable_pin ... ok
+test tests::with_format_parquet_accepted_orc_and_avro_refuse_loud ... ok
+test tests::drop_table_if_exists_is_idempotent ... ok
+test tests::extra_properties_write_merge_mode_creates_a_mor_table ... ok
+test tests::the_refuse_set_refuses_loud_through_the_door ... ok
+test tests::alter_table_rename_to_moves_the_table ... ok
+test tests::create_table_existing_refuses_and_if_not_exists_is_a_noop ... ok
+test tests::with_location_lands_the_table_under_the_path ... ok
+test tests::alter_add_drop_rename_column_round_trips ... ok
+test tests::ctas_into_registered_iceberg_catalog_round_trips ... ok
+test tests::information_schema_enumerates_registered_iceberg_catalogs ... ok
+test tests::with_partitioning_array_builds_the_partition_spec ... ok
+test tests::create_or_replace_table_as_select_replaces_rows ... ok
+test tests::alter_batches_ops_and_honours_if_exists ... ok
+test tests::insert_into_iceberg_table_round_trips ... ok
+test tests::branch_and_tag_ddl_round_trips ... ok
+test tests::mor_unpartitioned_multi_spec_dml_refuses ... ok
+test tests::time_travel_reads_a_pinned_snapshot ... ok
+test tests::time_travel_by_ref_name_reads_the_ref ... ok
+test tests::delete_from_iceberg_table_removes_matching_rows ... ok
+test tests::update_iceberg_table_rewrites_matching_rows ... ok
+test tests::merge_into_upserts_through_the_door ... ok
+
+test result: ok. 208 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s
+
+     Running tests/cross_door.rs (target/debug/deps/cross_door-6ff4157e37afe2e7)
+
+running 8 tests
+test extensions_are_session_scoped_not_dialect_scoped ... ok
+test cross_door_namespace_ddl_is_single_session_legal ... ok
+test cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted ... ok
+test cross_door_alter_lands_the_same_evolved_schema ... ok
+test cross_door_ctas_produces_the_same_table_content_and_schema ... ok
+test cross_door_insert_lands_the_same_rows ... ok
+test cross_door_time_travel_pins_the_same_snapshot_content ... ok
+test cross_door_merge_produces_the_same_result_table ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+
+     Running tests/introspection.rs (target/debug/deps/introspection-182a1da3fed4bddf)
+
+running 5 tests
+test introspection_still_refuses_without_the_information_schema_conf ... ok
+test show_tables_and_describe_delegate_through_the_ansi_door ... ok
+test metadata_tables_currently_enumerate_alongside_the_real_table ... ok
+test time_travel_pinned_views_do_not_leak_into_the_introspection_surface ... ok
+test information_schema_enumerates_an_iceberg_catalog_through_the_ansi_door ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+     Running tests/parser_productions.rs (target/debug/deps/parser_productions-b0fa1bed1f4a69d2)
+
+running 3 tests
+test with_clause_lands_in_the_with_variant ... ok
+test m2_productions_still_need_a_pre_parse_recognizer ... ok
+test m1_productions_parse_on_the_stock_generic_dialect ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/session_wiring.rs (target/debug/deps/session_wiring-29f7e7e27a12881b)
+
+running 2 tests
+test ansi_door_refusals_surface_through_the_session ... ok
+test ansi_dialect_on_a_repark_session_runs_the_door ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+     Running tests/ta_toll.rs (target/debug/deps/ta_toll-961d44ae369b751c)
+
+running 3 tests
+test ta_is_absent_from_a_native_ansi_session_without_the_extension ... ok
+test ta_non_literal_period_refuses_loud_through_the_ansi_door ... ok
+test ta_ema_through_the_ansi_door_is_bit_exact_against_the_golden ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (target/debug/deps/repark_ta-66ba74d1af837367)
+
+running 130 tests
+test math_operator::tests::max_prefers_the_more_recent_equal_value ... ok
+test math_operator::tests::min_max_sum_reject_period_below_two ... ok
+test math_operator::tests::min_rolling_window_matches_c ... ok
+test math_operator::tests::max_rolling_window_matches_c ... ok
+test math_operator::tests::short_input_is_all_nan_not_error ... ok
+test math_operator::tests::sum_rolling_window_matches_c ... ok
+test momentum::tests::adx_flat_market_holds_previous_value ... ok
+test extension::tests::ta_extension_configure_is_the_trait_default_pass_through ... ok
+test momentum::tests::adx_lookback_and_range ... ok
+test momentum::tests::adx_rejects_length_mismatch ... ok
+test momentum::tests::apo_and_ppo_are_fast_minus_slow_sma ... ok
+test momentum::tests::adxr_is_the_mean_of_adx_ends ... ok
+test momentum::tests::apo_mama_matype_dispatches_and_rejects_unknown ... ok
+test momentum::tests::apo_mama_equals_mama_minus_mama_on_long_series ... ok
+test momentum::tests::apo_swaps_fast_and_slow_periods ... ok
+test momentum::tests::aroon_tracks_bars_since_extreme ... ok
+test momentum::tests::aroon_checked_casts_refuse_adversarial_length ... ok
+test momentum::tests::aroonosc_is_up_minus_down ... ok
+test momentum::tests::bop_ratio_and_zero_range_guard ... ok
+test momentum::tests::cci_typical_price_window ... ok
+test momentum::tests::cmo_flat_series_guard_yields_zero ... ok
+test momentum::tests::cmo_spans_plus_minus_hundred ... ok
+test momentum::tests::di_lookback_is_period_and_range_bounded ... ok
+test momentum::tests::di_period_one_divides_dm_by_true_range ... ok
+test momentum::tests::dm_lookback_is_period_minus_one ... ok
+test momentum::tests::dm_period_one_is_the_raw_one_bar_move ... ok
+test momentum::tests::dx_flat_market_holds_previous_value ... ok
+test momentum::tests::dx_lookback_is_period_and_range_bounded ... ok
+test momentum::tests::macd_lookback_and_hist_relation ... ok
+test momentum::tests::macdext_all_sma_lookback_and_hist_relation ... ok
+test momentum::tests::macdext_mama_matype_lookback_and_unknown_still_rejects ... ok
+test momentum::tests::macdext_mama_with_longer_other_leg_matches_full_array_mama ... ok
+test momentum::tests::macdext_signal_period_one_is_identity_ma ... ok
+test momentum::tests::macdfix_differs_from_macd_12_26 ... ok
+test momentum::tests::mom_is_the_period_difference ... ok
+test momentum::tests::raw_stoch_k_is_hand_checkable ... ok
+test momentum::tests::roc_family_ratios_and_zero_guard ... ok
+test momentum::tests::rsi_all_gains_is_100 ... ok
+test momentum::tests::rsi_flat_series_guard_yields_zero ... ok
+test momentum::tests::stoch_default_lookback_and_slowk_equals_stochf_fastd ... ok
+test momentum::tests::stoch_path_period1_matype7_is_identity_via_ma_selector_lookback ... ok
+test momentum::tests::stochastics_accept_mama_matype_and_reject_out_of_range ... ok
+test momentum::tests::stochf_fastd_is_the_sma_of_raw_k ... ok
+test momentum::tests::stochf_flat_window_yields_zero ... ok
+test momentum::tests::stochastics_matype7_first_non_nan_lookback_pins ... ok
+test momentum::tests::stochf_lookback_and_identity_smoothing ... ok
+test momentum::tests::stochrsi_lookback_and_range ... ok
+test momentum::tests::trix_nan_prefix_then_finite ... ok
+test momentum::tests::ultosc_flat_market_is_zero_after_lookback ... ok
+test momentum::tests::ultosc_stays_in_the_zero_hundred_band ... ok
+test momentum::tests::willr_sits_in_the_negative_hundred_band ... ok
+test overlap::tests::bbands_flat_series_has_zero_width ... ok
+test overlap::tests::dema_nan_prefix_is_twice_the_ema_lookback ... ok
+test overlap::tests::ema_seed_is_sma_of_first_period ... ok
+test overlap::tests::kama_flat_series_holds_the_seed ... ok
+test overlap::tests::kama_nan_prefix_is_period_then_finite ... ok
+test overlap::tests::ma_selector_dispatches_and_identity ... ok
+test overlap::tests::ma_selector_matype7_dispatches_to_mama_and_rejects_out_of_range ... ok
+test overlap::tests::mama_lookback_is_32_and_rejects_out_of_range_limits ... ok
+test overlap::tests::mavp_clamps_period_and_lookback_uses_max_period ... ok
+test overlap::tests::mavp_uses_shifted_ma_seeding_not_full_array ... ok
+test overlap::tests::midpoint_is_window_high_low_mean ... ok
+test overlap::tests::midprice_length_mismatch_errors ... ok
+test overlap::tests::midprice_uses_high_max_and_low_min ... ok
+test overlap::tests::new_overlap_kernels_reject_period_below_two ... ok
+test overlap::tests::new_overlap_kernels_short_input_is_all_nan ... ok
+test overlap::tests::sar_rising_series_starts_long_and_seeds_at_first_low ... ok
+test overlap::tests::sarext_short_side_output_is_negative ... ok
+test overlap::tests::sarext_start_value_forces_direction_and_seed ... ok
+test overlap::tests::short_input_is_all_nan_not_error ... ok
+test overlap::tests::sma_nan_prefix_then_means ... ok
+test overlap::tests::sma_rejects_period_below_two ... ok
+test overlap::tests::t3_nan_prefix_is_six_ema_lookbacks_and_vfactor_threads ... ok
+test overlap::tests::tema_nan_prefix_is_thrice_the_ema_lookback ... ok
+test overlap::tests::trima_even_period_matches_hand_weights ... ok
+test overlap::tests::trima_odd_period_matches_hand_weights ... ok
+test overlap::tests::wma_weights_the_window_by_recency ... ok
+test price_transform::tests::avgprice_averages_the_four_series ... ok
+test price_transform::tests::empty_input_yields_empty_output ... ok
+test price_transform::tests::length_mismatch_errors ... ok
+test price_transform::tests::medprice_is_the_high_low_midpoint ... ok
+test price_transform::tests::typprice_averages_high_low_close ... ok
+test price_transform::tests::wclprice_double_weights_the_close ... ok
+test statistic::tests::beta_constant_returns_denominator_guard_is_zero ... ok
+test statistic::tests::beta_of_identical_series_is_one ... ok
+test statistic::tests::correl_flat_series_guard_yields_zero ... ok
+test statistic::tests::correl_perfectly_correlated_is_one ... ok
+test statistic::tests::linearreg_family_agrees_on_perfect_line ... ok
+test statistic::tests::stddev_applies_nbdev_multiplier ... ok
+test statistic::tests::var_of_constant_window_is_zero ... ok
+test tests::epsilon_guards_match_c_macros ... ok
+test tests::true_range_picks_greatest_of_three ... ok
+test udf::tests::compute_all_bbands_matches_split_compute ... ok
+test udf::tests::compute_ema_matches_the_kernel ... ok
+test udf::tests::compute_all_macd_and_aroon_match_split_compute ... ok
+test udf::tests::densify_scratch_reused_across_calls ... ok
+test udf::tests::densify_maps_null_to_nan ... ok
+test udf::tests::densify_null_free_matches_values_slice ... ok
+test udf::tests::evaluate_all_aroon_multi_series_siblings_bit_exact ... ok
+test udf::tests::densify_casts_int64_null_free_and_nullable ... ok
+test udf::tests::evaluate_all_float32_cast_matches_kernel ... ok
+test udf::tests::evaluate_all_bbands_int64_series_siblings_bit_exact ... ok
+test udf::tests::evaluate_all_empty_and_short_series_match_kernel ... ok
+test udf::tests::evaluate_all_nullable_bbands_siblings_match_nan_densify ... ok
+test udf::tests::evaluate_all_sliced_float64_borrow_matches_kernel ... ok
+test udf::tests::evaluate_all_stochrsi_and_macdext_siblings_bit_exact ... ok
+test udf::tests::evaluate_all_multi_output_two_partitions_no_cross_talk ... ok
+test udf::tests::evaluate_all_mama_siblings_real_scalars_bit_exact ... ok
+test udf::tests::float64_builder_output_is_dense_bit_exact ... ok
+test udf::tests::multi_family_covers_every_split_entry_point ... ok
+test udf::tests::every_spec_multi_family_has_band_and_compute_all_width ... ok
+test udf::tests::period_rejects_non_integral_values ... ok
+test udf::tests::evaluate_all_nullable_float64_densify_matches_kernel_nan ... ok
+test udf::tests::evaluate_all_stoch_multi_series_siblings_bit_exact ... ok
+test udf::tests::multi_out_kernel_error_does_not_pollute_cache ... ok
+test udf::tests::multi_out_cache_serves_sibling_bands_bit_exact ... ok
+test volatility::tests::atr_period_one_is_trange ... ok
+test udf::tests::multi_out_entry_pin_keeps_series_buffer_alive ... ok
+test udf::tests::window_udfs_registers_all_names ... ok
+test udf::tests::evaluate_all_too_few_series_errors_loud ... ok
+test volatility::tests::atr_seed_is_mean_of_first_true_ranges ... ok
+test volatility::tests::natr_period_one_is_raw_trange_unnormalized ... ok
+test volatility::tests::natr_normalizes_atr_by_close_times_100 ... ok
+test udf::tests::period_saturates_out_of_range_to_a_rejectable_value ... ok
+test volatility::tests::trange_matches_hand_computation ... ok
+test udf::tests::evaluate_all_macdfix_and_stochf_siblings_bit_exact ... ok
+test udf::tests::window_udf_lookup_hits_and_misses ... ok
+test udf::tests::evaluate_all_multi_output_siblings_bit_exact_via_cache ... ok
+test udf::tests::spec_arity_matches_series_plus_scalars ... ok
+test extension::tests::ta_extension_register_installs_the_whole_ta_udf_set_bit_exact ... ok
+
+test result: ok. 130 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/contract.rs (target/debug/deps/contract-51e91832e295aa22)
+
+running 10 tests
+test above_max_period_errors_not_overflows_for_every_kernel ... ok
+test below_minimum_period_errors_for_every_kernel ... ok
+test empty_input_yields_empty_output_for_every_kernel ... ok
+test multi_series_length_mismatch_errors ... ok
+test macd_ma_directional_contract ... ok
+test parked_four_argument_contract ... ok
+test price_transform_argument_contract ... ok
+test short_input_is_all_nan_for_every_kernel ... ok
+test stochastics_argument_contract ... ok
+test ultosc_apo_ppo_bop_argument_contract ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/goldens.rs (target/debug/deps/goldens-609bc2f99ae12f1c)
+
+running 39 tests
+test beta_flat_guard_branch_matches_c_talib ... ok
+test goldens_dir_resolves_from_the_runtime_manifest_dir ... ok
+test adx_matches_c_talib ... ok
+test mama_flat_guard_branches_match_c_talib ... ok
+test manifest_and_tests_cover_the_same_series ... ok
+test flat_plateau_guard_branches_match_c_talib ... ok
+test correl_matches_c_talib ... ok
+test bop_matches_c_talib ... ok
+test apo_ppo_match_c_talib ... ok
+test stochastics_flat_guard_branch_matches_c_talib ... ok
+test ma_selector_matches_c_talib ... ok
+test natr_and_beta_match_c_talib ... ok
+test ema_matches_c_talib ... ok
+test aroon_split_and_oscillator_match_c_talib ... ok
+test wg3_flat_guard_branches_match_c_talib ... ok
+test ma_selector_matype7_is_mama_matches_c_talib ... ok
+test bbands_matches_c_talib ... ok
+test rsi_matches_c_talib ... ok
+test wg2_flat_guard_branches_match_c_talib ... ok
+test directional_family_matches_c_talib ... ok
+test apo_ppo_matype7_match_c_talib ... ok
+test rate_of_change_family_matches_c_talib ... ok
+test bbands_band_branches_match_c_talib ... ok
+test mama_matches_c_talib ... ok
+test trix_and_ultosc_match_c_talib ... ok
+test trange_and_atr_match_c_talib ... ok
+test sma_matches_c_talib ... ok
+test price_transforms_match_c_talib ... ok
+test sar_and_sarext_match_c_talib ... ok
+test min_max_sum_match_c_talib ... ok
+test var_and_stddev_match_c_talib ... ok
+test macd_family_matches_c_talib ... ok
+test linearreg_family_matches_c_talib ... ok
+test stochastics_match_c_talib ... ok
+test macdext_matype7_match_c_talib ... ok
+test willr_cci_cmo_match_c_talib ... ok
+test mavp_matches_c_talib ... ok
+test stochastics_matype7_match_c_talib ... ok
+test overlap_ma_family_matches_c_talib ... ok
+
+test result: ok. 39 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/p1c_microbench.rs (target/debug/deps/p1c_microbench-cce345e7de54a49b)
+
+running 1 test
+test hour0_bbands_three_vs_one_1e6 ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.56s
+
+   Doc-tests repark_common
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests repark_core
+
+running 1 test
+test crates/repark-core/src/runtime.rs - runtime::EngineRuntime (line 32) - compile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+all doctests ran in 2.75s; merged doctests compilation took 2.67s
+   Doc-tests repark_functions
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests repark_iceberg
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests repark_ml
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests _native
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests repark_spark
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests repark_sql
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests repark_ta
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

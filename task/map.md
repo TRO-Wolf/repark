@@ -40,6 +40,9 @@ not this directory.
   intra-link fixes; Glue acceptance location-mismatch fail-loud guard (+ DESCRIBE probe); and
   the `make parity-live` ↔ `parity-live.yml` dual-wire checker with must-FAIL/must-PASS
   provocation proofs.
+- [g4-tests-split-ledger.md](g4-tests-split-ledger.md) — **G-4** declared-rename: split
+  `crates/repark-spark/src/tests.rs` → `src/tests/` by production-module alignment; identity
+  gate + name map under `task/g4-artifacts/`.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags

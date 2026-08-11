@@ -53,110 +53,125 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::CTAS_TARGET_ROUTING,
         t(
-            "tests::ctas_location_less_namespace_fails_loud_for_non_memory_catalog",
+            "tests::ctas::ctas_location_less_namespace_fails_loud_for_non_memory_catalog",
             SparkExtended,
         ),
     ),
     (
         surfaces::CREATE_OR_REPLACE_TABLE,
         t(
-            "tests::ctas_or_replace_success_replaces_rows",
+            "tests::ctas::ctas_or_replace_success_replaces_rows",
             SparkExtended,
         ),
     ),
     (
         surfaces::CREATE_TABLE_COLUMN_DEF,
         t(
-            "tests::column_def_create_schema_equals_ctas_twin",
+            "tests::create_table::column_def_create_schema_equals_ctas_twin",
             SparkExtended,
         ),
     ),
-    (surfaces::DROP_TABLE, t("tests::drop_table", SparkExtended)),
+    (
+        surfaces::DROP_TABLE,
+        t("tests::catalog_ops::drop_table", SparkExtended),
+    ),
     (
         surfaces::CREATE_SCHEMA,
         t(
-            "tests::sql_create_namespace_with_properties_round_trips",
+            "tests::namespace_ddl::sql_create_namespace_with_properties_round_trips",
             SparkExtended,
         ),
     ),
     (
         surfaces::DROP_SCHEMA,
-        t("tests::create_and_drop_namespace", SparkExtended),
+        t(
+            "tests::namespace_ddl::create_and_drop_namespace",
+            SparkExtended,
+        ),
     ),
     (
         surfaces::ALTER_TABLE_RENAME,
-        t("tests::alter_rename_table", SparkExtended),
+        t("tests::alter::alter_rename_table", SparkExtended),
     ),
     (
         surfaces::ALTER_TABLE_SCHEMA_EVOLUTION,
         t(
-            "tests::alter_add_rename_drop_column_schema_and_read_after",
+            "tests::alter::alter_add_rename_drop_column_schema_and_read_after",
             SparkExtended,
         ),
     ),
     (
         surfaces::ALTER_TABLE_PROPERTIES,
-        t("tests::alter_set_tblproperties", SparkExtended),
+        t("tests::alter::alter_set_tblproperties", SparkExtended),
     ),
     (
         surfaces::ALTER_TABLE_PARTITION_FIELDS,
         t(
-            "tests::alter_add_drop_partition_field_and_write_after_evolution",
+            "tests::alter::alter_add_drop_partition_field_and_write_after_evolution",
             SparkExtended,
         ),
     ),
     (
         surfaces::INSERT_INTO,
-        t("tests::bare_insert_applies_without_collect", SparkExtended),
+        t(
+            "tests::router::bare_insert_applies_without_collect",
+            SparkExtended,
+        ),
     ),
     (
         surfaces::INSERT_OVERWRITE,
-        t("tests::insert_overwrite_replaces_all", SparkExtended),
+        t(
+            "tests::insert_overwrite::insert_overwrite_replaces_all",
+            SparkExtended,
+        ),
     ),
     (
         surfaces::DELETE,
-        t("tests::delete_where_copy_on_write", SparkExtended),
+        t("tests::dml::delete_where_copy_on_write", SparkExtended),
     ),
     (
         surfaces::UPDATE,
-        t("tests::update_where_copy_on_write", SparkExtended),
+        t("tests::dml::update_where_copy_on_write", SparkExtended),
     ),
     (
         surfaces::MERGE,
-        t("tests::merge_upsert_updates_and_inserts", SparkExtended),
+        t(
+            "tests::merge::merge_upsert_updates_and_inserts",
+            SparkExtended,
+        ),
     ),
     (
         surfaces::TRUNCATE,
         t(
-            "tests::truncate_table_refuses_loud_naming_gap",
+            "tests::router::truncate_table_refuses_loud_naming_gap",
             SparkExtended,
         ),
     ),
     (
         surfaces::TIME_TRAVEL,
         t(
-            "tests::time_travel_version_timestamp_branch_tag_and_errors",
+            "tests::time_travel::time_travel_version_timestamp_branch_tag_and_errors",
             SparkExtended,
         ),
     ),
     (
         surfaces::BRANCH_TAG_DDL,
         t(
-            "tests::branch_tag_ddl_create_drop_round_trip",
+            "tests::ref_ddl::branch_tag_ddl_create_drop_round_trip",
             SparkExtended,
         ),
     ),
     (
         surfaces::MAINTENANCE_CALL,
         t(
-            "tests::call_rewrite_data_files_preserves_rows_and_reduces_files",
+            "tests::call::call_rewrite_data_files_preserves_rows_and_reduces_files",
             SparkExtended,
         ),
     ),
     (
         surfaces::METADATA_TABLES,
         t(
-            "tests::metadata_tables_spark_dot_form_and_guards",
+            "tests::metadata_tables::metadata_tables_spark_dot_form_and_guards",
             SparkExtended,
         ),
     ),
@@ -167,7 +182,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::INTROSPECTION,
         t(
-            "tests::show_namespaces_returns_spark_column_shape_and_real_namespaces",
+            "tests::describe_show::show_namespaces_returns_spark_column_shape_and_real_namespaces",
             SparkExtended,
         ),
     ),
@@ -178,14 +193,14 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::TABLE_OPTION_FORMAT,
         t(
-            "tests::ctas_parses_using_and_threads_tblproperties",
+            "tests::ctas::ctas_parses_using_and_threads_tblproperties",
             SparkExtended,
         ),
     ),
     (
         surfaces::TABLE_OPTION_FORMAT_VERSION,
         t(
-            "tests::ctas_format_version_two_consumed_others_rejected",
+            "tests::ctas::ctas_format_version_two_consumed_others_rejected",
             SparkExtended,
         ),
     ),
@@ -199,14 +214,14 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::TABLE_OPTION_LOCATION,
         t(
-            "tests::ctas_location_check_precedes_source_execution",
+            "tests::ctas::ctas_location_check_precedes_source_execution",
             SparkExtended,
         ),
     ),
     (
         surfaces::TABLE_OPTION_RAW_PROPERTIES,
         t(
-            "tests::ctas_parses_using_and_threads_tblproperties",
+            "tests::ctas::ctas_parses_using_and_threads_tblproperties",
             SparkExtended,
         ),
     ),
@@ -239,14 +254,14 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::MOR_TABLE_CREATION,
         t(
-            "tests::merge_merge_on_read_mode_runs_end_to_end",
+            "tests::merge::merge_merge_on_read_mode_runs_end_to_end",
             SparkExtended,
         ),
     ),
     (
         surfaces::SCHEMA_OPTION_LOCATION,
         t(
-            "tests::sql_create_schema_synonym_with_location_round_trips",
+            "tests::namespace_ddl::sql_create_schema_synonym_with_location_round_trips",
             SparkExtended,
         ),
     ),
@@ -272,14 +287,14 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::GUARD_WRITE_TO_BRANCH,
         t(
-            "tests::write_to_branch_refuses_loud_naming_fork_gap",
+            "tests::ref_ddl::write_to_branch_refuses_loud_naming_fork_gap",
             SparkExtended,
         ),
     ),
     (
         surfaces::GUARD_MOR_MULTI_SPEC_DML,
         t(
-            "tests::bug001_mor_delete_refuses_unpartitioned_after_partition_evolution",
+            "tests::dml::bug001_mor_delete_refuses_unpartitioned_after_partition_evolution",
             SparkExtended,
         ),
     ),
@@ -296,7 +311,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
     (
         surfaces::IDENTIFIER_CASE_FOLDING,
         t(
-            "tests::alter_column_case_insensitive_rename_and_drop",
+            "tests::alter::alter_column_case_insensitive_rename_and_drop",
             SparkExtended,
         ),
     ),

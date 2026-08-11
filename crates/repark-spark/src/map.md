@@ -78,27 +78,26 @@ wrapper.
 - `lib.rs` — manifest: module decls, `execute`/`SparkDialect`/`SparkExtension` re-exports, the
   v1 domain-module `pub(crate) use` groups, and the `#[cfg(test)]` root imports that
   reconstruct v1's crate-root scope for the battery's `use super::*`.
-- `tests.rs` — the ported v1 lib-root battery (move-only identity unit, 334 census names:
-  342 at the pin − 6 `postgres_p11_tests` (post-milestone-one) − 2 time-travel parser pins
-  hoisted to repark-core in phase 1). Includes the `bug001_*` MoR-valve set and the
-  `partitioned_ctas` / `partitioned_merge` / `transform_overwrite` / `service_managed_ctas`
-  groups. Plus the **declared-divergence pin**
-  `ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud` (H-1d, 2026-08-10): the
-  `IF EXISTS` / `IF NOT EXISTS` spellings and every other trailing clause refuse loud on
-  snapshot-ref DDL, and the refusal still cites the registry row it defends. Its leftover-token
-  assertion binds the **dynamic** `(got word "…")` span, never the bare word — the message's
-  constant tail already contains `NOT` and `EXISTS`, so a bare substring check would be a
-  tautology for two of the three cases.
-  `metadata_tables_spark_dot_form_and_guards` likewise exercises **all ten** write forms registry
-  row MT-2 names (INSERT / UPDATE / DELETE / MERGE / CTAS / CREATE OR REPLACE / TRUNCATE /
-  CREATE VIEW / DROP / ALTER), because a row may not assert more than its pin proves.
-  `metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door` (H-1c,
-  2026-08-10) is this door's half of
-  [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md): the fork's
-  synthesized `$`-metadata names do not enumerate in `information_schema.tables` or its twin
-  `SHOW TABLES`, and **both** spellings still resolve — the door's own `t.snapshots` and the
-  `t$snapshots` it rewrites onto. The decision is made once at the catalog layer, never here; this
-  row proves it reaches this door.
+- `tests/` — the ported v1 lib-root battery, **split by production-module alignment** (G-4,
+  2026-08-10 declared-rename unit). Was a ~14.5-KLOC `tests.rs` monolith; now
+  `tests/mod.rs` + leaf modules (`ctas`, `merge`, `dml`, `insert_overwrite`, `ref_ddl`, …)
+  plus path-preserving sibling lifts of the former nested mods (`partitioned_ctas`,
+  `partitioned_merge`, `transform_overwrite`, `service_managed_ctas`). Shared fixtures live in
+  `tests/common.rs`. Navigation: [tests/map.md](tests/map.md). Identity gate: 352 lib tests,
+  202 path renames, leaf multiset unchanged — see `task/g4-tests-split-ledger.md`.
+  Registry / matrix pin strings moved with the renames (path-string updates only).
+  Notable pins carried through the split: the **declared-divergence pin**
+  `tests/ref_ddl.rs::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud` (H-1d,
+  2026-08-10 — the refusal cites the registry row it defends, and its leftover-token assertion
+  binds the **dynamic** `(got word "…")` span, never the bare word);
+  `tests/metadata_tables.rs::metadata_tables_spark_dot_form_and_guards`, which exercises **all
+  ten** write forms registry row MT-2 names, because a row may not assert more than its pin
+  proves; and `tests/metadata_tables.rs::metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door`
+  (H-1c, 2026-08-10) — this door's half of
+  [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md): the
+  fork's synthesized `$`-metadata names do not enumerate in `information_schema.tables` or
+  `SHOW TABLES`, while both spellings still resolve; the decision is made once at the catalog
+  layer, never here — this row proves it reaches this door.
 
 **Where the refusal messages point.** Several modules here name
 `docs/spark-sql-iceberg-parity.md` (the **divergence registry**) in their loud-refusal text —
@@ -106,6 +105,7 @@ wrapper.
 registry holds the semantics of each of those gaps (repark's behavior, Apache Spark's, the pin,
 the rationale); this map links, it does not restate. A refusal message that cites a section is
 part of that section's pin — changing either one changes both.
+
 
 ## I want to...
 
@@ -120,7 +120,7 @@ part of that section's pin — changing either one changes both.
 | Column-def CREATE / type mapping | `create_table.rs` |
 | ALTER TABLE / token rewrites | `alter.rs` |
 | Namespace / DROP TABLE DDL | `namespace_ddl.rs` |
-| Pin a router behavior end to end | `tests.rs` (lib-root battery) |
+| Pin a router behavior end to end | [`tests/`](tests/map.md) (lib-root battery, by production module) |
 | Find why a statement form refuses, and whether it is declared | `../../../docs/spark-sql-iceberg-parity.md` §2 |
 | Pin a door-native gate (TRUNCATE/P11/BUG-010) | `router/tests.rs` |
 | ORDER BY / eager-command passthrough semantics | `spark_ast.rs` |
@@ -153,5 +153,5 @@ First checks: `cargo test -p repark-spark <module>::`. Escalate to: [../map.md#d
   neutral placeholders — the upstream job the acceptance shape mirrors is named generically
   ("the source publish job"), and example table/view/entity names are placeholders carrying no
   domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
-  that read it. Sites here: `tests.rs` (five doc comments + the MERGE source-view fixture in
+  that read it. Sites here: `tests/` (five doc comments + the MERGE source-view fixture in
   `merge_star_forms_upsert`, now `staging_view`) and `merge.rs` (two doc comments).

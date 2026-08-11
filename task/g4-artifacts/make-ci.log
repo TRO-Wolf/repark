@@ -1,0 +1,80 @@
+cargo fmt --check
+# disallowed_methods list is active only in rust-panic-ban (lib/bin);
+# keep the general gate inert for test unwrap (clippy folds the lint into `all`).
+cargo clippy --locked --workspace --all-targets -- -D warnings -A clippy::disallowed_methods
+    Checking repark-spark v0.0.0 (/tmp/grok-g4/crates/repark-spark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.39s
+# Production only (`--lib --bins`): disallowed-methods has no allow-in-tests.
+# This is the ONLY gate where clippy.toml's `disallowed-methods` list is live (the general
+# rust-clippy target passes -A clippy::disallowed_methods on purpose). It enforces BOTH
+# lists: unwrap/expect AND the tokio::spawn / spawn_blocking cancel-safety ban. Sanctioned
+# escapes are per-call-site #[expect(clippy::disallowed_methods, reason=…)].
+# repark-python (phase 3): EXCLUDED from the workspace invocation only because its second
+# invocation below must drop -D expect_used for the five create_exception! macro sites —
+# but disallowed_methods (and with it the tokio spawn/spawn_blocking cancel-safety ban)
+# STAYS LIVE for the crate: the macro sites sit inside a module-scoped
+# #![expect(clippy::disallowed_methods, reason=…)] (the narrowest escape that works —
+# a per-call-site #[expect] cannot reach inside the macro expansion; provocations
+# P-2/P-4/P-5 in task/p3c-binding-ledger.md).
+cargo clippy --locked --workspace --lib --bins --exclude repark-python -- \
+	-D clippy::disallowed_methods \
+	-D clippy::unwrap_used \
+	-D clippy::expect_used \
+	-D clippy::panic \
+	-D clippy::todo \
+	-D clippy::unimplemented \
+	-D clippy::unreachable
+    Checking repark-common v0.0.0 (/tmp/grok-g4/crates/repark-common)
+    Checking repark-ml v0.0.0 (/tmp/grok-g4/crates/repark-ml)
+    Checking repark-functions v0.0.0 (/tmp/grok-g4/crates/repark-functions)
+    Checking repark-iceberg v0.0.0 (/tmp/grok-g4/crates/repark-iceberg)
+    Checking repark-core v0.0.0 (/tmp/grok-g4/crates/repark-core)
+    Checking repark-ta v0.0.0 (/tmp/grok-g4/crates/repark-ta)
+    Checking repark-sql v0.0.0 (/tmp/grok-g4/crates/repark-sql)
+    Checking repark-spark v0.0.0 (/tmp/grok-g4/crates/repark-spark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.40s
+cargo clippy --locked -p repark-python --lib -- \
+	-D clippy::disallowed_methods \
+	-D clippy::unwrap_used \
+	-D clippy::expect_used \
+	-D clippy::panic \
+	-D clippy::todo \
+	-D clippy::unimplemented \
+	-D clippy::unreachable
+   Compiling pyo3 v0.29.2
+    Checking repark-functions v0.0.0 (/tmp/grok-g4/crates/repark-functions)
+    Checking repark-iceberg v0.0.0 (/tmp/grok-g4/crates/repark-iceberg)
+    Checking repark-core v0.0.0 (/tmp/grok-g4/crates/repark-core)
+    Checking repark-ta v0.0.0 (/tmp/grok-g4/crates/repark-ta)
+    Checking repark-spark v0.0.0 (/tmp/grok-g4/crates/repark-spark)
+    Checking repark-python v0.0.0 (/tmp/grok-g4/crates/repark-python)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.80s
+crate-dag: 20 internal edges clean (4 dev, 15 normal, 1 optional) across 9 of 9 mapped crates
+lib-rs: 9 crate roots clean (no inline test modules; ceilings held)
+lib-py: 54 files clean (ceilings held; no-stub rule held)
+manifest: 12 components (9 delivered, 3 planned) agree with the workspace, the gates, the doc index, the status document and the crate maps
+cargo check --locked --workspace
+    Checking repark-common v0.0.0 (/tmp/grok-g4/crates/repark-common)
+    Checking repark-ml v0.0.0 (/tmp/grok-g4/crates/repark-ml)
+    Checking repark-functions v0.0.0 (/tmp/grok-g4/crates/repark-functions)
+    Checking repark-iceberg v0.0.0 (/tmp/grok-g4/crates/repark-iceberg)
+    Checking repark-core v0.0.0 (/tmp/grok-g4/crates/repark-core)
+    Checking repark-ta v0.0.0 (/tmp/grok-g4/crates/repark-ta)
+    Checking repark-sql v0.0.0 (/tmp/grok-g4/crates/repark-sql)
+    Checking repark-spark v0.0.0 (/tmp/grok-g4/crates/repark-spark)
+    Checking repark-python v0.0.0 (/tmp/grok-g4/crates/repark-python)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.22s
+uvx ruff@0.15.22 check .
+[1;32mAll checks passed![0m
+uvx ruff@0.15.22 format --check .
+241 files already formatted
+uv lock --locked
+Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+Resolved 29 packages in 1ms
+uvx taplo@0.9.3 format --check
+ INFO taplo:format_files:load_config: found configuration file path="/tmp/grok-g4/.taplo.toml"
+ INFO taplo:format_files:collect_files: found files total=22 excluded=0 cwd="/tmp/grok-g4"
+uvx taplo@0.9.3 lint
+ INFO taplo:load_config: found configuration file path="/tmp/grok-g4/.taplo.toml"
+ INFO taplo:lint_files:collect_files: found files total=22 excluded=0 cwd="/tmp/grok-g4"
+uvx typos@1.47.2
