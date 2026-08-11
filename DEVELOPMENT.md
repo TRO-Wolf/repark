@@ -30,7 +30,7 @@ No JVM is needed for the normal build/test/verify loop. A Java 17 home is needed
 
 | Command | What it does |
 |---|---|
-| `make ci` | **The canonical fast gate.** fmt-check + clippy + panic/async bans + crate dependency policy + lib.rs/lib.py thinness + structural manifest + `cargo check` + ruff lint/format + uv-lock check + toml + spell. Mirrors the CI `ci.yml` job. |
+| `make ci` | **The canonical fast gate.** fmt-check + clippy + panic/async bans + crate dependency policy + lib.rs thinness + rust file-size (`crates/**/*.rs` ceilings; SSOT `scripts/check_rust_file_size.py`) + lib.py thinness + structural manifest + `cargo check` + ruff lint/format + uv-lock check + toml + spell. Mirrors the CI `ci.yml` job. |
 | `make test` | The **Rust workspace** suite (`cargo test --locked --workspace`) — and that is deliberately all of it. The Python suites need something `cargo test` cannot give them (see below). |
 | `make verify` | `ci` + `test` — full local verification. **A change is not done until `make verify` is green** and the touched directories' `map.md` files are current. |
 | `make py-test-facade` | The **facade** suite (`python/repark/tests`) against the real native module: provisions the four declared extras (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`, runs `maturin develop`, then pytest. Run it when you touch the facade — `make verify` does not. |
@@ -40,7 +40,7 @@ No JVM is needed for the normal build/test/verify loop. A Java 17 home is needed
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
 | `make develop` | Build + install the native module editable into the root `.venv` (`maturin develop`), for exercising the Python facade against real compiled code. |
 | `make build-wheel` | Build the release wheel with maturin. |
-| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + structural manifest + fmt/taplo/typos). Do this once per clone. |
+| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + rust file-size + structural manifest + fmt/taplo/typos). Do this once per clone. |
 
 ### Test-command discipline (hard)
 

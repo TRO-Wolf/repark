@@ -44,7 +44,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-lib-py check-manifest check-parity-live-dual-wire rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-manifest check-parity-live-dual-wire rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -126,6 +126,13 @@ check-lib-rs: ## lib.rs thinness guard (no inline tests; line ceilings)
 	@# Ceilings + EXCEPTIONS SSOT: scripts/check_lib_rs.py — dual-wired with ci.yml's guards job.
 	@# Mirrors make check-crate-dag (dual-wire lesson: Makefile AND ci.yml, never one alone).
 	@./scripts/check_lib_rs.sh
+
+.PHONY: check-rust-file-size
+check-rust-file-size: ## Per-file crates/**/*.rs line-ceiling guard (default + EXCEPTIONS)
+	@# Default ceiling + EXCEPTIONS SSOT: scripts/check_rust_file_size.py — dual-wired with
+	@# ci.yml's guards job. Companion to check-lib-rs (crate-root thinness). Ceilings ratchet
+	@# down only; prose points at the script and never restates the numbers.
+	@./scripts/check_rust_file_size.sh
 
 .PHONY: check-parity-live-dual-wire
 check-parity-live-dual-wire: ## Fail if make parity-live and parity-live.yml drift (load-bearing flags)
@@ -323,11 +330,12 @@ lint: ## Clippy + ruff (autofix Python)
 	$(RUFF) check --fix .
 
 .PHONY: install-hooks
-install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + Python thinness + manifest guards + cargo fmt + taplo + typos
+install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + rust file-size + Python thinness + manifest guards + cargo fmt + taplo + typos
 	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast
 	@# (sub-second: a `cargo metadata` read and a pure text scan). Hook budget stays < 1 s
-	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class), and
-	@# check_manifest.sh joined at FD-3 (pure text: no cargo, no network).
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_lib_py.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class),
+	@# check_manifest.sh joined at FD-3 (pure text: no cargo, no network), and
+	@# check_rust_file_size.sh joined at G-8 (same pure-text class as check_lib_rs).
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"
