@@ -68,6 +68,11 @@ not this directory.
   differential corpus, record-side). 10 recorded rows against live PySpark 4.1.2 +
   `iceberg-spark-runtime-4.1_2.13:1.11.0`, lifecycle helper cleanup proof, ready-to-paste registry
   rows, deferred Rust pins + live-tier scenarios (declared), octo/overload evidence.
+- [g7-decimal-ledger.md](g7-decimal-ledger.md) — unit ledger for **G-7** (decimal128 differential
+  corpus, Python half; G13 folded). Gap G2 (20-26 rows) + G13 (6-8) + 3 CTAS write-back +
+  committed record driver; budget pin + CONVERGED-flip-don't-delete disclosures; G-7b deferred
+  (Rust bit-exact pins + cross-door rows). Ready-to-paste registry rows live here, never in the
+  registry file (conductor ban).
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
