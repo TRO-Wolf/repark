@@ -114,9 +114,32 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the temp root resolves once
   at registration, never at query time). Hoisted MOVE-ONLY from the v1 SQL crate.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
-  (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, and `read_table_at`
-  (snapshot-pinned static provider via `iceberg-datafusion`). Hoisted MOVE-ONLY from the v1 SQL
-  crate; the SQL-text rewrite half stays deferred with the phase-2 router.
+  (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
+  (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the
+  ONE minter of the `__repark_tt_` ephemeral-view namespace, `pub` for that reason** (H-1b fix
+  pass, 2026-08-11). Hoisted MOVE-ONLY from the v1 SQL crate; the SQL-text rewrite half stays
+  deferred with the phase-2 router.
+  **Documented residual (H-1b, 2026-08-11):** `read_table_at` registers a `__repark_tt_<n>` temp
+  view and never deregisters it. For its own caller — the reader-options path in `session.rs`
+  (`spark.read.option("snapshot-id" | "as-of-timestamp" | "branch" | "tag", …)`) — that is
+  CORRECT and deliberately unchanged: the view backs the `DataFrame` handed to the user, and a
+  reader has no statement boundary to release at. Both SQL doors DO have one, and both now track
+  their rewrite's names in a `PinnedViews` ledger released after planning (`repark-spark`'s own
+  mint; `repark-sql` additionally records the name minted here, since its view composes over this
+  function). So a `__repark_tt_*` left on a session is a leak only if the session ran a
+  time-travel STATEMENT; after a reader-options read it is the residual — see
+  `crates/repark-spark/src/map.md` `## Debug` for the three-producer triage.
+  **"Deliberately unchanged" only became TRUE at the fix pass.** `repark-spark`'s rewrite minted
+  from a SECOND process-global counter, also starting at 1, so it produced the same names this
+  module does: a `VERSION AS OF` statement deregistered a live reader-options view and then
+  released it. The registration survived the reader, but not the next statement. One minter
+  (above) closes it by construction; pin:
+  `repark-spark`'s `tests::time_travel::time_travel_statement_pins_never_collide_with_a_reader_options_view`.
+  **`read_table_at`'s returned plan shape is load-bearing**, not incidental: the ANSI door reads
+  the name minted here off the frame's `LogicalPlan::TableScan` (`repark_sql::time_travel::
+  core_pinned_name`, prefix-checked), so wrapping the frame in another node here, or changing the
+  prefix, silently restores that door's half of the leak. The fence is the broadened
+  `LIKE '__repark_tt%'` assertion in `crates/repark-sql/tests/introspection.rs`.
 - `session_time_zone.rs` (+ `session_time_zone/tests.rs`) — the session timezone
   (`spark.sql.session.timeZone`). Holds the **one** authoritative spelling of that conf key
   (`SESSION_TIME_ZONE_KEY` — no alternate spelling exists, deliberately), the validated

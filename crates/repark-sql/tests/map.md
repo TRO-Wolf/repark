@@ -33,7 +33,13 @@ belongs out here is what must be observed from outside the crate.
   (`metadata_tables_currently_enumerate_alongside_the_real_table`), left red-on-purpose so the
   decision could not be made silently; it was flipped in the same diff as the behavior. Also
   carries the leak pin: a `FOR … AS OF` read must leave no `__repark_ansi_tt_*` relation behind,
-  which only became observable once this PR turned `information_schema` on.
+  which only became observable once this PR turned `information_schema` on. **Broadened in H-1b
+  (2026-08-11):** the pin now asserts the `'__repark_tt%'` half too — the name
+  `repark_core::read_table_at` registers under this door's view, which the ANSI-prefix filter was
+  blind to by construction and which was still leaking (three pinned reads →
+  `__repark_tt_1|2|3`). Added RED, then fixed in
+  `../src/time_travel.rs::register_pinned_view`; the two `LIKE` patterns are disjoint, so neither
+  half can go quiet again.
 
 - `ta_toll.rs` (PR-6, Q11) — `TaExtension` on a **native** session, one kernel driven through
   ANSI-door SQL as a window function and compared `f64::to_bits` against the recorded C TA-Lib

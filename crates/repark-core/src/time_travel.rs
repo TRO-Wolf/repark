@@ -28,6 +28,8 @@ use iceberg_datafusion::IcebergStaticTableProvider;
 use crate::catalog_state::CatalogRegistry;
 
 /// Process-wide counter so ephemeral temp-view names never collide across concurrent sessions.
+/// The ONE counter behind [`next_temp_view_name`] — see that function for why there must not be
+/// a second.
 static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
 
 /// Fold an iceberg error into a DataFusion error (this module's contract is
@@ -191,7 +193,24 @@ pub fn parse_timestamp_to_ms(raw: &str) -> Result<i64> {
 
 /// ===========================================================================================
 /// Build a snapshot-pinned [`DataFrame`] for a three-part Iceberg table + [`TimeTravelSpec`].
-/// Used by the reader-options path (`read_iceberg_table`).
+///
+/// **Two callers, with different correct dispositions for the registration it leaves behind:**
+/// 1. the reader-options path (`session.rs`'s `read_iceberg_table` —
+///    `spark.read.option("snapshot-id" | "as-of-timestamp" | "branch" | "tag", …)`), which KEEPS
+///    it: the ephemeral view backs the frame handed to the user and there is no statement
+///    boundary to release at (the documented residual, H-1b);
+/// 2. the ANSI door (`repark_sql::time_travel::register_pinned_view`), which composes its own
+///    `__repark_ansi_tt_<n>` view over the returned frame and RELEASES both names once the
+///    statement is planned.
+///
+/// Caller 2 recovers the name minted here by reading it off the returned frame's logical plan
+/// (`repark_sql::time_travel::core_pinned_name`: a bare `LogicalPlan::TableScan` whose table name
+/// carries the `__repark_tt_` prefix). **That plan shape and that prefix are load-bearing at this
+/// producing site**: wrapping the returned frame in another node here, or minting under a
+/// different prefix, silently turns that recovery into a `None` and restores the leak — which is
+/// why the pin that fences it (`repark-sql`'s
+/// `tests/introspection.rs::time_travel_pinned_views_do_not_leak_into_the_introspection_surface`)
+/// asserts on the broad `LIKE '__repark_tt%'` pattern rather than on a name.
 /// ===========================================================================================
 ///
 /// # Errors
@@ -222,7 +241,28 @@ pub async fn read_table_at(
     })
 }
 
-fn next_temp_view_name() -> String {
+/// ===========================================================================================
+/// Mint the next ephemeral `__repark_tt_<n>` temp-view name. **The only minter of that prefix.**
+///
+/// PUBLIC on purpose, and the reason is a correctness one rather than a convenience one: the
+/// `__repark_tt_` namespace is SHARED across crates, on a single `SessionContext`, so two
+/// independent counters do not merely produce untidy numbering — they produce the SAME name and
+/// one registration silently destroys the other. Three call sites live in that namespace:
+/// [`read_table_at`] below (the reader-options path, whose registration must SURVIVE — it backs
+/// the `DataFrame` handed to the user), the Spark door's SQL rewrite (`repark_spark::time_travel`),
+/// and the ANSI door by composition over [`read_table_at`] (`repark_sql::time_travel`).
+///
+/// Until H-1b (2026-08-11) the Spark door minted from a counter of its own, also starting at 1.
+/// On a session that had used the reader-options path first, the door's mint step therefore
+/// deregistered the reader's live view before registering its pinned provider under the same
+/// name, and the post-planning `PinnedViews::release` then deleted that name outright — a
+/// `spark.read.option("snapshot-id", …)` frame unregistered by an unrelated `VERSION AS OF`
+/// statement. Minting HERE, from one process-global counter, makes the collision impossible by
+/// construction. **Do not add a second counter**; the pin is
+/// `repark-spark`'s `tests::time_travel::time_travel_statement_pins_never_collide_with_a_reader_options_view`.
+/// ===========================================================================================
+#[must_use]
+pub fn next_temp_view_name() -> String {
     let sequence = TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed);
     format!("__repark_tt_{sequence}")
 }

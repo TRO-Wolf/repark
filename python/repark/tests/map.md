@@ -1039,7 +1039,11 @@ NOT in that file is a defect, not a decision.
   C1-Q-001/L-001/L-002); reader options `snapshot-id` / `as-of-timestamp` /
   `branch` / `tag` (all mutex pairs + residual incremental denylist); filter/projection
   composition; current-read unaffected; write-to-branch/tag loud; `__repark_tt_*` hidden from
-  listTables; two-part AS OF fail-loud; unary-minus snapshot id named in error; multi-table
+  listTables (rewritten in H-1b with the ephemeral-view leak fix: the SQL rewrite now RELEASES
+  its pins, so the non-vacuity half of that pin comes from the reader-options registration,
+  which still survives by design — it backs the returned frame; the filter step also asserts
+  POSITIVE membership of the real table first, so an empty listing cannot green it);
+  two-part AS OF fail-loud; unary-minus snapshot id named in error; multi-table
   JOIN dual VERSION AS OF (octo C2); RFC3339 Zulu TIMESTAMP; direct read_iceberg_table
   mutex kwargs; empty branch/tag loud (octo C3); schema-at-snapshot vs current after RTAS
   widen (static provider, not post-hoc filter — octo C4); SYSTEM_VERSION string ref;

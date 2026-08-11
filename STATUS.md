@@ -135,11 +135,6 @@ of state plus a link. A known **defect with its fix scheduled** is not a diverge
 row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
 moving it. Nothing is described in both places.
 
-- **Spark-door time-travel view leak** — a known **defect**, not a declared divergence: the fix is
-  scheduled (campaign decision D1, unit H-1b) and it is inherited verbatim from v1, so under the
-  v1-first rule it is fixed in the v1 source and re-ported rather than patched only here. The ANSI
-  door's fix (`PinnedViews`, released on every exit path) is the template. It has no registry row
-  and no pin today; H-1b's re-port lands both the fix and the pin, and retires this entry.
 - **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
   is the divergence registry's first declared row, with its behavior, its rationale and its pin:
   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) §3 row ID-1. It stays listed
@@ -183,6 +178,8 @@ moving it. Nothing is described in both places.
 **Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
 **2026-08-10** — see
 [docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md).
+The Spark-door time-travel view leak was fixed in unit H-1b on **2026-08-11** — see
+[task/h1b-ledger.md](task/h1b-ledger.md).
 Deleted at the campaign's close-out.
 
 ## Architectural risks

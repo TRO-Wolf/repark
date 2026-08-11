@@ -193,6 +193,13 @@ therefore has a precondition it does not itself satisfy: the predecessor's fix e
 - **Re-port the predecessor's fix** into `crates/repark-spark/src/time_travel.rs`, following the
   ANSI door's template — `PinnedViews` in `crates/repark-sql/src/time_travel.rs`, released on
   **every** exit path, including the error paths.
+  > **Annotation, 2026-08-11 (H-1b delivery — briefs are versioned, so this narrows rather than
+  > rewrites).** "Every exit path, including the error paths" is not what either door delivers or
+  > intends. The guarantee is the map's wording, **every `?` / `return` path**; unwind and
+  > future-drop are deliberately outside it (`PinnedViews` carries no `Drop` impl — it would have
+  > to own a `SessionContext` clone — and neither source exists today: panics are banned in prod
+  > and the PyO3 facade drives this via `block_on`). The error-path half of the sentence IS
+  > delivered and pinned. Decision D-1 + evidence: [../task/h1b-ledger.md](../task/h1b-ledger.md).
 - **Pins on both doors and the facade**: an ephemeral view created by a time-travel rewrite is gone
   after the statement completes, and gone after the statement *fails*.
 - **Move the issue's STATUS row** from "Known correctness issues" to fixed in the same PR, and

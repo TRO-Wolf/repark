@@ -43,6 +43,21 @@ not this directory.
 - [g4-tests-split-ledger.md](g4-tests-split-ledger.md) — **G-4** declared-rename: split
   `crates/repark-spark/src/tests.rs` → `src/tests/` by production-module alignment; identity
   gate + name map under `task/g4-artifacts/`.
+- [h1b-ledger.md](h1b-ledger.md) — **V2 Engine Hardening H-1b** (the time-travel ephemeral-view
+  leak): the Spark door's `PinnedViews` ledger + `execute_time_travelled` release split, the two
+  new leak pins with BOTH mutation transcripts (drop the release → both red; release only on `Ok`
+  → the error-path pin alone reds), the repair of the facade pin that ENCODED the leak as its own
+  non-vacuity proof, and the escaped half of the ANSI door's "fixed" claim — the `__repark_tt_<n>`
+  that `repark_core::read_table_at` mints under `__repark_ansi_tt_<n>`, caught RED then fixed.
+  Closes rider 4 of
+  [../docs/history/port-v2/p2g-ansi-m2-ledger.md](../docs/history/port-v2/p2g-ansi-m2-ledger.md)
+  and corrects that ledger's finding 3, both halves. Carries the documented reader-options
+  residual and one flagged deviation (D-2). **§11 is the adversarial panel's fix pass
+  (2026-08-11):** the F-1 counter unification (two process-global `__repark_tt_` minters became
+  one, in repark-core — a Spark-door statement used to destroy a live reader-options
+  registration), its collision pin proven red two ways, D-2's rationale corrected (a flagged
+  deviation justified by a constraint that did not exist — the cautionary tale), and the
+  finding → action table for F-1 … F-20.
 - [g8-file-size-ledger.md](g8-file-size-ledger.md) — **G-8** general Rust file-size gate
   (`scripts/check_rust_file_size.py`): measurement-seeded default + EXCEPTIONS, dual-wired into
   `make ci` + ci.yml guards, provocation proofs (must-FAIL / must-PASS).
@@ -112,6 +127,8 @@ promoted into [lessons.md](lessons.md) (2026-08-10) **before** the move.
 | Read why the session timezone is a build-time knob with one spelling | [h1a-ledger.md](h1a-ledger.md) |
 | Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [h1a-ledger.md](h1a-ledger.md) "§ Split B" |
 | See how an open question gets FIXED instead of declared (and why a fixed defect gets no row) | [h1c-ledger.md](h1c-ledger.md) + [../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md) |
+| Find out why a `__repark_tt_*` name is on a session, and which of its three producers put it there | [h1b-ledger.md](h1b-ledger.md), then [../crates/repark-spark/src/map.md](../crates/repark-spark/src/map.md) `## Debug` |
+| See what a two-mutation acceptance looks like (and why the second mutation is the one that matters) | [h1b-ledger.md](h1b-ledger.md) §7c/§7d |
 | Read the MERGE INTO differential corpus (gap G3) ledger + registry paste rows | [n2-merge-ledger.md](n2-merge-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |

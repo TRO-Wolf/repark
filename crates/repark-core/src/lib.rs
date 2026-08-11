@@ -53,10 +53,13 @@ pub use runtime::EngineRuntime;
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy};
 
-// --- Time travel (hoisted): spec + parsers + the reader-options path. ---
+// --- Time travel (hoisted): spec + parsers + the reader-options path, plus the ONE minter of
+// the shared `__repark_tt_` ephemeral-name namespace (`next_temp_view_name` — public because both
+// SQL doors register into that namespace on the same session, and a second counter would collide;
+// H-1b).
 pub use time_travel::{
-    TimeTravelSpec, parse_timestamp_to_ms, parse_version_value, read_table_at, resolve_snapshot_id,
-    snapshot_id_as_of_time,
+    TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms, parse_version_value, read_table_at,
+    resolve_snapshot_id, snapshot_id_as_of_time,
 };
 
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate). ---
