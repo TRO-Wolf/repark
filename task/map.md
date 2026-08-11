@@ -12,6 +12,11 @@ not this directory.
 
 ## Contents
 
+- [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) — **G-7b / W-1 in flight:** 10
+  bit-exact `Decimal128` i128 pins on the Spark door + 2 cross-door ANSI/Spark rows (Python
+  corpus cited, not edited). Continues archived
+  [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md)
+  §9.
 - [todo.md](todo.md) — a **pointer only**: the live backlog is [../STATUS.md](../STATUS.md), and a
   unit's working plan is its own ledger. The file keeps its name because live code, docs and one
   runtime error message cite this path.
@@ -30,6 +35,8 @@ not this directory.
 - [census/](census/map.md) — **evidence**: the recorded census runs, `baseline-fc3f48102/` (the port
   pin) and `v2-a5be8a7/` (the acceptance run). Never hand-edited; a re-run replaces a whole
   directory in one commit.
+
+- [wc-check-lib-rs-stale-ledger.md](wc-check-lib-rs-stale-ledger.md) — WC: `check_lib_rs` stale-EXCEPTIONS crate-key fail-closed (G-8 mold backport).
 
 ## Where the closed campaigns' ledgers went
 
@@ -90,7 +97,8 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Find out why a `__repark_tt_*` name is on a session, and which of its three producers put it there | [../docs/history/hardening-h1/h1b-ledger.md](../docs/history/hardening-h1/h1b-ledger.md), then [../crates/repark-spark/src/map.md](../crates/repark-spark/src/map.md) `## Debug` |
 | See what a two-mutation acceptance looks like (and why the second mutation is the one that matters) | [../docs/history/hardening-h1/h1b-ledger.md](../docs/history/hardening-h1/h1b-ledger.md) §7c/§7d |
 | Read the MERGE INTO differential corpus (gap G3) ledger + registry paste rows | [../docs/history/hardening-h1/n2-merge-ledger.md](../docs/history/hardening-h1/n2-merge-ledger.md) |
-| Read the decimal128 differential corpus ledger | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
+| Read the decimal128 differential corpus ledger (Python half) | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
+| Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |

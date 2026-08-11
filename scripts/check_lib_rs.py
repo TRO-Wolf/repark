@@ -99,7 +99,19 @@ def main() -> int:
         print("ERROR: crates/ not found", file=sys.stderr)
         return 2
 
+    # Stale EXCEPTIONS rows: a crate-name key whose crates/<key>/src/lib.rs no
+    # longer exists is fail-closed (exception for a deleted/renamed crate would
+    # silently grandfather nothing). Mirrors check_rust_file_size's path-key
+    # stale check; keys here are crate directory names, not repo-relative paths.
     all_errors: list[str] = []
+    for crate in sorted(EXCEPTIONS):
+        lib = crates_root / crate / "src" / "lib.rs"
+        if not lib.is_file():
+            all_errors.append(
+                f"ERROR: EXCEPTIONS key has no crate root on disk: {crate} "
+                f"(remove the row or restore crates/{crate}/src/lib.rs)"
+            )
+
     checked = 0
     for lib in sorted(crates_root.glob("*/src/lib.rs")):
         checked += 1

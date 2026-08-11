@@ -17,7 +17,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `ctas`, `create_table`, `namespace_ddl`, `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `merge`, `call`, `ref_ddl`, `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
-  `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse).
+  `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
+  `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
+  nullability; cites Python corpus row names, no Python edits).
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):
   `partitioned_ctas`, `partitioned_merge`, `transform_overwrite` (still nests
   `provider_partition_correctness`), `service_managed_ctas`.

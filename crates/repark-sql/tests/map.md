@@ -50,8 +50,11 @@ belongs out here is what must be observed from outside the crate.
   `AnsiDialect` session and a Spark-extended `SparkDialect` session, each over its OWN in-memory
   catalog, compared on the Arrow path (value AND type). Rows: CTAS, INSERT, ALTER (schema
   evolution + table rename), MERGE, time travel, identifier case folding, the single-session
-  legality boundary (pure catalog DDL), and the session-scope guard rail that explains why one
-  session cannot do this job. Needs the `repark-spark` dev-dep — the ONLY place either door may
+  legality boundary (pure catalog DDL), the session-scope guard rail that explains why one
+  session cannot do this job, and **G-7b decimal128** (`cross_door_decimal_add_same_precision_scale_bit_exact`,
+  `cross_door_decimal_mul_money_by_quantity_bit_exact` — same SQL through both doors, schema +
+  nullability + raw i128 equal; corpus rows `add_same_precision_scale` /
+  `mul_money_by_quantity`). Needs the `repark-spark` dev-dep — the ONLY place either door may
   name the other, and legal because the crate-DAG guard scopes layering to normal edges.
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)

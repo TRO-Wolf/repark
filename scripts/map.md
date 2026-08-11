@@ -67,7 +67,9 @@ Repository helper scripts wired into the dev workflow.
   ceiling ratcheted 230 → 190 when the taxonomy moved to src/exceptions.rs — without the row
   every slate reds on the crate's arrival), and `repark-ta` — the verbatim-ported kernel root's `TaError`
   contract + flat re-export surface).
-  Dual-wired: `make check-lib-rs` (in `make ci`) AND a ci.yml
+  **Stale EXCEPTIONS keys fail closed** (WC 2026-08-11): a crate-name key whose
+  `crates/<key>/src/lib.rs` is missing is an ERROR (G-8 mold; keys are crate names, not
+  paths). Dual-wired: `make check-lib-rs` (in `make ci`) AND a ci.yml
   `guards`-job step; pre-commit via `install-hooks` and `.pre-commit-config.yaml`
   (`lib-rs-guard`). Pure text — sub-second. EXCEPTIONS reason
   strings stay ≤100 cols (ruff E501; keep ruff-format clean).

@@ -9,6 +9,7 @@ mod call;
 mod catalog_ops;
 mod create_table;
 mod ctas;
+mod decimal;
 mod describe_show;
 mod dml;
 mod insert_overwrite;
