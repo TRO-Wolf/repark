@@ -62,7 +62,7 @@ there the hard way and bind here from day one.
   original wording "every exit path" overstated the mechanism — unwind and future-drop are not
   covered, deliberately (no `Drop`); and the Spark door's copy of the leak is now FIXED by
   H-1b with pins, not declared — a fixed defect gets no registry row. See
-  `task/h1b-ledger.md`.)*
+  `docs/history/hardening-h1/h1b-ledger.md`.)*
 - **DO pick the sync recipe by branch relationship.** Stacked branch after a squash-merge:
   verify the squash tree equals the prior branch head (empty diff), then blanket `--ours` is
   provably correct. SIBLING branches: union-merge by hand, then re-check semantic riders (a

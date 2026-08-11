@@ -1,8 +1,15 @@
 # Unit ledger — H-1c: the `$`-metadata introspection rider
 
+> **ARCHIVED 2026-08-11** (G-9 — H-1 phase ledger promotion) — a historical record of everything
+> delivered through the H-1 close gate (repark #35–#46), including the parallel G/N corpus units
+> whose gap-map homes are H-2, kept for provenance and **not a source of live rules**: every rule
+> still in force was verified live-elsewhere or promoted first
+> ([promotion-ledger.md](promotion-ledger.md)). Relative links were repaired for this location on
+> the same date; nothing else changed. Current state: [STATUS.md](../../../STATUS.md).
+
 **Unit:** V2 Engine Hardening H-1c · **Slate:**
-[../briefs/v2-engine-hardening.md](../briefs/v2-engine-hardening.md), unit "H-1c" · **Design:**
-[../docs/design/v2-engine-hardening.md](../docs/design/v2-engine-hardening.md) §2.1 (the second of
+[../briefs/v2-engine-hardening.md](../../../briefs/v2-engine-hardening.md), unit "H-1c" · **Design:**
+[../docs/design/v2-engine-hardening.md](../../design/v2-engine-hardening.md) §2.1 (the second of
 the three known correctness issues) + §4 decision D2 ("decide in the unit") · **Status:** drafted
 2026-08-10; **panel REJECT the same day, fix pass applied** (see "Fix pass — 2026-08-10" at the end
 of this ledger, which supersedes one gate line above); awaiting assembly.
@@ -17,7 +24,7 @@ in `MetadataProjectionSchemaProvider::table_names`
 addressable by name.
 
 The decision, the evidence, the rejected alternative and the fork-repin criteria are recorded in
-**[../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)**
+**[../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../../adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)**
 — the ADR is the authoritative home, and this ledger does not restate it. What follows is the
 *process* record: the evidence-gathering, the deviations, and the gate results.
 

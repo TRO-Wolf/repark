@@ -1186,7 +1186,7 @@ NOT in that file is a defect, not a decision.
   the asserted recipe are one recipe, not two copies. Exit 0 = every recorded half still
   reproduces (schema name/type/nullability then values); non-zero prints the live values to paste
   back after deciding the move is deliberate. It never edits the corpus. Needs a JVM + `pyspark`
-  (`uv sync --extra record`); invocation is in its module docstring and in `task/h1a-ledger.md`.
+  (`uv sync --extra record`); invocation is in its module docstring and in `docs/history/hardening-h1/h1a-ledger.md`.
 - `test_merge_differential_parity.py` — the **MERGE INTO differential corpus** (H-2 gap G3,
   record-side). 10 rows (budget 8-10): basic upsert control, duplicate source keys (error-class
   `MERGE_CARDINALITY_VIOLATION` on both engines + insert-only that commits both rows),
@@ -1201,14 +1201,14 @@ NOT in that file is a defect, not a decision.
   match; jar is record-time only via `spark.jars.packages`). Split-path convergence is CLASSIFIED
   (CONVERGED → flip to content equality; commit-but-mismatch → regression) when repark stops
   refusing — not a bare "expected raise". **Deferred (declared):** 4 Rust pins (G-4 file ban) and
-  2 live-tier scenarios (`_live_parity` + workflow banned). See `task/n2-merge-ledger.md` §9
+  2 live-tier scenarios (`_live_parity` + workflow banned). See `docs/history/hardening-h1/n2-merge-ledger.md` §9
   (PR #41 fix-round).
 - `_record_merge_differential_goldens.py` — the **record driver** for the MERGE corpus (NOT a
   `test_` module; never collected). Provisions Spark with the pinned Iceberg GAV + a local Hadoop
   warehouse catalog, imports `ROWS` + lifecycle helpers from the committed test module, and
   re-derives every Spark half (content / error needle / split success). Exit 0 = bit-for-bit
   reproduce; never edits the corpus. Needs zulu-17 + `uv sync --extra record` + network on first
-  Ivy resolve. Invocation in its docstring and `task/n2-merge-ledger.md`.
+  Ivy resolve. Invocation in its docstring and `docs/history/hardening-h1/n2-merge-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
   level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (12 equality
   controls + 12 disclosures) and 7 G13 rows (raise-class + nullability), recorded in record mode
@@ -1226,14 +1226,14 @@ NOT in that file is a defect, not a decision.
   cannot green the pin. Three CTAS write-back rows (Q1: repark-only Iceberg path; Spark is SELECT
   oracle when equality holds) prove `decimal128(p,s)` survives CTAS -> memory catalog -> read
   back. Rust bit-exact pins + cross-door rows are **G-7b** (deferred). Ledger:
-  `task/g7-decimal-ledger.md` (§6 holds paste-true registry rows with full
+  `docs/history/hardening-h1/g7-decimal-ledger.md` (§6 holds paste-true registry rows with full
   `path::test[case]` node ids; registry file itself is not edited from this unit).
 - `_record_decimal128_goldens.py` — the **record driver** for the decimal128 corpus (NOT a
   `test_` module; never collected). Imports `ROWS` / `CTAS_ROWS` from the committed test module
   and re-runs each row's own `run_row` recipe on live PySpark; raise-class rows re-check the
   exception class still matches. Exit 0 = every recorded half still reproduces; never edits the
   corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation in its module docstring
-  and in `task/g7-decimal-ledger.md`.
+  and in `docs/history/hardening-h1/g7-decimal-ledger.md`.
 - `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
   never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
   `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines

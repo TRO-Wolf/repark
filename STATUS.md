@@ -70,9 +70,11 @@ What happens next, in order:
    ([docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md),
    [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md)). One preparatory
    sweep has already landed from it (#30, 2026-08-10 — the dead doc-pointer sweep in ported
-   sources, which closed the deferral of the same name). The engineering items parked below (spill
-   coverage, the `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its
-   natural inputs.
+   sources, which closed the deferral of the same name). **H-1 phase record archived
+   2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md) (mid-campaign
+   promotion G-9 — ten unit ledgers + `g4-artifacts/` through the H-1 close gate #35–#46; campaign
+   continues into **H-2**). The engineering items parked below (spill coverage, the
+   `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its natural inputs.
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -100,9 +102,11 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
-- **V2 Engine Hardening** (active; recon complete, design and slate landed) — the first campaign to
-  touch engine code since the port: optimization across the native door, the Spark facade and the
-  write path, together with the verification that proves each improvement. Its design is
+- **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
+  mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
+  campaign continues into H-2) — the first campaign to touch engine code since the port:
+  optimization across the native door, the Spark facade and the write path, together with the
+  verification that proves each improvement. Its design is
   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md) (goal, the six phases
   H-0…H-5, the dated decisions) and its execution slate is
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
@@ -179,7 +183,7 @@ moving it. Nothing is described in both places.
 **2026-08-10** — see
 [docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md).
 The Spark-door time-travel view leak was fixed in unit H-1b on **2026-08-11** — see
-[task/h1b-ledger.md](task/h1b-ledger.md).
+[docs/history/hardening-h1/h1b-ledger.md](docs/history/hardening-h1/h1b-ledger.md).
 Deleted at the campaign's close-out.
 
 ## Architectural risks

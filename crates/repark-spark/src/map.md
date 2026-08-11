@@ -112,7 +112,7 @@ wrapper.
   plus path-preserving sibling lifts of the former nested mods (`partitioned_ctas`,
   `partitioned_merge`, `transform_overwrite`, `service_managed_ctas`). Shared fixtures live in
   `tests/common.rs`. Navigation: [tests/map.md](tests/map.md). Identity gate: 352 lib tests,
-  202 path renames, leaf multiset unchanged — see `task/g4-tests-split-ledger.md`.
+  202 path renames, leaf multiset unchanged — see `docs/history/hardening-h1/g4-tests-split-ledger.md`.
   Registry / matrix pin strings moved with the renames (path-string updates only).
   Notable pins carried through the split: the **declared-divergence pin**
   `tests/ref_ddl.rs::ref_ddl_if_exists_spellings_and_trailing_clauses_refuse_loud` (H-1d,
