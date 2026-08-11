@@ -162,13 +162,30 @@ registry text when they land; orchestrator owns `docs/spark-sql-iceberg-parity.m
 
 ---
 
-## 7. Octo / critic (filled after critic pass)
+## 7. Octo / critic
 
 | Stage | Label | Detail |
 |---|---|---|
-| procedural ACC-style | *pending* | C1+C2+C4 |
-| sepmo-octo | *pending* | cycles=2, early_stop, claims_critic=true; Half-A = C1+C2+C3+C4 |
+| procedural ACC-style | **ACC-CONVERGED** | C1 quality/bugs + C2 security/safety + C4 claims — CLEAN |
+| sepmo-octo cycle 1 | **CLEAN** ≥ S1 | Half-A C1+C2+C3+C4 quad; claims_critic=true; early_stop eligible |
+| sepmo-octo | **OCTO-CONVERGED** | cycles=2 requested, early_stop after CLEAN cycle 1 |
 | overload | **not run** | A2: no wave-global overload overnight |
+
+### Critic-4 (claims) null-report
+
+| Class | Inventory | Verdict |
+|---|---|---|
+| CL-MANDATE | items 1+4 claimed done; 2+3 claimed deferred | tree has 4 pin fns + NIT diffs; no item-2/3 code; design note outside repo only |
+| CL-QUANT | "4 Rust pins", "23 passed", "13 passed" | re-ran: 4 new pins green; full `tests::merge::` was 23; differential 13 |
+| CL-STALE | ledger "does NOT claim N-2b closed" | holds; §2 DEFERRED present; W2-COMPLETE PARTIAL |
+| CL-RATIONALE | G-4 file ban as prior deferral reason | historical (archived n2 ledger); G-4 merged; pins now land |
+| CL-TRANSCRIPT | make ci EXIT 0; dual-wire OK | re-ran dual-wire OK; ci log EXIT 0 |
+| CL-COUNT | 4 pins named in map + ledger + code | three homes agree on the four names |
+| CL-DUALHOME | archived n2 ledger still says "0 Rust pins deferred" | **history** under docs/history — not a live claim |
+| CL-VACUOUS | GAV pin derives from pyproject | re-ran `test_iceberg_gav_pin_is_exact_spark_minor` PASS; field `spark_needs_cow_props` absent |
+| CL-GHOST | design note path `planning/grok/W2-LIFECYCLE-DESIGN.md` | exists on planning tree; not a repo path (A11) |
+
+OPEN ≥ S1: **none**. Residual notes (below floor): score-arm pins use Int32 (leaf surface) vs Python BIGINT — value semantics match; type pin is the downcast.
 
 ---
 
