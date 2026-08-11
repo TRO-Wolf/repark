@@ -1259,6 +1259,23 @@ NOT in that file is a defect, not a decision.
   compare. Exit 0 = every recorded half still reproduces; never edits the corpus. Needs zulu-17
   + `uv sync --extra record`. Invocation in its docstring and `task/w3-joins-ledger.md`.
   Serialize with other JVM recorders via `/tmp/grok-jvm-record.lock`.
+- `test_window_parity.py` — the **window-function differential corpus** (H-2 gap G5). 27 rows
+  (budget 20-28): default-frame trap with ties (RANGE peers — name-gated `default_frame_*` ≥3),
+  explicit ROWS vs RANGE / sliding / unbounded / value-offset frames, ranking family with ties
+  (`rank`/`dense_rank`/`row_number`/`ntile`/`percent_rank`), lag/lead default + explicit default
+  value + NULL payload, partitioned vs unpartitioned, ORDER BY NULLS FIRST/LAST, and ≥2
+  DataFrame-API `Window.partitionBy` rows (CP-11). Seed via `createDataFrame` + temp view so the
+  corpus measures WINDOW behaviour, not VALUES literal-type noise. 19 equalities (value+type match
+  on frames/offsets/default-frame trap) + 8 disclosures (SQL-door ranking returns Arrow `uint64`
+  vs Spark `int32`; DF-API `row_number` already casts to IntegerType and is equality). Every row
+  asserts on the Arrow path via `repark_parity.assert_frames_equal`; disclosure failures are
+  CLASSIFIED CONVERGED (flip-don't-delete) vs regression. Determinism: total ORDER BY or
+  peer-determined columns. Ledger: `task/w4-windows-ledger.md`.
+- `_record_window_goldens.py` — the **record driver** for the window corpus (NOT a `test_` module;
+  never collected). Imports `ROWS` + `run_row` from the committed test module; re-derives every
+  Spark half on live PySpark 4.1.2 (`local[2]`, ANSI on, shuffle=2). `--emit` prints paste-ready
+  `_table(...)` snippets. Exit 0 = bit-for-bit reproduce; never edits the corpus. Needs zulu-17 +
+  `uv sync --extra record`. Invocation in its docstring and `task/w4-windows-ledger.md`.
 - `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
   never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
   `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
@@ -1428,6 +1445,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a window-function differential row (gap G5) | `test_window_parity.py` (`ROWS`; record Spark half with `_record_window_goldens.py`, never by hand) |
+| Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1478,6 +1497,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a row reds saying "moved OFF its pinned disclosure ... regression" | repark matches neither half: re-derive both in record mode (`_record_session_timezone_goldens.py`) before touching the pin. |
 | a `test_decimal128_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or raises the same ANSI class): do NOT delete — flip to equality / shared-raise and record the convergence. |
 | a decimal128 row reds saying regression | re-derive both halves with `_record_decimal128_goldens.py` before touching the pin. |
+| a `test_window_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
+| a window row reds saying regression | re-derive both halves with `_record_window_goldens.py` before touching the pin. |
+| window budget pin reds | G5 must stay 20-28 rows, min 6 equalities, max 22 disclosures, ≥3 `default_frame_*`, ROWS-vs-RANGE, ranking/offset/nulls families, ≥2 `dataframe_api` rows; restore controls rather than deleting families. |
 | decimal128 budget pin reds | G2 must stay 20-26, G13 6-8, CTAS exactly 3, min 8 equalities, max 20 disclosures, and ≥3 `*clamps_scale_in_spark` rows; restore the control equalities / clamp family rather than converting them to disclosures or deleting them behind a non-clamp `DECIMAL(38,…)` control. |
 | a `test_join_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or DF semi/anti starts succeeding): do NOT delete — flip to content equality and record the convergence. |
 | a joins row reds saying regression | re-derive both halves with `_record_join_goldens.py` before touching the pin. |

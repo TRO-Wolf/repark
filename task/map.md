@@ -30,6 +30,7 @@ not this directory.
 - [w3-joins-ledger.md](w3-joins-ledger.md) — **in flight (W-3 / H-2 gap G4):** joins differential
   corpus vs live Spark (value AND Arrow type AND nullability); record driver; §6 paste-true
   registry rows. Does **not** edit `docs/spark-sql-iceberg-parity.md`.
+- [w4-windows-ledger.md](w4-windows-ledger.md) — **live** W-4 window-function corpus (gap G5) unit ledger
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -102,6 +103,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the MERGE INTO differential corpus (gap G3) ledger + registry paste rows | [../docs/history/hardening-h1/n2-merge-ledger.md](../docs/history/hardening-h1/n2-merge-ledger.md) |
 | Read the decimal128 differential corpus ledger (Python half) | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
 | Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
+| Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
