@@ -36,6 +36,8 @@ not this directory.
   pin) and `v2-a5be8a7/` (the acceptance run). Never hand-edited; a re-run replaces a whole
   directory in one commit.
 
+- [wc-check-lib-rs-stale-ledger.md](wc-check-lib-rs-stale-ledger.md) — WC: `check_lib_rs` stale-EXCEPTIONS crate-key fail-closed (G-8 mold backport).
+
 ## Where the closed campaigns' ledgers went
 
 The seventeen `p1*` / `p2*` / `p3*` unit ledgers, the four phase briefs and the port's `todo.md`
