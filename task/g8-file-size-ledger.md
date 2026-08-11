@@ -110,6 +110,13 @@ under 1500. Adding a second ceiling class for a social convention ("mod.rs shoul
 buys nothing mechanical today; the MERGE file's row carries
 `RATCHET: after COW/MOR/plan split out of mod.rs`.
 
+### 5. Stale EXCEPTIONS keys — **fail-closed**
+
+An `EXCEPTIONS` key whose path no longer exists on disk is an **ERROR** (not a silent skip).
+Without this, a rename/delete would leave a dead grandfather that never re-validates. Checked
+in `main()` before the scan (~sorted key walk). The `check_lib_rs` crate-name form of the same
+check is a separate queued backport — **not** part of G-8.
+
 ---
 
 ## Seeded EXCEPTIONS (path → ceiling; measured; one-line reason)
@@ -141,7 +148,7 @@ Full reason strings (with RATCHET notes) live only in `scripts/check_rust_file_s
 
 | Surface | Detail |
 |---|---|
-| SSOT | `scripts/check_rust_file_size.py` (default + EXCEPTIONS + fail-closed empty/unreadable) |
+| SSOT | `scripts/check_rust_file_size.py` (default + EXCEPTIONS + fail-closed empty/unreadable/stale key) |
 | Wrapper | `scripts/check_rust_file_size.sh` (thin; dual-wire shape) |
 | `make check-rust-file-size` | target + `##` help row |
 | `make ci` | includes `check-rust-file-size` after `check-lib-rs` |
@@ -190,6 +197,18 @@ rust-file-size: FAIL — 1 violation(s) across 181 files
 (exit 1)
 ```
 
+### must-FAIL 3 — stale EXCEPTIONS key (path does not exist)
+
+Temporarily added
+`EXCEPTIONS["crates/repark-common/src/does_not_exist_g8_provocation.rs"] = (1500, "provocation")`;
+restored after. Verbatim stderr (2026-08-11 fix-round):
+
+```text
+ERROR: EXCEPTIONS key has no file on disk: crates/repark-common/src/does_not_exist_g8_provocation.rs (remove the row or restore the path)
+rust-file-size: FAIL — 1 violation(s) across 181 files
+(exit 1)
+```
+
 ### Raised-without-reason — convention, not mechanical
 
 Raising a ceiling (or adding a row with a vacuous reason string) is **not** mechanically
@@ -205,6 +224,7 @@ reader does not expect a red gate for a silent raise.
 | Condition | Result |
 |---|---|
 | `crates/` missing | exit 2, `ERROR: crates/ not found` |
+| Stale EXCEPTIONS key (path missing) | exit 1, `ERROR: EXCEPTIONS key has no file on disk: <path> …` |
 | Zero `*.rs` files under `crates/` | exit 2, `ERROR: … scan set is empty — refuse to pass closed` |
 | Unreadable file | exit 1, `ERROR: <path>: unreadable (…)` named in the violation list |
 

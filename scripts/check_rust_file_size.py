@@ -16,7 +16,8 @@ Rules over every *.rs under crates/ (recursive):
    mechanical and fails the gate.
 
 Exit 0 on clean; non-zero with path, measured count, ceiling, and sanctioned
-outs. Fail-closed: unreadable file or empty scan set is an error, never a skip.
+outs. Fail-closed: unreadable file, empty scan set, or an EXCEPTIONS key whose
+path no longer exists is an error, never a skip.
 """
 
 from __future__ import annotations
@@ -146,6 +147,16 @@ def main() -> int:
         print("ERROR: crates/ not found", file=sys.stderr)
         return 2
 
+    # Stale EXCEPTIONS rows: a key whose path no longer exists is fail-closed
+    # (exception for a deleted/renamed file would silently grandfather nothing).
+    all_errors: list[str] = []
+    for rel in sorted(EXCEPTIONS):
+        if not (repo / rel).is_file():
+            all_errors.append(
+                f"ERROR: EXCEPTIONS key has no file on disk: {rel} "
+                f"(remove the row or restore the path)"
+            )
+
     paths = sorted(crates_root.rglob("*.rs"))
     if not paths:
         print(
@@ -154,7 +165,6 @@ def main() -> int:
         )
         return 2
 
-    all_errors: list[str] = []
     checked = 0
     for path in paths:
         if not path.is_file():

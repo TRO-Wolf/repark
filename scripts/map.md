@@ -110,9 +110,10 @@ Repository helper scripts wired into the dev workflow.
   line ceiling with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN only). Default
   and exception numbers live **only** in the `.py` — prose never restates them. Seeded from the
   post-G-4 measured tree (the former 14.5-KLOC `tests.rs` monolith is gone and is not
-  grandfathered). Fail-closed: unreadable file or empty scan set is an error. Pure text —
-  sub-second. Dual-wired: `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job
-  step; also both pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
+  grandfathered). Fail-closed: unreadable file, empty scan set, or a stale `EXCEPTIONS` key
+  (path no longer on disk) is an error. Pure text — sub-second. Dual-wired:
+  `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job step; also both
+  pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
 
 - `check_parity_live_dual_wire.sh` + `check_parity_live_dual_wire.py` — the **parity-live dual-wire**
   guard (G-6). Compares `make parity-live` and `.github/workflows/parity-live.yml` to **each
@@ -176,6 +177,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `lib-py: python/repark/src/repark not found` | The guard runs from the repo root and needs the facade package present |
 | `rust-file-size: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_rust_file_size.py` with a reason (ceilings ratchet down only) |
 | `rust-file-size: … scan set is empty` | Fail-closed: the guard found zero `crates/**/*.rs` files — fix the tree or the scan root |
+| `rust-file-size: EXCEPTIONS key has no file on disk` | Remove the stale row or restore the path (fail-closed; not a silent skip) |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
