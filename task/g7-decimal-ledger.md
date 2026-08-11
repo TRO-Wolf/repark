@@ -389,3 +389,24 @@ Oracle basis for every Spark half below: **recorded** — goldens re-derivable i
 | Ready-to-paste registry rows in ledger only | PROVEN (§6) |
 | G-7b deferral declared | PROVEN (§5, §9) |
 | No banned paths touched | PROVEN |
+
+---
+
+## 11. Fix-round (PR #42 ACCEPT-WITH-NITS) — 2026-08-11
+
+Orchestrator must-fix from the PR comment + MORNING-FIXES addendum. **Second rebase** onto
+`origin/main` after #41 merged (`bf2027a`): both-add conflicts in `task/map.md` and
+`python/repark/tests/map.md` — kept **all** ledger rows and both corpus map entries; multi-hunk
+sweep clean (`grep -rn '^<<<<<<<'`).
+
+| Finding | Action |
+|---|---|
+| Ledger §6 not paste-true (wrong bullet template; Pin citations not resolvable node ids) | **Rewrote §6** to the registry bullet template (`- **repark**` / `- **Apache Spark**` / `- **Pin**` / `- **Rationale**`) with full `python/repark/tests/test_decimal128_parity.py::test_decimal128_row_matches_spark_or_still_diverges[<case>]` ids. Registry file **not** edited (orchestrator lands rows). |
+| 38-digit-clamp coverage pin satisfied by a non-clamp control row (`mul_38_0_identity` is DECIMAL(38,…) equality) | **Tightened pin** — requires ≥3 G2 rows whose names match `*clamps_scale_in_spark`; deleting the clamp family goes red. |
+| Disclosure note missing `f` prefix (~line 365) — failures printed literal `{FIX_G2}` | **Added `f`** so the note formats the real `FIX_G2` text. |
+| Authorship polluted (`Grok (grok-4.5) <noreply@x.ai>`) | **Amended** to `TRO-Wolf <64240326+TRO-Wolf@users.noreply.github.com>` + existing `Authored-By: Grok (grok-4.5) <noreply@x.ai>` trailer (per-command `-c` only). Re-verified after this rebase. |
+
+### Rebase note (post-#41)
+
+Suite grows by the MERGE differential corpus now on main; re-gate with full
+`make py-test-facade` (not unit-only) so a stale `.so` cannot hide a false green.
