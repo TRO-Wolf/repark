@@ -1183,6 +1183,28 @@ NOT in that file is a defect, not a decision.
   reproduces (schema name/type/nullability then values); non-zero prints the live values to paste
   back after deciding the move is deliberate. It never edits the corpus. Needs a JVM + `pyspark`
   (`uv sync --extra record`); invocation is in its module docstring and in `task/h1a-ledger.md`.
+- `test_merge_differential_parity.py` — the **MERGE INTO differential corpus** (H-2 gap G3,
+  record-side). 10 rows (budget 8-10): basic upsert control, duplicate source keys (error-class
+  `MERGE_CARDINALITY_VIOLATION` on both engines + insert-only that commits both rows),
+  `WHEN MATCHED AND` arm ordering / threshold first-match-wins, NULL merge keys (NULL=NULL does
+  not match), insert-only and delete arms, conditional matched update by target predicate, and
+  the `WHEN NOT MATCHED BY SOURCE` refuse disclosure (repark `NotImplemented`; Spark deletes
+  unmatched target). Every content row runs create → seed → MERGE → read back on a real Iceberg
+  table and asserts post-MERGE contents on the Arrow path (value AND type AND nullability) via
+  the parity comparator; error/split rows pin the error token. Lifecycle helper (cleanup on
+  success and failure — no stray warehouse tables) lives in this module beside the recipe SSOT.
+  Recorded against live PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` (exact Spark-minor
+  match; jar is record-time only via `spark.jars.packages`). Split-path convergence is CLASSIFIED
+  (CONVERGED → flip to content equality; commit-but-mismatch → regression) when repark stops
+  refusing — not a bare "expected raise". **Deferred (declared):** 4 Rust pins (G-4 file ban) and
+  2 live-tier scenarios (`_live_parity` + workflow banned). See `task/n2-merge-ledger.md` §9
+  (PR #41 fix-round).
+- `_record_merge_differential_goldens.py` — the **record driver** for the MERGE corpus (NOT a
+  `test_` module; never collected). Provisions Spark with the pinned Iceberg GAV + a local Hadoop
+  warehouse catalog, imports `ROWS` + lifecycle helpers from the committed test module, and
+  re-derives every Spark half (content / error needle / split success). Exit 0 = bit-for-bit
+  reproduce; never edits the corpus. Needs zulu-17 + `uv sync --extra record` + network on first
+  Ivy resolve. Invocation in its docstring and `task/n2-merge-ledger.md`.
 - `_live_parity.py` — the **live oracle tier** shared registry (29 scenarios; NOT a `test_` module — a helper,
   never collected). Holds every mandated golden as an *engine-agnostic recipe* + its pinned
   `golden`: because repark is a near-drop-in for PySpark, ONE recipe runs on both engines
@@ -1346,6 +1368,8 @@ NOT in that file is a defect, not a decision.
 | Run a live-oracle scenario under a NON-UTC session zone | `Scenario(..., session_conf=((lp.SESSION_TIME_ZONE_KEY, lp.ZONE_TOKYO),))` — and move the size + uniqueness pins in the same diff |
 | Add a session-timezone / temporal-edge differential row | `test_session_timezone_parity.py` (`G1_ROWS` / `G16_ROWS`; record the Spark half with `_record_session_timezone_goldens.py`, never by hand) |
 | Re-derive the recorded Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py` |
+| Add a MERGE INTO differential row (gap G3) | `test_merge_differential_parity.py` (`ROWS`; record Spark half with `_record_merge_differential_goldens.py`, never by hand) |
+| Re-derive the MERGE differential Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py` |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |

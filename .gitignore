@@ -33,3 +33,13 @@ build/
 
 # Note: Cargo.lock IS checked in (binary workspace). uv.lock is checked in from phase 3, when
 # the uv workspace members land (no uv project exists at the root until then).
+
+# Local Spark default warehouse + Derby metastore (accidental CWD-relative Spark runs / record
+# misconfig). Record driver uses a tempfile warehouse; these are run-output residue only.
+/spark-warehouse/
+/metastore_db/
+/derby.log
+
+# Overnight-conductor local scratch if ever materialised under the worktree (canonical scratch
+# lives under /tmp/overnight-conductor/<lane>/scratch/, outside the repo).
+/scratch/
