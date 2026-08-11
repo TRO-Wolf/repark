@@ -103,7 +103,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `extension.rs` (+ `extension/tests.rs`) — the registration seam (design §3):
   `SessionExtension` with two defaulted hooks (`configure` pre-assembly, `register`
   post-context) at v1's inline registration positions; `NoopSessionExtension` is the
-  no-extension baseline.
+  no-extension baseline. `configure` takes a `SessionBuildConf` — the builder's raw conf map PLUS
+  the values `build()` has already resolved from it (today: the session timezone, H-1a split B).
+  A door reads the resolved value instead of re-parsing the map, which is what keeps
+  "resolved once, at construction" literally true rather than approximately true.
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
   `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the temp root resolves once
@@ -119,8 +122,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   the `UTC` default (a DECLARED divergence from Spark's JVM-local default: reproducible, and no
   host-environment read), and `resolve_session_time_zone`, which `session.rs`'s `build()` calls
   ONCE so an unresolvable zone fails at construction rather than at query time. The value is
-  carried on the session (`ReparkSession::session_time_zone`); timestamp EXTRACTION does not
-  consume it yet — that is H-1a split B, and nothing in this module changes an evaluated result.
+  carried on the session (`ReparkSession::session_time_zone`) **and handed to the `configure`
+  hook** (H-1a split B, 2026-08-10), which is how the Spark door's extractor layer consumes it:
+  this crate never imports `repark-functions` (a forbidden upward edge), so the door is the
+  crossing point. Nothing about the key, its spelling or its validation lives anywhere but here.
 - `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
   incl. the late-config region-signal pin, AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
@@ -147,7 +152,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
 | `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
-| `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Correct, and known: this unit landed the CONF surface only — extraction still resolves in the stored zone. The divergence is recorded row by row in `python/repark/tests/test_session_timezone_parity.py` (recorded against live PySpark) and flips to equality when H-1a split B lands. |
+| `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES, on a Spark-extended session. On a session built without `SparkExtension` it does not, because stock DataFusion's `date_part` reads the array's own zone — the zone reaches the extractors through `SparkExtension::configure`. Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
 | A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): it must be an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob — there is exactly one spelling. |
 | `$`-suffixed metadata tables do NOT show up in `SHOW TABLES` | Intended since 2026-08-10 — `repark_iceberg::catalog::MetadataProjectionSchemaProvider::table_names` filters the fork's synthesized names ([ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)); they stay queryable as `ns."t$snapshots"`. Pins: `information_schema_hides_the_dollar_metadata_tables_on_the_bare_session` + `a_hidden_metadata_table_is_still_queryable_on_the_bare_session`. |
 

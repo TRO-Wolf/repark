@@ -4,10 +4,22 @@ use std::sync::Arc;
 use datafusion::arrow::array::{Array, Float64Array, Int32Array, Int64Array, RecordBatch};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::prelude::{SessionConfig, SessionContext};
-use repark_core::SessionExtension;
+use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 use repark_functions::cardinality::ReparkSqlConfig;
+use repark_functions::session_time_zone::{SessionTimeZoneConfig, session_time_zone_from_options};
 
 use super::SparkExtension;
+
+/// The hook's second argument, spelled once: the resolved zone `build()` hands `configure`.
+fn build_conf<'a>(
+    conf: &'a HashMap<String, String>,
+    zone: &'a SessionTimeZone,
+) -> SessionBuildConf<'a> {
+    SessionBuildConf {
+        conf,
+        session_time_zone: zone,
+    }
+}
 
 /// `configure` re-homes v1's inline r24 SB1 install: the builder conf map's `repark.sql.*`
 /// keys land on the `SessionConfig` as the `ReparkSqlConfig` `ConfigExtension`.
@@ -15,8 +27,9 @@ use super::SparkExtension;
 fn configure_installs_repark_sql_config_from_conf_map() {
     let mut conf = HashMap::new();
     conf.insert("repark.sql.maxArrayElements".to_string(), "42".to_string());
+    let zone = SessionTimeZone::default();
     let config = SparkExtension
-        .configure(&conf, SessionConfig::new())
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
         .unwrap();
     let installed = config
         .options()
@@ -25,6 +38,54 @@ fn configure_installs_repark_sql_config_from_conf_map() {
         .expect("configure must install ReparkSqlConfig");
     assert_eq!(installed.max_array_elements, 42);
     assert!(!installed.allow_local_filesystem_ddl);
+}
+
+/// H-1a split B: `configure` is the ONE crossing point where `repark-core`'s resolved session
+/// zone reaches `repark-functions`' extractor layer. The hook must install the carrier with the
+/// zone it was HANDED — not a re-parse of the conf map, and not the default.
+#[test]
+fn configure_installs_the_resolved_session_time_zone_carrier() {
+    let mut conf = HashMap::new();
+    // A conf map whose raw string DISAGREES with the resolved value: if the hook ever re-parsed
+    // the map instead of carrying what `build()` resolved, the assertion below would see the
+    // padded string (or, with a stricter parse, the default) instead of `Asia/Tokyo`.
+    conf.insert(
+        "spark.sql.session.timeZone".to_string(),
+        "  Asia/Tokyo ".to_string(),
+    );
+    let zone = SessionTimeZone::parse("Asia/Tokyo").expect("a real zone");
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    assert_eq!(
+        session_time_zone_from_options(config.options()),
+        "Asia/Tokyo"
+    );
+    assert!(
+        config
+            .options()
+            .extensions
+            .get::<SessionTimeZoneConfig>()
+            .is_some(),
+        "the carrier itself must be installed, not merely a matching string somewhere"
+    );
+}
+
+/// The carrier is installed on EVERY Spark session, including one that never set the key — so
+/// the extractor layer never falls back to its own default in a real session.
+#[test]
+fn configure_installs_the_carrier_even_for_the_default_zone() {
+    let conf = HashMap::new();
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    assert_eq!(session_time_zone_from_options(config.options()), "UTC");
+    assert_eq!(
+        zone.id(),
+        repark_core::DEFAULT_SESSION_TIME_ZONE,
+        "the door carries the ENGINE's default; it does not invent one"
+    );
 }
 
 /// v1's fail-loud contract: a present-but-unparsable `repark.sql.*` value errors at build
@@ -36,8 +97,9 @@ fn configure_refuses_unparsable_conf_value() {
         "repark.sql.maxArrayElements".to_string(),
         "not-a-number".to_string(),
     );
+    let zone = SessionTimeZone::default();
     let err = SparkExtension
-        .configure(&conf, SessionConfig::new())
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
         .unwrap_err()
         .to_string();
     assert!(

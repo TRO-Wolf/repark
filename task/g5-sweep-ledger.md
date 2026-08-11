@@ -25,7 +25,11 @@ High-signal marker pass (original H-1d spellings) enumerated separately for the 
 
 **Blind spots (also stated in registry §1 Scope):** text search is not a semantic proof; no-pin
 comments cannot become rows; polars-or-fork-only differences are out of Spark-registry scope;
-DIVERGENCE-1 carved out for H-1a split B.
+DIVERGENCE-1 carved out for H-1a split B — **CLOSED 2026-08-10**: split B revisited it,
+left it UNROWED with its pin unchanged (a `CAST` is not an extractor and the extraction fix does
+not touch the cast path), and corrected its superseded "do not build session-tz machinery"
+docstring. The outcome sentence lives in registry §1; this is its dated closure here, in the home
+§6 designates.
 
 ## Triage table
 
@@ -33,7 +37,7 @@ Disposition keys: **already-row** | **rowed-here** | **carve-out** | **ledger-on
 
 | Hit / site | Kind | Disposition | Notes |
 |---|---|---|---|
-| Seed queue #1 `test_dogfood_gaps::test_divergence_timestamp_ltz_collect_passthrough` | DIVERGENCE-1 | **carve-out** | H-1a split B; not rowed |
+| Seed queue #1 `test_dogfood_gaps::test_divergence_timestamp_ltz_collect_passthrough` | DIVERGENCE-1 | **carve-out — CLOSED 2026-08-10** | H-1a split B revisited it and left it UNROWED: a `CAST` is not an extractor, the extraction fix does not touch the cast path, and the pin is unchanged. Its docstring now names the classes that keep it divergent (TZ-4, TZ-6) and states that the pin is UTC-only by construction. |
 | Seed queue #2/#3 `test_show_namespaces::test_show_namespaces_disclosed_divergences_fail_loud` | two refusals | **rowed-here** → NS-1, NS-2 | same pin, two arms |
 | Seed queue #4 `test_catalog_surface::test_show_tables_in_not_implemented_divergence` | SHOW TABLES IN | **rowed-here** → ST-1 | |
 | Seed queue #5 `test_catalog_surface::test_list_databases_location_uri_none_divergence` | locationUri None | **rowed-here** → FA-2 | |

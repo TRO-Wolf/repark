@@ -134,9 +134,11 @@ impl ReparkSession {
 }   // sql_with = two doors sharing one session (ADR-0002 "one test row per door")
 ```
 
-**Registration seam:** `SessionExtension { fn configure(&self, conf, SessionConfig) ->
-DFResult<SessionConfig>; fn register(&self, ctx) -> DFResult<()> }` — both defaulted (the
-trait-wrapping both-sides audit applies). Phase-2 repark-spark ships one extension holding
+**Registration seam:** `SessionExtension { fn configure(&self, SessionBuildConf<'_>,
+SessionConfig) -> DFResult<SessionConfig>; fn register(&self, ctx) -> DFResult<()> }` — both
+defaulted (the trait-wrapping both-sides audit applies). *`configure`'s first argument was the bare
+conf map as shipped in phase 1; it became `SessionBuildConf` (the map PLUS the values `build()` has
+already resolved) on 2026-08-10 — see the superseding note linked from the seam freeze below.* Phase-2 repark-spark ships one extension holding
 exactly what v1 inlined (function registry + analyzer rules + TA UDFs + cardinality config).
 Consequence, stated plainly: the phase-1 native core has DataFusion semantics — Spark semantics
 are the Spark door's extension by definition.
@@ -149,6 +151,14 @@ in phase 1 — the status flips from UNSTABLE here, per
 unchanged; there are no core-side pre-execution hooks, and guards are door-called. `EngineContext`
 is `#[non_exhaustive]`, so adding a field stays non-breaking; changing or removing a method or an
 existing field now requires a superseding design note.
+
+**SUPERSEDED IN PART, 2026-08-10 —
+[session-extension-conf-seam.md](session-extension-conf-seam.md).** `SessionExtension::configure`
+now takes a `SessionBuildConf<'_>` (the builder conf map PLUS the values `build()` already resolved
+from it, today the session timezone) instead of the bare map. That note is the amendment the
+sentence above requires: it prices the break at three in-tree implementors and no external ones,
+and records the two rejected alternatives. `SqlDialect::execute`, `SessionExtension::register` and
+the session-scoped-not-dialect-scoped rule below are **unchanged and still frozen**.
 
 **Extensions are session-scoped, not dialect-scoped.** A Spark-extended session has Spark
 expression semantics through **every** door, including the ANSI one — the extension's function

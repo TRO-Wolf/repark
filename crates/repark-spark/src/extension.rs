@@ -6,7 +6,16 @@
 //! - [`configure`](repark_core::SessionExtension::configure) — the cardinality /
 //!   `repark.sql.*` `ConfigExtension` install (v1 r24 SB1): parse the builder conf map via
 //!   [`repark_functions::cardinality::repark_sql_settings_from_config_map`] and attach it with
-//!   [`repark_functions::cardinality::with_repark_sql_config`].
+//!   [`repark_functions::cardinality::with_repark_sql_config`]; **plus** the session-timezone
+//!   carrier (H-1a split B), which is this door's whole part in making timestamp extraction
+//!   honor `spark.sql.session.timeZone`.
+//!
+//! **Why the timezone crosses HERE and nowhere else.** `repark-core` (tier 2) owns the key, the
+//! validation and the resolved value; `repark-functions` (tier-3 capability leaf) owns the
+//! extractors and deliberately has no `repark-core` edge — and a core→functions edge would be the
+//! forbidden upward one. This door is the only crate that depends on both, so it is the only
+//! place the two can meet. It carries the value the engine already resolved; it does not re-read,
+//! re-spell or re-validate it.
 //! - [`register`](repark_core::SessionExtension::register) — the Spark function registry
 //!   ([`repark_functions::register_all`]) plus the expression-semantics analyzer rules
 //!   ([`repark_functions::analyzer_rules`], appended after DataFusion's built-ins so they see
@@ -28,10 +37,8 @@
 //!   `repark_ta::udf::register_all` itself; a native session installs `TaExtension` directly.
 //!   (Restores the PR-2 rider in `task/p2b-spark-skeleton-ledger.md`.)
 
-use std::collections::HashMap;
-
 use datafusion::prelude::{SessionConfig, SessionContext};
-use repark_core::SessionExtension;
+use repark_core::{SessionBuildConf, SessionExtension};
 use repark_ta::TaExtension;
 
 /// ===========================================================================================
@@ -46,18 +53,25 @@ pub struct SparkExtension;
 
 impl SessionExtension for SparkExtension {
     /// v1 position: after the engine write knobs, before the `RuntimeEnv` is assembled —
-    /// the r24 SB1 cardinality / `repark.sql.*` `ConfigExtension` install.
+    /// the r24 SB1 cardinality / `repark.sql.*` `ConfigExtension` install, and the
+    /// session-timezone carrier the extractor layer reads at invoke time.
     ///
     /// # Errors
-    /// A present-but-unparsable `repark.sql.*` conf value (v1's fail-loud contract).
+    /// A present-but-unparsable `repark.sql.*` conf value (v1's fail-loud contract). The zone
+    /// cannot fail here — `build()` validated it before this hook runs.
     fn configure(
         &self,
-        conf: &HashMap<String, String>,
+        session: SessionBuildConf<'_>,
         config: SessionConfig,
     ) -> datafusion::error::Result<SessionConfig> {
-        let settings = repark_functions::cardinality::repark_sql_settings_from_config_map(conf)?;
-        Ok(repark_functions::cardinality::with_repark_sql_config(
-            config, settings,
+        let settings =
+            repark_functions::cardinality::repark_sql_settings_from_config_map(session.conf)?;
+        let config = repark_functions::cardinality::with_repark_sql_config(config, settings);
+        // The one crossing point (module docs): the engine's already-resolved zone becomes the
+        // carrier every calendar extractor reads out of `ScalarFunctionArgs::config_options`.
+        Ok(repark_functions::session_time_zone::with_session_time_zone(
+            config,
+            session.session_time_zone.id(),
         ))
     }
 

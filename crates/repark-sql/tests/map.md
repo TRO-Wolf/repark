@@ -58,6 +58,15 @@ belongs out here is what must be observed from outside the crate.
   if the divergence silently disappears, which is the point: the registry holds the semantics and
   this test holds the registry honest.
 
+- `session_timezone_ansi_door.rs` — **H-1a split B (2026-08-10):** the ANSI-door cell of the
+  session-timezone matrix. On ONE Spark-extended session at a non-UTC zone, `sql_with(AnsiDialect)`
+  and the Spark door return the same calendar fields, value AND Arrow type — a legal
+  single-session row, because what is measured is that the DOOR does not change the answer
+  (extensions are session-scoped). It also pins the honest negative: an extension-free session is
+  stock DataFusion and reads the stored zone, which is a property of that profile rather than a
+  Spark divergence. Needs the same `repark-spark` dev-dep as `cross_door.rs`, for the same
+  reason — the reverse edge does not exist, so this cell can only be built here.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Spike record: `../../../docs/history/port-v2/p2f-ansi-m1-ledger.md`;
@@ -75,6 +84,8 @@ belongs out here is what must be observed from outside the crate.
 | `cross_door` RED on ONE door only | The doors' lowerings drifted — that is the row doing its job (design §6 R3). Compare the two handlers, do not relax the assertion |
 | `cross_door_identifier_case_folding_*` RED because a quoted wrong-case identifier now RESOLVES | repark has CONVERGED on Apache Spark. Retire `docs/spark-sql-iceberg-parity.md` §3 row ID-1 in the same change (a new dated decision supersedes D3) — never relax the assertion |
 | `extensions_are_session_scoped_not_dialect_scoped` RED | Extension scoping changed. Every `TwoSession` matrix row in BOTH doors needs re-reading before anything else |
+| `ansi_door_and_spark_door_agree_under_a_non_utc_session` RED on ONE door | The session timezone stopped being session-scoped (it rides `ConfigOptions`, which every door on the session shares). Check `repark_functions::session_time_zone` and `SparkExtension::configure` before touching the row |
+| `a_native_session_without_the_spark_extension_reads_the_stored_zone` RED | A zone-aware extractor leaked into the extension-less profile — check what registers UDFs on a bare session |
 | `ta_toll` RED on bit-exactness | Compare against `crates/repark-ta/tests/goldens.rs` first — if THAT is green, the divergence is in the window-UDF wrapper or the door, not the kernel |
 
 First checks: `cargo test -p repark-sql --test parser_productions`,

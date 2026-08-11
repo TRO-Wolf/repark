@@ -26,6 +26,9 @@ notes, and per-tier operating manuals for this repo.
   seams, forced-edit ledger, omissions ledger, server landing map;
   [design/sql-doors.md](design/sql-doors.md): the phase-2 two-SQL-doors design —
   delegate-first crate layout, Q1–Q15 ANSI rulings, seam freeze, census + matrix discipline;
+  [design/session-extension-conf-seam.md](design/session-extension-conf-seam.md): the dated
+  superseding note the 2026-08-08 seam freeze requires, for `SessionExtension::configure`'s
+  argument change;
   [design/python-facade.md](design/python-facade.md): the phase-3 Python binding + facade +
   census design — ten edit classes, Q1–Q10 rulings, the census/acceptance procedure, the
   seven-PR slate).
@@ -69,6 +72,7 @@ notes, and per-tier operating manuals for this repo.
 | Record a divergence (or retire one) | [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §6 |
 | Understand the phase-1 crate layout / Session API | [design/session-api.md](design/session-api.md) |
 | Understand the phase-2 SQL doors / ANSI surface | [design/sql-doors.md](design/sql-doors.md) |
+| See why the frozen `SessionExtension` seam changed | [design/session-extension-conf-seam.md](design/session-extension-conf-seam.md) |
 | Understand the phase-3 port / census gate / edit classes | [design/python-facade.md](design/python-facade.md) |
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
 | Run a census / compare two runs | [port/census.md](port/census.md) |

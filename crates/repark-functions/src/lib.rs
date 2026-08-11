@@ -41,6 +41,7 @@ pub mod collection;
 pub mod datetime;
 pub mod expr_fn;
 pub mod random;
+pub mod session_time_zone;
 pub mod string;
 
 use std::sync::Arc;

@@ -25,6 +25,7 @@ Both live behind the `datafusion` feature — the module does not exist without 
 | `ta_ema` unknown after `register` | The kernel spec table in `../udf.rs` (`SPECS`) — `register_all` iterates `window_udfs()`, so a missing name is a missing spec row, not an extension bug |
 | Bit mismatch vs the kernel | An engine/UDF regression — never edit the assertion. Reproduce with the goldens battery: `cargo test -p repark-ta --features datafusion` |
 | `configure` test fails | Someone gave `TaExtension` a `configure` override; TA installs no `ConfigExtension` by design (design Q11 "register-only") |
+| `configure` test stops COMPILING | The `SessionExtension::configure` signature moved. It now takes a `repark_core::SessionBuildConf` (H-1a split B added the resolved session timezone beside the conf map); the pass-through assertion is unchanged in meaning |
 
 First checks: `cargo test -p repark-ta --features datafusion extension::`. Escalate to:
 [../map.md#debug](../map.md).

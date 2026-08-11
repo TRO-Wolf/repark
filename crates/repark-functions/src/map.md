@@ -7,6 +7,27 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 ## Contents
 
+- `session_time_zone.rs` (+ `session_time_zone/`) — **H-1a split B:** the CARRIER that brings the
+  resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
+  (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty
+  `entries()` — so it is a channel, never a second spelling of the knob. Filled by
+  `repark-spark`'s `SparkExtension::configure` (the only crate depending on both the engine that
+  owns the key and this leaf); read by `datetime.rs` at invoke. The empty `entries()` also erases
+  the zone from `ScalarFunctionExpr` equality (DataFusion 54.1 compares sorted config entries), so
+  two identical extractor expressions built under different session zones compare EQUAL — safe only
+  while no plan cache or cross-session expression reuse exists, and stated in the module doc beside
+  the rationale rather than left to be rediscovered.
+- `datetime.rs` — **session-zone semantics (H-1a split B + its 2026-08-10 rework).** The coercion
+  path TYPES the decision (`coerce_date_arg` / `coerce_to_timestamp_micros` / `coerce_to_date32`: a
+  `Timestamp` of any unit and any zone is an INSTANT; `Date32`/`Time`/string keep zone-free types;
+  every arm a fixed point, because DataFusion re-analyzes at physical planning). At invoke,
+  `LocalSource` says whether the widened micros are an instant or a zone-free wall clock —
+  `invoke_local_micros` for `date_trunc`/`date_format`, `invoke_local_dates` for `trunc`/
+  `add_months`. `micros_from_local_datetime` models `java.time.ZonedDateTime.ofLocal` arm for arm
+  (single offset; **ambiguous → prefer the SOURCE instant's offset**, which is what
+  `ZonedDateTime.truncatedTo` does and what keeps a fall-back hour's two instants distinct; gap →
+  `offset_before_gap`, a bounded 26-hour lookback that replaced a 15-minute forward search whose
+  "all IANA gaps are one hour" justification was false).
 - `cardinality.rs` — r24 SB1 SEC-01 ceilings + SEC-02 conf extension (const
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
   arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded)
@@ -94,6 +115,21 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   Inputs are coerced by `coerce_date_arg` / `coerce_to_date32` / `coerce_to_timestamp_micros`
   (`user_defined` signature): date / timestamp (any unit+zone) / string — matching Spark. Tests run
   the UDFs through a real `SessionContext` against ISO-8601 / Spark goldens.
+  **H-1a split B (2026-08-10) — the SESSION TIMEZONE.** Every calendar field of a `TIMESTAMP` now
+  resolves in `spark.sql.session.timeZone`, as Spark's does. The coercion path carries the whole
+  decision: a `Timestamp` of any unit/zone (including **none**) is an INSTANT and is coerced to a
+  `UTC`-annotated timestamp, which is what marks it for session-zone resolution; `Date32`/`Time*`/
+  string arguments keep zone-free types and therefore never move. `DatePartUdf` re-annotates the
+  instant into the session zone (metadata only) before `date_part`; `DateTrunc` and `DateFormat`
+  go through `invoke_local_micros`, which is the ONE place that decides what "local" means for
+  them (and, for `date_trunc`, puts the truncated local time back on the timeline with
+  `java.time`'s DST rules — earliest offset when ambiguous, pushed forward across a gap). The zone
+  is read at **invoke** time from `ScalarFunctionArgs::config_options` (`session_time_zone.rs`),
+  not baked in at registration, because `expr_fn` embeds a UDF into a standalone `Expr` with no
+  session — the DataFrame-API entry point would otherwise be missed. `coerce_types` MUST stay
+  idempotent (DataFusion re-analyzes at physical planning); pinned by
+  `coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date`. `date_trunc`'s output stays
+  tz-naive while registry row TZ-4 is open.
   **r20 A1:** SAF-001 out-of-chrono Date32 → NULL in `add_months`/`trunc` (pins
   `extreme_date32_add_months_and_trunc_null_without_panic`,
   `chrono_boundary_date32_add_months_computes`, `extreme_date32_year_extractor_no_panic`);
@@ -111,6 +147,13 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 - Up: [../map.md](../map.md)
 
 ## Debug
+
+| Symptom | First check |
+|---|---|
+| `year`/`hour`/`date_trunc` ignore `spark.sql.session.timeZone` | The carrier is not on the session. Only `SparkExtension::configure` installs it; a bare DataFusion context falls back to `UTC`. See `session_time_zone/map.md`. |
+| A `DATE` shifted by a day under a non-UTC session | A coercion arm stopped being idempotent, so a second analysis pass promoted the date to an instant. That exact bug shipped in a draft of this fix and is pinned by `coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date` + `crates/repark-spark/tests/session_timezone.rs::date_arguments_never_move_with_the_session_zone`. |
+| EVERY IANA zone id fails at query time but `+05:30` works | The `chrono-tz` feature on this crate's `arrow` dependency is gone. It is DECLARED in `Cargo.toml` for exactly this reason — re-declare it there rather than relying on `datafusion`'s feature graph. |
+| `date_trunc` returns the right instant with the wrong-looking wall clock | Expected: the output is tz-NAIVE while registry row TZ-4 is open, so the ticks are Spark's instant with no `UTC` annotation to render it by. |
 
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 

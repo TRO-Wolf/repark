@@ -1139,21 +1139,43 @@ NOT in that file is a defect, not a decision.
   against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.
   partitions=2`) with `spark.sql.session.timeZone` set to the row's own zone — `America/New_York`
   and `Asia/Tokyo`, one either side of UTC so a sign error cannot pass both — plus the
-  `current_timestamp` row, whose value is nondeterministic and so is pinned by Arrow TYPE. Most
-  rows are **DISCLOSURES**, not equalities: repark extracts timestamp fields in the STORED zone,
-  so each divergent row pins BOTH halves (repark's actual output AND the recorded Spark output).
-  A failed disclosure is CLASSIFIED before it raises: if repark's live output now equals the
-  recorded Spark golden the message says CONVERGED and says flip-don't-delete; if it matches
-  neither half the message says regression and sends you to record mode. Two control rows assert
-  plain EQUALITY (DATE extraction and leap-day DATE arithmetic are session-zone independent on
-  both engines) so an all-disclosure corpus cannot mask a zone-blind fix. When the extraction fix
-  lands, each divergent row flips to `repark=None`, and that flip is the fix's revert-red
-  evidence. Also carries the conf-surface pins: the `UTC` default, the builder round trip, the
+  `current_timestamp` row, whose value is nondeterministic and so is pinned by Arrow TYPE.
+  **Since H-1a split B (2026-08-10) most rows are EQUALITY rows:** the extraction fix landed, so
+  thirteen of the recorded disclosures now assert `repark == Spark` (`repark=None`) — and that
+  flip IS the fix's revert-red evidence, because undoing the fix reds every one of them.
+  **Its 2026-08-10 rework grew the corpus from 20 rows to 29** (a size pin moved because an
+  adversarial panel measured wrong-answer families the original rows were structurally blind to —
+  every one of them hands the engine a `…Z`-suffixed string, i.e. only the shapes where reading a
+  TIMESTAMP as a UTC instant is RIGHT). The nine added rows are: three ZONELESS-input disclosures
+  (a `TIMESTAMP '…'` literal, a zoneless `to_timestamp` / `CAST(str AS TIMESTAMP)`, and a
+  naive-`datetime` COLUMN — registry row TZ-7, and the half of the class this unit does NOT fix);
+  one `TimestampNTZType`-vs-`TimestampType` disclosure that gives registry row TZ-6 a **recorded**
+  basis where it had only a documented one; two `date_trunc`-COMPOSITION equality rows (a `DATE`
+  and a string truncated and then read back — the single-hop `DATE` control row cannot see a
+  whole-day error there); one DST fall-back `date_trunc` row; and two **DataFrame-API** rows
+  (`entry_point="dataframe_api"` → `dataframe_api_extraction`, i.e. `df.select(F.year(...), ...)`,
+  the facade's OTHER user entry point, previously pinned only by a Rust proxy).
+  Twelve rows are still disclosures and none is the instant-typed extraction class: two are the
+  tz-naive Arrow export TYPE, five are rows whose VALUE converged while their TYPE did not, one is
+  the `CAST(TIMESTAMP AS BIGINT)` unit bug, three are TZ-7 and one is TZ-6.
+  `test_the_extraction_class_converged_and_the_residue_is_named` pins that residue by name, so a
+  new disclosure cannot be smuggled back into the extraction class.
+  A disclosure row pins BOTH halves (repark's actual output AND the recorded Spark output), and a
+  failed one is CLASSIFIED before it raises: if repark's live output now equals the recorded Spark
+  golden the message says CONVERGED and says flip-don't-delete; if it matches neither half the
+  message says regression and sends you to record mode. Two control rows assert plain EQUALITY
+  (DATE extraction and leap-day DATE arithmetic are session-zone independent on both engines) and
+  are UNCHANGED by the fix — which is the half of the claim an all-disclosure corpus could never
+  make. Also carries the conf-surface pins: the `UTC` default, the builder round trip, the
   accepted-but-neither-validated-nor-applied runtime `conf.set`/`unset` disclosure, the reuse
   path's deliberate laxness (an invalid zone on a second `getOrCreate` warns, never raises), the
   whitespace normalization that keeps `conf.get` on the engine's trimmed zone, and the engine's
-  build-time refusal of an unknown or blank zone. Every row goes through the facade `sql()` door;
-  the four-entry-point matrix is **split B's** obligation.
+  build-time refusal of an unknown or blank zone. Rows go through the facade `sql()` door or (for
+  the two `dataframe_api_extract_*` rows) `df.select(F...)`; together they are the **facade** cell
+  of the four-entry-point matrix, at BOTH of its user spellings. The other three cells are pinned in
+  Rust against the same instants — `crates/repark-spark/tests/session_timezone.rs` (native
+  DataFrame API + Spark door) and `crates/repark-sql/tests/session_timezone_ansi_door.rs`
+  (ANSI door).
 - `_record_session_timezone_goldens.py` — the **record driver** for the corpus above (NOT a
   `test_` module; never collected). Imports `ROWS` from the committed test module and re-runs each
   row's own `run_row` recipe on live PySpark under the row's own zone, so the recorded golden and
@@ -1359,7 +1381,8 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | `test_parity_live.py` live tests SKIPPED | expected unless `REPARK_PARITY_LIVE=1` + a JVM (`make parity-live`); routine CI is JVM-free by design |
 | `test_disclosures_mirror_the_registry` RED | `DISCLOSURES` and `docs/spark-sql-iceberg-parity.md` disagree. The failure names which side is orphaned: a registry-only name means the `Disclosure` was deleted (the row lost its drift detector); a disclosure-only name means the row was never written. Fix the side that moved |
 | live tier RED | triage per docs/testing.md: golden leg only → golden drift (fix pin); live-Spark diverges from an unchanged pin → oracle drift; a disclosure reds → engines converged |
-| a `test_session_timezone_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete the row — flip it to `repark=None` (equality) and record the convergence. That flip is the extraction fix's revert-red evidence. |
+| a `test_session_timezone_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete the row — flip it to `repark=None` (equality) and record the convergence. Thirteen rows were flipped exactly this way when the extraction fix landed, and that flip is its revert-red evidence. |
+| an EQUALITY row in that module reds after an engine change | The extraction fix regressed. Check `crates/repark-functions/src/datetime.rs` (the coercion path) and `SparkExtension::configure` (the carrier install) before touching the row — the Rust pins in `crates/repark-spark/tests/session_timezone.rs` localize it faster than the facade does. |
 | a row reds saying "moved OFF its pinned disclosure ... regression" | repark matches neither half: re-derive both in record mode (`_record_session_timezone_goldens.py`) before touching the pin. |
 | a live scenario reds only under a non-UTC `session_conf` | the override reached the oracle but not repark (or vice versa): repark takes it at session BUILD, Spark at `conf.set`. Check `build_repark_engine` stopped the previous active session. |
 
