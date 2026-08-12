@@ -20,8 +20,9 @@ reach delegation through the ordinary arm.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
-- `router.rs` — the statement router (text guards → pre-parse stage → parse → match → the two
-  DML valves → delegate) and the delegation path that carries the SEC-02 guard. Delegation
+- `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
+  valve → match → the two DML valves → delegate) and the delegation path that carries the SEC-02
+  guard. Delegation
   covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
   `TableProvider` (ADR-0003). `DELETE`/`UPDATE` share a NAMED arm on the way to delegation:
   both DML data-loss valves need the parse, and they run cheap-first — G3-E8 (sync AST walk)
@@ -33,6 +34,9 @@ reach delegation through the ordinary arm.
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
   tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and
+  the **G15 collation valve** (`refuse_collation_in_statement`, called immediately after the
+  stock parse so `COLLATE` / column collation / session collation conf refuse at parse
+  altitude — G3-E8 lesson),
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate`, called from the
   router's named `DELETE`/`UPDATE` arm because it needs the PARSED statement — it reads both the
   `WHERE` expression and the target off the parse tree, so a quoted target renders usably).

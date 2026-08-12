@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
+  collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
+  paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does
+  **not** edit `docs/spark-sql-iceberg-parity.md`.
 - [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) — **L-1 landing-truth (2026-08-12):**
   docs of record catch up with merged `main` (`baf6617`). §A classification table of every
   `task/*-ledger.md` §6 handoff; live-tier both-halves; STATUS + registry + G14 + G5 slate

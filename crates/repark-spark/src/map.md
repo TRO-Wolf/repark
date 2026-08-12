@@ -61,8 +61,16 @@ wrapper.
   `DmlSubqueryVerb`: a `WHERE` subquery is lost at DataFusion's DML planning boundary and
   degenerates into match-all — deliberately syntactic and slightly wide; see the module doc and
   `task/g3e8-guard-ledger.md`), the MERGE star rewrite call, partition-spec builders.
+- `collation.rs` — **G15 (2026-08-12):** parse-altitude collation refuse. Walks
+  `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
+  and session `SQLConf` keys containing `collation`. `refuse_collation_in_statement` is
+  called from `spark_ast.rs` (executing parse) and the router's successful parse (intercepted
+  CREATE/ALTER). `refuse_collation_in_sql` is `pub` for the Python binding (`F.expr`,
+  `filter_sql`). Pins: [`tests/collation.rs`](tests/map.md). Ledger:
+  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/y7-collation-refuse-ledger.md).
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
-  eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G3-E8 valve's authoritative
+  eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
+  (`refuse_collation_in_statement` on the EXECUTING parse), the **G3-E8 valve's authoritative
   call** (`refuse_dml_subquery_predicate_in_statement` on the EXECUTING parse — the only parse
   every DML route agrees on; the router's own parse is a different dialect), and the **G5b
   temporal-`RANGE` conformance call** (`conform_temporal_range_frames`, between planning and

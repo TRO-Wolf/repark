@@ -177,6 +177,10 @@ class RuntimeConfig:
         if key in _SQLCONF_STATIC_KEYS:
             # Spark static conf: isModifiable→False and set refuses (octo C3 C1 cheap).
             raise Exception(f"Cannot modify the value of static config: {key}")
+        # G15: a collation SQLConf key would otherwise be stored and ignored.
+        from repark.types import refuse_collation_session_key
+
+        refuse_collation_session_key(key)
         if isinstance(value, bool):
             text = "true" if value else "false"
         elif isinstance(value, (str, int)):

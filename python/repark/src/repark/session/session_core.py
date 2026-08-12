@@ -2090,6 +2090,9 @@ class ReparkSession:
         def _set_config_entry(self, key: str, value: str | None) -> None:
             """Store one config entry; ``repark.display.style`` aliases canonicalize last-wins
             under the canonical key, case-insensitively (R-DISPLAY C6 harden)."""
+            from repark.types import refuse_collation_session_key
+
+            refuse_collation_session_key(key)
             if key.lower() == _DISPLAY_STYLE_KEY:
                 for existing in list(self._config):
                     if existing.lower() == _DISPLAY_STYLE_KEY:

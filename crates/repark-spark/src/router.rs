@@ -198,6 +198,10 @@ async fn execute_inner(
     let Some((statement, partitioning)) = parse_single_normalized(sql)? else {
         return execute_unparsable_fallthrough(ctx, catalogs, sql).await;
     };
+    // G15 — intercepted CREATE / ALTER never reach execute_passthrough; refuse
+    // collation on this parse too so column-def COLLATE cannot be a generic
+    // "column option not supported" or a silent Iceberg string.
+    crate::refuse_collation_in_statement(&statement)?;
     match &statement {
         Statement::CreateTable(create) if create.query.is_some() => {
             execute_ctas(ctx, catalogs, build_ctas(create, &partitioning)?).await

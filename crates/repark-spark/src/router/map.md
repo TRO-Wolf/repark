@@ -21,5 +21,6 @@ their refuse tests were deleted with the arms. The ported v1 lib-root battery li
 | Symptom | First check |
 |---|---|
 | A routing regression on an intercepted form | The lib-root battery (`cargo test -p repark-spark tests::`) pins every arm end to end |
+| A `COLLATE` spelling on CREATE TABLE was a generic column-option refuse | G15: `refuse_collation_in_statement` runs on the router parse before the CREATE arm |
 
 First checks: `cargo test -p repark-spark router::`. Escalate to: [../map.md#debug](../map.md).

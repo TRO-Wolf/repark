@@ -23,6 +23,10 @@ refusing everything.
   the same dialect, because a guard wired to a parse the executor does not use is fail-open
   (the class that produced the Spark door's bypass). The `AnsiDoor` harness is shared by the two
   end-to-end pins.
+  **G15 (2026-08-12):** five collation pins — expression `COLLATE`, `ORDER BY COLLATE`,
+  `CREATE TABLE` column `COLLATE`, a string-literal negative, and an end-to-end refuse +
+  default `SELECT 1` untouched. Ledger:
+  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/y7-collation-refuse-ledger.md).
 
 ## Pointers
 

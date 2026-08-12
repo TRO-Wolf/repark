@@ -1694,6 +1694,74 @@ def _make_type_verifier(
     return verifier
 
 
+# === G15: collation refuse (first evaluation, not construction) ===============================
+
+COLLATION_REFUSAL_NEEDLE = "does not implement collation"
+_DEFAULT_BINARY_COLLATION = "UTF8_BINARY"
+
+
+def collation_refusal_message(requested: str) -> str:
+    """Actionable G15 refusal — same needles as both SQL doors."""
+    return (
+        f"repark {COLLATION_REFUSAL_NEEDLE}: requested `{requested}`. Spark 4 would apply "
+        "that collation to comparisons and ORDER BY; repark refuses rather than silently "
+        "ignore it. Use binary/default ordering — omit COLLATE, keep StringType() / "
+        "UTF8_BINARY, and do not set a session collation."
+    )
+
+
+def is_collation_session_key(key: str) -> bool:
+    """True when a Spark SQLConf / session key would change compare/order collation."""
+    return "collation" in key.lower()
+
+
+def refuse_collation_session_key(key: str) -> None:
+    """Refuse a session/builder conf key that requests collation semantics."""
+    if not is_collation_session_key(key):
+        return
+    from repark.errors import UnsupportedOperationException
+
+    raise UnsupportedOperationException(collation_refusal_message(key))
+
+
+def refuse_evaluated_collation(data_type: Any) -> None:
+    """Refuse first evaluation of a non-binary ``StringType`` (nested-aware).
+
+    Construction and ``simpleString`` stay legal (A5). Evaluation is createDataFrame,
+    cast/try_cast, and any schema→engine mapping.
+    """
+    from repark.errors import UnsupportedOperationException
+
+    if isinstance(data_type, StringType) and not data_type.isUTF8BinaryCollation():
+        raise UnsupportedOperationException(collation_refusal_message(data_type.collation))
+    if isinstance(data_type, ArrayType):
+        refuse_evaluated_collation(data_type.elementType)
+        return
+    if isinstance(data_type, MapType):
+        refuse_evaluated_collation(data_type.keyType)
+        refuse_evaluated_collation(data_type.valueType)
+        return
+    if isinstance(data_type, StructType):
+        for field in data_type.fields:
+            refuse_evaluated_collation(field.dataType)
+        return
+    if isinstance(data_type, StructField):
+        refuse_evaluated_collation(data_type.dataType)
+
+
+def refuse_collated_type_string(type_text: str) -> None:
+    """Refuse a ``string collate NAME`` cast/DDL token other than UTF8_BINARY."""
+    match = _STRING_COLLATE.fullmatch(type_text.strip())
+    if match is None:
+        return
+    name = match.group(1)
+    if name.upper() == _DEFAULT_BINARY_COLLATION:
+        return
+    from repark.errors import UnsupportedOperationException
+
+    raise UnsupportedOperationException(collation_refusal_message(name))
+
+
 __all__ = [
     "ArrayType",
     "BinaryType",

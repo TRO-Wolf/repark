@@ -93,8 +93,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - `column.py` — **r24 A3 QUAL-03:** cast map lockstep (`tinyint`/`smallint` aliases) with
   native `parse_data_type`. Pins: `tests/test_a3_cast_vocab.py`,
   `tests/test_a3_secrets_redaction.py`.
+  **G15:** `cast` / `try_cast` refuse a non-binary `StringType` / `string collate NAME`
+  token at first evaluation (not construction). Pins: `tests/test_collation_refuse.py`.
 - `functions.py` — **r24 A3 octo C1-Q-001:** `posexplode` STOP message has no embedded
   DataFusion major (was stale "52.x" while pin is 54.1); pin in `test_explode_rewrite`.
+  **G15:** `collate` / `collation` are **not** stubbed — absence is already `AttributeError`
+  (A5); documented in `tests/test_collation_refuse.py`.
 - `functions.py` / `dataframe.py` / `column.py` — explode/explode_outer guarded unnest
   (R-EXPLODE-REWRITE); posexplode STOP. Octo c1: str→col, sticky generator+cast;
   octo c2: quoted idents (no double-AS), Timestamp/nested element types, asc/desc sticky,
@@ -452,6 +456,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   test_types; class+param keys `CANNOT_MERGE_TYPE` / `FIELD_NOT_NULLABLE_WITH_NAME` /
   `FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME`); compat bootstrap overlays the underscore names.
   **X2 R-CENSUS-TYPES (2026-08-01):** full type constructor surface —
+  **G15 (2026-08-12):** `refuse_evaluated_collation` / `refuse_collation_session_key` /
+  `collation_refusal_message` — first evaluation of a non-binary `StringType` (and any
+  session key containing `collation`) refuses; constructor + `simpleString` stay.
   `StringType(collation)`, `ArrayType`/`MapType`/`NullType`/`BinaryType`/`ByteType`/
   `ShortType`/`FloatType`/`CharType`/`VarcharType`/`TimeType`/`TimestampNTZType`/
   `CalendarIntervalType`/`VariantType`; `StructType.add`/`fieldNames`/`toDDL`/

@@ -122,6 +122,11 @@ async fn execute_time_travelled(
         return delegate(cx, sql).await;
     };
 
+    // G15 — collation at the parse every route agrees on (G3-E8 altitude), before
+    // CREATE / SELECT / SET match. A COLLATE spelling must not reach DataFusion's
+    // unsupported-AST path or be silently dropped on a column-def CREATE.
+    guards::refuse_collation_in_statement(statement.as_ref())?;
+
     match statement.as_ref() {
         Statement::CreateTable(create) => create_table::execute_create_table(cx, create).await,
         Statement::CreateSchema {

@@ -892,3 +892,77 @@ fn router_parse_dialect_matches_the_session_default() {
          otherwise a statement can be routed by one parser and executed by another"
     );
 }
+
+// === Guard — G15 collation refuse ===========================================================
+
+fn assert_g15_refusal(error: &DataFusionError, requested: &str) {
+    let text = error.to_string();
+    assert!(
+        matches!(error, DataFusionError::NotImplemented(_)),
+        "G15 must be NotImplemented, got {error:?}"
+    );
+    assert!(
+        text.contains(COLLATION_REFUSAL_NEEDLE),
+        "must name the unimplemented class: {text}"
+    );
+    assert!(
+        text.contains(requested),
+        "must name the requested collation `{requested}`: {text}"
+    );
+    assert!(
+        text.contains("binary/default"),
+        "must steer to binary/default ordering: {text}"
+    );
+}
+
+/// Expression `COLLATE` is detected on the parsed statement (the router's parse).
+#[test]
+fn collation_valve_fires_on_expression_collate() {
+    let error = refuse_collation_in_statement(&parsed("SELECT 'Alice' COLLATE UTF8_LCASE"))
+        .expect_err("expression COLLATE must refuse");
+    assert_g15_refusal(&error, "UTF8_LCASE");
+}
+
+/// `ORDER BY … COLLATE` is a compare/order-changing path.
+#[test]
+fn collation_valve_fires_on_order_by_collate() {
+    let error = refuse_collation_in_statement(&parsed(
+        "SELECT name FROM t ORDER BY name COLLATE UNICODE_CI",
+    ))
+    .expect_err("ORDER BY COLLATE must refuse");
+    assert_g15_refusal(&error, "UNICODE_CI");
+}
+
+/// Column-def `STRING COLLATE` is a collation request, not a generic unsupported option.
+#[test]
+fn collation_valve_fires_on_create_table_column_collate() {
+    let error = refuse_collation_in_statement(&parsed(
+        "CREATE TABLE ice.sales.t (name STRING COLLATE UTF8_LCASE)",
+    ))
+    .expect_err("CREATE TABLE column COLLATE must refuse");
+    assert_g15_refusal(&error, "UTF8_LCASE");
+}
+
+/// A `COLLATE` token inside a string literal is not a collation request.
+#[test]
+fn collation_valve_ignores_collate_inside_a_literal() {
+    refuse_collation_in_statement(&parsed("SELECT 'COLLATE UTF8_LCASE' AS note"))
+        .unwrap_or_else(|error| panic!("literal must pass: {error}"));
+}
+
+/// End to end: the door refuses `COLLATE` and a non-COLLATE SELECT still runs.
+#[tokio::test]
+async fn collation_valve_refuses_end_to_end_and_default_select_is_untouched() {
+    let door = AnsiDoor::new().await;
+    let refused = door.err("SELECT 'Alice' COLLATE UTF8_LCASE").await;
+    assert!(
+        refused.contains(COLLATION_REFUSAL_NEEDLE),
+        "end-to-end must carry the G15 needle: {refused}"
+    );
+    assert!(
+        refused.contains("UTF8_LCASE"),
+        "end-to-end must name the requested collation: {refused}"
+    );
+    let ids = door.ok("SELECT 1").await;
+    assert_eq!(ids, vec![1], "default (non-COLLATE) SELECT must stay live");
+}

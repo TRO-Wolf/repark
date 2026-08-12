@@ -57,6 +57,9 @@ pub(crate) async fn execute_passthrough(
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     let mut may_have_bare_range_bound = false;
     if let DfStatement::Statement(inner) = &mut statement {
+        // G15 — collation at the EXECUTING parse (G3-E8 altitude). A COLLATE spelling
+        // must not reach DataFusion's unsupported-AST path or be silently dropped.
+        crate::refuse_collation_in_statement(inner)?;
         // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
         crate::refuse_dml_subquery_predicate_in_statement(inner)?;
         apply_spark_order_by_defaults(inner);

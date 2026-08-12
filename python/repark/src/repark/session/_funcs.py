@@ -1472,7 +1472,6 @@ def _supported_array_typecodes() -> frozenset[str]:
     import sys
 
     def int_size_to_ok(bit_width: int) -> bool:
-
         return bit_width <= 64
 
     supported: set[str] = {"f", "d"}
@@ -1872,6 +1871,13 @@ def _data_type_to_sql_type(data_type: Any) -> str:
         # string (only string / str / varchar(n)). Using VARCHAR made every nested type
 
         # that contained a string field silently fall back to pa.string() (octo X2 C1).
+
+        # G15: a non-binary StringType collation would be silently stripped here
+        # (engine token is always STRING) — that is the silently-wrong-count path.
+        if isinstance(data_type, StringType):
+            from repark.types import refuse_evaluated_collation
+
+            refuse_evaluated_collation(data_type)
 
         return "STRING"
 
@@ -3312,7 +3318,6 @@ def _register_cdf_view_cleanup(session: ReparkSession, frame: DataFrame, view_na
         session_ref: ReparkSession = session,
         name: str = view_name,
     ) -> None:
-
         with contextlib.suppress(Exception):
             # Session may already be stopped; best-effort cleanup only.
 

@@ -671,6 +671,8 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the predicate does not parse or cannot be planned.
     pub fn filter_sql(&self, predicate: &str) -> PyResult<Self> {
         fenced!("PyDataFrame.filter_sql", {
+            // G15: filter("col COLLATE name = …") never hits the statement router.
+            repark_spark::refuse_collation_in_sql(predicate).map_err(datafusion_to_py_err)?;
             let expr = self
                 .df
                 .parse_sql_expr(predicate)

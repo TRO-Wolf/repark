@@ -13,6 +13,7 @@
 mod alter;
 mod call;
 mod catalog_ops;
+mod collation;
 mod create_table;
 mod ctas;
 mod describe_show;
@@ -31,6 +32,11 @@ mod window_range;
 
 // --- The router entrypoints (v1 `repark_sql::execute` family, re-homed). ---
 pub use router::{execute, execute_with_read_only};
+// G15: parse-altitude collation refuse (binding `F.expr` / `filter_sql` call this).
+pub use collation::{
+    COLLATION_REFUSAL_NEEDLE, collation_refusal_message, is_collation_session_key,
+    refuse_collation_in_sql, refuse_collation_in_statement,
+};
 
 // --- The phase-1 seam adapter. ---
 pub use dialect::SparkDialect;
