@@ -584,6 +584,120 @@ fn join_on_names_merges_the_key_column() {
     });
 }
 
+/// Plan `l(k, lv)` LEFT-JOIN-shaped against `r(k, rv)` with the given `how`, collected to one
+/// batch. `l` has keys 1, 2 and a NULL-keyed row; `r` has key 1 and a NULL key — so the pair
+/// exercises the match, the no-match and the `NULL = NULL is unknown` arm at once (G4b).
+fn semi_family_batch(py: Python<'_>, how: &str) -> RecordBatch {
+    let s = session(py);
+    let left = s
+        .borrow(py)
+        .sql(
+            py,
+            "SELECT * FROM (VALUES (1, 100), (2, 200), (NULL, 300)) AS l(k, lv)",
+        )
+        .expect("left plans");
+    let right = s
+        .borrow(py)
+        .sql(py, "SELECT * FROM (VALUES (1, 11), (NULL, 99)) AS r(k, rv)")
+        .expect("right plans");
+    let right_cell = Py::new(py, right).expect("right pyclass");
+    let joined = left
+        .join_on_names(right_cell.borrow(py), vec!["k".to_string()], how)
+        .expect("semi-family join plans");
+    let joined = Py::new(py, joined).expect("joined pyclass");
+    collect_one_batch(py, &joined)
+}
+
+#[test]
+fn join_on_names_left_semi_keeps_matching_left_rows_only() {
+    Python::attach(|py| {
+        let batch = semi_family_batch(py, "leftsemi");
+        // Left-only schema: the right side is a filter, not a widening (no `rv`, no second `k`).
+        assert_eq!(
+            batch
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| field.name().clone())
+                .collect::<Vec<_>>(),
+            vec!["k".to_string(), "lv".to_string()],
+            "LEFT SEMI output is the left side's columns only"
+        );
+        // k=1 matches; k=2 has no match; k=NULL never matches (NULL = NULL is unknown), so the
+        // right side's own NULL key does NOT pull it in.
+        assert_eq!(int64_column(&batch, 0), vec![1]);
+        assert_eq!(int64_column(&batch, 1), vec![100]);
+    });
+}
+
+#[test]
+fn join_on_names_left_anti_keeps_unmatched_left_rows_including_null_keys() {
+    Python::attach(|py| {
+        let batch = semi_family_batch(py, "leftanti");
+        assert_eq!(
+            batch
+                .schema()
+                .fields()
+                .iter()
+                .map(|field| field.name().clone())
+                .collect::<Vec<_>>(),
+            vec!["k".to_string(), "lv".to_string()],
+            "LEFT ANTI output is the left side's columns only"
+        );
+        // k=2 is unmatched; the NULL-keyed left row is KEPT (its key never matched anything) —
+        // the exact complement of the semi pin above, so neither arm can be vacuous.
+        assert_eq!(batch.num_rows(), 2, "k=2 and the NULL-keyed row survive");
+        let key_column = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("k is int64");
+        let mut keys: Vec<Option<i64>> = (0..key_column.len())
+            .map(|row| {
+                if key_column.is_null(row) {
+                    None
+                } else {
+                    Some(key_column.value(row))
+                }
+            })
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(keys, vec![None, Some(2)]);
+    });
+}
+
+#[test]
+fn join_on_names_semi_family_never_merges_a_key_column() {
+    Python::attach(|py| {
+        // The no-key-merge invariant, stated against the inner-join baseline it must NOT share:
+        // `inner` merges the duplicate right key into one column and carries `rv` through;
+        // the semi family carries neither, on every accepted spelling of the keyword.
+        let inner = semi_family_batch(py, "inner");
+        assert_eq!(
+            inner.num_columns(),
+            3,
+            "baseline: inner merges the key and keeps `rv` (k, lv, rv)"
+        );
+        for how in [
+            "semi",
+            "left_semi",
+            "leftsemi",
+            "anti",
+            "left_anti",
+            "leftanti",
+        ] {
+            let batch = semi_family_batch(py, how);
+            assert_eq!(
+                batch.num_columns(),
+                2,
+                "how={how}: semi-family output is exactly the left schema (k, lv)"
+            );
+            assert_eq!(batch.schema().field(0).name(), "k", "how={how}");
+            assert_eq!(batch.schema().field(1).name(), "lv", "how={how}");
+        }
+    });
+}
+
 /// Read a `Utf8` column as `Vec<Option<String>>` (test helper; preserves NULLs).
 fn string_column(batch: &RecordBatch, index: usize) -> Vec<Option<String>> {
     let array = batch

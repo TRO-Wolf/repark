@@ -31,7 +31,14 @@ pyo3 `auto-initialize` **dev**-dependency) and drive the pyclasses directly — 
   `show(py, n)` takes a row limit
   (engine-side). Also drives the `PyDataFrame` transform surface directly:
   `with_column` (a `PyColumn` operator expression), `filter`/`filter_sql`, `sort` (desc + nulls
-  ordering), and `join_on_names` (key-merge). WG2 date/window bindings are covered too (via the
+  ordering), and `join_on_names` (key-merge). **G4b** adds the semi-family trio over the shared
+  `semi_family_batch` helper (left keys 1/2/NULL against right keys 1/NULL, so match, no-match and
+  the `NULL = NULL is unknown` arm are all live in one fixture):
+  `join_on_names_left_semi_keeps_matching_left_rows_only`,
+  `join_on_names_left_anti_keeps_unmatched_left_rows_including_null_keys` (the exact complement,
+  so neither can pass vacuously) and `join_on_names_semi_family_never_merges_a_key_column`
+  (the no-key-merge invariant stated against the inner-join baseline, over every accepted
+  spelling). WG2 date/window bindings are covered too (via the
   `int32_column` helper that reads an `Int32Array`): `date_function_year_extracts_the_calendar_year`
   (`PyColumn::column("d").year()` → Int32 `2024`), `row_number_over_window_numbers_rows_in_order`
   (`PyColumn::row_number().over(...)` numbers rows by `ORDER BY v ASC`, result is Int32 for Spark

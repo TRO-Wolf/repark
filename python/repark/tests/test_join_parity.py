@@ -7,10 +7,21 @@ PySpark 4.1.2 (zulu-17, ``master("local[2]")``, ANSI on, ``spark.sql.shuffle.par
 the same code path - nothing here is hand-computed.
 
 **Why some rows are DISCLOSURES / splits.** When the engines agree on value AND Arrow type AND
-nullability, the row is a plain equality (``repark is None``). When repark's DataFrame surface
-refuses ``leftsemi`` / ``leftanti`` while Spark runs them, the row is a **split** that pins the
-recorded Spark success half and repark's refuse needle. A silent CONVERGENCE goes red and forces
-the disclosure to be revisited rather than laundered into "parity".
+nullability, the row is a plain equality (``repark is None``). When one engine refuses a surface
+the other runs, the row is a **split** that pins the recorded Spark success half and repark's
+refuse needle. A silent CONVERGENCE goes red and forces the disclosure to be revisited rather
+than laundered into "parity".
+
+**G4b (2026-08-11): the two DataFrame semi/anti splits CONVERGED.** ``df_left_semi_unsupported``
+and ``df_left_anti_unsupported`` pinned repark's facade refusing ``how='leftsemi'`` /
+``how='leftanti'``. The DataFrame-door widening landed the surface, the split classifier reported
+CONVERGED against those already-recorded Spark goldens, and both rows are now content equalities
+- their Spark halves are UNCHANGED, only repark's side moved. Their names are kept byte-identical
+(a pin's name is part of the pin; the ``_unsupported`` suffix retires in a declared-rename unit).
+Four rows were added beside them so the claim covers the whole surface rather than one shape:
+``on='k'`` / ``on=['k']`` / ``left.k == right.k``, and the NULL-key edge on both semi and anti.
+The corpus currently holds NO splits; the classifier's two arms stay proven by an explicit
+harness probe row (see ``_CLASSIFIER_PROBE_SPLIT``).
 
 **Rows assert on the Arrow path** (``to_arrow`` / Spark ``toArrow``) through the parity
 comparator, so schema name, Arrow type and nullability are part of every content assertion -
@@ -28,9 +39,9 @@ It imports ``ROWS`` from THIS module and runs each row's own recipe, so the reco
 the asserted recipe cannot drift apart. Needs a JVM + ``pyspark`` (``uv sync --extra record``);
 never collected by pytest. CI stays JVM-free.
 
-**Entry points (CP-11).** Facade ``sql()`` is the primary door (every SQL-tagged row). At least
-two DataFrame-API (``df.join``) content rows pin the DF door; two more DF rows document the
-semi/anti refuse split. A class claim is scoped to the entry it names.
+**Entry points (CP-11).** Facade ``sql()`` is the primary door (every SQL-tagged row). The
+DataFrame-API (``df.join``) door carries its own content rows, including the whole semi family
+across every ``on`` shape (G4b). A class claim is scoped to the entry it names.
 
 **Out of scope (named, not silent):** fixing any divergence found (rows document; fixes are
 future units); the registry file; window functions (W-4).
@@ -57,10 +68,15 @@ if TYPE_CHECKING:
 # ==================================================================================================
 
 G4_BUDGET_MIN = 20
-G4_BUDGET_MAX = 28
+# G4b raised the ceiling 28 -> 30 for the four DataFrame-door semi-family rows the widening
+# added (condition-join + NULL-key, semi and anti). Deliberate, not incidental: the budget is a
+# sprawl guard, so growing it is a reviewed act with a named driver, never a silent bump.
+G4_BUDGET_MAX = 30
 MIN_EQUALITY_ROWS = 14
 MAX_DISCLOSURE_OR_SPLIT_ROWS = 8
-MIN_DF_API_ROWS = 2
+# G4b: the DF door was 2 content rows + 2 refuse splits; it is now 9 content rows. The floor
+# tracks that so the door cannot quietly shrink back.
+MIN_DF_API_ROWS = 6
 MIN_NULL_KEY_ROWS = 4  # every join type: inner/left/right/full (name-gated *null_keys_*)
 MIN_DUPLICATE_KEY_ROWS = 2
 MIN_TYPE_MISMATCH_ROWS = 2
@@ -123,7 +139,11 @@ class JoinRow:
     right_columns: list[str] | None = None
     on: str | None = None
     how: str = "inner"
-    on_mode: Literal["name", "eq_null_safe", "none"] = "name"
+    # ``name`` = ``on="k"``; ``name_list`` = ``on=["k"]``; ``condition`` = ``left.k == right.k``;
+    # ``eq_null_safe`` = ``left.k.eqNullSafe(right.k)``; ``none`` = no ``on`` at all. The four
+    # ``on`` shapes are separate engine paths (name equi-join vs the H1 condition rewrite), so a
+    # claim proven on one says nothing about the others - G4b pins the semi family on both.
+    on_mode: Literal["name", "name_list", "condition", "eq_null_safe", "none"] = "name"
     # When True, post-join select aliases left.k->lk / right.k->rk to avoid duplicate names.
     select_eq_null_safe: bool = False
     spark: pa.Table | None = None
@@ -173,6 +193,12 @@ def run_join_content(session: Any, row: JoinRow) -> pa.Table:
             )
         else:
             frame = joined
+    elif row.on_mode == "condition":
+        assert row.on is not None
+        frame = left.join(right, left[row.on] == right[row.on], row.how)
+    elif row.on_mode == "name_list":
+        assert row.on is not None
+        frame = left.join(right, [row.on], row.how)
     elif row.on_mode == "none":
         frame = left.join(right, how=row.how)
     else:
@@ -790,9 +816,10 @@ ROWS: list[JoinRow] = [
             "Post-join select aliases keys to avoid duplicate column names in Arrow."
         ),
     ),
+    # ----- 7. G4b: DataFrame-door semi family (was two refuse splits; now content) ---------------
     JoinRow(
         name="df_left_semi_unsupported",
-        kind="split",
+        kind="content",
         entry="df",
         family="missing_type",
         left_rows=[(1, "a"), (2, "b")],
@@ -807,16 +834,19 @@ ROWS: list[JoinRow] = [
             {"k": [1], "a": ["a"]},
         ),
         repark=None,
-        repark_error_needle="Unsupported join type",
         note=(
-            "SPLIT: DataFrame ``how='leftsemi'`` - Spark runs it; repark's facade refuses with "
-            "AnalysisException (supported: inner/left/right/full/cross only). Do not invent "
-            "support; SQL door ``LEFT SEMI`` is a separate content row."
+            "G4b CONVERGED (was a refuse split): DataFrame ``how='leftsemi'`` on a name key. "
+            "Output is the LEFT side's columns only - no key merge, no right-hand column. The "
+            "recorded Spark half is UNCHANGED from the split; only repark's side moved, and the "
+            "harness's own split classifier reported CONVERGED against this exact golden. "
+            "The row NAME is kept byte-identical on purpose - a pin's name is part of the pin, "
+            "so the (now historical) '_unsupported' suffix is retired by a declared-rename unit, "
+            "never smuggled into a behaviour change."
         ),
     ),
     JoinRow(
         name="df_left_anti_unsupported",
-        kind="split",
+        kind="content",
         entry="df",
         family="missing_type",
         left_rows=[(1, "a"), (2, "b")],
@@ -831,10 +861,107 @@ ROWS: list[JoinRow] = [
             {"k": [2], "a": ["b"]},
         ),
         repark=None,
-        repark_error_needle="Unsupported join type",
         note=(
-            "SPLIT: DataFrame ``how='leftanti'`` - Spark runs it; repark refuses. "
-            "SQL door ``LEFT ANTI`` is a separate content equality."
+            "G4b CONVERGED (was a refuse split): DataFrame ``how='leftanti'`` on a name key - "
+            "the exact complement of the semi row above on the same inputs, so neither can be "
+            "satisfied by an empty-result bug. Name kept byte-identical (see the semi row)."
+        ),
+    ),
+    JoinRow(
+        name="df_left_semi_on_condition",
+        kind="content",
+        entry="df",
+        family="missing_type",
+        left_rows=[(1, "a"), (2, "b")],
+        right_rows=[(1,)],
+        left_columns=["k", "a"],
+        right_columns=["k"],
+        on="k",
+        how="leftsemi",
+        on_mode="condition",
+        spark=_table(
+            [("k", _I64, True), ("a", _STR, True)],
+            {"k": [1], "a": ["a"]},
+        ),
+        repark=None,
+        note=(
+            "G4b: ``leftsemi`` through the H1 Column-condition path (``left.k == right.k``), a "
+            "DIFFERENT engine path from the name-key row (SQL rewrite, not ``join_on_names``). "
+            "Spark keeps the left schema for a condition semi join too - the condition join's "
+            "usual all-columns-from-both-sides rule does not apply to the semi family."
+        ),
+    ),
+    JoinRow(
+        name="df_left_anti_on_condition",
+        kind="content",
+        entry="df",
+        family="missing_type",
+        left_rows=[(1, "a"), (2, "b")],
+        right_rows=[(1,)],
+        left_columns=["k", "a"],
+        right_columns=["k"],
+        on="k",
+        how="leftanti",
+        on_mode="condition",
+        spark=_table(
+            [("k", _I64, True), ("a", _STR, True)],
+            {"k": [2], "a": ["b"]},
+        ),
+        repark=None,
+        note=(
+            "G4b: ``leftanti`` through the H1 Column-condition path; left schema, complement rows."
+        ),
+    ),
+    JoinRow(
+        name="df_left_semi_null_keys_no_match",
+        kind="content",
+        entry="df",
+        family="missing_type",
+        left_rows=[(1, "a"), (None, "n")],
+        right_rows=[(9,), (None,)],
+        left_columns=["k", "a"],
+        right_columns=["k"],
+        on="k",
+        how="leftsemi",
+        on_mode="name_list",
+        spark=_table(
+            [("k", _I64, True), ("a", _STR, True)],
+            {"k": [], "a": []},
+        ),
+        repark=None,
+        note=(
+            "G4b: DF door mirror of ``left_semi_null_keys_no_match`` (SQL door). NULL = NULL is "
+            "unknown, so the NULL-keyed left row does NOT match the right side's NULL key, and "
+            "k=1 has no partner among the right's real keys - empty result, left schema "
+            "preserved. The right side carries a non-matching REAL key (9) beside the NULL: an "
+            "all-NULL column is not inferable by Spark's ``createDataFrame`` (CANNOT_DETERMINE_"
+            "TYPE), and it also proves the emptiness comes from the NULL logic rather than from "
+            "an empty right side. Uses the ``on=['k']`` LIST shape so the list entry point is "
+            "pinned too, not only ``on='k'``."
+        ),
+    ),
+    JoinRow(
+        name="df_left_anti_null_keys_keeps_row",
+        kind="content",
+        entry="df",
+        family="missing_type",
+        left_rows=[(1, "a"), (None, "n")],
+        right_rows=[(9,), (None,)],
+        left_columns=["k", "a"],
+        right_columns=["k"],
+        on="k",
+        how="leftanti",
+        on_mode="name_list",
+        spark=_table(
+            [("k", _I64, True), ("a", _STR, True)],
+            {"k": [1, None], "a": ["a", "n"]},
+        ),
+        repark=None,
+        note=(
+            "G4b: the anti side of the same NULL-key edge - because NULL never matches, the "
+            "NULL-keyed left row is KEPT (three-valued logic, not 'NULL is dropped'). Complement "
+            "of the semi row on identical inputs, so an all-empty or all-pass bug reds one of "
+            "the pair. ``on=['k']`` LIST shape."
         ),
     ),
 ]
@@ -1000,12 +1127,35 @@ def test_join_row_set_covers_g4_budget() -> None:
     assert any("cross" in name for name in names), "must pin CROSS JOIN"
     assert any("semi" in name for name in names), "must pin LEFT SEMI"
     assert any("anti" in name for name in names), "must pin LEFT ANTI"
-    # DF refuse splits must stay splits (do not invent DF support).
-    for split_name in ("df_left_semi_unsupported", "df_left_anti_unsupported"):
-        split_row = next(row for row in ROWS if row.name == split_name)
-        assert split_row.kind == "split", f"{split_name} must remain a split disclosure"
-        assert split_row.repark_error_needle is not None
-        assert split_row.spark is not None
+    # G4b: the two former DF refuse splits are now CONTENT equalities - the widening landed, so
+    # the corpus must state parity, not a stale disclosure. Re-splitting them (a regression that
+    # re-refuses the surface) reds here as well as on the row itself.
+    for flipped_name in ("df_left_semi_unsupported", "df_left_anti_unsupported"):
+        flipped = next(row for row in ROWS if row.name == flipped_name)
+        assert flipped.kind == "content", (
+            f"{flipped_name} is a G4b content equality; a split here means the DataFrame semi "
+            "surface stopped working (do not re-record the refuse needle to make it green)"
+        )
+        assert flipped.repark is None, f"{flipped_name} asserts repark == Spark, not a pin"
+        assert flipped.repark_error_needle is None, f"{flipped_name} must not keep a refuse needle"
+        assert flipped.spark is not None
+    # G4b entry-point matrix: the semi family is pinned on the DF door across BOTH `on` shapes
+    # (name/list key AND Column condition) and on the NULL-key edge - name-gated so no single
+    # control row can satisfy the family (CP-2).
+    df_semi_family = [row for row in ROWS if row.entry == "df" and row.family == "missing_type"]
+    df_semi_modes = {(row.how, row.on_mode) for row in df_semi_family}
+    for how in ("leftsemi", "leftanti"):
+        assert (how, "condition") in df_semi_modes, (
+            f"DF door must pin how={how!r} through the Column-condition path; got {df_semi_modes}"
+        )
+        assert {(how, "name"), (how, "name_list")} & df_semi_modes, (
+            f"DF door must pin how={how!r} through a name/list key; got {df_semi_modes}"
+        )
+    for null_edge in ("df_left_semi_null_keys_no_match", "df_left_anti_null_keys_keeps_row"):
+        assert null_edge in names, f"DF door must pin the semi-family NULL-key edge: {null_edge}"
+    assert all(row.kind == "content" and row.repark is None for row in df_semi_family), (
+        "every DF semi-family row is a plain repark == Spark equality after G4b"
+    )
 
     # 4. Type-mismatched keys - name-gated.
     mismatch_rows = [name for name in names if "type_mismatch_" in name]
@@ -1053,6 +1203,30 @@ def test_join_row_set_covers_g4_budget() -> None:
 # Classifier reachability (CP-1) - both arms proven by monkeypatch
 # ==================================================================================================
 
+# G4b: the corpus's last two splits became content equalities when the DataFrame semi family
+# landed, so the split classifier no longer has a live row to exercise. The classifier is
+# HARNESS machinery, not a corpus pin - deleting its coverage because today's corpus happens to
+# be split-free would leave the next lane's split disclosure unguarded. This probe row keeps
+# both arms provable; it is deliberately NOT in ROWS (it would be an unrecorded golden and would
+# count against the budget).
+_CLASSIFIER_PROBE_SPLIT = JoinRow(
+    name="_classifier_probe_split",
+    kind="split",
+    entry="df",
+    family="harness_probe",
+    left_rows=[(1, "a"), (2, "b")],
+    right_rows=[(1,)],
+    left_columns=["k", "a"],
+    right_columns=["k"],
+    on="k",
+    how="leftsemi",
+    on_mode="name",
+    spark=_table([("k", _I64, True), ("a", _STR, True)], {"k": [1], "a": ["a"]}),
+    repark=None,
+    repark_error_needle="Unsupported join type",
+    note="Harness probe for the split classifier's two arms - not a recorded corpus row.",
+)
+
 
 def test_split_classifier_converged_arm(
     repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
@@ -1060,7 +1234,7 @@ def test_split_classifier_converged_arm(
     """CP-1: split refuse side matching the Spark golden -> CONVERGED flip guidance."""
     import test_join_parity as join_mod
 
-    split_row = next(row for row in ROWS if row.name == "df_left_semi_unsupported")
+    split_row = _CLASSIFIER_PROBE_SPLIT
     assert split_row.spark is not None
     golden = split_row.spark
 
@@ -1082,7 +1256,7 @@ def test_split_classifier_regression_arm(
     """CP-1: split commits a non-Spark result -> regression guidance (not bare assert)."""
     import test_join_parity as join_mod
 
-    split_row = next(row for row in ROWS if row.name == "df_left_anti_unsupported")
+    split_row = _CLASSIFIER_PROBE_SPLIT
     wrong = _table(
         [("k", _I64, True), ("a", _STR, True)],
         {"k": [99], "a": ["WRONG"]},

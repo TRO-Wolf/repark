@@ -159,6 +159,11 @@ _STOPPED_MESSAGE = "Cannot call methods on a stopped ReparkSession"
 # on a ["false", "b"] frame, filter("false") is zero rows and filter("true") is every row).
 _SQL_LITERAL_KEYWORDS = frozenset({"true", "false", "null"})
 
+# === G4b: semi-family join ===
+# Engine `how` tokens whose output schema is the LEFT side alone. Semi/anti joins are filters
+# spelled as joins: the right side decides which left rows survive and contributes no columns.
+_SEMI_JOIN_HOWS = frozenset({"leftsemi", "leftanti"})
+
 # === r21 T2: sort-memory ===
 # Substrings that mark a mid-stream engine memory / ExternalSorter failure (DataFusion
 # Resources exhausted + ExternalSorter / FairSpillPool messages). Case-insensitive match.
@@ -4828,8 +4833,16 @@ class DataFrame:
         (subject to ``spark.sql.crossJoin.enabled`` via :attr:`session.conf`). ``how`` defaults
         to ``"inner"``. Supported join types: ``inner``, ``left`` / ``left_outer`` / ``leftouter``,
         ``right`` / ``right_outer`` / ``rightouter``, ``full`` / ``outer`` / ``fullouter`` /
-        ``full_outer``, ``cross``. Partition-transform Columns (``F.years`` / …) in a Column
+        ``full_outer``, ``cross``, ``semi`` / ``leftsemi`` / ``left_semi``, ``anti`` /
+        ``leftanti`` / ``left_anti``. Partition-transform Columns (``F.years`` / …) in a Column
         condition raise — valid only inside :meth:`DataFrameWriterV2.partitionedBy`.
+
+        G4b (semi family): ``leftsemi`` / ``leftanti`` are filters spelled as joins — the output
+        schema is the **left side's columns only** (no key merge, no right-hand columns), on both
+        the name-key and the :class:`Column`-condition path. NULL join keys never match
+        (``NULL = NULL`` is unknown), so semi drops a NULL-keyed left row and anti keeps it. A
+        semi/anti join with ``on=None`` is refused loud rather than silently degraded to a
+        Cartesian product, which is a different result set (see the raise below).
 
         H1 (Group H): condition joins rewrite origin-qualified Column refs to relation-qualified
         SQL (``"alias"."field"``) so self-joins and duplicate non-key names resolve; output
@@ -4855,14 +4868,33 @@ class DataFrame:
             "full": "full",
             "outer": "full",
             "fullouter": "full",
+            # G4b semi family. `.replace("_", "")` already folded `left_semi`/`left_anti` in.
+            "semi": "leftsemi",
+            "leftsemi": "leftsemi",
+            "anti": "leftanti",
+            "leftanti": "leftanti",
         }
         if join_how not in how_aliases:
             raise AnalysisException(
                 f"Unsupported join type '{how}'. Supported join types include: "
                 "'inner', 'outer', 'full', 'fullouter', 'full_outer', 'leftouter', 'left', "
-                "'left_outer', 'rightouter', 'right', 'right_outer', 'cross'."
+                "'left_outer', 'rightouter', 'right', 'right_outer', 'cross', 'semi', "
+                "'leftsemi', 'left_semi', 'anti', 'leftanti', 'left_anti'."
             )
         engine_how = how_aliases[join_how]
+        if engine_how in _SEMI_JOIN_HOWS and (
+            on is None or (isinstance(on, (list, tuple)) and not on)
+        ):
+            # A conditionless semi/anti join is NOT a Cartesian product: Spark keeps every left
+            # row iff the right side is non-empty (semi) / empty (anti), with no m*n fan-out.
+            # Both conditionless shapes (`on=None`, `on=[]`) fall through to crossJoin below, so
+            # they are refused loud here rather than silently answering with a cross join's rows.
+            raise AnalysisException(
+                f"join type '{how}' requires an `on` condition. A conditionless {engine_how} "
+                "join is not a Cartesian product, so repark refuses it rather than returning a "
+                "cross join's rows. Pass `on=` a column name, a list of names, or a boolean "
+                "Column."
+            )
         if on is None:
             # Cartesian product requires crossJoin or conf spark.sql.crossJoin.enabled.
             # Read the same effective value as RuntimeConfig.get (runtime map, then builder).
@@ -4908,7 +4940,12 @@ class DataFrame:
         condition: Column,
         engine_how: str,
     ) -> DataFrame:
-        """Condition join with H1 origin-qualified ON rewrite + multi-name display map."""
+        """Condition join with H1 origin-qualified ON rewrite + multi-name display map.
+
+        G4b: for the semi family (``leftsemi``/``leftanti``) only the LEFT side is projected —
+        a ``LEFT SEMI``/``LEFT ANTI`` join contributes no right-hand columns, so emitting them
+        would be an unresolvable reference rather than a wider result.
+        """
         from repark._idents import quote_ident as _quote_ident
 
         left_alias = f"_repark_jl_{uuid.uuid4().hex[:12]}"
@@ -4919,7 +4956,10 @@ class DataFrame:
             "right": "RIGHT OUTER",
             "full": "FULL OUTER",
             "cross": "CROSS",
+            "leftsemi": "LEFT SEMI",
+            "leftanti": "LEFT ANTI",
         }.get(engine_how, "INNER")
+        left_only = engine_how in _SEMI_JOIN_HOWS
         # Register both plans as temp views (plan-stable), analyze SQL join, then drop views.
         self._session.create_or_replace_temp_view(left_alias, self._plan())
         self._session.create_or_replace_temp_view(right_alias, other._plan())
@@ -4933,7 +4973,10 @@ class DataFrame:
             )
             left_cols = list(self.columns)
             right_cols = list(other.columns)
-            all_display = left_cols + right_cols
+            # G4b: a semi/anti join emits the left side only, so a right-hand name that merely
+            # SHARES a left name is not a duplicate in the output — counting it would mangle the
+            # left engine field for no reason (and `k` is shared on essentially every semi join).
+            all_display = left_cols if left_only else left_cols + right_cols
             display_counts: dict[str, int] = {}
             for name in all_display:
                 display_counts[name] = display_counts.get(name, 0) + 1
@@ -4982,7 +5025,8 @@ class DataFrame:
                                 origin_map[(plan_id, field)] = engine_out
 
             _emit_side(self, left_alias, "l")
-            _emit_side(other, right_alias, "r")
+            if not left_only:
+                _emit_side(other, right_alias, "r")
 
             if engine_how == "cross":
                 join_sql = (
