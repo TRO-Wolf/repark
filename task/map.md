@@ -47,6 +47,10 @@ not this directory.
   cast-failure semantics differential corpus vs live Spark 4.1.2 ANSI ON; record driver; §6
   paste-true registry + `Disclosure(...)` handoff (does **not** edit the registry or
   `_live_parity.py` — A3).
+- [x2-tvl-ledger.md](x2-tvl-ledger.md) — **in flight (X-2 / H-2 gap G12):** three-valued logic
+  differential corpus vs live Spark (value AND Arrow type AND nullability) + 2 cross-door 3VL
+  rows; record driver; §6 paste-true registry rows. Does **not** edit
+  `docs/spark-sql-iceberg-parity.md`. DML NOT-IN twin cites **PR #54 in flight**.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -133,6 +137,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
+| Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
