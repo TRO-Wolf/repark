@@ -72,6 +72,11 @@ not this directory.
   (`crates/repark-spark/src/window_range.rs`) with 5 Spark-door pins, 15 appended differential rows
   and 5 recorded residual divergences handed to the unit queue. Does **not** edit
   `docs/spark-sql-iceberg-parity.md` (section 6 is the paste-true handoff).
+- [g5br-range-residuals-ledger.md](g5br-range-residuals-ledger.md) — **live (Y-1 / G5b-R):**
+  five window-RANGE residual classes on the `window_range.rs` seam. R3 HIGH closed as a
+  Spark-empty-frame fix (no wrapping); R2 closed as a `DAY TO SECOND` restatement; R1 / R4 /
+  R5 declared deferred. Does **not** edit the registry / `_live_parity.py` / live pins
+  (section 6 is the paste-true handoff).
 - [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) — **in flight (O-1 / unit-queue G4b):**
   the FIX behind W-3's two DataFrame `leftsemi`/`leftanti` refuse splits — engine `how`-token
   widening + facade alias map, the splits flipped to content equalities, 3 Rust binding pins.
@@ -177,6 +182,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) | **Y-10 / G11** ANSI door — correctness, not parity |
 | [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) | **Y-3** `getDatabase` + G-6 live-leg |
 | [y5-origin-map-ledger.md](y5-origin-map-ledger.md) | **Y-5 / G4b-R2** semi/anti origin-map join-type awareness |
+| [g5br-range-residuals-ledger.md](g5br-range-residuals-ledger.md) | **Y-1 / G5b-R** window-RANGE residuals — R3 empty-frame fix, R2 DAY TO SECOND, R1/R4/R5 deferred |
 
 ## I want to...
 
@@ -198,6 +204,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the decimal128 differential corpus ledger (Python half) | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
 | Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
+| Read the G5b-R window-RANGE residual dispositions (Y-1) | [g5br-range-residuals-ledger.md](g5br-range-residuals-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
 | Read the G11 ANSI-door correctness-not-parity ledger | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) |

@@ -7,7 +7,7 @@ router (`execute` / `execute_with_read_only`) parses with DataFusion's `sqlparse
 dialect + token-level normalisers for Spark-isms), intercepts the forms DataFusion cannot
 execute against Iceberg, and passes everything else through the Spark passthrough
 (`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands +
-the G5b temporal-`RANGE` conformance call).
+the G5b / G5b-R temporal-`RANGE` conformance call).
 `SparkDialect` adapts the router to `repark_core::SqlDialect`; `SparkExtension` installs the
 v1 `build()` registrations (function registry + analyzer rules + cardinality/`repark.sql.*`
 config) via `repark_core::SessionExtension`, and **composes `repark_ta::TaExtension`** for the
