@@ -113,7 +113,10 @@ struct/map equalities would collapse into type disclosures.
 **D-X5-5 — Registry rows stay in this ledger.** Ready-to-paste §6 only; do not edit
 `docs/spark-sql-iceberg-parity.md`.
 
-**D-X5-6 — Combined Part 1+2 in one PR.** Combined added lines ~1.1k (under the ~1200 ceiling).
+**D-X5-6 — Combined Part 1+2 in one PR (line-ceiling process miss).** Combined GitHub
+additions = **+1541** (ledger+maps included), which **exceeds** the brief's ~1200 soft ceiling.
+Still shipped as one PR (B1 forbids a stacked Part-2). Morning residual: accept process miss;
+do not invent a second PR.
 
 ---
 
@@ -260,5 +263,5 @@ No OPEN claims; no taxonomy miss requiring a fix cycle. **OCTO-CONVERGED** (earl
 
 ## 9. Diff size / sequencing
 
-- Part 1 + Part 2 combined in **one PR** (under ~1200 added lines ceiling).
+- Part 1 + Part 2 combined in **one PR** (process miss: +1541 > ~1200 soft ceiling; B1 no stack).
 - No stacked second PR (conductor B1).
