@@ -1315,6 +1315,25 @@ NOT in that file is a defect, not a decision.
 - `_record_nested_container_goldens.py` — the **record driver** for the nested corpus (NOT a
   `test_` module; never collected). Imports `ROWS` + `run_row`; re-derives every Spark half;
   `--emit` pastes Spark + divergent repark halves. Hold `/tmp/grok-jvm-record.lock`.
+- `test_cast_failure_parity.py` — the **cast-failure semantics differential corpus** (H-2 gap G6),
+  landed by X-1. 10 rows (budget 8–10) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
+  shuffle=2, `session.timeZone=UTC`): 5 shared-raise **error** equalities (malformed string→int /
+  date, INT→TINYINT overflow, decimal narrowing overflow, DF `Column.cast` twin), 2 **try_cast**
+  NULL equalities (twins of the failing casts), 1 well-formed control equality, and **2 true
+  splits** under ANSI ON (DATE→INT: Spark `DATATYPE_MISMATCH` refuse vs repark days-since-epoch;
+  TIMESTAMP→INT: Spark unix-seconds vs repark Arrow Cast overflow). §0 re-verified that the slate
+  "non-ANSI NULL" premise narrowed under ANSI ON — fewer than 4 real divergences, not manufactured.
+  Every content row asserts value AND Arrow type AND nullability via
+  `repark_parity.assert_frames_equal`; error rows pin raise class + error needle (A7). Split
+  classifiers (CONVERGED vs regression) proven by monkeypatch (CP-1). **Does not edit**
+  `_live_parity.py` / live size pins / registry (A3 — §6 paste-true BOTH halves in the ledger).
+  Ledger: `task/x1-cast-failure-ledger.md`.
+- `_record_cast_failure_goldens.py` — the **record driver** for the cast-failure corpus (NOT a
+  `test_` module; never collected). Imports `ROWS` + lifecycle helpers from the committed test
+  module; re-derives every Spark half (content / error needle / split success-or-raise) under
+  ANSI ON + UTC. Exit 0 = every recorded half still reproduces; never edits the corpus. Needs
+  zulu-17 + `uv sync --extra record`. Invocation in its docstring and
+  `task/x1-cast-failure-ledger.md`. Serialize via `/tmp/grok-jvm-record.lock`.
 - `_live_parity.py` — the **live oracle tier** shared registry (NOT a `test_` module — a helper,
   never collected). Two recipe kinds:
   1. **Single-shot** (`Scenario` / `SCENARIOS`, **42** goldens): Group E group-agg/na/union +
@@ -1489,6 +1508,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a nested-container differential row (gap G18) | `test_nested_container_parity.py` (`ROWS`; record Spark half with `_record_nested_container_goldens.py`, never by hand) |
 | Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a cast-failure differential row (gap G6) | `test_cast_failure_parity.py` (`ROWS`; record Spark half with `_record_cast_failure_goldens.py`, never by hand) |
+| Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1549,6 +1570,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a `test_join_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or DF semi/anti starts succeeding): do NOT delete — flip to content equality and record the convergence. |
 | a joins row reds saying regression | re-derive both halves with `_record_join_goldens.py` before touching the pin. |
 | joins budget pin reds | G4 must stay 20–28 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥2 DF content rows; restore the name-gated families rather than greening them with controls. |
+| a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
+| a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
+| cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
 | a live scenario reds only under a non-UTC `session_conf` | the override reached the oracle but not repark (or vice versa): repark takes it at session BUILD, Spark at `conf.set`. Check `build_repark_engine` stopped the previous active session. |
 
 First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).

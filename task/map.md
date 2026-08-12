@@ -43,6 +43,10 @@ not this directory.
   nested order-insensitive comparator + 6 nested-container differential rows vs live Spark;
   record driver; §6 paste-true registry rows. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`.
+- [x1-cast-failure-ledger.md](x1-cast-failure-ledger.md) — **in flight (X-1 / H-2 gap G6):**
+  cast-failure semantics differential corpus vs live Spark 4.1.2 ANSI ON; record driver; §6
+  paste-true registry + `Disclosure(...)` handoff (does **not** edit the registry or
+  `_live_parity.py` — A3).
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
