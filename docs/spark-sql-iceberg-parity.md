@@ -546,7 +546,7 @@ form is a contract, and a row author edits *this* file rather than the test. A r
 **top-level list item and nothing else on the line**: a `- ` at column zero, then — inside one
 pair of backticks — the field name, a colon, a single space, and the name; then end of line. The
 name matches `[a-z0-9_]+` (lower-case, digits and underscores; **no hyphens**). The compiled form
-is `python/repark/tests/test_parity_live.py::_LIVE_MIRROR_RE`, and the four live rows in this
+is `python/repark/tests/test_parity_live.py::_LIVE_MIRROR_RE`, and the live-mirrored rows in this
 document are its worked examples.
 
 Anything else is a **near-miss** and reds loud, naming the offending line: an indented bullet, a
@@ -563,25 +563,26 @@ Differences we intend to close. Each pin **codifies today's behavior** so the fi
 purpose; a pin here is a description, not a contract, and the unit that fixes the class *updates*
 the pin rather than obeying it.
 
-### BL-1 — a failing `CAST` raises where non-ANSI Spark yields NULL
+### BL-1 — cast-failure class (G6) — oracle-backed pin home
 
-- **repark** — a runtime `CAST` of a non-numeric or out-of-range string to a numeric type —
-  `CAST('abc' AS INT)` — **raises** an execution-class error at collect, through both the raw
-  `spark.sql()` entry point and the DataFrame `Column.cast` entry point.
-- **Apache Spark** — in its default **non-ANSI** mode returns **NULL** for the same expression.
-  *(oracle: documented — Spark's documented non-ANSI cast semantics. This is a documented **value**
-  claim, admitted under §1's narrow exception because no oracle for it exists here yet: nobody in
-  this repository has observed the NULL, and neither pin below asserts it. The unit that attaches a
-  real oracle is **H-2 gap G6** — cast-failure semantics — whose slate already budgets the
-  differential rows and the live-tier disclosures for this class; the basis moves to *live* in that
-  same change.)*
-- **Pin** — `python/repark/tests/test_errors.py::test_sql_execution_error_raises_base_exception`
-  and `python/repark/tests/test_errors.py::test_dataframe_collect_execution_error_raises_base_exception`
-- **Rationale** — BACKLOG, intent to FIX. This is a silently-wrong-result class in the migration
-  direction that matters: a pipeline that relied on Spark's NULL-on-bad-cast gets a hard failure
-  here instead of a null row. It is deliberately **not** in the adversarial SQL corpus
-  (`test_sql_passthrough_parity.py`), because that corpus is green-only and repark does not match
-  Spark on this class yet. A CAST-parity unit updates both pins to assert NULL.
+- **repark** — under **ANSI ON** (Spark 4 default; the recorded oracle), a failing
+  `CAST('abc' AS INT)` **raises** an execution-class error (`Cast error`) through both
+  `spark.sql()` and DataFrame `Column.cast`. `try_cast` of a failing cast yields NULL at the
+  target Arrow type. These two recipes **agree with ANSI Spark** (raise vs raise; NULL vs NULL).
+- **Apache Spark** — under ANSI ON raises `CAST_INVALID_INPUT` / `NumberFormatException` for the
+  malformed-string CAST and yields NULL for `try_cast`. The pre-G6 "non-ANSI Spark yields NULL"
+  claim is retired: this repository has never recorded a non-ANSI NULL for this recipe, and the
+  live session is ANSI ON. *(oracle: recorded — PySpark 4.1.2, ANSI on.)*
+- **Pin** — the oracle-backed home is now
+  `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 10 rows). The two remaining
+  live divergences under ANSI ON are [G6-3](#g6-3--dateint-spark-refuses-repark-yields-days-since-epoch)
+  and [G6-4](#g6-4--timestampint-nullability-only-after-tz-5). Equality pins:
+  `…[malformed_string_to_int_both_raise]`, `…[df_cast_malformed_string_to_int_both_raise]`,
+  `…[try_cast_malformed_string_to_int_null]`, `…[try_cast_overflow_tinyint_null]`.
+- **Rationale** — rewritten 2026-08-12 (L-1) when the G6 corpus landed. BL-1 is no longer a
+  documented-value placeholder; it is the pointer at the recorded corpus. The residual
+  silently-wrong-result class is G6-3 (DATE→INT). G6-4 is value+type agreement after #64;
+  only CAST nullability still diverges.
 
 ### BL-2 — backtick-quoted identifiers in a filter string
 
@@ -650,16 +651,31 @@ the pin rather than obeying it.
   was re-recorded in the same change and they moved into this row. Closing TZ-4 is also what would
   let TZ-6's interpretation be retired.
 
-### TZ-5 — `CAST(TIMESTAMP AS BIGINT)` returns nanoseconds
-
-- **repark** — epoch **nanoseconds**: `-1800000000000` for `1969-12-31T23:30:00Z`.
-- **Apache Spark** — epoch **seconds**: `-1800` for the same instant. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_session_timezone_parity.py::test_session_timezone_row_matches_spark_or_still_diverges[pre_1970_timestamp_cast_to_bigint]`
-- **Rationale** — BACKLOG, intent to FIX. Found while authoring the timezone corpus but **not a
-  zone bug** — a cast-unit bug, correctly signed before 1970. A 10⁹ factor on every
-  timestamp→integer cast is a silently-wrong-result class in its own right; it gets its own unit
-  rather than a fold into the extraction fix. State: [../STATUS.md](../STATUS.md) "Known
-  correctness issues".
+> **TZ-5 — `CAST(TIMESTAMP AS <numeric>)` returns epoch seconds — FIXED (2026-08-12, #64).**
+> repark returned epoch **nanoseconds** where Spark returns epoch **seconds** — a 10⁹ factor,
+> correctly signed, on `CAST(ts AS BIGINT)`. The same wrong scaling reached `DOUBLE`, `FLOAT`
+> and `DECIMAL(p,s)`; `INT` and `SMALLINT` were refused outright.
+>
+> repark now matches Spark 4.1.2 on the whole numeric-target family, **including the floor
+> edge**: Spark uses `Math.floorDiv`, so `1969-12-31T23:59:59.5Z` is `-1` (not `0`). Float and
+> decimal targets keep the fraction. The class is zone-independent on both engines.
+>
+> The **reverse** direction (`CAST(<integer> AS TIMESTAMP)`) was already correct (seconds);
+> its remaining gap is the Arrow export **type** — that is [TZ-4](#tz-4--timestamp-arrow-export-is-tz-naive),
+> not this row.
+>
+> **Fix:** `repark_functions::timestamp_cast` driven by the `Expr::Cast` arm of
+> `repark_functions::analyzer::SparkExprSemantics`.
+> **Pins:** `crates/repark-spark/tests/timestamp_cast_seconds.rs`,
+> `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`,
+> `python/repark/tests/test_timestamp_cast_parity.py`, and the flipped row
+> `pre_1970_timestamp_cast_to_bigint` in
+> `python/repark/tests/test_session_timezone_parity.py`.
+> **Residuals** (all LOUD refusals, none silent): `TINYINT` overflow-message parity, the `LONG`
+> keyword spelling, `unix_timestamp`, the `D` double-literal suffix, and `F.expr` over a
+> column reference — `task/tz5-cast-seconds-ledger.md` §5.
+> The X-1 TIMESTAMP→INT split flipped to a **nullability-only** disclosure; see
+> [G6-4](#g6-4--timestampint-nullability-only-after-tz-5).
 
 ### TZ-6 — every TIMESTAMP is an instant; there is no `TIMESTAMP_NTZ`
 
@@ -859,6 +875,228 @@ the pin rather than obeying it.
   `[mul_three_digit_capacity_nullability_differs]`
 - **Rationale** — BACKLOG, intent to FIX (gap G13). Nullability-only pin; a schema-sensitive
   consumer that trusts non-null is wrong under repark's marking.
+
+> **The 2026-08-12 landing-truth sweep (L-1)** pasted the overnight-wave §6 handoffs after
+> re-verifying each against merged `main` (`baf6617`). Equalities and already-landed pins are
+> classified in `task/l1-landing-truth-ledger.md`, not restated here.
+
+### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
+
+- **repark** — `CAST(DATE '2020-01-01' AS INT)` yields non-null int32 `18262` (days since epoch).
+- **Apache Spark** — raises `AnalysisException` / `DATATYPE_MISMATCH` (suggests `UNIX_DATE`).
+  *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days]`
+- `live-mirror: cast_date_to_int_spark_refuses`
+- **Rationale** — BACKLOG, intent to FIX (gap G6). Silently-wrong-result class in the migration
+  direction that assumes Spark's refuse: a job that casts partition dates to int succeeds here
+  and fails on Spark.
+
+### G6-4 — TIMESTAMP→INT nullability only (after TZ-5)
+
+- **repark** — `CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT)` under UTC yields int32
+  **non-null** `1577836800` (unix seconds).
+- **Apache Spark** — same value and Arrow type; the CAST is typed **nullable**.
+  *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_spark_seconds_repark_raises]`
+  (name kept byte-identical after the #64 flip; rename queued per relocation discipline).
+- `live-mirror: cast_timestamp_to_int_nullability`
+- **Rationale** — BACKLOG, intent to FIX or DECLARE (same class as G12 null-safe-equal
+  nullability). X-1 originally queued this as raise-vs-value; #64 un-refused the INT path
+  and the residual is nullability only (`task/tz5-cast-seconds-ledger.md` §10).
+
+### G12-1 — null-safe equal result nullability (SQL `<=>`)
+
+- **repark** — `SELECT (NULL <=> NULL) AS nse` yields Arrow `bool` **nullable** (value TRUE).
+- **Apache Spark** — same expression yields Arrow `bool` **non-nullable** (value TRUE).
+  *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq]`
+- `live-mirror: null_safe_eq_sql_nullability`
+- **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12). VALUE already matches; only
+  schema nullability diverges.
+
+### G12-2 — null-safe equal result nullability (DataFrame `eqNullSafe`)
+
+- **repark** — `Column.eqNullSafe` select yields Arrow `bool` **nullable** (values match Spark).
+- **Apache Spark** — same recipe yields Arrow `bool` **non-nullable**. *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select]`
+- `live-mirror: null_safe_eq_df_nullability`
+- **Rationale** — BACKLOG, intent to FIX or DECLARE (gap G12 — DF door twin of G12-1).
+
+### FLOAT-AGG-1 — sum of catastrophic-cancellation float vector
+
+- **repark** — `sum(v)` over the G7 fixture lands **3.75** at
+  `spark.sql.shuffle.partitions = 2` on a VALUES source. Type: Arrow `float64` nullable.
+- **Apache Spark** — same recipe under `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`
+  lands **2.25**. Type: Arrow `float64` nullable. *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_float_agg_parity.py::test_float_agg_parity_row[sum_catastrophic_cancellation_fixture]`
+  and `crates/repark-spark/src/tests/float_agg.rs::pin_sum_f64_bits_at_target_partitions_2`
+- `live-mirror: sum_catastrophic_cancellation_fixture`
+- **Rationale** — accumulation-order sensitivity on a catastrophic-cancellation fixture;
+  value diverges, type agrees. DECLARE candidacy until a G7 fix lands.
+
+### FLOAT-AGG-2 — avg of the same fixture
+
+- **repark** — `avg(v)` lands **0.46875**.
+- **Apache Spark** — lands **0.28125**. *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_float_agg_parity.py::test_float_agg_parity_row[avg_catastrophic_cancellation_fixture]`
+  and `crates/repark-spark/src/tests/float_agg.rs::pin_avg_f64_bits_at_target_partitions_2`
+- `live-mirror: avg_catastrophic_cancellation_fixture`
+- **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
+
+### G18-1 — array-column list value-field name (`item` vs `element`)
+
+- **repark** — `createDataFrame` of an array column exports Arrow list value field named `item`.
+- **Apache Spark** — same recipe exports list value field named `element`. Values match.
+  *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[array_column_roundtrip]`
+- `live-mirror: nested_array_list_field_name`
+- **Rationale** — TYPE disclosure (list field name). Unlocked by G18; fix is G10 / list-type
+  follow-on.
+
+### G18-2 — `collect_list` list nullability and value-field name
+
+- **repark** — `groupBy.agg(collect_list)` exports `list<item: int64>` **nullable** (elements
+  nullable).
+- **Apache Spark** — exports `list<element: int64 not null>` **non-nullable**. Values match
+  under the G18 order-insensitive comparator. *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[collect_list_grouped]`
+- `live-mirror: nested_collect_list_nullability`
+- **Rationale** — TYPE disclosure (field name + collect_list nullability). Same G10 follow-on.
+
+### G18-3 — array-of-struct list value-field name
+
+- **repark** — array-of-struct `createDataFrame` wraps `struct<x, y>` in a list value field
+  named `item`.
+- **Apache Spark** — wraps the same struct in a list value field named `element`. Values match.
+  *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges[array_of_struct_roundtrip]`
+- `live-mirror: nested_array_of_struct_list_field_name`
+- **Rationale** — TYPE disclosure; sibling of G18-1 on a nested list+struct shape.
+
+> **REG-G4-1 / REG-G4-2 — DataFrame `leftsemi` / `leftanti` — FIXED (2026-08-11, G4b / #63).**
+> W-3 queued both as BACKLOG surface gaps. G4b implemented the `how`-token widening and
+> facade alias map; the corpus rows
+> `test_join_parity.py::test_join_parity_row[df_left_semi_unsupported]` and
+> `…[df_left_anti_unsupported]` are now content equalities (names kept; rename queued). A
+> fixed defect gets this dated note, never a live divergence row.
+
+### G4-3 — conditionless DataFrame semi/anti join refuses
+
+- **repark** — `df.join(other, how="leftsemi")` with no `on` (and `on=[]`) raises
+  `AnalysisException`: join type `leftsemi`/`leftanti` requires an `on` condition; a
+  conditionless semi/anti is not a Cartesian product.
+- **Apache Spark** — `on=None` keeps every left row when the right side is non-empty and none
+  when it is empty; the anti side is the complement. `on=[]` raises a PySpark `IndexError`.
+  *(oracle: recorded live, PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_g4b_semi_join.py::test_conditionless_semi_family_refuses_loud`
+- `live-mirror: conditionless_semi_anti_refuses`
+- **Rationale** — DELIBERATE refusal, low priority to fix. The facade's only fallback is the
+  Cartesian path, which returns an m×n result set — a wrong answer, not a narrower one.
+
+### G5-RANK-TYPE-1 — SQL-door `rank()` Arrow type
+
+- **repark** — `rank() OVER (ORDER BY k)` yields Arrow `uint64` non-null (values match Spark).
+- **Apache Spark** — yields `int32` non-null with the same values. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[rank_with_ties]`
+- **Rationale** — BACKLOG, intent to FIX (gap G5). SQL door leaves DataFusion UInt64; DF-API
+  door already casts row_number to IntegerType.
+
+### G5-RANK-TYPE-2 — SQL-door `row_number()` Arrow type (total order)
+
+- **repark** — `row_number() OVER (ORDER BY k, id)` → `uint64`.
+- **Apache Spark** — `int32`. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[row_number_total_order]`
+- **Rationale** — BACKLOG, intent to FIX (gap G5). Sibling of G5-RANK-TYPE-1.
+
+### G5-RANK-TYPE-3 — SQL-door `ntile` Arrow type
+
+- **repark** — `ntile(4) OVER (ORDER BY id)` → `uint64`.
+- **Apache Spark** — `int32`. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[ntile_4_total_order]`
+- **Rationale** — BACKLOG, intent to FIX (gap G5). Completes the ranking-family type class.
+
+> **Temporal `RANGE` window frames — supported, with a corrected bare-offset envelope
+> (G5b / #62, 2026-08-11).** A `RANGE` frame bounded by an interval over a `TIMESTAMP` or
+> `DATE` order key matches Spark 4.1.2 on value and Arrow type through the facade `sql()`
+> door. A **unit-less** offset over a datetime order key (`RANGE BETWEEN 1 PRECEDING`) no
+> longer silently means one *month*: over a `TIMESTAMP` key the door refuses with Spark's
+> `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`, and over a `DATE` key it means days.
+> Pins: `crates/repark-spark/src/tests/window_temporal_range.rs` and the `temporal_range`
+> family in `python/repark/tests/test_window_parity.py`. The five residuals below stay OPEN.
+
+### G5b-R1 — unquoted `INTERVAL n UNIT` frame bound refused
+
+- **repark** — `RANGE BETWEEN INTERVAL 1 DAY PRECEDING` (unquoted) is refused as a frame bound.
+- **Apache Spark** — accepts the unquoted interval literal. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_unquoted_interval_literal]`
+- **Rationale** — BACKLOG (G5b-R). Use `INTERVAL '1' DAY` today.
+
+### G5b-R2 — `DAY TO SECOND` qualified interval literal refused as a frame bound
+
+- **repark** — `INTERVAL '1 12:00:00' DAY TO SECOND PRECEDING` is refused as a frame bound.
+- **Apache Spark** — accepts it. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_day_to_second_literal]`
+- **Rationale** — BACKLOG (G5b-R). Same seam as G5b-R1.
+
+### G5b-R3 — negative interval offset is a wrong answer (`count(*)` = -1)
+
+- **repark** — `RANGE BETWEEN INTERVAL '-1' DAY PRECEDING` yields `count(*)` = **-1** (release
+  wheels wrap; debug may panic). `sum` fails.
+- **Apache Spark** — returns an empty frame. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_negative_offset_count]`
+  and `…[temporal_range_negative_offset_sum]`
+- **Rationale** — BACKLOG, **HIGH** (G5b-R). Silently-wrong-result class in release wheels.
+  State: [../STATUS.md](../STATUS.md).
+
+### G5b-R4 — FOLLOWING-to-FOLLOWING frame includes the current row
+
+- **repark** — `INTERVAL '1' DAY FOLLOWING AND INTERVAL '2' DAY FOLLOWING` includes the
+  current row (sums 120 where Spark sums 90 on the recorded seed).
+- **Apache Spark** — the current row lies outside that frame. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_following_to_following_window]`
+- **Rationale** — BACKLOG (G5b-R). Range-search boundary.
+
+### G5b-R5 — interval bound over a numeric order key: raw Arrow cast error
+
+- **repark** — an interval bound over a numeric order key raises a raw Arrow cast error.
+- **Apache Spark** — raises a Spark error class. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_interval_bound_over_int_key]`
+- **Rationale** — BACKLOG (G5b-R). Error-class alignment only.
+
+### G3-E8 — DELETE/UPDATE subquery predicate is refused (valve, not a fix)
+
+- **repark** — `DELETE FROM t WHERE <predicate containing a subquery>` and
+  `UPDATE t SET … WHERE <predicate containing a subquery>` are **refused** with a `Plan` error
+  naming defect G3-E8, on both SQL doors. Every subquery spelling is refused, including the
+  uncorrelated scalar spelling (deliberate over-refusal) and Spark's FROM-less `DELETE <table>
+  WHERE …`. Subqueries in an `UPDATE … SET` assignment, in `INSERT … SELECT`, and in a
+  `MERGE INTO … USING (…)` source are unaffected.
+- **Apache Spark** — runs all of them, deleting/updating exactly the matching rows.
+  *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11.0.)*
+- **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`
+  and the rest of that corpus; Rust:
+  `crates/repark-spark/src/tests/dml.rs::g3e8_delete_subquery_family_all_refuse`.
+- **Rationale** — DEFECT, refused pending the G3-E8 FIX unit (not a settled absence). Until
+  the fix lands, executing these silently deleted or rewrote every row. **Delete this row
+  when the fix lands.**
+
+### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
+
+- **repark** — `DELETE`/`UPDATE` with `NOT IN (SELECT …)` where the subquery contains `NULL`
+  is refused (same G3-E8 valve).
+- **Apache Spark** — `x NOT IN (…, NULL)` is UNKNOWN for every row, so Spark matches nothing
+  and the table is unchanged. *(oracle: recorded.)*
+- **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_not_in_subquery_with_null_key]`
+  and `…[update_not_in_subquery_with_null_key]`
+- **Rationale** — keep after the fix lands (flip the repark half to "matches Spark"): the
+  behaviour is surprising enough to be re-broken.
 
 ### Surfaced, awaiting pins — not yet rows
 

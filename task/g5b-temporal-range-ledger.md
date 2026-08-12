@@ -359,3 +359,10 @@ DataFusion frame-bound seam, so they should be scoped together, not one PR each)
 | G5b-R3 | negative interval offset | wrong answer + panic; needs a Spark-shaped empty frame |
 | G5b-R4 | `FOLLOWING`-to-`FOLLOWING` off-by-one | range-search boundary, upstream-shaped |
 | G5b-R5 | interval bound over a numeric key | error-class alignment only |
+
+## Landing note (L-1, 2026-08-12)
+
+Supported + corrected envelope classified **LANDED** as a FIXED-style registry note. G5b-R1…R5
+classified **LANDED** as OPEN pinned BACKLOG rows (no live-mirror — window-frame recipes are
+not in the L-1 live-tier both-halves set). G5 slate cell dated-corrected in
+`briefs/v2-engine-hardening.md`.

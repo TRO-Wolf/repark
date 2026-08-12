@@ -361,3 +361,10 @@ Ledger claims vs tree:
 | **PR** | https://github.com/TRO-Wolf/repark/pull/61 |
 | **Author** | TRO-Wolf + `Authored-By: Grok (grok-code) <noreply@x.ai>` |
 | **Base** | `origin/main` @ freeze `9acb566` (A11; no mid-flight rebase) |
+
+## Landing note (L-1, 2026-08-12)
+
+FLOAT-AGG-1 / FLOAT-AGG-2 classified **LANDED** with live-mirrors
+`sum_catastrophic_cancellation_fixture` / `avg_catastrophic_cancellation_fixture`. Paste-true
+after rework `c99689d`; values re-read from merged `test_float_agg_parity.py` (3.75/2.25 and
+0.46875/0.28125).

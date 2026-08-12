@@ -330,3 +330,9 @@ live mirror + registry row described a raise-vs-value split — that text is STA
 Land the class as a **nullability-only disclosure** (same class as G12's eqNullSafe rows) or fold
 it into that family's registry row; do not paste the split wording. DATE→INT is untouched and
 still a spark-raises split.
+
+## Landing note (L-1, 2026-08-12)
+
+§6 TZ-5 row classified **LANDED** as a FIXED registry note (retired the nanoseconds BACKLOG
+row). §10 TIMESTAMP→INT form classified **LANDED** as G6-4 + live-mirror
+`cast_timestamp_to_int_nullability`.

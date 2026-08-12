@@ -265,3 +265,11 @@ No OPEN claims; no taxonomy miss requiring a fix cycle. **OCTO-CONVERGED** (earl
 
 - Part 1 + Part 2 combined in **one PR** (process miss: +1541 > ~1200 soft ceiling; B1 no stack).
 - No stacked second PR (conductor B1).
+
+## Landing note (L-1, 2026-08-12)
+
+The three TYPE rows classified **LANDED** as G18-1/2/3 with live-mirrors
+`nested_array_list_field_name`, `nested_collect_list_nullability`,
+`nested_array_of_struct_list_field_name`. §6 had no Disclosure blocks; helpers were derived
+from merged `test_nested_container_parity.py` recipes (item vs element; collect_list
+nullability).

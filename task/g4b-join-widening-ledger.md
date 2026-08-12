@@ -262,3 +262,9 @@ this lane only (W-3 merged at the frozen base).
 
 Commits authored **TRO-Wolf** with the `Authored-By: Claude (claude-opus-5)` trailer, per-command
 `-c` identity only. No co-author trailers, no session ids or URLs.
+
+## Landing note (L-1, 2026-08-12)
+
+REG-G4-1/2 classified **LANDED** as FIXED entries (never live rows). Conditionless semi/anti
+classified **LANDED** with live-mirror `conditionless_semi_anti_refuses`. Declared-rename and
+H1 origin-map follow-ups classified **DEFERRED**.

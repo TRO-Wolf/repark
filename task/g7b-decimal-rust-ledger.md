@@ -174,3 +174,8 @@ overload).
 
 **ACC label: CLEAN** (one absorbed entry-point correction; two flagged structural deviations with
 true reasons; zero open defects).
+
+## Landing note (L-1, 2026-08-12)
+
+§6 classified **ALREADY-LANDED** / no-registry-surface: DEC-1…DEC-9 already live in the
+registry. Optional avg entry-point split note **DEFERRED**.

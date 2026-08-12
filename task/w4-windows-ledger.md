@@ -278,3 +278,9 @@ Claims-critic: ledger budget/inventory/node-id claims match `ROWS` and
 
 Commits: author `TRO-Wolf <64240326+TRO-Wolf@users.noreply.github.com>` via per-command `-c`;
 trailer `Authored-By: Grok (<model>) <noreply@x.ai>`.
+
+## Landing note (L-1, 2026-08-12)
+
+G5-RANK-TYPE-1/2/3 classified **LANDED** as registry BACKLOG rows (no live-mirror — type-only
+ranking family; not in the L-1 live-tier both-halves set). G5-DEFAULT-FRAME remains equality
+evidence, not a row.

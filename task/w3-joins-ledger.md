@@ -242,3 +242,8 @@ CONVERGED vs regression.
 
 Commits authored **TRO-Wolf** + `Authored-By: Grok (grok-4.5) <noreply@x.ai>` trailer, per-command
 `-c` identity only.
+
+## Landing note (L-1, 2026-08-12)
+
+REG-G4-1 / REG-G4-2 classified **SUPERSEDED** — landed as FIXED entries per
+`task/g4b-join-widening-ledger.md` §6 after #63. REG-G4-3 remains none-further.

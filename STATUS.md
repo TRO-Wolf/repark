@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-10._
+_Last updated: 2026-08-12._
 
 ## Release state
 
@@ -73,14 +73,19 @@ What happens next, in order:
    sources, which closed the deferral of the same name). **H-1 phase record archived
    2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md) (mid-campaign
    promotion G-9 — ten unit ledgers + `g4-artifacts/` through the H-1 close gate #35–#46; campaign
-   continues into **H-2**). The engineering items parked below (spill coverage, the
-   `ReparkSession` decomposition trigger, the `ExecutionBackend` seam) are its natural inputs.
+   continues into **H-2**). **H-2 seed+tail progress (2026-08-12):** landed G1/G16, G2/G13,
+   G3 guard-half, G4+G4b, G5+G5b, G6, G7, G12, G17, G18, G9-partial; **TZ-5 closed by #64**.
+   Still open: G8 (deliberately last), G10 (now unblocked by the X-5 comparator), G11/G15
+   (owner rulings), TZ-4 (design pass required), G3-E8 FIX, G5b-R. The engineering items
+   parked below (spill coverage, the `ReparkSession` decomposition trigger, the
+   `ExecutionBackend` seam) are its natural inputs.
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
    ([docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover").
-4. **The first tagged release** — **held by the owner**, not blocked by engineering. It starts the
-   "API is forever" clock; mechanics and hard blockers: [docs/release.md](docs/release.md).
+4. **The first tagged release** — **held by the owner**, and still blocked by the
+   `repark.sql` re-home ([docs/release.md](docs/release.md) "Hard blockers"). It starts the
+   "API is forever" clock.
 
 Owner-side actions that rode this sequence rather than gating it are **DISCHARGED — no owner-side
 tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) workflow's first dispatch ran
@@ -122,8 +127,11 @@ Parked lanes (drawn up, not started; they conflict with nothing and can interlea
 
 - **`repark.sql` re-home** — the deferred native-door `repark.sql()` relocation, gated on
   release-prep (design ruling in [docs/design/python-facade.md](docs/design/python-facade.md) §4).
-- **dbt-repark** — the dbt adapter (separate Python package, dbt-duckdb precedent), a year-one
-  load-bearing surface per [PROJECT.md](PROJECT.md).
+  This is also the **hard blocker for the first tag**.
+
+**dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
+insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2
+done until those gates run.
 
 ## Known correctness issues
 
@@ -168,16 +176,27 @@ moving it. Nothing is described in both places.
   the extractor path — and **TZ-6**, that repark has no `TIMESTAMP_NTZ` distinct from `TIMESTAMP`
   (re-recorded from the live oracle in the same change). TZ-4's unit is the one that retires TZ-6
   and TZ-7 with it.
-- **`CAST(TIMESTAMP AS BIGINT)` returns nanoseconds, not seconds** — **BACKLOG, open
-  (2026-08-10)**: a silently-wrong-result class (a 10⁹ factor on every timestamp→integer cast),
-  found while authoring the timezone corpus; not a zone bug, and it gets its own unit rather than
-  a fold into the extraction fix. Semantics + pin: registry §7 row TZ-5.
+- **`CAST(TIMESTAMP AS <numeric>)` returns epoch seconds** — **FIXED (2026-08-12, #64).**
+  The 10⁹ nanoseconds-vs-seconds class is closed, including INT/SMALLINT un-refusal and
+  floor semantics. Residual: TIMESTAMP→INT **nullability only** (registry G6-4). Semantics of
+  the closed class: registry TZ-5 (FIXED note).
 - **decimal128 semantics diverge from Apache Spark across nine classes** — **BACKLOG, open
   (2026-08-11)**: bare-literal inference, division precision/scale, the 38-digit result-type
   clamp (and its plan-refuse face), `avg`/`INT*DECIMAL` promotion, ANSI overflow and
   divide-by-zero, and arithmetic nullability — recorded against live PySpark 4.1.2 by the G-7
   differential corpus (hardening gaps G2 + G13). Semantics + pins: registry §7 rows DEC-1 …
   DEC-9; the corpus classifies any silent convergence CONVERGED-flip-don't-delete.
+  **Photographed, not fixed.**
+- **Negative temporal-RANGE `count(*)` = -1 in release wheels** — **BACKLOG, HIGH
+  (2026-08-11, G5b-R3).** A `RANGE BETWEEN INTERVAL '-1' DAY PRECEDING` frame returns
+  `count(*)` = -1 (debug may panic; release wraps). Spark returns an empty frame. Semantics +
+  pin: registry §7 row G5b-R3.
+- **DELETE/UPDATE subquery predicates are refused, not implemented** — **BACKLOG, open
+  (G3-E8 guard half).** A silent-data-loss window is closed by a loud valve; the FIX unit that
+  would lower the statements onto MERGE has not started. Semantics + pins: registry §7 rows
+  G3-E8 / G3-E8-NULL.
+- **`repark.sql` re-home** — **blocks the first tagged release** (not a correctness defect).
+  See [docs/release.md](docs/release.md) "Hard blockers" and Deferred capabilities.
 
 **Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
 **2026-08-10** — see
@@ -226,7 +245,8 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None technical.** The engine, tests, and gates are green on `main`. The first tagged release is a
-**user-side action, held by the owner** (step 4 of the sequence in "Current milestone"), not an
-engineering blocker. The release-side hard blockers — the ones that fail a tag rather than delay
-one — are in [docs/release.md](docs/release.md).
+**One technical hard blocker remains:** `repark.sql` is still the pyspark-alias package, so the
+first tag fails the release checklist ([docs/release.md](docs/release.md)). Everything else that
+fails a tag (rather than delaying one) is listed there. The engine, tests, and gates are green
+on `main`. The tag itself remains a **user-side action, held by the owner** (step 4 of
+"Current milestone").

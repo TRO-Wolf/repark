@@ -999,3 +999,8 @@ true of the ANSI door, before and after, and is now pinned
 | **F-C(3)** "hoist detector+message to repark-common IF the diff stays proportionate" | NOT hoisted. | `repark-common` depends on `thiserror` alone; the detector needs sqlparser. The hoist = a DataFusion dep in tier 0 + promoting `repark-spark → repark-common` from `dev` to `normal` in the DAG SSOT. Disproportionate inside a guard unit. The disposition's stated minimum landed instead (equality pin + honest D-1 + named follow-up). V-10. |
 | **F-J** "re-run the provocations" | The LIVE-Spark provocations (§4d record mode, §4e emitter, §5c golden perturbation) were NOT re-run. | The dispositions named the neuter and clean-run provocations; the live ones need the JVM oracle and nothing this pass touched can move them — the corpus module's only edits were `import re`, the control-row subquery regex, and the GAV docstring. Labelled as ACTOR transcripts in §5 rather than presented as fresh. V-11. |
 | **F-D** "add the three missing spellings … as ❌ with executed evidence" | Also added their UPDATE twins and re-executed four ⚠️ rows that were not asked for. | Cheap, same probe run, and it is what turns §7 item 4 from a prose warning into a table a fix unit can act on. No deviation in substance — a superset. |
+
+## Landing note (L-1, 2026-08-12)
+
+§6 BACKLOG rows classified **LANDED** as registry G3-E8 / G3-E8-NULL (no live-mirror — DML
+lifecycle is not a single-shot Disclosure). The FIX unit remains queued.

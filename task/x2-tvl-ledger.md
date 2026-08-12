@@ -284,3 +284,9 @@ engine change flips a content row, the disclosure idiom classifies CONVERGED vs 
 
 Commits authored **TRO-Wolf** + `Authored-By: Grok (grok-4.5) <noreply@x.ai>` trailer, per-command
 `-c` identity only. Two-pass hygiene before push.
+
+## Landing note (L-1, 2026-08-12)
+
+REG-G12-1 / REG-G12-2 classified **LANDED** with live-mirrors `null_safe_eq_sql_nullability`
+and `null_safe_eq_df_nullability`. Re-verified against merged `test_three_valued_logic_parity.py`
+(value TRUE; Spark nse non-nullable, repark nullable).

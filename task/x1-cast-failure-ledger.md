@@ -409,3 +409,11 @@ Claims critic (CL-*) null-report: inventory of budget counts, row inventory, "2 
 - Two-pass hygiene before push
 - Never touch: CLAUDE.md, AGENTS.md, PROJECT.md, STATUS.md, registry, Cargo.lock, uv.lock,
   .github/, planning/hardening
+
+## Landing note (L-1, 2026-08-12)
+
+- G6-1 / G6-2 classified **LANDED** as BL-1 rewrite (ANSI ON equalities; not live-mirrors).
+- G6-3 classified **LANDED** (live-mirror `cast_date_to_int_spark_refuses`).
+- G6-4 classified **SUPERSEDED** — X-1 raise-vs-value text is stale after #64. Landed as
+  G6-4 nullability-only + live-mirror `cast_timestamp_to_int_nullability` per
+  `task/tz5-cast-seconds-ledger.md` §10.
