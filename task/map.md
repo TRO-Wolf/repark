@@ -68,6 +68,11 @@ not this directory.
   `NamespaceScopedCatalog` explicit forwards or stated omissions for every defaulted
   `Catalog` method (16 re-verified at pin `b009ac1`); HIGH `publish_replace_table` +
   4 wrapper pins.
+- [x3-float-agg-ledger.md](x3-float-agg-ledger.md) — **X-3 / H-2 gap G7 in flight:** float
+  aggregation determinism — 6 `f64::to_bits` Rust pins (sum/avg × target_partitions 1/2/8) over a
+  catastrophic-cancellation fixture + run-to-run stability + cross-count spread disclosure; 2
+  differential Python rows (both disclosures: Spark 2.25/0.28125 vs repark 3.75/0.46875). Record
+  driver. Does **not** edit `_live_parity.py` or the registry (A4/B6).
 
 ## Where the closed campaigns' ledgers went
 
