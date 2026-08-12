@@ -271,3 +271,35 @@ X-1's worktree.
 | `make verify` | 0 | `/tmp/opus-o3-verify.log` |
 | `make py-test-facade` | 0 | `/tmp/opus-o3-py-test-facade.log` |
 | `make preflight` | 0 | `/tmp/opus-o3-preflight.log` |
+
+## 9. Follow-on the fix made reachable (fixed in this PR, same commit as its pins)
+
+`python/repark/tests/test_g2_window_rand_sampleby.py::test_range_between_moving_average` was
+written **around** this bug. Its own docstring said so:
+
+> Live Spark: `date.cast("timestamp").cast("long")` is **epoch seconds**. DataFusion
+> `cast(timestamp AS bigint)` is **epoch microseconds** — dividing by 1e6 recovers Spark's second
+> scale so the ±3-day RANGE offsets match. Residual: bare `cast("long")` on timestamps stays
+> DF-µs (seed for cast-unit track).
+
+This unit IS that track. Dropping the `/ 1e6` — so the test now spells Spark's own expression —
+is part of the fix's revert-red evidence: restore the divisor and it goes red.
+
+Removing the wrapper then exposed a **separate, pre-existing facade defect** the wrapper had been
+hiding. `Column.over` derives the value-offset RANGE guard's order-key NAMES, and a CAST chain
+keeps its BASE column's projection name (`col("d").cast("timestamp").cast("long")` still projects
+as `d`). The guard therefore looked up `d`'s dtype — `timestamp` — and refused with
+`SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE` a RANGE key that is plainly `BIGINT`, and that Spark
+accepts. With the arithmetic wrapper present the column was not "stable-named", so the guard fell
+through and never saw it.
+
+**Fix:** treat a key as "bare" only when its spark display EQUALS its projection name. A bare
+column still names itself and is still checked (the existing refusal pins are untouched); an
+expression falls to the display branch, whose name matches no schema field, so the guard skips it
+and the engine remains the authority on the type — the residual that branch's own comment already
+declared. One condition in `python/repark/src/repark/column.py`, pinned from **both** sides:
+`test_range_value_offset_refuses_non_numeric_order` (unchanged) and the new
+`test_range_value_offset_accepts_a_cast_numeric_order_key`.
+
+Also corrected in the same commit: `python/repark/src/repark/map.md` carried a now-false residual
+note ("`timestamp.cast("long")` is DF-µs not Spark-seconds").

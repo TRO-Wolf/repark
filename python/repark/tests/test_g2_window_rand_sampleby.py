@@ -107,10 +107,19 @@ def test_cumulative_sum_unbounded_preceding(spark: ReparkSession) -> None:
 def test_range_between_moving_average(spark: ReparkSession) -> None:
     """Apache ``test_window_functions_moving_average`` shape on a numeric order key.
 
-    Live Spark: ``date.cast(\"timestamp\").cast(\"long\")`` is **epoch seconds**.
-    DataFusion ``cast(timestamp AS bigint)`` is **epoch microseconds** — dividing by
-    1e6 recovers Spark's second scale so the ±3-day RANGE offsets match. Residual:
-    bare ``cast(\"long\")`` on timestamps stays DF-µs (seed for cast-unit track).
+    Live Spark: ``date.cast(\"timestamp\").cast(\"long\")`` is **epoch seconds**, and since the
+    TZ-5 cast fix (2026-08-12, ``task/tz5-cast-seconds-ledger.md``) so is repark's — so this test
+    now spells Spark's own expression with **no scale workaround**. It used to divide by 1e6,
+    because DataFusion handed back the raw tick value (µs for this ``createDataFrame`` column,
+    ns for a ``to_timestamp`` literal) and the ±3-day RANGE offsets are in seconds; that
+    docstring called itself a "seed for the cast-unit track", and this is that track landing.
+
+    Dropping the ``/ 1e6`` is therefore part of the fix's revert-red evidence: restore it and
+    this test goes red, exactly as re-introducing the raw-tick cast would.
+
+    The column is a NAIVE datetime, which repark reads as UTC and Spark as a session wall clock
+    (registry row TZ-7) — immaterial here, because a RANGE frame only reads DIFFERENCES between
+    order-key values and a constant offset cancels out of every one of them.
     """
     import datetime
 
@@ -127,7 +136,7 @@ def test_range_between_moving_average(spark: ReparkSession) -> None:
     def to_sec(days: int) -> int:
         return days * 86400
 
-    order_seconds = (F.col("date").cast("timestamp").cast("long") / F.lit(1_000_000)).cast("long")
+    order_seconds = F.col("date").cast("timestamp").cast("long")
     window = Window.orderBy(order_seconds).rangeBetween(-to_sec(3), 0)
     result = frame.withColumn("avg3", F.avg("temperature").over(window))
     rows = sorted(tuple(row) for row in result.collect())
@@ -165,6 +174,24 @@ def test_range_value_offset_refuses_non_numeric_order(spark: ReparkSession) -> N
     peer = Window.orderBy("s").rangeBetween(Window.unboundedPreceding, Window.currentRow)
     peer_rows = sorted(tuple(row) for row in frame.select("s", F.sum("v").over(peer)).collect())
     assert peer_rows == [("a", 4), ("a", 4), ("b", 6)]
+
+
+def test_range_value_offset_accepts_a_cast_numeric_order_key(spark: ReparkSession) -> None:
+    """A CAST-to-numeric ORDER BY is a legal value-offset RANGE key — the guard's other side.
+
+    The refusal above resolves the order key by NAME, and a cast chain keeps its base column's
+    projection name (``col("s").cast("long")`` still projects as ``s``). Naming it made the guard
+    read the SOURCE column's dtype and refuse a numeric key that Spark accepts. That over-reach
+    was unreachable until the TZ-5 cast fix (``task/tz5-cast-seconds-ledger.md``) let the
+    moving-average pin drop the arithmetic wrapper that had been hiding it, so the fix is pinned
+    from both sides here: a bare non-numeric key is still refused (above), and a cast TO a numeric
+    type is accepted (below).
+    """
+    frame = spark.createDataFrame([("1", 10), ("2", 20), ("5", 30), ("6", 40)], ["s", "v"])
+    window = Window.orderBy(F.col("s").cast("long")).rangeBetween(-1, 0)
+    rows = sorted(tuple(row) for row in frame.select("s", F.sum("v").over(window)).collect())
+    # Same frame arithmetic as the integer-key pin: 1 → {1}; 2 → {1,2}; 5 → {5}; 6 → {5,6}.
+    assert rows == [("1", 10), ("2", 30), ("5", 30), ("6", 70)]
 
 
 def test_range_without_order_by_refuses(spark: ReparkSession) -> None:

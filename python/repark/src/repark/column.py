@@ -1326,7 +1326,22 @@ class Column:
             names: list[str] = []
             for order_column in window._order_columns:
                 # Bare col / alias: stable projection name; else spark display (best-effort).
-                if order_column._stable_name and order_column._projection_name is not None:
+                #
+                # "Bare" must mean bare. A CAST chain keeps the BASE column's projection name
+                # (`col("d").cast("timestamp").cast("long")` still projects as `d`), so naming it
+                # here made the guard below read the SOURCE column's dtype and refuse a perfectly
+                # numeric order key — Spark accepts `CAST(ts AS BIGINT)` as a RANGE key, and so
+                # does repark since the TZ-5 cast fix made that expression epoch seconds
+                # (task/tz5-cast-seconds-ledger.md; the arithmetic wrapper the moving-average pin
+                # used to carry had been hiding this). Requiring the display to EQUAL the
+                # projection name is what separates a bare reference from an expression over one;
+                # an expression falls to the display branch, whose name matches no schema field,
+                # so the guard skips it and the engine remains the authority on its type.
+                if (
+                    order_column._stable_name
+                    and order_column._projection_name is not None
+                    and order_column._spark_display == order_column._projection_name
+                ):
                     names.append(order_column._projection_name)
                 elif order_column._spark_display is not None:
                     names.append(order_column._spark_display)
