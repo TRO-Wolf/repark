@@ -20,7 +20,10 @@ use datafusion::catalog::{CatalogProvider, SchemaProvider};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use iceberg::table::Table;
-use iceberg::{Catalog, Namespace, NamespaceIdent, TableCommit, TableCreation, TableIdent};
+use iceberg::view::{View, ViewCommit};
+use iceberg::{
+    Catalog, Namespace, NamespaceIdent, TableCommit, TableCreation, TableIdent, ViewCreation,
+};
 use iceberg_datafusion::IcebergCatalogProvider;
 
 use crate::catalog::metadata_projection::MetadataProjectionSchemaProvider;
@@ -347,10 +350,8 @@ async fn build_namespace_schema(
     namespace: &NamespaceIdent,
 ) -> Result<Arc<dyn SchemaProvider>> {
     let schema_name = namespace_schema_name(namespace);
-    let scoped: Arc<dyn Catalog> = Arc::new(NamespaceScopedCatalog {
-        inner: catalog,
-        only: namespace.clone(),
-    });
+    let scoped: Arc<dyn Catalog> =
+        Arc::new(NamespaceScopedCatalog::new(catalog, namespace.clone()));
     let iceberg = IcebergCatalogProvider::try_new(scoped)
         .await
         .map_err(super::iceberg_to_datafusion)?;
@@ -377,15 +378,33 @@ fn namespace_schema_name(namespace: &NamespaceIdent) -> String {
 /// Catalog view that reports a single namespace from `list_namespaces` so
 /// `IcebergCatalogProvider::try_new` only builds one `IcebergSchemaProvider`.
 ///
-/// All other methods fully delegate to `inner` so the schema provider remains write-capable.
+/// Required methods and every defaulted method that an inner catalog may override are
+/// **explicit forwards** to `inner` (so a trait default cannot swallow a real override —
+/// G17 / both-sides trait-wrapping audit). Three composition defaults are **stated omissions**
+/// (see the block comment in the `impl Catalog` body): they deliberately fall through because
+/// they only call methods this wrapper already forwards.
 /// ===========================================================================================
 #[derive(Debug)]
-struct NamespaceScopedCatalog {
+pub(crate) struct NamespaceScopedCatalog {
     inner: Arc<dyn Catalog>,
     only: NamespaceIdent,
 }
 
+impl NamespaceScopedCatalog {
+    /// ===========================================================================================
+    /// Wrap `inner` so root `list_namespaces` reports only `only` (if it exists).
+    /// ===========================================================================================
+    pub(crate) fn new(inner: Arc<dyn Catalog>, only: NamespaceIdent) -> Self {
+        Self { inner, only }
+    }
+}
+
 impl Catalog for NamespaceScopedCatalog {
+    // -------------------------------------------------------------------------------------------
+    // Required Catalog methods (14). `list_namespaces` is the only intentional filter; the rest
+    // fully delegate so the schema provider remains write-capable.
+    // -------------------------------------------------------------------------------------------
+
     fn list_namespaces<'life0, 'life1, 'async_trait>(
         &'life0 self,
         parent: Option<&'life1 NamespaceIdent>,
@@ -569,5 +588,170 @@ impl Catalog for NamespaceScopedCatalog {
         Self: 'async_trait,
     {
         self.inner.update_table(commit)
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Stated omissions (3 of 16 defaulted methods at fork pin b009ac1).
+    //
+    // These trait defaults compose only from methods already forwarded above — they do not
+    // call an overridable default that an inner catalog might replace with real work, so leaving
+    // them as the trait default is correct *and* observable (see namespace_scoped_tests).
+    //
+    //   update_namespace_properties — get_namespace + update_namespace (both forwarded)
+    //   set_namespace_properties    — update_namespace_properties(empty removals, updates)
+    //   remove_namespace_properties — update_namespace_properties(removals, empty updates)
+    //
+    // Never silent: if a future fork rev makes one of these a real primitive (not a composition),
+    // re-audit and convert that method to an explicit forward.
+    // -------------------------------------------------------------------------------------------
+
+    // -------------------------------------------------------------------------------------------
+    // Explicit forwards (13 of 16 defaulted methods). A silent fall-through would return the
+    // trait default and swallow an inner catalog's override — HIGH for publish_replace_table
+    // (default FeatureUnsupported masks MemoryCatalog's CAS replace) and the views family
+    // (MemoryCatalog implements views; default is FeatureUnsupported).
+    // -------------------------------------------------------------------------------------------
+
+    fn publish_create_table<'life0, 'async_trait>(
+        &'life0 self,
+        table: Table,
+    ) -> BoxedCatalogFuture<'async_trait, Table>
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.publish_create_table(table)
+    }
+
+    fn publish_replace_table<'life0, 'async_trait>(
+        &'life0 self,
+        table: Table,
+        expected_base_metadata_location: Option<String>,
+    ) -> BoxedCatalogFuture<'async_trait, Table>
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
+        // HIGH (G17): trait default is FeatureUnsupported; MemoryCatalog implements CAS replace.
+        self.inner
+            .publish_replace_table(table, expected_base_metadata_location)
+    }
+
+    fn list_views<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+    ) -> BoxedCatalogFuture<'async_trait, Vec<TableIdent>>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.list_views(namespace)
+    }
+
+    fn create_view<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        namespace: &'life1 NamespaceIdent,
+        creation: ViewCreation,
+    ) -> BoxedCatalogFuture<'async_trait, View>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.create_view(namespace, creation)
+    }
+
+    fn load_view<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        view: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, View>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.load_view(view)
+    }
+
+    fn drop_view<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        view: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.drop_view(view)
+    }
+
+    fn view_exists<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        view: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, bool>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.view_exists(view)
+    }
+
+    fn rename_view<'life0, 'life1, 'life2, 'async_trait>(
+        &'life0 self,
+        src: &'life1 TableIdent,
+        dest: &'life2 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        'life2: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.rename_view(src, dest)
+    }
+
+    fn update_view<'life0, 'async_trait>(
+        &'life0 self,
+        commit: ViewCommit,
+    ) -> BoxedCatalogFuture<'async_trait, View>
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.update_view(commit)
+    }
+
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+
+    fn properties(&self) -> &HashMap<String, String> {
+        self.inner.properties()
+    }
+
+    fn invalidate_table<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        table: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.invalidate_table(table)
+    }
+
+    fn invalidate_view<'life0, 'life1, 'async_trait>(
+        &'life0 self,
+        view: &'life1 TableIdent,
+    ) -> BoxedCatalogFuture<'async_trait, ()>
+    where
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
+    {
+        self.inner.invalidate_view(view)
     }
 }

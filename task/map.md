@@ -60,6 +60,10 @@ not this directory.
 - [xc-product-statements-ledger.md](xc-product-statements-ledger.md) — **XC (docs):** G3-E3/E4/E7
   product statements → [`docs/design/product-contract.md`](../docs/design/product-contract.md)
   + design/docs map lockstep; cite inventory; B6 proposals only.
+- [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) — **X-4 / G17 in flight:**
+  `NamespaceScopedCatalog` explicit forwards or stated omissions for every defaulted
+  `Catalog` method (16 re-verified at pin `b009ac1`); HIGH `publish_replace_table` +
+  4 wrapper pins.
 
 ## Where the closed campaigns' ledgers went
 
@@ -106,6 +110,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — items 1+4 in PR #50; items 2+3 (lifecycle live + 13 tz live scenarios) in the second PR. Full N-2b closed only when **both** PRs land. |
 | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) | **X-5 / G18** nested comparator + nested-container corpus (Part 1+2) |
+| [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) | **X-4 / G17** catalog wrapper explicit forwards (HIGH `publish_replace_table`) |
 
 ## I want to...
 
@@ -127,6 +132,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
+| Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
