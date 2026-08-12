@@ -365,7 +365,7 @@ ROWS: list[CastRow] = [
         ),
     ),
     CastRow(
-        name="timestamp_to_int_spark_seconds_repark_raises",
+        name="timestamp_to_int_nullability",
         kind="content",
         entry="sql",
         family="timestamp_to_int",
@@ -718,7 +718,7 @@ def test_content_disclosure_classifier_converged_arm(
     """
     import test_cast_failure_parity as cast_mod
 
-    row = next(row for row in ROWS if row.name == "timestamp_to_int_spark_seconds_repark_raises")
+    row = next(row for row in ROWS if row.name == "timestamp_to_int_nullability")
     assert row.kind == "content" and row.repark is not None and row.spark is not None
     golden = row.spark
 
@@ -740,7 +740,7 @@ def test_content_disclosure_classifier_regression_arm(
     """CP-1: content disclosure landing on NEITHER half → regression guidance."""
     import test_cast_failure_parity as cast_mod
 
-    row = next(row for row in ROWS if row.name == "timestamp_to_int_spark_seconds_repark_raises")
+    row = next(row for row in ROWS if row.name == "timestamp_to_int_nullability")
     wrong = _one_row([("n", _I32, False)], {"n": 99})
 
     def _fake_wrong(_session: Any, _row: CastRow) -> pa.Table:
