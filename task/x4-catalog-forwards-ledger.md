@@ -115,3 +115,8 @@ cargo clippy -p repark-iceberg --lib -- -D warnings
 ## 6. Conductor A11 freeze
 
 Base freeze `9acb566`. No fork-side, registry, or lock edits.
+
+## Landing note (L-1, 2026-08-12)
+
+§6 / no-handoff classified **ALREADY-LANDED** — no registry surface (catalog forwards are
+engine-wrapper completeness, not a Spark divergence).

@@ -41,3 +41,8 @@ none.
 
 check_lib_py stale backport; pre-commit path HOLD from G-8; unit-queue discharge
 (orchestrator-side).
+
+## Landing note (L-1, 2026-08-12)
+
+Classified **ALREADY-LANDED** / no-registry-surface — mechanical gate, not a Spark
+divergence.

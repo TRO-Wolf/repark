@@ -328,3 +328,9 @@ OPEN ≥ S1: **none**.
 - No STATUS / unit-queue / registry FILE edits.
 - No engine MERGE production changes.
 - No `error_needle` / `run_lifecycle_expect_error` (deferred to a consumer).
+
+## Landing note (L-1, 2026-08-12)
+
+REG-N2b-LIVE-1 / REG-N2b-LIVE-2 classified **ALREADY-LANDED**: `LIFECYCLE_SCENARIOS` is 2 and
+`SCENARIOS` is 42 on merged `main`. No new registry divergence rows (these were coverage notes,
+not disposed differences).

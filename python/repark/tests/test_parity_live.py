@@ -138,6 +138,18 @@ def test_live_scenario_matches_repark_golden_and_spark(
 
 
 @pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
+@pytest.mark.parametrize("disclosure", lp.DISCLOSURES, ids=[d.name for d in lp.DISCLOSURES])
+def test_live_disclosure_still_diverges(disclosure: lp.Disclosure, spark_engine: lp.Engine) -> None:
+    """Each recorded divergence still holds on BOTH live engines: repark keeps its (divergent)
+    behavior and live Spark keeps the behavior it differs from. If either engine converged toward
+    the other, its check flips RED — forcing the disclosure to be revisited rather than silently
+    laundered into 'parity'.
+    """
+    disclosure.repark_check(lp.build_repark_engine())
+    disclosure.spark_check(spark_engine)
+
+
+@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
 @pytest.mark.parametrize(
     "repark_scenario,spark_scenario",
     list(zip(lp.LIFECYCLE_SCENARIOS, lp.LIFECYCLE_SCENARIOS_SPARK, strict=True)),
@@ -154,6 +166,11 @@ def test_live_lifecycle_scenario_matches_repark_golden_and_spark(
     Uses the dedicated Iceberg-provisioned engine (not the plain spark_engine). repark gets a
     fresh memory catalog + COW props; Spark runs without COW props (Iceberg 1.11 default).
     Catalog names differ (mem vs local) but SQL shapes and goldens are identical.
+
+    Collected *after* the scenario + disclosure live tests so the default SparkContext (no
+    Iceberg GAV) is finished before ``build_spark_iceberg_engine`` stops it and starts a
+    packages-capable context. ``spark.jars.packages`` is SparkContext-level; getOrCreate on
+    the default session would leave ``SparkCatalog`` unloaded (L-1 amendment).
     """
     order = repark_scenario.order_sensitive
     assert repark_scenario.name == spark_scenario.name
@@ -169,18 +186,6 @@ def test_live_lifecycle_scenario_matches_repark_golden_and_spark(
             spark_scenario, spark_iceberg_engine, with_cow_props=False
         )
     assert_frames_equal(spark_out, spark_scenario.golden, order_sensitive=order)
-
-
-@pytest.mark.skipif(not lp.LIVE, reason=lp.LIVE_SKIP_REASON)
-@pytest.mark.parametrize("disclosure", lp.DISCLOSURES, ids=[d.name for d in lp.DISCLOSURES])
-def test_live_disclosure_still_diverges(disclosure: lp.Disclosure, spark_engine: lp.Engine) -> None:
-    """Each recorded divergence still holds on BOTH live engines: repark keeps its (divergent)
-    behavior and live Spark keeps the behavior it differs from. If either engine converged toward
-    the other, its check flips RED — forcing the disclosure to be revisited rather than silently
-    laundered into 'parity'.
-    """
-    disclosure.repark_check(lp.build_repark_engine())
-    disclosure.spark_check(spark_engine)
 
 
 # ==================================================================================================
@@ -202,7 +207,8 @@ def test_registry_covers_the_mandated_golden_family() -> None:
     family (Group E group-agg/na/union + columns + dates + compound-agg display name) plus the two
     Group L-write division goldens (union + bare) plus the two audit-G2 filter-rewriter goldens
     plus the two H-1a non-UTC-oracle goldens, plus the 13 G1/G16 extraction-class timezone live
-    rows (N-2b item 3), plus the four load-bearing disclosures.
+    rows (N-2b item 3). DISCLOSURES are a separate exact-set pin (L-1 landing-truth grew it;
+    SCENARIOS stays 42).
 
     The size moved 29 -> 42 DELIBERATELY in the same diff as the 13 timezone scenarios it counts
     (item 3). Prior move 27 -> 29 was the two H-1a non-UTC date controls.
@@ -217,6 +223,16 @@ def test_registry_covers_the_mandated_golden_family() -> None:
         "fillna_scalar_numeric_nullability",
         "filter_case_collision_bypasses",
         "filter_backtick_identifier",
+        "cast_date_to_int_spark_refuses",
+        "cast_timestamp_to_int_nullability",
+        "null_safe_eq_sql_nullability",
+        "null_safe_eq_df_nullability",
+        "sum_catastrophic_cancellation_fixture",
+        "avg_catastrophic_cancellation_fixture",
+        "nested_array_list_field_name",
+        "nested_collect_list_nullability",
+        "nested_array_of_struct_list_field_name",
+        "conditionless_semi_anti_refuses",
     }, "every load-bearing disclosure is present"
 
 

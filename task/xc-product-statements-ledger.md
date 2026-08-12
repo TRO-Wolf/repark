@@ -62,3 +62,9 @@ Pure docs + map lockstep — no testable surface. Exempt under docs/testing.md h
 ## Verify
 
 Docs-only; `make verify` map-md / manifest checks as available. No code/tests changed.
+
+## Landing note (L-1, 2026-08-12)
+
+Classified **ALREADY-LANDED** — `docs/design/product-contract.md` is on `origin/main`. No
+registry surface (product statements are not Spark divergences). AGENTS pointer remains an
+optional morning note.

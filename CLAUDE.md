@@ -16,6 +16,7 @@ CLAUDE.md restates nothing. Follow the pointers:
 | Current state (release, delivered crates, active/deferred work) | [STATUS.md](STATUS.md) |
 | Component boundaries, the crate DAG, runtime flows | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Local setup, `make` targets, CI surface, troubleshooting | [DEVELOPMENT.md](DEVELOPMENT.md) |
+| Gate roster (`verify` / `preflight` / facade) | [AGENTS.md `## Verify before "done"`](AGENTS.md#verify-before-done) — `verify` is Rust-only; `preflight` adds `py-test-facade` + audit + workflow lint. Keep this pointer in lockstep with AGENTS.md; do not invent a second roster. |
 | The testing-discipline contract (hard block) | [docs/testing.md](docs/testing.md) |
 | Product intent / north star | [PROJECT.md](PROJECT.md) |
 | Navigation for a directory you will touch | that directory's `map.md` |

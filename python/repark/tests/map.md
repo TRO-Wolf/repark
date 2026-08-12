@@ -1450,12 +1450,14 @@ NOT in that file is a defect, not a decision.
      multi-statement `create → seed → [merge_src] → act → read` with always-cleanup.
      `live_merge_basic_upsert` (control equality) + `live_merge_matched_arm_order` (arm-order
      first-match-wins — not the builder upsert twin). `build_spark_iceberg_engine` is a sibling of
-     `build_spark_engine` (option A): GAV from `_oracle_pins`, Hadoop catalog, ANSI on; keeps the
-     default live session Iceberg-free. repark path: `build_repark_engine` +
+     `build_spark_engine` (option A): GAV from `_oracle_pins`, Hadoop catalog, ANSI on. The
+     default live session still has **no Iceberg catalog**; under `REPARK_PARITY_LIVE=1` this
+     module arms `PYSPARK_SUBMIT_ARGS` with the GAV so the process's first SparkContext can
+     resolve `SparkCatalog` for later lifecycle tests (L-1). repark path: `build_repark_engine` +
      `register_memory_catalog` + `with_cow_props=True`.
-  `DISCLOSURES` = the four load-bearing recorded divergences (`int_union_string`,
-  `fillna_scalar_numeric_nullability`, `filter_case_collision_bypasses` /
-  `filter_backtick_identifier`). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
+  `DISCLOSURES` = the load-bearing recorded divergences (exact-set pin in
+  `test_parity_live.py`; 14 names after the 2026-08-12 L-1 landing-truth sweep — the original
+  four plus G6/G12/G7/G18/G4b live-mirrors). `live_enabled()` is the `REPARK_PARITY_LIVE` gate;
   `build_spark_engine()` / `build_spark_iceberg_engine()` import pyspark **lazily**.
   **Per-scenario session-conf override (H-1a):** `Scenario.session_conf` (and lifecycle) carries
   conf pairs for one scenario only — oracle via `spark_session_conf`, repark via BUILD.

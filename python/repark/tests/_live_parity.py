@@ -84,6 +84,40 @@ def live_enabled(environ: Mapping[str, str] | None = None) -> bool:
 LIVE = live_enabled()
 
 
+def _arm_iceberg_packages_on_first_spark() -> None:
+    """Put the Iceberg runtime on the *first* SparkContext in this process.
+
+    ``spark.jars.packages`` cannot be added after a SparkContext exists. The full
+    facade suite starts Spark from other modules before the live lifecycle tests;
+    ``PYSPARK_SUBMIT_ARGS`` is the hook that reaches that first context. Armed
+    only when the live tier is on (so ``make preflight`` / JVM-free runs stay
+    Iceberg-free). L-1: without this, full-suite lifecycle tests raise
+    ``ClassNotFoundException: SparkCatalog``.
+    """
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+
+    token = ICEBERG_SPARK_RUNTIME_GAV
+    existing = os.environ.get("PYSPARK_SUBMIT_ARGS", "").strip()
+    if token in existing:
+        return
+    prefix = (
+        f"--packages {token} "
+        "--conf spark.sql.extensions="
+        "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+    )
+    if existing:
+        if existing.endswith("pyspark-shell"):
+            os.environ["PYSPARK_SUBMIT_ARGS"] = f"{prefix} {existing}"
+        else:
+            os.environ["PYSPARK_SUBMIT_ARGS"] = f"{prefix} {existing} pyspark-shell"
+    else:
+        os.environ["PYSPARK_SUBMIT_ARGS"] = f"{prefix} pyspark-shell"
+
+
+if LIVE:
+    _arm_iceberg_packages_on_first_spark()
+
+
 # ==================================================================================================
 # Per-scenario session-conf override (H-1a)
 # ==================================================================================================
@@ -188,8 +222,10 @@ def build_spark_engine() -> Engine:
 def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) -> Engine:
     """Live PySpark + Iceberg engine for multi-statement table lifecycle scenarios.
 
-    Sibling of :func:`build_spark_engine` (option A): keeps the default live session JVM-cheap and
-    Iceberg-free; only lifecycle/MERGE live tests request this provisioned engine. Pins the same
+    Sibling of :func:`build_spark_engine` (option A): the default live session has no Iceberg
+    *catalog*; under ``REPARK_PARITY_LIVE=1`` the module arms ``PYSPARK_SUBMIT_ARGS`` with the
+    GAV so the first SparkContext in the process can resolve ``SparkCatalog``. Only lifecycle
+    tests request this provisioned engine. Pins the same
     GAV the MERGE differential record driver uses (from :mod:`_oracle_pins`), a local Hadoop
     catalog named ``local`` rooted at ``warehouse``, Iceberg session extensions, ANSI on, UTC by
     default, ``local[2]``. Optional ``session_conf`` is applied at BUILD time (the session is not
@@ -220,6 +256,10 @@ def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) 
     for key, value in session_conf:
         builder = builder.config(key, value)
     session = builder.getOrCreate()
+    # Catalog keys are session-level; if getOrCreate reused an earlier context, set them live.
+    session.conf.set(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+    session.conf.set(f"spark.sql.catalog.{catalog}.type", "hadoop")
+    session.conf.set(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
     session.sparkContext.setLogLevel("ERROR")
     return Engine(
         name="spark-iceberg",
@@ -1447,12 +1487,17 @@ SCENARIOS: list[Scenario] = [
 # ==================================================================================================
 
 
-def _expect_raises(fn: Callable[[], Any]) -> None:
-    """Assert ``fn()`` raises — the recorded 'Spark errors here' half of a disclosure."""
+def _expect_raises(fn: Callable[[], Any], needle: str | None = None) -> None:
+    """Assert ``fn()`` raises — the recorded 'Spark errors here' half of a disclosure.
+
+    Optional ``needle`` (L-1) is a substring that must appear in the exception text. Existing
+    callers omit it and still accept any raise.
+    """
     try:
         fn()
-    except Exception:
-        # Any engine-side raise satisfies the recorded "Spark errors here" half of the disclosure.
+    except Exception as exc:
+        if needle is not None and needle not in str(exc):
+            raise AssertionError(f"raised, but message did not contain {needle!r}: {exc}") from exc
         return
     raise AssertionError("expected a raise but none occurred (the disclosure may have converged)")
 
@@ -1539,6 +1584,259 @@ def _disc_filter_backtick_identifier_spark(engine: Engine) -> None:
     assert engine.arrow_of(src.filter("`x` > 0")).num_rows == 1, "Spark honours backtick idents"
 
 
+# -------------------------------------------------------------------------------------------------
+# L-1 landing-truth disclosures — recipes re-verified against merged main 2026-08-12 (baf6617).
+# Names must match the registry `- `live-mirror: <name>`` bullets exactly.
+# -------------------------------------------------------------------------------------------------
+
+
+def _disc_cast_date_to_int_repark(engine: Engine) -> None:
+    """CAST(DATE AS INT): repark yields days-since-epoch (corpus date_to_int split)."""
+    out = engine.arrow_of(engine.session.sql("SELECT CAST(DATE '2020-01-01' AS INT) AS n"))
+    assert out.schema.field("n").type == pa.int32()
+    assert out.column("n").to_pylist() == [18262]
+
+
+def _disc_cast_date_to_int_spark(engine: Engine) -> None:
+    _expect_raises(
+        lambda: engine.arrow_of(engine.session.sql("SELECT CAST(DATE '2020-01-01' AS INT) AS n")),
+        needle="DATATYPE_MISMATCH",
+    )
+
+
+def _disc_cast_timestamp_to_int_repark(engine: Engine) -> None:
+    """TZ-5 §10 form: value matches Spark; residual is nullability (literal non-null)."""
+    out = engine.arrow_of(
+        engine.session.sql("SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n")
+    )
+    field = out.schema.field("n")
+    assert field.type == pa.int32()
+    assert field.nullable is False, "repark propagates the timestamp literal's non-null"
+    assert out.column("n").to_pylist() == [1577836800]
+
+
+def _disc_cast_timestamp_to_int_spark(engine: Engine) -> None:
+    # Live spark engine is UTC (build_spark_engine pins session.timeZone=UTC).
+    out = engine.arrow_of(
+        engine.session.sql("SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n")
+    )
+    field = out.schema.field("n")
+    assert field.type == pa.int32()
+    assert field.nullable is True, "Spark types CAST(ts AS INT) nullable"
+    assert out.column("n").to_pylist() == [1577836800]
+
+
+def _disc_null_safe_eq_sql_repark(engine: Engine) -> None:
+    out = engine.arrow_of(
+        engine.session.sql(
+            "SELECT "
+            "(CAST(NULL AS INT) = CAST(NULL AS INT)) AS eq, "
+            "(CAST(NULL AS INT) <=> CAST(NULL AS INT)) AS nse"
+        )
+    )
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is True, "repark <=> result is nullable bool"
+    assert out.column("nse").to_pylist() == [True]
+    assert out.column("eq").to_pylist() == [None]
+
+
+def _disc_null_safe_eq_sql_spark(engine: Engine) -> None:
+    out = engine.arrow_of(
+        engine.session.sql(
+            "SELECT "
+            "(CAST(NULL AS INT) = CAST(NULL AS INT)) AS eq, "
+            "(CAST(NULL AS INT) <=> CAST(NULL AS INT)) AS nse"
+        )
+    )
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is False, "Spark <=> result is non-nullable bool"
+    assert out.column("nse").to_pylist() == [True]
+    assert out.column("eq").to_pylist() == [None]
+
+
+def _disc_null_safe_eq_df_repark(engine: Engine) -> None:
+    frame = engine.session.createDataFrame(
+        [(1, 1), (None, None), (1, None), (None, 1)],
+        ["a", "b"],
+    )
+    out = engine.arrow_of(frame.select(frame.a.eqNullSafe(frame.b).alias("nse")))
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is True
+    assert out.column("nse").to_pylist() == [True, True, False, False]
+
+
+def _disc_null_safe_eq_df_spark(engine: Engine) -> None:
+    frame = engine.session.createDataFrame(
+        [(1, 1), (None, None), (1, None), (None, 1)],
+        ["a", "b"],
+    )
+    out = engine.arrow_of(frame.select(frame.a.eqNullSafe(frame.b).alias("nse")))
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is False
+    assert out.column("nse").to_pylist() == [True, True, False, False]
+
+
+# Same VALUES recipe as test_float_agg_parity / the Rust G7 fixture (order matters).
+_G7_FIXTURE_VALUES_SQL = (
+    "SELECT * FROM (VALUES "
+    "(CAST(1.0e16 AS DOUBLE)), (CAST(1.0 AS DOUBLE)), (CAST(-1.0e16 AS DOUBLE)), "
+    "(CAST(2.0 AS DOUBLE)), (CAST(1.0e16 AS DOUBLE)), (CAST(0.5 AS DOUBLE)), "
+    "(CAST(-1.0e16 AS DOUBLE)), (CAST(0.25 AS DOUBLE))"
+    ") AS t(v)"
+)
+_G7_SUM_SQL = f"SELECT sum(v) AS s FROM ({_G7_FIXTURE_VALUES_SQL}) src"
+_G7_AVG_SQL = f"SELECT avg(v) AS a FROM ({_G7_FIXTURE_VALUES_SQL}) src"
+
+
+def _disc_sum_catastrophic_cancellation_repark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_SUM_SQL))
+    assert out.schema.field("s").type == pa.float64()
+    assert out.schema.field("s").nullable is True
+    assert out.column("s").to_pylist() == [3.75]
+
+
+def _disc_sum_catastrophic_cancellation_spark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_SUM_SQL))
+    assert out.schema.field("s").type == pa.float64()
+    assert out.schema.field("s").nullable is True
+    assert out.column("s").to_pylist() == [2.25]
+
+
+def _disc_avg_catastrophic_cancellation_repark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_AVG_SQL))
+    assert out.schema.field("a").type == pa.float64()
+    assert out.schema.field("a").nullable is True
+    assert out.column("a").to_pylist() == [0.46875]
+
+
+def _disc_avg_catastrophic_cancellation_spark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_AVG_SQL))
+    assert out.schema.field("a").type == pa.float64()
+    assert out.schema.field("a").nullable is True
+    assert out.column("a").to_pylist() == [0.28125]
+
+
+def _list_value_field(table: pa.Table, column: str) -> pa.Field:
+    """The list value field of ``column`` (name + element type + element nullability)."""
+    field = table.schema.field(column)
+    typ = field.type
+    assert pa.types.is_list(typ), f"{column} is not a list, got {typ}"
+    return typ.field(0)
+
+
+def _nested_array_frame(engine: Engine) -> Any:
+    types = engine.types
+    schema = types.StructType(
+        [
+            types.StructField("id", types.LongType()),
+            types.StructField("items", types.ArrayType(types.LongType())),
+        ]
+    )
+    return engine.session.createDataFrame(
+        [(1, [10, 20]), (2, [30]), (3, [10, 20]), (4, None)],
+        schema,
+    ).select("id", "items")
+
+
+def _disc_nested_array_list_field_repark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_array_frame(engine))
+    value = _list_value_field(out, "items")
+    assert value.name == "item", f"repark list value field is 'item', got {value.name!r}"
+
+
+def _disc_nested_array_list_field_spark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_array_frame(engine))
+    value = _list_value_field(out, "items")
+    assert value.name == "element", f"Spark list value field is 'element', got {value.name!r}"
+
+
+def _nested_collect_list_frame(engine: Engine) -> Any:
+    functions = engine.functions
+    frame = engine.session.createDataFrame(
+        [(1, 10), (1, 20), (2, 30), (2, 40), (1, 15)],
+        ["grp", "v"],
+    )
+    return frame.groupBy("grp").agg(functions.collect_list("v").alias("items"))
+
+
+def _disc_nested_collect_list_repark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_collect_list_frame(engine))
+    items = out.schema.field("items")
+    value = _list_value_field(out, "items")
+    assert items.nullable is True
+    assert value.name == "item"
+    assert value.nullable is True
+
+
+def _disc_nested_collect_list_spark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_collect_list_frame(engine))
+    items = out.schema.field("items")
+    value = _list_value_field(out, "items")
+    assert items.nullable is False
+    assert value.name == "element"
+    assert value.nullable is False
+
+
+def _nested_aos_frame(engine: Engine) -> Any:
+    types = engine.types
+    element = types.StructType(
+        [
+            types.StructField("x", types.LongType()),
+            types.StructField("y", types.StringType()),
+        ]
+    )
+    schema = types.StructType(
+        [
+            types.StructField("id", types.LongType()),
+            types.StructField("items", types.ArrayType(element)),
+        ]
+    )
+    return engine.session.createDataFrame(
+        [
+            (1, [(10, "a"), (11, "b")]),
+            (2, [(20, "c")]),
+            (3, [(10, "a"), (11, "b")]),
+        ],
+        schema,
+    ).select("id", "items")
+
+
+def _disc_nested_aos_list_field_repark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_aos_frame(engine))
+    assert _list_value_field(out, "items").name == "item"
+
+
+def _disc_nested_aos_list_field_spark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_aos_frame(engine))
+    assert _list_value_field(out, "items").name == "element"
+
+
+def _semi_pair(engine: Engine) -> tuple[Any, Any]:
+    left = engine.session.createDataFrame([(1, "a"), (2, "b"), (None, "n")], ["k", "a"])
+    right = engine.session.createDataFrame([(1,), (9,)], ["k"])
+    return left, right
+
+
+def _disc_conditionless_semi_repark(engine: Engine) -> None:
+    left, right = _semi_pair(engine)
+    _expect_raises(
+        lambda: left.join(right, None, "leftsemi"),
+        needle="requires an `on` condition",
+    )
+    _expect_raises(
+        lambda: left.join(right, [], "leftanti"),
+        needle="requires an `on` condition",
+    )
+
+
+def _disc_conditionless_semi_spark(engine: Engine) -> None:
+    # Live Spark 4.1.2 (g4b ledger §2 D1): on=None keeps every left row iff right is non-empty.
+    left, right = _semi_pair(engine)
+    out = engine.arrow_of(left.join(right, None, "leftsemi"))
+    assert out.num_rows == 3, "Spark conditionless leftsemi keeps every left row (right non-empty)"
+    # on=[] is a PySpark IndexError — a different Spark face; the live half pins on=None.
+
+
 DISCLOSURES: list[Disclosure] = [
     Disclosure(
         "int_union_string",
@@ -1573,5 +1871,95 @@ DISCLOSURES: list[Disclosure] = [
         "triple-double-quoted field name that resolves to nothing; Spark filters normally. "
         "PRE-EXISTING (not an audit-G2 regression); the fix and its pin belong in a follow-up "
         "unit.",
+    ),
+    Disclosure(
+        "cast_date_to_int_spark_refuses",
+        _disc_cast_date_to_int_repark,
+        _disc_cast_date_to_int_spark,
+        "CAST(DATE '2020-01-01' AS INT): repark yields days-since-epoch 18262; "
+        "ANSI Spark refuses with DATATYPE_MISMATCH. Corpus: "
+        "test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days].",
+    ),
+    Disclosure(
+        "cast_timestamp_to_int_nullability",
+        _disc_cast_timestamp_to_int_repark,
+        _disc_cast_timestamp_to_int_spark,
+        "CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) under UTC: both engines yield unix "
+        "seconds 1577836800 as int32; Spark types the CAST nullable, repark propagates the "
+        "literal's non-null. X-1's raise-vs-value split is STALE after #64; this is the TZ-5 "
+        "§10 form. Corpus: "
+        "test_cast_failure_parity.py::test_cast_failure_row"
+        "[timestamp_to_int_spark_seconds_repark_raises].",
+    ),
+    Disclosure(
+        "null_safe_eq_sql_nullability",
+        _disc_null_safe_eq_sql_repark,
+        _disc_null_safe_eq_sql_spark,
+        "SELECT (NULL <=> NULL): value TRUE on both engines; repark Arrow bool is nullable, "
+        "Spark's is non-nullable. Corpus: "
+        "test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq].",
+    ),
+    Disclosure(
+        "null_safe_eq_df_nullability",
+        _disc_null_safe_eq_df_repark,
+        _disc_null_safe_eq_df_spark,
+        "Column.eqNullSafe: values match Spark; result nullability diverges (repark nullable, "
+        "Spark not). Corpus: "
+        "test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select].",
+    ),
+    Disclosure(
+        "sum_catastrophic_cancellation_fixture",
+        _disc_sum_catastrophic_cancellation_repark,
+        _disc_sum_catastrophic_cancellation_spark,
+        "sum of the G7 catastrophic-cancellation fixture: repark lands 3.75; Spark 4.1.2 "
+        "local[2]/shuffle=2 lands 2.25. Same Arrow float64 nullable; accumulation order "
+        "diverges. Corpus: "
+        "test_float_agg_parity.py::test_float_agg_parity_row"
+        "[sum_catastrophic_cancellation_fixture].",
+    ),
+    Disclosure(
+        "avg_catastrophic_cancellation_fixture",
+        _disc_avg_catastrophic_cancellation_repark,
+        _disc_avg_catastrophic_cancellation_spark,
+        "avg of the same G7 fixture (sum/8): repark 0.46875 vs Spark 0.28125. Follows the "
+        "sum divergence. Corpus: "
+        "test_float_agg_parity.py::test_float_agg_parity_row"
+        "[avg_catastrophic_cancellation_fixture].",
+    ),
+    Disclosure(
+        "nested_array_list_field_name",
+        _disc_nested_array_list_field_repark,
+        _disc_nested_array_list_field_spark,
+        "Array column createDataFrame: values match; list value-field name is 'item' "
+        "(repark) vs 'element' (Spark). Corpus: "
+        "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
+        "[array_column_roundtrip].",
+    ),
+    Disclosure(
+        "nested_collect_list_nullability",
+        _disc_nested_collect_list_repark,
+        _disc_nested_collect_list_spark,
+        "groupBy.agg(collect_list): values match under G18; repark list<item: int64> "
+        "nullable vs Spark list<element: int64 not null> non-nullable. Corpus: "
+        "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
+        "[collect_list_grouped].",
+    ),
+    Disclosure(
+        "nested_array_of_struct_list_field_name",
+        _disc_nested_aos_list_field_repark,
+        _disc_nested_aos_list_field_spark,
+        "Array-of-struct createDataFrame: values match; list value-field name is 'item' "
+        "(repark) vs 'element' (Spark). Corpus: "
+        "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
+        "[array_of_struct_roundtrip].",
+    ),
+    Disclosure(
+        "conditionless_semi_anti_refuses",
+        _disc_conditionless_semi_repark,
+        _disc_conditionless_semi_spark,
+        "df.join(other, how='leftsemi'/'leftanti') with on=None or on=[]: repark refuses "
+        "loud (Cartesian fallback would be a wrong answer); Spark on=None keeps every left "
+        "row iff the right side is non-empty. Pin: "
+        "test_g4b_semi_join.py::test_conditionless_semi_family_refuses_loud.",
     ),
 ]
