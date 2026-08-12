@@ -75,13 +75,18 @@ v1 crate-root re-export lists.
   fast-path defect); credential handling lives inside the fork. Two fork-coupled gaps are carried
   deliberately, and **both are re-verified at every fork repin**
   ([../../AGENTS.md](../../AGENTS.md) "Version-pin contract"):
-  - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) forwards only the required `Catalog`
-    methods.** All 16 defaulted methods fall to trait defaults with no omission comments — the
-    both-sides trait-wrapping audit is unmet here. `publish_replace_table` is the HIGH one: the
-    default answers `FeatureUnsupported`, swallowing a real inner-catalog override. The views
-    family and the namespace-property setters are the same shape at lower severity, and the
-    wrapper's own "all other methods fully delegate" banner is inaccurate. Closing it means
-    explicit forwards (or a stated omission per method) plus a wrapper-level test.
+  - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) both-sides trait-wrapping audit
+    (G17) is CLOSED.** At fork pin `b009ac1` the `Catalog` trait has 14 required + **16
+    defaulted** methods. The wrapper explicitly forwards all 14 required methods (with
+    `list_namespaces` filtered to one namespace) and **13 of 16** defaulted methods — including
+    the HIGH `publish_replace_table` (whose trait default is `FeatureUnsupported` and would
+    swallow `MemoryCatalog`'s CAS replace). The remaining **3** defaulted methods
+    (`update_namespace_properties` / `set_namespace_properties` /
+    `remove_namespace_properties`) are **stated omissions**: the trait defaults compose only
+    from methods already forwarded. Pins live in
+    `src/catalog/namespace_scoped_tests.rs`. **Repin duty:** re-enumerate the fork trait
+    surface; a method that newly gains a real override (no longer a pure composition default)
+    becomes an explicit forward.
   - **The metadata-projection shim (`src/catalog/metadata_projection.rs`) is still required.** The
     fork's metadata-table `scan` ignores `projection`; the shim goes only when a fork rev honors
     it, empty-projection case included. The gap is not yet filed in the fork's own
