@@ -207,7 +207,11 @@ Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crat
   `nullable = true`), not the physical `stream.schema()`. `inner()`; transforms:
   `with_column`, `filter` / `filter_sql`, `select`, `drop`, `sort`, `join_on_names` /
   `join_on_condition` (**H1 r20:** `join_type_from_str` accepts inner/left/right/full —
-  Apache self-join / select-join-keys battery); **Group E** set/aggregate routing:
+  Apache self-join / select-join-keys battery; **G4b:** widened with the semi family
+  `semi`/`left_semi`/`leftsemi` → `JoinType::LeftSemi` and `anti`/`left_anti`/`leftanti` →
+  `JoinType::LeftAnti`. `join_keeps_only_left_columns` gates the Spark key-merge projection OFF
+  for those two: a semi/anti output is the LEFT input's schema, so there is no duplicate
+  right-hand key to merge and `spark_join_projection` must not run); **Group E** set/aggregate routing:
   `aggregate(group_by, aggregates)`
   (PySpark `groupBy().agg`; empty `group_by` = global aggregate — one NULL row over an empty input,
   vs zero rows grouped), `union(other, by_name)` (`by_name=false` = positional keeping left names +

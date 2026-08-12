@@ -59,6 +59,12 @@ not this directory.
   (`crates/repark-spark/src/window_range.rs`) with 5 Spark-door pins, 15 appended differential rows
   and 5 recorded residual divergences handed to the unit queue. Does **not** edit
   `docs/spark-sql-iceberg-parity.md` (section 6 is the paste-true handoff).
+- [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) — **in flight (O-1 / unit-queue G4b):**
+  the FIX behind W-3's two DataFrame `leftsemi`/`leftanti` refuse splits — engine `how`-token
+  widening + facade alias map, the splits flipped to content equalities, 3 Rust binding pins.
+  §6 states REG-G4-1/2 are now **FIXED** (land them as fixed entries, never live divergences) and
+  queues one new disclosure (conditionless semi/anti refuses) plus a declared-rename follow-up.
+  Does **not** edit `docs/spark-sql-iceberg-parity.md`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -151,6 +157,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
 | Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
+| See how a corpus refuse-split gets FIXED and flipped (and why the row keeps its name) | [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) §2 D2 / §4 |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |

@@ -79,10 +79,14 @@ pub(crate) fn with_stream_poll_no_detach<T>(body: impl FnOnce() -> T) -> T {
 /// ===========================================================================================
 /// Map a PySpark `how=` join keyword to a DataFusion [`JoinType`].
 ///
-/// Supports the Spark join kinds the facade normalizes to (`inner` / `left` / `right` / `full`).
-/// An unrecognized keyword is a descriptive error rather than a silent default (a silent
-/// `inner` would corrupt a left-join result set). H1 (Group H) needs `right`/`full` for the
-/// Apache self-join / select-join-keys battery.
+/// Supports the Spark join kinds the facade normalizes to (`inner` / `left` / `right` / `full`
+/// plus the G4b semi family `leftsemi` / `leftanti`). An unrecognized keyword is a descriptive
+/// error rather than a silent default (a silent `inner` would corrupt a left-join result set).
+/// H1 (Group H) needs `right`/`full` for the Apache self-join / select-join-keys battery.
+///
+/// Every PySpark spelling is accepted here even though the facade normalizes before calling —
+/// the binding is a public engine surface in its own right (`join_on_names` is called from the
+/// Rust binding tests), so it must not depend on a caller-side normalization it cannot enforce.
 /// ===========================================================================================
 fn join_type_from_str(how: &str) -> PyResult<JoinType> {
     match how {
@@ -90,10 +94,26 @@ fn join_type_from_str(how: &str) -> PyResult<JoinType> {
         "left" | "left_outer" | "leftouter" => Ok(JoinType::Left),
         "right" | "right_outer" | "rightouter" => Ok(JoinType::Right),
         "full" | "outer" | "fullouter" | "full_outer" => Ok(JoinType::Full),
+        "semi" | "left_semi" | "leftsemi" => Ok(JoinType::LeftSemi),
+        "anti" | "left_anti" | "leftanti" => Ok(JoinType::LeftAnti),
         other => Err(PyValueError::new_err(format!(
-            "unsupported join type {other:?} (supported: 'inner', 'left', 'right', 'full')"
+            "unsupported join type {other:?} (supported: 'inner', 'left', 'right', 'full', \
+             'leftsemi', 'leftanti')"
         ))),
     }
+}
+
+/// ===========================================================================================
+/// True when a join type's output schema is the LEFT input's schema alone.
+///
+/// `LeftSemi` / `LeftAnti` are filters expressed as joins: the right side decides which left
+/// rows survive and contributes no columns. The Spark key-merge projection
+/// ([`spark_join_projection`]) therefore must NOT run for them — there is no duplicate
+/// right-hand key column to merge away, and building a projection over the joined schema would
+/// be a no-op node at best and would mask a schema surprise at worst.
+/// ===========================================================================================
+fn join_keeps_only_left_columns(join_type: JoinType) -> bool {
+    matches!(join_type, JoinType::LeftSemi | JoinType::LeftAnti)
 }
 
 /// ===========================================================================================
@@ -732,8 +752,14 @@ impl PyDataFrame {
 
     /// Equi-join on shared column names (PySpark `df.join(other, on=<name|list>, how=…)`).
     ///
-    /// Reproduces Spark's single-merged-key-column output via [`spark_join_projection`]. `how` is
-    /// `"inner"` or `"left"` (see [`join_type_from_str`]).
+    /// Reproduces Spark's single-merged-key-column output via [`spark_join_projection`] for the
+    /// join types that carry both sides through. `how` accepts every keyword
+    /// [`join_type_from_str`] maps.
+    ///
+    /// **Semi family (G4b).** `leftsemi` / `leftanti` output the LEFT side's columns only, so the
+    /// key-merge projection is skipped ([`join_keeps_only_left_columns`]) and the join's own
+    /// schema is the result schema. NULL keys never match (`NULL = NULL` is unknown), so a semi
+    /// join drops NULL-keyed left rows and an anti join keeps them.
     ///
     /// # Errors
     /// Returns `RuntimeError` for an unsupported `how`, or if the join/projection cannot be planned.
@@ -751,15 +777,21 @@ impl PyDataFrame {
                 .clone()
                 .join(right.df.clone(), join_type, &on_refs, &on_refs, None)
                 .map_err(datafusion_to_py_err)?;
-            let projection = spark_join_projection(&joined, &on);
-            let df = joined.select(projection).map_err(datafusion_to_py_err)?;
+            let df = if join_keeps_only_left_columns(join_type) {
+                joined
+            } else {
+                let projection = spark_join_projection(&joined, &on);
+                joined.select(projection).map_err(datafusion_to_py_err)?
+            };
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
 
     /// Join on a boolean [`PyColumn`] condition (PySpark `df.join(other, on=<Column>, how=…)`).
     ///
-    /// Keeps all columns from both sides (Spark does not merge columns for an expression join).
+    /// Keeps all columns from both sides (Spark does not merge columns for an expression join) —
+    /// except for the semi family, where DataFusion's own `LeftSemi`/`LeftAnti` output schema is
+    /// the left side alone, matching Spark.
     ///
     /// # Errors
     /// Returns `RuntimeError` for an unsupported `how`, or if the join cannot be planned.

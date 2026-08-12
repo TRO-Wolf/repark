@@ -1269,19 +1269,38 @@ NOT in that file is a defect, not a decision.
   exception class still matches. Exit 0 = every recorded half still reproduces; never edits the
   corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation in its module docstring
   and in `docs/history/hardening-h1/g7-decimal-ledger.md`.
-- `test_join_parity.py` — the **joins differential corpus** (H-2 gap G4), landed by W-3. 26 rows
-  (budget 20–28): NULL join keys on every join type (inner/left/right/full — NULL never matches
-  NULL) + null-safe `<=>`; duplicate-key m×n fan-out (order-insensitive); SQL CROSS / LEFT SEMI /
-  LEFT ANTI content equalities + DF `leftsemi`/`leftanti` refuse **splits** (never invent DF
-  support); type-mismatched keys (int/string/decimal + malformed cast error); outer-join schema
-  nullability flips (name-gated `*nullable*`); facade `sql()` primary + ≥2 DataFrame-API
-  `df.join` content rows (CP-11) + `eqNullSafe` condition join. Every content row asserts value
-  AND Arrow type AND nullability on the `to_arrow` path via `repark_parity.assert_frames_equal`
-  — never `show`. Split-path convergence is CLASSIFIED (CONVERGED → flip to content equality;
-  commit-but-mismatch → regression); both classifier arms proven by monkeypatch. Budget pin +
+- `test_join_parity.py` — the **joins differential corpus** (H-2 gap G4), landed by W-3, widened
+  by **G4b**. 30 rows (budget 20–30): NULL join keys on every join type (inner/left/right/full —
+  NULL never matches NULL) + null-safe `<=>`; duplicate-key m×n fan-out (order-insensitive);
+  SQL CROSS / LEFT SEMI / LEFT ANTI content equalities; type-mismatched keys
+  (int/string/decimal + malformed cast error); outer-join schema nullability flips (name-gated
+  `*nullable*`); facade `sql()` primary + 9 DataFrame-API `df.join` content rows (CP-11)
+  including `eqNullSafe`. Every content row asserts value AND Arrow type AND nullability on the
+  `to_arrow` path via `repark_parity.assert_frames_equal` — never `show`. Budget pin +
   name-gated family coverage so a control cannot satisfy NULL-key / nullability / type-mismatch
-  pins. **Out of scope (declared):** fixing divergences; registry file; windows (W-4). Ledger:
-  `task/w3-joins-ledger.md` (§6 holds paste-true registry rows; registry file not edited).
+  pins. **G4b:** the two DF `leftsemi`/`leftanti` refuse **splits** CONVERGED when the DataFrame
+  semi binding landed — they are now content equalities with their recorded Spark halves
+  unchanged, names kept byte-identical (a pin's name is part of the pin; the `_unsupported`
+  suffix retires in a declared-rename unit). Four rows joined them so the claim spans the whole
+  DF surface, not one shape: `on='k'` / `on=['k']` / `left.k == right.k` (a different engine
+  path — the H1 SQL rewrite) and the NULL-key edge on both semi and anti. The corpus now holds
+  NO splits, so the split classifier's two arms are proven against the explicit
+  `_CLASSIFIER_PROBE_SPLIT` harness row rather than a live corpus row — the machinery stays
+  guarded for the next lane's disclosure. Split-path convergence is still CLASSIFIED (CONVERGED
+  → flip to content equality; commit-but-mismatch → regression). **Out of scope (declared):**
+  fixing divergences; registry file; windows (W-4). Ledgers: `task/w3-joins-ledger.md`,
+  `task/g4b-join-widening-ledger.md` (§6 holds paste-true registry rows; registry file not
+  edited by either).
+- `test_g4b_semi_join.py` — the **non-differential** half of the G4b DataFrame semi/anti
+  widening: the parts with no Spark golden to compare against. Every accepted spelling
+  (`semi` / `left_semi` / `leftsemi` / `LeftSemi` / `LEFT_SEMI` and the anti family — each is its
+  own alias-map key, and `LeftSemi` is reachable only through the case fold), semi + anti as
+  complements on one fixture, the semi result staying a usable frame (project / filter / count),
+  the refusal-message contents, and the declared **conditionless divergence**: `on=None` /
+  `on=[]` with a semi `how` refuses loud rather than falling through to the facade's Cartesian
+  path, which would answer an m×n cross join. A guard test pins that the refusal did NOT widen
+  into `how='inner'`. Live-Spark behaviour for the diverging case is recorded in
+  `task/g4b-join-widening-ledger.md`.
 - `_record_join_goldens.py` — the **record driver** for the joins corpus (NOT a `test_` module;
   never collected). Imports `ROWS` + lifecycle helpers from the committed test module and
   re-derives every Spark half (content / error needle / split success) under order-insensitive
@@ -1550,6 +1569,7 @@ NOT in that file is a defect, not a decision.
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
+| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a window-function differential row (gap G5) | `test_window_parity.py` (`ROWS`; record Spark half with `_record_window_goldens.py`, never by hand) |
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
@@ -1623,7 +1643,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | decimal128 budget pin reds | G2 must stay 20-26, G13 6-8, CTAS exactly 3, min 8 equalities, max 20 disclosures, and ≥3 `*clamps_scale_in_spark` rows; restore the control equalities / clamp family rather than converting them to disclosures or deleting them behind a non-clamp `DECIMAL(38,…)` control. |
 | a `test_join_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or DF semi/anti starts succeeding): do NOT delete — flip to content equality and record the convergence. |
 | a joins row reds saying regression | re-derive both halves with `_record_join_goldens.py` before touching the pin. |
-| joins budget pin reds | G4 must stay 20–28 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥2 DF content rows; restore the name-gated families rather than greening them with controls. |
+| joins budget pin reds | G4 must stay 20–30 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥6 DF content rows, and (G4b) the DF semi family on both the name/list-key and Column-condition paths plus both NULL-key edges; restore the name-gated families rather than greening them with controls. |
+| a `df_left_semi_*` / `df_left_anti_*` row reds | the G4b DataFrame semi binding regressed. Localize in Rust first (`crates/repark-python/tests/bindings.rs` `join_on_names_left_semi_*` / `_left_anti_*` / `_semi_family_never_merges_a_key_column`), then the facade alias map + `_join_on_condition_h1` left-only projection in `python/repark/src/repark/dataframe/core.py`. Re-splitting the row to green it is a laundered regression, and `test_join_row_set_covers_g4_budget` reds on it. |
+| `test_g4b_semi_join.py` conditionless test reds | the semi/anti `on=None` / `on=[]` guard stopped firing, so a conditionless semi join now falls through to the Cartesian path and answers an m×n cross join instead of Spark's rows. Restore the `_SEMI_JOIN_HOWS` guard in `DataFrame.join`; do not relax the test. |
 | a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
 | a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
 | cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
