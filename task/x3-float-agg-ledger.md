@@ -226,22 +226,88 @@ measurement.
   - **Rationale** — follows FLOAT-AGG-1 (avg = sum/8); same accumulation-order class.
   - live-mirror: `avg_catastrophic_cancellation_fixture`
 
-### 6.2 `_live_parity.py` Disclosure blocks (orchestrator pastes — NOT in this PR)
+### 6.2 `_live_parity.py` Disclosure blocks (exact — orchestrator pastes; NOT in this PR)
+
+Paste into `python/repark/tests/_live_parity.py` `DISCLOSURES` list (names must match the
+`live-mirror:` bullets above exactly — the mirror gate parses that spelling). Positional
+constructor matches existing entries (`name, repark_check, spark_check, note`):
 
 ```python
-# G7 float-agg (X-3 handoff) — both halves; land with the registry live-mirror bullets above.
+# G7 float-agg (X-3 handoff) — land with the registry live-mirror bullets above.
 Disclosure(
-    name="sum_catastrophic_cancellation_fixture",
-    # … exact fields match the live-tier Disclosure dataclass when the orchestrator lands …
+    "sum_catastrophic_cancellation_fixture",
+    _disc_sum_catastrophic_cancellation_repark,
+    _disc_sum_catastrophic_cancellation_spark,
+    "sum of the G7 catastrophic-cancellation fixture: repark lands 3.75 (f64 bits "
+    "0x400e000000000000); Spark 4.1.2 local[2]/shuffle=2 lands 2.25 (0x4002000000000000). "
+    "Same Arrow float64 nullable; accumulation order diverges. Corpus: "
+    "test_float_agg_parity.py::test_float_agg_parity_row[sum_catastrophic_cancellation_fixture].",
 ),
 Disclosure(
-    name="avg_catastrophic_cancellation_fixture",
-    # … same …
+    "avg_catastrophic_cancellation_fixture",
+    _disc_avg_catastrophic_cancellation_repark,
+    _disc_avg_catastrophic_cancellation_spark,
+    "avg of the same fixture (sum/8): repark 0.46875 (0x3fde000000000000) vs Spark 0.28125 "
+    "(0x3fd2000000000000). Follows the sum divergence. Corpus: "
+    "test_float_agg_parity.py::test_float_agg_parity_row[avg_catastrophic_cancellation_fixture].",
 ),
 ```
 
-And the exact-set pin update in `test_parity_live.py` (line ~215 area) must grow by 2 names
-so `test_disclosures_mirror_the_registry` stays green. **Do not land one side without the other.**
+Helpers (orchestrator implements beside the other `_disc_*` functions; same `Engine` mold):
+
+```python
+_G7_FIXTURE_VALUES_SQL = (
+    "SELECT * FROM (VALUES "
+    "(CAST(1.0e16 AS DOUBLE)), (CAST(1.0 AS DOUBLE)), (CAST(-1.0e16 AS DOUBLE)), "
+    "(CAST(2.0 AS DOUBLE)), (CAST(1.0e16 AS DOUBLE)), (CAST(0.5 AS DOUBLE)), "
+    "(CAST(-1.0e16 AS DOUBLE)), (CAST(0.25 AS DOUBLE))"
+    ") AS t(v)"
+)
+_G7_SUM_SQL = f"SELECT sum(v) AS s FROM ({_G7_FIXTURE_VALUES_SQL}) src"
+_G7_AVG_SQL = f"SELECT avg(v) AS a FROM ({_G7_FIXTURE_VALUES_SQL}) src"
+
+
+def _disc_sum_catastrophic_cancellation_repark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_SUM_SQL))
+    assert out.schema.field("s").type == pa.float64()
+    assert out.schema.field("s").nullable is True
+    assert out.column("s").to_pylist() == [3.75]
+
+
+def _disc_sum_catastrophic_cancellation_spark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_SUM_SQL))
+    assert out.schema.field("s").type == pa.float64()
+    assert out.schema.field("s").nullable is True
+    assert out.column("s").to_pylist() == [2.25]
+
+
+def _disc_avg_catastrophic_cancellation_repark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_AVG_SQL))
+    assert out.schema.field("a").type == pa.float64()
+    assert out.schema.field("a").nullable is True
+    assert out.column("a").to_pylist() == [0.46875]
+
+
+def _disc_avg_catastrophic_cancellation_spark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_AVG_SQL))
+    assert out.schema.field("a").type == pa.float64()
+    assert out.schema.field("a").nullable is True
+    assert out.column("a").to_pylist() == [0.28125]
+```
+
+### 6.3 Exact-set pin update text (`test_parity_live.py`)
+
+The mirror gate and any exact-set pin of `DISCLOSURES` names (≈ line 215 on `9acb566`) must add
+exactly:
+
+```text
+sum_catastrophic_cancellation_fixture
+avg_catastrophic_cancellation_fixture
+```
+
+**Do not change** `SCENARIOS` size pin (**42**) or `LIFECYCLE` size pin (**2**). Only the
+`DISCLOSURES` exact-set grows by these two names, landed in the **same** orchestrator commit as
+the registry `live-mirror:` bullets. **Do not land one side without the other.**
 
 ---
 
