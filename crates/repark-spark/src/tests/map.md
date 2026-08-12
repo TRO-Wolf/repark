@@ -36,6 +36,20 @@ code is not here — only tests, shared fixtures, and the module manifest.
   that leaf only, so they stay out of `common.rs`). They read the default catalog/schema directly
   rather than `information_schema`, which this door's `setup` does not enable. Not a relocation:
   new tests, new names, and the G-4 identity artifacts are unaffected.
+- **G5b temporal-`RANGE` pins (2026-08-11)** — `window_temporal_range.rs`, a NEW leaf (not a
+  relocation): five tests over the Spark door's `RANGE` frames on datetime order keys, holding
+  the two arms of `../window_range.rs` plus the paths it must NOT disturb —
+  `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark` (Spark's error class),
+  `temporal_range_bare_offset_over_date_key_means_days` (one day vs thirty days, so a
+  one-month reading cannot pass), `temporal_range_interval_bounds_still_match_spark` (asc /
+  desc / ties / HOUR-not-DAY), `temporal_range_null_order_keys_match_spark`, and
+  `temporal_range_numeric_order_keys_are_untouched` (scope, incl. the mixed-statement
+  fallback). Goldens are the live PySpark 4.1.2 halves recorded in the unit's section-0 recon,
+  the same oracle the `temporal_range` family in
+  `python/repark/tests/test_window_parity.py` pins — one oracle, two halves. Leaf-private
+  fixtures (`register_timestamp_seed`, `register_date_seed`, `seed_micros`,
+  `days_from_civil`) stay out of `common.rs`: only this leaf uses them. Ledger:
+  [`../../../../task/g5b-temporal-range-ledger.md`](../../../../task/g5b-temporal-range-ledger.md).
 - **N-2b / G3 deferred MERGE pins (2026-08-11)** — `merge.rs` gains four Spark-door SQL pins
   that mirror the N-2 Python differential corpus shapes G-4's file ban deferred:
   `merge_duplicate_source_keys_with_matched_raises`,

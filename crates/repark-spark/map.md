@@ -6,7 +6,8 @@ The **Spark SQL door** (tier 3): v1 `repark-sql` ported over the phase-1 seams. 
 router (`execute` / `execute_with_read_only`) parses with DataFusion's `sqlparser` (Databricks
 dialect + token-level normalisers for Spark-isms), intercepts the forms DataFusion cannot
 execute against Iceberg, and passes everything else through the Spark passthrough
-(`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands).
+(`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands +
+the G5b temporal-`RANGE` conformance call).
 `SparkDialect` adapts the router to `repark_core::SqlDialect`; `SparkExtension` installs the
 v1 `build()` registrations (function registry + analyzer rules + cardinality/`repark.sql.*`
 config) via `repark_core::SessionExtension`, and **composes `repark_ta::TaExtension`** for the
@@ -40,6 +41,7 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 |---|---|
 | Follow a SQL statement through the router | [src/map.md](src/map.md) → `router.rs` |
 | Add/adjust a Spark-ism normaliser | `src/normalize.rs` |
+| Change temporal / unit-less `RANGE` window-frame semantics | `src/window_range.rs` |
 | Change what the extension registers | `src/extension.rs` |
 | See why a construct refuses with "lands in phase-2 PR-3x" | `src/router.rs` (TEMPORARY refuse arms) |
 

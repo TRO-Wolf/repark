@@ -46,6 +46,7 @@ this corpus.
 
 from __future__ import annotations
 
+import datetime as dt
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
@@ -71,7 +72,10 @@ TYPE_DISC = (
 
 # Budget floors/ceilings pinned by test_window_row_set_covers_gap_budgets (not incidental).
 G5_BUDGET_MIN = 20
-G5_BUDGET_MAX = 28
+# Raised 20-28 -> 20-45 by G5b, which appends the temporal-RANGE family (15 rows) to W-4's
+# 27. The ceiling is a shape pin, not a cap on honest coverage; the equality floor and the
+# disclosure ceiling below are what keep the corpus from degenerating.
+G5_BUDGET_MAX = 45
 # Corpus cannot degenerate to all-disclosures: at least this many plain equalities, and at most
 # this many disclosures among the differential ROWS.
 MIN_EQUALITY_ROWS = 6
@@ -121,6 +125,46 @@ SEED_VALUES_SQL = f"FROM {SEED_VIEW}"
 
 # NULL-bearing seed for NULLS FIRST/LAST + lag/lead NULL handling.
 NULL_SEED_VALUES_SQL = f"FROM {NULL_SEED_VIEW}"
+
+# --- G5b temporal-RANGE seeds -------------------------------------------------------------------
+# Timestamp seed: a 12-hour pair (ids 1/2) makes a sub-day interval observable, a 24-hour gap
+# (id 3) separates HOUR from DAY, and a tie on `ts` (ids 4/5) makes peer handling observable.
+TEMPORAL_TS_VIEW = "win_ts_seed"
+TEMPORAL_DATE_VIEW = "win_date_seed"
+TEMPORAL_NULL_TS_VIEW = "win_ts_null_seed"
+
+TEMPORAL_TS_ROWS: list[tuple[int, dt.datetime, int]] = [
+    (1, dt.datetime(2024, 1, 1, 0, 0, 0), 10),
+    (2, dt.datetime(2024, 1, 1, 12, 0, 0), 20),
+    (3, dt.datetime(2024, 1, 2, 0, 0, 0), 30),
+    (4, dt.datetime(2024, 1, 4, 0, 0, 0), 40),
+    (5, dt.datetime(2024, 1, 4, 0, 0, 0), 50),
+]
+TEMPORAL_DATE_ROWS: list[tuple[int, dt.date, int]] = [
+    (1, dt.date(2024, 1, 1), 10),
+    (2, dt.date(2024, 1, 2), 20),
+    (3, dt.date(2024, 1, 4), 30),
+]
+TEMPORAL_NULL_TS_ROWS: list[tuple[int, dt.datetime | None, int]] = [
+    (1, dt.datetime(2024, 1, 1), 10),
+    (2, None, 20),
+    (3, dt.datetime(2024, 1, 2), 30),
+    (4, None, 40),
+]
+
+TEMPORAL_TS_SQL = f"FROM {TEMPORAL_TS_VIEW}"
+TEMPORAL_DATE_SQL = f"FROM {TEMPORAL_DATE_VIEW}"
+TEMPORAL_NULL_TS_SQL = f"FROM {TEMPORAL_NULL_TS_VIEW}"
+
+# Every temporal row carries this family so `run_row` knows to register the three seeds above and
+# the budget test can name-gate the family.
+TEMPORAL_FAMILY = "temporal_range"
+
+# Named so every temporal disclosure cites the same follow-up rather than inventing per-row IDs.
+FIX_G5B = (
+    "the temporal-RANGE residual follow-up (G5b ledger task/g5b-temporal-range-ledger.md "
+    "section 6 handoff; each row names the exact spelling or bound class it is waiting on)"
+)
 
 
 # ==================================================================================================
@@ -215,6 +259,19 @@ def register_null_seed_view(session: object) -> None:
     frame.createOrReplaceTempView(NULL_SEED_VIEW)
 
 
+def register_temporal_seed_views(session: object) -> None:
+    """Register the three G5b temporal seeds on either engine (timestamp, date, nullable ts)."""
+    session.createDataFrame(  # type: ignore[attr-defined]
+        TEMPORAL_TS_ROWS, ["id", "ts", "v"]
+    ).createOrReplaceTempView(TEMPORAL_TS_VIEW)
+    session.createDataFrame(  # type: ignore[attr-defined]
+        TEMPORAL_DATE_ROWS, ["id", "d", "v"]
+    ).createOrReplaceTempView(TEMPORAL_DATE_VIEW)
+    session.createDataFrame(  # type: ignore[attr-defined]
+        TEMPORAL_NULL_TS_ROWS, ["id", "ts", "v"]
+    ).createOrReplaceTempView(TEMPORAL_NULL_TS_VIEW)
+
+
 def _to_arrow(frame: object) -> pa.Table:
     """Arrow export common to both engines (``to_arrow`` / ``toArrow``)."""
     to_arrow = getattr(frame, "to_arrow", None) or frame.toArrow  # type: ignore[attr-defined]
@@ -275,6 +332,10 @@ def run_row(row: WindowRow, session: object) -> pa.Table:
     # SQL rows: register both seed views so recipes may read either without per-row flags.
     register_seed_view(session)
     register_null_seed_view(session)
+    # The three temporal seeds cost two extra createDataFrame round trips per row on the JVM
+    # side, so they are registered only for the family that reads them.
+    if row.family == TEMPORAL_FAMILY:
+        register_temporal_seed_views(session)
     frame = session.sql(row.sql)  # type: ignore[attr-defined]
     return _to_arrow(frame)
 
@@ -810,6 +871,244 @@ ROWS: list[WindowRow] = [
         entry_point="dataframe_api",
         df_recipe="rows_between_sum",
     ),
+    # ----- 7. G5b temporal RANGE frames (interval bounds over datetime order keys) --------------
+    #
+    # The G5b section-0 recon (task/g5b-temporal-range-ledger.md) found this family ALREADY
+    # matching Spark for interval-bounded frames — it was never "rejected outright" — and found
+    # the real divergences at its edges. The equalities below are the standing detector for the
+    # working path; the disclosures pin every edge that still differs, each naming what flips it.
+    #
+    # The refuse-arm twin (`RANGE BETWEEN <n> PRECEDING` over a TIMESTAMP key, where BOTH engines
+    # raise once the G5b fix lands) cannot be expressed as a WindowRow — the shape forbids
+    # pinning both engines raising — so it is pinned by
+    # `test_temporal_range_bare_offset_over_timestamp_refuses` below, and on the Spark door by
+    # `temporal_range_bare_offset_over_timestamp_key_refuses_like_spark`
+    # (crates/repark-spark/src/tests/window_temporal_range.rs).
+    WindowRow(
+        "temporal_range_ts_asc_interval_day",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 30, 60, 90, 90]},
+        ),
+        None,
+        "Ascending timestamp order key, one-day trailing interval frame. The tied ids 4/5 both "
+        "see the whole peer group (40+50), so this measures the frame, not a running total.",
+    ),
+    WindowRow(
+        "temporal_range_ts_desc_interval_day",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts DESC RANGE BETWEEN INTERVAL '1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [60, 50, 30, 90, 90]},
+        ),
+        None,
+        "DESC order key: PRECEDING must reach the LATER timestamps. The values differ from the "
+        "ascending row on ids 1-3, so a direction-blind implementation cannot pass both.",
+    ),
+    WindowRow(
+        "temporal_range_ts_peer_group_zero_interval",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '0' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 20, 30, 90, 90]},
+        ),
+        None,
+        "TIES on the order key: a zero-width interval frame is exactly the peer group, so only "
+        "the tied ids 4/5 see more than themselves. An engine that silently used ROWS here would "
+        "answer 10/20/30/40/50.",
+    ),
+    WindowRow(
+        "temporal_range_ts_null_order_keys",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_NULL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4], "s": [10, 60, 40, 60]},
+        ),
+        None,
+        "NULL order keys under a temporal frame: the NULL rows form their own peer group under "
+        "Spark's ASC NULLS FIRST default, so ids 2 and 4 sum each other (20+40).",
+    ),
+    WindowRow(
+        "temporal_range_date_order_key_interval_day",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY d RANGE BETWEEN INTERVAL '1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_DATE_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3], "s": [10, 30, 30]},
+        ),
+        None,
+        "DATE (not timestamp) order key: the day-granular key must still frame by interval. "
+        "id 3 is three days after id 2, so it sees only itself.",
+    ),
+    WindowRow(
+        "temporal_range_ts_partitioned",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (PARTITION BY id % 2 ORDER BY ts RANGE BETWEEN "
+        f"INTERVAL '1' DAY PRECEDING AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 20, 40, 40, 50]},
+        ),
+        None,
+        "PARTITION BY with a temporal frame: the interval must not reach across partitions. The "
+        "ids 4/5 tie is split by the partition key, so neither sees the other.",
+    ),
+    WindowRow(
+        "temporal_range_ts_both_sides_interval",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY PRECEDING "
+        f"AND INTERVAL '1' DAY FOLLOWING) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [60, 60, 60, 90, 90]},
+        ),
+        None,
+        "Both bounds are intervals — a centred window, the shape a trailing-only implementation "
+        "gets wrong. ids 1-3 all span the same +/-1 day neighbourhood.",
+    ),
+    WindowRow(
+        "temporal_range_ts_hour_unit",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '12' HOUR PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 30, 50, 90, 90]},
+        ),
+        None,
+        "Sub-day unit: HOUR must not be read as DAY. id 3 sees id 2 (12h back) but not id 1 "
+        "(24h back), so this row differs from the DAY row and pins that the unit is honoured.",
+    ),
+    WindowRow(
+        "temporal_range_bare_offset_over_date_key_means_days",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY d RANGE BETWEEN 1 PRECEDING AND CURRENT ROW) AS s "
+        f"{TEMPORAL_DATE_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3], "s": [10, 30, 30]},
+        ),
+        None,
+        "THE G5b FIX, facade half: Spark reads a unit-less RANGE offset over a DATE key as one "
+        "DAY. DataFusion coerces it to Interval(MonthDayNano), where Arrow reads a bare '1' as "
+        "one MONTH — the same query, a silently wider window, no error (it answered 10/30/60). "
+        "The Spark door now restates the bound as INTERVAL '1' DAY and re-plans. Reverting that "
+        "turns this row red on value.",
+    ),
+    # --- Recorded residual divergences: each names the spelling or bound class it waits on ------
+    WindowRow(
+        "temporal_range_unquoted_interval_literal",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL 1 DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 30, 60, 90, 90]},
+        ),
+        None,
+        "DISCLOSURE (spelling): Spark accepts the unquoted `INTERVAL 1 DAY` frame bound and "
+        "answers exactly as the quoted form. DataFusion's frame-bound parser accepts only a "
+        "string-literal interval value there (`INTERVAL expression cannot be Value(Number...)`), "
+        "even though the same unquoted literal works fine in an ordinary expression. Flipped by "
+        + FIX_G5B,
+        repark_raises="PySparkException",
+    ),
+    WindowRow(
+        "temporal_range_day_to_second_literal",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1 12:00:00' DAY TO SECOND "
+        f"PRECEDING AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 30, 60, 90, 90]},
+        ),
+        None,
+        "DISCLOSURE (spelling): Spark accepts a `DAY TO SECOND` qualified interval as a frame "
+        "bound. DataFusion concatenates the literal and the LEADING field only, handing Arrow "
+        "`1 12:00:00 DAY`, which its interval parser rejects. Flipped by " + FIX_G5B,
+        repark_raises="PySparkException",
+    ),
+    WindowRow(
+        "temporal_range_negative_offset_sum",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [None, None, None, None, None]},
+        ),
+        None,
+        "DISCLOSURE (defect): a NEGATIVE interval offset makes the frame end before it starts. "
+        "Spark returns an empty frame (sum NULL). repark reaches DataFusion's sliding-sum "
+        "accumulator with a malformed range and PANICS ('attempt to subtract with overflow'), "
+        "surfacing at the boundary as an internal error. The panic is debug-build only: a "
+        "release wheel wraps instead, so this is a wrong-answer class, not only a crash class. "
+        "Flipped by " + FIX_G5B,
+        repark_raises="PySparkException",
+    ),
+    WindowRow(
+        "temporal_range_negative_offset_count",
+        TEMPORAL_FAMILY,
+        f"SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS c {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("c", pa.int64(), False)],
+            {"id": [1, 2, 3, 4, 5], "c": [0, 0, 0, 0, 0]},
+        ),
+        _table(
+            [("id", pa.int64(), True), ("c", pa.int64(), False)],
+            {"id": [1, 2, 3, 4, 5], "c": [-1, -1, 0, 0, 0]},
+        ),
+        "DISCLOSURE (defect, silent): the same negative-offset frame as the row above, measured "
+        "with count(*) instead of sum. Spark counts 0 rows in the empty frame; repark returns a "
+        "NEGATIVE COUNT (-1) with no error at all. This is the row that shows the negative-offset "
+        "class is a silent wrong answer and not merely a crash. Flipped by " + FIX_G5B,
+    ),
+    WindowRow(
+        "temporal_range_following_to_following_window",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY FOLLOWING "
+        f"AND INTERVAL '2' DAY FOLLOWING) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [30, None, 90, None, None]},
+        ),
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [30, None, 120, None, None]},
+        ),
+        "DISCLOSURE (value): a frame entirely in the FUTURE (both bounds FOLLOWING). For id 3 "
+        "the frame is (ts+1d, ts+2d] = ids 4 and 5 -> Spark 90; repark answers 120, i.e. it also "
+        "counts the current row, which is OUTSIDE its own frame. Silent: no error, a plausible "
+        "number. Flipped by " + FIX_G5B,
+    ),
+    WindowRow(
+        "temporal_range_interval_bound_over_int_key",
+        TEMPORAL_FAMILY,
+        f"SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS s {TEMPORAL_TS_SQL} ORDER BY id",
+        _table(
+            [("id", pa.int64(), True), ("s", pa.int64(), True)],
+            {"id": [1, 2, 3, 4, 5], "s": [10, 20, 30, 40, 50]},
+        ),
+        None,
+        "DISCLOSURE (error class): an INTERVAL bound over an INT order key. Spark resolves it to "
+        "a frame no row falls into, so every row sees only itself; repark surfaces a raw Arrow "
+        "cast error (`Cannot cast string '1 DAY' to value of Int64 type`) instead of a Spark "
+        "error class or a table. The G5b fix deliberately does not touch this arm (it only "
+        "handles unit-less bounds over datetime keys). Flipped by " + FIX_G5B,
+        repark_raises="PySparkException",
+    ),
 ]
 
 
@@ -1028,6 +1327,34 @@ def test_window_row_set_covers_gap_budgets() -> None:
             f"{row.name}: default-frame trap must ORDER BY the tied key k (not a total order)"
         )
 
+    # 7. G5b temporal-RANGE family — name-gated so a numeric-RANGE control cannot satisfy it.
+    temporal = [row for row in ROWS if row.family == TEMPORAL_FAMILY]
+    assert len(temporal) >= 12, (
+        "G5b must keep the temporal-RANGE family (>=12 rows in family "
+        f"{TEMPORAL_FAMILY!r}); got {len(temporal)}"
+    )
+    temporal_names = {row.name for row in temporal}
+    for needle in (
+        "ts_asc_interval_day",
+        "ts_desc_interval_day",
+        "peer_group_zero_interval",
+        "null_order_keys",
+        "date_order_key",
+        "hour_unit",
+        "bare_offset_over_date_key_means_days",
+    ):
+        assert any(needle in name for name in temporal_names), (
+            f"temporal-RANGE family is missing coverage for {needle!r}"
+        )
+    # The family must keep BOTH halves: working-path equalities and recorded residuals. An edit
+    # that deletes either side would leave the claim unbacked or the divergences unrecorded.
+    assert sum(row.is_equality() for row in temporal) >= 8, (
+        "temporal-RANGE family must keep >=8 equality rows (the working interval-bounded path)"
+    )
+    assert sum(row.is_disclosure() for row in temporal) >= 5, (
+        "temporal-RANGE family must keep >=5 recorded residual divergences"
+    )
+
     # Row-shape well-formedness.
     for row in ROWS:
         assert not (row.spark_raises and row.repark_raises), (
@@ -1043,3 +1370,65 @@ def test_window_row_set_covers_gap_budgets() -> None:
             assert row.df_recipe is not None
         if row.is_equality():
             assert row.spark is not None and row.repark is None
+
+
+# ==================================================================================================
+# G5b — the refuse arm, which the WindowRow shape cannot express (both engines raise)
+# ==================================================================================================
+
+
+def test_temporal_range_bare_offset_over_timestamp_refuses() -> None:
+    """A unit-less RANGE offset over a TIMESTAMP order key must refuse with Spark's error class.
+
+    Spark 4.1.2 raises ``DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`` here (recorded live in the
+    G5b section-0 recon). Before the fix repark ANSWERED instead: DataFusion coerces the bare
+    offset to ``Interval(MonthDayNano)`` and Arrow reads a unit-less ``"1"`` as one *month*, so a
+    migrated query silently got a one-month window and no warning.
+
+    This lives outside :data:`ROWS` because a differential row cannot pin both engines raising
+    (``WindowRow`` forbids ``spark_raises`` and ``repark_raises`` together) — the shared refusal
+    is the point, so it is asserted directly. The Spark-door twin is
+    ``temporal_range_bare_offset_over_timestamp_key_refuses_like_spark`` in
+    ``crates/repark-spark/src/tests/window_temporal_range.rs``.
+    """
+    session = _session()
+    register_temporal_seed_views(session)
+
+    for frame in (
+        "RANGE BETWEEN 1 PRECEDING AND CURRENT ROW",
+        "RANGE BETWEEN 30 PRECEDING AND CURRENT ROW",
+        "RANGE BETWEEN CURRENT ROW AND 1 FOLLOWING",
+    ):
+        sql = f"SELECT id, sum(v) OVER (ORDER BY ts {frame}) AS s {TEMPORAL_TS_SQL} ORDER BY id"
+        with pytest.raises(Exception) as excinfo:
+            _to_arrow(session.sql(sql))
+        message = str(excinfo.value)
+        assert "DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE" in message, (
+            f"{frame!r} must refuse with Spark's error class, got: {message}"
+        )
+        assert 'does not support the data type "INT"' in message, (
+            f"{frame!r} must carry Spark's INT-in-range-frame wording, got: {message}"
+        )
+
+
+def test_temporal_range_bare_offset_over_date_key_is_days_not_months() -> None:
+    """The DATE arm of the same fix, asserted as a value claim on two different offsets.
+
+    One offset alone cannot carry this: over the three-day seed a one-MONTH window and a
+    thirty-DAY window produce the same numbers. ``1 PRECEDING`` (one day, ``[10, 30, 30]``) and
+    ``30 PRECEDING`` (thirty days, ``[10, 30, 60]``) together pin that the unit is days.
+    """
+    session = _session()
+    register_temporal_seed_views(session)
+
+    def sums(offset: int) -> list[int | None]:
+        table = _to_arrow(
+            session.sql(
+                f"SELECT id, sum(v) OVER (ORDER BY d RANGE BETWEEN {offset} PRECEDING "
+                f"AND CURRENT ROW) AS s {TEMPORAL_DATE_SQL} ORDER BY id"
+            )
+        )
+        return table.column("s").to_pylist()
+
+    assert sums(1) == [10, 30, 30], "1 PRECEDING over a DATE key is one DAY (Spark), not a month"
+    assert sums(30) == [10, 30, 60], "30 PRECEDING over a DATE key is thirty DAYS"
