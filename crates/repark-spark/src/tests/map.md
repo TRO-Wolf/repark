@@ -41,6 +41,22 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `merge_matched_and_arm_order_update_then_delete`,
   `merge_matched_and_threshold_update_or_delete`, plus the leaf-private `score_table_rows`
   helper for the two score-arm pins. Not a relocation: new tests, new names.
+- **Added after the split** — `dml.rs` gained **10** `g3e8_*` subquery-predicate valve pins
+  (2026-08-11): the refuse family for both verbs, the adjacent negatives that prove the valve did
+  not widen (non-subquery DML, `INSERT … SELECT` with a subquery, MERGE over a subquery source,
+  `UPDATE … SET col = (SELECT …)` with and without a `WHERE`), the guard-ORDER pin against the
+  BUG-001 valve, the **FROM-less** `DELETE <table> WHERE …` family + its negative (the panel's
+  live bypass — that spelling fails the router's Databricks parse and reaches the executor
+  through the passthrough's own parse), and the CTE-prefixed `WITH … DELETE` loud-today pin.
+  `normalize.rs` gained **2**: the detector unit pin
+  (`g3e8_subquery_detector_fires_on_every_spelling_and_no_other`) and the statement-level valve
+  pin (`g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target`, the entry point
+  `spark_ast::execute_passthrough` calls) — production-module alignment: both live in
+  `../normalize.rs`. Leaf-private helpers (`g3e8_setup`, `g3e8_seed`, `assert_g3e8_message`) stay
+  in `dml.rs`; only that leaf uses them. Counts here are the file's real `#[tokio::test]` /
+  `#[test]` totals — re-derive with
+  `grep -cE '^(async )?fn g3e8_' crates/repark-spark/src/tests/{dml,normalize}.rs` minus the two
+  helper fns in `dml.rs`. See `task/g3e8-guard-ledger.md`.
 
 ## Mapping rule
 

@@ -22,6 +22,14 @@ not this directory.
   runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
   delete). Seeded 2026-08-06 from the private v1 repository.
+- [g3e8-guard-ledger.md](g3e8-guard-ledger.md) — unit ledger for **G3-E8 (guard-first half)**:
+  the DELETE/UPDATE **subquery-predicate valve**. Localizes a silent-data-loss defect (a subquery
+  in a DML `WHERE` was lost at DataFusion's DML planning boundary and matched EVERY row), closes
+  the window with a refuse-loud valve in BOTH SQL doors, and records the live-Spark oracle the
+  future fix will need (`python/repark/tests/test_dml_subquery_parity.py`, 10 rows). Carries the
+  statement-form matrix, the guard decisions (incl. the deliberate over-refusal of uncorrelated
+  scalar subqueries), provocation transcripts, and §6 registry rows READY TO PASTE but not landed.
+  Recon lives planning-side (it names fork + DataFusion internals).
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
@@ -93,6 +101,8 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
+| See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
+| Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |
 | Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
 | See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
 | Read why the session timezone is a build-time knob with one spelling | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) |

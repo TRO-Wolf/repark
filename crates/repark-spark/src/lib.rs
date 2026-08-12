@@ -63,9 +63,10 @@ pub(crate) use namespace_ddl::{
     try_parse_create_namespace,
 };
 pub(crate) use normalize::{
-    MorDmlKind, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
+    DmlSubqueryVerb, MorDmlKind, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
     build_transform_field, delete_target_object_name, object_name_from_table_with_joins,
-    parse_single_normalized, property_value, refuse_mor_unpartitioned_multi_spec_dml,
+    parse_single_normalized, property_value, refuse_dml_subquery_predicate,
+    refuse_dml_subquery_predicate_in_statement, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, starts_with_branch_or_tag_ddl, starts_with_merge,
 };
 

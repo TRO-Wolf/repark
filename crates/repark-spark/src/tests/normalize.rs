@@ -156,3 +156,159 @@ fn qi1_path_escape_shared_probes_refuse() {
     // Empty remains sql-compose-only.
     assert!(reject_path_escape_ident("", "table").is_err());
 }
+
+/// G3-E8 detector: the valve reads the parsed `WHERE` expression and fires on **any** subquery,
+/// at any depth, in any spelling — and on nothing else.
+///
+/// The detection rule is "a `Query` node under the predicate", not an enumeration of
+/// subquery-bearing `Expr` variants, so this pin is what proves the rule reaches the shapes an
+/// enumeration would have to list one by one (and would silently miss after a sqlparser bump).
+#[test]
+fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
+    use datafusion::sql::sqlparser::ast::Expr;
+
+    let parse = |sql: &str| -> Statement {
+        Parser::parse_sql(&DatabricksDialect {}, sql)
+            .unwrap_or_else(|error| panic!("{sql:?} must parse: {error}"))
+            .remove(0)
+    };
+    let selection_of = |statement: &Statement| -> Option<Expr> {
+        match statement {
+            Statement::Delete(delete) => delete.selection.clone(),
+            Statement::Update(update) => update.selection.clone(),
+            other => panic!("not DML: {other}"),
+        }
+    };
+
+    // Every WHERE spelling that carries a subquery must refuse …
+    for sql in [
+        "DELETE FROM t WHERE id IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE id NOT IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE NOT (id IN (SELECT id FROM k))",
+        "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM t WHERE id > ANY (SELECT id FROM k)",
+        "DELETE FROM t WHERE id > ALL (SELECT id FROM k)",
+        "DELETE FROM t WHERE id = (SELECT max(id) FROM k)",
+        "DELETE FROM t WHERE id = 1 OR id IN (SELECT id FROM k)",
+        "DELETE FROM t WHERE id > 1 AND id IN (SELECT id FROM k)",
+        // buried under a function argument and inside a CASE — positions an Expr-variant
+        // enumeration would have to walk into anyway
+        "DELETE FROM t WHERE abs(id - (SELECT max(id) FROM k)) > 1",
+        "DELETE FROM t WHERE CASE WHEN id IN (SELECT id FROM k) THEN true ELSE false END",
+        // subquery nested inside another subquery's FROM
+        "DELETE FROM t WHERE id IN (SELECT id FROM (SELECT id FROM k) AS x)",
+        "UPDATE t SET name = 'z' WHERE id IN (SELECT id FROM k)",
+        // The three spellings the panel found missing from the matrix (L1 M-4): none of them is
+        // safe-because-uncorrelated — the safe/unsafe boundary is per-shape.
+        "DELETE FROM t WHERE NOT EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM t WHERE EXISTS (SELECT 1 FROM k WHERE 1 = 0)",
+        "DELETE FROM t WHERE id IN (SELECT max(id) FROM k)",
+    ] {
+        let statement = parse(sql);
+        let selection = selection_of(&statement);
+        assert!(
+            refuse_dml_subquery_predicate(DmlSubqueryVerb::Delete, selection.as_ref(), "t")
+                .is_err(),
+            "detector must fire on {sql:?}"
+        );
+    }
+
+    // … and every subquery-free predicate must pass, including the shapes that *look* like a
+    // subquery (`IN` over a value list, a derived-table-free EXISTS-ish name).
+    for sql in [
+        "DELETE FROM t WHERE id = 2",
+        "DELETE FROM t WHERE id IN (1, 2, 3)",
+        "DELETE FROM t WHERE id BETWEEN 2 AND 3",
+        "DELETE FROM t WHERE name LIKE 'b%' OR id = 3",
+        "DELETE FROM t WHERE abs(id) > 1 AND name IS NOT NULL",
+        "DELETE FROM t WHERE CASE WHEN id > 1 THEN true ELSE false END",
+        "UPDATE t SET name = 'z' WHERE id = 2",
+        // the assignment subquery is deliberately NOT the detector's business — only `selection`
+        // is passed in, and this statement's WHERE is subquery-free
+        "UPDATE t SET name = (SELECT max(name) FROM k) WHERE id = 2",
+    ] {
+        let statement = parse(sql);
+        let selection = selection_of(&statement);
+        assert!(
+            refuse_dml_subquery_predicate(DmlSubqueryVerb::Delete, selection.as_ref(), "t").is_ok(),
+            "detector must NOT fire on {sql:?}"
+        );
+    }
+
+    // No WHERE clause at all is the provider's genuine match-all — never refused.
+    let statement = parse("DELETE FROM t");
+    assert!(
+        refuse_dml_subquery_predicate(
+            DmlSubqueryVerb::Delete,
+            selection_of(&statement).as_ref(),
+            "t"
+        )
+        .is_ok(),
+        "a bare DELETE FROM t must not be refused"
+    );
+}
+
+/// ===========================================================================================
+/// The valve's AUTHORITATIVE entry point — the statement-shaped one the passthrough calls (F-A).
+///
+/// [`refuse_dml_subquery_predicate_in_statement`] is what runs at the EXECUTING parse, so it owns
+/// two things the expression-level function does not: which statements it applies to (only
+/// `DELETE`/`UPDATE` — everything else passes through untouched, which the passthrough relies on
+/// for every SELECT in the engine), and the rendered target, which it reads off the parse tree so
+/// that FROM-less and quoted spellings still name a usable table.
+/// ===========================================================================================
+#[test]
+fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
+    let parse = |sql: &str| -> Statement {
+        Parser::parse_sql(&DatabricksDialect {}, sql)
+            .unwrap_or_else(|error| panic!("{sql:?} must parse: {error}"))
+            .remove(0)
+    };
+
+    // Fires, and names the parsed target — including the FROM-less spelling the router's own
+    // parse rejects (the panel's bypass family) and the quoted one the text scan cannot read.
+    for (sql, expected_target, verb) in [
+        (
+            "DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM k)",
+            "ice.sales.t",
+            "DELETE",
+        ),
+        (
+            "UPDATE ice.sales.t SET name = 'z' WHERE id IN (SELECT id FROM k)",
+            "ice.sales.t",
+            "UPDATE",
+        ),
+        (
+            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE id IN (SELECT id FROM k)",
+            "\"ice\".\"sales\".\"t\"",
+            "DELETE",
+        ),
+    ] {
+        let refusal = refuse_dml_subquery_predicate_in_statement(&parse(sql))
+            .expect_err("the statement valve must fire")
+            .to_string();
+        assert!(
+            refusal.contains(&format!("{verb} with a subquery")),
+            "sql={sql:?}, got {refusal}"
+        );
+        assert!(
+            refusal.contains(&format!("is refused on `{expected_target}`")),
+            "the target must come from the parse tree, sql={sql:?}, got {refusal}"
+        );
+    }
+
+    // Passes everything it must not gate: subquery-free DML, and every non-DML statement (a
+    // SELECT with a subquery is not this valve's business — the passthrough plans it).
+    for sql in [
+        "DELETE FROM ice.sales.t WHERE id = 2",
+        "UPDATE ice.sales.t SET name = 'z' WHERE id IN (1, 2)",
+        "DELETE FROM ice.sales.t",
+        "SELECT id FROM t WHERE id IN (SELECT id FROM k)",
+        "INSERT INTO t SELECT id FROM k WHERE id IN (SELECT id FROM k2)",
+        "MERGE INTO t USING (SELECT id FROM k) s ON t.id = s.id WHEN MATCHED THEN DELETE",
+    ] {
+        refuse_dml_subquery_predicate_in_statement(&parse(sql))
+            .unwrap_or_else(|err| panic!("the statement valve must NOT fire on {sql:?}: {err}"));
+    }
+}

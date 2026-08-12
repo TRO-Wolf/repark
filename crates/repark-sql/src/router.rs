@@ -5,20 +5,23 @@
 //! 1. **Text guards, multi-statement FIRST** ([`crate::guards`]). Refusing a script before
 //!    anything else runs is what stops a second statement from being rewritten or sniffed — the
 //!    ordering-defect class the design's judges called out explicitly.
-//! 2. **The merge-on-read valve** ([`guards::refuse_mor_multi_spec_dml`], BUG-001) — async,
-//!    because it has to load the target table's metadata, so it cannot ride the text-guard fn.
-//!    Still at the router head, still before any parse (design §2 Q12 puts it in this guard set).
-//! 3. **The pre-parse stage** — the productions stock sqlparser cannot reach at all (the R1
+//! 2. **The pre-parse stage** — the productions stock sqlparser cannot reach at all (the R1
 //!    spike named them): the `ALTER TABLE … EXECUTE` refusal, the branch/tag recognizer
 //!    ([`crate::ref_ddl`]), the `SET PROPERTIES` rewrite ([`crate::alter`]), and the
 //!    `FOR … AS OF` rewrite ([`crate::time_travel`]). Its position is the BUG-010 ordering rule
 //!    in action: every one of these runs AFTER the multi-statement refuse, so no recognizer can
 //!    ever see — or rewrite — the second statement of a script.
-//! 4. **Parse, with stock DataFusion parser machinery on the Generic dialect** (design §2 Q14 —
+//! 3. **Parse, with stock DataFusion parser machinery on the Generic dialect** (design §2 Q14 —
 //!    no bespoke `Dialect` impl in phase 2).
-//! 5. **Statement match.** The Iceberg catalog DDL DataFusion cannot express (`CREATE TABLE`
+//! 4. **Statement match.** The Iceberg catalog DDL DataFusion cannot express (`CREATE TABLE`
 //!    both forms, `DROP TABLE`, `CREATE SCHEMA`, `DROP SCHEMA`, `ALTER TABLE`), the `MERGE INTO`
 //!    lowering, and the refuse set ([`crate::refusals`]: `INSERT OVERWRITE`, `CALL`, `TRUNCATE`).
+//! 5. **The two DML data-loss valves**, in the shared `DELETE`/`UPDATE` arm, both needing the
+//!    parsed statement or its target: the G3-E8 subquery-predicate valve
+//!    ([`guards::refuse_dml_subquery_predicate`], sync) and then the BUG-001 merge-on-read valve
+//!    ([`guards::refuse_mor_multi_spec_dml`], async — it loads the target's Iceberg metadata).
+//!    Cheap before expensive, which is also the Spark door's order (`execute_delete`), and the
+//!    only DML the BUG-001 valve ever gated is the DML this arm carries.
 //! 6. **Delegate.** Everything else is planned and executed by DataFusion, with the SEC-02
 //!    local-filesystem guard between planning and execution. That includes reads of the fork's
 //!    metadata tables (`t$snapshots`, `t$files`, …), which the fork's schema provider registers
@@ -51,7 +54,12 @@ use crate::{
 /// The dialect handed to DataFusion's parser. Stock `Generic`, deliberately — NOT DataFusion's
 /// `Ansi` dialect, which is untested against the phase-1 baseline and would be a silent
 /// regression surface (design §2 Q14).
-const PARSER_DIALECT: datafusion::config::Dialect = datafusion::config::Dialect::Generic;
+///
+/// It must also equal the SESSION's `sql_parser.dialect`, because [`delegate`] re-parses through
+/// `create_logical_plan`: a router that routes with one parser and executes with another is
+/// fail-open for every statement the two disagree about (the panel's L1 M-1 class, found on the
+/// Spark door). Pinned by `guards::tests::router_parse_dialect_matches_the_session_default`.
+pub(crate) const PARSER_DIALECT: datafusion::config::Dialect = datafusion::config::Dialect::Generic;
 
 /// ===========================================================================================
 /// Execute one ANSI SQL statement against an [`EngineContext`].
@@ -62,7 +70,6 @@ const PARSER_DIALECT: datafusion::config::Dialect = datafusion::config::Dialect:
 /// Spark-ism), or any iceberg / execution error from an intercepted handler.
 pub async fn execute(cx: EngineContext<'_>, sql: &str) -> Result<DataFrame> {
     guards::run_text_guards(&cx, sql)?;
-    guards::refuse_mor_multi_spec_dml(&cx, sql).await?;
 
     // --- Pre-parse stage: the three productions stock sqlparser cannot reach (R1 spike). ---
     // Every one of them runs AFTER the multi-statement refuse, which is the BUG-010 ordering
@@ -157,6 +164,17 @@ async fn execute_time_travelled(
                 .first()
                 .map_or_else(|| "<table>".to_string(), |target| target.name.to_string()),
         )),
+        // --- Delegated DML, behind the two data-loss valves, cheap one first. ---
+        // These arms would otherwise fall through `_ =>` to `delegate` unchanged; they exist so
+        // the guards see the PARSED statement. G3-E8 (sync AST walk — a `WHERE` subquery is lost
+        // at DataFusion's DML planning boundary and degenerates into match-all) runs before
+        // BUG-001 (async: loads the target's Iceberg metadata), which is the Spark door's order
+        // and rationale exactly. Everything after them is the delegation path verbatim.
+        Statement::Delete(_) | Statement::Update(_) => {
+            guards::refuse_dml_subquery_predicate(statement.as_ref())?;
+            guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+            delegate(cx, sql).await
+        }
         _ => delegate(cx, sql).await,
     }
 }
