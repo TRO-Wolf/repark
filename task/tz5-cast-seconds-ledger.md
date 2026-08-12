@@ -303,3 +303,30 @@ declared. One condition in `python/repark/src/repark/column.py`, pinned from **b
 
 Also corrected in the same commit: `python/repark/src/repark/map.md` carried a now-false residual
 note ("`timestamp.cast("long")` is DF-µs not Spark-seconds").
+
+## 10. 2026-08-12 rebase reconcile — the X-1 TIMESTAMP→INT split (anticipated collision)
+
+X-1's cast-failure corpus (merged as the G6 unit while this PR was in flight) pinned
+`timestamp_to_int_spark_seconds_repark_raises` as a repark-raises split. This unit un-refuses
+that exact path, so on the rebase the split's classifier fired — correctly — with "no longer
+refuses, but does NOT match the recorded Spark golden": repark now returns Spark's value and
+type (`1577836800`, int32) and differs in **nullability only** (repark propagates the literal's
+non-null; Spark types the CAST nullable).
+
+Resolution in this PR (the unit that flips a class carries the flip):
+
+- The row flipped split → **content disclosure**, both halves pinned (Spark int32 nullable /
+  repark int32 non-null, same value). Name kept byte-identical; rename queued per relocation
+  discipline.
+- The corpus's content-disclosure branch is now reachable by a real row for the first time —
+  both its classifier arms (CONVERGED / regression) are proven on this row. The repark-raises
+  split arms stay proven via a synthetic exemplar row outside `ROWS`.
+- Record mode re-run after the flip (lock held, containerized cluster ignored per B4):
+  `record mode: 10 rows re-derived, 0 mismatch(es)`, exit 0 — including
+  `timestamp_to_int_spark_seconds_repark_raises [content] PASS`.
+
+**§6 impact (orchestrator, landing PR):** X-1's queued both-halves handoff for the TIMESTAMP→INT
+live mirror + registry row described a raise-vs-value split — that text is STALE after this PR.
+Land the class as a **nullability-only disclosure** (same class as G12's eqNullSafe rows) or fold
+it into that family's registry row; do not paste the split wording. DATE→INT is untouched and
+still a spark-raises split.

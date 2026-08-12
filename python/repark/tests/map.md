@@ -1390,9 +1390,13 @@ NOT in that file is a defect, not a decision.
   landed by X-1. 10 rows (budget 8–10) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
   shuffle=2, `session.timeZone=UTC`): 5 shared-raise **error** equalities (malformed string→int /
   date, INT→TINYINT overflow, decimal narrowing overflow, DF `Column.cast` twin), 2 **try_cast**
-  NULL equalities (twins of the failing casts), 1 well-formed control equality, and **2 true
-  splits** under ANSI ON (DATE→INT: Spark `DATATYPE_MISMATCH` refuse vs repark days-since-epoch;
-  TIMESTAMP→INT: Spark unix-seconds vs repark Arrow Cast overflow). §0 re-verified that the slate
+  NULL equalities (twins of the failing casts), 1 well-formed control equality, **1 true
+  split** under ANSI ON (DATE→INT: Spark `DATATYPE_MISMATCH` refuse vs repark days-since-epoch)
+  and **1 nullability-only content disclosure** (TIMESTAMP→INT — was a repark-raises split until
+  the TZ-5 cast unit un-refused it, 2026-08-12: value/type now match Spark's unix-seconds int32;
+  repark propagates the literal's non-null where Spark types the CAST nullable; content-disclosure
+  classifier arms proven on this row, split arms kept proven via a synthetic exemplar).
+  §0 re-verified that the slate
   "non-ANSI NULL" premise narrowed under ANSI ON — fewer than 4 real divergences, not manufactured.
   Every content row asserts value AND Arrow type AND nullability via
   `repark_parity.assert_frames_equal`; error rows pin raise class + error needle (A7). Split
