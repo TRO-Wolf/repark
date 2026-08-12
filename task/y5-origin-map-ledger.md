@@ -141,8 +141,8 @@ Real exit codes, never a pipe's. Logs under `/tmp/y5-<gate>.log`.
 |---|---|---|
 | targeted facade | `pytest python/repark/tests/test_g4b_semi_join.py` | **0** (43 passed; was 17) |
 | H1/H2 origin regression | `pytest test_g1_stat_and_expander.py test_h2_group_h2.py -k 'h1_ or H1 or origin or join'` | **0** (26 passed) |
-| `make verify` | `make verify > /tmp/y5-verify.log 2>&1; echo $?` | *(filled after the run)* |
-| `make preflight` | `make preflight > /tmp/y5-preflight.log 2>&1; echo $?` | *(filled after the run)* |
+| `make verify` | `make verify > /tmp/y5-verify.log 2>&1; echo $?` | **0** |
+| `make preflight` | `make preflight > /tmp/y5-preflight.log 2>&1; echo $?` | **0** (facade **2848 passed, 71 skipped**) |
 
 `map.md` lockstep, same commit: `python/repark/src/repark/dataframe/map.md`,
 `python/repark/tests/map.md`, `task/map.md`, this ledger.
