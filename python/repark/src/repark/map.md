@@ -1300,8 +1300,11 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
   F.rank/dense_rank/ntile; F.rand/randn Spark XORShift (seeded); sampleBy seed counts MATCH;
   eagerEval `__repr__`/`_repr_html_` (showString packing + conf truncate/maxNumRows).
   Region banners `# === r20 G2: window/rand/sampleBy ===` in window.py / functions.py /
-  dataframe sampleBy+eagerEval. Residual: timestamp.cast("long") is DF-µs not Spark-seconds
-  (rangeBetween moving-average pin divides by 1e6).
+  dataframe sampleBy+eagerEval. (Residual CLOSED 2026-08-12 by registry row TZ-5:
+  `timestamp.cast("long")` was the raw DataFusion tick — µs for a `createDataFrame` column, ns
+  for a `to_timestamp` literal — and is now Spark's epoch SECONDS. The rangeBetween
+  moving-average pin no longer divides by 1e6; it spells Spark's own expression.
+  See `task/tz5-cast-seconds-ledger.md`.)
   **octo C1:** `_repr_html_` html.escape cells+headers (XSS); RANGE value-offset non-numeric
   ORDER BY → SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE; RANGE without ORDER BY →
   RANGE_FRAME_WITHOUT_ORDER; finite float frame bounds refuse; sampleBy exact XORShift key
@@ -1309,7 +1312,15 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
   **octo C2:** RANGE value-offset multi-ORDER BY → RANGE_FRAME_MULTI_ORDER; ranking
   functions without ORDER BY loud (not DF Internal); row_number spark_display.
   **octo C3:** inverted frame bounds (start>end) refuse at rowsBetween/rangeBetween.
-  **octo gates:** ruff SIM103/C416 on RANGE dtype helper; XORShift test line wrap. -->
+  **octo gates:** ruff SIM103/C416 on RANGE dtype helper; XORShift test line wrap.
+  **TZ-5 follow-on (2026-08-12):** the non-numeric ORDER BY guard resolves the key by NAME, and a
+  CAST chain keeps its BASE column's projection name (`col("d").cast("long")` still projects as
+  `d`) — so it read the SOURCE dtype and refused a numeric key Spark accepts. `Column.over` now
+  treats a key as "bare" only when its spark display EQUALS its projection name; an expression
+  falls to the display branch, matches no schema field, and the engine stays the authority on its
+  type. Unreachable until the TZ-5 cast fix let the moving-average pin drop the `/1e6` wrapper
+  that was hiding it. Pinned both ways in `test_g2_window_rand_sampleby.py`
+  (`..._refuses_non_numeric_order` / `..._accepts_a_cast_numeric_order_key`). -->
 - M7 format/lint gate clean (ruff format + py-lint).
 
 <!-- 2026-08-03 (r20 combine): dataframe.py select() projection reconstructed after H1×G2 keep-both — G2 range-order validation in the input loop + H1 deferred-for_select rebind projection. -->

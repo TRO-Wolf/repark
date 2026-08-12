@@ -12,6 +12,8 @@ on the same malformed / overflow casts repark raises on. The honest corpus is th
 **shared-raise error equalities** and **try_cast NULL equalities**, with a small number of true
 divergences (DATE→INT plan refuse vs days-since-epoch; TIMESTAMP→INT unix-seconds vs raise). Real
 divergence count is recorded in the unit ledger; this lane does not manufacture more.
+*(2026-08-12: the TZ-5 cast unit un-refused TIMESTAMP→INT — that split is now a nullability-only
+content disclosure; see its row note.)*
 
 **Row kinds** (join-corpus mold):
 
@@ -364,18 +366,19 @@ ROWS: list[CastRow] = [
     ),
     CastRow(
         name="timestamp_to_int_spark_seconds_repark_raises",
-        kind="split",
+        kind="content",
         entry="sql",
         family="timestamp_to_int",
         sql="SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n",
-        which_raises="repark",
         spark=_one_row([("n", _I32, True)], {"n": 1577836800}),
-        repark_error_needle="Cast error",
+        repark=_one_row([("n", _I32, False)], {"n": 1577836800}),
         note=(
-            "SPLIT: under session timeZone=UTC, Spark CAST(TIMESTAMP→INT) yields unix seconds "
-            "1577836800 (int32 nullable). repark holds timestamps as ns and the cast to Int32 "
-            "overflows (Arrow Cast error). Related to TZ-5's TIMESTAMP→BIGINT nanoseconds class "
-            f"but the INT path is a raise-vs-value split, not a scale factor. Flipped by {FIX_G6}."
+            "DISCLOSURE (was a repark-raises split until 2026-08-12): the TZ-5 cast unit fixed "
+            "the timestamp→numeric scaling and un-refused the INT path, so repark now returns "
+            "Spark's unix seconds 1577836800 as int32 — the residual divergence is NULLABILITY "
+            "only (repark propagates the literal's non-null; Spark types the CAST nullable). "
+            "Same class as the G12 eqNullSafe nullability disclosures. The name predates the "
+            "flip; the rename ships alone per relocation discipline."
         ),
     ),
 ]
@@ -645,15 +648,30 @@ def test_cast_failure_row_set_covers_g6_budget() -> None:
 # ==================================================================================================
 
 
+# The corpus no longer carries a repark-raises split (the TIMESTAMP→INT one flipped to a
+# nullability disclosure when the TZ-5 cast unit landed, 2026-08-12), but the harness branch
+# still exists and stays proven — via a synthetic exemplar that never joins ROWS (so the
+# budget pins see only real rows).
+_SYNTHETIC_REPARK_RAISES_SPLIT = CastRow(
+    name="synthetic_repark_raises_split_exemplar",
+    kind="split",
+    entry="sql",
+    family="synthetic",
+    sql="SELECT 1 AS n",  # never executed — run_cast_content is monkeypatched in both arms
+    which_raises="repark",
+    spark=_one_row([("n", _I32, True)], {"n": 1577836800}),
+    repark_error_needle="Cast error",
+    note="synthetic CP-1 exemplar for the repark-raises split classifier arms; not in ROWS.",
+)
+
+
 def test_split_repark_raises_classifier_converged_arm(
     repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """CP-1: repark-raises split matching the Spark golden → CONVERGED flip guidance."""
     import test_cast_failure_parity as cast_mod
 
-    split_row = next(
-        row for row in ROWS if row.name == "timestamp_to_int_spark_seconds_repark_raises"
-    )
+    split_row = _SYNTHETIC_REPARK_RAISES_SPLIT
     assert split_row.spark is not None
     golden = split_row.spark
 
@@ -675,9 +693,7 @@ def test_split_repark_raises_classifier_regression_arm(
     """CP-1: repark-raises split commits a non-Spark result → regression guidance."""
     import test_cast_failure_parity as cast_mod
 
-    split_row = next(
-        row for row in ROWS if row.name == "timestamp_to_int_spark_seconds_repark_raises"
-    )
+    split_row = _SYNTHETIC_REPARK_RAISES_SPLIT
     wrong = _one_row([("n", _I32, True)], {"n": 99})
 
     def _fake_wrong(_session: Any, _row: CastRow) -> pa.Table:
@@ -690,6 +706,53 @@ def test_split_repark_raises_classifier_regression_arm(
     message = str(excinfo.value)
     assert "Re-derive" in message
     assert "not a clean convergence" in message
+
+
+def test_content_disclosure_classifier_converged_arm(
+    repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CP-1: content disclosure landing ON the recorded Spark output → CONVERGED guidance.
+
+    The TIMESTAMP→INT flip (2026-08-12) made the content-disclosure branch reachable by a real
+    row for the first time; both its arms are proven here on that row.
+    """
+    import test_cast_failure_parity as cast_mod
+
+    row = next(row for row in ROWS if row.name == "timestamp_to_int_spark_seconds_repark_raises")
+    assert row.kind == "content" and row.repark is not None and row.spark is not None
+    golden = row.spark
+
+    def _fake_spark_output(_session: Any, _row: CastRow) -> pa.Table:
+        return golden
+
+    monkeypatch.setattr(cast_mod, "run_cast_content", _fake_spark_output)
+
+    with pytest.raises(AssertionError, match="CONVERGED") as excinfo:
+        test_cast_failure_row(row, repark)
+    message = str(excinfo.value)
+    assert "flip it to an equality row" in message
+    assert "Do not delete" in message
+
+
+def test_content_disclosure_classifier_regression_arm(
+    repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """CP-1: content disclosure landing on NEITHER half → regression guidance."""
+    import test_cast_failure_parity as cast_mod
+
+    row = next(row for row in ROWS if row.name == "timestamp_to_int_spark_seconds_repark_raises")
+    wrong = _one_row([("n", _I32, False)], {"n": 99})
+
+    def _fake_wrong(_session: Any, _row: CastRow) -> pa.Table:
+        return wrong
+
+    monkeypatch.setattr(cast_mod, "run_cast_content", _fake_wrong)
+
+    with pytest.raises(AssertionError, match="regression") as excinfo:
+        test_cast_failure_row(row, repark)
+    message = str(excinfo.value)
+    assert "moved OFF its pinned disclosure" in message
+    assert "Re-derive" in message
 
 
 def test_split_spark_raises_classifier_converged_arm(

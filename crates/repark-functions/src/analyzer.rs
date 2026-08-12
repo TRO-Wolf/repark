@@ -25,6 +25,12 @@
 //! - **`overlay(str, replace, pos, -1)`** drops the literal `-1` 4th arg so free-SQL matches
 //!   Spark's default (replace-length / 3-arg). DataFusion's 4-arg `-1` replaces the remainder
 //!   of the string (F2 octo C1-Q-002).
+//! - **`CAST(TIMESTAMP AS <numeric>)` is epoch SECONDS** (divergence registry row TZ-5). Spark
+//!   scales the instant to seconds; DataFusion reinterprets the raw tick value, so a
+//!   nanosecond-backed timestamp came back 10⁹ times too large — silently, and correctly signed,
+//!   which is what made it survive. The rewrite pushes the scaling under the user's cast through
+//!   [`crate::timestamp_cast`]'s two embedded UDFs (integer targets floor exactly; float and
+//!   decimal targets keep the fraction), leaving the outer `CAST` to apply the requested width.
 //!
 //! Registered by the session *after* the built-in analyzer rules (via the Spark door's
 //! `SessionExtension`), so it sees type-coerced plans and must emit exactly-typed expressions —
@@ -148,8 +154,70 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
                 Ok(Transformed::no(Expr::ScalarFunction(function)))
             }
         }
+        // TZ-5: `CAST(ts AS BIGINT/INT/DOUBLE/DECIMAL)` is epoch SECONDS in Spark and a raw tick
+        // reinterpretation in DataFusion. Matched on the SOURCE type, which is what makes the
+        // rewrite idempotent: its own output casts an `Int64`/`Float64`, never a timestamp.
+        Expr::Cast(_) => Ok(rewrite_timestamp_to_numeric_cast(expr, schema)),
         other => Ok(Transformed::no(other)),
     }
+}
+
+/// `CAST(<timestamp> AS <numeric>)` → Spark's epoch SECONDS (registry row TZ-5).
+///
+/// Spark's `Cast(TimestampType, LongType)` floors the instant to seconds; DataFusion hands back
+/// the raw tick value, so a `Timestamp(Nanosecond, _)` column was 10⁹ times too large. The
+/// scaling is pushed UNDER the user's cast — `CAST(__repark_epoch_seconds_floor__(ts) AS INT)` —
+/// so the outer cast still applies the requested width and whatever DataFusion does when the
+/// seconds value does not fit it: this rewrite owns the *scale*, not the cast-failure surface.
+///
+/// The split between the two embedded UDFs is a correctness requirement, not a convenience:
+/// integer targets need exact `i64` floor division (f64 cannot floor a sub-microsecond instant
+/// reliably at present-day epochs) and real targets need the fraction Spark keeps. See
+/// [`crate::timestamp_cast`].
+///
+/// Deliberately untouched: `CAST(ts AS DATE/STRING/TIMESTAMP)` (no scaling involved), unsigned
+/// integer targets (Spark SQL cannot spell one, so a rewrite would invent semantics), and the
+/// reverse direction `CAST(<integer> AS TIMESTAMP)` — probed against live Spark 4.1.2 and already
+/// correct in repark, because DataFusion's integer→timestamp cast reads SECONDS exactly as Spark
+/// does (ledger §3). Its remaining gap is the Arrow export TYPE, which is registry row TZ-4.
+fn rewrite_timestamp_to_numeric_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let Expr::Cast(cast) = expr else {
+        return Transformed::no(expr);
+    };
+    let Ok(source_type) = cast.expr.get_type(schema) else {
+        // Defensive bail, the same shape as `rewrite_division`'s: an unresolvable operand keeps
+        // DataFusion's cast rather than failing the plan.
+        return Transformed::no(Expr::Cast(cast));
+    };
+    if !matches!(source_type, DataType::Timestamp(..)) {
+        return Transformed::no(Expr::Cast(cast));
+    }
+    let target = cast.field.data_type().clone();
+    let Some(scaled) = epoch_seconds_for_target(&target, *cast.expr.clone()) else {
+        return Transformed::no(Expr::Cast(cast));
+    };
+    Transformed::yes(Expr::Cast(Cast::new(Box::new(scaled), target)))
+}
+
+/// The epoch-seconds expression a numeric cast target needs, or `None` when the target is not one
+/// this class covers (the cast is then left exactly as DataFusion planned it).
+fn epoch_seconds_for_target(target: &DataType, timestamp: Expr) -> Option<Expr> {
+    let udf = match target {
+        // Signed integers: Spark floors. The outer cast narrows.
+        DataType::Int64 | DataType::Int32 | DataType::Int16 | DataType::Int8 => {
+            crate::timestamp_cast::spark_epoch_seconds_floor_udf()
+        }
+        // Floats and decimals: Spark keeps the fraction.
+        DataType::Float64
+        | DataType::Float32
+        | DataType::Decimal128(..)
+        | DataType::Decimal256(..) => crate::timestamp_cast::spark_epoch_seconds_real_udf(),
+        _ => return None,
+    };
+    Some(Expr::ScalarFunction(ScalarFunction::new_udf(
+        udf,
+        vec![timestamp],
+    )))
 }
 
 /// True when `expr` is a signed integer literal equal to `-1` (Spark overlay default len).
@@ -615,6 +683,255 @@ mod tests {
                 .expect("string")
                 .value(0),
             "aXYdef"
+        );
+    }
+
+    // ---- TZ-5: `CAST(TIMESTAMP AS <numeric>)` is epoch SECONDS -------------------------------
+    //
+    // Oracle for every expectation below: live Spark 4.1.2 on the recorded basis
+    // (`task/tz5-cast-seconds-ledger.md` §2). Reverting the `Expr::Cast` arm in `rewrite_expr`
+    // reddens all of them — DataFusion's own cast answers the raw nanosecond tick.
+
+    /// The charged class: a whole-second instant before AND after 1970 casts to epoch seconds,
+    /// not to nanoseconds. Spark: `-1800` and `1718452800`; DataFusion alone: `×10⁹`.
+    #[tokio::test]
+    async fn timestamp_cast_to_bigint_is_epoch_seconds() {
+        let ctx = ctx();
+        assert_eq!(
+            i64_column(
+                &ctx,
+                "SELECT CAST(TIMESTAMP '1969-12-31 23:30:00' AS BIGINT)"
+            )
+            .await,
+            vec![Some(-1800)]
+        );
+        assert_eq!(
+            i64_column(
+                &ctx,
+                "SELECT CAST(TIMESTAMP '2024-06-15 12:00:00' AS BIGINT)"
+            )
+            .await,
+            vec![Some(1_718_452_800)]
+        );
+        assert_eq!(
+            i64_column(
+                &ctx,
+                "SELECT CAST(TIMESTAMP '1970-01-01 00:00:00' AS BIGINT)"
+            )
+            .await,
+            vec![Some(0)]
+        );
+    }
+
+    /// The floor edge, end to end. Spark uses `Math.floorDiv`, so a sub-second instant BEFORE the
+    /// epoch rounds toward −∞: `-0.5 s → -1`, `-1.25 s → -2`. Truncation toward zero (what an
+    /// arrow `Timestamp(Second)` hop would give) answers `0` and `-1` — the whole reason the
+    /// scaling lives in a UDF. Positive fractions floor and truncate alike, and are here so the
+    /// fix cannot be "always subtract one".
+    #[tokio::test]
+    async fn timestamp_cast_to_bigint_floors_on_both_sides_of_the_epoch() {
+        let ctx = ctx();
+        for (sql, expected) in [
+            ("TIMESTAMP '1969-12-31 23:59:59.5'", -1_i64),
+            ("TIMESTAMP '1969-12-31 23:59:58.75'", -2),
+            ("TIMESTAMP '1969-12-31 23:59:59'", -1),
+            ("TIMESTAMP '1970-01-01 00:00:00.75'", 0),
+            ("TIMESTAMP '2024-06-15 12:00:01.999999'", 1_718_452_801),
+        ] {
+            assert_eq!(
+                i64_column(&ctx, &format!("SELECT CAST({sql} AS BIGINT)")).await,
+                vec![Some(expected)],
+                "{sql}"
+            );
+        }
+    }
+
+    /// A NULL timestamp casts to NULL, and the Arrow type is still `Int64` — the embedded UDF
+    /// must not turn a null row into a zero or widen the column.
+    #[tokio::test]
+    async fn timestamp_cast_of_null_is_null_int64() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(CAST(NULL AS TIMESTAMP) AS BIGINT)";
+        assert_eq!(i64_column(&ctx, sql).await, vec![None]);
+        assert_eq!(result_type(&ctx, sql).await, DataType::Int64);
+    }
+
+    /// Narrower signed integer targets share the class: the scaling happens first and the outer
+    /// cast applies the width, so `INT` and `SMALLINT` answer Spark's `-1800` in `Int32`/`Int16`.
+    #[tokio::test]
+    async fn narrower_integer_targets_get_the_same_scaling() {
+        let ctx = ctx();
+        for (target, arrow_type) in [("INT", DataType::Int32), ("SMALLINT", DataType::Int16)] {
+            let sql = format!("SELECT CAST(TIMESTAMP '1969-12-31 23:30:00' AS {target})");
+            assert_eq!(result_type(&ctx, &sql).await, arrow_type, "{target}");
+            let batch = batch(&ctx, &sql).await;
+            let rendered =
+                datafusion::arrow::util::pretty::pretty_format_batches(&[batch]).unwrap();
+            assert!(
+                rendered.to_string().contains("-1800"),
+                "{target}: expected Spark's -1800, got:\n{rendered}"
+            );
+        }
+    }
+
+    /// Float and decimal targets keep the FRACTION Spark keeps (`-0.5 s → -0.5`), which is why
+    /// they cannot share the integer path's floor.
+    #[tokio::test]
+    async fn real_targets_keep_the_fractional_second() {
+        let ctx = ctx();
+        assert_eq!(
+            f64_column(
+                &ctx,
+                "SELECT CAST(TIMESTAMP '1969-12-31 23:59:59.5' AS DOUBLE)"
+            )
+            .await,
+            vec![Some(-0.5)]
+        );
+        assert_eq!(
+            f64_column(
+                &ctx,
+                "SELECT CAST(TIMESTAMP '1969-12-31 23:30:00' AS DOUBLE)"
+            )
+            .await,
+            vec![Some(-1800.0)]
+        );
+        let decimal = "SELECT CAST(TIMESTAMP '1969-12-31 23:59:59.5' AS DECIMAL(20,6))";
+        assert!(
+            matches!(
+                result_type(&ctx, decimal).await,
+                DataType::Decimal128(20, 6)
+            ),
+            "decimal target keeps its declared precision/scale"
+        );
+        let rendered =
+            datafusion::arrow::util::pretty::pretty_format_batches(&[batch(&ctx, decimal).await])
+                .unwrap()
+                .to_string();
+        assert!(
+            rendered.contains("-0.500000"),
+            "expected Spark's -0.500000, got:\n{rendered}"
+        );
+    }
+
+    /// The rewrite is idempotent: the analyzer runs once eagerly on the passthrough plan and
+    /// again at physical planning, and a rule that re-fired on its own output would wrap the
+    /// scaling twice (and answer nanoseconds-per-second-squared). Matching on the SOURCE type is
+    /// what prevents it, and this pin is what proves the prevention rather than asserting it.
+    #[tokio::test]
+    async fn the_timestamp_cast_rewrite_is_idempotent() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(TIMESTAMP '1969-12-31 23:30:00' AS BIGINT) AS epoch_value";
+        let state = ctx.state();
+        let plan = state.create_logical_plan(sql).await.unwrap();
+        let once = crate::analyze_eagerly(&state, plan).unwrap();
+        let twice = crate::analyze_eagerly(&state, once.clone()).unwrap();
+        assert_eq!(
+            once.display_indent_schema().to_string(),
+            twice.display_indent_schema().to_string(),
+            "a second analyze must be a fixpoint for this rewrite"
+        );
+        assert_eq!(
+            once.display_indent_schema()
+                .to_string()
+                .matches("__repark_epoch_seconds_floor__")
+                .count(),
+            1,
+            "exactly one scaling UDF, however many times the analyzer runs"
+        );
+        // And the twice-analyzed plan still executes to Spark's value.
+        assert_eq!(i64_column(&ctx, sql).await, vec![Some(-1800)]);
+    }
+
+    /// Casts this class does NOT own stay exactly as DataFusion planned them: a timestamp to
+    /// `DATE` or `STRING` involves no epoch scaling, and a dead-branch-free rewrite must leave
+    /// them alone rather than route them through a UDF that would then have to undo itself.
+    #[tokio::test]
+    async fn non_numeric_timestamp_casts_are_untouched() {
+        let ctx = ctx();
+        for (sql, expected) in [
+            (
+                "SELECT CAST(TIMESTAMP '2024-06-15 12:00:00' AS DATE)",
+                DataType::Date32,
+            ),
+            (
+                "SELECT CAST(TIMESTAMP '2024-06-15 12:00:00' AS STRING)",
+                DataType::Utf8View,
+            ),
+        ] {
+            assert_eq!(result_type(&ctx, sql).await, expected, "{sql}");
+            let state = ctx.state();
+            let plan = state.create_logical_plan(sql).await.unwrap();
+            let analyzed = crate::analyze_eagerly(&state, plan).unwrap();
+            assert!(
+                !analyzed
+                    .display_indent_schema()
+                    .to_string()
+                    .contains("__repark_epoch_seconds"),
+                "{sql}: no scaling UDF may be injected"
+            );
+        }
+    }
+
+    /// The REVERSE direction is already Spark-correct and must stay untouched: DataFusion reads
+    /// `CAST(<integer> AS TIMESTAMP)` as SECONDS, exactly as Spark does (probed 2026-08-11, ledger
+    /// §3). A symmetric "fix" here would have introduced the very divergence this unit removes.
+    #[tokio::test]
+    async fn integer_to_timestamp_cast_is_untouched_and_reads_seconds() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(CAST(-1800 AS BIGINT) AS TIMESTAMP)";
+        let state = ctx.state();
+        let plan = state.create_logical_plan(sql).await.unwrap();
+        let analyzed = crate::analyze_eagerly(&state, plan).unwrap();
+        assert!(
+            !analyzed
+                .display_indent_schema()
+                .to_string()
+                .contains("__repark_epoch_seconds"),
+            "the reverse direction takes no scaling UDF"
+        );
+        let rendered =
+            datafusion::arrow::util::pretty::pretty_format_batches(&[batch(&ctx, sql).await])
+                .unwrap()
+                .to_string();
+        assert!(
+            rendered.contains("1969-12-31T23:30:00"),
+            "-1800 must read as -1800 SECONDS; got:\n{rendered}"
+        );
+    }
+
+    /// The round trip closes: seconds out, the same instant back. This is the shape a migrated
+    /// job writes (store an epoch, rebuild the timestamp) and the one that stayed broken while
+    /// only one of the two directions was checked.
+    #[tokio::test]
+    async fn epoch_seconds_round_trip_returns_the_instant() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(CAST(TIMESTAMP '1969-12-31 23:30:00' AS BIGINT) AS TIMESTAMP)";
+        let rendered =
+            datafusion::arrow::util::pretty::pretty_format_batches(&[batch(&ctx, sql).await])
+                .unwrap()
+                .to_string();
+        assert!(
+            rendered.contains("1969-12-31T23:30:00"),
+            "round trip must return the instant; got:\n{rendered}"
+        );
+    }
+
+    /// A timestamp COLUMN (not a folded literal) takes the same path — the constant folder is not
+    /// what makes the fix work, and a per-row kernel with a null mask is the shape production
+    /// data has.
+    #[tokio::test]
+    async fn a_timestamp_column_casts_row_by_row() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(ts AS BIGINT) AS epoch_value FROM (VALUES \
+                   (TIMESTAMP '1969-12-31 23:30:00'), \
+                   (TIMESTAMP '1969-12-31 23:59:59.5'), \
+                   (CAST(NULL AS TIMESTAMP)), \
+                   (TIMESTAMP '2024-06-15 12:00:00')) AS t(ts) ORDER BY ts ASC NULLS FIRST";
+        assert_eq!(
+            i64_column(&ctx, sql).await,
+            vec![None, Some(-1800), Some(-1), Some(1_718_452_800)],
+            "NULLS FIRST is spelled explicitly so this row pins the CAST, not the engine's \
+             default null ordering (a different class, with its own pins)"
         );
     }
 }

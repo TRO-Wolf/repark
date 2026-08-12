@@ -1159,9 +1159,12 @@ NOT in that file is a defect, not a decision.
   whole-day error there); one DST fall-back `date_trunc` row; and two **DataFrame-API** rows
   (`entry_point="dataframe_api"` → `dataframe_api_extraction`, i.e. `df.select(F.year(...), ...)`,
   the facade's OTHER user entry point, previously pinned only by a Rust proxy).
-  Twelve rows are still disclosures and none is the instant-typed extraction class: two are the
-  tz-naive Arrow export TYPE, five are rows whose VALUE converged while their TYPE did not, one is
-  the `CAST(TIMESTAMP AS BIGINT)` unit bug, three are TZ-7 and one is TZ-6.
+  Eleven rows are still disclosures and none is the instant-typed extraction class: two are the
+  tz-naive Arrow export TYPE, five are rows whose VALUE converged while their TYPE did not, three
+  are TZ-7 and one is TZ-6. (A twelfth WAS the `CAST(TIMESTAMP AS BIGINT)` unit bug — registry row
+  **TZ-5**, which converged on 2026-08-12 when the timestamp-cast epoch-seconds fix landed;
+  `pre_1970_timestamp_cast_to_bigint` is now an equality row and the equality count moved 17 → 18.
+  That class's own per-entry-point corpus is `test_timestamp_cast_parity.py`.)
   `test_the_extraction_class_converged_and_the_residue_is_named` pins that residue by name, so a
   new disclosure cannot be smuggled back into the extraction class.
   A disclosure row pins BOTH halves (repark's actual output AND the recorded Spark output), and a
@@ -1187,6 +1190,38 @@ NOT in that file is a defect, not a decision.
   reproduces (schema name/type/nullability then values); non-zero prints the live values to paste
   back after deciding the move is deliberate. It never edits the corpus. Needs a JVM + `pyspark`
   (`uv sync --extra record`); invocation is in its module docstring and in `docs/history/hardening-h1/h1a-ledger.md`.
+- `test_timestamp_cast_parity.py` — the **timestamp-cast differential corpus** (registry row
+  **TZ-5**, landed 2026-08-12), the facade cell of the `CAST(TIMESTAMP AS <numeric>)`
+  epoch-seconds class. repark returned epoch NANOSECONDS where Spark returns epoch SECONDS — a
+  10⁹ factor, correctly signed, on the one shape a migrated job writes to get an epoch. 19 rows
+  recorded against live PySpark 4.1.2 on the same basis as the timezone corpus, across **three
+  facade spellings**: `sql` (16 rows), `dataframe_api` (2 — `F.col("ts").cast("long"/"int"/
+  "double")` over a real tz-aware COLUMN, which crosses PyO3 as a bare `Expr::Cast` with no SQL
+  string, i.e. the cell a SQL-only fix would leave wrong) and `expr` (1 — `F.expr`). The rows that
+  carry the claim are the **negative FRACTIONAL** seconds: Spark uses `Math.floorDiv`, so
+  `-0.5 s → -1` and `-1.25 s → -2` where truncation toward zero says `0` and `-1`. Truncation
+  agrees with Spark on every positive instant and every whole negative second, so those two rows
+  are the only things separating the real fix from the plausible one; the positive fractional rows
+  are the other half of that fence. Also pins the same-path siblings (`INT`/`SMALLINT` — refused
+  outright before the fix; `DOUBLE`/`FLOAT`/`DECIMAL`, which keep the fraction), NULL, and
+  zone-independence over three zones. Exactly ONE disclosure remains,
+  `bigint_to_timestamp_reads_seconds`: the REVERSE direction was probed and deliberately NOT
+  touched (DataFusion already reads an integer as seconds, exactly as Spark does, so "fixing" it
+  would have introduced the divergence) — its VALUE agrees and only its Arrow export TYPE differs,
+  which is registry row TZ-4. `test_the_class_is_covered_per_entry_point_and_per_edge` pins the
+  corpus SHAPE (all three spellings, both signs of the floor edge, every named cast target, the
+  zone matrix, and the single allowed disclosure) so the class cannot decay into "one
+  representative case". It is a corpus of its own rather than more `G16_ROWS` because the class is
+  zone-INdependent; the timezone corpus keeps the single row that first recorded the divergence,
+  as the flip evidence. Engine cells: `crates/repark-spark/tests/timestamp_cast_seconds.rs` and
+  `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`. Ledger:
+  `../../../task/tz5-cast-seconds-ledger.md`.
+- `_record_timestamp_cast_goldens.py` — the **record driver** for the corpus above (NOT a `test_`
+  module; never collected), the same shape as `_record_session_timezone_goldens.py`: it imports
+  `ROWS` from the committed module and re-runs each row's own `run_row` on live PySpark under the
+  row's own zone, so the golden and the asserted recipe cannot drift apart. It never edits the
+  corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation is in its module
+  docstring.
 - `test_merge_differential_parity.py` — the **MERGE INTO differential corpus** (H-2 gap G3,
   record-side). 10 rows (budget 8-10): basic upsert control, duplicate source keys (error-class
   `MERGE_CARDINALITY_VIOLATION` on both engines + insert-only that commits both rows),
@@ -1355,9 +1390,13 @@ NOT in that file is a defect, not a decision.
   landed by X-1. 10 rows (budget 8–10) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
   shuffle=2, `session.timeZone=UTC`): 5 shared-raise **error** equalities (malformed string→int /
   date, INT→TINYINT overflow, decimal narrowing overflow, DF `Column.cast` twin), 2 **try_cast**
-  NULL equalities (twins of the failing casts), 1 well-formed control equality, and **2 true
-  splits** under ANSI ON (DATE→INT: Spark `DATATYPE_MISMATCH` refuse vs repark days-since-epoch;
-  TIMESTAMP→INT: Spark unix-seconds vs repark Arrow Cast overflow). §0 re-verified that the slate
+  NULL equalities (twins of the failing casts), 1 well-formed control equality, **1 true
+  split** under ANSI ON (DATE→INT: Spark `DATATYPE_MISMATCH` refuse vs repark days-since-epoch)
+  and **1 nullability-only content disclosure** (TIMESTAMP→INT — was a repark-raises split until
+  the TZ-5 cast unit un-refused it, 2026-08-12: value/type now match Spark's unix-seconds int32;
+  repark propagates the literal's non-null where Spark types the CAST nullable; content-disclosure
+  classifier arms proven on this row, split arms kept proven via a synthetic exemplar).
+  §0 re-verified that the slate
   "non-ANSI NULL" premise narrowed under ANSI ON — fewer than 4 real divergences, not manufactured.
   Every content row asserts value AND Arrow type AND nullability via
   `repark_parity.assert_frames_equal`; error rows pin raise class + error needle (A7). Split
@@ -1571,6 +1610,8 @@ NOT in that file is a defect, not a decision.
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
 | Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a timestamp-cast differential row (registry TZ-5) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
+| Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a window-function differential row (gap G5) | `test_window_parity.py` (`ROWS`; record Spark half with `_record_window_goldens.py`, never by hand) |
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a nested-container differential row (gap G18) | `test_nested_container_parity.py` (`ROWS`; record Spark half with `_record_nested_container_goldens.py`, never by hand) |
@@ -1629,6 +1670,10 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a `test_session_timezone_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete the row — flip it to `repark=None` (equality) and record the convergence. Thirteen rows were flipped exactly this way when the extraction fix landed, and that flip is its revert-red evidence. |
 | an EQUALITY row in that module reds after an engine change | The extraction fix regressed. Check `crates/repark-functions/src/datetime.rs` (the coercion path) and `SparkExtension::configure` (the carrier install) before touching the row — the Rust pins in `crates/repark-spark/tests/session_timezone.rs` localize it faster than the facade does. |
 | a row reds saying "moved OFF its pinned disclosure ... regression" | repark matches neither half: re-derive both in record mode (`_record_session_timezone_goldens.py`) before touching the pin. |
+| a `test_timestamp_cast_parity.py` row reds with a value 10⁹ too large | the analyzer's `Expr::Cast` arm is not firing. It ships with the Spark door's `SessionExtension`, so check the session was built with it; a bare session legitimately keeps DataFusion's raw tick (pinned in `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`). |
+| a `test_timestamp_cast_parity.py` row reds by exactly ONE before 1970 | truncation toward zero crept back in. Spark FLOORS: check `seconds_floor_from_ticks` still uses `div_euclid` — an arrow `Timestamp(Second)` cast hop is the plausible "simplification" that reintroduces this, and only the negative FRACTIONAL rows catch it. |
+| `test_range_between_moving_average` reds with every window equal | its ORDER BY key is `date.cast("timestamp").cast("long")` — Spark's own spelling, and epoch SECONDS since the TZ-5 fix. It deliberately carries NO `/1e6` scale workaround any more; re-adding one reds it, which is the point (`task/tz5-cast-seconds-ledger.md` §9). |
+| a value-offset `rangeBetween` refuses a CAST order key | the guard resolves the key by NAME and a cast keeps its BASE column's projection name; `Column.over` treats a key as bare only when its spark display equals that name. Both sides are pinned in `test_g2_window_rand_sampleby.py` — do not widen one without the other. |
 | a `test_decimal128_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or raises the same ANSI class): do NOT delete — flip to equality / shared-raise and record the convergence. |
 | a decimal128 row reds saying regression | re-derive both halves with `_record_decimal128_goldens.py` before touching the pin. |
 | a `temporal_range` row reds | check WHICH half moved: an equality row means the interval-bounded path regressed (re-derive both halves); a disclosure means a residual class changed — flip it, do not delete it. `task/g5b-temporal-range-ledger.md` §6 names the follow-up per class |
