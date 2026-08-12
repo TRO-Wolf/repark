@@ -1221,6 +1221,29 @@ NOT in that file is a defect, not a decision.
   (`uv sync --locked --extra record --extra numpy --extra pandas --extra polars --extra ml-ext
   --no-install-package repark`) + network on first Ivy resolve. Invocation in its docstring and
   `task/n2b-merge-followup-ledger.md` re-derive block.
+- `test_dml_subquery_parity.py` — the **DELETE/UPDATE subquery-predicate corpus** (defect
+  **G3-E8**, guard-first half). 10 rows (budget 8-10): 8 **split** rows (repark refuses with the
+  G3-E8 valve's own needle `subquery predicates are silently mis-executed`; the Spark half is the
+  recorded post-DML table) covering DELETE x `IN` / `NOT IN` / `NOT IN` with a **NULL** in the
+  subquery / correlated `EXISTS` / `NOT EXISTS` / correlated `IN`, and UPDATE x `IN` / `NOT IN`
+  with a NULL — plus 2 **content equality controls** with non-subquery predicates so a broken
+  comparator cannot hide. The `*_with_null_key` rows pin SQL's three-valued-logic trap as live
+  Spark actually resolved it: `NOT IN` over a NULL-bearing subquery matches NOTHING, so the table
+  comes back unchanged. Every row runs create -> seed -> create key table -> seed -> DML -> read
+  back on a real Iceberg table (explicit DDL + INSERT, never CTAS) and asserts on the Arrow path
+  (value AND type AND nullability) through the parity comparator. Recorded against live PySpark
+  4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0` (record-time jar only). Split-path convergence
+  is CLASSIFIED (CONVERGED -> flip to content equality; commit-but-mismatch -> regression), and
+  the classifier is proven reachable in both arms. **The rows are the future fix's goldens**: when
+  the underlying defect is fixed, each split flips to `kind="content"`. See
+  `task/g3e8-guard-ledger.md`.
+- `_record_dml_subquery_goldens.py` — the **record driver** for the G3-E8 corpus (NOT a `test_`
+  module; never collected). Provisions Spark with the pinned Iceberg GAV + a local Hadoop
+  warehouse catalog, imports `ROWS` + the lifecycle helper from the committed test module, and
+  re-derives every Spark half. Exit 0 = bit-for-bit reproduce; never edits the corpus. Needs
+  zulu-17 + `uv sync --extra record` + network on the first Ivy resolve. Only ONE local Spark
+  driver at a time — check `pgrep -af 'pyspark|SparkSubmit'` (ignoring a standing container
+  cluster) before running. Invocation in its docstring and `task/g3e8-guard-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
   level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (12 equality
   controls + 12 disclosures) and 7 G13 rows (raise-class + nullability), recorded in record mode
@@ -1456,6 +1479,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the recorded Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_session_timezone_goldens.py` |
 | Add a MERGE INTO differential row (gap G3) | `test_merge_differential_parity.py` (`ROWS`; record Spark half with `_record_merge_differential_goldens.py`, never by hand) |
 | Re-derive the MERGE differential Spark halves (record mode) | First the parity-live sync line (`uv sync --locked --extra record --extra numpy --extra pandas --extra polars --extra ml-ext --no-install-package repark`), then `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_merge_differential_goldens.py` |
+| Add a DELETE/UPDATE subquery-predicate row (defect G3-E8) | `test_dml_subquery_parity.py` (`ROWS`; record the Spark half with `_record_dml_subquery_goldens.py`, never by hand) |
+| Re-derive the G3-E8 Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_dml_subquery_goldens.py` |
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |

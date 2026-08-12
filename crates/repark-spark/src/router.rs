@@ -36,9 +36,18 @@
 //! - **`TRUNCATE TABLE`** — targeted loud refuse (C4-L-001), verbatim from v1.
 //!
 //! Passthrough: `DELETE` / `UPDATE` / non-overwrite `INSERT INTO` ride DataFusion onto the fork
-//! provider's DML (ADR-0003) behind the P11 read-only-catalog refuse and the r22 A2 BUG-001
-//! merge-on-read multi-spec valve. Multi-statement SQL refuses first (BUG-010); the SEC-02
-//! local-filesystem DDL gate runs inside the passthrough.
+//! provider's DML (ADR-0003) behind the P11 read-only-catalog refuse, the **G3-E8
+//! subquery-predicate valve** (a `WHERE` subquery is lost at DataFusion's DML planning boundary
+//! and degenerates into match-all — see [`crate::normalize::refuse_dml_subquery_predicate`]), and
+//! the r22 A2 BUG-001 merge-on-read multi-spec valve. Multi-statement SQL refuses first
+//! (BUG-010); the SEC-02 local-filesystem DDL gate runs inside the passthrough.
+//!
+//! **This module's parse is NOT the executing parse.** [`parse_single_normalized`] uses
+//! `DatabricksDialect`; [`spark_ast::execute_passthrough`] re-parses under the session dialect
+//! and plans THAT. Any statement the first parse rejects reaches the second one through
+//! [`execute_unparsable_fallthrough`] — Spark's FROM-less `DELETE <table> WHERE …` is the live
+//! example. A DML data-loss guard must therefore attach at the executing parse (G3-E8 does; the
+//! arms below keep an early call only for valve ORDER), or it is fail-open by construction.
 
 use std::collections::HashSet;
 
@@ -48,13 +57,14 @@ use datafusion::sql::sqlparser::ast::{ObjectType, Statement, TableObject};
 use repark_core::CatalogRegistry;
 
 use crate::{
-    MorDmlKind, alter, build_ctas, call, create_table, delete_target_object_name, describe_show,
-    execute_create_namespace, execute_ctas, execute_drop_namespace, execute_drop_table,
-    execute_insert_overwrite, merge, metadata_tables, object_name_from_table_with_joins,
-    parse_single_normalized, passthrough_after_p11, ref_ddl,
-    refuse_mor_unpartitioned_multi_spec_dml, refuse_multi_statement_sql,
-    refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql, spark_ast,
-    starts_with_branch_or_tag_ddl, starts_with_merge, time_travel, try_parse_create_namespace,
+    DmlSubqueryVerb, MorDmlKind, alter, build_ctas, call, create_table, delete_target_object_name,
+    describe_show, execute_create_namespace, execute_ctas, execute_drop_namespace,
+    execute_drop_table, execute_insert_overwrite, merge, metadata_tables,
+    object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
+    refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
+    refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
+    spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
+    try_parse_create_namespace,
 };
 
 /// ===========================================================================================
@@ -249,33 +259,10 @@ async fn execute_inner(
             };
             passthrough_after_p11(ctx, catalogs, sql, refusal).await
         }
-        // DELETE/UPDATE passthrough would also miss P11 for pg targets (C2-L-001).
-        // r22 A2 / BUG-001: MoR + multi-spec history + current unpartitioned → refuse loud
-        // (fork DF position-delete unpartitioned fast path silent under-delete). MERGE untouched.
-        Statement::Delete(delete) => {
-            if let Some(message) = refuse_read_only_dml_from_delete(catalogs, delete) {
-                return Err(DataFusionError::Plan(message));
-            }
-            // ObjectName only — never TableWithJoins Display (aliases would under-refuse BUG-001).
-            refuse_mor_unpartitioned_multi_spec_dml(
-                catalogs,
-                delete_target_object_name(delete),
-                MorDmlKind::Delete,
-            )
-            .await?;
-            spark_ast::execute_passthrough(ctx, catalogs, sql).await
-        }
-        Statement::Update(update) => {
-            let object_name = object_name_from_table_with_joins(&update.table);
-            let table_sql =
-                object_name.map_or_else(|| update.table.to_string(), ToString::to_string);
-            if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
-                return Err(DataFusionError::Plan(message));
-            }
-            refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Update)
-                .await?;
-            spark_ast::execute_passthrough(ctx, catalogs, sql).await
-        }
+        // DELETE/UPDATE — the guarded passthrough; the valve chain lives in `execute_delete` /
+        // `execute_update` (kept out of this fn for clippy `too_many_lines`).
+        Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
+        Statement::Update(update) => execute_update(ctx, catalogs, sql, update).await,
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
         // Three procedures v1 (expire_snapshots / rewrite_data_files / rollback_to_snapshot);
         // unknown + remove_orphan_files refuse loud listing the supported set (C3-L-001 residual).
@@ -291,6 +278,72 @@ async fn execute_inner(
         )),
         _ => spark_ast::execute_passthrough(ctx, catalogs, sql).await,
     }
+}
+
+/// ===========================================================================================
+/// `DELETE FROM …` — the three valves, then the passthrough. Order is load-bearing:
+///
+/// 1. **P11** read-only-catalog refuse (C2-L-001): the most fundamental "you cannot write here at
+///    all"; a DELETE/UPDATE passthrough would otherwise miss it for postgres targets.
+/// 2. **G3-E8** subquery-predicate refuse: a subquery in the `WHERE` clause is lost at
+///    DataFusion's DML planning boundary and degenerates into match-all — silent whole-table
+///    deletion (see [`crate::normalize::refuse_dml_subquery_predicate`]).
+/// 3. **BUG-001** (r22 A2) merge-on-read + multi-spec history + currently-unpartitioned refuse
+///    (fork DF position-delete unpartitioned fast path silently under-deletes). MERGE untouched.
+///
+/// (2) precedes (3) because both are data-loss valves and (2) is a pure sync AST walk while (3)
+/// loads the target's Iceberg metadata (a network round-trip on Glue / S3 Tables) — cheap before
+/// expensive. Pinned by `tests::dml::g3e8_subquery_valve_precedes_the_mor_multi_spec_valve`, and
+/// mirrored on the ANSI door by `repark_sql`'s `mor_valve_runs_after_the_g3e8_valve`.
+///
+/// **(2) here is the EARLY call, not the load-bearing one.** The valve's authoritative attachment
+/// is inside [`spark_ast::execute_passthrough`], on the executing parse — the only parse that
+/// sees every DML route into DataFusion (F-A / panel L1 M-1). This call is kept solely so the
+/// cheap sync refusal wins the ORDER above; deleting it would not open the hole, it would only
+/// spend an Iceberg metadata load before refusing.
+/// ===========================================================================================
+async fn execute_delete(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    delete: &datafusion::sql::sqlparser::ast::Delete,
+) -> Result<DataFrame> {
+    if let Some(message) = refuse_read_only_dml_from_delete(catalogs, delete) {
+        return Err(DataFusionError::Plan(message));
+    }
+    // ObjectName only — never TableWithJoins Display (aliases would under-refuse BUG-001).
+    let object_name = delete_target_object_name(delete);
+    refuse_dml_subquery_predicate(
+        DmlSubqueryVerb::Delete,
+        delete.selection.as_ref(),
+        &object_name.map_or_else(|| "<table>".to_string(), ToString::to_string),
+    )?;
+    refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Delete).await?;
+    spark_ast::execute_passthrough(ctx, catalogs, sql).await
+}
+
+/// `UPDATE … SET …` — the same three valves in the same order as [`execute_delete`], reading the
+/// target from the `TableWithJoins` primary relation and the predicate from `Update::selection`.
+/// A subquery in a `SET` assignment is deliberately NOT gated (correct today, or a loud plan
+/// error — never silently wrong; see the G3-E8 valve's doc and `task/g3e8-guard-ledger.md`).
+async fn execute_update(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    sql: &str,
+    update: &datafusion::sql::sqlparser::ast::Update,
+) -> Result<DataFrame> {
+    let object_name = object_name_from_table_with_joins(&update.table);
+    let table_sql = object_name.map_or_else(|| update.table.to_string(), ToString::to_string);
+    if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
+        return Err(DataFusionError::Plan(message));
+    }
+    refuse_dml_subquery_predicate(
+        DmlSubqueryVerb::Update,
+        update.selection.as_ref(),
+        &table_sql,
+    )?;
+    refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Update).await?;
+    spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
 /// Pre-`parse_single_normalized` intercepts: ALTER (I6 residual + I7), CREATE/DESCRIBE/SHOW

@@ -31,7 +31,10 @@ notes, and per-tier operating manuals for this repo.
   argument change;
   [design/python-facade.md](design/python-facade.md): the phase-3 Python binding + facade +
   census design — ten edit classes, Q1–Q10 rulings, the census/acceptance procedure, the
-  seven-PR slate).
+  seven-PR slate;
+  [design/product-contract.md](design/product-contract.md): product-honesty contracts for
+  Catalog-API-only introspection (G3-E3), one-`sql()`-one-commit (G3-E4), and post-DDL
+  catalog visibility (G3-E7) — every claim cites a real test or pinned refusal).
 - [port/](port/map.md) — the V2 port plan ([port/PLAN.md](port/PLAN.md)): copy-then-re-home
   rules, the four phases, the census multiset acceptance gate, the v1-freeze trigger; and the
   recorded census procedure ([port/census.md](port/census.md)): the environment recipe, both
@@ -74,6 +77,7 @@ notes, and per-tier operating manuals for this repo.
 | Understand the phase-2 SQL doors / ANSI surface | [design/sql-doors.md](design/sql-doors.md) |
 | See why the frozen `SessionExtension` seam changed | [design/session-extension-conf-seam.md](design/session-extension-conf-seam.md) |
 | Understand the phase-3 port / census gate / edit classes | [design/python-facade.md](design/python-facade.md) |
+| See product contracts (list_tables / sql() boundary / post-DDL visibility) | [design/product-contract.md](design/product-contract.md) |
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
 | Run a census / compare two runs | [port/census.md](port/census.md) |
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
