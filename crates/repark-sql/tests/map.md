@@ -83,6 +83,15 @@ belongs out here is what must be observed from outside the crate.
   Spark divergence. Needs the same `repark-spark` dev-dep as `cross_door.rs`, for the same
   reason — the reverse edge does not exist, so this cell can only be built here.
 
+- `timestamp_cast_ansi_door.rs` — **TZ-5 (2026-08-12):** the ANSI-door cell of the
+  `CAST(TIMESTAMP AS <numeric>)` epoch-seconds matrix, built here for the same crate-DAG reason as
+  `session_timezone_ansi_door.rs`. On ONE Spark-extended session both doors scale a timestamp cast
+  to epoch SECONDS, value AND Arrow type, including the negative FRACTIONAL second where Spark
+  floors (`-0.5 s → -1`). Its second pin is the honest negative AND the class's revert-red
+  evidence: a bare, extension-free session still returns the raw nanosecond tick
+  (`-1800000000000`) — correct for a non-Spark session, and exactly what the Spark door returned
+  before the fix. Ledger: `../../../task/tz5-cast-seconds-ledger.md`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Spike record: `../../../docs/history/port-v2/p2f-ansi-m1-ledger.md`;

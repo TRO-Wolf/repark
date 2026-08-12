@@ -88,6 +88,13 @@ not this directory.
   differential Python rows (both disclosures: Spark 2.25/0.28125 vs repark 3.75/0.46875). Record
   driver. Does **not** edit `_live_parity.py` or the registry (A4/B6).
 
+- [tz5-cast-seconds-ledger.md](tz5-cast-seconds-ledger.md) — **TZ-5:** `CAST(TIMESTAMP AS
+  <numeric>)` returns epoch SECONDS (was nanoseconds — a 10⁹ factor). Live-Spark-4.1.2 probe
+  transcripts including the **floor-vs-truncate** verdict (Spark floors: `-0.5 s → -1`), the
+  engine fix (`repark_functions::timestamp_cast` + the analyzer's `Expr::Cast` arm), the
+  divergence-class flip and its per-entry-point corpus, six declared residuals, and the **§6
+  paste-true** registry text. Does **not** edit `docs/spark-sql-iceberg-parity.md`.
+
 ## Where the closed campaigns' ledgers went
 
 The seventeen `p1*` / `p2*` / `p3*` unit ledgers, the four phase briefs and the port's `todo.md`

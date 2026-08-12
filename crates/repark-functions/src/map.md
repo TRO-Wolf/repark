@@ -65,7 +65,14 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `array_element` onto the embedded `__repark_array_get__` UDF); swaps planner-embedded built-in
   `substr` nodes onto the Spark shim (the `SUBSTRING` special form bypasses the registry);
   **F2 octo C1:** `overlay(..., -1)` literal 4th arg dropped to 3-arg (Spark replace-length;
-  pin `overlay_len_minus_one_matches_three_arg`). Runs
+  pin `overlay_len_minus_one_matches_three_arg`);
+  **TZ-5 (2026-08-12):** `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS
+  (`rewrite_timestamp_to_numeric_cast` + `epoch_seconds_for_target`), pushing the scaling UNDER
+  the user's cast onto `timestamp_cast.rs`'s two embedded UDFs so the outer cast still applies the
+  requested width — the rewrite owns the *scale*, never the cast-FAILURE surface. Matched on the
+  SOURCE type, which is what makes it idempotent (its own output casts an `Int64`/`Float64`); the
+  reverse direction `CAST(<integer> AS TIMESTAMP)` was probed and is already correct, so it is
+  pinned as a fence rather than rewritten. Runs
   after the built-in analyzer rules (sees type-coerced plans, emits exactly-typed expressions,
   recomputes every node schema); every rewrite is **idempotent** — the passthrough analyzes
   eagerly and physical planning analyzes again. NB (Group L-write): running after `TypeCoercion`
@@ -96,6 +103,19 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   Q5/Q80/Q84 SQL `concat` on the Arrow path. Unit pins:
   `concat_register_all_overwrites_datafusion_spark` (name overwrite);
   `concat_array_any_null_propagates_per_row` (Apply null-mask path).
+- `timestamp_cast.rs` — **TZ-5 (2026-08-12):** the two embedded scaling UDFs `analyzer.rs` puts
+  under `CAST(TIMESTAMP AS <numeric>)`. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
+  integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
+  `-1` and `-1.25 s` is `-2`; truncation toward zero agrees on every positive instant and every
+  whole negative second, so a negative FRACTIONAL second is the only input that catches it.
+  `__repark_epoch_seconds_real__` (→ `Float64`) serves `DOUBLE`/`FLOAT`/`DECIMAL`, which keep the
+  fraction (Spark computes its own decimal cast through a double). Two UDFs and not one is a
+  correctness requirement: a decimal intermediate loses the floor edge to arrow's truncating
+  decimal→int cast, and an f64 one cannot floor a sub-microsecond present-day instant (f64 resolves
+  ~2e-7 s there). Per-`TimeUnit` divisor (`createDataFrame` gives `timestamp[us]`, `to_timestamp`
+  gives `timestamp[ns]`); nullability propagated via `return_field_from_args`; embedded, never
+  registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and three siblings here, plus
+  the door-layer files named in `task/tz5-cast-seconds-ledger.md` §4.
 - `collection.rs` — `SparkElementAt` (`element_at`; audit #15 — previously an alias of
   `map_extract`, broken on every array): arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
