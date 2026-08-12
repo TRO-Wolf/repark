@@ -875,10 +875,13 @@ NOT in that file is a defect, not a decision.
 - `test_catalog_surface.py` — **R-CURCAT-FACADE** (closes G-INT INT-004 follow-up). Pins
   `tableExists` (3-part + **2-part under currentCatalog** + 1-part under currentDatabase + temps),
   `currentCatalog`/`setCurrentCatalog`/`currentDatabase`/`setCurrentDatabase`,
-  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists` (+ snake_case), namedtuple field
-  shapes (`Database`/`Table`/`CatalogMetadata`), `spark.sql.defaultCatalog` seed, CATALOG_NOT_FOUND
-  / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`), multi-catalog
-  isolation, non-str → PySparkTypeError. Remaining divergences rowed as
+  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists`/`getDatabase` (+ snake_case),
+  namedtuple field shapes (`Database`/`Table`/`CatalogMetadata`), `spark.sql.defaultCatalog` seed,
+  CATALOG_NOT_FOUND / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`),
+  multi-catalog isolation, non-str → PySparkTypeError. **Y-3:** `getDatabase` value/shape
+  (bare + qualified + `spark_catalog` alias), real `locationUri`/`description` when set,
+  missing-namespace `SCHEMA_NOT_FOUND` needle + class, FA-2 `listDatabases` still None.
+  Remaining divergences rowed as
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
@@ -1557,9 +1560,9 @@ NOT in that file is a defect, not a decision.
   location) + the `deduplicate` row_number transform. **G-6 location-mismatch guard (Glue):**
   `normalize_location_uri`, `assert_namespace_location_matches` (exact equality after trailing-slash
   strip; match / mismatch / no-location all fail-loud with both values + the operator fix),
-  `location_from_describe_rows`, `probe_namespace_location_via_describe` (SQL
-  `DESCRIBE NAMESPACE` — the bounded live-read path; zero engine change), and
-  `assert_glue_scratch_namespace_location`. **A2 second bullet:** `s3tables_catalog_config`
+  `location_from_describe_rows`, `probe_namespace_location_via_describe` (DESCRIBE-row
+  unit helper; retired as the live path), and `assert_glue_scratch_namespace_location`
+  (**Y-3:** reads `spark.catalog.getDatabase(…).locationUri`). **A2 second bullet:** `s3tables_catalog_config`
   (S3TablesCatalog impl, ARN as `warehouse` → RePark's `table_bucket_arn`) + the non-secret
   `S3TABLES_CATALOG` name — the table-bucket ARN is a RUNTIME arg from `TABLE_BUCKET_ARN`, never a
   committed literal.
@@ -1570,7 +1573,8 @@ NOT in that file is a defect, not a decision.
   namespace guard, a structural guard that `test_aws_acceptance.py` carries no `DROP TABLE`/`DELETE
   FROM`/`DROP NAMESPACE`, the `deduplicate` transform against a memory session (newest row per id),
   and the G-6 location-mismatch guard's pure comparison edges (match, mismatch naming both values,
-  no-location, DESCRIBE-row extraction).
+  no-location, DESCRIBE-row extraction). **Y-3:** Glue wrapper stub drives `getDatabase`;
+  AST pin that the wrapper calls `getDatabase` (not DESCRIBE).
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
@@ -1578,8 +1582,8 @@ NOT in that file is a defect, not a decision.
   (entity/ds/id-col from `REPARK_ACCEPT_ENTITY`/`_DS`/`_ID_COL`), the dedup transform, then
   namespace-create (programmatic `spark.create_namespace(..., location=…)` — ADV-1, since SQL
   `CREATE NAMESPACE` without `LOCATION` would omit the `location` a real Glue catalog requires (SQL `LOCATION` works too since WG-5); idempotent on an
-  "already exists") → **G-6: `assert_glue_scratch_namespace_location`** (DESCRIBE NAMESPACE read +
-  exact match to the intended warehouse path; fail loud on stale LocationUri) →
+  "already exists") → **G-6: `assert_glue_scratch_namespace_location`** (`getDatabase.locationUri`
+  + exact match to the intended warehouse path; fail loud on stale LocationUri) →
   `tableExists`→CTAS-or-MERGE → idempotent second MERGE into `testing_repark_acceptance`.
   Oracles: bronze rows > 0, published == deduped (fresh CTAS), second pass count unchanged. NO
   DROP/DELETE of any AWS object — cleanup is the user's manual call. **A2 second bullet
@@ -1606,7 +1610,7 @@ NOT in that file is a defect, not a decision.
 | Add H2 Group H long-tail / wrap-display / same-object self-join pins | `test_h2_group_h2.py` |
 | Add a catalog / publish-path test | `test_catalog_flow.py` |
 | Add interchange (`toPandas` / `createDataFrame` / `to_polars`) parity | `test_interchange_parity.py` (G-INT) |
-| Add a Catalog API surface / missing-method divergence pin | `test_catalog_surface.py` (G-INT) |
+| Add a Catalog API surface / missing-method divergence pin | `test_catalog_surface.py` (G-INT; Y-3 `getDatabase`) |
 | Add a `DESCRIBE NAMESPACE` / namespace-metadata-readback test | `test_describe_namespace.py` |
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |

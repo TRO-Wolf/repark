@@ -4,6 +4,9 @@ Oracle: live PySpark 4.1.2 (zulu-17) measured 2026-07-27 (G-INT) and re-measured
 (overnight N1). Live V2 shapes:
 
 * ``listDatabases()`` → list of Database(name, catalog, description, locationUri)
+* ``getDatabase(db)`` → one Database; ``locationUri`` / ``description`` filled from namespace
+  metadata (unlike listDatabases FA-2); missing schema → AnalysisException SCHEMA_NOT_FOUND;
+  bare and ``catalog.db`` (incl. ``spark_catalog`` alias) spellings
 * ``listTables(db)`` → list of Table(name, catalog, namespace as list[str], description,
   tableType, isTemporary); missing schema → AnalysisException SCHEMA_NOT_FOUND; temps always
   included
@@ -98,6 +101,8 @@ def test_catalog_facade_public_surface() -> None:
         "current_database",
         "databaseExists",
         "database_exists",
+        "getDatabase",
+        "get_database",
         "dropTempView",
         "drop_temp_view",
         "listCatalogs",
@@ -162,6 +167,8 @@ def test_set_current_catalog_and_database_reject_non_str(spark: ReparkSession) -
         spark.catalog.setCurrentDatabase(123)  # type: ignore[arg-type]
     with pytest.raises(PySparkTypeError, match="dbName"):
         spark.catalog.databaseExists(None)  # type: ignore[arg-type]
+    with pytest.raises(PySparkTypeError, match="dbName"):
+        spark.catalog.getDatabase(None)  # type: ignore[arg-type]
     with pytest.raises(PySparkTypeError, match="tableName"):
         spark.catalog.tableExists(None)  # type: ignore[arg-type]
 
@@ -226,6 +233,64 @@ def test_database_exists(spark: ReparkSession) -> None:
     assert spark.catalog.database_exists("ns2") is True
     assert spark.catalog.databaseExists("nope_db") is False
     assert spark.catalog.databaseExists("glue_catalog.ns1") is True
+
+
+def test_get_database_bare_and_qualified_shape(spark: ReparkSession) -> None:
+    """getDatabase field shape (live 4.1.2 Database); bare and qualified spellings agree.
+
+    A LOCATION-less namespace has ``locationUri is None`` / ``description is None`` — Spark's
+    ``makeDatabase`` uses ``orNull`` when ``comment`` / ``location`` metadata is absent.
+    """
+    spark.catalog.setCurrentCatalog("glue_catalog")
+    bare = spark.catalog.getDatabase("ns1")
+    qualified = spark.catalog.get_database("glue_catalog.ns1")
+    expected = Database(name="ns1", catalog="glue_catalog", description=None, locationUri=None)
+    assert bare == expected
+    assert qualified == expected
+    assert bare._fields == ("name", "catalog", "description", "locationUri")
+    aliased = spark.catalog.getDatabase("spark_catalog.ns1")
+    assert aliased == expected
+
+
+def test_get_database_returns_location_and_comment(tmp_path: Path) -> None:
+    """getDatabase fills locationUri/description; listDatabases stays FA-2 (None)."""
+    spark = ReparkSession.builder.appName("pytest-getdatabase-loc").getOrCreate()
+    try:
+        spark.register_memory_catalog("glue_catalog", tmp_path)
+        spark.sql(
+            "CREATE NAMESPACE glue_catalog.located COMMENT 'y3 comment' "
+            "LOCATION 's3://bucket/y3/located'"
+        )
+        spark.catalog.setCurrentCatalog("glue_catalog")
+        db = spark.catalog.getDatabase("located")
+        assert db == Database(
+            name="located",
+            catalog="glue_catalog",
+            description="y3 comment",
+            locationUri="s3://bucket/y3/located",
+        )
+        qualified = spark.catalog.getDatabase("glue_catalog.located")
+        assert qualified == db
+        for listed in spark.catalog.listDatabases():
+            if listed.name == "located":
+                assert listed.locationUri is None
+                assert listed.description is None
+    finally:
+        spark.stop()
+
+
+def test_get_database_missing_raises_schema_not_found(spark: ReparkSession) -> None:
+    """Missing namespace: AnalysisException class + SCHEMA_NOT_FOUND needle (bare + qualified)."""
+    spark.catalog.setCurrentCatalog("glue_catalog")
+    with pytest.raises(AnalysisException) as bare:
+        spark.catalog.getDatabase("no_such_ns_xyz")
+    assert "[SCHEMA_NOT_FOUND]" in str(bare.value)
+    assert "no_such_ns_xyz" in str(bare.value)
+
+    with pytest.raises(AnalysisException) as qualified:
+        spark.catalog.getDatabase("glue_catalog.no_such_ns_xyz")
+    assert "[SCHEMA_NOT_FOUND]" in str(qualified.value)
+    assert "no_such_ns_xyz" in str(qualified.value)
 
 
 def test_set_current_database(spark: ReparkSession) -> None:
