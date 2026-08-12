@@ -734,6 +734,7 @@ class DataFrame:
         "_mia_plan_ready",
         "_mia_temp_views",
         "_origin_map",
+        "_origin_not_emitted",  # right-side plan ids a semi/anti join did not emit
         "_persist_requested",
         "_plan_id",
         "_session",
@@ -790,6 +791,7 @@ class DataFrame:
         self._display_names: list[str] | None = None
         self._engine_names: list[str] | None = None
         self._origin_map: dict[tuple[str, str], str] | None = None
+        self._origin_not_emitted: frozenset[str] = frozenset()
         # === r23b N2: plan-collapse ===
         self._collapse_base: DataFrame | None = None
         self._layer_window_key: tuple[Any, ...] | None = None
@@ -807,10 +809,12 @@ class DataFrame:
         Children do **not** inherit the parent's cache mark (object-identity caching only —
         Spark plan-matching cache is out of scope; disclosed in the unit ledger).
         Identity maps (H1) are **not** copied here — plan-preserving children use
-        :meth:`_spawn_preserving_identity`.
+        :meth:`_spawn_preserving_identity`. Semi/anti unemitted-origin ids **are**.
         """
         self._ensure_alive()
-        return DataFrame(inner, self._session, self._alive_token)
+        child = DataFrame(inner, self._session, self._alive_token)
+        child._origin_not_emitted = self._origin_not_emitted
+        return child
 
     def _spawn_preserving_identity(self, inner: Any) -> DataFrame:
         """Spawn a child that keeps H1 display/engine/origin maps (filter / limit / cache).
@@ -3644,6 +3648,45 @@ class DataFrame:
             ]
         return [self._bind_schema_column(name) for name in self.columns]
 
+    def _origin_plan_ids(self) -> frozenset[str]:
+        """Plan ids this frame can still attribute (own id + nested origin-map keys)."""
+        ids = {self._plan_id}
+        if self._origin_map is not None:
+            ids.update(plan_id for plan_id, _field in self._origin_map)
+        return frozenset(ids)
+
+    def _remember_unemitted_right_origins(self, left: DataFrame, right: DataFrame) -> None:
+        """Record right-side origin plan ids a semi/anti join did not emit (G4b-R2)."""
+        exclusive = right._origin_plan_ids() - left._origin_plan_ids()
+        if exclusive:
+            self._origin_not_emitted = self._origin_not_emitted | exclusive
+
+    def _raise_if_origin_not_emitted(self, plan_id: str | None, field: str | None) -> None:
+        """Raise Spark 4.1.2 ``MISSING_ATTRIBUTES`` when ``plan_id`` was not emitted."""
+        if plan_id is None or plan_id not in self._origin_not_emitted:
+            return
+        name = field if field is not None else "<unknown>"
+        available = ", ".join(f'"{column}"' for column in self.columns)
+        quoted = f'"{name}"'
+        if name in self.columns:
+            raise AnalysisException(
+                f"[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION] "
+                f"Resolved attribute(s) {quoted} missing from {available} in operator "
+                f"!Project. Attribute(s) with the same name appear in the operation: "
+                f"{quoted}. Please check if the right attribute(s) are used."
+            )
+        raise AnalysisException(
+            f"[MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT] "
+            f"Resolved attribute(s) {quoted} missing from {available} in operator !Project."
+        )
+
+    def _raise_unemitted_qcol_tokens(self, join_sql: str) -> None:
+        """Refuse QCOL tokens whose plan id is in :attr:`_origin_not_emitted`."""
+        if not self._origin_not_emitted or "__REPARK_QCOL_" not in join_sql:
+            return
+        for match in _QCOL_TOKEN_RE.finditer(join_sql):
+            self._raise_if_origin_not_emitted(match.group(1), _decode_qcol_field(match.group(2)))
+
     def _rebind_origin_column(self, column: Column) -> Column:
         """Rebind a parent-origin Column onto this frame's engine field (H1).
 
@@ -3651,7 +3694,14 @@ class DataFrame:
         ``_origin_map``. Compounds that *carry* origin only for multi-name select identity
         (e.g. fillna ``coalesce``) must keep their native expr — rebinding would strip the
         op (octo H1-C2-003). Filter uses join_sql QCOL rewrite for comparison compounds.
+
+        G4b-R2: a right-side origin after a semi/anti join is not in the output — raise
+        Spark's ``MISSING_ATTRIBUTES`` class rather than name-falling back to the left.
         """
+        self._raise_if_origin_not_emitted(column._origin_plan_id, column._origin_field)
+        join_sql = column._join_sql_expr
+        if join_sql is not None:
+            self._raise_unemitted_qcol_tokens(join_sql)
         if (
             column._origin_plan_id is None
             or column._origin_field is None
@@ -3660,7 +3710,6 @@ class DataFrame:
             return column
         # Only pure leaf refs: join_sql is absent, a bare QCOL token, or a quoted ident.
         # ``coalesce(...)`` / ``CAST(...)`` / binary ops keep native + origin for select.
-        join_sql = column._join_sql_expr
         if join_sql is not None:
             stripped = join_sql.strip()
             pure_qcol = stripped.startswith("__REPARK_QCOL_") and stripped.endswith("__")
@@ -4741,7 +4790,8 @@ class DataFrame:
         An absent name is a no-op. A :class:`Column` argument drops by its resolved
         field name (simple ``col("x")`` / ``df.x`` form). H1: when the Column carries
         origin identity and this frame has an origin map (post-join), drop targets the
-        correct side's engine field only — not every display-name match.
+        correct side's engine field only — not every display-name match. G4b-R2: drop of
+        an unemitted semi/anti right origin is a Spark 4.1.2 no-op.
         """
         # === r20 H1: join/identity ===
         engine_drop: list[str] = []
@@ -4750,12 +4800,15 @@ class DataFrame:
                 isinstance(item, Column)
                 and item._origin_plan_id is not None
                 and item._origin_field is not None
-                and self._origin_map is not None
             ):
-                key = (item._origin_plan_id, item._origin_field)
-                if key in self._origin_map:
-                    engine_drop.append(self._origin_map[key])
+                if item._origin_plan_id in self._origin_not_emitted:
+                    # Live Spark 4.1.2: drop(right["k"]) after leftsemi/leftanti is a no-op.
                     continue
+                if self._origin_map is not None:
+                    key = (item._origin_plan_id, item._origin_field)
+                    if key in self._origin_map:
+                        engine_drop.append(self._origin_map[key])
+                        continue
             name = self._name_of(item)
             if self._display_names is not None and self._engine_names is not None:
                 # Name-based: drop every engine field whose display matches.
@@ -4842,7 +4895,8 @@ class DataFrame:
         the name-key and the :class:`Column`-condition path. NULL join keys never match
         (``NULL = NULL`` is unknown), so semi drops a NULL-keyed left row and anti keeps it. A
         semi/anti join with ``on=None`` is refused loud rather than silently degraded to a
-        Cartesian product, which is a different result set (see the raise below).
+        Cartesian product, which is a different result set (see the raise below). G4b-R2:
+        a right-parent Column after semi/anti raises ``MISSING_ATTRIBUTES``; ``drop`` is a no-op.
 
         H1 (Group H): condition joins rewrite origin-qualified Column refs to relation-qualified
         SQL (``"alias"."field"``) so self-joins and duplicate non-key names resolve; output
@@ -4916,7 +4970,10 @@ class DataFrame:
             left = self
             right = other
         if isinstance(on, str):
-            return left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how))
+            child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how))
+            if engine_how in _SEMI_JOIN_HOWS:
+                child._remember_unemitted_right_origins(self, other)
+            return child
         if isinstance(on, (list, tuple)) and all(isinstance(key, str) for key in on):
             # octo C3-Q-001: empty key list is a cartesian product — same gate as on=None
             # (vacuous all-str would otherwise call join_on_names([]) and skip the conf check).
@@ -4928,7 +4985,10 @@ class DataFrame:
                         "If this is intended, set spark.sql.crossJoin.enabled=true to allow them."
                     )
                 return left.crossJoin(right)
-            return left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how))
+            child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how))
+            if engine_how in _SEMI_JOIN_HOWS:
+                child._remember_unemitted_right_origins(self, other)
+            return child
         raise PySparkTypeError(
             "join `on` expects a column name, a list of names, or a Column, "
             f"got {type(on).__name__}"
@@ -5044,6 +5104,8 @@ class DataFrame:
             child._display_names = display_names
             child._engine_names = engine_names
             child._origin_map = origin_map
+            if left_only:
+                child._remember_unemitted_right_origins(self, other)
             return child
         finally:
             self._session.drop_temp_view(left_alias)
@@ -7921,6 +7983,7 @@ def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame) -> str:
     def _replace(match: re.Match[str]) -> str:
         plan_id = match.group(1)
         field = _decode_qcol_field(match.group(2))
+        frame._raise_if_origin_not_emitted(plan_id, field)
         engine = origin_map.get((plan_id, field))
         if engine is None:
             return match.group(0)

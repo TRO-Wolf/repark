@@ -1341,8 +1341,13 @@ NOT in that file is a defect, not a decision.
   the refusal-message contents, and the declared **conditionless divergence**: `on=None` /
   `on=[]` with a semi `how` refuses loud rather than falling through to the facade's Cartesian
   path, which would answer an m×n cross join. A guard test pins that the refusal did NOT widen
-  into `how='inner'`. Live-Spark behaviour for the diverging case is recorded in
-  `task/g4b-join-widening-ledger.md`.
+  into `how='inner'`. **G4b-R2 / Y-5:** right-parent `select`/`filter`/`withColumn` after
+  semi/anti raise Spark 4.1.2 `MISSING_ATTRIBUTES` (same-name
+  `RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`; distinct-name
+  `RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT`); `drop(right[…])` is the probed Spark no-op;
+  left refs still resolve; inner-join origin resolution is a regression guard. Ledger:
+  `task/y5-origin-map-ledger.md`. Live-Spark behaviour for the conditionless divergence is
+  recorded in `task/g4b-join-widening-ledger.md`.
 - `_record_join_goldens.py` — the **record driver** for the joins corpus (NOT a `test_` module;
   never collected). Imports `ROWS` + lifecycle helpers from the committed test module and
   re-derives every Spark half (content / error needle / split success) under order-insensitive
@@ -1642,7 +1647,8 @@ NOT in that file is a defect, not a decision.
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
-| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
+| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 origin-map pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
+| Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_distinct_name_*`) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a timestamp-cast differential row (registry TZ-5) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
 | Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
@@ -1730,6 +1736,8 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | joins budget pin reds | G4 must stay 20–30 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥6 DF content rows, and (G4b) the DF semi family on both the name/list-key and Column-condition paths plus both NULL-key edges; restore the name-gated families rather than greening them with controls. |
 | a `df_left_semi_*` / `df_left_anti_*` row reds | the G4b DataFrame semi binding regressed. Localize in Rust first (`crates/repark-python/tests/bindings.rs` `join_on_names_left_semi_*` / `_left_anti_*` / `_semi_family_never_merges_a_key_column`), then the facade alias map + `_join_on_condition_h1` left-only projection in `python/repark/src/repark/dataframe/core.py`. Re-splitting the row to green it is a laundered regression, and `test_join_row_set_covers_g4_budget` reds on it. |
 | `test_g4b_semi_join.py` conditionless test reds | the semi/anti `on=None` / `on=[]` guard stopped firing, so a conditionless semi join now falls through to the Cartesian path and answers an m×n cross join instead of Spark's rows. Restore the `_SEMI_JOIN_HOWS` guard in `DataFrame.join`; do not relax the test. |
+| `test_right_ref_select_*` reds with left `k` values | the G4b-R2 origin map lost join-type awareness — `select(right["k"])` name-fell-back to the left column. Restore `_remember_unemitted_right_origins` on both the name-key and H1 condition paths; do not special-case `select` alone. |
+| `test_right_ref_drop_is_spark_noop` reds by dropping `k` | `drop(right["k"])` fell through to name-drop of the left column. The unemitted-origin branch must `continue` (Spark 4.1.2 no-op), not raise and not name-drop. |
 | a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
 | a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
 | cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
