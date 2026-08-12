@@ -1334,6 +1334,22 @@ NOT in that file is a defect, not a decision.
   ANSI ON + UTC. Exit 0 = every recorded half still reproduces; never edits the corpus. Needs
   zulu-17 + `uv sync --extra record`. Invocation in its docstring and
   `task/x1-cast-failure-ledger.md`. Serialize via `/tmp/grok-jvm-record.lock`.
+- `test_three_valued_logic_parity.py` — the **three-valued logic differential corpus** (H-2 gap
+  G12), landed by X-2. 12 rows (budget 10–12): six load-bearing AND/OR/NOT truth-table combos
+  (name-gated `and_*`/`or_*`/`not_*`); `NULL = NULL` vs `NULL <=> NULL`; `IS [NOT] NULL` vs
+  `= NULL`; `CASE WHEN <null-predicate>`; one SELECT-level `IN (…, NULL)` (DML NOT-IN family is
+  **PR #54 in flight** / G3-E8 — not duplicated); facade `sql()` primary + ≥2 DataFrame-API
+  `eqNullSafe` / `&|~` rows (CP-11, name-gated `df_*`). 10 equalities + 2 disclosures (null-safe
+  equal result nullability: Spark non-null bool vs repark nullable bool — value agrees). Every
+  content row asserts value AND Arrow type AND nullability on the `to_arrow` path; disclosure
+  failures CLASSIFIED CONVERGED vs regression; both classifier arms proven by monkeypatch.
+  Ledger: `task/x2-tvl-ledger.md` (§6 paste-true registry rows; registry file not edited).
+- `_record_tvl_goldens.py` — the **record driver** for the TVL corpus (NOT a `test_` module; never
+  collected). Imports `ROWS` + lifecycle helpers from the committed test module; re-derives every
+  Spark half under the parity comparator; `--emit` prints paste-ready `_table`/`_one_row`
+  snippets. Exit 0 = bit-for-bit reproduce; never edits the corpus. Needs zulu-17 +
+  `uv sync --extra record`. Serialize via `/tmp/grok-jvm-record.lock`. Invocation in its docstring
+  and `task/x2-tvl-ledger.md`.
 - `_live_parity.py` — the **live oracle tier** shared registry (NOT a `test_` module — a helper,
   never collected). Two recipe kinds:
   1. **Single-shot** (`Scenario` / `SCENARIOS`, **42** goldens): Group E group-agg/na/union +
@@ -1510,6 +1526,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a cast-failure differential row (gap G6) | `test_cast_failure_parity.py` (`ROWS`; record Spark half with `_record_cast_failure_goldens.py`, never by hand) |
 | Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a three-valued-logic differential row (gap G12) | `test_three_valued_logic_parity.py` (`ROWS`; record Spark half with `_record_tvl_goldens.py`, never by hand) |
+| Re-derive the TVL Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_tvl_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1565,6 +1583,8 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a `test_nested_container_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark list/struct/map output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
 | a nested-container row reds saying regression | re-derive both halves with `_record_nested_container_goldens.py` before touching the pin. |
 | nested budget pin reds | G18 must stay 4–6 rows, ≥2 equalities, ≥2 disclosures, ≥1 `*struct*`, ≥1 `*map*`, ≥2 `*array*`/`*collect_list*`; restore families rather than greening with controls. |
+| a `test_three_valued_logic_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (incl. null-safe-eq nullability): do NOT delete — flip to equality (`repark=None`) and record the convergence. |
+| a TVL row reds saying regression | re-derive both halves with `_record_tvl_goldens.py` before touching the pin. |
 | window budget pin reds | G5 must stay 20-28 rows, min 6 equalities, max 22 disclosures, ≥3 `default_frame_*`, ROWS-vs-RANGE, ranking/offset/nulls families, ≥2 `dataframe_api` rows; restore controls rather than deleting families. |
 | decimal128 budget pin reds | G2 must stay 20-26, G13 6-8, CTAS exactly 3, min 8 equalities, max 20 disclosures, and ≥3 `*clamps_scale_in_spark` rows; restore the control equalities / clamp family rather than converting them to disclosures or deleting them behind a non-clamp `DECIMAL(38,…)` control. |
 | a `test_join_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or DF semi/anti starts succeeding): do NOT delete — flip to content equality and record the convergence. |

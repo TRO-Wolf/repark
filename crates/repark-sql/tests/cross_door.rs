@@ -26,7 +26,9 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, Decimal128Array, Int64Array, StringArray};
+use datafusion::arrow::array::{
+    Array, BooleanArray, Decimal128Array, Int32Array, Int64Array, StringArray,
+};
 use datafusion::arrow::datatypes::{DataType, Field};
 use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
@@ -806,4 +808,142 @@ async fn cross_door_g3e8_refusals_render_identically() {
              otherwise pass the assertion above): {ansi_refusal}"
         );
     }
+}
+
+// =================================================================================================
+// G12 — three-valued logic cross-door rows (same SQL through both doors; type + nullability + value)
+// =================================================================================================
+
+/// One-column Boolean result: `(DataType, nullable, Option<bool>)`.
+///
+/// Goldens derive from the Python G12 corpus equality rows (`and_true_null_is_null` and the
+/// `eq` half of `null_eq_vs_null_safe_eq`). `<=>` is Spark-only — deliberately not used here so
+/// both doors share one portable SQL string.
+async fn boolean_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<bool>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let data_type = field.data_type().clone();
+    let nullable = field.is_nullable();
+    assert_eq!(
+        data_type,
+        DataType::Boolean,
+        "expected Boolean for `{sql}`, got {data_type:?}"
+    );
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .expect("BooleanArray");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (data_type, nullable, value)
+}
+
+/// One-column Int32 result: `(DataType, nullable, Option<i32>)`.
+///
+/// Used by the CASE-WHEN null-predicate cross-door row (corpus `case_when_null_predicate`).
+async fn int32_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<i32>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let data_type = field.data_type().clone();
+    let nullable = field.is_nullable();
+    assert_eq!(
+        data_type,
+        DataType::Int32,
+        "expected Int32 for `{sql}`, got {data_type:?}"
+    );
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("Int32Array");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (data_type, nullable, value)
+}
+
+/// G12 cross-door row 1 — TRUE AND NULL → NULL. Corpus row `and_true_null_is_null`.
+///
+/// Same SQL string through native ANSI and Spark-extended doors. Asserts Boolean type +
+/// nullability + value are equal across doors, and match the recorded Spark golden
+/// (nullable bool NULL).
+#[tokio::test]
+async fn cross_door_tvl_true_and_null_is_null() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT (TRUE AND CAST(NULL AS BOOLEAN)) AS v";
+
+    let ansi_pin = boolean_scalar(&ansi.session, sql).await;
+    let spark_pin = boolean_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "TRUE AND NULL must agree across doors (type + nullability + value)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (DataType::Boolean, true, None),
+        "shared result must match corpus row and_true_null_is_null"
+    );
+}
+
+/// G12 cross-door row 2 — CASE WHEN null-predicate falls through. Corpus
+/// `case_when_null_predicate`.
+///
+/// Portable ANSI/Spark SQL (no `<=>`). UNKNOWN WHEN does not match → next WHEN TRUE → 2.
+/// Asserts Int32 type + nullability + value across doors.
+#[tokio::test]
+async fn cross_door_tvl_case_when_null_predicate() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CASE \
+                 WHEN CAST(NULL AS BOOLEAN) THEN CAST(1 AS INT) \
+                 WHEN TRUE THEN CAST(2 AS INT) \
+                 ELSE CAST(3 AS INT) \
+               END AS v";
+
+    let ansi_pin = int32_scalar(&ansi.session, sql).await;
+    let spark_pin = int32_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "CASE WHEN null-predicate must agree across doors (type + nullability + value)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (DataType::Int32, false, Some(2)),
+        "shared result must match corpus row case_when_null_predicate"
+    );
 }

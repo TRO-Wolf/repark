@@ -54,7 +54,10 @@ belongs out here is what must be observed from outside the crate.
   session cannot do this job, **G-7b decimal128** (`cross_door_decimal_add_same_precision_scale_bit_exact`,
   `cross_door_decimal_mul_money_by_quantity_bit_exact` — same SQL through both doors, schema +
   nullability + raw i128 equal; corpus rows `add_same_precision_scale` /
-  `mul_money_by_quantity`), and — added 2026-08-11 —
+  `mul_money_by_quantity`), **G12 three-valued logic** (`cross_door_tvl_true_and_null_is_null`,
+  `cross_door_tvl_case_when_null_predicate` — portable SQL, Boolean/Int32 type + nullability +
+  value equal across doors; corpus rows `and_true_null_is_null` / `case_when_null_predicate`;
+  no Spark-only `<=>`), and — added 2026-08-11 —
   `cross_door_g3e8_refusals_render_identically`, which compares a **rendered refusal string**
   rather than a result: the G3-E8 valve is implemented twice (no door→door product edge), and
   this is the only pin that can see the two copies drift, including the rendered TARGET that the
