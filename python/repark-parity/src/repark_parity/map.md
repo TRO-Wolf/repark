@@ -10,7 +10,9 @@ The `repark_parity` package — the parity comparison core. See [../../map.md](.
   comparison). The schema signature is `(name, type, nullable)` per field — **field nullability is
   part of the parity contract** (Spark's non-null guarantees, e.g. `coalesce` with a non-null
   fallback / `row_number`, are reproduced by the engine; verified empirically to keep every existing
-  parity case green — closes the residual that nullability was ignored).
+  parity case green — closes the residual that nullability was ignored). **G18:** order-insensitive
+  path accepts nested list/struct/map columns via total canonical row keys + map entry
+  normalization; flat schemas keep the historical `sort_by` path (no golden re-record).
 - `__init__.py` — public exports. `py.typed` — typed marker.
 
 ## Pointers

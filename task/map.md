@@ -31,6 +31,10 @@ not this directory.
   corpus vs live Spark (value AND Arrow type AND nullability); record driver; §6 paste-true
   registry rows. Does **not** edit `docs/spark-sql-iceberg-parity.md`.
 - [w4-windows-ledger.md](w4-windows-ledger.md) — **live** W-4 window-function corpus (gap G5) unit ledger
+- [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) — **in flight (X-5 / H-2 gap G18):**
+  nested order-insensitive comparator + 6 nested-container differential rows vs live Spark;
+  record driver; §6 paste-true registry rows. Does **not** edit
+  `docs/spark-sql-iceberg-parity.md`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -86,6 +90,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — items 1+4 in PR #50; items 2+3 (lifecycle live + 13 tz live scenarios) in the second PR. Full N-2b closed only when **both** PRs land. |
+| [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) | **X-5 / G18** nested comparator + nested-container corpus (Part 1+2) |
 
 ## I want to...
 
@@ -104,6 +109,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the decimal128 differential corpus ledger (Python half) | [../docs/history/hardening-h1/g7-decimal-ledger.md](../docs/history/hardening-h1/g7-decimal-ledger.md) |
 | Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
+| Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |

@@ -1282,6 +1282,16 @@ NOT in that file is a defect, not a decision.
   Spark half on live PySpark 4.1.2 (`local[2]`, ANSI on, shuffle=2). `--emit` prints paste-ready
   `_table(...)` snippets. Exit 0 = bit-for-bit reproduce; never edits the corpus. Needs zulu-17 +
   `uv sync --extra record`. Invocation in its docstring and `task/w4-windows-ledger.md`.
+- `test_nested_container_parity.py` — the **nested-container differential corpus** (H-2 gap G18),
+  unlocked by the nested order-insensitive comparator. 6 rows (budget 4-6): struct + map
+  createDataFrame equalities (value AND type AND nullability), SQL-door struct select equality,
+  and TYPE disclosures for array / collect_list / array-of-struct (`list<item:…>` vs Spark
+  `list<element:…>` [not null]). Outer rows order-insensitive (G18 enabler). Budget pin +
+  CONVERGED/regression classifier. Does **not** edit the registry. Ledger:
+  `task/x5-nested-comparator-ledger.md`.
+- `_record_nested_container_goldens.py` — the **record driver** for the nested corpus (NOT a
+  `test_` module; never collected). Imports `ROWS` + `run_row`; re-derives every Spark half;
+  `--emit` pastes Spark + divergent repark halves. Hold `/tmp/grok-jvm-record.lock`.
 - `_live_parity.py` — the **live oracle tier** shared registry (NOT a `test_` module — a helper,
   never collected). Two recipe kinds:
   1. **Single-shot** (`Scenario` / `SCENARIOS`, **42** goldens): Group E group-agg/na/union +
@@ -1452,6 +1462,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a window-function differential row (gap G5) | `test_window_parity.py` (`ROWS`; record Spark half with `_record_window_goldens.py`, never by hand) |
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a nested-container differential row (gap G18) | `test_nested_container_parity.py` (`ROWS`; record Spark half with `_record_nested_container_goldens.py`, never by hand) |
+| Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1504,6 +1516,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a decimal128 row reds saying regression | re-derive both halves with `_record_decimal128_goldens.py` before touching the pin. |
 | a `test_window_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
 | a window row reds saying regression | re-derive both halves with `_record_window_goldens.py` before touching the pin. |
+| a `test_nested_container_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark list/struct/map output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
+| a nested-container row reds saying regression | re-derive both halves with `_record_nested_container_goldens.py` before touching the pin. |
+| nested budget pin reds | G18 must stay 4–6 rows, ≥2 equalities, ≥2 disclosures, ≥1 `*struct*`, ≥1 `*map*`, ≥2 `*array*`/`*collect_list*`; restore families rather than greening with controls. |
 | window budget pin reds | G5 must stay 20-28 rows, min 6 equalities, max 22 disclosures, ≥3 `default_frame_*`, ROWS-vs-RANGE, ranking/offset/nulls families, ≥2 `dataframe_api` rows; restore controls rather than deleting families. |
 | decimal128 budget pin reds | G2 must stay 20-26, G13 6-8, CTAS exactly 3, min 8 equalities, max 20 disclosures, and ≥3 `*clamps_scale_in_spark` rows; restore the control equalities / clamp family rather than converting them to disclosures or deleting them behind a non-clamp `DECIMAL(38,…)` control. |
 | a `test_join_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or DF semi/anti starts succeeding): do NOT delete — flip to content equality and record the convergence. |
