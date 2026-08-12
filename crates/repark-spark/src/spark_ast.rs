@@ -32,10 +32,19 @@ use repark_core::CatalogRegistry;
 /// defaults, then plan and execute. DataFusion-native statements that have no generic AST
 /// (`COPY`, `CREATE EXTERNAL TABLE`) carry no Spark ORDER BY surface and pass through
 /// unchanged — subject to the SEC-02 local-filesystem DDL gate (see [`local_fs_ddl`]).
+///
+/// **This is also where the G3-E8 subquery-predicate valve attaches** (F-A). Every route into
+/// DataFusion's DML — the router's `DELETE`/`UPDATE` arms, the `_ =>` arm, and
+/// `execute_unparsable_fallthrough` — lands here, and the statement below is the one that will
+/// actually be planned. A guard wired to the router's own `DatabricksDialect` parse is fail-OPEN
+/// for any form the two parsers disagree about: Spark's FROM-less `DELETE <table> WHERE …` fails
+/// the router parse, falls through, is re-parsed here under the session dialect, and — before
+/// this call — emptied the table. Attach DML guards at THIS parse.
 /// ===========================================================================================
 ///
 /// # Errors
-/// Propagates parse, planning, and execution errors as [`datafusion::error::DataFusionError`].
+/// Propagates parse, planning, and execution errors as [`datafusion::error::DataFusionError`],
+/// plus the G3-E8 refusal for a `DELETE`/`UPDATE` carrying a subquery predicate.
 pub(crate) async fn execute_passthrough(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -45,6 +54,8 @@ pub(crate) async fn execute_passthrough(
     let dialect = state.config().options().sql_parser.dialect;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     if let DfStatement::Statement(inner) = &mut statement {
+        // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
+        crate::refuse_dml_subquery_predicate_in_statement(inner)?;
         apply_spark_order_by_defaults(inner);
     }
     let plan = state.statement_to_plan(statement).await?;

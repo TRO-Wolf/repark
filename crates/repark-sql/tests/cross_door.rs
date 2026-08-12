@@ -745,3 +745,65 @@ async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
         "shared result must match corpus row mul_money_by_quantity"
     );
 }
+
+/// ROW 9 — **the G3-E8 refusal, RENDERED**, byte for byte. Profile: **`TwoSession`**.
+///
+/// The valve is deliberately implemented TWICE (this crate may not take a product edge to
+/// `repark-spark`), and the ledger's D-1 promises the two copies stay identical. Until this row
+/// the promise was pinned only at the template level — each door asserted its own copy of the
+/// message. The part a template pin cannot see is the part the copies actually disagreed about:
+/// the rendered TARGET, which the ANSI door used to read out of scrubbed text while the Spark
+/// door read it from the parse tree.
+///
+/// So: one statement, two doors, two independent warehouses, and the whole refusal string
+/// compared. Any drift — a reworded clause, a differently rendered target, one door's copy
+/// updated without the other's — REDs here, which is exactly the drift D-1 accepted the
+/// duplication's risk on. The quoted-target row is included because it is the spelling that was
+/// wrong.
+///
+/// Mutation: change one door's message (or one door's target derivation) → this row reds while
+/// both doors' own message pins stay green.
+#[tokio::test]
+async fn cross_door_g3e8_refusals_render_identically() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    make_namespace(&ansi, false).await;
+    make_namespace(&spark, true).await;
+
+    for door in [&ansi, &spark] {
+        door.session
+            .sql("CREATE TABLE ice.sales.orders AS SELECT 1 AS id, 'a' AS label")
+            .await
+            .expect("target CTAS");
+        door.session
+            .sql("CREATE TABLE ice.sales.keys AS SELECT 1 AS id")
+            .await
+            .expect("keys CTAS");
+    }
+
+    for sql in [
+        "DELETE FROM ice.sales.orders WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "UPDATE ice.sales.orders SET label = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
+        // The target rendering, quoted — the half a template-only pin cannot see.
+        "DELETE FROM \"ice\".\"sales\".\"orders\" WHERE id IN (SELECT id FROM ice.sales.keys)",
+    ] {
+        let ansi_refusal = match ansi.session.sql(sql).await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("ANSI door must refuse: {sql}"),
+        };
+        let spark_refusal = match spark.session.sql(sql).await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("Spark door must refuse: {sql}"),
+        };
+        assert_eq!(
+            ansi_refusal, spark_refusal,
+            "the two doors' G3-E8 refusals must be byte-identical, sql={sql:?}"
+        );
+        assert!(
+            ansi_refusal.contains("subquery predicates are silently mis-executed")
+                && ansi_refusal.contains("G3-E8"),
+            "…and that shared string must be the G3-E8 refusal (an equal-but-wrong pair would \
+             otherwise pass the assertion above): {ansi_refusal}"
+        );
+    }
+}

@@ -13,12 +13,21 @@
 //! 3. [`refuse_write_to_branch`] — writes targeting a branch-suffixed name; the fork's append
 //!    always sets `main`, so a branch-targeted write would silently land on `main`.
 //!
-//! A fourth text-level guard, [`refuse_mor_multi_spec_dml`] (the hoisted BUG-001 valve), also
-//! runs at the router head but is `async` — it has to load the target table's Iceberg metadata to
-//! decide — so the router calls it immediately after [`run_text_guards`] rather than from inside
-//! it. It gates the `DELETE` / `UPDATE` this door delegates to the fork's `TableProvider`.
+//! Two more guards need something the text does not carry, so they run later — and the ORDER
+//! between them is load-bearing:
 //!
-//! The fifth, [`refuse_local_filesystem_plan`] (SEC-02), needs a `LogicalPlan`, so it runs in the
+//! 4. [`refuse_dml_subquery_predicate`] (G3-E8) needs the PARSED statement (it reads the `WHERE`
+//!    expression), so the router calls it from its `DELETE` / `UPDATE` arms. It closes a
+//!    silent-data-loss window: a subquery predicate is lost at DataFusion's DML planning boundary
+//!    and degenerates into match-all.
+//! 5. [`refuse_mor_multi_spec_dml`] (the hoisted BUG-001 valve) is `async` — it loads the target
+//!    table's Iceberg metadata to decide — so the router calls it from the SAME two arms,
+//!    immediately AFTER the G3-E8 valve. Both are data-loss valves, so either message is honest;
+//!    the cheap sync AST walk runs before the metadata round-trip, which is the Spark door's
+//!    order and rationale exactly (`repark_spark::router::execute_delete`). Pinned by
+//!    `guards::tests::mor_valve_runs_after_the_g3e8_valve`.
+//!
+//! The last, [`refuse_local_filesystem_plan`] (SEC-02), needs a `LogicalPlan`, so it runs in the
 //! delegation path immediately after planning and before execution — the same position the Spark
 //! door's passthrough uses. Note its scope: it gates the surfaces DataFusion's own DDL would use
 //! to read/write the local filesystem as data (`CREATE EXTERNAL TABLE`, `COPY TO`). An
@@ -26,16 +35,23 @@
 //! an Iceberg table under a warehouse root and is governed by the catalog's
 //! [`repark_core::LocationPolicy`], which is a different (and stricter, per-catalog) rule.
 //!
-//! **Guard provenance (design §5 / the PR-5 ruling).** The Spark door's `local_fs_ddl` and
-//! `ref_ddl::sniff_write_to_branch` are `pub(crate)`/private inside `repark-spark`, and this
-//! crate must not take a door→door edge (nor the `repark-functions` edge the Spark gate uses to
-//! read its conf). Neither was importable, so both are RE-IMPLEMENTED here against the same
-//! observable contract — same conf key, same grandfather rule, same refusal class — and pinned by
-//! this module's own tests. Recorded as such in `task/p2f-ansi-m1-ledger.md`.
+//! **Guard provenance (design §5 / the PR-5 ruling).** The Spark door's `local_fs_ddl`,
+//! `ref_ddl::sniff_write_to_branch` and `normalize::refuse_dml_subquery_predicate` are
+//! `pub(crate)`/private inside `repark-spark`, and this crate must not take a door→door edge (nor
+//! the `repark-functions` edge the Spark gate uses to read its conf). None was importable, so all
+//! are RE-IMPLEMENTED here against the same observable contract — same conf key, same grandfather
+//! rule, same refusal class, same refusal text — and pinned by this door's own tests. Recorded as
+//! such in `task/p2f-ansi-m1-ledger.md` and `task/g3e8-guard-ledger.md`.
+
+use std::ops::ControlFlow;
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use datafusion::prelude::SessionContext;
+use datafusion::sql::sqlparser::ast::{
+    Delete, Expr, FromTable, ObjectName, Query, Statement, TableFactor, TableWithJoins, Update,
+    Visit, Visitor,
+};
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext};
@@ -460,6 +476,160 @@ fn canonicalize_best_effort(path: &std::path::Path) -> std::path::PathBuf {
         }
     }
     out
+}
+
+// === Guard 6 — G3-E8 subquery-predicate DML valve (runs on the parsed statement) ============
+
+/// The DML verb a G3-E8 subquery-predicate refusal names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DmlSubqueryVerb {
+    /// SQL `DELETE`.
+    Delete,
+    /// SQL `UPDATE`.
+    Update,
+}
+
+impl DmlSubqueryVerb {
+    /// The SQL verb, for the refusal message.
+    const fn verb(self) -> &'static str {
+        match self {
+            Self::Delete => "DELETE",
+            Self::Update => "UPDATE",
+        }
+    }
+
+    /// What the statement would silently do today, for the refusal message.
+    const fn consequence(self) -> &'static str {
+        match self {
+            Self::Delete => "delete EVERY row of the table",
+            Self::Update => "update EVERY row of the table",
+        }
+    }
+
+    /// The `MERGE INTO` arm the workaround uses, for the refusal message.
+    const fn merge_action(self) -> &'static str {
+        match self {
+            Self::Delete => "DELETE",
+            Self::Update => "UPDATE SET <assignments>",
+        }
+    }
+}
+
+/// ===========================================================================================
+/// Refuse a delegated `DELETE` / `UPDATE` whose `WHERE` clause contains a **subquery** (G3-E8).
+///
+/// This door delegates DML to DataFusion, which recovers the `WHERE` clause for the fork's
+/// `TableProvider::delete_from` / `::update` by walking the **optimized** plan for `Filter` /
+/// `TableScan.filters` nodes (`datafusion::physical_planner::extract_dml_filters`). The optimizer
+/// has by then decorrelated `IN` / `NOT IN` / `EXISTS` / `ANY` / `ALL` / correlated predicates
+/// into a semi/anti/mark **join**, from which that walk recovers nothing — and an empty filter
+/// list is the provider's spelling of "no `WHERE` clause", so the statement matches **every row**.
+/// Silent, total, and reproduced identically through BOTH doors.
+///
+/// **Guard provenance (design §5 / the PR-5 ruling).** The Spark door carries the twin of this
+/// valve as `repark_spark::normalize::refuse_dml_subquery_predicate`; that crate is a door, so
+/// this crate must not take a product edge to it. Re-implemented here against the same observable
+/// contract — same detection rule, same refusal text — and pinned by this door's own tests.
+///
+/// Detection is "**any `Query` node under the `WHERE` expression**", not an enumeration of
+/// subquery-bearing `Expr` variants, so a sqlparser upgrade cannot silently widen the hole. The
+/// class is refused wholesale even though an *uncorrelated* scalar subquery executes correctly
+/// today: its *correlated* twin is the same parse tree and destroys the table, and the two are
+/// not separable without full name resolution (rationale + the over-refused spellings:
+/// `task/g3e8-guard-ledger.md`).
+///
+/// The refused target is read from the PARSED statement, not from the scrubbed text: this door's
+/// text scrubber blanks quoted regions, so a quoted target (`DELETE FROM "ice"."sales"."t"`)
+/// would otherwise be rendered into the message as blanks and the suggested `MERGE INTO` rewrite
+/// would name a table that does not exist. Reading the AST also makes the rendered string equal
+/// to the Spark door's for the same statement, which
+/// `tests/cross_door.rs::cross_door_g3e8_refusals_render_identically` pins.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::Plan`] naming the defect class, the `MERGE INTO` workaround, and that
+/// support returns with the fix.
+pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()> {
+    let (verb, selection, target) = match statement {
+        Statement::Delete(delete) => (
+            DmlSubqueryVerb::Delete,
+            delete.selection.as_ref(),
+            delete_target(delete).map_or_else(|| "<table>".to_string(), ToString::to_string),
+        ),
+        Statement::Update(update) => (
+            DmlSubqueryVerb::Update,
+            update.selection.as_ref(),
+            update_target(update).map_or_else(|| update.table.to_string(), ToString::to_string),
+        ),
+        _ => return Ok(()),
+    };
+    let Some(selection) = selection else {
+        return Ok(());
+    };
+    if !expression_contains_subquery(selection) {
+        return Ok(());
+    }
+    Err(DataFusionError::Plan(dml_subquery_refusal_message(
+        verb, &target,
+    )))
+}
+
+/// The `ObjectName` a `DELETE` targets, from the parse tree — `FROM t` and the FROM-less
+/// `DELETE t` spellings alike. `None` for the shapes that have no single named relation
+/// (`USING`, a derived table), which fall back to `<table>` in the message.
+fn delete_target(delete: &Delete) -> Option<&ObjectName> {
+    let tables = match &delete.from {
+        FromTable::WithFromKeyword(tables) | FromTable::WithoutKeyword(tables) => tables,
+    };
+    object_name_of(tables.first()?)
+}
+
+/// The `ObjectName` an `UPDATE` targets — the primary relation of its `TableWithJoins`.
+fn update_target(update: &Update) -> Option<&ObjectName> {
+    object_name_of(&update.table)
+}
+
+/// The plain table name of a `TableWithJoins`' primary relation, if it is one.
+fn object_name_of(table: &TableWithJoins) -> Option<&ObjectName> {
+    match &table.relation {
+        TableFactor::Table { name, .. } => Some(name),
+        _ => None,
+    }
+}
+
+/// True when a `Query` node appears anywhere inside `expr` — i.e. the expression carries a
+/// subquery at any depth (`IN (…)`, `NOT IN`, `EXISTS`, `ANY`/`ALL`, a scalar `(SELECT …)`,
+/// nested under `NOT` / `OR` / a function argument, or inside another subquery).
+fn expression_contains_subquery(expr: &Expr) -> bool {
+    struct SawSubquery;
+    struct SubqueryProbe;
+    impl Visitor for SubqueryProbe {
+        type Break = SawSubquery;
+
+        fn pre_visit_query(&mut self, _query: &Query) -> ControlFlow<Self::Break> {
+            ControlFlow::Break(SawSubquery)
+        }
+    }
+    expr.visit(&mut SubqueryProbe).is_break()
+}
+
+/// The G3-E8 refusal text. Byte-identical to the Spark door's (the parity corpus asserts the
+/// needle `subquery predicates are silently mis-executed` through either door).
+fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
+    format!(
+        "{verb_name} with a subquery in its WHERE clause is refused on `{table}`: subquery \
+         predicates are silently mis-executed today — DataFusion's DML planner decorrelates \
+         IN / NOT IN / EXISTS / ANY / ALL / correlated predicates into a semi-join and then \
+         recovers NO filter for the Iceberg writer, so this statement would \
+         {consequence} instead of only the matching ones (defect G3-E8, silent data loss). \
+         Rewrite it as `MERGE INTO {table} AS target USING (<the subquery>) AS source \
+         ON <join keys> WHEN MATCHED THEN {action}` — the RePark-owned MERGE executor never \
+         crosses that seam, and it is the dbt adapter's proven vehicle. Support returns when the \
+         underlying fix lands; non-subquery {verb_name} predicates are unaffected.",
+        verb_name = verb.verb(),
+        consequence = verb.consequence(),
+        action = verb.merge_action(),
+    )
 }
 
 #[cfg(test)]
