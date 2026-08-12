@@ -19,7 +19,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `merge`, `call`, `ref_ddl`, `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
-  nullability; cites Python corpus row names, no Python edits).
+  nullability; cites Python corpus row names, no Python edits), `float_agg` (G7 float
+  aggregation determinism — catastrophic-cancellation fixture; `sum`/`avg` `f64::to_bits` at
+  `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure).
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):
   `partitioned_ctas`, `partitioned_merge`, `transform_overwrite` (still nests
   `provider_partition_correctness`), `service_managed_ctas`.

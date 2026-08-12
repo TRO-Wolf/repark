@@ -12,6 +12,7 @@ mod ctas;
 mod decimal;
 mod describe_show;
 mod dml;
+mod float_agg;
 mod insert_overwrite;
 mod local_fs_ddl;
 mod merge;

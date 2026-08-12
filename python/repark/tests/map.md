@@ -1350,6 +1350,20 @@ NOT in that file is a defect, not a decision.
   snippets. Exit 0 = bit-for-bit reproduce; never edits the corpus. Needs zulu-17 +
   `uv sync --extra record`. Serialize via `/tmp/grok-jvm-record.lock`. Invocation in its docstring
   and `task/x2-tvl-ledger.md`.
+- `test_float_agg_parity.py` — the **float aggregation differential corpus** (H-2 gap G7), landed
+  by X-3. Exactly 2 rows (budget 2): `sum` / `avg` of the catastrophic-cancellation fixture
+  (large ±1e16 interleaved with small addends — same VALUES as the Rust pins in
+  `crates/repark-spark/src/tests/float_agg.rs`). Both rows are **disclosures**: Spark lands 2.25 /
+  0.28125; repark lands 3.75 / 0.46875 (float64 nullable both sides). Recorded under
+  `local[2]` / shuffle=2 / ANSI on; repark uses `spark.sql.shuffle.partitions=2` (→
+  `target_partitions`). Arrow-path asserts via `repark_parity.assert_frames_equal`; disclosure
+  failures CLASSIFIED CONVERGED vs regression. In-module ULP-tolerance path exists but is unused
+  (distance is not last-ulp). Live-tier DISCLOSURE handoff is §6 paste-true only (lane never
+  edits `_live_parity.py` — conductor A4). Ledger: `task/x3-float-agg-ledger.md`.
+- `_record_float_agg_goldens.py` — the **record driver** for the float-agg corpus (NOT a `test_`
+  module; never collected). Imports `ROWS` + `run_row` from the committed test module; re-derives
+  every Spark half on live PySpark 4.1.2. Exit 0 = bit-for-bit reproduce; never edits the corpus.
+  Needs zulu-17 + `uv sync --extra record`. Hold `/tmp/grok-jvm-record.lock` (conductor B4).
 - `_live_parity.py` — the **live oracle tier** shared registry (NOT a `test_` module — a helper,
   never collected). Two recipe kinds:
   1. **Single-shot** (`Scenario` / `SCENARIOS`, **42** goldens): Group E group-agg/na/union +
@@ -1528,6 +1542,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a three-valued-logic differential row (gap G12) | `test_three_valued_logic_parity.py` (`ROWS`; record Spark half with `_record_tvl_goldens.py`, never by hand) |
 | Re-derive the TVL Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_tvl_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a float-agg differential row (gap G7) | `test_float_agg_parity.py` (`ROWS`; record Spark half with `_record_float_agg_goldens.py`, never by hand) |
+| Re-derive the float-agg Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_float_agg_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Run the live oracle tier (needs a JVM) | `make parity-live` (or `REPARK_PARITY_LIVE=1 … pytest`) |
 | Add an acceptance-harness helper (path/config/SQL builder) + its AWS-free unit | `_acceptance.py` + `test_acceptance_helpers.py` |
 | Change the real-AWS acceptance run | `test_aws_acceptance.py` (gated on `REPARK_AWS_ACCEPTANCE=1`; never run it AWS-free) |
@@ -1593,6 +1609,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
 | a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
 | cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
+| a `test_float_agg_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
+| a float-agg row reds saying regression | re-derive both halves with `_record_float_agg_goldens.py` before touching the pin. |
+| float-agg budget pin reds | G7 must stay exactly 2 rows (sum + avg of the catastrophic-cancellation fixture). |
 | a live scenario reds only under a non-UTC `session_conf` | the override reached the oracle but not repark (or vice versa): repark takes it at session BUILD, Spark at `conf.set`. Check `build_repark_engine` stopped the previous active session. |
 
 First checks: `uv run maturin develop` then `uv run pytest`. Escalate to: [../map.md#debug](../map.md).
