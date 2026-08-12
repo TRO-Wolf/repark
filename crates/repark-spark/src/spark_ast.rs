@@ -12,7 +12,9 @@
 
 use std::ops::ControlFlow;
 
+use datafusion::config::Dialect;
 use datafusion::error::Result;
+use datafusion::execution::SessionState;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::Statement as DfStatement;
@@ -21,7 +23,7 @@ use datafusion::sql::sqlparser::ast::{
     VisitorMut, WindowType,
 };
 
-use crate::local_fs_ddl;
+use crate::{local_fs_ddl, window_range};
 use repark_core::CatalogRegistry;
 
 /// ===========================================================================================
@@ -53,12 +55,22 @@ pub(crate) async fn execute_passthrough(
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
+    let mut may_have_bare_range_bound = false;
     if let DfStatement::Statement(inner) = &mut statement {
         // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
         crate::refuse_dml_subquery_predicate_in_statement(inner)?;
         apply_spark_order_by_defaults(inner);
+        may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
     }
     let plan = state.statement_to_plan(statement).await?;
+    // G5b: a unit-less `RANGE` offset over a datetime order key is Spark's refusal (TIMESTAMP)
+    // or means DAYS (DATE), never DataFusion's silent MONTHS. The AST probe above keeps every
+    // statement without such a bound — effectively all of them — on the single-plan path.
+    let plan = if may_have_bare_range_bound {
+        conform_temporal_range_frames(&state, sql, &dialect, plan).await?
+    } else {
+        plan
+    };
     // r24 SB1 / SEC-02: refuse local CREATE EXTERNAL / COPY TO when conf is false (warehouse
     // grandfather still allowed). Must run before eager collect so a blocked COPY never writes.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
@@ -90,6 +102,36 @@ pub(crate) async fn execute_passthrough(
     // returned DataFrame carries DataFusion's command shape.
     let batches = dataframe.collect().await?;
     ctx.read_batches(batches)
+}
+
+/// ===========================================================================================
+/// Apply Spark's bare-`RANGE`-offset rules to a freshly-planned statement (G5b).
+///
+/// Refuses the TIMESTAMP arm on the planned tree; for the DATE arm restates the offsets as
+/// `INTERVAL '<n>' DAY` in the AST and re-plans, because a window expression's schema name
+/// embeds its frame and an in-place plan rewrite would strand every parent column reference.
+/// See [`window_range`] for the full rationale.
+/// ===========================================================================================
+///
+/// # Errors
+/// Propagates the Spark refusal, and any parse / planning error of the restated statement.
+async fn conform_temporal_range_frames(
+    state: &SessionState,
+    sql: &str,
+    dialect: &Dialect,
+    plan: LogicalPlan,
+) -> Result<LogicalPlan> {
+    match window_range::classify_planned_range_frames(&plan)? {
+        window_range::RangeFrameVerdict::Unchanged => Ok(plan),
+        window_range::RangeFrameVerdict::RestateBareBoundsAsDays => {
+            let mut restated = state.sql_to_statement(sql, dialect)?;
+            if let DfStatement::Statement(inner) = &mut restated {
+                apply_spark_order_by_defaults(inner);
+                window_range::rewrite_bare_range_bounds_to_days(inner);
+            }
+            state.statement_to_plan(restated).await
+        }
+    }
 }
 
 /// Inject Spark's null-placement defaults into every `ORDER BY` whose placement is unspecified,

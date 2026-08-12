@@ -26,3 +26,4 @@ mod router;
 mod service_managed_ctas;
 mod time_travel;
 mod transform_overwrite;
+mod window_temporal_range;

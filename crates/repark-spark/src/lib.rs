@@ -27,6 +27,7 @@ mod ref_ddl;
 mod router;
 mod spark_ast;
 mod time_travel;
+mod window_range;
 
 // --- The router entrypoints (v1 `repark_sql::execute` family, re-homed). ---
 pub use router::{execute, execute_with_read_only};

@@ -51,6 +51,14 @@ not this directory.
   differential corpus vs live Spark (value AND Arrow type AND nullability) + 2 cross-door 3VL
   rows; record driver; §6 paste-true registry rows. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`. DML NOT-IN twin cites **PR #54 in flight**.
+- [g5b-temporal-range-ledger.md](g5b-temporal-range-ledger.md) — **live (G5b / H-2 gap G5, second
+  unit):** temporal `RANGE` window frames. Its section 0 recon **falsified the charter premise** —
+  interval-bounded temporal `RANGE` already matched Spark 4.1.2 at the frozen base — and found the
+  real defect one level down: a **unit-less** `RANGE` offset over a datetime order key was silently
+  read as MONTHS (Spark refuses on `TIMESTAMP`, means days on `DATE`). Ships that fix
+  (`crates/repark-spark/src/window_range.rs`) with 5 Spark-door pins, 15 appended differential rows
+  and 5 recorded residual divergences handed to the unit queue. Does **not** edit
+  `docs/spark-sql-iceberg-parity.md` (section 6 is the paste-true handoff).
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
