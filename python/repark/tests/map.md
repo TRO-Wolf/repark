@@ -1386,6 +1386,23 @@ NOT in that file is a defect, not a decision.
 - `_record_nested_container_goldens.py` — the **record driver** for the nested corpus (NOT a
   `test_` module; never collected). Imports `ROWS` + `run_row`; re-derives every Spark half;
   `--emit` pastes Spark + divergent repark halves. Hold `/tmp/grok-jvm-record.lock`.
+- `test_boundary_shapes_parity.py` — **Y-6 / H-2 gap G10** facade-boundary container-shape
+  corpus (sibling of `test_interchange_parity.py`; does **not** duplicate X-5
+  `test_nested_container_parity.py` VALUES families). 10 rows (budget 8–10), name-gated
+  `map_*` / `struct_*` / `binary_*` / `array_*` / `pandas_timestamp_unit_*` plus inbound
+  `*_from_pandas_*` and outbound `*_topandas_*`/`*_sql_cast_*`. Value AND dtype/shape AND
+  (Arrow surface) nullability. 6 equalities (binary bytes both directions, array ndarray
+  cells, ArrowDtype list field name, inbound object-dict→struct, SQL CAST pandas ns) and
+  4 disclosures (map toPandas dict vs list-of-pairs; struct Long→float 20.0 vs int 20;
+  inbound object-list `element` vs `item`; inbound datetime64[us] → pandas ns vs us).
+  CONVERGED/regression classifier arms committed. Census cohorts NOT extended (A11).
+  Ledger: `task/y6-boundary-shapes-ledger.md`.
+- `_record_boundary_shapes_goldens.py` — the **record driver** for the G10 corpus (NOT a
+  `test_` module; never collected). Imports `ROWS` + `run_row`; re-derives every Spark half
+  on live PySpark 4.1.2 (`local[2]`, ANSI on, shuffle=2, `session.timeZone=UTC`,
+  `arrow.pyspark.enabled=true`). Pyspark coordinate derived from the project's `record`
+  extra (CP-8). `--emit` pastes Spark + divergent repark halves. Hold
+  `/tmp/grok-jvm-record.lock`.
 - `test_cast_failure_parity.py` — the **cast-failure semantics differential corpus** (H-2 gap G6),
   landed by X-1. 10 rows (budget 8–10) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
   shuffle=2, `session.timeZone=UTC`): 5 shared-raise **error** equalities (malformed string→int /
@@ -1618,6 +1635,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a nested-container differential row (gap G18) | `test_nested_container_parity.py` (`ROWS`; record Spark half with `_record_nested_container_goldens.py`, never by hand) |
 | Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a facade-boundary container-shape row (gap G10) | `test_boundary_shapes_parity.py` (`ROWS`; record Spark half with `_record_boundary_shapes_goldens.py`, never by hand). Do not extend X-5 VALUES families or census allowlists. |
+| Re-derive the G10 boundary-shape Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py` (hold `/tmp/grok-jvm-record.lock`; marker `y6-g10-boundary`) |
 | Add a cast-failure differential row (gap G6) | `test_cast_failure_parity.py` (`ROWS`; record Spark half with `_record_cast_failure_goldens.py`, never by hand) |
 | Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a three-valued-logic differential row (gap G12) | `test_three_valued_logic_parity.py` (`ROWS`; record Spark half with `_record_tvl_goldens.py`, never by hand) |
@@ -1683,6 +1702,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a window row reds saying regression | re-derive both halves with `_record_window_goldens.py` before touching the pin. |
 | a `test_nested_container_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark list/struct/map output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
 | a nested-container row reds saying regression | re-derive both halves with `_record_nested_container_goldens.py` before touching the pin. |
+| a `test_boundary_shapes_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark pandas/Arrow boundary shape: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
+| a G10 boundary-shape row reds saying regression | re-derive both halves with `_record_boundary_shapes_goldens.py` before touching the pin. |
+| G10 budget pin reds | G10 must stay 8–10 rows, ≥1 equality, ≥3 disclosures, ≥1 `*map_*`, ≥1 `*struct_*`, ≥1 `*binary_*`, ≥2 `*array_*`, ≥1 `*pandas_timestamp_unit_*`, ≥2 `*_from_pandas_*`, ≥2 `*_topandas_*`/`*_sql_cast_*`; restore families rather than greening with controls. |
 | nested budget pin reds | G18 must stay 4–6 rows, ≥2 equalities, ≥2 disclosures, ≥1 `*struct*`, ≥1 `*map*`, ≥2 `*array*`/`*collect_list*`; restore families rather than greening with controls. |
 | a `test_three_valued_logic_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (incl. null-safe-eq nullability): do NOT delete — flip to equality (`repark=None`) and record the convergence. |
 | a TVL row reds saying regression | re-derive both halves with `_record_tvl_goldens.py` before touching the pin. |
