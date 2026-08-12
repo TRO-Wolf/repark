@@ -289,4 +289,9 @@ Ledger claims vs tree:
 
 ## 8. Commits / PR
 
-(filled after push)
+| Field | Value |
+|---|---|
+| **SHA** | `14b5d047a71a3051ff02cc18c63a086eda0a0f7b` |
+| **PR** | https://github.com/TRO-Wolf/repark/pull/61 |
+| **Author** | TRO-Wolf + `Authored-By: Grok (grok-code) <noreply@x.ai>` |
+| **Base** | `origin/main` @ freeze `9acb566` (A11; no mid-flight rebase) |
