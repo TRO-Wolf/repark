@@ -83,17 +83,17 @@ tracing = "0.1"
 # Foundation — one unified version family (DataFusion 54.1 / Arrow 58.4).
 datafusion = "54.1.0"
 datafusion-spark = "54.1.0"
-arrow = "58.4"
-arrow-array = "58.4"
-arrow-schema = "58.4"
-parquet = "58.4"
+arrow = "59.1"
+arrow-array = "59.1"
+arrow-schema = "59.1"
+parquet = "59.1"
 # S3 object-store reads (`s3://` warehouses + `s3a://` Spark bronze). `object_store` is
 # DataFusion's object-store abstraction: it MUST stay at the DataFusion 54.1 family's version
 # (lockfile-resolved), so the version is workspace-pinned; the `aws` feature adds the S3 client
 # DataFusion does not enable itself. `aws-config` + `aws-credential-types` bridge the AWS
 # default credential chain into an `object_store` `CredentialProvider` — `from_env` alone
 # can't read a shared-credentials file.
-object_store = { version = "0.13", features = ["aws"] }
+object_store = { version = "0.14", features = ["aws"] }
 aws-config = "1"
 aws-credential-types = "1"
 url = "2"

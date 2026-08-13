@@ -30,7 +30,7 @@ chrono.workspace = true
 # `#[tokio::test]` — the date-shim tests register the UDFs into a SessionContext and run SQL.
 tokio.workspace = true
 # PERF-10 (r24 G10): ratio micro-benches — pin at crate level (never workspace.dependencies).
-criterion = { version = "0.5.1", features = ["async_tokio", "html_reports"] }
+criterion = { version = "0.8.2", features = ["async_tokio", "html_reports"] }
 
 [[bench]]
 name = "ratio_string_datetime"
