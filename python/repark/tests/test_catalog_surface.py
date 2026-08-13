@@ -19,8 +19,13 @@ Oracle: live PySpark 4.1.2 (zulu-17) measured 2026-07-27 (G-INT) and re-measured
 * ``spark.sql.defaultCatalog`` defaults to ``spark_catalog``
 
 RePark is **two-part-namespace** Iceberg (``catalog.namespace.table`` three-part identifiers).
-R-CURCAT implements the Catalog list/current methods **facade-only** over SHOW NAMESPACES +
-information_schema (no engine USE / bare SHOW NAMESPACES).
+R-CURCAT implements the Catalog list/current methods **facade-only** (no engine USE /
+bare SHOW NAMESPACES) over:
+
+* ``SHOW NAMESPACES IN`` — ``listDatabases`` / ``databaseExists`` / ``setCurrentDatabase``
+* ``DESCRIBE NAMESPACE`` — ``getDatabase`` (location/comment; ``listDatabases`` stays FA-2)
+* live Iceberg ``list_iceberg_table_names`` + session temp views — ``listTables``
+  (not global ``information_schema.tables``)
 """
 
 from __future__ import annotations
@@ -280,17 +285,64 @@ def test_get_database_returns_location_and_comment(tmp_path: Path) -> None:
 
 
 def test_get_database_missing_raises_schema_not_found(spark: ReparkSession) -> None:
-    """Missing namespace: AnalysisException class + SCHEMA_NOT_FOUND needle (bare + qualified)."""
+    """Missing namespace: AnalysisException + SCHEMA_NOT_FOUND via DESCRIBE (not SHOW).
+
+    Existence is DESCRIBE's. The getDatabase message must match the DESCRIBE NAMESPACE
+    sibling on the same name — restoring a SHOW ``_namespace_exists`` precheck (different
+    text) or dropping DESCRIBE without an existence check turns this red.
+    """
     spark.catalog.setCurrentCatalog("glue_catalog")
+    with pytest.raises(AnalysisException) as described:
+        spark.sql("DESCRIBE NAMESPACE glue_catalog.no_such_ns_xyz").to_arrow()
+    described_text = str(described.value)
+    assert "[SCHEMA_NOT_FOUND]" in described_text
+    assert "no_such_ns_xyz" in described_text
+
     with pytest.raises(AnalysisException) as bare:
         spark.catalog.getDatabase("no_such_ns_xyz")
-    assert "[SCHEMA_NOT_FOUND]" in str(bare.value)
-    assert "no_such_ns_xyz" in str(bare.value)
+    assert str(bare.value) == described_text
 
     with pytest.raises(AnalysisException) as qualified:
         spark.catalog.getDatabase("glue_catalog.no_such_ns_xyz")
-    assert "[SCHEMA_NOT_FOUND]" in str(qualified.value)
-    assert "no_such_ns_xyz" in str(qualified.value)
+    assert str(qualified.value) == described_text
+
+
+def test_get_database_does_not_show_precheck() -> None:
+    """Q-001 / SEC-001: get_database must not SHOW-list existence (error swallow)."""
+    import ast
+    import inspect
+    import textwrap
+
+    tree = ast.parse(textwrap.dedent(inspect.getsource(Catalog.get_database)))
+    call_names = [
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+    ]
+    assert "_namespace_exists" not in call_names
+    literals: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            literals.append(node.value)
+        elif isinstance(node, ast.JoinedStr):
+            for value in node.values:
+                if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                    literals.append(value.value)
+    assert any("DESCRIBE NAMESPACE" in literal for literal in literals)
+
+
+def test_get_database_location_uri_matches_describe_probe(spark: ReparkSession) -> None:
+    """getDatabase.locationUri equals DESCRIBE Location on the same memory session."""
+    from _acceptance import probe_namespace_location_via_describe
+
+    spark.sql(
+        "CREATE NAMESPACE glue_catalog.located_q002 COMMENT 'y3 q002' "
+        "LOCATION 's3://bucket/y3-q002/located'"
+    )
+    spark.catalog.setCurrentCatalog("glue_catalog")
+    via_api = spark.catalog.getDatabase("located_q002").locationUri
+    via_describe = probe_namespace_location_via_describe(spark, "glue_catalog", "located_q002")
+    assert via_api == via_describe == "s3://bucket/y3-q002/located"
 
 
 def test_set_current_database(spark: ReparkSession) -> None:

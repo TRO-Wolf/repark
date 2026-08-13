@@ -427,8 +427,10 @@ class Catalog:
         Returns a :data:`Database` namedtuple. ``locationUri`` is the namespace warehouse
         location when the catalog stores one (``location``, else the U2 ``location_uri``
         mirror) — unlike :meth:`listDatabases`, which leaves it ``None`` (registry FA-2).
-        Missing schema → :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``.
-        Two-part ``catalog.db`` forms expand ``spark_catalog`` like :meth:`database_exists`.
+        Existence and location both come from ``DESCRIBE NAMESPACE`` (the engine already
+        checks ``namespace_exists`` and preserves catalog/IO errors). Missing schema →
+        :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``. Two-part
+        ``catalog.db`` forms expand ``spark_catalog`` like :meth:`database_exists`.
         """
         from repark.session import _alias_catalog_name
 
@@ -454,13 +456,10 @@ class Catalog:
             known_catalogs=known,
             default_catalog_is_auto=bool(state.get("auto_default_catalog")),
         )
-        if not self._namespace_exists(catalog, name):
-            raise AnalysisException(
-                f"[SCHEMA_NOT_FOUND] The schema `{catalog}`.`{name}` cannot be found. Verify "
-                f"the spelling and correctness of the schema and catalog."
-            )
-        # Existing engine route: DESCRIBE NAMESPACE already loads get_namespace + the
-        # location/`location_uri` resolver (G-6 / U2). listDatabases stays on SHOW (FA-2).
+        # Existence and location both come from DESCRIBE NAMESPACE (engine
+        # namespace_exists + get_namespace + location resolver). Do not SHOW-list
+        # first: that walk swallows catalog/IO errors as absence (Q-001 / SEC-001).
+        # listDatabases stays on SHOW (FA-2).
         sql = f"DESCRIBE NAMESPACE {_multipart([catalog, name])}"
         table = self._session.sql(sql).to_arrow()
         description: str | None = None

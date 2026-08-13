@@ -880,7 +880,10 @@ NOT in that file is a defect, not a decision.
   CATALOG_NOT_FOUND / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`),
   multi-catalog isolation, non-str → PySparkTypeError. **Y-3:** `getDatabase` value/shape
   (bare + qualified + `spark_catalog` alias), real `locationUri`/`description` when set,
-  missing-namespace `SCHEMA_NOT_FOUND` needle + class, FA-2 `listDatabases` still None.
+  missing-namespace `SCHEMA_NOT_FOUND` **equals DESCRIBE sibling** (no SHOW precheck;
+  AST forbids `_namespace_exists` on `get_database`), `locationUri` equals
+  `probe_namespace_location_via_describe` on one memory session, FA-2 `listDatabases`
+  still None.
   Remaining divergences rowed as
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).

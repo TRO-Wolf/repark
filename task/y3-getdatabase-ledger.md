@@ -12,7 +12,7 @@ Charter: `planning/grok/BRIEF-y3-getdatabase.md` (conductor overnight-4; A2 boun
 
 | Artifact | Role |
 |---|---|
-| [`python/repark/src/repark/catalog.py`](../python/repark/src/repark/catalog.py) | `get_database` / `getDatabase`: real `locationUri` + `description` |
+| [`python/repark/src/repark/catalog.py`](../python/repark/src/repark/catalog.py) | `get_database` / `getDatabase`: real `locationUri` + `description`; existence is DESCRIBE (no SHOW precheck) |
 | [`python/repark/tests/test_catalog_surface.py`](../python/repark/tests/test_catalog_surface.py) | value/shape, bare+qualified, SCHEMA_NOT_FOUND, FA-2 still None |
 | [`python/repark/tests/_acceptance.py`](../python/repark/tests/_acceptance.py) | G-6 Glue caller switched to `catalog.getDatabase` |
 | [`python/repark/tests/test_acceptance_helpers.py`](../python/repark/tests/test_acceptance_helpers.py) | stub + AST pin that the wrapper calls `getDatabase` |
@@ -183,7 +183,9 @@ property-less repark memory namespace has `locationUri is None`
 |---|---|
 | `test_get_database_bare_and_qualified_shape` | field shape; bare == `catalog.db` == `spark_catalog.db` alias; no-location → None |
 | `test_get_database_returns_location_and_comment` | COMMENT + LOCATION filled; **listDatabases still None (FA-2)** |
-| `test_get_database_missing_raises_schema_not_found` | `AnalysisException` + `[SCHEMA_NOT_FOUND]` + name needle; bare and qualified |
+| `test_get_database_missing_raises_schema_not_found` | `AnalysisException` + `[SCHEMA_NOT_FOUND]` **equals DESCRIBE sibling** (bare + qualified) |
+| `test_get_database_does_not_show_precheck` | AST: `get_database` calls DESCRIBE, not `_namespace_exists` |
+| `test_get_database_location_uri_matches_describe_probe` | `getDatabase.locationUri` == `probe_namespace_location_via_describe` |
 | public surface + non-str `dbName` | `getDatabase`/`get_database` in `dir(Catalog)`; `PySparkTypeError` |
 | `test_assert_glue_scratch_namespace_location_composes_getdatabase_and_compare` | Glue wrapper reads `getDatabase.locationUri` |
 | `test_glue_location_guard_calls_get_database` | AST: wrapper calls `getDatabase`, not DESCRIBE/`sql` |
@@ -198,8 +200,8 @@ Memory catalog only.
 
 | Gate | Result | Log |
 |---|---|---|
-| `make verify` | **0** | `/tmp/y3-verify.log` |
-| `make preflight` | **0** | `/tmp/y3-preflight.log` (facade **2826 passed**, 71 skipped) |
+| `make verify` | **0** | `/tmp/y3-verify.log` (actor); `/tmp/y3-fix-verify.log` (cycle-1) |
+| `make preflight` | **0** | `/tmp/y3-preflight.log` (actor; facade 2826/71); `/tmp/y3-fix-preflight.log` (cycle-1; facade **2828 passed**, 71 skipped) |
 
 ---
 
@@ -223,3 +225,16 @@ Glue path always creates with `location=`.
 Base freeze `a985edf7`. No registry / `_live_parity` / lock / AWS /
 `.github` / `Cargo.lock` / `uv.lock` edits. `DEVELOPMENT.md` one-line
 ridealong is A11-whitelisted.
+
+---
+
+## 8. Cycle-1 ACC remediations (OPEN queue only)
+
+| ID | Sev | Action |
+|---|---|---|
+| Q-001 | S1 | Deleted SHOW `_namespace_exists` precheck from `get_database`. Existence is DESCRIBE. Missing-ns pin equals DESCRIBE exception text; AST forbids `_namespace_exists` on `get_database`. |
+| SEC-001 | S2 | Same swallow — fixed by deleting the precheck (catalog/IO errors now propagate from DESCRIBE). |
+| Q-002 | S2 | `test_get_database_location_uri_matches_describe_probe`: `getDatabase.locationUri` == `probe_namespace_location_via_describe` on one memory-catalog session. |
+| CL-002 | S3 | `test_catalog_surface.py` module docstring: not SHOW + `information_schema` only. |
+
+Not in this queue (left OPEN): SEC-002 (E1 `getCondition`), SAF-001 (unmatched-quote `RuntimeError`), SEC-003 (keyword/`EXTENDED` quote-if-needed), CL-001 (workspace brief path). FA-2 `listDatabases` `locationUri=None` untouched. Zero AWS.
