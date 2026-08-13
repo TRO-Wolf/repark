@@ -36,7 +36,8 @@ reach delegation through the ordinary arm.
   tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and
   the **G15 collation valve** (`refuse_collation_in_statement`, called immediately after the
   stock parse so `COLLATE` / column collation / session collation conf refuse at parse
-  altitude — G3-E8 lesson),
+  altitude — G3-E8 lesson; type-position `CAST AS STRING COLLATE` on parse-fail;
+  `RESET` of a collation key before delegate),
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate`, called from the
   router's named `DELETE`/`UPDATE` arm because it needs the PARSED statement — it reads both the
   `WHERE` expression and the target off the parse tree, so a quoted target renders usably).

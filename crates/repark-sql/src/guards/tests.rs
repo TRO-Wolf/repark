@@ -950,6 +950,46 @@ fn collation_valve_ignores_collate_inside_a_literal() {
         .unwrap_or_else(|error| panic!("literal must pass: {error}"));
 }
 
+/// Type-position CAST COLLATE is G15 (sqlparser cannot attach COLLATE inside CAST).
+#[test]
+fn collation_valve_fires_on_cast_as_string_collate() {
+    let error =
+        refuse_type_position_collation_in_sql("SELECT CAST('Alice' AS STRING COLLATE UTF8_LCASE)")
+            .expect_err("CAST AS STRING COLLATE must refuse");
+    assert_g15_refusal(&error, "UTF8_LCASE");
+}
+
+/// SET of a collation `SQLConf` key is a collation request (Q-004).
+#[test]
+fn collation_valve_fires_on_set_session_key() {
+    let error = refuse_collation_in_statement(&parsed(
+        "SET spark.sql.collation.objectLevel.enabled = true",
+    ))
+    .expect_err("SET collation key must refuse");
+    assert_g15_refusal(&error, "spark.sql.collation.objectLevel.enabled");
+}
+
+/// Parenthesized SET is not discarded (SEC-003). Built as AST — dotted names
+/// inside `SET (…)` are not a Generic production.
+#[test]
+fn collation_valve_fires_on_parenthesized_set() {
+    use datafusion::sql::sqlparser::ast::{Ident, ObjectName, Set};
+
+    let statement = Statement::Set(Set::ParenthesizedAssignments {
+        variables: vec![ObjectName::from(vec![
+            Ident::new("spark"),
+            Ident::new("sql"),
+            Ident::new("collation"),
+            Ident::new("schemaLevel"),
+            Ident::new("enabled"),
+        ])],
+        values: vec![],
+    });
+    let error = refuse_collation_in_statement(&statement)
+        .expect_err("parenthesized SET collation key must refuse");
+    assert_g15_refusal(&error, "spark.sql.collation.schemaLevel.enabled");
+}
+
 /// End to end: the door refuses `COLLATE` and a non-COLLATE SELECT still runs.
 #[tokio::test]
 async fn collation_valve_refuses_end_to_end_and_default_select_is_untouched() {
@@ -965,4 +1005,19 @@ async fn collation_valve_refuses_end_to_end_and_default_select_is_untouched() {
     );
     let ids = door.ok("SELECT 1").await;
     assert_eq!(ids, vec![1], "default (non-COLLATE) SELECT must stay live");
+    let cast = door
+        .err("SELECT CAST('Alice' AS STRING COLLATE UTF8_LCASE)")
+        .await;
+    assert!(
+        cast.contains(COLLATION_REFUSAL_NEEDLE) && cast.contains("UTF8_LCASE"),
+        "CAST AS STRING COLLATE must be G15 end-to-end: {cast}"
+    );
+    let set = door
+        .err("SET spark.sql.collation.objectLevel.enabled = true")
+        .await;
+    assert!(
+        set.contains(COLLATION_REFUSAL_NEEDLE)
+            && set.contains("spark.sql.collation.objectLevel.enabled"),
+        "SQL SET collation key must be G15 end-to-end: {set}"
+    );
 }

@@ -2235,6 +2235,11 @@ class ReparkSession:
                     if value is None:
                         continue
                     text = value if isinstance(value, str) else str(value)
+                    # G15: reuse fold writes the store without RuntimeConfig.set —
+                    # refuse a planted collation key here (SEC-003).
+                    from repark.types import refuse_collation_session_key
+
+                    refuse_collation_session_key(key)
                     # === r21 T2: sort-memory ===
                     # datafusion.* is runtime-mutable on the live engine — fold via
                     # RuntimeConfig.set so SQL SET forwards (not store-only). Lookalike

@@ -15,6 +15,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY).
   **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
 - `session_core.py` — ReparkSession (sql/catalog methods stay here).
   **G15:** `Builder._set_config_entry` refuses collation `SQLConf` keys (silent-ignore path).
+  getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted
+  `_config` key cannot silently store (SEC-003).
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination)
 - `sql_udf.py` — UDFRegistration
 - `create_dataframe.py` — region marker + SparkSession/ReParkSession aliases

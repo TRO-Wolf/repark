@@ -9,8 +9,10 @@
 //! Attached at the parse every route agrees on (G3-E8 altitude):
 //! [`crate::spark_ast::execute_passthrough`] (the executing parse) **and** the router's
 //! successful `parse_single_normalized` result (intercepted `CREATE` / `ALTER` never
-//! reach the passthrough). The binding (`F.expr`, `DataFrame.filter` SQL-string form)
-//! calls [`refuse_collation_in_sql`] so those fragments see the same message.
+//! reach the passthrough). Type-position `CAST(x AS STRING COLLATE name)` is scanned
+//! on the executing-parse text because sqlparser cannot attach it. The binding
+//! (`F.expr`, `DataFrame.filter` SQL-string form) calls [`refuse_collation_in_sql`]
+//! so those fragments see the same message.
 
 use std::ops::ControlFlow;
 
@@ -67,12 +69,47 @@ pub fn refuse_collation_in_statement(statement: &Statement) -> Result<()> {
 /// # Errors
 /// [`DataFusionError::NotImplemented`] when a collation spelling is present.
 pub fn refuse_collation_in_sql(sql: &str) -> Result<()> {
+    // Type-position COLLATE (`CAST(x AS STRING COLLATE name)`) is not an
+    // `Expr::Collate` — sqlparser's CAST production does not consume COLLATE —
+    // so the AST walk never sees it. Scan text first (quote-aware) so the
+    // spelling Spark 4 accepts is G15, not a generic ParserError.
+    refuse_type_position_collation_in_sql(sql)?;
     if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, sql) {
         return refuse_parsed(&statements);
     }
     let wrapped = format!("SELECT ({sql})");
     if let Ok(statements) = Parser::parse_sql(&DatabricksDialect {}, &wrapped) {
         return refuse_parsed(&statements);
+    }
+    Ok(())
+}
+
+/// ===========================================================================================
+/// Refuse `AS STRING COLLATE name` / column-type COLLATE that sqlparser cannot attach.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] when a type-position collation is present.
+pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
+    if let Some(requested) = type_position_collation(sql) {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            &requested,
+        )));
+    }
+    Ok(())
+}
+
+/// ===========================================================================================
+/// Refuse `RESET` of a collation session key (DataFusion extension, not `Statement::Set`).
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] when the variable name contains `collation`.
+pub(crate) fn refuse_collation_reset_variable(variable: &str) -> Result<()> {
+    if is_collation_session_key(variable) {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            variable,
+        )));
     }
     Ok(())
 }
@@ -197,6 +234,150 @@ fn collation_requested_by_set(set: &Set) -> Option<String> {
             }
             None
         }
+        Set::ParenthesizedAssignments { variables, .. } => {
+            for variable in variables {
+                let key = variable.to_string();
+                if is_collation_session_key(&key) {
+                    return Some(key);
+                }
+            }
+            None
+        }
         _ => None,
     }
+}
+
+/// Quote-aware scan for a string-type token immediately before `COLLATE`.
+///
+/// Spark's `CAST(x AS STRING COLLATE name)` never becomes `Expr::Collate`.
+/// `CREATE TABLE … (col STRING COLLATE name)` is also type-position; the AST
+/// walk already catches the parsed form, and this scan is the unparsable twin.
+fn type_position_collation(sql: &str) -> Option<String> {
+    let scrubbed = blank_sql_quotes_and_comments(sql);
+    let lower = scrubbed.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(relative) = lower[from..].find("collate") {
+        let at = from + relative;
+        if !is_word_boundary(&lower, at, at + 7) || !preceded_by_string_type(&lower, at) {
+            from = at + 7;
+            continue;
+        }
+        return collation_ident_after(&scrubbed, at + 7);
+    }
+    None
+}
+
+fn preceded_by_string_type(lower: &str, collate_at: usize) -> bool {
+    let before = strip_trailing_length_spec(lower[..collate_at].trim_end());
+    for token in ["string", "varchar", "char", "text"] {
+        if before.ends_with(token)
+            && is_word_boundary(before, before.len() - token.len(), before.len())
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn strip_trailing_length_spec(text: &str) -> &str {
+    let trimmed = text.trim_end();
+    if !trimmed.ends_with(')') {
+        return trimmed;
+    }
+    let Some(open) = trimmed.rfind('(') else {
+        return trimmed;
+    };
+    let inner = trimmed[open + 1..trimmed.len() - 1].trim();
+    if inner
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || byte.is_ascii_whitespace())
+    {
+        return trimmed[..open].trim_end();
+    }
+    trimmed
+}
+
+fn collation_ident_after(sql: &str, after_collate: usize) -> Option<String> {
+    let tail = sql[after_collate..].trim_start();
+    let mut end = 0;
+    for (index, character) in tail.char_indices() {
+        if character.is_ascii_alphanumeric() || character == '_' || character == '.' {
+            end = index + character.len_utf8();
+            continue;
+        }
+        break;
+    }
+    (end > 0).then(|| tail[..end].to_string())
+}
+
+fn is_word_boundary(text: &str, start: usize, end: usize) -> bool {
+    let bytes = text.as_bytes();
+    let before_ok = start == 0 || !is_ident_byte(bytes[start - 1]);
+    let after_ok = end >= bytes.len() || !is_ident_byte(bytes[end]);
+    before_ok && after_ok
+}
+
+fn is_ident_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
+/// Blank `'…'` / `"…"` / `` `…` `` / `--` / `/* … */` content so COLLATE inside a
+/// literal is not a request. Spark quoting includes backticks.
+fn blank_sql_quotes_and_comments(sql: &str) -> String {
+    let bytes = sql.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        match bytes[index] {
+            b'\'' | b'"' | b'`' => {
+                let delimiter = bytes[index];
+                out.push(delimiter);
+                index += 1;
+                while index < bytes.len() {
+                    if bytes[index] == delimiter {
+                        if bytes.get(index + 1) == Some(&delimiter) {
+                            out.push(b' ');
+                            out.push(b' ');
+                            index += 2;
+                            continue;
+                        }
+                        out.push(delimiter);
+                        index += 1;
+                        break;
+                    }
+                    out.push(b' ');
+                    index += 1;
+                }
+            }
+            b'-' if bytes.get(index + 1) == Some(&b'-') => {
+                out.push(b'-');
+                out.push(b'-');
+                index += 2;
+                while index < bytes.len() && bytes[index] != b'\n' {
+                    out.push(b' ');
+                    index += 1;
+                }
+            }
+            b'/' if bytes.get(index + 1) == Some(&b'*') => {
+                out.push(b'/');
+                out.push(b'*');
+                index += 2;
+                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
+                {
+                    out.push(b' ');
+                    index += 1;
+                }
+                if index + 1 < bytes.len() {
+                    out.push(b'*');
+                    out.push(b'/');
+                    index += 2;
+                }
+            }
+            byte => {
+                out.push(byte);
+                index += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }

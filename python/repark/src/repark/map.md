@@ -459,6 +459,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **G15 (2026-08-12):** `refuse_evaluated_collation` / `refuse_collation_session_key` /
   `collation_refusal_message` — first evaluation of a non-binary `StringType` (and any
   session key containing `collation`) refuses; constructor + `simpleString` stay.
+  `StructField.fromJson` applies Spark `metadata.__COLLATIONS` (does not pop-and-forget)
+  so createDataFrame cannot silently wrong-count (Q-003 / SEC-001).
   `StringType(collation)`, `ArrayType`/`MapType`/`NullType`/`BinaryType`/`ByteType`/
   `ShortType`/`FloatType`/`CharType`/`VarcharType`/`TimeType`/`TimestampNTZType`/
   `CalendarIntervalType`/`VariantType`; `StructType.add`/`fieldNames`/`toDDL`/

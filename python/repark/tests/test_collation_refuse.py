@@ -1,9 +1,11 @@
 """G15 — collation refuses loudly (owner ruling 2026-08-12).
 
-Every live compare/order-changing entry point either refuses with an actionable
-message (requested collation, repark does not implement, use binary/default) or
-is proven absent. ``StringType(collation=…)`` construction and ``simpleString``
-stay legal (A5); first evaluation refuses.
+Every compare/order-changing path in the Y-7 inventory (plus Spark JSON
+``__COLLATIONS``) either refuses with an actionable message (requested
+collation, repark does not implement, use binary/default) or is proven absent.
+``StringType(collation=…)`` construction and ``simpleString`` stay legal (A5);
+first evaluation refuses. SQL ``CAST(x AS STRING COLLATE name)`` is G15 via a
+quote-aware type-position scan (sqlparser cannot attach COLLATE inside CAST).
 
 ``F.collate`` / ``F.collation`` / ``Column.collate`` are not on the facade —
 absence is already loud (AttributeError); this module documents that rather
@@ -63,6 +65,42 @@ def test_create_dataframe_ddl_collate_refuses(spark: ReparkSession) -> None:
     assert_g15(caught.value, "UNICODE_CI")
 
 
+def test_from_json_collations_metadata_constructs_and_create_refuses(
+    spark: ReparkSession,
+) -> None:
+    """Spark JSON ``__COLLATIONS`` must become StringType and then refuse (Q-003 / SEC-001)."""
+    field = StructField.fromJson(
+        {
+            "name": "name",
+            "type": "string",
+            "nullable": True,
+            "metadata": {"__COLLATIONS": {"name": "icu.UNICODE_CI"}},
+        }
+    )
+    assert field.dataType == StringType("UNICODE_CI")
+    assert field.metadata.get("__COLLATIONS") is None
+    schema = StructType([field])
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.createDataFrame([("Alice",), ("alice",)], schema)
+    assert_g15(caught.value, "UNICODE_CI")
+
+
+def test_from_json_bare_collations_name_refuses(spark: ReparkSession) -> None:
+    """Non-Spark ``__COLLATIONS`` payload (bare name, no provider) still refuses."""
+    field = StructField.fromJson(
+        {
+            "name": "name",
+            "type": "string",
+            "nullable": True,
+            "metadata": {"__COLLATIONS": {"name": "UTF8_LCASE"}},
+        }
+    )
+    assert field.dataType == StringType("UTF8_LCASE")
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.createDataFrame([("Alice",)], StructType([field]))
+    assert_g15(caught.value, "UTF8_LCASE")
+
+
 def test_create_dataframe_default_string_type_untouched(spark: ReparkSession) -> None:
     """Non-COLLATE path: Alice and alice remain two distinct binary strings."""
     schema = StructType([StructField("name", StringType(), True)])
@@ -113,6 +151,24 @@ def test_sql_order_by_collate_refuses(spark: ReparkSession) -> None:
     assert_g15(caught.value, "UNICODE_CI")
 
 
+def test_sql_cast_as_string_collate_refuses(spark: ReparkSession) -> None:
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql("SELECT CAST('Alice' AS STRING COLLATE UTF8_LCASE)").collect()
+    assert_g15(caught.value, "UTF8_LCASE")
+
+
+def test_sql_set_collation_key_refuses(spark: ReparkSession) -> None:
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql("SET spark.sql.collation.objectLevel.enabled = true")
+    assert_g15(caught.value, "spark.sql.collation.objectLevel.enabled")
+
+
+def test_sql_reset_collation_key_refuses(spark: ReparkSession) -> None:
+    with pytest.raises(UnsupportedOperationException) as caught:
+        spark.sql("RESET spark.sql.collation.objectLevel.enabled")
+    assert_g15(caught.value, "spark.sql.collation.objectLevel.enabled")
+
+
 def test_sql_collate_inside_literal_untouched(spark: ReparkSession) -> None:
     rows = spark.sql("SELECT 'COLLATE UTF8_LCASE' AS note").collect()
     assert rows[0][0] == "COLLATE UTF8_LCASE"
@@ -149,6 +205,19 @@ def test_builder_config_collation_key_refuses() -> None:
     with pytest.raises(UnsupportedOperationException) as caught:
         ReparkSession.builder.config("spark.sql.collation.schemaLevel.enabled", "true")
     assert_g15(caught.value, "spark.sql.collation.schemaLevel.enabled")
+
+
+def test_get_or_create_reuse_refuses_planted_collation_key() -> None:
+    """SEC-003: reuse fold must not store a planted collation key (bypasses conf.set)."""
+    session = ReparkSession.builder.appName("g15-reuse-fold").getOrCreate()
+    try:
+        later = ReparkSession.builder.appName("g15-reuse-fold")
+        later._config["spark.sql.collation.trim.enabled"] = "true"
+        with pytest.raises(UnsupportedOperationException) as caught:
+            later.getOrCreate()
+        assert_g15(caught.value, "spark.sql.collation.trim.enabled")
+    finally:
+        session.stop()
 
 
 # --- Construction + absence (A5) --------------------------------------------------------------

@@ -19,6 +19,9 @@
 //! 4. [`refuse_collation_in_statement`] (G15) needs the PARSED statement. The router calls it
 //!    immediately after the stock parse, before the statement match, so `COLLATE` / column
 //!    collation / session collation conf refuse at parse altitude (G3-E8 lesson).
+//!    Type-position `CAST AS STRING COLLATE` is refused on the parse-fail arm
+//!    ([`refuse_type_position_collation_in_sql`]); `RESET` of a collation key is
+//!    refused before delegate.
 //! 5. [`refuse_dml_subquery_predicate`] (G3-E8) needs the PARSED statement (it reads the `WHERE`
 //!    expression), so the router calls it from its `DELETE` / `UPDATE` arms. It closes a
 //!    silent-data-loss window: a subquery predicate is lost at DataFusion's DML planning boundary
@@ -776,8 +779,116 @@ fn collation_requested_by_set(set: &Set) -> Option<String> {
             }
             None
         }
+        Set::ParenthesizedAssignments { variables, .. } => {
+            for variable in variables {
+                let key = variable.to_string();
+                if key.to_ascii_lowercase().contains("collation") {
+                    return Some(key);
+                }
+            }
+            None
+        }
         _ => None,
     }
+}
+
+/// ===========================================================================================
+/// Refuse type-position `STRING COLLATE name` that sqlparser's CAST cannot attach.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] when a type-position collation is present.
+pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
+    if let Some(requested) = type_position_collation(sql) {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            &requested,
+        )));
+    }
+    Ok(())
+}
+
+/// ===========================================================================================
+/// Refuse `RESET` of a collation session key (DataFusion extension, not `Statement::Set`).
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] when the variable name contains `collation`.
+pub(crate) fn refuse_collation_reset_variable(variable: &str) -> Result<()> {
+    if variable.to_ascii_lowercase().contains("collation") {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            variable,
+        )));
+    }
+    Ok(())
+}
+
+fn type_position_collation(sql: &str) -> Option<String> {
+    let scrubbed = blank_out_quoted_and_comments(sql);
+    let lower = scrubbed.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(relative) = lower[from..].find("collate") {
+        let at = from + relative;
+        if !is_word_boundary(&lower, at, at + 7) || !preceded_by_string_type(&lower, at) {
+            from = at + 7;
+            continue;
+        }
+        return collation_ident_after(&scrubbed, at + 7);
+    }
+    None
+}
+
+fn preceded_by_string_type(lower: &str, collate_at: usize) -> bool {
+    let before = strip_trailing_length_spec(lower[..collate_at].trim_end());
+    for token in ["string", "varchar", "char", "text"] {
+        if before.ends_with(token)
+            && is_word_boundary(before, before.len() - token.len(), before.len())
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn strip_trailing_length_spec(text: &str) -> &str {
+    let trimmed = text.trim_end();
+    if !trimmed.ends_with(')') {
+        return trimmed;
+    }
+    let Some(open) = trimmed.rfind('(') else {
+        return trimmed;
+    };
+    let inner = trimmed[open + 1..trimmed.len() - 1].trim();
+    if inner
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || byte.is_ascii_whitespace())
+    {
+        return trimmed[..open].trim_end();
+    }
+    trimmed
+}
+
+fn collation_ident_after(sql: &str, after_collate: usize) -> Option<String> {
+    let tail = sql[after_collate..].trim_start();
+    let mut end = 0;
+    for (index, character) in tail.char_indices() {
+        if character.is_ascii_alphanumeric() || character == '_' || character == '.' {
+            end = index + character.len_utf8();
+            continue;
+        }
+        break;
+    }
+    (end > 0).then(|| tail[..end].to_string())
+}
+
+fn is_word_boundary(text: &str, start: usize, end: usize) -> bool {
+    let bytes = text.as_bytes();
+    let before_ok = start == 0 || !is_ident_byte(bytes[start - 1]);
+    let after_ok = end >= bytes.len() || !is_ident_byte(bytes[end]);
+    before_ok && after_ok
+}
+
+fn is_ident_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
 #[cfg(test)]

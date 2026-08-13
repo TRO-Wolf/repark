@@ -114,8 +114,18 @@ async fn execute_time_travelled(
 
     let statement = match cx.ctx.state().sql_to_statement(sql, &PARSER_DIALECT) {
         Ok(statement) => statement,
-        Err(err) => return Err(sniff::upgrade_error(sql, err)),
+        Err(err) => {
+            // G15: `CAST(x AS STRING COLLATE name)` is unparsable; refuse before
+            // the generic parse error so the Spark-live spelling is actionable.
+            guards::refuse_type_position_collation_in_sql(sql)?;
+            return Err(sniff::upgrade_error(sql, err));
+        }
     };
+    if let DFStatement::Reset(datafusion::sql::parser::ResetStatement::Variable(name)) = &statement
+    {
+        guards::refuse_collation_reset_variable(&name.to_string())?;
+        return delegate(cx, sql).await;
+    }
     let DFStatement::Statement(statement) = statement else {
         // DataFusion's own parser extensions (COPY, CREATE EXTERNAL TABLE, …) — delegate, where
         // the SEC-02 guard sees the resulting plan.
@@ -123,8 +133,8 @@ async fn execute_time_travelled(
     };
 
     // G15 — collation at the parse every route agrees on (G3-E8 altitude), before
-    // CREATE / SELECT / SET match. A COLLATE spelling must not reach DataFusion's
-    // unsupported-AST path or be silently dropped on a column-def CREATE.
+    // CREATE / SELECT / SET match. Type-position CAST COLLATE is the parse-fail
+    // arm above; RESET of a collation key is refused before delegate.
     guards::refuse_collation_in_statement(statement.as_ref())?;
 
     match statement.as_ref() {

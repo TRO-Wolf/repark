@@ -11,8 +11,11 @@
 (implementation stays a future decision). Bound addenda A4 / A5 / A10.
 
 This unit does **not** implement collation semantics. It closes the silently-wrong-count
-window: every live collation entry point either refuses with an actionable message or is
-proven absent.
+window on the **inventoried compare/order-changing paths** (this §0 table, plus Spark
+schema-JSON `__COLLATIONS` — Q-003 / SEC-001). Each of those either refuses with an
+actionable G15 message or is proven absent. Constructor + `simpleString` stay (A5) —
+they are not a refuse-or-absent cell. Cycle-1 ACC narrowed the charter's "every entry
+point / nothing silently ignores" quantifier to this set (CL-001).
 
 ---
 
@@ -27,8 +30,10 @@ JVM lock is acquired (MARKER=`y7-g15-collation`).
 | `SELECT expr COLLATE NAME` | Spark SQL + ANSI SQL | DataFusion `Unsupported ast node in sqltorel: Collate {…}` (census `TypesTests.test_collated_string` = `FAIL-MISSING`) | already loud, non-actionable | G15 `NotImplemented` at the executing parse |
 | `ORDER BY col COLLATE NAME` | Spark SQL + ANSI SQL | same unsupported-AST path (compare/order-changing) | already loud, non-actionable | G15 refuse |
 | `CREATE TABLE t (s STRING COLLATE NAME)` | Spark SQL + ANSI SQL | Spark door: generic `CREATE TABLE column option \`COLLATE …\` is not supported yet` (`create_table.rs` `ColumnOption` residual). ANSI: type maps via `CAST(NULL AS …)` and drops the collation | generic refuse / silent type strip | G15 refuse (column option walk) |
-| `CAST(x AS STRING COLLATE NAME)` / `col.cast(StringType("NAME"))` | facade Column | `_engine_type()` always returns `"string"` — collation stripped | silent ignore | refuse at first evaluation (`_engine_type_from_cast_arg`) |
+| `col.cast(StringType("NAME"))` / `col.cast("string collate NAME")` | facade Column | `_engine_type()` always returns `"string"` — collation stripped | silent ignore | refuse at first evaluation (`_engine_type_from_cast_arg`) |
+| `CAST(x AS STRING COLLATE NAME)` | Spark SQL + ANSI SQL | sqlparser CAST does not consume type-position COLLATE → generic `ParserError` | already loud, non-actionable | G15 via quote-aware type-position text scan (Q-002 / CL-002). Not `_engine_type_from_cast_arg` — that helper is Python cast only. |
 | `createDataFrame(..., StringType("UNICODE_CI"))` | facade | `_data_type_to_sql_type` emits `STRING`; distinct('Alice','alice') = **2**. Spark 4.1.2 `test_create_df_with_collation` expects **1** | **silently wrong-count** (the G15 gap) | refuse at first evaluation |
+| `StructField.fromJson` Spark `metadata.__COLLATIONS` | facade | popped the map and parsed type `"string"` as binary; createDataFrame distinct = **2** | **silently wrong-count** (uninventoried at first land) | apply the map (construction stays), first evaluation refuses (Q-003 / SEC-001) |
 | `createDataFrame(..., "name STRING COLLATE UNICODE_CI")` | facade | `fromDDL` builds `StringType("UNICODE_CI")` then same strip | silently wrong-count | refuse |
 | `F.collate` / `F.collation` | facade functions | names are **not** on `repark.functions` (`AttributeError`) | proven absent (A5) | documented, **not stubbed** |
 | `Column.collate` | facade column | method does not exist (`AttributeError`) | proven absent | documented, **not stubbed** |
@@ -106,7 +111,7 @@ and documents `F.collate` as absent.
 | ID | Decision | Rationale |
 |---|---|---|
 | D-1 | Refuse, do not implement | Owner ruling 2026-08-12. Locale/ICU stays a future decision. |
-| D-2 | Parse altitude (G3-E8 lesson) | Guard the parse every route agrees on: Spark `execute_passthrough` + the router's successful parse (intercepted CREATE/ALTER never reach passthrough). ANSI: immediately after the stock parse, before match. |
+| D-2 | Parse altitude (G3-E8 lesson) | Guard the parse every route agrees on: Spark `execute_passthrough` + the router's successful parse (intercepted CREATE/ALTER never reach passthrough). ANSI: immediately after the stock parse, before match. Type-position `CAST AS STRING COLLATE` is unparsable — scan the executing-parse **text** (quote-aware) so that Spark-live spelling is G15, not a generic parse error. Router is the agreed Databricks parse for intercepted/parsable SQL; `spark_ast` is G3-E8 defense-in-depth for session-dialect reparse and is source-pinned (Q-001). |
 | D-3 | Duplicate the detector; do not hoist | Door→door product edges are banned. Same message text in both doors (needles identical). Binding calls the Spark-door `pub` helper. |
 | D-4 | Construction stays; first evaluation refuses | A5. `StringType("UTF8_LCASE")` + `simpleString` untouched. `createDataFrame` / `cast` / SQL COLLATE refuse. |
 | D-5 | No refusing stubs for missing functions | A5 ABSENCE IS LOUD. `F.collate` / `F.collation` / `Column.collate` already `AttributeError`. |
@@ -125,8 +130,16 @@ and documents `F.collate` as absent.
 | `select_collate_expression_refuses` | `NotImplemented` | `does not implement collation` + `UTF8_LCASE` + `binary/default` |
 | `select_collate_unicode_ci_refuses` | `NotImplemented` | `UNICODE_CI` |
 | `order_by_collate_refuses` | `NotImplemented` | `UTF8_LCASE` |
+| `order_by_collate_unicode_ci_refuses` | `NotImplemented` | `UNICODE_CI` (Q-004 second needle) |
 | `create_table_column_collate_refuses` | `NotImplemented` | `UTF8_LCASE` |
-| `set_collation_session_key_is_detected` | `NotImplemented` | `spark.sql.collation.objectLevel.enabled` |
+| `cast_as_string_collate_refuses` | `NotImplemented` | `UTF8_LCASE` (Q-002) |
+| `cast_as_string_collate_fragment_is_detected` | `NotImplemented` | `UNICODE_CI` |
+| `set_collation_session_key_is_detected` | `NotImplemented` | helper |
+| `set_collation_session_key_refuses_via_execute` | `NotImplemented` | `execute` e2e (Q-004) |
+| `parenthesized_set_collation_key_is_detected` | `NotImplemented` | SEC-003 |
+| `reset_collation_session_key_refuses_via_execute` | `NotImplemented` | SEC-003 |
+| `execute_passthrough_attaches_collation_valve` | `NotImplemented` | Q-001 behavioral |
+| `spark_ast_source_attaches_collation_valve` | (source) | Q-001 mutation-proof |
 | `collate_inside_string_literal_is_not_refused` | (success) | literal is not a request |
 | `default_order_by_without_collate_is_untouched` | (success) | default path |
 
@@ -137,8 +150,11 @@ and documents `F.collate` as absent.
 | `collation_valve_fires_on_expression_collate` | `NotImplemented` | `UTF8_LCASE` |
 | `collation_valve_fires_on_order_by_collate` | `NotImplemented` | `UNICODE_CI` |
 | `collation_valve_fires_on_create_table_column_collate` | `NotImplemented` | `UTF8_LCASE` |
+| `collation_valve_fires_on_cast_as_string_collate` | `NotImplemented` | `UTF8_LCASE` (Q-002) |
+| `collation_valve_fires_on_set_session_key` | `NotImplemented` | Q-004 |
+| `collation_valve_fires_on_parenthesized_set` | `NotImplemented` | SEC-003 |
 | `collation_valve_ignores_collate_inside_a_literal` | (success) | — |
-| `collation_valve_refuses_end_to_end_and_default_select_is_untouched` | e2e refuse + `SELECT 1` | `does not implement collation` |
+| `collation_valve_refuses_end_to_end_and_default_select_is_untouched` | e2e refuse + `SELECT 1` + CAST + SET | `does not implement collation` |
 
 ### Facade (`python/repark/tests/test_collation_refuse.py`)
 
@@ -190,6 +206,20 @@ loud), `Cargo.lock`, registry / `_live_parity.py`.
 None that change the ruling. `filter(str)` is guarded in the binding rather than
 `core.py` (would have been a morning deferral if the parse lived only there).
 
+**Cycle-1 ACC (2026-08-12):**
+
+| ID | Disposition |
+|---|---|
+| Q-003 / SEC-001 | **CLOSED** — `StructField.fromJson` applies `__COLLATIONS` (Spark `provider.NAME` and bare name). Construction stays; createDataFrame refuses. |
+| Q-001 | **CLOSED** — `execute_passthrough` pin + source pin. Ledger: router = agreed Databricks parse; spark_ast = defense-in-depth executing parse. |
+| Q-002 / CL-002 | **CLOSED** — SQL `CAST(x AS STRING COLLATE name)` is G15 via type-position text scan (not `_engine_type_from_cast_arg`). Inventory row split from Python cast. |
+| CRATE-001 | **CLOSED** — new `tests/collation.rs` setup uses `.expect("…")`. |
+| CL-001 | **CLOSED** — intro + inventory narrowed to the inventoried compare/order-changing set + fromJson. Constructor KEEP is A5, not a silent ignore. |
+| SEC-003 | **CLOSED** — `ParenthesizedAssignments`, `RESET` of a collation key, reuse-fold `refuse_collation_session_key`. |
+| Q-004 | **CLOSED** — second `ORDER BY` name + SQL SET via `execute` / `spark.sql`. |
+
+SEC-002 (error-message interpolation of collation idents) was **not** in the OPEN queue and is not closed here.
+
 ---
 
 ## 6. Registry rows — READY TO PASTE, **not** landed
@@ -199,14 +229,15 @@ these after the PR merges.
 
 ---
 
-- **repark** — string collation is **refused** at parse / first evaluation. SQL `expr COLLATE
-  name`, `ORDER BY col COLLATE name`, `CREATE TABLE … (col STRING COLLATE name)`,
-  `SET spark.sql.collation.*`, `createDataFrame` with a non-`UTF8_BINARY` `StringType`, and
-  `Column.cast`/`try_cast` to a collated string all raise `UnsupportedOperationException`
-  (`NotImplemented` on the Rust doors) naming the requested collation and steering to
-  binary/default ordering. `StringType(collation=…)` construction and `simpleString` display
-  stay (schema metadata). `F.collate` / `F.collation` / `Column.collate` are not on the
-  facade (AttributeError).
+- **repark** — string collation is **refused** at parse / first evaluation on the inventoried
+  compare/order-changing paths. SQL `expr COLLATE name`, `ORDER BY col COLLATE name`,
+  `CREATE TABLE … (col STRING COLLATE name)`, `CAST(x AS STRING COLLATE name)`,
+  `SET`/`RESET spark.sql.collation.*`, `createDataFrame` with a non-`UTF8_BINARY`
+  `StringType` (including Spark JSON `__COLLATIONS`), and `Column.cast`/`try_cast` to a
+  collated string all raise `UnsupportedOperationException` (`NotImplemented` on the Rust
+  doors) naming the requested collation and steering to binary/default ordering.
+  `StringType(collation=…)` construction and `simpleString` display stay (schema metadata).
+  `F.collate` / `F.collation` / `Column.collate` are not on the facade (AttributeError).
 - **Apache Spark** — Spark 4.0+ applies the named collation to comparisons and `ORDER BY`.
   `createDataFrame([("Alice",), ("alice",)], StringType("UNICODE_CI")).distinct().count()`
   is **1**. `F.collate` / `F.collation` return a collated column / its name
@@ -214,14 +245,21 @@ these after the PR merges.
   `test_collation`; SQLConf keys from `v4.1.2` `SQLConf.scala`. Live probe recorded in this
   ledger §0b when the JVM lock is held.)*
 - **Pin** — `python/repark/tests/test_collation_refuse.py::test_create_dataframe_unicode_ci_refuses`,
+  `…::test_from_json_collations_metadata_constructs_and_create_refuses`,
   `…::test_sql_collate_expression_refuses`,
   `…::test_sql_order_by_collate_refuses`,
+  `…::test_sql_cast_as_string_collate_refuses`,
+  `…::test_sql_set_collation_key_refuses`,
   `…::test_cast_collated_string_type_refuses`,
   `…::test_conf_set_collation_key_refuses`,
   `crates/repark-spark/src/tests/collation.rs::select_collate_expression_refuses`,
   `…::order_by_collate_refuses`,
+  `…::cast_as_string_collate_refuses`,
+  `…::set_collation_session_key_refuses_via_execute`,
+  `…::execute_passthrough_attaches_collation_valve`,
   `…::create_table_column_collate_refuses`,
   `crates/repark-sql/src/guards/tests.rs::collation_valve_fires_on_expression_collate`,
+  `…::collation_valve_fires_on_cast_as_string_collate`,
   `…::collation_valve_refuses_end_to_end_and_default_select_is_untouched`.
 - **Rationale** — DEFECT, refused pending a future implement-or-keep-absent decision.
   **History:** G15 (MEDIUM) — "collation is unimplemented and silently wrong-count." The

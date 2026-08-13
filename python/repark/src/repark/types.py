@@ -811,14 +811,20 @@ class StructField(DataType):
 
     @classmethod
     def fromJson(cls, json: dict[str, Any]) -> StructField:  # noqa: N802
-        """Build from Spark field JSON (collation metadata keys ignored for v1)."""
+        """Build from Spark field JSON, applying ``metadata.__COLLATIONS``.
+
+        Spark 4 stores collation on the field metadata map (type token stays ``"string"``).
+        Construction of a collated :class:`StringType` stays legal (A5); first evaluation
+        refuses. Popping the key without applying it was the G15 silently-wrong-count path.
+        """
         metadata = dict(json.get("metadata") or {})
-        # Drop Spark collation metadata key if present — collations re-applied via type string.
-        metadata.pop("__COLLATIONS", None)
+        field_name = str(json.get("name", ""))
+        collations_map = _collations_map_from_field_metadata(metadata, field_name)
+        metadata.pop(_COLLATIONS_METADATA_KEY, None)
         metadata.pop("collations", None)
         return cls(
             json["name"],
-            _parse_datatype_json_value(json["type"], json.get("name", ""), None),
+            _parse_datatype_json_value(json["type"], field_name, collations_map or None),
             json.get("nullable", True),
             metadata,
         )
@@ -1159,6 +1165,37 @@ def _parse_datatype_string(text: str) -> DataType:
         except ValueError:
             pass
     return _parse_complex_or_atomic(stripped)
+
+
+_COLLATIONS_METADATA_KEY = "__COLLATIONS"
+
+
+def _collation_name_from_json_value(value: Any) -> str:
+    """Spark stores ``provider.NAME`` under ``__COLLATIONS``; a bare name is kept as-is.
+
+    Construction does not validate the provider (A5). ``icu.UNICODE_CI`` → ``UNICODE_CI``.
+    """
+    text = str(value)
+    parts = text.split(".")
+    if len(parts) == 2 and parts[0] and parts[1]:
+        return parts[1]
+    return text
+
+
+def _collations_map_from_field_metadata(
+    metadata: dict[str, Any], field_name: str
+) -> dict[str, str]:
+    """Read Spark field ``__COLLATIONS`` (or a ``collations`` alias) into a path→name map."""
+    raw = metadata.get(_COLLATIONS_METADATA_KEY)
+    if raw is None:
+        raw = metadata.get("collations")
+    if raw is None:
+        return {}
+    if isinstance(raw, str):
+        return {field_name: _collation_name_from_json_value(raw)}
+    if isinstance(raw, dict):
+        return {str(key): _collation_name_from_json_value(item) for key, item in raw.items()}
+    return {}
 
 
 def _parse_datatype_json_value(
