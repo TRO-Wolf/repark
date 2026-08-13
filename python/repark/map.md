@@ -41,7 +41,8 @@ becomes the facade; `repark.sql` becomes a callable). The target maps in `AGENTS
     `evaluation.py`, `linalg.py`, `param.py`, `pipeline.py`, `regression.py`, `tuning.py`,
     `util.py`, `feature/`, `ext/`) over `crates/repark-ml`; `ext/` holds the lazy delegated
     backends (`_sklearn`, `_xgboost`, `_lightgbm`, `_persist`, `_deps`, `_arrow_util`).
-- `tests/` — **127 files**, the facade suite, ported minus the empirically generated deferral
+- `tests/` — **134 `test_*.py` files** (plus committed `_record_*` drivers), the facade
+  suite, ported minus the empirically generated deferral
   ledger ([../../task/port/deferred-python-tests.txt](../../task/port/deferred-python-tests.txt),
   EC-4). See [tests/map.md](tests/map.md). This suite is the full-extras facade census cohort
   (design §6.3) and is run against the **installed wheel**, never a source tree.
