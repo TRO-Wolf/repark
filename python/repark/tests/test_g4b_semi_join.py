@@ -21,7 +21,11 @@ corpus): result sets on the Arrow path, value AND Arrow type AND nullability, ac
    distinct-name → ``RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT``). ``drop`` of that Column is
    a Spark 4.1.2 **no-op** (does not raise, does not drop the same-name left column) —
    the brief guessed a raise; live probe 2026-08-12 falsified that. Left refs and inner
-   joins stay resolved. See ``task/y5-origin-map-ledger.md``.
+   joins stay resolved. ``_spawn`` copies the not-emitted set so a filter/select
+   descendant still raises (Q-002); a later emitting join of the same right
+   subtracts those ids so ``select(right["k"])`` resolves again (Q-001). Self-semi
+   ``df.join(df, …)`` is exclusive-set empty, so ``select(df["k"])`` still works
+   (Q-003). See ``task/y5-origin-map-ledger.md``.
 
 These are repark-only assertions (a refusal has no Spark golden to compare against), which is
 exactly why they are not corpus rows: the corpus asserts differential equality.
@@ -243,6 +247,71 @@ def test_inner_join_right_ref_still_resolves(spark: ReparkSession, how: str, on_
     assert table.column_names == ["k"]
     assert table.to_pydict()["k"] == [1]
     assert joined.filter(right["k"] == 1).count() == 1
+
+
+@pytest.mark.parametrize("on_mode", ["name", "name_list", "condition"])
+def test_semi_then_inner_join_emits_the_same_right(spark: ReparkSession, on_mode: str) -> None:
+    """Q-001: a later inner join of the same right emits it; ``select(right["k"])`` resolves.
+
+    ``_spawn`` copies ``_origin_not_emitted``. Without the emitting-join subtract,
+    ``semi.join(right, …, "inner").select(right["k"])`` would still raise after
+    the right side is in the output.
+    """
+    _left, right, semi = _semi_family_join(spark, "leftsemi", on_mode)
+    if on_mode == "condition":
+        joined = semi.join(right, semi["k"] == right["k"], "inner")
+    elif on_mode == "name_list":
+        joined = semi.join(right, on=["k"], how="inner")
+    else:
+        joined = semi.join(right, on="k", how="inner")
+    table = joined.select(right["k"]).to_arrow()
+    assert table.column_names == ["k"]
+    assert table.to_pydict()["k"] == [1]
+    assert joined.filter(right["k"] == 1).count() == 1
+    # Subtract that right, do not clear the whole set: a different unemitted
+    # origin must still raise after an inner join of some other frame.
+    third = spark.createDataFrame([(1,)], ["k"])
+    other_inner = semi.join(third, on="k", how="inner")
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
+        other_inner.select(right["k"])
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+@pytest.mark.parametrize("on_mode", ["name", "condition"])
+def test_spawn_descendant_still_refuses_unemitted_right(
+    spark: ReparkSession, how: str, on_mode: str
+) -> None:
+    """Q-002: ``_spawn`` copies the not-emitted set; descendants must not name-fall-back.
+
+    Deleting ``child._origin_not_emitted = self._origin_not_emitted`` greens the
+    join-result pins (they rebind on the parent) while ``filter``/``select``
+    children silently bind the left ``k``.
+    """
+    left, right, joined = _semi_family_join(spark, how, on_mode)
+    filtered = joined.filter(left["k"].isNotNull())
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
+        filtered.select(right["k"])
+    projected = joined.select("k", "a")
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
+        projected.select(right["k"])
+    assert filtered.drop(right["k"]).columns == ["k", "a"]
+
+
+@pytest.mark.parametrize("on_mode", ["name", "condition"])
+def test_self_semi_exclusive_set_resolves_df_column(spark: ReparkSession, on_mode: str) -> None:
+    """Q-003: ``df.join(df, …, "leftsemi").select(df["k"])`` still works.
+
+    Exclusive-set: right plan ids minus left plan ids is empty, so the output
+    *is* that origin. A sloppy "all non-self plan ids" remember would refuse it.
+    """
+    frame = spark.createDataFrame([(1, "a"), (2, "b")], ["k", "a"])
+    if on_mode == "name":
+        joined = frame.join(frame, on="k", how="leftsemi")
+    else:
+        joined = frame.join(frame, frame["k"] == frame["k"], "leftsemi")
+    table = joined.select(frame["k"]).to_arrow()
+    assert table.column_names == ["k"]
+    assert sorted(table.to_pydict()["k"]) == [1, 2]
 
 
 @pytest.mark.parametrize("how", ["leftsemi", "leftanti"])

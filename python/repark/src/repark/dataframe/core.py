@@ -809,7 +809,9 @@ class DataFrame:
         Children do **not** inherit the parent's cache mark (object-identity caching only —
         Spark plan-matching cache is out of scope; disclosed in the unit ledger).
         Identity maps (H1) are **not** copied here — plan-preserving children use
-        :meth:`_spawn_preserving_identity`. Semi/anti unemitted-origin ids **are**.
+        :meth:`_spawn_preserving_identity`. Semi/anti unemitted-origin ids **are**
+        (Q-002: a later ``select(right[…])`` on a spawn descendant must still raise).
+        Emitting joins subtract the newly-emitted right ids (Q-001).
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
@@ -3655,11 +3657,22 @@ class DataFrame:
             ids.update(plan_id for plan_id, _field in self._origin_map)
         return frozenset(ids)
 
-    def _remember_unemitted_right_origins(self, left: DataFrame, right: DataFrame) -> None:
-        """Record right-side origin plan ids a semi/anti join did not emit (G4b-R2)."""
+    def _remember_unemitted_right_origins(
+        self, left: DataFrame, right: DataFrame, *, left_only: bool = True
+    ) -> None:
+        """Record (semi/anti) or forget (emitting join) exclusive right plan ids.
+
+        ``left_only=True`` unions the exclusive right ids into
+        :attr:`_origin_not_emitted`. ``left_only=False`` subtracts them so a later
+        inner/outer/cross that actually emits that right no longer raises (Q-001).
+        """
         exclusive = right._origin_plan_ids() - left._origin_plan_ids()
         if exclusive:
-            self._origin_not_emitted = self._origin_not_emitted | exclusive
+            self._origin_not_emitted = (
+                self._origin_not_emitted | exclusive
+                if left_only
+                else self._origin_not_emitted - exclusive
+            )
 
     def _raise_if_origin_not_emitted(self, plan_id: str | None, field: str | None) -> None:
         """Raise Spark 4.1.2 ``MISSING_ATTRIBUTES`` when ``plan_id`` was not emitted."""
@@ -4971,8 +4984,9 @@ class DataFrame:
             right = other
         if isinstance(on, str):
             child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how))
-            if engine_how in _SEMI_JOIN_HOWS:
-                child._remember_unemitted_right_origins(self, other)
+            child._remember_unemitted_right_origins(
+                self, other, left_only=engine_how in _SEMI_JOIN_HOWS
+            )
             return child
         if isinstance(on, (list, tuple)) and all(isinstance(key, str) for key in on):
             # octo C3-Q-001: empty key list is a cartesian product — same gate as on=None
@@ -4986,8 +5000,9 @@ class DataFrame:
                     )
                 return left.crossJoin(right)
             child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how))
-            if engine_how in _SEMI_JOIN_HOWS:
-                child._remember_unemitted_right_origins(self, other)
+            child._remember_unemitted_right_origins(
+                self, other, left_only=engine_how in _SEMI_JOIN_HOWS
+            )
             return child
         raise PySparkTypeError(
             "join `on` expects a column name, a list of names, or a Column, "
@@ -5104,8 +5119,7 @@ class DataFrame:
             child._display_names = display_names
             child._engine_names = engine_names
             child._origin_map = origin_map
-            if left_only:
-                child._remember_unemitted_right_origins(self, other)
+            child._remember_unemitted_right_origins(self, other, left_only=left_only)
             return child
         finally:
             self._session.drop_temp_view(left_alias)

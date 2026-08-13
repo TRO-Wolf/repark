@@ -211,3 +211,19 @@ the G4b-R2 bullets / Debug rows / ledger link. `test_join_parity.py` is Y-4's.
 Commits authored **TRO-Wolf** (`64240326+TRO-Wolf@users.noreply.github.com`) with the
 `Authored-By: Grok (grok-4.5) <noreply@x.ai>` trailer, per-command `-c` identity only. No
 co-author trailers, no session ids or URLs. `%ae` checked after every commit.
+
+---
+
+## 8. ACC cycle-1 (OPEN queue)
+
+| ID | Sev | Disposition |
+|---|---|---|
+| Q-001 | S1 | **FIXED.** Emitting joins call `_remember_unemitted_right_origins(..., left_only=False)`, which subtracts the exclusive right plan ids the `_spawn` copy inherited. Pin: `test_semi_then_inner_join_emits_the_same_right` (name / name_list / condition). The pin also joins a *third* frame and still refuses the original `right["k"]` so a "clear the whole set" bug reds. |
+| Q-002 | S1 | **FIXED / pinned.** The `_spawn` copy line stays. Pin: `test_spawn_descendant_still_refuses_unemitted_right` — `filter` (`_spawn_preserving_identity`) and `select("k","a")` (plain `_spawn`) both still raise; `drop(right["k"])` on the filter child is still a no-op. Deleting the copy line reds this while the join-result pins stay green. |
+| Q-003 | S1 | **PINNED.** `test_self_semi_exclusive_set_resolves_df_column` — `df.join(df, …, "leftsemi").select(df["k"])` on name and condition; exclusive-set is empty so the output *is* that origin. |
+| SAF-001 | cheap | **RESIDUAL (morning).** `F.abs(right["k"])` after semi binds the left `k`. `functions.abs` builds a fresh `Column(...)` and does not thread `_origin_plan_id` / `_join_sql_expr` (no origin mentions in `functions.py`). Fixing it requires the cheap wrapper path in `functions.py`, which is Y-7's file. Not touched. |
+
+No `test_join_parity.py` edit. No `column.py` edit. No `functions.py` edit.
+
+Cycle-1 gates (real exit codes): `make verify` → **0** (`/tmp/y5-fix-verify.log`);
+`make preflight` → **0** (`/tmp/y5-fix-preflight.log`; facade **2857 passed, 71 skipped**).

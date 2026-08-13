@@ -17,9 +17,12 @@ region split real (technique A: nested-class extract + owned helpers).
   semi/anti join (`on=None` or `on=[]`) refuses loud instead of falling through to the Cartesian
   path — a cross join is a different result set. **G4b-R2 / Y-5:** after a semi/anti join
   the origin map records the right side's plan ids as not-emitted (`_origin_not_emitted`,
-  copied by `_spawn`). `select` / `filter` / `withColumn` of a right-parent Column raise
-  Spark 4.1.2's `MISSING_ATTRIBUTES` class instead of name-falling back to the left
-  column; `drop` of that Column is a Spark no-op. See `task/y5-origin-map-ledger.md`.
+  copied by `_spawn` so descendants still raise — Q-002). A later emitting join of
+  that same right subtracts those ids (Q-001) so `semi.join(right, …, "inner")` can
+  `select(right["k"])` again. `select` / `filter` / `withColumn` of a still-unemitted
+  right-parent Column raise Spark 4.1.2's `MISSING_ATTRIBUTES` class instead of
+  name-falling back to the left column; `drop` of that Column is a Spark no-op.
+  Self-semi is exclusive-set empty (Q-003). See `task/y5-origin-map-ledger.md`.
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).
