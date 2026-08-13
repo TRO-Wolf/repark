@@ -10,7 +10,8 @@ separately: after U2 (`parse_float_as_decimal=true`) repark types
 `union(VALUES (1), VALUES (2.5))` as ``decimal128(21, 1)`` nullable (Int64 promoted to
 DECIMAL(20,0) union DECIMAL(2,1)), where Spark lands ``decimal128(11, 1)`` non-null
 (INT promoted to DECIMAL(10,0) union DECIMAL(2,1)).
-That leftover is campaign DEC-8 / U3 — see `test_union_inline_decimal_literal_diverges_from_spark`.
+That leftover is campaign DEC-8 / U3 **set-op widening** (Spark `forType(INT)=(10,0)`, not
+`fromLiteral` digits) — see `test_union_inline_decimal_literal_diverges_from_spark`.
 `dropDuplicates(subset)` is row-nondeterministic in Spark, so its fixtures pin a deterministic
 survivor (the surviving key set, or identical non-key values), never an accident (docs/testing.md
 row-order discipline).
@@ -101,16 +102,19 @@ def test_parity_union_type_coercion(spark: ReparkSession) -> None:
 
 
 def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE (TY-3, residual U3): U2 types the inline literal as DECIMAL, but
-    the union width is still not Spark's.
+    """DISCLOSED DIVERGENCE (TY-3): U3 does not move this row to Spark's (11,1).
 
-    Dated 2026-08-13 (U2): ``VALUES (2.5)`` is now DECIMAL(2,1) on the Spark door. ``VALUES (1)``
-    is still Int64, so the union is ``DECIMAL(20,0)`` union ``DECIMAL(2,1)`` →
-    ``decimal128(21, 1)`` **nullable**. Spark 4.1.2 treats the int as INT →
-    ``DECIMAL(10,0)`` union ``DECIMAL(2,1)`` → ``decimal128(11, 1)`` **non-null**.
-    Q4 = A: still DECLARED; leftover is campaign DEC-8 / U3
-    (integer-literal min-precision + VALUES nullability). We pin repark's ACTUAL output and
-    record the real Spark golden it diverges from.
+    Dated 2026-08-13 (U2): ``VALUES (2.5)`` is DECIMAL(2,1); ``VALUES (1)`` is Int64 ->
+    ``DECIMAL(20,0) union DECIMAL(2,1)`` -> ``decimal128(21, 1)`` **nullable**. Spark 4.1.2
+    treats the int as INT -> ``DECIMAL(10,0) union DECIMAL(2,1)`` -> ``decimal128(11, 1)``
+    **non-null**.
+
+    Dated 2026-08-13 (U3): integer-literal ``fromLiteral`` applies to ``+ - *`` only
+    (Spark ``literalPickMinimumPrecision``). UNION set-op widening uses Spark
+    ``forType(INT) = DECIMAL(10,0)``, not digits-of-the-value. Applying fromLiteral
+    here would yield ``DECIMAL(1,0) union DECIMAL(2,1)`` -> ``(3,1)``, which is neither
+    today's ``(21,1)`` nor Spark's ``(11,1)``. Observed type after U3 is still
+    ``decimal128(21, 1)`` nullable. Still DECLARED.
     """
     ints = spark.sql("SELECT * FROM (VALUES (1)) AS t(v)")
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")

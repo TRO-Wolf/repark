@@ -8,9 +8,10 @@
 //! corpus row it mirrors. This module does **not** re-derive or edit the Python corpus.
 //!
 //! Coverage classes (charter G-7b / archived `docs/history/hardening-h1/g7-decimal-ledger.md` §9):
-//! literal inference · division `(p,s)` · 38-clamp family · avg/promotion · ANSI overflow +
-//! div-zero · nullability marking. Equality-class money arithmetic is also pinned so the
-//! bit-exact idiom has green controls, not only disclosures.
+//! literal inference · division `(p,s)` · 38-clamp family (U4a matches Spark) · avg/promotion ·
+//! INT×DECIMAL width (U3 fromLiteral) · ANSI overflow + div-zero · nullability marking.
+//! Equality-class money arithmetic is also pinned so the bit-exact idiom has green controls,
+//! not only disclosures.
 //!
 //! Out of scope: fixing any divergence a pin documents; the registry file; Python corpus edits.
 
@@ -149,9 +150,9 @@ async fn pin_div_same_precision_scale_repark_i128() {
 // =================================================================================================
 
 /// Corpus row `mul_38_10_clamps_scale_in_spark`.
-/// Spark clamps product to (38,6); repark keeps s1+s2 → (38,20). Pin i128 = 10^20 (1.0 at s=20).
+/// U4a: Spark `adjustPrecisionScale` → (38,6). i128 = 10^6 (1.0 at s=6).
 #[tokio::test]
-async fn pin_mul_38_10_keeps_scale_20_i128() {
+async fn pin_mul_38_10_clamps_to_38_6_i128() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     let (precision, scale, nullable, value) = collect_decimal128(
@@ -160,16 +161,49 @@ async fn pin_mul_38_10_keeps_scale_20_i128() {
         "SELECT CAST(1 AS DECIMAL(38,10)) * CAST(1 AS DECIMAL(38,10)) AS v",
     )
     .await;
-    assert_eq!(
-        (precision, scale),
-        (38, 20),
-        "repark mul keeps s1+s2 under p=38"
-    );
+    assert_eq!((precision, scale), (38, 6), "Spark mul clamp (38,6)");
     assert!(!nullable, "scalar mul non-null today");
+    assert_eq!(value, Some(1_000_000), "i128 for 1.0 at scale 6");
+}
+
+/// Corpus row `add_38_18_clamps_scale_in_spark`.
+/// U4a: Spark add clamp → (38,17). i128 = 2 * 10^17.
+#[tokio::test]
+async fn pin_add_38_18_clamps_to_38_17_i128() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let (precision, scale, nullable, value) = collect_decimal128(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(1 AS DECIMAL(38,18)) + CAST(1 AS DECIMAL(38,18)) AS v",
+    )
+    .await;
+    assert_eq!((precision, scale), (38, 17), "Spark add clamp (38,17)");
+    assert!(!nullable, "scalar add non-null today");
     assert_eq!(
         value,
-        Some(100_000_000_000_000_000_000),
-        "i128 for 1.0 at scale 20"
+        Some(200_000_000_000_000_000),
+        "i128 for 2.0 at scale 17"
+    );
+}
+
+/// Corpus row `mul_38_20_plans_in_spark_refuses_in_repark`.
+/// U4a cannot close DEC-8: Arrow refuses at `BinaryExpr::get_type` before any analyzer.
+#[tokio::test]
+async fn pin_mul_38_20_still_refuses_at_plan() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(1 AS DECIMAL(38,20)) * CAST(1 AS DECIMAL(38,20)) AS v",
+    )
+    .await
+    .expect_err("DEC-8 must still refuse at plan construction");
+    let message = error.to_string();
+    assert!(
+        message.contains("exceed max scale") || message.contains("Cannot get result type"),
+        "expected Arrow scale-refuse, got {message}"
     );
 }
 
@@ -199,9 +233,10 @@ async fn pin_avg_money_stays_decimal128_14_6_i128() {
 }
 
 /// Corpus row `int_times_decimal_promotes_wider_in_repark`.
-/// Spark: (12,2) nullable; repark: (31,2) non-null. Value 7.50 → i128 = 750.
+/// U3: integer literal `5` is `DECIMAL(1,0)` → product (12,2). Value 7.50 → i128 = 750.
+/// Nullability still non-null (DEC-9 / U5); Spark marks nullable.
 #[tokio::test]
-async fn pin_int_times_decimal_promotes_to_31_2_i128() {
+async fn pin_int_times_decimal_is_12_2_i128() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     let (precision, scale, nullable, value) = collect_decimal128(
@@ -210,8 +245,24 @@ async fn pin_int_times_decimal_promotes_to_31_2_i128() {
         "SELECT 5 * CAST(1.50 AS DECIMAL(10,2)) AS v",
     )
     .await;
-    assert_eq!((precision, scale), (31, 2), "repark int×decimal width");
-    assert!(!nullable, "repark marks int×decimal non-null today");
+    assert_eq!((precision, scale), (12, 2), "U3 fromLiteral width");
+    assert!(!nullable, "repark marks int×decimal non-null (DEC-9)");
+    assert_eq!(value, Some(750), "i128 scaled 7.50 at scale 2");
+}
+
+/// Typed INT is `forType(INT)=(10,0)`, not min-precision. Must not shrink to (12,2).
+#[tokio::test]
+async fn pin_cast_int_times_decimal_stays_21_2_i128() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    let (precision, scale, nullable, value) = collect_decimal128(
+        &ctx,
+        &catalogs,
+        "SELECT CAST(5 AS INT) * CAST(1.50 AS DECIMAL(10,2)) AS v",
+    )
+    .await;
+    assert_eq!((precision, scale), (21, 2), "typed INT column width");
+    assert!(!nullable, "scalar mul non-null today");
     assert_eq!(value, Some(750), "i128 scaled 7.50 at scale 2");
 }
 

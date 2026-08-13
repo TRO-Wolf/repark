@@ -27,7 +27,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names. **U2 (2026-08-13):**
   `pin_literal_1_23_infers_decimal128_3_2_i128` (was float64) and overflow wrap `10^38`
-  at (38,0); fixtures go through `apply_spark_float_as_decimal` via `common::setup`), `float_agg` (G7 float
+  at (38,0). **V-2 U3+U4a (2026-08-13):** `pin_int_times_decimal_is_12_2_i128` (was 31,2),
+  `pin_cast_int_times_decimal_stays_21_2_i128`, clamp pins `(38,6)` / `(38,17)`,
+  `pin_mul_38_20_still_refuses_at_plan` (DEC-8 still plan-refuse); fixtures go through
+  `apply_spark_float_as_decimal` via `common::setup`), `float_agg` (G7 float
   aggregation determinism — catastrophic-cancellation fixture; `sum`/`avg` `f64::to_bits` at
   `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure).
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):

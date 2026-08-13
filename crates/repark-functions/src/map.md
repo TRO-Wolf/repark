@@ -50,12 +50,20 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   **W-2 U2 ride-along:** Decimal32/64/256 accumulator arms have revert-red pins
   (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
 
+- `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
+  U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
+  columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
+  `/` is U4b (CAST-after wrongs the value). Registry DEC-8 `(38,20)*(38,20)` still
+  refuses at plan construction (`BinaryExpr::get_type`) — an AnalyzerRule never sees
+  it. Inserted **first** in `analyzer_rules()` (before `SparkExprSemantics`) so a
+  future `/` rewrite sees a clean `decimal / decimal` before the `nullif` `/0` wrap.
+  Ledger: `task/v2-dec-u3u4-ledger.md`.
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (the Spark semantics rules the session installs on every context via the
-  Spark door's `SessionExtension` in `repark-spark`; error conversion one layer up is
-  `repark-core`) +
+  `analyzer_rules()` (`SparkDecimalPrecision` first, then Spark semantics + cardinality +
+  instant_ts; the session installs them via the Spark door's `SessionExtension`; error
+  conversion one layer up is `repark-core`) +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by

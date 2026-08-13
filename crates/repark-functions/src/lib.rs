@@ -40,6 +40,7 @@ pub mod analyzer;
 pub mod cardinality;
 pub mod collection;
 pub mod datetime;
+pub mod decimal_precision;
 pub mod expr_fn;
 pub mod instant_ts;
 pub mod random;
@@ -120,13 +121,16 @@ pub fn register_all(ctx: &SessionContext) {
 
 /// ===========================================================================================
 /// The Spark-semantics + plan-time safety analyzer rules the session installs on every
-/// context (after the DataFusion built-ins, so they see type-coerced plans). See [`analyzer`]
-/// and [`cardinality`] (r24 SB1 / SEC-01 expansion ceilings).
+/// context (after the DataFusion built-ins, so they see type-coerced plans). See
+/// [`decimal_precision`] (first — U3/U4a; order is semantic), [`analyzer`], and
+/// [`cardinality`] (r24 SB1 / SEC-01 expansion ceilings).
 /// ===========================================================================================
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
-    let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> =
-        vec![Arc::new(analyzer::SparkExprSemantics)];
+    let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
+        Arc::new(decimal_precision::SparkDecimalPrecision),
+        Arc::new(analyzer::SparkExprSemantics),
+    ];
     rules.extend(cardinality::analyzer_rules());
     rules.push(instant_ts::ltz_timestamp_cast_rule());
     rules

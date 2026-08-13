@@ -34,6 +34,11 @@ not this directory.
   [NOT] EXISTS` ± correlation through the A1-identity path. IN + NOT IN + EXISTS + NOT EXISTS
   execute both doors; dbt-upgrade gate sentence in §6. Residual correlated IN / UPDATE /
   nested / scalar stay refused. Does **not** edit the registry (V-5 owns it).
+- [v2-dec-u3u4-ledger.md](v2-dec-u3u4-ledger.md) — **V-2 / DEC U3+U4a (2026-08-13):**
+  integer-literal min-precision (`fromLiteral` on `+ − *`) + `SparkDecimalPrecision`
+  add/sub/mul 38-clamp (CAST-after). `/` declared U4b. DEC-8 still plan-refuse
+  (AnalyzerRule cannot see it). TY-3 still DECLARED `(21,1)` nullable. Does **not**
+  edit the registry (V-5 owns it; §6 paste-true).
 - [w5-z-landing-ledger.md](w5-z-landing-ledger.md) — **W-5 Z-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged Z-wave
   handoffs (G3-E8 IN-DELETE footnote, not family-fixed; TZ-4 progress not retired;
@@ -242,6 +247,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | [v5-w-landing-ledger.md](v5-w-landing-ledger.md) | **V-5** W-wave §6 landing increment — registry + one STATUS dated note |
 | [v4-partition-values-ledger.md](v4-partition-values-ledger.md) | **V-4** write-path partition-key VALUE audit — carry-check + load-bearing + TZ-8 |
+| [v2-dec-u3u4-ledger.md](v2-dec-u3u4-ledger.md) | **V-2** DEC U3+U4a — integer-literal min-precision + add/sub/mul 38-clamp |
 | [w5-z-landing-ledger.md](w5-z-landing-ledger.md) | **W-5** Z-wave §6 landing increment — registry + one STATUS dated note |
 | [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) | **Z-5** Y-wave §6 landing increment — registry + one STATUS dated note |
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
