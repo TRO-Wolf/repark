@@ -283,7 +283,8 @@ def test_minmax_maxabs_nan_tolerant() -> None:
     spark = _session()
     try:
         base = spark.sql(
-            "SELECT make_array(x) AS f FROM (VALUES (1.0), (CAST('NaN' AS DOUBLE)), (3.0)) t(x)"
+            "SELECT make_array(x) AS f FROM (VALUES "
+            "(CAST(1.0 AS DOUBLE)), (CAST('NaN' AS DOUBLE)), (CAST(3.0 AS DOUBLE))) t(x)"
         )
         mm = MinMaxScaler(inputCol="f", outputCol="m").fit(base)
         assert mm.original_min[0] == 1.0 and mm.original_max[0] == 3.0
@@ -349,7 +350,10 @@ def test_imputer_median_nan_missing() -> None:
     """Q1/octo F-Q1-002: default missingValue=NaN treats NaN as missing (not crash)."""
     spark = _session()
     try:
-        df = spark.sql("SELECT * FROM (VALUES (1.0), (CAST('NaN' AS DOUBLE)), (3.0), (5.0)) t(x)")
+        df = spark.sql(
+            "SELECT * FROM (VALUES (CAST(1.0 AS DOUBLE)), (CAST('NaN' AS DOUBLE)), "
+            "(CAST(3.0 AS DOUBLE)), (CAST(5.0 AS DOUBLE))) t(x)"
+        )
         model = Imputer(inputCols=["x"], outputCols=["x_out"], strategy="median").fit(df)
         # Fit must exclude NaNs → median of {1,3,5} window [1,5], finite replacement.
         rep = float(model.replacements["x"])
@@ -536,8 +540,10 @@ def test_count_vectorizer_and_idf() -> None:
         tf = cv_model.transform(df)
         rows = [list(row.asDict()["tf"]) for row in tf.collect()]
         # Vocabulary order is frequency-desc then token; check bag sums.
+        # U2: CountVectorizer SQL uses `1.0`/`0.0` literals → DECIMAL vectors after
+        # parse_float_as_decimal. Values still sum to the token counts.
         assert all(
-            abs(sum(vec) - expected) < 1e-9
+            abs(float(sum(vec)) - expected) < 1e-9
             for vec, expected in zip(rows, [3.0, 2.0, 3.0], strict=True)
         )
         idf_model = IDF(inputCol="tf", outputCol="tfidf").fit(tf)

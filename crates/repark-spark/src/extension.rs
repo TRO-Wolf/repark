@@ -8,7 +8,9 @@
 //!   [`repark_functions::cardinality::repark_sql_settings_from_config_map`] and attach it with
 //!   [`repark_functions::cardinality::with_repark_sql_config`]; **plus** the session-timezone
 //!   carrier (H-1a split B), which is this door's whole part in making timestamp extraction
-//!   honor `spark.sql.session.timeZone`.
+//!   honor `spark.sql.session.timeZone`; **plus** the Spark-door parser default
+//!   `datafusion.sql_parser.parse_float_as_decimal = true` (DEC-1 / U2) so bare floating-point
+//!   SQL literals (`1.23`) infer `DECIMAL`, matching Spark. The ANSI door never calls this hook.
 //!
 //! **Why the timezone crosses HERE and nowhere else.** `repark-core` (tier 2) owns the key, the
 //! validation and the resolved value; `repark-functions` (tier-3 capability leaf) owns the
@@ -51,10 +53,25 @@ use repark_ta::TaExtension;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SparkExtension;
 
+/// ===========================================================================================
+/// Spark-door parser default (DEC-1 / U2): floating-point SQL literals parse as DECIMAL.
+///
+/// DataFusion's `sql_parser.parse_float_as_decimal` defaults to `false` (bare `1.23` is
+/// `Float64`). Spark infers `DECIMAL` from the text. Every session that goes through
+/// [`SparkExtension::configure`] turns the flag on. The ANSI door never calls this helper.
+/// Spark-door unit fixtures that build a `SessionContext` without the extension call this so
+/// they match production wiring.
+/// ===========================================================================================
+pub(crate) fn apply_spark_float_as_decimal(mut config: SessionConfig) -> SessionConfig {
+    config.options_mut().sql_parser.parse_float_as_decimal = true;
+    config
+}
+
 impl SessionExtension for SparkExtension {
     /// v1 position: after the engine write knobs, before the `RuntimeEnv` is assembled —
-    /// the r24 SB1 cardinality / `repark.sql.*` `ConfigExtension` install, and the
-    /// session-timezone carrier the extractor layer reads at invoke time.
+    /// the r24 SB1 cardinality / `repark.sql.*` `ConfigExtension` install, the Spark-door
+    /// `parse_float_as_decimal` default (DEC-1 / U2), and the session-timezone carrier the
+    /// extractor layer reads at invoke time.
     ///
     /// # Errors
     /// A present-but-unparsable `repark.sql.*` conf value (v1's fail-loud contract). The zone
@@ -67,6 +84,7 @@ impl SessionExtension for SparkExtension {
         let settings =
             repark_functions::cardinality::repark_sql_settings_from_config_map(session.conf)?;
         let config = repark_functions::cardinality::with_repark_sql_config(config, settings);
+        let config = apply_spark_float_as_decimal(config);
         // The one crossing point (module docs): the engine's already-resolved zone becomes the
         // carrier every calendar extractor reads out of `ScalarFunctionArgs::config_options`.
         Ok(repark_functions::session_time_zone::with_session_time_zone(

@@ -781,7 +781,8 @@ def test_p5_collect_nan_and_none_preserved(spark: ReparkSession) -> None:
     import math
 
     rows = spark.sql(
-        "SELECT * FROM VALUES (CAST('NaN' AS DOUBLE), CAST(NULL AS DOUBLE)), (1.5, 2.0) AS t(a, b)"
+        "SELECT * FROM VALUES (CAST('NaN' AS DOUBLE), CAST(NULL AS DOUBLE)), "
+        "(CAST(1.5 AS DOUBLE), CAST(2.0 AS DOUBLE)) AS t(a, b)"
     ).collect()
     assert math.isnan(rows[0][0])
     assert rows[0][1] is None

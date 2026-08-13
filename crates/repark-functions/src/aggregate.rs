@@ -443,6 +443,8 @@ impl Accumulator for AvgAccumulatorWithRetract {
 mod tests {
     use super::*;
     use arrow::array::Float64Array;
+    use arrow::datatypes::Schema;
+    use arrow::record_batch::RecordBatch;
     use datafusion::prelude::SessionContext;
     use datafusion_spark;
 
@@ -644,6 +646,99 @@ mod tests {
         assert_eq!(acc.count, 0);
         let evaluated = acc.evaluate().expect("empty frame is null");
         assert!(evaluated.is_null(), "empty retracted frame must be NULL");
+    }
+
+    fn register_decimal_column(ctx: &SessionContext, column: ArrayRef, data_type: DataType) {
+        let schema = Arc::new(Schema::new(vec![Field::new("v", data_type, true)]));
+        let batch = RecordBatch::try_new(schema, vec![column]).expect("decimal avg fixture");
+        ctx.register_batch("t", batch)
+            .expect("register decimal avg fixture");
+    }
+
+    /// Z-3 S3 residual: Decimal32 accumulator arm. Mutation-red if the match arm is dropped
+    /// (`not_impl` at plan/exec, or a silent coerce to Float64).
+    #[tokio::test]
+    async fn group_avg_decimal32_stays_decimal_9_6_i32() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let array = arrow::array::Decimal32Array::from(vec![Some(110), Some(220)])
+            .with_precision_and_scale(5, 2)
+            .expect("decimal32 fixture");
+        register_decimal_column(&ctx, Arc::new(array), DataType::Decimal32(5, 2));
+        let batches = ctx
+            .sql("SELECT avg(v) AS a FROM t")
+            .await
+            .expect("plan decimal32 avg")
+            .collect()
+            .await
+            .expect("execute decimal32 avg");
+        let column = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Decimal32Array>()
+            .expect("decimal32, not float64");
+        assert_eq!(column.precision(), 9);
+        assert_eq!(column.scale(), 6);
+        assert_eq!(column.value(0), 1_650_000, "i32 scaled 1.650000 at scale 6");
+    }
+
+    /// Z-3 S3 residual: Decimal64 accumulator arm.
+    #[tokio::test]
+    async fn group_avg_decimal64_stays_decimal_14_6_i64() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let array = arrow::array::Decimal64Array::from(vec![Some(110), Some(220)])
+            .with_precision_and_scale(10, 2)
+            .expect("decimal64 fixture");
+        register_decimal_column(&ctx, Arc::new(array), DataType::Decimal64(10, 2));
+        let batches = ctx
+            .sql("SELECT avg(v) AS a FROM t")
+            .await
+            .expect("plan decimal64 avg")
+            .collect()
+            .await
+            .expect("execute decimal64 avg");
+        let column = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Decimal64Array>()
+            .expect("decimal64, not float64");
+        assert_eq!(column.precision(), 14);
+        assert_eq!(column.scale(), 6);
+        assert_eq!(column.value(0), 1_650_000, "i64 scaled 1.650000 at scale 6");
+    }
+
+    /// Z-3 S3 residual: Decimal256 accumulator arm.
+    #[tokio::test]
+    async fn group_avg_decimal256_stays_decimal_14_6_i256() {
+        let ctx = SessionContext::new();
+        crate::register_all(&ctx);
+        let array = arrow::array::Decimal256Array::from(vec![
+            Some(arrow::datatypes::i256::from_i128(110)),
+            Some(arrow::datatypes::i256::from_i128(220)),
+        ])
+        .with_precision_and_scale(10, 2)
+        .expect("decimal256 fixture");
+        register_decimal_column(&ctx, Arc::new(array), DataType::Decimal256(10, 2));
+        let batches = ctx
+            .sql("SELECT avg(v) AS a FROM t")
+            .await
+            .expect("plan decimal256 avg")
+            .collect()
+            .await
+            .expect("execute decimal256 avg");
+        let column = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<arrow::array::Decimal256Array>()
+            .expect("decimal256, not float64");
+        assert_eq!(column.precision(), 14);
+        assert_eq!(column.scale(), 6);
+        assert_eq!(
+            column.value(0),
+            arrow::datatypes::i256::from_i128(1_650_000),
+            "i256 scaled 1.650000 at scale 6"
+        );
     }
 
     #[tokio::test]

@@ -110,9 +110,18 @@ def _dec(precision: int, scale: int, value: Decimal | None, *, nullable: bool = 
     )
 
 
-def _f64(value: float, *, nullable: bool = False) -> pa.Table:
-    """One-column ``v`` table with ``float64`` (repark's bare decimal-literal inference today)."""
-    return _one_row([("v", pa.float64(), nullable)], {"v": value})
+def _dec_raw_i128(precision: int, scale: int, value: int, *, nullable: bool = False) -> pa.Table:
+    """One-column ``v`` table whose physical i128 may exceed the declared precision.
+
+    PyArrow's Python constructor rejects ``10**38`` at ``decimal128(38, 0)``. The engine
+    still emits that wrap as a raw 16-byte little-endian i128 (U2 overflow pin).
+    """
+    raw = value.to_bytes(16, "little", signed=True)
+    array = pa.Decimal128Array.from_buffers(
+        pa.decimal128(precision, scale), 1, [None, pa.py_buffer(raw)]
+    )
+    schema = pa.schema([pa.field("v", pa.decimal128(precision, scale), nullable)])
+    return pa.table({"v": array}, schema)
 
 
 @dataclass(frozen=True)
@@ -278,27 +287,28 @@ G2_ROWS: list[DecimalRow] = [
         "G2",
         "SELECT 1.23 AS v",
         _dec(3, 2, Decimal("1.23")),
-        _f64(1.23),
-        "bare decimal literal: Spark infers DECIMAL(3,2) -> decimal128(3,2); repark infers double. "
-        f"A money column written from a literal is the wrong Arrow type. Flipped by {FIX_G2}.",
+        None,
+        "bare decimal literal: Spark infers DECIMAL(3,2) -> decimal128(3,2). U2 / DEC-1 made "
+        "this the Spark-door default (`parse_float_as_decimal=true`). Name kept so registry "
+        "citations still resolve.",
     ),
     DecimalRow(
         "literal_0_1_infers_decimal_in_spark_double_in_repark",
         "G2",
         "SELECT 0.1 AS v",
         _dec(1, 1, Decimal("0.1")),
-        _f64(0.1),
-        "the classic binary-float landmine as a type divergence: Spark keeps DECIMAL(1,1); repark "
-        f"answers float64 0.1. Flipped by {FIX_G2}.",
+        None,
+        "the classic binary-float landmine as a type: Spark keeps DECIMAL(1,1). U2 / DEC-1 "
+        "equality. Name kept so registry citations still resolve.",
     ),
     DecimalRow(
         "literal_123_456_infers_decimal_in_spark_double_in_repark",
         "G2",
         "SELECT 123.456 AS v",
         _dec(6, 3, Decimal("123.456")),
-        _f64(123.456),
-        "three fractional digits of literal inference: Spark DECIMAL(6,3); repark double. "
-        f"Flipped by {FIX_G2}.",
+        None,
+        "three fractional digits of literal inference: Spark DECIMAL(6,3). U2 / DEC-1 "
+        "equality. Name kept so registry citations still resolve.",
     ),
     # ----- disclosures: division result (p,s) -----------------------------------------------------
     DecimalRow(
@@ -400,10 +410,11 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38,0)) "
         "+ CAST(1 AS DECIMAL(38,0)) AS v",
         None,
-        # repark currently returns a corrupted integer (float-path residue of the big literal).
-        _dec(38, 0, Decimal("99999999999999997748809823456034029569")),
-        "ANSI Spark raises NUMERIC_VALUE_OUT_OF_RANGE for max DECIMAL(38,0)+1; repark returns a "
-        f"wrong 38-digit value (no raise). Flipped by {FIX_G13}.",
+        # U2: 38-nines parses as exact DECIMAL, then +1 wraps to 10^38 at declared (38,0).
+        # DEC-6 leftover (wrap-not-residue). Not an ANSI-raise fix.
+        _dec_raw_i128(38, 0, 10**38),
+        "ANSI Spark raises NUMERIC_VALUE_OUT_OF_RANGE for max DECIMAL(38,0)+1; repark wraps to "
+        f"10^38 at decimal128(38,0) (U2 wrap-not-residue). Flipped by {FIX_G13}.",
         spark_raises="ArithmeticException",
     ),
     DecimalRow(

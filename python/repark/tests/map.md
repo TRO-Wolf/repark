@@ -143,7 +143,8 @@ NOT in that file is a defect, not a decision.
   pre-evo pin (octo I7-C5) + case-insensitive DROP name, REPLACE PARTITION FIELD, REPLACE
   COLUMNS promote + identity-trap twin; residual refuse ADD NOT NULL.
   FQ `mem.ns.table` only (no bare-name dependency).
-- `test_ml_feature_oracle.py` — R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
+- `test_ml_feature_oracle.py` — **U2:** NaN-mix SQL fixtures CAST float literals to DOUBLE;
+  CountVectorizer `1.0` SQL now yields decimal128 vectors (values still sum). R-ML-FEATURE (M2) + Q1 R-ML-QUANTILE: VectorAssembler, StringIndexer/IndexToString,
   OHE sparse, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode/**median**,
   Tokenizer, **RegexTokenizer**, StopWordsRemover, SQLTransformer, Binarizer, PolynomialExpansion,
   **RobustScaler**, **QuantileDiscretizer**, **CountVectorizer+IDF**, pipeline e2e, live label oracle;
@@ -269,7 +270,8 @@ NOT in that file is a defect, not a decision.
   join/conf + builder gate, sample overload/seed mix, randomSplit seed, count star + struct
   field names, explain extended hang budget, table, show, StorageLevel, toDF, dropDuplicates [].
 - `test_ml_boost_oracle.py` — M4 R-ML-BOOST + **M5 booster-bytes** + **M6 CV parallelism** + **M8 every-ext save/load-or-pin-refuse**: `repark.ml.ext` bare import + ImportError pin, XGBoostRegressor E2E + lib-direct parity, **XGBoostRegressorModel + ClassifierModel save/load predict-parity** (M1 envelope + `booster.raw` via `save_raw`; atomic M7 overwrite; library-major version guard; octo M5 C1/C2 path/params pins), **LightGBM* model_to_string save/load**, **sklearn RF* pin-refuse** exact `pickle forbidden (arbitrary code execution on load)` (save/write/**load/read** — octo M8 C1), matrix completeness pin, no-pickle hygiene grep, **octo M8 C1** classifier-flag mismatch + `num_features<=0` refuse pins, ParamGridBuilder + CrossValidator (LR + XGB grid; best-map selection pins) + **parallelism=1 vs 4 avgMetrics determinism** (M6), OHE plural inputCols/outputCols, PipelineModel.save STOP-loud for ext (no hollow ext publish), training-row re-hold pins, ext MemTable GC ownership, sparse+dense densify 4096 cap, multiclass f1 loud refuse, stretch Classifier/LightGBM/RF lib-direct, numpy not at repark.ml top-level grep-gate; octo C2–C7 pins retained.
-- `test_ml_estimators_oracle.py` — R-ML-ESTIMATORS (M3): LinearRegression OLS (perfect line,
+- `test_ml_estimators_oracle.py` — **U2:** intercept-only fixture labels `CAST(1.0 AS DOUBLE)`
+  (bare `1.0` is DECIMAL and `fit` refuses). R-ML-ESTIMATORS (M3): LinearRegression OLS (perfect line,
   multi-feature, no-intercept, singular/elastic/standardization loud), RegressionEvaluator RMSE,
   BinaryClassification accuracy + **areaUnderROC rank-sum** (M5; ties midrank; non-binary refuse octo M5 C1; raw prefers over prediction octo M5 C3) + **areaUnderPR score-group AP (M6; ties order-independent octo M6 C3)** + **dense list rawPrediction extract (M6)** + short-vector loud refuse (octo M6 C4) + **M7 sparse VectorUDT rawPrediction extract** (missing index → 0.0; size&lt;2 refuse; inverted+both-index mutation pins; null-cell not densify-to-0; non-vector Map refuse; native sparse densify disclosure), LogisticRegression IRLS, KMeans default-init refuse +
   random init, save-path no training rows, live pyspark 1e-6 rel parity, numpy import grep-gate (native only; M4 ext carve-out);
@@ -277,7 +279,8 @@ NOT in that file is a defect, not a decision.
   octo C3: transform width-mismatch loud; empty-feature intercept-only mean;
   octo C4: num_features/coefficients desync refuse; octo C5: empty evaluator refuse;
   octo C6: predictionCol collision refuse on transform; octo C7: MSE/MAE/R2 hand pins.
-- `test_ml_feature_oracle.py` — R-ML-FEATURE (M2): VectorAssembler (+ **M7 sparseOutput**), StringIndexer/IndexToString,
+- `test_ml_feature_oracle.py` — **U2:** see the Q1 row above (NaN-mix CAST + CountVectorizer
+  decimal vectors). R-ML-FEATURE (M2): VectorAssembler (+ **M7 sparseOutput**), StringIndexer/IndexToString,
   OHE sparse, **M7 SI keep × OHE dropLast matrix**, Standard/MinMax/MaxAbs scalers, Bucketizer, Imputer mean/mode + median STOP,
   Tokenizer, StopWordsRemover, SQLTransformer, Binarizer, PolynomialExpansion, pipeline e2e, live label oracle;
   quantile STOP stubs; octo c5 OHE all-null; octo c2–c4: StopWordsRemover unnest, Pipeline save/load, outputCol collision, foreign fit refuse; octo c1: SQLTransformer SELECT-only refuse + StandardScaler n=1 std pin.
@@ -310,7 +313,8 @@ NOT in that file is a defect, not a decision.
   **combine C5:** cube/rollup agg AS alias names + MIA plan-stable cube pin;
   **combine C6:** polars `_sort_key` generator sticky + orderBy/pl.sort refuse;
   non-finite float lit CAST embeds on select-global-agg).
-- `test_pivot.py` — R-PIVOT pins (values/inferred/multi values/null IS NULL/count/
+- `test_pivot.py` — **U2:** NaN-key fixture CASTs `10.0`/`1.0`/`20.0` to DOUBLE (bare
+  literals UNION NaN cannot cast to decimal). R-PIVOT pins (values/inferred/multi values/null IS NULL/count/
   alias/cap/limit-then-sort/cube refuse/countDistinct refuse/avg-min-max values/
   non-simple refuse/first-last ignorenulls partitions=1; c3: values order,
   distinct-before-limit, REPEATED_CLAUSE, bool true/false, cast values, NaN;
@@ -472,7 +476,9 @@ NOT in that file is a defect, not a decision.
 - **octo-extra C1 (2026-07-30):** test_fn_batch1 pins ln/log10 + from_unixtime string type
 
 - `test_fn_batch1.py` — R-FN-BATCH1 scalar wrappers (value+type+null; unsupported loud).
-- `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **Q1** flips
+- `test_fn_batch4.py` — R-FN-BATCH4 aggregates/stats/hash census; **U2 (2026-08-13):**
+  `test_stats_aggregates` VALUES `(1.0),(2.0),(3.0)` are DECIMAL(2,1) — compares go through
+  `float()`; **Q1** flips
   `percentile_approx`/`approx_percentile` LOUD → bounds-window + SQL alias pins;
   octo c1 adds bool reject, SQL centroids 3-arg pin, Imputer NaN/missingValue,
   RegexTokenizer order, CV fractional minTF, fit temp-view cleanup;
@@ -495,6 +501,8 @@ NOT in that file is a defect, not a decision.
   stringify), DDL nested array, map int keys, tuple/dict→struct, sparse exact keys.
 - `test_sliding_avg_parity.py` — R-RETRACT-SHIM rider: live-oracle sliding-avg pins (NULL
   frames, collect values + to_arrow types; oracle verbatim in the X2 ledger).
+  **U2:** `1.0`/`3.0`/`6.0` CAST to DOUBLE so the column stays Float64 (bare literals
+  mixed with `CAST(NULL AS DOUBLE)` became decimal avg).
 - `conftest.py` — autouse fixture clearing the process-wide `getOrCreate` active-session
   registry around every test (WU-4 isolation).
 - `test_create_dataframe_materialize.py` — R-PERF-VALUES / R-PERF-ARROW-CDF / **P1a** /
@@ -550,7 +558,8 @@ NOT in that file is a defect, not a decision.
   dropDuplicates, withColumnRenamed/withColumnsRenamed, F.sum("X")/shortcuts/dict agg
   (octo r4 C3-L-008); `select("*", expr)` expands star; all 13 date projection names;
   `F.expr("1 + 1")` → `(1 + 1)`; `current_timestamp()` display.
-- `test_session.py` — import smoke (`import repark`, `from repark import ReparkSession` — plus the
+- `test_session.py` — **U2:** `test_to_numpy_numeric_matrix` VALUES `(1.5, 2.5)` are
+  DECIMAL → object-of-Decimal (no longer float64). Import smoke (`import repark`, `from repark import ReparkSession` — plus the
   `SparkSession` drop-in and `ReParkSession` pre-rename aliases, identity-asserted); the
   builder chain (`builder…getOrCreate()`, both snake_case and camelCase, fresh-per-access);
   **C3:** `getActiveSession`/`active`/`newSession`/context-manager/`getAll`/`isModifiable`/
@@ -580,7 +589,8 @@ NOT in that file is a defect, not a decision.
   repeat same-builder calls don't re-warn, same-name-different-config warns naming the kept
   catalog while the ORIGINAL registration keeps serving, malformed late blocks raise like
   the build path.
-- `test_dataframe_actions.py` — **R-TAIL** DataFrame action surface vs live PySpark 4.1.2
+- `test_dataframe_actions.py` — **U2:** NaN/None collect fixture CASTs `1.5`/`2.0` to
+  DOUBLE. **R-TAIL** DataFrame action surface vs live PySpark 4.1.2
   (zulu-17 oracle 2026-07-28; ruff line-length/format clean): `take`/`head`/`first`/`tail`/
   `isEmpty`/`toLocalIterator`
   return types (`list[Row]` / `Row|None` / `bool` / iterator), `n=0` / oversize / empty-frame
@@ -989,7 +999,9 @@ NOT in that file is a defect, not a decision.
   rows (C2-Q-003), `select` columns `negative(x)`, `str`/`repr` `Column<'negative(x)'>`,
   `F.sum(-df.x)` → `sum(negative(x))`, double `negative(negative(x))`, nested
   `sum(negative((x + 1)))` display **and** values). JVM-free pins from live PySpark 4.1.2.
-- `test_columns.py` — the Column / expression surface (WG1): the seven `types` objects → engine
+- `test_columns.py` — **U2:** `SELECT 7.0 AS a` is DECIMAL(2,1); Column `/` stays float64
+  3.5 (`test_division_is_float`); SQL `SELECT 7.0 / 2.0` is decimal128(7,5)
+  (`test_sql_float_literal_division_is_decimal`). The Column / expression surface (WG1): the seven `types` objects → engine
   strings; `col`/`lit`/`expr` construction (incl. the column-referencing `expr` boundary raising);
   arithmetic/comparison/logical operators; the Python-boolean misuse guards (`bool()`, `and`/`or`,
   `if`, and `in` on a Column raise PySpark's ValueError instead of silently dropping predicates);
@@ -1008,7 +1020,8 @@ NOT in that file is a defect, not a decision.
 - `test_sql_passthrough_parity.py` — the AR-WG-SQL adversarial corpus (C-AR-005): raw
   `spark.sql()` strings — no DataFrame-API mediation — pinning the audit's live-proven
   divergence classes on their exact inputs: integer `/` always-double (the S0 `5/2`),
-  divide/modulo-by-zero → NULL (Spark non-ANSI; literal and column divisors), decimal ÷ decimal
+  divide/modulo-by-zero → NULL (Spark non-ANSI; literal and column divisors; **U2:**
+  `1.0/0.0` and `5.0%0.0` are decimal NULLs), decimal ÷ decimal
   stays decimal, ORDER BY null-placement defaults (asc/desc/explicit override/the LIMIT
   row-changing case/window `OVER (ORDER BY …)`), 0-based `[]` subscript + 1-based `element_at`
   (arrays incl. the index-0 error, maps), and the `substr`/`substring` position-edge matrix.
@@ -1083,7 +1096,8 @@ NOT in that file is a defect, not a decision.
   format case-insensitivity, load-arg beats option
   path, unknown-key tolerate, missing format/path → `AnalysisException`, `.schema` disclosed
   `UnsupportedOperationException` (C1-Q-007)). JVM-free pins; mutation-proof.
-- `test_group_agg.py` — **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
+- `test_group_agg.py` — **U2:** signed-zero collect_set fixture uses `createDataFrame`
+  (SQL `-0.0` is DECIMAL 0, no IEEE sign bit). **Group E (E1/E2/E7) + Group J**: the aggregation family, pinned to real
   (2026-07-22 review: ruff-formatted — the unit left the format gate red at tip)
   PySpark 4.1.2 (run locally under Java 17 — `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64`). `groupBy`/`agg`
   (Column + dict form), the shortcuts (`count`/`sum`/`avg`/`min`/`max`), and the aggregate functions;
@@ -1112,8 +1126,9 @@ NOT in that file is a defect, not a decision.
   fixture used inline SQL `VALUES (1)`/`VALUES (2.5)` and pinned repark's own `double`/nullable output
   as the "Spark" golden, but Spark parses `2.5` as DECIMAL(2,1) → `decimal128(11,1)` non-null, so the
   pin was repark-vs-repark); that inline-decimal-literal divergence is now DISCLOSED and pinned in
-  `test_union_inline_decimal_literal_diverges_from_spark` (repark's actual `double` output asserted;
-  the real Spark DECIMAL golden asserted NON-equal, load-bearing). Count-mismatch raises; `unionByName`
+  `test_union_inline_decimal_literal_diverges_from_spark` (**U2 / TY-3 dated 2026-08-13:**
+  repark now `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null — still
+  DECLARED, residual U3; load-bearing Spark golden). Count-mismatch raises; `unionByName`
   (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
   golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
   deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
@@ -1298,17 +1313,16 @@ NOT in that file is a defect, not a decision.
   driver at a time — check `pgrep -af 'pyspark|SparkSubmit'` (ignoring a standing container
   cluster) before running. Invocation in its docstring and `task/g3e8-guard-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
-  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (**13** equality
-  controls + **11** disclosures after Z-3 U1 flipped `avg_money_stays_decimal_in_spark_double_in_repark`
-  to equality) and 7 G13 rows (raise-class + nullability), recorded in record mode
+  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (**16** equality
+  controls + **8** disclosures after W-2 U2 flipped the three bare-literal rows to equality)
+  and 7 G13 rows (raise-class + nullability), recorded in record mode
   against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`).
-  Every row asserts value AND exact Arrow `decimal128(p,s)` (or `double` for repark's remaining
-  bare-literal disclosures) on the `to_arrow` path through `repark_parity.assert_frames_equal` — never
-  `show`. Disclosure classes: bare decimal literal inference (Spark DECIMAL vs repark double),
-  division result `(p,s)`, the 38-digit clamp on add/mul, INT
-  x DECIMAL promotion width, ANSI overflow raise vs wrong value, divide-by-zero raise vs NULL,
-  high-scale mul plan refuse, and overflow-capable nullability. `avg` of money is now an
-  equality (`decimal128(14,6)` nullable `1.650000`) — DEC-5 / Z-3 U1. A failed disclosure is CLASSIFIED
+  Every row asserts value AND exact Arrow `decimal128(p,s)` on the `to_arrow` path through
+  `repark_parity.assert_frames_equal` — never `show`. Disclosure classes: division result
+  `(p,s)`, the 38-digit clamp on add/mul, INT x DECIMAL promotion width, ANSI overflow raise
+  vs wrap-not-residue (`10^38` at (38,0) after U2), divide-by-zero raise vs NULL,
+  high-scale mul plan refuse, and overflow-capable nullability. Bare literals (`1.23` /
+  `0.1` / `123.456`) and `avg` of money are equalities (DEC-1 / U2 + DEC-5 / Z-3 U1). A failed disclosure is CLASSIFIED
   before it raises: CONVERGED (flip-don't-delete to `repark=None`) vs regression (re-derive both
   halves). Budget pin: G2 20-26, G13 6-8, min 8 equalities, max 20 disclosures so the corpus
   cannot degenerate to all-disclosures. Class-coverage pins include a **name-gated 38-digit clamp

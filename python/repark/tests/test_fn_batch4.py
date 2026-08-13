@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pyarrow as pa
 import pytest
 
@@ -61,11 +63,14 @@ def test_stats_aggregates(spark: ReparkSession) -> None:
         collect_list("x").alias("cl"),
     ).to_arrow()
     row = table.to_pylist()[0]
+    # U2: VALUES (1.0),(2.0),(3.0) are DECIMAL(2,1). stddev/corr stay float; median
+    # and collect_list follow the decimal column.
     assert abs(row["sd"] - 1.0) < 1e-9
     assert abs(row["cr"] - 1.0) < 1e-9
-    assert row["med"] == 2.0
-    assert sorted(row["cl"]) == [1.0, 2.0, 3.0]
+    assert row["med"] == Decimal("2.0")
+    assert sorted(row["cl"]) == [Decimal("1.0"), Decimal("2.0"), Decimal("3.0")]
     assert pa.types.is_floating(table.schema.field("sd").type)
+    assert table.schema.field("med").type == pa.decimal128(2, 1)
 
 
 def test_bit_aggregates(spark: ReparkSession) -> None:

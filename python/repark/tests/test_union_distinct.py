@@ -6,10 +6,11 @@ allowMissingColumns, UNION-ALL (no dedup) — and dedup determinism were all rec
 oracle. The int+double type-coercion **parity** pin builds its inputs with `createDataFrame` so both
 engines infer types AND nullability the same way (Python `int`→bigint, `float`→double, both
 nullable) — an inline SQL literal would NOT (see below). One **disclosed divergence** is pinned
-separately: repark lowers SQL through DataFusion, which parses an inline decimal literal like `2.5`
-as `double` where Spark parses it as DECIMAL(2,1), so `union(VALUES (1), VALUES (2.5))` diverges on
-the type class — see `test_union_inline_decimal_literal_diverges_from_spark` (task/lessons.md
-2026-07-19).
+separately: after U2 (`parse_float_as_decimal=true`) repark types
+`union(VALUES (1), VALUES (2.5))` as ``decimal128(21, 1)`` nullable (Int64 promoted to
+DECIMAL(20,0) union DECIMAL(2,1)), where Spark lands ``decimal128(11, 1)`` non-null
+(INT promoted to DECIMAL(10,0) union DECIMAL(2,1)).
+That leftover is campaign DEC-8 / U3 — see `test_union_inline_decimal_literal_diverges_from_spark`.
 `dropDuplicates(subset)` is row-nondeterministic in Spark, so its fixtures pin a deterministic
 survivor (the surviving key set, or identical non-key values), never an accident (docs/testing.md
 row-order discipline).
@@ -100,34 +101,30 @@ def test_parity_union_type_coercion(spark: ReparkSession) -> None:
 
 
 def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) -> None:
-    """DISCLOSED DIVERGENCE (not a parity pin): repark parses an inline SQL decimal literal
-    as ``double``, where Spark parses it as DECIMAL.
+    """DISCLOSED DIVERGENCE (TY-3, residual U3): U2 types the inline literal as DECIMAL, but
+    the union width is still not Spark's.
 
-    In real PySpark 4.1.2 the literal ``2.5`` is DECIMAL(2,1), so
-    ``union(VALUES (1), VALUES (2.5))`` yields ``[('v', 'decimal128(11, 1)', nullable=False)]``
-    with ``Decimal('1.0')`` / ``Decimal('2.5')`` (the int is widened into the decimal, and
-    inline-VALUES columns are non-null). repark lowers the SQL through DataFusion, which parses
-    ``2.5`` as ``double`` and marks inline-VALUES columns ``nullable=True`` — so it yields
-    ``[('v', 'double', nullable=True)]`` with ``1.0`` / ``2.5``. We pin repark's ACTUAL output
-    and record the real Spark golden it diverges from, so the gap is documented rather than
-    silently encoded as "parity" (docs/testing.md divergence-class discipline). Impact is
-    narrow: stored Iceberg DECIMAL columns coerce faithfully — only inline decimal *literals*
-    differ.
+    Dated 2026-08-13 (U2): ``VALUES (2.5)`` is now DECIMAL(2,1) on the Spark door. ``VALUES (1)``
+    is still Int64, so the union is ``DECIMAL(20,0)`` union ``DECIMAL(2,1)`` →
+    ``decimal128(21, 1)`` **nullable**. Spark 4.1.2 treats the int as INT →
+    ``DECIMAL(10,0)`` union ``DECIMAL(2,1)`` → ``decimal128(11, 1)`` **non-null**.
+    Q4 = A: still DECLARED; leftover is campaign DEC-8 / U3
+    (integer-literal min-precision + VALUES nullability). We pin repark's ACTUAL output and
+    record the real Spark golden it diverges from.
     """
     ints = spark.sql("SELECT * FROM (VALUES (1)) AS t(v)")
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")
     result = ints.union(dec).to_arrow()
 
-    # repark's ACTUAL output — the pinned (divergent) behavior.
+    # repark's ACTUAL output after U2 — still not Spark (21,1) nullable vs (11,1) non-null.
     repark_out = pa.table(
-        [pa.array([1.0, 2.5], pa.float64())],
-        schema=pa.schema([pa.field("v", pa.float64(), nullable=True)]),
+        [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(21, 1))],
+        schema=pa.schema([pa.field("v", pa.decimal128(21, 1), nullable=True)]),
     )
     assert_frames_equal(result, repark_out)
 
-    # The real Spark golden (recorded from PySpark 4.1.2). repark genuinely does NOT match it; if a
-    # future engine change converged on Spark's DECIMAL(11,1) non-null, this guard flips RED and the
-    # disclosure above must be revisited — so the golden is load-bearing, not decorative.
+    # The real Spark golden (recorded from PySpark 4.1.2). Load-bearing: if U3 converges on
+    # DECIMAL(11,1) non-null, this guard flips RED and the disclosure must be revisited.
     spark_golden = pa.table(
         [pa.array([Decimal("1.0"), Decimal("2.5")], pa.decimal128(11, 1))],
         schema=pa.schema([pa.field("v", pa.decimal128(11, 1), nullable=False)]),

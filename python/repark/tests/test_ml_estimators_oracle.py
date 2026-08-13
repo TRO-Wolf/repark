@@ -953,9 +953,9 @@ def test_empty_feature_vector_intercept_only() -> None:
     spark = _session()
     try:
         df = spark.sql(
-            "SELECT make_array() AS features, 1.0 AS label "
-            "UNION ALL SELECT make_array(), 3.0 "
-            "UNION ALL SELECT make_array(), 5.0"
+            "SELECT make_array() AS features, CAST(1.0 AS DOUBLE) AS label "
+            "UNION ALL SELECT make_array(), CAST(3.0 AS DOUBLE) "
+            "UNION ALL SELECT make_array(), CAST(5.0 AS DOUBLE)"
         )
         model = LinearRegression(fitIntercept=True).fit(df)
         assert model.num_features == 0

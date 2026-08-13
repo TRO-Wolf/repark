@@ -23,6 +23,7 @@ read [STATUS.md](STATUS.md).
 
 No JVM is needed for the normal build/test/verify loop. A Java 17 home is needed **only** for
 `make parity-live` (re-deriving Spark goldens from real Spark).
+The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, matching Spark (`datafusion.sql_parser.parse_float_as_decimal=true`); the ANSI door is unchanged.
 
 ## The commands that matter
 

@@ -831,10 +831,11 @@ def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -
     """
     import math
 
-    source = spark.sql(
-        "SELECT * FROM (VALUES "
-        "(1, CAST(-0.0 AS DOUBLE)), (1, CAST(0.0 AS DOUBLE)), (1, CAST(0.0 AS DOUBLE))"
-        ") AS t(g, x)"
+    # U2: SQL `-0.0` parses as DECIMAL 0 (no sign bit). IEEE signed-zero must enter
+    # as a Python float via createDataFrame.
+    source = spark.createDataFrame(
+        [(1, -0.0), (1, 0.0), (1, 0.0)],
+        ["g", "x"],
     )
     result = source.groupBy("g").agg(F.collect_list("x"), F.collect_set("x"))
     collected = result.to_arrow().to_pylist()
@@ -848,12 +849,9 @@ def test_collect_set_signed_zero_preserves_distinct_bits(spark: ReparkSession) -
     assert signs == [-1.0, 1.0]
 
     # Octo r4: multi-col pack inherits the same IEEE divergence vs Spark (oracle count = 1).
-    multi = spark.sql(
-        "SELECT * FROM (VALUES "
-        "(CAST(-0.0 AS DOUBLE), CAST(0.0 AS DOUBLE)), "
-        "(CAST(0.0 AS DOUBLE), CAST(0.0 AS DOUBLE)), "
-        "(CAST(-0.0 AS DOUBLE), CAST(-0.0 AS DOUBLE))"
-        ") AS t(a, b)"
+    multi = spark.createDataFrame(
+        [(-0.0, 0.0), (0.0, 0.0), (-0.0, -0.0)],
+        ["a", "b"],
     )
     multi_count = multi.agg(F.countDistinct("a", "b")).to_arrow().to_pylist()
     assert multi_count == [{"count(DISTINCT a, b)": 3}]

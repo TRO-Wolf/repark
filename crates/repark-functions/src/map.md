@@ -45,6 +45,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 - `aggregate.rs` / R-RETRACT-SHIM + **DEC-5 / Z-3 U1:** Float64 `avg` retract (X2) plus
   Spark-typed decimal `avg` with decimal `retract_batch` (no Numeric→Float64 coerce).
+  **W-2 U2 ride-along:** Decimal32/64/256 accumulator arms have revert-red pins
+  (`group_avg_decimal32_stays_decimal_9_6_i32` and siblings).
 
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
