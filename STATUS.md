@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-12._
+_Last updated: 2026-08-13._
 
 ## Release state
 
@@ -79,6 +79,17 @@ What happens next, in order:
    (owner rulings), TZ-4 (design pass required), G3-E8 FIX, G5b-R. The engineering items
    parked below (spill coverage, the `ReparkSession` decomposition trigger, the
    `ExecutionBackend` seam) are its natural inputs.
+   **2026-08-13 — Y wave landed; Z wave in flight.** Y-wave PRs **#66–#72** are on `main`
+   (kickoff SHA `9b2dce3`). Closed as code: G4b-R1 rename (#66), G11 ANSI-door
+   correctness-not-parity (#67), G10 boundary-shape corpus (#68), `getDatabase` real
+   `locationUri` (#69), G4b-R2 origin-map (#70), G15 collation refuse-loud (#71), G5b-R2
+   and Spark-door G5b-R3 empty-frame (#72). Still OPEN and **not** claimed closed by this
+   increment: G5b-R1 / R4 / R5, G3-E8 FIX, TZ-4 implementation, DEC-1…9, G8, G10 follow-on,
+   F-Y10-1 integer wrap (DEC U5 / G13). Semantics of each landed or still-open class: the
+   divergence registry
+   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md); completeness
+   table: [task/z5-landing-increment-ledger.md](task/z5-landing-increment-ledger.md).
+   Z-wave (Z-1…Z-5) is in flight on that frozen SHA.
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -187,10 +198,11 @@ moving it. Nothing is described in both places.
   differential corpus (hardening gaps G2 + G13). Semantics + pins: registry §7 rows DEC-1 …
   DEC-9; the corpus classifies any silent convergence CONVERGED-flip-don't-delete.
   **Photographed, not fixed.**
-- **Negative temporal-RANGE `count(*)` = -1 in release wheels** — **BACKLOG, HIGH
-  (2026-08-11, G5b-R3).** A `RANGE BETWEEN INTERVAL '-1' DAY PRECEDING` frame returns
-  `count(*)` = -1 (debug may panic; release wraps). Spark returns an empty frame. Semantics +
-  pin: registry §7 row G5b-R3.
+- **Negative temporal-RANGE `count(*)` = -1 in release wheels** — **FIXED on the Spark
+  door / facade `.sql()` (2026-08-12, Y-1 / #72).** Kind-or-magnitude invert is Spark's
+  empty frame (`count(*)` 0, `sum` NULL) or a loud refuse; wrap is gone there. Residuals:
+  G5b-R1 / R4 / R5 still OPEN; ANSI-door wrap is a named residual (no pin). Semantics:
+  registry G5b-R3 FIXED note + [G5b-R1](docs/spark-sql-iceberg-parity.md) / R4 / R5.
 - **DELETE/UPDATE subquery predicates are refused, not implemented** — **BACKLOG, open
   (G3-E8 guard half).** A silent-data-loss window is closed by a loud valve; the FIX unit that
   would lower the statements onto MERGE has not started. Semantics + pins: registry §7 rows
