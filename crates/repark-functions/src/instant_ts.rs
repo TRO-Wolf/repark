@@ -1,22 +1,23 @@
-//! Spark LTZ instant producers — Arrow `Timestamp(µs, UTC)` (TZ-4 PR-1).
+//! Spark LTZ instant producers — Arrow `Timestamp(µs, UTC)` (TZ-4 PR-1 + PR-2).
 //!
-//! DataFusion's `now()` / `current_timestamp` simplify to `Timestamp(ns, None)`, and
-//! `to_timestamp` returns the same naive-ns type. Spark 4.1.2 exports both as
-//! `timestamp[us, tz=UTC]`; Iceberg v2 rejects `timestamp_ns`. This module overwrites those
-//! names with a type-only wrap: ticks stay epoch-relative, the annotation becomes UTC, the
-//! unit becomes microseconds. Zoneless *values* are not localized (TZ-7 / PR-2).
-//!
-//! `CAST(<integer|NULL> AS TIMESTAMP)` is the same wire type. The rewrite lives here so
-//! `analyzer.rs` (TZ-5 / other-lane file) stays untouched.
+//! PR-1 typed `now` / `current_timestamp` / zone-suffixed `to_timestamp` / integer `CAST`
+//! as µs+UTC. PR-2 localizes zoneless LTZ inputs in `spark.sql.session.timeZone` then
+//! stores the instant: `TIMESTAMP '…'`, zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`,
+//! `CAST(date AS TIMESTAMP)`, `CAST(ntz AS TIMESTAMP)`. A zone-suffixed string is already
+//! an instant (do not localize — H-1a double-shift trap). NTZ stays naive.
 
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
+use arrow::array::timezone::Tz;
+use arrow::array::{Array, AsArray};
+use arrow::datatypes::TimestampMicrosecondType;
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, TimeUnit};
 use datafusion::common::config::ConfigOptions;
 use datafusion::common::tree_node::{Transformed, TransformedResult, TreeNode};
-use datafusion::common::{DFSchema, Result, ScalarValue, internal_err};
+use datafusion::common::{DFSchema, Result, ScalarValue, exec_err, internal_err};
+use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::simplify::{ExprSimplifyResult, SimplifyContext};
 use datafusion::logical_expr::{
@@ -24,6 +25,9 @@ use datafusion::logical_expr::{
     ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 use datafusion::optimizer::AnalyzerRule;
+
+use crate::datetime::localize_wall_micros_in_zone;
+use crate::session_time_zone::session_time_zone_from_options;
 
 /// Spark's default `TIMESTAMP` / LTZ Arrow type — µs with a UTC annotation.
 pub(crate) fn ltz_timestamp_type() -> DataType {
@@ -146,9 +150,9 @@ impl ScalarUDFImpl for SparkNow {
 }
 
 /// ===========================================================================================
-/// `to_timestamp` — DataFusion's parser (no `execution.time_zone`, so no zoneless
-/// localization) then a type-only cast to µs+UTC. One return type; zoneless inputs keep
-/// UTC-epoch ticks (TZ-7 stays a value disclosure).
+/// `to_timestamp` — DataFusion's parser (no `execution.time_zone`, Q9), then localize
+/// zoneless strings in the session zone and emit µs+UTC. Zone-suffixed strings keep the
+/// parsed instant (H-1a double-shift control).
 /// ===========================================================================================
 #[derive(Debug)]
 struct SparkToTimestamp {
@@ -165,7 +169,9 @@ impl SparkToTimestamp {
             &ConfigOptions::default(),
         );
         Self {
-            signature: Signature::variadic_any(Volatility::Immutable),
+            // Volatile: zoneless parse localizes in the session zone. Const-eval
+            // materializes a tz-naive ScalarValue and date_format then reads NTZ.
+            signature: Signature::variadic_any(Volatility::Volatile),
             inner,
         }
     }
@@ -192,25 +198,214 @@ impl ScalarUDFImpl for SparkToTimestamp {
         Ok(ltz_timestamp_type())
     }
 
+    fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        // Spark `to_timestamp` is nullable even on a non-null literal.
+        Ok(Field::new(self.name(), ltz_timestamp_type(), true).into())
+    }
+
     fn with_updated_config(&self, _config: &ConfigOptions) -> Option<ScalarUDF> {
         // Do not pick up `datafusion.execution.time_zone` (Q9).
         Some(ScalarUDF::from(Self::new()))
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let zone_id = session_time_zone_from_options(args.config_options.as_ref());
+        let zone = parse_extraction_zone(zone_id)?;
+        if args.args.len() == 1
+            && let Some(localized) = try_localize_date_or_ntz(&args.args[0], zone)?
+        {
+            return Ok(localized);
+        }
+        let strings = args.args.first().and_then(columnar_utf8_strings);
         let produced = self.inner.invoke_with_args(args)?;
-        cast_columnar_to_ltz(produced)
+        let ltz = cast_columnar_to_ltz(produced)?;
+        match strings {
+            Some(texts) => localize_zoneless_string_ticks(ltz, &texts, zone),
+            None => Ok(ltz),
+        }
     }
 }
 
-/// `CAST(<integer|NULL> AS TIMESTAMP)` → `Timestamp(µs, UTC)`. Idempotent: an already-LTZ
-/// target is left alone. String / timestamp sources are PR-2 (zoneless localization).
+fn parse_extraction_zone(zone_id: &str) -> Result<Tz> {
+    zone_id.parse::<Tz>().map_err(|error| {
+        datafusion::common::DataFusionError::Execution(format!(
+            "session timezone {zone_id:?} could not be resolved at query time ({error})"
+        ))
+    })
+}
+
+/// `true` when Spark would treat the string as already carrying a zone (instant, not wall).
+fn string_carries_timezone(text: &str) -> bool {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    let last = trimmed.as_bytes()[trimmed.len() - 1];
+    if last == b'Z' || last == b'z' {
+        return true;
+    }
+    if last == b']' && trimmed.contains('[') {
+        return true;
+    }
+    ends_with_numeric_offset(trimmed)
+}
+
+fn ends_with_numeric_offset(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    let length = bytes.len();
+    for suffix_len in [6_usize, 5, 3] {
+        if length < suffix_len {
+            continue;
+        }
+        let suffix = &bytes[length - suffix_len..];
+        if suffix[0] != b'+' && suffix[0] != b'-' {
+            continue;
+        }
+        if !suffix[1].is_ascii_digit() || !suffix[2].is_ascii_digit() {
+            continue;
+        }
+        match suffix_len {
+            3 => return true,
+            5 if suffix[3].is_ascii_digit() && suffix[4].is_ascii_digit() => return true,
+            6 if suffix[3] == b':' && suffix[4].is_ascii_digit() && suffix[5].is_ascii_digit() => {
+                return true;
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+fn columnar_utf8_strings(value: &ColumnarValue) -> Option<Vec<Option<String>>> {
+    let array = match value {
+        ColumnarValue::Array(array) => Arc::clone(array),
+        ColumnarValue::Scalar(scalar) => scalar.to_array().ok()?,
+    };
+    if !matches!(
+        array.data_type(),
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    ) {
+        return None;
+    }
+    let utf8 = cast(array.as_ref(), &DataType::Utf8).ok()?;
+    let strings = utf8.as_string::<i32>();
+    Some(
+        (0..strings.len())
+            .map(|row| {
+                if strings.is_null(row) {
+                    None
+                } else {
+                    Some(strings.value(row).to_string())
+                }
+            })
+            .collect(),
+    )
+}
+
+fn try_localize_date_or_ntz(value: &ColumnarValue, zone: Tz) -> Result<Option<ColumnarValue>> {
+    let array = match value {
+        ColumnarValue::Array(array) => Arc::clone(array),
+        ColumnarValue::Scalar(scalar) => scalar.to_array()?,
+    };
+    match array.data_type() {
+        DataType::Date32 | DataType::Date64 => {
+            let days = cast(array.as_ref(), &DataType::Date32)?;
+            let days = days.as_primitive::<datafusion::arrow::datatypes::Date32Type>();
+            let mut builder = arrow::array::TimestampMicrosecondArray::builder(days.len());
+            for row in 0..days.len() {
+                if days.is_null(row) {
+                    builder.append_null();
+                    continue;
+                }
+                let wall_micros = i64::from(days.value(row)) * 86_400 * 1_000_000;
+                match localize_wall_micros_in_zone(wall_micros, zone) {
+                    Some(micros) => builder.append_value(micros),
+                    None => builder.append_null(),
+                }
+            }
+            Ok(Some(ColumnarValue::Array(Arc::new(
+                builder.finish().with_timezone("UTC"),
+            ))))
+        }
+        DataType::Timestamp(TimeUnit::Microsecond, None) => {
+            let micros = cast(
+                array.as_ref(),
+                &DataType::Timestamp(TimeUnit::Microsecond, None),
+            )?;
+            let micros = micros.as_primitive::<TimestampMicrosecondType>();
+            let mut builder = arrow::array::TimestampMicrosecondArray::builder(micros.len());
+            for row in 0..micros.len() {
+                if micros.is_null(row) {
+                    builder.append_null();
+                    continue;
+                }
+                match localize_wall_micros_in_zone(micros.value(row), zone) {
+                    Some(localized) => builder.append_value(localized),
+                    None => builder.append_null(),
+                }
+            }
+            Ok(Some(ColumnarValue::Array(Arc::new(
+                builder.finish().with_timezone("UTC"),
+            ))))
+        }
+        _ => Ok(None),
+    }
+}
+
+fn localize_zoneless_string_ticks(
+    value: ColumnarValue,
+    texts: &[Option<String>],
+    zone: Tz,
+) -> Result<ColumnarValue> {
+    let array = match value {
+        ColumnarValue::Array(array) => array,
+        ColumnarValue::Scalar(scalar) => Arc::new(scalar.to_array()?),
+    };
+    let micros = cast(
+        array.as_ref(),
+        &DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::<str>::from("UTC"))),
+    )?;
+    let micros = micros.as_primitive::<TimestampMicrosecondType>();
+    let mut builder = arrow::array::TimestampMicrosecondArray::builder(micros.len());
+    for row in 0..micros.len() {
+        if micros.is_null(row) {
+            builder.append_null();
+            continue;
+        }
+        let ticks = micros.value(row);
+        let zoneless = texts
+            .get(row)
+            .and_then(Option::as_deref)
+            .is_none_or(|text| !string_carries_timezone(text));
+        if zoneless {
+            match localize_wall_micros_in_zone(ticks, zone) {
+                Some(localized) => builder.append_value(localized),
+                None => {
+                    return exec_err!(
+                        "cannot localize zoneless timestamp into session timezone: out of range"
+                    );
+                }
+            }
+        } else {
+            builder.append_value(ticks);
+        }
+    }
+    Ok(ColumnarValue::Array(Arc::new(
+        builder.finish().with_timezone("UTC"),
+    )))
+}
+
+/// `CAST(<integer|NULL> AS TIMESTAMP)` → `Timestamp(µs, UTC)`. String / date / NTZ
+/// sources rewrite onto [`SparkToTimestamp`] so zoneless walls localize in the session
+/// zone. Idempotent: an already-LTZ target is left alone.
 #[derive(Debug)]
 struct SparkLtzTimestampCast;
 
 impl AnalyzerRule for SparkLtzTimestampCast {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let zone = session_time_zone_from_options(config).to_string();
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, &zone))
+            .data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)] // `AnalyzerRule::name` ties the lifetime to &self
@@ -219,7 +414,7 @@ impl AnalyzerRule for SparkLtzTimestampCast {
     }
 }
 
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan, zone: &str) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -227,18 +422,30 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| Ok(rewrite_cast(node, &schema)))?;
+        let rewritten = expr.transform_up(|node| Ok(rewrite_cast(node, &schema, zone)))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     transformed.map_data(LogicalPlan::recompute_schema)
 }
 
-fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+fn rewrite_cast(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Expr> {
     // DataFusion plans `CAST(<int> AS TIMESTAMP)` as
     // `CAST(CAST(int AS Timestamp(s)) AS Timestamp(ns))`. Wrap the seconds
     // hop (not a retarget onto µs — that would read the integer as micros),
     // then elide the ns hop so it cannot strip the UTC annotation.
     if let Expr::Cast(cast) = &expr {
+        let targeting_naive_us = matches!(
+            cast.field.data_type(),
+            DataType::Timestamp(TimeUnit::Microsecond, None)
+        );
+        let child_is_to_timestamp = matches!(
+            cast.expr.as_ref(),
+            Expr::ScalarFunction(function) if function.func.name() == "to_timestamp"
+        );
+        if targeting_naive_us && child_is_to_timestamp {
+            return Transformed::yes(*cast.expr.clone());
+        }
+        let targeting_timestamp = matches!(cast.field.data_type(), DataType::Timestamp(_, _));
         let targeting_ns = matches!(
             cast.field.data_type(),
             DataType::Timestamp(TimeUnit::Nanosecond, _)
@@ -251,6 +458,15 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
             if targeting_ns && is_ltz_timestamp(&source) {
                 return Transformed::yes(*cast.expr.clone());
             }
+            if targeting_timestamp && is_wall_clock_cast_source(&source) {
+                if let Some(literal) = localized_zoneless_utf8_literal(&cast.expr, zone) {
+                    return Transformed::yes(literal);
+                }
+                return Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+                    to_timestamp_udf(),
+                    vec![*cast.expr.clone()],
+                )));
+            }
             let source_is_int_or_null = source.is_integer() || matches!(source, DataType::Null);
             let source_is_seconds = matches!(source, DataType::Timestamp(TimeUnit::Second, _));
             if (targeting_seconds && source_is_int_or_null)
@@ -260,7 +476,46 @@ fn rewrite_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
             }
         }
     }
-    wrap_ns_literal(expr, schema)
+    let rewritten = wrap_ns_literal(expr, schema, zone);
+    peel_naive_cast_of_ltz_producer(rewritten.data, schema)
+}
+
+/// `TypeCoercion` may wrap a `TIMESTAMP '…'` literal in `CAST(… AS Timestamp(µs))`
+/// (naive) *before* this rule rewrites the literal to `to_timestamp`. That CAST
+/// then strips the UTC annotation. Peel it when the child is already LTZ.
+fn peel_naive_cast_of_ltz_producer(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let Expr::Cast(cast) = &expr else {
+        return Transformed::no(expr);
+    };
+    if !matches!(cast.field.data_type(), DataType::Timestamp(_, None)) {
+        return Transformed::no(expr);
+    }
+    let is_to_timestamp = matches!(
+        cast.expr.as_ref(),
+        Expr::ScalarFunction(function) if function.func.name() == "to_timestamp"
+    );
+    let child_is_ltz = cast
+        .expr
+        .get_type(schema)
+        .is_ok_and(|data_type| is_ltz_timestamp(&data_type));
+    if is_to_timestamp || child_is_ltz {
+        return Transformed::yes(*cast.expr.clone());
+    }
+    Transformed::no(expr)
+}
+
+fn is_wall_clock_cast_source(data_type: &DataType) -> bool {
+    // NTZ is µs-naive. Leftover `Timestamp(ns, None)` (DataFusion `now()`, folded
+    // instants) is an un-annotated instant — type-wrap only, do not localize.
+    matches!(
+        data_type,
+        DataType::Utf8
+            | DataType::LargeUtf8
+            | DataType::Utf8View
+            | DataType::Date32
+            | DataType::Date64
+            | DataType::Timestamp(TimeUnit::Microsecond, None)
+    )
 }
 
 fn is_ltz_timestamp(data_type: &DataType) -> bool {
@@ -271,23 +526,71 @@ fn is_ltz_timestamp(data_type: &DataType) -> bool {
     )
 }
 
+/// A zoneless UTF-8 timestamp literal, localized in `zone` as a non-null LTZ literal.
+/// `None` when the expr is not a zoneless string literal (columns stay on `to_timestamp`).
+fn localized_zoneless_utf8_literal(expr: &Expr, zone: &str) -> Option<Expr> {
+    let Expr::Literal(scalar, _) = expr else {
+        return None;
+    };
+    let text = match scalar {
+        ScalarValue::Utf8(Some(text))
+        | ScalarValue::LargeUtf8(Some(text))
+        | ScalarValue::Utf8View(Some(text)) => text.as_str(),
+        _ => return None,
+    };
+    if string_carries_timezone(text) {
+        return None;
+    }
+    let parsed_zone = zone.parse::<Tz>().ok()?;
+    let naive = arrow::compute::cast(
+        &arrow::array::StringArray::from(vec![text]),
+        &DataType::Timestamp(TimeUnit::Microsecond, None),
+    )
+    .ok()?;
+    let wall = naive.as_primitive::<TimestampMicrosecondType>().value(0);
+    let localized = localize_wall_micros_in_zone(wall, parsed_zone)?;
+    Some(Expr::Literal(
+        ScalarValue::TimestampMicrosecond(Some(localized), Some(Arc::<str>::from("UTC"))),
+        None,
+    ))
+}
+
 fn wrap_as_ltz(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let nullable = expr.nullable(schema).unwrap_or(true);
     let field = Arc::new(Field::new("ts", ltz_timestamp_type(), nullable));
     Transformed::yes(Expr::Cast(Cast::new_from_field(Box::new(expr), field)))
 }
 
-/// DataFusion folds `CAST(<int> AS TIMESTAMP)` and `TIMESTAMP '…'` to
-/// `Timestamp(ns, _)` **literals**. Wrap those only — do not rewrite column
-/// references or `CAST(str AS TIMESTAMP)` (zoneless input / ingest; PR-2).
-fn wrap_ns_literal(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+/// DataFusion folds `TIMESTAMP '…'` to `Timestamp(ns, None)` **literals** whose
+/// ticks are the spelled wall as UTC. Localize that wall in the session zone as
+/// a non-null µs+UTC literal (Spark `TIMESTAMP '…'` is non-null; rewriting to
+/// `to_timestamp` made `CAST(ts AS INT)` nullable and falsely converged TZ-5's
+/// nullability disclosure). `date_format` is `Volatile` so it does not const-eval
+/// this literal in UTC. A tz-annotated ns literal is already an instant.
+fn wrap_ns_literal(expr: Expr, schema: &DFSchema, zone: &str) -> Transformed<Expr> {
     let Expr::Literal(scalar, _) = &expr else {
         return Transformed::no(expr);
     };
-    let ScalarValue::TimestampNanosecond(_, _) = scalar else {
+    let ScalarValue::TimestampNanosecond(ticks, literal_zone) = scalar else {
         return Transformed::no(expr);
     };
-    wrap_as_ltz(expr, schema)
+    if literal_zone.is_some() {
+        return wrap_as_ltz(expr, schema);
+    }
+    let Some(nanos) = ticks else {
+        return wrap_as_ltz(expr, schema);
+    };
+    let Ok(parsed_zone) = zone.parse::<Tz>() else {
+        return wrap_as_ltz(expr, schema);
+    };
+    let wall_micros = nanos.div_euclid(1_000);
+    let Some(localized) = localize_wall_micros_in_zone(wall_micros, parsed_zone) else {
+        return wrap_as_ltz(expr, schema);
+    };
+    Transformed::yes(Expr::Literal(
+        ScalarValue::TimestampMicrosecond(Some(localized), Some(Arc::<str>::from("UTC"))),
+        None,
+    ))
 }
 
 #[cfg(test)]
@@ -334,7 +637,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn zoneless_to_timestamp_keeps_utc_ticks() {
+    async fn zoneless_to_timestamp_under_utc_session_keeps_wall_as_utc() {
         let ctx = ctx();
         let sql = "SELECT to_timestamp('2024-06-15 12:00:00') AS ts";
         let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
@@ -346,7 +649,54 @@ mod tests {
             .column(0)
             .as_primitive::<TimestampMicrosecondType>()
             .value(0);
-        // Digits stored as UTC — PR-1 does not localize (TZ-7).
+        // Default session zone is UTC: wall 12:00 is 12:00Z.
+        assert_eq!(ticks, 1_718_452_800_000_000);
+    }
+
+    fn ctx_at(zone: &str) -> SessionContext {
+        use datafusion::prelude::SessionConfig;
+        let config = crate::session_time_zone::with_session_time_zone(SessionConfig::new(), zone);
+        let ctx = SessionContext::new_with_config(config);
+        crate::register_all(&ctx);
+        for rule in crate::analyzer_rules() {
+            ctx.add_analyzer_rule(rule);
+        }
+        ctx
+    }
+
+    #[tokio::test]
+    async fn zoneless_inputs_localize_in_the_session_zone() {
+        let ctx = ctx_at("America/New_York");
+        // 12:00 EDT = 16:00Z
+        let expected = 1_718_467_200_000_000_i64;
+        for sql in [
+            "SELECT to_timestamp('2024-06-15 12:00:00') AS ts",
+            "SELECT CAST('2024-06-15 12:00:00' AS TIMESTAMP) AS ts",
+            "SELECT TIMESTAMP '2024-06-15 12:00:00' AS ts",
+        ] {
+            let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
+            assert_eq!(
+                batches[0].schema().field(0).data_type(),
+                &ltz_timestamp_type(),
+                "{sql}"
+            );
+            let ticks = batches[0]
+                .column(0)
+                .as_primitive::<TimestampMicrosecondType>()
+                .value(0);
+            assert_eq!(ticks, expected, "{sql}");
+        }
+    }
+
+    #[tokio::test]
+    async fn zone_suffixed_to_timestamp_is_not_localized_again() {
+        let ctx = ctx_at("America/New_York");
+        let sql = "SELECT to_timestamp('2024-06-15T12:00:00Z') AS ts";
+        let batches = ctx.sql(sql).await.expect(sql).collect().await.expect(sql);
+        let ticks = batches[0]
+            .column(0)
+            .as_primitive::<TimestampMicrosecondType>()
+            .value(0);
         assert_eq!(ticks, 1_718_452_800_000_000);
     }
 

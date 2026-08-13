@@ -24,11 +24,11 @@
 //! resolved in `spark.sql.session.timeZone`. This module does the same, and does it on an
 //! **explicit** coercion path rather than incidentally:
 //!
-//! 1. [`coerce_date_arg`] / [`coerce_to_timestamp_micros`] / [`coerce_to_date32`] map every
-//!    instant-typed argument — `Timestamp(_, Some(zone))` **and** `Timestamp(_, None)` — onto a
-//!    `UTC`-annotated timestamp. That is where the "a repark TIMESTAMP is an instant" decision is
-//!    written down: a tz-naive timestamp here holds UTC-epoch ticks (`to_timestamp('…Z')` proves
-//!    it), so the missing annotation is a *type* gap (registry row TZ-4), not NTZ semantics.
+//! 1. [`coerce_date_arg`] / [`coerce_to_timestamp_micros`] / [`coerce_to_date32`] are
+//!    **type-driven** (TZ-4 PR-2): `Timestamp(_, Some(_))` is an LTZ instant and is normalized
+//!    onto a `UTC`-annotated timestamp; `Timestamp(_, None)` is Spark `TIMESTAMP_NTZ` and is
+//!    left naive so invoke skips the session zone. Zoneless LTZ inputs are localized onto
+//!    µs+UTC by [`crate::instant_ts`] *before* they reach these extractors.
 //! 2. `DATE`, `TIME` and string arguments are left on their zone-free coercion. A `DATE` carries
 //!    no instant, so its own calendar fields — and the string `date_format` renders from one —
 //!    never move with the session zone; the corpus's two control rows exist to hold that.
@@ -45,19 +45,12 @@
 //! either way), so step 1 and the invoke-time conversion never move an instant — only the
 //! calendar the field is read against.
 //!
-//! ## What this does NOT fix — the naive-input half, measured
+//! ## TZ-4 PR-2 — type-driven extraction + localized LTZ inputs
 //!
-//! Step 1 resolves the calendar of whatever instant it is handed; it cannot fix an instant that
-//! was wrong on arrival. Spark reads a zoneless `TIMESTAMP '2024-06-15 12:00:00'`, a zoneless
-//! `to_timestamp('2024-06-15 12:00:00')` and `CAST('2024-06-15 12:00:00' AS TIMESTAMP)` as a
-//! session-zone WALL CLOCK; repark's planner and `to_timestamp` produce `Timestamp(ns, None)`
-//! holding those digits as UTC ticks, byte-identical to what `to_timestamp('…T12:00:00Z')`
-//! produces for a genuine instant. Measured 2026-08-10 on this tree: all four spellings yield
-//! `timestamp[ns]` with the same ticks, so **no rule applied here can tell them apart** — closing
-//! the input half means changing repark's TIMESTAMP representation, which is registry row TZ-4's
-//! unit and not this one. The consequence is declared as registry rows TZ-7 (zoneless input) and
-//! TZ-6 (no `TIMESTAMP_NTZ`), both with live-Spark-recorded bases, and pinned by
-//! `a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark`.
+//! `Timestamp(_, None)` is NTZ (wall clock; no session zone). Zoneless LTZ inputs
+//! (`TIMESTAMP '…'`, zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`) are localized onto
+//! µs+UTC by [`crate::instant_ts`] so extractors see an instant. TZ-8 (`CAST(ts AS DATE)` /
+//! `to_date` / `datediff`) stays disclosed.
 
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -235,9 +228,9 @@ fn part_udf(name: &'static str, part: DatePart, spark_offset: i32) -> Arc<Scalar
 
 /// The single coerced argument type a [`DatePartUdf`] receives, given an input type. Spark applies
 /// these functions to dates, timestamps (any unit/zone) and strings; we mirror that:
-/// - a `Timestamp` of any unit and any zone — including **none** — is an INSTANT, and is coerced
-///   to the same unit annotated [`INSTANT_ZONE`], which is what marks it for session-zone
-///   resolution at invoke time (module docs, step 1);
+/// - a `Timestamp` with a zone annotation is an INSTANT and is coerced to the same unit
+///   annotated [`INSTANT_ZONE`] (session-zone resolution at invoke);
+/// - a tz-naive `Timestamp` is Spark `TIMESTAMP_NTZ` and stays naive (no session zone);
 /// - `Date32/64` and `Time32/64` pass straight to `date_part` on their own calendar, carrying no
 ///   instant and therefore never moving with the session zone;
 /// - strings are coerced to `Date32` (Spark parses `'yyyy-MM-dd'`);
@@ -246,7 +239,10 @@ fn part_udf(name: &'static str, part: DatePart, spark_offset: i32) -> Arc<Scalar
 /// Returns `None` for an unsupported type so the caller can raise a clear error.
 fn coerce_date_arg(arg: &DataType) -> Option<DataType> {
     match arg {
-        DataType::Timestamp(unit, _) => Some(DataType::Timestamp(*unit, Some(INSTANT_ZONE.into()))),
+        DataType::Timestamp(unit, Some(_)) => {
+            Some(DataType::Timestamp(*unit, Some(INSTANT_ZONE.into())))
+        }
+        DataType::Timestamp(_, None) => Some(arg.clone()),
         DataType::Date32 | DataType::Date64 | DataType::Time32(_) | DataType::Time64(_) => {
             Some(arg.clone())
         }
@@ -493,10 +489,11 @@ impl ScalarUDFImpl for MakeDate {
 /// physical planning): `Date32 → Date32`, `Timestamp(µs, UTC) → Timestamp(µs, UTC)`.
 fn coerce_to_date32(arg: &DataType) -> Option<DataType> {
     match arg {
-        DataType::Timestamp(_, _) => Some(DataType::Timestamp(
+        DataType::Timestamp(_, Some(_)) => Some(DataType::Timestamp(
             TIMESTAMP_UNIT,
             Some(INSTANT_ZONE.into()),
         )),
+        DataType::Timestamp(_, None) => Some(DataType::Timestamp(TIMESTAMP_UNIT, None)),
         DataType::Date32
         | DataType::Date64
         | DataType::Utf8
@@ -527,10 +524,11 @@ fn coerce_to_date32(arg: &DataType) -> Option<DataType> {
 /// `coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date`.
 fn coerce_to_timestamp_micros(arg: &DataType) -> Option<DataType> {
     match arg {
-        DataType::Timestamp(_, _) => Some(DataType::Timestamp(
+        DataType::Timestamp(_, Some(_)) => Some(DataType::Timestamp(
             TIMESTAMP_UNIT,
             Some(INSTANT_ZONE.into()),
         )),
+        DataType::Timestamp(_, None) => Some(DataType::Timestamp(TIMESTAMP_UNIT, None)),
         DataType::Date32 | DataType::Date64 | DataType::Null => Some(DataType::Date32),
         DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => Some(DataType::Utf8),
         _ => None,
@@ -553,6 +551,8 @@ enum LocalSource {
     /// `date_format` renders the wall clock it was handed, because localizing and reading back in
     /// the same zone is the identity.
     ZoneFree,
+    /// Spark `TIMESTAMP_NTZ`: wall-clock ticks, no session zone, naive µs on the way out.
+    NaiveTimestamp,
 }
 
 /// The `date_format` / `date_trunc` argument as `(local micros, the session zone, what it is)`.
@@ -570,10 +570,10 @@ fn invoke_local_micros(
     array: &ArrayRef,
     options: &ConfigOptions,
 ) -> Result<(ArrayRef, Tz, LocalSource)> {
-    let source = if is_instant(array.data_type()) {
-        LocalSource::Instant
-    } else {
-        LocalSource::ZoneFree
+    let source = match array.data_type() {
+        DataType::Timestamp(_, Some(_)) => LocalSource::Instant,
+        DataType::Timestamp(_, None) => LocalSource::NaiveTimestamp,
+        _ => LocalSource::ZoneFree,
     };
     let zone = extraction_time_zone(options)?;
     // SAF-002: after `coerce_to_timestamp_micros` this is Date32 / Utf8 / Timestamp(µs, UTC);
@@ -615,8 +615,17 @@ fn invoke_local_dates(array: &ArrayRef, options: &ConfigOptions) -> Result<Array
 
 /// A microsecond timestamp (µs since the Unix epoch, UTC) as a naive local-instant datetime.
 /// `None` if the value is more than ~262 000 years from the common era.
-fn datetime_from_micros(micros: i64) -> Option<NaiveDateTime> {
+pub(crate) fn datetime_from_micros(micros: i64) -> Option<NaiveDateTime> {
     DateTime::from_timestamp_micros(micros).map(|instant| instant.naive_utc())
+}
+
+/// Localize a zoneless wall clock (ticks as if the digits were UTC) in `zone` → instant µs.
+///
+/// Used by [`crate::instant_ts`] for `TIMESTAMP '…'`, zoneless `to_timestamp`, and
+/// `CAST(str AS TIMESTAMP)`. Gap/fold arms match [`micros_from_local_datetime`] (`ofLocal`).
+pub(crate) fn localize_wall_micros_in_zone(wall_micros: i64, zone: Tz) -> Option<i64> {
+    datetime_from_micros(wall_micros)
+        .and_then(|naive| micros_from_local_datetime(naive, zone, None))
 }
 
 /// The same microsecond instant as its **local** datetime in `zone` — the calendar Spark reads a
@@ -686,7 +695,7 @@ fn offset_before_gap(local: NaiveDateTime, zone: Tz) -> Option<FixedOffset> {
 /// offset to prefer.
 ///
 /// `None` only when the result leaves chrono's range.
-fn micros_from_local_datetime(
+pub(crate) fn micros_from_local_datetime(
     local: NaiveDateTime,
     zone: Tz,
     preferred: Option<FixedOffset>,
@@ -1142,8 +1151,9 @@ struct DateTrunc {
 
 impl DateTrunc {
     fn new() -> Self {
+        // Stable: truncation of an instant depends on the session zone (see DateFormat).
         Self {
-            signature: Signature::user_defined(Volatility::Immutable),
+            signature: Signature::user_defined(Volatility::Stable),
         }
     }
 }
@@ -1165,11 +1175,18 @@ impl Hash for DateTrunc {
 impl ScalarUDFImpl for DateTrunc {
     shim_udf_boilerplate!("date_trunc");
 
-    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Timestamp(
-            TIMESTAMP_UNIT,
-            Some(INSTANT_ZONE.into()),
-        ))
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        let ntz = arg_types
+            .get(1)
+            .is_some_and(|data_type| matches!(data_type, DataType::Timestamp(_, None)));
+        if ntz {
+            Ok(DataType::Timestamp(TIMESTAMP_UNIT, None))
+        } else {
+            Ok(DataType::Timestamp(
+                TIMESTAMP_UNIT,
+                Some(INSTANT_ZONE.into()),
+            ))
+        }
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -1219,15 +1236,22 @@ impl ScalarUDFImpl for DateTrunc {
                 LocalSource::ZoneFree => datetime_from_micros(micros)
                     .and_then(|datetime| trunc_datetime_to(datetime, formats.value(row)))
                     .and_then(|local| micros_from_local_datetime(local, zone, None)),
+                LocalSource::NaiveTimestamp => datetime_from_micros(micros)
+                    .and_then(|datetime| trunc_datetime_to(datetime, formats.value(row)))
+                    .map(|local| local.and_utc().timestamp_micros()),
             };
             match truncated {
                 Some(result) => builder.append_value(result),
                 None => builder.append_null(),
             }
         }
-        Ok(ColumnarValue::Array(Arc::new(
-            builder.finish().with_timezone(INSTANT_ZONE),
-        )))
+        let finished = builder.finish();
+        let finished = if source == LocalSource::NaiveTimestamp {
+            finished
+        } else {
+            finished.with_timezone(INSTANT_ZONE)
+        };
+        Ok(ColumnarValue::Array(Arc::new(finished)))
     }
 }
 
@@ -1241,8 +1265,10 @@ struct DateFormat {
 
 impl DateFormat {
     fn new() -> Self {
+        // Volatile: render depends on the session zone. Immutable/Stable let
+        // DataFusion const-evaluate with ConfigOptions that omit the carrier (UTC).
         Self {
-            signature: Signature::user_defined(Volatility::Immutable),
+            signature: Signature::user_defined(Volatility::Volatile),
         }
     }
 }
@@ -1311,7 +1337,7 @@ impl ScalarUDFImpl for DateFormat {
             let micros = timestamps.value(row);
             let rendered = match source {
                 LocalSource::Instant => local_datetime_from_micros(micros, zone),
-                LocalSource::ZoneFree => datetime_from_micros(micros),
+                LocalSource::ZoneFree | LocalSource::NaiveTimestamp => datetime_from_micros(micros),
             };
             let Some(datetime) = rendered else {
                 builder.append_null();
@@ -1427,7 +1453,7 @@ mod tests {
     #[test]
     fn only_timestamp_arguments_are_coerced_to_instants() {
         for (input, instant) in [
-            (DataType::Timestamp(TimeUnit::Nanosecond, None), true),
+            (DataType::Timestamp(TimeUnit::Nanosecond, None), false),
             (
                 DataType::Timestamp(TimeUnit::Microsecond, Some("Asia/Tokyo".into())),
                 true,

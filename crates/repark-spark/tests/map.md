@@ -39,7 +39,7 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   (`dst_gap_zones_resolve_like_spark` — Lord Howe's 30-minute step, Santiago's midnight
   transition); the date-valued shims this crate's engine owns
   (`date_valued_shims_take_the_date_in_the_session_zone` — `trunc`/`add_months`); and two DECLARED
-  divergences pinned as such, `a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark`
+  divergences pinned as such, `a_zoneless_timestamp_input_localizes_in_the_session_zone`
   (registry TZ-7) and `timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone`
   (registry TZ-8). Every expectation in the file is a live-Spark measurement, not a derivation.
   The `DATE` negative's CLAIM was also narrowed to match its coverage: `date_trunc(fmt, DATE)` is a

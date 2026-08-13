@@ -27,6 +27,8 @@ region split real (technique A: nested-class extract + owned helpers).
   aggregate builders. `core.py` `_rebind` is unchanged.
   See `task/y5-origin-map-ledger.md`, `task/z4-residuals-ledger.md`,
   `task/w4-z-residuals-ledger.md`.
+  **TZ-4 PR-2:** collect converts tz-aware timestamps to a naive session-zone wall
+  (`_arrow_cell_to_spark_python` + `_arrow_type_needs_spark_python_convert`).
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).

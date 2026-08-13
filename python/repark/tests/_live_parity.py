@@ -1889,7 +1889,7 @@ DISCLOSURES: list[Disclosure] = [
         "literal's non-null. X-1's raise-vs-value split is STALE after #64; this is the TZ-5 "
         "§10 form. Corpus: "
         "test_cast_failure_parity.py::test_cast_failure_row"
-        "[timestamp_to_int_spark_seconds_repark_raises].",
+        "[timestamp_to_int_nullability].",
     ),
     Disclosure(
         "null_safe_eq_sql_nullability",

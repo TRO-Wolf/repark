@@ -1887,8 +1887,11 @@ def _data_type_to_sql_type(data_type: Any) -> str:
     if isinstance(data_type, DateType):
         return "DATE"
 
-    if isinstance(data_type, (TimestampType, TimestampNTZType)):
+    if isinstance(data_type, TimestampType):
         return "TIMESTAMP"
+
+    if isinstance(data_type, TimestampNTZType):
+        return "TIMESTAMP_NTZ"
 
     if isinstance(data_type, DecimalType):
         return f"DECIMAL({data_type.precision},{data_type.scale})"
@@ -3505,7 +3508,8 @@ def _infer_arrow_type_from_python_sample(sample: Any) -> Any:
         return pa.binary()
 
     if isinstance(sample, _dt.datetime):
-        return pa.timestamp("us", tz="UTC" if sample.tzinfo else None)
+        # Default TIMESTAMP is LTZ (µs+UTC). NTZ is explicit schema only.
+        return pa.timestamp("us", tz="UTC")
 
     if isinstance(sample, _dt.date):
         return pa.date32()
@@ -3982,7 +3986,11 @@ def _prepare_nested_cell(cell: Any, arrow_type: Any) -> Any:
         from decimal import Decimal as _Decimal
 
         if isinstance(cell, _dt.datetime):
-            return cell
+            if arrow_type.tz:
+                from repark.session.session_time_zone import localize_naive_datetime_to_utc
+
+                return localize_naive_datetime_to_utc(cell)
+            return cell.replace(tzinfo=None) if cell.tzinfo is not None else cell
 
         # ``date`` is listed after the datetime return (datetime is a date subclass).
 
@@ -4158,7 +4166,8 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
         "STRING": pa.string(),
         "TEXT": pa.string(),
         "DATE": pa.date32(),
-        "TIMESTAMP": pa.timestamp("us"),
+        "TIMESTAMP": pa.timestamp("us", tz="UTC"),
+        "TIMESTAMP_NTZ": pa.timestamp("us"),
         "BINARY": pa.binary(),
         "BYTEA": pa.binary(),
     }
@@ -4264,6 +4273,9 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
     if engine_type is not None:
         target = _sql_type_to_arrow(engine_type)
 
+        if pa.types.is_timestamp(target) and target.tz is not None:
+            return _localize_naive_timestamp_column(column)
+
         if not column.type.equals(target):
             column = column.cast(target)
 
@@ -4285,7 +4297,36 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
     elif pa.types.is_large_binary(column.type):
         column = column.cast(pa.binary())
 
+    # Inferred pandas/polars naive timestamps stay naive (G10 unit-family pins).
+    # Python-tuple naive datetime is LTZ via `_arrow_table_from_tuples`.
+
     return column
+
+
+def _localize_naive_timestamp_column(column: Any) -> Any:
+    """Naive timestamp cells → session-zone instants stored as ``timestamp[us, tz=UTC]``."""
+
+    import datetime as _dt
+
+    import pyarrow as pa
+
+    from repark.session.session_time_zone import localize_naive_datetime_to_utc
+
+    if not pa.types.is_timestamp(column.type):
+        return column
+
+    if column.type.tz is not None and column.type.unit == "us":
+        return column
+
+    values: list[Any] = []
+    for cell in column.to_pylist():
+        if cell is None:
+            values.append(None)
+        elif getattr(cell, "tzinfo", None) is not None:
+            values.append(cell.astimezone(_dt.UTC))
+        else:
+            values.append(localize_naive_datetime_to_utc(cell))
+    return pa.array(values, type=pa.timestamp("us", tz="UTC"))
 
 
 def _validate_decimal_column_envelope(column: Any) -> None:
@@ -4964,10 +5005,11 @@ def _arrow_table_from_tuples(
 
                 if isinstance(sample, _dt.datetime):
                     # Timestamp + Long/Double/Date refuse — no epoch coercion (extra XC2-L1).
+                    # Default TIMESTAMP is LTZ; naive walls localize at cell-prepare.
 
                     _refuse_long_double_merge(tuples, column_index, names[column_index])
 
-                    arrow_types.append(pa.timestamp("us", tz="UTC" if sample.tzinfo else None))
+                    arrow_types.append(pa.timestamp("us", tz="UTC"))
 
                 elif isinstance(sample, _dt.date):
                     # Date + Long/Timestamp refuse — no day-epoch coercion (extra XC2-L2).

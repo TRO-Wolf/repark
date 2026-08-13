@@ -16,6 +16,7 @@ and can grow ORDER BY semantics without coupling scoreboard harness changes.
 
 from __future__ import annotations
 
+import datetime
 import math
 from dataclasses import dataclass
 from decimal import Decimal
@@ -119,6 +120,9 @@ def _normalize_cell(cell: Any) -> Any:
         if cell.is_integer():
             return int(cell)
         return cell
+    # TZ-4 PR-2: LTZ export is tz-aware UTC; DuckDB is naive. Same instant.
+    if isinstance(cell, datetime.datetime) and cell.tzinfo is not None:
+        cell = cell.astimezone(datetime.UTC).replace(tzinfo=None)
     iso = getattr(cell, "isoformat", None)
     if callable(iso):
         return iso()

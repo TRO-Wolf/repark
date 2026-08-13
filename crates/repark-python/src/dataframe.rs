@@ -253,7 +253,8 @@ fn arrow_type_key_at_depth(data_type: &ArrowDataType, depth: usize) -> String {
         | ArrowDataType::LargeBinary
         | ArrowDataType::BinaryView => "string".to_string(),
         ArrowDataType::Date32 | ArrowDataType::Date64 => "date".to_string(),
-        ArrowDataType::Timestamp(_, _) => "timestamp".to_string(),
+        ArrowDataType::Timestamp(_, None) => "timestamp_ntz".to_string(),
+        ArrowDataType::Timestamp(_, Some(_)) => "timestamp".to_string(),
         ArrowDataType::Decimal128(precision, scale)
         | ArrowDataType::Decimal256(precision, scale) => {
             format!("decimal({precision},{scale})")
@@ -321,7 +322,8 @@ fn spark_array_element_simple_string_at_depth(data_type: &ArrowDataType, depth: 
             "binary".to_string()
         }
         ArrowDataType::Date32 | ArrowDataType::Date64 => "date".to_string(),
-        ArrowDataType::Timestamp(_, _) => "timestamp".to_string(),
+        ArrowDataType::Timestamp(_, None) => "timestamp_ntz".to_string(),
+        ArrowDataType::Timestamp(_, Some(_)) => "timestamp".to_string(),
         ArrowDataType::Decimal128(precision, scale)
         | ArrowDataType::Decimal256(precision, scale) => {
             format!("decimal({precision},{scale})")

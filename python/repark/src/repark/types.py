@@ -16,9 +16,9 @@ import calendar
 import datetime
 import json
 import re
-import time
 from collections.abc import Iterator
 from typing import Any, ClassVar
+from zoneinfo import ZoneInfo
 
 # ==================================================================================================
 # DataType base
@@ -269,13 +269,13 @@ class DateType(DataType):
 
 
 class TimestampType(DataType):
-    """Microsecond timestamp (Arrow ``Timestamp(Microsecond)``)."""
+    """Microsecond LTZ timestamp (Arrow ``timestamp[us, tz=UTC]``)."""
 
     def __init__(self) -> None:
         """No-arg constructor."""
 
     def _engine_type(self) -> str:
-        """The engine string ``"timestamp"``."""
+        """The engine string ``"timestamp"`` (native parse maps to µs+UTC)."""
         return "timestamp"
 
     def needConversion(self) -> bool:  # noqa: N802
@@ -283,20 +283,27 @@ class TimestampType(DataType):
         return True
 
     def toInternal(self, value: datetime.datetime | None) -> int | None:  # noqa: N802
-        """Microseconds since epoch (UTC if aware; local mktime if naive — Spark parity)."""
+        """Microseconds since epoch (aware → UTC; naive localized in the session zone)."""
         if value is not None:
             if value.tzinfo is not None:
                 seconds = calendar.timegm(value.utctimetuple())
             else:
-                seconds = int(time.mktime(value.timetuple()))
+                from repark.session.session_time_zone import localize_naive_datetime_to_utc
+
+                utc = localize_naive_datetime_to_utc(value)
+                seconds = calendar.timegm(utc.utctimetuple())
             return int(seconds) * 1_000_000 + value.microsecond
         return None
 
     def fromInternal(self, value: int | None) -> datetime.datetime | None:  # noqa: N802
-        """``datetime.datetime`` from microsecond epoch."""
+        """Naive session-zone wall from microsecond epoch (not host ``mktime``)."""
         if value is not None:
-            return datetime.datetime.fromtimestamp(value // 1_000_000).replace(
-                microsecond=value % 1_000_000
+            from repark.session.session_time_zone import active_session_time_zone
+
+            zone = ZoneInfo(active_session_time_zone())
+            return datetime.datetime.fromtimestamp(value // 1_000_000, tz=zone).replace(
+                tzinfo=None,
+                microsecond=value % 1_000_000,
             )
         return None
 
@@ -1394,6 +1401,8 @@ def _arrow_type_to_repark(arrow_type: object) -> DataType:
     if pa.types.is_date(arrow_type):
         return DateType()
     if pa.types.is_timestamp(arrow_type):
+        if getattr(arrow_type, "tz", None) is None:
+            return TimestampNTZType()
         return TimestampType()
     if pa.types.is_decimal(arrow_type):
         return DecimalType(arrow_type.precision, arrow_type.scale)  # type: ignore[attr-defined]
@@ -1459,7 +1468,9 @@ def repark_type_to_arrow(data_type: DataType) -> Any:
         return pa.binary()
     if isinstance(data_type, DateType):
         return pa.date32()
-    if isinstance(data_type, (TimestampType, TimestampNTZType)):
+    if isinstance(data_type, TimestampType):
+        return pa.timestamp("us", tz="UTC")
+    if isinstance(data_type, TimestampNTZType):
         return pa.timestamp("us")
     if isinstance(data_type, DecimalType):
         return pa.decimal128(data_type.precision, data_type.scale)

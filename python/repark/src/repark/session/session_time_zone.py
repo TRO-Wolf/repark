@@ -37,22 +37,20 @@ construction — the same shape as the build-time memory-pool knob. It follows t
 produces different wall clocks on two hosts. repark defaults to ``UTC`` for reproducibility (and
 because reading the host zone would be an environment read the server-prep discipline forbids).
 
-**What the zone reaches, as of 2026-08-10.** Timestamp **extraction** honors it: ``year`` /
-``month`` / ``dayofmonth`` / ``hour`` / ``date_trunc`` / ``date_format`` (and ``trunc`` /
-``add_months``) over an INSTANT-typed TIMESTAMP resolve in this zone, on every entry point.
-Two halves are deliberately NOT closed and are recorded as divergence-registry rows rather than
-left to be discovered: a **zoneless** timestamp input (a ``TIMESTAMP '…'`` literal, a zoneless
-``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-``datetime`` column) is read as UTC rather
-than as a wall clock in this zone (row TZ-7), and ``to_date`` / ``CAST(ts AS DATE)`` / ``datediff``
-still take the date in the stored zone (row TZ-8). Both need repark's TIMESTAMP *representation* to
-change (row TZ-4), not another rule at the extractor. This module remains the configuration surface
-only — nothing here changes an evaluated result.
+**What the zone reaches, as of 2026-08-13 (TZ-4 PR-2).** Timestamp **extraction** honors it
+over an INSTANT-typed (tz-aware) TIMESTAMP. Zoneless LTZ inputs — ``TIMESTAMP '…'``, zoneless
+``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-``datetime`` column declared as default
+``TIMESTAMP`` / ``TimestampType`` — localize in this zone then store µs+UTC. ``TIMESTAMP_NTZ``
+stays naive and is **not** shifted. ``to_date`` / ``CAST(ts AS DATE)`` / ``datediff`` still take
+the date in the stored zone (row TZ-8). ``CAST(TIMESTAMP AS STRING)`` rendering is B-TZ-4.
 """
 
 from __future__ import annotations
 
+import datetime
 import warnings
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -128,3 +126,40 @@ def warn_runtime_session_time_zone_not_applied(key: str, *, stacklevel: int = 2)
         )
         _runtime_session_time_zone_warned = True
     return True
+
+
+def active_session_time_zone() -> str:
+    """The live session's zone id, or :data:`DEFAULT_SESSION_TIME_ZONE` if none is active.
+
+    Late-imports the session class so this module stays importable from ``types.py``.
+    """
+    try:
+        from repark.session.session_core import ReparkSession
+
+        session = ReparkSession.getActiveSession()
+        if session is None:
+            return DEFAULT_SESSION_TIME_ZONE
+        value = session.conf.get(SESSION_TIME_ZONE_KEY)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    except Exception:
+        return DEFAULT_SESSION_TIME_ZONE
+    return DEFAULT_SESSION_TIME_ZONE
+
+
+def collect_timestamp_as_session_wall(value: datetime.datetime) -> datetime.datetime:
+    """Spark ``collect``: tz-aware instant → naive wall in the session zone."""
+    return value.astimezone(ZoneInfo(active_session_time_zone())).replace(tzinfo=None)
+
+
+def localize_naive_datetime_to_utc(value: datetime.datetime) -> datetime.datetime:
+    """Naive wall → instant in the session zone (UTC-aware). Aware values convert to UTC.
+
+    Q12: session zone, never the host TZ. Gap/fold uses ``fold=0`` (earlier offset), matching
+    Spark's ``ofLocal`` earlier-preferred arm when no source offset is supplied.
+    """
+    if value.tzinfo is not None:
+        return value.astimezone(datetime.UTC)
+    zone = ZoneInfo(active_session_time_zone())
+    localized = value.replace(tzinfo=zone, fold=0)
+    return localized.astimezone(datetime.UTC)

@@ -18,9 +18,11 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   while no plan cache or cross-session expression reuse exists, and stated in the module doc beside
   the rationale rather than left to be rediscovered.
 - `datetime.rs` — **session-zone semantics (H-1a split B + its 2026-08-10 rework).** The coercion
-  path TYPES the decision (`coerce_date_arg` / `coerce_to_timestamp_micros` / `coerce_to_date32`: a
-  `Timestamp` of any unit and any zone is an INSTANT; `Date32`/`Time`/string keep zone-free types;
-  every arm a fixed point, because DataFusion re-analyzes at physical planning). At invoke,
+  path is **type-driven** as of TZ-4 PR-2 (`coerce_date_arg` / `coerce_to_timestamp_micros` /
+  `coerce_to_date32`: `Timestamp(_, Some(_))` is an LTZ instant; `Timestamp(_, None)` is NTZ
+  and stays naive; `Date32`/`Time`/string keep zone-free types; every arm a fixed point,
+  because DataFusion re-analyzes at physical planning). Zoneless LTZ inputs are localized
+  by `instant_ts.rs`. At invoke,
   `LocalSource` says whether the widened micros are an instant or a zone-free wall clock —
   `invoke_local_micros` for `date_trunc`/`date_format`, `invoke_local_dates` for `trunc`/
   `add_months`. `micros_from_local_datetime` models `java.time.ZonedDateTime.ofLocal` arm for arm
@@ -106,11 +108,11 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   Q5/Q80/Q84 SQL `concat` on the Arrow path. Unit pins:
   `concat_register_all_overwrites_datafusion_spark` (name overwrite);
   `concat_array_any_null_propagates_per_row` (Apply null-mask path).
-- `instant_ts.rs` — **TZ-4 PR-1:** overwrite `now` / `current_timestamp` / `to_timestamp` with
-  Arrow `Timestamp(µs, UTC)` (Spark LTZ wire type; Iceberg v2-legal). Analyzer rule
-  `spark_ltz_timestamp_cast` wraps leftover `Timestamp(ns, _)` expressions (folded
-  `CAST(<int> AS TIMESTAMP)`, `TIMESTAMP` literals) in a type-only µs+UTC CAST. Does **not**
-  localize zoneless digits (TZ-7 / PR-2). Pins: `instant_ts::tests::*`.
+- `instant_ts.rs` — **TZ-4 PR-1+PR-2:** overwrite `now` / `current_timestamp` / `to_timestamp`
+  with Arrow `Timestamp(µs, UTC)`. PR-2 localizes zoneless LTZ inputs (`TIMESTAMP '…'`,
+  zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a
+  zone-suffixed string is not localized. Analyzer rule `spark_ltz_timestamp_cast` still wraps
+  integer `CAST AS TIMESTAMP`. Pins: `instant_ts::tests::*`.
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12):** the two embedded scaling UDFs `analyzer.rs` puts
   under `CAST(TIMESTAMP AS <numeric>)`. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is

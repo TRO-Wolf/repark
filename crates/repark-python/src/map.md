@@ -53,6 +53,8 @@ Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crat
 - **r24 A3 QUAL-03:** `column.rs` `parse_data_type` full facade cast vocab (`float`/`byte`/
   `short`/`binary` + `tinyint`/`smallint`); residual → `AnalysisException` (not `ValueError`);
   test renamed `parse_data_type_maps_facade_primitive_cast_vocabulary` (rule 11).
+  **TZ-4 PR-2:** `"timestamp"` → `Timestamp(µs, UTC)`; `"timestamp_ntz"` → naive µs.
+  `dataframe.rs` `simpleString` distinguishes `timestamp` vs `timestamp_ntz`.
 - **r25 T3 plan-hygiene:** `column.rs` `collapse_identity_alias_chain` +
   `PyColumn.collapse_identity_aliases` peels nested `Alias` chains to one outer rename (facade
   N2 collapse path only — greylit Q7); unit `collapse_identity_alias_chain_peels_same_name_stack`.

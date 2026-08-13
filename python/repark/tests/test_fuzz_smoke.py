@@ -111,6 +111,16 @@ def test_fuzz_no_nan_in_fixture() -> None:
                     assert math.isfinite(cell), f"non-finite float in fixture: {cell!r}"
 
 
+def test_fuzz_compare_ltz_utc_matches_naive_wall() -> None:
+    """TZ-4 PR-2: aware UTC instants compare equal to DuckDB's naive same wall."""
+    import datetime as dt
+
+    compare = _compare_mod()
+    aware = dt.datetime(2020, 2, 12, 21, 30, tzinfo=dt.UTC)
+    naive = dt.datetime(2020, 2, 12, 21, 30)
+    assert compare.compare_result_sets([(aware,)], [(naive,)]).equal
+
+
 def test_fuzz_compare_integer_exact_and_float_tol() -> None:
     compare = _compare_mod()
     assert compare.compare_result_sets([(1,)], [(1,)]).equal
