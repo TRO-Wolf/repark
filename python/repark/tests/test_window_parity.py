@@ -1048,11 +1048,12 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "s": [None, None, None, None, None]},
         ),
         None,
-        "EQUALITY (G5b-R3, Y-1): a NEGATIVE interval offset makes the frame end before it "
-        "starts. Spark returns an empty frame (sum NULL). The Spark door sign-normalizes the "
-        "bound and restates an inverted frame as a far-future equal FOLLOWING pair, which "
-        "DataFusion executes as empty. Was a disclosure (debug panic / release wrap). "
-        "Flipped by Y-1 / G5b-R.",
+        "EQUALITY (G5b-R3, Y-1 / Half-B): a NEGATIVE interval offset makes the frame end "
+        "before it starts. Spark returns an empty frame (sum NULL). Kind invert vs CURRENT "
+        "ROW is restated as FILTER (WHERE false) over a current-row frame so DataFusion "
+        "never executes the inverted search. Same-kind magnitude invert is refused "
+        "(Spark's SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON). Was a disclosure (debug panic "
+        "/ release wrap). Flipped by Y-1 / G5b-R.",
     ),
     WindowRow(
         "temporal_range_negative_offset_count",
@@ -1064,9 +1065,9 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "c": [0, 0, 0, 0, 0]},
         ),
         None,
-        "EQUALITY (G5b-R3, Y-1): the same negative-offset frame as the sum row, measured with "
-        "count(*). Spark counts 0 rows in the empty frame. Was a disclosure (repark returned "
-        "count(*) = -1 in release wheels). Flipped by Y-1 / G5b-R.",
+        "EQUALITY (G5b-R3, Y-1 / Half-B): the same negative-offset frame as the sum row, "
+        "measured with count(*). Spark counts 0 rows in the empty frame. Was a disclosure "
+        "(repark returned count(*) = -1 in release wheels). Flipped by Y-1 / G5b-R.",
     ),
     WindowRow(
         "temporal_range_following_to_following_window",
@@ -1406,6 +1407,56 @@ def test_temporal_range_bare_offset_over_timestamp_refuses() -> None:
         assert 'does not support the data type "INT"' in message, (
             f"{frame!r} must carry Spark's INT-in-range-frame wording, got: {message}"
         )
+
+
+def test_temporal_range_negative_both_preceding_refuses_like_spark() -> None:
+    """Q-001: ``-2 PRECEDING AND -1 PRECEDING`` must not wrap.
+
+    After sign-normalize this is ``2 FOLLOWING AND 1 FOLLOWING``. Spark 4.1.2 refuses
+    with ``DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON``. A kind-only
+    invert check used to miss it and DataFusion wrapped ``count(*)`` to -1. Both
+    engines raise, so this cannot be a ``WindowRow``. Live-recorded MARKER=y1-g5br-fix.
+    """
+    session = _session()
+    register_temporal_seed_views(session)
+    sql = (
+        f"SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-2' DAY PRECEDING "
+        f"AND INTERVAL '-1' DAY PRECEDING) AS c {TEMPORAL_TS_SQL} ORDER BY id"
+    )
+    with pytest.raises(Exception) as excinfo:
+        _to_arrow(session.sql(sql))
+    message = str(excinfo.value)
+    assert "SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON" in message, (
+        f"-2 PRECEDING AND -1 PRECEDING must refuse like Spark, not wrap; got: {message}"
+    )
+    assert "lower bound of a window frame must be less than or equal" in message, (
+        f"must carry Spark's start<=end wording, got: {message}"
+    )
+
+
+def test_temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses() -> None:
+    """Q-003: mixed negative-TIMESTAMP interval + numeric unit-less RANGE must refuse.
+
+    The restatement is statement-wide. A numeric-keyed bare bound in the same statement
+    cannot be rewritten to days, so the inverted TIMESTAMP frame would otherwise execute
+    and wrap. Spark answers the mixed statement; we refuse loud
+    (``UNSUPPORTED.NEGATIVE_RANGE_OFFSET``). Not a ``WindowRow``: Spark returns a table.
+    """
+    session = _session()
+    register_temporal_seed_views(session)
+    sql = (
+        f"SELECT id, "
+        f"sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS by_ts, "
+        f"sum(v) OVER (ORDER BY v RANGE BETWEEN 10 PRECEDING AND CURRENT ROW) AS by_value "
+        f"{TEMPORAL_TS_SQL} ORDER BY id"
+    )
+    with pytest.raises(Exception) as excinfo:
+        _to_arrow(session.sql(sql))
+    message = str(excinfo.value)
+    assert "UNSUPPORTED.NEGATIVE_RANGE_OFFSET" in message, (
+        f"mixed negative-TIMESTAMP + numeric-bare must refuse, got: {message}"
+    )
 
 
 def test_temporal_range_bare_offset_over_date_key_is_days_not_months() -> None:

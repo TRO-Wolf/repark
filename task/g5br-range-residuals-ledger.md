@@ -106,13 +106,14 @@ and the sliding window wraps (`count(*)` = -1; `sum` panics in debug).
 The existing AST-restate + re-plan path now:
 
 1. Flips `INTERVAL '-n' UNIT PRECEDING` ↔ `INTERVAL 'n' UNIT FOLLOWING`.
-2. If the kinds are then inverted (FOLLOWING … CURRENT ROW), restates the frame to
-   `RANGE BETWEEN INTERVAL '10000' YEAR FOLLOWING AND INTERVAL '10000' YEAR FOLLOWING`.
+2. If the **signed positions** are then inverted (kind **or** same-kind magnitude),
+   restates the window as `FILTER (WHERE false)` over `RANGE BETWEEN CURRENT ROW AND
+   CURRENT ROW`. DataFusion never executes the inverted search.
 
-That pair is a real empty `RANGE` (no Iceberg/Spark timestamp reaches year 12024; the type's
-practical horizon is 9999). DataFusion's search returns `[length, length)` → Spark's empty
-frame (`count` 0, `sum` NULL). DATE + negative already answered empty and is left on the
-single-plan path (classify is TIMESTAMP-only for this site).
+Half-B (2026-08-12) dropped the `INTERVAL '10000' YEAR FOLLOWING` ×2 pair: that pair is
+not Spark-empty (a peer at `ts+10000y` would match; year overflow is undefined). DATE +
+negative already answered empty and is left on the single-plan path (classify is
+TIMESTAMP-only for this site).
 
 A statement that mixes a negative TIMESTAMP interval with a **numeric** unit-less bound cannot
 use the statement-wide restatement (same mixed-statement rule as G5b). That mix is **refused**
@@ -142,7 +143,9 @@ true for a negative interval or a field-qualified interval (`last_field`). Ordin
 | **R4** | **DEFER** | DF range-search off-by-one at the pin; still 120 vs 90 |
 | **R5** | **DEFER** | error-class alignment; still Arrow cast |
 
-R3 is not wrapping in any form on the Spark door / facade `.sql()`.
+R3 is not wrapping in any form on the Spark door / facade `.sql()` **after the Half-B
+fix** (kind-or-magnitude invert). The ANSI door still wraps — named residual, not
+silently absorbed. See §7.
 
 ---
 
@@ -185,7 +188,9 @@ flag moved. R1/R4/R5 Spark halves are unchanged.
 - `python/repark/tests/test_window_parity.py`, `python/repark/tests/map.md`
 - `task/g5br-range-residuals-ledger.md` (this file), `task/map.md`
 
-Not touched: `spark_ast.rs`, `column.py`, registry, `_live_parity.py`, live pins, `Cargo.lock`.
+Half-B added pins in `window_temporal_range.rs` + the
+`temporal_range_negative_both_preceding_count` corpus row; no `spark_ast.rs`,
+`column.py`, registry, `_live_parity.py`, live pins, or `Cargo.lock`.
 
 ---
 
@@ -210,16 +215,19 @@ Spark-door `window_temporal_range`: **10** passed (5 G5b + 5 G5b-R).
 > `crates/repark-spark/src/tests/window_temporal_range.rs` and the `temporal_range` family in
 > `python/repark/tests/test_window_parity.py`.
 >
-> **G5b-R3 — FIXED.** A `RANGE` frame bounded by a **negative** interval over a `TIMESTAMP`
-> order key (`RANGE BETWEEN INTERVAL '-1' DAY PRECEDING AND CURRENT ROW`) is Spark's empty
-> frame: `count(*)` is 0, `sum` is NULL. The previous silent-wrong (`count(*)` = **-1** in
-> release wheels; `sum` panics in debug) is gone. The door sign-normalizes the interval into
-> the bound kind and restates an inverted frame as a far-future equal `FOLLOWING` pair that
-> DataFusion executes as empty. DATE + negative already answered empty and is unchanged. The
-> ANSI door does not call this seam and still wraps — named residual, not silently absorbed.
-> A statement that mixes a negative TIMESTAMP interval with a numeric unit-less `RANGE` bound
+> **G5b-R3 — FIXED (Half-B).** Invert is kind **or** same-kind magnitude after
+> sign-normalize. Kind invert vs CURRENT ROW (`INTERVAL '-1' DAY PRECEDING AND CURRENT
+> ROW`) is Spark's empty frame (`count(*)` 0, `sum` NULL) via `FILTER (WHERE false)` over a
+> current-row frame. Same-kind magnitude invert (`-2 PRECEDING AND -1 PRECEDING`, direct
+> `2 FOLLOWING AND 1 FOLLOWING`) refuses at classify with Spark's
+> `SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON` (live 4.1.2). The previous silent-wrong
+> (`count(*)` = **-1** in release wheels; `sum` panics in debug) is gone on the **Spark
+> door / facade `.sql()` after this fix**. The far-future `10000 YEAR FOLLOWING` pair is
+> gone (not Spark-empty). DATE + negative already answered empty and is unchanged. The ANSI
+> door does not call this seam and still wraps — named residual, not silently absorbed. A
+> statement that mixes a negative TIMESTAMP interval with a numeric unit-less `RANGE` bound
 > is refused (`UNSUPPORTED.NEGATIVE_RANGE_OFFSET`) so wrapping cannot ride the mixed-statement
-> hole.
+> hole (Q-003, pinned).
 >
 > **G5b-R2 — FIXED.** `INTERVAL '1 12:00:00' DAY TO SECOND` (and `'1 0:0:0'`) as a frame bound
 > matches Spark 4.1.2 on value and Arrow type. The door restates the qualified literal as an
@@ -247,3 +255,24 @@ Spark-door `window_temporal_range`: **10** passed (5 G5b + 5 G5b-R).
 | G5b-R4 | `FOLLOWING`-to-`FOLLOWING` off-by-one | DataFusion range-search; needs a pin bump or an upstream fix |
 | G5b-R5 | interval bound over a numeric key | error-class alignment; Spark answers a table |
 | G5b-R3-ANSI | negative interval wrap on the ANSI door | same DF defect; this seam is Spark-door only |
+
+---
+
+## 7. Half-B (OPEN queue, 2026-08-12)
+
+Cycle-1 critic findings against the first R3 restatement. **Spark-door wrapping is gone
+after this fix.** ANSI still wraps (named residual above). STATUS / registry stay
+orchestrator-owned — this unit does not edit them.
+
+| ID | Sev | Disposition |
+|---|---|---|
+| Q-001 / L-001 / SAF-001 | S1 | **FIXED.** Invert is signed-position (kind **or** same-kind magnitude) after sign-normalize. Same-kind magnitude invert (`-2 PRECEDING AND -1 PRECEDING`, direct `2 FOLLOWING AND 1 FOLLOWING`) refuses at classify with Spark's `SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON` — never executed, never wraps. |
+| Q-002 / L-002 | S1/S2 | **FIXED.** Dropped `INTERVAL '10000' YEAR FOLLOWING` ×2. Kind invert vs CURRENT ROW restates to `FILTER (WHERE false)` over a current-row frame (Spark-empty). Magnitude invert refuses loud (Spark 4.1.2 live under MARKER=`y1-g5br-fix`). |
+| Q-003 / L-003 | S2 | **FIXED.** Mixed negative-TS + numeric-bare refuse is pinned (`temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses` in Rust + the facade module-level twin). |
+| CL-001 | S2 | **FIXED (this ledger only).** Spark-door wrapping gone after this fix; ANSI still wraps. STATUS / registry not edited. |
+
+Pins added: Rust `temporal_range_value_inverted_frames_do_not_wrap` (spellings 2–4 refuse
+like Spark) + the mixed refuse; Python
+`test_temporal_range_negative_both_preceding_refuses_like_spark` (spelling 2; both engines
+raise — not a value row). Live Spark probe under `/tmp/grok-jvm-record.lock`
+MARKER=`y1-g5br-fix`.

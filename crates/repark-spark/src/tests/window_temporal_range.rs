@@ -21,7 +21,11 @@
 //!
 //! G5b-R (Y-1): [`temporal_range_negative_offset_is_spark_empty_frame`] and
 //! [`temporal_range_day_to_second_literal_matches_spark`] pin the two closed residuals.
-//! R1 / R4 / R5 stay recorded (unquoted interval, FOLLOWING-to-FOLLOWING, interval-over-int).
+//! G5b-R Half-B: [`temporal_range_value_inverted_frames_do_not_wrap`] pins same-kind
+//! magnitude invert (the kind-only hole — Spark refuses `WRONG_COMPARISON`, never wraps)
+//! and [`temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses`] pins the mixed
+//! refuse. R1 / R4 / R5 stay recorded (unquoted interval, FOLLOWING-to-FOLLOWING,
+//! interval-over-int).
 
 use super::super::*;
 use super::common::*;
@@ -547,6 +551,64 @@ async fn temporal_range_negative_offset_is_spark_empty_frame() {
         date_count,
         present(&[0, 0, 0]),
         "DATE + negative interval already answered empty and must not be refused"
+    );
+}
+
+/// Q-001 / Q-002: invert is kind **or** same-kind magnitude after sign-normalize. The
+/// previous kind-only check missed `-2 PRECEDING AND -1 PRECEDING` (flips to
+/// `2 FOLLOWING AND 1 FOLLOWING`) and DataFusion wrapped `count(*)` to -1. Direct
+/// `2 FOLLOWING AND 1 FOLLOWING` never entered classify. Spark 4.1.2 refuses those
+/// same-kind magnitude inverts (`SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`); kind
+/// invert vs CURRENT ROW stays Spark-empty (pinned above). No `10000 YEAR` pair.
+#[tokio::test]
+async fn temporal_range_value_inverted_frames_do_not_wrap() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+
+    for sql in [
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-2' DAY PRECEDING \
+         AND INTERVAL '-1' DAY PRECEDING) AS c FROM wt ORDER BY id",
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-2' DAY PRECEDING \
+         AND INTERVAL '-1' DAY PRECEDING) AS s FROM wt ORDER BY id",
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND INTERVAL '0' DAY FOLLOWING) AS c FROM wt ORDER BY id",
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '2' DAY FOLLOWING \
+         AND INTERVAL '1' DAY FOLLOWING) AS c FROM wt ORDER BY id",
+    ] {
+        let message = execute_error(&ctx, &catalogs, sql).await;
+        assert!(
+            message.contains("SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON"),
+            "same-kind magnitude invert must refuse like Spark, not wrap; `{sql}` got: {message}"
+        );
+        assert!(
+            message.contains("lower bound of a window frame must be less than or equal"),
+            "`{sql}` must carry Spark's start<=end wording, got: {message}"
+        );
+    }
+}
+
+/// Q-003: a statement that mixes a negative TIMESTAMP interval with a numeric unit-less
+/// `RANGE` bound cannot use the statement-wide restatement. Refuse so wrapping cannot
+/// ride the mix.
+#[tokio::test]
+async fn temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let message = execute_error(
+        &ctx,
+        &catalogs,
+        "SELECT id, \
+         sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND CURRENT ROW) AS by_ts, \
+         sum(v) OVER (ORDER BY v RANGE BETWEEN 10 PRECEDING AND CURRENT ROW) AS by_value \
+         FROM wt ORDER BY id",
+    )
+    .await;
+    assert!(
+        message.contains("UNSUPPORTED.NEGATIVE_RANGE_OFFSET"),
+        "mixed negative-TIMESTAMP + numeric-bare must refuse, got: {message}"
     );
 }
 
