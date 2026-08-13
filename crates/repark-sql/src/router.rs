@@ -186,6 +186,19 @@ async fn execute_time_travelled(
         // BUG-001 (async: loads the target's Iceberg metadata), which is the Spark door's order
         // and rationale exactly. Everything after them is the delegation path verbatim.
         Statement::Delete(_) | Statement::Update(_) => {
+            if let Some(allowed) =
+                repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement.as_ref())?
+            {
+                guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+                let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
+                repark_iceberg::write::predicate_dml::execute_predicate_dml(
+                    cx.ctx,
+                    handle,
+                    &allowed.spec,
+                )
+                .await?;
+                return cx.ctx.read_empty();
+            }
             guards::refuse_dml_subquery_predicate(statement.as_ref())?;
             guards::refuse_mor_multi_spec_dml(cx, sql).await?;
             delegate(cx, sql).await

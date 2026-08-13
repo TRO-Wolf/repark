@@ -455,6 +455,11 @@ pub(crate) fn refuse_dml_subquery_predicate(
 /// # Errors
 /// [`DataFusionError::Plan`] — the same G3-E8 refusal [`refuse_dml_subquery_predicate`] renders.
 pub(crate) fn refuse_dml_subquery_predicate_in_statement(statement: &Statement) -> Result<()> {
+    // Full-statement allow-list only — never skip on the selection shape alone (USING /
+    // RETURNING / 1-part names must stay fail-closed, never DataFusion DML).
+    if repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)?.is_some() {
+        return Ok(());
+    }
     match statement {
         Statement::Delete(delete) => refuse_dml_subquery_predicate(
             DmlSubqueryVerb::Delete,

@@ -748,7 +748,10 @@ async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
     );
 }
 
-/// ROW 9 — **the G3-E8 refusal, RENDERED**, byte for byte. Profile: **`TwoSession`**.
+/// ROW 9 — **the G3-E8 residual refusal, RENDERED**, byte for byte. Profile: **`TwoSession`**.
+///
+/// Restated 2026-08-13 over still-refused spellings (NOT IN / EXISTS / UPDATE IN / quoted NOT IN)
+/// because uncorrelated `DELETE … IN (SELECT …)` now executes on the identity path.
 ///
 /// The valve is deliberately implemented TWICE (this crate may not take a product edge to
 /// `repark-spark`), and the ledger's D-1 promises the two copies stay identical. Until this row
@@ -784,10 +787,13 @@ async fn cross_door_g3e8_refusals_render_identically() {
     }
 
     for sql in [
-        "DELETE FROM ice.sales.orders WHERE id IN (SELECT id FROM ice.sales.keys)",
+        // ROW 9 restated over residual (still-refused) spellings — IN-DELETE now executes.
+        "DELETE FROM ice.sales.orders WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.orders WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
+         WHERE k.id = ice.sales.orders.id)",
         "UPDATE ice.sales.orders SET label = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
         // The target rendering, quoted — the half a template-only pin cannot see.
-        "DELETE FROM \"ice\".\"sales\".\"orders\" WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM \"ice\".\"sales\".\"orders\" WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
     ] {
         let ansi_refusal = match ansi.session.sql(sql).await {
             Err(error) => error.to_string(),

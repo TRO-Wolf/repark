@@ -494,22 +494,53 @@ fn assert_g3e8_message(text: &str, verb: &str, sql: &str) {
 }
 
 /// The confirmed repro (intake G3-E8): `DELETE … WHERE id IN (SELECT …)` emptied the table.
-/// It now refuses with the valve's own message and leaves every row in place.
+/// The identity path now deletes exactly the matching row (Spark `{1,3}`).
 #[tokio::test]
-async fn g3e8_delete_in_subquery_refuses_and_leaves_every_row() {
+async fn g3e8_delete_in_subquery_deletes_exactly_the_matching_row() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = g3e8_setup(&wh).await;
     let sql = "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)";
 
-    let err = execute(&ctx, &catalogs, sql)
+    execute(&ctx, &catalogs, sql)
         .await
-        .expect_err("G3-E8 must refuse a subquery DELETE predicate");
-    assert_g3e8_message(&err.to_string(), "DELETE", sql);
+        .expect("uncorrelated DELETE IN must execute on the identity path");
 
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
-        g3e8_seed(),
-        "the refusal must precede the write — pre-guard this table was EMPTY"
+        vec![(1, "a".to_string()), (3, "c".to_string())],
+        "IN-DELETE must remove only id=2 — pre-fix this table was EMPTY"
+    );
+}
+
+/// Quoted target + temp-view source: same product spelling, different target/source forms.
+#[tokio::test]
+async fn g3e8_delete_in_subquery_quoted_and_temp_view_source_execute() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("quoted-target IN must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(1, "a".to_string()), (3, "c".to_string())],
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM src WHERE id = 2)",
+    )
+    .await
+    .expect("temp-view source IN must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(1, "a".to_string()), (3, "c".to_string())],
     );
 }
 
@@ -518,8 +549,7 @@ async fn g3e8_delete_in_subquery_refuses_and_leaves_every_row() {
 #[tokio::test]
 async fn g3e8_delete_subquery_family_all_refuse() {
     for sql in [
-        // IN / NOT IN
-        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
+        // IN is the PR-1 product hole (executed by g3e8_delete_in_subquery_*). Residual refuse:
         "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         // negated, disjunctive and conjunctive positions (the AND form silently PARTIALLY
         // over-deleted — the surviving conjunct was applied alone)
@@ -553,9 +583,8 @@ async fn g3e8_delete_subquery_family_all_refuse() {
         "DELETE FROM ice.sales.tgt WHERE id > (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id <> (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE (SELECT count(*) FROM ice.sales.keys) > 99",
-        // subquery over a TEMP VIEW rather than an Iceberg table (recon round 2) — the source
-        // relation kind is irrelevant to the defect, and now to the guard (panel L2 N8)
-        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM src WHERE id = 2)",
+        // subquery over a TEMP VIEW — still uncorrelated IN, now executed
+        // (g3e8_delete_in_subquery_from_temp_view_source_executes). Residual refuse:
         // === the three spellings the panel found MISSING from the matrix (L1 M-4 / F-D) ======
         // They are NOT safe-because-uncorrelated: the boundary is per-shape, not
         // correlated-vs-uncorrelated. Pre-guard behaviour, executed under the neutered valve and
@@ -564,10 +593,8 @@ async fn g3e8_delete_subquery_family_all_refuse() {
         "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys)",
         // EXISTS over a subquery whose result set is EMPTY (Spark: deletes nothing)
         "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys WHERE id = 999)",
-        // an AGGREGATE scalar inside IN — an uncorrelated aggregate, still lost
+        // an AGGREGATE scalar inside IN — an uncorrelated aggregate, still refused
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
-        // lower-cased / oddly spaced — the guard reads the AST, not the text
-        "delete   from ice.sales.tgt where id in ( select id from ice.sales.keys )",
     ] {
         let wh = TempDir::new().unwrap();
         let (ctx, catalogs) = g3e8_setup(&wh).await;
@@ -853,10 +880,10 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
         "control must be the BUG-001 message, got {mor}"
     );
 
-    let sql = "DELETE FROM ice.sales.both WHERE id IN (SELECT id FROM ice.sales.bothkeys)";
+    let sql = "DELETE FROM ice.sales.both WHERE id NOT IN (SELECT id FROM ice.sales.bothkeys)";
     let both = execute(&ctx, &catalogs, sql)
         .await
-        .expect_err("a subquery DELETE on a BUG-001 table must still refuse")
+        .expect_err("a still-refused subquery DELETE on a BUG-001 table must still refuse")
         .to_string();
     assert_g3e8_message(&both, "DELETE", sql);
     assert!(
@@ -882,12 +909,28 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
 /// reproduced as a transcript, not as "it did not raise".
 /// ===========================================================================================
 #[tokio::test]
+async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {
+    for sql in [
+        "DELETE ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "delete ice.sales.tgt where id in (select id from ice.sales.keys)",
+    ] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = g3e8_setup(&wh).await;
+        execute(&ctx, &catalogs, sql)
+            .await
+            .unwrap_or_else(|error| panic!("FROM-less IN must execute, sql={sql:?}: {error}"));
+        assert_eq!(
+            table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+            vec![(1, "a".to_string()), (3, "c".to_string())],
+            "FROM-less IN must delete only id=2, sql={sql:?}"
+        );
+    }
+}
+
+/// Residual FROM-less subquery spellings stay refused at the executing parse (F-A).
+#[tokio::test]
 async fn g3e8_fromless_delete_subquery_family_all_refuse() {
     for sql in [
-        // F1 — the bypass repro: IN, upper case, FROM-less
-        "DELETE ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
-        // F7 — the same, lower case (the router parse fails on the shape, not the casing)
-        "delete ice.sales.tgt where id in (select id from ice.sales.keys)",
         // F8 — NOT IN
         "DELETE ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         // F9 — correlated EXISTS

@@ -14,10 +14,11 @@
 //! [`merge`] (`MERGE INTO`, copy-on-write AND
 //! merge-on-read — the fork's `ENGINE_CONTRACT` §6 makes MERGE engine-owned; the merge-on-read arm
 //! writes position-delete files via [`position_delete`] and commits them with the new data files in
-//! ONE `RowDelta`), and [`append`] (the public bulk
+//! ONE `RowDelta`), [`predicate_dml`] (G3-E8 identity DELETE/UPDATE over `(_file, _pos)`),
+//! and [`append`] (the public bulk
 //! append — downstream ask A1 — committing add-only through the stamped `fast_append` path with
-//! identity-partition fanout). `DELETE` / `UPDATE` need no adapter: DataFusion plans them onto the
-//! fork's `TableProvider` (ADR-0003). Non-empty `INSERT OVERWRITE` stage-then-swap commits via
+//! identity-partition fanout). Ordinary (non-subquery) `DELETE` / `UPDATE` still ride DataFusion
+//! onto the fork's `TableProvider` (ADR-0003). Non-empty `INSERT OVERWRITE` stage-then-swap commits via
 //! [`overwrite::commit_overwrite_replace_all`] (OV1 exclusive — Q9); empty wipe stays at the SQL
 //! router (C1-Q-001).
 //!
@@ -37,6 +38,8 @@ mod name_resolution;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap). CACHE1 must not call (Q9).
 pub mod overwrite;
 pub(crate) mod position_delete;
+/// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
+pub mod predicate_dml;
 pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (I5 CREATE/DROP BRANCH|TAG) + test-support seam.

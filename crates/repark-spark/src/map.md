@@ -59,8 +59,9 @@ wrapper.
   — predicate hoisted to `repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml`),
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate` +
   `DmlSubqueryVerb`: a `WHERE` subquery is lost at DataFusion's DML planning boundary and
-  degenerates into match-all — deliberately syntactic and slightly wide; see the module doc and
-  `task/g3e8-guard-ledger.md`), the MERGE star rewrite call, partition-spec builders.
+  degenerates into match-all — deliberately syntactic and slightly wide; the allow-list
+  opens uncorrelated `DELETE … col IN (SELECT …)` onto `execute_predicate_dml`; see the
+  module doc and `task/z1-g3e8-pr1-ledger.md`), the MERGE star rewrite call, partition-spec builders.
 - `collation.rs` — **G15 (2026-08-12):** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),
@@ -74,9 +75,10 @@ wrapper.
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then
   `refuse_collation_in_statement` on the EXECUTING parse, plus `RESET` of a collation
-  key — Q-001 pins this attach directly so the router cannot green-wash it), the **G3-E8 valve's authoritative
-  call** (`refuse_dml_subquery_predicate_in_statement` on the EXECUTING parse — the only parse
-  every DML route agrees on; the router's own parse is a different dialect), and the **G5b
+  key — Q-001 pins this attach directly so the router cannot green-wash it), the **G3-E8 valve +
+  identity-DELETE attach** (`try_allowed_delete_in` → `execute_predicate_dml` for uncorrelated
+  `DELETE … IN (SELECT …)`, else `refuse_dml_subquery_predicate_in_statement` on the EXECUTING
+  parse — the only parse every DML route agrees on; the router's own parse is a different dialect), and the **G5b
   temporal-`RANGE` conformance call** (`conform_temporal_range_frames`, between planning and
   analysis — see `window_range.rs`). 6 in-module tests.
 - `window_range.rs` — **G5b (2026-08-11) + G5b-R (Y-1, 2026-08-12) + Half-B:** Spark's rules

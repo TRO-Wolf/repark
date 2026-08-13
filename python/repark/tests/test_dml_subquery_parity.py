@@ -271,17 +271,17 @@ ROWS: list[DmlSubqueryRow] = [
     # ----- 3. DELETE … IN (subquery) — the confirmed repro ---------------------------------------
     DmlSubqueryRow(
         name="delete_in_subquery",
-        kind="split",
+        kind="content",
         dml_sql="DELETE FROM {target} WHERE id IN (SELECT id FROM {keys})",
         read_sql=READ_BACK,
         spark=_table(
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1, 3], "name": ["a", "c"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
         note=(
-            "THE intake repro (G3-E8): pre-guard this statement emptied the whole table. Spark "
-            "deletes exactly the one matching row. When the fix lands, flip to content equality."
+            "THE intake repro (G3-E8): pre-guard this statement emptied the whole table. The "
+            "identity path now deletes exactly the matching row — content equality vs the "
+            "recorded Spark golden."
         ),
     ),
     # ----- 4. DELETE … NOT IN (subquery) ---------------------------------------------------------
@@ -508,7 +508,7 @@ def test_refusal_leaves_every_row_untouched(repark: ReparkSession) -> None:
     post-refusal contents. This row keeps the target alive and reads it back — the assertion that
     would have caught the original defect (the table came back EMPTY).
     """
-    row = next(item for item in ROWS if item.name == "delete_in_subquery")
+    row = next(item for item in ROWS if item.name == "delete_not_in_subquery")
     fq_target = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue")
     fq_keys = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue_keys")
     ensure_namespace(repark, REPARK_CATALOG, REPARK_NAMESPACE)
@@ -561,17 +561,21 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
         "cannot tell agreement from a broken comparator"
     )
     for control in controls:
-        # Whitespace-tolerant: `( SELECT`, `(\n  SELECT` and `(SELECT` are all subqueries. The
-        # earlier literal check only knew one spelling of the gap, so a reformatted control row
-        # could have carried a subquery past it (panel L1 N-3).
-        assert re.search(r"\(\s*SELECT", control.dml_sql, re.IGNORECASE) is None, (
-            f"{control.name}: a content control must NOT carry a subquery predicate — it would be "
-            f"refused, and the row would be silently mis-classified"
+        # Whitespace-tolerant: `( SELECT`, `(\n  SELECT` and `(SELECT` are all subqueries.
+        # PR-1 flips `delete_in_subquery` to content — that one spelling is allowed to
+        # carry a subquery. Every other content row must stay subquery-free (panel L1 N-3).
+        has_subquery = re.search(r"\(\s*SELECT", control.dml_sql, re.IGNORECASE) is not None
+        if control.name == "delete_in_subquery":
+            assert has_subquery, f"{control.name}: the IN-DELETE content hole must keep its IN"
+            assert control.repark_error_needle is None
+            continue
+        assert not has_subquery, (
+            f"{control.name}: a content control must NOT carry a subquery predicate — it would "
+            f"be refused, and the row would be silently mis-classified"
         )
 
     names = {row.name for row in splits}
     for needle in (
-        "delete_in_subquery",
         "delete_not_in_subquery",
         "delete_exists_correlated",
         "delete_not_exists_correlated",
@@ -579,6 +583,8 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
         "update_in_subquery",
     ):
         assert needle in names, f"missing split coverage for {needle!r}"
+    contents = {row.name for row in ROWS if row.kind == "content"}
+    assert "delete_in_subquery" in contents, "IN-DELETE is the PR-1 content hole"
 
     # The NULL trap needs BOTH verbs — the classic Spark semantics surprise, per entry point.
     null_rows = [row for row in splits if row.name.endswith("_with_null_key")]

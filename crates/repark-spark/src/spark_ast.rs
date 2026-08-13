@@ -66,6 +66,30 @@ pub(crate) async fn execute_passthrough(
             // silently dropped. Router-parsable SELECT/ORDER BY still land here
             // when tests call execute_passthrough directly (Q-001 pin).
             crate::refuse_collation_in_statement(inner)?;
+            // G3-E8 identity path — uncorrelated DELETE … IN (SELECT …) only. Fail-closed:
+            // every other subquery spelling still hits the valve below (never DataFusion DML).
+            if let Some(allowed) =
+                repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
+            {
+                let object_name = match inner.as_ref() {
+                    Statement::Delete(delete) => crate::delete_target_object_name(delete),
+                    _ => None,
+                };
+                crate::refuse_mor_unpartitioned_multi_spec_dml(
+                    catalogs,
+                    object_name,
+                    crate::MorDmlKind::Delete,
+                )
+                .await?;
+                let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
+                repark_iceberg::write::predicate_dml::execute_predicate_dml(
+                    ctx,
+                    handle,
+                    &allowed.spec,
+                )
+                .await?;
+                return ctx.read_empty();
+            }
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
             apply_spark_order_by_defaults(inner);
