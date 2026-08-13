@@ -20,8 +20,8 @@ the error-path wrong-door sniff, the `CREATE TABLE` family (CTAS + column-def) w
 `WITH (…)` vocabulary, `extra_properties`, partitioning and Q15 loud-refuse routing,
 `CREATE`/`DROP SCHEMA` and `DROP TABLE`. M2 added ALTER (+ `SET PROPERTIES`, `RENAME TO`), the
 MERGE lowering, `FOR … AS OF` time travel, the ALTER-scoped branch/tag DDL, the completed refuse
-set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now reads 39 tested /
-4 deliberately absent, and every remaining absence is a standing design ruling, not a deferral.
+set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now reads 43 tested /
+7 deliberately absent (four standing design rulings + three G8 value-semantics pin-absences).
 
 ## Contents
 
@@ -75,8 +75,10 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
 - **Test strategy:** `cargo test -p repark-sql` — R1 parser-production pins, the two-session
   `cross_door.rs` rows (incl. G11 intended divergences), Q8 introspection, the Q11 ta-toll,
   G11 ANSI-door value pins (`tests/ansi_door_values.rs`).
-- **Known limitations:** `matrix.rs` reads 39 tested / 4 deliberately absent; every remaining absence
-  is a standing design ruling, not a deferral.
+- **Known limitations:** `matrix.rs` reads 43 tested / 7 deliberately absent; the four
+  statement-surface absences are standing design rulings, and the three `SEMANTICS_*`
+  absences are G8 pin-absences (the door implements them via DataFusion; no Native-profile
+  pin exists on this freeze tree).
 
 ## Pointers
 

@@ -15,8 +15,9 @@ workspace reserves `repark-core` for the Session crate.)
   shared by the workspace. **Error-boundary honesty (C1-CRATE-001):** not every crate returns
   `repark_common::Error` end-to-end — intermediate layers still surface `iceberg::Result` /
   `DataFusionError` and fold at the session/PyO3 boundary via `engine_err` / `iceberg_err`.
-- `src/surfaces.rs` (+ `src/surfaces/tests.rs`) — the surface registry: the 43-ID capability
-  vocabulary, `Row` / `SessionProfile`, and the `audit()` each door's `matrix.rs` runs as a
+- `src/surfaces.rs` (+ `src/surfaces/tests.rs`) — the surface registry: the 50-ID capability
+  vocabulary (43 statement/DDL/guard/ergonomic IDs + the 7 `SEMANTICS_*` value-semantics IDs
+  from H-2 G8), `Row` / `SessionProfile`, and the `audit()` each door's `matrix.rs` runs as a
   compile-run test (design `docs/design/sql-doors.md` §2 Q13, graft G2). Tier 0 so neither
   door needs an edge to the other.
 - `src/tests.rs` — file-backed test module: the exhaustive `exception_class` routing pin and the
@@ -28,12 +29,12 @@ workspace reserves `repark-core` for the Session crate.)
 |---|---|
 | Add an error variant | `src/lib.rs` (keep variants specific; no catch-all `String`) |
 | Add a shared domain type | `src/lib.rs` (it must not pull in heavier crates) |
-| Add / rename a SQL surface ID | `src/surfaces.rs` (const + `ALL`), the inventory in `src/surfaces/tests.rs`, then a row in EACH door's `matrix.rs` |
+| Add / rename a SQL surface ID | `src/surfaces.rs` (const + `ALL`), the inventory in `src/surfaces/tests.rs`, then a row in EACH door's `matrix.rs`. A `Tested` cite must be a live `cargo test -- --list` name (`make check-matrix-test-liveness`) |
 
 ## Component contract
 
 - **Owns:** the workspace `Error` / `ErrorClass` / `Result` seed; the dialect-neutral SQL **surface
-  registry** (`surfaces`: the 43-ID capability vocabulary, `Row` / `SessionProfile`, `audit()`).
+  registry** (`surfaces`: the 50-ID capability vocabulary, `Row` / `SessionProfile`, `audit()`).
 - **Does not own:** any engine / session / IO logic; error *folding* (that happens at the
   session / PyO3 boundary); door-specific matrices (each door owns its `matrix.rs`).
 - **Public inputs:** none at runtime — a leaf of pure types; doors call `surfaces::audit()` in tests.
@@ -49,14 +50,13 @@ workspace reserves `repark-core` for the Session crate.)
 - **Test strategy:** file-backed `tests.rs` — exhaustive exception-class routing + message-preservation
   pins; `surfaces/tests.rs` inventory audit.
 - **Known limitations:** must stay dependency-light — pulling in a heavier crate would risk
-  reintroducing a cycle. **The surface-matrix audit cannot verify that a cited test NAME still
-  exists**: each door's `matrix.rs` audit runs *inside* a Rust test binary, and a test binary
-  cannot enumerate its own test names, so renaming or deleting a cited test leaves the audit green
-  while the evidence is gone. The audit still catches an unmapped, stale, duplicated or
-  untraceable ID — the missing half is name liveness. Closing it needs a harness-level gate
-  (`cargo test -- --list` diffed against the matrices' cited names) wired like the other
-  mechanical guards in `scripts/`; every cited name was reconciled by hand at the ANSI door's
-  close. Until then, a matrix row's test name is checked by review, not by CI.
+  reintroducing a cycle. **Name liveness is a harness-level gate, not `audit()`:** each door's
+  `matrix.rs` audit runs *inside* a Rust test binary and cannot enumerate cargo test names.
+  `make check-matrix-test-liveness` (`scripts/check_matrix_test_liveness.py`, in `make ci` /
+  `make preflight`, dual-wired with the ci.yml rust-test job) diffs every `Tested` cite
+  against `cargo test --locked --workspace --lib --tests --bins -- --list`. A row citing a
+  dead name reds that gate. `audit()` still catches an unmapped, stale, duplicated or
+  untraceable ID.
 
 ## Pointers
 
@@ -69,5 +69,6 @@ workspace reserves `repark-core` for the Session crate.)
 |---|---|
 | Circular dependency | `repark-common` must depend on no sibling crate |
 | A door's `matrix_maps_every_surface` went RED | a `surfaces::ALL` entry has no row in that door — the audit error names the ID |
+| `matrix-test-liveness` RED | a `Tested` cite is missing from `cargo test -- --list` — `make check-matrix-test-liveness` |
 
 First checks: `cargo check -p repark-common`. Escalate to: [../map.md#debug](../map.md).

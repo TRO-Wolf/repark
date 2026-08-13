@@ -8,9 +8,10 @@ Source for `repark-common` — shared types + the `Error` enum. See [../map.md](
 - `tests.rs` — unit tests for Error / ErrorClass
 
 - `surfaces.rs` — the dialect-neutral **SQL surface registry** (design
-  `docs/design/sql-doors.md` §2 Q13, graft G2): 43 capability IDs (`CTAS`, `MERGE`,
-  `TABLE_OPTION_PARTITIONING`, `GUARD_MULTI_STATEMENT`, …) named by CAPABILITY rather than by
-  spelling, so one ID covers the ANSI `WITH (…)` form and the Spark `TBLPROPERTIES` form; plus
+  `docs/design/sql-doors.md` §2 Q13, graft G2): 50 capability IDs (`CTAS`, `MERGE`,
+  `TABLE_OPTION_PARTITIONING`, `GUARD_MULTI_STATEMENT`, `SEMANTICS_NULL_ORDERING`, …)
+  named by CAPABILITY rather than by spelling, so one ID covers the ANSI `WITH (…)` form
+  and the Spark `TBLPROPERTIES` form; plus
   `ALL` (the audit's universe), `Row { Tested { test, profile } | DeliberatelyAbsent { reason,
   adr } }`, `SessionProfile { Unit, Native, SparkExtended, TwoSession }` (graft G5 — evidence
   is only meaningful when the session profile is explicit) and `audit()`, which each door's

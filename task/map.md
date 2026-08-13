@@ -20,6 +20,12 @@ not this directory.
   B-TZ-4 FIXED; TZ-8 one row two citations, not fixed; F-V4-1/2 DECLARED
   fork-wave-routed; TZ-6/TZ-7 not duplicated). Completeness proof for the increment
   PR. Live-mirror both-halves: none.
+- [s2-g8-ledger.md](s2-g8-ledger.md) — **S-2 / H-2 G8 (2026-08-14):** the 7-ID
+  `SEMANTICS_*` value-semantics family (50-ID vocabulary) × 2 doors = 14 matrix rows
+  (each a live `cargo test -- --list` name or an honest `DeliberatelyAbsent`) plus
+  the test-name liveness gate (`make check-matrix-test-liveness`, dual-wired into
+  `make ci` / `make preflight` and the ci.yml rust-test job). No engine edits; no
+  new engine tests; registry is S-5. Completeness table for the 14 rows.
 - [v5-w-landing-ledger.md](v5-w-landing-ledger.md) — **V-5 W-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged W-wave
   handoffs (TZ-4 PR-2 progress not retired; TZ-6/TZ-7 FIXED notes already in-file
@@ -254,6 +260,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [s5-v-landing-ledger.md](s5-v-landing-ledger.md) | **S-5** V-wave §6 landing increment — registry + one STATUS dated note |
+| [s2-g8-ledger.md](s2-g8-ledger.md) | **S-2 / G8** capability value-semantics matrix + test-name liveness gate |
 | [v5-w-landing-ledger.md](v5-w-landing-ledger.md) | **V-5** W-wave §6 landing increment — registry + one STATUS dated note |
 | [v4-partition-values-ledger.md](v4-partition-values-ledger.md) | **V-4** write-path partition-key VALUE audit — carry-check + load-bearing + TZ-8 |
 | [v2-dec-u3u4-ledger.md](v2-dec-u3u4-ledger.md) | **V-2** DEC U3+U4a — integer-literal min-precision + add/sub/mul 38-clamp |
@@ -274,6 +281,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
+| Read the G8 value-semantics matrix + liveness gate | [s2-g8-ledger.md](s2-g8-ledger.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
 | See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |
