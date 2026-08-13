@@ -98,6 +98,11 @@ not this directory.
   engine fix (`repark_functions::timestamp_cast` + the analyzer's `Expr::Cast` arm), the
   divergence-class flip and its per-entry-point corpus, six declared residuals, and the **§6
   paste-true** registry text. Does **not** edit `docs/spark-sql-iceberg-parity.md`.
+- [y4-rename-ledger.md](y4-rename-ledger.md) — **Y-4 / G4b-R1 (2026-08-12):** declared-rename
+  unit (ships alone). `df_left_semi_unsupported` → `df_left_semi_on_name`,
+  `df_left_anti_unsupported` → `df_left_anti_on_name`,
+  `timestamp_to_int_spark_seconds_repark_raises` → `timestamp_to_int_nullability`. Identity
+  only. Does **not** edit the registry or `_live_parity.py` (§6 paste-true citations).
 
 - [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) — **Y-10 / H-2 gap G11 in flight:** ANSI
   door correctness-not-parity (Spark is not the ANSI oracle). §0 two-door inventory, 6
@@ -149,6 +154,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
+| [y4-rename-ledger.md](y4-rename-ledger.md) | **Y-4 / G4b-R1** declared rename (G4b flipped rows + TZ-5 nullability row) |
 | [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — items 1+4 in PR #50; items 2+3 (lifecycle live + 13 tz live scenarios) in the second PR. Full N-2b closed only when **both** PRs land. |
 | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) | **X-5 / G18** nested comparator + nested-container corpus (Part 1+2) |
 | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) | **X-4 / G17** catalog wrapper explicit forwards (HIGH `publish_replace_table`) |
@@ -179,6 +185,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the G11 ANSI-door correctness-not-parity ledger | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) |
 | Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
 | See how a corpus refuse-split gets FIXED and flipped (and why the row keeps its name) | [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) §2 D2 / §4 |
+| See the declared-rename map that retired those kept names (and the TZ-5 flip-row name) | [y4-rename-ledger.md](y4-rename-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
