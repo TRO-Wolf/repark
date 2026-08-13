@@ -17,6 +17,10 @@ not this directory.
   Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;
   FA-2 `getDatabase` note; Y-4 citation refresh). Completeness proof for the increment
   PR. Live-mirror both-halves deferred (none demanded; Z-2 owns `_live_parity.py`).
+- [z3-dec-u1u2-ledger.md](z3-dec-u1u2-ledger.md) — **Z-3 / DEC U1+U2 in flight:** U1
+  un-coerces facade `avg(DECIMAL)` (decimal retract, Spark `(p+4,s+4)`). U2
+  (`parse_float_as_decimal=true` Spark-door default) is a **named morning deferral**
+  — blast reds files outside the A1 writable set. Does **not** edit the registry.
 - [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
   collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
   paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does
