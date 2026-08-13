@@ -114,6 +114,8 @@ not this directory.
   INTENDED `cross_door.rs` rows, 6 `ansi_door_values.rs` standard-SQL pins, FINDING F-Y10-1
   (integer arithmetic overflow wraps). Does **not** edit the registry or the Y-8 ANSI-door
   timezone/cast files.
+- [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) — **Y-3:** `spark.catalog.getDatabase`
+  facade + G-6 location-guard live-leg activation (memory catalog; FA-2 untouched).
 
 ## Where the closed campaigns' ledgers went
 
@@ -164,6 +166,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) | **X-5 / G18** nested comparator + nested-container corpus (Part 1+2) |
 | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) | **X-4 / G17** catalog wrapper explicit forwards (HIGH `publish_replace_table`) |
 | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) | **Y-10 / G11** ANSI door — correctness, not parity |
+| [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) | **Y-3** `getDatabase` + G-6 live-leg |
 
 ## I want to...
 
@@ -188,6 +191,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
 | Read the G11 ANSI-door correctness-not-parity ledger | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) |
+| Read the getDatabase / G-6 live-leg ledger | [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) |
 | Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
 | See how a corpus refuse-split gets FIXED and flipped (and why the row keeps its name) | [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) §2 D2 / §4 |
 | See the declared-rename map that retired those kept names (and the TZ-5 flip-row name) | [y4-rename-ledger.md](y4-rename-ledger.md) |

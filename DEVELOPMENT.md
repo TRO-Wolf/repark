@@ -35,7 +35,7 @@ No JVM is needed for the normal build/test/verify loop. A Java 17 home is needed
 | `make verify` | `ci` + `test` — full local verification. **A change is not done until `make verify` is green** and the touched directories' `map.md` files are current. |
 | `make py-test-facade` | The **facade** suite (`python/repark/tests`) against the real native module: provisions the four declared extras (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`, runs `maturin develop`, then pytest. Run it when you touch the facade — `make verify` does not. |
 | `make py-test` | The **parity** harness (`python/repark-parity/tests`) — pure pyarrow, no native build, no JVM. Mirrors the CI step. |
-| `make preflight` | The pre-PR gate: `verify` + the security audits + workflow lint. If `preflight` is green, the PR checks are green. Run it before opening a PR. |
+| `make preflight` | The pre-PR gate: `verify` + the facade suite (`make py-test-facade`) + the security/workflow gates CI also runs. Roster: [AGENTS.md](AGENTS.md) "Verify before done". |
 | `make format` | Autoformat Rust + Python (`cargo fmt`, `ruff format`). |
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
 | `make develop` | Build + install the native module editable into the root `.venv` (`maturin develop`), for exercising the Python facade against real compiled code. |

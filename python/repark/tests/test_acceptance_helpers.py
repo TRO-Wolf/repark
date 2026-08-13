@@ -278,32 +278,33 @@ def test_probe_namespace_location_via_describe_reads_location_row() -> None:
     assert spark.last_sql == "DESCRIBE NAMESPACE glue_catalog.testing_repark_acceptance"
 
 
-def test_assert_glue_scratch_namespace_location_composes_probe_and_compare() -> None:
-    """AWS-free: Glue wrapper fails when DESCRIBE Location disagrees with warehouse intent."""
-    import pyarrow as pa
-    from _acceptance import assert_glue_scratch_namespace_location
+def test_assert_glue_scratch_namespace_location_composes_getdatabase_and_compare() -> None:
+    """AWS-free: Glue wrapper reads ``getDatabase.locationUri`` and compares to warehouse intent."""
+    from types import SimpleNamespace
 
-    class _FakeFrame:
+    from _acceptance import (
+        ACCEPTANCE_NAMESPACE,
+        SILVER_CATALOG,
+        assert_glue_scratch_namespace_location,
+    )
+
+    class _FakeCatalog:
         def __init__(self, location: str) -> None:
             self._location = location
+            self.last_name: str | None = None
 
-        def to_arrow(self) -> pa.Table:
-            return pa.table(
-                {
-                    "info_name": ["Location"],
-                    "info_value": [self._location],
-                }
-            )
+        def getDatabase(self, db_name: str) -> SimpleNamespace:  # noqa: N802 — PySpark camelCase
+            self.last_name = db_name
+            return SimpleNamespace(locationUri=self._location)
 
     class _FakeSpark:
         def __init__(self, location: str) -> None:
-            self._location = location
-
-        def sql(self, _statement: str) -> _FakeFrame:
-            return _FakeFrame(self._location)
+            self.catalog = _FakeCatalog(location)
 
     expected = acceptance_namespace_location("s3://acme-warehouse/")
-    assert_glue_scratch_namespace_location(_FakeSpark(expected), "s3://acme-warehouse/")
+    spark_ok = _FakeSpark(expected)
+    assert_glue_scratch_namespace_location(spark_ok, "s3://acme-warehouse/")
+    assert spark_ok.catalog.last_name == f"{SILVER_CATALOG}.{ACCEPTANCE_NAMESPACE}"
     with pytest.raises(RuntimeError, match="mismatch"):
         assert_glue_scratch_namespace_location(
             _FakeSpark("s3://stale-bucket/testing_repark_acceptance"),
@@ -354,3 +355,26 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
     assert "assert_glue_scratch_namespace_location" not in s3_names
     s3_source = ast.get_source_segment(source, s3) or ""
     assert "S3 Tables namespaces carry no location by design" in s3_source
+
+
+def test_glue_location_guard_calls_get_database() -> None:
+    """Y-3 activation: the Glue wrapper's live read is ``catalog.getDatabase``, not DESCRIBE."""
+    import ast
+
+    source = (_TESTS_DIR / "_acceptance.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    helper = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == (
+            "assert_glue_scratch_namespace_location"
+        ):
+            helper = node
+            break
+    assert helper is not None
+    call_names = []
+    for node in ast.walk(helper):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            call_names.append(node.func.attr)
+    assert "getDatabase" in call_names
+    assert "probe_namespace_location_via_describe" not in call_names
+    assert "sql" not in call_names
