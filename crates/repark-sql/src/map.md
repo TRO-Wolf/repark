@@ -25,7 +25,7 @@ reach delegation through the ordinary arm.
   guard. Delegation
   covers reads, the fork's metadata tables, and `INSERT`/`DELETE`/`UPDATE` via the fork's
   `TableProvider` (ADR-0003). `DELETE`/`UPDATE` share a NAMED arm on the way to delegation:
-  allow-listed uncorrelated `DELETE … IN (SELECT …)` calls `execute_predicate_dml`; every other
+  allow-listed uncorrelated `DELETE … IN` / `NOT IN (SELECT …)` calls `execute_predicate_dml`; every other
   subquery `WHERE` still hits G3-E8 then BUG-001 (cheap-first). The BUG-001 valve used to sit at the router head, i.e.
   before the parse G3-E8 needs, which made the two doors disagree about which refusal a
   doubly-hazardous statement gets. Tests: [router/map.md](router/map.md).

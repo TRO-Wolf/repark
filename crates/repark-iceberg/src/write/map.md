@@ -25,8 +25,10 @@ repark-core's error map.
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / isolation — **never**
-  `write.merge.mode`. Product hole is the valve allow-list (uncorrelated `DELETE … IN (SELECT …)`
-  only). Pins: [predicate_dml_tests.rs](predicate_dml_tests.rs).
+  `write.merge.mode`. Product hole is the valve allow-list (uncorrelated `DELETE … IN` /
+  `NOT IN (SELECT …)`, including the NULL 3VL trap). Pins:
+  [predicate_dml_tests.rs](predicate_dml_tests.rs). Ledger:
+  [`../../../../task/w3-g3e8-pr2-ledger.md`](../../../../task/w3-g3e8-pr2-ledger.md).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
   extra / duplicate column = loud error; strict casts, overflow never NULLs) → identity-
   partition fanout write → ONE stamped `fast_append` commit (append×append commutes via the

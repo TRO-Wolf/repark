@@ -544,13 +544,111 @@ async fn g3e8_delete_in_subquery_quoted_and_temp_view_source_execute() {
     );
 }
 
+/// Uncorrelated `DELETE … NOT IN (SELECT …)` — Spark 3VL, not set-difference.
+#[tokio::test]
+async fn g3e8_delete_not_in_subquery_deletes_non_matching_rows() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("uncorrelated DELETE NOT IN must execute on the identity path");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(2, "b".to_string())],
+        "NOT IN must keep only the key row — Spark {{2}}"
+    );
+}
+
+/// The NULL trap: ANY NULL in the subquery ⇒ NOT IN matches zero rows.
+#[tokio::test]
+async fn g3e8_delete_not_in_subquery_with_null_key_deletes_nothing() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    run(&ctx, &catalogs, "DROP TABLE ice.sales.keys").await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.keys AS \
+         SELECT 2 AS id, 'K' AS name UNION ALL SELECT CAST(NULL AS INT), 'N'",
+    )
+    .await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("NOT IN + NULL subquery must execute (and match nothing)");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        g3e8_seed(),
+        "Spark 3VL: a NULL in the subquery makes NOT IN UNKNOWN for every row"
+    );
+}
+
+/// Empty subquery: `x NOT IN ()` is vacuously TRUE — delete every row.
+#[tokio::test]
+async fn g3e8_delete_not_in_empty_subquery_deletes_every_row() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    run(&ctx, &catalogs, "DELETE FROM ice.sales.keys").await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("NOT IN empty subquery must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        Vec::<(i32, String)>::new(),
+        "empty NOT IN matches every row"
+    );
+}
+
+/// Quoted target + FROM-less: same product spelling, different target forms.
+#[tokio::test]
+async fn g3e8_delete_not_in_quoted_and_fromless_execute() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("quoted-target NOT IN must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(2, "b".to_string())],
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("FROM-less NOT IN must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(2, "b".to_string())],
+    );
+}
+
 /// Every DELETE subquery spelling the recon proved silently wrong refuses, and none of them
 /// touches a row. One fresh table per form, so a leaked write cannot hide behind a later one.
 #[tokio::test]
 async fn g3e8_delete_subquery_family_all_refuse() {
     for sql in [
-        // IN is the PR-1 product hole (executed by g3e8_delete_in_subquery_*). Residual refuse:
-        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        // IN / NOT IN are the product hole (executed by g3e8_delete_in_subquery_* /
+        // g3e8_delete_not_in_*). Residual refuse:
         // negated, disjunctive and conjunctive positions (the AND form silently PARTIALLY
         // over-deleted — the surviving conjunct was applied alone)
         "DELETE FROM ice.sales.tgt WHERE NOT (id IN (SELECT id FROM ice.sales.keys))",
@@ -880,7 +978,8 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
         "control must be the BUG-001 message, got {mor}"
     );
 
-    let sql = "DELETE FROM ice.sales.both WHERE id NOT IN (SELECT id FROM ice.sales.bothkeys)";
+    let sql = "DELETE FROM ice.sales.both WHERE EXISTS \
+               (SELECT 1 FROM ice.sales.bothkeys k WHERE k.id = ice.sales.both.id)";
     let both = execute(&ctx, &catalogs, sql)
         .await
         .expect_err("a still-refused subquery DELETE on a BUG-001 table must still refuse")
@@ -931,11 +1030,10 @@ async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {
 #[tokio::test]
 async fn g3e8_fromless_delete_subquery_family_all_refuse() {
     for sql in [
-        // F8 — NOT IN
-        "DELETE ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
-        // F9 — correlated EXISTS
+        // F9 — correlated EXISTS (FROM-less NOT IN now executes — see the pin below)
         "DELETE ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
          WHERE k.id = ice.sales.tgt.id)",
+        "DELETE ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
     ] {
         let wh = TempDir::new().unwrap();
         let (ctx, catalogs) = g3e8_setup(&wh).await;

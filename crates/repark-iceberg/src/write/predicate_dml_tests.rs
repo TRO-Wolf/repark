@@ -36,6 +36,12 @@ fn allow_list_accepts_only_uncorrelated_col_in_select() {
         "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt t WHERE t.id IN (SELECT k.id FROM ice.sales.keys k)",
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM src WHERE id = 2)",
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        "DELETE ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        "delete from ice.sales.tgt where id not in ( select id from ice.sales.keys )",
+        "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt t WHERE t.id NOT IN (SELECT k.id FROM ice.sales.keys k)",
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM src WHERE id = 2)",
     ] {
         assert!(
             try_allowed_delete_in(&parse_statement(sql))
@@ -49,7 +55,6 @@ fn allow_list_accepts_only_uncorrelated_col_in_select() {
 #[test]
 fn allow_list_refuses_every_other_subquery_spelling() {
     for sql in [
-        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE NOT (id IN (SELECT id FROM ice.sales.keys))",
         "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id = (SELECT max(id) FROM ice.sales.keys)",
@@ -61,6 +66,9 @@ fn allow_list_refuses_every_other_subquery_spelling() {
          WHERE k.id = ice.sales.tgt.id)",
         "UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt USING ice.sales.keys WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt USING ice.sales.keys WHERE id NOT IN \
+         (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys) RETURNING *",
         "DELETE FROM ice.sales.tgt WHERE id = 2",
     ] {
         assert!(
@@ -267,12 +275,18 @@ async fn live_data_file_paths(catalog: &Arc<dyn Catalog>, ident: &TableIdent) ->
 }
 
 fn identity_spec(table: &str) -> PredicateDmlSpec {
+    identity_spec_for(table, "id IN (SELECT id FROM keys)")
+}
+
+fn identity_spec_for(table: &str, selection_sql: &str) -> PredicateDmlSpec {
     PredicateDmlSpec {
         target: TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string()),
         target_alias: table.to_string(),
-        selection_sql: "id IN (SELECT id FROM keys)".to_string(),
+        selection_sql: selection_sql.to_string(),
     }
 }
+
+const NOT_IN_SELECTION: &str = "id NOT IN (SELECT id FROM keys)";
 
 #[tokio::test]
 async fn identity_delete_empty_match_commits_nothing() {
@@ -464,5 +478,300 @@ async fn identity_delete_honors_write_delete_mode_not_merge_mode() {
     assert_ne!(
         cow_after, cow_data_before,
         "COW DELETE must rewrite the affected data file away"
+    );
+}
+
+/// A4: the identity path is this SELECT. DataFusion must reproduce Spark 4.1.2 3VL here —
+/// empty subquery matches every row; ANY NULL in the subquery matches none; NULL LHS is
+/// UNKNOWN. A hand-rolled "match none" shortcut is not this pin.
+#[tokio::test]
+async fn identity_select_not_in_matches_spark_three_valued_logic() {
+    let ctx = SessionContext::new();
+    let target_schema = Arc::new(ArrowSchema::new(vec![Field::new(
+        "id",
+        DataType::Int32,
+        true,
+    )]));
+    let target_batch = RecordBatch::try_new(
+        Arc::clone(&target_schema),
+        vec![Arc::new(Int32Array::from(vec![
+            Some(1),
+            Some(2),
+            Some(3),
+            None,
+        ]))],
+    )
+    .expect("target batch");
+    ctx.register_table(
+        "tgt",
+        Arc::new(MemTable::try_new(target_schema, vec![vec![target_batch]]).expect("tgt")),
+    )
+    .expect("register tgt");
+
+    let select = |keys: &[Option<i32>]| {
+        let ctx = ctx.clone();
+        let keys = keys.to_vec();
+        async move {
+            let _ = ctx.deregister_table("keys");
+            register_keys(&ctx, &keys);
+            let batches = ctx
+                .sql("SELECT id FROM tgt WHERE id NOT IN (SELECT id FROM keys)")
+                .await
+                .expect("identity SELECT plans")
+                .collect()
+                .await
+                .expect("identity SELECT collects");
+            let mut ids = Vec::new();
+            for batch in &batches {
+                let column = batch
+                    .column(0)
+                    .as_any()
+                    .downcast_ref::<Int32Array>()
+                    .expect("id Int32");
+                for row in 0..batch.num_rows() {
+                    ids.push(column.is_valid(row).then(|| column.value(row)));
+                }
+            }
+            ids.sort();
+            ids
+        }
+    };
+
+    assert_eq!(
+        select(&[Some(2)]).await,
+        vec![Some(1), Some(3)],
+        "no-NULL NOT IN is set-difference: drop the key, keep the rest (NULL LHS is UNKNOWN)"
+    );
+    assert_eq!(
+        select(&[Some(2), None]).await,
+        Vec::<Option<i32>>::new(),
+        "ANY NULL in the subquery ⇒ NOT IN is never TRUE (Spark 3VL trap)"
+    );
+    assert_eq!(
+        select(&[]).await,
+        vec![None, Some(1), Some(2), Some(3)],
+        "empty subquery ⇒ NOT IN is vacuously TRUE, including a NULL target column"
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_in_keeps_only_the_key_row() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "notin", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(
+            &[Some(1), Some(2), Some(3)],
+            &[Some("a"), Some("b"), Some("c")],
+        ),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("notin", NOT_IN_SELECTION),
+    )
+    .await
+    .expect("NOT IN DELETE");
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(Some(2), Some("b".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_in_null_in_subquery_matches_nothing() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "nullsub", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(
+            &[Some(1), Some(2), Some(3)],
+            &[Some("a"), Some("b"), Some("c")],
+        ),
+    )
+    .await;
+    let before = snapshot_id(&catalog, &ident).await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2), None]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("nullsub", NOT_IN_SELECTION),
+    )
+    .await
+    .expect("NOT IN + NULL subquery");
+    assert_eq!(snapshot_id(&catalog, &ident).await, before);
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![
+            (Some(1), Some("a".into())),
+            (Some(2), Some("b".into())),
+            (Some(3), Some("c".into())),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_in_empty_subquery_deletes_every_row() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "emptykeys", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1), Some(2)], &[Some("a"), Some("b")]),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("emptykeys", NOT_IN_SELECTION),
+    )
+    .await
+    .expect("NOT IN empty subquery");
+    assert!(read_back(&catalog, &ident).await.is_empty());
+}
+
+#[tokio::test]
+async fn identity_delete_not_in_null_target_column_survives() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "nulltgt", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(
+            &[None, Some(1), Some(2)],
+            &[Some("n"), Some("a"), Some("b")],
+        ),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(1)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("nulltgt", NOT_IN_SELECTION),
+    )
+    .await
+    .expect("NOT IN NULL-target");
+    // NULL NOT IN {1} is UNKNOWN — the NULL-id row survives. id=2 is deleted.
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(None, Some("n".into())), (Some(1), Some("a".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_in_duplicates_both_sides() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "notindups", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1)], &[Some("same")]),
+    )
+    .await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1)], &[Some("same")]),
+    )
+    .await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(2)], &[Some("keep")]),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2), Some(2)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("notindups", NOT_IN_SELECTION),
+    )
+    .await
+    .expect("NOT IN duplicate-key DELETE");
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(Some(2), Some("keep".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_in_honors_write_delete_mode_not_merge_mode() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let mor = create_target(
+        &catalog,
+        "notin_mor",
+        HashMap::from([
+            (WRITE_DELETE_MODE.to_string(), "merge-on-read".to_string()),
+            ("write.merge.mode".to_string(), "copy-on-write".to_string()),
+        ]),
+    )
+    .await;
+    let cow = create_target(
+        &catalog,
+        "notin_cow",
+        HashMap::from([
+            (WRITE_DELETE_MODE.to_string(), "copy-on-write".to_string()),
+            ("write.merge.mode".to_string(), "merge-on-read".to_string()),
+        ]),
+    )
+    .await;
+    for ident in [&mor, &cow] {
+        append_file(
+            &catalog,
+            ident,
+            consumer_batch(&[Some(1), Some(3)], &[Some("keep"), Some("drop")]),
+        )
+        .await;
+        append_file(&catalog, ident, consumer_batch(&[Some(2)], &[Some("drop")])).await;
+    }
+    let mor_data_before = live_data_file_paths(&catalog, &mor).await;
+    let cow_data_before = live_data_file_paths(&catalog, &cow).await;
+
+    for name in ["notin_mor", "notin_cow"] {
+        let ctx = SessionContext::new();
+        register_keys(&ctx, &[Some(1)]);
+        execute_predicate_dml(&ctx, &catalog, &identity_spec_for(name, NOT_IN_SELECTION))
+            .await
+            .unwrap_or_else(|error| panic!("{name} identity NOT IN DELETE: {error}"));
+    }
+
+    let expected = vec![(Some(1), Some("keep".into()))];
+    assert_eq!(read_back(&catalog, &mor).await, expected);
+    assert_eq!(read_back(&catalog, &cow).await, expected);
+
+    assert!(
+        live_delete_file_count(&catalog, &mor).await >= 1,
+        "write.delete.mode=merge-on-read must commit position deletes (not follow write.merge.mode)"
+    );
+    assert_eq!(
+        live_data_file_paths(&catalog, &mor).await,
+        mor_data_before,
+        "MoR NOT IN DELETE must leave original data files in place"
+    );
+    assert_eq!(
+        live_delete_file_count(&catalog, &cow).await,
+        0,
+        "write.delete.mode=copy-on-write must NOT write position deletes even if merge.mode is MoR"
+    );
+    let cow_after = live_data_file_paths(&catalog, &cow).await;
+    assert_ne!(
+        cow_after, cow_data_before,
+        "COW NOT IN DELETE must rewrite the affected data file away"
     );
 }

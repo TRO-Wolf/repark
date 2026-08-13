@@ -8,7 +8,9 @@
 //! isolation properties, **never** `write.merge.mode`.
 //!
 //! The capability is general (any `WHERE` that DataFusion can plan as a query). The product hole
-//! is the valve allow-list: only uncorrelated `DELETE … WHERE col IN (SELECT …)` is exported.
+//! is the valve allow-list: uncorrelated `DELETE … WHERE col IN (SELECT …)` and
+//! `DELETE … WHERE col NOT IN (SELECT …)` (including the NULL 3VL trap). EXISTS, UPDATE, and
+//! every compound spelling stay refused.
 
 use std::sync::Arc;
 
@@ -59,7 +61,7 @@ pub struct PredicateDmlSpec {
     pub selection_sql: String,
 }
 
-/// Catalog name + identity spec extracted from an allow-listed `DELETE … IN (SELECT …)`.
+/// Catalog name + identity spec extracted from an allow-listed `DELETE … IN` / `NOT IN`.
 #[derive(Debug, Clone)]
 pub struct AllowedDeleteIn {
     /// Leading catalog identifier (`ice` in `ice.sales.tgt`).
@@ -69,17 +71,18 @@ pub struct AllowedDeleteIn {
 }
 
 /// ===========================================================================================
-/// True when `selection` is exactly uncorrelated `col IN (SELECT col FROM <table> …)`.
+/// True when `selection` is exactly uncorrelated `col IN (SELECT col FROM <table> …)` or
+/// `col NOT IN (SELECT col FROM <table> …)` — one 3VL family, both spellings.
 ///
-/// Fail-closed: NOT IN, EXISTS, scalars, mixed AND/OR, nested FROM, aggregates, WITH, and
-/// correlated outer refs stay **outside** the product hole.
+/// Fail-closed: `NOT (col IN …)`, EXISTS, scalars, mixed AND/OR, nested FROM, aggregates,
+/// WITH, and correlated outer refs stay **outside** the product hole.
 /// ===========================================================================================
 #[must_use]
 pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
     let Expr::InSubquery {
         expr,
         subquery,
-        negated: false,
+        negated: _,
     } = selection
     else {
         return false;
@@ -88,11 +91,13 @@ pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
 }
 
 /// ===========================================================================================
-/// If `statement` is the allow-listed IN-DELETE, return the catalog + spec; otherwise `None`.
+/// If `statement` is the allow-listed IN / NOT IN DELETE, return the catalog + spec; otherwise
+/// `None`.
 ///
 /// Unhandled subquery shapes return `None` so the caller can keep the G3-E8 valve. A recognized
-/// IN-DELETE whose target is not a three-part Iceberg name is a planning error (fail-closed —
-/// never DataFusion DML).
+/// IN / NOT IN DELETE whose target is not a three-part Iceberg name is not an executable hole
+/// (fail-closed — never DataFusion DML). USING / RETURNING / OUTPUT / LIMIT / ORDER BY /
+/// multi-table stay outside the hole.
 /// ===========================================================================================
 ///
 /// # Errors
