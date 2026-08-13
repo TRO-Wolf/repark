@@ -24,14 +24,15 @@
 //! G5b-R Half-B: [`temporal_range_value_inverted_frames_do_not_wrap`] pins same-kind
 //! magnitude invert (the kind-only hole — Spark refuses `WRONG_COMPARISON`, never wraps)
 //! and [`temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses`] pins the mixed
-//! refuse. R1 / R4 / R5 stay recorded (unquoted interval, FOLLOWING-to-FOLLOWING,
-//! interval-over-int). Z-4 (2026-08-13) re-verified all three against live Spark 4.1.2
-//! and DataFusion 54.1.0; none are expressible on this seam without `spark_ast.rs`.
+//! refuse. W-4 (2026-08-13): R1 (unquoted interval) and R5 (interval-over-int) close
+//! via `spark_ast` pre-plan quote + type-aware numeric restatement. R4 stays recorded
+//! (FOLLOWING-to-FOLLOWING; DF 54.1.0 range-search; sqlparser 0.62 `EXCLUDE` TBD).
 
 use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::{Date32Array, TimestampMicrosecondArray};
+use datafusion::arrow::datatypes::TimeUnit;
 
 // =================================================================================================
 // Fixtures — the §0 recon seed rows, registered as plain temp views (leaf-private)
@@ -141,6 +142,25 @@ fn register_date_seed(ctx: &SessionContext) {
     )
     .unwrap();
     ctx.register_batch("wd", batch).unwrap();
+}
+
+/// Ties + close values so `INTERVAL 'n' UNIT` magnitude over INT is observable.
+///
+/// `(id, v) = (1,10), (2,20), (3,20), (4,21), (5,30)` — Z-4 / W-4 live Spark seed.
+fn register_numeric_ties_seed(ctx: &SessionContext) {
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, true),
+        Field::new("v", DataType::Int64, true),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int64Array::from(vec![1_i64, 2, 3, 4, 5])),
+            Arc::new(Int64Array::from(vec![10_i64, 20, 20, 21, 30])),
+        ],
+    )
+    .unwrap();
+    ctx.register_batch("wi", batch).unwrap();
 }
 
 /// Collect one `BIGINT`-typed measured column, asserting its Arrow type and returning its cells.
@@ -478,7 +498,7 @@ async fn temporal_range_numeric_order_keys_are_untouched() {
 }
 
 // =================================================================================================
-// G5b-R residual pins — Y-1 (R3/R2 fixed; R1/R4/R5 remain recorded)
+// G5b-R residual pins — Y-1 (R3/R2 fixed); W-4 closes R1/R5; R4 remains recorded
 // =================================================================================================
 
 /// Plan/execute error text for a statement that must stay loud (deferred residual).
@@ -648,30 +668,42 @@ async fn temporal_range_day_to_second_literal_matches_spark() {
     );
 }
 
-/// R1 deferred (Z-4 re-verify): unquoted `INTERVAL 1 DAY` still fails at first plan.
-/// Spark 4.1.2 accepts it (same table as `INTERVAL '1' DAY`). Fix is a pre-plan AST
-/// quote in `spark_ast.rs` — this module's rewrite runs only after that plan succeeds.
+/// R1 (W-4): unquoted `INTERVAL 1 DAY` is quoted before first plan and matches the
+/// quoted `INTERVAL '1' DAY` table (Spark 4.1.2).
 #[tokio::test]
-async fn temporal_range_unquoted_interval_literal_still_refuses() {
+async fn temporal_range_unquoted_interval_literal_matches_quoted() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     register_timestamp_seed(&ctx);
-    let message = execute_error(
+    let unquoted = collect_measured_int64(
         &ctx,
         &catalogs,
         "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL 1 DAY PRECEDING \
          AND CURRENT ROW) AS s FROM wt ORDER BY id",
     )
     .await;
-    assert!(
-        message.contains("INTERVAL expression cannot be"),
-        "R1 stays a loud first-plan error until a pre-plan rewrite lands, got: {message}"
+    assert_eq!(
+        unquoted,
+        present(&[10, 30, 60, 90, 90]),
+        "unquoted INTERVAL 1 DAY must match Spark / the quoted INTERVAL '1' DAY table"
+    );
+    let quoted = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        unquoted, quoted,
+        "quoted and unquoted INTERVAL 1 DAY must agree"
     );
 }
 
-/// R4 deferred (Z-4 re-verify): both-bounds-FOLLOWING still includes the current row
-/// (120 vs Spark 90). Planned frame is correctly typed; DF 54.1.0 range-search at the
-/// pin. `EXCLUDE CURRENT ROW` is `TBD` in sqlparser. No Cargo.lock bump.
+/// R4 deferred (W-4 re-verify on DF 54.1.0 / sqlparser 0.62): both-bounds-FOLLOWING
+/// still includes the current row (120 vs Spark 90). Planned frame is correctly typed;
+/// `WindowFrame` has `// TBD: EXCLUDE`. No Cargo.lock bump. Seam restatement cannot
+/// exclude the current row without inventing row-level compensation.
 #[tokio::test]
 async fn temporal_range_following_to_following_still_includes_current_row() {
     let warehouse = TempDir::new().unwrap();
@@ -692,23 +724,145 @@ async fn temporal_range_following_to_following_still_includes_current_row() {
     );
 }
 
-/// R5 deferred (Z-4 re-verify): interval bound over a numeric key still surfaces a raw
-/// Arrow cast error. Spark 4.1.2 answers a table: `INTERVAL 'n' UNIT` is numeric `n`
-/// RANGE (unit ignored). Type-aware restatement needs `spark_ast.rs`.
+/// R5 (W-4): `INTERVAL 'n' UNIT` over a numeric key is Spark's numeric `n` RANGE
+/// (unit ignored). Unique `v` gaps of 10 make `n=1` look like "self only"; the
+/// magnitude pin below is the one that distinguishes that guess.
 #[tokio::test]
-async fn temporal_range_interval_bound_over_int_key_still_arrow_cast() {
+async fn temporal_range_interval_bound_over_int_key_is_numeric_n() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
     register_timestamp_seed(&ctx);
-    let message = execute_error(
+
+    let one_day = collect_measured_int64(
         &ctx,
         &catalogs,
         "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' DAY PRECEDING \
          AND CURRENT ROW) AS s FROM wt ORDER BY id",
     )
     .await;
+    assert_eq!(
+        one_day,
+        present(&[10, 20, 30, 40, 50]),
+        "INTERVAL '1' DAY over unique v (gaps of 10) is numeric 1 PRECEDING"
+    );
+
+    let one_hour = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' HOUR PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    let one_month = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' MONTH PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    let unitless = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN 1 PRECEDING AND CURRENT ROW) \
+         AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(one_day, one_hour, "R5: unit is ignored (DAY == HOUR)");
+    assert_eq!(one_day, one_month, "R5: unit is ignored (DAY == MONTH)");
+    assert_eq!(one_day, unitless, "R5: INTERVAL '1' UNIT == 1 PRECEDING");
+
+    let unquoted = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL 1 DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(unquoted, one_day, "R1+R5: unquoted INTERVAL 1 DAY over INT");
+}
+
+/// R5 magnitude: ties + `n=1` vs `n=10` so "self only" cannot pass.
+#[tokio::test]
+async fn temporal_range_interval_bound_over_int_key_uses_numeric_magnitude() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_numeric_ties_seed(&ctx);
+
+    let one = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wi ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        one,
+        present(&[10, 40, 40, 61, 30]),
+        "INTERVAL '1' DAY over ties seed is numeric 1 (not self-only)"
+    );
+
+    let ten = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '10' DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wi ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        ten,
+        present(&[10, 50, 50, 61, 91]),
+        "INTERVAL '10' DAY over ties seed is numeric 10 PRECEDING"
+    );
+
+    let zero = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '0' DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wi ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        zero,
+        present(&[10, 40, 40, 21, 30]),
+        "INTERVAL '0' DAY over ties seed is the peer group"
+    );
+}
+
+/// Mixed TIMESTAMP-interval + INT-interval cannot use the statement-wide R5 rewrite.
+/// The numeric site stays the recorded Arrow cast (same mixed-statement rule as G5b).
+#[tokio::test]
+async fn temporal_range_mixed_datetime_and_numeric_interval_leaves_numeric_loud() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let message = execute_error(
+        &ctx,
+        &catalogs,
+        "SELECT id, \
+         sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY PRECEDING \
+         AND CURRENT ROW) AS by_ts, \
+         sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' DAY PRECEDING \
+         AND CURRENT ROW) AS by_value \
+         FROM wt ORDER BY id",
+    )
+    .await;
     assert!(
         message.contains("Cannot cast string") && message.contains("1 DAY"),
-        "R5 stays the recorded Arrow cast error, got: {message}"
+        "mixed datetime-interval + numeric-interval must keep the numeric Arrow cast, got: {message}"
     );
+}
+
+/// Window-ns type pin (W-4 / #79): the temporal seed is µs end-to-end, not ns.
+#[tokio::test]
+async fn temporal_range_timestamp_seed_is_microseconds() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let frame = execute(&ctx, &catalogs, "SELECT ts FROM wt LIMIT 1")
+        .await
+        .expect("SELECT ts from the temporal seed must plan");
+    let data_type = frame.schema().field(0).data_type();
+    let DataType::Timestamp(TimeUnit::Microsecond, _) = data_type else {
+        panic!("temporal seed ts must be Timestamp(Microsecond, _), got {data_type}");
+    };
 }

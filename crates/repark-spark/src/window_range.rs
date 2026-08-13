@@ -35,17 +35,16 @@
 //! PRECEDING` becomes `2 FOLLOWING AND 1 FOLLOWING`: same kind, start after end). An inverted
 //! frame is Spark-empty: the restatement attaches `FILTER (WHERE false)` and a current-row
 //! frame so DataFusion never executes the inverted search. Unquoted `INTERVAL 1 DAY` (R1)
-//! fails at first plan, before classify (`convert_frame_bound_to_scalar_value` accepts only
-//! `SingleQuotedString`). The rewrite helpers here cannot run until that first plan
-//! succeeds; the pre-plan call lives in `spark_ast.rs` (closed to Z-4). Both-bounds-
-//! `FOLLOWING` values that are **not** inverted (R4) still include the current row on
-//! DataFusion 54.1.0 (120 vs Spark 90); sqlparser's `WindowFrame` has no `EXCLUDE`
-//! (`// TBD: EXCLUDE`), and an in-place plan rewrite strands parent column refs.
-//! An interval over a numeric key (R5) is still an Arrow cast. Spark 4.1.2 (Z-4 live
-//! probe) treats `INTERVAL 'n' UNIT` as **numeric `n` RANGE**, unit ignored (`1 DAY` =
-//! `1 HOUR` = `1 MONTH` = `1 PRECEDING`; `10 DAY` = `10 PRECEDING`; `0 DAY` = peer
-//! group) — not Y-1's unique-key "self only" guess. Restating that needs a type-aware
-//! AST rewrite invoked from `spark_ast.rs`. Those three stay recorded residuals.
+//! is quoted at `spark_ast` altitude before first plan (`convert_frame_bound_to_scalar_value`
+//! accepts only `SingleQuotedString`). Both-bounds-`FOLLOWING` values that are **not**
+//! inverted (R4) still include the current row on DataFusion 54.1.0 (120 vs Spark 90);
+//! sqlparser 0.62 `WindowFrame` has no `EXCLUDE` (`// TBD: EXCLUDE`), and an in-place
+//! plan rewrite strands parent column refs. An interval over a numeric key (R5) is
+//! restated to unit-less `n` when classify sees a numeric order key — Spark 4.1.2
+//! (Z-4 / W-4) treats `INTERVAL 'n' UNIT` as **numeric `n` RANGE**, unit ignored
+//! (`1 DAY` = `1 HOUR` = `1 MONTH` = `1 PRECEDING`; `10 DAY` = `10 PRECEDING`;
+//! `0 DAY` = peer group). Mixed datetime-interval + numeric-interval stays on the
+//! first plan (statement-wide rewrite cannot tell the sites apart).
 
 use std::collections::HashSet;
 use std::ops::ControlFlow;
@@ -70,7 +69,8 @@ use datafusion::sql::sqlparser::tokenizer::Span;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RangeFrameVerdict {
     /// Nothing to do — no bare-number `RANGE` bound sits over a datetime order key, and no
-    /// G5b-R interval restatement (negative TIMESTAMP offset / `DAY TO SECOND`) is pending.
+    /// G5b-R interval restatement (negative TIMESTAMP offset / `DAY TO SECOND` / numeric
+    /// key) is pending.
     Unchanged,
     /// Restate the AST and re-plan: DATE-keyed unit-less bounds become `INTERVAL '<n>' DAY`,
     /// negative / value-inverted TIMESTAMP interval offsets become a Spark-empty frame
@@ -78,6 +78,10 @@ pub(crate) enum RangeFrameVerdict {
     /// become an Arrow-accepted interval string. Only safe when no numeric-keyed unit-less
     /// bound in the same statement would be caught by that restatement.
     RestateBareBoundsAsDays,
+    /// Restate every `RANGE` `INTERVAL 'n' UNIT` bound to the unit-less number `n`
+    /// (Spark 4.1.2 over a numeric order key: unit ignored). Only safe when the
+    /// statement has no datetime-keyed interval frame that must stay an interval.
+    RestateIntervalBoundsAsNumeric,
 }
 
 /// ===========================================================================================
@@ -95,6 +99,8 @@ pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeF
     let mut other_keyed_sites = 0usize;
     let mut interval_restate_sites = 0usize;
     let mut negative_timestamp_sites = 0usize;
+    let mut datetime_interval_sites = 0usize;
+    let mut numeric_interval_sites = 0usize;
     let mut refusal: Option<DataFusionError> = None;
 
     plan.apply_with_subqueries(|node| {
@@ -128,6 +134,14 @@ pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeF
                         negative_timestamp_sites += 1;
                         Ok(TreeNodeRecursion::Continue)
                     }
+                    Ok(Some(FrameSite::DatetimeInterval)) => {
+                        datetime_interval_sites += 1;
+                        Ok(TreeNodeRecursion::Continue)
+                    }
+                    Ok(Some(FrameSite::NumericKeyedInterval)) => {
+                        numeric_interval_sites += 1;
+                        Ok(TreeNodeRecursion::Continue)
+                    }
                     Ok(None) => Ok(TreeNodeRecursion::Continue),
                 }
             })?;
@@ -146,8 +160,17 @@ pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeF
     if negative_timestamp_sites > 0 && other_keyed_sites > 0 {
         return Err(negative_range_offset_error());
     }
+    if numeric_interval_sites > 0
+        && date_keyed_sites == 0
+        && interval_restate_sites == 0
+        && negative_timestamp_sites == 0
+        && datetime_interval_sites == 0
+    {
+        return Ok(RangeFrameVerdict::RestateIntervalBoundsAsNumeric);
+    }
     if (date_keyed_sites > 0 || interval_restate_sites > 0 || negative_timestamp_sites > 0)
         && other_keyed_sites == 0
+        && numeric_interval_sites == 0
     {
         return Ok(RangeFrameVerdict::RestateBareBoundsAsDays);
     }
@@ -165,6 +188,10 @@ enum FrameSite {
     IntervalRestate,
     /// Negative or value-inverted interval over a `TIMESTAMP` key (R3 wrapping class).
     NegativeTimestamp,
+    /// Working-path interval over a datetime key — must not be restated to a unit-less `n`.
+    DatetimeInterval,
+    /// Interval bound over a numeric order key (R5 — Spark reads the leading `n`, unit ignored).
+    NumericKeyedInterval,
 }
 
 /// ===========================================================================================
@@ -233,8 +260,57 @@ fn classify_one_frame(
         DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) if saw_colon => {
             Ok(Some(FrameSite::IntervalRestate))
         }
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _)
+            if planned_frame_has_interval_bound(&params.window_frame) =>
+        {
+            Ok(Some(FrameSite::DatetimeInterval))
+        }
+        _ if is_numeric_order_key(&key_type)
+            && planned_frame_has_interval_bound(&params.window_frame) =>
+        {
+            Ok(Some(FrameSite::NumericKeyedInterval))
+        }
         _ => Ok(None),
     }
+}
+
+fn is_numeric_order_key(key_type: &DataType) -> bool {
+    matches!(
+        key_type,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float16
+            | DataType::Float32
+            | DataType::Float64
+            | DataType::Decimal128(_, _)
+            | DataType::Decimal256(_, _)
+    )
+}
+
+fn planned_frame_has_interval_bound(frame: &datafusion::logical_expr::WindowFrame) -> bool {
+    bound_is_interval_shaped(&frame.start_bound) || bound_is_interval_shaped(&frame.end_bound)
+}
+
+fn bound_is_interval_shaped(bound: &WindowFrameBound) -> bool {
+    if interval_bound_text(bound).is_some() {
+        return true;
+    }
+    let scalar = match bound {
+        WindowFrameBound::Preceding(value) | WindowFrameBound::Following(value) => value,
+        WindowFrameBound::CurrentRow => return false,
+    };
+    matches!(
+        scalar,
+        ScalarValue::IntervalMonthDayNano(_)
+            | ScalarValue::IntervalYearMonth(_)
+            | ScalarValue::IntervalDayTime(_)
+    )
 }
 
 /// True when, after sign-normalizing each bound, the start sits strictly after the end.
@@ -396,6 +472,215 @@ pub(crate) fn rewrite_bare_range_bounds_to_days(statement: &mut Statement) {
     };
     // The visitor's Break type is uninhabited — traversal always completes.
     let _ = VisitMut::visit(statement, &mut visitor);
+}
+
+/// ===========================================================================================
+/// Quote `INTERVAL 1 DAY` (Number) as `INTERVAL '1' DAY` in `RANGE` frame bounds (R1).
+///
+/// DataFusion's `convert_frame_bound_to_scalar_value` accepts only `SingleQuotedString`
+/// inside an interval bound. Spark 4.1.2 accepts the unquoted spelling and answers the
+/// same table as the quoted form. Called from `spark_ast` *before* first plan, and again
+/// on every restatement re-parse (the rewrite starts from the original SQL text).
+/// ===========================================================================================
+pub(crate) fn quote_unquoted_interval_range_bounds(statement: &mut Statement) {
+    let mut visitor = QuoteUnquotedIntervalBounds;
+    let _ = VisitMut::visit(statement, &mut visitor);
+}
+
+struct QuoteUnquotedIntervalBounds;
+
+impl VisitorMut for QuoteUnquotedIntervalBounds {
+    type Break = std::convert::Infallible;
+
+    fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
+        quote_unquoted_in_set_expr(&mut query.body);
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_expr(&mut self, expr: &mut AstExpr) -> ControlFlow<Self::Break> {
+        if let AstExpr::Function(function) = expr
+            && let Some(WindowType::WindowSpec(spec)) = &mut function.over
+        {
+            quote_unquoted_in_window_spec(spec);
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn quote_unquoted_in_set_expr(body: &mut SetExpr) {
+    match body {
+        SetExpr::Select(select) => {
+            for window in &mut select.named_window {
+                if let NamedWindowExpr::WindowSpec(spec) = &mut window.1 {
+                    quote_unquoted_in_window_spec(spec);
+                }
+            }
+        }
+        SetExpr::SetOperation { left, right, .. } => {
+            quote_unquoted_in_set_expr(left);
+            quote_unquoted_in_set_expr(right);
+        }
+        _ => {}
+    }
+}
+
+fn quote_unquoted_in_window_spec(spec: &mut WindowSpec) {
+    let Some(frame) = &mut spec.window_frame else {
+        return;
+    };
+    if frame.units != AstWindowFrameUnits::Range {
+        return;
+    }
+    quote_unquoted_in_bound(&mut frame.start_bound);
+    if let Some(end_bound) = &mut frame.end_bound {
+        quote_unquoted_in_bound(end_bound);
+    }
+}
+
+fn quote_unquoted_in_bound(bound: &mut AstWindowFrameBound) {
+    let Some(interval) = bound_interval_mut(bound) else {
+        return;
+    };
+    quote_unquoted_interval_value(&mut interval.value);
+}
+
+fn quote_unquoted_interval_value(value: &mut AstExpr) {
+    match value {
+        AstExpr::Value(ValueWithSpan {
+            value: Value::Number(text, _),
+            span,
+        }) => {
+            let quoted = text.clone();
+            let span = *span;
+            *value = AstExpr::Value(ValueWithSpan {
+                value: Value::SingleQuotedString(quoted),
+                span,
+            });
+        }
+        AstExpr::UnaryOp {
+            op: UnaryOperator::Minus,
+            expr,
+        } => {
+            if let AstExpr::Value(ValueWithSpan {
+                value: Value::Number(text, _),
+                span,
+            }) = expr.as_ref()
+            {
+                let quoted = format!("-{text}");
+                let span = *span;
+                *value = AstExpr::Value(ValueWithSpan {
+                    value: Value::SingleQuotedString(quoted),
+                    span,
+                });
+            }
+        }
+        _ => {}
+    }
+}
+
+/// ===========================================================================================
+/// Restate `RANGE` `INTERVAL 'n' UNIT` bounds to the unit-less number `n` (R5).
+///
+/// Applied only when [`classify_planned_range_frames`] returned
+/// [`RangeFrameVerdict::RestateIntervalBoundsAsNumeric`]: every interval site in the
+/// statement sits over a numeric order key, so statement-wide conversion matches Spark
+/// (unit ignored). The caller re-plans.
+/// ===========================================================================================
+pub(crate) fn rewrite_interval_range_bounds_to_numeric(statement: &mut Statement) {
+    let mut visitor = IntervalBoundsAsNumeric;
+    let _ = VisitMut::visit(statement, &mut visitor);
+}
+
+struct IntervalBoundsAsNumeric;
+
+impl VisitorMut for IntervalBoundsAsNumeric {
+    type Break = std::convert::Infallible;
+
+    fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
+        numeric_restate_set_expr(&mut query.body);
+        ControlFlow::Continue(())
+    }
+
+    fn post_visit_expr(&mut self, expr: &mut AstExpr) -> ControlFlow<Self::Break> {
+        if let AstExpr::Function(function) = expr
+            && let Some(WindowType::WindowSpec(spec)) = &mut function.over
+        {
+            numeric_restate_window_spec(spec);
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn numeric_restate_set_expr(body: &mut SetExpr) {
+    match body {
+        SetExpr::Select(select) => {
+            for window in &mut select.named_window {
+                if let NamedWindowExpr::WindowSpec(spec) = &mut window.1 {
+                    numeric_restate_window_spec(spec);
+                }
+            }
+        }
+        SetExpr::SetOperation { left, right, .. } => {
+            numeric_restate_set_expr(left);
+            numeric_restate_set_expr(right);
+        }
+        _ => {}
+    }
+}
+
+fn numeric_restate_window_spec(spec: &mut WindowSpec) {
+    let Some(frame) = &mut spec.window_frame else {
+        return;
+    };
+    if frame.units != AstWindowFrameUnits::Range {
+        return;
+    }
+    restate_interval_bound_as_numeric(&mut frame.start_bound);
+    if let Some(end_bound) = &mut frame.end_bound {
+        restate_interval_bound_as_numeric(end_bound);
+    }
+}
+
+fn restate_interval_bound_as_numeric(bound: &mut AstWindowFrameBound) {
+    let offset = match bound {
+        AstWindowFrameBound::Preceding(value) | AstWindowFrameBound::Following(value) => value,
+        AstWindowFrameBound::CurrentRow => return,
+    };
+    let Some(expr) = offset else {
+        return;
+    };
+    let AstExpr::Interval(interval) = expr.as_ref() else {
+        return;
+    };
+    let Some(number) = interval_leading_number_text(interval) else {
+        return;
+    };
+    let span = interval_value_span(&interval.value);
+    **expr = AstExpr::Value(ValueWithSpan {
+        value: Value::Number(number, false),
+        span,
+    });
+}
+
+/// Leading numeric magnitude of `INTERVAL 'n' UNIT` / `INTERVAL 'n …'` / unquoted `n`.
+fn interval_leading_number_text(interval: &Interval) -> Option<String> {
+    let literal = interval_signed_literal(&interval.value)?;
+    let (negative, rest) = strip_leading_minus(literal.trim());
+    let number_end = rest
+        .find(|character: char| !character.is_ascii_digit() && character != '.')
+        .unwrap_or(rest.len());
+    if number_end == 0 {
+        return None;
+    }
+    let number = rest[..number_end].trim();
+    if number.is_empty() || number == "." {
+        return None;
+    }
+    Some(if negative {
+        format!("-{number}")
+    } else {
+        number.to_string()
+    })
 }
 
 /// The visitor behind [`rewrite_bare_range_bounds_to_days`].
@@ -986,21 +1271,15 @@ fn interval_value_span(value: &AstExpr) -> Span {
     }
 }
 
-/// True when a `RANGE` bound is a residual interval this module restates (negative or
-/// field-qualified) or a unit-less number (the DATE arm).
+/// True when a `RANGE` bound needs classify: unit-less number (DATE arm) or any interval
+/// (R1 quote is already applied; R2/R3/R5 classify on the planned interval).
 fn bound_needs_conform(bound: &AstWindowFrameBound) -> bool {
-    if bound_is_bare_number(bound) {
-        return true;
-    }
-    let Some(interval) = bound_interval(bound) else {
-        return false;
-    };
-    interval.last_field.is_some() || interval_value_is_negative(&interval.value)
+    bound_is_bare_number(bound) || bound_interval(bound).is_some()
 }
 
 /// The AST frame shape a caller can cheaply test for before paying for a second planning pass.
-/// True when any `RANGE` frame in the statement carries a unit-less numeric bound, a
-/// negative interval, or a field-qualified interval (`DAY TO SECOND`).
+/// True when any `RANGE` frame in the statement carries a unit-less numeric bound or any
+/// interval (R2 / R3 / R5 / ordinary quoted interval so classify can see a numeric key).
 pub(crate) fn statement_has_bare_range_bound(statement: &Statement) -> bool {
     let mut visitor = BareRangeBoundProbe { found: false };
     // The visitor's Break type is uninhabited — traversal always completes.

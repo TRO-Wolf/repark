@@ -19,6 +19,10 @@ not this directory.
   D6-adjacent FIXED; R1/R4/R5 still OPEN; G5b-R5 Spark half amended to Z-4 recon).
   Completeness proof for the increment PR. TZ-6 / TZ-7 sections untouched (W-1).
   Live-mirror both-halves: none.
+- [w4-z-residuals-ledger.md](w4-z-residuals-ledger.md) — **W-4 / Z-wave residuals
+  (2026-08-13):** R1 unquoted `INTERVAL 1 DAY` pre-plan quote; R5 interval-over-int
+  numeric-`n` restatement; R4 FOLLOWING-to-FOLLOWING re-verify (still DEFER); window
+  µs type pins; A6 Q-002 aggregate origin thread. Does **not** edit the registry.
 - [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) — **Z-5 Y-wave §6
   landing increment (2026-08-13):** verify-before-paste classification of the merged
   Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;
@@ -236,6 +240,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the G5b-R window-RANGE residual dispositions (Y-1) | [g5br-range-residuals-ledger.md](g5br-range-residuals-ledger.md) |
+| Read the W-4 Z-wave residual close (R1/R5/Q-002) | [w4-z-residuals-ledger.md](w4-z-residuals-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
 | Read the G11 ANSI-door correctness-not-parity ledger | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) |
