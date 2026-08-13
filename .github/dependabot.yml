@@ -4,7 +4,8 @@
 # DataFusion-family rule: never merge a Dependabot cargo group that bundles a safe bump with a
 # DataFusion/Arrow MAJOR bump — the whole `datafusion` + `datafusion-spark` + `iceberg*` family
 # is pinned to one DataFusion version and must be bumped together, deliberately. Split the group
-# and land targeted bumps instead.
+# and land targeted bumps instead. Enforced since 2026-08-13 by the cargo `ignore` block below
+# (added after #74 bundled arrow 58→59 against the DF 54.1 pin and failed CI).
 version: 2
 updates:
   - package-ecosystem: cargo
@@ -16,6 +17,19 @@ updates:
     groups:
       cargo:
         patterns: ["*"]
+    ignore:
+      # The DataFusion-family rule above, enforced: these crates move together, deliberately,
+      # never via Dependabot. object_store rides the same graph (0.x: minor = breaking).
+      - dependency-name: "datafusion*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "arrow*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "parquet"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "object_store"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # iceberg* resolves to the fork rev via [patch.crates-io] — registry bumps are noise.
+      - dependency-name: "iceberg*"
 
   # The `uv` package-ecosystem entry returns in phase 3, when the uv workspace members and the
   # checked-in uv.lock land — until then Dependabot would error weekly on a repo with no uv
