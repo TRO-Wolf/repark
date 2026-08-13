@@ -6,6 +6,10 @@ Repository helper scripts wired into the dev workflow.
 
 ## Contents
 
+- `bump_fork_pin.sh` — bumps the iceberg-rust fork `[patch.crates-io]` pin: rewrites all five
+  `rev` lines + `Cargo.lock` together (single-writer-per-pin invariant-checked), prints the
+  fork changelog URL for the PR body. Wrapped by `make bump-fork-pin REV=<sha|branch>`;
+  contract in [../docs/fork-sync.md](../docs/fork-sync.md).
 - `check_map_md.sh` — the map.md lockstep guard: fails a commit if a staged `.rs`/`.py`/
   `Cargo.toml`/`pyproject.toml` file's directory has no same-change `map.md` update (lockfiles
   excluded; root-level manifests map to `map.md`, not `./map.md`). Invoked by

@@ -333,6 +333,10 @@ lint: ## Clippy + ruff (autofix Python)
 	@$(MAKE) rust-clippy
 	$(RUFF) check --fix .
 
+.PHONY: bump-fork-pin
+bump-fork-pin: ## Bump the iceberg-rust fork pin: make bump-fork-pin REV=<sha|branch> (docs/fork-sync.md)
+	@scripts/bump_fork_pin.sh "$(REV)"
+
 .PHONY: install-hooks
 install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + rust file-size + Python thinness + manifest guards + cargo fmt + taplo + typos
 	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast

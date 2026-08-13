@@ -10,6 +10,9 @@ notes, and per-tier operating manuals for this repo.
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
+- [fork-sync.md](fork-sync.md) — the iceberg-rust fork **sync contract**: pin-bump procedure
+  (`make bump-fork-pin`), green-before-pinnable, upstream-flows-through-the-fork, and the
+  weekly `fork-sync-drift` drift report with its thresholds.
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. Four fields per row (repark's behavior,
   Spark's behavior with its oracle basis, the `path::test_name` that pins it, the rationale) and
