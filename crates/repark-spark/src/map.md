@@ -62,8 +62,9 @@ wrapper.
   the **G3-E8 subquery-predicate DML valve** (`refuse_dml_subquery_predicate` +
   `DmlSubqueryVerb`: a `WHERE` subquery is lost at DataFusion's DML planning boundary and
   degenerates into match-all — deliberately syntactic and slightly wide; the allow-list
-  opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)` onto `execute_predicate_dml`; see the
-  module doc and `task/w3-g3e8-pr2-ledger.md`), the MERGE star rewrite call, partition-spec builders.
+  opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)` and `[NOT] EXISTS` ± correlation
+  onto `execute_predicate_dml`; see the module doc and `task/v1-g3e8-pr3-ledger.md`), the MERGE
+  star rewrite call, partition-spec builders.
 - `collation.rs` — **G15 (2026-08-12):** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),
@@ -79,7 +80,8 @@ wrapper.
   `refuse_collation_in_statement` on the EXECUTING parse, plus `RESET` of a collation
   key — Q-001 pins this attach directly so the router cannot green-wash it), the **G3-E8 valve +
   identity-DELETE attach** (`try_allowed_delete_in` → `execute_predicate_dml` for uncorrelated
-  `DELETE … IN` / `NOT IN (SELECT …)`, else `refuse_dml_subquery_predicate_in_statement` on the EXECUTING
+  `DELETE … IN` / `NOT IN (SELECT …)` and `[NOT] EXISTS` ± correlation, else
+  `refuse_dml_subquery_predicate_in_statement` on the EXECUTING
   parse — the only parse every DML route agrees on; the router's own parse is a different dialect), and the **G5b
   temporal-`RANGE` conformance call** (`conform_temporal_range_frames`, between planning and
   analysis — see `window_range.rs`; **W-4:** pre-plan `quote_unquoted_interval_range_bounds`

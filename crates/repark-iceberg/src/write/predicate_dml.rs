@@ -8,9 +8,10 @@
 //! isolation properties, **never** `write.merge.mode`.
 //!
 //! The capability is general (any `WHERE` that DataFusion can plan as a query). The product hole
-//! is the valve allow-list: uncorrelated `DELETE … WHERE col IN (SELECT …)` and
-//! `DELETE … WHERE col NOT IN (SELECT …)` (including the NULL 3VL trap). EXISTS, UPDATE, and
-//! every compound spelling stay refused.
+//! is the valve allow-list: uncorrelated `DELETE … WHERE col IN (SELECT …)` /
+//! `NOT IN (SELECT …)` (including the NULL 3VL trap) and `DELETE … WHERE [NOT] EXISTS
+//! (SELECT …)` both uncorrelated (all-or-nothing) and correlated (per-row semi/anti-join).
+//! UPDATE, mixed AND/OR, nested, scalar, CTE, USING/RETURNING, and correlated IN stay refused.
 
 use std::sync::Arc;
 
@@ -20,8 +21,8 @@ use datafusion::datasource::MemTable;
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Expr, FromTable, GroupByExpr, ObjectName, Query, SelectItem, SetExpr, Statement, TableFactor,
-    TableWithJoins, Visit, Visitor,
+    Expr, FromTable, GroupByExpr, Ident, ObjectName, Query, SelectItem, SetExpr, Statement,
+    TableFactor, TableWithJoins, Visit, VisitMut, Visitor, VisitorMut,
 };
 use iceberg::arrow::schema_to_arrow_schema;
 use iceberg::spec::{DataFileFormat, FormatVersion};
@@ -61,7 +62,8 @@ pub struct PredicateDmlSpec {
     pub selection_sql: String,
 }
 
-/// Catalog name + identity spec extracted from an allow-listed `DELETE … IN` / `NOT IN`.
+/// Catalog name + identity spec extracted from an allow-listed `DELETE … IN` / `NOT IN` /
+/// `[NOT] EXISTS`.
 #[derive(Debug, Clone)]
 pub struct AllowedDeleteIn {
     /// Leading catalog identifier (`ice` in `ice.sales.tgt`).
@@ -74,8 +76,8 @@ pub struct AllowedDeleteIn {
 /// True when `selection` is exactly uncorrelated `col IN (SELECT col FROM <table> …)` or
 /// `col NOT IN (SELECT col FROM <table> …)` — one 3VL family, both spellings.
 ///
-/// Fail-closed: `NOT (col IN …)`, EXISTS, scalars, mixed AND/OR, nested FROM, aggregates,
-/// WITH, and correlated outer refs stay **outside** the product hole.
+/// Fail-closed: `NOT (col IN …)`, scalars, mixed AND/OR, nested FROM, aggregates, WITH, and
+/// correlated outer refs stay **outside** this helper. `[NOT] EXISTS` is a sibling helper.
 /// ===========================================================================================
 #[must_use]
 pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
@@ -91,13 +93,38 @@ pub fn is_allowed_uncorrelated_in_selection(selection: &Expr) -> bool {
 }
 
 /// ===========================================================================================
-/// If `statement` is the allow-listed IN / NOT IN DELETE, return the catalog + spec; otherwise
-/// `None`.
+/// True when `selection` is exactly `[NOT] EXISTS (SELECT … FROM <table> [WHERE …])` whose
+/// compound refs are only the subquery source or the DELETE target (uncorrelated or correlated
+/// to that target). Nested / mixed / CTE / third-table refs stay outside the hole.
+/// ===========================================================================================
+#[must_use]
+pub fn is_allowed_exists_selection(
+    selection: &Expr,
+    target_parts: &[String],
+    target_alias: &str,
+) -> bool {
+    let Expr::Exists {
+        subquery,
+        negated: _,
+    } = selection
+    else {
+        return false;
+    };
+    is_simple_exists_subquery(subquery, target_parts, target_alias)
+}
+
+/// ===========================================================================================
+/// If `statement` is an allow-listed IN / NOT IN / `[NOT] EXISTS` DELETE, return the catalog +
+/// spec; otherwise `None`.
 ///
 /// Unhandled subquery shapes return `None` so the caller can keep the G3-E8 valve. A recognized
-/// IN / NOT IN DELETE whose target is not a three-part Iceberg name is not an executable hole
+/// spelling whose target is not a three-part Iceberg name is not an executable hole
 /// (fail-closed — never DataFusion DML). USING / RETURNING / OUTPUT / LIMIT / ORDER BY /
 /// multi-table stay outside the hole.
+///
+/// Target FQN refs inside the predicate are rewritten to the scratch alias so the identity
+/// SELECT evaluates the same predicate against the pinned `(_file, _pos)` stream (not a
+/// second scan of the user table).
 /// ===========================================================================================
 ///
 /// # Errors
@@ -119,9 +146,6 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
     let Some(selection) = delete.selection.as_ref() else {
         return Ok(None);
     };
-    if !is_allowed_uncorrelated_in_selection(selection) {
-        return Ok(None);
-    }
     let Some((object_name, alias)) = delete_target_and_alias(delete) else {
         return Ok(None);
     };
@@ -139,12 +163,19 @@ pub fn try_allowed_delete_in(statement: &Statement) -> Result<Option<AllowedDele
         ))
     })?;
     let target_alias = alias.unwrap_or_else(|| table_name.clone());
+    if !is_allowed_uncorrelated_in_selection(selection)
+        && !is_allowed_exists_selection(selection, &parts, &target_alias)
+    {
+        return Ok(None);
+    }
+    let mut scratch_selection = selection.clone();
+    rewrite_target_refs_in_expr(&mut scratch_selection, &parts, &target_alias);
     Ok(Some(AllowedDeleteIn {
         catalog_name,
         spec: PredicateDmlSpec {
             target: TableIdent::new(namespace, table_name),
             target_alias,
-            selection_sql: selection.to_string(),
+            selection_sql: scratch_selection.to_string(),
         },
     }))
 }
@@ -432,17 +463,17 @@ fn is_column_expr(expr: &Expr) -> bool {
     matches!(expr, Expr::Identifier(_) | Expr::CompoundIdentifier(_))
 }
 
-fn is_simple_uncorrelated_in_subquery(query: &Query) -> bool {
+fn is_simple_select_body(query: &Query) -> Option<&datafusion::sql::sqlparser::ast::Select> {
     if query.with.is_some()
         || query.order_by.is_some()
         || query.limit_clause.is_some()
         || query.fetch.is_some()
         || !query.locks.is_empty()
     {
-        return false;
+        return None;
     }
     let SetExpr::Select(select) = query.body.as_ref() else {
-        return false;
+        return None;
     };
     if select.distinct.is_some()
         || select.from.len() != 1
@@ -450,15 +481,22 @@ fn is_simple_uncorrelated_in_subquery(query: &Query) -> bool {
         || select.qualify.is_some()
         || !select.lateral_views.is_empty()
     {
-        return false;
+        return None;
     }
     if !matches!(&select.group_by, GroupByExpr::Expressions(exprs, mods) if exprs.is_empty() && mods.is_empty())
     {
-        return false;
+        return None;
     }
     if !is_plain_table(&select.from[0]) {
-        return false;
+        return None;
     }
+    Some(select)
+}
+
+fn is_simple_uncorrelated_in_subquery(query: &Query) -> bool {
+    let Some(select) = is_simple_select_body(query) else {
+        return false;
+    };
     if select.projection.len() != 1 {
         return false;
     }
@@ -474,6 +512,15 @@ fn is_simple_uncorrelated_in_subquery(query: &Query) -> bool {
     }
     let (source_parts, aliases) = source_relation_names(&select.from[0]);
     !subquery_has_nested_query(query) && !subquery_has_outer_ref(query, &source_parts, &aliases)
+}
+
+fn is_simple_exists_subquery(query: &Query, target_parts: &[String], target_alias: &str) -> bool {
+    let Some(select) = is_simple_select_body(query) else {
+        return false;
+    };
+    let (source_parts, aliases) = source_relation_names(&select.from[0]);
+    !subquery_has_nested_query(query)
+        && !subquery_has_disallowed_ref(query, &source_parts, &aliases, target_parts, target_alias)
 }
 
 fn is_plain_table(table: &TableWithJoins) -> bool {
@@ -550,6 +597,120 @@ fn subquery_has_outer_ref(query: &Query, source_parts: &[String], aliases: &[Str
         found: false,
     };
     query.visit(&mut visitor).is_break() || visitor.found
+}
+
+/// Compound identifiers that are neither the subquery source nor the DELETE target are a
+/// third-table (or otherwise unhandled) correlation — fail-closed.
+fn subquery_has_disallowed_ref(
+    query: &Query,
+    source_parts: &[String],
+    aliases: &[String],
+    target_parts: &[String],
+    target_alias: &str,
+) -> bool {
+    struct Disallowed<'a> {
+        source_parts: &'a [String],
+        aliases: &'a [String],
+        target_parts: &'a [String],
+        target_alias: &'a str,
+        found: bool,
+    }
+    impl Visitor for Disallowed<'_> {
+        type Break = ();
+
+        fn pre_visit_expr(&mut self, expr: &Expr) -> std::ops::ControlFlow<Self::Break> {
+            if let Expr::CompoundIdentifier(idents) = expr
+                && !compound_refers_to_source(idents, self.source_parts, self.aliases)
+                && !compound_refers_to_target(idents, self.target_parts, self.target_alias)
+            {
+                self.found = true;
+                return std::ops::ControlFlow::Break(());
+            }
+            std::ops::ControlFlow::Continue(())
+        }
+    }
+    let mut visitor = Disallowed {
+        source_parts,
+        aliases,
+        target_parts,
+        target_alias,
+        found: false,
+    };
+    query.visit(&mut visitor).is_break() || visitor.found
+}
+
+fn compound_refers_to_target(
+    idents: &[Ident],
+    target_parts: &[String],
+    target_alias: &str,
+) -> bool {
+    let Some(first) = idents.first() else {
+        return false;
+    };
+    if first.value.eq_ignore_ascii_case(target_alias) && idents.len() <= 2 {
+        return true;
+    }
+    if let Some(table_name) = target_parts.last()
+        && first.value.eq_ignore_ascii_case(table_name)
+        && idents.len() <= 2
+    {
+        return true;
+    }
+    idents.len() > target_parts.len()
+        && target_parts
+            .iter()
+            .zip(idents.iter())
+            .all(|(part, ident)| part.eq_ignore_ascii_case(&ident.value))
+}
+
+/// Rewrite `catalog.ns.tgt.col` (and only that prefix) to `alias.col` so the identity SELECT
+/// correlates against the scratch, not a second scan of the user table.
+fn rewrite_target_refs_in_expr(expr: &mut Expr, target_parts: &[String], alias: &str) {
+    struct Rewrite<'a> {
+        target_parts: &'a [String],
+        alias: &'a str,
+    }
+    impl VisitorMut for Rewrite<'_> {
+        type Break = ();
+
+        fn pre_visit_expr(&mut self, expr: &mut Expr) -> std::ops::ControlFlow<Self::Break> {
+            if let Expr::CompoundIdentifier(idents) = expr
+                && let Some(rewritten) =
+                    rewrite_target_compound(idents, self.target_parts, self.alias)
+            {
+                *idents = rewritten;
+            }
+            std::ops::ControlFlow::Continue(())
+        }
+    }
+    let _ = expr.visit(&mut Rewrite {
+        target_parts,
+        alias,
+    });
+}
+
+fn rewrite_target_compound(
+    idents: &[Ident],
+    target_parts: &[String],
+    alias: &str,
+) -> Option<Vec<Ident>> {
+    if target_parts.is_empty() || idents.is_empty() {
+        return None;
+    }
+    if idents[0].value.eq_ignore_ascii_case(alias) {
+        return None;
+    }
+    if idents.len() > target_parts.len()
+        && target_parts
+            .iter()
+            .zip(idents.iter())
+            .all(|(part, ident)| part.eq_ignore_ascii_case(&ident.value))
+    {
+        let mut rewritten = vec![Ident::new(alias)];
+        rewritten.extend(idents[target_parts.len()..].iter().cloned());
+        return Some(rewritten);
+    }
+    None
 }
 
 fn compound_refers_to_source(

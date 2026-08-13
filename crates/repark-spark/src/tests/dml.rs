@@ -642,6 +642,99 @@ async fn g3e8_delete_not_in_quoted_and_fromless_execute() {
     );
 }
 
+/// PR-3: `[NOT] EXISTS` uncorrelated (all-or-nothing) and correlated (semi/anti-join).
+#[tokio::test]
+async fn g3e8_delete_exists_uncorrelated_and_correlated_execute() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+    )
+    .await
+    .expect("uncorrelated nonempty EXISTS must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        Vec::<(i32, String)>::new(),
+        "non-empty uncorrelated EXISTS deletes every row"
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys WHERE id = 999)",
+    )
+    .await
+    .expect("uncorrelated empty-result EXISTS must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        g3e8_seed(),
+        "empty-result uncorrelated EXISTS deletes nothing"
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys)",
+    )
+    .await
+    .expect("uncorrelated nonempty NOT EXISTS must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        g3e8_seed(),
+        "non-empty uncorrelated NOT EXISTS deletes nothing"
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE EXISTS \
+         (SELECT 1 FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+    )
+    .await
+    .expect("correlated EXISTS must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(1, "a".to_string()), (3, "c".to_string())],
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE NOT EXISTS \
+         (SELECT 1 FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+    )
+    .await
+    .expect("correlated NOT EXISTS must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(2, "b".to_string())],
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+    )
+    .await
+    .expect("FROM-less uncorrelated EXISTS must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        Vec::<(i32, String)>::new(),
+    );
+}
+
 /// Every DELETE subquery spelling the recon proved silently wrong refuses, and none of them
 /// touches a row. One fresh table per form, so a leaked write cannot hide behind a later one.
 #[tokio::test]
@@ -654,11 +747,7 @@ async fn g3e8_delete_subquery_family_all_refuse() {
         "DELETE FROM ice.sales.tgt WHERE NOT (id IN (SELECT id FROM ice.sales.keys))",
         "DELETE FROM ice.sales.tgt WHERE id = 1 OR id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id > 1 AND id IN (SELECT id FROM ice.sales.keys)",
-        // EXISTS / NOT EXISTS (correlated)
-        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
-         WHERE k.id = ice.sales.tgt.id)",
-        "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys k \
-         WHERE k.id = ice.sales.tgt.id)",
+        // EXISTS / NOT EXISTS now execute (g3e8_delete_exists_*). Residual refuse:
         // correlated IN
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT k.id FROM ice.sales.keys k \
          WHERE k.name = ice.sales.tgt.name)",
@@ -687,10 +776,6 @@ async fn g3e8_delete_subquery_family_all_refuse() {
         // They are NOT safe-because-uncorrelated: the boundary is per-shape, not
         // correlated-vs-uncorrelated. Pre-guard behaviour, executed under the neutered valve and
         // recorded in task/g3e8-guard-ledger.md §2: all three EMPTIED the table.
-        // uncorrelated NOT EXISTS
-        "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys)",
-        // EXISTS over a subquery whose result set is EMPTY (Spark: deletes nothing)
-        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys WHERE id = 999)",
         // an AGGREGATE scalar inside IN — an uncorrelated aggregate, still refused
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
     ] {
@@ -978,8 +1063,8 @@ async fn g3e8_subquery_valve_precedes_the_mor_multi_spec_valve() {
         "control must be the BUG-001 message, got {mor}"
     );
 
-    let sql = "DELETE FROM ice.sales.both WHERE EXISTS \
-               (SELECT 1 FROM ice.sales.bothkeys k WHERE k.id = ice.sales.both.id)";
+    let sql = "DELETE FROM ice.sales.both WHERE id IN \
+               (SELECT max(id) FROM ice.sales.bothkeys)";
     let both = execute(&ctx, &catalogs, sql)
         .await
         .expect_err("a still-refused subquery DELETE on a BUG-001 table must still refuse")
@@ -1030,8 +1115,8 @@ async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {
 #[tokio::test]
 async fn g3e8_fromless_delete_subquery_family_all_refuse() {
     for sql in [
-        // F9 — correlated EXISTS (FROM-less NOT IN now executes — see the pin below)
-        "DELETE ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
+        // F9 — FROM-less residual (IN / NOT IN / [NOT] EXISTS now execute)
+        "DELETE ice.sales.tgt WHERE id IN (SELECT k.id FROM ice.sales.keys k \
          WHERE k.id = ice.sales.tgt.id)",
         "DELETE ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
     ] {

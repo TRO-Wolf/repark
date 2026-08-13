@@ -66,9 +66,10 @@ pub(crate) async fn execute_passthrough(
             // silently dropped. Router-parsable SELECT/ORDER BY still land here
             // when tests call execute_passthrough directly (Q-001 pin).
             crate::refuse_collation_in_statement(inner)?;
-            // G3-E8 identity path — allow-listed uncorrelated DELETE via
+            // G3-E8 identity path — allow-listed DELETE via
             // try_allowed_delete_in → execute_predicate_dml (attach is spelling-generic;
-            // the allow-list currently exports IN (SELECT …)). Fail-closed: every other
+            // the allow-list exports uncorrelated IN / NOT IN (SELECT …) and
+            // [NOT] EXISTS ± correlation). Fail-closed: every other
             // subquery spelling still hits the valve below (never DataFusion DML).
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?

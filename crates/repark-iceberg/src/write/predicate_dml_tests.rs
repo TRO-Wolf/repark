@@ -28,7 +28,7 @@ fn parse_statement(sql: &str) -> Statement {
 }
 
 #[test]
-fn allow_list_accepts_only_uncorrelated_col_in_select() {
+fn allow_list_accepts_in_not_in_and_exists_family() {
     for sql in [
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
         "DELETE ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
@@ -42,6 +42,20 @@ fn allow_list_accepts_only_uncorrelated_col_in_select() {
         "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt t WHERE t.id NOT IN (SELECT k.id FROM ice.sales.keys k)",
         "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM src WHERE id = 2)",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "delete from ice.sales.tgt where exists ( select 1 from ice.sales.keys )",
+        "DELETE FROM \"ice\".\"sales\".\"tgt\" WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt t WHERE EXISTS (SELECT 1 FROM ice.sales.keys k WHERE k.id = t.id)",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
+         WHERE k.id = ice.sales.tgt.id)",
+        "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt t WHERE NOT EXISTS \
+         (SELECT 1 FROM ice.sales.keys k WHERE k.id = t.id)",
+        "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys k \
+         WHERE k.id = ice.sales.tgt.id)",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys WHERE id = 2)",
     ] {
         assert!(
             try_allowed_delete_in(&parse_statement(sql))
@@ -56,7 +70,7 @@ fn allow_list_accepts_only_uncorrelated_col_in_select() {
 fn allow_list_refuses_every_other_subquery_spelling() {
     for sql in [
         "DELETE FROM ice.sales.tgt WHERE NOT (id IN (SELECT id FROM ice.sales.keys))",
-        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE NOT (EXISTS (SELECT 1 FROM ice.sales.keys))",
         "DELETE FROM ice.sales.tgt WHERE id = (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.keys) x)",
@@ -69,6 +83,14 @@ fn allow_list_refuses_every_other_subquery_spelling() {
         "DELETE FROM ice.sales.tgt USING ice.sales.keys WHERE id NOT IN \
          (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys) RETURNING *",
+        "DELETE FROM ice.sales.tgt USING ice.sales.keys WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys) RETURNING *",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM (SELECT id FROM ice.sales.keys) x)",
+        "DELETE FROM ice.sales.tgt WHERE id > 1 AND EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys) OR id = 1",
+        "UPDATE ice.sales.tgt SET name = 'z' WHERE EXISTS (SELECT 1 FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
+         WHERE k.id = other.id)",
         "DELETE FROM ice.sales.tgt WHERE id = 2",
     ] {
         assert!(
@@ -773,5 +795,585 @@ async fn identity_delete_not_in_honors_write_delete_mode_not_merge_mode() {
     assert_ne!(
         cow_after, cow_data_before,
         "COW NOT IN DELETE must rewrite the affected data file away"
+    );
+}
+
+const EXISTS_UNCORRELATED: &str = "EXISTS (SELECT 1 FROM keys)";
+const NOT_EXISTS_UNCORRELATED: &str = "NOT EXISTS (SELECT 1 FROM keys)";
+const EXISTS_CORRELATED: &str = "EXISTS (SELECT 1 FROM keys k WHERE k.id = tgt.id)";
+const NOT_EXISTS_CORRELATED: &str = "NOT EXISTS (SELECT 1 FROM keys k WHERE k.id = tgt.id)";
+
+#[derive(Clone)]
+struct ExistsSparkCase {
+    name: &'static str,
+    target_ids: Vec<Option<i32>>,
+    target_names: Vec<Option<String>>,
+    key_ids: Vec<Option<i32>>,
+    selection: &'static str,
+    spark_remaining: Vec<(Option<i32>, Option<String>)>,
+}
+
+fn exists_case(
+    name: &'static str,
+    target_ids: &[Option<i32>],
+    target_names: &[&str],
+    key_ids: &[Option<i32>],
+    selection: &'static str,
+    remaining: &[(Option<i32>, &str)],
+) -> ExistsSparkCase {
+    ExistsSparkCase {
+        name,
+        target_ids: target_ids.to_vec(),
+        target_names: target_names
+            .iter()
+            .map(|name| Some((*name).to_string()))
+            .collect(),
+        key_ids: key_ids.to_vec(),
+        selection,
+        spark_remaining: remaining
+            .iter()
+            .map(|(id, name)| (*id, Some((*name).to_string())))
+            .collect(),
+    }
+}
+
+#[allow(clippy::too_many_lines)] // recorded Spark 4.1.2 fixture table — one case per A4 row
+fn exists_spark_cases() -> Vec<ExistsSparkCase> {
+    let abc = [Some(1), Some(2), Some(3)];
+    let names = ["a", "b", "c"];
+    let keep_all = [(Some(1), "a"), (Some(2), "b"), (Some(3), "c")];
+    vec![
+        exists_case(
+            "exists_uncorrelated_nonempty",
+            &abc,
+            &names,
+            &[Some(2)],
+            EXISTS_UNCORRELATED,
+            &[],
+        ),
+        exists_case(
+            "exists_uncorrelated_empty",
+            &abc,
+            &names,
+            &[],
+            EXISTS_UNCORRELATED,
+            &keep_all,
+        ),
+        exists_case(
+            "not_exists_uncorrelated_nonempty",
+            &abc,
+            &names,
+            &[Some(2)],
+            NOT_EXISTS_UNCORRELATED,
+            &keep_all,
+        ),
+        exists_case(
+            "not_exists_uncorrelated_empty",
+            &abc,
+            &names,
+            &[],
+            NOT_EXISTS_UNCORRELATED,
+            &[],
+        ),
+        exists_case(
+            "exists_correlated_some",
+            &abc,
+            &names,
+            &[Some(2)],
+            EXISTS_CORRELATED,
+            &[(Some(1), "a"), (Some(3), "c")],
+        ),
+        exists_case(
+            "not_exists_correlated_some",
+            &abc,
+            &names,
+            &[Some(2)],
+            NOT_EXISTS_CORRELATED,
+            &[(Some(2), "b")],
+        ),
+        exists_case(
+            "exists_correlated_none",
+            &abc,
+            &names,
+            &[Some(99)],
+            EXISTS_CORRELATED,
+            &keep_all,
+        ),
+        exists_case(
+            "exists_correlated_all",
+            &abc,
+            &names,
+            &[Some(1), Some(2), Some(3)],
+            EXISTS_CORRELATED,
+            &[],
+        ),
+        exists_case(
+            "exists_correlated_empty",
+            &abc,
+            &names,
+            &[],
+            EXISTS_CORRELATED,
+            &keep_all,
+        ),
+        exists_case(
+            "not_exists_correlated_none",
+            &abc,
+            &names,
+            &[Some(99)],
+            NOT_EXISTS_CORRELATED,
+            &[],
+        ),
+        exists_case(
+            "not_exists_correlated_all",
+            &abc,
+            &names,
+            &[Some(1), Some(2), Some(3)],
+            NOT_EXISTS_CORRELATED,
+            &keep_all,
+        ),
+        exists_case(
+            "not_exists_correlated_empty",
+            &abc,
+            &names,
+            &[],
+            NOT_EXISTS_CORRELATED,
+            &[],
+        ),
+        exists_case(
+            "exists_correlated_null_keys",
+            &[Some(1), Some(2), None],
+            &["a", "b", "n"],
+            &[Some(2), None],
+            EXISTS_CORRELATED,
+            &[(None, "n"), (Some(1), "a")],
+        ),
+        exists_case(
+            "not_exists_correlated_null_keys",
+            &[Some(1), Some(2), None],
+            &["a", "b", "n"],
+            &[Some(2), None],
+            NOT_EXISTS_CORRELATED,
+            &[(Some(2), "b")],
+        ),
+        exists_case(
+            "exists_correlated_duplicates",
+            &[Some(1), Some(1), Some(2)],
+            &["a", "a", "b"],
+            &[Some(1), Some(1)],
+            EXISTS_CORRELATED,
+            &[(Some(2), "b")],
+        ),
+        exists_case(
+            "not_exists_correlated_duplicates",
+            &[Some(1), Some(1), Some(2)],
+            &["a", "a", "b"],
+            &[Some(1), Some(1)],
+            NOT_EXISTS_CORRELATED,
+            &[(Some(1), "a"), (Some(1), "a")],
+        ),
+    ]
+}
+
+/// A4: the identity path is this SELECT. DataFusion must reproduce live Spark 4.1.2
+/// `[NOT] EXISTS` row-sets (recorded 2026-08-13 under `/tmp/grok-jvm-record.lock`).
+/// No hand-rolled empty/all shortcut — the executed SELECT is the pin.
+#[tokio::test]
+async fn identity_select_exists_matches_spark_412_row_sets() {
+    for case in exists_spark_cases() {
+        let ctx = SessionContext::new();
+        let target_schema = Arc::new(ArrowSchema::new(vec![
+            Field::new("id", DataType::Int32, true),
+            Field::new("name", DataType::Utf8, true),
+        ]));
+        let target_batch = RecordBatch::try_new(
+            Arc::clone(&target_schema),
+            vec![
+                Arc::new(Int32Array::from(case.target_ids.clone())),
+                Arc::new(StringArray::from(case.target_names.clone())),
+            ],
+        )
+        .expect("target batch");
+        ctx.register_table(
+            "tgt",
+            Arc::new(MemTable::try_new(target_schema, vec![vec![target_batch]]).expect("tgt")),
+        )
+        .expect("register tgt");
+        register_keys(&ctx, &case.key_ids);
+        // Exact identity-path SELECT: rows the DELETE would remove. Remaining = seed − that set.
+        let delete_sql = format!("SELECT id, name FROM tgt WHERE {}", case.selection);
+        let batches = ctx
+            .sql(&delete_sql)
+            .await
+            .unwrap_or_else(|error| panic!("{} identity SELECT plans: {error}", case.name))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("{} identity SELECT collects: {error}", case.name));
+        let mut deleted = std::collections::HashSet::new();
+        for batch in &batches {
+            let ids = batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<Int32Array>()
+                .expect("id");
+            let names = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<StringArray>()
+                .expect("name");
+            for row in 0..batch.num_rows() {
+                deleted.insert((
+                    ids.is_valid(row).then(|| ids.value(row)),
+                    names.is_valid(row).then(|| names.value(row).to_string()),
+                ));
+            }
+        }
+        let mut remaining: Vec<(Option<i32>, Option<String>)> = case
+            .target_ids
+            .iter()
+            .zip(case.target_names.iter())
+            .map(|(id, name)| (*id, name.clone()))
+            .filter(|row| !deleted.contains(row))
+            .collect();
+        remaining.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
+        let mut expected: Vec<(Option<i32>, Option<String>)> = case.spark_remaining.clone();
+        expected.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
+        assert_eq!(
+            remaining, expected,
+            "{}: identity SELECT remaining must match live Spark 4.1.2 (deleted={deleted:?})",
+            case.name
+        );
+    }
+}
+
+#[test]
+fn allow_list_rewrites_target_fqn_to_scratch_alias() {
+    let statement = parse_statement(
+        "DELETE FROM ice.sales.tgt WHERE EXISTS \
+         (SELECT 1 FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+    );
+    let allowed = try_allowed_delete_in(&statement)
+        .expect("parse")
+        .expect("allowed");
+    assert_eq!(allowed.spec.target_alias, "tgt");
+    assert!(
+        allowed.spec.selection_sql.contains("tgt.id")
+            || allowed.spec.selection_sql.contains("tgt`.`id"),
+        "FQN target ref must become the scratch alias, got {}",
+        allowed.spec.selection_sql
+    );
+    assert!(
+        !allowed.spec.selection_sql.contains("ice.sales.tgt.id"),
+        "must not leave the user-table FQN in the identity SELECT: {}",
+        allowed.spec.selection_sql
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_exists_uncorrelated_nonempty_deletes_every_row() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "ex_all", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1), Some(2)], &[Some("a"), Some("b")]),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("ex_all", EXISTS_UNCORRELATED),
+    )
+    .await
+    .expect("uncorrelated nonempty EXISTS");
+    assert!(read_back(&catalog, &ident).await.is_empty());
+}
+
+#[tokio::test]
+async fn identity_delete_exists_uncorrelated_empty_deletes_nothing() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "ex_empty", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1), Some(2)], &[Some("a"), Some("b")]),
+    )
+    .await;
+    let before = snapshot_id(&catalog, &ident).await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("ex_empty", EXISTS_UNCORRELATED),
+    )
+    .await
+    .expect("uncorrelated empty EXISTS");
+    assert_eq!(snapshot_id(&catalog, &ident).await, before);
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(Some(1), Some("a".into())), (Some(2), Some("b".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_exists_uncorrelated_nonempty_deletes_nothing() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "nex_keep", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1), Some(2)], &[Some("a"), Some("b")]),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("nex_keep", NOT_EXISTS_UNCORRELATED),
+    )
+    .await
+    .expect("uncorrelated nonempty NOT EXISTS");
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(Some(1), Some("a".into())), (Some(2), Some("b".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_exists_uncorrelated_empty_deletes_every_row() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "nex_all", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1), Some(2)], &[Some("a"), Some("b")]),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for("nex_all", NOT_EXISTS_UNCORRELATED),
+    )
+    .await
+    .expect("uncorrelated empty NOT EXISTS");
+    assert!(read_back(&catalog, &ident).await.is_empty());
+}
+
+#[tokio::test]
+async fn identity_delete_exists_correlated_some_nulls_and_duplicates() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+
+    let some = create_target(&catalog, "ex_some", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &some,
+        consumer_batch(
+            &[Some(1), Some(2), Some(3)],
+            &[Some("a"), Some("b"), Some("c")],
+        ),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for(
+            "ex_some",
+            "EXISTS (SELECT 1 FROM keys k WHERE k.id = ex_some.id)",
+        ),
+    )
+    .await
+    .expect("correlated some EXISTS");
+    assert_eq!(
+        read_back(&catalog, &some).await,
+        vec![(Some(1), Some("a".into())), (Some(3), Some("c".into()))]
+    );
+
+    let nulls = create_target(&catalog, "ex_nulls", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &nulls,
+        consumer_batch(
+            &[Some(1), Some(2), None],
+            &[Some("a"), Some("b"), Some("n")],
+        ),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2), None]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for(
+            "ex_nulls",
+            "EXISTS (SELECT 1 FROM keys k WHERE k.id = ex_nulls.id)",
+        ),
+    )
+    .await
+    .expect("correlated NULL-key EXISTS");
+    assert_eq!(
+        read_back(&catalog, &nulls).await,
+        vec![(None, Some("n".into())), (Some(1), Some("a".into()))]
+    );
+
+    let dups = create_target(&catalog, "ex_dups", HashMap::new()).await;
+    append_file(&catalog, &dups, consumer_batch(&[Some(1)], &[Some("a")])).await;
+    append_file(&catalog, &dups, consumer_batch(&[Some(1)], &[Some("a")])).await;
+    append_file(&catalog, &dups, consumer_batch(&[Some(2)], &[Some("b")])).await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(1), Some(1)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for(
+            "ex_dups",
+            "EXISTS (SELECT 1 FROM keys k WHERE k.id = ex_dups.id)",
+        ),
+    )
+    .await
+    .expect("correlated duplicate EXISTS");
+    assert_eq!(
+        read_back(&catalog, &dups).await,
+        vec![(Some(2), Some("b".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_not_exists_correlated_some_and_nulls() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let some = create_target(&catalog, "nex_some", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &some,
+        consumer_batch(
+            &[Some(1), Some(2), Some(3)],
+            &[Some("a"), Some("b"), Some("c")],
+        ),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2)]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for(
+            "nex_some",
+            "NOT EXISTS (SELECT 1 FROM keys k WHERE k.id = nex_some.id)",
+        ),
+    )
+    .await
+    .expect("correlated some NOT EXISTS");
+    assert_eq!(
+        read_back(&catalog, &some).await,
+        vec![(Some(2), Some("b".into()))]
+    );
+
+    let nulls = create_target(&catalog, "nex_nulls", HashMap::new()).await;
+    append_file(
+        &catalog,
+        &nulls,
+        consumer_batch(
+            &[Some(1), Some(2), None],
+            &[Some("a"), Some("b"), Some("n")],
+        ),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(2), None]);
+    execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &identity_spec_for(
+            "nex_nulls",
+            "NOT EXISTS (SELECT 1 FROM keys k WHERE k.id = nex_nulls.id)",
+        ),
+    )
+    .await
+    .expect("correlated NULL-key NOT EXISTS");
+    assert_eq!(
+        read_back(&catalog, &nulls).await,
+        vec![(Some(2), Some("b".into()))]
+    );
+}
+
+#[tokio::test]
+async fn identity_delete_exists_honors_write_delete_mode_not_merge_mode() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let mor = create_target(
+        &catalog,
+        "ex_mor",
+        HashMap::from([
+            (WRITE_DELETE_MODE.to_string(), "merge-on-read".to_string()),
+            ("write.merge.mode".to_string(), "copy-on-write".to_string()),
+        ]),
+    )
+    .await;
+    let cow = create_target(
+        &catalog,
+        "ex_cow",
+        HashMap::from([
+            (WRITE_DELETE_MODE.to_string(), "copy-on-write".to_string()),
+            ("write.merge.mode".to_string(), "merge-on-read".to_string()),
+        ]),
+    )
+    .await;
+    for ident in [&mor, &cow] {
+        append_file(
+            &catalog,
+            ident,
+            consumer_batch(&[Some(1), Some(3)], &[Some("drop"), Some("keep")]),
+        )
+        .await;
+        append_file(&catalog, ident, consumer_batch(&[Some(2)], &[Some("stay")])).await;
+    }
+    let mor_data_before = live_data_file_paths(&catalog, &mor).await;
+    let cow_data_before = live_data_file_paths(&catalog, &cow).await;
+
+    for name in ["ex_mor", "ex_cow"] {
+        let ctx = SessionContext::new();
+        register_keys(&ctx, &[Some(1)]);
+        let selection = format!("EXISTS (SELECT 1 FROM keys k WHERE k.id = {name}.id)");
+        execute_predicate_dml(&ctx, &catalog, &identity_spec_for(name, &selection))
+            .await
+            .unwrap_or_else(|error| panic!("{name} identity EXISTS DELETE: {error}"));
+    }
+
+    let expected = vec![
+        (Some(2), Some("stay".into())),
+        (Some(3), Some("keep".into())),
+    ];
+    assert_eq!(read_back(&catalog, &mor).await, expected);
+    assert_eq!(read_back(&catalog, &cow).await, expected);
+    assert!(
+        live_delete_file_count(&catalog, &mor).await >= 1,
+        "write.delete.mode=merge-on-read must commit position deletes (not follow write.merge.mode)"
+    );
+    assert_eq!(
+        live_data_file_paths(&catalog, &mor).await,
+        mor_data_before,
+        "MoR EXISTS DELETE must leave original data files in place"
+    );
+    assert_eq!(
+        live_delete_file_count(&catalog, &cow).await,
+        0,
+        "write.delete.mode=copy-on-write must NOT write position deletes even if merge.mode is MoR"
+    );
+    let cow_after = live_data_file_paths(&catalog, &cow).await;
+    assert_ne!(
+        cow_after, cow_data_before,
+        "COW EXISTS DELETE must rewrite the affected data file away"
     );
 }

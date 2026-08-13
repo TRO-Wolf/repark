@@ -30,6 +30,10 @@ not this directory.
   2026-08-13 against live PySpark 4.1.2 (fraction trim, LTZ/NTZ, epoch, year shape).
   Does **not** edit the registry (V-5 owns it; §6 paste-true here). TZ-8 date-cast
   is ledger handoff only.
+- [v1-g3e8-pr3-ledger.md](v1-g3e8-pr3-ledger.md) — **V-1 / G3-E8 PR-3:** `DELETE … WHERE
+  [NOT] EXISTS` ± correlation through the A1-identity path. IN + NOT IN + EXISTS + NOT EXISTS
+  execute both doors; dbt-upgrade gate sentence in §6. Residual correlated IN / UPDATE /
+  nested / scalar stay refused. Does **not** edit the registry (V-5 owns it).
 - [w5-z-landing-ledger.md](w5-z-landing-ledger.md) — **W-5 Z-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged Z-wave
   handoffs (G3-E8 IN-DELETE footnote, not family-fixed; TZ-4 progress not retired;
