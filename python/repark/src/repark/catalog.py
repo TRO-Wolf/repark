@@ -5,6 +5,8 @@ Python session (dies with ``stop()``), built over existing primitives:
 
 * ``SHOW NAMESPACES IN <catalog>`` → :meth:`listDatabases` / :meth:`databaseExists` /
   :meth:`setCurrentDatabase` validation
+* ``DESCRIBE NAMESPACE <catalog>.<db>`` → :meth:`getDatabase` (real ``locationUri`` /
+  ``description``; :meth:`listDatabases` still leaves those ``None`` — FA-2)
 * Live Iceberg ``list_iceberg_table_names`` + session ``list_temp_view_names`` (default-schema
   directory) → :meth:`listTables` — **not** global ``information_schema.tables`` (that walk
   loads every provider table and hard-fails after OOB drop of a DF-known Iceberg name;
@@ -332,7 +334,7 @@ class Catalog:
     setCurrentDatabase = set_current_database  # noqa: N815
 
     # ===========================================================================================
-    # listCatalogs / listDatabases / listTables / databaseExists
+    # listCatalogs / listDatabases / listTables / databaseExists / getDatabase
     # ===========================================================================================
 
     def list_catalogs(self, pattern: str | None = None) -> list[Any]:
@@ -418,6 +420,68 @@ class Catalog:
             return False
 
     databaseExists = database_exists  # noqa: N815
+
+    def get_database(self, db_name: str) -> Any:
+        """Get the database with the specified name (PySpark ``spark.catalog.getDatabase``).
+
+        Returns a :data:`Database` namedtuple. ``locationUri`` is the namespace warehouse
+        location when the catalog stores one (``location``, else the U2 ``location_uri``
+        mirror) — unlike :meth:`listDatabases`, which leaves it ``None`` (registry FA-2).
+        Existence and location both come from ``DESCRIBE NAMESPACE`` (the engine already
+        checks ``namespace_exists`` and preserves catalog/IO errors). Missing schema →
+        :class:`~repark.errors.AnalysisException` ``SCHEMA_NOT_FOUND``. Two-part
+        ``catalog.db`` forms expand ``spark_catalog`` like :meth:`database_exists`.
+        """
+        from repark.session import _alias_catalog_name
+
+        self._session._ensure_alive()
+        name = _require_str(db_name, "dbName")
+        state = self._session._catalog_state()
+        known_raw = state.get("known_catalogs") or set()
+        known: set[str] = known_raw if isinstance(known_raw, set) else set(known_raw)
+        current_catalog = str(state["current_catalog"])
+        parts = _split_identifier(name)
+        if len(parts) == 2:
+            catalog, name = parts[0], parts[1]
+        elif len(parts) == 1:
+            catalog = current_catalog
+        else:
+            raise AnalysisException(
+                f"[SCHEMA_NOT_FOUND] The schema `{name}` cannot be found. Verify "
+                f"the spelling and correctness of the schema and catalog."
+            )
+        catalog = _alias_catalog_name(
+            catalog,
+            current_catalog=current_catalog,
+            known_catalogs=known,
+            default_catalog_is_auto=bool(state.get("auto_default_catalog")),
+        )
+        # Existence and location both come from DESCRIBE NAMESPACE (engine
+        # namespace_exists + get_namespace + location resolver). Do not SHOW-list
+        # first: that walk swallows catalog/IO errors as absence (Q-001 / SEC-001).
+        # listDatabases stays on SHOW (FA-2).
+        sql = f"DESCRIBE NAMESPACE {_multipart([catalog, name])}"
+        table = self._session.sql(sql).to_arrow()
+        description: str | None = None
+        location_uri: str | None = None
+        rows = zip(
+            table.column("info_name").to_pylist(),
+            table.column("info_value").to_pylist(),
+            strict=True,
+        )
+        for info_name, info_value in rows:
+            if info_name == "Comment":
+                description = info_value
+            elif info_name == "Location":
+                location_uri = info_value
+        return Database(
+            name=name,
+            catalog=catalog,
+            description=description,
+            locationUri=location_uri,
+        )
+
+    getDatabase = get_database  # noqa: N815
 
     def list_tables(
         self,

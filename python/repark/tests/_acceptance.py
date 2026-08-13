@@ -167,14 +167,13 @@ def probe_namespace_location_via_describe(
     catalog: str,
     namespace: str,
 ) -> str | None:
-    """Read namespace Location via SQL ``DESCRIBE NAMESPACE`` (harness-local).
+    """Read namespace Location via SQL ``DESCRIBE NAMESPACE`` (unit-test helper).
 
-    Bounded probe (G-6): the facade ``listDatabases`` path always returns ``locationUri=None``;
-    ``DESCRIBE NAMESPACE`` already yields a ``Location`` row when the property is set. This is
-    the only sanctioned live read path until a ``getDatabase`` facade-parity API lands.
+    Retired as the sanctioned live-read path: :meth:`spark.catalog.getDatabase` now returns
+    a real ``locationUri`` (Y-3). Kept so DESCRIBE-row extraction stays unit-testable without
+    a session. ``listDatabases`` still returns ``locationUri=None`` (FA-2).
 
-    ``spark`` is duck-typed (``spark.sql(...).to_arrow()``) so unit tests can pass a stub and the
-    real harness can pass a ``ReparkSession``. Zero engine change.
+    ``spark`` is duck-typed (``spark.sql(...).to_arrow()``).
     """
     sql = f"DESCRIBE NAMESPACE {catalog}.{namespace}"
     table = spark.sql(sql).to_arrow()  # type: ignore[attr-defined]
@@ -188,10 +187,12 @@ def assert_glue_scratch_namespace_location(spark: object, warehouse: str) -> Non
     """After ensure-namespace on the Glue leg: verify Location matches the intended path.
 
     Glue-only. S3 Tables namespaces carry no location by design — nothing to compare; that leg
-    must not call this guard.
+    must not call this guard. Reads ``locationUri`` from the public
+    ``spark.catalog.getDatabase`` API (Y-3; this was the helper's retirement condition).
     """
     expected = acceptance_namespace_location(warehouse)
-    actual = probe_namespace_location_via_describe(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE)
+    db = spark.catalog.getDatabase(f"{SILVER_CATALOG}.{ACCEPTANCE_NAMESPACE}")  # type: ignore[attr-defined]
+    actual = db.locationUri
     assert_namespace_location_matches(actual=actual, expected=expected)
 
 

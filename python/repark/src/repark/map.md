@@ -680,9 +680,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **r23 C6:** `registerFunction`/`register_function` (alias of `spark.udf.register`)
   + `functionExists`/`function_exists` (session UDF registry probe only),
   `currentCatalog`/`setCurrentCatalog`, `currentDatabase`/`setCurrentDatabase`,
-  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists` (+ `spark_catalog` alias on
-  two-part form for **listTables / databaseExists / tableExists**; snake_case aliases). Return
-  shapes: namedtuple `Database`/`Table`/`CatalogMetadata` (live 4.1.2 field names). Built over
+  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists`/`getDatabase` (+ `spark_catalog`
+  alias on two-part form for **listTables / databaseExists / tableExists / getDatabase**;
+  snake_case aliases). Return shapes: namedtuple `Database`/`Table`/`CatalogMetadata` (live
+  4.1.2 field names). **Y-3:** `getDatabase` fills `locationUri`/`description` via
+  `DESCRIBE NAMESPACE` (existence + location; no SHOW `_namespace_exists` precheck —
+  that walk swallows catalog/IO as absence). FA-2 `listDatabases` still None. Built over
   `SHOW NAMESPACES IN` + **T6 live Iceberg `list_iceberg_table_names`** (list-on-access;
   CQ-008/BUG-007 — not the DF provider snapshot) + **native `list_temp_view_names`** (default
   schema directory; never global `information_schema.tables` — F-T6-PHANTOM-A) + DF schema

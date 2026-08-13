@@ -15,7 +15,14 @@ region split real (technique A: nested-class extract + owned helpers).
   emits the LEFT side only and spells `LEFT SEMI` / `LEFT ANTI` (a semi join contributes no
   right-hand columns, so projecting them would be an unresolvable reference), and a conditionless
   semi/anti join (`on=None` or `on=[]`) refuses loud instead of falling through to the Cartesian
-  path — a cross join is a different result set. See `task/g4b-join-widening-ledger.md`.
+  path — a cross join is a different result set. **G4b-R2 / Y-5:** after a semi/anti join
+  the origin map records the right side's plan ids as not-emitted (`_origin_not_emitted`,
+  copied by `_spawn` so descendants still raise — Q-002). A later emitting join of
+  that same right subtracts those ids (Q-001) so `semi.join(right, …, "inner")` can
+  `select(right["k"])` again. `select` / `filter` / `withColumn` of a still-unemitted
+  right-parent Column raise Spark 4.1.2's `MISSING_ATTRIBUTES` class instead of
+  name-falling back to the left column; `drop` of that Column is a Spark no-op.
+  Self-semi is exclusive-set empty (Q-003). See `task/y5-origin-map-ledger.md`.
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).
@@ -28,6 +35,7 @@ region split real (technique A: nested-class extract + owned helpers).
 |---|---|
 | Change DataFrame methods / plan glue | `core.py` |
 | Change `join` how-aliases / semi-family routing | `core.py` (`DataFrame.join` + `_SEMI_JOIN_HOWS`) |
+| Change semi/anti origin-map join-type awareness | `core.py` (`_origin_not_emitted` + `_remember_unemitted_right_origins`) |
 | Change groupBy / pivot / agg grouping | `joins_columns.py` |
 | Change write / save / V2 writer / stat | `writer_readwriter.py` |
 | Change na.fill / drop / replace | `actions_export.py` |

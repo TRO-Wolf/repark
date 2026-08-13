@@ -51,6 +51,11 @@ not this directory.
   nested order-insensitive comparator + 6 nested-container differential rows vs live Spark;
   record driver; §6 paste-true registry rows. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`.
+- [y6-boundary-shapes-ledger.md](y6-boundary-shapes-ledger.md) — **in flight (Y-6 / H-2 gap G10):**
+  facade-boundary container-shape corpus (8–10 pins) vs live Spark 4.1.2; record driver;
+  §6 paste-true registry rows. Census cohorts / `_live_parity.py` / registry file **not**
+  edited (A11). Sibling of `test_interchange_parity.py`; does not duplicate X-5 VALUES
+  families.
 - [x1-cast-failure-ledger.md](x1-cast-failure-ledger.md) — **in flight (X-1 / H-2 gap G6):**
   cast-failure semantics differential corpus vs live Spark 4.1.2 ANSI ON; record driver; §6
   paste-true registry + `Disclosure(...)` handoff (does **not** edit the registry or
@@ -73,6 +78,11 @@ not this directory.
   §6 states REG-G4-1/2 are now **FIXED** (land them as fixed entries, never live divergences) and
   queues one new disclosure (conditionless semi/anti refuses) plus a declared-rename follow-up.
   Does **not** edit `docs/spark-sql-iceberg-parity.md`.
+- [y5-origin-map-ledger.md](y5-origin-map-ledger.md) — **Y-5 / G4b-R2:** semi/anti origin-map
+  join-type awareness. After a leftsemi/leftanti join, right-parent Columns raise Spark 4.1.2
+  `MISSING_ATTRIBUTES` on select/filter/withColumn instead of silently binding the left
+  column; `drop` of that Column is the probed Spark no-op. Does **not** edit
+  `docs/spark-sql-iceberg-parity.md`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -102,6 +112,19 @@ not this directory.
   engine fix (`repark_functions::timestamp_cast` + the analyzer's `Expr::Cast` arm), the
   divergence-class flip and its per-entry-point corpus, six declared residuals, and the **§6
   paste-true** registry text. Does **not** edit `docs/spark-sql-iceberg-parity.md`.
+- [y4-rename-ledger.md](y4-rename-ledger.md) — **Y-4 / G4b-R1 (2026-08-12):** declared-rename
+  unit (ships alone). `df_left_semi_unsupported` → `df_left_semi_on_name`,
+  `df_left_anti_unsupported` → `df_left_anti_on_name`,
+  `timestamp_to_int_spark_seconds_repark_raises` → `timestamp_to_int_nullability`. Identity
+  only. Does **not** edit the registry or `_live_parity.py` (§6 paste-true citations).
+
+- [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) — **Y-10 / H-2 gap G11 in flight:** ANSI
+  door correctness-not-parity (Spark is not the ANSI oracle). §0 two-door inventory, 6
+  INTENDED `cross_door.rs` rows, 6 `ansi_door_values.rs` standard-SQL pins, FINDING F-Y10-1
+  (integer arithmetic overflow wraps). Does **not** edit the registry or the Y-8 ANSI-door
+  timezone/cast files.
+- [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) — **Y-3:** `spark.catalog.getDatabase`
+  facade + G-6 location-guard live-leg activation (memory catalog; FA-2 untouched).
 
 ## Where the closed campaigns' ledgers went
 
@@ -147,9 +170,13 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
+| [y4-rename-ledger.md](y4-rename-ledger.md) | **Y-4 / G4b-R1** declared rename (G4b flipped rows + TZ-5 nullability row) |
 | [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — items 1+4 in PR #50; items 2+3 (lifecycle live + 13 tz live scenarios) in the second PR. Full N-2b closed only when **both** PRs land. |
 | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) | **X-5 / G18** nested comparator + nested-container corpus (Part 1+2) |
 | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) | **X-4 / G17** catalog wrapper explicit forwards (HIGH `publish_replace_table`) |
+| [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) | **Y-10 / G11** ANSI door — correctness, not parity |
+| [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) | **Y-3** `getDatabase` + G-6 live-leg |
+| [y5-origin-map-ledger.md](y5-origin-map-ledger.md) | **Y-5 / G4b-R2** semi/anti origin-map join-type awareness |
 
 ## I want to...
 
@@ -173,8 +200,12 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
+| Read the G11 ANSI-door correctness-not-parity ledger | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) |
+| Read the getDatabase / G-6 live-leg ledger | [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) |
 | Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
 | See how a corpus refuse-split gets FIXED and flipped (and why the row keeps its name) | [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) §2 D2 / §4 |
+| See the declared-rename map that retired those kept names (and the TZ-5 flip-row name) | [y4-rename-ledger.md](y4-rename-ledger.md) |
+| See why `select(right["k"])` after a semi join must raise `MISSING_ATTRIBUTES` | [y5-origin-map-ledger.md](y5-origin-map-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |

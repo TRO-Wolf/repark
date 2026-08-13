@@ -883,10 +883,16 @@ NOT in that file is a defect, not a decision.
 - `test_catalog_surface.py` — **R-CURCAT-FACADE** (closes G-INT INT-004 follow-up). Pins
   `tableExists` (3-part + **2-part under currentCatalog** + 1-part under currentDatabase + temps),
   `currentCatalog`/`setCurrentCatalog`/`currentDatabase`/`setCurrentDatabase`,
-  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists` (+ snake_case), namedtuple field
-  shapes (`Database`/`Table`/`CatalogMetadata`), `spark.sql.defaultCatalog` seed, CATALOG_NOT_FOUND
-  / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`), multi-catalog
-  isolation, non-str → PySparkTypeError. Remaining divergences rowed as
+  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists`/`getDatabase` (+ snake_case),
+  namedtuple field shapes (`Database`/`Table`/`CatalogMetadata`), `spark.sql.defaultCatalog` seed,
+  CATALOG_NOT_FOUND / SCHEMA_NOT_FOUND raises, listTables filterPattern (`*ent*` / `entity|other`),
+  multi-catalog isolation, non-str → PySparkTypeError. **Y-3:** `getDatabase` value/shape
+  (bare + qualified + `spark_catalog` alias), real `locationUri`/`description` when set,
+  missing-namespace `SCHEMA_NOT_FOUND` **equals DESCRIBE sibling** (no SHOW precheck;
+  AST forbids `_namespace_exists` on `get_database`), `locationUri` equals
+  `probe_namespace_location_via_describe` on one memory session, FA-2 `listDatabases`
+  still None.
+  Remaining divergences rowed as
   [ST-1](../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented) /
   [FA-2](../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none).
   SQL sibling smoke: `SHOW NAMESPACES IN` (full pin in `test_show_namespaces.py`).
@@ -1323,8 +1329,9 @@ NOT in that file is a defect, not a decision.
   name-gated family coverage so a control cannot satisfy NULL-key / nullability / type-mismatch
   pins. **G4b:** the two DF `leftsemi`/`leftanti` refuse **splits** CONVERGED when the DataFrame
   semi binding landed — they are now content equalities with their recorded Spark halves
-  unchanged, names kept byte-identical (a pin's name is part of the pin; the `_unsupported`
-  suffix retires in a declared-rename unit). Four rows joined them so the claim spans the whole
+  unchanged. **Y-4 (2026-08-12):** declared rename landed; current pins are
+  `df_left_semi_on_name` / `df_left_anti_on_name` (was `df_left_semi_unsupported` /
+  `df_left_anti_unsupported`). Four rows joined them so the claim spans the whole
   DF surface, not one shape: `on='k'` / `on=['k']` / `left.k == right.k` (a different engine
   path — the H1 SQL rewrite) and the NULL-key edge on both semi and anti. The corpus now holds
   NO splits, so the split classifier's two arms are proven against the explicit
@@ -1332,8 +1339,8 @@ NOT in that file is a defect, not a decision.
   guarded for the next lane's disclosure. Split-path convergence is still CLASSIFIED (CONVERGED
   → flip to content equality; commit-but-mismatch → regression). **Out of scope (declared):**
   fixing divergences; registry file; windows (W-4). Ledgers: `task/w3-joins-ledger.md`,
-  `task/g4b-join-widening-ledger.md` (§6 holds paste-true registry rows; registry file not
-  edited by either).
+  `task/g4b-join-widening-ledger.md`, `task/y4-rename-ledger.md` (§6 holds paste-true
+  registry citation updates; registry file not edited by Y-4).
 - `test_g4b_semi_join.py` — the **non-differential** half of the G4b DataFrame semi/anti
   widening: the parts with no Spark golden to compare against. Every accepted spelling
   (`semi` / `left_semi` / `leftsemi` / `LeftSemi` / `LEFT_SEMI` and the anti family — each is its
@@ -1342,8 +1349,15 @@ NOT in that file is a defect, not a decision.
   the refusal-message contents, and the declared **conditionless divergence**: `on=None` /
   `on=[]` with a semi `how` refuses loud rather than falling through to the facade's Cartesian
   path, which would answer an m×n cross join. A guard test pins that the refusal did NOT widen
-  into `how='inner'`. Live-Spark behaviour for the diverging case is recorded in
-  `task/g4b-join-widening-ledger.md`.
+  into `how='inner'`. **G4b-R2 / Y-5:** right-parent `select`/`filter`/`withColumn` after
+  semi/anti raise Spark 4.1.2 `MISSING_ATTRIBUTES` (same-name
+  `RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION`; distinct-name
+  `RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT`); `drop(right[…])` is the probed Spark no-op;
+  left refs still resolve; inner-join origin resolution is a regression guard;
+  Q-001 emitting-join subtract (`semi.join(right, …, "inner")`); Q-002 `_spawn`
+  descendant refuse; Q-003 self-semi exclusive-set. Ledger:
+  `task/y5-origin-map-ledger.md`. Live-Spark behaviour for the conditionless divergence is
+  recorded in `task/g4b-join-widening-ledger.md`.
 - `_record_join_goldens.py` — the **record driver** for the joins corpus (NOT a `test_` module;
   never collected). Imports `ROWS` + lifecycle helpers from the committed test module and
   re-derives every Spark half (content / error needle / split success) under order-insensitive
@@ -1394,6 +1408,27 @@ NOT in that file is a defect, not a decision.
 - `_record_nested_container_goldens.py` — the **record driver** for the nested corpus (NOT a
   `test_` module; never collected). Imports `ROWS` + `run_row`; re-derives every Spark half;
   `--emit` pastes Spark + divergent repark halves. Hold `/tmp/grok-jvm-record.lock`.
+- `test_boundary_shapes_parity.py` — **Y-6 / H-2 gap G10** facade-boundary container-shape
+  corpus (sibling of `test_interchange_parity.py`; does **not** duplicate X-5
+  `test_nested_container_parity.py` VALUES families). 10 rows (budget 8–10). Coverage
+  floors are **semantics-gated**: typed-Map (recipe `out_map` / Arrow map, plus
+  `map_topandas_*` disclosure — a `map_` prefix on a struct-inference equality does not
+  count); `*struct_*` both directions; `*binary_*` both directions; `*array_*` ≥2 **and**
+  the item-vs-element ingest disclosure; `*pandas_timestamp_unit_*` **and** the inbound
+  us disclosure (ns equality cannot satisfy); inbound glob `*_from_pandas_*` matches
+  every inbound row. Value AND dtype/shape AND (Arrow surface) nullability. 6 equalities
+  (binary bytes both directions, array ndarray cells, ArrowDtype list field name, inbound
+  object-dict→struct, inbound datetime64[ns]) and 4 disclosures (map toPandas dict vs
+  list-of-pairs; struct Long mixed `10`/`20.0` vs int 20; inbound object-list `element`
+  vs `item`; inbound datetime64[us] → pandas ns vs us). Map pair order is
+  order-insensitive (X-5 key-sort). CONVERGED/regression classifier arms committed.
+  Census cohorts NOT extended (A11). Ledger: `task/y6-boundary-shapes-ledger.md`.
+- `_record_boundary_shapes_goldens.py` — the **record driver** for the G10 corpus (NOT a
+  `test_` module; never collected). Imports `ROWS` + `run_row`; re-derives every Spark half
+  on live PySpark 4.1.2 (`local[2]`, ANSI on, shuffle=2, `session.timeZone=UTC`,
+  `arrow.pyspark.enabled=true`). Pyspark coordinate derived from the project's `record`
+  extra (CP-8). `--emit` pastes Spark + divergent repark halves. Hold
+  `/tmp/grok-jvm-record.lock`.
 - `test_cast_failure_parity.py` — the **cast-failure semantics differential corpus** (H-2 gap G6),
   landed by X-1. 10 rows (budget 8–10) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
   shuffle=2, `session.timeZone=UTC`): 5 shared-raise **error** equalities (malformed string→int /
@@ -1404,13 +1439,16 @@ NOT in that file is a defect, not a decision.
   the TZ-5 cast unit un-refused it, 2026-08-12: value/type now match Spark's unix-seconds int32;
   repark propagates the literal's non-null where Spark types the CAST nullable; content-disclosure
   classifier arms proven on this row, split arms kept proven via a synthetic exemplar).
+  **Y-4 (2026-08-12):** current pin name `timestamp_to_int_nullability` (was
+  `timestamp_to_int_spark_seconds_repark_raises`; live-mirror token
+  `cast_timestamp_to_int_nullability` is unchanged).
   §0 re-verified that the slate
   "non-ANSI NULL" premise narrowed under ANSI ON — fewer than 4 real divergences, not manufactured.
   Every content row asserts value AND Arrow type AND nullability via
   `repark_parity.assert_frames_equal`; error rows pin raise class + error needle (A7). Split
   classifiers (CONVERGED vs regression) proven by monkeypatch (CP-1). **Does not edit**
   `_live_parity.py` / live size pins / registry (A3 — §6 paste-true BOTH halves in the ledger).
-  Ledger: `task/x1-cast-failure-ledger.md`.
+  Ledgers: `task/x1-cast-failure-ledger.md`, `task/y4-rename-ledger.md` (Y-4 name only).
 - `_record_cast_failure_goldens.py` — the **record driver** for the cast-failure corpus (NOT a
   `test_` module; never collected). Imports `ROWS` + lifecycle helpers from the committed test
   module; re-derives every Spark half (content / error needle / split success-or-raise) under
@@ -1540,9 +1578,9 @@ NOT in that file is a defect, not a decision.
   location) + the `deduplicate` row_number transform. **G-6 location-mismatch guard (Glue):**
   `normalize_location_uri`, `assert_namespace_location_matches` (exact equality after trailing-slash
   strip; match / mismatch / no-location all fail-loud with both values + the operator fix),
-  `location_from_describe_rows`, `probe_namespace_location_via_describe` (SQL
-  `DESCRIBE NAMESPACE` — the bounded live-read path; zero engine change), and
-  `assert_glue_scratch_namespace_location`. **A2 second bullet:** `s3tables_catalog_config`
+  `location_from_describe_rows`, `probe_namespace_location_via_describe` (DESCRIBE-row
+  unit helper; retired as the live path), and `assert_glue_scratch_namespace_location`
+  (**Y-3:** reads `spark.catalog.getDatabase(…).locationUri`). **A2 second bullet:** `s3tables_catalog_config`
   (S3TablesCatalog impl, ARN as `warehouse` → RePark's `table_bucket_arn`) + the non-secret
   `S3TABLES_CATALOG` name — the table-bucket ARN is a RUNTIME arg from `TABLE_BUCKET_ARN`, never a
   committed literal.
@@ -1553,7 +1591,8 @@ NOT in that file is a defect, not a decision.
   namespace guard, a structural guard that `test_aws_acceptance.py` carries no `DROP TABLE`/`DELETE
   FROM`/`DROP NAMESPACE`, the `deduplicate` transform against a memory session (newest row per id),
   and the G-6 location-mismatch guard's pure comparison edges (match, mismatch naming both values,
-  no-location, DESCRIBE-row extraction).
+  no-location, DESCRIBE-row extraction). **Y-3:** Glue wrapper stub drives `getDatabase`;
+  AST pin that the wrapper calls `getDatabase` (not DESCRIBE).
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
@@ -1561,8 +1600,8 @@ NOT in that file is a defect, not a decision.
   (entity/ds/id-col from `REPARK_ACCEPT_ENTITY`/`_DS`/`_ID_COL`), the dedup transform, then
   namespace-create (programmatic `spark.create_namespace(..., location=…)` — ADV-1, since SQL
   `CREATE NAMESPACE` without `LOCATION` would omit the `location` a real Glue catalog requires (SQL `LOCATION` works too since WG-5); idempotent on an
-  "already exists") → **G-6: `assert_glue_scratch_namespace_location`** (DESCRIBE NAMESPACE read +
-  exact match to the intended warehouse path; fail loud on stale LocationUri) →
+  "already exists") → **G-6: `assert_glue_scratch_namespace_location`** (`getDatabase.locationUri`
+  + exact match to the intended warehouse path; fail loud on stale LocationUri) →
   `tableExists`→CTAS-or-MERGE → idempotent second MERGE into `testing_repark_acceptance`.
   Oracles: bronze rows > 0, published == deduped (fresh CTAS), second pass count unchanged. NO
   DROP/DELETE of any AWS object — cleanup is the user's manual call. **A2 second bullet
@@ -1589,7 +1628,7 @@ NOT in that file is a defect, not a decision.
 | Add H2 Group H long-tail / wrap-display / same-object self-join pins | `test_h2_group_h2.py` |
 | Add a catalog / publish-path test | `test_catalog_flow.py` |
 | Add interchange (`toPandas` / `createDataFrame` / `to_polars`) parity | `test_interchange_parity.py` (G-INT) |
-| Add a Catalog API surface / missing-method divergence pin | `test_catalog_surface.py` (G-INT) |
+| Add a Catalog API surface / missing-method divergence pin | `test_catalog_surface.py` (G-INT; Y-3 `getDatabase`) |
 | Add a `DESCRIBE NAMESPACE` / namespace-metadata-readback test | `test_describe_namespace.py` |
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
@@ -1618,7 +1657,8 @@ NOT in that file is a defect, not a decision.
 | Add a decimal128 / overflow differential row | `test_decimal128_parity.py` (`G2_ROWS` / `G13_ROWS` / `CTAS_ROWS`; record the Spark half with `_record_decimal128_goldens.py`, never by hand) |
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
-| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
+| Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 origin-map pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
+| Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a timestamp-cast differential row (registry TZ-5) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
 | Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
@@ -1626,6 +1666,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a nested-container differential row (gap G18) | `test_nested_container_parity.py` (`ROWS`; record Spark half with `_record_nested_container_goldens.py`, never by hand) |
 | Re-derive the nested-container Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_nested_container_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
+| Add a facade-boundary container-shape row (gap G10) | `test_boundary_shapes_parity.py` (`ROWS`; record Spark half with `_record_boundary_shapes_goldens.py`, never by hand). Do not extend X-5 VALUES families or census allowlists. |
+| Re-derive the G10 boundary-shape Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_boundary_shapes_goldens.py` (hold `/tmp/grok-jvm-record.lock`; marker `y6-g10-fix` after the cycle-1 pin fix) |
 | Add a cast-failure differential row (gap G6) | `test_cast_failure_parity.py` (`ROWS`; record Spark half with `_record_cast_failure_goldens.py`, never by hand) |
 | Re-derive the cast-failure Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_cast_failure_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a three-valued-logic differential row (gap G12) | `test_three_valued_logic_parity.py` (`ROWS`; record Spark half with `_record_tvl_goldens.py`, never by hand) |
@@ -1691,6 +1733,9 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a window row reds saying regression | re-derive both halves with `_record_window_goldens.py` before touching the pin. |
 | a `test_nested_container_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark list/struct/map output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
 | a nested-container row reds saying regression | re-derive both halves with `_record_nested_container_goldens.py` before touching the pin. |
+| a `test_boundary_shapes_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark pandas/Arrow boundary shape: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
+| a G10 boundary-shape row reds saying regression | re-derive both halves with `_record_boundary_shapes_goldens.py` before touching the pin. |
+| G10 budget pin reds | G10 must stay 8–10 rows, ≥1 equality, ≥3 disclosures, a **typed-Map** disclosure (`out_map` / `map_topandas_*`, not a `map_`-prefixed struct), struct+binary both directions, ≥2 `*array_*` **and** `array_from_pandas_object` disclosure, timestamp-unit **us disclosure** plus inbound ns twin, inbound glob `*_from_pandas_*` matching every inbound row; restore families rather than greening with controls. |
 | nested budget pin reds | G18 must stay 4–6 rows, ≥2 equalities, ≥2 disclosures, ≥1 `*struct*`, ≥1 `*map*`, ≥2 `*array*`/`*collect_list*`; restore families rather than greening with controls. |
 | a `test_three_valued_logic_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (incl. null-safe-eq nullability): do NOT delete — flip to equality (`repark=None`) and record the convergence. |
 | a TVL row reds saying regression | re-derive both halves with `_record_tvl_goldens.py` before touching the pin. |
@@ -1701,6 +1746,11 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | joins budget pin reds | G4 must stay 20–30 rows, min 14 equalities, max 8 disclosures/splits, ≥4 `*null_keys_*` (every join type), ≥2 `*duplicate_keys_*`, ≥2 `*type_mismatch_*`, ≥2 `*nullable*`, ≥6 DF content rows, and (G4b) the DF semi family on both the name/list-key and Column-condition paths plus both NULL-key edges; restore the name-gated families rather than greening them with controls. |
 | a `df_left_semi_*` / `df_left_anti_*` row reds | the G4b DataFrame semi binding regressed. Localize in Rust first (`crates/repark-python/tests/bindings.rs` `join_on_names_left_semi_*` / `_left_anti_*` / `_semi_family_never_merges_a_key_column`), then the facade alias map + `_join_on_condition_h1` left-only projection in `python/repark/src/repark/dataframe/core.py`. Re-splitting the row to green it is a laundered regression, and `test_join_row_set_covers_g4_budget` reds on it. |
 | `test_g4b_semi_join.py` conditionless test reds | the semi/anti `on=None` / `on=[]` guard stopped firing, so a conditionless semi join now falls through to the Cartesian path and answers an m×n cross join instead of Spark's rows. Restore the `_SEMI_JOIN_HOWS` guard in `DataFrame.join`; do not relax the test. |
+| `test_right_ref_select_*` reds with left `k` values | the G4b-R2 origin map lost join-type awareness — `select(right["k"])` name-fell-back to the left column. Restore `_remember_unemitted_right_origins` on both the name-key and H1 condition paths; do not special-case `select` alone. |
+| `test_semi_then_inner_join_emits_the_same_right` reds | `_spawn` copied `_origin_not_emitted` onto the inner-join child and the emitting path did not subtract. Restore `left_only=False` on non-semi `_remember_unemitted_right_origins`. |
+| `test_spawn_descendant_still_refuses_unemitted_right` reds with left `k` | the `_spawn` copy line was deleted; filter/select children name-fall-back. Restore `child._origin_not_emitted = self._origin_not_emitted`. |
+| `test_self_semi_exclusive_set_resolves_df_column` reds | exclusive-set remember started recording the shared self plan id. Keep `right.ids - left.ids`. |
+| `test_right_ref_drop_is_spark_noop` reds by dropping `k` | `drop(right["k"])` fell through to name-drop of the left column. The unemitted-origin branch must `continue` (Spark 4.1.2 no-op), not raise and not name-drop. |
 | a `test_cast_failure_parity.py` row reds saying CONVERGED | repark now matches Spark (shared raise, or success golden): do NOT delete — flip to content/error equality and record the convergence. |
 | a cast-failure row reds saying regression | re-derive both halves with `_record_cast_failure_goldens.py` before touching the pin. |
 | cast-failure budget pin reds | G6 must stay 8–10 rows, min 3 equality-class, min 3 shared-raise errors, ≥2 `try_cast_*`, ≥1 DF `Column.cast` row, name-gated malformed-numeric / malformed-temporal / overflow families; do not invent divergences under ANSI ON. |
