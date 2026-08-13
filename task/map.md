@@ -25,6 +25,11 @@ not this directory.
   plus load-bearing SQL `year(ts)` / `date_format` identity under non-UTC sessions
   and TZ-8 CAST/to_date disclose. Read-only against the engine. Does **not** edit
   the registry (V-5 owns it; §6 is paste-true).
+- [v3-btz4-ledger.md](v3-btz4-ledger.md) — **V-3 / TZ-4 PR-3 (B-TZ-4):** Spark
+  `CAST(TIMESTAMP AS STRING)` session-zone space-separated `Utf8`. Oracle recorded
+  2026-08-13 against live PySpark 4.1.2 (fraction trim, LTZ/NTZ, epoch, year shape).
+  Does **not** edit the registry (V-5 owns it; §6 paste-true here). TZ-8 date-cast
+  is ledger handoff only.
 - [w5-z-landing-ledger.md](w5-z-landing-ledger.md) — **W-5 Z-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged Z-wave
   handoffs (G3-E8 IN-DELETE footnote, not family-fixed; TZ-4 progress not retired;

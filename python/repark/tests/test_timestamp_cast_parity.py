@@ -1,4 +1,4 @@
-"""``CAST(TIMESTAMP AS <numeric>)`` differential rows — the facade cell of registry row TZ-5.
+"""``CAST(TIMESTAMP AS <numeric>)`` (TZ-5) and ``CAST(TIMESTAMP AS STRING)`` (B-TZ-4) rows.
 
 **The class.** Apache Spark's ``Cast(TimestampType, LongType)`` is the **floor of epoch SECONDS**.
 repark stored timestamps as nanosecond ticks and let DataFusion's cast reinterpret the raw value,
@@ -27,6 +27,11 @@ this fix — agrees with Spark on every positive instant and on every whole nega
 disagrees only on a **negative fractional** second. So ``-0.5 s → -1`` and ``-1.25 s → -2`` are the
 two rows that separate the real fix from the plausible one, and the positive fractional rows are
 the other half of that fence, so the fix cannot be "always subtract one".
+
+**B-TZ-4.** ``CAST(TIMESTAMP AS STRING)`` is Spark's session-zone space-separated ``string``
+(trailing-zero fraction trimmed; NTZ is the stored wall). Every ``spark`` half below was
+RECORDED against live PySpark 4.1.2 on 2026-08-13 (``task/v3-btz4-ledger.md`` §2). The recorded
+strings ARE the spec.
 
 **Entry points.** Three facade spellings, because a claim tested through one says nothing about
 the others (``docs/testing.md`` "Divergence-class claims"):
@@ -82,6 +87,11 @@ FIX = (
     "`repark_functions::timestamp_cast` + the analyzer's `Expr::Cast` arm)"
 )
 REVERT = f"reverting {FIX} reds this row."
+STRING_FIX = (
+    "the timestamp-to-string cast fix (task/v3-btz4-ledger.md; "
+    "`repark_functions::timestamp_cast` + the analyzer's CAST(ts AS STRING) arm)"
+)
+STRING_REVERT = f"reverting {STRING_FIX} reds this row."
 
 
 def _one_row(fields: list[tuple[str, pa.DataType, bool]], values: dict[str, object]) -> pa.Table:
@@ -147,6 +157,19 @@ def _epoch(target_type: pa.DataType, value: object) -> pa.Table:
     return _one_row([("epoch_value", target_type, True)], {"epoch_value": value})
 
 
+_STRING = pa.string()
+
+
+def _string_value(value: str | None) -> pa.Table:
+    """The one-column ``string_value`` golden every CAST-to-STRING row describes."""
+    return _one_row([("string_value", _STRING, True)], {"string_value": value})
+
+
+def _cast_string_sql(instant: str) -> str:
+    """``SELECT CAST(to_timestamp(<instant>) AS STRING) AS string_value``."""
+    return f"SELECT CAST(to_timestamp('{instant}') AS STRING) AS string_value"
+
+
 # ==================================================================================================
 # The DataFrame-API spelling: `F.col("ts").cast(...)` over a real tz-aware COLUMN
 # ==================================================================================================
@@ -208,6 +231,11 @@ def dataframe_api_cast_projection(session: object) -> pa.Table:
 
 
 EXPR_DOOR_SPELLING = "df.select(F.expr(\"CAST(to_timestamp('…') AS BIGINT)\"))"
+EXPR_STRING_SPELLING = "df.select(F.expr(\"CAST(to_timestamp('…Z') AS STRING)\"))"
+DATAFRAME_STRING_SPELLING = "df.select(F.col('ts').cast('string'))"
+DATAFRAME_NTZ_STRING_SPELLING = (
+    "df_ntz.select(F.col('ts').cast('string'))  # TimestampNTZType column"
+)
 
 
 def expr_door_projection(session: object) -> pa.Table:
@@ -224,6 +252,39 @@ def expr_door_projection(session: object) -> pa.Table:
         functions.expr(f"CAST(to_timestamp('{HALF_SECOND_BEFORE_EPOCH}') AS BIGINT)").alias(
             "epoch_value"
         )
+    )
+    return _to_arrow(projected)
+
+
+def dataframe_string_cast_projection(session: object) -> pa.Table:
+    """``F.col('ts').cast('string')`` over a tz-aware instant — the DataFrame door for B-TZ-4."""
+    functions = _functions_module(session)
+    aware = dt.datetime(2024, 6, 15, 12, 0, tzinfo=dt.UTC)
+    frame = session.createDataFrame([(aware,)], ["ts"])  # type: ignore[attr-defined]
+    projected = frame.select(functions.col("ts").cast("string").alias("string_value"))
+    return _to_arrow(projected)
+
+
+def dataframe_ntz_string_cast_projection(session: object) -> pa.Table:
+    """``F.col('ts').cast('string')`` over an explicit ``TimestampNTZType`` column."""
+    functions = _functions_module(session)
+    if session.__class__.__module__.split(".")[0] == "pyspark":
+        from pyspark.sql.types import StructField, StructType, TimestampNTZType
+    else:
+        from repark.types import StructField, StructType, TimestampNTZType
+    schema = StructType([StructField("ts", TimestampNTZType(), True)])
+    naive = dt.datetime(2024, 6, 15, 12, 0)
+    frame = session.createDataFrame([(naive,)], schema)  # type: ignore[attr-defined]
+    projected = frame.select(functions.col("ts").cast("string").alias("string_value"))
+    return _to_arrow(projected)
+
+
+def expr_string_door_projection(session: object) -> pa.Table:
+    """``F.expr('CAST(to_timestamp(…Z) AS STRING)')`` — the third facade spelling for B-TZ-4."""
+    functions = _functions_module(session)
+    frame = session.createDataFrame([(1,)], ["one"])  # type: ignore[attr-defined]
+    projected = frame.select(
+        functions.expr(f"CAST(to_timestamp('{MODERN_INSTANT}') AS STRING)").alias("string_value")
     )
     return _to_arrow(projected)
 
@@ -445,6 +506,114 @@ ROWS: list[TimestampCastRow] = [
         f"{REVERT}",
         entry_point="expr",
     ),
+    # ----- B-TZ-4: CAST(TIMESTAMP AS STRING) — recorded Spark 4.1.2 2026-08-13 -----------------
+    TimestampCastRow(
+        "timestamp_to_string_ltz_under_new_york",
+        ZONE_NEW_YORK,
+        _cast_string_sql(MODERN_INSTANT),
+        _string_value("2024-06-15 08:00:00"),
+        None,
+        "LTZ 12:00Z under America/New_York is 08:00 EDT, space-separated Utf8 — not ISO-T "
+        f"in the stored zone. {STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_ltz_under_tokyo",
+        ZONE_TOKYO,
+        _cast_string_sql(MODERN_INSTANT),
+        _string_value("2024-06-15 21:00:00"),
+        None,
+        "the same instant under Asia/Tokyo is 21:00 — session zone, not stored zone. "
+        f"{STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_ltz_under_utc",
+        ZONE_UTC,
+        _cast_string_sql(MODERN_INSTANT),
+        _string_value("2024-06-15 12:00:00"),
+        None,
+        f"UTC session: the wall equals the instant. Three zones, three walls. {STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_fraction_trims_trailing_zeros",
+        ZONE_NEW_YORK,
+        _cast_string_sql("2024-06-15T12:00:00.123400Z"),
+        _string_value("2024-06-15 08:00:00.1234"),
+        None,
+        "recorded trailing-zero shape: .123400 µs renders as .1234, not .123400 and not "
+        f"ISO-T. {STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_half_second_fraction",
+        ZONE_NEW_YORK,
+        _cast_string_sql("2024-06-15T12:00:00.5Z"),
+        _string_value("2024-06-15 08:00:00.5"),
+        None,
+        ".5 / .50 / .500000 all recorded as .5 — the trim is not a fixed 6-digit pad. "
+        f"{STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_microsecond_kept",
+        ZONE_NEW_YORK,
+        _cast_string_sql("2024-06-15T12:00:00.000001Z"),
+        _string_value("2024-06-15 08:00:00.000001"),
+        None,
+        "a single microsecond is kept (six digits, no trailing-zero left to strip). "
+        f"{STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_epoch_under_new_york",
+        ZONE_NEW_YORK,
+        _cast_string_sql(EPOCH_ZERO),
+        _string_value("1969-12-31 19:00:00"),
+        None,
+        f"epoch 1970-01-01T00:00:00Z is 1969-12-31 19:00 EST under New York. {STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "timestamp_to_string_pre_epoch_under_new_york",
+        ZONE_NEW_YORK,
+        _cast_string_sql(WHOLE_BEFORE_EPOCH),
+        _string_value("1969-12-31 18:30:00"),
+        None,
+        "1969-12-31T23:30:00Z is 18:30 EST — the day-boundary side of the epoch row. "
+        f"{STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "null_timestamp_to_string_is_null",
+        ZONE_NEW_YORK,
+        "SELECT CAST(CAST(NULL AS TIMESTAMP) AS STRING) AS string_value",
+        _string_value(None),
+        None,
+        f"a NULL instant stays NULL and the Arrow type is string, not string_view. {STRING_REVERT}",
+    ),
+    TimestampCastRow(
+        "dataframe_api_ltz_cast_to_string_under_new_york",
+        ZONE_NEW_YORK,
+        DATAFRAME_STRING_SPELLING,
+        _string_value("2024-06-15 08:00:00"),
+        None,
+        "the DataFrame door: F.col('ts').cast('string') over a tz-aware instant. Crosses PyO3 "
+        f"as a bare Expr::Cast, so a SQL-only rewrite would miss it. {STRING_REVERT}",
+        entry_point="dataframe_string",
+    ),
+    TimestampCastRow(
+        "dataframe_api_ntz_cast_to_string_under_new_york",
+        ZONE_NEW_YORK,
+        DATAFRAME_NTZ_STRING_SPELLING,
+        _string_value("2024-06-15 12:00:00"),
+        None,
+        "NTZ 12:00 under New York stays 12:00 — the session zone must not move a naive wall. "
+        f"A missing NTZ arm would emit 08:00 like the LTZ sibling. {STRING_REVERT}",
+        entry_point="dataframe_ntz_string",
+    ),
+    TimestampCastRow(
+        "expr_door_timestamp_to_string",
+        ZONE_NEW_YORK,
+        EXPR_STRING_SPELLING,
+        _string_value("2024-06-15 08:00:00"),
+        None,
+        f"the third facade spelling on the modern instant. {STRING_REVERT}",
+        entry_point="expr_string",
+    ),
 ]
 
 
@@ -481,8 +650,14 @@ def run_row(row: TimestampCastRow, session: object) -> pa.Table:
     """
     if row.entry_point == "dataframe_api":
         return dataframe_api_cast_projection(session)
+    if row.entry_point == "dataframe_string":
+        return dataframe_string_cast_projection(session)
+    if row.entry_point == "dataframe_ntz_string":
+        return dataframe_ntz_string_cast_projection(session)
     if row.entry_point == "expr":
         return expr_door_projection(session)
+    if row.entry_point == "expr_string":
+        return expr_string_door_projection(session)
     frame = session.sql(row.sql)  # type: ignore[attr-defined]
     return _to_arrow(frame)
 
@@ -537,9 +712,12 @@ def test_the_class_is_covered_per_entry_point_and_per_edge() -> None:
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
 
     entry_points = {row.entry_point for row in ROWS}
-    assert entry_points == {"sql", "dataframe_api", "expr"}, (
+    assert {"sql", "dataframe_api", "expr"}.issubset(entry_points), (
         "all three facade spellings must be present — the DataFrame door crosses PyO3 as a bare "
         "Expr::Cast and is exactly the cell a SQL-only fix would leave wrong"
+    )
+    assert {"dataframe_string", "dataframe_ntz_string", "expr_string"}.issubset(entry_points), (
+        "B-TZ-4 must pin CAST-to-STRING on the DataFrame door (LTZ and NTZ) and on F.expr"
     )
 
     # The floor edge, both signs, at the SQL door AND the DataFrame door.
@@ -581,10 +759,20 @@ def test_the_class_is_covered_per_entry_point_and_per_edge() -> None:
         "the answer"
     )
 
-    # Instant-producer type residue closed in TZ-4 PR-1; this corpus is all equality.
+    # Instant-producer type residue closed in TZ-4 PR-1; B-TZ-4 lands as equality too.
     disclosures = {row.name for row in ROWS if row.repark is not None}
     assert disclosures == set(), (
-        "TZ-4 PR-1 flipped the reverse-direction type disclosure to equality. A new disclosure "
-        "here means the fix regressed or a new class was found; either way it is an edit a "
-        "reviewer must see"
+        "TZ-4 PR-1 flipped the reverse-direction type disclosure to equality; B-TZ-4 lands as "
+        "equality against recorded Spark strings. A new disclosure here means the fix regressed "
+        "or a new class was found; either way it is an edit a reviewer must see"
+    )
+
+    string_sql = [row for row in ROWS if row.entry_point == "sql" and "AS STRING)" in row.sql]
+    assert len(string_sql) >= 8, (
+        "B-TZ-4 names LTZ + fraction-trim + epoch + zone + NULL + year-shape; "
+        f"got {len(string_sql)} SQL STRING rows"
+    )
+    string_zones = {row.session_time_zone for row in string_sql}
+    assert string_zones == {ZONE_NEW_YORK, ZONE_TOKYO, ZONE_UTC}, (
+        "CAST(ts AS STRING) is session-zone-sensitive; three zones are the measurement"
     )
