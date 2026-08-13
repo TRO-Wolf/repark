@@ -136,13 +136,13 @@ use crate::write::scan_prune::{
 
 /// The reserved `_file` metadata column the core scan projects (fork `metadata_columns.rs`
 /// `RESERVED_COL_NAME_FILE`) — the file path, one half of the streamed row identity.
-const FILE_PATH_COL: &str = "_file";
+pub(super) const FILE_PATH_COL: &str = "_file";
 
 /// The reserved `_pos` metadata column the core scan projects (fork `metadata_columns.rs`
 /// `RESERVED_COL_NAME_POS`, surfaced at rev `c10ea425`) — the per-file 0-based physical ordinal.
 /// `(_file, _pos)` is the stable, re-scan-invariant per-row identity the streamed target join uses,
 /// superseding the former materialize-time synthesized `__repark_row_id` counter.
-const POS_COL: &str = "_pos";
+pub(super) const POS_COL: &str = "_pos";
 
 /// Prefix of the sentinel column added to the source side so `LEFT JOIN` match-detection never
 /// depends on the nullability of user join keys. The full name gets a per-execution UUID suffix:
@@ -455,7 +455,7 @@ fn note_residual_push() {}
 /// `Err` and `Ok(None)` are treated as failed cleanup and warned. Returns `Ok(())` only when a
 /// table was actually removed (`Ok(Some(_))`). The `Err` return is for tests / callers that need
 /// to assert the failure path; `execute_merge` discards it.
-fn deregister_merge_scratch(
+pub(super) fn deregister_merge_scratch(
     ctx: &SessionContext,
     target_name: &str,
 ) -> std::result::Result<(), DataFusionError> {
@@ -565,7 +565,7 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
 /// The scratch target adds `_file` + `_pos` to the TARGET's columns; a target column with one of
 /// those names would collide with the reserved metadata columns, so refuse it outright. (The
 /// source-side match sentinel needs no guard — its name is UUID-suffixed per execution.)
-fn reserved_name_guard(write_schema: &ArrowSchema) -> Result<()> {
+pub(super) fn reserved_name_guard(write_schema: &ArrowSchema) -> Result<()> {
     for reserved in [FILE_PATH_COL, POS_COL] {
         if write_schema.field_with_name(reserved).is_ok() {
             return Err(DataFusionError::Plan(format!(
@@ -747,7 +747,7 @@ async fn source_column_names(ctx: &SessionContext, spec: &MergeSpec) -> Result<V
 /// the two reserved metadata columns the pinned core scan surfaces, together the `(_file, _pos)`
 /// per-row identity the merge queries group and anti-join on.
 /// ===========================================================================================
-fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
+pub(super) fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
     let mut fields: Vec<Field> = write_schema
         .fields()
         .iter()
@@ -774,7 +774,7 @@ fn scratch_schema(write_schema: &SchemaRef) -> SchemaRef {
 /// materialize-once synthesized counter could not have been re-derived.
 /// ===========================================================================================
 #[derive(Debug)]
-struct TargetScanStream {
+pub(super) struct TargetScanStream {
     table: Table,
     snapshot_id: Option<i64>,
     scratch_schema: SchemaRef,
@@ -795,7 +795,7 @@ struct TargetScanStream {
 
 impl TargetScanStream {
     /// The select list is the target's data columns followed by the two identity metadata columns.
-    fn new(
+    pub(super) fn new(
         table: Table,
         snapshot_id: Option<i64>,
         scratch_schema: SchemaRef,
@@ -940,7 +940,7 @@ fn conform_scan_batch(scratch: &SchemaRef, batch: &RecordBatch) -> Result<Record
 /// collected (OTH-001/SAF-001). The caller deregisters it when the merge finishes (success or
 /// failure). This is the seam the memory-profile pin mutates: swapping the `StreamingTable` for a
 /// collect-then-`MemTable` here materializes the entire target up front and turns the pin RED.
-fn register_streaming_target(
+pub(super) fn register_streaming_target(
     ctx: &SessionContext,
     scratch_schema: SchemaRef,
     source: Arc<dyn PartitionStream>,
@@ -1177,7 +1177,7 @@ async fn plan_and_commit_mor(
 /// uses (fork computed-transform mode). QUAL-08: the superseded collect-then-write adapter
 /// (`write_new_data_files` / `insert_rows`) was deleted — stream-out is the only path.
 /// ===========================================================================================
-async fn write_new_data_files_from_stream<S>(
+pub(super) async fn write_new_data_files_from_stream<S>(
     table: &Table,
     write_schema: &SchemaRef,
     stream: S,
@@ -1228,7 +1228,10 @@ async fn stream_sql(
 /// concurrent merge-on-read `DELETE` whose delete file targets a rewritten data file would be
 /// silently resurrected.
 /// ===========================================================================================
-async fn resolve_affected_data_files(table: &Table, affected: &[String]) -> Result<Vec<DataFile>> {
+pub(super) async fn resolve_affected_data_files(
+    table: &Table,
+    affected: &[String],
+) -> Result<Vec<DataFile>> {
     // Span is the P2a hour-0 measurement seam for scout #6 (manifest walk share of MERGE wall).
     async {
         if affected.is_empty() {
@@ -2389,6 +2392,31 @@ where
     Ok(files)
 }
 
+/// Isolation for overwrite / row-delta commit. MERGE is always serializable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum IsolationLevel {
+    /// Reject concurrent conflicting data and deletes.
+    Serializable,
+    /// Reject only concurrent conflicting deletes.
+    Snapshot,
+}
+
+/// Java row-delta recipe. MERGE keeps the UPDATE/MERGE guard set.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RowDeltaKind {
+    /// MERGE — UPDATE/MERGE validations (Java L251-254 + serializable data).
+    Merge,
+    /// SQL DELETE — no `validate_deleted_files` / `validate_no_conflicting_delete_files`.
+    Delete,
+}
+
+/// Verb recipe + isolation for [`commit_row_delta_kind`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct RowDeltaPolicy {
+    pub kind: RowDeltaKind,
+    pub isolation: IsolationLevel,
+}
+
 /// ===========================================================================================
 /// One atomic commit. Files rewritten ⇒ `OverwriteFiles` under the `ENGINE_CONTRACT` §5 COW
 /// SERIALIZABLE-isolation recipe (row 142, Java's MERGE default) — BOTH
@@ -2407,6 +2435,26 @@ async fn commit(
     snapshot_id: Option<i64>,
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
+) -> Result<()> {
+    commit_overwrite(
+        catalog,
+        table,
+        snapshot_id,
+        affected,
+        new_files,
+        IsolationLevel::Serializable,
+    )
+    .await
+}
+
+/// Copy-on-write overwrite commit. MERGE calls [`commit`] (always serializable).
+pub(super) async fn commit_overwrite(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    snapshot_id: Option<i64>,
+    affected: Vec<DataFile>,
+    new_files: Vec<DataFile>,
+    isolation: IsolationLevel,
 ) -> Result<()> {
     if affected.is_empty() && new_files.is_empty() {
         return Ok(());
@@ -2433,9 +2481,11 @@ async fn commit(
             .overwrite_files()
             .add_files(new_files)
             .conflict_detection_filter(Predicate::AlwaysTrue)
-            .validate_no_conflicting_data()
             .case_sensitive(true)
             .set_snapshot_properties(summary);
+        if isolation == IsolationLevel::Serializable {
+            action = action.validate_no_conflicting_data();
+        }
         if let Some(pin) = snapshot_id {
             action = action.validate_from_snapshot(pin);
         }
@@ -2464,9 +2514,11 @@ async fn commit(
             .add_files(new_files)
             .conflict_detection_filter(Predicate::AlwaysTrue)
             .validate_no_conflicting_deletes()
-            .validate_no_conflicting_data()
             .case_sensitive(true)
             .set_snapshot_properties(summary);
+        if isolation == IsolationLevel::Serializable {
+            action = action.validate_no_conflicting_data();
+        }
         if let Some(pin) = snapshot_id {
             action = action.validate_from_snapshot(pin);
         }
@@ -2519,6 +2571,31 @@ async fn commit_row_delta(
     data_files: Vec<DataFile>,
     concurrency: WriteConcurrency,
 ) -> Result<()> {
+    commit_row_delta_kind(
+        catalog,
+        table,
+        snapshot_id,
+        pairs,
+        data_files,
+        concurrency,
+        RowDeltaPolicy {
+            kind: RowDeltaKind::Merge,
+            isolation: IsolationLevel::Serializable,
+        },
+    )
+    .await
+}
+
+/// Position-delete `RowDelta` commit. MERGE calls [`commit_row_delta`] (Merge + serializable).
+pub(super) async fn commit_row_delta_kind(
+    catalog: &Arc<dyn Catalog>,
+    table: &Table,
+    snapshot_id: Option<i64>,
+    pairs: Vec<crate::write::position_delete::PositionDeletePair>,
+    data_files: Vec<DataFile>,
+    concurrency: WriteConcurrency,
+    policy: RowDeltaPolicy,
+) -> Result<()> {
     if pairs.is_empty() && data_files.is_empty() {
         return Ok(());
     }
@@ -2547,11 +2624,17 @@ async fn commit_row_delta(
         .add_deletes(delete_files)
         .conflict_detection_filter(Predicate::AlwaysTrue)
         .validate_data_files_exist(referenced)
-        .validate_deleted_files()
-        .validate_no_conflicting_delete_files()
-        .validate_no_conflicting_data_files()
         .case_sensitive(true)
         .set_snapshot_properties(summary);
+    // Java `SparkPositionDeltaWrite.commit` L251-254: UPDATE/MERGE only, not DELETE.
+    if matches!(policy.kind, RowDeltaKind::Merge) {
+        action = action
+            .validate_deleted_files()
+            .validate_no_conflicting_delete_files();
+    }
+    if policy.isolation == IsolationLevel::Serializable {
+        action = action.validate_no_conflicting_data_files();
+    }
     if let Some(pin) = snapshot_id {
         action = action.validate_from_snapshot(pin);
     }
@@ -2594,7 +2677,7 @@ fn sql_literal(value: &str) -> String {
 /// column names, so a name containing `"` must not break out of the identifier.
 ///
 /// Delegates to [`crate::write::idents::quote_ident_spark`] (r23 QI1 single-source Spark/DF dialect).
-fn quote_ident(name: &str) -> String {
+pub(super) fn quote_ident(name: &str) -> String {
     crate::write::idents::quote_ident_spark(name)
 }
 

@@ -45,18 +45,20 @@ v1 crate-root re-export lists.
 | Get an AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `src/catalog/` |
 | Build the Glue (primary) or S3 Tables (secondary) catalog | `glue_catalog` / `s3tables_catalog` in `src/catalog/` |
 | MERGE INTO / append / overwrite / ALTER / snapshot refs | [src/write/map.md](src/write/map.md) |
-| Wire DELETE/UPDATE/INSERT OVERWRITE | nothing here — DataFusion plans them onto the fork's `TableProvider` |
+| Identity DELETE (subquery `WHERE`) | `src/write/predicate_dml.rs` |
+| Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
 | Change credential handling | not here — AWS SDK default chain *inside the fork* |
 
 ## Component contract
 
 - **Owns:** the Iceberg surface — Glue (primary) + S3 Tables (secondary) catalog wiring for
   DataFusion (`catalog/`); the thin Spark-semantics write adapter over the owned fork (`write/`:
-  RePark-owned MERGE INTO, bulk `append`, stage-then-swap `INSERT OVERWRITE`, `ALTER` primitives); the
+  RePark-owned MERGE INTO, identity DELETE (`predicate_dml`), bulk `append`, stage-then-swap
+  `INSERT OVERWRITE`, `ALTER` primitives); the
   `[patch.crates-io]` fork-pin consumers.
 - **Does not own:** the table-format engine (write actions, evolution, snapshots, maintenance — those
-  live **in the fork**); DELETE / UPDATE / INSERT (planned onto the fork's `TableProvider`); the
-  session + error fold (repark-core).
+  live **in the fork**); ordinary (non-subquery) DELETE / UPDATE / INSERT (planned onto the fork's
+  `TableProvider`); the session + error fold (repark-core).
 - **Public inputs:** a DataFusion `SessionContext` + catalog config; write plans / batches from the
   session; MERGE / append / overwrite calls.
 - **Public outputs:** registered `CatalogProvider`s (three-part names resolve); committed snapshots;

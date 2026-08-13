@@ -12,8 +12,8 @@ Source for `repark-iceberg` — two independent module trees ported from v1 crat
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
   registration, scheme-based `FileIO` selection, and the hoisted `reregister_catalog_provider`
   session-refresh adapter (`catalog_ops.rs`). See [catalog/map.md](catalog/map.md).
-- `write/` — MERGE INTO / append / overwrite / ALTER / snapshot refs over the owned fork.
-  See [write/map.md](write/map.md).
+- `write/` — MERGE INTO / identity DELETE (`predicate_dml`) / append / overwrite / ALTER /
+  snapshot refs over the owned fork. See [write/map.md](write/map.md).
 - `fork_pin_tests.rs` — `cfg(test)`-only fork-pin proof (ADR-0001): names + exercises
   fork-only public API (`iceberg::plan_commit_base_load` / `CommitBaseLoadPlan`), so the test
   target compile-fails on a silent crates.io registry fallback.

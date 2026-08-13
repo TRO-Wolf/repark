@@ -317,11 +317,16 @@ async fn execute_delete(
     }
     // ObjectName only — never TableWithJoins Display (aliases would under-refuse BUG-001).
     let object_name = delete_target_object_name(delete);
-    refuse_dml_subquery_predicate(
-        DmlSubqueryVerb::Delete,
-        delete.selection.as_ref(),
-        &object_name.map_or_else(|| "<table>".to_string(), ToString::to_string),
-    )?;
+    {
+        let as_statement = datafusion::sql::sqlparser::ast::Statement::Delete(delete.clone());
+        if repark_iceberg::write::predicate_dml::try_allowed_delete_in(&as_statement)?.is_none() {
+            refuse_dml_subquery_predicate(
+                DmlSubqueryVerb::Delete,
+                delete.selection.as_ref(),
+                &object_name.map_or_else(|| "<table>".to_string(), ToString::to_string),
+            )?;
+        }
+    }
     refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Delete).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }

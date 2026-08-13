@@ -22,6 +22,11 @@ repark-core's error map.
   snapshot-ref helpers.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). See [merge/map.md](merge/map.md).
+- `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
+  `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
+  MERGE COW/MoR write arms honoring `write.delete.mode` / isolation — **never**
+  `write.merge.mode`. Product hole is the valve allow-list (uncorrelated `DELETE … IN (SELECT …)`
+  only). Pins: [predicate_dml_tests.rs](predicate_dml_tests.rs).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
   extra / duplicate column = loud error; strict casts, overflow never NULLs) → identity-
   partition fanout write → ONE stamped `fast_append` commit (append×append commutes via the
@@ -84,7 +89,8 @@ repark-core's error map.
 | Cap concurrent Iceberg file writers (session conf) | `repark.write.max-concurrent-files` via `concurrency.rs` |
 | Parquet compression codec (table property) | `writer_props.rs` |
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
-| Wire DELETE/UPDATE/INSERT OVERWRITE | nothing here — DataFusion → fork `TableProvider` |
+| Identity DELETE/UPDATE (subquery `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
+| Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
 | CREATE/DROP BRANCH or TAG | `snapshot_refs.rs` |
 
 ## Pointers

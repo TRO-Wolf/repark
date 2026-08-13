@@ -180,7 +180,8 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         }
     };
 
-    // Every WHERE spelling that carries a subquery must refuse …
+    // Every WHERE spelling that carries a subquery must refuse at the *expression* valve …
+    // (the product hole is statement-shaped only — see `g3e8_statement_valve`.)
     for sql in [
         "DELETE FROM t WHERE id IN (SELECT id FROM k)",
         "DELETE FROM t WHERE id NOT IN (SELECT id FROM k)",
@@ -198,6 +199,8 @@ fn g3e8_subquery_detector_fires_on_every_spelling_and_no_other() {
         "DELETE FROM t WHERE CASE WHEN id IN (SELECT id FROM k) THEN true ELSE false END",
         // subquery nested inside another subquery's FROM
         "DELETE FROM t WHERE id IN (SELECT id FROM (SELECT id FROM k) AS x)",
+        // UPDATE IN stays refused at the statement valve (verb is Update). The expression-level
+        // helper is verb-aware and would allow the same selection on DELETE; pin it with EXISTS.
         "UPDATE t SET name = 'z' WHERE id IN (SELECT id FROM k)",
         // The three spellings the panel found missing from the matrix (L1 M-4): none of them is
         // safe-because-uncorrelated — the safe/unsafe boundary is per-shape.
@@ -270,7 +273,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
     // parse rejects (the panel's bypass family) and the quoted one the text scan cannot read.
     for (sql, expected_target, verb) in [
         (
-            "DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM k)",
+            "DELETE FROM ice.sales.t WHERE id NOT IN (SELECT id FROM k)",
             "ice.sales.t",
             "DELETE",
         ),
@@ -280,8 +283,13 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
             "UPDATE",
         ),
         (
-            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE id IN (SELECT id FROM k)",
+            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE id NOT IN (SELECT id FROM k)",
             "\"ice\".\"sales\".\"t\"",
+            "DELETE",
+        ),
+        (
+            "DELETE FROM ice.sales.t WHERE EXISTS (SELECT 1 FROM k)",
+            "ice.sales.t",
             "DELETE",
         ),
     ] {
@@ -302,6 +310,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
     // SELECT with a subquery is not this valve's business — the passthrough plans it).
     for sql in [
         "DELETE FROM ice.sales.t WHERE id = 2",
+        "DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM k)",
         "UPDATE ice.sales.t SET name = 'z' WHERE id IN (1, 2)",
         "DELETE FROM ice.sales.t",
         "SELECT id FROM t WHERE id IN (SELECT id FROM k)",

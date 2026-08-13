@@ -21,6 +21,9 @@ not this directory.
   un-coerces facade `avg(DECIMAL)` (decimal retract, Spark `(p+4,s+4)`). U2
   (`parse_float_as_decimal=true` Spark-door default) is a **named morning deferral**
   — blast reds files outside the A1 writable set. Does **not** edit the registry.
+- [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) — **Z-1 / G3-E8 PR-1 in flight:**
+  A1-identity DELETE path + uncorrelated `DELETE … IN (SELECT …)` product hole. Residual
+  spellings stay refused. Does **not** edit the registry (Z-5 owns it).
 - [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
   collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
   paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does
@@ -207,6 +210,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Check a rule before acting | [lessons.md](lessons.md) |
 | See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |
+| See which G3-E8 spelling now executes (IN-DELETE) | [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) |
 | Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
 | See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) |
 | See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
