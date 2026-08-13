@@ -593,6 +593,9 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
         // through untouched (this arm is what the router's `_ =>` fallthrough relies on).
         "SELECT id FROM t WHERE id IN (SELECT id FROM k)",
         "INSERT INTO t SELECT id FROM k WHERE id IN (SELECT id FROM k2)",
+        // Three-part IN / NOT IN skip the valve (product hole). 1-part names stay refused above.
+        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
     ] {
         refuse_dml_subquery_predicate(&parsed(sql))
             .unwrap_or_else(|err| panic!("the valve must NOT fire on {sql:?}: {err}"));
@@ -602,7 +605,7 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
 /// The refusal names the verb it refused, so a user is not told to rewrite the wrong statement.
 #[test]
 fn dml_subquery_refusal_names_its_verb_and_target() {
-    let sql = "DELETE FROM ice.sales.t WHERE id NOT IN (SELECT id FROM ice.sales.k)";
+    let sql = "DELETE FROM ice.sales.t WHERE EXISTS (SELECT 1 FROM ice.sales.k)";
     let delete = refuse_dml_subquery_predicate(&parsed(sql))
         .unwrap_err()
         .to_string();
@@ -635,7 +638,7 @@ fn dml_subquery_refusal_names_its_verb_and_target() {
 fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
     for (sql, expected) in [
         (
-            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE id NOT IN (SELECT id FROM ice.sales.k)",
+            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE EXISTS (SELECT 1 FROM ice.sales.k)",
             "\"ice\".\"sales\".\"t\"",
         ),
         (
@@ -645,12 +648,12 @@ fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
         ),
         // FROM-less DELETE — the Spark spelling the Spark door's own router parse rejects.
         (
-            "DELETE ice.sales.t WHERE id NOT IN (SELECT id FROM ice.sales.k)",
+            "DELETE ice.sales.t WHERE EXISTS (SELECT 1 FROM ice.sales.k)",
             "ice.sales.t",
         ),
         // A comment between the verb and the target used to shift the text scan's word cursor.
         (
-            "DELETE /* why */ FROM ice.sales.t WHERE id NOT IN (SELECT id FROM ice.sales.k)",
+            "DELETE /* why */ FROM ice.sales.t WHERE EXISTS (SELECT 1 FROM ice.sales.k)",
             "ice.sales.t",
         ),
     ] {
@@ -783,8 +786,8 @@ async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
         "DELETE FROM ice.sales.sqtgt WHERE NOT EXISTS \
          (SELECT 1 FROM ice.sales.sqkeys k WHERE k.id = ice.sales.sqtgt.id)",
         "UPDATE ice.sales.sqtgt SET id = 9 WHERE id IN (SELECT id FROM ice.sales.sqkeys)",
-        // The FROM-less residual spelling (IN itself now executes — see the pin below).
-        "DELETE ice.sales.sqtgt WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)",
+        // The FROM-less residual spelling (IN / NOT IN now execute — see the pin below).
+        "DELETE ice.sales.sqtgt WHERE EXISTS (SELECT 1 FROM ice.sales.sqkeys)",
         // Uncorrelated NOT EXISTS and the aggregate-scalar IN — F-D's added spellings, executed.
         "DELETE FROM ice.sales.sqtgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.sqkeys)",
         "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT max(id) FROM ice.sales.sqkeys)",
@@ -830,6 +833,58 @@ async fn dml_subquery_in_delete_executes_and_deletes_exactly_the_match() {
         .ok("DELETE ice.sales.sqtgt WHERE id IN (SELECT id FROM ice.sales.sqkeys)")
         .await;
     assert_eq!(fromless.target_ids().await, vec![1, 3]);
+}
+
+/// PR-2 product hole: uncorrelated `DELETE … NOT IN (SELECT …)` including the NULL 3VL trap.
+#[tokio::test]
+async fn dml_subquery_not_in_delete_executes_and_honors_three_valued_logic() {
+    let door = AnsiDoor::new().await;
+    door.ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    door.ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
+        .await;
+    door.ok("DELETE FROM ice.sales.sqtgt WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)")
+        .await;
+    assert_eq!(door.target_ids().await, vec![2]);
+
+    let empty = AnsiDoor::new().await;
+    empty
+        .ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    empty
+        .ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id WHERE 1 = 0")
+        .await;
+    empty
+        .ok("DELETE FROM ice.sales.sqtgt WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)")
+        .await;
+    assert_eq!(empty.target_ids().await, Vec::<i64>::new());
+
+    let trap = AnsiDoor::new().await;
+    trap.ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    trap.ok(
+        "CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id UNION ALL SELECT CAST(NULL AS BIGINT)",
+    )
+    .await;
+    trap.ok("DELETE FROM ice.sales.sqtgt WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)")
+        .await;
+    assert_eq!(
+        trap.target_ids().await,
+        vec![1, 2, 3],
+        "ANY NULL in the subquery ⇒ NOT IN matches zero rows"
+    );
+
+    let fromless = AnsiDoor::new().await;
+    fromless
+        .ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    fromless
+        .ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
+        .await;
+    fromless
+        .ok("DELETE ice.sales.sqtgt WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)")
+        .await;
+    assert_eq!(fromless.target_ids().await, vec![2]);
 }
 
 /// Guard ORDER on this door (F-B): a table that trips BOTH data-loss valves reports **G3-E8**,
@@ -884,7 +939,10 @@ async fn mor_valve_runs_after_the_g3e8_valve() {
 
     // The doubly-hazardous statement: G3-E8 wins, and the BUG-001 message is nowhere in it.
     let both = door
-        .err("DELETE FROM ice.sales.sqtgt WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)")
+        .err(
+            "DELETE FROM ice.sales.sqtgt WHERE EXISTS \
+             (SELECT 1 FROM ice.sales.sqkeys k WHERE k.id = ice.sales.sqtgt.id)",
+        )
         .await;
     assert!(
         both.contains("subquery predicates are silently mis-executed") && both.contains("G3-E8"),

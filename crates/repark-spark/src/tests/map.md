@@ -103,6 +103,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
   (`g3e8_delete_in_subquery_deletes_exactly_the_matching_row`, quoted + temp-view,
   FROM-less IN). Residual refuse family + valve-ORDER pin restated over NOT IN / EXISTS.
   Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/z1-g3e8-pr1-ledger.md).
+- **W-3 / G3-E8 PR-2 (2026-08-13)** — NOT IN + NULL trap execute
+  (`g3e8_delete_not_in_subquery_*`, empty subquery, quoted + FROM-less). Residual refuse
+  family + valve-ORDER pin restated over EXISTS / nested / UPDATE. Ledger:
+  [`../../../../task/w3-g3e8-pr2-ledger.md`](../../../../task/w3-g3e8-pr2-ledger.md).
   `normalize.rs` gained **2**: the detector unit pin
   (`g3e8_subquery_detector_fires_on_every_spelling_and_no_other`) and the statement-level valve
   pin (`g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target`, the entry point

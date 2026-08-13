@@ -32,6 +32,9 @@ not this directory.
   `parse_float_as_decimal=true` default (DEC-1). Named blast-list flips + wider
   fixture sweep. TY-3 still DECLARED (residual U3). Does **not** edit the registry
   (W-5 owns it; DEC-1 FIXED text is paste-true here).
+- [w3-g3e8-pr2-ledger.md](w3-g3e8-pr2-ledger.md) — **W-3 / G3-E8 PR-2:** uncorrelated
+  `DELETE … NOT IN (SELECT …)` + the NULL 3VL trap as one unit. Residual EXISTS / UPDATE /
+  nested / scalar stay refused. Does **not** edit the registry (W-5 owns it).
 - [z3-dec-u1u2-ledger.md](z3-dec-u1u2-ledger.md) — **Z-3 / DEC U1+U2 (#76):** U1
   un-coerced facade `avg(DECIMAL)` (decimal retract, Spark `(p+4,s+4)`). U2
   (`parse_float_as_decimal=true` Spark-door default) was a **named morning deferral**
@@ -231,6 +234,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |
 | See which G3-E8 spelling now executes (IN-DELETE) | [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) |
+| See which G3-E8 spelling now executes (NOT IN + NULL trap) | [w3-g3e8-pr2-ledger.md](w3-g3e8-pr2-ledger.md) |
 | Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
 | See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) · [w5-z-landing-ledger.md](w5-z-landing-ledger.md) (Z wave) |
 | See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |

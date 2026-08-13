@@ -9,9 +9,10 @@ engine now **refuses** the whole class (the G3-E8 valve, both SQL doors); the ca
 returns in a later unit. These rows record what live Spark does for each spelling **now**, so the
 fix unit inherits its oracle instead of re-deriving one under time pressure.
 
-**Row kinds.** Every subquery row is a **split**: repark refuses (its needle is pinned) and the
-Spark half is the recorded post-DML table. Two **content** rows are plain equality controls with
-non-subquery predicates — without them a comparator that always "passed" would go unnoticed.
+**Row kinds.** Residual subquery rows are **split**: repark refuses (its needle is pinned) and the
+Spark half is the recorded post-DML table. **content** rows include two non-subquery equality
+controls plus the executed holes (`DELETE … IN`, `DELETE … NOT IN` and its 3VL / empty-subquery
+companions). Without the non-subquery controls a comparator that always "passed" would go unnoticed.
 
 **The NULL trap is recorded, not reasoned.** ``NOT IN`` over a subquery whose result contains NULL
 is SQL's three-valued-logic trap: every row's test evaluates to UNKNOWN, so Spark matches
@@ -237,7 +238,7 @@ READ_BACK = "SELECT id, name FROM {target} ORDER BY id"
 
 
 # ==================================================================================================
-# The corpus (defect G3-E8: 10 rows — 8 split + 2 equality controls; budget 8-10)
+# The corpus (defect G3-E8: 10 rows — 5 residual splits + 5 content; budget 8-11)
 # ==================================================================================================
 
 ROWS: list[DmlSubqueryRow] = [
@@ -287,23 +288,22 @@ ROWS: list[DmlSubqueryRow] = [
     # ----- 4. DELETE … NOT IN (subquery) ---------------------------------------------------------
     DmlSubqueryRow(
         name="delete_not_in_subquery",
-        kind="split",
+        kind="content",
         dml_sql="DELETE FROM {target} WHERE id NOT IN (SELECT id FROM {keys})",
         read_sql=READ_BACK,
         spark=_table(
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [2], "name": ["b"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
         note=(
-            "anti-join spelling: the optimizer rewrites it to a LeftAnti join, from which the DML "
-            "filter walk recovers nothing. Spark keeps only the key row."
+            "anti-join spelling: identity SELECT keeps only the key row (Spark `{2}`). Flipped "
+            "split → content when PR-2 proved DataFusion 3VL matches the recorded golden."
         ),
     ),
     # ----- 5. DELETE … NOT IN (subquery WITH A NULL) — the three-valued-logic trap ---------------
     DmlSubqueryRow(
         name="delete_not_in_subquery_with_null_key",
-        kind="split",
+        kind="content",
         keys_seed_sql=KEYS_SEED_WITH_NULL,
         dml_sql="DELETE FROM {target} WHERE id NOT IN (SELECT id FROM {keys})",
         read_sql=READ_BACK,
@@ -311,11 +311,11 @@ ROWS: list[DmlSubqueryRow] = [
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1, 2, 3], "name": ["a", "b", "c"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
         note=(
             "SQL three-valued logic: with a NULL in the subquery result, `id NOT IN (…)` is "
             "UNKNOWN for EVERY row, so Spark deletes NOTHING. The golden is what live Spark did — "
-            "the fix must reproduce this, not the intuitive 'delete the non-matching rows'."
+            "the identity SELECT must reproduce this, not the intuitive 'delete the non-matching "
+            "rows'."
         ),
     ),
     # ----- 6. DELETE … EXISTS (correlated) -------------------------------------------------------
@@ -508,7 +508,7 @@ def test_refusal_leaves_every_row_untouched(repark: ReparkSession) -> None:
     post-refusal contents. This row keeps the target alive and reads it back — the assertion that
     would have caught the original defect (the table came back EMPTY).
     """
-    row = next(item for item in ROWS if item.name == "delete_not_in_subquery")
+    row = next(item for item in ROWS if item.name == "delete_exists_correlated")
     fq_target = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue")
     fq_keys = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue_keys")
     ensure_namespace(repark, REPARK_CATALOG, REPARK_NAMESPACE)
@@ -549,11 +549,11 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     Coverage assertions are NAME-gated so a control row cannot satisfy them (the tautological-pin
     lesson: a family pin that any row can green is not a pin).
     """
-    assert 8 <= len(ROWS) <= 10, f"G3-E8 budget 8-10 rows (got {len(ROWS)})"
+    assert 8 <= len(ROWS) <= 11, f"G3-E8 budget 8-11 rows (got {len(ROWS)})"
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
 
     splits = [row for row in ROWS if row.kind == "split"]
-    assert 6 <= len(splits) <= 10, f"6-10 split rows required (got {len(splits)})"
+    assert 4 <= len(splits) <= 10, f"4-10 residual split rows required (got {len(splits)})"
 
     controls = [row for row in ROWS if row.kind == "content"]
     assert controls, (
@@ -565,8 +565,12 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
         # PR-1 flips `delete_in_subquery` to content — that one spelling is allowed to
         # carry a subquery. Every other content row must stay subquery-free (panel L1 N-3).
         has_subquery = re.search(r"\(\s*SELECT", control.dml_sql, re.IGNORECASE) is not None
-        if control.name == "delete_in_subquery":
-            assert has_subquery, f"{control.name}: the IN-DELETE content hole must keep its IN"
+        if control.name in {
+            "delete_in_subquery",
+            "delete_not_in_subquery",
+            "delete_not_in_subquery_with_null_key",
+        }:
+            assert has_subquery, f"{control.name}: the content hole must keep its subquery"
             assert control.repark_error_needle is None
             continue
         assert not has_subquery, (
@@ -576,18 +580,20 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
 
     names = {row.name for row in splits}
     for needle in (
-        "delete_not_in_subquery",
         "delete_exists_correlated",
         "delete_not_exists_correlated",
         "delete_correlated_in_subquery",
         "update_in_subquery",
+        "update_not_in_subquery_with_null_key",
     ):
         assert needle in names, f"missing split coverage for {needle!r}"
     contents = {row.name for row in ROWS if row.kind == "content"}
     assert "delete_in_subquery" in contents, "IN-DELETE is the PR-1 content hole"
+    assert "delete_not_in_subquery" in contents, "NOT IN-DELETE is the PR-2 content hole"
+    assert "delete_not_in_subquery_with_null_key" in contents, "NOT IN NULL trap is content"
 
-    # The NULL trap needs BOTH verbs — the classic Spark semantics surprise, per entry point.
-    null_rows = [row for row in splits if row.name.endswith("_with_null_key")]
+    # The NULL trap needs BOTH verbs — DELETE now executes; UPDATE stays refused.
+    null_rows = [row for row in ROWS if row.name.endswith("_with_null_key")]
     assert len(null_rows) >= 2, "NOT IN with a NULL key must be pinned for DELETE *and* UPDATE"
     for row in null_rows:
         assert "NOT IN" in row.dml_sql, f"{row.name}: the NULL trap row must use NOT IN"
@@ -596,6 +602,10 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
             f"{row.name}: the recorded Spark golden must show NOTHING matched (all 3 rows "
             f"survive) — if it does not, the trap was not exercised"
         )
+    delete_trap = next(row for row in null_rows if row.name.startswith("delete_"))
+    update_trap = next(row for row in null_rows if row.name.startswith("update_"))
+    assert delete_trap.kind == "content", "DELETE NULL trap is the PR-2 content hole"
+    assert update_trap.kind == "split", "UPDATE NULL trap stays refused (UPDATE is out of scope)"
 
     # Every split row pins the guard's OWN needle, never a generic failure.
     for row in splits:
