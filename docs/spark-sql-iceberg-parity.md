@@ -288,6 +288,24 @@ them, and the document is ordered by surface, never by date.
   names this section, and it reds if either half of the claim stops being true — including if the
   divergence silently disappears.
 
+> **G11 closed: not parity — correctness (2026-08-12, Y-10 / #67).** Spark is not the ANSI
+> door's oracle (owner ruling 2026-08-12, Option A). The ANSI door serves standard SQL;
+> matching Spark is the Spark door's job. Six INTENDED door-vs-door splits are pinned in
+> `crates/repark-sql/tests/cross_door.rs` (`cross_door_integer_division_*`,
+> `cross_door_*_div_by_zero_*`, `cross_door_order_by_*`). Six ANSI-door standard-SQL value
+> pins live in `crates/repark-sql/tests/ansi_door_values.rs`. Identifier case folding remains
+> this section's [ID-1](#id-1--a-quoted-identifier-resolves-case-sensitively) (cited, not
+> duplicated).
+>
+> **F-Y10-1 / F-Y10-2 — routed, not invented as DEC rows (2026-08-13, Z-5).** F-Y10-1
+> (`CAST(2147483647 AS INT) + CAST(1 AS INT)` wraps on **both** doors) is the integer analog
+> of [DEC-6](#dec-6--max-decimal380--1-under-ansi-returns-a-corrupted-value). The 2026-08-13
+> DEC addendum (Q11 = A) puts ANSI overflow on campaign U5 / G13; wrap is not pinned as
+> intended and is not a new DEC row. F-Y10-2 (ANSI float `/ 0` is IEEE `+Inf` rather than a
+> standard-SQL raise) is residual; the door-vs-door Inf-vs-NULL split is already an INTENDED
+> pin (`cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark`). It is not
+> [DEC-7](#dec-7--decimal--0-under-ansi-returns-null) (decimal).
+
 ### ID-2 — the case-collision refusal covers the SQL-string form only
 
 - **repark** — on a frame carrying both `id` and `ID`, the SQL-string predicate
@@ -477,8 +495,11 @@ them, and the document is ordered by surface, never by date.
   for each database. *(oracle: documented — field shape / filled location from the Catalog API.)*
 - **Pin** — `python/repark/tests/test_catalog_surface.py::test_list_databases_location_uri_none_divergence`
 - **Rationale** — DECLARED. Inventing a location would be a silent lie; leaving the fields `None`
-  is honest about what the SHOW primitive carries. Revisit if namespace metadata readback gains a
-  real location source.
+  is honest about what the SHOW primitive carries. **Y-3 / #69 (2026-08-12):** `getDatabase` now
+  returns the stored `locationUri` and `description` (DESCRIBE NAMESPACE; pin
+  `python/repark/tests/test_catalog_surface.py::test_get_database_returns_location_and_comment`).
+  This row's `listDatabases` half is unchanged (`locationUri` / `description` remain `None`).
+  Revisit if list-side metadata readback gains a real location source.
 
 ### FA-3 — Python-argument wrappers subclass `RuntimeError`
 
@@ -879,6 +900,10 @@ the pin rather than obeying it.
 > **The 2026-08-12 landing-truth sweep (L-1)** pasted the overnight-wave §6 handoffs after
 > re-verifying each against merged `main` (`baf6617`). Equalities and already-landed pins are
 > classified in `task/l1-landing-truth-ledger.md`, not restated here.
+>
+> **The 2026-08-13 Y-wave increment (Z-5)** pasted the merged Y-wave §6 handoffs after
+> re-verifying each against frozen `9b2dce3` (PRs #66–#72). Classification:
+> [`task/z5-landing-increment-ledger.md`](../task/z5-landing-increment-ledger.md).
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -897,8 +922,7 @@ the pin rather than obeying it.
   **non-null** `1577836800` (unix seconds).
 - **Apache Spark** — same value and Arrow type; the CAST is typed **nullable**.
   *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_spark_seconds_repark_raises]`
-  (name kept byte-identical after the #64 flip; rename queued per relocation discipline).
+- **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[timestamp_to_int_nullability]`
 - `live-mirror: cast_timestamp_to_int_nullability`
 - **Rationale** — BACKLOG, intent to FIX or DECLARE (same class as G12 null-safe-equal
   nullability). X-1 originally queued this as raise-vs-value; #64 un-refused the INT path
@@ -980,12 +1004,71 @@ the pin rather than obeying it.
 - `live-mirror: nested_array_of_struct_list_field_name`
 - **Rationale** — TYPE disclosure; sibling of G18-1 on a nested list+struct shape.
 
+### G10-1 — typed-map `toPandas` cells are list-of-pairs, not dict
+
+- **repark** — `toPandas` of a typed map column yields object-dtype **list-of-pairs** cells
+  (raw Arrow map → pandas).
+- **Apache Spark** — the same recipe yields object-dtype **dict** cells. Values otherwise
+  match. *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[map_topandas_cell_shape]`
+- **Rationale** — BACKLOG, interchange SHAPE (G10). Fix is a G10 follow-on, not silent
+  absorption. No `live-mirror`: the live-oracle tier has no scenario for this pandas-cell
+  SHAPE class (same as the G5-RANK-TYPE family).
+
+### G10-2 — typed-struct Long field stays `int` where Spark's second row is `float`
+
+- **repark** — `toPandas` of a typed struct Long field stays Python **int** `20` on the
+  recorded second row.
+- **Apache Spark** — the same recipe lands that Long as Python **float** `20.0` (row-0
+  stays int `10`; recorded live-Spark fact under arrow-on toPandas). *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[struct_topandas_cell_shape]`
+- **Rationale** — BACKLOG, interchange SHAPE (G10). Type-sensitive compare so `20 == 20.0`
+  cannot launder the row. No `live-mirror` (same SHAPE-class reason as G10-1).
+
+### G10-3 — pandas-ingest object-list arrays export `item` vs `element`
+
+- **repark** — `createDataFrame` from a pandas object-dtype list column exports Arrow
+  `list<item: int64>`.
+- **Apache Spark** — the same ingest exports `list<element: int64>`. Values match.
+  *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[array_from_pandas_object]`
+- **Rationale** — BACKLOG, interchange SHAPE (G10 — pandas ingest twin of G18-1). No
+  `live-mirror` (same SHAPE-class reason as G10-1). G18-1's live-mirror is the VALUES
+  entry; this row is the pandas ingest twin.
+
+### G10-4 — inbound `datetime64[us]` exports as `datetime64[us]`, not `[ns]`
+
+- **repark** — `createDataFrame` from pandas `datetime64[us]` then `toPandas` keeps
+  `datetime64[us]`. Wall-clock values match Spark.
+- **Apache Spark** — the same recipe exports `datetime64[ns]`. *(oracle: recorded.)*
+- **Pin** —
+  `python/repark/tests/test_boundary_shapes_parity.py::test_boundary_row_matches_spark_or_still_diverges[pandas_timestamp_unit_from_pandas_us]`
+- **Rationale** — BACKLOG, interchange SHAPE (G10 timestamp-unit family). The inbound
+  `datetime64[ns]` twin is an equality control, not a row. No `live-mirror` (same
+  SHAPE-class reason as G10-1).
+
 > **REG-G4-1 / REG-G4-2 — DataFrame `leftsemi` / `leftanti` — FIXED (2026-08-11, G4b / #63).**
 > W-3 queued both as BACKLOG surface gaps. G4b implemented the `how`-token widening and
 > facade alias map; the corpus rows
-> `test_join_parity.py::test_join_parity_row[df_left_semi_unsupported]` and
-> `…[df_left_anti_unsupported]` are now content equalities (names kept; rename queued). A
+> `test_join_parity.py::test_join_parity_row[df_left_semi_on_name]` and
+> `…[df_left_anti_on_name]` are now content equalities. A
 > fixed defect gets this dated note, never a live divergence row.
+
+> **G4b D6 — H1 origin-map gap on semi/anti results — FIXED (2026-08-12, Y-5 / #70).** After
+> `left.join(right, on, "leftsemi"|"leftanti")`, `select` / `filter` / `withColumn` of a
+> right-parent Column raise `AnalysisException` carrying Spark 4.1.2's
+> `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION` (same-name) or
+> `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT` (distinct-name).
+> `drop(right[…])` is a no-op (left schema unchanged). Left-parent refs and inner-join origin
+> resolution are unchanged. Pin:
+> `python/repark/tests/test_g4b_semi_join.py::test_right_ref_select_raises_missing_attributes_same_key`
+> (and the filter / withColumn / drop / left-ref / inner / distinct-name siblings). No remaining
+> divergence to disclose; no `live-mirror`. Conditionless semi/anti refusal remains
+> [G4-3](#g4-3--conditionless-dataframe-semiant-join-refuses). A fixed defect gets this dated
+> note, never a live divergence row.
 
 ### G4-3 — conditionless DataFrame semi/anti join refuses
 
@@ -1029,31 +1112,45 @@ the pin rather than obeying it.
 > longer silently means one *month*: over a `TIMESTAMP` key the door refuses with Spark's
 > `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`, and over a `DATE` key it means days.
 > Pins: `crates/repark-spark/src/tests/window_temporal_range.rs` and the `temporal_range`
-> family in `python/repark/tests/test_window_parity.py`. The five residuals below stay OPEN.
+> family in `python/repark/tests/test_window_parity.py`. **G5b-R2 and Spark-door G5b-R3
+> closed in Y-1 / #72** (FIXED notes below). **G5b-R1 / R4 / R5 stay OPEN** — Z-4 is the
+> in-flight residuals unit; this increment does not claim them closed.
+
+> **G5b-R2 — `DAY TO SECOND` qualified interval as a frame bound — FIXED (2026-08-12,
+> Y-1 / #72).** `INTERVAL '1 12:00:00' DAY TO SECOND` (and `'1 0:0:0'`) as a frame bound
+> matches Spark 4.1.2 on value and Arrow type. The Spark door restates the qualified
+> literal as an Arrow-accepted interval string (`1 days 12 hours 0 minutes 0 seconds`) and
+> re-plans. Pins (now equalities):
+> `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_day_to_second_literal_matches_spark`
+> and
+> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_day_to_second_literal]`.
+> A fixed defect gets this dated note, never a live divergence row.
+
+> **G5b-R3 — negative interval offset wrap (`count(*)` = -1) — FIXED (2026-08-12, Y-1
+> Half-B / #72).** Invert is kind **or** same-kind magnitude after sign-normalize. Kind
+> invert vs CURRENT ROW (`INTERVAL '-1' DAY PRECEDING AND CURRENT ROW`) is Spark's empty
+> frame (`count(*)` 0, `sum` NULL) via `FILTER (WHERE false)` over a current-row frame.
+> Same-kind magnitude invert (`-2 PRECEDING AND -1 PRECEDING`, direct `2 FOLLOWING AND 1
+> FOLLOWING`) refuses at classify with Spark's `SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`
+> (live 4.1.2). The previous silent-wrong (`count(*)` = **-1** in release wheels; `sum`
+> panics in debug) is gone on the **Spark door / facade `.sql()`**. The far-future
+> `10000 YEAR FOLLOWING` pair is gone (not Spark-empty). DATE + negative already answered
+> empty and is unchanged. The **ANSI door does not call this seam and still wraps** —
+> named residual, not silently absorbed (no dedicated pin → no G5b-R3-ANSI row). A
+> statement that mixes a negative TIMESTAMP interval with a numeric unit-less `RANGE`
+> bound is refused (`UNSUPPORTED.NEGATIVE_RANGE_OFFSET`) so wrapping cannot ride the
+> mixed-statement hole. Pins:
+> `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_negative_offset_is_spark_empty_frame`,
+> `…::temporal_range_value_inverted_frames_do_not_wrap`,
+> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_negative_offset_count]`
+> and `…[temporal_range_negative_offset_sum]`.
 
 ### G5b-R1 — unquoted `INTERVAL n UNIT` frame bound refused
 
 - **repark** — `RANGE BETWEEN INTERVAL 1 DAY PRECEDING` (unquoted) is refused as a frame bound.
 - **Apache Spark** — accepts the unquoted interval literal. *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_unquoted_interval_literal]`
-- **Rationale** — BACKLOG (G5b-R). Use `INTERVAL '1' DAY` today.
-
-### G5b-R2 — `DAY TO SECOND` qualified interval literal refused as a frame bound
-
-- **repark** — `INTERVAL '1 12:00:00' DAY TO SECOND PRECEDING` is refused as a frame bound.
-- **Apache Spark** — accepts it. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_day_to_second_literal]`
-- **Rationale** — BACKLOG (G5b-R). Same seam as G5b-R1.
-
-### G5b-R3 — negative interval offset is a wrong answer (`count(*)` = -1)
-
-- **repark** — `RANGE BETWEEN INTERVAL '-1' DAY PRECEDING` yields `count(*)` = **-1** (release
-  wheels wrap; debug may panic). `sum` fails.
-- **Apache Spark** — returns an empty frame. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_negative_offset_count]`
-  and `…[temporal_range_negative_offset_sum]`
-- **Rationale** — BACKLOG, **HIGH** (G5b-R). Silently-wrong-result class in release wheels.
-  State: [../STATUS.md](../STATUS.md).
+- **Rationale** — BACKLOG (G5b-R). Use `INTERVAL '1' DAY` today. Still OPEN.
 
 ### G5b-R4 — FOLLOWING-to-FOLLOWING frame includes the current row
 
@@ -1061,14 +1158,18 @@ the pin rather than obeying it.
   current row (sums 120 where Spark sums 90 on the recorded seed).
 - **Apache Spark** — the current row lies outside that frame. *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_following_to_following_window]`
-- **Rationale** — BACKLOG (G5b-R). Range-search boundary.
+- **Rationale** — BACKLOG (G5b-R). Range-search boundary. Still OPEN.
 
 ### G5b-R5 — interval bound over a numeric order key: raw Arrow cast error
 
-- **repark** — an interval bound over a numeric order key raises a raw Arrow cast error.
-- **Apache Spark** — raises a Spark error class. *(oracle: recorded.)*
+- **repark** — an interval bound over a numeric order key raises a raw Arrow cast error
+  (`Cannot cast string '1 DAY' to value of Int64 type`).
+- **Apache Spark** — returns a table in which every unique key sees only itself (recorded
+  seed: sums `[10, 20, 30, 40, 50]`). *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_interval_bound_over_int_key]`
-- **Rationale** — BACKLOG (G5b-R). Error-class alignment only.
+- **Rationale** — BACKLOG (G5b-R). Error-class alignment only. Still OPEN.
+  **Z-5 verify-before-paste (2026-08-13):** L-1's Spark half ("raises a Spark error class")
+  was stale against the Y-1 corpus; the Spark half above is the recorded table.
 
 ### G3-E8 — DELETE/UPDATE subquery predicate is refused (valve, not a fix)
 
@@ -1097,6 +1198,52 @@ the pin rather than obeying it.
   and `…[update_not_in_subquery_with_null_key]`
 - **Rationale** — keep after the fix lands (flip the repark half to "matches Spark"): the
   behaviour is surprising enough to be re-broken.
+
+### G15 — string collation is refused at first evaluation
+
+- **repark** — string collation is **refused** at parse / first evaluation on the inventoried
+  compare/order-changing paths. SQL `expr COLLATE name`, `ORDER BY col COLLATE name`,
+  `CREATE TABLE … (col STRING COLLATE name)`, `CAST(x AS STRING COLLATE name)`,
+  `SET`/`RESET spark.sql.collation.*`, `createDataFrame` with a non-`UTF8_BINARY`
+  `StringType` (including Spark JSON `__COLLATIONS`), and `Column.cast`/`try_cast` to a
+  collated string all raise `UnsupportedOperationException` (`NotImplemented` on the Rust
+  doors) naming the requested collation and steering to binary/default ordering.
+  `StringType(collation=…)` construction and `simpleString` display stay (schema metadata).
+  `F.collate` / `F.collation` / `Column.collate` are not on the facade (`AttributeError`).
+- **Apache Spark** — Spark 4.0+ applies the named collation to comparisons and `ORDER BY`.
+  `createDataFrame([("Alice",), ("alice",)], StringType("UNICODE_CI")).distinct().count()`
+  is **1**. `F.collate` / `F.collation` return a collated column / its name
+  (`SYSTEM.BUILTIN.UNICODE`). *(oracle: recorded — Apache 4.1.2 tests
+  `test_create_df_with_collation`, `test_collation`; live probe in
+  `task/y7-collation-refuse-ledger.md` §0b.)*
+- **Pin** — `python/repark/tests/test_collation_refuse.py::test_create_dataframe_unicode_ci_refuses`,
+  `…::test_from_json_collations_metadata_constructs_and_create_refuses`,
+  `…::test_sql_collate_expression_refuses`,
+  `…::test_sql_order_by_collate_refuses`,
+  `…::test_sql_cast_as_string_collate_refuses`,
+  `…::test_sql_set_collation_key_refuses`,
+  `…::test_cast_collated_string_type_refuses`,
+  `…::test_conf_set_collation_key_refuses`,
+  `crates/repark-spark/src/tests/collation.rs::select_collate_expression_refuses`,
+  `…::order_by_collate_refuses`,
+  `…::cast_as_string_collate_refuses`,
+  `…::set_collation_session_key_refuses_via_execute`,
+  `…::execute_passthrough_attaches_collation_valve`,
+  `…::create_table_column_collate_refuses`,
+  `crates/repark-sql/src/guards/tests.rs::collation_valve_fires_on_expression_collate`,
+  `…::collation_valve_fires_on_cast_as_string_collate`,
+  `…::collation_valve_refuses_end_to_end_and_default_select_is_untouched`.
+- **Rationale** — DEFECT, refused pending a future implement-or-keep-absent decision.
+  **History:** G15 (MEDIUM) — "collation is unimplemented and silently wrong-count." The
+  census row `pyspark.sql.tests.test_dataframe.DataFrameTests.test_create_df_with_collation`
+  was `FAIL-VALUE` / `2 != 1`: repark accepted `StringType("UNICODE_CI")`, stripped it to
+  binary `STRING`, and counted Alice/alice as two values. SQL `COLLATE` was already a raw
+  DataFusion unsupported-AST error (`test_collated_string` = `FAIL-MISSING`), not an
+  actionable refusal. **Ruling provenance:** owner 2026-08-12, conductor-4 A5 (scope =
+  compare/order-changing paths; constructor + simpleString stay; refuse at first
+  evaluation; ABSENCE IS LOUD) and A10 (parse-altitude refuse on `spark_ast.rs` + repark-sql
+  guard sites; G3-E8 lesson). Keep this row until collation is implemented or the product
+  permanently documents absence without a silent path.
 
 ### Surfaced, awaiting pins — not yet rows
 

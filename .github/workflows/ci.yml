@@ -51,19 +51,19 @@ jobs:
           sudo docker system prune -af --volumes >/dev/null 2>&1 || true
           df -h /
       # Provides a Python 3.12 with libpython so the PyO3 cdylib links (from phase 3 on).
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
       # SHA-pinned: dtolnay/rust-toolchain refs are branches (not tags), so a floating ref would
       # run unreviewed action code forever. The `toolchain:` input below selects the compiler.
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
       # Prefix-keyed per dependency family. `shared-key` is load-bearing: rust-cache otherwise
       # mixes the JOB ID into the key, so cache-warm.yml's warm-lint saves would land under keys
       # this job never restores. prefix-key AND shared-key MUST match warm-lint.
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3  # v2
         with:
           prefix-key: "v2-df54"
           shared-key: "lint"
@@ -102,15 +102,15 @@ jobs:
           sudo docker system prune -af --volumes >/dev/null 2>&1 || true
           df -h /
       # Provides a Python 3.12 with libpython so the PyO3 cdylib links during `cargo test`.
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
         with:
           python-version: "3.12"
       # SHA-pinned (see rust-lint).
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
         with:
           toolchain: "1.96.0"
       # prefix-key AND shared-key MUST match cache-warm.yml's warm-test job (see rust-lint note).
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32  # v2
+      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3  # v2
         with:
           prefix-key: "v2-df54-test"
           shared-key: "test"
@@ -129,10 +129,10 @@ jobs:
           persist-credentials: false
       # Needed by the crate-DAG guard: its wrapper runs `cargo metadata --locked` (a manifest
       # read, no build). SHA-pinned — see the rust job note.
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master 2026-07-11
+      - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
         with:
           toolchain: "1.96.0"
-      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
         with:
           version: "0.9.5"  # Makefile UV_VERSION
           python-version: "3.12"
@@ -182,7 +182,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990  # v8.3.2
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
         with:
           version: "0.9.5"  # Makefile UV_VERSION
           python-version: "3.12"
