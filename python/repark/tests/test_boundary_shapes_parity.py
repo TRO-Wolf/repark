@@ -13,14 +13,15 @@ unit, Arrow list field naming on the pandas ingest path). They do not duplicate 
 tuple-roundtrip VALUES families.
 
 **Why some rows are DISCLOSURES.** Where the engines already agree (binary bytes, array
-ndarray cells, inbound ArrowDtype list field name, inbound object-dict inferred as struct)
-the row is a plain equality. Where they honestly disagree the row pins BOTH halves:
+ndarray cells, inbound ArrowDtype list field name, inbound object-dict inferred as struct,
+inbound ``datetime64[ns]``) the row is a plain equality. Where they honestly disagree the
+row pins BOTH halves:
 
 * map ``toPandas`` cells are ``dict`` on Spark and list-of-pairs on repark
 * struct ``toPandas`` Long fields can land as Python ``float`` on Spark (row-stable) and stay
   ``int`` on repark
 * inbound pandas ``datetime64[us]`` exports as ``datetime64[ns]`` on Spark and ``datetime64[us]``
-  on repark
+  on repark; inbound ``datetime64[ns]`` is the same-path equality twin (both engines ``[ns]``)
 * inbound pandas object-list arrays export Arrow ``list<element: …>`` on Spark and
   ``list<item: …>`` on repark (same type class as G18, **pandas ingest** entry)
 
@@ -76,14 +77,15 @@ G10_BUDGET_MIN = 8
 G10_BUDGET_MAX = 10
 MIN_EQUALITY_ROWS = 1
 MIN_DISCLOSURE_ROWS = 3
-# Name-gated so a control cannot satisfy a family (CP-2).
-MIN_MAP_ROWS = 1  # *map_*
+# Name-gated floors. Disclosure families are *also* semantics-gated in the budget
+# pin so an equality control cannot satisfy them (CP-2 / Q-001 / Q-002 / L-001-L-004).
+MIN_MAP_ROWS = 1  # typed Map (recipe out_map / Arrow map), not a map_ prefix
 MIN_STRUCT_ROWS = 1  # *struct_*
 MIN_BINARY_ROWS = 1  # *binary_*
-MIN_ARRAY_ROWS = 2  # *array_*
-MIN_PANDAS_TS_UNIT_ROWS = 1  # *pandas_timestamp_unit_*
-MIN_FROM_PANDAS_ROWS = 2  # *_from_pandas_*
-MIN_OUT_ROWS = 2  # *_topandas_* or *_sql_cast_*
+MIN_ARRAY_ROWS = 2  # *array_* AND the item-vs-element ingest disclosure
+MIN_PANDAS_TS_UNIT_ROWS = 1  # *pandas_timestamp_unit_* AND the us ingest disclosure
+MIN_FROM_PANDAS_ROWS = 2  # *_from_pandas_* — must match every inbound row
+MIN_OUT_ROWS = 2  # *_topandas_*
 
 Surface = Literal["arrow", "pandas"]
 
@@ -122,7 +124,12 @@ def _pandas_shape(
 
 
 def _normalize_cell(cell: object) -> object:
-    """Comparable form of one pandas cell (dtype/kind are pinned separately)."""
+    """Comparable form of one pandas cell (dtype/kind are pinned separately).
+
+    Timestamp cells become naive ``datetime.datetime`` (microsecond resolution).
+    The pandas unit (``datetime64[ns]`` vs ``datetime64[us]``) lives on
+    ``str(series.dtype)``, not on these values.
+    """
     if cell is None:
         return None
     if type(cell).__name__ == "NaTType":
@@ -160,6 +167,31 @@ def capture_pandas(frame_pandas: object) -> PandasShape:
     return PandasShape(tuple(dtypes), tuple(cell_kinds), tuple(values))
 
 
+def _is_pair_sequence(value: object) -> bool:
+    """True when ``value`` is a non-empty tuple of 2-tuples (pandas map cells)."""
+    if not isinstance(value, tuple) or not value:
+        return False
+    return all(isinstance(item, tuple) and len(item) == 2 for item in value)
+
+
+def _pair_sequences_match(left: tuple[object, ...], right: tuple[object, ...]) -> bool:
+    """Order-insensitive map-cell compare (X-5 sorts map keys; pair order is storage)."""
+    if len(left) != len(right):
+        return False
+    left_keys = [pair[0] for pair in left]
+    right_keys = [pair[0] for pair in right]
+    if len(set(left_keys)) == len(left_keys) and len(set(right_keys)) == len(right_keys):
+        left_map = {pair[0]: pair[1] for pair in left}
+        right_map = {pair[0]: pair[1] for pair in right}
+        return _values_match(left_map, right_map)
+    # Duplicate keys: sort by repr(key) then compare positionally (no re-enter pair branch).
+    left_sorted = tuple(sorted(left, key=lambda pair: repr(pair[0])))
+    right_sorted = tuple(sorted(right, key=lambda pair: repr(pair[0])))
+    return all(
+        _values_match(item, other) for item, other in zip(left_sorted, right_sorted, strict=True)
+    )
+
+
 def _values_match(left: object, right: object) -> bool:
     """Type-sensitive value equality so ``20`` and ``20.0`` stay a disclosure."""
     if type(left) is not type(right):
@@ -171,6 +203,8 @@ def _values_match(left: object, right: object) -> bool:
         return all(_values_match(left[key], right[key]) for key in left)
     if isinstance(left, tuple):
         assert isinstance(right, tuple)
+        if _is_pair_sequence(left) and _is_pair_sequence(right):
+            return _pair_sequences_match(left, right)
         if len(left) != len(right):
             return False
         return all(_values_match(item, other) for item, other in zip(left, right, strict=True))
@@ -362,13 +396,6 @@ def recipe_out_binary(session: object) -> object:
     )
 
 
-def recipe_out_sql_cast_timestamp(session: object) -> object:
-    """SQL CAST timestamp — outbound pandas unit (session TZ = UTC on the Spark half)."""
-    return session.sql(  # type: ignore[attr-defined]
-        "SELECT CAST(1 AS BIGINT) AS id, CAST('2024-01-15 12:30:00' AS TIMESTAMP) AS ts"
-    )
-
-
 def recipe_in_pandas_object_list(session: object) -> object:
     """Inbound pandas object-dtype lists → array column (Arrow list field name)."""
     pdf = pd.DataFrame({"id": [1, 2], "items": [[10, 20], [30]]})
@@ -413,17 +440,34 @@ def recipe_in_pandas_datetime64_us(session: object) -> object:
     return session.createDataFrame(pdf)  # type: ignore[attr-defined]
 
 
+def recipe_in_pandas_datetime64_ns(session: object) -> object:
+    """Inbound pandas ``datetime64[ns]`` — same-path twin of the us ingest disclosure."""
+    pdf = pd.DataFrame(
+        {
+            "id": [1, 2],
+            "ts": pd.Series(
+                [
+                    pd.Timestamp("2024-01-15 12:30:00.123456"),
+                    pd.Timestamp("2020-06-01 00:00:00.654321"),
+                ],
+                dtype="datetime64[ns]",
+            ),
+        }
+    )
+    return session.createDataFrame(pdf)  # type: ignore[attr-defined]
+
+
 RECIPES: dict[str, Any] = {
     "out_map": recipe_out_map,
     "out_struct": recipe_out_struct,
     "out_array": recipe_out_array,
     "out_binary": recipe_out_binary,
-    "out_sql_cast_timestamp": recipe_out_sql_cast_timestamp,
     "in_pandas_object_list": recipe_in_pandas_object_list,
     "in_pandas_arrowdtype_list": recipe_in_pandas_arrowdtype_list,
     "in_pandas_bytes": recipe_in_pandas_bytes,
     "in_pandas_object_dict": recipe_in_pandas_object_dict,
     "in_pandas_datetime64_us": recipe_in_pandas_datetime64_us,
+    "in_pandas_datetime64_ns": recipe_in_pandas_datetime64_ns,
 }
 
 
@@ -493,8 +537,9 @@ ROWS: list[ShapeRow] = [
             },
         ),
         "toPandas of a typed struct column: both engines use object+dict cells; Spark's "
-        "Long field on the second row lands as Python float 20.0 (recorded, stable) while "
-        f"repark keeps int 20. Flipped by {FIX_G10}.",
+        "Long field on the recorded second row is Python float 20.0 while the first row "
+        "is int 10 (recorded live-Spark fact, not a uniform converter; L-005). repark "
+        f"keeps int 20. Flipped by {FIX_G10}.",
     ),
     ShapeRow(
         "binary_topandas_bytes_shape",
@@ -530,24 +575,6 @@ ROWS: list[ShapeRow] = [
         "toPandas of a typed array column: object dtype + numpy ndarray cells (null row "
         "included). Pandas shape matches; Arrow list field name is X-5's family, not re-pinned "
         "here.",
-    ),
-    ShapeRow(
-        "pandas_timestamp_unit_sql_cast_ns",
-        "timestamp",
-        "out_sql_cast_timestamp",
-        "pandas",
-        _pandas_shape(
-            [("id", "int64"), ("ts", "datetime64[ns]")],
-            [("id", ["int"]), ("ts", ["Timestamp"])],
-            {
-                "id": [1],
-                "ts": [dt.datetime(2024, 1, 15, 12, 30, 0)],
-            },
-        ),
-        None,
-        "SQL CAST timestamp → toPandas is datetime64[ns] on both engines (wall-clock "
-        "2024-01-15 12:30:00). Equality on the pandas unit; Arrow unit/tz is out of this "
-        "row's surface.",
     ),
     # ----- pandas IN: createDataFrame from pandas -----------------------------------------------
     ShapeRow(
@@ -590,7 +617,7 @@ ROWS: list[ShapeRow] = [
         "the element field name. Equality twin of array_from_pandas_object.",
     ),
     ShapeRow(
-        "binary_from_pandas",
+        "binary_from_pandas_bytes",
         "binary",
         "in_pandas_bytes",
         "arrow",
@@ -603,8 +630,8 @@ ROWS: list[ShapeRow] = [
         "identical payloads (inbound twin of binary_topandas_bytes_shape).",
     ),
     ShapeRow(
-        "map_from_pandas_object_dict",
-        "map",
+        "struct_from_pandas_object_dict",
+        "struct",
         "in_pandas_object_dict",
         "arrow",
         _table(
@@ -626,7 +653,8 @@ ROWS: list[ShapeRow] = [
         ),
         None,
         "createDataFrame from pandas object-dtype dicts (no MapType schema): both engines "
-        "infer a struct over the key union with null-fill — not a map. Equality.",
+        "infer a struct over the key union with null-fill — not a map. Named struct_* so "
+        "this equality cannot green the typed-map family (Q-002 / L-003).",
     ),
     ShapeRow(
         "pandas_timestamp_unit_from_pandas_us",
@@ -657,7 +685,30 @@ ROWS: list[ShapeRow] = [
         ),
         "createDataFrame from pandas datetime64[us] then toPandas: Spark promotes the "
         "export unit to datetime64[ns]; repark preserves datetime64[us]. Wall-clock "
-        f"values match. Flipped by {FIX_G10}.",
+        "values match. The timestamp-unit family disclosure (Q-001 / L-001). "
+        f"Flipped by {FIX_G10}.",
+    ),
+    ShapeRow(
+        "pandas_timestamp_unit_from_pandas_ns",
+        "timestamp",
+        "in_pandas_datetime64_ns",
+        "pandas",
+        _pandas_shape(
+            [("id", "int64"), ("ts", "datetime64[ns]")],
+            [("id", ["int", "int"]), ("ts", ["Timestamp", "Timestamp"])],
+            {
+                "id": [1, 2],
+                "ts": [
+                    dt.datetime(2024, 1, 15, 12, 30, 0, 123456),
+                    dt.datetime(2020, 6, 1, 0, 0, 0, 654321),
+                ],
+            },
+        ),
+        None,
+        "createDataFrame from pandas datetime64[ns] then toPandas: both engines export "
+        "datetime64[ns] (inbound-ns twin of pandas_timestamp_unit_from_pandas_us). "
+        "Ingest-always-us would red this equality (L-002). Values carry microseconds; "
+        "the unit lives on str(dtype).",
     ),
 ]
 
@@ -771,8 +822,22 @@ def test_boundary_row_matches_spark_or_still_diverges(row: ShapeRow) -> None:
         ) from mismatch
 
 
+def _arrow_has_map(table: pa.Table) -> bool:
+    """True when any top-level Arrow field is a Map type."""
+    return any(pa.types.is_map(field.type) for field in table.schema)
+
+
+def _is_typed_map_row(row: ShapeRow) -> bool:
+    """True when the row exercises a real Map, not a ``map_``-prefixed struct."""
+    if row.recipe == "out_map":
+        return True
+    if isinstance(row.spark, pa.Table) and _arrow_has_map(row.spark):
+        return True
+    return isinstance(row.repark, pa.Table) and _arrow_has_map(row.repark)
+
+
 def test_boundary_shapes_row_set_covers_g10_budget() -> None:
-    """Budget + name-gated family coverage pins (CP-2 / CP-10) — not incidental counts."""
+    """Budget + semantics-gated family coverage (CP-2 / CP-10) — not incidental counts."""
     names = [row.name for row in ROWS]
     assert len(names) == len(set(names)), f"duplicate row names: {names}"
     assert G10_BUDGET_MIN <= len(ROWS) <= G10_BUDGET_MAX, (
@@ -791,44 +856,89 @@ def test_boundary_shapes_row_set_covers_g10_budget() -> None:
         f"G10 needs ≥{MIN_DISCLOSURE_ROWS} disclosures; got {len(disclosures)}"
     )
 
-    map_rows = [row for row in ROWS if "map_" in row.name]
+    typed_map_rows = [row for row in ROWS if _is_typed_map_row(row)]
     struct_rows = [row for row in ROWS if "struct_" in row.name]
     binary_rows = [row for row in ROWS if "binary_" in row.name]
     array_rows = [row for row in ROWS if "array_" in row.name]
     ts_unit_rows = [row for row in ROWS if "pandas_timestamp_unit_" in row.name]
+    inbound_rows = [row for row in ROWS if row.recipe.startswith("in_pandas_")]
     from_pandas = [row for row in ROWS if "_from_pandas_" in row.name]
-    outbound = [row for row in ROWS if "_topandas_" in row.name or "_sql_cast_" in row.name]
-    assert len(map_rows) >= MIN_MAP_ROWS, (
-        f"G10 must keep the map family (≥{MIN_MAP_ROWS} rows named *map_*); got {len(map_rows)}"
+    outbound = [row for row in ROWS if "_topandas_" in row.name]
+    assert len(typed_map_rows) >= MIN_MAP_ROWS, (
+        f"G10 must keep a typed-Map row (recipe out_map or Arrow map type, "
+        f"≥{MIN_MAP_ROWS}); got {len(typed_map_rows)}"
+    )
+    assert any(row.is_disclosure() for row in typed_map_rows), (
+        "G10 map family needs a typed-Map DISCLOSURE (outbound map-cell shape); "
+        "a map_ prefix on a struct-inference equality does not count"
+    )
+    assert any("map_topandas" in row.name for row in typed_map_rows), (
+        "G10 map family needs the outbound map-cell disclosure by name (map_topandas_*)"
     )
     assert len(struct_rows) >= MIN_STRUCT_ROWS, (
         f"G10 must keep the struct family (≥{MIN_STRUCT_ROWS} rows named *struct_*); "
         f"got {len(struct_rows)}"
     )
+    assert any("_from_pandas_" in row.name for row in struct_rows), (
+        "G10 struct family needs an inbound *_from_pandas_* row (not outbound-only)"
+    )
+    assert any("_topandas_" in row.name for row in struct_rows), (
+        "G10 struct family needs an outbound *_topandas_* row"
+    )
     assert len(binary_rows) >= MIN_BINARY_ROWS, (
         f"G10 must keep the binary family (≥{MIN_BINARY_ROWS} rows named *binary_*); "
         f"got {len(binary_rows)}"
     )
+    assert any("_from_pandas_" in row.name for row in binary_rows), (
+        "G10 binary family needs an inbound *_from_pandas_* row"
+    )
+    assert any("_topandas_" in row.name for row in binary_rows), (
+        "G10 binary family needs an outbound *_topandas_* row"
+    )
     assert len(array_rows) >= MIN_ARRAY_ROWS, (
         f"G10 must keep the array family (≥{MIN_ARRAY_ROWS} rows named *array_*); "
         f"got {len(array_rows)}"
+    )
+    assert any(
+        row.name == "array_from_pandas_object" and row.is_disclosure() for row in array_rows
+    ), (
+        "G10 array family needs the pandas-ingest item-vs-element DISCLOSURE; "
+        "two array equalities cannot satisfy the floor"
+    )
+    assert any("_topandas_" in row.name for row in array_rows), (
+        "G10 array family needs an outbound *_topandas_* row"
     )
     assert len(ts_unit_rows) >= MIN_PANDAS_TS_UNIT_ROWS, (
         f"G10 must keep the pandas timestamp-unit family "
         f"(≥{MIN_PANDAS_TS_UNIT_ROWS} rows named *pandas_timestamp_unit_*); "
         f"got {len(ts_unit_rows)}"
     )
+    assert any(row.is_disclosure() and "from_pandas_us" in row.name for row in ts_unit_rows), (
+        "G10 pandas timestamp-unit family needs the inbound us DISCLOSURE "
+        "(pandas_timestamp_unit_from_pandas_us); an ns equality cannot satisfy the family"
+    )
+    assert any(row.recipe == "in_pandas_datetime64_ns" for row in ts_unit_rows), (
+        "G10 needs an inbound datetime64[ns] twin on the same createDataFrame(pandas) path"
+    )
+    assert inbound_rows, "G10 needs inbound createDataFrame-from-pandas rows"
+    assert all("_from_pandas_" in row.name for row in inbound_rows), (
+        "every inbound row must match *_from_pandas_*; "
+        f"misses={[row.name for row in inbound_rows if '_from_pandas_' not in row.name]}"
+    )
+    assert {row.name for row in inbound_rows} == {row.name for row in from_pandas}, (
+        "inbound glob *_from_pandas_* must match every inbound row and no others "
+        f"(recipes={[row.name for row in inbound_rows]} "
+        f"named={[row.name for row in from_pandas]})"
+    )
     assert len(from_pandas) >= MIN_FROM_PANDAS_ROWS, (
         f"G10 must keep inbound createDataFrame-from-pandas rows "
         f"(≥{MIN_FROM_PANDAS_ROWS} named *_from_pandas_*); got {len(from_pandas)}"
     )
     assert len(outbound) >= MIN_OUT_ROWS, (
-        f"G10 must keep outbound toPandas/sql-cast rows "
-        f"(≥{MIN_OUT_ROWS} named *_topandas_* or *_sql_cast_*); got {len(outbound)}"
+        f"G10 must keep outbound toPandas rows "
+        f"(≥{MIN_OUT_ROWS} named *_topandas_*); got {len(outbound)}"
     )
-    # A control equality cannot satisfy the timestamp-unit family (CP-2).
-    assert all("pandas_timestamp_unit_" in row.name for row in ts_unit_rows)
-    assert any(row.is_equality() for row in ROWS if "binary_" in row.name), (
+    assert any(row.is_equality() for row in binary_rows), (
         "at least one binary_* row must remain an equality control"
     )
 
@@ -892,3 +1002,18 @@ def test_disclosure_classifier_regression_arm(
     message = str(excinfo.value)
     assert "Re-derive" in message
     _ = repark
+
+
+def test_pandas_map_cell_pairs_are_order_insensitive() -> None:
+    """Q-003: map pair storage order is not a regression (X-5 key-sort)."""
+    left = _pandas_shape(
+        [("id", "int64"), ("attrs", "object")],
+        [("id", ["int"]), ("attrs", ["list"])],
+        {"id": [1], "attrs": [(("a", 1), ("b", 2))]},
+    )
+    right = _pandas_shape(
+        [("id", "int64"), ("attrs", "object")],
+        [("id", ["int"]), ("attrs", ["list"])],
+        {"id": [1], "attrs": [(("b", 2), ("a", 1))]},
+    )
+    assert_pandas_shapes_equal(left, right)
