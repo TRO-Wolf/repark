@@ -74,6 +74,11 @@ not this directory.
   §6 states REG-G4-1/2 are now **FIXED** (land them as fixed entries, never live divergences) and
   queues one new disclosure (conditionless semi/anti refuses) plus a declared-rename follow-up.
   Does **not** edit `docs/spark-sql-iceberg-parity.md`.
+- [y5-origin-map-ledger.md](y5-origin-map-ledger.md) — **Y-5 / G4b-R2:** semi/anti origin-map
+  join-type awareness. After a leftsemi/leftanti join, right-parent Columns raise Spark 4.1.2
+  `MISSING_ATTRIBUTES` on select/filter/withColumn instead of silently binding the left
+  column; `drop` of that Column is the probed Spark no-op. Does **not** edit
+  `docs/spark-sql-iceberg-parity.md`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -167,6 +172,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) | **X-4 / G17** catalog wrapper explicit forwards (HIGH `publish_replace_table`) |
 | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) | **Y-10 / G11** ANSI door — correctness, not parity |
 | [y3-getdatabase-ledger.md](y3-getdatabase-ledger.md) | **Y-3** `getDatabase` + G-6 live-leg |
+| [y5-origin-map-ledger.md](y5-origin-map-ledger.md) | **Y-5 / G4b-R2** semi/anti origin-map join-type awareness |
 
 ## I want to...
 
@@ -195,6 +201,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
 | See how a corpus refuse-split gets FIXED and flipped (and why the row keeps its name) | [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) §2 D2 / §4 |
 | See the declared-rename map that retired those kept names (and the TZ-5 flip-row name) | [y4-rename-ledger.md](y4-rename-ledger.md) |
+| See why `select(right["k"])` after a semi join must raise `MISSING_ATTRIBUTES` | [y5-origin-map-ledger.md](y5-origin-map-ledger.md) |
 | See why a dependency edge or a manifest field is gated, and the proofs it fires | [../docs/history/frontdoor/fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md) |
 | File a retrospective's metrics | [metrics.md](metrics.md) — append a section, never rewrite one |
 | See which v1 tests are deferred, and why | [port/deferred-tests.md](port/deferred-tests.md) |
