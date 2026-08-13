@@ -24,6 +24,9 @@ not this directory.
 - [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) — **Z-1 / G3-E8 PR-1 in flight:**
   A1-identity DELETE path + uncorrelated `DELETE … IN (SELECT …)` product hole. Residual
   spellings stay refused. Does **not** edit the registry (Z-5 owns it).
+- [z2-tz4-pr1-ledger.md](z2-tz4-pr1-ledger.md) — **Z-2 / TZ-4 PR-1:** µs+UTC instant
+  producers + Iceberg `timestamptz` for default SQL `TIMESTAMP`. A7 CREATE probe (Spark
+  Iceberg type `timestamptz`). Does **not** edit the registry / `types.py` / zoneless paths.
 - [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
   collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
   paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does

@@ -108,6 +108,17 @@ def _typed_frame_no_nulls(spark: ReparkSession) -> object:
 # ==================================================================================================
 
 
+def _assert_polars_timestamp_dtype(dtype: object) -> None:
+    """Arrow interchange already allows ns|us and tz None|UTC; polars follows the wire."""
+    pl = pytest.importorskip("polars")
+    assert dtype in {
+        pl.Datetime(time_unit="ns", time_zone=None),
+        pl.Datetime(time_unit="us", time_zone=None),
+        pl.Datetime(time_unit="us", time_zone="UTC"),
+        pl.Datetime(time_unit="ns", time_zone="UTC"),
+    }, dtype
+
+
 def _assert_timestamp_wall_clock(value: object, expected: dt.datetime) -> None:
     """Compare a timestamp cell as naive wall-clock UTC (repark ns / Spark us,tz=UTC)."""
     if hasattr(value, "to_pydatetime"):
@@ -210,11 +221,11 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     # date → object with datetime.date
     assert pdf["d"].dtype == object
     assert pdf["d"].tolist() == [dt.date(2024, 1, 15), None, dt.date(2020, 6, 1)]
-    # timestamp → datetime64[ns]
+    # timestamp → datetime64[ns] (tz-aware after TZ-4 PR-1 µs+UTC; compare wall clock)
     assert str(pdf["ts"].dtype).startswith("datetime64")
-    assert pdf["ts"].tolist()[0] == pd.Timestamp("2024-01-15 12:30:00")
+    _assert_timestamp_wall_clock(pdf["ts"].tolist()[0], dt.datetime(2024, 1, 15, 12, 30, 0))
     assert pd.isna(pdf["ts"].tolist()[1])
-    assert pdf["ts"].tolist()[2] == pd.Timestamp("2020-06-01 00:00:00")
+    _assert_timestamp_wall_clock(pdf["ts"].tolist()[2], dt.datetime(2020, 6, 1, 0, 0, 0))
 
 
 def test_to_pandas_no_nulls_preserves_numpy_ints_and_bool(spark: ReparkSession) -> None:
@@ -222,7 +233,7 @@ def test_to_pandas_no_nulls_preserves_numpy_ints_and_bool(spark: ReparkSession) 
 
     Also pins the Arrow path (value AND type) for the no-null matrix — C1-Q-004.
     """
-    pd = pytest.importorskip("pandas")
+    pytest.importorskip("pandas")
     frame = _typed_frame_no_nulls(spark)
     arrow = frame.to_arrow()
     assert arrow.schema.field("i32").type == pa.int32()
@@ -260,10 +271,8 @@ def test_to_pandas_no_nulls_preserves_numpy_ints_and_bool(spark: ReparkSession) 
     assert pdf["dec"].tolist() == [Decimal("12.34"), Decimal("-1.00")]
     assert pdf["s"].tolist() == ["hello", "world"]
     assert pdf["d"].tolist() == [dt.date(2024, 1, 15), dt.date(2020, 6, 1)]
-    assert pdf["ts"].tolist() == [
-        pd.Timestamp("2024-01-15 12:30:00"),
-        pd.Timestamp("2020-06-01 00:00:00"),
-    ]
+    _assert_timestamp_wall_clock(pdf["ts"].tolist()[0], dt.datetime(2024, 1, 15, 12, 30, 0))
+    _assert_timestamp_wall_clock(pdf["ts"].tolist()[1], dt.datetime(2020, 6, 1, 0, 0, 0))
 
 
 def test_to_pandas_camelcase_alias_is_same_method(spark: ReparkSession) -> None:
@@ -1408,7 +1417,7 @@ def test_to_polars_value_and_dtype(spark: ReparkSession) -> None:
     assert pldf.schema["s"] == pl.String
     assert pldf.schema["b"] == pl.Boolean
     assert pldf.schema["d"] == pl.Date
-    assert pldf.schema["ts"] == pl.Datetime(time_unit="ns", time_zone=None)
+    _assert_polars_timestamp_dtype(pldf.schema["ts"])
     assert pldf.select("i32").to_series().to_list() == [1, -2]
     assert pldf.select("i64").to_series().to_list() == [10, -20]
     assert pldf.select("f64").to_series().to_list() == [1.5, -0.5]
@@ -1417,8 +1426,8 @@ def test_to_polars_value_and_dtype(spark: ReparkSession) -> None:
     assert pldf.select("d").to_series().to_list() == [dt.date(2024, 1, 15), dt.date(2020, 6, 1)]
     assert pldf.select("dec").to_series().to_list() == [Decimal("12.34"), Decimal("-1.00")]
     ts_values = pldf.select("ts").to_series().to_list()
-    assert ts_values[0] == dt.datetime(2024, 1, 15, 12, 30, 0)
-    assert ts_values[1] == dt.datetime(2020, 6, 1, 0, 0, 0)
+    _assert_timestamp_wall_clock(ts_values[0], dt.datetime(2024, 1, 15, 12, 30, 0))
+    _assert_timestamp_wall_clock(ts_values[1], dt.datetime(2020, 6, 1, 0, 0, 0))
 
 
 def test_to_polars_with_nulls_value_and_dtype(spark: ReparkSession) -> None:
@@ -1440,7 +1449,7 @@ def test_to_polars_with_nulls_value_and_dtype(spark: ReparkSession) -> None:
     assert pldf.schema["s"] == pl.String
     assert pldf.schema["b"] == pl.Boolean
     assert pldf.schema["d"] == pl.Date
-    assert pldf.schema["ts"] == pl.Datetime(time_unit="ns", time_zone=None)
+    _assert_polars_timestamp_dtype(pldf.schema["ts"])
     assert pldf.select("i32").to_series().to_list() == [1, None, -2]
     assert pldf.select("i64").to_series().to_list() == [10, None, -20]
     assert pldf.select("f64").to_series().to_list() == [1.5, None, -0.5]
@@ -1453,9 +1462,9 @@ def test_to_polars_with_nulls_value_and_dtype(spark: ReparkSession) -> None:
         dt.date(2020, 6, 1),
     ]
     ts_values = pldf.select("ts").to_series().to_list()
-    assert ts_values[0] == dt.datetime(2024, 1, 15, 12, 30, 0)
+    _assert_timestamp_wall_clock(ts_values[0], dt.datetime(2024, 1, 15, 12, 30, 0))
     assert ts_values[1] is None
-    assert ts_values[2] == dt.datetime(2020, 6, 1, 0, 0, 0)
+    _assert_timestamp_wall_clock(ts_values[2], dt.datetime(2020, 6, 1, 0, 0, 0))
 
 
 def test_to_polars_round_trip_create_dataframe_value_identity(spark: ReparkSession) -> None:

@@ -44,6 +44,7 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   (registry TZ-8). Every expectation in the file is a live-Spark measurement, not a derivation.
   The `DATE` negative's CLAIM was also narrowed to match its coverage: `date_trunc(fmt, DATE)` is a
   session-zone localization in Spark, so it moves and now says so.
+  **TZ-4 PR-1 (2026-08-13):** `date_trunc` return type pins flipped to `timestamp[us, tz=UTC]`.
 - [timestamp_cast_seconds.rs](timestamp_cast_seconds.rs) — **TZ-5 (2026-08-12):** the
   `CAST(TIMESTAMP AS <numeric>)` epoch-seconds class at the **Spark door** and the **native
   DataFrame API**, on real sessions, value AND Arrow type. Nine pins: whole instants either side
@@ -53,10 +54,9 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   instant, never a wall clock); a real timestamp COLUMN with its null mask; narrower integer
   targets (`INT`/`SMALLINT`, which repark refused outright before the fix); float and decimal
   targets, which keep the fraction; and two fences — the REVERSE direction
-  (`CAST(<integer> AS TIMESTAMP)`) still reads seconds and round-trips, because it was already
-  correct and "fixing" it would have introduced the divergence; and `CAST(ts AS DATE/STRING/
-  TIMESTAMP)` stays untouched, because an over-eager live branch is as much a defect as a dead
-  one. Ledger: `../../../task/tz5-cast-seconds-ledger.md`.
+  (`CAST(<integer> AS TIMESTAMP)`) still reads seconds and round-trips; **TZ-4 PR-1** flipped
+  that reverse CAST's Arrow type to `timestamp[us, tz=UTC]`. `CAST(ts AS DATE/STRING)` stays
+  untouched. Ledger: `../../../task/tz5-cast-seconds-ledger.md`.
 - [ta_window.rs](ta_window.rs) — deferred rows #8-#14 (phase-2 PR-4): the seven
   `sql_route_*` cases, ported from v1 `repark-session/tests/ta_window.rs`. Proves the TA window
   UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the

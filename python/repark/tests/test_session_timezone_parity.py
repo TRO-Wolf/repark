@@ -14,24 +14,19 @@ measured as a four-hour silent offset. Split B landed the extraction fix, so **t
 disclosures are now plain equality rows (``repark=None``) — and that flip is precisely the
 revert-red evidence the testing contract asks for: undo the fix and each one goes red.
 
-**The rows that are still disclosures are a different class, named on each row.** Eleven remain,
-and none of them is the *instant-typed* extraction class this unit closed:
+**The rows that are still disclosures are a different class, named on each row.** Five remain
+after TZ-4 PR-1 flipped the instant-producer TYPE rows (``to_timestamp`` of a zone-suffixed
+string, ``date_trunc`` return, DataFrame-API ``date_trunc`` column, CAST-int type) to equality:
 
-* two are :data:`TZ4` — the Arrow export TYPE (``timestamp[ns]`` / ``timestamp[us]`` with no
-  timezone, where Spark exports ``timestamp[us, tz=UTC]``);
-* four are ``date_trunc`` / ``DataFrame``-API rows whose VALUE converged with the fix while their
-  TYPE did not, so they moved from the extraction class into :data:`TZ4`; their ``repark`` half
-  was recorded in the same change that moved it, which is why they are not silent;
+* one is :data:`TZ4` plus B-TZ-4 — ``CAST(ts AS STRING) AS TIMESTAMP`` still lands ns-naive
+  (zoneless CAST input; PR-2);
 * three are :data:`TZ7` — a **zoneless** TIMESTAMP input (a ``TIMESTAMP '…'`` literal, a zoneless
   ``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-datetime column). Spark reads those as a
-  session-zone wall clock; repark's planner stores the digits as UTC ticks under a type that is
-  *byte-identical* to the one a genuine instant gets, so the extractor cannot tell them apart and
-  answers the shifted hour. These rows were GREEN against Spark before this unit and are RED
-  after it — the disclosed price of reading every TIMESTAMP as an instant, recorded here rather
-  than left for a user to find;
+  session-zone wall clock; repark's planner stores the digits as UTC ticks. PR-2 localizes them.
+  These rows were GREEN against Spark before H-1a and are RED after it — the disclosed price of
+  reading every TIMESTAMP as an instant;
 * one is :data:`TZ6` — repark maps ``TimestampNTZType`` and ``TimestampType`` onto the SAME Arrow
-  type, so an NTZ column is indistinguishable from an instant one. Recorded from the live oracle,
-  not asserted from documentation.
+  type, so an NTZ column is indistinguishable from an instant one. PR-2.
 
 The twelfth **was** ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5). It
 CONVERGED when :data:`TZ5_FIX` landed and is now an equality row, which is the same revert-red
@@ -399,12 +394,10 @@ G1_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT to_timestamp('2024-03-10T01:30:00-05:00') AS ts",
         _one_row([("ts", pa.timestamp("us", "UTC"), True)], {"ts": _utc(2024, 3, 10, 6, 30)}),
-        _one_row([("ts", pa.timestamp("ns"), True)], {"ts": dt.datetime(2024, 3, 10, 6, 30)}),
-        "the INSTANT agrees (06:30Z) — the divergence is the Arrow type on the export path: "
-        "Spark's TIMESTAMP is an instant exported as timestamp[us, tz=UTC], repark exports a "
-        f"tz-NAIVE timestamp[ns]. A consumer that localizes the column is silently wrong. {TZ4}: "
-        f"no extractor runs here, so {FIX} does not touch this row — the type gap needs a change "
-        "to repark's TIMESTAMP representation itself, which is a separate unit.",
+        None,
+        "the INSTANT agreed already (06:30Z). TZ-4 PR-1 closed the type half: repark now "
+        "exports timestamp[us, tz=UTC] like Spark. Flip evidence — revert the to_timestamp "
+        "µs+UTC wrap and this row reds.",
     ),
     TimeZoneRow(
         "dst_spring_forward_instant_hour",
@@ -447,12 +440,9 @@ G1_ROWS: list[TimeZoneRow] = [
             [("round_trip", pa.timestamp("ns"), True)],
             {"round_trip": dt.datetime(2024, 6, 15, 12, 0)},
         ),
-        "timestamp -> string -> timestamp: Spark renders in the session zone (08:00) and parses "
-        "back in the session zone, so the instant survives as timestamp[us, tz=UTC]. repark "
-        "renders and re-parses in the stored zone and returns a tz-naive timestamp[ns]; the "
-        f"instant survives only because both halves ignore the zone. {TZ4}, plus the CAST "
-        "rendering gap (registry queue B-TZ-4): the fix moves the extractor family, and a CAST "
-        "is not an extractor. Left divergent deliberately rather than half-fixed.",
+        "timestamp -> string -> timestamp: Spark renders in the session zone and parses back "
+        "so the instant survives as timestamp[us, tz=UTC]. repark CAST(str AS TIMESTAMP) is a "
+        f"zoneless input path and stays tz-naive timestamp[ns] ({TZ4} + B-TZ-4). PR-2.",
     ),
     TimeZoneRow(
         "date_trunc_day_across_a_zone_boundary",
@@ -463,16 +453,10 @@ G1_ROWS: list[TimeZoneRow] = [
             [("day_start", pa.timestamp("us", "UTC"), True)],
             {"day_start": _utc(2024, 6, 14, 4, 0)},
         ),
-        _one_row(
-            [("day_start", pa.timestamp("us"), True)],
-            {"day_start": dt.datetime(2024, 6, 14, 4, 0)},
-        ),
-        "the daily-rollup boundary. The VALUE half converged: repark truncates to local midnight "
-        "(2024-06-14 00:00 EDT = 04:00Z) like Spark, where before the fix it truncated to UTC "
-        "midnight of the NEXT day and a daily aggregate landed in the wrong bucket. What is left "
-        f"is the TYPE half, {TZ4} — the ticks are Spark's instant, the tz annotation is not. This "
-        "row therefore stays a disclosure and moves class; reverting the extraction fix reds it "
-        "as a REGRESSION (repark would match neither half).",
+        None,
+        "the daily-rollup boundary. VALUE converged with H-1a; TZ-4 PR-1 closed the type half "
+        "(date_trunc now returns timestamp[us, tz=UTC]). Flip evidence — revert the date_trunc "
+        "return annotation and this row reds.",
     ),
     # ----- the COLUMN family: the same class over a real tz-aware timestamp column ---------------
     # Every row above extracts from a scalar literal. A migrated job extracts from a COLUMN, which
@@ -696,27 +680,11 @@ G1_ROWS: list[TimeZoneRow] = [
                 "day_start": [_utc(2023, 12, 31, 5, 0), _utc(2024, 6, 15, 4, 0)],
             },
         ),
-        _table(
-            [
-                ("year_part", _INT32, True),
-                ("hour_part", _INT32, True),
-                ("rendered", pa.string(), True),
-                ("day_start", pa.timestamp("us"), True),
-            ],
-            {
-                "year_part": [2023, 2024],
-                "hour_part": [23, 8],
-                "rendered": ["2023-12-31 23:30", "2024-06-15 08:00"],
-                "day_start": [
-                    dt.datetime(2023, 12, 31, 5, 0),
-                    dt.datetime(2024, 6, 15, 4, 0),
-                ],
-            },
-        ),
+        None,
         f"the OTHER facade entry point, at the spelling a user writes: `F.year(col)` builds a "
         f"standalone expression with no session attached, so a session zone baked in at "
-        f"REGISTRATION would reach `sql()` and miss this path entirely. Every VALUE converged — "
-        f"the whole point of the fix — and the only residue is `date_trunc`'s Arrow type, {TZ4}. "
+        f"REGISTRATION would reach `sql()` and miss this path entirely. VALUE converged with "
+        f"H-1a; TZ-4 PR-1 closed the date_trunc type half. "
         f"{REVERT}",
         entry_point="dataframe_api",
     ),
@@ -739,26 +707,10 @@ G1_ROWS: list[TimeZoneRow] = [
                 "day_start": [_utc(2023, 12, 31, 15, 0), _utc(2024, 6, 14, 15, 0)],
             },
         ),
-        _table(
-            [
-                ("year_part", _INT32, True),
-                ("hour_part", _INT32, True),
-                ("rendered", pa.string(), True),
-                ("day_start", pa.timestamp("us"), True),
-            ],
-            {
-                "year_part": [2024, 2024],
-                "hour_part": [13, 21],
-                "rendered": ["2024-01-01 13:30", "2024-06-15 21:00"],
-                "day_start": [
-                    dt.datetime(2023, 12, 31, 15, 0),
-                    dt.datetime(2024, 6, 14, 15, 0),
-                ],
-            },
-        ),
+        None,
         f"the same spelling east of UTC, so the DataFrame-API cell is pinned under BOTH non-UTC "
-        f"zones rather than under one. Values converged; the `date_trunc` type residue is {TZ4}. "
-        f"{REVERT}",
+        f"zones rather than under one. VALUE converged with H-1a; TZ-4 PR-1 closed the "
+        f"date_trunc type half. {REVERT}",
         entry_point="dataframe_api",
     ),
 ]
@@ -815,14 +767,10 @@ G16_ROWS: list[TimeZoneRow] = [
             [("year_start", pa.timestamp("us", "UTC"), True)],
             {"year_start": _utc(2023, 12, 31, 15, 0)},
         ),
-        _one_row(
-            [("year_start", pa.timestamp("us"), True)],
-            {"year_start": dt.datetime(2023, 12, 31, 15, 0)},
-        ),
+        None,
         "the instant is 2024-01-01 00:00 in Tokyo, so the year start is that same instant — and "
         "repark now returns it, where before the fix it truncated the stored 2023-12-31 and "
-        f"landed a whole year earlier. Like its New York sibling this row's VALUE converged and "
-        f"its TYPE did not ({TZ4}), so it stays a disclosure in the other class.",
+        "landed a whole year earlier. VALUE converged with H-1a; TZ-4 PR-1 closed the type half.",
     ),
     TimeZoneRow(
         "year_boundary_extract_and_format_under_new_york_session",
@@ -981,25 +929,13 @@ G16_ROWS: list[TimeZoneRow] = [
                 "truncated_minute": _utc(2024, 11, 3, 6, 30),
             },
         ),
-        _one_row(
-            [
-                ("before_fall_back", pa.timestamp("us"), True),
-                ("after_fall_back", pa.timestamp("us"), True),
-                ("truncated_minute", pa.timestamp("us"), True),
-            ],
-            {
-                "before_fall_back": dt.datetime(2024, 11, 3, 5, 0),
-                "after_fall_back": dt.datetime(2024, 11, 3, 6, 0),
-                "truncated_minute": dt.datetime(2024, 11, 3, 6, 30),
-            },
-        ),
-        f"truncating inside the REPEATED hour. Spark truncates with `ZonedDateTime.truncatedTo`, "
-        f"which preserves the source instant's offset, so the two distinct instants of local hour "
-        f"1 stay distinct and the minute row does not move at all. An implementation that "
-        f"re-resolves the truncated local time to the earliest valid offset collapses the pair "
-        f"onto 05:00Z and puts the minute row an hour early — which is what the first draft of "
-        f"this unit did. The VALUE half is pinned equal here; the residue is `date_trunc`'s Arrow "
-        f"type, {TZ4}.",
+        None,
+        "truncating inside the REPEATED hour. Spark truncates with `ZonedDateTime.truncatedTo`, "
+        "which preserves the source instant's offset, so the two distinct instants of local hour "
+        "1 stay distinct and the minute row does not move at all. An implementation that "
+        "re-resolves the truncated local time to the earliest valid offset collapses the pair "
+        "onto 05:00Z and puts the minute row an hour early — which is what the first draft of "
+        "this unit did. VALUE converged with H-1a; TZ-4 PR-1 closed the type half.",
     ),
 ]
 
@@ -1157,36 +1093,28 @@ def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
     equality = {row.name for row in ROWS if row.repark is None}
     disclosures = {row.name for row in ROWS if row.repark is not None}
     assert disclosures == {
-        # TZ-4 — the tz-naive Arrow export TYPE (no extractor involved).
-        "to_timestamp_of_zone_suffixed_string",
+        # TZ-4 + B-TZ-4: CAST(str AS TIMESTAMP) is a zoneless input path (PR-2).
         "tz_aware_to_naive_round_trip",
-        # TZ-4 — value converged with the extraction fix, type did not.
-        "date_trunc_day_across_a_zone_boundary",
-        "year_boundary_date_trunc_under_tokyo_session",
-        "date_trunc_across_the_fall_back_hour_under_new_york_session",
-        "dataframe_api_extract_under_new_york_session",
-        "dataframe_api_extract_under_tokyo_session",
         # TZ-5 is NO LONGER here: `pre_1970_timestamp_cast_to_bigint` converged when the
         # timestamp-cast epoch-seconds fix landed and is now an equality row (see TZ5_FIX).
+        # TZ-4 PR-1 flipped instant-producer TYPE rows (to_timestamp Z, date_trunc return,
+        # DataFrame-API date_trunc, CAST(int) type).
         # TZ-7 — a ZONELESS timestamp input is read as UTC, not as a session-zone wall clock.
         # This unit fixed extraction for INSTANT-typed inputs only; these are the other half,
-        # and they are worse after the fix than before it. Disclosed, not laundered.
+        # and they are worse after the fix than before it. Disclosed, not laundered. PR-2.
         "zoneless_timestamp_literal_under_new_york_session",
         "zoneless_timestamp_input_spellings_under_tokyo_session",
         "naive_datetime_column_under_new_york_session",
-        # TZ-6 — repark cannot tell TimestampNTZType from TimestampType.
+        # TZ-6 — repark cannot tell TimestampNTZType from TimestampType. PR-2.
         "timestamp_ntz_is_indistinguishable_from_timestamp",
     }, (
         "every remaining disclosure must belong to a NAMED class other than the INSTANT-typed "
         "timestamp extraction this unit closed — if a new one is legitimate, add it here with the "
         "registry row that owns it"
     )
-    assert len(equality) == 18, (
-        "13 rows converged with the extraction fix, plus the 2 date_trunc COMPOSITION rows the "
-        "rework added, plus the 2 zone-independent control rows that were equality rows all "
-        "along, plus `pre_1970_timestamp_cast_to_bigint`, which converged when the "
-        "timestamp-cast epoch-seconds fix landed (17 -> 18; the class's own corpus is "
-        "test_timestamp_cast_parity.py)"
+    assert len(equality) == 24, (
+        "18 after TZ-5, plus 6 TZ-4 PR-1 type flips (to_timestamp Z, 3 date_trunc type "
+        "rows, 2 DataFrame-API date_trunc columns)"
     )
 
 
@@ -1194,23 +1122,17 @@ def test_current_timestamp_type_and_zone_disclosure() -> None:
     """``current_timestamp`` — the G1 row whose VALUE cannot be pinned, so its TYPE is.
 
     Recorded live Spark 4.1.2 under ``spark.sql.session.timeZone=America/New_York``:
-    ``timestamp[us, tz=UTC]``, ``nullable=False``. repark returns a tz-NAIVE ``timestamp[ns]``,
-    also non-nullable — the instant is right, the zone annotation and the unit are not, so a
-    consumer that localizes the column silently shifts it.
+    ``timestamp[us, tz=UTC]``, ``nullable=False``. TZ-4 PR-1 aligned SQL ``current_timestamp``
+    to that wire type (copy of the ``F.current_timestamp`` µs+UTC cast).
     """
     session = _session_at(ZONE_NEW_YORK)
     field = session.sql("SELECT current_timestamp() AS now_ts").to_arrow().schema.field("now_ts")
 
     spark_recorded_type = pa.timestamp("us", "UTC")
-    assert field.type == pa.timestamp("ns"), (
-        "repark's current_timestamp is tz-naive timestamp[ns] today; if this changed, the "
-        f"disclosure below must be revisited. {FIX}"
+    assert field.type == spark_recorded_type, (
+        f"TZ-4 PR-1: SQL current_timestamp is timestamp[us, tz=UTC] like Spark; got {field.type}"
     )
     assert field.nullable is False, "both engines mark current_timestamp non-nullable"
-    assert field.type != spark_recorded_type, (
-        "repark and Spark have CONVERGED on current_timestamp's Arrow type — flip this test to "
-        "an equality assertion and record the convergence."
-    )
 
 
 def test_session_timezone_conf_is_readable_back_and_defaults_to_utc() -> None:

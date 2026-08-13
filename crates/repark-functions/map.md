@@ -62,6 +62,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/collection.rs` — Spark `element_at` (arrays + maps) + the embedded `__repark_array_get__`
   subscript UDF + **`spark_get_item_udf` / `__repark_get_item__`** (polymorphic array 0-based or
   map-by-key for facade `Column.__getitem__` non-int/non-str keys — octo C2-L-001).
+- `src/instant_ts.rs` — **TZ-4 PR-1:** `now` / `current_timestamp` / `to_timestamp` emit
+  `timestamp[us, tz=UTC]`; analyzer wrap of leftover ns-naive TIMESTAMP expressions. Zoneless
+  values not localized (PR-2).
 - `src/datetime.rs` — the Spark calendar date shim: extractors `year`/`month`/`dayofmonth`/`day`/
   `dayofyear`/`quarter`/`weekofyear`/`yearofweek`/`dayofweek`/`weekday`, **hour/minute/second**
   (Time+Timestamp; X1-octo C3), `make_date`, and the WG2 calendar-math shims `add_months`

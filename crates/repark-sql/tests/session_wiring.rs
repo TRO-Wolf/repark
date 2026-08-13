@@ -130,3 +130,30 @@ async fn ansi_door_refusals_surface_through_the_session() {
         "no session-local table may exist: {err}"
     );
 }
+
+/// A11 probe (2026-08-13): native ANSI `CREATE TABLE (ts timestamp)` still derives
+/// `timestamp_ns` via `CAST(NULL AS TIMESTAMP)` and Iceberg v2 refuses it. The
+/// named grant to edit `repark-sql/src/create_table.rs` fires only when that path
+/// writes Iceberg `timestamp` (naive); this residual is `timestamp_ns` → morning.
+#[tokio::test]
+async fn ansi_column_def_timestamp_still_rejects_ns_on_v2() {
+    let warehouse_dir = TempDir::new().expect("warehouse tempdir");
+    let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
+    let session = ansi_session(&warehouse).await;
+    session
+        .sql(&format!(
+            "CREATE SCHEMA ice.sales WITH (location = '{warehouse}/sales')"
+        ))
+        .await
+        .expect("CREATE SCHEMA");
+
+    let err = session
+        .sql("CREATE TABLE ice.sales.ts_ddl (ts timestamp)")
+        .await
+        .expect_err("native ANSI column-def TIMESTAMP is still ns")
+        .to_string();
+    assert!(
+        err.contains("timestamp_ns") && err.contains("v3"),
+        "A11 residual must stay the v2 ns reject, not a silent timestamp/timestamptz write: {err}"
+    );
+}

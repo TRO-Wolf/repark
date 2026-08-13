@@ -397,7 +397,10 @@ async fn casts_outside_the_class_are_untouched() {
     for (target, expected) in [
         ("DATE", DataType::Date32),
         ("STRING", DataType::Utf8View),
-        ("TIMESTAMP", DataType::Timestamp(TimeUnit::Nanosecond, None)),
+        (
+            "TIMESTAMP",
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        ),
     ] {
         let batches = session
             .sql(&cast_literal_sql(MODERN_INSTANT, target))

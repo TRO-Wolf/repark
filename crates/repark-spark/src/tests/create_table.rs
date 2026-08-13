@@ -364,7 +364,7 @@ async fn column_def_temporary_refuse_testing_create_ref_and_types() {
     ));
     assert!(matches!(
         fields[1].field_type.as_ref(),
-        iceberg::spec::Type::Primitive(PrimitiveType::Timestamp)
+        iceberg::spec::Type::Primitive(PrimitiveType::Timestamptz)
     ));
     assert!(matches!(
         fields[2].field_type.as_ref(),
@@ -501,5 +501,84 @@ async fn column_def_or_replace_wipe_if_not_exists_and_like() {
     assert!(
         !like_message.contains("requires a column list"),
         "empty-column message must not mask LIKE: {like_message}"
+    );
+}
+
+/// TZ-4 PR-1: one-row CTAS type smoke — `current_timestamp` / zone-suffixed `to_timestamp`
+/// store Iceberg `timestamptz`, including an identity-partitioned table (Q5 rider).
+#[tokio::test]
+async fn ctas_of_instant_producers_stores_timestamptz() {
+    use iceberg::spec::PrimitiveType;
+
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    repark_functions::register_all(&ctx);
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ts_now USING iceberg AS SELECT current_timestamp() AS ts",
+    )
+    .await;
+    let now_table = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "ts_now".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert!(
+        matches!(
+            now_table.metadata().current_schema().as_struct().fields()[0]
+                .field_type
+                .as_ref(),
+            iceberg::spec::Type::Primitive(PrimitiveType::Timestamptz)
+        ),
+        "SQL current_timestamp CTAS must be timestamptz, not timestamp_ns / timestamp"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ts_z USING iceberg AS \
+         SELECT to_timestamp('2024-06-15T12:00:00Z') AS ts",
+    )
+    .await;
+    let zoned = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "ts_z".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert!(matches!(
+        zoned.metadata().current_schema().as_struct().fields()[0]
+            .field_type
+            .as_ref(),
+        iceberg::spec::Type::Primitive(PrimitiveType::Timestamptz)
+    ));
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.ts_part USING iceberg PARTITIONED BY (ts) AS \
+         SELECT to_timestamp('2024-06-15T12:00:00Z') AS ts",
+    )
+    .await;
+    let partitioned = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "ts_part".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert!(
+        matches!(
+            partitioned.metadata().current_schema().as_struct().fields()[0]
+                .field_type
+                .as_ref(),
+            iceberg::spec::Type::Primitive(PrimitiveType::Timestamptz)
+        ),
+        "identity-partition key type follows the column: timestamptz"
     );
 }
