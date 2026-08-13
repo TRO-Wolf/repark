@@ -371,9 +371,10 @@ G2_ROWS: list[DecimalRow] = [
         "SELECT avg(x) AS v FROM (SELECT CAST(1.10 AS DECIMAL(10,2)) AS x "
         "UNION ALL SELECT CAST(2.20 AS DECIMAL(10,2))) t",
         _dec(14, 6, Decimal("1.650000"), nullable=True),
-        _f64(1.6500000000000001, nullable=True),
-        "avg of DECIMAL(10,2): Spark keeps decimal128(14,6) exact 1.650000; repark promotes to "
-        f"float64 with a binary residue. An average unit price is not money-safe. {FIX_G2}.",
+        None,
+        "avg of DECIMAL(10,2): both engines keep decimal128(14,6) exact 1.650000 nullable "
+        "(Spark Average +4; Z-3 U1 / DEC-5 stopped the facade Float64 overwrite). Name kept "
+        "so existing registry citations still resolve.",
     ),
     DecimalRow(
         "int_times_decimal_promotes_wider_in_repark",

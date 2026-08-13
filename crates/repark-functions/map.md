@@ -14,7 +14,12 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   repark `DatePartUdf` shims (accept Time32/64 + Timestamp; overwrite datafusion-spark Timestamp-only).
 
 
-- `aggregate.rs` / R-RETRACT-SHIM: Float64 `avg` with `retract_batch` (overwrites SparkAvg; sliding windows).
+- `aggregate.rs` / R-RETRACT-SHIM + **DEC-5 / Z-3 U1:** `SparkAvgWithRetract` keeps
+  Float64 retract (X2 sliding windows) and now also keeps Spark-typed decimal `avg`
+  (`(p,s)→(min(38,p+4), min(38,s+4))`) with decimal `retract_batch` (small copy of
+  DF `DecimalAvgAccumulator` / `DecimalAverager`). Signature is DF `Avg`'s: Decimal
+  stays decimal; Integer/Float still coerce to Float64. Pins:
+  `group_avg_decimal128_stays_decimal_14_6_i128`, `sliding_avg_decimal128_retracts`.
   Q1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases.
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`.

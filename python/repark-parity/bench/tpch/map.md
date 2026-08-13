@@ -53,6 +53,8 @@ Sail is prior-art only — never a RePark product dependency (no pysail in uv.lo
 - `run_tpch.py` — CLI entry (`--sf`, `--report`, `--report-append`, `--ledger`, `--repeats`,
   `--timeout`, `--timeout-retry`, `--storage`, `--isolation`, `--engine`, `--sail-python`).
 - `sf1_status_ledger.json` — frozen SF1 status map consumed by `test_tpch_smoke.py` pins.
+  **Z-3 U1 (2026-08-13):** Q1 flipped OK → WRONG-RESULT — Spark-typed `avg(l_discount)`
+  (`decimal128(19,6)`) no longer matches DuckDB float at 1e-6 relative.
 - `baseline-ratios.json` — **r24 G10 / Q15** PROVISIONAL repark/DuckDB wall-ratio ceilings
   (22 queries; seeded from sail-bench-report SF1 `r_ratio`; morning finals = tip × 1.5).
 - `check_baseline_ratios.py` — compare a scoreboard JSON against `baseline-ratios.json`

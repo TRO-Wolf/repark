@@ -2,7 +2,8 @@
   "numeric_tolerance": "1e-6 relative (floats/decimals only; ints exact)",
   "queries": {
     "1": {
-      "status": "OK"
+      "status": "WRONG-RESULT",
+      "note": "Z-3 U1 / DEC-5: avg(l_discount) is Spark decimal128(19,6) 0.050081; DuckDB keeps float 0.050081339… (rel err ~6.8e-6 > 1e-6). Spark-correct, DuckDB-divergent."
     },
     "10": {
       "status": "OK"

@@ -375,8 +375,9 @@ NOT in that file is a defect, not a decision.
   never SCHEMA_NOT_FOUND (explicit missing names still raise).
 - `test_tpch_smoke.py` — **R-TPCH-HARNESS**: SF0.01 DuckDB-diff pins for all 22 TPC-H queries
   against `python/repark-parity/bench/tpch/sf1_status_ledger.json` (OK → value match;
-  ERROR → EXPECTED-ERROR class (requires error_class); TIMEOUT still SF0.01 DuckDB-diff OK;
-  silent fix/regression both red). `importorskip("duckdb")`; tpch extension INSTALL try →
+  WRONG-RESULT → still disagrees; ERROR → EXPECTED-ERROR class (requires error_class); TIMEOUT still SF0.01 DuckDB-diff OK;
+  silent fix/regression both red). Q1 is **WRONG-RESULT** after Z-3 U1 (Spark-typed
+  `avg(l_discount)` vs DuckDB float). `importorskip("duckdb")`; tpch extension INSTALL try →
   skip if unreachable.
   Duckdb hard-provisioned in root `dev` group (scoreboard guard; polars/pandas skip precedent
   unchanged for *their* tests).
@@ -1294,15 +1295,17 @@ NOT in that file is a defect, not a decision.
   driver at a time — check `pgrep -af 'pyspark|SparkSubmit'` (ignoring a standing container
   cluster) before running. Invocation in its docstring and `task/g3e8-guard-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
-  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (12 equality
-  controls + 12 disclosures) and 7 G13 rows (raise-class + nullability), recorded in record mode
+  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (**13** equality
+  controls + **11** disclosures after Z-3 U1 flipped `avg_money_stays_decimal_in_spark_double_in_repark`
+  to equality) and 7 G13 rows (raise-class + nullability), recorded in record mode
   against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`).
-  Every row asserts value AND exact Arrow `decimal128(p,s)` (or `double` for repark's bare-literal
-  / `avg` disclosures) on the `to_arrow` path through `repark_parity.assert_frames_equal` — never
+  Every row asserts value AND exact Arrow `decimal128(p,s)` (or `double` for repark's remaining
+  bare-literal disclosures) on the `to_arrow` path through `repark_parity.assert_frames_equal` — never
   `show`. Disclosure classes: bare decimal literal inference (Spark DECIMAL vs repark double),
-  division result `(p,s)`, the 38-digit clamp on add/mul, `avg` of money (decimal vs double), INT
+  division result `(p,s)`, the 38-digit clamp on add/mul, INT
   x DECIMAL promotion width, ANSI overflow raise vs wrong value, divide-by-zero raise vs NULL,
-  high-scale mul plan refuse, and overflow-capable nullability. A failed disclosure is CLASSIFIED
+  high-scale mul plan refuse, and overflow-capable nullability. `avg` of money is now an
+  equality (`decimal128(14,6)` nullable `1.650000`) — DEC-5 / Z-3 U1. A failed disclosure is CLASSIFIED
   before it raises: CONVERGED (flip-don't-delete to `repark=None`) vs regression (re-derive both
   halves). Budget pin: G2 20-26, G13 6-8, min 8 equalities, max 20 disclosures so the corpus
   cannot degenerate to all-disclosures. Class-coverage pins include a **name-gated 38-digit clamp

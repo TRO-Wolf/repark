@@ -79,7 +79,8 @@ pub fn register_all(ctx: &SessionContext) {
     for udaf in datafusion_spark::all_default_aggregate_functions() {
         ctx.register_udaf(udaf.as_ref().clone());
     }
-    // R-RETRACT-SHIM: overwrite SparkAvg with Float64 retract_batch (sliding windows).
+    // R-RETRACT-SHIM + DEC-5: overwrite SparkAvg with Float64 retract plus decimal
+    // avg that keeps Spark's (p+4, s+4) type (sliding decimal uses decimal retract).
     for udaf in aggregate::functions() {
         ctx.register_udaf(udaf.as_ref().clone());
     }

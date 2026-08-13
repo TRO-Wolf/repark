@@ -43,7 +43,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   repark DatePartUdf (Time+Timestamp), overwriting datafusion-spark Timestamp-only.
 
 
-- `aggregate.rs` / R-RETRACT-SHIM: Float64 `avg` with `retract_batch` (overwrites SparkAvg; sliding windows).
+- `aggregate.rs` / R-RETRACT-SHIM + **DEC-5 / Z-3 U1:** Float64 `avg` retract (X2) plus
+  Spark-typed decimal `avg` with decimal `retract_batch` (no Numeric→Float64 coerce).
 
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
