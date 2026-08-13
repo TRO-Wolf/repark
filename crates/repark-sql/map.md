@@ -37,7 +37,8 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
   forbidden door→door edge. Nothing in `src/` may name them.
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
-  two-session `cross_door.rs` rows, Q8 `introspection.rs`, the Q11 `ta_toll.rs`.
+  two-session `cross_door.rs` rows (incl. G11 intended divergences), Q8 `introspection.rs`,
+  the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`).
 
 ## I want to...
 
@@ -72,7 +73,8 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
 - **Extension points:** change the `WITH (…)` vocabulary (`properties.rs`); partition parsing
   (`partitioning.rs`); a guard (`guards.rs`); a wrong-door steer (`sniff.rs`).
 - **Test strategy:** `cargo test -p repark-sql` — R1 parser-production pins, the two-session
-  `cross_door.rs` rows, Q8 introspection, the Q11 ta-toll.
+  `cross_door.rs` rows (incl. G11 intended divergences), Q8 introspection, the Q11 ta-toll,
+  G11 ANSI-door value pins (`tests/ansi_door_values.rs`).
 - **Known limitations:** `matrix.rs` reads 39 tested / 4 deliberately absent; every remaining absence
   is a standing design ruling, not a deferral.
 

@@ -12,8 +12,8 @@ the other runs, the row is a **split** that pins the recorded Spark success half
 refuse needle. A silent CONVERGENCE goes red and forces the disclosure to be revisited rather
 than laundered into "parity".
 
-**G4b (2026-08-11): the two DataFrame semi/anti splits CONVERGED.** ``df_left_semi_unsupported``
-and ``df_left_anti_unsupported`` pinned repark's facade refusing ``how='leftsemi'`` /
+**G4b (2026-08-11): the two DataFrame semi/anti splits CONVERGED.** ``df_left_semi_on_name``
+and ``df_left_anti_on_name`` pinned repark's facade refusing ``how='leftsemi'`` /
 ``how='leftanti'``. The DataFrame-door widening landed the surface, the split classifier reported
 CONVERGED against those already-recorded Spark goldens, and both rows are now content equalities
 - their Spark halves are UNCHANGED, only repark's side moved. Their names are kept byte-identical
@@ -818,7 +818,7 @@ ROWS: list[JoinRow] = [
     ),
     # ----- 7. G4b: DataFrame-door semi family (was two refuse splits; now content) ---------------
     JoinRow(
-        name="df_left_semi_unsupported",
+        name="df_left_semi_on_name",
         kind="content",
         entry="df",
         family="missing_type",
@@ -845,7 +845,7 @@ ROWS: list[JoinRow] = [
         ),
     ),
     JoinRow(
-        name="df_left_anti_unsupported",
+        name="df_left_anti_on_name",
         kind="content",
         entry="df",
         family="missing_type",
@@ -1130,7 +1130,7 @@ def test_join_row_set_covers_g4_budget() -> None:
     # G4b: the two former DF refuse splits are now CONTENT equalities - the widening landed, so
     # the corpus must state parity, not a stale disclosure. Re-splitting them (a regression that
     # re-refuses the surface) reds here as well as on the row itself.
-    for flipped_name in ("df_left_semi_unsupported", "df_left_anti_unsupported"):
+    for flipped_name in ("df_left_semi_on_name", "df_left_anti_on_name"):
         flipped = next(row for row in ROWS if row.name == flipped_name)
         assert flipped.kind == "content", (
             f"{flipped_name} is a G4b content equality; a split here means the DataFrame semi "
