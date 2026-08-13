@@ -47,6 +47,11 @@ not this directory.
   nested order-insensitive comparator + 6 nested-container differential rows vs live Spark;
   record driver; §6 paste-true registry rows. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`.
+- [y6-boundary-shapes-ledger.md](y6-boundary-shapes-ledger.md) — **in flight (Y-6 / H-2 gap G10):**
+  facade-boundary container-shape corpus (8–10 pins) vs live Spark 4.1.2; record driver;
+  §6 paste-true registry rows. Census cohorts / `_live_parity.py` / registry file **not**
+  edited (A11). Sibling of `test_interchange_parity.py`; does not duplicate X-5 VALUES
+  families.
 - [x1-cast-failure-ledger.md](x1-cast-failure-ledger.md) — **in flight (X-1 / H-2 gap G6):**
   cast-failure semantics differential corpus vs live Spark 4.1.2 ANSI ON; record driver; §6
   paste-true registry + `Disclosure(...)` handoff (does **not** edit the registry or
