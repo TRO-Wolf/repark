@@ -90,6 +90,18 @@ What happens next, in order:
    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md); completeness
    table: [task/z5-landing-increment-ledger.md](task/z5-landing-increment-ledger.md).
    Z-wave (Z-1…Z-5) is in flight on that frozen SHA.
+   **2026-08-13 — Z wave landed ×5; W wave in flight.** Z-wave PRs **#75–#79** are on
+   `main` (this increment's base `c7e6589` / `#79` tip; `#73` also on `main`). Closed
+   as code: Y-wave §6 landing (#75), facade `avg(DECIMAL)` Spark `(p+4,s+4)` (#76 /
+   registry DEC-4 / campaign DEC-5), `F.abs` after semi/anti origin-thread (#77),
+   uncorrelated `DELETE … IN` both doors (#78), TZ-4 PR-1 instant-producer
+   `timestamp[us, tz=UTC]` + Spark-door Iceberg `timestamptz` (#79). Still OPEN and
+   **not** claimed closed by this increment: G3-E8 residual spellings (W-3 in flight),
+   TZ-6 / TZ-7 (W-1; **not** retired), TZ-4 residues (B-TZ-4, ANSI column-def
+   `timestamp_ns`, Python `TimestampType` mapping), DEC-1 (W-2 in flight) and
+   DEC-2/3/5–9, TY-3 still DECLARED, G5b-R1 / R4 / R5 (W-4 in flight), G8, G10
+   follow-on, F-Y10-1. Completeness table:
+   [task/w5-z-landing-ledger.md](task/w5-z-landing-ledger.md).
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -182,30 +194,33 @@ moving it. Nothing is described in both places.
     Not a regression; a completeness gap, and `CAST(ts AS DATE)` is the commonest partition-key
     derivation in a migrated job.
 
-  Two further rows carry the type half: **[TZ-4](docs/spark-sql-iceberg-parity.md)** — the tz-naive
-  TIMESTAMP Arrow export, which split off because it is the timestamp *representation* rather than
-  the extractor path — and **TZ-6**, that repark has no `TIMESTAMP_NTZ` distinct from `TIMESTAMP`
-  (re-recorded from the live oracle in the same change). TZ-4's unit is the one that retires TZ-6
-  and TZ-7 with it.
+  Two further rows carry the type half: **[TZ-4](docs/spark-sql-iceberg-parity.md)** —
+  **PROGRESS (2026-08-13, #79), not retired.** Instant-typed producers now export
+  `timestamp[us, tz=UTC]`; Spark-door DDL `TIMESTAMP` stores Iceberg `timestamptz`.
+  Residues remain (B-TZ-4, ANSI column-def `timestamp_ns`, Python `TimestampType`
+  mapping). **TZ-6 / TZ-7 are not retired by this increment** (W-1). TZ-4's remaining
+  representation unit is still the one that would retire TZ-6 and TZ-7 with it.
 - **`CAST(TIMESTAMP AS <numeric>)` returns epoch seconds** — **FIXED (2026-08-12, #64).**
   The 10⁹ nanoseconds-vs-seconds class is closed, including INT/SMALLINT un-refusal and
   floor semantics. Residual: TIMESTAMP→INT **nullability only** (registry G6-4). Semantics of
   the closed class: registry TZ-5 (FIXED note).
-- **decimal128 semantics diverge from Apache Spark across nine classes** — **BACKLOG, open
-  (2026-08-11)**: bare-literal inference, division precision/scale, the 38-digit result-type
-  clamp (and its plan-refuse face), `avg`/`INT*DECIMAL` promotion, ANSI overflow and
-  divide-by-zero, and arithmetic nullability — recorded against live PySpark 4.1.2 by the G-7
-  differential corpus (hardening gaps G2 + G13). Semantics + pins: registry §7 rows DEC-1 …
-  DEC-9; the corpus classifies any silent convergence CONVERGED-flip-don't-delete.
-  **Photographed, not fixed.**
+- **decimal128 semantics diverge from Apache Spark across nine classes** — **BACKLOG,
+  still open except DEC-4.** Registry DEC-4 / campaign DEC-5 `avg(DECIMAL)` is
+  **FIXED (2026-08-13, #76)** — facade now Spark `(p+4,s+4)`. DEC-1 (literal
+  inference) stays open — **W-2 in flight**. DEC-2/3/5–9 remain photographed, not
+  fixed. TY-3 stays DECLARED (U2 revisit rides with W-2). Semantics + pins: registry
+  §7 DEC-1 … DEC-9 (DEC-4 is a dated FIXED note).
 - **Negative temporal-RANGE `count(*)` = -1 in release wheels** — **FIXED on the Spark
   door / facade `.sql()` (2026-08-12, Y-1 / #72).** Kind-or-magnitude invert is Spark's
   empty frame (`count(*)` 0, `sum` NULL) or a loud refuse; wrap is gone there. Residuals:
-  G5b-R1 / R4 / R5 still OPEN; ANSI-door wrap is a named residual (no pin). Semantics:
+  G5b-R1 / R4 / R5 still OPEN (**W-4 in flight**; this increment does not claim them
+  closed). ANSI-door wrap is a named residual (no pin). Semantics:
   registry G5b-R3 FIXED note + [G5b-R1](docs/spark-sql-iceberg-parity.md) / R4 / R5.
-- **DELETE/UPDATE subquery predicates are refused, not implemented** — **BACKLOG, open
-  (G3-E8 guard half).** A silent-data-loss window is closed by a loud valve; the FIX unit that
-  would lower the statements onto MERGE has not started. Semantics + pins: registry §7 rows
+- **DELETE/UPDATE subquery predicates** — **PARTIALLY FIXED (2026-08-13, #78).**
+  Uncorrelated `DELETE … WHERE col IN (SELECT col FROM …)` executes on both doors and
+  matches Spark. Sixteen residual spellings stay refused (UPDATE IN, NOT IN, EXISTS,
+  scalars, nested, mixed AND/OR, …). The family is **not** closed. G3-E8-NULL stays
+  refused. W-3 is the PR-2 (NOT IN + NULL trap). Semantics + pins: registry §7 rows
   G3-E8 / G3-E8-NULL.
 - **`repark.sql` re-home** — **blocks the first tagged release** (not a correctness defect).
   See [docs/release.md](docs/release.md) "Hard blockers" and Deferred capabilities.
