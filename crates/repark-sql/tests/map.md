@@ -62,8 +62,9 @@ belongs out here is what must be observed from outside the crate.
   value equal across doors; corpus rows `and_true_null_is_null` / `case_when_null_predicate`;
   no Spark-only `<=>`), and — added 2026-08-11 —
   `cross_door_g3e8_refusals_render_identically` (ROW 9, restated 2026-08-13 over still-refused
-  EXISTS / UPDATE IN / nested / scalar / quoted EXISTS — IN / NOT IN now execute) plus
-  `cross_door_g3e8_not_in_delete_executes_identically` (executed column), which compares a
+  correlated IN / UPDATE IN / nested / scalar — IN / NOT IN / `[NOT] EXISTS` now execute) plus
+  `cross_door_g3e8_not_in_delete_executes_identically` and
+  `cross_door_g3e8_exists_delete_executes_identically` (executed columns), which compares a
   **rendered refusal string** rather than a result: the G3-E8 valve is implemented twice (no
   door→door product edge), and this is the only pin that can see the two copies drift, including
   the rendered TARGET that the per-door message pins cannot. **G11 (2026-08-12):** six **INTENDED** door-vs-door value

@@ -107,6 +107,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
   (`g3e8_delete_not_in_subquery_*`, empty subquery, quoted + FROM-less). Residual refuse
   family + valve-ORDER pin restated over EXISTS / nested / UPDATE. Ledger:
   [`../../../../task/w3-g3e8-pr2-ledger.md`](../../../../task/w3-g3e8-pr2-ledger.md).
+- **V-1 / G3-E8 PR-3 (2026-08-13)** — `[NOT] EXISTS` ± correlation execute
+  (`g3e8_delete_exists_uncorrelated_and_correlated_execute`). Residual refuse family +
+  valve-ORDER pin restated over correlated IN / nested / scalar / UPDATE. Ledger:
+  [`../../../../task/v1-g3e8-pr3-ledger.md`](../../../../task/v1-g3e8-pr3-ledger.md).
   `normalize.rs` gained **2**: the detector unit pin
   (`g3e8_subquery_detector_fires_on_every_spelling_and_no_other`) and the statement-level valve
   pin (`g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target`, the entry point

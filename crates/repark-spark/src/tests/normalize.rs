@@ -273,7 +273,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
     // parse rejects (the panel's bypass family) and the quoted one the text scan cannot read.
     for (sql, expected_target, verb) in [
         (
-            "DELETE FROM ice.sales.t WHERE EXISTS (SELECT 1 FROM k)",
+            "DELETE FROM ice.sales.t WHERE id = (SELECT max(id) FROM k)",
             "ice.sales.t",
             "DELETE",
         ),
@@ -283,7 +283,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
             "UPDATE",
         ),
         (
-            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE EXISTS (SELECT 1 FROM k)",
+            "DELETE FROM \"ice\".\"sales\".\"t\" WHERE id = (SELECT max(id) FROM k)",
             "\"ice\".\"sales\".\"t\"",
             "DELETE",
         ),
@@ -312,6 +312,9 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
         "DELETE FROM ice.sales.t WHERE id = 2",
         "DELETE FROM ice.sales.t WHERE id IN (SELECT id FROM k)",
         "DELETE FROM ice.sales.t WHERE id NOT IN (SELECT id FROM k)",
+        "DELETE FROM ice.sales.t WHERE EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM ice.sales.t WHERE NOT EXISTS (SELECT 1 FROM k)",
+        "DELETE FROM ice.sales.t WHERE EXISTS (SELECT 1 FROM k x WHERE x.id = ice.sales.t.id)",
         "UPDATE ice.sales.t SET name = 'z' WHERE id IN (1, 2)",
         "DELETE FROM ice.sales.t",
         "SELECT id FROM t WHERE id IN (SELECT id FROM k)",

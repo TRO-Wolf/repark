@@ -11,8 +11,9 @@ fix unit inherits its oracle instead of re-deriving one under time pressure.
 
 **Row kinds.** Residual subquery rows are **split**: repark refuses (its needle is pinned) and the
 Spark half is the recorded post-DML table. **content** rows include two non-subquery equality
-controls plus the executed holes (`DELETE … IN`, `DELETE … NOT IN` and its 3VL / empty-subquery
-companions). Without the non-subquery controls a comparator that always "passed" would go unnoticed.
+controls plus the executed holes (`DELETE … IN`, `DELETE … NOT IN` + NULL trap, and
+`DELETE … [NOT] EXISTS` uncorrelated + correlated, recorded against live Spark 4.1.2). Without
+the non-subquery controls a comparator that always "passed" would go unnoticed.
 
 **The NULL trap is recorded, not reasoned.** ``NOT IN`` over a subquery whose result contains NULL
 is SQL's three-valued-logic trap: every row's test evaluates to UNKNOWN, so Spark matches
@@ -118,6 +119,36 @@ KEYS_SEED = "SELECT CAST(2 AS BIGINT) AS id, 'K' AS name"
 KEYS_SEED_WITH_NULL = (
     "SELECT CAST(2 AS BIGINT) AS id, 'K' AS name UNION ALL SELECT CAST(NULL AS BIGINT), 'N'"
 )
+KEYS_SEED_EMPTY = (
+    "SELECT CAST(2 AS BIGINT) AS id, 'K' AS name WHERE CAST(1 AS INT) = CAST(0 AS INT)"
+)
+KEYS_SEED_NONE = "SELECT CAST(99 AS BIGINT) AS id, 'K' AS name"
+KEYS_SEED_ALL = (
+    "SELECT CAST(1 AS BIGINT) AS id, 'K' AS name "
+    "UNION ALL SELECT CAST(2 AS BIGINT), 'K' "
+    "UNION ALL SELECT CAST(3 AS BIGINT), 'K'"
+)
+KEYS_SEED_DUPS = (
+    "SELECT CAST(1 AS BIGINT) AS id, 'K' AS name UNION ALL SELECT CAST(1 AS BIGINT), 'K'"
+)
+TARGET_SEED_WITH_NULL = (
+    "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name "
+    "UNION ALL SELECT CAST(2 AS BIGINT), 'b' "
+    "UNION ALL SELECT CAST(NULL AS BIGINT), 'n'"
+)
+TARGET_SEED_DUPS = (
+    "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name "
+    "UNION ALL SELECT CAST(1 AS BIGINT), 'a' "
+    "UNION ALL SELECT CAST(2 AS BIGINT), 'b'"
+)
+EXISTS_CORRELATED = (
+    "DELETE FROM {target} WHERE EXISTS (SELECT 1 FROM {keys} k WHERE k.id = {target}.id)"
+)
+NOT_EXISTS_CORRELATED = (
+    "DELETE FROM {target} WHERE NOT EXISTS (SELECT 1 FROM {keys} k WHERE k.id = {target}.id)"
+)
+EXISTS_UNCORRELATED = "DELETE FROM {target} WHERE EXISTS (SELECT 1 FROM {keys})"
+NOT_EXISTS_UNCORRELATED = "DELETE FROM {target} WHERE NOT EXISTS (SELECT 1 FROM {keys})"
 
 
 # ==================================================================================================
@@ -146,6 +177,7 @@ class DmlSubqueryRow:
     """Post-DML read-back; uses ``{target}``."""
     note: str
     keys_seed_sql: str = KEYS_SEED
+    target_seed_sql: str = TARGET_SEED
     spark: pa.Table | None = None
     repark_error_needle: str | None = None
 
@@ -207,7 +239,9 @@ def run_dml_lifecycle(
     fq_target = target_fqn(catalog, namespace, row.name)
     fq_keys = target_fqn(catalog, namespace, f"{row.name}_keys")
     ensure_namespace(session, catalog, namespace)
-    create_seeded_table(session, fq_table=fq_target, columns=TARGET_COLUMNS, seed_sql=TARGET_SEED)
+    create_seeded_table(
+        session, fq_table=fq_target, columns=TARGET_COLUMNS, seed_sql=row.target_seed_sql
+    )
     create_seeded_table(session, fq_table=fq_keys, columns=KEYS_COLUMNS, seed_sql=row.keys_seed_sql)
     try:
         session.sql(row.dml_sql.format(target=fq_target, keys=fq_keys))
@@ -222,7 +256,9 @@ def run_dml_expect_error(session: Any, row: DmlSubqueryRow, *, catalog: str, nam
     fq_target = target_fqn(catalog, namespace, row.name)
     fq_keys = target_fqn(catalog, namespace, f"{row.name}_keys")
     ensure_namespace(session, catalog, namespace)
-    create_seeded_table(session, fq_table=fq_target, columns=TARGET_COLUMNS, seed_sql=TARGET_SEED)
+    create_seeded_table(
+        session, fq_table=fq_target, columns=TARGET_COLUMNS, seed_sql=row.target_seed_sql
+    )
     create_seeded_table(session, fq_table=fq_keys, columns=KEYS_COLUMNS, seed_sql=row.keys_seed_sql)
     try:
         session.sql(row.dml_sql.format(target=fq_target, keys=fq_keys))
@@ -238,7 +274,7 @@ READ_BACK = "SELECT id, name FROM {target} ORDER BY id"
 
 
 # ==================================================================================================
-# The corpus (defect G3-E8: 10 rows — 5 residual splits + 5 content; budget 8-11)
+# The corpus (defect G3-E8: executed IN/NOT IN/EXISTS + residual UPDATE/correlated-IN splits)
 # ==================================================================================================
 
 ROWS: list[DmlSubqueryRow] = [
@@ -318,38 +354,31 @@ ROWS: list[DmlSubqueryRow] = [
             "rows'."
         ),
     ),
-    # ----- 6. DELETE … EXISTS (correlated) -------------------------------------------------------
+    # ----- 6. DELETE … EXISTS (correlated, matching some) ----------------------------------------
     DmlSubqueryRow(
         name="delete_exists_correlated",
-        kind="split",
-        dml_sql=(
-            "DELETE FROM {target} WHERE EXISTS (SELECT 1 FROM {keys} k WHERE k.id = {target}.id)"
-        ),
+        kind="content",
+        dml_sql=EXISTS_CORRELATED,
         read_sql=READ_BACK,
         spark=_table(
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1, 3], "name": ["a", "c"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
         note=(
-            "correlated EXISTS: decorrelated to a LeftSemi join, same loss. Same result as the IN "
-            "spelling on Spark — a second entry point into the identical divergence class."
+            "correlated EXISTS: identity SELECT is a per-row semi-join. Flipped split → content "
+            "when PR-3 proved the executed SELECT matches live Spark `{1,3}`."
         ),
     ),
-    # ----- 7. DELETE … NOT EXISTS (correlated) ---------------------------------------------------
+    # ----- 7. DELETE … NOT EXISTS (correlated, matching some) ------------------------------------
     DmlSubqueryRow(
         name="delete_not_exists_correlated",
-        kind="split",
-        dml_sql=(
-            "DELETE FROM {target} WHERE NOT EXISTS "
-            "(SELECT 1 FROM {keys} k WHERE k.id = {target}.id)"
-        ),
+        kind="content",
+        dml_sql=NOT_EXISTS_CORRELATED,
         read_sql=READ_BACK,
         spark=_table(
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [2], "name": ["b"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
         note=(
             "NOT EXISTS is NULL-safe where NOT IN is not — contrast with "
             "`delete_not_in_subquery_with_null_key`, which deletes nothing under the same data."
@@ -370,7 +399,186 @@ ROWS: list[DmlSubqueryRow] = [
         repark_error_needle=G3E8_NEEDLE,
         note="correlated IN — the third spelling of the same semi-join, pinned per entry point.",
     ),
-    # ----- 9. UPDATE … WHERE IN (subquery) -------------------------------------------------------
+    # ----- EXISTS family extras (recorded 2026-08-13 vs Spark 4.1.2) ------------------------------
+    DmlSubqueryRow(
+        name="delete_exists_uncorrelated",
+        kind="content",
+        dml_sql=EXISTS_UNCORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [], "name": []},
+        ),
+        note="uncorrelated nonempty EXISTS is TRUE for every row — Spark deletes the whole table.",
+    ),
+    DmlSubqueryRow(
+        name="delete_exists_uncorrelated_empty",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_EMPTY,
+        dml_sql=EXISTS_UNCORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b", "c"]},
+        ),
+        note=(
+            "uncorrelated empty EXISTS is FALSE — Spark deletes nothing. Not a match-all shortcut."
+        ),
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_uncorrelated",
+        kind="content",
+        dml_sql=NOT_EXISTS_UNCORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b", "c"]},
+        ),
+        note="uncorrelated nonempty NOT EXISTS is FALSE for every row — Spark deletes nothing.",
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_uncorrelated_empty",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_EMPTY,
+        dml_sql=NOT_EXISTS_UNCORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [], "name": []},
+        ),
+        note="uncorrelated empty NOT EXISTS is TRUE — Spark deletes every row.",
+    ),
+    DmlSubqueryRow(
+        name="delete_exists_correlated_none",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_NONE,
+        dml_sql=EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b", "c"]},
+        ),
+        note="correlated EXISTS matching none — keys={99}, Spark deletes nothing.",
+    ),
+    DmlSubqueryRow(
+        name="delete_exists_correlated_all",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_ALL,
+        dml_sql=EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [], "name": []},
+        ),
+        note="correlated EXISTS matching all — keys={1,2,3}, Spark empties the table.",
+    ),
+    DmlSubqueryRow(
+        name="delete_exists_correlated_empty",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_EMPTY,
+        dml_sql=EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b", "c"]},
+        ),
+        note="correlated EXISTS over an empty keys table — Spark deletes nothing.",
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_correlated_none",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_NONE,
+        dml_sql=NOT_EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [], "name": []},
+        ),
+        note="correlated NOT EXISTS matching none — Spark deletes every row.",
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_correlated_all",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_ALL,
+        dml_sql=NOT_EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b", "c"]},
+        ),
+        note="correlated NOT EXISTS matching all — Spark deletes nothing.",
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_correlated_empty",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_EMPTY,
+        dml_sql=NOT_EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [], "name": []},
+        ),
+        note="correlated NOT EXISTS over empty keys — Spark deletes every row.",
+    ),
+    DmlSubqueryRow(
+        name="delete_exists_correlated_null_keys",
+        kind="content",
+        target_seed_sql=TARGET_SEED_WITH_NULL,
+        keys_seed_sql=KEYS_SEED_WITH_NULL,
+        dml_sql=EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [None, 1], "name": ["n", "a"]},
+        ),
+        note=(
+            "NULL = NULL is unknown, so a NULL target id does not EXISTS-match a NULL key. "
+            "Spark remaining `{NULL, 1}` (deleted id=2). Recorded 2026-08-13."
+        ),
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_correlated_null_keys",
+        kind="content",
+        target_seed_sql=TARGET_SEED_WITH_NULL,
+        keys_seed_sql=KEYS_SEED_WITH_NULL,
+        dml_sql=NOT_EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [2], "name": ["b"]},
+        ),
+        note=(
+            "NOT EXISTS + NULL keys: NULL id has no TRUE match so it is deleted. "
+            "This is NOT the NOT IN 3VL trap."
+        ),
+    ),
+    DmlSubqueryRow(
+        name="delete_exists_correlated_duplicates",
+        kind="content",
+        target_seed_sql=TARGET_SEED_DUPS,
+        keys_seed_sql=KEYS_SEED_DUPS,
+        dml_sql=EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [2], "name": ["b"]},
+        ),
+        note="duplicate keys and duplicate target rows: EXISTS deletes every matching copy.",
+    ),
+    DmlSubqueryRow(
+        name="delete_not_exists_correlated_duplicates",
+        kind="content",
+        target_seed_sql=TARGET_SEED_DUPS,
+        keys_seed_sql=KEYS_SEED_DUPS,
+        dml_sql=NOT_EXISTS_CORRELATED,
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 1], "name": ["a", "a"]},
+        ),
+        note="NOT EXISTS keeps every non-matching copy (both id=1 rows).",
+    ),
+    # ----- residual UPDATE twins stay split ------------------------------------------------------
     DmlSubqueryRow(
         name="update_in_subquery",
         kind="split",
@@ -508,7 +716,7 @@ def test_refusal_leaves_every_row_untouched(repark: ReparkSession) -> None:
     post-refusal contents. This row keeps the target alive and reads it back — the assertion that
     would have caught the original defect (the table came back EMPTY).
     """
-    row = next(item for item in ROWS if item.name == "delete_exists_correlated")
+    row = next(item for item in ROWS if item.name == "delete_correlated_in_subquery")
     fq_target = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue")
     fq_keys = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue_keys")
     ensure_namespace(repark, REPARK_CATALOG, REPARK_NAMESPACE)
@@ -549,11 +757,11 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     Coverage assertions are NAME-gated so a control row cannot satisfy them (the tautological-pin
     lesson: a family pin that any row can green is not a pin).
     """
-    assert 8 <= len(ROWS) <= 11, f"G3-E8 budget 8-11 rows (got {len(ROWS)})"
+    assert 20 <= len(ROWS) <= 28, f"G3-E8 budget 20-28 rows after EXISTS family (got {len(ROWS)})"
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
 
     splits = [row for row in ROWS if row.kind == "split"]
-    assert 4 <= len(splits) <= 10, f"4-10 residual split rows required (got {len(splits)})"
+    assert 3 <= len(splits) <= 10, f"3-10 residual split rows required (got {len(splits)})"
 
     controls = [row for row in ROWS if row.kind == "content"]
     assert controls, (
@@ -569,6 +777,22 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
             "delete_in_subquery",
             "delete_not_in_subquery",
             "delete_not_in_subquery_with_null_key",
+            "delete_exists_correlated",
+            "delete_not_exists_correlated",
+            "delete_exists_uncorrelated",
+            "delete_exists_uncorrelated_empty",
+            "delete_not_exists_uncorrelated",
+            "delete_not_exists_uncorrelated_empty",
+            "delete_exists_correlated_none",
+            "delete_exists_correlated_all",
+            "delete_exists_correlated_empty",
+            "delete_not_exists_correlated_none",
+            "delete_not_exists_correlated_all",
+            "delete_not_exists_correlated_empty",
+            "delete_exists_correlated_null_keys",
+            "delete_not_exists_correlated_null_keys",
+            "delete_exists_correlated_duplicates",
+            "delete_not_exists_correlated_duplicates",
         }:
             assert has_subquery, f"{control.name}: the content hole must keep its subquery"
             assert control.repark_error_needle is None
@@ -580,8 +804,6 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
 
     names = {row.name for row in splits}
     for needle in (
-        "delete_exists_correlated",
-        "delete_not_exists_correlated",
         "delete_correlated_in_subquery",
         "update_in_subquery",
         "update_not_in_subquery_with_null_key",
@@ -591,6 +813,10 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     assert "delete_in_subquery" in contents, "IN-DELETE is the PR-1 content hole"
     assert "delete_not_in_subquery" in contents, "NOT IN-DELETE is the PR-2 content hole"
     assert "delete_not_in_subquery_with_null_key" in contents, "NOT IN NULL trap is content"
+    assert "delete_exists_correlated" in contents, "correlated EXISTS is the PR-3 content hole"
+    assert "delete_not_exists_correlated" in contents, "correlated NOT EXISTS is content"
+    assert "delete_exists_uncorrelated" in contents, "uncorrelated EXISTS is content"
+    assert "delete_not_exists_uncorrelated" in contents, "uncorrelated NOT EXISTS is content"
 
     # The NULL trap needs BOTH verbs — DELETE now executes; UPDATE stays refused.
     null_rows = [row for row in ROWS if row.name.endswith("_with_null_key")]
