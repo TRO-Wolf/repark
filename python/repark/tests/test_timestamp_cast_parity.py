@@ -82,9 +82,6 @@ FIX = (
     "`repark_functions::timestamp_cast` + the analyzer's `Expr::Cast` arm)"
 )
 REVERT = f"reverting {FIX} reds this row."
-# The class that owns the ONE residual gap in this corpus: repark's TIMESTAMP Arrow export carries
-# no timezone, so the reverse-direction row agrees on the VALUE and differs on the TYPE.
-TZ4 = "registry row TZ-4 (repark's tz-naive TIMESTAMP Arrow export)"
 
 
 def _one_row(fields: list[tuple[str, pa.DataType, bool]], values: dict[str, object]) -> pa.Table:
@@ -388,15 +385,10 @@ ROWS: list[TimestampCastRow] = [
             [("ts_value", pa.timestamp("us", "UTC"), False)],
             {"ts_value": dt.datetime(1969, 12, 31, 23, 30, tzinfo=dt.UTC)},
         ),
-        _one_row(
-            [("ts_value", pa.timestamp("ns"), False)],
-            {"ts_value": dt.datetime(1969, 12, 31, 23, 30)},
-        ),
-        "the REVERSE direction was probed and deliberately NOT touched: DataFusion already reads "
-        "an integer as SECONDS here, exactly as Spark does, so scaling it too would have "
-        "INTRODUCED the divergence this unit removes. The VALUE agrees; what still differs is the "
-        f"Arrow export TYPE, which is {TZ4} and not this unit's. Pinned as a disclosure so the "
-        "fence is visible rather than assumed.",
+        None,
+        "the REVERSE direction already read SECONDS (TZ-5 fence). TZ-4 PR-1 closed the type half: "
+        "CAST(<integer> AS TIMESTAMP) is now timestamp[us, tz=UTC] like Spark. Flip evidence — "
+        "revert the ns-naive wrap and this row reds.",
     ),
     # ----- the DataFrame door --------------------------------------------------------------------
     TimestampCastRow(
@@ -589,10 +581,10 @@ def test_the_class_is_covered_per_entry_point_and_per_edge() -> None:
         "the answer"
     )
 
-    # The corpus must keep at least one honest disclosure and stay mostly equality rows.
+    # Instant-producer type residue closed in TZ-4 PR-1; this corpus is all equality.
     disclosures = {row.name for row in ROWS if row.repark is not None}
-    assert disclosures == {"bigint_to_timestamp_reads_seconds"}, (
-        "exactly one row is still a disclosure — the reverse direction, whose VALUE agrees and "
-        "whose Arrow export TYPE belongs to registry row TZ-4. A new disclosure here means the "
-        "fix regressed or a new class was found; either way it is an edit a reviewer must see"
+    assert disclosures == set(), (
+        "TZ-4 PR-1 flipped the reverse-direction type disclosure to equality. A new disclosure "
+        "here means the fix regressed or a new class was found; either way it is an edit a "
+        "reviewer must see"
     )

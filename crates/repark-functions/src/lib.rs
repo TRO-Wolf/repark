@@ -41,6 +41,7 @@ pub mod cardinality;
 pub mod collection;
 pub mod datetime;
 pub mod expr_fn;
+pub mod instant_ts;
 pub mod random;
 pub mod session_time_zone;
 pub mod string;
@@ -101,6 +102,10 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_date_shim_functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    // TZ-4 PR-1: overwrite now / current_timestamp / to_timestamp with µs+UTC.
+    for udf in instant_ts::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
     for udf in string::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
@@ -123,6 +128,7 @@ pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> =
         vec![Arc::new(analyzer::SparkExprSemantics)];
     rules.extend(cardinality::analyzer_rules());
+    rules.push(instant_ts::ltz_timestamp_cast_rule());
     rules
 }
 

@@ -86,8 +86,8 @@ use crate::session_time_zone::session_time_zone_from_options;
 /// Spark `date_trunc` returns a microsecond timestamp; this is the shim's output unit for that
 /// function and the unit its input is coerced to before truncation.
 ///
-/// The output stays tz-**naive** while registry row TZ-4 (repark's tz-naive TIMESTAMP export) is
-/// open: the ticks are the UTC instant Spark returns, the annotation is what is missing.
+/// TZ-4 PR-1: the return type is `Timestamp(µs, UTC)` — Spark's LTZ wire type. The ticks
+/// were already Spark's instant; the annotation was the missing half.
 const TIMESTAMP_UNIT: TimeUnit = TimeUnit::Microsecond;
 
 /// The zone annotation every instant-typed argument is coerced to before the session zone is
@@ -1166,7 +1166,10 @@ impl ScalarUDFImpl for DateTrunc {
     shim_udf_boilerplate!("date_trunc");
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
-        Ok(DataType::Timestamp(TIMESTAMP_UNIT, None))
+        Ok(DataType::Timestamp(
+            TIMESTAMP_UNIT,
+            Some(INSTANT_ZONE.into()),
+        ))
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
@@ -1196,8 +1199,7 @@ impl ScalarUDFImpl for DateTrunc {
         // own local calendar and its own offset (preserved across a fall-back, as
         // `ZonedDateTime.truncatedTo` does); a DATE- or string-derived one is Spark's DATE →
         // TIMESTAMP promotion, which is a session-zone localization with no offset to prefer.
-        // The OUTPUT stays tz-naive on both paths while registry row TZ-4 is open — the ticks are
-        // Spark's instant, the annotation is not.
+        // Both paths return an instant; TZ-4 PR-1 annotates the array UTC to match Spark.
         let (timestamps, zone, source) =
             invoke_local_micros(&arrays[1], args.config_options.as_ref())?;
         let timestamps = timestamps.as_primitive::<TimestampMicrosecondType>();
@@ -1223,7 +1225,9 @@ impl ScalarUDFImpl for DateTrunc {
                 None => builder.append_null(),
             }
         }
-        Ok(ColumnarValue::Array(Arc::new(builder.finish())))
+        Ok(ColumnarValue::Array(Arc::new(
+            builder.finish().with_timezone(INSTANT_ZONE),
+        )))
     }
 }
 

@@ -104,6 +104,11 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   Q5/Q80/Q84 SQL `concat` on the Arrow path. Unit pins:
   `concat_register_all_overwrites_datafusion_spark` (name overwrite);
   `concat_array_any_null_propagates_per_row` (Apply null-mask path).
+- `instant_ts.rs` — **TZ-4 PR-1:** overwrite `now` / `current_timestamp` / `to_timestamp` with
+  Arrow `Timestamp(µs, UTC)` (Spark LTZ wire type; Iceberg v2-legal). Analyzer rule
+  `spark_ltz_timestamp_cast` wraps leftover `Timestamp(ns, _)` expressions (folded
+  `CAST(<int> AS TIMESTAMP)`, `TIMESTAMP` literals) in a type-only µs+UTC CAST. Does **not**
+  localize zoneless digits (TZ-7 / PR-2). Pins: `instant_ts::tests::*`.
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12):** the two embedded scaling UDFs `analyzer.rs` puts
   under `CAST(TIMESTAMP AS <numeric>)`. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
@@ -114,7 +119,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   correctness requirement: a decimal intermediate loses the floor edge to arrow's truncating
   decimal→int cast, and an f64 one cannot floor a sub-microsecond present-day instant (f64 resolves
   ~2e-7 s there). Per-`TimeUnit` divisor (`createDataFrame` gives `timestamp[us]`, `to_timestamp`
-  gives `timestamp[ns]`); nullability propagated via `return_field_from_args`; embedded, never
+  gives `timestamp[us, tz=UTC]` after TZ-4 PR-1); nullability propagated via
+  `return_field_from_args`; embedded, never
   registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and three siblings here, plus
   the door-layer files named in `task/tz5-cast-seconds-ledger.md` §4.
 - `collection.rs` — `SparkElementAt` (`element_at`; audit #15 — previously an alias of
@@ -149,8 +155,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   not baked in at registration, because `expr_fn` embeds a UDF into a standalone `Expr` with no
   session — the DataFrame-API entry point would otherwise be missed. `coerce_types` MUST stay
   idempotent (DataFusion re-analyzes at physical planning); pinned by
-  `coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date`. `date_trunc`'s output stays
-  tz-naive while registry row TZ-4 is open.
+  `coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date`. TZ-4 PR-1: `date_trunc`'s
+  output is `Timestamp(µs, UTC)`.
   **r20 A1:** SAF-001 out-of-chrono Date32 → NULL in `add_months`/`trunc` (pins
   `extreme_date32_add_months_and_trunc_null_without_panic`,
   `chrono_boundary_date32_add_months_computes`, `extreme_date32_year_extractor_no_panic`);
@@ -174,7 +180,7 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 | `year`/`hour`/`date_trunc` ignore `spark.sql.session.timeZone` | The carrier is not on the session. Only `SparkExtension::configure` installs it; a bare DataFusion context falls back to `UTC`. See `session_time_zone/map.md`. |
 | A `DATE` shifted by a day under a non-UTC session | A coercion arm stopped being idempotent, so a second analysis pass promoted the date to an instant. That exact bug shipped in a draft of this fix and is pinned by `coercion_is_idempotent_so_a_second_analysis_cannot_promote_a_date` + `crates/repark-spark/tests/session_timezone.rs::date_arguments_never_move_with_the_session_zone`. |
 | EVERY IANA zone id fails at query time but `+05:30` works | The `chrono-tz` feature on this crate's `arrow` dependency is gone. It is DECLARED in `Cargo.toml` for exactly this reason — re-declare it there rather than relying on `datafusion`'s feature graph. |
-| `date_trunc` returns the right instant with the wrong-looking wall clock | Expected: the output is tz-NAIVE while registry row TZ-4 is open, so the ticks are Spark's instant with no `UTC` annotation to render it by. |
+| `date_trunc` returns the right instant with the wrong-looking wall clock | Expected if the viewer ignores the UTC annotation: ticks are Spark's instant. After TZ-4 PR-1 the type is `timestamp[us, tz=UTC]`. |
 
 First checks: `cargo test -p repark-functions`. Escalate to: [../map.md#debug](../map.md).
 

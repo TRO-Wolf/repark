@@ -30,7 +30,9 @@ wrapper.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
-  Spark-SQL→iceberg type mapping; 3 in-module tests (`type_mapping_tests`).
+  Spark-SQL→iceberg type mapping; **TZ-4 PR-1:** default `TIMESTAMP` → Iceberg `timestamptz`,
+  `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). 3 in-module tests
+  (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests.

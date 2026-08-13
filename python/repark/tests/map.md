@@ -842,7 +842,9 @@ NOT in that file is a defect, not a decision.
   silently fell back to $TMPDIR), value + Arrow type on `to_arrow`.
 - (combine 2026-07-29: match= patterns raw-stringed, RUF043)
 - `test_interchange_parity.py` — **G-INT** interchange battery (oracle = live PySpark 4.1.2 /
-  zulu-17 / UTC / arrow.pyspark.enabled=true, measured 2026-07-27). **INT-001** `to_pandas` /
+  zulu-17 / UTC / arrow.pyspark.enabled=true, measured 2026-07-27). **TZ-4 PR-1:** pandas
+  timestamp cells compare wall-clock (same helper as Arrow) so UTC annotation is not a
+  naive-`Timestamp` equality red. **INT-001** `to_pandas` /
   `toPandas` + `to_arrow`: full value AND type matrix for int32/int64/float/decimal/string/bool/
   date/timestamp with and without nulls (nulls → float64/object promotion, matching live Spark;
   every column's Arrow + pandas cells pinned on all three rows — C1-Q-004). **INT-002**
@@ -966,7 +968,8 @@ NOT in that file is a defect, not a decision.
   `_reset_dropin_warnings_for_tests`). Group F adds `setLogLevel` silent no-op + `spark.version`
   repark-prefix disclosure pins. Rationale table: `docs/spark-sql-iceberg-parity.md` §8.
 - `test_dogfood_gaps.py` — Group F (2026-07-21 dogfood): F1 `current_timestamp` µs/UTC Arrow +
-  Iceberg v2 CTAS regression; F2/F3 `sparkContext`/`version`; F4 `withColumns` atomic +
+  Iceberg v2 CTAS regression; **TZ-4 PR-1:** SQL / `F.expr` `current_timestamp` ns residuals
+  flipped to µs+UTC; SQL / expr CTAS reject pins flipped to v2 success. F2/F3 `sparkContext`/`version`; F4 `withColumns` atomic +
   `withColumnsRenamed` (+ duplicate-name fail-loud); F5 `transform` signature/error class; F6
   DIVERGENCE-1 timestamp-LTZ collect passthrough disclosure (JVM-free). Oracles from live
   PySpark 4.1.2.
@@ -1162,6 +1165,9 @@ NOT in that file is a defect, not a decision.
   **Since H-1a split B (2026-08-10) most rows are EQUALITY rows:** the extraction fix landed, so
   thirteen of the recorded disclosures now assert `repark == Spark` (`repark=None`) — and that
   flip IS the fix's revert-red evidence, because undoing the fix reds every one of them.
+  **TZ-4 PR-1 (2026-08-13):** seven more TYPE rows flipped to equality (`to_timestamp` Z,
+  `date_trunc` return, DataFrame-API `date_trunc` column, CAST string-round-trip type).
+  Residues: TZ-7 (3) + TZ-6 (1). `current_timestamp` type pin is now equality.
   **Its 2026-08-10 rework grew the corpus from 20 rows to 29** (a size pin moved because an
   adversarial panel measured wrong-answer families the original rows were structurally blind to —
   every one of them hands the engine a `…Z`-suffixed string, i.e. only the shapes where reading a
@@ -1219,13 +1225,11 @@ NOT in that file is a defect, not a decision.
   are the only things separating the real fix from the plausible one; the positive fractional rows
   are the other half of that fence. Also pins the same-path siblings (`INT`/`SMALLINT` — refused
   outright before the fix; `DOUBLE`/`FLOAT`/`DECIMAL`, which keep the fraction), NULL, and
-  zone-independence over three zones. Exactly ONE disclosure remains,
-  `bigint_to_timestamp_reads_seconds`: the REVERSE direction was probed and deliberately NOT
-  touched (DataFusion already reads an integer as seconds, exactly as Spark does, so "fixing" it
-  would have introduced the divergence) — its VALUE agrees and only its Arrow export TYPE differs,
-  which is registry row TZ-4. `test_the_class_is_covered_per_entry_point_and_per_edge` pins the
+  zone-independence over three zones. **TZ-4 PR-1** flipped the last disclosure
+  (`bigint_to_timestamp_reads_seconds`) to equality — VALUE already agreed; the Arrow type is
+  now `timestamp[us, tz=UTC]`. `test_the_class_is_covered_per_entry_point_and_per_edge` pins the
   corpus SHAPE (all three spellings, both signs of the floor edge, every named cast target, the
-  zone matrix, and the single allowed disclosure) so the class cannot decay into "one
+  zone matrix, and zero disclosures) so the class cannot decay into "one
   representative case". It is a corpus of its own rather than more `G16_ROWS` because the class is
   zone-INdependent; the timezone corpus keeps the single row that first recorded the divergence,
   as the flip evidence. Engine cells: `crates/repark-spark/tests/timestamp_cast_seconds.rs` and

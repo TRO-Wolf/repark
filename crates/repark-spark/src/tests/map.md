@@ -13,6 +13,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). Bodies moved byte-identically from
   the monolith; `pub(super)` visibility + type re-exports for leaf `use super::common::*;`.
+- **TZ-4 PR-1 (2026-08-13)** — `create_table.rs` pin `ts TIMESTAMP` → `Timestamptz`;
+  `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
+  / identity-partitioned CTAS).
 - **Production-aligned leaves** (flat tests gained one path segment `tests::<leaf>::…`):
   `ctas`, `create_table`, `namespace_ddl`, `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,

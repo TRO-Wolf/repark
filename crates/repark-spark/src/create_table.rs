@@ -13,7 +13,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     ColumnDef, ColumnOption, CreateTable, CreateTableOptions, DataType as SqlDataType,
-    ExactNumberInfo, SqlOption, TimezoneInfo,
+    ExactNumberInfo, SqlOption,
 };
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
@@ -253,11 +253,12 @@ pub(crate) fn sql_type_to_iceberg(data_type: &SqlDataType) -> Result<Type> {
         | SqlDataType::CharacterVarying(_)
         | SqlDataType::CharVarying(_) => PrimitiveType::String,
         SqlDataType::Date => PrimitiveType::Date,
-        // Spark TIMESTAMP without TZ / TIMESTAMP_NTZ → Iceberg timestamp (µs, no zone).
-        SqlDataType::Timestamp(_, TimezoneInfo::None) | SqlDataType::TimestampNtz(_) => {
-            PrimitiveType::Timestamp
-        }
-        // WITH TIME ZONE / WITH LOCAL TIME ZONE → timestamptz.
+        // TIMESTAMP_NTZ stays naive Iceberg timestamp.
+        SqlDataType::TimestampNtz(_) => PrimitiveType::Timestamp,
+        // Spark default TIMESTAMP (no TZ) is an instant → Iceberg timestamptz, as is
+        // WITH TIME ZONE / WITH LOCAL TIME ZONE. Live Spark 4.1.2 +
+        // iceberg-spark-runtime-4.1_2.13:1.11.0 CREATE TABLE `(ts TIMESTAMP) USING iceberg`
+        // writes metadata type `"timestamptz"` (Z-2 A7 probe 2026-08-13).
         SqlDataType::Timestamp(_, _) => PrimitiveType::Timestamptz,
         SqlDataType::Binary(_) | SqlDataType::Varbinary(_) => PrimitiveType::Binary,
         other => {
@@ -440,6 +441,7 @@ async fn commit_staged_schema_only(
 mod type_mapping_tests {
     use super::*;
     use datafusion::sql::sqlparser::ast::DataType as SqlDataType;
+    use datafusion::sql::sqlparser::ast::TimezoneInfo;
 
     #[test]
     fn maps_spark_core_types() {
@@ -466,6 +468,14 @@ mod type_mapping_tests {
         assert!(matches!(
             sql_type_to_iceberg(&SqlDataType::Date).unwrap(),
             Type::Primitive(PrimitiveType::Date)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg(&SqlDataType::Timestamp(None, TimezoneInfo::None)).unwrap(),
+            Type::Primitive(PrimitiveType::Timestamptz)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg(&SqlDataType::TimestampNtz(None)).unwrap(),
+            Type::Primitive(PrimitiveType::Timestamp)
         ));
         match sql_type_to_iceberg(&SqlDataType::Decimal(ExactNumberInfo::PrecisionAndScale(
             10, 2,

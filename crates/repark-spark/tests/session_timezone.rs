@@ -335,9 +335,8 @@ async fn week_and_quarter_extractors_resolve_in_the_session_zone() {
 /// FAMILY 5 — `date_trunc`. Spark truncates to LOCAL midnight and returns the instant that
 /// denotes, which is the daily-rollup boundary a migrated aggregate depends on.
 ///
-/// The output stays tz-**naive** on purpose: its ticks are Spark's instant, and the missing
-/// annotation is registry row TZ-4 (the export-type half of this class), which this unit does not
-/// close. Asserting the type here is what keeps that honest rather than implied.
+/// TZ-4 PR-1 annotates the return as `timestamp[us, tz=UTC]`. The ticks were already Spark's
+/// instant; the type pin here is the representation half.
 #[tokio::test]
 async fn date_trunc_truncates_on_the_session_zone_calendar() {
     let new_york = session_at(NEW_YORK);
@@ -345,8 +344,8 @@ async fn date_trunc_truncates_on_the_session_zone_calendar() {
     let (kind, values) = timestamps(&new_york, "SELECT date_trunc('day', ts) FROM t").await;
     assert_eq!(
         kind,
-        DataType::Timestamp(TimeUnit::Microsecond, None),
-        "TZ-4 is still open: the ticks are Spark's, the tz annotation is not"
+        DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+        "TZ-4 PR-1: date_trunc of an instant is timestamp[us, tz=UTC]"
     );
     assert_eq!(
         values,
@@ -569,11 +568,9 @@ async fn date_arguments_never_move_with_the_session_zone() {
 /// date_format(date_trunc('day', DATE …),'yyyy-MM-dd HH:mm') '2024-01-01 00:00'    identical in both zones
 /// ```
 ///
-/// The COMPOSITION legs are the point. `date_trunc`'s output is tz-naive (TZ-4), and the extractor
-/// coercion reads a tz-naive timestamp as a UTC instant — so if `date_trunc` wrote LOCAL wall-clock
-/// ticks under that same type, the next extractor would shift them by the session offset and this
-/// whole calendar day would move. One tz-naive type must carry one meaning; these legs are what
-/// hold it.
+/// The COMPOSITION legs are the point. `date_trunc`'s output is an instant (TZ-4 PR-1: µs+UTC).
+/// Extractors resolve that instant in the session zone; these legs hold that the DATE-argument
+/// promotion wrote local midnight's instant, not a wall-clock tick under a naive type.
 #[tokio::test]
 async fn date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline() {
     for (zone, midnight, leap_midnight) in [
@@ -586,8 +583,8 @@ async fn date_trunc_of_a_date_or_string_lands_on_the_session_zone_timeline() {
             timestamps(&session, "SELECT date_trunc('day', DATE '2024-01-01')").await;
         assert_eq!(
             kind,
-            DataType::Timestamp(TimeUnit::Microsecond, None),
-            "TZ-4 is still open on this path too: the ticks are Spark's instant, not the type"
+            DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
+            "TZ-4 PR-1: date_trunc of a DATE is still an instant (local midnight)"
         );
         assert_eq!(
             values,

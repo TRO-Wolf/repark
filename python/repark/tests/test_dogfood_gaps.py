@@ -55,20 +55,14 @@ def test_current_timestamp_arrow_type_is_microsecond_utc(spark: ReparkSession) -
     )
 
 
-def test_sql_current_timestamp_still_nanosecond_residual(spark: ReparkSession) -> None:
-    """Octo C1-Q-001 residual: SQL ``current_timestamp()`` is still DataFusion ns.
-
-    Group F fixed the **functions** path only. This pin fails closed if SQL is later
-    aligned without updating the ledger — and documents the known gap for Iceberg CTAS
-    via pure SQL.
-    """
+def test_sql_current_timestamp_is_microsecond_utc(spark: ReparkSession) -> None:
+    """TZ-4 PR-1: SQL ``current_timestamp()`` matches Spark's ``timestamp[us, tz=UTC]``."""
     table = spark.sql("SELECT current_timestamp() AS ts").to_arrow()
     field_type = table.schema.field("ts").type
     assert pa.types.is_timestamp(field_type)
-    assert field_type.unit == "ns", (
-        f"SQL current_timestamp residual expected ns until a SQL-shim unit; got {field_type}. "
-        "If this is us, update task/todo.md Group F follow-up and this pin."
-    )
+    assert field_type.unit == "us", f"expected us, got {field_type}"
+    assert str(field_type.tz).upper() in {"UTC", "+00:00"}, f"expected UTC tz, got {field_type}"
+    assert not table.schema.field("ts").nullable
 
 
 def test_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:
@@ -484,14 +478,13 @@ def test_current_timestamp_value_is_near_now(spark: ReparkSession) -> None:
     assert delta < 120, f"current_timestamp not near now: value={value!r} delta={delta}s"
 
 
-def test_expr_current_timestamp_still_nanosecond_residual(spark: ReparkSession) -> None:
-    """C1-Q-002: ``F.expr("current_timestamp()")`` still ns (SQL residual class, second entry)."""
+def test_expr_current_timestamp_is_microsecond_utc(spark: ReparkSession) -> None:
+    """TZ-4 PR-1: ``F.expr("current_timestamp()")`` is the same SQL producer as ``now()``."""
     table = spark.sql("SELECT 1 AS a").withColumn("ts", F.expr("current_timestamp()")).to_arrow()
     field_type = table.schema.field("ts").type
     assert pa.types.is_timestamp(field_type)
-    assert field_type.unit == "ns", (
-        f"F.expr current_timestamp residual expected ns until SQL-shim unit; got {field_type}"
-    )
+    assert field_type.unit == "us", f"expected us, got {field_type}"
+    assert str(field_type.tz).upper() in {"UTC", "+00:00"}, f"expected UTC tz, got {field_type}"
 
 
 def test_with_columns_non_str_key_raises_type_error(spark: ReparkSession) -> None:
@@ -532,17 +525,17 @@ def test_with_columns_renamed_empty_map_is_identity(spark: ReparkSession) -> Non
     assert out.to_arrow().column("a").to_pylist() == [1]
 
 
-def test_sql_current_timestamp_ctas_still_rejects_ns(spark: ReparkSession) -> None:
-    """C4-Q-001: SQL current_timestamp() still fails Iceberg v2 CTAS (residual).
-
-    Mutation-proof for the residual: when SQL path is later fixed to µs, this pin must
-    flip green-fail and the ledger follow-up closes.
-    """
-    with pytest.raises(Exception, match=r"timestamp_ns|not supported until v3"):
-        spark.sql(
-            "CREATE TABLE cat.ns.sql_ts_ctas AS "
-            "SELECT 1 AS id, current_timestamp() AS ingestion_timestamp"
-        )
+def test_sql_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:
+    """TZ-4 PR-1: SQL ``current_timestamp()`` CTAS is Iceberg-v2 legal (µs+UTC → timestamptz)."""
+    spark.sql(
+        "CREATE TABLE cat.ns.sql_ts_ctas AS "
+        "SELECT 1 AS id, current_timestamp() AS ingestion_timestamp"
+    )
+    written = spark.table("cat.ns.sql_ts_ctas").to_arrow()
+    ts_type = written.schema.field("ingestion_timestamp").type
+    assert pa.types.is_timestamp(ts_type)
+    assert ts_type.unit == "us", f"Iceberg v2 path must persist microsecond timestamps: {ts_type}"
+    assert str(ts_type.tz).upper() in {"UTC", "+00:00"}, f"expected UTC after CTAS, got {ts_type}"
 
 
 def test_with_columns_snake_and_camel_are_identical(spark: ReparkSession) -> None:
@@ -614,12 +607,16 @@ def test_current_timestamp_cast_timestamptype_strips_tz(spark: ReparkSession) ->
     assert field_type.tz is None, f"cast(TimestampType) must be naive us, got {field_type}"
 
 
-def test_expr_current_timestamp_ctas_still_rejects_ns(spark: ReparkSession) -> None:
-    """C1-Q-003: F.expr current_timestamp residual still fails Iceberg v2 CTAS."""
+def test_expr_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:
+    """TZ-4 PR-1: ``F.expr("current_timestamp()")`` CTAS is Iceberg-v2 legal."""
     source = spark.sql("SELECT 1 AS id").withColumn("ts", F.expr("current_timestamp()"))
     source.createOrReplaceTempView("src_expr_ts")
-    with pytest.raises(Exception, match=r"timestamp_ns|not supported until v3"):
-        spark.sql("CREATE TABLE cat.ns.expr_ts_ctas AS SELECT * FROM src_expr_ts")
+    spark.sql("CREATE TABLE cat.ns.expr_ts_ctas AS SELECT * FROM src_expr_ts")
+    written = spark.table("cat.ns.expr_ts_ctas").to_arrow()
+    ts_type = written.schema.field("ts").type
+    assert pa.types.is_timestamp(ts_type)
+    assert ts_type.unit == "us", f"expected us after CTAS, got {ts_type}"
+    assert str(ts_type.tz).upper() in {"UTC", "+00:00"}, f"expected UTC after CTAS, got {ts_type}"
 
 
 def test_config_spark_master_case_insensitive_warns(tmp_path: Path) -> None:

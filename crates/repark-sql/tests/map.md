@@ -19,7 +19,10 @@ belongs out here is what must be observed from outside the crate.
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session
   boundary. It lives out here because "reachable through a session" is precisely what a unit
   test calling `AnsiDialect.execute(...)` on a bare `SessionContext` cannot show
-  (`surfaces::SQL_DIALECT_SEAM`).
+  (`surfaces::SQL_DIALECT_SEAM`). **TZ-4 PR-1 A11:**
+  `ansi_column_def_timestamp_still_rejects_ns_on_v2` — native ANSI
+  `CREATE TABLE (ts timestamp)` still derives `timestamp_ns` (v2 reject); grant to
+  `repark-sql/src/create_table.rs` not taken (wrote `timestamp_ns`, not `timestamp`).
 
 - `introspection.rs` (PR-6, Q8) — `SHOW TABLES` / `DESCRIBE` / `information_schema` DELEGATED
   through the door, on a session whose `information_schema` was enabled the product way
