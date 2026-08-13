@@ -20,6 +20,10 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   DF `DecimalAvgAccumulator` / `DecimalAverager`). Signature is DF `Avg`'s: Decimal
   stays decimal; Integer/Float still coerce to Float64. Pins:
   `group_avg_decimal128_stays_decimal_14_6_i128`, `sliding_avg_decimal128_retracts`.
+  **W-2 U2 ride-along (Z-3 S3):** revert-red pins
+  `group_avg_decimal32_stays_decimal_9_6_i32`,
+  `group_avg_decimal64_stays_decimal_14_6_i64`,
+  `group_avg_decimal256_stays_decimal_14_6_i256`.
   Q1 unit test: `percentile_approx_sql_aliases_resolve` pins Spark SQL aliases.
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`.

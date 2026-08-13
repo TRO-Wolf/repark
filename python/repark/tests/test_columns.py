@@ -15,6 +15,8 @@ own output as "Spark" (the cycle-2 F1/C1 mispin class — see ``task/lessons.md`
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pyarrow as pa
 import pytest
 
@@ -134,8 +136,21 @@ def test_arithmetic_operators(spark: ReparkSession) -> None:
 
 
 def test_division_is_float(spark: ReparkSession) -> None:
+    # U2: SQL literals `7.0`/`2.0` are DECIMAL(2,1); DataFrame Column `/` still yields
+    # float64 3.5 (the analyzer's SQL `/` rewrite is not this path).
     df = spark.sql("SELECT 7.0 AS a, 2.0 AS b").withColumn("d", F.col("a") / F.col("b"))
-    assert df.to_arrow().column("d").to_pylist() == [3.5]
+    table = df.to_arrow()
+    assert table.schema.field("a").type == pa.decimal128(2, 1)
+    assert table.schema.field("b").type == pa.decimal128(2, 1)
+    assert pa.types.is_floating(table.schema.field("d").type)
+    assert table.column("d").to_pylist() == [3.5]
+
+
+def test_sql_float_literal_division_is_decimal(spark: ReparkSession) -> None:
+    # The blast-list SQL spelling: `SELECT 7.0 / 2.0` is Arrow decimal `/` after U2.
+    table = spark.sql("SELECT 7.0 / 2.0 AS d").to_arrow()
+    assert table.schema.field("d").type == pa.decimal128(7, 5)
+    assert table.column("d").to_pylist() == [Decimal("3.50000")]
 
 
 def test_division_of_integers_is_double(spark: ReparkSession) -> None:

@@ -3,7 +3,7 @@
   "queries": {
     "1": {
       "status": "WRONG-RESULT",
-      "note": "Z-3 U1 / DEC-5: avg(l_discount) is Spark decimal128(19,6) 0.050081; DuckDB keeps float 0.050081339… (rel err ~6.8e-6 > 1e-6). Spark-correct, DuckDB-divergent."
+      "note": "Z-3 U1 / DEC-5: avg of money columns is Spark decimal (p+4,s+4); DuckDB keeps float (rel err ~6e-6 > 1e-6). Spark-correct, DuckDB-divergent. W-2 U2 (2026-08-13) re-ran SF1 DuckDB-diff: no additional query moved; Q1 remains this avg-type mismatch (col 8 repark=0.049985 vs DuckDB 0.0499852958). No extra literal-driven WRONG-RESULT."
     },
     "10": {
       "status": "OK"

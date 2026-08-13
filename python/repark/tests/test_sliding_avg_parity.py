@@ -19,8 +19,10 @@ _SQL = (
     "SELECT id, "
     "avg(v) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS a, "
     "count(v) OVER (ORDER BY id ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) AS c "
-    "FROM (VALUES (1, 1.0), (2, CAST(NULL AS DOUBLE)), (3, 3.0), "
-    "(4, CAST(NULL AS DOUBLE)), (5, CAST(NULL AS DOUBLE)), (6, 6.0)) t(id, v) "
+    "FROM (VALUES (1, CAST(1.0 AS DOUBLE)), (2, CAST(NULL AS DOUBLE)), "
+    "(3, CAST(3.0 AS DOUBLE)), "
+    "(4, CAST(NULL AS DOUBLE)), (5, CAST(NULL AS DOUBLE)), "
+    "(6, CAST(6.0 AS DOUBLE))) t(id, v) "
     "ORDER BY id"
 )
 

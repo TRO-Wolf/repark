@@ -19,8 +19,9 @@ pyo3 `auto-initialize` **dev**-dependency) and drive the pyclasses directly — 
   (**that suite lands phase-3 PR-5**; not in the tree yet). Also runs a `sql`
   round-trip, asserts the **streaming** Arrow PyCapsule (`__arrow_c_stream__`) exports a consumable
   stream with correct int64/utf8 values (`arrow_c_stream_exports_a_consumable_stream_with_correct_values`)
-  and — value AND Arrow type end-to-end across the streaming FFI export over Int64/Float64/Utf8
-  columns (`arrow_c_stream_streams_values_and_types_end_to_end`); and — end-to-end **laziness** —
+  and — value AND Arrow type end-to-end across the streaming FFI export over Int64/Decimal128/Utf8
+  columns (`arrow_c_stream_streams_values_and_types_end_to_end`; **U2:** `1.5` is
+  decimal128(2,1)); and — end-to-end **laziness** —
   `arrow_c_stream_defers_execution_and_does_not_collect_up_front` (through `session.sql` on an
   erroring query: the export returns a capsule WITHOUT materializing, so the deferred CAST error only
   surfaces on a full drain — a collect-then-wrap dunder would drain + raise at export instead, F-BR-4;

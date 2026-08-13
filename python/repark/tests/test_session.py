@@ -478,13 +478,23 @@ def test_to_pandas_camelcase_alias(spark: ReparkSession) -> None:
 
 def test_to_numpy_numeric_matrix(spark: ReparkSession) -> None:
     # The ML-feature-matrix case: an all-numeric frame yields a single numeric 2-D array.
+    # U2: VALUES (1.5, 2.5), (3.0, 4.0) are DECIMAL(2,1); Arrow decimal → object of Decimal.
+    from decimal import Decimal
+
     import numpy as np
 
     df = spark.sql("SELECT * FROM (VALUES (1.5, 2.5), (3.0, 4.0)) AS t(a, b) ORDER BY a")
     matrix = df.to_numpy()
     assert matrix.shape == (2, 2)
-    assert matrix.dtype == np.float64
-    np.testing.assert_array_equal(matrix, np.array([[1.5, 2.5], [3.0, 4.0]]))
+    assert matrix.dtype == object
+    expected = np.array(
+        [
+            [Decimal("1.5"), Decimal("2.5")],
+            [Decimal("3.0"), Decimal("4.0")],
+        ],
+        dtype=object,
+    )
+    np.testing.assert_array_equal(matrix, expected)
 
 
 def test_to_numpy_null_becomes_nan(spark: ReparkSession) -> None:

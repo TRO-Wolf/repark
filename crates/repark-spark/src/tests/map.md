@@ -11,7 +11,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
-  `execute_without_collecting`, unsafe-cast walk helpers). Bodies moved byte-identically from
+  `execute_without_collecting`, unsafe-cast walk helpers). **U2:** `setup` /
+  `setup_allow_local_fs_ddl` / `setup_strict_catalog` call
+  `crate::extension::apply_spark_float_as_decimal` so Spark-door unit fixtures match
+  production `configure`. Bodies moved byte-identically from
   the monolith; `pub(super)` visibility + type re-exports for leaf `use super::common::*;`.
 - **TZ-4 PR-1 (2026-08-13)** — `create_table.rs` pin `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
@@ -22,7 +25,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `merge`, `call`, `ref_ddl`, `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
-  nullability; cites Python corpus row names, no Python edits), `float_agg` (G7 float
+  nullability; cites Python corpus row names. **U2 (2026-08-13):**
+  `pin_literal_1_23_infers_decimal128_3_2_i128` (was float64) and overflow wrap `10^38`
+  at (38,0); fixtures go through `apply_spark_float_as_decimal` via `common::setup`), `float_agg` (G7 float
   aggregation determinism — catastrophic-cancellation fixture; `sum`/`avg` `f64::to_bits` at
   `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure).
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):

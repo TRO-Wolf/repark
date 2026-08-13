@@ -60,6 +60,9 @@ def test_division_and_modulo_by_zero_are_null(spark: ReparkSession) -> None:
     ).to_arrow()
     assert [column.to_pylist() for column in table.columns] == [[None]] * 5
     assert pa.types.is_float64(table.schema.field("a").type)  # int/int is DOUBLE even for NULL
+    # U2: 1.0/0.0 and 5.0%0.0 are decimal÷0 / decimal%0 (DEC-7 still NULLs).
+    assert table.schema.field("b").type == pa.decimal128(7, 5)
+    assert table.schema.field("d").type == pa.decimal128(1, 1)
 
 
 def test_division_by_zero_in_a_column_divisor(spark: ReparkSession) -> None:

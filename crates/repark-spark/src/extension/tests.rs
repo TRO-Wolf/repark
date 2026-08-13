@@ -108,6 +108,54 @@ fn configure_refuses_unparsable_conf_value() {
     );
 }
 
+/// DEC-1 / U2: `configure` turns on DataFusion's `parse_float_as_decimal` so the Spark door
+/// matches Spark's DECIMAL inference for bare floating-point SQL literals.
+#[test]
+fn configure_defaults_parse_float_as_decimal() {
+    let conf = HashMap::new();
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    assert!(
+        config.options().sql_parser.parse_float_as_decimal,
+        "Spark-door default: datafusion.sql_parser.parse_float_as_decimal=true"
+    );
+}
+
+/// Mutation-red for the same default on the collect path: `SELECT 1.23` is decimal128(3,2),
+/// not Float64. Stock DataFusion (flag off) would answer Float64 here.
+#[tokio::test]
+async fn configure_makes_bare_1_23_decimal128_3_2() {
+    let conf = HashMap::new();
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    let ctx = SessionContext::new_with_config(config);
+    let batches = ctx
+        .sql("SELECT 1.23 AS v")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let schema = batches[0].schema();
+    let field = schema.field(0);
+    assert_eq!(
+        field.data_type(),
+        &DataType::Decimal128(3, 2),
+        "bare 1.23 must infer decimal128(3,2), not Float64"
+    );
+    assert!(!field.is_nullable(), "bare literal is non-null");
+    let values = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<datafusion::arrow::array::Decimal128Array>()
+        .expect("Decimal128Array");
+    assert_eq!(values.value(0), 123, "i128 scaled 1.23 at scale 2");
+}
+
 /// `register` installs the Spark function registry: `weekofyear` (a date-shim function stock
 /// DataFusion does not ship) is callable from SQL after the hook runs.
 #[tokio::test]

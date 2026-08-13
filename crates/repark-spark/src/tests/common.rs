@@ -63,7 +63,7 @@ pub(super) async fn setup(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
     // warehouse call setup_allow_local_fs_ddl instead.
     let settings = repark_functions::cardinality::ReparkSqlSettings::default();
     let config = repark_functions::cardinality::with_repark_sql_config(
-        datafusion::prelude::SessionConfig::new(),
+        crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new()),
         settings,
     );
     let ctx = SessionContext::new_with_config(config);
@@ -113,7 +113,9 @@ pub(super) async fn setup_strict_catalog(
             .await
             .unwrap(),
     );
-    let ctx = SessionContext::new();
+    let ctx = SessionContext::new_with_config(crate::extension::apply_spark_float_as_decimal(
+        datafusion::prelude::SessionConfig::new(),
+    ));
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
@@ -291,7 +293,7 @@ pub(super) async fn setup_allow_local_fs_ddl(wh: &TempDir) -> (SessionContext, C
         ..repark_functions::cardinality::ReparkSqlSettings::default()
     };
     let config = repark_functions::cardinality::with_repark_sql_config(
-        datafusion::prelude::SessionConfig::new(),
+        crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new()),
         settings,
     );
     let ctx = SessionContext::new_with_config(config);

@@ -2,8 +2,8 @@
 //! decimal corpus).
 //!
 //! Each pin asserts on the **Arrow path** (`collect`): exact `DataType::Decimal128(p, s)` (or
-//! the disclosed non-decimal type), nullability, and the raw `i128` scaled integer (or
-//! `f64::to_bits` where repark currently answers float64). Goldens are derived from the merged
+//! the disclosed non-decimal type), nullability, and the raw `i128` scaled integer. Goldens
+//! are derived from the merged
 //! Python corpus at `python/repark/tests/test_decimal128_parity.py` — every test names the
 //! corpus row it mirrors. This module does **not** re-derive or edit the Python corpus.
 //!
@@ -17,7 +17,7 @@
 use super::super::*;
 use super::common::*;
 
-use datafusion::arrow::array::{Decimal128Array, Float64Array};
+use datafusion::arrow::array::Decimal128Array;
 
 // =================================================================================================
 // Collect helpers — one-column scalar pins on the Arrow path (value AND type AND nullability)
@@ -63,45 +63,6 @@ async fn collect_decimal128(
     (precision, scale, nullable, value)
 }
 
-/// One-column Float64 result: `(nullable, to_bits)`. Used where repark currently answers double
-/// (literal inference / avg-of-decimal disclosures).
-async fn collect_float64_bits(
-    ctx: &SessionContext,
-    catalogs: &CatalogRegistry,
-    sql: &str,
-) -> (bool, u64) {
-    let frame = execute(ctx, catalogs, sql)
-        .await
-        .unwrap_or_else(|error| panic!("plan/execute failed for `{sql}`: {error}"));
-    let schema = frame.schema();
-    let field = schema.field(0);
-    let nullable = field.is_nullable();
-    assert_eq!(
-        field.data_type(),
-        &DataType::Float64,
-        "expected Float64 for `{sql}`"
-    );
-    let batches = frame
-        .collect()
-        .await
-        .unwrap_or_else(|error| panic!("collect failed for `{sql}`: {error}"));
-    assert_eq!(
-        batches.iter().map(RecordBatch::num_rows).sum::<usize>(),
-        1,
-        "`{sql}` must yield exactly one row"
-    );
-    let array = batches[0]
-        .column(0)
-        .as_any()
-        .downcast_ref::<Float64Array>()
-        .unwrap_or_else(|| panic!("column 0 of `{sql}` is not Float64Array"));
-    assert!(
-        !array.is_null(0),
-        "`{sql}` cell must be non-null for bits pin"
-    );
-    (nullable, array.value(0).to_bits())
-}
-
 // =================================================================================================
 // Equality-class money controls (repark == Spark; corpus `repark is None`)
 // =================================================================================================
@@ -141,22 +102,25 @@ async fn pin_mul_money_by_quantity_i128() {
 }
 
 // =================================================================================================
-// Literal inference (disclosure — repark answers float64)
+// Literal inference (DEC-1 / U2 — Spark-door `parse_float_as_decimal=true`)
 // =================================================================================================
 
 /// Corpus row `literal_1_23_infers_decimal_in_spark_double_in_repark`.
-/// Spark: decimal128(3,2); repark: float64 1.23. Pin repark's disclosed half bit-exact.
+/// After U2 both doors' Spark half is decimal128(3,2) i128=123. Name kept on the Python
+/// corpus row; this Rust pin follows the new type.
 #[tokio::test]
-async fn pin_literal_1_23_infers_float64() {
+async fn pin_literal_1_23_infers_decimal128_3_2_i128() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
-    let (nullable, bits) = collect_float64_bits(&ctx, &catalogs, "SELECT 1.23 AS v").await;
-    assert!(!nullable, "bare literal is non-null");
+    let (precision, scale, nullable, value) =
+        collect_decimal128(&ctx, &catalogs, "SELECT 1.23 AS v").await;
     assert_eq!(
-        bits,
-        1.23_f64.to_bits(),
-        "f64::to_bits of the bare 1.23 literal"
+        (precision, scale),
+        (3, 2),
+        "bare 1.23 infers decimal128(3,2)"
     );
+    assert!(!nullable, "bare literal is non-null");
+    assert_eq!(value, Some(123), "i128 scaled 1.23 at scale 2");
 }
 
 // =================================================================================================
@@ -256,7 +220,8 @@ async fn pin_int_times_decimal_promotes_to_31_2_i128() {
 // =================================================================================================
 
 /// Corpus row `overflow_max_decimal38_plus_one_raises_in_spark`.
-/// ANSI Spark raises; repark returns a corrupted 38-digit value (no raise). Pin that value.
+/// ANSI Spark raises; after U2 the 38-nines token is exact DECIMAL then `+ 1` wraps to
+/// `10^38` at declared type (38,0) — wrap-not-residue (DEC-6 leftover, not a semantics fix).
 #[tokio::test]
 async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -269,11 +234,10 @@ async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
         (38, 0),
         "overflow result type stays (38,0)"
     );
-    // Python corpus repark half: Decimal("99999999999999997748809823456034029569") at scale 0.
     assert_eq!(
         value,
-        Some(99_999_999_999_999_997_748_809_823_456_034_029_569),
-        "repark's wrong overflow residue (corpus golden), not a raise"
+        Some(10_i128.pow(38)),
+        "U2 wrap: exact 38-nines then +1 stores 10^38 (39 digits) at (38,0)"
     );
 }
 

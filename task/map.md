@@ -28,10 +28,14 @@ not this directory.
   Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;
   FA-2 `getDatabase` note; Y-4 citation refresh). Completeness proof for the increment
   PR. Live-mirror both-halves deferred (none demanded; Z-2 owns `_live_parity.py`).
+- [w2-dec-u2-ledger.md](w2-dec-u2-ledger.md) — **W-2 / DEC U2 in flight:** Spark-door
+  `parse_float_as_decimal=true` default (DEC-1). Named blast-list flips + wider
+  fixture sweep. TY-3 still DECLARED (residual U3). Does **not** edit the registry
+  (W-5 owns it; DEC-1 FIXED text is paste-true here).
 - [z3-dec-u1u2-ledger.md](z3-dec-u1u2-ledger.md) — **Z-3 / DEC U1+U2 (#76):** U1
   un-coerced facade `avg(DECIMAL)` (decimal retract, Spark `(p+4,s+4)`). U2
-  (`parse_float_as_decimal=true` Spark-door default) is a **named morning deferral**
-  (W-2). Registry §6 landed by W-5.
+  (`parse_float_as_decimal=true` Spark-door default) was a **named morning deferral**
+  — landed as W-2. Registry §6 landed by W-5.
 - [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) — **Z-1 / G3-E8 PR-1 (#78):**
   A1-identity DELETE path + uncorrelated `DELETE … IN (SELECT …)` product hole. Residual
   spellings stay refused. Registry §6 landed by W-5 (family **not** marked fixed).

@@ -495,7 +495,10 @@ def test_pivot_nan_value_matches(spark: ReparkSession) -> None:
 
     SQL-sourced NaN (createDataFrame normalizes float NaN → null on some paths).
     """
-    frame = spark.sql("SELECT CAST('NaN' AS DOUBLE) AS p, 10.0 AS x UNION ALL SELECT 1.0, 20.0")
+    frame = spark.sql(
+        "SELECT CAST('NaN' AS DOUBLE) AS p, CAST(10.0 AS DOUBLE) AS x "
+        "UNION ALL SELECT CAST(1.0 AS DOUBLE), CAST(20.0 AS DOUBLE)"
+    )
     out = frame.groupBy().pivot("p", [float("nan"), 1.0]).sum("x").to_arrow().to_pylist()[0]
     # Column name follows str(nan) → "nan"; value must aggregate the NaN-keyed row.
     assert out.get("nan") == 10.0

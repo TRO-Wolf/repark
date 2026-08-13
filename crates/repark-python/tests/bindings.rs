@@ -9,7 +9,8 @@
 
 use _native::{PyColumn, PyDataFrame, PyReparkSession};
 use arrow::array::{
-    Array, Float64Array, Int32Array, Int64Array, RecordBatch, RecordBatchReader, StringArray,
+    Array, Decimal128Array, Float64Array, Int32Array, Int64Array, RecordBatch, RecordBatchReader,
+    StringArray,
 };
 use arrow::error::ArrowError;
 use arrow::ffi_stream::{ArrowArrayStreamReader, FFI_ArrowArrayStream};
@@ -190,9 +191,10 @@ fn arrow_c_stream_exports_a_consumable_stream_with_correct_values() {
 #[test]
 fn arrow_c_stream_streams_values_and_types_end_to_end() {
     // End-to-end value AND Arrow type across the streaming FFI export: three rows over three column
-    // types (Int64 / Float64 / Utf8) cross `__arrow_c_stream__` → the re-imported Arrow C stream
+    // types (Int64 / Decimal128 / Utf8) cross `__arrow_c_stream__` → the re-imported Arrow C stream
     // and arrive with the right values AND the right Arrow types (each downcast asserts the type).
-    // Exercises the real `DataFrame::execute_stream` producer, not a Rust-side collect.
+    // U2: bare `1.5` is DECIMAL(2,1) on the Spark door. Exercises the real
+    // `DataFrame::execute_stream` producer, not a Rust-side collect.
     Python::attach(|py| {
         let s = session(py);
         let df = s
@@ -213,16 +215,18 @@ fn arrow_c_stream_streams_values_and_types_end_to_end() {
         );
         // id: Int64 values, in order (the helper downcast asserts Int64).
         assert_eq!(int64_column(&batch, 0), vec![1, 2, 3], "id values");
-        // amt: Float64 — the downcast asserts the type, then the values.
+        // amt: decimal128(2,1) after U2 — the downcast asserts the type, then i128 values.
         let amt = batch
             .column(1)
             .as_any()
-            .downcast_ref::<Float64Array>()
-            .expect("amt is Float64");
+            .downcast_ref::<Decimal128Array>()
+            .expect("amt is Decimal128");
+        assert_eq!(amt.precision(), 2);
+        assert_eq!(amt.scale(), 1);
         assert_eq!(
             (0..amt.len()).map(|row| amt.value(row)).collect::<Vec<_>>(),
-            vec![1.5, 2.5, 3.5],
-            "amt values"
+            vec![15, 25, 35],
+            "amt i128 scaled at scale 1"
         );
         // label: Utf8.
         let label = batch
