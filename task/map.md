@@ -12,21 +12,28 @@ not this directory.
 
 ## Contents
 
+- [w5-z-landing-ledger.md](w5-z-landing-ledger.md) — **W-5 Z-wave §6 landing
+  increment (2026-08-13):** verify-before-paste classification of the merged Z-wave
+  handoffs (G3-E8 IN-DELETE footnote, not family-fixed; TZ-4 progress not retired;
+  DEC-4 / campaign DEC-5 avg FIXED; DEC-1 still OPEN; TY-3 still DECLARED; F.abs
+  D6-adjacent FIXED; R1/R4/R5 still OPEN; G5b-R5 Spark half amended to Z-4 recon).
+  Completeness proof for the increment PR. TZ-6 / TZ-7 sections untouched (W-1).
+  Live-mirror both-halves: none.
 - [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) — **Z-5 Y-wave §6
   landing increment (2026-08-13):** verify-before-paste classification of the merged
   Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;
   FA-2 `getDatabase` note; Y-4 citation refresh). Completeness proof for the increment
   PR. Live-mirror both-halves deferred (none demanded; Z-2 owns `_live_parity.py`).
-- [z3-dec-u1u2-ledger.md](z3-dec-u1u2-ledger.md) — **Z-3 / DEC U1+U2 in flight:** U1
-  un-coerces facade `avg(DECIMAL)` (decimal retract, Spark `(p+4,s+4)`). U2
+- [z3-dec-u1u2-ledger.md](z3-dec-u1u2-ledger.md) — **Z-3 / DEC U1+U2 (#76):** U1
+  un-coerced facade `avg(DECIMAL)` (decimal retract, Spark `(p+4,s+4)`). U2
   (`parse_float_as_decimal=true` Spark-door default) is a **named morning deferral**
-  — blast reds files outside the A1 writable set. Does **not** edit the registry.
-- [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) — **Z-1 / G3-E8 PR-1 in flight:**
+  (W-2). Registry §6 landed by W-5.
+- [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) — **Z-1 / G3-E8 PR-1 (#78):**
   A1-identity DELETE path + uncorrelated `DELETE … IN (SELECT …)` product hole. Residual
-  spellings stay refused. Does **not** edit the registry (Z-5 owns it).
-- [z2-tz4-pr1-ledger.md](z2-tz4-pr1-ledger.md) — **Z-2 / TZ-4 PR-1:** µs+UTC instant
+  spellings stay refused. Registry §6 landed by W-5 (family **not** marked fixed).
+- [z2-tz4-pr1-ledger.md](z2-tz4-pr1-ledger.md) — **Z-2 / TZ-4 PR-1 (#79):** µs+UTC instant
   producers + Iceberg `timestamptz` for default SQL `TIMESTAMP`. A7 CREATE probe (Spark
-  Iceberg type `timestamptz`). Does **not** edit the registry / `types.py` / zoneless paths.
+  Iceberg type `timestamptz`). Registry TZ-4 progress landed by W-5; TZ-6/TZ-7 stay W-1.
 - [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
   collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
   paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does
@@ -105,9 +112,10 @@ not this directory.
   `MISSING_ATTRIBUTES` on select/filter/withColumn instead of silently binding the left
   column; `drop` of that Column is the probed Spark no-op. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`.
-- [z4-residuals-ledger.md](z4-residuals-ledger.md) — **Z-4 / Y-wave residuals:** R1/R4/R5
-  re-verified and deferred (need `spark_ast.rs` or a DF pin bump); `F.abs` post-semi
-  origin-thread FIX (Y-5 SAF-001). G13 handoff text only. Does **not** edit the registry.
+- [z4-residuals-ledger.md](z4-residuals-ledger.md) — **Z-4 / Y-wave residuals (#77):** R1/R4/R5
+  re-verified and deferred (need `spark_ast.rs` or a DF pin bump; W-4 in flight); `F.abs`
+  post-semi origin-thread FIX (Y-5 SAF-001). G13 handoff text only. Registry §6 landed
+  by W-5.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
@@ -194,6 +202,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [w5-z-landing-ledger.md](w5-z-landing-ledger.md) | **W-5** Z-wave §6 landing increment — registry + one STATUS dated note |
 | [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) | **Z-5** Y-wave §6 landing increment — registry + one STATUS dated note |
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
 | [y4-rename-ledger.md](y4-rename-ledger.md) | **Y-4 / G4b-R1** declared rename (G4b flipped rows + TZ-5 nullability row) |
@@ -215,7 +224,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |
 | See which G3-E8 spelling now executes (IN-DELETE) | [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) |
 | Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
-| See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) |
+| See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) · [w5-z-landing-ledger.md](w5-z-landing-ledger.md) (Z wave) |
 | See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
 | Read why the session timezone is a build-time knob with one spelling | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) |
 | Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) "§ Split B" |
