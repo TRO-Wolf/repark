@@ -24,7 +24,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 
 - `Cargo.toml` — package; depends on `datafusion` + `datafusion-spark` + `arrow` + `chrono`.
   DataFusion-native: speaks `datafusion::error::Result`, so **no** `repark-core` dep.
-  **r24 G10 / PERF-10:** crate-level `criterion` 0.5.1 dev-dep + `[[bench]] ratio_string_datetime`
+  **r24 G10 / PERF-10:** crate-level `criterion` 0.8 dev-dep + `[[bench]] ratio_string_datetime`
   (never `[workspace.dependencies]`). See [benches/map.md](benches/map.md).
 - `benches/` — PERF-10 ratio micro-benches (`date_format`/`to_char`, `substring`/`upper`).
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
