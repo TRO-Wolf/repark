@@ -1837,7 +1837,11 @@ fn parse_data_type(spec: &str) -> Result<DataType, String> {
         "double" => Ok(DataType::Float64),
         "boolean" => Ok(DataType::Boolean),
         "date" => Ok(DataType::Date32),
-        "timestamp" => Ok(DataType::Timestamp(TIMESTAMP_UNIT, None)),
+        "timestamp" => Ok(DataType::Timestamp(
+            TIMESTAMP_UNIT,
+            Some(std::sync::Arc::<str>::from("UTC")),
+        )),
+        "timestamp_ntz" => Ok(DataType::Timestamp(TIMESTAMP_UNIT, None)),
         "binary" => Ok(DataType::Binary),
         other => parse_decimal_type(other),
     }
@@ -1892,6 +1896,13 @@ mod tests {
         assert_eq!(parse_data_type("date").unwrap(), DataType::Date32);
         assert_eq!(
             parse_data_type("timestamp").unwrap(),
+            DataType::Timestamp(
+                TimeUnit::Microsecond,
+                Some(std::sync::Arc::<str>::from("UTC"))
+            )
+        );
+        assert_eq!(
+            parse_data_type("timestamp_ntz").unwrap(),
             DataType::Timestamp(TimeUnit::Microsecond, None)
         );
         assert_eq!(parse_data_type("binary").unwrap(), DataType::Binary);

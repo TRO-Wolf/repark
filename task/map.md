@@ -23,6 +23,9 @@ not this directory.
   (2026-08-13):** R1 unquoted `INTERVAL 1 DAY` pre-plan quote; R5 interval-over-int
   numeric-`n` restatement; R4 FOLLOWING-to-FOLLOWING re-verify (still DEFER); window
   µs type pins; A6 Q-002 aggregate origin thread. Does **not** edit the registry.
+- [w1-tz4-pr2-ledger.md](w1-tz4-pr2-ledger.md) — **W-1 / TZ-4 PR-2:** zoneless LTZ
+  localization + NTZ distinction. Retires registry TZ-6 and TZ-7 (headings only).
+  Does **not** edit TZ-4 progress row (W-5). `_live_parity.py` A2 only (Y-4 citation).
 - [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) — **Z-5 Y-wave §6
   landing increment (2026-08-13):** verify-before-paste classification of the merged
   Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;

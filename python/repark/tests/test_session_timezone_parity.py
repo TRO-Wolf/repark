@@ -14,19 +14,11 @@ measured as a four-hour silent offset. Split B landed the extraction fix, so **t
 disclosures are now plain equality rows (``repark=None``) — and that flip is precisely the
 revert-red evidence the testing contract asks for: undo the fix and each one goes red.
 
-**The rows that are still disclosures are a different class, named on each row.** Five remain
-after TZ-4 PR-1 flipped the instant-producer TYPE rows (``to_timestamp`` of a zone-suffixed
-string, ``date_trunc`` return, DataFrame-API ``date_trunc`` column, CAST-int type) to equality:
-
-* one is :data:`TZ4` plus B-TZ-4 — ``CAST(ts AS STRING) AS TIMESTAMP`` still lands ns-naive
-  (zoneless CAST input; PR-2);
-* three are :data:`TZ7` — a **zoneless** TIMESTAMP input (a ``TIMESTAMP '…'`` literal, a zoneless
-  ``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-datetime column). Spark reads those as a
-  session-zone wall clock; repark's planner stores the digits as UTC ticks. PR-2 localizes them.
-  These rows were GREEN against Spark before H-1a and are RED after it — the disclosed price of
-  reading every TIMESTAMP as an instant;
-* one is :data:`TZ6` — repark maps ``TimestampNTZType`` and ``TimestampType`` onto the SAME Arrow
-  type, so an NTZ column is indistinguishable from an instant one. PR-2.
+**The rows that are still disclosures are a different class, named on each row.** TZ-4 PR-2
+flipped the five zoneless-input / NTZ / CAST-str-round-trip rows to equality. Remaining
+disclosures (if any) are named in
+``test_the_extraction_class_converged_and_the_residue_is_named``. B-TZ-4
+(``CAST(ts AS STRING)`` *render* shape) and TZ-8 stay out of this flip.
 
 The twelfth **was** ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5). It
 CONVERGED when :data:`TZ5_FIX` landed and is now an equality row, which is the same revert-red
@@ -436,13 +428,11 @@ G1_ROWS: list[TimeZoneRow] = [
             [("round_trip", pa.timestamp("us", "UTC"), True)],
             {"round_trip": _utc(2024, 6, 15, 12, 0)},
         ),
-        _one_row(
-            [("round_trip", pa.timestamp("ns"), True)],
-            {"round_trip": dt.datetime(2024, 6, 15, 12, 0)},
-        ),
+        None,
         "timestamp -> string -> timestamp: Spark renders in the session zone and parses back "
-        "so the instant survives as timestamp[us, tz=UTC]. repark CAST(str AS TIMESTAMP) is a "
-        f"zoneless input path and stays tz-naive timestamp[ns] ({TZ4} + B-TZ-4). PR-2.",
+        "so the instant survives as timestamp[us, tz=UTC]. TZ-4 PR-2 localizes CAST(str AS "
+        "TIMESTAMP); if the intermediate string is zone-suffixed (UTC annotation) the instant "
+        "round-trips. B-TZ-4 (session-zone space-separated render) is a later PR.",
     ),
     TimeZoneRow(
         "date_trunc_day_across_a_zone_boundary",
@@ -551,16 +541,15 @@ G1_ROWS: list[TimeZoneRow] = [
                 ("rendered", pa.string(), True),
             ],
             {
-                "hour_part": 8,
-                "year_part": 2023,
-                "day_part": 31,
-                "rendered": "2024-06-15 08:00",
+                "hour_part": 12,
+                "year_part": 2024,
+                "day_part": 1,
+                "rendered": "2024-06-15 12:00",
             },
         ),
-        f"a plain Spark TIMESTAMP literal — no NTZ anywhere. Spark parses the digits as a WALL "
-        f"CLOCK in the session zone, so `hour` reads back 12 in every zone and the year-boundary "
-        f"literal stays on 2024-01-01; repark stores them as UTC ticks and answers 8 / 2023-12-31, "
-        f"a whole calendar day out. {TZ7}. {TZ7_REGRESSION}",
+        "VALUE-converged TZ-7 (session-zone wall clock). Residual: Spark types these "
+        "extractor columns non-null; repark extractors stay nullable — not the TZ-7 class. "
+        "Recorded Spark half keeps the live-4.1.2 non-null schema for the record driver.",
     ),
     TimeZoneRow(
         "zoneless_timestamp_input_spellings_under_tokyo_session",
@@ -572,15 +561,9 @@ G1_ROWS: list[TimeZoneRow] = [
             [("from_to_timestamp", _INT32, True), ("from_cast", _INT32, True)],
             {"from_to_timestamp": 12, "from_cast": 12},
         ),
-        _one_row(
-            [("from_to_timestamp", _INT32, True), ("from_cast", _INT32, True)],
-            {"from_to_timestamp": 21, "from_cast": 21},
-        ),
-        f"the other two zoneless spellings, east of UTC so the divergence has the opposite sign "
-        f"(+9 rather than -4) and cannot be mistaken for a fixed offset. Both spellings must move "
-        f"TOGETHER: they land on the identical Arrow type holding the identical ticks, which is "
-        f"why no rule at the extractor can separate them from `to_timestamp('…Z')`. {TZ7}. "
-        f"{TZ7_REGRESSION}",
+        None,
+        "the other two zoneless spellings, east of UTC. TZ-4 PR-2 localizes both as a Tokyo "
+        "wall clock so `hour` reads 12. Both spellings must move TOGETHER. Flip evidence.",
     ),
     TimeZoneRow(
         "naive_datetime_column_under_new_york_session",
@@ -600,23 +583,10 @@ G1_ROWS: list[TimeZoneRow] = [
                 "rendered": ["2024-01-01 00:30", "2024-06-15 12:00"],
             },
         ),
-        _table(
-            [
-                ("hour_part", _INT32, True),
-                ("year_part", _INT32, True),
-                ("rendered", pa.string(), True),
-            ],
-            {
-                "hour_part": [19, 8],
-                "year_part": [2023, 2024],
-                "rendered": ["2023-12-31 19:30", "2024-06-15 08:00"],
-            },
-        ),
-        f"the mainstream COLUMN shape of the same class: `createDataFrame` over naive `datetime` "
-        f"objects, which both engines type as a plain default TIMESTAMP. This is the row a "
-        f"migrated Python job hits without ever writing a literal, and it is why {TZ7} is framed "
-        f"on ZONELESS INPUT rather than on NTZ — no NTZ type appears anywhere here. "
-        f"{TZ7_REGRESSION}",
+        None,
+        "the mainstream COLUMN shape: `createDataFrame` over naive `datetime` objects, typed as "
+        "default TIMESTAMP. TZ-4 PR-2 localizes each wall in the session zone so `hour` reads "
+        "the digits. Flip evidence.",
         needs_naive_column_view=True,
     ),
     TimeZoneRow(
@@ -638,26 +608,10 @@ G1_ROWS: list[TimeZoneRow] = [
                 "ntz_hour": 12,
             },
         ),
-        _one_row(
-            [
-                ("ltz", pa.timestamp("us"), True),
-                ("ntz", pa.timestamp("us"), True),
-                ("ltz_hour", _INT32, True),
-                ("ntz_hour", _INT32, True),
-            ],
-            {
-                "ltz": dt.datetime(2024, 6, 15, 12, 0),
-                "ntz": dt.datetime(2024, 6, 15, 12, 0),
-                "ltz_hour": 8,
-                "ntz_hour": 8,
-            },
-        ),
-        f"the same wall clock declared EXPLICITLY as `TimestampType` beside `TimestampNTZType`. "
-        f"Spark gives them two different Arrow types carrying two different instants (the LTZ one "
-        f"localized to 16:00Z, the NTZ one left at 12:00) and reads `hour` as 12 from both; repark "
-        f"maps both Spark types onto one Arrow type, so the two columns are byte-identical and "
-        f"both read 8. {TZ6}, now recorded from the live oracle rather than asserted from "
-        f"documentation — it retires with {TZ4}, whose unit owns the TIMESTAMP representation.",
+        None,
+        "the same wall clock declared EXPLICITLY as `TimestampType` beside `TimestampNTZType`. "
+        "TZ-4 PR-2: LTZ localizes to 16:00Z (`timestamp[us, tz=UTC]`); NTZ stays naive 12:00; "
+        "`hour` reads 12 from both. Flip evidence.",
         needs_ltz_and_ntz_view=True,
     ),
     # ----- the DataFrame-API spelling of the facade cell -----------------------------------------
@@ -1072,11 +1026,21 @@ def test_session_timezone_row_set_covers_both_gap_budgets() -> None:
         "the facade cell has TWO user entry points (`sql()` and `df.select(F...)`); pinning only "
         "the first would leave the most-used spelling on a Rust proxy"
     )
-    zoneless_rows = [row for row in ROWS if TZ7 in row.note]
-    assert len(zoneless_rows) == 3 and all(row.repark is not None for row in zoneless_rows), (
-        "the zoneless-input family must stay DISCLOSED (never quietly flipped to equality) until "
-        "repark's TIMESTAMP representation can separate a wall clock from an instant"
-    )
+    zoneless_names = {
+        "zoneless_timestamp_literal_under_new_york_session",
+        "zoneless_timestamp_input_spellings_under_tokyo_session",
+        "naive_datetime_column_under_new_york_session",
+    }
+    zoneless_rows = [row for row in ROWS if row.name in zoneless_names]
+    assert len(zoneless_rows) == 3, "the three TZ-7 zoneless-input rows must stay in the corpus"
+    assert all(
+        row.name != "zoneless_timestamp_literal_under_new_york_session" or row.repark is not None
+        for row in zoneless_rows
+    ), "literal row is value-converged; extractor nullability is a residual disclosure"
+    assert all(
+        row.name == "zoneless_timestamp_literal_under_new_york_session" or row.repark is None
+        for row in zoneless_rows
+    ), "to_timestamp / CAST / naive-column TZ-7 rows are equality"
 
 
 def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
@@ -1093,28 +1057,14 @@ def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
     equality = {row.name for row in ROWS if row.repark is None}
     disclosures = {row.name for row in ROWS if row.repark is not None}
     assert disclosures == {
-        # TZ-4 + B-TZ-4: CAST(str AS TIMESTAMP) is a zoneless input path (PR-2).
-        "tz_aware_to_naive_round_trip",
-        # TZ-5 is NO LONGER here: `pre_1970_timestamp_cast_to_bigint` converged when the
-        # timestamp-cast epoch-seconds fix landed and is now an equality row (see TZ5_FIX).
-        # TZ-4 PR-1 flipped instant-producer TYPE rows (to_timestamp Z, date_trunc return,
-        # DataFrame-API date_trunc, CAST(int) type).
-        # TZ-7 — a ZONELESS timestamp input is read as UTC, not as a session-zone wall clock.
-        # This unit fixed extraction for INSTANT-typed inputs only; these are the other half,
-        # and they are worse after the fix than before it. Disclosed, not laundered. PR-2.
+        # VALUE-converged TZ-7; residual is extractor nullability (Spark non-null).
         "zoneless_timestamp_literal_under_new_york_session",
-        "zoneless_timestamp_input_spellings_under_tokyo_session",
-        "naive_datetime_column_under_new_york_session",
-        # TZ-6 — repark cannot tell TimestampNTZType from TimestampType. PR-2.
-        "timestamp_ntz_is_indistinguishable_from_timestamp",
     }, (
-        "every remaining disclosure must belong to a NAMED class other than the INSTANT-typed "
-        "timestamp extraction this unit closed — if a new one is legitimate, add it here with the "
-        "registry row that owns it"
+        "TZ-4 PR-2 flipped TZ-6 / two TZ-7 spellings / CAST-str-round-trip; leftover "
+        f"{sorted(disclosures)} must be named here with their registry row"
     )
-    assert len(equality) == 24, (
-        "18 after TZ-5, plus 6 TZ-4 PR-1 type flips (to_timestamp Z, 3 date_trunc type "
-        "rows, 2 DataFrame-API date_trunc columns)"
+    assert len(equality) == 28, (
+        "24 after TZ-4 PR-1, plus 4 PR-2 equality flips (round-trip, 2 zoneless spellings, NTZ)"
     )
 
 

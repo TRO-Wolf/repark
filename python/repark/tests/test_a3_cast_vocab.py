@@ -44,7 +44,7 @@ _PRIMITIVE_CAST_TYPES: list[tuple[str, DataType, pa.DataType]] = [
     ("float", FloatType(), pa.float32()),
     ("double", DoubleType(), pa.float64()),
     ("date", DateType(), pa.date32()),
-    ("timestamp", TimestampType(), pa.timestamp("us")),
+    ("timestamp", TimestampType(), pa.timestamp("us", tz="UTC")),
     ("binary", BinaryType(), pa.binary()),
     ("decimal(10,4)", DecimalType(10, 4), pa.decimal128(10, 4)),
 ]

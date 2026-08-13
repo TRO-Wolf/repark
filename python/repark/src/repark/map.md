@@ -1217,7 +1217,7 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
 - Octo r2 C1: config spark.master OTH-010 warn; held SparkContext stop; withColumns str keys; F1 near-now + F.expr ns residual pins.
 - Octo r2 C2–C5: master warn on getOrCreate reuse; SQL CTAS ns residual fail pin; empty rename map.
 
-- Octo r3 C1: DF liveness token on stop; empty col names rejected; case-insensitive spark.master warn; cast(TimestampType) tz-strip pin.
+- Octo r3 C1: DF liveness token on stop; empty col names rejected; case-insensitive spark.master warn; cast(TimestampType) keeps µs+UTC (TZ-4 PR-2).
 - Octo r3 C2–C5: insertInto/stop gate; singular empty names; CTAS near-now value; columns/schema/transform after stop.
 
 - Group G1 (2026-07-21): `DataFrame.__getattr__` / `__getitem__`, `Column.__neg__` + `__repr__` —

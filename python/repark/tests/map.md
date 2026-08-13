@@ -1180,24 +1180,26 @@ NOT in that file is a defect, not a decision.
   **Since H-1a split B (2026-08-10) most rows are EQUALITY rows:** the extraction fix landed, so
   thirteen of the recorded disclosures now assert `repark == Spark` (`repark=None`) — and that
   flip IS the fix's revert-red evidence, because undoing the fix reds every one of them.
-  **TZ-4 PR-1 (2026-08-13):** seven more TYPE rows flipped to equality (`to_timestamp` Z,
-  `date_trunc` return, DataFrame-API `date_trunc` column, CAST string-round-trip type).
-  Residues: TZ-7 (3) + TZ-6 (1). `current_timestamp` type pin is now equality.
+  **TZ-4 PR-1 (2026-08-13):** instant-producer TYPE rows flipped to equality (`to_timestamp` Z,
+  `date_trunc` return, DataFrame-API `date_trunc` column). `current_timestamp` type pin is equality.
+  **TZ-4 PR-2 (2026-08-13):** zoneless LTZ input localizes in the session zone; `TimestampType`
+  is µs+UTC; NTZ stays naive. Flipped to equality: CAST-str round-trip, two zoneless
+  spellings, NTZ distinction. Residue: `zoneless_timestamp_literal_*` is VALUE-converged;
+  extractor columns stay nullable (Spark non-null) — not the TZ-7 class.
   **Its 2026-08-10 rework grew the corpus from 20 rows to 29** (a size pin moved because an
   adversarial panel measured wrong-answer families the original rows were structurally blind to —
   every one of them hands the engine a `…Z`-suffixed string, i.e. only the shapes where reading a
   TIMESTAMP as a UTC instant is RIGHT). The nine added rows are: three ZONELESS-input disclosures
   (a `TIMESTAMP '…'` literal, a zoneless `to_timestamp` / `CAST(str AS TIMESTAMP)`, and a
-  naive-`datetime` COLUMN — registry row TZ-7, and the half of the class this unit does NOT fix);
-  one `TimestampNTZType`-vs-`TimestampType` disclosure that gives registry row TZ-6 a **recorded**
-  basis where it had only a documented one; two `date_trunc`-COMPOSITION equality rows (a `DATE`
+  naive-`datetime` COLUMN — registry row TZ-7, now localized in PR-2);
+  one `TimestampNTZType`-vs-`TimestampType` row that gives registry row TZ-6 a **recorded**
+  basis (now an equality row); two `date_trunc`-COMPOSITION equality rows (a `DATE`
   and a string truncated and then read back — the single-hop `DATE` control row cannot see a
   whole-day error there); one DST fall-back `date_trunc` row; and two **DataFrame-API** rows
   (`entry_point="dataframe_api"` → `dataframe_api_extraction`, i.e. `df.select(F.year(...), ...)`,
   the facade's OTHER user entry point, previously pinned only by a Rust proxy).
-  Eleven rows are still disclosures and none is the instant-typed extraction class: two are the
-  tz-naive Arrow export TYPE, five are rows whose VALUE converged while their TYPE did not, three
-  are TZ-7 and one is TZ-6. (A twelfth WAS the `CAST(TIMESTAMP AS BIGINT)` unit bug — registry row
+  One row is still a disclosure (`zoneless_timestamp_literal_*`, extractor nullability only).
+  (A twelfth WAS the `CAST(TIMESTAMP AS BIGINT)` unit bug — registry row
   **TZ-5**, which converged on 2026-08-12 when the timestamp-cast epoch-seconds fix landed;
   `pre_1970_timestamp_cast_to_bigint` is now an equality row and the equality count moved 17 → 18.
   That class's own per-entry-point corpus is `test_timestamp_cast_parity.py`.)

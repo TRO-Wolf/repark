@@ -10,7 +10,7 @@ is the deliverable; engine product fixes mid-unit are **out of scope** (bank + p
 
 - `generator.py` — pure-Python query AST generator (`random.Random(seed)` only).
 - `datagen.py` — seeded multi-table fixture (int32/int64/float64/decimal/utf8/date/timestamp/bool, NULL ≥10%).
-- `compare.py` — TPC-H-class compare (ints exact; non-integral Decimals exact; non-integral floats 1e-6 rel; int≠fractional float; ORDER BY → order-sensitive).
+- `compare.py` — TPC-H-class compare (ints exact; non-integral Decimals exact; non-integral floats 1e-6 rel; int≠fractional float; ORDER BY → order-sensitive). **TZ-4 PR-2:** tz-aware UTC datetimes normalize to naive UTC walls so DuckDB (naive) does not false-red LTZ export.
 - `runner.py` — end-to-end run + census (`REPARK_FUZZ_SEED`, `REPARK_FUZZ_N`);
   statuses OK | WRONG-RESULT | ERROR (no SKIP).
 - `minimizer.py` — greedy shrink (drop LIMIT/ORDER leftmost-first/WHERE/joins/columns/rows;

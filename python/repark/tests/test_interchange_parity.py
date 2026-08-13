@@ -155,12 +155,11 @@ def test_to_pandas_with_nulls_values_and_dtypes(spark: ReparkSession) -> None:
     ), f"expected string family, got {string_type!r}"
     assert arrow.schema.field("b").type == pa.bool_()
     assert arrow.schema.field("d").type == pa.date32()
-    # repark: timestamp[ns] (no tz); Spark: timestamp[us, tz=UTC]. Wall-clock equal under UTC.
+    # TZ-4 PR-2: SQL TIMESTAMP is Spark's wire type (µs+UTC).
     ts_type = arrow.schema.field("ts").type
     assert pa.types.is_timestamp(ts_type)
-    assert ts_type.unit in {"ns", "us", "ms"}
-    # repark has no tz on the SQL CAST path; Spark Arrow-on is UTC — pin either.
-    assert ts_type.tz in (None, "UTC")
+    assert ts_type.unit == "us"
+    assert ts_type.tz == "UTC"
 
     rows = arrow.to_pylist()
     assert len(rows) == 3
@@ -248,7 +247,10 @@ def test_to_pandas_no_nulls_preserves_numpy_ints_and_bool(spark: ReparkSession) 
     )
     assert arrow.schema.field("b").type == pa.bool_()
     assert arrow.schema.field("d").type == pa.date32()
-    assert pa.types.is_timestamp(arrow.schema.field("ts").type)
+    ts_type = arrow.schema.field("ts").type
+    assert pa.types.is_timestamp(ts_type)
+    assert ts_type.unit == "us"
+    assert ts_type.tz == "UTC"
     rows = arrow.to_pylist()
     assert rows[0]["i32"] == 1 and rows[0]["i64"] == 10 and rows[0]["f64"] == 1.5
     assert rows[0]["dec"] == Decimal("12.34") and rows[0]["s"] == "hello" and rows[0]["b"] is True
@@ -357,16 +359,16 @@ def test_create_dataframe_date_timestamp_decimal_literals(spark: ReparkSession) 
     )
     table = frame.to_arrow()
     assert table.schema.field("d").type == pa.date32()
-    assert pa.types.is_timestamp(table.schema.field("ts").type)
+    assert table.schema.field("ts").type == pa.timestamp("us", tz="UTC")
     assert table.schema.field("dec").type == pa.decimal128(38, 18)
     rows = table.to_pylist()
     assert rows[0]["d"] == dt.date(2024, 1, 1)
     assert rows[0]["dec"] == Decimal("1.230000000000000000")
-    # wall-clock 12:00 (UTC session; repark timestamp[ns] naive)
+    # wall-clock 12:00 (UTC session → 12:00Z LTZ)
     ts_value = rows[0]["ts"]
     if hasattr(ts_value, "to_pydatetime"):
         ts_value = ts_value.to_pydatetime()
-    assert ts_value.replace(tzinfo=None) == dt.datetime(2024, 1, 1, 12, 0, 0)
+    _assert_timestamp_wall_clock(ts_value, dt.datetime(2024, 1, 1, 12, 0, 0))
 
 
 def test_create_dataframe_nulls_in_tuples(spark: ReparkSession) -> None:

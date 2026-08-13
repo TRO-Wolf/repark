@@ -381,16 +381,21 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
     arrow = casted.to_arrow()
     cast_ticks = arrow.column("ts2")[0].as_py()
 
-    # Host-TZ-independent: cast must not shift the Arrow value vs the parquet source.
-    # An LTZ conversion (any zone) changes ticks; hour==9 alone is false-green on UTC hosts.
-    assert cast_ticks == source_ticks, (
-        f"repark must pass naive timestamp ticks through; source={source_ticks!r} "
-        f"cast={cast_ticks!r}. If these differ, session-tz LTZ may have been introduced — "
-        "update the DIVERGENCE-1 disclosure before changing this pin."
+    # TZ-4 PR-2: cast(TimestampType()) is LTZ. Under the default UTC session the instant
+    # is unchanged (wall 09:00 stays 09:00Z); the Python cell becomes tz-aware.
+    source_wall = (
+        source_ticks.replace(tzinfo=None) if getattr(source_ticks, "tzinfo", None) else source_ticks
     )
-    assert cast_ticks == naive or (
-        hasattr(cast_ticks, "hour") and cast_ticks.hour == 9 and cast_ticks.day == 20
+    cast_wall = (
+        cast_ticks.replace(tzinfo=None) if getattr(cast_ticks, "tzinfo", None) else cast_ticks
     )
+    assert cast_wall == source_wall, (
+        f"UTC-session LTZ cast must not shift the wall; source={source_ticks!r} cast={cast_ticks!r}"
+    )
+    assert getattr(cast_ticks, "tzinfo", None) is not None, (
+        f"cast(TimestampType()) must be tz-aware LTZ, got {cast_ticks!r}"
+    )
+    assert cast_wall.hour == 9 and cast_wall.day == 20
     # Spark half (recorded): if repark ever returned the EDT-shifted wall clock, fail.
     if hasattr(cast_ticks, "hour"):
         assert cast_ticks != spark_edt_collect_wall, (
@@ -592,8 +597,8 @@ def test_empty_string_column_names_rejected(spark: ReparkSession) -> None:
         frame.withColumns({"": F.lit(1)})
 
 
-def test_current_timestamp_cast_timestamptype_strips_tz(spark: ReparkSession) -> None:
-    """C1-Q-001: cast(TimestampType()) strips F1 UTC → naive us (disclosed footgun)."""
+def test_current_timestamp_cast_timestamptype_keeps_utc(spark: ReparkSession) -> None:
+    """TZ-4 PR-2: cast(TimestampType()) is LTZ µs+UTC — no longer strips the F1 annotation."""
     from repark.types import TimestampType
 
     table = (
@@ -604,7 +609,9 @@ def test_current_timestamp_cast_timestamptype_strips_tz(spark: ReparkSession) ->
     field_type = table.schema.field("ts").type
     assert pa.types.is_timestamp(field_type)
     assert field_type.unit == "us"
-    assert field_type.tz is None, f"cast(TimestampType) must be naive us, got {field_type}"
+    assert str(field_type.tz).upper() in {"UTC", "+00:00"}, (
+        f"cast(TimestampType) must stay tz-aware µs, got {field_type}"
+    )
 
 
 def test_expr_current_timestamp_ctas_into_iceberg_v2_succeeds(spark: ReparkSession) -> None:

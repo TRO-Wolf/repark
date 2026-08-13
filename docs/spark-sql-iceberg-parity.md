@@ -715,65 +715,40 @@ the pin rather than obeying it.
 
 ### TZ-6 — every TIMESTAMP is an instant; there is no `TIMESTAMP_NTZ`
 
-- **repark** — the facade spells `TimestampNTZType`, but it maps to the same Arrow type as
-  `TimestampType` (`python/repark/src/repark/types.py` — both become `timestamp[us]`, tz-naive),
-  so **the engine cannot tell the two apart at all**. Declaring one column of each type and
-  exporting them side by side under an `America/New_York` session gives two byte-identical Arrow
-  columns (`timestamp[us]`, both holding `2024-06-15 12:00`) and `hour` reads `8` from both.
-- **Apache Spark** — the two types are distinct on the wire and in semantics: the same declaration
-  exports `ltz` as `timestamp[us, tz=UTC]` holding `2024-06-15T16:00Z` (the wall clock localized in
-  the session zone) and `ntz` as `timestamp[us]` holding `2024-06-15 12:00`, and `hour` reads `12`
-  from both. Iceberg's `timestamp` (without zone) maps to the NTZ one. *(oracle: **recorded** — live
-  PySpark 4.1.2 on 2026-08-10, re-derivable with the committed record driver.)*
-- **Pin** — `python/repark/tests/test_session_timezone_parity.py::…[timestamp_ntz_is_indistinguishable_from_timestamp]`
-  (both halves, value AND Arrow type, on the Arrow path) plus
-  `crates/repark-spark/tests/session_timezone.rs::a_tz_naive_timestamp_is_read_as_a_utc_instant`
-  (the interpretation, stated as a decision) and `…::date_arguments_never_move_with_the_session_zone`
-  (its boundary: `DATE` and `TIME` carry no instant and never move)
-- **Rationale** — BACKLOG, intent to FIX, and **recorded because H-1a split B is what made it
-  observable**. The alternative was to move only tz-*annotated* timestamps, which would have left
-  the whole scalar-literal family divergent: `to_timestamp('2024-01-01T04:30:00Z')` yields a
-  tz-naive Arrow type holding UTC ticks (that is TZ-4), so a type-driven rule would have read
-  repark's own instants as local wall clocks and closed almost nothing. Reading every TIMESTAMP as
-  an instant matches Spark's *default* type and closes the CRITICAL class.
-  **Corrected on 2026-08-10 (rework).** This row was first admitted under §1's documented-value
-  exception, on the ground that nobody here had run an NTZ column past a live Spark — but the unit
-  that admitted it *ships the oracle that measures it*, so the exception did not apply and the row
-  is now recorded. The correction also narrowed the claim: the divergence is **not confined to
-  NTZ**. A plain default-typed `TimestampType` column built from naive `datetime` objects diverges
-  too, which is a far more common shape than an explicit NTZ column and belongs to
-  [TZ-7](#tz-7--a-zoneless-timestamp-input-is-read-as-utc-not-as-a-session-zone-wall-clock) — a
-  user hitting that would never have found their bug under an NTZ heading. **The unit that retires
-  this row is the TIMESTAMP-representation unit that closes TZ-4** (registry queue B-TZ-4 is part
-  of its surface); at that point the extraction rule becomes purely type-driven and TZ-6 and TZ-7
-  retire together.
+> **TZ-6 — `TIMESTAMP` vs `TIMESTAMP_NTZ` are distinct — FIXED (2026-08-13, TZ-4 PR-2).**
+> `TimestampType` / default `TIMESTAMP` is Arrow `timestamp[us, tz=UTC]` (Iceberg `timestamptz`);
+> `TimestampNTZType` / `TIMESTAMP_NTZ` is naive `timestamp[us]` (Iceberg `timestamp`). Extraction
+> is type-driven: a tz-annotated column is an instant resolved in `spark.sql.session.timeZone`; a
+> naive column is NTZ and is not shifted. The same wall clock declared as both types under
+> `America/New_York` exports `ltz = timestamp[us, tz=UTC] @ 16:00Z` and
+> `ntz = timestamp[us] @ 12:00`, and `hour` reads `12` from both — matching Spark 4.1.2
+> (recorded 2026-08-10).
+>
+> **Pins:**
+> `python/repark/tests/test_session_timezone_parity.py::…[timestamp_ntz_is_indistinguishable_from_timestamp]`
+> (now an equality row) and
+> `crates/repark-spark/tests/session_timezone.rs::a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone`.
+> **Residual:** `spark.sql.timestampType` (opt-in default-NTZ) is not implemented (Q10).
 
 ### TZ-7 — a zoneless TIMESTAMP input is read as UTC, not as a session-zone wall clock
 
-- **repark** — `TIMESTAMP '2024-06-15 12:00:00'`, `to_timestamp('2024-06-15 12:00:00')` and
-  `CAST('2024-06-15 12:00:00' AS TIMESTAMP)` all plan to `timestamp[ns]` holding those digits as
-  **UTC ticks**, so `hour` reads `8` under `America/New_York` and `21` under `Asia/Tokyo`;
-  `year`/`dayofmonth` of `TIMESTAMP '2024-01-01 00:30:00'` read `2023` / `31`. A naive-`datetime`
-  column built with `createDataFrame` behaves the same way.
-- **Apache Spark** — parses a zoneless timestamp as a **wall clock in
-  `spark.sql.session.timeZone`**, so `hour` reads `12` in every zone and the year-boundary literal
-  stays on 2024-01-01. *(oracle: recorded — live PySpark 4.1.2, 2026-08-10.)*
-- **Pin** — `python/repark/tests/test_session_timezone_parity.py`:
-  `[zoneless_timestamp_literal_under_new_york_session]`,
-  `[zoneless_timestamp_input_spellings_under_tokyo_session]`,
-  `[naive_datetime_column_under_new_york_session]`; Rust:
-  `crates/repark-spark/tests/session_timezone.rs::a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark`
-- **Rationale** — BACKLOG, intent to FIX. **This is the half of TZ-1 that did not close, and it is
-  a REGRESSION direction, stated rather than buried:** before H-1a split B the session zone reached
-  no extractor, so these shapes happened to agree with Spark; after it they do not. That is the
-  disclosed price of reading every TIMESTAMP as an instant (ledger D-B5), and it is forced rather
-  than chosen — measured on 2026-08-10, all four input spellings including the zone-suffixed
-  `to_timestamp('…T12:00:00Z')` produce the **identical Arrow type holding the identical ticks**, so
-  no rule applied at the extractor can separate a wall clock from an instant. The counterfactual is
-  worse: a type-driven rule would leave the whole recorded corpus divergent (see TZ-6's rationale).
-  Closing it means the input paths — literal planning, `to_timestamp`, `CAST` — must produce a type
-  that says which one they made, which is exactly TZ-4's representation change; **TZ-7 retires with
-  TZ-4 and TZ-6.**
+> **TZ-7 — zoneless LTZ input localizes in the session zone — FIXED (2026-08-13, TZ-4 PR-2).**
+> `TIMESTAMP '2024-06-15 12:00:00'`, zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`, and a
+> naive-`datetime` `createDataFrame` column (default `TIMESTAMP`) are session-zone wall clocks
+> stored as µs+UTC. `hour` reads `12` in every zone; `year`/`dayofmonth` of
+> `TIMESTAMP '2024-01-01 00:30:00'` under `America/New_York` stay `2024` / `1`. A zone-suffixed
+> string is **not** localized (H-1a double-shift control).
+>
+> **Pins:** `python/repark/tests/test_session_timezone_parity.py`
+> `[zoneless_timestamp_literal_under_new_york_session]`,
+> `[zoneless_timestamp_input_spellings_under_tokyo_session]`,
+> `[naive_datetime_column_under_new_york_session]` (now equality rows); Rust:
+> `crates/repark-spark/tests/session_timezone.rs::a_zoneless_timestamp_input_localizes_in_the_session_zone`.
+> **Residual:** extractor columns over a `TIMESTAMP '…'` literal stay Arrow-nullable (Spark
+> types them non-null) — not the TZ-7 class. `F.lit(tz-aware)` under a non-UTC session still
+> emits a zoneless `TIMESTAMP '…'` of the UTC wall (`functions.py` is out of this PR's grant).
+> B-TZ-4 string-cast render is PR-3. `TimestampType.toInternal`/`fromInternal` use the session
+> zone (Q12), not the host.
 
 ### TZ-8 — TIMESTAMP→DATE outside this repo's coercion path reads the stored zone
 

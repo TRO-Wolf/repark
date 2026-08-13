@@ -950,31 +950,10 @@ async fn a_tz_naive_timestamp_is_read_as_a_utc_instant() {
     );
 }
 
-/// The other half of the same interpretation, and the half this unit does **not** fix: a
-/// **zoneless** timestamp input. Registry row **TZ-7**, pinned as a declared divergence.
-///
-/// Spark reads `TIMESTAMP '2024-06-15 12:00:00'`, `to_timestamp('2024-06-15 12:00:00')` and
-/// `CAST('2024-06-15 12:00:00' AS TIMESTAMP)` as a session-zone WALL CLOCK, so its hour is `12` in
-/// every zone. repark's planner and `to_timestamp` produce `Timestamp(ns, None)` holding those
-/// digits as UTC ticks — **byte-identical to what the zone-suffixed spelling above produces** —
-/// so no rule applied at the extractor can tell the two apart, and this one comes out shifted.
-/// Live Spark 4.1.2 vs this tree, 2026-08-10:
-///
-/// ```text
-///                                                    New_York        Tokyo
-/// hour(TIMESTAMP '2024-06-15 12:00:00')              Spark 12  repark 8   |  Spark 12  repark 21
-/// hour(to_timestamp('2024-06-15 12:00:00'))          Spark 12  repark 8   |  Spark 12  repark 21
-/// hour(CAST('2024-06-15 12:00:00' AS TIMESTAMP))     Spark 12  repark 8   |  Spark 12  repark 21
-/// year|dayofmonth(TIMESTAMP '2024-01-01 00:30:00')   Spark 2024,1  repark 2023,31
-/// ```
-///
-/// This is a REGRESSION direction relative to the pre-fix engine, where the zone reached no
-/// extractor and the answer happened to be Spark's: it is the disclosed price of reading every
-/// TIMESTAMP as an instant, and closing it means changing repark's TIMESTAMP representation
-/// (registry row TZ-4's unit), not adding another rule here.
+/// TZ-4 PR-2: a zoneless LTZ input is a session-zone wall clock. Flip evidence for TZ-7.
 #[tokio::test]
-async fn a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark() {
-    for (zone, shifted_hour) in [(NEW_YORK, 8), (TOKYO, 21)] {
+async fn a_zoneless_timestamp_input_localizes_in_the_session_zone() {
+    for zone in [NEW_YORK, TOKYO] {
         let session = session_at(zone);
         for sql in [
             "SELECT hour(TIMESTAMP '2024-06-15 12:00:00')",
@@ -983,10 +962,8 @@ async fn a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark() {
         ] {
             assert_eq!(
                 ints(&session, sql).await,
-                vec![shifted_hour],
-                "DIVERGENCE (registry TZ-7): live Spark answers 12 under {zone} for `{sql}` — it \
-                 parses a zoneless literal in the session zone. If this row starts answering 12, \
-                 the representation gap closed: flip it to an equality pin and retire TZ-7."
+                vec![12],
+                "zoneless LTZ input is a wall clock in {zone}: `{sql}`"
             );
         }
     }
@@ -999,7 +976,35 @@ async fn a_zoneless_timestamp_input_is_read_as_utc_and_diverges_from_spark() {
     .await;
     assert_eq!(
         (columns[0].clone(), columns[1].clone()),
-        (vec![2023], vec![31]),
-        "DIVERGENCE (registry TZ-7): live Spark answers 2024 and 1 — a whole calendar day"
+        (vec![2024], vec![1]),
+        "year-boundary zoneless literal stays on 2024-01-01 in New York"
+    );
+}
+
+/// TZ-4 PR-2: a tz-naive column is NTZ — extractors do not apply the session zone.
+#[tokio::test]
+async fn a_naive_ntz_timestamp_is_not_shifted_by_the_session_zone() {
+    use datafusion::arrow::array::TimestampMicrosecondArray;
+
+    let session = session_at(NEW_YORK);
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "ts",
+        DataType::Timestamp(TimeUnit::Microsecond, None),
+        false,
+    )]));
+    let ticks = micros("2024-06-15T12:00:00Z");
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![Arc::new(TimestampMicrosecondArray::from(vec![ticks]))],
+    )
+    .expect("ntz batch");
+    session
+        .context()
+        .register_batch("ntz", batch)
+        .expect("register ntz");
+    assert_eq!(
+        ints(&session, "SELECT hour(ts) FROM ntz").await,
+        vec![12],
+        "NTZ hour is the spelled wall, not the New York instant (8)"
     );
 }

@@ -92,6 +92,10 @@ def _arrow_cell_to_spark_python(value: Any, arrow_type: Any) -> Any:
             field.name: _arrow_cell_to_spark_python(value.get(field.name), field.type)
             for field in fields
         }
+    if pa.types.is_timestamp(arrow_type) and getattr(value, "tzinfo", None) is not None:
+        from repark.session.session_time_zone import collect_timestamp_as_session_wall
+
+        return collect_timestamp_as_session_wall(value)
     return value
 
 
@@ -6701,16 +6705,12 @@ class DataFrame:
 
     @staticmethod
     def _arrow_type_needs_spark_python_convert(arrow_type: Any) -> bool:
-        """True when cells need ``_arrow_cell_to_spark_python`` (map / nested map containers).
-
-        # === r22 P5: collect-rows ===
-        Primitives (int/float/bool/string/binary/date/timestamp/decimal/null) are identity
-        under ``to_pylist`` — skip per-cell type dispatch. Lists/structs need conversion only
-        when a nested map (or nested list/struct that holds a map) is present.
-        """
+        """True when cells need ``_arrow_cell_to_spark_python`` (map / tz-aware timestamp)."""
         import pyarrow as pa
 
-        if pa.types.is_map(arrow_type):
+        if pa.types.is_map(arrow_type) or (
+            pa.types.is_timestamp(arrow_type) and arrow_type.tz is not None
+        ):
             return True
         is_list_type = (
             pa.types.is_list(arrow_type)
