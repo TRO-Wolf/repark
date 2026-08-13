@@ -61,8 +61,14 @@ belongs out here is what must be observed from outside the crate.
   `cross_door_g3e8_refusals_render_identically`, which compares a **rendered refusal string**
   rather than a result: the G3-E8 valve is implemented twice (no door→door product edge), and
   this is the only pin that can see the two copies drift, including the rendered TARGET that the
-  per-door message pins cannot. Needs the `repark-spark` dev-dep — the ONLY place either door may
-  name the other, and legal because the crate-DAG guard scopes layering to normal edges.
+  per-door message pins cannot. **G11 (2026-08-12):** six **INTENDED** door-vs-door value
+  divergences (correctness, not parity — Spark is not the ANSI oracle): integer `/` (truncate
+  vs float), integer `/ 0` (raise vs NULL), float `/ 0` (IEEE +Inf vs NULL), decimal `/ 0`
+  (raise vs NULL), default `ORDER BY ASC` (NULLS LAST vs FIRST), default `ORDER BY DESC`
+  (NULLS FIRST vs LAST). Each row asserts both doors' actual Arrow outputs side by side; the
+  one-sentence reason is the test's doc comment. Needs the `repark-spark` dev-dep — the ONLY
+  place either door may name the other, and legal because the crate-DAG guard scopes layering
+  to normal edges.
 
   Its case-folding row (`cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted`)
   is a **declared-divergence test** as of H-1d (2026-08-10): it names the registry row it defends
@@ -92,6 +98,15 @@ belongs out here is what must be observed from outside the crate.
   (`-1800000000000`) — correct for a non-Spark session, and exactly what the Spark door returned
   before the fix. Ledger: `../../../task/tz5-cast-seconds-ledger.md`.
 
+- `ansi_door_values.rs` — **G11 / Y-10 (2026-08-12):** ANSI-door-only value pins. Standard SQL
+  is the oracle (ruling: correctness, not Spark parity). Six rows on a native `AnsiDialect`
+  session, Arrow path, value AND type: CAST overflow raises, integer `/` truncates, integer
+  `/ 0` raises, `SUM` skips NULLs, default `ORDER BY ASC` is `NULLS LAST`, implicit
+  string→number coercion refuses. Does **not** edit `timestamp_cast_ansi_door.rs` or
+  `session_timezone_ansi_door.rs`. Identifier case folding is registry ID-1 (cited, not
+  duplicated). Ledger: `../../../task/y10-ansi-door-ledger.md`. Cargo wires this file as its
+  own integration-test binary — this crate has no `tests/mod.rs`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Spike record: `../../../docs/history/port-v2/p2f-ansi-m1-ledger.md`;
@@ -109,6 +124,8 @@ belongs out here is what must be observed from outside the crate.
 | `cross_door` RED on ONE door only | The doors' lowerings drifted — that is the row doing its job (design §6 R3). Compare the two handlers, do not relax the assertion |
 | `cross_door_g3e8_refusals_render_identically` RED | The duplicated G3-E8 valve drifted: one door's message text or its target derivation changed without the other's. Both copies are named in `task/g3e8-guard-ledger.md` D-1; fix the copy, never the assertion (this pin IS the mitigation D-1 accepted the duplication on) |
 | `cross_door_identifier_case_folding_*` RED because a quoted wrong-case identifier now RESOLVES | repark has CONVERGED on Apache Spark. Retire `docs/spark-sql-iceberg-parity.md` §3 row ID-1 in the same change (a new dated decision supersedes D3) — never relax the assertion |
+| a G11 `cross_door_integer_division_*` / `cross_door_order_by_*` / `cross_door_*_div_by_zero_*` row RED | an INTENDED door-vs-door split moved. Re-read `task/y10-ansi-door-ledger.md` §2 — do not silently retarget the ANSI half at Spark |
+| `ansi_door_cast_overflow_int_to_tinyint_raises` RED because the CAST wraps or nulls | CAST overflow stopped raising. That is a correctness regression on the ANSI door; do not absorb it into F-Y10-1 (that finding is *arithmetic* wrap, not CAST) |
 | `extensions_are_session_scoped_not_dialect_scoped` RED | Extension scoping changed. Every `TwoSession` matrix row in BOTH doors needs re-reading before anything else |
 | `ansi_door_and_spark_door_agree_under_a_non_utc_session` RED on ONE door | The session timezone stopped being session-scoped (it rides `ConfigOptions`, which every door on the session shares). Check `repark_functions::session_time_zone` and `SparkExtension::configure` before touching the row |
 | `a_native_session_without_the_spark_extension_reads_the_stored_zone` RED | A zone-aware extractor leaked into the extension-less profile — check what registers UDFs on a bare session |
@@ -116,5 +133,5 @@ belongs out here is what must be observed from outside the crate.
 
 First checks: `cargo test -p repark-sql --test parser_productions`,
 `cargo test -p repark-sql --test session_wiring`, `--test introspection`, `--test ta_toll`,
-`--test cross_door`.
+`--test cross_door`, `--test ansi_door_values`.
 Escalate to: [../map.md#debug](../map.md).

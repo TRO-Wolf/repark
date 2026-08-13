@@ -104,6 +104,12 @@ not this directory.
   `timestamp_to_int_spark_seconds_repark_raises` → `timestamp_to_int_nullability`. Identity
   only. Does **not** edit the registry or `_live_parity.py` (§6 paste-true citations).
 
+- [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) — **Y-10 / H-2 gap G11 in flight:** ANSI
+  door correctness-not-parity (Spark is not the ANSI oracle). §0 two-door inventory, 6
+  INTENDED `cross_door.rs` rows, 6 `ansi_door_values.rs` standard-SQL pins, FINDING F-Y10-1
+  (integer arithmetic overflow wraps). Does **not** edit the registry or the Y-8 ANSI-door
+  timezone/cast files.
+
 ## Where the closed campaigns' ledgers went
 
 The seventeen `p1*` / `p2*` / `p3*` unit ledgers, the four phase briefs and the port's `todo.md`
@@ -152,6 +158,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — items 1+4 in PR #50; items 2+3 (lifecycle live + 13 tz live scenarios) in the second PR. Full N-2b closed only when **both** PRs land. |
 | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) | **X-5 / G18** nested comparator + nested-container corpus (Part 1+2) |
 | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) | **X-4 / G17** catalog wrapper explicit forwards (HIGH `publish_replace_table`) |
+| [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) | **Y-10 / G11** ANSI door — correctness, not parity |
 
 ## I want to...
 
@@ -175,6 +182,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
+| Read the G11 ANSI-door correctness-not-parity ledger | [y10-ansi-door-ledger.md](y10-ansi-door-ledger.md) |
 | Read the three-valued-logic differential corpus (gap G12) ledger | [x2-tvl-ledger.md](x2-tvl-ledger.md) |
 | See how a corpus refuse-split gets FIXED and flipped (and why the row keeps its name) | [g4b-join-widening-ledger.md](g4b-join-widening-ledger.md) §2 D2 / §4 |
 | See the declared-rename map that retired those kept names (and the TZ-5 flip-row name) | [y4-rename-ledger.md](y4-rename-ledger.md) |
