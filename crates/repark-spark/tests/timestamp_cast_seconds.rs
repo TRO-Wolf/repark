@@ -385,18 +385,16 @@ async fn the_reverse_direction_still_reads_seconds_and_round_trips() {
 }
 
 /// ===========================================================================================
-/// The rewrite does not reach casts it does not own.
-///
-/// `CAST(ts AS DATE)` and `CAST(ts AS STRING)` involve no epoch scaling. A rewrite that grabbed
-/// every timestamp cast would silently change them, so the boundary is pinned from outside too —
-/// a dead branch is a defect, and so is an over-eager live one.
+/// DATE / TIMESTAMP stay outside TZ-5. STRING is B-TZ-4: Spark `Utf8`, not DataFusion
+/// `Utf8View`. Flipped 2026-08-13 (V-3 named A5 overflow — the string-shape change forced
+/// this Spark-door type pin red).
 /// ===========================================================================================
 #[tokio::test]
 async fn casts_outside_the_class_are_untouched() {
     let session = session_at(NEW_YORK);
     for (target, expected) in [
         ("DATE", DataType::Date32),
-        ("STRING", DataType::Utf8View),
+        ("STRING", DataType::Utf8),
         (
             "TIMESTAMP",
             DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
@@ -412,7 +410,7 @@ async fn casts_outside_the_class_are_untouched() {
         assert_eq!(
             batches[0].schema().field(0).data_type(),
             &expected,
-            "{target}: the class must not widen into casts it does not own"
+            "{target}: DATE/TIMESTAMP stay unowned; STRING is B-TZ-4 Utf8"
         );
     }
 }

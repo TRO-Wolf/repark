@@ -77,7 +77,10 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   requested width — the rewrite owns the *scale*, never the cast-FAILURE surface. Matched on the
   SOURCE type, which is what makes it idempotent (its own output casts an `Int64`/`Float64`); the
   reverse direction `CAST(<integer> AS TIMESTAMP)` was probed and is already correct, so it is
-  pinned as a fence rather than rewritten. Runs
+  pinned as a fence rather than rewritten.
+  **B-TZ-4 (2026-08-13):** `CAST(TIMESTAMP AS STRING)` →
+  `__repark_timestamp_to_string__` via `rewrite_timestamp_to_string_cast` (Utf8, not Utf8View).
+  DATE stays untouched (TZ-8). Runs
   after the built-in analyzer rules (sees type-coerced plans, emits exactly-typed expressions,
   recomputes every node schema); every rewrite is **idempotent** — the passthrough analyzes
   eagerly and physical planning analyzes again. NB (Group L-write): running after `TypeCoercion`
@@ -113,8 +116,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a
   zone-suffixed string is not localized. Analyzer rule `spark_ltz_timestamp_cast` still wraps
   integer `CAST AS TIMESTAMP`. Pins: `instant_ts::tests::*`.
-- `timestamp_cast.rs` — **TZ-5 (2026-08-12):** the two embedded scaling UDFs `analyzer.rs` puts
-  under `CAST(TIMESTAMP AS <numeric>)`. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
+- `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
+  `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is
   `-1` and `-1.25 s` is `-2`; truncation toward zero agrees on every positive instant and every
   whole negative second, so a negative FRACTIONAL second is the only input that catches it.
@@ -124,9 +127,13 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   decimal→int cast, and an f64 one cannot floor a sub-microsecond present-day instant (f64 resolves
   ~2e-7 s there). Per-`TimeUnit` divisor (`createDataFrame` gives `timestamp[us]`, `to_timestamp`
   gives `timestamp[us, tz=UTC]` after TZ-4 PR-1); nullability propagated via
-  `return_field_from_args`; embedded, never
-  registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and three siblings here, plus
-  the door-layer files named in `task/tz5-cast-seconds-ledger.md` §4.
+  `return_field_from_args`. **B-TZ-4:** `__repark_timestamp_to_string__` (→ `Utf8`,
+  `Volatility::Volatile`) renders Spark's space-separated session-zone wall for LTZ and the
+  stored wall for NTZ; trailing-zero fractions are stripped (recorded: `.123400` → `.1234`).
+  Embedded, never registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and siblings,
+  plus `spark_timestamp_string_trims_trailing_fraction_zeros` / year-shape / LTZ-vs-NTZ here;
+  facade corpus `test_timestamp_cast_parity.py`. Ledgers: `task/tz5-cast-seconds-ledger.md` §4,
+  `task/v3-btz4-ledger.md`.
 - `collection.rs` — `SparkElementAt` (`element_at`; audit #15 — previously an alias of
   `map_extract`, broken on every array): arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL

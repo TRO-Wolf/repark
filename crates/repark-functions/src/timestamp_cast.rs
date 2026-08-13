@@ -43,11 +43,23 @@
 //! being a timestamp) cannot re-fire on its own output — the injected child is `Int64` / `Float64`
 //! by then. Idempotency matters: the analyzer runs once eagerly on the passthrough plan and again
 //! at physical planning.
+//!
+//! # B-TZ-4 — `CAST(TIMESTAMP AS STRING)`
+//!
+//! Spark's `Cast(TimestampType, StringType)` renders a **space-separated** session-zone wall
+//! clock as Arrow `Utf8`, with fractional seconds trimmed of trailing zeros. DataFusion's own
+//! cast emits `Utf8View` with an ISO-`T` stored-zone instant. [`spark_timestamp_to_string_udf`]
+//! is the third embedded UDF: LTZ (`Timestamp(_, Some(_))`) is resolved in
+//! `spark.sql.session.timeZone`; NTZ (`Timestamp(_, None)`) is the stored wall clock. The
+//! recorded Spark 4.1.2 strings in `task/v3-btz4-ledger.md` **are** the spec.
 
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, AsArray, Float64Array, Int64Array};
+use arrow::array::timezone::Tz;
+use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, Timelike};
+use datafusion::arrow::array::{Array, AsArray, Float64Array, Int64Array, StringBuilder};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef, Int64Type, TimeUnit};
 use datafusion::common::{DataFusionError, Result};
@@ -55,6 +67,8 @@ use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     Volatility,
 };
+
+use crate::session_time_zone::session_time_zone_from_options;
 
 /// ===========================================================================================
 /// The embedded integer-target UDF (`__repark_epoch_seconds_floor__`): `Timestamp` → `Int64`
@@ -79,6 +93,18 @@ pub fn spark_epoch_seconds_floor_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn spark_epoch_seconds_real_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkEpochSecondsReal::new()))
+}
+
+/// ===========================================================================================
+/// The embedded string-target UDF (`__repark_timestamp_to_string__`): `Timestamp` → `Utf8`
+/// in Spark's CAST shape (session-zone wall for LTZ, stored wall for NTZ).
+///
+/// Embedded by [`crate::analyzer`] under every `CAST(ts AS STRING)` / `Utf8` / `Utf8View`.
+/// Volatile so const-eval cannot fold a session-zone render against a default UTC carrier.
+/// ===========================================================================================
+#[must_use]
+pub fn spark_timestamp_to_string_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkTimestampToString::new()))
 }
 
 /// ===========================================================================================
@@ -260,6 +286,167 @@ impl ScalarUDFImpl for SparkEpochSecondsReal {
     }
 }
 
+/// ===========================================================================================
+/// `SparkTimestampToString` — B-TZ-4: Spark `CAST(TIMESTAMP AS STRING)` as `Utf8`.
+/// ===========================================================================================
+#[derive(Debug)]
+struct SparkTimestampToString {
+    signature: Signature,
+}
+
+impl SparkTimestampToString {
+    fn new() -> Self {
+        Self {
+            // Volatile: the render reads `spark.sql.session.timeZone` at invoke. An Immutable
+            // UDF can const-fold a timestamp literal against a default UTC carrier and emit
+            // the wrong wall under a New York / Tokyo session.
+            signature: Signature::any(1, Volatility::Volatile),
+        }
+    }
+}
+
+impl PartialEq for SparkTimestampToString {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkTimestampToString {}
+
+impl Hash for SparkTimestampToString {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkTimestampToString {
+    crate::shim_udf_boilerplate!("__repark_timestamp_to_string__");
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        argument_time_unit(self.name(), &arg_types[0])?;
+        Ok(DataType::Utf8)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            self.name(),
+            DataType::Utf8,
+            nullable_like_argument(&args),
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        let data_type = arrays[0].data_type().clone();
+        let (unit, zone_annotation) = argument_timestamp_parts(self.name(), &data_type)?;
+        let session_zone =
+            parse_session_zone(session_time_zone_from_options(args.config_options.as_ref()))?;
+        let ticks = timestamp_ticks(arrays[0].as_ref())?;
+        let mut builder = StringBuilder::with_capacity(ticks.len(), ticks.len() * 32);
+        for row in 0..ticks.len() {
+            if ticks.is_null(row) {
+                builder.append_null();
+                continue;
+            }
+            match wall_clock_from_ticks(
+                ticks.value(row),
+                unit,
+                zone_annotation.as_ref(),
+                session_zone,
+            ) {
+                Some(wall) => builder.append_value(format_spark_timestamp_string(wall)),
+                // SAF-001: outside chrono's range → NULL, never panic.
+                None => builder.append_null(),
+            }
+        }
+        Ok(ColumnarValue::Array(Arc::new(builder.finish())))
+    }
+}
+
+/// The timestamp unit and zone annotation of the single argument.
+fn argument_timestamp_parts(
+    name: &str,
+    data_type: &DataType,
+) -> Result<(TimeUnit, Option<Arc<str>>)> {
+    match data_type {
+        DataType::Timestamp(unit, zone) => Ok((*unit, zone.clone())),
+        other => Err(DataFusionError::Plan(format!(
+            "'{name}' expects a TIMESTAMP argument, got {other}"
+        ))),
+    }
+}
+
+fn parse_session_zone(zone_id: &str) -> Result<Tz> {
+    Tz::from_str(zone_id).map_err(|error| {
+        DataFusionError::Execution(format!(
+            "session timezone {zone_id:?} could not be resolved at query time ({error})"
+        ))
+    })
+}
+
+/// Ticks → microseconds. Spark's timestamp is µs; a leftover ns column floors toward −∞.
+fn ticks_to_micros(ticks: i64, unit: TimeUnit) -> Option<i64> {
+    match unit {
+        TimeUnit::Second => ticks.checked_mul(1_000_000),
+        TimeUnit::Millisecond => ticks.checked_mul(1_000),
+        TimeUnit::Microsecond => Some(ticks),
+        TimeUnit::Nanosecond => Some(ticks.div_euclid(1_000)),
+    }
+}
+
+/// LTZ (`Some` annotation) → session-zone wall. NTZ (`None`) → stored wall (ticks as UTC digits).
+fn wall_clock_from_ticks(
+    ticks: i64,
+    unit: TimeUnit,
+    zone_annotation: Option<&Arc<str>>,
+    session_zone: Tz,
+) -> Option<NaiveDateTime> {
+    let micros = ticks_to_micros(ticks, unit)?;
+    let utc = DateTime::from_timestamp_micros(micros)?;
+    if zone_annotation.is_some() {
+        Some(utc.with_timezone(&session_zone).naive_local())
+    } else {
+        Some(utc.naive_utc())
+    }
+}
+
+/// Spark 4.1.2 `CAST(ts AS STRING)` (recorded): `yyyy-MM-dd HH:mm:ss` plus a fraction with
+/// trailing zeros stripped. Whole seconds have no decimal point. Year 10000 is `+10000`;
+/// year −1 is `-0001`.
+fn format_spark_timestamp_string(wall: NaiveDateTime) -> String {
+    let date = format_iso_local_date(wall.date());
+    let time = format!(
+        "{:02}:{:02}:{:02}",
+        wall.hour(),
+        wall.minute(),
+        wall.second()
+    );
+    let nanos = wall.nanosecond();
+    if nanos == 0 {
+        format!("{date} {time}")
+    } else {
+        let mut fraction = format!("{nanos:09}");
+        while fraction.ends_with('0') {
+            fraction.pop();
+        }
+        format!("{date} {time}.{fraction}")
+    }
+}
+
+/// `DateTimeFormatter.ISO_LOCAL_DATE` as Spark 4.1.2 emitted it under the record probe.
+fn format_iso_local_date(date: NaiveDate) -> String {
+    let year = date.year();
+    let month = date.month();
+    let day = date.day();
+    if (0..=9999).contains(&year) {
+        format!("{year:04}-{month:02}-{day:02}")
+    } else if year > 9999 {
+        format!("+{year}-{month:02}-{day:02}")
+    } else {
+        format!("-{abs:04}-{month:02}-{day:02}", abs = year.unsigned_abs())
+    }
+}
+
 /// True when the sole argument is nullable (or absent, which the signature makes unreachable).
 fn nullable_like_argument(args: &ReturnFieldArgs<'_>) -> bool {
     args.arg_fields
@@ -361,5 +548,103 @@ mod tests {
             argument_time_unit("x", &DataType::Timestamp(TimeUnit::Nanosecond, None)).is_ok(),
             "a timestamp resolves"
         );
+    }
+
+    fn wall(
+        year: i32,
+        month: u32,
+        day: u32,
+        hour: u32,
+        minute: u32,
+        second: u32,
+        nanos: u32,
+    ) -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(year, month, day)
+            .and_then(|date| date.and_hms_nano_opt(hour, minute, second, nanos))
+            .expect("valid wall clock for a format pin")
+    }
+
+    /// Recorded Spark 4.1.2 `CAST(ts AS STRING)` trailing-zero shape (ledger §2).
+    #[test]
+    fn spark_timestamp_string_trims_trailing_fraction_zeros() {
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 0)),
+            "2024-06-15 08:00:00"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 500_000_000)),
+            "2024-06-15 08:00:00.5"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 123_400_000)),
+            "2024-06-15 08:00:00.1234"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 123_456_000)),
+            "2024-06-15 08:00:00.123456"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 100_000_000)),
+            "2024-06-15 08:00:00.1"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 1_000)),
+            "2024-06-15 08:00:00.000001"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(2024, 6, 15, 8, 0, 0, 123_000_000)),
+            "2024-06-15 08:00:00.123"
+        );
+    }
+
+    /// Recorded year-shape: 0001 / 0000 / −0001 / +10000.
+    #[test]
+    fn spark_timestamp_string_year_shape_matches_iso_local_date() {
+        assert_eq!(
+            format_spark_timestamp_string(wall(1, 1, 1, 0, 0, 0, 0)),
+            "0001-01-01 00:00:00"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(0, 1, 1, 0, 0, 0, 0)),
+            "0000-01-01 00:00:00"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(-1, 1, 1, 0, 0, 0, 0)),
+            "-0001-01-01 00:00:00"
+        );
+        assert_eq!(
+            format_spark_timestamp_string(wall(10_000, 1, 1, 0, 0, 0, 0)),
+            "+10000-01-01 00:00:00"
+        );
+    }
+
+    /// LTZ reads the session zone; NTZ keeps the stored wall. Recorded under `America/New_York`:
+    /// 2024-06-15T12:00:00Z → `2024-06-15 08:00:00`; the same ticks as NTZ stay `12:00:00`.
+    #[test]
+    fn ltz_renders_in_the_session_zone_and_ntz_does_not() {
+        let new_york = Tz::from_str("America/New_York").expect("IANA zone");
+        let modern_utc_micros = 1_718_452_800_000_000_i64; // 2024-06-15T12:00:00Z
+        let utc_annotation = Some(Arc::<str>::from("UTC"));
+        let ltz = wall_clock_from_ticks(
+            modern_utc_micros,
+            TimeUnit::Microsecond,
+            utc_annotation.as_ref(),
+            new_york,
+        )
+        .expect("in chrono range");
+        let ntz = wall_clock_from_ticks(modern_utc_micros, TimeUnit::Microsecond, None, new_york)
+            .expect("in chrono range");
+        assert_eq!(format_spark_timestamp_string(ltz), "2024-06-15 08:00:00");
+        assert_eq!(format_spark_timestamp_string(ntz), "2024-06-15 12:00:00");
+    }
+
+    /// A leftover nanosecond column floors to Spark's microsecond resolution before formatting.
+    #[test]
+    fn nanosecond_ticks_floor_to_microseconds() {
+        assert_eq!(
+            ticks_to_micros(123_456_789, TimeUnit::Nanosecond),
+            Some(123_456)
+        );
+        assert_eq!(ticks_to_micros(-1_500, TimeUnit::Nanosecond), Some(-2));
     }
 }

@@ -41,20 +41,25 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.
-- `src/timestamp_cast.rs` — **TZ-5:** the two embedded UDFs the analyzer's `Expr::Cast` arm puts
-  under `CAST(TIMESTAMP AS <numeric>)`. `__repark_epoch_seconds_floor__` (→ `Int64`, exact
-  `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is `-1`, not `0`) serves
-  integer targets; `__repark_epoch_seconds_real__` (→ `Float64`) serves `DOUBLE`/`FLOAT`/
+- `src/timestamp_cast.rs` — **TZ-5** plus **B-TZ-4:** the embedded UDFs the analyzer's
+  `Expr::Cast` arm puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`,
+  exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is `-1`, not `0`)
+  serves integer targets; `__repark_epoch_seconds_real__` (→ `Float64`) serves `DOUBLE`/`FLOAT`/
   `DECIMAL`, which keep the fraction. Two UDFs, not one: a decimal intermediate loses the floor
   edge to arrow's truncating decimal→int cast, and an f64 one cannot floor a sub-microsecond
   present-day instant. Per-`TimeUnit` divisor (a `createDataFrame` column is `timestamp[us]`, a
-  `to_timestamp` literal `timestamp[ns]`). Embedded, never registered. Ledger:
-  `task/tz5-cast-seconds-ledger.md`.
+  `to_timestamp` literal `timestamp[ns]`). **B-TZ-4 (2026-08-13):**
+  `__repark_timestamp_to_string__` (→ `Utf8`) emits Spark's session-zone space-separated
+  wall (NTZ = stored wall; trailing-zero fraction trimmed; year −1 is `-0001`, year 10000 is
+  `+10000`). Embedded, never registered. Ledgers: `task/tz5-cast-seconds-ledger.md`,
+  `task/v3-btz4-ledger.md`.
 - `src/analyzer.rs` — `SparkExprSemantics`: int `/` → double, div/mod-by-zero → NULL (Spark
   **non-ANSI**), 0-based `[]` array subscript, the planner-embedded-`substr` swap, and **TZ-5**
   `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS (scaling pushed UNDER the user's cast via
   [`timestamp_cast`], so the outer cast still applies the width; the reverse direction
-  `CAST(<integer> AS TIMESTAMP)` was probed and is already correct — do not "fix" it). Idempotent
+  `CAST(<integer> AS TIMESTAMP)` was probed and is already correct — do not "fix" it). **B-TZ-4:**
+  `CAST(TIMESTAMP AS STRING)` → `__repark_timestamp_to_string__` (`Utf8`, session-zone wall).
+  Idempotent
   by construction (see the module docs). NB: the rule runs after `TypeCoercion`, so ONE analyze is
   not always a whole-plan fixpoint — a division under a set op (`UNION`) reaches `Float64` only on
   the SECOND analyze; single-analyze *schema* consumers must analyze to the fixpoint (Group L-write,
@@ -97,7 +102,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 | Fix a Spark-semantics mismatch in a *function* | the matching shim module; lean on `datafusion-spark` where it is correct |
 | Tune plan-time array expansion ceiling / local DDL conf | `src/cardinality.rs` (`ReparkSqlSettings`, `MAX_ARRAY_ELEMENTS_KEY`)
 | Fix a Spark-semantics mismatch in an *operator* (`/`, `%`, `[]`, ORDER BY defaults) | `src/analyzer.rs` (plan-level, type-aware) — ORDER BY defaults live in `repark-spark::spark_ast` (AST-level) |
-| Fix a Spark-semantics mismatch in a *CAST* | `src/analyzer.rs` `rewrite_timestamp_to_numeric_cast` for the SHAPE + `src/timestamp_cast.rs` for the kernel; cast **failure** semantics (overflow, malformed strings) are a different surface and are not owned here |
+| Fix a Spark-semantics mismatch in a *CAST* | `src/analyzer.rs` `rewrite_timestamp_to_numeric_cast` (TZ-5) / `rewrite_timestamp_to_string_cast` (B-TZ-4) for the SHAPE + `src/timestamp_cast.rs` for the kernel; cast **failure** semantics (overflow, malformed strings) are a different surface and are not owned here |
 
 ## Component contract
 
@@ -150,6 +155,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 | What arg types do extractors accept? | `coerce_types` accepts date / timestamp (any unit+zone) / string (parsed to date); anything else is a planning error. A bare `Int` is rejected (Spark has no such overload) |
 | `year(tz_timestamp)` value looks off | the field is extracted in the stored zone, not a session timezone — Spark session-tz semantics are a follow-up (planning works; only the tz interpretation differs) |
 | `CAST(ts AS BIGINT)` looks 10⁹ too big | the analyzer rule is not installed — the rewrite ships with the Spark door's `SessionExtension`; a bare session keeps DataFusion's raw tick (pinned in `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`) |
+| `CAST(ts AS STRING)` is ISO-`T` / `string_view` | the B-TZ-4 rewrite is not firing — check `rewrite_timestamp_to_string_cast` and `__repark_timestamp_to_string__`; a bare session still rewrites (the UDF is in `SparkExprSemantics`) but renders NTZ/UTC |
 | `CAST(ts AS BIGINT)` is off by one before 1970 | Spark FLOORS (`Math.floorDiv`): `-0.5 s` is `-1`. If it reads `0`, something reintroduced truncating division — check `seconds_floor_from_ticks` uses `div_euclid` |
 | A `CAST` grew a second `__repark_epoch_seconds_*` wrapper | the rewrite must match on the SOURCE type (a timestamp), never the target; `the_timestamp_cast_rewrite_is_idempotent` is the pin |
 

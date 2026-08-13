@@ -1236,8 +1236,8 @@ NOT in that file is a defect, not a decision.
   back after deciding the move is deliberate. It never edits the corpus. Needs a JVM + `pyspark`
   (`uv sync --extra record`); invocation is in its module docstring and in `docs/history/hardening-h1/h1a-ledger.md`.
 - `test_timestamp_cast_parity.py` — the **timestamp-cast differential corpus** (registry row
-  **TZ-5**, landed 2026-08-12), the facade cell of the `CAST(TIMESTAMP AS <numeric>)`
-  epoch-seconds class. repark returned epoch NANOSECONDS where Spark returns epoch SECONDS — a
+  **TZ-5**, landed 2026-08-12; **B-TZ-4** string-cast rows landed 2026-08-13), the facade cell of
+  the `CAST(TIMESTAMP AS <numeric>)` epoch-seconds class **and** `CAST(TIMESTAMP AS STRING)`. repark returned epoch NANOSECONDS where Spark returns epoch SECONDS — a
   10⁹ factor, correctly signed, on the one shape a migrated job writes to get an epoch. 19 rows
   recorded against live PySpark 4.1.2 on the same basis as the timezone corpus, across **three
   facade spellings**: `sql` (16 rows), `dataframe_api` (2 — `F.col("ts").cast("long"/"int"/
@@ -1251,14 +1251,19 @@ NOT in that file is a defect, not a decision.
   outright before the fix; `DOUBLE`/`FLOAT`/`DECIMAL`, which keep the fraction), NULL, and
   zone-independence over three zones. **TZ-4 PR-1** flipped the last disclosure
   (`bigint_to_timestamp_reads_seconds`) to equality — VALUE already agreed; the Arrow type is
-  now `timestamp[us, tz=UTC]`. `test_the_class_is_covered_per_entry_point_and_per_edge` pins the
-  corpus SHAPE (all three spellings, both signs of the floor edge, every named cast target, the
-  zone matrix, and zero disclosures) so the class cannot decay into "one
-  representative case". It is a corpus of its own rather than more `G16_ROWS` because the class is
-  zone-INdependent; the timezone corpus keeps the single row that first recorded the divergence,
-  as the flip evidence. Engine cells: `crates/repark-spark/tests/timestamp_cast_seconds.rs` and
-  `crates/repark-sql/tests/timestamp_cast_ansi_door.rs`. Ledger:
-  `../../../task/tz5-cast-seconds-ledger.md`.
+  now `timestamp[us, tz=UTC]`. **B-TZ-4 (2026-08-13):** 12 equality rows for
+  `CAST(TIMESTAMP AS STRING)` — LTZ under NY/Tokyo/UTC, trailing-zero fraction, half-second,
+  microsecond, epoch, pre-epoch, NULL, DataFrame LTZ, DataFrame NTZ, `F.expr`.
+  Year-shape (0001 / −0001 / +10000) is a Rust kernel pin (`to_timestamp` year 1 is
+  outside the ns intermediate).
+  Recorded Spark 4.1.2 strings in `task/v3-btz4-ledger.md` §2. `test_the_class_is_covered_per_entry_point_and_per_edge`
+  pins the corpus SHAPE (all three numeric spellings, both signs of the floor edge, every named
+  numeric target, the zone matrix, B-TZ-4 STRING/NTZ/expr doors, and zero disclosures) so the
+  class cannot decay into "one representative case". The numeric class is zone-INdependent; the
+  string class is zone-sensitive. Engine cells: `crates/repark-spark/tests/timestamp_cast_seconds.rs`
+  and `crates/repark-sql/tests/timestamp_cast_ansi_door.rs` (numeric); string kernel pins live in
+  `crates/repark-functions/src/timestamp_cast.rs`. Ledgers:
+  `../../../task/tz5-cast-seconds-ledger.md`, `../../../task/v3-btz4-ledger.md`.
 - `_record_timestamp_cast_goldens.py` — the **record driver** for the corpus above (NOT a `test_`
   module; never collected), the same shape as `_record_session_timezone_goldens.py`: it imports
   `ROWS` from the committed module and re-runs each row's own `run_row` on live PySpark under the
@@ -1702,7 +1707,7 @@ NOT in that file is a defect, not a decision.
 | Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`, `test_right_ref_abs_*`, `test_left_abs_*`, `test_inner_join_abs_*`, `test_distinct_name_abs_*`, `test_right_ref_lower_*`, `test_coalesce_left_then_right_*`, `test_abs_string_name_*`, `test_right_ref_agg_*`, `test_left_agg_*`, `test_inner_join_sum_*`, `test_distinct_name_sum_*`, `test_count_distinct_left_then_right_*`, `test_sum_string_name_*`,
   `test_inner_join_abs_keeps_the_abs_on_a_negative_key`) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
-| Add a timestamp-cast differential row (registry TZ-5) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
+| Add a timestamp-cast differential row (registry TZ-5 / B-TZ-4) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
 | Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a window-function differential row (gap G5) | `test_window_parity.py` (`ROWS`; record Spark half with `_record_window_goldens.py`, never by hand) |
 | Re-derive the window Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_window_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |

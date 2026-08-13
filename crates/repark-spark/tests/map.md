@@ -55,8 +55,10 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   targets (`INT`/`SMALLINT`, which repark refused outright before the fix); float and decimal
   targets, which keep the fraction; and two fences — the REVERSE direction
   (`CAST(<integer> AS TIMESTAMP)`) still reads seconds and round-trips; **TZ-4 PR-1** flipped
-  that reverse CAST's Arrow type to `timestamp[us, tz=UTC]`. `CAST(ts AS DATE/STRING)` stays
-  untouched. Ledger: `../../../task/tz5-cast-seconds-ledger.md`.
+  that reverse CAST's Arrow type to `timestamp[us, tz=UTC]`. `CAST(ts AS DATE)` stays
+  untouched (TZ-8). **B-TZ-4 (V-3 A5 overflow):** `CAST(ts AS STRING)` is now `Utf8`
+  (was `Utf8View`). Ledger: `../../../task/tz5-cast-seconds-ledger.md`,
+  `../../../task/v3-btz4-ledger.md`.
 - [ta_window.rs](ta_window.rs) — deferred rows #8-#14 (phase-2 PR-4): the seven
   `sql_route_*` cases, ported from v1 `repark-session/tests/ta_window.rs`. Proves the TA window
   UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the

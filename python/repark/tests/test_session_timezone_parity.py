@@ -18,7 +18,8 @@ revert-red evidence the testing contract asks for: undo the fix and each one goe
 flipped the five zoneless-input / NTZ / CAST-str-round-trip rows to equality. Remaining
 disclosures (if any) are named in
 ``test_the_extraction_class_converged_and_the_residue_is_named``. B-TZ-4
-(``CAST(ts AS STRING)`` *render* shape) and TZ-8 stay out of this flip.
+(``CAST(ts AS STRING)`` render) is pinned in ``test_timestamp_cast_parity.py``.
+TZ-8 stays out of this flip.
 
 The twelfth **was** ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5). It
 CONVERGED when :data:`TZ5_FIX` landed and is now an equality row, which is the same revert-red
@@ -429,10 +430,9 @@ G1_ROWS: list[TimeZoneRow] = [
             {"round_trip": _utc(2024, 6, 15, 12, 0)},
         ),
         None,
-        "timestamp -> string -> timestamp: Spark renders in the session zone and parses back "
-        "so the instant survives as timestamp[us, tz=UTC]. TZ-4 PR-2 localizes CAST(str AS "
-        "TIMESTAMP); if the intermediate string is zone-suffixed (UTC annotation) the instant "
-        "round-trips. B-TZ-4 (session-zone space-separated render) is a later PR.",
+        "timestamp -> string -> timestamp: B-TZ-4 renders the session-zone wall "
+        "(`2024-06-15 08:00:00` under New York); TZ-4 PR-2 localizes that zoneless string "
+        "back in the session zone so the instant survives as timestamp[us, tz=UTC].",
     ),
     TimeZoneRow(
         "date_trunc_day_across_a_zone_boundary",
