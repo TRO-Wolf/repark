@@ -353,26 +353,27 @@ G2_ROWS: list[DecimalRow] = [
         "G2",
         "SELECT CAST(1 AS DECIMAL(38,10)) * CAST(1 AS DECIMAL(38,10)) AS v",
         _dec(38, 6, Decimal("1.000000")),
-        _dec(38, 20, Decimal("1.00000000000000000000")),
-        "38-digit clamp on multiply: Spark reduces scale to keep p<=38 -> decimal128(38,6); repark "
-        f"keeps s1+s2=20 -> decimal128(38,20). A high-scale product is the wrong width. {FIX_G2}.",
+        None,
+        "38-digit clamp on multiply: Spark reduces scale to keep p<=38 -> decimal128(38,6). "
+        "U4a / DEC-3: repark matches. Name kept so the name-gated clamp family pin still "
+        "resolves.",
     ),
     DecimalRow(
         "add_38_18_clamps_scale_in_spark",
         "G2",
         "SELECT CAST(1 AS DECIMAL(38,18)) + CAST(1 AS DECIMAL(38,18)) AS v",
         _dec(38, 17, Decimal("2.00000000000000000")),
-        _dec(38, 18, Decimal("2.000000000000000000")),
-        "38-digit clamp on add: Spark drops one scale digit -> (38,17); repark keeps (38,18). "
-        f"Flipped by {FIX_G2}.",
+        None,
+        "38-digit clamp on add: Spark drops one scale digit -> (38,17). U4a / DEC-3: repark "
+        "matches. Name kept so the name-gated clamp family pin still resolves.",
     ),
     DecimalRow(
         "add_38_10_clamps_scale_in_spark",
         "G2",
         "SELECT CAST(1 AS DECIMAL(38,10)) + CAST(1 AS DECIMAL(38,10)) AS v",
         _dec(38, 9, Decimal("2.000000000")),
-        _dec(38, 10, Decimal("2.0000000000")),
-        f"same clamp class at scale 10: Spark (38,9) vs repark (38,10). Flipped by {FIX_G2}.",
+        None,
+        "same clamp class at scale 10: Spark (38,9). U4a / DEC-3: repark matches. Name kept.",
     ),
     # ----- disclosures: avg type + int/decimal promotion ------------------------------------------
     DecimalRow(
@@ -391,9 +392,9 @@ G2_ROWS: list[DecimalRow] = [
         "G2",
         "SELECT 5 * CAST(1.50 AS DECIMAL(10,2)) AS v",
         _dec(12, 2, Decimal("7.50"), nullable=True),
-        _dec(31, 2, Decimal("7.50")),
-        "INT * DECIMAL: value agrees (7.50) but Spark lands decimal128(12,2) nullable while repark "
-        f"lands decimal128(31,2) non-null - a schema-level money divergence. Flipped by "
+        _dec(12, 2, Decimal("7.50")),
+        "INT * DECIMAL: U3 / DEC-8 fromLiteral closed the width (both (12,2), value 7.50). "
+        "Spark marks nullable; repark stays non-null (DEC-9 / U5). Name kept. "
         f"{FIX_G2}.",
     ),
 ]
@@ -443,8 +444,10 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(1 AS DECIMAL(38,20)) * CAST(1 AS DECIMAL(38,20)) AS v",
         _dec(38, 6, Decimal("1.000000")),
         None,
-        "Spark clamps the product to decimal128(38,6) and succeeds; repark refuses at plan time "
-        f"(Cannot get result type for decimal operation … 38,20 * 38,20). Flipped by {FIX_G13}.",
+        "Spark clamps the product to decimal128(38,6) and succeeds; repark still refuses at "
+        "plan construction (`BinaryExpr::get_type` / Arrow s>38) BEFORE any AnalyzerRule "
+        "runs. U4a cannot see this node. Closing it is an ExprPlanner (U4b-adjacent), not "
+        f"the DecimalPrecision analyzer. {FIX_G13}.",
         repark_raises="AnalysisException",
     ),
     DecimalRow(
@@ -707,7 +710,10 @@ def test_decimal128_row_set_covers_gap_budgets() -> None:
     assert any("avg(" in row.sql.lower() for row in g2), "G2 must pin avg result type"
     assert any("sum(" in row.sql.lower() for row in g2), "G2 must pin sum result type"
     assert any(row.spark_raises for row in g13), "G13 must pin at least one ANSI raise"
-    assert any(row.repark_raises for row in g13), "G13 must pin at least one repark plan refuse"
+    assert any(row.repark_raises for row in g13), (
+        "G13 must pin at least one repark plan refuse (DEC-8 still refuses at "
+        "plan construction; an AnalyzerRule cannot see it)"
+    )
     assert any(row.spark_select is not None for row in CTAS_ROWS), (
         "at least one CTAS row must carry a Spark SELECT oracle (equality-path write-back)"
     )

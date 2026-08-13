@@ -1134,8 +1134,9 @@ NOT in that file is a defect, not a decision.
   as the "Spark" golden, but Spark parses `2.5` as DECIMAL(2,1) → `decimal128(11,1)` non-null, so the
   pin was repark-vs-repark); that inline-decimal-literal divergence is now DISCLOSED and pinned in
   `test_union_inline_decimal_literal_diverges_from_spark` (**U2 / TY-3 dated 2026-08-13:**
-  repark now `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null — still
-  DECLARED, residual U3; load-bearing Spark golden). Count-mismatch raises; `unionByName`
+  repark `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null. **U3 dated
+  2026-08-13:** still DECLARED — U3 `fromLiteral` is `+ - *` only; UNION uses Spark
+  `forType(INT)=(10,0)`, not digits; observed type after U3 is still `(21,1)` nullable). Count-mismatch raises; `unionByName`
   (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
   golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
   deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
@@ -1325,16 +1326,18 @@ NOT in that file is a defect, not a decision.
   driver at a time — check `pgrep -af 'pyspark|SparkSubmit'` (ignoring a standing container
   cluster) before running. Invocation in its docstring and `task/g3e8-guard-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
-  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (**16** equality
-  controls + **8** disclosures after W-2 U2 flipped the three bare-literal rows to equality)
-  and 7 G13 rows (raise-class + nullability), recorded in record mode
+  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (**19** equality
+  controls + **5** disclosures after V-2 U4a flipped the three `*clamps_scale_in_spark`
+  rows; U2 had flipped the three bare-literal rows) and 7 G13 rows (raise-class +
+  nullability; DEC-8 still a repark plan-refuse), recorded in record mode
   against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`).
   Every row asserts value AND exact Arrow `decimal128(p,s)` on the `to_arrow` path through
   `repark_parity.assert_frames_equal` — never `show`. Disclosure classes: division result
-  `(p,s)`, the 38-digit clamp on add/mul, INT x DECIMAL promotion width, ANSI overflow raise
-  vs wrap-not-residue (`10^38` at (38,0) after U2), divide-by-zero raise vs NULL,
-  high-scale mul plan refuse, and overflow-capable nullability. Bare literals (`1.23` /
-  `0.1` / `123.456`) and `avg` of money are equalities (DEC-1 / U2 + DEC-5 / Z-3 U1). A failed disclosure is CLASSIFIED
+  `(p,s)` (U4b), INT×DECIMAL **nullability** (width closed by U3; DEC-9 leftover), ANSI
+  overflow raise vs wrap-not-residue (`10^38` at (38,0) after U2), divide-by-zero raise vs
+  NULL, high-scale mul plan refuse (DEC-8; AnalyzerRule cannot see it), and overflow-capable
+  nullability. Bare literals, `avg` of money, and the 38-clamp family are equalities
+  (DEC-1 / U2 + DEC-5 / Z-3 U1 + DEC-3 / V-2 U4a). A failed disclosure is CLASSIFIED
   before it raises: CONVERGED (flip-don't-delete to `repark=None`) vs regression (re-derive both
   halves). Budget pin: G2 20-26, G13 6-8, min 8 equalities, max 20 disclosures so the corpus
   cannot degenerate to all-disclosures. Class-coverage pins include a **name-gated 38-digit clamp
