@@ -377,18 +377,20 @@ them, and the document is ordered by surface, never by date.
 
 ### TY-3 — an inline SQL decimal literal
 
-- **repark** — parses `2.5` in an inline `VALUES` as `double`, and marks inline-`VALUES` columns
-  nullable, so `union(VALUES (1), VALUES (2.5))` yields `double` / nullable with `1.0`, `2.5`.
+- **repark** — after U2, `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is still Int64, so
+  `union(VALUES (1), VALUES (2.5))` yields `decimal128(21,1)` / nullable with `Decimal('1.0')`,
+  `Decimal('2.5')`.
 - **Apache Spark** — parses the literal as `DECIMAL(2,1)` and widens the integer into it, yielding
   `decimal128(11,1)` / non-null with `Decimal('1.0')`, `Decimal('2.5')`. *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_union_distinct.py::test_union_inline_decimal_literal_diverges_from_spark`
 - **Rationale** — DECLARED, with narrow impact: stored Iceberg `DECIMAL` columns coerce
   faithfully; only inline decimal *literals* differ. The pin asserts repark's actual output **and**
   asserts that the recorded Spark golden still does not match, so a future convergence reds it.
-  **Dated 2026-08-13 (Z-3 / W-5):** U2 (`parse_float_as_decimal=true` Spark-door default) did
-  not land in Z-3, so the registry-mandated dated revisit of this declaration rides with the
-  U2 unit. Residual after U2 would still be `(21,1)` nullable vs Spark `(11,1)` non-null
-  (campaign DEC-8 / U3) — that is not this increment.
+  **Dated 2026-08-13 (W-2 U2 / #84):** U2 landed. The declaration is revisited and **kept**:
+  after `parse_float_as_decimal=true`, `VALUES (2.5)` is `DECIMAL(2,1)` and `VALUES (1)` is
+  still Int64, so the union is `decimal128(21,1)` **nullable** vs Spark `decimal128(11,1)`
+  **non-null**. Residual is campaign DEC-8 / U3 (integer-literal min-precision + VALUES
+  nullability). Do not pre-claim U3.
 
 ### TY-4 — `createDataFrame` widens Arrow int32 to int64
 
@@ -648,20 +650,22 @@ the pin rather than obeying it.
 
 ### TZ-4 — TIMESTAMP Arrow export is tz-naive
 
-> **TZ-4 progress, not retired (2026-08-13, Z-2 / #79).** Instant-typed producers now export
-> `timestamp[us, tz=UTC]`. Spark-door DDL `TIMESTAMP` maps to Iceberg `timestamptz` (live
-> Spark 4.1.2 CREATE probe 2026-08-13). This row is **not** retired. TZ-6 / TZ-7 retire only
-> with PR-2 (this increment does not touch those sections and invents no `live-mirror`
-> tokens). B-TZ-4 stays queued until PR-3.
+> **TZ-4 progress, not retired (2026-08-13, Z-2 / #79 + TZ-4 PR-2 / #85).** Instant-typed
+> producers export `timestamp[us, tz=UTC]`. Spark-door DDL `TIMESTAMP` maps to Iceberg
+> `timestamptz` (live Spark 4.1.2 CREATE probe 2026-08-13). PR-2 localizes zoneless LTZ
+> inputs in `spark.sql.session.timeZone` and distinguishes `TIMESTAMP` (µs+UTC / Iceberg
+> `timestamptz`) from `TIMESTAMP_NTZ` (naive µs / Iceberg `timestamp`). Extraction is
+> type-driven. **TZ-6 and TZ-7 are FIXED** (their registry sections, dated by #85 — not
+> duplicated here). This row is **not** retired. B-TZ-4 stays queued until PR-3.
 
 - **repark** — instant-typed producers (`current_timestamp` / `now`, `to_timestamp` of a
   zone-suffixed string, `date_trunc` return, `CAST(<integer> AS TIMESTAMP)` type wrap) export
   `timestamp[us, tz=UTC]`. Spark-door `CREATE` / CTAS of those producers stores Iceberg
-  `timestamptz`. Remaining tz-naive residues on this row: `CAST(str AS TIMESTAMP)` /
-  `[tz_aware_to_naive_round_trip]` stays `timestamp[ns]` (zoneless input path + B-TZ-4;
-  Z-2's blast-radius "flip to equality" is **not** true on this base). Native ANSI
+  `timestamptz`. `[tz_aware_to_naive_round_trip]` is now a content equality at
+  `timestamp[us, tz=UTC]` (W-5's "still `timestamp[ns]`" is stale on this base). Native ANSI
   column-def `TIMESTAMP` still derives `timestamp_ns` and Iceberg v2 refuses it (A11).
-  Zoneless-input and NTZ-indistinguishability residues live on TZ-7 / TZ-6, not restated here.
+  Zoneless-input and NTZ-indistinguishability classes are closed on TZ-7 / TZ-6 (FIXED
+  notes), not restated here.
 - **Apache Spark** — `toArrow()` yields `timestamp[us, tz=UTC]`, and does so *whatever* the
   session zone is — the session zone moves a `TIMESTAMP`'s calendar fields, never its export
   annotation. Spark-door Iceberg `TIMESTAMP` is `timestamptz`. *(oracle: recorded — including
@@ -670,6 +674,7 @@ the pin rather than obeying it.
 - **Pin** — progress (now equalities):
   `python/repark/tests/test_session_timezone_parity.py::test_current_timestamp_type_and_zone_disclosure`,
   `…[to_timestamp_of_zone_suffixed_string]`,
+  `…[tz_aware_to_naive_round_trip]` (now equality, PR-2),
   `…[date_trunc_day_across_a_zone_boundary]`,
   `…[dataframe_api_extract_under_new_york_session]`,
   `python/repark/tests/test_timestamp_cast_parity.py::…[bigint_to_timestamp_reads_seconds]`,
@@ -677,14 +682,13 @@ the pin rather than obeying it.
   (now asserts `timestamp[us, tz=UTC]`, not naive),
   `crates/repark-spark/src/tests/create_table.rs::column_def_temporary_refuse_testing_create_ref_and_types`,
   `…::ctas_of_instant_producers_stores_timestamptz`.
-  Residues: `…[tz_aware_to_naive_round_trip]` (still a disclosure);
-  `crates/repark-sql/tests/session_wiring.rs::ansi_column_def_timestamp_still_rejects_ns_on_v2`
+  Residue: `crates/repark-sql/tests/session_wiring.rs::ansi_column_def_timestamp_still_rejects_ns_on_v2`
   (A11).
 - **Rationale** — BACKLOG, **partial close**. It split from TZ-1 rather than closing with it
   (2026-08-10): TZ-1 was the extractor *coercion path*; TZ-4 is TIMESTAMP *representation*.
-  PR-1 closed the instant-producer + Spark-door write-mapping half. The remaining blast
-  (zoneless localization, NTZ distinction, Python `TimestampType` mapping, B-TZ-4 string
-  shape, ANSI column-def `timestamp_ns`) is still a unit of its own. Not retired.
+  PR-1 closed the instant-producer + Spark-door write-mapping half. PR-2 closed zoneless
+  localization, NTZ distinction, and the Python `TimestampType` / `TimestampNTZType`
+  mapping. Remaining: B-TZ-4 string shape, ANSI column-def `timestamp_ns`. Not retired.
 
 > **TZ-5 — `CAST(TIMESTAMP AS <numeric>)` returns epoch seconds — FIXED (2026-08-12, #64).**
 > repark returned epoch **nanoseconds** where Spark returns epoch **seconds** — a 10⁹ factor,
@@ -779,22 +783,19 @@ the pin rather than obeying it.
 > written `[<case>]` for short; each asserts repark's pinned half AND classifies a drift as
 > CONVERGED (flip, don't delete) vs regression.
 
-### DEC-1 — a bare SQL decimal literal infers `double`
-
-- **repark** — `SELECT 1.23 AS v`, `SELECT 0.1 AS v` and `SELECT 123.456 AS v` all yield Arrow
-  `float64` non-null with the binary-float value.
-- **Apache Spark** — infers `decimal128(3,2)` / `decimal128(1,1)` / `decimal128(6,3)` non-null
-  with the exact `Decimal` value. *(oracle: recorded.)*
-- **Pin** — `[literal_1_23_infers_decimal_in_spark_double_in_repark]`,
-  `[literal_0_1_infers_decimal_in_spark_double_in_repark]`,
-  `[literal_123_456_infers_decimal_in_spark_double_in_repark]`
-- **Rationale** — BACKLOG, intent to FIX (gap G2). A money column written from a bare literal is
-  the wrong Arrow type, and `0.1` is the classic binary-float landmine surfaced as a type
-  divergence. This is the SQL `SELECT`-literal sibling of
-  [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES`, DECLARED narrow-impact); a
-  literal-inference fix that lands for G2 revisits TY-3's declaration by a dated decision in the
-  same change, never silently. **Still OPEN (2026-08-13):** Z-3 deferred U2
-  (`parse_float_as_decimal=true` Spark-door default). Do not mark DEC-1 FIXED.
+> **DEC-1 — a bare SQL decimal literal infers `double` — FIXED (2026-08-13, W-2 U2 / #84).**
+> Spark-door default `datafusion.sql_parser.parse_float_as_decimal=true` via
+> `SparkExtension::configure` (`apply_spark_float_as_decimal`). Bare `1.23` / `0.1` /
+> `123.456` are `decimal128(3,2)` / `(1,1)` / `(6,3)` non-null. ANSI door unchanged.
+> The parametrized names
+> `[literal_1_23_infers_decimal_in_spark_double_in_repark]` (and `0.1` / `123.456`
+> siblings) are kept so citations still resolve; the rows are now content equalities
+> (`repark is None`). Pins: those corpus cases; Rust
+> `crates/repark-spark/src/tests/decimal.rs::pin_literal_1_23_infers_decimal128_3_2_i128` +
+> `crates/repark-spark/src/extension/tests.rs::configure_makes_bare_1_23_decimal128_3_2`.
+> A fixed defect gets this dated note, never a live divergence row.
+> [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES` union width) stays
+> DECLARED — see its dated 2026-08-13 note.
 
 ### DEC-2 — `DECIMAL / DECIMAL` result precision and scale
 
@@ -851,13 +852,17 @@ the pin rather than obeying it.
 
 ### DEC-6 — max `DECIMAL(38,0) + 1` under ANSI returns a corrupted value
 
-- **repark** — returns a corrupted `decimal128(38,0)` value (no raise) for
-  `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))`.
+- **repark** — `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))` stores `10^38` at
+  declared `decimal128(38,0)` (no raise). U2 removed the prior float-residue photograph;
+  leftover is wrap-not-residue.
 - **Apache Spark** — under ANSI raises `ArithmeticException` / `NUMERIC_VALUE_OUT_OF_RANGE`.
   *(oracle: recorded.)*
-- **Pin** — `[overflow_max_decimal38_plus_one_raises_in_spark]`
+- **Pin** — `[overflow_max_decimal38_plus_one_raises_in_spark]`; Rust
+  `crates/repark-spark/src/tests/decimal.rs::pin_overflow_max_decimal38_plus_one_wrong_value_i128`
 - **Rationale** — BACKLOG, intent to FIX (gap G13 — ANSI overflow raise, or honest NULL under
   non-ANSI). Silently-wrong-result class on the integrity path.
+  **Dated 2026-08-13 (W-2 / #84):** photograph updated to the wrap. ANSI raise is campaign
+  DEC U5 / G13 (not this increment).
 
 ### DEC-7 — `DECIMAL / 0` under ANSI returns NULL
 
@@ -904,6 +909,11 @@ the pin rather than obeying it.
 > re-verifying each against frozen `c7e6589` (PRs #75–#79). Classification:
 > [`task/w5-z-landing-ledger.md`](../task/w5-z-landing-ledger.md). TZ-6 / TZ-7 sections
 > were not touched (PR-2 owns those two headings). No new `live-mirror:` tokens.
+>
+> **The 2026-08-13 W-wave increment (V-5)** pasted the merged W-wave §6 handoffs after
+> re-verifying each against frozen `8d325d4` (PRs #81–#85). Classification:
+> [`task/v5-w-landing-ledger.md`](../task/v5-w-landing-ledger.md). TZ-6 / TZ-7 FIXED
+> notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
@@ -1070,11 +1080,20 @@ the pin rather than obeying it.
 > raises the same `MISSING_ATTRIBUTES` classes (`test_right_ref_abs_raises_missing_attributes_same_key`
 > and the left / inner / distinct-name / `F.lower` siblings). The origin-thread rides
 > `functions._scalar` (e.g. `F.lower`) and the other named Column wrappers in `functions.py`;
-> aggregate builders (`F.sum` / `F.count` / …) are a named residual (Z-4 Q-002), not a claim
-> that every wrapper is threaded. No remaining D6 divergence to disclose; no `live-mirror`.
-> Conditionless semi/anti refusal remains
-> [G4-3](#g4-3--conditionless-dataframe-semiant-join-refuses). A fixed defect gets this dated
-> note, never a live divergence row.
+> aggregate builders (`F.sum` / `F.count` / …) were a named residual (Z-4 Q-002).
+> **2026-08-13 (W-4 / #82):** Q-002 is closed — after
+> `left.join(right, on, "leftsemi"|"leftanti")`,
+> `select(F.sum|count|avg|min|max|count_distinct|first|last(right[…]))` raises
+> `AnalysisException` carrying Spark 4.1.2's
+> `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION` (same-name) or
+> `MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT` (distinct-name). Left refs
+> and inner-join refs still resolve. `count_distinct(left, right)` still raises on the
+> unemitted right (`join_sql` QCOL scan, not first-origin-only). Pin:
+> `python/repark/tests/test_g4b_semi_join.py::test_right_ref_agg_raises_missing_attributes_same_key`
+> (and left / inner / distinct-name / `count_distinct` left-then-right siblings). No
+> remaining D6 divergence to disclose; no `live-mirror`. Conditionless semi/anti refusal
+> remains [G4-3](#g4-3--conditionless-dataframe-semiant-join-refuses). A fixed defect
+> gets this dated note, never a live divergence row.
 
 ### G4-3 — conditionless DataFrame semi/anti join refuses
 
@@ -1119,8 +1138,8 @@ the pin rather than obeying it.
 > `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE`, and over a `DATE` key it means days.
 > Pins: `crates/repark-spark/src/tests/window_temporal_range.rs` and the `temporal_range`
 > family in `python/repark/tests/test_window_parity.py`. **G5b-R2 and Spark-door G5b-R3
-> closed in Y-1 / #72** (FIXED notes below). **G5b-R1 / R4 / R5 stay OPEN.** This
-> increment does not claim them closed.
+> closed in Y-1 / #72** (FIXED notes below). **G5b-R1 and G5b-R5 closed in W-4 / #82**
+> (FIXED notes below). **G5b-R4 stays OPEN.** This increment does not claim R4 closed.
 
 > **G5b-R2 — `DAY TO SECOND` qualified interval as a frame bound — FIXED (2026-08-12,
 > Y-1 / #72).** `INTERVAL '1 12:00:00' DAY TO SECOND` (and `'1 0:0:0'`) as a frame bound
@@ -1151,14 +1170,13 @@ the pin rather than obeying it.
 > `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_negative_offset_count]`
 > and `…[temporal_range_negative_offset_sum]`.
 
-### G5b-R1 — unquoted `INTERVAL n UNIT` frame bound refused
-
-- **repark** — `RANGE BETWEEN INTERVAL 1 DAY PRECEDING` (unquoted) is refused as a frame bound.
-- **Apache Spark** — accepts the unquoted interval literal. *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_unquoted_interval_literal]`
-- **Rationale** — BACKLOG (G5b-R). Use `INTERVAL '1' DAY` today. Still OPEN.
-  Z-4 re-verified: first-plan fails before `window_range` rewrite; the quote lives in
-  `spark_ast.rs`.
+> **G5b-R1 — unquoted `INTERVAL n UNIT` frame bound refused — FIXED (2026-08-13, W-4 / #82).**
+> Unquoted `INTERVAL 1 DAY` is quoted to `INTERVAL '1' DAY` before first plan and matches
+> the quoted table `[10, 30, 60, 90, 90]`. Pins:
+> `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_unquoted_interval_literal_matches_quoted`
+> and
+> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_unquoted_interval_literal]`
+> (now equality). A fixed defect gets this dated note, never a live divergence row.
 
 ### G5b-R4 — FOLLOWING-to-FOLLOWING frame includes the current row
 
@@ -1167,64 +1185,71 @@ the pin rather than obeying it.
 - **Apache Spark** — the current row lies outside that frame. *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_following_to_following_window]`
 - **Rationale** — BACKLOG (G5b-R). Range-search boundary. Still OPEN.
-  Z-4 re-verified: DF 54.1.0 still 120; Spark 4.1.2 is 90; `sqlparser` `EXCLUDE` is
-  TBD; no dependency bump.
+  W-4 re-verified on this base: DF 54.1.0 still 120; Spark 4.1.2 is 90;
+  `sqlparser` 0.62 `WindowFrame` is `// TBD: EXCLUDE`; no dependency bump. Rust pin
+  `temporal_range_following_to_following_still_includes_current_row` still asserts 120.
 
-### G5b-R5 — interval bound over a numeric order key: raw Arrow cast error
-
-- **repark** — an interval bound over a numeric order key raises a raw Arrow cast error
-  (`Cannot cast string '1 DAY' to value of Int64 type`).
-- **Apache Spark** — does **not** refuse and does **not** collapse to "self only" as a
-  rule. `INTERVAL 'n' UNIT` over a numeric order key is numeric `n` RANGE (unit ignored:
-  `1 DAY` = `1 HOUR` = `1 MONTH` = `1 PRECEDING`; `10 DAY` = `10 PRECEDING`; `0 DAY` =
-  peer group). The recorded unique-key seed (gaps of 10) still pins sums
-  `[10, 20, 30, 40, 50]`, which is what `1 PRECEDING` produces on that seed — Y-1's
-  unique-key fixture could not see the magnitude. *(oracle: recorded — Z-4 live
-  PySpark 4.1.2 recon, now in the corpus comment and
-  `temporal_range_interval_bound_over_int_key_still_arrow_cast` on this base.)*
-- **Pin** — `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_interval_bound_over_int_key]`
-- **Rationale** — BACKLOG (G5b-R). Type-aware restatement (`INTERVAL 'n' UNIT` →
-  unit-less `n`) needs `spark_ast.rs`. Still OPEN.
-  **W-5 verify-before-paste (2026-08-13):** Z-5's Spark half ("every unique key sees
-  only itself") was stale against Z-4's live recon now in the merged corpus; the Spark
-  half above is that recon. The recorded seed table is unchanged. This increment does
-  not claim R5 closed. W-5 did not take the JVM lock; the recon is the merged corpus.
+> **G5b-R5 — interval bound over a numeric order key — FIXED (2026-08-13, W-4 / #82).**
+> `INTERVAL 'n' UNIT` over a numeric order key is restated to unit-less `n` RANGE (unit
+> ignored). Unique-key seed `[10, 20, 30, 40, 50]` is `n=1` on gaps of 10. Ties seed
+> distinguishes magnitude (`1 DAY` → `[10, 40, 40, 61, 30]`; `10 DAY` →
+> `[10, 50, 50, 61, 91]`; `0 DAY` → peer group). Y-1's "each unique key sees only
+> itself" is the unique-`v` special case of numeric `n=1`, not a distinct class. Pins:
+> `crates/repark-spark/src/tests/window_temporal_range.rs::temporal_range_interval_bound_over_int_key_is_numeric_n`,
+> `…::temporal_range_interval_bound_over_int_key_uses_numeric_magnitude`,
+> `python/repark/tests/test_window_parity.py::test_window_row_matches_spark_or_still_diverges[temporal_range_interval_bound_over_int_key]`
+> (now equality), and facade
+> `test_temporal_range_interval_over_int_uses_numeric_magnitude`. A fixed defect gets
+> this dated note, never a live divergence row.
 
 ### G3-E8 — DELETE/UPDATE subquery predicate is refused (valve, not a fix)
 
 - **repark** — `DELETE` / `UPDATE` with a subquery `WHERE` are still **refused** (needle
   `subquery predicates are silently mis-executed`) **except** uncorrelated
-  `DELETE … WHERE col IN (SELECT col FROM …)`, which now executes on both doors via the
-  A1-identity path (`execute_predicate_dml`) and matches Spark (FROM and FROM-less).
-  UPDATE IN, NOT IN, EXISTS, scalars, nested, mixed AND/OR, and the rest of the family
+  `DELETE … WHERE col IN (SELECT col FROM …)` **and**
+  `DELETE … WHERE col NOT IN (SELECT col FROM …)` (including ANY-NULL-in-subquery
+  matches nothing, empty subquery matches all), which now execute on both doors via
+  the A1-identity path (`execute_predicate_dml`) and match Spark (FROM and FROM-less).
+  UPDATE IN / NOT IN, EXISTS, scalars, nested, mixed AND/OR, and the rest of the family
   remain refused. SET-assignment / `INSERT` / `MERGE` source still unaffected.
 - **Apache Spark** — runs all of them, deleting/updating exactly the matching rows.
   *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11.0.)*
-- **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`
-  (now **content**); residual splits unchanged (`delete_not_in_subquery`,
-  `delete_exists_correlated`, `update_in_subquery`, …). Rust:
+- **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`,
+  `…[delete_not_in_subquery]`, `…[delete_not_in_subquery_with_null_key]` (now **content**);
+  residual splits unchanged (`delete_exists_correlated`, `update_in_subquery`, …). Rust:
   `crates/repark-spark/src/tests/dml.rs::g3e8_delete_in_subquery_deletes_exactly_the_matching_row`
   (and quoted / temp-view / FROM-less siblings);
-  `…::g3e8_delete_subquery_family_all_refuse` (IN excluded — residual refuse);
+  `…::g3e8_delete_not_in_subquery_deletes_non_matching_rows`,
+  `…::g3e8_delete_not_in_subquery_with_null_key_deletes_nothing`,
+  `…::g3e8_delete_not_in_empty_subquery_deletes_every_row`;
+  `…::g3e8_delete_subquery_family_all_refuse` (IN / NOT IN excluded — residual refuse);
   `…::g3e8_update_subquery_family_all_refuse`;
-  ANSI `crates/repark-sql/src/guards/tests.rs::dml_subquery_in_delete_executes_and_deletes_exactly_the_match`;
+  ANSI `crates/repark-sql/src/guards/tests.rs::dml_subquery_in_delete_executes_and_deletes_exactly_the_match`,
+  `…::dml_subquery_not_in_delete_executes_and_honors_three_valued_logic`;
   ROW 9 `crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_refusals_render_identically`
-  restated over NOT IN / EXISTS / UPDATE IN.
+  restated over EXISTS / UPDATE IN / nested / scalar;
+  `…::cross_door_g3e8_not_in_delete_executes_identically`.
 - **Rationale** — DEFECT, **partial fix**. Uncorrelated IN-DELETE is the PR-1 product
-  hole; the family is **not** closed (sixteen residual spellings stay refused). Delete
-  this row only when the claimed surface is actually re-enabled. NOT IN + the NULL
-  trap is the next FIX cut — this increment does not claim that work.
+  hole; uncorrelated NOT IN-DELETE + the NULL 3VL trap is the PR-2 product hole
+  (#83). The family is **not** closed (EXISTS ± correlation, UPDATE twins, nested,
+  scalars stay refused). Delete this row only when the claimed surface is actually
+  re-enabled. EXISTS ± correlation is the next FIX cut — this increment does not
+  claim the dbt gate (IN + NOT IN + EXISTS all executing).
 
 ### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
 
-- **repark** — `DELETE`/`UPDATE` with `NOT IN (SELECT …)` where the subquery contains `NULL`
-  is refused (same G3-E8 valve).
+- **repark** — `DELETE … NOT IN (SELECT …)` where the subquery contains `NULL` now
+  matches Spark (identity SELECT reproduces 3VL: ANY NULL ⇒ match zero rows; table
+  unchanged). `UPDATE … NOT IN (SELECT …)` with a NULL key stays refused (same
+  G3-E8 valve).
 - **Apache Spark** — `x NOT IN (…, NULL)` is UNKNOWN for every row, so Spark matches nothing
   and the table is unchanged. *(oracle: recorded.)*
 - **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_not_in_subquery_with_null_key]`
-  and `…[update_not_in_subquery_with_null_key]`
-- **Rationale** — keep after the fix lands (flip the repark half to "matches Spark"): the
-  behaviour is surprising enough to be re-broken.
+  (now **content**, remaining ids `{1,2,3}`) and `…[update_not_in_subquery_with_null_key]`
+  (still **split**). Rust:
+  `crates/repark-spark/src/tests/dml.rs::g3e8_delete_not_in_subquery_with_null_key_deletes_nothing`.
+- **Rationale** — keep after the DELETE fix landed: the 3VL trap is surprising enough
+  to be re-broken. Flip the UPDATE half to "matches Spark" when that spelling ships.
 
 ### G15 — string collation is refused at first evaluation
 

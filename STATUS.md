@@ -102,6 +102,17 @@ What happens next, in order:
    DEC-2/3/5–9, TY-3 still DECLARED, G5b-R1 / R4 / R5 (W-4 in flight), G8, G10
    follow-on, F-Y10-1. Completeness table:
    [task/w5-z-landing-ledger.md](task/w5-z-landing-ledger.md).
+   **2026-08-13 — W wave landed ×5; V wave in flight (night 1 of the 48-hour push).**
+   W-wave PRs **#81–#85** are on `main` (this increment's base `8d325d4` / `#85` tip;
+   `#80` also on `main`). Closed as code: Z-wave §6 landing (#81), G5b-R1/R5 + Q-002
+   origin-thread (#82), uncorrelated `DELETE … NOT IN` + NULL 3VL both doors (#83),
+   Spark-door `parse_float_as_decimal` / DEC-1 (#84), TZ-4 PR-2 zoneless LTZ
+   localization + NTZ distinction; TZ-6/TZ-7 FIXED notes (#85). Still OPEN and **not**
+   claimed closed by this increment: G3-E8 residual EXISTS ± correlation (V-1; dbt
+   gate not met), TZ-4 residues (B-TZ-4, ANSI column-def `timestamp_ns`), DEC-2/3/5–9,
+   TY-3 still DECLARED (U3 revisit rides with V-2), G5b-R4, G8, G10 follow-on,
+   F-Y10-1. Completeness table:
+   [task/v5-w-landing-ledger.md](task/v5-w-landing-ledger.md).
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -182,46 +193,50 @@ moving it. Nothing is described in both places.
   this repo's `trunc` / `add_months`, over a TIMESTAMP that already carries the right instant now
   resolve in `spark.sql.session.timeZone` at all four entry points (SQL door, ANSI door, native
   `DataFrame` API, facade — the last pinned at both `sql()` and `df.select(F...)`). Registry row
-  TZ-1 was CLOSED IN PART and CONVERTED rather than retired, because two halves are still wrong and
-  a reader arriving from a wrong wall clock must land on one of them:
-  * **[TZ-7](docs/spark-sql-iceberg-parity.md)** — a **zoneless** TIMESTAMP input (a
-    `TIMESTAMP '…'` literal, a zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`, a
-    naive-`datetime` column) is read as UTC rather than as a wall clock in the session zone, so its
-    instant is wrong before any extractor sees it. These shapes **agreed with Spark before the fix
-    and diverge after it** — the disclosed, forced price of reading every TIMESTAMP as an instant.
+  TZ-1 was CLOSED IN PART and CONVERTED rather than retired. Two successor rows carried
+  the remainder; #85 closed the zoneless-input / NTZ half:
+  * **[TZ-7](docs/spark-sql-iceberg-parity.md)** — **FIXED (2026-08-13, #85).** Zoneless
+    LTZ inputs localize in the session zone. Residual: extractor nullability on
+    `TIMESTAMP` literals; `F.lit(tz-aware)` under a non-UTC session. Semantics: registry
+    TZ-7 FIXED note.
   * **[TZ-8](docs/spark-sql-iceberg-parity.md)** — `to_date` / `CAST(ts AS DATE)` / `datediff` still
     take the date in the stored zone (`last_day` / `date_add` over a TIMESTAMP do not plan at all).
     Not a regression; a completeness gap, and `CAST(ts AS DATE)` is the commonest partition-key
     derivation in a migrated job.
 
-  Two further rows carry the type half: **[TZ-4](docs/spark-sql-iceberg-parity.md)** —
-  **PROGRESS (2026-08-13, #79), not retired.** Instant-typed producers now export
-  `timestamp[us, tz=UTC]`; Spark-door DDL `TIMESTAMP` stores Iceberg `timestamptz`.
-  Residues remain (B-TZ-4, ANSI column-def `timestamp_ns`, Python `TimestampType`
-  mapping). **TZ-6 / TZ-7 are not retired by this increment** (W-1). TZ-4's remaining
-  representation unit is still the one that would retire TZ-6 and TZ-7 with it.
+  Two further rows carry the type half: **[TZ-6](docs/spark-sql-iceberg-parity.md)** —
+  **FIXED (2026-08-13, #85).** `TIMESTAMP` vs `TIMESTAMP_NTZ` are distinct. Residual:
+  `spark.sql.timestampType` is not implemented. **[TZ-4](docs/spark-sql-iceberg-parity.md)** —
+  **PROGRESS (2026-08-13, #79 + #85), not retired.** Instant-typed producers export
+  `timestamp[us, tz=UTC]`; Spark-door DDL `TIMESTAMP` stores Iceberg `timestamptz`;
+  zoneless localization + NTZ distinction landed in PR-2. Residues remain (B-TZ-4,
+  ANSI column-def `timestamp_ns`).
 - **`CAST(TIMESTAMP AS <numeric>)` returns epoch seconds** — **FIXED (2026-08-12, #64).**
   The 10⁹ nanoseconds-vs-seconds class is closed, including INT/SMALLINT un-refusal and
   floor semantics. Residual: TIMESTAMP→INT **nullability only** (registry G6-4). Semantics of
   the closed class: registry TZ-5 (FIXED note).
 - **decimal128 semantics diverge from Apache Spark across nine classes** — **BACKLOG,
-  still open except DEC-4.** Registry DEC-4 / campaign DEC-5 `avg(DECIMAL)` is
+  still open except DEC-1 and DEC-4.** Registry DEC-4 / campaign DEC-5 `avg(DECIMAL)` is
   **FIXED (2026-08-13, #76)** — facade now Spark `(p+4,s+4)`. DEC-1 (literal
-  inference) stays open — **W-2 in flight**. DEC-2/3/5–9 remain photographed, not
-  fixed. TY-3 stays DECLARED (U2 revisit rides with W-2). Semantics + pins: registry
-  §7 DEC-1 … DEC-9 (DEC-4 is a dated FIXED note).
+  inference) is **FIXED (2026-08-13, #84)** — Spark-door `parse_float_as_decimal=true`.
+  DEC-2/3/5–9 remain photographed, not fixed. TY-3 stays DECLARED (U2 landed; residual
+  `(21,1)` nullable vs Spark `(11,1)` non-null — U3 revisit rides with V-2). Semantics
+  + pins: registry §7 DEC-1 … DEC-9 (DEC-1 and DEC-4 are dated FIXED notes).
 - **Negative temporal-RANGE `count(*)` = -1 in release wheels** — **FIXED on the Spark
   door / facade `.sql()` (2026-08-12, Y-1 / #72).** Kind-or-magnitude invert is Spark's
-  empty frame (`count(*)` 0, `sum` NULL) or a loud refuse; wrap is gone there. Residuals:
-  G5b-R1 / R4 / R5 still OPEN (**W-4 in flight**; this increment does not claim them
-  closed). ANSI-door wrap is a named residual (no pin). Semantics:
-  registry G5b-R3 FIXED note + [G5b-R1](docs/spark-sql-iceberg-parity.md) / R4 / R5.
-- **DELETE/UPDATE subquery predicates** — **PARTIALLY FIXED (2026-08-13, #78).**
-  Uncorrelated `DELETE … WHERE col IN (SELECT col FROM …)` executes on both doors and
-  matches Spark. Sixteen residual spellings stay refused (UPDATE IN, NOT IN, EXISTS,
-  scalars, nested, mixed AND/OR, …). The family is **not** closed. G3-E8-NULL stays
-  refused. W-3 is the PR-2 (NOT IN + NULL trap). Semantics + pins: registry §7 rows
-  G3-E8 / G3-E8-NULL.
+  empty frame (`count(*)` 0, `sum` NULL) or a loud refuse; wrap is gone there.
+  **G5b-R1 / R5 FIXED (2026-08-13, #82).** G5b-R4 still OPEN (FOLLOWING-to-FOLLOWING
+  120 vs 90; DF 54.1 range-search). ANSI-door wrap is a named residual (no pin).
+  Semantics: registry G5b-R3 / R1 / R5 FIXED notes +
+  [G5b-R4](docs/spark-sql-iceberg-parity.md).
+- **DELETE/UPDATE subquery predicates** — **PARTIALLY FIXED (2026-08-13, #78 + #83).**
+  Uncorrelated `DELETE … WHERE col IN (SELECT col FROM …)` and
+  `DELETE … WHERE col NOT IN (SELECT col FROM …)` (including the NULL 3VL trap)
+  execute on both doors and match Spark. Residual spellings stay refused (UPDATE IN /
+  NOT IN, EXISTS ± correlation, scalars, nested, mixed AND/OR, …). The family is
+  **not** closed. G3-E8-NULL DELETE half now matches Spark; UPDATE half stays refused.
+  The dbt gate (IN + NOT IN + EXISTS) is **not** met. Semantics + pins: registry §7
+  rows G3-E8 / G3-E8-NULL.
 - **`repark.sql` re-home** — **blocks the first tagged release** (not a correctness defect).
   See [docs/release.md](docs/release.md) "Hard blockers" and Deferred capabilities.
 

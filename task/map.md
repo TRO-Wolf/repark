@@ -12,12 +12,20 @@ not this directory.
 
 ## Contents
 
+- [v5-w-landing-ledger.md](v5-w-landing-ledger.md) — **V-5 W-wave §6 landing
+  increment (2026-08-13):** verify-before-paste classification of the merged W-wave
+  handoffs (TZ-4 PR-2 progress not retired; TZ-6/TZ-7 FIXED notes already in-file
+  from #85, not duplicated; DEC-1 FIXED; TY-3 still DECLARED; G3-E8 IN+NOT IN
+  footnote, family not fixed, dbt gate not met; G5b-R1/R5 FIXED; R4 still OPEN;
+  Q-002 FIXED). Completeness proof for the increment PR. Live-mirror both-halves:
+  none.
 - [w5-z-landing-ledger.md](w5-z-landing-ledger.md) — **W-5 Z-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged Z-wave
   handoffs (G3-E8 IN-DELETE footnote, not family-fixed; TZ-4 progress not retired;
-  DEC-4 / campaign DEC-5 avg FIXED; DEC-1 still OPEN; TY-3 still DECLARED; F.abs
-  D6-adjacent FIXED; R1/R4/R5 still OPEN; G5b-R5 Spark half amended to Z-4 recon).
-  Completeness proof for the increment PR. TZ-6 / TZ-7 sections untouched (W-1).
+  DEC-4 / campaign DEC-5 avg FIXED; DEC-1 still OPEN at W-5 write time — closed by
+  #84 / V-5; TY-3 still DECLARED; F.abs D6-adjacent FIXED; R1/R4/R5 still OPEN at
+  W-5 write time — R1/R5 closed by #82 / V-5). Completeness proof for the increment
+  PR. TZ-6 / TZ-7 sections untouched by W-5 (W-1 / #85 wrote those FIXED notes).
   Live-mirror both-halves: none.
 - [w4-z-residuals-ledger.md](w4-z-residuals-ledger.md) — **W-4 / Z-wave residuals
   (2026-08-13):** R1 unquoted `INTERVAL 1 DAY` pre-plan quote; R5 interval-over-int
@@ -31,10 +39,10 @@ not this directory.
   Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;
   FA-2 `getDatabase` note; Y-4 citation refresh). Completeness proof for the increment
   PR. Live-mirror both-halves deferred (none demanded; Z-2 owns `_live_parity.py`).
-- [w2-dec-u2-ledger.md](w2-dec-u2-ledger.md) — **W-2 / DEC U2 in flight:** Spark-door
+- [w2-dec-u2-ledger.md](w2-dec-u2-ledger.md) — **W-2 / DEC U2 (#84):** Spark-door
   `parse_float_as_decimal=true` default (DEC-1). Named blast-list flips + wider
   fixture sweep. TY-3 still DECLARED (residual U3). Does **not** edit the registry
-  (W-5 owns it; DEC-1 FIXED text is paste-true here).
+  (V-5 lands DEC-1 FIXED text).
 - [w3-g3e8-pr2-ledger.md](w3-g3e8-pr2-ledger.md) — **W-3 / G3-E8 PR-2:** uncorrelated
   `DELETE … NOT IN (SELECT …)` + the NULL 3VL trap as one unit. Residual EXISTS / UPDATE /
   nested / scalar stay refused. Does **not** edit the registry (W-5 owns it).
@@ -47,7 +55,8 @@ not this directory.
   spellings stay refused. Registry §6 landed by W-5 (family **not** marked fixed).
 - [z2-tz4-pr1-ledger.md](z2-tz4-pr1-ledger.md) — **Z-2 / TZ-4 PR-1 (#79):** µs+UTC instant
   producers + Iceberg `timestamptz` for default SQL `TIMESTAMP`. A7 CREATE probe (Spark
-  Iceberg type `timestamptz`). Registry TZ-4 progress landed by W-5; TZ-6/TZ-7 stay W-1.
+  Iceberg type `timestamptz`). Registry TZ-4 PR-1 progress landed by W-5; TZ-6/TZ-7
+  FIXED notes landed by #85; TZ-4 PR-2 progress landed by V-5.
 - [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
   collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
   paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does
@@ -127,7 +136,7 @@ not this directory.
   column; `drop` of that Column is the probed Spark no-op. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`.
 - [z4-residuals-ledger.md](z4-residuals-ledger.md) — **Z-4 / Y-wave residuals (#77):** R1/R4/R5
-  re-verified and deferred (need `spark_ast.rs` or a DF pin bump; W-4 in flight); `F.abs`
+  re-verified and deferred at Z-4 write time (W-4 / #82 later closed R1/R5); `F.abs`
   post-semi origin-thread FIX (Y-5 SAF-001). G13 handoff text only. Registry §6 landed
   by W-5.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
@@ -216,6 +225,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [v5-w-landing-ledger.md](v5-w-landing-ledger.md) | **V-5** W-wave §6 landing increment — registry + one STATUS dated note |
 | [w5-z-landing-ledger.md](w5-z-landing-ledger.md) | **W-5** Z-wave §6 landing increment — registry + one STATUS dated note |
 | [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) | **Z-5** Y-wave §6 landing increment — registry + one STATUS dated note |
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
@@ -239,7 +249,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | See which G3-E8 spelling now executes (IN-DELETE) | [z1-g3e8-pr1-ledger.md](z1-g3e8-pr1-ledger.md) |
 | See which G3-E8 spelling now executes (NOT IN + NULL trap) | [w3-g3e8-pr2-ledger.md](w3-g3e8-pr2-ledger.md) |
 | Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
-| See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) · [w5-z-landing-ledger.md](w5-z-landing-ledger.md) (Z wave) |
+| See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) · [w5-z-landing-ledger.md](w5-z-landing-ledger.md) (Z wave) · [v5-w-landing-ledger.md](v5-w-landing-ledger.md) (W wave) |
 | See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
 | Read why the session timezone is a build-time knob with one spelling | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) |
 | Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) "§ Split B" |
