@@ -19,6 +19,14 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- `test_collation_refuse.py` — **G15 (2026-08-12):** loud collation refuse. createDataFrame
+  (`UNICODE_CI` / `UTF8_LCASE` / DDL / Spark `__COLLATIONS` fromJson), `cast`/`try_cast`,
+  Spark SQL `COLLATE` / `ORDER BY COLLATE` / `CAST AS STRING COLLATE` / `SET`/`RESET`,
+  `F.expr` / `filter` SQL-string, session/builder conf keys + getOrCreate reuse fold;
+  default (non-COLLATE) distinct-count untouched; constructor + `simpleString` stay;
+  `F.collate` / `F.collation` / `Column.collate` proven absent. Ledger:
+  `task/y7-collation-refuse-ledger.md`.
+
 - `test_t0_df_regions_import_freeze.py` — r27 T0 Q7 import freeze pins (r27 T0 overload)
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins

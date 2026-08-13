@@ -36,6 +36,13 @@ code is not here — only tests, shared fixtures, and the module manifest.
   that leaf only, so they stay out of `common.rs`). They read the default catalog/schema directly
   rather than `information_schema`, which this door's `setup` does not enable. Not a relocation:
   new tests, new names, and the G-4 identity artifacts are unaffected.
+- **G15 collation refuse pins (2026-08-12)** — `collation.rs`, a NEW leaf: Spark-door
+  parse-altitude refusals for expression `COLLATE`, `ORDER BY COLLATE` (two names),
+  `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET/RESET of a collation
+  `SQLConf` key (helper + `execute` + parenthesized SET), `execute_passthrough` +
+  spark_ast source attach (Q-001), a string-literal negative (incl. CAST-in-literal),
+  and a default (non-COLLATE) `ORDER BY` untouched pin. Ledger:
+  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/y7-collation-refuse-ledger.md).
 - **G5b temporal-`RANGE` pins (2026-08-11)** — `window_temporal_range.rs`, a NEW leaf (not a
   relocation): five tests over the Spark door's `RANGE` frames on datetime order keys, holding
   the two arms of `../window_range.rs` plus the paths it must NOT disturb —

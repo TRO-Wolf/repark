@@ -1485,11 +1485,15 @@ def _engine_type_from_cast_arg(data_type: Any) -> str:
     never bare ``AttributeError`` on ``_engine_type`` (octo C5-C1-001).
     """
     if isinstance(data_type, str):
+        from repark.types import refuse_collated_type_string
+
+        refuse_collated_type_string(data_type)
         return data_type
     # Lazy import: types ↔ column would cycle if DataType were a top-level import.
-    from repark.types import DataType
+    from repark.types import DataType, refuse_evaluated_collation
 
     if isinstance(data_type, DataType):
+        refuse_evaluated_collation(data_type)
         return data_type._engine_type()
     raise PySparkTypeError(
         errorClass="NOT_DATATYPE_OR_STR",

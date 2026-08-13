@@ -7,6 +7,7 @@ mod common;
 mod alter;
 mod call;
 mod catalog_ops;
+mod collation;
 mod create_table;
 mod ctas;
 mod decimal;

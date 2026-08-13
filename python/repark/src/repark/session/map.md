@@ -8,9 +8,15 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY).
 
 - `_funcs.py` — free functions (shared name binding for class modules); includes
   `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
-  widths refuse loud — layout home `repark.ml.linalg`)
-- `builder_conf.py` — SparkContext, RuntimeConfig
-- `session_core.py` — ReparkSession (sql/catalog methods stay here)
+  widths refuse loud — layout home `repark.ml.linalg`).
+  **G15:** `_data_type_to_sql_type` refuses a non-binary `StringType` (the silently-wrong-count
+  path: collation was stripped to `STRING`).
+- `builder_conf.py` — SparkContext, RuntimeConfig.
+  **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
+- `session_core.py` — ReparkSession (sql/catalog methods stay here).
+  **G15:** `Builder._set_config_entry` refuses collation `SQLConf` keys (silent-ignore path).
+  getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted
+  `_config` key cannot silently store (SEC-003).
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination)
 - `sql_udf.py` — UDFRegistration
 - `create_dataframe.py` — region marker + SparkSession/ReParkSession aliases

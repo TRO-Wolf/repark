@@ -17,7 +17,7 @@ use datafusion::error::Result;
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::parser::Statement as DfStatement;
+use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
 use datafusion::sql::sqlparser::ast::{
     Expr, NamedWindowExpr, OrderByExpr, OrderByKind, Query, SetExpr, Statement, VisitMut,
     VisitorMut, WindowType,
@@ -54,13 +54,27 @@ pub(crate) async fn execute_passthrough(
 ) -> Result<DataFrame> {
     let state = ctx.state();
     let dialect = state.config().options().sql_parser.dialect;
+    // G15 type-position (`CAST(x AS STRING COLLATE name)`) fails `sql_to_statement`.
+    // Scan the executing-parse text first so that spelling is G15, not ParserError.
+    crate::collation::refuse_type_position_collation_in_sql(sql)?;
     let mut statement = state.sql_to_statement(sql, &dialect)?;
     let mut may_have_bare_range_bound = false;
-    if let DfStatement::Statement(inner) = &mut statement {
-        // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
-        crate::refuse_dml_subquery_predicate_in_statement(inner)?;
-        apply_spark_order_by_defaults(inner);
-        may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
+    match &mut statement {
+        DfStatement::Statement(inner) => {
+            // G15 — collation at the EXECUTING parse (G3-E8 altitude). A COLLATE
+            // spelling must not reach DataFusion's unsupported-AST path or be
+            // silently dropped. Router-parsable SELECT/ORDER BY still land here
+            // when tests call execute_passthrough directly (Q-001 pin).
+            crate::refuse_collation_in_statement(inner)?;
+            // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
+            crate::refuse_dml_subquery_predicate_in_statement(inner)?;
+            apply_spark_order_by_defaults(inner);
+            may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
+        }
+        DfStatement::Reset(ResetStatement::Variable(name)) => {
+            crate::collation::refuse_collation_reset_variable(&name.to_string())?;
+        }
+        _ => {}
     }
     let plan = state.statement_to_plan(statement).await?;
     // G5b: a unit-less `RANGE` offset over a datetime order key is Spark's refusal (TIMESTAMP)

@@ -13,14 +13,20 @@
 //! 3. [`refuse_write_to_branch`] — writes targeting a branch-suffixed name; the fork's append
 //!    always sets `main`, so a branch-targeted write would silently land on `main`.
 //!
-//! Two more guards need something the text does not carry, so they run later — and the ORDER
-//! between them is load-bearing:
+//! More guards need something the text does not carry, so they run later — and the ORDER
+//! between the DML pair is load-bearing:
 //!
-//! 4. [`refuse_dml_subquery_predicate`] (G3-E8) needs the PARSED statement (it reads the `WHERE`
+//! 4. [`refuse_collation_in_statement`] (G15) needs the PARSED statement. The router calls it
+//!    immediately after the stock parse, before the statement match, so `COLLATE` / column
+//!    collation / session collation conf refuse at parse altitude (G3-E8 lesson).
+//!    Type-position `CAST AS STRING COLLATE` is refused on the parse-fail arm
+//!    ([`refuse_type_position_collation_in_sql`]); `RESET` of a collation key is
+//!    refused before delegate.
+//! 5. [`refuse_dml_subquery_predicate`] (G3-E8) needs the PARSED statement (it reads the `WHERE`
 //!    expression), so the router calls it from its `DELETE` / `UPDATE` arms. It closes a
 //!    silent-data-loss window: a subquery predicate is lost at DataFusion's DML planning boundary
 //!    and degenerates into match-all.
-//! 5. [`refuse_mor_multi_spec_dml`] (the hoisted BUG-001 valve) is `async` — it loads the target
+//! 6. [`refuse_mor_multi_spec_dml`] (the hoisted BUG-001 valve) is `async` — it loads the target
 //!    table's Iceberg metadata to decide — so the router calls it from the SAME two arms,
 //!    immediately AFTER the G3-E8 valve. Both are data-loss valves, so either message is honest;
 //!    the cheap sync AST walk runs before the metadata round-trip, which is the Spark door's
@@ -49,8 +55,8 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::logical_expr::{DdlStatement, LogicalPlan};
 use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
-    Delete, Expr, FromTable, ObjectName, Query, Statement, TableFactor, TableWithJoins, Update,
-    Visit, Visitor,
+    AlterSchemaOperation, AlterTableOperation, ColumnOption, Delete, Expr, FromTable, ObjectName,
+    Query, Set, Statement, TableFactor, TableWithJoins, Update, Visit, Visitor,
 };
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
@@ -58,6 +64,9 @@ use repark_core::{CatalogRegistry, EngineContext};
 use repark_iceberg::write::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
+
+/// Needle pinned by the G15 refusal tests (both doors). Byte-identical to the Spark door.
+pub(crate) const COLLATION_REFUSAL_NEEDLE: &str = "does not implement collation";
 
 /// The conf key that opens the SEC-02 local-filesystem gate. Spelled identically to the Spark
 /// door's `repark_functions::cardinality::ALLOW_LOCAL_FILESYSTEM_DDL_KEY` — one user-visible
@@ -630,6 +639,256 @@ fn dml_subquery_refusal_message(verb: DmlSubqueryVerb, table: &str) -> String {
         consequence = verb.consequence(),
         action = verb.merge_action(),
     )
+}
+
+// === Guard — G15 collation refuse (parse altitude) ==========================================
+
+/// ===========================================================================================
+/// Render the G15 refusal. Byte-identical to the Spark door's message (same needles).
+/// ===========================================================================================
+pub(crate) fn collation_refusal_message(requested: &str) -> String {
+    format!(
+        "repark {COLLATION_REFUSAL_NEEDLE}: requested `{requested}`. Spark 4 would apply \
+         that collation to comparisons and ORDER BY; repark refuses rather than silently \
+         ignore it. Use binary/default ordering — omit COLLATE, keep StringType() / \
+         UTF8_BINARY, and do not set a session collation."
+    )
+}
+
+/// ===========================================================================================
+/// Refuse a collation spelling on the router's parsed statement (G3-E8 altitude).
+/// ===========================================================================================
+///
+/// Called immediately after the stock parse, before the statement match, so SELECT
+/// COLLATE, ORDER BY COLLATE, CREATE TABLE column COLLATE, SET collation, and
+/// CREATE/ALTER COLLATION all refuse on the parse every route agrees on.
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] naming the requested collation.
+pub(crate) fn refuse_collation_in_statement(statement: &Statement) -> Result<()> {
+    let mut probe = CollationProbe { requested: None };
+    if statement.visit(&mut probe).is_break()
+        && let Some(requested) = probe.requested
+    {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            &requested,
+        )));
+    }
+    Ok(())
+}
+
+struct CollationProbe {
+    requested: Option<String>,
+}
+
+impl Visitor for CollationProbe {
+    type Break = ();
+
+    fn pre_visit_expr(&mut self, expr: &Expr) -> ControlFlow<Self::Break> {
+        if let Expr::Collate { collation, .. } = expr {
+            self.requested = Some(collation.to_string());
+            return ControlFlow::Break(());
+        }
+        ControlFlow::Continue(())
+    }
+
+    fn pre_visit_statement(&mut self, statement: &Statement) -> ControlFlow<Self::Break> {
+        if let Some(requested) = collation_requested_by_statement(statement) {
+            self.requested = Some(requested);
+            return ControlFlow::Break(());
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+fn collation_requested_by_statement(statement: &Statement) -> Option<String> {
+    match statement {
+        Statement::CreateTable(create) => {
+            if let Some(name) = &create.default_ddl_collation {
+                return Some(name.clone());
+            }
+            first_column_collation(&create.columns)
+        }
+        Statement::CreateSchema {
+            default_collate_spec: Some(spec),
+            ..
+        } => Some(spec.to_string()),
+        Statement::CreateDatabase {
+            default_collation,
+            default_ddl_collation,
+            ..
+        } => default_collation
+            .clone()
+            .or_else(|| default_ddl_collation.clone()),
+        Statement::CreateCollation(create) => Some(create.name.to_string()),
+        Statement::AlterCollation(alter) => Some(alter.name.to_string()),
+        Statement::AlterSchema(alter) => {
+            for operation in &alter.operations {
+                if let AlterSchemaOperation::SetDefaultCollate { collate } = operation {
+                    return Some(collate.to_string());
+                }
+            }
+            None
+        }
+        Statement::AlterTable(alter) => {
+            for operation in &alter.operations {
+                if let AlterTableOperation::AddColumn { column_def, .. } = operation
+                    && let Some(name) = first_column_collation(std::slice::from_ref(column_def))
+                {
+                    return Some(name);
+                }
+            }
+            None
+        }
+        Statement::Set(set) => collation_requested_by_set(set),
+        _ => None,
+    }
+}
+
+fn first_column_collation(
+    columns: &[datafusion::sql::sqlparser::ast::ColumnDef],
+) -> Option<String> {
+    for column in columns {
+        for option in &column.options {
+            if let ColumnOption::Collation(name) = &option.option {
+                return Some(name.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn collation_requested_by_set(set: &Set) -> Option<String> {
+    match set {
+        Set::SetNames {
+            collation_name: Some(name),
+            ..
+        } => Some(name.clone()),
+        Set::SingleAssignment { variable, .. } => {
+            let key = variable.to_string();
+            key.to_ascii_lowercase()
+                .contains("collation")
+                .then_some(key)
+        }
+        Set::MultipleAssignments { assignments } => {
+            for assignment in assignments {
+                let key = assignment.name.to_string();
+                if key.to_ascii_lowercase().contains("collation") {
+                    return Some(key);
+                }
+            }
+            None
+        }
+        Set::ParenthesizedAssignments { variables, .. } => {
+            for variable in variables {
+                let key = variable.to_string();
+                if key.to_ascii_lowercase().contains("collation") {
+                    return Some(key);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
+/// ===========================================================================================
+/// Refuse type-position `STRING COLLATE name` that sqlparser's CAST cannot attach.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] when a type-position collation is present.
+pub(crate) fn refuse_type_position_collation_in_sql(sql: &str) -> Result<()> {
+    if let Some(requested) = type_position_collation(sql) {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            &requested,
+        )));
+    }
+    Ok(())
+}
+
+/// ===========================================================================================
+/// Refuse `RESET` of a collation session key (DataFusion extension, not `Statement::Set`).
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] when the variable name contains `collation`.
+pub(crate) fn refuse_collation_reset_variable(variable: &str) -> Result<()> {
+    if variable.to_ascii_lowercase().contains("collation") {
+        return Err(DataFusionError::NotImplemented(collation_refusal_message(
+            variable,
+        )));
+    }
+    Ok(())
+}
+
+fn type_position_collation(sql: &str) -> Option<String> {
+    let scrubbed = blank_out_quoted_and_comments(sql);
+    let lower = scrubbed.to_ascii_lowercase();
+    let mut from = 0;
+    while let Some(relative) = lower[from..].find("collate") {
+        let at = from + relative;
+        if !is_word_boundary(&lower, at, at + 7) || !preceded_by_string_type(&lower, at) {
+            from = at + 7;
+            continue;
+        }
+        return collation_ident_after(&scrubbed, at + 7);
+    }
+    None
+}
+
+fn preceded_by_string_type(lower: &str, collate_at: usize) -> bool {
+    let before = strip_trailing_length_spec(lower[..collate_at].trim_end());
+    for token in ["string", "varchar", "char", "text"] {
+        if before.ends_with(token)
+            && is_word_boundary(before, before.len() - token.len(), before.len())
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn strip_trailing_length_spec(text: &str) -> &str {
+    let trimmed = text.trim_end();
+    if !trimmed.ends_with(')') {
+        return trimmed;
+    }
+    let Some(open) = trimmed.rfind('(') else {
+        return trimmed;
+    };
+    let inner = trimmed[open + 1..trimmed.len() - 1].trim();
+    if inner
+        .bytes()
+        .all(|byte| byte.is_ascii_digit() || byte.is_ascii_whitespace())
+    {
+        return trimmed[..open].trim_end();
+    }
+    trimmed
+}
+
+fn collation_ident_after(sql: &str, after_collate: usize) -> Option<String> {
+    let tail = sql[after_collate..].trim_start();
+    let mut end = 0;
+    for (index, character) in tail.char_indices() {
+        if character.is_ascii_alphanumeric() || character == '_' || character == '.' {
+            end = index + character.len_utf8();
+            continue;
+        }
+        break;
+    }
+    (end > 0).then(|| tail[..end].to_string())
+}
+
+fn is_word_boundary(text: &str, start: usize, end: usize) -> bool {
+    let bytes = text.as_bytes();
+    let before_ok = start == 0 || !is_ident_byte(bytes[start - 1]);
+    let after_ok = end >= bytes.len() || !is_ident_byte(bytes[end]);
+    before_ok && after_ok
+}
+
+fn is_ident_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
 }
 
 #[cfg(test)]
