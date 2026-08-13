@@ -1315,8 +1315,9 @@ NOT in that file is a defect, not a decision.
   name-gated family coverage so a control cannot satisfy NULL-key / nullability / type-mismatch
   pins. **G4b:** the two DF `leftsemi`/`leftanti` refuse **splits** CONVERGED when the DataFrame
   semi binding landed — they are now content equalities with their recorded Spark halves
-  unchanged, names kept byte-identical (a pin's name is part of the pin; the `_unsupported`
-  suffix retires in a declared-rename unit). Four rows joined them so the claim spans the whole
+  unchanged. **Y-4 (2026-08-12):** declared rename landed; current pins are
+  `df_left_semi_on_name` / `df_left_anti_on_name` (was `df_left_semi_unsupported` /
+  `df_left_anti_unsupported`). Four rows joined them so the claim spans the whole
   DF surface, not one shape: `on='k'` / `on=['k']` / `left.k == right.k` (a different engine
   path — the H1 SQL rewrite) and the NULL-key edge on both semi and anti. The corpus now holds
   NO splits, so the split classifier's two arms are proven against the explicit
@@ -1324,8 +1325,8 @@ NOT in that file is a defect, not a decision.
   guarded for the next lane's disclosure. Split-path convergence is still CLASSIFIED (CONVERGED
   → flip to content equality; commit-but-mismatch → regression). **Out of scope (declared):**
   fixing divergences; registry file; windows (W-4). Ledgers: `task/w3-joins-ledger.md`,
-  `task/g4b-join-widening-ledger.md` (§6 holds paste-true registry rows; registry file not
-  edited by either).
+  `task/g4b-join-widening-ledger.md`, `task/y4-rename-ledger.md` (§6 holds paste-true
+  registry citation updates; registry file not edited by Y-4).
 - `test_g4b_semi_join.py` — the **non-differential** half of the G4b DataFrame semi/anti
   widening: the parts with no Spark golden to compare against. Every accepted spelling
   (`semi` / `left_semi` / `leftsemi` / `LeftSemi` / `LEFT_SEMI` and the anti family — each is its
@@ -1396,13 +1397,16 @@ NOT in that file is a defect, not a decision.
   the TZ-5 cast unit un-refused it, 2026-08-12: value/type now match Spark's unix-seconds int32;
   repark propagates the literal's non-null where Spark types the CAST nullable; content-disclosure
   classifier arms proven on this row, split arms kept proven via a synthetic exemplar).
+  **Y-4 (2026-08-12):** current pin name `timestamp_to_int_nullability` (was
+  `timestamp_to_int_spark_seconds_repark_raises`; live-mirror token
+  `cast_timestamp_to_int_nullability` is unchanged).
   §0 re-verified that the slate
   "non-ANSI NULL" premise narrowed under ANSI ON — fewer than 4 real divergences, not manufactured.
   Every content row asserts value AND Arrow type AND nullability via
   `repark_parity.assert_frames_equal`; error rows pin raise class + error needle (A7). Split
   classifiers (CONVERGED vs regression) proven by monkeypatch (CP-1). **Does not edit**
   `_live_parity.py` / live size pins / registry (A3 — §6 paste-true BOTH halves in the ledger).
-  Ledger: `task/x1-cast-failure-ledger.md`.
+  Ledgers: `task/x1-cast-failure-ledger.md`, `task/y4-rename-ledger.md` (Y-4 name only).
 - `_record_cast_failure_goldens.py` — the **record driver** for the cast-failure corpus (NOT a
   `test_` module; never collected). Imports `ROWS` + lifecycle helpers from the committed test
   module; re-derives every Spark half (content / error needle / split success-or-raise) under
