@@ -19,10 +19,13 @@
 //! and [`temporal_range_bare_offset_over_date_key_means_days`] red on value (a one-month window
 //! sums 60 where Spark sums 30).
 //!
-//! Out of scope: the residual temporal-`RANGE` divergences the recon recorded (unquoted
-//! `INTERVAL 1 DAY`, `DAY TO SECOND` literals, negative offsets, `FOLLOWING`-to-`FOLLOWING`
-//! values). They are recorded rows in `python/repark/tests/test_window_parity.py` with a §6
-//! handoff, not silent gaps, and none of them is touched by this module's fix.
+//! G5b-R (Y-1): [`temporal_range_negative_offset_is_spark_empty_frame`] and
+//! [`temporal_range_day_to_second_literal_matches_spark`] pin the two closed residuals.
+//! G5b-R Half-B: [`temporal_range_value_inverted_frames_do_not_wrap`] pins same-kind
+//! magnitude invert (the kind-only hole — Spark refuses `WRONG_COMPARISON`, never wraps)
+//! and [`temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses`] pins the mixed
+//! refuse. R1 / R4 / R5 stay recorded (unquoted interval, FOLLOWING-to-FOLLOWING,
+//! interval-over-int).
 
 use super::super::*;
 use super::common::*;
@@ -470,5 +473,235 @@ async fn temporal_range_numeric_order_keys_are_untouched() {
             .collect::<Vec<_>>(),
         vec![10, 30, 50],
         "the INT-keyed frame in a mixed statement is never re-scaled to days"
+    );
+}
+
+// =================================================================================================
+// G5b-R residual pins — Y-1 (R3/R2 fixed; R1/R4/R5 remain recorded)
+// =================================================================================================
+
+/// Plan/execute error text for a statement that must stay loud (deferred residual).
+async fn execute_error(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> String {
+    match execute(ctx, catalogs, sql).await {
+        Err(error) => error.to_string(),
+        Ok(frame) => match frame.collect().await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("`{sql}` must stay loud, not answer"),
+        },
+    }
+}
+
+/// R3 HIGH: `INTERVAL '-1' DAY PRECEDING` over a TIMESTAMP key is Spark's empty frame
+/// (sum NULL, count 0), not a wrapped `count(*)` = -1 / debug panic. DATE already answered
+/// empty at the pin and must stay empty (the restatement is TIMESTAMP-only).
+#[tokio::test]
+async fn temporal_range_negative_offset_is_spark_empty_frame() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    register_date_seed(&ctx);
+
+    let negative_sum = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        negative_sum,
+        vec![None, None, None, None, None],
+        "negative PRECEDING over TIMESTAMP is Spark's empty sum, not a panic"
+    );
+
+    let negative_count = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND CURRENT ROW) AS c FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        negative_count,
+        present(&[0, 0, 0, 0, 0]),
+        "negative PRECEDING over TIMESTAMP is Spark's empty count, not wrapping -1"
+    );
+
+    let negative_following = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN CURRENT ROW AND \
+         INTERVAL '-1' DAY FOLLOWING) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        negative_following,
+        vec![None, None, None, None, None],
+        "negative FOLLOWING to CURRENT ROW is the same inverted empty frame"
+    );
+
+    let date_count = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, count(*) OVER (ORDER BY d RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND CURRENT ROW) AS c FROM wd ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        date_count,
+        present(&[0, 0, 0]),
+        "DATE + negative interval already answered empty and must not be refused"
+    );
+}
+
+/// Q-001 / Q-002: invert is kind **or** same-kind magnitude after sign-normalize. The
+/// previous kind-only check missed `-2 PRECEDING AND -1 PRECEDING` (flips to
+/// `2 FOLLOWING AND 1 FOLLOWING`) and DataFusion wrapped `count(*)` to -1. Direct
+/// `2 FOLLOWING AND 1 FOLLOWING` never entered classify. Spark 4.1.2 refuses those
+/// same-kind magnitude inverts (`SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON`); kind
+/// invert vs CURRENT ROW stays Spark-empty (pinned above). No `10000 YEAR` pair.
+#[tokio::test]
+async fn temporal_range_value_inverted_frames_do_not_wrap() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+
+    for sql in [
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-2' DAY PRECEDING \
+         AND INTERVAL '-1' DAY PRECEDING) AS c FROM wt ORDER BY id",
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-2' DAY PRECEDING \
+         AND INTERVAL '-1' DAY PRECEDING) AS s FROM wt ORDER BY id",
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND INTERVAL '0' DAY FOLLOWING) AS c FROM wt ORDER BY id",
+        "SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '2' DAY FOLLOWING \
+         AND INTERVAL '1' DAY FOLLOWING) AS c FROM wt ORDER BY id",
+    ] {
+        let message = execute_error(&ctx, &catalogs, sql).await;
+        assert!(
+            message.contains("SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON"),
+            "same-kind magnitude invert must refuse like Spark, not wrap; `{sql}` got: {message}"
+        );
+        assert!(
+            message.contains("lower bound of a window frame must be less than or equal"),
+            "`{sql}` must carry Spark's start<=end wording, got: {message}"
+        );
+    }
+}
+
+/// Q-003: a statement that mixes a negative TIMESTAMP interval with a numeric unit-less
+/// `RANGE` bound cannot use the statement-wide restatement. Refuse so wrapping cannot
+/// ride the mix.
+#[tokio::test]
+async fn temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let message = execute_error(
+        &ctx,
+        &catalogs,
+        "SELECT id, \
+         sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING \
+         AND CURRENT ROW) AS by_ts, \
+         sum(v) OVER (ORDER BY v RANGE BETWEEN 10 PRECEDING AND CURRENT ROW) AS by_value \
+         FROM wt ORDER BY id",
+    )
+    .await;
+    assert!(
+        message.contains("UNSUPPORTED.NEGATIVE_RANGE_OFFSET"),
+        "mixed negative-TIMESTAMP + numeric-bare must refuse, got: {message}"
+    );
+}
+
+/// R2: `INTERVAL '1 12:00:00' DAY TO SECOND` (and the brief's `'1 0:0:0'`) is Spark's
+/// one-day-plus-hours trailing window, not an Arrow parse error.
+#[tokio::test]
+async fn temporal_range_day_to_second_literal_matches_spark() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+
+    let day_and_twelve = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1 12:00:00' DAY TO SECOND \
+         PRECEDING AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        day_and_twelve,
+        present(&[10, 30, 60, 90, 90]),
+        "DAY TO SECOND 1 12:00:00 is a 36-hour trailing window (same rows as 1 DAY on this seed)"
+    );
+
+    let day_exactly = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1 0:0:0' DAY TO SECOND \
+         PRECEDING AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        day_exactly,
+        present(&[10, 30, 60, 90, 90]),
+        "DAY TO SECOND 1 0:0:0 is exactly one day"
+    );
+}
+
+/// R1 deferred: unquoted `INTERVAL 1 DAY` still fails at first plan (needs `spark_ast.rs`).
+#[tokio::test]
+async fn temporal_range_unquoted_interval_literal_still_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let message = execute_error(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL 1 DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert!(
+        message.contains("INTERVAL expression cannot be"),
+        "R1 stays a loud first-plan error until a pre-plan rewrite lands, got: {message}"
+    );
+}
+
+/// R4 deferred: both-bounds-FOLLOWING still includes the current row (120 vs Spark 90).
+#[tokio::test]
+async fn temporal_range_following_to_following_still_includes_current_row() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let sums = collect_measured_int64(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '1' DAY FOLLOWING \
+         AND INTERVAL '2' DAY FOLLOWING) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert_eq!(
+        sums,
+        vec![Some(30), None, Some(120), None, None],
+        "R4 stays the recorded silent off-by-one (Spark is 30/NULL/90/NULL/NULL) until a \
+         DataFusion range-search fix; do not absorb a move off this pin"
+    );
+}
+
+/// R5 deferred: interval bound over a numeric key still surfaces a raw Arrow cast error.
+#[tokio::test]
+async fn temporal_range_interval_bound_over_int_key_still_arrow_cast() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    register_timestamp_seed(&ctx);
+    let message = execute_error(
+        &ctx,
+        &catalogs,
+        "SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN INTERVAL '1' DAY PRECEDING \
+         AND CURRENT ROW) AS s FROM wt ORDER BY id",
+    )
+    .await;
+    assert!(
+        message.contains("Cannot cast string") && message.contains("1 DAY"),
+        "R5 stays the recorded Arrow cast error, got: {message}"
     );
 }

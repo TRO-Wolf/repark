@@ -1370,29 +1370,33 @@ NOT in that file is a defect, not a decision.
   (`rank`/`dense_rank`/`row_number`/`ntile`/`percent_rank`), lag/lead default + explicit default
   value + NULL payload, partitioned vs unpartitioned, ORDER BY NULLS FIRST/LAST, and ≥2
   DataFrame-API `Window.partitionBy` rows (CP-11). Seed via `createDataFrame` + temp view so the
-  corpus measures WINDOW behaviour, not VALUES literal-type noise. 19 equalities (value+type match
-  on frames/offsets/default-frame trap) + 8 disclosures (SQL-door ranking returns Arrow `uint64`
-  vs Spark `int32`; DF-API `row_number` already casts to IntegerType and is equality). Every row
+  corpus measures WINDOW behaviour, not VALUES literal-type noise. 31 equalities (value+type match
+  on frames/offsets/default-frame trap + temporal working path) + 11 disclosures (SQL-door ranking
+  returns Arrow `uint64` vs Spark `int32`; R1/R4/R5 residuals). Every row
   asserts on the Arrow path via `repark_parity.assert_frames_equal`; disclosure failures are
   CLASSIFIED CONVERGED (flip-don't-delete) vs regression. Determinism: total ORDER BY or
   peer-determined columns. Ledger: `task/w4-windows-ledger.md`.
   **G5b temporal-`RANGE` family (2026-08-11, appended — no W-4 row edited):** 15 rows, family
-  `temporal_range`, name-gated in the budget test. 9 equalities pin the interval-bounded path
+  `temporal_range`, name-gated in the budget test. 12 equalities pin the interval-bounded path
   over datetime order keys — ascending, descending, ties (zero-width interval == peer group),
-  NULL order keys, `DATE` key, partitioned, centred (both bounds intervals), `HOUR`≠`DAY`, and
-  the fix's own evidence row (a unit-less offset over a `DATE` key means **days**, not Arrow's
-  months). 6 disclosures record what still differs: the unquoted `INTERVAL 1 DAY` and
-  `DAY TO SECOND` frame-bound spellings (refused, Spark accepts), the negative-offset class
-  (`sum` panics, `count(*)` returns **-1** where Spark returns 0), the both-bounds-`FOLLOWING`
-  off-by-one (120 vs Spark's 90), and an interval bound over a numeric key (raw Arrow cast
-  error). Two module-level tests carry the refuse arm the `WindowRow` shape cannot express —
-  it forbids pinning BOTH engines raising — `test_temporal_range_bare_offset_over_timestamp_
-  refuses` and `test_temporal_range_bare_offset_over_date_key_is_days_not_months`. Entry point
+  NULL order keys, `DATE` key, partitioned, centred (both bounds intervals), `HOUR`≠`DAY`, the
+  G5b evidence row (a unit-less offset over a `DATE` key means **days**, not Arrow's months),
+  and Y-1's three flips. **Y-1 (2026-08-12) flipped three residual rows to equality:** `DAY TO SECOND` (R2)
+  and both negative-offset rows (R3 `sum` / `count(*)`). **Half-B** pins same-kind magnitude
+  invert as a shared refuse (`test_temporal_range_negative_both_preceding_refuses_like_spark`
+  — wrapping `-1` is gone on the Spark door after this fix; ANSI still wraps — named residual).
+  Three disclosures remain: unquoted `INTERVAL 1 DAY` (R1, deferred — needs `spark_ast.rs`),
+  both-bounds-`FOLLOWING` off-by-one (R4, 120 vs Spark's 90), and an interval bound over a
+  numeric key (R5, raw Arrow cast). Family disclosure floor is now ≥3. Module-level
+  tests: `test_temporal_range_bare_offset_over_timestamp_refuses`,
+  `test_temporal_range_bare_offset_over_date_key_is_days_not_months`,
+  `test_temporal_range_negative_both_preceding_refuses_like_spark` (Q-001), and
+  `test_temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses` (Q-003). Entry point
   is SQL only: `Window.rangeBetween` takes numeric offsets in PySpark and in the facade, so a
   temporal frame is unreachable from the DataFrame API in either engine. Engine half:
   `crates/repark-spark/src/window_range.rs`; Spark-door pins:
-  `crates/repark-spark/src/tests/window_temporal_range.rs`. Ledger:
-  `task/g5b-temporal-range-ledger.md`.
+  `crates/repark-spark/src/tests/window_temporal_range.rs`. Ledgers:
+  `task/g5b-temporal-range-ledger.md`, `task/g5br-range-residuals-ledger.md`.
 - `_record_window_goldens.py` — the **record driver** for the window corpus (NOT a `test_` module;
   never collected). Imports `ROWS` + `run_row` from the committed test module; re-derives every
   Spark half on live PySpark 4.1.2 (`local[2]`, ANSI on, shuffle=2). `--emit` prints paste-ready
@@ -1728,7 +1732,7 @@ Window.partitionBy/orderBy refuse; cube/rollup/groupingSets + SQL agg bare explo
 | a value-offset `rangeBetween` refuses a CAST order key | the guard resolves the key by NAME and a cast keeps its BASE column's projection name; `Column.over` treats a key as bare only when its spark display equals that name. Both sides are pinned in `test_g2_window_rand_sampleby.py` — do not widen one without the other. |
 | a `test_decimal128_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output (or raises the same ANSI class): do NOT delete — flip to equality / shared-raise and record the convergence. |
 | a decimal128 row reds saying regression | re-derive both halves with `_record_decimal128_goldens.py` before touching the pin. |
-| a `temporal_range` row reds | check WHICH half moved: an equality row means the interval-bounded path regressed (re-derive both halves); a disclosure means a residual class changed — flip it, do not delete it. `task/g5b-temporal-range-ledger.md` §6 names the follow-up per class |
+| a `temporal_range` row reds | check WHICH half moved: an equality row means the interval-bounded path (or Y-1's R2/R3 / Half-B invert fix) regressed (re-derive both halves); a disclosure means a residual class changed — flip it, do not delete it. `task/g5br-range-residuals-ledger.md` §6 names the remaining classes |
 | a `test_window_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |
 | a window row reds saying regression | re-derive both halves with `_record_window_goldens.py` before touching the pin. |
 | a `test_nested_container_parity.py` row reds saying CONVERGED | repark now produces the recorded Spark list/struct/map output: do NOT delete — flip to `repark=None` (equality) and record the convergence. |

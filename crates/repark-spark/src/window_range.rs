@@ -28,12 +28,19 @@
 //! arm restates the **AST** ([`rewrite_bare_range_bounds_to_days`]) and re-plans, where the
 //! whole plan is rebuilt consistently.
 //!
-//! **Scope.** Only bounds that are unit-less numbers under `RANGE` over a datetime key are
-//! touched; an interval-shaped bound, a `ROWS`/`GROUPS` frame, and every numeric key are left
-//! exactly as they were. Residual divergences of the surrounding surface (unquoted
-//! `INTERVAL 1 DAY`, `DAY TO SECOND` literals, negative offsets, `FOLLOWING`-to-`FOLLOWING`
-//! values) are recorded rows in `python/repark/tests/test_window_parity.py`, not silent gaps.
+//! **Scope.** Unit-less numbers under `RANGE` over a datetime key (G5b), plus the G5b-R
+//! residuals that share this seam: a **negative** or **value-inverted** interval offset over
+//! a `TIMESTAMP` key (R3 — wrapping `count(*)` / debug panic) and a `DAY TO SECOND` qualified
+//! literal (R2). Invert is kind-or-magnitude after sign-normalize (`-2 PRECEDING AND -1
+//! PRECEDING` becomes `2 FOLLOWING AND 1 FOLLOWING`: same kind, start after end). An inverted
+//! frame is Spark-empty: the restatement attaches `FILTER (WHERE false)` and a current-row
+//! frame so DataFusion never executes the inverted search. Unquoted `INTERVAL 1 DAY` (R1)
+//! fails at first plan, before classify, and needs a pre-plan rewrite in `spark_ast.rs` (not
+//! this unit's writable set). Both-bounds-`FOLLOWING` values that are **not** inverted (R4)
+//! are a DataFusion range-search off-by-one at the pin. An interval over a numeric key (R5)
+//! is error-class alignment. Those three stay recorded residuals.
 
+use std::collections::HashSet;
 use std::ops::ControlFlow;
 
 use datafusion::arrow::datatypes::DataType;
@@ -45,18 +52,24 @@ use datafusion::logical_expr::{
     Expr, ExprSchemable, LogicalPlan, WindowFrameBound, WindowFrameUnits,
 };
 use datafusion::sql::sqlparser::ast::{
-    DateTimeField, Expr as AstExpr, Interval, NamedWindowExpr, Query, SetExpr, Statement, Value,
-    ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut, WindowFrameBound as AstWindowFrameBound,
+    DateTimeField, Expr as AstExpr, Interval, NamedWindowExpr, Query, SetExpr, Statement,
+    UnaryOperator, Value, ValueWithSpan, Visit, VisitMut, Visitor, VisitorMut,
+    WindowFrame as AstWindowFrame, WindowFrameBound as AstWindowFrameBound,
     WindowFrameUnits as AstWindowFrameUnits, WindowSpec, WindowType,
 };
+use datafusion::sql::sqlparser::tokenizer::Span;
 
 /// What a planned statement's `RANGE` frames ask the door to do before execution.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RangeFrameVerdict {
-    /// Nothing to do — no bare-number `RANGE` bound sits over a datetime order key.
+    /// Nothing to do — no bare-number `RANGE` bound sits over a datetime order key, and no
+    /// G5b-R interval restatement (negative TIMESTAMP offset / `DAY TO SECOND`) is pending.
     Unchanged,
-    /// At least one DATE-keyed frame needs its unit-less bounds restated as `INTERVAL '<n>' DAY`,
-    /// and no numeric-keyed frame in the same statement would be caught by that restatement.
+    /// Restate the AST and re-plan: DATE-keyed unit-less bounds become `INTERVAL '<n>' DAY`,
+    /// negative / value-inverted TIMESTAMP interval offsets become a Spark-empty frame
+    /// (`FILTER (WHERE false)` over a current-row frame), and `DAY TO SECOND` literals
+    /// become an Arrow-accepted interval string. Only safe when no numeric-keyed unit-less
+    /// bound in the same statement would be caught by that restatement.
     RestateBareBoundsAsDays,
 }
 
@@ -73,6 +86,8 @@ pub(crate) enum RangeFrameVerdict {
 pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeFrameVerdict> {
     let mut date_keyed_sites = 0usize;
     let mut other_keyed_sites = 0usize;
+    let mut interval_restate_sites = 0usize;
+    let mut negative_timestamp_sites = 0usize;
     let mut refusal: Option<DataFusionError> = None;
 
     plan.apply_with_subqueries(|node| {
@@ -98,6 +113,14 @@ pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeF
                         other_keyed_sites += 1;
                         Ok(TreeNodeRecursion::Continue)
                     }
+                    Ok(Some(FrameSite::IntervalRestate)) => {
+                        interval_restate_sites += 1;
+                        Ok(TreeNodeRecursion::Continue)
+                    }
+                    Ok(Some(FrameSite::NegativeTimestamp)) => {
+                        negative_timestamp_sites += 1;
+                        Ok(TreeNodeRecursion::Continue)
+                    }
                     Ok(None) => Ok(TreeNodeRecursion::Continue),
                 }
             })?;
@@ -109,22 +132,32 @@ pub(crate) fn classify_planned_range_frames(plan: &LogicalPlan) -> Result<RangeF
         return Err(error);
     }
     // The restatement is statement-wide (the AST carries no resolved order-key type), so it is
-    // only safe when every unit-less RANGE bound in the statement belongs to a DATE-keyed frame.
-    // A statement that mixes a DATE-keyed frame with an ordinary numeric-keyed one keeps its
-    // recorded divergence rather than silently re-scaling the numeric frame to days.
-    if date_keyed_sites > 0 && other_keyed_sites == 0 {
+    // only safe when no unit-less RANGE bound in the statement belongs to a numeric-keyed frame.
+    // A mixed DATE/INT bare-number statement keeps its recorded divergence rather than
+    // silently re-scaling the numeric frame to days. A mixed inverted-TIMESTAMP / numeric-bare
+    // statement cannot be restated either — refuse so R3 wrapping cannot ride the mix.
+    if negative_timestamp_sites > 0 && other_keyed_sites > 0 {
+        return Err(negative_range_offset_error());
+    }
+    if (date_keyed_sites > 0 || interval_restate_sites > 0 || negative_timestamp_sites > 0)
+        && other_keyed_sites == 0
+    {
         return Ok(RangeFrameVerdict::RestateBareBoundsAsDays);
     }
     Ok(RangeFrameVerdict::Unchanged)
 }
 
-/// Which order-key family a unit-less `RANGE` bound was found over.
+/// Which order-key family / residual a `RANGE` bound was found over.
 #[derive(Debug, Clone, Copy)]
 enum FrameSite {
     /// `DATE` order key — Spark reads the number as days.
     DateKeyed,
     /// Any non-datetime order key — an ordinary numeric `RANGE`, already correct.
     OtherKeyed,
+    /// Interval text Arrow cannot parse as-is (`DAY TO SECOND` → `"1 12:00:00 DAY"`).
+    IntervalRestate,
+    /// Negative or value-inverted interval over a `TIMESTAMP` key (R3 wrapping class).
+    NegativeTimestamp,
 }
 
 /// ===========================================================================================
@@ -148,18 +181,131 @@ fn classify_one_frame(
     .into_iter()
     .filter_map(bare_number_bound_text)
     .collect();
-    if bare_bounds.is_empty() {
-        return Ok(None);
-    }
     let key_type = sort.expr.get_type(input_schema)?;
-    match key_type {
-        DataType::Date32 | DataType::Date64 => Ok(Some(FrameSite::DateKeyed)),
-        DataType::Timestamp(_, _) => Err(range_frame_invalid_type_error(
-            &sort.expr.to_string(),
-            &params.window_frame.to_string(),
-        )),
-        _ => Ok(Some(FrameSite::OtherKeyed)),
+    if !bare_bounds.is_empty() {
+        return match key_type {
+            DataType::Date32 | DataType::Date64 => Ok(Some(FrameSite::DateKeyed)),
+            DataType::Timestamp(_, _) => Err(range_frame_invalid_type_error(
+                &sort.expr.to_string(),
+                &params.window_frame.to_string(),
+            )),
+            _ => Ok(Some(FrameSite::OtherKeyed)),
+        };
     }
+    let interval_texts = [
+        &params.window_frame.start_bound,
+        &params.window_frame.end_bound,
+    ]
+    .into_iter()
+    .filter_map(interval_bound_text);
+    let mut saw_colon = false;
+    let mut saw_negative = false;
+    for text in interval_texts {
+        if text.trim().starts_with('-') {
+            saw_negative = true;
+        }
+        if text.contains(':') {
+            saw_colon = true;
+        }
+    }
+    let inverted = planned_frame_is_value_inverted(&params.window_frame);
+    match key_type {
+        DataType::Timestamp(_, _)
+            if inverted && planned_frame_is_same_kind_magnitude_invert(&params.window_frame) =>
+        {
+            // Spark 4.1.2 refuses same-kind magnitude invert (`2 FOLLOWING AND 1 FOLLOWING`,
+            // including after `-2 PRECEDING AND -1 PRECEDING` flips). Empty is the
+            // CURRENT-ROW kind-invert class only. Never execute: wrapping is the DF defect.
+            Err(window_frame_wrong_comparison_error(
+                &params.window_frame.to_string(),
+            ))
+        }
+        DataType::Timestamp(_, _) if inverted || saw_negative => {
+            Ok(Some(FrameSite::NegativeTimestamp))
+        }
+        DataType::Date32 | DataType::Date64 | DataType::Timestamp(_, _) if saw_colon => {
+            Ok(Some(FrameSite::IntervalRestate))
+        }
+        _ => Ok(None),
+    }
+}
+
+/// True when, after sign-normalizing each bound, the start sits strictly after the end.
+///
+/// Kind invert (`FOLLOWING` then `CURRENT ROW`) and same-kind magnitude invert
+/// (`2 FOLLOWING AND 1 FOLLOWING`, including after `-2 PRECEDING AND -1 PRECEDING` flips)
+/// are both invert. DataFusion's start≤end check is kind-only, so the magnitude case wraps
+/// (`count(*)` = -1) unless we restated it first.
+fn planned_frame_is_value_inverted(frame: &datafusion::logical_expr::WindowFrame) -> bool {
+    if frame.units != WindowFrameUnits::Range {
+        return false;
+    }
+    matches!(
+        position_is_strictly_after(
+            planned_bound_position(&frame.start_bound),
+            planned_bound_position(&frame.end_bound),
+        ),
+        Some(true)
+    )
+}
+
+/// Same-kind magnitude invert: both bounds are finite offsets and start sits after end
+/// (`2 FOLLOWING AND 1 FOLLOWING`). Distinct from kind invert (`FOLLOWING` vs `CURRENT ROW`).
+fn planned_frame_is_same_kind_magnitude_invert(
+    frame: &datafusion::logical_expr::WindowFrame,
+) -> bool {
+    matches!(
+        (
+            planned_bound_position(&frame.start_bound),
+            planned_bound_position(&frame.end_bound),
+        ),
+        (SignedBound::Offset(_), SignedBound::Offset(_))
+    ) && planned_frame_is_value_inverted(frame)
+}
+
+fn planned_bound_position(bound: &WindowFrameBound) -> SignedBound {
+    match bound {
+        WindowFrameBound::CurrentRow => SignedBound::Current,
+        WindowFrameBound::Preceding(value) if value.is_null() => SignedBound::UnboundedPreceding,
+        WindowFrameBound::Following(value) if value.is_null() => SignedBound::UnboundedFollowing,
+        WindowFrameBound::Preceding(value) => match scalar_offset_axis(value) {
+            Some(axis) => SignedBound::Offset(negate_axis(axis)),
+            None => SignedBound::Unknown,
+        },
+        WindowFrameBound::Following(value) => match scalar_offset_axis(value) {
+            Some(axis) => SignedBound::Offset(axis),
+            None => SignedBound::Unknown,
+        },
+    }
+}
+
+fn scalar_offset_axis(value: &ScalarValue) -> Option<Axis> {
+    match value {
+        ScalarValue::Utf8(Some(text)) | ScalarValue::LargeUtf8(Some(text)) => {
+            parse_interval_axis(text)
+        }
+        _ => None,
+    }
+}
+
+/// Utf8 offset text of a value bound when it is interval-shaped (`"1 DAY"`, `"-1 DAY"`,
+/// `"1 12:00:00 DAY"`). Bare numbers and unbounded bounds yield `None`.
+fn interval_bound_text(bound: &WindowFrameBound) -> Option<&str> {
+    let scalar = match bound {
+        WindowFrameBound::Preceding(value) | WindowFrameBound::Following(value) => value,
+        WindowFrameBound::CurrentRow => return None,
+    };
+    let ScalarValue::Utf8(Some(text)) = scalar else {
+        return None;
+    };
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.contains(char::is_alphabetic) || trimmed.starts_with('-') {
+        return Some(trimmed);
+    }
+    None
 }
 
 /// The still-`Utf8` offset text of a value bound, when it is a unit-less number (`"1"`, `"2.5"`,
@@ -196,75 +342,485 @@ fn range_frame_invalid_type_error(order_key: &str, window_frame: &str) -> DataFu
 }
 
 /// ===========================================================================================
-/// Restate every unit-less `RANGE` frame bound in the statement as `INTERVAL '<n>' DAY`.
+/// Refusal when a negative TIMESTAMP `RANGE` offset shares a statement with a numeric
+/// unit-less bound, so the statement-wide AST restatement cannot run.
 ///
-/// Spark reads a bare `RANGE` offset over a `DATE` key as a number of days; DataFusion's
-/// coercion reads it as months. Applied only when [`classify_planned_range_frames`] returned
-/// [`RangeFrameVerdict::RestateBareBoundsAsDays`], i.e. every such bound in the statement sits
-/// over a DATE key. Mirrors [`crate::spark_ast::apply_spark_order_by_defaults`]'s traversal:
-/// `post_visit_expr` reaches inline `OVER (…)`, `post_visit_query` the named `WINDOW` clauses.
+/// The wrapping class (release `count(*)` = -1 / debug panic) must not survive. Mixed
+/// statements take this loud out instead of executing the inverted search.
+/// ===========================================================================================
+fn negative_range_offset_error() -> DataFusionError {
+    DataFusionError::Plan(
+        "[UNSUPPORTED.NEGATIVE_RANGE_OFFSET] RANGE frame with a negative interval offset \
+         over a TIMESTAMP order key cannot be restated in a statement that also carries a \
+         unit-less RANGE bound over a numeric key (G5b-R3). Split the statement, or write a \
+         non-negative interval. Spark 4.1.2 returns an empty frame for the inverted spelling; \
+         executing it here wraps the sliding-window count. SQLSTATE: 0A000"
+            .to_string(),
+    )
+}
+
+/// Spark 4.1.2's refusal when a RANGE frame's lower bound sits after its upper bound
+/// (same-kind magnitude invert after sign-normalize). Recorded live under MARKER=y1-g5br-fix.
+fn window_frame_wrong_comparison_error(window_frame: &str) -> DataFusionError {
+    DataFusionError::Plan(format!(
+        "[DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON] Cannot resolve \
+         \"{window_frame}\" due to data type mismatch: The lower bound of a window frame \
+         must be less than or equal to the upper bound. SQLSTATE: 42K09"
+    ))
+}
+
+/// ===========================================================================================
+/// Restate `RANGE` frame bounds the DATE / G5b-R arms need, then the caller re-plans.
+///
+/// Applied only when [`classify_planned_range_frames`] returned
+/// [`RangeFrameVerdict::RestateBareBoundsAsDays`]:
+/// - unit-less numbers become `INTERVAL '<n>' DAY` (DATE key, Spark days not Arrow months);
+/// - a negative interval over a `TIMESTAMP` key is sign-normalized; a value-inverted
+///   frame (kind or same-kind magnitude) becomes Spark-empty via `FILTER (WHERE false)`
+///   over a current-row frame (R3 — no far-future YEAR pair);
+/// - `DAY TO SECOND` literals become an Arrow-accepted interval string (R2).
+///
+/// Mirrors [`crate::spark_ast::apply_spark_order_by_defaults`]'s traversal: `post_visit_expr`
+/// reaches inline `OVER (…)`, `post_visit_query` the named `WINDOW` clauses.
 /// ===========================================================================================
 pub(crate) fn rewrite_bare_range_bounds_to_days(statement: &mut Statement) {
-    let mut visitor = BareRangeBoundsAsDays;
+    let mut visitor = BareRangeBoundsAsDays {
+        inverted_named_windows: HashSet::new(),
+    };
     // The visitor's Break type is uninhabited — traversal always completes.
     let _ = VisitMut::visit(statement, &mut visitor);
 }
 
 /// The visitor behind [`rewrite_bare_range_bounds_to_days`].
-struct BareRangeBoundsAsDays;
+struct BareRangeBoundsAsDays {
+    /// Named `WINDOW w AS (…)` specs that were inverted and restated to a current-row
+    /// frame. Each `OVER w` reference must also get `FILTER (WHERE false)` so the
+    /// restated spec is Spark-empty, not a peer-group window.
+    inverted_named_windows: HashSet<String>,
+}
 
 impl VisitorMut for BareRangeBoundsAsDays {
     type Break = std::convert::Infallible;
 
-    fn post_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
-        restate_set_expr(&mut query.body);
+    fn pre_visit_query(&mut self, query: &mut Query) -> ControlFlow<Self::Break> {
+        // Named windows must be classified before the SELECT-list functions that
+        // reference them (`OVER w`) are visited.
+        restate_set_expr(&mut query.body, &mut self.inverted_named_windows);
         ControlFlow::Continue(())
     }
 
     fn post_visit_expr(&mut self, expr: &mut AstExpr) -> ControlFlow<Self::Break> {
-        if let AstExpr::Function(function) = expr
-            && let Some(WindowType::WindowSpec(spec)) = &mut function.over
-        {
-            restate_window_spec(spec);
+        let AstExpr::Function(function) = expr else {
+            return ControlFlow::Continue(());
+        };
+        match &mut function.over {
+            Some(WindowType::WindowSpec(spec)) => {
+                if restate_window_spec(spec) {
+                    apply_false_filter(function);
+                }
+            }
+            Some(WindowType::NamedWindow(name))
+                if self.inverted_named_windows.contains(&name.value) =>
+            {
+                apply_false_filter(function);
+            }
+            Some(WindowType::NamedWindow(_)) | None => {}
         }
         ControlFlow::Continue(())
     }
 }
 
-/// Reach the named `WINDOW w AS (…)` clauses of every `SELECT` in a query body. Nested queries
-/// get their own `post_visit_query`; set operations are walked to both sides.
-fn restate_set_expr(body: &mut SetExpr) {
+/// Reach the named `WINDOW w AS (…)` clauses of every `SELECT` in a query body. Nested
+/// queries get their own `pre_visit_query`; set operations are walked to both sides.
+fn restate_set_expr(body: &mut SetExpr, inverted_named_windows: &mut HashSet<String>) {
     match body {
         SetExpr::Select(select) => {
             for window in &mut select.named_window {
-                if let NamedWindowExpr::WindowSpec(spec) = &mut window.1 {
-                    restate_window_spec(spec);
+                if let NamedWindowExpr::WindowSpec(spec) = &mut window.1
+                    && restate_window_spec(spec)
+                {
+                    inverted_named_windows.insert(window.0.value.clone());
                 }
             }
         }
         SetExpr::SetOperation { left, right, .. } => {
-            restate_set_expr(left);
-            restate_set_expr(right);
+            restate_set_expr(left, inverted_named_windows);
+            restate_set_expr(right, inverted_named_windows);
         }
         _ => {}
     }
 }
 
 /// Restate both bounds of one window spec's `RANGE` frame (no-op for `ROWS` / `GROUPS`).
-fn restate_window_spec(spec: &mut WindowSpec) {
+///
+/// Returns `true` when the frame is value-inverted after sign-normalize and was rewritten
+/// to a current-row frame; the caller must attach `FILTER (WHERE false)` so the window is
+/// Spark-empty rather than a peer group.
+fn restate_window_spec(spec: &mut WindowSpec) -> bool {
     let Some(frame) = &mut spec.window_frame else {
-        return;
+        return false;
     };
     if frame.units != AstWindowFrameUnits::Range {
-        return;
+        return false;
     }
+    normalize_negative_interval_bounds(frame);
     restate_bound(&mut frame.start_bound);
     if let Some(end_bound) = &mut frame.end_bound {
         restate_bound(end_bound);
     }
+    if frame_is_value_inverted(frame) {
+        write_current_row_range_frame(frame);
+        return true;
+    }
+    false
 }
 
-/// `<n> PRECEDING` → `INTERVAL '<n>' DAY PRECEDING`; anything else is untouched.
+/// Flip `INTERVAL '-n' UNIT PRECEDING` ↔ `INTERVAL 'n' UNIT FOLLOWING` (and the inverse).
+///
+/// DataFusion's start≤end check looks at bound *kind*, not the sign inside the interval
+/// scalar, so a negative PRECEDING is not seen as FOLLOWING and the sliding window wraps.
+/// Returns whether any bound was flipped.
+fn normalize_negative_interval_bounds(frame: &mut AstWindowFrame) -> bool {
+    let start_flipped = flip_negative_interval_bound(&mut frame.start_bound);
+    let end_flipped = frame
+        .end_bound
+        .as_mut()
+        .is_some_and(flip_negative_interval_bound);
+    start_flipped || end_flipped
+}
+
+/// Flip one negative interval bound's sign and PRECEDING/FOLLOWING kind. `true` if flipped.
+fn flip_negative_interval_bound(bound: &mut AstWindowFrameBound) -> bool {
+    {
+        let Some(interval) = bound_interval_mut(bound) else {
+            return false;
+        };
+        if !interval_value_is_negative(&interval.value) {
+            return false;
+        }
+        if !strip_interval_value_sign(&mut interval.value) {
+            return false;
+        }
+    }
+    let taken = std::mem::replace(bound, AstWindowFrameBound::CurrentRow);
+    *bound = match taken {
+        AstWindowFrameBound::Preceding(offset) => AstWindowFrameBound::Following(offset),
+        AstWindowFrameBound::Following(offset) => AstWindowFrameBound::Preceding(offset),
+        AstWindowFrameBound::CurrentRow => AstWindowFrameBound::CurrentRow,
+    };
+    true
+}
+
+/// True when, after reading each bound's signed position, start sits strictly after end.
+///
+/// Replaces a kind-only check: `-2 PRECEDING AND -1 PRECEDING` sign-normalizes to
+/// `2 FOLLOWING AND 1 FOLLOWING` (same kind, magnitude inverted). Kind-only would miss
+/// that and DataFusion would wrap.
+fn frame_is_value_inverted(frame: &AstWindowFrame) -> bool {
+    let start = ast_bound_position(&frame.start_bound);
+    let end = frame
+        .end_bound
+        .as_ref()
+        .map_or(SignedBound::Current, ast_bound_position);
+    matches!(position_is_strictly_after(start, end), Some(true))
+}
+
+/// `RANGE BETWEEN CURRENT ROW AND CURRENT ROW` — a valid (non-inverted) frame. Combined
+/// with `FILTER (WHERE false)` this is Spark's empty window without a far-future YEAR pair.
+fn write_current_row_range_frame(frame: &mut AstWindowFrame) {
+    frame.start_bound = AstWindowFrameBound::CurrentRow;
+    frame.end_bound = Some(AstWindowFrameBound::CurrentRow);
+}
+
+fn apply_false_filter(function: &mut datafusion::sql::sqlparser::ast::Function) {
+    function.filter = Some(Box::new(AstExpr::Value(ValueWithSpan {
+        value: Value::Boolean(false),
+        span: Span::empty(),
+    })));
+}
+
+/// Signed bound positions (kind + magnitude) after reading the sign inside an interval.
+const NANOS_PER_SECOND: i128 = 1_000_000_000;
+const SECONDS_PER_MINUTE: i128 = 60;
+const SECONDS_PER_HOUR: i128 = 3_600;
+const SECONDS_PER_DAY: i128 = 86_400;
+
+/// A comparable RANGE offset. Distinct axes never compare (1 MONTH vs 1 DAY is unknown).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Axis {
+    Months(i128),
+    Nanos(i128),
+    /// Unit-less number (DATE-arm bare bound before restatement).
+    Unitless(i128),
+}
+
+/// Position of one frame bound on the order-key line (current row = 0).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SignedBound {
+    UnboundedPreceding,
+    Offset(Axis),
+    Current,
+    UnboundedFollowing,
+    /// Unparsable offset — do not claim invert (and do not empty a valid frame).
+    Unknown,
+}
+
+fn negate_axis(axis: Axis) -> Axis {
+    match axis {
+        Axis::Months(value) => Axis::Months(-value),
+        Axis::Nanos(value) => Axis::Nanos(-value),
+        Axis::Unitless(value) => Axis::Unitless(-value),
+    }
+}
+
+fn apply_axis_sign(negative: bool, axis: Axis) -> Axis {
+    if negative { negate_axis(axis) } else { axis }
+}
+
+fn zero_of(axis: Axis) -> Axis {
+    match axis {
+        Axis::Months(_) => Axis::Months(0),
+        Axis::Nanos(_) => Axis::Nanos(0),
+        Axis::Unitless(_) => Axis::Unitless(0),
+    }
+}
+
+fn axis_is_greater(left: Axis, right: Axis) -> Option<bool> {
+    match (left, right) {
+        (Axis::Months(left_value), Axis::Months(right_value))
+        | (Axis::Nanos(left_value), Axis::Nanos(right_value))
+        | (Axis::Unitless(left_value), Axis::Unitless(right_value)) => {
+            Some(left_value > right_value)
+        }
+        _ => None,
+    }
+}
+
+fn position_is_strictly_after(start: SignedBound, end: SignedBound) -> Option<bool> {
+    match (start, end) {
+        (SignedBound::Unknown, _) | (_, SignedBound::Unknown) => None,
+        (SignedBound::UnboundedPreceding, _)
+        | (_, SignedBound::UnboundedFollowing)
+        | (SignedBound::Current, SignedBound::Current) => Some(false),
+        (SignedBound::UnboundedFollowing, _) | (_, SignedBound::UnboundedPreceding) => Some(true),
+        (SignedBound::Offset(start_axis), SignedBound::Offset(end_axis)) => {
+            axis_is_greater(start_axis, end_axis)
+        }
+        (SignedBound::Offset(start_axis), SignedBound::Current) => {
+            axis_is_greater(start_axis, zero_of(start_axis))
+        }
+        (SignedBound::Current, SignedBound::Offset(end_axis)) => {
+            axis_is_greater(zero_of(end_axis), end_axis)
+        }
+    }
+}
+
+fn ast_bound_position(bound: &AstWindowFrameBound) -> SignedBound {
+    match bound {
+        AstWindowFrameBound::CurrentRow => SignedBound::Current,
+        AstWindowFrameBound::Preceding(None) => SignedBound::UnboundedPreceding,
+        AstWindowFrameBound::Following(None) => SignedBound::UnboundedFollowing,
+        AstWindowFrameBound::Preceding(Some(expr)) => match ast_offset_axis(expr) {
+            Some(axis) => SignedBound::Offset(negate_axis(axis)),
+            None => SignedBound::Unknown,
+        },
+        AstWindowFrameBound::Following(Some(expr)) => match ast_offset_axis(expr) {
+            Some(axis) => SignedBound::Offset(axis),
+            None => SignedBound::Unknown,
+        },
+    }
+}
+
+fn ast_offset_axis(expr: &AstExpr) -> Option<Axis> {
+    match expr {
+        AstExpr::Interval(interval) => ast_interval_axis(interval),
+        AstExpr::Value(ValueWithSpan {
+            value: Value::Number(text, _) | Value::SingleQuotedString(text),
+            ..
+        }) => parse_interval_axis(text),
+        AstExpr::UnaryOp {
+            op: UnaryOperator::Minus,
+            expr,
+        } => Some(negate_axis(ast_offset_axis(expr)?)),
+        _ => None,
+    }
+}
+
+fn ast_interval_axis(interval: &Interval) -> Option<Axis> {
+    let literal = interval_signed_literal(&interval.value)?;
+    if interval.last_field.is_some() {
+        return parse_interval_axis(&literal);
+    }
+    if let Some(field) = &interval.leading_field {
+        let (negative, number_text) = strip_leading_minus(literal.trim());
+        let count: i128 = number_text.parse().ok()?;
+        return Some(apply_axis_sign(
+            negative,
+            axis_from_datetime_field(field, count)?,
+        ));
+    }
+    parse_interval_axis(&literal)
+}
+
+fn interval_signed_literal(value: &AstExpr) -> Option<String> {
+    match value {
+        AstExpr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(text) | Value::Number(text, _),
+            ..
+        }) => Some(text.clone()),
+        AstExpr::UnaryOp {
+            op: UnaryOperator::Minus,
+            expr,
+        } => Some(format!("-{}", interval_signed_literal(expr)?)),
+        _ => None,
+    }
+}
+
+fn axis_from_datetime_field(field: &DateTimeField, count: i128) -> Option<Axis> {
+    match field {
+        DateTimeField::Year | DateTimeField::Years => Some(Axis::Months(count.checked_mul(12)?)),
+        DateTimeField::Quarter => Some(Axis::Months(count.checked_mul(3)?)),
+        DateTimeField::Month | DateTimeField::Months => Some(Axis::Months(count)),
+        DateTimeField::Week(_) | DateTimeField::Weeks => Some(Axis::Nanos(
+            count.checked_mul(7 * SECONDS_PER_DAY * NANOS_PER_SECOND)?,
+        )),
+        DateTimeField::Day | DateTimeField::Days => Some(Axis::Nanos(
+            count.checked_mul(SECONDS_PER_DAY * NANOS_PER_SECOND)?,
+        )),
+        DateTimeField::Hour | DateTimeField::Hours => Some(Axis::Nanos(
+            count.checked_mul(SECONDS_PER_HOUR * NANOS_PER_SECOND)?,
+        )),
+        DateTimeField::Minute | DateTimeField::Minutes => Some(Axis::Nanos(
+            count.checked_mul(SECONDS_PER_MINUTE * NANOS_PER_SECOND)?,
+        )),
+        DateTimeField::Second | DateTimeField::Seconds => {
+            Some(Axis::Nanos(count.checked_mul(NANOS_PER_SECOND)?))
+        }
+        DateTimeField::Millisecond | DateTimeField::Milliseconds => {
+            Some(Axis::Nanos(count.checked_mul(1_000_000)?))
+        }
+        DateTimeField::Microsecond | DateTimeField::Microseconds => {
+            Some(Axis::Nanos(count.checked_mul(1_000)?))
+        }
+        DateTimeField::Nanosecond | DateTimeField::Nanoseconds => Some(Axis::Nanos(count)),
+        _ => None,
+    }
+}
+
+fn strip_leading_minus(text: &str) -> (bool, &str) {
+    text.strip_prefix('-')
+        .map_or((false, text), |rest| (true, rest.trim()))
+}
+
+fn parse_interval_axis(text: &str) -> Option<Axis> {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let (negative, rest) = strip_leading_minus(trimmed);
+    if let Some(axis) = parse_spelled_out_interval(rest) {
+        return Some(apply_axis_sign(negative, axis));
+    }
+    if let Some(axis) = parse_day_to_second_axis(rest) {
+        return Some(apply_axis_sign(negative, axis));
+    }
+    if let Some(axis) = parse_number_and_unit(rest) {
+        return Some(apply_axis_sign(negative, axis));
+    }
+    let count: i128 = rest.parse().ok()?;
+    Some(apply_axis_sign(negative, Axis::Unitless(count)))
+}
+
+fn parse_spelled_out_interval(text: &str) -> Option<Axis> {
+    let tokens: Vec<&str> = text.split_whitespace().collect();
+    if tokens.len() < 4 || !tokens.len().is_multiple_of(2) {
+        return None;
+    }
+    let mut nanos = 0_i128;
+    let mut months = 0_i128;
+    let mut saw_nanos = false;
+    let mut saw_months = false;
+    for pair in tokens.chunks(2) {
+        let count: i128 = pair[0].parse().ok()?;
+        match axis_from_unit_name(pair[1], count)? {
+            Axis::Nanos(value) => {
+                nanos = nanos.checked_add(value)?;
+                saw_nanos = true;
+            }
+            Axis::Months(value) => {
+                months = months.checked_add(value)?;
+                saw_months = true;
+            }
+            Axis::Unitless(_) => return None,
+        }
+    }
+    if saw_months && saw_nanos {
+        return None;
+    }
+    if saw_months {
+        Some(Axis::Months(months))
+    } else if saw_nanos {
+        Some(Axis::Nanos(nanos))
+    } else {
+        None
+    }
+}
+
+fn parse_day_to_second_axis(text: &str) -> Option<Axis> {
+    let unsigned = text.trim();
+    let (days_text, time_text) = unsigned.split_once(' ')?;
+    if !time_text.contains(':') {
+        return None;
+    }
+    let days: i128 = days_text.parse().ok()?;
+    let mut time_parts = time_text.split(':');
+    let hours: i128 = time_parts.next()?.parse().ok()?;
+    let minutes: i128 = time_parts.next()?.parse().ok()?;
+    let seconds_text = time_parts.next().unwrap_or("0");
+    if time_parts.next().is_some() {
+        return None;
+    }
+    let seconds_whole = seconds_text.split('.').next().unwrap_or("0");
+    let seconds: i128 = seconds_whole.parse().ok()?;
+    let nanos = days
+        .checked_mul(SECONDS_PER_DAY * NANOS_PER_SECOND)?
+        .checked_add(hours.checked_mul(SECONDS_PER_HOUR * NANOS_PER_SECOND)?)?
+        .checked_add(minutes.checked_mul(SECONDS_PER_MINUTE * NANOS_PER_SECOND)?)?
+        .checked_add(seconds.checked_mul(NANOS_PER_SECOND)?)?;
+    Some(Axis::Nanos(nanos))
+}
+
+fn parse_number_and_unit(text: &str) -> Option<Axis> {
+    let mut parts = text.split_whitespace();
+    let number_text = parts.next()?;
+    let unit_text = parts.next()?;
+    if parts.next().is_some() {
+        return None;
+    }
+    let count: i128 = number_text.parse().ok()?;
+    axis_from_unit_name(unit_text, count)
+}
+
+fn axis_from_unit_name(unit: &str, count: i128) -> Option<Axis> {
+    let normalized = unit.trim_end_matches(',').to_ascii_lowercase();
+    let field = match normalized.as_str() {
+        "year" | "years" => DateTimeField::Year,
+        "quarter" | "quarters" => DateTimeField::Quarter,
+        "month" | "months" => DateTimeField::Month,
+        "week" | "weeks" => DateTimeField::Week(None),
+        "day" | "days" => DateTimeField::Day,
+        "hour" | "hours" => DateTimeField::Hour,
+        "minute" | "minutes" => DateTimeField::Minute,
+        "second" | "seconds" => DateTimeField::Second,
+        "millisecond" | "milliseconds" => DateTimeField::Millisecond,
+        "microsecond" | "microseconds" => DateTimeField::Microsecond,
+        "nanosecond" | "nanoseconds" => DateTimeField::Nanosecond,
+        _ => return None,
+    };
+    axis_from_datetime_field(&field, count)
+}
+
+/// `<n> PRECEDING` → `INTERVAL '<n>' DAY PRECEDING`; `DAY TO SECOND` → Arrow-accepted text.
 fn restate_bound(bound: &mut AstWindowFrameBound) {
     let offset = match bound {
         AstWindowFrameBound::Preceding(value) | AstWindowFrameBound::Following(value) => value,
@@ -273,27 +829,171 @@ fn restate_bound(bound: &mut AstWindowFrameBound) {
     let Some(expr) = offset else {
         return;
     };
-    let AstExpr::Value(ValueWithSpan {
+    if let AstExpr::Value(ValueWithSpan {
         value: Value::Number(number, false),
         span,
     }) = expr.as_ref()
-    else {
+    {
+        let span = *span;
+        let number = number.clone();
+        **expr = AstExpr::Interval(Interval {
+            value: Box::new(AstExpr::Value(ValueWithSpan {
+                value: Value::SingleQuotedString(number),
+                span,
+            })),
+            leading_field: Some(DateTimeField::Day),
+            leading_precision: None,
+            last_field: None,
+            fractional_seconds_precision: None,
+        });
+        return;
+    }
+    if let AstExpr::Interval(interval) = expr.as_mut()
+        && interval.last_field.is_some()
+    {
+        restate_day_to_second_interval(interval);
+    }
+}
+
+/// `INTERVAL '1 12:00:00' DAY TO SECOND` → `INTERVAL '1 days 12 hours 0 minutes 0 seconds'`.
+///
+/// DataFusion concatenates only the leading field (`"1 12:00:00 DAY"`), which Arrow rejects.
+/// Clearing `leading_field` / `last_field` and spelling the parts out is what Arrow's
+/// interval parser accepts (G5b-R2 recon).
+fn restate_day_to_second_interval(interval: &mut Interval) {
+    let Some(literal) = interval_quoted_literal(&interval.value) else {
         return;
     };
-    **expr = AstExpr::Interval(Interval {
-        value: Box::new(AstExpr::Value(ValueWithSpan {
-            value: Value::SingleQuotedString(number.clone()),
-            span: *span,
-        })),
-        leading_field: Some(DateTimeField::Day),
-        leading_precision: None,
-        last_field: None,
-        fractional_seconds_precision: None,
+    let Some(restated) = restated_day_to_second_literal(literal) else {
+        return;
+    };
+    let span = interval_value_span(&interval.value);
+    *interval.value = AstExpr::Value(ValueWithSpan {
+        value: Value::SingleQuotedString(restated),
+        span,
     });
+    interval.leading_field = None;
+    interval.last_field = None;
+    interval.leading_precision = None;
+    interval.fractional_seconds_precision = None;
+}
+
+/// `'D H:M:S'` / `'D H:M:S.frac'` → `'D days H hours M minutes S seconds'`.
+fn restated_day_to_second_literal(literal: &str) -> Option<String> {
+    let trimmed = literal.trim();
+    let unsigned = trimmed.strip_prefix('-').unwrap_or(trimmed);
+    let (days_text, time_text) = unsigned.split_once(' ')?;
+    let days: u64 = days_text.parse().ok()?;
+    let mut time_parts = time_text.split(':');
+    let hours: u64 = time_parts.next()?.parse().ok()?;
+    let minutes: u64 = time_parts.next()?.parse().ok()?;
+    let seconds_text = time_parts.next().unwrap_or("0");
+    let seconds_whole = seconds_text.split('.').next().unwrap_or("0");
+    let seconds: u64 = seconds_whole.parse().ok()?;
+    if time_parts.next().is_some() {
+        return None;
+    }
+    Some(format!(
+        "{days} days {hours} hours {minutes} minutes {seconds} seconds"
+    ))
+}
+
+fn bound_interval(bound: &AstWindowFrameBound) -> Option<&Interval> {
+    let offset = match bound {
+        AstWindowFrameBound::Preceding(value) | AstWindowFrameBound::Following(value) => {
+            value.as_ref()?
+        }
+        AstWindowFrameBound::CurrentRow => return None,
+    };
+    match offset.as_ref() {
+        AstExpr::Interval(interval) => Some(interval),
+        _ => None,
+    }
+}
+
+fn bound_interval_mut(bound: &mut AstWindowFrameBound) -> Option<&mut Interval> {
+    let offset = match bound {
+        AstWindowFrameBound::Preceding(value) | AstWindowFrameBound::Following(value) => {
+            value.as_mut()?
+        }
+        AstWindowFrameBound::CurrentRow => return None,
+    };
+    match offset.as_mut() {
+        AstExpr::Interval(interval) => Some(interval),
+        _ => None,
+    }
+}
+
+fn interval_value_is_negative(value: &AstExpr) -> bool {
+    match value {
+        AstExpr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(text) | Value::Number(text, _),
+            ..
+        }) => text.trim().starts_with('-'),
+        AstExpr::UnaryOp {
+            op: UnaryOperator::Minus,
+            ..
+        } => true,
+        _ => false,
+    }
+}
+
+fn strip_interval_value_sign(value: &mut AstExpr) -> bool {
+    match value {
+        AstExpr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(text) | Value::Number(text, _),
+            ..
+        }) => {
+            let trimmed = text.trim();
+            let Some(unsigned) = trimmed.strip_prefix('-') else {
+                return false;
+            };
+            *text = unsigned.to_string();
+            true
+        }
+        AstExpr::UnaryOp {
+            op: UnaryOperator::Minus,
+            expr,
+        } => {
+            *value = (**expr).clone();
+            true
+        }
+        _ => false,
+    }
+}
+
+fn interval_quoted_literal(value: &AstExpr) -> Option<&str> {
+    match value {
+        AstExpr::Value(ValueWithSpan {
+            value: Value::SingleQuotedString(text),
+            ..
+        }) => Some(text.as_str()),
+        _ => None,
+    }
+}
+
+fn interval_value_span(value: &AstExpr) -> Span {
+    match value {
+        AstExpr::Value(ValueWithSpan { span, .. }) => *span,
+        _ => Span::empty(),
+    }
+}
+
+/// True when a `RANGE` bound is a residual interval this module restates (negative or
+/// field-qualified) or a unit-less number (the DATE arm).
+fn bound_needs_conform(bound: &AstWindowFrameBound) -> bool {
+    if bound_is_bare_number(bound) {
+        return true;
+    }
+    let Some(interval) = bound_interval(bound) else {
+        return false;
+    };
+    interval.last_field.is_some() || interval_value_is_negative(&interval.value)
 }
 
 /// The AST frame shape a caller can cheaply test for before paying for a second planning pass.
-/// True when any `RANGE` frame in the statement carries a unit-less numeric bound.
+/// True when any `RANGE` frame in the statement carries a unit-less numeric bound, a
+/// negative interval, or a field-qualified interval (`DAY TO SECOND`).
 pub(crate) fn statement_has_bare_range_bound(statement: &Statement) -> bool {
     let mut visitor = BareRangeBoundProbe { found: false };
     // The visitor's Break type is uninhabited — traversal always completes.
@@ -350,10 +1050,15 @@ fn probe_window_spec(found: &mut bool, spec: &WindowSpec) {
     if frame.units != AstWindowFrameUnits::Range {
         return;
     }
-    if bound_is_bare_number(&frame.start_bound) {
+    if bound_needs_conform(&frame.start_bound) {
         *found = true;
     }
-    if frame.end_bound.as_ref().is_some_and(bound_is_bare_number) {
+    if frame.end_bound.as_ref().is_some_and(bound_needs_conform) {
+        *found = true;
+    }
+    // Positive same-kind invert (`2 FOLLOWING AND 1 FOLLOWING`) has no negative and no
+    // field qualifier, so the cheap probes above miss it — it must still enter classify.
+    if frame_is_value_inverted(frame) {
         *found = true;
     }
 }

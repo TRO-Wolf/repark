@@ -1005,7 +1005,7 @@ ROWS: list[WindowRow] = [
         "The Spark door now restates the bound as INTERVAL '1' DAY and re-plans. Reverting that "
         "turns this row red on value.",
     ),
-    # --- Recorded residual divergences: each names the spelling or bound class it waits on ------
+    # --- Residuals: R2/R3 flipped to equality by Y-1; R1/R4/R5 still recorded ------------------
     WindowRow(
         "temporal_range_unquoted_interval_literal",
         TEMPORAL_FAMILY,
@@ -1019,8 +1019,8 @@ ROWS: list[WindowRow] = [
         "DISCLOSURE (spelling): Spark accepts the unquoted `INTERVAL 1 DAY` frame bound and "
         "answers exactly as the quoted form. DataFusion's frame-bound parser accepts only a "
         "string-literal interval value there (`INTERVAL expression cannot be Value(Number...)`), "
-        "even though the same unquoted literal works fine in an ordinary expression. Flipped by "
-        + FIX_G5B,
+        "even though the same unquoted literal works fine in an ordinary expression. Y-1 "
+        "deferred (needs a pre-plan rewrite in spark_ast.rs). Flipped by " + FIX_G5B,
         repark_raises="PySparkException",
     ),
     WindowRow(
@@ -1033,10 +1033,10 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "s": [10, 30, 60, 90, 90]},
         ),
         None,
-        "DISCLOSURE (spelling): Spark accepts a `DAY TO SECOND` qualified interval as a frame "
-        "bound. DataFusion concatenates the literal and the LEADING field only, handing Arrow "
-        "`1 12:00:00 DAY`, which its interval parser rejects. Flipped by " + FIX_G5B,
-        repark_raises="PySparkException",
+        "EQUALITY (G5b-R2, Y-1): Spark accepts a `DAY TO SECOND` qualified interval as a frame "
+        "bound. The Spark door restates `INTERVAL '1 12:00:00' DAY TO SECOND` as an "
+        "Arrow-accepted interval string (`1 days 12 hours 0 minutes 0 seconds`) and re-plans. "
+        "Was a disclosure (Arrow parse error). Flipped by Y-1 / G5b-R.",
     ),
     WindowRow(
         "temporal_range_negative_offset_sum",
@@ -1048,13 +1048,12 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "s": [None, None, None, None, None]},
         ),
         None,
-        "DISCLOSURE (defect): a NEGATIVE interval offset makes the frame end before it starts. "
-        "Spark returns an empty frame (sum NULL). repark reaches DataFusion's sliding-sum "
-        "accumulator with a malformed range and PANICS ('attempt to subtract with overflow'), "
-        "surfacing at the boundary as an internal error. The panic is debug-build only: a "
-        "release wheel wraps instead, so this is a wrong-answer class, not only a crash class. "
-        "Flipped by " + FIX_G5B,
-        repark_raises="PySparkException",
+        "EQUALITY (G5b-R3, Y-1 / Half-B): a NEGATIVE interval offset makes the frame end "
+        "before it starts. Spark returns an empty frame (sum NULL). Kind invert vs CURRENT "
+        "ROW is restated as FILTER (WHERE false) over a current-row frame so DataFusion "
+        "never executes the inverted search. Same-kind magnitude invert is refused "
+        "(Spark's SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON). Was a disclosure (debug panic "
+        "/ release wrap). Flipped by Y-1 / G5b-R.",
     ),
     WindowRow(
         "temporal_range_negative_offset_count",
@@ -1065,14 +1064,10 @@ ROWS: list[WindowRow] = [
             [("id", pa.int64(), True), ("c", pa.int64(), False)],
             {"id": [1, 2, 3, 4, 5], "c": [0, 0, 0, 0, 0]},
         ),
-        _table(
-            [("id", pa.int64(), True), ("c", pa.int64(), False)],
-            {"id": [1, 2, 3, 4, 5], "c": [-1, -1, 0, 0, 0]},
-        ),
-        "DISCLOSURE (defect, silent): the same negative-offset frame as the row above, measured "
-        "with count(*) instead of sum. Spark counts 0 rows in the empty frame; repark returns a "
-        "NEGATIVE COUNT (-1) with no error at all. This is the row that shows the negative-offset "
-        "class is a silent wrong answer and not merely a crash. Flipped by " + FIX_G5B,
+        None,
+        "EQUALITY (G5b-R3, Y-1 / Half-B): the same negative-offset frame as the sum row, "
+        "measured with count(*). Spark counts 0 rows in the empty frame. Was a disclosure "
+        "(repark returned count(*) = -1 in release wheels). Flipped by Y-1 / G5b-R.",
     ),
     WindowRow(
         "temporal_range_following_to_following_window",
@@ -1090,7 +1085,8 @@ ROWS: list[WindowRow] = [
         "DISCLOSURE (value): a frame entirely in the FUTURE (both bounds FOLLOWING). For id 3 "
         "the frame is (ts+1d, ts+2d] = ids 4 and 5 -> Spark 90; repark answers 120, i.e. it also "
         "counts the current row, which is OUTSIDE its own frame. Silent: no error, a plausible "
-        "number. Flipped by " + FIX_G5B,
+        "number. Y-1 deferred (DataFusion range-search off-by-one at the pin). Flipped by "
+        + FIX_G5B,
     ),
     WindowRow(
         "temporal_range_interval_bound_over_int_key",
@@ -1105,8 +1101,8 @@ ROWS: list[WindowRow] = [
         "DISCLOSURE (error class): an INTERVAL bound over an INT order key. Spark resolves it to "
         "a frame no row falls into, so every row sees only itself; repark surfaces a raw Arrow "
         "cast error (`Cannot cast string '1 DAY' to value of Int64 type`) instead of a Spark "
-        "error class or a table. The G5b fix deliberately does not touch this arm (it only "
-        "handles unit-less bounds over datetime keys). Flipped by " + FIX_G5B,
+        "error class or a table. Y-1 deferred (error-class alignment; Spark returns a table). "
+        "Flipped by " + FIX_G5B,
         repark_raises="PySparkException",
     ),
 ]
@@ -1351,8 +1347,10 @@ def test_window_row_set_covers_gap_budgets() -> None:
     assert sum(row.is_equality() for row in temporal) >= 8, (
         "temporal-RANGE family must keep >=8 equality rows (the working interval-bounded path)"
     )
-    assert sum(row.is_disclosure() for row in temporal) >= 5, (
-        "temporal-RANGE family must keep >=5 recorded residual divergences"
+    assert sum(row.is_disclosure() for row in temporal) >= 3, (
+        "temporal-RANGE family must keep >=3 recorded residual divergences "
+        "(R1 unquoted / R4 following-to-following / R5 interval-over-int; "
+        "R2 and R3 flipped to equality by Y-1)"
     )
 
     # Row-shape well-formedness.
@@ -1409,6 +1407,56 @@ def test_temporal_range_bare_offset_over_timestamp_refuses() -> None:
         assert 'does not support the data type "INT"' in message, (
             f"{frame!r} must carry Spark's INT-in-range-frame wording, got: {message}"
         )
+
+
+def test_temporal_range_negative_both_preceding_refuses_like_spark() -> None:
+    """Q-001: ``-2 PRECEDING AND -1 PRECEDING`` must not wrap.
+
+    After sign-normalize this is ``2 FOLLOWING AND 1 FOLLOWING``. Spark 4.1.2 refuses
+    with ``DATATYPE_MISMATCH.SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON``. A kind-only
+    invert check used to miss it and DataFusion wrapped ``count(*)`` to -1. Both
+    engines raise, so this cannot be a ``WindowRow``. Live-recorded MARKER=y1-g5br-fix.
+    """
+    session = _session()
+    register_temporal_seed_views(session)
+    sql = (
+        f"SELECT id, count(*) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-2' DAY PRECEDING "
+        f"AND INTERVAL '-1' DAY PRECEDING) AS c {TEMPORAL_TS_SQL} ORDER BY id"
+    )
+    with pytest.raises(Exception) as excinfo:
+        _to_arrow(session.sql(sql))
+    message = str(excinfo.value)
+    assert "SPECIFIED_WINDOW_FRAME_WRONG_COMPARISON" in message, (
+        f"-2 PRECEDING AND -1 PRECEDING must refuse like Spark, not wrap; got: {message}"
+    )
+    assert "lower bound of a window frame must be less than or equal" in message, (
+        f"must carry Spark's start<=end wording, got: {message}"
+    )
+
+
+def test_temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses() -> None:
+    """Q-003: mixed negative-TIMESTAMP interval + numeric unit-less RANGE must refuse.
+
+    The restatement is statement-wide. A numeric-keyed bare bound in the same statement
+    cannot be rewritten to days, so the inverted TIMESTAMP frame would otherwise execute
+    and wrap. Spark answers the mixed statement; we refuse loud
+    (``UNSUPPORTED.NEGATIVE_RANGE_OFFSET``). Not a ``WindowRow``: Spark returns a table.
+    """
+    session = _session()
+    register_temporal_seed_views(session)
+    sql = (
+        f"SELECT id, "
+        f"sum(v) OVER (ORDER BY ts RANGE BETWEEN INTERVAL '-1' DAY PRECEDING "
+        f"AND CURRENT ROW) AS by_ts, "
+        f"sum(v) OVER (ORDER BY v RANGE BETWEEN 10 PRECEDING AND CURRENT ROW) AS by_value "
+        f"{TEMPORAL_TS_SQL} ORDER BY id"
+    )
+    with pytest.raises(Exception) as excinfo:
+        _to_arrow(session.sql(sql))
+    message = str(excinfo.value)
+    assert "UNSUPPORTED.NEGATIVE_RANGE_OFFSET" in message, (
+        f"mixed negative-TIMESTAMP + numeric-bare must refuse, got: {message}"
+    )
 
 
 def test_temporal_range_bare_offset_over_date_key_is_days_not_months() -> None:

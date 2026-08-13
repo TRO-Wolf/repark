@@ -57,6 +57,20 @@ code is not here — only tests, shared fixtures, and the module manifest.
   fixtures (`register_timestamp_seed`, `register_date_seed`, `seed_micros`,
   `days_from_civil`) stay out of `common.rs`: only this leaf uses them. Ledger:
   [`../../../../task/g5b-temporal-range-ledger.md`](../../../../task/g5b-temporal-range-ledger.md).
+- **G5b-R residual pins (Y-1, 2026-08-12)** — same leaf, five added tests:
+  `temporal_range_negative_offset_is_spark_empty_frame` (R3 HIGH — TIMESTAMP
+  `INTERVAL '-1' DAY` is Spark's empty frame; DATE stays empty and is not refused),
+  `temporal_range_day_to_second_literal_matches_spark` (R2 — `'1 12:00:00'` and `'1 0:0:0'`),
+  plus three still-open recordings:
+  `temporal_range_unquoted_interval_literal_still_refuses` (R1),
+  `temporal_range_following_to_following_still_includes_current_row` (R4, 120 vs 90),
+  `temporal_range_interval_bound_over_int_key_still_arrow_cast` (R5).
+  **Half-B (2026-08-12)** adds two: `temporal_range_value_inverted_frames_do_not_wrap`
+  (same-kind magnitude invert after sign-normalize: `-2 PRECEDING AND -1 PRECEDING`,
+  `-1 PRECEDING AND 0 FOLLOWING`, direct `2 FOLLOWING AND 1 FOLLOWING` — Spark
+  `WRONG_COMPARISON`, wrapping `-1` is gone; no `10000 YEAR` pair) and
+  `temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses` (Q-003). Ledger:
+  [`../../../../task/g5br-range-residuals-ledger.md`](../../../../task/g5br-range-residuals-ledger.md).
 - **N-2b / G3 deferred MERGE pins (2026-08-11)** — `merge.rs` gains four Spark-door SQL pins
   that mirror the N-2 Python differential corpus shapes G-4's file ban deferred:
   `merge_duplicate_source_keys_with_matched_raises`,
