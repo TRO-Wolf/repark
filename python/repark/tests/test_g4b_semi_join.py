@@ -451,3 +451,95 @@ def test_inner_join_abs_keeps_the_abs_on_a_negative_key(spark: ReparkSession, on
     table = joined.select(F.abs(right["k"]).alias("ak")).to_arrow()
     assert table.to_pydict()["ak"] == [3]
     assert joined.filter(F.abs(right["k"]) > 0).count() == 1
+
+
+# ---- A6 Q-002: aggregate builders thread origin + join_sql_expr (same hole as F.abs) ----------
+
+_AGG_BUILDERS = (
+    ("sum", F.sum),
+    ("count", F.count),
+    ("avg", F.avg),
+    ("min", F.min),
+    ("max", F.max),
+    ("count_distinct", F.count_distinct),
+    ("first", F.first),
+    ("last", F.last),
+)
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+@pytest.mark.parametrize("on_mode", ["name", "condition"])
+@pytest.mark.parametrize("builder_name,builder", _AGG_BUILDERS)
+def test_right_ref_agg_raises_missing_attributes_same_key(
+    spark: ReparkSession,
+    how: str,
+    on_mode: str,
+    builder_name: str,
+    builder: object,
+) -> None:
+    """``F.<agg>(right["k"])`` after semi/anti raises Spark's same-name MISSING_ATTRIBUTES.
+
+    Q-002: aggregate builders used to drop ``_origin_plan_id`` / ``_join_sql_expr``, so
+    ``F.sum(right["k"])`` bound the LEFT ``k``. Each named builder is its own pin
+    (red-first: revert the thread on that builder and this case reds).
+    """
+    _left, right, joined = _semi_family_join(spark, how, on_mode)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
+        joined.select(builder(right["k"]))  # type: ignore[operator]
+    assert 'Resolved attribute(s) "k"' in str(excinfo.value), builder_name
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+@pytest.mark.parametrize("builder_name,builder", _AGG_BUILDERS)
+def test_left_agg_still_resolves_after_semi_family(
+    spark: ReparkSession, how: str, builder_name: str, builder: object
+) -> None:
+    """``F.<agg>(left["k"])`` is the output column — origin thread must not refuse left."""
+    left, _right, joined = _semi_family_join(spark, how, "name")
+    table = joined.select(builder(left["k"]).alias("ak")).to_arrow()  # type: ignore[operator]
+    assert table.column_names == ["ak"], builder_name
+    assert table.num_rows == 1, f"{builder_name} is a global agg (one row), not a refuse"
+
+
+def test_inner_join_sum_right_ref_still_resolves(spark: ReparkSession) -> None:
+    """Regression: origin-thread on ``F.sum`` must not break an emitting join.
+
+    Name-key inner join (one ``k``) — a condition join of two ``k`` columns is
+    DataFusion-ambiguous on the native aggregate handle and is not this pin.
+    """
+    _left, right, joined = _semi_family_join(spark, "inner", "name")
+    table = joined.select(F.sum(right["k"]).alias("sk")).to_arrow()
+    assert table.to_pydict()["sk"] == [1]
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+def test_distinct_name_sum_raises_missing_from_input(spark: ReparkSession, how: str) -> None:
+    """``F.sum(right["rk"])`` after a condition semi uses the MISSING_FROM_INPUT subclass."""
+    left = spark.createDataFrame([(1, "a"), (2, "b")], ["k", "a"])
+    right = spark.createDataFrame([(1,), (9,)], ["rk"])
+    joined = left.join(right, left["k"] == right["rk"], how)
+    with pytest.raises(AnalysisException, match=_MISSING_ABSENT) as excinfo:
+        joined.select(F.sum(right["rk"]))
+    assert 'Resolved attribute(s) "rk"' in str(excinfo.value)
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+def test_count_distinct_left_then_right_still_raises_unemitted_right(
+    spark: ReparkSession, how: str
+) -> None:
+    """``join_sql`` QCOL scan: left-then-right ``count_distinct`` must raise on the right.
+
+    ``_thread_origin`` copies the first origin-bearing arg (left ``k``, emitted).
+    Without ``join_sql_expr`` carrying the right QCOL this would bind left.
+    """
+    left, right, joined = _semi_family_join(spark, how, "condition")
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
+        joined.select(F.count_distinct(left["k"], right["k"]))
+    assert 'Resolved attribute(s) "k"' in str(excinfo.value)
+
+
+def test_sum_string_name_still_resolves_after_semi(spark: ReparkSession) -> None:
+    """``F.sum("k")`` is a name, not a right-parent origin — still the left ``k``."""
+    _left, _right, joined = _semi_family_join(spark, "leftsemi", "name")
+    table = joined.select(F.sum("k").alias("sk")).to_arrow()
+    assert table.to_pydict()["sk"] == [1]

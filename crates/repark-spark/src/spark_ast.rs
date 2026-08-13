@@ -66,8 +66,10 @@ pub(crate) async fn execute_passthrough(
             // silently dropped. Router-parsable SELECT/ORDER BY still land here
             // when tests call execute_passthrough directly (Q-001 pin).
             crate::refuse_collation_in_statement(inner)?;
-            // G3-E8 identity path — uncorrelated DELETE … IN (SELECT …) only. Fail-closed:
-            // every other subquery spelling still hits the valve below (never DataFusion DML).
+            // G3-E8 identity path — allow-listed uncorrelated DELETE via
+            // try_allowed_delete_in → execute_predicate_dml (attach is spelling-generic;
+            // the allow-list currently exports IN (SELECT …)). Fail-closed: every other
+            // subquery spelling still hits the valve below (never DataFusion DML).
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
             {
@@ -93,6 +95,9 @@ pub(crate) async fn execute_passthrough(
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
             apply_spark_order_by_defaults(inner);
+            // R1: DataFusion's convert_frame_bound_to_scalar_value accepts only
+            // SingleQuotedString inside INTERVAL. Quote `INTERVAL 1 DAY` before first plan.
+            window_range::quote_unquoted_interval_range_bounds(inner);
             may_have_bare_range_bound = window_range::statement_has_bare_range_bound(inner);
         }
         DfStatement::Reset(ResetStatement::Variable(name)) => {
@@ -162,14 +167,43 @@ async fn conform_temporal_range_frames(
     match window_range::classify_planned_range_frames(&plan)? {
         window_range::RangeFrameVerdict::Unchanged => Ok(plan),
         window_range::RangeFrameVerdict::RestateBareBoundsAsDays => {
-            let mut restated = state.sql_to_statement(sql, dialect)?;
-            if let DfStatement::Statement(inner) = &mut restated {
-                apply_spark_order_by_defaults(inner);
-                window_range::rewrite_bare_range_bounds_to_days(inner);
-            }
-            state.statement_to_plan(restated).await
+            restate_range_frames_and_replan(
+                state,
+                sql,
+                dialect,
+                window_range::rewrite_bare_range_bounds_to_days,
+            )
+            .await
+        }
+        window_range::RangeFrameVerdict::RestateIntervalBoundsAsNumeric => {
+            restate_range_frames_and_replan(
+                state,
+                sql,
+                dialect,
+                window_range::rewrite_interval_range_bounds_to_numeric,
+            )
+            .await
         }
     }
+}
+
+/// Re-parse, re-apply Spark ORDER BY defaults + R1 quoting, run `rewrite`, re-plan.
+///
+/// The restatement path starts from the original SQL text (window names embed the
+/// frame), so unquoted `INTERVAL 1 DAY` must be quoted again before the second plan.
+async fn restate_range_frames_and_replan(
+    state: &SessionState,
+    sql: &str,
+    dialect: &Dialect,
+    rewrite: impl FnOnce(&mut Statement),
+) -> Result<LogicalPlan> {
+    let mut restated = state.sql_to_statement(sql, dialect)?;
+    if let DfStatement::Statement(inner) = &mut restated {
+        apply_spark_order_by_defaults(inner);
+        window_range::quote_unquoted_interval_range_bounds(inner);
+        rewrite(inner);
+    }
+    state.statement_to_plan(restated).await
 }
 
 /// Inject Spark's null-placement defaults into every `ORDER BY` whose placement is unspecified,

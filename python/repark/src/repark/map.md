@@ -1025,7 +1025,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
   `add_months`, `date_add` so `F.abs(right["k"])` after a semi join raises Spark's
-  `MISSING_ATTRIBUTES` instead of binding left. `column.py` is closed. WG1 in-use set: `col` (stable_name),
+  `MISSING_ATTRIBUTES` instead of binding left. **W-4 / A6 Q-002:** the same thread
+  on `sum`, `count` (non-star), `avg`, `min`, `max`, `count_distinct`, `first`,
+  `last`. `column.py` is closed. WG1 in-use set: `col` (stable_name),
   `lit`, `expr` (column-free SQL only; infix fragments parenthesize for projection like Spark
   `(1 + 1)`), `coalesce`/`concat` (with `_spark_display` + projection; carry Group I
   `_partition_transform` when any arg is marked),

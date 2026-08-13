@@ -1005,7 +1005,7 @@ ROWS: list[WindowRow] = [
         "The Spark door now restates the bound as INTERVAL '1' DAY and re-plans. Reverting that "
         "turns this row red on value.",
     ),
-    # --- Residuals: R2/R3 flipped to equality by Y-1; R1/R4/R5 still recorded ------------------
+    # --- Residuals: R2/R3 flipped by Y-1; R1/R5 flipped by W-4; R4 still recorded -------------
     WindowRow(
         "temporal_range_unquoted_interval_literal",
         TEMPORAL_FAMILY,
@@ -1016,14 +1016,11 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "s": [10, 30, 60, 90, 90]},
         ),
         None,
-        "DISCLOSURE (spelling): Spark accepts the unquoted `INTERVAL 1 DAY` frame bound and "
-        "answers exactly as the quoted form. DataFusion's frame-bound parser accepts only a "
-        "string-literal interval value there (`INTERVAL expression cannot be Value(Number...)`), "
-        "even though the same unquoted literal works fine in an ordinary expression. Z-4 "
-        "re-verified (live 4.1.2 = quoted table) and deferred: first-plan fails before "
-        "window_range rewrite; pre-plan quote lives in spark_ast.rs (Z-1's file). Flipped by "
-        + FIX_G5B,
-        repark_raises="PySparkException",
+        "EQUALITY (G5b-R1, W-4): Spark accepts the unquoted `INTERVAL 1 DAY` frame bound "
+        "and answers exactly as the quoted form. The Spark door quotes the Number to "
+        "`INTERVAL '1' DAY` before first plan so DataFusion's frame-bound parser accepts "
+        "it. Was a disclosure (first-plan `INTERVAL expression cannot be Value(Number…)`). "
+        "Flipped by W-4 / G5b-R.",
     ),
     WindowRow(
         "temporal_range_day_to_second_literal",
@@ -1087,9 +1084,8 @@ ROWS: list[WindowRow] = [
         "DISCLOSURE (value): a frame entirely in the FUTURE (both bounds FOLLOWING). For id 3 "
         "the frame is (ts+1d, ts+2d] = ids 4 and 5 -> Spark 90; repark answers 120, i.e. it also "
         "counts the current row, which is OUTSIDE its own frame. Silent: no error, a plausible "
-        "number. Z-4 re-verified (live 4.1.2 = 30/NULL/90/NULL/NULL; DF 54.1.0 still 120). "
-        "sqlparser EXCLUDE is TBD; plan rewrite strands names; no Cargo.lock bump. Flipped by "
-        + FIX_G5B,
+        "number. W-4 re-verified (DF 54.1.0 still 120; sqlparser 0.62 `WindowFrame` is "
+        "`// TBD: EXCLUDE`; plan rewrite strands names; no Cargo.lock bump). Flipped by " + FIX_G5B,
     ),
     WindowRow(
         "temporal_range_interval_bound_over_int_key",
@@ -1101,13 +1097,11 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "s": [10, 20, 30, 40, 50]},
         ),
         None,
-        "DISCLOSURE (error class): an INTERVAL bound over an INT order key. Spark 4.1.2 "
-        "(Z-4 live) treats `INTERVAL 'n' UNIT` as numeric `n` RANGE (unit ignored: 1 DAY = "
-        "1 HOUR = 1 MONTH = 1 PRECEDING; 10 DAY = 10 PRECEDING; 0 DAY = peer group). Unique "
-        "keys with gaps of 10 made Y-1's seed look like 'self only'. repark still surfaces a "
-        "raw Arrow cast (`Cannot cast string '1 DAY' to value of Int64 type`). Type-aware "
-        "restatement needs spark_ast.rs. Flipped by " + FIX_G5B,
-        repark_raises="PySparkException",
+        "EQUALITY (G5b-R5, W-4): an INTERVAL bound over an INT order key. Spark 4.1.2 "
+        "treats `INTERVAL 'n' UNIT` as numeric `n` RANGE (unit ignored). Unique keys with "
+        "gaps of 10 make `n=1` look like 'self only' (Y-1's seed); the door restates the "
+        "interval to unit-less `n` when classify sees a numeric key. Was a disclosure "
+        "(Arrow `Cannot cast string '1 DAY' to Int64`). Flipped by W-4 / G5b-R.",
     ),
 ]
 
@@ -1351,10 +1345,9 @@ def test_window_row_set_covers_gap_budgets() -> None:
     assert sum(row.is_equality() for row in temporal) >= 8, (
         "temporal-RANGE family must keep >=8 equality rows (the working interval-bounded path)"
     )
-    assert sum(row.is_disclosure() for row in temporal) >= 3, (
-        "temporal-RANGE family must keep >=3 recorded residual divergences "
-        "(R1 unquoted / R4 following-to-following / R5 interval-over-int; "
-        "R2 and R3 flipped to equality by Y-1)"
+    assert sum(row.is_disclosure() for row in temporal) >= 1, (
+        "temporal-RANGE family must keep >=1 recorded residual divergence "
+        "(R4 following-to-following; R1/R5 flipped by W-4; R2/R3 flipped by Y-1)"
     )
 
     # Row-shape well-formedness.
@@ -1484,3 +1477,36 @@ def test_temporal_range_bare_offset_over_date_key_is_days_not_months() -> None:
 
     assert sums(1) == [10, 30, 30], "1 PRECEDING over a DATE key is one DAY (Spark), not a month"
     assert sums(30) == [10, 30, 60], "30 PRECEDING over a DATE key is thirty DAYS"
+
+
+def test_temporal_range_interval_over_int_uses_numeric_magnitude() -> None:
+    """R5 magnitude: ties + n=1 vs n=10 so Y-1's unique-key 'self only' cannot pass."""
+    session = _session()
+    session.createDataFrame(  # type: ignore[attr-defined]
+        [(1, 10), (2, 20), (3, 20), (4, 21), (5, 30)],
+        ["id", "v"],
+    ).createOrReplaceTempView("win_int_ties")
+
+    def sums(bound: str) -> list[int | None]:
+        table = _to_arrow(
+            session.sql(
+                f"SELECT id, sum(v) OVER (ORDER BY v RANGE BETWEEN {bound} "
+                f"AND CURRENT ROW) AS s FROM win_int_ties ORDER BY id"
+            )
+        )
+        return table.column("s").to_pylist()
+
+    assert sums("INTERVAL '1' DAY PRECEDING") == [10, 40, 40, 61, 30]
+    assert sums("INTERVAL '1' HOUR PRECEDING") == [10, 40, 40, 61, 30]
+    assert sums("INTERVAL '10' DAY PRECEDING") == [10, 50, 50, 61, 91]
+    assert sums("INTERVAL '0' DAY PRECEDING") == [10, 40, 40, 21, 30]
+
+
+def test_temporal_range_timestamp_order_key_is_microseconds() -> None:
+    """Window-ns type pin (W-4 / #79): the temporal seed exports timestamp[us], not ns."""
+    session = _session()
+    register_temporal_seed_views(session)
+    table = _to_arrow(session.sql(f"SELECT ts {TEMPORAL_TS_SQL} LIMIT 1"))
+    ts_type = table.schema.field("ts").type
+    assert pa.types.is_timestamp(ts_type), f"ts must be a timestamp, got {ts_type}"
+    assert ts_type.unit == "us", f"ts must be microseconds after #79, got {ts_type}"

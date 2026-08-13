@@ -609,9 +609,11 @@ def sum(col: Column | str) -> Column:
         column._inner.aggregate("sum", False),
         agg_name=agg_name,
         sql_expr=f"sum({column.sql_expr_part()})",
+        join_sql_expr=f"sum({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
@@ -643,8 +645,10 @@ def count(col: Column | str) -> Column:
         agg_name=agg_name,
         # Quoted identifier from _aggregate_argument / Column.sql_expr (octo C3-SEC-001).
         sql_expr=f"count({column.sql_expr_part()})",
+        join_sql_expr=f"count({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
+        **_thread_origin(column),
     )
 
 
@@ -674,9 +678,13 @@ def count_distinct(col: Column | str, *cols: Column | str) -> Column:
         _native.PyColumn.count_aggregate(natives, True),
         agg_name=agg_name,
         sql_expr=sql_expr,
+        join_sql_expr=(
+            f"count(DISTINCT {', '.join(column.join_sql_part() for column, _ in columns)})"
+        ),
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=_partition_transform_of(*(column for column, _ in columns)),
+        **_thread_origin(*(column for column, _ in columns)),
     )
 
 
@@ -692,9 +700,11 @@ def avg(col: Column | str) -> Column:
         column._inner.aggregate("avg", False),
         agg_name=agg_name,
         sql_expr=f"avg({column.sql_expr_part()})",
+        join_sql_expr=f"avg({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
@@ -710,9 +720,11 @@ def min(col: Column | str) -> Column:
         column._inner.aggregate("min", False),
         agg_name=agg_name,
         sql_expr=f"min({column.sql_expr_part()})",
+        join_sql_expr=f"min({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
@@ -724,9 +736,11 @@ def max(col: Column | str) -> Column:
         column._inner.aggregate("max", False),
         agg_name=agg_name,
         sql_expr=f"max({column.sql_expr_part()})",
+        join_sql_expr=f"max({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
@@ -747,9 +761,11 @@ def first(col: Column | str, ignorenulls: bool = False) -> Column:
         column._inner.aggregate("first", ignorenulls),
         agg_name=agg_name,
         sql_expr=sql_expr,
+        join_sql_expr=f"first_value({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
@@ -767,9 +783,11 @@ def last(col: Column | str, ignorenulls: bool = False) -> Column:
         column._inner.aggregate("last", ignorenulls),
         agg_name=agg_name,
         sql_expr=sql_expr,
+        join_sql_expr=f"last_value({column.join_sql_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
