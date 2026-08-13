@@ -22,7 +22,9 @@ region split real (technique A: nested-class extract + owned helpers).
   `select(right["k"])` again. `select` / `filter` / `withColumn` of a still-unemitted
   right-parent Column raise Spark 4.1.2's `MISSING_ATTRIBUTES` class instead of
   name-falling back to the left column; `drop` of that Column is a Spark no-op.
-  Self-semi is exclusive-set empty (Q-003). See `task/y5-origin-map-ledger.md`.
+  Self-semi is exclusive-set empty (Q-003). **Z-4:** `F.abs` / other `functions.py`
+  wrappers thread origin (Y-5 SAF-001); `core.py` `_rebind` is unchanged.
+  See `task/y5-origin-map-ledger.md`, `task/z4-residuals-ledger.md`.
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).

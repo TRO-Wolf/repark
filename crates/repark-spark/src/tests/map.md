@@ -69,8 +69,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   (same-kind magnitude invert after sign-normalize: `-2 PRECEDING AND -1 PRECEDING`,
   `-1 PRECEDING AND 0 FOLLOWING`, direct `2 FOLLOWING AND 1 FOLLOWING` — Spark
   `WRONG_COMPARISON`, wrapping `-1` is gone; no `10000 YEAR` pair) and
-  `temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses` (Q-003). Ledger:
-  [`../../../../task/g5br-range-residuals-ledger.md`](../../../../task/g5br-range-residuals-ledger.md).
+  `temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses` (Q-003). **Z-4
+  (2026-08-13)** re-verified R1/R4/R5 (still-open pins; comments updated; no value
+  flip). Ledger:
+  [`../../../../task/g5br-range-residuals-ledger.md`](../../../../task/g5br-range-residuals-ledger.md),
+  [`../../../../task/z4-residuals-ledger.md`](../../../../task/z4-residuals-ledger.md).
 - **N-2b / G3 deferred MERGE pins (2026-08-11)** — `merge.rs` gains four Spark-door SQL pins
   that mirror the N-2 Python differential corpus shapes G-4's file ban deferred:
   `merge_duplicate_source_keys_with_matched_raises`,

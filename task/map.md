@@ -90,6 +90,9 @@ not this directory.
   `MISSING_ATTRIBUTES` on select/filter/withColumn instead of silently binding the left
   column; `drop` of that Column is the probed Spark no-op. Does **not** edit
   `docs/spark-sql-iceberg-parity.md`.
+- [z4-residuals-ledger.md](z4-residuals-ledger.md) — **Z-4 / Y-wave residuals:** R1/R4/R5
+  re-verified and deferred (need `spark_ast.rs` or a DF pin bump); `F.abs` post-semi
+  origin-thread FIX (Y-5 SAF-001). G13 handoff text only. Does **not** edit the registry.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its

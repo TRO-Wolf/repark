@@ -381,6 +381,22 @@ def _partition_transform_of(*columns: Column) -> str | None:
     return None
 
 
+def _thread_origin(*columns: Column) -> dict[str, str | None]:
+    """Copy H1 origin tokens from the first origin-bearing argument.
+
+    Wrappers that build a fresh :class:`Column` must pass these through;
+    otherwise ``F.abs(right["k"])`` after a semi join silently binds the left
+    column (Y-5 SAF-001).
+    """
+    for column in columns:
+        if column._origin_plan_id is not None:
+            return {
+                "origin_plan_id": column._origin_plan_id,
+                "origin_field": column._origin_field,
+            }
+    return {}
+
+
 def coalesce(*columns: Column) -> Column:
     """First non-null across the argument columns (PySpark ``functions.coalesce``)."""
     if not columns:
@@ -402,12 +418,14 @@ def coalesce(*columns: Column) -> Column:
         spark_display=display,
         projection_name=display,
         sql_expr=f"coalesce({sql_parts})",
+        join_sql_expr=f"coalesce({', '.join(column.join_sql_part() for column in columns)})",
         stable_name=False,
         is_aggregate=is_aggregate,
         is_foldable=is_foldable,
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(*columns),
+        **_thread_origin(*columns),
     )
 
 
@@ -437,12 +455,14 @@ def concat(*columns: Column) -> Column:
         spark_display=display,
         projection_name=display,
         sql_expr=sql_expr,
+        join_sql_expr=f"concat({', '.join(column.join_sql_part() for column in columns)})",
         stable_name=False,
         is_aggregate=is_aggregate,
         is_foldable=is_foldable,
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(*columns),
+        **_thread_origin(*columns),
     )
 
 
@@ -565,12 +585,14 @@ def abs(col: Column | str) -> Column:
         spark_display=display,
         projection_name=display,
         sql_expr=f"abs({column.sql_expr_part()})",
+        join_sql_expr=f"abs({column.join_sql_part()})",
         stable_name=False,
         is_aggregate=column._is_aggregate,
         is_foldable=column._is_foldable and not column._is_aggregate,
         has_free_attribute=column._has_free_attribute,
         has_ungroupable=column._has_ungroupable,
         partition_transform=column._partition_transform,
+        **_thread_origin(column),
     )
 
 
@@ -882,12 +904,14 @@ def _date_fn(column: Column | str, method_name: str, display_name: str) -> Colum
         spark_display=display,
         projection_name=display,
         sql_expr=f"{display_name}({argument.sql_expr_part()})",
+        join_sql_expr=f"{display_name}({argument.join_sql_part()})",
         stable_name=False,
         is_aggregate=argument._is_aggregate,
         is_foldable=argument._is_foldable and not argument._is_aggregate,
         has_free_attribute=argument._has_free_attribute,
         has_ungroupable=argument._has_ungroupable,
         partition_transform=argument._partition_transform,
+        **_thread_origin(argument),
     )
 
 
@@ -966,11 +990,15 @@ def add_months(start: Column | str, months: Column | int | str) -> Column:
         projection_name=display,
         stable_name=False,
         sql_expr=f"add_months({start_column.sql_expr_part()}, {months_sql})",
+        join_sql_expr=(
+            f"add_months({start_column.join_sql_part()}, {months_column.join_sql_part()})"
+        ),
         is_aggregate=is_aggregate,
         is_foldable=(not is_aggregate) and start_column._is_foldable and months_column._is_foldable,
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(start_column, months_column),
+        **_thread_origin(start_column, months_column),
     )
 
 
@@ -999,11 +1027,13 @@ def date_add(start: Column | str, days: Column | int | str) -> Column:
         projection_name=display,
         stable_name=False,
         sql_expr=f"date_add({start_column.sql_expr_part()}, {days_sql})",
+        join_sql_expr=f"date_add({start_column.join_sql_part()}, {days_column.join_sql_part()})",
         is_aggregate=is_aggregate,
         is_foldable=(not is_aggregate) and start_column._is_foldable and days_column._is_foldable,
         has_free_attribute=has_free_attribute,
         has_ungroupable=has_ungroupable,
         partition_transform=_partition_transform_of(start_column, days_column),
+        **_thread_origin(start_column, days_column),
     )
 
 
@@ -2776,6 +2806,7 @@ def _scalar(
         spark_display=shown,
         projection_name=shown,
         sql_expr=f"{name}({', '.join(sql_parts)})",
+        join_sql_expr=f"{name}({', '.join(column.join_sql_part() for column in columns)})",
         stable_name=False,
         is_aggregate=is_aggregate,
         is_foldable=is_foldable,
@@ -2783,6 +2814,7 @@ def _scalar(
         has_ungroupable=ungroupable_flag,
         partition_transform=_partition_transform_of(*columns),
         window_spec=window_spec,
+        **_thread_origin(*columns),
     )
 
 
