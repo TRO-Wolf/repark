@@ -266,3 +266,28 @@ resolve on `main`.
 Dated 2026-08-13: U2 did not land, so the registry-mandated dated revisit of
 TY-3 rides with the U2 morning unit. Residual after U2 would still be
 `(21,1)` nullable vs Spark `(11,1)` non-null (campaign DEC-8 / U3).
+
+---
+
+## 7. ACC + C4 (one remediating cycle: TPC-H Q1 fallout)
+
+Sequential hats (no spawn; independence weaker than separate agents).
+
+**Critic-1 CLEAN.** Context break executed. Coverage skeptic: each U1
+behavior has a mutation-red pin (group i128, sliding retract, empty-group
+NULL, integer still Float64, float sliding). Residual green-bug:
+Decimal32/64/256 arms unpinned (S3; money class is Decimal128). Null
+reports: spec, logic, interface, maintainability, data integrity.
+
+**Critic-2 CLEAN.** Context break executed. No secrets, no `unsafe`, no
+prod unwrap/expect (Option `unwrap_or_default` only). Atomicity n/a.
+Numeric overflow follows DF `DecimalAverager` (exec_err). Null reports:
+secrets, injection, panics, resource, destructive ops.
+
+**Critic-4 CLEAN.** Context break executed. CL-IDENTITY: branch `%ae` =
+`64240326+TRO-Wolf@users.noreply.github.com` byte-exact. Trailer
+`Authored-By: Grok (grok-4.5)`. U2-not-landed claimed vs `extension.rs`
+diff empty. 13/11 G2 counts match import of `ROWS`. Collect node id
+resolves. Lock released. DEC-1 not claimed FIXED.
+
+**Convergence:** `ACC-CONVERGED` (C1+C2+C4 artifacts; verify+preflight 0).
