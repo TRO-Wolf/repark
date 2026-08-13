@@ -12,6 +12,11 @@ not this directory.
 
 ## Contents
 
+- [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) — **Z-5 Y-wave §6
+  landing increment (2026-08-13):** verify-before-paste classification of the merged
+  Y-wave handoffs (G5b-R2/R3 FIXED; G15; G11 ruling; G10 SHAPE rows; G4b D6 FIXED;
+  FA-2 `getDatabase` note; Y-4 citation refresh). Completeness proof for the increment
+  PR. Live-mirror both-halves deferred (none demanded; Z-2 owns `_live_parity.py`).
 - [y7-collation-refuse-ledger.md](y7-collation-refuse-ledger.md) — **Y-7 / G15 in flight:**
   collation refuses loudly at parse altitude (both SQL doors + facade evaluation). §6
   paste-true registry disclosure (silently-wrong-count history + ruling provenance). Does
@@ -176,6 +181,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) | **Z-5** Y-wave §6 landing increment — registry + one STATUS dated note |
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
 | [y4-rename-ledger.md](y4-rename-ledger.md) | **Y-4 / G4b-R1** declared rename (G4b flipped rows + TZ-5 nullability row) |
 | [n2b-merge-followup-ledger.md](n2b-merge-followup-ledger.md) | **N-2b / W-2** MERGE follow-up — items 1+4 in PR #50; items 2+3 (lifecycle live + 13 tz live scenarios) in the second PR. Full N-2b closed only when **both** PRs land. |
@@ -195,7 +201,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |
 | Start a new unit's ledger | copy the shape of the archived [h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md) (or [fd3-ledger.md](../docs/history/frontdoor/fd3-ledger.md)); link it from this map in the same commit |
-| See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) |
+| See how a §6 handoff is classified and landed (or superseded) | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) (W/X wave) · [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) (Y wave) |
 | See how a divergence gets declared, pinned and mirrored | [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md), then [../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md) §6 |
 | Read why the session timezone is a build-time knob with one spelling | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) |
 | Read how timestamp extraction came to honor it, and what the fix deliberately did NOT close | [../docs/history/hardening-h1/h1a-ledger.md](../docs/history/hardening-h1/h1a-ledger.md) "§ Split B" |
