@@ -19,6 +19,13 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
+  (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
+  Carry-check (identity int/string/date/timestamp, bucket, truncate, Iceberg
+  years/months/days/hours UTC-epoch) + load-bearing SQL `year(ts)` /
+  `date_format` identity under non-UTC sessions + TZ-8 CAST/to_date disclose +
+  refusal-class pins. Ledger: `task/v4-partition-values-ledger.md`.
+
 - `test_collation_refuse.py` — **G15 (2026-08-12):** loud collation refuse. createDataFrame
   (`UNICODE_CI` / `UTF8_LCASE` / DDL / Spark `__COLLATIONS` fromJson), `cast`/`try_cast`,
   Spark SQL `COLLATE` / `ORDER BY COLLATE` / `CAST AS STRING COLLATE` / `SET`/`RESET`,

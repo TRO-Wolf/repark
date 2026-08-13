@@ -19,6 +19,12 @@ not this directory.
   footnote, family not fixed, dbt gate not met; G5b-R1/R5 FIXED; R4 still OPEN;
   Q-002 FIXED). Completeness proof for the increment PR. Live-mirror both-halves:
   none.
+- [v4-partition-values-ledger.md](v4-partition-values-ledger.md) — **V-4 write-path
+  partition-key VALUE audit (2026-08-13):** transform × type matrix as carry-check
+  pins (identity / bucket / truncate / Iceberg years-months-days-hours UTC-epoch)
+  plus load-bearing SQL `year(ts)` / `date_format` identity under non-UTC sessions
+  and TZ-8 CAST/to_date disclose. Read-only against the engine. Does **not** edit
+  the registry (V-5 owns it; §6 is paste-true).
 - [w5-z-landing-ledger.md](w5-z-landing-ledger.md) — **W-5 Z-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged Z-wave
   handoffs (G3-E8 IN-DELETE footnote, not family-fixed; TZ-4 progress not retired;
@@ -226,6 +232,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [v5-w-landing-ledger.md](v5-w-landing-ledger.md) | **V-5** W-wave §6 landing increment — registry + one STATUS dated note |
+| [v4-partition-values-ledger.md](v4-partition-values-ledger.md) | **V-4** write-path partition-key VALUE audit — carry-check + load-bearing + TZ-8 |
 | [w5-z-landing-ledger.md](w5-z-landing-ledger.md) | **W-5** Z-wave §6 landing increment — registry + one STATUS dated note |
 | [z5-landing-increment-ledger.md](z5-landing-increment-ledger.md) | **Z-5** Y-wave §6 landing increment — registry + one STATUS dated note |
 | [l1-landing-truth-ledger.md](l1-landing-truth-ledger.md) | **L-1** landing-truth — STATUS + registry + live-mirror both-halves + G14 |
@@ -261,6 +268,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the decimal128 Rust half (G-7b pins + cross-door) | [g7b-decimal-rust-ledger.md](g7b-decimal-rust-ledger.md) |
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the G5b-R window-RANGE residual dispositions (Y-1) | [g5br-range-residuals-ledger.md](g5br-range-residuals-ledger.md) |
+| Read the V-4 write-path partition-value audit | [v4-partition-values-ledger.md](v4-partition-values-ledger.md) |
 | Read the W-4 Z-wave residual close (R1/R5/Q-002) | [w4-z-residuals-ledger.md](w4-z-residuals-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |
