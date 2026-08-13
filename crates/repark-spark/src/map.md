@@ -96,10 +96,15 @@ wrapper.
   `10000 YEAR FOLLOWING` pair is gone. A cheap AST probe
   (`statement_has_bare_range_bound`) still keeps ordinary statements on the single-plan path
   (now also fires for a negative, field-qualified, or value-inverted interval). R1 / R4 / R5
-  stay recorded. ANSI-door wrapping is a named residual (this seam is Spark-door only).
+  stay recorded. **Z-4 (2026-08-13)** re-verified all three against live Spark 4.1.2 +
+  DataFusion 54.1.0 and deferred: R1 first-plan quote needs `spark_ast.rs`; R4 is DF
+  range-search (EXCLUDE TBD); R5 Spark treats `INTERVAL 'n' UNIT` as numeric `n` (unit
+  ignored) — type-aware restatement also needs `spark_ast.rs`. ANSI-door wrapping is a
+  named residual (this seam is Spark-door only).
   Pins: [`tests/window_temporal_range.rs`](tests/map.md); ledgers
   [`../../../task/g5b-temporal-range-ledger.md`](../../../task/g5b-temporal-range-ledger.md),
-  [`../../../task/g5br-range-residuals-ledger.md`](../../../task/g5br-range-residuals-ledger.md).
+  [`../../../task/g5br-range-residuals-ledger.md`](../../../task/g5br-range-residuals-ledger.md),
+  [`../../../task/z4-residuals-ledger.md`](../../../task/z4-residuals-ledger.md).
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction).
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
@@ -212,7 +217,7 @@ part of that section's pin — changing either one changes both.
 | A `DELETE`/`UPDATE` with a subquery `WHERE` was refused | By design (G3-E8): `normalize::refuse_dml_subquery_predicate`. It over-refuses the uncorrelated-scalar spelling on purpose — the correlated twin is the same parse tree and destroys the table |
 | A `DELETE`/`UPDATE` with a subquery `WHERE` was NOT refused | Ask FIRST which parse saw it. The valve's load-bearing call is in `spark_ast::execute_passthrough`, on the statement the session dialect parsed; the router arms' call is an early duplicate for valve ORDER only. If `execute_passthrough` planned a `Statement::Delete`/`::Update` and the valve did not fire, the predicate genuinely carries no `Query` node — e.g. the subquery sits in an `UPDATE … SET` assignment, which is deliberately ungated (correct, or a loud plan error — never silently wrong). If it never reached `execute_passthrough` as a `Delete`/`Update` statement at all, see the row below |
 | **A DML statement executed WITHOUT any router arm running (the fail-open attachment class)** | This router parses with `DatabricksDialect`; the executor re-parses with the SESSION dialect. Every form the two disagree about — Spark's FROM-less `DELETE <table> WHERE …` is the live one — fails `parse_single_normalized`, falls through `execute_unparsable_fallthrough`, and is planned from the SECOND parse. **A DML guard attached to a router arm is fail-open by construction**; attach it inside `spark_ast::execute_passthrough` (which is what G3-E8 does — panel finding L1 M-1). The same trap applies to `Statement::Query`-shaped DML: `WITH … DELETE` never reaches either `Delete` arm (loud `NotImplemented` today, pinned by `tests::dml::g3e8_cte_prefixed_dml_is_loud_today_and_writes_nothing`) |
-| A `RANGE` window answered a wider/narrower window than Spark | `window_range.rs`: is the bound unit-less? over a datetime key a bare number is Arrow's MONTHS, which is why it is refused (TIMESTAMP) or restated as days (DATE). A mixed numeric/DATE statement is deliberately left alone. A **negative or value-inverted** interval over TIMESTAMP must be Spark's empty frame (R3 — kind *or* same-kind magnitude after sign-normalize); `DAY TO SECOND` must restate, not Arrow-parse-fail (R2). Mixed inverted-TIMESTAMP + numeric-bare refuses (`UNSUPPORTED.NEGATIVE_RANGE_OFFSET`) |
+| A `RANGE` window answered a wider/narrower window than Spark | `window_range.rs`: is the bound unit-less? over a datetime key a bare number is Arrow's MONTHS, which is why it is refused (TIMESTAMP) or restated as days (DATE). A mixed numeric/DATE statement is deliberately left alone. A **negative or value-inverted** interval over TIMESTAMP must be Spark's empty frame (R3 — kind *or* same-kind magnitude after sign-normalize); `DAY TO SECOND` must restate, not Arrow-parse-fail (R2). Mixed inverted-TIMESTAMP + numeric-bare refuses (`UNSUPPORTED.NEGATIVE_RANGE_OFFSET`). Z-4: R1/R4/R5 stay recorded (see `task/z4-residuals-ledger.md`) |
 | `DATATYPE_MISMATCH.RANGE_FRAME_INVALID_TYPE` where Spark answers | the order key resolved to `Timestamp`, not `Date` — Spark refuses that spelling too; use `INTERVAL '<n>' DAY` |
 | `matrix::matrix_maps_every_surface` RED | a surface ID was added to `repark_common::surfaces::ALL` with no row here — add `Tested`/`DeliberatelyAbsent` |
 | Doc comment names a crate that doesn't exist | v1-port doc text re-homes to `repark_core` (verify-panel fix); report any straggler |

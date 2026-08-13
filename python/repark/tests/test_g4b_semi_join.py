@@ -25,7 +25,10 @@ corpus): result sets on the Arrow path, value AND Arrow type AND nullability, ac
    descendant still raises (Q-002); a later emitting join of the same right
    subtracts those ids so ``select(right["k"])`` resolves again (Q-001). Self-semi
    ``df.join(df, …)`` is exclusive-set empty, so ``select(df["k"])`` still works
-   (Q-003). See ``task/y5-origin-map-ledger.md``.
+   (Q-003). **Z-4 / Y-5 SAF-001:** ``F.abs(right[…])`` (and other ``functions.py``
+   Column wrappers) thread origin so they raise the same ``MISSING_ATTRIBUTES``
+   class instead of binding left. See ``task/y5-origin-map-ledger.md`` and
+   ``task/z4-residuals-ledger.md``.
 
 These are repark-only assertions (a refusal has no Spark golden to compare against), which is
 exactly why they are not corpus rows: the corpus asserts differential equality.
@@ -38,6 +41,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from repark import ReparkSession
+from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.errors import AnalysisException
 
 if TYPE_CHECKING:
@@ -336,3 +340,114 @@ def test_distinct_name_right_ref_raises_missing_from_input(spark: ReparkSession,
     # drop of a distinct-name right origin is still a Spark no-op.
     assert joined.drop(right["rk"]).columns == ["k", "a"]
     assert joined.select(left["k"]).columns == ["k"]
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+@pytest.mark.parametrize("on_mode", ["name", "name_list", "condition"])
+def test_right_ref_abs_raises_missing_attributes_same_key(
+    spark: ReparkSession, how: str, on_mode: str
+) -> None:
+    """``F.abs(right["k"])`` after semi/anti raises Spark's same-name MISSING_ATTRIBUTES.
+
+    Y-5 SAF-001: ``functions.abs`` used to build a fresh ``Column`` and drop
+    ``_origin_plan_id`` / ``_join_sql_expr``, so this bound the LEFT ``k``.
+    Spark 4.1.2 class is ``MISSING_ATTRIBUTES.RESOLVED_ATTRIBUTE_APPEAR_IN_OPERATION``.
+    """
+    _left, right, joined = _semi_family_join(spark, how, on_mode)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
+        joined.select(F.abs(right["k"]))
+    assert 'Resolved attribute(s) "k"' in str(excinfo.value)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
+        joined.filter(F.abs(right["k"]) == 1)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR):
+        joined.withColumn("x", F.abs(right["k"]))
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+@pytest.mark.parametrize("on_mode", ["name", "condition"])
+def test_left_abs_still_resolves_after_semi_family(
+    spark: ReparkSession, how: str, on_mode: str
+) -> None:
+    """``F.abs(left["k"])`` is the output column — origin thread must not refuse left."""
+    left, _right, joined = _semi_family_join(spark, how, on_mode)
+    table = joined.select(F.abs(left["k"]).alias("ak")).to_arrow()
+    assert table.column_names == ["ak"]
+    values = table.to_pydict()["ak"]
+    if how == "leftsemi":
+        assert values == [1]
+    else:
+        # leftanti keeps k=2 and the NULL key; abs(NULL) stays NULL.
+        assert sorted(value for value in values if value is not None) == [2]
+        assert None in values
+
+
+@pytest.mark.parametrize("on_mode", ["name", "condition"])
+def test_inner_join_abs_right_ref_still_resolves(spark: ReparkSession, on_mode: str) -> None:
+    """Regression: origin-thread on ``F.abs`` must not break inner-join right refs."""
+    _left, right, joined = _semi_family_join(spark, "inner", on_mode)
+    table = joined.select(F.abs(right["k"]).alias("ak")).to_arrow()
+    assert table.column_names == ["ak"]
+    assert table.to_pydict()["ak"] == [1]
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+def test_distinct_name_abs_raises_missing_from_input(spark: ReparkSession, how: str) -> None:
+    """``F.abs(right["rk"])`` after a condition semi uses the MISSING_FROM_INPUT subclass."""
+    left = spark.createDataFrame([(1, "a"), (2, "b")], ["k", "a"])
+    right = spark.createDataFrame([(1,), (9,)], ["rk"])
+    joined = left.join(right, left["k"] == right["rk"], how)
+    with pytest.raises(AnalysisException, match=_MISSING_ABSENT) as excinfo:
+        joined.select(F.abs(right["rk"]))
+    assert 'Resolved attribute(s) "rk"' in str(excinfo.value)
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+def test_right_ref_lower_raises_missing_attributes_same_key(spark: ReparkSession, how: str) -> None:
+    """``_scalar`` ride-along: ``F.lower(right["a"])`` after semi must not bind left ``a``."""
+    left = spark.createDataFrame([(1, "A")], ["k", "a"])
+    right = spark.createDataFrame([(1, "Z")], ["k", "a"])
+    joined = left.join(right, on="k", how=how)
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
+        joined.select(F.lower(right["a"]))
+    assert 'Resolved attribute(s) "a"' in str(excinfo.value)
+
+
+@pytest.mark.parametrize("how", ["leftsemi", "leftanti"])
+def test_coalesce_left_then_right_still_raises_unemitted_right(
+    spark: ReparkSession, how: str
+) -> None:
+    """``join_sql`` QCOL scan, not first-origin-only: left-then-right coalesce must raise.
+
+    ``_thread_origin`` copies the first origin-bearing arg (here the left ``k``, which
+    is emitted). Without ``join_sql_expr`` carrying the right QCOL, this would silently
+    bind left. Live Spark 4.1.2 raises ``MISSING_ATTRIBUTES`` on the right attribute.
+    """
+    left, right, joined = _semi_family_join(spark, how, "condition")
+    with pytest.raises(AnalysisException, match=_MISSING_APPEAR) as excinfo:
+        joined.select(F.coalesce(left["k"], right["k"]))
+    assert 'Resolved attribute(s) "k"' in str(excinfo.value)
+
+
+def test_abs_string_name_still_resolves_after_semi(spark: ReparkSession) -> None:
+    """``F.abs("k")`` is a name, not a right-parent origin — still the left ``k``."""
+    _left, _right, joined = _semi_family_join(spark, "leftsemi", "name")
+    table = joined.select(F.abs("k").alias("ak")).to_arrow()
+    assert table.to_pydict()["ak"] == [1]
+
+
+@pytest.mark.parametrize("on_mode", ["name", "condition"])
+def test_inner_join_abs_keeps_the_abs_on_a_negative_key(spark: ReparkSession, on_mode: str) -> None:
+    """Q-001: ``F.abs`` after an emitting join must stay ``abs``, not rebound to the leaf.
+
+    The seed ``k=1`` makes ``abs(k) == k``, so a join_sql drop that rebinds the CASE
+    to a bare column would stay green. A negative key turns that mutation red.
+    """
+    left = spark.createDataFrame([(-3, "a")], ["k", "a"])
+    right = spark.createDataFrame([(-3,)], ["k"])
+    if on_mode == "condition":
+        joined = left.join(right, left["k"] == right["k"], "inner")
+    else:
+        joined = left.join(right, on="k", how="inner")
+    table = joined.select(F.abs(right["k"]).alias("ak")).to_arrow()
+    assert table.to_pydict()["ak"] == [3]
+    assert joined.filter(F.abs(right["k"]) > 0).count() == 1

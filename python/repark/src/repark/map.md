@@ -1021,7 +1021,11 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   rejected).
   **X3:** `struct(...)` via native `make_struct` + `count` star Column forms (`"*"`,
   `col("*")`, `df["*"]`); **octo X3 C4** field names via named_struct path.
-- `functions.py` — the `pyspark.sql.functions` surface. WG1 in-use set: `col` (stable_name),
+- `functions.py` — the `pyspark.sql.functions` surface. **Z-4 / Y-5 SAF-001:**
+  `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
+  `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
+  `add_months`, `date_add` so `F.abs(right["k"])` after a semi join raises Spark's
+  `MISSING_ATTRIBUTES` instead of binding left. `column.py` is closed. WG1 in-use set: `col` (stable_name),
   `lit`, `expr` (column-free SQL only; infix fragments parenthesize for projection like Spark
   `(1 + 1)`), `coalesce`/`concat` (with `_spark_display` + projection; carry Group I
   `_partition_transform` when any arg is marked),

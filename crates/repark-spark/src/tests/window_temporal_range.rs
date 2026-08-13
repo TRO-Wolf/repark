@@ -25,7 +25,8 @@
 //! magnitude invert (the kind-only hole — Spark refuses `WRONG_COMPARISON`, never wraps)
 //! and [`temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses`] pins the mixed
 //! refuse. R1 / R4 / R5 stay recorded (unquoted interval, FOLLOWING-to-FOLLOWING,
-//! interval-over-int).
+//! interval-over-int). Z-4 (2026-08-13) re-verified all three against live Spark 4.1.2
+//! and DataFusion 54.1.0; none are expressible on this seam without `spark_ast.rs`.
 
 use super::super::*;
 use super::common::*;
@@ -647,7 +648,9 @@ async fn temporal_range_day_to_second_literal_matches_spark() {
     );
 }
 
-/// R1 deferred: unquoted `INTERVAL 1 DAY` still fails at first plan (needs `spark_ast.rs`).
+/// R1 deferred (Z-4 re-verify): unquoted `INTERVAL 1 DAY` still fails at first plan.
+/// Spark 4.1.2 accepts it (same table as `INTERVAL '1' DAY`). Fix is a pre-plan AST
+/// quote in `spark_ast.rs` — this module's rewrite runs only after that plan succeeds.
 #[tokio::test]
 async fn temporal_range_unquoted_interval_literal_still_refuses() {
     let warehouse = TempDir::new().unwrap();
@@ -666,7 +669,9 @@ async fn temporal_range_unquoted_interval_literal_still_refuses() {
     );
 }
 
-/// R4 deferred: both-bounds-FOLLOWING still includes the current row (120 vs Spark 90).
+/// R4 deferred (Z-4 re-verify): both-bounds-FOLLOWING still includes the current row
+/// (120 vs Spark 90). Planned frame is correctly typed; DF 54.1.0 range-search at the
+/// pin. `EXCLUDE CURRENT ROW` is `TBD` in sqlparser. No Cargo.lock bump.
 #[tokio::test]
 async fn temporal_range_following_to_following_still_includes_current_row() {
     let warehouse = TempDir::new().unwrap();
@@ -687,7 +692,9 @@ async fn temporal_range_following_to_following_still_includes_current_row() {
     );
 }
 
-/// R5 deferred: interval bound over a numeric key still surfaces a raw Arrow cast error.
+/// R5 deferred (Z-4 re-verify): interval bound over a numeric key still surfaces a raw
+/// Arrow cast error. Spark 4.1.2 answers a table: `INTERVAL 'n' UNIT` is numeric `n`
+/// RANGE (unit ignored). Type-aware restatement needs `spark_ast.rs`.
 #[tokio::test]
 async fn temporal_range_interval_bound_over_int_key_still_arrow_cast() {
     let warehouse = TempDir::new().unwrap();

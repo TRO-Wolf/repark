@@ -1019,8 +1019,10 @@ ROWS: list[WindowRow] = [
         "DISCLOSURE (spelling): Spark accepts the unquoted `INTERVAL 1 DAY` frame bound and "
         "answers exactly as the quoted form. DataFusion's frame-bound parser accepts only a "
         "string-literal interval value there (`INTERVAL expression cannot be Value(Number...)`), "
-        "even though the same unquoted literal works fine in an ordinary expression. Y-1 "
-        "deferred (needs a pre-plan rewrite in spark_ast.rs). Flipped by " + FIX_G5B,
+        "even though the same unquoted literal works fine in an ordinary expression. Z-4 "
+        "re-verified (live 4.1.2 = quoted table) and deferred: first-plan fails before "
+        "window_range rewrite; pre-plan quote lives in spark_ast.rs (Z-1's file). Flipped by "
+        + FIX_G5B,
         repark_raises="PySparkException",
     ),
     WindowRow(
@@ -1085,7 +1087,8 @@ ROWS: list[WindowRow] = [
         "DISCLOSURE (value): a frame entirely in the FUTURE (both bounds FOLLOWING). For id 3 "
         "the frame is (ts+1d, ts+2d] = ids 4 and 5 -> Spark 90; repark answers 120, i.e. it also "
         "counts the current row, which is OUTSIDE its own frame. Silent: no error, a plausible "
-        "number. Y-1 deferred (DataFusion range-search off-by-one at the pin). Flipped by "
+        "number. Z-4 re-verified (live 4.1.2 = 30/NULL/90/NULL/NULL; DF 54.1.0 still 120). "
+        "sqlparser EXCLUDE is TBD; plan rewrite strands names; no Cargo.lock bump. Flipped by "
         + FIX_G5B,
     ),
     WindowRow(
@@ -1098,11 +1101,12 @@ ROWS: list[WindowRow] = [
             {"id": [1, 2, 3, 4, 5], "s": [10, 20, 30, 40, 50]},
         ),
         None,
-        "DISCLOSURE (error class): an INTERVAL bound over an INT order key. Spark resolves it to "
-        "a frame no row falls into, so every row sees only itself; repark surfaces a raw Arrow "
-        "cast error (`Cannot cast string '1 DAY' to value of Int64 type`) instead of a Spark "
-        "error class or a table. Y-1 deferred (error-class alignment; Spark returns a table). "
-        "Flipped by " + FIX_G5B,
+        "DISCLOSURE (error class): an INTERVAL bound over an INT order key. Spark 4.1.2 "
+        "(Z-4 live) treats `INTERVAL 'n' UNIT` as numeric `n` RANGE (unit ignored: 1 DAY = "
+        "1 HOUR = 1 MONTH = 1 PRECEDING; 10 DAY = 10 PRECEDING; 0 DAY = peer group). Unique "
+        "keys with gaps of 10 made Y-1's seed look like 'self only'. repark still surfaces a "
+        "raw Arrow cast (`Cannot cast string '1 DAY' to value of Int64 type`). Type-aware "
+        "restatement needs spark_ast.rs. Flipped by " + FIX_G5B,
         repark_raises="PySparkException",
     ),
 ]

@@ -35,10 +35,17 @@
 //! PRECEDING` becomes `2 FOLLOWING AND 1 FOLLOWING`: same kind, start after end). An inverted
 //! frame is Spark-empty: the restatement attaches `FILTER (WHERE false)` and a current-row
 //! frame so DataFusion never executes the inverted search. Unquoted `INTERVAL 1 DAY` (R1)
-//! fails at first plan, before classify, and needs a pre-plan rewrite in `spark_ast.rs` (not
-//! this unit's writable set). Both-bounds-`FOLLOWING` values that are **not** inverted (R4)
-//! are a DataFusion range-search off-by-one at the pin. An interval over a numeric key (R5)
-//! is error-class alignment. Those three stay recorded residuals.
+//! fails at first plan, before classify (`convert_frame_bound_to_scalar_value` accepts only
+//! `SingleQuotedString`). The rewrite helpers here cannot run until that first plan
+//! succeeds; the pre-plan call lives in `spark_ast.rs` (closed to Z-4). Both-bounds-
+//! `FOLLOWING` values that are **not** inverted (R4) still include the current row on
+//! DataFusion 54.1.0 (120 vs Spark 90); sqlparser's `WindowFrame` has no `EXCLUDE`
+//! (`// TBD: EXCLUDE`), and an in-place plan rewrite strands parent column refs.
+//! An interval over a numeric key (R5) is still an Arrow cast. Spark 4.1.2 (Z-4 live
+//! probe) treats `INTERVAL 'n' UNIT` as **numeric `n` RANGE**, unit ignored (`1 DAY` =
+//! `1 HOUR` = `1 MONTH` = `1 PRECEDING`; `10 DAY` = `10 PRECEDING`; `0 DAY` = peer
+//! group) — not Y-1's unique-key "self only" guess. Restating that needs a type-aware
+//! AST rewrite invoked from `spark_ast.rs`. Those three stay recorded residuals.
 
 use std::collections::HashSet;
 use std::ops::ControlFlow;

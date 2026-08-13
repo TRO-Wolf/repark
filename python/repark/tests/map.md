@@ -1355,8 +1355,11 @@ NOT in that file is a defect, not a decision.
   `RESOLVED_ATTRIBUTE_MISSING_FROM_INPUT`); `drop(right[…])` is the probed Spark no-op;
   left refs still resolve; inner-join origin resolution is a regression guard;
   Q-001 emitting-join subtract (`semi.join(right, …, "inner")`); Q-002 `_spawn`
-  descendant refuse; Q-003 self-semi exclusive-set. Ledger:
-  `task/y5-origin-map-ledger.md`. Live-Spark behaviour for the conditionless divergence is
+  descendant refuse; Q-003 self-semi exclusive-set. **Z-4 / Y-5 SAF-001:**
+  `F.abs(right[…])` after semi/anti raises the same `MISSING_ATTRIBUTES` classes
+  (select/filter/withColumn); left-abs and inner-abs still resolve; `_scalar`
+  ride-along (`F.lower`). Ledger: `task/y5-origin-map-ledger.md`,
+  `task/z4-residuals-ledger.md`. Live-Spark behaviour for the conditionless divergence is
   recorded in `task/g4b-join-widening-ledger.md`.
 - `_record_join_goldens.py` — the **record driver** for the joins corpus (NOT a `test_` module;
   never collected). Imports `ROWS` + lifecycle helpers from the committed test module and
@@ -1662,7 +1665,8 @@ NOT in that file is a defect, not a decision.
 | Re-derive the decimal128 Spark halves (record mode) | `JAVA_HOME=… PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_decimal128_goldens.py` |
 | Add a joins differential row (gap G4) | `test_join_parity.py` (`ROWS`; record Spark half with `_record_join_goldens.py`, never by hand) |
 | Change / extend the DataFrame `leftsemi` / `leftanti` surface | `test_g4b_semi_join.py` for spellings + refusals + G4b-R2 origin-map pins; `test_join_parity.py` for a recorded Spark equality; `crates/repark-python/tests/bindings.rs` for the engine-level pin |
-| Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`) |
+| Pin semi/anti right-origin refuse / drop no-op | `test_g4b_semi_join.py` (`test_right_ref_*`, `test_left_refs_*`, `test_inner_join_right_ref_*`, `test_semi_then_inner_join_emits_the_same_right`, `test_spawn_descendant_still_refuses_unemitted_right`, `test_self_semi_exclusive_set_resolves_df_column`, `test_distinct_name_*`, `test_right_ref_abs_*`, `test_left_abs_*`, `test_inner_join_abs_*`, `test_distinct_name_abs_*`, `test_right_ref_lower_*`, `test_coalesce_left_then_right_*`, `test_abs_string_name_*`,
+  `test_inner_join_abs_keeps_the_abs_on_a_negative_key`) |
 | Re-derive the joins Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_join_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
 | Add a timestamp-cast differential row (registry TZ-5) | `test_timestamp_cast_parity.py` (`ROWS`; record Spark half with `_record_timestamp_cast_goldens.py`, never by hand — and keep the SHAPE pin in `test_the_class_is_covered_per_entry_point_and_per_edge` honest in the same diff) |
 | Re-derive the timestamp-cast Spark halves (record mode) | `JAVA_HOME=/usr/lib/jvm/zulu-17-amd64 SPARK_LOCAL_IP=127.0.0.1 PYTHONPATH=python/repark-parity/src .venv/bin/python python/repark/tests/_record_timestamp_cast_goldens.py` (hold `/tmp/grok-jvm-record.lock`) |
