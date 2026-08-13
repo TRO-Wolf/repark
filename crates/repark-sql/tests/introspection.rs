@@ -236,7 +236,20 @@ async fn introspection_still_refuses_without_the_information_schema_conf() {
 /// releasing the name does not break the read — the `DataFrame` is collected AFTER `execute`
 /// returned (the plan owns its provider), and it still returns the pinned rows.
 ///
-/// Mutation: drop the `pinned.release(cx.ctx)` in `router::execute` → the leftover assertion reds.
+/// **Both prefixes, since H-1b (2026-08-11).** This door composes TWO registrations per relation:
+/// the `__repark_ansi_tt_<n>` view it mints itself, and the `__repark_tt_<n>` the shared core half
+/// [`repark_core::read_table_at`] registers underneath it. The original pin filtered the ANSI
+/// prefix ONLY, so the core-minted half escaped it and leaked on the very door whose fix this test
+/// defends (three `FOR … AS OF` reads → `__repark_tt_1|2|3` left behind). The two `LIKE` patterns
+/// are disjoint — `__repark_tt%` does not match `__repark_ansi_tt_<n>` — so each half is its own
+/// assertion and neither can go quiet again.
+///
+/// Mutations, both run and captured (H-1b, `task/h1b-ledger.md`): drop the
+/// `pinned.release(cx.ctx)` in `router::execute` → the test reds at the FIRST leftover assertion,
+/// naming `__repark_ansi_tt_1|2|3` (the core half leaks too, but a panic reports one assertion, so
+/// that is what the transcript can show). Drop the core-name record in
+/// `time_travel::register_pinned_view` → the ANSI half stays green and the SECOND assertion reds,
+/// naming `__repark_tt_1|2|3` — which is what earns the broadened half its place.
 #[tokio::test]
 async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
     let warehouse_dir = TempDir::new().expect("warehouse");
@@ -276,6 +289,19 @@ async fn time_travel_pinned_views_do_not_leak_into_the_introspection_surface() {
     assert!(
         leftover.is_empty(),
         "time-travel temp views must be released, not left on the session: {leftover:?}"
+    );
+    // The core-minted half (`repark_core::read_table_at`), which the ANSI-prefix filter above is
+    // blind to by construction.
+    let core_leftover = utf8_column(
+        &session,
+        "SELECT table_name FROM information_schema.tables \
+         WHERE table_name LIKE '__repark_tt%'",
+    )
+    .await;
+    assert!(
+        core_leftover.is_empty(),
+        "the core half of each pinned relation must be released too, not left on the session: \
+         {core_leftover:?}"
     );
 }
 

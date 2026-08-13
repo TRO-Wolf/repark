@@ -22,8 +22,10 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   pass): H-1b's edit list presupposed a registry row H-1d's own admission rule forbade it to write
   (an issue with no disposition and no pin gets no row), so that line now tells H-1b to *create*
   the row if the re-port leaves a residual difference — the conflict and its resolution are
-  recorded in [../task/h1d-ledger.md](../task/h1d-ledger.md). A brief is amended in place, dated
-  and traceable, never silently rewritten.
+  recorded in [../docs/history/hardening-h1/h1d-ledger.md](../docs/history/hardening-h1/h1d-ledger.md).
+  **Amended again 2026-08-12 (L-1):** the G5 seed-table cell's "temporal RANGE is rejected
+  outright" is dated-corrected (untested, not rejected; real defect was the unit-less offset
+  envelope, #62). A brief is amended in place, dated and traceable, never silently rewritten.
 
 A slate lands here when its campaign starts and leaves when the campaign closes; between
 campaigns this directory holds only its map.

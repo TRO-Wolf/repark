@@ -354,6 +354,9 @@ impl PyColumn {
     #[staticmethod]
     pub fn sql(sql: &str) -> PyResult<Self> {
         fenced!("Column.sql", {
+            // G15: F.expr / Column.sql bypass the Spark-door router. Refuse COLLATE
+            // here so the fragment sees the same actionable message as spark.sql().
+            repark_spark::refuse_collation_in_sql(sql).map_err(crate::datafusion_to_py_err)?;
             let context = SessionContext::new();
             repark_functions::register_all(&context);
             for rule in repark_functions::analyzer_rules() {

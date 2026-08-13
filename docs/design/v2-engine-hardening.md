@@ -59,6 +59,18 @@ The ANSI door already solves the first class the right way — `PinnedViews` in
 `crates/repark-sql/src/time_travel.rs`, released on every exit path — so the fix has a template
 rather than a design question.
 
+> **Correction, 2026-08-11 (H-1b delivery).** The paragraph above, and the "does not release it on
+> every exit path" wording in the table's first row, were both written from the ANSI door's own
+> claim rather than from its behavior. Two things were not true as stated. (a) The ANSI door was
+> **not a fixed door**: its view composes over `repark_core::read_table_at`, which mints a
+> `__repark_tt_<n>` of its own, and only the door's `__repark_ansi_tt_<n>` went into the ledger —
+> so the core-minted half leaked, on the door named as the template, until H-1b fixed it. The
+> template was **structural only** (`PinnedViews` + a release split after planning), which is
+> exactly the part that ported. (b) "Every exit path" overstates what either door does or intends:
+> the guarantee is "every `?` / `return` path", with unwind and future-drop deliberately excluded
+> (no `Drop` impl; neither source exists today). Evidence and decisions:
+> [../../task/h1b-ledger.md](../../task/h1b-ledger.md).
+
 ### 2.2 The verification surface, as it actually is
 
 Five facts that shape H-1 and H-2:

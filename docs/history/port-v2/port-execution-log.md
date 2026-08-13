@@ -248,7 +248,8 @@ passes are added-lines-only from here). The PyPI `repark` name is already reserv
 placeholder) — local wheels install by explicit path forever.
 
 **Open debt** (below): the Spark-door time-travel view leak (declared divergence, fix with the
-v1 pair); the `$`-metadata introspection rider. **User-side milestone-one actions** (p3g ledger
+v1 pair — *closed by H-1b, 2026-08-11, with no divergence row*); the `$`-metadata introspection
+rider (*closed by H-1c, 2026-08-10*). **User-side milestone-one actions** (p3g ledger
 §"Milestone-one declaration"): declare v1 bugfix-only; settle cutover sequencing; the first
 tagged release (trusted publishers + the `repark.sql`-module release gate + the reserved-name
 existing-project flow); the first dispatch of each tier-2 workflow.
@@ -262,12 +263,14 @@ existing-project flow); the first dispatch of each tier-2 workflow.
 
 ## Open items
 
-- [ ] **Spark-door time-travel temp-view leak (inherited from v1)** — `repark-spark`'s
+- [x] **Spark-door time-travel temp-view leak (inherited from v1)** — `repark-spark`'s
       time_travel apply-half registers pinned views and never deregisters (v1's own behavior at
-      the pin). The ANSI door fixed its copy in PR-6 (`PinnedViews` released on every exit
-      path); the Spark door's fix is a **declared divergence-with-issue** (port fidelity says
-      never fix silently): apply the same release idiom + a divergence note, ideally alongside
-      the matching v1 bugfix. Found by the PR-6 verify panel (p2g ledger).
+      the pin). The ANSI door fixed its copy in PR-6 (`PinnedViews` released on every `?` /
+      `return` path); the Spark door's fix is a **declared divergence-with-issue** (port fidelity
+      says never fix silently): apply the same release idiom + a divergence note, ideally
+      alongside the matching v1 bugfix. Found by the PR-6 verify panel (p2g ledger).
+      **Closed by H-1b (2026-08-11), see [task/h1b-ledger.md](../../../task/h1b-ledger.md)** —
+      and the outcome was "no divergence row at all": a fixed defect is not a divergence.
 - [ ] **`$`-metadata-table filtering in introspection** — carried forward as an open fork/core
       rider from PR-6's Q8 delivery (see p2g ledger).
 

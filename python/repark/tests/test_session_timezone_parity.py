@@ -14,7 +14,7 @@ measured as a four-hour silent offset. Split B landed the extraction fix, so **t
 disclosures are now plain equality rows (``repark=None``) — and that flip is precisely the
 revert-red evidence the testing contract asks for: undo the fix and each one goes red.
 
-**The rows that are still disclosures are a different class, named on each row.** Twelve remain,
+**The rows that are still disclosures are a different class, named on each row.** Eleven remain,
 and none of them is the *instant-typed* extraction class this unit closed:
 
 * two are :data:`TZ4` — the Arrow export TYPE (``timestamp[ns]`` / ``timestamp[us]`` with no
@@ -22,8 +22,6 @@ and none of them is the *instant-typed* extraction class this unit closed:
 * four are ``date_trunc`` / ``DataFrame``-API rows whose VALUE converged with the fix while their
   TYPE did not, so they moved from the extraction class into :data:`TZ4`; their ``repark`` half
   was recorded in the same change that moved it, which is why they are not silent;
-* one is ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5) — a cast-unit
-  bug this unit deliberately does not fix;
 * three are :data:`TZ7` — a **zoneless** TIMESTAMP input (a ``TIMESTAMP '…'`` literal, a zoneless
   ``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-datetime column). Spark reads those as a
   session-zone wall clock; repark's planner stores the digits as UTC ticks under a type that is
@@ -34,6 +32,13 @@ and none of them is the *instant-typed* extraction class this unit closed:
 * one is :data:`TZ6` — repark maps ``TimestampNTZType`` and ``TimestampType`` onto the SAME Arrow
   type, so an NTZ column is indistinguishable from an instant one. Recorded from the live oracle,
   not asserted from documentation.
+
+The twelfth **was** ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5). It
+CONVERGED when :data:`TZ5_FIX` landed and is now an equality row, which is the same revert-red
+evidence the extraction flip is. The class's own per-entry-point corpus — SQL door and DataFrame
+door, both signs of the floor edge, NULL, and the reverse direction — is
+``test_timestamp_cast_parity.py``; this row stays here because it is where the class was first
+measured.
 
 A disclosure row pins BOTH halves — repark's actual output (value AND Arrow type) and the
 recorded live-Spark output it differs from — and asserts that the two still differ. A row that
@@ -108,6 +113,11 @@ TZ7 = (
 )
 # repark spells `TimestampNTZType` but maps it onto the same Arrow type as `TimestampType`.
 TZ6 = "registry row TZ-6 (no TIMESTAMP_NTZ distinct from TIMESTAMP)"
+# The cast-scaling fix that closed registry row TZ-5, named on the row it flipped to equality.
+TZ5_FIX = (
+    "the timestamp-cast epoch-seconds fix (task/tz5-cast-seconds-ledger.md; "
+    "`repark_functions::timestamp_cast` + the analyzer's `Expr::Cast` arm)"
+)
 # What a TZ-7 row costs, stated once: these shapes AGREED with Spark before the extraction fix.
 TZ7_REGRESSION = (
     "This row was GREEN against Spark before the extraction fix and is RED after it. That is the "
@@ -787,11 +797,14 @@ G16_ROWS: list[TimeZoneRow] = [
         ZONE_NEW_YORK,
         "SELECT CAST(to_timestamp('1969-12-31T23:30:00Z') AS BIGINT) AS epoch_value",
         _one_row([("epoch_value", pa.int64(), True)], {"epoch_value": -1800}),
-        _one_row([("epoch_value", pa.int64(), True)], {"epoch_value": -1800000000000}),
-        "a SEPARATE divergence this unit surfaced and does NOT fix: casting TIMESTAMP to BIGINT "
-        "yields epoch SECONDS in Spark and epoch NANOSECONDS in repark (a 10^9 factor, correctly "
-        "signed before 1970). Not a zone bug — a cast-unit bug; recorded here so the temporal "
-        "edge is not silently green, and carried to the divergence registry as its own row.",
+        None,
+        "a SEPARATE divergence this unit surfaced and did NOT fix — casting TIMESTAMP to BIGINT "
+        "yielded epoch SECONDS in Spark and epoch NANOSECONDS in repark (a 10^9 factor, correctly "
+        "signed before 1970). It was recorded here as a disclosure so the temporal edge was not "
+        f"silently green, and it CONVERGED when {TZ5_FIX} landed: repark now scales the instant to "
+        "seconds under every numeric cast target. This row is now the flip evidence — reverting "
+        "that fix reds it. The class's own per-entry-point corpus is "
+        "`test_timestamp_cast_parity.py`.",
     ),
     TimeZoneRow(
         "year_boundary_date_trunc_under_tokyo_session",
@@ -1153,8 +1166,8 @@ def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
         "date_trunc_across_the_fall_back_hour_under_new_york_session",
         "dataframe_api_extract_under_new_york_session",
         "dataframe_api_extract_under_tokyo_session",
-        # TZ-5 — a cast-unit bug (10^9 factor), deliberately out of this unit's scope.
-        "pre_1970_timestamp_cast_to_bigint",
+        # TZ-5 is NO LONGER here: `pre_1970_timestamp_cast_to_bigint` converged when the
+        # timestamp-cast epoch-seconds fix landed and is now an equality row (see TZ5_FIX).
         # TZ-7 — a ZONELESS timestamp input is read as UTC, not as a session-zone wall clock.
         # This unit fixed extraction for INSTANT-typed inputs only; these are the other half,
         # and they are worse after the fix than before it. Disclosed, not laundered.
@@ -1168,9 +1181,12 @@ def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
         "timestamp extraction this unit closed — if a new one is legitimate, add it here with the "
         "registry row that owns it"
     )
-    assert len(equality) == 17, (
+    assert len(equality) == 18, (
         "13 rows converged with the extraction fix, plus the 2 date_trunc COMPOSITION rows the "
-        "rework added, plus the 2 zone-independent control rows that were equality rows all along"
+        "rework added, plus the 2 zone-independent control rows that were equality rows all "
+        "along, plus `pre_1970_timestamp_cast_to_bigint`, which converged when the "
+        "timestamp-cast epoch-seconds fix landed (17 -> 18; the class's own corpus is "
+        "test_timestamp_cast_parity.py)"
     )
 
 

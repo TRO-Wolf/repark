@@ -193,6 +193,13 @@ therefore has a precondition it does not itself satisfy: the predecessor's fix e
 - **Re-port the predecessor's fix** into `crates/repark-spark/src/time_travel.rs`, following the
   ANSI door's template — `PinnedViews` in `crates/repark-sql/src/time_travel.rs`, released on
   **every** exit path, including the error paths.
+  > **Annotation, 2026-08-11 (H-1b delivery — briefs are versioned, so this narrows rather than
+  > rewrites).** "Every exit path, including the error paths" is not what either door delivers or
+  > intends. The guarantee is the map's wording, **every `?` / `return` path**; unwind and
+  > future-drop are deliberately outside it (`PinnedViews` carries no `Drop` impl — it would have
+  > to own a `SessionContext` clone — and neither source exists today: panics are banned in prod
+  > and the PyO3 facade drives this via `block_on`). The error-path half of the sentence IS
+  > delivered and pinned. Decision D-1 + evidence: [../task/h1b-ledger.md](../task/h1b-ledger.md).
 - **Pins on both doors and the facade**: an ephemeral view created by a time-travel rewrite is gone
   after the statement completes, and gone after the statement *fails*.
 - **Move the issue's STATUS row** from "Known correctness issues" to fixed in the same PR, and
@@ -262,6 +269,14 @@ owner-accepted deferral row. There is **no unit-count cap**; the list is the gat
 | **G3** `MERGE INTO` has no Spark-parity differential | **HIGH** | mechanics are well tested, but the result set has never been compared to Spark: duplicate source keys, `WHEN MATCHED AND …` arm ordering, NULL merge keys | 8–10 differential rows · 4 Rust pins (duplicate-source-key detection, arm ordering) · 2 live scenarios | 2 — unit A grows the live engine abstraction to cover a table lifecycle (create → merge → read); unit B is the parity rows |
 | **G4** join semantics: NULL keys, duplicate keys, missing join types | **HIGH** | facade join coverage is about naming and ambiguity, not values; duplicate-key row multiplication is unpinned; the binding accepts only `inner`/`left`/`right`/`full` | 10–12 differential rows (join type × {NULL key, dup one side, dup both sides}, value + type + nullability) · 3 Rust binding pins for the widened join-type set · 2 cross-door rows | 1–2 — the missing join types are implemented **in** the unit that pins them (tests-with-code) |
 | **G5** window frame semantics | **HIGH** | coverage is dominated by refusal pins; one real frame-semantics value case exists; a temporal `RANGE` frame over a timestamp order key is rejected outright | 12–16 differential rows (`ROWS` × five bound kinds; `RANGE` over numeric and temporal order keys; ties under `rank`/`dense_rank`/`row_number`; NULL in partition and order keys; empty frame) · 4 live scenarios · 4 Rust pins for the temporal-`RANGE` path | 2 — one for the value matrix, one for the temporal-`RANGE` implementation and its pins |
+
+> **Correction, 2026-08-12 (L-1 landing-truth — briefs are versioned, so this narrows rather than
+> rewrites).** The G5 cell's "a temporal `RANGE` frame over a timestamp order key is rejected
+> outright" was **untested, not rejected**. O-2's §0 recon
+> (`task/g5b-temporal-range-ledger.md`) found interval-bounded temporal `RANGE` already matched
+> Spark 4.1.2 at the frozen base. The real defect was the **unit-less** offset envelope (silently
+> read as MONTHS): #62 refuses it on `TIMESTAMP` and means days on `DATE`, as Spark does. Five
+> residuals remain open as G5b-R (negative-offset `count(*)`=-1 is HIGH).
 
 ## The tail — the rest of the ranked list
 

@@ -26,7 +26,9 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int64Array, StringArray};
+use datafusion::arrow::array::{
+    Array, BooleanArray, Decimal128Array, Float64Array, Int32Array, Int64Array, StringArray,
+};
 use datafusion::arrow::datatypes::{DataType, Field};
 use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
@@ -653,5 +655,555 @@ async fn cross_door_identifier_case_folding_agrees_unquoted_and_diverges_quoted(
         spark_quoted.contains("No field named") && spark_quoted.contains("\"ID\""),
         "the Spark-door refusal must be a resolution failure naming the unresolved identifier as \
          `\"ID\"` (row ID-1): {spark_quoted}"
+    );
+}
+
+// =================================================================================================
+// G-7b — decimal128 cross-door rows (same SQL through both doors; schema + i128 + nullability)
+// =================================================================================================
+
+/// One-column Decimal128 result through a session: `(precision, scale, nullable, i128_or_null)`.
+///
+/// Compared bit-exact across doors. Goldens derive from the Python corpus equality rows
+/// `add_same_precision_scale` / `mul_money_by_quantity` (repark already matches Spark there).
+async fn decimal128_scalar(session: &ReparkSession, sql: &str) -> (u8, i8, bool, Option<i128>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let nullable = field.is_nullable();
+    let (precision, scale) = match field.data_type() {
+        DataType::Decimal128(precision, scale) => (*precision, *scale),
+        other => panic!("expected Decimal128 for `{sql}`, got {other:?}"),
+    };
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Decimal128Array>()
+        .expect("Decimal128Array");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (precision, scale, nullable, value)
+}
+
+/// G-7b cross-door row 1 — money add. Corpus row `add_same_precision_scale`.
+///
+/// Same SQL string through native ANSI (`AnsiDialect`, no extension) and Spark-extended
+/// (`SparkDialect` + `SparkExtension`). Asserts schema `(p,s)` + nullability + raw i128 are
+/// bit-exact equal across doors, and match the corpus golden (11,2) / 579.
+#[tokio::test]
+async fn cross_door_decimal_add_same_precision_scale_bit_exact() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(1.23 AS DECIMAL(10,2)) + CAST(4.56 AS DECIMAL(10,2)) AS v";
+
+    let ansi_pin = decimal128_scalar(&ansi.session, sql).await;
+    let spark_pin = decimal128_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "decimal add must agree across doors (schema + nullability + i128)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (11, 2, false, Some(579)),
+        "shared result must match corpus row add_same_precision_scale"
+    );
+}
+
+/// G-7b cross-door row 2 — money × quantity. Corpus row `mul_money_by_quantity`.
+///
+/// Same two-session protocol as the add row. Golden: decimal128(21,2) non-null i128=5997.
+#[tokio::test]
+async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(19.99 AS DECIMAL(10,2)) * CAST(3 AS DECIMAL(10,0)) AS v";
+
+    let ansi_pin = decimal128_scalar(&ansi.session, sql).await;
+    let spark_pin = decimal128_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "decimal mul must agree across doors (schema + nullability + i128)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (21, 2, false, Some(5997)),
+        "shared result must match corpus row mul_money_by_quantity"
+    );
+}
+
+/// ROW 9 — **the G3-E8 refusal, RENDERED**, byte for byte. Profile: **`TwoSession`**.
+///
+/// The valve is deliberately implemented TWICE (this crate may not take a product edge to
+/// `repark-spark`), and the ledger's D-1 promises the two copies stay identical. Until this row
+/// the promise was pinned only at the template level — each door asserted its own copy of the
+/// message. The part a template pin cannot see is the part the copies actually disagreed about:
+/// the rendered TARGET, which the ANSI door used to read out of scrubbed text while the Spark
+/// door read it from the parse tree.
+///
+/// So: one statement, two doors, two independent warehouses, and the whole refusal string
+/// compared. Any drift — a reworded clause, a differently rendered target, one door's copy
+/// updated without the other's — REDs here, which is exactly the drift D-1 accepted the
+/// duplication's risk on. The quoted-target row is included because it is the spelling that was
+/// wrong.
+///
+/// Mutation: change one door's message (or one door's target derivation) → this row reds while
+/// both doors' own message pins stay green.
+#[tokio::test]
+async fn cross_door_g3e8_refusals_render_identically() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    make_namespace(&ansi, false).await;
+    make_namespace(&spark, true).await;
+
+    for door in [&ansi, &spark] {
+        door.session
+            .sql("CREATE TABLE ice.sales.orders AS SELECT 1 AS id, 'a' AS label")
+            .await
+            .expect("target CTAS");
+        door.session
+            .sql("CREATE TABLE ice.sales.keys AS SELECT 1 AS id")
+            .await
+            .expect("keys CTAS");
+    }
+
+    for sql in [
+        "DELETE FROM ice.sales.orders WHERE id IN (SELECT id FROM ice.sales.keys)",
+        "UPDATE ice.sales.orders SET label = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
+        // The target rendering, quoted — the half a template-only pin cannot see.
+        "DELETE FROM \"ice\".\"sales\".\"orders\" WHERE id IN (SELECT id FROM ice.sales.keys)",
+    ] {
+        let ansi_refusal = match ansi.session.sql(sql).await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("ANSI door must refuse: {sql}"),
+        };
+        let spark_refusal = match spark.session.sql(sql).await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("Spark door must refuse: {sql}"),
+        };
+        assert_eq!(
+            ansi_refusal, spark_refusal,
+            "the two doors' G3-E8 refusals must be byte-identical, sql={sql:?}"
+        );
+        assert!(
+            ansi_refusal.contains("subquery predicates are silently mis-executed")
+                && ansi_refusal.contains("G3-E8"),
+            "…and that shared string must be the G3-E8 refusal (an equal-but-wrong pair would \
+             otherwise pass the assertion above): {ansi_refusal}"
+        );
+    }
+}
+
+// =================================================================================================
+// G12 — three-valued logic cross-door rows (same SQL through both doors; type + nullability + value)
+// =================================================================================================
+
+/// One-column Boolean result: `(DataType, nullable, Option<bool>)`.
+///
+/// Goldens derive from the Python G12 corpus equality rows (`and_true_null_is_null` and the
+/// `eq` half of `null_eq_vs_null_safe_eq`). `<=>` is Spark-only — deliberately not used here so
+/// both doors share one portable SQL string.
+async fn boolean_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<bool>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let data_type = field.data_type().clone();
+    let nullable = field.is_nullable();
+    assert_eq!(
+        data_type,
+        DataType::Boolean,
+        "expected Boolean for `{sql}`, got {data_type:?}"
+    );
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .expect("BooleanArray");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (data_type, nullable, value)
+}
+
+/// One-column Int32 result: `(DataType, nullable, Option<i32>)`.
+///
+/// Used by the CASE-WHEN null-predicate cross-door row (corpus `case_when_null_predicate`).
+async fn int32_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<i32>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let data_type = field.data_type().clone();
+    let nullable = field.is_nullable();
+    assert_eq!(
+        data_type,
+        DataType::Int32,
+        "expected Int32 for `{sql}`, got {data_type:?}"
+    );
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Int32Array>()
+        .expect("Int32Array");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (data_type, nullable, value)
+}
+
+/// G12 cross-door row 1 — TRUE AND NULL → NULL. Corpus row `and_true_null_is_null`.
+///
+/// Same SQL string through native ANSI and Spark-extended doors. Asserts Boolean type +
+/// nullability + value are equal across doors, and match the recorded Spark golden
+/// (nullable bool NULL).
+#[tokio::test]
+async fn cross_door_tvl_true_and_null_is_null() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT (TRUE AND CAST(NULL AS BOOLEAN)) AS v";
+
+    let ansi_pin = boolean_scalar(&ansi.session, sql).await;
+    let spark_pin = boolean_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "TRUE AND NULL must agree across doors (type + nullability + value)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (DataType::Boolean, true, None),
+        "shared result must match corpus row and_true_null_is_null"
+    );
+}
+
+/// G12 cross-door row 2 — CASE WHEN null-predicate falls through. Corpus
+/// `case_when_null_predicate`.
+///
+/// Portable ANSI/Spark SQL (no `<=>`). UNKNOWN WHEN does not match → next WHEN TRUE → 2.
+/// Asserts Int32 type + nullability + value across doors.
+#[tokio::test]
+async fn cross_door_tvl_case_when_null_predicate() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CASE \
+                 WHEN CAST(NULL AS BOOLEAN) THEN CAST(1 AS INT) \
+                 WHEN TRUE THEN CAST(2 AS INT) \
+                 ELSE CAST(3 AS INT) \
+               END AS v";
+
+    let ansi_pin = int32_scalar(&ansi.session, sql).await;
+    let spark_pin = int32_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin, spark_pin,
+        "CASE WHEN null-predicate must agree across doors (type + nullability + value)"
+    );
+    assert_eq!(
+        ansi_pin,
+        (DataType::Int32, false, Some(2)),
+        "shared result must match corpus row case_when_null_predicate"
+    );
+}
+
+// =================================================================================================
+// G11 — intended ANSI vs Spark door divergences (correctness, not parity)
+// =================================================================================================
+
+/// Plan- or collect-time error text. Panics if `{sql}` succeeds through `{session}`.
+async fn collect_error(session: &ReparkSession, sql: &str) -> String {
+    match session.sql(sql).await {
+        Err(error) => error.to_string(),
+        Ok(frame) => match frame.collect().await {
+            Err(error) => error.to_string(),
+            Ok(_) => panic!("expected `{sql}` to fail, but it produced rows"),
+        },
+    }
+}
+
+/// One-column Float64 result: `(DataType, nullable, Option<f64>)`.
+///
+/// `None` is SQL NULL. Used by the G11 `/` rows where the Spark door promotes to float.
+async fn float64_scalar(session: &ReparkSession, sql: &str) -> (DataType, bool, Option<f64>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let data_type = field.data_type().clone();
+    let nullable = field.is_nullable();
+    assert_eq!(
+        data_type,
+        DataType::Float64,
+        "expected Float64 for `{sql}`, got {data_type:?}"
+    );
+    let batches = frame.collect().await.expect("collect");
+    assert_eq!(
+        batches
+            .iter()
+            .map(datafusion::arrow::array::RecordBatch::num_rows)
+            .sum::<usize>(),
+        1,
+        "`{sql}` must yield one row"
+    );
+    let array = batches[0]
+        .column(0)
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .expect("Float64Array");
+    let value = if array.is_null(0) {
+        None
+    } else {
+        Some(array.value(0))
+    };
+    (data_type, nullable, value)
+}
+
+/// Seed `ice.sales.nums(n INT)` with `{1, NULL, 2}` — the G11 ordering / aggregate fixture.
+async fn make_nullable_ints(door: &Door, spark_spelling: bool) {
+    make_namespace(door, spark_spelling).await;
+    door.session
+        .sql(
+            "CREATE TABLE ice.sales.nums AS \
+             SELECT CAST(1 AS INT) AS n UNION ALL \
+             SELECT CAST(NULL AS INT) AS n UNION ALL \
+             SELECT CAST(2 AS INT) AS n",
+        )
+        .await
+        .expect("nums CTAS");
+}
+
+/// One-column Int32 result set in **statement order** (not sorted).
+///
+/// Default `ORDER BY` is the claim: sorting here would hide the null-placement divergence.
+async fn ordered_int32(session: &ReparkSession, sql: &str) -> (DataType, bool, Vec<Option<i32>>) {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("query failed ({sql}): {error}"));
+    let schema = frame.schema().as_arrow().clone();
+    let field = schema.field(0);
+    let data_type = field.data_type().clone();
+    let nullable = field.is_nullable();
+    assert_eq!(
+        data_type,
+        DataType::Int32,
+        "expected Int32 for `{sql}`, got {data_type:?}"
+    );
+    let batches = frame.collect().await.expect("collect");
+    let mut values = Vec::new();
+    for batch in &batches {
+        let array = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .expect("Int32Array");
+        for row in 0..batch.num_rows() {
+            if array.is_null(row) {
+                values.push(None);
+            } else {
+                values.push(Some(array.value(row)));
+            }
+        }
+    }
+    (data_type, nullable, values)
+}
+
+/// G11 cross-door row 1 — integer `/`.
+///
+/// Standard SQL integer `/` truncates toward zero (`INT 5/2 = 2`); Spark `/` is always
+/// floating-point (`2.5`, nullable).
+#[tokio::test]
+async fn cross_door_integer_division_truncates_on_ansi_is_float_on_spark() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(5 AS INT) / CAST(2 AS INT) AS v";
+
+    let ansi_pin = int32_scalar(&ansi.session, sql).await;
+    let spark_pin = float64_scalar(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin,
+        (DataType::Int32, false, Some(2)),
+        "ANSI door: integer `/` stays Int32 and truncates toward zero"
+    );
+    assert_eq!(
+        spark_pin,
+        (DataType::Float64, true, Some(2.5)),
+        "Spark door: `/` promotes integers to nullable Float64"
+    );
+}
+
+/// G11 cross-door row 2 — integer `/ 0`.
+///
+/// Standard SQL division by zero raises; Spark-family `/` promotes integers to float and
+/// yields NULL.
+#[tokio::test]
+async fn cross_door_integer_div_by_zero_raises_on_ansi_null_on_spark() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(1 AS INT) / CAST(0 AS INT) AS v";
+
+    let ansi_error = collect_error(&ansi.session, sql).await;
+    assert!(
+        ansi_error.contains("Divide by zero"),
+        "ANSI door must raise on integer `/ 0`, got: {ansi_error}"
+    );
+
+    let spark_pin = float64_scalar(&spark.session, sql).await;
+    assert_eq!(
+        spark_pin,
+        (DataType::Float64, true, None),
+        "Spark door: integer `/ 0` is a nullable Float64 NULL"
+    );
+}
+
+/// G11 cross-door row 3 — float `/ 0`.
+///
+/// Stock DataFusion / IEEE-754 `/` yields `+Infinity`; the Spark door's `/` yields NULL.
+#[tokio::test]
+async fn cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(1.0 AS DOUBLE) / CAST(0.0 AS DOUBLE) AS v";
+
+    let (ansi_type, ansi_nullable, ansi_value) = float64_scalar(&ansi.session, sql).await;
+    assert_eq!(ansi_type, DataType::Float64);
+    assert!(
+        !ansi_nullable,
+        "ANSI IEEE `/ 0` is a non-null Infinity, not a SQL NULL"
+    );
+    let ansi_float = ansi_value.expect("ANSI float `/ 0` must not be SQL NULL");
+    assert!(
+        ansi_float.is_infinite() && ansi_float.is_sign_positive(),
+        "ANSI door must yield +Infinity, got {ansi_float}"
+    );
+
+    let spark_pin = float64_scalar(&spark.session, sql).await;
+    assert_eq!(
+        spark_pin,
+        (DataType::Float64, true, None),
+        "Spark door: float `/ 0` is a nullable Float64 NULL"
+    );
+}
+
+/// G11 cross-door row 4 — decimal `/ 0`.
+///
+/// Standard SQL decimal division by zero raises; the Spark door yields NULL at the decimal
+/// result type.
+#[tokio::test]
+async fn cross_door_decimal_div_by_zero_raises_on_ansi_null_on_spark() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    let sql = "SELECT CAST(1 AS DECIMAL(10,0)) / CAST(0 AS DECIMAL(10,0)) AS v";
+
+    let ansi_error = collect_error(&ansi.session, sql).await;
+    assert!(
+        ansi_error.contains("Divide by zero"),
+        "ANSI door must raise on decimal `/ 0`, got: {ansi_error}"
+    );
+
+    let spark_pin = decimal128_scalar(&spark.session, sql).await;
+    assert_eq!(
+        spark_pin,
+        (14, 4, true, None),
+        "Spark door: decimal `/ 0` is nullable Decimal128(14,4) NULL"
+    );
+}
+
+/// G11 cross-door row 5 — default `ORDER BY … ASC` null placement.
+///
+/// Trino/PostgreSQL-style nulls-sort-high (`ASC` defaults to `NULLS LAST`) versus Spark/Hive
+/// nulls-sort-low (`ASC` defaults to `NULLS FIRST`).
+#[tokio::test]
+async fn cross_door_order_by_asc_default_nulls_last_on_ansi_first_on_spark() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    make_nullable_ints(&ansi, false).await;
+    make_nullable_ints(&spark, true).await;
+    let sql = "SELECT n FROM ice.sales.nums ORDER BY n ASC";
+
+    let ansi_pin = ordered_int32(&ansi.session, sql).await;
+    let spark_pin = ordered_int32(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin,
+        (DataType::Int32, true, vec![Some(1), Some(2), None]),
+        "ANSI door: ASC defaults to NULLS LAST"
+    );
+    assert_eq!(
+        spark_pin,
+        (DataType::Int32, true, vec![None, Some(1), Some(2)]),
+        "Spark door: ASC defaults to NULLS FIRST"
+    );
+}
+
+/// G11 cross-door row 6 — default `ORDER BY … DESC` null placement.
+///
+/// The same nulls-sort-high versus nulls-sort-low rule: ANSI `DESC` defaults to `NULLS FIRST`;
+/// Spark `DESC` defaults to `NULLS LAST`.
+#[tokio::test]
+async fn cross_door_order_by_desc_default_nulls_first_on_ansi_last_on_spark() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    make_nullable_ints(&ansi, false).await;
+    make_nullable_ints(&spark, true).await;
+    let sql = "SELECT n FROM ice.sales.nums ORDER BY n DESC";
+
+    let ansi_pin = ordered_int32(&ansi.session, sql).await;
+    let spark_pin = ordered_int32(&spark.session, sql).await;
+
+    assert_eq!(
+        ansi_pin,
+        (DataType::Int32, true, vec![None, Some(2), Some(1)]),
+        "ANSI door: DESC defaults to NULLS FIRST"
+    );
+    assert_eq!(
+        spark_pin,
+        (DataType::Int32, true, vec![Some(2), Some(1), None]),
+        "Spark door: DESC defaults to NULLS LAST"
     );
 }

@@ -811,14 +811,20 @@ class StructField(DataType):
 
     @classmethod
     def fromJson(cls, json: dict[str, Any]) -> StructField:  # noqa: N802
-        """Build from Spark field JSON (collation metadata keys ignored for v1)."""
+        """Build from Spark field JSON, applying ``metadata.__COLLATIONS``.
+
+        Spark 4 stores collation on the field metadata map (type token stays ``"string"``).
+        Construction of a collated :class:`StringType` stays legal (A5); first evaluation
+        refuses. Popping the key without applying it was the G15 silently-wrong-count path.
+        """
         metadata = dict(json.get("metadata") or {})
-        # Drop Spark collation metadata key if present — collations re-applied via type string.
-        metadata.pop("__COLLATIONS", None)
+        field_name = str(json.get("name", ""))
+        collations_map = _collations_map_from_field_metadata(metadata, field_name)
+        metadata.pop(_COLLATIONS_METADATA_KEY, None)
         metadata.pop("collations", None)
         return cls(
             json["name"],
-            _parse_datatype_json_value(json["type"], json.get("name", ""), None),
+            _parse_datatype_json_value(json["type"], field_name, collations_map or None),
             json.get("nullable", True),
             metadata,
         )
@@ -1159,6 +1165,37 @@ def _parse_datatype_string(text: str) -> DataType:
         except ValueError:
             pass
     return _parse_complex_or_atomic(stripped)
+
+
+_COLLATIONS_METADATA_KEY = "__COLLATIONS"
+
+
+def _collation_name_from_json_value(value: Any) -> str:
+    """Spark stores ``provider.NAME`` under ``__COLLATIONS``; a bare name is kept as-is.
+
+    Construction does not validate the provider (A5). ``icu.UNICODE_CI`` → ``UNICODE_CI``.
+    """
+    text = str(value)
+    parts = text.split(".")
+    if len(parts) == 2 and parts[0] and parts[1]:
+        return parts[1]
+    return text
+
+
+def _collations_map_from_field_metadata(
+    metadata: dict[str, Any], field_name: str
+) -> dict[str, str]:
+    """Read Spark field ``__COLLATIONS`` (or a ``collations`` alias) into a path→name map."""
+    raw = metadata.get(_COLLATIONS_METADATA_KEY)
+    if raw is None:
+        raw = metadata.get("collations")
+    if raw is None:
+        return {}
+    if isinstance(raw, str):
+        return {field_name: _collation_name_from_json_value(raw)}
+    if isinstance(raw, dict):
+        return {str(key): _collation_name_from_json_value(item) for key, item in raw.items()}
+    return {}
 
 
 def _parse_datatype_json_value(
@@ -1692,6 +1729,74 @@ def _make_type_verifier(
             )
 
     return verifier
+
+
+# === G15: collation refuse (first evaluation, not construction) ===============================
+
+COLLATION_REFUSAL_NEEDLE = "does not implement collation"
+_DEFAULT_BINARY_COLLATION = "UTF8_BINARY"
+
+
+def collation_refusal_message(requested: str) -> str:
+    """Actionable G15 refusal — same needles as both SQL doors."""
+    return (
+        f"repark {COLLATION_REFUSAL_NEEDLE}: requested `{requested}`. Spark 4 would apply "
+        "that collation to comparisons and ORDER BY; repark refuses rather than silently "
+        "ignore it. Use binary/default ordering — omit COLLATE, keep StringType() / "
+        "UTF8_BINARY, and do not set a session collation."
+    )
+
+
+def is_collation_session_key(key: str) -> bool:
+    """True when a Spark SQLConf / session key would change compare/order collation."""
+    return "collation" in key.lower()
+
+
+def refuse_collation_session_key(key: str) -> None:
+    """Refuse a session/builder conf key that requests collation semantics."""
+    if not is_collation_session_key(key):
+        return
+    from repark.errors import UnsupportedOperationException
+
+    raise UnsupportedOperationException(collation_refusal_message(key))
+
+
+def refuse_evaluated_collation(data_type: Any) -> None:
+    """Refuse first evaluation of a non-binary ``StringType`` (nested-aware).
+
+    Construction and ``simpleString`` stay legal (A5). Evaluation is createDataFrame,
+    cast/try_cast, and any schema→engine mapping.
+    """
+    from repark.errors import UnsupportedOperationException
+
+    if isinstance(data_type, StringType) and not data_type.isUTF8BinaryCollation():
+        raise UnsupportedOperationException(collation_refusal_message(data_type.collation))
+    if isinstance(data_type, ArrayType):
+        refuse_evaluated_collation(data_type.elementType)
+        return
+    if isinstance(data_type, MapType):
+        refuse_evaluated_collation(data_type.keyType)
+        refuse_evaluated_collation(data_type.valueType)
+        return
+    if isinstance(data_type, StructType):
+        for field in data_type.fields:
+            refuse_evaluated_collation(field.dataType)
+        return
+    if isinstance(data_type, StructField):
+        refuse_evaluated_collation(data_type.dataType)
+
+
+def refuse_collated_type_string(type_text: str) -> None:
+    """Refuse a ``string collate NAME`` cast/DDL token other than UTF8_BINARY."""
+    match = _STRING_COLLATE.fullmatch(type_text.strip())
+    if match is None:
+        return
+    name = match.group(1)
+    if name.upper() == _DEFAULT_BINARY_COLLATION:
+        return
+    from repark.errors import UnsupportedOperationException
+
+    raise UnsupportedOperationException(collation_refusal_message(name))
 
 
 __all__ = [

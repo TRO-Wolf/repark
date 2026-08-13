@@ -1326,7 +1326,22 @@ class Column:
             names: list[str] = []
             for order_column in window._order_columns:
                 # Bare col / alias: stable projection name; else spark display (best-effort).
-                if order_column._stable_name and order_column._projection_name is not None:
+                #
+                # "Bare" must mean bare. A CAST chain keeps the BASE column's projection name
+                # (`col("d").cast("timestamp").cast("long")` still projects as `d`), so naming it
+                # here made the guard below read the SOURCE column's dtype and refuse a perfectly
+                # numeric order key — Spark accepts `CAST(ts AS BIGINT)` as a RANGE key, and so
+                # does repark since the TZ-5 cast fix made that expression epoch seconds
+                # (task/tz5-cast-seconds-ledger.md; the arithmetic wrapper the moving-average pin
+                # used to carry had been hiding this). Requiring the display to EQUAL the
+                # projection name is what separates a bare reference from an expression over one;
+                # an expression falls to the display branch, whose name matches no schema field,
+                # so the guard skips it and the engine remains the authority on its type.
+                if (
+                    order_column._stable_name
+                    and order_column._projection_name is not None
+                    and order_column._spark_display == order_column._projection_name
+                ):
                     names.append(order_column._projection_name)
                 elif order_column._spark_display is not None:
                     names.append(order_column._spark_display)
@@ -1470,11 +1485,15 @@ def _engine_type_from_cast_arg(data_type: Any) -> str:
     never bare ``AttributeError`` on ``_engine_type`` (octo C5-C1-001).
     """
     if isinstance(data_type, str):
+        from repark.types import refuse_collated_type_string
+
+        refuse_collated_type_string(data_type)
         return data_type
     # Lazy import: types ↔ column would cycle if DataType were a top-level import.
-    from repark.types import DataType
+    from repark.types import DataType, refuse_evaluated_collation
 
     if isinstance(data_type, DataType):
+        refuse_evaluated_collation(data_type)
         return data_type._engine_type()
     raise PySparkTypeError(
         errorClass="NOT_DATATYPE_OR_STR",

@@ -93,8 +93,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - `column.py` — **r24 A3 QUAL-03:** cast map lockstep (`tinyint`/`smallint` aliases) with
   native `parse_data_type`. Pins: `tests/test_a3_cast_vocab.py`,
   `tests/test_a3_secrets_redaction.py`.
+  **G15:** `cast` / `try_cast` refuse a non-binary `StringType` / `string collate NAME`
+  token at first evaluation (not construction). Pins: `tests/test_collation_refuse.py`.
 - `functions.py` — **r24 A3 octo C1-Q-001:** `posexplode` STOP message has no embedded
   DataFusion major (was stale "52.x" while pin is 54.1); pin in `test_explode_rewrite`.
+  **G15:** `collate` / `collation` are **not** stubbed — absence is already `AttributeError`
+  (A5); documented in `tests/test_collation_refuse.py`.
 - `functions.py` / `dataframe.py` / `column.py` — explode/explode_outer guarded unnest
   (R-EXPLODE-REWRITE); posexplode STOP. Octo c1: str→col, sticky generator+cast;
   octo c2: quoted idents (no double-AS), Timestamp/nested element types, asc/desc sticky,
@@ -452,6 +456,11 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   test_types; class+param keys `CANNOT_MERGE_TYPE` / `FIELD_NOT_NULLABLE_WITH_NAME` /
   `FIELD_DATA_TYPE_UNACCEPTABLE_WITH_NAME`); compat bootstrap overlays the underscore names.
   **X2 R-CENSUS-TYPES (2026-08-01):** full type constructor surface —
+  **G15 (2026-08-12):** `refuse_evaluated_collation` / `refuse_collation_session_key` /
+  `collation_refusal_message` — first evaluation of a non-binary `StringType` (and any
+  session key containing `collation`) refuses; constructor + `simpleString` stay.
+  `StructField.fromJson` applies Spark `metadata.__COLLATIONS` (does not pop-and-forget)
+  so createDataFrame cannot silently wrong-count (Q-003 / SEC-001).
   `StringType(collation)`, `ArrayType`/`MapType`/`NullType`/`BinaryType`/`ByteType`/
   `ShortType`/`FloatType`/`CharType`/`VarcharType`/`TimeType`/`TimestampNTZType`/
   `CalendarIntervalType`/`VariantType`; `StructType.add`/`fieldNames`/`toDDL`/
@@ -671,15 +680,27 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **r23 C6:** `registerFunction`/`register_function` (alias of `spark.udf.register`)
   + `functionExists`/`function_exists` (session UDF registry probe only),
   `currentCatalog`/`setCurrentCatalog`, `currentDatabase`/`setCurrentDatabase`,
-  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists` (+ `spark_catalog` alias on
-  two-part form for **listTables / databaseExists / tableExists**; snake_case aliases). Return
-  shapes: namedtuple `Database`/`Table`/`CatalogMetadata` (live 4.1.2 field names). Built over
+  `listCatalogs`/`listDatabases`/`listTables`/`databaseExists`/`getDatabase` (+ `spark_catalog`
+  alias on two-part form for **listTables / databaseExists / tableExists / getDatabase**;
+  snake_case aliases). Return shapes: namedtuple `Database`/`Table`/`CatalogMetadata` (live
+  4.1.2 field names). **Y-3:** `getDatabase` fills `locationUri`/`description` via
+  `DESCRIBE NAMESPACE` (existence + location; no SHOW `_namespace_exists` precheck —
+  that walk swallows catalog/IO as absence). FA-2 `listDatabases` still None. Built over
   `SHOW NAMESPACES IN` + **T6 live Iceberg `list_iceberg_table_names`** (list-on-access;
   CQ-008/BUG-007 — not the DF provider snapshot) + **native `list_temp_view_names`** (default
   schema directory; never global `information_schema.tables` — F-T6-PHANTOM-A) + DF schema
   `list_df_schema_table_names` for non-Iceberg permanents. **listTables** globally hides
   engine-private prefixes `__repark_cdf_*` / `__repark_mia_*` / `__repark_tt_*` (I1 time-travel
   static pins — octo C1-Q-002); two-part `spark_catalog.db` aliases like `tableExists` (octo C2-Q-002).
+  Since **H-1b (2026-08-11)** the `__repark_tt_*` filter's live subject is the **reader-options**
+  registration only (`spark.read.option("snapshot-id", …)`, which keeps its view because that view
+  backs the returned frame): the SQL `VERSION AS OF` rewrite releases its pins once the statement
+  is planned, so it no longer produces anything for this filter to hide. The filter stays — dropping
+  it would expose the reader-options pin — and the test now sources its non-vacuity from that path.
+  That sourcing is only sound because the two paths can no longer collide: until the same unit's
+  fix pass the engine had TWO minters of the prefix, both counting from 1, so a `VERSION AS OF`
+  statement could deregister the very reader-options view this filter hides (engine pin:
+  `repark-spark`'s `time_travel_statement_pins_never_collide_with_a_reader_options_view`).
   Optional list* `pattern` uses Spark filterPattern (`*` / `|`;
   Python `re` `\A…\Z` anchors — not Rust `\z`). Non-str args → `PySparkTypeError`. Listing
   divergences rowed as
@@ -1080,12 +1101,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   table / compound stoch sums via `_ma_lookback`.
   **r21 T4 ta-etl:** `ta.over_columns(window, {name: bare_ta_col, …})` → dict for a single
   `DataFrame.withColumns` (same-spec windows fuse to one DataFusion `WindowAggExec`). Measurement
-  WIN — kernel work dominates; see `task/t4-ta-etl-ledger.md`. Region banner `# === r21 T4: ta-etl ===`.
+  WIN — kernel work dominates; see the private v1 repository's `t4-ta-etl-ledger.md` (v1-era ledger, never ported). Region banner `# === r21 T4: ta-etl ===`.
   **r23b N2 plan-collapse:** adjacent independent same-spec `withColumn`/`withColumns` chains now
   merge into one `WindowAggExec` (sticky layer meta + structural WindowSpec equality; dep on a
   prior-layer name keeps stacking; cache/persist marks block merge — octo C2). Alias-chain squash
-  in `select` projection build collapses identity `x AS x AS x` re-aliases. See
-  `task/n2-plan-collapse-ledger.md`.
+  in `select` projection build collapses identity `x AS x AS x` re-aliases. Pins live with
+  `python/repark/tests/test_n2_plan_collapse.py` (no unit ledger was filed for this surface).
   **r25 T3 plan-hygiene:** extends `_collapse_identity_projection_alias` only (Q7 — no second path)
   to peel nested native `Alias` chains via `PyColumn.collapse_identity_aliases` before the N2
   for_select gate; operator 17-TA chain plan/value-parity pins. See
@@ -1291,8 +1312,11 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
   F.rank/dense_rank/ntile; F.rand/randn Spark XORShift (seeded); sampleBy seed counts MATCH;
   eagerEval `__repr__`/`_repr_html_` (showString packing + conf truncate/maxNumRows).
   Region banners `# === r20 G2: window/rand/sampleBy ===` in window.py / functions.py /
-  dataframe sampleBy+eagerEval. Residual: timestamp.cast("long") is DF-µs not Spark-seconds
-  (rangeBetween moving-average pin divides by 1e6).
+  dataframe sampleBy+eagerEval. (Residual CLOSED 2026-08-12 by registry row TZ-5:
+  `timestamp.cast("long")` was the raw DataFusion tick — µs for a `createDataFrame` column, ns
+  for a `to_timestamp` literal — and is now Spark's epoch SECONDS. The rangeBetween
+  moving-average pin no longer divides by 1e6; it spells Spark's own expression.
+  See `task/tz5-cast-seconds-ledger.md`.)
   **octo C1:** `_repr_html_` html.escape cells+headers (XSS); RANGE value-offset non-numeric
   ORDER BY → SPECIFIED_WINDOW_FRAME_UNACCEPTED_TYPE; RANGE without ORDER BY →
   RANGE_FRAME_WITHOUT_ORDER; finite float frame bounds refuse; sampleBy exact XORShift key
@@ -1300,7 +1324,15 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
   **octo C2:** RANGE value-offset multi-ORDER BY → RANGE_FRAME_MULTI_ORDER; ranking
   functions without ORDER BY loud (not DF Internal); row_number spark_display.
   **octo C3:** inverted frame bounds (start>end) refuse at rowsBetween/rangeBetween.
-  **octo gates:** ruff SIM103/C416 on RANGE dtype helper; XORShift test line wrap. -->
+  **octo gates:** ruff SIM103/C416 on RANGE dtype helper; XORShift test line wrap.
+  **TZ-5 follow-on (2026-08-12):** the non-numeric ORDER BY guard resolves the key by NAME, and a
+  CAST chain keeps its BASE column's projection name (`col("d").cast("long")` still projects as
+  `d`) — so it read the SOURCE dtype and refused a numeric key Spark accepts. `Column.over` now
+  treats a key as "bare" only when its spark display EQUALS its projection name; an expression
+  falls to the display branch, matches no schema field, and the engine stays the authority on its
+  type. Unreachable until the TZ-5 cast fix let the moving-average pin drop the `/1e6` wrapper
+  that was hiding it. Pinned both ways in `test_g2_window_rand_sampleby.py`
+  (`..._refuses_non_numeric_order` / `..._accepts_a_cast_numeric_order_key`). -->
 - M7 format/lint gate clean (ruff format + py-lint).
 
 <!-- 2026-08-03 (r20 combine): dataframe.py select() projection reconstructed after H1×G2 keep-both — G2 range-order validation in the input loop + H1 deferred-for_select rebind projection. -->

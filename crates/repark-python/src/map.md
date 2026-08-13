@@ -205,9 +205,15 @@ Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crat
   `OnceLock`-runtime re-entry) — peak memory O(one batch), not O(result) (audit SAF-003 /
   finding #14). Declares the analyzed LOGICAL schema (`analyze_eagerly`: right types + Spark-style
   `nullable = true`), not the physical `stream.schema()`. `inner()`; transforms:
-  `with_column`, `filter` / `filter_sql`, `select`, `drop`, `sort`, `join_on_names` /
+  `with_column`, `filter` / `filter_sql` (**G15:** `filter_sql` calls
+  `repark_spark::refuse_collation_in_sql` so a SQL-string COLLATE never hits DataFusion's
+  unsupported-AST path), `select`, `drop`, `sort`, `join_on_names` /
   `join_on_condition` (**H1 r20:** `join_type_from_str` accepts inner/left/right/full —
-  Apache self-join / select-join-keys battery); **Group E** set/aggregate routing:
+  Apache self-join / select-join-keys battery; **G4b:** widened with the semi family
+  `semi`/`left_semi`/`leftsemi` → `JoinType::LeftSemi` and `anti`/`left_anti`/`leftanti` →
+  `JoinType::LeftAnti`. `join_keeps_only_left_columns` gates the Spark key-merge projection OFF
+  for those two: a semi/anti output is the LEFT input's schema, so there is no duplicate
+  right-hand key to merge and `spark_join_projection` must not run); **Group E** set/aggregate routing:
   `aggregate(group_by, aggregates)`
   (PySpark `groupBy().agg`; empty `group_by` = global aggregate — one NULL row over an empty input,
   vs zero rows grouped), `union(other, by_name)` (`by_name=false` = positional keeping left names +
@@ -231,7 +237,9 @@ Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crat
   `KeyboardInterrupt` → `ArrowError` → facade `PySparkException`). Rationale lives in the rustdoc
   on `StreamingBatchReader` (v1's `task/pg2-pg-runtime-ledger.md` has no counterpart here).
 - `column.rs` — `PyColumn`: wraps a DataFusion `Expr` (`from_py_object`-opt-in so it extracts by
-  value as a method arg). Constructors `column`/`literal`/`sql` + `coalesce`/`concat`/
+  value as a method arg). Constructors `column`/`literal`/`sql` (**G15:** `sql` calls
+  `repark_spark::refuse_collation_in_sql` so `F.expr("… COLLATE …")` refuses at parse altitude)
+  + `coalesce`/`concat`/
   `current_timestamp` (Group F: casts DataFusion `now()` ns → `timestamp[us, tz=UTC]` to match
   live PySpark 4.1.2 Arrow and Iceberg v2 — `timestamp_ns` is rejected until v3); operators
   `add`/`sub`/`mul`/`div`/`modulo`, `eq`/`ne`/`lt`/`gt`/`le`/`ge`,

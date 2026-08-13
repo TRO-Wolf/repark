@@ -9,7 +9,10 @@ Unit tests for the parity comparison core (no Spark, no JVM, no repark required)
 
 - `test_compare.py` — equal/unequal frames, order-insensitivity, null handling, schema/row-count
   mismatches, and a **field-nullability difference** (part of the schema signature — a differing
-  `nullable` flag with identical name/type/values is a parity failure).
+  `nullable` flag with identical name/type/values is a parity failure). **G18 nested invariants:**
+  (1) flat-schema `sort_by` path unchanged, (2) nested row-permutation invariance for
+  list/struct/map, (3) multiset sensitivity mutation per nested kind, (4) `order_sensitive=True`
+  untouched on nested tables; plus list-element-order significance and nested-only schemas.
 - `test_compat_harness.py` — C2 / R-PYSPARK-COMPAT unit pins: message-first JVM classification,
   HARNESS narrowness, both denominators (incl. MODULE-TIMEOUT stay-in), `tag_for_pyspark_version`,
   worker env scrub, method-name filter (no prefix steal), `Py4J*` type → NEEDS-JVM,

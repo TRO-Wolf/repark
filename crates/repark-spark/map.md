@@ -6,7 +6,8 @@ The **Spark SQL door** (tier 3): v1 `repark-sql` ported over the phase-1 seams. 
 router (`execute` / `execute_with_read_only`) parses with DataFusion's `sqlparser` (Databricks
 dialect + token-level normalisers for Spark-isms), intercepts the forms DataFusion cannot
 execute against Iceberg, and passes everything else through the Spark passthrough
-(`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands).
+(`spark_ast` — ORDER BY null-placement defaults + eager analysis + eager DML/COPY commands +
+the G5b / G5b-R temporal-`RANGE` conformance call).
 `SparkDialect` adapts the router to `repark_core::SqlDialect`; `SparkExtension` installs the
 v1 `build()` registrations (function registry + analyzer rules + cardinality/`repark.sql.*`
 config) via `repark_core::SessionExtension`, and **composes `repark_ta::TaExtension`** for the
@@ -40,6 +41,7 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 |---|---|
 | Follow a SQL statement through the router | [src/map.md](src/map.md) → `router.rs` |
 | Add/adjust a Spark-ism normaliser | `src/normalize.rs` |
+| Change temporal / unit-less `RANGE` window-frame semantics | `src/window_range.rs` |
 | Change what the extension registers | `src/extension.rs` |
 | See why a construct refuses with "lands in phase-2 PR-3x" | `src/router.rs` (TEMPORARY refuse arms) |
 
@@ -65,8 +67,14 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
   extension registers (`extension.rs`); add a router arm (`router.rs` + a handler module).
 - **Test strategy:** `cargo test -p repark-spark` — Session + `SparkExtension` + `SparkDialect`
   integration; the v1 lib-root battery; the Q13 surface-matrix audit.
-- **Known limitations:** carried v1 divergences — the time-travel view leak + the `$`-metadata rider
-  ([../../STATUS.md](../../STATUS.md) "Known correctness issues"). Every divergence that has been
+- **Known limitations:** the two v1-carried items this row used to name are both CLOSED — the
+  time-travel ephemeral-view leak by H-1b (2026-08-11,
+  [../../docs/history/hardening-h1/h1b-ledger.md](../../docs/history/hardening-h1/h1b-ledger.md); the door's `PinnedViews` release split, and
+  no divergence row, because a fixed defect is not a divergence) and the `$`-metadata rider by
+  H-1c (2026-08-10,
+  [../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md](../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)).
+  What remains open for this door is listed in
+  [../../STATUS.md](../../STATUS.md) "Known correctness issues". Every divergence that has been
   *disposed of* — declared, or backlogged with an intent to fix — has its semantics, its pin and
   its rationale in the divergence registry
   ([../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md)); this door's

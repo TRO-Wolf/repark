@@ -1,7 +1,14 @@
 # Unit ledger — N-2 / H-2 gap G3: MERGE INTO differential corpus (record-side)
 
+> **ARCHIVED 2026-08-11** (G-9 — H-1 phase ledger promotion) — a historical record of everything
+> delivered through the H-1 close gate (repark #35–#46), including the parallel G/N corpus units
+> whose gap-map homes are H-2, kept for provenance and **not a source of live rules**: every rule
+> still in force was verified live-elsewhere or promoted first
+> ([promotion-ledger.md](promotion-ledger.md)). Relative links were repaired for this location on
+> the same date; nothing else changed. Current state: [STATUS.md](../../../STATUS.md).
+
 **Unit:** H-2 gap **G3** of the V2 Engine Hardening campaign
-([../briefs/v2-engine-hardening.md](../briefs/v2-engine-hardening.md) "G3") ·
+([../briefs/v2-engine-hardening.md](../../../briefs/v2-engine-hardening.md) "G3") ·
 **Date:** 2026-08-10 · **Lane:** overnight conductor N-2 · **Branch:** `grok/n2-merge-differential`
 
 **This ledger covers the record-side differential only.** The brief's G3 full budget also names
@@ -15,10 +22,10 @@ deviation is recorded here, not silent.
 
 | Artifact | Path | Role |
 |---|---|---|
-| Differential corpus | [`python/repark/tests/test_merge_differential_parity.py`](../python/repark/tests/test_merge_differential_parity.py) | 10 rows + lifecycle helper + assertions |
-| Record driver | [`python/repark/tests/_record_merge_differential_goldens.py`](../python/repark/tests/_record_merge_differential_goldens.py) | Spark+Iceberg provision; re-derive goldens |
-| Tests map | [`python/repark/tests/map.md`](../python/repark/tests/map.md) | lockstep entry |
-| This ledger | `task/n2-merge-ledger.md` | linked from [`task/map.md`](map.md) |
+| Differential corpus | [`python/repark/tests/test_merge_differential_parity.py`](../../../python/repark/tests/test_merge_differential_parity.py) | 10 rows + lifecycle helper + assertions |
+| Record driver | [`python/repark/tests/_record_merge_differential_goldens.py`](../../../python/repark/tests/_record_merge_differential_goldens.py) | Spark+Iceberg provision; re-derive goldens |
+| Tests map | [`python/repark/tests/map.md`](../../../python/repark/tests/map.md) | lockstep entry |
+| This ledger | `task/n2-merge-ledger.md` | linked from [`task/map.md`](../../../task/map.md) |
 
 ### 1.1 Row inventory (budget 8-10 → **10**)
 

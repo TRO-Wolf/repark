@@ -227,7 +227,35 @@ was confirmed RED against the pre-fix source before it went green.
 |---|---|---|---|---|
 | 1 | `refusals::recognize_alter_table_execute` searched the WHOLE statement for the bare word `EXECUTE`, so `ALTER TABLE ice.sales.orders ADD COLUMN execute BIGINT` refused as "ALTER TABLE … EXECUTE BIGINT is not supported yet" — a legal schema-evolution statement rejected pre-parse, with the column's TYPE named as the "procedure" | probe on the recognizer; also `RENAME COLUMN a TO execute` | the test is ANCHORED to the verb slot — the word after the (dotted / quoted) table name — via `verb_slot_after_table_name`, which walks OFFSETS because a quoted name part contributes no word | `refusals::tests::alter_execute_recognizer_is_anchored_to_the_verb_slot` (6 legal statements) + `…_finds_the_verb_after_any_name_spelling` (6 name spellings) |
 | 2 | `ref_ddl::reject_trailing` filtered the leftover tail through `Sig::ident`, so trailing NUMBER / punctuation tokens were SILENTLY DROPPED — `… DROP BRANCH audit 5` dropped the branch and `… CREATE BRANCH audit AS OF VERSION 7 99` created it — the exact "ignore it" the fn doc forbids | probe through `try_parse_ref_ddl` | `Sig::Other` now carries its source text, `reject_trailing` refuses on ANY leftover and NAMES it; a trailing `;` is stripped in `tokenize_significant` (one statement is still one statement) | `ref_ddl::tests::trailing_non_identifier_tokens_refuse_too` + `…::a_trailing_semicolon_is_not_a_trailing_clause` |
-| 3 | `time_travel::register_pinned_view` registered `__repark_ansi_tt_<n>` and never deregistered it: one permanent relation per `FOR … AS OF` relation per query on a long-lived session, AND user-visible in `SHOW TABLES` / `information_schema.tables` — the very surface the R2 fix in this PR turns on. (The `deregister_table` on the old line 147 was dead: the name comes from a monotonic counter and can never pre-exist.) | 3 pinned reads on one session → `information_schema.tables` listed `__repark_ansi_tt_1|2|3` | a `PinnedViews` record threaded through the rewrite; `router::execute` splits the post-rewrite pipeline into `execute_time_travelled` so `pinned.release(cx.ctx)` runs on EVERY exit path, including the `?` ones. Safe because planning resolves the relation into a `TableScan` that owns the provider — the returned `DataFrame` still collects | `tests/introspection.rs::time_travel_pinned_views_do_not_leak_into_the_introspection_surface` (asserts both halves: no leftover row, and the pinned read still returns its row + Arrow type) |
+| 3 | `time_travel::register_pinned_view` registered `__repark_ansi_tt_<n>` and never deregistered it: one permanent relation per `FOR … AS OF` relation per query on a long-lived session, AND user-visible in `SHOW TABLES` / `information_schema.tables` — the very surface the R2 fix in this PR turns on. (The `deregister_table` on the old line 147 was dead: the name comes from a monotonic counter and can never pre-exist.) | 3 pinned reads on one session → `information_schema.tables` listed `__repark_ansi_tt_1|2|3` | a `PinnedViews` record threaded through the rewrite; `router::execute` splits the post-rewrite pipeline into `execute_time_travelled` so `pinned.release(cx.ctx)` runs on every `?` / `return` path (**corrected — see below**). Safe because planning resolves the relation into a `TableScan` that owns the provider — the returned `DataFrame` still collects | `tests/introspection.rs::time_travel_pinned_views_do_not_leak_into_the_introspection_surface` (asserts: no leftover row under EITHER prefix, and the pinned read still returns its row + Arrow type) |
+
+> **Correction to finding 3, filed 2026-08-11 by unit H-1b (V2 Engine Hardening).** The Fix cell
+> above was half-true twice over, and both halves are now fixed in code and restated here.
+>
+> 1. **"EVERY exit path" overstated the guarantee.** The release runs on every `?` / `return`
+>    path — not on unwind or future-drop. `PinnedViews` deliberately carries no `Drop` impl (it
+>    would have to own a `SessionContext` clone), and neither source exists today: panics are
+>    banned in prod code and the PyO3 facade drives this via `block_on`. The claim is now worded
+>    "every `?` / `return` path" here, in `crates/repark-sql/src/router.rs`, and in the Spark
+>    door's copy of the same split. It is a scope statement, not a defect.
+> 2. **The wrong half of the leak was fixed — the tracked name was released, the composed one was
+>    not.** `register_pinned_view` builds its view over `repark_core::read_table_at`, which
+>    registers a `__repark_tt_<n>` of its OWN before returning the frame. Only the
+>    `__repark_ansi_tt_<n>` went into the ledger, so every `FOR … AS OF` relation still left one
+>    untracked relation behind — on the very door this row declares fixed. The pin could not see
+>    it: it filtered `LIKE '__repark_ansi_tt%'` only. Re-measured at H-1b, unchanged since this
+>    row was written: three ANSI pinned reads → `ansi_leftover=[]`,
+>    `tt_leftover=["__repark_tt_1","__repark_tt_2","__repark_tt_3"]`. H-1b records BOTH names in
+>    the same ledger (inside `register_pinned_view`, so the reader-options caller of
+>    `read_table_at` — whose registration must SURVIVE — is untouched by construction) and adds
+>    the `'__repark_tt%'` half to the pin, captured RED before the fix. **Closed except for two
+>    named residuals:** (a) a `read_table_at`-INTERNAL failure between its own `register_table`
+>    and its `ctx.table` lookup leaves a name this side cannot observe — closing that needs
+>    Option 2 of the re-port map (thread the ledger into `read_table_at`), whose blast radius
+>    reaches the reader-options caller; and (b) if `core_pinned_name` ever answers `None` for a
+>    frame that DID carry a core-minted pin (a changed plan shape or prefix upstream), the leak
+>    returns silently — fenced by the pin's broadened `LIKE '__repark_tt%'` assertion, which reds
+>    on the leftover rather than on the recovery.
 
 Rejected panel items, with reasons:
 
@@ -252,15 +280,27 @@ Rejected panel items, with reasons:
 3. **Case folding vs Apache Spark** (see Q13 result 1): a real divergence, currently inherited
    engine-wide. If it is ever to be fixed, it is a Spark-door resolution decision, not a matrix
    row.
-4. **NEW, from the verify pass — the SPARK door has the same time-travel view leak.**
-   `crates/repark-spark/src/time_travel.rs` registers `__repark_tt_<n>` and never deregisters it,
-   exactly as the ANSI door did (finding 3 above). It is PRE-EXISTING — phase-1 code, not
-   PR-6's — but this PR is what makes it visible, because the R2 fix lets ANY session enable
+4. **CLOSED 2026-08-11 by unit H-1b (V2 Engine Hardening).** ~~NEW, from the verify pass — the
+   SPARK door has the same time-travel view leak.~~
+   `crates/repark-spark/src/time_travel.rs` registered `__repark_tt_<n>` and never deregistered
+   it, exactly as the ANSI door did (finding 3 above). It was PRE-EXISTING — phase-1 code, not
+   PR-6's — but this PR is what made it visible, because the R2 fix lets ANY session enable
    `information_schema`. Left out of the fix commit deliberately: the Spark router's
    time-travel call sits inside a different pipeline shape, and re-plumbing it is a behavioural
    change to a door this PR was not scoped to touch. The ANSI-side fix is the template
-   (`PinnedViews` + release after planning). File it as the first rider of the next Spark-door
-   unit.
+   (`PinnedViews` + release after planning — **see the correction to finding 3 above**: that
+   template was itself still leaking its composed core half when this rider named it, so it was a
+   structural template only). Filed as the first rider of the next Spark-door unit.
+   **How it closed:** H-1b re-ported the shape by meaning, not by patch (the `Cow` juggling
+   differs — the Spark router borrows its `sql` parameter where the ANSI one consumes an owned
+   rewrite): `PinnedViews` + record-before-register in `crates/repark-spark/src/time_travel.rs`,
+   and an `execute_time_travelled` split in `crates/repark-spark/src/router.rs` releasing on
+   every `?` / `return` path. Pins:
+   `crates/repark-spark/src/tests/time_travel.rs::time_travel_temp_views_do_not_survive_a_successful_statement`
+   and `…_a_failed_statement`, both re-run under two deliberate mutations (drop the release →
+   both red; release only on `Ok` → the error-path pin alone reds, which is what earns it its
+   place). The same unit corrected finding 3 above, both halves. Unit ledger:
+   `task/h1b-ledger.md`.
 
 ## Gate table
 

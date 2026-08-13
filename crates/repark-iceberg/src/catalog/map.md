@@ -48,9 +48,15 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
   is a no-op; DROP NAMESPACE is a zero-list map remove; invalidate/drop fail loud when the DF
   catalog name is not registered. Every schema snapshot/refresh wraps with
-  `MetadataProjectionSchemaProvider`.
+  `MetadataProjectionSchemaProvider`. Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
+  + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
+  stated omissions (see crate-root map "Known limitations").
+- `namespace_scoped_tests.rs` — G17 wrapper pins (file-backed): `publish_replace_table`
+  reaches a spy inner; `name()` returns the inner value; stated-omission
+  `update_namespace_properties` composes via forwarded `get_namespace`/`update_namespace`;
+  `list_views` reaches the inner (not `FeatureUnsupported`).
 - `tests.rs` — the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
-  validation + offline construction, live-list staleness pins, O(1) invalidation pins,
+  validation + namespace construction, live-list staleness pins, O(1) invalidation pins,
   scheme-selection + key-identity partitions, span secret-hygiene pins, and the fork-patch
   proof test (`fork_patch_in_effect_deletefilter_is_public` — names a fork-only public symbol,
   cannot compile against crates.io iceberg 0.9.1).
@@ -89,7 +95,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Hang on Glue/S3 catalog with no logs | enable `RUST_LOG=repark_iceberg=info`; expect `catalog.*` span close timings. Span fields are key names only |
 | `SHOW TABLES` does not list `t$snapshots` | expected since ADR-0006 — hidden from enumeration on purpose, still queryable as `ns."t$snapshots"` (or the Spark door's `ns.t.snapshots`) |
 | A `$`-metadata name reappears in `SHOW TABLES` after a fork repin | the fork changed the synthesized spelling; the filter matches `<base>$<MetadataTableType::as_str()>` exactly. See `crates/repark-iceberg/map.md` "Known limitations" (the repin duty) |
-| `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | known residue, not a regression: the predicate splits on the first `$`, as the fork's own `table()`/`table_exist()` do, so those names cannot be recognised — and `a$b` is unreachable through the fork anyway. ADR-0006 "Residue" + `task/h1c-ledger.md` F-2; pinned by `the_filter_keeps_names_the_fork_did_not_synthesize` |
+| `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | known residue, not a regression: the predicate splits on the first `$`, as the fork's own `table()`/`table_exist()` do, so those names cannot be recognised — and `a$b` is unreachable through the fork anyway. ADR-0006 "Residue" + `docs/history/hardening-h1/h1c-ledger.md` F-2; pinned by `the_filter_keeps_names_the_fork_did_not_synthesize` |
 
 First checks: `cargo test -p repark-iceberg catalog::`. Escalate to: [../../map.md#debug](../../map.md).
 

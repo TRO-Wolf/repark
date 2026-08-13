@@ -192,4 +192,6 @@ pub(crate) use location::{
     LocationBackend, classify_location_backend, has_colon_before_first_slash,
 };
 #[cfg(test)]
+mod namespace_scoped_tests;
+#[cfg(test)]
 mod tests;

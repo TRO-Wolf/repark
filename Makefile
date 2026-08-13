@@ -1,6 +1,7 @@
 # repark developer command surface. `make help` lists targets. `make ci` is the fast canonical
-# gate; `make preflight` runs the FULL CI surface locally (verify + security audits + workflow
-# lint) and is the pre-PR gate — if preflight is green, the PR checks are green. Every
+# gate; `make preflight` runs the FULL CI surface locally (verify + facade suite + security
+# audits + workflow lint) and is the pre-PR gate — if preflight is green, the PR checks are
+# green. `make verify` stays Rust-only (inner-loop). Every
 # CI-enforced tool runs here too, version-pinned identically — nothing silently skips when a
 # tool is absent (uvx provisions the pinned tool on demand).
 #
@@ -55,15 +56,18 @@ ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check
 #   * the PARITY harness (python/repark-parity/tests) is pure pyarrow — `make py-test`, mirrored
 #     by ci.yml's `parity-harness tests` step.
 #   * the LIVE oracle tier needs a JVM — `make parity-live` / parity-live.yml, never in `verify`.
-# `make verify` = `ci` + `test`; it is JVM-free and native-build-free on purpose.
+# `make verify` = `ci` + `test`; it is JVM-free and native-build-free on purpose
+# (inner-loop speed). The compiled-module facade suite is `make py-test-facade` and is
+# wired into `make preflight` (2026-08-12, G14), not into `verify`. CI still runs that
+# suite against the built wheel (`wheels.yml` smoke).
 .PHONY: test
-test: rust-test ## Rust workspace suite (facade: `make py-test-facade`; parity: `make py-test`)
+test: rust-test ## Rust workspace suite only (facade: `make py-test-facade`, also in preflight; parity: `make py-test`)
 
 .PHONY: verify
-verify: ci test ## ci + test — full local verification
+verify: ci test ## ci + rust-test — JVM-free, native-build-free (inner-loop)
 
 .PHONY: preflight
-preflight: verify audit workflows-lint ## The pre-PR gate: everything CI runs
+preflight: verify py-test-facade audit workflows-lint ## The pre-PR gate: verify + facade suite + security + workflow lint
 
 .PHONY: audit
 audit: rust-audit rust-deny py-audit ## Security gates (cargo-audit + cargo-deny + pip-audit)

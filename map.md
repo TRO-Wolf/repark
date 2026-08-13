@@ -35,7 +35,8 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
   they are how the r26 region splits keep their pre-split import paths (design §2.3).
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
-  `make verify` = ci + test; `make preflight` mirrors the full CI surface. Tool pins match the
+  `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +
+  `py-test-facade` + audit + workflow lint (G14, 2026-08-12). Tool pins match the
   workflow pins. The tier-2 `parity-live` target is dual-wired with
   [.github/workflows/parity-live.yml](.github/workflows/parity-live.yml) step for step — including
   its `uv sync` flag set, which is load-bearing rather than cosmetic (`uv sync` is exact: a missing

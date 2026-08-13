@@ -20,7 +20,6 @@
 //! - `snapshot_id_as_of_time` (`<=` semantics): `crates/iceberg/src/inspect/metadata_log_entries.rs:129-138`
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
@@ -29,14 +28,11 @@ use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer, Word};
 use iceberg::{NamespaceIdent, TableIdent};
 use iceberg_datafusion::IcebergStaticTableProvider;
 use repark_core::{
-    CatalogRegistry, TimeTravelSpec, parse_timestamp_to_ms, parse_version_value,
-    resolve_snapshot_id,
+    CatalogRegistry, TimeTravelSpec, next_temp_view_name, parse_timestamp_to_ms,
+    parse_version_value, resolve_snapshot_id,
 };
 
 use crate::catalog_ops::iceberg_err;
-
-/// Process-wide counter so ephemeral temp-view names never collide across concurrent sessions.
-static TEMP_VIEW_SEQ: AtomicU64 = AtomicU64::new(1);
 
 /// ===========================================================================================
 /// Whether `sql` contains a Spark Iceberg time-travel clause we must rewrite.
@@ -61,10 +57,58 @@ struct TimeTravelSpan {
 }
 
 /// ===========================================================================================
+/// The ephemeral names one statement's rewrite registered, so the router can take them back off
+/// the session once the statement has been PLANNED.
+/// ===========================================================================================
+///
+/// Without this the pinned temp views accumulate forever — one per AS OF relation per query, on a
+/// session that may live for hours — and they are USER-VISIBLE: `SHOW TABLES` /
+/// `information_schema.tables` listed `__repark_tt_1`, `…_2`, `…_3` after three pinned reads, and
+/// listed them after a FAILED statement too (the rewrite registers before the plan can fail).
+/// The registration only has to survive planning: DataFusion resolves the relation into a
+/// `TableScan` that owns the provider, so the returned `DataFrame` still collects correctly after
+/// the name is gone.
+#[derive(Debug, Default)]
+pub struct PinnedViews {
+    names: Vec<String>,
+}
+
+impl PinnedViews {
+    /// Deregister everything this statement registered. Best-effort by design: a name that is
+    /// already gone is not an error worth failing a successful statement over.
+    ///
+    /// **`release` only touches names this statement minted itself — true by construction since
+    /// H-1b, not by hope.** Every name comes from `repark_core::next_temp_view_name`, the SINGLE
+    /// process-global minter of the `__repark_tt_` prefix. While this module kept a counter of its
+    /// own, both sequences started at 1 and handed out identical names, so a statement's mint step
+    /// could deregister — and this method then delete — the reader-options view
+    /// (`repark_core::read_table_at`) that a user's live `spark.read.option("snapshot-id", …)`
+    /// frame had registered. Do not reintroduce a second counter.
+    ///
+    /// The `__repark` prefix is ENGINE-RESERVED: user code must not register tables or views under
+    /// it. The mint step still clobbers a squatter (`deregister_table` before `register_table`,
+    /// below — KEPT, and not dead: DataFusion's schema provider refuses a duplicate
+    /// `register_table`, so without it a squatted name would fail the statement instead of being
+    /// replaced), so a user table called `__repark_tt_<n>` was silently REPLACED before this fix
+    /// and is silently DELETED after it. That is the reserved prefix working as intended, not a
+    /// regression — the sequence is a process-global counter starting at 1, so the names are
+    /// guessable and reserving them is the only defence. Minting with a per-process nonce would
+    /// make the point moot; see `map.md` `## Debug`.
+    pub fn release(&self, ctx: &SessionContext) {
+        for name in &self.names {
+            let _ = ctx.deregister_table(name.as_str());
+        }
+    }
+}
+
+/// ===========================================================================================
 /// If `sql` has time-travel clauses: resolve each to a snapshot-pinned
 /// [`IcebergStaticTableProvider`], register ephemeral temp views, rewrite FROM/JOIN relations,
 /// and return the rewritten SQL. Returns `Ok(None)` when there is nothing to rewrite.
 /// ===========================================================================================
+///
+/// Every name registered is recorded in `pinned` — including on the error paths, so a statement
+/// that fails part-way through a multi-relation rewrite still cleans up after itself.
 ///
 /// # Errors
 /// Propagates parse, catalog, snapshot-resolution, and provider-build errors.
@@ -72,6 +116,7 @@ pub async fn prepare_time_travel_sql(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    pinned: &mut PinnedViews,
 ) -> Result<Option<String>> {
     let dialect = DatabricksDialect {};
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize() else {
@@ -90,9 +135,18 @@ pub async fn prepare_time_travel_sql(
         let provider = IcebergStaticTableProvider::try_new_from_table_snapshot(table, snapshot_id)
             .await
             .map_err(iceberg_err)?;
+        // The SHARED minter in repark-core (H-1b): one process-global counter for the whole
+        // `__repark_tt_` namespace, so this name can never be one the reader-options path or the
+        // ANSI door's composed half is still using.
         let temp_name = next_temp_view_name();
-        // Replace any prior registration of the same ephemeral name (should never collide).
+        // KEPT after the unification, and not dead: an ENGINE-minted collision is now impossible,
+        // but DataFusion's schema provider refuses a duplicate `register_table`, so this line is
+        // what makes a user squatting the reserved `__repark_tt_<n>` name a clobber (the
+        // reserved-prefix rule) rather than a statement failure.
         let _ = ctx.deregister_table(temp_name.as_str());
+        // Recorded BEFORE the registration attempt: `register_table` can fail after taking the
+        // name, and every later `?` in this loop must still release what earlier turns took.
+        pinned.names.push(temp_name.clone());
         ctx.register_table(temp_name.as_str(), Arc::new(provider))
             .map_err(|error| {
                 DataFusionError::Plan(format!(
@@ -112,11 +166,6 @@ pub async fn prepare_time_travel_sql(
     }
 
     Ok(Some(tokens_to_sql(&tokens)))
-}
-
-fn next_temp_view_name() -> String {
-    let sequence = TEMP_VIEW_SEQ.fetch_add(1, Ordering::Relaxed);
-    format!("__repark_tt_{sequence}")
 }
 
 async fn resolve_table_snapshot(

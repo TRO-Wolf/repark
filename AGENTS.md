@@ -95,11 +95,13 @@ Session builder). Each is extracted later, when its code actually arrives.
 
 ## Verify before "done"
 
-`make verify` — a change is not done until lint, format, clippy, tests, and the touched directories'
-`map.md` files are all current. See [docs/testing.md](docs/testing.md). Before opening a PR, run
-`make preflight` — `verify` plus the security/workflow gates CI also runs. `make ci` is the canonical
-gate. Tool versions are pinned identically in the Makefile and the workflows, and CI-enforced tools
-never silently skip locally (uvx provisions the pinned tool on demand).
+`make verify` — a change is not done until lint, format, clippy, **Rust** tests, and the touched
+directories' `map.md` files are all current. `verify` is Rust-only on purpose (inner-loop speed);
+it does **not** build the native module. See [docs/testing.md](docs/testing.md). Before opening a
+PR, run `make preflight` — `verify` plus the facade suite (`make py-test-facade`, which carries
+the live-mirror gate) plus the security/workflow gates CI also runs. `make ci` is the canonical
+fast gate. Tool versions are pinned identically in the Makefile and the workflows, and CI-enforced
+tools never silently skip locally (uvx provisions the pinned tool on demand).
 
 ## Hard rules (non-negotiable)
 
@@ -262,7 +264,8 @@ never relax them.
   the first commit in any worktree. A hook bypass or non-firing-hook workspace is a
   slate-failing violation.
 - **Gates:** every unit gates (`make verify`), including STOP / report-only units; check REAL
-  exit codes (never a pipe's); lint only via the Makefile's pinned toolchain targets.
+  exit codes (never a pipe's); lint only via the Makefile's pinned toolchain targets. Before a
+  PR: `make preflight` (verify + `py-test-facade` + audit + workflow lint).
 - **Ledgers:** one `task/<unit>-ledger.md` per unit, linked from `task/map.md` in the same
   commit. Ledger presence is a gate item.
 - **Oracles:** oracle/differential test files are NAMED deliverables per unit; live-oracle

@@ -2090,6 +2090,9 @@ class ReparkSession:
         def _set_config_entry(self, key: str, value: str | None) -> None:
             """Store one config entry; ``repark.display.style`` aliases canonicalize last-wins
             under the canonical key, case-insensitively (R-DISPLAY C6 harden)."""
+            from repark.types import refuse_collation_session_key
+
+            refuse_collation_session_key(key)
             if key.lower() == _DISPLAY_STYLE_KEY:
                 for existing in list(self._config):
                     if existing.lower() == _DISPLAY_STYLE_KEY:
@@ -2232,6 +2235,11 @@ class ReparkSession:
                     if value is None:
                         continue
                     text = value if isinstance(value, str) else str(value)
+                    # G15: reuse fold writes the store without RuntimeConfig.set —
+                    # refuse a planted collation key here (SEC-003).
+                    from repark.types import refuse_collation_session_key
+
+                    refuse_collation_session_key(key)
                     # === r21 T2: sort-memory ===
                     # datafusion.* is runtime-mutable on the live engine — fold via
                     # RuntimeConfig.set so SQL SET forwards (not store-only). Lookalike

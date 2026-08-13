@@ -7,31 +7,42 @@ them. Two failure classes are then invisible until a human re-runs the oracle by
 * **golden drift** — a stale or hand-edited pin no longer matches what Spark actually produces;
 * **oracle drift** — a Spark bump silently changes semantics under a still-green pin.
 
-This module is the drift detector's engine. It holds every mandated golden as an *engine-agnostic
-recipe* (`Scenario.recipe`) plus its pinned `golden` table. Because repark is a **near-drop-in for
-PySpark** — the same `createDataFrame` / DataFrame-API / `functions` surface, only the import line
-differs — one recipe runs unchanged on BOTH engines. The live tier
-(`test_parity_live.py`) then asserts the full triple **repark == pinned golden == live Spark**
-(value AND Arrow-path type/nullability) for every scenario; routine CI runs only the JVM-free
-`repark == golden` half of the same recipes (`test_scenario_recipe_matches_golden_on_repark`), so
-the recipes themselves carry no-JVM coverage.
+This module is the drift detector's engine. It holds two recipe kinds:
+
+1. **Single-shot** (``Scenario`` / ``SCENARIOS``) — an engine-agnostic
+   ``recipe: Engine → DataFrame`` plus its pinned ``golden``. Group E / columns / dates /
+   filter-rewriter / non-UTC date controls / the G1 extraction-class timezone live rows. Because
+   repark is a **near-drop-in for PySpark** — the same ``createDataFrame`` / DataFrame-API /
+   ``functions`` surface, only the import line differs — one recipe runs unchanged on BOTH engines.
+2. **Lifecycle** (``LifecycleScenario`` / ``LIFECYCLE_SCENARIOS``) — multi-statement table lifecycle
+   ``create → seed → [register source view] → act → read``, with always-cleanup. Used by the live
+   MERGE drift detector (Iceberg table + optional ``merge_src`` view). repark path uses a memory
+   catalog + COW TBLPROPERTIES; Spark path uses ``build_spark_iceberg_engine`` (Hadoop catalog +
+   the pinned Iceberg GAV from :mod:`_oracle_pins`).
+
+The live tier (``test_parity_live.py``) asserts the full triple **repark == pinned golden == live
+Spark** (value AND Arrow-path type/nullability) for every scenario of both kinds; routine CI runs
+only the JVM-free ``repark == golden`` half of the same recipes, so the recipes themselves carry
+no-JVM coverage.
 
 Nothing here imports pyspark at module load — the pyspark import is deferred into
-`build_spark_engine`, so this module (and the tests that import it) collect cleanly on a runner with
-neither pyspark nor a JVM installed (the routine-CI contract, L3).
+``build_spark_engine`` / ``build_spark_iceberg_engine``, so this module (and the tests that import
+it) collect cleanly on a runner with neither pyspark nor a JVM installed (the routine-CI
+contract, L3).
 
 Session config (VERIFIED against live PySpark 4.1.2, not guessed): the Group E / columns / date
 goldens were recorded under Spark 4.1.2 defaults — **ANSI mode ON** (Spark 4 default; the
-int-UNION-string disclosure literally depends on it) — so `build_spark_engine` pins
-`spark.sql.ansi.enabled=true` explicitly. The registry's **default** session zone is `UTC` for
-determinism across runners. `master("local[2]")` per the plan.
+int-UNION-string disclosure literally depends on it) — so ``build_spark_engine`` pins
+``spark.sql.ansi.enabled=true`` explicitly. The registry's **default** session zone is ``UTC`` for
+determinism across runners. ``master("local[2]")`` per the plan.
 
 **Per-scenario session-conf override (H-1a).** A registry pinned to one session zone is
 structurally incapable of catching a session-timezone divergence — the whole class is invisible to
-it. `Scenario.session_conf` therefore carries conf pairs applied to BOTH engines for that scenario
-only: the oracle takes them through `spark_session_conf` (set, run, restore), and repark takes them
-by BUILDING a session with them, because repark resolves the session zone once at session
-construction. Scenarios that declare no override behave exactly as before.
+it. ``Scenario.session_conf`` (and ``LifecycleScenario.session_conf``) therefore carry conf pairs
+applied to BOTH engines for that scenario only: the oracle takes them through
+``spark_session_conf`` (set, run, restore), and repark takes them by BUILDING a session with them,
+because repark resolves the session zone once at session construction. Scenarios that declare no
+override behave exactly as before.
 """
 
 from __future__ import annotations
@@ -42,6 +53,7 @@ import os
 import uuid
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
@@ -70,6 +82,40 @@ def live_enabled(environ: Mapping[str, str] | None = None) -> bool:
 
 
 LIVE = live_enabled()
+
+
+def _arm_iceberg_packages_on_first_spark() -> None:
+    """Put the Iceberg runtime on the *first* SparkContext in this process.
+
+    ``spark.jars.packages`` cannot be added after a SparkContext exists. The full
+    facade suite starts Spark from other modules before the live lifecycle tests;
+    ``PYSPARK_SUBMIT_ARGS`` is the hook that reaches that first context. Armed
+    only when the live tier is on (so ``make preflight`` / JVM-free runs stay
+    Iceberg-free). L-1: without this, full-suite lifecycle tests raise
+    ``ClassNotFoundException: SparkCatalog``.
+    """
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+
+    token = ICEBERG_SPARK_RUNTIME_GAV
+    existing = os.environ.get("PYSPARK_SUBMIT_ARGS", "").strip()
+    if token in existing:
+        return
+    prefix = (
+        f"--packages {token} "
+        "--conf spark.sql.extensions="
+        "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions"
+    )
+    if existing:
+        if existing.endswith("pyspark-shell"):
+            os.environ["PYSPARK_SUBMIT_ARGS"] = f"{prefix} {existing}"
+        else:
+            os.environ["PYSPARK_SUBMIT_ARGS"] = f"{prefix} {existing} pyspark-shell"
+    else:
+        os.environ["PYSPARK_SUBMIT_ARGS"] = f"{prefix} pyspark-shell"
+
+
+if LIVE:
+    _arm_iceberg_packages_on_first_spark()
 
 
 # ==================================================================================================
@@ -173,6 +219,58 @@ def build_spark_engine() -> Engine:
     )
 
 
+def build_spark_iceberg_engine(warehouse: Path, session_conf: SessionConf = ()) -> Engine:
+    """Live PySpark + Iceberg engine for multi-statement table lifecycle scenarios.
+
+    Sibling of :func:`build_spark_engine` (option A): the default live session has no Iceberg
+    *catalog*; under ``REPARK_PARITY_LIVE=1`` the module arms ``PYSPARK_SUBMIT_ARGS`` with the
+    GAV so the first SparkContext in the process can resolve ``SparkCatalog``. Only lifecycle
+    tests request this provisioned engine. Pins the same
+    GAV the MERGE differential record driver uses (from :mod:`_oracle_pins`), a local Hadoop
+    catalog named ``local`` rooted at ``warehouse``, Iceberg session extensions, ANSI on, UTC by
+    default, ``local[2]``. Optional ``session_conf`` is applied at BUILD time (the session is not
+    shared with the plain spark engine, so build-time application is safe).
+    """
+    from _oracle_pins import ICEBERG_SPARK_RUNTIME_GAV
+    from pyspark.sql import SparkSession, Window
+    from pyspark.sql import functions as sfunctions
+    from pyspark.sql import types as stypes
+
+    catalog = LIFECYCLE_SPARK_CATALOG
+    builder = (
+        SparkSession.builder.master("local[2]")
+        .appName("repark-parity-live-iceberg")
+        .config("spark.sql.ansi.enabled", "true")
+        .config(SESSION_TIME_ZONE_KEY, DEFAULT_SESSION_TIME_ZONE)
+        .config("spark.sql.shuffle.partitions", "2")
+        .config("spark.ui.enabled", "false")
+        .config("spark.jars.packages", ICEBERG_SPARK_RUNTIME_GAV)
+        .config(
+            "spark.sql.extensions",
+            "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions",
+        )
+        .config(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+        .config(f"spark.sql.catalog.{catalog}.type", "hadoop")
+        .config(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
+    )
+    for key, value in session_conf:
+        builder = builder.config(key, value)
+    session = builder.getOrCreate()
+    # Catalog keys are session-level; if getOrCreate reused an earlier context, set them live.
+    session.conf.set(f"spark.sql.catalog.{catalog}", "org.apache.iceberg.spark.SparkCatalog")
+    session.conf.set(f"spark.sql.catalog.{catalog}.type", "hadoop")
+    session.conf.set(f"spark.sql.catalog.{catalog}.warehouse", str(warehouse))
+    session.sparkContext.setLogLevel("ERROR")
+    return Engine(
+        name="spark-iceberg",
+        session=session,
+        functions=sfunctions,
+        types=stypes,
+        window=Window,
+        arrow_of=lambda df: df.toArrow(),
+    )
+
+
 @contextlib.contextmanager
 def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[None]:
     """Apply `session_conf` to the SHARED live oracle session, then restore it.
@@ -198,6 +296,201 @@ def spark_session_conf(engine: Engine, session_conf: SessionConf) -> Iterator[No
 def run_scenario(scenario: Scenario, engine: Engine) -> pa.Table:
     """Execute a scenario's recipe on an engine and return its Arrow output."""
     return engine.arrow_of(scenario.recipe(engine))
+
+
+# ==================================================================================================
+# Lifecycle scenarios — multi-statement table lifecycle (create → seed → act → read)
+# ==================================================================================================
+
+# Catalog names used by lifecycle scenarios. repark registers a memory catalog under
+# LIFECYCLE_REPARK_CATALOG; Spark Hadoop catalog is LIFECYCLE_SPARK_CATALOG (configured in
+# build_spark_iceberg_engine). Each LifecycleScenario carries the catalog name that matches the
+# engine under test — tests build engines and pick the matching scenario list, OR the scenario
+# catalog is rewritten per engine via the per-engine lists below.
+LIFECYCLE_REPARK_CATALOG = "mem"
+LIFECYCLE_SPARK_CATALOG = "local"
+LIFECYCLE_NAMESPACE = "ns"
+
+# Shared COW table properties so repark's merge mode is explicit (matches test_merge_into.py /
+# the MERGE differential corpus). Spark Iceberg 1.11 defaults accept MERGE without these; repark
+# pins COW for determinism. Injected via {cow_props} in create_sql when with_cow_props=True.
+COW_TBLPROPERTIES = (
+    "'format-version' = '2', "
+    "'write.delete.mode' = 'copy-on-write', "
+    "'write.update.mode' = 'copy-on-write', "
+    "'write.merge.mode' = 'copy-on-write'"
+)
+
+# Temp view name for optional MERGE source registration (matches the differential corpus).
+LIFECYCLE_SOURCE_VIEW = "merge_src"
+
+
+@dataclass(frozen=True)
+class LifecycleScenario:
+    """Multi-statement live scenario: setup → act → read, with always-cleanup.
+
+    Engine-agnostic SQL steps over a resolved FQN (``{target}``). Optional ``source_sql``
+    registers a temp view named ``merge_src`` before ``act_sql`` (MERGE needs a source relation).
+    ``error_needle`` is intentionally absent on first landing — error-class twins ship later
+    with ``run_lifecycle_expect_error`` when a consumer exists.
+    """
+
+    name: str
+    catalog: str
+    namespace: str
+    table: str
+    create_sql: str  # may use {target} and {cow_props}
+    seed_sql: str  # may use {target}
+    act_sql: str  # may use {target}
+    read_sql: str  # may use {target}
+    golden: pa.Table
+    order_sensitive: bool = True
+    session_conf: SessionConf = field(default=())
+    source_sql: str | None = None  # optional SELECT registered as merge_src before act
+
+
+def _lifecycle_target(scenario: LifecycleScenario) -> str:
+    """Three-part Iceberg table name both engines accept."""
+    return f"{scenario.catalog}.{scenario.namespace}.{scenario.table}"
+
+
+def _drop_lifecycle_table(session: Any, fq_table: str) -> None:
+    """Drop an Iceberg table if present. Best-effort: a missing table is fine."""
+    with contextlib.suppress(Exception):
+        session.sql(f"DROP TABLE IF EXISTS {fq_table}")
+    with contextlib.suppress(Exception):
+        session.sql(f"DROP TABLE {fq_table}")
+
+
+def _drop_lifecycle_source_view(session: Any) -> None:
+    """Drop the shared lifecycle source temp view if the session still holds it."""
+    drop_temp = getattr(session, "catalog", None)
+    if drop_temp is not None and hasattr(drop_temp, "dropTempView"):
+        with contextlib.suppress(Exception):
+            session.catalog.dropTempView(LIFECYCLE_SOURCE_VIEW)
+    with contextlib.suppress(Exception):
+        session.sql(f"DROP VIEW IF EXISTS {LIFECYCLE_SOURCE_VIEW}")
+
+
+def run_lifecycle_scenario(
+    scenario: LifecycleScenario, engine: Engine, *, with_cow_props: bool
+) -> pa.Table:
+    """create → seed → [register source] → act → read; drop target (+ source view) in finally.
+
+    ``with_cow_props`` is a *caller* choice: repark always wants COW TBLPROPERTIES on CREATE;
+    Spark Iceberg 1.11 does not need them. Encoded here rather than as a per-row dead knob.
+    """
+    session = engine.session
+    fq_table = _lifecycle_target(scenario)
+    cow_props = f" TBLPROPERTIES ({COW_TBLPROPERTIES})" if with_cow_props else ""
+    session.sql(f"CREATE NAMESPACE IF NOT EXISTS {scenario.catalog}.{scenario.namespace}")
+    _drop_lifecycle_table(session, fq_table)
+    session.sql(scenario.create_sql.format(target=fq_table, cow_props=cow_props))
+    session.sql(scenario.seed_sql.format(target=fq_table))
+    if scenario.source_sql is not None:
+        _drop_lifecycle_source_view(session)
+        frame = session.sql(scenario.source_sql)
+        frame.createOrReplaceTempView(LIFECYCLE_SOURCE_VIEW)
+    try:
+        session.sql(scenario.act_sql.format(target=fq_table))
+        return engine.arrow_of(session.sql(scenario.read_sql.format(target=fq_table)))
+    finally:
+        _drop_lifecycle_table(session, fq_table)
+        if scenario.source_sql is not None:
+            _drop_lifecycle_source_view(session)
+
+
+def _lifecycle_merge_table(
+    fields: list[tuple[str, pa.DataType, bool]], values: dict[str, list[object]]
+) -> pa.Table:
+    """Build a short Arrow golden for a MERGE lifecycle row (name/type/nullability + values)."""
+    schema = pa.schema([pa.field(name, kind, nullable=null) for name, kind, null in fields])
+    return pa.table({name: pa.array(values[name], kind) for name, kind, _ in fields}, schema)
+
+
+_I64 = pa.int64()
+_STR = pa.string()
+
+
+def _merge_lifecycle_rows(*, catalog: str) -> list[LifecycleScenario]:
+    """The 2 live-tier MERGE scenarios, bound to ``catalog`` for the engine under test.
+
+    Chosen pair (see ledger § chosen rows):
+    * ``live_merge_basic_upsert`` — control equality (publish-job upsert shape).
+    * ``live_merge_matched_arm_order`` — first-match-wins UPDATE-then-DELETE (not the builder
+      upsert twin; detects arm-order drift that ``test_merge_into.py`` does not cover).
+
+    Goldens are the recorded Spark halves from the MERGE differential corpus (short tables;
+    duplicated here so ``_live_parity`` never imports the ``test_`` module).
+    """
+    return [
+        LifecycleScenario(
+            name="live_merge_basic_upsert",
+            catalog=catalog,
+            namespace=LIFECYCLE_NAMESPACE,
+            table="live_merge_basic_upsert",
+            create_sql="CREATE TABLE {target} (id BIGINT, name STRING) USING iceberg{cow_props}",
+            seed_sql=(
+                "INSERT INTO {target} "
+                "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name "
+                "UNION ALL SELECT CAST(2 AS BIGINT), 'b'"
+            ),
+            source_sql=(
+                "SELECT CAST(2 AS BIGINT) AS id, 'bee' AS name "
+                "UNION ALL SELECT CAST(3 AS BIGINT), 'c'"
+            ),
+            act_sql=(
+                "MERGE INTO {target} AS target USING merge_src AS source "
+                "ON target.id = source.id "
+                "WHEN MATCHED THEN UPDATE SET * "
+                "WHEN NOT MATCHED THEN INSERT *"
+            ),
+            read_sql="SELECT id, name FROM {target} ORDER BY id",
+            golden=_lifecycle_merge_table(
+                [("id", _I64, True), ("name", _STR, True)],
+                {"id": [1, 2, 3], "name": ["a", "bee", "c"]},
+            ),
+            order_sensitive=True,
+        ),
+        LifecycleScenario(
+            name="live_merge_matched_arm_order",
+            catalog=catalog,
+            namespace=LIFECYCLE_NAMESPACE,
+            table="live_merge_matched_arm_order",
+            create_sql=("CREATE TABLE {target} (id BIGINT, score BIGINT) USING iceberg{cow_props}"),
+            seed_sql=(
+                "INSERT INTO {target} "
+                "SELECT CAST(1 AS BIGINT) AS id, CAST(10 AS BIGINT) AS score "
+                "UNION ALL SELECT CAST(2 AS BIGINT), CAST(20 AS BIGINT)"
+            ),
+            source_sql=(
+                "SELECT CAST(1 AS BIGINT) AS id, CAST(100 AS BIGINT) AS score "
+                "UNION ALL SELECT CAST(2 AS BIGINT), CAST(200 AS BIGINT)"
+            ),
+            act_sql=(
+                "MERGE INTO {target} AS target USING merge_src AS source "
+                "ON target.id = source.id "
+                "WHEN MATCHED AND target.score = 10 THEN UPDATE SET target.score = source.score "
+                "WHEN MATCHED THEN DELETE"
+            ),
+            read_sql="SELECT id, score FROM {target} ORDER BY id",
+            golden=_lifecycle_merge_table(
+                [("id", _I64, True), ("score", _I64, True)],
+                {"id": [1], "score": [100]},
+            ),
+            order_sensitive=True,
+        ),
+    ]
+
+
+# repark-facing list (memory catalog name). Spark-facing list is built with LIFECYCLE_SPARK_CATALOG
+# so FQNs resolve against the Hadoop catalog configured in build_spark_iceberg_engine.
+LIFECYCLE_SCENARIOS: list[LifecycleScenario] = _merge_lifecycle_rows(
+    catalog=LIFECYCLE_REPARK_CATALOG
+)
+LIFECYCLE_SCENARIOS_SPARK: list[LifecycleScenario] = _merge_lifecycle_rows(
+    catalog=LIFECYCLE_SPARK_CATALOG
+)
 
 
 # ==================================================================================================
@@ -486,6 +779,66 @@ def _sc_date_extractor_under_new_york_session(engine: Engine) -> Any:
         "month(to_date('2024-02-29')) AS month_part, "
         "dayofmonth(to_date('2024-02-29')) AS day_part"
     )
+
+
+# ==================================================================================================
+# G1 / G16 extraction-class timezone live rows (N-2b item 3)
+# ==================================================================================================
+#
+# The 13 equality rows that converged with the H-1a-b extraction fix (see
+# test_session_timezone_parity.test_the_extraction_class_converged_and_the_residue_is_named).
+# NOT the 2 composition date_trunc value-converged-but-type-disclosure rows, NOT the 2
+# zone-independent DATE controls, NOT any disclosure (TZ-4 type, TZ-5 cast, TZ-6 NTZ, TZ-7
+# zoneless). Goldens are the recorded Spark halves (equality rows: repark is None).
+
+
+def _utc(*args: int) -> dt.datetime:
+    """A tz-aware UTC instant (what PySpark's Arrow export produces for a TIMESTAMP)."""
+    return dt.datetime(*args, tzinfo=dt.UTC)  # type: ignore[arg-type]
+
+
+# Column-path fixture: same two instants as test_session_timezone_parity.COLUMN_INSTANTS.
+_TZ_COLUMN_VIEW = "tz_aware_instants"
+_TZ_COLUMN_INSTANTS: tuple[dt.datetime, ...] = (
+    _utc(2024, 6, 15, 12, 0),
+    _utc(2024, 1, 1, 4, 30),
+)
+_TZ_COLUMN_SQL = (
+    "SELECT year(ts) AS year_part, month(ts) AS month_part, dayofmonth(ts) AS day_part, "
+    f"hour(ts) AS hour_part FROM {_TZ_COLUMN_VIEW} ORDER BY ts"
+)
+
+
+def register_tz_column_view(engine: Engine) -> None:
+    """Register the tz-aware TIMESTAMP column view used by column-path timezone scenarios.
+
+    ``createDataFrame`` + ``createOrReplaceTempView`` are spelled identically on both engines.
+    Schema is INFERRED deliberately so both engines carry an instant-typed TIMESTAMP.
+    """
+    frame = engine.session.createDataFrame([(instant,) for instant in _TZ_COLUMN_INSTANTS], ["ts"])
+    frame.createOrReplaceTempView(_TZ_COLUMN_VIEW)
+
+
+def _sc_sql(sql: str) -> Callable[[Engine], Any]:
+    """Build a single-shot recipe that runs ``engine.session.sql(sql)``."""
+
+    def recipe(engine: Engine) -> Any:
+        return engine.session.sql(sql)
+
+    return recipe
+
+
+def _sc_column_sql(sql: str) -> Callable[[Engine], Any]:
+    """Build a recipe that registers the tz column view, then runs ``sql``."""
+
+    def recipe(engine: Engine) -> Any:
+        register_tz_column_view(engine)
+        return engine.session.sql(sql)
+
+    return recipe
+
+
+_INT32 = pa.int32()
 
 
 def _sc_date_math_under_tokyo_session(engine: Engine) -> Any:
@@ -917,6 +1270,213 @@ SCENARIOS: list[Scenario] = [
         ),
         session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
     ),
+    # ----- G1 / G16 extraction-class timezone live rows (N-2b item 3) -----
+    # 13 equality rows that converged with the extraction fix. Size pin 29 -> 42
+    # moved DELIBERATELY in the same diff as these 13 scenarios.
+    Scenario(
+        "tz_live_year_of_instant_under_new_york_session",
+        _sc_sql("SELECT year(to_timestamp('2024-01-01T04:30:00Z')) AS year_part"),
+        pa.table(
+            [pa.array([2023], _INT32)],
+            schema=pa.schema([pa.field("year_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_month_of_instant_under_new_york_session",
+        _sc_sql("SELECT month(to_timestamp('2024-03-01T02:15:00Z')) AS month_part"),
+        pa.table(
+            [pa.array([2], _INT32)],
+            schema=pa.schema([pa.field("month_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_day_of_instant_under_new_york_session",
+        _sc_sql("SELECT dayofmonth(to_timestamp('2024-06-15T03:00:00Z')) AS day_part"),
+        pa.table(
+            [pa.array([14], _INT32)],
+            schema=pa.schema([pa.field("day_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_hour_of_instant_under_new_york_session",
+        _sc_sql("SELECT hour(to_timestamp('2024-06-15T12:00:00Z')) AS hour_part"),
+        pa.table(
+            [pa.array([8], _INT32)],
+            schema=pa.schema([pa.field("hour_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_hour_of_instant_under_tokyo_session",
+        _sc_sql("SELECT hour(to_timestamp('2024-06-15T12:00:00Z')) AS hour_part"),
+        pa.table(
+            [pa.array([21], _INT32)],
+            schema=pa.schema([pa.field("hour_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    Scenario(
+        "tz_live_year_month_day_of_instant_under_tokyo_session",
+        _sc_sql(
+            "SELECT year(to_timestamp('2023-12-31T16:30:00Z')) AS year_part, "
+            "month(to_timestamp('2023-12-31T16:30:00Z')) AS month_part, "
+            "dayofmonth(to_timestamp('2023-12-31T16:30:00Z')) AS day_part"
+        ),
+        pa.table(
+            [
+                pa.array([2024], _INT32),
+                pa.array([1], _INT32),
+                pa.array([1], _INT32),
+            ],
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    Scenario(
+        "tz_live_dst_spring_forward_instant_hour",
+        _sc_sql("SELECT hour(to_timestamp('2024-03-10T07:00:00Z')) AS hour_part"),
+        pa.table(
+            [pa.array([3], _INT32)],
+            schema=pa.schema([pa.field("hour_part", _INT32, nullable=True)]),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_dst_fall_back_repeated_local_hour",
+        _sc_sql(
+            "SELECT hour(to_timestamp('2024-11-03T05:30:00Z')) AS before_part, "
+            "hour(to_timestamp('2024-11-03T06:30:00Z')) AS after_part"
+        ),
+        pa.table(
+            [pa.array([1], _INT32), pa.array([1], _INT32)],
+            schema=pa.schema(
+                [
+                    pa.field("before_part", _INT32, nullable=True),
+                    pa.field("after_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_column_extract_under_new_york_session",
+        _sc_column_sql(_TZ_COLUMN_SQL),
+        pa.table(
+            {
+                "year_part": pa.array([2023, 2024], _INT32),
+                "month_part": pa.array([12, 6], _INT32),
+                "day_part": pa.array([31, 15], _INT32),
+                "hour_part": pa.array([23, 8], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                    pa.field("hour_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        order_sensitive=True,
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_column_extract_under_tokyo_session",
+        _sc_column_sql(_TZ_COLUMN_SQL),
+        pa.table(
+            {
+                "year_part": pa.array([2024, 2024], _INT32),
+                "month_part": pa.array([1, 6], _INT32),
+                "day_part": pa.array([1, 15], _INT32),
+                "hour_part": pa.array([13, 21], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                    pa.field("hour_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        order_sensitive=True,
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_TOKYO),),
+    ),
+    Scenario(
+        "tz_live_pre_1970_extract_under_new_york_session",
+        _sc_sql(
+            "SELECT year(to_timestamp('1969-12-31T23:30:00Z')) AS year_part, "
+            "month(to_timestamp('1969-12-31T23:30:00Z')) AS month_part, "
+            "dayofmonth(to_timestamp('1969-12-31T23:30:00Z')) AS day_part, "
+            "hour(to_timestamp('1969-12-31T23:30:00Z')) AS hour_part"
+        ),
+        pa.table(
+            {
+                "year_part": pa.array([1969], _INT32),
+                "month_part": pa.array([12], _INT32),
+                "day_part": pa.array([31], _INT32),
+                "hour_part": pa.array([18], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                    pa.field("hour_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_year_boundary_extract_and_format_under_new_york_session",
+        _sc_sql(
+            "SELECT year(to_timestamp('2024-01-01T02:00:00Z')) AS year_part, "
+            "date_format(to_timestamp('2024-01-01T02:00:00Z'), 'yyyy-MM-dd') AS local_date"
+        ),
+        pa.table(
+            {
+                "year_part": pa.array([2023], _INT32),
+                "local_date": pa.array(["2023-12-31"], pa.string()),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("year_part", _INT32, nullable=True),
+                    pa.field("local_date", pa.string(), nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
+    Scenario(
+        "tz_live_leap_day_extract_under_new_york_session",
+        _sc_sql(
+            "SELECT month(to_timestamp('2024-02-29T02:00:00Z')) AS month_part, "
+            "dayofmonth(to_timestamp('2024-02-29T02:00:00Z')) AS day_part"
+        ),
+        pa.table(
+            {
+                "month_part": pa.array([2], _INT32),
+                "day_part": pa.array([28], _INT32),
+            },
+            schema=pa.schema(
+                [
+                    pa.field("month_part", _INT32, nullable=True),
+                    pa.field("day_part", _INT32, nullable=True),
+                ]
+            ),
+        ),
+        session_conf=((SESSION_TIME_ZONE_KEY, ZONE_NEW_YORK),),
+    ),
 ]
 
 
@@ -927,12 +1487,17 @@ SCENARIOS: list[Scenario] = [
 # ==================================================================================================
 
 
-def _expect_raises(fn: Callable[[], Any]) -> None:
-    """Assert ``fn()`` raises — the recorded 'Spark errors here' half of a disclosure."""
+def _expect_raises(fn: Callable[[], Any], needle: str | None = None) -> None:
+    """Assert ``fn()`` raises — the recorded 'Spark errors here' half of a disclosure.
+
+    Optional ``needle`` (L-1) is a substring that must appear in the exception text. Existing
+    callers omit it and still accept any raise.
+    """
     try:
         fn()
-    except Exception:
-        # Any engine-side raise satisfies the recorded "Spark errors here" half of the disclosure.
+    except Exception as exc:
+        if needle is not None and needle not in str(exc):
+            raise AssertionError(f"raised, but message did not contain {needle!r}: {exc}") from exc
         return
     raise AssertionError("expected a raise but none occurred (the disclosure may have converged)")
 
@@ -1019,6 +1584,259 @@ def _disc_filter_backtick_identifier_spark(engine: Engine) -> None:
     assert engine.arrow_of(src.filter("`x` > 0")).num_rows == 1, "Spark honours backtick idents"
 
 
+# -------------------------------------------------------------------------------------------------
+# L-1 landing-truth disclosures — recipes re-verified against merged main 2026-08-12 (baf6617).
+# Names must match the registry `- `live-mirror: <name>`` bullets exactly.
+# -------------------------------------------------------------------------------------------------
+
+
+def _disc_cast_date_to_int_repark(engine: Engine) -> None:
+    """CAST(DATE AS INT): repark yields days-since-epoch (corpus date_to_int split)."""
+    out = engine.arrow_of(engine.session.sql("SELECT CAST(DATE '2020-01-01' AS INT) AS n"))
+    assert out.schema.field("n").type == pa.int32()
+    assert out.column("n").to_pylist() == [18262]
+
+
+def _disc_cast_date_to_int_spark(engine: Engine) -> None:
+    _expect_raises(
+        lambda: engine.arrow_of(engine.session.sql("SELECT CAST(DATE '2020-01-01' AS INT) AS n")),
+        needle="DATATYPE_MISMATCH",
+    )
+
+
+def _disc_cast_timestamp_to_int_repark(engine: Engine) -> None:
+    """TZ-5 §10 form: value matches Spark; residual is nullability (literal non-null)."""
+    out = engine.arrow_of(
+        engine.session.sql("SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n")
+    )
+    field = out.schema.field("n")
+    assert field.type == pa.int32()
+    assert field.nullable is False, "repark propagates the timestamp literal's non-null"
+    assert out.column("n").to_pylist() == [1577836800]
+
+
+def _disc_cast_timestamp_to_int_spark(engine: Engine) -> None:
+    # Live spark engine is UTC (build_spark_engine pins session.timeZone=UTC).
+    out = engine.arrow_of(
+        engine.session.sql("SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) AS n")
+    )
+    field = out.schema.field("n")
+    assert field.type == pa.int32()
+    assert field.nullable is True, "Spark types CAST(ts AS INT) nullable"
+    assert out.column("n").to_pylist() == [1577836800]
+
+
+def _disc_null_safe_eq_sql_repark(engine: Engine) -> None:
+    out = engine.arrow_of(
+        engine.session.sql(
+            "SELECT "
+            "(CAST(NULL AS INT) = CAST(NULL AS INT)) AS eq, "
+            "(CAST(NULL AS INT) <=> CAST(NULL AS INT)) AS nse"
+        )
+    )
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is True, "repark <=> result is nullable bool"
+    assert out.column("nse").to_pylist() == [True]
+    assert out.column("eq").to_pylist() == [None]
+
+
+def _disc_null_safe_eq_sql_spark(engine: Engine) -> None:
+    out = engine.arrow_of(
+        engine.session.sql(
+            "SELECT "
+            "(CAST(NULL AS INT) = CAST(NULL AS INT)) AS eq, "
+            "(CAST(NULL AS INT) <=> CAST(NULL AS INT)) AS nse"
+        )
+    )
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is False, "Spark <=> result is non-nullable bool"
+    assert out.column("nse").to_pylist() == [True]
+    assert out.column("eq").to_pylist() == [None]
+
+
+def _disc_null_safe_eq_df_repark(engine: Engine) -> None:
+    frame = engine.session.createDataFrame(
+        [(1, 1), (None, None), (1, None), (None, 1)],
+        ["a", "b"],
+    )
+    out = engine.arrow_of(frame.select(frame.a.eqNullSafe(frame.b).alias("nse")))
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is True
+    assert out.column("nse").to_pylist() == [True, True, False, False]
+
+
+def _disc_null_safe_eq_df_spark(engine: Engine) -> None:
+    frame = engine.session.createDataFrame(
+        [(1, 1), (None, None), (1, None), (None, 1)],
+        ["a", "b"],
+    )
+    out = engine.arrow_of(frame.select(frame.a.eqNullSafe(frame.b).alias("nse")))
+    assert out.schema.field("nse").type == pa.bool_()
+    assert out.schema.field("nse").nullable is False
+    assert out.column("nse").to_pylist() == [True, True, False, False]
+
+
+# Same VALUES recipe as test_float_agg_parity / the Rust G7 fixture (order matters).
+_G7_FIXTURE_VALUES_SQL = (
+    "SELECT * FROM (VALUES "
+    "(CAST(1.0e16 AS DOUBLE)), (CAST(1.0 AS DOUBLE)), (CAST(-1.0e16 AS DOUBLE)), "
+    "(CAST(2.0 AS DOUBLE)), (CAST(1.0e16 AS DOUBLE)), (CAST(0.5 AS DOUBLE)), "
+    "(CAST(-1.0e16 AS DOUBLE)), (CAST(0.25 AS DOUBLE))"
+    ") AS t(v)"
+)
+_G7_SUM_SQL = f"SELECT sum(v) AS s FROM ({_G7_FIXTURE_VALUES_SQL}) src"
+_G7_AVG_SQL = f"SELECT avg(v) AS a FROM ({_G7_FIXTURE_VALUES_SQL}) src"
+
+
+def _disc_sum_catastrophic_cancellation_repark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_SUM_SQL))
+    assert out.schema.field("s").type == pa.float64()
+    assert out.schema.field("s").nullable is True
+    assert out.column("s").to_pylist() == [3.75]
+
+
+def _disc_sum_catastrophic_cancellation_spark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_SUM_SQL))
+    assert out.schema.field("s").type == pa.float64()
+    assert out.schema.field("s").nullable is True
+    assert out.column("s").to_pylist() == [2.25]
+
+
+def _disc_avg_catastrophic_cancellation_repark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_AVG_SQL))
+    assert out.schema.field("a").type == pa.float64()
+    assert out.schema.field("a").nullable is True
+    assert out.column("a").to_pylist() == [0.46875]
+
+
+def _disc_avg_catastrophic_cancellation_spark(engine: Engine) -> None:
+    out = engine.arrow_of(engine.session.sql(_G7_AVG_SQL))
+    assert out.schema.field("a").type == pa.float64()
+    assert out.schema.field("a").nullable is True
+    assert out.column("a").to_pylist() == [0.28125]
+
+
+def _list_value_field(table: pa.Table, column: str) -> pa.Field:
+    """The list value field of ``column`` (name + element type + element nullability)."""
+    field = table.schema.field(column)
+    typ = field.type
+    assert pa.types.is_list(typ), f"{column} is not a list, got {typ}"
+    return typ.field(0)
+
+
+def _nested_array_frame(engine: Engine) -> Any:
+    types = engine.types
+    schema = types.StructType(
+        [
+            types.StructField("id", types.LongType()),
+            types.StructField("items", types.ArrayType(types.LongType())),
+        ]
+    )
+    return engine.session.createDataFrame(
+        [(1, [10, 20]), (2, [30]), (3, [10, 20]), (4, None)],
+        schema,
+    ).select("id", "items")
+
+
+def _disc_nested_array_list_field_repark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_array_frame(engine))
+    value = _list_value_field(out, "items")
+    assert value.name == "item", f"repark list value field is 'item', got {value.name!r}"
+
+
+def _disc_nested_array_list_field_spark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_array_frame(engine))
+    value = _list_value_field(out, "items")
+    assert value.name == "element", f"Spark list value field is 'element', got {value.name!r}"
+
+
+def _nested_collect_list_frame(engine: Engine) -> Any:
+    functions = engine.functions
+    frame = engine.session.createDataFrame(
+        [(1, 10), (1, 20), (2, 30), (2, 40), (1, 15)],
+        ["grp", "v"],
+    )
+    return frame.groupBy("grp").agg(functions.collect_list("v").alias("items"))
+
+
+def _disc_nested_collect_list_repark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_collect_list_frame(engine))
+    items = out.schema.field("items")
+    value = _list_value_field(out, "items")
+    assert items.nullable is True
+    assert value.name == "item"
+    assert value.nullable is True
+
+
+def _disc_nested_collect_list_spark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_collect_list_frame(engine))
+    items = out.schema.field("items")
+    value = _list_value_field(out, "items")
+    assert items.nullable is False
+    assert value.name == "element"
+    assert value.nullable is False
+
+
+def _nested_aos_frame(engine: Engine) -> Any:
+    types = engine.types
+    element = types.StructType(
+        [
+            types.StructField("x", types.LongType()),
+            types.StructField("y", types.StringType()),
+        ]
+    )
+    schema = types.StructType(
+        [
+            types.StructField("id", types.LongType()),
+            types.StructField("items", types.ArrayType(element)),
+        ]
+    )
+    return engine.session.createDataFrame(
+        [
+            (1, [(10, "a"), (11, "b")]),
+            (2, [(20, "c")]),
+            (3, [(10, "a"), (11, "b")]),
+        ],
+        schema,
+    ).select("id", "items")
+
+
+def _disc_nested_aos_list_field_repark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_aos_frame(engine))
+    assert _list_value_field(out, "items").name == "item"
+
+
+def _disc_nested_aos_list_field_spark(engine: Engine) -> None:
+    out = engine.arrow_of(_nested_aos_frame(engine))
+    assert _list_value_field(out, "items").name == "element"
+
+
+def _semi_pair(engine: Engine) -> tuple[Any, Any]:
+    left = engine.session.createDataFrame([(1, "a"), (2, "b"), (None, "n")], ["k", "a"])
+    right = engine.session.createDataFrame([(1,), (9,)], ["k"])
+    return left, right
+
+
+def _disc_conditionless_semi_repark(engine: Engine) -> None:
+    left, right = _semi_pair(engine)
+    _expect_raises(
+        lambda: left.join(right, None, "leftsemi"),
+        needle="requires an `on` condition",
+    )
+    _expect_raises(
+        lambda: left.join(right, [], "leftanti"),
+        needle="requires an `on` condition",
+    )
+
+
+def _disc_conditionless_semi_spark(engine: Engine) -> None:
+    # Live Spark 4.1.2 (g4b ledger §2 D1): on=None keeps every left row iff right is non-empty.
+    left, right = _semi_pair(engine)
+    out = engine.arrow_of(left.join(right, None, "leftsemi"))
+    assert out.num_rows == 3, "Spark conditionless leftsemi keeps every left row (right non-empty)"
+    # on=[] is a PySpark IndexError — a different Spark face; the live half pins on=None.
+
+
 DISCLOSURES: list[Disclosure] = [
     Disclosure(
         "int_union_string",
@@ -1053,5 +1871,95 @@ DISCLOSURES: list[Disclosure] = [
         "triple-double-quoted field name that resolves to nothing; Spark filters normally. "
         "PRE-EXISTING (not an audit-G2 regression); the fix and its pin belong in a follow-up "
         "unit.",
+    ),
+    Disclosure(
+        "cast_date_to_int_spark_refuses",
+        _disc_cast_date_to_int_repark,
+        _disc_cast_date_to_int_spark,
+        "CAST(DATE '2020-01-01' AS INT): repark yields days-since-epoch 18262; "
+        "ANSI Spark refuses with DATATYPE_MISMATCH. Corpus: "
+        "test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days].",
+    ),
+    Disclosure(
+        "cast_timestamp_to_int_nullability",
+        _disc_cast_timestamp_to_int_repark,
+        _disc_cast_timestamp_to_int_spark,
+        "CAST(TIMESTAMP '2020-01-01 00:00:00' AS INT) under UTC: both engines yield unix "
+        "seconds 1577836800 as int32; Spark types the CAST nullable, repark propagates the "
+        "literal's non-null. X-1's raise-vs-value split is STALE after #64; this is the TZ-5 "
+        "§10 form. Corpus: "
+        "test_cast_failure_parity.py::test_cast_failure_row"
+        "[timestamp_to_int_spark_seconds_repark_raises].",
+    ),
+    Disclosure(
+        "null_safe_eq_sql_nullability",
+        _disc_null_safe_eq_sql_repark,
+        _disc_null_safe_eq_sql_spark,
+        "SELECT (NULL <=> NULL): value TRUE on both engines; repark Arrow bool is nullable, "
+        "Spark's is non-nullable. Corpus: "
+        "test_three_valued_logic_parity.py::test_tvl_parity_row[null_eq_vs_null_safe_eq].",
+    ),
+    Disclosure(
+        "null_safe_eq_df_nullability",
+        _disc_null_safe_eq_df_repark,
+        _disc_null_safe_eq_df_spark,
+        "Column.eqNullSafe: values match Spark; result nullability diverges (repark nullable, "
+        "Spark not). Corpus: "
+        "test_three_valued_logic_parity.py::test_tvl_parity_row[df_eq_null_safe_select].",
+    ),
+    Disclosure(
+        "sum_catastrophic_cancellation_fixture",
+        _disc_sum_catastrophic_cancellation_repark,
+        _disc_sum_catastrophic_cancellation_spark,
+        "sum of the G7 catastrophic-cancellation fixture: repark lands 3.75; Spark 4.1.2 "
+        "local[2]/shuffle=2 lands 2.25. Same Arrow float64 nullable; accumulation order "
+        "diverges. Corpus: "
+        "test_float_agg_parity.py::test_float_agg_parity_row"
+        "[sum_catastrophic_cancellation_fixture].",
+    ),
+    Disclosure(
+        "avg_catastrophic_cancellation_fixture",
+        _disc_avg_catastrophic_cancellation_repark,
+        _disc_avg_catastrophic_cancellation_spark,
+        "avg of the same G7 fixture (sum/8): repark 0.46875 vs Spark 0.28125. Follows the "
+        "sum divergence. Corpus: "
+        "test_float_agg_parity.py::test_float_agg_parity_row"
+        "[avg_catastrophic_cancellation_fixture].",
+    ),
+    Disclosure(
+        "nested_array_list_field_name",
+        _disc_nested_array_list_field_repark,
+        _disc_nested_array_list_field_spark,
+        "Array column createDataFrame: values match; list value-field name is 'item' "
+        "(repark) vs 'element' (Spark). Corpus: "
+        "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
+        "[array_column_roundtrip].",
+    ),
+    Disclosure(
+        "nested_collect_list_nullability",
+        _disc_nested_collect_list_repark,
+        _disc_nested_collect_list_spark,
+        "groupBy.agg(collect_list): values match under G18; repark list<item: int64> "
+        "nullable vs Spark list<element: int64 not null> non-nullable. Corpus: "
+        "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
+        "[collect_list_grouped].",
+    ),
+    Disclosure(
+        "nested_array_of_struct_list_field_name",
+        _disc_nested_aos_list_field_repark,
+        _disc_nested_aos_list_field_spark,
+        "Array-of-struct createDataFrame: values match; list value-field name is 'item' "
+        "(repark) vs 'element' (Spark). Corpus: "
+        "test_nested_container_parity.py::test_nested_row_matches_spark_or_still_diverges"
+        "[array_of_struct_roundtrip].",
+    ),
+    Disclosure(
+        "conditionless_semi_anti_refuses",
+        _disc_conditionless_semi_repark,
+        _disc_conditionless_semi_spark,
+        "df.join(other, how='leftsemi'/'leftanti') with on=None or on=[]: repark refuses "
+        "loud (Cartesian fallback would be a wrong answer); Spark on=None keeps every left "
+        "row iff the right side is non-empty. Pin: "
+        "test_g4b_semi_join.py::test_conditionless_semi_family_refuses_loud.",
     ),
 ]
