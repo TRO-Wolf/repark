@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime
 
-from repark.types import (
+from repark.spark.types import (
     ArrayType,
     BinaryType,
     BooleanType,

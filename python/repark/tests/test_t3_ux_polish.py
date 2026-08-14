@@ -15,7 +15,7 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark import ta as repark_ta
 from repark.errors import IllegalArgumentException
-from repark.window import Window
+from repark.spark.window import Window
 
 
 @pytest.fixture

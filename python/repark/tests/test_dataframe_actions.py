@@ -35,7 +35,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException, PySparkException, PySparkTypeError
-from repark.row import Row
+from repark.spark.row import Row
 
 
 @pytest.fixture
@@ -700,7 +700,7 @@ def test_collect_mid_stream_error_is_pyspark_exception(spark: ReparkSession) -> 
 
 def test_p5_collect_primitive_fast_path_matches_arrow(spark: ReparkSession) -> None:
     """P5: all-primitive collect matches to_arrow values AND types (Arrow path, not show)."""
-    from repark.dataframe import DataFrame
+    from repark.spark.dataframe import DataFrame
 
     frame = (
         spark.range(1_000)
@@ -793,8 +793,8 @@ def test_p5_collect_nan_and_none_preserved(spark: ReparkSession) -> None:
 
 def test_p5_nested_calendar_interval_refused(spark: ReparkSession) -> None:
     """P5 octo C1: nested MonthDayNano refuses on collect (list/struct/map containers)."""
-    from repark.dataframe import DataFrame
     from repark.errors import PySparkNotImplementedError
+    from repark.spark.dataframe import DataFrame
 
     del spark
     mdn = pa.scalar((1, 2, 3), type=pa.month_day_nano_interval()).as_py()
@@ -825,7 +825,7 @@ def test_p5_nested_calendar_interval_refused(spark: ReparkSession) -> None:
 
 def test_p5_collect_duplicate_display_names_positional(spark: ReparkSession) -> None:
     """P5: duplicate field names stay positional (T3 pins) under bulk Row assembly."""
-    from repark.dataframe import DataFrame
+    from repark.spark.dataframe import DataFrame
 
     table = pa.table({"a": [1, 2], "b": [10, 20]})
     # Simulate H1 multi-name rename: two columns both display as ``id``.
@@ -841,7 +841,7 @@ def test_p5_collect_duplicate_display_names_positional(spark: ReparkSession) -> 
 
 def test_p5_rows_from_arrow_empty_and_zero_column(spark: ReparkSession) -> None:
     """P5: empty table and zero-column rows do not break bulk assembly."""
-    from repark.dataframe import DataFrame
+    from repark.spark.dataframe import DataFrame
 
     empty = pa.table({"id": pa.array([], type=pa.int64())})
     assert DataFrame._rows_from_arrow_table(empty) == []

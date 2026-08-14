@@ -3,7 +3,8 @@
 ## Purpose
 
 Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crate with `unsafe`. See
-[../map.md](../map.md).
+[../map.md](../map.md). Q1 re-home (2026-08-14): `PyReparkSession.native()` builds a
+non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callable.
 
 ## Contents
 - `tests.rs` — binder unit tests (r26 LR1 hoist). **EC-1 type-identity guard:** four `const _`

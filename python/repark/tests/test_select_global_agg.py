@@ -176,7 +176,7 @@ def test_select_sum_with_nonfinite_float_lit(frame: object) -> None:
     """
     import math
 
-    from repark.functions import _lit_sql_expr
+    from repark.spark.functions import _lit_sql_expr
 
     assert _lit_sql_expr(float("nan")) == "CAST('NaN' AS DOUBLE)"
     assert _lit_sql_expr(float("inf")) == "CAST('Infinity' AS DOUBLE)"
@@ -584,7 +584,7 @@ def test_select_sum_with_window_over_missing_group_by(frame: object) -> None:
     Window ``.over`` clears agg/free/foldable; pure_global = all(¬free) alone mis-routed
     into global-agg SQL. Predicate requires aggregate|foldable + not free.
     """
-    from repark.window import Window
+    from repark.spark.window import Window
 
     windowed = F.row_number().over(Window.orderBy("id"))
     assert windowed._is_aggregate is False
@@ -610,7 +610,7 @@ def test_select_case_preserved_sum_compound_pure_and_sql(frame: object) -> None:
     assert compound._is_aggregate_function is True
     assert compound.sql_expr_part() == 'sum(("X" + 1))'
     # Nested paren → not native-pure (mutation-proof for the compound-routing fix).
-    from repark.dataframe import _is_native_pure_global_aggregate
+    from repark.spark.dataframe import _is_native_pure_global_aggregate
 
     assert _is_native_pure_global_aggregate(compound) is False
     assert _is_native_pure_global_aggregate(F.sum("X")) is True
@@ -642,7 +642,7 @@ def test_polars_sort_key_preserves_sql_expr(frame: object) -> None:
     while Column.asc/desc keep them — hollow pin for generator refuse on pl.sort /
     orderBy after sort-key wrapping (combine octo C6-Q-002).
     """
-    from repark.polars import _sort_key
+    from repark.spark.polars import _sort_key
 
     bare = F.sum("x")
     keyed = _sort_key(bare, ascending=True)
@@ -707,7 +707,7 @@ def test_select_nested_window_with_aggregate_missing_group_by(frame: object) -> 
     ``.over`` OR-propagates through binary / coalesce / when so nested composition cannot
     pure_global via sticky ``_is_aggregate`` alone.
     """
-    from repark.window import Window
+    from repark.spark.window import Window
 
     windowed = F.row_number().over(Window.orderBy("id"))
     assert windowed._has_ungroupable is True
@@ -769,7 +769,7 @@ def test_grouping_col_sql_quotes_hostile_string_keys(spark: ReparkSession) -> No
     ``a\") UNION ALL SELECT 1 --`` broke out of free-SQL GROUP BY. Mutation that reverts to
     naive quoting fails the doubled-quote pin and/or injection refuse.
     """
-    from repark._idents import quote_ident as _quote_ident
+    from repark.spark._idents import quote_ident as _quote_ident
 
     frame = spark.createDataFrame([(1, 10), (2, 20)], ["order", "x"])
     hostile = 'a") UNION ALL SELECT 1 --'
@@ -805,7 +805,7 @@ def test_rebind_sort_marker_preserves_sticky_bits(spark: ReparkSession) -> None:
     ``Column.asc`` preserves sticky bits; rebind at select/group/order must not drop them.
     Reserved name ``order`` must stay quoted for cube free-SQL SELECT.
     """
-    from repark.column import Column
+    from repark.spark.column import Column
 
     frame = spark.createDataFrame([(1, 10), (2, 20)], ["order", "x"])
     # Public path: bare col + asc rebinds and keeps schema-quoted sql_expr.

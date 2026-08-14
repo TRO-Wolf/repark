@@ -1,16 +1,18 @@
-"""repark — a near-drop-in PySpark API on a pure-Rust, no-JVM Apache Iceberg engine.
+"""repark — native ANSI ``sql()`` door plus a deprecation shim for the PySpark facade.
 
-Migrating an existing script is a one-line change::
+The facade lives at :mod:`repark.spark`. Migrating a script is still one line::
 
     from repark import ReparkSession   # was: from pyspark.sql import SparkSession
 
     spark = ReparkSession.builder.appName("etl").getOrCreate()
     spark.sql("SELECT 1 AS a, 'x' AS b").show()
 
-``SparkSession`` remains available as an alias of :class:`ReparkSession` for byte-identical drop-in
-(``from repark import SparkSession``); new code may also use ``import repark as rp`` then
-``rp.ReparkSession``. All compute happens in Rust; data crosses the boundary as Apache Arrow
-(zero-copy, no serialization) via the Arrow PyCapsule interface.
+``repark.sql("SELECT 1")`` is the ANSI-door *callable* (not a package).
+``import repark.sql`` fails — the old pyspark-alias package moved to
+``repark.spark.sql`` so ``sed 's/pyspark/repark.spark/'`` still works.
+
+``SparkSession`` remains an alias of :class:`ReparkSession`. All compute happens
+in Rust; data crosses as Apache Arrow via the Arrow PyCapsule interface.
 """
 
 from __future__ import annotations
@@ -19,20 +21,35 @@ import sys
 import types as _types_mod
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _distribution_version
+from typing import Any
 
-from repark import errors, functions, ml, polars, ta, types
-from repark.catalog import Catalog
-from repark.column import Column
-from repark.dataframe import DataFrame
-from repark.row import Row
-from repark.session import ReParkSession, ReparkSession, SparkSession
-from repark.storage import StorageLevel
-from repark.window import Window, WindowSpec
-
+# Session construction reads ``repark.__version__`` while this package is still
+# loading — bind it before any facade import.
 try:
     __version__ = _distribution_version("repark")
 except PackageNotFoundError:  # running from a source tree without an installed distribution
     __version__ = "0.0.0"
+
+from repark import errors
+from repark.spark import (
+    catalog,
+    column,
+    dataframe,
+    functions,
+    merge,
+    ml,
+    polars,
+    session,
+    ta,
+    types,
+)
+from repark.spark.catalog import Catalog
+from repark.spark.column import Column
+from repark.spark.dataframe import DataFrame
+from repark.spark.row import Row
+from repark.spark.session import ReParkSession, ReparkSession, SparkSession
+from repark.spark.storage import StorageLevel
+from repark.spark.window import Window, WindowSpec
 
 __all__ = [
     "Catalog",
@@ -45,13 +62,50 @@ __all__ = [
     "StorageLevel",
     "Window",
     "WindowSpec",
+    "catalog",
+    "column",
+    "dataframe",
     "errors",
     "functions",
+    "merge",
     "ml",
     "polars",
+    "session",
+    "sql",
     "ta",
     "types",
 ]
+
+_ANSI_NATIVE: Any = None
+_ANSI_ALIVE: dict[str, bool] = {"alive": True}
+
+
+def sql(query: str) -> DataFrame:
+    """Run ``query`` through the native ANSI SQL door.
+
+    Uses a process-wide native engine session (stock DataFusion dialect, no
+    Spark extension) distinct from :meth:`ReparkSession.builder.getOrCreate`.
+    Results are a :class:`DataFrame`; pin value AND Arrow type via ``to_arrow``
+    / ``collect`` — never ``show`` alone.
+
+    Parameters
+    ----------
+    query:
+        A SQL string. Must be ``str`` (no bytes / Column).
+
+    Returns
+    -------
+    DataFrame
+        The planned native-session frame.
+    """
+    if not isinstance(query, str):
+        raise TypeError(f"repark.sql() query must be str, got {type(query).__name__}")
+    from repark import _native
+
+    global _ANSI_NATIVE
+    if _ANSI_NATIVE is None:
+        _ANSI_NATIVE = _native.PyReparkSession.native()
+    return DataFrame(_ANSI_NATIVE.sql(query), _ANSI_NATIVE, _ANSI_ALIVE)
 
 
 # === r21 T3: ux-polish ===

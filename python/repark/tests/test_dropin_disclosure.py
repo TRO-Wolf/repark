@@ -19,7 +19,7 @@ import pytest
 from repark import ReparkSession
 from repark import dataframe as dataframe_module
 from repark import session as session_module
-from repark.catalog import Catalog
+from repark.spark.catalog import Catalog
 
 
 @pytest.fixture(autouse=True)
@@ -82,7 +82,7 @@ def test_show_does_not_log_row_data_at_info(
     # SEC-008: show() prints the table to stdout (PySpark parity) but must NOT leak row data / PII
     # into INFO logs. INFO gets only a row-count breadcrumb; the full render is DEBUG-only.
     frame = spark.sql("SELECT 1 AS id, 'SENTINEL_PII_CELL' AS name")
-    with caplog.at_level(logging.DEBUG, logger="repark.dataframe"):
+    with caplog.at_level(logging.DEBUG, logger="repark.spark.dataframe"):
         frame.show()
 
     info = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
@@ -109,7 +109,7 @@ def test_master_warns_once(tmp_path: Path) -> None:
 def test_set_log_level_is_documented_silent_noop(spark: ReparkSession) -> None:
     # spark.sparkContext.setLogLevel is accepted for source compatibility; engine logging is
     # tracing-based. Silent no-op (same OTH-010 class as clearCache — jobs call it every run).
-    from repark.session import SparkContext
+    from repark.spark.session import SparkContext
 
     docstring = SparkContext.setLogLevel.__doc__ or ""
     assert "tracing" in docstring or "no-op" in docstring.lower() or "Silent" in docstring

@@ -12,7 +12,7 @@ import pytest
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
-from repark.session import (
+from repark.spark.session import (
     _default_namespace_from_builder_config,
     _parse_table_identifier_segments,
     _reset_active_session_for_tests,

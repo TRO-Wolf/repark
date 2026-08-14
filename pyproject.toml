@@ -25,11 +25,11 @@ ignore = ["ANN401"]
 "**/tests/**" = ["ANN201", "ANN202", "ANN001", "S101"]
 # repark.ml mirrors pyspark.ml camelCase API (toArray, saveImpl, getOrDefault, …)
 # and Spark-shaped Generic type vars; do not rename for PEP8.
-"python/repark/src/repark/ml/**" = ["N802", "UP046"]
+"python/repark/src/repark/spark/ml/**" = ["N802", "UP046"]
 # r26 T1 package split: free funcs + class modules use dynamic name binding /
 # intentional re-exports; import * and F821 are load-bearing.
-"python/repark/src/repark/session/**" = ["F401", "F821", "E402", "I001", "F403", "F405"]
-"python/repark/src/repark/dataframe/**" = ["F401", "F403", "F405"]
+"python/repark/src/repark/spark/session/**" = ["F401", "F821", "E402", "I001", "F403", "F405"]
+"python/repark/src/repark/spark/dataframe/**" = ["F401", "F403", "F405"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["repark", "repark_parity"]

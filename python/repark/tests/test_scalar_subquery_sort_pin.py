@@ -9,7 +9,7 @@ flipped back after the upstream fix.
 
 from __future__ import annotations
 
-from repark.session import ReparkSession
+from repark.spark.session import ReparkSession
 
 
 def _session() -> ReparkSession:
@@ -50,7 +50,7 @@ def test_multi_key_order_survives_aggregate_scalar_subquery() -> None:
 
 def test_dataframe_order_by_survives_scalar_subquery_filter() -> None:
     """Same guarantee through the DataFrame API sort path."""
-    from repark.functions import col
+    from repark.spark.functions import col
 
     spark = _session()
     spark.createDataFrame([(0, -6642), (4, -4769)], ["id", "b"]).createOrReplaceTempView(

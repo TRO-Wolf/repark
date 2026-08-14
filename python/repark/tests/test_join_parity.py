@@ -61,7 +61,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # ==================================================================================================
 # Budget floors/ceilings - pinned by test_join_row_set_covers_g4_budget (not incidental)

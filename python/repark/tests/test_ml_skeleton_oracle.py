@@ -17,7 +17,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException, IllegalArgumentException, PySparkTypeError
-from repark.ml import (
+from repark.spark.ml import (
     Model,
     Param,
     Params,
@@ -25,14 +25,14 @@ from repark.ml import (
     PipelineModel,
     Vectors,
 )
-from repark.ml.linalg import DenseVector, SparseVector, VectorUDT
-from repark.ml.pipeline import (
+from repark.spark.ml.linalg import DenseVector, SparseVector, VectorUDT
+from repark.spark.ml.pipeline import (
     REPARK_ML_FORMAT,
     REPARK_ML_VERSION,
     _ConstantColumnEstimator,
     _ConstantColumnModel,
 )
-from repark.ml.util import _random_uid
+from repark.spark.ml.util import _random_uid
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -275,7 +275,7 @@ def test_pipeline_model_save_race_aside_cleanup() -> None:
     Simulates concurrent-overwrite race via rename hook: after target→aside, peer recreates
     target so staging→target fails → commit cleans aside (no `.repark-ml-aside-*` sibling).
     """
-    from repark.ml.pipeline import _begin_atomic_save, _commit_atomic_save
+    from repark.spark.ml.pipeline import _begin_atomic_save, _commit_atomic_save
 
     tmp = tempfile.mkdtemp(prefix="repark-ml-race-")
     try:

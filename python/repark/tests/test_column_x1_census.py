@@ -9,9 +9,9 @@ import pytest
 
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.column import Column
-from repark.session import _reset_active_session_for_tests
-from repark.types import IntegerType, LongType
+from repark.spark.column import Column
+from repark.spark.session import _reset_active_session_for_tests
+from repark.spark.types import IntegerType, LongType
 
 
 @pytest.fixture

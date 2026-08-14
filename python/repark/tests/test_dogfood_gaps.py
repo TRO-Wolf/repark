@@ -17,9 +17,9 @@ import pytest
 
 from repark import ReparkSession, __version__
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.dataframe import DataFrame
 from repark.errors import AnalysisException
-from repark.session import SparkContext
+from repark.spark.dataframe import DataFrame
+from repark.spark.session import SparkContext
 
 
 @pytest.fixture
@@ -372,7 +372,7 @@ def test_divergence_timestamp_ltz_collect_passthrough(spark: ReparkSession, tmp_
     pq.write_table(table, path)
 
     frame = spark.read.parquet(str(path))
-    from repark.types import TimestampType
+    from repark.spark.types import TimestampType
 
     source_arrow = frame.to_arrow()
     source_ticks = source_arrow.column("ts")[0].as_py()
@@ -599,7 +599,7 @@ def test_empty_string_column_names_rejected(spark: ReparkSession) -> None:
 
 def test_current_timestamp_cast_timestamptype_keeps_utc(spark: ReparkSession) -> None:
     """TZ-4 PR-2: cast(TimestampType()) is LTZ µs+UTC — no longer strips the F1 annotation."""
-    from repark.types import TimestampType
+    from repark.spark.types import TimestampType
 
     table = (
         spark.sql("SELECT 1 AS a")

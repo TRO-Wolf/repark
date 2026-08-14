@@ -362,7 +362,7 @@ def test_write_to_option_warns_once(spark: ReparkSession) -> None:
     """C1-Q-005: option/options emit a process-once UserWarning (ignored storage options)."""
     import warnings
 
-    from repark.dataframe import _reset_writer_v2_option_warnings_for_tests
+    from repark.spark.dataframe import _reset_writer_v2_option_warnings_for_tests
 
     _reset_writer_v2_option_warnings_for_tests()
     writer = _source(spark, "(1,'a')").writeTo(TABLE)

@@ -54,7 +54,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # Named so every disclosure's note can cite the same future work without inventing per-row fix IDs.
 FIX_G12 = (

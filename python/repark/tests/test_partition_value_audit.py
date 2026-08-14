@@ -62,7 +62,7 @@ from _oracle_pins import (
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # Re-export so the record driver / GAV pin keep one importable home (_oracle_pins).
 _ICEBERG_SPARK_SCALA_BINARY = ICEBERG_SPARK_SCALA_BINARY

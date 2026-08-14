@@ -63,7 +63,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 pd = pytest.importorskip("pandas")
 
@@ -788,7 +788,7 @@ def test_boundary_row_matches_spark_or_still_diverges(row: ShapeRow) -> None:
         actual = run_row(row, session)
     finally:
         session.stop()
-        from repark.session import _reset_active_session_for_tests
+        from repark.spark.session import _reset_active_session_for_tests
 
         _reset_active_session_for_tests()
 

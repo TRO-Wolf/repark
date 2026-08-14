@@ -13,10 +13,10 @@ from typing import Any
 
 import pytest
 
-import repark.polars as rp
+import repark.spark.polars as rp
 from repark import ReparkSession
-from repark.functions import col
-from repark.functions import sum as sum_
+from repark.spark.functions import col
+from repark.spark.functions import sum as sum_
 
 pl = pytest.importorskip("polars")
 

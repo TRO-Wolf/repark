@@ -11,7 +11,6 @@ import pytest
 
 from repark import _native
 from repark import functions as F  # noqa: N812 — PySpark idiom
-from repark.column import Column
 from repark.errors import (
     AnalysisException,
     IllegalArgumentException,
@@ -23,8 +22,9 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-from repark.session import ReparkSession
-from repark.types import (
+from repark.spark.column import Column
+from repark.spark.session import ReparkSession
+from repark.spark.types import (
     DayTimeIntervalType,
     StructType,
     YearMonthIntervalType,
@@ -300,7 +300,7 @@ def test_alias_metadata_single_name_accepted(spark: ReparkSession) -> None:
 
 
 def test_column_getitem_returns_column_and_rejects_step() -> None:
-    from repark.functions import col
+    from repark.spark.functions import col
 
     assert isinstance(col("foo")[1:3], Column)
     assert isinstance(col("foo")[0], Column)
@@ -321,7 +321,7 @@ def test_column_getitem_open_bound_slice_no_invented_defaults() -> None:
     silently lower ``col[:n]`` → ``substr(1,n)``, ``col[i:]`` → ``substr(i,i)``, or
     ``col[:]`` → ``substr(1,1)``.
     """
-    from repark.functions import col
+    from repark.spark.functions import col
 
     # col[:3] → substr(None, 3) → type(None) != type(int)
     with pytest.raises(PySparkTypeError) as open_stop:
@@ -446,7 +446,7 @@ def test_column_getitem_non_int_non_str_not_parent(spark: ReparkSession) -> None
 
 def test_column_getitem_str_sql_expr_quotes_hostile_ident() -> None:
     """octo C1-SEC-001: string keys are double-quoted in free-SQL; injection cannot widen."""
-    from repark.functions import col
+    from repark.spark.functions import col
 
     hostile = col("id")["id OR true"]
     sql = hostile.sql_expr_part()
@@ -458,7 +458,7 @@ def test_column_getitem_str_sql_expr_quotes_hostile_ident() -> None:
 
 
 def test_column_iter_raises_not_iterable() -> None:
-    from repark.functions import col
+    from repark.spark.functions import col
 
     with pytest.raises(PySparkTypeError) as caught:
         for _item in col("foo"):

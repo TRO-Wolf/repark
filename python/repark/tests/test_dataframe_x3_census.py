@@ -18,8 +18,8 @@ from repark.errors import (
     IllegalArgumentException,
     PySparkTypeError,
 )
-from repark.row import Row
-from repark.storage import StorageLevel
+from repark.spark.row import Row
+from repark.spark.storage import StorageLevel
 
 
 @pytest.fixture

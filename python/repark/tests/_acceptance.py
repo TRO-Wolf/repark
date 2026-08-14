@@ -14,7 +14,7 @@ import os
 
 from repark import Window
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.dataframe import DataFrame
+from repark.spark.dataframe import DataFrame
 
 # ==============================================================================================
 # Constants — mirrored from the real source publish job's config block

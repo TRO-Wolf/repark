@@ -38,9 +38,9 @@ from pyspark.sql.types import StringType as SparkStringType  # noqa: E402
 
 from repark import SparkSession  # noqa: E402
 from repark.errors import PySparkException  # noqa: E402
-from repark.functions import col as repark_col  # noqa: E402
-from repark.functions import udf  # noqa: E402
-from repark.types import LongType, StringType  # noqa: E402
+from repark.spark.functions import col as repark_col  # noqa: E402
+from repark.spark.functions import udf  # noqa: E402
+from repark.spark.types import LongType, StringType  # noqa: E402
 
 _TESTS_DIR = str(Path(__file__).resolve().parent)
 if _TESTS_DIR not in sys.path:

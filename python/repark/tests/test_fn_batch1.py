@@ -7,7 +7,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import UnsupportedOperationException
-from repark.functions import (
+from repark.spark.functions import (
     ceil,
     concat_ws,
     current_date,

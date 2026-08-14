@@ -9,7 +9,7 @@ import pyarrow as pa
 import pytest
 
 from repark import SparkSession
-from repark.functions import array_contains, col, lit
+from repark.spark.functions import array_contains, col, lit
 
 
 @pytest.fixture

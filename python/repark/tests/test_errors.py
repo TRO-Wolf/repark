@@ -433,7 +433,7 @@ def test_row_missing_key_and_bad_index_raise_pyspark_value_error() -> None:
     No new exception leaves — reuses Group S/X ``errors.py`` types only. ``PySparkKeyError``
     stays deferred (malformed-Row IndexError branch unreachable while fields/values lock-step).
     """
-    from repark.row import Row
+    from repark.spark.row import Row
 
     row = Row(a=1, b=2)
     with pytest.raises(PySparkValueError) as missing:

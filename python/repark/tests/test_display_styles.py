@@ -58,9 +58,9 @@ from contextlib import redirect_stdout
 import pytest
 
 from repark import ReparkSession
-from repark.dataframe import DataFrame
 from repark.errors import IllegalArgumentException, PySparkTypeError
-from repark.session import (
+from repark.spark.dataframe import DataFrame
+from repark.spark.session import (
     _DEFAULT_DISPLAY_STYLE,
     _DISPLAY_STYLE_KEY,
     normalize_display_style,
@@ -643,7 +643,7 @@ def test_polars_show_zero_logs_zero_shown_rows(
 
     spark.display_style = "polars"
     frame = spark.sql(_ORDERED_12_SQL)
-    with caplog.at_level(logging.INFO, logger="repark.dataframe"):
+    with caplog.at_level(logging.INFO, logger="repark.spark.dataframe"):
         _capture_show(frame, 0, truncate=False)
     info_messages = [
         record.getMessage() for record in caplog.records if record.levelno == logging.INFO

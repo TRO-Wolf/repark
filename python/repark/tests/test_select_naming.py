@@ -162,8 +162,8 @@ def test_mutation_drop_select_alias_application(
     frame: object, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Mutation proof: if select stops applying for_select, compound names regress."""
-    from repark.column import Column
-    from repark.dataframe import DataFrame
+    from repark.spark.column import Column
+    from repark.spark.dataframe import DataFrame
 
     original = DataFrame.select
 

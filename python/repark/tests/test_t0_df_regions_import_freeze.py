@@ -5,12 +5,12 @@ Mutation: drop a core re-export of GroupedData / _resolve_writer_table → RED.
 
 from __future__ import annotations
 
-import repark.dataframe as dataframe_package
-import repark.dataframe.actions_export as actions_export
-import repark.dataframe.core as dataframe_core
-import repark.dataframe.joins_columns as joins_columns
-import repark.dataframe.writer_readwriter as writer_readwriter
-from repark.dataframe import (
+import repark.spark.dataframe as dataframe_package
+import repark.spark.dataframe.actions_export as actions_export
+import repark.spark.dataframe.core as dataframe_core
+import repark.spark.dataframe.joins_columns as joins_columns
+import repark.spark.dataframe.writer_readwriter as writer_readwriter
+from repark.spark.dataframe import (
     DataFrame,
     DataFrameNaFunctions,
     DataFrameStatFunctions,
@@ -19,28 +19,28 @@ from repark.dataframe import (
     GroupedData,
     _resolve_writer_table,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     DataFrame as CoreDataFrame,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     DataFrameNaFunctions as CoreNa,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     DataFrameStatFunctions as CoreStat,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     DataFrameWriter as CoreWriter,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     DataFrameWriterV2 as CoreWriterV2,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     GroupedData as CoreGrouped,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     _pivot_max_values,
 )
-from repark.dataframe.core import (
+from repark.spark.dataframe.core import (
     _resolve_writer_table as core_resolve_writer_table,
 )
 
@@ -92,7 +92,7 @@ def test_moved_private_helpers_reexported_on_core_and_package() -> None:
 
 def test_dataframe_class_module_remains_core() -> None:
     """DataFrame skeleton stays in core; nested types may live in region modules."""
-    assert DataFrame.__module__ == "repark.dataframe.core"
-    assert GroupedData.__module__ == "repark.dataframe.joins_columns"
-    assert DataFrameWriter.__module__ == "repark.dataframe.writer_readwriter"
-    assert DataFrameNaFunctions.__module__ == "repark.dataframe.actions_export"
+    assert DataFrame.__module__ == "repark.spark.dataframe.core"
+    assert GroupedData.__module__ == "repark.spark.dataframe.joins_columns"
+    assert DataFrameWriter.__module__ == "repark.spark.dataframe.writer_readwriter"
+    assert DataFrameNaFunctions.__module__ == "repark.spark.dataframe.actions_export"

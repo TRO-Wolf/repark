@@ -302,10 +302,10 @@ def test_meta_redirect_installs_repark_session(_compat_provenance: object) -> No
     import pyspark.sql.column as pyspark_column
     import pyspark.sql.dataframe as pyspark_dataframe
 
-    from repark.column import Column as ReparkColumn
-    from repark.dataframe import DataFrame as ReparkDataFrame
-    from repark.session import ReparkSession
-    from repark.session import SparkSession as ReparkSparkSession
+    from repark.spark.column import Column as ReparkColumn
+    from repark.spark.dataframe import DataFrame as ReparkDataFrame
+    from repark.spark.session import ReparkSession
+    from repark.spark.session import SparkSession as ReparkSparkSession
 
     assert pyspark_sql.SparkSession is ReparkSparkSession
     assert issubclass(pyspark_sql.SparkSession, ReparkSession) or (
@@ -325,7 +325,7 @@ def test_meta_no_jvm_gateway(_compat_provenance: object) -> None:
     """Meta-pin: redirect must not start a JVM / active SparkContext gateway."""
     assert_no_jvm()
     # Building a session through the patched factory path stays JVM-free.
-    from repark.session import ReparkSession, _reset_active_session_for_tests
+    from repark.spark.session import ReparkSession, _reset_active_session_for_tests
 
     _reset_active_session_for_tests()
     session = ReparkSession.builder.appName("compat-smoke-no-jvm").getOrCreate()

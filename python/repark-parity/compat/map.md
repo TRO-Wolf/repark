@@ -2,7 +2,9 @@
 
 ## Purpose
 
-The PySpark-compat measurement harness plus **the port's acceptance gate**. The harness runs
+The PySpark-compat measurement harness plus **the port's acceptance gate**. Q1 re-home
+(2026-08-14): redirect sources are `repark.spark.session` / `repark.spark.functions` /
+`repark.spark.types`. The harness runs
 Apache's own `pyspark.sql.tests` against the repark facade via a session/bootstrap redirect;
 the comparator turns two such runs into a pass/fail verdict. Measurement-only: a failing
 Apache test is a FINDING, never a mid-unit product fix. Every cohort keeps its **own

@@ -18,7 +18,7 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-from repark.session import ReparkSession, _reset_active_session_for_tests
+from repark.spark.session import ReparkSession, _reset_active_session_for_tests
 
 
 @pytest.fixture()
@@ -190,7 +190,7 @@ def test_group_h_self_join_on_name(spark: ReparkSession) -> None:
 
 
 def test_group_h_equi_join_independent_ranges(spark: ReparkSession) -> None:
-    from repark.functions import lit
+    from repark.spark.functions import lit
 
     left = spark.range(5).withColumn("v1", lit(1))
     right = spark.range(5).withColumn("v2", lit(2))
@@ -257,7 +257,7 @@ def test_h1_condition_join_duplicate_nonkey(spark: ReparkSession) -> None:
 
 def test_h1_self_join_range_condition(spark: ReparkSession) -> None:
     """Apache test_self_join: range self-join on renamed column condition."""
-    from repark.functions import lit
+    from repark.spark.functions import lit
 
     df1 = spark.range(10).withColumn("a", lit(0))
     df2 = df1.withColumnRenamed("a", "b")
@@ -268,7 +268,7 @@ def test_h1_self_join_range_condition(spark: ReparkSession) -> None:
 
 def test_h1_self_join_left_duplicate_names(spark: ReparkSession) -> None:
     """Apache test_self_join_III: left join keeps duplicate display names."""
-    from repark.functions import lit
+    from repark.spark.functions import lit
 
     df1 = spark.range(10).withColumn("value", lit(1))
     df2 = df1.union(df1)
@@ -279,7 +279,7 @@ def test_h1_self_join_left_duplicate_names(spark: ReparkSession) -> None:
 
 def test_h1_self_join_right(spark: ReparkSession) -> None:
     """Apache test_self_join_IV: right join + multi-name output."""
-    from repark.functions import lit
+    from repark.spark.functions import lit
 
     df1 = spark.range(10).withColumn("value", lit(1))
     df2 = df1.withColumn("value", lit(2)).union(df1.withColumn("value", lit(3)))
@@ -321,7 +321,7 @@ def test_h1_select_parent_columns_both_sides(spark: ReparkSession) -> None:
 
 def test_h1_select_join_keys_all_how(spark: ReparkSession) -> None:
     """Apache test_select_join_keys: select parent id after name equi-join for each how."""
-    from repark.functions import lit
+    from repark.spark.functions import lit
 
     df1 = spark.range(10).withColumn("v1", lit(1))
     df2 = spark.range(10).withColumn("v2", lit(2))

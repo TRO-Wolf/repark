@@ -19,8 +19,8 @@ from repark.errors import (
     PySparkTypeError,
     PySparkValueError,
 )
-from repark.functions import col, lit, when
-from repark.merge import MergeIntoWriter
+from repark.spark.functions import col, lit, when
+from repark.spark.merge import MergeIntoWriter
 
 FQ = "mem.ns.entity"
 COW_PROPS = """
@@ -236,8 +236,8 @@ def test_merge_into_render_sql_shape() -> None:
     """Unit-level SQL render (no engine) — clause order and star forms."""
     # Lightweight: exercise private render via a stub-free construction path is hard;
     # pin _on_sql sugar and assignment quoting instead.
-    from repark.functions import col, lit
-    from repark.merge import _column_sql, _on_sql, _quote_assign_target
+    from repark.spark.functions import col, lit
+    from repark.spark.merge import _column_sql, _on_sql, _quote_assign_target
 
     assert _on_sql("id") == 'target."id" = source."id"'
     assert _on_sql("  name  ") == 'target."name" = source."name"'
@@ -247,7 +247,7 @@ def test_merge_into_render_sql_shape() -> None:
     assert "'bee'" in _column_sql(col("source.name") != lit("bee"))
     assert "'x'" in _column_sql(when(col("id") > 0, lit("x")).otherwise(lit("y")))
     assert "'2020-01-01'" in _column_sql(lit("2020-01-01").cast("date"))
-    from repark.functions import concat
+    from repark.spark.functions import concat
 
     concat_sql = _column_sql(concat(lit("a"), lit("b")))
     assert "'a'" in concat_sql

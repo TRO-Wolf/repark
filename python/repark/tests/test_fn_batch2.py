@@ -12,7 +12,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import UnsupportedOperationException
-from repark.functions import (
+from repark.spark.functions import (
     array_distinct,
     array_except,
     array_intersect,

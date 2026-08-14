@@ -17,10 +17,14 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException, IllegalArgumentException, UnsupportedOperationException
-from repark.ml.clustering import KMeans
-from repark.ml.evaluation import AUC_PR_SEED, BinaryClassificationEvaluator, RegressionEvaluator
-from repark.ml.feature import VectorAssembler
-from repark.ml.regression import (
+from repark.spark.ml.clustering import KMeans
+from repark.spark.ml.evaluation import (
+    AUC_PR_SEED,
+    BinaryClassificationEvaluator,
+    RegressionEvaluator,
+)
+from repark.spark.ml.feature import VectorAssembler
+from repark.spark.ml.regression import (
     ELASTIC_NET_SEED,
     SOLVER_DIVERGENCE,
     LinearRegression,
@@ -178,7 +182,7 @@ def test_linear_regression_params_only_no_training_rows_on_save() -> None:
         df = spark.createDataFrame(rows, ["x", "label"])
         assembled = VectorAssembler(inputCols=["x"], outputCol="features").transform(df)
         model = LinearRegression().fit(assembled)
-        from repark.ml import PipelineModel
+        from repark.spark.ml import PipelineModel
 
         pm = PipelineModel(stages=[model])
         with tempfile.TemporaryDirectory() as tmp:
@@ -424,7 +428,7 @@ def test_binary_area_under_roc_sparse_vector_raw_prediction() -> None:
 
     Sparse zeros omitted: missing index 1 → score 0.0. Perfect ranking still → AUC/PR 1.0.
     """
-    from repark.ml.linalg import Vectors
+    from repark.spark.ml.linalg import Vectors
 
     spark = _session()
     try:
@@ -537,7 +541,7 @@ def test_binary_area_under_roc_non_vector_score_refuses_loud() -> None:
 
 def test_native_estimator_sparse_features_densify_disclosure() -> None:
     """M7 octo C2: native fit on sparse VectorUDT names densify/sparseOutput boundary."""
-    from repark.ml.linalg import Vectors
+    from repark.spark.ml.linalg import Vectors
 
     spark = _session()
     try:
@@ -559,7 +563,7 @@ def test_native_estimator_sparse_features_densify_disclosure() -> None:
 
 def test_binary_area_under_roc_short_sparse_vector_refuses_loud() -> None:
     """M7: sparse size < 2 must refuse like short dense (not degenerate-labels)."""
-    from repark.ml.linalg import Vectors
+    from repark.spark.ml.linalg import Vectors
 
     spark = _session()
     try:
@@ -733,7 +737,7 @@ def test_logistic_regression_separable() -> None:
     """Binary logistic learns positive slope on 1-d separable data."""
     spark = _session()
     try:
-        from repark.ml.classification import LogisticRegression
+        from repark.spark.ml.classification import LogisticRegression
 
         rows = []
         for x in range(-5, 6):
@@ -843,7 +847,7 @@ def test_no_numpy_import_in_ml_fit_modules() -> None:
     ``repark[ml-ext]`` path (lazy ``require_numpy``). Native estimators remain
     under the M3 Rust rule — no numpy in non-ext modules.
     """
-    root = Path(__file__).resolve().parents[1] / "src" / "repark" / "ml"
+    root = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "ml"
     banned = re.compile(r"^\s*(import numpy|from numpy)")
     offenders: list[str] = []
     for path in root.rglob("*.py"):
@@ -864,8 +868,8 @@ def test_model_copy_isolates_fitted_params() -> None:
     """copy() deep-copies coefficients / centers — mutating the copy must not alias."""
     spark = _session()
     try:
-        from repark.ml.classification import LogisticRegression
-        from repark.ml.clustering import KMeans
+        from repark.spark.ml.classification import LogisticRegression
+        from repark.spark.ml.clustering import KMeans
 
         rows = [(-2.0, 0.0), (-1.0, 0.0), (1.0, 1.0), (2.0, 1.0)]
         df = spark.createDataFrame(rows, ["x", "label"])
@@ -969,8 +973,8 @@ def test_max_iter_zero_no_optimization_steps() -> None:
     """maxIter=0 → zero iterations; params stay cold-start / init centers; num_rows counted."""
     spark = _session()
     try:
-        from repark.ml.classification import LogisticRegression
-        from repark.ml.clustering import KMeans
+        from repark.spark.ml.classification import LogisticRegression
+        from repark.spark.ml.clustering import KMeans
 
         rows = [(-2.0, 0.0), (-1.0, 0.0), (1.0, 1.0), (2.0, 1.0)]
         df = spark.createDataFrame(rows, ["x", "label"])

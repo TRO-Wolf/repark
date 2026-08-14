@@ -16,8 +16,8 @@ import pytest
 
 from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark.errors import AnalysisException, ParseException
-from repark.session import ReparkSession
-from repark.types import (
+from repark.spark.session import ReparkSession
+from repark.spark.types import (
     BinaryType,
     BooleanType,
     ByteType,

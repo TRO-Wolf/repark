@@ -20,7 +20,7 @@ from repark.errors import (
     PySparkRuntimeError,
     PySparkTypeError,
 )
-from repark.session import _reset_active_session_for_tests
+from repark.spark.session import _reset_active_session_for_tests
 
 
 def test_import_smoke() -> None:
@@ -228,7 +228,7 @@ def test_new_session_restores_active_on_base_exception() -> None:
     def _boom(self: object) -> object:
         decoy = real_get_or_create(self)  # type: ignore[arg-type]
         decoy_holder.append(decoy)
-        import repark.session as session_mod
+        import repark.spark.session as session_mod
 
         session_mod._active_session = decoy  # type: ignore[attr-defined]
         raise KeyboardInterrupt("simulated mid-newSession")
@@ -610,7 +610,7 @@ def test_read_parquet_via_reader(spark: ReparkSession, tmp_path: Path) -> None:
 
 
 def test_is_null_and_when(spark: ReparkSession) -> None:
-    import repark.functions as F  # noqa: N812 — PySpark idiomatic alias
+    import repark.spark.functions as F  # noqa: N812 — PySpark idiomatic alias
 
     df = spark.sql("SELECT * FROM (VALUES (1), (CAST(NULL AS INT))) AS t(a)")
     flags = df.select(F.col("a").isNull().alias("n")).collect()
@@ -626,7 +626,7 @@ def test_is_null_and_when(spark: ReparkSession) -> None:
 
 def test_f_expr_matches_spark_sql_on_substr_zero(spark: ReparkSession) -> None:
     # BUG-010: F.expr must use Spark semantics (substr pos 0 → 'hel'), not raw DataFusion.
-    import repark.functions as F  # noqa: N812 — PySpark idiomatic alias
+    import repark.spark.functions as F  # noqa: N812 — PySpark idiomatic alias
 
     via_expr = spark.sql("SELECT 1 AS dummy").select(F.expr("substr('hello', 0, 3)").alias("s"))
     via_sql = spark.sql("SELECT substr('hello', 0, 3) AS s")

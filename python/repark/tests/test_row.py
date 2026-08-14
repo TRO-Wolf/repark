@@ -34,7 +34,7 @@ from repark.errors import (
     PySparkTypeError,
     PySparkValueError,
 )
-from repark.row import Row
+from repark.spark.row import Row
 
 # ==================================================================================================
 # Construction + surface shape

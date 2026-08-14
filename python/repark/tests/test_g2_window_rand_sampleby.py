@@ -10,7 +10,7 @@ import pytest
 
 from repark import Window
 from repark import functions as F  # noqa: N812 — PySpark-style F alias
-from repark.session import ReparkSession
+from repark.spark.session import ReparkSession
 
 
 @pytest.fixture

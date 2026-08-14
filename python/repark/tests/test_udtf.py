@@ -17,8 +17,8 @@ from repark.errors import (
     PySparkTypeError,
     UnsupportedOperationException,
 )
-from repark.functions import lit, udtf
-from repark.udtf import UDTFRegistration, UserDefinedTableFunction
+from repark.spark.functions import lit, udtf
+from repark.spark.udtf import UDTFRegistration, UserDefinedTableFunction
 
 
 @pytest.fixture
@@ -110,7 +110,7 @@ def test_udtf_lateral_sql_refuses_loud(spark: SparkSession) -> None:
 
 def test_udtf_non_literal_column_refuses(spark: SparkSession) -> None:
     """Non-foldable Column args refuse (would require LATERAL)."""
-    from repark.functions import col
+    from repark.spark.functions import col
 
     @udtf(returnType="a: int")
     class Echo:
@@ -257,7 +257,7 @@ def test_functions_udtf_export() -> None:
 
 def test_scalar_udf_paths_refuse_udtf_wrapper(spark: SparkSession) -> None:
     """F.udf / spark.udf.register must not half-wire a table UDTF as scalar (octo U11 C1)."""
-    from repark.functions import udf as scalar_udf
+    from repark.spark.functions import udf as scalar_udf
 
     @udtf(returnType="c1: int, c2: int")
     class PlusOne:

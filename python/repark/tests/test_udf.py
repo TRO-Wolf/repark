@@ -16,7 +16,7 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-from repark.functions import (
+from repark.spark.functions import (
     PythonUDFColumn,
     UserDefinedFunction,
     col,
@@ -26,10 +26,10 @@ from repark.functions import (
     udf,
     years,
 )
-from repark.functions import (
+from repark.spark.functions import (
     sum as f_sum,
 )
-from repark.types import IntegerType, LongType
+from repark.spark.types import IntegerType, LongType
 
 
 @pytest.fixture
@@ -475,7 +475,7 @@ def test_udf_multi_arg_null_propagation(spark: SparkSession) -> None:
 
 def test_sql_mask_helpers_unit() -> None:
     """Pure helper pins for registry scan mask / comment strip (octo C6)."""
-    from repark.session import (
+    from repark.spark.session import (
         _parse_simple_sql_udf_call,
         _sql_mask_strings_and_comments,
         _sql_strip_comments_preserve_strings,
@@ -1053,7 +1053,7 @@ def test_sql_udf_where_interval_to_unit_not_projected(spark: SparkSession) -> No
     multi-unit form (same without UDF); must not leak ``__repark_sql_udf_*`` or claim a
     missing column named SECOND/MONTH.
     """
-    from repark.session import _sql_where_residual_base_projections
+    from repark.spark.session import _sql_where_residual_base_projections
 
     residual = "__repark_sql_udf_out_0 > 0 AND INTERVAL '1' DAY TO SECOND IS NOT NULL"
     rewritten, parts, _ = _sql_where_residual_base_projections(

@@ -1,0 +1,21 @@
+# Q1 re-home — declared-rename old→new pytest node-id map
+# Generated 2026-08-14 with the S-3 re-home. The facade test *files* stay under
+# python/repark/tests/; node ids change only where a test was inverted or a
+# parametrize id embedded a repark.sql module path.
+#
+# Format: old<TAB>new
+# Unlisted collected ids are identity (old == new).
+# S-1 files (test_decimal128_parity.py, test_sql_passthrough_parity.py,
+# _record_decimal128_goldens.py) are not rewritten; their node ids are identity.
+
+python/repark/tests/test_sql_alias.py::test_sql_package_core_names_are_canonical_identity	python/repark/tests/test_sql_alias.py::test_spark_sql_package_core_names_are_canonical_identity
+python/repark/tests/test_sql_alias.py::test_sql_functions_types_window_names_are_identity	python/repark/tests/test_sql_alias.py::test_spark_sql_functions_types_window_names_are_identity
+python/repark/tests/test_sql_alias.py::test_absent_pyspark_sql_names_raise_loud	python/repark/tests/test_sql_alias.py::test_absent_pyspark_sql_names_raise_loud
+python/repark/tests/test_sql_alias.py::test_sed_swap_harness_import_block_execs	python/repark/tests/test_sql_alias.py::test_sed_swap_pyspark_to_repark_spark_execs
+python/repark/tests/test_sql_alias.py::test_sed_swap_process_silver_style_imports	python/repark/tests/test_sql_alias.py::test_sed_swap_process_silver_style_imports
+
+# Added (no old id)
+-	python/repark/tests/test_sql_alias.py::test_import_repark_sql_module_fails
+-	python/repark/tests/test_sql_alias.py::test_repark_sql_callable_select_one_arrow_path
+-	python/repark/tests/test_sql_alias.py::test_repark_sql_callable_integer_division_is_ansi_not_spark
+-	python/repark/tests/test_sql_alias.py::test_top_level_shim_repark_session_identity

@@ -49,8 +49,8 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.dataframe import DataFrame
 from repark.errors import AnalysisException, ParseException
+from repark.spark.dataframe import DataFrame
 
 
 @pytest.fixture

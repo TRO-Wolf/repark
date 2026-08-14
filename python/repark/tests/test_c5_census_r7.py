@@ -11,11 +11,11 @@ from collections.abc import Iterator
 import pyarrow as pa
 import pytest
 
-from repark.column import Column
 from repark.errors import PySparkTypeError
-from repark.functions import col, lit, trim, upper, when
-from repark.session import ReparkSession
-from repark.types import IntegerType, LongType
+from repark.spark.column import Column
+from repark.spark.functions import col, lit, trim, upper, when
+from repark.spark.session import ReparkSession
+from repark.spark.types import IntegerType, LongType
 
 
 @pytest.fixture

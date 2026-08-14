@@ -51,15 +51,15 @@ from repark.errors import (
     IllegalArgumentException,
     UnsupportedOperationException,
 )
-from repark.ml.evaluation import (
+from repark.spark.ml.evaluation import (
     MULTICLASS_F1_SEED,
     MulticlassClassificationEvaluator,
     RegressionEvaluator,
 )
-from repark.ml.feature import OneHotEncoder, VectorAssembler
-from repark.ml.pipeline import Pipeline
-from repark.ml.regression import LinearRegression
-from repark.ml.tuning import CrossValidator, ParamGridBuilder
+from repark.spark.ml.feature import OneHotEncoder, VectorAssembler
+from repark.spark.ml.pipeline import Pipeline
+from repark.spark.ml.regression import LinearRegression
+from repark.spark.ml.tuning import CrossValidator, ParamGridBuilder
 
 
 def _session() -> ReparkSession:
@@ -203,7 +203,7 @@ def _maybe_live_spark():
 
 def test_ext_package_import_succeeds_bare() -> None:
     """``import repark.ml.ext`` must succeed without ml-ext installed."""
-    import repark.ml.ext as ext
+    import repark.spark.ml.ext as ext
 
     assert ext is not None
     assert hasattr(ext, "XGBoostRegressor") or "XGBoostRegressor" in getattr(ext, "__all__", [])
@@ -230,7 +230,7 @@ def test_ext_require_names_extra_when_missing(
     via import monkeypatch.
     """
     _block_module_import(monkeypatch, module_root)
-    import repark.ml.ext._deps as deps
+    import repark.spark.ml.ext._deps as deps
 
     require_fn = getattr(deps, require_name)
     with pytest.raises(ImportError, match=r"repark\[ml-ext\]"):
@@ -240,12 +240,12 @@ def test_ext_require_names_extra_when_missing(
 @pytest.mark.parametrize(
     ("module_root", "import_path", "class_name"),
     [
-        ("xgboost", "repark.ml.ext._xgboost", "XGBoostRegressor"),
-        ("xgboost", "repark.ml.ext._xgboost", "XGBoostClassifier"),
-        ("lightgbm", "repark.ml.ext._lightgbm", "LightGBMRegressor"),
-        ("lightgbm", "repark.ml.ext._lightgbm", "LightGBMClassifier"),
-        ("sklearn", "repark.ml.ext._sklearn", "RandomForestRegressor"),
-        ("sklearn", "repark.ml.ext._sklearn", "RandomForestClassifier"),
+        ("xgboost", "repark.spark.ml.ext._xgboost", "XGBoostRegressor"),
+        ("xgboost", "repark.spark.ml.ext._xgboost", "XGBoostClassifier"),
+        ("lightgbm", "repark.spark.ml.ext._lightgbm", "LightGBMRegressor"),
+        ("lightgbm", "repark.spark.ml.ext._lightgbm", "LightGBMClassifier"),
+        ("sklearn", "repark.spark.ml.ext._sklearn", "RandomForestRegressor"),
+        ("sklearn", "repark.spark.ml.ext._sklearn", "RandomForestClassifier"),
     ],
 )
 def test_ext_class_touch_names_extra_when_missing(
@@ -518,7 +518,7 @@ def test_xgboost_regressor_e2e_and_lib_parity() -> None:
     import numpy as np
     import xgboost as xgb
 
-    from repark.ml.ext import XGBoostRegressor
+    from repark.spark.ml.ext import XGBoostRegressor
 
     spark = _session()
     try:
@@ -598,7 +598,7 @@ def test_xgboost_regressor_load_requires_params_parquet() -> None:
     still predicting from booster.raw (silent integrity loss).
     """
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
+    from repark.spark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
 
     spark = _session()
     try:
@@ -646,7 +646,7 @@ def test_xgboost_regressor_load_refuses_booster_blob_path_escape() -> None:
     ``../evil/booster.raw`` and absolute paths load a real booster outside the model tree.
     """
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
+    from repark.spark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
 
     spark = _session()
     try:
@@ -694,8 +694,8 @@ def test_xgboost_regressor_booster_bytes_save_load_predict_parity() -> None:
     pytest.importorskip("xgboost")
     import numpy as np
 
-    from repark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
-    from repark.ml.pipeline import REPARK_ML_FORMAT
+    from repark.spark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
+    from repark.spark.ml.pipeline import REPARK_ML_FORMAT
 
     spark = _session()
     try:
@@ -766,7 +766,7 @@ def test_xgboost_regressor_booster_bytes_save_load_predict_parity() -> None:
 def test_pipeline_model_save_with_xgb_stage_stop_loud() -> None:
     """PipelineModel must not hollow-publish ext stages as empty fitted parquet (octo C1-Q-001)."""
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostRegressor
+    from repark.spark.ml.ext import XGBoostRegressor
 
     spark = _session()
     try:
@@ -797,7 +797,7 @@ def test_pipeline_model_save_with_xgb_stage_stop_loud() -> None:
 def test_ext_transform_temp_view_owned_and_dropped() -> None:
     """Success-path re-entry must own and GC-drop __repark_ml_ext_* views (octo C1-SAF-001)."""
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostRegressor
+    from repark.spark.ml.ext import XGBoostRegressor
 
     spark = _session()
     try:
@@ -853,7 +853,7 @@ def test_sparse_feature_size_capped() -> None:
     pytest.importorskip("numpy")
     import pyarrow as pa
 
-    from repark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
+    from repark.spark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
 
     huge = MAX_EXT_FEATURES + 1
     # Sparse struct cell with absurd size — must not allocate dense=[0.0]*huge.
@@ -872,7 +872,7 @@ def test_sparse_feature_nnz_capped() -> None:
     pytest.importorskip("numpy")
     import pyarrow as pa
 
-    from repark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
+    from repark.spark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
 
     huge_nnz = MAX_EXT_FEATURES + 1
     # size within cap but nnz exceeds — must not list()-materialize then densify.
@@ -898,7 +898,7 @@ def test_dense_feature_width_capped() -> None:
     pytest.importorskip("numpy")
     import pyarrow as pa
 
-    from repark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
+    from repark.spark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
 
     huge = MAX_EXT_FEATURES + 1
     dense_row = [0.0] * huge
@@ -915,7 +915,7 @@ def test_xgboost_regressor_transform_wrong_width_refuses() -> None:
     suite green — this oracle goes red on that deletion.
     """
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostRegressor
+    from repark.spark.ml.ext import XGBoostRegressor
 
     spark = _session()
     try:
@@ -977,7 +977,7 @@ def test_xgboost_classifier_stretch() -> None:
     import numpy as np
     import xgboost as xgb
 
-    from repark.ml.ext import XGBoostClassifier
+    from repark.spark.ml.ext import XGBoostClassifier
 
     spark = _session()
     try:
@@ -1023,7 +1023,7 @@ def test_lightgbm_regressor_stretch() -> None:
     import lightgbm as lgb
     import numpy as np
 
-    from repark.ml.ext import LightGBMRegressor
+    from repark.spark.ml.ext import LightGBMRegressor
 
     spark = _session()
     try:
@@ -1069,7 +1069,7 @@ def test_sklearn_random_forest_regressor_stretch() -> None:
     import numpy as np
     from sklearn.ensemble import RandomForestRegressor as SKRandomForestRegressor
 
-    from repark.ml.ext import RandomForestRegressor
+    from repark.spark.ml.ext import RandomForestRegressor
 
     spark = _session()
     try:
@@ -1116,7 +1116,7 @@ def test_lightgbm_classifier_stretch() -> None:
     import lightgbm as lgb
     import numpy as np
 
-    from repark.ml.ext import LightGBMClassifier
+    from repark.spark.ml.ext import LightGBMClassifier
 
     spark = _session()
     try:
@@ -1164,7 +1164,7 @@ def test_sklearn_random_forest_classifier_stretch() -> None:
     import numpy as np
     from sklearn.ensemble import RandomForestClassifier as SKRandomForestClassifier
 
-    from repark.ml.ext import RandomForestClassifier
+    from repark.spark.ml.ext import RandomForestClassifier
 
     spark = _session()
     try:
@@ -1206,7 +1206,9 @@ def test_sklearn_random_forest_classifier_stretch() -> None:
 
 def test_numpy_not_imported_at_repark_ml_toplevel() -> None:
     """numpy must not appear as a top-level import of repark.ml (only behind ext)."""
-    ml_init = Path(__file__).resolve().parents[1] / "src" / "repark" / "ml" / "__init__.py"
+    ml_init = (
+        Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "ml" / "__init__.py"
+    )
     text = ml_init.read_text(encoding="utf-8")
     assert "import numpy" not in text
     assert "from numpy" not in text
@@ -1228,7 +1230,7 @@ def test_numpy_not_imported_at_repark_ml_toplevel() -> None:
 def test_cv_over_small_xgb_grid() -> None:
     """CV over a tiny XGB grid also satisfies merge bar (when xgboost present)."""
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostRegressor
+    from repark.spark.ml.ext import XGBoostRegressor
 
     spark = _session()
     try:
@@ -1419,7 +1421,7 @@ def test_pipeline_load_refuses_path_traversal() -> None:
     import json
     import shutil
 
-    from repark.ml.pipeline import REPARK_ML_FORMAT, REPARK_ML_VERSION, PipelineModel
+    from repark.spark.ml.pipeline import REPARK_ML_FORMAT, REPARK_ML_VERSION, PipelineModel
 
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -1437,7 +1439,7 @@ def test_pipeline_load_refuses_path_traversal() -> None:
                 {
                     "index": 0,
                     "uid": "evil",
-                    "class": "repark.ml.pipeline._ConstantColumnModel",
+                    "class": "repark.spark.ml.pipeline._ConstantColumnModel",
                     "relative_path": "../",
                 }
             ],
@@ -1457,7 +1459,7 @@ def test_pipeline_load_refuses_path_traversal() -> None:
             PipelineModel.load(str(model_dir))
 
         # Save path: hostile uid with separators must not write outside stages/.
-        from repark.ml.pipeline import Pipeline, _ConstantColumnEstimator
+        from repark.spark.ml.pipeline import Pipeline, _ConstantColumnEstimator
 
         spark = _session()
         try:
@@ -1483,12 +1485,12 @@ def test_pipeline_load_refuses_path_traversal() -> None:
 
 def test_pipeline_instantiate_stage_allowlists_repark_ml() -> None:
     """importlib class_path must be under repark.ml (octo C2-SEC-002)."""
-    from repark.ml.pipeline import _assert_allowed_stage_class_path, _instantiate_stage
+    from repark.spark.ml.pipeline import _assert_allowed_stage_class_path, _instantiate_stage
 
     with pytest.raises(UnsupportedOperationException, match=r"allowlist|repark\.ml"):
         _assert_allowed_stage_class_path("os.system")
     with pytest.raises(UnsupportedOperationException, match=r"allowlist|repark\.ml|denied"):
-        _assert_allowed_stage_class_path("repark.ml.ext._xgboost.XGBoostRegressorModel")
+        _assert_allowed_stage_class_path("repark.spark.ml.ext._xgboost.XGBoostRegressorModel")
     with pytest.raises(UnsupportedOperationException, match=r"allowlist|repark\.ml"):
         _instantiate_stage(
             "json.loads",
@@ -1499,9 +1501,9 @@ def test_pipeline_instantiate_stage_allowlists_repark_ml() -> None:
     # Legitimate repark.ml module path is allowed by the allowlist (import may still fail
     # if class lacks _ml_from_save — that is a different refuse).
     module_name, class_name = _assert_allowed_stage_class_path(
-        "repark.ml.regression.LinearRegressionModel"
+        "repark.spark.ml.regression.LinearRegressionModel"
     )
-    assert module_name == "repark.ml.regression"
+    assert module_name == "repark.spark.ml.regression"
     assert class_name == "LinearRegressionModel"
 
 
@@ -1520,7 +1522,7 @@ def test_stretch_ext_write_stop_loud() -> None:
         assembled = VectorAssembler(inputCols=["x"], outputCol="features").transform(df)
 
         if importlib.util.find_spec("lightgbm") is not None:
-            from repark.ml.ext import LightGBMRegressor, LightGBMRegressorModel
+            from repark.spark.ml.ext import LightGBMRegressor, LightGBMRegressorModel
 
             lgb_model = LightGBMRegressor(
                 featuresCol="features",
@@ -1546,7 +1548,7 @@ def test_stretch_ext_write_stop_loud() -> None:
                 assert _rel_close(left, right, tol=1e-6), (left, right)
 
         if importlib.util.find_spec("sklearn") is not None:
-            from repark.ml.ext import PICKLE_FORBIDDEN_REASON, RandomForestRegressor
+            from repark.spark.ml.ext import PICKLE_FORBIDDEN_REASON, RandomForestRegressor
 
             rf = RandomForestRegressor(
                 featuresCol="features",
@@ -1596,7 +1598,7 @@ def test_classifier_models_save_write_stop_loud() -> None:
 
         if importlib.util.find_spec("xgboost") is not None:
             saw_any = True
-            from repark.ml.ext import XGBoostClassifier, XGBoostClassifierModel
+            from repark.spark.ml.ext import XGBoostClassifier, XGBoostClassifierModel
 
             model = XGBoostClassifier(
                 featuresCol="features",
@@ -1621,7 +1623,7 @@ def test_classifier_models_save_write_stop_loud() -> None:
 
         if importlib.util.find_spec("lightgbm") is not None:
             saw_any = True
-            from repark.ml.ext import LightGBMClassifier, LightGBMClassifierModel
+            from repark.spark.ml.ext import LightGBMClassifier, LightGBMClassifierModel
 
             model = LightGBMClassifier(
                 featuresCol="features",
@@ -1646,7 +1648,7 @@ def test_classifier_models_save_write_stop_loud() -> None:
 
         if importlib.util.find_spec("sklearn") is not None:
             saw_any = True
-            from repark.ml.ext import PICKLE_FORBIDDEN_REASON, RandomForestClassifier
+            from repark.spark.ml.ext import PICKLE_FORBIDDEN_REASON, RandomForestClassifier
 
             model = RandomForestClassifier(
                 featuresCol="features",
@@ -1682,7 +1684,7 @@ def test_features_matrix_caps_before_as_py() -> None:
     hostile materialize before MAX_EXT_FEATURES; this pin raises if as_py runs first.
     """
     pytest.importorskip("numpy")
-    from repark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
+    from repark.spark.ml.ext._arrow_util import MAX_EXT_FEATURES, features_matrix_from_arrow
 
     class _NullCell:
         is_valid = False
@@ -1781,8 +1783,8 @@ def test_model_copy_extra_applies_prediction_col_override() -> None:
     """
     import importlib.util
 
-    from repark.ml.classification import LogisticRegression
-    from repark.ml.regression import LinearRegression
+    from repark.spark.ml.classification import LogisticRegression
+    from repark.spark.ml.regression import LinearRegression
 
     spark = _session()
     try:
@@ -1830,7 +1832,7 @@ def test_model_copy_extra_applies_prediction_col_override() -> None:
         assert all("prediction" not in row.asDict() for row in cv_out)
 
         if importlib.util.find_spec("xgboost") is not None:
-            from repark.ml.ext import XGBoostRegressor
+            from repark.spark.ml.ext import XGBoostRegressor
 
             xgb_model = XGBoostRegressor(
                 featuresCol="features",
@@ -1857,8 +1859,8 @@ def test_m8_xgboost_regressor_atomic_overwrite_and_version_guard() -> None:
     pytest.importorskip("xgboost")
     import xgboost as xgb
 
-    from repark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
-    from repark.ml.pipeline import REPARK_ML_FORMAT
+    from repark.spark.ml.ext import XGBoostRegressor, XGBoostRegressorModel
+    from repark.spark.ml.pipeline import REPARK_ML_FORMAT
 
     spark = _session()
     try:
@@ -1913,7 +1915,7 @@ def test_m8_xgboost_regressor_atomic_overwrite_and_version_guard() -> None:
 def test_m8_xgboost_classifier_booster_bytes_predict_parity() -> None:
     """M8: XGBoostClassifierModel save_raw round-trip equals pre-save predict."""
     pytest.importorskip("xgboost")
-    from repark.ml.ext import XGBoostClassifier, XGBoostClassifierModel
+    from repark.spark.ml.ext import XGBoostClassifier, XGBoostClassifierModel
 
     spark = _session()
     try:
@@ -1950,7 +1952,7 @@ def test_m8_xgboost_classifier_booster_bytes_predict_parity() -> None:
 def test_m8_lightgbm_regressor_and_classifier_predict_parity() -> None:
     """M8: LightGBM model_to_string save→load→predict equality (reg + clf)."""
     pytest.importorskip("lightgbm")
-    from repark.ml.ext import (
+    from repark.spark.ml.ext import (
         LightGBMClassifier,
         LightGBMClassifierModel,
         LightGBMRegressor,
@@ -2022,7 +2024,7 @@ def test_m8_lightgbm_regressor_and_classifier_predict_parity() -> None:
 def test_m8_sklearn_random_forest_pickle_forbidden_pin() -> None:
     """M8: sklearn RF* refuse with exact pickle-forbidden reason (no third state)."""
     pytest.importorskip("sklearn")
-    from repark.ml.ext import (
+    from repark.spark.ml.ext import (
         PICKLE_FORBIDDEN_REASON,
         RandomForestClassifier,
         RandomForestClassifierModel,
@@ -2081,7 +2083,7 @@ def test_m8_every_ext_model_has_save_or_pin_refuse() -> None:
     """
     import importlib.util
 
-    from repark.ml.ext import PICKLE_FORBIDDEN_REASON
+    from repark.spark.ml.ext import PICKLE_FORBIDDEN_REASON
 
     spark = _session()
     try:
@@ -2095,7 +2097,7 @@ def test_m8_every_ext_model_has_save_or_pin_refuse() -> None:
         matrix: list[tuple[str, object, str]] = []  # name, model, expected: save|refuse
 
         if importlib.util.find_spec("xgboost") is not None:
-            from repark.ml.ext import XGBoostClassifier, XGBoostRegressor
+            from repark.spark.ml.ext import XGBoostClassifier, XGBoostRegressor
 
             matrix.append(
                 (
@@ -2124,7 +2126,7 @@ def test_m8_every_ext_model_has_save_or_pin_refuse() -> None:
                 )
             )
         if importlib.util.find_spec("lightgbm") is not None:
-            from repark.ml.ext import LightGBMClassifier, LightGBMRegressor
+            from repark.spark.ml.ext import LightGBMClassifier, LightGBMRegressor
 
             matrix.append(
                 (
@@ -2153,7 +2155,7 @@ def test_m8_every_ext_model_has_save_or_pin_refuse() -> None:
                 )
             )
         if importlib.util.find_spec("sklearn") is not None:
-            from repark.ml.ext import RandomForestClassifier, RandomForestRegressor
+            from repark.spark.ml.ext import RandomForestClassifier, RandomForestRegressor
 
             matrix.append(
                 (
@@ -2225,7 +2227,7 @@ def test_m8_every_ext_model_has_save_or_pin_refuse() -> None:
 
 def test_m8_no_pickle_import_in_ext_persist_sources() -> None:
     """M8 hygiene: ext persistence modules must not import pickle/joblib."""
-    root = Path(__file__).resolve().parents[1] / "src" / "repark" / "ml" / "ext"
+    root = Path(__file__).resolve().parents[1] / "src" / "repark" / "spark" / "ml" / "ext"
     forbidden = re.compile(
         r"^\s*(import\s+pickle|from\s+pickle\s+import|import\s+joblib|from\s+joblib\s+import)"
     )
@@ -2248,7 +2250,7 @@ def test_m8_load_refuses_classifier_flag_mismatch_and_nonpositive_num_features()
     import pyarrow as pa
     import pyarrow.parquet as pq
 
-    from repark.ml.ext import XGBoostClassifierModel, XGBoostRegressor, XGBoostRegressorModel
+    from repark.spark.ml.ext import XGBoostClassifierModel, XGBoostRegressor, XGBoostRegressorModel
 
     spark = _session()
     try:

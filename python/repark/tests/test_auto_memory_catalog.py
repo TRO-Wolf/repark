@@ -18,13 +18,13 @@ from pathlib import Path
 
 import pytest
 
-from repark.session import ReparkSession
+from repark.spark.session import ReparkSession
 
 
 @pytest.fixture()
 def _fresh_session_slot() -> None:
     """Ensure no active session leaks between tests (module uses bare getOrCreate)."""
-    import repark.session as session_mod
+    import repark.spark.session as session_mod
 
     if session_mod._active_session is not None:
         session_mod._active_session.stop()

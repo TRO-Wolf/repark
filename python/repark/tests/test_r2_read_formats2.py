@@ -12,7 +12,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException
-from repark.session import _reset_active_session_for_tests
+from repark.spark.session import _reset_active_session_for_tests
 
 
 @pytest.fixture

@@ -63,7 +63,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # ==================================================================================================
 # Oracle environment pin (record-time only; never a CI dependency)

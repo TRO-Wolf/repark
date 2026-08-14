@@ -11,8 +11,8 @@ from collections.abc import Iterator
 import pytest
 
 from repark import SparkSession
-from repark.functions import udf
-from repark.types import IntegerType, StringType
+from repark.spark.functions import udf
+from repark.spark.types import IntegerType, StringType
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def test_catalog_register_function_sql_and_dataframe(spark: SparkSession) -> Non
 
 def test_catalog_register_function_camel_case_alias(spark: SparkSession) -> None:
     """camelCase registerFunction is the same method as snake_case (class-level alias)."""
-    from repark.catalog import Catalog
+    from repark.spark.catalog import Catalog
 
     # Catalog is reconstructed per ``spark.catalog`` access — compare unbound methods.
     assert Catalog.registerFunction is Catalog.register_function
@@ -53,7 +53,7 @@ def test_catalog_register_function_camel_case_alias(spark: SparkSession) -> None
 
 def test_catalog_function_exists_registry_only(spark: SparkSession) -> None:
     """functionExists probes the session UDF registry (not CREATE FUNCTION / JVM)."""
-    from repark.catalog import Catalog
+    from repark.spark.catalog import Catalog
 
     assert Catalog.functionExists is Catalog.function_exists
     assert spark.catalog.functionExists("func1") is False

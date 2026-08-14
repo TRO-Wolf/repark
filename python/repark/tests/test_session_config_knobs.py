@@ -52,7 +52,7 @@ import pytest
 
 from repark import ReparkSession, _native
 from repark.errors import IllegalArgumentException, PySparkException
-from repark.session import (
+from repark.spark.session import (
     _BATCH_SIZE_KEYS,
     _MEMORY_LIMIT_KEYS,
     _TARGET_PARTITIONS_KEYS,

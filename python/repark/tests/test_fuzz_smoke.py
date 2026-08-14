@@ -531,7 +531,7 @@ def test_fuzz_repark_registers_temp_views() -> None:
     finally:
         runner._close_repark(session)
         # Clear process-wide session registry (conftest also does this).
-        from repark.session import _reset_active_session_for_tests
+        from repark.spark.session import _reset_active_session_for_tests
 
         _reset_active_session_for_tests()
 

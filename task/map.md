@@ -30,6 +30,10 @@ not this directory.
   `spark.sql.ansi.enabled` default TRUE on the Spark door + DEC-7 `/0` and `% 0`
   via shared `guard_zero_divisor`. DEC-6 overflow raise DECLARED (38-nines wrap).
   DEC-9 named residue. Does **not** edit the registry (S-5 owns it; §6 paste-true).
+- [s3-rehome-ledger.md](s3-rehome-ledger.md) — **S-3 / Q1 `repark.sql` re-home (2026-08-14):**
+  facade at `repark.spark`, alias at `repark.spark.sql`, `repark.sql()` ANSI callable,
+  `import repark.sql` fails. Node-id map: [s3-rehome-node-id-map.txt](s3-rehome-node-id-map.txt).
+  S-1 three files not rewritten (SQM union).
 - [v5-w-landing-ledger.md](v5-w-landing-ledger.md) — **V-5 W-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged W-wave
   handoffs (TZ-4 PR-2 progress not retired; TZ-6/TZ-7 FIXED notes already in-file

@@ -6,7 +6,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import IllegalArgumentException
-from repark.session import _reset_active_session_for_tests
+from repark.spark.session import _reset_active_session_for_tests
 
 
 @pytest.fixture

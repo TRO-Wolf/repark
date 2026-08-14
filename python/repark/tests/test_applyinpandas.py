@@ -11,7 +11,7 @@ import pytest
 
 from repark import SparkSession
 from repark.errors import AnalysisException, PySparkException, PySparkTypeError
-from repark.types import IntegerType, StringType, StructField, StructType
+from repark.spark.types import IntegerType, StringType, StructField, StructType
 
 
 @pytest.fixture
@@ -319,7 +319,7 @@ def test_applyinpandas_boundary_stitch_multi_batch(spark: SparkSession) -> None:
     Drives the facade boundary-stitch path by feeding a sorted multi-batch stream
     through the private group iterator (same helper the bridge uses).
     """
-    from repark.dataframe import _iter_apply_in_pandas_group_tables
+    from repark.spark.dataframe import _iter_apply_in_pandas_group_tables
 
     # Two batches, group k=1 straddles the edge; k=2 only in batch 2.
     batch_a = pa.RecordBatch.from_pydict({"k": [1, 1], "v": [10, 20]})
@@ -336,7 +336,7 @@ def test_applyinpandas_boundary_stitch_multi_batch(spark: SparkSession) -> None:
 
 def test_applyinpandas_boundary_stitch_null_type_promote(spark: SparkSession) -> None:
     """Stitch when an all-null string key segment infers Arrow null vs string (octo U6 C2)."""
-    from repark.dataframe import _iter_apply_in_pandas_group_tables
+    from repark.spark.dataframe import _iter_apply_in_pandas_group_tables
 
     # from_pydict infers g:null in batch_a and g:string in batch_b — from_batches alone fails.
     batch_a = pa.RecordBatch.from_pydict({"k": [1, 1], "g": [None, None], "v": [10, 20]})
@@ -497,7 +497,7 @@ def test_applyinpandas_multi_key_null_and_empty_string(spark: SparkSession) -> N
 
 def test_applyinpandas_boundary_stitch_skips_empty_batches(spark: SparkSession) -> None:
     """Empty RecordBatches between segments must not break boundary stitch."""
-    from repark.dataframe import _iter_apply_in_pandas_group_tables
+    from repark.spark.dataframe import _iter_apply_in_pandas_group_tables
 
     schema = pa.schema([("k", pa.int32()), ("v", pa.int32())])
     batch_a = pa.RecordBatch.from_arrays(
