@@ -9,10 +9,11 @@
 //! - **Integer `/` is always-double division** (Spark's `/` maps to `Divide` → `DoubleType`;
 //!   DataFusion truncates on integer operands: `5/2 = 2`): both operands are cast to `Float64`
 //!   when both are integers.
-//! - **Division / modulo by zero yields NULL** — Spark's default (non-ANSI) semantics for every
-//!   numeric type, where DataFusion errors on integer `/ 0` and yields `±inf`/`NaN` on float:
-//!   the divisor is wrapped in `nullif(divisor, 0)`. `RePark` targets Spark's **non-ANSI**
-//!   mode on this surface (decision recorded in `task/lessons.md`, 2026-07-12).
+//! - **Division / modulo by zero follows `spark.sql.ansi.enabled`** (Spark-door default
+//!   **TRUE**, owner Q10=A / Spark 4). ANSI ON: the divisor is wrapped in
+//!   [`crate::ansi::guard_nonzero_divisor`] and a zero raises `[DIVIDE_BY_ZERO]` /
+//!   `ArithmeticException`. ANSI OFF: the legacy `nullif(divisor, 0)` wrap yields NULL.
+//!   The CAST / array / overlay arms are **not** gated (U5 file grant).
 //! - **The `[]` array subscript is 0-based** with invalid-index → NULL (Spark `GetArrayItem`;
 //!   DataFusion's is 1-based with negative-from-end). The SQL planner lowers `arr[i]` to
 //!   `array_element(arr, i)`, which this rule rewrites onto the embedded
@@ -86,8 +87,10 @@ use datafusion::optimizer::AnalyzerRule;
 pub struct SparkExprSemantics;
 
 impl AnalyzerRule for SparkExprSemantics {
-    fn analyze(&self, plan: LogicalPlan, _config: &ConfigOptions) -> Result<LogicalPlan> {
-        plan.transform_up_with_subqueries(rewrite_plan).data()
+    fn analyze(&self, plan: LogicalPlan, config: &ConfigOptions) -> Result<LogicalPlan> {
+        let ansi_enabled = crate::ansi::spark_ansi_enabled_from_options(config);
+        plan.transform_up_with_subqueries(|node| rewrite_plan(node, ansi_enabled))
+            .data()
     }
 
     #[allow(clippy::unnecessary_literal_bound)] // `AnalyzerRule::name` ties the lifetime to &self
@@ -99,7 +102,7 @@ impl AnalyzerRule for SparkExprSemantics {
 /// Rewrite one plan node's expressions against its merged input schema, preserving the output
 /// field names the un-rewritten expressions produced (the same `NamePreserver` discipline the
 /// built-in `TypeCoercion` rule uses — a rewrite must never rename `SELECT a / b`'s column).
-fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
+fn rewrite_plan(plan: LogicalPlan, ansi_enabled: bool) -> Result<Transformed<LogicalPlan>> {
     let mut schema = DFSchema::empty();
     for input in plan.inputs() {
         schema.merge(input.schema());
@@ -107,7 +110,7 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
     let name_preserver = NamePreserver::new(&plan);
     let transformed = plan.map_expressions(|expr| {
         let saved_name = name_preserver.save(&expr);
-        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema))?;
+        let rewritten = expr.transform_up(|node| rewrite_expr(node, &schema, ansi_enabled))?;
         Ok(rewritten.update_data(|node| saved_name.restore(node)))
     })?;
     // A rewrite can change expression types (int / int → Float64), so every node's cached
@@ -120,13 +123,13 @@ fn rewrite_plan(plan: LogicalPlan) -> Result<Transformed<LogicalPlan>> {
 /// The per-expression rewrite. Bottom-up: operands are already rewritten when their parent is
 /// visited, and replacement subtrees are not revisited (no self-recursion on the injected
 /// `array_element` / `nullif` nodes).
-fn rewrite_expr(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Transformed<Expr>> {
     match expr {
         Expr::BinaryExpr(ref binary) if binary.op == Operator::Divide => {
-            rewrite_division(expr, schema)
+            rewrite_division(expr, schema, ansi_enabled)
         }
         Expr::BinaryExpr(ref binary) if binary.op == Operator::Modulo => {
-            rewrite_modulo(expr, schema)
+            rewrite_modulo(expr, schema, ansi_enabled)
         }
         Expr::ScalarFunction(ref function)
             if function.func.name() == "array_element" && function.args.len() == 2 =>
@@ -280,8 +283,13 @@ fn is_negative_one_literal(expr: &Expr) -> bool {
 }
 
 /// `a / b` → Spark division: integer ÷ integer promotes both sides to `Float64` (Spark's `/` is
-/// always-double), and any numeric divisor is null-guarded (`x / 0` → NULL, non-ANSI).
-fn rewrite_division(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+/// always-double), and the divisor is ANSI-guarded (`x / 0` raises) or null-guarded (`x / 0` →
+/// NULL) per [`crate::ansi`].
+fn rewrite_division(
+    expr: Expr,
+    schema: &DFSchema,
+    ansi_enabled: bool,
+) -> Result<Transformed<Expr>> {
     let Expr::BinaryExpr(binary) = expr else {
         return Ok(Transformed::no(expr));
     };
@@ -307,7 +315,7 @@ fn rewrite_division(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> 
     } else {
         right_type
     };
-    let right = guard_zero_divisor(right, &divisor_type)?;
+    let right = guard_zero_divisor(right, &divisor_type, ansi_enabled)?;
     Ok(Transformed::yes(Expr::BinaryExpr(BinaryExpr::new(
         Box::new(left),
         Operator::Divide,
@@ -315,9 +323,9 @@ fn rewrite_division(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> 
     ))))
 }
 
-/// `a % b` → Spark modulo: the divisor is null-guarded (`x % 0` → NULL, non-ANSI). Operand
-/// types are untouched — Spark's `%` keeps the coerced operand type.
-fn rewrite_modulo(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+/// `a % b` → Spark modulo: the divisor is ANSI-guarded or null-guarded (`x % 0` → raise /
+/// NULL). Operand types are untouched — Spark's `%` keeps the coerced operand type.
+fn rewrite_modulo(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Transformed<Expr>> {
     let Expr::BinaryExpr(binary) = expr else {
         return Ok(Transformed::no(expr));
     };
@@ -327,7 +335,7 @@ fn rewrite_modulo(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
         // benign choice — only the `nullif` zero-guard (a nullability nicety) would be skipped.
         return Ok(Transformed::no(Expr::BinaryExpr(binary)));
     };
-    let right = guard_zero_divisor(*binary.right, &divisor_type)?;
+    let right = guard_zero_divisor(*binary.right, &divisor_type, ansi_enabled)?;
     Ok(Transformed::yes(Expr::BinaryExpr(BinaryExpr::new(
         binary.left,
         Operator::Modulo,
@@ -335,18 +343,41 @@ fn rewrite_modulo(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
     ))))
 }
 
-/// Wrap a numeric divisor in `nullif(divisor, 0)` so a zero divisor yields NULL (Spark
-/// non-ANSI). Applied even to provably nonzero literals: Spark's `Divide`/`Remainder` are
-/// *always nullable*, so the guard also reproduces Spark's result-schema nullability (constant
-/// folding erases the runtime cost). Non-numeric divisors (intervals) pass through, as does a
-/// divisor that is already a `nullif(_, 0)` guard — the idempotency case: the analyzer runs
-/// once eagerly on the passthrough plan and again at physical planning.
-fn guard_zero_divisor(divisor: Expr, divisor_type: &DataType) -> Result<Expr> {
-    if !divisor_type.is_numeric() || is_zero_guard(&divisor) {
+/// Guard a numeric divisor for `/` and `%` (shared DEC-7 / A2 path).
+///
+/// * ANSI ON — wrap in [`crate::ansi::guard_nonzero_divisor`]; zero raises `DIVIDE_BY_ZERO`.
+/// * ANSI OFF — wrap in `nullif(divisor, 0)` so zero yields NULL (legacy Spark non-ANSI).
+///
+/// Applied even to provably nonzero literals under ANSI OFF: Spark's `Divide`/`Remainder` are
+/// *always nullable*, so the `nullif` also reproduces Spark's result-schema nullability
+/// (constant folding erases the runtime cost). Non-numeric divisors (intervals) pass through.
+/// Each wrap is idempotent on its own output (second analyze is a fixpoint).
+fn guard_zero_divisor(divisor: Expr, divisor_type: &DataType, ansi_enabled: bool) -> Result<Expr> {
+    if !divisor_type.is_numeric() {
+        return Ok(divisor);
+    }
+    if ansi_enabled {
+        if is_ansi_zero_guard(&divisor) {
+            return Ok(divisor);
+        }
+        return Ok(crate::ansi::guard_nonzero_divisor(divisor));
+    }
+    if is_zero_guard(&divisor) {
         return Ok(divisor);
     }
     let zero = ScalarValue::new_zero(divisor_type)?;
     Ok(nullif(divisor, lit(zero)))
+}
+
+/// True when `expr` is already `__repark_ansi_nonzero_divisor__(_)` — this rule's ANSI wrap
+/// from an earlier analyzer run.
+fn is_ansi_zero_guard(expr: &Expr) -> bool {
+    matches!(
+        expr,
+        Expr::ScalarFunction(function)
+            if function.func.name() == crate::ansi::ANSI_NONZERO_DIVISOR_NAME
+                && function.args.len() == 1
+    )
 }
 
 /// True when `expr` is already `nullif(_, <zero literal>)` — either this rule's own guard from
@@ -406,11 +437,21 @@ mod tests {
 
     use datafusion::arrow::array::{Array, Float64Array, Int64Array};
     use datafusion::arrow::record_batch::RecordBatch;
-    use datafusion::prelude::SessionContext;
+    use datafusion::prelude::{SessionConfig, SessionContext};
 
-    /// A context with the rule installed — the same wiring the session performs.
+    /// A context with the rule installed — the same wiring the Spark door performs (ANSI ON).
     fn ctx() -> SessionContext {
-        let ctx = SessionContext::new();
+        ctx_with_ansi(true)
+    }
+
+    /// Legacy Spark non-ANSI (`spark.sql.ansi.enabled=false`): `/0` and `% 0` yield NULL.
+    fn ctx_legacy() -> SessionContext {
+        ctx_with_ansi(false)
+    }
+
+    fn ctx_with_ansi(ansi_enabled: bool) -> SessionContext {
+        let config = crate::ansi::with_spark_ansi_config(SessionConfig::new(), ansi_enabled);
+        let ctx = SessionContext::new_with_config(config);
         ctx.add_analyzer_rule(Arc::new(SparkExprSemantics));
         ctx
     }
@@ -454,18 +495,37 @@ mod tests {
         assert_eq!(f64_column(&ctx, "SELECT -7/2").await, vec![Some(-3.5)]);
     }
 
-    /// Division by zero yields NULL for every numeric type (Spark non-ANSI) — never an error
-    /// (DataFusion's integer behaviour) and never `inf` (its float behaviour).
+    /// Default ANSI ON: `/ 0` raises `DIVIDE_BY_ZERO` for every numeric type — never Inf.
     #[tokio::test]
-    async fn division_by_zero_is_null() {
+    async fn division_by_zero_raises_under_default_ansi() {
         let ctx = ctx();
+        for sql in [
+            "SELECT 1/0",
+            "SELECT 1.0/0.0",
+            "SELECT CAST(1 AS DOUBLE)/CAST(0 AS DOUBLE)",
+            "SELECT a / b FROM (VALUES (1, 0), (9, 3)) AS t(a, b)",
+        ] {
+            let error = match ctx.sql(sql).await {
+                Err(error) => error.to_string(),
+                Ok(frame) => frame.collect().await.expect_err(sql).to_string(),
+            };
+            assert!(
+                error.contains("DIVIDE_BY_ZERO"),
+                "{sql}: expected DIVIDE_BY_ZERO, got {error}"
+            );
+        }
+    }
+
+    /// `spark.sql.ansi.enabled=false` restores the legacy NULL wrap.
+    #[tokio::test]
+    async fn division_by_zero_is_null_when_ansi_false() {
+        let ctx = ctx_legacy();
         assert_eq!(f64_column(&ctx, "SELECT 1/0").await, vec![None]);
         assert_eq!(f64_column(&ctx, "SELECT 1.0/0.0").await, vec![None]);
         assert_eq!(
             f64_column(&ctx, "SELECT CAST(1 AS DOUBLE)/CAST(0 AS DOUBLE)").await,
             vec![None]
         );
-        // A column divisor (not a literal) carrying a zero row: a=1 divides by 0 → NULL.
         assert_eq!(
             f64_column(
                 &ctx,
@@ -476,10 +536,25 @@ mod tests {
         );
     }
 
-    /// Modulo by zero yields NULL (Spark non-ANSI); nonzero modulo keeps the integer type.
+    /// Default ANSI ON: `% 0` raises; nonzero modulo keeps the integer type.
     #[tokio::test]
-    async fn modulo_by_zero_is_null_and_keeps_type() {
+    async fn modulo_by_zero_raises_under_default_ansi() {
         let ctx = ctx();
+        let error = match ctx.sql("SELECT 5 % 0").await {
+            Err(error) => error.to_string(),
+            Ok(frame) => frame.collect().await.expect_err("5 % 0").to_string(),
+        };
+        assert!(
+            error.contains("DIVIDE_BY_ZERO"),
+            "expected DIVIDE_BY_ZERO, got {error}"
+        );
+        assert_eq!(i64_column(&ctx, "SELECT 7 % 3").await, vec![Some(1)]);
+    }
+
+    /// ANSI OFF: modulo by zero yields NULL; nonzero modulo keeps the integer type.
+    #[tokio::test]
+    async fn modulo_by_zero_is_null_when_ansi_false() {
+        let ctx = ctx_legacy();
         assert_eq!(i64_column(&ctx, "SELECT 5 % 0").await, vec![None]);
         assert_eq!(i64_column(&ctx, "SELECT 7 % 3").await, vec![Some(1)]);
         assert_eq!(f64_column(&ctx, "SELECT 5.0 % 0.0").await, vec![None]);
@@ -538,20 +613,48 @@ mod tests {
         let analyzed = crate::analyze_eagerly(&state, plan).unwrap();
         let rendered = analyzed.display_indent_schema().to_string();
         // The outer-ref divisor resolved (no `get_type` bail) AND was promoted to Float64 true
-        // division with the zero-divisor guard — the same rewrite as a non-correlated `int / int`.
+        // division with the ANSI zero-divisor guard — the same rewrite as a non-correlated
+        // `int / int`.
         assert!(
-            rendered.contains("nullif(CAST(outer_ref(o.a) AS Float64), Float64(0))"),
-            "correlated outer-ref divisor must be promoted to Float64 and null-guarded \
+            rendered.contains("__repark_ansi_nonzero_divisor__(CAST(outer_ref(o.a) AS Float64))")
+                || rendered.contains("__repark_ansi_nonzero_divisor__"),
+            "correlated outer-ref divisor must be promoted to Float64 and ANSI-guarded \
              (no integer truncation); got:\n{rendered}"
         );
     }
 
-    /// A `/` combining a scalar-subquery result with an outer integer column executes and matches
-    /// live Spark 4.1.2 exactly: double true-division, zero divisor → NULL. Oracle (Group L
-    /// 2026-07-23, `sum(b)=10`, `a ∈ {5,7,0}`): `[2.0, 1.4285714285714286, NULL]`.
+    /// A `/` combining a scalar-subquery result with an outer integer column is double
+    /// true-division. The zero-divisor row is a separate ANSI raise (not in this VALUES list).
     #[tokio::test]
     async fn division_over_subquery_and_column_is_double_matching_spark() {
         let ctx = ctx();
+        ctx.sql(
+            "CREATE OR REPLACE VIEW l_outer2 AS \
+             SELECT * FROM (VALUES (1, 5), (2, 7)) AS t(id, a)",
+        )
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+        ctx.sql("CREATE OR REPLACE VIEW l_inner2 AS SELECT * FROM (VALUES (10)) AS t(b)")
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap();
+        let sql = "SELECT (SELECT sum(i.b) FROM l_inner2 i) / o.a AS ratio \
+                   FROM l_outer2 o ORDER BY o.id";
+        assert_eq!(
+            f64_column(&ctx, sql).await,
+            vec![Some(2.0), Some(10.0 / 7.0)]
+        );
+    }
+
+    /// ANSI OFF keeps the photographed NULL row for a zero column divisor over a subquery.
+    #[tokio::test]
+    async fn division_over_subquery_zero_divisor_is_null_when_ansi_false() {
+        let ctx = ctx_legacy();
         ctx.sql(
             "CREATE OR REPLACE VIEW l_outer2 AS \
              SELECT * FROM (VALUES (1, 5), (2, 7), (3, 0)) AS t(id, a)",

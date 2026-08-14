@@ -57,8 +57,12 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   wall (NTZ = stored wall; trailing-zero fraction trimmed; year −1 is `-0001`, year 10000 is
   `+10000`). Embedded, never registered. Ledgers: `task/tz5-cast-seconds-ledger.md`,
   `task/v3-btz4-ledger.md`.
-- `src/analyzer.rs` — `SparkExprSemantics`: int `/` → double, div/mod-by-zero → NULL (Spark
-  **non-ANSI**), 0-based `[]` array subscript, the planner-embedded-`substr` swap, and **TZ-5**
+- `src/ansi.rs` — **U5:** `spark.sql.ansi.enabled` ConfigExtension (default TRUE) +
+  `__repark_ansi_nonzero_divisor__`. Sibling of `ReparkSqlConfig`, not mixed into
+  `repark.sql.*`.
+- `src/analyzer.rs` — `SparkExprSemantics`: int `/` → double, div/mod-by-zero follows
+  `spark.sql.ansi.enabled` (raise when TRUE, `nullif` NULL when false), 0-based `[]` array
+  subscript, the planner-embedded-`substr` swap, and **TZ-5**
   `CAST(TIMESTAMP AS <numeric>)` → epoch SECONDS (scaling pushed UNDER the user's cast via
   [`timestamp_cast`], so the outer cast still applies the width; the reverse direction
   `CAST(<integer> AS TIMESTAMP)` was probed and is already correct — do not "fix" it). **B-TZ-4:**
@@ -113,8 +117,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 
 - **Owns:** the Spark-compatible function registry (`register_all`) — `datafusion-spark` wiring +
   hand-rolled shims (date / string / collection) + the Spark expression-semantics analyzer rules (int
-  `/` → double, div / mod-by-zero → NULL, 0-based `[]`); the plan-time array-cardinality ceiling +
-  the `repark.sql.*` config extension.
+  `/` → double, div / mod-by-zero gated by `spark.sql.ansi.enabled`, 0-based `[]`); the plan-time
+  array-cardinality ceiling + the `repark.sql.*` config extension + the Spark ANSI carrier.
 - **Does not own:** session construction (repark-core installs these via a `SessionExtension`); SQL
   routing (the doors); TA / ML kernels.
 - **Public inputs:** a DataFusion `SessionContext` (`register_all(ctx)`); `analyzer_rules()`; `Expr`

@@ -41,7 +41,16 @@ pub(super) use tempfile::TempDir;
 
 /// A `SessionContext` with an in-memory Iceberg catalog `ice` (namespace `sales`) registered,
 /// a source temp view `src` of three rows, and the matching `CatalogRegistry`.
+/// U5: ANSI ON (Spark-door default) so `/0` pins match production `SparkExtension`.
 pub(super) async fn setup(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
+    setup_with_ansi(wh, true).await
+}
+
+/// Like [`setup`] with an explicit `spark.sql.ansi.enabled` (U5 knob-state twins).
+pub(super) async fn setup_with_ansi(
+    wh: &TempDir,
+    ansi_enabled: bool,
+) -> (SessionContext, CatalogRegistry) {
     let warehouse = wh.path().to_str().unwrap().to_string();
     let catalog: Arc<dyn Catalog> = Arc::new(
         MemoryCatalogBuilder::default()
@@ -58,14 +67,12 @@ pub(super) async fn setup(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
         .create_namespace(&NamespaceIdent::new("sales".to_string()), ns_props)
         .await
         .unwrap();
-
-    // r24 SB1: attach SQL safety knobs (defaults). COPY TO pins that write outside the
-    // warehouse call setup_allow_local_fs_ddl instead.
     let settings = repark_functions::cardinality::ReparkSqlSettings::default();
     let config = repark_functions::cardinality::with_repark_sql_config(
         crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new()),
         settings,
     );
+    let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
     let ctx = SessionContext::new_with_config(config);
     // Production wiring: repark-session installs the Spark analyzer rules on every context,
     // so the router tests must run under them too (CTAS schema derivation depends on it).
@@ -296,6 +303,7 @@ pub(super) async fn setup_allow_local_fs_ddl(wh: &TempDir) -> (SessionContext, C
         crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new()),
         settings,
     );
+    let config = repark_functions::ansi::with_spark_ansi_config(config, true);
     let ctx = SessionContext::new_with_config(config);
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);

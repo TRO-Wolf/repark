@@ -31,8 +31,9 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # repark-common exists, well under the default); entries are added with a measured count
     # and reason in the same change that makes a crate root exceed the default.
     "repark-functions": (
-        166,  # measured 151
+        175,  # measured 167 after U5 `pub mod ansi;`
         "register_all / analyzer_rules registration glue is root-legitimate; "
+        "U5 added the ANSI ConfigExtension module decl; "
         "RATCHET: if registration moves",
     ),
     "repark-python": (

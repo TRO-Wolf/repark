@@ -30,7 +30,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   at (38,0). **V-2 U3+U4a (2026-08-13):** `pin_int_times_decimal_is_12_2_i128` (was 31,2),
   `pin_cast_int_times_decimal_stays_21_2_i128`, clamp pins `(38,6)` / `(38,17)`,
   `pin_mul_38_20_still_refuses_at_plan` (DEC-8 still plan-refuse); fixtures go through
-  `apply_spark_float_as_decimal` via `common::setup`), `float_agg` (G7 float
+  `apply_spark_float_as_decimal` via `common::setup`. **U5 (2026-08-14):** `setup` installs
+  ANSI ON; `setup_with_ansi(false)` for legacy NULL `/0`;
+  `pin_div_by_zero_decimal38_raises_under_default_ansi` +
+  `pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false`; DEC-6 wrap pin kept
+  (DECLARE)), `float_agg` (G7 float
   aggregation determinism — catastrophic-cancellation fixture; `sum`/`avg` `f64::to_bits` at
   `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure).
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):

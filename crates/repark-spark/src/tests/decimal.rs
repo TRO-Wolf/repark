@@ -272,7 +272,8 @@ async fn pin_cast_int_times_decimal_stays_21_2_i128() {
 
 /// Corpus row `overflow_max_decimal38_plus_one_raises_in_spark`.
 /// ANSI Spark raises; after U2 the 38-nines token is exact DECIMAL then `+ 1` wraps to
-/// `10^38` at declared type (38,0) — wrap-not-residue (DEC-6 leftover, not a semantics fix).
+/// `10^38` at declared type (38,0) — wrap-not-residue. U5 DECLARES DEC-6: no honest
+/// ≤unit hook on an allowed file (overflow is Arrow exec, not `guard_zero_divisor`).
 #[tokio::test]
 async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -292,12 +293,32 @@ async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
     );
 }
 
-/// Corpus row `div_by_zero_decimal38_raises_in_spark_null_in_repark`.
-/// ANSI Spark raises `DIVIDE_BY_ZERO`; repark returns NULL at decimal128(38,4).
+/// Corpus row `div_by_zero_decimal38_raises_in_spark_null_in_repark` after U5: default ANSI
+/// ON raises `DIVIDE_BY_ZERO` (shared-raise with Spark). Name kept on the Python row.
 #[tokio::test]
-async fn pin_div_by_zero_decimal38_returns_null_at_38_4() {
+async fn pin_div_by_zero_decimal38_raises_under_default_ansi() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let sql = "SELECT CAST(1 AS DECIMAL(38,0)) / CAST(0 AS DECIMAL(38,0)) AS v";
+    let error = match execute(&ctx, &catalogs, sql).await {
+        Err(error) => error.to_string(),
+        Ok(frame) => frame
+            .collect()
+            .await
+            .expect_err("ANSI /0 must raise")
+            .to_string(),
+    };
+    assert!(
+        error.contains("DIVIDE_BY_ZERO"),
+        "expected DIVIDE_BY_ZERO, got {error}"
+    );
+}
+
+/// ANSI OFF restores the legacy NULL at repark's Arrow division type (38,4).
+#[tokio::test]
+async fn pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_with_ansi(&warehouse, false).await;
     let (precision, scale, nullable, value) = collect_decimal128(
         &ctx,
         &catalogs,
@@ -307,10 +328,10 @@ async fn pin_div_by_zero_decimal38_returns_null_at_38_4() {
     assert_eq!(
         (precision, scale),
         (38, 4),
-        "repark div-by-zero result type"
+        "repark div-by-zero result type (Arrow formula; U4b)"
     );
     assert!(nullable, "NULL cell requires a nullable field");
-    assert_eq!(value, None, "div-by-zero yields NULL, not a raise");
+    assert_eq!(value, None, "ansi=false /0 yields NULL, not a raise");
 }
 
 // =================================================================================================

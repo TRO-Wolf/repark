@@ -69,8 +69,9 @@ belongs out here is what must be observed from outside the crate.
   door→door product edge), and this is the only pin that can see the two copies drift, including
   the rendered TARGET that the per-door message pins cannot. **G11 (2026-08-12):** six **INTENDED** door-vs-door value
   divergences (correctness, not parity — Spark is not the ANSI oracle): integer `/` (truncate
-  vs float), integer `/ 0` (raise vs NULL), float `/ 0` (IEEE +Inf vs NULL), decimal `/ 0`
-  (raise vs NULL), default `ORDER BY ASC` (NULLS LAST vs FIRST), default `ORDER BY DESC`
+  vs float), integer `/ 0` (**U5:** both raise; names kept), float `/ 0` (**U5:** IEEE +Inf vs
+  Spark `DIVIDE_BY_ZERO`; names kept), decimal `/ 0` (**U5:** both raise; names kept), default
+  `ORDER BY ASC` (NULLS LAST vs FIRST), default `ORDER BY DESC`
   (NULLS FIRST vs LAST). Each row asserts both doors' actual Arrow outputs side by side; the
   one-sentence reason is the test's doc comment. Needs the `repark-spark` dev-dep — the ONLY
   place either door may name the other, and legal because the crate-DAG guard scopes layering

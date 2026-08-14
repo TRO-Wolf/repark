@@ -64,7 +64,8 @@ Repository helper scripts wired into the dev workflow.
 - `check_lib_rs.sh` + `check_lib_rs.py` — the lib.rs thinness guard. No inline
   `#[cfg(test)] mod {…}` (file-backed only; same-line `#[cfg(test)] mod … {` also fails);
   non-test line ceilings with an EXCEPTIONS-with-reason table in the `.py` (SSOT; ratchet down
-  only; empty at phase-1 PR-A; rows so far: `repark-functions` — registration glue,
+  only; empty at phase-1 PR-A; rows so far: `repark-functions` — registration glue
+  (ceiling 175 after U5 `pub mod ansi;`),
   `repark-python` — the 180-line PyO3 crate root, a MANIFEST (module decls incl. the
   file-backed `exceptions` taxonomy module, the two error folds, the `#[pymodule]`
   registration) that already uses the sanctioned file-backed test module (phase-3 PR-3, EC-10;

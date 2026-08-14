@@ -43,7 +43,8 @@ wrapper.
   `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`). Tests:
   [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
-  `repark.sql.*` config **+ Spark-door `parse_float_as_decimal=true` (DEC-1 / U2)** **+ the session-timezone carrier**; `register` =
+  `repark.sql.*` config **+ `spark.sql.ansi.enabled` default TRUE (U5 / Q10=A)** **+ Spark-door
+  `parse_float_as_decimal=true` (DEC-1 / U2)** **+ the session-timezone carrier**; `register` =
   `repark_functions::register_all` + analyzer rules + the composed `repark_ta::TaExtension`, in v1
   `build()`'s order; the DF-54.1 subquery guard stays a core session default, G8). The TA half is
   **composed, not re-implemented** — the TA set is door-neutral (design Q11), so this door installs

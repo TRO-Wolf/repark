@@ -4,7 +4,9 @@
 
 File-backed tests for `SparkExtension` (`../extension.rs`): the `configure` hook's
 `repark.sql.*` `ConfigExtension` install (r24 SB1 re-home, incl. the fail-loud unparsable-value
-contract), **the Spark-door `parse_float_as_decimal=true` default** (DEC-1 / U2 — bare
+contract), **the Spark-door `spark.sql.ansi.enabled` carrier** (U5 / Q10=A — default TRUE;
+`notabool` fail-louds; ANSI door never calls this hook), **the Spark-door
+`parse_float_as_decimal=true` default** (DEC-1 / U2 — bare
 floating-point SQL literals infer DECIMAL, matching Spark; ANSI door never calls this hook),
 **and its session-timezone carrier install** (H-1a split B — this hook is the ONE place
 `repark-core`'s resolved zone reaches `repark-functions`' extractors, because it is the only crate
@@ -17,7 +19,9 @@ function-registry + analyzer-rule installation + the composed
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../extension.rs`. U2 pins:
   `configure_defaults_parse_float_as_decimal` (the option is on) and
-  `configure_makes_bare_1_23_decimal128_3_2` (collect path, i128=123).
+  `configure_makes_bare_1_23_decimal128_3_2` (collect path, i128=123). U5 pins:
+  `configure_defaults_ansi_enabled_true`, `configure_honors_ansi_enabled_false`,
+  `configure_refuses_ansi_notabool`.
 
 ## Pointers
 

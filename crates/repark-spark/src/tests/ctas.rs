@@ -818,7 +818,7 @@ async fn ctas_bare_integer_division_lands_as_double() {
 #[tokio::test]
 async fn ctas_union_zero_divisor_is_null_double() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
+    let (ctx, catalogs) = setup_with_ansi(&wh, false).await;
     execute(
         &ctx,
         &catalogs,
@@ -943,7 +943,7 @@ async fn ctas_union_decimal_division_stays_decimal() {
 #[tokio::test]
 async fn ctas_three_branch_mixed_union_reconciles_to_double() {
     let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
+    let (ctx, catalogs) = setup_with_ansi(&wh, false).await;
     execute(
         &ctx,
         &catalogs,

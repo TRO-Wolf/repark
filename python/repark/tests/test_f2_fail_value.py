@@ -4,7 +4,7 @@ Hour-0 carve families (static 08-03 FAIL-VALUE + F1 reclassify hand-offs):
 
 * nested createDataFrame infer residual (tuple→struct, name padding, map collect dict)
 * lit display forms (overlay default -1; mixed-type lit list string coercion)
-* csc/sec(0) Inf (not NULL) while global div-by-zero stays NULL
+* csc/sec(0) Inf (not NULL); U5: global float /0 raises under default ANSI
 * dtypes / schema display shapes (``str(df)``, ``printSchema(level)``)
 * scalar DataType createDataFrame (``DoubleType()`` → ``value`` column)
 
@@ -146,9 +146,9 @@ def test_csc_zero_is_inf_not_null(spark: ReparkSession) -> None:
     values = csc_table.column("c").to_pylist()
     assert values[0] == float("inf")
     assert values[1] == pytest.approx(2.0)
-    # Bare float division by zero remains NULL (non-ANSI product rule — not loosened).
-    div = spark.sql("SELECT CAST(1.0 AS DOUBLE) / CAST(0.0 AS DOUBLE) AS d").to_arrow()
-    assert div.column("d").to_pylist() == [None]
+    # U5 default ANSI ON: bare float / 0 raises (Spark 4), not Inf and not NULL.
+    with pytest.raises(Exception, match="DIVIDE_BY_ZERO"):
+        spark.sql("SELECT CAST(1.0 AS DOUBLE) / CAST(0.0 AS DOUBLE) AS d").to_arrow()
 
 
 def test_sec_csc_collect_matches_arrow(spark: ReparkSession) -> None:

@@ -81,7 +81,7 @@ FIX_G13 = (
 G2_BUDGET_MIN = 20
 G2_BUDGET_MAX = 26
 G13_BUDGET_MIN = 6
-G13_BUDGET_MAX = 8
+G13_BUDGET_MAX = 12  # U5: knob-state twins for /0 (and optional overflow OFF)
 CTAS_BUDGET = 3
 # Corpus cannot degenerate to all-disclosures: at least this many plain equalities, and at most
 # this many disclosures among the differential ROWS (CTAS counted separately).
@@ -136,6 +136,10 @@ class DecimalRow:
 
     ``spark_raises`` / ``repark_raises`` mark ANSI raise-class rows (G13 overflow / divide-by-zero).
     The raising side's table is ``None``; the non-raising side pins its Arrow half.
+
+    Shared-raise equality (U5): ``spark_raises`` set, both tables ``None``,
+    ``repark_raises is None`` — both engines raise the Spark needle. ``session_conf``
+    is applied on the repark builder and, in record mode, via live ``spark.conf.set``.
     """
 
     name: str
@@ -146,9 +150,21 @@ class DecimalRow:
     note: str
     spark_raises: str | None = None
     repark_raises: str | None = None
+    session_conf: tuple[tuple[str, str], ...] = ()
+
+    def is_shared_raise(self) -> bool:
+        """True when both engines raise the same recorded Spark class needle."""
+        return (
+            self.spark_raises is not None
+            and self.repark is None
+            and self.spark is None
+            and self.repark_raises is None
+        )
 
     def is_equality(self) -> bool:
-        """True when the row asserts plain repark == Spark (no raise flags, no repark pin)."""
+        """True when the row asserts repark == Spark (table equality or shared raise)."""
+        if self.is_shared_raise():
+            return True
         return (
             self.repark is None
             and self.spark is not None
@@ -415,28 +431,62 @@ G13_ROWS: list[DecimalRow] = [
         # DEC-6 leftover (wrap-not-residue). Not an ANSI-raise fix.
         _dec_raw_i128(38, 0, 10**38),
         "ANSI Spark raises NUMERIC_VALUE_OUT_OF_RANGE for max DECIMAL(38,0)+1; repark wraps to "
-        f"10^38 at decimal128(38,0) (U2 wrap-not-residue). Flipped by {FIX_G13}.",
+        f"10^38 at decimal128(38,0) (U2 wrap-not-residue). U5 DECLARES DEC-6 — no honest "
+        f"≤unit hook on an allowed file. {FIX_G13}.",
         spark_raises="ArithmeticException",
+    ),
+    DecimalRow(
+        "overflow_max_decimal38_plus_one_null_when_ansi_false",
+        "G13",
+        "SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38,0)) "
+        "+ CAST(1 AS DECIMAL(38,0)) AS v",
+        _dec(38, 0, None, nullable=True),
+        _dec_raw_i128(38, 0, 10**38),
+        "U5 DEC-6 DECLARE evidence (ansi=false): Spark NULLs at decimal128(38,0) nullable; "
+        "repark still wraps to 10^38 at (38,0). Recorded live 2026-08-13. "
+        f"{FIX_G13}.",
+        session_conf=(("spark.sql.ansi.enabled", "false"),),
     ),
     DecimalRow(
         "div_by_zero_decimal38_raises_in_spark_null_in_repark",
         "G13",
         "SELECT CAST(1 AS DECIMAL(38,0)) / CAST(0 AS DECIMAL(38,0)) AS v",
         None,
-        _dec(38, 4, None, nullable=True),
-        "ANSI Spark raises DIVIDE_BY_ZERO; repark returns NULL at decimal128(38,4). Flipped by "
+        None,
+        "U5 default ANSI ON: both engines raise ArithmeticException / DIVIDE_BY_ZERO. "
+        "Name kept so registry citations still resolve. "
         f"{FIX_G13}.",
         spark_raises="ArithmeticException",
+    ),
+    DecimalRow(
+        "div_by_zero_decimal38_null_when_ansi_false",
+        "G13",
+        "SELECT CAST(1 AS DECIMAL(38,0)) / CAST(0 AS DECIMAL(38,0)) AS v",
+        # Spark ANSI OFF: NULL at Spark's division type (38,6). Recorded live (U5 lock).
+        _dec(38, 6, None, nullable=True),
+        _dec(38, 4, None, nullable=True),
+        "ansi=false: both NULL. Spark (38,6) vs repark Arrow (38,4) — U4b type leftover. "
+        f"{FIX_G13}.",
+        session_conf=(("spark.sql.ansi.enabled", "false"),),
     ),
     DecimalRow(
         "div_by_zero_small_decimal_raises_in_spark_null_in_repark",
         "G13",
         "SELECT CAST(10 AS DECIMAL(2,0)) / CAST(0 AS DECIMAL(2,0)) AS v",
         None,
-        _dec(6, 4, None, nullable=True),
-        "same ANSI divide-by-zero class at small precision; repark NULL at (6,4). Flipped by "
-        f"{FIX_G13}.",
+        None,
+        f"U5 default ANSI ON: both raise. Name kept. {FIX_G13}.",
         spark_raises="ArithmeticException",
+    ),
+    DecimalRow(
+        "div_by_zero_small_decimal_null_when_ansi_false",
+        "G13",
+        "SELECT CAST(10 AS DECIMAL(2,0)) / CAST(0 AS DECIMAL(2,0)) AS v",
+        # Spark ANSI OFF half is filled from the live record (U5 lock) — do not hand-edit.
+        _dec(8, 6, None, nullable=True),
+        _dec(6, 4, None, nullable=True),
+        f"ansi=false: both NULL. Spark division type vs Arrow (6,4) — U4b leftover. {FIX_G13}.",
+        session_conf=(("spark.sql.ansi.enabled", "false"),),
     ),
     DecimalRow(
         "mul_38_20_plans_in_spark_refuses_in_repark",
@@ -532,6 +582,16 @@ def _session() -> ReparkSession:
     return repark.ReparkSession.builder.appName("decimal128-parity").getOrCreate()
 
 
+def _session_for_row(row: DecimalRow) -> ReparkSession:
+    """Builder-time session honoring ``row.session_conf`` (U5 knob-state twins)."""
+    import repark
+
+    builder = repark.ReparkSession.builder.appName("decimal128-parity")
+    for key, value in row.session_conf:
+        builder = builder.config(key, value)
+    return builder.getOrCreate()
+
+
 def _frames_differ(actual: pa.Table, expected: pa.Table) -> bool:
     """True when the parity comparator rejects the pair (schema, row count, or any value)."""
     try:
@@ -584,7 +644,18 @@ def test_decimal128_row_matches_spark_or_still_diverges(row: DecimalRow) -> None
     (re-derive both halves). Raise-class rows assert the raising side still raises the recorded
     exception class and the non-raising side still matches its pinned table.
     """
-    session = _session()
+    session = _session_for_row(row)
+
+    # ----- shared-raise equality (U5: both engines raise the Spark needle) -----------------------
+    if row.is_shared_raise():
+        assert row.spark_raises is not None
+        with pytest.raises(Exception) as excinfo:
+            run_row(row, session)
+        assert _matches_raise(excinfo.value, row.spark_raises), (
+            f"{row.name}: shared-raise expected {row.spark_raises!r}, got "
+            f"{_exception_name(excinfo.value)}: {excinfo.value!s:.200}. {row.note}"
+        )
+        return
 
     # ----- raise-class rows (G13 overflow / ANSI divide-by-zero) ---------------------------------
     if row.repark_raises is not None:
@@ -723,9 +794,11 @@ def test_decimal128_row_set_covers_gap_budgets() -> None:
     # Row-shape well-formedness: raise flags and table halves cannot contradict each other.
     for row in ROWS:
         assert not (row.spark_raises and row.repark_raises), (
-            f"{row.name}: a row cannot pin both engines raising "
-            f"(no shared-raise equality shape yet)"
+            f"{row.name}: a row cannot pin both spark_raises and repark_raises "
+            f"(shared-raise is spark_raises + both tables None)"
         )
+        if row.is_shared_raise():
+            continue
         if row.spark_raises is not None:
             assert row.spark is None, f"{row.name}: spark_raises forbids a spark table half"
             assert row.repark is not None, f"{row.name}: spark_raises requires a repark table pin"

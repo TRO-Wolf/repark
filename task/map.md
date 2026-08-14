@@ -26,6 +26,10 @@ not this directory.
   the test-name liveness gate (`make check-matrix-test-liveness`, dual-wired into
   `make ci` / `make preflight` and the ci.yml rust-test job). No engine edits; no
   new engine tests; registry is S-5. Completeness table for the 14 rows.
+- [s1-ansi-knob-u5-ledger.md](s1-ansi-knob-u5-ledger.md) — **S-1 / U5 (2026-08-14):**
+  `spark.sql.ansi.enabled` default TRUE on the Spark door + DEC-7 `/0` and `% 0`
+  via shared `guard_zero_divisor`. DEC-6 overflow raise DECLARED (38-nines wrap).
+  DEC-9 named residue. Does **not** edit the registry (S-5 owns it; §6 paste-true).
 - [v5-w-landing-ledger.md](v5-w-landing-ledger.md) — **V-5 W-wave §6 landing
   increment (2026-08-13):** verify-before-paste classification of the merged W-wave
   handoffs (TZ-4 PR-2 progress not retired; TZ-6/TZ-7 FIXED notes already in-file
@@ -261,6 +265,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | [s5-v-landing-ledger.md](s5-v-landing-ledger.md) | **S-5** V-wave §6 landing increment — registry + one STATUS dated note |
 | [s2-g8-ledger.md](s2-g8-ledger.md) | **S-2 / G8** capability value-semantics matrix + test-name liveness gate |
+| [s1-ansi-knob-u5-ledger.md](s1-ansi-knob-u5-ledger.md) | **S-1 / U5** ANSI knob default TRUE + DEC-7 `/0`/`% 0`; DEC-6 DECLARE; DEC-9 residue |
 | [v5-w-landing-ledger.md](v5-w-landing-ledger.md) | **V-5** W-wave §6 landing increment — registry + one STATUS dated note |
 | [v4-partition-values-ledger.md](v4-partition-values-ledger.md) | **V-4** write-path partition-key VALUE audit — carry-check + load-bearing + TZ-8 |
 | [v2-dec-u3u4-ledger.md](v2-dec-u3u4-ledger.md) | **V-2** DEC U3+U4a — integer-literal min-precision + add/sub/mul 38-clamp |

@@ -1027,8 +1027,9 @@ NOT in that file is a defect, not a decision.
 - `test_sql_passthrough_parity.py` — the AR-WG-SQL adversarial corpus (C-AR-005): raw
   `spark.sql()` strings — no DataFrame-API mediation — pinning the audit's live-proven
   divergence classes on their exact inputs: integer `/` always-double (the S0 `5/2`),
-  divide/modulo-by-zero → NULL (Spark non-ANSI; literal and column divisors; **U2:**
-  `1.0/0.0` and `5.0%0.0` are decimal NULLs), decimal ÷ decimal
+  divide/modulo-by-zero **raises under default ANSI ON** (U5 / Q10=A) and is NULL when
+  `.config("spark.sql.ansi.enabled", "false")` (literal and column divisors; **U2:**
+  `1.0/0.0` and `5.0%0.0` are decimal), decimal ÷ decimal
   stays decimal, ORDER BY null-placement defaults (asc/desc/explicit override/the LIMIT
   row-changing case/window `OVER (ORDER BY …)`), 0-based `[]` subscript + 1-based `element_at`
   (arrays incl. the index-0 error, maps), and the `substr`/`substring` position-edge matrix.
@@ -1326,27 +1327,15 @@ NOT in that file is a defect, not a decision.
   driver at a time — check `pgrep -af 'pyspark|SparkSubmit'` (ignoring a standing container
   cluster) before running. Invocation in its docstring and `task/g3e8-guard-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
-  level arithmetic overflow (gap G13), landed by G-7 (Python half). 24 G2 rows (**19** equality
-  controls + **5** disclosures after V-2 U4a flipped the three `*clamps_scale_in_spark`
-  rows; U2 had flipped the three bare-literal rows) and 7 G13 rows (raise-class +
-  nullability; DEC-8 still a repark plan-refuse), recorded in record mode
-  against live PySpark 4.1.2 (zulu-17, `local[2]`, ANSI on, `spark.sql.shuffle.partitions=2`).
-  Every row asserts value AND exact Arrow `decimal128(p,s)` on the `to_arrow` path through
-  `repark_parity.assert_frames_equal` — never `show`. Disclosure classes: division result
-  `(p,s)` (U4b), INT×DECIMAL **nullability** (width closed by U3; DEC-9 leftover), ANSI
-  overflow raise vs wrap-not-residue (`10^38` at (38,0) after U2), divide-by-zero raise vs
-  NULL, high-scale mul plan refuse (DEC-8; AnalyzerRule cannot see it), and overflow-capable
-  nullability. Bare literals, `avg` of money, and the 38-clamp family are equalities
-  (DEC-1 / U2 + DEC-5 / Z-3 U1 + DEC-3 / V-2 U4a). A failed disclosure is CLASSIFIED
-  before it raises: CONVERGED (flip-don't-delete to `repark=None`) vs regression (re-derive both
-  halves). Budget pin: G2 20-26, G13 6-8, min 8 equalities, max 20 disclosures so the corpus
-  cannot degenerate to all-disclosures. Class-coverage pins include a **name-gated 38-digit clamp
-  family** (`>=3` rows named `*clamps_scale_in_spark`) so a `DECIMAL(38,…)` equality control alone
-  cannot green the pin. Three CTAS write-back rows (Q1: repark-only Iceberg path; Spark is SELECT
-  oracle when equality holds) prove `decimal128(p,s)` survives CTAS -> memory catalog -> read
-  back. Rust bit-exact pins + cross-door rows are **G-7b** (deferred). Ledger:
-  `docs/history/hardening-h1/g7-decimal-ledger.md` (§6 holds paste-true registry rows with full
-  `path::test[case]` node ids; registry file itself is not edited from this unit).
+  level arithmetic overflow (gap G13), landed by G-7 (Python half), U5-updated. 24 G2 rows
+  and 9 G13 rows (shared-raise `/0` under default ANSI ON + ANSI-OFF NULL twins + overflow
+  wrap DECLARE + DEC-8 plan-refuse + DEC-9 nullability residue). Recorded against live
+  PySpark 4.1.2 (zulu-17, `local[2]`, both `spark.sql.ansi.enabled` states, shuffle=2).
+  Shared-raise equality: `spark_raises` + both tables `None`. `session_conf` carries the
+  OFF twins. DEC-6 overflow raise is **DECLARED** (no honest ≤unit hook). DEC-9 is
+  **named residue**. Budget pin: G2 20-26, G13 6-12. Ledger:
+  `task/s1-ansi-knob-u5-ledger.md` (U5) +
+  `docs/history/hardening-h1/g7-decimal-ledger.md`.
 - `_record_decimal128_goldens.py` — the **record driver** for the decimal128 corpus (NOT a
   `test_` module; never collected). Imports `ROWS` / `CTAS_ROWS` from the committed test module
   and re-runs each row's own `run_row` recipe on live PySpark; raise-class rows re-check the
