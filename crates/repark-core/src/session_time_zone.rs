@@ -25,9 +25,9 @@
 //! reaches the extractors: `repark-spark`'s `configure` hands it to `repark-functions`' carrier,
 //! and every calendar field of an INSTANT-typed `TIMESTAMP` is resolved in it. What is still NOT
 //! honored is recorded as divergence-registry rows, not left implicit — a **zoneless** timestamp
-//! input is read as UTC rather than as a wall clock in this zone (row TZ-7), and
-//! `to_date` / `CAST(ts AS DATE)` / `datediff` take the date in the stored zone (row TZ-8). Both
-//! wait on repark's TIMESTAMP representation (row TZ-4).
+//! input is localized in this zone then stored as µs+UTC (TZ-4 PR-2). `CAST(ts AS DATE)` /
+//! `to_date` take the date in this zone (TZ-8; NTZ stays the stored wall). `datediff` of a
+//! TIMESTAMP rides that CAST. `last_day` / `date_add` over TIMESTAMP stay residual.
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;

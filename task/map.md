@@ -23,6 +23,10 @@ not this directory.
   both doors (INNER/LEFT/SEMI/ANTI), ANSI `SEMANTICS_WINDOW_FRAMES` (ROWS/RANGE + DATE
   unit-less months), ANSI `SEMANTICS_FLOAT_DETERMINISM` (G7 `f64::to_bits` twins).
   Vocabulary stays at 50. Registry / STATUS closed (A4; §6 paste-true).
+- [r4-tz8-ledger.md](r4-tz8-ledger.md) — **R-4 / TZ-8 (2026-08-14):** `CAST(ts AS DATE)` /
+  `to_date` read the session zone (LTZ → session calendar; NTZ → stored wall). `datediff`
+  rides CAST. `last_day` / `date_add` over TIMESTAMP stay residual. Does **not** edit
+  the registry (R-7 deferred; §6 paste-true).
 - [s5-v-landing-ledger.md](s5-v-landing-ledger.md) — **S-5 V-wave §6 landing
   increment (2026-08-14):** verify-before-paste classification of the merged V-wave
   handoffs (G3-E8 IN+NOT IN+`[NOT] EXISTS` footnote, dbt gate MET, family not
@@ -279,6 +283,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
+| [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |
 | [s5-v-landing-ledger.md](s5-v-landing-ledger.md) | **S-5** V-wave §6 landing increment — registry + one STATUS dated note |
 | [s2-g8-ledger.md](s2-g8-ledger.md) | **S-2 / G8** capability value-semantics matrix + test-name liveness gate |
 | [s1-ansi-knob-u5-ledger.md](s1-ansi-knob-u5-ledger.md) | **S-1 / U5** ANSI knob default TRUE + DEC-7 `/0`/`% 0`; DEC-6 DECLARE; DEC-9 residue |
@@ -323,6 +328,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the window-function differential corpus (gap G5) ledger | [w4-windows-ledger.md](w4-windows-ledger.md) |
 | Read the G5b-R window-RANGE residual dispositions (Y-1) | [g5br-range-residuals-ledger.md](g5br-range-residuals-ledger.md) |
 | Read the V-4 write-path partition-value audit | [v4-partition-values-ledger.md](v4-partition-values-ledger.md) |
+| Read the R-4 TZ-8 CAST/to_date session-zone fix | [r4-tz8-ledger.md](r4-tz8-ledger.md) |
 | Read the W-4 Z-wave residual close (R1/R5/Q-002) | [w4-z-residuals-ledger.md](w4-z-residuals-ledger.md) |
 | Read the nested comparator + nested-container corpus (gap G18) ledger | [x5-nested-comparator-ledger.md](x5-nested-comparator-ledger.md) |
 | Read the G17 catalog-wrapper forwards ledger | [x4-catalog-forwards-ledger.md](x4-catalog-forwards-ledger.md) |

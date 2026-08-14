@@ -40,8 +40,11 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   transition); the date-valued shims this crate's engine owns
   (`date_valued_shims_take_the_date_in_the_session_zone` — `trunc`/`add_months`); and two DECLARED
   divergences pinned as such, `a_zoneless_timestamp_input_localizes_in_the_session_zone`
-  (registry TZ-7) and `timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone`
-  (registry TZ-8). Every expectation in the file is a live-Spark measurement, not a derivation.
+  (registry TZ-7) and `timestamp_to_date_paths_read_the_session_zone` (TZ-8 CAST/`to_date`
+  plus `datediff` riding CAST, FIXED) plus
+  `last_day_and_date_add_over_a_timestamp_still_refuse` (TZ-8 named residual) plus
+  `native_dataframe_api_cast_to_date_reads_the_session_zone` (`Expr::Cast` cell).
+  Every expectation in the file is a live-Spark measurement, not a derivation.
   The `DATE` negative's CLAIM was also narrowed to match its coverage: `date_trunc(fmt, DATE)` is a
   session-zone localization in Spark, so it moves and now says so.
   **TZ-4 PR-1 (2026-08-13):** `date_trunc` return type pins flipped to `timestamp[us, tz=UTC]`.
@@ -55,8 +58,8 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   targets (`INT`/`SMALLINT`, which repark refused outright before the fix); float and decimal
   targets, which keep the fraction; and two fences — the REVERSE direction
   (`CAST(<integer> AS TIMESTAMP)`) still reads seconds and round-trips; **TZ-4 PR-1** flipped
-  that reverse CAST's Arrow type to `timestamp[us, tz=UTC]`. `CAST(ts AS DATE)` stays
-  untouched (TZ-8). **B-TZ-4 (V-3 A5 overflow):** `CAST(ts AS STRING)` is now `Utf8`
+  that reverse CAST's Arrow type to `timestamp[us, tz=UTC]`. `CAST(ts AS DATE)` is TZ-8
+  (session-zone Date32; type pin here stays Date32). **B-TZ-4 (V-3 A5 overflow):** `CAST(ts AS STRING)` is now `Utf8`
   (was `Utf8View`). Ledger: `../../../task/tz5-cast-seconds-ledger.md`,
   `../../../task/v3-btz4-ledger.md`.
 - [ta_window.rs](ta_window.rs) — deferred rows #8-#14 (phase-2 PR-4): the seven

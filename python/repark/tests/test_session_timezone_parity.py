@@ -19,7 +19,8 @@ flipped the five zoneless-input / NTZ / CAST-str-round-trip rows to equality. Re
 disclosures (if any) are named in
 ``test_the_extraction_class_converged_and_the_residue_is_named``. B-TZ-4
 (``CAST(ts AS STRING)`` render) is pinned in ``test_timestamp_cast_parity.py``.
-TZ-8 stays out of this flip.
+TZ-8 ``CAST(ts AS DATE)`` / ``to_date`` / ``datediff`` (rides CAST) rows in this
+corpus are equality (R-4); ``last_day`` / ``date_add`` over TIMESTAMP stay residual.
 
 The twelfth **was** ``CAST(TIMESTAMP AS BIGINT)`` returning nanoseconds (registry row TZ-5). It
 CONVERGED when :data:`TZ5_FIX` landed and is now an equality row, which is the same revert-red
@@ -667,6 +668,76 @@ G1_ROWS: list[TimeZoneRow] = [
         f"date_trunc type half. {REVERT}",
         entry_point="dataframe_api",
     ),
+    # ----- TZ-8: CAST(ts AS DATE) / to_date read the session zone -------------------------------
+    TimeZoneRow(
+        "timestamp_to_date_cast_and_to_date_under_new_york_session",
+        "G1",
+        ZONE_NEW_YORK,
+        "SELECT CAST(to_timestamp('2024-06-15T03:00:00Z') AS DATE) AS from_cast, "
+        "to_date(to_timestamp('2024-06-15T03:00:00Z')) AS from_to_date, "
+        "datediff(to_timestamp('2024-06-15T03:00:00Z'), DATE '2024-06-01') AS day_span",
+        _one_row(
+            [
+                ("from_cast", pa.date32(), True),
+                ("from_to_date", pa.date32(), True),
+                ("day_span", _INT32, True),
+            ],
+            {
+                "from_cast": dt.date(2024, 6, 14),
+                "from_to_date": dt.date(2024, 6, 14),
+                "day_span": 13,
+            },
+        ),
+        None,
+        "TZ-8: the instant is 23:00 EDT on the 14th. CAST and to_date must move TOGETHER. "
+        "datediff rides CAST(ts AS DATE) (SparkDateDiff::simplify) so it is 13, not 14. "
+        "Recorded Spark 4.1.2 (V-3 handoff + R-4 live table).",
+    ),
+    TimeZoneRow(
+        "timestamp_to_date_cast_and_to_date_under_utc_session",
+        "G1",
+        "UTC",
+        "SELECT CAST(to_timestamp('2024-06-15T03:00:00Z') AS DATE) AS from_cast, "
+        "to_date(to_timestamp('2024-06-15T03:00:00Z')) AS from_to_date",
+        _one_row(
+            [("from_cast", pa.date32(), True), ("from_to_date", pa.date32(), True)],
+            {
+                "from_cast": dt.date(2024, 6, 15),
+                "from_to_date": dt.date(2024, 6, 15),
+            },
+        ),
+        None,
+        "TZ-8 UTC control: the session-zone date equals the stored date, so a sign error "
+        "cannot hide behind a New York-only pin.",
+    ),
+    TimeZoneRow(
+        "timestamp_to_date_crosses_forward_under_tokyo_session",
+        "G1",
+        ZONE_TOKYO,
+        "SELECT CAST(to_timestamp('2023-12-31T16:30:00Z') AS DATE) AS local_date",
+        _one_row([("local_date", pa.date32(), True)], {"local_date": dt.date(2024, 1, 1)}),
+        None,
+        "TZ-8 east-of-UTC midnight crossing: 01:30 JST on 2024-01-01. The NY row crosses "
+        "BACKWARD; this one crosses FORWARD.",
+    ),
+    TimeZoneRow(
+        "ntz_to_date_is_session_zone_independent",
+        "G1",
+        ZONE_NEW_YORK,
+        f"SELECT CAST(ntz AS DATE) AS from_cast, to_date(ntz) AS from_to_date "
+        f"FROM {LTZ_AND_NTZ_VIEW}",
+        _one_row(
+            [("from_cast", pa.date32(), True), ("from_to_date", pa.date32(), True)],
+            {
+                "from_cast": dt.date(2024, 6, 15),
+                "from_to_date": dt.date(2024, 6, 15),
+            },
+        ),
+        None,
+        "TZ-8 NTZ: the stored wall is 2024-06-15 12:00 regardless of session zone. "
+        "CAST and to_date must not apply New York.",
+        needs_ltz_and_ntz_view=True,
+    ),
 ]
 
 
@@ -891,6 +962,23 @@ G16_ROWS: list[TimeZoneRow] = [
         "onto 05:00Z and puts the minute row an hour early — which is what the first draft of "
         "this unit did. VALUE converged with H-1a; TZ-4 PR-1 closed the type half.",
     ),
+    TimeZoneRow(
+        "timestamp_to_date_epoch_under_new_york_session",
+        "G16",
+        ZONE_NEW_YORK,
+        "SELECT CAST(to_timestamp('1970-01-01T00:00:00Z') AS DATE) AS from_cast, "
+        "to_date(to_timestamp('1970-01-01T00:00:00Z')) AS from_to_date",
+        _one_row(
+            [("from_cast", pa.date32(), True), ("from_to_date", pa.date32(), True)],
+            {
+                "from_cast": dt.date(1969, 12, 31),
+                "from_to_date": dt.date(1969, 12, 31),
+            },
+        ),
+        None,
+        "TZ-8 epoch edge: 00:00Z is 1969-12-31 19:00 EST. Sign handling of a negative-of-epoch "
+        "calendar date, not just a modern DST offset.",
+    ),
 ]
 
 ROWS: list[TimeZoneRow] = [*G1_ROWS, *G16_ROWS]
@@ -1003,13 +1091,13 @@ def test_session_timezone_row_set_covers_both_gap_budgets() -> None:
     """
     g1 = [row for row in ROWS if row.gap == "G1"]
     g16 = [row for row in ROWS if row.gap == "G16"]
-    assert len(g1) + 1 == 20, (
-        "G1: 11 scalar-literal + 2 column-path + 4 zoneless-input/NTZ + 2 DataFrame-API rows, "
-        "plus the current_timestamp row"
+    assert len(g1) + 1 == 24, (
+        "G1: 11 scalar-literal + 2 column-path + 4 zoneless-input/NTZ + 2 DataFrame-API rows "
+        "+ 4 TZ-8 CAST/to_date rows, plus the current_timestamp row"
     )
-    assert len(g16) == 10, (
-        "G16: pre-1970, year-boundary and leap-day rows, plus 2 date_trunc COMPOSITION rows and "
-        "the DST fall-back truncation row"
+    assert len(g16) == 11, (
+        "G16: pre-1970, year-boundary and leap-day rows, plus 2 date_trunc COMPOSITION rows, "
+        "the DST fall-back truncation row, and the TZ-8 epoch CAST/to_date row"
     )
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
     assert [row for row in ROWS if row.repark is None], (
@@ -1063,8 +1151,8 @@ def test_the_extraction_class_converged_and_the_residue_is_named() -> None:
         "TZ-4 PR-2 flipped TZ-6 / two TZ-7 spellings / CAST-str-round-trip; leftover "
         f"{sorted(disclosures)} must be named here with their registry row"
     )
-    assert len(equality) == 28, (
-        "24 after TZ-4 PR-1, plus 4 PR-2 equality flips (round-trip, 2 zoneless spellings, NTZ)"
+    assert len(equality) == 33, (
+        "28 after TZ-4 PR-2, plus 5 TZ-8 CAST/to_date equality rows (NY, UTC, Tokyo, NTZ, epoch)"
     )
 
 
@@ -1083,6 +1171,34 @@ def test_current_timestamp_type_and_zone_disclosure() -> None:
         f"TZ-4 PR-1: SQL current_timestamp is timestamp[us, tz=UTC] like Spark; got {field.type}"
     )
     assert field.nullable is False, "both engines mark current_timestamp non-nullable"
+
+
+def test_dataframe_api_timestamp_to_date_reads_the_session_zone() -> None:
+    """The OTHER facade spelling of TZ-8: ``F.col.cast('date')`` and ``F.to_date``.
+
+    SQL CAST / ``to_date`` live in :data:`ROWS`. This pin is the PyO3 standalone-expression
+    path (no SQL string) under New York, so a registration-time zone would miss it.
+    """
+    from repark.spark.sql import functions as functions
+
+    session = _session_at(ZONE_NEW_YORK)
+    try:
+        frame = session.createDataFrame([(_utc(2024, 6, 15, 3, 0),)], ["ts"])
+        projected = frame.select(
+            functions.col("ts").cast("date").alias("from_cast"),
+            functions.to_date("ts").alias("from_to_date"),
+        )
+        table = projected.to_arrow()
+        expected = _one_row(
+            [("from_cast", pa.date32(), True), ("from_to_date", pa.date32(), True)],
+            {
+                "from_cast": dt.date(2024, 6, 14),
+                "from_to_date": dt.date(2024, 6, 14),
+            },
+        )
+        assert_frames_equal(table, expected)
+    finally:
+        session.stop()
 
 
 def test_session_timezone_conf_is_readable_back_and_defaults_to_utc() -> None:

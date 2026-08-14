@@ -158,6 +158,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   hook** (H-1a split B, 2026-08-10), which is how the Spark door's extractor layer consumes it:
   this crate never imports `repark-functions` (a forbidden upward edge), so the door is the
   crossing point. Nothing about the key, its spelling or its validation lives anywhere but here.
+  **TZ-8 (2026-08-14):** module docs now say `CAST(ts AS DATE)` / `to_date` honor the zone
+  (NTZ stays the stored wall); `datediff` rides CAST; `last_day`/`date_add` over TIMESTAMP
+  stay residual. Ledger: `task/r4-tz8-ledger.md`.
 - `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
   incl. the late-config region-signal pin, AWS-free), `namespace_create_tests.rs`
   (R-6 / G-6 Q1: create-new / same / conflicting / no-location), and `tests.rs`

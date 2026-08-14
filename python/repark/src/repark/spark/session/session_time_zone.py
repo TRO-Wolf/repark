@@ -37,12 +37,14 @@ construction — the same shape as the build-time memory-pool knob. It follows t
 produces different wall clocks on two hosts. repark defaults to ``UTC`` for reproducibility (and
 because reading the host zone would be an environment read the server-prep discipline forbids).
 
-**What the zone reaches, as of 2026-08-13 (TZ-4 PR-2).** Timestamp **extraction** honors it
-over an INSTANT-typed (tz-aware) TIMESTAMP. Zoneless LTZ inputs — ``TIMESTAMP '…'``, zoneless
+**What the zone reaches, as of 2026-08-14 (TZ-8).** Timestamp **extraction** honors it over
+an INSTANT-typed (tz-aware) TIMESTAMP. Zoneless LTZ inputs — ``TIMESTAMP '…'``, zoneless
 ``to_timestamp``, ``CAST(str AS TIMESTAMP)``, a naive-``datetime`` column declared as default
 ``TIMESTAMP`` / ``TimestampType`` — localize in this zone then store µs+UTC. ``TIMESTAMP_NTZ``
-stays naive and is **not** shifted. ``to_date`` / ``CAST(ts AS DATE)`` / ``datediff`` still take
-the date in the stored zone (row TZ-8). ``CAST(TIMESTAMP AS STRING)`` rendering is B-TZ-4.
+stays naive and is **not** shifted. ``CAST(ts AS DATE)`` / ``to_date(ts)`` take the date in
+this zone for LTZ (NTZ stays the stored wall). ``datediff`` of a TIMESTAMP rides that
+CAST. ``last_day`` / ``date_add`` over a TIMESTAMP stay residual. ``CAST(TIMESTAMP AS
+STRING)`` rendering is B-TZ-4.
 """
 
 from __future__ import annotations

@@ -36,6 +36,7 @@ use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{
     DataType, Date32Type, Field, Int32Type, Schema, TimeUnit, TimestampMicrosecondType,
 };
+use datafusion::logical_expr::{Cast, Expr};
 use datafusion::prelude::col;
 use repark_core::{ReparkSession, SqlDialect};
 use repark_functions::expr_fn;
@@ -756,8 +757,8 @@ async fn dst_gap_zones_resolve_like_spark() {
 /// ```
 ///
 /// Both reach the date through [`repark_functions`]' own `coerce_to_date32` + invoke, which is why
-/// they were fixable here; the timestamp→DATE paths this crate does NOT own are pinned as declared
-/// divergences in `timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone`.
+/// they were fixable here; `CAST(ts AS DATE)` / `to_date` now share that kernel
+/// (`timestamp_to_date_paths_read_the_session_zone`). `datediff` stays residual.
 #[tokio::test]
 async fn date_valued_shims_take_the_date_in_the_session_zone() {
     let new_york = session_at(NEW_YORK);
@@ -793,47 +794,81 @@ async fn date_valued_shims_take_the_date_in_the_session_zone() {
     }
 }
 
-/// The timestamp→DATE paths this crate does NOT own, pinned as **declared divergences** so the
-/// class boundary is a measured line rather than an implied one (registry row TZ-8).
-///
-/// `to_date` and `datediff` come from `datafusion-spark`; `CAST(ts AS DATE)` is arrow's cast
-/// kernel. All three read the array's own `UTC` annotation instead of `spark.sql.session.timeZone`,
-/// so they answer a day late west of UTC. Live Spark 4.1.2 vs this tree, `America/New_York`,
-/// 2026-08-10:
-///
-/// ```text
-/// to_date(to_timestamp('2024-06-15T03:00:00Z'))                     Spark 2024-06-14   repark 2024-06-15
-/// CAST(to_timestamp('2024-06-15T03:00:00Z') AS DATE)                Spark 2024-06-14   repark 2024-06-15
-/// datediff(to_timestamp('2024-06-15T03:00:00Z'), DATE '2024-06-01') Spark 13           repark 14
-/// ```
-///
-/// `CAST(ts AS DATE)` is the most common partition-key derivation in a migrated job, which is why
-/// this is pinned rather than merely listed: the pin RE-RECORDS as a convergence the moment a
-/// future unit fixes it, and cannot be forgotten.
+/// TZ-8 CAST / `to_date`: an LTZ timestamp's date is the session-zone calendar. Live Spark
+/// 4.1.2, `America/New_York`, `2024-06-15T03:00:00Z` → `2024-06-14` (23:00 EDT on the 14th).
+/// The UTC control and the Tokyo forward-crossing pin the sign; NTZ stays the stored wall.
 #[tokio::test]
-async fn timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone() {
+async fn timestamp_to_date_paths_read_the_session_zone() {
     let new_york = session_at(NEW_YORK);
     register_instants(&new_york, &["2024-06-15T03:00:00Z"]);
     assert_eq!(
         dates(&new_york, "SELECT to_date(ts) FROM t").await,
-        vec![date32("2024-06-15")],
-        "DIVERGENCE (registry TZ-8): live Spark answers 2024-06-14 — the instant is 23:00 EDT on \
-         the 14th. `to_date` is datafusion-spark's, not this repo's coercion path."
+        vec![date32("2024-06-14")],
+        "the instant is 23:00 EDT on the 14th; `to_date` must not read the stored UTC date"
     );
     assert_eq!(
         dates(&new_york, "SELECT CAST(ts AS DATE) FROM t").await,
-        vec![date32("2024-06-15")],
-        "DIVERGENCE (registry TZ-8): live Spark answers 2024-06-14. This is arrow's cast kernel, \
-         which reads the array annotation; fixing it is the TIMESTAMP-representation unit (TZ-4)."
-    );
-    assert_eq!(
-        ints(&new_york, "SELECT datediff(ts, DATE '2024-06-01') FROM t").await,
-        vec![14],
-        "DIVERGENCE (registry TZ-8): live Spark answers 13, off by the same one day"
+        vec![date32("2024-06-14")],
+        "CAST(ts AS DATE) is the common partition-key derivation — same date as to_date"
     );
 
-    // `last_day` / `date_add` over a TIMESTAMP do not even PLAN here, where Spark accepts them
-    // (2024-05-31 / 2024-06-01 for the instant below). A different failure mode, same class.
+    let utc = session_at("UTC");
+    register_instants(&utc, &["2024-06-15T03:00:00Z"]);
+    assert_eq!(
+        dates(&utc, "SELECT CAST(ts AS DATE) FROM t").await,
+        vec![date32("2024-06-15")],
+        "UTC control: the session-zone date equals the stored date"
+    );
+
+    let tokyo = session_at(TOKYO);
+    register_instants(&tokyo, &["2023-12-31T16:30:00Z"]);
+    assert_eq!(
+        dates(&tokyo, "SELECT CAST(ts AS DATE) FROM t").await,
+        vec![date32("2024-01-01")],
+        "east of UTC the same class crosses the year boundary FORWARD"
+    );
+
+    // datediff simplifies to Date32 subtraction of CAST(ts AS DATE) (datafusion-spark
+    // SparkDateDiff::simplify). It therefore rides the TZ-8 CAST rewrite — Spark 13, not 14.
+    assert_eq!(
+        ints(&new_york, "SELECT datediff(ts, DATE '2024-06-01') FROM t").await,
+        vec![13],
+        "datediff(ts, date) is CAST(ts AS DATE) − date; the CAST rewrite closes this spelling"
+    );
+}
+
+/// Native `DataFrame` API cell: a standalone `Expr::Cast` (the shape `Column.cast("date")`
+/// crosses PyO3 as) must hit the same rewrite as SQL `CAST(ts AS DATE)`.
+#[tokio::test]
+async fn native_dataframe_api_cast_to_date_reads_the_session_zone() {
+    let new_york = session_at(NEW_YORK);
+    register_instants(&new_york, &["2024-06-15T03:00:00Z"]);
+    let frame = new_york
+        .context()
+        .table("t")
+        .await
+        .expect("the registered table")
+        .select(vec![
+            Expr::Cast(Cast::new(Box::new(col("ts")), DataType::Date32)).alias("d"),
+        ])
+        .expect("a DataFrame-API CAST AS DATE");
+    let batches = frame.collect().await.expect("collect");
+    let batch = &batches[0];
+    assert_eq!(batch.schema().field(0).data_type(), &DataType::Date32);
+    let values = batch.column(0).as_primitive::<Date32Type>();
+    assert_eq!(values.value(0), date32("2024-06-14"));
+}
+
+/// TZ-8 residue: `last_day` / `date_add` over a TIMESTAMP still fail to plan (Spark accepts
+/// them). Named residual — not datediff, which rides CAST. Do not silently absorb.
+#[tokio::test]
+async fn last_day_and_date_add_over_a_timestamp_still_refuse() {
+    let new_york = session_at(NEW_YORK);
+    register_instants(&new_york, &["2024-06-15T03:00:00Z"]);
+
+    // `last_day` / `date_add` over a TIMESTAMP do not even PLAN here, where Spark accepts
+    // them. Live Spark 4.1.2 for this instant under NY: last_day → 2024-06-30,
+    // date_add(..., 1) → 2024-06-15 (session-zone date 2024-06-14 ± calendar).
     for sql in [
         "SELECT last_day(ts) FROM t",
         "SELECT date_add(ts, 1) FROM t",
@@ -844,8 +879,8 @@ async fn timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone()
         let error = error.to_string();
         assert!(
             error.contains("coerce") || error.contains("No function matches"),
-            "DIVERGENCE (registry TZ-8): `{sql}` must fail to PLAN until the overload is added; \
-             got {error}"
+            "DIVERGENCE (registry TZ-8 residual): `{sql}` must fail to PLAN until the overload \
+             is added; got {error}"
         );
     }
 }

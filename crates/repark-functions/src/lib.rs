@@ -104,6 +104,8 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in spark_date_shim_functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    // TZ-8: overwrite DataFusion `to_date` so a TIMESTAMP arg reads the session zone.
+    ctx.register_udf(timestamp_cast::to_date_udf().as_ref().clone());
     // TZ-4 PR-1: overwrite now / current_timestamp / to_timestamp with µs+UTC.
     for udf in instant_ts::functions() {
         ctx.register_udf(udf.as_ref().clone());

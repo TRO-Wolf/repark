@@ -52,6 +52,16 @@
 //! is the third embedded UDF: LTZ (`Timestamp(_, Some(_))`) is resolved in
 //! `spark.sql.session.timeZone`; NTZ (`Timestamp(_, None)`) is the stored wall clock. The
 //! recorded Spark 4.1.2 strings in `task/v3-btz4-ledger.md` **are** the spec.
+//!
+//! # TZ-8 — `CAST(TIMESTAMP AS DATE)` / `to_date`
+//!
+//! Spark takes an LTZ timestamp's date in `spark.sql.session.timeZone`; NTZ stays the stored
+//! wall. Arrow / DataFusion `CAST` and DataFusion `to_date` both read the array's own
+//! annotation (UTC), so a New York session answers a day late west of UTC. [`spark_timestamp_to_date_udf`]
+//! is the embedded CAST rewrite; [`to_date_udf`] overwrites the registered name. Both share
+//! [`crate::datetime::invoke_local_dates`]. `datediff` rides the CAST rewrite
+//! (`SparkDateDiff::simplify` → Date32 subtraction). `last_day` / `date_add` over
+//! TIMESTAMP stay residual.
 
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -68,6 +78,7 @@ use datafusion::logical_expr::{
     Volatility,
 };
 
+use crate::datetime::invoke_local_dates;
 use crate::session_time_zone::session_time_zone_from_options;
 
 /// ===========================================================================================
@@ -105,6 +116,30 @@ pub fn spark_epoch_seconds_real_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn spark_timestamp_to_string_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkTimestampToString::new()))
+}
+
+/// ===========================================================================================
+/// The embedded DATE-target UDF (`__repark_timestamp_to_date__`): `Timestamp` → `Date32`.
+///
+/// Embedded by [`crate::analyzer`] under every `CAST(ts AS DATE)`. Volatile so const-eval
+/// cannot fold a session-zone date against a default UTC carrier. NTZ (`Timestamp(_, None)`)
+/// keeps the stored wall; LTZ reads `spark.sql.session.timeZone`.
+/// ===========================================================================================
+#[must_use]
+pub fn spark_timestamp_to_date_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkTimestampToDate::new()))
+}
+
+/// ===========================================================================================
+/// Registered `to_date` overwrite — same session-zone kernel as CAST for a TIMESTAMP argument.
+///
+/// Date / string / numeric args keep arrow's Date32 cast (Spark's string/`DATE` path). One
+/// argument only: the two-arg Java-pattern form is a named Chrono/Java gap (facade `format=`
+/// already refuses).
+/// ===========================================================================================
+#[must_use]
+pub fn to_date_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkToDate::new()))
 }
 
 /// ===========================================================================================
@@ -360,6 +395,110 @@ impl ScalarUDFImpl for SparkTimestampToString {
             }
         }
         Ok(ColumnarValue::Array(Arc::new(builder.finish())))
+    }
+}
+
+/// ===========================================================================================
+/// `SparkTimestampToDate` — TZ-8: Spark `CAST(TIMESTAMP AS DATE)` as `Date32`.
+/// ===========================================================================================
+#[derive(Debug)]
+struct SparkTimestampToDate {
+    signature: Signature,
+}
+
+impl SparkTimestampToDate {
+    fn new() -> Self {
+        Self {
+            // Volatile: the date reads `spark.sql.session.timeZone` at invoke.
+            signature: Signature::any(1, Volatility::Volatile),
+        }
+    }
+}
+
+impl PartialEq for SparkTimestampToDate {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkTimestampToDate {}
+
+impl Hash for SparkTimestampToDate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkTimestampToDate {
+    crate::shim_udf_boilerplate!("__repark_timestamp_to_date__");
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        argument_time_unit(self.name(), &arg_types[0])?;
+        Ok(DataType::Date32)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            self.name(),
+            DataType::Date32,
+            nullable_like_argument(&args),
+        )))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        argument_time_unit(self.name(), arrays[0].data_type())?;
+        let dates = invoke_local_dates(&arrays[0], args.config_options.as_ref())?;
+        Ok(ColumnarValue::Array(dates))
+    }
+}
+
+/// ===========================================================================================
+/// `SparkToDate` — registered `to_date` overwrite (TZ-8 TIMESTAMP arm + date/string pass-through).
+/// ===========================================================================================
+#[derive(Debug)]
+struct SparkToDate {
+    signature: Signature,
+}
+
+impl SparkToDate {
+    fn new() -> Self {
+        Self {
+            signature: Signature::any(1, Volatility::Volatile),
+        }
+    }
+}
+
+impl PartialEq for SparkToDate {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkToDate {}
+
+impl Hash for SparkToDate {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkToDate {
+    crate::shim_udf_boilerplate!("to_date");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Date32)
+    }
+
+    fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        // Spark `to_date` is always nullable (even over a non-null string literal).
+        Ok(Arc::new(Field::new(self.name(), DataType::Date32, true)))
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+        let dates = invoke_local_dates(&arrays[0], args.config_options.as_ref())?;
+        Ok(ColumnarValue::Array(dates))
     }
 }
 
@@ -646,5 +785,43 @@ mod tests {
             Some(123_456)
         );
         assert_eq!(ticks_to_micros(-1_500, TimeUnit::Nanosecond), Some(-2));
+    }
+
+    /// TZ-8 kernel: LTZ `2024-06-15T03:00:00Z` is 2024-06-14 under New York; the same ticks as
+    /// NTZ stay 2024-06-15. Recorded Spark 4.1.2 (V-3 handoff + this unit's live table).
+    #[test]
+    fn ltz_date_is_session_zone_and_ntz_is_stored_wall() {
+        use datafusion::arrow::array::{ArrayRef, Date32Array, TimestampMicrosecondArray};
+        use datafusion::arrow::datatypes::Date32Type;
+        use datafusion::prelude::SessionConfig;
+
+        use crate::session_time_zone::with_session_time_zone;
+
+        // 2024-06-15T03:00:00Z — 23:00 EDT on the 14th.
+        let micros = 1_718_420_400_000_000_i64;
+        let ltz: ArrayRef =
+            Arc::new(TimestampMicrosecondArray::from(vec![Some(micros)]).with_timezone("UTC"));
+        let ntz: ArrayRef = Arc::new(TimestampMicrosecondArray::from(vec![Some(micros)]));
+        let config = with_session_time_zone(SessionConfig::new(), "America/New_York");
+        let ltz_dates = invoke_local_dates(&ltz, config.options()).expect("LTZ date");
+        let ntz_dates = invoke_local_dates(&ntz, config.options()).expect("NTZ date");
+        let ltz_values = ltz_dates
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .expect("Date32");
+        let ntz_values = ntz_dates
+            .as_any()
+            .downcast_ref::<Date32Array>()
+            .expect("Date32");
+        assert_eq!(
+            ltz_values.value(0),
+            Date32Type::from_naive_date(NaiveDate::from_ymd_opt(2024, 6, 14).expect("date")),
+            "NY session-zone date of 03:00Z"
+        );
+        assert_eq!(
+            ntz_values.value(0),
+            Date32Type::from_naive_date(NaiveDate::from_ymd_opt(2024, 6, 15).expect("date")),
+            "NTZ wall date ignores the session zone"
+        );
     }
 }

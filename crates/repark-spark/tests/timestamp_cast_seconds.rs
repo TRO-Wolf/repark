@@ -385,9 +385,9 @@ async fn the_reverse_direction_still_reads_seconds_and_round_trips() {
 }
 
 /// ===========================================================================================
-/// DATE / TIMESTAMP stay outside TZ-5. STRING is B-TZ-4: Spark `Utf8`, not DataFusion
-/// `Utf8View`. Flipped 2026-08-13 (V-3 named A5 overflow — the string-shape change forced
-/// this Spark-door type pin red).
+/// DATE / TIMESTAMP stay outside TZ-5's *scale*. STRING is B-TZ-4: Spark `Utf8`. DATE is
+/// TZ-8 (session-zone value; type stays `Date32`). Flipped 2026-08-13 (V-3 named A5 overflow
+/// — the string-shape change forced this Spark-door type pin red).
 /// ===========================================================================================
 #[tokio::test]
 async fn casts_outside_the_class_are_untouched() {

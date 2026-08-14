@@ -6,8 +6,9 @@
 //! instance directly, so the resulting expression is valid on its own and is byte-for-byte the same
 //! function the SQL path resolves — [`crate::register_all`] installs the same UDFs by name.
 //!
-//! The calendar extractors and the calendar-math shims come from [`crate::datetime`]; `date_add` and
-//! `last_day` come from `datafusion-spark` (which this crate already registers). The Spark argument
+//! The calendar extractors and the calendar-math shims come from [`crate::datetime`]; `to_date`
+//! comes from [`crate::timestamp_cast`] (TZ-8); `date_add` and `last_day` come from
+//! `datafusion-spark` (which this crate already registers). The Spark argument
 //! order is preserved (notably `date_trunc(format, timestamp)` — format first).
 
 use std::sync::Arc;
@@ -137,4 +138,10 @@ pub fn minute(arg: Expr) -> Expr {
 #[must_use]
 pub fn second(arg: Expr) -> Expr {
     call(datetime::second_udf(), vec![arg])
+}
+
+/// Spark `to_date(ts|date|string)` — TZ-8 session-zone date for an LTZ timestamp.
+#[must_use]
+pub fn to_date(arg: Expr) -> Expr {
+    call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
