@@ -33,6 +33,11 @@ not this directory.
   deferred (Spark 4.1.2 parse-fails quantified comparisons). ROW 9 restated as
   the permanent v1 valve. Does **not** edit the registry (R-7 deferred; §6
   paste-true).
+- [r2-dec-close-ledger.md](r2-dec-close-ledger.md) — **R-2 / DEC close (2026-08-14):**
+  U4b Spark `/` formula (new `decimal_spark.rs` + A5 slot), DEC-8 `ExprPlanner`
+  compute-with-clamp, DEC-6 exec overflow raise (ANSI knob), TY-3 still DECLARED
+  (UNION `forType(INT)` is a wider `TypeCoercion` seam). Does **not** edit the
+  registry (R-7 deferred; §6 paste-true).
 - [s5-v-landing-ledger.md](s5-v-landing-ledger.md) — **S-5 V-wave §6 landing
   increment (2026-08-14):** verify-before-paste classification of the merged V-wave
   handoffs (G3-E8 IN+NOT IN+`[NOT] EXISTS` footnote, dbt gate MET, family not
@@ -290,6 +295,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |
+| [r2-dec-close-ledger.md](r2-dec-close-ledger.md) | **R-2** DEC close — U4b `/` + DEC-8 `ExprPlanner` + DEC-6 exec-raise; TY-3 DECLARED |
 | [s5-v-landing-ledger.md](s5-v-landing-ledger.md) | **S-5** V-wave §6 landing increment — registry + one STATUS dated note |
 | [s2-g8-ledger.md](s2-g8-ledger.md) | **S-2 / G8** capability value-semantics matrix + test-name liveness gate |
 | [s1-ansi-knob-u5-ledger.md](s1-ansi-knob-u5-ledger.md) | **S-1 / U5** ANSI knob default TRUE + DEC-7 `/0`/`% 0`; DEC-6 DECLARE; DEC-9 residue |

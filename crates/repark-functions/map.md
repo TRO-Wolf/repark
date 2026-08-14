@@ -35,13 +35,18 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
   `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
-  `SparkExprSemantics` + cardinality + instant_ts; installed by the session on every
-  context via the Spark door's `SessionExtension` in `repark-spark`) + the shared
-  `shim_udf_boilerplate!` macro. Error conversion from `DataFusionError` happens one layer
-  up in `repark-core` (this crate stays DataFusion-native).
+  `SparkDecimalRewrite` (U4b `/` + DEC-6), then `SparkExprSemantics` + cardinality +
+  instant_ts; installed by the session on every context via the Spark door's
+  `SessionExtension` in `repark-spark`) + DEC-8 `register_spark_decimal_planner` from
+  `register_all` + the shared `shim_udf_boilerplate!` macro. Error conversion from
+  `DataFusionError` happens one layer up in `repark-core` (this crate stays DataFusion-native).
 - `src/decimal_precision.rs` — **V-2 / DEC U3+U4a:** Spark `DecimalPrecision` rule (integer-literal
-  min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` and DEC-8 plan-refuse
-  stay disclosed (U4b / ExprPlanner). Ledger: `task/v2-dec-u3u4-ledger.md`.
+  min-precision on `+ − *`; add/sub/mul 38-clamp via CAST-after). `/` formula and DEC-8
+  plan-refuse live in `decimal_spark.rs`. Ledger: `task/v2-dec-u3u4-ledger.md`.
+- `src/decimal_spark.rs` — **R-2 / U4b + DEC-8 + DEC-6:** Spark `/` UDF (`resultDecimalType`
+  + 38-clamp), `SparkDecimalRewrite` analyzer slot (A5, before `SparkExprSemantics`; UDF
+  owns `/0`), `SparkDecimalExprPlanner` for `(38,20)*(38,20)`, checked `+`/`−` UDF reading
+  the landed ANSI knob. Ledger: `task/r2-dec-close-ledger.md`.
 - `src/cardinality.rs` — **r24 SB1 / SEC-01:** plan-time `array_repeat`/`repeat`/`sequence` ceilings
   (`repark.sql.maxArrayElements` default 10_000_000) + `ReparkSqlConfig` extension
   (`allowLocalFilesystemDDL` for SEC-02); analyzer rule `ArrayCardinalityCeiling`.
@@ -113,7 +118,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
 | Fix a Spark-semantics mismatch in a *function* | the matching shim module; lean on `datafusion-spark` where it is correct |
 | Tune plan-time array expansion ceiling / local DDL conf | `src/cardinality.rs` (`ReparkSqlSettings`, `MAX_ARRAY_ELEMENTS_KEY`)
 | Fix a Spark-semantics mismatch in an *operator* (`/`, `%`, `[]`, ORDER BY defaults) | `src/analyzer.rs` (plan-level, type-aware) — ORDER BY defaults live in `repark-spark::spark_ast` (AST-level) |
-| Fix Spark decimal result `(p,s)` / integer-literal min-precision | `src/decimal_precision.rs` (`SparkDecimalPrecision`; `/` and DEC-8 plan-refuse are U4b / ExprPlanner) |
+| Fix Spark decimal result `(p,s)` / integer-literal min-precision | `src/decimal_precision.rs` (`SparkDecimalPrecision` for `+ − *`) + `src/decimal_spark.rs` (`/` UDF, DEC-8 `ExprPlanner`, DEC-6 overflow) |
 | Fix a Spark-semantics mismatch in a *CAST* | `src/analyzer.rs` `rewrite_timestamp_to_numeric_cast` (TZ-5) / `rewrite_timestamp_to_string_cast` (B-TZ-4) / `rewrite_timestamp_to_date_cast` (TZ-8) for the SHAPE + `src/timestamp_cast.rs` for the kernel; cast **failure** semantics (overflow, malformed strings) are a different surface and are not owned here |
 
 ## Component contract

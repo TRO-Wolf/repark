@@ -147,10 +147,10 @@ def test_division_is_float(spark: ReparkSession) -> None:
 
 
 def test_sql_float_literal_division_is_decimal(spark: ReparkSession) -> None:
-    # The blast-list SQL spelling: `SELECT 7.0 / 2.0` is Arrow decimal `/` after U2.
+    # A7 grant: `SELECT 7.0 / 2.0` is Spark decimal `/` after U4b — (2,1)/(2,1) → (8,6).
     table = spark.sql("SELECT 7.0 / 2.0 AS d").to_arrow()
-    assert table.schema.field("d").type == pa.decimal128(7, 5)
-    assert table.column("d").to_pylist() == [Decimal("3.50000")]
+    assert table.schema.field("d").type == pa.decimal128(8, 6)
+    assert table.column("d").to_pylist() == [Decimal("3.500000")]
 
 
 def test_division_of_integers_is_double(spark: ReparkSession) -> None:

@@ -22,8 +22,8 @@
 //!   already-clamped operands and drop scale again. Registry DEC-8 (`(38,20)*(38,20)`)
 //!   **refuses at plan construction** (`BinaryExpr::get_type` → Arrow `s1+s2>38`) before
 //!   any `AnalyzerRule` runs — this file cannot see that node. Closing it is an
-//!   `ExprPlanner` (U4b-adjacent). CAST-after on `/` is forbidden (value is short, not
-//!   only the type) and is not implemented here.
+//!   `ExprPlanner` (now [`crate::decimal_spark`]). CAST-after on `/` is forbidden (value
+//!   is short, not only the type) and is not implemented here.
 //!
 //! Registered **before** [`crate::analyzer::SparkExprSemantics`] (see `analyzer_rules`):
 //! order is semantic. A later `/` rewrite (U4b) must see a clean `decimal / decimal`
@@ -42,8 +42,8 @@ use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPla
 use datafusion::optimizer::AnalyzerRule;
 
 /// Spark / Arrow decimal128 limits. Unbounded math uses [`i32`] so `p1+p2+1` (77) fits.
-const MAX_PRECISION: i32 = 38;
-const MINIMUM_ADJUSTED_SCALE: i32 = 6;
+pub(crate) const MAX_PRECISION: i32 = 38;
+pub(crate) const MINIMUM_ADJUSTED_SCALE: i32 = 6;
 
 /// ===========================================================================================
 /// Spark result-type + integer-literal min-precision over type-coerced `+ − *`.
@@ -259,7 +259,7 @@ fn min_precision_digits(value: i128) -> u8 {
     }
 }
 
-fn decimal128_parts(data_type: &DataType) -> Option<(u8, i8)> {
+pub(crate) fn decimal128_parts(data_type: &DataType) -> Option<(u8, i8)> {
     match data_type {
         DataType::Decimal128(precision, scale) => Some((*precision, *scale)),
         _ => None,
@@ -269,7 +269,11 @@ fn decimal128_parts(data_type: &DataType) -> Option<(u8, i8)> {
 /// ===========================================================================================
 /// Spark `resultDecimalType` + `adjustPrecisionScale` (`allowPrecisionLoss=true`).
 /// ===========================================================================================
-fn spark_result_type(operator: Operator, left: (u8, i8), right: (u8, i8)) -> Option<(u8, i8)> {
+pub(crate) fn spark_result_type(
+    operator: Operator,
+    left: (u8, i8),
+    right: (u8, i8),
+) -> Option<(u8, i8)> {
     let (left_precision, left_scale) = signed_parts(left)?;
     let (right_precision, right_scale) = signed_parts(right)?;
     let (unbounded_precision, unbounded_scale) = match operator {
@@ -280,13 +284,29 @@ fn spark_result_type(operator: Operator, left: (u8, i8), right: (u8, i8)) -> Opt
             left_precision + right_precision + 1,
             left_scale + right_scale,
         ),
+        Operator::Divide => {
+            return spark_div_result_type(left, right);
+        }
         _ => return None,
     };
     Some(adjust_precision_scale(unbounded_precision, unbounded_scale))
 }
 
+/// Spark `/` unbounded formula: `s = max(6, s1+p2+1)`, `p = p1-s1+s2+s`, then the 38-clamp.
+pub(crate) fn spark_div_result_type(left: (u8, i8), right: (u8, i8)) -> Option<(u8, i8)> {
+    let (left_precision, left_scale) = signed_parts(left)?;
+    let (right_precision, right_scale) = signed_parts(right)?;
+    let unbounded_scale = (left_scale + right_precision + 1).max(MINIMUM_ADJUSTED_SCALE);
+    let unbounded_precision = left_precision - left_scale + right_scale + unbounded_scale;
+    Some(adjust_precision_scale(unbounded_precision, unbounded_scale))
+}
+
 /// Arrow / Hive keep-scale clamp; `None` when mul scale would exceed 38 (plan refuse).
-fn arrow_result_type(operator: Operator, left: (u8, i8), right: (u8, i8)) -> Option<(u8, i8)> {
+pub(crate) fn arrow_result_type(
+    operator: Operator,
+    left: (u8, i8),
+    right: (u8, i8),
+) -> Option<(u8, i8)> {
     let (left_precision, left_scale) = signed_parts(left)?;
     let (right_precision, right_scale) = signed_parts(right)?;
     match operator {
@@ -371,6 +391,7 @@ mod tests {
 
     fn ctx() -> SessionContext {
         let ctx = SessionContext::new();
+        crate::decimal_spark::register_spark_decimal_planner(&ctx);
         for rule in analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
@@ -600,24 +621,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn mul_38_20_still_refuses_before_any_analyzer_rule() {
-        // DEC-8: `Projection::try_new` asks `BinaryExpr::get_type`, Arrow refuses
-        // `s1+s2>38`, and the plan is never built. An AnalyzerRule cannot see it.
-        // Closing this needs an ExprPlanner (U4b-adjacent), not this rule.
+    async fn mul_38_20_plans_via_the_expr_planner() {
+        // DEC-8: the ExprPlanner replaces Arrow-refusing `*` before `get_type`.
+        // This rule still cannot see a BinaryExpr of (38,20)*(38,20).
         let ctx = ctx();
-        let error = ctx
-            .sql("SELECT CAST(1 AS DECIMAL(38,20)) * CAST(1 AS DECIMAL(38,20)) AS v")
-            .await
-            .expect_err("DEC-8 must still refuse at plan construction");
-        let message = error.to_string();
-        assert!(
-            message.contains("exceed max scale") || message.contains("Cannot get result type"),
-            "expected Arrow scale-refuse, got {message}"
-        );
+        let batch = batch(
+            &ctx,
+            "SELECT CAST(1 AS DECIMAL(38,20)) * CAST(1 AS DECIMAL(38,20)) AS v",
+        )
+        .await;
+        assert_eq!(decimal128_cell(&batch), (38, 6, Some(1_000_000)));
     }
 
     #[tokio::test]
-    async fn division_is_not_rewritten_this_unit() {
+    async fn division_uses_the_spark_formula() {
         let ctx = ctx();
         let batch = batch(
             &ctx,
@@ -627,10 +644,10 @@ mod tests {
         let (precision, scale, value) = decimal128_cell(&batch);
         assert_eq!(
             (precision, scale),
-            (16, 6),
-            "U4b: Arrow `/` formula stays until the division rewrite"
+            (23, 13),
+            "U4b: Spark `/` formula, not Arrow s=s1+4"
         );
-        assert_eq!(value, Some(269_736));
+        assert_eq!(value, Some(2_697_368_421_053));
     }
 
     #[tokio::test]

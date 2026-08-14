@@ -60,17 +60,19 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 - `decimal_precision.rs` — **V-2 / DEC U3+U4a:** `SparkDecimalPrecision` analyzer rule.
   U3: integer-literal `fromLiteral` (`DECIMAL(digits,0)`) on `+ − *` only (typed INT
   columns untouched). U4a: CAST-after add/sub/mul clamp (`allowPrecisionLoss=true`).
-  `/` is U4b (CAST-after wrongs the value). Registry DEC-8 `(38,20)*(38,20)` still
-  refuses at plan construction (`BinaryExpr::get_type`) — an AnalyzerRule never sees
-  it. Inserted **first** in `analyzer_rules()` (before `SparkExprSemantics`) so a
-  future `/` rewrite sees a clean `decimal / decimal` before the `nullif` `/0` wrap.
+  `/` formula, DEC-8, and DEC-6 live in `decimal_spark.rs`. Inserted **first** in
+  `analyzer_rules()` (before `SparkDecimalRewrite` then `SparkExprSemantics`).
   Ledger: `task/v2-dec-u3u4-ledger.md`.
+- `decimal_spark.rs` — **R-2:** `SparkDecimalRewrite` (A5 slot: clean `decimal / decimal`
+  before `SparkExprSemantics`; UDF owns `/0`) + `SparkDecimalExprPlanner` (DEC-8
+  compute-with-clamp) + checked `+`/`−` (DEC-6, reads `SparkAnsiConfig`). Registered
+  from `lib.rs` (`analyzer_rules` + `register_all`). Ledger: `task/r2-dec-close-ledger.md`.
 - `lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the date + string + collection
   + **r20 G2** `random` (Spark XORShift `rand`/`randn`/`random`) shims — later registration wins a
   name clash) + Q1 percentile aliases + `spark_date_shim_functions()` +
-  `analyzer_rules()` (`SparkDecimalPrecision` first, then Spark semantics + cardinality +
-  instant_ts; the session installs them via the Spark door's `SessionExtension`; error
-  conversion one layer up is `repark-core`) +
+  `analyzer_rules()` (`SparkDecimalPrecision` → `SparkDecimalRewrite` → Spark semantics +
+  cardinality + instant_ts; the session installs them via the Spark door's `SessionExtension`;
+  error conversion one layer up is `repark-core`) + `register_spark_decimal_planner` +
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by
