@@ -154,9 +154,10 @@ wrapper.
 - `matrix.rs` — the Q13 surface matrix (`#[cfg(test)]`, design `docs/design/sql-doors.md` §2
   Q13 / graft G2): every `repark_common::surfaces` ID mapped to `Row::Tested { test, profile }`
   or `Row::DeliberatelyAbsent { reason, adr }`, plus the compile-run audit that fails on an
-  unmapped surface. **46 tested / 4 deliberately absent** as of G8 (the three PR-6 structural
-  absences — sort order + unknown-key refuse are ANSI-only; the wrong-door sniff points AT
-  this door — plus the G8 pin-absence for `SEMANTICS_JOIN_NULL_KEYS`). `CROSS_DOOR_EQUIVALENCE` is
+  unmapped surface. **47 tested / 3 deliberately absent** as of R-3 (the three PR-6
+  structural absences — sort order + unknown-key refuse are ANSI-only; the wrong-door
+  sniff points AT this door). `SEMANTICS_JOIN_NULL_KEYS` flipped from pin-absence to
+  Tested at R-3. `CROSS_DOOR_EQUIVALENCE` is
   `Tested` under the `TwoSession` profile, and its evidence deliberately lives in the OTHER
   crate's test binary — `crates/repark-sql/tests/cross_door.rs`, the only place a dev-dependency
   may put both doors in one process; `cargo test -p repark-spark` alone will not run it. 3 tests.

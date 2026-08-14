@@ -18,6 +18,11 @@ not this directory.
   `refuse_contradictory_namespace_location`. Matching / no-location stay
   idempotent; conflict fails loud naming both paths. Registry/STATUS closed
   (§6 handoff).
+- [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) — **R-3 / G8 absence pins
+  (2026-08-14):** the four S-2 pin-absences flip to Tested — `SEMANTICS_JOIN_NULL_KEYS`
+  both doors (INNER/LEFT/SEMI/ANTI), ANSI `SEMANTICS_WINDOW_FRAMES` (ROWS/RANGE + DATE
+  unit-less months), ANSI `SEMANTICS_FLOAT_DETERMINISM` (G7 `f64::to_bits` twins).
+  Vocabulary stays at 50. Registry / STATUS closed (A4; §6 paste-true).
 - [s5-v-landing-ledger.md](s5-v-landing-ledger.md) — **S-5 V-wave §6 landing
   increment (2026-08-14):** verify-before-paste classification of the merged V-wave
   handoffs (G3-E8 IN+NOT IN+`[NOT] EXISTS` footnote, dbt gate MET, family not
@@ -273,6 +278,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [s5-v-landing-ledger.md](s5-v-landing-ledger.md) | **S-5** V-wave §6 landing increment — registry + one STATUS dated note |
 | [s2-g8-ledger.md](s2-g8-ledger.md) | **S-2 / G8** capability value-semantics matrix + test-name liveness gate |
 | [s1-ansi-knob-u5-ledger.md](s1-ansi-knob-u5-ledger.md) | **S-1 / U5** ANSI knob default TRUE + DEC-7 `/0`/`% 0`; DEC-6 DECLARE; DEC-9 residue |
@@ -297,6 +303,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
 | Read the G8 value-semantics matrix + liveness gate | [s2-g8-ledger.md](s2-g8-ledger.md) |
+| Read the R-3 flip of the four G8 pin-absences | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
 | See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |

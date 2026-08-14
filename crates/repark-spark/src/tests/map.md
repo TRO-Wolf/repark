@@ -38,7 +38,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false`; DEC-6 wrap pin kept
   (DECLARE)), `float_agg` (G7 float
   aggregation determinism — catastrophic-cancellation fixture; `sum`/`avg` `f64::to_bits` at
-  `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure).
+  `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure),
+  `join_null_keys` (R-3 / G8 — Spark-door NULL-key join value pin: INNER / LEFT /
+  LEFT SEMI / LEFT ANTI; goldens = G4 live Spark 4.1.2, re-verified under the
+  JVM lock; cites
+  `spark_door_null_keys_never_match_inner_left_semi_anti`).
 - **Path-preserving sibling lifts** (former nested `mod`s; cargo paths unchanged):
   `partitioned_ctas`, `partitioned_merge`, `transform_overwrite` (still nests
   `provider_partition_correctness`), `service_managed_ctas`.
@@ -155,6 +159,7 @@ planning cut map `G4-CUT-MAP.md`. Generated name map: `docs/history/hardening-h1
 | Matrix pin string red / stale | `matrix.rs` strings are `--list` names; update with renames only — never re-point a surface |
 | Registry pin path stale | filesystem form `crates/repark-spark/src/tests/<file>.rs::leaf` |
 | Missing `TempDir` / Arrow types in a leaf | `use super::common::*;` (shared re-exports live in `common.rs`) |
+| `spark_door_null_keys_never_match_inner_left_semi_anti` RED | 3VL on JOIN keys moved, or `LEFT SEMI`/`ANTI` stopped parsing. Goldens are G4 live Spark 4.1.2 — do not absorb a match-on-NULL |
 | Cross-leaf helper not found | should be `pub(super)` in `common.rs` (or wrongly left private in one leaf) |
 | Nested partition pin fails | `partitioned_ctas` / `partitioned_merge` / `transform_overwrite` — manifest-level `DataFile.partition` oracles |
 
