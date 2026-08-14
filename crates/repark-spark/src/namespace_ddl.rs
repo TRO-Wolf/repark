@@ -87,6 +87,10 @@ pub(crate) struct CreateNamespace {
 /// `location_uri` by `repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional,
 /// never overwriting an explicit key — so the canonical Glue `locationUri` field is set whichever
 /// key the catalog implementation maps (audit BUG-001 / U2).
+///
+/// `IF NOT EXISTS` is idempotent when the request carries no location or the resolved location
+/// matches. A contradictory `LOCATION` fails loud (both paths named) rather than silently
+/// adopting the existing namespace (G-6 Q1).
 pub(crate) async fn execute_create_namespace(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -95,10 +99,18 @@ pub(crate) async fn execute_create_namespace(
     let handle = catalog_handle(catalogs, &create.catalog)?;
     let namespace = create.namespace.clone();
     let ident = NamespaceIdent::new(create.namespace);
+    repark_iceberg::catalog::mirror_namespace_location_keys(&mut create.properties);
     if create.if_not_exists && handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
+        // G-6 Q1: IF NOT EXISTS must not silently adopt a contradictory LOCATION.
+        let existing = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
+        repark_core::refuse_contradictory_namespace_location(
+            &namespace,
+            existing.properties(),
+            &create.properties,
+        )
+        .map_err(DataFusionError::Plan)?;
         return ctx.read_empty();
     }
-    repark_iceberg::catalog::mirror_namespace_location_keys(&mut create.properties);
     handle
         .create_namespace(&ident, create.properties)
         .await

@@ -14,6 +14,11 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
   opt-in without finalize still refuses (no lazy query-time resolution); the late config map's
   region-conf signal class is consulted (dual-spelling conflict fails loud pre-resolution).
+- `namespace_create_tests.rs` — **R-6 / G-6 Q1 (2026-08-14):** session
+  `create_namespace` location-guard pins on a memory catalog: create-new, re-create
+  same location (idempotent), re-create conflicting (Analysis, both paths named,
+  stored location unchanged), re-create without request location (idempotent),
+  trailing-slash-only difference (idempotent).
 - `tests.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
   subset is in `task/port/deferred-tests.md`), plus the P2G R2 cohort at the tail: the
   builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored /

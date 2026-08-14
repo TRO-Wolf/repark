@@ -37,7 +37,10 @@ wrapper.
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
   9 in-module tests.
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
-  create-namespace hand parser, `consume_word`.
+  create-namespace hand parser, `consume_word`. **R-6 / G-6 Q1 (2026-08-14):**
+  `IF NOT EXISTS` no longer early-returns without the location check — matching
+  / no-location stay idempotent; a contradictory `LOCATION` fails loud naming
+  both paths (`repark_core::refuse_contradictory_namespace_location`).
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
   into v1's positional `execute_with_read_only` call; install with
   `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`). Tests:

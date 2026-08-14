@@ -32,7 +32,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `batch_size`, `target_partitions`), sync `build()` + async
   `register_configured_catalogs()` finalize (two-phase lifecycle), catalog ops
   (`register_iceberg_catalog`, `register_memory_catalog`, `create_namespace` with the
-  location/location_uri mirror, `table_exists`, the listing families,
+  location/location_uri mirror and the G-6 Q1 contradictory-location refuse,
+  `table_exists`, the listing families,
   `refresh_catalog_provider`), readers (`read_parquet`/`read_csv`/`read_json`,
   `read_iceberg_table` + `TimeTravelOpts`), the temp-view family, and the `testing_` seams.
   Excel/postgres readers are deferred with their crates.
@@ -50,6 +51,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
 - `src/read_options.rs` — CSV/JSON Spark option-map helpers.
 - `src/error_map.rs` — DataFusion/iceberg error folds into `repark_common::Error`; public
   `engine_err` (the single `DataFusionError → Error` classifier).
+- `src/namespace_create.rs` — G-6 Q1 location-conflict predicate shared by Session
+  `create_namespace` and both SQL doors' `IF NOT EXISTS` paths.
 - `src/idents.rs` — table-identifier segment parse + path-escape refuse (delegates to
   `repark_iceberg::write::idents::path_escape_kind` — single-source needles).
 - `src/object_store_s3.rs` — `s3://` / `s3a://` `read_parquet` support:

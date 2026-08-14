@@ -20,7 +20,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
 - **Production-aligned leaves** (flat tests gained one path segment `tests::<leaf>::…`):
-  `ctas`, `create_table`, `namespace_ddl`, `catalog_ops`, `describe_show`, `alter`, `dml`
+  `ctas`, `create_table`, `namespace_ddl` (R-6 / G-6 Q1: `IF NOT EXISTS` create-new /
+  same / conflicting / no-location twins; the old silent-adopt fixture now matches
+  location), `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
   `merge`, `call`, `ref_ddl`, `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact

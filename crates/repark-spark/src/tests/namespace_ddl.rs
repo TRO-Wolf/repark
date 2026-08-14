@@ -251,9 +251,9 @@ async fn sql_create_namespace_with_properties_round_trips() {
     assert!(count_parquet_files(std::path::Path::new(&location)) > 0);
 }
 
-/// WG-5 C-3: `IF NOT EXISTS` is idempotent — a second create on an existing namespace is a no-op
-/// that does NOT error and does NOT overwrite the existing `location` (so a later CTAS still
-/// lands under the ORIGINAL location, not the second call's).
+/// WG-5 C-3 + G-6 Q1: `IF NOT EXISTS` with the SAME location is idempotent — a second create
+/// does NOT error and does NOT overwrite the existing `location`. A contradictory LOCATION
+/// is the fail-loud twin (`sql_create_namespace_if_not_exists_conflicting_location_fails_loud`).
 #[tokio::test]
 async fn sql_create_namespace_if_not_exists_is_idempotent() {
     let wh = TempDir::new().unwrap();
@@ -267,11 +267,10 @@ async fn sql_create_namespace_if_not_exists_is_idempotent() {
     )
     .await
     .unwrap();
-    // A second create with IF NOT EXISTS (pointing at a DIFFERENT location) is a no-op.
     execute(
         &ctx,
         &catalogs,
-        &format!("CREATE NAMESPACE IF NOT EXISTS glue_like.silver LOCATION '{warehouse}/other'"),
+        &format!("CREATE NAMESPACE IF NOT EXISTS glue_like.silver LOCATION '{location}'"),
     )
     .await
     .unwrap();
@@ -298,6 +297,131 @@ async fn sql_create_namespace_if_not_exists_is_idempotent() {
     assert!(
         count_parquet_files(std::path::Path::new(&location)) > 0,
         "the CTAS must land under the ORIGINAL location, not the IF-NOT-EXISTS no-op's"
+    );
+}
+
+/// G-6 Q1 create-new: `CREATE NAMESPACE IF NOT EXISTS` on a missing name creates it.
+#[tokio::test]
+async fn sql_create_namespace_if_not_exists_create_new() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE NAMESPACE IF NOT EXISTS ice.fresh_ns",
+    )
+    .await
+    .unwrap();
+    assert!(
+        catalogs["ice"]
+            .namespace_exists(&NamespaceIdent::new("fresh_ns".to_string()))
+            .await
+            .unwrap(),
+        "IF NOT EXISTS on a missing namespace must create it"
+    );
+}
+
+/// G-6 Q1 re-create-same: `IF NOT EXISTS` with the same LOCATION is a no-op.
+#[tokio::test]
+async fn sql_create_namespace_if_not_exists_same_location_is_idempotent() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, warehouse) = setup_strict_catalog(&wh).await;
+    let location = format!("{warehouse}/same_location");
+
+    execute(
+        &ctx,
+        &catalogs,
+        &format!("CREATE NAMESPACE glue_like.silver LOCATION '{location}'"),
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        &format!("CREATE NAMESPACE IF NOT EXISTS glue_like.silver LOCATION '{location}'"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        namespace_props(&catalogs, "silver")
+            .await
+            .get("location")
+            .map(String::as_str),
+        Some(location.as_str())
+    );
+}
+
+/// G-6 Q1 re-create-conflicting: `IF NOT EXISTS … LOCATION` that contradicts the stored
+/// path fails loud, naming both paths, and does not rewrite the stored location.
+#[tokio::test]
+async fn sql_create_namespace_if_not_exists_conflicting_location_fails_loud() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, warehouse) = setup_strict_catalog(&wh).await;
+    let existing = format!("{warehouse}/existing");
+    let requested = format!("{warehouse}/requested");
+
+    execute(
+        &ctx,
+        &catalogs,
+        &format!("CREATE NAMESPACE glue_like.silver LOCATION '{existing}'"),
+    )
+    .await
+    .unwrap();
+    let error = execute(
+        &ctx,
+        &catalogs,
+        &format!("CREATE NAMESPACE IF NOT EXISTS glue_like.silver LOCATION '{requested}'"),
+    )
+    .await
+    .expect_err("contradictory IF NOT EXISTS LOCATION must fail loud");
+    let message = error.to_string();
+    assert!(
+        message.contains(&existing),
+        "must name the existing path: {message}"
+    );
+    assert!(
+        message.contains(&requested),
+        "must name the requested path: {message}"
+    );
+    assert_eq!(
+        namespace_props(&catalogs, "silver")
+            .await
+            .get("location")
+            .map(String::as_str),
+        Some(existing.as_str()),
+        "a refused IF NOT EXISTS must not rewrite the stored location"
+    );
+}
+
+/// G-6 Q1 re-create-without-location: `IF NOT EXISTS` with no LOCATION adopts the existing ns.
+#[tokio::test]
+async fn sql_create_namespace_if_not_exists_without_location_is_idempotent() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs, warehouse) = setup_strict_catalog(&wh).await;
+    let location = format!("{warehouse}/kept_location");
+
+    execute(
+        &ctx,
+        &catalogs,
+        &format!("CREATE NAMESPACE glue_like.silver LOCATION '{location}'"),
+    )
+    .await
+    .unwrap();
+    execute(
+        &ctx,
+        &catalogs,
+        "CREATE NAMESPACE IF NOT EXISTS glue_like.silver",
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        namespace_props(&catalogs, "silver")
+            .await
+            .get("location")
+            .map(String::as_str),
+        Some(location.as_str()),
+        "IF NOT EXISTS without LOCATION must keep the stored location"
     );
 }
 
