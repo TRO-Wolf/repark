@@ -860,6 +860,10 @@ NOT in that file is a defect, not a decision.
   (the pre-existing real-Glue-DB shape, built via `WITH DBPROPERTIES`) resolves for CTAS through
   the facade: data lands under it (empty rglob ⟺ the fallback read is gone and the memory catalog
   silently fell back to $TMPDIR), value + Arrow type on `to_arrow`.
+- `test_namespace_location_guard.py` — **R-6 / G-6 Q1 (2026-08-14):** one facade
+  pin, memory catalog, `repark.sql`-era imports. `spark.create_namespace` four
+  shapes: create-new, same-location idempotent, contradictory location raises
+  `AnalysisException` naming both paths, no-location idempotent.
 - (combine 2026-07-29: match= patterns raw-stringed, RUF043)
 - `test_interchange_parity.py` — **G-INT** interchange battery (oracle = live PySpark 4.1.2 /
   zulu-17 / UTC / arrow.pyspark.enabled=true, measured 2026-07-27). **TZ-4 PR-1:** pandas

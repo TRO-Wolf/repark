@@ -838,10 +838,16 @@ impl ReparkSession {
     /// maps `location` — audit BUG-001 / U2). This is the chokepoint for the PyO3
     /// `create_namespace` and the facade `spark.create_namespace(..., location=…)` paths.
     ///
+    /// Re-creating an existing namespace is idempotent when the request carries no location
+    /// or the resolved location matches. A contradictory explicit location fails loud
+    /// ([`crate::refuse_contradictory_namespace_location`]) — G-6 Q1.
+    ///
     /// # Errors
-    /// Returns [`Error::DataFusion`] if `catalog` is unknown; a create failure is classified by
-    /// its iceberg kind ([`Error::Analysis`] for an already-existing namespace — Spark's
-    /// `NamespaceAlreadyExistsException` is an `AnalysisException` — else [`Error::Iceberg`]).
+    /// Returns [`Error::DataFusion`] if `catalog` is unknown; [`Error::Analysis`] if the
+    /// namespace already exists and the request's explicit location contradicts the stored
+    /// one (the message names both paths); a create failure is classified by its iceberg
+    /// kind (else [`Error::Iceberg`]). An existing namespace with no request location, or
+    /// with a matching location, is adopted (idempotent) — G-6 Q1.
     pub async fn create_namespace(
         &self,
         catalog: &str,
@@ -850,8 +856,19 @@ impl ReparkSession {
     ) -> Result<()> {
         let handle = self.catalog_handle(catalog)?;
         repark_iceberg::catalog::mirror_namespace_location_keys(&mut properties);
+        let ident = NamespaceIdent::new(namespace.to_string());
+        if handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
+            let existing = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
+            crate::refuse_contradictory_namespace_location(
+                namespace,
+                existing.properties(),
+                &properties,
+            )
+            .map_err(Error::Analysis)?;
+            return Ok(());
+        }
         handle
-            .create_namespace(&NamespaceIdent::new(namespace.to_string()), properties)
+            .create_namespace(&ident, properties)
             .await
             .map_err(iceberg_err)?;
         // The provider snapshots namespaces at construction — re-register to pick up the new one.
@@ -1574,6 +1591,9 @@ impl std::fmt::Debug for ReparkSession {
 
 #[cfg(test)]
 mod aws_gate_tests;
+
+#[cfg(test)]
+mod namespace_create_tests;
 
 #[cfg(test)]
 mod tests;

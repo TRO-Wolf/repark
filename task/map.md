@@ -12,6 +12,12 @@ not this directory.
 
 ## Contents
 
+- [r6-namespace-guard-ledger.md](r6-namespace-guard-ledger.md) — **R-6 / G-6 Q1
+  (2026-08-14):** namespace-create location guard. Core `create_namespace` +
+  Spark `IF NOT EXISTS` + ANSI `CREATE SCHEMA IF NOT EXISTS` share
+  `refuse_contradictory_namespace_location`. Matching / no-location stay
+  idempotent; conflict fails loud naming both paths. Registry/STATUS closed
+  (§6 handoff).
 - [s5-v-landing-ledger.md](s5-v-landing-ledger.md) — **S-5 V-wave §6 landing
   increment (2026-08-14):** verify-before-paste classification of the merged V-wave
   handoffs (G3-E8 IN+NOT IN+`[NOT] EXISTS` footnote, dbt gate MET, family not

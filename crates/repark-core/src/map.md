@@ -37,7 +37,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   Entry points: `sql`, `register_iceberg_catalog` (policy `RequireExplicitLocation`;
   `register_memory_catalog` = the AWS-free local catalog, `TempFallbackAllowed`),
   `create_namespace` (mirrors `location` onto `location_uri` via
-  `repark_iceberg::catalog::mirror_namespace_location_keys`), the temp-view family
+  `repark_iceberg::catalog::mirror_namespace_location_keys`; G-6 Q1: existing
+  namespace + contradictory explicit location fails loud naming both paths;
+  matching / no-request-location stay idempotent), the temp-view family
   (`create_or_replace_temp_view` / `materialize_dataframe_as_temp_view` /
   `materialize_dataframe_as_cache_view` / `create_or_replace_temp_view_from` /
   `drop_temp_view`), `table_exists` (quote-aware segment parse; path-escape segments reject),
@@ -75,6 +77,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `idents.rs` — table-identifier segment parse + path-escape refuse
   (`reject_path_escape_segment` delegates to `repark_iceberg::write::idents::path_escape_kind`
   — shared needles).
+- `namespace_create.rs` — **R-6 / G-6 Q1 (2026-08-14):** the shared
+  `refuse_contradictory_namespace_location` predicate (and its message helper)
+  used by `session.rs` `create_namespace` and both SQL doors' `IF NOT EXISTS`
+  paths. Matching location / no-request-location adopt; conflict names both
+  paths. Standalone policy (ADR-0005 decision 4), not a Session split.
 - `object_store_s3.rs` — `s3://` / `s3a://` object-store registration for `read_parquet`.
   `AwsConfigCredentialProvider` bridges the aws-config default credential chain (env → shared
   file → IMDS) into `object_store::CredentialProvider`; `build_amazon_s3_store` resolves
@@ -152,7 +159,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   this crate never imports `repark-functions` (a forbidden upward edge), so the door is the
   crossing point. Nothing about the key, its spelling or its validation lives anywhere but here.
 - `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
-  incl. the late-config region-signal pin, AWS-free) and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
+  incl. the late-config region-signal pin, AWS-free), `namespace_create_tests.rs`
+  (R-6 / G-6 Q1: create-new / same / conflicting / no-location), and `tests.rs`
+  (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
   `task/port/deferred-tests.md`; plus the phase-2 PR-2 G8 pin
   `bare_session_without_extension_carries_df_54_1_subquery_guard`, NEW — outside the ported

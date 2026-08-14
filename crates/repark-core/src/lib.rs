@@ -22,6 +22,7 @@ mod dialect;
 mod error_map;
 mod extension;
 mod idents;
+mod namespace_create;
 mod object_store_s3;
 mod read_options;
 mod runtime;
@@ -52,6 +53,7 @@ pub use runtime::EngineRuntime;
 // --- Catalog configuration + engine-side registry (hoisted). ---
 pub use catalog_config::{CatalogKind, CatalogSpec, parse_catalog_specs};
 pub use catalog_state::{CatalogRegistry, LocationPolicy};
+pub use namespace_create::refuse_contradictory_namespace_location;
 
 // --- Time travel (hoisted): spec + parsers + the reader-options path, plus the ONE minter of
 // the shared `__repark_tt_` ephemeral-name namespace (`next_temp_view_name` — public because both

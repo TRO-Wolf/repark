@@ -68,7 +68,9 @@ reach delegation through the ordinary arm.
   NOT shared with the Spark door's `PARTITIONED BY` validator) and Iceberg spec building with
   Java-parity field names. Tests: [partitioning/map.md](partitioning/map.md).
 - `schema_ddl.rs` — `CREATE SCHEMA … WITH (location = …)`, `DROP SCHEMA`, `DROP TABLE`, plus the
-  shared catalog-handle / name-parts / identifier-hygiene helpers.
+  shared catalog-handle / name-parts / identifier-hygiene helpers. **R-6 / G-6 Q1:**
+  `IF NOT EXISTS` runs the same location-conflict predicate as the Spark door
+  (matching / no-location idempotent; contradictory location fails loud).
   Tests: [schema_ddl/map.md](schema_ddl/map.md).
 - `alter.rs` — `ALTER TABLE` schema evolution (ADD/DROP/RENAME COLUMN, `ALTER COLUMN … SET DATA
   TYPE`, `RENAME TO`) through the tier-1 `repark_iceberg::write::alter` seams, plus Trino

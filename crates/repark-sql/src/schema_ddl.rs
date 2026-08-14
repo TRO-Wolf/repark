@@ -13,7 +13,8 @@
 //! resolves through it. It is mirrored onto `location_uri` by
 //! `repark_iceberg::catalog::mirror_namespace_location_keys` — unidirectional, never overwriting
 //! an explicit key — so a real Glue database's canonical `locationUri` field is set whichever key
-//! the catalog implementation maps.
+//! the catalog implementation maps. `IF NOT EXISTS` shares the G-6 Q1 location-conflict
+//! predicate: matching / no-location adopt; a contradictory location fails loud.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -44,10 +45,19 @@ pub(crate) async fn execute_create_schema(
     let mut properties = schema_properties(with.map_or(&[][..], Vec::as_slice))?;
 
     let ident = NamespaceIdent::from_strs(&namespace).map_err(iceberg_err)?;
+    repark_iceberg::catalog::mirror_namespace_location_keys(&mut properties);
     if if_not_exists && handle.namespace_exists(&ident).await.map_err(iceberg_err)? {
+        // G-6 Q1: IF NOT EXISTS must not silently adopt a contradictory location.
+        let existing = handle.get_namespace(&ident).await.map_err(iceberg_err)?;
+        let leaf = namespace.last().cloned().unwrap_or_default();
+        repark_core::refuse_contradictory_namespace_location(
+            &leaf,
+            existing.properties(),
+            &properties,
+        )
+        .map_err(DataFusionError::Plan)?;
         return cx.ctx.read_empty();
     }
-    repark_iceberg::catalog::mirror_namespace_location_keys(&mut properties);
     handle
         .create_namespace(&ident, properties)
         .await
@@ -278,6 +288,9 @@ pub(crate) fn reject_path_escape_ident(segment: &str, kind: &str) -> Result<()> 
 pub(crate) fn iceberg_err(err: iceberg::Error) -> DataFusionError {
     DataFusionError::External(Box::new(err))
 }
+
+#[cfg(test)]
+mod location_guard_tests;
 
 #[cfg(test)]
 mod tests;

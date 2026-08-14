@@ -9,6 +9,9 @@ in `../tests.rs` against a real catalog.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../schema_ddl.rs`.
+- `location_guard_tests.rs` — **R-6 / G-6 Q1 (2026-08-14):** ANSI
+  `CREATE SCHEMA IF NOT EXISTS` four-shape twins (create-new / same /
+  conflicting / no-location) against a memory catalog.
 
 ## Pointers
 
