@@ -785,8 +785,8 @@ impl PyColumn {
                     expr_fn::current_date()
                 }
                 "to_date" => {
-                    need_at_least(1)?;
-                    expr_fn::to_date(exprs.clone())
+                    need(1)?;
+                    repark_functions::expr_fn::to_date(exprs[0].clone())
                 }
                 "to_timestamp" => {
                     need_at_least(1)?;

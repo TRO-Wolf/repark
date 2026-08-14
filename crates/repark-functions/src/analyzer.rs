@@ -35,7 +35,12 @@
 //! - **`CAST(TIMESTAMP AS STRING)` is Spark's session-zone space-separated `Utf8`** (registry
 //!   row B-TZ-4). DataFusion emits `Utf8View` with an ISO-`T` stored-zone instant. The rewrite
 //!   replaces the cast with [`crate::timestamp_cast`]'s `__repark_timestamp_to_string__` UDF.
-//!   `CAST(ts AS DATE)` / `CAST(ts AS TIMESTAMP)` stay untouched (TZ-8 is a later unit).
+//! - **`CAST(TIMESTAMP AS DATE)` is Spark's session-zone date** (registry row TZ-8). Arrow's
+//!   own cast reads the array's UTC annotation. The rewrite replaces the cast with
+//!   [`crate::timestamp_cast`]'s `__repark_timestamp_to_date__` UDF (LTZ → session zone; NTZ
+//!   → stored wall). `CAST(ts AS TIMESTAMP)` stays untouched (identity). `datediff`
+//!   rides this CAST (`SparkDateDiff::simplify`). `last_day` / `date_add` over TIMESTAMP
+//!   stay residual.
 //!
 //! Registered by the session *after* the built-in analyzer rules (via the Spark door's
 //! `SessionExtension`), so it sees type-coerced plans and must emit exactly-typed expressions —
@@ -163,22 +168,27 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
         }
         // TZ-5: `CAST(ts AS BIGINT/INT/DOUBLE/DECIMAL)` is epoch SECONDS in Spark and a raw tick
         // reinterpretation in DataFusion. B-TZ-4: `CAST(ts AS STRING)` is Spark's session-zone
-        // space-separated Utf8. Both match on the SOURCE type so the rewrite is idempotent.
+        // space-separated Utf8. TZ-8: `CAST(ts AS DATE)` is Spark's session-zone Date32. All
+        // three match on the SOURCE type so the rewrite is idempotent.
         Expr::Cast(_) => Ok(rewrite_timestamp_casts(expr, schema)),
         other => Ok(Transformed::no(other)),
     }
 }
 
-/// Dispatch a timestamp `CAST`: numeric targets take TZ-5; string targets take B-TZ-4.
+/// Dispatch a timestamp `CAST`: numeric → TZ-5; string → B-TZ-4; date → TZ-8.
 ///
-/// The numeric arm is left byte-stable (`rewrite_timestamp_to_numeric_cast`); the string arm
-/// only runs when the numeric rewrite declines the target.
+/// The numeric arm is left byte-stable (`rewrite_timestamp_to_numeric_cast`); later arms
+/// only run when the previous rewrite declines the target.
 fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let numeric = rewrite_timestamp_to_numeric_cast(expr, schema);
     if numeric.transformed {
         return numeric;
     }
-    rewrite_timestamp_to_string_cast(numeric.data, schema)
+    let string = rewrite_timestamp_to_string_cast(numeric.data, schema);
+    if string.transformed {
+        return string;
+    }
+    rewrite_timestamp_to_date_cast(string.data, schema)
 }
 
 /// `CAST(<timestamp> AS STRING)` → Spark's session-zone space-separated `Utf8` (B-TZ-4).
@@ -186,7 +196,7 @@ fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
 /// The user's STRING target is DataFusion `Utf8View`; Spark exports `Utf8`. The rewrite
 /// **replaces** the cast with the embedded UDF rather than wrapping it, so the Arrow type
 /// is Spark's `string` and a second analyze cannot re-fire (the child is no longer a
-/// timestamp). DATE / TIMESTAMP targets are declined here.
+/// timestamp). DATE / TIMESTAMP targets are declined here (DATE is [`rewrite_timestamp_to_date_cast`]).
 fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -209,6 +219,31 @@ fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transforme
     )))
 }
 
+/// `CAST(<timestamp> AS DATE)` → Spark's session-zone `Date32` (TZ-8).
+///
+/// The user's DATE target is DataFusion `Date32`. Arrow's own cast reads the array
+/// annotation (UTC). The rewrite **replaces** the cast with the embedded UDF so a
+/// second analyze cannot re-fire (the child is no longer a timestamp). TIMESTAMP
+/// targets are declined here (identity).
+fn rewrite_timestamp_to_date_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+    let Expr::Cast(cast) = expr else {
+        return Transformed::no(expr);
+    };
+    let Ok(source_type) = cast.expr.get_type(schema) else {
+        return Transformed::no(Expr::Cast(cast));
+    };
+    if !matches!(source_type, DataType::Timestamp(..)) {
+        return Transformed::no(Expr::Cast(cast));
+    }
+    if !matches!(cast.field.data_type(), DataType::Date32) {
+        return Transformed::no(Expr::Cast(cast));
+    }
+    Transformed::yes(Expr::ScalarFunction(ScalarFunction::new_udf(
+        crate::timestamp_cast::spark_timestamp_to_date_udf(),
+        vec![*cast.expr],
+    )))
+}
+
 /// `CAST(<timestamp> AS <numeric>)` → Spark's epoch SECONDS (registry row TZ-5).
 ///
 /// Spark's `Cast(TimestampType, LongType)` floors the instant to seconds; DataFusion hands back
@@ -222,12 +257,13 @@ fn rewrite_timestamp_to_string_cast(expr: Expr, schema: &DFSchema) -> Transforme
 /// reliably at present-day epochs) and real targets need the fraction Spark keeps. See
 /// [`crate::timestamp_cast`].
 ///
-/// Deliberately untouched here: `CAST(ts AS DATE/TIMESTAMP)` (TZ-8 / identity), unsigned
-/// integer targets (Spark SQL cannot spell one, so a rewrite would invent semantics), and the
+/// Deliberately untouched here: `CAST(ts AS TIMESTAMP)` (identity) and unsigned integer
+/// targets (Spark SQL cannot spell one, so a rewrite would invent semantics), and the
 /// reverse direction `CAST(<integer> AS TIMESTAMP)` — probed against live Spark 4.1.2 and already
 /// correct in repark, because DataFusion's integer→timestamp cast reads SECONDS exactly as Spark
 /// does (ledger §3). Its remaining gap is the Arrow export TYPE, which is registry row TZ-4.
-/// `CAST(ts AS STRING)` is **not** this function — see [`rewrite_timestamp_to_string_cast`].
+/// `CAST(ts AS STRING)` is [`rewrite_timestamp_to_string_cast`]; `CAST(ts AS DATE)` is
+/// [`rewrite_timestamp_to_date_cast`].
 fn rewrite_timestamp_to_numeric_cast(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
     let Expr::Cast(cast) = expr else {
         return Transformed::no(expr);
@@ -990,15 +1026,12 @@ mod tests {
         assert_eq!(i64_column(&ctx, sql).await, vec![Some(-1800)]);
     }
 
-    /// Casts this class does NOT own stay exactly as DataFusion planned them: a timestamp to
-    /// `DATE` involves no string-shape rewrite (TZ-8) and no epoch scaling, and a dead-branch-free
-    /// rewrite must leave it alone. STRING is B-TZ-4 and is pinned in
-    /// [`timestamp_cast_to_string_is_spark_utf8`].
+    /// `CAST(ts AS TIMESTAMP)` is identity and must stay unrewritten (no epoch / string / date
+    /// UDF). DATE is TZ-8 ([`timestamp_cast_to_date_is_spark_date32`]); STRING is B-TZ-4.
     #[tokio::test]
-    async fn non_numeric_timestamp_casts_are_untouched() {
+    async fn timestamp_to_timestamp_cast_is_untouched() {
         let ctx = ctx();
-        let sql = "SELECT CAST(TIMESTAMP '2024-06-15 12:00:00' AS DATE)";
-        assert_eq!(result_type(&ctx, sql).await, DataType::Date32, "{sql}");
+        let sql = "SELECT CAST(TIMESTAMP '2024-06-15 12:00:00' AS TIMESTAMP)";
         let state = ctx.state();
         let plan = state.create_logical_plan(sql).await.unwrap();
         let analyzed = crate::analyze_eagerly(&state, plan).unwrap();
@@ -1009,7 +1042,52 @@ mod tests {
         );
         assert!(
             !rendered.contains("__repark_timestamp_to_string__"),
-            "{sql}: TZ-8 DATE is not tonight's string rewrite"
+            "{sql}: identity TIMESTAMP is not the string rewrite"
+        );
+        assert!(
+            !rendered.contains("__repark_timestamp_to_date__"),
+            "{sql}: identity TIMESTAMP is not the date rewrite"
+        );
+    }
+
+    /// TZ-8: `CAST(ts AS DATE)` is Spark `Date32` via one embedded UDF. The analyzer context
+    /// has no session-zone carrier, so a zoneless TIMESTAMP literal is NTZ-shaped and the
+    /// date is the spelled wall (2024-06-15). Session-zone values are pinned on the Spark door.
+    #[tokio::test]
+    async fn timestamp_cast_to_date_is_spark_date32() {
+        let ctx = ctx();
+        let sql = "SELECT CAST(TIMESTAMP '2024-06-15 12:00:00' AS DATE)";
+        assert_eq!(result_type(&ctx, sql).await, DataType::Date32, "{sql}");
+        let state = ctx.state();
+        let plan = state.create_logical_plan(sql).await.unwrap();
+        let once = crate::analyze_eagerly(&state, plan).unwrap();
+        let twice = crate::analyze_eagerly(&state, once.clone()).unwrap();
+        let rendered = once.display_indent_schema().to_string();
+        assert_eq!(
+            rendered,
+            twice.display_indent_schema().to_string(),
+            "a second analyze must be a fixpoint for the date rewrite"
+        );
+        assert_eq!(
+            rendered.matches("__repark_timestamp_to_date__").count(),
+            1,
+            "exactly one date-cast UDF, however many times the analyzer runs"
+        );
+        assert!(
+            !rendered.contains("__repark_epoch_seconds"),
+            "DATE is not a numeric-scaling target"
+        );
+        assert!(
+            !rendered.contains("__repark_timestamp_to_string__"),
+            "DATE is not the string rewrite"
+        );
+        let printed =
+            datafusion::arrow::util::pretty::pretty_format_batches(&[batch(&ctx, sql).await])
+                .unwrap()
+                .to_string();
+        assert!(
+            printed.contains("2024-06-15"),
+            "NTZ wall date of the spelled TIMESTAMP; got:\n{printed}"
         );
     }
 

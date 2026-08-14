@@ -26,8 +26,9 @@ NOT in that file is a defect, not a decision.
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
   Carry-check (identity int/string/date/timestamp, bucket, truncate, Iceberg
   years/months/days/hours UTC-epoch) + load-bearing SQL `year(ts)` /
-  `date_format` identity under non-UTC sessions + TZ-8 CAST/to_date disclose +
-  refusal-class pins. Ledger: `task/v4-partition-values-ledger.md`.
+  `date_format` identity under non-UTC sessions + TZ-8 CAST/to_date equality (R-4) +
+  refusal-class pins. Ledger: `task/v4-partition-values-ledger.md`,
+  `task/r4-tz8-ledger.md`.
 
 - `test_collation_refuse.py` — **G15 (2026-08-12):** loud collation refuse. createDataFrame
   (`UNICODE_CI` / `UTF8_LCASE` / DDL / Spark `__COLLATIONS` fromJson), `cast`/`try_cast`,
@@ -1202,6 +1203,9 @@ NOT in that file is a defect, not a decision.
   is µs+UTC; NTZ stays naive. Flipped to equality: CAST-str round-trip, two zoneless
   spellings, NTZ distinction. Residue: `zoneless_timestamp_literal_*` is VALUE-converged;
   extractor columns stay nullable (Spark non-null) — not the TZ-7 class.
+  **TZ-8 (2026-08-14):** five CAST/`to_date` equality rows (NY, UTC, Tokyo forward, NTZ,
+  epoch) plus a DataFrame-API pin (post-#95 `repark.spark.sql` import era). `datediff` stays
+  residual. Ledger: `task/r4-tz8-ledger.md`.
   **Its 2026-08-10 rework grew the corpus from 20 rows to 29** (a size pin moved because an
   adversarial panel measured wrong-answer families the original rows were structurally blind to —
   every one of them hands the engine a `…Z`-suffixed string, i.e. only the shapes where reading a

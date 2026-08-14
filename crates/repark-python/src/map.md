@@ -75,7 +75,8 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   `named_struct(lit(name), expr, …)` extracting outer Alias names so Spark field names
   are preserved (bare `struct(args…)` always emits `c0`/`c1`).
 - `column.rs` — `PyColumn.call_scalar` (R-FN-BATCH1/2 DataFusion expr_fn dispatch) +
-  Q1 `approx_percentile_cont`.
+  Q1 `approx_percentile_cont`. **TZ-8:** `to_date` embeds `repark_functions::expr_fn::to_date`
+  (session-zone Date32), not DataFusion's built-in.
 
 - `exceptions.rs` — the five-member `create_exception!` taxonomy in its own file-backed module
   (the `check_lib_rs` RATCHET fired at PR-3): carries the module-scoped

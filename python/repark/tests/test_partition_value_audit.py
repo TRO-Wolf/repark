@@ -10,8 +10,9 @@ over the source would extract. Three classes (TZ4-DESIGN §4 / A2):
   (distinct-count). This corpus pins the VALUES.
 * **load_bearing** — identity partitions of SQL ``year(ts)`` / ``date_format(ts, …)`` under a
   **non-UTC** session. Session-zone extractors; the classic silent-corruption hole.
-* **tz8** — identity partitions of ``CAST(ts AS DATE)`` / ``to_date(ts)``. Disclose / refuse,
-  no fix (A2).
+* **tz8** — identity partitions of ``CAST(ts AS DATE)`` / ``to_date(ts)``. R-4 flipped
+  both date-key rows to equality (session-zone dates). ``datediff`` rides CAST.
+  ``last_day`` / ``date_add`` over TIMESTAMP stay residual.
 
 Transforms the engine refuses today get **refusal-class** pins (needle + class), never silent
 skips. The swept transform x type matrix is enumerated in
@@ -484,7 +485,7 @@ def _tz8(
     select_sql: str,
     note: str,
 ) -> PartitionValueRow:
-    """TZ-8 disclose pin: CAST/to_date as an identity partition key. No fix."""
+    """TZ-8 identity-partition pin: CAST/to_date as a session-zone date key."""
     return PartitionValueRow(
         name=name,
         family="tz8",
@@ -764,20 +765,19 @@ ROWS: list[PartitionValueRow] = [
             "04:30 localizes to 09:30Z so y=2024. Distinct from the tz-aware NY-boundary row."
         ),
     ),
-    # ----- TZ-8: CAST(ts AS DATE) / to_date as partition key (disclose, no fix) -----------------
+    # ----- TZ-8: CAST(ts AS DATE) / to_date as partition key (equality after R-4) --------------
     _tz8(
         "tz8_cast_ts_as_date_identity_new_york_ctas",
         select_sql="SELECT id, CAST(ts AS DATE) AS d FROM src",
         note=(
-            "TZ-8 DISCLOSE: CAST(ts AS DATE) as identity partition under NY. Spark writes "
-            "the session-zone date (2023-12-31); repark writes the UTC date (2024-01-01). "
-            "No fix this unit."
+            "TZ-8 FIXED: CAST(ts AS DATE) as identity partition under NY. Both engines write "
+            "the session-zone date (2023-12-31 for the NY-boundary instant). Flip evidence."
         ),
     ),
     _tz8(
         "tz8_to_date_ts_identity_new_york_ctas",
         select_sql="SELECT id, to_date(ts) AS d FROM src",
-        note="TZ-8 DISCLOSE: to_date(ts) as identity partition — same class as CAST AS DATE.",
+        note="TZ-8 FIXED: to_date(ts) as identity partition — same class as CAST AS DATE.",
     ),
     # ----- refuse (needles from repark probe; Spark needles locked at record) ------------------
     _refuse(
@@ -849,7 +849,7 @@ def _ts_plus0(spark_ts_table: pa.Table) -> pa.Table:
 
 
 # Recorded Spark 4.1.2 + Iceberg 1.11.0 halves (2026-08-13, zulu-17, local[2], ANSI on).
-# Repark-only halves are the two disclosure classes: F-V4-2 (+00:00 vs UTC) and TZ-8.
+# Repark-only halves remaining: F-V4-2 (+00:00 vs UTC). TZ-8 date-key rows are equality.
 _GOLDENS: dict[str, dict[str, object]] = {
     "carry_identity_int_ctas": {
         "spark_data": _table(
@@ -1209,13 +1209,8 @@ _GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"] = {
             "d": [dt.date(2023, 12, 31), dt.date(2023, 12, 31), dt.date(2024, 6, 15)],
         },
     ),
-    "repark_data": _table(
-        [("id", _I64, True), ("d", _DATE, True)],
-        {
-            "id": [1, 2, 3],
-            "d": [dt.date(2024, 1, 1), dt.date(2023, 12, 31), dt.date(2024, 6, 15)],
-        },
-    ),
+    # R-4: session-zone dates match Spark; flip both halves to equality.
+    "repark_data": None,
     "spark_meta": _meta(
         "d:identity",
         [
@@ -1225,26 +1220,13 @@ _GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"] = {
             ("partitions", '{"d":"2024-06-15"}', 1),
         ],
     ),
+    "repark_meta": None,
 }
-
-# TZ-8 repark meta from the live repark probe on the three-instant load fixture:
-# 2024-01-01 (NY-boundary UTC date), 2023-12-31 (Tokyo-boundary UTC date), 2024-06-15.
-_GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"]["repark_meta"] = _meta(
-    "d:identity",
-    [
-        ("files", '{"d":"2024-01-01"}', 1),
-        ("files", '{"d":"2023-12-31"}', 1),
-        ("files", '{"d":"2024-06-15"}', 1),
-        ("partitions", '{"d":"2024-01-01"}', 1),
-        ("partitions", '{"d":"2023-12-31"}', 1),
-        ("partitions", '{"d":"2024-06-15"}', 1),
-    ],
-)
 _GOLDENS["tz8_to_date_ts_identity_new_york_ctas"] = {
     "spark_data": _GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"]["spark_data"],
-    "repark_data": _GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"]["repark_data"],
+    "repark_data": None,
     "spark_meta": _GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"]["spark_meta"],
-    "repark_meta": _GOLDENS["tz8_cast_ts_as_date_identity_new_york_ctas"]["repark_meta"],
+    "repark_meta": None,
 }
 
 
@@ -1505,6 +1487,9 @@ def test_partition_value_row_set_covers_the_v4_budget() -> None:
         "tz8_cast_ts_as_date_identity_new_york_ctas",
         "tz8_to_date_ts_identity_new_york_ctas",
     }
+    assert all(row.repark_data is None and row.repark_meta is None for row in tz8), (
+        "TZ-8 date-key rows are equality after the session-zone CAST/to_date fix"
+    )
     for row in ROWS:
         if row.kind == "error":
             assert row.spark_error_needle, f"{row.name}: error row missing Spark needle"

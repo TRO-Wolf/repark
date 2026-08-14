@@ -34,7 +34,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   into the live session's conf). Its module docstring also carries the **user-visible statement of
   what the zone reaches** (updated 2026-08-13, TZ-4 PR-2): extraction over an INSTANT-typed
   TIMESTAMP honors it; zoneless LTZ inputs localize in this zone; NTZ stays naive;
-  `to_date` / `CAST(ts AS DATE)` / `datediff` (row TZ-8) still do not. Helpers:
+  `CAST(ts AS DATE)` / `to_date` honor it (TZ-8); `datediff` rides CAST;
+  `last_day` / `date_add` over TIMESTAMP stay residual. Helpers:
   `active_session_time_zone`, `localize_naive_datetime_to_utc`,
   `collect_timestamp_as_session_wall`. That paragraph ships in the
   wheel, so it is a lockstep obligation whenever the engine's coverage changes.

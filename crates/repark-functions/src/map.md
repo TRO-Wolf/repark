@@ -95,7 +95,10 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   pinned as a fence rather than rewritten.
   **B-TZ-4 (2026-08-13):** `CAST(TIMESTAMP AS STRING)` →
   `__repark_timestamp_to_string__` via `rewrite_timestamp_to_string_cast` (Utf8, not Utf8View).
-  DATE stays untouched (TZ-8). Runs
+  **TZ-8 (2026-08-14):** `CAST(TIMESTAMP AS DATE)` →
+  `__repark_timestamp_to_date__` via `rewrite_timestamp_to_date_cast` (session-zone Date32
+  for LTZ; stored wall for NTZ). `datediff` rides CAST. `last_day`/`date_add`
+  over TIMESTAMP stay residual. Runs
   after the built-in analyzer rules (sees type-coerced plans, emits exactly-typed expressions,
   recomputes every node schema); every rewrite is **idempotent** — the passthrough analyzes
   eagerly and physical planning analyzes again. NB (Group L-write): running after `TypeCoercion`
@@ -147,8 +150,10 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   stored wall for NTZ; trailing-zero fractions are stripped (recorded: `.123400` → `.1234`).
   Embedded, never registered. Pins: `epoch_seconds_floor_is_floor_not_truncation` and siblings,
   plus `spark_timestamp_string_trims_trailing_fraction_zeros` / year-shape / LTZ-vs-NTZ here;
-  facade corpus `test_timestamp_cast_parity.py`. Ledgers: `task/tz5-cast-seconds-ledger.md` §4,
-  `task/v3-btz4-ledger.md`.
+  facade corpus `test_timestamp_cast_parity.py`. **TZ-8:** `__repark_timestamp_to_date__`
+  (embedded CAST) + registered `to_date` overwrite share `datetime::invoke_local_dates`.
+  Pin `ltz_date_is_session_zone_and_ntz_is_stored_wall`. Ledgers:
+  `task/tz5-cast-seconds-ledger.md` §4, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
 - `collection.rs` — `SparkElementAt` (`element_at`; audit #15 — previously an alias of
   `map_extract`, broken on every array): arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
@@ -190,10 +195,11 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `trunc_accepts_large_utf8_format_without_panic`).
 - `expr_fn.rs` — logical-`Expr` builders (`year`, `month`, `quarter`, `weekofyear`, `dayofweek`,
   `weekday` (0=Monday; Group I facade wire-up), `dayofmonth`, `dayofyear`, `last_day`,
-  `add_months`, `date_add`, `date_format`, `trunc`, `date_trunc`) that embed the UDF instance
-  directly, so `repark-python`'s `PyColumn` gets a self-contained date-function expression without
-  a `SessionContext`. Extractors + calendar-math come from `datetime`; `date_add` (days cast to
-  `Int32`) + `last_day` from `datafusion-spark`.
+  `add_months`, `date_add`, `date_format`, `trunc`, `date_trunc`, **TZ-8 `to_date`**) that embed
+  the UDF instance directly, so `repark-python`'s `PyColumn` gets a self-contained date-function
+  expression without a `SessionContext`. Extractors + calendar-math come from `datetime`;
+  `to_date` from `timestamp_cast`; `date_add` (days cast to `Int32`) + `last_day` from
+  `datafusion-spark`.
 
 ## Pointers
 

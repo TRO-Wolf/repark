@@ -49,8 +49,10 @@
 //!
 //! `Timestamp(_, None)` is NTZ (wall clock; no session zone). Zoneless LTZ inputs
 //! (`TIMESTAMP '…'`, zoneless `to_timestamp`, `CAST(str AS TIMESTAMP)`) are localized onto
-//! µs+UTC by [`crate::instant_ts`] so extractors see an instant. TZ-8 (`CAST(ts AS DATE)` /
-//! `to_date` / `datediff`) stays disclosed.
+//! µs+UTC by [`crate::instant_ts`] so extractors see an instant. TZ-8 `CAST(ts AS DATE)` /
+//! `to_date` share [`invoke_local_dates`] (LTZ → session-zone date; NTZ → stored wall).
+//! `datediff` rides CAST (`SparkDateDiff` simplifies to Date32 subtraction). `last_day` /
+//! `date_add` over TIMESTAMP stay residual.
 
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -583,14 +585,15 @@ fn invoke_local_micros(
     Ok((micros, zone, source))
 }
 
-/// The `add_months` / `trunc` argument as `Date32` values on the calendar Spark reads it against.
+/// The `add_months` / `trunc` / TZ-8 `to_date` / `CAST(ts AS DATE)` argument as `Date32` on the
+/// calendar Spark reads it against.
 ///
-/// A `DATE`/string argument is its own calendar and casts straight through. A TIMESTAMP argument
-/// is an INSTANT, and Spark takes its date in `spark.sql.session.timeZone` — measured live:
-/// `trunc(to_timestamp('2024-06-01T03:00:00Z'), 'MM')` is `2024-05-01` under `America/New_York`,
-/// because the instant is 2024-05-31 23:00 EDT. Casting the instant to `Date32` with arrow instead
-/// reads the array's own `UTC` annotation and answers `2024-06-01`.
-fn invoke_local_dates(array: &ArrayRef, options: &ConfigOptions) -> Result<ArrayRef> {
+/// A `DATE`/string/NTZ argument is its own calendar and casts straight through. An LTZ
+/// `Timestamp(_, Some(_))` is an INSTANT, and Spark takes its date in
+/// `spark.sql.session.timeZone` — measured live: `CAST(to_timestamp('2024-06-15T03:00:00Z')
+/// AS DATE)` is `2024-06-14` under `America/New_York` (the instant is 23:00 EDT on the 14th).
+/// Arrow's own `CAST(ts AS Date32)` reads the array's `UTC` annotation and answers `2024-06-15`.
+pub(crate) fn invoke_local_dates(array: &ArrayRef, options: &ConfigOptions) -> Result<ArrayRef> {
     if !is_instant(array.data_type()) {
         // SAF-002: defensive cast so a physical-type mismatch is a typed engine error.
         return Ok(cast(array.as_ref(), &DataType::Date32)?);
