@@ -12,10 +12,13 @@ _Last updated: 2026-08-14._
 ## Release state
 
 Pre-alpha. **No tagged release exists yet.** The PyPI `repark` name is reserved with a placeholder
-`0.0.1`; nothing functional has been published. The "API is forever" clock starts at the **first
-tagged PyPI release** — that release is now *unblocked* (milestone one is reached) but is a
-**user-side action that has not yet been taken**. Public ≠ released: the repository is public, the
-engine is not yet distributed. Release mechanics: [docs/release.md](docs/release.md).
+`0.0.1`; nothing functional has been published. **Every release precondition in our control is now
+met (2026-08-14):** the `repark.sql` re-home landed (#95) closing the last hard blocker, and the
+release machinery is armed — `release.yml` (tag-triggered, PyPI trusted publishing, wheel-only;
+crates.io publishing is structurally deferred, see docs/release.md) with the version SSOT at the
+Cargo workspace (`0.1.0`). What remains is **owner-side**: the one-time PyPI trusted-publisher
+setup, then the tag — which starts the "API is forever" clock. Public ≠ released: the repository
+is public, the engine is not yet distributed. Release mechanics: [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 

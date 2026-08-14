@@ -374,7 +374,6 @@ wheels = [
 
 [[package]]
 name = "repark"
-version = "0.0.0"
 source = { editable = "python/repark" }
 dependencies = [
     { name = "pyarrow" },
@@ -410,7 +409,7 @@ requires-dist = [
     { name = "scikit-learn", marker = "extra == 'ml-ext'", specifier = ">=1.3" },
     { name = "xgboost", marker = "extra == 'ml-ext'", specifier = ">=2.0" },
 ]
-provides-extras = ["numpy", "pandas", "polars", "ml-ext"]
+provides-extras = ["ml-ext", "numpy", "pandas", "polars"]
 
 [[package]]
 name = "repark-parity"
