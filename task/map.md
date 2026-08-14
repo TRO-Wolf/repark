@@ -27,6 +27,12 @@ not this directory.
   `to_date` read the session zone (LTZ → session calendar; NTZ → stored wall). `datediff`
   rides CAST. `last_day` / `date_add` over TIMESTAMP stay residual. Does **not** edit
   the registry (R-7 deferred; §6 paste-true).
+- [r1-g3e8-pr4-ledger.md](r1-g3e8-pr4-ledger.md) — **R-1 / G3-E8 PR-4:** identity
+  `UPDATE … SET <scalar> WHERE col IN (SELECT …)` + correlated
+  `DELETE … IN` (recorded ≡ EXISTS) through the A1-identity path. ANY/ALL
+  deferred (Spark 4.1.2 parse-fails quantified comparisons). ROW 9 restated as
+  the permanent v1 valve. Does **not** edit the registry (R-7 deferred; §6
+  paste-true).
 - [s5-v-landing-ledger.md](s5-v-landing-ledger.md) — **S-5 V-wave §6 landing
   increment (2026-08-14):** verify-before-paste classification of the merged V-wave
   handoffs (G3-E8 IN+NOT IN+`[NOT] EXISTS` footnote, dbt gate MET, family not

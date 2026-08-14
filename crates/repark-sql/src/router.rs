@@ -199,6 +199,19 @@ async fn execute_time_travelled(
                 .await?;
                 return cx.ctx.read_empty();
             }
+            if let Some(allowed) =
+                repark_iceberg::write::predicate_dml::try_allowed_update_in(statement.as_ref())?
+            {
+                guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+                let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
+                repark_iceberg::write::predicate_dml::execute_predicate_dml(
+                    cx.ctx,
+                    handle,
+                    &allowed.spec,
+                )
+                .await?;
+                return cx.ctx.read_empty();
+            }
             guards::refuse_dml_subquery_predicate(statement.as_ref())?;
             guards::refuse_mor_multi_spec_dml(cx, sql).await?;
             delegate(cx, sql).await

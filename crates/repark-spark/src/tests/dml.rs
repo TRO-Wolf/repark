@@ -735,6 +735,84 @@ async fn g3e8_delete_exists_uncorrelated_and_correlated_execute() {
     );
 }
 
+/// PR-4: correlated `DELETE … IN` — recorded equivalent to correlated EXISTS.
+#[tokio::test]
+async fn g3e8_delete_correlated_in_deletes_exactly_the_matching_row() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.tgt WHERE id IN \
+         (SELECT k.id FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+    )
+    .await
+    .expect("correlated IN DELETE must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(1, "a".to_string()), (3, "c".to_string())],
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "DELETE ice.sales.tgt WHERE id IN \
+         (SELECT k.id FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+    )
+    .await
+    .expect("FROM-less correlated IN must execute");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![(1, "a".to_string()), (3, "c".to_string())],
+    );
+}
+
+/// PR-4: identity `UPDATE … SET <scalar> WHERE col IN (SELECT …)`.
+#[tokio::test]
+async fn g3e8_update_in_subquery_rewrites_only_the_matching_row() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("UPDATE IN must execute on the identity path");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.tgt").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "z".to_string()),
+            (3, "c".to_string()),
+        ],
+        "UPDATE IN must rewrite only id=2 — pre-fix every row became 'z'"
+    );
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = g3e8_setup(&wh).await;
+    execute(
+        &ctx,
+        &catalogs,
+        "UPDATE ice.sales.tgt SET name = 'z', id = id + 10 \
+         WHERE id IN (SELECT id FROM ice.sales.keys)",
+    )
+    .await
+    .expect("multi-column UPDATE IN must execute");
+    let mut rows = table_rows(&ctx, &catalogs, "ice.sales.tgt").await;
+    rows.sort_by_key(|(id, _)| *id);
+    assert_eq!(
+        rows,
+        vec![
+            (1, "a".to_string()),
+            (3, "c".to_string()),
+            (12, "z".to_string()),
+        ],
+    );
+}
+
 /// Every DELETE subquery spelling the recon proved silently wrong refuses, and none of them
 /// touches a row. One fresh table per form, so a leaked write cannot hide behind a later one.
 #[tokio::test]
@@ -747,13 +825,12 @@ async fn g3e8_delete_subquery_family_all_refuse() {
         "DELETE FROM ice.sales.tgt WHERE NOT (id IN (SELECT id FROM ice.sales.keys))",
         "DELETE FROM ice.sales.tgt WHERE id = 1 OR id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id > 1 AND id IN (SELECT id FROM ice.sales.keys)",
-        // EXISTS / NOT EXISTS now execute (g3e8_delete_exists_*). Residual refuse:
-        // correlated IN
-        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT k.id FROM ice.sales.keys k \
-         WHERE k.name = ice.sales.tgt.name)",
-        // quantified comparison
+        // EXISTS / NOT EXISTS / correlated IN now execute. Residual refuse:
+        // quantified comparison (Spark 4.1.2 parse-fails ANY/ALL — permanent v1 valve)
         "DELETE FROM ice.sales.tgt WHERE id > ANY (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id > ALL (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE id = ANY (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.tgt WHERE id <> ALL (SELECT id FROM ice.sales.keys)",
         // nested subquery inside the subquery's own FROM
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.keys) \
          AS inner_alias)",
@@ -798,7 +875,6 @@ async fn g3e8_delete_subquery_family_all_refuse() {
 #[tokio::test]
 async fn g3e8_update_subquery_family_all_refuse() {
     for sql in [
-        "UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
         "UPDATE ice.sales.tgt SET name = 'z' WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         "UPDATE ice.sales.tgt SET name = 'z' WHERE EXISTS (SELECT 1 FROM ice.sales.keys k \
          WHERE k.id = ice.sales.tgt.id)",
@@ -1115,10 +1191,9 @@ async fn g3e8_fromless_delete_in_subquery_deletes_exactly_the_matching_row() {
 #[tokio::test]
 async fn g3e8_fromless_delete_subquery_family_all_refuse() {
     for sql in [
-        // F9 — FROM-less residual (IN / NOT IN / [NOT] EXISTS now execute)
-        "DELETE ice.sales.tgt WHERE id IN (SELECT k.id FROM ice.sales.keys k \
-         WHERE k.id = ice.sales.tgt.id)",
+        // F9 — FROM-less residual (IN / NOT IN / [NOT] EXISTS / correlated IN now execute)
         "DELETE ice.sales.tgt WHERE id IN (SELECT max(id) FROM ice.sales.keys)",
+        "DELETE ice.sales.tgt WHERE id = ANY (SELECT id FROM ice.sales.keys)",
     ] {
         let wh = TempDir::new().unwrap();
         let (ctx, catalogs) = g3e8_setup(&wh).await;

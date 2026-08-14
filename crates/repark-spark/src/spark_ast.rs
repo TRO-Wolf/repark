@@ -66,10 +66,11 @@ pub(crate) async fn execute_passthrough(
             // silently dropped. Router-parsable SELECT/ORDER BY still land here
             // when tests call execute_passthrough directly (Q-001 pin).
             crate::refuse_collation_in_statement(inner)?;
-            // G3-E8 identity path — allow-listed DELETE via
-            // try_allowed_delete_in → execute_predicate_dml (attach is spelling-generic;
-            // the allow-list exports uncorrelated IN / NOT IN (SELECT …) and
-            // [NOT] EXISTS ± correlation). Fail-closed: every other
+            // G3-E8 identity path — allow-listed DELETE / UPDATE via
+            // try_allowed_delete_in / try_allowed_update_in → execute_predicate_dml
+            // (attach is spelling-generic; the allow-list exports uncorrelated IN /
+            // NOT IN, [NOT] EXISTS ± correlation, correlated IN, and identity
+            // UPDATE … SET <scalar> WHERE col IN). Fail-closed: every other
             // subquery spelling still hits the valve below (never DataFusion DML).
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(inner)?
@@ -82,6 +83,30 @@ pub(crate) async fn execute_passthrough(
                     catalogs,
                     object_name,
                     crate::MorDmlKind::Delete,
+                )
+                .await?;
+                let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;
+                repark_iceberg::write::predicate_dml::execute_predicate_dml(
+                    ctx,
+                    handle,
+                    &allowed.spec,
+                )
+                .await?;
+                return ctx.read_empty();
+            }
+            if let Some(allowed) =
+                repark_iceberg::write::predicate_dml::try_allowed_update_in(inner)?
+            {
+                let object_name = match inner.as_ref() {
+                    Statement::Update(update) => {
+                        crate::object_name_from_table_with_joins(&update.table)
+                    }
+                    _ => None,
+                };
+                crate::refuse_mor_unpartitioned_multi_spec_dml(
+                    catalogs,
+                    object_name,
+                    crate::MorDmlKind::Update,
                 )
                 .await?;
                 let handle = crate::catalog_handle(catalogs, &allowed.catalog_name)?;

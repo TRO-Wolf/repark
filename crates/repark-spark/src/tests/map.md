@@ -124,6 +124,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   (`g3e8_delete_exists_uncorrelated_and_correlated_execute`). Residual refuse family +
   valve-ORDER pin restated over correlated IN / nested / scalar / UPDATE. Ledger:
   [`../../../../task/v1-g3e8-pr3-ledger.md`](../../../../task/v1-g3e8-pr3-ledger.md).
+- **R-1 / G3-E8 PR-4 (2026-08-14)** — correlated IN + identity UPDATE IN execute
+  (`g3e8_delete_correlated_in_deletes_exactly_the_matching_row`,
+  `g3e8_update_in_subquery_rewrites_only_the_matching_row`). Residual refuse family
+  restated as the permanent v1 valve (ANY/ALL / nested / scalar / mixed / UPDATE NOT IN).
+  Ledger: [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/r1-g3e8-pr4-ledger.md).
   `normalize.rs` gained **2**: the detector unit pin
   (`g3e8_subquery_detector_fires_on_every_spelling_and_no_other`) and the statement-level valve
   pin (`g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target`, the entry point

@@ -45,7 +45,7 @@ v1 crate-root re-export lists.
 | Get an AWS-free catalog for local dev / tests | `memory_catalog(warehouse)` in `src/catalog/` |
 | Build the Glue (primary) or S3 Tables (secondary) catalog | `glue_catalog` / `s3tables_catalog` in `src/catalog/` |
 | MERGE INTO / append / overwrite / ALTER / snapshot refs | [src/write/map.md](src/write/map.md) |
-| Identity DELETE (subquery `WHERE`) | `src/write/predicate_dml.rs` |
+| Identity DELETE/UPDATE (subquery `WHERE`) | `src/write/predicate_dml.rs` |
 | Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
 | Change credential handling | not here — AWS SDK default chain *inside the fork* |
 

@@ -346,11 +346,16 @@ async fn execute_update(
     if let Some(message) = refuse_read_only_dml_table_sql(catalogs, &table_sql) {
         return Err(DataFusionError::Plan(message));
     }
-    refuse_dml_subquery_predicate(
-        DmlSubqueryVerb::Update,
-        update.selection.as_ref(),
-        &table_sql,
-    )?;
+    {
+        let as_statement = datafusion::sql::sqlparser::ast::Statement::Update(update.clone());
+        if repark_iceberg::write::predicate_dml::try_allowed_update_in(&as_statement)?.is_none() {
+            refuse_dml_subquery_predicate(
+                DmlSubqueryVerb::Update,
+                update.selection.as_ref(),
+                &table_sql,
+            )?;
+        }
+    }
     refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Update).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }

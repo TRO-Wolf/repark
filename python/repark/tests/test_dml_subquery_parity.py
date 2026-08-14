@@ -11,9 +11,9 @@ fix unit inherits its oracle instead of re-deriving one under time pressure.
 
 **Row kinds.** Residual subquery rows are **split**: repark refuses (its needle is pinned) and the
 Spark half is the recorded post-DML table. **content** rows include two non-subquery equality
-controls plus the executed holes (`DELETE … IN`, `DELETE … NOT IN` + NULL trap, and
-`DELETE … [NOT] EXISTS` uncorrelated + correlated, recorded against live Spark 4.1.2). Without
-the non-subquery controls a comparator that always "passed" would go unnoticed.
+controls plus the executed holes (`DELETE … IN` / `NOT IN` + NULL trap, `[NOT] EXISTS`
+± correlation, correlated IN, and identity `UPDATE … IN`, recorded against live Spark 4.1.2).
+Without the non-subquery controls a comparator that always "passed" would go unnoticed.
 
 **The NULL trap is recorded, not reasoned.** ``NOT IN`` over a subquery whose result contains NULL
 is SQL's three-valued-logic trap: every row's test evaluates to UNKNOWN, so Spark matches
@@ -387,7 +387,7 @@ ROWS: list[DmlSubqueryRow] = [
     # ----- 8. DELETE … IN (correlated subquery) --------------------------------------------------
     DmlSubqueryRow(
         name="delete_correlated_in_subquery",
-        kind="split",
+        kind="content",
         dml_sql=(
             "DELETE FROM {target} WHERE id IN (SELECT k.id FROM {keys} k WHERE k.id = {target}.id)"
         ),
@@ -396,8 +396,10 @@ ROWS: list[DmlSubqueryRow] = [
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1, 3], "name": ["a", "c"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
-        note="correlated IN — the third spelling of the same semi-join, pinned per entry point.",
+        note=(
+            "correlated IN — recorded equivalent to correlated EXISTS on every fixture "
+            "(same remaining `{1,3}`). Flipped split → content in PR-4."
+        ),
     ),
     # ----- EXISTS family extras (recorded 2026-08-13 vs Spark 4.1.2) ------------------------------
     DmlSubqueryRow(
@@ -578,21 +580,55 @@ ROWS: list[DmlSubqueryRow] = [
         ),
         note="NOT EXISTS keeps every non-matching copy (both id=1 rows).",
     ),
-    # ----- residual UPDATE twins stay split ------------------------------------------------------
     DmlSubqueryRow(
         name="update_in_subquery",
-        kind="split",
+        kind="content",
         dml_sql="UPDATE {target} SET name = 'z' WHERE id IN (SELECT id FROM {keys})",
         read_sql=READ_BACK,
         spark=_table(
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1, 2, 3], "name": ["a", "z", "c"]},
         ),
-        repark_error_needle=G3E8_NEEDLE,
         note=(
-            "the UPDATE arm of the same defect: pre-guard EVERY row took the SET value. Spark "
-            "rewrites only the matching row."
+            "identity UPDATE IN: Spark rewrites only the matching row. Flipped split → content "
+            "in PR-4 against the recorded golden."
         ),
+    ),
+    DmlSubqueryRow(
+        name="update_in_subquery_multi_set",
+        kind="content",
+        dml_sql="UPDATE {target} SET name = 'z', id = id + 10 WHERE id IN (SELECT id FROM {keys})",
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 3, 12], "name": ["a", "c", "z"]},
+        ),
+        note="multi-column scalar SET on the identity-UPDATE path (recorded 2026-08-14).",
+    ),
+    DmlSubqueryRow(
+        name="update_in_subquery_expr",
+        kind="content",
+        dml_sql="UPDATE {target} SET name = concat(name, '_x') WHERE id IN (SELECT id FROM {keys})",
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b_x", "c"]},
+        ),
+        note=(
+            "SET with a scalar expression (concat) — D-4 SET-subquery stays ungated/unimplemented."
+        ),
+    ),
+    DmlSubqueryRow(
+        name="update_in_subquery_empty",
+        kind="content",
+        keys_seed_sql=KEYS_SEED_EMPTY,
+        dml_sql="UPDATE {target} SET name = 'z' WHERE id IN (SELECT id FROM {keys})",
+        read_sql=READ_BACK,
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1, 2, 3], "name": ["a", "b", "c"]},
+        ),
+        note="empty subquery ⇒ IN is FALSE; Spark rewrites nothing.",
     ),
     # ----- 10. UPDATE … WHERE NOT IN (subquery WITH A NULL) --------------------------------------
     DmlSubqueryRow(
@@ -716,7 +752,7 @@ def test_refusal_leaves_every_row_untouched(repark: ReparkSession) -> None:
     post-refusal contents. This row keeps the target alive and reads it back — the assertion that
     would have caught the original defect (the table came back EMPTY).
     """
-    row = next(item for item in ROWS if item.name == "delete_correlated_in_subquery")
+    row = next(item for item in ROWS if item.name == "update_not_in_subquery_with_null_key")
     fq_target = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue")
     fq_keys = target_fqn(REPARK_CATALOG, REPARK_NAMESPACE, "guard_residue_keys")
     ensure_namespace(repark, REPARK_CATALOG, REPARK_NAMESPACE)
@@ -757,11 +793,13 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     Coverage assertions are NAME-gated so a control row cannot satisfy them (the tautological-pin
     lesson: a family pin that any row can green is not a pin).
     """
-    assert 20 <= len(ROWS) <= 28, f"G3-E8 budget 20-28 rows after EXISTS family (got {len(ROWS)})"
+    assert 20 <= len(ROWS) <= 32, (
+        f"G3-E8 budget 20-32 rows after PR-4 family close (got {len(ROWS)})"
+    )
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
 
     splits = [row for row in ROWS if row.kind == "split"]
-    assert 3 <= len(splits) <= 10, f"3-10 residual split rows required (got {len(splits)})"
+    assert 1 <= len(splits) <= 10, f"1-10 residual split rows required (got {len(splits)})"
 
     controls = [row for row in ROWS if row.kind == "content"]
     assert controls, (
@@ -793,6 +831,11 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
             "delete_not_exists_correlated_null_keys",
             "delete_exists_correlated_duplicates",
             "delete_not_exists_correlated_duplicates",
+            "delete_correlated_in_subquery",
+            "update_in_subquery",
+            "update_in_subquery_multi_set",
+            "update_in_subquery_expr",
+            "update_in_subquery_empty",
         }:
             assert has_subquery, f"{control.name}: the content hole must keep its subquery"
             assert control.repark_error_needle is None
@@ -803,11 +846,7 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
         )
 
     names = {row.name for row in splits}
-    for needle in (
-        "delete_correlated_in_subquery",
-        "update_in_subquery",
-        "update_not_in_subquery_with_null_key",
-    ):
+    for needle in ("update_not_in_subquery_with_null_key",):
         assert needle in names, f"missing split coverage for {needle!r}"
     contents = {row.name for row in ROWS if row.kind == "content"}
     assert "delete_in_subquery" in contents, "IN-DELETE is the PR-1 content hole"
@@ -817,6 +856,10 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     assert "delete_not_exists_correlated" in contents, "correlated NOT EXISTS is content"
     assert "delete_exists_uncorrelated" in contents, "uncorrelated EXISTS is content"
     assert "delete_not_exists_uncorrelated" in contents, "uncorrelated NOT EXISTS is content"
+    assert "delete_correlated_in_subquery" in contents, "correlated IN is the PR-4 content hole"
+    assert "update_in_subquery" in contents, "UPDATE IN is the PR-4 content hole"
+    assert "update_in_subquery_multi_set" in contents, "multi-column UPDATE IN is content"
+    assert "update_in_subquery_expr" in contents, "SET-expression UPDATE IN is content"
 
     # The NULL trap needs BOTH verbs — DELETE now executes; UPDATE stays refused.
     null_rows = [row for row in ROWS if row.name.endswith("_with_null_key")]
@@ -831,7 +874,7 @@ def test_dml_subquery_row_set_covers_the_g3e8_budget() -> None:
     delete_trap = next(row for row in null_rows if row.name.startswith("delete_"))
     update_trap = next(row for row in null_rows if row.name.startswith("update_"))
     assert delete_trap.kind == "content", "DELETE NULL trap is the PR-2 content hole"
-    assert update_trap.kind == "split", "UPDATE NULL trap stays refused (UPDATE is out of scope)"
+    assert update_trap.kind == "split", "UPDATE NOT IN NULL trap stays refused (not this PR's hole)"
 
     # Every split row pins the guard's OWN needle, never a generic failure.
     for row in splits:

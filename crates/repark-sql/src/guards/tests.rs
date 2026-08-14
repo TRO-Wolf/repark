@@ -602,6 +602,9 @@ fn dml_subquery_valve_fires_on_every_spelling_and_no_other() {
         "DELETE FROM ice.sales.tgt t WHERE EXISTS (SELECT 1 FROM ice.sales.keys k WHERE k.id = t.id)",
         "DELETE FROM ice.sales.tgt WHERE NOT EXISTS \
          (SELECT 1 FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+        "DELETE FROM ice.sales.tgt WHERE id IN \
+         (SELECT k.id FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+        "UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
     ] {
         refuse_dml_subquery_predicate(&parsed(sql))
             .unwrap_or_else(|err| panic!("the valve must NOT fire on {sql:?}: {err}"));
@@ -622,7 +625,7 @@ fn dml_subquery_refusal_names_its_verb_and_target() {
     );
     assert!(delete.contains("delete EVERY row"), "{delete}");
 
-    let sql = "UPDATE ice.sales.t SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.k)";
+    let sql = "UPDATE ice.sales.t SET name = 'z' WHERE id = (SELECT max(id) FROM ice.sales.k)";
     let update = refuse_dml_subquery_predicate(&parsed(sql))
         .unwrap_err()
         .to_string();
@@ -649,7 +652,7 @@ fn dml_subquery_refusal_renders_a_usable_target_for_every_spelling() {
         ),
         (
             "UPDATE \"ice\".\"sales\".\"t\" SET name = 'z' \
-             WHERE id IN (SELECT id FROM ice.sales.k)",
+             WHERE id = (SELECT max(id) FROM ice.sales.k)",
             "\"ice\".\"sales\".\"t\"",
         ),
         // FROM-less DELETE — the Spark spelling the Spark door's own router parse rejects.
@@ -789,14 +792,13 @@ async fn dml_subquery_valve_refuses_end_to_end_and_writes_nothing() {
         .await;
 
     for sql in [
-        "DELETE FROM ice.sales.sqtgt WHERE id IN \
-         (SELECT k.id FROM ice.sales.sqkeys k WHERE k.id = ice.sales.sqtgt.id)",
-        "UPDATE ice.sales.sqtgt SET id = 9 WHERE id IN (SELECT id FROM ice.sales.sqkeys)",
-        // The FROM-less residual spelling (IN / NOT IN / [NOT] EXISTS now execute).
+        "UPDATE ice.sales.sqtgt SET id = 9 WHERE id NOT IN (SELECT id FROM ice.sales.sqkeys)",
+        // The FROM-less residual spelling (IN / NOT IN / [NOT] EXISTS / correlated IN execute).
         "DELETE ice.sales.sqtgt WHERE id = (SELECT max(id) FROM ice.sales.sqkeys)",
-        // Nested + mixed AND/OR stay refused.
+        // Nested + mixed AND/OR + ANY/ALL stay refused (permanent v1 valve).
         "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.sqkeys) x)",
         "DELETE FROM ice.sales.sqtgt WHERE id IN (SELECT max(id) FROM ice.sales.sqkeys)",
+        "DELETE FROM ice.sales.sqtgt WHERE id = ANY (SELECT id FROM ice.sales.sqkeys)",
     ] {
         let refusal = door.err(sql).await;
         assert!(
@@ -997,6 +999,35 @@ async fn dml_subquery_exists_delete_executes_uncorrelated_and_correlated() {
         .ok("DELETE ice.sales.sqtgt WHERE EXISTS (SELECT 1 FROM ice.sales.sqkeys)")
         .await;
     assert_eq!(fromless.target_ids().await, Vec::<i64>::new());
+}
+
+/// PR-4 product hole: correlated `DELETE … IN` and identity `UPDATE … IN`.
+#[tokio::test]
+async fn dml_subquery_correlated_in_and_update_in_execute() {
+    let correlated = AnsiDoor::new().await;
+    correlated
+        .ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    correlated
+        .ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
+        .await;
+    correlated
+        .ok("DELETE FROM ice.sales.sqtgt WHERE id IN \
+             (SELECT k.id FROM ice.sales.sqkeys k WHERE k.id = ice.sales.sqtgt.id)")
+        .await;
+    assert_eq!(correlated.target_ids().await, vec![1, 3]);
+
+    let update = AnsiDoor::new().await;
+    update
+        .ok("CREATE TABLE ice.sales.sqtgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3")
+        .await;
+    update
+        .ok("CREATE TABLE ice.sales.sqkeys AS SELECT 2 AS id")
+        .await;
+    update
+        .ok("UPDATE ice.sales.sqtgt SET id = 9 WHERE id IN (SELECT id FROM ice.sales.sqkeys)")
+        .await;
+    assert_eq!(update.target_ids().await, vec![1, 3, 9]);
 }
 
 /// Guard ORDER on this door (F-B): a table that trips BOTH data-loss valves reports **G3-E8**,
