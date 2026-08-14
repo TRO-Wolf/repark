@@ -37,6 +37,29 @@ to check:
 **>50** ahead of the fork → schedule a fork-side upstream merge in the next planning pass.
 **Hard stop:** the pin going unreachable — investigate before any other fork action.
 
+## Pin history
+
+The live pin is the five identical `rev` lines in the root [Cargo.toml](../Cargo.toml).
+This table is append-only: one row per dedicated pin-bump PR (rule 1). Started 2026-08-14.
+
+| Date | Old pin | New pin | Notes |
+|---|---|---|---|
+| 2026-08-14 | `b009ac158f7584a956fa9292c0e9675a411ecf0d` | `1dae9b668781007c43c27ac92583c99c1b0d4f2a` | FW-5 via `make bump-fork-pin`. FW-0 verdict **REPIN-SAFE**. `#186` is not a rider. |
+
+Riders on the 2026-08-14 row (every main-side commit listed in `FW0-RECON.md`):
+
+1. `TRO-Wolf/iceberg-rust#182 Feat/slate 2026 07 31 combined`
+2. `TRO-Wolf/iceberg-rust#183 Feat/fk mor perf campaign`
+3. `TRO-Wolf/iceberg-rust#184 Fix/qb posdelete bounds and partition stamp`
+4. `TRO-Wolf/iceberg-rust#185 docs(task): DF 52→54 churn map (V0 recon)`
+5. `TRO-Wolf/iceberg-rust#187 Chore/df54 family bump recut`
+6. `TRO-Wolf/iceberg-rust#188 docs(ledger): #187 catch-up — queue reconciliation + 3 lessons`
+7. `TRO-Wolf/iceberg-rust#189 docs(datafusion): H7-S2 review round 2 — peak-memory doc clause + ledger corrections`
+8. `TRO-Wolf/iceberg-rust#190 U3 / hazard-1: Java MIDPOINT row-group selection over ranged splits`
+9. `TRO-Wolf/iceberg-rust#191 2026-08 audit hardening — decimal parity, bounded recursion, typed metadata failures, namespaces, cache bytes, secret redaction`
+
+Equivalence (FW-0, copy-true): pin `b009ac15` (18-commit DF54 side branch) is content-equivalent on `1dae9b66` via `#182` (scan/`plan_tasks`/`with_file_prune_only`) + `#187` (DF54 family + `PageIndexPolicy` + nested-insert re-pin); six `docs(task)` tip-stamps are SHA-unique and not product content.
+
 ## Debug
 
 First checks: dispatch `fork-sync-drift` manually and read the run summary; locally,
