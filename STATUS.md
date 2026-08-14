@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-13._
+_Last updated: 2026-08-14._
 
 ## Release state
 
@@ -113,6 +113,16 @@ What happens next, in order:
    TY-3 still DECLARED (U3 revisit rides with V-2), G5b-R4, G8, G10 follow-on,
    F-Y10-1. Completeness table:
    [task/v5-w-landing-ledger.md](task/v5-w-landing-ledger.md).
+   **2026-08-14 — V wave landed ×5; S wave in flight (night 2 of the 48-hour push).**
+   V-wave PRs **#87–#91** are on `main` (this increment's base `d9a7391` / `#91` tip;
+   `#86` also on `main`). Closed as code: W-wave §6 landing (#87), write-path
+   partition-value audit (#88), `[NOT] EXISTS` ± correlation both doors (#89; dbt-upgrade
+   gate MET, family not fixed), B-TZ-4 string-cast (#90), U3 fromLiteral + U4a
+   add/sub/mul clamp (#91; `/` EXCEPTED as U4b). Still OPEN and **not** claimed closed
+   by this increment: G3-E8 residual UPDATE IN + correlated IN/ANY/ALL, TZ-8 date-cast,
+   DEC-2 `/` (U4b), registry DEC-8 plan-refuse, DEC-6/7/9, TY-3 still DECLARED,
+   F-V4-1/2 fork-wave, G5b-R4, G8, the `repark.sql` re-home. Completeness table:
+   [task/s5-v-landing-ledger.md](task/s5-v-landing-ledger.md).
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -207,21 +217,29 @@ moving it. Nothing is described in both places.
   Two further rows carry the type half: **[TZ-6](docs/spark-sql-iceberg-parity.md)** —
   **FIXED (2026-08-13, #85).** `TIMESTAMP` vs `TIMESTAMP_NTZ` are distinct. Residual:
   `spark.sql.timestampType` is not implemented. **[TZ-4](docs/spark-sql-iceberg-parity.md)** —
-  **PROGRESS (2026-08-13, #79 + #85), not retired.** Instant-typed producers export
+  **PROGRESS (2026-08-13, #79 + #85 + #90), not retired.** Instant-typed producers export
   `timestamp[us, tz=UTC]`; Spark-door DDL `TIMESTAMP` stores Iceberg `timestamptz`;
-  zoneless localization + NTZ distinction landed in PR-2. Residues remain (B-TZ-4,
-  ANSI column-def `timestamp_ns`).
+  zoneless localization + NTZ distinction landed in PR-2; B-TZ-4 string-cast **FIXED
+  (#90)**. Residue: ANSI column-def `timestamp_ns`.
+  **[F-V4-1](docs/spark-sql-iceberg-parity.md) / [F-V4-2](docs/spark-sql-iceberg-parity.md)** —
+  **DECLARED (2026-08-14), fork-wave-routed.** Timestamptz identity meta projection
+  refuses; Arrow annotation is `+00:00` vs Spark `UTC`.
 - **`CAST(TIMESTAMP AS <numeric>)` returns epoch seconds** — **FIXED (2026-08-12, #64).**
   The 10⁹ nanoseconds-vs-seconds class is closed, including INT/SMALLINT un-refusal and
   floor semantics. Residual: TIMESTAMP→INT **nullability only** (registry G6-4). Semantics of
   the closed class: registry TZ-5 (FIXED note).
 - **decimal128 semantics diverge from Apache Spark across nine classes** — **BACKLOG,
-  still open except DEC-1 and DEC-4.** Registry DEC-4 / campaign DEC-5 `avg(DECIMAL)` is
-  **FIXED (2026-08-13, #76)** — facade now Spark `(p+4,s+4)`. DEC-1 (literal
-  inference) is **FIXED (2026-08-13, #84)** — Spark-door `parse_float_as_decimal=true`.
-  DEC-2/3/5–9 remain photographed, not fixed. TY-3 stays DECLARED (U2 landed; residual
-  `(21,1)` nullable vs Spark `(11,1)` non-null — U3 revisit rides with V-2). Semantics
-  + pins: registry §7 DEC-1 … DEC-9 (DEC-1 and DEC-4 are dated FIXED notes).
+  still open except DEC-1, DEC-3, DEC-4, and DEC-5 width.** Registry DEC-4 / campaign
+  DEC-5 `avg(DECIMAL)` is **FIXED (2026-08-13, #76)** — facade now Spark `(p+4,s+4)`.
+  DEC-1 (literal inference) is **FIXED (2026-08-13, #84)** — Spark-door
+  `parse_float_as_decimal=true`. DEC-3 (38-digit add/sub/mul clamp) is **FIXED
+  (2026-08-13, #91 / U4a)**; `/` is **EXCEPTED** as U4b (DEC-2 stays BACKLOG).
+  Campaign DEC-8 / U3 integer-literal min-precision closed DEC-5 **width** (#91);
+  DEC-5 **nullability** stays BACKLOG (DEC-9). Registry DEC-8 (`(38,20)*(38,20)`
+  plan-refuse) stays BACKLOG (ExprPlanner). DEC-2/6/7/9 remain photographed, not
+  fixed. TY-3 stays DECLARED (U3 landed; residual is UNION `forType(INT)` —
+  `(21,1)` nullable vs Spark `(11,1)` non-null). Semantics + pins: registry §7
+  DEC-1 … DEC-9 (DEC-1, DEC-3, DEC-4 are dated FIXED notes).
 - **Negative temporal-RANGE `count(*)` = -1 in release wheels** — **FIXED on the Spark
   door / facade `.sql()` (2026-08-12, Y-1 / #72).** Kind-or-magnitude invert is Spark's
   empty frame (`count(*)` 0, `sum` NULL) or a loud refuse; wrap is gone there.
@@ -229,14 +247,14 @@ moving it. Nothing is described in both places.
   120 vs 90; DF 54.1 range-search). ANSI-door wrap is a named residual (no pin).
   Semantics: registry G5b-R3 / R1 / R5 FIXED notes +
   [G5b-R4](docs/spark-sql-iceberg-parity.md).
-- **DELETE/UPDATE subquery predicates** — **PARTIALLY FIXED (2026-08-13, #78 + #83).**
-  Uncorrelated `DELETE … WHERE col IN (SELECT col FROM …)` and
-  `DELETE … WHERE col NOT IN (SELECT col FROM …)` (including the NULL 3VL trap)
-  execute on both doors and match Spark. Residual spellings stay refused (UPDATE IN /
-  NOT IN, EXISTS ± correlation, scalars, nested, mixed AND/OR, …). The family is
-  **not** closed. G3-E8-NULL DELETE half now matches Spark; UPDATE half stays refused.
-  The dbt gate (IN + NOT IN + EXISTS) is **not** met. Semantics + pins: registry §7
-  rows G3-E8 / G3-E8-NULL.
+- **DELETE/UPDATE subquery predicates** — **PARTIALLY FIXED (2026-08-13, #78 + #83 + #89).**
+  Uncorrelated `DELETE … WHERE col IN (SELECT col FROM …)`,
+  `DELETE … WHERE col NOT IN (SELECT col FROM …)` (including the NULL 3VL trap), and
+  `DELETE … WHERE [NOT] EXISTS (SELECT …)` ± correlation execute on both doors and
+  match Spark. IN + NOT IN + `[NOT] EXISTS` ± correlation all execute both doors —
+  the dbt-upgrade gate is MET. The family is **not** closed: UPDATE IN + correlated
+  IN / ANY / ALL stay valved. G3-E8-NULL DELETE half matches Spark; UPDATE half stays
+  refused. Semantics + pins: registry §7 rows G3-E8 / G3-E8-NULL.
 - **`repark.sql` re-home** — **blocks the first tagged release** (not a correctness defect).
   See [docs/release.md](docs/release.md) "Hard blockers" and Deferred capabilities.
 
