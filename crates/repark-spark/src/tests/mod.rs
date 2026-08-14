@@ -15,6 +15,7 @@ mod describe_show;
 mod dml;
 mod float_agg;
 mod insert_overwrite;
+mod join_null_keys;
 mod local_fs_ddl;
 mod merge;
 mod metadata_tables;

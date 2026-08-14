@@ -114,6 +114,24 @@ belongs out here is what must be observed from outside the crate.
   duplicated). Ledger: `../../../task/y10-ansi-door-ledger.md`. Cargo wires this file as its
   own integration-test binary — this crate has no `tests/mod.rs`.
 
+- `ansi_door_join_null_keys.rs` — **R-3 / G8 (2026-08-14):** Native-profile NULL-key join
+  pin (INNER / LEFT / LEFT SEMI / LEFT ANTI). G11: standard-SQL 3VL (`NULL = NULL` is
+  unknown). Spark 4.1.2 agrees (G4 corpus); documented, not a parity claim. Matrix cite:
+  `ansi_door_null_keys_never_match_inner_left_semi_anti`. Ledger:
+  `../../../task/r3-g8-absences-ledger.md`.
+
+- `ansi_door_window_frames.rs` — **R-3 / G8 (2026-08-14):** Native-profile ROWS/RANGE
+  frame-value pins. Numeric frames document agreement with G5; unit-less `RANGE 1
+  PRECEDING` over DATE is DF-native **months** (Spark reads **days**). Matrix cite:
+  `ansi_door_rows_and_range_frame_values`. Ledger:
+  `../../../task/r3-g8-absences-ledger.md`.
+
+- `ansi_door_float_agg.rs` — **R-3 / G8 (2026-08-14):** Native-profile G7 twins —
+  `f64::to_bits` `sum`/`avg` at `target_partitions` 1/2/8 over the catastrophic-cancellation
+  fixture, plus stability and the p=8 spread disclosure. Matrix cite:
+  `ansi_door_sum_f64_bits_at_target_partitions_1`. Ledger:
+  `../../../task/r3-g8-absences-ledger.md`.
+
 ## Pointers
 
 - Up: [../map.md](../map.md). Spike record: `../../../docs/history/port-v2/p2f-ansi-m1-ledger.md`;
@@ -133,6 +151,9 @@ belongs out here is what must be observed from outside the crate.
 | `cross_door_identifier_case_folding_*` RED because a quoted wrong-case identifier now RESOLVES | repark has CONVERGED on Apache Spark. Retire `docs/spark-sql-iceberg-parity.md` §3 row ID-1 in the same change (a new dated decision supersedes D3) — never relax the assertion |
 | a G11 `cross_door_integer_division_*` / `cross_door_order_by_*` / `cross_door_*_div_by_zero_*` row RED | an INTENDED door-vs-door split moved. Re-read `task/y10-ansi-door-ledger.md` §2 — do not silently retarget the ANSI half at Spark |
 | `ansi_door_cast_overflow_int_to_tinyint_raises` RED because the CAST wraps or nulls | CAST overflow stopped raising. That is a correctness regression on the ANSI door; do not absorb it into F-Y10-1 (that finding is *arithmetic* wrap, not CAST) |
+| `ansi_door_null_keys_never_match_inner_left_semi_anti` RED | 3VL on JOIN keys moved. Re-read `task/r3-g8-absences-ledger.md` — do not retarget the ANSI half at Spark |
+| `ansi_door_rows_and_range_frame_values` RED | a ROWS/RANGE frame value moved. Unit-less DATE RANGE `[10,30,60]` is DF-native months; do not "fix" it to Spark's days |
+| `ansi_door_sum_f64_bits_at_target_partitions_*` RED | Native-door float-agg bits drifted. Same fixture as G7; do not fudge a bit pattern |
 | `extensions_are_session_scoped_not_dialect_scoped` RED | Extension scoping changed. Every `TwoSession` matrix row in BOTH doors needs re-reading before anything else |
 | `ansi_door_and_spark_door_agree_under_a_non_utc_session` RED on ONE door | The session timezone stopped being session-scoped (it rides `ConfigOptions`, which every door on the session shares). Check `repark_functions::session_time_zone` and `SparkExtension::configure` before touching the row |
 | `a_native_session_without_the_spark_extension_reads_the_stored_zone` RED | A zone-aware extractor leaked into the extension-less profile — check what registers UDFs on a bare session |
@@ -140,5 +161,6 @@ belongs out here is what must be observed from outside the crate.
 
 First checks: `cargo test -p repark-sql --test parser_productions`,
 `cargo test -p repark-sql --test session_wiring`, `--test introspection`, `--test ta_toll`,
-`--test cross_door`, `--test ansi_door_values`.
+`--test cross_door`, `--test ansi_door_values`, `--test ansi_door_join_null_keys`,
+`--test ansi_door_window_frames`, `--test ansi_door_float_agg`.
 Escalate to: [../map.md#debug](../map.md).

@@ -15,9 +15,9 @@
 //!
 //! What remains `DeliberatelyAbsent` after M2 is absent **by ruling, not by sequencing** — four
 //! statement-surface rows, each a standing design decision with its callable-op equivalent and
-//! its trigger named (design §6 R5). G8 added three value-semantics pin-absences (window
-//! frames, JOIN NULL keys, float determinism): the door implements those via DataFusion, but
-//! this freeze tree has no Native-profile pin to cite. There are no `M2`-deferral rows left.
+//! its trigger named (design §6 R5). The three G8 value-semantics pin-absences (window
+//! frames, JOIN NULL keys, float determinism) flipped to Tested at R-3. There are no
+//! `M2`-deferral rows left.
 //!
 //! The whole module is `#[cfg(test)]` — audit evidence, not product code.
 //!
@@ -363,32 +363,18 @@ const ROWS: &[(SurfaceId, Row)] = &[
     ),
     (
         surfaces::SEMANTICS_WINDOW_FRAMES,
-        absent(
-            "No ANSI-door Native-profile ROWS/RANGE frame-value pin exists on this freeze \
-             tree. The G5 / G5b temporal-`RANGE` rust twins live on the Spark door \
-             (`tests::window_temporal_range::*`); the Q11 TA toll is `TA_FUNCTIONS`, not \
-             frame bounds. Trigger: an ANSI-door Native-profile frame-value pin.",
-            "docs/design/v2-engine-hardening.md H-2 G5 / G8 / G11",
-        ),
+        t("ansi_door_rows_and_range_frame_values", Native),
     ),
     (
         surfaces::SEMANTICS_JOIN_NULL_KEYS,
-        absent(
-            "No Rust ANSI-door binary pins JOIN values when a key is NULL. The G4 corpus \
-             (`python/repark/tests/test_join_parity.py`) is the facade/PyO3 path and cannot \
-             reach this door (bindings have no `repark-sql` edge). Trigger: an ANSI-door \
-             Native-profile NULL-key join value pin.",
-            "docs/design/v2-engine-hardening.md H-2 G4 / G8 / G11",
+        t(
+            "ansi_door_null_keys_never_match_inner_left_semi_anti",
+            Native,
         ),
     ),
     (
         surfaces::SEMANTICS_FLOAT_DETERMINISM,
-        absent(
-            "No ANSI-door `f64::to_bits` pin varies `target_partitions` over a \
-             catastrophic-cancellation fixture. The G7 rust twins live on the Spark door \
-             (`tests::float_agg::*`). Trigger: an ANSI-door Native-profile float-agg pin.",
-            "docs/design/v2-engine-hardening.md H-2 G7 / G8",
-        ),
+        t("ansi_door_sum_f64_bits_at_target_partitions_1", Native),
     ),
 ];
 
@@ -460,12 +446,11 @@ fn two_session_rows_name_surfaces_both_doors_have() {
 }
 
 /// M2 closed the statement door: four absences BY RULING (Q3 partition-spec evolution, Q9
-/// `INSERT OVERWRITE`, the permanent `TRUNCATE` refuse, Q7 maintenance-as-callable-ops). G8
-/// added three pin-absences on the value-semantics family (window frames, JOIN NULL keys,
-/// float determinism) — those are unpinned implemented surfaces, not product refusals. The
-/// risk this pins is scope creep in either direction: a surface quietly shipped without its
-/// design ruling being applied, or a shipped surface quietly downgraded to an absence row
-/// to make a gate green.
+/// `INSERT OVERWRITE`, the permanent `TRUNCATE` refuse, Q7 maintenance-as-callable-ops).
+/// The three G8 value-semantics pin-absences flipped to Tested at R-3. The risk this pins
+/// is scope creep in either direction: a surface quietly shipped without its design ruling
+/// being applied, or a shipped surface quietly downgraded to an absence row to make a
+/// gate green.
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
 #[test]
 fn m2_closes_the_ansi_door() {
@@ -481,16 +466,13 @@ fn m2_closes_the_ansi_door() {
             surfaces::INSERT_OVERWRITE,
             surfaces::TRUNCATE,
             surfaces::MAINTENANCE_CALL,
-            surfaces::SEMANTICS_WINDOW_FRAMES,
-            surfaces::SEMANTICS_JOIN_NULL_KEYS,
-            surfaces::SEMANTICS_FLOAT_DETERMINISM,
         ],
         "the ANSI door's deliberate absences changed — update this pin AND \
-         task/s2-g8-ledger.md"
+         task/r3-g8-absences-ledger.md"
     );
     assert_eq!(
         ROWS.len() - absent_ids.len(),
-        43,
-        "shipped-surface count (PR-5 shipped 29; PR-6 added 10; G8 added 4 Tested)"
+        46,
+        "shipped-surface count (PR-5 shipped 29; PR-6 added 10; G8 added 4; R-3 added 3)"
     );
 }

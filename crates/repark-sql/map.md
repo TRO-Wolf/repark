@@ -20,8 +20,9 @@ the error-path wrong-door sniff, the `CREATE TABLE` family (CTAS + column-def) w
 `WITH (…)` vocabulary, `extra_properties`, partitioning and Q15 loud-refuse routing,
 `CREATE`/`DROP SCHEMA` and `DROP TABLE`. M2 added ALTER (+ `SET PROPERTIES`, `RENAME TO`), the
 MERGE lowering, `FOR … AS OF` time travel, the ALTER-scoped branch/tag DDL, the completed refuse
-set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now reads 43 tested /
-7 deliberately absent (four standing design rulings + three G8 value-semantics pin-absences).
+set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now reads 46 tested /
+4 deliberately absent (four standing design rulings; the three G8 value-semantics
+pin-absences flipped to Tested at R-3).
 
 ## Contents
 
@@ -38,7 +39,9 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
 - [src/map.md](src/map.md) — module-by-module navigation.
 - [tests/map.md](tests/map.md) — integration tests: the R1 parser-production pins, the
   two-session `cross_door.rs` rows (incl. G11 intended divergences), Q8 `introspection.rs`,
-  the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`).
+  the Q11 `ta_toll.rs`, the G11 ANSI-door value pins (`ansi_door_values.rs`), the R-3 / G8
+  Native-profile pins (`ansi_door_join_null_keys.rs`, `ansi_door_window_frames.rs`,
+  `ansi_door_float_agg.rs`).
 
 ## I want to...
 
@@ -74,11 +77,12 @@ set, Q8 introspection and the two-session cross-door rows. `src/matrix.rs` now r
   (`partitioning.rs`); a guard (`guards.rs`); a wrong-door steer (`sniff.rs`).
 - **Test strategy:** `cargo test -p repark-sql` — R1 parser-production pins, the two-session
   `cross_door.rs` rows (incl. G11 intended divergences), Q8 introspection, the Q11 ta-toll,
-  G11 ANSI-door value pins (`tests/ansi_door_values.rs`).
-- **Known limitations:** `matrix.rs` reads 43 tested / 7 deliberately absent; the four
-  statement-surface absences are standing design rulings, and the three `SEMANTICS_*`
-  absences are G8 pin-absences (the door implements them via DataFusion; no Native-profile
-  pin exists on this freeze tree).
+  G11 ANSI-door value pins (`tests/ansi_door_values.rs`), R-3 / G8 Native-profile pins
+  (`tests/ansi_door_join_null_keys.rs`, `tests/ansi_door_window_frames.rs`,
+  `tests/ansi_door_float_agg.rs`).
+- **Known limitations:** `matrix.rs` reads 46 tested / 4 deliberately absent; the four
+  statement-surface absences are standing design rulings. The three G8 `SEMANTICS_*`
+  pin-absences (window frames, JOIN NULL keys, float determinism) are Tested as of R-3.
 
 ## Pointers
 
