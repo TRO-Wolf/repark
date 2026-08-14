@@ -27,7 +27,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
-version = "0.0.0"
+version = "0.1.0"
 license = "Apache-2.0"
 rust-version = "1.96"
 repository = "https://github.com/TRO-Wolf/repark"
@@ -113,20 +113,21 @@ iceberg-catalog-s3tables = "0.9.1"
 # S3 Tables catalogs use internally; consumed directly (with `opendal-s3`) for scheme-based
 # FileIO selection.
 iceberg-storage-opendal = "0.9.1"
-# Internal crates. Each entry carries `version` + `default-features = false`.
+# Internal crates. Path-only + `default-features = false`.
 # `default-features = false` is the one-way door: retrofitting it after internal feature flags
 # proliferate is a workspace-wide breaking change (rust-lang/cargo#11329), so it lands now
-# while the internal feature surface is empty. The `version` matches
-# `[workspace.package] version` above and buys forward-compat only: the workspace is
-# `publish = false`, so it is not a publishability claim.
-repark-common = { path = "crates/repark-common", version = "0.0.0", default-features = false }
-repark-iceberg = { path = "crates/repark-iceberg", version = "0.0.0", default-features = false }
-repark-core = { path = "crates/repark-core", version = "0.0.0", default-features = false }
-repark-functions = { path = "crates/repark-functions", version = "0.0.0", default-features = false }
-repark-ta = { path = "crates/repark-ta", version = "0.0.0", default-features = false }
-repark-spark = { path = "crates/repark-spark", version = "0.0.0", default-features = false }
-repark-sql = { path = "crates/repark-sql", version = "0.0.0", default-features = false }
-repark-ml = { path = "crates/repark-ml", version = "0.0.0", default-features = false }
+# while the internal feature surface is empty. No `version` field: `[workspace.package] version`
+# is the single release SSOT and a literal requirement here would have to chase every bump
+# (a stale one fails resolution). The workspace is `publish = false` and crates.io is deferred
+# (docs/release.md); version requirements return only when crates get published.
+repark-common = { path = "crates/repark-common", default-features = false }
+repark-iceberg = { path = "crates/repark-iceberg", default-features = false }
+repark-core = { path = "crates/repark-core", default-features = false }
+repark-functions = { path = "crates/repark-functions", default-features = false }
+repark-ta = { path = "crates/repark-ta", default-features = false }
+repark-spark = { path = "crates/repark-spark", default-features = false }
+repark-sql = { path = "crates/repark-sql", default-features = false }
+repark-ml = { path = "crates/repark-ml", default-features = false }
 
 # -------------------------------------------------------------------------------------------
 # The owned iceberg-rust fork: the whole iceberg* family is sourced from the owned fork, whose

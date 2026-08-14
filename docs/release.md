@@ -32,19 +32,19 @@ Maintainer setup (registry-side, one-time, done when `release.yml` lands):
 The publishing job in `release.yml` (when it exists) needs `permissions: id-token: write` on the
 publish job only, and uses `pypa/gh-action-pypi-publish` (SHA-pinned, like every action here).
 
-## crates.io — Trusted Publishing
+## crates.io — Trusted Publishing (DEFERRED — structurally blocked)
 
-crates.io supports the equivalent [Trusted
-Publishing](https://crates.io/docs/trusted-publishing) flow for GitHub Actions:
+**Discovered 2026-08-14 at release-PR drafting:** the workspace sources the whole `iceberg*`
+family from the owned fork via `[patch.crates-io]` (rev-pinned). Cargo does not publish
+patches: a crate uploaded to crates.io would resolve its `iceberg 0.9.1` dependency against
+the REGISTRY release, which lacks the fork's write/commit surface — the published crates
+would not compile the engine that repark actually is. PyPI is unaffected (the cdylib links
+everything statically).
 
-1. As the crate owner, open each `repark-*` crate on crates.io → **Settings** → **Trusted
-   Publishing** → **Add**.
-2. Configure: repository owner `TRO-Wolf`, repository `repark`, workflow file `release.yml`,
-   and (recommended) the `release` environment.
-3. First-time publishes of a new crate name still require a classic token once (crates.io
-   trusted publishing cannot create a crate that does not exist); do that manually from a
-   maintainer machine with a scoped, short-expiry token, then configure the trusted publisher
-   and revoke the token.
+Unblock path (a later, deliberate decision — not release-blocking): publish the fork's
+crates under owned names (e.g. `repark-iceberg-core`) and depend on those directly, or
+upstream the fork surface. Until then, `release.yml` publishes the wheel only. The original
+trusted-publishing steps below stand for whenever the unblock lands.
 
 ## Bootstrap tokens — revoke
 
@@ -54,14 +54,14 @@ No registry token is ever stored as a GitHub Actions secret.
 
 ## Hard blockers (the first tag FAILS while any of these holds)
 
-- **`repark.sql` is still a module.** The phase-3 design
-  ([design/python-facade.md](design/python-facade.md) Q1) ships the ported pyspark-alias
-  *package* at `repark.sql` and defers the re-home (`repark.spark` facade; `repark.sql()` the
-  ANSI-door *function*) to its own post-milestone-one design pass. That deferral is legal only
-  pre-release — a tag with the alias package in place would make it an API-forever promise.
-  The release PR's checklist verifies `python -c "import repark.sql"` fails (or imports a
-  callable's owner, not the alias package) before tagging; while it succeeds, there is no tag.
-  Added 2026-08-08 with the phase-3 arming PR; the settled rulings live in the design doc.
+- **RESOLVED 2026-08-14 (#95):** `repark.sql` is no longer a module. The pyspark-alias package
+  re-homed to `repark.spark` (with `repark.spark.sql` keeping same-object identity for the
+  mechanical `pyspark` → `repark.spark` swap), and `repark.sql()` is the top-level ANSI-door
+  callable. `python -c "import repark.sql"` fails; `release.yml` re-verifies this on every
+  tag build (the import smoke fails the release if the alias package ever returns).
+
+No hard blocker remains. The first tag is an owner action: registry-side trusted-publisher
+setup below, then `git tag v<version> && git push origin v<version>`.
 
 ## Open items (decide before the first tagged release)
 
