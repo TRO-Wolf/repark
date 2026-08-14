@@ -61,10 +61,13 @@ belongs out here is what must be observed from outside the crate.
   `cross_door_tvl_case_when_null_predicate` — portable SQL, Boolean/Int32 type + nullability +
   value equal across doors; corpus rows `and_true_null_is_null` / `case_when_null_predicate`;
   no Spark-only `<=>`), and — added 2026-08-11 —
-  `cross_door_g3e8_refusals_render_identically` (ROW 9, restated 2026-08-13 over still-refused
-  correlated IN / UPDATE IN / nested / scalar — IN / NOT IN / `[NOT] EXISTS` now execute) plus
-  `cross_door_g3e8_not_in_delete_executes_identically` and
-  `cross_door_g3e8_exists_delete_executes_identically` (executed columns), which compares a
+  `cross_door_g3e8_refusals_render_identically` (ROW 9, restated 2026-08-14 as the permanent
+  v1 valve: mixed AND/OR, nested, scalar, ANY/ALL, UPDATE NOT IN; IN / NOT IN / EXISTS /
+  correlated IN / UPDATE IN execute) plus executed columns
+  `cross_door_g3e8_not_in_delete_executes_identically`,
+  `cross_door_g3e8_exists_delete_executes_identically`,
+  `cross_door_g3e8_correlated_in_delete_executes_identically`,
+  `cross_door_g3e8_update_in_executes_identically`, which compares a
   **rendered refusal string** rather than a result: the G3-E8 valve is implemented twice (no
   door→door product edge), and this is the only pin that can see the two copies drift, including
   the rendered TARGET that the per-door message pins cannot. **G11 (2026-08-12):** six **INTENDED** door-vs-door value

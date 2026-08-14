@@ -278,7 +278,7 @@ fn g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target() {
             "DELETE",
         ),
         (
-            "UPDATE ice.sales.t SET name = 'z' WHERE id IN (SELECT id FROM k)",
+            "UPDATE ice.sales.t SET name = 'z' WHERE id = (SELECT max(id) FROM k)",
             "ice.sales.t",
             "UPDATE",
         ),

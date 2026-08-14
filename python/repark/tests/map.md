@@ -1318,18 +1318,18 @@ NOT in that file is a defect, not a decision.
   --no-install-package repark`) + network on first Ivy resolve. Invocation in its docstring and
   `task/n2b-merge-followup-ledger.md` re-derive block.
 - `test_dml_subquery_parity.py` — the **DELETE/UPDATE subquery-predicate corpus** (defect
-  **G3-E8**). Budget 20-28: residual **split** rows (repark refuses with the
+  **G3-E8**). Budget 20-32: residual **split** rows (repark refuses with the
   G3-E8 valve's own needle `subquery predicates are silently mis-executed`; the Spark half is the
-  recorded post-DML table) covering correlated `IN` and UPDATE x `IN` / `NOT IN` with a NULL —
-  plus **content** rows (2 non-subquery controls + **`delete_in_subquery`** +
-  **`delete_not_in_subquery`** + the NULL trap + `[NOT] EXISTS` uncorrelated and correlated,
-  including empty / none / all / NULL-key / duplicate fixtures). Recorded against live Spark
-  4.1.2 2026-08-13. Every row runs create -> seed -> create key table -> seed -> DML -> read
+  recorded post-DML table) covering UPDATE `NOT IN` with a NULL — plus **content** rows
+  (2 non-subquery controls + `DELETE … IN` / `NOT IN` + NULL trap + `[NOT] EXISTS` ±
+  correlation + correlated IN + identity `UPDATE … IN` including multi-column SET, scalar
+  expression, and empty subquery). Recorded against live Spark 4.1.2 2026-08-14. Every row
+  runs create -> seed -> create key table -> seed -> DML -> read
   back on a real Iceberg table (explicit DDL + INSERT, never CTAS) and asserts on the Arrow path
   (value AND type AND nullability) through the parity comparator. Split-path convergence
   is CLASSIFIED (CONVERGED -> flip to content equality; commit-but-mismatch -> regression), and
   the classifier is proven reachable in both arms. Residual splits stay refused. See
-  `task/v1-g3e8-pr3-ledger.md`.
+  `task/r1-g3e8-pr4-ledger.md`.
 - `_record_dml_subquery_goldens.py` — the **record driver** for the G3-E8 corpus (NOT a `test_`
   module; never collected). Provisions Spark with the pinned Iceberg GAV + a local Hadoop
   warehouse catalog, imports `ROWS` + the lifecycle helper from the committed test module, and

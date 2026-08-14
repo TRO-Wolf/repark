@@ -24,11 +24,14 @@ repark-core's error map.
   `write.merge.mode`, fork ENGINE_CONTRACT §6). See [merge/map.md](merge/map.md).
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
-  MERGE COW/MoR write arms honoring `write.delete.mode` / isolation — **never**
-  `write.merge.mode`. Product hole is the valve allow-list (uncorrelated `DELETE … IN` /
-  `NOT IN (SELECT …)`, including the NULL 3VL trap, and `[NOT] EXISTS` ± correlation). Pins:
-  [predicate_dml_tests.rs](predicate_dml_tests.rs). Ledger:
-  [`../../../../task/v1-g3e8-pr3-ledger.md`](../../../../task/v1-g3e8-pr3-ledger.md).
+  MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —
+  **never** `write.merge.mode`. Product hole is the valve allow-list (uncorrelated
+  `DELETE … IN` / `NOT IN (SELECT …)`, including the NULL 3VL trap, `[NOT] EXISTS` ±
+  correlation, correlated IN, and identity `UPDATE … SET <scalar> WHERE col IN`). ANY/ALL
+  stay refused (Spark 4.1.2 parse-fails quantified comparisons). Pins:
+  [predicate_dml_tests.rs](predicate_dml_tests.rs) +
+  [predicate_dml_update_tests.rs](predicate_dml_update_tests.rs). Ledger:
+  [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/r1-g3e8-pr4-ledger.md).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
   extra / duplicate column = loud error; strict casts, overflow never NULLs) → identity-
   partition fanout write → ONE stamped `fast_append` commit (append×append commutes via the

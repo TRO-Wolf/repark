@@ -572,7 +572,9 @@ pub(crate) fn refuse_dml_subquery_predicate(statement: &Statement) -> Result<()>
         ),
         _ => return Ok(()),
     };
-    if repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)?.is_some() {
+    if repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement)?.is_some()
+        || repark_iceberg::write::predicate_dml::try_allowed_update_in(statement)?.is_some()
+    {
         return Ok(());
     }
     let Some(selection) = selection else {

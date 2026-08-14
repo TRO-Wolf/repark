@@ -56,6 +56,10 @@ fn allow_list_accepts_in_not_in_and_exists_family() {
         "DELETE FROM ice.sales.tgt WHERE NOT EXISTS (SELECT 1 FROM ice.sales.keys k \
          WHERE k.id = ice.sales.tgt.id)",
         "DELETE FROM ice.sales.tgt WHERE EXISTS (SELECT 1 FROM ice.sales.keys WHERE id = 2)",
+        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT k.id FROM ice.sales.keys k \
+         WHERE k.id = ice.sales.tgt.id)",
+        "DELETE FROM ice.sales.tgt t WHERE t.id IN (SELECT k.id FROM ice.sales.keys k \
+         WHERE k.id = t.id)",
     ] {
         assert!(
             try_allowed_delete_in(&parse_statement(sql))
@@ -76,8 +80,6 @@ fn allow_list_refuses_every_other_subquery_spelling() {
         "DELETE FROM ice.sales.tgt WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.keys) x)",
         "DELETE FROM ice.sales.tgt WHERE id = 1 OR id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt WHERE id > 1 AND id IN (SELECT id FROM ice.sales.keys)",
-        "DELETE FROM ice.sales.tgt WHERE id IN (SELECT k.id FROM ice.sales.keys k \
-         WHERE k.id = ice.sales.tgt.id)",
         "UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt USING ice.sales.keys WHERE id IN (SELECT id FROM ice.sales.keys)",
         "DELETE FROM ice.sales.tgt USING ice.sales.keys WHERE id NOT IN \
@@ -305,6 +307,7 @@ fn identity_spec_for(table: &str, selection_sql: &str) -> PredicateDmlSpec {
         target: TableIdent::new(NamespaceIdent::new("sales".to_string()), table.to_string()),
         target_alias: table.to_string(),
         selection_sql: selection_sql.to_string(),
+        assignments: None,
     }
 }
 

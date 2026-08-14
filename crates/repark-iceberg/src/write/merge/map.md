@@ -10,8 +10,10 @@ lives as this module directory (move-only; pub surface frozen).
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   `commit_overwrite` / `commit_row_delta_kind` are `pub(super)` so identity DML
   (`../predicate_dml.rs`) reuses the COW/MoR commit arms without calling
-  `execute_merge`. MERGE SQL still goes through `commit` / `commit_row_delta`
-  (serializable MERGE recipe; tests stay identity-diff).
+  `execute_merge`. Identity UPDATE reuses `RowDeltaKind::Merge` (Java
+  UPDATE/MERGE bucket). MERGE SQL still goes through
+  `commit` / `commit_row_delta` (serializable MERGE recipe; tests stay
+  identity-diff).
 - `tests.rs` — primary unit battery
 - `occ_tests.rs` — OCC / commit conflict pins
 - `streaming_tests.rs` — stream write interleaving pins

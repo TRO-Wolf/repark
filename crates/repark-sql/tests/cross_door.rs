@@ -750,9 +750,10 @@ async fn cross_door_decimal_mul_money_by_quantity_bit_exact() {
 
 /// ROW 9 — **the G3-E8 residual refusal, RENDERED**, byte for byte. Profile: **`TwoSession`**.
 ///
-/// Restated 2026-08-13 over still-refused spellings (correlated IN / UPDATE IN / nested / scalar /
-/// mixed AND/OR) because uncorrelated `DELETE … IN` / `NOT IN` and `[NOT] EXISTS` ± correlation
-/// now execute on the identity path.
+/// Restated 2026-08-14 into its **permanent v1 valve** form: mixed AND/OR, nested, CTE (loud
+/// today), scalar subquery `WHERE`, SET-subquery (D-4 stays ungated when WHERE is clean),
+/// UPDATE NOT IN / EXISTS, and every ANY/ALL spelling. Uncorrelated `DELETE … IN` / `NOT IN`,
+/// `[NOT] EXISTS` ± correlation, correlated IN, and identity `UPDATE … IN` now execute.
 ///
 /// The valve is deliberately implemented TWICE (this crate may not take a product edge to
 /// `repark-spark`), and the ledger's D-1 promises the two copies stay identical. Until this row
@@ -788,12 +789,12 @@ async fn cross_door_g3e8_refusals_render_identically() {
     }
 
     for sql in [
-        // ROW 9 restated over residual (still-refused) spellings — IN / NOT IN / EXISTS execute.
-        "DELETE FROM ice.sales.orders WHERE id IN (SELECT k.id FROM ice.sales.keys k \
-         WHERE k.id = ice.sales.orders.id)",
-        "UPDATE ice.sales.orders SET label = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)",
+        // ROW 9 — permanent v1 valve (IN / NOT IN / EXISTS / correlated IN / UPDATE IN execute).
         "DELETE FROM ice.sales.orders WHERE id IN (SELECT id FROM (SELECT id FROM ice.sales.keys) x)",
         "DELETE FROM ice.sales.orders WHERE id = (SELECT max(id) FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.orders WHERE id > 1 AND id IN (SELECT id FROM ice.sales.keys)",
+        "DELETE FROM ice.sales.orders WHERE id = ANY (SELECT id FROM ice.sales.keys)",
+        "UPDATE ice.sales.orders SET label = 'z' WHERE id NOT IN (SELECT id FROM ice.sales.keys)",
         // The target rendering, quoted — the half a template-only pin cannot see.
         "DELETE FROM \"ice\".\"sales\".\"orders\" WHERE id = (SELECT max(id) FROM ice.sales.keys)",
     ] {
@@ -934,6 +935,136 @@ async fn cross_door_g3e8_exists_delete_executes_identically() {
         remaining[0],
         vec![1, 3],
         "correlated EXISTS deletes the key row"
+    );
+}
+
+/// ROW 9 executed column — correlated `DELETE … IN` on both doors, same remaining row-set.
+#[tokio::test]
+async fn cross_door_g3e8_correlated_in_delete_executes_identically() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    make_namespace(&ansi, false).await;
+    make_namespace(&spark, true).await;
+
+    for door in [&ansi, &spark] {
+        door.session
+            .sql(
+                "CREATE TABLE ice.sales.tgt AS SELECT 1 AS id UNION ALL SELECT 2 UNION ALL SELECT 3",
+            )
+            .await
+            .expect("target CTAS");
+        door.session
+            .sql("CREATE TABLE ice.sales.keys AS SELECT 2 AS id")
+            .await
+            .expect("keys CTAS");
+        door.session
+            .sql(
+                "DELETE FROM ice.sales.tgt WHERE id IN \
+                 (SELECT k.id FROM ice.sales.keys k WHERE k.id = ice.sales.tgt.id)",
+            )
+            .await
+            .unwrap_or_else(|error| panic!("correlated IN DELETE must execute: {error}"));
+    }
+
+    let mut remaining = Vec::new();
+    for door in [&ansi, &spark] {
+        let frame = door
+            .session
+            .sql("SELECT id FROM ice.sales.tgt ORDER BY id")
+            .await
+            .expect("read back");
+        let batches = frame.collect().await.expect("collect");
+        let mut ids = Vec::new();
+        for batch in &batches {
+            if let Some(column) = batch.column(0).as_any().downcast_ref::<Int64Array>() {
+                for row in 0..batch.num_rows() {
+                    ids.push(column.value(row));
+                }
+            } else if let Some(column) = batch.column(0).as_any().downcast_ref::<Int32Array>() {
+                for row in 0..batch.num_rows() {
+                    ids.push(i64::from(column.value(row)));
+                }
+            } else {
+                panic!("expected Int32/Int64 id column, got {:?}", batch.schema());
+            }
+        }
+        remaining.push(ids);
+    }
+    assert_eq!(
+        remaining[0], remaining[1],
+        "both doors must keep the same ids after correlated IN"
+    );
+    assert_eq!(
+        remaining[0],
+        vec![1, 3],
+        "correlated IN deletes the key row"
+    );
+}
+
+/// ROW 9 executed column — identity `UPDATE … IN` on both doors, same remaining row-set.
+#[tokio::test]
+async fn cross_door_g3e8_update_in_executes_identically() {
+    let ansi = native_ansi_door().await;
+    let spark = spark_extended_door().await;
+    make_namespace(&ansi, false).await;
+    make_namespace(&spark, true).await;
+
+    for door in [&ansi, &spark] {
+        door.session
+            .sql(
+                "CREATE TABLE ice.sales.tgt AS SELECT 1 AS id, 'a' AS name UNION ALL \
+                 SELECT 2, 'b' UNION ALL SELECT 3, 'c'",
+            )
+            .await
+            .expect("target CTAS");
+        door.session
+            .sql("CREATE TABLE ice.sales.keys AS SELECT 2 AS id")
+            .await
+            .expect("keys CTAS");
+        door.session
+            .sql("UPDATE ice.sales.tgt SET name = 'z' WHERE id IN (SELECT id FROM ice.sales.keys)")
+            .await
+            .unwrap_or_else(|error| panic!("UPDATE IN must execute: {error}"));
+    }
+
+    let mut remaining = Vec::new();
+    for door in [&ansi, &spark] {
+        let frame = door
+            .session
+            .sql("SELECT id, name FROM ice.sales.tgt ORDER BY id")
+            .await
+            .expect("read back");
+        let batches = frame.collect().await.expect("collect");
+        let mut rows = Vec::new();
+        for batch in &batches {
+            let ids = batch.column(0).as_any().downcast_ref::<Int64Array>();
+            let ids32 = batch.column(0).as_any().downcast_ref::<Int32Array>();
+            let names = batch
+                .column(1)
+                .as_any()
+                .downcast_ref::<datafusion::arrow::array::StringArray>()
+                .expect("name Utf8");
+            for row in 0..batch.num_rows() {
+                let id = if let Some(column) = ids {
+                    column.value(row)
+                } else if let Some(column) = ids32 {
+                    i64::from(column.value(row))
+                } else {
+                    panic!("expected Int32/Int64 id, got {:?}", batch.schema());
+                };
+                rows.push((id, names.value(row).to_string()));
+            }
+        }
+        remaining.push(rows);
+    }
+    assert_eq!(
+        remaining[0], remaining[1],
+        "both doors must keep the same (id, name) after UPDATE IN"
+    );
+    assert_eq!(
+        remaining[0],
+        vec![(1, "a".into()), (2, "z".into()), (3, "c".into())],
+        "UPDATE IN rewrites only the key row"
     );
 }
 
