@@ -7,9 +7,13 @@ built engine and proved the passthrough leaked raw DataFusion semantics: ``5/2``
 every array. Each case here pins the divergence class on the exact input that was live-proven
 wrong, straight through ``spark.sql()`` — no DataFrame-API mediation.
 
-Goldens are hand-computed from Spark's documented semantics (Spark's default **non-ANSI** mode:
-divide/modulo-by-zero → NULL, invalid array index → NULL). Real pyspark goldens are still not
-recordable in this environment (Connect-only pyspark + Java 11 — tracked in ``task/todo.md``).
+Goldens are hand-computed from Spark's documented semantics. U5: the Spark door defaults
+``spark.sql.ansi.enabled=true`` (Spark 4 / Q10=A) so divide/modulo-by-zero **raises**;
+``.config(..., false)`` restores the legacy NULL wrap. Invalid array index / substring
+bounds stay NULL (those arms are not gated tonight). Real pyspark goldens for this
+passthrough file are still not the record-driver path (Connect-only note in
+``task/todo.md``); the decimal ``/0`` Spark halves live in
+``test_decimal128_parity.py``.
 
 Known divergence NOT yet pinned here (parity backlog): a runtime ``CAST`` of a non-numeric or
 out-of-range string to a numeric type — e.g. ``CAST('abc' AS INT)`` — **raises** in repark today
@@ -51,25 +55,50 @@ def test_integer_division_is_double(spark: ReparkSession) -> None:
     assert_frames_equal(result.to_arrow(), golden)
 
 
-def test_division_and_modulo_by_zero_are_null(spark: ReparkSession) -> None:
-    # Spark non-ANSI: ANY division/modulo by zero is NULL — DataFusion errors on int/0 and
-    # yields inf on float/0.0, both live-proven divergences (#16).
+def test_division_and_modulo_by_zero_raise_under_default_ansi(spark: ReparkSession) -> None:
+    # U5 default TRUE: ANY division/modulo by zero raises DIVIDE_BY_ZERO (Spark ANSI).
+    with pytest.raises(Exception, match="DIVIDE_BY_ZERO"):
+        spark.sql(
+            "SELECT 1/0 AS a, 1.0/0.0 AS b, 5 % 0 AS c, 5.0 % 0.0 AS d, "
+            "CAST(1 AS DOUBLE)/CAST(0 AS DOUBLE) AS e"
+        ).to_arrow()
+
+
+def test_division_and_modulo_by_zero_are_null_when_ansi_false() -> None:
+    # Builder `.config(..., false)` restores legacy NULL wrap (U5 real knob).
+    spark = ReparkSession.builder.config("spark.sql.ansi.enabled", "false").getOrCreate()
     table = spark.sql(
         "SELECT 1/0 AS a, 1.0/0.0 AS b, 5 % 0 AS c, 5.0 % 0.0 AS d, "
         "CAST(1 AS DOUBLE)/CAST(0 AS DOUBLE) AS e"
     ).to_arrow()
     assert [column.to_pylist() for column in table.columns] == [[None]] * 5
     assert pa.types.is_float64(table.schema.field("a").type)  # int/int is DOUBLE even for NULL
-    # U2: 1.0/0.0 and 5.0%0.0 are decimal÷0 / decimal%0 (DEC-7 still NULLs).
+    # U2: 1.0/0.0 and 5.0%0.0 are decimal÷0 / decimal%0 (Arrow type; U4b).
     assert table.schema.field("b").type == pa.decimal128(7, 5)
     assert table.schema.field("d").type == pa.decimal128(1, 1)
 
 
-def test_division_by_zero_in_a_column_divisor(spark: ReparkSession) -> None:
-    # The divisor is a column, not a literal — the guard must be runtime, not const-folding.
+def test_division_by_zero_in_a_column_divisor_raises_under_default_ansi(
+    spark: ReparkSession,
+) -> None:
+    # The divisor is a column, not a literal — the ANSI guard must be runtime.
+    with pytest.raises(Exception, match="DIVIDE_BY_ZERO"):
+        spark.sql("SELECT a / b AS d FROM (VALUES (1, 0), (9, 3)) AS t(a, b) ORDER BY a").to_arrow()
+
+
+def test_division_by_zero_in_a_column_divisor_is_null_when_ansi_false() -> None:
+    spark = ReparkSession.builder.config("spark.sql.ansi.enabled", "false").getOrCreate()
     result = spark.sql("SELECT a / b AS d FROM (VALUES (1, 0), (9, 3)) AS t(a, b) ORDER BY a")
     golden = pa.table({"d": pa.array([None, 3.0], pa.float64())})
     assert_frames_equal(result.to_arrow(), golden, order_sensitive=True)
+
+
+def test_ansi_notabool_fails_loud() -> None:
+    # Type-validation seam: configure() fail-louds with Spark's boolean needle.
+    # Exception *class* is not IllegalArgument (engine_err never emits Error::Config;
+    # session.rs builder is CLOSED) — message needle is the contract.
+    with pytest.raises(Exception, match="should be boolean, but was notabool"):
+        ReparkSession.builder.config("spark.sql.ansi.enabled", "notabool").getOrCreate()
 
 
 def test_decimal_division_stays_decimal(spark: ReparkSession) -> None:
@@ -196,12 +225,16 @@ def test_substr_null_and_multibyte(spark: ReparkSession) -> None:
 # (expression, expected value, expected Arrow type or None when the value alone is the pin)
 DIVERGENCE_CORPUS: list[tuple[str, object, pa.DataType | None]] = [
     ("5/2", 2.5, pa.float64()),
-    ("1/0", None, pa.float64()),
-    ("7 % 0", None, None),
     ("substr('hello', 0, 3)", "hel", None),
     ("substr('hello', -3)", "llo", None),
     ("element_at(array(10, 20, 30), 1)", 10, None),
     ("(array(10, 20, 30))[0]", 10, None),
+]
+
+# /0 and % 0 are knob-gated (U5). Default ANSI raises; false restores NULL.
+ZERO_DIVISOR_CORPUS: list[tuple[str, pa.DataType | None]] = [
+    ("1/0", pa.float64()),
+    ("7 % 0", None),
 ]
 
 
@@ -232,5 +265,39 @@ def test_divergence_corpus_on_the_arrow_path(
 ) -> None:
     table = entry_point(spark, expression)  # type: ignore[operator]
     assert table.column("x").to_pylist() == [expected]
+    if expected_type is not None:
+        assert table.schema.field("x").type == expected_type
+
+
+@pytest.mark.parametrize("entry_point", [_via_spark_sql, _via_f_expr], ids=["spark.sql", "F.expr"])
+@pytest.mark.parametrize(
+    ("expression", "_expected_type"),
+    ZERO_DIVISOR_CORPUS,
+    ids=[case[0] for case in ZERO_DIVISOR_CORPUS],
+)
+def test_zero_divisor_raises_on_the_arrow_path_under_default_ansi(
+    spark: ReparkSession,
+    entry_point: object,
+    expression: str,
+    _expected_type: pa.DataType | None,
+) -> None:
+    with pytest.raises(Exception, match="DIVIDE_BY_ZERO"):
+        entry_point(spark, expression)  # type: ignore[operator]
+
+
+@pytest.mark.parametrize(
+    ("expression", "expected_type"),
+    ZERO_DIVISOR_CORPUS,
+    ids=[case[0] for case in ZERO_DIVISOR_CORPUS],
+)
+def test_zero_divisor_is_null_on_spark_sql_when_ansi_false(
+    expression: str,
+    expected_type: pa.DataType | None,
+) -> None:
+    # F.expr parses standalone (default ANSI carrier TRUE) so it cannot honor a later
+    # builder false — named residue, not a silent omit. spark.sql is the knob path.
+    spark = ReparkSession.builder.config("spark.sql.ansi.enabled", "false").getOrCreate()
+    table = _via_spark_sql(spark, expression)
+    assert table.column("x").to_pylist() == [None]
     if expected_type is not None:
         assert table.schema.field("x").type == expected_type

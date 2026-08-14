@@ -5,6 +5,7 @@ use datafusion::arrow::array::{Array, Float64Array, Int32Array, Int64Array, Reco
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
+use repark_functions::ansi::{SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig};
 use repark_functions::cardinality::ReparkSqlConfig;
 use repark_functions::session_time_zone::{SessionTimeZoneConfig, session_time_zone_from_options};
 
@@ -105,6 +106,65 @@ fn configure_refuses_unparsable_conf_value() {
     assert!(
         err.contains("repark.sql.maxArrayElements"),
         "error must name the conf key: {err}"
+    );
+}
+
+/// U5: `configure` installs `spark.sql.ansi.enabled` default TRUE (Spark 4 / Q10=A).
+#[test]
+fn configure_defaults_ansi_enabled_true() {
+    let conf = HashMap::new();
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    let installed = config
+        .options()
+        .extensions
+        .get::<SparkAnsiConfig>()
+        .expect("configure must install SparkAnsiConfig");
+    assert!(
+        installed.enabled,
+        "Spark-door default: spark.sql.ansi.enabled=true"
+    );
+}
+
+/// `conf.set` / builder `.config(..., false)` restores the legacy NULL/wrap path.
+#[test]
+fn configure_honors_ansi_enabled_false() {
+    let mut conf = HashMap::new();
+    conf.insert(SPARK_SQL_ANSI_ENABLED_KEY.to_string(), "false".to_string());
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    let installed = config
+        .options()
+        .extensions
+        .get::<SparkAnsiConfig>()
+        .expect("configure must install SparkAnsiConfig");
+    assert!(!installed.enabled, "builder false must land on the carrier");
+}
+
+/// Present-but-unparsable value fail-louds with Spark's boolean needle (notabool).
+#[test]
+fn configure_refuses_ansi_notabool() {
+    let mut conf = HashMap::new();
+    conf.insert(
+        SPARK_SQL_ANSI_ENABLED_KEY.to_string(),
+        "notabool".to_string(),
+    );
+    let zone = SessionTimeZone::default();
+    let err = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains("should be boolean, but was notabool"),
+        "Spark message needle missing: {err}"
+    );
+    assert!(
+        err.contains(SPARK_SQL_ANSI_ENABLED_KEY),
+        "error must name the key: {err}"
     );
 }
 

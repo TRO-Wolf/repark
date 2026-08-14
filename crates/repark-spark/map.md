@@ -50,7 +50,8 @@ omission rider is **discharged at PR-4**: `SparkExtension.register` now composes
 - **Owns:** the Spark SQL door — the statement router (`execute` / `execute_with_read_only`),
   `SparkDialect` (adapts to `repark_core::SqlDialect`), `SparkExtension` (installs the function
   registry + analyzer rules + cardinality config + `parse_float_as_decimal=true`, and composes `repark_ta::TaExtension`), the
-  Spark-ism normalizers + the `spark_ast` passthrough.
+  Spark-ism normalizers + the `spark_ast` passthrough. **U5:** `SparkExtension::configure`
+  installs `spark.sql.ansi.enabled` (default TRUE).
 - **Does not own:** the shared Iceberg machinery (repark-iceberg); the function / analyzer
   implementations (repark-functions); TA kernels (repark-ta); the ANSI door (no door↔door edge).
 - **Public inputs:** a `SessionContext` + `CatalogRegistry` + Spark-dialect SQL text; via the seams, a

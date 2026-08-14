@@ -1206,8 +1206,8 @@ async fn cross_door_integer_division_truncates_on_ansi_is_float_on_spark() {
 
 /// G11 cross-door row 2 — integer `/ 0`.
 ///
-/// Standard SQL division by zero raises; Spark-family `/` promotes integers to float and
-/// yields NULL.
+/// Standard SQL division by zero raises. U5: the Spark door (ANSI ON default) also raises
+/// after promoting integers to float — both doors raise; messages differ.
 #[tokio::test]
 async fn cross_door_integer_div_by_zero_raises_on_ansi_null_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1220,17 +1220,17 @@ async fn cross_door_integer_div_by_zero_raises_on_ansi_null_on_spark() {
         "ANSI door must raise on integer `/ 0`, got: {ansi_error}"
     );
 
-    let spark_pin = float64_scalar(&spark.session, sql).await;
-    assert_eq!(
-        spark_pin,
-        (DataType::Float64, true, None),
-        "Spark door: integer `/ 0` is a nullable Float64 NULL"
+    let spark_error = collect_error(&spark.session, sql).await;
+    assert!(
+        spark_error.contains("DIVIDE_BY_ZERO"),
+        "Spark door (ANSI ON) must raise DIVIDE_BY_ZERO, got: {spark_error}"
     );
 }
 
 /// G11 cross-door row 3 — float `/ 0`.
 ///
-/// Stock DataFusion / IEEE-754 `/` yields `+Infinity`; the Spark door's `/` yields NULL.
+/// Stock DataFusion / IEEE-754 `/` yields `+Infinity` (ANSI door, G11 correctness-not-parity).
+/// U5: the Spark door (ANSI ON default) raises `DIVIDE_BY_ZERO` — Spark 4 ANSI, not IEEE.
 #[tokio::test]
 async fn cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1249,18 +1249,17 @@ async fn cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark() {
         "ANSI door must yield +Infinity, got {ansi_float}"
     );
 
-    let spark_pin = float64_scalar(&spark.session, sql).await;
-    assert_eq!(
-        spark_pin,
-        (DataType::Float64, true, None),
-        "Spark door: float `/ 0` is a nullable Float64 NULL"
+    let spark_error = collect_error(&spark.session, sql).await;
+    assert!(
+        spark_error.contains("DIVIDE_BY_ZERO"),
+        "Spark door (ANSI ON) must raise DIVIDE_BY_ZERO on float /0, got: {spark_error}"
     );
 }
 
 /// G11 cross-door row 4 — decimal `/ 0`.
 ///
-/// Standard SQL decimal division by zero raises; the Spark door yields NULL at the decimal
-/// result type.
+/// Standard SQL decimal division by zero raises. U5: the Spark door (ANSI ON default) also
+/// raises `DIVIDE_BY_ZERO`.
 #[tokio::test]
 async fn cross_door_decimal_div_by_zero_raises_on_ansi_null_on_spark() {
     let ansi = native_ansi_door().await;
@@ -1273,11 +1272,10 @@ async fn cross_door_decimal_div_by_zero_raises_on_ansi_null_on_spark() {
         "ANSI door must raise on decimal `/ 0`, got: {ansi_error}"
     );
 
-    let spark_pin = decimal128_scalar(&spark.session, sql).await;
-    assert_eq!(
-        spark_pin,
-        (14, 4, true, None),
-        "Spark door: decimal `/ 0` is nullable Decimal128(14,4) NULL"
+    let spark_error = collect_error(&spark.session, sql).await;
+    assert!(
+        spark_error.contains("DIVIDE_BY_ZERO"),
+        "Spark door (ANSI ON) must raise DIVIDE_BY_ZERO on decimal /0, got: {spark_error}"
     );
 }
 

@@ -72,9 +72,26 @@ def _matches_raise(exc: BaseException, expected_substring: str) -> bool:
     return expected_substring in str(exc)
 
 
+def _apply_row_session_conf(spark: Any, row: DecimalRow) -> None:
+    """Honor ``row.session_conf`` on the live Spark session (U5 both-knob-state records).
+
+    Resets ``spark.sql.ansi.enabled`` to the recorded-basis default (true) when a row
+    does not override it, so an OFF twin cannot leak into the next ON row.
+    """
+    ansi = "true"
+    for key, value in row.session_conf:
+        if key == "spark.sql.ansi.enabled":
+            ansi = value
+        else:
+            spark.conf.set(key, value)
+    spark.conf.set("spark.sql.ansi.enabled", ansi)
+
+
 def _record_row(spark: Any, row: DecimalRow) -> str | None:
     """Re-derive one differential row against live Spark. None = match; else a report."""
     from test_decimal128_parity import run_row
+
+    _apply_row_session_conf(spark, row)
 
     if row.spark_raises is not None:
         try:

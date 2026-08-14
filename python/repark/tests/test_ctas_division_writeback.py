@@ -30,7 +30,12 @@ NAMESPACE = "glue_catalog.div_ns"
 @pytest.fixture
 def spark(tmp_path: Path) -> ReparkSession:
     """A session with an in-memory Iceberg catalog + namespace (local, AWS-free)."""
-    session = ReparkSession.builder.appName("pytest-ctas-division").getOrCreate()
+    # UNION-of-/0 write-path pin needs a NULL branch (legacy). Default ANSI ON would raise.
+    session = (
+        ReparkSession.builder.appName("pytest-ctas-division")
+        .config("spark.sql.ansi.enabled", "false")
+        .getOrCreate()
+    )
     session.register_memory_catalog("glue_catalog", tmp_path)
     session.sql(f"CREATE NAMESPACE {NAMESPACE}")
     return session

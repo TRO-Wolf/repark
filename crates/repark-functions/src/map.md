@@ -7,6 +7,13 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 ## Contents
 
+- `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier
+  (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
+  `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in
+  `SparkExtension::configure`. Missing carrier also defaults TRUE. `notabool`
+  fail-louds with Spark's `should be boolean, but was` needle
+  (`DataFusionError::Configuration`; IllegalArgument class is a named residue —
+  `engine_err` never emits `Error::Config`). Ledger: `task/s1-ansi-knob-u5-ledger.md`.
 - `session_time_zone.rs` (+ `session_time_zone/`) — **H-1a split B:** the CARRIER that brings the
   resolved session timezone to the extractors. A `ConfigExtension` with a two-segment `PREFIX`
   (`repark.session`), a `set` that always refuses naming `spark.sql.session.timeZone`, and empty
