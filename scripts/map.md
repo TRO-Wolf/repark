@@ -130,6 +130,15 @@ Repository helper scripts wired into the dev workflow.
   multi-pair framework). Dual-wired: `make check-parity-live-dual-wire` (in `make ci`) AND the
   ci.yml `guards`-job step.
 
+- `check_matrix_test_liveness.sh` + `check_matrix_test_liveness.py` — the **surface-matrix
+  test-name liveness** guard (H-2 G8). Diffs every `Row::Tested { test }` in
+  `crates/repark-spark/src/matrix.rs` and `crates/repark-sql/src/matrix.rs` against
+  `cargo test --locked --workspace --lib --tests --bins -- --list`. A dead cite reds the
+  gate. Fail-closed on a parse miss, a missing matrix file, zero extracted cites, zero
+  listed names, or a non-zero cargo exit. Dual-wired: `make check-matrix-test-liveness`
+  (in `make ci` / `make preflight`) AND the ci.yml `rust-test` job step (not the guards
+  job — the check needs compiled test binaries).
+
 Not re-homed (the port is complete — each returns only with a concrete driver):
 `test_lock_gate.sh` (uv lock-gate detector self-test — a lock-gate change that needs it),
 `generate_excel_fixtures.py` (synthetic .xlsx fixtures — the deferred `repark-excel` reader; see
@@ -148,6 +157,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Raise/lower a general Rust file line ceiling | `check_rust_file_size.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Check `make parity-live` still matches `parity-live.yml` | `make check-parity-live-dual-wire` |
+| Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
 | Install the pre-commit hook | `make install-hooks` |
 | Run the Apache-suite census | `bash scripts/run_census.sh` + [../docs/port/census.md](../docs/port/census.md) |
 
@@ -190,8 +200,10 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `run_census.sh` aborts on the environment | Intended: an empty `pip freeze`, a missing gated version, or pandas ≥ 3 all fail the run at provisioning time. A run whose environment is not recorded is not a baseline (design §5 F2) |
 | A census run's markdown reports are "missing" from `task/` | They are not written there: the default `CENSUS_REPORT_DIR` is the gitignored `target/census-reports/` (declared change 3). The final line of the run echoes the directory it wrote |
 | `parity-live dual-wire: FAIL` / parse incomplete | A load-bearing flag drifted between `Makefile` `parity-live` and `.github/workflows/parity-live.yml` — change one, change the other. A parse miss is also red (fail-closed); fix the surface or the extractor in `check_parity_live_dual_wire.py` |
+| `matrix-test-liveness: FAIL` / dead cite | A `matrix.rs` `Tested` row names a test `cargo test -- --list` does not print — rename the cite with the test, or flip the row to `DeliberatelyAbsent`. A parse miss or cargo non-zero is also red (fail-closed); SSOT: `check_matrix_test_liveness.py` |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `bash scripts/check_manifest.sh`,
-`bash scripts/check_parity_live_dual_wire.sh`, `make workflows-parse`. Escalate to:
+`bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,
+`make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).

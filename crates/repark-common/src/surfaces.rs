@@ -50,8 +50,9 @@ macro_rules! surface_ids {
         $($(#[$meta])* pub const $konst: SurfaceId = SurfaceId(stringify!($konst));)+
 
         /// Every surface ID, in declaration order (grouped by family: statement forms,
-        /// table-creation options, guard rails, ergonomics + seams). **The audit's universe** —
-        /// [`audit`] fails a door whose matrix does not map exactly this set.
+        /// table-creation options, guard rails, ergonomics + seams, value semantics).
+        /// **The audit's universe** — [`audit`] fails a door whose matrix does not map
+        /// exactly this set.
         pub const ALL: &[SurfaceId] = &[$($konst),+];
     };
 }
@@ -158,6 +159,22 @@ surface_ids! {
     /// `sql_with` row does NOT discharge this — extensions are session-scoped, so a
     /// Spark-extended session has Spark expression semantics through every door.
     CROSS_DOOR_EQUIVALENCE;
+
+    // --- Value semantics (H-2 G8) ---
+    /// `ORDER BY` / window `ORDER BY` default null placement (`NULLS FIRST` vs `LAST`).
+    SEMANTICS_NULL_ORDERING;
+    /// Decimal arithmetic: result `(p,s)`, the 38-digit clamp, and bit-exact `i128` payloads.
+    SEMANTICS_DECIMAL_ARITHMETIC;
+    /// Cast / coercion value matrix (overflow, invalid input, timestamp-as-numeric).
+    SEMANTICS_CAST_MATRIX;
+    /// Session-timezone extraction (`spark.sql.session.timeZone`) vs stored-zone fallback.
+    SEMANTICS_SESSION_TIMEZONE;
+    /// Window frame bounds (`ROWS` / `RANGE`, including temporal `RANGE`).
+    SEMANTICS_WINDOW_FRAMES;
+    /// Join values when a key is NULL (NULL≠NULL on INNER; outer-join orphans).
+    SEMANTICS_JOIN_NULL_KEYS;
+    /// Float aggregation determinism across `target_partitions` (`f64::to_bits`).
+    SEMANTICS_FLOAT_DETERMINISM;
 }
 
 /// ===========================================================================================

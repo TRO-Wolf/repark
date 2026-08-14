@@ -116,6 +116,13 @@ jobs:
           shared-key: "test"
       - name: test
         run: make rust-test
+      # Surface-matrix test-name liveness (H-2 G8): every matrix.rs Tested cite must appear
+      # in `cargo test --locked --workspace --lib --tests --bins -- --list`. Dual-wired
+      # with `make check-matrix-test-liveness` / `make ci`. SSOT:
+      # scripts/check_matrix_test_liveness.py. Lives here (not the guards job) because
+      # the check needs the compiled test binaries rust-test just produced.
+      - name: matrix test-name liveness
+        run: ./scripts/check_matrix_test_liveness.sh
       - name: disk after
         if: always()
         run: df -h /

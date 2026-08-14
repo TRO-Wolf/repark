@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-manifest check-parity-live-dual-wire rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-manifest check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -145,6 +145,14 @@ check-parity-live-dual-wire: ## Fail if make parity-live and parity-live.yml dri
 	@# DUAL-WIRED: the `parity-live dual-wire guard` step in ci.yml's guards job mirrors this
 	@# target. Change one, change the other.
 	@./scripts/check_parity_live_dual_wire.sh
+
+.PHONY: check-matrix-test-liveness
+check-matrix-test-liveness: ## Fail if a matrix.rs Tested cite is missing from cargo test -- --list
+	@# SSOT: scripts/check_matrix_test_liveness.py — cargo test -- --list vs both door
+	@# matrices' Tested names. Fail-closed on a parse miss or a dead cite.
+	@# DUAL-WIRED: the `matrix test-name liveness` step in ci.yml's rust-test job mirrors
+	@# this target. Change one, change the other. In make ci / make preflight.
+	@./scripts/check_matrix_test_liveness.sh
 
 .PHONY: rust-check
 rust-check: ## cargo check

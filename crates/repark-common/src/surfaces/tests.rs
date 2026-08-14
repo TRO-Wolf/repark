@@ -51,15 +51,16 @@ fn ids_are_screaming_snake_case() {
     }
 }
 
-/// The registry's size is itself a reviewed number: 43 surfaces as of PR-5. A silent +1 means a
-/// capability entered the product vocabulary without the ledger's row counts being revisited.
+/// The registry's size is itself a reviewed number: 50 surfaces as of G8 (43 + the 7
+/// `SEMANTICS_*` value-semantics IDs). A silent +1 means a capability entered the product
+/// vocabulary without the ledger's row counts being revisited.
 /// MUTATION: add an ID without updating this count → this REDs.
 #[test]
 fn all_has_the_reviewed_surface_count() {
     assert_eq!(
         ALL.len(),
-        43,
-        "the surface count changed — update task/p2f-ansi-m1-ledger.md's row-count table too"
+        50,
+        "the surface count changed — update task/s2-g8-ledger.md's row-count table too"
     );
 }
 
@@ -77,6 +78,7 @@ fn ids_are_self_naming() {
         "TABLE_OPTION_FORMAT_VERSION"
     );
     assert_eq!(format!("{CTAS}"), "CTAS", "Display renders the bare name");
+    assert_eq!(SEMANTICS_NULL_ORDERING.name(), "SEMANTICS_NULL_ORDERING");
 }
 
 /// A complete, exact mapping passes. The baseline both door matrices ride on.

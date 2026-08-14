@@ -31,11 +31,13 @@ const fn absent(reason: &'static str, adr: &'static str) -> Row {
 /// The Spark door's disposition of every surface ID.
 ///
 /// The door is a VERBATIM port of v1 `repark-sql` (design §0: delegate-first, no half-file
-/// surgery), so almost every row is `Tested` and names a ported battery test. The three
-/// remaining absences are structural, not gaps: two are ANSI-only ergonomics (`sorted_by` /
-/// unknown-key refuse have no Spark spelling to guard) and one is the wrong-door sniff (this IS
-/// the Spark door). `TA_FUNCTIONS` flipped at PR-4 (`TaExtension` composition) and
-/// `CROSS_DOOR_EQUIVALENCE` at PR-6, when the two-session protocol was actually run.
+/// surgery), so almost every row is `Tested` and names a ported battery test. Four absences
+/// remain: two are ANSI-only ergonomics (`sorted_by` / unknown-key refuse have no Spark
+/// spelling to guard), one is the wrong-door sniff (this IS the Spark door), and one is the
+/// G8 pin-absence for `SEMANTICS_JOIN_NULL_KEYS` (the G4 corpus is Python-only; no Rust
+/// door-binary NULL-key join value pin on this freeze tree). `TA_FUNCTIONS` flipped at PR-4
+/// (`TaExtension` composition) and `CROSS_DOOR_EQUIVALENCE` at PR-6, when the two-session
+/// protocol was actually run. The `SEMANTICS_*` family landed at G8.
 /// ===========================================================================================
 const ROWS: &[(SurfaceId, Row)] = &[
     // --- Statement forms ---
@@ -341,6 +343,57 @@ const ROWS: &[(SurfaceId, Row)] = &[
             TwoSession,
         ),
     ),
+    // --- Value semantics (H-2 G8). Test names are `cargo test -- --list` names. ---
+    (
+        surfaces::SEMANTICS_NULL_ORDERING,
+        t(
+            "spark_ast::tests::order_by_defaults_are_spark",
+            SparkExtended,
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_DECIMAL_ARITHMETIC,
+        t(
+            "tests::decimal::pin_add_same_precision_scale_i128",
+            SparkExtended,
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_CAST_MATRIX,
+        t(
+            "spark_door_timestamp_cast_to_bigint_is_epoch_seconds",
+            SparkExtended,
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_SESSION_TIMEZONE,
+        t("year_extractor_resolves_in_the_session_zone", SparkExtended),
+    ),
+    (
+        surfaces::SEMANTICS_WINDOW_FRAMES,
+        t(
+            "tests::window_temporal_range::temporal_range_interval_bounds_still_match_spark",
+            SparkExtended,
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_JOIN_NULL_KEYS,
+        absent(
+            "No Rust Spark-door binary pins JOIN values when a key is NULL. The G4 corpus \
+             (`python/repark/tests/test_join_parity.py`, including `null_keys_inner_no_match`) \
+             is the facade/PyO3 path and is not a `cargo test -- --list` name. The door \
+             delegates JOIN to DataFusion; this row is a declared pin-absence, not a product \
+             refusal. Trigger: a Spark-door Rust NULL-key join value pin (inner + outer orphan).",
+            "docs/design/v2-engine-hardening.md H-2 G4 / G8",
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_FLOAT_DETERMINISM,
+        t(
+            "tests::float_agg::pin_sum_f64_bits_at_target_partitions_1",
+            SparkExtended,
+        ),
+    ),
 ];
 
 /// ===========================================================================================
@@ -362,12 +415,12 @@ fn matrix_maps_every_surface() {
 }
 
 /// The Spark door is a verbatim port of a shipped v1 engine, so the shipped/absent split is
-/// itself a fact worth pinning: three deliberate absences after PR-6, every one of them named
-/// above. A fourth absence appearing without a reviewer noticing is exactly how "typed absence"
-/// rots into "typed excuse".
+/// itself a fact worth pinning: three structural absences (PR-6) plus the G8 pin-absence for
+/// `SEMANTICS_JOIN_NULL_KEYS`, every one of them named above. A fifth absence appearing
+/// without a reviewer noticing is exactly how "typed absence" rots into "typed excuse".
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
 #[test]
-fn spark_door_absences_are_the_three_declared_ones() {
+fn spark_door_absences_are_the_declared_ones() {
     let absent_ids: Vec<SurfaceId> = ROWS
         .iter()
         .filter(|(_, row)| !row.is_tested())
@@ -379,10 +432,12 @@ fn spark_door_absences_are_the_three_declared_ones() {
             surfaces::TABLE_OPTION_SORT_ORDER,
             surfaces::TABLE_OPTION_UNKNOWN_KEY_REFUSE,
             surfaces::WRONG_DOOR_SNIFF,
+            surfaces::SEMANTICS_JOIN_NULL_KEYS,
         ],
-        "the Spark door's deliberate absences changed — update this pin AND the ledger"
+        "the Spark door's deliberate absences changed — update this pin AND \
+         task/s2-g8-ledger.md"
     );
-    assert_eq!(ROWS.len() - absent_ids.len(), 40, "shipped-surface count");
+    assert_eq!(ROWS.len() - absent_ids.len(), 46, "shipped-surface count");
 }
 
 /// `TwoSession` may be claimed by exactly ONE row — `CROSS_DOOR_EQUIVALENCE` — and only because

@@ -14,8 +14,10 @@
 //! cross-door rows.
 //!
 //! What remains `DeliberatelyAbsent` after M2 is absent **by ruling, not by sequencing** — four
-//! rows, each a standing design decision with its callable-op equivalent and its trigger named
-//! (design §6 R5). There are no `M2`-deferral rows left.
+//! statement-surface rows, each a standing design decision with its callable-op equivalent and
+//! its trigger named (design §6 R5). G8 added three value-semantics pin-absences (window
+//! frames, JOIN NULL keys, float determinism): the door implements those via DataFusion, but
+//! this freeze tree has no Native-profile pin to cite. There are no `M2`-deferral rows left.
 //!
 //! The whole module is `#[cfg(test)]` — audit evidence, not product code.
 //!
@@ -336,6 +338,58 @@ const ROWS: &[(SurfaceId, Row)] = &[
             TwoSession,
         ),
     ),
+    // --- Value semantics (H-2 G8). Test names are `cargo test -- --list` names. ---
+    (
+        surfaces::SEMANTICS_NULL_ORDERING,
+        t("ansi_door_order_by_asc_defaults_to_nulls_last", Native),
+    ),
+    (
+        surfaces::SEMANTICS_DECIMAL_ARITHMETIC,
+        t(
+            "cross_door_decimal_add_same_precision_scale_bit_exact",
+            TwoSession,
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_CAST_MATRIX,
+        t("ansi_door_cast_overflow_int_to_tinyint_raises", Native),
+    ),
+    (
+        surfaces::SEMANTICS_SESSION_TIMEZONE,
+        t(
+            "a_native_session_without_the_spark_extension_reads_the_stored_zone",
+            Native,
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_WINDOW_FRAMES,
+        absent(
+            "No ANSI-door Native-profile ROWS/RANGE frame-value pin exists on this freeze \
+             tree. The G5 / G5b temporal-`RANGE` rust twins live on the Spark door \
+             (`tests::window_temporal_range::*`); the Q11 TA toll is `TA_FUNCTIONS`, not \
+             frame bounds. Trigger: an ANSI-door Native-profile frame-value pin.",
+            "docs/design/v2-engine-hardening.md H-2 G5 / G8 / G11",
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_JOIN_NULL_KEYS,
+        absent(
+            "No Rust ANSI-door binary pins JOIN values when a key is NULL. The G4 corpus \
+             (`python/repark/tests/test_join_parity.py`) is the facade/PyO3 path and cannot \
+             reach this door (bindings have no `repark-sql` edge). Trigger: an ANSI-door \
+             Native-profile NULL-key join value pin.",
+            "docs/design/v2-engine-hardening.md H-2 G4 / G8 / G11",
+        ),
+    ),
+    (
+        surfaces::SEMANTICS_FLOAT_DETERMINISM,
+        absent(
+            "No ANSI-door `f64::to_bits` pin varies `target_partitions` over a \
+             catastrophic-cancellation fixture. The G7 rust twins live on the Spark door \
+             (`tests::float_agg::*`). Trigger: an ANSI-door Native-profile float-agg pin.",
+            "docs/design/v2-engine-hardening.md H-2 G7 / G8",
+        ),
+    ),
 ];
 
 /// ===========================================================================================
@@ -405,12 +459,13 @@ fn two_session_rows_name_surfaces_both_doors_have() {
     }
 }
 
-/// M2 closes the door: the shipped set is PR-5's plus everything PR-6 landed, and the four rows
-/// left absent are absent BY RULING (Q3 partition-spec evolution, Q9 `INSERT OVERWRITE`, the
-/// permanent `TRUNCATE` refuse, Q7 maintenance-as-callable-ops) — none of them a sequencing
-/// deferral. The risk this pins is scope creep in either direction: a surface quietly shipped
-/// without its design ruling being applied, or a shipped surface quietly downgraded to an absence
-/// row to make a gate green.
+/// M2 closed the statement door: four absences BY RULING (Q3 partition-spec evolution, Q9
+/// `INSERT OVERWRITE`, the permanent `TRUNCATE` refuse, Q7 maintenance-as-callable-ops). G8
+/// added three pin-absences on the value-semantics family (window frames, JOIN NULL keys,
+/// float determinism) — those are unpinned implemented surfaces, not product refusals. The
+/// risk this pins is scope creep in either direction: a surface quietly shipped without its
+/// design ruling being applied, or a shipped surface quietly downgraded to an absence row
+/// to make a gate green.
 /// MUTATION: flip any `Tested` row to `absent(...)` → this REDs.
 #[test]
 fn m2_closes_the_ansi_door() {
@@ -426,13 +481,16 @@ fn m2_closes_the_ansi_door() {
             surfaces::INSERT_OVERWRITE,
             surfaces::TRUNCATE,
             surfaces::MAINTENANCE_CALL,
+            surfaces::SEMANTICS_WINDOW_FRAMES,
+            surfaces::SEMANTICS_JOIN_NULL_KEYS,
+            surfaces::SEMANTICS_FLOAT_DETERMINISM,
         ],
         "the ANSI door's deliberate absences changed — update this pin AND \
-         task/p2g-ansi-m2-ledger.md"
+         task/s2-g8-ledger.md"
     );
     assert_eq!(
         ROWS.len() - absent_ids.len(),
-        39,
-        "shipped-surface count (PR-5 shipped 29; PR-6 added 10)"
+        43,
+        "shipped-surface count (PR-5 shipped 29; PR-6 added 10; G8 added 4 Tested)"
     );
 }
