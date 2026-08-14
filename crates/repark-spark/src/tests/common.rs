@@ -76,6 +76,7 @@ pub(super) async fn setup_with_ansi(
     let ctx = SessionContext::new_with_config(config);
     // Production wiring: repark-session installs the Spark analyzer rules on every context,
     // so the router tests must run under them too (CTAS schema derivation depends on it).
+    repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
@@ -123,6 +124,7 @@ pub(super) async fn setup_strict_catalog(
     let ctx = SessionContext::new_with_config(crate::extension::apply_spark_float_as_decimal(
         datafusion::prelude::SessionConfig::new(),
     ));
+    repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }
@@ -305,6 +307,7 @@ pub(super) async fn setup_allow_local_fs_ddl(wh: &TempDir) -> (SessionContext, C
     );
     let config = repark_functions::ansi::with_spark_ansi_config(config, true);
     let ctx = SessionContext::new_with_config(config);
+    repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
     for rule in repark_functions::analyzer_rules() {
         ctx.add_analyzer_rule(rule);
     }

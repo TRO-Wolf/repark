@@ -1015,7 +1015,7 @@ NOT in that file is a defect, not a decision.
   `F.sum(-df.x)` → `sum(negative(x))`, double `negative(negative(x))`, nested
   `sum(negative((x + 1)))` display **and** values). JVM-free pins from live PySpark 4.1.2.
 - `test_columns.py` — **U2:** `SELECT 7.0 AS a` is DECIMAL(2,1); Column `/` stays float64
-  3.5 (`test_division_is_float`); SQL `SELECT 7.0 / 2.0` is decimal128(7,5)
+  3.5 (`test_division_is_float`); **R-2 A7:** SQL `SELECT 7.0 / 2.0` is decimal128(8,6)
   (`test_sql_float_literal_division_is_decimal`). The Column / expression surface (WG1): the seven `types` objects → engine
   strings; `col`/`lit`/`expr` construction (incl. the column-referencing `expr` boundary raising);
   arithmetic/comparison/logical operators; the Python-boolean misuse guards (`bool()`, `and`/`or`,
@@ -1037,8 +1037,8 @@ NOT in that file is a defect, not a decision.
   divergence classes on their exact inputs: integer `/` always-double (the S0 `5/2`),
   divide/modulo-by-zero **raises under default ANSI ON** (U5 / Q10=A) and is NULL when
   `.config("spark.sql.ansi.enabled", "false")` (literal and column divisors; **U2:**
-  `1.0/0.0` and `5.0%0.0` are decimal), decimal ÷ decimal
-  stays decimal, ORDER BY null-placement defaults (asc/desc/explicit override/the LIMIT
+  `1.0/0.0` and `5.0%0.0` are decimal; **R-2 U4b:** `1.0/0.0` is `(8,6)`), decimal ÷ decimal
+  is Spark `(23,13)` (`test_decimal_division_stays_decimal`), ORDER BY null-placement defaults (asc/desc/explicit override/the LIMIT
   row-changing case/window `OVER (ORDER BY …)`), 0-based `[]` subscript + 1-based `element_at`
   (arrays incl. the index-0 error, maps), and the `substr`/`substring` position-edge matrix.
   Ends with the **divergence corpus × entry-point matrix** (added 2026-07-13 after the F.expr
@@ -1145,7 +1145,8 @@ NOT in that file is a defect, not a decision.
   `test_union_inline_decimal_literal_diverges_from_spark` (**U2 / TY-3 dated 2026-08-13:**
   repark `decimal128(21,1)` nullable vs Spark `decimal128(11,1)` non-null. **U3 dated
   2026-08-13:** still DECLARED — U3 `fromLiteral` is `+ - *` only; UNION uses Spark
-  `forType(INT)=(10,0)`, not digits; observed type after U3 is still `(21,1)` nullable). Count-mismatch raises; `unionByName`
+  `forType(INT)=(10,0)`, not digits. **R-2 dated 2026-08-14:** still DECLARED — hook is
+  `TypeCoercion` / `coerce_union` (Int64→DECIMAL(20,0)), not a `decimal_precision` arm). Count-mismatch raises; `unionByName`
   (by name, reorders), missing-column raises by default + `allowMissingColumns=True` fills NULL (parity
   golden); `distinct`, `dropDuplicates()` (= distinct) and `dropDuplicates(subset)` with a
   deterministic-survivor pin (key set / identical non-key values, never an accident). **R4
@@ -1338,15 +1339,12 @@ NOT in that file is a defect, not a decision.
   driver at a time — check `pgrep -af 'pyspark|SparkSubmit'` (ignoring a standing container
   cluster) before running. Invocation in its docstring and `task/g3e8-guard-ledger.md`.
 - `test_decimal128_parity.py` — the **decimal128 differential corpus** (gap G2) plus expression-
-  level arithmetic overflow (gap G13), landed by G-7 (Python half), U5-updated. 24 G2 rows
-  and 9 G13 rows (shared-raise `/0` under default ANSI ON + ANSI-OFF NULL twins + overflow
-  wrap DECLARE + DEC-8 plan-refuse + DEC-9 nullability residue). Recorded against live
-  PySpark 4.1.2 (zulu-17, `local[2]`, both `spark.sql.ansi.enabled` states, shuffle=2).
-  Shared-raise equality: `spark_raises` + both tables `None`. `session_conf` carries the
-  OFF twins. DEC-6 overflow raise is **DECLARED** (no honest ≤unit hook). DEC-9 is
-  **named residue**. Budget pin: G2 20-26, G13 6-12. Ledger:
-  `task/s1-ansi-knob-u5-ledger.md` (U5) +
-  `docs/history/hardening-h1/g7-decimal-ledger.md`.
+  level arithmetic overflow (gap G13), landed by G-7 (Python half), U5-updated, **R-2
+  flipped**. 24 G2 rows (4 `/` rows now equality at Spark `(p,s)`) and 10 G13 rows
+  (shared-raise `/0` + overflow; ANSI-OFF `/0` and overflow NULL at Spark types;
+  DEC-8 `(38,20)*(38,20)` equality at `(38,6)`; DEC-9 nullability residue kept).
+  Recorded against live PySpark 4.1.2. DEC-6 overflow raise is **LANDED** (checked `+`
+  UDF). Budget pin: G2 20-26, G13 6-12. Ledger: `task/r2-dec-close-ledger.md`.
 - `_record_decimal128_goldens.py` — the **record driver** for the decimal128 corpus (NOT a
   `test_` module; never collected). Imports `ROWS` / `CTAS_ROWS` from the committed test module
   and re-runs each row's own `run_row` recipe on live PySpark; raise-class rows re-check the

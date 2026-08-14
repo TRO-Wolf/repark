@@ -332,36 +332,32 @@ G2_ROWS: list[DecimalRow] = [
         "G2",
         "SELECT CAST(1.23 AS DECIMAL(10,2)) / CAST(4.56 AS DECIMAL(10,2)) AS v",
         _dec(23, 13, Decimal("0.2697368421053"), nullable=True),
-        _dec(16, 6, Decimal("0.269736"), nullable=True),
-        "Spark division (p,s) is far wider (23,13) and keeps more fractional digits; repark lands "
-        f"(16,6) with a rounded 0.269736. Value AND type diverge. Flipped by {FIX_G2}.",
+        None,
+        "U4b: Spark `/` formula s=max(6,s1+p2+1) → (23,13) 0.2697368421053. Name kept.",
     ),
     DecimalRow(
         "div_repeating_money",
         "G2",
         "SELECT CAST(10.00 AS DECIMAL(10,2)) / CAST(3.00 AS DECIMAL(10,2)) AS v",
         _dec(23, 13, Decimal("3.3333333333333"), nullable=True),
-        _dec(16, 6, Decimal("3.333333"), nullable=True),
-        "repeating money division: Spark keeps 13 fractional digits at (23,13); repark six at "
-        f"(16,6). A unit-price split is silently short. Flipped by {FIX_G2}.",
+        None,
+        "U4b: repeating money keeps 13 fractional digits at (23,13). Name kept.",
     ),
     DecimalRow(
         "div_integer_scales",
         "G2",
         "SELECT CAST(1 AS DECIMAL(10,0)) / CAST(3 AS DECIMAL(10,0)) AS v",
         _dec(21, 11, Decimal("0.33333333333"), nullable=True),
-        _dec(14, 4, Decimal("0.3333"), nullable=True),
-        "integer-scale division still produces a fractional result type; Spark (21,11) vs repark "
-        f"(14,4). Flipped by {FIX_G2}.",
+        None,
+        "U4b: integer-scale division is Spark (21,11). Name kept.",
     ),
     DecimalRow(
         "div_exact_half_type_only",
         "G2",
         "SELECT CAST(5.00 AS DECIMAL(10,2)) / CAST(2.00 AS DECIMAL(10,2)) AS v",
         _dec(23, 13, Decimal("2.5000000000000"), nullable=True),
-        _dec(16, 6, Decimal("2.500000"), nullable=True),
-        "exact half: the VALUE is 2.5 on both engines but the result type still diverges "
-        f"((23,13) vs (16,6)), so a schema-sensitive consumer is wrong. Flipped by {FIX_G2}.",
+        None,
+        "U4b: exact half is 2.5 at Spark (23,13). Name kept.",
     ),
     # ----- disclosures: 38-digit clamp ------------------------------------------------------------
     DecimalRow(
@@ -427,12 +423,10 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38,0)) "
         "+ CAST(1 AS DECIMAL(38,0)) AS v",
         None,
-        # U2: 38-nines parses as exact DECIMAL, then +1 wraps to 10^38 at declared (38,0).
-        # DEC-6 leftover (wrap-not-residue). Not an ANSI-raise fix.
-        _dec_raw_i128(38, 0, 10**38),
-        "ANSI Spark raises NUMERIC_VALUE_OUT_OF_RANGE for max DECIMAL(38,0)+1; repark wraps to "
-        f"10^38 at decimal128(38,0) (U2 wrap-not-residue). U5 DECLARES DEC-6 — no honest "
-        f"≤unit hook on an allowed file. {FIX_G13}.",
+        None,
+        "DEC-6: ANSI ON both engines raise NUMERIC_VALUE_OUT_OF_RANGE / ArithmeticException. "
+        "Name kept. "
+        f"{FIX_G13}.",
         spark_raises="ArithmeticException",
     ),
     DecimalRow(
@@ -441,10 +435,8 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38,0)) "
         "+ CAST(1 AS DECIMAL(38,0)) AS v",
         _dec(38, 0, None, nullable=True),
-        _dec_raw_i128(38, 0, 10**38),
-        "U5 DEC-6 DECLARE evidence (ansi=false): Spark NULLs at decimal128(38,0) nullable; "
-        "repark still wraps to 10^38 at (38,0). Recorded live 2026-08-13. "
-        f"{FIX_G13}.",
+        None,
+        f"DEC-6 ansi=false: both NULL at decimal128(38,0). Name kept. {FIX_G13}.",
         session_conf=(("spark.sql.ansi.enabled", "false"),),
     ),
     DecimalRow(
@@ -464,9 +456,8 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(1 AS DECIMAL(38,0)) / CAST(0 AS DECIMAL(38,0)) AS v",
         # Spark ANSI OFF: NULL at Spark's division type (38,6). Recorded live (U5 lock).
         _dec(38, 6, None, nullable=True),
-        _dec(38, 4, None, nullable=True),
-        "ansi=false: both NULL. Spark (38,6) vs repark Arrow (38,4) — U4b type leftover. "
-        f"{FIX_G13}.",
+        None,
+        f"U4b + U5: ansi=false both NULL at Spark (38,6). {FIX_G13}.",
         session_conf=(("spark.sql.ansi.enabled", "false"),),
     ),
     DecimalRow(
@@ -484,8 +475,8 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(10 AS DECIMAL(2,0)) / CAST(0 AS DECIMAL(2,0)) AS v",
         # Spark ANSI OFF half is filled from the live record (U5 lock) — do not hand-edit.
         _dec(8, 6, None, nullable=True),
-        _dec(6, 4, None, nullable=True),
-        f"ansi=false: both NULL. Spark division type vs Arrow (6,4) — U4b leftover. {FIX_G13}.",
+        None,
+        f"U4b + U5: ansi=false both NULL at Spark (8,6). {FIX_G13}.",
         session_conf=(("spark.sql.ansi.enabled", "false"),),
     ),
     DecimalRow(
@@ -494,11 +485,8 @@ G13_ROWS: list[DecimalRow] = [
         "SELECT CAST(1 AS DECIMAL(38,20)) * CAST(1 AS DECIMAL(38,20)) AS v",
         _dec(38, 6, Decimal("1.000000")),
         None,
-        "Spark clamps the product to decimal128(38,6) and succeeds; repark still refuses at "
-        "plan construction (`BinaryExpr::get_type` / Arrow s>38) BEFORE any AnalyzerRule "
-        "runs. U4a cannot see this node. Closing it is an ExprPlanner (U4b-adjacent), not "
-        f"the DecimalPrecision analyzer. {FIX_G13}.",
-        repark_raises="AnalysisException",
+        "DEC-8: ExprPlanner replaces Arrow-refusing `*` with Spark clamp (38,6). Name kept. "
+        f"{FIX_G13}.",
     ),
     DecimalRow(
         "mul_single_digit_nullability_differs",
@@ -558,14 +546,14 @@ CTAS_ROWS: list[CtasRow] = [
         "ctas_div_preserves_repark_result_type",
         "SELECT CAST(10.00 AS DECIMAL(10,2)) / CAST(3.00 AS DECIMAL(10,2)) AS q",
         _one_row(
-            [("q", pa.decimal128(16, 6), True)],
-            {"q": Decimal("3.333333")},
+            [("q", pa.decimal128(23, 13), True)],
+            {"q": Decimal("3.3333333333333")},
         ),
-        "CTAS of a division DISCLOSURE path: repark's (16,6) result type is what is written and "
-        "read back - type preservation through Iceberg, even while the SELECT half still "
-        f"diverges from Spark's (23,13). Flipped to Spark equality by {FIX_G2}.",
-        # Spark SELECT half would be (23,13); deliberately not required equal here (Q1).
-        spark_select=None,
+        "U4b: CTAS of Spark `/` writes decimal128(23,13) 3.3333333333333 through Iceberg.",
+        spark_select=_one_row(
+            [("q", pa.decimal128(23, 13), True)],
+            {"q": Decimal("3.3333333333333")},
+        ),
     ),
 ]
 
@@ -781,16 +769,11 @@ def test_decimal128_row_set_covers_gap_budgets() -> None:
     assert any("avg(" in row.sql.lower() for row in g2), "G2 must pin avg result type"
     assert any("sum(" in row.sql.lower() for row in g2), "G2 must pin sum result type"
     assert any(row.spark_raises for row in g13), "G13 must pin at least one ANSI raise"
-    assert any(row.repark_raises for row in g13), (
-        "G13 must pin at least one repark plan refuse (DEC-8 still refuses at "
-        "plan construction; an AnalyzerRule cannot see it)"
-    )
     assert any(row.spark_select is not None for row in CTAS_ROWS), (
         "at least one CTAS row must carry a Spark SELECT oracle (equality-path write-back)"
     )
-    assert any(row.spark_select is None for row in CTAS_ROWS), (
-        "at least one CTAS row must be repark-only (disclosure-path type preservation, Q1)"
-    )
+    # U4b closed the last disclosure-path CTAS (`ctas_div`); all three now have a Spark
+    # SELECT oracle. The previous "at least one spark_select is None" pin died with that flip.
     # Row-shape well-formedness: raise flags and table halves cannot contradict each other.
     for row in ROWS:
         assert not (row.spark_raises and row.repark_raises), (

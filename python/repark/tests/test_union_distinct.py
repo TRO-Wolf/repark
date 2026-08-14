@@ -115,6 +115,11 @@ def test_union_inline_decimal_literal_diverges_from_spark(spark: ReparkSession) 
     here would yield ``DECIMAL(1,0) union DECIMAL(2,1)`` -> ``(3,1)``, which is neither
     today's ``(21,1)`` nor Spark's ``(11,1)``. Observed type after U3 is still
     ``decimal128(21, 1)`` nullable. Still DECLARED.
+
+    Dated 2026-08-14 (R-2 / TY-3): the honest hook is DataFusion ``TypeCoercion`` /
+    ``coerce_union`` (Int64 → DECIMAL(20,0)), not a ``decimal_precision.rs`` arithmetic
+    arm. Parse-time INT-vs-Int64 is a session-wide bomb; a UNION-only ``forType(INT)``
+    rewrite cannot tell ``VALUES (1)`` from a BIGINT column. Still DECLARED.
     """
     ints = spark.sql("SELECT * FROM (VALUES (1)) AS t(v)")
     dec = spark.sql("SELECT * FROM (VALUES (2.5)) AS t(v)")

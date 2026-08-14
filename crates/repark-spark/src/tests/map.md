@@ -14,7 +14,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `execute_without_collecting`, unsafe-cast walk helpers). **U2:** `setup` /
   `setup_allow_local_fs_ddl` / `setup_strict_catalog` call
   `crate::extension::apply_spark_float_as_decimal` so Spark-door unit fixtures match
-  production `configure`. Bodies moved byte-identically from
+  production `configure`. **R-2:** those fixtures plus `setup_with_ansi` also call
+  `register_spark_decimal_planner` (`extension.rs` is closed). Bodies moved
+  byte-identically from
   the monolith; `pub(super)` visibility + type re-exports for leaf `use super::common::*;`.
 - **TZ-4 PR-1 (2026-08-13)** — `create_table.rs` pin `ts TIMESTAMP` → `Timestamptz`;
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
@@ -31,12 +33,14 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `pin_literal_1_23_infers_decimal128_3_2_i128` (was float64) and overflow wrap `10^38`
   at (38,0). **V-2 U3+U4a (2026-08-13):** `pin_int_times_decimal_is_12_2_i128` (was 31,2),
   `pin_cast_int_times_decimal_stays_21_2_i128`, clamp pins `(38,6)` / `(38,17)`,
-  `pin_mul_38_20_still_refuses_at_plan` (DEC-8 still plan-refuse); fixtures go through
-  `apply_spark_float_as_decimal` via `common::setup`. **U5 (2026-08-14):** `setup` installs
-  ANSI ON; `setup_with_ansi(false)` for legacy NULL `/0`;
+  `pin_mul_38_20_still_refuses_at_plan` (DEC-8 now plans `(38,6)` — name kept);
+  fixtures go through `apply_spark_float_as_decimal` via `common::setup` plus the DEC-8
+  `ExprPlanner`. **U5 (2026-08-14):** `setup` installs ANSI ON; `setup_with_ansi(false)`
+  for legacy NULL `/0`;
   `pin_div_by_zero_decimal38_raises_under_default_ansi` +
-  `pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false`; DEC-6 wrap pin kept
-  (DECLARE)), `float_agg` (G7 float
+  `pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false` (type now Spark
+  `(38,6)`). **R-2 (2026-08-14):** `/` i128 at `(23,13)`; DEC-6 raise / ANSI-OFF NULL;
+  DEC-8 plans), `float_agg` (G7 float
   aggregation determinism — catastrophic-cancellation fixture; `sum`/`avg` `f64::to_bits` at
   `target_partitions` 1/2/8; per-count stability + cross-count spread disclosure),
   `join_null_keys` (R-3 / G8 — Spark-door NULL-key join value pin: INNER / LEFT /

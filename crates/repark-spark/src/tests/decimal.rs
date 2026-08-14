@@ -129,7 +129,7 @@ async fn pin_literal_1_23_infers_decimal128_3_2_i128() {
 // =================================================================================================
 
 /// Corpus row `div_same_precision_scale`.
-/// Spark: (23,13) 0.2697368421053; repark: (16,6) 0.269736. Pin repark i128 = 269736.
+/// U4b: Spark (23,13) 0.2697368421053. i128 = 2697368421053.
 #[tokio::test]
 async fn pin_div_same_precision_scale_repark_i128() {
     let warehouse = TempDir::new().unwrap();
@@ -140,9 +140,13 @@ async fn pin_div_same_precision_scale_repark_i128() {
         "SELECT CAST(1.23 AS DECIMAL(10,2)) / CAST(4.56 AS DECIMAL(10,2)) AS v",
     )
     .await;
-    assert_eq!((precision, scale), (16, 6), "repark division result (p,s)");
-    assert!(nullable, "decimal division is nullable on repark today");
-    assert_eq!(value, Some(269_736), "i128 scaled 0.269736 at scale 6");
+    assert_eq!((precision, scale), (23, 13), "Spark division result (p,s)");
+    assert!(nullable, "Spark decimal `/` is always nullable");
+    assert_eq!(
+        value,
+        Some(2_697_368_421_053),
+        "i128 scaled 0.2697368421053 at scale 13"
+    );
 }
 
 // =================================================================================================
@@ -187,24 +191,19 @@ async fn pin_add_38_18_clamps_to_38_17_i128() {
     );
 }
 
-/// Corpus row `mul_38_20_plans_in_spark_refuses_in_repark`.
-/// U4a cannot close DEC-8: Arrow refuses at `BinaryExpr::get_type` before any analyzer.
+/// Corpus row `mul_38_20_plans_in_spark_refuses_in_repark` after DEC-8: Spark clamp (38,6).
 #[tokio::test]
 async fn pin_mul_38_20_still_refuses_at_plan() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
-    let error = execute(
+    let (precision, scale, _nullable, value) = collect_decimal128(
         &ctx,
         &catalogs,
         "SELECT CAST(1 AS DECIMAL(38,20)) * CAST(1 AS DECIMAL(38,20)) AS v",
     )
-    .await
-    .expect_err("DEC-8 must still refuse at plan construction");
-    let message = error.to_string();
-    assert!(
-        message.contains("exceed max scale") || message.contains("Cannot get result type"),
-        "expected Arrow scale-refuse, got {message}"
-    );
+    .await;
+    assert_eq!((precision, scale), (38, 6), "DEC-8 Spark clamp (38,6)");
+    assert_eq!(value, Some(1_000_000), "i128 for 1.0 at scale 6");
 }
 
 // =================================================================================================
@@ -270,14 +269,33 @@ async fn pin_cast_int_times_decimal_stays_21_2_i128() {
 // ANSI overflow + divide-by-zero (G13 raise-class disclosures on the repark half)
 // =================================================================================================
 
-/// Corpus row `overflow_max_decimal38_plus_one_raises_in_spark`.
-/// ANSI Spark raises; after U2 the 38-nines token is exact DECIMAL then `+ 1` wraps to
-/// `10^38` at declared type (38,0) — wrap-not-residue. U5 DECLARES DEC-6: no honest
-/// ≤unit hook on an allowed file (overflow is Arrow exec, not `guard_zero_divisor`).
+/// Corpus row `overflow_max_decimal38_plus_one_raises_in_spark` after DEC-6: ANSI ON raises.
 #[tokio::test]
 async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;
+    let sql = "SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38,0)) \
+               + CAST(1 AS DECIMAL(38,0)) AS v";
+    let error = match execute(&ctx, &catalogs, sql).await {
+        Err(error) => error.to_string(),
+        Ok(frame) => frame
+            .collect()
+            .await
+            .expect_err("ANSI overflow must raise")
+            .to_string(),
+    };
+    assert!(
+        error.contains("NUMERIC_VALUE_OUT_OF_RANGE"),
+        "expected NUMERIC_VALUE_OUT_OF_RANGE, got {error}"
+    );
+}
+
+/// ANSI OFF: photographed wrap becomes NULL at (38,0). Nullability may stay non-null
+/// (DEC-9 residue) — pin the value only.
+#[tokio::test]
+async fn pin_overflow_max_decimal38_plus_one_null_when_ansi_false() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_with_ansi(&warehouse, false).await;
     let sql = "SELECT CAST(99999999999999999999999999999999999999 AS DECIMAL(38,0)) \
                + CAST(1 AS DECIMAL(38,0)) AS v";
     let (precision, scale, _nullable, value) = collect_decimal128(&ctx, &catalogs, sql).await;
@@ -287,9 +305,8 @@ async fn pin_overflow_max_decimal38_plus_one_wrong_value_i128() {
         "overflow result type stays (38,0)"
     );
     assert_eq!(
-        value,
-        Some(10_i128.pow(38)),
-        "U2 wrap: exact 38-nines then +1 stores 10^38 (39 digits) at (38,0)"
+        value, None,
+        "ansi=false overflow yields NULL, not the 10^38 wrap"
     );
 }
 
@@ -327,8 +344,8 @@ async fn pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false() {
     .await;
     assert_eq!(
         (precision, scale),
-        (38, 4),
-        "repark div-by-zero result type (Arrow formula; U4b)"
+        (38, 6),
+        "repark div-by-zero result type (Spark `/` formula)"
     );
     assert!(nullable, "NULL cell requires a nullable field");
     assert_eq!(value, None, "ansi=false /0 yields NULL, not a raise");

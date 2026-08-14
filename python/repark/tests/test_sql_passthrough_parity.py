@@ -25,6 +25,8 @@ not match Spark on this class yet — a future CAST-parity unit updates those pi
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pyarrow as pa
 import pytest
 
@@ -73,8 +75,9 @@ def test_division_and_modulo_by_zero_are_null_when_ansi_false() -> None:
     ).to_arrow()
     assert [column.to_pylist() for column in table.columns] == [[None]] * 5
     assert pa.types.is_float64(table.schema.field("a").type)  # int/int is DOUBLE even for NULL
-    # U2: 1.0/0.0 and 5.0%0.0 are decimal÷0 / decimal%0 (Arrow type; U4b).
-    assert table.schema.field("b").type == pa.decimal128(7, 5)
+    # U2: 1.0/0.0 and 5.0%0.0 are decimal÷0 / decimal%0. U4b: `/` uses Spark (8,6).
+    # `%` resultDecimalType stays CLOSED (Arrow type).
+    assert table.schema.field("b").type == pa.decimal128(8, 6)
     assert table.schema.field("d").type == pa.decimal128(1, 1)
 
 
@@ -102,12 +105,12 @@ def test_ansi_notabool_fails_loud() -> None:
 
 
 def test_decimal_division_stays_decimal(spark: ReparkSession) -> None:
-    # The int→double promotion must not touch decimals (Spark keeps decimal ÷ decimal in
-    # decimal; the precision/scale rules are DataFusion's for now — flagged in the charter).
+    # U4b: Spark `/` formula (10,2)/(10,2) → (23,13). 1.00/3.00 is 0.3333333333333.
     table = spark.sql(
         "SELECT CAST(1.00 AS DECIMAL(10,2)) / CAST(3.00 AS DECIMAL(10,2)) AS d"
     ).to_arrow()
-    assert pa.types.is_decimal(table.schema.field("d").type)
+    assert table.schema.field("d").type == pa.decimal128(23, 13)
+    assert table.column("d").to_pylist() == [Decimal("0.3333333333333")]
 
 
 # ==================================================================================================

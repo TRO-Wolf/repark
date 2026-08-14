@@ -42,6 +42,7 @@ pub mod cardinality;
 pub mod collection;
 pub mod datetime;
 pub mod decimal_precision;
+pub mod decimal_spark;
 pub mod expr_fn;
 pub mod instant_ts;
 pub mod random;
@@ -120,18 +121,23 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in random::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    // DEC-8: ExprPlanner must be on the session before BinaryExpr::get_type
+    // refuses `(38,20)*(38,20)`. SparkExtension calls this function.
+    decimal_spark::register_spark_decimal_planner(ctx);
 }
 
 /// ===========================================================================================
 /// The Spark-semantics + plan-time safety analyzer rules the session installs on every
 /// context (after the DataFusion built-ins, so they see type-coerced plans). See
-/// [`decimal_precision`] (first — U3/U4a; order is semantic), [`analyzer`], and
+/// [`decimal_precision`] (first — U3/U4a), [`decimal_spark`] (U4b `/` + DEC-6 wrap;
+/// sees clean `decimal / decimal` before [`analyzer::SparkExprSemantics`]), [`analyzer`], and
 /// [`cardinality`] (r24 SB1 / SEC-01 expansion ceilings).
 /// ===========================================================================================
 #[must_use]
 pub fn analyzer_rules() -> Vec<Arc<dyn AnalyzerRule + Send + Sync>> {
     let mut rules: Vec<Arc<dyn AnalyzerRule + Send + Sync>> = vec![
         Arc::new(decimal_precision::SparkDecimalPrecision),
+        Arc::new(decimal_spark::SparkDecimalRewrite),
         Arc::new(analyzer::SparkExprSemantics),
     ];
     rules.extend(cardinality::analyzer_rules());
