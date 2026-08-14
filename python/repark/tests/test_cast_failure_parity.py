@@ -59,7 +59,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # ==================================================================================================
 # Budget floors/ceilings — pinned by test_cast_failure_row_set_covers_g6_budget (not incidental)
@@ -179,7 +179,7 @@ def _functions_for(session: Any) -> Any:
         from pyspark.sql import functions as spark_functions
 
         return spark_functions
-    from repark.sql import functions as repark_functions
+    from repark.spark.sql import functions as repark_functions
 
     return repark_functions
 

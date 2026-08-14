@@ -17,8 +17,8 @@ from __future__ import annotations
 import pytest
 
 from repark.errors import UnsupportedOperationException
-from repark.session import ReparkSession
-from repark.types import (
+from repark.spark.session import ReparkSession
+from repark.spark.types import (
     COLLATION_REFUSAL_NEEDLE,
     StringType,
     StructField,
@@ -237,12 +237,12 @@ def test_string_type_construction_and_simple_string_untouched() -> None:
 
 def test_collate_and_collation_functions_are_absent() -> None:
     """ABSENCE IS LOUD: Spark's F.collate / F.collation are not stubbed."""
-    import repark.functions as F  # noqa: N812 — PySpark idiom
+    import repark.spark.functions as F  # noqa: N812 — PySpark idiom
 
     with pytest.raises(AttributeError, match="collate"):
         _ = F.collate  # type: ignore[attr-defined]
     with pytest.raises(AttributeError, match="collation"):
         _ = F.collation  # type: ignore[attr-defined]
-    from repark.column import Column
+    from repark.spark.column import Column
 
     assert not hasattr(Column, "collate")

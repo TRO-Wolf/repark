@@ -11,9 +11,9 @@ import array
 import pytest
 
 from repark.errors import PySparkNotImplementedError, PySparkTypeError, PySparkValueError
-from repark.row import Row
-from repark.session import ReparkSession, _reset_active_session_for_tests
-from repark.types import (
+from repark.spark.row import Row
+from repark.spark.session import ReparkSession, _reset_active_session_for_tests
+from repark.spark.types import (
     ArrayType,
     DoubleType,
     IntegerType,

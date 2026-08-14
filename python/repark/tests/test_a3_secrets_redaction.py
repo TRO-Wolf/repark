@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from repark._secrets import prop_key_is_secret
-from repark.session import ReparkSession
+from repark.spark._secrets import prop_key_is_secret
+from repark.spark.session import ReparkSession
 
 # Needle inventory mirrored from catalog_config.rs:126 prop_key_is_secret (do not edit Rust).
 # Conformance pin (Q9 / octo C1-SEC-001): every Rust arm has ≥1 positive key; exclusion arms

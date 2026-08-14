@@ -15,12 +15,12 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark._csv_smart import (
+from repark.spark._csv_smart import (
     RUNG_ORDER,
     resolve_cell_rung,
     resolve_column_type,
 )
-from repark.session import _reset_active_session_for_tests
+from repark.spark.session import _reset_active_session_for_tests
 
 
 @pytest.fixture

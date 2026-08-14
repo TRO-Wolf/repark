@@ -10,7 +10,7 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import PySparkException, PySparkTypeError
-from repark.types import IntegerType, StructField, StructType
+from repark.spark.types import IntegerType, StructField, StructType
 
 
 @pytest.fixture
@@ -392,7 +392,7 @@ def test_mapinarrow_register_tracks_before_sql_fail(
     Native PyO3 methods are read-only; wrap ``DataFrame._session`` (Python attr) so we can
     inject sql failure after register_ipc and assert track/drop ordering.
     """
-    from repark.dataframe import DataFrame as _DataFrame
+    from repark.spark.dataframe import DataFrame as _DataFrame
 
     spark._ensure_information_schema()
 

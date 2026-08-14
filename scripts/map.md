@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Repository helper scripts wired into the dev workflow.
+Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
+`check_lib_py.py` EXCEPTIONS paths moved under `python/repark/src/repark/spark/`.
 
 ## Contents
 

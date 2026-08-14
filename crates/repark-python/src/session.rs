@@ -24,7 +24,7 @@ use arrow::array::{RecordBatch, RecordBatchReader};
 use arrow::ffi_stream::{ArrowArrayStreamReader, FFI_ArrowArrayStream};
 use pyo3::prelude::*;
 use pyo3::types::PyCapsule;
-use repark_core::{EngineRuntime, ReparkSession};
+use repark_core::{EngineRuntime, ReparkSession, ReparkSessionBuilder};
 use tokio::runtime::Runtime;
 
 use crate::dataframe::{PyDataFrame, with_stream_poll_no_detach};
@@ -34,6 +34,58 @@ use crate::{UnsupportedOperationException, to_py_err};
 /// Arrow C Stream `PyCapsule` name — same constant as `dataframe.rs` export path
 /// (`ARROW_STREAM_CAPSULE_NAME`). Consumers must request this exact name.
 const ARROW_STREAM_CAPSULE_NAME: &CStr = c"arrow_array_stream";
+
+/// Apply the shared builder knobs used by both the Spark-door constructor and the native door.
+fn apply_session_knobs(
+    memory_limit_gb: Option<usize>,
+    batch_size: Option<usize>,
+    target_partitions: Option<usize>,
+    config: Option<HashMap<String, String>>,
+) -> PyResult<ReparkSessionBuilder> {
+    let mut builder = ReparkSession::builder();
+    // `None` → engine default 8 GiB pool. `Some(0)` → explicit unbounded opt-out
+    // (`memory_limit_bytes(0)`). `Some(n>0)` → n GiB (C2-Q-002 / C2-L-004).
+    match memory_limit_gb {
+        None => {}
+        Some(0) => {
+            builder = builder.memory_limit_bytes(0);
+        }
+        Some(gb) => {
+            builder = builder.memory_limit_gb(gb);
+        }
+    }
+    // Refuse zero explicitly (Critic-octo P3C1-Q-002). Silent filter would drop the
+    // user's request and leave DataFusion defaults — same class as Rust builder Config.
+    if let Some(0) = batch_size {
+        return Err(to_py_err(repark_core::Error::Config(
+            "batch_size must be >= 1 (got 0)".to_string(),
+        )));
+    }
+    if let Some(0) = target_partitions {
+        return Err(to_py_err(repark_core::Error::Config(
+            "target_partitions must be >= 1 (got 0)".to_string(),
+        )));
+    }
+    if let Some(rows) = batch_size {
+        builder = builder.batch_size(rows);
+    }
+    if let Some(parts) = target_partitions {
+        builder = builder.target_partitions(parts);
+    }
+    if let Some(config) = config {
+        builder = builder.configs(config);
+    }
+    Ok(builder)
+}
+
+/// Build the engine session, register catalogs, wrap in the Python handle.
+fn finish_session(py: Python<'_>, builder: ReparkSessionBuilder) -> PyResult<PyReparkSession> {
+    let session = builder.build().map_err(to_py_err)?;
+    let runtime = shared_runtime()?;
+    py.detach(|| runtime.block_on(session.register_configured_catalogs()))
+        .map_err(to_py_err)?;
+    Ok(PyReparkSession { session, runtime })
+}
 
 /// Process-wide Tokio runtime shared by every [`PyReparkSession`] (and every [`PyDataFrame`] it
 /// mints). Constructed on first session build; subsequent sessions reuse the same `Arc`.
@@ -124,55 +176,42 @@ impl PyReparkSession {
         config: Option<HashMap<String, String>>,
     ) -> PyResult<Self> {
         fenced_span!("py.session", "PyReparkSession.__new__", {
-            let mut builder = ReparkSession::builder();
-            // `None` → engine default 8 GiB pool. `Some(0)` → explicit unbounded opt-out
-            // (`memory_limit_bytes(0)`). `Some(n>0)` → n GiB (C2-Q-002 / C2-L-004).
-            match memory_limit_gb {
-                None => {}
-                Some(0) => {
-                    builder = builder.memory_limit_bytes(0);
-                }
-                Some(gb) => {
-                    builder = builder.memory_limit_gb(gb);
-                }
-            }
-            // Refuse zero explicitly (Critic-octo P3C1-Q-002). Silent filter would drop the
-            // user's request and leave DataFusion defaults — same class as Rust builder Config.
-            if let Some(0) = batch_size {
-                return Err(to_py_err(repark_core::Error::Config(
-                    "batch_size must be >= 1 (got 0)".to_string(),
-                )));
-            }
-            if let Some(0) = target_partitions {
-                return Err(to_py_err(repark_core::Error::Config(
-                    "target_partitions must be >= 1 (got 0)".to_string(),
-                )));
-            }
-            if let Some(rows) = batch_size {
-                builder = builder.batch_size(rows);
-            }
-            if let Some(parts) = target_partitions {
-                builder = builder.target_partitions(parts);
-            }
-            if let Some(config) = config {
-                builder = builder.configs(config);
-            }
+            let builder =
+                apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
             // EC-2 (design §3 / §5 F3): install the Spark DOOR before `build()`. A bare builder
             // is stock DataFusion — `SparkExtension` supplies the Spark function registry + the
             // analyzer rules v1 inlined into `build()`, and `SparkDialect` routes `sql()` through
             // the Spark statement router v1's `sql()` called positionally. Both are
             // session-scoped (the frozen seam rule), so they are installed per session, here.
-            let session = builder
+            let builder = builder
                 .with_sql_dialect(Arc::new(repark_spark::SparkDialect))
-                .with_extension(Arc::new(repark_spark::SparkExtension))
-                .build()
-                .map_err(to_py_err)?;
-            let runtime = shared_runtime()?;
-            // Catalog registration is async; run it on the shared runtime with the GIL released so
-            // other Python threads can progress during network/catalog setup.
-            py.detach(|| runtime.block_on(session.register_configured_catalogs()))
-                .map_err(to_py_err)?;
-            Ok(Self { session, runtime })
+                .with_extension(Arc::new(repark_spark::SparkExtension));
+            finish_session(py, builder)
+        })
+    }
+
+    /// Build a **native** (non-Spark) session for the ANSI-door callable `repark.sql()`.
+    ///
+    /// A bare builder is stock DataFusion (`DataFusionDialect`, no `SparkExtension`). That is
+    /// the honest native door reachable from Python tonight without a new
+    /// `repark-python → repark-sql` product edge (lockfile-illegal on this unit). Iceberg-DDL
+    /// `AnsiDialect` handlers remain a recorded residual.
+    ///
+    /// # Errors
+    /// Same knob refusals as [`Self::new`].
+    #[staticmethod]
+    #[pyo3(signature = (memory_limit_gb=None, batch_size=None, target_partitions=None, config=None))]
+    pub fn native(
+        py: Python<'_>,
+        memory_limit_gb: Option<usize>,
+        batch_size: Option<usize>,
+        target_partitions: Option<usize>,
+        config: Option<HashMap<String, String>>,
+    ) -> PyResult<Self> {
+        fenced_span!("py.session", "PyReparkSession.native", {
+            let builder =
+                apply_session_knobs(memory_limit_gb, batch_size, target_partitions, config)?;
+            finish_session(py, builder)
         })
     }
 
@@ -1025,6 +1064,47 @@ mod tests {
             assert!(
                 routed.is_instance_of::<crate::UnsupportedOperationException>(py),
                 "the router's NotImplemented folds to UnsupportedOperationException: {message}"
+            );
+        });
+    }
+
+    /// Native door: `PyReparkSession::native` must NOT install the Spark extension or dialect.
+    ///
+    /// Integer `/` truncates (DataFusion / ANSI) instead of promoting to float (Spark).
+    /// `weekofyear` must fail to resolve. Mutation: wiring `SparkExtension` here would make
+    /// `/` return Float64 2.5 and this pin go red.
+    #[test]
+    fn native_session_is_not_spark_doored() {
+        Python::attach(|py| {
+            let session =
+                PyReparkSession::native(py, None, None, None, None).expect("native session builds");
+
+            let frame = session
+                .sql(py, "SELECT CAST(5 AS INT) / CAST(2 AS INT) AS q")
+                .expect("native integer division plans");
+            let batches = frame
+                .runtime_handle()
+                .block_on(frame.inner().clone().collect())
+                .expect("native integer division evaluates");
+            let quotients = batches[0]
+                .column(0)
+                .as_any()
+                .downcast_ref::<arrow::array::Int32Array>()
+                .expect("native INT/INT is Int32 (truncated), not Spark Float64");
+            assert_eq!(
+                quotients.value(0),
+                2,
+                "ANSI / DataFusion integer / truncates"
+            );
+
+            let Err(missing) = session.sql(py, "SELECT weekofyear(DATE '2021-01-01') AS w") else {
+                panic!("weekofyear must not resolve on a native session");
+            };
+            let message = missing.to_string();
+            assert!(
+                message.to_ascii_lowercase().contains("weekofyear")
+                    || message.to_ascii_lowercase().contains("invalid function"),
+                "native session must lack the Spark function registry; got: {message}"
             );
         });
     }

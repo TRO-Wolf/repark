@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from repark.session import _reset_active_session_for_tests
+from repark.spark.session import _reset_active_session_for_tests
 
 
 @pytest.fixture(autouse=True)

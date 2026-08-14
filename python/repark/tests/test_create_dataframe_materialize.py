@@ -14,7 +14,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.types import IntegerType, StringType, StructField, StructType
+from repark.spark.types import IntegerType, StringType, StructField, StructType
 
 
 @pytest.fixture
@@ -324,7 +324,7 @@ def test_create_dataframe_pandas_uses_native_arrow_not_row_loop(
     (``pa.Table.from_pandas`` is a C-extension slot and cannot be monkeypatched; the
     builder vs rows split is the mutation seam — critic-octo C5.)
     """
-    import repark.session as session_mod
+    import repark.spark.session as session_mod
 
     pd = pytest.importorskip("pandas")
     calls: list[str] = []
@@ -353,7 +353,7 @@ def test_create_dataframe_polars_uses_native_arrow_not_row_loop(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """P2a: polars path uses native ``.to_arrow()`` builder, not the row extractor."""
-    import repark.session as session_mod
+    import repark.spark.session as session_mod
 
     pl = pytest.importorskip("polars")
     calls: list[str] = []
@@ -383,7 +383,7 @@ def test_create_dataframe_native_typed_schema_refuses_inf(spark: ReparkSession) 
     untyped ``createDataFrame(pd.DataFrame({...inf}))`` still refuses.
     """
     from repark.errors import PySparkTypeError
-    from repark.types import DoubleType, FloatType, StructField, StructType
+    from repark.spark.types import DoubleType, FloatType, StructField, StructType
 
     pd = pytest.importorskip("pandas")
     pl = pytest.importorskip("polars")
@@ -437,7 +437,7 @@ def test_create_dataframe_object_null_schema_cast_is_pyspark_type_error(
     import pandas as pd
 
     from repark.errors import PySparkTypeError
-    from repark.types import DoubleType, StructField, StructType
+    from repark.spark.types import DoubleType, StructField, StructType
 
     schema = StructType([StructField("x", DoubleType(), True)])
     frame = pd.DataFrame({"x": pd.Series([pd.NaT, pd.NaT], dtype=object)})
@@ -453,7 +453,7 @@ def test_create_dataframe_empty_pandas_polars_structtype_keeps_types(
     Name-only schema still refuses (interchange pin). List empty+StructType already worked;
     native frame builders must match.
     """
-    from repark.types import IntegerType, StringType, StructField, StructType
+    from repark.spark.types import IntegerType, StringType, StructField, StructType
 
     pd = pytest.importorskip("pandas")
     pl = pytest.importorskip("polars")

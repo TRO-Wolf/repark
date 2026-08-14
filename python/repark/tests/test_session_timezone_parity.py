@@ -74,7 +74,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # The two non-UTC oracle zones. New York exercises a DST-observing zone west of UTC; Tokyo a
 # fixed-offset zone east of UTC, so a sign error cannot pass both.
@@ -240,7 +240,7 @@ def register_ltz_and_ntz_view(session: object) -> None:
             TimestampType,
         )
     else:
-        from repark.types import (
+        from repark.spark.types import (
             StructField,
             StructType,
             TimestampNTZType,
@@ -298,7 +298,7 @@ def _functions_module(session: object) -> object:
         from pyspark.sql import functions as spark_functions
 
         return spark_functions
-    from repark.sql import functions as repark_functions
+    from repark.spark.sql import functions as repark_functions
 
     return repark_functions
 
@@ -1116,7 +1116,7 @@ def test_runtime_conf_set_of_the_session_zone_is_accepted_but_not_applied() -> N
     """
     import warnings
 
-    from repark.session import session_time_zone as tz_module
+    from repark.spark.session import session_time_zone as tz_module
 
     tz_module._runtime_session_time_zone_warned = False  # re-arm the once-per-process disclosure
     session = _session_at(ZONE_TOKYO)
@@ -1158,7 +1158,7 @@ def test_apache_sql_conf_context_manager_round_trips_the_session_zone() -> None:
     import warnings
 
     import repark
-    from repark.session import session_time_zone as tz_module
+    from repark.spark.session import session_time_zone as tz_module
 
     tz_module._runtime_session_time_zone_warned = True  # disclosure already made; keep it quiet
     session = _session_at(ZONE_NEW_YORK)

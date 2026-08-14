@@ -35,8 +35,8 @@ from pathlib import Path
 import pytest
 
 from repark import ReparkSession
-from repark.catalog import Catalog, CatalogMetadata, Database, Table
 from repark.errors import AnalysisException, PySparkTypeError, UnsupportedOperationException
+from repark.spark.catalog import Catalog, CatalogMetadata, Database, Table
 
 
 @pytest.fixture

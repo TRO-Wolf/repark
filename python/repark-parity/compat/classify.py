@@ -336,7 +336,7 @@ def _is_third_party_import(text: str) -> bool:
     # Product repark import gaps stay FAIL-MISSING (not env HARNESS).
     # Match the missing/imported module name — including quoted forms used by CPython:
     #   No module named 'repark.foo'
-    #   cannot import name 'X' from 'repark.functions'
+    #   cannot import name 'X' from 'repark.spark.functions'
     if re.search(
         r"no module named ['\"]?repark"
         r"|cannot import name .+ from ['\"]repark"

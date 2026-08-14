@@ -73,7 +73,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 ZONE_NEW_YORK = "America/New_York"
 ZONE_TOKYO = "Asia/Tokyo"
@@ -200,7 +200,7 @@ def _functions_module(session: object) -> object:
         from pyspark.sql import functions as spark_functions
 
         return spark_functions
-    from repark.sql import functions as repark_functions
+    from repark.spark.sql import functions as repark_functions
 
     return repark_functions
 
@@ -271,7 +271,7 @@ def dataframe_ntz_string_cast_projection(session: object) -> pa.Table:
     if session.__class__.__module__.split(".")[0] == "pyspark":
         from pyspark.sql.types import StructField, StructType, TimestampNTZType
     else:
-        from repark.types import StructField, StructType, TimestampNTZType
+        from repark.spark.types import StructField, StructType, TimestampNTZType
     schema = StructType([StructField("ts", TimestampNTZType(), True)])
     naive = dt.datetime(2024, 6, 15, 12, 0)
     frame = session.createDataFrame([(naive,)], schema)  # type: ignore[attr-defined]

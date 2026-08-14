@@ -10,7 +10,6 @@ import pyarrow as pa
 import pytest
 
 from repark import SparkSession
-from repark.dataframe import DataFrame
 from repark.errors import (
     AnalysisException,
     PySparkException,
@@ -18,7 +17,8 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
-from repark.functions import (
+from repark.spark.dataframe import DataFrame
+from repark.spark.functions import (
     PandasUDFColumn,
     PandasUDFType,
     bucket,
@@ -30,10 +30,10 @@ from repark.functions import (
     pandas_udf,
     years,
 )
-from repark.functions import (
+from repark.spark.functions import (
     sum as f_sum,
 )
-from repark.types import (
+from repark.spark.types import (
     CharType,
     IntegerType,
     LongType,
@@ -410,7 +410,7 @@ def test_pandas_udf_composition_refused(spark: SparkSession) -> None:
     # non-WindowSpec → TypeError; SCALAR + real WindowSpec → AnalysisException (not GROUPED_AGG).
     with pytest.raises(PySparkTypeError, match=r"WindowSpec"):
         marker.over(object())
-    from repark.window import Window
+    from repark.spark.window import Window
 
     with pytest.raises(AnalysisException, match=r"GROUPED_AGG|functionType"):
         marker.over(Window.partitionBy("x"))
@@ -574,7 +574,7 @@ def test_pandas_udf_expression_input(spark: SparkSession) -> None:
 
 
 def test_pandas_udf_export_on_functions_all() -> None:
-    import repark.functions as functions
+    import repark.spark.functions as functions
 
     assert "pandas_udf" in functions.__all__
     assert "PandasUDFType" in functions.__all__
@@ -582,7 +582,7 @@ def test_pandas_udf_export_on_functions_all() -> None:
 
 
 def test_pandas_udf_sql_functions_alias() -> None:
-    from repark.sql import functions as sql_functions
+    from repark.spark.sql import functions as sql_functions
 
     assert sql_functions.pandas_udf is pandas_udf
     assert sql_functions.PandasUDFType is PandasUDFType
@@ -1262,7 +1262,7 @@ def test_pandas_udf_window_partition_unbounded(spark: SparkSession) -> None:
 
     Plan-built: groupBy(partition).agg(udf) join back on keys (not Python merge).
     """
-    from repark.window import Window
+    from repark.spark.window import Window
 
     @pandas_udf("double", PandasUDFType.GROUPED_AGG)
     def mean_udf(series: pd.Series) -> float:
@@ -1293,7 +1293,7 @@ def test_pandas_udf_window_order_by_default_frame(spark: SparkSession) -> None:
 
     Values ordered 1, 3, 5 under key a → running means 1.0, 2.0, 3.0 (not whole-partition 3.0).
     """
-    from repark.window import Window
+    from repark.spark.window import Window
 
     @pandas_udf("double", PandasUDFType.GROUPED_AGG)
     def mean_udf(series: pd.Series) -> float:
@@ -1318,7 +1318,7 @@ def test_pandas_udf_window_rows_between_duck_typed(spark: SparkSession) -> None:
     Uses a WindowSpec subclass so slots can carry frame bounds without editing window.py.
     Frame rowsBetween(-1, 0): mean of previous+current.
     """
-    from repark.window import Window, WindowSpec
+    from repark.spark.window import Window, WindowSpec
 
     class _WindowSpecWithRows(WindowSpec):
         """Test-only G2-shaped frame carrier (slots-safe subclass)."""
@@ -1366,7 +1366,7 @@ def test_pandas_udf_window_select_alias_overwrites_source_column(spark: SparkSes
     through; or null-safe join prefers left for non-keys so even last-wins final_names
     still project source ``v`` when both sides carry the name.
     """
-    from repark.window import Window
+    from repark.spark.window import Window
 
     @pandas_udf("double", PandasUDFType.GROUPED_AGG)
     def mean_udf(series: pd.Series) -> float:
@@ -1398,7 +1398,7 @@ def test_pandas_udf_window_null_partition_keys(spark: SparkSession) -> None:
     MUTATION: name-list equi-join drops ``NULL = NULL`` partitions → only non-null keys
     survive (silently wrong multiset / missing rows).
     """
-    from repark.window import Window
+    from repark.spark.window import Window
 
     @pandas_udf("double", PandasUDFType.GROUPED_AGG)
     def mean_udf(series: pd.Series) -> float:

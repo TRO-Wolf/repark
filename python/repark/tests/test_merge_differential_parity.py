@@ -70,7 +70,7 @@ from _oracle_pins import (
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # Re-export oracle pins so in-module callers keep the historical names; the SSOT is
 # :mod:`_oracle_pins`. Record driver imports GAV from ``_oracle_pins`` directly (never here).

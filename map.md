@@ -31,8 +31,9 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).
   Both members are declared (`python/repark`, `python/repark-parity`); the three facade
-  per-file-ignore blocks (`ml/**`, `session/**`, `dataframe/**`) are **load-bearing**, not style —
-  they are how the r26 region splits keep their pre-split import paths (design §2.3).
+  per-file-ignore blocks (`spark/ml/**`, `spark/session/**`, `spark/dataframe/**`) are
+  **load-bearing**, not style — they are how the r26 region splits keep their pre-split
+  import paths after the Q1 re-home (design §2.3 / §4 Q1).
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +

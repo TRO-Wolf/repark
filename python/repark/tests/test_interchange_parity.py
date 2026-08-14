@@ -574,7 +574,7 @@ def test_create_dataframe_list_all_nan_nat_preserves_arrow_types(
     would emit CAST(NULL AS VARCHAR). Pure None stays string (C2-L-003).
     """
     np = pytest.importorskip("numpy")
-    from repark.row import Row
+    from repark.spark.row import Row
 
     # Tuple path — float NaN → DOUBLE, value AND type.
     nan_table = spark.createDataFrame(
@@ -1270,7 +1270,7 @@ def test_create_dataframe_pandas_datetime64_minute_not_month(
     TIMESTAMP occupancy, and that ms still stays TIMESTAMP (closed-bracket residual).
     """
     np = pytest.importorskip("numpy")
-    from repark.session import _null_sql_for_pandas_dtype
+    from repark.spark.session import _null_sql_for_pandas_dtype
 
     # Mapper: case-sensitive unit — minute TIMESTAMP, month DATE (would fail if text.lower()).
     assert "TIMESTAMP" in _null_sql_for_pandas_dtype(np.dtype("datetime64[m]")).upper()

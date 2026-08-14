@@ -16,7 +16,7 @@ import pytest
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
 from repark.errors import AnalysisException
-from repark.session import DataFrameReader
+from repark.spark.session import DataFrameReader
 
 
 @pytest.fixture
@@ -281,7 +281,7 @@ def test_read_table_rejects_sql_fragments(spark: ReparkSession) -> None:
 
 def test_sql_table_ref_accepts_quoted_segments_with_dots() -> None:
     """Octo C2-L-001 / C2-Q-002: quote-aware multipart parsing (dots inside quotes)."""
-    from repark.session import _sql_table_ref
+    from repark.spark.session import _sql_table_ref
 
     assert _sql_table_ref('catalog."db.with.dot".t') == '"catalog"."db.with.dot"."t"'
     assert _sql_table_ref('"a.b"') == '"a.b"'
@@ -431,7 +431,7 @@ def test_read_iceberg_option_path_load(spark: ReparkSession, tmp_path: Path) -> 
 
 def test_read_schema_stores_for_csv_json(spark: ReparkSession, tmp_path: Path) -> None:
     """R1: DataFrameReader.schema chains and applies on csv/json (was C1-Q-007 unsupported)."""
-    from repark.types import IntegerType, StructField, StructType
+    from repark.spark.types import IntegerType, StructField, StructType
 
     path = tmp_path / "schema.csv"
     path.write_text("1\n2\n", encoding="utf-8")

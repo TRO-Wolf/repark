@@ -8,10 +8,10 @@ declared in the root [`pyproject.toml`](../pyproject.toml), sharing one `uv.lock
 
 ## Contents
 
-- [repark/](repark/map.md) — the PySpark facade wheel: maturin backend over
-  `crates/repark-python`, 53 source modules (the `repark.sql` alias package, the r26 `session/`
-  and `dataframe/` region splits, `repark.ml`) and the 126-file facade suite (127 at the pin minus the whole-file excel deferral). Landed in phase-3
-  PR-5; it is the full-extras facade census cohort (`docs/design/python-facade.md` §6.3).
+- [repark/](repark/map.md) — the wheel: maturin backend over `crates/repark-python`.
+  Q1 re-home (2026-08-14): facade at `repark.spark`, alias at `repark.spark.sql`,
+  `repark.sql()` the ANSI callable. Landed in phase-3 PR-5; it is the full-extras
+  facade census cohort (`docs/design/python-facade.md` §6.3).
 - [repark-parity/](repark-parity/map.md) — the Spark-parity differential harness (pure-pyarrow
   comparison core, no Spark and no JVM), the `compat/` PySpark-suite census machinery **including
   the report comparator that is the port's acceptance gate**, and `bench/` (TPC-H / TPC-DS / write

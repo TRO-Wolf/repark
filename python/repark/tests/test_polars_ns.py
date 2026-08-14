@@ -8,7 +8,7 @@ from __future__ import annotations
 import pyarrow as pa
 import pytest
 
-import repark.polars as rp
+import repark.spark.polars as rp
 from repark import ReparkSession
 from repark.errors import UnsupportedOperationException
 

@@ -26,7 +26,7 @@ import time
 import pyarrow as pa
 import pytest
 
-import repark.session as session_module
+import repark.spark.session as session_module
 from repark import ReparkSession
 from repark import functions as F  # noqa: N812
 from repark.errors import IllegalArgumentException, PySparkException
@@ -170,7 +170,7 @@ def test_datafusion_trailing_newline_key_refuses_loud_no_store_no_engine() -> No
 
 def test_datafusion_set_value_quote_escape_no_injection() -> None:
     """Value is single-quoted + quote-doubled; engine parse fails closed (octo T2 C4)."""
-    from repark.session import _format_datafusion_set_sql
+    from repark.spark.session import _format_datafusion_set_sql
 
     assert (
         _format_datafusion_set_sql("datafusion.execution.batch_size", "a'b")
@@ -269,7 +269,7 @@ def test_sort_oom_collect_path_same_error_class() -> None:
 
 def test_export_error_helper_strips_pyarrow_noise() -> None:
     """Unit pin: wrapper noise loses to an engine Resources exhausted payload."""
-    from repark.dataframe import _export_engine_error, _export_error_message
+    from repark.spark.dataframe import _export_engine_error, _export_error_message
 
     class _OuterError(Exception):
         pass

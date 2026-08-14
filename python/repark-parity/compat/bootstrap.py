@@ -43,67 +43,67 @@ class PatchEntry:
 PATCH_MAP: tuple[PatchEntry, ...] = (
     PatchEntry(
         target="pyspark.sql.SparkSession",
-        source="repark.session.SparkSession (= ReparkSession)",
+        source="repark.spark.session.SparkSession (= ReparkSession)",
         kind="replace",
         notes="Builder + session type used by suite factories after ReusedSQLTestCase patch.",
     ),
     PatchEntry(
         target="pyspark.sql.session.SparkSession",
-        source="repark.session.SparkSession",
+        source="repark.spark.session.SparkSession",
         kind="replace",
         notes="Same class object as pyspark.sql.SparkSession.",
     ),
     PatchEntry(
         target="pyspark.sql.classic.session.SparkSession",
-        source="repark.session.SparkSession",
+        source="repark.spark.session.SparkSession",
         kind="replace",
         notes="Spark 4 classic submodule (when importable).",
     ),
     PatchEntry(
         target="pyspark.sql.DataFrame",
-        source="repark.dataframe.DataFrame",
+        source="repark.spark.dataframe.DataFrame",
         kind="replace",
         notes="So `from pyspark.sql import DataFrame` binds repark's type.",
     ),
     PatchEntry(
         target="pyspark.sql.classic.dataframe.DataFrame",
-        source="repark.dataframe.DataFrame",
+        source="repark.spark.dataframe.DataFrame",
         kind="replace",
         notes="Spark 4 classic dataframe submodule (when importable).",
     ),
     PatchEntry(
         target="pyspark.sql.Row",
-        source="repark.row.Row",
+        source="repark.spark.row.Row",
         kind="replace",
         notes="Row identity for createDataFrame / collect comparisons.",
     ),
     PatchEntry(
         target="pyspark.sql.column.Column",
-        source="repark.column.Column",
+        source="repark.spark.column.Column",
         kind="replace",
-        notes="Column type shared with repark.functions; submodule + package attribute.",
+        notes="Column type shared with repark.spark.functions; submodule + package attribute.",
     ),
     PatchEntry(
         target="pyspark.sql.dataframe.DataFrame",
-        source="repark.dataframe.DataFrame",
+        source="repark.spark.dataframe.DataFrame",
         kind="replace",
         notes="Submodule path for `from pyspark.sql.dataframe import DataFrame`.",
     ),
     PatchEntry(
         target="pyspark.sql.classic.column.Column",
-        source="repark.column.Column",
+        source="repark.spark.column.Column",
         kind="replace",
         notes="Spark 4 classic column submodule (when importable).",
     ),
     PatchEntry(
         target="pyspark.sql.types.* (overlay)",
-        source="repark.types public names",
+        source="repark.spark.types public names",
         kind="overlay",
         notes="Only names repark implements; missing Spark types stay pyspark (often NEEDS-JVM).",
     ),
     PatchEntry(
         target="pyspark.sql.functions.* (overlay)",
-        source="repark.functions public names",
+        source="repark.spark.functions public names",
         kind="overlay",
         notes="Overlay onto classic functions module + package __init__; submodules "
         "(avro, builtin extras) stay pyspark and usually FAIL-MISSING / NEEDS-JVM.",
@@ -291,15 +291,15 @@ def _patch_session_and_types() -> None:
     import pyspark.sql.types as pyspark_types
 
     import repark
-    from repark.column import Column
-    from repark.dataframe import DataFrame
-    from repark.row import Row
-    from repark.session import ReparkSession, SparkSession
-    from repark.window import Window, WindowSpec
+    from repark.spark.column import Column
+    from repark.spark.dataframe import DataFrame
+    from repark.spark.row import Row
+    from repark.spark.session import ReparkSession, SparkSession
+    from repark.spark.window import Window, WindowSpec
 
     pyspark_sql.SparkSession = SparkSession  # type: ignore[misc, assignment]
     pyspark_session.SparkSession = SparkSession  # type: ignore[misc, assignment]
-    _log("replace: pyspark.sql.SparkSession → repark.session.SparkSession")
+    _log("replace: pyspark.sql.SparkSession → repark.spark.session.SparkSession")
 
     pyspark_sql.DataFrame = DataFrame  # type: ignore[misc, assignment]
     pyspark_sql.Row = Row  # type: ignore[misc, assignment]
@@ -349,10 +349,10 @@ def _patch_session_and_types() -> None:
     except ImportError:
         pass
 
-    import repark.types as repark_types
+    import repark.spark.types as repark_types
 
     overlaid = _overlay_public_names(pyspark_types, repark_types)
-    _log(f"overlay: pyspark.sql.types ← repark.types ({overlaid} names)")
+    _log(f"overlay: pyspark.sql.types ← repark.spark.types ({overlaid} names)")
     # F1 true-EC: Apache test_types imports private helpers by name
     # (`from pyspark.sql.types import _merge_type, _make_type_verifier`). Public-name
     # overlay skips underscore attrs; pin the repark implementations so check_error
@@ -360,17 +360,17 @@ def _patch_session_and_types() -> None:
     for private_name in ("_merge_type", "_make_type_verifier"):
         if hasattr(repark_types, private_name):
             setattr(pyspark_types, private_name, getattr(repark_types, private_name))
-            _log(f"replace: pyspark.sql.types.{private_name} → repark.types.{private_name}")
+            _log(f"replace: pyspark.sql.types.{private_name} → repark.spark.types.{private_name}")
 
     # StorageLevel: Apache cache tests import pyspark.storagelevel.StorageLevel and compare
     # to DataFrame.storageLevel (repark). Replace the class so identity + equality match.
     try:
         import pyspark.storagelevel as pyspark_storagelevel
 
-        from repark.storage import StorageLevel
+        from repark.spark.storage import StorageLevel
 
         pyspark_storagelevel.StorageLevel = StorageLevel  # type: ignore[misc, assignment]
-        _log("replace: pyspark.storagelevel.StorageLevel → repark.storage.StorageLevel")
+        _log("replace: pyspark.storagelevel.StorageLevel → repark.spark.storage.StorageLevel")
     except ImportError:
         pass
 
@@ -380,7 +380,7 @@ def _patch_session_and_types() -> None:
 
 
 def _patch_functions_overlay() -> None:
-    import repark.functions as repark_functions
+    import repark.spark.functions as repark_functions
 
     # Spark 4 ships functions as a package; overlay public callables onto it.
     try:
@@ -390,14 +390,14 @@ def _patch_functions_overlay() -> None:
         return
 
     overlaid = _overlay_public_names(pyspark_functions, repark_functions)
-    _log(f"overlay: pyspark.sql.functions ← repark.functions ({overlaid} names)")
+    _log(f"overlay: pyspark.sql.functions ← repark.spark.functions ({overlaid} names)")
 
     # classic.functions module (used by some internal imports)
     try:
         import pyspark.sql.classic.functions as classic_functions
 
         n = _overlay_public_names(classic_functions, repark_functions)
-        _log(f"overlay: pyspark.sql.classic.functions ← repark.functions ({n} names)")
+        _log(f"overlay: pyspark.sql.classic.functions ← repark.spark.functions ({n} names)")
     except ImportError:
         pass
 
@@ -498,9 +498,9 @@ def _patch_test_case_factories() -> None:
 
     def reused_sql_setup(cls: type) -> None:
         """Build a repark session; mirror Apache's cls.spark / cls.df fixtures."""
-        from repark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
-        from repark.row import Row
-        from repark.session import ReparkSession, _reset_active_session_for_tests
+        from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
+        from repark.spark.row import Row
+        from repark.spark.session import ReparkSession, _reset_active_session_for_tests
 
         _reset_active_session_for_tests()
         # Parent would start SparkContext — skip it intentionally.
@@ -557,7 +557,7 @@ def _patch_test_case_factories() -> None:
         warehouse = getattr(cls, "_repark_compat_warehouse", None)
         if warehouse is not None:
             shutil.rmtree(warehouse, ignore_errors=True)
-        from repark.session import _reset_active_session_for_tests
+        from repark.spark.session import _reset_active_session_for_tests
 
         _reset_active_session_for_tests()
 
@@ -612,7 +612,7 @@ def _assert_no_jvm_started() -> None:
 
 def build_repark_session(app_name: str = "repark-pyspark-compat") -> Any:
     """Helper for smoke/meta tests: a fresh repark session via the public builder."""
-    from repark.session import ReparkSession, _reset_active_session_for_tests
+    from repark.spark.session import ReparkSession, _reset_active_session_for_tests
 
     _reset_active_session_for_tests()
     return ReparkSession.builder.appName(app_name).getOrCreate()

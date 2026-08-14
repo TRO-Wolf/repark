@@ -407,8 +407,8 @@ def test_explode_on_sql_functions_export_and_posexplode_stop() -> None:
     ``from repark.sql import functions as F; F.explode`` raise a false 'not implemented'
     AttributeError via sql.functions.__getattr__.
     """
-    import repark.functions as canonical
-    from repark.sql import functions as sql_functions
+    import repark.spark.functions as canonical
+    from repark.spark.sql import functions as sql_functions
 
     for name in ("explode", "explode_outer", "posexplode", "posexplode_outer"):
         assert name in canonical.__all__, name
@@ -774,7 +774,7 @@ def test_explode_nested_aggregate_argument_missing_group_by(frame: object) -> No
         F.explode_outer(F.array_repeat(F.sum("id"), 1))
     # select boundary: nested form must not reach unnest even if builder were bypassed
     # (select-level generator+aggregate gate — synthetic sticky Column).
-    from repark.column import Column
+    from repark.spark.column import Column
 
     synth = Column(
         collect._inner,
@@ -801,7 +801,7 @@ def test_generator_alias_cast_keeps_sticky_aggregate(frame: object) -> None:
     generator+agg ``[MISSING_GROUP_BY]`` gate that bare ``select(synth)`` raised.
     Mutation that drops sticky copy fails these pins; ordinary explode still unnests.
     """
-    from repark.column import Column
+    from repark.spark.column import Column
 
     collect = F.collect_list(frame.id)
     synth = Column(

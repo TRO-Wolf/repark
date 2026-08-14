@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import pytest
 
-from repark.row import Row
-from repark.session import ReparkSession
-from repark.types import IntegerType, LongType, StringType, StructField, StructType
+from repark.spark.row import Row
+from repark.spark.session import ReparkSession
+from repark.spark.types import IntegerType, LongType, StringType, StructField, StructType
 
 # ==================================================================================================
 # Row factory / repr (Apache DataTypeTests)
@@ -124,7 +124,7 @@ def test_struct_field_metadata_create_dataframe() -> None:
 
 
 def test_from_ddl_array_struct() -> None:
-    from repark.types import ArrayType, DataType, DoubleType
+    from repark.spark.types import ArrayType, DataType, DoubleType
 
     assert DataType.fromDDL("array<int>") == ArrayType(IntegerType())
     assert DataType.fromDDL("struct<a:string,b:array<long>>") == StructType(
@@ -141,7 +141,7 @@ def test_from_ddl_array_struct() -> None:
 
 def test_create_dataframe_explicit_nested_struct_with_string() -> None:
     """StructType nested fields with StringType must stay struct — not stringify (octo X2 C1)."""
-    from repark.types import ArrayType
+    from repark.spark.types import ArrayType
 
     spark = ReparkSession.builder.master("local[1]").appName("x2-nested-schema").getOrCreate()
     try:
@@ -180,7 +180,7 @@ def test_create_dataframe_explicit_nested_struct_with_string() -> None:
 
 def test_create_dataframe_explicit_map_and_array_string() -> None:
     """MapType / ArrayType(StringType) explicit schema must not collapse to string (octo X2 C1)."""
-    from repark.types import ArrayType, MapType
+    from repark.spark.types import ArrayType, MapType
 
     spark = ReparkSession.builder.master("local[1]").appName("x2-map-arr").getOrCreate()
     try:

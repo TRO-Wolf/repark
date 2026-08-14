@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import pytest
 
-from repark._idents import (
+from repark.errors import PySparkValueError
+from repark.spark._idents import (
     INJECTION_PROBES,
     PATH_ESCAPE_PROBES,
     PATH_ESCAPE_SAFE,
@@ -26,7 +27,6 @@ from repark._idents import (
     quote_multipart,
     reject_path_escape_segment,
 )
-from repark.errors import PySparkValueError
 
 # ---------------------------------------------------------------------------
 # Behavior pins — call-site classes
@@ -183,8 +183,8 @@ def test_is_plain_ident() -> None:
 
 def test_polars_join_quote_uses_ssot_for_bare() -> None:
     """Q5: polars nested quote_ident builds SQL identifiers — bare-only + always-quote SSOT."""
-    from repark._idents import is_plain_ident
-    from repark._idents import quote_ident as ssot
+    from repark.spark._idents import is_plain_ident
+    from repark.spark._idents import quote_ident as ssot
 
     # Mirror the nested helper contract without spinning a full join.
     assert is_plain_ident("id")

@@ -14,8 +14,8 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
-from repark.session import _reset_active_session_for_tests
-from repark.types import (
+from repark.spark.session import _reset_active_session_for_tests
+from repark.spark.types import (
     ArrayType,
     LongType,
     NullType,
@@ -43,7 +43,7 @@ def spark() -> Iterator[ReparkSession]:
 
 def test_both_method_names_bound(spark: ReparkSession) -> None:
     """Q26: both ``dynamicFlatten`` and ``dynamic_flatten`` exist and agree."""
-    from repark.dataframe import DataFrame
+    from repark.spark.dataframe import DataFrame
 
     frame = spark.createDataFrame([(1, "a")], "id INT, name STRING")
     assert hasattr(frame, "dynamicFlatten")
@@ -722,7 +722,7 @@ def test_dynamic_flatten_plan_build_does_not_force_collect(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Plan-time dynamicFlatten must not invoke collect / count / to_arrow (C2-Q-003)."""
-    from repark.dataframe import DataFrame
+    from repark.spark.dataframe import DataFrame
 
     actions: list[str] = []
 

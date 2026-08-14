@@ -13,8 +13,8 @@ import pytest
 
 from repark import ReparkSession
 from repark.errors import AnalysisException, IllegalArgumentException, UnsupportedOperationException
-from repark.ml import Pipeline
-from repark.ml.feature import (
+from repark.spark.ml import Pipeline
+from repark.spark.ml.feature import (
     IDF,
     QUANTILE_FAMILY_STATUS,
     Binarizer,
@@ -551,7 +551,7 @@ def test_count_vectorizer_and_idf() -> None:
         assert all(weight >= 0.0 for weight in idf_model.idf)
         tfidf_rows = idf_model.transform(tf).collect()
         assert len(tfidf_rows) == 3
-        from repark.ml.feature import COUNT_VECTORIZER_STATUS, IDF_STATUS
+        from repark.spark.ml.feature import COUNT_VECTORIZER_STATUS, IDF_STATUS
 
         assert "SHIPPED" in COUNT_VECTORIZER_STATUS
         assert "SHIPPED" in IDF_STATUS
@@ -760,7 +760,7 @@ def test_pipeline_string_indexer_save_load() -> None:
     import tempfile
     from pathlib import Path
 
-    from repark.ml import PipelineModel
+    from repark.spark.ml import PipelineModel
 
     spark = _session()
     tmp = tempfile.mkdtemp()

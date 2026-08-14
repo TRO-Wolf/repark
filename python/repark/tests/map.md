@@ -3,7 +3,10 @@
 ## Purpose
 
 Facade tests for the `repark` wheel — they require the compiled native module and exercise the
-real boundary end to end. See [../map.md](../map.md).
+real boundary end to end. See [../map.md](../map.md). Q1 re-home (2026-08-14): imports target
+`repark.spark.*`; `test_sql_alias.py` pins failing `import repark.sql` + the ANSI callable.
+S-1's `test_decimal128_parity.py` / `test_sql_passthrough_parity.py` /
+`_record_decimal128_goldens.py` keep old import lines (SQM union).
 
 **This suite IS the full-extras facade census cohort** (`docs/design/python-facade.md` §6.3): the
 recorded acceptance run installs the built **wheel** by explicit file path into a bare interpreter
@@ -919,10 +922,10 @@ NOT in that file is a defect, not a decision.
 - `test_parity3.py` — **R-PARITY3**: `createDataFrame(schema=StructType|DDL)` preserves int32;
   `show(vertical=True)` real `-RECORD` layout + only-showing-top-n. Row factory/pickle pins in
   `test_row.py`.
-- `test_sql_alias.py` — **R-SQLALIAS** `repark.sql` package. Pins `is` identity for every
-  aliased name vs canonical `repark.*`, loud AttributeError/ImportError for absent pyspark.sql
-  names (never stubs), sed-swap smoke of the live-parity harness import block and
-  publish-job-style multi-imports.
+- `test_sql_alias.py` — **Q1 re-home**. `import repark.sql` fails; `repark.sql("SELECT 1")`
+  is the ANSI-door callable (Arrow path, INT/INT truncates). `repark.spark.sql` alias
+  package: `is` identity vs canonical `repark.spark.*`, loud gaps, sed
+  `pyspark`→`repark.spark` smoke, top-level shim identity.
 - `test_catalog_surface.py` — **G-INT INT-004** (historical bullet; current surface is the
   R-CURCAT entry above). Pins that still matter: `tableExists` / camelCase aliases /
   `clearCache`/`dropTempView`. Rowed listing refusals:

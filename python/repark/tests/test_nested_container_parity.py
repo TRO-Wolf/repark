@@ -45,7 +45,7 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 if TYPE_CHECKING:
-    from repark.session import ReparkSession
+    from repark.spark.session import ReparkSession
 
 # Named so every disclosure's note can cite the same future work without inventing per-row fix IDs.
 FIX_G18_LIST = (
@@ -136,7 +136,7 @@ def _functions_module(session: object) -> object:
         from pyspark.sql import functions as spark_functions
 
         return spark_functions
-    from repark.sql import functions as repark_functions
+    from repark.spark.sql import functions as repark_functions
 
     return repark_functions
 
@@ -568,7 +568,7 @@ def test_nested_row_matches_spark_or_still_diverges(row: NestedRow) -> None:
         actual = run_row(row, session)
     finally:
         session.stop()
-        from repark.session import _reset_active_session_for_tests
+        from repark.spark.session import _reset_active_session_for_tests
 
         _reset_active_session_for_tests()
 

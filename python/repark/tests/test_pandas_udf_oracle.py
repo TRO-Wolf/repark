@@ -38,7 +38,7 @@ from pyspark.sql.functions import pandas_udf as spark_pandas_udf  # noqa: E402
 
 from repark import SparkSession  # noqa: E402
 from repark.errors import PySparkException  # noqa: E402
-from repark.functions import PandasUDFType, col, pandas_udf  # noqa: E402
+from repark.spark.functions import PandasUDFType, col, pandas_udf  # noqa: E402
 
 _TESTS_DIR = str(Path(__file__).resolve().parent)
 if _TESTS_DIR not in sys.path:

@@ -22,7 +22,7 @@ import pytest
 
 from repark import ReparkSession, functions
 from repark.errors import PySparkTypeError
-from repark.types import DoubleType, LongType, MapType, StructField, StructType
+from repark.spark.types import DoubleType, LongType, MapType, StructField, StructType
 
 # Local alias — PySpark suite spelling; N812 exempt via explicit rebind (not `import as F`).
 F = functions

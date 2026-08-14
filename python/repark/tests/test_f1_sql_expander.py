@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from repark.session import ReparkSession, _reset_active_session_for_tests
+from repark.spark.session import ReparkSession, _reset_active_session_for_tests
 
 
 @pytest.fixture()

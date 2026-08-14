@@ -12,7 +12,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.types import IntegerType, StringType, StructField, StructType
+from repark.spark.types import IntegerType, StringType, StructField, StructType
 
 
 @pytest.fixture

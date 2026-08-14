@@ -250,7 +250,7 @@ def _emit_all(spark: Any) -> None:
     repark_session = None
     try:
         import repark
-        from repark.session import _reset_active_session_for_tests
+        from repark.spark.session import _reset_active_session_for_tests
 
         _reset_active_session_for_tests()
         repark_session = repark.ReparkSession.builder.appName("boundary-shapes-emit").getOrCreate()
@@ -279,7 +279,7 @@ def _emit_all(spark: Any) -> None:
     finally:
         if repark_session is not None:
             repark_session.stop()
-            from repark.session import _reset_active_session_for_tests
+            from repark.spark.session import _reset_active_session_for_tests
 
             _reset_active_session_for_tests()
 

@@ -92,9 +92,9 @@ def test_unpivot_quotes_hostile_names_and_labels(spark: ReparkSession) -> None:
     Mutation that reverts to bare ``'{value_col}'`` / unquoted AS names fails the
     single-column / no-breakout pins below.
     """
-    from repark._idents import quote_ident as _quote_ident
-    from repark.dataframe import _sql_string_literal
     from repark.errors import AnalysisException
+    from repark.spark._idents import quote_ident as _quote_ident
+    from repark.spark.dataframe import _sql_string_literal
 
     frame = spark.sql('SELECT 1 AS "order", 10 AS a, 20 AS b')
     # Reserved-name id column must quote cleanly.
