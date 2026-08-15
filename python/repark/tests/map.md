@@ -498,6 +498,11 @@ NOT in that file is a defect, not a decision.
 - `test_merge_store_assign.py` — **audit M9**: MERGE INSERT ANSI store-assignment gate —
   boolean→int / timestamp→bigint / string→numeric refuse at analysis; numeric widening,
   NULL-fill and atomic→string still insert. Arrow path.
+- `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
+  c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
+  `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
+  UPDATE on an unpartitioned target; partial INSERT NULL-fills omitted nullable columns.
+  Arrow path, value + type.
 - **octo-extra C3: format= refuse surface**
 
 - **octo-extra C2: __all__ / export coverage**
