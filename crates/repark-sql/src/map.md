@@ -79,7 +79,9 @@ reach delegation through the ordinary arm.
   spelling and refuses citing Q3. Tests: [alter/map.md](alter/map.md).
 - `merge.rs` — `MERGE INTO` → `repark_iceberg::write::merge::MergeSpec` (~200 lines of mapping).
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
-  (parse-level absent here); OUTPUT/RETURNING refuses. Tests: [merge/map.md](merge/map.md).
+  (parse-level absent here); OUTPUT/RETURNING refuses. **MG-2:** Oracle sub-predicates,
+  assignment-target qualification, non-last unconditional clauses refuse at this door.
+  Tests: [merge/map.md](merge/map.md).
 - `time_travel.rs` — the `FOR VERSION|TIMESTAMP AS OF` token-scan rewrite (Q5/G7): recognize,
   resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register
   an ephemeral pinned view, splice its name in, THEN parse. `FOR` is mandatory; `"` quotes
