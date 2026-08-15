@@ -11,11 +11,12 @@
 The oracle is `polars_talib`, which bundles **C TA-Lib 0.4.0** — the exact library the
 pipeline's models were trained against. This script generates two deterministic fixtures — a
 5000-row OHLC random walk, and a 600-row series with a 300-bar dead-flat plateau (which drives
-the `TA_IS_ZERO` guard branches a smooth walk never reaches) — computes every indicator/param
-set the `repark-ta` golden tests cover, and writes raw little-endian f64 bit patterns (`.bin`,
-one u64 per row; nulls recorded as NaN) plus a `manifest.json` into
-`crates/repark-ta/tests/goldens/`. Writes are temp-file + atomic rename, so an interrupted run
-cannot leave a half-written file.
+the `TA_IS_ZERO` guard branches a smooth walk never reaches) — plus a strictly-positive
+`volume` column on both (dedicated RNGs; seeds 4242 / 77 — never the OHLC RNGs) — computes
+every indicator/param set the `repark-ta` golden tests cover, and writes raw little-endian
+f64 bit patterns (`.bin`, one u64 per row; nulls recorded as NaN) plus a `manifest.json`
+into `crates/repark-ta/tests/goldens/`. Writes are temp-file + atomic rename, so an
+interrupted run cannot leave a half-written file.
 
 Run from the repo root (dependencies resolve from the PEP-723 header):
 
@@ -45,7 +46,20 @@ EXPECTED_TALIB_VERSION_PREFIX = "0.4.0"
 EXPECTED_WRAPPER_VERSION = "0.1.5"
 N_ROWS = 5000
 N_ROWS_FLAT = 600
+# Dedicated volume RNGs — independent of the OHLC seeds (walk=42, flat=7) so existing
+# fixture_{open,high,low,close,periods} and fixture_flat_* bytes stay byte-identical.
+WALK_VOLUME_SEED = 4242
+FLAT_VOLUME_SEED = 77
+# Lognormal ~1e6 geometric mean; always strictly positive.
+VOLUME_LOG_MEAN = float(np.log(1_000_000.0))
+VOLUME_LOG_SIGMA = 0.35
 OUT_DIR = Path(__file__).resolve().parents[2] / "crates" / "repark-ta" / "tests" / "goldens"
+
+
+def positive_volume(n_rows: int, seed: int) -> np.ndarray:
+    """Strictly-positive lognormal volume from a dedicated RNG (never the OHLC RNG)."""
+    volume_rng = np.random.default_rng(seed)
+    return np.exp(volume_rng.normal(VOLUME_LOG_MEAN, VOLUME_LOG_SIGMA, n_rows))
 
 
 def series_bits(values: list[float | None]) -> bytes:
@@ -74,8 +88,17 @@ def walk_fixture() -> pl.DataFrame:
     # both ends). Drawn WITHOUT the RNG so the OHLC bytes above stay byte-for-byte unchanged (the
     # goldens gate is additive-only).
     periods = 2.0 + (np.arange(N_ROWS) % 29).astype(np.float64)
+    # Volume: dedicated seed 4242 — does not consume the OHLC RNG (seed 42).
+    volume = positive_volume(N_ROWS, WALK_VOLUME_SEED)
     return pl.DataFrame(
-        {"open": open_, "high": high, "low": low, "close": close, "periods": periods}
+        {
+            "open": open_,
+            "high": high,
+            "low": low,
+            "close": close,
+            "periods": periods,
+            "volume": volume,
+        }
     )
 
 
@@ -96,12 +119,17 @@ def flat_fixture() -> pl.DataFrame:
     # `open` is drawn AFTER the spread so the high/low/close bytes are unchanged (additive). On the
     # dead-flat plateau high == low, so `open` collapses onto them — BOP's zero-range guard fires.
     open_ = low + (high - low) * rng.uniform(0.0, 1.0, N_ROWS_FLAT)
-    return pl.DataFrame({"open": open_, "high": high, "low": low, "close": close})
+    # Volume: dedicated seed 77 — does not consume the OHLC RNG (seed 7). Stays strictly
+    # positive through the price plateau so AD's `tmp > 0.0` skip, OBV's equal-close hold,
+    # and MFI's zero-delta / `pos+neg < 1.0` guards fire with real volume.
+    volume = positive_volume(N_ROWS_FLAT, FLAT_VOLUME_SEED)
+    return pl.DataFrame({"open": open_, "high": high, "low": low, "close": close, "volume": volume})
 
 
 def walk_cases() -> dict[str, pl.Expr]:
     c, h, lo, o = pl.col("close"), pl.col("high"), pl.col("low"), pl.col("open")
     p = pl.col("periods")
+    v = pl.col("volume")
     mama = plta.mama(c, fastlimit=0.5, slowlimit=0.05)
     bb = plta.bbands(c, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
     aroon = plta.aroon(h, lo, timeperiod=14)
@@ -324,11 +352,17 @@ def walk_cases() -> dict[str, pl.Expr]:
         "mavp": plta.mavp(c, p, minperiod=5, maxperiod=20, matype=0),
         "mavp_ema": plta.mavp(c, p, minperiod=5, maxperiod=20, matype=1),
         "ma_30_type7": plta.ma(c, timeperiod=30, matype=7),
+        # TA-3 volume family (kernels land in TA-4). Canonical TA-Lib / polars_talib defaults.
+        "ad": plta.ad(h, lo, c, v),
+        "adosc_3_10": plta.adosc(h, lo, c, v, fastperiod=3, slowperiod=10),
+        "obv": plta.obv(c, v),
+        "mfi_14": plta.mfi(h, lo, c, v, timeperiod=14),
     }
 
 
 def flat_cases() -> dict[str, pl.Expr]:
     c, h, lo, o = pl.col("close"), pl.col("high"), pl.col("low"), pl.col("open")
+    v = pl.col("volume")
     mama = plta.mama(c, fastlimit=0.5, slowlimit=0.05)
     bb = plta.bbands(c, timeperiod=20, nbdevup=2.0, nbdevdn=2.0)
     stochf = plta.stochf(h, lo, c, fastk_period=5, fastd_period=3, fastd_matype=0)
@@ -370,6 +404,13 @@ def flat_cases() -> dict[str, pl.Expr]:
         # warm-up), bit-exactly as C.
         "flat_mama_mama": mama.struct.field("mama"),
         "flat_mama_fama": mama.struct.field("fama"),
+        # TA-3 volume family on the price plateau: AD `tmp > 0.0` skip, OBV equal-close hold,
+        # MFI zero typical-price delta + `posSumMF+negSumMF < 1.0` → 0.0, ADOSC EMA of a
+        # frozen AD line.
+        "flat_ad": plta.ad(h, lo, c, v),
+        "flat_adosc_3_10": plta.adosc(h, lo, c, v, fastperiod=3, slowperiod=10),
+        "flat_obv": plta.obv(c, v),
+        "flat_mfi_14": plta.mfi(h, lo, c, v, timeperiod=14),
     }
 
 
@@ -393,7 +434,8 @@ def main() -> None:
     cases = walk_cases()
     result = walk.with_columns(**cases)
     # `periods` rides along as `fixture_periods` (the MAVP per-row period input series).
-    for name in ("open", "high", "low", "close", "periods"):
+    # `volume` rides along as `fixture_volume` (the TA-3 volume-family input series).
+    for name in ("open", "high", "low", "close", "periods", "volume"):
         write_atomic(OUT_DIR / f"fixture_{name}.bin", series_bits(result[name].to_list()))
         manifest[f"fixture_{name}"] = N_ROWS
     for name in cases:
@@ -403,7 +445,7 @@ def main() -> None:
     flat = flat_fixture()
     fcases = flat_cases()
     fresult = flat.with_columns(**fcases)
-    for name in ("open", "high", "low", "close"):
+    for name in ("open", "high", "low", "close", "volume"):
         write_atomic(OUT_DIR / f"fixture_flat_{name}.bin", series_bits(fresult[name].to_list()))
         manifest[f"fixture_flat_{name}"] = N_ROWS_FLAT
     for name in fcases:

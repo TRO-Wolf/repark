@@ -17,7 +17,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   [compat/map.md](compat/map.md).
 
 - `record_ta_goldens.py` — standalone PEP-723 script (NOT part of the package): records the
-  `repark-ta` bit-exactness goldens (148 series, incl. the T2 batch-1 `min`/`max`/`sum`
+  `repark-ta` bit-exactness goldens (158 series, incl. the T2 batch-1 `min`/`max`/`sum`
   math-operators, the WG1 overlap-MA family `wma`/`dema`/`tema`/`trima` odd+even/`kama`/`t3`
   at two vfactors/`midpoint`/`midprice`, the WG2 simple-momentum batch `mom`/`roc`/`rocp`/
   `rocr`/`rocr100`/`willr`/`cci`/`cmo`/`bop`/`apo`/`ppo` at matype 0 **and matype 7 (MAMA)**/
@@ -34,7 +34,10 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   `flat_dx`/`flat_plus_di`/`flat_minus_di`, the WG4 `flat_stochf_fastk`/`_fastd`, the WG5
   `flat_beta_5`, and the T3 parked four — `mama_mama`/`mama_fama`/`flat_mama_mama`/`flat_mama_fama`,
   `sar`, `sarext`/`sarext_long_offset`/`sarext_short`, `mavp`/`mavp_ema`, `ma_30_type7`, plus the
-  `fixture_periods` input series MAVP consumes)
+  `fixture_periods` input series MAVP consumes, plus the TA-3 volume family
+  `ad`/`adosc_3_10`/`obv`/`mfi_14` and `flat_ad`/`flat_adosc_3_10`/`flat_obv`/`flat_mfi_14`
+  over the additive `fixture_volume` / `fixture_flat_volume` columns — dedicated RNGs
+  seed 4242 / 77, never the OHLC RNGs)
   from C TA-Lib 0.4.0 via `polars-talib` (pinned in its header; asserts the bundled TA-Lib
   version). Run `uv run python/repark-parity/record_ta_goldens.py`; output lands in
   `crates/repark-ta/tests/goldens/`.

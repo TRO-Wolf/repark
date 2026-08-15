@@ -6,7 +6,8 @@
 //! comparison here would defeat the crate's whole purpose; see the crate docs.
 //!
 //! Two fixtures: the 5000-row lognormal walk (happy path) and the 600-row flat-plateau series
-//! (drives the `TA_IS_ZERO` guard branches). `manifest.json` is the recorder's ledger; the
+//! (drives the `TA_IS_ZERO` guard branches). Both carry a strictly-positive `volume` column
+//! (TA-3; dedicated RNGs). `manifest.json` is the recorder's ledger; the
 //! `manifest_and_tests_cover_the_same_series` test keeps recorder and tests in sync both ways.
 
 use std::collections::BTreeSet;
@@ -184,6 +185,19 @@ const CONSUMED: &[&str] = &[
     "mavp",
     "mavp_ema",
     "ma_30_type7",
+    // TA-3 volume family — recorded now; kernel `to_bits` comparison lands in TA-4.
+    // Listed so the recorder↔test two-way sync stays closed. `volume_family_goldens_are_recorded`
+    // consumes them as shape pins (no kernel calls).
+    "fixture_volume",
+    "fixture_flat_volume",
+    "ad",
+    "adosc_3_10",
+    "obv",
+    "mfi_14",
+    "flat_ad",
+    "flat_adosc_3_10",
+    "flat_obv",
+    "flat_mfi_14",
 ];
 
 fn goldens_dir() -> PathBuf {
@@ -314,6 +328,76 @@ fn manifest_and_tests_cover_the_same_series() {
         unrecorded.is_empty(),
         "consumed by tests but not recorded: {unrecorded:?}"
     );
+}
+
+/// TA-3 shape pin: the volume-family goldens exist, are the right length, volume is
+/// strictly positive, and C lookback prefixes are NaN. No kernel is called — that is TA-4.
+#[test]
+fn volume_family_goldens_are_recorded() {
+    let walk_volume = golden("fixture_volume");
+    assert_eq!(walk_volume.len(), 5000);
+    assert!(
+        walk_volume.iter().all(|value| *value > 0.0),
+        "walk volume must be strictly positive"
+    );
+    let flat_volume = golden("fixture_flat_volume");
+    assert_eq!(flat_volume.len(), 600);
+    assert!(
+        flat_volume.iter().all(|value| *value > 0.0),
+        "flat volume must be strictly positive"
+    );
+
+    for name in ["ad", "adosc_3_10", "obv", "mfi_14"] {
+        assert_eq!(golden(name).len(), 5000, "{name}");
+    }
+    for name in ["flat_ad", "flat_adosc_3_10", "flat_obv", "flat_mfi_14"] {
+        assert_eq!(golden(name).len(), 600, "{name}");
+    }
+
+    // AD / OBV lookback 0 — first output is a finite value. OBV seeds `prevOBV = volume[0]`.
+    let ad = golden("ad");
+    let obv = golden("obv");
+    assert!(!ad[0].is_nan(), "AD lookback is 0");
+    assert!(!obv[0].is_nan(), "OBV lookback is 0");
+    assert_eq!(
+        obv[0].to_bits(),
+        walk_volume[0].to_bits(),
+        "OBV[0] is C's prevOBV = inVolume[startIdx]"
+    );
+
+    // ADOSC(3,10) lookback = EMA(slow=10) = 9; MFI(14) lookback = 14 (unstable period 0).
+    let adosc = golden("adosc_3_10");
+    let mfi = golden("mfi_14");
+    assert!(
+        adosc[..9].iter().all(|value| value.is_nan()),
+        "ADOSC prefix"
+    );
+    assert!(!adosc[9].is_nan(), "ADOSC first live output");
+    assert!(mfi[..14].iter().all(|value| value.is_nan()), "MFI prefix");
+    assert!(!mfi[14].is_nan(), "MFI first live output");
+
+    // Same lookbacks on the plateau fixture (C lookback is input-length-independent).
+    let flat_ad = golden("flat_ad");
+    let flat_obv = golden("flat_obv");
+    assert!(!flat_ad[0].is_nan(), "flat AD lookback is 0");
+    assert!(!flat_obv[0].is_nan(), "flat OBV lookback is 0");
+    assert_eq!(
+        flat_obv[0].to_bits(),
+        flat_volume[0].to_bits(),
+        "flat OBV[0] is C's prevOBV = inVolume[startIdx]"
+    );
+    let flat_adosc = golden("flat_adosc_3_10");
+    let flat_mfi = golden("flat_mfi_14");
+    assert!(
+        flat_adosc[..9].iter().all(|value| value.is_nan()),
+        "flat ADOSC prefix"
+    );
+    assert!(!flat_adosc[9].is_nan(), "flat ADOSC first live output");
+    assert!(
+        flat_mfi[..14].iter().all(|value| value.is_nan()),
+        "flat MFI prefix"
+    );
+    assert!(!flat_mfi[14].is_nan(), "flat MFI first live output");
 }
 
 #[test]
