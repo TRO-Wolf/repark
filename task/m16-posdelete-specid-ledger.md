@@ -184,4 +184,7 @@ None. A11 closed those files. Paste-true for a later landing increment if wanted
 - `make verify` **EC=0** (2026-08-15). One earlier workspace run flaked
   `repark-ta` `hour0_bbands_three_vs_one_1e6` (load: 1.11x vs 1.5x); isolated
   retry and the subsequent full `make verify` both green. Not an M16 defect.
-- `make preflight` recorded below after the commit.
+- `make preflight` constituents **EC=0**: verify; facade `3119 passed, 71
+  skipped`; `make audit`; `make workflows-lint`. A single wrapped
+  `make preflight` timed out after pytest hit 100%; the same steps were
+  re-run to completion.
