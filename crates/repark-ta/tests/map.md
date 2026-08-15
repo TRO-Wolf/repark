@@ -9,7 +9,7 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
 ## Contents
 
 - `goldens.rs` — **strict `f64::to_bits` equality** per element (NaN ↔ NaN allowed) for every
-  kernel × param-set: 38 test fns over 148 recorded series across two fixtures — the 5000-row
+  kernel × param-set: 40 test fns over 158 recorded series across two fixtures — the 5000-row
   lognormal walk (happy path, all 5 BBANDS band branches, the WG1 overlap-MA family incl. TRIMA
   odd/even + T3 two vfactors, the WG2 simple-momentum batch incl. the ROC family, WILLR/CCI/CMO,
   BOP, APO/PPO at matype 0 **and matype 7 (MAMA)**, split AROON + AROONOSC, TRIX, ULTOSC, the WG3
@@ -24,7 +24,10 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   incl. KAMA's efficiency-ratio guard, the WG2 CMO/WILLR/CCI/BOP/ULTOSC zero short-circuits, the
   WG3 DX re-emit + DI zero short-circuit, the WG4 STOCHF raw-%K `diff` zero guard, the WG5 BETA
   return/denominator zero guards, and MAMA's steady-state atan/`Re`/`Im` zero guards). Also enforces
-  recorder↔test sync via `manifest.json` (`manifest_and_tests_cover_the_same_series`).
+  recorder↔test sync via `manifest.json` (`manifest_and_tests_cover_the_same_series`). TA-3 adds
+  the volume-family goldens (`ad`/`adosc_3_10`/`obv`/`mfi_14` + flat twins + `fixture_volume` /
+  `fixture_flat_volume`) and a shape pin (`volume_family_goldens_are_recorded`); kernel `to_bits`
+  comparison lands in TA-4.
 - `contract.rs` — the argument contract for EVERY kernel: below-min period → `InvalidPeriod`;
   above-`MAX_PERIOD` (incl. `usize::MAX`) → `InvalidPeriod`, never overflow; short input →
   full-length all-NaN; empty → empty; multi-series length mismatch → `LengthMismatch`. The shared

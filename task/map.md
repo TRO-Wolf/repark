@@ -34,6 +34,9 @@ not this directory.
   (2026-08-15):** M19/M20 conflict batteries B/C/E/F/G/H/I + DELETE/UPDATE
   isolation-property pins. Test-only; engine frozen at `cd0db4f`. Independent
   of OCC-1 #117.
+- [ta3-volume-goldens-ledger.md](ta3-volume-goldens-ledger.md) — **TA-3
+  (2026-08-15):** volume-family goldens (`ad`/`adosc`/`obv`/`mfi`) + C-source
+  recon. Recorder + additive `.bin` only; no kernel port (TA-4).
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
@@ -350,6 +353,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) | **M16** evolved unpartitioned position-delete `spec_id` |
 | [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) | **FN-D** datetime aliases/shims — 11 shipped, rest honest-cut |
 | [fn-e-collections-ledger.md](fn-e-collections-ledger.md) | **FN-E** collections / higher-order alias batch |
+| [ta3-volume-goldens-ledger.md](ta3-volume-goldens-ledger.md) | **TA-3** volume-family goldens (`ad`/`adosc`/`obv`/`mfi`) — recorder + C recon, no kernels |
 | [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) | **MG-1** scan-prune hardening — M1/M5/M6/M7 |
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |
