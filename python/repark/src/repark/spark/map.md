@@ -1023,8 +1023,10 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **X3:** `struct(...)` via native `make_struct` + `count` star Column forms (`"*"`,
   `col("*")`, `df["*"]`); **octo X3 C4** field names via named_struct path.
 - `functions.py` — the `pyspark.sql.functions` surface (FN-SPLIT 2026-08-15: constructors +
-  first-half agg/date stay here; `functions_udf.py` holds pandas/python UDF including
-  `PandasUDFColumn` re-export; `functions_expr.py` holds `_scalar` wrappers). **Z-4 / Y-5 SAF-001:**
+  first-half agg/date stay here; `functions_udf.py` holds pandas/python UDF;
+  `functions.py` re-exports UDF helpers the DataFrame/session bridges import
+  (`_build_python_udf`, `_normalize_pandas_udf_*`); `functions_expr.py` holds
+  `_scalar` wrappers). **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
   `add_months`, `date_add` so `F.abs(right["k"])` after a semi join raises Spark's

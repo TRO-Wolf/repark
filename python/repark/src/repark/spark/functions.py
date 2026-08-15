@@ -1471,11 +1471,24 @@ from repark.spark.functions_expr import (  # noqa: E402
     when,
     xxhash64,
 )
-from repark.spark.functions_udf import (  # noqa: E402
+from repark.spark.functions_udf import (  # noqa: E402, F401 — re-export surface
     PandasUDFColumn,
+    PandasUDFFunction,
     PandasUDFType,
     PythonUDFColumn,
     UserDefinedFunction,
+    _build_pandas_udf,
+    _build_python_udf,
+    _is_pandas_udf_datatype_like,
+    _is_pandas_udf_function_type,
+    _is_python_udf_datatype_like,
+    _normalize_pandas_udf_function_type,
+    _normalize_pandas_udf_return_type_sql,
+    _normalize_python_udf_return_type_sql,
+    _pandas_udf_arrow_type_for_return,
+    _pandas_udf_refuse_fail_open_string_leaves,
+    _python_udf_arrow_type_for_return,
+    _refuse_udtf_as_scalar_udf,
     pandas_udf,
     udf,
 )
