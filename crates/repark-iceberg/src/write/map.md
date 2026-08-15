@@ -30,7 +30,10 @@ repark-core's error map.
   correlation, correlated IN, and identity `UPDATE … SET <scalar> WHERE col IN`). ANY/ALL
   stay refused (Spark 4.1.2 parse-fails quantified comparisons). Pins:
   [predicate_dml_tests.rs](predicate_dml_tests.rs) +
-  [predicate_dml_update_tests.rs](predicate_dml_update_tests.rs). Ledger:
+  [predicate_dml_update_tests.rs](predicate_dml_update_tests.rs). Isolation
+  property pins (M19 / A10: no trim, `to_ascii_lowercase`, default serializable,
+  garbage ⇒ Plan `Invalid isolation level: {name}`) live in those two test
+  files. Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/r1-g3e8-pr4-ledger.md).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
   extra / duplicate column = loud error; strict casts, overflow never NULLs) → identity-

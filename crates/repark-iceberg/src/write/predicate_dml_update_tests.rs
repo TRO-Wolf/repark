@@ -19,7 +19,9 @@ use iceberg::spec::{
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::*;
+use super::{
+    IsolationLevel, WRITE_UPDATE_ISOLATION_LEVEL, commit_overwrite, resolve_update_isolation, *,
+};
 
 fn parse_statement(sql: &str) -> Statement {
     Parser::parse_sql(&GenericDialect {}, sql)
@@ -674,4 +676,198 @@ async fn identity_delete_correlated_in_deletes_the_key_row() {
         read_back(&catalog, &ident).await,
         vec![(Some(1), Some("a".into())), (Some(3), Some("c".into())),]
     );
+}
+
+async fn table_with_update_isolation(
+    catalog: &Arc<dyn Catalog>,
+    name: &str,
+    value: Option<&str>,
+) -> iceberg::table::Table {
+    let mut properties = HashMap::new();
+    if let Some(level) = value {
+        properties.insert(WRITE_UPDATE_ISOLATION_LEVEL.to_string(), level.to_string());
+    }
+    let ident = create_target(catalog, name, properties).await;
+    catalog.load_table(&ident).await.expect("load")
+}
+
+/// Isolation-property cases (M19) for `write.update.isolation-level`. Live resolver
+/// semantics (conductor-13 A10): no trim, `to_ascii_lowercase`, default serializable,
+/// garbage ⇒ `DataFusionError::Plan` `Invalid isolation level: {name}`.
+#[tokio::test]
+async fn update_isolation_property_a10_no_trim_lowercase_default_garbage() {
+    use datafusion::error::DataFusionError;
+
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+
+    assert_eq!(
+        resolve_update_isolation(&table_with_update_isolation(&catalog, "udef", None).await)
+            .expect("default"),
+        IsolationLevel::Serializable
+    );
+    assert_eq!(
+        resolve_update_isolation(
+            &table_with_update_isolation(&catalog, "uup", Some("SNAPSHOT")).await,
+        )
+        .expect("upper"),
+        IsolationLevel::Snapshot
+    );
+    assert_eq!(
+        resolve_update_isolation(
+            &table_with_update_isolation(&catalog, "umix", Some("Serializable")).await,
+        )
+        .expect("mixed"),
+        IsolationLevel::Serializable
+    );
+
+    let padded = resolve_update_isolation(
+        &table_with_update_isolation(&catalog, "upad", Some("  snapshot  ")).await,
+    )
+    .expect_err("padded is garbage — resolver does not trim");
+    match padded {
+        DataFusionError::Plan(message) => {
+            assert_eq!(message, "Invalid isolation level:   snapshot  ");
+        }
+        other => panic!("expected Plan, got {other}"),
+    }
+
+    let garbage = resolve_update_isolation(
+        &table_with_update_isolation(&catalog, "ugarb", Some("read-committed")).await,
+    )
+    .expect_err("unknown name is loud");
+    match garbage {
+        DataFusionError::Plan(message) => {
+            assert_eq!(message, "Invalid isolation level: read-committed");
+        }
+        other => panic!("expected Plan, got {other}"),
+    }
+}
+
+fn synthetic_data_file(path: &str) -> iceberg::spec::DataFile {
+    use iceberg::spec::{DataContentType, DataFileBuilder, DataFileFormat, Struct};
+    DataFileBuilder::default()
+        .content(DataContentType::Data)
+        .file_path(path.to_string())
+        .file_format(DataFileFormat::Parquet)
+        .file_size_in_bytes(100)
+        .record_count(1)
+        .partition_spec_id(0)
+        .partition(Struct::empty())
+        .build()
+        .expect("build data file")
+}
+
+async fn fast_append_files(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    files: Vec<iceberg::spec::DataFile>,
+) -> (iceberg::table::Table, i64) {
+    use iceberg::transaction::{ApplyTransactionAction, Transaction};
+    let table = catalog.load_table(ident).await.expect("load table");
+    let tx = Transaction::new(&table);
+    let action = tx.fast_append().add_data_files(files);
+    let tx = action.apply(tx).expect("apply fast_append");
+    let table = tx
+        .commit(catalog.as_ref())
+        .await
+        .expect("commit fast_append");
+    let snapshot_id = table
+        .metadata()
+        .current_snapshot()
+        .expect("snapshot")
+        .snapshot_id();
+    (table, snapshot_id)
+}
+
+/// Isolation policy thread (M19): `write.update.isolation-level = serializable` (default)
+/// rejects a concurrent append on the identity-UPDATE COW arm (`commit_overwrite`).
+#[tokio::test]
+async fn update_isolation_serializable_rejects_concurrent_append() {
+    use datafusion::error::DataFusionError;
+
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(
+        &catalog,
+        "updser",
+        HashMap::from([(
+            WRITE_UPDATE_ISOLATION_LEVEL.to_string(),
+            "serializable".to_string(),
+        )]),
+    )
+    .await;
+    let a = synthetic_data_file("test/a.parquet");
+    let (table_at_pin, pin) = fast_append_files(&catalog, &ident, vec![a.clone()]).await;
+    let isolation = resolve_update_isolation(&table_at_pin).expect("resolve");
+    assert_eq!(isolation, IsolationLevel::Serializable);
+
+    fast_append_files(
+        &catalog,
+        &ident,
+        vec![synthetic_data_file("test/concurrent.parquet")],
+    )
+    .await;
+
+    let error = commit_overwrite(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        vec![a],
+        vec![synthetic_data_file("test/a-prime.parquet")],
+        isolation,
+    )
+    .await
+    .expect_err("serializable UPDATE must reject a concurrent append");
+    let DataFusionError::External(boxed) = error else {
+        panic!("expected External(iceberg), got {error}");
+    };
+    let ice = boxed
+        .downcast_ref::<iceberg::Error>()
+        .expect("iceberg error");
+    assert_eq!(ice.kind(), iceberg::ErrorKind::DataInvalid);
+    assert!(
+        ice.message().contains("Found conflicting files"),
+        "got: {}",
+        ice.message()
+    );
+}
+
+/// Isolation policy thread (M19): `write.update.isolation-level = SNAPSHOT` (case-folded)
+/// commits through the same concurrent append — the Spark S5 shape for UPDATE.
+#[tokio::test]
+async fn update_isolation_snapshot_commits_through_concurrent_append() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(
+        &catalog,
+        "updsnap",
+        HashMap::from([(
+            WRITE_UPDATE_ISOLATION_LEVEL.to_string(),
+            "SNAPSHOT".to_string(),
+        )]),
+    )
+    .await;
+    let a = synthetic_data_file("test/a.parquet");
+    let (table_at_pin, pin) = fast_append_files(&catalog, &ident, vec![a.clone()]).await;
+    let isolation = resolve_update_isolation(&table_at_pin).expect("resolve");
+    assert_eq!(isolation, IsolationLevel::Snapshot);
+
+    fast_append_files(
+        &catalog,
+        &ident,
+        vec![synthetic_data_file("test/concurrent.parquet")],
+    )
+    .await;
+
+    commit_overwrite(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        vec![a],
+        vec![synthetic_data_file("test/a-prime.parquet")],
+        isolation,
+    )
+    .await
+    .expect("snapshot UPDATE must commit through a concurrent append");
 }
