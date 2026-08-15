@@ -1345,12 +1345,21 @@ NOT in that file is a defect, not a decision.
   corpus. Needs a JVM + `pyspark` (`uv sync --extra record`); invocation is in its module
   docstring.
 - `test_merge_differential_parity.py` — the **MERGE INTO differential corpus** (H-2 gap G3,
-  record-side). 10 rows (budget 8-10): basic upsert control, duplicate source keys (error-class
+  record-side). 11 rows (budget 8-11): basic upsert control, duplicate source keys (error-class
   `MERGE_CARDINALITY_VIOLATION` on both engines + insert-only that commits both rows),
   `WHEN MATCHED AND` arm ordering / threshold first-match-wins, NULL merge keys (NULL=NULL does
   not match), insert-only and delete arms, conditional matched update by target predicate, and
   the `WHEN NOT MATCHED BY SOURCE` refuse disclosure (repark `NotImplemented`; Spark deletes
-  unmatched target). Every content row runs create → seed → MERGE → read back on a real Iceberg
+  unmatched target), and — **audit M11 (2026-08-15)** — `dup_source_keys_unconditional_delete`, a
+  **split** row for duplicate source keys against a SINGLE unconditional `WHEN MATCHED THEN
+  DELETE`: repark raises `MERGE_CARDINALITY_VIOLATION` (its check fires whenever any matched arm
+  exists) while Spark **skips** the check for that exact shape and commits the delete
+  (`RewriteMergeIntoTable.isCardinalityCheckNeeded` is false when the only matched action is an
+  unconditional DELETE — deleting a target row twice is idempotent, so there is no
+  last-writer-wins ambiguity to guard). The Spark half was RECORDED live, not asserted: the
+  driver re-derived it on PySpark 4.1.2 + Iceberg 1.11.0. The exemption fix flips this row
+  split → content equality; the budget ceiling moved 10 → 11 for it (commented at the gate).
+  Every content row runs create → seed → MERGE → read back on a real Iceberg
   table and asserts post-MERGE contents on the Arrow path (value AND type AND nullability) via
   the parity comparator; error/split rows pin the error token. Lifecycle helper (cleanup on
   success and failure — no stray warehouse tables) lives in this module beside the recipe SSOT.
