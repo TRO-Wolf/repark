@@ -21,7 +21,8 @@ function-registry + analyzer-rule installation + the composed
   `configure_defaults_parse_float_as_decimal` (the option is on) and
   `configure_makes_bare_1_23_decimal128_3_2` (collect path, i128=123). U5 pins:
   `configure_defaults_ansi_enabled_true`, `configure_honors_ansi_enabled_false`,
-  `configure_refuses_ansi_notabool`.
+  `configure_refuses_ansi_notabool`. **Q10:** `configure_defaults_timestamp_type_ltz`,
+  `configure_honors_timestamp_type_ntz`, `configure_refuses_invalid_timestamp_type`.
 
 ## Pointers
 

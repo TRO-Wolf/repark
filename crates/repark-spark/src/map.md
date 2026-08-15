@@ -33,11 +33,15 @@ wrapper.
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **TZ-4 PR-1:** default `TIMESTAMP` → Iceberg `timestamptz`,
-  `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). 3 in-module tests
-  (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
+  `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). **Q10:** bare
+  `TIMESTAMP` follows `spark.sql.timestampType` (`TIMESTAMP_NTZ` → Iceberg `timestamp`);
+  existing `sql_type_to_iceberg` wrapper stays LTZ so default-mode pins are untouched.
+  4 in-module tests (`type_mapping_tests`) + `tests/create_table.rs` pin + CTAS type smoke.
 - `alter.rs` — ALTER TABLE handlers (SET/UNSET TBLPROPERTIES, RENAME TO, schema evolution I6,
   I7 partition-field DDL, residual refusals) + the ALTER token rewrites the normalizer runs;
-  9 in-module tests.
+  9 in-module tests. **Q10:** ADD/ALTER COLUMN bare `TIMESTAMP` follows the session
+  `spark.sql.timestampType` carrier. REPLACE COLUMNS stays on the LTZ wrapper
+  (parse-time, no session).
 - `namespace_ddl.rs` — CREATE/DROP NAMESPACE|DATABASE + DROP TABLE handlers, the
   create-namespace hand parser, `consume_word`. **R-6 / G-6 Q1 (2026-08-14):**
   `IF NOT EXISTS` no longer early-returns without the location check — matching
@@ -48,7 +52,8 @@ wrapper.
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
-  `repark.sql.*` config **+ `spark.sql.ansi.enabled` default TRUE (U5 / Q10=A)** **+ Spark-door
+  `repark.sql.*` config **+ `spark.sql.ansi.enabled` default TRUE (U5 / Q10=A)** **+
+  `spark.sql.timestampType` default TIMESTAMP_LTZ (Q10)** **+ Spark-door
   `parse_float_as_decimal=true` (DEC-1 / U2)** **+ the session-timezone carrier**; `register` =
   `repark_functions::register_all` + analyzer rules + the composed `repark_ta::TaExtension`, in v1
   `build()`'s order; the DF-54.1 subquery guard stays a core session default, G8). The TA half is

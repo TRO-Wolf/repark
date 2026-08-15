@@ -45,6 +45,10 @@ not this directory.
   `functions_bitwise.py` + `functions_session.py` + `test_functions_f.py`.
   `_PRE_SPLIT_ALL` pin moved 253→263. Deferred: remaining try_* /
   to_number/to_binary + bit_count/getbit/shift* + assert_true.
+- [q10-timestamptype-ledger.md](q10-timestamptype-ledger.md) — **Q10
+  (2026-08-15):** `spark.sql.timestampType` LTZ default + NTZ opt-in. Session
+  conf + door type-resolution (literals / CAST / DDL). Existing default-mode
+  pins untouched.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7

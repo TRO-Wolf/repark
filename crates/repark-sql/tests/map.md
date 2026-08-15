@@ -14,6 +14,10 @@ belongs out here is what must be observed from outside the crate.
   NOT — so PR-6's recognizer obligations stay honest, and an upstream parser change is a visible
   signal rather than a silent redundancy.
 
+- `session_timestamp_type_ansi_door.rs` — **Q10:** ANSI-door cell of
+  `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session
+  (`sql_with(AnsiDialect)`). Literal + CAST agree with the Spark door, value
+  AND Arrow type (naive µs).
 - `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` installed on a real
   `ReparkSession` through `ReparkSessionBuilder::with_sql_dialect`, driving schema DDL, CTAS,
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session

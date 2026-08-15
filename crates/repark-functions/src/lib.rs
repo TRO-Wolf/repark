@@ -10,10 +10,9 @@
 //! Beyond functions, [`analyzer`] carries the Spark **expression-semantics** analyzer rule
 //! (integer `/` → double, divide/modulo-by-zero → NULL, 0-based `[]` array subscript) that
 //! the session installs on every context (via the Spark door's `SessionExtension`) — the
-//! AR-WG-SQL fidelity layer over raw DataFusion semantics. [`string`] (`substr`/`substring`)
-//! and [`collection`] (`element_at`) shim the divergent built-ins the same way [`datetime`]
-//! shims the date gaps, and [`timestamp_cast`] carries the epoch-seconds scaling that same
-//! analyzer rule pushes under `CAST(TIMESTAMP AS <numeric>)` (registry row TZ-5).
+//! AR-WG-SQL fidelity layer over raw DataFusion semantics. [`string`] / [`collection`] shim
+//! the divergent built-ins the same way [`datetime`] shims the date gaps; [`timestamp_cast`]
+//! carries TZ-5 epoch-seconds scaling under `CAST(TIMESTAMP AS <numeric>)`.
 //!
 //! This crate is DataFusion-native: its public surface speaks `datafusion::error::Result`, so it
 //! does not depend on `repark-core`. The `DataFusionError -> repark_core::Error` conversion
@@ -49,6 +48,7 @@ pub mod random;
 pub mod session_time_zone;
 pub mod string;
 pub mod timestamp_cast;
+pub mod timestamp_type;
 
 use std::sync::Arc;
 

@@ -8,6 +8,7 @@ from typing import Any
 
 from repark.spark.session import _funcs as _session_funcs
 from repark.spark.session.session_time_zone import warn_runtime_session_time_zone_not_applied
+from repark.spark.session.timestamp_type import TIMESTAMP_TYPE_KEY, parse_timestamp_type
 
 for _name in dir(_session_funcs):
     if _name.startswith("__"):
@@ -181,6 +182,14 @@ class RuntimeConfig:
         from repark.spark.types import refuse_collation_session_key
 
         refuse_collation_session_key(key)
+        if key == TIMESTAMP_TYPE_KEY:
+            if isinstance(value, bool):
+                text = parse_timestamp_type("true" if value else "false")
+            else:
+                text = parse_timestamp_type(str(value))
+            self._unset_keys().discard(key)
+            self._store()[key] = text
+            return
         if isinstance(value, bool):
             text = "true" if value else "false"
         elif isinstance(value, (str, int)):

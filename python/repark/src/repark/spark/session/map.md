@@ -22,6 +22,11 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 - `sql_udf.py` — UDFRegistration
 - `create_dataframe.py` — region marker + SparkSession/ReParkSession aliases
 - `catalog.py` — re-export binding region note (r27 T1 no-stub mark)
+- `timestamp_type.py` — **Q10:** `spark.sql.timestampType` facade half (ONE key
+  spelling, default `TIMESTAMP_LTZ`, parse refuses naming both legal tokens,
+  builder whitespace normalize, `active_timestamp_type` / inference helpers).
+  Engine resolves at `SparkExtension.configure`; runtime `conf.set` is
+  store-only (ansi.enabled precedent).
 - `session_time_zone.py` — the `spark.sql.session.timeZone` conf surface (H-1a): the ONE key
   spelling, the `UTC` default, `warn_runtime_session_time_zone_not_applied` (a runtime
   `conf.set`/`unset` of this build-time knob is accepted for drop-in, warned once **per process**,

@@ -7,6 +7,14 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 ## Contents
 
+- `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line
+  dropped so `pub mod timestamp_type` does not raise `check_lib_rs` EXCEPTIONS).
+- `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
+  (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
+  **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
+  Missing carrier also defaults LTZ (today's type-resolution). Invalid value
+  fail-louds naming `TIMESTAMP_LTZ` and `TIMESTAMP_NTZ`. Ledger:
+  `task/q10-timestamptype-ledger.md`.
 - `ansi.rs` — **U5 / Q10=A:** Spark-door `spark.sql.ansi.enabled` carrier
   (`SparkAnsiConfig`, `PREFIX = repark.ansi`, default **TRUE**) + the embedded
   `__repark_ansi_nonzero_divisor__` raise kernel. Parsed from the builder map in
@@ -135,7 +143,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   with Arrow `Timestamp(µs, UTC)`. PR-2 localizes zoneless LTZ inputs (`TIMESTAMP '…'`,
   zoneless `to_timestamp`, `CAST(str|date|ntz AS TIMESTAMP)`) in the session zone; a
   zone-suffixed string is not localized. Analyzer rule `spark_ltz_timestamp_cast` still wraps
-  integer `CAST AS TIMESTAMP`. Pins: `instant_ts::tests::*`.
+  integer `CAST AS TIMESTAMP`. **Q10:** when `spark.sql.timestampType=TIMESTAMP_NTZ` the
+  same rule resolves bare `TIMESTAMP` literals / casts to naive µs (no localization);
+  `to_timestamp` / `now` stay LTZ. Pins: `instant_ts::tests::*`.
 - `timestamp_cast.rs` — **TZ-5 (2026-08-12)** plus **B-TZ-4 (2026-08-13):** the embedded UDFs
   `analyzer.rs` puts under timestamp casts. `__repark_epoch_seconds_floor__` (→ `Int64`) serves
   integer targets with exact `div_euclid` **floor** — Spark uses `Math.floorDiv`, so `-0.5 s` is

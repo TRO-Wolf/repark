@@ -64,6 +64,9 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   `__repark_timestamp_to_date__` (embedded CAST → Date32) + registered `to_date`
   overwrite; both share `datetime::invoke_local_dates`. Ledgers:
   `task/tz5-cast-seconds-ledger.md`, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
+- `src/timestamp_type.rs` — **Q10:** `spark.sql.timestampType` ConfigExtension
+  (default `TIMESTAMP_LTZ`) + parse/from-map/from-options. Sibling of
+  `SparkAnsiConfig`. Invalid value names both legal tokens.
 - `src/ansi.rs` — **U5:** `spark.sql.ansi.enabled` ConfigExtension (default TRUE) +
   `__repark_ansi_nonzero_divisor__`. Sibling of `ReparkSqlConfig`, not mixed into
   `repark.sql.*`.
@@ -89,7 +92,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   map-by-key for facade `Column.__getitem__` non-int/non-str keys — octo C2-L-001).
 - `src/instant_ts.rs` — **TZ-4 PR-1:** `now` / `current_timestamp` / `to_timestamp` emit
   `timestamp[us, tz=UTC]`; analyzer wrap of leftover ns-naive TIMESTAMP expressions. Zoneless
-  values not localized (PR-2).
+  values not localized (PR-2). **Q10:** NTZ opt-in arm of the CAST/literal rewrite.
 - `src/datetime.rs` — the Spark calendar date shim: extractors `year`/`month`/`dayofmonth`/`day`/
   `dayofyear`/`quarter`/`weekofyear`/`yearofweek`/`dayofweek`/`weekday`, **hour/minute/second**
   (Time+Timestamp; X1-octo C3), `make_date`, and the WG2 calendar-math shims `add_months`

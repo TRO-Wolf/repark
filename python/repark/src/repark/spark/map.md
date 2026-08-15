@@ -17,6 +17,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   terminal string; deterministic) + messy-CSV prep (BOM, preamble skip, delimiter detect,
   header detect, ragged null-pad). Consumed by `DataFrameReader.smartCsv`. Not shared Rust
   (greylit Q1(b)); claim-board copy for T5/T6. Pins: `tests/test_t4_csv_smart.py`.
+  **Q10:** timestamp rung follows `spark.sql.timestampType` via
+  `session/timestamp_type.default_timestamp_data_type`.
 - `session.py` — **r25 T4** `DataFrameReader.smartCsv(...)` repark extension (Q5 method
   contract); default `.csv` frozen (r20-R1). `dataframe.py` — `describe_ingest()` + sticky
   `_ingest_report` slot (diagnostics; no silent magic).
