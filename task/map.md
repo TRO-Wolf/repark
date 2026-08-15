@@ -49,6 +49,11 @@ not this directory.
   (2026-08-15):** `spark.sql.timestampType` LTZ default + NTZ opt-in. Session
   conf + door type-resolution (literals / CAST / DDL). Existing default-mode
   pins untouched.
+- [a11-ansi-ns-reject-ledger.md](a11-ansi-ns-reject-ledger.md) — **A11
+  (2026-08-15):** ANSI-door column-def `CREATE TABLE` refuses nanosecond
+  timestamps at DDL time (column + precision 9 + `TIMESTAMP(6)`). `TIMESTAMP(6)`
+  positive control unchanged. Spark door documented, not changed. CTAS / ALTER
+  / write-path / fork closed.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7

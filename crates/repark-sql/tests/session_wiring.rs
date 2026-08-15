@@ -14,7 +14,7 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Int64Array, StringArray};
-use datafusion::arrow::datatypes::DataType;
+use datafusion::arrow::datatypes::{DataType, TimeUnit};
 use datafusion::arrow::record_batch::RecordBatch;
 use repark_core::{ReparkSession, SqlDialect};
 use repark_sql::AnsiDialect;
@@ -131,12 +131,38 @@ async fn ansi_door_refusals_surface_through_the_session() {
     );
 }
 
-/// A11 probe (2026-08-13): native ANSI `CREATE TABLE (ts timestamp)` still derives
-/// `timestamp_ns` via `CAST(NULL AS TIMESTAMP)` and Iceberg v2 refuses it. The
-/// named grant to edit `repark-sql/src/create_table.rs` fires only when that path
-/// writes Iceberg `timestamp` (naive); this residual is `timestamp_ns` → morning.
+/// A11: ANSI column-def `CREATE TABLE` refuses nanosecond-precision timestamps at
+/// DDL time. DataFusion maps bare `TIMESTAMP` / `TIMESTAMP(9)` (and the WITH /
+/// WITHOUT TIME ZONE twins) to Arrow `timestamp[ns]`; Iceberg v2 cannot store
+/// that (`timestamp_ns`). The refuse names the column, the precision (9 /
+/// nanosecond), and the supported precision (6 / microseconds).
+///
+/// Cross-door: the Spark door is **not** changed here. Spark `CREATE TABLE
+/// (ts TIMESTAMP) USING iceberg` maps to Iceberg `timestamptz` (µs) via its own
+/// `sql_type_to_iceberg` table (`crates/repark-spark/src/create_table.rs`) and
+/// never takes this CAST-NULL derivation. CTAS and ALTER ADD COLUMN stay on
+/// the existing write-path / type-resolution refuse — out of this unit.
+fn assert_ansi_ns_create_refusal(err: &str, column: &str) {
+    assert!(
+        err.contains(&format!("`{column}`")),
+        "must name column `{column}`: {err}"
+    );
+    assert!(
+        err.contains("nanosecond") && err.contains("(9)"),
+        "must name nanosecond precision 9: {err}"
+    );
+    assert!(
+        err.contains("microsecond") && err.contains("TIMESTAMP(6)"),
+        "must name the supported precision: {err}"
+    );
+    assert!(
+        !err.contains("not supported until v3"),
+        "must be the DDL-time refuse, not the Iceberg v2 write-path residual: {err}"
+    );
+}
+
 #[tokio::test]
-async fn ansi_column_def_timestamp_still_rejects_ns_on_v2() {
+async fn ansi_column_def_nanosecond_timestamp_shapes_refuse() {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
     let session = ansi_session(&warehouse).await;
@@ -147,13 +173,118 @@ async fn ansi_column_def_timestamp_still_rejects_ns_on_v2() {
         .await
         .expect("CREATE SCHEMA");
 
+    // Named shapes that DataFusion types as `timestamp[ns]` (planner.rs:743-764).
+    let shapes: &[(&str, &str, &str)] = &[
+        ("bare", "ts", "ts TIMESTAMP"),
+        ("explicit_9", "event_at", "event_at TIMESTAMP(9)"),
+        (
+            "with_time_zone",
+            "when_tz",
+            "when_tz TIMESTAMP WITH TIME ZONE",
+        ),
+        (
+            "explicit_9_with_time_zone",
+            "when_tz9",
+            "when_tz9 TIMESTAMP(9) WITH TIME ZONE",
+        ),
+        (
+            "without_time_zone",
+            "when_ntz",
+            "when_ntz TIMESTAMP WITHOUT TIME ZONE",
+        ),
+        (
+            "explicit_9_without_time_zone",
+            "when_ntz9",
+            "when_ntz9 TIMESTAMP(9) WITHOUT TIME ZONE",
+        ),
+    ];
+
+    for (shape, column, decl) in shapes {
+        let table = format!("ts_{shape}");
+        let err = match session
+            .sql(&format!("CREATE TABLE ice.sales.{table} ({decl})"))
+            .await
+        {
+            Ok(_) => panic!("shape `{shape}` must refuse"),
+            Err(err) => err.to_string(),
+        };
+        assert_ansi_ns_create_refusal(&err, column);
+
+        let leftover = session
+            .sql(&format!("SELECT * FROM ice.sales.{table}"))
+            .await;
+        assert!(
+            leftover.is_err(),
+            "shape `{shape}` must not leave a table: {table}"
+        );
+    }
+
+    // Mixed list: the ns column is named; the µs sibling is not the refuse subject.
     let err = session
-        .sql("CREATE TABLE ice.sales.ts_ddl (ts timestamp)")
+        .sql("CREATE TABLE ice.sales.mixed (ok TIMESTAMP(6), late TIMESTAMP(9), label VARCHAR)")
         .await
-        .expect_err("native ANSI column-def TIMESTAMP is still ns")
+        .expect_err("mixed ns column must refuse")
         .to_string();
+    assert_ansi_ns_create_refusal(&err, "late");
     assert!(
-        err.contains("timestamp_ns") && err.contains("v3"),
-        "A11 residual must stay the v2 ns reject, not a silent timestamp/timestamptz write: {err}"
+        !err.contains("`ok`"),
+        "must name the ns column, not the µs sibling: {err}"
+    );
+}
+
+/// Positive control: `TIMESTAMP(6)` is microseconds and stays a successful CREATE.
+/// Arrow export is `timestamp[us]` (naive) — Iceberg v2 `timestamp`.
+#[tokio::test]
+async fn ansi_column_def_timestamp_6_create_is_unchanged() {
+    let warehouse_dir = TempDir::new().expect("warehouse tempdir");
+    let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
+    let session = ansi_session(&warehouse).await;
+    session
+        .sql(&format!(
+            "CREATE SCHEMA ice.sales WITH (location = '{warehouse}/sales')"
+        ))
+        .await
+        .expect("CREATE SCHEMA");
+
+    session
+        .sql("CREATE TABLE ice.sales.ts_us (event_at TIMESTAMP(6), label VARCHAR)")
+        .await
+        .expect("TIMESTAMP(6) CREATE must succeed");
+    session
+        .sql("CREATE TABLE ice.sales.ts_us_ntz (event_at TIMESTAMP(6) WITHOUT TIME ZONE)")
+        .await
+        .expect("TIMESTAMP(6) WITHOUT TIME ZONE CREATE must succeed");
+
+    let frame = session
+        .sql("SELECT event_at, label FROM ice.sales.ts_us")
+        .await
+        .expect("read TIMESTAMP(6) table");
+    let schema = frame.schema().as_arrow().clone();
+    assert_eq!(
+        schema.field(0).data_type(),
+        &DataType::Timestamp(TimeUnit::Microsecond, None),
+        "TIMESTAMP(6) must stay microsecond"
+    );
+    assert_eq!(schema.field(1).data_type(), &DataType::Utf8, "VARCHAR");
+    assert_eq!(
+        frame
+            .collect()
+            .await
+            .expect("collect")
+            .iter()
+            .map(RecordBatch::num_rows)
+            .sum::<usize>(),
+        0,
+        "column-def CREATE writes no rows"
+    );
+
+    let frame = session
+        .sql("SELECT event_at FROM ice.sales.ts_us_ntz")
+        .await
+        .expect("read TIMESTAMP(6) WITHOUT TIME ZONE table");
+    assert_eq!(
+        frame.schema().as_arrow().field(0).data_type(),
+        &DataType::Timestamp(TimeUnit::Microsecond, None),
+        "TIMESTAMP(6) WITHOUT TIME ZONE must stay microsecond"
     );
 }

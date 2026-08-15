@@ -83,6 +83,9 @@ pin-absences flipped to Tested at R-3).
 - **Known limitations:** `matrix.rs` reads 46 tested / 4 deliberately absent; the four
   statement-surface absences are standing design rulings. The three G8 `SEMANTICS_*`
   pin-absences (window frames, JOIN NULL keys, float determinism) are Tested as of R-3.
+  **A11:** column-def `CREATE TABLE` refuses nanosecond `TIMESTAMP` / `TIMESTAMP(9)`
+  (DDL needle). `TIMESTAMP(6)` is the supported spelling. CTAS / ALTER / Spark door
+  are not this refuse.
 
 ## Pointers
 
