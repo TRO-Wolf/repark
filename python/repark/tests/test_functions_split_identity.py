@@ -1,15 +1,15 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C (aggregates) deliberately grows the pin —
-declared in that batch's PR body.
+``__all__`` tuple is the surface pin. FN-C (aggregates) + FN-D (datetime) deliberately
+grow the pin - each batch's names are declared in its PR body.
 """
 
 from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-C (was 253 after the FN-A + FN-B union).
+# Moved 2026-08-15 with FN-C, unioned with FN-D at SQM (was 253 on freeze cd0db4f).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -77,16 +77,22 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "covar_samp",
     "crc32",
     "csc",
+    "curdate",
     "currentDate",
     "currentTimestamp",
     "current_date",
     "current_timestamp",
+    "current_timezone",
     "date_add",
     "date_format",
+    "date_from_unix_date",
     "date_part",
     "date_sub",
     "date_trunc",
+    "dateadd",
     "datediff",
+    "datepart",
+    "day",
     "dayname",
     "dayofmonth",
     "dayofweek",
@@ -174,6 +180,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "nanvl",
     "negative",
     "next_day",
+    "now",
     "ntile",
     "nullif",
     "nullifzero",
@@ -251,6 +258,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "timestamp_seconds",
     "to_date",
     "to_timestamp",
+    "to_unix_timestamp",
     "to_utc_timestamp",
     "translate",
     "trim",
@@ -260,6 +268,9 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "udf",
     "udtf",
     "unbase64",
+    "unix_date",
+    "unix_millis",
+    "unix_seconds",
     "unix_timestamp",
     "upper",
     "var_pop",
@@ -277,7 +288,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 261
+    assert len(F.__all__) == 272
 
 
 def test_every_all_name_resolves() -> None:
