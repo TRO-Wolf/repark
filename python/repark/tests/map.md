@@ -28,6 +28,8 @@ NOT in that file is a defect, not a decision.
   (2026-08-15): `__all__` before==after pin. **FN-D moved the pin** 253→264
   (11 datetime additions on the freeze inventory; independent of FN-C) + every
   name resolves.
+  (2026-08-15): `__all__` before==after pin. **FN-E moved the pin** to 262 names
+  (freeze 253 + 9 collection additions) + every name resolves.
 - [test_functions_a.py](test_functions_a.py) — FN-A (2026-08-15): ordering / null /
   math wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias
   names resolve + one behavior case. `cbrt` pins the negative-root hazard.
@@ -42,6 +44,9 @@ NOT in that file is a defect, not a decision.
   through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
   + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
   `current_timezone` pins Session zone, not `$TZ`.
+- [test_functions_e.py](test_functions_e.py) — FN-E (2026-08-15): collection
+  wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). `get`
+  pins 0-based vs SQL `element_at` 1-based (index 0 raises).
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.

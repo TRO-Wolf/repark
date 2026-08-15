@@ -1,15 +1,15 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C (aggregates) + FN-D (datetime) deliberately
-grow the pin - each batch's names are declared in its PR body.
+``__all__`` tuple is the surface pin. FN-C/D/E deliberately grow the pin - each
+batch's names are declared in its PR body.
 """
 
 from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-C, unioned with FN-D at SQM (was 253 on freeze cd0db4f).
+# Moved 2026-08-15 with FN-C, unioned with FN-D/E at SQM (was 253 on freeze cd0db4f).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -21,6 +21,8 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "add_months",
     "approx_percentile",
     "array",
+    "array_agg",
+    "array_append",
     "array_contains",
     "array_distinct",
     "array_except",
@@ -29,10 +31,13 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "array_max",
     "array_min",
     "array_position",
+    "array_prepend",
     "array_remove",
     "array_repeat",
+    "array_size",
     "array_sort",
     "array_union",
+    "arrays_overlap",
     "arrays_zip",
     "asc",
     "asc_nulls_first",
@@ -51,6 +56,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "bool_or",
     "btrim",
     "bucket",
+    "cardinality",
     "cbrt",
     "ceil",
     "ceiling",
@@ -126,6 +132,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "from_unixtime",
     "from_utc_timestamp",
     "from_xml",
+    "get",
     "greatest",
     "hash",
     "hour",
@@ -161,6 +168,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "lpad",
     "ltrim",
     "make_timestamp",
+    "map_contains_key",
     "map_entries",
     "map_from_arrays",
     "map_keys",
@@ -177,6 +185,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "monthname",
     "months",
     "months_between",
+    "named_struct",
     "nanvl",
     "negative",
     "next_day",
@@ -288,7 +297,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 272
+    assert len(F.__all__) == 281
 
 
 def test_every_all_name_resolves() -> None:
