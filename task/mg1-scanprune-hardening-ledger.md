@@ -33,7 +33,7 @@ landing increment.
 | C-012 | Existing PERF-04 residual-push pins stay green (identical Int32/Int64 still prune). | PROVEN — `cow_equi_key_residual_keeps_colocated_survivors`, `mor_equi_key_residual_upsert_correct`, `residual_pushes_identical_int32_keys` |
 | C-013 | Python pins land in `test_merge_scan_prune_semantics.py` only; `test_merge_semantics_audit.py` / `test_merge_insert_scope*` / `test_merge_store_assign*` untouched. | PROVEN — diff names |
 | C-014 | map.md lockstep + this ledger linked from `task/map.md` in the same change. | PROVEN — listed in §2 |
-| C-015 | `make verify` exit 0. `make preflight` before `gh pr create`. | PROVEN verify — §4. preflight recorded at Delivery. |
+| C-015 | `make verify` exit 0. `make preflight` before `gh pr create`. | PROVEN — §4 |
 
 **Enumeration:** four repro cases × {rust unit / rust scan-level / python Arrow} as chartered.
 R1 also has the streaming-scan push-counter pin (must stay 0).
@@ -113,7 +113,7 @@ Recorded at Actor-build / Delivery time:
 | Gate | Exit |
 |---|---|
 | `make verify` | 0 (Actor, 2026-08-15) |
-| `make preflight` | pending — before `gh pr create` |
+| `make preflight` | 0 — verify + `py-test-facade` 3077 passed / 71 skipped + audit + workflows-lint |
 | `merge/mod.rs` lines | 2631 / 2700 |
 | `streaming_scan_tests.rs` lines | 3345 / 3400 |
 | `scan_prune.rs` lines | 839 / 1500 |
