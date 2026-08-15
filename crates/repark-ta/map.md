@@ -19,8 +19,12 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
 
 - `Cargo.toml` — workspace member; runtime dep `thiserror` + optional `datafusion` and
   `repark-core` (both behind the `datafusion` feature, which turns on the `udf` wrapper module
-  and the `extension` module), dev-deps `serde_json` + `tokio`. Workspace lints
-  (`unsafe_code = "forbid"`, clippy pedantic) apply.
+  and the `extension` module), dev-deps `serde_json` + `tokio` + crate-level `criterion` 0.8
+  (`async_tokio` + `html_reports`, never `[workspace.dependencies]`) and `[[bench]] ta_kernels`
+  (`harness = false`). Workspace lints (`unsafe_code = "forbid"`, clippy pedantic) apply.
+- [benches/](benches/map.md) — **P-1** criterion kernel baseline (`ema`/`sma`/`rsi`/`bbands`
+  + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold vs three-sibling vs cache-hit
+  shape). Measure-only; no `src/` instrumentation.
 - `NOTICE` — TA-Lib BSD-3-Clause attribution (algorithms ported by reference; carry this into
   any distribution).
 - [src/](src/map.md) — the kernels, grouped by TA-Lib category. C-mirrored `*_idx` local names
@@ -38,6 +42,7 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
 | Call an indicator from Rust | `repark_ta::{sma, ema, rsi, adx, atr, bbands, mama, sar, sarext, mavp, apo, ppo, macdext, stoch, ad, adosc, obv, mfi, …}` (68 kernels; `ma(_, _, 7)` / APO·PPO·MACDEXT·STOCH* matype 7 = MAMA) |
 | Install the TA UDFs on a session | `extension` module (feature `datafusion`): `TaExtension` — a `repark_core::SessionExtension`; `SparkExtension` composes it, native sessions install it directly |
 | Call an indicator from SQL / DataFrame | `udf` module (feature `datafusion`): `ta_ema(close, 21) OVER (…)`; Python `repark.ta.ema(...)` — see [src/map.md](src/map.md) |
+| Run the P-1 kernel criterion baseline | `cargo bench -p repark-ta --bench ta_kernels -- --quick` — see [benches/map.md](benches/map.md) |
 
 ## Component contract
 
@@ -80,6 +85,7 @@ API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/
 | New kernel is "close but not exact" (≤ a few ulp) | Look for `mul_add`, reordered accumulation, or a recomputed-per-window sum that C keeps incremental |
 | Values differ only late in a long series | Accumulator-drift mismatch: C's running totals were replaced by per-window recomputation (or vice versa) |
 | Three BBANDS columns ~3× slower than one | Pre-#8 path: each split UDF re-ran the full kernel. Post-P1c: thread-local multi-output cache should make siblings share one run — see `src/udf.rs` multi-out docs + `tests/p1c_microbench.rs` |
+| Need a recorded kernel ns/row | P-1 criterion: `cargo bench -p repark-ta --bench ta_kernels -- --quick` — [benches/map.md](benches/map.md); numbers stay planning-side |
 
 First checks: `cargo test -p repark-ta` (lib unit tests + goldens + contract). Escalate to:
 [../map.md#debug](../map.md).

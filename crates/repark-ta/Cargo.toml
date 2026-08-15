@@ -41,3 +41,10 @@ serde_json.workspace = true
 # `#[tokio::test]` — the `TaExtension` test registers the UDFs on a `SessionContext` and runs
 # the SQL window route, so it needs a runtime (the kernel batteries stay sync).
 tokio.workspace = true
+# P-1 (perf-wave-14): kernel criterion baseline — pin at crate level (never
+# workspace.dependencies). Feature set matches `repark-functions` (PERF-10).
+criterion = { version = "0.8", features = ["async_tokio", "html_reports"] }
+
+[[bench]]
+name = "ta_kernels"
+harness = false
