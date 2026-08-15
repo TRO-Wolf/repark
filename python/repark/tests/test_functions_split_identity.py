@@ -1,7 +1,7 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C/D/E deliberately grow the pin - each
+``__all__`` tuple is the surface pin. FN-C/D/E/F deliberately grow the pin - each
 batch's names are declared in its PR body.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-C, unioned with FN-D/E at SQM (was 253 on freeze cd0db4f).
+# Moved 2026-08-15 with FN-C, unioned with FN-D/E/F at SQM (was 253 on freeze cd0db4f).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -52,8 +52,11 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "bit_and",
     "bit_or",
     "bit_xor",
+    "bitwiseNOT",
+    "bitwise_not",
     "bool_and",
     "bool_or",
+    "broadcast",
     "btrim",
     "bucket",
     "cardinality",
@@ -86,9 +89,13 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "curdate",
     "currentDate",
     "currentTimestamp",
+    "current_catalog",
+    "current_database",
     "current_date",
+    "current_schema",
     "current_timestamp",
     "current_timezone",
+    "current_user",
     "date_add",
     "date_format",
     "date_from_unix_date",
@@ -282,9 +289,12 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "unix_seconds",
     "unix_timestamp",
     "upper",
+    "user",
+    "uuid",
     "var_pop",
     "var_samp",
     "variance",
+    "version",
     "weekday",
     "weekofyear",
     "when",
@@ -297,7 +307,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 281
+    assert len(F.__all__) == 291
 
 
 def test_every_all_name_resolves() -> None:

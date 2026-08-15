@@ -1061,6 +1061,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   (`call_scalar` allow-list); array_compact (`array_except` de-duplicates);
   element_at (1-based + zero-index kernel is SQL-only); charter higher-order/JSON/
   generators. Pins: `tests/test_functions_e.py`.
+  **FN-F (2026-08-15):** 10 try/session/bitwise names in `functions_bitwise.py` +
+  `functions_session.py` (bitwise_not/bitwiseNOT, broadcast, current_user/user,
+  current_catalog/current_database/current_schema, version, uuid). Deferred:
+  remaining try_* / to_number / to_binary (charter); bit_count/getbit/shift*
+  (`call_scalar` allow-list — no crates/ edit); assert_true (`raise_error` is
+  construction-time UOE). Pins: `tests/test_functions_f.py`.
   **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
@@ -1187,6 +1193,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_udf.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_datetime.py` (FN-D) |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_collections.py` |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_bitwise.py` / `functions_session.py` / `functions_udf.py` |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add / change the TA serving helper (`with_indicators`) | `ta.py` (TA-2; required `partition`/`order`) |

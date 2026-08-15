@@ -37,6 +37,11 @@ not this directory.
 - [ta3-volume-goldens-ledger.md](ta3-volume-goldens-ledger.md) — **TA-3
   (2026-08-15):** volume-family goldens (`ad`/`adosc`/`obv`/`mfi`) + C-source
   recon. Recorder + additive `.bin` only; no kernel port (TA-4).
+- [fn-f-try-bitwise-ledger.md](fn-f-try-bitwise-ledger.md) — **FN-F
+  (2026-08-15):** 10 try/session/bitwise facade names in
+  `functions_bitwise.py` + `functions_session.py` + `test_functions_f.py`.
+  `_PRE_SPLIT_ALL` pin moved 253→263. Deferred: remaining try_* /
+  to_number/to_binary + bit_count/getbit/shift* + assert_true.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
@@ -354,6 +359,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) | **FN-D** datetime aliases/shims — 11 shipped, rest honest-cut |
 | [fn-e-collections-ledger.md](fn-e-collections-ledger.md) | **FN-E** collections / higher-order alias batch |
 | [ta3-volume-goldens-ledger.md](ta3-volume-goldens-ledger.md) | **TA-3** volume-family goldens (`ad`/`adosc`/`obv`/`mfi`) — recorder + C recon, no kernels |
+| [fn-f-try-bitwise-ledger.md](fn-f-try-bitwise-ledger.md) | **FN-F** try / session / bitwise — 10 shipped, rest deferred |
 | [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) | **MG-1** scan-prune hardening — M1/M5/M6/M7 |
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |

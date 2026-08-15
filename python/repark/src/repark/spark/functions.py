@@ -1322,6 +1322,10 @@ from repark.spark.functions_agg import (  # noqa: E402
     some,
     std,
 )
+from repark.spark.functions_bitwise import (  # noqa: E402
+    bitwise_not,
+    bitwiseNOT,
+)
 from repark.spark.functions_collections import (  # noqa: E402
     array_agg,
     array_append,
@@ -1551,6 +1555,16 @@ from repark.spark.functions_expr import (  # noqa: E402
     xxhash64,
     zeroifnull,
 )
+from repark.spark.functions_session import (  # noqa: E402
+    broadcast,
+    current_catalog,
+    current_database,
+    current_schema,
+    current_user,
+    user,
+    uuid,
+    version,
+)
 from repark.spark.functions_udf import (  # noqa: E402, F401 — re-export surface
     PandasUDFColumn,
     PandasUDFFunction,
@@ -1615,8 +1629,11 @@ __all__ = [
     "bit_and",
     "bit_or",
     "bit_xor",
+    "bitwiseNOT",
+    "bitwise_not",
     "bool_and",
     "bool_or",
+    "broadcast",
     "btrim",
     "bucket",
     "cardinality",
@@ -1649,9 +1666,13 @@ __all__ = [
     "curdate",
     "currentDate",
     "currentTimestamp",
+    "current_catalog",
+    "current_database",
     "current_date",
+    "current_schema",
     "current_timestamp",
     "current_timezone",
+    "current_user",
     "date_add",
     "date_format",
     "date_from_unix_date",
@@ -1845,9 +1866,12 @@ __all__ = [
     "unix_seconds",
     "unix_timestamp",
     "upper",
+    "user",
+    "uuid",
     "var_pop",
     "var_samp",
     "variance",
+    "version",
     "weekday",
     "weekofyear",
     "when",
