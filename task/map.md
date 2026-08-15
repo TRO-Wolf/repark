@@ -54,6 +54,10 @@ not this directory.
   `test_functions_a.py`. `_PRE_SPLIT_ALL` pin moved 207→232. Deferred:
   typeof/bround/conv + rint/factorial/bin/hex/unhex +
   asc_nulls_last/desc_nulls_first.
+- [fn-e-collections-ledger.md](fn-e-collections-ledger.md) — **FN-E (2026-08-15):**
+  9 collection facade names in `functions_collections.py` + `test_functions_e.py`.
+  `_PRE_SPLIT_ALL` pin moved 253→262. Deferred: map_from_entries/shuffle/create_map
+  + array_compact/element_at + charter higher-order/JSON/generators.
 - [fn-b-strings-ledger.md](fn-b-strings-ledger.md) — **FN-B (2026-08-15):** 21
   string facade names in `functions_expr.py` + `test_functions_b.py`.
   `_PRE_SPLIT_ALL` pin moved 207→228. Deferred: regexp_extract_all/regexp_substr
@@ -345,6 +349,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) | **M16** evolved unpartitioned position-delete `spec_id` |
 | [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) | **FN-D** datetime aliases/shims — 11 shipped, rest honest-cut |
+| [fn-e-collections-ledger.md](fn-e-collections-ledger.md) | **FN-E** collections / higher-order alias batch |
 | [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) | **MG-1** scan-prune hardening — M1/M5/M6/M7 |
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |

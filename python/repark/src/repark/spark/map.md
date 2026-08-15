@@ -1055,6 +1055,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   to_timestamp_ntz (SEMANTIC-HAZARD honest-cut); charter ENGINE-WORK
   make_timestamp_ltz/ntz, make_ym_interval, to_timestamp_ltz, convert_timezone,
   timestamp_add/diff. Pins: `tests/test_functions_d.py`.
+  **FN-E (2026-08-15):** 9 collection names in `functions_collections.py`
+  (cardinality/array_size/array_agg/named_struct/map_contains_key/array_append/
+  array_prepend/arrays_overlap/get). Deferred: map_from_entries/shuffle/create_map
+  (`call_scalar` allow-list); array_compact (`array_except` de-duplicates);
+  element_at (1-based + zero-index kernel is SQL-only); charter higher-order/JSON/
+  generators. Pins: `tests/test_functions_e.py`.
   **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
@@ -1180,6 +1186,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add a column operator / `__neg__` / `alias` / `__getitem__` / `cast` / `over` | `column.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_udf.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_datetime.py` (FN-D) |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_collections.py` |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add / change the TA serving helper (`with_indicators`) | `ta.py` (TA-2; required `partition`/`order`) |
