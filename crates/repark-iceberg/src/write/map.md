@@ -125,6 +125,7 @@ repark-core's error map.
 | UNSET errors "present in both removal and update set" | a key was both set and removed in one action — the router only passes disjoint keys |
 | Streaming CTAS OOMs / collects the whole SELECT | must use the `_from_stream` writers over `execute_stream()`, never `collect()` |
 | Parallel write left partial files after a failed MERGE | abort flag must skip `finish()`/`close()` |
+| Rejected MERGE OCC commit left new Parquet files in the warehouse | commit-error abort must `FileIO::delete` writer-result paths only (`merge/abort.rs`); never re-derive from manifests; never delete `affected` |
 | MERGE OOMs on a large target | target must register as a `StreamingTable` (`(_file, _pos)` identity), never a full-target `MemTable` |
 | MERGE produces duplicates | multiple-source-match must **error** (like Spark); serializable (default) commit arms carry `validate_no_conflicting_data`; snapshot isolation drops it (`write.merge.isolation-level`) |
 | Conflict-retry corrupts data | on commit conflicts re-read the target; don't cache stale file lists |
