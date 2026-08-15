@@ -1,0 +1,1564 @@
+"""Scalar / string / math / collection / remaining-agg wrappers (FN-SPLIT).
+
+Move-only: every name here previously lived in ``repark.spark.functions``.
+Public names are re-exported from ``functions.py``. Helpers ``_scalar`` /
+``_as_column_arg`` stay in this module (they only serve these wrappers).
+"""
+
+from __future__ import annotations
+
+from repark import _native
+from repark.errors import (
+    AnalysisException,
+    PySparkTypeError,
+    PySparkValueError,
+    UnsupportedOperationException,
+)
+from repark.spark.column import Column, Scalar
+from repark.spark.functions import (
+    _aggregate_argument,
+    _as_column_arg,
+    _column_argument,
+    _integer_argument,
+    _partition_transform_of,
+    _scalar,
+    col,
+    date_add,
+    date_format,
+    lit,
+)
+from repark.spark.types import StructType
+
+
+def when(condition: Column, value: Column | Scalar) -> Column:
+    """Start a searched ``CASE`` (PySpark ``functions.when``).
+
+    Chain further ``.when(...)`` arms and finish with ``.otherwise(...)``::
+
+        F.when(F.col("a") > 0, 1).when(F.col("a") < 0, -1).otherwise(0)
+
+    Without ``otherwise``, non-matching rows yield NULL.
+    """
+    # Apache ``test_when``: bare str condition → NOT_COLUMN (not AttributeError on str).
+    if not isinstance(condition, Column):
+        raise PySparkTypeError(
+            errorClass="NOT_COLUMN",
+            messageParameters={
+                "arg_name": "condition",
+                "arg_type": type(condition).__name__,
+            },
+        )
+    return Column._from_when_pairs([(condition, Column._to_column(value))], otherwise=None)
+
+
+def lower(col: Column | str) -> Column:
+    """Lowercase string (PySpark ``functions.lower``)."""
+    return _scalar("lower", col)
+
+
+def upper(col: Column | str) -> Column:
+    """Uppercase string (PySpark ``functions.upper``)."""
+    return _scalar("upper", col)
+
+
+def trim(col: Column | str) -> Column:
+    """Trim both sides (PySpark ``functions.trim``)."""
+    return _scalar("trim", col)
+
+
+def ltrim(col: Column | str) -> Column:
+    """Trim leading whitespace (PySpark ``functions.ltrim``)."""
+    return _scalar("ltrim", col)
+
+
+def rtrim(col: Column | str) -> Column:
+    """Trim trailing whitespace (PySpark ``functions.rtrim``)."""
+    return _scalar("rtrim", col)
+
+
+def length(col: Column | str) -> Column:
+    """Character length (PySpark ``functions.length``)."""
+    return _scalar("length", col)
+
+
+def initcap(col: Column | str) -> Column:
+    """Title-case words (PySpark ``functions.initcap``)."""
+    return _scalar("initcap", col)
+
+
+def lpad(col: Column | str, len: int, pad: str = " ") -> Column:
+    """Left-pad a string (PySpark ``functions.lpad``)."""
+    return _scalar("lpad", col, len, pad, lit_indices=frozenset({1, 2}))
+
+
+def rpad(col: Column | str, len: int, pad: str = " ") -> Column:
+    """Right-pad a string (PySpark ``functions.rpad``)."""
+    return _scalar("rpad", col, len, pad, lit_indices=frozenset({1, 2}))
+
+
+def instr(str: Column | str, substr: str) -> Column:
+    """1-based index of substring (PySpark ``functions.instr``)."""
+    return _scalar("instr", str, substr, lit_indices=frozenset({1}))
+
+
+def concat_ws(sep: str, *cols: Column | str) -> Column:
+    """Join strings with a separator (PySpark ``functions.concat_ws``)."""
+    return _scalar("concat_ws", sep, *cols, lit_indices=frozenset({0}))
+
+
+def regexp_replace(
+    str: Column | str,
+    pattern: Column | str,
+    replacement: Column | str,
+) -> Column:
+    """Replace regex matches (PySpark ``functions.regexp_replace``).
+
+    Engine lowers with the global ``g`` flag (Spark replaces every match; DataFusion defaults
+    to first-match only — F2 / Apache ``test_regexp_replace``). ``pattern`` / ``replacement``
+    may be Column or str (literal strings stay forced-lit via ``lit_indices``).
+    """
+    lit_indices: set[int] = set()
+    if not isinstance(pattern, Column):
+        lit_indices.add(1)
+    if not isinstance(replacement, Column):
+        lit_indices.add(2)
+    return _scalar(
+        "regexp_replace",
+        str,
+        pattern,
+        replacement,
+        lit_indices=frozenset(lit_indices),
+    )
+
+
+def sqrt(col: Column | str) -> Column:
+    """Square root (PySpark ``functions.sqrt``)."""
+    return _scalar("sqrt", col)
+
+
+def cos(col: Column | str) -> Column:
+    """Cosine (PySpark ``functions.cos``)."""
+    return _scalar("cos", col)
+
+
+def sin(col: Column | str) -> Column:
+    """Sine (PySpark ``functions.sin``)."""
+    return _scalar("sin", col)
+
+
+def tan(col: Column | str) -> Column:
+    """Tangent (PySpark ``functions.tan``)."""
+    return _scalar("tan", col)
+
+
+def cosh(col: Column | str) -> Column:
+    """Hyperbolic cosine (PySpark ``functions.cosh``)."""
+    return _scalar("cosh", col)
+
+
+def sinh(col: Column | str) -> Column:
+    """Hyperbolic sine (PySpark ``functions.sinh``)."""
+    return _scalar("sinh", col)
+
+
+def tanh(col: Column | str) -> Column:
+    """Hyperbolic tangent (PySpark ``functions.tanh``)."""
+    return _scalar("tanh", col)
+
+
+def acos(col: Column | str) -> Column:
+    """Inverse cosine (PySpark ``functions.acos``)."""
+    return _scalar("acos", col)
+
+
+def asin(col: Column | str) -> Column:
+    """Inverse sine (PySpark ``functions.asin``)."""
+    return _scalar("asin", col)
+
+
+def atan(col: Column | str) -> Column:
+    """Inverse tangent (PySpark ``functions.atan``)."""
+    return _scalar("atan", col)
+
+
+def atan2(col1: Column | str | float | int, col2: Column | str | float | int) -> Column:
+    """Two-argument inverse tangent (PySpark ``functions.atan2``)."""
+    return _scalar("atan2", col1, col2)
+
+
+def acosh(col: Column | str) -> Column:
+    """Inverse hyperbolic cosine (PySpark ``functions.acosh``)."""
+    return _scalar("acosh", col)
+
+
+def asinh(col: Column | str) -> Column:
+    """Inverse hyperbolic sine (PySpark ``functions.asinh``)."""
+    return _scalar("asinh", col)
+
+
+def atanh(col: Column | str) -> Column:
+    """Inverse hyperbolic tangent (PySpark ``functions.atanh``)."""
+    return _scalar("atanh", col)
+
+
+def cot(col: Column | str) -> Column:
+    """Cotangent (PySpark ``functions.cot``)."""
+    return _scalar("cot", col)
+
+
+def sec(col: Column | str) -> Column:
+    """Secant ``1/cos`` (PySpark ``functions.sec``)."""
+    return _scalar("sec", col)
+
+
+def csc(col: Column | str) -> Column:
+    """Cosecant ``1/sin`` (PySpark ``functions.csc``)."""
+    return _scalar("csc", col)
+
+
+def hypot(col1: Column | str | float | int, col2: Column | str | float | int) -> Column:
+    """Euclidean norm ``sqrt(a² + b²)`` (PySpark ``functions.hypot``)."""
+    return _scalar("hypot", col1, col2)
+
+
+def dayname(col: Column | str) -> Column:
+    """Abbreviated weekday name (PySpark ``functions.dayname`` → ``date_format(..., 'EEE')``)."""
+    column = _column_argument(col)
+    result = date_format(column, "EEE")
+    display = f"dayname({column.spark_wrap_display_part()})"
+    return Column(
+        result._inner,
+        spark_display=display,
+        projection_name=display,
+        sql_expr=result.sql_expr_part(),
+        stable_name=False,
+        is_aggregate=column._is_aggregate,
+        is_foldable=column._is_foldable and not column._is_aggregate,
+        has_free_attribute=column._has_free_attribute,
+        has_ungroupable=column._has_ungroupable,
+        partition_transform=column._partition_transform,
+    )
+
+
+def monthname(col: Column | str) -> Column:
+    """Abbreviated month name (PySpark ``functions.monthname`` → ``date_format(..., 'MMM')``)."""
+    column = _column_argument(col)
+    result = date_format(column, "MMM")
+    display = f"monthname({column.spark_wrap_display_part()})"
+    return Column(
+        result._inner,
+        spark_display=display,
+        projection_name=display,
+        sql_expr=result.sql_expr_part(),
+        stable_name=False,
+        is_aggregate=column._is_aggregate,
+        is_foldable=column._is_foldable and not column._is_aggregate,
+        has_free_attribute=column._has_free_attribute,
+        has_ungroupable=column._has_ungroupable,
+        partition_transform=column._partition_transform,
+    )
+
+
+def floor(col: Column | str) -> Column:
+    """Floor (PySpark ``functions.floor``)."""
+    return _scalar("floor", col)
+
+
+def ceil(col: Column | str) -> Column:
+    """Ceiling (PySpark ``functions.ceil``)."""
+    return _scalar("ceil", col)
+
+
+ceiling = ceil
+
+
+def signum(col: Column | str) -> Column:
+    """Sign as -1/0/1 (PySpark ``functions.signum``)."""
+    return _scalar("signum", col)
+
+
+def exp(col: Column | str) -> Column:
+    """Natural exponential (PySpark ``functions.exp``)."""
+    return _scalar("exp", col)
+
+
+def pow(col1: Column | str | float | int, col2: Column | str | float | int) -> Column:
+    """Power (PySpark ``functions.pow``)."""
+    left = (
+        col1 if isinstance(col1, Column) else lit(col1) if not isinstance(col1, str) else col(col1)
+    )
+    right = (
+        col2 if isinstance(col2, Column) else lit(col2) if not isinstance(col2, str) else col(col2)
+    )
+    return _scalar("pow", left, right)
+
+
+def power(col1: Column | str | float | int, col2: Column | str | float | int) -> Column:
+    """Alias of :func:`pow` (PySpark ``functions.power``)."""
+    return pow(col1, col2)
+
+
+def round(col: Column | str, scale: int = 0) -> Column:
+    """Round to ``scale`` decimals (PySpark ``functions.round``)."""
+    return _scalar("round", col, scale, lit_indices=frozenset({1}))
+
+
+def log(col: Column | str) -> Column:
+    """Natural logarithm (PySpark ``functions.log`` — base *e*, not log10)."""
+    return _scalar("log", col)
+
+
+def log10(col: Column | str) -> Column:
+    """Base-10 logarithm (PySpark ``functions.log10``)."""
+    return _scalar("log10", col)
+
+
+def md5(col: Column | str) -> Column:
+    """MD5 hex digest (PySpark ``functions.md5``)."""
+    return _scalar("md5", col)
+
+
+def isnan(col: Column | str) -> Column:
+    """True when value is NaN (PySpark ``functions.isnan``)."""
+    return _scalar("isnan", col)
+
+
+def isnull(col: Column | str) -> Column:
+    """True when value is NULL (PySpark ``functions.isnull``).
+
+    Sticky free/aggregate identity matches :meth:`Column.is_null` so
+    ``select(sum(x), isnull(id))`` is ``[MISSING_GROUP_BY]`` and ``isnull(sum(x))`` stays
+    global-agg (octo C4-L-003). Structural SQL is ``IS NULL`` (DataFusion has no ``isnull``
+    scalar).
+    """
+    column = _column_argument(col)
+    null_column = column.is_null()
+    display = f"isnull({column.spark_wrap_display_part()})"
+    return Column(
+        null_column._inner,
+        spark_display=display,
+        projection_name=display,
+        stable_name=False,
+        sql_expr=f"({column.sql_expr_part()} IS NULL)",
+        is_aggregate=column._is_aggregate,
+        is_foldable=column._is_foldable and not column._is_aggregate,
+        has_free_attribute=column._has_free_attribute,
+        has_ungroupable=column._has_ungroupable,
+        partition_transform=column._partition_transform,
+    )
+
+
+def nanvl(col1: Column | str, col2: Column | str | float | int) -> Column:
+    """Replace NaN with ``col2`` (PySpark ``functions.nanvl``)."""
+    return _scalar("nanvl", col1, col2)
+
+
+def greatest(*cols: Column | str) -> Column:
+    """Row-wise maximum (PySpark ``functions.greatest``).
+
+    E1: requires ≥2 columns — ``WRONG_NUM_COLUMNS`` with keys ``func_name`` / ``num_cols``.
+    """
+    if len(cols) < 2:
+        raise PySparkValueError(
+            errorClass="WRONG_NUM_COLUMNS",
+            messageParameters={"func_name": "greatest", "num_cols": "2"},
+        )
+    return _scalar("greatest", *cols)
+
+
+def least(*cols: Column | str) -> Column:
+    """Row-wise minimum (PySpark ``functions.least``).
+
+    E1: requires ≥2 columns — same ``WRONG_NUM_COLUMNS`` bar as :func:`greatest`.
+    """
+    if len(cols) < 2:
+        raise PySparkValueError(
+            errorClass="WRONG_NUM_COLUMNS",
+            messageParameters={"func_name": "least", "num_cols": "2"},
+        )
+    return _scalar("least", *cols)
+
+
+# ---- E1 error-class pre-check stubs (type/arg validation only; happy path loud) ----------------
+
+
+def _require_column_or_str(value: object, arg_name: str) -> None:
+    """Raise ``NOT_COLUMN_OR_STR`` when ``value`` is neither Column nor str (E1 check_error bar)."""
+    if not isinstance(value, (str, Column)):
+        raise PySparkTypeError(
+            errorClass="NOT_COLUMN_OR_STR",
+            messageParameters={
+                "arg_name": arg_name,
+                "arg_type": type(value).__name__,
+            },
+        )
+
+
+def from_csv(
+    col: Column | str,
+    schema: Column | str,
+    options: dict[str, str] | None = None,
+) -> Column:
+    """Parse a CSV string column (PySpark ``functions.from_csv``).
+
+    E1: type pre-check only (``NOT_COLUMN_OR_STR`` on ``schema``). Happy path is loud-
+    unsupported until a CSV parse kernel lands.
+    """
+    _ = options
+    _require_column_or_str(col, "col")
+    _require_column_or_str(schema, "schema")
+
+    raise UnsupportedOperationException(
+        "functions.from_csv is not supported yet (CSV parse kernel deferred; disclosed E1)"
+    )
+
+
+def from_xml(
+    col: Column | str,
+    schema: object,
+    options: dict[str, str] | None = None,
+) -> Column:
+    """Parse an XML string column (PySpark ``functions.from_xml``).
+
+    E1: type pre-check — ``schema`` must be StructType, Column, or str
+    (``NOT_COLUMN_OR_STR_OR_STRUCT``).
+    """
+
+    _ = options
+    _require_column_or_str(col, "col")
+    if not isinstance(schema, (StructType, str, Column)):
+        raise PySparkTypeError(
+            errorClass="NOT_COLUMN_OR_STR_OR_STRUCT",
+            messageParameters={
+                "arg_name": "schema",
+                "arg_type": type(schema).__name__,
+            },
+        )
+    from repark.errors import UnsupportedOperationException
+
+    raise UnsupportedOperationException(
+        "functions.from_xml is not supported yet (XML parse kernel deferred; disclosed E1)"
+    )
+
+
+def schema_of_csv(csv: Column | str, options: dict[str, str] | None = None) -> Column:
+    """Infer CSV schema as DDL (PySpark ``functions.schema_of_csv``). E1 type pre-check only."""
+    _ = options
+    _require_column_or_str(csv, "csv")
+
+    raise UnsupportedOperationException(
+        "functions.schema_of_csv is not supported yet (disclosed E1)"
+    )
+
+
+def schema_of_json(json: Column | str, options: dict[str, str] | None = None) -> Column:
+    """Infer JSON schema as DDL (PySpark ``functions.schema_of_json``). E1 type pre-check only."""
+    _ = options
+    _require_column_or_str(json, "json")
+
+    raise UnsupportedOperationException(
+        "functions.schema_of_json is not supported yet (disclosed E1)"
+    )
+
+
+def schema_of_xml(xml: Column | str, options: dict[str, str] | None = None) -> Column:
+    """Infer XML schema as DDL (PySpark ``functions.schema_of_xml``). E1 type pre-check only."""
+    _ = options
+    _require_column_or_str(xml, "xml")
+
+    raise UnsupportedOperationException(
+        "functions.schema_of_xml is not supported yet (disclosed E1)"
+    )
+
+
+def json_tuple(col: Column | str, *fields: str) -> Column:
+    """Extract JSON fields as a row (PySpark ``functions.json_tuple``).
+
+    E1: empty ``fields`` raises ``CANNOT_BE_EMPTY`` (Apache ``test_json_tuple_empty_fields``
+    pins the message text via assertRaisesRegex).
+    """
+    if len(fields) == 0:
+        # Apache test_json_tuple_empty_fields asserts message text via assertRaisesRegex
+        # (oracle: "At least one field must be specified") — faithful template, G5.
+        raise PySparkValueError(
+            "At least one field must be specified",
+            errorClass="CANNOT_BE_EMPTY",
+            messageParameters={"item": "field"},
+        )
+    _require_column_or_str(col, "col")
+
+    raise UnsupportedOperationException(
+        "functions.json_tuple is not supported yet (JSON tuple kernel deferred; disclosed E1)"
+    )
+
+
+def raise_error(errMsg: Column | str) -> Column:  # noqa: N803 — PySpark arg name
+    """Throw at evaluation with the given message (PySpark ``functions.raise_error``).
+
+    E1: type pre-check (``NOT_COLUMN_OR_STR``). Happy path needs an engine raise kernel —
+    residual ``test_raise_error`` until that lands.
+    """
+    if not isinstance(errMsg, (str, Column)):
+        raise PySparkTypeError(
+            errorClass="NOT_COLUMN_OR_STR",
+            messageParameters={
+                "arg_name": "errMsg",
+                "arg_type": type(errMsg).__name__,
+            },
+        )
+
+    raise UnsupportedOperationException(
+        "functions.raise_error evaluation is not supported yet (engine raise kernel deferred; "
+        "disclosed E1)"
+    )
+
+
+def current_date() -> Column:
+    """Current date (PySpark ``functions.current_date``).
+
+    Explicitly foldable so ``select(sum(x), current_date())`` is global-agg (C3-Q-002).
+    Must not rely on vacuous ``all([])`` in ``_scalar`` (that path is non-foldable after
+    octo C7-L-001).
+    """
+    return _scalar("current_date", foldable=True)
+
+
+currentDate = current_date  # noqa: N816
+
+
+def to_date(col: Column | str, format: str | None = None) -> Column:
+    """Parse/cast to date (PySpark ``functions.to_date``).
+
+    A bare ``str`` is a **column name** (Spark ColumnOrName), not a date literal. Pass
+    ``lit("2020-01-02")`` for a string literal. ``format=`` is refused until Java-pattern
+    parity is wired (engine uses Chrono ``%Y`` not Spark ``yyyy`` — octo C3-Q-002).
+    """
+    if format is not None:
+        from repark.errors import UnsupportedOperationException
+
+        raise UnsupportedOperationException(
+            "to_date(format=...) is not supported yet "
+            "(engine Chrono patterns ≠ Spark Java patterns; use format-less to_date or SQL)"
+        )
+    return _scalar("to_date", col)
+
+
+def to_timestamp(col: Column | str, format: str | None = None) -> Column:
+    """Parse/cast to timestamp (PySpark ``functions.to_timestamp``).
+
+    A bare ``str`` is a **column name**. ``format=`` refused (same Chrono/Java gap as to_date).
+    """
+    if format is not None:
+        from repark.errors import UnsupportedOperationException
+
+        raise UnsupportedOperationException(
+            "to_timestamp(format=...) is not supported yet "
+            "(engine Chrono patterns ≠ Spark Java patterns; use format-less to_timestamp or SQL)"
+        )
+    return _scalar("to_timestamp", col)
+
+
+def from_unixtime(col: Column | str | int) -> Column:
+    """Epoch seconds → **string** timestamp (PySpark ``functions.from_unixtime``)."""
+    if isinstance(col, int) and not isinstance(col, bool):
+        return _scalar("from_unixtime", lit(col))
+    return _scalar("from_unixtime", col)
+
+
+def date_sub(start: Column | str, days: Column | int | str) -> Column:
+    """Subtract days (PySpark ``functions.date_sub``) via ``date_add(..., -days)``."""
+    if isinstance(days, bool):
+        raise PySparkTypeError("date_sub days must be int, Column, or column name (str)")
+    if isinstance(days, int):
+        return date_add(start, -days)
+    # Column or column-name str (SPARK-37738 / octo C3).
+    return date_add(start, lit(0) - _integer_argument(days))
+
+
+# Explicitly unsupported this unit (engine gap) — loud helpers for dogfood discoverability.
+def split(str: Column | str, pattern: str, limit: int = -1) -> Column:
+    """Unsupported: engine has no Spark ``split`` (use SQL when available)."""
+
+    raise UnsupportedOperationException(
+        "functions.split is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+def regexp_extract(str: Column | str, pattern: str, idx: int) -> Column:
+    """Unsupported: engine has no ``regexp_extract``."""
+
+    raise UnsupportedOperationException(
+        "functions.regexp_extract is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+def datediff(end: Column | str, start: Column | str) -> Column:
+    """Unsupported: engine has no ``datediff``."""
+
+    raise UnsupportedOperationException(
+        "functions.datediff is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+def months_between(date1: Column | str, date2: Column | str, roundOff: bool = True) -> Column:  # noqa: N803
+    """Unsupported: engine has no ``months_between``."""
+
+    raise UnsupportedOperationException(
+        "functions.months_between is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+def unix_timestamp(
+    timestamp: Column | str | None = None,
+    format: str | None = None,
+) -> Column:
+    """Unsupported: engine has no ``unix_timestamp``."""
+
+    raise UnsupportedOperationException(
+        "functions.unix_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+def hash(*cols: Column | str) -> Column:
+    """Unsupported: engine has no Spark ``hash`` (xxhash-style)."""
+
+    raise UnsupportedOperationException(
+        "functions.hash is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+def struct(*cols: Column | str) -> Column:
+    """Build a struct column (PySpark ``functions.struct``).
+
+    Lowers to the engine ``struct`` expression over the child columns so ``df.select`` can
+    bind field references (free-SQL ``named_struct`` cannot — no FROM schema at construct
+    time). Field names follow argument names; structural ``sql_expr`` still emits
+    ``named_struct`` for free-SQL surfaces.
+    """
+    if not cols:
+        raise PySparkTypeError("struct() requires at least one column")
+    columns: list[Column] = []
+    named_parts: list[str] = []
+    display_parts: list[str] = []
+    free = False
+    for index, item in enumerate(cols):
+        if isinstance(item, str):
+            column = col(item)
+            field_name = item
+            free = True
+        elif isinstance(item, Column):
+            column = item
+            field_name = item._projection_name or item._spark_display or f"col{index}"
+            free = free or bool(item._has_free_attribute)
+        else:
+            raise PySparkTypeError(
+                errorClass="NOT_COLUMN_OR_STR",
+                messageParameters={
+                    "arg_name": "cols",
+                    "arg_type": type(item).__name__,
+                },
+            )
+        columns.append(column)
+        safe_name = str(field_name).replace("'", "''")
+        named_parts.append(f"'{safe_name}', {column.sql_expr_part()}")
+        display_parts.append(str(field_name))
+    sql = f"named_struct({', '.join(named_parts)})"
+    display = f"struct({', '.join(display_parts)})"
+    # Alias children to field names so DF ``struct`` keeps Spark field names (c0/c1 otherwise).
+    named_natives = [
+        column._inner.alias(str(name)) for column, name in zip(columns, display_parts, strict=True)
+    ]
+    return Column(
+        _native.PyColumn.make_struct(named_natives),
+        spark_display=display,
+        projection_name=display,
+        stable_name=False,
+        sql_expr=sql,
+        has_free_attribute=free,
+    )
+
+
+def array(*cols: Column | str | int | float | bool | None) -> Column:
+    """Build an array column (PySpark ``functions.array``; X1 → engine ``make_array``)."""
+    return _scalar("array", *cols)
+
+
+def array_contains(col: Column | str, value: Column | str | int | float) -> Column:
+    """True when the array column contains ``value`` (PySpark ``functions.array_contains``).
+
+    # === r21 T7: census-r6 ===
+    Lowers via engine ``array_has`` (DataFusion name for Spark ``array_contains``).
+    Literal ``value`` is forced so string needles are not misread as column names.
+    """
+    lit_indices = frozenset({1}) if not isinstance(value, Column) else None
+    left = _as_column_arg(col, as_lit=False)
+    right = _as_column_arg(value, as_lit=not isinstance(value, Column))  # type: ignore[arg-type]
+    shown = f"array_contains({left.spark_wrap_display_part()}, {right.spark_wrap_display_part()})"
+    return _scalar("array_has", col, value, lit_indices=lit_indices, display=shown)
+
+
+def format_string(format: str, *cols: Column | str) -> Column:
+    """Unsupported: ``format_string`` / printf not wired."""
+
+    raise UnsupportedOperationException(
+        "functions.format_string is not supported yet (engine gap; disclosed R-FN-BATCH1)"
+    )
+
+
+# ---- R-FN-BATCH2: strings / regexp / collection wrappers --------------------------------------
+
+
+def reverse(col: Column | str) -> Column:
+    """Reverse a string (PySpark ``functions.reverse``)."""
+    return _scalar("reverse", col)
+
+
+def repeat(col: Column | str, n: Column | int) -> Column:
+    """Repeat a string ``n`` times (PySpark ``functions.repeat``)."""
+    return _scalar("repeat", col, n, lit_indices=frozenset({1}) if isinstance(n, int) else None)
+
+
+def translate(src: Column | str, matching: str, replace: str) -> Column:
+    """Character-wise translate (PySpark ``functions.translate``)."""
+    return _scalar("translate", src, matching, replace, lit_indices=frozenset({1, 2}))
+
+
+def substring_index(str: Column | str, delim: str, count: int) -> Column:
+    """Substring before ``count`` occurrences of ``delim`` (PySpark ``substring_index``)."""
+    return _scalar("substring_index", str, delim, count, lit_indices=frozenset({1, 2}))
+
+
+def levenshtein(left: Column | str, right: Column | str) -> Column:
+    """Levenshtein edit distance (PySpark ``functions.levenshtein``)."""
+    return _scalar("levenshtein", left, right)
+
+
+def ascii(col: Column | str) -> Column:
+    """Unicode code point of the first character (PySpark ``functions.ascii``)."""
+    return _scalar("ascii", col)
+
+
+def chr(col: Column | str | int) -> Column:
+    """Unicode code point → character (PySpark ``functions.chr``)."""
+    if isinstance(col, int) and not isinstance(col, bool):
+        return _scalar("chr", lit(col))
+    return _scalar("chr", col)
+
+
+def overlay(
+    src: Column | str,
+    replace: Column | str,
+    pos: Column | int,
+    len: Column | int | None = None,
+) -> Column:
+    """Overlay ``replace`` onto ``src`` at ``pos`` (PySpark ``functions.overlay``).
+
+    When ``len`` is omitted (or the Spark default ``-1``), display shows ``-1`` and the
+    engine uses the 3-arg form (replace-length semantics). DataFusion's 4-arg ``len=-1``
+    replaces the *remainder* of the string — not Spark — so literal ``-1`` must not be
+    forwarded as a 4th arg (F2 / octo C1-Q-002).
+    """
+    # Apache test_overlay: float pos/len → NOT_COLUMN_OR_INT_OR_STR (octo C2-Q-002).
+    if not isinstance(pos, (Column, int, str)) or isinstance(pos, bool):
+        raise PySparkTypeError(
+            errorClass="NOT_COLUMN_OR_INT_OR_STR",
+            messageParameters={"arg_name": "pos", "arg_type": type(pos).__name__},
+        )
+    if len is not None and (not isinstance(len, (Column, int, str)) or isinstance(len, bool)):
+        raise PySparkTypeError(
+            errorClass="NOT_COLUMN_OR_INT_OR_STR",
+            messageParameters={"arg_name": "len", "arg_type": type(len).__name__},
+        )
+    # Spark default len = -1 means "use length of replace" (same as omit / 3-arg).
+    if len is None or (isinstance(len, int) and not isinstance(len, bool) and len == -1):
+        result = _scalar("overlay", src, replace, pos)
+        display = (
+            f"overlay({_as_column_arg(src, as_lit=False).spark_display_part()}, "
+            f"{_as_column_arg(replace, as_lit=False).spark_display_part()}, "
+            f"{_as_column_arg(pos, as_lit=isinstance(pos, int)).spark_display_part()}, -1)"
+        )
+        return Column(
+            result._inner,
+            spark_display=display,
+            projection_name=display,
+            stable_name=False,
+            sql_expr=result.sql_expr_part(),
+            is_foldable=result._is_foldable,
+            is_aggregate=result._is_aggregate,
+            has_free_attribute=result._has_free_attribute,
+            has_ungroupable=result._has_ungroupable,
+        )
+    return _scalar("overlay", src, replace, pos, len)
+
+
+def find_in_set(str: Column | str, str_array: Column | str) -> Column:
+    """1-based index of ``str`` in comma-separated ``str_array`` (PySpark ``find_in_set``)."""
+    return _scalar("find_in_set", str, str_array)
+
+
+def locate(substr: str, str: Column | str, pos: int | None = None) -> Column:
+    """1-based index of ``substr`` in ``str`` (PySpark ``functions.locate``).
+
+    ``pos`` start offset is not supported yet (engine strpos is full-string) — raise if set.
+    """
+    if pos is not None and pos != 1:
+        from repark.errors import UnsupportedOperationException
+
+        raise UnsupportedOperationException(
+            "functions.locate(pos=...) start offset is not supported yet "
+            "(engine strpos has no start; disclosed R-FN-BATCH2)"
+        )
+    return _scalar("locate", lit(substr), str)
+
+
+def position(substr: Column | str, str: Column | str | None = None) -> Column:
+    """Position of substring (PySpark ``functions.position``)."""
+    if str is None:
+        from repark.errors import PySparkTypeError
+
+        raise PySparkTypeError("position requires (substr, str)")
+    return _scalar("position", substr, str)
+
+
+def base64(col: Column | str) -> Column:
+    """Base64-encode a string/binary (PySpark ``functions.base64`` → encode base64)."""
+    return _scalar("base64", col)
+
+
+def unbase64(col: Column | str) -> Column:
+    """Base64-decode (PySpark ``functions.unbase64`` → decode base64)."""
+    return _scalar("unbase64", col)
+
+
+def encode(col: Column | str, charset: str) -> Column:
+    """Encode string with charset (PySpark ``functions.encode``).
+
+    Engine supports ``base64`` and ``hex`` (not full Java charset set) — other names
+    raise from the engine.
+    """
+    return _scalar("encode", col, charset, lit_indices=frozenset({1}))
+
+
+def decode(col: Column | str, charset: str) -> Column:
+    """Decode binary with charset (PySpark ``functions.decode``). Engine: base64/hex."""
+    return _scalar("decode", col, charset, lit_indices=frozenset({1}))
+
+
+def size(col: Column | str) -> Column:
+    """Array/map cardinality (PySpark ``functions.size`` → engine ``cardinality``)."""
+    return _scalar("size", col)
+
+
+def array_distinct(col: Column | str) -> Column:
+    """Distinct elements of an array (PySpark ``functions.array_distinct``)."""
+    return _scalar("array_distinct", col)
+
+
+def array_except(col1: Column | str, col2: Column | str) -> Column:
+    """Array set difference (PySpark ``functions.array_except``)."""
+    return _scalar("array_except", col1, col2)
+
+
+def array_intersect(col1: Column | str, col2: Column | str) -> Column:
+    """Array set intersection (PySpark ``functions.array_intersect``)."""
+    return _scalar("array_intersect", col1, col2)
+
+
+def array_union(col1: Column | str, col2: Column | str) -> Column:
+    """Array set union (PySpark ``functions.array_union``)."""
+    return _scalar("array_union", col1, col2)
+
+
+def array_join(col: Column | str, delimiter: str, null_replacement: str | None = None) -> Column:
+    """Join array elements with delimiter (PySpark ``functions.array_join``)."""
+    if null_replacement is not None:
+        from repark.errors import UnsupportedOperationException
+
+        raise UnsupportedOperationException(
+            "functions.array_join(null_replacement=...) is not supported yet "
+            "(engine array_to_string is 2-arg; disclosed R-FN-BATCH2)"
+        )
+    return _scalar("array_join", col, delimiter, lit_indices=frozenset({1}))
+
+
+def array_max(col: Column | str) -> Column:
+    """Max element of an array (PySpark ``functions.array_max``)."""
+    return _scalar("array_max", col)
+
+
+def array_min(col: Column | str) -> Column:
+    """Min element of an array (PySpark ``functions.array_min``)."""
+    return _scalar("array_min", col)
+
+
+def array_position(col: Column | str, value: Column | str | int | float) -> Column:
+    """1-based index of value in array (PySpark ``functions.array_position``)."""
+    return _scalar("array_position", col, value)
+
+
+def array_remove(col: Column | str, element: Column | str | int | float) -> Column:
+    """Remove all occurrences of element (PySpark ``functions.array_remove``)."""
+    return _scalar("array_remove", col, element)
+
+
+def array_repeat(element: Column | str | int | float, count: Column | int) -> Column:
+    """Repeat element into an array (PySpark ``functions.array_repeat``)."""
+    return _scalar("array_repeat", element, count)
+
+
+def array_sort(col: Column | str, asc: bool | None = None) -> Column:
+    """Sort array ascending by default (PySpark ``functions.array_sort``)."""
+    if asc is None or asc is True:
+        return _scalar("array_sort", col)
+    return _scalar("array_sort", col, lit("DESC"))
+
+
+def sort_array(col: Column | str, asc: bool = True) -> Column:
+    """Alias of :func:`array_sort` (PySpark ``functions.sort_array``)."""
+    return array_sort(col, asc=asc)
+
+
+def slice(x: Column | str, start: Column | int, length: Column | int) -> Column:
+    """Spark ``slice(array, start, length)`` (1-based, length count)."""
+    return _scalar("slice", x, start, length)
+
+
+def flatten(col: Column | str) -> Column:
+    """Flatten one level of nested arrays (PySpark ``functions.flatten``)."""
+    return _scalar("flatten", col)
+
+
+def map_keys(col: Column | str) -> Column:
+    """Keys of a map (PySpark ``functions.map_keys``)."""
+    return _scalar("map_keys", col)
+
+
+def map_values(col: Column | str) -> Column:
+    """Values of a map (PySpark ``functions.map_values``)."""
+    return _scalar("map_values", col)
+
+
+def map_entries(col: Column | str) -> Column:
+    """Entries of a map as array of structs (PySpark ``functions.map_entries``)."""
+    return _scalar("map_entries", col)
+
+
+def sequence(start: Column | int, stop: Column | int, step: Column | int | None = None) -> Column:
+    """Generate sequence (PySpark ``functions.sequence`` → engine ``generate_series``)."""
+    if step is None:
+        return _scalar("sequence", start, stop)
+    return _scalar("sequence", start, stop, step)
+
+
+def elt(n: Column | int, *inputs: Column | str) -> Column:
+    """1-based pick among inputs (PySpark ``functions.elt``)."""
+    if not inputs:
+        from repark.errors import AnalysisException
+
+        raise AnalysisException("elt requires at least one value after the index")
+    return _scalar("elt", n, *inputs)
+
+
+def soundex(col: Column | str) -> Column:
+    """Unsupported: engine has no ``soundex`` (R-FN-BATCH2 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.soundex is not supported yet (engine gap; disclosed R-FN-BATCH2)"
+    )
+
+
+def sentences(col: Column | str, language: Column | str | None = None) -> Column:
+    """Unsupported: engine has no ``sentences`` (R-FN-BATCH2 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.sentences is not supported yet (engine gap; disclosed R-FN-BATCH2)"
+    )
+
+
+def arrays_zip(*cols: Column | str) -> Column:
+    """Unsupported: engine has no ``arrays_zip`` (R-FN-BATCH2 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.arrays_zip is not supported yet (engine gap; disclosed R-FN-BATCH2)"
+    )
+
+
+def map_from_arrays(col1: Column | str, col2: Column | str) -> Column:
+    """Unsupported as Column builder (SQL ``map_from_arrays`` may work; R-FN-BATCH2)."""
+
+    raise UnsupportedOperationException(
+        "functions.map_from_arrays Column builder not supported yet "
+        "(use SQL map_from_arrays; disclosed R-FN-BATCH2)"
+    )
+
+
+# ---- R-FN-BATCH3: datetime / interval / formatting --------------------------------------------
+
+
+def next_day(date: Column | str, dayOfWeek: str) -> Column:  # noqa: N803 — PySpark name
+    """Next day-of-week on or after ``date`` (PySpark ``functions.next_day``)."""
+    return _scalar("next_day", date, dayOfWeek, lit_indices=frozenset({1}))
+
+
+def hour(col: Column | str) -> Column:
+    """Hour of day 0..23 (PySpark ``functions.hour``)."""
+    return _scalar("hour", col)
+
+
+def minute(col: Column | str) -> Column:
+    """Minute 0..59 (PySpark ``functions.minute``)."""
+    return _scalar("minute", col)
+
+
+def second(col: Column | str) -> Column:
+    """Second 0..59 (PySpark ``functions.second``)."""
+    return _scalar("second", col)
+
+
+def date_part(field: str, source: Column | str) -> Column:
+    """Extract calendar field (PySpark ``functions.date_part``)."""
+    return _scalar("date_part", field, source, lit_indices=frozenset({0}))
+
+
+def extract(field: str, source: Column | str) -> Column:
+    """Alias of :func:`date_part` (PySpark ``functions.extract``)."""
+    return date_part(field, source)
+
+
+def timestamp_seconds(col: Column | str | int) -> Column:
+    """Epoch seconds → timestamp (PySpark ``functions.timestamp_seconds``)."""
+    if isinstance(col, int) and not isinstance(col, bool):
+        return _scalar("timestamp_seconds", lit(col))
+    return _scalar("timestamp_seconds", col)
+
+
+def timestamp_millis(col: Column | str | int) -> Column:
+    """Epoch millis → timestamp (PySpark ``functions.timestamp_millis``)."""
+    if isinstance(col, int) and not isinstance(col, bool):
+        return _scalar("timestamp_millis", lit(col))
+    return _scalar("timestamp_millis", col)
+
+
+def timestamp_micros(col: Column | str | int) -> Column:
+    """Epoch micros → timestamp (PySpark ``functions.timestamp_micros``)."""
+    if isinstance(col, int) and not isinstance(col, bool):
+        return _scalar("timestamp_micros", lit(col))
+    return _scalar("timestamp_micros", col)
+
+
+def format_number(col: Column | str, d: int) -> Column:
+    """Unsupported: Spark ``format_number`` not wired (R-FN-BATCH3 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.format_number is not supported yet (engine gap; disclosed R-FN-BATCH3)"
+    )
+
+
+def try_to_timestamp(col: Column | str, format: str | None = None) -> Column:
+    """Unsupported: ``try_to_timestamp`` not wired (R-FN-BATCH3 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.try_to_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
+    )
+
+
+def to_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
+    """Unsupported: timezone conversion not wired (R-FN-BATCH3 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.to_utc_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
+    )
+
+
+def from_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
+    """Unsupported: timezone conversion not wired (R-FN-BATCH3 census)."""
+
+    raise UnsupportedOperationException(
+        "functions.from_utc_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
+    )
+
+
+def make_timestamp(
+    years: Column | int,
+    months: Column | int,
+    days: Column | int,
+    hours: Column | int,
+    mins: Column | int,
+    secs: Column | float | int,
+    timezone: str | None = None,
+) -> Column:
+    """Unsupported: ``make_timestamp`` not wired (R-FN-BATCH3 census; use make_date + SQL)."""
+
+    raise UnsupportedOperationException(
+        "functions.make_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
+    )
+
+
+# ---- R-FN-BATCH4: aggregates / stats / hashes / ids -------------------------------------------
+
+
+def stddev(col: Column | str) -> Column:
+    """Sample standard deviation (PySpark ``functions.stddev`` / ``stddev_samp``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"stddev({part})"
+    return Column(
+        column._inner.aggregate("stddev", False),
+        agg_name=agg_name,
+        # Structural quoted sql_expr for free-SQL global-agg (octo C4-Q-002 / C4-SEC-001).
+        sql_expr=f"stddev({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def stddev_samp(col: Column | str) -> Column:
+    """Alias of :func:`stddev`."""
+    return stddev(col)
+
+
+def stddev_pop(col: Column | str) -> Column:
+    """Population standard deviation (PySpark ``functions.stddev_pop``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"stddev_pop({part})"
+    return Column(
+        column._inner.aggregate("stddev_pop", False),
+        agg_name=agg_name,
+        sql_expr=f"stddev_pop({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def variance(col: Column | str) -> Column:
+    """Sample variance (PySpark ``functions.variance`` / ``var_samp``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"variance({part})"
+    # DataFusion SQL name is ``var_samp`` (``variance`` is not registered — octo C4-Q-002).
+    return Column(
+        column._inner.aggregate("variance", False),
+        agg_name=agg_name,
+        sql_expr=f"var_samp({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def var_samp(col: Column | str) -> Column:
+    """Alias of :func:`variance`."""
+    return variance(col)
+
+
+def var_pop(col: Column | str) -> Column:
+    """Population variance (PySpark ``functions.var_pop``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"var_pop({part})"
+    return Column(
+        column._inner.aggregate("var_pop", False),
+        agg_name=agg_name,
+        sql_expr=f"var_pop({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def median(col: Column | str) -> Column:
+    """Exact median aggregate (PySpark ``functions.median``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"median({part})"
+    return Column(
+        column._inner.aggregate("median", False),
+        agg_name=agg_name,
+        sql_expr=f"median({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def corr(col1: Column | str, col2: Column | str) -> Column:
+    """Pearson correlation (PySpark ``functions.corr``)."""
+    left, left_part = _aggregate_argument(col1)
+    right, right_part = _aggregate_argument(col2)
+    agg_name = f"corr({left_part}, {right_part})"
+    return Column(
+        left._inner.aggregate_binary("corr", right._inner),
+        agg_name=agg_name,
+        sql_expr=f"corr({left.sql_expr_part()}, {right.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=_partition_transform_of(left, right),
+    )
+
+
+def covar_pop(col1: Column | str, col2: Column | str) -> Column:
+    """Population covariance (PySpark ``functions.covar_pop``)."""
+    left, left_part = _aggregate_argument(col1)
+    right, right_part = _aggregate_argument(col2)
+    agg_name = f"covar_pop({left_part}, {right_part})"
+    return Column(
+        left._inner.aggregate_binary("covar_pop", right._inner),
+        agg_name=agg_name,
+        sql_expr=f"covar_pop({left.sql_expr_part()}, {right.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=_partition_transform_of(left, right),
+    )
+
+
+def covar_samp(col1: Column | str, col2: Column | str) -> Column:
+    """Sample covariance (PySpark ``functions.covar_samp``)."""
+    left, left_part = _aggregate_argument(col1)
+    right, right_part = _aggregate_argument(col2)
+    agg_name = f"covar_samp({left_part}, {right_part})"
+    return Column(
+        left._inner.aggregate_binary("covar_samp", right._inner),
+        agg_name=agg_name,
+        sql_expr=f"covar_samp({left.sql_expr_part()}, {right.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=_partition_transform_of(left, right),
+    )
+
+
+def bit_and(col: Column | str) -> Column:
+    """Bitwise AND aggregate (PySpark ``functions.bit_and``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"bit_and({part})"
+    return Column(
+        column._inner.aggregate("bit_and", False),
+        agg_name=agg_name,
+        sql_expr=f"bit_and({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def bit_or(col: Column | str) -> Column:
+    """Bitwise OR aggregate (PySpark ``functions.bit_or``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"bit_or({part})"
+    return Column(
+        column._inner.aggregate("bit_or", False),
+        agg_name=agg_name,
+        sql_expr=f"bit_or({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def bit_xor(col: Column | str) -> Column:
+    """Bitwise XOR aggregate (PySpark ``functions.bit_xor``)."""
+    column, part = _aggregate_argument(col)
+    agg_name = f"bit_xor({part})"
+    return Column(
+        column._inner.aggregate("bit_xor", False),
+        agg_name=agg_name,
+        sql_expr=f"bit_xor({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def sha2(col: Column | str, numBits: int) -> Column:  # noqa: N803
+    """SHA-2 hash; only 256-bit supported via engine ``sha256`` (R-FN-BATCH4)."""
+    if numBits != 256:
+        from repark.errors import UnsupportedOperationException
+
+        raise UnsupportedOperationException(
+            f"functions.sha2(numBits={numBits}) only 256 is supported "
+            "(engine sha256; disclosed R-FN-BATCH4)"
+        )
+    return _scalar("sha256", col)
+
+
+def sha1(col: Column | str) -> Column:
+    """Unsupported: engine has no ``sha1`` (use sha2(..., 256); R-FN-BATCH4)."""
+
+    raise UnsupportedOperationException(
+        "functions.sha1 is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    )
+
+
+def crc32(col: Column | str) -> Column:
+    """Unsupported: engine has no ``crc32`` (R-FN-BATCH4)."""
+
+    raise UnsupportedOperationException(
+        "functions.crc32 is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    )
+
+
+def xxhash64(col: Column | str) -> Column:
+    """Unsupported: engine has no ``xxhash64`` (R-FN-BATCH4)."""
+
+    raise UnsupportedOperationException(
+        "functions.xxhash64 is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    )
+
+
+def rand(seed: int | None = None) -> Column:
+    """Uniform random [0, 1) (PySpark ``functions.rand``).
+
+    **r20 G2:** seeded via Spark XORShiftRandom (``seed + partitionIndex``; repark
+    partitionIndex=0). Same seed ⇒ same values **per partition layout** (single-batch
+    MemTable layout matches Spark single-partition tasks).
+
+    **Seed contract (honest divergence):** an **omitted** seed lowers to engine seed ``0``
+    (stable XORShift sequence) so range-only callers and sampleBy default stay deterministic.
+    Live Spark unseeded ``rand()`` draws a fresh non-deterministic seed per query — do **not**
+    treat repark unseeded ``rand()`` as Spark-random; pass an explicit seed for parity with
+    Spark seeded calls. Multi-batch layouts restart the sequence per batch (disclosed residual).
+
+    Non-foldable and ungroupable (Spark ``Rand``): ``select(sum(x), rand())`` and nested
+    ``sum(x)+rand()`` raise ``[MISSING_GROUP_BY]`` — not pure_global (octo C7-L-001).
+    """
+    # === r20 G2: window/rand/sampleBy ===
+    if seed is None:
+        return _scalar("rand", has_ungroupable=True)
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        from repark.errors import PySparkTypeError
+
+        raise PySparkTypeError(
+            errorClass="NOT_INT",
+            messageParameters={"arg_name": "seed", "arg_type": type(seed).__name__},
+        )
+    return _scalar("rand", int(seed), lit_indices=frozenset({0}), has_ungroupable=True)
+
+
+def randn(seed: int | None = None) -> Column:
+    """Standard normal (PySpark ``functions.randn``).
+
+    **r20 G2:** Spark XORShift + java.util.Random polar Gaussian. Seed contract same as
+    :func:`rand` (per partition layout; partitionIndex=0; unseeded → seed ``0``, not Spark's
+    non-deterministic unseeded path — see :func:`rand`).
+    """
+    # === r20 G2: window/rand/sampleBy ===
+    if seed is None:
+        return _scalar("randn", has_ungroupable=True)
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        from repark.errors import PySparkTypeError
+
+        raise PySparkTypeError(
+            errorClass="NOT_INT",
+            messageParameters={"arg_name": "seed", "arg_type": type(seed).__name__},
+        )
+    return _scalar("randn", int(seed), lit_indices=frozenset({0}), has_ungroupable=True)
+
+
+def random(seed: int | None = None) -> Column:
+    """Alias of :func:`rand` (SQL ``random`` spelling)."""
+    return rand(seed)
+
+
+def skewness(col: Column | str) -> Column:
+    """Unsupported: engine has no ``skewness`` (R-FN-BATCH4)."""
+
+    raise UnsupportedOperationException(
+        "functions.skewness is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    )
+
+
+def kurtosis(col: Column | str) -> Column:
+    """Unsupported: engine has no ``kurtosis`` (R-FN-BATCH4)."""
+
+    raise UnsupportedOperationException(
+        "functions.kurtosis is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    )
+
+
+def percentile_approx(
+    col: Column | str,
+    percentage: float | list[float] | tuple[float, ...],
+    accuracy: int | None = None,
+) -> Column:
+    """Approximate percentile (PySpark ``functions.percentile_approx``).
+
+    Lowers to engine ``approx_percentile_cont`` (DataFusion t-digest). Spark uses
+    Greenwald-Khanna QuantileSummaries — values may differ within approximation bounds;
+    oracles pin bounds-windows, never cross-engine exact equality.
+
+    ``accuracy`` is **accepted and ignored** (t-digest has no Greenwald-Khanna accuracy
+    knob). Array/list/tuple of percentages is not shipped yet (engine returns a scalar
+    per call) — loud STOP seed.
+    """
+    if isinstance(percentage, (list, tuple)):
+        from repark.errors import UnsupportedOperationException
+
+        raise UnsupportedOperationException(
+            "functions.percentile_approx(array_of_percentages) is not supported yet "
+            "(engine approx_percentile_cont is scalar-only; named seed: "
+            "percentile_approx_array_percentages)"
+        )
+    # bool is a subclass of int — reject before the numeric branch (octo F-Q1-008).
+    if isinstance(percentage, bool) or not isinstance(percentage, (int, float)):
+        from repark.errors import PySparkTypeError
+
+        raise PySparkTypeError(
+            f"percentile_approx percentage must be float or sequence of float, "
+            f"got {type(percentage).__name__}"
+        )
+    pct = float(percentage)
+    if not 0.0 <= pct <= 1.0:
+        from repark.errors import IllegalArgumentException
+
+        raise IllegalArgumentException(f"percentile_approx percentage must be in [0, 1], got {pct}")
+    # accuracy: facade accepts-and-ignores (Spark GK relative-error knob has no t-digest
+    # equivalent). Free-SQL `percentile_approx(col, p, n)` is a *different* path: DataFusion
+    # treats the optional third arg as t-digest **centroids**, not Spark accuracy
+    # (octo F-Q1-001; dual-path also noted on this module's map entry).
+    del accuracy
+    column, part = _aggregate_argument(col)
+    # Spark display name keeps the user-facing Spark name; SQL path uses the engine name
+    # (aliases percentile_approx / approx_percentile are registered for free-SQL too).
+    agg_name = f"percentile_approx({part}, {pct})"
+    return Column(
+        column._inner.approx_percentile_cont(pct),
+        agg_name=agg_name,
+        sql_expr=f"approx_percentile_cont({column.sql_expr_part()}, {pct})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+        partition_transform=column._partition_transform,
+    )
+
+
+def approx_percentile(
+    col: Column | str,
+    percentage: float | list[float] | tuple[float, ...],
+    accuracy: int | None = None,
+) -> Column:
+    """Alias of :func:`percentile_approx` (PySpark ``functions.approx_percentile``)."""
+    return percentile_approx(col, percentage, accuracy)
+
+
+def mode(col: Column | str) -> Column:
+    """Unsupported: engine has no ``mode`` (R-FN-BATCH4)."""
+
+    raise UnsupportedOperationException(
+        "functions.mode is not supported yet (engine gap; disclosed R-FN-BATCH4)"
+    )
+
+
+def monotonically_increasing_id() -> Column:
+    """Unsupported: single-node id generator not wired (R-FN-BATCH4 disclosed)."""
+
+    raise UnsupportedOperationException(
+        "functions.monotonically_increasing_id is not supported yet "
+        "(single-node semantics disclosed; R-FN-BATCH4)"
+    )
+
+
+def spark_partition_id() -> Column:
+    """Unsupported: single-node partition id (always 0 if implemented; R-FN-BATCH4 loud)."""
+
+    raise UnsupportedOperationException(
+        "functions.spark_partition_id is not supported yet (single-node disclosed; R-FN-BATCH4)"
+    )
+
+
+def input_file_name() -> Column:
+    """Unsupported: input_file_name not wired (R-FN-BATCH4 disclosed)."""
+
+    raise UnsupportedOperationException(
+        "functions.input_file_name is not supported yet (disclosed R-FN-BATCH4)"
+    )
+
+
+def explode(column: Column | str) -> Column:
+    """Generator: one row per array element; drop null/empty arrays (PySpark ``explode``).
+
+    Lowered at :meth:`~repark.dataframe.DataFrame.select` time via a guarded DataFusion
+    ``unnest`` (R-EXPLODE-REWRITE): pre-filter null/empty so the engine null-list gap is
+    avoided. Only one generator per select list.
+
+    A bare ``str`` is a **column name** (Spark ColumnOrName), not a string literal
+    (octo C1-Q-001). Pre-aliased inputs strip trailing ``AS name`` so unnest never
+    embeds illegal alias SQL (octo C1-Q-005). Nested generators
+    (``explode(explode_outer(...))``) refuse loud — overwriting kind would silently drop
+    null/empty rows (octo C5-L-002 / C5-Q-001). Sticky aggregate arguments
+    (``explode(collect_list(x))`` / ``explode(array_repeat(sum(x), 1))``) refuse with
+    ``[MISSING_GROUP_BY]`` — building a generator Column would strip ``_is_aggregate`` and
+    let ``select`` enter unnest mid-project instead of the F1xF3 gate (combine octo C4-Q-001).
+    """
+    array_column = _column_argument(column)
+    array_column._reject_nested_generator("explode")
+    _reject_aggregate_generator_argument(array_column, "explode")
+    array_sql = array_column.sql_expr_without_alias()
+    return Column(
+        array_column._inner,  # placeholder; select rewrites via SQL
+        spark_display=f"explode({array_sql})",
+        sql_expr=array_sql,
+        projection_name="col",  # Spark default name for explode
+        generator="explode",
+    )
+
+
+def explode_outer(column: Column | str) -> Column:
+    """Generator: one row per element; null/empty arrays yield one null row (``explode_outer``).
+
+    Lowered via ``unnest(CASE WHEN null/empty THEN array(NULL) ELSE col END)`` so DataFusion's
+    null-list ``unnest`` gap is avoided without forking the engine (R-EXPLODE-REWRITE).
+
+    A bare ``str`` is a column name, not a literal (octo C1-Q-001). Pre-aliased inputs
+    strip trailing ``AS name`` (octo C1-Q-005). Nested generators refuse loud (octo C5-L-002).
+    Sticky aggregate arguments refuse ``[MISSING_GROUP_BY]`` (combine octo C4-Q-001).
+    """
+    array_column = _column_argument(column)
+    array_column._reject_nested_generator("explode_outer")
+    _reject_aggregate_generator_argument(array_column, "explode_outer")
+    array_sql = array_column.sql_expr_without_alias()
+    return Column(
+        array_column._inner,
+        spark_display=f"explode_outer({array_sql})",
+        sql_expr=array_sql,
+        projection_name="col",
+        generator="explode_outer",
+    )
+
+
+def _reject_aggregate_generator_argument(array_column: Column, operation: str) -> None:
+    """Refuse explode* on sticky-aggregate args so select cannot unnest past MISSING_GROUP_BY.
+
+    Combine octo C4-Q-001: ``explode`` / ``explode_outer`` previously built a generator
+    Column without ``_is_aggregate``, so ``select(explode(collect_list(x)))`` bypassed the
+    F1xF3 sibling gate (``select(explode, sum)``) and entered unnest mid-project.
+    """
+    if not array_column._is_aggregate:
+        return
+
+    raise AnalysisException(
+        "[MISSING_GROUP_BY] The query does not include a GROUP BY clause. "
+        "Add GROUP BY or turn it into the window functions using OVER clauses. "
+        f"(generator {operation} cannot wrap an aggregate expression)"
+    )
+
+
+def posexplode(column: Column | str) -> Column:
+    """Generator with ordinal (PySpark ``posexplode``) — STOP: no DF unnest-with-ordinality.
+
+    Raises :class:`~repark.errors.UnsupportedOperationException`. ``explode`` /
+    ``explode_outer`` are delivered separately (partial WIN per R-EXPLODE-REWRITE).
+    """
+
+    _ = column
+    # r24 A3 octo C1-Q-001: do not embed a DataFusion major in the user-facing
+    # message — the number rots (audit QUAL-06 cited the former "52.x" claim while
+    # the wheel pins 54.1). Capability fact only.
+    raise UnsupportedOperationException(
+        "posexplode is not supported yet (no first-class unnest-with-ordinality; "
+        "explode/explode_outer are available via guarded unnest rewrite)"
+    )
+
+
+def posexplode_outer(column: Column | str) -> Column:
+    """``posexplode_outer`` — same STOP as :func:`posexplode`."""
+
+    _ = column
+    raise UnsupportedOperationException(
+        "posexplode_outer is not supported yet (see posexplode; use explode_outer without ordinal)"
+    )

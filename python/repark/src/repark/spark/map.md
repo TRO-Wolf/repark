@@ -1022,7 +1022,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   rejected).
   **X3:** `struct(...)` via native `make_struct` + `count` star Column forms (`"*"`,
   `col("*")`, `df["*"]`); **octo X3 C4** field names via named_struct path.
-- `functions.py` — the `pyspark.sql.functions` surface. **Z-4 / Y-5 SAF-001:**
+- `functions.py` — the `pyspark.sql.functions` surface (FN-SPLIT 2026-08-15: constructors +
+  first-half agg/date stay here; `functions_udf.py` holds pandas/python UDF; `functions_expr.py`
+  holds `_scalar` wrappers). **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
   `add_months`, `date_add` so `F.abs(right["k"])` after a semi join raises Spark's
@@ -1137,7 +1139,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add `df.x` / `df["x"]` column-access sugar (Group G1) | `dataframe.py` (`__getattr__` / `__getitem__`) |
 | Add a groupBy/agg, union, distinct, na, or write method | `dataframe.py` (`GroupedData` / `DataFrameNaFunctions` / `DataFrameWriter`) |
 | Add a column operator / `__neg__` / `alias` / `__getitem__` / `cast` / `over` | `column.py` |
-| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add ML pipeline / feature / estimator (`repark.ml`) | [ml/map.md](ml/map.md) + [docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q3 + `crates/repark-ml` |

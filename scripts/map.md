@@ -106,8 +106,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `check_lib_rs` and the SSOT for facade file size (ported verbatim at phase-3 PR-5 with the
   facade package it inspects). Over every `*.py` under `python/repark/src/repark/**`: a per-file
   line ceiling (default 2500) with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN
-  only; four rows at the pin — `dataframe/core.py`, `functions.py`,
-  `ml/feature/_transformers.py`, `session/_funcs.py`), plus the no-stub rule (a module whose body
+  only; three rows after FN-SPLIT — `dataframe/core.py`,
+  `ml/feature/_transformers.py`, `session/_funcs.py`; `functions.py` dropped when the
+  package-split shipped), plus the no-stub rule (a module whose body
   is only a docstring + imports/re-exports/`__all__`/`pass` must open its docstring with the
   exact substring `re-export binding`; package `__init__.py` files are exempt from the no-stub
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into

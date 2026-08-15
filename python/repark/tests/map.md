@@ -22,6 +22,8 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_functions_split_identity.py](test_functions_split_identity.py) — FN-SPLIT
+  (2026-08-15): `__all__` before==after (207 names) + every name resolves.
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
