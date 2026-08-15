@@ -8,6 +8,9 @@ lives as this module directory (move-only; pub surface frozen).
 ## Contents
 
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+- `insert.rs` — NOT MATCHED INSERT machinery: `insert_projection` (clause→projection lowering,
+  moved from `mod.rs` 2026-08-15), the source-only execution seam (`insert_stream_checked`),
+  and the ANSI store-assignment gate (audit M4/M9).
   Unpartitioned writer: `#182` `PartitionKey::new(...)` is `Result`; `?` via `iceberg_err`
   (net-zero lines vs the 2700-line file ceiling).
   `residual_join_key_filter` is a thin caller of `scan_prune::residual_bounds_predicate`

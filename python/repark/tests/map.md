@@ -492,6 +492,12 @@ NOT in that file is a defect, not a decision.
   mixed-case ON ≡ pruning-off). Memory catalog, Arrow `to_arrow()` value AND type.
   Does **not** edit `test_merge_semantics_audit.py`. Ledger:
   `task/mg1-scanprune-hardening-ledger.md`.
+- `test_merge_insert_scope.py` — **audit M4**: NOT MATCHED conditions/VALUES resolve against the
+  SOURCE only — target-column reference is a loud analysis error (was: silent LEFT-JOIN NULL);
+  source-qualified and bare names resolve to the source. Arrow path.
+- `test_merge_store_assign.py` — **audit M9**: MERGE INSERT ANSI store-assignment gate —
+  boolean→int / timestamp→bigint / string→numeric refuse at analysis; numeric widening,
+  NULL-fill and atomic→string still insert. Arrow path.
 - **octo-extra C3: format= refuse surface**
 
 - **octo-extra C2: __all__ / export coverage**

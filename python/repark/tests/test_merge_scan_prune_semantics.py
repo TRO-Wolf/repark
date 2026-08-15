@@ -60,6 +60,11 @@ def test_merge_string_source_int_target_updates_both_keys(spark: ReparkSession) 
     Without the identical-type skip, lexicographic min/max of ``'10'``/``'9'``
     strict-casts to ``id >= 10 AND id <= 9``, every file is pruned, updates are
     lost, and both source rows insert as duplicates (4 rows).
+
+    The INSERT arm casts explicitly: bare ``VALUES (s.id, …)`` with a Utf8 source
+    into an INT column is not ANSI-store-assignable — Spark refuses the whole
+    statement at analysis, and so does repark's M9 gate (declared pin flip with the
+    M4/M9 unit; the M1 corruption guard lives in the join/pruning, unchanged).
     """
     _create(spark, FQ, "id INT, v STRING")
     spark.sql(f"INSERT INTO {FQ} VALUES (9,'x'),(10,'y')")
@@ -68,7 +73,7 @@ def test_merge_string_source_int_target_updates_both_keys(spark: ReparkSession) 
     spark.sql(
         f"MERGE INTO {FQ} AS t USING {SRC} AS s ON t.id = s.id "
         "WHEN MATCHED THEN UPDATE SET v = s.v "
-        "WHEN NOT MATCHED THEN INSERT (id, v) VALUES (s.id, s.v)"
+        "WHEN NOT MATCHED THEN INSERT (id, v) VALUES (CAST(s.id AS INT), s.v)"
     )
     out = spark.sql(f"SELECT id, v FROM {FQ} ORDER BY id").to_arrow()
     assert out.schema.field("id").type == pa.int32()
