@@ -22,6 +22,11 @@ not this directory.
   action sub-predicates (M2), misqualified / nested assignment targets (M3),
   and non-last unconditional same-kind clauses (M10). Spark door adds the ANSI
   INSERT column-list needle (M8). Door validation only; engine untouched.
+- [fn-c-aggregates-ledger.md](fn-c-aggregates-ledger.md) — **FN-C
+  (2026-08-15):** 8 aggregate aliases/shims in `functions_agg.py` +
+  `test_functions_c.py`. `_PRE_SPLIT_ALL` pin moved 253→261. Deferred:
+  lag/lead/nth_value/percent_rank/cume_dist (A8) +
+  sum_distinct/approx_count_distinct + charter ENGINE-WORK names.
 - [fn-a-ordering-null-math-ledger.md](fn-a-ordering-null-math-ledger.md) — **FN-A
   (2026-08-15):** 25 ordering/null/math facade names in `functions_expr.py` +
   `test_functions_a.py`. `_PRE_SPLIT_ALL` pin moved 207→232. Deferred:

@@ -1039,6 +1039,15 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   printf/replace/quote). Deferred: regexp_extract_all/regexp_substr (charter);
   split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar
   (`call_scalar` allow-list — no crates/ edit). Pins: `tests/test_functions_b.py`.
+- `functions_agg.py` — **FN-C (2026-08-15):** 8 aggregate aliases/shims
+  (`first_value`/`last_value`/`std`/`count_if`/`bool_and`/`every`/`bool_or`/`some`).
+  Deferred: `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist` (A8: PyColumn
+  window surface is closed); `sum_distinct`/`sumDistinct` /
+  `approx_count_distinct`/`approxCountDistinct` (no native distinct-on-sum /
+  approx-distinct arm; `count_aggregate` distinct is count-only); charter
+  ENGINE-WORK `any_value`/`max_by`/`min_by`/`product`/`grouping`/`grouping_id`/
+  `percentile`/`window`/`window_time`/`session_window`. Pins:
+  `tests/test_functions_c.py`.
   **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
@@ -1154,7 +1163,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add `df.x` / `df["x"]` column-access sugar (Group G1) | `dataframe.py` (`__getattr__` / `__getitem__`) |
 | Add a groupBy/agg, union, distinct, na, or write method | `dataframe.py` (`GroupedData` / `DataFrameNaFunctions` / `DataFrameWriter`) |
 | Add a column operator / `__neg__` / `alias` / `__getitem__` / `cast` / `over` | `column.py` |
-| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_udf.py` |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add ML pipeline / feature / estimator (`repark.ml`) | [ml/map.md](ml/map.md) + [docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q3 + `crates/repark-ml` |
