@@ -298,7 +298,7 @@ def run_merge_expect_error(
 
 
 # ==================================================================================================
-# The corpus (gap G3: 10 rows, budget 8-10)
+# The corpus (gap G3: 11 rows, budget 8-11)
 # ==================================================================================================
 
 ROWS: list[MergeDiffRow] = [
@@ -587,6 +587,43 @@ ROWS: list[MergeDiffRow] = [
             "Do not invent repark support; this row is the refuse disclosure."
         ),
     ),
+    # ----- 12. dup source keys + SINGLE unconditional MATCHED DELETE — repark refuses, Spark ------
+    MergeDiffRow(
+        name="dup_source_keys_unconditional_delete",
+        kind="split",
+        target_columns="id BIGINT, name STRING",
+        seed_sql=(
+            "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name UNION ALL SELECT CAST(2 AS BIGINT), 'b'"
+        ),
+        source_sql=(
+            "SELECT CAST(2 AS BIGINT) AS id, 'x' AS name UNION ALL SELECT CAST(2 AS BIGINT), 'y'"
+        ),
+        merge_sql=(
+            "MERGE INTO {target} AS target USING merge_src AS source "
+            "ON target.id = source.id "
+            "WHEN MATCHED THEN DELETE"
+        ),
+        read_sql="SELECT id, name FROM {target} ORDER BY id",
+        spark=_table(
+            [("id", _I64, True), ("name", _STR, True)],
+            {"id": [1], "name": ["a"]},
+        ),
+        repark=None,  # repark refuses — see repark_error_needle
+        spark_error_needle=None,
+        repark_error_needle="MERGE_CARDINALITY_VIOLATION",
+        note=(
+            "DISCLOSURE (audit M11): duplicate source keys (id=2 twice) against a SINGLE "
+            "unconditional WHEN MATCHED THEN DELETE. repark runs its cardinality check whenever "
+            "any WHEN MATCHED arm exists and refuses with MERGE_CARDINALITY_VIOLATION. Spark "
+            "skips the check for this exact shape — RewriteMergeIntoTable.isCardinalityCheckNeeded "
+            "is false when the only matched action is an unconditional DELETE, because deleting a "
+            "target row twice is idempotent and no last-writer-wins ambiguity exists — so it "
+            "deletes id=2 and commits, leaving id=1. Contrast row 2 "
+            "(duplicate_source_keys_with_matched_raises): with an UPDATE arm both engines refuse. "
+            "The exemption fix (skip the check when spec.matched == [unconditional Delete]) flips "
+            "this row split → content equality."
+        ),
+    ),
 ]
 
 
@@ -745,7 +782,9 @@ def test_merge_differential_row(row: MergeDiffRow, repark: ReparkSession) -> Non
 
 def test_merge_differential_row_set_covers_g3_budget() -> None:
     """The pin budget is part of the unit — corpus size and class coverage are pinned."""
-    assert 8 <= len(ROWS) <= 10, f"G3 budget 8-10 differential rows (got {len(ROWS)})"
+    # Ceiling bumped 10 → 11 (audit M11): the dup-key + single unconditional MATCHED DELETE
+    # disclosure row. One row, one bump — the budget stays a real gate, not an open drawer.
+    assert 8 <= len(ROWS) <= 11, f"G3 budget 8-11 differential rows (got {len(ROWS)})"
     assert len({row.name for row in ROWS}) == len(ROWS), "row names are unique"
 
     kinds = {row.kind for row in ROWS}
