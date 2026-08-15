@@ -125,6 +125,7 @@ use iceberg::{Catalog, TableIdent};
 use tracing::Instrument;
 use uuid::Uuid;
 
+mod abort;
 mod insert;
 use insert::{insert_projection, insert_stream_checked};
 
@@ -2338,7 +2339,8 @@ fn resolve_merge_isolation(table: &Table) -> Result<IsolationLevel> {
 /// serializable `validate_no_conflicting_data` guard on the SAME pin — an insert-only MERGE also
 /// raced its pinned NOT-MATCHED set against a concurrent add, so it cannot append blindly; nothing
 /// at all ⇒ no commit. Every commit is stamped with a unique `engine.operation-id`
-/// snapshot-summary property (§8).
+/// snapshot-summary property (§8). On `tx.commit` `Err`, [`commit_overwrite`] best-effort
+/// deletes the new-file paths then re-raises the original error (M14).
 /// ===========================================================================================
 async fn commit(
     catalog: &Arc<dyn Catalog>,
@@ -2353,6 +2355,9 @@ async fn commit(
 
 /// Copy-on-write overwrite commit. MERGE calls [`commit`], which resolves
 /// `write.merge.isolation-level` (default serializable).
+///
+/// On `tx.commit` error, best-effort-delete the `new_files` paths only (never
+/// `affected`) and re-raise the original error. See [`abort`].
 pub(super) async fn commit_overwrite(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -2364,6 +2369,7 @@ pub(super) async fn commit_overwrite(
     if affected.is_empty() && new_files.is_empty() {
         return Ok(());
     }
+    let new_file_paths = abort::written_file_paths(&new_files);
     let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
     let tx = Transaction::new(table);
     let tx = if affected.is_empty() {
@@ -2429,8 +2435,13 @@ pub(super) async fn commit_overwrite(
         }
         action.apply(tx).map_err(iceberg_err)?
     };
-    tx.commit(catalog.as_ref()).await.map_err(iceberg_err)?;
-    Ok(())
+    match tx.commit(catalog.as_ref()).await {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            abort::delete_written_files_best_effort(table, &new_file_paths, &error).await;
+            Err(iceberg_err(error))
+        }
+    }
 }
 
 /// ===========================================================================================
@@ -2467,6 +2478,8 @@ pub(super) async fn commit_overwrite(
 /// The position-delete files are written HERE rather than by the caller so the write and the commit
 /// stay adjacent: the pairs are grouped, sorted and encoded, and the very next statement commits
 /// them, so no code path can produce delete files and then take a branch that fails to commit them.
+/// On `tx.commit` `Err`, [`commit_row_delta_kind`] best-effort deletes the new data-file and
+/// delete-file paths then re-raises the original error (M14).
 /// ===========================================================================================
 async fn commit_row_delta(
     catalog: &Arc<dyn Catalog>,
@@ -2494,6 +2507,11 @@ async fn commit_row_delta(
 
 /// Position-delete `RowDelta` commit. MERGE calls [`commit_row_delta`] (Merge +
 /// `write.merge.isolation-level`, default serializable).
+///
+/// On `tx.commit` error, best-effort-delete the new `data_files` paths and the
+/// position-delete files this function just wrote, then re-raise the original
+/// error. A failed `write_position_deletes` has no successful writer result to
+/// delete (partial writes are not walked). See [`abort`].
 pub(super) async fn commit_row_delta_kind(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -2506,6 +2524,7 @@ pub(super) async fn commit_row_delta_kind(
     if pairs.is_empty() && data_files.is_empty() {
         return Ok(());
     }
+    let data_file_paths = abort::written_file_paths(&data_files);
     // The DATA files these position deletes reference — the `validate_data_files_exist` set. Built
     // BEFORE the write so it is derived from the pairs themselves, never from the delete files.
     let referenced: HashSet<String> = pairs
@@ -2521,6 +2540,7 @@ pub(super) async fn commit_row_delta_kind(
                 pairs = pair_count
             ))
             .await?;
+    let delete_file_paths = abort::written_file_paths(&delete_files);
     let delete_file_count = delete_files.len() as u64;
 
     let summary = HashMap::from([(OPERATION_ID_PROP.to_string(), Uuid::new_v4().to_string())]);
@@ -2546,15 +2566,23 @@ pub(super) async fn commit_row_delta_kind(
         action = action.validate_from_snapshot(pin);
     }
     let tx = action.apply(tx).map_err(iceberg_err)?;
-    tx.commit(catalog.as_ref())
+    match tx
+        .commit(catalog.as_ref())
         .instrument(tracing::info_span!(
             "merge.commit",
             data_files = data_file_count,
             delete_files = delete_file_count
         ))
         .await
-        .map_err(iceberg_err)?;
-    Ok(())
+    {
+        Ok(_) => Ok(()),
+        Err(error) => {
+            let mut abort_paths = data_file_paths;
+            abort_paths.extend(delete_file_paths);
+            abort::delete_written_files_best_effort(table, &abort_paths, &error).await;
+            Err(iceberg_err(error))
+        }
+    }
 }
 
 /// Column lookup that names the missing column instead of panicking.

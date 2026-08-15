@@ -1,9 +1,10 @@
-//! M19/M20 OCC conflict batteries B/C/E/F/G/H/I (test-only; engine frozen).
+//! M19/M20 OCC conflict batteries B/C/E/F/G/H/I (M14 abort-path cleanup lives in the
+//! commit functions; this battery flips the orphan characterization).
 //!
 //! House style matches [`super::occ_tests`]: `MemoryCatalog` + local-FS warehouse + synthetic
 //! `DataFile`s. Two-handle races are sequential (the MERGE executor serializes under
 //! `cfg(test)`); they are not threaded. Each battery names its audit letter in the test
-//! doc comment. No `#[ignore]`. Characterization pins name M14/M15/M20 rather than xfail.
+//! doc comment. No `#[ignore]`. Pins name M14/M15/M20 rather than xfail.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -867,14 +868,13 @@ async fn merge_delete_only_mor_stamps_delete_m20() {
 }
 
 // ===================================================================================
-// BATTERY I / M14 — rejected commit leaves written files in the warehouse.
+// BATTERY I / M14 — rejected commit abort-deletes written files (design A).
 // ===================================================================================
 
-/// Battery I / M14 characterization — after a rejected copy-on-write commit the
-/// already-written data files still exist in the warehouse. CURRENT behavior; M14 is
-/// the future abort-path cleanup. Not an xfail.
+/// Battery I / M14 — after a rejected copy-on-write commit the staged data files are
+/// gone from the warehouse and the original OCC error still surfaces.
 #[tokio::test]
-async fn rejected_cow_commit_leaves_written_data_files_in_the_warehouse_m14() {
+async fn rejected_cow_commit_files_are_removed_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (catalog, ident) = setup(&warehouse).await;
     let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
@@ -900,23 +900,30 @@ async fn rejected_cow_commit_leaves_written_data_files_in_the_warehouse_m14() {
     assert_eq!(ice.kind(), iceberg::ErrorKind::DataInvalid);
 
     let live = live_data_file_paths(&catalog, &ident).await;
+    assert!(
+        live.contains("test/a.parquet"),
+        "abort must not delete referenced existing data files, live={live:?}"
+    );
+    assert!(
+        live.contains("test/concurrent.parquet"),
+        "abort must not delete the concurrent winner's files, live={live:?}"
+    );
     for path in &staged_paths {
         assert!(
             !live.contains(path),
             "the rejected file must not be in the live snapshot, path={path}, live={live:?}"
         );
         assert!(
-            path_exists(&table_at_pin, path).await,
-            "M14: staged data file still exists in the warehouse after OCC reject: {path}"
+            !path_exists(&table_at_pin, path).await,
+            "M14: staged data file must be gone after OCC reject: {path}"
         );
     }
 }
 
-/// Battery I / M14 characterization — merge-on-read writes position-delete files BEFORE
-/// `tx.commit`; a rejected row delta leaves those delete files as orphans. CURRENT
-/// behavior; M14 is the future abort-path cleanup. Not an xfail.
+/// Battery I / M14 — merge-on-read writes position-delete files BEFORE `tx.commit`; a
+/// rejected row delta abort-deletes those files and still surfaces the OCC error.
 #[tokio::test]
-async fn rejected_row_delta_leaves_written_delete_files_in_the_warehouse_m14() {
+async fn rejected_row_delta_files_are_removed_m14() {
     let warehouse = TempDir::new().expect("temp warehouse");
     let (catalog, ident) = setup(&warehouse).await;
     let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
@@ -940,9 +947,120 @@ async fn rejected_row_delta_leaves_written_delete_files_in_the_warehouse_m14() {
     let after = parquet_paths_under(warehouse.path());
     let orphans: HashSet<_> = after.difference(&before).cloned().collect();
     assert!(
-        !orphans.is_empty(),
-        "M14: the rejected row delta must have left at least one new Parquet file on disk, \
+        orphans.is_empty(),
+        "M14: the rejected row delta must not leave new Parquet files on disk, \
+         orphans={orphans:?} before={before:?} after={after:?}"
+    );
+}
+
+/// Battery I / M14 success path — a successful copy-on-write overwrite commit leaves
+/// the newly written data files in the warehouse (cleanup must not fire after Ok).
+#[tokio::test]
+async fn successful_cow_overwrite_commit_leaves_written_data_files_m14() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup(&warehouse).await;
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
+
+    let written = write_data_files(&table_at_pin, vec![id_batch(&[99])])
+        .await
+        .expect("stage the insert files");
+    assert!(
+        !written.is_empty(),
+        "the writer must produce at least one real Parquet file"
+    );
+    let staged_paths: Vec<String> = written
+        .iter()
+        .map(|file| file.file_path().to_string())
+        .collect();
+
+    commit(&catalog, &table_at_pin, Some(pin), Vec::new(), written)
+        .await
+        .expect("insert-only copy-on-write commit succeeds with no concurrent writer");
+
+    let live = live_data_file_paths(&catalog, &ident).await;
+    for path in &staged_paths {
+        assert!(
+            live.contains(path),
+            "committed data file must be live, path={path}, live={live:?}"
+        );
+        assert!(
+            path_exists(&table_at_pin, path).await,
+            "success-path abort must not delete committed data files: {path}"
+        );
+    }
+}
+
+/// Battery I / M14 success path — a successful row-delta commit leaves the newly
+/// written position-delete files in the warehouse.
+#[tokio::test]
+async fn successful_row_delta_leaves_written_delete_files_m14() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup(&warehouse).await;
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
+
+    let before = parquet_paths_under(warehouse.path());
+    commit_row_delta(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        vec![(std::sync::Arc::<str>::from("test/a.parquet"), 0)],
+        Vec::new(),
+        default_concurrency(),
+    )
+    .await
+    .expect("delete-only merge-on-read commit succeeds with no concurrent writer");
+
+    let after = parquet_paths_under(warehouse.path());
+    let written: HashSet<_> = after.difference(&before).cloned().collect();
+    assert!(
+        !written.is_empty(),
+        "a successful row delta must have written at least one position-delete Parquet file, \
          before={before:?} after={after:?}"
+    );
+    for path in &written {
+        assert!(
+            path_exists(&table_at_pin, path).await,
+            "success-path abort must not delete committed delete files: {path}"
+        );
+    }
+}
+
+/// Battery I / M14 — a failing `FileIO::delete` must not replace the original OCC
+/// `DataInvalid`. A custom `Storage` wrapper is not injected (typetag + lockfile).
+/// The scripted failure is a real directory path: `LocalFs` `delete` uses `remove_file`,
+/// which errors with "Is a directory".
+#[tokio::test]
+async fn delete_failure_does_not_mask_cow_commit_error_m14() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup(&warehouse).await;
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
+    append(&catalog, &ident, vec![data_file("test/concurrent.parquet")]).await;
+
+    let not_a_file = warehouse.path().join("m14-delete-fail-dir");
+    std::fs::create_dir(&not_a_file).expect("create a directory FileIO::delete cannot unlink");
+    let not_a_file_path = not_a_file
+        .to_str()
+        .expect("utf-8 warehouse path")
+        .to_string();
+
+    let error = commit(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        Vec::new(),
+        vec![data_file(&not_a_file_path)],
+    )
+    .await
+    .expect_err("serializable insert-only MERGE must reject the concurrent append");
+    let ice = iceberg_error(&error);
+    assert_eq!(
+        ice.kind(),
+        iceberg::ErrorKind::DataInvalid,
+        "a failed abort delete must not mask the OCC reject, got: {ice}"
+    );
+    assert!(
+        not_a_file.is_dir(),
+        "the scripted delete target must still be a directory (delete failed as intended)"
     );
 }
 
