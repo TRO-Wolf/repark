@@ -1151,6 +1151,14 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   to peel nested native `Alias` chains via `PyColumn.collapse_identity_aliases` before the N2
   for_select gate; operator 17-TA chain plan/value-parity pins. See
   `task/t3-plan-hygiene-ledger.md`.
+  **conductor-13 TA-2:** `ta.with_indicators(df, *, partition, order, columns,
+  null_lookback=False, last_row=False)` — serving helper. `partition` and `order` are required
+  keyword-only (no guessed column names). A missing `partitionBy` is the silent cross-symbol RSI
+  footgun (one global series across symbols that share timestamps); the helper exists so ETL
+  cannot forget it. Builds the fused `over_columns` window from existing plan pieces only
+  (window + `row_number`/`max`); `last_row=True` keeps the last TA-window bar per partition;
+  `null_lookback` threads through `_NullLookbackColumn`. Pins:
+  `tests/test_ta_with_indicators.py`. Ledger: `task/ta2-with-indicators-ledger.md`.
 - `types.py` — the seven Spark cast type objects (`StringType`, `IntegerType`, `DoubleType`,
   `BooleanType`, `DateType`, `TimestampType`, `DecimalType(p, s)`) → canonical engine type strings
   the native `cast` parses. Plain classes (not Pydantic) to keep PySpark's positional constructors.
@@ -1174,6 +1182,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_datetime.py` (FN-D) |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
+| Add / change the TA serving helper (`with_indicators`) | `ta.py` (TA-2; required `partition`/`order`) |
 | Add ML pipeline / feature / estimator (`repark.ml`) | [ml/map.md](ml/map.md) + [docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q3 + `crates/repark-ml` |
 | Add a Spark cast type object | `types.py` |
 | Add / change an exception type (the error taxonomy) | `errors.py` (+ the `create_exception!` block and `to_py_err` in `crates/repark-python/src/lib.rs`) |
@@ -1186,6 +1195,11 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - Native module: [../../../../crates/repark-python/map.md](../../../../crates/repark-python/map.md).
 
 ## Debug
+
+- **TA-2 `with_indicators`:** omitting `partition` is a `TypeError` (keyword-only, no
+  default). Empty `partition=[]` is `PySparkTypeError` naming the cross-symbol RSI
+  footgun. Do not add a guessed `"symbol"` / `"ts"` default. `null_lookback` rewrites
+  through `_NullLookbackColumn` only (lookback-by-length, never `isnan`).
 
 - **r25 T4 smartCsv:** diagnostics live on `df.describe_ingest()` (sticky `_ingest_report`);
   plain `.csv` returns `{}`. Inference is pure-Python protocol (`_csv_smart`); casts go through

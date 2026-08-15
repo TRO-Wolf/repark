@@ -1647,6 +1647,13 @@ NOT in that file is a defect, not a decision.
   **r21 T4 ta-etl:** `over_columns` type guards; `withColumns(over_columns(...))` → one
   `WindowAggExec` + Arrow bit-exact vs sequential `withColumn`; **r23b N2:** sequential same-spec
   independent `withColumn` also merges to one `WindowAggExec` (was N-stack anti-pattern pin).
+- `test_ta_with_indicators.py` — **conductor-13 TA-2:** `ta.with_indicators` serving helper.
+  Arrow value+type vs hand-built `over_columns`; required keyword-only `partition`/`order`
+  (TypeError on omit; empty partition refuses); cross-symbol RSI leak vs unpartitioned
+  `orderBy("ts")`; `last_row` row-count + last-bar values; one `WindowAggExec` via the N2
+  mechanic (function-name tokens so DCE cannot fake fusion); `null_lookback` threads through
+  `_NullLookbackColumn`. Does **not** edit `test_ta.py` (A12). Ledger:
+  `task/ta2-with-indicators-ledger.md`.
 - `test_n2_plan_collapse.py` — **r23b N2** plan-collapse pins: stage (a) logical alias-chain squash
   (no `ts AS ts AS ts`); stage (b) adjacent same-spec withColumns/withColumn merge → 1
   `WindowAggExec` + Arrow bit-exact vs single fused call; dependent `tr`→`etr5` keeps stacking;
@@ -1738,6 +1745,7 @@ NOT in that file is a defect, not a decision.
 | Add an FN-C aggregate / window-alias function test | `test_functions_c.py` |
 | Add an FN-D datetime-function test | `test_functions_d.py` |
 | Add a `repark.ta` indicator test | `test_ta.py` |
+| Add a `ta.with_indicators` serving-helper pin | `test_ta_with_indicators.py` (do not edit `test_ta.py`) |
 | Add / extend a live-oracle golden (repark == pin == live Spark) | `_live_parity.py` (`SCENARIOS`) + `test_parity_live.py` |
 | Record a divergence from Apache Spark (behavior, pin, rationale) | `../../../docs/spark-sql-iceberg-parity.md` — the registry; add the `Disclosure` too when the live tier can express it (§6) |
 | Run a live-oracle scenario under a NON-UTC session zone | `Scenario(..., session_conf=((lp.SESSION_TIME_ZONE_KEY, lp.ZONE_TOKYO),))` — and move the size + uniqueness pins in the same diff |

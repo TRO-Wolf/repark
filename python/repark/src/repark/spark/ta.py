@@ -37,10 +37,18 @@ stacks (a TA column consumed by a later TA window) still emit stacked operators,
 optimizer. Hour-0 r21 T4: on the Arrow path the fused vs sequential gap is real but modest at
 operator scale once ``withColumns`` is already used; kernel work dominates; collect
 Row materialization is a separate surface (not this module). See ``task/t4-ta-etl-ledger.md``.
+
+# === conductor-13 TA-2: with_indicators ===
+**Serving helper.** :func:`with_indicators` is the ETL door that **requires** ``partition`` and
+``order`` (keyword-only, no guessed column names). A missing ``partitionBy`` is the silent
+cross-symbol RSI footgun: ``Window.orderBy("ts")`` alone treats every symbol as one series, so
+RSI / EMA / MACD leak across instruments that share timestamps. ``last_row=True`` keeps the
+last bar per partition so serving collects ``N_symbols`` rows, not the full history.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from repark import _native
@@ -49,7 +57,10 @@ from repark.spark.column import Column
 from repark.spark.functions import lit
 
 if TYPE_CHECKING:
+    from repark.spark.dataframe import DataFrame
     from repark.spark.window import WindowSpec
+
+_WindowKey = Column | str | Sequence[Column | str]
 
 
 def _series(value: Column | str) -> Column:
@@ -105,6 +116,22 @@ def _max2(left: int, right: int) -> int:
     return left if left >= right else right
 
 
+class _LookbackAwareColumn(Column):
+    """Un-``OVER``ed TA column that carries the kernel lookback length.
+
+    Default (``null_lookback=False``) factories return this instead of a bare :class:`Column`
+    so :func:`with_indicators` can thread ``null_lookback`` through
+    :class:`_NullLookbackColumn`. ``.over`` is inherited — no prefix rewrite — so existing
+    NaN-prefix goldens stay byte-unchanged.
+    """
+
+    __slots__ = ("_lookback",)
+
+    def __init__(self, inner: object, lookback: int) -> None:
+        super().__init__(inner)
+        self._lookback = lookback
+
+
 class _NullLookbackColumn(Column):
     """TA window :class:`Column` that nulls the deterministic lookback prefix on ``.over``.
 
@@ -147,11 +174,14 @@ def _window(
 
     When ``null_lookback`` is true, wrap so ``.over(w)`` converts the first ``lookback`` rows
     from kernel NaN to SQL NULL (polars_talib-shaped). Default is false — kernel NaN unchanged.
+    The default path still carries the lookback length (:class:`_LookbackAwareColumn`) so
+    :func:`with_indicators` can thread the existing rewrite rather than invent a kernel path.
     """
     column = Column(_native.PyColumn.ta_window(name, [argument._inner for argument in args]))
+    lookback_length = _nonneg(lookback)
     if null_lookback:
-        return _NullLookbackColumn(column._inner, _nonneg(lookback))
-    return column
+        return _NullLookbackColumn(column._inner, lookback_length)
+    return _LookbackAwareColumn(column._inner, lookback_length)
 
 
 # === r21 T4: ta-etl ===
@@ -212,6 +242,165 @@ def over_columns(window: WindowSpec, columns: dict[str, Column]) -> dict[str, Co
                 f"got {type(column).__name__} for {name!r}"
             )
         result[name] = column.over(window)
+    return result
+
+
+# === conductor-13 TA-2: with_indicators ===
+
+_LAST_ROW_NUMBER = "__repark_ta_last_row"
+_LAST_ROW_MAX = "__repark_ta_last_row_max"
+
+
+def _window_key_columns(value: _WindowKey, *, label: str) -> list[Column]:
+    """Coerce ``partition`` / ``order`` to a non-empty list of :class:`Column`.
+
+    ``str`` is checked before any sequence walk — a bare name must not be character-iterated.
+    An empty list is the same footgun as omitting ``partition`` (one global series).
+    """
+    from repark.spark.functions import col
+
+    if isinstance(value, (str, Column)):
+        items: list[Column | str] = [value]
+    elif isinstance(value, (list, tuple)):
+        items = list(value)
+    else:
+        raise PySparkTypeError(
+            f"with_indicators {label} must be a column name, Column, or list/tuple of those, "
+            f"got {type(value).__name__}"
+        )
+    if not items:
+        raise PySparkTypeError(
+            f"with_indicators {label} must not be empty — a missing partition is the silent "
+            "cross-symbol RSI footgun (one global series across symbols that share timestamps)"
+        )
+    result: list[Column] = []
+    for item in items:
+        if isinstance(item, Column):
+            result.append(item)
+        elif isinstance(item, str):
+            if item.strip() == "":
+                raise PySparkTypeError(f"with_indicators {label} column names must be non-empty")
+            result.append(col(item))
+        else:
+            raise PySparkTypeError(
+                f"with_indicators {label} items must be a column name or Column, "
+                f"got {type(item).__name__}"
+            )
+    return result
+
+
+def _thread_null_lookback(columns: dict[str, Column]) -> dict[str, Column]:
+    """Re-wrap each ta.* column through :class:`_NullLookbackColumn` (existing rewrite path).
+
+    Must not use ``getattr(column, "_lookback", None)``: :class:`Column.__getattr__`
+    builds a field-access Column for any missing name, so a non-TA value would
+    silently look like it had a lookback.
+    """
+    prepared: dict[str, Column] = {}
+    for name, column in columns.items():
+        if not isinstance(column, (_LookbackAwareColumn, _NullLookbackColumn)):
+            raise PySparkTypeError(
+                f"with_indicators null_lookback=True requires a ta.* indicator Column for "
+                f"{name!r}; {type(column).__name__} has no lookback"
+            )
+        prepared[name] = _NullLookbackColumn(column._inner, int(column._lookback))
+    return prepared
+
+
+def _select_last_row_per_partition(
+    frame: DataFrame,
+    partition_columns: list[Column],
+    order_columns: list[Column],
+) -> DataFrame:
+    """Keep the last row of the fused TA window (max ``row_number``) in each partition.
+
+    ``max`` over a partition-only spec is refused (DataFusion ``ORDER BY column cannot
+    be empty``). Use the same ORDER BY as the TA window with a whole-partition frame
+    so this is a partition max, not a running max.
+    """
+    from repark.spark.functions import col
+    from repark.spark.functions import max as max_
+    from repark.spark.window import Window
+
+    max_window = (
+        Window.partitionBy(*partition_columns)
+        .orderBy(*order_columns)
+        .rowsBetween(Window.unboundedPreceding, Window.unboundedFollowing)
+    )
+    marked = frame.withColumn(
+        _LAST_ROW_MAX,
+        max_(col(_LAST_ROW_NUMBER)).over(max_window),
+    )
+    return marked.filter(col(_LAST_ROW_NUMBER) == col(_LAST_ROW_MAX)).drop(
+        _LAST_ROW_NUMBER, _LAST_ROW_MAX
+    )
+
+
+def with_indicators(
+    df: DataFrame,
+    *,
+    partition: _WindowKey,
+    order: _WindowKey,
+    columns: dict[str, Column],
+    null_lookback: bool = False,
+    last_row: bool = False,
+) -> DataFrame:
+    """Attach many TA indicators in one fused window; ``partition`` and ``order`` are required.
+
+    ``partition`` and ``order`` are keyword-only with **no defaults that guess column names**.
+    Omitting ``partition`` is the silent **cross-symbol RSI footgun**: a window that is only
+    ``orderBy("ts")`` treats every symbol as one series, so RSI / EMA / MACD leak across
+    instruments that share timestamps. This helper exists so ETL cannot forget
+    ``partitionBy``.
+
+    Builds the fused :func:`over_columns` window from existing plan pieces only (the TA
+    window plus ``row_number`` / ``max`` for ``last_row``). No engine edits.
+
+    ``null_lookback`` is threaded through the existing :class:`_NullLookbackColumn` rewrite
+    (lookback-by-length, never blanket ``isnan``). Factory-level ``ta.ema(...,
+    null_lookback=True)`` still wins on its own via ``.over``.
+
+    ``last_row=True`` keeps the last bar of the TA window in each partition so serving
+    collects ``N_symbols`` rows, not the full history.
+
+    Example::
+
+        from repark.spark import ta
+
+        out = ta.with_indicators(
+            df,
+            partition="symbol",
+            order="ts",
+            columns={
+                "ema21": ta.ema("close", timeperiod=21),
+                "rsi14": ta.rsi("close", timeperiod=14),
+            },
+            last_row=True,
+        )
+
+    Raises:
+        TypeError: if ``partition`` or ``order`` is omitted (keyword-only, no default).
+        PySparkTypeError: if ``partition`` / ``order`` / ``columns`` / ``df`` is the wrong
+            shape, or ``partition`` / ``order`` is empty.
+    """
+    from repark.spark.functions import row_number
+    from repark.spark.window import Window
+
+    if not hasattr(df, "withColumns"):
+        raise PySparkTypeError(f"with_indicators df must be a DataFrame, got {type(df).__name__}")
+    partition_columns = _window_key_columns(partition, label="partition")
+    order_columns = _window_key_columns(order, label="order")
+    if not isinstance(columns, dict):
+        raise PySparkTypeError(
+            f"with_indicators columns must be a dict[str, Column], got {type(columns).__name__}"
+        )
+    prepared: dict[str, Column] = _thread_null_lookback(columns) if null_lookback else dict(columns)
+    if last_row:
+        prepared[_LAST_ROW_NUMBER] = row_number()
+    window = Window.partitionBy(*partition_columns).orderBy(*order_columns)
+    result = df.withColumns(over_columns(window, prepared))
+    if last_row:
+        return _select_last_row_per_partition(result, partition_columns, order_columns)
     return result
 
 
@@ -1586,4 +1775,5 @@ __all__ = [
     "var",
     "wclprice",
     "willr",
+    "with_indicators",
 ]
