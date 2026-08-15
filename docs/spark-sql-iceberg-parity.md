@@ -701,45 +701,37 @@ the pin rather than obeying it.
   `MERGE_CARDINALITY_VIOLATION`, including when the only matched clause is an unconditional
   `DELETE`.
 - **Apache Spark** — `RewriteMergeIntoTable.isCardinalityCheckNeeded` skips the check for
-  exactly that shape and deletes the row. *(oracle: asserted from source — the Spark golden is
-  deliberately unrecorded; the WG-M11 owner runbook records it before the fix.)*
+  exactly that shape and deletes the row. *(oracle: RECORDED 2026-08-15 (#131) — live Spark 4.1.2 + Iceberg 1.11.0 commits the
+  delete and leaves the 1-row survivor table; `test_merge_differential_parity.py`
+  `dup_source_keys_unconditional_delete`, kind split.)*
 - **Pin** — `crates/repark-iceberg/src/write/merge/streaming_scan_tests.rs`
   `merge_cardinality_uses_file_and_pos_not_file_alone` codifies today's raise;
   `python/repark/tests/test_merge_differential_parity.py` covers the both-engines-raise
   conditional-clause shape.
-- **Rationale** — BACKLOG (audit M11). Fail-closed until the recorded golden exists; the fix is
+- **Rationale** — BACKLOG (audit M11). Fail-closed; the golden now exists, so the fix unit is
+  unblocked: it is
   a narrow exemption for the `matched == [unconditional Delete]` shape, flipping a recorded
   split diff-row to content.
 
 ### BL-4 — `UPDATE`-path store-assignment error shape in `MERGE`
 
-- **repark** — an illegal `WHEN MATCHED UPDATE SET` coercion surfaces as a DataFusion
-  `CASE`/type-coercion planning error (an incidental guard), not a named store-assignment
-  refusal. The INSERT path now matches Spark's ANSI gate (#111).
-- **Apache Spark** — raises the named `INCOMPATIBLE_DATA_FOR_TABLE` class at analysis for both
-  paths. *(oracle: documented — audit M9 residual.)*
-- **Pin** — the INSERT-path contrast pins in
-  `python/repark/tests/test_merge_store_assign.py`; the UPDATE-path error-shape pin lands with
-  the fix unit (none codifies the CASE-error text today — deliberately, since the fix replaces
-  the whole shape).
-- **Rationale** — BACKLOG. Both engines refuse (no silent wrong data); only the error CLASS
-  diverges. Close by routing UPDATE `SET` assignments through the same
-  `validate_insert_store_assignment` gate the INSERT path uses.
+> **CLOSED 2026-08-15 (#135).** `WHEN MATCHED UPDATE SET` assignments now route through the
+> same `ansi_store_assignable` matrix as the INSERT path (`update_stream_checked` /
+> `validate_update_store_assignment` in `merge/insert.rs`), refusing with the shared
+> `not ANSI-store-assignable` needle on BOTH doors. The old CASE/type-coercion error shape is
+> gone; the UPDATE trio in `test_merge_store_assign.py` plus native-door pins are the record.
+> Retired per §6: the fix landed and the pins flipped in the same change.
 
 ### BL-5 — rejected `MERGE` commit leaves written files behind
 
-- **repark** — data and position-delete files are written before the transaction commits; an
-  OCC-rejected commit orphans every written file (no abort-path cleanup).
-- **Apache Spark** — `BatchWrite.abort()` deletes the task files of a failed write.
-  *(oracle: documented — audit M14.)*
-- **Pin** — `crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`
-  `rejected_cow_commit_leaves_written_data_files_in_the_warehouse_m14` /
-  `rejected_row_delta_leaves_written_delete_files_in_the_warehouse_m14` — characterization
-  pins the fix must FLIP.
-- **Rationale** — BACKLOG, fix design-gated (WG-M14: best-effort delete on the commit-error
-  path is the leaning; a mis-scoped catch deleting committed files would be S1, so the design
-  ruling precedes any code). Until then `remove_orphan_files`-style maintenance is the
-  mitigation.
+> **CLOSED 2026-08-15 (#134, owner-ratified design A).** A commit-path `Err` now best-effort
+> deletes every file the attempt wrote (paths threaded from writer results, never re-derived),
+> then re-raises the original error; the battery-I characterization pins flipped to
+> "files gone, error surfaces" in the same change. One deliberate carve-out:
+> `CommitStateUnknown` errors SKIP cleanup (the catalog may have persisted — Java's
+> `CommitStateUnknownException` rethrow-before-cleanup rule), leaving those files to
+> orphan-file maintenance; an injection test for that path is a named residual.
+
 
 > **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on
 > 2026-08-10**, when H-1a split B landed the extraction fix (campaign decision D7). It does not

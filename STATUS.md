@@ -320,6 +320,21 @@ Recorded, not built. Each names the trigger that would start it.
 **None.** v0.1.0 shipped 2026-08-15. Future tags follow [docs/release.md](docs/release.md)
 (version SSOT at the Cargo workspace; wheel-only; crates.io publishing structurally deferred).
 
+## 2026-08-15 evening increment (conductor-14 + Opus work group)
+
+Six more merged PRs: the five deferred window functions land (`lag`/`lead`/`nth_value`/
+`percent_rank`/`cume_dist`, #133 — functions surface 291 -> 296; `column.rs` is now at its
+2200 ceiling, operator-group extraction due before any further growth); the BL-4 UPDATE-path
+store-assignment gate (#135) and the BL-5 abort-path cleanup (#134, with a
+`CommitStateUnknown` carve-out so ambiguous commits are never corrupted) — both registry rows
+retired; the M11 Spark golden RECORDED (#131, answering the audit's open question: Spark
+deletes, repark refuses — the fix unit is now unblocked); and the perf baseline batteries
+(#132 criterion kernels, #136 the six pipeline benches). Orchestrator profiling: TA kernels
+measured at ~5% of engine time (window-exec 37% / sort 34% / arrow glue 21%) and the
+unsafe-Rust ceiling measured at <=0.4% and rejected — slate priority is plan-shape work.
+Also discharged by the Opus group: the spill-coverage spike (unit S-1 chartered) and the
+CDL Int32-lane design.
+
 ## 2026-08-15 hardening increment (conductor-13)
 
 Twelve PRs merged in one wave: MERGE OCC hardening (`write.merge.isolation-level` honored
