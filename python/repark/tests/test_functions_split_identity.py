@@ -1,7 +1,7 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-B (strings) deliberately grows the pin —
+``__all__`` tuple is the surface pin. FN-C (aggregates) deliberately grows the pin —
 declared in that batch's PR body.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-B (was the 207-name FN-SPLIT freeze on 8b5c8cb).
+# Moved 2026-08-15 with FN-C (was 253 after the FN-A + FN-B union).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -47,6 +47,8 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "bit_and",
     "bit_or",
     "bit_xor",
+    "bool_and",
+    "bool_or",
     "btrim",
     "bucket",
     "cbrt",
@@ -70,6 +72,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "count",
     "countDistinct",
     "count_distinct",
+    "count_if",
     "covar_pop",
     "covar_samp",
     "crc32",
@@ -99,6 +102,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "encode",
     "endswith",
     "equal_null",
+    "every",
     "exp",
     "explode",
     "explode_outer",
@@ -107,6 +111,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "extract",
     "find_in_set",
     "first",
+    "first_value",
     "flatten",
     "floor",
     "format_number",
@@ -132,6 +137,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "kurtosis",
     "last",
     "last_day",
+    "last_value",
     "lcase",
     "least",
     "left",
@@ -222,12 +228,14 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "size",
     "skewness",
     "slice",
+    "some",
     "sort_array",
     "soundex",
     "spark_partition_id",
     "split",
     "sqrt",
     "startswith",
+    "std",
     "stddev",
     "stddev_pop",
     "stddev_samp",
@@ -269,7 +277,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 253
+    assert len(F.__all__) == 261
 
 
 def test_every_all_name_resolves() -> None:
