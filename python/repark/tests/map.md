@@ -487,7 +487,8 @@ NOT in that file is a defect, not a decision.
   `withSchemaEvolution` returns self; equi-join sugar unit pin. Arrow path for row sets.
 - `test_merge_scan_prune_semantics.py` — **MG-1 (2026-08-15):** MERGE residual-probe
   hardening pins (r1/M1 Utf8→INT 2-row upsert; r2/M6 BIGINT 3e9 vs INT no-abort;
-  r3/M5 `t.city = 'Zürich'` battery shape + `t.Zürich` CTAS column; r11/M7
+  r3/M5 `t.city = 'Zürich'` battery shape + backtick `` t.`Zürich` `` column;
+  r11/M7
   mixed-case ON ≡ pruning-off). Memory catalog, Arrow `to_arrow()` value AND type.
   Does **not** edit `test_merge_semantics_audit.py`. Ledger:
   `task/mg1-scanprune-hardening-ledger.md`.

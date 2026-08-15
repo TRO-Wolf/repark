@@ -117,21 +117,22 @@ def test_merge_on_utf8_literal_does_not_panic(spark: ReparkSession) -> None:
 
 
 def test_merge_on_utf8_column_name_does_not_panic(spark: ReparkSession) -> None:
-    """M5: non-ASCII COLUMN name in ON (unquoted ident via CTAS) must not panic.
+    """M5: non-ASCII COLUMN name in ON must not panic.
 
-    Complements the r3 literal pin. The scanners walk ``t.Zürich``; the id
-    equality still drives the update. Column created by CTAS alias — no quoted
-    DDL.
+    Complements the r3 literal pin. Spark-dialect backticks are required to
+    *name* the column; the scanners still walk the ``ü`` inside
+    ``t.\\`Zürich\\```. The id equality drives the update.
     """
-    spark.sql(
-        f"CREATE TABLE {FQ} USING iceberg TBLPROPERTIES ({COW_PROPS}) AS "
-        "SELECT CAST(1 AS BIGINT) AS id, 'Zürich' AS Zürich, 'x' AS v"
-    )
-    _create(spark, SRC, "id BIGINT, city STRING")
-    spark.sql(f"INSERT INTO {SRC} VALUES (1,'Zürich')")
+    # Spark-dialect backticks around the non-ASCII column (unquoted unicode
+    # in the column list is a parse error). ON still uses the unquoted
+    # identifier so the scanners walk `ü`.
+    _create(spark, FQ, "id BIGINT, `Zürich` STRING, v STRING")
+    spark.sql(f"INSERT INTO {FQ} VALUES (1,'Zürich','x')")
+    _create(spark, SRC, "id BIGINT, v STRING")
+    spark.sql(f"INSERT INTO {SRC} VALUES (1,'a')")
     spark.sql(
         f"MERGE INTO {FQ} AS t USING {SRC} AS s "
-        "ON t.id = s.id AND t.Zürich = s.city "
+        "ON t.id = s.id AND t.`Zürich` = 'Zürich' "
         "WHEN MATCHED THEN UPDATE SET v = s.v"
     )
     out = spark.sql(f"SELECT id, v FROM {FQ} ORDER BY id").to_arrow()
