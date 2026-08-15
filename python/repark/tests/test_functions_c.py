@@ -4,8 +4,8 @@ Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow pat
 (``to_arrow()``): value AND type. Alias names resolve and share a behavior case
 with their canonical.
 
-Deferred this batch (no stubs): ``lag``, ``lead``, ``nth_value``,
-``percent_rank``, ``cume_dist`` (A8: PyColumn window surface is closed);
+Deferred this batch (no stubs): FN-W ships ``lag`` / ``lead`` / ``nth_value`` /
+``percent_rank`` / ``cume_dist``; remaining A8 residuals stay absent:
 ``sum_distinct`` / ``sumDistinct``, ``approx_count_distinct`` /
 ``approxCountDistinct`` (no native distinct-on-sum / approx-distinct arm);
 charter ENGINE-WORK ``any_value``, ``max_by``, ``min_by``, ``product``,
@@ -176,13 +176,8 @@ def test_bool_and_empty_group_is_null(spark: ReparkSession) -> None:
 
 
 def test_fn_c_deferred_names_are_absent() -> None:
-    """No stubs for A8 window names, distinct/approx arms, or charter ENGINE-WORK."""
+    """No stubs for remaining A8 residuals, distinct/approx arms, or charter ENGINE-WORK."""
     deferred = (
-        "lag",
-        "lead",
-        "nth_value",
-        "percent_rank",
-        "cume_dist",
         "sum_distinct",
         "sumDistinct",
         "approx_count_distinct",

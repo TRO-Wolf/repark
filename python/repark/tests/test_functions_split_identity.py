@@ -1,7 +1,7 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C/D/E/F deliberately grow the pin - each
+``__all__`` tuple is the surface pin. FN-C/D/E/F/W deliberately grow the pin - each
 batch's names are declared in its PR body.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-C, unioned with FN-D/E/F at SQM (was 253 on freeze cd0db4f).
+# Moved 2026-08-15 with FN-C, unioned with FN-D/E/F/W at SQM (was 253 on freeze cd0db4f).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -86,6 +86,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "covar_samp",
     "crc32",
     "csc",
+    "cume_dist",
     "curdate",
     "currentDate",
     "currentTimestamp",
@@ -155,10 +156,12 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "isnull",
     "json_tuple",
     "kurtosis",
+    "lag",
     "last",
     "last_day",
     "last_value",
     "lcase",
+    "lead",
     "least",
     "left",
     "length",
@@ -197,6 +200,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "negative",
     "next_day",
     "now",
+    "nth_value",
     "ntile",
     "nullif",
     "nullifzero",
@@ -204,6 +208,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "nvl2",
     "overlay",
     "pandas_udf",
+    "percent_rank",
     "percentile_approx",
     "pi",
     "pmod",
@@ -307,7 +312,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 291
+    assert len(F.__all__) == 296
 
 
 def test_every_all_name_resolves() -> None:

@@ -29,6 +29,10 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
 - **r20 G2:** `Column.over` accepts optional ROWS/RANGE frame + AggregateFunction→window;
   `rank`/`dense_rank`/`ntile` (Int32 cast); `call_scalar` `rand`/`randn` → repark-functions
   XORShift UDFs (seeded).
+- **FN-W (2026-08-15):** `column.rs` `window_udwf` (no IntegerType cast) +
+  `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist` over DF 54.1 UDWFs.
+  `percent_rank`/`cume_dist` stay Float64; offset windows preserve input type.
+  Measured `column.rs` = 2200 / ceiling 2200. `ignoreNulls` not wired.
 
 - **Q1 R-ML-QUANTILE:** `PyColumn::approx_percentile_cont(percentile: f64)` — native
   AggregateUDF call for facade `percentile_approx` / `approx_percentile` (groupBy/df.agg).

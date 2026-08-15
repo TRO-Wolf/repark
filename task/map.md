@@ -20,6 +20,10 @@ not this directory.
   rejected MERGE commit abort-deletes writer-result files (design A). Cleanup
   inside `commit` / `commit_overwrite` / `commit_row_delta` /
   `commit_row_delta_kind`. Pins in `occ_conflict_tests.rs`.
+- [fn-w-window-fns-ledger.md](fn-w-window-fns-ledger.md) — **FN-W
+  (2026-08-15):** `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist` facade
+  window names. Rust grant = `column.rs` only (`window_udwf`, no i32 cast).
+  `_PRE_SPLIT_ALL` 291→296. `ignoreNulls` honest-cut. `column.rs` 2200/2200.
 - [ta1-sql-fusion-ledger.md](ta1-sql-fusion-ledger.md) — **TA-1 (2026-08-15):**
   SQL same-OVER `WindowAggExec` fusion pin on both doors (`ta_window.rs` Spark,
   `ta_toll.rs` ANSI+TaExtension). Named `OVER w` and inline same-spec = 1;
