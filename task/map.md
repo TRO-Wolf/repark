@@ -34,6 +34,9 @@ not this directory.
   (2026-08-15):** M19/M20 conflict batteries B/C/E/F/G/H/I + DELETE/UPDATE
   isolation-property pins. Test-only; engine frozen at `cd0db4f`. Independent
   of OCC-1 #117.
+- [ta4-volume-kernels-ledger.md](ta4-volume-kernels-ledger.md) — **TA-4
+  (2026-08-15):** volume-family kernel port (`ad`/`adosc`/`obv`/`mfi`) in
+  `crates/repark-ta/src/volume.rs` + SPECS/facade + `to_bits` goldens.
 - [ta3-volume-goldens-ledger.md](ta3-volume-goldens-ledger.md) — **TA-3
   (2026-08-15):** volume-family goldens (`ad`/`adosc`/`obv`/`mfi`) + C-source
   recon. Recorder + additive `.bin` only; no kernel port (TA-4).

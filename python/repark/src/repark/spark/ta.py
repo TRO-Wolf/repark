@@ -1642,6 +1642,84 @@ def wclprice(
     )
 
 
+# ---- volume indicators --------------------------------------------------------------------------
+
+
+def ad(
+    high: Column | str,
+    low: Column | str,
+    close: Column | str,
+    volume: Column | str,
+    *,
+    null_lookback: bool = False,
+) -> Column:
+    """Chaikin A/D line (TA-Lib ``AD``, four-series H/L/C/V). Lookback 0. Use ``.over``."""
+    return _window(
+        "ta_ad",
+        [_series(high), _series(low), _series(close), _series(volume)],
+        lookback=0,
+        null_lookback=null_lookback,
+    )
+
+
+def adosc(
+    high: Column | str,
+    low: Column | str,
+    close: Column | str,
+    volume: Column | str,
+    fastperiod: int = 3,
+    slowperiod: int = 10,
+    *,
+    null_lookback: bool = False,
+) -> Column:
+    """Chaikin A/D oscillator (TA-Lib ``ADOSC``). ``fastperiod``/``slowperiod`` are slots.
+
+    Lookback is ``EMA(slowest) = max(fast, slow) - 1`` (9 at the TA-Lib defaults 3/10).
+    Complete with ``.over(window)``.
+    """
+    return _window(
+        "ta_adosc",
+        [
+            _series(high),
+            _series(low),
+            _series(close),
+            _series(volume),
+            lit(fastperiod),
+            lit(slowperiod),
+        ],
+        lookback=_nonneg(_max2(fastperiod, slowperiod) - 1),
+        null_lookback=null_lookback,
+    )
+
+
+def obv(real: Column | str, volume: Column | str, *, null_lookback: bool = False) -> Column:
+    """On-balance volume (TA-Lib ``OBV``). First output is the first volume. Use ``.over``."""
+    return _window(
+        "ta_obv",
+        [_series(real), _series(volume)],
+        lookback=0,
+        null_lookback=null_lookback,
+    )
+
+
+def mfi(
+    high: Column | str,
+    low: Column | str,
+    close: Column | str,
+    volume: Column | str,
+    timeperiod: int = 14,
+    *,
+    null_lookback: bool = False,
+) -> Column:
+    """Money-flow index (TA-Lib ``MFI``). Rolling buffer, not Wilder. Use ``.over(window)``."""
+    return _window(
+        "ta_mfi",
+        [_series(high), _series(low), _series(close), _series(volume), lit(timeperiod)],
+        lookback=_nonneg(timeperiod),
+        null_lookback=null_lookback,
+    )
+
+
 # ---- math operators -----------------------------------------------------------------------------
 
 
@@ -1698,6 +1776,8 @@ __all__ = [
     "MAX",
     "MIN",
     "SUM",
+    "ad",
+    "adosc",
     "adx",
     "adxr",
     "apo",
@@ -1737,6 +1817,7 @@ __all__ = [
     "mavp",
     "max",
     "medprice",
+    "mfi",
     "midpoint",
     "midprice",
     "min",
@@ -1744,6 +1825,7 @@ __all__ = [
     "minus_dm",
     "mom",
     "natr",
+    "obv",
     "over_columns",
     "plus_di",
     "plus_dm",

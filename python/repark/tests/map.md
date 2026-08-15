@@ -1628,6 +1628,11 @@ NOT in that file is a defect, not a decision.
   does not match the exact spelling reds loud naming the line, rather than reading as zero matches
   — otherwise a row could advertise a drift detector nobody checks. Registry §6 documents that
   spelling for row authors; the regex and the doc move together.
+- `test_ta_volume.py` — **TA-4 (2026-08-15):** volume-family facade (`ad`/`adosc`/`obv`/`mfi`)
+  through the DataFrame door. The 5000-row OHLC + `fixture_volume` golden is written to Parquet
+  and `read_parquet`-ed; each indicator `.over(orderBy(ts))` is `to_bits`-identical to the
+  TA-3-recorded C-TA-Lib golden. Call-site Column-returns + polars_talib keyword spellings
+  (`fastperiod`/`slowperiod`/`timeperiod`). Does **not** edit `test_ta.py`.
 - `test_ta.py` — T1b + T2 batches 1–2 + WG2–WG5 + T3: the `repark.ta` DataFrame route. The 5000-row
   OHLC golden fixture (`crates/repark-ta/tests/goldens/*.bin`, columns
   `ts`/`open`/`high`/`low`/`close`/`periods`)
@@ -1757,6 +1762,7 @@ NOT in that file is a defect, not a decision.
 | Add an FN-D datetime-function test | `test_functions_d.py` |
 | Add a `repark.ta` indicator test | `test_ta.py` |
 | Add a `ta.with_indicators` serving-helper pin | `test_ta_with_indicators.py` (do not edit `test_ta.py`) |
+| Add a `repark.ta` indicator test | `test_ta.py` (volume family: `test_ta_volume.py`) |
 | Add / extend a live-oracle golden (repark == pin == live Spark) | `_live_parity.py` (`SCENARIOS`) + `test_parity_live.py` |
 | Record a divergence from Apache Spark (behavior, pin, rationale) | `../../../docs/spark-sql-iceberg-parity.md` — the registry; add the `Disclosure` too when the live tier can express it (§6) |
 | Run a live-oracle scenario under a NON-UTC session zone | `Scenario(..., session_conf=((lp.SESSION_TIME_ZONE_KEY, lp.ZONE_TOKYO),))` — and move the size + uniqueness pins in the same diff |

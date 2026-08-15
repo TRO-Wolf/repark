@@ -60,6 +60,7 @@ pub mod statistic;
 #[cfg(feature = "datafusion")]
 pub mod udf;
 pub mod volatility;
+pub mod volume;
 
 #[cfg(feature = "datafusion")]
 pub use extension::TaExtension;
@@ -79,6 +80,7 @@ pub use statistic::{
     var,
 };
 pub use volatility::{atr, natr, trange};
+pub use volume::{ad, adosc, mfi, obv};
 
 /// ===========================================================================================
 /// Kernel-argument errors.

@@ -16,11 +16,12 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use repark_ta::{
-    adx, adxr, apo, aroon, aroonosc, atr, avgprice, bbands, beta, bop, cci, cmo, correl, dema, dx,
-    ema, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdext,
-    macdfix, mama, mavp, max, medprice, midpoint, midprice, min, minus_di, minus_dm, mom, natr,
-    plus_di, plus_dm, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf,
-    stochrsi, sum, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma,
+    ad, adosc, adx, adxr, apo, aroon, aroonosc, atr, avgprice, bbands, beta, bop, cci, cmo, correl,
+    dema, dx, ema, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma,
+    macd, macdext, macdfix, mama, mavp, max, medprice, mfi, midpoint, midprice, min, minus_di,
+    minus_dm, mom, natr, obv, plus_di, plus_dm, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext,
+    sma, stddev, stoch, stochf, stochrsi, sum, t3, tema, trange, trima, trix, tsf, typprice,
+    ultosc, var, wclprice, willr, wma,
 };
 
 /// Every golden series the tests below consume — checked against `manifest.json` so a series
@@ -185,9 +186,7 @@ const CONSUMED: &[&str] = &[
     "mavp",
     "mavp_ema",
     "ma_30_type7",
-    // TA-3 volume family — recorded now; kernel `to_bits` comparison lands in TA-4.
-    // Listed so the recorder↔test two-way sync stays closed. `volume_family_goldens_are_recorded`
-    // consumes them as shape pins (no kernel calls).
+    // TA-4 volume family — kernel `to_bits` vs the TA-3-recorded C 0.4.0 goldens.
     "fixture_volume",
     "fixture_flat_volume",
     "ad",
@@ -330,16 +329,50 @@ fn manifest_and_tests_cover_the_same_series() {
     );
 }
 
-/// TA-3 shape pin: the volume-family goldens exist, are the right length, volume is
-/// strictly positive, and C lookback prefixes are NaN. No kernel is called — that is TA-4.
+/// TA-4: volume-family kernels vs the TA-3-recorded C 0.4.0 goldens (`f64::to_bits`).
+/// Shape pins (lookback / OBV seed) stay so a bit-exact miss still names the C contract.
 #[test]
-fn volume_family_goldens_are_recorded() {
+fn volume_family_matches_c_talib() {
+    let f = fixture();
     let walk_volume = golden("fixture_volume");
     assert_eq!(walk_volume.len(), 5000);
     assert!(
         walk_volume.iter().all(|value| *value > 0.0),
         "walk volume must be strictly positive"
     );
+
+    let ad_out = ad(&f.high, &f.low, &f.close, &walk_volume).expect("ad");
+    let adosc_out = adosc(&f.high, &f.low, &f.close, &walk_volume, 3, 10).expect("adosc");
+    let obv_out = obv(&f.close, &walk_volume).expect("obv");
+    let mfi_out = mfi(&f.high, &f.low, &f.close, &walk_volume, 14).expect("mfi");
+
+    assert!(!ad_out[0].is_nan(), "AD lookback is 0");
+    assert!(!obv_out[0].is_nan(), "OBV lookback is 0");
+    assert_eq!(
+        obv_out[0].to_bits(),
+        walk_volume[0].to_bits(),
+        "OBV[0] is C's prevOBV = inVolume[startIdx]"
+    );
+    assert!(
+        adosc_out[..9].iter().all(|value| value.is_nan()),
+        "ADOSC prefix"
+    );
+    assert!(!adosc_out[9].is_nan(), "ADOSC first live output");
+    assert!(
+        mfi_out[..14].iter().all(|value| value.is_nan()),
+        "MFI prefix"
+    );
+    assert!(!mfi_out[14].is_nan(), "MFI first live output");
+
+    assert_bit_exact("ad", &ad_out);
+    assert_bit_exact("adosc_3_10", &adosc_out);
+    assert_bit_exact("obv", &obv_out);
+    assert_bit_exact("mfi_14", &mfi_out);
+}
+
+#[test]
+fn volume_family_flat_guard_branches_match_c_talib() {
+    let f = flat_fixture();
     let flat_volume = golden("fixture_flat_volume");
     assert_eq!(flat_volume.len(), 600);
     assert!(
@@ -347,57 +380,33 @@ fn volume_family_goldens_are_recorded() {
         "flat volume must be strictly positive"
     );
 
-    for name in ["ad", "adosc_3_10", "obv", "mfi_14"] {
-        assert_eq!(golden(name).len(), 5000, "{name}");
-    }
-    for name in ["flat_ad", "flat_adosc_3_10", "flat_obv", "flat_mfi_14"] {
-        assert_eq!(golden(name).len(), 600, "{name}");
-    }
+    let ad_out = ad(&f.high, &f.low, &f.close, &flat_volume).expect("flat ad");
+    let adosc_out = adosc(&f.high, &f.low, &f.close, &flat_volume, 3, 10).expect("flat adosc");
+    let obv_out = obv(&f.close, &flat_volume).expect("flat obv");
+    let mfi_out = mfi(&f.high, &f.low, &f.close, &flat_volume, 14).expect("flat mfi");
 
-    // AD / OBV lookback 0 — first output is a finite value. OBV seeds `prevOBV = volume[0]`.
-    let ad = golden("ad");
-    let obv = golden("obv");
-    assert!(!ad[0].is_nan(), "AD lookback is 0");
-    assert!(!obv[0].is_nan(), "OBV lookback is 0");
+    assert!(!ad_out[0].is_nan(), "flat AD lookback is 0");
+    assert!(!obv_out[0].is_nan(), "flat OBV lookback is 0");
     assert_eq!(
-        obv[0].to_bits(),
-        walk_volume[0].to_bits(),
-        "OBV[0] is C's prevOBV = inVolume[startIdx]"
-    );
-
-    // ADOSC(3,10) lookback = EMA(slow=10) = 9; MFI(14) lookback = 14 (unstable period 0).
-    let adosc = golden("adosc_3_10");
-    let mfi = golden("mfi_14");
-    assert!(
-        adosc[..9].iter().all(|value| value.is_nan()),
-        "ADOSC prefix"
-    );
-    assert!(!adosc[9].is_nan(), "ADOSC first live output");
-    assert!(mfi[..14].iter().all(|value| value.is_nan()), "MFI prefix");
-    assert!(!mfi[14].is_nan(), "MFI first live output");
-
-    // Same lookbacks on the plateau fixture (C lookback is input-length-independent).
-    let flat_ad = golden("flat_ad");
-    let flat_obv = golden("flat_obv");
-    assert!(!flat_ad[0].is_nan(), "flat AD lookback is 0");
-    assert!(!flat_obv[0].is_nan(), "flat OBV lookback is 0");
-    assert_eq!(
-        flat_obv[0].to_bits(),
+        obv_out[0].to_bits(),
         flat_volume[0].to_bits(),
         "flat OBV[0] is C's prevOBV = inVolume[startIdx]"
     );
-    let flat_adosc = golden("flat_adosc_3_10");
-    let flat_mfi = golden("flat_mfi_14");
     assert!(
-        flat_adosc[..9].iter().all(|value| value.is_nan()),
+        adosc_out[..9].iter().all(|value| value.is_nan()),
         "flat ADOSC prefix"
     );
-    assert!(!flat_adosc[9].is_nan(), "flat ADOSC first live output");
+    assert!(!adosc_out[9].is_nan(), "flat ADOSC first live output");
     assert!(
-        flat_mfi[..14].iter().all(|value| value.is_nan()),
+        mfi_out[..14].iter().all(|value| value.is_nan()),
         "flat MFI prefix"
     );
-    assert!(!flat_mfi[14].is_nan(), "flat MFI first live output");
+    assert!(!mfi_out[14].is_nan(), "flat MFI first live output");
+
+    assert_bit_exact("flat_ad", &ad_out);
+    assert_bit_exact("flat_adosc_3_10", &adosc_out);
+    assert_bit_exact("flat_obv", &obv_out);
+    assert_bit_exact("flat_mfi_14", &mfi_out);
 }
 
 #[test]
