@@ -26,10 +26,19 @@
 //! (a real warehouse must never have data placed under `$TMPDIR`), and `ServiceManagedLocation`
 //! (S3 Tables) cannot stage at all — the service assigns the location at create — so it routes to
 //! create-first + append + drop-on-abort.
+//!
+//! ## Nanosecond timestamps (A11)
+//!
+//! DataFusion types bare `TIMESTAMP` / `TIMESTAMP(9)` as Arrow `timestamp[ns]`. Iceberg v2
+//! cannot store that (`timestamp_ns` / `timestamptz_ns`); this engine writes microseconds.
+//! Column-def `CREATE TABLE` therefore refuses nanosecond-precision timestamp columns at DDL
+//! time — naming the column, the precision (9), and the supported precision (`TIMESTAMP(6)`).
+//! CTAS is out of scope (the SELECT's type is the table's type). The Spark door maps
+//! `TIMESTAMP` to Iceberg `timestamptz` in its own type table and is not this path.
 
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::{Field, Schema as ArrowSchema};
+use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, TimeUnit};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
@@ -111,13 +120,14 @@ pub(crate) async fn execute_create_table(
 
     // Derive the table's Arrow schema. CTAS derives it from the SELECT's logical plan (no
     // execution needed); the column-def form derives it from the declared columns.
-    let (arrow_schema, query) = match create.query.as_ref() {
-        Some(query) => {
-            let frame = cx.ctx.sql(&query.to_string()).await?;
-            let schema = Arc::new(frame.schema().as_arrow().clone());
-            (schema, Some(frame))
-        }
-        None => (column_def_schema(cx.ctx, create, form).await?, None),
+    let (arrow_schema, query) = if let Some(query) = create.query.as_ref() {
+        let frame = cx.ctx.sql(&query.to_string()).await?;
+        let schema = Arc::new(frame.schema().as_arrow().clone());
+        (schema, Some(frame))
+    } else {
+        let schema = column_def_schema(cx.ctx, create, form).await?;
+        refuse_nanosecond_timestamp_columns(&schema, form)?;
+        (schema, None)
     };
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
@@ -628,6 +638,46 @@ async fn column_def_schema(
         })
         .collect::<Vec<_>>();
     Ok(Arc::new(ArrowSchema::new(fields)))
+}
+
+/// SQL / Iceberg precision this engine can honor on a column-def CREATE (microseconds).
+const SUPPORTED_TIMESTAMP_PRECISION: u8 = 6;
+
+/// DataFusion's default / `TIMESTAMP(9)` precision (nanoseconds).
+const NANOSECOND_TIMESTAMP_PRECISION: u8 = 9;
+
+/// ===========================================================================================
+/// Refuse column-def timestamps the write path cannot honor (Arrow nanoseconds).
+/// ===========================================================================================
+///
+/// DataFusion maps bare `TIMESTAMP` and `TIMESTAMP(9)` to `TimeUnit::Nanosecond`. Iceberg v2
+/// stores microseconds only; `timestamp_ns` is v3. Fail here — before
+/// `arrow_schema_to_schema_auto_assign_ids` — so the user sees the column, the precision, and
+/// the supported spelling instead of the fork's v2 schema check.
+///
+/// Top-level columns only (column-def CREATE has no nested timestamp surface). CTAS does not
+/// call this: the SELECT type is the table type, and remapping it would be a write-path change.
+///
+/// # Errors
+/// A [`DataFusionError::Plan`] naming the first rejected column, its precision, and
+/// `TIMESTAMP(6)`.
+fn refuse_nanosecond_timestamp_columns(schema: &ArrowSchema, form: &str) -> Result<()> {
+    for field in schema.fields() {
+        if matches!(
+            field.data_type(),
+            DataType::Timestamp(TimeUnit::Nanosecond, _)
+        ) {
+            return Err(DataFusionError::Plan(format!(
+                "{form}: column `{}` is TIMESTAMP with nanosecond precision ({ns}), which this \
+                 engine cannot honor (`timestamp_ns` is not a supported write type). Supported \
+                 precisions: {us} (microseconds). Declare TIMESTAMP({us}).",
+                field.name(),
+                ns = NANOSECOND_TIMESTAMP_PRECISION,
+                us = SUPPORTED_TIMESTAMP_PRECISION,
+            )));
+        }
+    }
+    Ok(())
 }
 
 /// ===========================================================================================

@@ -23,10 +23,14 @@ belongs out here is what must be observed from outside the crate.
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session
   boundary. It lives out here because "reachable through a session" is precisely what a unit
   test calling `AnsiDialect.execute(...)` on a bare `SessionContext` cannot show
-  (`surfaces::SQL_DIALECT_SEAM`). **TZ-4 PR-1 A11:**
-  `ansi_column_def_timestamp_still_rejects_ns_on_v2` — native ANSI
-  `CREATE TABLE (ts timestamp)` still derives `timestamp_ns` (v2 reject); grant to
-  `repark-sql/src/create_table.rs` not taken (wrote `timestamp_ns`, not `timestamp`).
+  (`surfaces::SQL_DIALECT_SEAM`). **A11 (2026-08-15):**
+  `ansi_column_def_nanosecond_timestamp_shapes_refuse` — native ANSI column-def
+  `CREATE TABLE` refuses nanosecond-precision timestamps at DDL time (bare
+  `TIMESTAMP`, `TIMESTAMP(9)`, WITH/WITHOUT TIME ZONE twins; needle = column +
+  precision 9 + `TIMESTAMP(6)`). Positive control:
+  `ansi_column_def_timestamp_6_create_is_unchanged`. Spark-door `TIMESTAMP` →
+  Iceberg `timestamptz` is documented, not changed. CTAS / ALTER stay out of
+  this unit. Ledger: `../../../task/a11-ansi-ns-reject-ledger.md`.
 
 - `introspection.rs` (PR-6, Q8) — `SHOW TABLES` / `DESCRIBE` / `information_schema` DELEGATED
   through the door, on a session whose `information_schema` was enabled the product way
@@ -156,6 +160,8 @@ belongs out here is what must be observed from outside the crate.
 | `m2_productions_still_need_a_pre_parse_recognizer` RED | Good news — upstream learned the form. Revisit the PR-6 plan, then update the pin |
 | An M1 production stopped parsing | The matching handler is now unreachable; check the DataFusion/sqlparser version bump |
 | `session_wiring` RED on the catalog-visible read | The dialect is probably not installed (session default fell back to `DataFusionDialect`, whose CTAS makes a `MemTable`) |
+| `ansi_column_def_nanosecond_timestamp_shapes_refuse` RED | The A11 DDL refuse moved or the Iceberg v2 write-path residual came back. Check `create_table::refuse_nanosecond_timestamp_columns` — the needle must name the column, precision 9, and `TIMESTAMP(6)` |
+| `ansi_column_def_timestamp_6_create_is_unchanged` RED | A µs-precision CREATE started failing or the Arrow type is no longer `timestamp[us]`. Do not "fix" it by remapping ns → µs (that is the Spark door, not this refuse) |
 | `introspection` RED with "not supported unless information_schema is enabled" | The repark-core builder→`SessionConfig` plumbing (`apply_datafusion_config_keys`) regressed; check `cargo test -p repark-core --lib builder_datafusion` first |
 | `cross_door` RED on ONE door only | The doors' lowerings drifted — that is the row doing its job (design §6 R3). Compare the two handlers, do not relax the assertion |
 | `cross_door_g3e8_refusals_render_identically` RED | The duplicated G3-E8 valve drifted: one door's message text or its target derivation changed without the other's. Both copies are named in `task/g3e8-guard-ledger.md` D-1; fix the copy, never the assertion (this pin IS the mitigation D-1 accepted the duplication on) |

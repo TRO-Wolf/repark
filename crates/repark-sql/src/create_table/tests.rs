@@ -5,6 +5,9 @@
 //! produce a table that exists but does not match what the user asked for — the failure mode
 //! worth the most refusals.
 
+use std::sync::Arc;
+
+use datafusion::arrow::datatypes::{DataType, Field, Schema, TimeUnit};
 use datafusion::sql::sqlparser::dialect::GenericDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 
@@ -126,4 +129,68 @@ fn only_the_with_option_syntax_is_accepted() {
             .expect("no options is fine")
             .is_empty()
     );
+}
+
+/// A11: the DDL-time refuse names the column, nanosecond precision 9, and TIMESTAMP(6).
+#[test]
+fn nanosecond_timestamp_columns_refuse_with_column_and_precision() {
+    let schema = Schema::new(vec![
+        Field::new("ok", DataType::Int64, true),
+        Field::new(
+            "event_at",
+            DataType::Timestamp(TimeUnit::Nanosecond, None),
+            true,
+        ),
+    ]);
+    let err = refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE")
+        .expect_err("ns timestamp must refuse")
+        .to_string();
+    assert!(err.contains("`event_at`"), "must name the column: {err}");
+    assert!(
+        err.contains("nanosecond") && err.contains("(9)"),
+        "must name precision 9: {err}"
+    );
+    assert!(
+        err.contains("microsecond") && err.contains("TIMESTAMP(6)"),
+        "must name the supported spelling: {err}"
+    );
+    assert!(
+        !err.contains("`ok`"),
+        "must not blame a non-timestamp sibling: {err}"
+    );
+}
+
+/// A zoned nanosecond timestamp is the same refuse (`timestamptz_ns` is also v2-illegal).
+#[test]
+fn nanosecond_timestamptz_columns_refuse() {
+    let schema = Schema::new(vec![Field::new(
+        "when_tz",
+        DataType::Timestamp(TimeUnit::Nanosecond, Some(Arc::from("UTC"))),
+        true,
+    )]);
+    let err = refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE")
+        .expect_err("ns timestamptz must refuse")
+        .to_string();
+    assert!(err.contains("`when_tz`"), "must name the column: {err}");
+    assert!(err.contains("nanosecond"), "must name the unit: {err}");
+}
+
+/// Positive control: microsecond (and non-timestamp) schemas pass the gate.
+#[test]
+fn microsecond_timestamp_columns_pass_the_ns_gate() {
+    let schema = Schema::new(vec![
+        Field::new("id", DataType::Int32, false),
+        Field::new(
+            "event_at",
+            DataType::Timestamp(TimeUnit::Microsecond, None),
+            true,
+        ),
+        Field::new(
+            "when_tz",
+            DataType::Timestamp(TimeUnit::Microsecond, Some(Arc::from("UTC"))),
+            true,
+        ),
+    ]);
+    refuse_nanosecond_timestamp_columns(&schema, "CREATE TABLE")
+        .unwrap_or_else(|err| panic!("µs timestamps must pass: {err}"));
 }

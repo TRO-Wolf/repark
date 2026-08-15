@@ -57,9 +57,10 @@ reach delegation through the ordinary arm.
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the
   sniff reports). In-module tests.
 - `create_table.rs` — CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
-  catalog or LOUD refuse — never a silent `MemTable`), clause refusals, the three-way
-  `LocationPolicy` resolution, staged create/replace, and the service-managed create-first path.
-  Tests: [create_table/map.md](create_table/map.md).
+  catalog or LOUD refuse — never a silent `MemTable`), clause refusals, A11 nanosecond-timestamp
+  refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
+  three-way `LocationPolicy` resolution, staged create/replace, and the service-managed
+  create-first path. Tests: [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`,
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,
   and the reserved refusals (`sorted_by`, ORC/AVRO) that name their triggers.
