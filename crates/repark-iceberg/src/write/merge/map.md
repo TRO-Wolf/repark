@@ -19,10 +19,14 @@ lives as this module directory (move-only; pub surface frozen).
   (`../predicate_dml.rs`) reuses the COW/MoR commit arms without calling
   `execute_merge`. Identity UPDATE reuses `RowDeltaKind::Merge` (Java
   UPDATE/MERGE bucket). MERGE SQL still goes through
-  `commit` / `commit_row_delta` (serializable MERGE recipe; tests stay
-  identity-diff).
+  `commit` / `commit_row_delta`, which resolve
+  `write.merge.isolation-level` (default serializable; snapshot drops
+  `validate_no_conflicting_data` / `validate_no_conflicting_data_files`;
+  M15 AlwaysTrue is more conservative than the residual). Pins in
+  `occ_tests.rs` (M13 parse + M19-A snapshot split).
 - `tests.rs` — primary unit battery
-- `occ_tests.rs` — OCC / commit conflict pins
+- `occ_tests.rs` — OCC / commit conflict pins + M13 isolation parse +
+  M19-A serializable-vs-snapshot split
 - `streaming_tests.rs` — stream write interleaving pins
 - `parallel_write_tests.rs` — concurrent file write pins
 - `streaming_scan_tests.rs` — streaming target-scan pins + PERF-04 residual-push

@@ -13,11 +13,22 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::{OPERATION_ID_PROP, commit, commit_row_delta};
+use super::{
+    IsolationLevel, OPERATION_ID_PROP, WRITE_MERGE_ISOLATION_LEVEL, commit, commit_row_delta,
+    resolve_merge_isolation,
+};
 
 /// An in-memory Iceberg catalog (local-FS warehouse, format-version 2 by default) with a
 /// `sales` namespace and one UNPARTITIONED table `t (id int)`. No AWS, no network.
 async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
+    setup_with_properties(warehouse, HashMap::new()).await
+}
+
+/// [`setup`] with Iceberg table properties set at create time (so the pin handle sees them).
+async fn setup_with_properties(
+    warehouse: &TempDir,
+    properties: HashMap<String, String>,
+) -> (Arc<dyn Catalog>, TableIdent) {
     let path = warehouse
         .path()
         .to_str()
@@ -48,13 +59,53 @@ async fn setup(warehouse: &TempDir) -> (Arc<dyn Catalog>, TableIdent) {
     let creation = TableCreation::builder()
         .name("t".to_string())
         .schema(schema)
-        .properties(HashMap::new())
+        .properties(properties)
         .build();
     catalog
         .create_table(&namespace, creation)
         .await
         .expect("create table");
     (catalog, TableIdent::new(namespace, "t".to_string()))
+}
+
+/// [`setup`] with `write.merge.isolation-level` set at create time.
+async fn setup_with_isolation(
+    warehouse: &TempDir,
+    isolation: &str,
+) -> (Arc<dyn Catalog>, TableIdent) {
+    setup_with_properties(
+        warehouse,
+        HashMap::from([(
+            WRITE_MERGE_ISOLATION_LEVEL.to_string(),
+            isolation.to_string(),
+        )]),
+    )
+    .await
+}
+
+/// Resolve `write.merge.isolation-level` off a freshly created table (parse-only).
+async fn resolve_isolation_of(value: Option<&str>) -> Result<IsolationLevel, DataFusionError> {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = match value {
+        Some(name) => setup_with_isolation(&warehouse, name).await,
+        None => setup(&warehouse).await,
+    };
+    let table = catalog.load_table(&ident).await.expect("load table");
+    resolve_merge_isolation(&table)
+}
+
+/// Exact `DataFusionError::Plan` needle from the DML isolation resolver.
+fn assert_invalid_isolation(error: DataFusionError, name: &str) {
+    match error {
+        DataFusionError::Plan(message) => {
+            assert_eq!(
+                message,
+                format!("Invalid isolation level: {name}"),
+                "garbage isolation must use the DML Plan needle, got: {message}"
+            );
+        }
+        other => panic!("expected DataFusionError::Plan, got: {other}"),
+    }
 }
 
 /// An unpartitioned synthetic DATA file (manifest-only) with a unique path.
@@ -702,5 +753,185 @@ async fn commit_row_delta_commits_deletes_and_data_without_concurrency() {
             .additional_properties
             .contains_key(OPERATION_ID_PROP),
         "every MERGE commit carries the §8 engine.operation-id stamp"
+    );
+}
+
+// ===================================================================================
+// GROUP M13 — `write.merge.isolation-level` parse + M19-A serializable-vs-snapshot
+// split. The resolver copies DML `resolve_isolation_property` BYTE-FOR-BYTE: no trim,
+// `to_ascii_lowercase`, default serializable, garbage ⇒ Plan
+// `Invalid isolation level: {name}`. Padded `  snapshot  ` is therefore GARBAGE.
+// ===================================================================================
+
+/// PIN M13 parse — upper `SNAPSHOT` / `SERIALIZABLE` honor the DML case fold.
+/// Risk: a byte-exact match would silently ignore Spark/Java's case-insensitive
+/// property values and keep MERGE serializable.
+#[tokio::test]
+async fn merge_isolation_property_parses_upper_snapshot_and_serializable() {
+    assert_eq!(
+        resolve_isolation_of(Some("SNAPSHOT"))
+            .await
+            .expect("SNAPSHOT must parse"),
+        IsolationLevel::Snapshot
+    );
+    assert_eq!(
+        resolve_isolation_of(Some("SERIALIZABLE"))
+            .await
+            .expect("SERIALIZABLE must parse"),
+        IsolationLevel::Serializable
+    );
+    assert_eq!(
+        resolve_isolation_of(None)
+            .await
+            .expect("unset defaults to serializable"),
+        IsolationLevel::Serializable
+    );
+}
+
+/// PIN M13 parse — NO trim. A padded value is garbage, not snapshot.
+/// Risk: "improving" the DML copy with `.trim()` would honor `  snapshot  `
+/// and diverge from DELETE/UPDATE isolation parse.
+#[tokio::test]
+async fn merge_isolation_property_padded_snapshot_is_garbage() {
+    let error = resolve_isolation_of(Some("  snapshot  "))
+        .await
+        .expect_err("padded snapshot is garbage: the DML resolver does not trim");
+    assert_invalid_isolation(error, "  snapshot  ");
+}
+
+/// PIN M13 parse — unknown token is a loud Plan error naming the raw value.
+/// Risk: silent default-to-serializable would hide a typo'd table property.
+#[tokio::test]
+async fn merge_isolation_property_garbage_is_plan_error() {
+    let error = resolve_isolation_of(Some("read-committed"))
+        .await
+        .expect_err("unknown isolation must Plan-error");
+    assert_invalid_isolation(error, "read-committed");
+}
+
+/// PIN M13 thread-through — `commit` surfaces the Plan needle (not only the helper).
+/// Uses a non-empty add so an empty-commit short-circuit cannot skip the resolve.
+#[tokio::test]
+async fn commit_rejects_invalid_merge_isolation_level() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup_with_isolation(&warehouse, "read-committed").await;
+    let table = catalog.load_table(&ident).await.expect("load table");
+    let error = commit(
+        &catalog,
+        &table,
+        None,
+        Vec::new(),
+        vec![data_file("test/insert.parquet")],
+    )
+    .await
+    .expect_err("commit must resolve isolation before writing");
+    assert_invalid_isolation(error, "read-committed");
+}
+
+/// PIN M19-A (Spark S5) — SERIALIZABLE half of the same-race split. Explicit
+/// `write.merge.isolation-level=serializable` (not merely the unset default)
+/// must reject a concurrent append on an insert-only MERGE — the F-BR-1 class.
+/// Control for
+/// [`commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append`].
+#[tokio::test]
+async fn commit_insert_only_serializable_isolation_rejects_conflicting_concurrent_append() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup_with_isolation(&warehouse, "serializable").await;
+
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
+    append(&catalog, &ident, vec![data_file("test/concurrent.parquet")]).await;
+
+    let error = commit(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        Vec::new(),
+        vec![data_file("test/insert.parquet")],
+    )
+    .await
+    .expect_err("serializable MERGE must reject the conflicting concurrent add");
+
+    let ice = iceberg_error(&error);
+    assert_eq!(ice.kind(), iceberg::ErrorKind::DataInvalid);
+    assert!(!ice.retryable());
+    assert!(
+        ice.message().contains("Found conflicting files"),
+        "must be validate_no_conflicting_data, got: {}",
+        ice.message()
+    );
+    let live = live_data_file_paths(&catalog, &ident).await;
+    assert!(
+        !live.contains("test/insert.parquet"),
+        "the rejected insert must not be in the table, live={live:?}"
+    );
+}
+
+/// PIN M19-A (Spark S5) — SNAPSHOT half of the same-race split. RED-THEN-GREEN:
+/// without reading `write.merge.isolation-level`, `commit` hard-wires
+/// `IsolationLevel::Serializable` and this case rejects the concurrent append
+/// (same as the serializable sibling). With the resolver threaded through,
+/// snapshot drops `validate_no_conflicting_data` and the insert commits —
+/// Spark S5: snapshot MERGE allows a concurrent unrelated append.
+#[tokio::test]
+async fn commit_insert_only_snapshot_isolation_commits_through_conflicting_concurrent_append() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup_with_isolation(&warehouse, "SNAPSHOT").await;
+
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
+    append(&catalog, &ident, vec![data_file("test/concurrent.parquet")]).await;
+
+    commit(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        Vec::new(),
+        vec![data_file("test/insert.parquet")],
+    )
+    .await
+    .expect("snapshot MERGE must commit through a concurrent append (Spark S5 / M19-A)");
+
+    let live = live_data_file_paths(&catalog, &ident).await;
+    assert_eq!(
+        live,
+        HashSet::from([
+            "test/a.parquet".to_string(),
+            "test/concurrent.parquet".to_string(),
+            "test/insert.parquet".to_string(),
+        ]),
+        "base + concurrent add + snapshot MERGE insert are all live, live={live:?}"
+    );
+}
+
+/// PIN M19-A merge-on-read twin — `commit_row_delta` must honor snapshot the same way
+/// (drop `validate_no_conflicting_data_files`). Same race as T5; T5 is the
+/// serializable reject. RED-THEN-GREEN without threading isolation through
+/// `commit_row_delta`.
+#[tokio::test]
+async fn commit_row_delta_snapshot_isolation_commits_through_conflicting_concurrent_append() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup_with_isolation(&warehouse, "snapshot").await;
+
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![data_file("test/a.parquet")]).await;
+    append(&catalog, &ident, vec![data_file("test/concurrent.parquet")]).await;
+
+    commit_row_delta(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        vec![(std::sync::Arc::<str>::from("test/a.parquet"), 0)],
+        Vec::new(),
+        crate::write::concurrency::WriteConcurrency::default(),
+    )
+    .await
+    .expect("snapshot merge-on-read MERGE must commit through a concurrent append");
+
+    let live = live_data_file_paths(&catalog, &ident).await;
+    assert_eq!(
+        live,
+        HashSet::from([
+            "test/a.parquet".to_string(),
+            "test/concurrent.parquet".to_string(),
+        ]),
+        "MoR snapshot MERGE leaves A + the concurrent add live, live={live:?}"
     );
 }

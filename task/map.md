@@ -16,6 +16,10 @@ not this directory.
   SQL same-OVER `WindowAggExec` fusion pin on both doors (`ta_window.rs` Spark,
   `ta_toll.rs` ANSI+TaExtension). Named `OVER w` and inline same-spec = 1;
   intervening filter between two live windows = 2. Test-only; no engine edits.
+- [occ1-merge-isolation-ledger.md](occ1-merge-isolation-ledger.md) — **OCC-1
+  (2026-08-15):** MERGE reads `write.merge.isolation-level` (M13) + M15
+  AlwaysTrue doc-truth. Resolver copies DML semantics (no trim). Snapshot
+  drops data-conflict validation. Pins in `occ_tests.rs` (M19-A S5 split).
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7

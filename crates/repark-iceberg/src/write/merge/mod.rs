@@ -2278,7 +2278,11 @@ where
     Ok(files)
 }
 
-/// Isolation for overwrite / row-delta commit. MERGE is always serializable.
+/// Iceberg standard table property selecting MERGE isolation (Java default: serializable).
+const WRITE_MERGE_ISOLATION_LEVEL: &str = "write.merge.isolation-level";
+
+/// Isolation for overwrite / row-delta commit. MERGE reads
+/// `write.merge.isolation-level` (default serializable; `snapshot` honored).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum IsolationLevel {
     /// Reject concurrent conflicting data and deletes.
@@ -2290,22 +2294,43 @@ pub(super) enum IsolationLevel {
 /// Java row-delta recipe. MERGE keeps the UPDATE/MERGE guard set.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum RowDeltaKind {
-    /// MERGE — UPDATE/MERGE validations (Java L251-254 + serializable data).
+    /// MERGE — UPDATE/MERGE validations (Java L251-254 + isolation-gated data).
     Merge,
     /// SQL DELETE — no `validate_deleted_files` / `validate_no_conflicting_delete_files`.
     Delete,
 }
 
 /// Verb recipe + isolation for [`commit_row_delta_kind`].
+/// MERGE isolation comes from `resolve_merge_isolation`, not a hard-wired serializable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) struct RowDeltaPolicy {
     pub kind: RowDeltaKind,
     pub isolation: IsolationLevel,
 }
 
+/// Copy of `predicate_dml::resolve_isolation_property` onto `write.merge.isolation-level`
+/// (no trim, `to_ascii_lowercase`, default serializable, garbage ⇒ Plan).
+fn resolve_merge_isolation(table: &Table) -> Result<IsolationLevel> {
+    match table
+        .metadata()
+        .properties()
+        .get(WRITE_MERGE_ISOLATION_LEVEL)
+    {
+        Some(name) => match name.to_ascii_lowercase().as_str() {
+            "serializable" => Ok(IsolationLevel::Serializable),
+            "snapshot" => Ok(IsolationLevel::Snapshot),
+            _ => Err(DataFusionError::Plan(format!(
+                "Invalid isolation level: {name}"
+            ))),
+        },
+        None => Ok(IsolationLevel::Serializable),
+    }
+}
+
 /// ===========================================================================================
 /// One atomic commit. Files rewritten ⇒ `OverwriteFiles` under the `ENGINE_CONTRACT` §5 COW
-/// SERIALIZABLE-isolation recipe (row 142, Java's MERGE default) — BOTH
+/// SERIALIZABLE-isolation recipe (row 142, Java's MERGE default; snapshot drops
+/// `validate_no_conflicting_data`) — BOTH
 /// `validate_no_conflicting_deletes` AND `validate_no_conflicting_data` pinned to the scanned
 /// snapshot, so neither a concurrent row-level delete on a rewritten file nor a concurrent add
 /// matching the ON condition (the F-BR-1 silent duplicate) slips past; nothing rewritten but rows
@@ -2322,18 +2347,12 @@ async fn commit(
     affected: Vec<DataFile>,
     new_files: Vec<DataFile>,
 ) -> Result<()> {
-    commit_overwrite(
-        catalog,
-        table,
-        snapshot_id,
-        affected,
-        new_files,
-        IsolationLevel::Serializable,
-    )
-    .await
+    let isolation = resolve_merge_isolation(table)?;
+    commit_overwrite(catalog, table, snapshot_id, affected, new_files, isolation).await
 }
 
-/// Copy-on-write overwrite commit. MERGE calls [`commit`] (always serializable).
+/// Copy-on-write overwrite commit. MERGE calls [`commit`], which resolves
+/// `write.merge.isolation-level` (default serializable).
 pub(super) async fn commit_overwrite(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
@@ -2432,12 +2451,12 @@ pub(super) async fn commit_overwrite(
 ///     a concurrent row-level delete of those same rows is a genuine conflict; and it widens the
 ///     files-exist check's op set from `{OVERWRITE}` to `{OVERWRITE, DELETE}` so a concurrent
 ///     merge-on-read DELETE that removed a referenced data file also conflicts.
-///   * `validate_no_conflicting_data_files()` — the SERIALIZABLE guard (L256-258), which is Java's
-///     MERGE default isolation (§5 row 142, the same level the copy-on-write arm commits under):
+///   * `validate_no_conflicting_data_files()` — the SERIALIZABLE guard (L256-258); Java's MERGE
+///     default, gated on `write.merge.isolation-level` (snapshot drops this call):
 ///     rejects a concurrent ADD that could match the ON condition, the F-BR-1 silent-duplicate class.
-///   * `conflict_detection_filter(AlwaysTrue)` — Java computes the AND of the filters PUSHED into
-///     the scan (L284-292); this path pushes none (the streamed target scan is unfiltered), so
-///     `AlwaysTrue` is the Java-exact, most conservative value.
+///   * `conflict_detection_filter(AlwaysTrue)` — deliberately MORE conservative than the PERF-04
+///     residual (audit M15). Narrowing to the residual would be WRONG: residual is source-key
+///     min/max, not the ON condition. `AlwaysTrue` is the safe conservative value.
 ///   * `validate_from_snapshot(pin)` — anchored to the snapshot the merge queries actually read,
 ///     and only when the scan captured one (an empty-at-read-time table depended on no prior state;
 ///     Java runs no from-snapshot validation there either).
@@ -2457,6 +2476,7 @@ async fn commit_row_delta(
     data_files: Vec<DataFile>,
     concurrency: WriteConcurrency,
 ) -> Result<()> {
+    let isolation = resolve_merge_isolation(table)?;
     commit_row_delta_kind(
         catalog,
         table,
@@ -2466,13 +2486,14 @@ async fn commit_row_delta(
         concurrency,
         RowDeltaPolicy {
             kind: RowDeltaKind::Merge,
-            isolation: IsolationLevel::Serializable,
+            isolation,
         },
     )
     .await
 }
 
-/// Position-delete `RowDelta` commit. MERGE calls [`commit_row_delta`] (Merge + serializable).
+/// Position-delete `RowDelta` commit. MERGE calls [`commit_row_delta`] (Merge +
+/// `write.merge.isolation-level`, default serializable).
 pub(super) async fn commit_row_delta_kind(
     catalog: &Arc<dyn Catalog>,
     table: &Table,
