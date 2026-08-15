@@ -10,19 +10,19 @@ Pins:
 - real table literally named ``files`` wins over suffix interpretation
 - DML targeting a metadata table is loud
 - AS OF + metadata composition is out of scope v1 (loud disclose)
-- known fork residues (empty ``partition`` on unpartitioned; readable_metrics by name)
+- unpartitioned metadata tables drop the empty ``partition`` column (fork #194 / Java)
 
 Fork pin ``b009ac1`` (the rev in the workspace ``[patch.crates-io]``; re-verify on every repin).
 Symbols, not line numbers — the ranges here went stale across one repin already:
 - ``MetadataTableType`` (enum + ``all_types`` + ``TryFrom<&str>``) — ``crates/iceberg/src/inspect/
   metadata_table.rs``
-- DF ``name.split_once('$')`` in ``IcebergSchemaProvider::{table, table_exist}``, and the
+- DF ``name.rsplit_once('$')`` in ``IcebergSchemaProvider::{table, table_exist}``, and the
   ``table_names`` synthesis this module's ADR-0006 pins hide —
   ``crates/integrations/datafusion/src/schema.rs``
 - snapshots / history schemas — ``inspect/snapshots.rs::SnapshotsTable::schema`` /
   ``inspect/history.rs::HistoryTable::schema``
 - files/data_file columns — ``inspect/data_file.rs`` + ``inspect/files.rs``
-- unpartitioned empty ``partition`` divergence — ``inspect/partitions.rs`` (R142)
+- unpartitioned files/partitions drop the empty ``partition`` column — fork #194
 - readable_metrics by name — ``inspect/readable_metrics.rs`` / entries/files (R142)
 
 Local memory-catalog only (no AWS, no docker).
@@ -80,7 +80,6 @@ FILES_CORE_NAMES = [
     "file_path",
     "file_format",
     "spec_id",
-    "partition",
     "record_count",
     "file_size_in_bytes",
 ]
@@ -257,11 +256,11 @@ def test_manifests_partitions_refs_entries_metadata_log(
     assert manifests.num_rows >= 1
 
     partitions = spark.sql(f"SELECT * FROM {TABLE}.partitions").to_arrow()
-    # Unpartitioned: fork KEEPS empty-struct partition column (Java drops it) — R142 divergence.
+    # Unpartitioned: fork #194 dropped the empty partition column (Java parity).
     part_names = _schema_names(partitions)
-    assert "partition" in part_names, (
-        "known fork residue: unpartitioned partitions table keeps empty partition struct "
-        "(inspect/partitions.rs:31-37; Java drops it)"
+    assert "partition" not in part_names, (
+        "unpartitioned partitions table must not keep an empty partition struct "
+        f"(got {part_names})"
     )
     assert "record_count" in part_names
     assert partitions.num_rows >= 1
@@ -470,22 +469,18 @@ def test_drop_alter_metadata_loud(spark: ReparkSession, multi_snapshot: dict[str
     assert "read-only" in message or "metadata table" in message
 
 
-def test_unpartitioned_partition_column_divergence(
+def test_unpartitioned_files_have_no_partition_column(
     spark: ReparkSession, multi_snapshot: dict[str, object]
 ) -> None:
-    """Pin fork residue: empty partition column kept on unpartitioned tables (Java drops it).
+    """Fork #194: unpartitioned ``.files`` drops the empty ``partition`` column (Java parity).
 
-    Java-Iceberg parity item, tracked fork-side — not a registry row.
+    Declared rename of ``test_unpartitioned_partition_column_divergence``.
     """
     _ = multi_snapshot
     files = spark.sql(f"SELECT * FROM {TABLE}.files").to_arrow()
-    assert "partition" in _schema_names(files)
-    partition_field = files.schema.field("partition")
-    assert pa.types.is_struct(partition_field.type)
-    # Unpartitioned → empty struct (0 fields).
-    assert partition_field.type.num_fields == 0, (
-        "fork keeps empty-struct partition on unpartitioned files table "
-        "(inspect/files.rs unpartitioned divergence / R142)"
+    assert "partition" not in _schema_names(files), (
+        "unpartitioned files table must not keep an empty partition column "
+        f"(got {_schema_names(files)})"
     )
 
 
