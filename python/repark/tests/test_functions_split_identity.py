@@ -1,15 +1,15 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-A (ordering / null / math) deliberately grows
-the pin — declared in that batch's PR body.
+``__all__`` tuple is the surface pin. FN-B (strings) deliberately grows the pin —
+declared in that batch's PR body.
 """
 
 from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Moved 2026-08-15 with FN-A (was the 207-name FN-SPLIT freeze on 8b5c8cb).
+# Moved 2026-08-15 with FN-B (was the 207-name FN-SPLIT freeze on 8b5c8cb).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -47,10 +47,14 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "bit_and",
     "bit_or",
     "bit_xor",
+    "btrim",
     "bucket",
     "cbrt",
     "ceil",
     "ceiling",
+    "char",
+    "char_length",
+    "character_length",
     "chr",
     "coalesce",
     "col",
@@ -58,6 +62,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "collect_set",
     "concat",
     "concat_ws",
+    "contains",
     "corr",
     "cos",
     "cosh",
@@ -92,6 +97,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "e",
     "elt",
     "encode",
+    "endswith",
     "equal_null",
     "exp",
     "explode",
@@ -115,6 +121,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "hours",
     "hypot",
     "ifnull",
+    "ilike",
     "initcap",
     "input_file_name",
     "instr",
@@ -125,9 +132,12 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "kurtosis",
     "last",
     "last_day",
+    "lcase",
     "least",
+    "left",
     "length",
     "levenshtein",
+    "like",
     "lit",
     "ln",
     "locate",
@@ -174,17 +184,24 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "positive",
     "pow",
     "power",
+    "printf",
     "quarter",
+    "quote",
     "radians",
     "raise_error",
     "rand",
     "randn",
     "random",
     "rank",
+    "regexp",
     "regexp_extract",
+    "regexp_like",
     "regexp_replace",
     "repeat",
+    "replace",
     "reverse",
+    "right",
+    "rlike",
     "round",
     "row_number",
     "rpad",
@@ -210,10 +227,13 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "spark_partition_id",
     "split",
     "sqrt",
+    "startswith",
     "stddev",
     "stddev_pop",
     "stddev_samp",
     "struct",
+    "substr",
+    "substring",
     "substring_index",
     "sum",
     "tan",
@@ -228,6 +248,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "trim",
     "trunc",
     "try_to_timestamp",
+    "ucase",
     "udf",
     "udtf",
     "unbase64",
@@ -248,7 +269,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 232
+    assert len(F.__all__) == 253
 
 
 def test_every_all_name_resolves() -> None:

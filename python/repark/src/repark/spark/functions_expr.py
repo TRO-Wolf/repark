@@ -5,9 +5,13 @@ Public names are re-exported from ``functions.py``. Helpers ``_scalar`` /
 ``_as_column_arg`` stay imported from ``functions`` (they serve these wrappers).
 
 FN-A (2026-08-15): ordering / null / math names land in this module.
+
+FN-B (2026-08-15): string-function names land in this module.
 """
 
 from __future__ import annotations
+
+import re
 
 from repark import _native
 from repark.errors import (
@@ -26,6 +30,7 @@ from repark.spark.functions import (
     _scalar,
     coalesce,
     col,
+    concat,
     date_add,
     date_format,
     lit,
@@ -1729,3 +1734,140 @@ def cbrt(col: Column | str) -> Column:
     column = _as_column_arg(col, as_lit=False)
     third = lit(1.0 / 3.0)
     return when(column < lit(0), -pow(-column, third)).otherwise(pow(column, third))
+
+
+# ---- FN-B: strings ----------------------------------------------------------------------------
+
+
+def lcase(col: Column | str) -> Column:
+    """Lowercase string (PySpark ``functions.lcase``; alias of ``lower``)."""
+    return lower(col)
+
+
+def ucase(col: Column | str) -> Column:
+    """Uppercase string (PySpark ``functions.ucase``; alias of ``upper``)."""
+    return upper(col)
+
+
+def char(col: Column | str | int) -> Column:
+    """Unicode code point → character (PySpark ``functions.char``; alias of ``chr``)."""
+    return chr(col)
+
+
+def char_length(col: Column | str) -> Column:
+    """Character length (PySpark ``functions.char_length``; alias of ``length``)."""
+    return length(col)
+
+
+def character_length(col: Column | str) -> Column:
+    """Character length (PySpark ``functions.character_length``; alias of ``length``)."""
+    return _scalar("character_length", col)
+
+
+def substring(str: Column | str, pos: Column | int, len: Column | int) -> Column:
+    """1-based substring (PySpark ``functions.substring``)."""
+    lit_indices: set[int] = set()
+    if isinstance(pos, int) and not isinstance(pos, bool):
+        lit_indices.add(1)
+    if isinstance(len, int) and not isinstance(len, bool):
+        lit_indices.add(2)
+    return _scalar("substring", str, pos, len, lit_indices=frozenset(lit_indices) or None)
+
+
+def substr(str: Column | str, pos: Column | int, len: Column | int) -> Column:
+    """1-based substring (PySpark ``functions.substr``; alias of ``substring``)."""
+    return substring(str, pos, len)
+
+
+def left(str: Column | str, len: Column | int) -> Column:
+    """Leftmost ``len`` characters (PySpark ``functions.left``)."""
+    return substring(str, 1, len)
+
+
+def right(str: Column | str, len: Column | int) -> Column:
+    """Rightmost ``len`` characters (PySpark ``functions.right``)."""
+    source = _as_column_arg(str, as_lit=False)
+    count = _as_column_arg(len, as_lit=isinstance(len, int) and not isinstance(len, bool))
+    start = greatest(length(source) - count + lit(1), lit(1))
+    return substring(source, start, count)
+
+
+def contains(col: Column | str, value: Column | str) -> Column:
+    """Substring containment (PySpark ``functions.contains``)."""
+    lit_indices = frozenset({1}) if isinstance(value, str) else None
+    return _scalar("contains", col, value, lit_indices=lit_indices)
+
+
+def like(col: Column | str, pattern: Column | str) -> Column:
+    """SQL LIKE (PySpark ``functions.like``)."""
+    lit_indices = frozenset({1}) if isinstance(pattern, str) else None
+    return _scalar("like", col, pattern, lit_indices=lit_indices)
+
+
+def ilike(col: Column | str, pattern: Column | str) -> Column:
+    """Case-insensitive SQL LIKE (PySpark ``functions.ilike``)."""
+    lit_indices = frozenset({1}) if isinstance(pattern, str) else None
+    return _scalar("ilike", col, pattern, lit_indices=lit_indices)
+
+
+def regexp_like(col: Column | str, pattern: Column | str) -> Column:
+    """Regular-expression match (PySpark ``functions.regexp_like``)."""
+    lit_indices = frozenset({1}) if isinstance(pattern, str) else None
+    return _scalar("regexp_like", col, pattern, lit_indices=lit_indices)
+
+
+def rlike(col: Column | str, pattern: Column | str) -> Column:
+    """Regular-expression match (PySpark ``functions.rlike``; alias of ``regexp_like``)."""
+    return regexp_like(col, pattern)
+
+
+def regexp(col: Column | str, pattern: Column | str) -> Column:
+    """Regular-expression match (PySpark ``functions.regexp``; alias of ``regexp_like``)."""
+    return regexp_like(col, pattern)
+
+
+def btrim(col: Column | str, trim: Column | str | None = None) -> Column:
+    """Trim both sides (PySpark ``functions.btrim``)."""
+    if trim is None:
+        return _scalar("btrim", col)
+    lit_indices = frozenset({1}) if isinstance(trim, str) else None
+    return _scalar("btrim", col, trim, lit_indices=lit_indices)
+
+
+def startswith(col: Column | str, prefix: Column | str) -> Column:
+    """Prefix test (PySpark ``functions.startswith``)."""
+    lit_indices = frozenset({1}) if isinstance(prefix, str) else None
+    return _scalar("starts_with", col, prefix, lit_indices=lit_indices)
+
+
+def endswith(col: Column | str, suffix: Column | str) -> Column:
+    """Suffix test (PySpark ``functions.endswith``)."""
+    lit_indices = frozenset({1}) if isinstance(suffix, str) else None
+    return _scalar("ends_with", col, suffix, lit_indices=lit_indices)
+
+
+def printf(format: str, *cols: Column | str) -> Column:
+    """Printf-style format (PySpark ``functions.printf``; alias of ``format_string``)."""
+    return format_string(format, *cols)
+
+
+def replace(src: Column | str, search: str, replacement: Column | str) -> Column:
+    """Literal string replace (PySpark ``functions.replace``).
+
+    DataFusion ``replace`` is not on ``call_scalar``. Lowered via ``regexp_replace``
+    after escaping ``search`` so ``.`` / ``*`` are literals, not regex — pin vs
+    ``regexp_replace`` (SEMANTIC-HAZARD). Column ``search`` is not accepted (cannot
+    escape per row without a kernel).
+    """
+    escaped_search = re.escape(search)
+    if isinstance(replacement, str):
+        escaped_replacement = replacement.replace("\\", "\\\\").replace("$", "\\$")
+        return regexp_replace(src, escaped_search, escaped_replacement)
+    return regexp_replace(src, escaped_search, replacement)
+
+
+def quote(col: Column | str) -> Column:
+    """SQL single-quoted literal of a string column (PySpark ``functions.quote``)."""
+    column = _as_column_arg(col, as_lit=False)
+    escaped = regexp_replace(column, "'", "''")
+    return concat(lit("'"), escaped, lit("'"))
