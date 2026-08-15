@@ -36,6 +36,13 @@ the dialect layers are thin translators.
   goal today is "spills where the engine can, documented where it cannot".*)
 - Zero-copy interop — anything that speaks Arrow is a first-class citizen.
 - Reproducibility: same query + same snapshot = same bytes, every time.
+- **TA serving performance at parity with `polars_talib`** on the shapes that matter
+  (many-symbols windows, wide multi-indicator SELECT statements, last-row serving) — reached
+  **golden-safe**: bit-exact numerics are non-negotiable, so the wins come from
+  allocation/copy/dispatch/plan-shape work, never math reordering; every optimization is
+  gated on a recorded benchmark baseline (measure first, then implement). `unsafe` stays
+  workspace-forbidden; a per-module exception is a last rung reached only on flamegraph
+  evidence that safe restructuring cannot match, and carries Miri + fuzz gates of its own.
 - Long-term ease of maintenance: strict testing contract, mechanical gates, one owned fork.
 
 ## Differentiators
