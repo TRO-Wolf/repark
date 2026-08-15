@@ -46,7 +46,7 @@ remains the deprecation shim. Native lazy DataFrame API is not this phase.
 | Add/adjust a DataFrame action or interchange export | `src/repark/spark/dataframe/actions_export.py` |
 | Add/adjust joins or column projection | `src/repark/spark/dataframe/joins_columns.py` |
 | Add/adjust V2 `writeTo` / path writes | `src/repark/spark/dataframe/writer_readwriter.py` |
-| Add/adjust a Spark function | `src/repark/spark/functions.py` (+ `src/repark/spark/sql/functions.py` alias) |
+| Add/adjust a Spark function | `src/repark/spark/functions.py` (re-export) + `functions_expr.py` / `functions_udf.py` (+ `src/repark/spark/sql/functions.py` alias) |
 | Add/adjust an ML transformer or estimator | [src/repark/spark/ml/map.md](src/repark/spark/ml/map.md) |
 | Change how the wheel builds | `pyproject.toml` `[tool.maturin]` |
 | Build the wheel | `uvx maturin@1.14.1 build --out <dir>` from this directory |

@@ -26,7 +26,7 @@ AttributeError naming the gap), never stubs.
 
 | I want to… | Go to |
 |---|---|
-| Change a real function/type/window | canonical `../functions.py` / `../types.py` / `../window.py` — never only here |
+| Change a real function/type/window | canonical `../functions.py` (re-export) / `../functions_expr.py` / `../functions_udf.py` / `../types.py` / `../window.py` — never only here |
 | Add a new sql alias for a new repark surface | `__init__.py` + matching re-export module if submodule |
 | Pin import identity / sed-swap smoke / failing `import repark.sql` | `../../../../tests/test_sql_alias.py` |
 
