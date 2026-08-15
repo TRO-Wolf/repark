@@ -688,6 +688,61 @@ async fn scan_pruning_false_does_not_push_residual() {
     );
 }
 
+/// M1 scan-level pin: Utf8 source keys vs Int32 target must **not** push residual
+/// (lexicographic min/max of `'9'`/`'10'` is inverted after strict-cast). Mutation:
+/// drop the identical-type skip → push==1 and/or the update of id=9 is lost.
+#[tokio::test]
+async fn utf8_source_int32_target_does_not_push_residual() {
+    let push_counter = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(&catalog, "m1_utf8").await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[9, 10], &[Some("x"), Some("y")]),
+    )
+    .await;
+    let ctx = SessionContext::new();
+    let source_batch = RecordBatch::try_new(
+        Arc::new(ArrowSchema::new(vec![
+            Field::new("id", DataType::Utf8, true),
+            Field::new("v", DataType::Utf8, true),
+        ])),
+        vec![
+            Arc::new(StringArray::from(vec!["9", "10"])),
+            Arc::new(StringArray::from(vec!["a", "b"])),
+        ],
+    )
+    .expect("utf8 source batch");
+    let source = MemTable::try_new(source_batch.schema(), vec![vec![source_batch]])
+        .expect("utf8 source memtable");
+    ctx.register_table("src", Arc::new(source))
+        .expect("register utf8 src");
+    let spec = merge_spec("m1_utf8", vec![update_set("v", "s.v")], vec![]);
+    let instruments = MergeTestInstruments {
+        residual_push: Some(std::sync::Arc::clone(&push_counter)),
+        ..MergeTestInstruments::default()
+    };
+    MERGE_TEST_INSTRUMENTS
+        .scope(instruments, async {
+            execute_merge(&ctx, &catalog, &spec)
+                .await
+                .expect("Utf8→Int32 MERGE must not abort");
+        })
+        .await;
+    assert_eq!(
+        push_counter.load(Ordering::SeqCst),
+        0,
+        "M1: Utf8 source vs Int32 target must skip residual (got a push)"
+    );
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(9, Some("a".to_string())), (10, Some("b".to_string()))],
+        "M1: both INT keys must update; inverted Utf8 bounds lose id=9"
+    );
+}
+
 /// R-MERGE-FILE-SCAN pin: multi-file COW where only file B is affected — survivors
 /// co-located in B are preserved (P2-shape), files A/C untouched, and escape hatch
 /// `file-scoped-rewrite=false` yields the same rows. Task-count filtering is unit-pinned

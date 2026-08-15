@@ -58,7 +58,11 @@ repark-core's error map.
   the MERGE target scan's `with_concurrency_limit`.
 - `scan_prune.rs` — MERGE target-scan pruning + ON bare-equality parser + residual bounds
   (`repark.merge.scan-pruning`, default true); `ReparkMergeConfig` also carries
-  `file_scoped_rewrite`.
+  `file_scoped_rewrite`. **MG-1 (2026-08-15):** char-boundary ON scanners (`char_indices`);
+  skip-conjunct helpers (`identical_int_key_width`, `unique_schema_field`,
+  `residual_bounds_predicate`) — identical Int32/Int64 only, probe failures skip, source
+  column resolved case-insensitively then quoted. Ledger:
+  [`../../../../task/mg1-scanprune-hardening-ledger.md`](../../../../task/mg1-scanprune-hardening-ledger.md).
 - `file_scoped_rewrite.rs` — filter `FileScanTask`s by affected-path allowlist
   (`repark.merge.file-scoped-rewrite`); refuses a non-empty allowlist matching zero or partial
   path set (survivor-loss guard). Test helper `dummy_task` constructs `#183` Arc innards

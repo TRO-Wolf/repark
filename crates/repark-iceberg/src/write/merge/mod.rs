@@ -130,8 +130,8 @@ use crate::write::file_scoped_rewrite::{allowlist_from_paths, filter_tasks_to_al
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
 use crate::write::scan_concurrency::scan_concurrency_from_ctx;
 use crate::write::scan_prune::{
-    bare_equalities_from_on, conjoin, file_scoped_rewrite_from_ctx, range_predicate_i32,
-    range_predicate_i64, scan_pruning_from_ctx,
+    bare_equalities_from_on, file_scoped_rewrite_from_ctx, residual_bounds_predicate,
+    scan_pruning_from_ctx,
 };
 
 /// The reserved `_file` metadata column the core scan projects (fork `metadata_columns.rs`
@@ -307,13 +307,13 @@ pub async fn execute_merge(
 }
 
 /// ===========================================================================================
-/// PERF-04: build an Iceberg residual predicate from bare equi-key ON + source min/max.
+/// PERF-04: residual join-key bounds. Thin caller — M1/M6/M7 live in `scan_prune.rs`.
 ///
 /// **Safe shapes only (when in doubt → None / over-scan):**
 /// - conf `repark.merge.scan-pruning` true (default)
 /// - ON yields ≥1 bare equality (`t.col = s.col`); OR / `<=>` / expression-only → None
-/// - target join key is Int32 or Int64 (other types → skip that conjunct; none left → None)
-/// - source min/max non-null (empty source → None)
+/// - source field Arrow type **identical** to target Int32/Int64 key; else skip conjunct
+/// - source min/max non-null (empty source → None); any probe failure → skip conjunct (M6)
 /// - `MoR` always OK; COW only when `file_scoped_rewrite` (rewrite is a separate unfiltered scan)
 ///
 /// General multi-clause / non-equi ON pushdown is OUT (r25 seed). Wrong push = S0 lost rows;
@@ -338,83 +338,14 @@ async fn residual_join_key_filter(
     if equalities.is_empty() {
         return Ok(None);
     }
-
-    let mut predicates = Vec::new();
-    for equality in &equalities {
-        let field = write_schema
-            .fields()
-            .iter()
-            .find(|field| field.name().eq_ignore_ascii_case(&equality.target_column));
-        let Some(field) = field else {
-            // Unknown target column — do not invent a filter (join will fail loud elsewhere).
-            continue;
-        };
-        let source_quoted = quote_ident(&equality.source_column);
-        // One aggregate over the user source SQL (table or subquery). Not counted as a
-        // target-SQL pass (no target scan).
-        let bounds_sql = format!(
-            "SELECT min({source_quoted}) AS __repark_min, max({source_quoted}) AS __repark_max \
-             FROM {} AS __repark_src_bounds",
-            spec.source_from_sql
-        );
-        let batches = ctx.sql(&bounds_sql).await?.collect().await?;
-        // Skip this conjunct only (do not discard already-built bounds — C2-Q-001).
-        let Some(batch) = batches.first() else {
-            continue;
-        };
-        if batch.num_rows() == 0 || batch.num_columns() < 2 {
-            continue;
-        }
-        // min/max may widen to Int64; cast strictly per target key type.
-        match field.data_type() {
-            DataType::Int32 => {
-                let mins = cast_with_options(batch.column(0), &DataType::Int32, &strict_cast())?;
-                let maxs = cast_with_options(batch.column(1), &DataType::Int32, &strict_cast())?;
-                let min_array = mins
-                    .as_any()
-                    .downcast_ref::<datafusion::arrow::array::Int32Array>()
-                    .ok_or_else(|| {
-                        DataFusionError::Internal("source min is not Int32 after cast".into())
-                    })?;
-                let max_array = maxs
-                    .as_any()
-                    .downcast_ref::<datafusion::arrow::array::Int32Array>()
-                    .ok_or_else(|| {
-                        DataFusionError::Internal("source max is not Int32 after cast".into())
-                    })?;
-                if min_array.is_null(0) || max_array.is_null(0) {
-                    // Empty source or all-null keys — no useful bound.
-                    continue;
-                }
-                predicates.push(range_predicate_i32(
-                    field.name(),
-                    min_array.value(0),
-                    max_array.value(0),
-                )?);
-            }
-            DataType::Int64 => {
-                let mins = cast_with_options(batch.column(0), &DataType::Int64, &strict_cast())?;
-                let maxs = cast_with_options(batch.column(1), &DataType::Int64, &strict_cast())?;
-                let min_array = mins.as_any().downcast_ref::<Int64Array>().ok_or_else(|| {
-                    DataFusionError::Internal("source min is not Int64 after cast".into())
-                })?;
-                let max_array = maxs.as_any().downcast_ref::<Int64Array>().ok_or_else(|| {
-                    DataFusionError::Internal("source max is not Int64 after cast".into())
-                })?;
-                if min_array.is_null(0) || max_array.is_null(0) {
-                    continue;
-                }
-                predicates.push(range_predicate_i64(
-                    field.name(),
-                    min_array.value(0),
-                    max_array.value(0),
-                )?);
-            }
-            // Bounded equi-key only — non-int keys skip (do not push partial wrong types).
-            _ => {}
-        }
-    }
-    let residual = conjoin(predicates);
+    let residual = residual_bounds_predicate(
+        ctx,
+        &spec.source_from_sql,
+        &spec.source_alias,
+        write_schema.as_ref(),
+        &equalities,
+    )
+    .await;
     if residual.is_some() {
         note_residual_push();
     }

@@ -12,6 +12,11 @@ not this directory.
 
 ## Contents
 
+- [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
+  (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
+  skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
+  case-insensitive source resolve-then-quote). Region: `scan_prune.rs` + thin
+  `residual_join_key_filter`.
 - [r6-namespace-guard-ledger.md](r6-namespace-guard-ledger.md) — **R-6 / G-6 Q1
   (2026-08-14):** namespace-create location guard. Core `create_namespace` +
   Spark `IF NOT EXISTS` + ANSI `CREATE SCHEMA IF NOT EXISTS` share
@@ -293,6 +298,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) | **MG-1** scan-prune hardening — M1/M5/M6/M7 |
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |
 | [r2-dec-close-ledger.md](r2-dec-close-ledger.md) | **R-2** DEC close — U4b `/` + DEC-8 `ExprPlanner` + DEC-6 exec-raise; TY-3 DECLARED |

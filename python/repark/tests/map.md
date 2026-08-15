@@ -485,6 +485,13 @@ NOT in that file is a defect, not a decision.
   partial update / insert dict; Column condition; temp-view cleanup (success + failure);
   no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource` engine reject; type errors;
   `withSchemaEvolution` returns self; equi-join sugar unit pin. Arrow path for row sets.
+- `test_merge_scan_prune_semantics.py` — **MG-1 (2026-08-15):** MERGE residual-probe
+  hardening pins (r1/M1 Utf8→INT 2-row upsert; r2/M6 BIGINT 3e9 vs INT no-abort;
+  r3/M5 `t.city = 'Zürich'` battery shape + backtick `` t.`Zürich` `` column;
+  r11/M7
+  mixed-case ON ≡ pruning-off). Memory catalog, Arrow `to_arrow()` value AND type.
+  Does **not** edit `test_merge_semantics_audit.py`. Ledger:
+  `task/mg1-scanprune-hardening-ledger.md`.
 - **octo-extra C3: format= refuse surface**
 
 - **octo-extra C2: __all__ / export coverage**
@@ -1669,6 +1676,7 @@ NOT in that file is a defect, not a decision.
 | ...do this | go to |
 |---|---|
 | Add a `DataFrame.mergeInto` builder pin (R-MERGEINTO) | `test_merge_into.py` |
+| Add a MERGE scan-prune / residual-probe pin (M1/M5/M6/M7) | `test_merge_scan_prune_semantics.py` |
 | Add a cache/persist pin (R-PERF-CACHE) | `test_cache_persist.py` |
 | Add easy DataFrame lowering pins (R-DF-EASY) | `test_df_easy.py` |
 | Add a facade behavior test | `test_session.py` |
