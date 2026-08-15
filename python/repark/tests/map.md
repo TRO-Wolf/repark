@@ -26,7 +26,7 @@ NOT in that file is a defect, not a decision.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
   **AD-2 (2026-08-15):** F-V4-2 `+00:00`→`UTC` equality; F-V4-1 timestamptz projection
-  unlocked (fork #192/#193).
+  unlocked (fork #192/#193). ruff-format lockstep on `test_metadata_tables.py`.
   Carry-check (identity int/string/date/timestamp, bucket, truncate, Iceberg
   years/months/days/hours UTC-epoch) + load-bearing SQL `year(ts)` /
   `date_format` identity under non-UTC sessions + TZ-8 CAST/to_date equality (R-4) +

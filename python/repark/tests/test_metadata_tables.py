@@ -259,8 +259,7 @@ def test_manifests_partitions_refs_entries_metadata_log(
     # Unpartitioned: fork #194 dropped the empty partition column (Java parity).
     part_names = _schema_names(partitions)
     assert "partition" not in part_names, (
-        "unpartitioned partitions table must not keep an empty partition struct "
-        f"(got {part_names})"
+        f"unpartitioned partitions table must not keep an empty partition struct (got {part_names})"
     )
     assert "record_count" in part_names
     assert partitions.num_rows >= 1
