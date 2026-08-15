@@ -1033,6 +1033,13 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   rint/factorial/bin/hex/unhex (`call_scalar` allow-list — no crates/ edit);
   asc_nulls_last/desc_nulls_first (`_sort_specs` couples nulls to ascending).
   Pins: `tests/test_functions_a.py`. **Z-4 / Y-5 SAF-001:**
+  `_scalar` wrappers). **FN-B (2026-08-15):** 21 string names in
+  `functions_expr.py` (lcase/ucase/char/char_length/character_length/substring/substr/
+  left/right/contains/like/ilike/regexp_like/rlike/regexp/btrim/startswith/endswith/
+  printf/replace/quote). Deferred: regexp_extract_all/regexp_substr (charter);
+  split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar
+  (`call_scalar` allow-list — no crates/ edit). Pins: `tests/test_functions_b.py`.
+  **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
   `add_months`, `date_add` so `F.abs(right["k"])` after a semi join raises Spark's

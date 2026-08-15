@@ -27,6 +27,10 @@ not this directory.
   `test_functions_a.py`. `_PRE_SPLIT_ALL` pin moved 207→232. Deferred:
   typeof/bround/conv + rint/factorial/bin/hex/unhex +
   asc_nulls_last/desc_nulls_first.
+- [fn-b-strings-ledger.md](fn-b-strings-ledger.md) — **FN-B (2026-08-15):** 21
+  string facade names in `functions_expr.py` + `test_functions_b.py`.
+  `_PRE_SPLIT_ALL` pin moved 207→228. Deferred: regexp_extract_all/regexp_substr
+  + split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar.
 - [r6-namespace-guard-ledger.md](r6-namespace-guard-ledger.md) — **R-6 / G-6 Q1
   (2026-08-14):** namespace-create location guard. Core `create_namespace` +
   Spark `IF NOT EXISTS` + ANSI `CREATE SCHEMA IF NOT EXISTS` share
