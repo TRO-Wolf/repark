@@ -1472,6 +1472,7 @@ from repark.spark.functions_expr import (  # noqa: E402
     xxhash64,
 )
 from repark.spark.functions_udf import (  # noqa: E402
+    PandasUDFColumn,
     PandasUDFType,
     PythonUDFColumn,
     UserDefinedFunction,
