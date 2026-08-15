@@ -50,6 +50,10 @@ not this directory.
   string facade names in `functions_expr.py` + `test_functions_b.py`.
   `_PRE_SPLIT_ALL` pin moved 207→228. Deferred: regexp_extract_all/regexp_substr
   + split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar.
+- [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) — **FN-D (2026-08-15):** 11
+  datetime facade names in `functions_datetime.py` + `test_functions_d.py`.
+  `_PRE_SPLIT_ALL` pin moved 253→264. Deferred: make_date/interval/dt_interval/
+  unix_micros + date_diff/localtimestamp/to_timestamp_ntz + charter ENGINE-WORK.
 - [r6-namespace-guard-ledger.md](r6-namespace-guard-ledger.md) — **R-6 / G-6 Q1
   (2026-08-14):** namespace-create location guard. Core `create_namespace` +
   Spark `IF NOT EXISTS` + ANSI `CREATE SCHEMA IF NOT EXISTS` share
@@ -332,6 +336,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) | **M16** evolved unpartitioned position-delete `spec_id` |
+| [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) | **FN-D** datetime aliases/shims — 11 shipped, rest honest-cut |
 | [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) | **MG-1** scan-prune hardening — M1/M5/M6/M7 |
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |
@@ -362,6 +367,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Read the M16 evolved-spec position-delete stamp | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) |
 | Read the G8 value-semantics matrix + liveness gate | [s2-g8-ledger.md](s2-g8-ledger.md) |
 | Read the R-3 flip of the four G8 pin-absences | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) |
+| Read the FN-D datetime function batch | [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
 | See how a data-loss defect is localized, valved and oracled before it is fixed | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) |
 | Find out why a `DELETE`/`UPDATE` with a subquery `WHERE` is refused | [g3e8-guard-ledger.md](g3e8-guard-ledger.md) §2 (the matrix) + §3 (D-3, the deliberate over-refusal) |

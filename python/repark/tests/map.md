@@ -25,6 +25,9 @@ NOT in that file is a defect, not a decision.
 - [test_functions_split_identity.py](test_functions_split_identity.py) — FN-SPLIT
   (2026-08-15): `__all__` before==after pin. **FN-C moved the pin** to 261
   names (253 after FN-A + FN-B + 8 aggregate additions) + every name resolves.
+  (2026-08-15): `__all__` before==after pin. **FN-D moved the pin** 253→264
+  (11 datetime additions on the freeze inventory; independent of FN-C) + every
+  name resolves.
 - [test_functions_a.py](test_functions_a.py) — FN-A (2026-08-15): ordering / null /
   math wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias
   names resolve + one behavior case. `cbrt` pins the negative-root hazard.
@@ -35,6 +38,10 @@ NOT in that file is a defect, not a decision.
   aliases/shims through `ReparkSession` Arrow `to_arrow()` (value AND type).
   Alias names resolve + one behavior case vs canonical. `count_if` pins
   true-only counting; `bool_and`/`bool_or` pin vs `min`/`max` on booleans.
+- [test_functions_d.py](test_functions_d.py) — FN-D (2026-08-15): datetime wrappers
+  through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias names resolve
+  + one behavior case. `unix_seconds` pins toward-zero vs TZ-5 CAST floor.
+  `current_timezone` pins Session zone, not `$TZ`.
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
@@ -1729,6 +1736,7 @@ NOT in that file is a defect, not a decision.
 | Add an FN-A ordering / null / math function test | `test_functions_a.py` |
 | Add an FN-B string-function test | `test_functions_b.py` |
 | Add an FN-C aggregate / window-alias function test | `test_functions_c.py` |
+| Add an FN-D datetime-function test | `test_functions_d.py` |
 | Add a `repark.ta` indicator test | `test_ta.py` |
 | Add / extend a live-oracle golden (repark == pin == live Spark) | `_live_parity.py` (`SCENARIOS`) + `test_parity_live.py` |
 | Record a divergence from Apache Spark (behavior, pin, rationale) | `../../../docs/spark-sql-iceberg-parity.md` — the registry; add the `Disclosure` too when the live tier can express it (§6) |

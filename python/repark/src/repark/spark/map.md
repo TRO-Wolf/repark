@@ -1048,6 +1048,13 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   ENGINE-WORK `any_value`/`max_by`/`min_by`/`product`/`grouping`/`grouping_id`/
   `percentile`/`window`/`window_time`/`session_window`. Pins:
   `tests/test_functions_c.py`.
+  **FN-D (2026-08-15):** 11 datetime names in `functions_datetime.py` (day/curdate/now/
+  dateadd/datepart/to_unix_timestamp/unix_date/unix_seconds/unix_millis/
+  date_from_unix_date/current_timezone). Deferred: make_date/make_interval/
+  make_dt_interval/unix_micros (`call_scalar` miss); date_diff/localtimestamp/
+  to_timestamp_ntz (SEMANTIC-HAZARD honest-cut); charter ENGINE-WORK
+  make_timestamp_ltz/ntz, make_ym_interval, to_timestamp_ltz, convert_timezone,
+  timestamp_add/diff. Pins: `tests/test_functions_d.py`.
   **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
@@ -1164,6 +1171,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add a groupBy/agg, union, distinct, na, or write method | `dataframe.py` (`GroupedData` / `DataFrameNaFunctions` / `DataFrameWriter`) |
 | Add a column operator / `__neg__` / `alias` / `__getitem__` / `cast` / `over` | `column.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_udf.py` |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_datetime.py` (FN-D) |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add ML pipeline / feature / estimator (`repark.ml`) | [ml/map.md](ml/map.md) + [docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q3 + `crates/repark-ml` |
