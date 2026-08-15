@@ -22,6 +22,11 @@ not this directory.
   action sub-predicates (M2), misqualified / nested assignment targets (M3),
   and non-last unconditional same-kind clauses (M10). Spark door adds the ANSI
   INSERT column-list needle (M8). Door validation only; engine untouched.
+- [fn-a-ordering-null-math-ledger.md](fn-a-ordering-null-math-ledger.md) — **FN-A
+  (2026-08-15):** 25 ordering/null/math facade names in `functions_expr.py` +
+  `test_functions_a.py`. `_PRE_SPLIT_ALL` pin moved 207→232. Deferred:
+  typeof/bround/conv + rint/factorial/bin/hex/unhex +
+  asc_nulls_last/desc_nulls_first.
 - [r6-namespace-guard-ledger.md](r6-namespace-guard-ledger.md) — **R-6 / G-6 Q1
   (2026-08-14):** namespace-create location guard. Core `create_namespace` +
   Spark `IF NOT EXISTS` + ANSI `CREATE SCHEMA IF NOT EXISTS` share

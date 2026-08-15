@@ -1,16 +1,15 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
-Relocation discipline (docs/testing.md): this is a declared move-only split. The 207-name
-``__all__`` tuple is the before==after pin. Adding a new function is a later FN-A..F PR,
-not this file's job.
+Relocation discipline (docs/testing.md): this began as a declared move-only split. The
+``__all__`` tuple is the surface pin. FN-A (ordering / null / math) deliberately grows
+the pin — declared in that batch's PR body.
 """
 
 from __future__ import annotations
 
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
-# Frozen 2026-08-14 on 8b5c8cb before the split. Do not edit unless a later batch
-# deliberately grows the surface (and then this pin moves with that batch).
+# Moved 2026-08-15 with FN-A (was the 207-name FN-SPLIT freeze on 8b5c8cb).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -35,6 +34,8 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "array_sort",
     "array_union",
     "arrays_zip",
+    "asc",
+    "asc_nulls_first",
     "ascii",
     "asin",
     "asinh",
@@ -47,6 +48,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "bit_or",
     "bit_xor",
     "bucket",
+    "cbrt",
     "ceil",
     "ceiling",
     "chr",
@@ -83,12 +85,18 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "dayofyear",
     "days",
     "decode",
+    "degrees",
     "dense_rank",
+    "desc",
+    "desc_nulls_last",
+    "e",
     "elt",
     "encode",
+    "equal_null",
     "exp",
     "explode",
     "explode_outer",
+    "expm1",
     "expr",
     "extract",
     "find_in_set",
@@ -106,10 +114,12 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "hour",
     "hours",
     "hypot",
+    "ifnull",
     "initcap",
     "input_file_name",
     "instr",
     "isnan",
+    "isnotnull",
     "isnull",
     "json_tuple",
     "kurtosis",
@@ -119,8 +129,11 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "length",
     "levenshtein",
     "lit",
+    "ln",
     "locate",
     "log",
+    "log1p",
+    "log2",
     "log10",
     "lower",
     "lpad",
@@ -143,17 +156,26 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "months",
     "months_between",
     "nanvl",
+    "negative",
     "next_day",
     "ntile",
+    "nullif",
+    "nullifzero",
+    "nvl",
+    "nvl2",
     "overlay",
     "pandas_udf",
     "percentile_approx",
+    "pi",
+    "pmod",
     "posexplode",
     "posexplode_outer",
     "position",
+    "positive",
     "pow",
     "power",
     "quarter",
+    "radians",
     "raise_error",
     "rand",
     "randn",
@@ -176,6 +198,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "sequence",
     "sha1",
     "sha2",
+    "sign",
     "signum",
     "sin",
     "sinh",
@@ -219,12 +242,13 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "xxhash64",
     "year",
     "years",
+    "zeroifnull",
 )
 
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 207
+    assert len(F.__all__) == 232
 
 
 def test_every_all_name_resolves() -> None:

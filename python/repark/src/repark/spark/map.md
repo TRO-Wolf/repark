@@ -1026,7 +1026,13 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   first-half agg/date stay here; `functions_udf.py` holds pandas/python UDF;
   `functions.py` re-exports UDF helpers the DataFrame/session bridges import
   (`_build_python_udf`, `_normalize_pandas_udf_*`); `functions_expr.py` holds
-  `_scalar` wrappers). **Z-4 / Y-5 SAF-001:**
+  `_scalar` wrappers). **FN-A (2026-08-15):** 25 ordering/null/math names in
+  `functions_expr.py` (sign/ifnull/nvl/asc/desc/asc_nulls_first/desc_nulls_last/e/pi/
+  negative/positive/pmod/expm1/ln/log2/log1p/degrees/radians/nvl2/nullif/equal_null/
+  zeroifnull/nullifzero/isnotnull/cbrt). Deferred: typeof/bround/conv (charter);
+  rint/factorial/bin/hex/unhex (`call_scalar` allow-list — no crates/ edit);
+  asc_nulls_last/desc_nulls_first (`_sort_specs` couples nulls to ascending).
+  Pins: `tests/test_functions_a.py`. **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,
   `add_months`, `date_add` so `F.abs(right["k"])` after a semi join raises Spark's

@@ -1,8 +1,10 @@
 """Scalar / string / math / collection / remaining-agg wrappers (FN-SPLIT).
 
-Move-only: every name here previously lived in ``repark.spark.functions``.
+Move-only origin: every name here previously lived in ``repark.spark.functions``.
 Public names are re-exported from ``functions.py``. Helpers ``_scalar`` /
-``_as_column_arg`` stay in this module (they only serve these wrappers).
+``_as_column_arg`` stay imported from ``functions`` (they serve these wrappers).
+
+FN-A (2026-08-15): ordering / null / math names land in this module.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from repark.spark.functions import (
     _integer_argument,
     _partition_transform_of,
     _scalar,
+    coalesce,
     col,
     date_add,
     date_format,
@@ -1562,3 +1565,167 @@ def posexplode_outer(column: Column | str) -> Column:
     raise UnsupportedOperationException(
         "posexplode_outer is not supported yet (see posexplode; use explode_outer without ordinal)"
     )
+
+
+# ---- FN-A: ordering / null / math -------------------------------------------------------------
+
+
+def sign(col: Column | str) -> Column:
+    """Sign as -1/0/1 (PySpark ``functions.sign``; alias of ``signum``)."""
+    return _scalar("sign", col)
+
+
+def ifnull(col: Column | str, alt: Column | str) -> Column:
+    """Replace NULL with ``alt`` (PySpark ``functions.ifnull``; 2-arg ``coalesce``)."""
+    return coalesce(_as_column_arg(col, as_lit=False), _as_column_arg(alt, as_lit=False))
+
+
+def nvl(col1: Column | str, col2: Column | str) -> Column:
+    """Replace NULL with ``col2`` (PySpark ``functions.nvl``; 2-arg ``coalesce``)."""
+    return coalesce(_as_column_arg(col1, as_lit=False), _as_column_arg(col2, as_lit=False))
+
+
+def asc(col: Column | str) -> Column:
+    """Ascending sort marker, nulls first (PySpark ``functions.asc``)."""
+    return _as_column_arg(col, as_lit=False).asc()
+
+
+def desc(col: Column | str) -> Column:
+    """Descending sort marker, nulls last (PySpark ``functions.desc``)."""
+    return _as_column_arg(col, as_lit=False).desc()
+
+
+def asc_nulls_first(col: Column | str) -> Column:
+    """Ascending sort, nulls first (PySpark ``functions.asc_nulls_first``; alias of ``asc``)."""
+    return asc(col)
+
+
+def desc_nulls_last(col: Column | str) -> Column:
+    """Descending sort, nulls last (PySpark ``functions.desc_nulls_last``; alias of ``desc``)."""
+    return desc(col)
+
+
+def e() -> Column:
+    """Euler's number (PySpark ``functions.e``).
+
+    Foldable. Implemented as ``exp(1)`` so the Spark-door SQL global-agg path
+    (``select(sum(x), e())``) stays DOUBLE — a bare ``lit(math.e)`` re-embeds as
+    a decimal literal (``2.718…``) and comes back ``decimal128``.
+    """
+    return Column(
+        exp(lit(1))._inner,
+        spark_display="E()",
+        projection_name="E()",
+        sql_expr="exp(1)",
+        is_foldable=True,
+    )
+
+
+def pi() -> Column:
+    """π (PySpark ``functions.pi``). Foldable DataFusion ``pi()``."""
+    return Column(
+        _native.PyColumn.sql("pi()"),
+        spark_display="pi()",
+        projection_name="pi()",
+        sql_expr="pi()",
+        is_foldable=True,
+    )
+
+
+def negative(col: Column | str) -> Column:
+    """Unary minus (PySpark ``functions.negative``)."""
+    return -_as_column_arg(col, as_lit=False)
+
+
+def positive(col: Column | str) -> Column:
+    """Unary plus — identity column (PySpark ``functions.positive``)."""
+    return _as_column_arg(col, as_lit=False)
+
+
+def pmod(dividend: Column | str, divisor: Column | str) -> Column:
+    """Positive modulo (PySpark ``functions.pmod``).
+
+    ``((dividend % divisor) + divisor) % divisor`` matches Spark's sign-of-divisor
+    remainder (``pmod(-10, 3) == 2``). ``call_scalar("pmod")`` is not wired.
+    """
+    left = _as_column_arg(dividend, as_lit=False)
+    right = _as_column_arg(divisor, as_lit=False)
+    return ((left % right) + right) % right
+
+
+def expm1(col: Column | str) -> Column:
+    """``exp(col) - 1`` (PySpark ``functions.expm1``)."""
+    return exp(col) - lit(1)
+
+
+def ln(col: Column | str) -> Column:
+    """Natural logarithm (PySpark ``functions.ln``; alias of ``log``)."""
+    return _scalar("ln", col)
+
+
+def log2(col: Column | str) -> Column:
+    """Base-2 logarithm (PySpark ``functions.log2``).
+
+    ``call_scalar`` has no ``log2`` arm; SHIM as ``log(col) / log(2)``.
+    """
+    return log(col) / log(lit(2))
+
+
+def log1p(col: Column | str) -> Column:
+    """``log(1 + col)`` (PySpark ``functions.log1p``)."""
+    return log(lit(1) + _as_column_arg(col, as_lit=False))
+
+
+def degrees(col: Column | str) -> Column:
+    """Radians to degrees (PySpark ``functions.degrees``)."""
+    return _as_column_arg(col, as_lit=False) * lit(180) / pi()
+
+
+def radians(col: Column | str) -> Column:
+    """Degrees to radians (PySpark ``functions.radians``)."""
+    return _as_column_arg(col, as_lit=False) * pi() / lit(180)
+
+
+def nvl2(col1: Column | str, col2: Column | str, col3: Column | str) -> Column:
+    """If ``col1`` is not null return ``col2`` else ``col3`` (PySpark ``functions.nvl2``)."""
+    return when(~isnull(col1), _as_column_arg(col2, as_lit=False)).otherwise(
+        _as_column_arg(col3, as_lit=False)
+    )
+
+
+def nullif(col1: Column | str, col2: Column | str) -> Column:
+    """NULL if the arguments compare equal, else ``col1`` (PySpark ``functions.nullif``)."""
+    left = _as_column_arg(col1, as_lit=False)
+    right = _as_column_arg(col2, as_lit=False)
+    return when(left == right, lit(None)).otherwise(left)
+
+
+def equal_null(col1: Column | str, col2: Column | str) -> Column:
+    """Null-safe equality (PySpark ``functions.equal_null``; ``Column.eqNullSafe``)."""
+    return _as_column_arg(col1, as_lit=False).eqNullSafe(_as_column_arg(col2, as_lit=False))
+
+
+def zeroifnull(col: Column | str) -> Column:
+    """Replace NULL with 0 (PySpark ``functions.zeroifnull``)."""
+    return coalesce(_as_column_arg(col, as_lit=False), lit(0))
+
+
+def nullifzero(col: Column | str) -> Column:
+    """NULL when the value is 0 (PySpark ``functions.nullifzero``)."""
+    return nullif(col, lit(0))
+
+
+def isnotnull(col: Column | str) -> Column:
+    """True when the value is not NULL (PySpark ``functions.isnotnull``)."""
+    return ~isnull(col)
+
+
+def cbrt(col: Column | str) -> Column:
+    """Cube root (PySpark ``functions.cbrt``).
+
+    ``pow(col, 1/3)`` is NaN on negatives (IEEE); Spark returns the real root.
+    Negatives use ``-pow(-col, 1/3)`` so the named hazard is not a lie.
+    """
+    column = _as_column_arg(col, as_lit=False)
+    third = lit(1.0 / 3.0)
+    return when(column < lit(0), -pow(-column, third)).otherwise(pow(column, third))
