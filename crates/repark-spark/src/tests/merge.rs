@@ -943,6 +943,389 @@ async fn merge_matched_and_threshold_update_or_delete() {
     );
 }
 
+// ================================================================================================
+// MG-2 lowering-strictness pins (M2 / M3 / M8 / M10) — Spark-door execute path.
+// Lowering twins live in `src/merge.rs`. Repro shapes r5 / r6 / r7 / r12 converted, not imported.
+// ================================================================================================
+
+/// M2 / r5 — Oracle-style `UPDATE SET … WHERE` refuses at the door (not silently dropped).
+#[tokio::test]
+async fn merge_oracle_style_update_where_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.r5_t (id INT NOT NULL, qty INT NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.r5_t VALUES (1, 100), (2, 200)",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.r5_s (id INT NOT NULL, qty INT NOT NULL) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.r5_s VALUES (1, 0), (2, 7)",
+    )
+    .await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.r5_t AS t USING ice.sales.r5_s AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET qty = s.qty WHERE s.qty > 0",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("UPDATE SET … WHERE"),
+        "expected Oracle-style UPDATE WHERE refusal, got: {err}"
+    );
+    assert_eq!(
+        qty_table_rows(&ctx, &catalogs, "ice.sales.r5_t").await,
+        vec![(1, 100), (2, 200)],
+        "failed MERGE must leave rows untouched"
+    );
+}
+
+/// M2 — Oracle-style `DELETE WHERE` on UPDATE SET refuses.
+#[tokio::test]
+async fn merge_oracle_style_delete_where_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(2, "bee")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let before = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name DELETE WHERE s.name = 'bee'",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("DELETE WHERE"),
+        "expected Oracle-style DELETE WHERE refusal, got: {err}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        before,
+        "failed MERGE must leave rows untouched"
+    );
+}
+
+/// M2 — Oracle-style `INSERT … WHERE` refuses.
+#[tokio::test]
+async fn merge_oracle_style_insert_where_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(4, "dee")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let before = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name) WHERE s.id > 0",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string().contains("INSERT … WHERE"),
+        "expected Oracle-style INSERT WHERE refusal, got: {err}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        before,
+        "failed MERGE must leave rows untouched"
+    );
+}
+
+/// M3 / r7 — source-qualified SET target refuses and writes nothing.
+#[tokio::test]
+async fn merge_source_qualified_set_target_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(1, "new")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let before = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET s.name = 'hacked'",
+    )
+    .await
+    .unwrap_err();
+    let message = err.to_string();
+    assert!(
+        message.contains("`s`"),
+        "must name the received qualifier: {message}"
+    );
+    assert!(
+        message.contains("target alias `t`"),
+        "must name the target alias: {message}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        before,
+        "failed MERGE must leave rows untouched"
+    );
+}
+
+/// M3 — `t.addr.city` refuses with the nested-field needle.
+#[tokio::test]
+async fn merge_nested_field_set_target_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(1, "new")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.addr.city = s.name",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("nested-field assignment is not supported"),
+        "expected nested-field refusal, got: {err}"
+    );
+}
+
+/// M3 positive — `t.name = …` and bare `name = …` still lower and execute.
+#[tokio::test]
+async fn merge_target_qualified_and_bare_set_targets_execute() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(2, "bee")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.name = s.name",
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "bee".to_string()),
+            (3, "c".to_string()),
+        ]
+    );
+
+    register_source(&ctx, "updates2", &[(3, "cee")]);
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates2 AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name",
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        vec![
+            (1, "a".to_string()),
+            (2, "bee".to_string()),
+            (3, "cee".to_string()),
+        ]
+    );
+}
+
+/// M8 / r6 — column-list-less `INSERT VALUES` is refused with the ANSI needle.
+#[tokio::test]
+async fn merge_insert_without_column_list_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.r6_t (a STRING, b STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.r6_t VALUES ('a0', 'b0')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.r6_s (a STRING, b STRING) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.r6_s VALUES ('a1', 'b1')",
+    )
+    .await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.r6_t AS t USING ice.sales.r6_s AS s ON t.a = s.a \
+             WHEN NOT MATCHED THEN INSERT VALUES (s.b, s.a)",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("MERGE INSERT requires an explicit column list: INSERT (a, b) VALUES (…)"),
+        "must copy the ANSI needle verbatim, got: {err}"
+    );
+}
+
+/// M10 / r12 — unconditional MATCHED clause before a later MATCHED clause refuses.
+#[tokio::test]
+async fn merge_non_last_unconditional_matched_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(1, "b")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let before = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN MATCHED THEN DELETE \
+             WHEN MATCHED AND s.name = 'b' THEN UPDATE SET name = s.name",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION"),
+        "expected Spark error-class wording, got: {err}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        before,
+        "failed MERGE must leave rows untouched"
+    );
+}
+
+/// M10 — unconditional NOT MATCHED clause before a later NOT MATCHED clause refuses.
+#[tokio::test]
+async fn merge_non_last_unconditional_not_matched_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    register_source(&ctx, "updates", &[(4, "dee")]);
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.t AS SELECT * FROM src",
+    )
+    .await;
+    let before = table_rows(&ctx, &catalogs, "ice.sales.t").await;
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.t AS t USING updates AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name) \
+             WHEN NOT MATCHED AND s.name = 'dee' THEN INSERT (id, name) VALUES (s.id, s.name)",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION"),
+        "expected Spark error-class wording, got: {err}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.t").await,
+        before,
+        "failed MERGE must leave rows untouched"
+    );
+}
+
+/// Read `(id, qty)` pairs sorted by id — local oracle for the M2 / r5 pin.
+async fn qty_table_rows(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+) -> Vec<(i32, i32)> {
+    let batches = execute(
+        ctx,
+        catalogs,
+        &format!("SELECT id, qty FROM {table} ORDER BY id"),
+    )
+    .await
+    .unwrap()
+    .collect()
+    .await
+    .unwrap();
+    let mut rows = Vec::new();
+    for batch in &batches {
+        let ids = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        let quantities = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        for index in 0..batch.num_rows() {
+            rows.push((ids.value(index), quantities.value(index)));
+        }
+    }
+    rows
+}
+
 /// Read `(id, score)` pairs sorted by id — local oracle for the two G3 score-arm pins.
 async fn score_table_rows(
     ctx: &SessionContext,

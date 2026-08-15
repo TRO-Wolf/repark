@@ -102,6 +102,16 @@ code is not here — only tests, shared fixtures, and the module manifest.
   [`../../../../task/g5br-range-residuals-ledger.md`](../../../../task/g5br-range-residuals-ledger.md),
   [`../../../../task/z4-residuals-ledger.md`](../../../../task/z4-residuals-ledger.md),
   [`../../../../task/w4-z-residuals-ledger.md`](../../../../task/w4-z-residuals-ledger.md).
+- **MG-2 MERGE lowering strictness (2026-08-15)** — `merge.rs` gains execute-path
+  pins for M2 (`merge_oracle_style_update_where_refuses` / `_delete_where_` /
+  `_insert_where_`), M3 (`merge_source_qualified_set_target_refuses`,
+  `merge_nested_field_set_target_refuses`,
+  `merge_target_qualified_and_bare_set_targets_execute`), M8
+  (`merge_insert_without_column_list_refuses`; `INSERT *` stays on
+  `merge_star_forms_upsert`), M10 (`merge_non_last_unconditional_matched_refuses`,
+  `merge_non_last_unconditional_not_matched_refuses`; first-match-wins stays on
+  `merge_clause_order_first_match_wins` / `merge_matched_and_arm_order_update_then_delete`).
+  Lowering twins live in `../merge.rs`. Ledger: `task/mg2-lowering-strictness-ledger.md`.
 - **N-2b / G3 deferred MERGE pins (2026-08-11)** — `merge.rs` gains four Spark-door SQL pins
   that mirror the N-2 Python differential corpus shapes G-4's file ban deferred:
   `merge_duplicate_source_keys_with_matched_raises`,

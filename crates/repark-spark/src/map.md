@@ -20,7 +20,9 @@ wrapper.
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
   `return` path of the rewrite — see the `time_travel.rs` row below.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
-  star-sentinel rewrite); 10 in-module tests.
+  star-sentinel rewrite); 24 in-module tests (MG-2: M2 Oracle sub-predicates, M3
+  assignment-target qualification, M8 INSERT column list, M10 non-last
+  unconditional clause).
 - `insert_overwrite.rs` — INSERT OVERWRITE: empty probe/validate/provider-wipe (C1-Q-001) +
   non-empty r23 OV1 stage-then-swap; 2 in-module tests (`assignment_type_unit_tests`).
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
@@ -200,7 +202,7 @@ part of that section's pin — changing either one changes both.
 | ...do this | go to |
 |---|---|
 | Trace statement routing / targeted refusals | `router.rs` |
-| MERGE lowering / star sentinel | `merge.rs` |
+| MERGE lowering / star sentinel / MG-2 door refusals | `merge.rs` |
 | INSERT OVERWRITE probe / OV1 swap | `insert_overwrite.rs` |
 | Branch/tag DDL, write-to-branch sniff | `ref_ddl.rs` |
 | Maintenance CALL procedures | `call.rs` |

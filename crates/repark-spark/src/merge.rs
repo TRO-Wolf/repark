@@ -11,7 +11,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     Assignment, AssignmentTarget, Expr, MergeAction, MergeClause, MergeClauseKind, MergeInsertExpr,
-    MergeInsertKind, ObjectName, TableFactor,
+    MergeInsertKind, MergeUpdateExpr, ObjectName, TableFactor,
 };
 use datafusion::sql::sqlparser::keywords::Keyword;
 use datafusion::sql::sqlparser::tokenizer::Token;
@@ -30,6 +30,24 @@ use crate::{catalog_handle, name_parts};
 /// hand-writing the exact substituted shape is indistinguishable from the star and behaves as
 /// one, and any other use surfaces as an unknown-column error downstream.
 const STAR_SENTINEL: &str = "__repark_merge_star_sentinel__";
+
+/// Oracle-style action sub-predicates (`UPDATE SET … WHERE` / `DELETE WHERE` /
+/// `INSERT … WHERE`) are not Spark MERGE grammar. Copied into both doors.
+const ORACLE_STYLE_SUB_PREDICATE_REFUSAL: &str = "Oracle-style `UPDATE SET … WHERE` / `DELETE WHERE` / `INSERT … WHERE` is not Spark MERGE \
+     grammar; move the predicate into `WHEN MATCHED AND <cond>` / `WHEN NOT MATCHED AND <cond>`";
+
+/// Verbatim ANSI-door needle (A8): Spark `INSERT VALUES` without a column list is refused
+/// the same way. `INSERT *` is rewritten to a sentinel list before this check runs.
+const MERGE_INSERT_COLUMN_LIST_REQUIRED: &str =
+    "MERGE INSERT requires an explicit column list: INSERT (a, b) VALUES (…)";
+
+/// Spark analysis error-class: an unconditioned MATCHED clause that is not last of its kind.
+const NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION: When there are more than one MATCHED clauses in a \
+     MERGE statement, only the last MATCHED clause can omit the condition";
+
+/// Spark analysis error-class: an unconditioned NOT MATCHED clause that is not last of its kind.
+const NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: &str = "NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION: When there are more than one NOT MATCHED \
+     clauses in a MERGE statement, only the last NOT MATCHED clause can omit the condition";
 
 /// ===========================================================================================
 /// Route a parsed `MERGE INTO` statement: lower the AST to a [`MergeSpec`], resolve the target's
@@ -168,13 +186,14 @@ fn lower(
     let mut matched = Vec::new();
     let mut not_matched = Vec::new();
     for clause in clauses {
-        lower_clause(clause, &mut matched, &mut not_matched)?;
+        lower_clause(clause, &target_alias, &mut matched, &mut not_matched)?;
     }
     if matched.is_empty() && not_matched.is_empty() {
         return Err(DataFusionError::Plan(
             "MERGE INTO requires at least one WHEN clause".to_string(),
         ));
     }
+    refuse_non_last_unconditional_clause(&matched, &not_matched)?;
 
     let spec = MergeSpec {
         target: TableIdent::new(NamespaceIdent::new(namespace.clone()), table_name.clone()),
@@ -191,17 +210,25 @@ fn lower(
 /// Sort one WHEN clause into the matched / not-matched lists, validating the kind–action pairing.
 fn lower_clause(
     clause: &MergeClause,
+    target_alias: &str,
     matched: &mut Vec<MatchedClause>,
     not_matched: &mut Vec<InsertClause>,
 ) -> Result<()> {
     let predicate_sql = clause.predicate.as_ref().map(ToString::to_string);
     match (&clause.clause_kind, &clause.action) {
         (MergeClauseKind::Matched, MergeAction::Update(update_expr)) => {
-            let assignments = &update_expr.assignments;
+            let MergeUpdateExpr {
+                update_token: _,
+                assignments,
+                update_predicate,
+                delete_predicate,
+            } = update_expr;
+            refuse_oracle_style_sub_predicate(update_predicate.as_ref())?;
+            refuse_oracle_style_sub_predicate(delete_predicate.as_ref())?;
             let action = match star_update(assignments)? {
                 Some(all) => all,
                 None => MatchedAction::Update {
-                    assignments: lower_assignments(assignments)?,
+                    assignments: lower_assignments(assignments, target_alias)?,
                 },
             };
             matched.push(MatchedClause {
@@ -224,6 +251,14 @@ fn lower_clause(
             MergeClauseKind::NotMatched | MergeClauseKind::NotMatchedByTarget,
             MergeAction::Insert(insert),
         ) => {
+            let MergeInsertExpr {
+                insert_token: _,
+                columns,
+                kind_token: _,
+                kind,
+                insert_predicate,
+            } = insert;
+            refuse_oracle_style_sub_predicate(insert_predicate.as_ref())?;
             if star_insert(insert) {
                 not_matched.push(InsertClause {
                     predicate_sql,
@@ -231,7 +266,7 @@ fn lower_clause(
                 });
                 return Ok(());
             }
-            let MergeInsertKind::Values(values) = &insert.kind else {
+            let MergeInsertKind::Values(values) = kind else {
                 return Err(DataFusionError::NotImplemented(
                     "MERGE `INSERT ROW` is not supported; use INSERT (cols) VALUES (…)".to_string(),
                 ));
@@ -241,10 +276,19 @@ fn lower_clause(
                     "MERGE INSERT expects exactly one VALUES row".to_string(),
                 ));
             };
+            if columns.is_empty() {
+                return Err(DataFusionError::Plan(
+                    MERGE_INSERT_COLUMN_LIST_REQUIRED.to_string(),
+                ));
+            }
+            let columns = columns
+                .iter()
+                .map(|name| resolve_merge_column(name, target_alias, "INSERT column"))
+                .collect::<Result<Vec<_>>>()?;
             not_matched.push(InsertClause {
                 predicate_sql,
                 action: InsertAction::Explicit {
-                    columns: insert.columns.iter().map(object_name_column).collect(),
+                    columns,
                     values_sql: row.iter().map(ToString::to_string).collect(),
                 },
             });
@@ -318,8 +362,12 @@ fn expr_is_sentinel(expr: &Expr) -> bool {
     matches!(expr, Expr::Identifier(ident) if ident.value == STAR_SENTINEL)
 }
 
-/// `SET col = expr` pairs; a qualified target (`t.col`) keeps only the column name.
-fn lower_assignments(assignments: &[Assignment]) -> Result<Vec<(String, String)>> {
+/// `SET col = expr` pairs. Accepts a bare column or `<target-alias>.column`; any other
+/// qualifier or a three-or-more-part (nested) name is refused.
+fn lower_assignments(
+    assignments: &[Assignment],
+    target_alias: &str,
+) -> Result<Vec<(String, String)>> {
     assignments
         .iter()
         .map(|assignment| {
@@ -328,12 +376,84 @@ fn lower_assignments(assignments: &[Assignment]) -> Result<Vec<(String, String)>
                     "MERGE UPDATE SET (a, b) = … tuple assignment is not supported".to_string(),
                 ));
             };
-            let column = name_parts(name).pop().ok_or_else(|| {
-                DataFusionError::Plan(format!("cannot resolve SET target `{name}`"))
-            })?;
+            let column = resolve_merge_column(name, target_alias, "SET target")?;
             Ok((column, assignment.value.to_string()))
         })
         .collect()
+}
+
+/// Loud Plan error when an Oracle-style action sub-predicate is present.
+fn refuse_oracle_style_sub_predicate(predicate: Option<&Expr>) -> Result<()> {
+    if predicate.is_some() {
+        return Err(DataFusionError::Plan(
+            ORACLE_STYLE_SUB_PREDICATE_REFUSAL.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// After clause collection: an unconditioned clause may only be last of its kind.
+fn refuse_non_last_unconditional_clause(
+    matched: &[MatchedClause],
+    not_matched: &[InsertClause],
+) -> Result<()> {
+    if matched
+        .iter()
+        .enumerate()
+        .any(|(index, clause)| clause.predicate_sql.is_none() && index + 1 < matched.len())
+    {
+        return Err(DataFusionError::Plan(
+            NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION.to_string(),
+        ));
+    }
+    if not_matched
+        .iter()
+        .enumerate()
+        .any(|(index, clause)| clause.predicate_sql.is_none() && index + 1 < not_matched.len())
+    {
+        return Err(DataFusionError::Plan(
+            NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION.to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// Bare column, or `<target-alias>.column` (qualifier compared case-insensitively to the
+/// statement's target alias). Three-or-more-part names are nested-field assignment.
+fn resolve_merge_column(name: &ObjectName, target_alias: &str, construct: &str) -> Result<String> {
+    let parts = name_parts(name);
+    match parts.as_slice() {
+        [] => Err(DataFusionError::Plan(format!(
+            "cannot resolve {construct} `{name}`"
+        ))),
+        [column] => Ok(column.clone()),
+        [qualifier, column] => {
+            if qualifier.eq_ignore_ascii_case(unquoted_ident(target_alias)) {
+                Ok(column.clone())
+            } else {
+                Err(DataFusionError::Plan(format!(
+                    "{construct} qualifier `{qualifier}` is not the MERGE target alias `{target_alias}`"
+                )))
+            }
+        }
+        _ => Err(DataFusionError::Plan(
+            "nested-field assignment is not supported".to_string(),
+        )),
+    }
+}
+
+/// Strip a matching pair of `"` or `` ` `` from a rendered identifier so alias comparison
+/// uses the ident value, not the quote style.
+fn unquoted_ident(rendered: &str) -> &str {
+    let trimmed = rendered.trim();
+    let bytes = trimmed.as_bytes();
+    if bytes.len() >= 2 {
+        let quote = bytes[0];
+        if matches!(quote, b'"' | b'`') && bytes[bytes.len() - 1] == quote {
+            return &trimmed[1..trimmed.len() - 1];
+        }
+    }
+    trimmed
 }
 
 /// The MERGE target: a plain table factor with an optional alias. The alias is rendered with
@@ -579,5 +699,242 @@ mod tests {
         );
         let err = lower(&table, &source, &on, &clauses).unwrap_err();
         assert!(err.to_string().contains("three-part"));
+    }
+
+    fn lower_error(sql: &str) -> String {
+        let (table, source, on, clauses) = parse_merge(sql);
+        lower(&table, &source, &on, &clauses)
+            .expect_err("lowering must refuse")
+            .to_string()
+    }
+
+    /// M2 / r5 — Oracle-style `UPDATE SET … WHERE` is destructured and refused, not dropped.
+    #[test]
+    fn oracle_style_update_where_predicate_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name WHERE s.name IS NOT NULL",
+        );
+        assert!(
+            err.contains("UPDATE SET … WHERE"),
+            "must name the UPDATE WHERE construct: {err}"
+        );
+        assert!(
+            err.contains("is not Spark MERGE grammar"),
+            "must name the Spark form: {err}"
+        );
+        assert!(
+            err.contains("WHEN MATCHED AND <cond>"),
+            "must name the Spark rewrite: {err}"
+        );
+    }
+
+    /// M2 — Oracle-style `UPDATE SET … DELETE WHERE` is destructured and refused.
+    #[test]
+    fn oracle_style_delete_where_predicate_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name DELETE WHERE s.name IS NULL",
+        );
+        assert!(
+            err.contains("DELETE WHERE"),
+            "must name the DELETE WHERE construct: {err}"
+        );
+        assert!(
+            err.contains("is not Spark MERGE grammar"),
+            "must name the Spark form: {err}"
+        );
+    }
+
+    /// M2 — Oracle-style `INSERT … WHERE` is destructured and refused.
+    #[test]
+    fn oracle_style_insert_where_predicate_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name) WHERE s.id > 0",
+        );
+        assert!(
+            err.contains("INSERT … WHERE"),
+            "must name the INSERT WHERE construct: {err}"
+        );
+        assert!(
+            err.contains("is not Spark MERGE grammar"),
+            "must name the Spark form: {err}"
+        );
+    }
+
+    /// M3 / r7 — a source-qualified SET target is refused, naming qualifier and target alias.
+    #[test]
+    fn source_qualified_set_target_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET s.name = 'hacked'",
+        );
+        assert!(
+            err.contains("`s`"),
+            "must name the received qualifier: {err}"
+        );
+        assert!(
+            err.contains("target alias `t`"),
+            "must name the target alias: {err}"
+        );
+    }
+
+    /// M3 — three-or-more-part SET targets refuse as nested-field assignment.
+    #[test]
+    fn nested_field_set_target_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.addr.city = s.name",
+        );
+        assert!(
+            err.contains("nested-field assignment is not supported"),
+            "{err}"
+        );
+    }
+
+    /// M3 positive — `t.name` and bare `name` both lower to the target column.
+    #[test]
+    fn target_qualified_and_bare_set_targets_lower() {
+        let (table, source, on, clauses) = parse_merge(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET t.name = s.name",
+        );
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        let MatchedAction::Update { assignments } = &spec.matched[0].action else {
+            panic!("expected an UPDATE clause");
+        };
+        assert_eq!(assignments[0], ("name".to_string(), "s.name".to_string()));
+
+        let (table, source, on, clauses) = parse_merge(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET name = s.name",
+        );
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        let MatchedAction::Update { assignments } = &spec.matched[0].action else {
+            panic!("expected an UPDATE clause");
+        };
+        assert_eq!(assignments[0], ("name".to_string(), "s.name".to_string()));
+
+        let (table, source, on, clauses) = parse_merge(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET T.name = s.name",
+        );
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        let MatchedAction::Update { assignments } = &spec.matched[0].action else {
+            panic!("expected an UPDATE clause");
+        };
+        assert_eq!(assignments[0].0, "name");
+    }
+
+    /// M3 — quoted target alias + `"Tgt".col` still resolves (unquote before compare).
+    #[test]
+    fn quoted_target_alias_set_target_lowers() {
+        let (table, source, on, clauses) = parse_merge(
+            "MERGE INTO ice.sales.t AS \"Tgt\" USING u AS s ON \"Tgt\".id = s.id \
+             WHEN MATCHED THEN UPDATE SET \"Tgt\".name = s.name",
+        );
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        assert_eq!(spec.target_alias, "\"Tgt\"");
+        let MatchedAction::Update { assignments } = &spec.matched[0].action else {
+            panic!("expected an UPDATE clause");
+        };
+        assert_eq!(assignments[0], ("name".to_string(), "s.name".to_string()));
+    }
+
+    /// M3 — source-qualified INSERT columns refuse, naming qualifier and target alias.
+    #[test]
+    fn source_qualified_insert_column_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (s.id, s.name) VALUES (s.id, s.name)",
+        );
+        assert!(
+            err.contains("`s`"),
+            "must name the received qualifier: {err}"
+        );
+        assert!(
+            err.contains("target alias `t`"),
+            "must name the target alias: {err}"
+        );
+    }
+
+    /// M3 — three-or-more-part INSERT columns refuse as nested-field assignment.
+    #[test]
+    fn nested_field_insert_column_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (t.addr.city) VALUES (s.name)",
+        );
+        assert!(
+            err.contains("nested-field assignment is not supported"),
+            "{err}"
+        );
+    }
+
+    /// M8 / r6 — column-list-less `INSERT VALUES` is refused with the ANSI needle.
+    #[test]
+    fn insert_without_column_list_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT VALUES (s.id, s.name)",
+        );
+        assert!(
+            err.contains(MERGE_INSERT_COLUMN_LIST_REQUIRED),
+            "must copy the ANSI needle verbatim: {err}"
+        );
+    }
+
+    /// M8 positive — `INSERT *` still lowers to the star marker.
+    #[test]
+    fn insert_star_still_lowers() {
+        let (table, source, on, clauses) = parse_merge(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT *",
+        );
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        assert!(matches!(spec.not_matched[0].action, InsertAction::All));
+    }
+
+    /// M10 / r12 — an unconditioned MATCHED clause before another MATCHED clause refuses.
+    #[test]
+    fn non_last_unconditional_matched_clause_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED THEN DELETE \
+             WHEN MATCHED AND s.name = 'b' THEN UPDATE SET name = s.name",
+        );
+        assert!(
+            err.contains("NON_LAST_MATCHED_CLAUSE_OMIT_CONDITION"),
+            "{err}"
+        );
+    }
+
+    /// M10 — an unconditioned NOT MATCHED clause before another NOT MATCHED clause refuses.
+    #[test]
+    fn non_last_unconditional_not_matched_clause_refuses() {
+        let err = lower_error(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name) \
+             WHEN NOT MATCHED AND s.name = 'x' THEN INSERT (id, name) VALUES (s.id, s.name)",
+        );
+        assert!(
+            err.contains("NON_LAST_NOT_MATCHED_CLAUSE_OMIT_CONDITION"),
+            "{err}"
+        );
+    }
+
+    /// M10 positive — an unconditioned LAST MATCHED clause still lowers.
+    #[test]
+    fn unconditional_last_matched_clause_still_lowers() {
+        let (table, source, on, clauses) = parse_merge(
+            "MERGE INTO ice.sales.t AS t USING u AS s ON t.id = s.id \
+             WHEN MATCHED AND s.name = 'd' THEN DELETE \
+             WHEN MATCHED THEN UPDATE SET name = s.name",
+        );
+        let (_, spec) = lower(&table, &source, &on, &clauses).unwrap();
+        assert_eq!(spec.matched.len(), 2);
+        assert!(spec.matched[0].predicate_sql.is_some());
+        assert!(spec.matched[1].predicate_sql.is_none());
     }
 }

@@ -11,6 +11,11 @@ mapping of the SAME target type (design §6 R3).
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../merge.rs`.
+  **MG-2 (2026-08-15):** M2 Oracle `UPDATE SET … WHERE` / `DELETE WHERE` /
+  `INSERT … WHERE` refusals; M3 SET/INSERT target qualification + nested-field
+  refuse + target-qualified/bare positives + quoted-alias SET; M10 non-last unconditional MATCHED
+  and NOT MATCHED refusals + last-unconditional positive. M8 column-list
+  refuse was already pinned (`degenerate_update_and_insert_shapes_refuse`).
 
 ## Pointers
 

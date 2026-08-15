@@ -17,6 +17,11 @@ not this directory.
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
   case-insensitive source resolve-then-quote). Region: `scan_prune.rs` + thin
   `residual_join_key_filter`.
+- [mg2-lowering-strictness-ledger.md](mg2-lowering-strictness-ledger.md) — **MG-2
+  (2026-08-15):** MERGE lowering strictness. Both doors refuse Oracle-style
+  action sub-predicates (M2), misqualified / nested assignment targets (M3),
+  and non-last unconditional same-kind clauses (M10). Spark door adds the ANSI
+  INSERT column-list needle (M8). Door validation only; engine untouched.
 - [r6-namespace-guard-ledger.md](r6-namespace-guard-ledger.md) — **R-6 / G-6 Q1
   (2026-08-14):** namespace-create location guard. Core `create_namespace` +
   Spark `IF NOT EXISTS` + ANSI `CREATE SCHEMA IF NOT EXISTS` share
