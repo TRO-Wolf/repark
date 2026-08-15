@@ -19,15 +19,19 @@
 //!   * **Partition stamping.** A position-delete file is associated with the `(spec_id, partition)`
 //!     of the DATA file it deletes from — the commit validates the delete file's partition against
 //!     the registered spec. So the pairs are grouped by their target data file's OWN
-//!     `(spec_id, partition)` (read off the live manifests) and one delete file is written per group,
-//!     stamped with that group's [`PartitionKey`]. This mirrors Java `PositionDeleteWriter` (always
-//!     carries a per-data-file `PartitionKey`) and the fork's own merge-on-read DELETE/UPDATE arm in
-//!     `iceberg-datafusion`'s `physical_plan/delete.rs`, which `RePark`'s MERGE arm is built to match
-//!     file-for-file.
+//!     `(spec_id, partition)` (read off the live manifests) and one delete file is written per group.
+//!     A partitioned group is stamped with that group's [`PartitionKey`]. An unpartitioned group
+//!     still passes `partition_key = None` (empty-tuple semantics); when the resolved spec's id is
+//!     not 0 the writer is also chained `.with_partition_spec(spec)` so the file claims that spec
+//!     instead of the fork's `DEFAULT_PARTITION_SPEC_ID` (0) fallback. This mirrors Java
+//!     `PositionDeleteWriter` (always carries a per-data-file `PartitionSpec`) and the fork's own
+//!     merge-on-read DELETE/UPDATE arm in `iceberg-datafusion`'s `physical_plan/delete.rs`, which
+//!     `RePark`'s MERGE arm is built to match file-for-file.
 //!
 //! Reading the partition off the DATA FILE (not off the table's current default spec) is what makes
 //! the stamp correct: the row being deleted physically lives in that file, under the spec that file
-//! was written with.
+//! was written with. The unpartitioned `None` key is a *result* of that lookup; the spec id is
+//! threaded separately because a `None` key alone makes the fork stamp 0.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -37,7 +41,7 @@ use datafusion::error::{DataFusionError, Result};
 use futures::stream::{self, StreamExt};
 use iceberg::spec::{
     DataContentType, DataFile, DataFileFormat, ManifestContentType, MetricsConfig, PartitionKey,
-    Struct,
+    PartitionSpec, Struct,
 };
 use iceberg::table::Table;
 use iceberg::writer::base_writer::position_delete_writer::{
@@ -55,6 +59,10 @@ use uuid::Uuid;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::iceberg_err;
 use crate::write::writer_props::writer_properties_for;
+
+/// Iceberg default partition-spec id (fork `DEFAULT_PARTITION_SPEC_ID`). The position-delete
+/// writer stamps this when built with `partition_key = None` and no `.with_partition_spec`.
+const DEFAULT_PARTITION_SPEC_ID: i32 = 0;
 
 // === r20 P2a: merge ===
 /// One deleted row's identity: the data file it lives in, and its 0-based ordinal within that file.
@@ -92,12 +100,17 @@ pub(crate) fn sort_position_delete_pairs(pairs: &mut [PositionDeletePair]) {
 /// shortcut off the table's DEFAULT spec is the wrong predicate: under partition-spec evolution a
 /// table whose *current* default is unpartitioned can still hold live data files written under an
 /// earlier PARTITIONED spec, and those files' deletes must carry that spec's partition, not an empty
-/// one. (`RePark`'s own DDL cannot produce that state today, and the fork currently fails such a
-/// commit loud and atomically — `Partition value is not compatible` — so the bug is masked rather
-/// than live. It is still the wrong predicate, and a Glue table evolved by Spark/Java reaches the
-/// state.) A group whose resolved spec IS unpartitioned still gets a `None` partition key, so the
-/// unpartitioned case is a *result* of the lookup rather than an assumption ahead of it — the
-/// manifest walk is the same one the copy-on-write arm already does per MERGE.
+/// one. (`RePark`'s own DDL can produce that state via [`crate::write::alter::apply_partition_spec_changes`]
+/// — drop the last partition field — and a Glue table evolved by Spark/Java reaches it too.) A
+/// group whose resolved spec IS unpartitioned still gets a `None` partition key (empty-tuple
+/// semantics). That `None` is a *result* of the lookup, not an assumption keyed off the table's
+/// current default. It is not enough on its own: the fork's writer, given no key and no
+/// `.with_partition_spec`, stamps `DEFAULT_PARTITION_SPEC_ID` (0). When spec 0 is still the
+/// original *partitioned* spec, the commit then fails loud (`Partition value is not compatible`);
+/// when spec 0 happens to be unpartitioned too, the delete commits and never applies. So an
+/// unpartitioned group whose resolved spec id is not 0 also chains `.with_partition_spec(spec)`.
+/// The spec-0 unpartitioned path stays `None` + no configured spec — the fork default is correct
+/// only there. The manifest walk is the same one the copy-on-write arm already does per MERGE.
 ///
 /// The caller need not pre-sort: every group is sorted here immediately before it is written.
 ///
@@ -151,6 +164,15 @@ pub(crate) async fn write_position_deletes(
             })?
             .as_ref()
             .clone();
+        // Unpartitioned groups keep `partition_key = None` (empty tuple). The fork then stamps
+        // spec id 0 unless the resolved spec is configured on the builder — required whenever
+        // the looked-up spec is unpartitioned-but-not-spec-0 (M16).
+        let builder_spec = if spec.is_unpartitioned() && spec.spec_id() != DEFAULT_PARTITION_SPEC_ID
+        {
+            Some(spec.clone())
+        } else {
+            None
+        };
         let partition_key = if spec.is_unpartitioned() {
             None
         } else {
@@ -159,15 +181,22 @@ pub(crate) async fn write_position_deletes(
                     .map_err(iceberg_err)?,
             )
         };
-        prepared.push((group, partition_key));
+        prepared.push((group, partition_key, builder_spec));
     }
 
     let max_concurrent = concurrency.max_concurrent_files.max(1);
     if max_concurrent == 1 || prepared.len() <= 1 {
         let mut delete_files = Vec::with_capacity(prepared.len());
-        for (group, partition_key) in prepared {
+        for (group, partition_key, builder_spec) in prepared {
             delete_files.extend(
-                write_position_deletes_for_partition(table, &config, &group, partition_key).await?,
+                write_position_deletes_for_partition(
+                    table,
+                    &config,
+                    &group,
+                    partition_key,
+                    builder_spec,
+                )
+                .await?,
             );
         }
         return Ok(delete_files);
@@ -175,10 +204,17 @@ pub(crate) async fn write_position_deletes(
 
     // Parallelize ACROSS delete-file groups only (each group is already sorted). Bound by K.
     let results: Vec<Result<Vec<DataFile>>> = stream::iter(prepared)
-        .map(|(group, partition_key)| {
+        .map(|(group, partition_key, builder_spec)| {
             let config = config.clone();
             async move {
-                write_position_deletes_for_partition(table, &config, &group, partition_key).await
+                write_position_deletes_for_partition(
+                    table,
+                    &config,
+                    &group,
+                    partition_key,
+                    builder_spec,
+                )
+                .await
             }
         })
         .buffer_unordered(max_concurrent)
@@ -233,17 +269,22 @@ async fn data_file_partitions(table: &Table) -> Result<HashMap<String, (i32, Str
 /// ===========================================================================================
 /// Write ONE `(spec_id, partition)` group's pairs through the fork's `PositionDeleteFileWriter`.
 ///
-/// `pairs` must already be in spec `(file_path, pos)` order (the callers sort each group). The
-/// Parquet metrics config is `for_position_delete` — Java's choice, which keeps the `file_path` /
-/// `pos` bounds FULL so delete-file path pruning stays precise (the default `truncate(16)` would
-/// widen the path range and defeat it). A non-empty group that produced no file is an internal
-/// error, never a silent success: the deletes would be lost and the rows resurrected.
+/// `pairs` must already be in spec `(file_path, pos)` order (the callers sort each group).
+/// `builder_spec` is the resolved unpartitioned-but-not-spec-0 spec, if any: the fork's writer
+/// stamps `DEFAULT_PARTITION_SPEC_ID` (0) when `partition_key` is `None` unless
+/// `.with_partition_spec` is chained (M16). The spec-0 unpartitioned path passes `None` here so
+/// that construction stays byte-identical. The Parquet metrics config is `for_position_delete` —
+/// Java's choice, which keeps the `file_path` / `pos` bounds FULL so delete-file path pruning
+/// stays precise (the default `truncate(16)` would widen the path range and defeat it). A
+/// non-empty group that produced no file is an internal error, never a silent success: the
+/// deletes would be lost and the rows resurrected.
 /// ===========================================================================================
 async fn write_position_deletes_for_partition(
     table: &Table,
     config: &PositionDeleteWriterConfig,
     pairs: &[PositionDeletePair],
     partition_key: Option<PartitionKey>,
+    builder_spec: Option<PartitionSpec>,
 ) -> Result<Vec<DataFile>> {
     let location_generator =
         DefaultLocationGenerator::new(table.metadata().clone()).map_err(iceberg_err)?;
@@ -261,7 +302,11 @@ async fn write_position_deletes_for_partition(
         location_generator,
         file_name_generator,
     );
-    let mut writer = PositionDeleteFileWriterBuilder::new(rolling_builder, config.clone())
+    let mut writer_builder = PositionDeleteFileWriterBuilder::new(rolling_builder, config.clone());
+    if let Some(spec) = builder_spec {
+        writer_builder = writer_builder.with_partition_spec(spec);
+    }
+    let mut writer = writer_builder
         .build(partition_key)
         .await
         .map_err(iceberg_err)?;
@@ -430,6 +475,367 @@ mod tests {
         assert!(Arc::ptr_eq(&group[0].0, &path));
         assert_eq!(group[0].1, 0);
         assert_eq!(group[1].1, 1);
+    }
+
+    /// PIN M16 — a spec-evolved unpartitioned table (spec 0 partitioned → spec 1
+    /// unpartitioned) writes data under spec 1. The position-delete writer must stamp
+    /// that resolved spec id, not the fork's `DEFAULT_PARTITION_SPEC_ID` (0) fallback
+    /// that applies when `partition_key = None` and `.with_partition_spec` is omitted.
+    ///
+    /// Spec 0 is still the original *partitioned* spec, so a spec-0 empty-tuple delete
+    /// is a loud `Partition value is not compatible` `RowDelta` commit (fork
+    /// `ENGINE_CONTRACT` §7a), not a silently inapplicable delete. Mutation: drop
+    /// `.with_partition_spec` on the unpartitioned-but-not-spec-0 branch → this
+    /// asserts `partition_spec_id() == evolved` and turns RED.
+    #[tokio::test]
+    async fn evolved_unpartitioned_spec_position_delete_claims_resolved_spec_id() {
+        let warehouse = tempfile::TempDir::new().expect("temp warehouse");
+        let catalog = sales_memory_catalog(&warehouse).await;
+        let ident = create_identity_then_drop_to_unpartitioned(&catalog, "m16").await;
+        let evolved_spec_id = default_spec_id(&catalog, &ident).await;
+        assert_ne!(evolved_spec_id, DEFAULT_PARTITION_SPEC_ID);
+        assert!(default_spec_is_unpartitioned(&catalog, &ident).await);
+
+        append_id_v(&catalog, &ident, &[1, 2, 3], &["a", "b", "c"]).await;
+        let data_files = live_content_files(&catalog, &ident, DataContentType::Data).await;
+        assert_eq!(data_files.len(), 1, "one post-evolve data file");
+        assert_eq!(
+            data_files[0].partition_spec_id(),
+            evolved_spec_id,
+            "fixture: the data file must be written under the evolved spec"
+        );
+        let data_path: Arc<str> = Arc::from(data_files[0].file_path());
+
+        let table = catalog.load_table(&ident).await.expect("reload for writer");
+        let written = write_position_deletes(
+            &table,
+            &[(Arc::clone(&data_path), 1)],
+            WriteConcurrency::new(1).expect("K=1"),
+        )
+        .await
+        .expect("write position deletes for the spec-1 file");
+        assert_eq!(
+            written.len(),
+            1,
+            "one unpartitioned group ⇒ one delete file"
+        );
+        let merge_result = merge_delete_id(&catalog, &ident, 2).await;
+        assert_eq!(
+            written[0].partition_spec_id(),
+            evolved_spec_id,
+            "M16: the emitted delete must claim the resolved unpartitioned spec, not 0 \
+             (MERGE outcome: {merge_result:?})"
+        );
+        merge_result.expect("MoR MERGE delete on a spec-1 file must commit");
+
+        let committed =
+            live_content_files(&catalog, &ident, DataContentType::PositionDeletes).await;
+        assert_eq!(
+            committed.len(),
+            1,
+            "exactly one committed position-delete file"
+        );
+        assert_eq!(
+            committed[0].partition_spec_id(),
+            evolved_spec_id,
+            "the committed delete must carry the evolved spec (otherwise the row resurrects)"
+        );
+        assert_eq!(
+            scanned_ids(&catalog, &ident).await,
+            vec![1, 3],
+            "the spec-stamped delete must apply: id=2 is gone"
+        );
+    }
+
+    /// PIN M16 control — an unpartitioned-from-birth table is spec 0. The writer must keep
+    /// stamping 0 there (the fork default is correct only for this path). Guards the
+    /// unpartitioned-spec-0 branch against a blanket `.with_partition_spec` that would still
+    /// happen to emit 0 today but would couple this path to the evolved-spec fix.
+    #[tokio::test]
+    async fn unpartitioned_spec_zero_position_delete_still_claims_spec_zero() {
+        let warehouse = tempfile::TempDir::new().expect("temp warehouse");
+        let catalog = sales_memory_catalog(&warehouse).await;
+        let ident = create_unpartitioned_target(&catalog, "m16_spec0").await;
+        assert_eq!(
+            default_spec_id(&catalog, &ident).await,
+            DEFAULT_PARTITION_SPEC_ID
+        );
+        assert!(default_spec_is_unpartitioned(&catalog, &ident).await);
+
+        append_id_v(&catalog, &ident, &[1, 2], &["a", "b"]).await;
+        let data_files = live_content_files(&catalog, &ident, DataContentType::Data).await;
+        let data_path: Arc<str> = Arc::from(data_files[0].file_path());
+        let table = catalog.load_table(&ident).await.expect("reload");
+        let written = write_position_deletes(
+            &table,
+            &[(data_path, 0)],
+            WriteConcurrency::new(1).expect("K=1"),
+        )
+        .await
+        .expect("write spec-0 position deletes");
+        assert_eq!(written.len(), 1);
+        assert_eq!(
+            written[0].partition_spec_id(),
+            DEFAULT_PARTITION_SPEC_ID,
+            "unpartitioned spec 0 must keep stamping 0"
+        );
+    }
+
+    async fn sales_memory_catalog(warehouse: &tempfile::TempDir) -> Arc<dyn Catalog> {
+        use iceberg::NamespaceIdent;
+        let warehouse_path = warehouse
+            .path()
+            .to_str()
+            .expect("utf-8 warehouse path")
+            .to_string();
+        let catalog = crate::catalog::memory_catalog(&warehouse_path)
+            .await
+            .expect("memory catalog");
+        catalog
+            .create_namespace(&NamespaceIdent::new("sales".to_string()), HashMap::new())
+            .await
+            .expect("create namespace");
+        catalog
+    }
+
+    fn id_v_schema() -> iceberg::spec::Schema {
+        use iceberg::spec::{NestedField, PrimitiveType, Schema, Type};
+        Schema::builder()
+            .with_schema_id(0)
+            .with_fields(vec![
+                NestedField::required(1, "id", Type::Primitive(PrimitiveType::Int)).into(),
+                NestedField::optional(2, "v", Type::Primitive(PrimitiveType::String)).into(),
+            ])
+            .build()
+            .expect("id/v schema")
+    }
+
+    fn id_v_batch(ids: &[i32], values: &[&str]) -> RecordBatch {
+        use datafusion::arrow::array::{Int32Array, StringArray};
+        use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema};
+        RecordBatch::try_new(
+            Arc::new(ArrowSchema::new(vec![
+                Field::new("id", DataType::Int32, false),
+                Field::new("v", DataType::Utf8, true),
+            ])),
+            vec![
+                Arc::new(Int32Array::from(ids.to_vec())),
+                Arc::new(StringArray::from(
+                    values.iter().map(|value| Some(*value)).collect::<Vec<_>>(),
+                )),
+            ],
+        )
+        .expect("id/v batch")
+    }
+
+    async fn create_unpartitioned_target(catalog: &Arc<dyn Catalog>, name: &str) -> TableIdent {
+        use iceberg::{NamespaceIdent, TableCreation};
+        let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string());
+        catalog
+            .create_table(
+                ident.namespace(),
+                TableCreation::builder()
+                    .name(name.to_string())
+                    .schema(id_v_schema())
+                    .build(),
+            )
+            .await
+            .expect("create unpartitioned table");
+        ident
+    }
+
+    async fn create_identity_then_drop_to_unpartitioned(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+    ) -> TableIdent {
+        use iceberg::spec::{Transform, UnboundPartitionSpec};
+        use iceberg::{NamespaceIdent, TableCreation};
+
+        use crate::write::alter::{PartitionSpecChange, apply_partition_spec_changes};
+
+        let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string());
+        let initial_spec = UnboundPartitionSpec::builder()
+            .add_partition_field(1, "id", Transform::Identity)
+            .expect("add identity partition field")
+            .build();
+        catalog
+            .create_table(
+                ident.namespace(),
+                TableCreation::builder()
+                    .name(name.to_string())
+                    .schema(id_v_schema())
+                    .partition_spec(initial_spec)
+                    .properties(HashMap::from([(
+                        "write.merge.mode".to_string(),
+                        "merge-on-read".to_string(),
+                    )]))
+                    .build(),
+            )
+            .await
+            .expect("create identity-partitioned table");
+        let created = catalog.load_table(&ident).await.expect("load created");
+        assert_eq!(
+            created.metadata().default_partition_spec_id(),
+            DEFAULT_PARTITION_SPEC_ID,
+            "fixture: create-time spec is spec 0"
+        );
+        assert!(
+            !created
+                .metadata()
+                .default_partition_spec()
+                .is_unpartitioned(),
+            "fixture: spec 0 is partitioned"
+        );
+        apply_partition_spec_changes(
+            catalog.as_ref(),
+            &ident,
+            &[PartitionSpecChange::RemoveFieldByTransform {
+                source_name: "id".to_string(),
+                transform: Transform::Identity,
+            }],
+        )
+        .await
+        .expect("drop the only partition field");
+        ident
+    }
+
+    async fn default_spec_id(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> i32 {
+        catalog
+            .load_table(ident)
+            .await
+            .expect("load")
+            .metadata()
+            .default_partition_spec_id()
+    }
+
+    async fn default_spec_is_unpartitioned(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> bool {
+        catalog
+            .load_table(ident)
+            .await
+            .expect("load")
+            .metadata()
+            .default_partition_spec()
+            .is_unpartitioned()
+    }
+
+    async fn append_id_v(
+        catalog: &Arc<dyn Catalog>,
+        ident: &TableIdent,
+        ids: &[i32],
+        values: &[&str],
+    ) {
+        crate::write::append::append(catalog, ident, vec![id_v_batch(ids, values)])
+            .await
+            .expect("append");
+    }
+
+    async fn merge_delete_id(
+        catalog: &Arc<dyn Catalog>,
+        ident: &TableIdent,
+        id: i32,
+    ) -> datafusion::error::Result<()> {
+        use datafusion::datasource::MemTable;
+        use datafusion::prelude::SessionContext;
+
+        use crate::write::merge::{MatchedAction, MatchedClause, MergeSpec, execute_merge};
+
+        let ctx = SessionContext::new();
+        let source_batch = id_v_batch(&[id], &["ignored"]);
+        ctx.register_table(
+            "src",
+            Arc::new(
+                MemTable::try_new(source_batch.schema(), vec![vec![source_batch]])
+                    .expect("source memtable"),
+            ),
+        )
+        .expect("register src");
+        execute_merge(
+            &ctx,
+            catalog,
+            &MergeSpec {
+                target: ident.clone(),
+                target_alias: "t".to_string(),
+                source_from_sql: "src".to_string(),
+                source_alias: "s".to_string(),
+                on_sql: "t.id = s.id".to_string(),
+                matched: vec![MatchedClause {
+                    predicate_sql: None,
+                    action: MatchedAction::Delete,
+                }],
+                not_matched: vec![],
+            },
+        )
+        .await
+    }
+
+    async fn scanned_ids(catalog: &Arc<dyn Catalog>, ident: &TableIdent) -> Vec<i32> {
+        use datafusion::arrow::array::Int32Array;
+        let table = catalog.load_table(ident).await.expect("load for scan");
+        let batches: Vec<RecordBatch> = futures::TryStreamExt::try_collect(
+            table
+                .scan()
+                .select(["id"])
+                .build()
+                .expect("build scan")
+                .to_arrow()
+                .await
+                .expect("scan to_arrow"),
+        )
+        .await
+        .expect("collect scan");
+        let mut ids: Vec<i32> = batches
+            .iter()
+            .flat_map(|batch| {
+                batch
+                    .column(0)
+                    .as_any()
+                    .downcast_ref::<Int32Array>()
+                    .expect("id is Int32")
+                    .values()
+                    .iter()
+                    .copied()
+            })
+            .collect();
+        ids.sort_unstable();
+        ids
+    }
+
+    /// Live DATA or DELETE files in the current snapshot (Added/Existing).
+    async fn live_content_files(
+        catalog: &Arc<dyn Catalog>,
+        ident: &TableIdent,
+        content: DataContentType,
+    ) -> Vec<DataFile> {
+        use iceberg::spec::ManifestContentType;
+        let table = catalog.load_table(ident).await.expect("load table");
+        let metadata = table.metadata();
+        let snapshot = metadata.current_snapshot().expect("current snapshot");
+        let manifest_list = snapshot
+            .load_manifest_list(table.file_io(), metadata)
+            .await
+            .expect("load manifest list");
+        let want = match content {
+            DataContentType::Data => ManifestContentType::Data,
+            DataContentType::PositionDeletes | DataContentType::EqualityDeletes => {
+                ManifestContentType::Deletes
+            }
+        };
+        let mut files = Vec::new();
+        for manifest_file in manifest_list.entries() {
+            if manifest_file.content != want {
+                continue;
+            }
+            let manifest = manifest_file
+                .load_manifest(table.file_io())
+                .await
+                .expect("load manifest");
+            for entry in manifest.entries() {
+                if entry.is_alive() && entry.data_file().content_type() == content {
+                    files.push(entry.data_file().clone());
+                }
+            }
+        }
+        files
     }
 
     /// PIN — fork #182 made `PartitionKey::new` fallible (`validate_partition_data`).

@@ -75,14 +75,17 @@ repark-core's error map.
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending
   `(file_path, pos)`) and partition stamping (each delete file carries the `(spec_id,
   partition)` of the data file it deletes from, resolved from the snapshot's DATA manifests —
-  never the table's current default spec). `#182` `PartitionKey::new` is fallible
-  (`validate_partition_data`); this module maps `iceberg::Error` through `iceberg_err`.
-  Also hosts the BUG-001 P0 valve
+  never the table's current default spec). Unpartitioned groups keep `partition_key = None`;
+  an evolved unpartitioned spec whose id is not 0 also chains `.with_partition_spec(spec)`
+  so the fork does not fall back to stamping spec 0 (**M16**,
+  [`../../../../task/m16-posdelete-specid-ledger.md`](../../../../task/m16-posdelete-specid-ledger.md)).
+  `#182` `PartitionKey::new` is fallible (`validate_partition_data`); this module maps
+  `iceberg::Error` through `iceberg_err`. Also hosts the BUG-001 P0 valve
   (`MorDmlKind` + `refuse_mor_unpartitioned_multi_spec_dml`, hoisted from the v1 SQL crate in
   phase-2 PR-3b): refuse merge-on-read SQL DELETE/UPDATE when the current default spec is
   unpartitioned and multi-spec history exists — the fork position-delete fast-path under-delete
   hazard this file's stamping discipline exists to avoid. The SQL door resolves the target and
-  calls it; the door's `bug001_*` battery pins it end to end.
+  calls it; the door's `bug001_*` battery pins it end to end. MERGE is never gated here.
 - `idents.rs` — shared Spark/DF `quote_ident_spark` + path-escape needles + `probes` tables
   (single source; MERGE `quote_ident` delegates here).
 - `writer_props.rs` — Parquet `WriterProperties` from Iceberg
@@ -122,6 +125,7 @@ repark-core's error map.
 | MERGE OOMs on a large target | target must register as a `StreamingTable` (`(_file, _pos)` identity), never a full-target `MemTable` |
 | MERGE produces duplicates | multiple-source-match must **error** (like Spark); serializable (default) commit arms carry `validate_no_conflicting_data`; snapshot isolation drops it (`write.merge.isolation-level`) |
 | Conflict-retry corrupts data | on commit conflicts re-read the target; don't cache stale file lists |
+| MoR MERGE on a spec-evolved unpartitioned table loud-fails `Partition value is not compatible` | position-delete writer must `.with_partition_spec` the resolved unpartitioned spec when it is not spec 0; `partition_key` stays `None` |
 
 First checks: `cargo test -p repark-iceberg write::` (all on `MemoryCatalog`). Escalate to:
 [../../map.md#debug](../../map.md).

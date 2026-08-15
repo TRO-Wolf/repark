@@ -20,6 +20,12 @@ not this directory.
   (2026-08-15):** MERGE reads `write.merge.isolation-level` (M13) + M15
   AlwaysTrue doc-truth. Resolver copies DML semantics (no trim). Snapshot
   drops data-conflict validation. Pins in `occ_tests.rs` (M19-A S5 split).
+- [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) — **M16
+  (2026-08-15):** evolved unpartitioned `partition_spec_id` on position
+  deletes. Spec 0 partitioned → spec 1 unpartitioned; MoR MERGE delete
+  was stamped spec 0 and loud-failed commit. Fix: `.with_partition_spec`
+  on the unpartitioned-but-not-spec-0 branch. Region:
+  `position_delete.rs` only.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
@@ -325,6 +331,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) | **M16** evolved unpartitioned position-delete `spec_id` |
 | [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) | **MG-1** scan-prune hardening — M1/M5/M6/M7 |
 | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) | **R-3 / G8** four pin-absences → Tested (JOIN both doors, ANSI WINDOW + FLOAT) |
 | [r4-tz8-ledger.md](r4-tz8-ledger.md) | **R-4 / TZ-8** CAST(ts AS DATE) / to_date session-zone dates; datediff residual |
@@ -352,6 +359,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
+| Read the M16 evolved-spec position-delete stamp | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) |
 | Read the G8 value-semantics matrix + liveness gate | [s2-g8-ledger.md](s2-g8-ledger.md) |
 | Read the R-3 flip of the four G8 pin-absences | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) |
 | Check a rule before acting | [lessons.md](lessons.md) |
