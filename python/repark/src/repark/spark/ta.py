@@ -30,10 +30,12 @@ partition order is undefined, exactly as in Spark; always pass a window with an 
 # === r21 T4: ta-etl ===
 **Windowed ETL throughput (measure-first, release wheel).** Same-spec TA windows in a single
 ``DataFrame.withColumns({...})`` lower to **one** DataFusion ``WindowAggExec`` (fused partition
-sort + multi-UDF pass). Sequential ``N x withColumn`` stacks **N** ``WindowAggExec`` nodes and
-re-walks the series N times — prefer batching. Helper :func:`over_columns` builds the fused dict
-without changing kernels. Hour-0 r21 T4: on the Arrow path the fused vs sequential gap is real
-but modest at operator scale once ``withColumns`` is already used; kernel work dominates; collect
+sort + multi-UDF pass). Since r23b N2, sequential **independent** same-spec ``withColumn`` calls
+also merge into that one operator (pinned in ``test_n2_plan_collapse.py``); only *dependent*
+stacks (a TA column consumed by a later TA window) still emit stacked operators, by design.
+:func:`over_columns` remains the preferred spelling — one fused pass, no reliance on the plan
+optimizer. Hour-0 r21 T4: on the Arrow path the fused vs sequential gap is real but modest at
+operator scale once ``withColumns`` is already used; kernel work dominates; collect
 Row materialization is a separate surface (not this module). See ``task/t4-ta-etl-ledger.md``.
 """
 
