@@ -243,6 +243,37 @@ Supported surface, for reference:
   the "increment roadmap" `crates/repark-spark/src/normalize.rs` points here for; the schedule
   itself lives in [../STATUS.md](../STATUS.md) and the campaign briefs, never in this registry.
 
+#### DML-4 — insert-only `MERGE` snapshot operation stamp
+
+- **repark** — an insert-only `MERGE` (no `WHEN MATCHED` arm) commits with operation `append`
+  under copy-on-write and `overwrite` under merge-on-read, inherited from the Java-faithful
+  commit classification (`commit_overwrite` vs the row-delta path).
+- **Apache Spark** — the same operation classes for the same modes — but a table whose
+  `write.merge.mode` flips changes which snapshots an `IncrementalAppendScan` (CDC-style
+  consumer) sees, so the stamp is a visibility contract worth declaring. *(oracle: documented —
+  audit M20.)*
+- **Pin** — `crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`
+  `merge_insert_only_cow_stamps_append_m20` / `merge_insert_only_mor_stamps_overwrite_m20`
+  (plus the mixed/delete-only stamps in the same battery).
+- **Rationale** — DECLARED. The stamps match Spark class-for-class; the row exists to warn CDC
+  consumers that the mode knob moves insert-only commits between `append` and `overwrite`
+  visibility. Landed with the 2026-08-15 OCC battery (#121).
+
+#### DML-5 — serializable `MERGE` conflict-detection breadth
+
+- **repark** — a serializable `MERGE` validates against **any** concurrent append
+  (`AlwaysTrue` conflict filter): a concurrent insert into an unrelated partition aborts the
+  MERGE with a conflict error.
+- **Apache Spark** — scopes serializable validation to a filter derived from the scan, so the
+  same unrelated-partition append commits. *(oracle: documented — audit M15.)*
+- **Pin** — `crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`
+  `commit_serializable_merge_rejects_concurrent_append_in_a_different_partition_m15` (and the
+  snapshot-isolation contrast cases beside it; `write.merge.isolation-level = snapshot` (#117)
+  is the user-facing relief valve).
+- **Rationale** — DECLARED, fail-closed by design. Narrowing to the pushed-predicate residual
+  would be UNSOUND for the shapes whose residual under-covers the scan (audit M15); the honest
+  contract is over-rejection plus the documented `snapshot` opt-down.
+
 ### 2.4 Namespace and table listing statements
 
 #### NS-1 — `SHOW NAMESPACES` without `IN` / `FROM` requires an explicit catalog
@@ -663,6 +694,52 @@ the pin rather than obeying it.
   is a backlog row and not part of
   [ID-2](#id-2--the-case-collision-refusal-covers-the-sql-string-form-only).
   The fix is to treat a backticked span the way a double-quoted span is already treated.
+
+### BL-3 — `MERGE` cardinality check fires on a lone unconditional `DELETE`
+
+- **repark** — duplicate-key source rows that hit any `WHEN MATCHED` clause raise
+  `MERGE_CARDINALITY_VIOLATION`, including when the only matched clause is an unconditional
+  `DELETE`.
+- **Apache Spark** — `RewriteMergeIntoTable.isCardinalityCheckNeeded` skips the check for
+  exactly that shape and deletes the row. *(oracle: asserted from source — the Spark golden is
+  deliberately unrecorded; the WG-M11 owner runbook records it before the fix.)*
+- **Pin** — `crates/repark-iceberg/src/write/merge/streaming_scan_tests.rs`
+  `merge_cardinality_uses_file_and_pos_not_file_alone` codifies today's raise;
+  `python/repark/tests/test_merge_differential_parity.py` covers the both-engines-raise
+  conditional-clause shape.
+- **Rationale** — BACKLOG (audit M11). Fail-closed until the recorded golden exists; the fix is
+  a narrow exemption for the `matched == [unconditional Delete]` shape, flipping a recorded
+  split diff-row to content.
+
+### BL-4 — `UPDATE`-path store-assignment error shape in `MERGE`
+
+- **repark** — an illegal `WHEN MATCHED UPDATE SET` coercion surfaces as a DataFusion
+  `CASE`/type-coercion planning error (an incidental guard), not a named store-assignment
+  refusal. The INSERT path now matches Spark's ANSI gate (#111).
+- **Apache Spark** — raises the named `INCOMPATIBLE_DATA_FOR_TABLE` class at analysis for both
+  paths. *(oracle: documented — audit M9 residual.)*
+- **Pin** — the INSERT-path contrast pins in
+  `python/repark/tests/test_merge_store_assign.py`; the UPDATE-path error-shape pin lands with
+  the fix unit (none codifies the CASE-error text today — deliberately, since the fix replaces
+  the whole shape).
+- **Rationale** — BACKLOG. Both engines refuse (no silent wrong data); only the error CLASS
+  diverges. Close by routing UPDATE `SET` assignments through the same
+  `validate_insert_store_assignment` gate the INSERT path uses.
+
+### BL-5 — rejected `MERGE` commit leaves written files behind
+
+- **repark** — data and position-delete files are written before the transaction commits; an
+  OCC-rejected commit orphans every written file (no abort-path cleanup).
+- **Apache Spark** — `BatchWrite.abort()` deletes the task files of a failed write.
+  *(oracle: documented — audit M14.)*
+- **Pin** — `crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs`
+  `rejected_cow_commit_leaves_written_data_files_in_the_warehouse_m14` /
+  `rejected_row_delta_leaves_written_delete_files_in_the_warehouse_m14` — characterization
+  pins the fix must FLIP.
+- **Rationale** — BACKLOG, fix design-gated (WG-M14: best-effort delete on the commit-error
+  path is the leaning; a mis-scoped catch deleting committed files would be S1, so the design
+  ruling precedes any code). Until then `remove_orphan_files`-style maintenance is the
+  mitigation.
 
 > **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on
 > 2026-08-10**, when H-1a split B landed the extraction fix (campaign decision D7). It does not
