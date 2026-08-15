@@ -17,8 +17,11 @@
 //!   casts with the full arrow kernel (`cast_one_batch_to_write_schema`, strict), so without a
 //!   gate those pairs would silently commit reinterpreted values. [`insert_stream_checked`]
 //!   validates the PLANNED schema against the write schema before a single batch streams.
-//!   (The UPDATE path is incidentally guarded by DataFusion's CASE-arm coercion, which refuses
-//!   un-coercible pairs — asymmetric error shape, noted as an audit residual.)
+//!   [`update_stream_checked`] is the UPDATE twin: it plans each `SET` expression in isolation
+//!   (no `CASE` unification) and runs the **same** [`ansi_store_assignable`] matrix before the
+//!   copy-on-write / merge-on-read rewrite SQL is required to type-check. DataFusion `CASE`
+//!   arms would otherwise refuse bool→int at plan time with an incidental coercion error, so
+//!   illegal pairs would never reach a post-plan gate (audit M9 residual BL-4).
 
 use std::collections::{HashMap, HashSet};
 
@@ -28,7 +31,7 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::SessionContext;
 use futures::Stream;
 
-use super::{InsertAction, InsertClause, quote_ident, resolve_schema_field_name};
+use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
 
 /// Project an INSERT clause onto the target schema: named columns take their VALUES expression,
 /// everything else becomes NULL. Rejects unknown columns, arity mismatches, and NULL-filling a
@@ -140,24 +143,144 @@ fn validate_insert_store_assignment(
                 target_field.name()
             )));
         }
-        let src = normalize_for_assignment(plan_field.data_type());
-        let dst = normalize_for_assignment(target_field.data_type());
-        if !ansi_store_assignable(src, dst) {
-            return Err(DataFusionError::Plan(format!(
-                "MERGE INSERT cannot store-assign column `{}`: source type {} is not \
-                 ANSI-store-assignable to target type {} (Spark INCOMPATIBLE_DATA_FOR_TABLE; \
-                 add an explicit CAST only if the reinterpretation is intended semantics)",
-                target_field.name(),
-                plan_field.data_type(),
-                target_field.data_type()
-            )));
+        refuse_unless_ansi_store_assignable(
+            "INSERT",
+            target_field.name(),
+            plan_field.data_type(),
+            target_field.data_type(),
+        )?;
+    }
+    Ok(())
+}
+
+/// ===========================================================================================
+/// UPDATE twin of [`insert_stream_checked`]: gate `SET` assignment types, then stream rewrite.
+///
+/// The probe plans each assignment expression against the same source⋈target join **without**
+/// wrapping it in the rewrite `CASE` (THEN assignment ELSE `t.col`). DataFusion CASE-arm
+/// unification refuses bool→int at plan time, which would hide this gate behind an incidental
+/// coercion error. Illegal pairs therefore fail with the ANSI needle; the CASE rewrite is
+/// planned only after every `SET` pair is store-assignable. The probe is analysis-only (not a
+/// PERF-19 logical target pass).
+/// ===========================================================================================
+pub(super) async fn update_stream_checked(
+    ctx: &SessionContext,
+    sql: &super::MergeSql<'_>,
+    rewrite_sql: &str,
+    write_schema: &ArrowSchema,
+) -> Result<impl Stream<Item = Result<RecordBatch>> + Unpin + use<>> {
+    validate_update_store_assignment(ctx, sql, write_schema).await?;
+    super::note_logical_target_sql_pass();
+    let dataframe = ctx.sql(rewrite_sql).await?;
+    dataframe.execute_stream().await
+}
+
+/// Plan every `UPDATE SET` expression in isolation and run the shared ANSI matrix.
+pub(super) async fn validate_update_store_assignment(
+    ctx: &SessionContext,
+    sql: &super::MergeSql<'_>,
+    write_schema: &ArrowSchema,
+) -> Result<()> {
+    let Some((probe_sql, target_columns)) = update_assignment_probe_sql(sql, write_schema)? else {
+        return Ok(());
+    };
+    let dataframe = ctx.sql(&probe_sql).await?;
+    let planned = dataframe.schema().fields();
+    if planned.len() != target_columns.len() {
+        return Err(DataFusionError::Internal(format!(
+            "MERGE UPDATE SET probe planned {} columns for {} assignments (executor bug)",
+            planned.len(),
+            target_columns.len()
+        )));
+    }
+    for (plan_field, target_name) in planned.iter().zip(target_columns) {
+        let target_field = write_schema
+            .field_with_name(&target_name)
+            .map_err(|error| {
+                DataFusionError::Internal(format!(
+                    "MERGE UPDATE SET target `{target_name}` missing from write schema: {error}"
+                ))
+            })?;
+        refuse_unless_ansi_store_assignable(
+            "UPDATE SET",
+            &target_name,
+            plan_field.data_type(),
+            target_field.data_type(),
+        )?;
+    }
+    Ok(())
+}
+
+/// `SELECT (expr) AS aN, … FROM source JOIN target ON on` — one column per SET pair.
+///
+/// `None` when no UPDATE assignments exist (DELETE-only / empty matched). Aliases are
+/// synthetic so two clauses can assign the same target column independently.
+fn update_assignment_probe_sql(
+    sql: &super::MergeSql<'_>,
+    write_schema: &ArrowSchema,
+) -> Result<Option<(String, Vec<String>)>> {
+    let mut projections = Vec::new();
+    let mut target_columns = Vec::new();
+    for clause in &sql.spec.matched {
+        let MatchedAction::Update { assignments } = &clause.action else {
+            continue;
+        };
+        for (column, expr) in assignments {
+            let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
+                return Err(DataFusionError::Internal(format!(
+                    "MERGE UPDATE SET column `{column}` missing after validate_update_columns \
+                     (executor bug)"
+                )));
+            };
+            let alias = quote_ident(&format!("a{}", projections.len()));
+            projections.push(format!("({expr}) AS {alias}"));
+            target_columns.push(canonical.to_string());
         }
+    }
+    if projections.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some((
+        format!(
+            "SELECT {projection} FROM {source} JOIN {target} ON {on}",
+            projection = projections.join(", "),
+            source = sql.source_from(),
+            target = sql.target_from(),
+            on = sql.spec.on_sql,
+        ),
+        target_columns,
+    )))
+}
+
+/// CAST a validated SET expression to the target Arrow type so the rewrite `CASE`
+/// (THEN assignment ELSE `t.col`) unifies. Must run **after** the ANSI gate: wrapping
+/// first would make bool→int look like Int32→Int32 and silently write `1`.
+pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> String {
+    let type_name = target_type.to_string().replace('\'', "''");
+    format!("arrow_cast(({expr}), '{type_name}')")
+}
+
+/// Shared refusal — path label is `INSERT` or `UPDATE SET`; the matrix is not forked.
+fn refuse_unless_ansi_store_assignable(
+    path: &str,
+    column: &str,
+    source_type: &DataType,
+    target_type: &DataType,
+) -> Result<()> {
+    let src = normalize_for_assignment(source_type);
+    let dst = normalize_for_assignment(target_type);
+    if !ansi_store_assignable(src, dst) {
+        return Err(DataFusionError::Plan(format!(
+            "MERGE {path} cannot store-assign column `{column}`: source type {source_type} is not \
+             ANSI-store-assignable to target type {target_type} (Spark INCOMPATIBLE_DATA_FOR_TABLE; \
+             add an explicit CAST only if the reinterpretation is intended semantics)"
+        )));
     }
     Ok(())
 }
 
 /// Strip wrappers that do not change assignability (dictionary encoding).
-fn normalize_for_assignment(data_type: &DataType) -> &DataType {
+pub(super) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, value) => normalize_for_assignment(value),
         other => other,
@@ -166,7 +289,7 @@ fn normalize_for_assignment(data_type: &DataType) -> &DataType {
 
 /// Spark `Cast.canANSIStoreAssign`, translated to Arrow types (v1: nested types must be
 /// identical — Spark's per-field recursion is a named residual).
-fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
+pub(super) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
     use DataType::{
         Binary, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8, Utf8View,
     };
@@ -256,5 +379,34 @@ mod insert_gate_tests {
             &Timestamp(TimeUnit::Microsecond, utc)
         ));
         assert!(!ansi_store_assignable(&Utf8, &Boolean));
+    }
+
+    #[test]
+    fn store_assignment_then_sql_arrow_casts_to_the_target_type() {
+        assert_eq!(
+            super::store_assignment_then_sql("s.b", &DataType::Utf8),
+            "arrow_cast((s.b), 'Utf8')"
+        );
+    }
+
+    #[test]
+    fn update_set_refusal_uses_the_shared_needle_and_path_label() {
+        let err = super::refuse_unless_ansi_store_assignable(
+            "UPDATE SET",
+            "flag",
+            &DataType::Boolean,
+            &DataType::Int32,
+        )
+        .expect_err("bool→int must refuse");
+        let text = err.to_string();
+        assert!(
+            text.contains("not ANSI-store-assignable"),
+            "needle missing: {text}"
+        );
+        assert!(text.contains("UPDATE SET"), "path label missing: {text}");
+        assert!(
+            text.contains("INCOMPATIBLE_DATA_FOR_TABLE"),
+            "Spark class missing: {text}"
+        );
     }
 }

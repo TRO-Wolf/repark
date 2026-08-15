@@ -1,12 +1,14 @@
-"""MERGE INSERT ANSI store-assignment gate (audit M9, repros r13b/r13c).
+"""MERGE INSERT/UPDATE ANSI store-assignment gate (audit M9 / BL-4, repros r13b/r13c).
 
 Oracle: Spark's DML store-assignment policy (``Cast.canANSIStoreAssign``, default
 ``spark.sql.storeAssignmentPolicy=ANSI``) rejects boolean→int, timestamp→bigint and
 string→numeric at ANALYSIS time (``INCOMPATIBLE_DATA_FOR_TABLE``) — far narrower than a CAST.
 Before the fix repark's insert path ran the full arrow cast kernel, silently committing
-``flag = 1`` for a boolean and the raw epoch micros for a timestamp. These pins are red
-without ``validate_insert_store_assignment`` (merge/insert.rs). The UPDATE path is incidentally
-guarded by DataFusion CASE coercion (divergent error shape — audit residual, not pinned here).
+``flag = 1`` for a boolean and the raw epoch micros for a timestamp. INSERT pins are red
+without ``validate_insert_store_assignment`` (merge/insert.rs). UPDATE ``SET`` twins are red
+without ``update_stream_checked``: the rewrite ``CASE`` would otherwise fail with an
+incidental DataFusion coercion error instead of the shared ``not ANSI-store-assignable``
+needle (Spark ``INCOMPATIBLE_DATA_FOR_TABLE``).
 """
 
 from __future__ import annotations
@@ -46,6 +48,13 @@ def _merge_insert(spark: ReparkSession, columns: str, values: str) -> None:
     spark.sql(
         f"MERGE INTO {FQ} AS t USING {SRC} AS s ON t.id = s.id "
         f"WHEN NOT MATCHED THEN INSERT ({columns}) VALUES ({values})"
+    )
+
+
+def _merge_update(spark: ReparkSession, assignments: str) -> None:
+    spark.sql(
+        f"MERGE INTO {FQ} AS t USING {SRC} AS s ON t.id = s.id "
+        f"WHEN MATCHED THEN UPDATE SET {assignments}"
     )
 
 
@@ -90,3 +99,54 @@ def test_atomic_to_string_still_inserts(spark: ReparkSession) -> None:
     spark.sql(f"INSERT INTO {SRC} VALUES (6, true)")
     _merge_insert(spark, "id, s", "s.id, s.b")
     assert spark.sql(f"SELECT s FROM {FQ}").to_arrow().to_pylist() == [{"s": "true"}]
+
+
+def test_boolean_to_int_update_refuses(spark: ReparkSession) -> None:
+    """UPDATE twin of r13b: boolean source into INT target — ANSI needle, not CASE."""
+    _tables(spark, "id BIGINT, flag INT", "id BIGINT, b BOOLEAN")
+    spark.sql(f"INSERT INTO {FQ} VALUES (2, 0)")
+    spark.sql(f"INSERT INTO {SRC} VALUES (2, true)")
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        _merge_update(spark, "flag = s.b")
+    assert spark.sql(f"SELECT id, flag FROM {FQ}").to_arrow().to_pylist() == [{"id": 2, "flag": 0}]
+
+
+def test_timestamp_to_bigint_update_refuses(spark: ReparkSession) -> None:
+    """UPDATE twin of r13c: timestamp source into BIGINT target."""
+    _tables(spark, "id BIGINT, ts_us BIGINT", "id BIGINT, ev TIMESTAMP")
+    spark.sql(f"INSERT INTO {FQ} VALUES (3, 0)")
+    spark.sql(f"INSERT INTO {SRC} VALUES (3, TIMESTAMP '2026-01-01 00:00:00')")
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        _merge_update(spark, "ts_us = s.ev")
+    assert spark.sql(f"SELECT id, ts_us FROM {FQ}").to_arrow().to_pylist() == [
+        {"id": 3, "ts_us": 0}
+    ]
+
+
+def test_string_to_bigint_update_refuses(spark: ReparkSession) -> None:
+    """UPDATE twin: string→numeric is not ANSI store-assignable."""
+    _tables(spark, "id BIGINT, n BIGINT", "id BIGINT, txt STRING")
+    spark.sql(f"INSERT INTO {FQ} VALUES (4, 0)")
+    spark.sql(f"INSERT INTO {SRC} VALUES (4, '42')")
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        _merge_update(spark, "n = s.txt")
+    assert spark.sql(f"SELECT id, n FROM {FQ}").to_arrow().to_pylist() == [{"id": 4, "n": 0}]
+
+
+def test_numeric_widening_still_updates(spark: ReparkSession) -> None:
+    """Positive control: INT→BIGINT widening still updates through WHEN MATCHED."""
+    _tables(spark, "id BIGINT, big BIGINT", "id BIGINT, small INT")
+    spark.sql(f"INSERT INTO {FQ} VALUES (5, 0)")
+    spark.sql(f"INSERT INTO {SRC} VALUES (5, 9)")
+    _merge_update(spark, "big = s.small")
+    out = spark.sql(f"SELECT id, big FROM {FQ}").to_arrow()
+    assert out.to_pylist() == [{"id": 5, "big": 9}]
+
+
+def test_atomic_to_string_still_updates(spark: ReparkSession) -> None:
+    """AtomicType→StringType is store-assignable on UPDATE SET (boolean → 'true')."""
+    _tables(spark, "id BIGINT, label STRING", "id BIGINT, b BOOLEAN")
+    spark.sql(f"INSERT INTO {FQ} VALUES (6, 'old')")
+    spark.sql(f"INSERT INTO {SRC} VALUES (6, true)")
+    _merge_update(spark, "label = s.b")
+    assert spark.sql(f"SELECT label FROM {FQ}").to_arrow().to_pylist() == [{"label": "true"}]

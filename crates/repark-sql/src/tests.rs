@@ -1288,6 +1288,43 @@ async fn merge_into_upserts_through_the_door() {
     assert_eq!(rows_of(&batches), vec![(1, 10), (2, 99), (3, 30)]);
 }
 
+/// BL-4: `WHEN MATCHED UPDATE SET` boolean→int uses the shared ANSI store-assignment needle.
+#[tokio::test]
+async fn merge_update_boolean_to_int_refuses() {
+    let door = door_with_schema().await;
+    door.ok("CREATE TABLE ice.sales.ut AS SELECT CAST(1 AS BIGINT) AS id, CAST(0 AS INT) AS flag")
+        .await;
+    door.ok("CREATE TABLE ice.sales.us AS SELECT CAST(1 AS BIGINT) AS id, TRUE AS b")
+        .await;
+    let err = door
+        .err(
+            "MERGE INTO ice.sales.ut AS t USING ice.sales.us AS s ON t.id = s.id \
+             WHEN MATCHED THEN UPDATE SET flag = s.b",
+        )
+        .await;
+    assert!(err.contains("not ANSI-store-assignable"), "{err}");
+}
+
+/// BL-4: INT→BIGINT widening still updates through the native door (same matrix as INSERT).
+#[tokio::test]
+async fn merge_update_numeric_widening_still_updates() {
+    let door = door_with_schema().await;
+    door.ok(
+        "CREATE TABLE ice.sales.ut AS SELECT CAST(1 AS BIGINT) AS id, CAST(0 AS BIGINT) AS big",
+    )
+    .await;
+    door.ok("CREATE TABLE ice.sales.us AS SELECT CAST(1 AS BIGINT) AS id, CAST(9 AS INT) AS small")
+        .await;
+    door.ok(
+        "MERGE INTO ice.sales.ut AS t USING ice.sales.us AS s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET big = s.small",
+    )
+    .await;
+    let (schema, batches) = door.ok_typed("SELECT id, big FROM ice.sales.ut").await;
+    assert_eq!(schema.field(1).data_type(), &DataType::Int64, "big type");
+    assert_eq!(rows_of(&batches), vec![(1, 9)]);
+}
+
 /// Read `(id, amount)` pairs out of a two-Int64-column result, in batch order.
 fn rows_of(batches: &[RecordBatch]) -> Vec<(i64, i64)> {
     let mut rows = Vec::new();
