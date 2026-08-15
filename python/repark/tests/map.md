@@ -536,9 +536,11 @@ NOT in that file is a defect, not a decision.
 - `test_merge_insert_scope.py` — **audit M4**: NOT MATCHED conditions/VALUES resolve against the
   SOURCE only — target-column reference is a loud analysis error (was: silent LEFT-JOIN NULL);
   source-qualified and bare names resolve to the source. Arrow path.
-- `test_merge_store_assign.py` — **audit M9**: MERGE INSERT ANSI store-assignment gate —
-  boolean→int / timestamp→bigint / string→numeric refuse at analysis; numeric widening,
-  NULL-fill and atomic→string still insert. Arrow path.
+- `test_merge_store_assign.py` — **audit M9 / BL-4**: MERGE INSERT **and**
+  `WHEN MATCHED UPDATE SET` ANSI store-assignment gate — boolean→int /
+  timestamp→bigint / string→numeric refuse at analysis (`not ANSI-store-assignable`);
+  numeric widening, NULL-fill and atomic→string still insert/update. Arrow path.
+  UPDATE twins need a matching key so the SET path fires.
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key

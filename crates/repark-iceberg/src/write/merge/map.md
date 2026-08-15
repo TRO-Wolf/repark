@@ -18,7 +18,14 @@ lives as this module directory (move-only; pub surface frozen).
   `tracing::warn` and never mask the original commit error.
 - `insert.rs` — NOT MATCHED INSERT machinery: `insert_projection` (clause→projection lowering,
   moved from `mod.rs` 2026-08-15), the source-only execution seam (`insert_stream_checked`),
-  and the ANSI store-assignment gate (audit M4/M9).
+  and the ANSI store-assignment gate (audit M4/M9). **BL-4 (2026-08-15):**
+  `update_stream_checked` / `validate_update_store_assignment` plan each `UPDATE SET`
+  expression in isolation (no rewrite-`CASE` unification) and run the same
+  `ansi_store_assignable` / `normalize_for_assignment` matrix (`pub(super)`) against
+  the target column type. Needle `not ANSI-store-assignable`. After the gate,
+  rewrite THEN arms use `arrow_cast` to the target type so CASE unifies on
+  legal pairs CASE cannot coerce (bool→string). COW call site is the rewrite
+  stream; MoR call site is `matched_work_mor`. Match-discovery is not gated.
   Unpartitioned writer: `#182` `PartitionKey::new(...)` is `Result`; `?` via `iceberg_err`
   (net-zero lines vs the 2700-line file ceiling).
   `residual_join_key_filter` is a thin caller of `scan_prune::residual_bounds_predicate`

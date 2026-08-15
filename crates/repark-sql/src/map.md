@@ -109,7 +109,9 @@ reach delegation through the ordinary arm.
   Tested (window frames, JOIN NULL keys, float determinism). Each row also carries its
   session profile, and a test forbids this door from ever claiming `SparkExtended` evidence.
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a NATIVE session (no extension),
-  asserted on the Arrow path, value AND type.
+  asserted on the Arrow path, value AND type. **BL-4 (2026-08-15):**
+  `merge_update_boolean_to_int_refuses` + `merge_update_numeric_widening_still_updates`
+  — UPDATE SET store-assignment through this door (needle + widening pass).
 
 ## I want to...
 

@@ -127,7 +127,9 @@ use uuid::Uuid;
 
 mod abort;
 mod insert;
-use insert::{insert_projection, insert_stream_checked};
+use insert::{
+    insert_projection, insert_stream_checked, store_assignment_then_sql, update_stream_checked,
+};
 
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
 use crate::write::file_scoped_rewrite::{allowlist_from_paths, filter_tasks_to_allowlist_nonempty};
@@ -980,7 +982,8 @@ async fn plan_and_commit_cow(
                 rewrite_scratches.push(path_table.clone());
                 sql.rewrite_sql_path_semijoin(sql.target_name, &path_table, write_schema)
             };
-            let rewrite_stream = stream_sql(ctx, &rewrite_sql).await?;
+            let rewrite_stream =
+                update_stream_checked(ctx, sql, &rewrite_sql, write_schema).await?;
             streams.push(Box::pin(rewrite_stream));
         }
         for index in 0..spec.not_matched.len() {
@@ -1353,7 +1356,8 @@ async fn matched_work_mor(
     Vec<RecordBatch>,
 )> {
     // === r20 P2a: merge ===
-    let mut stream = stream_sql(ctx, &sql.matched_work_sql(write_schema)).await?;
+    let mut stream =
+        update_stream_checked(ctx, sql, &sql.matched_work_sql(write_schema), write_schema).await?;
     let mut path_intern: HashMap<String, usize> = HashMap::new();
     let mut unique_paths: Vec<std::sync::Arc<str>> = Vec::new();
     let mut seen_pair: HashSet<(usize, i64)> = HashSet::new();
@@ -1701,7 +1705,9 @@ impl MergeSql<'_> {
         write_schema
             .fields()
             .iter()
-            .map(|field| self.rewrite_column_with_maps(&maps, field.name()))
+            .map(|field| {
+                self.rewrite_column_with_maps(&maps, field.name(), Some(field.data_type()))
+            })
             .collect::<Vec<_>>()
             .join(", ")
     }
@@ -1836,14 +1842,17 @@ impl MergeSql<'_> {
     #[cfg(test)]
     fn rewrite_column(&self, column: &str) -> String {
         let maps = self.update_assignment_lookup();
-        self.rewrite_column_with_maps(&maps, column)
+        self.rewrite_column_with_maps(&maps, column, None)
     }
 
     /// Like [`Self::rewrite_column`] but reuses a pre-built assignment lookup (scout #18).
+    /// `store_type` is the target column type: wrap THEN in `arrow_cast` so CASE unifies
+    /// after the ANSI gate (bool→string is store-assignable but CASE cannot coerce it).
     fn rewrite_column_with_maps(
         &self,
         maps: &[Option<HashMap<String, &str>>],
         column: &str,
+        store_type: Option<&DataType>,
     ) -> String {
         let ta = &self.spec.target_alias;
         let quoted = quote_ident(column);
@@ -1856,7 +1865,11 @@ impl MergeSql<'_> {
             .enumerate()
             .filter_map(|(index, map_opt)| {
                 let expr = map_opt.as_ref()?.get(&key)?;
-                Some(format!("WHEN {index} THEN ({expr})"))
+                let then_expr = match store_type {
+                    Some(data_type) => store_assignment_then_sql(expr, data_type),
+                    None => (*expr).to_string(),
+                };
+                Some(format!("WHEN {index} THEN ({then_expr})"))
             })
             .collect();
         if branches.is_empty() {
