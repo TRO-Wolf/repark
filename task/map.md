@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [ta1-sql-fusion-ledger.md](ta1-sql-fusion-ledger.md) — **TA-1 (2026-08-15):**
+  SQL same-OVER `WindowAggExec` fusion pin on both doors (`ta_window.rs` Spark,
+  `ta_toll.rs` ANSI+TaExtension). Named `OVER w` and inline same-spec = 1;
+  intervening filter between two live windows = 2. Test-only; no engine edits.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7

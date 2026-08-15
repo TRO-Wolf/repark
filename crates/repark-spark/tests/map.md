@@ -68,6 +68,11 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   `repark_ta` kernels on the crate's own 5000-row OHLC goldens (`../../repark-ta/tests/goldens/*.bin`
   — read, never re-recorded), across single/scalar-param/multi-series/parked-four families,
   `PARTITION BY` scoping, a 12k multi-batch partition, and the non-literal-period refuse.
+  **TA-1 (2026-08-15):** three plan-shape pins — named `OVER w` and inline same-spec
+  `ta_*(…) OVER (PARTITION BY … ORDER BY …)` each plan one `WindowAggExec` (EXPLAIN +
+  `create_physical_plan`); an intervening filter between two live windows stacks two
+  (`sql_intervening_filter_between_windows_stacks_window_agg_exec`). Ledger:
+  [../../../task/ta1-sql-fusion-ledger.md](../../../task/ta1-sql-fusion-ledger.md).
 
 ## I want to...
 
@@ -102,6 +107,10 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   `$CARGO_MANIFEST_DIR/../repark-ta/tests/goldens`, i.e. repark-ta's sibling position in the
   workspace. A *bit* mismatch is an engine/UDF regression, never a goldens edit — see
   [../../repark-ta/map.md#debug](../../repark-ta/map.md).
+- `sql_*_window_agg_exec` RED: DataFusion's same-OVER fusion / intervening-filter stacking
+  moved. The pin records measured truth (`task/ta1-sql-fusion-ledger.md`); do not "fix"
+  the engine in this lane, and do not drop `ema5` from the stacked SELECT (DCE then
+  collapses the count to 1).
 - Week-53 assertion is ISO-week semantics (2021-01-01 → ISO week 53 of 2020) — a failure there
   is the date shim regressing, not the fixture.
 

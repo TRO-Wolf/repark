@@ -47,7 +47,11 @@ belongs out here is what must be observed from outside the crate.
 - `ta_toll.rs` (PR-6, Q11) — `TaExtension` on a **native** session, one kernel driven through
   ANSI-door SQL as a window function and compared `f64::to_bits` against the recorded C TA-Lib
   golden, plus the non-literal-period refuse and the "absent until you opt in" row. Needs the
-  `repark-ta` dev-dep (feature `datafusion`).
+  `repark-ta` dev-dep (feature `datafusion`). **TA-1 (2026-08-15):** the ANSI-door half of
+  the SQL same-OVER fusion pin — named `OVER w` and inline same-spec each plan one
+  `WindowAggExec`; an intervening filter between two live windows stacks two. Same SQL
+  shapes as `../../repark-spark/tests/ta_window.rs`. Ledger:
+  [../../../task/ta1-sql-fusion-ledger.md](../../../task/ta1-sql-fusion-ledger.md).
 
 - `cross_door.rs` (PR-6, Q13 / graft G5) — the **two-session** cross-door protocol: a native
   `AnsiDialect` session and a Spark-extended `SparkDialect` session, each over its OWN in-memory
@@ -161,6 +165,7 @@ belongs out here is what must be observed from outside the crate.
 | `ansi_door_and_spark_door_agree_under_a_non_utc_session` RED on ONE door | The session timezone stopped being session-scoped (it rides `ConfigOptions`, which every door on the session shares). Check `repark_functions::session_time_zone` and `SparkExtension::configure` before touching the row |
 | `a_native_session_without_the_spark_extension_reads_the_stored_zone` RED | A zone-aware extractor leaked into the extension-less profile — check what registers UDFs on a bare session |
 | `ta_toll` RED on bit-exactness | Compare against `crates/repark-ta/tests/goldens.rs` first — if THAT is green, the divergence is in the window-UDF wrapper or the door, not the kernel |
+| `sql_*_window_agg_exec` RED | DataFusion same-OVER fusion / intervening-filter stacking moved. Pin records measured truth (`task/ta1-sql-fusion-ledger.md`); do not drop `ema5` from the stacked SELECT (DCE fakes a fused count) |
 
 First checks: `cargo test -p repark-sql --test parser_productions`,
 `cargo test -p repark-sql --test session_wiring`, `--test introspection`, `--test ta_toll`,
