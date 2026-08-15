@@ -5,13 +5,17 @@
 //! bar produces one output (the [`crate::volatility::trange`]-shaped no-lookback family). The only
 //! bit-exactness concern is the addition order and the divisor.
 //!
-//! **Oracle note.** Unlike every other kernel here, the `polars_talib` oracle implements these four
-//! transforms in its *own* native Rust plugin (`_polars_talib`), not by calling C TA-Lib. For
-//! `AVGPRICE`/`MEDPRICE`/`WCLPRICE` the oracle's association is bit-identical to the C source, but
-//! its `TYPPRICE` folds `low + close` first and then adds `high` (`high + (low + close)`), which
-//! rounds differently from the C source's left fold `(high + low) + close`. Since the pipeline's
-//! models were trained on the `polars_talib` values, the oracle wins: `TYPPRICE` matches
-//! `high + (low + close)`. The goldens pin all four bit-exactly.
+//! **Oracle note.** The association for all four transforms follows the **recorded
+//! `polars_talib` 0.1.5 bits**, not a reading of either implementation: the recorded `TYPPRICE`
+//! series matches `high + (low + close)` (fold `low + close` first), which rounds differently
+//! from a `(high + low) + close` left fold on some inputs. An earlier revision of this note
+//! claimed the wrapper computes these in its own native Rust plugin — that is FALSE on upstream
+//! `master` (its `talib/src/transform.rs` calls `TA_TYPPRICE`/`TA_AVGPRICE`/… over FFI like every
+//! other function; 2026-08-15 research pass), so where the fold originates (wrapper build, C
+//! codegen, or the C source itself) is unverified. It does not matter for correctness here:
+//! the pipeline's models were trained on the recorded values, the oracle wins, and the goldens
+//! pin all four bit-exactly. Anyone re-recording must keep wrapper 0.1.5 (recorder asserts it)
+//! or re-verify these four series against both C 0.4.0 and the new wrapper first.
 
 use crate::{Result, check_lengths};
 
@@ -48,9 +52,9 @@ pub fn medprice(high: &[f64], low: &[f64]) -> Result<Vec<f64>> {
 /// ===========================================================================================
 /// `TYPPRICE` — typical price, `(high + low + close) / 3` (`ta_TYPPRICE.c`). Lookback 0.
 ///
-/// The `polars_talib` oracle folds `low + close` first, so the summation is `high + (low + close)`
-/// (not the C source's `(high + low) + close`) — a bit-different rounding. The oracle wins (see the
-/// module note); the golden pins this association exactly.
+/// The recorded oracle bits fold `low + close` first, so the summation is `high + (low + close)`
+/// — a bit-different rounding from a `(high + low) + close` left fold. Where the fold originates
+/// is unverified (see the module note); the golden pins this association exactly.
 /// ===========================================================================================
 ///
 /// # Errors

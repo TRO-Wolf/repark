@@ -1086,7 +1086,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   only; no `pyspark.ml` alias shim tonight. Vectors: dense FixedSizeList / sparse struct
   (layout home: `ml/linalg.py`); persistence repark-ml v1 (`pipeline.py` format constants).
 - `ta.py` — the `repark.ta` technical-analysis surface (T1b + T2 batches 1–2 + WG2–WG5 + T3 +
-  **G-NAN**): the
+  **G-NAN**; module doc truth-up 2026-08-15: plan-fusion claim corrected to post-N2 behavior): the
   full 77
   indicator entry points (`ema`/`sma`/`rsi`/`adx`/`atr`/`trange`/`var`/`stddev`/`linearreg`+`_slope`/
   `_intercept`/`_angle`/`tsf`/`correl`/`min`/`max`/`sum`, the WG1 overlap-MA family `wma`/`dema`/

@@ -97,9 +97,10 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   safety, `TA_IS_ZERO` return + denominator guards; lookback `p`).
 - `price_transform.rs` — WG5: `avgprice`/`medprice`/`typprice`/`wclprice`, the no-period O/H/L/C
   combinations (lookback 0, every bar produces a value — the `trange`-shaped no-lookback family).
-  Oracle note: `polars_talib` implements these in its OWN native Rust (not C TA-Lib); avg/med/wcl
-  are bit-identical to the C association, but its `TYPPRICE` folds `low + close` first
-  (`high + (low + close)`), so the kernel matches the oracle's association (documented in-module).
+  Oracle note (truth-up 2026-08-15): the association follows the RECORDED `polars_talib` 0.1.5
+  bits — its `TYPPRICE` series folds `low + close` first (`high + (low + close)`), and the kernel
+  matches that. The earlier "wrapper implements these in its own native Rust" claim was false
+  (upstream calls C over FFI); fold origin unverified — see the in-module re-record caution.
 - `udf.rs` — **feature `datafusion`** — the DataFusion window-UDF wrapper layer. A single spec
   table (name → kernel) drives 77 `WindowUDF`s (the full 77/77 entry-point inventory) — the 66
   T1–WG4 entry points, the 6 WG5 sweep-up ones, and the 5 T3 parked-four (the split `ta_mama`/
