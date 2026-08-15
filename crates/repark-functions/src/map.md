@@ -7,6 +7,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 ## Contents
 
+- `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line
+  dropped so `pub mod timestamp_type` does not raise `check_lib_rs` EXCEPTIONS).
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
   (`SparkTimestampTypeConfig`, `PREFIX = repark.timestamp`, default
   **TIMESTAMP_LTZ**). Parsed from the builder map in `SparkExtension::configure`.
