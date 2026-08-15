@@ -21,6 +21,8 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 - `write/` — **R-WRITE-BENCH (W1)** local-fs CTAS+append K × target-file-size matrix
   plus r22 extension MERGE (1M/10M × narrow/wide × K) and INSERT OVERWRITE peak RSS
   (OTH-004); measurement only; see [write/map.md](write/map.md).
+- `ta/` — **P-2 (perf-wave-14)** Python TA pipeline baseline battery (§8.1–8.5,
+  §8.7); measurement only; §8.6 is #116 (do not rebuild); see [ta/map.md](ta/map.md).
 - `map.md` — this file.
 
 ## I want to…
@@ -38,6 +40,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run SQL fuzzer smoke (seed 42, 200q) | `fuzz/run_fuzz.py` or `python/repark/tests/test_fuzz_smoke.py` *(facade path — arrives with the facade package in the phase-3 facade PR)* |
 | Long fuzz pass | `REPARK_FUZZ_N=5000 python …/fuzz/run_fuzz.py --out …` |
 | Run write-path K×file-size bench (SF1) | `write/run_write_bench.py --mode ctas --sf 1 --report task/write-bench-report-….md` |
+| Run the P-2 TA pipeline battery | `ta/bench_kernel_race.py` (and siblings); `--quick` for n=1e5 |
 | Run r22 MERGE+OVERWRITE extension | `write/run_write_bench.py --mode extension --assert-release --report task/write-bench-report-r22-extension.md` |
 | Read TPC-H findings | `../../../task/tpch-report-2026-07-31.md` |
 | Read fuzzer long-pass census | `../../../task/d3-sql-fuzzer-ledger.md` |

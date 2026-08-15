@@ -28,6 +28,10 @@ not this directory.
   (2026-08-15):** MERGE `WHEN MATCHED UPDATE SET` ANSI store-assignment gate.
   Same `ansi_store_assignable` matrix as INSERT. Probe assignments before the
   rewrite `CASE` (CASE unification would hide the needle). Both doors.
+- [p2-ta-pipeline-benches-ledger.md](p2-ta-pipeline-benches-ledger.md) — **P-2
+  (2026-08-15):** Python TA pipeline benches (§8.1–8.5, §8.7). Measure-only;
+  no engine edits. §8.6 cited as #116 (TA-1), not rebuilt. Scripts in
+  `python/repark-parity/bench/ta/`. Numbers stay planning-side.
 - [ta1-sql-fusion-ledger.md](ta1-sql-fusion-ledger.md) — **TA-1 (2026-08-15):**
   SQL same-OVER `WindowAggExec` fusion pin on both doors (`ta_window.rs` Spark,
   `ta_toll.rs` ANSI+TaExtension). Named `OVER w` and inline same-spec = 1;
