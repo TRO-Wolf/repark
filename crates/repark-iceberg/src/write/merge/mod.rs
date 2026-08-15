@@ -2202,7 +2202,8 @@ async fn build_unpartitioned_data_file_writer(table: &Table) -> Result<impl Iceb
         table.metadata().default_partition_spec().as_ref().clone(),
         table.metadata().current_schema().clone(),
         Struct::empty(),
-    );
+    )
+    .map_err(iceberg_err)?;
     DataFileWriterBuilder::new(rolling_builder)
         .build(Some(unpartitioned_key))
         .await

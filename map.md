@@ -26,7 +26,8 @@ tagged (see [STATUS.md](STATUS.md) "Release state").
 - `Cargo.toml` — **also the version SSOT (release PR, 2026-08-14):** `[workspace.package] version` (0.1.0) is the single release version; maturin injects it into the wheel (pyproject `dynamic`); bump here, nowhere else (internal deps are path-only — no version requirements to chase). With `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
   `.cargo/` — Rust workspace + tooling. `[workspace.dependencies]` is the single version table;
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
-  are in force.
+  are in force. The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
+  each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).
 - `pyproject.toml`, `.python-version`, `uv.lock` — the **uv workspace root** (virtual — not
   itself a package): the member list, the `dev` dependency group, and the Ruff config (line 100).

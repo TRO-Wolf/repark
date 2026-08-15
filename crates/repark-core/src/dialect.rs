@@ -72,7 +72,10 @@ impl<'a> EngineContext<'a> {
 /// "one test row per door"). Implementations must be cheap to call per statement — the session
 /// constructs a fresh [`EngineContext`] snapshot every call.
 /// ===========================================================================================
-#[async_trait]
+// ?Send: rustc 1.96 HRTB rejects the default Send future once the iceberg Catalog
+// object (inside CatalogRegistry) is in the crate graph after the AD-1 pin. The
+// session awaits `execute` in place (`sql_with`); tokio::spawn is banned.
+#[async_trait(?Send)]
 pub trait SqlDialect: Send + Sync {
     /// Execute one SQL statement against the engine context.
     ///
@@ -97,7 +100,7 @@ pub trait SqlDialect: Send + Sync {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DataFusionDialect;
 
-#[async_trait]
+#[async_trait(?Send)]
 impl SqlDialect for DataFusionDialect {
     async fn execute(
         &self,

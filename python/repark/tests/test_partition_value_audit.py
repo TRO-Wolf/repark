@@ -82,9 +82,7 @@ ZONE_UTC = "UTC"
 BUDGET_MIN = 24
 BUDGET_MAX = 34
 
-# Timestamptz identity partitions write, but the files/partitions metadata projection refuses
-# (fork data_file inspect). Named finding F-V4-1; the fork is CLOSED to this lane.
-TIMESTAMPTZ_META_NEEDLE = "Timestamptz is not supported"
+# Fork #192 projects timestamptz/timestamptz_ns in data_file metadata tables (F-V4-1 unlocked).
 
 
 # ==================================================================================================
@@ -96,7 +94,6 @@ _I32 = pa.int32()
 _STR = pa.string()
 _DATE = pa.date32()
 _TS_UTC = pa.timestamp("us", "UTC")
-_TS_PLUS0 = pa.timestamp("us", "+00:00")
 
 
 def _table(
@@ -284,7 +281,7 @@ def _spec_from_partition_type(partition_type: pa.DataType) -> str:
 def extract_meta(session: Any, fq_table: str) -> pa.Table:
     """Read ``.files`` + ``.partitions`` and return the uniform META table.
 
-    Raises whatever the metadata projection raises (timestamptz identity is F-V4-1).
+    Fork #192 projects timestamptz partition fields (F-V4-1 unlocked).
     """
     files = read_table(session, f"SELECT partition, record_count FROM {fq_table}.files")
     partitions = read_table(session, f"SELECT partition, record_count FROM {fq_table}.partitions")
@@ -574,9 +571,8 @@ ROWS: list[PartitionValueRow] = [
         data_sql="SELECT id, ts FROM {target} ORDER BY id",
         note=(
             "identity timestamp CTAS post-#79/#85 (timestamptz). Data must round-trip. "
-            "repark metadata projection of a timestamptz partition field is F-V4-1."
+            "Fork #192 unlocks timestamptz metadata projection (F-V4-1)."
         ),
-        repark_meta_error_needle=TIMESTAMPTZ_META_NEEDLE,
     ),
     _carry(
         "carry_identity_timestamp_insert",
@@ -586,8 +582,7 @@ ROWS: list[PartitionValueRow] = [
         select_sql="SELECT * FROM src",
         data_sql="SELECT id, ts FROM {target} ORDER BY id",
         create_columns="id BIGINT, ts TIMESTAMP",
-        note="identity timestamp INSERT twin of the CTAS row (same F-V4-1 meta refuse).",
-        repark_meta_error_needle=TIMESTAMPTZ_META_NEEDLE,
+        note="identity timestamp INSERT twin of the CTAS row (F-V4-1 unlocked by fork #192).",
     ),
     # ----- carry-check: bucket / truncate ------------------------------------------------------
     _carry(
@@ -834,22 +829,8 @@ ROWS: list[PartitionValueRow] = [
 ]
 
 
-def _ts_plus0(spark_ts_table: pa.Table) -> pa.Table:
-    """Repark Iceberg timestamptz read annotation is ``+00:00``, Spark's is ``UTC`` (F-V4-2)."""
-    values: dict[str, list[object]] = {}
-    fields: list[tuple[str, pa.DataType, bool]] = []
-    for field in spark_ts_table.schema:
-        column = spark_ts_table.column(field.name).to_pylist()
-        if pa.types.is_timestamp(field.type):
-            fields.append((field.name, _TS_PLUS0, field.nullable))
-        else:
-            fields.append((field.name, field.type, field.nullable))
-        values[field.name] = column
-    return _table(fields, values)
-
-
 # Recorded Spark 4.1.2 + Iceberg 1.11.0 halves (2026-08-13, zulu-17, local[2], ANSI on).
-# Repark-only halves remaining: F-V4-2 (+00:00 vs UTC). TZ-8 date-key rows are equality.
+# Fork #193: timestamptz Arrow annotation is UTC (F-V4-2). TZ-8 date-key rows are equality.
 _GOLDENS: dict[str, dict[str, object]] = {
     "carry_identity_int_ctas": {
         "spark_data": _table(
@@ -1072,7 +1053,7 @@ def _identity_ts_spark_data() -> pa.Table:
 
 _GOLDENS["carry_identity_timestamp_ctas"] = {
     "spark_data": _identity_ts_spark_data(),
-    "repark_data": _ts_plus0(_identity_ts_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts:identity",
         [
@@ -1085,7 +1066,7 @@ _GOLDENS["carry_identity_timestamp_ctas"] = {
 }
 _GOLDENS["carry_identity_timestamp_insert"] = {
     "spark_data": _identity_ts_spark_data(),
-    "repark_data": _ts_plus0(_identity_ts_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts:identity",
         [
@@ -1098,7 +1079,7 @@ _GOLDENS["carry_identity_timestamp_insert"] = {
 }
 _GOLDENS["carry_years_ts_ctas"] = {
     "spark_data": _temporal_spark_data(),
-    "repark_data": _ts_plus0(_temporal_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts_year:year",
         [
@@ -1111,7 +1092,7 @@ _GOLDENS["carry_years_ts_ctas"] = {
 }
 _GOLDENS["carry_year_singular_ts_ctas"] = {
     "spark_data": _temporal_spark_data(),
-    "repark_data": _ts_plus0(_temporal_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts_year:year",
         [
@@ -1124,7 +1105,7 @@ _GOLDENS["carry_year_singular_ts_ctas"] = {
 }
 _GOLDENS["carry_months_ts_ctas"] = {
     "spark_data": _temporal_spark_data(),
-    "repark_data": _ts_plus0(_temporal_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts_month:month",
         [
@@ -1139,7 +1120,7 @@ _GOLDENS["carry_months_ts_ctas"] = {
 }
 _GOLDENS["carry_days_ts_ctas"] = {
     "spark_data": _temporal_spark_data(),
-    "repark_data": _ts_plus0(_temporal_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts_day:day",
         [
@@ -1156,7 +1137,7 @@ _GOLDENS["carry_days_ts_ctas"] = {
 }
 _GOLDENS["carry_hours_ts_ctas"] = {
     "spark_data": _temporal_spark_data(),
-    "repark_data": _ts_plus0(_temporal_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts_hour:hour",
         [
@@ -1175,7 +1156,7 @@ _GOLDENS["carry_hours_ts_ctas"] = {
 }
 _GOLDENS["carry_years_ts_insert"] = {
     "spark_data": _temporal_spark_data(),
-    "repark_data": _ts_plus0(_temporal_spark_data()),
+    "repark_data": None,
     "spark_meta": _meta(
         "ts_year:year",
         [

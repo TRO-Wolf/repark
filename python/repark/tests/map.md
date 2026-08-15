@@ -27,6 +27,8 @@ NOT in that file is a defect, not a decision.
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.
+  **AD-2 (2026-08-15):** F-V4-2 `+00:00`→`UTC` equality; F-V4-1 timestamptz projection
+  unlocked (fork #192/#193). ruff-format lockstep on `test_metadata_tables.py`.
   Carry-check (identity int/string/date/timestamp, bucket, truncate, Iceberg
   years/months/days/hours UTC-epoch) + load-bearing SQL `year(ts)` /
   `date_format` identity under non-UTC sessions + TZ-8 CAST/to_date equality (R-4) +
@@ -1069,8 +1071,11 @@ NOT in that file is a defect, not a decision.
   `cat.ns.tbl.snapshots` (+ history/files/manifests/partitions/refs/entries/
   metadata_log_entries/all_* family) + `spark.table("…files")`; schema pins from fork
   inspect sources; row sanity on ≥3-snapshot fixture; real table named `files` wins; DML
-  + AS OF composition loud; unpartitioned empty-`partition` pin (Java-Iceberg residue, not a
-  registry row — fork-side) + readable_metrics-by-name divergence pins (R142). Octo C1: FQ column
+  + AS OF composition loud; unpartitioned files/partitions drop the empty `partition`
+  column (fork #194; declared rename of
+  `test_unpartitioned_partition_column_divergence` →
+  `test_unpartitioned_files_have_no_partition_column`) + readable_metrics-by-name
+  pins (R142). Octo C1: FQ column
   named `files` not rewritten; UPDATE/CTAS
   DML refuse; paren AS OF refuse; metadata of real `files` table; tight readable_metrics
   interior pin (no hollow `len>=0`). Octo C2: JOIN metadata; TRUNCATE refuse; real

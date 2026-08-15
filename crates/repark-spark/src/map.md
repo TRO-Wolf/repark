@@ -42,9 +42,9 @@ wrapper.
   / no-location stay idempotent; a contradictory `LOCATION` fails loud naming
   both paths (`repark_core::refuse_contradictory_namespace_location`).
 - `dialect.rs` — `SparkDialect: repark_core::SqlDialect` (seam adapter; unpacks `EngineContext`
-  into v1's positional `execute_with_read_only` call; install with
-  `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`). Tests:
-  [dialect/map.md](dialect/map.md).
+  into v1's positional `execute_with_read_only` call; `#[async_trait(?Send)]` matches the
+  core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
+  Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
   `repark.sql.*` config **+ `spark.sql.ansi.enabled` default TRUE (U5 / Q10=A)** **+ Spark-door
   `parse_float_as_decimal=true` (DEC-1 / U2)** **+ the session-timezone carrier**; `register` =
