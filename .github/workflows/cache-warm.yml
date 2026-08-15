@@ -45,7 +45,7 @@ jobs:
       # prefix-key AND shared-key MUST match ci.yml's rust-lint restore. shared-key is
       # load-bearing: without it rust-cache mixes the JOB ID (warm-lint vs rust-lint) into the
       # key and these saves are never restored by the PR jobs.
-      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3  # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
           prefix-key: "v2-df54"
           shared-key: "lint"
@@ -73,7 +73,7 @@ jobs:
         with:
           toolchain: "1.96.0"
       # prefix-key AND shared-key MUST match ci.yml's rust-test restore (see warm-lint note).
-      - uses: Swatinem/rust-cache@258712b0b7b1ddf8bddc9fc3b0faca682b2736c3  # v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
           prefix-key: "v2-df54-test"
           shared-key: "test"
