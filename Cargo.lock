@@ -4565,6 +4565,7 @@ dependencies = [
 name = "repark-ta"
 version = "0.2.0"
 dependencies = [
+ "criterion",
  "datafusion",
  "repark-core",
  "serde_json",

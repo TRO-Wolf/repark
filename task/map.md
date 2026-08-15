@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) — **P-1
+  (2026-08-15):** criterion kernel baseline for `repark-ta` (`ema`/`sma`/`rsi`/
+  `bbands` + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold / three-
+  sibling / cache-hit shape). Measure-only; no `src/` edits.
 - [ta1-sql-fusion-ledger.md](ta1-sql-fusion-ledger.md) — **TA-1 (2026-08-15):**
   SQL same-OVER `WindowAggExec` fusion pin on both doors (`ta_window.rs` Spark,
   `ta_toll.rs` ANSI+TaExtension). Named `OVER w` and inline same-spec = 1;
@@ -367,6 +371,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) | **P-1** criterion TA kernel baseline (measure-only) |
 | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) | **M16** evolved unpartitioned position-delete `spec_id` |
 | [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) | **FN-D** datetime aliases/shims — 11 shipped, rest honest-cut |
 | [fn-e-collections-ledger.md](fn-e-collections-ledger.md) | **FN-E** collections / higher-order alias batch |
@@ -399,6 +404,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
+| Read the P-1 criterion TA kernel baseline | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) |
 | Read the M16 evolved-spec position-delete stamp | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) |
 | Read the G8 value-semantics matrix + liveness gate | [s2-g8-ledger.md](s2-g8-ledger.md) |
 | Read the R-3 flip of the four G8 pin-absences | [r3-g8-absences-ledger.md](r3-g8-absences-ledger.md) |
