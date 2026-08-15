@@ -154,6 +154,15 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
+- **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
+  Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
+  perf note's §8 battery: kernel race, many-symbols scaling, wide serving SELECT, batch-size
+  sweep, null_lookback cost, last-row collect; plus flamegraph/heaptrack and a bench-only
+  safe-vs-unchecked ceiling microbench). Implementation slates (multi-slot cache, null-free
+  borrow, single Arrow write, short-partition early-out) are GATED on those numbers; the perf
+  note's §7 do-not list (no math reordering, goldens bit-exact) is binding; `unsafe` remains
+  workspace-forbidden.
+
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
   campaign continues into H-2) — the first campaign to touch engine code since the port:
