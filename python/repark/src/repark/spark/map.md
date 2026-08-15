@@ -1114,8 +1114,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   only; no `pyspark.ml` alias shim tonight. Vectors: dense FixedSizeList / sparse struct
   (layout home: `ml/linalg.py`); persistence repark-ml v1 (`pipeline.py` format constants).
 - `ta.py` — the `repark.ta` technical-analysis surface (T1b + T2 batches 1–2 + WG2–WG5 + T3 +
+  TA-4 volume +
   **G-NAN**; module doc truth-up 2026-08-15: plan-fusion claim corrected to post-N2 behavior): the
-  full 77
+  full 81
   indicator entry points (`ema`/`sma`/`rsi`/`adx`/`atr`/`trange`/`var`/`stddev`/`linearreg`+`_slope`/
   `_intercept`/`_angle`/`tsf`/`correl`/`min`/`max`/`sum`, the WG1 overlap-MA family `wma`/`dema`/
   `tema`/`trima`/`kama`/`t3`/`midpoint`/`midprice`, the split `bbands_upper`/`_middle`/`_lower`,
@@ -1128,7 +1129,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `avgprice`/`medprice`/`typprice`/`wclprice`, and the T3 parked four — the split `mama`/`fama`
   (real-valued `fastlimit`/`slowlimit`), `sar`/`sarext` (H/L, real-valued accelerations; SAREXT's
   short-side output is negative), and `mavp` whose second argument is a per-row `periods` **series**
-  — column-or-name — clamped to `[minperiod, maxperiod]`) over the
+  — column-or-name — clamped to `[minperiod, maxperiod]`, and the TA-4 volume four `ad`/`adosc`
+  (H/L/C/V; `fastperiod`/`slowperiod` slots) / `obv` (close+volume; first output is first volume) /
+  `mfi` (H/L/C/V, `timeperiod`)) over the
   `repark-ta` kernels — `min`/`max`/`sum` carry uppercase `MIN`/`MAX`/`SUM` TA-Lib-name aliases.
   Each returns a
   **window-function** `Column` (series column-or-name first, TA-Lib-named kwargs

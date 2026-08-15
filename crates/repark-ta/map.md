@@ -7,13 +7,13 @@ crate): bit-exact hand-ports of the TA-Lib C 0.4.0
 algorithms (no C compiled/linked/vendored, no third-party TA crate — decision trail in
 task/todo.md T0). This is the kernel layer only — plain `&[f64]` in → `Vec<f64>` out,
 dependency-light (runtime dep: `thiserror`; dev-dep: `serde_json` for the goldens
-manifest), independently publishable. **64 public kernel functions** (the full frozen inventory —
-T3 landed the last four: MAMA, SAR, SAREXT, MAVP). The optional `datafusion` feature adds the
-window-UDF wrapper layer (`udf` module — **77 `WindowUDF`s**: one per entry point, so the
+manifest), independently publishable. **68 public kernel functions** (the frozen 64 plus the TA-4 volume
+four: AD, ADOSC, OBV, MFI). The optional `datafusion` feature adds the
+window-UDF wrapper layer (`udf` module — **81 `WindowUDF`s**: one per entry point, so the
 multi-output kernels — BBANDS, MAMA, AROON, the MACD family, the stochastics — are split one UDF
 per output) plus the door-neutral `TaExtension`. Consumers: `repark-spark` (the Spark door
 composes `TaExtension` at v1's registration position) and, in phase 3, `repark-python` (DataFrame
-API — the `repark.ta` Python namespace is built on it). **64/64 functions, 77/77 entry points.**
+API — the `repark.ta` Python namespace is built on it). **68/68 functions, 81/81 entry points.**
 
 ## Contents
 
@@ -35,14 +35,14 @@ API — the `repark.ta` Python namespace is built on it). **64/64 functions, 77/
 | Add / fix a kernel | [src/map.md](src/map.md) — port from the C reference, mind the numerics contract |
 | Understand the numerics contract (no FMA, incremental accumulators, …) | `src/lib.rs` crate docs |
 | Re-record or extend the goldens | `python/repark-parity/record_ta_goldens.py` → [tests/map.md](tests/map.md) |
-| Call an indicator from Rust | `repark_ta::{sma, ema, rsi, adx, atr, bbands, mama, sar, sarext, mavp, apo, ppo, macdext, stoch, …}` (64 kernels; `ma(_, _, 7)` / APO·PPO·MACDEXT·STOCH* matype 7 = MAMA) |
+| Call an indicator from Rust | `repark_ta::{sma, ema, rsi, adx, atr, bbands, mama, sar, sarext, mavp, apo, ppo, macdext, stoch, ad, adosc, obv, mfi, …}` (68 kernels; `ma(_, _, 7)` / APO·PPO·MACDEXT·STOCH* matype 7 = MAMA) |
 | Install the TA UDFs on a session | `extension` module (feature `datafusion`): `TaExtension` — a `repark_core::SessionExtension`; `SparkExtension` composes it, native sessions install it directly |
 | Call an indicator from SQL / DataFrame | `udf` module (feature `datafusion`): `ta_ema(close, 21) OVER (…)`; Python `repark.ta.ema(...)` — see [src/map.md](src/map.md) |
 
 ## Component contract
 
-- **Owns:** pure-Rust bit-exact TA-Lib 0.4.0 kernels (64 functions); under the optional `datafusion`
-  feature, the window-UDF wrapper layer (77 `WindowUDF`s — one per entry point) + the door-neutral
+- **Owns:** pure-Rust bit-exact TA-Lib 0.4.0 kernels (68 functions); under the optional `datafusion`
+  feature, the window-UDF wrapper layer (81 `WindowUDF`s — one per entry point) + the door-neutral
   `TaExtension`.
 - **Does not own:** the session install position (the Spark door composes `TaExtension`); the Python
   `repark.ta` namespace (repark-python builds on this).

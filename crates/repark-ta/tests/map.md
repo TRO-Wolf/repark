@@ -24,10 +24,10 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   incl. KAMA's efficiency-ratio guard, the WG2 CMO/WILLR/CCI/BOP/ULTOSC zero short-circuits, the
   WG3 DX re-emit + DI zero short-circuit, the WG4 STOCHF raw-%K `diff` zero guard, the WG5 BETA
   return/denominator zero guards, and MAMA's steady-state atan/`Re`/`Im` zero guards). Also enforces
-  recorder↔test sync via `manifest.json` (`manifest_and_tests_cover_the_same_series`). TA-3 adds
-  the volume-family goldens (`ad`/`adosc_3_10`/`obv`/`mfi_14` + flat twins + `fixture_volume` /
-  `fixture_flat_volume`) and a shape pin (`volume_family_goldens_are_recorded`); kernel `to_bits`
-  comparison lands in TA-4.
+  recorder↔test sync via `manifest.json` (`manifest_and_tests_cover_the_same_series`). TA-4
+  consumes the volume-family goldens (`ad`/`adosc_3_10`/`obv`/`mfi_14` + flat twins +
+  `fixture_volume` / `fixture_flat_volume`) as `f64::to_bits` kernel pins
+  (`volume_family_matches_c_talib` / `volume_family_flat_guard_branches_match_c_talib`).
 - `contract.rs` — the argument contract for EVERY kernel: below-min period → `InvalidPeriod`;
   above-`MAX_PERIOD` (incl. `usize::MAX`) → `InvalidPeriod`, never overflow; short input →
   full-length all-NaN; empty → empty; multi-series length mismatch → `LengthMismatch`. The shared
@@ -43,6 +43,9 @@ golden fails, the kernel drifted (or the oracle moved), never "close enough".
   matype-7 short-series all-NaN success + out-of-range `UnsupportedMaType`). WG5: `natr`/`beta`
   join the shared `kernels()` sweep (both period-min 1); the no-period O/H/L/C price transforms get
   a dedicated `price_transform_argument_contract` (every-bar output, empty→empty, length mismatch).
+  TA-4: `mfi` joins the shared `kernels()` sweep (period-min 2); AD/OBV (no period) and ADOSC
+  (two named periods, min 2) get `volume_family_argument_contract` (every-bar / empty / short
+  all-NaN / below-min / length mismatch).
   T3: `parked_four_argument_contract` pins the four's real-valued / multi-input parameter ranges
   (MAMA limits `[0.01,0.99]` + NaN-reject; SAR/SAREXT accelerations `[0,3e37]`, SAREXT start
   `[-3e37,3e37]` with a negative start legal; MAVP min/max `[2,MAX_PERIOD]` + matype `0..=8` +

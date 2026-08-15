@@ -9,12 +9,12 @@
 //! 4. An empty input → an empty vector.
 
 use repark_ta::{
-    MAX_PERIOD, TA_REAL_MAX, TaError, adx, adxr, apo, aroon, aroonosc, atr, avgprice, bbands, beta,
-    bop, cci, cmo, correl, dema, dx, ema, kama, linearreg, linearreg_angle, linearreg_intercept,
-    linearreg_slope, ma, macd, macdext, macdfix, mama, mavp, max, medprice, midpoint, midprice,
-    min, minus_di, minus_dm, mom, natr, plus_di, plus_dm, ppo, roc, rocp, rocr, rocr100, rsi, sar,
-    sarext, sma, stddev, stoch, stochf, stochrsi, sum, t3, tema, trange, trima, trix, tsf,
-    typprice, ultosc, var, wclprice, willr, wma,
+    MAX_PERIOD, TA_REAL_MAX, TaError, ad, adosc, adx, adxr, apo, aroon, aroonosc, atr, avgprice,
+    bbands, beta, bop, cci, cmo, correl, dema, dx, ema, kama, linearreg, linearreg_angle,
+    linearreg_intercept, linearreg_slope, ma, macd, macdext, macdfix, mama, mavp, max, medprice,
+    mfi, midpoint, midprice, min, minus_di, minus_dm, mom, natr, obv, plus_di, plus_dm, ppo, roc,
+    rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf, stochrsi, sum, t3, tema,
+    trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma,
 };
 
 type Kernel = (
@@ -93,6 +93,9 @@ fn kernels() -> Vec<Kernel> {
         // allow period 1. The no-period price transforms get a dedicated test below.
         ("natr", 1, Box::new(|d, p| natr(d, d, d, p))),
         ("beta", 1, Box::new(|d, p| beta(d, d, p))),
+        // TA-4 volume: MFI is the one-period kernel (min 2). AD/OBV have no period; ADOSC has
+        // two named periods — they get `volume_family_argument_contract` below.
+        ("mfi", 2, Box::new(|d, p| mfi(d, d, d, d, p))),
     ]
 }
 
@@ -711,4 +714,65 @@ fn parked_four_argument_contract() {
     assert_eq!(short.len(), data.len());
     assert!(short.iter().all(|v| v.is_nan()));
     assert!(mavp(&[], &[], 5, 20, 0).expect("mavp empty").is_empty());
+}
+
+/// TA-4 volume family: AD/OBV have no period (lookback 0); ADOSC has two named periods
+/// (`optInFastPeriod` / `optInSlowPeriod`, min 2); MFI's period contract rides `kernels()`.
+#[test]
+fn volume_family_argument_contract() {
+    let data = [1.0, 2.0, 3.0, 4.0];
+    let ad_out = ad(&data, &data, &data, &data).expect("ad");
+    assert_eq!(ad_out.len(), data.len());
+    assert!(ad_out.iter().all(|v| v.is_finite()));
+    let obv_out = obv(&data, &data).expect("obv");
+    assert_eq!(obv_out.len(), data.len());
+    assert!(obv_out.iter().all(|v| v.is_finite()));
+    assert_eq!(obv_out[0].to_bits(), data[0].to_bits());
+
+    assert!(ad(&[], &[], &[], &[]).expect("ad empty").is_empty());
+    assert!(obv(&[], &[]).expect("obv empty").is_empty());
+    assert!(
+        adosc(&[], &[], &[], &[], 3, 10)
+            .expect("adosc empty")
+            .is_empty()
+    );
+
+    assert_eq!(
+        adosc(&data, &data, &data, &data, 1, 10),
+        Err(TaError::InvalidPeriod {
+            name: "optInFastPeriod",
+            value: 1,
+            min: 2,
+        })
+    );
+    assert!(matches!(
+        adosc(&data, &data, &data, &data, 3, usize::MAX),
+        Err(TaError::InvalidPeriod {
+            name: "optInSlowPeriod",
+            ..
+        })
+    ));
+    // lookback = max(3,10)-1 = 9 > 4 → full-length all-NaN, not an error.
+    let short = adosc(&data, &data, &data, &data, 3, 10).expect("adosc short");
+    assert_eq!(short.len(), data.len());
+    assert!(short.iter().all(|v| v.is_nan()));
+
+    let a = [1.0, 2.0, 3.0];
+    let b = [1.0, 2.0];
+    assert_eq!(
+        ad(&a, &b, &a, &a),
+        Err(TaError::LengthMismatch { left: 3, right: 2 })
+    );
+    assert_eq!(
+        adosc(&a, &a, &a, &b, 3, 10),
+        Err(TaError::LengthMismatch { left: 3, right: 2 })
+    );
+    assert_eq!(
+        obv(&a, &b),
+        Err(TaError::LengthMismatch { left: 3, right: 2 })
+    );
+    assert_eq!(
+        mfi(&a, &a, &b, &a, 2),
+        Err(TaError::LengthMismatch { left: 3, right: 2 })
+    );
 }

@@ -101,12 +101,20 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   bits — its `TYPPRICE` series folds `low + close` first (`high + (low + close)`), and the kernel
   matches that. The earlier "wrapper implements these in its own native Rust" claim was false
   (upstream calls C over FFI); fold origin unverified — see the in-module re-record caution.
+- `volume.rs` — TA-4: `ad`/`adosc`/`obv`/`mfi`. AD lookback 0, increment only if
+  `(high−low) > 0.0` (strict `>`, not `TA_IS_ZERO`), CLV order
+  `(((c−l)−(h−c))/tmp)*vol`. ADOSC does **not** call standalone `ema()` — C seeds both EMAs
+  with the first AD then `(k*ad)+(one_minus_k*ema)`, `PER_TO_K(p)=2.0/(p+1)`, lookback 9 at
+  (3,10). OBV first output is `volume[0]`. MFI is **not** Wilder: rolling pos/neg buffer,
+  classify neg-first, hard `pos+neg < 1.0`, do not clamp (drift can go slightly negative).
 - `udf.rs` — **feature `datafusion`** — the DataFusion window-UDF wrapper layer. A single spec
-  table (name → kernel) drives 77 `WindowUDF`s (the full 77/77 entry-point inventory) — the 66
+  table (name → kernel) drives 81 `WindowUDF`s (the full 81/81 entry-point inventory) — the 66
   T1–WG4 entry points, the 6 WG5 sweep-up ones, and the 5 T3 parked-four (the split `ta_mama`/
   `ta_fama` — 1 series + 2 real limits each; `ta_sar` — 2 series + 2 real scalars; `ta_sarext` — 2
   series + 8 real scalars; `ta_mavp` — 2 series, the second being the per-row periods column, + 3
-  integral scalars). Real-valued scalars (MAMA limits, SAR/SAREXT accelerations) bypass `period`
+  integral scalars), plus the 4 TA-4 volume entry points (`ta_ad`/`ta_adosc`/`ta_mfi` four-series
+  H/L/C/V; `ta_obv` close+volume; `ta_adosc` two period scalars, `ta_mfi` one). Real-valued
+  scalars (MAMA limits, SAR/SAREXT accelerations) bypass `period`
   (no whole-number check); MAVP's min/max/matype go through it. The WG5
   sweep-up ones (`ta_natr` H/L/C+period, `ta_beta` two-series+period, and the no-period
   `ta_avgprice` O/H/L/C, `ta_medprice` H/L, `ta_typprice`/`ta_wclprice` H/L/C) — (the 17

@@ -38,11 +38,12 @@ use datafusion::physical_expr::expressions::Literal;
 use datafusion::prelude::SessionContext;
 
 use crate::{
-    adx, adxr, apo, aroon, aroonosc, atr, avgprice, bbands, beta, bop, cci, cmo, correl, dema, dx,
-    ema, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma, macd, macdext,
-    macdfix, mama, mavp, max, medprice, midpoint, midprice, min, minus_di, minus_dm, mom, natr,
-    plus_di, plus_dm, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext, sma, stddev, stoch, stochf,
-    stochrsi, sum, t3, tema, trange, trima, trix, tsf, typprice, ultosc, var, wclprice, willr, wma,
+    ad, adosc, adx, adxr, apo, aroon, aroonosc, atr, avgprice, bbands, beta, bop, cci, cmo, correl,
+    dema, dx, ema, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma,
+    macd, macdext, macdfix, mama, mavp, max, medprice, mfi, midpoint, midprice, min, minus_di,
+    minus_dm, mom, natr, obv, plus_di, plus_dm, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext,
+    sma, stddev, stoch, stochf, stochrsi, sum, t3, tema, trange, trima, trix, tsf, typprice,
+    ultosc, var, wclprice, willr, wma,
 };
 
 // ===========================================================================================
@@ -221,7 +222,7 @@ fn multi_out_clear() {
     });
 }
 
-/// The 77 window-UDF names, in registration order: the 17 single-output T1 kernels (incl. the
+/// The 81 window-UDF names, in registration order: the 17 single-output T1 kernels (incl. the
 /// `MIN`/`MAX`/`SUM` math operators), the 8 WG1 overlap-MA kernels (`WMA`, `DEMA`, `TEMA`,
 /// `TRIMA`, `KAMA`, `T3`, `MIDPOINT`, `MIDPRICE`), the three split `BBANDS` outputs, the 16
 /// WG2 simple-momentum entry points (`MOM`, `ROC`/`ROCP`/`ROCR`/`ROCR100`, `WILLR`, `CCI`, `CMO`,
@@ -234,8 +235,9 @@ fn multi_out_clear() {
 /// WG5 sweep-up entry points (`NATR`, `BETA`, and the no-period O/H/L/C price transforms
 /// `ta_avgprice`/`ta_medprice`/`ta_typprice`/`ta_wclprice`), plus the 5 T3 parked-four entry points
 /// (`MAMA` split into `ta_mama`/`ta_fama`, `ta_sar`, the 8-scalar `ta_sarext`, and the two-series
-/// `ta_mavp`). This is the single source of truth for name → kernel; both [`register_all`] and
-/// [`window_udf`] read it, so adding a kernel is one row.
+/// `ta_mavp`), plus the 4 TA-4 volume entry points (`ta_ad`/`ta_adosc`/`ta_obv`/`ta_mfi`). This
+/// is the single source of truth for name → kernel; both [`register_all`] and [`window_udf`]
+/// read it, so adding a kernel is one row.
 const SPECS: &[(&str, TaFn)] = &[
     ("ta_sma", TaFn::Sma),
     ("ta_ema", TaFn::Ema),
@@ -309,13 +311,19 @@ const SPECS: &[(&str, TaFn)] = &[
     ("ta_medprice", TaFn::Medprice),
     ("ta_typprice", TaFn::Typprice),
     ("ta_wclprice", TaFn::Wclprice),
-    // T3 — the parked four (77/77): MAMA split into its two outputs, SAR, the 8-param SAREXT, and
+    // T3 — the parked four: MAMA split into its two outputs, SAR, the 8-param SAREXT, and
     // MAVP (whose second series is the per-row periods column, not a scalar).
     ("ta_mama", TaFn::Mama),
     ("ta_fama", TaFn::Fama),
     ("ta_sar", TaFn::Sar),
     ("ta_sarext", TaFn::Sarext),
     ("ta_mavp", TaFn::Mavp),
+    // TA-4 volume family (81/81): all single-output. AD/ADOSC/MFI are four-series H/L/C/V;
+    // OBV is close+volume.
+    ("ta_ad", TaFn::Ad),
+    ("ta_adosc", TaFn::Adosc),
+    ("ta_obv", TaFn::Obv),
+    ("ta_mfi", TaFn::Mfi),
 ];
 
 /// ===========================================================================================
@@ -401,13 +409,17 @@ enum TaFn {
     Sar,
     Sarext,
     Mavp,
+    Ad,
+    Adosc,
+    Obv,
+    Mfi,
 }
 
 impl TaFn {
     /// How many leading arguments are *series* columns (the rest are scalar literal params).
     fn n_series(self) -> usize {
         match self {
-            TaFn::Bop | TaFn::Avgprice => 4,
+            TaFn::Bop | TaFn::Avgprice | TaFn::Ad | TaFn::Adosc | TaFn::Mfi => 4,
             TaFn::Trange
             | TaFn::Atr
             | TaFn::Adx
@@ -437,7 +449,8 @@ impl TaFn {
             // SAR/SAREXT are two-series (high, low); MAVP's second series is the periods column.
             | TaFn::Sar
             | TaFn::Sarext
-            | TaFn::Mavp => 2,
+            | TaFn::Mavp
+            | TaFn::Obv => 2,
             _ => 1,
         }
     }
@@ -451,7 +464,9 @@ impl TaFn {
             | TaFn::Avgprice
             | TaFn::Medprice
             | TaFn::Typprice
-            | TaFn::Wclprice => 0,
+            | TaFn::Wclprice
+            | TaFn::Ad
+            | TaFn::Obv => 0,
             // T3: period + vfactor; MA: period + matype; MACDFIX: signal only (1, the default arm).
             // MAMA: fastlimit + slowlimit; SAR: acceleration + maximum (all real-valued scalars).
             TaFn::Var
@@ -460,7 +475,8 @@ impl TaFn {
             | TaFn::Ma
             | TaFn::Mama
             | TaFn::Fama
-            | TaFn::Sar => 2,
+            | TaFn::Sar
+            | TaFn::Adosc => 2,
             // BBANDS: period + 2 nbdev; APO/PPO: fast + slow + matype; ULTOSC: three periods;
             // MACD: fast + slow + signal; STOCHF: fastk + fastd + fastd matype; MAVP: min + max +
             // matype (the periods series is a column, not a scalar).
@@ -847,6 +863,24 @@ impl TaFn {
                 period(params[1])?,
                 period(params[2])?,
             ),
+            // TA-4 volume: AD/ADOSC/MFI are H/L/C/V; OBV is close+volume.
+            TaFn::Ad => ad(series[0], series[1], series[2], series[3]),
+            TaFn::Adosc => adosc(
+                series[0],
+                series[1],
+                series[2],
+                series[3],
+                period(params[0])?,
+                period(params[1])?,
+            ),
+            TaFn::Obv => obv(series[0], series[1]),
+            TaFn::Mfi => mfi(
+                series[0],
+                series[1],
+                series[2],
+                series[3],
+                period(params[0])?,
+            ),
         }
     }
 }
@@ -1169,7 +1203,7 @@ mod tests {
     #[test]
     fn window_udfs_registers_all_names() {
         let udfs = window_udfs();
-        assert_eq!(udfs.len(), 77);
+        assert_eq!(udfs.len(), 81);
         let names: Vec<&str> = udfs.iter().map(WindowUDF::name).collect();
         for &(spec_name, _) in SPECS {
             assert!(
@@ -1183,6 +1217,10 @@ mod tests {
     fn window_udf_lookup_hits_and_misses() {
         assert!(window_udf("ta_ema").is_some());
         assert!(window_udf("ta_bbands_lower").is_some());
+        assert!(window_udf("ta_ad").is_some());
+        assert!(window_udf("ta_adosc").is_some());
+        assert!(window_udf("ta_obv").is_some());
+        assert!(window_udf("ta_mfi").is_some());
         assert!(window_udf("ta_not_a_function").is_none());
     }
 
@@ -1219,6 +1257,37 @@ mod tests {
         for (a, b) in via_udf.iter().zip(&direct) {
             assert!(a.to_bits() == b.to_bits() || (a.is_nan() && b.is_nan()));
         }
+    }
+
+    #[test]
+    fn compute_volume_kernels_match_the_kernel() {
+        // TA-4 wiring: SPECS dispatch is bit-exact with the public kernels (arity + series order).
+        let high: Vec<f64> = (0..20).map(|i| 12.0 + f64::from(i)).collect();
+        let low: Vec<f64> = (0..20).map(|i| 8.0 + f64::from(i)).collect();
+        let close: Vec<f64> = (0..20).map(|i| 11.0 + f64::from(i)).collect();
+        let volume: Vec<f64> = (0..20).map(|i| 100.0 + f64::from(i)).collect();
+        let hlcv = [
+            high.as_slice(),
+            low.as_slice(),
+            close.as_slice(),
+            volume.as_slice(),
+        ];
+        let via_ad = TaFn::Ad.compute(&hlcv, &[]).expect("ta_ad");
+        assert_f64_series_bit_exact(&via_ad, &ad(&high, &low, &close, &volume).expect("ad"));
+        let via_adosc = TaFn::Adosc.compute(&hlcv, &[3.0, 10.0]).expect("ta_adosc");
+        assert_f64_series_bit_exact(
+            &via_adosc,
+            &adosc(&high, &low, &close, &volume, 3, 10).expect("adosc"),
+        );
+        let via_obv = TaFn::Obv
+            .compute(&[close.as_slice(), volume.as_slice()], &[])
+            .expect("ta_obv");
+        assert_f64_series_bit_exact(&via_obv, &obv(&close, &volume).expect("obv"));
+        let via_mfi = TaFn::Mfi.compute(&hlcv, &[14.0]).expect("ta_mfi");
+        assert_f64_series_bit_exact(
+            &via_mfi,
+            &mfi(&high, &low, &close, &volume, 14).expect("mfi"),
+        );
     }
 
     #[test]
