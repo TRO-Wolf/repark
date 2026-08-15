@@ -62,6 +62,11 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   (session-zone Date32; type pin here stays Date32). **B-TZ-4 (V-3 A5 overflow):** `CAST(ts AS STRING)` is now `Utf8`
   (was `Utf8View`). Ledger: `../../../task/tz5-cast-seconds-ledger.md`,
   `../../../task/v3-btz4-ledger.md`.
+- [session_timestamp_type.rs](session_timestamp_type.rs) — **Q10:** Spark-door +
+  native DataFrame pins for `spark.sql.timestampType`. Default LTZ type/value,
+  NTZ opt-in literals/casts (naive µs, no localization), invalid-value refusal
+  naming both tokens, DDL `TIMESTAMP` → Iceberg `timestamp` under NTZ /
+  `timestamptz` under LTZ. `to_timestamp` stays LTZ.
 - [ta_window.rs](ta_window.rs) — deferred rows #8-#14 (phase-2 PR-4): the seven
   `sql_route_*` cases, ported from v1 `repark-session/tests/ta_window.rs`. Proves the TA window
   UDFs the composed `repark_ta::TaExtension` registers are `f64::to_bits`-identical to the

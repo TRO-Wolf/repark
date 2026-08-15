@@ -22,6 +22,11 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_timestamp_type.py](test_timestamp_type.py) — **Q10:** facade
+  `spark.sql.timestampType` — default get, get/set round-trip, invalid set +
+  builder refusal naming both tokens, NTZ opt-in SQL literal/CAST +
+  `selectExpr` + `createDataFrame` inference on Arrow (value AND type),
+  `to_timestamp` stays LTZ. Ledger: `task/q10-timestamptype-ledger.md`.
 - [test_functions_split_identity.py](test_functions_split_identity.py) — FN-SPLIT
   (2026-08-15): `__all__` before==after pin. **FN-C moved the pin** to 261
   names (253 after FN-A + FN-B + 8 aggregate additions) + every name resolves.

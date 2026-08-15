@@ -12,6 +12,10 @@ from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEYS,
     normalize_session_time_zone_config,
 )
+from repark.spark.session.timestamp_type import (
+    TIMESTAMP_TYPE_KEYS,
+    normalize_timestamp_type_config,
+)
 
 for _name in dir(_sf):
     if _name.startswith("__"):
@@ -2173,6 +2177,7 @@ class ReparkSession:
             # facade's own `conf.get` does not report. Normalization only — the engine stays the
             # SOLE validator of what a zone is.
             normalize_session_time_zone_config(self._config)
+            normalize_timestamp_type_config(self._config)
             memory_limit_gb = self._resolve_memory_limit_gb()
             batch_size = self._resolve_batch_size()
             target_partitions = self._resolve_shuffle_partitions()
@@ -2216,6 +2221,7 @@ class ReparkSession:
                         # report a zone the live engine session does not have. It falls into
                         # `unapplied` below and rides the existing engine-knob warning.
                         *SESSION_TIME_ZONE_KEYS,
+                        *TIMESTAMP_TYPE_KEYS,
                     )
                 }
                 runtime_conf = RuntimeConfig(_sf._active_session)._store()

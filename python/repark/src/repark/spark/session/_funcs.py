@@ -89,6 +89,10 @@ from repark.spark.session.session_time_zone import (
     DEFAULT_SESSION_TIME_ZONE,
     SESSION_TIME_ZONE_KEY,
 )
+from repark.spark.session.timestamp_type import (
+    DEFAULT_TIMESTAMP_TYPE,
+    TIMESTAMP_TYPE_KEY,
+)
 
 
 if TYPE_CHECKING:
@@ -122,6 +126,8 @@ _SQLCONF_DEFAULTS: dict[str, str] = {
     # Readable back before anything sets it. UTC, not the host zone — a DECLARED divergence
     # from Spark's JVM-local default (reproducibility; no host-environment read).
     SESSION_TIME_ZONE_KEY: DEFAULT_SESSION_TIME_ZONE,
+    # === Q10: spark.sql.timestampType (default TIMESTAMP_LTZ, current LTZ behavior) ===
+    TIMESTAMP_TYPE_KEY: DEFAULT_TIMESTAMP_TYPE,
 }
 
 
@@ -3512,8 +3518,9 @@ def _infer_arrow_type_from_python_sample(sample: Any) -> Any:
         return pa.binary()
 
     if isinstance(sample, _dt.datetime):
-        # Default TIMESTAMP is LTZ (µs+UTC). NTZ is explicit schema only.
-        return pa.timestamp("us", tz="UTC")
+        from repark.spark.session.timestamp_type import default_timestamp_arrow_type
+
+        return default_timestamp_arrow_type()
 
     if isinstance(sample, _dt.date):
         return pa.date32()
@@ -4308,16 +4315,32 @@ def _normalize_frame_arrow_column(column: Any, *, engine_type: str | None) -> An
 
 
 def _localize_naive_timestamp_column(column: Any) -> Any:
-    """Naive timestamp cells → session-zone instants stored as ``timestamp[us, tz=UTC]``."""
+    """Naive timestamp cells → session-zone instants stored as ``timestamp[us, tz=UTC]``.
+
+    When ``spark.sql.timestampType=TIMESTAMP_NTZ`` the inferred default is a naive
+    wall clock — do not localize.
+    """
 
     import datetime as _dt
 
     import pyarrow as pa
 
     from repark.spark.session.session_time_zone import localize_naive_datetime_to_utc
+    from repark.spark.session.timestamp_type import is_default_timestamp_ntz
 
     if not pa.types.is_timestamp(column.type):
         return column
+
+    if is_default_timestamp_ntz():
+        values: list[Any] = []
+        for cell in column.to_pylist():
+            if cell is None:
+                values.append(None)
+            elif getattr(cell, "tzinfo", None) is not None:
+                values.append(cell.astimezone(_dt.UTC).replace(tzinfo=None))
+            else:
+                values.append(cell)
+        return pa.array(values, type=pa.timestamp("us"))
 
     if column.type.tz is not None and column.type.unit == "us":
         return column
@@ -5009,11 +5032,13 @@ def _arrow_table_from_tuples(
 
                 if isinstance(sample, _dt.datetime):
                     # Timestamp + Long/Double/Date refuse — no epoch coercion (extra XC2-L1).
-                    # Default TIMESTAMP is LTZ; naive walls localize at cell-prepare.
+                    # Default TIMESTAMP follows spark.sql.timestampType (Q10).
+
+                    from repark.spark.session.timestamp_type import default_timestamp_arrow_type
 
                     _refuse_long_double_merge(tuples, column_index, names[column_index])
 
-                    arrow_types.append(pa.timestamp("us", tz="UTC"))
+                    arrow_types.append(default_timestamp_arrow_type())
 
                 elif isinstance(sample, _dt.date):
                     # Date + Long/Timestamp refuse — no day-epoch coercion (extra XC2-L2).

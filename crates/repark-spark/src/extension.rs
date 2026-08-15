@@ -7,7 +7,8 @@
 //!   `repark.sql.*` `ConfigExtension` install (v1 r24 SB1): parse the builder conf map via
 //!   [`repark_functions::cardinality::repark_sql_settings_from_config_map`] and attach it with
 //!   [`repark_functions::cardinality::with_repark_sql_config`]; **plus** the Spark-door
-//!   `spark.sql.ansi.enabled` carrier (U5 / Q10=A, default **TRUE**); **plus** the
+//!   `spark.sql.ansi.enabled` carrier (U5 / Q10=A, default **TRUE**); **plus** the Spark-door
+//!   `spark.sql.timestampType` carrier (Q10, default **`TIMESTAMP_LTZ`**); **plus** the
 //!   session-timezone carrier (H-1a split B), which is this door's whole part in making
 //!   timestamp extraction honor `spark.sql.session.timeZone`; **plus** the Spark-door parser
 //!   default `datafusion.sql_parser.parse_float_as_decimal = true` (DEC-1 / U2) so bare
@@ -72,13 +73,17 @@ pub(crate) fn apply_spark_float_as_decimal(mut config: SessionConfig) -> Session
 impl SessionExtension for SparkExtension {
     /// v1 position: after the engine write knobs, before the `RuntimeEnv` is assembled —
     /// the r24 SB1 cardinality / `repark.sql.*` `ConfigExtension` install, the Spark-door
-    /// `spark.sql.ansi.enabled` carrier (default TRUE), the `parse_float_as_decimal` default
-    /// (DEC-1 / U2), and the session-timezone carrier the extractor layer reads at invoke time.
+    /// `spark.sql.ansi.enabled` carrier (default TRUE), the Spark-door
+    /// `spark.sql.timestampType` carrier (default `TIMESTAMP_LTZ`), the
+    /// `parse_float_as_decimal` default (DEC-1 / U2), and the session-timezone carrier
+    /// the extractor layer reads at invoke time.
     ///
     /// # Errors
-    /// A present-but-unparsable `repark.sql.*` conf value (v1's fail-loud contract), or a
+    /// A present-but-unparsable `repark.sql.*` conf value (v1's fail-loud contract), a
     /// present-but-unparsable `spark.sql.ansi.enabled` (Spark's `should be boolean, but was`
-    /// needle). The zone cannot fail here — `build()` validated it before this hook runs.
+    /// needle), or a present-but-unparsable `spark.sql.timestampType` (must be
+    /// `TIMESTAMP_LTZ` or `TIMESTAMP_NTZ`). The zone cannot fail here — `build()`
+    /// validated it before this hook runs.
     fn configure(
         &self,
         session: SessionBuildConf<'_>,
@@ -89,6 +94,10 @@ impl SessionExtension for SparkExtension {
         let config = repark_functions::cardinality::with_repark_sql_config(config, settings);
         let ansi_enabled = repark_functions::ansi::spark_ansi_from_config_map(session.conf)?;
         let config = repark_functions::ansi::with_spark_ansi_config(config, ansi_enabled);
+        let timestamp_type =
+            repark_functions::timestamp_type::spark_timestamp_type_from_config_map(session.conf)?;
+        let config =
+            repark_functions::timestamp_type::with_spark_timestamp_type(config, timestamp_type);
         let config = apply_spark_float_as_decimal(config);
         // The one crossing point (module docs): the engine's already-resolved zone becomes the
         // carrier every calendar extractor reads out of `ScalarFunctionArgs::config_options`.

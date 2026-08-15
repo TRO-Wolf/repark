@@ -8,6 +8,10 @@ use repark_core::{SessionBuildConf, SessionExtension, SessionTimeZone};
 use repark_functions::ansi::{SPARK_SQL_ANSI_ENABLED_KEY, SparkAnsiConfig};
 use repark_functions::cardinality::ReparkSqlConfig;
 use repark_functions::session_time_zone::{SessionTimeZoneConfig, session_time_zone_from_options};
+use repark_functions::timestamp_type::{
+    SPARK_SQL_TIMESTAMP_TYPE_KEY, SparkTimestampType, SparkTimestampTypeConfig,
+    spark_timestamp_type_from_options,
+};
 
 use super::SparkExtension;
 
@@ -165,6 +169,69 @@ fn configure_refuses_ansi_notabool() {
     assert!(
         err.contains(SPARK_SQL_ANSI_ENABLED_KEY),
         "error must name the key: {err}"
+    );
+}
+
+/// Q10: `configure` installs `spark.sql.timestampType` default `TIMESTAMP_LTZ`.
+#[test]
+fn configure_defaults_timestamp_type_ltz() {
+    let conf = HashMap::new();
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    assert_eq!(
+        spark_timestamp_type_from_options(config.options()),
+        SparkTimestampType::Ltz
+    );
+    assert!(
+        config
+            .options()
+            .extensions
+            .get::<SparkTimestampTypeConfig>()
+            .is_some(),
+        "the carrier itself must be installed so a missing-extension fallback cannot hide a miss"
+    );
+}
+
+/// Builder `.config(..., TIMESTAMP_NTZ)` is the opt-in.
+#[test]
+fn configure_honors_timestamp_type_ntz() {
+    let mut conf = HashMap::new();
+    conf.insert(
+        SPARK_SQL_TIMESTAMP_TYPE_KEY.to_string(),
+        "TIMESTAMP_NTZ".to_string(),
+    );
+    let zone = SessionTimeZone::default();
+    let config = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap();
+    assert_eq!(
+        spark_timestamp_type_from_options(config.options()),
+        SparkTimestampType::Ntz
+    );
+}
+
+/// Present-but-unparsable value fail-louds naming both legal tokens.
+#[test]
+fn configure_refuses_invalid_timestamp_type() {
+    let mut conf = HashMap::new();
+    conf.insert(
+        SPARK_SQL_TIMESTAMP_TYPE_KEY.to_string(),
+        "TIMESTAMP".to_string(),
+    );
+    let zone = SessionTimeZone::default();
+    let err = SparkExtension
+        .configure(build_conf(&conf, &zone), SessionConfig::new())
+        .unwrap_err()
+        .to_string();
+    assert!(
+        err.contains(SPARK_SQL_TIMESTAMP_TYPE_KEY),
+        "error must name the key: {err}"
+    );
+    assert!(
+        err.contains("TIMESTAMP_LTZ") && err.contains("TIMESTAMP_NTZ"),
+        "error must name both legal values: {err}"
     );
 }
 

@@ -49,6 +49,7 @@ pub mod random;
 pub mod session_time_zone;
 pub mod string;
 pub mod timestamp_cast;
+pub mod timestamp_type;
 
 use std::sync::Arc;
 

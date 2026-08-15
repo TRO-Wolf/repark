@@ -434,7 +434,6 @@ def rung_to_spark_type(resolution: ColumnResolution) -> Any:
         IntegerType,
         LongType,
         StringType,
-        TimestampType,
     )
 
     rung = resolution.rung
@@ -453,7 +452,9 @@ def rung_to_spark_type(resolution: ColumnResolution) -> Any:
     if rung == "date":
         return DateType()
     if rung == "timestamp":
-        return TimestampType()
+        from repark.spark.session.timestamp_type import default_timestamp_data_type
+
+        return default_timestamp_data_type()
     return StringType()
 
 

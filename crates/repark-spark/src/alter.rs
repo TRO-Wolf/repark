@@ -45,11 +45,12 @@ use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::CatalogRegistry;
 use repark_iceberg::write::alter::{ColumnPosition, PartitionSpecChange, SchemaChange};
 
-use crate::create_table::sql_type_to_iceberg;
+use crate::create_table::{sql_type_to_iceberg, sql_type_to_iceberg_with_timestamp_type};
 use crate::{
     PartitionFieldSpec, build_transform_field, catalog_handle, iceberg_err, name_parts,
     property_value, reregister,
 };
+use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 /// The value an `UNSET TBLPROPERTIES` key carries after the token rewrite, so the parsed
 /// `SetTblProperties` op can be decoded back into a removal. Namespaced + unguessable so it cannot
@@ -79,6 +80,7 @@ pub(crate) async fn execute_alter_table(
 ) -> Result<DataFrame> {
     let (catalog_name, mut ident) = resolve_table(name)?;
     let handle = catalog_handle(catalogs, &catalog_name)?;
+    let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
     let mut schema_batch: Vec<SchemaChange> = Vec::new();
     let mut schema_dirty = false;
 
@@ -113,7 +115,11 @@ pub(crate) async fn execute_alter_table(
                 if_not_exists,
                 ..
             } => {
-                let change = schema_change_from_add_column(column_def, column_position.as_ref())?;
+                let change = schema_change_from_add_column(
+                    column_def,
+                    column_position.as_ref(),
+                    timestamp_type,
+                )?;
                 if *if_not_exists {
                     // Iceberg has no IF NOT EXISTS on ADD; soft-skip when the name is already present.
                     if column_exists(handle.as_ref(), &ident, &column_def.name.value).await? {
@@ -149,7 +155,11 @@ pub(crate) async fn execute_alter_table(
                 schema_dirty = true;
             }
             AlterTableOperation::AlterColumn { column_name, op } => {
-                schema_batch.push(schema_change_from_alter_column(column_name, op)?);
+                schema_batch.push(schema_change_from_alter_column(
+                    column_name,
+                    op,
+                    timestamp_type,
+                )?);
                 schema_dirty = true;
             }
             other => {
@@ -218,8 +228,10 @@ async fn execute_rename_table(
 fn schema_change_from_add_column(
     column_def: &ColumnDef,
     column_position: Option<&MySQLColumnPosition>,
+    timestamp_type: SparkTimestampType,
 ) -> Result<SchemaChange> {
-    let field_type = sql_type_to_iceberg(&column_def.data_type)?;
+    let field_type =
+        sql_type_to_iceberg_with_timestamp_type(&column_def.data_type, timestamp_type)?;
     let mut required = false;
     let mut doc: Option<String> = None;
     for option in &column_def.options {
@@ -264,6 +276,7 @@ fn schema_change_from_add_column(
 fn schema_change_from_alter_column(
     column_name: &Ident,
     op: &AlterColumnOperation,
+    timestamp_type: SparkTimestampType,
 ) -> Result<SchemaChange> {
     match op {
         AlterColumnOperation::SetDataType {
@@ -276,7 +289,7 @@ fn schema_change_from_alter_column(
                         .into(),
                 ));
             }
-            let iceberg_type = sql_type_to_iceberg(data_type)?;
+            let iceberg_type = sql_type_to_iceberg_with_timestamp_type(data_type, timestamp_type)?;
             let iceberg::spec::Type::Primitive(new_type) = iceberg_type else {
                 return Err(DataFusionError::NotImplemented(format!(
                     "ALTER COLUMN `{}` TYPE to a non-primitive is not supported",

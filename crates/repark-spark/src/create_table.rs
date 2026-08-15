@@ -13,13 +13,14 @@ use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     ColumnDef, ColumnOption, CreateTable, CreateTableOptions, DataType as SqlDataType,
-    ExactNumberInfo, SqlOption,
+    ExactNumberInfo, SqlOption, TimezoneInfo,
 };
 use iceberg::spec::{NestedField, PrimitiveType, Schema, Type, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 
 use repark_core::{CatalogRegistry, LocationPolicy};
+use repark_functions::timestamp_type::{SparkTimestampType, spark_timestamp_type_from_options};
 
 use crate::{
     CreatePlan, PartitionFieldSpec, PartitionedByElement, build_partition_spec,
@@ -53,7 +54,8 @@ pub(crate) async fn execute_create_table(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
 ) -> Result<DataFrame> {
-    let schema_create = build_schema_create(create, partitioning)?;
+    let timestamp_type = spark_timestamp_type_from_options(ctx.copied_config().options());
+    let schema_create = build_schema_create(create, partitioning, timestamp_type)?;
     execute_schema_create(ctx, catalogs, schema_create).await
 }
 
@@ -62,6 +64,7 @@ pub(crate) async fn execute_create_table(
 fn build_schema_create(
     create: &CreateTable,
     partitioning: &[PartitionedByElement],
+    timestamp_type: SparkTimestampType,
 ) -> Result<SchemaCreate> {
     if create.query.is_some() {
         return Err(DataFusionError::Internal(
@@ -161,7 +164,7 @@ fn build_schema_create(
         )));
     }
 
-    let schema = schema_from_column_defs(&create.columns)?;
+    let schema = schema_from_column_defs(&create.columns, timestamp_type)?;
     let partition_spec = build_partition_spec(&schema, &partition_fields)?;
     // Bind partition validation early (unknown column fails before catalog I/O).
     let _ = partition_spec;
@@ -180,13 +183,17 @@ fn build_schema_create(
 }
 
 /// Map sqlparser column defs → Iceberg [`Schema`] (1-based field ids, Spark nullable default).
-fn schema_from_column_defs(columns: &[ColumnDef]) -> Result<Schema> {
+fn schema_from_column_defs(
+    columns: &[ColumnDef],
+    timestamp_type: SparkTimestampType,
+) -> Result<Schema> {
     let mut fields = Vec::with_capacity(columns.len());
     for (index, column) in columns.iter().enumerate() {
         let field_id = i32::try_from(index + 1).map_err(|_| {
             DataFusionError::Plan("CREATE TABLE exceeds Iceberg field-id range".into())
         })?;
-        let iceberg_type = sql_type_to_iceberg(&column.data_type)?;
+        let iceberg_type =
+            sql_type_to_iceberg_with_timestamp_type(&column.data_type, timestamp_type)?;
         // Only NULL / NOT NULL are handled. DEFAULT / UNIQUE / CHECK / COMMENT / … must not be
         // silently dropped (I5 octo C1-F2 — same fail-open class as historical CTAS column lists).
         let mut required = false;
@@ -220,7 +227,17 @@ fn schema_from_column_defs(columns: &[ColumnDef]) -> Result<Schema> {
 /// Map a Spark/SQL column type to an Iceberg primitive (loud on nested / unsupported).
 ///
 /// Shared with `ALTER TABLE ADD/ALTER COLUMN` (I6) so CREATE and ALTER cannot drift.
+/// Bare `TIMESTAMP` (`TimezoneInfo::None`) follows [`SparkTimestampType`] — default
+/// LTZ → `timestamptz`. The no-arg wrapper keeps existing call sites on that default.
 pub(crate) fn sql_type_to_iceberg(data_type: &SqlDataType) -> Result<Type> {
+    sql_type_to_iceberg_with_timestamp_type(data_type, SparkTimestampType::Ltz)
+}
+
+/// Same mapping as [`sql_type_to_iceberg`], with the session default for bare `TIMESTAMP`.
+pub(crate) fn sql_type_to_iceberg_with_timestamp_type(
+    data_type: &SqlDataType,
+    timestamp_type: SparkTimestampType,
+) -> Result<Type> {
     let primitive = match data_type {
         SqlDataType::Boolean | SqlDataType::Bool => PrimitiveType::Boolean,
         SqlDataType::TinyInt(_)
@@ -253,12 +270,18 @@ pub(crate) fn sql_type_to_iceberg(data_type: &SqlDataType) -> Result<Type> {
         | SqlDataType::CharacterVarying(_)
         | SqlDataType::CharVarying(_) => PrimitiveType::String,
         SqlDataType::Date => PrimitiveType::Date,
-        // TIMESTAMP_NTZ stays naive Iceberg timestamp.
-        SqlDataType::TimestampNtz(_) => PrimitiveType::Timestamp,
-        // Spark default TIMESTAMP (no TZ) is an instant → Iceberg timestamptz, as is
-        // WITH TIME ZONE / WITH LOCAL TIME ZONE. Live Spark 4.1.2 +
-        // iceberg-spark-runtime-4.1_2.13:1.11.0 CREATE TABLE `(ts TIMESTAMP) USING iceberg`
-        // writes metadata type `"timestamptz"` (Z-2 A7 probe 2026-08-13).
+        // TIMESTAMP_NTZ / TIMESTAMP WITHOUT TIME ZONE stay naive Iceberg timestamp,
+        // independent of the session default.
+        SqlDataType::TimestampNtz(_) | SqlDataType::Timestamp(_, TimezoneInfo::WithoutTimeZone) => {
+            PrimitiveType::Timestamp
+        }
+        // Bare TIMESTAMP follows spark.sql.timestampType. Default LTZ → timestamptz
+        // (live Spark 4.1.2 + iceberg-spark-runtime CREATE probe, Z-2 A7).
+        SqlDataType::Timestamp(_, TimezoneInfo::None) => match timestamp_type {
+            SparkTimestampType::Ltz => PrimitiveType::Timestamptz,
+            SparkTimestampType::Ntz => PrimitiveType::Timestamp,
+        },
+        // WITH TIME ZONE / TIMESTAMPTZ stay instants.
         SqlDataType::Timestamp(_, _) => PrimitiveType::Timestamptz,
         SqlDataType::Binary(_) | SqlDataType::Varbinary(_) => PrimitiveType::Binary,
         other => {
@@ -498,6 +521,42 @@ mod type_mapping_tests {
     }
 
     #[test]
+    fn bare_timestamp_follows_session_timestamp_type() {
+        assert!(matches!(
+            sql_type_to_iceberg_with_timestamp_type(
+                &SqlDataType::Timestamp(None, TimezoneInfo::None),
+                SparkTimestampType::Ltz,
+            )
+            .unwrap(),
+            Type::Primitive(PrimitiveType::Timestamptz)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg_with_timestamp_type(
+                &SqlDataType::Timestamp(None, TimezoneInfo::None),
+                SparkTimestampType::Ntz,
+            )
+            .unwrap(),
+            Type::Primitive(PrimitiveType::Timestamp)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg_with_timestamp_type(
+                &SqlDataType::TimestampNtz(None),
+                SparkTimestampType::Ltz,
+            )
+            .unwrap(),
+            Type::Primitive(PrimitiveType::Timestamp)
+        ));
+        assert!(matches!(
+            sql_type_to_iceberg_with_timestamp_type(
+                &SqlDataType::Timestamp(None, TimezoneInfo::WithTimeZone),
+                SparkTimestampType::Ntz,
+            )
+            .unwrap(),
+            Type::Primitive(PrimitiveType::Timestamptz)
+        ));
+    }
+
+    #[test]
     fn not_null_maps_required_and_default_option_refused() {
         use datafusion::sql::sqlparser::ast::{
             ColumnDef, ColumnOption, ColumnOptionDef, Ident, Statement,
@@ -513,7 +572,9 @@ mod type_mapping_tests {
                 option: ColumnOption::NotNull,
             }],
         };
-        let schema = schema_from_column_defs(std::slice::from_ref(&not_null)).unwrap();
+        let schema =
+            schema_from_column_defs(std::slice::from_ref(&not_null), SparkTimestampType::Ltz)
+                .unwrap();
         assert!(schema.as_struct().fields()[0].required);
 
         // Parse a real DEFAULT form so the option variant stays accurate across sqlparser bumps.
@@ -525,7 +586,7 @@ mod type_mapping_tests {
         let Statement::CreateTable(create) = &statements[0] else {
             panic!("expected CreateTable");
         };
-        let err = schema_from_column_defs(&create.columns).unwrap_err();
+        let err = schema_from_column_defs(&create.columns, SparkTimestampType::Ltz).unwrap_err();
         let message = err.to_string();
         assert!(
             message.contains("not supported")
