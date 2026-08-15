@@ -7,14 +7,14 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-14._
+_Last updated: 2026-08-15._
 
 ## Release state
 
-Pre-alpha. **No tagged release exists yet.** The PyPI `repark` name is reserved with a placeholder
-`0.0.1`; nothing functional has been published. **Every release precondition in our control is now
-met (2026-08-14):** the `repark.sql` re-home landed (#95) closing the last hard blocker, and the
-release machinery is armed — `release.yml` (tag-triggered, PyPI trusted publishing, wheel-only;
+Pre-alpha, **with v0.1.0 published to PyPI (2026-08-15)** — the first functional release: tag-triggered
+`release.yml`, PyPI trusted publishing (the bootstrap token is revoked), `cp312-abi3` manylinux
+wheel. The first-tag shakeout (an unresolvable `setup-python` pin, #112) was fixed and the tag
+re-cut; the release machinery is proven end-to-end — `release.yml` (tag-triggered, PyPI trusted publishing, wheel-only;
 crates.io publishing is structurally deferred, see docs/release.md) with the version SSOT at the
 Cargo workspace (`0.1.0`). What remains is **owner-side**: the one-time PyPI trusted-publisher
 setup, then the tag — which starts the "API is forever" clock. Public ≠ released: the repository
@@ -308,8 +308,17 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**One technical hard blocker remains:** `repark.sql` is still the pyspark-alias package, so the
-first tag fails the release checklist ([docs/release.md](docs/release.md)). Everything else that
-fails a tag (rather than delaying one) is listed there. The engine, tests, and gates are green
-on `main`. The tag itself remains a **user-side action, held by the owner** (step 4 of
-"Current milestone").
+**None.** v0.1.0 shipped 2026-08-15. Future tags follow [docs/release.md](docs/release.md)
+(version SSOT at the Cargo workspace; wheel-only; crates.io publishing structurally deferred).
+
+## 2026-08-15 hardening increment (conductor-13)
+
+Twelve PRs merged in one wave: MERGE OCC hardening (`write.merge.isolation-level` honored
+(#117, audit M13), conflict batteries + M14/M15/M20 characterization pins (#121), evolved-spec
+position-delete `spec_id` stamping fixed (#118, M16)); functions surface 253 -> 291 across
+FN-C/D/E/F (#115/#119/#122/#125); the TA lane (fusion pins #116, `ta.with_indicators` #120,
+volume goldens #123, volume kernels `ad`/`adosc`/`obv`/`mfi` #127); and the pre-authorized
+stretch pair (`spark.sql.timestampType` LTZ/NTZ #124, ANSI-door nanosecond CREATE reject #126).
+Remaining MERGE divergences are registered as DML-4/DML-5 and BL-3/BL-4/BL-5 in
+[the divergence registry](docs/spark-sql-iceberg-parity.md); TA oracle divergences stay
+documented in-crate (`crates/repark-ta`), their authoritative home.
