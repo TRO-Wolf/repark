@@ -17,7 +17,7 @@ use repark_core::{EngineContext, SqlDialect};
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SparkDialect;
 
-#[async_trait]
+#[async_trait(?Send)]
 impl SqlDialect for SparkDialect {
     async fn execute(
         &self,

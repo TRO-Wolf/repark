@@ -154,11 +154,10 @@ pub(crate) async fn write_position_deletes(
         let partition_key = if spec.is_unpartitioned() {
             None
         } else {
-            Some(PartitionKey::new(
-                spec,
-                metadata.current_schema().clone(),
-                partition,
-            ))
+            Some(
+                PartitionKey::new(spec, metadata.current_schema().clone(), partition)
+                    .map_err(iceberg_err)?,
+            )
         };
         prepared.push((group, partition_key));
     }
@@ -431,5 +430,49 @@ mod tests {
         assert!(Arc::ptr_eq(&group[0].0, &path));
         assert_eq!(group[0].1, 0);
         assert_eq!(group[1].1, 1);
+    }
+
+    /// PIN — fork #182 made `PartitionKey::new` fallible (`validate_partition_data`).
+    /// The write path maps `iceberg::Error` through [`iceberg_err`]. Unpartitioned +
+    /// empty struct is the merge/mod.rs unpartitioned-writer shape; an identity spec
+    /// with an empty struct must refuse (the adapter must not swallow that Err).
+    #[test]
+    fn partition_key_new_is_fallible_and_maps_through_iceberg_err() {
+        use iceberg::spec::{
+            NestedField, PartitionSpec, PrimitiveType, Schema, Transform, Type,
+            UnboundPartitionSpec,
+        };
+
+        let schema = Schema::builder()
+            .with_fields(vec![Arc::new(NestedField::required(
+                1,
+                "id",
+                Type::Primitive(PrimitiveType::Long),
+            ))])
+            .build()
+            .expect("schema");
+        let schema_ref = std::sync::Arc::new(schema);
+        let ok = PartitionKey::new(
+            PartitionSpec::unpartition_spec(),
+            std::sync::Arc::clone(&schema_ref),
+            Struct::empty(),
+        );
+        assert!(
+            ok.is_ok(),
+            "unpartitioned + empty struct must construct: {ok:?}"
+        );
+
+        let partitioned = UnboundPartitionSpec::builder()
+            .add_partition_field(1, "id", Transform::Identity)
+            .expect("add identity partition field")
+            .build()
+            .bind(std::sync::Arc::clone(&schema_ref))
+            .expect("bind identity spec");
+        let err = PartitionKey::new(partitioned, schema_ref, Struct::empty());
+        let err = err.expect_err("identity spec + empty struct must fail validation");
+        assert!(
+            matches!(iceberg_err(err), DataFusionError::External(_)),
+            "adapter must wrap the constructor Err as DataFusionError::External"
+        );
     }
 }

@@ -61,7 +61,8 @@ repark-core's error map.
   `file_scoped_rewrite`.
 - `file_scoped_rewrite.rs` — filter `FileScanTask`s by affected-path allowlist
   (`repark.merge.file-scoped-rewrite`); refuses a non-empty allowlist matching zero or partial
-  path set (survivor-loss guard).
+  path set (survivor-loss guard). Test helper `dummy_task` constructs `#183` Arc innards
+  (`data_file_path: Arc<str>`, `project_field_ids: Arc<[i32]>`, `deletes: Arc<[…]>`).
 - `name_resolution.rs` (crate-private) — the shared case-insensitive by-name column resolver
   (Spark `spark.sql.caseSensitive=false` conform semantics); used by both `append` conform and
   merge star expansion so the two surfaces cannot drift.
@@ -70,7 +71,9 @@ repark-core's error map.
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending
   `(file_path, pos)`) and partition stamping (each delete file carries the `(spec_id,
   partition)` of the data file it deletes from, resolved from the snapshot's DATA manifests —
-  never the table's current default spec). Also hosts the BUG-001 P0 valve
+  never the table's current default spec). `#182` `PartitionKey::new` is fallible
+  (`validate_partition_data`); this module maps `iceberg::Error` through `iceberg_err`.
+  Also hosts the BUG-001 P0 valve
   (`MorDmlKind` + `refuse_mor_unpartitioned_multi_spec_dml`, hoisted from the v1 SQL crate in
   phase-2 PR-3b): refuse merge-on-read SQL DELETE/UPDATE when the current default spec is
   unpartitioned and multi-spec history exists — the fork position-delete fast-path under-delete

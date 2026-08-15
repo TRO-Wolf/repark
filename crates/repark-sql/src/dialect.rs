@@ -22,7 +22,7 @@ use repark_core::{EngineContext, SqlDialect};
 #[derive(Debug, Clone, Copy, Default)]
 pub struct AnsiDialect;
 
-#[async_trait]
+#[async_trait(?Send)]
 impl SqlDialect for AnsiDialect {
     async fn execute(
         &self,
