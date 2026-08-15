@@ -716,9 +716,14 @@ fn merge_sql_keys_identity_on_file_and_pos() {
         "must build the join on the source (source JOIN target), got: {discovery}"
     );
     let insert = sql.insert_sql(0, &arrow_schema()).unwrap();
+    // Audit M4: the anti-join `_pos` rides through the source-only scope as a sentinel alias —
+    // the outer WHERE keys on the sentinel, and the target alias is NOT in the outer scope
+    // (a target-column reference in a NOT MATCHED condition/VALUES must fail resolution).
     assert!(
-        insert.contains("WHERE t.\"_pos\" IS NULL"),
-        "insert anti-join must key on `_pos IS NULL`, got: {insert}"
+        insert.contains("t.\"_pos\" AS \"__repark_not_matched_pos\"")
+            && insert.contains("WHERE \"__repark_not_matched_pos\" IS NULL"),
+        "insert anti-join must key on the sentinel `_pos` copy inside the source-only scope, \
+         got: {insert}"
     );
     for query in [&discovery, &insert] {
         assert!(

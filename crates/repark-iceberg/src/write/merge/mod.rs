@@ -125,6 +125,9 @@ use iceberg::{Catalog, TableIdent};
 use tracing::Instrument;
 use uuid::Uuid;
 
+mod insert;
+use insert::{insert_projection, insert_stream_checked};
+
 use crate::write::concurrency::{WriteConcurrency, concurrency_from_ctx};
 use crate::write::file_scoped_rewrite::{allowlist_from_paths, filter_tasks_to_allowlist_nonempty};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
@@ -470,10 +473,14 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
         )));
     }
     // Below this point the mode is merge-on-read; both other arms return.
+    // Iceberg-Java's `RowLevelOperationMode.fromName` is equalsIgnoreCase, and the sibling MoR
+    // valve (position_delete.rs) already trims+ignores case — match both (audit M12).
     match table.metadata().properties().get(MERGE_MODE_PROP) {
         None => return Ok(MergeMode::CopyOnWrite),
-        Some(mode) if mode == "copy-on-write" => return Ok(MergeMode::CopyOnWrite),
-        Some(mode) if mode == "merge-on-read" => {}
+        Some(mode) if mode.trim().eq_ignore_ascii_case("copy-on-write") => {
+            return Ok(MergeMode::CopyOnWrite);
+        }
+        Some(mode) if mode.trim().eq_ignore_ascii_case("merge-on-read") => {}
         Some(mode) => {
             return Err(DataFusionError::NotImplemented(format!(
                 "{MERGE_MODE_PROP} = '{mode}' is not a recognised mode: MERGE INTO supports \
@@ -977,7 +984,9 @@ async fn plan_and_commit_cow(
         }
         for index in 0..spec.not_matched.len() {
             let insert_sql = sql.insert_sql(index, write_schema)?;
-            streams.push(Box::pin(stream_sql(ctx, &insert_sql).await?));
+            streams.push(Box::pin(
+                insert_stream_checked(ctx, &insert_sql, write_schema).await?,
+            ));
         }
         let concurrency = concurrency_from_ctx(ctx);
         let chained = futures::stream::iter(streams).flatten();
@@ -1081,7 +1090,9 @@ async fn plan_and_commit_mor(
         };
         for index in 0..spec.not_matched.len() {
             let insert_sql = sql.insert_sql(index, write_schema)?;
-            streams.push(Box::pin(stream_sql(ctx, &insert_sql).await?));
+            streams.push(Box::pin(
+                insert_stream_checked(ctx, &insert_sql, write_schema).await?,
+            ));
         }
         let concurrency = concurrency_from_ctx(ctx);
         let chained = futures::stream::iter(streams).flatten();
@@ -1894,6 +1905,14 @@ impl MergeSql<'_> {
     /// found no target row; `_pos` is required in the target, so it is NULL only on non-match),
     /// no correlated subquery, first-match-wins among the NOT MATCHED clauses (`clause_id = index`),
     /// projected onto the full target column list.
+    ///
+    /// **Source-only scope (audit M4).** The inner subquery projects ONLY the source columns
+    /// plus a sentinel copy of the target `_pos`; the clause predicates and VALUES expressions
+    /// evaluate in the OUTER query, where the target alias does not exist — so a target-column
+    /// reference in a NOT MATCHED condition or VALUES fails resolution loudly (Spark resolves
+    /// `InsertAction` against the source plan only and raises `UNRESOLVED_COLUMN`; the previous
+    /// shape silently read the LEFT-JOIN NULL). A bare column name now resolves to the SOURCE
+    /// column, also matching Spark's source-only resolution.
     fn insert_sql(&self, index: usize, write_schema: &ArrowSchema) -> Result<String> {
         let clause = &self.spec.not_matched[index];
         let projection = insert_projection(clause, write_schema)?;
@@ -1905,86 +1924,21 @@ impl MergeSql<'_> {
             .collect();
         let clause_id = Self::clause_id_case(&predicates);
         Ok(format!(
-            "SELECT {projection} FROM {source} LEFT JOIN {target} ON {on} \
-             WHERE {ta}.\"{POS_COL}\" IS NULL AND ({clause_id}) = {index}",
+            "SELECT {projection} FROM (SELECT {sa}.*, {ta}.\"{POS_COL}\" AS \"{NOT_MATCHED_POS_SENTINEL}\" \
+             FROM {source} LEFT JOIN {target} ON {on}) AS {sa} \
+             WHERE \"{NOT_MATCHED_POS_SENTINEL}\" IS NULL AND ({clause_id}) = {index}",
             source = self.source_from(),
             target = self.target_from(),
             on = self.spec.on_sql,
             ta = self.spec.target_alias,
+            sa = self.spec.source_alias,
         ))
     }
 }
 
-/// Project an INSERT clause onto the target schema: named columns take their VALUES expression,
-/// everything else becomes NULL. Rejects unknown columns, arity mismatches, and NULL-filling a
-/// required column — before anything is written. Only explicit clauses reach this point:
-/// `INSERT *` is expanded by [`expand_star_clauses`] first.
-fn insert_projection(clause: &InsertClause, write_schema: &ArrowSchema) -> Result<String> {
-    let InsertAction::Explicit {
-        columns: named,
-        values_sql,
-    } = &clause.action
-    else {
-        return Err(DataFusionError::Internal(
-            "MERGE `INSERT *` reached SQL generation unexpanded (executor bug)".to_string(),
-        ));
-    };
-    let columns: Vec<String> = if named.is_empty() {
-        write_schema
-            .fields()
-            .iter()
-            .map(|field| field.name().clone())
-            .collect()
-    } else {
-        named.clone()
-    };
-    if columns.len() != values_sql.len() {
-        return Err(DataFusionError::Plan(format!(
-            "MERGE INSERT clause has {} columns but {} VALUES expressions",
-            columns.len(),
-            values_sql.len()
-        )));
-    }
-    // Case-insensitive resolution (Spark `caseSensitive=false`); project under canonical schema
-    // field names so values land on the right columns (audit BUG-006).
-    let mut seen = HashSet::with_capacity(columns.len());
-    let mut canonical_columns: Vec<String> = Vec::with_capacity(columns.len());
-    for column in &columns {
-        let Some(canonical) = resolve_schema_field_name(write_schema, column) else {
-            return Err(DataFusionError::Plan(format!(
-                "MERGE INSERT column `{column}` does not exist in the target table"
-            )));
-        };
-        if !seen.insert(canonical.to_ascii_lowercase()) {
-            return Err(DataFusionError::Plan(format!(
-                "MERGE INSERT clause names column `{column}` more than once"
-            )));
-        }
-        canonical_columns.push(canonical.to_string());
-    }
-    let assigned: HashMap<&str, &str> = canonical_columns
-        .iter()
-        .map(String::as_str)
-        .zip(values_sql.iter().map(String::as_str))
-        .collect();
-    let mut projection = Vec::with_capacity(write_schema.fields().len());
-    for field in write_schema.fields() {
-        let quoted = quote_ident(field.name());
-        match assigned.get(field.name().as_str()) {
-            Some(expr) => projection.push(format!("({expr}) AS {quoted}")),
-            None if field.is_nullable() => {
-                projection.push(format!("NULL AS {quoted}"));
-            }
-            None => {
-                return Err(DataFusionError::Plan(format!(
-                    "MERGE INSERT clause leaves required column `{}` unassigned",
-                    field.name()
-                )));
-            }
-        }
-    }
-    Ok(projection.join(", "))
-}
+/// Sentinel alias carrying the target `_pos` through the source-only insert scope: named so no
+/// plausible user column collides (a genuine collision surfaces as a loud ambiguity error).
+const NOT_MATCHED_POS_SENTINEL: &str = "__repark_not_matched_pos";
 
 /// Cast one batch onto the Iceberg write schema (strict casts, field order by name).
 fn cast_one_batch_to_write_schema(

@@ -2836,6 +2836,18 @@ async fn merge_mode_resolves_from_the_table_property() {
         ("mode_unset", HashMap::new(), Some(MergeMode::CopyOnWrite)),
         ("mode_cow", cow_props(), Some(MergeMode::CopyOnWrite)),
         ("mode_mor", mor_props(), Some(MergeMode::MergeOnRead)),
+        // Audit M12: Iceberg-Java `RowLevelOperationMode.fromName` is equalsIgnoreCase and the
+        // position_delete.rs valve trims — mixed case / padded values must resolve, not refuse.
+        (
+            "mode_mor_upper",
+            HashMap::from([(MERGE_MODE_PROP.to_string(), "MERGE-ON-READ".to_string())]),
+            Some(MergeMode::MergeOnRead),
+        ),
+        (
+            "mode_cow_padded",
+            HashMap::from([(MERGE_MODE_PROP.to_string(), " Copy-On-Write ".to_string())]),
+            Some(MergeMode::CopyOnWrite),
+        ),
         (
             "mode_bogus",
             HashMap::from([(MERGE_MODE_PROP.to_string(), "banana".to_string())]),
