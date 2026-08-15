@@ -16,7 +16,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, Float64Array, Int64Array, RecordBatch};
+use datafusion::arrow::array::{Array, Float64Array, Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use repark_core::{ReparkSession, SqlDialect};
 use repark_spark::{SparkDialect, SparkExtension};
@@ -626,4 +626,188 @@ async fn sql_route_rejects_a_non_literal_period() {
         message.contains("literal") || message.contains("ta_ema"),
         "unexpected error: {message}"
     );
+}
+
+// =================================================================================================
+// TA-1 — SQL same-OVER WindowAggExec fusion (Spark door). Plan-shape only; no kernel edits.
+// =================================================================================================
+
+/// Four independent TA windows sharing one named `WINDOW w` (same PARTITION BY / ORDER BY).
+const SAME_NAMED_OVER_SQL: &str = "\
+SELECT \
+  ta_ema(close, 5) OVER w AS ema5, \
+  ta_sma(close, 10) OVER w AS sma10, \
+  ta_rsi(close, 14) OVER w AS rsi14, \
+  ta_mom(close, 10) OVER w AS mom10 \
+FROM (SELECT ts, close, CAST(1 AS BIGINT) AS sym FROM bars) bars_part \
+WINDOW w AS (PARTITION BY sym ORDER BY ts)";
+
+/// Same four windows with the spec repeated inline (fusion is not named-WINDOW-only).
+const SAME_INLINE_OVER_SQL: &str = "\
+SELECT \
+  ta_ema(close, 5) OVER (PARTITION BY sym ORDER BY ts) AS ema5, \
+  ta_sma(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS sma10, \
+  ta_rsi(close, 14) OVER (PARTITION BY sym ORDER BY ts) AS rsi14, \
+  ta_mom(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS mom10 \
+FROM (SELECT ts, close, CAST(1 AS BIGINT) AS sym FROM bars) bars_part";
+
+/// Window → filter on an input column → window. Both outputs stay live so dead-code
+/// elimination cannot drop the first `WindowAggExec` and fake a fused count of 1.
+const INTERVENING_INPUT_FILTER_SQL: &str = "\
+SELECT ema5, \
+       ta_sma(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS sma10 \
+FROM ( \
+  SELECT * FROM ( \
+    SELECT ts, close, CAST(1 AS BIGINT) AS sym, \
+           ta_ema(close, 5) OVER (PARTITION BY CAST(1 AS BIGINT) ORDER BY ts) AS ema5 \
+    FROM bars \
+  ) first_window \
+  WHERE close > 0 \
+) filtered";
+
+/// Window → filter on the first window's output → window. Same live-output rule as above.
+const INTERVENING_OUTPUT_FILTER_SQL: &str = "\
+SELECT ema5, \
+       ta_sma(close, 10) OVER (PARTITION BY sym ORDER BY ts) AS sma10 \
+FROM ( \
+  SELECT * FROM ( \
+    SELECT ts, close, CAST(1 AS BIGINT) AS sym, \
+           ta_ema(close, 5) OVER (PARTITION BY CAST(1 AS BIGINT) ORDER BY ts) AS ema5 \
+    FROM bars \
+  ) first_window \
+  WHERE ema5 IS NOT NULL \
+) filtered";
+
+/// Indent-display of the physical plan (the N2 `WindowAggExec` token lives here).
+async fn physical_plan_text(session: &ReparkSession, sql: &str) -> String {
+    let frame = session
+        .sql(sql)
+        .await
+        .unwrap_or_else(|error| panic!("must plan `{sql}`: {error}"));
+    let plan = frame
+        .create_physical_plan()
+        .await
+        .unwrap_or_else(|error| panic!("physical plan `{sql}`: {error}"));
+    datafusion::physical_plan::displayable(plan.as_ref())
+        .indent(false)
+        .to_string()
+}
+
+/// `EXPLAIN` physical-plan body (Utf8 `plan` column, `plan_type = physical_plan` only).
+async fn explain_physical_plan_text(session: &ReparkSession, sql: &str) -> String {
+    let batches = session
+        .sql(&format!("EXPLAIN {sql}"))
+        .await
+        .unwrap_or_else(|error| panic!("EXPLAIN must plan `{sql}`: {error}"))
+        .collect()
+        .await
+        .unwrap_or_else(|error| panic!("EXPLAIN collect `{sql}`: {error}"));
+    let mut physical = String::new();
+    for batch in &batches {
+        let plan_types = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("EXPLAIN plan_type is Utf8");
+        let plans = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .expect("EXPLAIN plan is Utf8");
+        for row in 0..batch.num_rows() {
+            if plan_types.value(row) == "physical_plan" {
+                physical.push_str(plans.value(row));
+            }
+        }
+    }
+    assert!(
+        !physical.is_empty(),
+        "EXPLAIN must emit a physical_plan row for `{sql}`"
+    );
+    physical
+}
+
+fn window_agg_exec_count(plan: &str) -> usize {
+    plan.matches("WindowAggExec").count()
+}
+
+/// N2 mechanic on the SQL door: both `create_physical_plan` and `EXPLAIN` must agree.
+async fn assert_window_agg_exec_count(
+    session: &ReparkSession,
+    sql: &str,
+    expected: usize,
+    required_tokens: &[&str],
+) {
+    let physical = physical_plan_text(session, sql).await;
+    let explained = explain_physical_plan_text(session, sql).await;
+    let from_plan = window_agg_exec_count(&physical);
+    let from_explain = window_agg_exec_count(&explained);
+    assert_eq!(
+        from_plan, expected,
+        "create_physical_plan WindowAggExec count {from_plan} != {expected}\n{physical}"
+    );
+    assert_eq!(
+        from_explain, expected,
+        "EXPLAIN physical_plan WindowAggExec count {from_explain} != {expected}\n{explained}"
+    );
+    for token in required_tokens {
+        assert!(
+            physical.contains(token),
+            "physical plan dropped `{token}` (DCE would fake a fused count):\n{physical}"
+        );
+        assert!(
+            explained.contains(token),
+            "EXPLAIN physical_plan dropped `{token}`:\n{explained}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn sql_same_named_over_window_fuses_to_one_window_agg_exec() {
+    // Perf-note idea 11: many `ta_*(…) OVER w` sharing PARTITION BY / ORDER BY must plan
+    // one WindowAggExec. DataFrame-door fusion is N2; this is the Spark-door SQL pin.
+    let (session, _open, _high, _low, _close) = session_with_bars();
+    assert_window_agg_exec_count(
+        &session,
+        SAME_NAMED_OVER_SQL,
+        1,
+        &["ta_ema", "ta_sma", "ta_rsi", "ta_mom"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn sql_same_inline_over_spec_fuses_to_one_window_agg_exec() {
+    // Same claim without the named WINDOW clause — fusion is the shared spec, not the spelling.
+    let (session, _open, _high, _low, _close) = session_with_bars();
+    assert_window_agg_exec_count(
+        &session,
+        SAME_INLINE_OVER_SQL,
+        1,
+        &["ta_ema", "ta_sma", "ta_rsi", "ta_mom"],
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn sql_intervening_filter_between_windows_stacks_window_agg_exec() {
+    // Measured truth (2026-08-15, freeze cd0db4f): an intervening filter between two *live*
+    // windows stacks (2 WindowAggExec). Predicate pushdown of `close > 0` does not re-fuse
+    // the two logical WindowAggr nodes. A filter that does not keep `ema5` live is not this
+    // pin — unused first-window output is eliminated and the count collapses to 1 by DCE.
+    let (session, _open, _high, _low, _close) = session_with_bars();
+    assert_window_agg_exec_count(
+        &session,
+        INTERVENING_INPUT_FILTER_SQL,
+        2,
+        &["ta_ema", "ta_sma"],
+    )
+    .await;
+    assert_window_agg_exec_count(
+        &session,
+        INTERVENING_OUTPUT_FILTER_SQL,
+        2,
+        &["ta_ema", "ta_sma"],
+    )
+    .await;
 }
