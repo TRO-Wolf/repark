@@ -29,8 +29,11 @@ use datafusion::functions_aggregate::min_max::{max_udaf, min_udaf};
 use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
+use datafusion::functions_window::cume_dist::cume_dist_udwf;
+use datafusion::functions_window::lead_lag::{lag_udwf, lead_udwf};
+use datafusion::functions_window::nth_value::nth_value_udwf;
 use datafusion::functions_window::ntile::ntile_udwf;
-use datafusion::functions_window::rank::{dense_rank_udwf, rank_udwf};
+use datafusion::functions_window::rank::{dense_rank_udwf, percent_rank_udwf, rank_udwf};
 use datafusion::functions_window::row_number::row_number_udwf;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::logical_expr::expr::{Alias, NullTreatment, ScalarFunction, WindowFunction};
@@ -85,6 +88,17 @@ impl PyColumn {
             args,
         ));
         Self::from_expr(Expr::Cast(Cast::new(Box::new(window), DataType::Int32)))
+    }
+
+    /// Window UDF with no `IntegerType` cast.
+    fn window_udwf(
+        udwf: std::sync::Arc<datafusion::logical_expr::WindowUDF>,
+        args: &[PyColumn],
+    ) -> Self {
+        Self::from_expr(Expr::from(WindowFunction::new(
+            WindowFunctionDefinition::WindowUDF(udwf),
+            args.iter().map(PyColumn::expr).collect(),
+        )))
     }
 }
 
@@ -1320,6 +1334,42 @@ impl PyColumn {
                 )));
             }
             Ok(Self::window_udwf_i32(ntile_udwf(), vec![lit(n)]))
+        })
+    }
+
+    /// Spark `lag` — preceding row; preserves input type.
+    #[staticmethod]
+    pub fn lag(args: Vec<PyColumn>) -> PyResult<Self> {
+        fenced!("Column.lag", { Ok(Self::window_udwf(lag_udwf(), &args)) })
+    }
+
+    /// Spark `lead` — following row; preserves input type.
+    #[staticmethod]
+    pub fn lead(args: Vec<PyColumn>) -> PyResult<Self> {
+        fenced!("Column.lead", { Ok(Self::window_udwf(lead_udwf(), &args)) })
+    }
+
+    /// Spark `nth_value` — 1-based; preserves input type.
+    #[staticmethod]
+    pub fn nth_value(args: Vec<PyColumn>) -> PyResult<Self> {
+        fenced!("Column.nth_value", {
+            Ok(Self::window_udwf(nth_value_udwf(), &args))
+        })
+    }
+
+    /// Spark `percent_rank()` — already Float64; no `IntegerType` cast.
+    #[staticmethod]
+    pub fn percent_rank() -> PyResult<Self> {
+        fenced!("Column.percent_rank", {
+            Ok(Self::window_udwf(percent_rank_udwf(), &[]))
+        })
+    }
+
+    /// Spark `cume_dist()` — already Float64; no `IntegerType` cast.
+    #[staticmethod]
+    pub fn cume_dist() -> PyResult<Self> {
+        fenced!("Column.cume_dist", {
+            Ok(Self::window_udwf(cume_dist_udwf(), &[]))
         })
     }
 

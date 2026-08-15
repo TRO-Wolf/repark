@@ -1041,10 +1041,14 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   printf/replace/quote). Deferred: regexp_extract_all/regexp_substr (charter);
   split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar
   (`call_scalar` allow-list — no crates/ edit). Pins: `tests/test_functions_b.py`.
+- `functions_window.py` — **FN-W (2026-08-15):** 5 window names (`lag` /
+  `lead` / `nth_value` / `percent_rank` / `cume_dist`) over DF 54.1 UDWFs via
+  `PyColumn.window_udwf` (no IntegerType cast). Python owns PySpark signatures;
+  `ignoreNulls` is an honest cut. Pins: `tests/test_functions_w.py`.
 - `functions_agg.py` — **FN-C (2026-08-15):** 8 aggregate aliases/shims
   (`first_value`/`last_value`/`std`/`count_if`/`bool_and`/`every`/`bool_or`/`some`).
   Deferred: `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist` (A8: PyColumn
-  window surface is closed); `sum_distinct`/`sumDistinct` /
+  window surface is closed — **FN-W ships these**); `sum_distinct`/`sumDistinct` /
   `approx_count_distinct`/`approxCountDistinct` (no native distinct-on-sum /
   approx-distinct arm; `count_aggregate` distinct is count-only); charter
   ENGINE-WORK `any_value`/`max_by`/`min_by`/`product`/`grouping`/`grouping_id`/
@@ -1195,7 +1199,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add `df.x` / `df["x"]` column-access sugar (Group G1) | `dataframe.py` (`__getattr__` / `__getitem__`) |
 | Add a groupBy/agg, union, distinct, na, or write method | `dataframe.py` (`GroupedData` / `DataFrameNaFunctions` / `DataFrameWriter`) |
 | Add a column operator / `__neg__` / `alias` / `__getitem__` / `cast` / `over` | `column.py` |
-| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_udf.py` |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_window.py` / `functions_udf.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_datetime.py` (FN-D) |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_collections.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_bitwise.py` / `functions_session.py` / `functions_udf.py` |

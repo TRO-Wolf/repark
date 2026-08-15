@@ -1586,6 +1586,13 @@ from repark.spark.functions_udf import (  # noqa: E402, F401 — re-export surfa
     pandas_udf,
     udf,
 )
+from repark.spark.functions_window import (  # noqa: E402
+    cume_dist,
+    lag,
+    lead,
+    nth_value,
+    percent_rank,
+)
 
 __all__ = [
     "PandasUDFType",
@@ -1663,6 +1670,7 @@ __all__ = [
     "covar_samp",
     "crc32",
     "csc",
+    "cume_dist",
     "curdate",
     "currentDate",
     "currentTimestamp",
@@ -1732,10 +1740,12 @@ __all__ = [
     "isnull",
     "json_tuple",
     "kurtosis",
+    "lag",
     "last",
     "last_day",
     "last_value",
     "lcase",
+    "lead",
     "least",
     "left",
     "length",
@@ -1774,6 +1784,7 @@ __all__ = [
     "negative",
     "next_day",
     "now",
+    "nth_value",
     "ntile",
     "nullif",
     "nullifzero",
@@ -1781,6 +1792,7 @@ __all__ = [
     "nvl2",
     "overlay",
     "pandas_udf",
+    "percent_rank",
     "percentile_approx",
     "pi",
     "pmod",

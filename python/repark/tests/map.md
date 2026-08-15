@@ -37,6 +37,13 @@ NOT in that file is a defect, not a decision.
   (freeze 253 + 9 collection additions) + every name resolves.
   (2026-08-15): `__all__` before==after pin. **FN-F moved the pin** to 263
   names (253 FN-A+FN-B + 10 session/bitwise additions) + every name resolves.
+  (2026-08-15): **FN-W moved the pin** 291→296 (5 window additions:
+  `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist`).
+- [test_functions_w.py](test_functions_w.py) — FN-W (2026-08-15): window
+  wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
+  `lag`/`lead` default first/last-row NULL + explicit default + NULL-source
+  row; `nth_value` 1-based; `percent_rank`/`cume_dist` Float64. `ignoreNulls`
+  is an honest cut (TypeError).
 - [test_functions_a.py](test_functions_a.py) — FN-A (2026-08-15): ordering / null /
   math wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type). Alias
   names resolve + one behavior case. `cbrt` pins the negative-root hazard.
