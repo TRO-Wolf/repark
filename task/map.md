@@ -26,6 +26,10 @@ not this directory.
   was stamped spec 0 and loud-failed commit. Fix: `.with_partition_spec`
   on the unpartitioned-but-not-spec-0 branch. Region:
   `position_delete.rs` only.
+- [ta2-with-indicators-ledger.md](ta2-with-indicators-ledger.md) — **TA-2
+  (2026-08-15):** `ta.with_indicators` serving helper. Required keyword-only
+  `partition`/`order` (cross-symbol RSI footgun). Fused `over_columns` window +
+  optional last-bar-per-partition (`row_number`/`max`). No engine edits.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
