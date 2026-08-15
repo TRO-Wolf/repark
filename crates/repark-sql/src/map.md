@@ -31,7 +31,7 @@ reach delegation through the ordinary arm.
   before the parse G3-E8 needs, which made the two doors disagree about which refusal a
   doubly-hazardous statement gets. Tests: [router/map.md](router/map.md).
 - `dialect.rs` — `AnsiDialect: repark_core::SqlDialect` (the frozen seam adapter; a one-liner
-  onto the router, deliberately). In-module tests.
+  onto the router, deliberately; `#[async_trait(?Send)]` matches the core trait). In-module tests.
 - `guards.rs` — the guard set: multi-statement refuse (quote-aware, FIRST), P11 read-only
   catalog DML (generic message), write-to-branch, the BUG-001 MoR valve (async wrapper over the
   tier-1 predicate, gating delegated DELETE/UPDATE), the SEC-02 local-filesystem plan gate, and

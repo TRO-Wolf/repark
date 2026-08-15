@@ -8,6 +8,8 @@ lives as this module directory (move-only; pub surface frozen).
 ## Contents
 
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+  Unpartitioned writer: `#182` `PartitionKey::new(...)` is `Result`; `?` via `iceberg_err`
+  (net-zero lines vs the 2700-line file ceiling).
   `commit_overwrite` / `commit_row_delta_kind` are `pub(super)` so identity DML
   (`../predicate_dml.rs`) reuses the COW/MoR commit arms without calling
   `execute_merge`. Identity UPDATE reuses `RowDeltaKind::Merge` (Java
