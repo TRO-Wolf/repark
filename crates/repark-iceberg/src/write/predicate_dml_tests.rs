@@ -19,7 +19,7 @@ use iceberg::spec::{
 use iceberg::{Catalog, CatalogBuilder, NamespaceIdent, TableCreation, TableIdent};
 use tempfile::TempDir;
 
-use super::*;
+use super::{IsolationLevel, WRITE_DELETE_ISOLATION_LEVEL, resolve_delete_isolation, *};
 
 fn parse_statement(sql: &str) -> Statement {
     Parser::parse_sql(&GenericDialect {}, sql)
@@ -1379,4 +1379,70 @@ async fn identity_delete_exists_honors_write_delete_mode_not_merge_mode() {
         cow_after, cow_data_before,
         "COW EXISTS DELETE must rewrite the affected data file away"
     );
+}
+
+async fn table_with_delete_isolation(
+    catalog: &Arc<dyn Catalog>,
+    name: &str,
+    value: Option<&str>,
+) -> iceberg::table::Table {
+    let mut properties = HashMap::new();
+    if let Some(level) = value {
+        properties.insert(WRITE_DELETE_ISOLATION_LEVEL.to_string(), level.to_string());
+    }
+    let ident = create_target(catalog, name, properties).await;
+    catalog.load_table(&ident).await.expect("load")
+}
+
+/// Isolation-property cases (M19) for `write.delete.isolation-level`. Live resolver
+/// semantics (conductor-13 A10): no trim, `to_ascii_lowercase`, default serializable,
+/// garbage ⇒ `DataFusionError::Plan` `Invalid isolation level: {name}`.
+#[tokio::test]
+async fn delete_isolation_property_a10_no_trim_lowercase_default_garbage() {
+    use datafusion::error::DataFusionError;
+
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+
+    assert_eq!(
+        resolve_delete_isolation(&table_with_delete_isolation(&catalog, "def", None).await)
+            .expect("default"),
+        IsolationLevel::Serializable
+    );
+    assert_eq!(
+        resolve_delete_isolation(
+            &table_with_delete_isolation(&catalog, "up", Some("SNAPSHOT")).await,
+        )
+        .expect("upper"),
+        IsolationLevel::Snapshot
+    );
+    assert_eq!(
+        resolve_delete_isolation(
+            &table_with_delete_isolation(&catalog, "mix", Some("Serializable")).await,
+        )
+        .expect("mixed"),
+        IsolationLevel::Serializable
+    );
+
+    let padded = resolve_delete_isolation(
+        &table_with_delete_isolation(&catalog, "pad", Some("  snapshot  ")).await,
+    )
+    .expect_err("padded is garbage — resolver does not trim");
+    match padded {
+        DataFusionError::Plan(message) => {
+            assert_eq!(message, "Invalid isolation level:   snapshot  ");
+        }
+        other => panic!("expected Plan, got {other}"),
+    }
+
+    let garbage = resolve_delete_isolation(
+        &table_with_delete_isolation(&catalog, "garb", Some("read-committed")).await,
+    )
+    .expect_err("unknown name is loud");
+    match garbage {
+        DataFusionError::Plan(message) => {
+            assert_eq!(message, "Invalid isolation level: read-committed");
+        }
+        other => panic!("expected Plan, got {other}"),
+    }
 }

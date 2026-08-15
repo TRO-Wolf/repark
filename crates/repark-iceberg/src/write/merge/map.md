@@ -27,6 +27,11 @@ lives as this module directory (move-only; pub surface frozen).
 - `tests.rs` — primary unit battery
 - `occ_tests.rs` — OCC / commit conflict pins + M13 isolation parse +
   M19-A serializable-vs-snapshot split
+- `occ_tests.rs` — OCC / commit conflict pins
+- `occ_conflict_tests.rs` — OCC-2 M19/M20 batteries B/C/E/F/G/H/I
+  (`RowDeltaKind::Delete`, MERGE↔MERGE both orders, retry-from-original-pin,
+  empty-table from-root, M15 partitioned over-rejection, M20 operation stamps,
+  M14 orphan characterization). Engine frozen; no production edits.
 - `streaming_tests.rs` — stream write interleaving pins
 - `parallel_write_tests.rs` — concurrent file write pins
 - `streaming_scan_tests.rs` — streaming target-scan pins + PERF-04 residual-push
@@ -38,7 +43,7 @@ lives as this module directory (move-only; pub surface frozen).
 |---|---|
 | Change MERGE execute / MoR-CoW arms | `mod.rs` |
 | Add a unit pin for SQL shape | `tests.rs` |
-| Touch OCC commit behavior | `occ_tests.rs` |
+| Touch OCC commit behavior | `occ_tests.rs` / `occ_conflict_tests.rs` |
 
 ## Pointers
 

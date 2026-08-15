@@ -30,6 +30,10 @@ not this directory.
   (2026-08-15):** `ta.with_indicators` serving helper. Required keyword-only
   `partition`/`order` (cross-symbol RSI footgun). Fused `over_columns` window +
   optional last-bar-per-partition (`row_number`/`max`). No engine edits.
+- [occ2-conflict-batteries-ledger.md](occ2-conflict-batteries-ledger.md) — **OCC-2
+  (2026-08-15):** M19/M20 conflict batteries B/C/E/F/G/H/I + DELETE/UPDATE
+  isolation-property pins. Test-only; engine frozen at `cd0db4f`. Independent
+  of OCC-1 #117.
 - [mg1-scanprune-hardening-ledger.md](mg1-scanprune-hardening-ledger.md) — **MG-1
   (2026-08-15):** MERGE scan-prune / residual-probe hardening (M1 type-domain
   skip-conjunct, M5 char-boundary scanners, M6 probe-failure continue, M7
