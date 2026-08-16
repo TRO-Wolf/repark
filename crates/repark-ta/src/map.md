@@ -20,7 +20,7 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   index, rescanning the window only when that index falls off the trailing edge; `<=`/`>=`
   single-bar extension prefers the more recent equal value — the cadence that makes it bit-exact)
   and `sum` (the `sma` add-one/subtract-one running total without the divide).
-- `overlap.rs` — `sma` (incremental running total; T5 hot loop is `iter_mut().zip` over incoming + trailing, same add/snapshot/subtract/divide order), `ema` (SMA seed + `(x−prev)*k+prev`),
+- `overlap.rs` — `sma` (incremental running total; T5 hot loop is `iter_mut().zip` over incoming + trailing, same add/snapshot/subtract/divide order), `ema` (SMA seed + `(x−prev)*k+prev`; single-write `with_capacity`/`extend` construction, measured −11% — the push form measured +61% slower),
   `wma` (recency-weighted `periodSum`/`periodSub` accumulator), `dema`/`tema` (EMA-of-EMA
   compositions built from `ema` itself — lookbacks `2·(p−1)` / `3·(p−1)`, C's index bookkeeping,
   NOT a re-derived closed form), `trima` (triangular window with C's odd/even period split — the
