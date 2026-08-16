@@ -31,7 +31,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 - `tests.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
   subset is in `task/port/deferred-tests.md`), plus the P2G R2 cohort at the tail: the
   builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored /
-  unknown key fails loud / explicit conf overrides a core default) and the Q8 enumeration pair
+  unknown key fails loud / explicit conf overrides a core default / unset `batch_size` lands
+  `DEFAULT_BATCH_SIZE` 65536 with the conf key still winning) and the Q8 enumeration pair
   (a registered Iceberg catalog enumerates through `information_schema` + `SHOW TABLES` +
   `DESCRIBE` on the PRODUCT path; the negative half proves the conf is what enables it). Since
   **2026-08-10 (unit H-1c,

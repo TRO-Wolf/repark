@@ -149,6 +149,15 @@ impl TimeTravelOpts {
 /// are unchanged (design §3 seam freeze).
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
 
+/// Session default for DataFusion `batch_size` (rows per Arrow batch).
+///
+/// 65536, not DataFusion's 8192: the 2026-08-16 release-build baseline measured windowed-TA
+/// single-thread cost dropping 229 → 65 ns/row across 8192 → 65536 on a persisted 2 M-row
+/// table — the whole gap to C-extension parity on one core. An explicit
+/// [`ReparkSessionBuilder::batch_size`], a `datafusion.execution.batch_size` builder conf,
+/// or a runtime `SET` all still win over this default.
+pub const DEFAULT_BATCH_SIZE: usize = 65536;
+
 /// ===========================================================================================
 /// Apply every `datafusion.*` key from the builder config map onto `config`.
 ///
@@ -309,6 +318,8 @@ impl ReparkSessionBuilder {
 
     /// Rows per Arrow batch (DataFusion `batch_size`). Larger = fewer, bigger batches.
     ///
+    /// Unset defaults to [`DEFAULT_BATCH_SIZE`] (65536), not DataFusion's 8192.
+    ///
     /// Must be `>= 1` at [`Self::build`] — `0` is a config error (audit SAF-006). This is the
     /// ENGINE knob, not the Spark key: Spark documents
     /// `spark.sql.execution.arrow.maxRecordsPerBatch <= 0` as "no limit", and the Python facade
@@ -415,9 +426,9 @@ impl ReparkSessionBuilder {
             file_scoped_rewrite,
         );
         config = repark_iceberg::write::with_scan_concurrency(config, scan_concurrency);
-        if let Some(rows) = self.batch_size {
-            config = config.with_batch_size(rows);
-        }
+        // Unset falls to the repark default (65536, perf-funded), not DataFusion's 8192; the
+        // conf-key pass below still overrides it, so precedence stays typed setter > conf > default.
+        config = config.with_batch_size(self.batch_size.unwrap_or(DEFAULT_BATCH_SIZE));
         if let Some(partitions) = self.target_partitions {
             config = config.with_target_partitions(partitions);
         }
