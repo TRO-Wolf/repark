@@ -120,7 +120,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   and exception numbers live **only** in the `.py` — prose never restates them. Seeded from the
   post-G-4 measured tree (the former 14.5-KLOC `tests.rs` monolith is gone and is not
   grandfathered). Fail-closed: unreadable file, empty scan set, or a stale `EXCEPTIONS` key
-  (path no longer on disk) is an error. Pure text — sub-second. Dual-wired:
+  (path no longer on disk) is an error. **2026-08-15 (UDFX):** the `crates/repark-ta/src/udf.rs`
+  key moved to `crates/repark-ta/src/udf/mod.rs` (per-family UDF module split) and ratcheted
+  DOWN; family siblings use the default ceiling. Pure text — sub-second. Dual-wired:
   `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job step; also both
   pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
   **COLX (2026-08-15):** EXCEPTIONS key `crates/repark-python/src/column.rs` deleted;

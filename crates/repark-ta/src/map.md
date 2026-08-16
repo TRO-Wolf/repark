@@ -107,39 +107,43 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   with the first AD then `(k*ad)+(one_minus_k*ema)`, `PER_TO_K(p)=2.0/(p+1)`, lookback 9 at
   (3,10). OBV first output is `volume[0]`. MFI is **not** Wilder: rolling pos/neg buffer,
   classify neg-first, hard `pos+neg < 1.0`, do not clamp (drift can go slightly negative).
-- `udf.rs` — **feature `datafusion`** — the DataFusion window-UDF wrapper layer. A single spec
-  table (name → kernel) drives 81 `WindowUDF`s (the full 81/81 entry-point inventory) — the 66
-  T1–WG4 entry points, the 6 WG5 sweep-up ones, and the 5 T3 parked-four (the split `ta_mama`/
-  `ta_fama` — 1 series + 2 real limits each; `ta_sar` — 2 series + 2 real scalars; `ta_sarext` — 2
-  series + 8 real scalars; `ta_mavp` — 2 series, the second being the per-row periods column, + 3
-  integral scalars), plus the 4 TA-4 volume entry points (`ta_ad`/`ta_adosc`/`ta_mfi` four-series
-  H/L/C/V; `ta_obv` close+volume; `ta_adosc` two period scalars, `ta_mfi` one). Real-valued
-  scalars (MAMA limits, SAR/SAREXT accelerations) bypass `period`
-  (no whole-number check); MAVP's min/max/matype go through it. The WG5
-  sweep-up ones (`ta_natr` H/L/C+period, `ta_beta` two-series+period, and the no-period
-  `ta_avgprice` O/H/L/C, `ta_medprice` H/L, `ta_typprice`/`ta_wclprice` H/L/C) — (the 17
-  single-output T1 kernels + the 8 WG1
-  overlap-MA kernels `ta_wma`/`ta_dema`/`ta_tema`/`ta_trima`/`ta_kama`/`ta_t3`/`ta_midpoint`/
-  `ta_midprice` + the 3 split `BBANDS` outputs + the 16 WG2 simple-momentum entry points
-  `ta_mom`/`ta_roc`/`ta_rocp`/`ta_rocr`/`ta_rocr100`/`ta_willr`/`ta_cci`/`ta_cmo`/`ta_bop`/
-  `ta_apo`/`ta_ppo`/`ta_aroon_down`/`ta_aroon_up`/`ta_aroonosc`/`ta_trix`/`ta_ultosc` + the 16 WG3
-  directional + MACD entry points `ta_dx`/`ta_adxr`/`ta_plus_di`/`ta_minus_di`/`ta_plus_dm`/
-  `ta_minus_dm`/the split `ta_macd`/`_signal`/`_hist`, `ta_macdfix`/`_signal`/`_hist`,
-  `ta_macdext`/`_signal`/`_hist`, and the `ta_ma` selector + the 6 WG4 stochastic entry points
-  — the split `ta_stoch_slowk`/`_slowd`, `ta_stochf_fastk`/`_fastd`, `ta_stochrsi_fastk`/`_fastd`).
-  `ta_t3`
-  carries a second scalar literal (`vfactor`); `ta_apo`/`ta_ppo` carry three (fast, slow,
-  `matype`); `ta_ultosc`/`ta_macd*` carry three periods; `ta_macdext*` carry six (fast/slow/signal
-  period + matype); `ta_ma` carries two (period + matype); `ta_bop` is four-series with no scalar;
+- `udf/` — **feature `datafusion`** — the DataFusion window-UDF wrapper layer (directory
+  module; `pub mod udf` in `lib.rs` resolves `udf/mod.rs`). A single spec table (name →
+  kernel) in `udf/mod.rs` drives 81 `WindowUDF`s (the full 81/81 entry-point inventory) —
+  the 66 T1–WG4 entry points, the 6 WG5 sweep-up ones, and the 5 T3 parked-four (the split
+  `ta_mama`/`ta_fama` — 1 series + 2 real limits each; `ta_sar` — 2 series + 2 real scalars;
+  `ta_sarext` — 2 series + 8 real scalars; `ta_mavp` — 2 series, the second being the per-row
+  periods column, + 3 integral scalars), plus the 4 TA-4 volume entry points (`ta_ad`/
+  `ta_adosc`/`ta_mfi` four-series H/L/C/V; `ta_obv` close+volume; `ta_adosc` two period
+  scalars, `ta_mfi` one). Real-valued scalars (MAMA limits, SAR/SAREXT accelerations) bypass
+  `period` (no whole-number check); MAVP's min/max/matype go through it. The WG5 sweep-up
+  ones (`ta_natr` H/L/C+period, `ta_beta` two-series+period, and the no-period `ta_avgprice`
+  O/H/L/C, `ta_medprice` H/L, `ta_typprice`/`ta_wclprice` H/L/C) — (the 17 single-output T1
+  kernels + the 8 WG1 overlap-MA kernels `ta_wma`/`ta_dema`/`ta_tema`/`ta_trima`/`ta_kama`/
+  `ta_t3`/`ta_midpoint`/`ta_midprice` + the 3 split `BBANDS` outputs + the 16 WG2
+  simple-momentum entry points `ta_mom`/`ta_roc`/`ta_rocp`/`ta_rocr`/`ta_rocr100`/`ta_willr`/
+  `ta_cci`/`ta_cmo`/`ta_bop`/`ta_apo`/`ta_ppo`/`ta_aroon_down`/`ta_aroon_up`/`ta_aroonosc`/
+  `ta_trix`/`ta_ultosc` + the 16 WG3 directional + MACD entry points `ta_dx`/`ta_adxr`/
+  `ta_plus_di`/`ta_minus_di`/`ta_plus_dm`/`ta_minus_dm`/the split `ta_macd`/`_signal`/`_hist`,
+  `ta_macdfix`/`_signal`/`_hist`, `ta_macdext`/`_signal`/`_hist`, and the `ta_ma` selector +
+  the 6 WG4 stochastic entry points — the split `ta_stoch_slowk`/`_slowd`,
+  `ta_stochf_fastk`/`_fastd`, `ta_stochrsi_fastk`/`_fastd`). `ta_t3` carries a second scalar
+  literal (`vfactor`); `ta_apo`/`ta_ppo` carry three (fast, slow, `matype`); `ta_ultosc`/
+  `ta_macd*` carry three periods; `ta_macdext*` carry six (fast/slow/signal period +
+  matype); `ta_ma` carries two (period + matype); `ta_bop` is four-series with no scalar;
   `ta_midprice`/`ta_aroon_*`/`ta_plus_dm`/`ta_minus_dm` are two-series; `ta_dx`/`ta_adxr`/
   `ta_plus_di`/`ta_minus_di` are three-series (high, low, close); the STOCH/STOCHF UDFs are
-  three-series H/L/C (STOCH + 5 scalars, STOCHF + 3), STOCHRSI is single-series close + 4 scalars.
-  Each is a
-  stateful full-series function:
-  `PartitionEvaluator::evaluate_all` runs the kernel over the whole ordered partition (series
-  columns first, scalar params as constant literals extracted at plan time; `Float64` out, NaN
-  lookback preserved for `to_bits` parity). `register_all(ctx)` / `window_udfs()` (registration) +
-  `window_udf(name)` (the `Arc<WindowUDF>` the Python DataFrame builder needs).
+  three-series H/L/C (STOCH + 5 scalars, STOCHF + 3), STOCHRSI is single-series close + 4
+  scalars. Each is a stateful full-series function:
+  `PartitionEvaluator::evaluate_all` runs the kernel over the whole ordered partition
+  (series columns first, scalar params as constant literals extracted at plan time;
+  `Float64` out, NaN lookback preserved for `to_bits` parity). `register_all(ctx)` /
+  `window_udfs()` (registration) + `window_udf(name)` (the `Arc<WindowUDF>` the Python
+  DataFrame builder needs). Shared machinery (cache, densify, param checks, `evaluate_all`,
+  SPECS, `TaFn`, statistic + math_operator dispatch, `register_all` / `window_udf*`) stays
+  in `udf/mod.rs`; per-family `compute` / `compute_all` arms live in `udf/overlap.rs`,
+  `udf/momentum.rs`, `udf/volatility.rs`, `udf/volume.rs`, `udf/price.rs`. Navigation:
+  [udf/map.md](udf/map.md).
   **P1c perf (scout #8 + #9, 2026-08-02):** multi-output siblings (BBANDS / MACD* / STOCH* /
   AROON / MAMA) share a single-slot **thread-local** cache keyed by (family, params
   `f64::to_bits`, series values-buffer pointer + len + null_count) — one kernel run per
@@ -179,7 +183,7 @@ empty/short, nullable multi-output, sliced borrow, kernel-error leaves cache emp
 | ...do this | go to |
 |---|---|
 | Add a kernel | New fn in the matching category module + re-export in `lib.rs` + golden series in the recorder + `tests/goldens.rs` case — one commit |
-| Expose a kernel as a window UDF | Add a `(name, TaFn)` row + `TaFn` arm in `udf.rs` (feature `datafusion`) |
+| Expose a kernel as a window UDF | Add a `(name, TaFn)` row in `udf/mod.rs` + the family `compute` arm (feature `datafusion`) |
 | Install every TA UDF on a session | `extension.rs` — `TaExtension`; do NOT add a second registration path |
 | Change error behavior | `lib.rs` (`TaError`) — mirror TA-Lib `TA_BAD_PARAM` semantics only |
 | Touch any arithmetic | Re-read the numerics contract in `lib.rs` first; then `cargo test -p repark-ta` |
