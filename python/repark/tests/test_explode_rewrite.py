@@ -14,6 +14,7 @@ from repark.errors import (
     ParseException,
     UnsupportedOperationException,
 )
+from repark.spark.types import ArrayType, LongType, StructField, StructType
 
 
 def _is_arrow_string(data_type: pa.DataType) -> bool:
@@ -840,3 +841,88 @@ def test_generator_alias_cast_keeps_sticky_aggregate(frame: object) -> None:
     # Non-aggregate explode.alias / cast still unnest (regression guard).
     alone = frame.select(F.explode(frame.a).alias("e").cast("int")).to_arrow()
     assert alone.num_rows == 4
+
+
+# ==================================================================================================
+# createDataFrame capitalized list column (string-form explode case-loss)
+# ==================================================================================================
+
+
+def _capitalized_legs_long_frame(spark: ReparkSession) -> object:
+    """createDataFrame frame with mixed-case list column ``Legs`` (bigint elements)."""
+    schema = StructType(
+        [
+            StructField("id", LongType(), False),
+            StructField("Legs", ArrayType(LongType()), True),
+        ]
+    )
+    rows = [
+        {"id": 1, "Legs": [10, 20]},
+        {"id": 2, "Legs": None},
+        {"id": 3, "Legs": []},
+        {"id": 4, "Legs": [None, 5]},
+    ]
+    return spark.createDataFrame(rows, schema=schema)
+
+
+def test_explode_str_capitalized_list_column(spark: ReparkSession) -> None:
+    """String-form ``F.explode('Legs')`` on createDataFrame keeps values + type."""
+    frame = _capitalized_legs_long_frame(spark)
+    out = frame.select(frame.id, F.explode("Legs").alias("e")).orderBy("id", "e")
+    table = out.to_arrow()
+    rows = [(row["id"], row["e"]) for row in table.to_pylist()]
+    assert rows == [(1, 10), (1, 20), (4, None), (4, 5)]
+    assert table.schema.field("e").type == pa.int64()
+
+
+def test_explode_outer_str_capitalized_list_column(spark: ReparkSession) -> None:
+    """String-form ``explode_outer('Legs')`` keeps null/empty rows (value + type)."""
+    frame = _capitalized_legs_long_frame(spark)
+    out = frame.select(frame.id, F.explode_outer("Legs").alias("e")).orderBy("id", "e")
+    by_id: dict[int, list] = {}
+    table = out.to_arrow()
+    for row in table.to_pylist():
+        by_id.setdefault(row["id"], []).append(row["e"])
+    assert sorted(item for item in by_id[1] if item is not None) == [10, 20]
+    assert by_id[2] == [None]
+    assert by_id[3] == [None]
+    assert None in by_id[4] and 5 in by_id[4]
+    assert table.schema.field("e").type == pa.int64()
+
+
+def test_explode_str_case_insensitive_capitalized_list(spark: ReparkSession) -> None:
+    """``F.explode('LEGS')`` resolves createDataFrame field ``Legs`` (value + type)."""
+    frame = _capitalized_legs_long_frame(spark)
+    out = frame.select(frame.id, F.explode("LEGS").alias("e")).orderBy("id", "e")
+    table = out.to_arrow()
+    rows = [(row["id"], row["e"]) for row in table.to_pylist()]
+    assert rows == [(1, 10), (1, 20), (4, None), (4, 5)]
+    assert table.schema.field("e").type == pa.int64()
+
+
+def test_explode_getitem_capitalized_list_column(spark: ReparkSession) -> None:
+    """Column-form ``F.explode(df['Legs'])`` still works (regression, value + type)."""
+    frame = _capitalized_legs_long_frame(spark)
+    out = frame.select(frame.id, F.explode(frame["Legs"]).alias("e")).orderBy("id", "e")
+    table = out.to_arrow()
+    rows = [(row["id"], row["e"]) for row in table.to_pylist()]
+    assert rows == [(1, 10), (1, 20), (4, None), (4, 5)]
+    assert table.schema.field("e").type == pa.int64()
+
+
+def test_explode_col_capitalized_list_column(spark: ReparkSession) -> None:
+    """``F.explode(F.col('Legs'))`` binds the mixed-case field (value + type)."""
+    frame = _capitalized_legs_long_frame(spark)
+    out = frame.select(frame.id, F.explode(F.col("Legs")).alias("e")).orderBy("id", "e")
+    table = out.to_arrow()
+    rows = [(row["id"], row["e"]) for row in table.to_pylist()]
+    assert rows == [(1, 10), (1, 20), (4, None), (4, 5)]
+    assert table.schema.field("e").type == pa.int64()
+
+
+def test_explode_str_absent_column_names_missing(spark: ReparkSession) -> None:
+    """Truly-absent string-form explode still fails loudly and names the column."""
+    frame = _capitalized_legs_long_frame(spark)
+    with pytest.raises(AnalysisException) as raised:
+        frame.select(F.explode("NoSuchLegs").alias("e")).collect()
+    assert "nosuchlegs" in str(raised.value).casefold()

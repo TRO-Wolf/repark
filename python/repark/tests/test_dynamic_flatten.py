@@ -245,6 +245,59 @@ def test_list_of_struct_explodes_then_unnests(spark: ReparkSession) -> None:
     assert table.schema.field("legs_side").type in (pa.string(), pa.large_string())
 
 
+def test_list_of_struct_capitalized_legs_and_sibling_struct(spark: ReparkSession) -> None:
+    """createDataFrame ``Legs`` list-of-struct + sibling struct flattens (value + type)."""
+    schema = StructType(
+        [
+            StructField("id", LongType(), False),
+            StructField(
+                "Meta",
+                StructType([StructField("account", StringType(), True)]),
+                True,
+            ),
+            StructField(
+                "Legs",
+                ArrayType(
+                    StructType(
+                        [
+                            StructField("leg_id", LongType(), True),
+                            StructField("side", StringType(), True),
+                        ]
+                    )
+                ),
+                True,
+            ),
+        ]
+    )
+    rows = [
+        {
+            "id": 1,
+            "Meta": {"account": "A"},
+            "Legs": [
+                {"leg_id": 1, "side": "Buy"},
+                {"leg_id": 2, "side": "Sell"},
+            ],
+        },
+        {
+            "id": 2,
+            "Meta": {"account": "B"},
+            "Legs": [{"leg_id": 9, "side": "Buy"}],
+        },
+    ]
+    frame = spark.createDataFrame(rows, schema=schema)
+    flat = frame.dynamicFlatten().orderBy("id", "Legs_leg_id")
+    assert flat.columns == ["id", "Meta_account", "Legs_leg_id", "Legs_side"]
+    table = flat.to_arrow()
+    assert table.to_pylist() == [
+        {"id": 1, "Meta_account": "A", "Legs_leg_id": 1, "Legs_side": "Buy"},
+        {"id": 1, "Meta_account": "A", "Legs_leg_id": 2, "Legs_side": "Sell"},
+        {"id": 2, "Meta_account": "B", "Legs_leg_id": 9, "Legs_side": "Buy"},
+    ]
+    assert table.schema.field("Meta_account").type in (pa.string(), pa.large_string())
+    assert table.schema.field("Legs_leg_id").type == pa.int64()
+    assert table.schema.field("Legs_side").type in (pa.string(), pa.large_string())
+
+
 def test_multi_list_serial_explode_order(spark: ReparkSession) -> None:
     """Two list columns explode serially in schema order (cartesian product)."""
     schema = StructType(

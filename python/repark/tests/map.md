@@ -103,6 +103,7 @@ NOT in that file is a defect, not a decision.
   `getAll` redacts; `get(explicit)` unchanged.
 - `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`:
   nested struct-in-struct; null parent/mid struct → NULL not zero; list-of-struct;
+  **U-DF-1:** capitalized `Legs` list-of-struct + sibling struct (`Legs_leg_id`);
   multi-list serial explode order; list explode in-place column order;
   struct-in-list-in-struct; null-typed list drop;
   explode null/empty array value row-drop; max_depth LOUD refuse; bool flag type gates;
@@ -405,7 +406,9 @@ NOT in that file is a defect, not a decision.
 - `test_pandas_udf_oracle.py (+ pandas_udf_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 pandas_udf oracle (named deliverable): SCALAR values/nulls/coercion/multi-arg/string/error/withColumn + **M5 SCALAR_ITER + pure GROUPED_AGG**; skips cleanly without JVM. Not Apache `test_pandas_udf*` census.
 - `test_explode_rewrite.py` — R-EXPLODE-REWRITE pins (null/empty, one-generator, posexplode*
   STOP, str ColumnOrName, cast sticky, withColumn unnest, pre-aliased AS strip, multi-array
-  exact type bind; octo c2: pre-aliased sibling, Timestamp outer type, reserved/mixed-case
+  exact type bind; **U-DF-1:** string-form / `F.col` / getitem / casefold explode of
+  createDataFrame `Legs`, `explode_outer('Legs')` null/empty keep, absent name still loud;
+  octo c2: pre-aliased sibling, Timestamp outer type, reserved/mixed-case
   idents, hostile name quote, asc/desc sticky, alone-select outer; octo c3: compound
   mixed-case sibling, nested-list outer type, fn-call/subquery ColumnOrName not SQL inject,
   array-of-struct explode, coalesce outer type, size sibling; octo c4: sql.functions

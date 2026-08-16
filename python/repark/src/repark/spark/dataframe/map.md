@@ -31,6 +31,10 @@ r26 T1 package-split the former monolith; **r27 T0** made the region split real
   **TZ-4 PR-2:** collect converts tz-aware timestamps to a naive session-zone wall
   (`_arrow_cell_to_spark_python` + `_arrow_type_needs_spark_python_convert`).
   **S-1 R3:** OOM suffix — RAM-relative default, cap 8 GiB (net-zero rewrite).
+  **U-DF-1:** `_select_with_generator` mid-project binds a single-ident generator
+  through `_bound_generator_array` (`column.py`) so string-form `explode` /
+  `explode_outer` keep createDataFrame case (`Legs`); compounds and unresolved
+  names keep `generator._inner`.
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).
@@ -42,6 +46,7 @@ r26 T1 package-split the former monolith; **r27 T0** made the region split real
 | Task | Go to |
 |---|---|
 | Change DataFrame methods / plan glue | `core.py` |
+| Change generator mid-project name bind | `../column.py` (`_bound_generator_array`) + `core.py` (`_select_with_generator`) |
 | Change `join` how-aliases / semi-family routing | `core.py` (`DataFrame.join` + `_SEMI_JOIN_HOWS`) |
 | Change semi/anti origin-map join-type awareness | `core.py` (`_origin_not_emitted` + `_remember_unemitted_right_origins`) |
 | Change groupBy / pivot / agg grouping | `joins_columns.py` |

@@ -29,7 +29,7 @@ from repark.errors import (
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident_sql
-from repark.spark.column import Column
+from repark.spark.column import Column, _bound_generator_array
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -3269,7 +3269,7 @@ class DataFrame:
         for column in projected:
             if column is generator or getattr(column, "_generator", None):
                 # Array expression only (cast after unnest via _generator_cast).
-                mid_natives.append(generator._inner.alias(array_temp))
+                mid_natives.append(_bound_generator_array(self, generator).alias(array_temp))
             else:
                 # for_select already applied Spark projection names on the native expr.
                 mid_natives.append(column._inner)
