@@ -38,13 +38,15 @@ use datafusion::physical_expr::expressions::Literal;
 use datafusion::prelude::SessionContext;
 
 use crate::{
-    ad, adosc, adx, adxr, apo, aroon, aroonosc, atr, avgprice, bbands, beta, bop, cci, cmo, correl,
-    dema, dx, ema, kama, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, ma,
-    macd, macdext, macdfix, mama, mavp, max, medprice, mfi, midpoint, midprice, min, minus_di,
-    minus_dm, mom, natr, obv, plus_di, plus_dm, ppo, roc, rocp, rocr, rocr100, rsi, sar, sarext,
-    sma, stddev, stoch, stochf, stochrsi, sum, t3, tema, trange, trima, trix, tsf, typprice,
-    ultosc, var, wclprice, willr, wma,
+    beta, correl, linearreg, linearreg_angle, linearreg_intercept, linearreg_slope, max, min,
+    stddev, sum, tsf, var,
 };
+
+mod momentum;
+mod overlap;
+mod price;
+mod volatility;
+mod volume;
 
 // ===========================================================================================
 // Scout #8 — partition-local multi-output cache.
@@ -555,81 +557,20 @@ impl TaFn {
     ///
     /// Callers only invoke this for multi-output UDFs (`multi_family().is_some()`). A
     /// single-output `TaFn` falls through to a one-element wrap of [`Self::compute`].
-    #[allow(clippy::too_many_lines)]
     fn compute_all(self, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<Vec<f64>>> {
         match self.multi_family() {
-            Some(MultiFamily::Bbands) => {
-                let (upper, middle, lower) =
-                    bbands(series[0], period(params[0])?, params[1], params[2])?;
-                Ok(vec![upper, middle, lower])
+            Some(family @ (MultiFamily::Bbands | MultiFamily::Mama)) => {
+                overlap::compute_all(family, series, params)
             }
-            Some(MultiFamily::Macd) => {
-                let (macd_line, signal, hist) = macd(
-                    series[0],
-                    period(params[0])?,
-                    period(params[1])?,
-                    period(params[2])?,
-                )?;
-                Ok(vec![macd_line, signal, hist])
-            }
-            Some(MultiFamily::Macdfix) => {
-                let (macd_line, signal, hist) = macdfix(series[0], period(params[0])?)?;
-                Ok(vec![macd_line, signal, hist])
-            }
-            Some(MultiFamily::Macdext) => {
-                let (macd_line, signal, hist) = macdext(
-                    series[0],
-                    period(params[0])?,
-                    period(params[1])?,
-                    period(params[2])?,
-                    period(params[3])?,
-                    period(params[4])?,
-                    period(params[5])?,
-                )?;
-                Ok(vec![macd_line, signal, hist])
-            }
-            Some(MultiFamily::Stoch) => {
-                let (slow_k, slow_d) = stoch(
-                    series[0],
-                    series[1],
-                    series[2],
-                    period(params[0])?,
-                    period(params[1])?,
-                    period(params[2])?,
-                    period(params[3])?,
-                    period(params[4])?,
-                )?;
-                Ok(vec![slow_k, slow_d])
-            }
-            Some(MultiFamily::Stochf) => {
-                let (fast_k, fast_d) = stochf(
-                    series[0],
-                    series[1],
-                    series[2],
-                    period(params[0])?,
-                    period(params[1])?,
-                    period(params[2])?,
-                )?;
-                Ok(vec![fast_k, fast_d])
-            }
-            Some(MultiFamily::Stochrsi) => {
-                let (fast_k, fast_d) = stochrsi(
-                    series[0],
-                    period(params[0])?,
-                    period(params[1])?,
-                    period(params[2])?,
-                    period(params[3])?,
-                )?;
-                Ok(vec![fast_k, fast_d])
-            }
-            Some(MultiFamily::Aroon) => {
-                let (down, up) = aroon(series[0], series[1], period(params[0])?)?;
-                Ok(vec![down, up])
-            }
-            Some(MultiFamily::Mama) => {
-                let (mama_out, fama_out) = mama(series[0], params[0], params[1])?;
-                Ok(vec![mama_out, fama_out])
-            }
+            Some(
+                family @ (MultiFamily::Macd
+                | MultiFamily::Macdfix
+                | MultiFamily::Macdext
+                | MultiFamily::Stoch
+                | MultiFamily::Stochf
+                | MultiFamily::Stochrsi
+                | MultiFamily::Aroon),
+            ) => momentum::compute_all(family, series, params),
             None => self.compute(series, params).map(|band| vec![band]),
         }
     }
@@ -637,15 +578,71 @@ impl TaFn {
     /// Dispatch to the kernel. `series` holds the [`Self::n_series`] input columns (already
     /// `f64`); `params` holds the scalar arguments as `f64` (period fields are cast to `usize`
     /// via [`period`] — the kernel then range-validates them).
-    #[allow(clippy::too_many_lines)] // one flat match arm per UDF — splitting it would obscure the table.
     fn compute(self, series: &[&[f64]], params: &[f64]) -> crate::Result<Vec<f64>> {
         match self {
-            TaFn::Sma => sma(series[0], period(params[0])?),
-            TaFn::Ema => ema(series[0], period(params[0])?),
-            TaFn::Rsi => rsi(series[0], period(params[0])?),
-            TaFn::Adx => adx(series[0], series[1], series[2], period(params[0])?),
-            TaFn::Atr => atr(series[0], series[1], series[2], period(params[0])?),
-            TaFn::Trange => trange(series[0], series[1], series[2]),
+            TaFn::Sma
+            | TaFn::Ema
+            | TaFn::Wma
+            | TaFn::Dema
+            | TaFn::Tema
+            | TaFn::Trima
+            | TaFn::Kama
+            | TaFn::T3
+            | TaFn::Midpoint
+            | TaFn::Midprice
+            | TaFn::BbandsUpper
+            | TaFn::BbandsMiddle
+            | TaFn::BbandsLower
+            | TaFn::Ma
+            | TaFn::Mama
+            | TaFn::Fama
+            | TaFn::Sar
+            | TaFn::Sarext
+            | TaFn::Mavp => overlap::compute(self, series, params),
+            TaFn::Rsi
+            | TaFn::Adx
+            | TaFn::Mom
+            | TaFn::Roc
+            | TaFn::Rocp
+            | TaFn::Rocr
+            | TaFn::Rocr100
+            | TaFn::Willr
+            | TaFn::Cci
+            | TaFn::Cmo
+            | TaFn::Bop
+            | TaFn::Apo
+            | TaFn::Ppo
+            | TaFn::AroonDown
+            | TaFn::AroonUp
+            | TaFn::Aroonosc
+            | TaFn::Trix
+            | TaFn::Ultosc
+            | TaFn::Dx
+            | TaFn::Adxr
+            | TaFn::PlusDi
+            | TaFn::MinusDi
+            | TaFn::PlusDm
+            | TaFn::MinusDm
+            | TaFn::Macd
+            | TaFn::MacdSignal
+            | TaFn::MacdHist
+            | TaFn::Macdfix
+            | TaFn::MacdfixSignal
+            | TaFn::MacdfixHist
+            | TaFn::Macdext
+            | TaFn::MacdextSignal
+            | TaFn::MacdextHist
+            | TaFn::StochSlowk
+            | TaFn::StochSlowd
+            | TaFn::StochfFastk
+            | TaFn::StochfFastd
+            | TaFn::StochrsiFastk
+            | TaFn::StochrsiFastd => momentum::compute(self, series, params),
+            TaFn::Atr | TaFn::Trange | TaFn::Natr => volatility::compute(self, series, params),
+            TaFn::Ad | TaFn::Adosc | TaFn::Obv | TaFn::Mfi => volume::compute(self, series, params),
+            TaFn::Avgprice | TaFn::Medprice | TaFn::Typprice | TaFn::Wclprice => {
+                price::compute(self, series, params)
+            }
             TaFn::Var => var(series[0], period(params[0])?, params[1]),
             TaFn::Stddev => stddev(series[0], period(params[0])?, params[1]),
             TaFn::Linearreg => linearreg(series[0], period(params[0])?),
@@ -657,231 +654,31 @@ impl TaFn {
             TaFn::Min => min(series[0], period(params[0])?),
             TaFn::Max => max(series[0], period(params[0])?),
             TaFn::Sum => sum(series[0], period(params[0])?),
-            TaFn::Wma => wma(series[0], period(params[0])?),
-            TaFn::Dema => dema(series[0], period(params[0])?),
-            TaFn::Tema => tema(series[0], period(params[0])?),
-            TaFn::Trima => trima(series[0], period(params[0])?),
-            TaFn::Kama => kama(series[0], period(params[0])?),
-            TaFn::T3 => t3(series[0], period(params[0])?, params[1]),
-            TaFn::Midpoint => midpoint(series[0], period(params[0])?),
-            TaFn::Midprice => midprice(series[0], series[1], period(params[0])?),
-            TaFn::BbandsUpper => {
-                bbands(series[0], period(params[0])?, params[1], params[2]).map(|(u, _, _)| u)
-            }
-            TaFn::BbandsMiddle => {
-                bbands(series[0], period(params[0])?, params[1], params[2]).map(|(_, m, _)| m)
-            }
-            TaFn::BbandsLower => {
-                bbands(series[0], period(params[0])?, params[1], params[2]).map(|(_, _, l)| l)
-            }
-            TaFn::Mom => mom(series[0], period(params[0])?),
-            TaFn::Roc => roc(series[0], period(params[0])?),
-            TaFn::Rocp => rocp(series[0], period(params[0])?),
-            TaFn::Rocr => rocr(series[0], period(params[0])?),
-            TaFn::Rocr100 => rocr100(series[0], period(params[0])?),
-            TaFn::Willr => willr(series[0], series[1], series[2], period(params[0])?),
-            TaFn::Cci => cci(series[0], series[1], series[2], period(params[0])?),
-            TaFn::Cmo => cmo(series[0], period(params[0])?),
-            TaFn::Bop => bop(series[0], series[1], series[2], series[3]),
-            // params: [fastPeriod, slowPeriod, matype]; `matype` is a small non-negative code
-            // coerced via [`period`] (kernel `ma_dispatch` range-validates it).
-            TaFn::Apo => apo(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            ),
-            TaFn::Ppo => ppo(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            ),
-            TaFn::AroonDown => {
-                aroon(series[0], series[1], period(params[0])?).map(|(down, _)| down)
-            }
-            TaFn::AroonUp => aroon(series[0], series[1], period(params[0])?).map(|(_, up)| up),
-            TaFn::Aroonosc => aroonosc(series[0], series[1], period(params[0])?),
-            TaFn::Trix => trix(series[0], period(params[0])?),
-            TaFn::Ultosc => ultosc(
-                series[0],
-                series[1],
-                series[2],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            ),
-            TaFn::Dx => dx(series[0], series[1], series[2], period(params[0])?),
-            TaFn::Adxr => adxr(series[0], series[1], series[2], period(params[0])?),
-            TaFn::PlusDi => plus_di(series[0], series[1], series[2], period(params[0])?),
-            TaFn::MinusDi => minus_di(series[0], series[1], series[2], period(params[0])?),
-            TaFn::PlusDm => plus_dm(series[0], series[1], period(params[0])?),
-            TaFn::MinusDm => minus_dm(series[0], series[1], period(params[0])?),
-            // MACD splits: params [fast, slow, signal]; each output picks one band.
-            TaFn::Macd => macd(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            )
-            .map(|(m, _, _)| m),
-            TaFn::MacdSignal => macd(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            )
-            .map(|(_, s, _)| s),
-            TaFn::MacdHist => macd(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            )
-            .map(|(_, _, h)| h),
-            // MACDFIX splits: params [signal] (12/26 pinned).
-            TaFn::Macdfix => macdfix(series[0], period(params[0])?).map(|(m, _, _)| m),
-            TaFn::MacdfixSignal => macdfix(series[0], period(params[0])?).map(|(_, s, _)| s),
-            TaFn::MacdfixHist => macdfix(series[0], period(params[0])?).map(|(_, _, h)| h),
-            // MACDEXT splits: params [fastPeriod, fastMAType, slowPeriod, slowMAType, signalPeriod,
-            // signalMAType], `matype`s coerced via [`period`] then range-validated by the kernel.
-            TaFn::Macdext => macdext(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-                period(params[4])?,
-                period(params[5])?,
-            )
-            .map(|(m, _, _)| m),
-            TaFn::MacdextSignal => macdext(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-                period(params[4])?,
-                period(params[5])?,
-            )
-            .map(|(_, s, _)| s),
-            TaFn::MacdextHist => macdext(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-                period(params[4])?,
-                period(params[5])?,
-            )
-            .map(|(_, _, h)| h),
-            // MA selector: params [period, matype].
-            TaFn::Ma => ma(series[0], period(params[0])?, period(params[1])?),
-            // STOCH splits: params [fastkPeriod, slowkPeriod, slowkMAType, slowdPeriod,
-            // slowdMAType]; each output picks one line.
-            TaFn::StochSlowk => stoch(
-                series[0],
-                series[1],
-                series[2],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-                period(params[4])?,
-            )
-            .map(|(k, _)| k),
-            TaFn::StochSlowd => stoch(
-                series[0],
-                series[1],
-                series[2],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-                period(params[4])?,
-            )
-            .map(|(_, d)| d),
-            // STOCHF splits: params [fastkPeriod, fastdPeriod, fastdMAType].
-            TaFn::StochfFastk => stochf(
-                series[0],
-                series[1],
-                series[2],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            )
-            .map(|(k, _)| k),
-            TaFn::StochfFastd => stochf(
-                series[0],
-                series[1],
-                series[2],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            )
-            .map(|(_, d)| d),
-            // STOCHRSI splits: params [timeperiod, fastkPeriod, fastdPeriod, fastdMAType].
-            TaFn::StochrsiFastk => stochrsi(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-            )
-            .map(|(k, _)| k),
-            TaFn::StochrsiFastd => stochrsi(
-                series[0],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-                period(params[3])?,
-            )
-            .map(|(_, d)| d),
-            // WG5 sweep-up: NATR (H/L/C + period), BETA (two-series + period), and the four
-            // no-period O/H/L/C price transforms.
-            TaFn::Natr => natr(series[0], series[1], series[2], period(params[0])?),
             TaFn::Beta => beta(series[0], series[1], period(params[0])?),
-            TaFn::Avgprice => avgprice(series[0], series[1], series[2], series[3]),
-            TaFn::Medprice => medprice(series[0], series[1]),
-            TaFn::Typprice => typprice(series[0], series[1], series[2]),
-            TaFn::Wclprice => wclprice(series[0], series[1], series[2]),
-            // T3 — the parked four. MAMA/SAR/SAREXT carry REAL-valued scalars (limits / accelerations
-            // / offset / start), passed through verbatim — NOT via `period` (which rejects
-            // non-integral values). MAVP's three scalars (min, max, matype) ARE integral, so they go
-            // through `period`; its second series (`series[1]`) is the per-row periods column.
-            TaFn::Mama => mama(series[0], params[0], params[1]).map(|(mama_out, _)| mama_out),
-            TaFn::Fama => mama(series[0], params[0], params[1]).map(|(_, fama_out)| fama_out),
-            TaFn::Sar => sar(series[0], series[1], params[0], params[1]),
-            TaFn::Sarext => sarext(
-                series[0], series[1], params[0], params[1], params[2], params[3], params[4],
-                params[5], params[6], params[7],
-            ),
-            TaFn::Mavp => mavp(
-                series[0],
-                series[1],
-                period(params[0])?,
-                period(params[1])?,
-                period(params[2])?,
-            ),
-            // TA-4 volume: AD/ADOSC/MFI are H/L/C/V; OBV is close+volume.
-            TaFn::Ad => ad(series[0], series[1], series[2], series[3]),
-            TaFn::Adosc => adosc(
-                series[0],
-                series[1],
-                series[2],
-                series[3],
-                period(params[0])?,
-                period(params[1])?,
-            ),
-            TaFn::Obv => obv(series[0], series[1]),
-            TaFn::Mfi => mfi(
-                series[0],
-                series[1],
-                series[2],
-                series[3],
-                period(params[0])?,
-            ),
         }
+    }
+}
+
+/// ===========================================================================================
+/// Loud error when a family `compute` table dropped a variant the router still sends there.
+/// Never a kernel-math path.
+/// ===========================================================================================
+fn family_dispatch_miss(func: TaFn) -> crate::TaError {
+    crate::TaError::InvalidRealParam {
+        name: "udf family dispatch",
+        value: format!("{func:?}"),
+        range: "owned family compute arm",
+    }
+}
+
+/// ===========================================================================================
+/// Same miss shape as [`family_dispatch_miss`], keyed by [`MultiFamily`].
+/// ===========================================================================================
+fn family_dispatch_miss_multi(family: MultiFamily) -> crate::TaError {
+    crate::TaError::InvalidRealParam {
+        name: "udf family dispatch",
+        value: format!("{family:?}"),
+        range: "owned family compute arm",
     }
 }
 
@@ -1188,6 +985,10 @@ pub fn register_all(ctx: &SessionContext) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        ad, adosc, aroon, bbands, ema, macdext, macdfix, mama, mfi, obv, sma, stoch, stochf,
+        stochrsi,
+    };
 
     #[test]
     fn spec_arity_matches_series_plus_scalars() {
@@ -2163,5 +1964,57 @@ mod tests {
         assert_f64_series_bit_exact(&array_values(&out_u), &kernel_u);
         assert_f64_series_bit_exact(&array_values(&out_l), &kernel_l);
         multi_out_clear();
+    }
+
+    #[test]
+    fn compute_routes_every_spec_to_a_family_or_shared_arm() {
+        // Split pin: every SPECS entry must hit a family/shared compute arm, never
+        // `family_dispatch_miss` (which would mean a router/table drift).
+        let close: Vec<f64> = (1..=64).map(|i| 50.0 + f64::from(i)).collect();
+        let high: Vec<f64> = close.iter().map(|value| value + 1.0).collect();
+        let low: Vec<f64> = close.iter().map(|value| value - 1.0).collect();
+        let open: Vec<f64> = close.iter().map(|value| value - 0.25).collect();
+        let volume: Vec<f64> = (0..64).map(|i| 100.0 + f64::from(i)).collect();
+        for &(name, func) in SPECS {
+            let series: Vec<&[f64]> = match func {
+                TaFn::Ad | TaFn::Adosc | TaFn::Mfi => {
+                    vec![
+                        high.as_slice(),
+                        low.as_slice(),
+                        close.as_slice(),
+                        volume.as_slice(),
+                    ]
+                }
+                TaFn::Obv => vec![close.as_slice(), volume.as_slice()],
+                _ => match func.n_series() {
+                    1 => vec![close.as_slice()],
+                    2 => vec![high.as_slice(), low.as_slice()],
+                    3 => vec![high.as_slice(), low.as_slice(), close.as_slice()],
+                    4 => vec![
+                        open.as_slice(),
+                        high.as_slice(),
+                        low.as_slice(),
+                        close.as_slice(),
+                    ],
+                    n_series => panic!("{name}: unexpected n_series {n_series}"),
+                },
+            };
+            let params: Vec<f64> = match func {
+                TaFn::Mama | TaFn::Fama => vec![0.5, 0.05],
+                TaFn::Sar => vec![0.02, 0.2],
+                TaFn::Sarext => vec![0.0, 0.0, 0.02, 0.02, 0.2, 0.02, 0.02, 0.2],
+                _ => vec![14.0; func.n_scalars()],
+            };
+            match func.compute(&series, &params) {
+                Ok(_) => {}
+                Err(err) => {
+                    let msg = err.to_string();
+                    assert!(
+                        !msg.contains("udf family dispatch"),
+                        "{name}: family dispatch miss: {msg}"
+                    );
+                }
+            }
+        }
     }
 }

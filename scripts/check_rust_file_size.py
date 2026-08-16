@@ -108,11 +108,11 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "family); "
         "RATCHET: after per-indicator modules if identity-diff allows",
     ),
-    "crates/repark-ta/src/udf.rs": (
-        2200,  # measured 2098
-        "DataFusion window-UDF wrappers for every TA kernel (feature "
-        "`datafusion`; PartitionEvaluator::evaluate_all shape); "
-        "RATCHET: after per-family UDF modules",
+    "crates/repark-ta/src/udf/mod.rs": (
+        2100,  # measured 2020
+        "DataFusion window-UDF wrappers: shared cache/densify/evaluate_all/"
+        "SPECS/TaFn + statistic/math dispatch (feature `datafusion`); "
+        "RATCHET: after statistic/math extract or tests/ split",
     ),
 }
 

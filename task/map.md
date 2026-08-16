@@ -24,6 +24,10 @@ not this directory.
   (2026-08-15):** extract non-pymethods helpers from `column.rs` →
   `column/{mod,window,expr_build}.rs`; ratchet file-size EXCEPTIONS DOWN.
   `multiple-pymethods` stays off.
+- [udfx-udf-split-ledger.md](udfx-udf-split-ledger.md) — **UDFX (2026-08-15):**
+  split `crates/repark-ta/src/udf.rs` into `udf/mod.rs` + per-family dispatch
+  modules (`overlap`/`momentum`/`volatility`/`volume`/`price`). Zero numeric
+  change. EXCEPTIONS key moved and ratcheted DOWN.
 - [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) — **P-1
   (2026-08-15):** criterion kernel baseline for `repark-ta` (`ema`/`sma`/`rsi`/
   `bbands` + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold / three-
