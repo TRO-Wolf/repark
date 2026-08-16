@@ -2,7 +2,7 @@
 
 Measure-first diagnosis (hour-0, synthetic OHLCV + 17 float cols, no AWS):
 
-* Default pool is FairSpillPool **8 GiB** (``repark.memory.limit.gb`` unset).
+* Default pool is FairSpillPool, RAM-relative (``clamp(0.6 * detected, 1 MiB, 8 GiB)``).
 * Under ``repark.memory.limit.gb=1``, a 2M-row x ~23-col reverse sort fails with
   DataFusion pool-pressure class text (``Resources exhausted`` / ``not enough
   memory``; operator may be ExternalSorter *or* SortPreservingMergeExec) naming
@@ -21,7 +21,9 @@ get/set equality on the facade store after a successful engine SET.
 from __future__ import annotations
 
 import re
+import tempfile
 import time
+from pathlib import Path
 
 import pyarrow as pa
 import pytest
@@ -94,8 +96,10 @@ def test_datafusion_runtime_memory_limit_conf_round_trip_and_pool() -> None:
         frame.sort(F.col("close").desc()).to_arrow()
     message = str(raised.value)
     assert "Resources exhausted" in message or "not enough memory" in message.lower()
-    # Live pool after conf.set is 256 MiB (not the builder 1 GiB).
+    # Live pool after conf.set is 256 MiB FairSpillPool (not the builder 1 GiB, not greedy).
     assert re.search(r"pool_size:\s*256\.0\s*MB", message), message
+    assert "fair(" in message.lower(), message
+    assert "greedy(" not in message.lower(), message
     assert "datafusion.runtime.memory_limit" in message
     assert "repark.memory.limit.gb" in message  # REPARK conf hint
 
@@ -205,7 +209,10 @@ def test_builder_datafusion_memory_limit_alone_applies() -> None:
     frame = _wide_frame(spark, 2_000_000)
     with pytest.raises(PySparkException) as raised:
         frame.sort(F.col("close").desc()).to_arrow()
-    assert re.search(r"pool_size:\s*256\.0\s*MB", str(raised.value)), str(raised.value)
+    message = str(raised.value)
+    assert re.search(r"pool_size:\s*256\.0\s*MB", message), message
+    assert "fair(" in message.lower(), message
+    assert "greedy(" not in message.lower(), message
 
 
 def test_dual_memory_knobs_refuse_loud() -> None:
@@ -249,7 +256,8 @@ def test_sort_oom_error_is_pyspark_exception_with_df_message_and_hint() -> None:
         or "sortpreservingmerge" in lower
         or "failed to allocate additional" in lower
     )
-    assert "fair(pool_size:" in lower or "pool_size:" in lower
+    assert "fair(" in lower, message
+    assert "greedy(" not in lower, message
     assert "datafusion.runtime.memory_limit" in message
     assert "repark.memory.limit.gb" in message
 
@@ -297,6 +305,35 @@ def test_export_error_helper_strips_pyarrow_noise() -> None:
 # ---------------------------------------------------------------------------------------------
 # Measure-first before/after bench (recorded; not a flaky wall-time assert)
 # ---------------------------------------------------------------------------------------------
+
+
+def test_runtime_temp_directory_refuses_loud_no_store() -> None:
+    """Runtime temp_directory must refuse (names TMPDIR) — no silent facade twin."""
+    spark = ReparkSession.builder.getOrCreate()
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.conf.set("datafusion.runtime.temp_directory", "/tmp/repark-spill-must-not-stick")
+    message = str(raised.value)
+    assert "TMPDIR" in message, message
+    assert "datafusion.runtime.temp_directory" in message
+    assert spark.conf.get("datafusion.runtime.temp_directory", None) is None
+
+
+def test_sql_set_temp_directory_refuses_loud() -> None:
+    spark = ReparkSession.builder.getOrCreate()
+    with pytest.raises((IllegalArgumentException, PySparkException)) as raised:
+        spark.sql("SET datafusion.runtime.temp_directory = '/tmp/repark-spill-sql'")
+    assert "TMPDIR" in str(raised.value), str(raised.value)
+
+
+def test_builder_temp_directory_creates_datafusion_workdir() -> None:
+    """Build-time key wires DiskManager: a datafusion-* dir appears under the path."""
+    with tempfile.TemporaryDirectory() as scratch:
+        spark = ReparkSession.builder.config(
+            "datafusion.runtime.temp_directory", scratch
+        ).getOrCreate()
+        children = list(Path(scratch).glob("datafusion-*"))
+        assert children, f"expected a datafusion-* workdir under {scratch}"
+        _ = spark  # keep the session (and DiskManager TempDir) alive across the glob
 
 
 def test_reverse_sort_succeeds_when_pool_raised() -> None:

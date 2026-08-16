@@ -829,7 +829,18 @@ NOT in that file is a defect, not a decision.
   `conf.set("repark.memory.limit.gb")` refuse (build-time only); OOM `to_arrow`/`collect` →
   `PySparkException` with DF message + REPARK conf hint (no pyarrow dynamic-source wrapper);
   unit pin for `_export_engine_error` noise strip; reverse-sort succeeds after pool raise
-  via conf.
+  via conf. **S-1 R1:** pool-type pins at the three `pool_size`-only sites now require
+  `fair(` and forbid `greedy(` (A3: those were false-green under DF's greedy SET).
+  **S-1 R2:** runtime `temp_directory` `conf.set` / SQL `SET` refuse loud (names
+  `TMPDIR`, no store-only twin); builder key creates a `datafusion-*` DiskManager
+  workdir. **S-1 R3:** module docstring default is RAM-relative (cap 8 GiB).
+- `test_t2_spill_reach.py` — **S-1:** recon §3 battery. Small FairSpillPool (64 MiB SET,
+  2 partitions): sort / hash_agg / distinct / grouping_sets / SMJ assert
+  `EXPLAIN ANALYZE` `spill_count > 0`. hash_join + `array_agg` pinned AS failures
+  (`Resources exhausted` + `HashJoin` / `array_agg`; `fair(` required, `greedy(`
+  forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
+  (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
+  ruff-format lockstep.
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

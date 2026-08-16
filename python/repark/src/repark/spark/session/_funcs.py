@@ -593,7 +593,7 @@ def _refuse_dual_memory_pool_knobs(config: dict[str, str | None]) -> None:
             "[INVALID_CONF_VALUE.REQUIREMENT] both "
             f"{_MEMORY_LIMIT_KEYS[0]!r} and {_DATAFUSION_RUNTIME_MEMORY_LIMIT_KEY!r} "
             "are set. They configure the same FairSpillPool — use exactly one: "
-            f"{_MEMORY_LIMIT_KEYS[0]} at builder/getOrCreate (build-time; default 8 GiB, "
+            f"{_MEMORY_LIMIT_KEYS[0]} at builder/getOrCreate (RAM-relative default, cap 8 GiB, "
             "0 = unbounded), or datafusion.runtime.memory_limit via spark.conf.set / "
             "SQL SET (runtime; e.g. '16G')."
         )
@@ -617,7 +617,7 @@ def _refuse_runtime_memory_limit_gb(key: str) -> None:
 
     raise IllegalArgumentException(
         f"[INVALID_CONF_VALUE.REQUIREMENT] config {key!r} is build-time only "
-        f"(FairSpillPool size at getOrCreate; default 8 GiB; 0 = unbounded). "
+        f"(FairSpillPool size at getOrCreate; RAM-relative default, cap 8 GiB; 0 = unbounded). "
         f"To re-size the live pool use spark.conf.set("
         f"{_DATAFUSION_RUNTIME_MEMORY_LIMIT_KEY!r}, 'NG') or SQL SET "
         f"{_DATAFUSION_RUNTIME_MEMORY_LIMIT_KEY} = 'NG' — same pool, one truth."
@@ -634,6 +634,8 @@ def _apply_builder_datafusion_conf(session: ReparkSession, config: dict[str, str
     context. Insertion order is preserved (last alias wins for duplicate keys).
 
     Non-canonical / mixed-case keys refuse-loud via :meth:`RuntimeConfig.set`.
+    ``datafusion.runtime.temp_directory`` is skipped (already applied at Rust build;
+    a runtime SET of it refuses loud and names TMPDIR).
 
     """
 
@@ -644,6 +646,10 @@ def _apply_builder_datafusion_conf(session: ReparkSession, config: dict[str, str
             continue
 
         if not _looks_like_datafusion_conf_key(key):
+            continue
+
+        # Build-time only: Rust already applied with_temp_file_path. A runtime SET refuses.
+        if key.lower() == "datafusion.runtime.temp_directory":
             continue
 
         runtime.set(key, value)

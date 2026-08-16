@@ -36,9 +36,9 @@ async fn builder_applies_config_without_error() {
     assert_eq!(cfg.target_partitions(), 4);
 }
 
-/// C1-Q-002 / C1-L-005: a default `build()` installs an 8 GiB `FairSpillPool` so peak RAM is
-/// bounded without an explicit `.memory_limit_gb`. Mutation-proof: if the default is removed,
-/// `memory_limit()` is no longer `Finite(8 GiB)`.
+/// C1-Q-002 / C1-L-005: a default `build()` installs a finite `FairSpillPool` so peak RAM is
+/// bounded without an explicit `.memory_limit_gb`. RAM-relative: Finite, in
+/// `[MIN_MEMORY_LIMIT_BYTES, 8 GiB]`, equal to `default_memory_limit_bytes`.
 #[tokio::test]
 async fn builder_default_installs_eight_gib_fair_spill_pool() {
     use datafusion::execution::memory_pool::MemoryLimit;
@@ -47,17 +47,26 @@ async fn builder_default_installs_eight_gib_fair_spill_pool() {
     let limit = session.context().runtime_env().memory_pool.memory_limit();
     match limit {
         MemoryLimit::Finite(bytes) => {
+            assert!(
+                bytes >= MIN_MEMORY_LIMIT_BYTES,
+                "default pool {bytes} is below the 1 MiB floor"
+            );
+            assert!(
+                bytes <= DEFAULT_MEMORY_LIMIT_BYTES,
+                "default pool {bytes} exceeds the 8 GiB cap"
+            );
             assert_eq!(
-                bytes, DEFAULT_MEMORY_LIMIT_BYTES,
-                "default pool must be 8 GiB ({DEFAULT_MEMORY_LIMIT_BYTES} bytes)"
+                bytes,
+                default_memory_limit_bytes(),
+                "default pool must equal the detection helper"
             );
         }
-        MemoryLimit::Infinite => panic!("expected Finite(8 GiB) FairSpillPool, got Infinite"),
-        MemoryLimit::Unknown => panic!("expected Finite(8 GiB) FairSpillPool, got Unknown"),
+        MemoryLimit::Infinite => panic!("expected Finite FairSpillPool, got Infinite"),
+        MemoryLimit::Unknown => panic!("expected Finite FairSpillPool, got Unknown"),
     }
 }
 
-/// Explicit `.memory_limit_gb(n)` overrides the 8 GiB default.
+/// Explicit `.memory_limit_gb(n)` overrides the RAM-relative default.
 #[tokio::test]
 async fn builder_explicit_memory_limit_overrides_default() {
     use datafusion::execution::memory_pool::MemoryLimit;

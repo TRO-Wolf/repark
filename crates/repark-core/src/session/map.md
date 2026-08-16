@@ -9,6 +9,15 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 
 ## Contents
 
+- `spill.rs` — **S-1:** FairSpillPool install + runtime `SET datafusion.runtime.memory_limit`
+  intercept (R1). DataFusion 54.1 has no in-place resize (`pool_size` lives outside the mutex),
+  so SET **swaps** a new `FairSpillPool` (in-flight reservations stay on the old pool).
+  Dual `repark.memory.limit.gb` + the DF key refuses. **R2:** runtime
+  `SET datafusion.runtime.temp_directory` refuses loud (names `TMPDIR`); build-time key
+  applies `RuntimeEnvBuilder::with_temp_file_path`. `max_temp_directory_size` residual.
+  **R3:** RAM-relative default `clamp(0.6 × cgroup-or-MemTotal, MIN, 8 GiB)` at `build()`
+  only; `builder_default_installs_eight_gib_fair_spill_pool` asserts Finite / floor / cap /
+  equals helper.
 - `aws_gate_tests.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;
@@ -43,7 +52,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 |---|---|
 | `S3 read … refused: this session never resolved its AWS SDK config` | Call `register_configured_catalogs()` after signaling AWS use (AWS-backed catalog spec, S3-region conf, or `repark.aws.enable=true`). |
 | Uncorrelated scalar subquery misplans on a bare session | The DF-54.1 guard (`enable_physical_uncorrelated_scalar_subquery = false`) is a core session default (G8), pinned by `bare_session_without_extension_carries_df_54_1_subquery_guard`. |
-| A builder `datafusion.*` key seems ignored | It is not (P2G R2) — `apply_datafusion_config_keys` applies it and an unknown key is a build error, with ONE exact-key exclusion: `datafusion.runtime.memory_limit` is the facade-owned LIVE resize pseudo-key (`REPARK_OWNED_DATAFUSION_PSEUDO_KEYS`, P3E B-1) and is deliberately not swept at build. The typo pin carries TWO fixtures — truncated (catches a namespace-prefix exclusion) and extended (catches a `starts_with(pseudo_key)` exclusion). If the value did not take, check ordering: the extension `configure` hook runs AFTER, so an extension can still overwrite. Pin: `builder_datafusion_config_key_reaches_session_config`. |
+| A builder `datafusion.*` key seems ignored | It is not (P2G R2) — `apply_datafusion_config_keys` applies it and an unknown key is a build error, with exact-key exclusions in `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` (`datafusion.runtime.memory_limit` is applied to a **FairSpillPool** at `build()` / runtime SET, never swept into `ConfigOptions`). The typo pin carries TWO fixtures — truncated (catches a namespace-prefix exclusion) and extended (catches a `starts_with(pseudo_key)` exclusion). If the value did not take, check ordering: the extension `configure` hook runs AFTER, so an extension can still overwrite. Pin: `builder_datafusion_config_key_reaches_session_config`. |
+| Runtime `SET datafusion.runtime.memory_limit` OOMs with `greedy(` | Intercept lives in `spill.rs` (`maybe_apply_runtime_set`) and must run **before** `dialect.execute`. Pin: `runtime_set_memory_limit_oom_is_fair_not_greedy`. |
+| Runtime `SET datafusion.runtime.temp_directory` succeeds silently | R2: must refuse and name `TMPDIR`. Pin: `runtime_set_temp_directory_refuses_loud_naming_tmpdir`. Build-time key: `builder_temp_directory_wires_disk_manager`. |
 
 First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug](../map.md).
 

@@ -12,8 +12,17 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   widths refuse loud — layout home `repark.ml.linalg`).
   **G15:** `_data_type_to_sql_type` refuses a non-binary `StringType` (the silently-wrong-count
   path: collation was stripped to `STRING`).
+  **S-1 R2:** `_apply_builder_datafusion_conf` skips `datafusion.runtime.temp_directory`
+  (already applied at Rust `build()`; a runtime SET of it refuses and names `TMPDIR`).
 - `builder_conf.py` — SparkContext, RuntimeConfig.
   **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
+  **S-1 R1:** RuntimeConfig docs — `datafusion.runtime.memory_limit` swaps a new
+  `FairSpillPool` (same pool type as the builder; one truth, not two knobs).
+  **S-1 R2:** `datafusion.runtime.temp_directory` is build-time; runtime SET refuses
+  and names `TMPDIR`.
+  **S-1 R3:** RAM-relative FairSpillPool default (cap 8 GiB); documents the
+  `sort_spill_reservation_bytes × target_partitions` floor. `_funcs.py` one-truth
+  strings flipped in lockstep.
 - `session_core.py` — ReparkSession (sql/catalog methods stay here).
   **G15:** `Builder._set_config_entry` refuses collation `SQLConf` keys (silent-ignore path).
   getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted

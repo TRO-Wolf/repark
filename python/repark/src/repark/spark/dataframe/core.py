@@ -257,7 +257,7 @@ def _export_engine_error(error: BaseException) -> PySparkException:
             f"{message.rstrip()}\n"
             "REPARK: raise the FairSpillPool via "
             "SparkSession.builder.config('repark.memory.limit.gb', N).getOrCreate() "
-            "(build-time; default 8 GiB; 0 = unbounded) or "
+            "(build-time; RAM-relative, cap 8 GiB; 0 = unbounded) or "
             "spark.conf.set('datafusion.runtime.memory_limit', 'NG') "
             "(runtime; same pool — one truth, not two knobs)."
         )

@@ -105,16 +105,20 @@ class RuntimeConfig:
     **One truth for the memory pool (not two lying knobs):**
 
     * Build-time: ``repark.memory.limit.gb`` / ``SparkSession.builder.config(...)`` installs
-      the FairSpillPool (default **8 GiB**; ``0`` opts out / unbounded). Fixed at
-      ``getOrCreate`` — reuse does not re-size the pool from the builder.
-      ``spark.conf.set("repark.memory.limit.gb", …)`` at runtime **refuses loud** (would only
-      mutate the facade while the live pool stayed put).
+      the FairSpillPool (RAM-relative default ``clamp(0.6 * cgroup-or-MemTotal, 1 MiB,
+      8 GiB)``; ``0`` opts out / unbounded). ``sort_spill_reservation_bytes *
+      target_partitions`` is a non-spillable floor. Fixed at ``getOrCreate`` — reuse does
+      not re-size the pool from the builder. ``spark.conf.set("repark.memory.limit.gb", …)``
+      at runtime **refuses loud** (would only mutate the facade while the live pool stayed put).
     * Runtime: ``spark.conf.set("datafusion.runtime.memory_limit", "16G")`` (or SQL
-      ``SET datafusion.runtime.memory_limit = '16G'``) re-sizes the **same** pool for
-      subsequent queries. Use this to raise the pool after a large sort / ExternalSorter
-      exhaustion without rebuilding the session.
+      ``SET datafusion.runtime.memory_limit = '16G'``) swaps a **new FairSpillPool**
+      of that size (DataFusion 54.1 has no in-place resize; in-flight reservations
+      stay on the old pool). Same pool type as the builder — one truth, not two knobs.
     * Setting **both** ``repark.memory.limit.gb`` and ``datafusion.runtime.memory_limit`` on
       the same builder refuses loud (same pool, ambiguous initial size).
+    * Spill disk: ``datafusion.runtime.temp_directory`` is a **build-time** pseudo-key
+      (``RuntimeEnvBuilder.with_temp_file_path``). Runtime ``conf.set`` / SQL ``SET`` of it
+      **refuses loud** and names ``TMPDIR`` (the DiskManager is fixed after ``build()``).
 
     **The session timezone is build-time too (H-1a), with a different disclosure shape.**
     ``spark.sql.session.timeZone`` is set on the builder and validated by the engine once at
