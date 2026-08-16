@@ -13,6 +13,7 @@ import pytest
 
 import repark.spark.session as session_module
 from repark import ReparkSession
+from repark import functions as F  # noqa: N812
 from repark.errors import PySparkException
 
 
@@ -27,14 +28,14 @@ def _isolate_session() -> None:
     _clear_active()
 
 
-def _small_fair_session() -> ReparkSession:
-    """64 MiB FairSpillPool via runtime SET; 2 partitions; 1 MiB sort reservation."""
+def _small_fair_session(memory: str = "64M") -> ReparkSession:
+    """FairSpillPool via runtime SET; 2 partitions; 1 MiB sort reservation."""
     spark = (
         ReparkSession.builder.config("datafusion.execution.target_partitions", "2")
         .config("datafusion.execution.sort_spill_reservation_bytes", "1048576")
         .getOrCreate()
     )
-    spark.conf.set("datafusion.runtime.memory_limit", "64M")
+    spark.conf.set("datafusion.runtime.memory_limit", memory)
     return spark
 
 
@@ -57,13 +58,24 @@ def _max_spill_count(plan_text: str) -> int:
 
 def test_runtime_set_memory_limit_error_is_fair_not_greedy() -> None:
     """Pool-type pin: SET datafusion.runtime.memory_limit must stay fair (recon §1.2)."""
-    spark = _small_fair_session()
-    spark.conf.set("datafusion.execution.target_partitions", "32")
-    spark.conf.set("datafusion.execution.sort_spill_reservation_bytes", "4194304")
-    spark.conf.set("datafusion.runtime.memory_limit", "8M")
-    _register_series(spark, "tiny", 8)
+    spark = (
+        ReparkSession.builder.config("repark.memory.limit.gb", "1")
+        .config("datafusion.execution.target_partitions", "128")
+        .getOrCreate()
+    )
+    spark.conf.set("datafusion.runtime.memory_limit", "256M")
+    base = spark.range(2_000_000)
+    frame = base.select(
+        F.col("id").alias("ts"),
+        (F.col("id") % 1000).cast("double").alias("close"),
+    )
+    for index in range(17):
+        frame = frame.withColumn(
+            f"f{index}",
+            (F.col("close") * (index + 1) + F.col("ts") % (index + 3)).cast("double"),
+        )
     with pytest.raises(PySparkException) as raised:
-        spark.sql("SELECT * FROM tiny ORDER BY id DESC").to_arrow()
+        frame.sort(F.col("close").desc()).to_arrow()
     message = str(raised.value).lower()
     assert "fair(" in message, str(raised.value)
     assert "greedy(" not in message, str(raised.value)
@@ -104,7 +116,8 @@ def test_grouping_sets_spills_under_small_fair_pool() -> None:
     _register_series(spark, "series", 400_000)
     text = _explain_analyze(
         spark,
-        "SELECT id % 8 AS g, count(*) AS n FROM series GROUP BY GROUPING SETS ((id % 8), ())",
+        "SELECT h, count(*) AS n FROM (SELECT md5(cast(id AS string)) AS h FROM series) "
+        "GROUP BY GROUPING SETS ((h), ())",
     )
     assert _max_spill_count(text) > 0, text
 
@@ -122,22 +135,32 @@ def test_distinct_spills_under_small_fair_pool() -> None:
 def test_sort_merge_join_spills_under_small_fair_pool() -> None:
     spark = _small_fair_session()
     spark.conf.set("datafusion.optimizer.prefer_hash_join", "false")
-    _register_series(spark, "left_s", 200_000)
-    _register_series(spark, "right_s", 200_000)
+    _register_series(spark, "left_s", 400_000)
+    _register_series(spark, "right_s", 400_000)
+    # Join on md5 so inputs are not pre-sorted (range is already ordered by id).
     text = _explain_analyze(
         spark,
-        "SELECT l.id FROM left_s l JOIN right_s r ON l.id = r.id",
+        "SELECT l.h FROM "
+        "(SELECT md5(cast(id AS string)) AS h FROM left_s) l "
+        "JOIN (SELECT md5(cast(id AS string)) AS h FROM right_s) r "
+        "ON l.h = r.h",
     )
     assert _max_spill_count(text) > 0, text
 
 
 def test_hash_join_is_pinned_as_resources_exhausted() -> None:
     """Recon §3.1 hash_join: build side cannot spill. Needle class, not a number."""
-    spark = _small_fair_session()
-    _register_series(spark, "left_s", 200_000)
-    _register_series(spark, "right_s", 200_000)
+    spark = _small_fair_session("16M")
+    spark.range(1_000_000).selectExpr(
+        "id", "md5(cast(id as string)) AS h", "repeat('x', 64) AS payload"
+    ).createOrReplaceTempView("left_s")
+    spark.range(1_000_000).selectExpr(
+        "id", "md5(cast(id as string)) AS h", "repeat('x', 64) AS payload"
+    ).createOrReplaceTempView("right_s")
     with pytest.raises(PySparkException) as raised:
-        spark.sql("SELECT l.id FROM left_s l JOIN right_s r ON l.id = r.id").to_arrow()
+        spark.sql(
+            "SELECT l.id FROM left_s l JOIN right_s r ON l.h = r.h"
+        ).to_arrow()
     message = str(raised.value)
     assert "Resources exhausted" in message, message
     assert "HashJoin" in message, message
@@ -147,10 +170,13 @@ def test_hash_join_is_pinned_as_resources_exhausted() -> None:
 
 def test_array_agg_spill_path_is_pinned_as_resources_exhausted() -> None:
     """Recon §3.1 hash_agg_collect: the aggregate decides to spill then cannot afford to."""
-    spark = _small_fair_session()
-    _register_series(spark, "series", 200_000)
+    spark = _small_fair_session("16M")
+    _register_series(spark, "series", 1_000_000)
     with pytest.raises(PySparkException) as raised:
-        spark.sql("SELECT id % 2 AS g, array_agg(id) AS a FROM series GROUP BY 1").to_arrow()
+        spark.sql(
+            "SELECT id % 2 AS g, array_agg(md5(cast(id AS string))) AS a "
+            "FROM series GROUP BY 1"
+        ).to_arrow()
     message = str(raised.value)
     assert "Resources exhausted" in message, message
     assert "array_agg" in message, message

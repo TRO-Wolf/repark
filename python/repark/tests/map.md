@@ -838,7 +838,8 @@ NOT in that file is a defect, not a decision.
   2 partitions): sort / hash_agg / distinct / grouping_sets / SMJ assert
   `EXPLAIN ANALYZE` `spill_count > 0`. hash_join + `array_agg` pinned AS failures
   (`Resources exhausted` + `HashJoin` / `array_agg`; `fair(` required, `greedy(`
-  forbidden). Runtime-SET pool-type pin.
+  forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
+  (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set

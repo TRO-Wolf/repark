@@ -55,6 +55,13 @@ PROJECT / ARCHITECTURE / `Cargo.lock` / `[patch]` CLOSED.
 | sort/agg no longer spill | `test_*_spills_under_small_fair_pool` |
 | hash join / array_agg start spilling | pinned AS `Resources exhausted` |
 
+## Follow-up (same branch)
+
+Facade probe after R3: builder `temp_directory` was re-SET by `_apply_builder_datafusion_conf`
+and refused. Skip that key (Rust already applied it). Spill-reach recipes retuned:
+grouping sets over `md5` (not `id % 8`); SMJ on `md5` (range is pre-sorted); hash_join /
+array_agg use a 16 MiB pool + payload. 27/27 green in 21s.
+
 ## Notes
 
 A3: `FairSpillPool.pool_size` is outside the mutex in datafusion-execution 54.1.0.

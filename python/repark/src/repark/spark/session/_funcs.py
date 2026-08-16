@@ -634,6 +634,8 @@ def _apply_builder_datafusion_conf(session: ReparkSession, config: dict[str, str
     context. Insertion order is preserved (last alias wins for duplicate keys).
 
     Non-canonical / mixed-case keys refuse-loud via :meth:`RuntimeConfig.set`.
+    ``datafusion.runtime.temp_directory`` is skipped (already applied at Rust build;
+    a runtime SET of it refuses loud and names TMPDIR).
 
     """
 
@@ -644,6 +646,10 @@ def _apply_builder_datafusion_conf(session: ReparkSession, config: dict[str, str
             continue
 
         if not _looks_like_datafusion_conf_key(key):
+            continue
+
+        # Build-time only: Rust already applied with_temp_file_path. A runtime SET refuses.
+        if key.lower() == "datafusion.runtime.temp_directory":
             continue
 
         runtime.set(key, value)
