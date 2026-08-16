@@ -402,6 +402,30 @@ impl PyReparkSession {
         })
     }
 
+    /// Declare the in-memory temp view `name` pre-sorted by `keys` (engine field names) so
+    /// DataFusion elides redundant window `SortExec`s (SE-1). The engine ALWAYS verifies the
+    /// claim before re-registering — a wrong claim raises `AnalysisException` and the view is
+    /// untouched. The facade resolves display→engine names before calling.
+    ///
+    /// Releases the GIL for the verification scan (O(n) over the sort keys).
+    ///
+    /// # Errors
+    /// `AnalysisException` for unknown view/key, non-in-memory frames, or unsorted data.
+    pub fn declare_temp_view_sorted(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        keys: Vec<String>,
+    ) -> PyResult<()> {
+        fenced!("PyReparkSession.declare_temp_view_sorted", {
+            py.detach(|| {
+                self.runtime
+                    .block_on(self.session.declare_temp_view_sorted(name, &keys))
+            })
+            .map_err(to_py_err)
+        })
+    }
+
     /// Collect `frame` once and register as an in-memory (`MemTable`) temp view so later scans
     /// do not re-execute the plan body (R-PERF-VALUES: createDataFrame VALUES materialization).
     ///

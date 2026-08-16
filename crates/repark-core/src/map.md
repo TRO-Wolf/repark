@@ -151,6 +151,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   core_pinned_name`, prefix-checked), so wrapping the frame in another node here, or changing the
   prefix, silently restores that door's half of the leak. The fence is the broadened
   `LIKE '__repark_tt%'` assertion in `crates/repark-sql/tests/introspection.rs`.
+- `sorted_view.rs` — SE-1 declared-sorted temp views: `verify_batches_sorted` (the O(n)
+  adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
+  (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class).
+  The public door is `session.rs::declare_temp_view_sorted`: verify FIRST, then re-register
+  the `MemTable` `with_sort_order` so DataFusion elides redundant window `SortExec`s.
+  Trust model is declare + ALWAYS-verify, refuse loud — no unverified fast path, by design
+  (a wrong claim would silently corrupt every window result). Plan pins + refusal battery:
+  `../tests/declared_sorted.rs`.
 - `session_time_zone.rs` (+ `session_time_zone/tests.rs`) — the session timezone
   (`spark.sql.session.timeZone`). Holds the **one** authoritative spelling of that conf key
   (`SESSION_TIME_ZONE_KEY` — no alternate spelling exists, deliberately), the validated

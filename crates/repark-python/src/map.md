@@ -120,7 +120,9 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   `python/repark/src/repark/errors.py` instead (**that package lands phase-3 PR-5**; not in the
   tree yet) — they need MULTIPLE bases, which
   `pyo3::create_exception!` cannot express, and no Rust code raises them.
-- `session.rs` — `PyReparkSession`; includes `materialize_as_temp_view` (VALUES) +
+- `session.rs` — `PyReparkSession`; includes `declare_temp_view_sorted` (SE-1: verified
+  sortedness declaration → window `SortExec` elision; GIL released for the scan);
+  `materialize_as_temp_view` (VALUES) +
   `materialize_as_cache_view` (r23 CACHE1 cache path, optional max_bytes); R-PERF-ARROW-CDF
   `register_ipc_stream_as_temp_view` (IPC ingest; **P1a:** createDataFrame facade prefers
   C-stream and only falls back here on version-skew); **I4 R-STREAM-IPC-INGEST**
