@@ -94,8 +94,10 @@ def test_datafusion_runtime_memory_limit_conf_round_trip_and_pool() -> None:
         frame.sort(F.col("close").desc()).to_arrow()
     message = str(raised.value)
     assert "Resources exhausted" in message or "not enough memory" in message.lower()
-    # Live pool after conf.set is 256 MiB (not the builder 1 GiB).
+    # Live pool after conf.set is 256 MiB FairSpillPool (not the builder 1 GiB, not greedy).
     assert re.search(r"pool_size:\s*256\.0\s*MB", message), message
+    assert "fair(" in message.lower(), message
+    assert "greedy(" not in message.lower(), message
     assert "datafusion.runtime.memory_limit" in message
     assert "repark.memory.limit.gb" in message  # REPARK conf hint
 
@@ -205,7 +207,10 @@ def test_builder_datafusion_memory_limit_alone_applies() -> None:
     frame = _wide_frame(spark, 2_000_000)
     with pytest.raises(PySparkException) as raised:
         frame.sort(F.col("close").desc()).to_arrow()
-    assert re.search(r"pool_size:\s*256\.0\s*MB", str(raised.value)), str(raised.value)
+    message = str(raised.value)
+    assert re.search(r"pool_size:\s*256\.0\s*MB", message), message
+    assert "fair(" in message.lower(), message
+    assert "greedy(" not in message.lower(), message
 
 
 def test_dual_memory_knobs_refuse_loud() -> None:
@@ -249,7 +254,8 @@ def test_sort_oom_error_is_pyspark_exception_with_df_message_and_hint() -> None:
         or "sortpreservingmerge" in lower
         or "failed to allocate additional" in lower
     )
-    assert "fair(pool_size:" in lower or "pool_size:" in lower
+    assert "fair(" in lower, message
+    assert "greedy(" not in lower, message
     assert "datafusion.runtime.memory_limit" in message
     assert "repark.memory.limit.gb" in message
 

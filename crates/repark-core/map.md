@@ -28,7 +28,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `tokio` — added phase-3 PR-3 solely to NAME `EngineRuntime` (EC-5); core still constructs no
   runtime and never blocks. No new package resolves: DataFusion already pulls tokio into the lock.
 - `src/session.rs` — `ReparkSession` + `ReparkSessionBuilder`: knob surface
-  (`config`/`configs`, memory limit with the 1 MiB floor / 8 GiB `FairSpillPool` default,
+  (`config`/`configs`, memory limit with the 1 MiB floor / 8 GiB `FairSpillPool` default —
+  runtime SET of `datafusion.runtime.memory_limit` swaps a new FairSpillPool, see
+  `src/session/spill.rs`;
   `batch_size`, `target_partitions`), sync `build()` + async
   `register_configured_catalogs()` finalize (two-phase lifecycle), catalog ops
   (`register_iceberg_catalog`, `register_memory_catalog`, `create_namespace` with the

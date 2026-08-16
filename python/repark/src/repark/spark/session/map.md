@@ -14,6 +14,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   path: collation was stripped to `STRING`).
 - `builder_conf.py` — SparkContext, RuntimeConfig.
   **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
+  **S-1 R1:** RuntimeConfig docs — `datafusion.runtime.memory_limit` swaps a new
+  `FairSpillPool` (same pool type as the builder; one truth, not two knobs).
 - `session_core.py` — ReparkSession (sql/catalog methods stay here).
   **G15:** `Builder._set_config_entry` refuses collation `SQLConf` keys (silent-ignore path).
   getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted

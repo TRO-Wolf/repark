@@ -28,6 +28,9 @@ not this directory.
   split `crates/repark-ta/src/udf.rs` into `udf/mod.rs` + per-family dispatch
   modules (`overlap`/`momentum`/`volatility`/`volume`/`price`). Zero numeric
   change. EXCEPTIONS key moved and ratcheted DOWN.
+- [s1-spill-truth-ledger.md](s1-spill-truth-ledger.md) — **S-1 (2026-08-15):**
+  FairSpillPool is the one truth for `datafusion.runtime.memory_limit` (R1
+  runtime SET swap + R2 temp_directory + R3 RAM-relative default).
 - [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) — **P-1
   (2026-08-15):** criterion kernel baseline for `repark-ta` (`ema`/`sma`/`rsi`/
   `bbands` + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold / three-
@@ -404,6 +407,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | Ledger | Unit |
 |---|---|
 | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) | **T5** conductor-15 iterator-form `rsi`/`sma` (bit-exact) |
+| [s1-spill-truth-ledger.md](s1-spill-truth-ledger.md) | **S-1** spill truth and reach (FairSpillPool SET / temp_directory / RAM default) |
 | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) | **P-1** criterion TA kernel baseline (measure-only) |
 | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) | **M14** rejected MERGE commit abort-deletes written files |
 | [bl4-update-store-assign-ledger.md](bl4-update-store-assign-ledger.md) | **BL-4** UPDATE SET ANSI store-assignment gate (shared INSERT matrix) |

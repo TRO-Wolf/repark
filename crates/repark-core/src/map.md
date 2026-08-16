@@ -26,6 +26,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `information_schema.*` live in BOTH SQL doors), installs a
   default 8 GiB `FairSpillPool` when memory is unset (`memory_limit_bytes(0)` /
   `memory_limit_gb(0)` opt out to Infinite; non-zero budgets below 1 MiB refuse at build;
+  runtime `SET datafusion.runtime.memory_limit` swaps a new FairSpillPool — see
+  `session/spill.rs`;
   `batch_size(0)` / `target_partitions(0)` refuse at build), attaches the write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,
   `with_scan_concurrency`, `with_write_concurrency`), and builds `RuntimeEnv` with
@@ -161,10 +163,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TZ-8 (2026-08-14):** module docs now say `CAST(ts AS DATE)` / `to_date` honor the zone
   (NTZ stays the stored wall); `datediff` rides CAST; `last_day`/`date_add` over TIMESTAMP
   stay residual. Ledger: `task/r4-tz8-ledger.md`.
-- `session/` — file-backed test modules of `session.rs`: `aws_gate_tests.rs` (E-2 gate pins
-  incl. the late-config region-signal pin, AWS-free), `namespace_create_tests.rs`
-  (R-6 / G-6 Q1: create-new / same / conflicting / no-location), and `tests.rs`
-  (the ported v1 battery, 38 port-now tests in v1 order; names port
+- `session/` — `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
+  sibling of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
+  (E-2 gate pins incl. the late-config region-signal pin, AWS-free),
+  `namespace_create_tests.rs` (R-6 / G-6 Q1: create-new / same / conflicting / no-location),
+  and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
   `task/port/deferred-tests.md`; plus the phase-2 PR-2 G8 pin
   `bare_session_without_extension_carries_df_54_1_subquery_guard`, NEW — outside the ported
@@ -175,10 +178,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - Up: [../map.md](../map.md)
 
 ### P3E B-1 (2026-08-08)
-- `session.rs` gains `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` — the exact-key exclusion set for
-  facade-owned `datafusion.`-prefixed pseudo-keys the build-time sweep must skip
-  (`datafusion.runtime.memory_limit`, the LIVE resize knob). Typos of the pseudo-key still
-  fail loud; both directions pinned in `session/tests.rs`.
+- `session.rs` re-exports `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` from `session/spill.rs` —
+  the exact-key exclusion set for facade-owned `datafusion.`-prefixed pseudo-keys the
+  build-time sweep must skip (`datafusion.runtime.memory_limit`, applied to a FairSpillPool
+  at build and on runtime SET). Typos of the pseudo-key still fail loud; both directions
+  pinned in `session/tests.rs`.
 
 ## Debug
 

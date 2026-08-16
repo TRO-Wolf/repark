@@ -110,9 +110,9 @@ class RuntimeConfig:
       ``spark.conf.set("repark.memory.limit.gb", …)`` at runtime **refuses loud** (would only
       mutate the facade while the live pool stayed put).
     * Runtime: ``spark.conf.set("datafusion.runtime.memory_limit", "16G")`` (or SQL
-      ``SET datafusion.runtime.memory_limit = '16G'``) re-sizes the **same** pool for
-      subsequent queries. Use this to raise the pool after a large sort / ExternalSorter
-      exhaustion without rebuilding the session.
+      ``SET datafusion.runtime.memory_limit = '16G'``) swaps a **new FairSpillPool**
+      of that size (DataFusion 54.1 has no in-place resize; in-flight reservations
+      stay on the old pool). Same pool type as the builder — one truth, not two knobs.
     * Setting **both** ``repark.memory.limit.gb`` and ``datafusion.runtime.memory_limit`` on
       the same builder refuses loud (same pool, ambiguous initial size).
 

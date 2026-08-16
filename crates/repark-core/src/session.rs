@@ -36,7 +36,6 @@ use std::sync::{Arc, Mutex, OnceLock, RwLock};
 use arrow::array::RecordBatch;
 use aws_config::{BehaviorVersion, SdkConfig};
 use datafusion::datasource::MemTable;
-use datafusion::execution::memory_pool::FairSpillPool;
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
@@ -61,6 +60,13 @@ use crate::{
     json_read_options_from_map, object_store_s3, parse_table_identifier_segments,
     resolve_s3_region_override,
 };
+
+mod spill;
+
+pub(crate) use spill::BYTES_PER_GB;
+pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
+#[cfg(test)]
+pub(crate) use spill::{DEFAULT_MEMORY_LIMIT_BYTES, MIN_MEMORY_LIMIT_BYTES};
 
 /// ===========================================================================================
 /// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
@@ -129,8 +135,6 @@ impl TimeTravelOpts {
     }
 }
 
-const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
-
 /// The builder-config prefix that reaches DataFusion's own [`SessionConfig`] options
 /// (`datafusion.catalog.information_schema`, `datafusion.execution.batch_size`, …).
 ///
@@ -142,18 +146,6 @@ const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
 /// filed core gap). This is config plumbing only: the [`SqlDialect`] / [`SessionExtension`] seams
 /// are unchanged (design §3 seam freeze).
 pub const DATAFUSION_CONFIG_PREFIX: &str = "datafusion.";
-
-/// Repark-owned pseudo-keys that share the `datafusion.` prefix but are NOT DataFusion
-/// `ConfigOptions` keys, excluded from `apply_datafusion_config_keys`'s build-time sweep.
-///
-/// `datafusion.runtime.memory_limit` is the port source's facade-only LIVE memory-pool resize
-/// knob: at the pin it never reached `ConfigOptions` at build (the facade forwards it onto the
-/// live session after construction), and pushing it through `options_mut().set` fails loud on a
-/// key that is legal everywhere else in the product. Found by the phase-3 PR-5 census gate
-/// (ported facade pin `test_builder_datafusion_memory_limit_alone_applies` red on arrival —
-/// p3e ledger B-1). The exclusion is EXACT-KEY, never a prefix: a typo of the pseudo-key must
-/// still fail loud, which is this function's whole reason to exist.
-pub const REPARK_OWNED_DATAFUSION_PSEUDO_KEYS: &[&str] = &["datafusion.runtime.memory_limit"];
 
 /// ===========================================================================================
 /// Apply every `datafusion.*` key from the builder config map onto `config`.
@@ -196,33 +188,22 @@ fn apply_datafusion_config_keys(
 /// chain (no IMDS probe for offline sessions).
 pub const AWS_ENABLE_CONFIG_KEY: &str = "repark.aws.enable";
 
-/// Smallest non-zero `memory_limit_bytes` accepted by [`ReparkSessionBuilder::build`].
-/// Explicit `0` still opts out (unbounded). Pathological 1-byte budgets thrash the spill pool
-/// without a clean config error (audit SAF-007 / 2026-07-25).
-const MIN_MEMORY_LIMIT_BYTES: usize = 1024 * 1024;
-
-/// Default `FairSpillPool` budget when the builder leaves memory unset (C1-Q-002 / C1-L-005).
-///
-/// Unbounded DataFusion defaults OOM on large sorts/aggregations/MERGE; 8 GiB is a conservative
-/// single-node ceiling that still spills rather than hard-failing. Override with
-/// [`ReparkSessionBuilder::memory_limit_gb`] / [`ReparkSessionBuilder::memory_limit_bytes`];
-/// pass `memory_limit_bytes(0)` to opt out and keep DataFusion's unbounded pool.
-const DEFAULT_MEMORY_LIMIT_BYTES: usize = 8 * BYTES_PER_GB;
-
 /// ===========================================================================================
 /// Builder for a [`ReparkSession`] — the PySpark `SparkSession.builder` analogue.
 ///
 /// Every knob is optional. When `memory_limit_*` is **unset**, [`build`](Self::build) installs an
-/// 8 GiB [`FairSpillPool`] that bounds **spillable operators only** (sort / hash-aggregate / join
-/// reservations that ask the pool — C1-Q-002). Expression evaluation allocates Arrow buffers
-/// outside the pool, so RSS can still exceed the budget (or the process can abort on allocation
-/// failure) for large `array_repeat` / `repeat` / `sequence` / `collect_list` results. Plan-time
-/// cardinality ceilings (`repark.sql.maxArrayElements`, default `10_000_000`) convert
-/// planner-visible expansion bombs into catchable analysis errors; they do **not** make the pool
-/// bound expression allocs. Re-size the **same** live pool via conf
-/// `datafusion.runtime.memory_limit` (or set [`.memory_limit_gb(n)`](Self::memory_limit_gb) /
-/// [`.memory_limit_bytes(n)`](Self::memory_limit_bytes) at build). `n = 0` opts out (unbounded
-/// pool). Other unset knobs use DataFusion's defaults.
+/// 8 GiB [`datafusion::execution::memory_pool::FairSpillPool`] that bounds **spillable operators
+/// only** (sort / hash-aggregate / join reservations that ask the pool — C1-Q-002). Expression
+/// evaluation allocates Arrow buffers outside the pool, so RSS can still exceed the budget (or
+/// the process can abort on allocation failure) for large `array_repeat` / `repeat` / `sequence`
+/// / `collect_list` results. Plan-time cardinality ceilings (`repark.sql.maxArrayElements`,
+/// default `10_000_000`) convert planner-visible expansion bombs into catchable analysis errors;
+/// they do **not** make the pool bound expression allocs. Runtime
+/// `SET datafusion.runtime.memory_limit` (or the same builder key) swaps a **new**
+/// `FairSpillPool` of the requested size — DataFusion 54.1 has no in-place resize, so
+/// in-flight reservations stay on the old pool. Both knobs are the same pool type (one
+/// truth, not two knobs). Dual-set at build refuses. `n = 0` opts out (unbounded pool).
+/// Other unset knobs use DataFusion's defaults. See `session/spill.rs`.
 /// ===========================================================================================
 #[derive(Clone, Default)]
 pub struct ReparkSessionBuilder {
@@ -366,15 +347,8 @@ impl ReparkSessionBuilder {
                 "target_partitions must be >= 1 (got 0)".to_string(),
             ));
         }
-        if let Some(bytes) = self.memory_limit_bytes
-            && bytes > 0
-            && bytes < MIN_MEMORY_LIMIT_BYTES
-        {
-            return Err(Error::Config(format!(
-                "memory_limit_bytes must be 0 (unbounded) or >= {MIN_MEMORY_LIMIT_BYTES} \
-                 (1 MiB); got {bytes}"
-            )));
-        }
+        let pool_bytes =
+            spill::resolve_build_time_pool_bytes(self.memory_limit_bytes, &self.config)?;
 
         let catalog_specs = catalog_config::parse_catalog_specs(&self.config)?;
         // The session timezone, resolved and VALIDATED here — once, at construction — so no
@@ -465,15 +439,8 @@ impl ReparkSessionBuilder {
             .map_err(engine_err)?;
 
         let mut runtime = RuntimeEnvBuilder::new();
-        // Default 8 GiB FairSpillPool when unset (C1-Q-002). Explicit Some(0) opts out (unbounded).
-        let pool_bytes = match self.memory_limit_bytes {
-            None => Some(DEFAULT_MEMORY_LIMIT_BYTES),
-            Some(0) => None,
-            Some(bytes) => Some(bytes),
-        };
-        if let Some(bytes) = pool_bytes {
-            runtime = runtime.with_memory_pool(Arc::new(FairSpillPool::new(bytes)));
-        }
+        // FairSpillPool when set; explicit 0 / `'0'` opts out (unbounded). Default 8 GiB.
+        runtime = spill::with_memory_pool(runtime, pool_bytes);
         // DataFusion caches directory listings by path on the RuntimeEnv object-list cache.
         // Path parquet overwrite stage-swaps into the *same* destination path; a warm listing
         // then makes same-session `read_parquet` return pre-overwrite rows while on-disk data
@@ -612,6 +579,11 @@ impl ReparkSession {
     /// Identical classification to [`Self::sql`] — the [`engine_err`] fold is session-side, so
     /// every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
+        // Intercept SET datafusion.runtime.memory_limit before any dialect reaches DataFusion's
+        // greedy-pool handler. Other statements (and other SET keys) fall through unchanged.
+        if let Some(frame) = spill::maybe_apply_runtime_set(self.context(), query)? {
+            return Ok(frame);
+        }
         // Clone the registry (cheap — keys + `Arc`s) so no lock is held across the `await`.
         let catalogs = self.catalogs_snapshot();
         let read_only = self.postgres_catalog_names_snapshot();
