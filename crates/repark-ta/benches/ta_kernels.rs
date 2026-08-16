@@ -1,7 +1,9 @@
 //! P-1 criterion kernel baseline — MEASURE ONLY (perf-wave-14).
 //!
 //! Per-kernel ns/row at n=1e6, null-free `f64`, pre-sorted walk. Kernels:
-//! `ema`/`sma`/`rsi`/`bbands` plus volume `ad`/`adosc`/`obv`/`mfi`.
+//! `ema`/`sma`/`rsi`/`bbands` plus volume `ad`/`adosc`/`obv`/`mfi`, plus the
+//! iterator-construction sweep representatives `trange`/`atr`/`adx` (Wilder family),
+//! `macd` (three outputs, internal dense EMA) and `linearreg`/`stddev` (statistic family).
 //!
 //! Multi-output path extends the `p1c_microbench` convention as criterion benches
 //! (not `#[test]`): BBANDS cold single call vs three independent sibling runs vs
@@ -16,7 +18,9 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use repark_ta::{ad, adosc, bbands, ema, mfi, obv, rsi, sma};
+use repark_ta::{
+    ad, adosc, adx, atr, bbands, ema, linearreg, macd, mfi, obv, rsi, sma, stddev, trange,
+};
 
 /// Rows per kernel — large enough that arithmetic dominates call overhead.
 const ROW_COUNT: usize = 1_000_000;
@@ -29,6 +33,14 @@ const BBANDS_NBDEV: f64 = 2.0;
 const ADOSC_FAST: usize = 3;
 const ADOSC_SLOW: usize = 10;
 const MFI_PERIOD: usize = 14;
+const ATR_PERIOD: usize = 14;
+const ADX_PERIOD: usize = 14;
+const MACD_FAST: usize = 12;
+const MACD_SLOW: usize = 26;
+const MACD_SIGNAL: usize = 9;
+const LINEARREG_PERIOD: usize = 14;
+const STDDEV_PERIOD: usize = 20;
+const STDDEV_NBDEV: f64 = 1.0;
 /// Warm-up + N-iteration median (same shape as `p1c_microbench`).
 const WARMUP: u32 = 3;
 const ROUNDS: u32 = 15;
@@ -335,12 +347,133 @@ fn bench_bbands_cache_path(criterion: &mut Criterion) {
     report_ratio("bbands_cache_hit_shape", "bbands_cold", cache_hit, cold);
 }
 
+/// ===========================================================================================
+/// Wilder / true-range family (`trange` / `atr` / `adx`) — the iterator-construction sweep's
+/// forward-writing representatives. `atr` composes `trange`; `adx` is the three-phase
+/// `DirectionalState` loop.
+/// ===========================================================================================
+fn bench_wilder(criterion: &mut Criterion) {
+    let data = fixture();
+    let high = data.high.as_slice();
+    let low = data.low.as_slice();
+    let close = data.close.as_slice();
+
+    criterion.bench_function("trange_n1e6", |bencher| {
+        bencher.iter(|| {
+            let out = trange(black_box(high), black_box(low), black_box(close)).expect("trange");
+            black_box(out);
+        });
+    });
+    criterion.bench_function("atr_n1e6", |bencher| {
+        bencher.iter(|| {
+            let out = atr(
+                black_box(high),
+                black_box(low),
+                black_box(close),
+                black_box(ATR_PERIOD),
+            )
+            .expect("atr");
+            black_box(out);
+        });
+    });
+    criterion.bench_function("adx_n1e6", |bencher| {
+        bencher.iter(|| {
+            let out = adx(
+                black_box(high),
+                black_box(low),
+                black_box(close),
+                black_box(ADX_PERIOD),
+            )
+            .expect("adx");
+            black_box(out);
+        });
+    });
+
+    let sma_wall = median_wall(|| {
+        black_box(sma(close, SMA_PERIOD).expect("sma"));
+    });
+    let trange_wall = median_wall(|| {
+        black_box(trange(high, low, close).expect("trange"));
+    });
+    let atr_wall = median_wall(|| {
+        black_box(atr(high, low, close, ATR_PERIOD).expect("atr"));
+    });
+    let adx_wall = median_wall(|| {
+        black_box(adx(high, low, close, ADX_PERIOD).expect("adx"));
+    });
+    report("trange", "none", ROW_COUNT, trange_wall);
+    report("atr", "period=14", ROW_COUNT, atr_wall);
+    report("adx", "period=14", ROW_COUNT, adx_wall);
+    report_ratio("trange", "sma", trange_wall, sma_wall);
+    report_ratio("atr", "sma", atr_wall, sma_wall);
+    report_ratio("adx", "sma", adx_wall, sma_wall);
+}
+
+/// ===========================================================================================
+/// MACD (three outputs, internal dense EMA — NOT `overlap::ema`) plus the statistic family
+/// representatives `linearreg` (per-window closed form) and `stddev` (`var` + guarded sqrt).
+/// ===========================================================================================
+fn bench_macd_statistic(criterion: &mut Criterion) {
+    let data = fixture();
+    let close = data.close.as_slice();
+
+    criterion.bench_function("macd_n1e6", |bencher| {
+        bencher.iter(|| {
+            let out = macd(
+                black_box(close),
+                black_box(MACD_FAST),
+                black_box(MACD_SLOW),
+                black_box(MACD_SIGNAL),
+            )
+            .expect("macd");
+            black_box(out);
+        });
+    });
+    criterion.bench_function("linearreg_n1e6", |bencher| {
+        bencher.iter(|| {
+            let out = linearreg(black_box(close), black_box(LINEARREG_PERIOD)).expect("linearreg");
+            black_box(out);
+        });
+    });
+    criterion.bench_function("stddev_n1e6", |bencher| {
+        bencher.iter(|| {
+            let out = stddev(
+                black_box(close),
+                black_box(STDDEV_PERIOD),
+                black_box(STDDEV_NBDEV),
+            )
+            .expect("stddev");
+            black_box(out);
+        });
+    });
+
+    let sma_wall = median_wall(|| {
+        black_box(sma(close, SMA_PERIOD).expect("sma"));
+    });
+    let macd_wall = median_wall(|| {
+        black_box(macd(close, MACD_FAST, MACD_SLOW, MACD_SIGNAL).expect("macd"));
+    });
+    let linearreg_wall = median_wall(|| {
+        black_box(linearreg(close, LINEARREG_PERIOD).expect("linearreg"));
+    });
+    let stddev_wall = median_wall(|| {
+        black_box(stddev(close, STDDEV_PERIOD, STDDEV_NBDEV).expect("stddev"));
+    });
+    report("macd", "fast=12,slow=26,signal=9", ROW_COUNT, macd_wall);
+    report("linearreg", "period=14", ROW_COUNT, linearreg_wall);
+    report("stddev", "period=20,nbdev=1", ROW_COUNT, stddev_wall);
+    report_ratio("macd", "sma", macd_wall, sma_wall);
+    report_ratio("linearreg", "sma", linearreg_wall, sma_wall);
+    report_ratio("stddev", "sma", stddev_wall, sma_wall);
+}
+
 criterion_group!(
     name = ta_kernel_benches;
     config = Criterion::default()
         .sample_size(10)
         .warm_up_time(Duration::from_secs(1))
         .measurement_time(Duration::from_secs(2));
-    targets = bench_overlap_momentum, bench_volume, bench_bbands_cache_path
+    targets = bench_overlap_momentum, bench_volume, bench_bbands_cache_path, bench_wilder,
+        bench_macd_statistic
 );
 criterion_main!(ta_kernel_benches);
