@@ -10,6 +10,10 @@ lives as this module directory (move-only; pub surface frozen).
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
   `mod abort;` is T5-owned. On `tx.commit` `Err`, `commit_overwrite` /
   `commit_row_delta_kind` best-effort-delete writer-result paths (M14 design A).
+  **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`
+  take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
+  `match_count > 1` still folds mutations / pos-deletes (double-delete is
+  idempotent).
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

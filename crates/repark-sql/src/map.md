@@ -82,6 +82,8 @@ reach delegation through the ordinary arm.
   Execution is the shared RePark-owned executor, never the fork `TableProvider`. No star forms
   (parse-level absent here); OUTPUT/RETURNING refuses. **MG-2:** Oracle sub-predicates,
   assignment-target qualification, non-last unconditional clauses refuse at this door.
+  **M11:** lone unconditional MATCHED DELETE cardinality exemption is execute-path (shared
+  executor); pins in [merge/cardinality_tests.rs](merge/cardinality_tests.rs).
   Tests: [merge/map.md](merge/map.md).
 - `time_travel.rs` — the `FOR VERSION|TIMESTAMP AS OF` token-scan rewrite (Q5/G7): recognize,
   resolve through the hoisted `repark_core` half (`TimeTravelSpec` / `read_table_at`), register

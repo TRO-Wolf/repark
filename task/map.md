@@ -16,6 +16,10 @@ not this directory.
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,
   `f64::to_bits` bit-exact). Loop-form, not math. No `unsafe`.
+- [m11f-cardinality-exempt-ledger.md](m11f-cardinality-exempt-ledger.md) — **M11
+  (2026-08-15):** skip MERGE cardinality for a lone unconditional MATCHED DELETE.
+  Shared-executor fold/consume helpers; native-door pins + differential flip
+  `dup_source_keys_unconditional_delete` split → content. BL-3 left for orchestrator.
 - [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) — **P-1
   (2026-08-15):** criterion kernel baseline for `repark-ta` (`ema`/`sma`/`rsi`/
   `bbands` + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold / three-

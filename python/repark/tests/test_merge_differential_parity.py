@@ -587,10 +587,10 @@ ROWS: list[MergeDiffRow] = [
             "Do not invent repark support; this row is the refuse disclosure."
         ),
     ),
-    # ----- 12. dup source keys + SINGLE unconditional MATCHED DELETE — repark refuses, Spark ------
+    # ----- 12. dup source keys + SINGLE unconditional MATCHED DELETE — engines agree -------------
     MergeDiffRow(
         name="dup_source_keys_unconditional_delete",
-        kind="split",
+        kind="content",
         target_columns="id BIGINT, name STRING",
         seed_sql=(
             "SELECT CAST(1 AS BIGINT) AS id, 'a' AS name UNION ALL SELECT CAST(2 AS BIGINT), 'b'"
@@ -608,20 +608,17 @@ ROWS: list[MergeDiffRow] = [
             [("id", _I64, True), ("name", _STR, True)],
             {"id": [1], "name": ["a"]},
         ),
-        repark=None,  # repark refuses — see repark_error_needle
+        repark=None,  # engines agree — equality against the recorded Spark survivor table
         spark_error_needle=None,
-        repark_error_needle="MERGE_CARDINALITY_VIOLATION",
+        repark_error_needle=None,
         note=(
-            "DISCLOSURE (audit M11): duplicate source keys (id=2 twice) against a SINGLE "
-            "unconditional WHEN MATCHED THEN DELETE. repark runs its cardinality check whenever "
-            "any WHEN MATCHED arm exists and refuses with MERGE_CARDINALITY_VIOLATION. Spark "
-            "skips the check for this exact shape — RewriteMergeIntoTable.isCardinalityCheckNeeded "
-            "is false when the only matched action is an unconditional DELETE, because deleting a "
-            "target row twice is idempotent and no last-writer-wins ambiguity exists — so it "
-            "deletes id=2 and commits, leaving id=1. Contrast row 2 "
-            "(duplicate_source_keys_with_matched_raises): with an UPDATE arm both engines refuse. "
-            "The exemption fix (skip the check when spec.matched == [unconditional Delete]) flips "
-            "this row split → content equality."
+            "Exemption landed (audit M11): duplicate source keys (id=2 twice) against a SINGLE "
+            "unconditional WHEN MATCHED THEN DELETE. Spark's "
+            "RewriteMergeIntoTable.isCardinalityCheckNeeded is false for this exact shape — "
+            "deleting a target row twice is idempotent — and repark now skips the same check and "
+            "commits the delete. The recorded Spark survivor table (id=1 / name='a') is the "
+            "golden. Contrast row 2 (duplicate_source_keys_with_matched_raises): with an UPDATE "
+            "arm both engines still refuse."
         ),
     ),
 ]

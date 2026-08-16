@@ -342,6 +342,25 @@ fn delete_clause_shapes_filter_not_projection() {
     );
 }
 
+/// M11: skip only a lone unconditional MATCHED DELETE — every other matched shape stays checked.
+#[test]
+fn skip_cardinality_only_lone_unconditional_delete() {
+    assert!(skip_cardinality(&spec(vec![delete(None)], vec![])));
+    assert!(!skip_cardinality(&spec(
+        vec![delete(Some("t.id > 0"))],
+        vec![]
+    )));
+    assert!(!skip_cardinality(&spec(
+        vec![update(None, &[("name", "s.name")])],
+        vec![],
+    )));
+    assert!(!skip_cardinality(&spec(vec![], vec![])));
+    assert!(!skip_cardinality(&spec(
+        vec![delete(None), update(None, &[("name", "s.name")])],
+        vec![],
+    )));
+}
+
 /// Critic-octo C2-Q1 / R5 for C1-S1: null Stage-B flag columns fail loud (mutation pin).
 #[test]
 fn consume_matched_work_batch_rejects_null_flag_columns() {
@@ -382,6 +401,7 @@ fn consume_matched_work_batch_rejects_null_flag_columns() {
         &mut seen_pair,
         &mut pair_indices,
         &mut update_batches,
+        false,
     )
     .expect_err("null is_mutated must fail");
     assert!(
@@ -440,6 +460,7 @@ fn stage_b_path_intern_shares_arc_across_pairs() {
         &mut seen_pair,
         &mut pair_indices,
         &mut update_batches,
+        false,
     )
     .expect("consume");
     assert_eq!(unique_paths.len(), 2, "two distinct paths interned");
