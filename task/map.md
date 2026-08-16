@@ -412,6 +412,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) | **M14** rejected MERGE commit abort-deletes written files |
 | [bl4-update-store-assign-ledger.md](bl4-update-store-assign-ledger.md) | **BL-4** UPDATE SET ANSI store-assignment gate (shared INSERT matrix) |
 | [wi1-insert-store-gate-ledger.md](wi1-insert-store-gate-ledger.md) | **WI-1** ANSI store-assignment gate on the non-MERGE write paths (matrix hoisted to `write/store_assign.rs`; plain `INSERT INTO` named unclosed) |
+| [wi2-g6-cast-integrity-ledger.md](wi2-g6-cast-integrity-ledger.md) | **G6-3 / G6-5 + WI-2** — Spark-parity `CAST`/`TRY_CAST` DATE↔INT refusals in `analyzer/cast_legality.rs`, and the plain-INSERT store gate as an `AnalyzerRule` over `Dml(Insert)` (`write/insert_gate.rs`). Names the `VALUES`-literal residual |
 | [m16-posdelete-specid-ledger.md](m16-posdelete-specid-ledger.md) | **M16** evolved unpartitioned position-delete `spec_id` |
 | [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) | **FN-D** datetime aliases/shims — 11 shipped, rest honest-cut |
 | [fn-e-collections-ledger.md](fn-e-collections-ledger.md) | **FN-E** collections / higher-order alias batch |

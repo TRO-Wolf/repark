@@ -913,6 +913,13 @@ impl PyColumn {
                     need(1)?;
                     repark_functions::expr_fn::second(exprs[0].clone())
                 }
+                // The facade's `F.unix_date` builds the ENGINE's function, not a hand-rolled
+                // `CAST(x AS DATE) AS INT` chain — that pair is refused at analysis (G6-3), and
+                // the UDF's own `simplify` re-creates it in the optimizer where it is legal.
+                "unix_date" => {
+                    need(1)?;
+                    repark_functions::expr_fn::unix_date(exprs[0].clone())
+                }
                 "date_part" | "datepart" => {
                     need(2)?;
                     // Spark date_part(field, source); DF same order.

@@ -52,6 +52,7 @@ wrapper.
   core trait; install with `ReparkSessionBuilder::with_sql_dialect` + `SparkExtension`).
   Tests: [dialect/map.md](dialect/map.md).
 - `extension.rs` — `SparkExtension: repark_core::SessionExtension` (`configure` = cardinality
+  **WI-2 (2026-08-15):** `register` installs `repark_iceberg::InsertStoreAssignment` BEFORE the `repark_functions::analyzer_rules()` loop. The order is semantic: a `DATE → INT` insert is refused by both that rule (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`) and the G6-3 cast-legality gate inside `SparkExprSemantics` (`DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`), and Spark raises the WRITE class for that statement, so the write gate must speak first.
   `repark.sql.*` config **+ `spark.sql.ansi.enabled` default TRUE (U5 / Q10=A)** **+
   `spark.sql.timestampType` default TIMESTAMP_LTZ (Q10)** **+ Spark-door
   `parse_float_as_decimal=true` (DEC-1 / U2)** **+ the session-timezone carrier**; `register` =

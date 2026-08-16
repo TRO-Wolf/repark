@@ -11,12 +11,16 @@ Before the gate the engine ran the full arrow cast kernel on the way to the stag
 1970-01-01 — into a durable Iceberg file. That is strictly worse than the SELECT-side
 ``CAST(DATE AS INT)`` divergence, which at least stays in memory: the caller never wrote a CAST.
 
-Scope of this file is the door WI-1 actually gated. ``INSERT INTO … SELECT``,
-``INSERT INTO … VALUES``, ``writeTo().append()`` and ``write.insertInto()`` (no ``overwrite``) are
-lowered by DataFusion's own ``insert_to_plan`` — which injects the ``CAST`` and hands a
-schema-conformed plan to the fork's ``IcebergTableProvider::insert_into`` — so they never reach a
-``crates/repark-iceberg/src/write/`` seam and stay ungated. They are named in
-``task/wi1-insert-store-gate-ledger.md`` §4 with the seam a follow-on unit needs, not pinned here.
+WI-1 gated ``INSERT OVERWRITE`` and the public ``append`` entry point at the batch-conform seam.
+The four plain-INSERT doors — ``INSERT INTO … SELECT``, ``INSERT INTO … VALUES``,
+``writeTo().append()`` and ``write.insertInto()`` — never reach a
+``crates/repark-iceberg/src/write/`` seam at all: DataFusion's own ``insert_to_plan`` injects the
+conforming ``CAST`` at SQL-planning time and hands a schema-conformed plan to the fork's
+``IcebergTableProvider::insert_into``, by which point the source type is gone. **WI-2** closes
+them one stage earlier, with an ``AnalyzerRule`` over ``LogicalPlan::Dml(WriteOp::Insert)``
+(``crates/repark-iceberg/src/write/insert_gate.rs``) that runs the SAME matrix — imported, never
+duplicated — against the pre-cast types still visible in the synthesized projection's input
+schema. Those pins are the ``=== WI-2`` section at the bottom of this file.
 
 The MERGE twins live in ``test_merge_store_assign.py`` and share the ``NEEDLE`` below; this file
 does not touch them.
@@ -196,3 +200,120 @@ def test_identity_roundtrip_still_overwrites(spark: ReparkSession) -> None:
     spark.sql(f"INSERT INTO {SRC} VALUES (1, DATE '2020-01-01')")
     spark.sql(f"INSERT OVERWRITE {FQ} SELECT k, v FROM {SRC}")
     assert _rows(spark, "k") == [{"k": 1}]
+
+
+# === WI-2 — the four plain-INSERT doors ====================================================
+#
+# Each of these was measured writing 18262 (or a silent 1) before WI-2 and is a refusal now. The
+# refusal is an ANALYSIS refusal, so nothing is staged and no snapshot moves.
+
+
+def _plain_insert_tables(spark: ReparkSession) -> None:
+    """Target ``INT``, source ``DATE`` — the measured silently-wrong pair, one row loaded."""
+    _tables(spark, "k INT, v INT", "k INT, v DATE")
+    spark.sql(f"INSERT INTO {SRC} VALUES (1, DATE '2020-01-01')")
+
+
+def test_insert_into_select_refuses(spark: ReparkSession) -> None:
+    """Door 1: the plainest write of all — no CAST anywhere in the statement the caller wrote."""
+    _plain_insert_tables(spark)
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        spark.sql(f"INSERT INTO {FQ} SELECT k, v FROM {SRC}")
+    assert _rows(spark, "k, v") == []
+
+
+def test_write_to_append_refuses(spark: ReparkSession) -> None:
+    """Door 4: ``df.writeTo(t).append()`` builds a by-name projection into an ``INSERT INTO``."""
+    _plain_insert_tables(spark)
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        spark.table(SRC).writeTo(FQ).append()
+    assert _rows(spark, "k, v") == []
+
+
+def test_write_insert_into_append_mode_refuses(spark: ReparkSession) -> None:
+    """Door 5: ``df.write.mode('append').insertInto`` builds a positional ``INSERT INTO``."""
+    _plain_insert_tables(spark)
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        spark.table(SRC).write.format("iceberg").mode("append").insertInto(FQ)
+    assert _rows(spark, "k, v") == []
+
+
+def test_plain_insert_refusal_names_the_statement_the_caller_wrote(spark: ReparkSession) -> None:
+    """The path label is ``INSERT INTO``, not ``INSERT OVERWRITE`` — one message, one statement."""
+    _plain_insert_tables(spark)
+    with pytest.raises(AnalysisException) as excinfo:
+        spark.sql(f"INSERT INTO {FQ} SELECT k, v FROM {SRC}")
+    message = str(excinfo.value)
+    assert "INSERT INTO cannot store-assign column `v`" in message, message
+    assert "Date32" in message and "Int32" in message, message
+    assert "INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST" in message, message
+
+
+def test_plain_insert_refuses_the_rest_of_the_matrix(spark: ReparkSession) -> None:
+    """boolean→int, timestamp→bigint and string→numeric reach the same node as date→int."""
+    for target, source, value in [
+        ("k INT, v INT", "k INT, v BOOLEAN", "true"),
+        ("k INT, v BIGINT", "k INT, v TIMESTAMP", "TIMESTAMP '2026-01-01 00:00:00'"),
+        ("k INT, v BIGINT", "k INT, v STRING", "'42'"),
+    ]:
+        spark.sql(f"DROP TABLE IF EXISTS {FQ}")
+        spark.sql(f"DROP TABLE IF EXISTS {SRC}")
+        _tables(spark, target, source)
+        spark.sql(f"INSERT INTO {SRC} VALUES (1, {value})")
+        with pytest.raises(AnalysisException, match=NEEDLE):
+            spark.sql(f"INSERT INTO {FQ} SELECT k, v FROM {SRC}")
+        assert _rows(spark, "k, v") == []
+
+
+def test_plain_insert_refuses_the_g6_5_reverse_pair(spark: ReparkSession) -> None:
+    """The write-path twin of G6-5: INT into a DATE column. The matrix was always right here."""
+    _tables(spark, "k INT, d DATE", "k INT, n INT")
+    spark.sql(f"INSERT INTO {SRC} VALUES (1, 18262)")
+    with pytest.raises(AnalysisException, match=NEEDLE):
+        spark.sql(f"INSERT INTO {FQ} SELECT k, n FROM {SRC}")
+    assert _rows(spark, "k, d") == []
+
+
+def test_an_explicit_user_cast_still_writes(spark: ReparkSession) -> None:
+    """**The constraint that shapes the rule.** Spark treats an explicit CAST as the user's stated
+    intent and accepts it where bare store assignment refuses. The gate judges ONLY the conform
+    cast DataFusion synthesizes over a source COLUMN, so the explicit form — which reaches the DML
+    projection already conformed, as a bare column reference — is invisible to it.
+    """
+    _tables(spark, "k INT, v INT", "k INT, b BOOLEAN")
+    spark.sql(f"INSERT INTO {SRC} VALUES (1, true)")
+    spark.sql(f"INSERT INTO {FQ} SELECT k, CAST(b AS INT) FROM {SRC}")
+    assert _rows(spark, "k, v") == [{"k": 1, "v": 1}]
+
+
+def test_plain_insert_positive_controls_still_write(spark: ReparkSession) -> None:
+    """Widening, atomic→string and identity are store-assignable and must still write."""
+    _tables(spark, "k INT, v BIGINT", "k INT, v INT")
+    spark.sql(f"INSERT INTO {SRC} VALUES (1, 9)")
+    spark.sql(f"INSERT INTO {FQ} SELECT k, v FROM {SRC}")
+    assert _rows(spark, "k, v") == [{"k": 1, "v": 9}]
+
+
+def test_the_named_residual_is_a_literal_values_row(spark: ReparkSession) -> None:
+    """WI-2's honest residual, pinned so it cannot rot into a surprise.
+
+    ``INSERT INTO … VALUES`` conforms its literals inside the ``Values`` node
+    (``LogicalPlanBuilder::infer_inner`` rewrites each row element as
+    ``row[j].cast_to(field_type, schema)``), where a synthesized cast and a user-written
+    ``CAST(x AS INT)`` are byte-identical — the outer conform is a no-op once the inner cast
+    already yielded the target type. Gating it would refuse a legal explicit cast, which is worse
+    than the gap, so the rule judges only ``Cast(Column, …)``.
+
+    The half of the residual that carried a silently-wrong VALUE is closed anyway: ``DATE → INT``
+    is refused wherever the cast appears, ``Values`` node included, by the G6-3 cast-legality gate
+    — with the CAST class rather than the write class, which this test records rather than hides.
+    What is genuinely open is a cast-legal-but-not-store-assignable literal, and ``true`` into an
+    ``INT`` column is exactly that.
+    """
+    _tables(spark, "k INT, v INT", "k INT, b BOOLEAN")
+    # Open: writes 1, where Spark refuses INCOMPATIBLE_DATA_FOR_TABLE.
+    spark.sql(f"INSERT INTO {FQ} VALUES (1, true)")
+    assert _rows(spark, "k, v") == [{"k": 1, "v": 1}]
+    # Closed, by the other gate and with the other class.
+    with pytest.raises(AnalysisException, match=r"DATATYPE_MISMATCH\.CAST_WITH_FUNC_SUGGESTION"):
+        spark.sql(f"INSERT INTO {FQ} VALUES (2, DATE '2020-01-01')")

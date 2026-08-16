@@ -669,15 +669,17 @@ the pin rather than obeying it.
   claim is retired: this repository has never recorded a non-ANSI NULL for this recipe, and the
   live session is ANSI ON. *(oracle: recorded — PySpark 4.1.2, ANSI on.)*
 - **Pin** — the oracle-backed home is now
-  `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 10 rows). The two remaining
-  live divergences under ANSI ON are [G6-3](#g6-3--dateint-spark-refuses-repark-yields-days-since-epoch)
-  and [G6-4](#g6-4--timestampint-nullability-only-after-tz-5). Equality pins:
-  `…[malformed_string_to_int_both_raise]`, `…[df_cast_malformed_string_to_int_both_raise]`,
+  `python/repark/tests/test_cast_failure_parity.py` (G6 corpus; 15 rows). The ONE remaining
+  live divergence under ANSI ON is
+  [G6-4](#g6-4--timestampint-nullability-only-after-tz-5), and it is nullability only. Equality
+  pins: `…[malformed_string_to_int_both_raise]`, `…[df_cast_malformed_string_to_int_both_raise]`,
   `…[try_cast_malformed_string_to_int_null]`, `…[try_cast_overflow_tinyint_null]`.
-- **Rationale** — rewritten 2026-08-12 (L-1) when the G6 corpus landed. BL-1 is no longer a
-  documented-value placeholder; it is the pointer at the recorded corpus. The residual
-  silently-wrong-result class is G6-3 (DATE→INT). G6-4 is value+type agreement after #64;
-  only CAST nullability still diverges.
+- **Rationale** — rewritten 2026-08-12 (L-1) when the G6 corpus landed, and again 2026-08-15 when
+  the DATE↔INT gate landed. BL-1 is no longer a documented-value placeholder; it is the pointer at
+  the recorded corpus. The sentence this bullet used to carry — "the residual silently-wrong-result
+  class is G6-3 (DATE→INT)" — became false at that commit: G6-3 and G6-5 are both CLOSED, the
+  corpus grew 10 → 15 rows recording all five converged doors, and what is left under ANSI ON is
+  G6-4's CAST nullability (value+type already agree after #64).
 
 ### BL-2 — backtick-quoted identifiers in a filter string
 
@@ -1056,14 +1058,28 @@ the pin rather than obeying it.
 
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
-- **repark** — `CAST(DATE '2020-01-01' AS INT)` yields non-null int32 `18262` (days since epoch).
-- **Apache Spark** — raises `AnalysisException` / `DATATYPE_MISMATCH` (suggests `UNIX_DATE`).
-  *(oracle: recorded.)*
-- **Pin** — `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days]`
-- `live-mirror: cast_date_to_int_spark_refuses`
-- **Rationale** — BACKLOG, intent to FIX (gap G6). Silently-wrong-result class in the migration
-  direction that assumes Spark's refuse: a job that casts partition dates to int succeeds here
-  and fails on Spark.
+> **CLOSED 2026-08-15.** `CAST`/`TRY_CAST` between `DATE` and any signed integer width now
+> refuses at ANALYSIS with Spark's own class — `[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]`,
+> naming `UNIX_DATE` as the remedy — from a deny matrix in
+> `crates/repark-functions/src/analyzer/cast_legality.rs`, called at the head of
+> `SparkExprSemantics`'s `Expr::Cast` arm and from a NEW `Expr::TryCast` arm. The gate must live
+> at analysis, not the optimizer: `datafusion-spark`'s `unix_date` — the remedy the message
+> names — lowers to a textually identical `CAST(a AS Int32)` in `simplify_expressions`, one
+> stage later. Five recipes converged, not one: the SQL `INT` and `BIGINT` doors, SQL
+> `try_cast`, `Column.cast` and `Column.try_cast`, all recorded as shared-raise equalities in
+> `test_cast_failure_parity.py`. The `live-mirror: cast_date_to_int_spark_refuses` disclosure is
+> retired with the row (a disclosure detects a DIVERGENCE; a converged pair belongs in the
+> corpus). Design: `planning/hardening/G63-DATE-INT-DESIGN.md`. Retired per §6.
+
+### G6-5 — INT→DATE: Spark refuses; repark yields a date
+
+> **CLOSED 2026-08-15, in the same change as G6-3.** The reverse direction is the same Spark
+> class with the reverse remedy (`DATE_FROM_UNIX_DATE`): `CAST(18262 AS DATE)` answered
+> `2020-01-01` non-null in repark and refused in Spark. It was unpinned anywhere — not in the G6
+> corpus, not in this registry — and closing G6-3 alone would have left the class half-shut,
+> which §6 discipline forbids. Now pinned as a shared-raise equality:
+> `python/repark/tests/test_cast_failure_parity.py::test_cast_failure_row[int_to_date_both_refuse]`.
+> Retired per §6.
 
 ### G6-4 — TIMESTAMP→INT nullability only (after TZ-5)
 

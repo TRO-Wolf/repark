@@ -89,6 +89,15 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 - `random.rs` — **r20 G2:** Spark `XORShiftRandom` + MurmurHash3 `hashSeed`; `rand`/`randn`
   ScalarUDFs (seed + partitionIndex=0; sequential within batch). Pins: first `rand(0)` value,
   sampleBy seed-0 count band.
+- `analyzer/` — file-backed submodules of `analyzer.rs`. See [analyzer/map.md](analyzer/map.md).
+  **G6-3 / G6-5 (2026-08-15):** `analyzer/cast_legality.rs` holds Spark's CAST/TRY_CAST
+  type-legality deny matrix (`{Date32,Date64} ↔ {Int8,Int16,Int32,Int64}`) and its refusal
+  (`[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]`, naming `UNIX_DATE` / `DATE_FROM_UNIX_DATE`).
+  Called at the head of `rewrite_timestamp_casts` and from a NEW `Expr::TryCast` arm — the arm
+  that did not exist before, which is why `try_cast(DATE AS INT)` was silently wrong. Not
+  ANSI-gated (legality is a check on the type PAIR, not the eval mode). It is deliberately NOT
+  the store-assignment matrix (`repark-iceberg`'s `write/store_assign.rs`) — the two answer
+  different questions and each is laxer than the other somewhere.
 - `analyzer.rs` — `SparkExprSemantics` (AR-WG-SQL, audit findings #1/#5/#16; Group L 2026-07-23: BUG-004 disproved — the `get_type` bail is unreachable, correlated `int/int` already promotes to double; the real bug — the single-analyze CTAS write-schema path — is FIXED in Group L-write, `repark_sql::execute_ctas` re-analyzes to the fixpoint): integer `/` →
   always-double division; division/modulo-by-zero → NULL (Spark **non-ANSI**, the recorded
   decision); `[]` array subscript → 0-based with invalid-index → NULL (rewrites the planner's
@@ -206,6 +215,7 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   SAF-002 downcast evidence + defensive `cast` before `as_primitive`/`as_string` (pin
   `trunc_accepts_large_utf8_format_without_panic`).
 - `expr_fn.rs` — logical-`Expr` builders (`year`, `month`, `quarter`, `weekofyear`, `dayofweek`,
+  **G6-3 rider (2026-08-15):** `unix_date` joined this list. The Python facade spelled it `CAST(CAST(x AS DATE) AS INT)`, which the cast-legality gate refuses — as Spark does — so the facade now builds the ENGINE's `unix_date` (`datafusion-spark` `SparkUnixDate`), whose own `simplify` re-creates the same cast in the OPTIMIZER where it is legal.
   `weekday` (0=Monday; Group I facade wire-up), `dayofmonth`, `dayofyear`, `last_day`,
   `add_months`, `date_add`, `date_format`, `trunc`, `date_trunc`, **TZ-8 `to_date`**) that embed
   the UDF instance directly, so `repark-python`'s `PyColumn` gets a self-contained date-function

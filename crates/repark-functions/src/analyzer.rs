@@ -83,6 +83,11 @@ use datafusion::logical_expr::expr_rewriter::NamePreserver;
 use datafusion::logical_expr::{BinaryExpr, Cast, Expr, ExprSchemable, LogicalPlan, Operator, lit};
 use datafusion::optimizer::AnalyzerRule;
 
+/// G6-3 / G6-5: Spark's CAST / TRY_CAST **type-legality** deny matrix and its refusal. A
+/// file-backed submodule so this rule's own file keeps its ceiling headroom (the crate root is
+/// at its `check_lib_rs` ceiling, so a top-level `mod` decl is not available).
+mod cast_legality;
+
 /// ===========================================================================================
 /// The analyzer rule: Spark operator semantics over type-coerced logical plans.
 ///
@@ -169,26 +174,65 @@ fn rewrite_expr(expr: Expr, schema: &DFSchema, ansi_enabled: bool) -> Result<Tra
         // TZ-5: `CAST(ts AS BIGINT/INT/DOUBLE/DECIMAL)` is epoch SECONDS in Spark and a raw tick
         // reinterpretation in DataFusion. B-TZ-4: `CAST(ts AS STRING)` is Spark's session-zone
         // space-separated Utf8. TZ-8: `CAST(ts AS DATE)` is Spark's session-zone Date32. All
-        // three match on the SOURCE type so the rewrite is idempotent.
-        Expr::Cast(_) => Ok(rewrite_timestamp_casts(expr, schema)),
+        // three match on the SOURCE type so the rewrite is idempotent. G6-3 / G6-5: the
+        // DATE ↔ INT legality refusal heads the same function.
+        Expr::Cast(_) => rewrite_timestamp_casts(expr, schema),
+        // G6-3 / G6-5, the second door. `TryCast` was matched NOWHERE in this rule before —
+        // it fell to the catch-all below — but Spark's refusal is a check on the TYPE PAIR
+        // (`Cast.checkInputDataTypes`), and Spark 4's `TryCast` is `Cast(evalMode = TRY)`: the
+        // eval mode changes what happens to a value a legal cast cannot represent, never which
+        // pairs are castable. So `try_cast(DATE '…' AS INT)` refuses in Spark exactly like
+        // `CAST`, with `TRY_CAST(…)` echoed in the message (recorded oracle, design §1.2 row 3).
+        // No timestamp rewrite rides this arm: TZ-5 / B-TZ-4 / TZ-8 are `Expr::Cast` only, and
+        // widening them to `TryCast` would be a behaviour change this unit did not measure.
+        Expr::TryCast(ref try_cast) => {
+            if let Ok(source_type) = try_cast.expr.get_type(schema) {
+                cast_legality::refuse_spark_illegal_cast(
+                    cast_legality::CastKeyword::TryCast,
+                    &try_cast.expr,
+                    &source_type,
+                    try_cast.field.data_type(),
+                )?;
+            }
+            Ok(Transformed::no(expr))
+        }
         other => Ok(Transformed::no(other)),
     }
 }
 
-/// Dispatch a timestamp `CAST`: numeric → TZ-5; string → B-TZ-4; date → TZ-8.
+/// Dispatch a `CAST`: **legality first** (G6-3 / G6-5), then numeric → TZ-5; string → B-TZ-4;
+/// date → TZ-8.
 ///
-/// The numeric arm is left byte-stable (`rewrite_timestamp_to_numeric_cast`); later arms
-/// only run when the previous rewrite declines the target.
-fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Transformed<Expr> {
+/// The legality gate at the head is keyed on the SOURCE being `Date32`/`Date64` (or an integer
+/// with a date target), so it can never reach a `Timestamp` source and the three timestamp
+/// rewrites below are untouched by construction. The numeric arm stays byte-stable
+/// (`rewrite_timestamp_to_numeric_cast`); later arms only run when the previous rewrite
+/// declines the target.
+///
+/// # Errors
+/// [`DataFusionError::Plan`] from [`cast_legality::refuse_spark_illegal_cast`] for a
+/// `DATE ↔ INT` pair. A `get_type` failure on the child leaves the cast untouched (the same
+/// defensive bail the timestamp arms take) rather than failing the plan.
+fn rewrite_timestamp_casts(expr: Expr, schema: &DFSchema) -> Result<Transformed<Expr>> {
+    if let Expr::Cast(cast) = &expr
+        && let Ok(source_type) = cast.expr.get_type(schema)
+    {
+        cast_legality::refuse_spark_illegal_cast(
+            cast_legality::CastKeyword::Cast,
+            &cast.expr,
+            &source_type,
+            cast.field.data_type(),
+        )?;
+    }
     let numeric = rewrite_timestamp_to_numeric_cast(expr, schema);
     if numeric.transformed {
-        return numeric;
+        return Ok(numeric);
     }
     let string = rewrite_timestamp_to_string_cast(numeric.data, schema);
     if string.transformed {
-        return string;
+        return Ok(string);
     }
-    rewrite_timestamp_to_date_cast(string.data, schema)
+    Ok(rewrite_timestamp_to_date_cast(string.data, schema))
 }
 
 /// `CAST(<timestamp> AS STRING)` → Spark's session-zone space-separated `Utf8` (B-TZ-4).
@@ -1190,5 +1234,174 @@ mod tests {
             "NULLS FIRST is spelled explicitly so this row pins the CAST, not the engine's \
              default null ordering (a different class, with its own pins)"
         );
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // G6-3 / G6-5 — DATE ↔ INT cast legality. `sql_error` runs the whole door: plan, analyze,
+    // execute — so a rewrite that only refuses at plan time and a refusal that arrives at
+    // execution are both distinguishable from the analysis-time refusal Spark raises.
+    // ---------------------------------------------------------------------------------------
+
+    async fn sql_error(ctx: &SessionContext, sql: &str) -> String {
+        match ctx.sql(sql).await {
+            Err(error) => error.to_string(),
+            Ok(frame) => frame.collect().await.expect_err(sql).to_string(),
+        }
+    }
+
+    /// G6-3: the two silently-wrong pairs, plus the two that already refused with a DataFusion
+    /// needle — all four now carry Spark's class and Spark's named remedy.
+    #[tokio::test]
+    async fn date_to_integer_casts_refuse_with_sparks_class() {
+        let ctx = ctx();
+        for (target, spark_name) in [
+            ("INT", "INT"),
+            ("BIGINT", "BIGINT"),
+            ("TINYINT", "TINYINT"),
+            ("SMALLINT", "SMALLINT"),
+        ] {
+            let sql = format!("SELECT CAST(DATE '2020-01-01' AS {target}) AS n");
+            let message = sql_error(&ctx, &sql).await;
+            assert!(
+                message.contains("[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]"),
+                "{sql}: {message}"
+            );
+            assert!(
+                message.contains(&format!("cannot cast \"DATE\" to \"{spark_name}\"")),
+                "{sql}: {message}"
+            );
+            assert!(message.contains("`UNIX_DATE`"), "{sql}: {message}");
+        }
+    }
+
+    /// The gate is a check on the type PAIR, so it does not consult `spark.sql.ansi.enabled` —
+    /// Spark's `Cast.checkInputDataTypes` runs in both modes.
+    #[tokio::test]
+    async fn the_legality_gate_fires_in_both_ansi_modes() {
+        for ctx in [ctx(), ctx_legacy()] {
+            let message = sql_error(&ctx, "SELECT CAST(DATE '2020-01-01' AS INT) AS n").await;
+            assert!(
+                message.contains("[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]"),
+                "{message}"
+            );
+        }
+    }
+
+    /// The `try_cast` door — the arm that did not exist before this unit. `try_cast` is total
+    /// over VALUES, never over TYPES.
+    #[tokio::test]
+    async fn try_cast_date_to_int_refuses_and_spells_try_cast() {
+        let ctx = ctx();
+        let message = sql_error(&ctx, "SELECT try_cast(DATE '2020-01-01' AS INT) AS n").await;
+        assert!(
+            message.contains("[DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION]"),
+            "{message}"
+        );
+        assert!(message.contains("TRY_CAST("), "{message}");
+    }
+
+    /// G6-2 must not move: `try_cast` over a LEGAL pair whose VALUE fails still nulls out.
+    #[tokio::test]
+    async fn try_cast_over_a_legal_pair_still_nulls_the_bad_value() {
+        let ctx = ctx();
+        assert_eq!(
+            i64_column(&ctx, "SELECT CAST(try_cast('abc' AS INT) AS BIGINT) AS n").await,
+            vec![None]
+        );
+    }
+
+    /// G6-5, the reverse direction, and the remedy Spark names for it.
+    #[tokio::test]
+    async fn int_to_date_casts_refuse_with_the_reverse_remedy() {
+        let ctx = ctx();
+        // A bare integer literal is `Int64` in DataFusion, so the message names BIGINT; the
+        // narrowed spelling gives Spark's INT.
+        for (sql, spark_name) in [
+            ("SELECT CAST(18262 AS DATE) AS d", "BIGINT"),
+            ("SELECT CAST(CAST(18262 AS INT) AS DATE) AS d", "INT"),
+        ] {
+            let message = sql_error(&ctx, sql).await;
+            assert!(
+                message.contains(&format!("cannot cast \"{spark_name}\" to \"DATE\"")),
+                "{sql}: {message}"
+            );
+            assert!(
+                message.contains("`DATE_FROM_UNIX_DATE`"),
+                "{sql}: {message}"
+            );
+        }
+    }
+
+    /// The blast-radius assertion the design demands be explicit: TZ-5 shares the function the
+    /// gate now heads, and `1577836800` is the value G6-4 pins.
+    #[tokio::test]
+    async fn a_timestamp_source_never_reaches_the_legality_gate() {
+        let ctx = ctx();
+        assert_eq!(
+            i64_column(
+                &ctx,
+                "SELECT CAST(TIMESTAMP '2020-01-01 00:00:00' AS BIGINT) AS n"
+            )
+            .await,
+            vec![Some(1_577_836_800)]
+        );
+    }
+
+    /// `unix_date` is the remedy the refusal names — and `simplify_expressions` lowers it to a
+    /// textually identical `CAST(a AS Int32)` one stage later. It must still answer.
+    #[tokio::test]
+    async fn the_remedy_the_error_names_still_works() {
+        // The Spark function registry, not the bare rule-only harness: `unix_date` / `datediff`
+        // are `datafusion-spark` UDFs and only `register_all` puts them on a context.
+        let ctx = ctx();
+        crate::register_all(&ctx);
+        assert_eq!(
+            i64_column(
+                &ctx,
+                "SELECT CAST(unix_date(DATE '2020-01-01') AS BIGINT) AS n"
+            )
+            .await,
+            vec![Some(18262)],
+            "a gate in the OPTIMIZER would refuse the function its own message recommends"
+        );
+        assert_eq!(
+            i64_column(
+                &ctx,
+                "SELECT CAST(datediff(DATE '2020-01-05', DATE '2020-01-01') AS BIGINT) AS n"
+            )
+            .await,
+            vec![Some(4)],
+            "`SparkDateDiff::simplify` manufactures a cast too — its source types as Int64"
+        );
+    }
+
+    /// Non-integer targets keep today's behaviour byte-for-byte: still refused, still by the
+    /// arrow/DataFusion kernel, NOT by this gate (design §3.3 excludes them on purpose).
+    #[tokio::test]
+    async fn date_to_non_integer_targets_keep_the_datafusion_needle() {
+        let ctx = ctx();
+        for target in ["DOUBLE", "BOOLEAN", "DECIMAL(10,0)"] {
+            let sql = format!("SELECT CAST(DATE '2020-01-01' AS {target}) AS n");
+            let message = sql_error(&ctx, &sql).await;
+            assert!(
+                !message.contains("CAST_WITH_FUNC_SUGGESTION"),
+                "{sql} must NOT be claimed by the legality gate: {message}"
+            );
+        }
+    }
+
+    /// DATE → STRING and DATE → TIMESTAMP are legal in Spark and must still answer.
+    #[tokio::test]
+    async fn legal_date_targets_still_answer() {
+        let ctx = ctx();
+        let rendered = datafusion::arrow::util::pretty::pretty_format_batches(&[batch(
+            &ctx,
+            "SELECT CAST(DATE '2020-01-01' AS STRING) AS s, \
+             CAST(DATE '2020-01-01' AS TIMESTAMP) AS t",
+        )
+        .await])
+        .unwrap()
+        .to_string();
+        assert!(rendered.contains("2020-01-01"), "{rendered}");
     }
 }

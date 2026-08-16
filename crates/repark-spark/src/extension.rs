@@ -24,7 +24,9 @@
 //! - [`register`](repark_core::SessionExtension::register) — the Spark function registry
 //!   ([`repark_functions::register_all`]) plus the expression-semantics analyzer rules
 //!   ([`repark_functions::analyzer_rules`], appended after DataFusion's built-ins so they see
-//!   type-coerced plans).
+//!   type-coerced plans) — preceded by [`repark_iceberg::InsertStoreAssignment`], the WI-2
+//!   plain-INSERT store-assignment gate, which must speak BEFORE the CAST-legality gate inside
+//!   `SparkExprSemantics` so a `DATE → INT` insert cites Spark's WRITE class.
 //!
 //! Deliberately NOT here:
 //!
@@ -41,6 +43,8 @@
 //!   this door **composes** the owning crate's extension rather than calling
 //!   `repark_ta::udf::register_all` itself; a native session installs `TaExtension` directly.
 //!   (Restores the PR-2 rider in `task/p2b-spark-skeleton-ledger.md`.)
+
+use std::sync::Arc;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use repark_core::{SessionBuildConf, SessionExtension};
@@ -117,6 +121,12 @@ impl SessionExtension for SparkExtension {
     /// registrations cannot fail.
     fn register(&self, ctx: &SessionContext) -> datafusion::error::Result<()> {
         repark_functions::register_all(ctx);
+        // WI-2: the plain-INSERT ANSI store-assignment gate, BEFORE the Spark expression
+        // semantics. Order is semantic, not stylistic: a `DATE → INT` insert is refused by both
+        // this rule (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`) and the G6-3 cast-legality
+        // gate inside `SparkExprSemantics` (`DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`), and
+        // Spark raises the WRITE class for that statement — so the write gate must speak first.
+        ctx.add_analyzer_rule(Arc::new(repark_iceberg::InsertStoreAssignment));
         for rule in repark_functions::analyzer_rules() {
             ctx.add_analyzer_rule(rule);
         }
