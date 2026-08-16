@@ -114,6 +114,43 @@ dbt)**. Load-bearing surfaces, in order: (1) the SQL engine with Iceberg DML, (2
 (engine embedded in the dbt process — dbt-duckdb precedent), (3) the lazy DataFrame API for Airflow
 tasks. The PySpark facade's year-one job: migrate existing pipelines without rewrites.
 
+## Validation & documentation roadmap (owner-set, 2026-08-16)
+
+Four workstreams the owner has named as roadmap commitments. Each ships twice: as repo
+artifacts (docs / datasets / test suites) AND as runnable Jupyter notebooks.
+
+1. **Full examples documentation.** A worked example for every public function and
+   transformation — every `F.*` function, every DataFrame method, every TA kernel, every
+   reader/writer — kept executable so drift fails loudly rather than rotting in prose.
+
+2. **Torture-test dataset suite** (each dataset ≥1M rows, generators checked in so the data
+   is reproducible, never committed as blobs):
+   - *Nested reading + `dynamicFlatten`*: deep struct/list nesting with mixed element types,
+     lists of structs, capitalized field names, and null-typed lists.
+   - *Schema-inference conflicts*: columns whose observed type shifts mid-file (int32 until
+     row 500k then int64; string-vs-float halves; bool-looking ints; date-looking strings;
+     as many conflict classes as we can enumerate) — the inference torture battery.
+   - *Extreme types*: high-precision decimals (decimal128-scale values such as
+     `102.102334252345232345233`), UUID columns, paragraph-length strings, and columns with
+     embedded HTML fragments.
+   - *Secrets-flagging fixture*: columns named like credentials (`apiKey`, `api_key`,
+     `api_token`, `access_token`, …) carrying fake plaintext secrets — the fixture for an
+     **opt-in secrets-flagging mechanism** (disabled by default; a bool conf enables
+     read-time flagging/refusal). The mechanism itself is a roadmap feature this fixture
+     exists to test.
+   - *smartCsv expansion*: grow the messy-CSV battery (header normalization, blank cells,
+     currency/decimal widths, bool spellings) far beyond the current three-row example.
+
+3. **Full Iceberg statement coverage.** Every DML and DDL statement, and every system
+   operation (`rewrite data files`-class maintenance, snapshot rollback/expiry, branch/tag
+   operations — the complete procedure surface), each validated in **full comparison against
+   PySpark** on the same tables; gaps land in the divergence registry, never silently.
+
+4. **Cross-engine function validation.** Systematic comparison-and-validation batteries for
+   the full `pyspark.sql.functions` surface (extending the existing parity harness), plus
+   equivalent comparisons against polars and DuckDB function behavior where surfaces
+   overlap — three oracles, one function matrix.
+
 ## Current state
 
 **Status is tracked in [STATUS.md](STATUS.md)** — the single source of truth for release state,
