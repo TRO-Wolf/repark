@@ -2,8 +2,8 @@
 
 **Unit:** conductor-18 · **Date:** 2026-08-16 ·
 **Lane:** repark · **Executor:** Grok (grok-4.6) ·
-**Worktree:** `/tmp/grok-c18` · **Branch:** `grok/c18-ds1-nested` (per increment) ·
-**Base:** origin/main at release SSOT 0.3.1 (#152)
+**Worktree:** `/tmp/grok-c18` · **Branch:** per increment (`grok/c18-ds2-schema-inference`) ·
+**Base:** origin/main at release SSOT 0.3.2 (#157); DS-1 merged as #153
 
 **Charter:** conductor-18 brief + 2026-08-16 Q&A addendum (A1–A9).
 This ledger is the single file for the whole workstream (A4); later increments
@@ -40,10 +40,27 @@ are reported, not fixed. Divergence-registry rows are orchestrator-side.
 See the increment diff. New directories: `python/repark-parity/datasets/`,
 `python/repark-parity/datasets/nested/`.
 
-## 3. Later increments (append here)
+## 3. DS-2 delivered
 
-- DS-2 — `schema_inference` + `extreme_types`
+`schema_inference` + `extreme_types`. Each family has `datagen.py`, `manifest.json`
+(tests read the file), `map.md`. CSV + parquet. CLI default `conflict_at=500_000`;
+`small()` defaults `conflict_at=rows//2`. `_cache.py` not re-opened (dangling-symlink
+amend from #153 stays). Facade pins still DS-4 (c17 explode fix is on main via #154;
+DS-5 rider not required).
+
+### Proposition ledger (DS-2)
+
+| ID | Proposition | Verdict |
+|---|---|---|
+| C-011 | `schema_inference` emits every manifest class as a column. | PROVEN — `test_manifest_labels_every_class_and_column` |
+| C-012 | `int_widens` is int32-range before `conflict_at` and > 2^31-1 after. | PROVEN — `test_int_widens_shifts_at_conflict_at` |
+| C-013 | CLI default `conflict_at` is 500_000; `small()` defaults inside the row budget. | PROVEN — `DEFAULT_CONFLICT_AT` pin + `small()` default `rows//2` |
+| C-014 | Parquet re-read matches `small()` (table identity, not file bytes). | PROVEN — both families' write/re-read tests |
+| C-015 | `extreme_types` has decimal128(24,21), beyond-38 digit strings, uuid5, paragraph, HTML at example.com. | PROVEN — `test_decimal128_scale_and_beyond_38`, `test_uuid_paragraph_html_shapes` |
+| C-016 | Tests read the checked-in `manifest.json` (not a hardcoded twin). | PROVEN — `load_manifest()` in both families |
+| C-017 | No facade tests, no `_cache.py` edit, no lockfiles / `.github/` / crates. | PROVEN — diff names |
+
+## 4. Later increments
+
 - DS-3 — `secrets` + `smartcsv`
-- DS-4 — facade-scale pins + `examples/notebooks/datasets_tour.ipynb`
-- DS-5 — capitalized-explode / dynamicFlatten success pins, only if conductor-17 is
-  still unverified when DS-4 ships (A8)
+- DS-4 — facade-scale pins + `examples/notebooks/datasets_tour.ipynb` (capitalized-explode / dynamicFlatten success pins land here; #154 is on main)

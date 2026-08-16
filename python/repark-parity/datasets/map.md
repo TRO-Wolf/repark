@@ -18,10 +18,14 @@ not add it to hatch `packages`, Makefile `PYTHONPATH`, or `ci.yml`.
   write refuse.
 - `__init__.py` — re-exports `KNOWN_FAMILIES`, `default_datasets_root`, `family_cache_dir`.
 - `nested/` — nested / dynamicFlatten family (DS-1); see [nested/map.md](nested/map.md).
+- `schema_inference/` — inference-conflict family (DS-2); see
+  [schema_inference/map.md](schema_inference/map.md).
+- `extreme_types/` — extreme-types family (DS-2); see
+  [extreme_types/map.md](extreme_types/map.md).
 - `map.md` — this file.
 
-Later increments add `schema_inference/`, `extreme_types/`, `secrets/`, `smartcsv/`
-(slugs bound; do not create empty dirs ahead of their increment).
+Later increments add `secrets/`, `smartcsv/` (slugs bound; do not create empty
+dirs ahead of their increment).
 
 ## I want to…
 
@@ -29,8 +33,10 @@ Later increments add `schema_inference/`, `extreme_types/`, `secrets/`, `smartcs
 |---|---|
 | Generate the nested family (in-memory) | `nested/datagen.py` `small(rows=64, seed=42)` |
 | Generate nested files | `python python/repark-parity/datasets/nested/datagen.py --rows N --seed S --out DIR` |
+| Generate schema-inference files | `python python/repark-parity/datasets/schema_inference/datagen.py --rows N --seed S --out DIR` |
+| Generate extreme-types files | `python python/repark-parity/datasets/extreme_types/datagen.py --rows N --seed S --out DIR` |
 | Read the cache contract | `_cache.py` |
-| Generator tests | [../tests/map.md](../tests/map.md) `test_datasets_nested.py` |
+| Generator tests | [../tests/map.md](../tests/map.md) `test_datasets_*.py` |
 
 ## Pointers
 
@@ -49,5 +55,5 @@ Later increments add `schema_inference/`, `extreme_types/`, `secrets/`, `smartcs
 ## Constraints
 
 - Zero new Python dependencies (pyarrow + stdlib).
-- Facade / engine pins for this family land in DS-4 (DS-5 rider if conductor-17 is still unmerged).
+- Facade / engine pins land in DS-4 (c17 explode fix is on main; no DS-5 rider).
 - Never cite planning/ paths in this tree.
