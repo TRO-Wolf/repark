@@ -359,3 +359,6 @@ fn bare_alias(name: &ObjectName) -> Result<String> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod cardinality_tests;

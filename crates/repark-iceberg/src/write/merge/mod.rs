@@ -39,7 +39,7 @@
 //! as a single O(C) `clause_id` CASE, scout #18; rewrite columns are `CASE (clause_id) WHEN i
 //! THEN …`), a clause predicate evaluating to NULL means "does not apply" (every predicate is
 //! wrapped `COALESCE((p), FALSE)` — 3-valued-logic footgun), and a target row matched by more
-//! than one source row raises `MERGE_CARDINALITY_VIOLATION` when any WHEN MATCHED clause exists.
+//! than one source row raises `MERGE_CARDINALITY_VIOLATION` except a lone unconditional DELETE.
 //! The star forms (`UPDATE SET *` / `INSERT *`) expand with Spark's star resolution before any SQL
 //! is generated: every TARGET column takes the same-named source column — a target column missing
 //! from the source errors up front, extra source columns are ignored (see [`expand_star_clauses`]).
@@ -246,7 +246,7 @@ pub enum InsertAction {
 ///
 /// # Errors
 /// `NotImplemented` for the documented v1 limits; `MERGE_CARDINALITY_VIOLATION` when a target
-/// row matches more than one source row; otherwise any planning, execution, write, or commit
+/// row matches more than one source row (except a lone unconditional DELETE); otherwise any
 /// error (a failed §5 validation is non-retryable by design and surfaces as-is).
 pub async fn execute_merge(
     ctx: &SessionContext,
@@ -954,7 +954,7 @@ async fn plan_and_commit_cow(
         let affected = if spec.matched.is_empty() {
             Vec::new()
         } else {
-            affected_files(ctx, sql).await?
+            affected_files(ctx, sql, skip_cardinality(spec)).await?
         };
         // R-MERGE-STREAM-OUT: pipe rewrite + insert SQL streams into concurrent file writers
         // without collecting the full change set first.
@@ -1084,7 +1084,8 @@ async fn plan_and_commit_mor(
         let pairs = if spec.matched.is_empty() {
             Vec::new()
         } else {
-            let (pairs, update_batches) = matched_work_mor(ctx, sql, write_schema).await?;
+            let (pairs, update_batches) =
+                matched_work_mor(ctx, sql, write_schema, skip_cardinality(spec)).await?;
             if !update_batches.is_empty() {
                 streams.push(Box::pin(futures::stream::iter(
                     update_batches.into_iter().map(Ok),
@@ -1232,24 +1233,40 @@ pub(super) async fn resolve_affected_data_files(
 const CARDINALITY_VIOLATION_MSG: &str = "MERGE_CARDINALITY_VIOLATION: a target row matched more \
     than one source row; deduplicate the source or tighten the ON condition";
 
+/// Spark `isCardinalityCheckNeeded`: skip only a lone unconditional MATCHED DELETE.
+#[must_use]
+fn skip_cardinality(spec: &MergeSpec) -> bool {
+    matches!(
+        spec.matched.as_slice(),
+        [MatchedClause {
+            predicate_sql: None,
+            action: MatchedAction::Delete,
+        }]
+    )
+}
+
 /// ===========================================================================================
 /// R-MERGE-ONEPASS Stage A + PERF-01: stream match discovery and fold to **distinct affected
 /// `_file` paths** (the COW rewrite set). Cardinality is enforced per grouped row in the same
-/// pass (`match_count > 1` → same error as before).
+/// pass (`match_count > 1` → same error as before, unless [`skip_cardinality`]).
 ///
 /// Driver-side retained state is **O(distinct affected files)**, not O(matched rows): only a
 /// first-seen path allocates a `String` into the result set (path interning pattern from `MoR`
 /// Stage B / P2a). The previous collect of `Vec<(String, i64, i64, i64)>` per matched row is
 /// gone — that was ~7–10 GB at 50 M matches, outside the DataFusion memory pool.
 /// ===========================================================================================
-async fn affected_files(ctx: &SessionContext, sql: &MergeSql<'_>) -> Result<Vec<String>> {
+async fn affected_files(
+    ctx: &SessionContext,
+    sql: &MergeSql<'_>,
+    skip_cardinality: bool,
+) -> Result<Vec<String>> {
     let mut stream = stream_sql(ctx, &sql.match_discovery_sql()).await?;
     // Single owned `String` per distinct path (HashSet only; collect at end). First-seen
     // membership uses `contains(&str)` so non-first rows never allocate (PERF-01 / C1-Q-003).
     let mut seen: HashSet<String> = HashSet::new();
     while let Some(batch_result) = stream.next().await {
         let batch = batch_result?;
-        fold_discovery_batch_into_affected(&batch, &mut seen)?;
+        fold_discovery_batch_into_affected(&batch, &mut seen, skip_cardinality)?;
     }
     Ok(seen.into_iter().collect())
 }
@@ -1260,6 +1277,7 @@ async fn affected_files(ctx: &SessionContext, sql: &MergeSql<'_>) -> Result<Vec<
 fn fold_discovery_batch_into_affected(
     batch: &RecordBatch,
     seen: &mut HashSet<String>,
+    skip_cardinality: bool,
 ) -> Result<()> {
     if batch.num_columns() < 4 {
         return Err(DataFusionError::Internal(format!(
@@ -1304,7 +1322,7 @@ fn fold_discovery_batch_into_affected(
         // Critic-octo C3-Q1: same fail-loud null flags as Stage B (C1-S1).
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
-        if match_count > 1 {
+        if match_count > 1 && !skip_cardinality {
             return Err(DataFusionError::Execution(
                 CARDINALITY_VIOLATION_MSG.to_string(),
             ));
@@ -1340,7 +1358,8 @@ fn note_discovery_path_alloc() {}
 /// R-MERGE-ONEPASS Stage B (`MoR`): one INNER JOIN pass for cardinality + pos-deletes + UPDATE rows.
 ///
 /// Layout per batch: `_file`, `_pos`, `match_count`, `is_mutated`, `is_update`, then one column
-/// per write-schema field (UPDATE projection). `match_count > 1` → cardinality error (same message).
+/// per write-schema field (UPDATE projection). `match_count > 1` → cardinality error unless
+/// [`skip_cardinality`] (same message).
 ///
 /// Scout #2: streams the join result (no full `collect`); interns `_file` paths so the seen-pair
 /// set and pos-delete list do not re-`to_string` every row for the same data file.
@@ -1351,6 +1370,7 @@ async fn matched_work_mor(
     ctx: &SessionContext,
     sql: &MergeSql<'_>,
     write_schema: &SchemaRef,
+    skip_cardinality: bool,
 ) -> Result<(
     Vec<crate::write::position_delete::PositionDeletePair>,
     Vec<RecordBatch>,
@@ -1376,6 +1396,7 @@ async fn matched_work_mor(
             &mut seen_pair,
             &mut pair_indices,
             &mut update_batches,
+            skip_cardinality,
         )?;
     }
     let pairs = pair_indices
@@ -1399,6 +1420,7 @@ fn consume_matched_work_batch(
     seen_pair: &mut HashSet<(usize, i64)>,
     pair_indices: &mut Vec<(usize, i64)>,
     update_batches: &mut Vec<RecordBatch>,
+    skip_cardinality: bool,
 ) -> Result<()> {
     if batch.num_columns() < 5 + data_field_count {
         return Err(DataFusionError::Internal(format!(
@@ -1446,7 +1468,7 @@ fn consume_matched_work_batch(
         let match_count = require_non_null_i64(match_counts, row, "match_count")?;
         let is_mutated_flag = require_non_null_i64(is_mutated, row, "is_mutated")?;
         let is_update_flag = require_non_null_i64(is_update, row, "is_update")?;
-        if match_count > 1 {
+        if match_count > 1 && !skip_cardinality {
             return Err(DataFusionError::Execution(
                 CARDINALITY_VIOLATION_MSG.to_string(),
             ));

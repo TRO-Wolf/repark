@@ -16,6 +16,8 @@ mapping of the SAME target type (design §6 R3).
   refuse + target-qualified/bare positives + quoted-alias SET; M10 non-last unconditional MATCHED
   and NOT MATCHED refusals + last-unconditional positive. M8 column-list
   refuse was already pinned (`degenerate_update_and_insert_shapes_refuse`).
+- `cardinality_tests.rs` — native-door execute pins for the M11 lone-unconditional-DELETE
+  cardinality exemption (refuse-gone + still-raises on UPDATE and conditional DELETE).
 
 ## Pointers
 
