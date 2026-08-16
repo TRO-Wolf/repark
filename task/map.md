@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [c18-datasets-ledger.md](c18-datasets-ledger.md) — **conductor-18** torture-dataset
+  workstream (DS-1..DS-4, DS-5 rider if needed). Generators under
+  `python/repark-parity/datasets/`; data stays in the cache root. Single ledger, appended
+  per increment.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

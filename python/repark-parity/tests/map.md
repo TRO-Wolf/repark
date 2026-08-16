@@ -2,11 +2,17 @@
 
 ## Purpose
 
-Unit tests for the parity comparison core (no Spark, no JVM, no repark required). See
-[../map.md](../map.md).
+Unit tests for the parity comparison core **and the dataset generators** (no Spark, no
+JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_datasets_nested.py` — **DS-1** nested / dynamicFlatten generator: A9 defaults
+  (64 / seed 42), table-identity determinism (not raw bytes), parquet + JSON-lines
+  re-read under `SCHEMA`, labeled classes (depth ≥ 6, capitalized `Legs`, mixed list
+  types, null-typed lists, empty/null list rows), cache symlink + in-repo refuse, CLI
+  `--out`. Loads `repark_datasets` via the bench sys.modules loader. Ledger:
+  `task/c18-datasets-ledger.md`.
 - `test_compare.py` — equal/unequal frames, order-insensitivity, null handling, schema/row-count
   mismatches, and a **field-nullability difference** (part of the schema signature — a differing
   `nullable` flag with identical name/type/values is a parity failure). **G18 nested invariants:**
