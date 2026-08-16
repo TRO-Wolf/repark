@@ -7,18 +7,21 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-15._
+_Last updated: 2026-08-16._
 
 ## Release state
 
-Pre-alpha, **with v0.3.0 published to PyPI (2026-08-16)** — the third tag on proven machinery
-(v0.1.0 and v0.2.0 both shipped 2026-08-15): tag-triggered `release.yml`, PyPI trusted publishing
-(the bootstrap token is revoked), `cp312-abi3` manylinux wheel, wheel-only (crates.io publishing
-is structurally deferred, see docs/release.md), version SSOT at the Cargo workspace (`0.3.0`).
-v0.3.0 ships the August hardening campaign (#130–#146): Spark-parity refusals where the engine
-previously silently diverged (MERGE cardinality, date/int cast + ANSI store-assignment
+Pre-alpha, **with v0.3.1 published to PyPI (2026-08-16)** — the fourth tag on proven machinery
+(v0.1.0 and v0.2.0: 2026-08-15; v0.3.0: 2026-08-16): tag-triggered `release.yml`, PyPI trusted
+publishing (the bootstrap token is revoked), `cp312-abi3` manylinux wheel, wheel-only (crates.io
+publishing is structurally deferred, see docs/release.md), version SSOT at the Cargo workspace
+(`0.3.1`). v0.3.0 shipped the August hardening campaign (#130–#146): Spark-parity refusals where
+the engine previously silently diverged (MERGE cardinality, date/int cast + ANSI store-assignment
 integrity), the spill/memory "one truth" (runtime `memory_limit` resizes the live fair pool;
-inert keys refuse loud), and the bench-funded `batch_size` 65536 default. Pre-alpha still means
+inert keys refuse loud), and the bench-funded `batch_size` 65536 default. v0.3.1 is a perf patch:
+the measured single-write TA-kernel construction pass (#148, #151 — ema, trange, atr, linearreg,
+and macd's dense-EMA core; −3% to −18% per kernel, goldens bit-exact) plus its criterion bench
+coverage (#149) and the owner validation & documentation roadmap (#150). Pre-alpha still means
 the API can move between tags. Release mechanics: [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
@@ -318,7 +321,7 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v0.3.0 shipped 2026-08-16 (v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
+**None.** v0.3.1 shipped 2026-08-16 (v0.3.0 same day; v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
 [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace; wheel-only; crates.io
 publishing structurally deferred).
 
