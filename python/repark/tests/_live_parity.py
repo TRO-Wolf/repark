@@ -1590,18 +1590,12 @@ def _disc_filter_backtick_identifier_spark(engine: Engine) -> None:
 # -------------------------------------------------------------------------------------------------
 
 
-def _disc_cast_date_to_int_repark(engine: Engine) -> None:
-    """CAST(DATE AS INT): repark yields days-since-epoch (corpus date_to_int split)."""
-    out = engine.arrow_of(engine.session.sql("SELECT CAST(DATE '2020-01-01' AS INT) AS n"))
-    assert out.schema.field("n").type == pa.int32()
-    assert out.column("n").to_pylist() == [18262]
-
-
-def _disc_cast_date_to_int_spark(engine: Engine) -> None:
-    _expect_raises(
-        lambda: engine.arrow_of(engine.session.sql("SELECT CAST(DATE '2020-01-01' AS INT) AS n")),
-        needle="DATATYPE_MISMATCH",
-    )
+# `cast_date_to_int_spark_refuses` was a disclosure here until 2026-08-15. The G6-3 gate made
+# both engines refuse `CAST(DATE '2020-01-01' AS INT)` with the same Spark class, so it is no
+# longer a divergence and no longer has a registry §6 row to mirror. The convergence is pinned as
+# a shared-raise equality on BOTH engines by
+# `test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days]`,
+# which is a stronger detector than a disclosure was.
 
 
 def _disc_cast_timestamp_to_int_repark(engine: Engine) -> None:
@@ -1871,14 +1865,6 @@ DISCLOSURES: list[Disclosure] = [
         "triple-double-quoted field name that resolves to nothing; Spark filters normally. "
         "PRE-EXISTING (not an audit-G2 regression); the fix and its pin belong in a follow-up "
         "unit.",
-    ),
-    Disclosure(
-        "cast_date_to_int_spark_refuses",
-        _disc_cast_date_to_int_repark,
-        _disc_cast_date_to_int_spark,
-        "CAST(DATE '2020-01-01' AS INT): repark yields days-since-epoch 18262; "
-        "ANSI Spark refuses with DATATYPE_MISMATCH. Corpus: "
-        "test_cast_failure_parity.py::test_cast_failure_row[date_to_int_spark_refuses_repark_days].",
     ),
     Disclosure(
         "cast_timestamp_to_int_nullability",

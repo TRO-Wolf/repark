@@ -223,7 +223,6 @@ def test_registry_covers_the_mandated_golden_family() -> None:
         "fillna_scalar_numeric_nullability",
         "filter_case_collision_bypasses",
         "filter_backtick_identifier",
-        "cast_date_to_int_spark_refuses",
         "cast_timestamp_to_int_nullability",
         "null_safe_eq_sql_nullability",
         "null_safe_eq_df_nullability",
@@ -234,6 +233,11 @@ def test_registry_covers_the_mandated_golden_family() -> None:
         "nested_array_of_struct_list_field_name",
         "conditionless_semi_anti_refuses",
     }, "every load-bearing disclosure is present"
+    # 14 -> 13 on 2026-08-15: `cast_date_to_int_spark_refuses` retired when the G6-3 gate made
+    # both engines refuse DATE -> INT. A disclosure is a DIVERGENCE detector; a converged pair
+    # belongs in the corpus as a shared-raise equality, and moving it there is what keeps
+    # `test_disclosures_mirror_the_registry` green in both directions.
+    assert len(lp.DISCLOSURES) == 13, "disclosure roster is an exact-set pin, not a floor"
 
 
 def test_lifecycle_registry_budget() -> None:

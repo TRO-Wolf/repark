@@ -110,6 +110,19 @@ pub fn date_add(start: Expr, num_days: Expr) -> Expr {
     spark_datetime::date_add(start, num_days)
 }
 
+/// Spark `unix_date(date)` — days since 1970-01-01 → INT (from `datafusion-spark`).
+///
+/// The Python facade spelled this `CAST(CAST(x AS DATE) AS INT)` until the G6-3 cast-legality
+/// gate landed, which refuses exactly that type pair — as Spark does. The engine's own
+/// `unix_date` is the correct builder and always was: `SparkUnixDate::simplify` lowers to the
+/// same two casts, but in the OPTIMIZER, one stage after the analyzer gate. That ordering is why
+/// the gate lives at analysis (`planning/hardening/G63-DATE-INT-DESIGN.md` §3.4) and why the
+/// remedy Spark's own error message names keeps working.
+#[must_use]
+pub fn unix_date(date: Expr) -> Expr {
+    spark_datetime::unix_date(date)
+}
+
 /// Spark `last_day(date)` — the last day of the month containing `date` → DATE (from `datafusion-spark`).
 #[must_use]
 pub fn last_day(date: Expr) -> Expr {

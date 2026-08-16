@@ -33,6 +33,10 @@ pub mod concurrency;
 pub mod file_scoped_rewrite;
 /// Shared Spark/DF `quote_ident` + path-escape needles (r23 QI1 / CQ-006/007).
 pub mod idents;
+/// WI-2: the plain-INSERT store-assignment gate, as an `AnalyzerRule` over
+/// `LogicalPlan::Dml(WriteOp::Insert)` — the one stage where the pre-cast source type is still
+/// in the plan. Same matrix as [`store_assign`], imported not duplicated.
+pub mod insert_gate;
 pub mod merge;
 mod name_resolution;
 /// OV1 exclusive full-table overwrite commit (stage-then-swap). CACHE1 must not call (Q9).
@@ -77,6 +81,7 @@ pub use concurrency::{
     DEFAULT_MAX_CONCURRENT_FILES, MAX_CONCURRENT_FILES_KEY, WriteConcurrency,
     concurrency_from_config_map, concurrency_from_ctx, with_write_concurrency,
 };
+pub use insert_gate::InsertStoreAssignment;
 pub use merge::{
     write_data_files, write_data_files_from_stream, write_data_files_from_stream_with_concurrency,
     write_data_files_with_concurrency,

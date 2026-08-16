@@ -9,13 +9,13 @@ the fork; this tree only translates Spark write semantics onto the fork's native
 OCC retry loop. `DELETE`/`UPDATE`/`INSERT` need no adapter — DataFusion plans them onto the
 fork's `iceberg-datafusion` `TableProvider`.
 
-**Known gap (WI-1, 2026-08-15):** because plain `INSERT` has no adapter here, it also has no
-ANSI store-assignment gate. DataFusion's own `insert_to_plan` injects the `CAST` and hands a
-schema-conformed plan straight to the fork's `IcebergTableProvider::insert_into`, so
-`INSERT INTO … SELECT`, `INSERT INTO … VALUES`, `writeTo().append()` and `write.insertInto()`
-still persist a `Date32 → Int32` reinterpretation (`18262`) that Spark refuses. `store_assign.rs`
-is the predicate a follow-on unit needs; the missing half is a call site OUTSIDE this crate (see
-`task/wi1-insert-store-gate-ledger.md` §4).
+**The gap WI-1 named, closed by WI-2 (2026-08-15):** plain `INSERT` still has no adapter here —
+DataFusion's own `insert_to_plan` injects the `CAST` and hands a schema-conformed plan straight to
+the fork's `IcebergTableProvider::insert_into` — so the gate could not be a call site on a write
+lowering. It is an `AnalyzerRule` instead (`insert_gate.rs`), one stage EARLIER, where the
+pre-cast source type is still in the plan. `INSERT INTO … SELECT`, `writeTo().append()` and
+`write.insertInto()` now refuse the `Date32 → Int32` reinterpretation (`18262`) that Spark
+refuses. Named residual: a literal `INSERT INTO … VALUES` row — see `insert_gate.rs`.
 
 **Error boundary:** re-exports `repark_common::{Error, Result}` for MERGE/append, but the
 `alter` and `snapshot_refs` primitives still return `iceberg::Result` — the fold lives in
@@ -54,6 +54,17 @@ repark-core's error map.
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
   (absent→snapshot | snapshot | serializable | none | invalid-loud).
+- `insert_gate.rs` — **WI-2 (2026-08-15):** `InsertStoreAssignment`, an `AnalyzerRule` over
+  `LogicalPlan::Dml(WriteOp::Insert(_))` that runs `store_assign.rs`'s matrix — imported, never
+  duplicated — against the pre-cast types in the synthesized projection's INPUT schema. Registered
+  by `repark_spark::SparkExtension::register`, BEFORE `repark_functions::analyzer_rules()`, so a
+  `DATE → INT` insert cites Spark's WRITE class rather than the CAST class. Judges exactly
+  `Alias(Cast(Column(c), target))`: that shape is provably the conform cast DataFusion
+  synthesized, while a user-written explicit `CAST` (legal Spark — the user's stated intent)
+  reaches this projection already conformed, as a bare column, and is invisible to the rule.
+  Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
+  forms are byte-identical. Ledger:
+  [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/wi2-g6-cast-integrity-ledger.md).
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /

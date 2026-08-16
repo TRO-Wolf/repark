@@ -49,6 +49,7 @@ handoff only); engine code; Cargo.lock / uv.lock.
 from __future__ import annotations
 
 import contextlib
+import datetime
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
@@ -66,7 +67,14 @@ if TYPE_CHECKING:
 # ==================================================================================================
 
 G6_BUDGET_MIN = 8
-G6_BUDGET_MAX = 10
+# 2026-08-15 (G6-3 / G6-5): raised 10 -> 15 in the landing diff, with the reason the design
+# (`planning/hardening/G63-DATE-INT-DESIGN.md` §4.2) requires. The DATE-INT gate closed FIVE
+# recipes, not one: the pinned `CAST(DATE AS INT)` row plus four doors §1.2 measured as unpinned
+# divergences (BIGINT target, `try_cast` in SQL, `Column.cast`, `Column.try_cast`) and the G6-5
+# reverse (`CAST(INT AS DATE)`, §1.3). Recording them was the design's stated alternative to
+# filing a follow-on corpus unit; the ceiling exists to force that choice explicitly, and this is
+# the explicit choice. RATCHET: back down if any door is retired.
+G6_BUDGET_MAX = 15
 MIN_EQUALITY_ROWS = 3  # content equalities + shared-raise error rows count as equality-class
 MIN_ERROR_ROWS = 3  # shared-raise error equalities
 MIN_TRY_CAST_ROWS = 2  # try_cast twin of ≥2 failing casts (name-gated *try_cast*)
@@ -77,6 +85,11 @@ MIN_MALFORMED_TEMPORAL = 1  # *malformed_string_to_date* / *timestamp*
 MIN_NUMERIC_OVERFLOW = 1  # *overflow* / *decimal_narrowing_overflow*
 # True content/split disclosures found under ANSI ON — do not invent more (brief A3 / item 6).
 MAX_DISCLOSURE_OR_SPLIT_ROWS = 4
+
+# The Spark class BOTH engines now raise for every DATE ↔ INT cast door (G6-3 / G6-5). Recorded
+# verbatim against live PySpark 4.1.2 ANSI; repark emits the same bracketed class from
+# `repark-functions`' analyzer, so one needle pins both halves.
+_DATE_INT_NEEDLE = "DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION"
 
 FIX_G6 = (
     "the cast-failure semantics fix "
@@ -350,18 +363,104 @@ ROWS: list[CastRow] = [
     # ----- true divergences under ANSI ON (do not invent more) ------------------------------------
     CastRow(
         name="date_to_int_spark_refuses_repark_days",
-        kind="split",
+        kind="error",
         entry="sql",
         family="date_to_int",
         sql="SELECT CAST(DATE '2020-01-01' AS INT) AS n",
-        which_raises="spark",
-        spark_error_needle="DATATYPE_MISMATCH",
-        repark=_one_row([("n", _I32, False)], {"n": 18262}),
+        spark_error_needle=_DATE_INT_NEEDLE,
+        repark_error_needle=_DATE_INT_NEEDLE,
         note=(
-            "SPLIT: Spark 4.1.2 ANSI refuses DATE→INT at analysis "
-            "(DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION; suggests UNIX_DATE). repark yields "
-            "days-since-epoch 18262 as non-null int32. A migration that casts partition dates to "
-            f"int succeeds here and fails on Spark. Flipped by {FIX_G6}."
+            "CONVERGED 2026-08-15 (was a spark-raises SPLIT): repark answered days-since-epoch "
+            "18262 as non-null int32 because arrow-rs 58.4 reinterprets the Date32 backing value; "
+            "Spark 4.1.2 ANSI refuses the type pair at analysis (Cast.checkInputDataTypes). The "
+            "G6-3 gate in repark-functions' SparkExprSemantics now refuses with Spark's own class "
+            "and Spark's own remedy, so this is a shared-raise equality. The name predates the "
+            f"flip; the rename ships alone per relocation discipline. Flipped by {FIX_G6}."
+        ),
+    ),
+    # ----- the four doors §1.2 measured as unpinned divergences beside the pinned one ------------
+    CastRow(
+        name="date_to_bigint_both_refuse",
+        kind="error",
+        entry="sql",
+        family="date_to_int",
+        sql="SELECT CAST(DATE '2020-01-01' AS BIGINT) AS n",
+        spark_error_needle=_DATE_INT_NEEDLE,
+        repark_error_needle=_DATE_INT_NEEDLE,
+        note=(
+            "The BIGINT twin of the headline row. arrow-rs permits Date32→Int64 as the SAME "
+            "days-since-epoch reinterpretation, so repark answered 18262 as int64 while Spark "
+            "refused with the identical class (design §1.2 door 2, recorded). Unpinned until "
+            f"this unit. Closed by {FIX_G6}."
+        ),
+    ),
+    CastRow(
+        name="try_cast_date_to_int_both_refuse",
+        kind="error",
+        entry="sql",
+        family="date_to_int",
+        sql="SELECT try_cast(DATE '2020-01-01' AS INT) AS n",
+        spark_error_needle=_DATE_INT_NEEDLE,
+        repark_error_needle=_DATE_INT_NEEDLE,
+        note=(
+            "try_cast is total over VALUES, never over TYPES. Spark 4's TryCast is "
+            "Cast(evalMode = TRY), so the legality check in Cast.checkInputDataTypes fires "
+            "identically and the message spells TRY_CAST (design §1.2 door 3 — recorded "
+            "fresh, settling the corpus's open question). repark's Expr::TryCast arm did not "
+            f"exist before this unit, so this door was silently wrong. Closed by {FIX_G6}."
+        ),
+    ),
+    CastRow(
+        name="df_cast_date_to_int_both_refuse",
+        kind="error",
+        entry="df_cast",
+        family="date_to_int",
+        df_rows=[(datetime.date(2020, 1, 1),)],
+        df_columns=["d"],
+        cast_column="d",
+        cast_type="int",
+        spark_error_needle=_DATE_INT_NEEDLE,
+        repark_error_needle=_DATE_INT_NEEDLE,
+        note=(
+            "CP-11 DataFrame-API door: Column.cast('int') on a DATE column. Spark refuses at "
+            "analysis exactly as on the SQL door because the check is on the TYPE PAIR, not the "
+            "spelling (design §1.2 door 4). A SQL-only green could not have claimed this "
+            f"surface. Closed by {FIX_G6}."
+        ),
+    ),
+    CastRow(
+        name="df_try_cast_date_to_int_both_refuse",
+        kind="error",
+        entry="df_try_cast",
+        family="date_to_int",
+        df_rows=[(datetime.date(2020, 1, 1),)],
+        df_columns=["d"],
+        cast_column="d",
+        cast_type="int",
+        spark_error_needle=_DATE_INT_NEEDLE,
+        repark_error_needle=_DATE_INT_NEEDLE,
+        note=(
+            "The fourth door: Column.try_cast('int') on a DATE column (design §1.2 door 5). "
+            "Together with the SQL try_cast row this pins that the gate is on legality and the "
+            f"eval mode is irrelevant to it. Closed by {FIX_G6}."
+        ),
+    ),
+    CastRow(
+        name="int_to_date_both_refuse",
+        kind="error",
+        entry="sql",
+        family="int_to_date",
+        sql="SELECT CAST(CAST(18262 AS INT) AS DATE) AS d",
+        spark_error_needle=_DATE_INT_NEEDLE,
+        repark_error_needle=_DATE_INT_NEEDLE,
+        note=(
+            "G6-5, the same class in the REVERSE direction (design §1.3, recorded): Spark "
+            "refuses INT→DATE and names DATE_FROM_UNIX_DATE as the remedy, while repark "
+            "answered date32 2020-01-01 non-null. It was unpinned anywhere — not in this "
+            "corpus, not in the registry — and closing G6-3 without it would leave the class "
+            "half-shut, which §6 discipline forbids. The inner CAST narrows the Int64 "
+            "literal so the message names Spark's INT rather than DataFusion's BIGINT. Closed by "
+            f"{FIX_G6}."
         ),
     ),
     CastRow(
@@ -755,13 +854,32 @@ def test_content_disclosure_classifier_regression_arm(
     assert "Re-derive" in message
 
 
+# The corpus no longer carries a SPARK-raises split either: `date_to_int_spark_refuses_repark_days`
+# flipped to a shared-raise error equality on 2026-08-15 when the G6-3 gate landed, which is
+# exactly the convergence this classifier arm exists to announce. CP-1 requires both arms stay
+# reachable whether or not a real row exercises them, so the arm keeps its exemplar the same way
+# the repark-raises arm did in 2026-08-12: a synthetic CastRow that never joins ROWS, so the
+# budget pins still see only real rows.
+_SYNTHETIC_SPARK_RAISES_SPLIT = CastRow(
+    name="synthetic_spark_raises_split_exemplar",
+    kind="split",
+    entry="sql",
+    family="synthetic",
+    sql="SELECT 1 AS n",  # never executed — run_cast_content is monkeypatched
+    which_raises="spark",
+    spark_error_needle="DATATYPE_MISMATCH",
+    repark=_one_row([("n", _I32, False)], {"n": 18262}),
+    note="synthetic CP-1 exemplar for the spark-raises split classifier arm; not in ROWS.",
+)
+
+
 def test_split_spark_raises_classifier_converged_arm(
     repark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """CP-1: spark-raises split where repark starts raising Spark's needle → CONVERGED."""
     import test_cast_failure_parity as cast_mod
 
-    split_row = next(row for row in ROWS if row.name == "date_to_int_spark_refuses_repark_days")
+    split_row = _SYNTHETIC_SPARK_RAISES_SPLIT
     assert split_row.spark_error_needle is not None
     needle = split_row.spark_error_needle
 

@@ -7,7 +7,8 @@ Source for `repark-iceberg` — two independent module trees ported from v1 crat
 
 ## Contents
 
-- `lib.rs` — thin manifest: `pub mod catalog; pub mod write;` + the union of the two v1
+- `lib.rs` — thin manifest (WI-2 2026-08-15 added `InsertStoreAssignment` to the `write`
+  re-export block — the plain-INSERT store-assignment `AnalyzerRule` the Spark door registers): `pub mod catalog; pub mod write;` + the union of the two v1
   crate-root re-export lists (public names unchanged).
 - `catalog/` — Glue + S3 Tables + memory catalog builders, DataFusion `CatalogProvider`
   registration, scheme-based `FileIO` selection, and the hoisted `reregister_catalog_provider`

@@ -548,10 +548,15 @@ NOT in that file is a defect, not a decision.
   `not ANSI-store-assignable` needle and the `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`
   sub-class, naming the column and both types; a refused overwrite leaves the prior snapshot
   intact. Positives: widening, narrowing, atomic→string, date→timestamp, NULL-fill and identity
-  all still write. **Deliberately absent:** plain `INSERT INTO … SELECT|VALUES`,
-  `writeTo().append()` and `write.insertInto()` (no overwrite) — DataFusion lowers those onto
-  the fork `TableProvider` with the CAST already applied, so they remain ungated and are named
-  in `task/wi1-insert-store-gate-ledger.md` §4 rather than pinned here. Arrow path.
+  all still write. **WI-2 (2026-08-15) — the `=== WI-2` section:** the four plain-INSERT doors
+  are refusals now, not a named gap. `INSERT INTO … SELECT`, `writeTo().append()` and
+  `write.insertInto()` refuse with the `INSERT INTO` path label and the same needle, driven by
+  the `InsertStoreAssignment` `AnalyzerRule` (`crates/repark-iceberg/src/write/insert_gate.rs`) —
+  plus the G6-5 reverse pair (`INT → DATE`), a positive control that an **explicit user CAST**
+  still writes (Spark treats it as the user's intent), and the honest residual: a literal
+  `INSERT INTO … VALUES` row conforms inside the `Values` node where the synthesized and explicit
+  casts are byte-identical, so `VALUES (true)` into an `INT` column still writes `1` while
+  `VALUES (DATE '…')` is refused by the G6-3 CAST gate instead. Arrow path.
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
@@ -1570,15 +1575,26 @@ NOT in that file is a defect, not a decision.
   extra (CP-8). `--emit` pastes Spark + divergent repark halves. Hold
   `/tmp/grok-jvm-record.lock`.
 - `test_cast_failure_parity.py` — the **cast-failure semantics differential corpus** (H-2 gap G6),
-  landed by X-1. 10 rows (budget 8–10) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
-  shuffle=2, `session.timeZone=UTC`): 5 shared-raise **error** equalities (malformed string→int /
-  date, INT→TINYINT overflow, decimal narrowing overflow, DF `Column.cast` twin), 2 **try_cast**
-  NULL equalities (twins of the failing casts), 1 well-formed control equality, **1 true
-  split** under ANSI ON (DATE→INT: Spark `DATATYPE_MISMATCH` refuse vs repark days-since-epoch)
+  landed by X-1. 15 rows (budget 8–15) recorded against live PySpark 4.1.2 ANSI ON (`local[2]`,
+  shuffle=2, `session.timeZone=UTC`): 10 shared-raise **error** equalities (malformed string→int /
+  date, INT→TINYINT overflow, decimal narrowing overflow, DF `Column.cast` twin, and the five
+  DATE↔INT doors below), 2 **try_cast** NULL equalities (twins of the failing casts), 1
+  well-formed control equality, **no remaining split**
   and **1 nullability-only content disclosure** (TIMESTAMP→INT — was a repark-raises split until
   the TZ-5 cast unit un-refused it, 2026-08-12: value/type now match Spark's unix-seconds int32;
   repark propagates the literal's non-null where Spark types the CAST nullable; content-disclosure
   classifier arms proven on this row, split arms kept proven via a synthetic exemplar).
+  **G6-3 / G6-5 (2026-08-15):** the corpus's last `split` flipped —
+  `date_to_int_spark_refuses_repark_days` is a shared-raise **error** equality now, both engines
+  raising `DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION`. Four doors the design measured as
+  unpinned divergences were recorded in the same diff (`date_to_bigint_both_refuse`,
+  `try_cast_date_to_int_both_refuse`, `df_cast_date_to_int_both_refuse`,
+  `df_try_cast_date_to_int_both_refuse`) plus the reverse `int_to_date_both_refuse` (G6-5), which
+  is why `G6_BUDGET_MAX` ratcheted 10 → 15 with its reason on the constant. The spark-raises split
+  classifier arm keeps its exemplar the way the repark-raises arm did: a synthetic `CastRow` that
+  never joins `ROWS`. The live-tier disclosure `cast_date_to_int_spark_refuses` retired with the
+  row (`_live_parity.py`, the `test_parity_live.py` exact set, and the registry §6 heading all move
+  in the same diff or the mirror gate reds in both directions).
   **Y-4 (2026-08-12):** current pin name `timestamp_to_int_nullability` (was
   `timestamp_to_int_spark_seconds_repark_raises`; live-mirror token
   `cast_timestamp_to_int_nullability` is unchanged).

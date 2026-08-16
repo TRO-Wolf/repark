@@ -1061,6 +1061,13 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   to_timestamp_ntz (SEMANTIC-HAZARD honest-cut); charter ENGINE-WORK
   make_timestamp_ltz/ntz, make_ym_interval, to_timestamp_ltz, convert_timezone,
   timestamp_add/diff. Pins: `tests/test_functions_d.py`.
+  **G6-3 rider (2026-08-15):** `unix_date` now builds the ENGINE's `unix_date`
+  (`_scalar("unix_date", …)` over the new `call_scalar` arm) instead of the
+  `.cast("date").cast("int")` chain it used to spell. Spark refuses `CAST(DATE AS INT)` at
+  analysis and repark does too now (registry row G6-3), and the refusal's own message names
+  `UNIX_DATE` as the remedy — so the remedy must not be spelled as the refused cast. The leading
+  `.cast("date")` stays: it is what lets a string / timestamp column reach a function whose
+  signature is an exact DATE.
   **FN-E (2026-08-15):** 9 collection names in `functions_collections.py`
   (cardinality/array_size/array_agg/named_struct/map_contains_key/array_append/
   array_prepend/arrays_overlap/get). Deferred: map_from_entries/shuffle/create_map

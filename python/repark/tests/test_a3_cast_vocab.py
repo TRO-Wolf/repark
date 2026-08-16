@@ -49,6 +49,15 @@ _PRIMITIVE_CAST_TYPES: list[tuple[str, DataType, pa.DataType]] = [
     ("decimal(10,4)", DecimalType(10, 4), pa.decimal128(10, 4)),
 ]
 
+# Source column per token. Everything casts from the LONG `v` except DATE, which casts from the
+# STRING `s`: Spark refuses `CAST(BIGINT AS DATE)` at analysis
+# (`DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION` — "use `DATE_FROM_UNIX_DATE` instead", divergence
+# registry row G6-5), and so does repark since the cast-legality gate landed. The claim this file
+# makes is a VOCABULARY claim — that the string token and the type object reach the same native
+# cast — and it is unchanged by which legal source column the cast starts from.
+_CAST_SOURCE: dict[str, str] = {"date": "s"}
+
+
 # Alias tokens the facade/native both accept (Spark short forms).
 _ALIAS_TOKENS: list[tuple[str, pa.DataType]] = [
     ("tinyint", pa.int8()),
@@ -76,9 +85,10 @@ def test_cast_primitive_type_object_and_token(
     arrow_type: pa.DataType,
 ) -> None:
     """Every types.py primitive that claims cast works as type object and string token."""
-    frame = spark.range(1).select(F.col("id").alias("v"))
-    via_obj = frame.select(F.col("v").cast(type_obj).alias("c")).to_arrow()
-    via_token = frame.select(F.col("v").cast(token).alias("c")).to_arrow()
+    frame = spark.range(1).select(F.col("id").alias("v"), F.lit("2020-01-01").alias("s"))
+    source = _CAST_SOURCE.get(token, "v")
+    via_obj = frame.select(F.col(source).cast(type_obj).alias("c")).to_arrow()
+    via_token = frame.select(F.col(source).cast(token).alias("c")).to_arrow()
     assert via_obj.schema.field("c").type == arrow_type, (
         f"cast({type_obj!r}) schema {via_obj.schema.field('c').type} != {arrow_type}"
     )
@@ -98,10 +108,16 @@ def test_try_cast_primitive_type_object_and_token(
     type_obj: DataType,
     arrow_type: pa.DataType,
 ) -> None:
-    """try_cast accepts the same vocabulary; schema matches cast."""
-    frame = spark.range(1).select(F.col("id").alias("v"))
-    via_obj = frame.select(F.col("v").try_cast(type_obj).alias("c")).to_arrow()
-    via_token = frame.select(F.col("v").try_cast(token).alias("c")).to_arrow()
+    """try_cast accepts the same vocabulary; schema matches cast.
+
+    ``try_cast`` shares the source-column note above: Spark's legality check is
+    ``Cast.checkInputDataTypes``, which ``TryCast`` (``Cast(evalMode = TRY)``) inherits — the eval
+    mode governs VALUES that a legal cast cannot represent, never which type pairs are castable.
+    """
+    frame = spark.range(1).select(F.col("id").alias("v"), F.lit("2020-01-01").alias("s"))
+    source = _CAST_SOURCE.get(token, "v")
+    via_obj = frame.select(F.col(source).try_cast(type_obj).alias("c")).to_arrow()
+    via_token = frame.select(F.col(source).try_cast(token).alias("c")).to_arrow()
     assert via_obj.schema.field("c").type == arrow_type
     assert via_token.schema.field("c").type == arrow_type
 

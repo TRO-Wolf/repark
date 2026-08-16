@@ -9,6 +9,7 @@ without enabling PyO3 `multiple-pymethods`.
 ## Contents
 
 - `mod.rs` — `#[pyclass] PyColumn` + the one `#[pymethods]` impl (constructors, operators,
+  **G6-3 rider (2026-08-15):** `call_scalar` grew a `"unix_date"` arm (`repark_functions::expr_fn::unix_date`) so the facade's `F.unix_date` builds the engine's function instead of the `CAST(x AS DATE) AS INT` chain the cast-legality gate now refuses.
   `call_scalar`, date / window / aggregate arms) and `expr_tests` (sql / `call_scalar` handoff
   pins). `multiple-pymethods` stays off.
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark

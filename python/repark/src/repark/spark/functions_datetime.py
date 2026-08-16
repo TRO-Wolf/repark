@@ -12,6 +12,7 @@ import datetime
 from repark.spark.column import Column
 from repark.spark.functions import (
     _as_column_arg,
+    _scalar,
     current_timestamp,
     date_add,
     dayofmonth,
@@ -75,9 +76,17 @@ def _truncate_toward_zero(column: Column) -> Column:
 def unix_date(col: Column | str) -> Column:
     """Days since 1970-01-01 (PySpark ``functions.unix_date``).
 
-    Matches datafusion-spark ``SparkUnixDate``: ``CAST(date AS INT)``.
+    Builds the engine's ``unix_date`` (datafusion-spark ``SparkUnixDate``) rather than the
+    ``CAST(date AS INT)`` chain it lowers to. Spark refuses ``CAST(DATE AS INT)`` at analysis
+    (registry row G6-3, ``DATATYPE_MISMATCH.CAST_WITH_FUNC_SUGGESTION``) and so does repark, and
+    the error message names ``UNIX_DATE`` as the remedy — so the remedy must not itself be spelled
+    as the refused cast. ``SparkUnixDate::simplify`` re-creates the cast in the OPTIMIZER, one
+    stage after the gate, which is exactly where it is legal.
+
+    The leading ``.cast("date")`` is unchanged: it is what lets a string / timestamp column reach
+    a function whose signature is an exact DATE.
     """
-    return _as_column_arg(col, as_lit=False).cast("date").cast("int")
+    return _scalar("unix_date", _as_column_arg(col, as_lit=False).cast("date"))
 
 
 def unix_seconds(col: Column | str) -> Column:
