@@ -18,12 +18,12 @@ window-UDF layer, tier 3), `crates/repark-sql` (the ANSI/Trino-flavoured door: `
 guard set + wrong-door sniff + the curated `WITH (…)` vocabulary), `crates/repark-ml` (native ML
 estimator kernels, tier 3), and `crates/repark-python` (the PyO3 cdylib, **tier 4 "bindings"**).
 The Python tree ships `python/repark-parity` (the parity harness + census machinery + report
-comparator) and `python/repark` (the PySpark facade wheel). A wheel is buildable; it is not yet
-tagged (see [STATUS.md](STATUS.md) "Release state").
+comparator) and `python/repark` (the PySpark facade wheel, published to PyPI — see
+[STATUS.md](STATUS.md) "Release state").
 
 ## Contents
 
-- `Cargo.toml` — **also the version SSOT (release PR, 2026-08-14):** `[workspace.package] version` (0.2.0) is the single release version; maturin injects it into the wheel (pyproject `dynamic`); bump here, nowhere else (internal deps are path-only — no version requirements to chase). With `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
+- `Cargo.toml` — **also the version SSOT (release PR, 2026-08-14):** `[workspace.package] version` (0.3.0) is the single release version; maturin injects it into the wheel (pyproject `dynamic`); bump here, nowhere else (internal deps are path-only — no version requirements to chase). With `Cargo.lock`, `rust-toolchain.toml`, `rustfmt.toml`, `clippy.toml`, `deny.toml`,
   `.cargo/` — Rust workspace + tooling. `[workspace.dependencies]` is the single version table;
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
   are in force. The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);

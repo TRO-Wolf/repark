@@ -11,14 +11,15 @@ _Last updated: 2026-08-15._
 
 ## Release state
 
-Pre-alpha, **with v0.1.0 published to PyPI (2026-08-15)** — the first functional release: tag-triggered
-`release.yml`, PyPI trusted publishing (the bootstrap token is revoked), `cp312-abi3` manylinux
-wheel. The first-tag shakeout (an unresolvable `setup-python` pin, #112) was fixed and the tag
-re-cut; the release machinery is proven end-to-end — `release.yml` (tag-triggered, PyPI trusted publishing, wheel-only;
-crates.io publishing is structurally deferred, see docs/release.md) with the version SSOT at the
-Cargo workspace (`0.1.0`). What remains is **owner-side**: the one-time PyPI trusted-publisher
-setup, then the tag — which starts the "API is forever" clock. Public ≠ released: the repository
-is public, the engine is not yet distributed. Release mechanics: [docs/release.md](docs/release.md).
+Pre-alpha, **with v0.3.0 published to PyPI (2026-08-16)** — the third tag on proven machinery
+(v0.1.0 and v0.2.0 both shipped 2026-08-15): tag-triggered `release.yml`, PyPI trusted publishing
+(the bootstrap token is revoked), `cp312-abi3` manylinux wheel, wheel-only (crates.io publishing
+is structurally deferred, see docs/release.md), version SSOT at the Cargo workspace (`0.3.0`).
+v0.3.0 ships the August hardening campaign (#130–#146): Spark-parity refusals where the engine
+previously silently diverged (MERGE cardinality, date/int cast + ANSI store-assignment
+integrity), the spill/memory "one truth" (runtime `memory_limit` resizes the live fair pool;
+inert keys refuse loud), and the bench-funded `batch_size` 65536 default. Pre-alpha still means
+the API can move between tags. Release mechanics: [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
@@ -317,8 +318,9 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v0.1.0 shipped 2026-08-15. Future tags follow [docs/release.md](docs/release.md)
-(version SSOT at the Cargo workspace; wheel-only; crates.io publishing structurally deferred).
+**None.** v0.3.0 shipped 2026-08-16 (v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
+[docs/release.md](docs/release.md) (version SSOT at the Cargo workspace; wheel-only; crates.io
+publishing structurally deferred).
 
 ## 2026-08-15 night increment (conductor-15 + Opus work group 2)
 
