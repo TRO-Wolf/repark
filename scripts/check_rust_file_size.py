@@ -78,11 +78,11 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "MERGE streaming-scan unit battery (position-delete + rewrite pins); "
         "RATCHET: after per-scenario module split",
     ),
-    "crates/repark-python/src/column.rs": (
-        2200,  # measured 2136
-        "PyO3 Column expression surface (thin adapter; large method surface "
-        "mirrors PySpark Column operators); "
-        "RATCHET: after operator-group extract",
+    "crates/repark-python/src/column/mod.rs": (
+        1850,  # measured 1779
+        "PyO3 Column #[pymethods] arms only (helpers in column/window.rs + "
+        "column/expr_build.rs; multiple-pymethods stays off); "
+        "RATCHET: after further operator-group extract",
     ),
     "crates/repark-spark/src/alter.rs": (
         2000,  # measured 1915

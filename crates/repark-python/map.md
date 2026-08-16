@@ -65,7 +65,7 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   `register_memory_catalog`, `create_namespace`, `register_ipc_stream_as_temp_view` (IPC fallback),
   **I4/P1a** `register_arrow_stream_as_temp_view` — C-stream import under GIL → MemTable;
   createDataFrame prefers this over IPC).
-- `src/column.rs (r24 SB1: `array_repeat`/`sequence`/`repeat` facade cardinality refuse)` — `PyColumn` + **`call_scalar`** match table (R-FN-BATCH1/2: string/math +
+- `src/column/` ([src/column/map.md](src/column/map.md); r24 SB1: `array_repeat`/`sequence`/`repeat` facade cardinality refuse) — `PyColumn` + **`call_scalar`** match table (R-FN-BATCH1/2: string/math +
   reverse/array_*/map_*/size/slice/sequence/… via `datafusion::functions` + `functions_nested`;
   **E1 octo C1:** `array_element` → `__repark_array_get__`, `get_field`;
   **E1 octo C2:** `getitem` → `__repark_get_item__` polymorphic array/map GetItem;
@@ -137,7 +137,7 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
 | Expose a class/function to Python | `src/lib.rs` (register on the `_native` module) |
 | Add a session method (`sql`-like) | `src/session.rs` (`#[pymethods] impl PyReparkSession`) |
 | Add a DataFrame action | `src/dataframe.rs` (`#[pymethods] impl PyDataFrame`) |
-| Add an aggregate Column method (e.g. percentile) | `src/column.rs` (`approx_percentile_cont`, `aggregate`, …) |
+| Add an aggregate Column method (e.g. percentile) | `src/column/mod.rs` (`approx_percentile_cont`, `aggregate`, …) |
 | Cross Arrow data to Python | `__arrow_c_stream__` in `src/dataframe.rs` — zero-copy |
 | Fence a panic at a new entry point | wrap the body in `fenced!("Type.method", { … })` (`src/fence.rs`); an FFI-callback poll uses `fence_stream_poll` |
 
@@ -163,7 +163,7 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
   panic is caught by the fence and re-raised as `PySparkException` (never an uncatchable abort); a
   mid-stream execution error rides the Arrow error channel.
 - **Extension points:** expose a class / function (`lib.rs`); add a session method (`session.rs`), a
-  DataFrame action (`dataframe.rs`), or a Column method (`column.rs`); fence a new entry point
+  DataFrame action (`dataframe.rs`), or a Column method (`column/mod.rs`); fence a new entry point
   (`fenced!`).
 - **Test strategy:** `cargo test -p repark-python` (embedded interpreter via the `auto-initialize`
   dev-dep) + `maturin develop` import smoke; `extension-module` stays OFF for tests.

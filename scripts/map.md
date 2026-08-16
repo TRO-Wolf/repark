@@ -123,6 +123,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   (path no longer on disk) is an error. Pure text — sub-second. Dual-wired:
   `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job step; also both
   pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
+  **COLX (2026-08-15):** EXCEPTIONS key `crates/repark-python/src/column.rs` deleted;
+  replaced by `crates/repark-python/src/column/mod.rs` (ratchet DOWN after helper extract).
 
 - `check_parity_live_dual_wire.sh` + `check_parity_live_dual_wire.py` — the **parity-live dual-wire**
   guard (G-6). Compares `make parity-live` and `.github/workflows/parity-live.yml` to **each
