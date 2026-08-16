@@ -24,6 +24,8 @@
 //! `arrow-pyarrow` pin to reconcile) and is exactly what `pyarrow.table(df)` /
 //! `polars.from_arrow(df)` consume.
 
+#[cfg(feature = "allocator-mimalloc")]
+mod allocator;
 mod column;
 mod dataframe;
 mod fence;

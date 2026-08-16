@@ -7,6 +7,10 @@ Source for `repark-python` — the PyO3 cdylib (`_native` module). The only crat
 non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callable.
 
 ## Contents
+- `allocator.rs` — conductor-19 AL-1a: `#[global_allocator]` mimalloc static, compiled
+  only under `allocator-mimalloc` (default off). Funding / default-off rustdoc lives
+  here. `lib.rs` carries a two-line `#[cfg]` `mod` hook so the 190-line root ceiling
+  stands.
 - `tests.rs` — binder unit tests (r26 LR1 hoist). **EC-1 type-identity guard:** four `const _`
   coercions plus `repark_core_error_is_the_repark_common_error_type` pin that `repark_core::Error`
   / `ErrorClass` ARE `repark_common::Error` / `ErrorClass` (re-exported, not redefined) — the
