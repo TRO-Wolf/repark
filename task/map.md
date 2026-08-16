@@ -20,6 +20,10 @@ not this directory.
   (2026-08-15):** skip MERGE cardinality for a lone unconditional MATCHED DELETE.
   Shared-executor fold/consume helpers; native-door pins + differential flip
   `dup_source_keys_unconditional_delete` split → content. BL-3 left for orchestrator.
+- [colx-column-extract-ledger.md](colx-column-extract-ledger.md) — **COLX
+  (2026-08-15):** extract non-pymethods helpers from `column.rs` →
+  `column/{mod,window,expr_build}.rs`; ratchet file-size EXCEPTIONS DOWN.
+  `multiple-pymethods` stays off.
 - [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) — **P-1
   (2026-08-15):** criterion kernel baseline for `repark-ta` (`ema`/`sma`/`rsi`/
   `bbands` + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold / three-

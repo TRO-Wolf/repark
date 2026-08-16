@@ -29,10 +29,11 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
 - **r20 G2:** `Column.over` accepts optional ROWS/RANGE frame + AggregateFunction→window;
   `rank`/`dense_rank`/`ntile` (Int32 cast); `call_scalar` `rand`/`randn` → repark-functions
   XORShift UDFs (seeded).
-- **FN-W (2026-08-15):** `column.rs` `window_udwf` (no IntegerType cast) +
+- **FN-W (2026-08-15):** `column/window.rs` `window_udwf` (no IntegerType cast) +
   `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist` over DF 54.1 UDWFs.
   `percent_rank`/`cume_dist` stay Float64; offset windows preserve input type.
-  Measured `column.rs` = 2200 / ceiling 2200. `ignoreNulls` not wired.
+  `ignoreNulls` not wired. **COLX (2026-08-15):** `column.rs` → `column/`
+  (`mod.rs` pymethods; helpers in `window.rs` / `expr_build.rs`).
 
 - **Q1 R-ML-QUANTILE:** `PyColumn::approx_percentile_cont(percentile: f64)` — native
   AggregateUDF call for facade `percentile_approx` / `approx_percentile` (groupBy/df.agg).
@@ -55,12 +56,12 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   closes Column.__getitem__ slice / 3-arg pos-0/`negative` divergence (C7-L-001).
 - **r22 C5 census-r7:** `PyColumn::try_cast` → DataFusion `Expr::TryCast` (null on cast
   failure; facade `Column.try_cast` / SQL `TRY_CAST` display). Cargo.toml freeze held.
-- **r24 A3 QUAL-03:** `column.rs` `parse_data_type` full facade cast vocab (`float`/`byte`/
+- **r24 A3 QUAL-03:** `column/expr_build.rs` `parse_data_type` full facade cast vocab (`float`/`byte`/
   `short`/`binary` + `tinyint`/`smallint`); residual → `AnalysisException` (not `ValueError`);
   test renamed `parse_data_type_maps_facade_primitive_cast_vocabulary` (rule 11).
   **TZ-4 PR-2:** `"timestamp"` → `Timestamp(µs, UTC)`; `"timestamp_ntz"` → naive µs.
   `dataframe.rs` `simpleString` distinguishes `timestamp` vs `timestamp_ntz`.
-- **r25 T3 plan-hygiene:** `column.rs` `collapse_identity_alias_chain` +
+- **r25 T3 plan-hygiene:** `column/expr_build.rs` `collapse_identity_alias_chain` +
   `PyColumn.collapse_identity_aliases` peels nested `Alias` chains to one outer rename (facade
   N2 collapse path only — greylit Q7); unit `collapse_identity_alias_chain_peels_same_name_stack`.
 - **E2:** `arrow_type_key` List/LargeList/FixedSizeList → Spark `array<element>`
@@ -75,10 +76,10 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   default flags `"g"`; `sec`/`csc` CASE Inf at exact zero; **octo C1:** `overlay` drops
   literal `-1` 4th arg (Spark replace-length).
 
-- `column.rs` — **X3 + octo X3 C4:** `PyColumn.make_struct(fields)` → DataFusion
+- `column/` — [column/map.md](column/map.md). **X3 + octo X3 C4:** `PyColumn.make_struct(fields)` → DataFusion
   `named_struct(lit(name), expr, …)` extracting outer Alias names so Spark field names
   are preserved (bare `struct(args…)` always emits `c0`/`c1`).
-- `column.rs` — `PyColumn.call_scalar` (R-FN-BATCH1/2 DataFusion expr_fn dispatch) +
+- `column/mod.rs` — `PyColumn.call_scalar` (R-FN-BATCH1/2 DataFusion expr_fn dispatch) +
   Q1 `approx_percentile_cont`. **TZ-8:** `to_date` embeds `repark_functions::expr_fn::to_date`
   (session-zone Date32), not DataFusion's built-in.
 
@@ -132,7 +133,7 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   repark-stream re-entry cannot process-abort (octo C1-SAF-001).
 - `fence.rs` — the shared **SAF-007 panic fence** over the PyO3 boundary. `fence(op, || PyResult<T>)`
   (+ the `fenced!("Type.method", { … })` macro) wraps EVERY `#[pymethods]` body across `session.rs`,
-  `dataframe.rs`, and `column.rs`. **OBS1:** hang-localizing families use `fenced_span!(family, op, …)`
+  `dataframe.rs`, and `column/mod.rs`. **OBS1:** hang-localizing families use `fenced_span!(family, op, …)`
   → `py.entry` span (`family` + `operation` static labels only — never user secrets). Families:
   `py.session`/`py.sql`/`py.read`/`py.action`/`py.catalog` (incl. `table_exists` /
   `list_temp_view_names` / `list_df_schema_table_names`). Column plan-builders stay plain `fenced!`.
@@ -244,7 +245,7 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   `check_signals` between batches was evaluated and **not shipped** (would launder
   `KeyboardInterrupt` → `ArrowError` → facade `PySparkException`). Rationale lives in the rustdoc
   on `StreamingBatchReader` (v1's `task/pg2-pg-runtime-ledger.md` has no counterpart here).
-- `column.rs` — `PyColumn`: wraps a DataFusion `Expr` (`from_py_object`-opt-in so it extracts by
+- `column/mod.rs` — `PyColumn`: wraps a DataFusion `Expr` (`from_py_object`-opt-in so it extracts by
   value as a method arg). Constructors `column`/`literal`/`sql` (**G15:** `sql` calls
   `repark_spark::refuse_collation_in_sql` so `F.expr("… COLLATE …")` refuses at parse altitude)
   + `coalesce`/`concat`/
@@ -321,10 +322,10 @@ import smoke; `PYO3_PYTHON` set via `.cargo/config.toml`. Escalate to: [../map.m
 ## DF 54.1 note (2026-08-01)
 as_any trait methods removed (DF54 trait upcasting); Cast uses field-aware API where touched.
 
-<!-- 2026-08-02: r16 combine rider — doc-markdown backtick fix in column.rs struct doc -->
+<!-- 2026-08-02: r16 combine rider — doc-markdown backtick fix in column/mod.rs struct doc -->
 
 <!-- 2026-08-04 (r24 combine rider): PyO3 note_local_write_root passthrough for the SEC-02
   typed-writer narrowing (internal; not a PySpark surface). -->
-- r25 morning critic fix: `collapse_identity_alias_chain` (column.rs) preserves the outer
+- r25 morning critic fix: `collapse_identity_alias_chain` (column/expr_build.rs) preserves the outer
   Alias `relation` + field `metadata` and passes a lone Alias through untouched; pin
   `collapse_identity_alias_chain_preserves_qualifier_and_metadata`.
