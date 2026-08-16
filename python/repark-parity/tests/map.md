@@ -80,6 +80,10 @@ JVM, no repark required). See [../map.md](../map.md).
   a third direction is closed — every deferred id must resolve to a row of the recorded baseline
   JUnit XML *through `load_junit_report`*, the loader the facade cohort's `--junit` gate actually
   uses; the id-space mismatch that assertion catches made the ledger subtract nothing.
+- `test_ta_bench_conf.py` — **BH-1 (conductor-19):** default-conf `target_partitions`
+  contract for `bench/ta` (omit knob + emit `default`; isolation emits `1` +
+  `isolation=single_core`). Helper unit pins + AST scan of the six scripts.
+  No engine / numpy / native module.
 - `test_redact.py` — the battery for `compat/redact.py`, the recorded path-redaction transform.
   Its one hard property is that the artifact still parses afterwards, so the two regressions are
   explicit contrasts: a naive text substitution over a traceback-bearing census report emits an

@@ -2,9 +2,9 @@
 """§8.2 — many symbols x M bars: partitionBy vs Polars ``.over("symbol")``.
 
 Rows:
-  * RePark ``partitionBy("symbol").orderBy("ts")`` at
-    ``target_partitions ∈ {1, cores}``
-  * the **no-partitionBy** cliff (``Window.orderBy("ts")`` only)
+  * RePark ``partitionBy("symbol").orderBy("ts")`` at default conf (tp unset)
+    as the PRIMARY cell, plus an explicit ``target_partitions=1`` isolation cell
+  * the **no-partitionBy** cliff (``Window.orderBy("ts")`` only) at default conf
   * Polars ``plta.ema(...).over("symbol")`` vs the same expr with no ``.over``
 
 Usage::
@@ -18,6 +18,7 @@ import argparse
 from typing import Any
 
 import harness
+from target_partition_contract import emit_target_partition_fields, session_target_partitions
 
 
 def _repark_work(seed: object, *, partition: bool) -> object:
@@ -66,7 +67,6 @@ def main() -> None:
     if bars is None:
         bars = harness.QUICK_BARS_PER_SYMBOL if args.quick else harness.DEFAULT_BARS_PER_SYMBOL
     n_rows = n_symbols * bars
-    cores = harness.cpu_core_count()
     harness.emit_hardware(script="bench_many_symbols")
     seed = harness.many_symbols_polars(n_symbols, bars)
 
@@ -105,14 +105,15 @@ def main() -> None:
                 )
 
     if args.impl in ("all", "repark"):
-        for target_partitions, partition, shape in (
-            (1, True, "partition_by_symbol"),
-            (cores, True, "partition_by_symbol"),
-            (1, False, "no_partition_by_cliff"),
+        for isolation, partition, shape in (
+            (True, True, "partition_by_symbol"),
+            (False, True, "partition_by_symbol"),
+            (False, False, "no_partition_by_cliff"),
         ):
+            cell = "iso1" if isolation else "default"
             spark = harness.make_session(
-                app_name=f"bench-ta-many-symbols-p{target_partitions}-{shape}",
-                target_partitions=target_partitions,
+                app_name=f"bench-ta-many-symbols-{cell}-{shape}",
+                target_partitions=session_target_partitions(isolation=isolation),
             )
             try:
                 repark_seed = harness.seed_repark_frame(spark, seed)
@@ -142,7 +143,7 @@ def main() -> None:
                     n_symbols=n_symbols,
                     bars=bars,
                     n=n_rows,
-                    target_partitions=target_partitions,
+                    **emit_target_partition_fields(isolation=isolation),
                     warmup=warmup,
                     iterations=iterations,
                     median_s=median_s,

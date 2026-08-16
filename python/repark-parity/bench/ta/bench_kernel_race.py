@@ -19,6 +19,7 @@ import argparse
 from typing import Any
 
 import harness
+from target_partition_contract import emit_target_partition_fields
 
 
 def _repark_kernel_work(
@@ -128,10 +129,7 @@ def main() -> None:
                 )
 
     if args.impl in ("all", "repark"):
-        spark = harness.make_session(
-            app_name="bench-ta-kernel-race",
-            target_partitions=1,
-        )
+        spark = harness.make_session(app_name="bench-ta-kernel-race")
         try:
             repark_seed = harness.seed_repark_frame(spark, seed)
             for kernel in kernels:
@@ -167,7 +165,7 @@ def main() -> None:
                     impl="repark_engine",
                     kernel=kernel,
                     n=n_rows,
-                    target_partitions=1,
+                    **emit_target_partition_fields(isolation=False),
                     warmup=warmup,
                     iterations=iterations,
                     median_s=median_s,

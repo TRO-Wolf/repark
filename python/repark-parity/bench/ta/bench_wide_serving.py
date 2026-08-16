@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 
 import harness
+from target_partition_contract import emit_target_partition_fields
 
 
 def _fused_over_columns(seed: object) -> object:
@@ -114,10 +115,7 @@ def main() -> None:
     n_rows = harness.resolve_n_rows(args, full=harness.DEFAULT_N_ROWS, quick=harness.QUICK_N_ROWS)
     harness.emit_hardware(script="bench_wide_serving")
     seed = harness.one_symbol_polars(n_rows)
-    spark = harness.make_session(
-        app_name="bench-ta-wide-serving",
-        target_partitions=1,
-    )
+    spark = harness.make_session(app_name="bench-ta-wide-serving")
     workers = {
         "over_columns": _fused_over_columns,
         "with_indicators": _fused_with_indicators,
@@ -137,7 +135,7 @@ def main() -> None:
                 impl="repark_engine",
                 shape=shape,
                 n=n_rows,
-                target_partitions=1,
+                **emit_target_partition_fields(isolation=False),
                 warmup=warmup,
                 iterations=iterations,
                 median_s=median_s,
