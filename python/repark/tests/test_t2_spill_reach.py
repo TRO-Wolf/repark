@@ -158,9 +158,7 @@ def test_hash_join_is_pinned_as_resources_exhausted() -> None:
         "id", "md5(cast(id as string)) AS h", "repeat('x', 64) AS payload"
     ).createOrReplaceTempView("right_s")
     with pytest.raises(PySparkException) as raised:
-        spark.sql(
-            "SELECT l.id FROM left_s l JOIN right_s r ON l.h = r.h"
-        ).to_arrow()
+        spark.sql("SELECT l.id FROM left_s l JOIN right_s r ON l.h = r.h").to_arrow()
     message = str(raised.value)
     assert "Resources exhausted" in message, message
     assert "HashJoin" in message, message
@@ -174,8 +172,7 @@ def test_array_agg_spill_path_is_pinned_as_resources_exhausted() -> None:
     _register_series(spark, "series", 1_000_000)
     with pytest.raises(PySparkException) as raised:
         spark.sql(
-            "SELECT id % 2 AS g, array_agg(md5(cast(id AS string))) AS a "
-            "FROM series GROUP BY 1"
+            "SELECT id % 2 AS g, array_agg(md5(cast(id AS string))) AS a FROM series GROUP BY 1"
         ).to_arrow()
     message = str(raised.value)
     assert "Resources exhausted" in message, message

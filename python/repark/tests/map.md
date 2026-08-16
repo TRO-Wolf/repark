@@ -840,6 +840,7 @@ NOT in that file is a defect, not a decision.
   (`Resources exhausted` + `HashJoin` / `array_agg`; `fair(` required, `greedy(`
   forbidden). Runtime-SET pool-type pin. Grouping sets over `md5`; SMJ on `md5`
   (range is pre-sorted); hash_join/array_agg use a 16 MiB pool + payload.
+  ruff-format lockstep.
 - `test_describe_namespace.py` — Group Z: `DESCRIBE NAMESPACE [EXTENDED]` + the
   `DATABASE`/`SCHEMA`/`DESC` synonyms through the facade. Pins the Arrow schema (`info_name`
   NOT NULL / `info_value` nullable, both `string`) AND values from `to_arrow()`, the v2 row set
