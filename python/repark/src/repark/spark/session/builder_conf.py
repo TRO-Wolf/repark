@@ -105,10 +105,11 @@ class RuntimeConfig:
     **One truth for the memory pool (not two lying knobs):**
 
     * Build-time: ``repark.memory.limit.gb`` / ``SparkSession.builder.config(...)`` installs
-      the FairSpillPool (default **8 GiB**; ``0`` opts out / unbounded). Fixed at
-      ``getOrCreate`` — reuse does not re-size the pool from the builder.
-      ``spark.conf.set("repark.memory.limit.gb", …)`` at runtime **refuses loud** (would only
-      mutate the facade while the live pool stayed put).
+      the FairSpillPool (RAM-relative default ``clamp(0.6 * cgroup-or-MemTotal, 1 MiB,
+      8 GiB)``; ``0`` opts out / unbounded). ``sort_spill_reservation_bytes *
+      target_partitions`` is a non-spillable floor. Fixed at ``getOrCreate`` — reuse does
+      not re-size the pool from the builder. ``spark.conf.set("repark.memory.limit.gb", …)``
+      at runtime **refuses loud** (would only mutate the facade while the live pool stayed put).
     * Runtime: ``spark.conf.set("datafusion.runtime.memory_limit", "16G")`` (or SQL
       ``SET datafusion.runtime.memory_limit = '16G'``) swaps a **new FairSpillPool**
       of that size (DataFusion 54.1 has no in-place resize; in-flight reservations

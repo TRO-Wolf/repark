@@ -15,6 +15,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   Dual `repark.memory.limit.gb` + the DF key refuses. **R2:** runtime
   `SET datafusion.runtime.temp_directory` refuses loud (names `TMPDIR`); build-time key
   applies `RuntimeEnvBuilder::with_temp_file_path`. `max_temp_directory_size` residual.
+  **R3:** RAM-relative default `clamp(0.6 × cgroup-or-MemTotal, MIN, 8 GiB)` at `build()`
+  only; `builder_default_installs_eight_gib_fair_spill_pool` asserts Finite / floor / cap /
+  equals helper.
 - `aws_gate_tests.rs` — E-2 gate pins, AWS-free by construction: an offline session's finalize
   never resolves the AWS SDK chain (no IMDS probe); an S3-path read on a session that never
   resolved fails loud naming `register_configured_catalogs` and the `repark.aws.enable` opt-in;

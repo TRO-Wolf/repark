@@ -833,7 +833,7 @@ NOT in that file is a defect, not a decision.
   `fair(` and forbid `greedy(` (A3: those were false-green under DF's greedy SET).
   **S-1 R2:** runtime `temp_directory` `conf.set` / SQL `SET` refuse loud (names
   `TMPDIR`, no store-only twin); builder key creates a `datafusion-*` DiskManager
-  workdir.
+  workdir. **S-1 R3:** module docstring default is RAM-relative (cap 8 GiB).
 - `test_t2_spill_reach.py` — **S-1:** recon §3 battery. Small FairSpillPool (64 MiB SET,
   2 partitions): sort / hash_agg / distinct / grouping_sets / SMJ assert
   `EXPLAIN ANALYZE` `spill_count > 0`. hash_join + `array_agg` pinned AS failures

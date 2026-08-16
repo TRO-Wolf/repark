@@ -30,6 +30,7 @@ r26 T1 package-split the former monolith; **r27 T0** made the region split real
   `task/w4-z-residuals-ledger.md`.
   **TZ-4 PR-2:** collect converts tz-aware timestamps to a naive session-zone wall
   (`_arrow_cell_to_spark_python` + `_arrow_type_needs_spark_python_convert`).
+  **S-1 R3:** OOM suffix — RAM-relative default, cap 8 GiB (net-zero rewrite).
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).

@@ -66,7 +66,9 @@ mod spill;
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
 #[cfg(test)]
-pub(crate) use spill::{DEFAULT_MEMORY_LIMIT_BYTES, MIN_MEMORY_LIMIT_BYTES};
+pub(crate) use spill::{
+    DEFAULT_MEMORY_LIMIT_BYTES, MIN_MEMORY_LIMIT_BYTES, default_memory_limit_bytes,
+};
 
 /// ===========================================================================================
 /// Iceberg reader time-travel options (Spark `snapshot-id` / `as-of-timestamp` / `branch` / `tag`).
@@ -191,9 +193,11 @@ pub const AWS_ENABLE_CONFIG_KEY: &str = "repark.aws.enable";
 /// ===========================================================================================
 /// Builder for a [`ReparkSession`] — the PySpark `SparkSession.builder` analogue.
 ///
-/// Every knob is optional. When `memory_limit_*` is **unset**, [`build`](Self::build) installs an
-/// 8 GiB [`datafusion::execution::memory_pool::FairSpillPool`] that bounds **spillable operators
-/// only** (sort / hash-aggregate / join reservations that ask the pool — C1-Q-002). Expression
+/// Every knob is optional. When `memory_limit_*` is **unset**, [`build`](Self::build) installs a
+/// RAM-relative [`datafusion::execution::memory_pool::FairSpillPool`]
+/// (`clamp(0.6 × cgroup-or-MemTotal, 1 MiB, 8 GiB)`) that bounds **spillable operators only**
+/// (sort / hash-aggregate / join reservations that ask the pool — C1-Q-002).
+/// `sort_spill_reservation_bytes × target_partitions` is a non-spillable floor. Expression
 /// evaluation allocates Arrow buffers outside the pool, so RSS can still exceed the budget (or
 /// the process can abort on allocation failure) for large `array_repeat` / `repeat` / `sequence`
 /// / `collect_list` results. Plan-time cardinality ceilings (`repark.sql.maxArrayElements`,
@@ -279,7 +283,7 @@ impl ReparkSessionBuilder {
 
     /// Cap engine memory at `gb` gigabytes via a `FairSpillPool` (spills instead of running out).
     ///
-    /// Overrides the default 8 GiB budget applied when memory is left unset. Pass `0` (via
+    /// Overrides the RAM-relative default (cap 8 GiB) applied when memory is left unset. Pass `0` (via
     /// [`Self::memory_limit_bytes`]) to opt out of a bounded pool entirely.
     ///
     /// Whole-GB budgets can never trip the `MIN_MEMORY_LIMIT_BYTES` floor: the smallest non-zero
@@ -295,7 +299,7 @@ impl ReparkSessionBuilder {
 
     /// Cap engine memory at an explicit byte budget.
     ///
-    /// Overrides the default 8 GiB budget. Pass `0` to opt out and keep DataFusion's unbounded
+    /// Overrides the RAM-relative default (cap 8 GiB). Pass `0` to opt out and keep DataFusion's unbounded
     /// memory pool (no `FairSpillPool`).
     #[must_use]
     pub fn memory_limit_bytes(mut self, bytes: usize) -> Self {
@@ -439,7 +443,7 @@ impl ReparkSessionBuilder {
             .map_err(engine_err)?;
 
         let mut runtime = RuntimeEnvBuilder::new();
-        // FairSpillPool when set; explicit 0 / `'0'` opts out (unbounded). Default 8 GiB.
+        // FairSpillPool when set; explicit 0 / `'0'` opts out (unbounded). RAM-relative default.
         runtime = spill::with_memory_pool(runtime, pool_bytes);
         runtime = spill::with_temp_directory(runtime, &self.config)?;
         // DataFusion caches directory listings by path on the RuntimeEnv object-list cache.

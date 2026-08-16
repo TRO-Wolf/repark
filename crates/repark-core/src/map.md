@@ -24,10 +24,10 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   an `Error::Config`, never silently inert — this is what makes
   `datafusion.catalog.information_schema = true` real and Q8's `SHOW TABLES` / `DESCRIBE` /
   `information_schema.*` live in BOTH SQL doors), installs a
-  default 8 GiB `FairSpillPool` when memory is unset (`memory_limit_bytes(0)` /
-  `memory_limit_gb(0)` opt out to Infinite; non-zero budgets below 1 MiB refuse at build;
-  runtime `SET datafusion.runtime.memory_limit` swaps a new FairSpillPool — see
-  `session/spill.rs`;
+  RAM-relative `FairSpillPool` when memory is unset (`clamp(0.6 × cgroup-or-MemTotal,
+  1 MiB, 8 GiB)`; `memory_limit_bytes(0)` / `memory_limit_gb(0)` opt out to Infinite;
+  non-zero budgets below 1 MiB refuse at build; runtime `SET datafusion.runtime.memory_limit`
+  swaps a new FairSpillPool — see `session/spill.rs`;
   `batch_size(0)` / `target_partitions(0)` refuse at build), attaches the write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,
   `with_scan_concurrency`, `with_write_concurrency`), and builds `RuntimeEnv` with

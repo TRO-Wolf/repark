@@ -2,7 +2,7 @@
 
 Measure-first diagnosis (hour-0, synthetic OHLCV + 17 float cols, no AWS):
 
-* Default pool is FairSpillPool **8 GiB** (``repark.memory.limit.gb`` unset).
+* Default pool is FairSpillPool, RAM-relative (``clamp(0.6 * detected, 1 MiB, 8 GiB)``).
 * Under ``repark.memory.limit.gb=1``, a 2M-row x ~23-col reverse sort fails with
   DataFusion pool-pressure class text (``Resources exhausted`` / ``not enough
   memory``; operator may be ExternalSorter *or* SortPreservingMergeExec) naming

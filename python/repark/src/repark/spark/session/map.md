@@ -18,6 +18,9 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   `FairSpillPool` (same pool type as the builder; one truth, not two knobs).
   **S-1 R2:** `datafusion.runtime.temp_directory` is build-time; runtime SET refuses
   and names `TMPDIR`.
+  **S-1 R3:** RAM-relative FairSpillPool default (cap 8 GiB); documents the
+  `sort_spill_reservation_bytes × target_partitions` floor. `_funcs.py` one-truth
+  strings flipped in lockstep.
 - `session_core.py` — ReparkSession (sql/catalog methods stay here).
   **G15:** `Builder._set_config_entry` refuses collation `SQLConf` keys (silent-ignore path).
   getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted

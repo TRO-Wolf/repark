@@ -27,18 +27,78 @@ pub(crate) const BYTES_PER_GB: usize = 1024 * 1024 * 1024;
 /// without a clean config error (audit SAF-007 / 2026-07-25).
 pub(crate) const MIN_MEMORY_LIMIT_BYTES: usize = 1024 * 1024;
 
-/// Default `FairSpillPool` budget when the builder leaves memory unset (C1-Q-002 / C1-L-005).
+/// Cap of the RAM-relative default `FairSpillPool` (and the historical 8 GiB constant).
 ///
-/// Unbounded DataFusion defaults OOM on large sorts/aggregations/MERGE; 8 GiB is a conservative
-/// single-node ceiling that still spills rather than hard-failing. Override with
-/// [`crate::ReparkSessionBuilder::memory_limit_gb`] /
-/// [`crate::ReparkSessionBuilder::memory_limit_bytes`]; pass `memory_limit_bytes(0)` to opt out
-/// and keep DataFusion's unbounded pool.
+/// The live default is [`default_memory_limit_bytes`]:
+/// `clamp(0.6 × detected, MIN_MEMORY_LIMIT_BYTES, DEFAULT_MEMORY_LIMIT_BYTES)` where
+/// `detected` is cgroup `memory.max` (if present and not `max`) else `/proc/meminfo`
+/// `MemTotal`. Read **only** at `build()` (ADR-0004: never at query time). Explicit
+/// builder / `SET` wins; `0` stays unbounded.
 ///
 /// `sort_spill_reservation_bytes × target_partitions` is a **non-spillable** floor claimed
 /// per partition by `ExternalSorterMerge` before a row is sorted. At shipped defaults that
 /// floor scales with host cores (10 MiB × cores).
 pub(crate) const DEFAULT_MEMORY_LIMIT_BYTES: usize = 8 * BYTES_PER_GB;
+
+/// ===========================================================================================
+/// RAM-relative default pool: `clamp(0.6 × detected, MIN, 8 GiB)`. Host read at `build()` only.
+/// ===========================================================================================
+pub(crate) fn default_memory_limit_bytes() -> usize {
+    clamp_default_memory_limit_bytes(detect_host_memory_bytes())
+}
+
+/// ===========================================================================================
+/// Pure clamp used by [`default_memory_limit_bytes`] (and tests with fixture detections).
+/// ===========================================================================================
+pub(crate) fn clamp_default_memory_limit_bytes(detected: Option<usize>) -> usize {
+    let Some(detected) = detected else {
+        return DEFAULT_MEMORY_LIMIT_BYTES;
+    };
+    let sixty_percent = detected.saturating_mul(3) / 5;
+    sixty_percent.clamp(MIN_MEMORY_LIMIT_BYTES, DEFAULT_MEMORY_LIMIT_BYTES)
+}
+
+/// ===========================================================================================
+/// Parse cgroup v2 `memory.max` (`max` / empty → `None`).
+/// ===========================================================================================
+pub(crate) fn parse_cgroup_memory_max(text: &str) -> Option<usize> {
+    let trimmed = text.trim();
+    if trimmed.is_empty() || trimmed.eq_ignore_ascii_case("max") {
+        return None;
+    }
+    trimmed
+        .parse::<u128>()
+        .ok()
+        .and_then(|bytes| usize::try_from(bytes).ok())
+}
+
+/// ===========================================================================================
+/// Parse `/proc/meminfo` `MemTotal` (kB) into bytes.
+/// ===========================================================================================
+pub(crate) fn parse_meminfo_mem_total(text: &str) -> Option<usize> {
+    for line in text.lines() {
+        let line = line.trim();
+        let Some(rest) = line.strip_prefix("MemTotal:") else {
+            continue;
+        };
+        let number = rest.split_whitespace().next()?;
+        let kib: u128 = number.parse().ok()?;
+        return usize::try_from(kib.saturating_mul(1024)).ok();
+    }
+    None
+}
+
+fn detect_host_memory_bytes() -> Option<usize> {
+    if let Ok(text) = std::fs::read_to_string("/sys/fs/cgroup/memory.max")
+        && let Some(bytes) = parse_cgroup_memory_max(&text)
+    {
+        return Some(bytes);
+    }
+    if let Ok(text) = std::fs::read_to_string("/proc/meminfo") {
+        return parse_meminfo_mem_total(&text);
+    }
+    None
+}
 
 /// Canonical runtime / builder pseudo-key for the live `FairSpillPool` size.
 pub(crate) const MEMORY_LIMIT_KEY: &str = "datafusion.runtime.memory_limit";
@@ -127,7 +187,7 @@ pub(crate) fn resolve_build_time_pool_bytes(
                 let bytes = parse_memory_limit_value(value)?;
                 if bytes == 0 { None } else { Some(bytes) }
             }
-            None => Some(DEFAULT_MEMORY_LIMIT_BYTES),
+            None => Some(default_memory_limit_bytes()),
         },
     };
     if let Some(bytes) = resolved
@@ -161,8 +221,8 @@ pub(crate) fn refuse_dual_memory_knobs(
         return Err(Error::Config(format!(
             "both 'repark.memory.limit.gb' and '{MEMORY_LIMIT_KEY}' are set. \
              They configure the same FairSpillPool — use exactly one: \
-             repark.memory.limit.gb / memory_limit_gb at build (default 8 GiB; \
-             0 = unbounded), or {MEMORY_LIMIT_KEY} via builder / SQL SET \
+             repark.memory.limit.gb / memory_limit_gb at build (RAM-relative default, \
+             cap 8 GiB; 0 = unbounded), or {MEMORY_LIMIT_KEY} via builder / SQL SET \
              (same pool, one truth, not two knobs)"
         )));
     }
@@ -387,6 +447,43 @@ mod spill_unit_tests {
         let other = parse_set_assignment("SET datafusion.execution.batch_size = '4096'")
             .expect("still a SET");
         assert_eq!(other.0, "datafusion.execution.batch_size");
+    }
+
+    #[test]
+    fn parse_cgroup_and_meminfo_fixtures() {
+        assert_eq!(parse_cgroup_memory_max("max"), None);
+        assert_eq!(parse_cgroup_memory_max("MAX\n"), None);
+        assert_eq!(parse_cgroup_memory_max(""), None);
+        assert_eq!(
+            parse_cgroup_memory_max("1073741824\n"),
+            Some(1024 * 1024 * 1024)
+        );
+        assert_eq!(
+            parse_meminfo_mem_total("MemTotal:       1048576 kB\nMemFree: 1 kB\n"),
+            Some(1024 * 1024 * 1024)
+        );
+        assert_eq!(parse_meminfo_mem_total("MemFree: 1 kB\n"), None);
+    }
+
+    #[test]
+    fn clamp_default_is_sixty_percent_between_floor_and_eight_gib() {
+        assert_eq!(
+            clamp_default_memory_limit_bytes(None),
+            DEFAULT_MEMORY_LIMIT_BYTES
+        );
+        let four_gib = 4 * BYTES_PER_GB;
+        assert_eq!(
+            clamp_default_memory_limit_bytes(Some(four_gib)),
+            four_gib * 3 / 5
+        );
+        assert_eq!(
+            clamp_default_memory_limit_bytes(Some(100 * BYTES_PER_GB)),
+            DEFAULT_MEMORY_LIMIT_BYTES
+        );
+        assert_eq!(
+            clamp_default_memory_limit_bytes(Some(MIN_MEMORY_LIMIT_BYTES)),
+            MIN_MEMORY_LIMIT_BYTES
+        );
     }
 
     #[test]

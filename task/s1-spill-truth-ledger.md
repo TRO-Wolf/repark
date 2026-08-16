@@ -15,9 +15,16 @@ PROJECT / ARCHITECTURE / `Cargo.lock` / `[patch]` CLOSED.
 |---|---|---|
 | R1 FairSpillPool SET | A3 fallback (swap, not resize) | **SHIPPED** in this commit |
 | R2 temp_directory | refuse-loud + build-time wire | **SHIPPED** in the R2 commit |
-| R3 RAM-relative default | `clamp(0.6 × detected, MIN, 8 GiB)` | follow commit on this branch |
+| R3 RAM-relative default | `clamp(0.6 × detected, MIN, 8 GiB)` | **SHIPPED** in the R3 commit |
 | `max_temp_directory_size` | residual | unless it fits with no ceiling drama |
 | in-place FairSpillPool resize | DF 54.1 has no seam | documented; swap is the path |
+
+## Files (R3)
+
+- `session/spill.rs` — `default_memory_limit_bytes` / cgroup+MemTotal parse / clamp
+- `session.rs` + `session/tests.rs` — default pin flipped to Finite / floor / cap / helper
+- `builder_conf.py` / `_funcs.py` / `dataframe/core.py` — 8 GiB default prose → RAM-relative
+- maps + this ledger
 
 ## Files (R2)
 
