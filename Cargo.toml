@@ -27,7 +27,7 @@ members = [
 
 [workspace.package]
 edition = "2024"
-version = "0.3.1"
+version = "0.3.2"
 license = "Apache-2.0"
 rust-version = "1.96"
 repository = "https://github.com/TRO-Wolf/repark"
