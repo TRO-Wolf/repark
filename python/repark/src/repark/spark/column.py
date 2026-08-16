@@ -1587,3 +1587,25 @@ def _require_allowlisted_spark_cast_token(spark_type: str) -> str:
     if _SPARK_DECIMAL_CAST_TOKEN_RE.fullmatch(spark_type) is not None:
         return spark_type
     raise ValueError(f"unknown cast type {spark_type!r}")
+
+
+def _bound_generator_array(frame: Any, generator: Column) -> Any:
+    """Native array expr for generator mid-project, schema-quoted when the source is a name.
+
+    String-form ``explode`` / ``explode_outer`` build an unquoted DataFusion column
+    reference. Unquoted idents fold to lowercase, so a createDataFrame field ``Legs``
+    fails as ``legs``. The generator already carries the source as a single-ident
+    ``sql_expr``; rebind that name through the frame schema (same as ``select("Legs")``).
+    Compound expressions and unresolved names keep ``generator._inner`` unchanged
+    so missing-column errors stay engine-shaped.
+    """
+    from repark.spark.dataframe.core import _sql_ident_bare_name
+
+    fragment = generator.sql_expr_without_alias()
+    name = _sql_ident_bare_name(fragment)
+    if name is None:
+        return generator._inner
+    try:
+        return frame._bind_schema_column(name)._inner
+    except AnalysisException:
+        return generator._inner

@@ -98,6 +98,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `tests/test_a3_secrets_redaction.py`.
   **G15:** `cast` / `try_cast` refuse a non-binary `StringType` / `string collate NAME`
   token at first evaluation (not construction). Pins: `tests/test_collation_refuse.py`.
+  **U-DF-1:** `_bound_generator_array` rebinds a single-ident explode source through
+  the frame schema at select mid-project (unquoted native `col` folds case). Pins:
+  `tests/test_explode_rewrite.py`, `tests/test_dynamic_flatten.py`.
 - `functions.py` — **r24 A3 octo C1-Q-001:** `posexplode` STOP message has no embedded
   DataFusion major (was stale "52.x" while pin is 54.1); pin in `test_explode_rewrite`.
   **G15:** `collate` / `collation` are **not** stubbed — absence is already `AttributeError`
@@ -119,6 +122,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   empty guards use top-level `array_length` (not multi-dim `cardinality`).
   octo c7: `_date_fn`/date_* + `.dt` refuse generators; Window.partitionBy/orderBy
   refuse; cube/rollup/groupingSets + `_agg_via_sql_group` refuse (parity with groupBy/agg).
+  **U-DF-1:** `_select_with_generator` mid-project uses `_bound_generator_array`
+  so string-form / `F.col` explode of mixed-case createDataFrame fields (`Legs`)
+  resolve; Column-form `df['Legs']` and compound inners unchanged.
   **combine octo C1:** `_select_with_generator` mid-projects via `_plan()` (not raw
   `_inner`) so mapInArrowxexplode/withColumn(explode) materializes the UDF bridge;
   sticky-aggregate classification runs *before* the generator short-circuit so

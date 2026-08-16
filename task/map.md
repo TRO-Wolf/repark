@@ -16,6 +16,11 @@ not this directory.
   workstream (DS-1..DS-4, DS-5 rider if needed). Generators under
   `python/repark-parity/datasets/`; data stays in the cache root. Single ledger, appended
   per increment.
+- [c17-explode-case-ledger.md](c17-explode-case-ledger.md) — **U-DF-1
+  (2026-08-16):** string-form `explode` / `explode_outer` (and
+  `dynamicFlatten` list pass) rebind a single-ident source through the
+  frame schema so createDataFrame mixed-case fields (`Legs`) resolve.
+  Helper `_bound_generator_array` in `column.py`; `core.py` net-zero.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,
@@ -449,6 +454,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
+| Read the U-DF-1 explode mixed-case bind | [c17-explode-case-ledger.md](c17-explode-case-ledger.md) |
 | Read the T5 rsi/sma iterator-form rewrite | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) |
 | Read the P-1 criterion TA kernel baseline | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) |
 | Read the M14 rejected-commit abort cleanup | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) |
