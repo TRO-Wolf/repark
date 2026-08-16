@@ -65,6 +65,7 @@ use uuid::Uuid;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_with_concurrency};
 use crate::write::name_resolution::{CaseInsensitiveColumnIndex, SourceMatch};
+use crate::write::store_assign::refuse_unless_write_store_assignable;
 use crate::write::writer_props::writer_properties_for;
 
 /// ===========================================================================================
@@ -134,7 +135,11 @@ fn reject_unsupported_append(table: &Table) -> Result<()> {
 /// (`spark.sql.caseSensitive=false`; `TableOutputResolver.reorderColumnsByName`). A target with
 /// no source column, an extra source column matching no target, OR two source columns colliding
 /// on one target (case-differing or an exact duplicate) is a loud error naming the column(s);
-/// values are strictly cast to the target Arrow types (overflow errors instead of silent NULLs),
+/// every resolved `(source, target)` pair is gated through the ANSI store-assignment matrix
+/// ([`crate::write::store_assign`], WI-1) BEFORE any cast runs, so a Spark-illegal pair
+/// (`date→int`, `boolean→int`, `timestamp→bigint`, `string→numeric`) refuses instead of
+/// committing a reinterpreted value; the legal ones are strictly cast to the target Arrow types
+/// (overflow errors instead of silent NULLs),
 /// and batch construction enforces nullability (a NULL in a required column fails loudly).
 /// Validation runs on EVERY batch — including zero-row ones — before the zero-row batches are
 /// dropped, so an empty-but-malformed batch cannot slip through.
@@ -151,7 +156,8 @@ fn conform_batches(write_schema: &SchemaRef, batches: &[RecordBatch]) -> Result<
 /// Conform ONE consumer batch to the write schema (the per-batch body of [`conform_batches`],
 /// extracted so the streaming partitioned write can conform each batch as it arrives instead of
 /// after a full collect). Same contract: case-insensitive by-name resolution
-/// (missing/extra/ambiguous = loud error), strict casts (overflow errors, never NULLs),
+/// (missing/extra/ambiguous = loud error), ANSI store-assignment gate then strict casts
+/// (overflow errors, never NULLs),
 /// nullability enforced by construction. Zero-row batches are conformed and validated too (an
 /// empty-but-malformed batch cannot slip through); the caller drops empties after conforming.
 fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<RecordBatch> {
@@ -169,6 +175,16 @@ fn conform_batch(write_schema: &SchemaRef, batch: &RecordBatch) -> Result<Record
         .map(|field| match source_index.resolve(field.name()) {
             SourceMatch::Unique(index) => {
                 consumed[index] = true;
+                // WI-1: ANSI store assignment BEFORE the kernel. `cast_with_options` happily
+                // reinterprets a Date32 as days-since-epoch into an Int32 column — a durable
+                // silently-wrong value in a committed data file. Spark refuses the same pair at
+                // analysis (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`).
+                refuse_unless_write_store_assignable(
+                    "append",
+                    field.name(),
+                    batch.column(index).data_type(),
+                    field.data_type(),
+                )?;
                 Ok(cast_with_options(
                     batch.column(index),
                     field.data_type(),

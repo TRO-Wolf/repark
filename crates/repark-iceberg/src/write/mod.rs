@@ -44,6 +44,9 @@ pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (I5 CREATE/DROP BRANCH|TAG) + test-support seam.
 pub mod snapshot_refs;
+/// The ANSI store-assignment matrix (`Cast.canANSIStoreAssign`) — ONE home for MERGE and the
+/// non-MERGE insert/append lowerings (WI-1 hoist out of `merge/insert.rs`).
+pub(crate) mod store_assign;
 /// Test-support-only snapshot-ref helpers (`_testing_create_ref`). Product SQL routes via
 /// [`snapshot_refs`]; this seam stays for existing fixtures (I1 / I5).
 pub mod testing_support;
