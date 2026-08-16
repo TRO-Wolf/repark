@@ -28,6 +28,7 @@ mod read_options;
 mod runtime;
 mod session;
 mod session_time_zone;
+mod sorted_view;
 mod time_travel;
 
 // --- The Session surface (v1 names, courtesy `Session` alias). ---

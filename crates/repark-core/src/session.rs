@@ -1171,6 +1171,53 @@ impl ReparkSession {
         self.replace_view(name, Arc::new(table))
     }
 
+    /// Declare an in-memory temp view as pre-sorted by `keys` (engine field names), so the
+    /// re-registered [`MemTable`] advertises the ordering and DataFusion elides redundant
+    /// `SortExec`s (SE-1). The claim is ALWAYS verified (O(n) adjacent-pair pass, ASC NULLS
+    /// LAST) before anything is replaced — a wrong claim refuses loudly and the original
+    /// registration stays untouched.
+    ///
+    /// # Errors
+    /// [`Error::Analysis`] for an unknown view, a non-in-memory provider, an unknown key,
+    /// empty keys, or data that is not sorted as declared; [`Error::DataFusion`] for
+    /// engine-level scan/registration failures.
+    pub async fn declare_temp_view_sorted(&self, name: &str, keys: &[String]) -> Result<()> {
+        if keys.is_empty() {
+            return Err(Error::Analysis(
+                "declared-sorted view: at least one key column is required".to_string(),
+            ));
+        }
+        let provider = self.context().table_provider(name).await.map_err(|_| {
+            Error::Analysis(format!("declared-sorted view: no temp view named '{name}'"))
+        })?;
+        let provider_any: &dyn std::any::Any = provider.as_ref();
+        if provider_any.downcast_ref::<MemTable>().is_none() {
+            return Err(Error::Analysis(format!(
+                "declared-sorted view: '{name}' is not an in-memory frame — sortedness \
+                 declarations support createDataFrame/cache views only"
+            )));
+        }
+        let schema = provider.schema();
+        let batches = self
+            .context()
+            .table(name)
+            .await
+            .map_err(engine_err)?
+            .collect()
+            .await
+            .map_err(engine_err)?;
+        crate::sorted_view::verify_batches_sorted(&schema, &batches, keys)?;
+        let partitions = if batches.is_empty() {
+            vec![vec![]]
+        } else {
+            vec![batches]
+        };
+        let table = MemTable::try_new(schema, partitions)
+            .map_err(engine_err)?
+            .with_sort_order(crate::sorted_view::declared_sort_order(keys));
+        self.replace_view(name, Arc::new(table))
+    }
+
     /// The shared "create OR REPLACE" registration: `register_table` errors on a name clash, so
     /// drop any existing view first (a no-op returning `Ok(None)` when absent).
     fn replace_view(
