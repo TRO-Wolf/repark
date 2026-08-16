@@ -1,7 +1,7 @@
 //! Volatility — `TRANGE`, `ATR` (TA-Lib C 0.4.0 ports; see the crate docs for the numerics
 //! contract).
 
-use crate::{Result, as_f64, check_lengths, check_period, is_zero, nan_vec, true_range};
+use crate::{Result, as_f64, check_lengths, check_period, is_zero, true_range};
 
 /// ===========================================================================================
 /// `TRANGE` — true range (`ta_TRANGE.c`).
@@ -15,10 +15,19 @@ use crate::{Result, as_f64, check_lengths, check_period, is_zero, nan_vec, true_
 pub fn trange(high: &[f64], low: &[f64], close: &[f64]) -> Result<Vec<f64>> {
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
-    let mut out = nan_vec(len);
-    for today in 1..len {
-        out[today] = true_range(high[today], low[today], close[today - 1]);
+    // Single-write construction (the `overlap::ema` pattern): one NaN via resize, then the
+    // per-bar TRUE_RANGE streamed through a TrustedLen extend — one write per slot, never a
+    // push loop. Arithmetic and bar order are unchanged.
+    let mut out = Vec::with_capacity(len);
+    if len == 0 {
+        return Ok(out);
     }
+    out.resize(1, f64::NAN);
+    out.extend(high[1..].iter().zip(&low[1..]).zip(&close[..len - 1]).map(
+        |((today_high, today_low), yesterday_close)| {
+            true_range(*today_high, *today_low, *yesterday_close)
+        },
+    ));
     Ok(out)
 }
 
@@ -40,8 +49,12 @@ pub fn atr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     }
     let tr = trange(high, low, close)?;
     let len = tr.len();
-    let mut out = nan_vec(len);
+    // Single-write construction (the `overlap::ema` pattern): NaN lookback prefix via resize,
+    // then the Wilder recursion streamed through a TrustedLen extend. The three-statement
+    // Wilder order (`*=`, `+=`, `/=`) is unchanged — construction only.
+    let mut out = Vec::with_capacity(len);
     if len < period + 1 {
+        out.resize(len, f64::NAN);
         return Ok(out);
     }
     // Seed: TA_INT_SMA over the first `period` true ranges (tr[1..=period]).
@@ -50,13 +63,14 @@ pub fn atr(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
         period_total += *value;
     }
     let mut prev_atr = period_total / as_f64(period);
-    out[period] = prev_atr;
-    for i in (period + 1)..len {
+    out.resize(period, f64::NAN);
+    out.push(prev_atr);
+    out.extend(tr[(period + 1)..].iter().map(|value| {
         prev_atr *= as_f64(period - 1);
-        prev_atr += tr[i];
+        prev_atr += *value;
         prev_atr /= as_f64(period);
-        out[i] = prev_atr;
-    }
+        prev_atr
+    }));
     Ok(out)
 }
 

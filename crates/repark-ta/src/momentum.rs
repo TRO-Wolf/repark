@@ -441,6 +441,9 @@ pub fn adx(high: &[f64], low: &[f64], close: &[f64], period: usize) -> Result<Ve
     check_period("optInTimePeriod", period, 2)?;
     check_lengths(high.len(), &[low.len(), close.len()])?;
     let len = high.len();
+    // Keeps `nan_vec`: the `ema` single-write extend form was MEASURED at +42% on `adx_n1e6`
+    // (n=1e6) — the `DirectionalState` carried through the closure defeats the optimization.
+    // The same shape applies to `dx` / the `directional_*` helpers. Do not "modernize" these.
     let mut out = nan_vec(len);
     let lookback = 2 * period - 1;
     if len < lookback + 1 {
@@ -925,13 +928,15 @@ fn int_ema_dense(
         today += 1;
     }
     let mut prev = temp / as_f64(period);
+    // Single-write construction (the `overlap::ema` pattern): seed pushed once, then the
+    // recursion streamed through a TrustedLen extend instead of a push-per-element loop.
+    // `(x − prev)·k + prev` and its two roundings are unchanged — construction only.
     let mut out = Vec::with_capacity(end_idx - eff_start + 1);
     out.push(prev);
-    while today <= end_idx {
-        prev = ((input[today] - prev) * k) + prev;
-        out.push(prev);
-        today += 1;
-    }
+    out.extend(input[today..=end_idx].iter().map(|value| {
+        prev = ((value - prev) * k) + prev;
+        prev
+    }));
     out
 }
 
