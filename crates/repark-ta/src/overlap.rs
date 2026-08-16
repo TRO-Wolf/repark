@@ -28,11 +28,17 @@ pub fn sma(input: &[f64], period: usize) -> Result<Vec<f64>> {
     for value in &input[..lookback] {
         period_total += *value;
     }
-    for (trailing, i) in (lookback..len).enumerate() {
-        period_total += input[i];
+    let incoming = &input[lookback..len];
+    let trailing = &input[..len - lookback];
+    for ((output_slot, value), trailing_value) in out[lookback..len]
+        .iter_mut()
+        .zip(incoming.iter())
+        .zip(trailing.iter())
+    {
+        period_total += *value;
         let temp = period_total;
-        period_total -= input[trailing];
-        out[i] = temp / as_f64(period);
+        period_total -= *trailing_value;
+        *output_slot = temp / as_f64(period);
     }
     Ok(out)
 }

@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
+  (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
+  `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,
+  `f64::to_bits` bit-exact). Loop-form, not math. No `unsafe`.
 - [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) — **P-1
   (2026-08-15):** criterion kernel baseline for `repark-ta` (`ema`/`sma`/`rsi`/
   `bbands` + volume `ad`/`adosc`/`obv`/`mfi` at n=1e6; BBANDS cold / three-
@@ -387,6 +391,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) | **T5** conductor-15 iterator-form `rsi`/`sma` (bit-exact) |
 | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) | **P-1** criterion TA kernel baseline (measure-only) |
 | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) | **M14** rejected MERGE commit abort-deletes written files |
 | [bl4-update-store-assign-ledger.md](bl4-update-store-assign-ledger.md) | **BL-4** UPDATE SET ANSI store-assignment gate (shared INSERT matrix) |
@@ -422,6 +427,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
+| Read the T5 rsi/sma iterator-form rewrite | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) |
 | Read the P-1 criterion TA kernel baseline | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) |
 | Read the M14 rejected-commit abort cleanup | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) |
 | Read the BL-4 UPDATE SET store-assignment gate | [bl4-update-store-assign-ledger.md](bl4-update-store-assign-ledger.md) |
