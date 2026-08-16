@@ -14,8 +14,9 @@ declared in the root [`pyproject.toml`](../pyproject.toml), sharing one `uv.lock
   facade census cohort (`docs/design/python-facade.md` §6.3).
 - [repark-parity/](repark-parity/map.md) — the Spark-parity differential harness (pure-pyarrow
   comparison core, no Spark and no JVM), the `compat/` PySpark-suite census machinery **including
-  the report comparator that is the port's acceptance gate**, and `bench/` (TPC-H / TPC-DS / write
-  / fuzz measurement scripts). Landed in phase-3 PR-4.
+  the report comparator that is the port's acceptance gate**, `bench/` (TPC-H / TPC-DS / write
+  / fuzz measurement scripts), and `datasets/` (torture-dataset generators; cache-root
+  outputs). Landed in phase-3 PR-4; datasets arrive with conductor-18.
 
 ## I want to...
 

@@ -10,7 +10,9 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 
 - `pyproject.toml` — hatchling package; `pyarrow` dep; `record` extra (`pyspark`) for golden refresh.
 - `src/repark_parity/` — `compare.py` (the comparison core), `__init__.py`, `py.typed`.
-- `tests/` — unit tests for the comparison core.
+- `tests/` — unit tests for the comparison core **and the dataset generators**.
+- `datasets/` — torture-dataset generators (cache-root outputs, data never committed);
+  loaded as `repark_datasets`, not part of the hatch package; see [datasets/map.md](datasets/map.md).
 - `bench/` — local performance measurement scripts (R-PERF-MEASURE); see [bench/map.md](bench/map.md).
 - `compat/` — the Apache `pyspark.sql.tests` census harness (redirect seam + runner) **and the
   report comparator** that turns two census runs into the port's acceptance verdict; see
@@ -52,6 +54,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 | Run the PySpark-suite compatibility census | [compat/map.md](compat/map.md) / `python -m compat.runner --classic` |
 | Compare two census runs (the acceptance gate) | `python -m compat.compare_reports` / [../../docs/port/census.md](../../docs/port/census.md) |
 | Follow the recorded census procedure | [../../docs/port/census.md](../../docs/port/census.md) |
+| Generate / test torture datasets | [datasets/map.md](datasets/map.md) |
 
 ## Pointers
 
