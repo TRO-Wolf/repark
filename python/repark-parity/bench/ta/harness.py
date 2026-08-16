@@ -261,6 +261,8 @@ def make_session(
     """Build a fresh ``ReparkSession``. Caller must ``stop`` it.
 
     Engine knobs are fixed at build — do not reuse a session across a sweep.
+    ``target_partitions=None`` (the default) omits ``repark.target.partitions``
+    so DataFusion's ``num_cpus`` default plans the query — BH-1 primary cells.
     """
     from repark import ReparkSession
 

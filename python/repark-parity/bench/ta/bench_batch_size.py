@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""§8.4 — ``batch_size`` sweep, one symbol, ``target_partitions=1``.
+"""§8.4 — ``batch_size`` sweep, one symbol, single-core isolation.
 
-``evaluate_all`` concatenates every batch in the partition before the kernel.
-Default DataFusion ``batch_size`` is 8192; a 2M-bar symbol is then ~244
-batches. This sweep records wall time vs that knob.
+``target_partitions=1`` is deliberate isolation (not the default-conf primary).
+The sweep records wall time vs ``batch_size``. The measured lever is SortExec;
+WindowAggExec is batch-size-insensitive because ``evaluate_all`` already sees
+one concatenated partition.
 
 Usage::
 
@@ -15,6 +16,7 @@ from __future__ import annotations
 import argparse
 
 import harness
+from target_partition_contract import emit_target_partition_fields, session_target_partitions
 
 FULL_SWEEP = (1_024, 8_192, 65_536, 262_144, 2_097_152)
 QUICK_SWEEP = (1_024, 8_192, 65_536)
@@ -56,7 +58,7 @@ def main() -> None:
     for batch_size in sweep:
         spark = harness.make_session(
             app_name=f"bench-ta-batch-size-{batch_size}",
-            target_partitions=1,
+            target_partitions=session_target_partitions(isolation=True),
             batch_size=batch_size,
         )
         try:
@@ -78,7 +80,7 @@ def main() -> None:
                 impl="repark_engine",
                 kernel="ema21",
                 n=n_rows,
-                target_partitions=1,
+                **emit_target_partition_fields(isolation=True),
                 batch_size=batch_size,
                 warmup=warmup,
                 iterations=iterations,

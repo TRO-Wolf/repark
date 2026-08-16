@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 
 import harness
+from target_partition_contract import emit_target_partition_fields
 
 
 def _indicators(seed: object, *, last_row: bool) -> object:
@@ -57,10 +58,7 @@ def main() -> None:
     n_rows = n_symbols * bars
     harness.emit_hardware(script="bench_last_row")
     seed = harness.many_symbols_polars(n_symbols, bars)
-    spark = harness.make_session(
-        app_name="bench-ta-last-row",
-        target_partitions=1,
-    )
+    spark = harness.make_session(app_name="bench-ta-last-row")
     try:
         repark_seed = harness.seed_repark_frame(spark, seed)
         from repark.spark import ta
@@ -90,7 +88,7 @@ def main() -> None:
                 n_symbols=n_symbols,
                 bars=bars,
                 n=n_rows,
-                target_partitions=1,
+                **emit_target_partition_fields(isolation=False),
                 warmup=warmup,
                 iterations=iterations,
                 median_s=median_s,
@@ -123,7 +121,7 @@ def main() -> None:
                 n_symbols=n_symbols,
                 bars=bars,
                 n=n_rows,
-                target_partitions=1,
+                **emit_target_partition_fields(isolation=False),
                 warmup=warmup,
                 iterations=iterations,
                 median_s=median_s,

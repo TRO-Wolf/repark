@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 
 import harness
+from target_partition_contract import emit_target_partition_fields
 
 
 def _work(seed: object, *, null_lookback: bool) -> object:
@@ -40,10 +41,7 @@ def main() -> None:
     n_rows = harness.resolve_n_rows(args, full=harness.DEFAULT_N_ROWS, quick=harness.QUICK_N_ROWS)
     harness.emit_hardware(script="bench_null_lookback")
     seed = harness.one_symbol_polars(n_rows)
-    spark = harness.make_session(
-        app_name="bench-ta-null-lookback",
-        target_partitions=1,
-    )
+    spark = harness.make_session(app_name="bench-ta-null-lookback")
     try:
         repark_seed = harness.seed_repark_frame(spark, seed)
         from repark.spark import ta
@@ -68,7 +66,7 @@ def main() -> None:
                 shape=shape,
                 n_columns=10,
                 n=n_rows,
-                target_partitions=1,
+                **emit_target_partition_fields(isolation=False),
                 warmup=warmup,
                 iterations=iterations,
                 median_s=median_s,

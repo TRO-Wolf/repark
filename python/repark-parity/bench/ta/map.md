@@ -20,21 +20,26 @@ owned — not duplicated here.
 - `harness.py` — shared seeded generators (p1c walk, never wall clock in the
   seed), warm-up + N-iteration median, session / plan-shape helpers, one-line
   `TA_PIPELINE` emitter.
+- `target_partition_contract.py` — BH-1 emit/session tokens (`target_partitions=default`
+  vs `target_partitions=1` + `isolation=single_core`). No engine imports.
 - `bench_kernel_race.py` — §8.1: one symbol, n=1e6 (``--quick`` n=1e5): RePark
   `evaluate_all` vs `polars_talib` vs raw `repark_ta` (SKIP: no Python kernel
-  API; cite P-1 #132).
-- `bench_many_symbols.py` — §8.2: `partitionBy("symbol").orderBy("ts")` at
-  `target_partitions ∈ {1, cores}` vs Polars `.over("symbol")`; includes the
-  no-`partitionBy` cliff row.
+  API; cite P-1 #132). PRIMARY at default conf (tp unset).
+- `bench_many_symbols.py` — §8.2: `partitionBy("symbol").orderBy("ts")` PRIMARY
+  at default conf (tp unset); explicit `tp=1` isolation cell; no-`partitionBy`
+  cliff also at default conf. No explicit-cores cell (unset ≡ `num_cpus`).
 - `bench_wide_serving.py` — §8.3: 3×BBANDS + 3×MACD + 2×STOCH + EMA/RSI/ATR
   in one `over_columns` / `with_indicators`; stacked `filter` repeat;
   `WindowAggExec` count recorded next to wall time. Cites #116 for §8.6.
+  PRIMARY at default conf.
 - `bench_batch_size.py` — §8.4: `batch_size` sweep, one 2M-bar symbol
-  (`--quick` 200k), `target_partitions=1`.
+  (`--quick` 200k), `target_partitions=1` single-core isolation (not a
+  default-conf primary). SortExec is the measured lever.
 - `bench_null_lookback.py` — §8.5: `null_lookback=True` × 10 columns vs
-  default; `WindowAggExec` + window-fn token counts.
+  default; `WindowAggExec` + window-fn token counts. PRIMARY at default conf.
 - `bench_last_row.py` — §8.7: `with_indicators(last_row=True)` vs full-table
-  collect; Arrow (`to_arrow`) and Spark-Row (`collect`) sinks.
+  collect; Arrow (`to_arrow`) and Spark-Row (`collect`) sinks. PRIMARY at
+  default conf.
 - `map.md` — this file.
 
 ## I want to…
@@ -44,7 +49,7 @@ owned — not duplicated here.
 | Race kernels vs C TA-Lib (one symbol) | `bench_kernel_race.py` |
 | Measure the partitionBy / `.over` cliff | `bench_many_symbols.py` |
 | Time the wide serving SELECT + stacked filter | `bench_wide_serving.py` |
-| Sweep `batch_size` on a fat symbol | `bench_batch_size.py` |
+| Sweep `batch_size` on a fat symbol (tp=1 isolation) | `bench_batch_size.py` |
 | Cost of `null_lookback=True` × 10 | `bench_null_lookback.py` |
 | Last-row collect vs full table | `bench_last_row.py` |
 | Short path (n=1e5 / 200k) | add `--quick` to any script |
@@ -67,3 +72,9 @@ owned — not duplicated here.
 - Never add `polars_talib` (or any new dep) to `pyproject.toml` / `uv.lock`.
 - Deterministic seeds; `ts` is a bar index, never `time.time()`.
 - Do not rebuild §8.6 (already #116). Do not duplicate P-3 flamegraphs.
+- **BH-1 default-conf primary.** PRIMARY `TA_PIPELINE` lines omit
+  `repark.target.partitions` and emit `target_partitions=default`. Explicit
+  `target_partitions=1` is isolation-only and must also emit
+  `isolation=single_core`. Prose labels live here / in script docstrings —
+  no spaces in TA_PIPELINE kv values. The old `{1, cores}` many-symbols sweep
+  is retired: default (unset) replaces the explicit-cores cell.
