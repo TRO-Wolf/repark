@@ -17,6 +17,9 @@ pub fn var(input: &[f64], period: usize, nbdev: f64) -> Result<Vec<f64>> {
     let _ = nbdev;
     check_period("optInTimePeriod", period, 1)?;
     let len = input.len();
+    // Keeps `nan_vec`: the extend form was MEASURED at +43% on `stddev_n1e6` (n=1e6) — two
+    // mutable running accumulators inside the closure defeat the optimization that makes the
+    // `ema` single-write form a win. Do not "modernize" this loop.
     let mut out = nan_vec(len);
     if len < period {
         return Ok(out);
@@ -85,15 +88,20 @@ fn linearreg_core(
 ) -> Result<Vec<f64>> {
     check_period("optInTimePeriod", period, 2)?;
     let len = input.len();
-    let mut out = nan_vec(len);
+    // Single-write construction (the `overlap::ema` pattern): NaN lookback prefix via resize,
+    // then one output per window through a TrustedLen extend. The per-window accumulation
+    // (oldest-first `i` countdown) and both closed-form expressions are unchanged.
+    let mut out = Vec::with_capacity(len);
     if len < period {
+        out.resize(len, f64::NAN);
         return Ok(out);
     }
     let lookback = period - 1;
     let sum_x = as_f64(period * (period - 1)) * 0.5;
     let sum_x_sqr = as_f64(period * (period - 1) * (2 * period - 1) / 6);
     let divisor = sum_x * sum_x - as_f64(period) * sum_x_sqr;
-    for today in lookback..len {
+    out.resize(lookback, f64::NAN);
+    out.extend((lookback..len).map(|today| {
         let mut sum_xy = 0.0_f64;
         let mut sum_y = 0.0_f64;
         let mut i = period;
@@ -105,8 +113,8 @@ fn linearreg_core(
         }
         let m = (as_f64(period) * sum_xy - sum_x * sum_y) / divisor;
         let b = (sum_y - m * sum_x) / as_f64(period);
-        out[today] = emit(m, b);
-    }
+        emit(m, b)
+    }));
     Ok(out)
 }
 

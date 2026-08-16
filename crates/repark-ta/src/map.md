@@ -24,7 +24,9 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   `wma` (recency-weighted `periodSum`/`periodSub` accumulator), `dema`/`tema` (EMA-of-EMA
   compositions built from `ema` itself — lookbacks `2·(p−1)` / `3·(p−1)`, C's index bookkeeping,
   NOT a re-derived closed form), `trima` (triangular window with C's odd/even period split — the
-  divisor, `middleIdx` offset, and per-bar `numeratorAdd` statement order all branch on parity),
+  divisor, `middleIdx` offset, and per-bar `numeratorAdd` statement order all branch on parity;
+  both `.rev()` seed loops are EXEMPT from the single-write construction sweep and keep
+  `nan_vec` — they are backward *readers* of `input` whose sum order is bit-exactness-critical),
   `kama` (efficiency-ratio adaptive EMA; incremental `sumROC1`, `TA_IS_ZERO` ER guard; lookback
   `p`), `t3` (six chained EMA accumulators + Tillson volume-factor constants; `vfactor` param,
   lookback `6·(p−1)`), `midpoint`/`midprice` (per-bar full-window rescan of one / two H-L series),
@@ -45,7 +47,9 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
 - `momentum.rs` — `rsi` (Classic seed + Wilder smoothing + zero-guard; T5 hot loop is `iter_mut().zip`, same statement order including the two divides and `is_zero` guard), `adx` (three-phase:
   raw ±DM/TR accumulation → Wilder-decayed DX sum → smoothed output loop; lookback `2p−1`;
   the per-bar ±DM/TR block is the shared `DirectionalState::step`, `decay` selecting the
-  phase-1 vs phase-2/3 accumulation — same statements, same order as C). WG2 simple-momentum:
+  phase-1 vs phase-2/3 accumulation — same statements, same order as C; keeps `nan_vec` —
+  the `ema` single-write extend form measured **+42%** on `adx_n1e6`, the carried
+  `DirectionalState` kills it, and `dx`/`directional_*` share that shape). WG2 simple-momentum:
   `mom` + the `roc`/`rocp`/`rocr`/`rocr100` family (one shared trailing-ratio loop, exact `!= 0.0`
   prevPrice guard), `willr` (trailing-index rescan, strict `</>` inside + `<=`/`>=` extension,
   persistent `diff`; output in `[−100,0]`), `cci` (per-window circular-buffer re-sum of typical
@@ -66,7 +70,10 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   `directional_prime` (raw phase-1 seed) + accessors — lookbacks DX/DI `p`, DM `p−1`, ADXR `3p−2`
   (ADXR reuses `adx`); DI/DM allow `period == 1` (the un-smoothed `DM1`/`DM1÷TR1` fast path). MACD
   (`macd`/`macdfix`) shares `int_macd`, seeding the slow EMA `lookbackSignal` bars early through
-  `int_ema_dense` (explicit `k` — MACDFIX pins 0.15/0.075, distinct from `PER_TO_K` MACD);
+  `int_ema_dense` (explicit `k` — MACDFIX pins 0.15/0.075, distinct from `PER_TO_K` MACD;
+  MACD does **not** compose `overlap::ema`, so it did not inherit that kernel's win —
+  `int_ema_dense` now builds its buffer with the same single-write `extend`, measured
+  **−16%** on `macd_n1e6`; it was a push-per-element loop before);
   `macdext` routes fast/slow/signal through `ma_dispatch` with `ma_range` reproducing C's shifted
   MA computation bit-exactly for windowed/re-seeded matypes; **matype 7 (MAMA) uses full-prefix
   `mama` + index slice** (not a re-based window — Hilbert absolute parity). It slices the
@@ -84,14 +91,21 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   mixed 7/0=38, stoch all-MAMA=68, stochrsi type7=50
   (`stochastics_matype7_first_non_nan_lookback_pins`); period-1 + matype 7 identity on stochf /
   stoch / stochrsi (`stoch_path_period1_matype7_is_identity_via_ma_selector_lookback`).
-- `volatility.rs` — `trange` (max of three ranges), `atr` (SMA-of-TR seed + Wilder; `period==1`
+- `volatility.rs` — `trange` (max of three ranges; single-write `with_capacity`/`extend`
+  construction over zipped H/L/prev-C slices, measured **−18%**), `atr` (SMA-of-TR seed +
+  Wilder; same single-write construction, measured **−3.4%** median of three — marginal, the
+  divide-latency chain dominates; `period==1`
   delegates to `trange` as C does), `natr` (WG5: reuses `atr` then normalizes `(atr/close)·100`
   with a `TA_IS_ZERO(close)` guard — unreachable for real positive prices; `period==1` returns raw
   `trange` unnormalized, as C does).
-- `statistic.rs` — `var` (running Σx/Σx², `E[X²]−E[X]²`; `nbdev` ignored as C ignores it),
+- `statistic.rs` — `var` (running Σx/Σx², `E[X²]−E[X]²`; `nbdev` ignored as C ignores it;
+  keeps `nan_vec` — the `ema` single-write extend form measured **+43%** on `stddev_n1e6`,
+  two mutable accumulators in the closure kill it),
   `stddev` (var → guarded `sqrt(v) * nbdev`; C's `nbdev==1` fast path folds in — `x*1.0` is
   bit-identical), `linearreg`/`linearreg_slope`/`linearreg_intercept`/`linearreg_angle`/`tsf`
-  (one shared closed-form core, per-variant emit), `correl` (five running sums, guarded
+  (one shared closed-form core, per-variant emit; the core builds its output with the
+  single-write `with_capacity`/`resize`/`extend` form, measured **−4.4%** on `linearreg_n1e6`),
+  `correl` (five running sums, guarded
   denominator), `beta` (WG5: two-series rolling covariance slope over per-bar returns — five
   running sums in C's exact statement order, trailing read before the write for in-place aliasing
   safety, `TA_IS_ZERO` return + denominator guards; lookback `p`).
@@ -187,6 +201,7 @@ empty/short, nullable multi-output, sliced borrow, kernel-error leaves cache emp
 | Install every TA UDF on a session | `extension.rs` — `TaExtension`; do NOT add a second registration path |
 | Change error behavior | `lib.rs` (`TaError`) — mirror TA-Lib `TA_BAD_PARAM` semantics only |
 | Touch any arithmetic | Re-read the numerics contract in `lib.rs` first; then `cargo test -p repark-ta` |
+| Change how a kernel builds its output `Vec` | Bench it in [../benches/ta_kernels.rs](../benches/ta_kernels.rs) FIRST, then `--save-baseline`/`--baseline`. The single-write `with_capacity`+`resize`+`extend` form wins only for a single-scalar recurrence (`ema` −11%, `trange` −18%, `int_ema_dense` −16%); with carried struct/multi-accumulator state it LOSES hard (`adx` +42%, `var` +43%) — never assume, measure |
 
 ## Pointers
 

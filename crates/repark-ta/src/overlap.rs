@@ -335,6 +335,8 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
         let mut today_idx = middle_idx + half;
         let mut numerator = 0.0_f64;
         let mut numerator_sub = 0.0_f64;
+        // Exempt from the single-write construction sweep: keeps `nan_vec`, backward reader —
+        // this seed walks `input` newest-to-oldest and the sum order is bit-exactness-critical.
         for idx in (trailing_idx..=middle_idx).rev() {
             let temp = input[idx];
             numerator_sub += temp;
@@ -378,6 +380,8 @@ pub fn trima(input: &[f64], period: usize) -> Result<Vec<f64>> {
         let mut today_idx = middle_idx + half;
         let mut numerator = 0.0_f64;
         let mut numerator_sub = 0.0_f64;
+        // Exempt from the single-write construction sweep: keeps `nan_vec`, backward reader —
+        // this seed walks `input` newest-to-oldest and the sum order is bit-exactness-critical.
         for idx in (trailing_idx..=middle_idx).rev() {
             let temp = input[idx];
             numerator_sub += temp;
