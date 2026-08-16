@@ -21,7 +21,9 @@ get/set equality on the facade store after a successful engine SET.
 from __future__ import annotations
 
 import re
+import tempfile
 import time
+from pathlib import Path
 
 import pyarrow as pa
 import pytest
@@ -303,6 +305,35 @@ def test_export_error_helper_strips_pyarrow_noise() -> None:
 # ---------------------------------------------------------------------------------------------
 # Measure-first before/after bench (recorded; not a flaky wall-time assert)
 # ---------------------------------------------------------------------------------------------
+
+
+def test_runtime_temp_directory_refuses_loud_no_store() -> None:
+    """Runtime temp_directory must refuse (names TMPDIR) — no silent facade twin."""
+    spark = ReparkSession.builder.getOrCreate()
+    with pytest.raises(IllegalArgumentException) as raised:
+        spark.conf.set("datafusion.runtime.temp_directory", "/tmp/repark-spill-must-not-stick")
+    message = str(raised.value)
+    assert "TMPDIR" in message, message
+    assert "datafusion.runtime.temp_directory" in message
+    assert spark.conf.get("datafusion.runtime.temp_directory", None) is None
+
+
+def test_sql_set_temp_directory_refuses_loud() -> None:
+    spark = ReparkSession.builder.getOrCreate()
+    with pytest.raises((IllegalArgumentException, PySparkException)) as raised:
+        spark.sql("SET datafusion.runtime.temp_directory = '/tmp/repark-spill-sql'")
+    assert "TMPDIR" in str(raised.value), str(raised.value)
+
+
+def test_builder_temp_directory_creates_datafusion_workdir() -> None:
+    """Build-time key wires DiskManager: a datafusion-* dir appears under the path."""
+    with tempfile.TemporaryDirectory() as scratch:
+        spark = ReparkSession.builder.config(
+            "datafusion.runtime.temp_directory", scratch
+        ).getOrCreate()
+        children = list(Path(scratch).glob("datafusion-*"))
+        assert children, f"expected a datafusion-* workdir under {scratch}"
+        _ = spark  # keep the session (and DiskManager TempDir) alive across the glob
 
 
 def test_reverse_sort_succeeds_when_pool_raised() -> None:

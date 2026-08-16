@@ -1,4 +1,4 @@
-//! `FairSpillPool` install, runtime SET intercept, and (later) spill-disk / default policy.
+//! `FairSpillPool` install, runtime SET intercept, and spill-disk (`temp_directory`) policy.
 //!
 //! DataFusion 54.1's `SET datafusion.runtime.memory_limit` handler rebuilds the live
 //! `RuntimeEnv` with a `GreedyMemoryPool` inside `TrackConsumersPool` — the pool type its
@@ -43,6 +43,16 @@ pub(crate) const DEFAULT_MEMORY_LIMIT_BYTES: usize = 8 * BYTES_PER_GB;
 /// Canonical runtime / builder pseudo-key for the live `FairSpillPool` size.
 pub(crate) const MEMORY_LIMIT_KEY: &str = "datafusion.runtime.memory_limit";
 
+/// Build-time spill directory (`RuntimeEnvBuilder::with_temp_file_path`). Runtime SET refuses.
+pub(crate) const TEMP_DIRECTORY_KEY: &str = "datafusion.runtime.temp_directory";
+
+/// Loud runtime refusal: `DiskManager` is fixed after `RuntimeEnv` build. Names `TMPDIR`.
+pub(crate) const TEMP_DIRECTORY_RUNTIME_REFUSAL: &str = "datafusion.runtime.temp_directory cannot be changed at runtime \
+     (the DiskManager is fixed when the RuntimeEnv is built). \
+     Set TMPDIR in the process environment before start, or \
+     SparkSession.builder.config('datafusion.runtime.temp_directory', path).getOrCreate() \
+     at build time.";
+
 /// Builder-only `FairSpillPool` size keys (Python also refuses a runtime `conf.set` of these).
 const REPARK_MEMORY_LIMIT_KEYS: &[&str] =
     &["repark.memory.limit.gb", "spark.repark.memory.limit.gb"];
@@ -51,10 +61,11 @@ const REPARK_MEMORY_LIMIT_KEYS: &[&str] =
 /// `ConfigOptions` keys, excluded from `apply_datafusion_config_keys`'s build-time sweep.
 ///
 /// `datafusion.runtime.memory_limit` is applied to a [`FairSpillPool`] at `build()` and on
-/// runtime `SET`; pushing it through `options_mut().set` fails loud on a key that is legal
-/// everywhere else in the product. The exclusion is EXACT-KEY, never a prefix: a typo of the
-/// pseudo-key must still fail loud.
-pub const REPARK_OWNED_DATAFUSION_PSEUDO_KEYS: &[&str] = &[MEMORY_LIMIT_KEY];
+/// runtime `SET`. `datafusion.runtime.temp_directory` is applied via
+/// `RuntimeEnvBuilder::with_temp_file_path` at `build()` only; runtime SET refuses loud
+/// (names `TMPDIR`). Pushing either through `options_mut().set` fails loud. The exclusion is
+/// EXACT-KEY, never a prefix: a typo of a pseudo-key must still fail loud.
+pub const REPARK_OWNED_DATAFUSION_PSEUDO_KEYS: &[&str] = &[MEMORY_LIMIT_KEY, TEMP_DIRECTORY_KEY];
 
 /// ===========================================================================================
 /// Install `pool_bytes` as a [`FairSpillPool`], or leave DataFusion's unbounded default.
@@ -66,6 +77,30 @@ pub(crate) fn with_memory_pool(
     match pool_bytes {
         Some(bytes) => runtime.with_memory_pool(Arc::new(FairSpillPool::new(bytes))),
         None => runtime,
+    }
+}
+
+/// ===========================================================================================
+/// Apply builder `datafusion.runtime.temp_directory` via `with_temp_file_path` (build time only).
+/// ===========================================================================================
+///
+/// # Errors
+/// [`Error::Config`] when the key is present and empty.
+pub(crate) fn with_temp_directory(
+    runtime: RuntimeEnvBuilder,
+    config: &HashMap<String, String>,
+) -> Result<RuntimeEnvBuilder> {
+    match config.get(TEMP_DIRECTORY_KEY) {
+        Some(path) => {
+            let trimmed = path.trim();
+            if trimmed.is_empty() {
+                return Err(Error::Config(format!(
+                    "{TEMP_DIRECTORY_KEY} requires a non-empty path"
+                )));
+            }
+            Ok(runtime.with_temp_file_path(trimmed))
+        }
+        None => Ok(runtime),
     }
 }
 
@@ -153,6 +188,9 @@ pub(crate) fn maybe_apply_runtime_set(
     let Some((key, value)) = parse_set_assignment(query) else {
         return Ok(None);
     };
+    if key.eq_ignore_ascii_case(TEMP_DIRECTORY_KEY) {
+        return Err(Error::Config(TEMP_DIRECTORY_RUNTIME_REFUSAL.to_string()));
+    }
     if !key.eq_ignore_ascii_case(MEMORY_LIMIT_KEY) {
         return Ok(None);
     }
@@ -521,5 +559,66 @@ mod spill_session_tests {
             }
             MemoryLimit::Unknown => panic!("builder '0' must be unbounded, got Unknown"),
         }
+    }
+
+    #[tokio::test]
+    async fn runtime_set_temp_directory_refuses_loud_naming_tmpdir() {
+        let session = ReparkSession::builder().build().expect("build");
+        let error = session
+            .sql("SET datafusion.runtime.temp_directory = '/tmp/repark-spill'")
+            .await
+            .expect_err("runtime SET must refuse");
+        let message = error.to_string();
+        assert!(
+            message.contains("TMPDIR"),
+            "refusal must name TMPDIR: {message}"
+        );
+        assert!(
+            message.contains(TEMP_DIRECTORY_KEY),
+            "refusal must name the key: {message}"
+        );
+    }
+
+    #[test]
+    fn builder_temp_directory_wires_disk_manager() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().to_str().expect("utf8 path");
+        let session = ReparkSession::builder()
+            .config(TEMP_DIRECTORY_KEY, path)
+            .build()
+            .expect("build-time temp_directory must apply");
+        let paths = session
+            .context()
+            .runtime_env()
+            .disk_manager
+            .temp_dir_paths();
+        assert!(
+            paths
+                .iter()
+                .any(|installed| installed.starts_with(dir.path())),
+            "DiskManager paths must live under the configured dir, got {paths:?}"
+        );
+    }
+
+    #[test]
+    fn builder_empty_temp_directory_refuses() {
+        let error = ReparkSession::builder()
+            .config(TEMP_DIRECTORY_KEY, "   ")
+            .build()
+            .expect_err("empty path");
+        assert!(error.to_string().contains(TEMP_DIRECTORY_KEY));
+    }
+
+    #[test]
+    fn builder_temp_directory_typo_still_fails_loud() {
+        let error = ReparkSession::builder()
+            .config("datafusion.runtime.temp_directory2", "/tmp/x")
+            .build()
+            .expect_err("typo is an unknown ConfigOptions key");
+        assert!(
+            error
+                .to_string()
+                .contains("datafusion.runtime.temp_directory2")
+        );
     }
 }

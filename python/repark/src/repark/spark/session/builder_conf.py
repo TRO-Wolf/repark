@@ -115,6 +115,9 @@ class RuntimeConfig:
       stay on the old pool). Same pool type as the builder — one truth, not two knobs.
     * Setting **both** ``repark.memory.limit.gb`` and ``datafusion.runtime.memory_limit`` on
       the same builder refuses loud (same pool, ambiguous initial size).
+    * Spill disk: ``datafusion.runtime.temp_directory`` is a **build-time** pseudo-key
+      (``RuntimeEnvBuilder.with_temp_file_path``). Runtime ``conf.set`` / SQL ``SET`` of it
+      **refuses loud** and names ``TMPDIR`` (the DiskManager is fixed after ``build()``).
 
     **The session timezone is build-time too (H-1a), with a different disclosure shape.**
     ``spark.sql.session.timeZone`` is set on the builder and validated by the engine once at

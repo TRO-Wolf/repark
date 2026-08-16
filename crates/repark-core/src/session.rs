@@ -441,6 +441,7 @@ impl ReparkSessionBuilder {
         let mut runtime = RuntimeEnvBuilder::new();
         // FairSpillPool when set; explicit 0 / `'0'` opts out (unbounded). Default 8 GiB.
         runtime = spill::with_memory_pool(runtime, pool_bytes);
+        runtime = spill::with_temp_directory(runtime, &self.config)?;
         // DataFusion caches directory listings by path on the RuntimeEnv object-list cache.
         // Path parquet overwrite stage-swaps into the *same* destination path; a warm listing
         // then makes same-session `read_parquet` return pre-overwrite rows while on-disk data
@@ -579,8 +580,9 @@ impl ReparkSession {
     /// Identical classification to [`Self::sql`] — the [`engine_err`] fold is session-side, so
     /// every dialect gets the same error taxonomy.
     pub async fn sql_with(&self, dialect: &Arc<dyn SqlDialect>, query: &str) -> Result<DataFrame> {
-        // Intercept SET datafusion.runtime.memory_limit before any dialect reaches DataFusion's
-        // greedy-pool handler. Other statements (and other SET keys) fall through unchanged.
+        // Intercept SET datafusion.runtime.memory_limit (FairSpillPool swap) and refuse
+        // SET datafusion.runtime.temp_directory (names TMPDIR) before any dialect reaches
+        // DataFusion. Other statements (and other SET keys) fall through unchanged.
         if let Some(frame) = spill::maybe_apply_runtime_set(self.context(), query)? {
             return Ok(frame);
         }

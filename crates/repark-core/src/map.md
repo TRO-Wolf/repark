@@ -181,8 +181,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 - `session.rs` re-exports `REPARK_OWNED_DATAFUSION_PSEUDO_KEYS` from `session/spill.rs` —
   the exact-key exclusion set for facade-owned `datafusion.`-prefixed pseudo-keys the
   build-time sweep must skip (`datafusion.runtime.memory_limit`, applied to a FairSpillPool
-  at build and on runtime SET). Typos of the pseudo-key still fail loud; both directions
-  pinned in `session/tests.rs`.
+  at build and on runtime SET; `datafusion.runtime.temp_directory` is build-time only,
+  runtime SET refuses and names `TMPDIR`). Typos of a pseudo-key still fail loud; both
+  directions pinned in `session/tests.rs` / `session/spill.rs`.
 
 ## Debug
 
