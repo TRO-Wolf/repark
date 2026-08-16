@@ -47,8 +47,11 @@ pub fn rsi(input: &[f64], period: usize) -> Result<Vec<f64>> {
     } else {
         100.0 * (prev_gain / temp_value1)
     };
-    for i in (period + 1)..len {
-        let temp_value1 = input[i];
+    for (output_slot, incoming) in out[period + 1..len]
+        .iter_mut()
+        .zip(input[period + 1..len].iter())
+    {
+        let temp_value1 = *incoming;
         let temp_value2 = temp_value1 - prev_value;
         prev_value = temp_value1;
         prev_loss *= as_f64(period - 1);
@@ -61,7 +64,7 @@ pub fn rsi(input: &[f64], period: usize) -> Result<Vec<f64>> {
         prev_loss /= as_f64(period);
         prev_gain /= as_f64(period);
         let temp_value1 = prev_gain + prev_loss;
-        out[i] = if is_zero(temp_value1) {
+        *output_slot = if is_zero(temp_value1) {
             0.0
         } else {
             100.0 * (prev_gain / temp_value1)

@@ -20,7 +20,7 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   index, rescanning the window only when that index falls off the trailing edge; `<=`/`>=`
   single-bar extension prefers the more recent equal value — the cadence that makes it bit-exact)
   and `sum` (the `sma` add-one/subtract-one running total without the divide).
-- `overlap.rs` — `sma` (incremental running total), `ema` (SMA seed + `(x−prev)*k+prev`),
+- `overlap.rs` — `sma` (incremental running total; T5 hot loop is `iter_mut().zip` over incoming + trailing, same add/snapshot/subtract/divide order), `ema` (SMA seed + `(x−prev)*k+prev`),
   `wma` (recency-weighted `periodSum`/`periodSub` accumulator), `dema`/`tema` (EMA-of-EMA
   compositions built from `ema` itself — lookbacks `2·(p−1)` / `3·(p−1)`, C's index bookkeeping,
   NOT a re-derived closed form), `trima` (triangular window with C's odd/even period split — the
@@ -42,7 +42,7 @@ smoothing in C's statement order; `TA_IS_ZERO` ±1e-8 guards; NaN lookback prefi
   lookback 1), `sarext` (SAR extended, 8 params; **short-side output is NEGATIVE** — replicated),
   `mavp` (variable-period MA over a second `periods` series, clamped `[min,max]` + int-truncated;
   each per-period MA via `momentum::ma_range` = C's shifted seeding — NOT a full-array MA).
-- `momentum.rs` — `rsi` (Classic seed + Wilder smoothing + zero-guard), `adx` (three-phase:
+- `momentum.rs` — `rsi` (Classic seed + Wilder smoothing + zero-guard; T5 hot loop is `iter_mut().zip`, same statement order including the two divides and `is_zero` guard), `adx` (three-phase:
   raw ±DM/TR accumulation → Wilder-decayed DX sum → smoothed output loop; lookback `2p−1`;
   the per-bar ±DM/TR block is the shared `DirectionalState::step`, `decay` selecting the
   phase-1 vs phase-2/3 accumulation — same statements, same order as C). WG2 simple-momentum:
