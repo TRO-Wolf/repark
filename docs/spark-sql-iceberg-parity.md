@@ -697,21 +697,13 @@ the pin rather than obeying it.
 
 ### BL-3 — `MERGE` cardinality check fires on a lone unconditional `DELETE`
 
-- **repark** — duplicate-key source rows that hit any `WHEN MATCHED` clause raise
-  `MERGE_CARDINALITY_VIOLATION`, including when the only matched clause is an unconditional
-  `DELETE`.
-- **Apache Spark** — `RewriteMergeIntoTable.isCardinalityCheckNeeded` skips the check for
-  exactly that shape and deletes the row. *(oracle: RECORDED 2026-08-15 (#131) — live Spark 4.1.2 + Iceberg 1.11.0 commits the
-  delete and leaves the 1-row survivor table; `test_merge_differential_parity.py`
-  `dup_source_keys_unconditional_delete`, kind split.)*
-- **Pin** — `crates/repark-iceberg/src/write/merge/streaming_scan_tests.rs`
-  `merge_cardinality_uses_file_and_pos_not_file_alone` codifies today's raise;
-  `python/repark/tests/test_merge_differential_parity.py` covers the both-engines-raise
-  conditional-clause shape.
-- **Rationale** — BACKLOG (audit M11). Fail-closed; the golden now exists, so the fix unit is
-  unblocked: it is
-  a narrow exemption for the `matched == [unconditional Delete]` shape, flipping a recorded
-  split diff-row to content.
+> **CLOSED 2026-08-15 (#140).** The cardinality check now skips exactly Spark's
+> `isCardinalityCheckNeeded` shape — a single unconditional `WHEN MATCHED THEN DELETE` —
+> via a `skip_cardinality` flag threaded from the spec-owning execute path (never SQL
+> re-parsing in the fold). Every other matched shape keeps the check (the file+pos grouping
+> pin and the conditional-clause differential row stayed green untouched). The recorded
+> differential row `dup_source_keys_unconditional_delete` flipped split → content in the
+> same change: both engines now produce the recorded survivor table. Retired per §6.
 
 ### BL-4 — `UPDATE`-path store-assignment error shape in `MERGE`
 

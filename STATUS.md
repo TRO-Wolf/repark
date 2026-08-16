@@ -320,6 +320,21 @@ Recorded, not built. Each names the trigger that would start it.
 **None.** v0.1.0 shipped 2026-08-15. Future tags follow [docs/release.md](docs/release.md)
 (version SSOT at the Cargo workspace; wheel-only; crates.io publishing structurally deferred).
 
+## 2026-08-15 night increment (conductor-15 + Opus work group 2)
+
+Eight more merged PRs. Engine: S-1 "spill truth" (#143 — runtime `memory_limit` now installs
+a FairSpillPool so the "one truth" claim is TRUE; `temp_directory` refuses loud; RAM-relative
+default `clamp(0.6 x detected, floor, 8 GiB)`; the spill regression battery landed), the M11
+cardinality exemption (#140 — BL-3 retired; the last MERGE-audit divergence with a fix path
+is closed), and the WI-1 store-assignment gate (#142 — INSERT OVERWRITE + append paths now
+refuse un-assignable types; the four plain-INSERT doors need the WI-2 analyzer seam, named).
+Debt service: column.rs -> column/ (ceiling 2200 -> 1850, #139) and udf.rs -> udf/ per-family
+(2200 -> 2100, #141) — both ratcheted DOWN; the CDL Int32 prerequisite is now unblocked.
+Perf: iterator-form rsi/sma, bit-exact (#138). Fork: Java battery increment 2 (#199, entries
++ readable_metrics; F-1 leaf-doc finding recorded). Recon discharged: dbt-repark (P0 session
+lifetime found), fork Partitioning unification (PT-0 positional-walk corruption finding),
+G6-3/G6-5 cast design.
+
 ## 2026-08-15 evening increment (conductor-14 + Opus work group)
 
 Six more merged PRs: the five deferred window functions land (`lag`/`lead`/`nth_value`/
