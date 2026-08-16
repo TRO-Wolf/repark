@@ -9,6 +9,14 @@ the fork; this tree only translates Spark write semantics onto the fork's native
 OCC retry loop. `DELETE`/`UPDATE`/`INSERT` need no adapter — DataFusion plans them onto the
 fork's `iceberg-datafusion` `TableProvider`.
 
+**Known gap (WI-1, 2026-08-15):** because plain `INSERT` has no adapter here, it also has no
+ANSI store-assignment gate. DataFusion's own `insert_to_plan` injects the `CAST` and hands a
+schema-conformed plan straight to the fork's `IcebergTableProvider::insert_into`, so
+`INSERT INTO … SELECT`, `INSERT INTO … VALUES`, `writeTo().append()` and `write.insertInto()`
+still persist a `Date32 → Int32` reinterpretation (`18262`) that Spark refuses. `store_assign.rs`
+is the predicate a follow-on unit needs; the missing half is a call site OUTSIDE this crate (see
+`task/wi1-insert-store-gate-ledger.md` §4).
+
 **Error boundary:** re-exports `repark_common::{Error, Result}` for MERGE/append, but the
 `alter` and `snapshot_refs` primitives still return `iceberg::Result` — the fold lives in
 repark-core's error map.
@@ -19,7 +27,8 @@ repark-core's error map.
   `Error`/`Result`, write/scan concurrency knobs, `writer_props`, the `write_data_files*` +
   `write_partitioned_data_files*` families (bounded-memory stream variants; K concurrent file
   writers, default 4, K=1 serial), `append`, the overwrite stage-then-swap surface, and the
-  snapshot-ref helpers.
+  snapshot-ref helpers. `store_assign` is declared `pub(crate)` — an internal predicate, never
+  a public surface.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). See [merge/map.md](merge/map.md).
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
@@ -36,14 +45,28 @@ repark-core's error map.
   files. Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/r1-g3e8-pr4-ledger.md).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
-  extra / duplicate column = loud error; strict casts, overflow never NULLs) → identity-
-  partition fanout write → ONE stamped `fast_append` commit (append×append commutes via the
-  fork's refresh-and-re-apply retry; empty input commits an empty stamped snapshot). Also
-  `write_partitioned_data_files(_from_stream)` — the partitioned staged-write core.
+  extra / duplicate column = loud error; **WI-1** ANSI store-assignment gate then strict casts,
+  overflow never NULLs) → identity-partition fanout write → ONE stamped `fast_append` commit
+  (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an
+  empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
+  staged-write core.
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
-  `write_overwrite_staged_files_from_stream` (positional map + stream stage) +
-  `commit_overwrite_replace_all` + `parse_overwrite_isolation` (absent→snapshot | snapshot |
-  serializable | none | invalid-loud).
+  `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
+  stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`
+  (absent→snapshot | snapshot | serializable | none | invalid-loud).
+- `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
+  store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
+  `ansi_store_assignable` / `normalize_for_assignment` /
+  `refuse_unless_ansi_store_assignable` (`MERGE `-labelled callers, class
+  `INCOMPATIBLE_DATA_FOR_TABLE` — byte-identical #111/#135 text) and
+  `refuse_unless_write_store_assignable` (non-MERGE write paths, sub-class
+  `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`). Hoisted out of `merge/insert.rs`, which
+  had the only two call sites in the tree, so `append.rs` / `overwrite.rs` share the predicate
+  instead of forking a second one. Needle `not ANSI-store-assignable`. Named narrowing: the
+  write-path entry point excuses NESTED pairs (the v1 matrix judges them by identity, which
+  would be a NEW refusal on paths that conform `List<Utf8View>` → `List<Utf8>` correctly today).
+  **Not** a CAST-legality matrix — see `planning/hardening/G63-DATE-INT-DESIGN.md` §3.3.
+  Ledger: [`../../../../task/wi1-insert-store-gate-ledger.md`](../../../../task/wi1-insert-store-gate-ledger.md).
 - `alter.rs` — `ALTER TABLE` primitives on iceberg-rust public API: SET/UNSET TBLPROPERTIES
   (`alter_table_properties(sets, unsets)` commits both as ONE action — no half-applied state),
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
@@ -109,6 +132,7 @@ repark-core's error map.
 | Change MERGE INTO semantics | [merge/map.md](merge/map.md) |
 | Identity DELETE/UPDATE (subquery `WHERE`) | `predicate_dml.rs` (`execute_predicate_dml`) |
 | Wire ordinary DELETE/UPDATE/INSERT OVERWRITE | DataFusion → fork `TableProvider` (non-subquery) |
+| Ask whether a `(source, target)` type pair may be written | `store_assign.rs` (`ansi_store_assignable`) |
 | CREATE/DROP BRANCH or TAG | `snapshot_refs.rs` |
 
 ## Pointers

@@ -30,6 +30,7 @@ use uuid::Uuid;
 use crate::write::append::write_partitioned_data_files_from_stream_with_concurrency;
 use crate::write::concurrency::WriteConcurrency;
 use crate::write::merge::{OPERATION_ID_PROP, write_data_files_from_stream_with_concurrency};
+use crate::write::store_assign::refuse_unless_write_store_assignable;
 
 /// Table property key for `INSERT OVERWRITE` isolation (engine-defined, same string as the
 /// fork provider). Values: `serializable` / `snapshot` / `none`; **absent → snapshot**
@@ -181,11 +182,16 @@ pub async fn commit_overwrite_replace_all(
 /// SQL INSERT OVERWRITE positional assignment onto the Iceberg write schema (D9).
 ///
 /// Empty column list: source col `i` → table field `i`. Non-empty list: source col `i` → listed
-/// field + null-fill unmentioned (required omit → refuse). Strict casts. **Not** append by-name.
+/// field + null-fill unmentioned (required omit → refuse). Every positional `(source, target)`
+/// pair passes the ANSI store-assignment matrix ([`crate::write::store_assign`], WI-1) BEFORE its
+/// strict cast — Spark refuses `date→int` / `boolean→int` / `timestamp→bigint` / `string→numeric`
+/// at analysis (`INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`), and the arrow kernel would
+/// otherwise reinterpret them into the staged data files. **Not** append by-name.
 /// ===========================================================================================
 ///
 /// # Errors
-/// Arity mismatch, unknown/ambiguous column list name, required-omit, or cast failure.
+/// Arity mismatch, unknown/ambiguous column list name, required-omit, a pair that is not
+/// ANSI-store-assignable, or cast failure.
 pub fn positional_map_overwrite_batch(
     batch: &RecordBatch,
     table_schema: &SchemaRef,
@@ -250,6 +256,14 @@ fn positional_map_all_columns(
         .iter()
         .enumerate()
         .map(|(index, field)| {
+            // WI-1: ANSI store assignment BEFORE the kernel — `date→int` and friends must refuse,
+            // not commit a reinterpreted value into the staged data files.
+            refuse_unless_write_store_assignable(
+                "INSERT OVERWRITE",
+                field.name(),
+                batch.column(index).data_type(),
+                field.data_type(),
+            )?;
             cast_with_options(batch.column(index), field.data_type(), strict).map_err(|error| {
                 DataFusionError::Execution(format!(
                     "INSERT OVERWRITE cast of source column {index} to `{}` ({}) failed: {error}",
@@ -301,6 +315,13 @@ fn positional_map_column_list(
                 name = column_names[source_index]
             )));
         }
+        // WI-1: ANSI store assignment BEFORE the kernel (same gate as the all-columns arm).
+        refuse_unless_write_store_assignable(
+            "INSERT OVERWRITE",
+            field.name(),
+            batch.column(source_index).data_type(),
+            field.data_type(),
+        )?;
         let casted = cast_with_options(batch.column(source_index), field.data_type(), strict)
             .map_err(|error| {
                 DataFusionError::Execution(format!(

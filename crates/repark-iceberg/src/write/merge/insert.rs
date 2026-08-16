@@ -18,7 +18,8 @@
 //!   gate those pairs would silently commit reinterpreted values. [`insert_stream_checked`]
 //!   validates the PLANNED schema against the write schema before a single batch streams.
 //!   [`update_stream_checked`] is the UPDATE twin: it plans each `SET` expression in isolation
-//!   (no `CASE` unification) and runs the **same** [`ansi_store_assignable`] matrix before the
+//!   (no `CASE` unification) and runs the **same**
+//!   [`ansi_store_assignable`](crate::write::store_assign::ansi_store_assignable) matrix before the
 //!   copy-on-write / merge-on-read rewrite SQL is required to type-check. DataFusion `CASE`
 //!   arms would otherwise refuse bool→int at plan time with an incidental coercion error, so
 //!   illegal pairs would never reach a post-plan gate (audit M9 residual BL-4).
@@ -32,6 +33,7 @@ use datafusion::prelude::SessionContext;
 use futures::Stream;
 
 use super::{InsertAction, InsertClause, MatchedAction, quote_ident, resolve_schema_field_name};
+use crate::write::store_assign::{self, MERGE_SPARK_CLASS};
 
 /// Project an INSERT clause onto the target schema: named columns take their VALUES expression,
 /// everything else becomes NULL. Rejects unknown columns, arity mismatches, and NULL-filling a
@@ -261,87 +263,31 @@ pub(super) fn store_assignment_then_sql(expr: &str, target_type: &DataType) -> S
 }
 
 /// Shared refusal — path label is `INSERT` or `UPDATE SET`; the matrix is not forked.
+///
+/// The matrix itself moved to [`crate::write::store_assign`] (WI-1) so the non-MERGE write
+/// lowerings share it instead of forking a second copy. This wrapper keeps the `MERGE `-prefixed
+/// path label and the [`MERGE_SPARK_CLASS`] citation, so the shipped #111 / #135 message text is
+/// byte-identical to before the hoist.
 fn refuse_unless_ansi_store_assignable(
     path: &str,
     column: &str,
     source_type: &DataType,
     target_type: &DataType,
 ) -> Result<()> {
-    let src = normalize_for_assignment(source_type);
-    let dst = normalize_for_assignment(target_type);
-    if !ansi_store_assignable(src, dst) {
-        return Err(DataFusionError::Plan(format!(
-            "MERGE {path} cannot store-assign column `{column}`: source type {source_type} is not \
-             ANSI-store-assignable to target type {target_type} (Spark INCOMPATIBLE_DATA_FOR_TABLE; \
-             add an explicit CAST only if the reinterpretation is intended semantics)"
-        )));
-    }
-    Ok(())
-}
-
-/// Strip wrappers that do not change assignability (dictionary encoding).
-pub(super) fn normalize_for_assignment(data_type: &DataType) -> &DataType {
-    match data_type {
-        DataType::Dictionary(_, value) => normalize_for_assignment(value),
-        other => other,
-    }
-}
-
-/// Spark `Cast.canANSIStoreAssign`, translated to Arrow types (v1: nested types must be
-/// identical — Spark's per-field recursion is a named residual).
-pub(super) fn ansi_store_assignable(src: &DataType, dst: &DataType) -> bool {
-    use DataType::{
-        Binary, Boolean, Date32, Date64, LargeBinary, LargeUtf8, Null, Timestamp, Utf8, Utf8View,
-    };
-    if src == dst {
-        return true;
-    }
-    // NullType → anything (the projection NULL-fills nullable columns as untyped NULL).
-    if matches!(src, Null) {
-        return true;
-    }
-    // NumericType → NumericType (widening AND narrowing — overflow is the strict runtime cast's
-    // ANSI error, exactly Spark's split between analysis-legal and runtime-failing).
-    if src.is_numeric() && dst.is_numeric() {
-        return true;
-    }
-    // AtomicType → StringType.
-    let is_string = |t: &DataType| matches!(t, Utf8 | LargeUtf8 | Utf8View);
-    let is_atomic = |t: &DataType| {
-        t.is_numeric()
-            || matches!(
-                t,
-                Boolean | Utf8 | LargeUtf8 | Utf8View | Binary | LargeBinary | Date32 | Date64
-            )
-            || matches!(t, Timestamp(_, _))
-    };
-    if is_string(dst) && is_atomic(src) {
-        return true;
-    }
-    // String width variants among themselves.
-    if is_string(src) && is_string(dst) {
-        return true;
-    }
-    // Date ↔ Timestamp, both directions; timestamp unit/annotation changes within timestamps.
-    let is_date = |t: &DataType| matches!(t, Date32 | Date64);
-    let is_ts = |t: &DataType| matches!(t, Timestamp(_, _));
-    if (is_date(src) && (is_date(dst) || is_ts(dst)))
-        || (is_ts(src) && (is_ts(dst) || is_date(dst)))
-    {
-        return true;
-    }
-    // Binary width variants.
-    if matches!(src, Binary | LargeBinary) && matches!(dst, Binary | LargeBinary) {
-        return true;
-    }
-    false
+    store_assign::refuse_unless_ansi_store_assignable(
+        &format!("MERGE {path}"),
+        MERGE_SPARK_CLASS,
+        column,
+        source_type,
+        target_type,
+    )
 }
 
 #[cfg(test)]
 mod insert_gate_tests {
     use datafusion::arrow::datatypes::{DataType, TimeUnit};
 
-    use super::ansi_store_assignable;
+    use crate::write::store_assign::ansi_store_assignable;
 
     #[test]
     fn spark_ansi_store_assign_matrix() {

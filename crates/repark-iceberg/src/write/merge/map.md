@@ -25,8 +25,12 @@ lives as this module directory (move-only; pub surface frozen).
   and the ANSI store-assignment gate (audit M4/M9). **BL-4 (2026-08-15):**
   `update_stream_checked` / `validate_update_store_assignment` plan each `UPDATE SET`
   expression in isolation (no rewrite-`CASE` unification) and run the same
-  `ansi_store_assignable` / `normalize_for_assignment` matrix (`pub(super)`) against
-  the target column type. Needle `not ANSI-store-assignable`. After the gate,
+  `ansi_store_assignable` / `normalize_for_assignment` matrix against
+  the target column type. **WI-1 (2026-08-15):** that matrix now lives in
+  [`../store_assign.rs`](../store_assign.rs) — this file keeps only the `MERGE `-prefixed
+  path-label wrapper, so the shipped #111/#135 message text is byte-identical while the
+  non-MERGE write lowerings share the predicate instead of forking a second copy.
+  Needle `not ANSI-store-assignable`. After the gate,
   rewrite THEN arms use `arrow_cast` to the target type so CASE unifies on
   legal pairs CASE cannot coerce (bool→string). COW call site is the rewrite
   stream; MoR call site is `matched_work_mor`. Match-discovery is not gated.

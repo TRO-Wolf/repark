@@ -541,6 +541,17 @@ NOT in that file is a defect, not a decision.
   timestamp→bigint / string→numeric refuse at analysis (`not ANSI-store-assignable`);
   numeric widening, NULL-fill and atomic→string still insert/update. Arrow path.
   UPDATE twins need a matching key so the SET path fires.
+- `test_insert_store_assign.py` — **WI-1**: the NON-MERGE write-path store-assignment gate.
+  `INSERT OVERWRITE` (all-columns AND column-list arms, plus the
+  `write.mode('overwrite').insertInto` facade door) refuses `date→int` / `date→bigint` /
+  `boolean→int` / `timestamp→bigint` / `string→numeric` with the shared
+  `not ANSI-store-assignable` needle and the `INCOMPATIBLE_DATA_FOR_TABLE.CANNOT_SAFELY_CAST`
+  sub-class, naming the column and both types; a refused overwrite leaves the prior snapshot
+  intact. Positives: widening, narrowing, atomic→string, date→timestamp, NULL-fill and identity
+  all still write. **Deliberately absent:** plain `INSERT INTO … SELECT|VALUES`,
+  `writeTo().append()` and `write.insertInto()` (no overwrite) — DataFusion lowers those onto
+  the fork `TableProvider` with the CAST already applied, so they remain ungated and are named
+  in `task/wi1-insert-store-gate-ledger.md` §4 rather than pinned here. Arrow path.
 - `test_merge_semantics_audit.py` — **MERGE-audit corpus** (2026-08-14 audit gap-map rows
   c/d/g/n/o): null-safe `<=>` / `eqNullSafe` ON matches NULL keys (both doors); builder-door
   `=` NULL keys do not match; self-merge (target as source) updates once per row; join-key
