@@ -23,6 +23,25 @@ fn sample_batch() -> RecordBatch {
     .unwrap()
 }
 
+/// 2026-08 perf baseline: an unset builder lands the repark default (65536), and a
+/// `datafusion.execution.batch_size` conf key still beats it (precedence: typed setter > conf >
+/// default — the typed-setter arm is `builder_applies_config_without_error` below).
+#[tokio::test]
+async fn builder_default_batch_size_is_65536_and_conf_key_wins() {
+    let default_session = ReparkSession::builder().build().unwrap();
+    assert_eq!(
+        default_session.context().copied_config().batch_size(),
+        crate::session::DEFAULT_BATCH_SIZE
+    );
+    assert_eq!(crate::session::DEFAULT_BATCH_SIZE, 65536);
+
+    let conf_session = ReparkSession::builder()
+        .config("datafusion.execution.batch_size", "1234")
+        .build()
+        .unwrap();
+    assert_eq!(conf_session.context().copied_config().batch_size(), 1234);
+}
+
 #[tokio::test]
 async fn builder_applies_config_without_error() {
     let session = ReparkSession::builder()

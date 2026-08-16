@@ -377,25 +377,30 @@ def test_applyinpandas_engine_sort_key_contiguous_stream(spark: SparkSession) ->
 def test_applyinpandas_e2e_multi_batch_group_calls_once(spark: SparkSession) -> None:
     """Group spanning multiple engine Arrow batches must invoke func once (stitch e2e).
 
-    Engine stream chunk size is 8192 rows; >8192 rows for one key forces a multi-batch
-    group through the real orderBy + mapInArrow bridge (not only the unit iterator pin).
+    Batch size is pinned to 8192 here (the session default is 65536) so >8192 rows for
+    one key forces a multi-batch group through the real orderBy + mapInArrow bridge
+    (not only the unit iterator pin).
     """
     large_group_rows = 20_000  # > 8192 → at least 3 batches for k=1
-    rows = [(1, index) for index in range(large_group_rows)] + [(2, 0), (2, 1)]
-    frame = spark.createDataFrame(rows, "k INT, v INT")
-    # Sanity: sorted stream is multi-batch for this size.
-    batch_count = sum(1 for _ in pa.RecordBatchReader.from_stream(frame.orderBy("k")))
-    assert batch_count >= 3
+    spark.conf.set("datafusion.execution.batch_size", "8192")
+    try:
+        rows = [(1, index) for index in range(large_group_rows)] + [(2, 0), (2, 1)]
+        frame = spark.createDataFrame(rows, "k INT, v INT")
+        # Sanity: sorted stream is multi-batch for this size.
+        batch_count = sum(1 for _ in pa.RecordBatchReader.from_stream(frame.orderBy("k")))
+        assert batch_count >= 3
 
-    calls: list[int] = []
+        calls: list[int] = []
 
-    def track(pdf: pd.DataFrame) -> pd.DataFrame:
-        calls.append(len(pdf))
-        return pd.DataFrame({"k": [int(pdf["k"].iloc[0])], "n": [len(pdf)]})
+        def track(pdf: pd.DataFrame) -> pd.DataFrame:
+            calls.append(len(pdf))
+            return pd.DataFrame({"k": [int(pdf["k"].iloc[0])], "n": [len(pdf)]})
 
-    out_rows = _rows(frame.groupBy("k").applyInPandas(track, "k INT, n INT").to_arrow())
-    assert _multiset(out_rows) == _multiset([{"k": 1, "n": large_group_rows}, {"k": 2, "n": 2}])
-    assert sorted(calls) == [2, large_group_rows]
+        out_rows = _rows(frame.groupBy("k").applyInPandas(track, "k INT, n INT").to_arrow())
+        assert _multiset(out_rows) == _multiset([{"k": 1, "n": large_group_rows}, {"k": 2, "n": 2}])
+        assert sorted(calls) == [2, large_group_rows]
+    finally:
+        spark.conf.unset("datafusion.execution.batch_size")
 
 
 def test_applyinpandas_schema_cast_overflow_names_column(spark: SparkSession) -> None:

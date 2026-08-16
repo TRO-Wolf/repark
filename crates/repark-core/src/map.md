@@ -28,7 +28,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   1 MiB, 8 GiB)`; `memory_limit_bytes(0)` / `memory_limit_gb(0)` opt out to Infinite;
   non-zero budgets below 1 MiB refuse at build; runtime `SET datafusion.runtime.memory_limit`
   swaps a new FairSpillPool — see `session/spill.rs`;
-  `batch_size(0)` / `target_partitions(0)` refuse at build), attaches the write/scan knobs as
+  `batch_size(0)` / `target_partitions(0)` refuse at build; unset `batch_size` defaults to
+  `DEFAULT_BATCH_SIZE` 65536, not DataFusion's 8192 — 2026-08 perf baseline, typed setter >
+  conf key > default), attaches the write/scan knobs as
   DataFusion `ConfigExtension`s via `repark_iceberg::write::*` (`with_merge_session_knobs`,
   `with_scan_concurrency`, `with_write_concurrency`), and builds `RuntimeEnv` with
   `object_list_cache_limit(0)` so path-overwrite stage-swap never serves a stale listing. Async

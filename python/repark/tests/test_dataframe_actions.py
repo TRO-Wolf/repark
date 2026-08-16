@@ -517,19 +517,20 @@ def test_to_arrow_batches_multibatch_orderby_equals_to_arrow(spark: ReparkSessio
     """P2b octo C1: multi-batch stream concat ≡ to_arrow under orderBy (positional)."""
     # range(n) without orderBy is multi-partition unordered across separate executions;
     # orderBy pins a stable row order so concat equality is mutation-proof.
-    frame = spark.range(50_000).selectExpr("id", "cast(id as string) as s").orderBy("id")
+    # 200_000 > the 65536 session-default batch_size, so the stream is genuinely multi-batch.
+    frame = spark.range(200_000).selectExpr("id", "cast(id as string) as s").orderBy("id")
     batches = list(frame.to_arrow_batches())
     assert len(batches) >= 2, f"expected multi-batch plan, got {len(batches)} batch(es)"
     reconstructed = pa.Table.from_batches(batches)
     full = frame.to_arrow()
-    assert reconstructed.num_rows == full.num_rows == 50_000
+    assert reconstructed.num_rows == full.num_rows == 200_000
     assert reconstructed.schema.equals(full.schema)
     assert reconstructed.to_pydict() == full.to_pydict()
     # Stream rows match collect under the same orderBy (value + int type).
     streamed = list(frame.toLocalIterator())
     collected = frame.collect()
     assert _row_tuples(streamed) == _row_tuples(collected)
-    assert streamed[0][0] == 0 and streamed[-1][0] == 49_999
+    assert streamed[0][0] == 0 and streamed[-1][0] == 199_999
     assert full.schema.field("id").type == pa.int64()
 
 

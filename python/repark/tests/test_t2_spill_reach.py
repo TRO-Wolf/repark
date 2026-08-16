@@ -29,10 +29,16 @@ def _isolate_session() -> None:
 
 
 def _small_fair_session(memory: str = "64M") -> ReparkSession:
-    """FairSpillPool via runtime SET; 2 partitions; 1 MiB sort reservation."""
+    """FairSpillPool via runtime SET; 2 partitions; 1 MiB sort reservation.
+
+    batch_size is pinned to 8192 (the session default is 65536): these spill-reach
+    recipes were calibrated at 8192-row batches, and the larger default lets the sort
+    class finish in-memory under the same 64 MiB pool — the probe would lose its teeth.
+    """
     spark = (
         ReparkSession.builder.config("datafusion.execution.target_partitions", "2")
         .config("datafusion.execution.sort_spill_reservation_bytes", "1048576")
+        .config("datafusion.execution.batch_size", "8192")
         .getOrCreate()
     )
     spark.conf.set("datafusion.runtime.memory_limit", memory)
