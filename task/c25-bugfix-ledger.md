@@ -571,3 +571,120 @@ candidates). Agents spawned (explore): Critic-1, Critic-2, three
 finders — not NOT-RUN.
 
 Keep #175 DRAFT. B1 not started.
+
+---
+
+## 2. DF-2 — dynamicFlatten outer-explode remediation (2026-08-17)
+
+**Branch:** `grok/c25-df2-outer-flatten` off `b628b0f` (#175 merged).
+**Charter:** BRIEF-conductor-25.md "Addendum 2026-08-17 — DF-2 WORK ORDER"
++ sync_file amendment (`empty_as_null` default **True**).
+
+### 2.1 Oracles (measured this unit)
+
+**Polars 1.43.2** (`/tmp/grok-c25/.venv`): `DataFrame.explode(..., empty_as_null=)`
+on a 3-row GA4-shaped frame (page_view empty items, purchase one item,
+session_start NULL items):
+
+| kwarg | event_names kept |
+|---|---|
+| default (deprecation: will become False in 2.0) | page_view, purchase, session_start |
+| `empty_as_null=True` | page_view, purchase, session_start |
+| `empty_as_null=False` | purchase, session_start |
+
+Three sequential explodes (params / user_properties / items) agree: True
+keeps all three rows; False drops page_view (empty lists) and keeps
+session_start (NULL lists).
+
+**Spark 4.1.2** (`/tmp/grok-c25-pyspark`, `JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64`):
+`explode_outer("Legs")` on `array<struct<leg_id,side>>` keeps empty and
+NULL as one null-element row; plain `explode` drops them.
+
+**Engine CAST probe (repark native):** `CAST(NULL AS struct<x:bigint,y:string>)`
+and `CAST(NULL AS STRUCT<x BIGINT, y VARCHAR>)` both succeed.
+`make_array(CAST(NULL AS struct<leg_id:bigint,…,Fills:array<struct<…>>>>)`
++ `unnest` yields a typed null struct. `CAST(NULL AS struct<m:map<string,int>>)`
+fails parse — map elements stay refused. `CAST(NULL AS void)` unsupported —
+void lists keep inner explode.
+
+### 2.2 Deliverables
+
+- **D-1:** `_spark_array_element_to_sql` spells `struct<name:TYPE,…>` (nested
+  structs + `array<…>` fields). `timestamp_ntz` → `TIMESTAMP`. `map<…>`
+  returns `None` (same refuse class).
+- **D-2:** `dynamicFlatten(..., empty_as_null: bool = True)`. True →
+  `explode_outer`. False → private `explode_keep_null` (NULL-only CASE +
+  inner explode). `array<void>` still dropped / inner-exploded (no CAST).
+- **D-3:** flipped `test_nested_explode_outer_on_array_of_struct_refuses_loud`
+  to the value pin; `_nested_full_flatten_rows` now derives the outer
+  cartesian (shown in the test body); scalar explode_outer pin untouched.
+- **D-4:** in-test GA4 fixture in `test_dynamic_flatten.py` (both flag
+  states, leaf count, Arrow types). No `planning/` paths.
+- **D-5:** docstring, dataframe-guide flag table, troubleshooting rewrite,
+  map.md lockstep. Registry row is orchestrator-side.
+
+B1 not started.
+
+### 2.3 Known residual
+
+`test_nested_dynamic_flatten_count_action_refuses_loud` — flip only if
+the optimizer trip goes away under the new plan; otherwise keep.
+
+`array<void>` / `NullType` lists: `CAST(NULL AS void)` is unsupported, so
+`empty_as_null` cannot build a typed null element. Remaining void lists
+(when `drop_null_lists=False`) stay on inner explode (NULL and EMPTY both
+drop). Documented on the method, the guide flag table, and
+`test_drop_null_lists_false_keeps_null_list_column`. ACC Q-001 (S2)
+remediated as honest residual, not a silent ignore.
+
+SEC-001 (S2): struct field names are allowlisted (`[A-Za-z_][A-Za-z0-9_]*`)
+before CAST embed; `decimal(p,s)` is `fullmatch`-gated; splitters honor
+`()` so `decimal(10,2)` commas do not split fields. Hostile names/tokens
+refuse loud.
+
+## Pre-PR critic report (/repark-harden)
+Engine: acc review-only standard — tier standard
+Critic-1 (quality/parity): attacked explode_outer CAST, empty_as_null True/False
+  CASE, void residual, pin discrimination, docs. Findings: Q-001 S2 (void
+  lists ignore empty_as_null) WITHDRAWN after honest-docs remediating. 0 S0/S1.
+  Test-coverage skeptic table recorded in the critic artifact. Null reports:
+  signature parity, map refuse, scalar pin untouched, no planning/ paths.
+Critic-2 (security/safety): attacked CAST interpolation, field-name embed,
+  decimal prefix. Findings: SEC-001 S2 WITHDRAWN after allowlist + decimal
+  fullmatch + paren-depth split. Null reports: secrets, parser DoS, panics,
+  destructive ops, _explode_keep_null not exported.
+Signature table: 0 pyspark.sql.functions names changed (empty_as_null is a
+  repark-extra kwarg on dynamicFlatten only).
+Oracle probes: polars 1.43.2 empty_as_null True/False; Spark 4.1.2
+  explode_outer on array<struct>; CAST(NULL AS struct<…>); live NTZ
+  explode_outer hour=12 / timestamp[us] (finder S1 REFUTED).
+Pin audit: struct explode_outer value pin, GA4 both flags, mapper unit,
+  map refuse, void residual, sanitizer refuses — each names the impl it kills.
+Convergence: ACC-CONVERGED (Critic-1 CLEAN after Q-001; Critic-2 CLEAN after
+  SEC-001) + TEST-GATED preflight_exit=0 (3335 passed, 70 skipped).
+
+## Finder-battery report
+Target: b628b0f...worktree DF-2 | dimensions: 3
+  (wiring/semantics, pins/tests, fence/docs) | findings: 10 raw → 10 deduped
+Survivors: none at S0/S1 after verify
+Refuted:
+  - timestamp_ntz CAST→LTZ hour shift (S1) — live probe: timestamp[us], hour=12
+  - full-depth count-only pin — out of D-3 scope (D-4 owns values/False)
+  - flipped explode_outer missing payloads — D-3 asked for the scalar pin shape
+  - GA4 False name-list-only — D-4 discharged (columns + names + types)
+  - GA4 page_view user_properties_key — same CASE as pinned EMPTY items
+  - nested web_info EMPTY — same CASE as sibling EMPTY + nested NULL
+  - hyphenated field refuse — intended SEC-001 allowlist, not a silent bug
+Confirmed (S3 fence, remediating in this commit):
+  - tests/map.md "Four" → three remaining BUG-CANDIDATE pins
+  - stale "140 rows" in the count() residual docstring
+  - dataframe/map.md omitted empty_as_null / explode_keep_null
+Null attestations:
+  - wiring: True/False CASE, map refuse, void residual documented
+  - pins: flip-don't-delete, GA4 both flags, mapper + sanitizer
+  - fence: CLOSED surfaces untouched; ceilings held; no planning/ in public files
+Verdict: CLEAN (zero S0/S1 survivors). Verifiers spawned (8). Agents spawned
+  (explore): Critic-1, Critic-1 re-spot, Critic-2, Critic-2 re-spot, three
+  finders, eight verifiers — not NOT-RUN.
+
+B1 not started.

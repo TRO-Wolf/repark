@@ -357,6 +357,7 @@ The flags, with their defaults:
 | `separator` | `"_"` | joins the parent path to the field name (`meta` → `meta_k`) |
 | `explode_lists` | `True` | `False` unnests structs and leaves arrays alone |
 | `drop_null_lists` | `True` | drops all-null (`array<void>`) columns instead of exploding them |
+| `empty_as_null` | `True` | NULL **and** EMPTY lists each become one null-element row. `False` is the polars ≥2.0 default (NULL kept, EMPTY dropped). The True default is a deliberate divergence: GA4-class empty repeated fields would otherwise vanish. Does not apply to `array<void>` (no CAST spelling; those lists still drop). |
 | `max_depth` | `100` | hard bound; **refuses loud** if work remains, never truncates silently |
 
 ```python

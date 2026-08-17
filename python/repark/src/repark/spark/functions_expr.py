@@ -1533,6 +1533,25 @@ def explode_outer(column: Column | str) -> Column:
     )
 
 
+def _explode_keep_null(column: Column | str) -> Column:
+    """Private generator: keep NULL lists as one null row; drop EMPTY lists.
+
+    Used only by ``dynamicFlatten(empty_as_null=False)`` (polars ≥2.0 default).
+    Not a public PySpark name — do not re-export.
+    """
+    array_column = _column_argument(column)
+    array_column._reject_nested_generator("explode")
+    _reject_aggregate_generator_argument(array_column, "explode")
+    array_sql = array_column.sql_expr_without_alias()
+    return Column(
+        array_column._inner,
+        spark_display=f"explode({array_sql})",
+        sql_expr=array_sql,
+        projection_name="col",
+        generator="explode_keep_null",
+    )
+
+
 def _reject_aggregate_generator_argument(array_column: Column, operation: str) -> None:
     """Refuse explode* on sticky-aggregate args so select cannot unnest past MISSING_GROUP_BY.
 

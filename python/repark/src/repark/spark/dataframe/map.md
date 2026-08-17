@@ -36,7 +36,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   **U-DF-1:** `_select_with_generator` mid-project binds a single-ident generator
   through `_bound_generator_array` (`column.py`) so string-form `explode` /
   `explode_outer` keep createDataFrame case (`Legs`); compounds and unresolved
-  names keep `generator._inner`.
+  names keep `generator._inner`. **DF-2:** `dynamicFlatten(empty_as_null=True)`
+  uses `explode_outer` on typed lists (False uses private `explode_keep_null`);
+  void lists stay on inner explode (no CAST spelling).
   **SE-1 PR-B (2026-08-17):** `DataFrame.declareSorted` / `declare_sorted` — the
   disclosed repark extension (no PySpark twin) that declares a `createDataFrame`
   source frame pre-sorted so DataFusion elides the window `SortExec`. It refuses
@@ -55,7 +57,8 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
   duckdb formatters, the Arrow→display and Arrow→SQL type mappers, the r24 DF1
-  `dynamicFlatten` struct expander and the r20 H1 join-qcol token rewriters.
+  `dynamicFlatten` struct expander, Spark-simpleString struct-element CAST spelling
+  for `explode_outer`, and the r20 H1 join-qcol token rewriters.
   Imports nothing from `core` at module scope (annotations only, under `TYPE_CHECKING`);
   `core.py` re-exports every name callers use, so `repark.spark.dataframe.core` and
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).

@@ -124,7 +124,10 @@ NOT in that file is a defect, not a decision.
   **U-DF-1:** capitalized `Legs` list-of-struct + sibling struct (`Legs_leg_id`);
   multi-list serial explode order; list explode in-place column order;
   struct-in-list-in-struct; null-typed list drop;
-  explode null/empty array value row-drop; max_depth LOUD refuse; bool flag type gates;
+  **DF-2:** default `empty_as_null=True` keeps NULL+EMPTY lists as a null-element row
+  (`False` keeps NULL / drops EMPTY); in-test GA4 fixture pins both flag states
+  (page_view empty / purchase full / session_start NULL); max_depth LOUD refuse;
+  bool flag type gates (incl. `empty_as_null`);
   name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
   in-place column order;
   idempotence on already-flat; both method names; custom separator; explode_lists=False;
@@ -429,7 +432,9 @@ NOT in that file is a defect, not a decision.
 - `test_pandas_udf_oracle.py (+ pandas_udf_oracle_funcs.py picklable helpers)` — live PySpark 4.1.2 pandas_udf oracle (named deliverable): SCALAR values/nulls/coercion/multi-arg/string/error/withColumn + **M5 SCALAR_ITER + pure GROUPED_AGG**; skips cleanly without JVM. Not Apache `test_pandas_udf*` census.
 - `test_explode_rewrite.py` — R-EXPLODE-REWRITE pins (null/empty, one-generator, posexplode*
   STOP, str ColumnOrName, cast sticky, withColumn unnest, pre-aliased AS strip, multi-array
-  exact type bind; **U-DF-1:** string-form / `F.col` / getitem / casefold explode of
+  exact type bind; **DF-2:** `explode_outer` on `array<struct>` + nested `web_info` struct
+  keeps null/empty rows; map element still refuses; struct/map mapper unit pin;
+  **U-DF-1:** string-form / `F.col` / getitem / casefold explode of
   createDataFrame `Legs`, `explode_outer('Legs')` null/empty keep, absent name still loud;
   octo c2: pre-aliased sibling, Timestamp outer type, reserved/mixed-case
   idents, hostile name quote, asc/desc sticky, alone-select outer; octo c3: compound
@@ -452,11 +457,13 @@ NOT in that file is a defect, not a decision.
   value+type. **nested** (the held DS-1 pins, landed on #154): parquet keeps the capitalized
   nested schema incl. `array<void>`; string-form / casefold / `F.col` / getitem
   `explode('Legs')`; `explode_outer` keeps null+empty rows on the scalar-element lists
-  (`Tags`/`Scores`) with the plain-explode drop as the contrast; `dynamicFlatten` struct
-  unnest with parent-path prefixes and full-depth in-place column order (13 columns, 140
-  rows at 64 seed-42 rows) with the null-typed list dropped; a fourth BUG-CANDIDATE pins
-  that `count()` on that full-depth plan reds in `push_down_leaf_projections` while
-  `to_arrow()` on the same plan is correct. **schema_inference** POLICY:
+  (`Tags`/`Scores`) **and** on `array<struct>` `Legs` (DF-2 flipped the refuse pin
+  in place); `dynamicFlatten` struct unnest with parent-path prefixes and full-depth
+  in-place column order (13 columns; row count is the outer-explode cartesian — see
+  `_nested_full_flatten_rows`) with the null-typed list dropped; a remaining
+  BUG-CANDIDATE pins that `count()` on that full-depth plan reds in
+  `push_down_leaf_projections` while `to_arrow()` on the same plan is correct
+  (flipped in-place if the optimizer trip goes away). **schema_inference** POLICY:
   an under-sampled read misses the int32→int64 widening past `samplingRows` (full-scan
   control resolves int64) **and** the under-widened cast then refuses LOUD, never silently
   truncating; labeled-class resolutions incl. zero-padded ids reading as `int32`.
@@ -464,14 +471,13 @@ NOT in that file is a defect, not a decision.
   **secrets**: reads are unredacted — standing detector if data-column flagging ever lands
   silently. **smartcsv**: delimiter zoo (declared `sep`) diagnostics, duplicate-header
   dedupe, ragged pad + synthesized `_c12` overflow column, null-token / bool-spelling /
-  decimal-width classes vs typed truth. Four BUG-CANDIDATE pins across the file report
+  decimal-width classes vs typed truth. Three BUG-CANDIDATE pins across the file report
   engine behavior without changing it: delimiter AUTO-detect picks a rival delimiter on
-  the embedded-delimiter corpus (B4 round 4 left this as a known-limit; declare `sep=`;
-  European-locale files use `sep=';'`); `explode_outer` refuses on `array<struct>`
-  where `explode` succeeds; a euro-comma column infers `decimal128` and then refuses
-  the cast on the raw comma text (both corpora that carry the class); `count()` on the
-  full-depth flatten plan reds in `push_down_leaf_projections`. Ledger:
-  `task/c18-datasets-ledger.md`; B4 record: `task/c25-bugfix-ledger.md`.
+  the embedded-delimiter corpus (B4 left this as a known-limit; declare `sep=`;
+  European-locale files use `sep=';'`); a euro-comma column infers `decimal128` and
+  then refuses the cast on the raw comma text (both corpora that carry the class);
+  `count()` on the full-depth flatten plan reds in `push_down_leaf_projections`.
+  Ledger: `task/c18-datasets-ledger.md`; B4/DF-2 record: `task/c25-bugfix-ledger.md`.
 
 - **R-TPCH-V3 (W1):** SF10 disk gate / DIED exit 6 / subprocess signal→DIED /
   iceberg_wall vs parquet-not-Iceberg column pins; query_result JSON round-trip;

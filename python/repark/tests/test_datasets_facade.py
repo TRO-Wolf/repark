@@ -120,22 +120,58 @@ def _nested_leg_rows(rows: list[dict[str, Any]]) -> list[tuple[int, int, str]]:
     )
 
 
-def _nested_full_flatten_rows(rows: list[dict[str, Any]]) -> int:
+def _list_explode_width(items: list[Any] | None, *, empty_as_null: bool) -> int:
+    """How many rows one list contributes under ``empty_as_null`` explode semantics.
+
+    NULL always contributes 1 (a null-element row). EMPTY contributes 1 when
+    ``empty_as_null`` is True and 0 when False. A populated list contributes
+    ``len(items)``.
+    """
+    if items is None:
+        return 1
+    if len(items) == 0:
+        return 1 if empty_as_null else 0
+    return len(items)
+
+
+def _nested_full_flatten_rows(rows: list[dict[str, Any]], *, empty_as_null: bool = True) -> int:
     """Oracle row count for a full ``dynamicFlatten``.
 
-    Every list on the path is exploded, and ``explode`` drops the row when a list is
-    null or empty — so a branch survives only when every list it passes through is
-    non-empty. The count is the nested cartesian product of the surviving branches.
+    Default ``empty_as_null=True``: every list on the path is exploded with
+    outer semantics — NULL and EMPTY each contribute width 1 (one null-element
+    row), then the nested cartesian product is taken. ``user_properties`` is
+    ``array<void>`` and is dropped (``drop_null_lists`` default), so it is not
+    in the product.
+
+    Derivation per input row:
+      legs_width = sum over legs of (sum over fills of (meta.Tags width * Extra.Flags width));
+      a missing/empty Legs (or Fills) list is itself width 1 under True, which then
+      null-unnests to Tags width 1 * Flags width 1.
+      row_rows = legs_width * top-level Tags width * top-level Scores width.
     """
     total = 0
     for row in rows:
-        legs_branch = 0
-        for leg in row["Legs"] or []:
-            for fill in leg["Fills"] or []:
-                meta = fill["Meta"] or {}
-                extra = meta.get("Extra") or {}
-                legs_branch += len(meta.get("Tags") or []) * len(extra.get("Flags") or [])
-        total += legs_branch * len(row["Tags"] or []) * len(row["Scores"] or [])
+        legs = row["Legs"]
+        legs_width = _list_explode_width(legs, empty_as_null=empty_as_null)
+        if legs:
+            legs_width = 0
+            for leg in legs:
+                fills = leg["Fills"]
+                fill_width = _list_explode_width(fills, empty_as_null=empty_as_null)
+                if fills:
+                    fill_width = 0
+                    for fill in fills:
+                        meta = fill["Meta"] or {}
+                        extra = meta.get("Extra") or {}
+                        fill_width += _list_explode_width(
+                            meta.get("Tags"), empty_as_null=empty_as_null
+                        ) * _list_explode_width(extra.get("Flags"), empty_as_null=empty_as_null)
+                legs_width += fill_width
+        total += (
+            legs_width
+            * _list_explode_width(row["Tags"], empty_as_null=empty_as_null)
+            * _list_explode_width(row["Scores"], empty_as_null=empty_as_null)
+        )
     return total
 
 
@@ -246,30 +282,36 @@ def test_nested_explode_outer_keeps_null_and_empty_list_rows(
 def test_nested_explode_outer_on_array_of_struct_refuses_loud(
     spark: ReparkSession, tmp_path: Path
 ) -> None:
-    """BUG-CANDIDATE — ``explode_outer`` refuses on ``array<struct>`` while ``explode`` works.
+    """``explode_outer`` on ``array<struct>`` keeps null-list and empty-list rows.
 
-    Plain ``explode('Legs')`` unnests the list-of-struct fine (pinned above). Its outer
-    twin needs an SQL element type for the null/empty guard and has no spelling for a
-    struct element, so it refuses instead of keeping the null rows. The asymmetry is
-    reported, not fixed here: the null/empty-keep behavior is pinned on the scalar-element
-    lists in the previous test. If this reds because the guard learned struct elements,
-    that is the fix — replace it with the value pin the previous test uses.
+    Same value pin as ``test_nested_explode_outer_keeps_null_and_empty_list_rows``,
+    on the struct-element ``Legs`` column. Pre-fix this test was a BUG-CANDIDATE
+    refuse pin (no SQL spelling for the struct element); the guard now spells
+    ``struct<…>`` via CAST(NULL AS struct<…>). Name kept (flip-don't-delete).
     """
-    from repark.errors import AnalysisException
-
     written = _write_family("nested", tmp_path / "nested")
     frame = spark.read.parquet(str(written / "data.parquet"))
+    truth = _nested_truth()
 
-    with pytest.raises(AnalysisException, match=r"explode_outer cannot resolve SQL element type"):
-        frame.select(frame.id, F.explode_outer("Legs").alias("leg")).to_arrow()
+    elements = sum(len(row["Legs"] or []) for row in truth)
+    missing = [row["id"] for row in truth if not row["Legs"]]
+    assert elements and missing
 
-    # The refusal names the element type it could not spell, not a generic failure.
-    with pytest.raises(AnalysisException, match=r"array<struct<leg_id:bigint"):
-        frame.select(frame.id, F.explode_outer("Legs").alias("leg")).to_arrow()
+    table = frame.select(frame.id, F.explode_outer("Legs").alias("leg")).to_arrow()
+    assert table.num_rows == elements + len(missing)
+    leg_type = table.schema.field("leg").type
+    assert pa.types.is_struct(leg_type)
+    assert leg_type.field("leg_id").type == pa.int64()
+    assert _is_arrow_string(leg_type.field("side").type)
 
-    # Contrast: the plain generator on the very same column still unnests.
+    rows = table.to_pylist()
+    null_ids = sorted({row["id"] for row in rows if row["leg"] is None})
+    assert null_ids == sorted(missing)
+
+    # Contrast: plain explode still drops those rows.
     plain = frame.select(frame.id, F.explode("Legs").alias("leg")).to_arrow()
-    assert plain.num_rows == len(_nested_leg_rows(_nested_truth()))
+    assert plain.num_rows == elements
+    assert plain.num_rows == len(_nested_leg_rows(truth))
 
 
 def test_nested_dynamic_flatten_unnests_struct_columns(
@@ -322,7 +364,13 @@ def test_nested_dynamic_flatten_full_depth_column_order(
     assert "user_properties" not in flat.columns
 
     table = flat.to_arrow()
-    assert table.num_rows == _nested_full_flatten_rows(_nested_truth())
+    truth = _nested_truth()
+    # Derivation (empty_as_null=True default): each list on the path contributes
+    # max(len, 1) when null/empty (one null-element row) and len otherwise; the
+    # row count is the nested cartesian of Legs->Fills->Meta.Tags * Extra.Flags
+    # times top-level Tags * Scores. See _nested_full_flatten_rows.
+    expected = _nested_full_flatten_rows(truth)
+    assert table.num_rows == expected
     assert table.schema.field("Legs_Fills_px").type == pa.float64()
 
     assert table.schema.field("Legs_Fills_Meta_Extra_Deep_level").type == pa.int32()
@@ -336,8 +384,9 @@ def test_nested_dynamic_flatten_count_action_refuses_loud(
 ) -> None:
     """BUG-CANDIDATE — ``count()`` on the full-depth flatten plan trips an optimizer rule.
 
-    The very same plan exports fine through ``to_arrow`` (pinned above, 140 rows at this
-    scale), but the ``count()`` action reds inside ``push_down_leaf_projections``: the
+    The very same plan exports fine through ``to_arrow`` (pinned above; row count is
+    the outer-explode cartesian from ``_nested_full_flatten_rows``), but the
+    ``count()`` action reds inside ``push_down_leaf_projections``: the
     multi-pass explode leaves a qualified ``<explode-alias>."Legs"`` beside the
     unqualified ``Legs`` and the rule calls the pair ambiguous. So the row count is
     reachable and correct on the export path while the cheapest way to ask for it fails.
