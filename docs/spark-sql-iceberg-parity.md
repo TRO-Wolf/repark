@@ -594,6 +594,24 @@ pattern): the claim is about the *error class hierarchy*, not a value.
   additionally catches facade arg errors. A future unit that decouples `PySparkException` from
   `RuntimeError` updates this pin — it records today's shape, not a forever contract.
 
+### FA-4 — `inferNestedDictAsStruct` defaults to `true`
+
+- **repark** — `spark.sql.pyspark.inferNestedDictAsStruct.enabled` defaults to **`"true"`**:
+  dict-valued *cells* in `createDataFrame` python-object ingestion infer as `StructType`
+  (field union + null-fill) with no conf set. Row-level dicts (key-union) are unaffected;
+  explicit `schema=` wins either way.
+- **Apache Spark** — the conf defaults to `false` (SPARK-35929): dict cells infer as
+  `MapType` unless the user opts in. *(oracle: documented — the conf's documented default.)*
+- **Pin** — `python/repark/tests/test_n1_nested_dict_struct.py::test_conf_default_true_in_sqlconf_defaults`
+  and `::test_default_unset_dict_cell_infers_struct`; the conf-false leg stays pinned
+  byte-identical to PySpark in the same file.
+- **Rationale** — DECLARED, owner decision (2026-08-16). The dominant facade ingestion shape
+  is nested dict rows headed for `dynamicFlatten`/struct addressing, where map inference is
+  a silent no-op surprise; struct is the useful default and the honest one to declare. The
+  PySpark-faithful behavior is one conf away (`"false"` restores byte-identity), the flip is
+  visible (`conf.get` discloses it), and both directions stay under test so a drift in
+  either inference path reds.
+
 ---
 
 ## 6. How a row is added, mirrored and retired

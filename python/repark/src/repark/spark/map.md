@@ -435,8 +435,10 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `createDataFrame` + multiLine JSON error. Pins: `tests/test_t1_cdf_ingest.py` + updated
   interchange refuse/union pins.
 - **r23b N1 nested-dict-struct** (2026-08-04, `# === r23b N1: … ===`): conf
-  `spark.sql.pyspark.inferNestedDictAsStruct.enabled` default `"false"` in
-  `_SQLCONF_DEFAULTS`; contextvar `_INFER_NESTED_DICT_AS_STRUCT` (template after
+  `spark.sql.pyspark.inferNestedDictAsStruct.enabled` — default flipped to `"true"` in
+  `_SQLCONF_DEFAULTS` (owner decision 2026-08-16; DECLARED divergence from PySpark's
+  `false`, registry row in the divergence registry; `"false"` restores byte-identical
+  PySpark behavior); contextvar `_INFER_NESTED_DICT_AS_STRUCT` (template after
   `_LEGACY_FIRST_ELEMENT_COERCE`) set per `createDataFrame`. Conf true: dict-valued
   *cells* → StructType with multi-row / list-element field union + null-fill (Spark
   SPARK-35929); conf false: MapType byte-identical. Sparse `{size,indices,values}` path

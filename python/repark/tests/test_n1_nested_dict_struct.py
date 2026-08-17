@@ -67,11 +67,19 @@ def _synthetic_cond() -> dict[str, object]:
 # ==================================================================================================
 
 
-def test_conf_default_false_in_sqlconf_defaults(spark: ReparkSession) -> None:
-    """Default is false via ``_SQLCONF_DEFAULTS`` (get without prior set)."""
-    assert spark.conf.get(CONF) == "false"
+def test_conf_default_true_in_sqlconf_defaults(spark: ReparkSession) -> None:
+    """Default is TRUE via ``_SQLCONF_DEFAULTS`` — a declared divergence from PySpark's
+    false (owner decision 2026-08-16; registry FA-4). ``"false"`` restores PySpark."""
+    assert spark.conf.get(CONF) == "true"
     # getAll is a property (PySpark camelCase), not a method.
-    assert spark.conf.getAll[CONF] == "false"
+    assert spark.conf.getAll[CONF] == "true"
+
+
+def test_default_unset_dict_cell_infers_struct(spark: ReparkSession) -> None:
+    """The flipped default in action: dict cells infer as struct with NO conf set."""
+    frame = spark.createDataFrame([Row(m={"a": 1, "b": 2}), Row(m={"a": 3, "b": 4})])
+    m_type = frame.to_arrow().schema.field("m").type
+    assert pa.types.is_struct(m_type), f"default should infer struct, got {m_type}"
 
 
 def test_conf_set_and_builder_config() -> None:
@@ -86,11 +94,11 @@ def test_conf_set_and_builder_config() -> None:
 
     session = ReparkSession.builder.appName("n1-conf-set").getOrCreate()
     try:
-        assert session.conf.get(CONF) == "false"
-        session.conf.set(CONF, "true")
         assert session.conf.get(CONF) == "true"
         session.conf.set(CONF, False)
         assert session.conf.get(CONF) == "false"
+        session.conf.set(CONF, "true")
+        assert session.conf.get(CONF) == "true"
     finally:
         session.stop()
         _reset_active_session_for_tests()
@@ -102,13 +110,10 @@ def test_conf_set_and_builder_config() -> None:
 
 
 def test_q8a_conf_false_list_of_dict_is_map(spark: ReparkSession) -> None:
-    """conf false/unset: list-of-dict cell → list<map>; mixed values stringify (r22 T1)."""
-    for conf_val in (None, "false"):
-        if conf_val is None:
-            # unset / default
-            pass
-        else:
-            spark.conf.set(CONF, conf_val)
+    """conf false (explicit — the repark default is now true): list-of-dict cell →
+    list<map>; mixed values stringify (r22 T1). Byte-identical to PySpark's default."""
+    for conf_val in ("false",):
+        spark.conf.set(CONF, conf_val)
         data = [
             Row(f1=[{"payment": 200.5, "name": "A"}], f2=[1, 2]),
             Row(f1=[{"payment": 100.5, "name": "B"}], f2=[2, 3]),

@@ -650,7 +650,8 @@ NOT in that file is a defect, not a decision.
   collect/to_arrow value+type; Binary/Time refuse retained; wrapped `{"Orders":[...]}`
   via `json.load` + dict path chain.
 - `test_n1_nested_dict_struct.py` — **r23b N1** `inferNestedDictAsStruct.enabled`: conf
-  default/builder/set entry points; Q8 conf-false map byte-identity + sparse-vector
+  default (TRUE since the FA-4 owner flip, 2026-08-16 — divergence registry) /builder/set
+  entry points + the default-unset struct pin; Q8 conf-false(explicit) map byte-identity + sparse-vector
   conf-invariant; conf-true list-of-dict / unnested cell / dict-in-dict / ragged
   null-fill / field-order / non-string keys; row-dict key-union conf-invariant (Q6);
   explicit schema wins (Q11); Orders shape Legs/ConditionalOrders array<struct> under

@@ -118,10 +118,13 @@ _SQLCONF_DEFAULTS: dict[str, str] = {
     # Default app name where we control the default (Spark has no default appName).
     "spark.app.name": "repark",
     # === r23b N1: nested dict-cell → StructType (Spark SPARK-35929) ===
-    # Conf false/unset keeps MapType inference (byte-identical to pre-N1). Conf true
-    # infers StructType for dict-valued *cells* (any nesting depth); row-dicts (r22
-    # key-union) are unaffected.
-    "spark.sql.pyspark.inferNestedDictAsStruct.enabled": "false",
+    # Conf true infers StructType for dict-valued *cells* (any nesting depth); false keeps
+    # MapType inference (byte-identical to PySpark's default); row-dicts (r22 key-union)
+    # are unaffected either way. repark defaults TRUE — a DECLARED divergence from
+    # PySpark's false (owner decision, 2026-08-16; registry row in
+    # docs/spark-sql-iceberg-parity.md): nested dict rows should flatten without an
+    # explicit schema. Set "false" to restore byte-identical PySpark behavior.
+    "spark.sql.pyspark.inferNestedDictAsStruct.enabled": "true",
     # === H-1a: session timezone (gap G1) ===
     # Readable back before anything sets it. UTC, not the host zone — a DECLARED divergence
     # from Spark's JVM-local default (reproducibility; no host-environment read).
@@ -3077,7 +3080,7 @@ def _create_dataframe_from_rows(
     # strip() matches other bool conf parsers in this module (octo C2-Q-001).
 
     infer_dict_as_struct = str(
-        session.conf.get("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
+        session.conf.get("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "true")
     ).strip().lower() in {"true", "1"}
 
     token_legacy = _LEGACY_FIRST_ELEMENT_COERCE.set(legacy_first)

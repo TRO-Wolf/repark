@@ -126,6 +126,9 @@ def test_dict_key_union_null_fill_and_type_widening(spark: ReparkSession) -> Non
 
 def test_dict_key_union_orders_shaped_synthetic(spark: ReparkSession) -> None:
     """Synthetic Orders-shaped ragged optional fields (invented IDs only)."""
+    # FA-4: repark defaults inferNestedDictAsStruct to true; this r21 key-union pin keeps
+    # the PySpark-default MAP cell path (the struct shape is pinned in the N1 file).
+    spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     rows = [
         {
             "OrderId": 9001,

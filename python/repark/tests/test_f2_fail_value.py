@@ -68,6 +68,8 @@ def test_create_dataframe_pads_short_name_list(spark: ReparkSession) -> None:
 
 def test_empty_map_collects_as_dict(spark: ReparkSession) -> None:
     """Map cells collect as dict (empty → {}), not Arrow pair-lists."""
+    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
+    spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([({},), ({"a": 1},), ({"a": None},)], ["f1"])
     assert isinstance(frame.schema.fields[0].dataType, MapType)
     rows = frame.collect()
@@ -84,6 +86,8 @@ def test_empty_map_null_before_int_apache_order(spark: ReparkSession) -> None:
 
     Null-only witness must not pin map value type to string (octo C1-Q-001).
     """
+    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
+    spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([({},), ({"a": None},), ({"a": 1},)], ["f1"])
     assert frame.schema.fields[0].dataType.simpleString() == "map<string,bigint>"
     rows = frame.collect()
@@ -99,6 +103,8 @@ def test_empty_map_null_before_int_apache_order(spark: ReparkSession) -> None:
 
 def test_nested_array_of_maps_collects_dicts(spark: ReparkSession) -> None:
     """array<map> collect → list[dict], empty map → {} (octo C1-Q-003)."""
+    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
+    spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     frame = spark.createDataFrame([([{"a": 1}, {}],)], ["x"])
     rows = frame.collect()
     assert rows[0].x == [{"a": 1}, {}]
@@ -314,6 +320,8 @@ def test_print_schema_level_truncates_nested(spark: ReparkSession) -> None:
 
 def test_mutation_proof_combo_map_overlay_empty_scalar(spark: ReparkSession) -> None:
     """Combined C1+C2 surfaces stay correct after interleaved actions (octo C3)."""
+    # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is about the MAP path.
+    spark.conf.set("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
     maps = spark.createDataFrame([({},), ({"a": None},), ({"a": 1},)], ["f1"])
     _ = maps.collect()
     assert maps.schema.fields[0].dataType.simpleString() == "map<string,bigint>"
