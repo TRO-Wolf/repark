@@ -233,38 +233,40 @@ class (SQM R1) and lets a single wide line decide on a small file (R4).
 
 ### 1.3 Derived rank key (from the fixtures)
 
-1. **Count quote-aware** (delimiter-independent `"` toggle, `""` escape). A
-   rival inside quotes contributes no splits. This is *not* `csv.reader` on the
-   whole file — stream `csv.reader` is still delimiter-dependent and scores the
-   quoted-pipe case the same as the per-line reader (`|` → `(4, 3)`).
-2. **Rank `(header_join, agreement, mode_fields)`.** `header_join` is 1 when
-   some line splits into `mode_fields` identifier tokens
-   (`^[A-Za-z_][A-Za-z0-9_-]*$`). Agreement stays primary among header-joining
-   candidates; modal field count is only the last tie-break.
+~~Round-2 table below is STRUCK. SQM round 3 found it fabricated / not
+re-measured against the shipped code. Do not cite these tuples. Corrected
+origin/main `csv.reader` scores are in §1.8.~~
 
-Measured on the real DS-4 generator (`render_csv(64, 42, scheme)`) and the
-SQM counterexamples (quote-aware counts):
+1. ~~**Count quote-aware** (delimiter-independent `"` toggle, `""` escape).~~
+2. ~~**Rank `(header_join, agreement, mode_fields)`.**~~
+
+~~Measured on the real DS-4 generator (`render_csv(64, 42, scheme)`) and the
+SQM counterexamples (quote-aware counts):~~
 
 | corpus | `,` | `;` | tab | `\|` | winner |
 |---|---|---|---|---|---|
-| DS-4 comma | header (12, 54) | (0, 0) | (0, 0) | (0, 0) | `,` |
-| DS-4 semicolon | (4, 58), no header | header (12, 54) | (0, 0) | (0, 0) | `;` |
-| DS-4 tab | (4, 58), no header | (0, 0) | header (12, 54) | (0, 0) | tab |
-| DS-4 pipe | (4, 58), no header | (0, 0) | (0, 0) | header (12, 54) | `\|` |
-| TSV + commas | (3, 2), no header | (0, 0) | header (2, 4) | (0, 0) | tab |
-| 2-col `;` + commas | (3, 3), no header | header (2, 4) | (0, 0) | (0, 0) | `;` |
-| quoted pipe-list | header (3, 4) | (0, 0) | (0, 0) | (0, 0) | `,` |
-| small-file one wide line | header (2, 2) | (5, 1), no header | (0, 0) | (0, 0) | `,` |
-| troubleshooting:248 repro | header (3, 2) | (0, 0) quote-aware | — | — | `,` |
+| ~~DS-4 comma~~ | ~~header (12, 54)~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~`,`~~ |
+| ~~DS-4 semicolon~~ | ~~(4, 58), no header~~ | ~~header (12, 54)~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~`;`~~ |
+| ~~DS-4 tab~~ | ~~(4, 58), no header~~ | ~~(0, 0)~~ | ~~header (12, 54)~~ | ~~(0, 0)~~ | ~~tab~~ |
+| ~~DS-4 pipe~~ | ~~(4, 58), no header~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~header (12, 54)~~ | ~~`\|`~~ |
+| ~~TSV + commas~~ | ~~(3, 2), no header~~ | ~~(0, 0)~~ | ~~header (2, 4)~~ | ~~(0, 0)~~ | ~~tab~~ |
+| ~~2-col `;` + commas~~ | ~~(3, 3), no header~~ | ~~header (2, 4)~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~`;`~~ |
+| ~~quoted pipe-list~~ | ~~header (3, 4)~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~`,`~~ |
+| ~~small-file one wide line~~ | ~~header (2, 2)~~ | ~~(5, 1), no header~~ | ~~(0, 0)~~ | ~~(0, 0)~~ | ~~`,`~~ |
+| ~~troubleshooting:248 repro~~ | ~~header (3, 2)~~ | ~~(0, 0) quote-aware~~ | — | — | ~~`,`~~ |
 
-Without header-join, agreement-primary would pick comma on DS-4 semicolon /
-tab / pipe (58 > 54). That is the derived refinement, justified against every
-SQM counterexample: the unquoted rival never splits the identifier header, so
-`header_join=0` and loses to the true delimiter.
+**Correction (round 4, measured on origin/main `csv.reader`, agreement-first
+`(agreement, mode)`):** DS-4 comma/semicolon/tab/pipe auto-detect **all pick
+a rival** (see §0.2 reproduced table: 63 rows, header eaten). Headed TSV +
+commas keeps tab `(4, 2)` over comma `(3, 3)`. Headed 2-col `;` keeps `;`
+`(4, 2)` over comma `(3, 3)`. Quoted pipe-list keeps comma `(4, 3)` over
+pipe `(3, 4)`. Honest `['id,name','1;2;3;4;5']` elects `;` (agr tie, mode 5).
+Headerless TSV/`;` with commas elect comma. Unquoted data commas elect
+comma. Two-inch-mark row under declared comma parses as four cells.
 
-`preferred=` empty / multi-char now raises `ValueError` (unit) /
-`IllegalArgumentException` (smartCsv door). Previously returned unvalidated
-and escaped as a raw `csv.reader` TypeError.
+`preferred=` empty / multi-char / newline / CR / quote raises `ValueError`
+(unit) / `IllegalArgumentException` (smartCsv door). This D2 refuse is the
+**surviving salvage** (see §1.8).
 
 ### 1.4 Pins (each fails origin/main **or** the naive re-rank)
 
@@ -398,3 +400,105 @@ fence (getting-started:164 + troubleshooting truth-up; product needles 0);
 callers (smartCsv option is-not-None; prepare_messy_csv uses _parse_line).
 Verdict: CLEAN (zero S0/S1 survivors). Loop-until-dry not re-run as a second
 independent process in this session — orchestrator SQM is the backstop.
+
+---
+
+### 1.8 Round 4 — DESCOPE AND SALVAGE (owner-ratified 2026-08-17)
+
+SQM round 3 (35 agents, 29 CONFIRMED, 7 blockers) closed the heuristic path:
+every single-signal rank key had a constructed counterexample, and the C2
+one-splitter multiplied the blast radius into **value corruption** on the
+declared-sep path (two inch marks in different cells; quoted field + stray
+inch; `""` unescaped twice). Owner ratified D1–D5.
+
+**D1 (done).** Deleted `_split_quote_aware` / `_split_fields` / `_unquote_cell`
+/ `_parse_line` / `_shared_header_line` / `_mode_and_agreement` and the
+`(header_join, agreement, -mode)` rank. Detect, preamble skip, and parse
+again use per-line `csv.reader` (origin/main semantics).
+
+**D2 (kept).** `option("sep","")` / `delimiter` resolved with `is not None`
+(no falsy fall-through). Refuse empty / multi-char / `\n` / `\r` / `"`;
+`\x01` stays allowed. Pins:
+`test_detect_delimiter_preferred_refuses_non_single_char`,
+`test_smart_csv_sep_refuses_non_single_char`,
+`test_smart_csv_option_empty_sep_refuses_and_does_not_fall_through`.
+
+**D3 (done).** Docs truth-up BACK: troubleshooting repro shows the `;` miss
+again; getting-started + tour notebook declare `sep=`; European-locale
+remedy is `sep=';'`. C-043 restored to known-limit. Registry row is
+orchestrator-side (this lane does not edit `docs/spark-sql-iceberg-parity.md`).
+
+**D4 (this section).** Three-round history stays above; §1.3 table struck
+with visible correction, not deleted.
+
+**D5 (pins).** Surviving detect pins assert origin/main measured winners.
+DS-4 facade pin restored to `misdetected` + `ROWS-1` + declared-sep control.
+Human-header "fix" pin deleted.
+
+**Residuals (named, not closed):**
+- DS-4 embedded-rival auto-detect miss (quote-blind `csv.reader` +
+  agreement-first) — declare `sep`.
+- Headerless 2-col TSV/`;` with rival chars elects the wider rival.
+- Equal-width rival preamble can hijack detect (round-3 class; origin/main
+  also susceptible when preamble agreement matches).
+- One-rival-char-per-row ties: narrower candidate can win on mode
+  (origin/main last slot is `+mode`, so *wider* wins a pure agr tie).
+- Multiline quoted fields: never supported (per-line reader).
+- Inch-mark *values* are fine on origin/main `csv.reader` (declared sep);
+  they were a round-3 one-splitter regression, now gone.
+
+Escape hatch not taken: no new rank key posted.
+
+## Pre-PR critic report (/repark-harden) — round 4
+
+Engine: ACC review-only standard (descope/salvage; no engine crates) +
+5-dimension finder-battery (spawned `explore` agents, blocking retrieval).
+Tier: standard for the shipped slice (facade Python); previous HIGH
+redesigns are reverted.
+
+Critic-1 (quality/parity/pins): attacked detect rank vs origin/main,
+parse==detect splitter, DS-4 pin polarity, headed TSV/`;`/pipe pins,
+honest-(e) `-mode` mutant, parse value pins, D2 option vs kwargs,
+preamble skip, C-043/maps/notebook, registry non-edit, headerless
+residual. Findings: 0 S0/S1. Verdict CLEAN.
+
+Critic-2 (safety/option-path/values): traced `option("sep","")` and
+`option("sep","").option("delimiter",";")` — empty is sticky-present,
+does not fall through; refuse `len!=1` / `\n` `\r` `"`. Declared-sep
+two-inch-mark row stays 4 cells via `csv.reader`. `\x01` allowed.
+Findings: 0. Verdict CLEAN.
+
+Signature table: 0 `pyspark.sql.functions` names (facade-pure reader).
+Oracle probes: facade-pure; csv.reader is the oracle for this unit
+(no Spark CAST). Pin audit: each surviving detect/parse/D2 pin names
+the implementation it kills (origin/main winners; D2 refuse trio;
+inch-mark value pin kills one-splitter).
+
+Convergence: ACC-CONVERGED (spawned Critic-1 + Critic-2 CLEAN) +
+TEST-GATED (`make ci` 0; `make py-test` 0 / 235; `make py-test-facade`
+0 / 3330 passed, 70 skipped).
+
+## Finder-battery report
+
+Target: 2cfcba9...worktree round-4 descope | dimensions: 5
+(wiring/semantics, pins/tests, fence/docs, removed-behavior,
+value-fidelity/parse) | findings: 0 raw → 0 deduped
+Survivors: none
+Refuted: n/a (no candidates)
+Null attestations:
+- wiring: detect/parse == 2cfcba9 csv.reader; only D2 preferred refuse added
+- pins: measured origin/main winners; D2 refuse trio load-bearing
+- fence: D3 known-limit language; §1.3 table struck; registry untouched
+- removed-behavior: five redesign helpers gone; no leftover callers
+- value-fidelity: probes A–G MATCH csv.reader (DS-4 elects `;`; TSV keeps tab)
+Verdict: CLEAN (zero S0/S1 survivors). Loop-until-dry second quiet round
+not re-run (standard tier; first 5-dim round was quiet). Verifiers not
+spawned because deduped finding count was 0.
+
+First background spawn batch (7 agents) was not retrievable by task-id
+in this session; the reports above are from a second blocking spawn of
+the same five dimensions plus ACC Critic-1/2. Not claimed as a second
+quiet round.
+
+Halt for orchestrator SQM. Same branch; no second B4 PR. B1 stays HELD
+until merge.

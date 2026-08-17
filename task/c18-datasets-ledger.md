@@ -157,7 +157,7 @@ source through the frame schema, and its own pins live in `test_explode_rewrite.
 | C-040 | Secrets reads behave NORMALLY: values pass through verbatim, nothing is masked, camelCase headers survive both doors. Flagging of secret-shaped DATA columns is a roadmap feature this fixture predates. | PROVEN — `test_secrets_parquet_read_is_unredacted`, `test_secrets_smart_csv_keeps_camel_case_headers` (stated in the module and test docstrings) |
 | C-041 | Each delimiter scheme reads through the facade smart-CSV path with the delimiter declared: BOM stripped, preamble skipped, duplicate header deduped, ragged rows padded into a synthesized overflow column. | PROVEN — `test_smartcsv_delimiter_zoo_reads_every_scheme`, `test_smartcsv_ragged_rows_pad_and_overflow_column` |
 | C-042 | Null-token, bool-spelling, embedded-delimiter, duplicate-header and ragged-overflow classes match the generator's typed truth cell for cell; the decimal-width union materialises as `decimal128(15,5)` with exact values. | PROVEN — `test_smartcsv_null_tokens_and_bool_spellings`, `test_smartcsv_decimal_widths_materialize` |
-| C-043 | FIXED (B4 / #175): delimiter AUTO-detect picks each scheme's own delimiter on the embedded-delimiter corpus and keeps the header. Quote-aware counts + `(header_join, agreement, mode_fields)`. | PROVEN — `test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter` (name kept; now asserts auto == declared, `data_row_count == 64`) |
+| C-043 | BUG-CANDIDATE / known-limit: delimiter AUTO-detect picks a rival delimiter on the embedded-delimiter corpus and eats one data row as the header. B4 rounds 1–3 tried to close this and each regressed a named counterexample; round 4 (#175) descoped detect back to origin/main and documented `sep=` as the remedy. | PROVEN — `test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter` (both halves: the miss, and the correct read with `sep` declared) |
 | C-043b | BUG-CANDIDATE: a euro-comma column infers `decimal128(5,2)` and the cast then refuses the raw comma text, so a whole-frame read of either corpus carrying the class raises. Reported, not fixed. | PROVEN — `test_smartcsv_euro_comma_decimal_cast_refuses_loud` (both `smartcsv` and `schema_inference`, with the resolved type asserted first so the broken promise is visible) |
 | C-044 | The tour notebook runs all five families end to end from the cache root at 2 000 rows, and is committed with outputs cleared. | PROVEN — `examples/notebooks/datasets_tour.ipynb` executed headless before commit; `outputs: []` in the committed file |
 | C-045 | `datasets/` generators and `_cache.py` untouched; `python/repark/src/` untouched; zero new dependencies; `uv.lock` / `Cargo.lock` / `.github/` untouched. | PROVEN — diff names |
@@ -166,9 +166,10 @@ source through the frame schema, and its own pins live in `test_explode_rewrite.
 ### Findings reported (not fixed)
 
 Six, all found by reading the generated corpora through the facade: four marked
-BUG-CANDIDATE and two POLICY confirmations. Finding 2 (delimiter auto-detect) was
-**fixed in B4 (#175)**; the other five stay as this lane left them. Every one is
-pinned so a later fix reds the pin instead of landing silently.
+BUG-CANDIDATE and two POLICY confirmations. Finding 2 (delimiter auto-detect)
+stays a known-limit after B4 (#175) round 4 descope; the other five stay as
+this lane left them. Every one is pinned so a later fix reds the pin instead of
+landing silently.
 
 1. **A euro-comma decimal column infers `decimal128` and then refuses its own cast
    (BUG-CANDIDATE).** The ladder normalizes `760,35` to a fixed-point value and resolves
@@ -182,12 +183,14 @@ pinned so a later fix reds the pin instead of landing silently.
    covered euro commas end to end; the protocol-level rung pin in `test_t4_csv_smart.py`
    stops before the cast.
 
-2. **Delimiter auto-detect loses to an embedded rival delimiter (BUG-CANDIDATE) —
-   FIXED in B4 (#175).** Root cause was quote-blind per-line `csv.reader` (a quote
-   only opens a field) plus agreement-only ranking, not "too little field count".
-   B4 counts quote-aware and ranks `(header_join, agreement, mode_fields)`. The
-   pin `test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter` now asserts
-   auto-detect == declared scheme delimiter.
+2. **Delimiter auto-detect loses to an embedded rival delimiter (BUG-CANDIDATE /
+   known-limit after B4 #175 round 4).** `detect_delimiter` scores candidates
+   by field-count agreement, and `csv.reader` treats a quote that does not START
+   a field as literal text. Three detect redesigns each closed the named corpus
+   and regressed an unnamed one (including declared-sep value corruption).
+   Detect and parse reverted to origin/main. Declaring `sep` (European-locale:
+   `sep=';'`) reads the file correctly. The pin asserts the documented miss
+   plus the declared-sep control.
 3. **`explode_outer` refuses on `array<struct>` where `explode` succeeds (BUG-CANDIDATE).**
    `explode_outer` needs an SQL element type for its null/empty guard and has no spelling
    for a struct element:

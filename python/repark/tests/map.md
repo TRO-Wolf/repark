@@ -301,9 +301,11 @@ NOT in that file is a defect, not a decision.
 - `test_t4_csv_smart.py` — **r25 T4** smartCsv + Q1 inference protocol: pure rung pins,
   messy preamble/BOM/ragged fixtures, value+type Arrow path (bool/int32/int64/decimal/date/
   timestamp/float64/string), `describe_ingest` diagnostics, opt-in header case normalize,
-  default `.csv` r20-R1 regression guards. **B4:** one-splitter detect + structural
-  `(header_join, agreement, -mode)`; C5 pin suite (headerless, human-header, forgery,
-  inch-mark, preamble, honest (e), quote-blind, option-path).
+  default `.csv` r20-R1 regression guards. **B4 (round 4):** detect pins origin/main
+  agreement-first (DS-4 known-limit elects the rival; headed TSV/`;`/quoted-pipe
+  keep origin/main winners) plus D2 refuse (empty / multi-char / newline / CR /
+  quote; `option("sep","")` does not fall through). Parse pins origin/main
+  `csv.reader` values.
 - `test_r1_read_formats.py` — R1 CSV/JSON read+write: header/inferSchema/schema/sep/nullValue/
   multiLine readers; format().load; write→read Arrow value+type (flat + nested JSON); empty
   overwrite; unsupported parse options + orc DATA_SOURCE_NOT_FOUND; **octo:** numeric nullValue,
@@ -461,12 +463,12 @@ NOT in that file is a defect, not a decision.
   **secrets**: reads are unredacted — standing detector if data-column flagging ever lands
   silently. **smartcsv**: delimiter zoo (declared `sep`) diagnostics, duplicate-header
   dedupe, ragged pad + synthesized `_c12` overflow column, null-token / bool-spelling /
-  decimal-width classes vs typed truth. **B4** flipped the delimiter AUTO-detect pin
-  in place: auto-detect now matches each scheme's own delimiter (structural
-  header-join + quote-aware one-splitter), including a human-header swap pin.
-  Remaining BUG-CANDIDATE pins: `explode_outer` refuses on `array<struct>` where
-  `explode` succeeds; a euro-comma column infers `decimal128` and then refuses the
-  cast on the raw comma text (both corpora that carry the class); `count()` on the
+  decimal-width classes vs typed truth. Four BUG-CANDIDATE pins across the file report
+  engine behavior without changing it: delimiter AUTO-detect picks a rival delimiter on
+  the embedded-delimiter corpus (B4 round 4 left this as a known-limit; declare `sep=`;
+  European-locale files use `sep=';'`); `explode_outer` refuses on `array<struct>`
+  where `explode` succeeds; a euro-comma column infers `decimal128` and then refuses
+  the cast on the raw comma text (both corpora that carry the class); `count()` on the
   full-depth flatten plan reds in `push_down_leaf_projections`. Ledger:
   `task/c18-datasets-ledger.md`; B4 record: `task/c25-bugfix-ledger.md`.
 
