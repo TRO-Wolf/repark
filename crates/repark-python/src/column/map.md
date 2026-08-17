@@ -16,6 +16,10 @@ without enabling PyO3 `multiple-pymethods`.
   names land as arms here. **G6-3 rider:** `"unix_date"` arm
   (`repark_functions::expr_fn::unix_date`) so `F.unix_date` builds the engine function
   instead of the `CAST(x AS DATE) AS INT` chain the cast-legality gate refuses.
+  **FN-GT1 (2026-08-17):** leftover math/string/bitwise/utf8 arms (`bin`/`hex`/`unhex`/
+  `factorial`/`rint`/`width_bucket`/`bit_count`/`bit_get`/`getbit`/shifts/`split_part`/
+  `regexp_count`/`regexp_instr`/`bit_length`/`octet_length`/`is_valid_utf8`/
+  `make_valid_utf8`).
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,

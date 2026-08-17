@@ -39,6 +39,12 @@ NOT in that file is a defect, not a decision.
   names (253 FN-A+FN-B + 10 session/bitwise additions) + every name resolves.
   (2026-08-15): **FN-W moved the pin** 291→296 (5 window additions:
   `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist`).
+  (2026-08-17): **FN-GT1 moved the pin** 296→315 (18 leftover thin-wires +
+  `getbit` alias of `bit_get`).
+- [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17): leftover
+  THIN-WIRE math/string/bitwise/utf8 through `ReparkSession` Arrow `to_arrow()`
+  (value AND type). `factorial` pins Spark domain `[0, 20]` → NULL outside;
+  `getbit` aliases `bit_get`.
 - [test_functions_w.py](test_functions_w.py) — FN-W (2026-08-15): window
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source
@@ -63,8 +69,9 @@ NOT in that file is a defect, not a decision.
   pins 0-based vs SQL `element_at` 1-based (index 0 raises).
 - [test_functions_f.py](test_functions_f.py) — FN-F (2026-08-15): try / session /
   bitwise wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
-  `uuid` pins type + uniqueness; `version` is the repark string. Deferred names
-  stay absent.
+  `uuid` pins type + uniqueness; `version` is the repark string. FN-GT1 later
+  shipped ``bit_count`` / ``getbit`` / snake-case shifts; camelCase shift
+  aliases and charter try_* stay absent.
 - [test_version_ssot.py](test_version_ssot.py) — version SSOT pins (release PR): `__version__` == distribution version, PEP 440 release shape, past the 0.0.1 name-reservation era. Guards the `dynamic = ["version"]` maturin wiring.
 - `test_partition_value_audit.py` + `_record_partition_value_goldens.py` — **V-4
   (2026-08-13):** write-path partition-key VALUE audit vs live Spark 4.1.2 + Iceberg.

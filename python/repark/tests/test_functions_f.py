@@ -5,8 +5,8 @@ path (``to_arrow()``): value AND type. ``uuid`` pins type + uniqueness, not a
 golden value. ``version`` is the repark string (not DataFusion ``version()``).
 
 Deferred this batch (no stubs): charter try_* / to_number / to_binary;
-``bit_count``, ``getbit``, ``shiftleft`` / ``shiftright`` / ``shiftrightunsigned``
-(+ camelCase aliases) — ``call_scalar`` allow-list, no honest shim;
+camelCase ``shiftLeft`` / ``shiftRight`` / ``shiftRightUnsigned`` (PySpark
+``__all__`` is snake_case; FN-GT1 shipped the snake names);
 ``assert_true`` — ``raise_error`` is construction-time UOE, not an evaluable Column.
 """
 
@@ -166,14 +166,9 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
     "name",
     [
         "assert_true",
-        "bit_count",
-        "getbit",
         "shiftLeft",
         "shiftRight",
         "shiftRightUnsigned",
-        "shiftleft",
-        "shiftright",
-        "shiftrightunsigned",
         "try_sum",
         "try_add",
         "to_number",

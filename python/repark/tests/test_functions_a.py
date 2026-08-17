@@ -6,9 +6,9 @@ with their canonical. SEMANTIC-HAZARD names that shipped (``cbrt`` negatives)
 hit the named hazard.
 
 Deferred this batch (no stubs): ``typeof``, ``bround``, ``conv`` (charter);
-``rint``, ``factorial``, ``bin``, ``hex``, ``unhex`` (``call_scalar`` has no
-arm; no honest shim); ``asc_nulls_last``, ``desc_nulls_first`` (``DataFrame``
-sort couples nulls to ascending and ignores ``_sort_nulls_first``).
+``asc_nulls_last``, ``desc_nulls_first`` (``DataFrame`` sort couples nulls to
+ascending and ignores ``_sort_nulls_first``). FN-GT1 later shipped ``rint`` /
+``factorial`` / ``bin`` / ``hex`` / ``unhex``.
 """
 
 from __future__ import annotations

@@ -643,6 +643,106 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                 args,
             ))
         }
+        // ---- FN-GT1: leftover THIN-WIRE math / string / bitwise / utf8 ----------------------
+        "bin" => {
+            need(1)?;
+            repark_functions::expr_fn::bin(exprs[0].clone())
+        }
+        "hex" => {
+            need(1)?;
+            repark_functions::expr_fn::hex(exprs[0].clone())
+        }
+        "unhex" => {
+            need(1)?;
+            repark_functions::expr_fn::unhex(exprs[0].clone())
+        }
+        "factorial" => {
+            need(1)?;
+            repark_functions::expr_fn::factorial(exprs[0].clone())
+        }
+        "rint" => {
+            need(1)?;
+            repark_functions::expr_fn::rint(exprs[0].clone())
+        }
+        "width_bucket" => {
+            need(4)?;
+            repark_functions::expr_fn::width_bucket(
+                exprs[0].clone(),
+                exprs[1].clone(),
+                exprs[2].clone(),
+                exprs[3].clone(),
+            )
+        }
+        "bit_count" => {
+            need(1)?;
+            repark_functions::expr_fn::bit_count(exprs[0].clone())
+        }
+        "bit_get" | "getbit" => {
+            need(2)?;
+            repark_functions::expr_fn::bit_get(exprs[0].clone(), exprs[1].clone())
+        }
+        "shiftleft" => {
+            need(2)?;
+            repark_functions::expr_fn::shiftleft(exprs[0].clone(), exprs[1].clone())
+        }
+        "shiftright" => {
+            need(2)?;
+            repark_functions::expr_fn::shiftright(exprs[0].clone(), exprs[1].clone())
+        }
+        "shiftrightunsigned" => {
+            need(2)?;
+            repark_functions::expr_fn::shiftrightunsigned(exprs[0].clone(), exprs[1].clone())
+        }
+        "split_part" => {
+            need(3)?;
+            expr_fn::split_part(exprs[0].clone(), exprs[1].clone(), exprs[2].clone())
+        }
+        "regexp_count" => {
+            need_at_least(2)?;
+            if exprs.len() > 4 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 to 4 args, got {}",
+                    exprs.len()
+                )));
+            }
+            let start = exprs.get(2).cloned();
+            let flags = exprs.get(3).cloned();
+            expr_fn::regexp_count(exprs[0].clone(), exprs[1].clone(), start, flags)
+        }
+        "regexp_instr" => {
+            need_at_least(2)?;
+            if exprs.len() > 7 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 to 7 args, got {}",
+                    exprs.len()
+                )));
+            }
+            expr_fn::regexp_instr(
+                exprs[0].clone(),
+                exprs[1].clone(),
+                exprs.get(2).cloned(),
+                exprs.get(3).cloned(),
+                exprs.get(4).cloned(),
+                exprs.get(5).cloned(),
+                exprs.get(6).cloned(),
+            )
+        }
+        "bit_length" => {
+            need(1)?;
+            expr_fn::bit_length(exprs[0].clone())
+        }
+        "octet_length" => {
+            need(1)?;
+            expr_fn::octet_length(exprs[0].clone())
+        }
+        "is_valid_utf8" => {
+            need(1)?;
+            repark_functions::expr_fn::is_valid_utf8(exprs[0].clone())
+        }
+        "make_valid_utf8" => {
+            need(1)?;
+            repark_functions::expr_fn::make_valid_utf8(exprs[0].clone())
+        }
         other => {
             return Err(PyValueError::new_err(format!(
                 "call_scalar: unsupported function {other:?}"

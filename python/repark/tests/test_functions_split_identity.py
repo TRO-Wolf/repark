@@ -1,7 +1,7 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C/D/E/F/W deliberately grow the pin - each
+``__all__`` tuple is the surface pin. FN-C/D/E/F/W/GT1 deliberately grow the pin - each
 batch's names are declared in its PR body.
 """
 
@@ -49,7 +49,11 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "atanh",
     "avg",
     "base64",
+    "bin",
     "bit_and",
+    "bit_count",
+    "bit_get",
+    "bit_length",
     "bit_or",
     "bit_xor",
     "bitwiseNOT",
@@ -129,6 +133,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "expm1",
     "expr",
     "extract",
+    "factorial",
     "find_in_set",
     "first",
     "first_value",
@@ -141,8 +146,10 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "from_utc_timestamp",
     "from_xml",
     "get",
+    "getbit",
     "greatest",
     "hash",
+    "hex",
     "hour",
     "hours",
     "hypot",
@@ -151,6 +158,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "initcap",
     "input_file_name",
     "instr",
+    "is_valid_utf8",
     "isnan",
     "isnotnull",
     "isnull",
@@ -178,6 +186,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "lpad",
     "ltrim",
     "make_timestamp",
+    "make_valid_utf8",
     "map_contains_key",
     "map_entries",
     "map_from_arrays",
@@ -206,6 +215,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "nullifzero",
     "nvl",
     "nvl2",
+    "octet_length",
     "overlay",
     "pandas_udf",
     "percent_rank",
@@ -228,13 +238,16 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "random",
     "rank",
     "regexp",
+    "regexp_count",
     "regexp_extract",
+    "regexp_instr",
     "regexp_like",
     "regexp_replace",
     "repeat",
     "replace",
     "reverse",
     "right",
+    "rint",
     "rlike",
     "round",
     "row_number",
@@ -249,6 +262,9 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "sequence",
     "sha1",
     "sha2",
+    "shiftleft",
+    "shiftright",
+    "shiftrightunsigned",
     "sign",
     "signum",
     "sin",
@@ -261,6 +277,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "soundex",
     "spark_partition_id",
     "split",
+    "split_part",
     "sqrt",
     "startswith",
     "std",
@@ -289,6 +306,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "udf",
     "udtf",
     "unbase64",
+    "unhex",
     "unix_date",
     "unix_millis",
     "unix_seconds",
@@ -303,6 +321,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "weekday",
     "weekofyear",
     "when",
+    "width_bucket",
     "xxhash64",
     "year",
     "years",
@@ -312,7 +331,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 296
+    assert len(F.__all__) == 315
 
 
 def test_every_all_name_resolves() -> None:
