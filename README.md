@@ -33,6 +33,9 @@ single home for what it covers; none of them restates another.
 
 Then the `map.md` in each directory your change touches; every directory has one.
 
+Runnable examples live in [examples/](examples/map.md) — start with the torture-dataset tour
+notebook.
+
 ## License
 
 [Apache-2.0](LICENSE)

@@ -13,9 +13,11 @@ not this directory.
 ## Contents
 
 - [c18-datasets-ledger.md](c18-datasets-ledger.md) — **conductor-18** torture-dataset
-  workstream (DS-1..DS-4, DS-5 rider if needed). Generators under
+  workstream (DS-1..DS-4, complete). Generators under
   `python/repark-parity/datasets/`; data stays in the cache root. Single ledger, appended
-  per increment.
+  per increment. DS-4 closes it with the facade pins
+  (`python/repark/tests/test_datasets_facade.py`) and the tour notebook under
+  [../examples/map.md](../examples/map.md).
 - [c17-explode-case-ledger.md](c17-explode-case-ledger.md) — **U-DF-1
   (2026-08-16):** string-form `explode` / `explode_outer` (and
   `dynamicFlatten` list pass) rebind a single-ident source through the
