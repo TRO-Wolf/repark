@@ -38,6 +38,11 @@ r26 T1 package-split the former monolith; **r27 T0** made the region split real
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).
+  **F-3 (2026-08-17):** the six undocumented `DataFrameStatFunctions` methods gained
+  docstrings — the five delegating ones point at their `DataFrame` twin (which holds the
+  real semantics, so there is one truth), and `freqItems` says plainly that it refuses.
+  `core.py` is the one file F-3 left alone: its 11 remaining nested helpers are deferred
+  because the file sits at 8199 of its 8200-line ceiling, so they wait on the next extract.
 - `actions_export.py` — `DataFrameNaFunctions` (real body; technique A).
 - `__init__.py` — frozen public imports (star-bind of core for private parity).
 

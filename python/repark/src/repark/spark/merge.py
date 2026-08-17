@@ -309,6 +309,7 @@ class MergeIntoWriter:
             self._predicate_sql = writer._predicate_sql(condition)
 
         def updateAll(self) -> MergeIntoWriter:  # noqa: N802 — PySpark method name
+            """Update all columns of source-unmatched target rows (``UPDATE SET *``)."""
             self._writer._clauses.append(
                 _Clause(
                     kind="not_matched_by_source",
@@ -319,6 +320,7 @@ class MergeIntoWriter:
             return self._writer
 
         def update(self, assignments: dict[str, Column | str]) -> MergeIntoWriter:
+            """Update source-unmatched target rows with the given column assignments."""
             rendered = self._writer._require_assignment_map(
                 assignments, surface="whenNotMatchedBySource.update"
             )
@@ -333,6 +335,7 @@ class MergeIntoWriter:
             return self._writer
 
         def delete(self) -> MergeIntoWriter:
+            """Delete target rows that no source row matched."""
             self._writer._clauses.append(
                 _Clause(
                     kind="not_matched_by_source",

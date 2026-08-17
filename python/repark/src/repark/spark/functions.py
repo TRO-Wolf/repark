@@ -150,6 +150,7 @@ def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
     import numbers
 
     def kind(item: Any) -> str | None:
+        """Coercion bucket for one leaf — ``None`` for null, else bool/int/float/str/list."""
         if item is None:
             return None
         if isinstance(item, bool):

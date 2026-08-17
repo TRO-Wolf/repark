@@ -160,6 +160,7 @@ class Row:
             return dict(zip(self.__field_names, self.__field_values, strict=True))
 
         def convert(obj: Any) -> Any:
+            """Recursively turn nested Rows (and Rows inside lists/dicts) into dicts."""
             if isinstance(obj, Row):
                 return obj.asDict(recursive=True)
             if isinstance(obj, list):

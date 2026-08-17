@@ -47,6 +47,7 @@ class _WhenBuilder:
         self._condition = condition
 
     def then(self, value: Column | Any) -> Column:
+        """Complete the arm with ``value``, yielding a repark ``when`` :class:`Column`."""
         return spark_when(self._condition, value)
 
 
@@ -107,6 +108,7 @@ class PolarsFrame:
         return self
 
     def select(self, *exprs: Column | str) -> PolarsFrame:
+        """Project ``exprs`` (Columns or column names) into a new lazy frame."""
         return PolarsFrame(self._frame.select(*exprs))
 
     def with_columns(self, *exprs: Column, **named: Column) -> PolarsFrame:
@@ -138,6 +140,7 @@ class PolarsFrame:
         return PolarsFrame(frame.with_columns(mapping))
 
     def filter(self, predicate: Column | str) -> PolarsFrame:
+        """Keep rows where ``predicate`` is true; real ``polars.Expr`` inputs are refused."""
         _reject_polars_expr(predicate, surface="filter")
         return PolarsFrame(self._frame.filter(predicate))
 
@@ -169,6 +172,7 @@ class PolarsFrame:
         return PolarsFrame(self._frame.order_by(*keys))
 
     def group_by(self, *by: str | Column) -> _PolarsGrouped:
+        """Group by ``by``; finish with :meth:`_PolarsGrouped.agg`."""
         return _PolarsGrouped(self._frame.group_by(*by))
 
     def join(
@@ -207,6 +211,7 @@ class PolarsFrame:
         from repark.spark._idents import quote_ident as _quote_ident_ssot
 
         def quote_ident(name: str) -> str:
+            """Quote a join key, rejecting anything that is not a bare SQL identifier."""
             if not is_plain_ident(name):
                 raise PySparkValueError(f"join column must be a bare SQL identifier, got {name!r}")
             return _quote_ident_ssot(name)
@@ -242,6 +247,7 @@ class PolarsFrame:
             session.drop_temp_view(right_view)
 
     def rename(self, mapping: dict[str, str]) -> PolarsFrame:
+        """Rename columns from an ``{old: new}`` mapping; unlisted columns keep their names."""
         return PolarsFrame(self._frame.with_columns_renamed(mapping))
 
     def unique(
@@ -258,12 +264,15 @@ class PolarsFrame:
         return PolarsFrame(self._frame.drop_duplicates(list(subset)))
 
     def drop_nulls(self, subset: str | list[str] | None = None) -> PolarsFrame:
+        """Drop rows holding a null in ``subset`` (every column when ``subset`` is None)."""
         return PolarsFrame(self._frame.dropna(subset=subset))
 
     def head(self, n: int = 5) -> PolarsFrame:
+        """Keep the first ``n`` rows (lazy ``LIMIT``; no order is implied)."""
         return PolarsFrame(self._frame.limit(n))
 
     def limit(self, n: int) -> PolarsFrame:
+        """Keep the first ``n`` rows — the explicit-``n`` spelling of :meth:`head`."""
         return PolarsFrame(self._frame.limit(n))
 
     def null_count(self) -> PolarsFrame:
@@ -333,6 +342,7 @@ class _PolarsGrouped:
         self._grouped = grouped
 
     def agg(self, *exprs: Column) -> PolarsFrame:
+        """Aggregate the group with ``exprs``, returning a :class:`PolarsFrame`."""
         return PolarsFrame(self._grouped.agg(*exprs))
 
 
@@ -345,16 +355,22 @@ class StringNameSpace:
         self._column = column
 
     def to_uppercase(self) -> Column:
+        """Upper-case the string (lowers to repark ``upper``)."""
         from repark.spark.functions import upper
 
         return upper(self._column)
 
     def to_lowercase(self) -> Column:
+        """Lower-case the string (lowers to repark ``lower``)."""
         from repark.spark.functions import lower
 
         return lower(self._column)
 
     def strip_chars(self) -> Column:
+        """Trim whitespace from both ends (lowers to repark ``trim``).
+
+        Takes no argument — the polars per-character strip set is not supported here.
+        """
         from repark.spark.functions import trim
 
         return trim(self._column)
@@ -388,11 +404,17 @@ class StringNameSpace:
         return _scalar("contains", self._column, lit(pattern))
 
     def replace(self, pattern: str, value: str) -> Column:
+        """Replace regex ``pattern`` with ``value`` (lowers to repark ``regexp_replace``).
+
+        **Divergence:** repark replaces *every* match, so this behaves like
+        :meth:`replace_all`; real polars ``str.replace`` stops after the first match.
+        """
         from repark.spark.functions import regexp_replace
 
         return regexp_replace(self._column, pattern, value)
 
     def replace_all(self, pattern: str, value: str) -> Column:
+        """Replace every regex ``pattern`` match with ``value`` (see :meth:`replace`)."""
         return self.replace(pattern, value)
 
     def slice(self, offset: int, length: int | None = None) -> Column:
@@ -410,26 +432,35 @@ class StringNameSpace:
         return _scalar("substr", self._column, lit(position), lit(length))
 
     def len_chars(self) -> Column:
+        """Character count of the string (lowers to repark ``length``)."""
         from repark.spark.functions import length
 
         return length(self._column)
 
     def zfill(self, length: int) -> Column:
+        """Left-pad with ``0`` up to ``length`` (lowers to repark ``lpad``).
+
+        **Divergence:** this is a plain left-pad — unlike real polars it does not keep a
+        leading sign character ahead of the zeros.
+        """
         from repark.spark.functions import lpad
 
         return lpad(self._column, length, "0")
 
     def pad_start(self, length: int, fill_char: str = " ") -> Column:
+        """Left-pad with ``fill_char`` up to ``length`` (lowers to repark ``lpad``)."""
         from repark.spark.functions import lpad
 
         return lpad(self._column, length, fill_char)
 
     def pad_end(self, length: int, fill_char: str = " ") -> Column:
+        """Right-pad with ``fill_char`` up to ``length`` (lowers to repark ``rpad``)."""
         from repark.spark.functions import rpad
 
         return rpad(self._column, length, fill_char)
 
     def split(self, by: str) -> Column:
+        """Refuse — splitting on ``by`` awaits an engine ``split``; raises loudly today."""
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException(
@@ -446,21 +477,25 @@ class DatetimeNameSpace:
         self._column = column
 
     def year(self) -> Column:
+        """Calendar year of a date/timestamp (lowers to repark ``year``)."""
         from repark.spark.functions import year
 
         return year(self._column)
 
     def month(self) -> Column:
+        """Month of year, 1..12 (lowers to repark ``month``)."""
         from repark.spark.functions import month
 
         return month(self._column)
 
     def day(self) -> Column:
+        """Day of month, 1..31 (lowers to repark ``dayofmonth``)."""
         from repark.spark.functions import dayofmonth
 
         return dayofmonth(self._column)
 
     def hour(self) -> Column:
+        """Refuse — ``dt.hour`` awaits an engine ``hour``; raises loudly today."""
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException(
@@ -468,31 +503,45 @@ class DatetimeNameSpace:
         )
 
     def minute(self) -> Column:
+        """Refuse — ``dt.minute`` is not wired on this branch; raises loudly today."""
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException("dt.minute not on this branch (disclosed R-POLARS-NS)")
 
     def second(self) -> Column:
+        """Refuse — ``dt.second`` is not wired on this branch; raises loudly today."""
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException("dt.second not on this branch (disclosed R-POLARS-NS)")
 
     def weekday(self) -> Column:
+        """Day of week (lowers to repark ``weekday``).
+
+        **Divergence:** the result uses Spark's indexing — 0 = Monday through 6 = Sunday —
+        where real polars ``dt.weekday`` numbers Monday 1 through Sunday 7.
+        """
         from repark.spark.functions import weekday
 
         return weekday(self._column)
 
     def ordinal_day(self) -> Column:
+        """Day of year, 1..366 (lowers to repark ``dayofyear``)."""
         from repark.spark.functions import dayofyear
 
         return dayofyear(self._column)
 
     def truncate(self, every: str) -> Column:
+        """Truncate a timestamp down to ``every`` (lowers to repark ``date_trunc``).
+
+        ``every`` is a Spark granularity name — ``"year"``, ``"month"``, ``"day"``,
+        ``"hour"`` and friends — not a polars duration string such as ``"1mo"``.
+        """
         from repark.spark.functions import date_trunc
 
         return date_trunc(every, self._column)
 
     def offset_by(self, by: str) -> Column:
+        """Refuse — shifting by a duration string is not supported; raises loudly today."""
         from repark.errors import UnsupportedOperationException
 
         raise UnsupportedOperationException(

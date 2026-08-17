@@ -210,6 +210,7 @@ class ReparkSession:
             inner = self._ensure_alive()
 
             def probe(name: str) -> bool:
+                """True when ``name`` resolves to an existing table/temp view."""
                 try:
                     return bool(inner.table_exists(name))
                 except Exception:
