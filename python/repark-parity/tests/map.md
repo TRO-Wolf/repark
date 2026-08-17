@@ -7,9 +7,41 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_datasets_secrets.py` — **DS-3** secrets fixture: A9 defaults, table-identity
+  determinism, manifest class→column coverage in schema order, the needle labels
+  re-derived with the `prop_key_is_secret` fold (lowercase, hyphen/dot → underscore,
+  underscores stripped for the compact form) **without importing repark**, the
+  `bucket_key` `_key` carve-out as a negative control, the hard hygiene fence (every
+  value starts with `repark-fake-`; no `AKIA…`/`ghp_…`/`sk-…`/`xoxb-…` shape, no `@`,
+  no URL), the one nullable credential column, parquet identity, CSV columns, CLI.
+  **Acceptance pin in the module docstring:** reads behave NORMALLY today — the opt-in
+  secrets-flagging mechanism is a roadmap feature this fixture predates, so nothing
+  here asserts redaction. Facade read pins are DS-4.
+- `test_datasets_smartcsv.py` — **DS-3** messy-CSV torture generator: A9 defaults,
+  table-identity determinism, both manifest scopes (**column** classes present in
+  `small()`; **file** classes provable in the emitted text at 64 rows), the delimiter
+  zoo (comma / semicolon / tab / pipe, one file each, byte-equal to `render_csv`),
+  BOM + preamble, duplicate header row emitted twice, ragged rows in both directions
+  with the short-wins tie (row 137), bool spellings vs yes/no tokens that only look
+  boolean, recognized
+  vs literal null tokens, currency + decimal width variants, embedded-delimiter
+  quoting in every scheme, parquet identity, CLI.
+- `test_datasets_manifest_types.py` — **DS-3 rider (from the DS-2 review):** the
+  manifest↔schema cross-check over all four labeled families (`schema_inference`,
+  `extreme_types`, `secrets`, `smartcsv`). Every manifest-declared type string must
+  equal the real Arrow field type after normalizing spacing (`decimal128(24, 21)` vs
+  `decimal128(24,21)`) and pyarrow's rendering aliases (`double` → `float64`,
+  `date32[day]` → `date32`). Both directions are closed: no manifest row may name a
+  column the schema lacks, and no schema field may go unlabeled outside the explicit
+  `EXPECTED_UNLABELED` set (`id` in the two DS-2 families). The normalizer is itself
+  pinned so a no-op normalizer cannot hide a mismatch, and class ids must be unique.
 - `test_datasets_schema_inference.py` — **DS-2** schema-inference generator: manifest
   class→column pin, A9 defaults, `conflict_at` int32→int64 + string/float halves,
-  parquet identity, CSV text patterns, CLI `--conflict-at`.
+  parquet identity, CSV text patterns, CLI `--conflict-at`. **DS-3 rider:** the
+  `leading_zero_id` pad width is derived from the requested row count (a fixed `06d`
+  loses the leading zero at `row_index >= 1_000_000`, and `MAX_ROWS` is 10M) — pinned
+  at the >1M boundary through `leading_zero_width` / `leading_zero_id` with explicit
+  widths, never by generating a million rows, plus a helper↔column binding test.
 - `test_datasets_extreme_types.py` — **DS-2** extreme-types generator: manifest
   classes, decimal128(24,21), beyond-38 digit strings, uuid5, paragraph length,
   HTML example.com-only, parquet identity, CLI.
@@ -117,6 +149,8 @@ JVM, no repark required). See [../map.md](../map.md).
 
 | Symptom | First check |
 |---|---|
+| `test_datasets_manifest_types` reds | A schema field and its `manifest.json` row were edited one-sidedly; the failure names the family and class id |
+| `test_datasets_secrets` reds on the hygiene fence | A value stopped starting with `repark-fake-` or picked up a real credential shape — fix the value, never the fence |
 | `test_deferred_ledger` reds on "ALSO ported" | A node id is in the txt AND still defined in `python/repark/tests` — excise the test or drop the row |
 | `test_deferred_ledger` reds on "absent from the recorded pin collection" | The id does not name a real v1 node; check it against `task/census/baseline-fc3f48102/facade/collected.txt` |
 | `test_deferred_ledger` reds on the human summary | `task/port/deferred-tests.md` must name every id in the txt verbatim |

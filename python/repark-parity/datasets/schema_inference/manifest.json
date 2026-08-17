@@ -36,7 +36,7 @@
       "id": "leading_zero_ids",
       "column": "leading_zero_id",
       "parquet_type": "string",
-      "description": "zero-padded identifier strings"
+      "description": "zero-padded identifier strings; the pad width is derived from the requested row count (floor 6) so ids past 1_000_000 keep a leading zero"
     },
     {
       "id": "empty_vs_null",

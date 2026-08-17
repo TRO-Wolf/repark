@@ -22,10 +22,16 @@ not add it to hatch `packages`, Makefile `PYTHONPATH`, or `ci.yml`.
   [schema_inference/map.md](schema_inference/map.md).
 - `extreme_types/` — extreme-types family (DS-2); see
   [extreme_types/map.md](extreme_types/map.md).
+- `secrets/` — credential-named-column fixture (DS-3); see
+  [secrets/map.md](secrets/map.md).
+- `smartcsv/` — messy-CSV torture family (DS-3); see
+  [smartcsv/map.md](smartcsv/map.md).
 - `map.md` — this file.
 
-Later increments add `secrets/`, `smartcsv/` (slugs bound; do not create empty
-dirs ahead of their increment).
+All five bound family slugs now exist. `nested` labels row classes; the other four
+carry a `manifest.json` whose declared types are cross-checked against the real
+Arrow schema by `tests/test_datasets_manifest_types.py` — edit a schema field and
+its manifest row in the same change, or that test reds.
 
 ## I want to…
 
@@ -35,6 +41,8 @@ dirs ahead of their increment).
 | Generate nested files | `python python/repark-parity/datasets/nested/datagen.py --rows N --seed S --out DIR` |
 | Generate schema-inference files | `python python/repark-parity/datasets/schema_inference/datagen.py --rows N --seed S --out DIR` |
 | Generate extreme-types files | `python python/repark-parity/datasets/extreme_types/datagen.py --rows N --seed S --out DIR` |
+| Generate the secrets fixture | `python python/repark-parity/datasets/secrets/datagen.py --rows N --seed S --out DIR` |
+| Generate the smartCsv torture corpus (4 delimiter schemes) | `python python/repark-parity/datasets/smartcsv/datagen.py --rows N --seed S --out DIR` |
 | Read the cache contract | `_cache.py` |
 | Generator tests | [../tests/map.md](../tests/map.md) `test_datasets_*.py` |
 
@@ -51,6 +59,7 @@ dirs ahead of their increment).
 | Wrote data into the checkout | `_cache.refuse_repository_output` — pass `--out` outside the repo or omit it (cache root) |
 | Symlink refused | Cache root / out dir / data file must be real directories/files, not symlinks |
 | `make py-test` cannot import `repark` | Expected — this tree's tests are pyarrow-only |
+| Manifest type does not match the schema | `tests/test_datasets_manifest_types.py` names the family and class id |
 
 ## Constraints
 
