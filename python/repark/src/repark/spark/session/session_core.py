@@ -1130,9 +1130,11 @@ class ReparkSession:
           (Spark ``STRUCT_ARRAY_LENGTH_MISMATCH`` class). Row-as-dict ingestion is **not**
           governed by ``spark.sql.pyspark.inferNestedDictAsStruct.enabled`` (r23b N1 /
           SPARK-35929) — that conf only affects **dict-valued cells** (column values at any
-          nesting depth). When the conf is ``true``, a dict *cell* infers as StructType with
-          field union + null-fill; when ``false``/unset (default), dict cells stay MapType
-          (byte-identical to pre-N1). Explicit ``schema=`` wins either way.
+          nesting depth). When the conf is ``true`` (**the repark default** — a declared
+          divergence from PySpark's ``false``; owner decision 2026-08-16, registry row in
+          the divergence registry), a dict *cell* infers as StructType with field union +
+          null-fill; when ``false``, dict cells stay MapType, byte-identical to PySpark's
+          default behavior. Explicit ``schema=`` wins either way.
         * a list of :class:`~repark.row.Row` (fail-loud name bind — no key-union)
         * a pandas ``DataFrame`` (optional; empty frames fail with CANNOT_INFER_EMPTY_SCHEMA;
           nested list/struct Arrow columns accepted via the native Arrow path)

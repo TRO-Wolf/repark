@@ -10,6 +10,9 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 - `_funcs.py` — free functions (shared name binding for class modules); includes
   `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
   widths refuse loud — layout home `repark.ml.linalg`).
+  `_SQLCONF_DEFAULTS` sets `spark.sql.pyspark.inferNestedDictAsStruct.enabled` to `"true"`
+  (FA-4 owner flip, 2026-08-16 — declared divergence from PySpark's `false`; registry row
+  in the divergence registry; `"false"` restores byte-identical PySpark inference).
   **G15:** `_data_type_to_sql_type` refuses a non-binary `StringType` (the silently-wrong-count
   path: collation was stripped to `STRING`).
   **S-1 R2:** `_apply_builder_datafusion_conf` skips `datafusion.runtime.temp_directory`

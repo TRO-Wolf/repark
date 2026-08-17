@@ -213,7 +213,13 @@ def test_create_dataframe_ddl_nested_array() -> None:
 
 def test_create_dataframe_map_int_keys_inferred() -> None:
     """Inferred map keys follow sample key type (not always string) — octo X2 C2."""
-    spark = ReparkSession.builder.master("local[1]").appName("x2-map-keys").getOrCreate()
+    spark = (
+        ReparkSession.builder.master("local[1]")
+        .appName("x2-map-keys")
+        # FA-4: repark defaults inferNestedDictAsStruct to true; this pin is the MAP path.
+        .config("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
+        .getOrCreate()
+    )
     try:
         frame = spark.createDataFrame([Row(m={1: "a", 2: "b"})])
         arrow = frame.to_arrow()
@@ -255,7 +261,14 @@ def test_create_dataframe_tuple_as_struct_positional() -> None:
 
 def test_create_dataframe_sparse_vector_dict_exact_keys() -> None:
     """Sparse ML dict needs exact key set; extra keys stay map (octo X2 C5)."""
-    spark = ReparkSession.builder.master("local[1]").appName("x2-sparse").getOrCreate()
+    spark = (
+        ReparkSession.builder.master("local[1]")
+        .appName("x2-sparse")
+        # FA-4: repark defaults inferNestedDictAsStruct to true; the C5 boundary (extra
+        # key falls back to MAP, not sparse struct) is a PySpark-default-path pin.
+        .config("spark.sql.pyspark.inferNestedDictAsStruct.enabled", "false")
+        .getOrCreate()
+    )
     try:
         sparse = spark.createDataFrame(
             [Row(v={"size": 3, "indices": [0, 2], "values": [1.0, 2.0]})]
