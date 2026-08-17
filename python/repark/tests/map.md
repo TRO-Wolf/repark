@@ -48,6 +48,8 @@ NOT in that file is a defect, not a decision.
   string-key map extraction; ``shuffle`` pins type+length; ``array_compact``
   drops NULLs only. Rework: exact interval/bitmap/unix_micros values, regex
   ``str_to_map``, NULL rows, non-UTC session pins, docstring-example execute.
+  Honesty: ``parse_url`` schemeless NULL + ``://`` raise + QUERY ``f.o`` exact;
+  W2 MonthDayNano; ``date_diff`` int32; bitmap 0/−1; unix_micros LA column.
 - [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17): leftover
   THIN-WIRE math/string/bitwise/utf8 through `ReparkSession` Arrow `to_arrow()`
   (value AND type). `factorial` pins Spark domain `[0, 20]` → NULL outside;

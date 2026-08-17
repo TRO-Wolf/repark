@@ -3,8 +3,8 @@
 **Unit:** FN-GT2 · conductor-20 · **Date:** 2026-08-17 ·
 **Executor:** Grok (grok-4.6) ·
 **Worktree:** the conductor-20 worktree · **Branch:** `grok/c20-fngt2-thin-wire` ·
-**PR:** #174 (in-place rework; stays the one PR) ·
-**Base:** `2cfcba9` (origin/main, FN-GT1 #172).
+**PR:** #174 (in-place rework; stays DRAFT) ·
+**Base:** `b628b0f` (origin/main, B4 #175; rebased from `2cfcba9`).
 
 **Oracle:** pinned pyspark==4.1.2, `JAVA_HOME` = the OpenJDK 21 path named
 in the orchestrator unstick, `SPARK_LOCAL_IP=127.0.0.1`.
@@ -27,7 +27,9 @@ in the orchestrator unstick, `SPARK_LOCAL_IP=127.0.0.1`.
 
 ## get() payload (not this PR)
 
-PySpark 4.1.2 `get(col, index)` is **array-only** (`ColumnOrName | int`; a `str` index is a column name). It refuses maps (`DATATYPE_MISMATCH` — first param requires ARRAY). FN-E shipped `get`; it is not a GT2 name. No change here.
+PySpark 4.1.2 `get(col, index)` is **array-only** (maps refuse). FN-E shipped
+`getitem` and `test_get_map_by_key` still pins map lookup. Docstring now states
+both facts (Spark refuse + repark `getitem` still serves maps). Impl unchanged.
 
 ## Residuals
 
@@ -35,6 +37,15 @@ PySpark 4.1.2 `get(col, index)` is **array-only** (`ColumnOrName | int`; a `str`
 - `make_interval` CAST AS STRING is `'24 mons'` / `'1 days'`, not Spark's `'2 years'` / `'1 days'` (days match; years display differs).
 - `shuffle(seed=)` (PySpark 4.0+) is an honest cut.
 - Calendar-interval `collect()` stays `PySparkNotImplementedError` (existing `test_f1_errorclass`); GT2 pins `to_arrow()`.
+- Q-010: `parse_url` / `try_parse_url` / `str_to_map` bare-`str` part/key/delim
+  is a convenience lit; Spark 4.1.2 `ColumnOrName` binds a column of that name.
+  Pass `F.col(...)` for the Spark column-name path. ACCEPTED_FLAGGED S2.
+- `parse_url` QUERY 3rd arg: Spark compiles an unquoted Java `Pattern`; DF is
+  exact key equality. Pin: `'f.o'` on `?foo=1` → NULL (Spark `'1'`). DF-owned.
+- `parse_url('not a url','HOST')`: Spark raises `INVALID_URL`; DF HOST is NULL.
+  `'inva lid://host'` raises on both. Mixed kernel, both sides pinned.
+- Spark `unix_micros` refuses DATE (`DATATYPE_MISMATCH`); facade `.cast("timestamp")`
+  accepts DATE and session-localizes (LA `make_date(1970,1,1)` → `28_800_000_000`).
 
 ## Mutation-proof pins
 
@@ -47,6 +58,8 @@ PySpark 4.1.2 `get(col, index)` is **array-only** (`ColumnOrName | int`; a `str`
 | str_to_map literal split | `test_str_to_map_delimiters_are_regex` |
 | vacuous interval assert | `test_make_interval_and_dt` |
 | bitmap not-None | `test_bitmap_scalars` |
+| QUERY key treated as Java regex | `test_parse_url_and_try` (`'f.o'` → NULL) |
+| interval `"y"` not read as column years | `test_make_interval_str_is_column_name` MonthDayNano (24,0,0) |
 
 ## Files
 
@@ -61,66 +74,72 @@ PySpark 4.1.2 `get(col, index)` is **array-only** (`ColumnOrName | int`; a `str`
 
 | Gate | Result |
 |---|---|
-| `make verify` | exit **0** |
-| `make preflight` | exit **0**; facade **3330 passed / 70 skipped** (critic pins added after; GT2 file 18 passed) |
+| `make verify` | exit **0** (post-rebase `b628b0f`; re-run after honesty pins) |
+| `make preflight` | exit **0**; facade **3343 passed / 70 skipped** (pre-honesty; re-run after) |
 | two-pass hygiene | PASS1 added-line needles **0**; PASS2 new files **0** |
 
 ## Pre-PR critic report (/repark-harden)
 
 Engine: ACC `review-only` risk_tier=high (expr_fn.rs / dispatch / owned UDF) —
-two explore critics spawned for real, then finder-battery 5 dimensions spawned
-for real. Second quiet finder loop **NOT-RUN** (not a write path).
+Critic-1 + Critic-2 spawned as explore subagents. Finder-battery 5 dimensions
+spawned, 3-vote on S1 candidates, then a second 5-finder quiet round (also
+spawned). Not a write path — two write-path quiet rounds N/A.
 
-Critic-1 (quality/parity): attacked signatures, W1–W5 wiring, pins, R1, maps.
-Filed Q-001..Q-011. S1s remediating this turn: Spark camelCase kwargs
-(`pairDelim` / `keyValueDelim` / `partToExtract`); empty-pair keep; kv-regex
-+ SQL-door pins; `url_decode` raise pin; honest `parse_url` NULL kernel;
-`make_dt_interval("d")`; 3-arg QUERY pin; crate-root map row. Q-010
-(ColumnOrName vs convenience lit on delimiter/`partToExtract` `str`) is
-ACCEPTED_FLAGGED S2 — defaults must be literals; Column form is the Spark
-column-name path.
+Critic-1 (quality/parity): attacked signatures, W1–W5, pins, R1, maps.
+Q-001 S1 (doc claimed DF always NULL on invalid URL) **WITHDRAWN** after
+mixed-kernel honesty: Spark raises on `'not a url'`; DF HOST NULL;
+`'inva lid://host'` raises on both. Q-002 = Q-010 ACCEPTED_FLAGGED S2.
+Re-spot CLEAN.
 
-Critic-2 (security/safety): attacked ReDoS, panic, error leak, coerce,
-unix_micros TZ, facade injection, hygiene. Verdict CLEAN at S1 floor.
-SAF-001 S2 remediating: defensive Utf8 cast before downcast.
+Critic-2 (security/safety): ReDoS (rust `regex` 1.13 linear), panics,
+injection (identifier dispatch), TZ parse-at-build, no write path.
+Verdict **CLEAN** at S1. S2: LAST_WIN dead copy; pattern echo in errors.
 
-Signature table: 18 GT2 names vs live 4.1.2. Mismatches found/fixed:
-element_at extraction lit; interval str=column; unix_micros cast-first;
-str_to_map regex; camelCase kwargs. Remaining: `parse_url`/`str_to_map`
-bare-`str` convenience lit (Q-010).
+Signature table: 18 GT2 names vs live 4.1.2. Remaining mismatch: Q-010
+convenience lit. `create_map` / `try_url_encode` not shipped (latter
+absent from 4.1.2).
 
-Oracle probes: element_at `'b'` vs `col('b')`; make_interval(`"y"`);
-unix_micros UTC 0 + LA 28.8e9 / 2015-07-22 PDT instant; str_to_map
-`[,c]` / `[x]` / empty pair; bitmap 1/123/32769; url_decode `%ZZ` raise.
+Oracle probes (JAVA 21, pyspark 4.1.2): element_at `'b'` vs `col('b')`;
+`make_interval("y")`; unix_micros UTC 0 + LA 28.8e9 / 2015-07-22 PDT;
+`str_to_map` `[,c]`; bitmap 0/−1/1/123/32769 match Spark; `parse_url`
+schemeless RAISE vs NULL; QUERY `'f.o'` Spark `'1'` / repark NULL;
+unix_micros(DATE) Spark DATATYPE_MISMATCH, repark LA 28.8e9.
 
-Pin audit: each W/P item names the impl it kills (see mutation table).
-Finder S1s remediating: wrap-bucket 32769; raw-str delimiter; parse_url
-NULL; make_date column names; unix_micros column name.
+Pin audit: W/P items name the impl they kill. Post-battery tighten:
+W2 MonthDayNano (24,0,0); `date_diff` exact `int32`; bitmap 0/−1;
+unix_micros LA column; QUERY `'f.o'` honest NULL.
 
-Convergence: **ACC-CONVERGED** at S1 floor after one remediation cycle.
-Finder-battery: see below.
+Convergence: **ACC-CONVERGED** at S1 floor.
 
 ## Finder-battery report
 
-Target: worktree vs `2cfcba9` + uncommitted rework | dimensions: 5
+Target: `origin/main...HEAD` + unstaged honesty | dimensions: 5
 (wiring, pins, fence, removed-behavior, cross-file/TZ/regex) | finders
-spawned as explore subagents.
+and verifiers spawned as explore subagents.
 
-Round-1 raw findings remediating (S1): wrap-around bitmap bucket;
-`parse_url` NULL input; `make_date`/`unix_micros` column-name direction;
-raw-str `str_to_map` delim; exact-type tightening where cheap; `get()`
-doc honesty; rustdoc throw-vs-NULL.
+Round-1 raw → deduped S1 candidates (3-vote):
+- F1 ColumnOrName convenience lit — CONFIRMED **S2** (Q-010 already flagged)
+- F2 `date_diff` TZ-8 13-vs-14 — **REFUTED** (confounded `F.to_timestamp` NTZ;
+  SQL `datediff` of LTZ already 13)
+- F3 `parse_url` QUERY Java Pattern vs DF exact — CONFIRMED; remediating as
+  documented DF-owned residual + `'f.o'` pin (not a new owned UDF)
+- F4 `get()` docstring vs `test_get_map_by_key` — CONFIRMED doc clash;
+  remediating (impl unchanged)
+- F5 stale FN-D/FN-E Deferred — REFUTED as contract lie (historical);
+  annotated “GT2 shipped”
+- F8 bitmap ≤0 formula — **REFUTED** (DF already matches Spark; 0/−1 pinned)
+- F10 unix_micros column epoch — **REFUTED** (cast-first still reds Utf8;
+  LA column now pinned)
 
-Refuted: unescaped `|` as pair delim — live 4.1.2 also raises
-DUPLICATED_MAP_KEY (not a rust-only miss).
+Quiet round (5 finders spawned):
+- `unix_micros(DATE)` UTC-midnight S1 — **REFUTED live**: Spark refuses DATE;
+  repark LA `make_date(1970,1,1)` → `28_800_000_000`
+- `unix_seconds`/`unix_millis` missing cast-first — **out of scope** (FN-D,
+  not a GT2 name)
+- `date_diff` `int32|int64` disjunction + W2 display-only pin — remediating
+  (`int32`; MonthDayNano (24,0,0))
+- fence / removed-behavior: no new S0/S1
 
-Residuals (S2, not blocking): facade `str` convenience lit vs Spark
-ColumnOrName for delimiters/`partToExtract`; rust regex ≉ Java Pattern
-(Unicode classes / lookaround); SQL-door `unix_micros` TZ is the
-engine CAST path (W5 pins the facade mold); `mapKeyDedupPolicy` text
-is inherited DF dead copy; shuffle(NULL) DF kernel panic.
-
-Second quiet loop: **NOT-RUN**.
-
-Verdict: S1s from the spawned round remediating; do not stamp CLEAN
-for a second unrun loop.
+Verdict: no open S0/S1. Quiet-round survivors either REFUTED, out of scope,
+or remediating as pin honesty. Do not stamp CLEAN for an unrun loop — this
+second round **did run**.

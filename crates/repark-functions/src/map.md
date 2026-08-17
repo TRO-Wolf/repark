@@ -232,6 +232,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `map_from_entries` / `str_to_map` / URL + bitmap spark-reg builders.
   **FN-GT2 rework (2026-08-17):** `str_to_map.rs` (via `collection.rs` `#[path]`)
   overwrites the DF literal-split kernel — both delimiters are regex.
+  `parse_url` rustdoc: Spark raises on invalid URL; DF HOST is NULL on
+  schemeless text and raises on some `://`-malformed URLs.
 
 ## Pointers
 

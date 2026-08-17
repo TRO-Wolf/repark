@@ -97,9 +97,13 @@ def test_make_interval_str_is_column_name(spark: ReparkSession) -> None:
     direction, not the display spelling.
     """
     frame = spark.createDataFrame([(2,)], ["y"])
-    table = _table(frame.select(F.make_interval("y").cast("string").alias("s")))
-    assert table.column("s").to_pylist() == ["24 mons"]
-    assert _is_string(table.schema.field("s").type)
+    table = _table(frame.select(F.make_interval("y").alias("i")))
+    interval = table.column("i").to_pylist()[0]
+    assert interval is not None
+    assert (interval.months, interval.days, interval.nanoseconds) == (24, 0, 0)
+    assert table.schema.field("i").type == pa.month_day_nano_interval()
+    as_string = _table(frame.select(F.make_interval("y").cast("string").alias("s")))
+    assert as_string.column("s").to_pylist() == ["24 mons"]
 
 
 def test_unix_micros_and_date_diff(spark: ReparkSession) -> None:
@@ -118,7 +122,7 @@ def test_unix_micros_and_date_diff(spark: ReparkSession) -> None:
     assert table.schema.field("u").type == pa.int64()
     assert table.column("un").to_pylist() == [None]
     assert table.column("d").to_pylist() == [2]
-    assert table.schema.field("d").type in (pa.int32(), pa.int64())
+    assert table.schema.field("d").type == pa.int32()
     assert table.column("dn").to_pylist() == [None]
     ts_frame = spark.createDataFrame([("1970-01-01 00:00:00",)], ["ts"])
     ts_table = _table(ts_frame.select(F.unix_micros("ts").alias("from_col")))
@@ -135,12 +139,15 @@ def test_unix_micros_non_utc_non_epoch() -> None:
                 F.unix_micros(F.lit("2015-07-22 10:00:00")).alias("u"),
             )
         )
+        col_frame = session.createDataFrame([("2015-07-22 10:00:00",)], ["ts"])
+        col_table = _table(col_frame.select(F.unix_micros("ts").alias("from_col")))
     finally:
         session.stop()
     # Live 4.1.2: to_timestamp('1970-01-01 00:00:00') in America/Los_Angeles.
     assert table.column("epoch").to_pylist() == [28_800_000_000]
     assert table.column("u").to_pylist() == [1_437_584_400_000_000]
     assert table.schema.field("u").type == pa.int64()
+    assert col_table.column("from_col").to_pylist() == [1_437_584_400_000_000]
 
 
 def test_datetime_names_hold_under_non_utc_session() -> None:
@@ -293,9 +300,16 @@ def test_parse_url_and_try(spark: ReparkSession) -> None:
     assert table.column("bad").to_pylist() == [None]
     assert _is_string(table.schema.field("bad").type)
     assert table.column("n").to_pylist() == [None]
-    # DF kernel yields NULL on invalid (Spark raises). Honest pin.
-    invalid = _table(frame.select(F.parse_url(F.lit("not a url"), "HOST").alias("inv")))
-    assert invalid.column("inv").to_pylist() == [None]
+    # Spark 4.1.2 raises INVALID_URL on schemeless text; DF HOST is NULL.
+    schemeless = _table(frame.select(F.parse_url(F.lit("not a url"), "HOST").alias("inv")))
+    assert schemeless.column("inv").to_pylist() == [None]
+    # DF also raises on some ://-malformed URLs (same as Spark). Not "always NULL".
+    with pytest.raises(PySparkException, match="url is invalid"):
+        frame.select(F.parse_url(F.lit("inva lid://host"), "HOST")).to_arrow()
+    try_malformed = _table(
+        frame.select(F.try_parse_url(F.lit("inva lid://host"), "HOST").alias("try_mal"))
+    )
+    assert try_malformed.column("try_mal").to_pylist() == [None]
     null_parse = _table(
         frame.select(F.parse_url(F.lit(None).cast("string"), "HOST").alias("parse_null"))
     )
@@ -306,6 +320,12 @@ def test_parse_url_and_try(spark: ReparkSession) -> None:
         )
     )
     assert query.column("q").to_pylist() == ["1"]
+    # Spark 4.1.2 compiles QUERY key as Java Pattern ('f.o' matches foo).
+    # DF kernel is exact equality — pin the honest miss, do not claim regex.
+    regex_key = _table(
+        frame.select(F.parse_url(F.lit("https://x/?foo=1"), "QUERY", "f.o").alias("re"))
+    )
+    assert regex_key.column("re").to_pylist() == [None]
 
 
 def test_url_encode_decode(spark: ReparkSession) -> None:
@@ -343,6 +363,10 @@ def test_bitmap_scalars(spark: ReparkSession) -> None:
             F.bitmap_bucket_number(F.lit(123)).alias("b123"),
             F.bitmap_bit_position(F.lit(32769)).alias("p_wrap"),
             F.bitmap_bucket_number(F.lit(32769)).alias("b_wrap"),
+            F.bitmap_bit_position(F.lit(0)).alias("p0"),
+            F.bitmap_bucket_number(F.lit(0)).alias("b0"),
+            F.bitmap_bit_position(F.lit(-1)).alias("pneg"),
+            F.bitmap_bucket_number(F.lit(-1)).alias("bneg"),
             F.bitmap_count(F.unhex(F.lit("FF"))).alias("c"),
             F.bitmap_bit_position(F.lit(None).cast("long")).alias("pos_null"),
             F.bitmap_bucket_number(F.lit(None).cast("long")).alias("bucket_null"),
@@ -354,6 +378,10 @@ def test_bitmap_scalars(spark: ReparkSession) -> None:
     assert table.column("b123").to_pylist() == [1]
     assert table.column("p_wrap").to_pylist() == [0]
     assert table.column("b_wrap").to_pylist() == [2]
+    assert table.column("p0").to_pylist() == [0]
+    assert table.column("b0").to_pylist() == [0]
+    assert table.column("pneg").to_pylist() == [1]
+    assert table.column("bneg").to_pylist() == [0]
     assert table.schema.field("p").type == pa.int64()
     assert table.schema.field("b").type == pa.int64()
     assert table.column("c").to_pylist() == [8]
@@ -367,7 +395,7 @@ def test_bitmap_scalars(spark: ReparkSession) -> None:
 
 
 def test_gt2_docstring_examples_execute(spark: ReparkSession) -> None:
-    """R1: every GT2 docstring example runs against repark and matches its claim."""
+    """R1: happy-path results named in the GT2 docstrings also collect here."""
     frame = spark.range(1)
     table = _table(
         frame.select(

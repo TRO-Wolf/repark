@@ -1074,9 +1074,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `tests/test_functions_c.py`.
   **FN-D (2026-08-15):** 11 datetime names in `functions_datetime.py` (day/curdate/now/
   dateadd/datepart/to_unix_timestamp/unix_date/unix_seconds/unix_millis/
-  date_from_unix_date/current_timezone). Deferred: make_date/make_interval/
-  make_dt_interval/unix_micros (`call_scalar` miss); date_diff/localtimestamp/
-  to_timestamp_ntz (SEMANTIC-HAZARD honest-cut); charter ENGINE-WORK
+  date_from_unix_date/current_timezone). Deferred at FN-D write (GT2 shipped
+  make_date/make_interval/make_dt_interval/unix_micros/date_diff):
+  localtimestamp/to_timestamp_ntz; charter ENGINE-WORK
   make_timestamp_ltz/ntz, make_ym_interval, to_timestamp_ltz, convert_timezone,
   timestamp_add/diff. Pins: `tests/test_functions_d.py`.
   **G6-3 rider (2026-08-15):** `unix_date` now builds the ENGINE's `unix_date`
@@ -1088,9 +1088,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   signature is an exact DATE.
   **FN-E (2026-08-15):** 9 collection names in `functions_collections.py`
   (cardinality/array_size/array_agg/named_struct/map_contains_key/array_append/
-  array_prepend/arrays_overlap/get). Deferred: map_from_entries/shuffle/create_map
-  (`call_scalar` allow-list); array_compact (`array_except` de-duplicates);
-  element_at (1-based + zero-index kernel is SQL-only); charter higher-order/JSON/
+  array_prepend/arrays_overlap/get). Deferred at FN-E write (GT2 shipped
+  map_from_entries/shuffle/array_compact/element_at): create_map
+  (`call_scalar` allow-list); charter higher-order/JSON/
   generators. Pins: `tests/test_functions_e.py`.
   **FN-GT2 (2026-08-17):** leftover THIN-WIRE datetime/collections/url/bitmap
   — 18 names. Wrappers in `functions_datetime.py` / `functions_collections.py`

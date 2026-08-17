@@ -304,8 +304,9 @@ pub fn str_to_map(text: Expr, pair_delim: Expr, key_value_delim: Expr) -> Expr {
     )
 }
 
-/// Spark `parse_url` — 2 or 3 args. Spark throws on invalid URL; the DF
-/// kernel currently yields NULL (same as `try_parse_url`).
+/// Spark `parse_url` — 2 or 3 args. Spark 4.1.2 raises `INVALID_URL` on
+/// invalid input. The DF kernel yields NULL for schemeless text and raises
+/// on some `://`-malformed URLs.
 #[must_use]
 pub fn parse_url(args: Vec<Expr>) -> Expr {
     spark_url_udfs::parse_url().call(args)

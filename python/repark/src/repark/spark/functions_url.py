@@ -17,8 +17,12 @@ def parse_url(
 ) -> Column:
     """Extract a URL part (PySpark ``functions.parse_url``).
 
-    Spark raises on an invalid URL. The DF kernel currently yields NULL
-    (same as :func:`try_parse_url`). Pin the honest kernel; do not claim a raise.
+    Spark 4.1.2 raises ``INVALID_URL`` on invalid input (including schemeless
+    ``'not a url'``). The DF kernel is mixed: schemeless text yields NULL
+    (HOST missing on a relative URI); some ``://``-malformed URLs raise
+    (``'inva lid://host'``). Do not claim a single throw-vs-NULL rule.
+    Spark compiles a ``QUERY`` key as a Java ``Pattern``; the DF kernel is
+    exact equality (``'f.o'`` matches ``foo`` on Spark, NULL here).
 
     Parameters
     ----------

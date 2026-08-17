@@ -260,6 +260,7 @@ def date_diff(end: Column | str, start: Column | str) -> Column:
     """Days from ``start`` to ``end`` (PySpark ``functions.date_diff``).
 
     Distinct from the DISPOSED-STUB ``datediff`` (R-FN-BATCH1). Do not alias.
+    Date columns match Spark.
 
     Parameters
     ----------

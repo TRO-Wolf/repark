@@ -142,7 +142,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   builders (consumed by the Spark door + the Python bindings).
 - **State & lifecycle:** stateless registration; idempotent analyzer rules.
 - **Allowed internal deps:** **none internal** — speaks `datafusion::error::Result` (no `repark-core`
-  dep). Third-party: datafusion + datafusion-spark + arrow + chrono.
+  dep). Third-party: datafusion + datafusion-spark + arrow + chrono + regex.
 - **Failure model:** `datafusion::error::Result`; a missing function gets a Rust shim or a LOUD
   unsupported error — never Python compute.
 - **Extension points:** add a Spark date / non-date function (a shim module + register from

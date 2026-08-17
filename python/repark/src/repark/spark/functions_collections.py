@@ -156,10 +156,12 @@ def get(
     col: Column | str,
     index: Column | str | int | float | bool | None,
 ) -> Column:
-    """0-based array element (PySpark ``functions.get``).
+    """0-based array element or map value (PySpark ``functions.get``).
 
-    Spark 4.1.2 ``get`` is array-only (maps refuse). Contrast ``element_at``
-    (1-based; index 0 raises ``INVALID_INDEX_OF_ZERO``; maps by key).
+    Spark 4.1.2 ``get`` is array-only (maps refuse). This FN-E wrapper is
+    ``getitem`` and currently also serves maps (``test_get_map_by_key``).
+    Contrast ``element_at`` (1-based; index 0 raises
+    ``INVALID_INDEX_OF_ZERO``; maps by key).
     """
     container = _as_column_arg(col, as_lit=False)
     key = index if isinstance(index, Column) else lit(index)
@@ -174,7 +176,8 @@ def element_at(
 
     A Python ``str`` extraction is a **literal** map key (or never a column
     name). Pass a :class:`Column` to extract by another column. Index ``0``
-    raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based; array-only).
+    raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based; ``getitem``,
+    including maps).
 
     Parameters
     ----------
