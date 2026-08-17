@@ -41,6 +41,11 @@ NOT in that file is a defect, not a decision.
   `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist`).
   (2026-08-17): **FN-GT1 moved the pin** 296→315 (18 leftover thin-wires +
   `getbit` alias of `bit_get`).
+  (2026-08-17): **FN-GT2 moved the pin** 315→333 (18 datetime/collections/url/bitmap).
+- [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 (2026-08-17): leftover
+  THIN-WIRE datetime/collections/url/bitmap through Arrow (value AND type).
+  ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse;
+  ``shuffle`` pins type+length; ``array_compact`` drops NULLs only.
 - [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17): leftover
   THIN-WIRE math/string/bitwise/utf8 through `ReparkSession` Arrow `to_arrow()`
   (value AND type). `factorial` pins Spark domain `[0, 20]` → NULL outside;

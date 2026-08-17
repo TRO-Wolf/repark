@@ -20,6 +20,11 @@ without enabling PyO3 `multiple-pymethods`.
   `factorial`/`rint`/`width_bucket`/`bit_count`/`bit_get`/`getbit`/shifts/`split_part`/
   `regexp_count`/`regexp_instr`/`bit_length`/`octet_length`/`is_valid_utf8`/
   `make_valid_utf8`).
+  **FN-GT2 (2026-08-17):** datetime/collections/url/bitmap leftover arms
+  (`make_date`/`make_interval`/`make_dt_interval`/`unix_micros`/`date_diff`/
+  `element_at`/`array_compact`/`shuffle`/`map_from_entries`/`str_to_map`/
+  `parse_url`/`try_parse_url`/`url_encode`/`url_decode`/`try_url_decode`/
+  `bitmap_bit_position`/`bitmap_bucket_number`/`bitmap_count`).
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,

@@ -34,7 +34,13 @@ use datafusion::logical_expr::{
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![Arc::new(ScalarUDF::from(SparkElementAt::new()))]
+    vec![element_at_udf()]
+}
+
+/// Spark `element_at` UDF instance (1-based array / map-by-key).
+#[must_use]
+pub fn element_at_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkElementAt::new()))
 }
 
 /// ===========================================================================================

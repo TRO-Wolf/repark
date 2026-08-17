@@ -175,7 +175,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   (embedded CAST) + registered `to_date` overwrite share `datetime::invoke_local_dates`.
   Pin `ltz_date_is_session_zone_and_ntz_is_stored_wall`. Ledgers:
   `task/tz5-cast-seconds-ledger.md` §4, `task/v3-btz4-ledger.md`, `task/r4-tz8-ledger.md`.
-- `collection.rs` — `SparkElementAt` (`element_at`; audit #15 — previously an alias of
+- `collection.rs` — `SparkElementAt` (`element_at`; **FN-GT2** public `element_at_udf()`
+  for the facade embed; audit #15 — previously an alias of
   `map_extract`, broken on every array): arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
   (`map_extract` unwrapped through `array_element`). Also `SparkArrayGet`
@@ -224,6 +225,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `datafusion-spark`. **FN-GT1 (2026-08-17):** also `bin`/`hex`/`unhex`/`factorial`
   (Int32 cast)/`rint`/`width_bucket`/`bit_count`/`bit_get`/shifts/`is_valid_utf8`/
   `make_valid_utf8` from `datafusion-spark` math/bitwise/string `expr_fn`.
+  **FN-GT2 (2026-08-17):** `make_date` (repark UDF) / `make_interval` /
+  `make_dt_interval` / `unix_micros` / `date_diff` / `element_at` / `shuffle` /
+  `map_from_entries` / `str_to_map` / URL + bitmap spark-reg builders.
 
 ## Pointers
 

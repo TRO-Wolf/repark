@@ -1,11 +1,8 @@
-"""Collection facade wrappers (FN-E).
+"""Collection facade wrappers (FN-E + FN-GT2).
 
-Aliases and shims over existing ``functions`` / ``functions_expr`` helpers.
-Public names are re-exported from ``functions.py``.
-
-Higher-order / JSON / generator names stay deferred (lambda module empty;
-``call_scalar`` has no arms). ``concat`` is string-only (casts Utf8) — array
-append/prepend cannot use it.
+Public names are re-exported from ``functions.py``. FN-GT2 wires leftover
+``element_at`` / ``array_compact`` / ``shuffle`` / ``map_from_entries`` /
+``str_to_map``.
 """
 
 from __future__ import annotations
@@ -161,10 +158,82 @@ def get(
 ) -> Column:
     """0-based array element or map value (PySpark ``functions.get``).
 
-    SEMANTIC-HAZARD vs SQL ``element_at`` (1-based; index 0 raises
-    ``INVALID_INDEX_OF_ZERO``). ``call_scalar`` has no ``element_at`` arm, so
-    the 1-based spelling is not a facade name — pin the base contrast here.
+    SEMANTIC-HAZARD vs ``element_at`` (1-based; index 0 raises
+    ``INVALID_INDEX_OF_ZERO``). FN-GT2 ships ``element_at`` as its own name.
     """
     container = _as_column_arg(col, as_lit=False)
     key = index if isinstance(index, Column) else lit(index)
     return _scalar("getitem", container, key)
+
+
+def element_at(
+    col: Column | str,
+    extraction: Column | str | int,
+) -> Column:
+    """1-based array element or map value (PySpark ``functions.element_at``).
+
+    Index ``0`` raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based).
+
+    Examples
+    --------
+    ``F.element_at(F.array(10, 20, 30), 1)`` is ``10``.
+    """
+    return _scalar(
+        "element_at",
+        col,
+        extraction,
+        lit_indices=frozenset({1} if not isinstance(extraction, (Column, str)) else ()),
+    )
+
+
+def array_compact(col: Column | str) -> Column:
+    """Drop NULL elements from an array (PySpark ``functions.array_compact``).
+
+    Does not de-duplicate — that was the FN-E honest-cut miss.
+
+    Examples
+    --------
+    ``F.array_compact(F.array(1, None, 1))`` is ``[1, 1]``.
+    """
+    return _scalar("array_compact", col)
+
+
+def shuffle(col: Column | str) -> Column:
+    """Random permutation of an array (PySpark ``functions.shuffle``).
+
+    Non-deterministic. Tests pin type and length, not order.
+    """
+    return _scalar("shuffle", col)
+
+
+def map_from_entries(col: Column | str) -> Column:
+    """Map from ``array<struct<key, value>>`` (PySpark ``functions.map_from_entries``).
+
+    Examples
+    --------
+    ``F.map_from_entries(F.array(F.struct(F.lit('a').alias('key'), F.lit(1).alias('value'))))``.
+    """
+    return _scalar("map_from_entries", col)
+
+
+def str_to_map(
+    text: Column | str,
+    pair_delim: Column | str | None = None,
+    key_value_delim: Column | str | None = None,
+) -> Column:
+    """Split a string into a map (PySpark ``functions.str_to_map``).
+
+    Defaults: pair delimiter ``,`` and key/value delimiter ``:``.
+
+    Examples
+    --------
+    ``F.str_to_map(F.lit('a:1,b:2'))`` is ``{'a': '1', 'b': '2'}``.
+    """
+    pair = "," if pair_delim is None else pair_delim
+    key_value = ":" if key_value_delim is None else key_value_delim
+    lit_indices: set[int] = set()
+    if not isinstance(pair, Column):
+        lit_indices.add(1)
+    if not isinstance(key_value, Column):
+        lit_indices.add(2)
+    return _scalar("str_to_map", text, pair, key_value, lit_indices=frozenset(lit_indices))

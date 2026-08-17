@@ -6,9 +6,8 @@ with their canonical. ``get`` pins the 0-based vs SQL ``element_at`` 1-based
 hazard (index 0 / 1 / NULL).
 
 Deferred this batch (no stubs): charter higher-order / JSON / generators;
-``map_from_entries``, ``shuffle``, ``create_map`` (``call_scalar`` allow-list);
-``array_compact`` (``array_except`` de-duplicates; not Spark compact);
-``element_at`` (1-based + ``INVALID_INDEX_OF_ZERO`` kernel is SQL-only).
+``create_map`` (G3 extra). FN-GT2 later shipped ``map_from_entries`` /
+``shuffle`` / ``array_compact`` / ``element_at``.
 """
 
 from __future__ import annotations

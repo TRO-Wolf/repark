@@ -1,7 +1,7 @@
 """FN-SPLIT identity: ``functions.__all__`` is unchanged and every name resolves.
 
 Relocation discipline (docs/testing.md): this began as a declared move-only split. The
-``__all__`` tuple is the surface pin. FN-C/D/E/F/W/GT1 deliberately grow the pin - each
+``__all__`` tuple is the surface pin. FN-C/D/E/F/W/GT1/GT2 deliberately grow the pin - each
 batch's names are declared in its PR body.
 """
 
@@ -23,6 +23,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "array",
     "array_agg",
     "array_append",
+    "array_compact",
     "array_contains",
     "array_distinct",
     "array_except",
@@ -56,6 +57,9 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "bit_length",
     "bit_or",
     "bit_xor",
+    "bitmap_bit_position",
+    "bitmap_bucket_number",
+    "bitmap_count",
     "bitwiseNOT",
     "bitwise_not",
     "bool_and",
@@ -102,6 +106,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "current_timezone",
     "current_user",
     "date_add",
+    "date_diff",
     "date_format",
     "date_from_unix_date",
     "date_part",
@@ -122,6 +127,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "desc",
     "desc_nulls_last",
     "e",
+    "element_at",
     "elt",
     "encode",
     "endswith",
@@ -185,11 +191,15 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "lower",
     "lpad",
     "ltrim",
+    "make_date",
+    "make_dt_interval",
+    "make_interval",
     "make_timestamp",
     "make_valid_utf8",
     "map_contains_key",
     "map_entries",
     "map_from_arrays",
+    "map_from_entries",
     "map_keys",
     "map_values",
     "max",
@@ -218,6 +228,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "octet_length",
     "overlay",
     "pandas_udf",
+    "parse_url",
     "percent_rank",
     "percentile_approx",
     "pi",
@@ -265,6 +276,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "shiftleft",
     "shiftright",
     "shiftrightunsigned",
+    "shuffle",
     "sign",
     "signum",
     "sin",
@@ -284,6 +296,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "stddev",
     "stddev_pop",
     "stddev_samp",
+    "str_to_map",
     "struct",
     "substr",
     "substring",
@@ -301,17 +314,22 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "translate",
     "trim",
     "trunc",
+    "try_parse_url",
     "try_to_timestamp",
+    "try_url_decode",
     "ucase",
     "udf",
     "udtf",
     "unbase64",
     "unhex",
     "unix_date",
+    "unix_micros",
     "unix_millis",
     "unix_seconds",
     "unix_timestamp",
     "upper",
+    "url_decode",
+    "url_encode",
     "user",
     "uuid",
     "var_pop",
@@ -331,7 +349,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 315
+    assert len(F.__all__) == 333
 
 
 def test_every_all_name_resolves() -> None:
