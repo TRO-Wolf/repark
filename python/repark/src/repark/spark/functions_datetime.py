@@ -170,10 +170,21 @@ def make_interval(
     """Build a year-month-day interval (PySpark ``functions.make_interval``).
 
     Omitted leading parts default to zero. A no-arg call is a zero interval.
+    A Python ``str`` part is a **column name** (``make_date`` mold).
+
+    Parameters
+    ----------
+    years, months, weeks, days, hours, mins, secs : Column or str or number, optional
+        Interval parts. ``str`` names a column; ints/floats are literals.
+
+    Returns
+    -------
+    Column
+        Calendar interval (Arrow ``month_day_nano_interval``).
 
     Examples
     --------
-    ``F.make_interval(days=1)`` is a one-day interval.
+    ``F.make_interval(days=1)`` is 1 day (string form ``'1 days'``).
     """
     parts: list[Column | str | float | int] = [
         0 if part is None else part for part in (years, months, weeks, days, hours, mins, secs)
@@ -181,7 +192,7 @@ def make_interval(
     if all(part is None for part in (years, months, weeks, days, hours, mins, secs)):
         return _scalar("make_interval", foldable=True)
     lit_indices = frozenset(
-        index for index, part in enumerate(parts) if not isinstance(part, Column)
+        index for index, part in enumerate(parts) if not isinstance(part, (Column, str))
     )
     return _scalar("make_interval", *parts, lit_indices=lit_indices)
 
@@ -194,9 +205,21 @@ def make_dt_interval(
 ) -> Column:
     """Build a day-time interval (PySpark ``functions.make_dt_interval``).
 
+    A Python ``str`` part is a **column name** (``make_date`` mold).
+
+    Parameters
+    ----------
+    days, hours, mins, secs : Column or str or number, optional
+        Day-time parts. ``str`` names a column; ints/floats are literals.
+
+    Returns
+    -------
+    Column
+        Day-time interval (Arrow ``duration[us]``).
+
     Examples
     --------
-    ``F.make_dt_interval(1, 2)`` is 1 day + 2 hours.
+    ``F.make_dt_interval(1, 0, 0, 0)`` is ``timedelta(days=1)``.
     """
     parts: list[Column | str | float | int] = [
         0 if part is None else part for part in (days, hours, mins, secs)
@@ -204,7 +227,7 @@ def make_dt_interval(
     if all(part is None for part in (days, hours, mins, secs)):
         return _scalar("make_dt_interval", foldable=True)
     lit_indices = frozenset(
-        index for index, part in enumerate(parts) if not isinstance(part, Column)
+        index for index, part in enumerate(parts) if not isinstance(part, (Column, str))
     )
     return _scalar("make_dt_interval", *parts, lit_indices=lit_indices)
 
@@ -212,13 +235,25 @@ def make_dt_interval(
 def unix_micros(col: Column | str) -> Column:
     """Microseconds since 1970-01-01 UTC (PySpark ``functions.unix_micros``).
 
-    Dedicated spark-reg kernel — not a float multiply of ``unix_seconds``.
+    Dedicated spark-reg kernel. The leading ``.cast("timestamp")`` is the
+    ``unix_date`` mold: Spark-legal string/date inputs coerce and localize
+    through the session zone.
+
+    Parameters
+    ----------
+    col : Column or str
+        Timestamp (or string/date coerced to timestamp).
+
+    Returns
+    -------
+    Column
+        Int64 microseconds since the UTC epoch.
 
     Examples
     --------
-    ``F.unix_micros(F.lit('1970-01-01 00:00:00'))`` is ``0``.
+    ``F.unix_micros(F.lit('1970-01-01 00:00:00'))`` is ``0`` in a UTC session.
     """
-    return _scalar("unix_micros", col)
+    return _scalar("unix_micros", _as_column_arg(col, as_lit=False).cast("timestamp"))
 
 
 def date_diff(end: Column | str, start: Column | str) -> Column:
@@ -226,8 +261,19 @@ def date_diff(end: Column | str, start: Column | str) -> Column:
 
     Distinct from the DISPOSED-STUB ``datediff`` (R-FN-BATCH1). Do not alias.
 
+    Parameters
+    ----------
+    end, start : Column or str
+        Date columns (end minus start).
+
+    Returns
+    -------
+    Column
+        Integer day difference.
+
     Examples
     --------
-    ``F.date_diff(F.lit('2020-01-03'), F.lit('2020-01-01'))`` is ``2``.
+    ``F.date_diff(F.lit(datetime.date(2020, 1, 3)), F.lit(datetime.date(2020, 1, 1)))``
+    is ``2``.
     """
     return _scalar("date_diff", end, start)

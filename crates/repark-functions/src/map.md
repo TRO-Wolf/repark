@@ -179,7 +179,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   for the facade embed; audit #15 — previously an alias of
   `map_extract`, broken on every array): arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
-  (`map_extract` unwrapped through `array_element`). Also `SparkArrayGet`
+  (`map_extract` unwrapped through `array_element`). **FN-GT2 rework:**
+  `str_to_map.rs` (`#[path]`) regex `str_to_map` overwrites DF's literal split.
+  Also `SparkArrayGet`
   (`__repark_array_get__`) — the embedded (never registered) `[]` subscript UDF the analyzer
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —
   polymorphic array 0-based or map-by-key for facade `Column.__getitem__` Column/other keys
@@ -228,6 +230,8 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   **FN-GT2 (2026-08-17):** `make_date` (repark UDF) / `make_interval` /
   `make_dt_interval` / `unix_micros` / `date_diff` / `element_at` / `shuffle` /
   `map_from_entries` / `str_to_map` / URL + bitmap spark-reg builders.
+  **FN-GT2 rework (2026-08-17):** `str_to_map.rs` (via `collection.rs` `#[path]`)
+  overwrites the DF literal-split kernel — both delimiters are regex.
 
 ## Pointers
 

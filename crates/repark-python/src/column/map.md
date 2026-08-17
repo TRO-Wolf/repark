@@ -25,6 +25,7 @@ without enabling PyO3 `multiple-pymethods`.
   `element_at`/`array_compact`/`shuffle`/`map_from_entries`/`str_to_map`/
   `parse_url`/`try_parse_url`/`url_encode`/`url_decode`/`try_url_decode`/
   `bitmap_bit_position`/`bitmap_bucket_number`/`bitmap_count`).
+  Rework: `str_to_map` now embeds the regex UDF from `repark-functions`.
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,

@@ -1326,6 +1326,9 @@ from repark.spark.functions_agg import (  # noqa: E402
 from repark.spark.functions_bitwise import (  # noqa: E402
     bit_count,
     bit_get,
+    bitmap_bit_position,
+    bitmap_bucket_number,
+    bitmap_count,
     bitwise_not,
     bitwiseNOT,
     getbit,
@@ -1619,9 +1622,6 @@ from repark.spark.functions_udf import (  # noqa: E402, F401 — re-export surfa
     udf,
 )
 from repark.spark.functions_url import (  # noqa: E402
-    bitmap_bit_position,
-    bitmap_bucket_number,
-    bitmap_count,
     parse_url,
     try_parse_url,
     try_url_decode,

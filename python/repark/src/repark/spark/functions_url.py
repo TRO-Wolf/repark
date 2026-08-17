@@ -1,6 +1,7 @@
-"""URL and bitmap facade wrappers (FN-GT2).
+"""URL facade wrappers (FN-GT2).
 
-Public names are re-exported from ``functions.py``.
+Public names are re-exported from ``functions.py``. Bitmap helpers live
+in :mod:`repark.spark.functions_bitwise` (bit-family sibling).
 """
 
 from __future__ import annotations
@@ -11,12 +12,27 @@ from repark.spark.functions import _scalar
 
 def parse_url(
     url: Column | str,
-    part_to_extract: Column | str,
+    partToExtract: Column | str,  # noqa: N803 — PySpark keyword
     key: Column | str | None = None,
 ) -> Column:
     """Extract a URL part (PySpark ``functions.parse_url``).
 
-    Invalid URLs raise. Use :func:`try_parse_url` for NULL-on-invalid.
+    Spark raises on an invalid URL. The DF kernel currently yields NULL
+    (same as :func:`try_parse_url`). Pin the honest kernel; do not claim a raise.
+
+    Parameters
+    ----------
+    url : Column or str
+        URL string.
+    partToExtract : Column or str
+        Part name (``HOST``, ``PATH``, ``QUERY``, …). A Python ``str`` is a literal.
+    key : Column or str, optional
+        Query-parameter key when extracting ``QUERY``.
+
+    Returns
+    -------
+    Column
+        The extracted string.
 
     Examples
     --------
@@ -27,13 +43,13 @@ def parse_url(
         return _scalar(
             "parse_url",
             url,
-            part_to_extract,
-            lit_indices=frozenset({1} if isinstance(part_to_extract, str) else ()),
+            partToExtract,
+            lit_indices=frozenset({1} if isinstance(partToExtract, str) else ()),
         )
     return _scalar(
         "parse_url",
         url,
-        part_to_extract,
+        partToExtract,
         key,
         lit_indices=frozenset({1, 2}),
     )
@@ -41,10 +57,24 @@ def parse_url(
 
 def try_parse_url(
     url: Column | str,
-    part_to_extract: Column | str,
+    partToExtract: Column | str,  # noqa: N803 — PySpark keyword
     key: Column | str | None = None,
 ) -> Column:
     """Extract a URL part, NULL if invalid (PySpark ``functions.try_parse_url``).
+
+    Parameters
+    ----------
+    url : Column or str
+        URL string.
+    partToExtract : Column or str
+        Part name. A Python ``str`` is a literal.
+    key : Column or str, optional
+        Query-parameter key when extracting ``QUERY``.
+
+    Returns
+    -------
+    Column
+        The extracted string, or NULL.
 
     Examples
     --------
@@ -54,13 +84,13 @@ def try_parse_url(
         return _scalar(
             "try_parse_url",
             url,
-            part_to_extract,
-            lit_indices=frozenset({1} if isinstance(part_to_extract, str) else ()),
+            partToExtract,
+            lit_indices=frozenset({1} if isinstance(partToExtract, str) else ()),
         )
     return _scalar(
         "try_parse_url",
         url,
-        part_to_extract,
+        partToExtract,
         key,
         lit_indices=frozenset({1, 2}),
     )
@@ -68,6 +98,16 @@ def try_parse_url(
 
 def url_encode(col: Column | str) -> Column:
     """URL-encode a string (PySpark ``functions.url_encode``).
+
+    Parameters
+    ----------
+    col : Column or str
+        Input string.
+
+    Returns
+    -------
+    Column
+        Percent-encoded string (space → ``+``).
 
     Examples
     --------
@@ -79,6 +119,16 @@ def url_encode(col: Column | str) -> Column:
 def url_decode(col: Column | str) -> Column:
     """URL-decode a string (PySpark ``functions.url_decode``).
 
+    Parameters
+    ----------
+    col : Column or str
+        Encoded string.
+
+    Returns
+    -------
+    Column
+        Decoded string.
+
     Examples
     --------
     ``F.url_decode(F.lit('a+b'))`` is ``'a b'``.
@@ -89,38 +139,18 @@ def url_decode(col: Column | str) -> Column:
 def try_url_decode(col: Column | str) -> Column:
     """URL-decode, NULL if invalid (PySpark ``functions.try_url_decode``).
 
+    Parameters
+    ----------
+    col : Column or str
+        Encoded string.
+
+    Returns
+    -------
+    Column
+        Decoded string, or NULL on invalid input.
+
     Examples
     --------
     ``F.try_url_decode(F.lit('%ZZ'))`` is NULL.
     """
     return _scalar("try_url_decode", col)
-
-
-def bitmap_bit_position(col: Column | str) -> Column:
-    """Bit position for a bitmap child (PySpark ``functions.bitmap_bit_position``).
-
-    Examples
-    --------
-    ``F.bitmap_bit_position(F.lit(1))`` is a non-null integer.
-    """
-    return _scalar("bitmap_bit_position", col)
-
-
-def bitmap_bucket_number(col: Column | str) -> Column:
-    """Bucket number for a bitmap child (PySpark ``functions.bitmap_bucket_number``).
-
-    Examples
-    --------
-    ``F.bitmap_bucket_number(F.lit(1))`` is a non-null integer.
-    """
-    return _scalar("bitmap_bucket_number", col)
-
-
-def bitmap_count(col: Column | str) -> Column:
-    """Number of set bits in a binary bitmap (PySpark ``functions.bitmap_count``).
-
-    Examples
-    --------
-    ``F.bitmap_count(F.unhex(F.lit('FF')))`` is ``8``.
-    """
-    return _scalar("bitmap_count", col)

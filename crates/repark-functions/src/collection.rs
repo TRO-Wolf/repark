@@ -28,13 +28,24 @@ use datafusion::logical_expr::{
     ColumnarValue, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature, Volatility,
 };
 
+/// Regex `str_to_map` (Spark treats both delimiters as regular expressions).
+/// Sibling file so `lib.rs` stays at its crate-root ceiling.
+#[path = "str_to_map.rs"]
+mod str_to_map;
+
 /// ===========================================================================================
 /// The collection shims to register (after the defaults, so `element_at` sheds its
-/// `map_extract`-alias resolution).
+/// `map_extract`-alias resolution and `str_to_map` overwrites the literal-split kernel).
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![element_at_udf()]
+    vec![element_at_udf(), str_to_map_udf()]
+}
+
+/// Spark `str_to_map` UDF (regex pair + key/value delimiters).
+#[must_use]
+pub fn str_to_map_udf() -> Arc<ScalarUDF> {
+    str_to_map::str_to_map_udf()
 }
 
 /// Spark `element_at` UDF instance (1-based array / map-by-key).

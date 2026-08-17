@@ -1094,7 +1094,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   generators. Pins: `tests/test_functions_e.py`.
   **FN-GT2 (2026-08-17):** leftover THIN-WIRE datetime/collections/url/bitmap
   — 18 names. Wrappers in `functions_datetime.py` / `functions_collections.py`
-  / new `functions_url.py`. Binder arms in `column/function_dispatch.rs`.
+  / `functions_url.py`. Binder arms in `column/function_dispatch.rs`.
+  **Rework (2026-08-17):** W1 `element_at` treats a `str` extraction as a
+  literal key; W2 interval
+  `str` parts are column names; W3 `unix_micros` casts timestamp first; W4
+  regex `str_to_map`; W5 non-UTC pins. `bitmap_*` moved to
+  `functions_bitwise.py`.
   `datediff` DISPOSED-STUB untouched. `element_at` is 1-based (contrast `get`).
   **FN-GT1 (2026-08-17):** leftover THIN-WIRE math/string/bitwise/utf8 — 18
   names + `getbit` alias. Math wrappers in new `functions_math.py`; bitwise

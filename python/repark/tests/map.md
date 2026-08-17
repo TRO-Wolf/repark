@@ -44,8 +44,10 @@ NOT in that file is a defect, not a decision.
   (2026-08-17): **FN-GT2 moved the pin** 315→333 (18 datetime/collections/url/bitmap).
 - [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 (2026-08-17): leftover
   THIN-WIRE datetime/collections/url/bitmap through Arrow (value AND type).
-  ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse;
-  ``shuffle`` pins type+length; ``array_compact`` drops NULLs only.
+  ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse +
+  string-key map extraction; ``shuffle`` pins type+length; ``array_compact``
+  drops NULLs only. Rework: exact interval/bitmap/unix_micros values, regex
+  ``str_to_map``, NULL rows, non-UTC session pins, docstring-example execute.
 - [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17): leftover
   THIN-WIRE math/string/bitwise/utf8 through `ReparkSession` Arrow `to_arrow()`
   (value AND type). `factorial` pins Spark domain `[0, 20]` → NULL outside;

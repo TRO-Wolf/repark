@@ -295,13 +295,17 @@ pub fn map_from_entries(arg: Expr) -> Expr {
     spark_map::map_from_entries(arg)
 }
 
-/// Spark `str_to_map(text, pairDelim, keyValueDelim)` (from `datafusion-spark`).
+/// Spark `str_to_map(text, pairDelim, keyValueDelim)` — regex delimiters (owned shim).
 #[must_use]
 pub fn str_to_map(text: Expr, pair_delim: Expr, key_value_delim: Expr) -> Expr {
-    spark_map::str_to_map(text, pair_delim, key_value_delim)
+    call(
+        crate::collection::str_to_map_udf(),
+        vec![text, pair_delim, key_value_delim],
+    )
 }
 
-/// Spark `parse_url` — 2 or 3 args; throws on invalid URL.
+/// Spark `parse_url` — 2 or 3 args. Spark throws on invalid URL; the DF
+/// kernel currently yields NULL (same as `try_parse_url`).
 #[must_use]
 pub fn parse_url(args: Vec<Expr>) -> Expr {
     spark_url_udfs::parse_url().call(args)

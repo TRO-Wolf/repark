@@ -156,10 +156,10 @@ def get(
     col: Column | str,
     index: Column | str | int | float | bool | None,
 ) -> Column:
-    """0-based array element or map value (PySpark ``functions.get``).
+    """0-based array element (PySpark ``functions.get``).
 
-    SEMANTIC-HAZARD vs ``element_at`` (1-based; index 0 raises
-    ``INVALID_INDEX_OF_ZERO``). FN-GT2 ships ``element_at`` as its own name.
+    Spark 4.1.2 ``get`` is array-only (maps refuse). Contrast ``element_at``
+    (1-based; index 0 raises ``INVALID_INDEX_OF_ZERO``; maps by key).
     """
     container = _as_column_arg(col, as_lit=False)
     key = index if isinstance(index, Column) else lit(index)
@@ -172,17 +172,32 @@ def element_at(
 ) -> Column:
     """1-based array element or map value (PySpark ``functions.element_at``).
 
-    Index ``0`` raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based).
+    A Python ``str`` extraction is a **literal** map key (or never a column
+    name). Pass a :class:`Column` to extract by another column. Index ``0``
+    raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based; array-only).
+
+    Parameters
+    ----------
+    col : Column or str
+        Array or map column.
+    extraction : Column or str or int
+        1-based array index, or map key. A bare ``str`` is ``lit(extraction)``.
+
+    Returns
+    -------
+    Column
+        The element or map value; NULL when missing / out of range.
 
     Examples
     --------
     ``F.element_at(F.array(10, 20, 30), 1)`` is ``10``.
+    On a map, ``F.element_at(..., 'b')`` treats ``'b'`` as a literal key.
     """
     return _scalar(
         "element_at",
         col,
         extraction,
-        lit_indices=frozenset({1} if not isinstance(extraction, (Column, str)) else ()),
+        lit_indices=frozenset({} if isinstance(extraction, Column) else {1}),
     )
 
 
@@ -190,6 +205,16 @@ def array_compact(col: Column | str) -> Column:
     """Drop NULL elements from an array (PySpark ``functions.array_compact``).
 
     Does not de-duplicate — that was the FN-E honest-cut miss.
+
+    Parameters
+    ----------
+    col : Column or str
+        Array column.
+
+    Returns
+    -------
+    Column
+        Array with NULL elements removed (duplicates kept).
 
     Examples
     --------
@@ -202,6 +227,22 @@ def shuffle(col: Column | str) -> Column:
     """Random permutation of an array (PySpark ``functions.shuffle``).
 
     Non-deterministic. Tests pin type and length, not order.
+    PySpark 4.0+ ``seed`` is an honest cut (not wired).
+
+    Parameters
+    ----------
+    col : Column or str
+        Array column.
+
+    Returns
+    -------
+    Column
+        An array of the same elements in random order.
+
+    Examples
+    --------
+    ``F.shuffle(F.array(1, 2, 3))`` is a length-3 integer array whose
+    sorted values are ``[1, 2, 3]``.
     """
     return _scalar("shuffle", col)
 
@@ -209,28 +250,57 @@ def shuffle(col: Column | str) -> Column:
 def map_from_entries(col: Column | str) -> Column:
     """Map from ``array<struct<key, value>>`` (PySpark ``functions.map_from_entries``).
 
+    Parameters
+    ----------
+    col : Column or str
+        Array of key/value structs.
+
+    Returns
+    -------
+    Column
+        A map.
+
     Examples
     --------
-    ``F.map_from_entries(F.array(F.struct(F.lit('a').alias('key'), F.lit(1).alias('value'))))``.
+    ``F.map_from_entries(F.array(F.struct(F.lit('a').alias('key'), F.lit(1).alias('value'))))``
+    is ``{'a': 1}``.
     """
     return _scalar("map_from_entries", col)
 
 
 def str_to_map(
     text: Column | str,
-    pair_delim: Column | str | None = None,
-    key_value_delim: Column | str | None = None,
+    pairDelim: Column | str | None = None,  # noqa: N803 — PySpark keyword
+    keyValueDelim: Column | str | None = None,  # noqa: N803 — PySpark keyword
 ) -> Column:
     """Split a string into a map (PySpark ``functions.str_to_map``).
 
     Defaults: pair delimiter ``,`` and key/value delimiter ``:``.
+    Both delimiters are **regular expressions** (Spark). A Python ``str``
+    delimiter is wrapped as a literal (the default path must be a literal).
+
+    Parameters
+    ----------
+    text : Column or str
+        Input string.
+    pairDelim : Column or str, optional
+        Regex between pairs (default ``,``).
+    keyValueDelim : Column or str, optional
+        Regex between key and value (default ``:``).
+
+    Returns
+    -------
+    Column
+        ``map<string, string>``.
 
     Examples
     --------
     ``F.str_to_map(F.lit('a:1,b:2'))`` is ``{'a': '1', 'b': '2'}``.
+    ``F.str_to_map(F.lit('a:1,b:2c:3'), F.lit('[,c]'), F.lit(':'))`` is
+    ``{'a': '1', 'b': '2', '': '3'}``.
     """
-    pair = "," if pair_delim is None else pair_delim
-    key_value = ":" if key_value_delim is None else key_value_delim
+    pair = "," if pairDelim is None else pairDelim
+    key_value = ":" if keyValueDelim is None else keyValueDelim
     lit_indices: set[int] = set()
     if not isinstance(pair, Column):
         lit_indices.add(1)
