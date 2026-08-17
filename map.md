@@ -67,7 +67,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   families). Illustration, never a gate: nothing in `make ci` / `verify` / `preflight` executes
   it, and every behavior an example shows is pinned by a test it points at. Execution gating
   arrives with the examples-harness workstream. See [examples/map.md](examples/map.md).
-- `docs/` — contracts, ADRs, the port plan, per-tier manuals, and `docs/history/` (the archive of
+- `docs/` — contracts, ADRs, the port plan, per-tier manuals, `docs/guide/` (the **user-facing**
+  guides — install, session + conf, the DataFrame API, the two SQL doors; the only docs written
+  for a user rather than a contributor), and `docs/history/` (the archive of
   closed campaigns — the v1 → v2 port and the Agent-Agnostic Front-Door campaign, both off the
   normal read path; see [docs/history/map.md](docs/history/map.md)).
   `task/` — the rules in force (`lessons.md`), the process metrics ledger (`metrics.md`), the
@@ -92,6 +94,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | ...do this | go to |
 |---|---|
 | Know the current state (release / delivery / what's next) | [STATUS.md](STATUS.md) |
+| Learn to *use* repark (install, session, DataFrame, SQL doors) | [docs/guide/map.md](docs/guide/map.md) |
 | Understand the project intent / north star | [PROJECT.md](PROJECT.md) |
 | Follow the authoritative contributor contract | [AGENTS.md](AGENTS.md) |
 | Understand the architecture / crate DAG / runtime flows | [ARCHITECTURE.md](ARCHITECTURE.md) |
