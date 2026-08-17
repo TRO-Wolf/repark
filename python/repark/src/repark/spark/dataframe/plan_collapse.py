@@ -711,6 +711,10 @@ def _split_struct_field(field: str) -> tuple[str, str] | None:
 _SIMPLE_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _DECIMAL_SQL_RE = re.compile(r"decimal\(\d+,\s*\d+\)", re.IGNORECASE)
 
+# Sentinel: void / Null elements have no CAST spelling. explode_outer emits
+# make_array(NULL) and must never interpolate this token into CAST(... AS ...).
+_UNTYPED_NULL_ELEMENT = "__repark_untyped_null__"
+
 
 def _struct_field_name_for_cast(name: str) -> str | None:
     """Allowlist a struct field name before embedding it in CAST SQL.
@@ -746,7 +750,7 @@ def _spark_struct_element_to_sql(raw: str) -> str | None:
         name, type_text = split
         safe_name = _struct_field_name_for_cast(name)
         mapped = _spark_array_element_to_sql(type_text)
-        if safe_name is None or mapped is None:
+        if safe_name is None or mapped is None or mapped == _UNTYPED_NULL_ELEMENT:
             return None
         parts.append(f"{safe_name}:{mapped}")
     return "struct<" + ",".join(parts) + ">"
@@ -758,13 +762,16 @@ def _spark_array_element_to_sql(element: str) -> str | None:
     token = raw.lower()
     if token.startswith("array<") and token.endswith(">"):
         inner = _spark_array_element_to_sql(raw[len("array<") : -1].strip())
-        if inner is None:
+        # Nested array<void> has no CAST spelling (leaf void uses make_array(NULL)).
+        if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
         return f"{inner}[]"
     if token.startswith("struct<") and token.endswith(">"):
         return _spark_struct_element_to_sql(raw)
     if token.startswith("map<"):
         return None
+    if token in {"null", "void"}:
+        return _UNTYPED_NULL_ELEMENT
     mapping = {
         "tinyint": "TINYINT",
         "byte": "TINYINT",
@@ -812,7 +819,8 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
     text = element.strip()
     if text.startswith("List("):
         inner = _parse_list_element_sql_type(text)
-        if inner is None:
+        # Nested void has no CAST spelling (same refuse as simpleString array<null>).
+        if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
         return f"{inner}[]"
     if text.startswith("Timestamp"):
@@ -843,7 +851,7 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
             return f"DECIMAL({decimal_match.group(1)}, {decimal_match.group(2)})"
         return "DECIMAL(38, 18)"
     if text.startswith("Null"):
-        return "BIGINT"
+        return _UNTYPED_NULL_ELEMENT
     # Struct / Map / Union / Dictionary — unsupported for make_array(NULL) guard.
     return None
 

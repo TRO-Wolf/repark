@@ -188,7 +188,9 @@ legs.select("id", F.explode_outer("Legs").alias("leg")).orderBy("id").show()
 ```
 
 **Why it works.** The guard is `CASE WHEN array IS NULL OR empty THEN make_array(CAST(NULL
-AS struct<…>)) ELSE array END`. Engine SQL accepts that CAST. Map element types, and
+AS struct<…>)) ELSE array END`. Engine SQL accepts that CAST. Void / `array<Null>`
+elements have no CAST spelling — the same CASE uses untyped `make_array(NULL)` so
+an empty void sibling cannot cartesian-drop typed sibling lists. Map element types, and
 struct fields whose names are not simple identifiers, still refuse loud (no safe CAST
 spelling). Pin:
 `python/repark/tests/test_datasets_facade.py::test_nested_explode_outer_on_array_of_struct_refuses_loud`.

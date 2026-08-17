@@ -14,7 +14,14 @@ from repark.errors import (
     ParseException,
     UnsupportedOperationException,
 )
-from repark.spark.types import ArrayType, LongType, StringType, StructField, StructType
+from repark.spark.types import (
+    ArrayType,
+    LongType,
+    NullType,
+    StringType,
+    StructField,
+    StructType,
+)
 
 
 def _is_arrow_string(data_type: pa.DataType) -> bool:
@@ -1013,16 +1020,53 @@ def test_explode_outer_nested_struct_element_device_web_info(spark: ReparkSessio
     assert pa.types.is_struct(hit_type.field("web_info").type)
 
 
+def test_explode_outer_void_array_keeps_null_and_empty(spark: ReparkSession) -> None:
+    """explode_outer on array<void> uses untyped make_array(NULL) (SQM #176 V-2).
+
+    MEASURED: BASE b628b0f and f6aed24 raise AnalysisException (no CAST
+    spelling for void). After: empty and NULL void lists each yield one
+    null element. Kills: missing ``_UNTYPED_NULL_ELEMENT`` arm;
+    ``CAST(NULL AS void)`` attempt.
+    """
+    frame = spark.sql(
+        """
+        SELECT 1 AS id, make_array() AS props
+        UNION ALL
+        SELECT 2, CASE WHEN false THEN make_array() END
+        """
+    )
+    props_type = frame.schema["props"].dataType
+    assert isinstance(props_type, ArrayType)
+    assert isinstance(props_type.elementType, NullType)
+    table = frame.select(frame.id, F.explode_outer("props").alias("e")).orderBy("id").to_arrow()
+    rows = table.to_pylist()
+    assert [row["id"] for row in rows] == [1, 2]
+    assert rows[0]["e"] is None
+    assert rows[1]["e"] is None
+    assert pa.types.is_null(table.schema.field("e").type)
+
+
 def test_explode_outer_map_element_still_refuses_loud(spark: ReparkSession) -> None:
-    """Map element types stay refused (no CAST spelling; same message class)."""
+    """Map element types stay refused (no CAST spelling; same message class).
+
+    Non-discriminating regression guard (B4 L2 / SQM #176 V-1): MEASURED
+    green on BASE b628b0f — ``_spark_array_element_to_sql('map<…>')`` was
+    already None and explode_outer already raised this class. Does not go
+    red on revert of this PR's struct-spelling. Kills a later map CAST that
+    would silently accept.
+    """
     frame = spark.sql("SELECT 1 AS id, [map('a', 1)] AS m")
     with pytest.raises(AnalysisException, match=r"explode_outer cannot resolve SQL element type"):
         frame.select(F.explode_outer("m").alias("e")).to_arrow()
 
 
 def test_spark_array_element_to_sql_struct_and_map() -> None:
-    """Struct elements spell; map elements stay unmapped."""
-    from repark.spark.dataframe.plan_collapse import _spark_array_element_to_sql
+    """Struct elements spell; map elements stay unmapped; void is the untyped sentinel."""
+    from repark.spark.dataframe.plan_collapse import (
+        _UNTYPED_NULL_ELEMENT,
+        _parse_list_element_sql_type,
+        _spark_array_element_to_sql,
+    )
 
     spelled = _spark_array_element_to_sql(
         "struct<leg_id:bigint,side:string,Fills:array<struct<fill_id:bigint>>>"
@@ -1032,8 +1076,29 @@ def test_spark_array_element_to_sql_struct_and_map() -> None:
         "struct<category:string,web_info:struct<hostname:string,browser:string>>"
     )
     assert nested == ("struct<category:VARCHAR,web_info:struct<hostname:VARCHAR,browser:VARCHAR>>")
+    # Non-discriminating vs BASE (already None): map / nested-void refuse.
     assert _spark_array_element_to_sql("map<string,int>") is None
     assert _spark_array_element_to_sql("struct<m:map<string,int>>") is None
+    assert _spark_array_element_to_sql("array<null>") is None
+    assert _spark_array_element_to_sql("struct<x:void>") is None
+    # Discriminates this PR: leaf void is the untyped sentinel, not None.
+    assert _spark_array_element_to_sql("null") == _UNTYPED_NULL_ELEMENT
+    assert _spark_array_element_to_sql("void") == _UNTYPED_NULL_ELEMENT
+    assert _spark_array_element_to_sql("Null") == _UNTYPED_NULL_ELEMENT
+    assert _parse_list_element_sql_type("array<Null>") == _UNTYPED_NULL_ELEMENT
+    assert _parse_list_element_sql_type("array<void>") == _UNTYPED_NULL_ELEMENT
+    assert (
+        _parse_list_element_sql_type("List(Field { data_type: Null, nullable: true })")
+        == _UNTYPED_NULL_ELEMENT
+    )
+    # Nested void on the Arrow-debug path must refuse, not wrap the sentinel as CAST SQL.
+    assert (
+        _parse_list_element_sql_type(
+            "List(Field { data_type: List(Field { data_type: Null, nullable: true }), "
+            "nullable: true })"
+        )
+        is None
+    )
     assert _spark_array_element_to_sql("timestamp_ntz") == "TIMESTAMP"
     assert _spark_array_element_to_sql("struct<x:decimal(10,2)>") == "struct<x:DECIMAL(10,2)>"
     assert _spark_array_element_to_sql("struct<x:decimal(10,2),y:int>") == (

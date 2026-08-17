@@ -16,7 +16,8 @@ not this directory.
   DS-4 / F-4 bug-candidate fix round (B4→B1→B6→B2→B3→B5) plus escaped DF-2.
   Single ledger, appended per PR. B4 (#175) CLOSED. **DF-2:** `explode_outer`
   struct-element CAST + `dynamicFlatten(empty_as_null=True)` default (branch
-  `grok/c25-df2-outer-flatten`). B1 stays queued behind DF-2.
+  `grok/c25-df2-outer-flatten`; SQM #176 V-2: void `make_array(NULL)`).
+  B1 stays queued behind DF-2.
 - [f3-docstring-ledger.md](f3-docstring-ledger.md) — **F-3 (2026-08-17):** public-docstring
   backfill across the facade. Carries the AST census before/after per file (1117/1210 →
   1199/1210; 82 docstrings, 101 added lines, 0 deleted) and the measured `repark.polars`

@@ -605,7 +605,7 @@ and `CAST(NULL AS STRUCT<x BIGINT, y VARCHAR>)` both succeed.
 `make_array(CAST(NULL AS struct<leg_id:bigint,…,Fills:array<struct<…>>>>)`
 + `unnest` yields a typed null struct. `CAST(NULL AS struct<m:map<string,int>>)`
 fails parse — map elements stay refused. `CAST(NULL AS void)` unsupported —
-void lists keep inner explode.
+~~void lists keep inner explode.~~ Corrected §2.4: untyped `make_array(NULL)`.
 
 ### 2.2 Deliverables
 
@@ -614,7 +614,10 @@ void lists keep inner explode.
   returns `None` (same refuse class).
 - **D-2:** `dynamicFlatten(..., empty_as_null: bool = True)`. True →
   `explode_outer`. False → private `explode_keep_null` (NULL-only CASE +
-  inner explode). `array<void>` still dropped / inner-exploded (no CAST).
+  inner explode). ~~`array<void>` still dropped / inner-exploded (no CAST).~~
+  Corrected §2.4: remaining void lists use `explode_outer` /
+  `explode_keep_null` via `make_array(NULL)`. `drop_null_lists=True` still
+  drops void columns.
 - **D-3:** flipped `test_nested_explode_outer_on_array_of_struct_refuses_loud`
   to the value pin; `_nested_full_flatten_rows` now derives the outer
   cartesian (shown in the test body); scalar explode_outer pin untouched.
@@ -630,12 +633,18 @@ B1 not started.
 `test_nested_dynamic_flatten_count_action_refuses_loud` — flip only if
 the optimizer trip goes away under the new plan; otherwise keep.
 
-`array<void>` / `NullType` lists: `CAST(NULL AS void)` is unsupported, so
+~~`array<void>` / `NullType` lists: `CAST(NULL AS void)` is unsupported, so
 `empty_as_null` cannot build a typed null element. Remaining void lists
 (when `drop_null_lists=False`) stay on inner explode (NULL and EMPTY both
 drop). Documented on the method, the guide flag table, and
 `test_drop_null_lists_false_keeps_null_list_column`. ACC Q-001 (S2)
-remediated as honest residual, not a silent ignore.
+remediated as honest residual, not a silent ignore.~~
+STRUCK (SQM #176 V-2). Silent sibling row-kill is not an acceptable residual.
+Corrected residual: `CAST(NULL AS void)` is still unsupported; the NULL-guard
+is untyped `make_array(NULL)` (measured: CASE + unnest keep one null element).
+Nested `array<array<void>>` and `struct<…:void>` still refuse (no CAST
+spelling). Map elements still refuse. `drop_null_lists=True` still drops
+void columns.
 
 SEC-001 (S2): struct field names are allowlisted (`[A-Za-z_][A-Za-z0-9_]*`)
 before CAST embed; `decimal(p,s)` is `fullmatch`-gated; splitters honor
@@ -658,8 +667,12 @@ Signature table: 0 pyspark.sql.functions names changed (empty_as_null is a
 Oracle probes: polars 1.43.2 empty_as_null True/False; Spark 4.1.2
   explode_outer on array<struct>; CAST(NULL AS struct<…>); live NTZ
   explode_outer hour=12 / timestamp[us] (finder S1 REFUTED).
-Pin audit: struct explode_outer value pin, GA4 both flags, mapper unit,
-  map refuse, void residual, sanitizer refuses — each names the impl it kills.
+Pin audit: ~~struct explode_outer value pin, GA4 both flags, mapper unit,
+  map refuse, void residual, sanitizer refuses — each names the impl it kills.~~
+  STRUCK (SQM #176 V-1). MEASURED: map-refuse and
+  `test_drop_null_lists_false_keeps_null_list_column` were green on BASE
+  b628b0f (map already None→refuse; void pin asserted `count()==0` identical
+  to BASE inner explode). Corrected in §2.4.
 Convergence: ACC-CONVERGED (Critic-1 CLEAN after Q-001; Critic-2 CLEAN after
   SEC-001) + TEST-GATED preflight_exit=0 (3335 passed, 70 skipped).
 
@@ -686,5 +699,110 @@ Null attestations:
 Verdict: CLEAN (zero S0/S1 survivors). Verifiers spawned (8). Agents spawned
   (explore): Critic-1, Critic-1 re-spot, Critic-2, Critic-2 re-spot, three
   finders, eight verifiers — not NOT-RUN.
+
+SUPERSEDED by SQM #176 ROUND 1 (V-1 vacuous pins, V-2 void-sibling row-kill).
+Round-2 critic / finder reports follow §2.4 (this commit).
+
+B1 not started.
+
+### 2.4 SQM #176 ROUND 1 — V-1 / V-2 (2026-08-17)
+
+**V-2 (S2, behavior).** Preference (1) landed: untyped `make_array(NULL)`
+CASE arm. MEASURED on f6aed24 before the fix:
+
+| probe | result |
+|---|---|
+| `make_array(NULL)` | `[{a: [None]}]` list<item: null> |
+| `CAST(NULL AS void)` | UnsupportedOperationException |
+| CASE empty void → `make_array(NULL)` + unnest | `[{e: None}]` |
+| `{props:[] void, items:[SKU]}` `drop_null_lists=False` | 0 rows |
+| same, default `drop_null_lists=True` | 1 row, SKU |
+| typed-empty sibling contrast | 1 row, SKU |
+
+`_spark_array_element_to_sql("null"|"void")` → `_UNTYPED_NULL_ELEMENT`;
+`_select_with_generator` emits `make_array(NULL)` and never interpolates
+the sentinel into CAST. Nested `array<null>` / `struct<x:void>` stay
+refused. `dynamicFlatten` no longer inner-explodes void lists.
+
+**V-1 (S1, pin honesty).** MEASURED:
+
+| pin | BASE b628b0f | f6aed24 | after V-2 |
+|---|---|---|---|
+| map-refuse `explode_outer("m")` | same AnalysisException (mapper already None) | same | same — relabeled non-discriminating regression guard |
+| `test_drop_null_lists_false_keeps_null_list_column` | `count()==0` | `count()==0` | 1 row, `props` NULL — now discriminates inner-explode |
+
+New discriminating pins: void `explode_outer` value pin; void-sibling SKU
+pin (S2 corpus). `empty_as_null=False` EMPTY void still drops; NULL void
++ False keeps SKU (NULL-only CASE). Q-010: NULL-void False keep now pins
+input `ArrayType(NullType)` + output Arrow `null`.
+
+## Pre-PR critic report (/repark-harden) — round 2
+Engine: acc review-only standard — tier standard
+Critic-1 (quality/parity): attacked V-1 pin honesty, V-2 make_array(NULL),
+  True/False CASE, docs residual. Cycle 1: Q-001 S2 (doc overclaim False
+  keep) REMEDIATED; Q-002 S2 (void pins missing Arrow type) REMEDIATED;
+  Q-003 S3 (debug-path nested wrap) REMEDIATED; Q-004 S3 (GA4 False
+  payload) REMEDIATED; Q-005 S3 (WHERE redundant) WITHDRAWN (typed-path
+  contract). Re-spot: Q-010 S2 (NULL-void input type unpinned)
+  REMEDIATED. 0 S0/S1. Verdict CLEAN after remediating.
+  Null reports: signature parity, map refuse labeled, scalar pin
+  untouched, CLOSED surfaces, True default.
+Critic-2 (security/safety): attacked CAST interpolation, sentinel,
+  field-name embed, void sibling destruction. Findings: SEC-002 S2
+  ACCEPTED_FLAGGED — physical field name `x:decimal(10,2),y` serializes
+  as extra type fields in `arrow_type_key` (Rust embed, pre-V-2 D-1
+  residual; complete fix is Rust quoting, out of V-1/V-2). Null reports:
+  secrets, `_UNTYPED_NULL_ELEMENT` never in CAST, decimal fullmatch,
+  classic injection, V-2 leaf sibling row-kill, panics, AWS.
+Signature table: 0 pyspark.sql.functions names changed.
+Oracle probes: make_array(NULL) + CASE unnest; S2 sibling 0→1 row;
+  explode_outer void → pa.null(); CAST(NULL AS void) still unsupported.
+Pin audit: void flatten + sibling SKU + void explode_outer + is_null
+  each kill inner-explode / missing sentinel; map-refuse + mapper
+  map/nested-void `is None` labeled non-discriminating; Q-010 input
+  ArrayType pin kills scalar-null impostor.
+Convergence: ACC-CONVERGED (Critic-1 CLEAN after Q-001/002/010;
+  Critic-2 CLEAN with SEC-002 ACCEPTED_FLAGGED) + TEST-GATED
+  preflight_exit=0 (3337 passed, 70 skipped) firsthand.
+
+## Finder-battery report — round 2
+Target: b628b0f...worktree DF-2 V-1/V-2 | dimensions: 3
+  (wiring/semantics, pins/tests, fence/docs) | findings: 12 raw → 12
+  deduped
+Survivors after verify (ranked):
+  [S1/CONFIRMED] F1 ledger pointed at missing round-2 reports — remediating
+    in this section (this text).
+  [S2/CONFIRMED] F2 explode_outer docstring still said array(NULL) —
+    remediating (`make_array(CAST…)` / void `make_array(NULL)`).
+  [S2/CONFIRMED] F3 dataframe/map.md F-4 sizes read as live — remediating
+    (F-4 snapshot labeled; Debug has 7293/1211).
+  [S2/CONFIRMED] F5 spark/map.md DF1 omitted False EMPTY void sibling
+    drop — remediating.
+  [S3/CONFIRMED] P2 void explode_outer pin lacked input ArrayType —
+    remediating.
+  [S3/CONFIRMED] P3 mapper map/nested-void `is None` unlabeled BASE-green
+    — remediating (labeled).
+  [S3/CONFIRMED] P4 web_info pin skips EMPTY — ACCEPTED_FLAGGED (same
+    CASE arm as pinned NULL + sibling empty pin).
+  [S2/CONFIRMED] SEC-002 type-key name/type split — ACCEPTED_FLAGGED
+    (Rust quote; out of V-1/V-2).
+Refuted:
+  - W1 nested void in struct refuse-kills siblings — D-1 loud residual,
+    V-2 is leaf array<void> only.
+  - W2 unquoted reserved CAST field names fail explode_outer — engine
+    type grammar accepts reserved Word tokens (SQM #176 also live-refuted
+    from/to).
+  - W3 CASE drops capitalized Fills — mapper spells Fills; flatten
+    sibling pin would red.
+  - P1 nested void refuse unit-only — same None→AnalysisException as
+    map to_arrow pin; BIGINT fail-open impossible.
+  - F4 raw SHAs in test prose — no contract forbids MEASURED BASE SHAs
+    in pin docstrings.
+Null attestations:
+  - wiring: leaf make_array(NULL), True/False CASE, drop flags, map refuse
+  - pins: V-1 relabel + V-2 discriminators + Q-010 input type
+  - fence: CLOSED surfaces; no planning/; ceilings held; pin-audit struck
+Verdict: CLEAN after remediating F1–F3/F5/P2/P3 (zero remaining S0/S1).
+  Verifiers spawned (7 explore). Finders spawned (3). Not NOT-RUN.
 
 B1 not started.

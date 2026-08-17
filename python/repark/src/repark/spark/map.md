@@ -67,11 +67,12 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   in-place unnest column order (polars select+unnest), optional list explode
   (`explode_lists=True`, in-place column position), drop `array<void>`
   (`drop_null_lists=True`), `empty_as_null=True` (keep NULL and EMPTY lists as one
-  null-element row; `False` is the polars ≥2.0 default — deliberate divergence),
+  null-element row; `False` is the polars ≥2.0 default — EMPTY drops, including
+  EMPTY `array<void>` siblings that carry typed lists; NULL void lists are kept),
   `max_depth=100`
   LOUD refuse (never silent truncate); schema-only walks (no forced collect); prefixed name
   collisions refuse LOUD (Q25). Helper `_dynamic_flatten_unnest_structs`.
-  Pins: `tests/test_dynamic_flatten.py`. Divergences row #35.
+  Pins: `tests/test_dynamic_flatten.py`. Registry row is orchestrator-side.
   Region: new method + helper only; H1/H2 identity, collect, writer frozen.
 - `dataframe.py` — GroupedData.pivot two-phase CASE aggregates (R-PIVOT; octo c1–c8:
   bare count, alias recovery, distinct.limit then sort ≤max, cube/rollup refuse,
@@ -115,7 +116,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   withColumn→select rewrite, exact element-type bind, strip AS on pre-aliased array;
   octo c3: two-phase native siblings + SQL unnest (compound mixed-case, size/cardinality,
   ColumnOrName not free SQL); element type only for explode_outer / explode_keep_null
-  (DF-2: struct elements spell via CAST(NULL AS struct<…>); map still refuses);
+  (DF-2: struct elements spell via CAST(NULL AS struct<…>); void uses
+  untyped `make_array(NULL)`; map still refuses);
   no BIGINT fail-open;
   generator cast keeps array native.
   octo c4: explode*/posexplode* in `functions.__all__` (sql.functions sed-swap);

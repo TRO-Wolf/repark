@@ -3365,23 +3365,26 @@ class DataFrame:
             where = f"({array_sql}) IS NOT NULL AND {length_expr} > 0"
             unnest_expr = f"unnest({array_sql})"
         else:
-            # explode_outer / explode_keep_null: CASE + typed NULL element.
+            # explode_outer / explode_keep_null: CASE + NULL element.
             # Type is taken from the intermediate field (covers coalesce/compounds —
-            # octo C3-L-002); never fail-open to BIGINT.
+            # octo C3-L-002); never fail-open to BIGINT. Void / Null elements have
+            # no CAST spelling — untyped make_array(NULL) (SQM #176 V-2).
             element_sql_type = mid._array_element_sql_type(array_sql, generator)
+            if element_sql_type == _UNTYPED_NULL_ELEMENT:
+                null_array_sql = "make_array(NULL)"
+            else:
+                null_array_sql = f"make_array(CAST(NULL AS {element_sql_type}))"
             if kind == "explode_keep_null":
                 # NULL list → one null-element row; EMPTY list stays empty and drops.
                 guarded = (
-                    f"CASE WHEN ({array_sql}) IS NULL "
-                    f"THEN make_array(CAST(NULL AS {element_sql_type})) "
-                    f"ELSE ({array_sql}) END"
+                    f"CASE WHEN ({array_sql}) IS NULL THEN {null_array_sql} ELSE ({array_sql}) END"
                 )
                 where = f"({array_sql}) IS NULL OR {length_expr} > 0"
             else:
                 # explode_outer: null/empty → single-element array of NULL of element type.
                 guarded = (
                     f"CASE WHEN ({array_sql}) IS NULL OR {length_expr} = 0 "
-                    f"THEN make_array(CAST(NULL AS {element_sql_type})) "
+                    f"THEN {null_array_sql} "
                     f"ELSE ({array_sql}) END"
                 )
                 where = None
@@ -3465,7 +3468,7 @@ class DataFrame:
         parsed = _parse_list_element_sql_type(type_key)
         if parsed is not None:
             return parsed
-        # Field bound but element type unsupported (struct / map / …).
+        # Field bound but element type unsupported (map / nested-void / …).
         raise AnalysisException(
             f"explode_outer cannot resolve SQL element type for array column {bare!r} "
             f"(engine type {type_key!r}); cast the array or use a supported element type"
@@ -6044,11 +6047,14 @@ class DataFrame:
              (``CASE WHEN parent IS NULL THEN NULL ELSE parent.field END``), drop the parent
              struct column, and re-read schema (nested structs surface next pass).
           3. Else if ``explode_lists`` and list columns remain: drop ``array<void>`` when
-             ``drop_null_lists``. Void elements have no CAST spelling (``CAST(NULL AS
-             void)`` is unsupported), so a remaining void list always uses inner
-             ``explode`` (NULL and EMPTY both drop) regardless of ``empty_as_null``.
-             Typed lists explode with ``empty_as_null`` (True uses ``explode_outer``;
-             False keeps NULL lists and drops EMPTY). Re-read next pass.
+             ``drop_null_lists``. Remaining lists — including void — explode with
+             ``empty_as_null`` (True uses ``explode_outer``; False keeps NULL lists and
+             drops EMPTY). Void elements have no CAST spelling; the NULL-guard is
+             untyped ``make_array(NULL)``. Under True, empty or null void siblings
+             become one null-element row and cannot cartesian-drop typed sibling
+             lists. Under False, EMPTY void lists still drop (polars ≥2.0),
+             including rows that carry typed sibling lists; NULL void lists are
+             kept. Re-read next pass.
           4. Else break (fully flat under the chosen flags).
 
         Name collisions: the parent-path prefix is the disambiguator. If a prefixed name still
@@ -6114,12 +6120,10 @@ class DataFrame:
                     # One generator per select (R-EXPLODE-REWRITE); keep the list column name
                     # so a list-of-struct surfaces as a same-name struct on the next pass.
                     # Preserve column position (polars explode is in-place) — C4-Q-001.
-                    # void / array<Null>: CAST(NULL AS void) is unsupported, so
-                    # empty_as_null cannot build a typed null element. Inner explode
-                    # (NULL and EMPTY both drop) is the residual, not a silent ignore.
-                    if isinstance(element_type, NullType):
-                        exploded = functions_mod.explode(list_field.name).alias(list_field.name)
-                    elif empty_as_null:
+                    # void / array<Null>: untyped make_array(NULL) CASE (explode_outer /
+                    # explode_keep_null). Do not inner-explode — that cartesian-drops
+                    # sibling lists (SQM #176 V-2).
+                    if empty_as_null:
                         exploded = functions_mod.explode_outer(list_field.name).alias(
                             list_field.name
                         )
@@ -7243,6 +7247,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _rewrite_qcol_tokens_local,
     _same_object_qcol_alternation_safe,
     _spark_array_element_to_sql,
+    _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,
     _sql_ident_bare_name,
     _sql_string_literal,
