@@ -197,3 +197,25 @@ PySpark-visible surface. That is an OWNER decision, not an increment:
 **Default in force until the owner rules: (b)** — no schema change; the door remains exactly
 as PR-B shipped it. The null-free detection built for the probe (`Array::null_count()` per
 key per batch during verification) is the right input for (a) and drops in unchanged.
+
+## Addendum 2026-08-17 (late) — EXPLAIN is not the executed plan; elision re-proven at execution
+
+Orchestrator probes with a live PySpark 4.1.2 oracle (nullable-key window, values compared):
+
+- **Parity: CORRECT.** Both repark doors execute windows and top-level sorts with Spark's
+  NULLS FIRST semantics — byte-identical row numbering to PySpark. No divergence row needed.
+- **Facade `EXPLAIN` renders the UNREWRITTEN plan.** A top-level `ORDER BY ts` that
+  provably executes NULLS FIRST prints `SortExec: expr=[ts ASC NULLS LAST]` through
+  `spark.sql("EXPLAIN …")`. The Spark-parity null-placement rewrite is applied at execution
+  but not reflected in EXPLAIN output. Consequences: (a) the displayed plan is not the
+  executed plan — a diagnostic-honesty bug, chartered for the next wave; (b) facade
+  EXPLAIN-based sort-spelling pins (including this campaign's PR-B plan pins and the
+  2026-08-17 addendum's four-cell table) are evidence about the EXPLAIN path, not
+  necessarily the executed path. PR-A's Rust-level plan pins are unaffected.
+- **The elision is real where it counts.** Execution-layer A/B, 1M rows × 4 symbols,
+  tp=1, `SUM OVER (PARTITION BY sym ORDER BY ts ASC NULLS LAST)`, declared vs undeclared
+  medians over 3 runs each: **1.20× faster declared**. The declaration is consumed by
+  execution regardless of what EXPLAIN prints.
+- Next-wave charter: locate the null-placement rewrite seam, make EXPLAIN show the
+  executed plan (or document the gap loudly), and re-anchor the facade elision pins to
+  execution-layer evidence (timing or engine-level plans).
