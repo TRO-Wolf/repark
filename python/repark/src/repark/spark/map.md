@@ -1136,7 +1136,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   (layout home: `ml/linalg.py`); persistence repark-ml v1 (`pipeline.py` format constants).
 - `ta.py` — the `repark.ta` technical-analysis surface (T1b + T2 batches 1–2 + WG2–WG5 + T3 +
   TA-4 volume +
-  **G-NAN**; module doc truth-up 2026-08-15: plan-fusion claim corrected to post-N2 behavior): the
+  **G-NAN**; module doc truth-up 2026-08-15: plan-fusion claim corrected to post-N2 behavior;
+  `__all__` gap closed 2026-08-17 — `wma` was defined but unexported, F-4 finding, now listed
+  and pinned by a completeness test): the
   full 81
   indicator entry points (`ema`/`sma`/`rsi`/`adx`/`atr`/`trange`/`var`/`stddev`/`linearreg`+`_slope`/
   `_intercept`/`_angle`/`tsf`/`correl`/`min`/`max`/`sum`, the WG1 overlap-MA family `wma`/`dema`/

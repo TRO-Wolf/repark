@@ -1729,7 +1729,9 @@ NOT in that file is a defect, not a decision.
   and `read_parquet`-ed; each indicator `.over(orderBy(ts))` is `to_bits`-identical to the
   TA-3-recorded C-TA-Lib golden. Call-site Column-returns + polars_talib keyword spellings
   (`fastperiod`/`slowperiod`/`timeperiod`). Does **not** edit `test_ta.py`.
-- `test_ta.py` — T1b + T2 batches 1–2 + WG2–WG5 + T3: the `repark.ta` DataFrame route. The 5000-row
+- `test_ta.py` — T1b + T2 batches 1–2 + WG2–WG5 + T3 (+ the 2026-08-17 `__all__`-completeness
+  pin: every public `ta` def must be exported — closes the silent-`wma`-omission class): the
+  `repark.ta` DataFrame route. The 5000-row
   OHLC golden fixture (`crates/repark-ta/tests/goldens/*.bin`, columns
   `ts`/`open`/`high`/`low`/`close`/`periods`)
   is written to Parquet and `read_parquet`-ed, then each indicator (`ta.ema(...).over(...)`, plus
