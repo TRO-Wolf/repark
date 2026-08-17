@@ -63,6 +63,10 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 - `CODEOWNERS` — maintainer ownership. `LICENSE`, `README.md` — repo front matter.
 - `python/` — the uv workspace members: the facade wheel (`repark`) and the parity harness
   (`repark-parity`). See [python/map.md](python/map.md).
+- `examples/` — runnable examples for humans (currently one notebook touring the torture-dataset
+  families). Illustration, never a gate: nothing in `make ci` / `verify` / `preflight` executes
+  it, and every behavior an example shows is pinned by a test it points at. Execution gating
+  arrives with the examples-harness workstream. See [examples/map.md](examples/map.md).
 - `docs/` — contracts, ADRs, the port plan, per-tier manuals, and `docs/history/` (the archive of
   closed campaigns — the v1 → v2 port and the Agent-Agnostic Front-Door campaign, both off the
   normal read path; see [docs/history/map.md](docs/history/map.md)).
@@ -108,6 +112,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Navigate the engine crates | [crates/map.md](crates/map.md) |
 | Navigate the Python tree | [python/map.md](python/map.md) |
 | Build the wheel / run the facade suite | [python/repark/map.md](python/repark/map.md) |
+| Read a runnable example / the dataset tour notebook | [examples/map.md](examples/map.md) |
 | Run or compare a census | [docs/port/census.md](docs/port/census.md) |
 | Run the canonical gate | `make ci` (see `make help`) |
 | Declare a new crate / doc / gate command structurally | [repo-manifest.toml](repo-manifest.toml) (validated by `make check-manifest`) |
