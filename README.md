@@ -33,6 +33,9 @@ single home for what it covers; none of them restates another.
 
 Then the `map.md` in each directory your change touches; every directory has one.
 
+Using repark rather than working on it? The user-facing guides live in
+[docs/guide/](docs/guide/map.md) — install, session + conf, the DataFrame API, the two SQL doors.
+
 Runnable examples live in [examples/](examples/map.md) — start with the torture-dataset tour
 notebook.
 

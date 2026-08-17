@@ -3,10 +3,16 @@
 ## Purpose
 
 Engineering contracts, decision records, settled designs, the port plan, release-engineering
-notes, and per-tier operating manuals for this repo.
+notes, per-tier operating manuals, and the one user-facing set ([guide/](guide/map.md)) for this
+repo.
 
 ## Contents
 
+- [guide/](guide/map.md) — the **user-facing guides** (the only directory here written for a user
+  rather than a contributor): install + first session, session/conf, the DataFrame API, the two SQL
+  doors. Nothing there is authoritative — each guide links the document that owns the fact (the
+  divergence registry, [../STATUS.md](../STATUS.md), the ADRs) and every snippet it shows was
+  executed against a built module.
 - [testing.md](testing.md) — the mandatory testing contract (tests-with-code hard block,
   test-per-change, divergence-class claims, calibration-per-domain, the entry-point matrix,
   relocation discipline, the forbidden list). Read before any code change.
@@ -74,6 +80,7 @@ notes, and per-tier operating manuals for this repo.
 
 | ...do this | go to |
 |---|---|
+| Learn to *use* repark (install, session, DataFrame, SQL doors) | [guide/map.md](guide/map.md) |
 | Understand the testing rules | [testing.md](testing.md) |
 | Find out how repark differs from Apache Spark, and why | [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) |
 | Record a divergence (or retire one) | [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) §6 |
