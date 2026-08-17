@@ -3919,7 +3919,10 @@ class DataFrame:
         ident_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 
         def replace_idents(fragment: str) -> str:
+            """Quote every bare identifier in ``fragment`` that names a column of this frame."""
+
             def replacer(match: re.Match[str]) -> str:
+                """Quote one matched token, or return it unchanged when it names no column."""
                 token = match.group(1)
                 if token.casefold() in _SQL_LITERAL_KEYWORDS:
                     return token
@@ -6659,10 +6662,12 @@ class DataFrame:
         return self.limit(limit_count).collect()
 
     @overload
-    def head(self) -> Row | None: ...
+    def head(self) -> Row | None:
+        """Typing overload: no argument → one :class:`~repark.row.Row`, or ``None`` if empty."""
 
     @overload
-    def head(self, n: int) -> list[Row]: ...
+    def head(self, n: int) -> list[Row]:
+        """Typing overload: an ``int`` argument → a ``list`` of at most ``n`` rows."""
 
     def head(self, n: int | None = None) -> Row | list[Row] | None:
         """Return the first row, or the first ``n`` rows (PySpark ``DataFrame.head``).

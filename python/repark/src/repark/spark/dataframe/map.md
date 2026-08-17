@@ -65,10 +65,13 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   **F-3 (2026-08-17):** the six undocumented `DataFrameStatFunctions` methods gained
   docstrings — the five delegating ones point at their `DataFrame` twin (which holds the
   real semantics, so there is one truth), and `freqItems` says plainly that it refuses.
-  `core.py` is the one file F-3 left alone: its 11 remaining nested helpers were deferred
-  because the file sat at 8199 of its then 8200-line ceiling. The T0b extract below freed
-  that headroom (core.py ~7224, ceiling ratcheted to 7350), so the deferral is now a
-  choice, not a wall.
+  `core.py` was the one file F-3 left alone: its 11 remaining names were deferred because
+  the file sat at 8199 of its then 8200-line ceiling. **Closed in F-4 (2026-08-17)** on the
+  headroom the T0b extract below freed: all 11 landed (4 in `core.py`, 7 in
+  `plan_collapse.py` — the extract moved seven of them with their bodies), so the facade
+  census is 1211/1211 by the ledger's own AST rule. Nine of the eleven are nested rendering
+  closures and two are `@overload` typing stubs; none is a user-facing API name.
+  No ceiling was raised (`core.py` 7253 of 7350, `plan_collapse.py` 1103 of 2500).
 - `actions_export.py` — `DataFrameNaFunctions` (real body; technique A).
 - `__init__.py` — frozen public imports (star-bind of core for private parity).
 

@@ -110,6 +110,25 @@ runs on a source frame, whose plan *is* that scan. Mutation-tested by the plan p
 
 Results identical in every cell.
 
+**Re-measured 2026-08-17 (F-4 docs lane, writing `docs/guide/ta-guide.md`).** Row 2 does not
+reproduce. On a `repark.target.partitions=1` session over 3 symbols × 300 bars, counting `SortExec`
+in the physical plan, with both `row_number()` and `ta_sma(close, 3)` as the window function:
+
+| window ordering | undeclared | declared |
+|---|---|---|
+| SQL `ORDER BY ts ASC NULLS LAST` | ×1 | **×0** |
+| SQL `ORDER BY ts` (bare) | ×1 | **×0** |
+| SQL `ORDER BY ts ASC NULLS FIRST` | ×1 | ×1 |
+| `Window.partitionBy(sym).orderBy(ts)` facade spec | ×1 | ×1 |
+
+So the discriminator is the **null placement**, and a *bare* SQL `ORDER BY ts` in a window takes
+DataFusion's NULLS LAST rather than Spark's NULLS FIRST — which is why it elides. Rows 1 and 3 of
+the original table stand; row 2's "Spark default" label is true of the **facade `WindowSpec`**
+(row 4, which does plan `nulls_first=true` and does not elide), not of the bare SQL spelling. The
+PR-B conclusion is unchanged: the headline `Window.partitionBy(sym).orderBy(ts)` serving shape
+still does not elide, and PR-C's analysis below is unaffected. Worth a look from the SE-1 owner:
+the bare SQL-door window ordering may itself be a Spark-parity question separate from this door.
+
 ## Residue — the NULLS-placement gap (honest, and it bounds the win)
 
 The engine declares **ASC NULLS LAST** (DataFusion's `ORDER BY` default). Spark's

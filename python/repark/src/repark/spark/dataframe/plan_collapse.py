@@ -254,6 +254,7 @@ def _format_show_table(table: Any, *, truncate_at: int | None) -> str:
             widths[index] = max(widths[index], len(cell))
 
     def fmt_row(cells: list[str]) -> str:
+        """Render one ``| a | b |`` grid line, each cell left-padded to its column width."""
         return "| " + " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(cells)) + " |"
 
     separator = "+-" + "-+-".join("-" * width for width in widths) + "-+"
@@ -283,6 +284,7 @@ def _format_eager_eval_table(table: Any, *, truncate_at: int | None) -> str:
             widths[index] = max(widths[index], len(cell))
 
     def fmt_row(cells: list[str]) -> str:
+        """Render one abutted ``|a|b|`` REPL line, each cell right-aligned to its column width."""
         return "|" + "|".join(cell.rjust(widths[i]) for i, cell in enumerate(cells)) + "|"
 
     separator = "+" + "+".join("-" * width for width in widths) + "+"
@@ -520,9 +522,11 @@ def _format_polars_show(
     inner_widths = [width + 2 for width in widths]
 
     def hline(left: str, mid: str, right: str, fill: str = "─") -> str:
+        """Draw one polars box rule from the given corner / junction / corner glyphs."""
         return left + mid.join(fill * width for width in inner_widths) + right
 
     def row_line(cells: list[str], *, align: str = "left") -> str:
+        """Render one polars body line; ``align="center"`` centres each cell in its column."""
         parts: list[str] = []
         for index, width in enumerate(widths):
             cell = cells[index] if index < len(cells) else ""
@@ -581,9 +585,11 @@ def _format_duckdb_show(
         table_inner = footer_need
 
     def hline(left: str, mid: str, right: str, fill: str = "─") -> str:
+        """Draw one DuckDB box rule from the given corner / junction / corner glyphs."""
         return left + mid.join(fill * (width + 2) for width in widths) + right
 
     def is_numeric_cell(text: str) -> bool:
+        """Report whether a rendered cell should right-align (a number, not NULL / NaN / a dot)."""
         if text in {"NULL", "null", "nan", "NaN", "…", "·"}:
             return False
         try:
@@ -593,6 +599,7 @@ def _format_duckdb_show(
             return False
 
     def row_line(cells: list[str], *, center: bool = False) -> str:
+        """Render one DuckDB body line; headers centre, numeric cells right-align."""
         parts: list[str] = []
         for index, width in enumerate(widths):
             cell = cells[index] if index < len(cells) else ""

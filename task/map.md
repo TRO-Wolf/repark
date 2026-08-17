@@ -15,9 +15,11 @@ not this directory.
 - [f3-docstring-ledger.md](f3-docstring-ledger.md) — **F-3 (2026-08-17):** public-docstring
   backfill across the facade. Carries the AST census before/after per file (1117/1210 →
   1199/1210; 82 docstrings, 101 added lines, 0 deleted) and the measured `repark.polars`
-  `.str`/`.dt` divergences that the new text states. The 11 names still missing are all in
-  `spark/dataframe/core.py`, deferred because that file sits at 8199 of its 8200-line ceiling
-  — they ride the next extract, and no ceiling was raised to make room.
+  `.str`/`.dt` divergences that the new text states. The 11 names it deferred (blocked on
+  `core.py`'s line ceiling) were **closed in F-4 increment 2 (2026-08-17)** once the SE-1 PR-B
+  extract freed headroom: census 1211/1211, with the honest caveat that nine are nested
+  rendering closures and two are `@overload` typing stubs, so the *user-facing* API surface was
+  already complete. No ceiling was raised at any point.
 - [c18-datasets-ledger.md](c18-datasets-ledger.md) — **conductor-18** torture-dataset
   workstream (DS-1..DS-4, complete). Generators under
   `python/repark-parity/datasets/`; data stays in the cache root. Single ledger, appended
