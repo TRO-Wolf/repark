@@ -21,9 +21,10 @@ is needed; a cell that fails Ruff fails the canonical gate.
   `dynamicFlatten`, the inference sampling miss, the >38-digit decimal demotion,
   credential-named columns reading normally, and the messy-CSV delimiter zoo. Two
   reported findings are shown honestly rather than hidden: delimiter auto-detect picks a
-  rival delimiter on the embedded-delimiter corpus, and the euro-comma column infers
-  `decimal128` but refuses its cast — which is why the CSV cells declare `sep=` and
-  project the columns they are about.
+  rival delimiter on the embedded-delimiter corpus (declare `sep=`; European-locale
+  files use `sep=';'`), and the euro-comma column infers `decimal128` but refuses its
+  cast — which is why the CSV cells declare `sep=` and project the columns they are
+  about.
 - `map.md` — this file.
 
 ## I want to…

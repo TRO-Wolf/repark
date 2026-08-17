@@ -782,19 +782,24 @@ def test_smartcsv_euro_comma_decimal_cast_refuses_loud(
 
 
 def test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter(tmp_path: Path) -> None:
-    """BUG-CANDIDATE — auto-detect picks the wrong delimiter on the delimiter-zoo corpus.
+    """BUG-CANDIDATE / known-limit — auto-detect picks the wrong delimiter.
 
-    ``detect_delimiter`` scores candidates by how many lines agree on a field count, and
-    ``csv.reader`` only honors a quote that starts a field. In the comma-scheme file the
-    ``embedded_delims`` value is quoted for the comma, so a rival candidate (``;``) sees
-    that quote mid-field, treats it as literal, and splits every data line into exactly
-    two fields — perfect agreement, and it beats the correct 12-field split. The header
-    line then fails the field-count vote too, so one data row is eaten as the header.
+    ``detect_delimiter`` scores candidates by how many lines agree on a field
+    count, and ``csv.reader`` only honors a quote that starts a field. In the
+    comma-scheme file the ``embedded_delims`` value is quoted for the comma, so
+    a rival candidate (``;``) sees that quote mid-field, treats it as literal,
+    and splits every data line into exactly two fields — perfect agreement, and
+    it beats the correct 12-field split. The header line then fails the
+    field-count vote too, so one data row is eaten as the header.
 
-    Pinned at the preprocessing surface (no engine) because the mis-split header names
-    are not usable identifiers. Declaring ``sep`` reads the file correctly — that is what
-    every other smartcsv pin here does. If this reds because detection learned to respect
-    quoting, that is the fix: re-point the pin at the scheme's own delimiter.
+    B4 rounds 1-3 tried to close this class and each regressed a named
+    counterexample (field-count-first inverted 2-col files; one-splitter
+    corrupted declared-sep values). Round 4 descopes: document the miss,
+    declare ``sep`` (European-locale files: ``sep=';'``). The pin asserts
+    the documented origin/main behavior, plus the correct read with ``sep``.
+
+    Pinned at the preprocessing surface (no engine) because the mis-split
+    header names are not usable identifiers.
     """
     from repark.spark._csv_smart import prepare_messy_csv
 

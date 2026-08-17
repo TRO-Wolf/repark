@@ -17,6 +17,8 @@ import pytest
 from repark import ReparkSession
 from repark.spark._csv_smart import (
     RUNG_ORDER,
+    detect_delimiter,
+    prepare_messy_csv,
     resolve_cell_rung,
     resolve_column_type,
 )
@@ -66,6 +68,133 @@ def test_protocol_cell_rungs() -> None:
     assert resolve_cell_rung("2020-01-15T12:30:00") == "timestamp"
     assert resolve_cell_rung("2020-01-15 12:30:00.123") == "timestamp"
     assert resolve_cell_rung("not-a-type") == "string"
+
+
+def test_detect_delimiter_ds4_ragged_picks_semicolon_rival() -> None:
+    """Known-limit (DS-4): origin/main agreement-first elects the ``;`` rival.
+
+    Measured on origin/main ``csv.reader`` scores: ``;`` (agreement 7, mode 2)
+    beats ``,`` (agreement 4, mode 12). Declared ``preferred=','`` is the
+    remedy. Discriminates a quote-aware / header-join redesign that would
+    pick comma here.
+    """
+    header = ",".join(f"col_{index}" for index in range(12))
+    full = ",".join(["1"] * 11 + ['"a;b"'])
+    short = ",".join(["1"] * 9 + ['"c;d"'])
+    lines = [header, full, full, full, short, short, short, short]
+    assert detect_delimiter(lines) == ";"
+    assert detect_delimiter(lines, preferred=",") == ","
+
+
+def test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab() -> None:
+    """origin/main: headed 2-col TSV with commas keeps tab.
+
+    Measured: ``\\t`` (agreement 4, mode 2) over ``,`` (agreement 3, mode 3).
+    Field-count-first (round 1) elects comma — this pin goes red on that key.
+    """
+    lines = [
+        "name\tnote",
+        "alice\thello, world, more",
+        "bob\tfoo, bar, baz",
+        "carol\ta, b, c",
+    ]
+    assert detect_delimiter(lines) == "\t"
+
+
+def test_detect_delimiter_two_column_semicolon_beats_wider_comma() -> None:
+    """origin/main: headed 2-col ``;`` file with commas keeps ``;``.
+
+    Measured: ``;`` (agreement 4, mode 2) over ``,`` (agreement 3, mode 3).
+    """
+    lines = [
+        "id;note",
+        "1;a,b,c",
+        "2;d,e,f",
+        "3;g,h,i",
+    ]
+    assert detect_delimiter(lines) == ";"
+
+
+def test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe() -> None:
+    """origin/main: headed quoted pipe-list keeps comma.
+
+    Measured: ``,`` (agreement 4, mode 3) over ``|`` (agreement 3, mode 4).
+    Field-count-first elects pipe.
+    """
+    lines = [
+        "id,note,extra",
+        '1,"a|b|c|d",x',
+        '2,"e|f|g|h",y',
+        '3,"i|j|k|l",z',
+    ]
+    assert detect_delimiter(lines) == ","
+
+
+def test_detect_delimiter_honest_small_file_picks_semicolon() -> None:
+    """origin/main: ``['id,name', '1;2;3;4;5']`` elects ``;``.
+
+    Measured: agr tie (1), wider mode 5 beats 2. Kills the round-3 ``-mode``
+    key (that key picked comma). Green on origin/main *and* on
+    field-count-first — not a discriminator for the naive re-rank.
+    """
+    assert detect_delimiter(["id,name", "1;2;3;4;5"]) == ";"
+
+
+def test_detect_delimiter_preferred_refuses_non_single_char() -> None:
+    """D2: empty / multi-char / newline / CR / quote refuse; ``\\x01`` allowed."""
+    lines = ["a,b", "1,2"]
+    for bad in ("", "||", "sep", "\n", "\r", '"'):
+        with pytest.raises(ValueError, match="single character"):
+            detect_delimiter(lines, preferred=bad)
+    assert detect_delimiter(lines, preferred=";") == ";"
+    assert detect_delimiter(lines, preferred="\x01") == "\x01"
+
+
+def test_parse_quoted_embedded_delimiter_unquotes(tmp_path: Path) -> None:
+    """Non-discriminating regression guard — origin/main ``csv.reader`` unquote.
+
+    Green on origin/main and on every B4 head that still parsed with
+    ``csv.reader``. Does not kill a rejected rank key; it only fails if parse
+    stops unquoting a quoted embedded delimiter.
+    """
+    path = tmp_path / "q.csv"
+    path.write_text('id,note\n1,"a,b"\n', encoding="utf-8")
+    prepared = prepare_messy_csv(path)
+    assert prepared.report.delimiter == ","
+    assert prepared.rows[0][1] == "a,b"
+
+
+def test_parse_escaped_quote_unescapes(tmp_path: Path) -> None:
+    """Non-discriminating regression guard — origin/main ``csv.reader`` ``""``.
+
+    Green on origin/main and on every B4 head that still parsed with
+    ``csv.reader``. Does not kill a rejected rank key.
+    """
+    path = tmp_path / "esc.csv"
+    path.write_text('id,note\n1,"say ""hi"""\n', encoding="utf-8")
+    prepared = prepare_messy_csv(path)
+    assert prepared.rows[0][1] == 'say "hi"'
+
+
+def test_parse_inch_mark_declared_sep_keeps_cells(tmp_path: Path) -> None:
+    """Non-discriminating regression guard — declared-sep inch marks.
+
+    Green on origin/main ``csv.reader`` (and on B4 heads that kept that
+    parse). Kills only a one-splitter that merges cells between two inch
+    marks; it does not kill a rank-key mutant. Relabeled per SQM L2.
+    """
+    path = tmp_path / "inch.csv"
+    path.write_text('id,size,other,n\nA1,3" pipe,5" hose,2\n', encoding="utf-8")
+    prepared = prepare_messy_csv(path, sep=",")
+    assert prepared.rows[0] == ["A1", '3" pipe', '5" hose', "2"]
+
+
+def test_parse_preserves_leading_trailing_whitespace(tmp_path: Path) -> None:
+    """Non-discriminating regression guard — origin/main whitespace keep."""
+    path = tmp_path / "ws.csv"
+    path.write_text("id,note\n1,  hi  \n", encoding="utf-8")
+    prepared = prepare_messy_csv(path)
+    assert prepared.rows[0][1] == "  hi  "
 
 
 def test_protocol_column_promotion_and_nulls() -> None:
@@ -375,6 +504,51 @@ def test_sampling_rows_via_option_map(spark: Any, tmp_path: Path) -> None:
     assert report["inference_capped"] is True
     assert report["sampling_rows_limit"] == 2
     assert frame.count() == 3
+
+
+def test_smart_csv_sep_refuses_non_single_char(spark: Any, tmp_path: Path) -> None:
+    """smartCsv sep= empty / multi-char / newline / CR / quote refuse loud."""
+    from repark.errors import IllegalArgumentException
+
+    path = tmp_path / "sep.csv"
+    path.write_text("a,b\n1,2\n", encoding="utf-8")
+    for bad in ("", "||", "sep", "\n", "\r", '"'):
+        with pytest.raises(IllegalArgumentException, match="single character"):
+            spark.read.smartCsv(str(path), sep=bad)
+
+
+def test_smart_csv_option_empty_sep_refuses_and_does_not_fall_through(
+    spark: Any, tmp_path: Path
+) -> None:
+    """Empty option('sep') refuses; a present option('sep') beats auto-detect.
+
+    Refuse arms kill origin/main unvalidated preferred / falsy ``or`` fall-through.
+    The positive arm uses a file whose *auto-detect* elects ``;`` (measured) so
+    ignoring ``option('sep', ',')`` would shred — not the ``a,b`` file that
+    auto-detects as comma on every head.
+    """
+    from repark.errors import IllegalArgumentException
+
+    path = tmp_path / "sep.csv"
+    path.write_text("a,b\n1,2\n", encoding="utf-8")
+    with pytest.raises(IllegalArgumentException, match="single character"):
+        spark.read.option("sep", "").smartCsv(str(path))
+    with pytest.raises(IllegalArgumentException, match="single character"):
+        spark.read.option("sep", "").option("delimiter", ";").smartCsv(str(path))
+    frame_control = spark.read.smartCsv(str(path), sep="\x01")
+    assert frame_control.describe_ingest()["delimiter"] == "\x01"
+
+    rival = tmp_path / "rival.csv"
+    rival.write_text(
+        'id,name,note\n1,"a;b",x\n2,"c;d",y,extra\n3,"e;f",z,extra,more\n',
+        encoding="utf-8",
+    )
+    from repark.spark._csv_smart import prepare_messy_csv
+
+    assert prepare_messy_csv(rival).report.delimiter == ";"
+    declared = spark.read.option("sep", ",").smartCsv(str(rival), header=True)
+    assert declared.describe_ingest()["delimiter"] == ","
+    assert declared.columns[0] == "id"
 
 
 def test_sampling_rows_empty_string_loud_refuse(spark: Any, tmp_path: Path) -> None:

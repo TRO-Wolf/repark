@@ -128,7 +128,7 @@ class DataFrameReader:
 
         **Not** a Spark API. Default :meth:`csv` is unchanged (byte-identical r20-R1 pins).
 
-        * Delimiter auto-detect (unless ``sep`` given)
+        * Delimiter auto-detect (unless ``sep`` given; ``sep`` must be one character)
         * Leading junk/preamble skip (delimiter-consistency scan)
         * Header auto-detect (override with ``header=True/False``)
         * Ragged rows null-padded (count in :meth:`~repark.dataframe.DataFrame.describe_ingest`)
@@ -158,9 +158,11 @@ class DataFrameReader:
                 "smartCsv does not accept multi-path lists yet (pass a single path)"
             )
         # Snake-case locals (N806); kwargs keep PySpark-shaped camelCase names.
-        resolved_sep = (
-            sep if sep is not None else (self._option_str("sep") or self._option_str("delimiter"))
-        )
+        if sep is not None:
+            resolved_sep = sep
+        else:
+            sep_option = self._option_str("sep")
+            resolved_sep = sep_option if sep_option is not None else self._option_str("delimiter")
         resolved_null = nullValue if nullValue is not None else self._option_str("nullvalue")
         resolved_case = (
             normalizeHeaderCase
@@ -236,6 +238,19 @@ class DataFrameReader:
                     f"smartCsv samplingRows must be > 0, got {sampling_int}"
                 )
             resolved_sampling = sampling_int
+
+        if resolved_sep is not None:
+            from repark.spark._csv_smart import _require_single_char_delimiter
+
+            if not isinstance(resolved_sep, str):
+                raise IllegalArgumentException(
+                    "smartCsv sep must be a single character other than newline, "
+                    f"carriage return, or quote, got {resolved_sep!r}"
+                )
+            try:
+                resolved_sep = _require_single_char_delimiter(resolved_sep, what="smartCsv sep")
+            except ValueError as error:
+                raise IllegalArgumentException(str(error)) from error
 
         frame, report = load_smart_csv(
             self._session,

@@ -162,6 +162,8 @@ auto-detect, null-padded ragged rows, and a type-inference ladder that samples t
 data rows (the full file is always read for *data*; `df.describe_ingest()` reports what inference
 actually saw). Reach for plain `.csv()` with an explicit `sep=` when you already know the shape —
 auto-detection is a guess, and the tour notebook shows a corpus where it guesses wrong.
+European-locale `;` files should declare `sep=';'`. The euro-comma cast refusal on that
+corpus is still open.
 
 ## Your first `dynamicFlatten`
 

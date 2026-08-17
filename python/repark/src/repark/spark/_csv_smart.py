@@ -72,6 +72,11 @@ _SCI_RE = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)[eE][+-]?\d+$")
 
 _DEFAULT_NULL_TOKENS: frozenset[str] = frozenset({"", "null", "none", "na", "n/a", "nan"})
 
+# Auto-detect candidates (deterministic order). A declared preferred may be any
+# single character except newline / carriage return / quote.
+_DELIMITER_CANDIDATES: tuple[str, ...] = (",", ";", "\t", "|")
+_REFUSED_DELIMITERS: frozenset[str] = frozenset({"\n", "\r", '"'})
+
 
 # ==================================================================================================
 # Diagnostics report
@@ -499,10 +504,21 @@ def _strip_bom(text: str) -> tuple[str, bool]:
     return text, False
 
 
+def _require_single_char_delimiter(value: str, *, what: str) -> str:
+    """Refuse empty, multi-char, newline, carriage return, or quote."""
+    if len(value) != 1 or value in _REFUSED_DELIMITERS:
+        raise ValueError(
+            f"{what} must be a single character other than newline, "
+            f"carriage return, or quote, got {value!r}"
+        )
+    return value
+
+
 def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
     """Score delimiter consistency: (mode_field_count_or_0, agreement_rows).
 
     Higher agreement with field_count >= 2 wins. Returns (0, 0) when unusable.
+    Per-line ``csv.reader`` — origin/main detect semantics (B4 round 4).
     """
     counts: list[int] = []
     for line in lines:
@@ -527,13 +543,19 @@ def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
 
 
 def detect_delimiter(lines: list[str], *, preferred: str | None = None) -> str:
-    """Pick the delimiter with the strongest field-count consistency (deterministic order)."""
+    """Pick the delimiter with the strongest field-count consistency.
+
+    Ranking is origin/main ``(agreement, mode_fields)`` over ``, ; \\t |``,
+    counted with per-line ``csv.reader``. Auto-detect is a known-limit on
+    files whose values embed a rival delimiter (DS-4); declare ``sep``.
+    A declared ``preferred`` must be a single character other than newline,
+    carriage return, or quote.
+    """
     if preferred is not None:
-        return preferred
-    candidates = (",", ";", "\t", "|")
+        return _require_single_char_delimiter(preferred, what="preferred delimiter")
     best = ","
     best_score = (-1, -1)  # (agreement, mode_fields)
-    for candidate in candidates:
+    for candidate in _DELIMITER_CANDIDATES:
         mode_fields, agreement = _score_delimiter(lines, candidate)
         score = (agreement, mode_fields)
         if score > best_score:

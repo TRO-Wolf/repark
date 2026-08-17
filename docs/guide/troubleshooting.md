@@ -274,6 +274,11 @@ only appears inside quoted values — splits every line into a consistent 2, bec
 honoured when it *starts* a field. `;` wins the agreement contest, and the header detector then
 votes the real header line out as preamble.
 
+This is a **known limit**, not a closed class. Three B4 redesigns (field-count-first, identifier
+header-join, one-splitter + structural join) each closed the named corpus and regressed an
+unnamed one, including value corruption on the declared-`sep` path. Detect and parse stay on
+origin/main `csv.reader` semantics.
+
 `describe_ingest()` tells you exactly what happened, which is the fastest way to confirm it:
 
 ```python
@@ -284,8 +289,20 @@ auto.describe_ingest()["delimiter"], auto.describe_ingest()["skipped_lines"]
 (';', 1)
 ```
 
-**What to do.** Declare the delimiter whenever you know it. `sep=` short-circuits detection
-entirely:
+**What to do.** Declare the delimiter whenever you know it. On European-locale `;` files —
+and any file whose values embed a rival — pass `sep=';'` (or the known delimiter). `sep=`
+short-circuits detection entirely and must be a **single character** other than newline, CR,
+or quote (empty / multi-char / those three raise `IllegalArgumentException`).
+`option("sep", "")` does **not** fall through to `option("delimiter", ...)` —
+the empty string is a present value and refuses loud:
+
+```python
+spark.read.option("sep", "").option("delimiter", ";").smartCsv(str(p))
+# IllegalArgumentException: smartCsv sep must be a single character ...
+```
+
+When you *do* know the delimiter, pass it (kwarg or option) and the ragged
+comma file above parses as comma:
 
 ```python
 spark.read.smartCsv(str(p), sep=",").show()
