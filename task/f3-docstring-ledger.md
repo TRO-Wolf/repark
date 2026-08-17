@@ -101,7 +101,38 @@ restating semantics — one truth, no drift. `freqItems` states that it refuses.
 - `scripts/check_lib_py.sh` → 65 files clean; no ceiling raised, `core.py` byte-untouched.
 - Post-change census re-run: 1199/1210, the 11 remaining all in `core.py`.
 
-## Follow-on
+## Follow-on — CLOSED (F-4 increment 2, 2026-08-17)
 
-- **`core.py` ×11** — blocked on headroom, not on judgement. When the method-region extract lands
-  (the `RATCHET` note already on that ceiling), backfill the 11 closures in the same PR.
+The 11 landed as a docstring-only rider on the F-4 guides PR, on the headroom the SE-1 PR-B T0b
+extract freed. **Census re-run with the same walk: 1211 / 1211, 0 missing.**
+
+The count moved from 1210 to 1211 because the extract split the tail block out of `core.py`
+(`plan_collapse.py` is now its own module), so seven of the eleven had *moved* with their bodies:
+
+| File | Public defs/classes | Missing before | Missing after |
+|---|---|---|---|
+| `spark/dataframe/core.py` | 97 | 4 | 0 |
+| `spark/dataframe/plan_collapse.py` | 7 | 7 | 0 |
+| **Package total** | **1211** | **11** | **0** |
+
+(`plan_collapse.py`'s module-level helpers are all underscore-private, so every name the walk
+counts public in that file *is* one of the nested closures.)
+
+**The honest caveat.** "100%" here is 100% *of this ledger's declared census rule*, which is
+`ast.walk` — so it counts nested closures as public. It does not mean eleven user-facing API names
+were undocumented. Of the eleven:
+
+- **9 are nested rendering closures** — `fmt_row` ×2, `hline` ×2, `row_line` ×2, `is_numeric_cell`
+  (all inside the `plan_collapse.py` formatters), plus `replace_idents` / `replacer` inside
+  `core.py`'s SQL-identifier rewriter. None is reachable from outside its enclosing function.
+- **2 are `@overload` typing stubs** for `DataFrame.head`, whose real implementation was already
+  documented. Their bodies were `...`; each now carries a one-line docstring instead.
+
+So the *user-facing* facade surface was already at 100% when F-3 shipped, and this rider closes the
+census metric rather than a documentation gap. Recorded that way on purpose: the number is only
+worth having if what it measures is stated.
+
+**Cost:** 11 docstrings across two files. `git diff --numstat`: `core.py` +7 / −2 (the two
+`@overload` `...` stub bodies became their docstrings), `plan_collapse.py` +7 / −0. No signature,
+logic, import or `__all__` moved; no ceiling raised — `core.py` 7253 of 7350,
+`plan_collapse.py` 1103 of 2500. `make ci` and `make py-test-facade` green.

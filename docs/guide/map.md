@@ -40,6 +40,27 @@ illustrative. A claim with no verified basis does not go in.
   DataFusion/ANSI, its own process-wide session); the no-blended-parser rule (ADR-0002); why two
   sessions; wrong-door sniffing at a high level and what the Python callable does *today*;
   identifier case (ID-1); how to choose.
+- [ta-guide.md](ta-guide.md) — the `repark.ta` library: the un-`OVER`ed-column shape, `over_columns`
+  and the `with_indicators` serving door, the `null_lookback` prefix rewrite, the 81 entry points
+  over 68 kernels, the `ta_*` SQL spelling (Spark door only), the TA-Lib C 0.4.0 bit-exactness
+  claim as the crate states it (`f64::to_bits` goldens, the `linearreg_angle` libm caveat), the
+  SE-1 `declareSorted` door with its measured null-placement boundary, the benchmarking contract
+  (default-conf primary vs single-core isolation), and the mimalloc wheel note.
+- [ml-guide.md](ml-guide.md) — `repark.spark.ml`: fit/transform, the three natively-trained
+  estimators and their loud refusals, the dense (`fixed_size_list`) and sparse
+  (`{size, indices, values}` struct) vector cell shapes, the plan-built feature package,
+  `Pipeline` persistence (params only, atomic, allowlisted on load), the `repark[ml-ext]`
+  backends, and an explicit table of what is absent versus `pyspark.ml`.
+- [iceberg-guide.md](iceberg-guide.md) — catalogs (Glue primary, S3 Tables secondary, the local
+  in-memory one), the `spark.sql.catalog.<name>.*` keys, accepted warehouse locations
+  (`s3://` / `s3a://` / `file://` / bare absolute path) and their refusals, reading and writing
+  through the facade, the write forms that refuse (DML-1 / DML-2 / `overwritePartitions`), time
+  travel both spellings plus the reader options, the fifteen metadata tables, maintenance `CALL`,
+  and the registry sections that govern each.
+- [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
+  dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals, `explode_outer`
+  on `array<struct>`, `count()` on a deep `dynamicFlatten`, `smartCsv` delimiter auto-detect,
+  the wrong-door `ParserError`, the UTC timezone default (TZ-2 / TZ-3), and the install smoke.
 - `map.md` — this file.
 
 ## I want to...
@@ -51,6 +72,11 @@ illustrative. A claim with no verified basis does not go in.
 | Understand why a `conf.set` appeared to do nothing | [session-and-conf.md](session-and-conf.md) "How `conf.get` / `conf.set` behave" |
 | Learn the DataFrame API / flatten nested data | [dataframe-guide.md](dataframe-guide.md) |
 | Work out which `sql()` to call | [sql-doors.md](sql-doors.md) |
+| Compute technical indicators, or make a TA window stop re-sorting | [ta-guide.md](ta-guide.md) |
+| Fit a model, or find out whether an estimator exists at all | [ml-guide.md](ml-guide.md) |
+| Point a session at Glue / S3 Tables, or read an Iceberg table | [iceberg-guide.md](iceberg-guide.md) |
+| Time-travel a table, or work out why a statement refuses | [iceberg-guide.md](iceberg-guide.md) |
+| Diagnose a surprising result or a loud refusal | [troubleshooting.md](troubleshooting.md) |
 | Find out how repark differs from Apache Spark, and why | [../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md) (authoritative) |
 | Check release / delivery state | [../../STATUS.md](../../STATUS.md) (authoritative) |
 | Run a worked example end to end | [../../examples/notebooks/datasets_tour.ipynb](../../examples/notebooks/datasets_tour.ipynb) |
