@@ -79,10 +79,11 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
         "RATCHET: after per-scenario module split",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1850,  # measured 1779
-        "PyO3 Column #[pymethods] arms only (helpers in column/window.rs + "
+        1200,  # measured 1112
+        "PyO3 Column #[pymethods] arms only (match tables in "
+        "column/function_dispatch.rs; helpers in column/window.rs + "
         "column/expr_build.rs; multiple-pymethods stays off); "
-        "RATCHET: after further operator-group extract",
+        "RATCHET: after remaining date/window pymethods extract",
     ),
     "crates/repark-spark/src/alter.rs": (
         2000,  # measured 1915

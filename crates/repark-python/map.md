@@ -70,7 +70,7 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   `register_memory_catalog`, `create_namespace`, `register_ipc_stream_as_temp_view` (IPC fallback),
   **I4/P1a** `register_arrow_stream_as_temp_view` — C-stream import under GIL → MemTable;
   createDataFrame prefers this over IPC).
-- `src/column/` ([src/column/map.md](src/column/map.md); r24 SB1: `array_repeat`/`sequence`/`repeat` facade cardinality refuse) — `PyColumn` + **`call_scalar`** match table (R-FN-BATCH1/2: string/math +
+- `src/column/` ([src/column/map.md](src/column/map.md); r24 SB1: `array_repeat`/`sequence`/`repeat` facade cardinality refuse) — `PyColumn` + **`call_scalar`** match table in `function_dispatch.rs` (**FN-GX**, 2026-08-16 move-only; R-FN-BATCH1/2: string/math +
   reverse/array_*/map_*/size/slice/sequence/… via `datafusion::functions` + `functions_nested`;
   **E1 octo C1:** `array_element` → `__repark_array_get__`, `get_field`;
   **E1 octo C2:** `getitem` → `__repark_get_item__` polymorphic array/map GetItem;
@@ -142,7 +142,8 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
 | Expose a class/function to Python | `src/lib.rs` (register on the `_native` module) |
 | Add a session method (`sql`-like) | `src/session.rs` (`#[pymethods] impl PyReparkSession`) |
 | Add a DataFrame action | `src/dataframe.rs` (`#[pymethods] impl PyDataFrame`) |
-| Add an aggregate Column method (e.g. percentile) | `src/column/mod.rs` (`approx_percentile_cont`, `aggregate`, …) |
+| Add an aggregate Column method (e.g. percentile) | `src/column/mod.rs` pymethod + `src/column/function_dispatch.rs` match arm (`approx_percentile_cont`, `aggregate`, …) |
+| Add a `call_scalar` / `aggregate` / `aggregate_binary` name | `src/column/function_dispatch.rs` (FN-GX tables) |
 | Cross Arrow data to Python | `__arrow_c_stream__` in `src/dataframe.rs` — zero-copy |
 | Fence a panic at a new entry point | wrap the body in `fenced!("Type.method", { … })` (`src/fence.rs`); an FFI-callback poll uses `fence_stream_poll` |
 | Opt in to the mimalloc global allocator (compile-time) | `src/allocator.rs` + `--features allocator-mimalloc` (default off) |
