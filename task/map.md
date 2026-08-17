@@ -60,6 +60,9 @@ not this directory.
   (2026-08-15):** MERGE `WHEN MATCHED UPDATE SET` ANSI store-assignment gate.
   Same `ansi_store_assignable` matrix as INSERT. Probe assignments before the
   rewrite `CASE` (CASE unification would hide the needle). Both doors.
+- [c19-al1a-mimalloc-ledger.md](c19-al1a-mimalloc-ledger.md) — **AL-1a
+  (conductor-19, 2026-08-16):** feature-gated mimalloc global allocator in
+  `repark-python` (default off; no wheel wire). File-backed `src/allocator.rs`.
 - [c19-bh1-default-conf-ledger.md](c19-bh1-default-conf-ledger.md) — **BH-1
   (conductor-19, 2026-08-16):** TA bench PRIMARY cells run at default conf
   (tp unset; emit `target_partitions=default`). Isolation cells emit
@@ -425,6 +428,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 |---|---|
 | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) | **T5** conductor-15 iterator-form `rsi`/`sma` (bit-exact) |
 | [s1-spill-truth-ledger.md](s1-spill-truth-ledger.md) | **S-1** spill truth and reach (FairSpillPool SET / temp_directory / RAM default) |
+| [c19-al1a-mimalloc-ledger.md](c19-al1a-mimalloc-ledger.md) | **AL-1a / conductor-19** feature-gated mimalloc (default off) |
 | [c19-bh1-default-conf-ledger.md](c19-bh1-default-conf-ledger.md) | **BH-1 / conductor-19** TA bench default-conf primary (measure-only) |
 | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) | **P-1** criterion TA kernel baseline (measure-only) |
 | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) | **M14** rejected MERGE commit abort-deletes written files |
@@ -465,6 +469,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
 | Read the U-DF-1 explode mixed-case bind | [c17-explode-case-ledger.md](c17-explode-case-ledger.md) |
 | Read the T5 rsi/sma iterator-form rewrite | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) |
+| Read the AL-1a feature-gated mimalloc spike | [c19-al1a-mimalloc-ledger.md](c19-al1a-mimalloc-ledger.md) |
 | Read the BH-1 default-conf bench-harness fix | [c19-bh1-default-conf-ledger.md](c19-bh1-default-conf-ledger.md) |
 | Read the P-1 criterion TA kernel baseline | [p1-ta-kernel-benches-ledger.md](p1-ta-kernel-benches-ledger.md) |
 | Read the M14 rejected-commit abort cleanup | [m14-abort-cleanup-ledger.md](m14-abort-cleanup-ledger.md) |

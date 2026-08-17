@@ -80,6 +80,10 @@ uuid = { version = "1", features = ["v4"] }
 # Catalog-edge / write-path spans and warnings (`tracing::warn!` on failed scratch-table
 # deregister). Ratified addition (orchestrator ruling R3, 2026-08-06).
 tracing = "0.1"
+# Feature-gated mimalloc global allocator (repark-python only; default off).
+# Ratified addition — orchestrator ruling, conductor-19 charter, 2026-08-16; allocator
+# spike, feature-gated default-off.
+mimalloc = "0.1"
 # Foundation — one unified version family (DataFusion 54.1 / Arrow 58.4).
 datafusion = "54.1.0"
 datafusion-spark = "54.1.0"

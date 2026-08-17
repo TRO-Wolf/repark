@@ -127,3 +127,15 @@ fn repark_core_error_is_the_repark_common_error_type() {
         assert!(raised.to_string().contains("re-home identity probe"));
     });
 }
+
+#[cfg(not(feature = "allocator-mimalloc"))]
+#[test]
+fn allocator_mimalloc_is_off_unless_the_feature_is_enabled() {
+    const { assert!(!cfg!(feature = "allocator-mimalloc")) };
+}
+
+#[cfg(feature = "allocator-mimalloc")]
+#[test]
+fn allocator_mimalloc_feature_compiles_the_global_allocator_module() {
+    const { assert!(cfg!(feature = "allocator-mimalloc")) };
+}

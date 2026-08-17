@@ -75,6 +75,9 @@ tracing-subscriber = { version = "0.3", default-features = false, features = [
   "std",
   "ansi",
 ] }
+# Optional process-wide mimalloc (conductor-19 AL-1a). Default off; the published
+# wheel does not enable this feature until a later AL-1b wire (SQM-gated).
+mimalloc = { workspace = true, optional = true }
 
 [dev-dependencies]
 # EC-1 type-identity guard (`src/tests.rs`): naming `repark_common::Error` alongside
@@ -92,3 +95,7 @@ pyo3 = { workspace = true, features = ["auto-initialize"] }
 # Enabled by maturin when building the wheel (links against libpython via the stable ABI).
 # OFF by default so `cargo check` / `cargo test` build the crate without needing to link libpython.
 extension-module = ["pyo3/extension-module"]
+# Default off. Model: repark-ta's `datafusion` feature (`dep:` so the crate is
+# compiled only when the flag is on). Do not fold into `--all-features` test runs
+# (that flag also turns on `extension-module` and breaks the test binary).
+allocator-mimalloc = ["dep:mimalloc"]

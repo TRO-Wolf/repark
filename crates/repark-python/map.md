@@ -30,14 +30,19 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   with kind `dev` — inspected like every other edge, exempt only from the layering rule).
   Spells out its own lints with `unsafe_code = "allow"`
   (it does NOT inherit `[lints] workspace = true`; the workspace root reserves the carve-out).
-  `scripts/check_lib_rs.py` carries a `repark-python` EXCEPTIONS row (EC-10: the 180-line root is a
+  `scripts/check_lib_rs.py` carries a `repark-python` EXCEPTIONS row (EC-10: the 182-line root is a
   manifest and already uses the sanctioned file-backed test module). The off-by-default `extension-module` feature stays OFF for
-  `cargo test` (so libpython links).
+  `cargo test` (so libpython links). Optional `mimalloc` + feature `allocator-mimalloc`
+  (conductor-19 AL-1a; default off; `dep:mimalloc`) — not in the published wheel until
+  a later AL-1b wire.
 - `src/lib.rs` — the `#[pymodule] _native` entry point + `to_py_err` (engine `Error` → `RuntimeError`)
   + **`try_init_repark_tracing`** (R-TRACE-SUBSCRIBER): on module init, if `REPARK_LOG` (preferred)
   or `RUST_LOG` is set, `tracing_subscriber::fmt` + `EnvFilter` + `FmtSpan::CLOSE` → stderr via
   `try_init` (never panics if a subscriber already exists); absent env = zero overhead; registers
-  M3 `ml::register` fit functions.
+  M3 `ml::register` fit functions. Two-line `#[cfg(feature = "allocator-mimalloc")] mod allocator;`
+  hook (ceiling 190 stands).
+- `src/allocator.rs` — file-backed `#[global_allocator]` mimalloc static; compiled only
+  under `allocator-mimalloc`. Funding/default-off rustdoc lives here, not in `lib.rs`.
 - `src/fence.rs` — the shared **SAF-007 panic fence**. `fence(op, || PyResult<T>)` wraps every
   `#[pymethods]` body (via the `fenced!` macro): a Rust panic is caught and re-raised as the base
   `PySparkException` (a `RuntimeError`) with the message preserved under an "internal error" framing,
@@ -140,6 +145,7 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
 | Add an aggregate Column method (e.g. percentile) | `src/column/mod.rs` (`approx_percentile_cont`, `aggregate`, …) |
 | Cross Arrow data to Python | `__arrow_c_stream__` in `src/dataframe.rs` — zero-copy |
 | Fence a panic at a new entry point | wrap the body in `fenced!("Type.method", { … })` (`src/fence.rs`); an FFI-callback poll uses `fence_stream_poll` |
+| Opt in to the mimalloc global allocator (compile-time) | `src/allocator.rs` + `--features allocator-mimalloc` (default off) |
 
 ## Component contract
 
@@ -188,6 +194,7 @@ documented residual in the `StreamingBatchReader` rustdoc (v1's
 |---|---|
 | PyO3 build can't find Python | `.cargo/config.toml` sets `PYO3_PYTHON=python3` |
 | `cargo test --all-features` link error | Use `cargo test -p repark-python`; `extension-module` must stay off for tests |
+| Need the mimalloc spike build | `cargo test --locked -p repark-python --features allocator-mimalloc` (never `--all-features`) |
 | `cargo test` fails to init the interpreter | the `auto-initialize` dev-dep boots it; confirm libpython3.x is installed |
 | `unsafe` lint fires elsewhere | Keep all `unsafe`/FFI in this crate only |
 | `pyarrow.table(df)` raises on the capsule | capsule must be named `arrow_array_stream`; see `__arrow_c_stream__` |
