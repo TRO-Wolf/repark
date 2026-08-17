@@ -10,6 +10,8 @@ if ignored, produces a table that exists but does not match what was asked for.
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../create_table.rs`. Clause
   refusals plus A11: `nanosecond_timestamp_columns_refuse_with_column_and_precision`,
   `nanosecond_timestamptz_columns_refuse`, `microsecond_timestamp_columns_pass_the_ns_gate`.
+  The SE-1 PR-D1 tightened-CTAS refuse is pinned in
+  [`../../tests/declared_sorted_tighten.rs`](../../tests/declared_sorted_tighten.rs).
 
 ## Pointers
 

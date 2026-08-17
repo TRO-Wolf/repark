@@ -102,7 +102,12 @@ NOT in that file is a defect, not a decision.
   one function; declaring twice is idempotent. Disclosed in the module docstring: the window
   ordering in the plan pin is spelled `ASC NULLS LAST` because Spark's `ASC` default is
   NULLS FIRST while the engine declares NULLS LAST. Ledger:
-  `task/se1-declared-sorted-ledger.md`.
+  `task/se1-declared-sorted-ledger.md`. **PR-D1 does not edit this file** (13 nodes stay
+  byte-identical).
+- `test_declare_sorted_tighten.py` — **SE-1 PR-D1:** `tightenNulls=True` value-identical
+  to hint with key fields non-nullable on `to_arrow()`; refuse-on-nulls (names the flag);
+  hint-after-tighten restores; both spellings share the keyword. Serving-shape elision is
+  the Rust Spark-door pin, not this file.
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
 
@@ -1883,6 +1888,7 @@ NOT in that file is a defect, not a decision.
 | Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; overwritePartitions now a LOUD gate — raise + target untouched, both spellings (the empty-wipe pin replaced); C1-Q-005 option warn-once; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
 | Add a Window / date-function / row_number test | `test_functions_dates.py` |
 | Add a `declareSorted` / sort-elimination plan or refusal test | `test_declare_sorted.py` |
+| Add a `tightenNulls` facade pin | `test_declare_sorted_tighten.py` |
 | Add an FN-A ordering / null / math function test | `test_functions_a.py` |
 | Add an FN-B string-function test | `test_functions_b.py` |
 | Add an FN-C aggregate / window-alias function test | `test_functions_c.py` |

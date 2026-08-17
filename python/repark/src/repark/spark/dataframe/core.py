@@ -2703,7 +2703,11 @@ class DataFrame:
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 
     # === SE-1: declared-sorted door ===
-    def declare_sorted(self, *cols: str) -> DataFrame:
+    def declare_sorted(
+        self,
+        *cols: str,
+        tightenNulls: bool = False,  # noqa: N803 — repark-extra camelCase keyword
+    ) -> DataFrame:
         """Declare this source frame already sorted by ``cols`` — a repark **extension**.
 
         Not a PySpark API. Declares ASC NULLS LAST ordering (per key, in the order given)
@@ -2716,6 +2720,31 @@ class DataFrame:
         raises :class:`~repark.errors.AnalysisException` naming the first offending row
         indices, and the view is left exactly as it was. There is no unverified fast path.
 
+        Parameters
+        ----------
+        cols:
+            Sort keys, in order. At least one is required.
+        tightenNulls:
+            Default ``False`` keeps the door a pure hint (schema unchanged). ``True``
+            unlocks elision on every query shape, including
+            ``Window.partitionBy(...).orderBy(...)``: after verify, a NULL in a declared
+            key refuses (name the key; drop ``tightenNulls`` or clean the data); otherwise
+            the in-engine schema of those keys becomes non-nullable
+            (``df.schema`` / ``to_arrow()``). That is a plan property, not a data contract
+            — Iceberg CREATE of a tightened frame is refused until PR-D2.
+
+        Returns
+        -------
+        DataFrame
+            ``self``, so the call chains.
+
+        Examples
+        --------
+        >>> spark.createDataFrame(bars, cols).declareSorted("symbol", "ts")
+        >>> spark.createDataFrame(bars, cols).declareSorted(
+        ...     "symbol", "ts", tightenNulls=True
+        ... )
+
         Valid only on a source frame — the frame ``createDataFrame`` handed back. Any
         transformed frame (``select`` / ``filter`` / join / agg output) refuses loudly;
         declare on the source, then transform. Names resolve case-insensitively through the
@@ -2723,7 +2752,8 @@ class DataFrame:
         declared with any spelling; an unknown name refuses and lists the available columns.
 
         Replacing the underlying view drops the declaration (it lives on the registered
-        table, not on this handle). Returns ``self`` so the call chains.
+        table, not on this handle). Each call is a fresh verify-then-register: a later
+        default-flag call after a tighten restores original key nullability.
         """
         self._ensure_alive()
         if not cols:
@@ -2759,7 +2789,7 @@ class DataFrame:
             canonical = self._resolve_getitem_column_name(name)
             engine_keys.append(self._engine_field_for_display(canonical))
         view = self._source_view_name
-        self._session.declare_temp_view_sorted(view, engine_keys)
+        self._session.declare_temp_view_sorted(view, engine_keys, tightenNulls)
         # The declaration re-registers the view's MemTable, but this frame's logical plan
         # still holds the table source captured when the scan was planned — re-resolve it,
         # or the frame that declared would be the one frame that never sees the elision.

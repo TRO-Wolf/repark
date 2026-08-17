@@ -42,6 +42,8 @@ not this directory.
   `SortExec` elision; probe: 1→0 at tp=1 AND through the hash repartition at tp=default,
   results byte-identical). PR-A engine seam; **PR-B (2026-08-17)** lands the facade
   `declareSorted` door + the `plan_collapse.py` headroom extract that made room for it.
+  **PR-D1 (2026-08-17):** `tightenNulls` (c+) — verified-null-free keys flip to
+  non-nullable; Iceberg CREATE of a tightened frame refuses until PR-D2.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

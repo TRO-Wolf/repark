@@ -129,6 +129,8 @@ pub(crate) async fn execute_create_table(
         refuse_nanosecond_timestamp_columns(&schema, form)?;
         (schema, None)
     };
+    repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())
+        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;

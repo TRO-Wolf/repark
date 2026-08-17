@@ -407,20 +407,29 @@ impl PyReparkSession {
     /// claim before re-registering — a wrong claim raises `AnalysisException` and the view is
     /// untouched. The facade resolves display→engine names before calling.
     ///
+    /// `tighten_nulls` (facade `tightenNulls`) is the c+ lever: after verify, a NULL in a
+    /// key refuses; otherwise verified-null-free keys flip to non-nullable.
+    ///
     /// Releases the GIL for the verification scan (O(n) over the sort keys).
     ///
     /// # Errors
-    /// `AnalysisException` for unknown view/key, non-in-memory frames, or unsorted data.
+    /// `AnalysisException` for unknown view/key, non-in-memory frames, unsorted data, or a
+    /// NULL key under tighten.
+    #[pyo3(signature = (name, keys, tighten_nulls=false))]
     pub fn declare_temp_view_sorted(
         &self,
         py: Python<'_>,
         name: &str,
         keys: Vec<String>,
+        tighten_nulls: bool,
     ) -> PyResult<()> {
         fenced!("PyReparkSession.declare_temp_view_sorted", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.declare_temp_view_sorted(name, &keys))
+                self.runtime.block_on(self.session.declare_temp_view_sorted(
+                    name,
+                    &keys,
+                    tighten_nulls,
+                ))
             })
             .map_err(to_py_err)
         })

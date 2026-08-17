@@ -219,3 +219,41 @@ Orchestrator probes with a live PySpark 4.1.2 oracle (nullable-key window, value
 - Next-wave charter: locate the null-placement rewrite seam, make EXPLAIN show the
   executed plan (or document the gap loudly), and re-anchor the facade elision pins to
   execution-layer evidence (timing or engine-level plans).
+
+# PR-D1 — tightenNulls (c+) (2026-08-17)
+
+Owner locked (c+): default stays a pure hint; `tightenNulls=True` unlocks full elision;
+Iceberg writes stay optional (CREATE refused this PR; exact relax is PR-D2).
+
+- Engine: `declare_temp_view_sorted(..., tighten_nulls: bool)`. New logic in
+  `sorted_view.rs` (`apply_declare_nullability`): every call restores prior tighten
+  metadata first, then optionally flips verified-null-free **nullable** keys to
+  non-nullable and tags them `repark.tighten_nulls=1`. Already-non-nullable keys are
+  not tagged. A NULL in a declared key refuses naming the key and `tightenNulls`.
+- Both SQL doors refuse Iceberg CREATE whose derived Arrow schema carries that
+  metadata (`refuse_iceberg_create_of_tightened_schema` at CTAS derivation). INSERT
+  into an existing table stays allowed.
+- Facade: keyword-only `tightenNulls: bool = False` on both spellings. Docstring +
+  `docs/guide/ta-guide.md` disclose the in-engine schema change. No parity-corpus row
+  (no Spark twin). Orchestrator owns `docs/spark-sql-iceberg-parity.md` from the
+  payload below.
+- Pins: existing 13 `test_declare_sorted.py` nodes untouched. New facade file
+  `test_declare_sorted_tighten.py`. Rust execution-layer serving-shape pin in
+  `crates/repark-spark/tests/declared_sorted_tighten.rs` (`create_physical_plan`, not
+  EXPLAIN). ANSI CTAS refuse in `crates/repark-sql/tests/declared_sorted_tighten.rs`.
+
+## Extension-registry payload (orchestrator writes)
+
+- Surface: `DataFrame.declareSorted` / `declare_sorted` keyword `tightenNulls`
+  (repark extension, not PySpark).
+- Default `False`: planner hint, schema unchanged.
+- `True`: after verify, verified-null-free keys report non-nullable in-engine;
+  Iceberg CREATE refused until PR-D2; INSERT into existing tables allowed.
+- Dual-door CREATE refuse: Spark CTAS + ANSI CTAS.
+
+## Residue
+
+- PR-D2: relax exactly the tagged fields at
+  `arrow_schema_to_schema_auto_assign_ids` (both doors); remove the CREATE refuse.
+- PR-D3: attach Spark ORDER BY rewrite to `DfStatement::Explain`; re-anchor the
+  PR-B EXPLAIN pin.

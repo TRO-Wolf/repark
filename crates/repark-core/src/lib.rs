@@ -69,6 +69,13 @@ pub use time_travel::{
 pub use error_map::engine_err;
 pub use repark_common::{Error, ErrorClass, Result};
 
+// --- SE-1 tightenNulls (PR-D1): the metadata key + the Iceberg-CREATE refuse both doors
+// call at CTAS schema derivation. The flip itself stays crate-private in `sorted_view`. ---
+pub use sorted_view::{
+    TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
+    refuse_iceberg_create_of_tightened_schema, tightened_field_names,
+};
+
 // --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6). ---
 pub use datafusion::prelude::DataFrame;
 

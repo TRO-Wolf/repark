@@ -11,6 +11,11 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 - [session_extension.rs](session_extension.rs) — deferred test #1
   (`temp_view_then_sql_runs_the_spark_function_shim`): temp view + `session.sql` reaches the
   Spark date shim (`year`, `weekofyear`) through the installed extension + dialect.
+- [declared_sorted_tighten.rs](declared_sorted_tighten.rs) — **SE-1 PR-D1:** Spark-door
+  execution-layer pin that `tightenNulls` elides `SortExec` on the serving-shape window
+  (`ORDER BY ts` = NULLS FIRST over nullable keys) via `create_physical_plan` (not EXPLAIN);
+  hint mode keeps the sort; Iceberg CTAS of a tightened frame refuses; INSERT into an
+  existing table stays allowed.
 - [ddl_sessions.rs](ddl_sessions.rs) — deferred rows #2, #4, #5, #6, #7 (phase-2 PR-3a): CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

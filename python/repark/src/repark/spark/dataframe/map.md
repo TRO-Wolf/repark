@@ -55,7 +55,10 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `declare_temp_view_sorted` (which ALWAYS verifies and refuses loud on
   out-of-order data), and then **re-plans its own `_inner`** — the logical plan
   captured the pre-declaration table source, so without the re-plan the declaring
-  frame would be the one frame that never sees the elision. See
+  frame would be the one frame that never sees the elision.
+  **SE-1 PR-D1:** keyword-only `tightenNulls: bool = False` (one name, both
+  spellings) unlocks full elision by flipping verified-null-free keys to
+  non-nullable; a NULL key refuses; a later default-flag call restores. See
   `task/se1-declared-sorted-ledger.md`.
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent

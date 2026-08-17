@@ -13,7 +13,9 @@ behavior only reachable end-to-end.
   count 0 with a declaration / ≥1 without, at tp=1 and default), results-identity
   (elision changes no value), and the verification refusal battery (unsorted rows named by
   index, cross-batch boundary violations, NULLS LAST discipline, unknown key/view, empty
-  keys, non-`MemTable` provider, idempotent redeclaration). `RepartitionExec` presence is
+  keys, non-`MemTable` provider, idempotent redeclaration). **PR-D1:** tighten tags only
+  flipped fields, refuses a NULL key, hint-after-tighten restores, `SELECT *` keeps the
+  metadata, tighten vs hint values match. `RepartitionExec` presence is
   deliberately NOT pinned (size/config-dependent; see the SE-1 unit ledger).
 
 ## I want to…

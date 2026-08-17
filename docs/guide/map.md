@@ -45,7 +45,8 @@ illustrative. A claim with no verified basis does not go in.
   and the `with_indicators` serving door, the `null_lookback` prefix rewrite, the 81 entry points
   over 68 kernels, the `ta_*` SQL spelling (Spark door only), the TA-Lib C 0.4.0 bit-exactness
   claim as the crate states it (`f64::to_bits` goldens, the `linearreg_angle` libm caveat), the
-  SE-1 `declareSorted` door with its measured null-placement boundary, the benchmarking contract
+  SE-1 `declareSorted` door with its measured null-placement boundary and the
+  `tightenNulls` opt-in (PR-D1), the benchmarking contract
   (default-conf primary vs single-core isolation), and the mimalloc wheel note.
 - [ml-guide.md](ml-guide.md) — `repark.spark.ml`: fit/transform, the three natively-trained
   estimators and their loud refusals, the dense (`fixed_size_list`) and sparse

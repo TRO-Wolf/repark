@@ -1175,13 +1175,19 @@ impl ReparkSession {
     /// re-registered [`MemTable`] advertises the ordering and DataFusion elides redundant
     /// `SortExec`s (SE-1). The claim is ALWAYS verified (O(n) adjacent-pair pass, ASC NULLS
     /// LAST) before anything is replaced — a wrong claim refuses loudly and the original
-    /// registration stays untouched.
+    /// registration stays untouched. `tighten_nulls` is the c+ lever: after verify, a NULL
+    /// in a key refuses; otherwise verified-null-free keys flip to non-nullable.
     ///
     /// # Errors
     /// [`Error::Analysis`] for an unknown view, a non-in-memory provider, an unknown key,
-    /// empty keys, or data that is not sorted as declared; [`Error::DataFusion`] for
-    /// engine-level scan/registration failures.
-    pub async fn declare_temp_view_sorted(&self, name: &str, keys: &[String]) -> Result<()> {
+    /// empty keys, data that is not sorted as declared, or a NULL key under tighten;
+    /// [`Error::DataFusion`] for engine-level scan/registration failures.
+    pub async fn declare_temp_view_sorted(
+        &self,
+        name: &str,
+        keys: &[String],
+        tighten_nulls: bool,
+    ) -> Result<()> {
         if keys.is_empty() {
             return Err(Error::Analysis(
                 "declared-sorted view: at least one key column is required".to_string(),
@@ -1207,6 +1213,8 @@ impl ReparkSession {
             .await
             .map_err(engine_err)?;
         crate::sorted_view::verify_batches_sorted(&schema, &batches, keys)?;
+        let (schema, batches) =
+            crate::sorted_view::apply_declare_nullability(schema, batches, keys, tighten_nulls)?;
         let partitions = if batches.is_empty() {
             vec![vec![]]
         } else {
