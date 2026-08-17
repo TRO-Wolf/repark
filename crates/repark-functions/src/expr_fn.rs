@@ -16,7 +16,10 @@ use std::sync::Arc;
 use arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Cast, Expr, ScalarUDF};
+use datafusion_spark::function::bitwise::expr_fn as spark_bitwise;
 use datafusion_spark::function::datetime::expr_fn as spark_datetime;
+use datafusion_spark::function::math::expr_fn as spark_math;
+use datafusion_spark::function::string::expr_fn as spark_string;
 
 use crate::datetime;
 
@@ -157,4 +160,85 @@ pub fn second(arg: Expr) -> Expr {
 #[must_use]
 pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
+}
+
+/// Spark `bin(expr)` — binary string of a long (from `datafusion-spark`).
+#[must_use]
+pub fn bin(arg: Expr) -> Expr {
+    spark_math::bin(arg)
+}
+
+/// Spark `hex(expr)` — hex string of a number, string, or binary (from `datafusion-spark`).
+#[must_use]
+pub fn hex(arg: Expr) -> Expr {
+    spark_math::hex(arg)
+}
+
+/// Spark `unhex(expr)` — hex string to binary (from `datafusion-spark`).
+#[must_use]
+pub fn unhex(arg: Expr) -> Expr {
+    spark_math::unhex(arg)
+}
+
+/// Spark `factorial(expr)` — `n!` for `n` in `[0, 20]`, else NULL (from `datafusion-spark`).
+///
+/// The kernel is `Int32`-exact; a facade `lit(5)` is `Int64`, so we cast like `date_add`.
+#[must_use]
+pub fn factorial(arg: Expr) -> Expr {
+    let arg = Expr::Cast(Cast::new(Box::new(arg), DataType::Int32));
+    spark_math::factorial(arg)
+}
+
+/// Spark `rint(expr)` — nearest integer as a double (from `datafusion-spark`).
+#[must_use]
+pub fn rint(arg: Expr) -> Expr {
+    spark_math::rint(arg)
+}
+
+/// Spark `width_bucket(value, min, max, numBucket)` (from `datafusion-spark`).
+#[must_use]
+pub fn width_bucket(value: Expr, min: Expr, max: Expr, num_bucket: Expr) -> Expr {
+    spark_math::width_bucket(value, min, max, num_bucket)
+}
+
+/// Spark `bit_count(expr)` — population count (from `datafusion-spark`).
+#[must_use]
+pub fn bit_count(arg: Expr) -> Expr {
+    spark_bitwise::bit_count(arg)
+}
+
+/// Spark `bit_get(expr, pos)` / `getbit` — bit at 0-based position from the right.
+#[must_use]
+pub fn bit_get(value: Expr, pos: Expr) -> Expr {
+    spark_bitwise::bit_get(value, pos)
+}
+
+/// Spark `shiftleft(expr, n)` (from `datafusion-spark`).
+#[must_use]
+pub fn shiftleft(value: Expr, shift: Expr) -> Expr {
+    spark_bitwise::shiftleft(value, shift)
+}
+
+/// Spark `shiftright(expr, n)` — arithmetic/signed (from `datafusion-spark`).
+#[must_use]
+pub fn shiftright(value: Expr, shift: Expr) -> Expr {
+    spark_bitwise::shiftright(value, shift)
+}
+
+/// Spark `shiftrightunsigned(expr, n)` — logical/unsigned (from `datafusion-spark`).
+#[must_use]
+pub fn shiftrightunsigned(value: Expr, shift: Expr) -> Expr {
+    spark_bitwise::shiftrightunsigned(value, shift)
+}
+
+/// Spark `is_valid_utf8(expr)` (from `datafusion-spark`).
+#[must_use]
+pub fn is_valid_utf8(arg: Expr) -> Expr {
+    spark_string::is_valid_utf8(arg)
+}
+
+/// Spark `make_valid_utf8(expr)` — replace invalid UTF-8 with U+FFFD.
+#[must_use]
+pub fn make_valid_utf8(arg: Expr) -> Expr {
+    spark_string::make_valid_utf8(arg)
 }

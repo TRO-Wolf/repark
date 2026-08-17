@@ -7,6 +7,10 @@ Public names are re-exported from ``functions.py``. Helpers ``_scalar`` /
 FN-A (2026-08-15): ordering / null / math names land in this module.
 
 FN-B (2026-08-15): string-function names land in this module.
+
+FN-GT1 (2026-08-17): leftover string / utf8 thin-wires land in this module
+(``split_part`` / ``regexp_count`` / ``regexp_instr`` / ``bit_length`` /
+``octet_length`` / ``is_valid_utf8`` / ``make_valid_utf8``).
 """
 
 from __future__ import annotations
@@ -1871,3 +1875,156 @@ def quote(col: Column | str) -> Column:
     column = _as_column_arg(col, as_lit=False)
     escaped = regexp_replace(column, "'", "''")
     return concat(lit("'"), escaped, lit("'"))
+
+
+def split_part(src: Column | str, delimiter: Column | str, part_num: Column | str | int) -> Column:
+    """Nth field after splitting on a delimiter (PySpark ``functions.split_part``).
+
+    Parameters
+    ----------
+    src : Column or str
+        Input string.
+    delimiter : Column or str
+        Field separator.
+    part_num : Column or str or int
+        1-based field index (negative counts from the end).
+
+    Returns
+    -------
+    Column
+        The selected field, or empty string when out of range.
+
+    Examples
+    --------
+    ``F.split_part(F.lit('a.b.c'), '.', 2)`` is ``'b'``.
+    """
+    lit_indices: set[int] = {2}
+    if not isinstance(delimiter, Column):
+        lit_indices.add(1)
+    return _scalar("split_part", src, delimiter, part_num, lit_indices=frozenset(lit_indices))
+
+
+def regexp_count(str: Column | str, regexp: Column | str) -> Column:
+    """Count regex matches (PySpark ``functions.regexp_count``).
+
+    Parameters
+    ----------
+    str : Column or str
+        Input string.
+    regexp : Column or str
+        Java/Spark regular expression.
+
+    Returns
+    -------
+    Column
+        Match count.
+
+    Examples
+    --------
+    ``F.regexp_count(F.lit('ababab'), 'ab')`` is ``3``.
+    """
+    lit_indices = frozenset({1}) if not isinstance(regexp, Column) else frozenset()
+    return _scalar("regexp_count", str, regexp, lit_indices=lit_indices)
+
+
+def regexp_instr(str: Column | str, regexp: Column | str) -> Column:
+    """1-based index of the first regex match (PySpark ``functions.regexp_instr``).
+
+    Parameters
+    ----------
+    str : Column or str
+        Input string.
+    regexp : Column or str
+        Java/Spark regular expression.
+
+    Returns
+    -------
+    Column
+        1-based start index, or ``0`` when there is no match.
+
+    Examples
+    --------
+    ``F.regexp_instr(F.lit('abcde'), 'c')`` is ``3``.
+    """
+    lit_indices = frozenset({1}) if not isinstance(regexp, Column) else frozenset()
+    return _scalar("regexp_instr", str, regexp, lit_indices=lit_indices)
+
+
+def bit_length(col: Column | str) -> Column:
+    """Bit length of a string (PySpark ``functions.bit_length``).
+
+    Parameters
+    ----------
+    col : Column or str
+        String column.
+
+    Returns
+    -------
+    Column
+        ``8 * octet_length``.
+
+    Examples
+    --------
+    ``F.bit_length(F.lit('ab'))`` is ``16``.
+    """
+    return _scalar("bit_length", col)
+
+
+def octet_length(col: Column | str) -> Column:
+    """Byte length of a string (PySpark ``functions.octet_length``).
+
+    Parameters
+    ----------
+    col : Column or str
+        String column.
+
+    Returns
+    -------
+    Column
+        UTF-8 byte count.
+
+    Examples
+    --------
+    ``F.octet_length(F.lit('ab'))`` is ``2``.
+    """
+    return _scalar("octet_length", col)
+
+
+def is_valid_utf8(col: Column | str) -> Column:
+    """Whether the value is valid UTF-8 (PySpark ``functions.is_valid_utf8``).
+
+    Parameters
+    ----------
+    col : Column or str
+        String or binary column.
+
+    Returns
+    -------
+    Column
+        Boolean.
+
+    Examples
+    --------
+    ``F.is_valid_utf8(F.lit('ok'))`` is ``True``.
+    """
+    return _scalar("is_valid_utf8", col)
+
+
+def make_valid_utf8(col: Column | str) -> Column:
+    """Replace invalid UTF-8 with U+FFFD (PySpark ``functions.make_valid_utf8``).
+
+    Parameters
+    ----------
+    col : Column or str
+        String or binary column.
+
+    Returns
+    -------
+    Column
+        A valid UTF-8 string.
+
+    Examples
+    --------
+    ``F.make_valid_utf8(F.lit('ok'))`` is ``'ok'``.
+    """
+    return _scalar("make_valid_utf8", col)

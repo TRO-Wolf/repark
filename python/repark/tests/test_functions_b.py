@@ -5,8 +5,8 @@ Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow pat
 ``replace`` pins the literal-vs-regexp hazard.
 
 Deferred this batch (no stubs): ``regexp_extract_all``, ``regexp_substr`` (charter);
-``split_part``, ``regexp_count``, ``regexp_instr``, ``bit_length``, ``octet_length``,
-``to_char``, ``to_varchar`` (``call_scalar`` allow-list; no honest shim / no crates/).
+``to_char``, ``to_varchar`` (DESIGN-GATED). FN-GT1 later shipped ``split_part`` /
+``regexp_count`` / ``regexp_instr`` / ``bit_length`` / ``octet_length``.
 """
 
 from __future__ import annotations

@@ -1082,6 +1082,10 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   (`call_scalar` allow-list); array_compact (`array_except` de-duplicates);
   element_at (1-based + zero-index kernel is SQL-only); charter higher-order/JSON/
   generators. Pins: `tests/test_functions_e.py`.
+  **FN-GT1 (2026-08-17):** leftover THIN-WIRE math/string/bitwise/utf8 — 18
+  names + `getbit` alias. Math wrappers in new `functions_math.py`; bitwise
+  leftovers in `functions_bitwise.py`; string/utf8 leftovers in
+  `functions_expr.py`. Binder arms in `column/function_dispatch.rs`.
   **FN-F (2026-08-15):** 10 try/session/bitwise names in `functions_bitwise.py` +
   `functions_session.py` (bitwise_not/bitwiseNOT, broadcast, current_user/user,
   current_catalog/current_database/current_schema, version, uuid). Deferred:
@@ -1219,7 +1223,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_agg.py` / `functions_window.py` / `functions_udf.py` |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_datetime.py` (FN-D) |
 | Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_udf.py` / `functions_collections.py` |
-| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_bitwise.py` / `functions_session.py` / `functions_udf.py` |
+| Add a `functions` (`col`/`lit`/date/window/aggregate) function | `functions.py` (re-export + `__all__`) / `functions_expr.py` / `functions_bitwise.py` / `functions_math.py` / `functions_session.py` / `functions_udf.py` |
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add / change the TA serving helper (`with_indicators`) | `ta.py` (TA-2; required `partition`/`order`) |

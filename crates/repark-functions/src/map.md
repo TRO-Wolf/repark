@@ -221,7 +221,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   the UDF instance directly, so `repark-python`'s `PyColumn` gets a self-contained date-function
   expression without a `SessionContext`. Extractors + calendar-math come from `datetime`;
   `to_date` from `timestamp_cast`; `date_add` (days cast to `Int32`) + `last_day` from
-  `datafusion-spark`.
+  `datafusion-spark`. **FN-GT1 (2026-08-17):** also `bin`/`hex`/`unhex`/`factorial`
+  (Int32 cast)/`rint`/`width_bucket`/`bit_count`/`bit_get`/shifts/`is_valid_utf8`/
+  `make_valid_utf8` from `datafusion-spark` math/bitwise/string `expr_fn`.
 
 ## Pointers
 
