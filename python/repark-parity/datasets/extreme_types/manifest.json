@@ -1,0 +1,35 @@
+{
+  "family": "extreme_types",
+  "classes": [
+    {
+      "id": "decimal128_scale",
+      "column": "decimal_hi",
+      "parquet_type": "decimal128(24,21)",
+      "description": "decimal128-scale values such as 102.102334252345232345233"
+    },
+    {
+      "id": "beyond_38_digits",
+      "column": "beyond_38",
+      "parquet_type": "string",
+      "description": "digit strings whose precision is > 38 (smartCsv ladder demotes these; facade pin is DS-4 POLICY)"
+    },
+    {
+      "id": "uuid",
+      "column": "uuid_col",
+      "parquet_type": "string",
+      "description": "deterministic UUID strings (uuid5 over example.com + seed + row)"
+    },
+    {
+      "id": "paragraph",
+      "column": "paragraph",
+      "parquet_type": "string",
+      "description": "paragraph-length synthetic text (no real names/emails)"
+    },
+    {
+      "id": "html_fragment",
+      "column": "html_fragment",
+      "parquet_type": "string",
+      "description": "embedded HTML fragments pointing only at example.com"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "family": "schema_inference",
+  "conflict_at_cli_default": 500000,
+  "classes": [
+    {
+      "id": "int32_then_int64",
+      "column": "int_widens",
+      "parquet_type": "int64",
+      "description": "int32-range integers until conflict_at, then values > 2^31-1"
+    },
+    {
+      "id": "string_vs_float",
+      "column": "str_or_float",
+      "parquet_type": "string",
+      "description": "plain words until conflict_at, then float-looking tokens"
+    },
+    {
+      "id": "bool_looking_ints",
+      "column": "boolish_int",
+      "parquet_type": "int32",
+      "description": "0/1 integers (CSV '0'/'1' — bool-looking, typed as int)"
+    },
+    {
+      "id": "date_looking_strings",
+      "column": "dateish",
+      "parquet_type": "string",
+      "description": "ISO date tokens mixed with non-dates"
+    },
+    {
+      "id": "currency",
+      "column": "currency",
+      "parquet_type": "string",
+      "description": "numeric amounts with currency symbols"
+    },
+    {
+      "id": "leading_zero_ids",
+      "column": "leading_zero_id",
+      "parquet_type": "string",
+      "description": "zero-padded identifier strings"
+    },
+    {
+      "id": "empty_vs_null",
+      "column": "empty_or_null",
+      "parquet_type": "string",
+      "description": "empty string plus null-token spellings plus a real value"
+    },
+    {
+      "id": "euro_comma_decimal",
+      "column": "euro_decimal",
+      "parquet_type": "string",
+      "description": "fixed-point amounts using a comma decimal separator"
+    },
+    {
+      "id": "scientific",
+      "column": "scientific",
+      "parquet_type": "float64",
+      "description": "scientific-notation tokens; typed truth is float64"
+    },
+    {
+      "id": "iso_timestamp",
+      "column": "ts_looking",
+      "parquet_type": "timestamp[us]",
+      "description": "ISO-8601 timestamps (T-separator, seconds)"
+    },
+    {
+      "id": "bool_spellings",
+      "column": "bool_spelling",
+      "parquet_type": "bool",
+      "description": "true/false/t/f mixed-case spellings; typed truth is bool"
+    }
+  ]
+}

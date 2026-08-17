@@ -7,6 +7,12 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_datasets_schema_inference.py` — **DS-2** schema-inference generator: manifest
+  class→column pin, A9 defaults, `conflict_at` int32→int64 + string/float halves,
+  parquet identity, CSV text patterns, CLI `--conflict-at`.
+- `test_datasets_extreme_types.py` — **DS-2** extreme-types generator: manifest
+  classes, decimal128(24,21), beyond-38 digit strings, uuid5, paragraph length,
+  HTML example.com-only, parquet identity, CLI.
 - `test_datasets_nested.py` — **DS-1** nested / dynamicFlatten generator: A9 defaults
   (64 / seed 42), table-identity determinism (not raw bytes), parquet + JSON-lines
   re-read under `SCHEMA`, labeled classes (depth ≥ 6, capitalized `Legs`, mixed list
