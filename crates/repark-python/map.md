@@ -33,8 +33,11 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   `scripts/check_lib_rs.py` carries a `repark-python` EXCEPTIONS row (EC-10: the 182-line root is a
   manifest and already uses the sanctioned file-backed test module). The off-by-default `extension-module` feature stays OFF for
   `cargo test` (so libpython links). Optional `mimalloc` + feature `allocator-mimalloc`
-  (conductor-19 AL-1a; default off; `dep:mimalloc`) — not in the published wheel until
-  a later AL-1b wire.
+  (conductor-19 AL-1a; `dep:mimalloc`) — **wired into the published wheel** by the AL-1b
+  A/B verdict (conductor-19, 2026-08-16; numbers in the parity bench map): the facade
+  pyproject's `[tool.maturin] features` enables it, so wheel/`maturin develop` builds carry
+  mimalloc while plain `cargo test` stays default-allocator (spike builds still opt in
+  explicitly).
 - `src/lib.rs` — the `#[pymodule] _native` entry point + `to_py_err` (engine `Error` → `RuntimeError`)
   + **`try_init_repark_tracing`** (R-TRACE-SUBSCRIBER): on module init, if `REPARK_LOG` (preferred)
   or `RUST_LOG` is set, `tracing_subscriber::fmt` + `EnvFilter` + `FmtSpan::CLOSE` → stderr via

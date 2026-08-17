@@ -78,3 +78,19 @@ owned — not duplicated here.
   `isolation=single_core`. Prose labels live here / in script docstrings —
   no spaces in TA_PIPELINE kv values. The old `{1, cores}` many-symbols sweep
   is retired: default (unset) replaces the explicit-cores cell.
+
+## Allocator verdict — AL-1b (2026-08-16)
+
+mimalloc (feature `allocator-mimalloc`, landed default-off in #159) measured A/B against the
+glibc default on the BH-1 default-conf battery: 5 contention-guarded interleaved pairs
+(verdict set) + 20 contended pairs both orders (corroboration) + a 30-pair single-core
+gate-cell sweep. Median ns_per_row deltas (B vs A): kernel_race sma −15% / ema −13% /
+rsi −3% / bbands −4%; many_symbols partitionBy −13% / no-partitionBy −11%; wide_serving
+over_columns −48% / with_indicators −37% / stacked_filter −52%. Gate cell (batch_size
+n=2e6 bs=8192 tp=1): −9% guarded, ±0 across the 30-pair sweep — that shape is bimodal
+per process on BOTH allocators (fast/slow mode lottery, ~205 vs ~500 ns/row); mimalloc's
+win concentrates where glibc arena contention bites (multi-threaded default conf).
+VERDICT: WIRE (≥5% win on 7/9 primaries, no primary regression). Wired into the wheel via
+the facade pyproject `[tool.maturin] features` in the AL-1b wire PR; goldens + facade suite
+verified green under mimalloc before wiring. Full protocol + deviations: the wire PR body
+and task/c19-al1a-mimalloc-ledger.md.

@@ -42,3 +42,19 @@ allocator.
 | `make verify` | **0** |
 | `make preflight` | **0** (facade 3278 passed, 70 skipped) |
 | `cargo test --locked -p repark-python --features allocator-mimalloc` | **0** (35 lib + 24 bindings) |
+
+## AL-1b — measurement + wire verdict (2026-08-16, orchestrator-side)
+
+- Protocol: charter A6–A10 + two recorded amendments — loadavg guard (quiet threshold
+  relaxed 2.0→2.5 with 120 s per-leg cap; >4.0 post-leg void rule enforced, 6 legs voided
+  and rerun) and prebuilt-.so leg switching (byte-identical to a real feature-on build,
+  md5-verified) enabling 25 tightly interleaved pairs + a 30-pair gate-cell sweep.
+- Verdict: WIRE. 7/9 default-conf primaries ≥5% faster (wide_serving up to −52%), worst
+  primary still a win (−3%), A6 gate cell no-regress (−9% guarded; ±0 in the dedicated
+  sweep — the tp=1 shape is bimodal per process on both allocators; not NUMA, not THP).
+- Numerics fence (A9): full preflight green under the feature; facade suite additionally
+  re-run against the feature-on RELEASE module: 3278 passed, 70 skipped. No golden moved.
+- Wire: facade pyproject `[tool.maturin] features` += allocator-mimalloc (this PR). Plain
+  `--features allocator-mimalloc` is ADDITIVE with pyproject features (verified via ldd +
+  mi_* symbol table) — the extension-module fallback spelling was not needed.
+- Owner default A12 applied (wire-on-win); owner AFK window, delegation on record.

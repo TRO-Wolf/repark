@@ -39,4 +39,7 @@ ml-ext = [
 manifest-path = "../../crates/repark-python/Cargo.toml"
 module-name = "repark._native"
 python-source = "src"
-features = ["extension-module"]
+# allocator-mimalloc wired by the AL-1b A/B verdict (conductor-19, 2026-08-16): 7/9
+# default-conf primaries ≥5% faster (serving shapes up to ~50%), no primary regression,
+# goldens + facade suite green under mimalloc. Numbers: the AL-1b wire PR + bench/ta/map.md.
+features = ["extension-module", "allocator-mimalloc"]
