@@ -36,6 +36,8 @@ DATA_PARQUET: Final[str] = "data.parquet"
 DATA_CSV: Final[str] = "data.csv"
 MANIFEST_NAME: Final[str] = "manifest.json"
 INT32_MAX: Final[int] = 2**31 - 1
+#: Floor for the `leading_zero_id` pad width — keeps small runs at the historical shape.
+LEADING_ZERO_MIN_WIDTH: Final[int] = 6
 
 SCHEMA: Final[pa.Schema] = pa.schema(
     [
@@ -103,6 +105,30 @@ def _validate(rows: int, seed: int, conflict_at: int) -> None:
         raise ValueError(msg)
 
 
+def leading_zero_width(rows: int) -> int:
+    """Zero-pad width that keeps a leading zero on EVERY id of a ``rows``-row run.
+
+    A fixed ``06d`` silently retires the class once ``row_index >= 1_000_000``
+    (``1000000`` has no leading zero) — and :data:`MAX_ROWS` is 10_000_000, so the
+    CLI can reach there. The width is therefore derived from the requested row
+    count: one digit wider than the largest index, floored at
+    :data:`LEADING_ZERO_MIN_WIDTH` so small runs keep the historical six.
+    """
+    if rows < 1:
+        return LEADING_ZERO_MIN_WIDTH
+    return max(LEADING_ZERO_MIN_WIDTH, len(str(rows - 1)) + 1)
+
+
+def format_leading_zero_id(row_index: int, width: int) -> str:
+    """Format one id at an explicit pad width."""
+    return f"{row_index:0{width}d}"
+
+
+def leading_zero_id(row_index: int, rows: int) -> str:
+    """The id emitted for ``row_index`` in a ``rows``-row run (always leading-zeroed)."""
+    return format_leading_zero_id(row_index, leading_zero_width(rows))
+
+
 def _resolve_small_conflict_at(rows: int, conflict_at: int | None) -> int:
     if conflict_at is not None:
         return conflict_at
@@ -113,6 +139,7 @@ def _build_row(
     rng: random.Random,
     row_index: int,
     conflict_at: int,
+    id_width: int,
 ) -> tuple[dict[str, Any], dict[str, str]]:
     """One row. RNG draws are consumed on every row so later rows stay seed-stable."""
     if row_index < conflict_at:
@@ -130,7 +157,7 @@ def _build_row(
 
     mark = rng.choice(_CURRENCY_MARKS)
     currency = f"{mark}{rng.randint(1, 99)}.{rng.randint(0, 99):02d}"
-    leading = f"{row_index:06d}"
+    leading = format_leading_zero_id(row_index, id_width)
     empty_or_null = _NULL_TOKENS[row_index % len(_NULL_TOKENS)]
     euro = f"{rng.randint(1, 99)},{rng.randint(0, 99):02d}"
 
@@ -186,13 +213,14 @@ def _iter_batches(
     batch_size: int = BATCH_SIZE,
 ) -> Iterator[tuple[pa.RecordBatch, list[dict[str, str]]]]:
     rng = random.Random(seed)
+    id_width = leading_zero_width(rows)
     start = 0
     while start < rows:
         end = min(start + batch_size, rows)
         typed_rows: list[dict[str, Any]] = []
         csv_rows: list[dict[str, str]] = []
         for row_index in range(start, end):
-            typed, csv_row = _build_row(rng, row_index, conflict_at)
+            typed, csv_row = _build_row(rng, row_index, conflict_at, id_width)
             typed_rows.append(typed)
             csv_rows.append(csv_row)
         yield pa.RecordBatch.from_pylist(typed_rows, schema=SCHEMA), csv_rows

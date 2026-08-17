@@ -93,6 +93,47 @@ def test_string_vs_float_halves_at_conflict_at() -> None:
     assert all(any(character.isdigit() for character in value) for value in values[32:])
 
 
+def test_leading_zero_width_is_derived_from_the_requested_rows() -> None:
+    """DS-3 rider: a fixed 06d retires the class once row_index reaches 1_000_000."""
+    datagen = _datagen()
+    assert datagen.LEADING_ZERO_MIN_WIDTH == 6
+    # Small runs keep the historical six.
+    assert datagen.leading_zero_width(1) == 6
+    assert datagen.leading_zero_width(64) == 6
+    assert datagen.leading_zero_width(100_000) == 6
+    # One digit wider than the largest index (``rows - 1``), from the first count that needs it.
+    assert datagen.leading_zero_width(1_000_000) == 7  # largest index 999_999
+    assert datagen.leading_zero_width(1_000_001) == 8  # largest index 1_000_000
+    assert datagen.leading_zero_width(10_000_000) == 8
+    assert datagen.leading_zero_width(datagen.MAX_ROWS) == 8
+
+
+def test_leading_zero_id_keeps_a_leading_zero_past_one_million() -> None:
+    """The >1M boundary, checked on the formatter — no 1M-row generation in CI."""
+    datagen = _datagen()
+    # The old f"{row_index:06d}" produced "1000000" here: seven chars, no leading zero.
+    assert datagen.format_leading_zero_id(1_000_000, 6) == "1000000"
+    assert datagen.leading_zero_id(1_000_000, 10_000_000) == "01000000"
+    assert datagen.leading_zero_id(9_999_999, 10_000_000) == "09999999"
+    assert datagen.leading_zero_id(999_999, 1_000_000) == "0999999"
+    for rows in (1_000_000, 1_048_576, 10_000_000):
+        width = datagen.leading_zero_width(rows)
+        # Only indices the run can actually emit: 0 .. rows - 1.
+        for row_index in {0, 1, min(999_999, rows - 1), min(1_000_000, rows - 1), rows - 1}:
+            token = datagen.leading_zero_id(row_index, rows)
+            assert token.startswith("0"), (rows, row_index, token)
+            assert len(token) == width, (rows, row_index, token)
+
+
+def test_leading_zero_helper_matches_the_generated_column() -> None:
+    """Bind the helper to the generator so the two cannot drift apart."""
+    datagen = _datagen()
+    table = datagen.small(rows=64, seed=42, conflict_at=32)
+    values = table.column("leading_zero_id").to_pylist()
+    assert values == [datagen.leading_zero_id(index, 64) for index in range(64)]
+    assert all(len(value) == 6 and value.startswith("0") for value in values)
+
+
 def test_typed_columns_match_declared_parquet_types() -> None:
     datagen = _datagen()
     schema = datagen.SCHEMA

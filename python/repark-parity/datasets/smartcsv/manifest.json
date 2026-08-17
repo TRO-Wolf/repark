@@ -1,0 +1,128 @@
+{
+  "family": "smartcsv",
+  "delimiter_schemes": {
+    "comma": ",",
+    "semicolon": ";",
+    "tab": "\t",
+    "pipe": "|"
+  },
+  "duplicate_header_name": "dup_label",
+  "null_tokens_recognized": ["", "null", "NULL", "none", "None", "NA", "na", "n/a", "N/A", "nan", "NaN"],
+  "null_tokens_unrecognized": ["-", "\\N", "(null)", "NIL", "missing", "ok"],
+  "classes": [
+    {
+      "id": "row_id",
+      "scope": "column",
+      "column": "id",
+      "parquet_type": "int64",
+      "description": "monotonic row identifier (the join key for facade pins)"
+    },
+    {
+      "id": "currency_amounts",
+      "scope": "column",
+      "column": "amount_currency",
+      "parquet_type": "string",
+      "description": "currency-marked amounts with thousands separators ($/EUR/GBP marks); the embedded comma forces quoting in the comma scheme"
+    },
+    {
+      "id": "decimal_widths",
+      "scope": "column",
+      "column": "amount_wide",
+      "parquet_type": "string",
+      "description": "decimal width variants: pure fraction, bare int, uniform scale, wide int digits, signs, leading zeros"
+    },
+    {
+      "id": "euro_comma_decimal",
+      "scope": "column",
+      "column": "euro_decimal",
+      "parquet_type": "string",
+      "description": "fixed-point amounts using a comma decimal separator"
+    },
+    {
+      "id": "bool_spellings",
+      "scope": "column",
+      "column": "flag",
+      "parquet_type": "bool",
+      "description": "true/TRUE/t/T and false/FALSE/f/F spellings; typed truth is bool"
+    },
+    {
+      "id": "non_bool_yes_no",
+      "scope": "column",
+      "column": "yes_no",
+      "parquet_type": "string",
+      "description": "yes/no/Y/N spellings that are NOT bool tokens; they must stay strings"
+    },
+    {
+      "id": "null_token_variants",
+      "scope": "column",
+      "column": "nullable_note",
+      "parquet_type": "string",
+      "description": "recognized null spellings (typed truth null) interleaved with unrecognized ones (typed truth the literal string)"
+    },
+    {
+      "id": "embedded_delimiters",
+      "scope": "column",
+      "column": "embedded_delims",
+      "parquet_type": "string",
+      "description": "one value carrying all four candidate delimiters, so every scheme must quote this field"
+    },
+    {
+      "id": "duplicate_header_left",
+      "scope": "column",
+      "column": "dup_label",
+      "parquet_type": "string",
+      "description": "first occurrence of the duplicated header name"
+    },
+    {
+      "id": "duplicate_header_right",
+      "scope": "column",
+      "column": "dup_label_2",
+      "parquet_type": "string",
+      "description": "second occurrence; the CSV header writes 'dup_label' again and the reader is expected to dedupe"
+    },
+    {
+      "id": "ragged_tail_first",
+      "scope": "column",
+      "column": "ragged_tail_1",
+      "parquet_type": "string",
+      "description": "trailing cell dropped by short rows; typed truth is null there"
+    },
+    {
+      "id": "ragged_tail_second",
+      "scope": "column",
+      "column": "ragged_tail_2",
+      "parquet_type": "string",
+      "description": "second trailing cell dropped by short rows; typed truth is null there"
+    },
+    {
+      "id": "utf8_bom",
+      "scope": "file",
+      "description": "every emitted CSV starts with a UTF-8 BOM"
+    },
+    {
+      "id": "preamble_lines",
+      "scope": "file",
+      "description": "two junk lines above the header row; neither contains a candidate delimiter"
+    },
+    {
+      "id": "duplicate_header_row",
+      "scope": "file",
+      "description": "the header row names 'dup_label' twice"
+    },
+    {
+      "id": "ragged_rows",
+      "scope": "file",
+      "description": "short rows omit the two trailing cells; long rows carry one unlabeled overflow cell (short wins on rows that qualify for both)"
+    },
+    {
+      "id": "delimiter_zoo",
+      "scope": "file",
+      "description": "the same logical rows are emitted once per delimiter scheme (data_<scheme>.csv)"
+    },
+    {
+      "id": "quoted_embedded_delimiter",
+      "scope": "file",
+      "description": "in every scheme at least one field is quoted because it embeds that scheme's delimiter"
+    }
+  ]
+}

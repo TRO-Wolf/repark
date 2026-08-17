@@ -60,7 +60,69 @@ DS-5 rider not required).
 | C-016 | Tests read the checked-in `manifest.json` (not a hardcoded twin). | PROVEN — `load_manifest()` in both families |
 | C-017 | No facade tests, no `_cache.py` edit, no lockfiles / `.github/` / crates. | PROVEN — diff names |
 
-## 4. Later increments
+## 4. DS-3 delivered
 
-- DS-3 — `secrets` + `smartcsv`
-- DS-4 — facade-scale pins + `examples/notebooks/datasets_tour.ipynb` (capitalized-explode / dynamicFlatten success pins land here; #154 is on main)
+**Executor (DS-3):** Claude (claude-opus-5) · **Branch:** `opus/c18-ds3-secrets-smartcsv` ·
+**Base:** origin/main at the mimalloc allocator increment (#159). Same charter, same
+fences; only the executor changed for this increment.
+
+`secrets` + `smartcsv` — the last two bound family slugs. Each has `datagen.py`,
+`manifest.json` (tests read the file), `map.md`. `_cache.py` not re-opened. No
+facade tests; DS-4 still owns every engine-facing pin.
+
+**secrets** — ten credential-named columns plus two negative controls, every value
+prefixed `repark-fake-`. **smartcsv** — messy-CSV torture at generator scale:
+parquet typed truth plus one CSV per delimiter scheme, with BOM, preamble, ragged
+rows, duplicate headers, bool spellings, null-token variants and currency/decimal
+width variants.
+
+Two riders from the DS-2 review land here (both were non-live before this
+increment): the manifest↔schema type cross-check, and the `leading_zero_id`
+pad-width fix.
+
+### Proposition ledger (DS-3)
+
+| ID | Proposition | Verdict |
+|---|---|---|
+| C-018 | `secrets` carries the four charter columns plus a labeled credential-shaped set; no Hadoop/S3/JDBC conf-key spellings appear as columns. | PROVEN — `SECRET_COLUMNS` + `test_manifest_labels_every_class_and_column` |
+| C-019 | Every secret value is obviously fake: `repark-fake-` prefix, no real credential shape, no `@`, no URL. | PROVEN — `test_every_secret_value_is_obviously_fake` (`FORBIDDEN_VALUE_PREFIXES` is the fence) |
+| C-020 | Each secrets column is labeled with the needle class it stands for, and the label matches the column name under the `prop_key_is_secret` fold — derived in the test, never by importing repark. | PROVEN — `test_manifest_needle_labels_match_the_column_names` |
+| C-021 | `bucket_key` is a negative control: it ends with `_key` yet the `bucket` carve-out excludes it. | PROVEN — `test_bucket_key_is_the_documented_carve_out` |
+| C-022 | Secrets acceptance: reads behave NORMALLY today; the opt-in flagging mechanism is a roadmap feature this fixture predates. | PROVEN — stated in the `test_datasets_secrets.py` module docstring and `secrets/map.md`; no read behavior is asserted |
+| C-023 | `smartcsv` labels every torture class with a scope, and `small()` at 64 rows emits every one: column classes in the table, file classes in the emitted CSV text. | PROVEN — `test_manifest_column_classes_are_all_emitted_by_small`, `test_manifest_file_classes_are_all_visible_at_small_scale` |
+| C-024 | Delimiter zoo: one CSV per scheme (comma / semicolon / tab / pipe), each byte-equal to `render_csv` and each reconstructing the embedded-delimiter value. | PROVEN — `test_delimiter_zoo_emits_one_file_per_scheme` |
+| C-025 | Ragged rows exist in both directions and short wins the tie (first collision row 137); short rows null the two trailing columns in typed truth. | PROVEN — `test_ragged_rows_null_the_trailing_columns` |
+| C-026 | A3 determinism holds for both new families: same seed+rows ⇒ identical pyarrow tables from `small()` and from the parquet re-read; a seed change moves values. | PROVEN — both families' identity + seed-change + write/re-read tests |
+| C-027 | RIDER a — every manifest-declared type matches the real Arrow field type across all four labeled families, after normalizing spacing and pyarrow's rendering aliases; both directions closed. | PROVEN — `test_datasets_manifest_types.py`; provoked RED by retyping one manifest row |
+| C-028 | RIDER b — `leading_zero_id` keeps a leading zero at every emitted index: the pad width is derived from the requested row count (floor 6), pinned at the >1M boundary without generating 1M rows. | PROVEN — `test_leading_zero_width_is_derived_from_the_requested_rows`, `test_leading_zero_id_keeps_a_leading_zero_past_one_million`, `test_leading_zero_helper_matches_the_generated_column` |
+| C-029 | Zero new dependencies; `_cache.py`, `uv.lock`, `Cargo.lock`, `.github/`, crates and facade src untouched; no generated data committed. | PROVEN — diff names |
+| C-030 | `map.md` lockstep for every touched directory + this ledger appended in the same commit. | PROVEN — §5 |
+
+### Charter deviation (called out)
+
+Addendum **A6** bound the secrets column set to the four charter names plus
+`password` / `session_token` / `accessKey`, with values shaped `repark-fake-…`
+**or** `sk-repark-fake-…`. Two deliberate departures:
+
+1. **No `sk-` prefixed values.** The DS-3 hygiene fence forbids any value that
+   pattern-matches a real credential format, and `sk-` is exactly such a shape.
+   Every value is `repark-fake-…`; `FORBIDDEN_VALUE_PREFIXES` pins the exclusion.
+2. **Three extra columns** (`client_secret`, `private_key`, `credential_id`) so the
+   labeled set covers the remaining needle classes in the `prop_key_is_secret`
+   inventory. All three are ordinary column names, not Hadoop/S3/JDBC conf-key
+   spellings, so the A6 prohibition is respected. Two negative controls (`id`,
+   `bucket_key`) were added for the same reason — a needle set with no non-matches
+   proves nothing.
+
+## 5. Files (DS-3)
+
+New: `datasets/secrets/{datagen.py,manifest.json,__init__.py,map.md}`,
+`datasets/smartcsv/{datagen.py,manifest.json,__init__.py,map.md}`,
+`tests/{test_datasets_secrets.py,test_datasets_smartcsv.py,test_datasets_manifest_types.py}`.
+
+Edited: `datasets/map.md`, `datasets/schema_inference/{datagen.py,__init__.py,manifest.json,map.md}`,
+`tests/test_datasets_schema_inference.py`, `tests/map.md`, this ledger.
+
+## 6. Later increments
+
+- DS-4 — facade-scale pins + `examples/notebooks/datasets_tour.ipynb` (capitalized-explode / dynamicFlatten success pins land here; #154 is on main). Both DS-3 families are ready for it: `secrets` needs a NORMAL-read pin (no redaction), `smartcsv` needs the four-scheme read plus the documented sampling / p>38 POLICY pins.
