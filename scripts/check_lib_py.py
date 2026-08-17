@@ -26,9 +26,9 @@ DEFAULT_CEILING = 2500
 # repo-relative posix path -> (ceiling, reason). Keys sorted. Ceilings DOWN only.
 EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark/src/repark/spark/dataframe/core.py": (
-        8200,  # measured ~8077 post-r27-T0
-        "DataFrame class + plan glue after T0 nested-class extract; "
-        "RATCHET: after method-region mixins (technique B) if shipped",
+        7350,  # measured ~7224 post-T0b plan_collapse extract
+        "DataFrame class + plan glue after the T0 nested-class and T0b plan-collapse "
+        "extracts; RATCHET: after method-region mixins (technique B) if shipped",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
         2800,  # measured ~2733

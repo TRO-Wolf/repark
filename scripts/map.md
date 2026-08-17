@@ -108,7 +108,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   line ceiling (default 2500) with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN
   only; three rows after FN-SPLIT — `dataframe/core.py`,
   `ml/feature/_transformers.py`, `session/_funcs.py`; `functions.py` dropped when the
-  package-split shipped), plus the no-stub rule (a module whose body
+  package-split shipped. **SE-1 PR-B (2026-08-17):** the `dataframe/core.py` ceiling ratcheted
+  DOWN after the T0b `plan_collapse.py` extract; the new module is under the default ceiling
+  and needs no row), plus the no-stub rule (a module whose body
   is only a docstring + imports/re-exports/`__all__`/`pass` must open its docstring with the
   exact substring `re-export binding`; package `__init__.py` files are exempt from the no-stub
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
