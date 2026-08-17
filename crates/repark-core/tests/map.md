@@ -15,7 +15,8 @@ behavior only reachable end-to-end.
   index, cross-batch boundary violations, NULLS LAST discipline, unknown key/view, empty
   keys, non-`MemTable` provider, idempotent redeclaration). **PR-D1:** tighten tags only
   flipped fields, refuses a NULL key, hint-after-tighten restores, `SELECT *` keeps the
-  metadata, tighten vs hint values match. `RepartitionExec` presence is
+  metadata, tighten vs hint values match, top-level schema metadata survives tighten
+  and restore (SQM F2). `RepartitionExec` presence is
   deliberately NOT pinned (size/config-dependent; see the SE-1 unit ledger).
 
 ## I want to…

@@ -748,6 +748,8 @@ class DataFrame:
         # source frame; None on every transformed/derived frame (see declare_sorted).
         "_source_view_name",
         "_storage_level",
+        # Spawn-propagated: True on a tightened source and every descendant (SQM F1).
+        "_tighten_derived",
     )
 
     def __init__(
@@ -811,6 +813,9 @@ class DataFrame:
         # copied by _spawn / _spawn_preserving_identity / _identity_child, so a transformed
         # frame refuses :meth:`declare_sorted` loudly instead of declaring the wrong view.
         self._source_view_name: str | None = None
+        # SE-1 PR-D1 SQM F1: True after tightenNulls=True; copied by every spawn so a
+        # derived frame cannot Iceberg-CREATE through a temp-view hop that drops tags.
+        self._tighten_derived: bool = False
 
     def _ensure_alive(self) -> None:
         """Raise if the owning :class:`ReparkSession` has been stopped."""
@@ -830,6 +835,7 @@ class DataFrame:
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
         child._origin_not_emitted = self._origin_not_emitted
+        child._tighten_derived = self._tighten_derived
         return child
 
     def _spawn_preserving_identity(self, inner: Any) -> DataFrame:
@@ -2794,7 +2800,18 @@ class DataFrame:
         # still holds the table source captured when the scan was planned — re-resolve it,
         # or the frame that declared would be the one frame that never sees the elision.
         self._inner = self._session.sql(f"SELECT * FROM {view}")
+        self._tighten_derived = tightenNulls
         return self
+
+    def _refuse_tightened_iceberg_create(self) -> None:
+        """Refuse Iceberg CREATE of a tightened (or tighten-derived) frame until PR-D2."""
+        if not self._tighten_derived:
+            return
+        raise AnalysisException(
+            "Iceberg CREATE of a frame declared with tightenNulls=True is refused until "
+            "PR-D2 (the write-boundary relax). Drop tightenNulls or wait for the "
+            "create-path relax."
+        )
 
     # repark extension (no PySpark equivalent); camelCase is the disclosed repark spelling.
     declareSorted = declare_sorted  # noqa: N815 — repark-extra camelCase surface

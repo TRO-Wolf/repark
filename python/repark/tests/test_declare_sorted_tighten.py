@@ -9,6 +9,8 @@ the unwritten plan until PR-D3.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from repark import ReparkSession
@@ -53,6 +55,11 @@ def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSe
     assert tight_arrow.schema.field("ts").nullable is False
     assert hint_arrow.schema.field("sym").nullable is True
     assert hint_arrow.schema.field("ts").nullable is True
+    # F4: df.schema is the analyzed logical path, distinct from to_arrow().
+    assert tight.schema["sym"].nullable is False
+    assert tight.schema["ts"].nullable is False
+    assert hint.schema["sym"].nullable is True
+    assert hint.schema["ts"].nullable is True
 
 
 def test_tighten_refuses_nulls_in_a_declared_key(spark: ReparkSession) -> None:
@@ -70,11 +77,46 @@ def test_hint_after_tighten_restores_nullability(spark: ReparkSession) -> None:
     frame = spark.createDataFrame(SORTED_ROWS, SCHEMA)
     frame.declareSorted("sym", "ts", tightenNulls=True)
     assert frame.to_arrow().schema.field("ts").nullable is False
+    assert frame.schema["ts"].nullable is False
     frame.declareSorted("sym", "ts")
     assert frame.to_arrow().schema.field("ts").nullable is True
+    assert frame.schema["ts"].nullable is True
     frame.declareSorted("sym", "ts", tightenNulls=True)
     assert frame.to_arrow().schema.field("ts").nullable is False
+    assert frame.schema["ts"].nullable is False
 
 
 def test_tighten_nulls_keyword_is_shared_by_both_spellings() -> None:
     assert DataFrame.declareSorted is DataFrame.declare_sorted
+
+
+@pytest.fixture
+def spark_catalog(tmp_path: Path) -> ReparkSession:
+    session = ReparkSession.builder.appName("pytest-declare-sorted-tighten-write").getOrCreate()
+    session.register_memory_catalog("glue_catalog", tmp_path)
+    session.sql("CREATE NAMESPACE glue_catalog.writer_ns")
+    return session
+
+
+def test_save_as_table_create_refuses_tightened_and_derived(
+    spark_catalog: ReparkSession,
+) -> None:
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    derived = tight.select((F.col("ts") + 1).alias("ts2"))
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        tight.write.saveAsTable("glue_catalog.writer_ns.tight_src")
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        derived.write.saveAsTable("glue_catalog.writer_ns.tight_derived")
+
+
+def test_write_to_create_refuses_tightened_and_derived(spark_catalog: ReparkSession) -> None:
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    derived = tight.select((F.col("ts") + 1).alias("ts2"))
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        tight.writeTo("glue_catalog.writer_ns.wt_src").create()
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        derived.writeTo("glue_catalog.writer_ns.wt_derived").create()

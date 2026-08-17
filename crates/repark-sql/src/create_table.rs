@@ -122,6 +122,8 @@ pub(crate) async fn execute_create_table(
     // execution needed); the column-def form derives it from the declared columns.
     let (arrow_schema, query) = if let Some(query) = create.query.as_ref() {
         let frame = cx.ctx.sql(&query.to_string()).await?;
+        repark_core::refuse_iceberg_create_of_tightened_plan(frame.logical_plan())
+            .map_err(|error| DataFusionError::Plan(error.to_string()))?;
         let schema = Arc::new(frame.schema().as_arrow().clone());
         (schema, Some(frame))
     } else {

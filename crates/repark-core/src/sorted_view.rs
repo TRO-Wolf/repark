@@ -16,7 +16,8 @@ use arrow::compute::kernels::sort::{LexicographicalComparator, SortColumn, SortO
 use arrow::datatypes::{Field, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use datafusion::common::Column;
-use datafusion::logical_expr::{Expr, SortExpr};
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
+use datafusion::logical_expr::{Expr, LogicalPlan, SortExpr};
 
 use crate::error_map::engine_err;
 use repark_common::{Error, Result};
@@ -187,7 +188,36 @@ pub fn tightened_field_names(schema: &Schema) -> Vec<String> {
 /// [`Error::Analysis`] naming `tightenNulls` and the tagged fields when any field carries
 /// the tighten metadata.
 pub fn refuse_iceberg_create_of_tightened_schema(schema: &Schema) -> Result<()> {
-    let names = tightened_field_names(schema);
+    refuse_named_tighten_fields(&tightened_field_names(schema))
+}
+
+/// ===========================================================================================
+/// Source-based Iceberg-CREATE refuse (SQM F1): walk every `TableScan` and refuse if the
+/// *registered* provider schema carries the tighten tag. Output-schema tags are not enough
+/// — DataFusion drops field metadata on computed expressions while propagating
+/// non-nullability, which would otherwise persist a required Iceberg column.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`Error::Analysis`] when any scanned view is tagged; [`Error::DataFusion`] if the plan
+/// walk fails.
+pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()> {
+    let mut tagged: Vec<String> = Vec::new();
+    plan.apply(|node| {
+        if let LogicalPlan::TableScan(scan) = node {
+            for name in tightened_field_names(scan.source.schema().as_ref()) {
+                if !tagged.iter().any(|existing| existing == &name) {
+                    tagged.push(name);
+                }
+            }
+        }
+        Ok(TreeNodeRecursion::Continue)
+    })
+    .map_err(engine_err)?;
+    refuse_named_tighten_fields(&tagged)
+}
+
+fn refuse_named_tighten_fields(names: &[String]) -> Result<()> {
     if names.is_empty() {
         return Ok(());
     }
@@ -229,7 +259,10 @@ fn restore_tighten_metadata(
                 .with_metadata(metadata)
         })
         .collect();
-    rebuild_batches(Arc::new(Schema::new(fields)), batches)
+    rebuild_batches(
+        Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone())),
+        batches,
+    )
 }
 
 fn apply_tighten(
@@ -272,7 +305,10 @@ fn apply_tighten(
     if !flipped_any {
         return Ok((schema, batches));
     }
-    rebuild_batches(Arc::new(Schema::new(fields)), batches)
+    rebuild_batches(
+        Arc::new(Schema::new_with_metadata(fields, schema.metadata().clone())),
+        batches,
+    )
 }
 
 fn rebuild_batches(

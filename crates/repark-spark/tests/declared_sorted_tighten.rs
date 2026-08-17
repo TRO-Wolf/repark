@@ -161,3 +161,39 @@ async fn iceberg_create_of_tightened_frame_refuses_insert_into_existing_allowed(
         .await
         .expect("collect insert");
 }
+
+#[tokio::test]
+async fn iceberg_create_from_derived_expression_over_tightened_source_refuses() {
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = spark_session();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]),
+        )
+        .await
+        .unwrap();
+    let rows = nullable_sorted_rows(4);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(), true)
+        .await
+        .unwrap();
+    let refused = session
+        .sql("CREATE TABLE ice.sales.derived AS SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .expect_err("derived-expression CTAS must refuse via the source walk");
+    let message = refused.to_string();
+    assert!(
+        message.contains("tightenNulls"),
+        "names the flag: {message}"
+    );
+}

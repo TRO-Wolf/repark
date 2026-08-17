@@ -221,6 +221,7 @@ class DataFrameWriter:
         session = self._dataframe._session
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if not session.table_exists(qualified):
+            self._dataframe._refuse_tightened_iceberg_create()
             self._run_through_temp_view(lambda view: self._ctas_sql(table_ref, view=view))
             return
         if normalized_mode == "error":
@@ -1140,6 +1141,7 @@ class DataFrameWriterV2:
                 "because it already exists. Choose a different name, drop or replace the existing "
                 "object, or use createOrReplace()."
             )
+        self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=False)
 
     def createOrReplace(self) -> None:  # noqa: N802 — PySpark method name
@@ -1148,6 +1150,7 @@ class DataFrameWriterV2:
         Routes to ``CREATE OR REPLACE TABLE … AS SELECT`` (engine path already supported).
         """
         self._dataframe._ensure_alive()
+        self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
 
     create_or_replace = createOrReplace
@@ -1166,6 +1169,7 @@ class DataFrameWriterV2:
                 f"[TABLE_OR_VIEW_NOT_FOUND] Cannot replace table {self._table!r} because it does "
                 "not exist. Use create() or createOrReplace() to create it."
             )
+        self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
 
     def append(self) -> None:

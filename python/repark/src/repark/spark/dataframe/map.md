@@ -58,8 +58,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   frame would be the one frame that never sees the elision.
   **SE-1 PR-D1:** keyword-only `tightenNulls: bool = False` (one name, both
   spellings) unlocks full elision by flipping verified-null-free keys to
-  non-nullable; a NULL key refuses; a later default-flag call restores. See
-  `task/se1-declared-sorted-ledger.md`.
+  non-nullable; a NULL key refuses; a later default-flag call restores.
+  `_tighten_derived` is spawn-propagated so writer CREATE paths refuse before the
+  temp-view hop (SQM F1). See `task/se1-declared-sorted-ledger.md`.
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
@@ -72,7 +73,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
-  + write helpers (real body; technique A).
+  + write helpers (real body; technique A). **SE-1 PR-D1 SQM F1:** CREATE paths
+  (`saveAsTable` create, `writeTo().create()` / `createOrReplace` / `replace`) refuse
+  a `_tighten_derived` frame before the temp-view hop.
   **F-3 (2026-08-17):** the six undocumented `DataFrameStatFunctions` methods gained
   docstrings — the five delegating ones point at their `DataFrame` twin (which holds the
   real semantics, so there is one truth), and `freqItems` says plainly that it refuses.

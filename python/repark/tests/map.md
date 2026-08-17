@@ -105,9 +105,10 @@ NOT in that file is a defect, not a decision.
   `task/se1-declared-sorted-ledger.md`. **PR-D1 does not edit this file** (13 nodes stay
   byte-identical).
 - `test_declare_sorted_tighten.py` — **SE-1 PR-D1:** `tightenNulls=True` value-identical
-  to hint with key fields non-nullable on `to_arrow()`; refuse-on-nulls (names the flag);
-  hint-after-tighten restores; both spellings share the keyword. Serving-shape elision is
-  the Rust Spark-door pin, not this file.
+  to hint with key fields non-nullable on `to_arrow()` **and** `df.schema` (SQM F4);
+  refuse-on-nulls (names the flag); hint-after-tighten restores; both spellings share the
+  keyword; `saveAsTable` create and `writeTo().create()` refuse a tightened frame and a
+  tighten-derived frame (SQM F3). Serving-shape elision is the Rust Spark-door pin.
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
 

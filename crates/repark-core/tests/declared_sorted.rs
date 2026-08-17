@@ -6,6 +6,7 @@
 //! deliberately not pinned (at probe scale 1.2M rows it appears and the elision holds
 //! through it — recorded in the unit ledger, not asserted here).
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use arrow::array::{Float64Array, Int64Array, StringArray};
@@ -508,5 +509,50 @@ async fn tighten_and_hint_results_are_bit_identical() {
     assert_eq!(
         rendered[0], rendered[1],
         "tighten must not change any value"
+    );
+}
+
+#[tokio::test]
+async fn tighten_preserves_top_level_schema_metadata() {
+    let session = ReparkSession::new().unwrap();
+    let schema = Arc::new(Schema::new_with_metadata(
+        vec![
+            Field::new("symbol", DataType::Utf8, false),
+            Field::new("ts", DataType::Int64, true),
+            Field::new("close", DataType::Float64, false),
+        ],
+        HashMap::from([("owner".to_string(), "se1-d1".to_string())]),
+    ));
+    let rows = RecordBatch::try_new(
+        Arc::clone(&schema),
+        vec![
+            Arc::new(StringArray::from(vec!["AAA", "AAA"])),
+            Arc::new(Int64Array::from(vec![Some(1), Some(2)])),
+            Arc::new(Float64Array::from(vec![1.0, 2.0])),
+        ],
+    )
+    .unwrap();
+    session
+        .register_record_batches_as_temp_view("t", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("t", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let tightened = view_schema(&session, "t").await;
+    assert_eq!(
+        tightened.metadata().get("owner").map(String::as_str),
+        Some("se1-d1"),
+        "tighten must not drop top-level schema metadata"
+    );
+    session
+        .declare_temp_view_sorted("t", &keys(&["symbol", "ts"]), false)
+        .await
+        .unwrap();
+    let restored = view_schema(&session, "t").await;
+    assert_eq!(
+        restored.metadata().get("owner").map(String::as_str),
+        Some("se1-d1"),
+        "hint restore must not drop top-level schema metadata"
     );
 }

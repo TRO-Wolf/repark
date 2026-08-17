@@ -155,8 +155,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
   (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class)
   + **PR-D1 `tightenNulls`:** `apply_declare_nullability` (restore then optional tighten;
-  tag flipped fields with `repark.tighten_nulls=1`) and the public
-  `refuse_iceberg_create_of_tightened_schema` both SQL doors call at CTAS derivation.
+  tag flipped fields with `repark.tighten_nulls=1`; rebuilds via
+  `Schema::new_with_metadata` so top-level schema metadata survives). Public
+  `refuse_iceberg_create_of_tightened_plan` (walk `TableScan` source schemas — SQM F1)
+  plus `refuse_iceberg_create_of_tightened_schema` (output-tag belt). Both SQL doors
+  call these at CTAS derivation.
   The public door is `session.rs::declare_temp_view_sorted(..., tighten_nulls)`: verify
   FIRST, then apply nullability, then re-register the `MemTable` `with_sort_order`.
   Trust model is declare + ALWAYS-verify, refuse loud — no unverified fast path, by design

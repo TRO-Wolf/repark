@@ -230,17 +230,32 @@ Iceberg writes stay optional (CREATE refused this PR; exact relax is PR-D2).
   metadata first, then optionally flips verified-null-free **nullable** keys to
   non-nullable and tags them `repark.tighten_nulls=1`. Already-non-nullable keys are
   not tagged. A NULL in a declared key refuses naming the key and `tightenNulls`.
-- Both SQL doors refuse Iceberg CREATE whose derived Arrow schema carries that
-  metadata (`refuse_iceberg_create_of_tightened_schema` at CTAS derivation). INSERT
-  into an existing table stays allowed.
+- Both SQL doors refuse Iceberg CREATE at CTAS derivation. **SQM F1 (2026-08-17):**
+  tag-only detection on the *output* schema is not enough — DataFusion 54.1
+  propagates non-nullability through computed expressions (`ts + 1 AS ts2`) while
+  dropping field metadata, so a derived CTAS would persist a required Iceberg
+  column. Detection is now **source-based**:
+  - Engine: `refuse_iceberg_create_of_tightened_plan` walks every `TableScan` and
+    refuses if the registered provider schema carries `repark.tighten_nulls`.
+    Output-schema tag check remains as a belt.
+  - Facade: `_tighten_derived` is set on a successful `tightenNulls=True` and
+    copied by `_spawn`; `saveAsTable` create / `writeTo().create()` /
+    `createOrReplace` / `replace` refuse on that marker **before** the temp-view
+    re-registration hop (which would also drop tags).
+  INSERT into an existing table stays allowed.
 - Facade: keyword-only `tightenNulls: bool = False` on both spellings. Docstring +
   `docs/guide/ta-guide.md` disclose the in-engine schema change. No parity-corpus row
   (no Spark twin). Orchestrator owns `docs/spark-sql-iceberg-parity.md` from the
   payload below.
-- Pins: existing 13 `test_declare_sorted.py` nodes untouched. New facade file
-  `test_declare_sorted_tighten.py`. Rust execution-layer serving-shape pin in
-  `crates/repark-spark/tests/declared_sorted_tighten.rs` (`create_physical_plan`, not
-  EXPLAIN). ANSI CTAS refuse in `crates/repark-sql/tests/declared_sorted_tighten.rs`.
+- Rebuilds use `Schema::new_with_metadata` so top-level schema metadata survives
+  tighten and hint-restore (SQM F2).
+- Pins: existing 13 `test_declare_sorted.py` nodes untouched. Facade file
+  `test_declare_sorted_tighten.py` (value+type on `to_arrow()` **and** `df.schema`
+  — SQM F4; writer CREATE refuse on source and derived — SQM F3). Rust
+  execution-layer serving-shape pin plus derived-expression CTAS refuse in
+  `crates/repark-spark/tests/declared_sorted_tighten.rs`. ANSI twins in
+  `crates/repark-sql/tests/declared_sorted_tighten.rs`. Schema-metadata pin in
+  `crates/repark-core/tests/declared_sorted.rs`.
 
 ## Extension-registry payload (orchestrator writes)
 

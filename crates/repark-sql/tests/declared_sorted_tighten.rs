@@ -84,3 +84,33 @@ async fn ansi_ctas_of_tightened_frame_refuses_insert_into_existing_allowed() {
         .await
         .expect("collect insert");
 }
+
+#[tokio::test]
+async fn ansi_ctas_from_derived_expression_over_tightened_source_refuses() {
+    let warehouse_dir = TempDir::new().expect("warehouse tempdir");
+    let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
+    let session = ansi_session(&warehouse).await;
+    session
+        .sql(&format!(
+            "CREATE SCHEMA ice.sales WITH (location = '{warehouse}/sales')"
+        ))
+        .await
+        .expect("CREATE SCHEMA must run");
+    let rows = nullable_sorted_rows();
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &["symbol".to_string(), "ts".to_string()], true)
+        .await
+        .unwrap();
+    let refused = session
+        .sql("CREATE TABLE ice.sales.derived AS SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .expect_err("derived-expression CTAS must refuse via the source walk");
+    let message = refused.to_string();
+    assert!(
+        message.contains("tightenNulls"),
+        "names the flag: {message}"
+    );
+}
