@@ -1603,6 +1603,7 @@ def _make_type_verifier(
     from repark.errors import PySparkTypeError, PySparkValueError
 
     def verifier(obj: Any) -> None:
+        """Check ``obj`` against the captured type, raising on null/shape/leaf mismatch."""
         if obj is None:
             if nullable:
                 return

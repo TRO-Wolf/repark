@@ -17,6 +17,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   path: collation was stripped to `STRING`).
   **S-1 R2:** `_apply_builder_datafusion_conf` skips `datafusion.runtime.temp_directory`
   (already applied at Rust `build()`; a runtime SET of it refuses and names `TMPDIR`).
+  **F-3 (2026-08-17):** the last undocumented public name here, `int_size_to_ok` inside
+  `_supported_array_typecodes`, gained a docstring; docstring-only, ceiling unmoved.
 - `builder_conf.py` — SparkContext, RuntimeConfig.
   **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
   **S-1 R1:** RuntimeConfig docs — `datafusion.runtime.memory_limit` swaps a new
@@ -30,6 +32,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   **G15:** `Builder._set_config_entry` refuses collation `SQLConf` keys (silent-ignore path).
   getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted
   `_config` key cannot silently store (SEC-003).
+  **F-3 (2026-08-17):** `probe`, the temp-view existence closure inside `resolve_table_name`,
+  gained a docstring; docstring-only, and the file stays under its 2500-line ceiling.
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination)
 - `sql_udf.py` — UDFRegistration
 - `create_dataframe.py` — region marker + SparkSession/ReParkSession aliases

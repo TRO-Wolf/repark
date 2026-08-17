@@ -1,0 +1,107 @@
+# F-3 — public docstring backfill (facade)
+
+## Purpose
+
+Bring `python/repark/src/repark/` to **100% public-docstring coverage outside
+`spark/dataframe/core.py`**, so the facade a user reads in an editor tooltip explains itself.
+Docstring-only: no signature, logic, import or `__all__` moved, no dependency added, no lockfile
+touched, no file-size ceiling raised.
+
+**Census method** (re-derived, not inherited): AST walk over every `*.py` under
+`python/repark/src/repark/`; a node counts when it is a `FunctionDef` / `AsyncFunctionDef` /
+`ClassDef` whose name does not start with `_`; it is *missing* when `ast.get_docstring` returns
+`None`. The walk is `ast.walk`, so nested helper closures (`probe`, `verifier`, `rec`, …) count
+too — they are public by that rule and they were the long tail.
+
+## Census — before / after
+
+Base `834b2df`. Every count below is that walk, not an estimate.
+
+| File | Public defs/classes | Documented before | Documented after | Missing after |
+|---|---|---|---|---|
+| `spark/functions_udf.py` | 53 | 16 | 53 | 0 |
+| `spark/polars.py` | 50 | 20 | 50 | 0 |
+| `spark/dataframe/writer_readwriter.py` | 31 | 25 | 31 | 0 |
+| `spark/merge.py` | 17 | 14 | 17 | 0 |
+| `spark/functions.py` | 41 | 40 | 41 | 0 |
+| `spark/row.py` | 5 | 4 | 5 | 0 |
+| `spark/types.py` | 93 | 92 | 93 | 0 |
+| `spark/session/_funcs.py` | 3 | 2 | 3 | 0 |
+| `spark/session/session_core.py` | 40 | 39 | 40 | 0 |
+| `spark/ml/feature/_transformers.py` | 40 | 39 | 40 | 0 |
+| **`spark/dataframe/core.py`** *(deferred)* | 103 | 92 | 92 | **11** |
+| **Package total** | **1210** | **1117** | **1199** | **11** |
+
+82 docstrings added across 10 files; 101 inserted lines, 0 deleted (the diff is purely
+additive — verified with `git diff -U0`).
+
+## Why `core.py` is deferred, not skipped
+
+`spark/dataframe/core.py` measures **8199 lines against its 8200-line ceiling** in
+`scripts/check_lib_py.py`. Its 11 remaining names are all nested rendering/binding closures
+(`head`, `fmt_row`, `hline`, `row_line`, `is_numeric_cell`, `replace_idents`, `replacer`). Eleven
+docstrings cannot fit in one line of headroom, and the sanctioned outs are *split the module* or
+*raise the ceiling* — F-3 is a docs unit and does neither. They land with the next extract that
+frees headroom; ceilings ratchet down only.
+
+## Content rules applied
+
+- First line is an imperative summary; parameters/returns spelled out only where the signature is
+  not self-evident. Style follows each file's documented neighbours (`functions_expr.py`, at
+  201/201, is the house style for the function modules).
+- **No PySpark text was copied.** Every line is original, and each divergence is stated rather
+  than smoothed over.
+- **No invented examples.** The house style in the touched files uses prose and `::` literal
+  blocks, not doctests (nothing in the repo collects doctests), so no worked output values were
+  written. Every *behavioural* claim below was executed against the module built in this tree
+  rather than assumed from Spark or from polars.
+
+### `functions_udf.py` — the UDF execution model, stated honestly
+
+37 of the 82 are the composition-refuse stubs on `PandasUDFColumn` and `PythonUDFColumn`. These
+are **not** plan `Column`s: a UDF result is a projection-rewrite bridge node, so `udf_col + 1`,
+`udf_col > 0` in a filter, or nesting under `coalesce` raises
+`UnsupportedOperationException` instead of silently composing. Each stub now names the surface it
+refuses and points at the fix (materialize via `select`/`withColumn`, then compose). `over` is
+refused on the classic scalar `udf` marker while `PandasUDFColumn.over` is real (unbounded
+whole-partition `GROUPED_AGG`) — the docstrings keep that asymmetry visible.
+
+### `polars.py` — the interop contract, measured not assumed
+
+`repark.polars` is polars-*style* naming over repark `Column` machinery, not real polars. Four
+`.str` / `.dt` behaviours differ from the library whose spelling they borrow, so each carries an
+explicit **Divergence** note, and each was executed before it was written:
+
+| Name | Measured on the built engine | Real polars |
+|---|---|---|
+| `str.replace("X", "-")` on `aXbXc` | `a-b-c` — every match | first match only |
+| `str.replace_all` | `a-b-c` — identical lowering | (same) |
+| `str.zfill(6)` on `-42` | `000-42` — plain `lpad`, sign not hoisted | `-00042` |
+| `dt.weekday()` on a Monday | `0` (Spark 0=Mon..6=Sun) | `1` (1=Mon..7=Sun) |
+| `dt.truncate("month")` | Spark `date_trunc` granularity name | polars duration (`"1mo"`) |
+
+These are polars-only differences. Per the divergence registry's own admission rule, a
+polars-or-fork-only difference cannot become a registry row without a pin, so they stay
+docstring-local and contradict nothing in
+[../docs/spark-sql-iceberg-parity.md](../docs/spark-sql-iceberg-parity.md).
+
+The loud-unsupported members (`str.split`, `dt.hour` / `minute` / `second`, `dt.offset_by`) say
+they refuse today and why, instead of reading as if they work.
+
+### `writer_readwriter.py` / `merge.py`
+
+The five delegating `DataFrameStatFunctions` methods point at their `DataFrame` twin rather than
+restating semantics — one truth, no drift. `freqItems` states that it refuses. `merge.py`'s
+`WhenNotMatchedBySource` terminals now read like their `WhenMatched` siblings.
+
+## Verification
+
+- `make ci` → exit 0.
+- `make py-test-facade` → exit 0 (built native module; the divergence table above came from it).
+- `scripts/check_lib_py.sh` → 65 files clean; no ceiling raised, `core.py` byte-untouched.
+- Post-change census re-run: 1199/1210, the 11 remaining all in `core.py`.
+
+## Follow-on
+
+- **`core.py` ×11** — blocked on headroom, not on judgement. When the method-region extract lands
+  (the `RATCHET` note already on that ceiling), backfill the 11 closures in the same PR.

@@ -2001,6 +2001,7 @@ class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
         terms: list[str] = []
 
         def rec(start: int, remaining: int, factors: list[str]) -> None:
+            """Emit every monomial of the remaining degree, drawing factors from ``start`` on."""
             if remaining == 0:
                 if factors:
                     terms.append("*".join(factors))

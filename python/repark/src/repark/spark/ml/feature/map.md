@@ -59,3 +59,6 @@ Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../.
   — no residual S1+ on charter surface (F-Q1-014).
 - 2026-08-01 style rider: `_transformers.py` lint fixes (pairwise/ternary/import order) + format.
 - M7 format/lint gate clean (ruff format + py-lint).
+- **F-3 (2026-08-17):** `_transformers.py` reached 100% public-docstring coverage — the one
+  gap was `rec`, the monomial recursion inside `PolynomialExpansion`; it now states what it
+  emits and what `start` bounds. Docstring-only, and the file's 2800-line ceiling is unmoved.

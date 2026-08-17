@@ -1487,6 +1487,7 @@ def _supported_array_typecodes() -> frozenset[str]:
     import sys
 
     def int_size_to_ok(bit_width: int) -> bool:
+        """True when ``bit_width`` still fits a signed JVM integral type."""
         return bit_width <= 64
 
     supported: set[str] = {"f", "d"}

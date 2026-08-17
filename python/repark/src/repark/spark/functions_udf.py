@@ -512,6 +512,7 @@ class PandasUDFColumn:
         self._refuse_composition("logical (~)")
 
     def cast(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``cast`` — select the marker first, then cast the materialized column."""
         self._refuse_composition("cast")
 
     # ``over`` is implemented above for M6 unbounded windowed GROUPED_AGG (not refused).
@@ -520,58 +521,75 @@ class PandasUDFColumn:
     # C5 residual). All refuse UOE M5 seed — same class as arithmetic/cast.
 
     def is_null(self) -> None:
+        """Refuse ``isNull`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("isNull")
 
     isNull = is_null  # noqa: N815 — PySpark camelCase alias
 
     def is_not_null(self) -> None:
+        """Refuse ``isNotNull`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("isNotNull")
 
     isNotNull = is_not_null  # noqa: N815 — PySpark camelCase alias
 
     def between(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``between`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("between")
 
     def eqNullSafe(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``eqNullSafe`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("eqNullSafe")
 
     def when(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``when`` — a pandas_udf marker cannot open a ``CASE`` arm."""
         self._refuse_composition("when")
 
     def otherwise(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``otherwise`` — a pandas_udf marker cannot close a ``CASE`` arm."""
         self._refuse_composition("otherwise")
 
     def asc(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``asc`` — sort on the materialized column instead of the marker."""
         self._refuse_composition("asc")
 
     def desc(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``desc`` — sort on the materialized column instead of the marker."""
         self._refuse_composition("desc")
 
     def contains(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``contains`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (contains)")
 
     def startswith(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``startswith`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (startswith)")
 
     def endswith(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``endswith`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (endswith)")
 
     def like(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``like`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (like)")
 
     def ilike(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``ilike`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (ilike)")
 
     def rlike(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``rlike`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (rlike)")
 
     def bitwiseAND(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``bitwiseAND`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("bitwiseAND")
 
     def bitwiseOR(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``bitwiseOR`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("bitwiseOR")
 
     def bitwiseXOR(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``bitwiseXOR`` — a pandas_udf marker is not a plan :class:`Column`."""
         self._refuse_composition("bitwiseXOR")
 
     def __contains__(self, _item: object) -> bool:
@@ -1047,64 +1065,83 @@ class PythonUDFColumn:
         self._refuse_composition("logical (~)")
 
     def cast(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``cast`` — select the marker first, then cast the materialized column."""
         self._refuse_composition("cast")
 
     def over(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``over`` — a classic scalar ``udf`` has no windowed form on repark."""
         self._refuse_composition("window .over")
 
     def is_null(self) -> None:
+        """Refuse ``isNull`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("isNull")
 
     isNull = is_null  # noqa: N815 — PySpark camelCase alias
 
     def is_not_null(self) -> None:
+        """Refuse ``isNotNull`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("isNotNull")
 
     isNotNull = is_not_null  # noqa: N815 — PySpark camelCase alias
 
     def between(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``between`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("between")
 
     def eqNullSafe(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``eqNullSafe`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("eqNullSafe")
 
     def when(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``when`` — a udf marker cannot open a ``CASE`` arm."""
         self._refuse_composition("when")
 
     def otherwise(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``otherwise`` — a udf marker cannot close a ``CASE`` arm."""
         self._refuse_composition("otherwise")
 
     def asc(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``asc`` — sort on the materialized column instead of the marker."""
         self._refuse_composition("asc")
 
     def desc(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``desc`` — sort on the materialized column instead of the marker."""
         self._refuse_composition("desc")
 
     def contains(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``contains`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (contains)")
 
     def startswith(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``startswith`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (startswith)")
 
     def endswith(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``endswith`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (endswith)")
 
     def like(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``like`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (like)")
 
     def ilike(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``ilike`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (ilike)")
 
     def rlike(self, *_args: Any, **_kwargs: Any) -> None:
+        """Refuse ``rlike`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("string predicate (rlike)")
 
     def bitwiseAND(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``bitwiseAND`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("bitwiseAND")
 
     def bitwiseOR(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``bitwiseOR`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("bitwiseOR")
 
     def bitwiseXOR(self, *_args: Any, **_kwargs: Any) -> None:  # noqa: N802 — PySpark camelCase
+        """Refuse ``bitwiseXOR`` — a udf marker is not a plan :class:`Column`."""
         self._refuse_composition("bitwiseXOR")
 
     def __contains__(self, _item: object) -> bool:

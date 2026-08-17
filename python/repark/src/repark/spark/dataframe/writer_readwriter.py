@@ -1369,18 +1369,23 @@ class DataFrameStatFunctions:
         probabilities: list[float] | tuple[float, ...],
         relativeError: float,  # noqa: N803
     ) -> list[float] | list[list[float]]:
+        """Approximate quantiles of numeric columns — see :meth:`DataFrame.approxQuantile`."""
         return self._dataframe.approxQuantile(col, probabilities, relativeError)
 
     def corr(self, col1: str, col2: str, method: str | None = None) -> float:
+        """Pearson correlation of two columns — see :meth:`DataFrame.corr`."""
         return self._dataframe.corr(col1, col2, method)
 
     def cov(self, col1: str, col2: str) -> float:
+        """Sample covariance of two columns — see :meth:`DataFrame.cov`."""
         return self._dataframe.cov(col1, col2)
 
     def crosstab(self, col1: str, col2: str) -> DataFrame:
+        """Pair-wise frequency table of two columns — see :meth:`DataFrame.crosstab`."""
         return self._dataframe.crosstab(col1, col2)
 
     def freqItems(self, cols: list[str], support: float | None = None) -> DataFrame:  # noqa: N802
+        """Refuse — frequent-item discovery is not implemented; raises loudly today."""
         del cols, support
         raise UnsupportedOperationException(
             "DataFrame.stat.freqItems is not supported yet (disclosed R-DF-BATCH2)"
@@ -1392,4 +1397,5 @@ class DataFrameStatFunctions:
         fractions: dict[Any, float],
         seed: int | None = None,
     ) -> DataFrame:
+        """Stratified sample without replacement — see :meth:`DataFrame.sampleBy`."""
         return self._dataframe.sampleBy(col, fractions, seed)

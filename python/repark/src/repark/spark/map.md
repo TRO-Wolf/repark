@@ -1453,3 +1453,13 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
 
 - r26 octo C1: smartCsv samplingRows also via DataFrameReader.option map
 - octo C3 commit 2026-08-05T23:29:11Z: order-independent decimal union
+- **F-3 (2026-08-17) docstring backfill:** every public `def`/`class` in this directory now
+  carries a docstring — `functions_udf.py` (37: the `PandasUDFColumn` / `PythonUDFColumn`
+  composition-refuse stubs, each naming the surface it refuses), `polars.py` (30), `merge.py`
+  (3: the `WhenNotMatchedBySource` terminals), plus singles in `functions.py`, `row.py` and
+  `types.py`. The `polars.py` `.str` / `.dt` texts state the repark-specific contract measured
+  against the built engine, not polars': `replace` replaces EVERY match (so it equals
+  `replace_all`), `zfill` is a plain `lpad` with no sign handling, `weekday` uses Spark's
+  0=Monday..6=Sunday, and `truncate` takes a Spark `date_trunc` granularity (not `"1mo"`).
+  These are polars-only differences, so they stay docstring-local — the divergence registry
+  takes rows only for pinned Spark differences. Docstring-only; no signature or logic moved.
