@@ -9,9 +9,13 @@ without enabling PyO3 `multiple-pymethods`.
 ## Contents
 
 - `mod.rs` — `#[pyclass] PyColumn` + the one `#[pymethods]` impl (constructors, operators,
-  **G6-3 rider (2026-08-15):** `call_scalar` grew a `"unix_date"` arm (`repark_functions::expr_fn::unix_date`) so the facade's `F.unix_date` builds the engine's function instead of the `CAST(x AS DATE) AS INT` chain the cast-legality gate now refuses.
-  `call_scalar`, date / window / aggregate arms) and `expr_tests` (sql / `call_scalar` handoff
-  pins). `multiple-pymethods` stays off.
+  thin `call_scalar` / `aggregate` / `aggregate_binary` wrappers, date / window / aggregate
+  arms) and `expr_tests` (sql / `call_scalar` handoff pins). `multiple-pymethods` stays off.
+- `function_dispatch.rs` — **FN-GX (2026-08-16):** move-only extract of the `call_scalar`
+  name table plus the `aggregate` / `aggregate_binary` UDAF match tables. New function
+  names land as arms here. **G6-3 rider:** `"unix_date"` arm
+  (`repark_functions::expr_fn::unix_date`) so `F.unix_date` builds the engine function
+  instead of the `CAST(x AS DATE) AS INT` chain the cast-legality gate refuses.
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,
@@ -28,7 +32,9 @@ without enabling PyO3 `multiple-pymethods`.
 |---|---|
 | `cast` / `try_cast` rejects a type string | vocabulary lives in `expr_build.rs` `parse_data_type` |
 | window frame bound wrong | `window.rs` `spark_window_frame` / `spark_offset_to_bound` |
-| `sec`/`csc` at zero is NULL not Inf | `expr_build.rs` `reciprocal_trig_or_inf` |
+| `sec`/`csc` at zero is NULL not Inf | `function_dispatch.rs` `sec`/`csc` arms + `expr_build.rs` `reciprocal_trig_or_inf` |
+| `call_scalar` unknown name / arity | `function_dispatch.rs` `call_scalar_expr` |
+| unknown `aggregate` / `aggregate_binary` kind | `function_dispatch.rs` `unary_aggregate_udaf` / `binary_aggregate_udaf` |
 | `… AS x AS x` in a plan | `expr_build.rs` `collapse_identity_alias_chain` |
 
 First checks: `cargo test -p repark-python column`. Escalate to: [../map.md#debug](../map.md).

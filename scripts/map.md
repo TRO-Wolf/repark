@@ -127,6 +127,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
   **COLX (2026-08-15):** EXCEPTIONS key `crates/repark-python/src/column.rs` deleted;
   replaced by `crates/repark-python/src/column/mod.rs` (ratchet DOWN after helper extract).
+  **FN-GX (2026-08-16):** `column/mod.rs` ceiling ratcheted DOWN after the `call_scalar` /
+  `aggregate` / `aggregate_binary` match tables moved to `column/function_dispatch.rs`
+  (default ceiling; no new EXCEPTIONS row).
 
 - `check_parity_live_dual_wire.sh` + `check_parity_live_dual_wire.py` — the **parity-live dual-wire**
   guard (G-6). Compares `make parity-live` and `.github/workflows/parity-live.yml` to **each
