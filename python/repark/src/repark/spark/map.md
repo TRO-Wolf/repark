@@ -15,9 +15,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - `_csv_smart.py (r26 T2: decimal union; samplingRows/10k cap)` — **r25 T4 csv-smart** (`# === r25 T4: csv-smart ===`): Q1 inference
   PROTOCOL (bool→int32→int64→decimal128→float64→date→timestamp→string; fail falls back;
   terminal string; deterministic) + messy-CSV prep (BOM, preamble skip, delimiter detect
-  — quote-aware counts + ``(header_join, agreement, mode_fields)`` so a quoted
-  rival cannot beat the true split and a 2-col file cannot lose to a wider
-  unquoted rival (B4),
+  — one quote-aware splitter (plain-split if quotes do not close) + structural
+  ``(header_join, agreement, -mode)`` (B4),
   header detect, ragged null-pad). Consumed by `DataFrameReader.smartCsv`. Not shared Rust
   (greylit Q1(b)); claim-board copy for T5/T6. Pins: `tests/test_t4_csv_smart.py`.
   **Q10:** timestamp rung follows `spark.sql.timestampType` via

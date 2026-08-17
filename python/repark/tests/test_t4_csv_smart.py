@@ -18,6 +18,7 @@ from repark import ReparkSession
 from repark.spark._csv_smart import (
     RUNG_ORDER,
     detect_delimiter,
+    prepare_messy_csv,
     resolve_cell_rung,
     resolve_column_type,
 )
@@ -72,9 +73,8 @@ def test_protocol_cell_rungs() -> None:
 def test_detect_delimiter_ds4_ragged_wide_beats_quoted_two_field_rival() -> None:
     """(a) DS-4 class: quoted mid-field rival must not beat a ragged 12-col split.
 
-    Naive ``csv.reader`` per line + agreement-first (origin/main): ``;`` scores
-    (2, 7) against ``,`` (12, 4) and wins. Quote-aware counts drop ``;`` to
-    one field (the ``;`` sits inside quotes). Discriminates origin/main.
+    Measured: ``,`` (1, 4, -12) over ``;`` (0, 0, 0). origin/main agreement-first
+    elects ``;`` (naive (2, 7) vs (12, 4)).
     """
     header = ",".join(f"col_{index}" for index in range(12))
     full = ",".join(["1"] * 11 + ['"a;b"'])
@@ -85,10 +85,10 @@ def test_detect_delimiter_ds4_ragged_wide_beats_quoted_two_field_rival() -> None
 
 
 def test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab() -> None:
-    """(b) 2-col TSV whose text column contains commas must stay tab.
+    """(b) 2-col TSV with commas in the text column stays tab.
 
-    Naive field-count-first: ``,`` → (3, 3) beats ``\\t`` → (2, 4). Agreement-
-    first and header-join both keep tab. Discriminates the naive re-rank.
+    Measured: ``\\t`` (1, 4, -2) over ``,`` (1, 3, -3). Field-count-first elects
+    ``,`` (3, 3) over ``\\t`` (2, 4).
     """
     lines = [
         "name\tnote",
@@ -99,10 +99,24 @@ def test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab() -> None:
     assert detect_delimiter(lines) == "\t"
 
 
-def test_detect_delimiter_two_column_semicolon_beats_wider_comma() -> None:
-    """(c) 2-col ``;`` file with commas in the text column must stay ``;``.
+def test_detect_delimiter_headerless_tsv_with_unquoted_commas_keeps_tab() -> None:
+    """Headerless (b): both join; agr tie; ``-mode`` picks tab.
 
-    Naive field-count-first: ``,`` → (3, 3) beats ``;`` → (2, 4).
+    Measured: ``\\t`` (1, 3, -2) over ``,`` (1, 3, -3). Rank-truncation mutant
+    (drop third slot) elects ``,`` by candidate order.
+    """
+    lines = [
+        "alice\thello, world, more",
+        "bob\tfoo, bar, baz",
+        "carol\ta, b, c",
+    ]
+    assert detect_delimiter(lines) == "\t"
+
+
+def test_detect_delimiter_two_column_semicolon_beats_wider_comma() -> None:
+    """(c) 2-col ``;`` file with commas in the text column stays ``;``.
+
+    Measured: ``;`` (1, 4, -2) over ``,`` (1, 3, -3).
     """
     lines = [
         "id;note",
@@ -113,12 +127,24 @@ def test_detect_delimiter_two_column_semicolon_beats_wider_comma() -> None:
     assert detect_delimiter(lines) == ";"
 
 
-def test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe() -> None:
-    """(d) A quoted pipe-list must not elect ``|`` over the real comma split.
+def test_detect_delimiter_headerless_two_column_semicolon_beats_wider_comma() -> None:
+    """Headerless (c): both join; agr tie; ``-mode`` picks ``;``.
 
-    Naive ``csv.reader`` per line + field-count-first: ``|`` → (4, 3) beats
-    ``,`` → (3, 4) because the quote does not open a field under ``|``.
-    Quote-aware counting gives ``|`` no splits inside the quotes.
+    Measured: ``;`` (1, 3, -2) over ``,`` (1, 3, -3).
+    """
+    lines = [
+        "1;a,b,c",
+        "2;d,e,f",
+        "3;g,h,i",
+    ]
+    assert detect_delimiter(lines) == ";"
+
+
+def test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe() -> None:
+    """(d) Headed quoted pipe-list: comma joins, pipe is unusable.
+
+    Measured: ``,`` (1, 4, -3) over ``|`` (0, 0, 0). Join decides before quoting
+    is consulted — not the quote-blind discriminator (see A7 pin).
     """
     lines = [
         "id,note,extra",
@@ -129,27 +155,20 @@ def test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe() -> None:
     assert detect_delimiter(lines) == ","
 
 
-def test_detect_delimiter_small_file_one_wide_line_does_not_decide() -> None:
-    """(e) One wide rival line must not elect the rival on a small file.
+def test_detect_delimiter_honest_small_file_wide_rival_does_not_decide() -> None:
+    """(e) Honest corpus ``[id,name / 1;2;3;4;5]``.
 
-    Naive field-count-first: ``;`` → (5, 1) beats ``,`` → (2, 2). Header-join
-    + agreement-primary keep comma.
+    Measured: ``,`` (0, 1, -2) over ``;`` (0, 1, -5). origin/main and round-1
+    field-count-first elect ``;`` (mode 5 vs 2, agr tie). The old (e) pin with
+    ``id,name`` + ``1,ok`` + ``x;y;z;w;v`` scored ``;`` as (0,0,0) via mode<2.
     """
-    lines = [
-        "id,name",
-        "1,ok",
-        "x;y;z;w;v",
-    ]
-    assert detect_delimiter(lines) == ","
+    assert detect_delimiter(["id,name", "1;2;3;4;5"]) == ","
 
 
 def test_detect_delimiter_header_join_beats_unquoted_data_commas() -> None:
-    """Unquoted data commas (euro / thousands) must not beat a ``;`` header-join.
+    """Unquoted data commas must not beat a ``;`` structural header-join.
 
-    After quote-aware counting the DS-4 semicolon/tab/pipe schemes still have
-    unquoted ``,`` in ``euro_decimal`` / ``amount_currency``. Agreement-primary
-    alone then picks comma (higher agreement, fewer fields). Header-join is the
-    derived refinement: only ``;`` splits the identifier header into the mode.
+    Measured: ``;`` (1, 4, -5) over ``,`` (0, 7, -3).
     """
     lines = [
         "col_a;col_b;col_c;col_d;col_e",
@@ -164,13 +183,154 @@ def test_detect_delimiter_header_join_beats_unquoted_data_commas() -> None:
     assert detect_delimiter(lines) == ";"
 
 
+def test_detect_delimiter_tsv_forgery_empty_leading_cell_keeps_tab() -> None:
+    """A later ``\\tblue,gold`` row must not mint comma join.
+
+    Measured: ``\\t`` (1, 4, -2) over ``,`` (0, 1, -2).
+    """
+    lines = [
+        "name\tnote",
+        "alice\thello",
+        "\tblue,gold",
+        "bob\tok",
+    ]
+    assert detect_delimiter(lines) == "\t"
+
+
+def test_detect_delimiter_inch_mark_does_not_zero_semicolon() -> None:
+    """C3: unbalanced quote falls back to plain split (probe A).
+
+    Measured: ``;`` (1, 3, -3). Without the EOL fallback every later ``;`` is
+    swallowed and the true delimiter goes unusable.
+    """
+    lines = [
+        "id;size;n",
+        '1;5" pipe;3',
+        "2;ok;4",
+    ]
+    assert detect_delimiter(lines) == ";"
+
+
+def test_detect_delimiter_inch_mark_on_every_row_keeps_semicolon() -> None:
+    """C3 probe B: inch marks on every data row still leave ``;`` usable."""
+    lines = [
+        "id;size;n",
+        '1;5" pipe;3',
+        '2;3" nail;4',
+        '3;1" bit;5',
+    ]
+    assert detect_delimiter(lines) == ";"
+
+
+def test_detect_delimiter_one_comma_preamble_keeps_semicolon() -> None:
+    """A2: one rival-bearing preamble must not elect comma.
+
+    Measured: ``;`` (1, 4, -3) over ``,`` (0, 1, -2).
+    """
+    lines = [
+        "Exported, 2026",
+        "id;name;note",
+        "1;a;b",
+        "2;c;d",
+        "3;e;f",
+    ]
+    assert detect_delimiter(lines) == ";"
+
+
+def test_detect_delimiter_two_comma_preambles_keeps_semicolon() -> None:
+    """A2: two rival-bearing preamble lines must not elect comma.
+
+    Measured: ``;`` (1, 4, -3) over ``,`` (0, 2, -2).
+    """
+    lines = [
+        "Exported, 2026",
+        "note, v2",
+        "id;name;note",
+        "1;a;b",
+        "2;c;d",
+        "3;e;f",
+    ]
+    assert detect_delimiter(lines) == ";"
+
+
+def test_detect_delimiter_quote_blind_ragged_comma_uniform_quoted_pipe() -> None:
+    """Quote-blind mutant elects pipe; quote-aware elects comma.
+
+    Measured quote-aware: ``,`` (0, 1, -5) over ``|`` (0, 0, 0).
+    Measured quote-blind csv.reader: ``|`` (1, 3, -2) over ``,`` (0, 1, -5).
+    """
+    lines = [
+        '1,"a|b",x,y',
+        '2,"c|d",x',
+        '3,"e|f",x,y,z',
+    ]
+    assert detect_delimiter(lines) == ","
+
+
+def test_detect_delimiter_header_one_cell_not_bare_identifier() -> None:
+    """One non-identifier header cell must not drop comma join."""
+    for header in (
+        "id,Amount (USD),note",
+        "id,amount.usd,note",
+        "id,1amount,note",
+        "id,cantidad,note",
+        "id,金額,note",
+    ):
+        lines = [header, "1,2,3", "4,5,6"]
+        assert detect_delimiter(lines) == ",", header
+
+
+def test_detect_delimiter_mode_below_two_is_unusable() -> None:
+    """A candidate whose modal width is 1 stays (0,0,0); comma still wins.
+
+    ``;`` never reaches width 2. Dropping the mode>=2 guard would let a
+    1-field candidate compete on agreement of every line.
+    """
+    lines = ["a,b", "c,d", "e,f"]
+    assert detect_delimiter(lines) == ","
+
+
 def test_detect_delimiter_preferred_refuses_non_single_char() -> None:
-    """Declared preferred must be one character (empty / multi-char refuse loud)."""
+    """Declared preferred: empty / multi-char / newline / CR / quote refuse."""
     lines = ["a,b", "1,2"]
-    for bad in ("", "||", "sep"):
+    for bad in ("", "||", "sep", "\n", "\r", '"'):
         with pytest.raises(ValueError, match="single character"):
             detect_delimiter(lines, preferred=bad)
     assert detect_delimiter(lines, preferred=";") == ";"
+    assert detect_delimiter(lines, preferred="\x01") == "\x01"
+
+
+def test_parse_quoted_embedded_delimiter_unquotes(tmp_path: Path) -> None:
+    """A1: quoted cell with embedded delimiter round-trips through prepare."""
+    path = tmp_path / "q.csv"
+    path.write_text('id,note\n1,"a,b"\n', encoding="utf-8")
+    prepared = prepare_messy_csv(path)
+    assert prepared.report.delimiter == ","
+    assert prepared.rows[0][1] == "a,b"
+
+
+def test_parse_escaped_quote_unescapes(tmp_path: Path) -> None:
+    """A1: ``""`` inside a quoted cell unescapes to one ``"``."""
+    path = tmp_path / "esc.csv"
+    path.write_text('id,note\n1,"say ""hi"""\n', encoding="utf-8")
+    prepared = prepare_messy_csv(path)
+    assert prepared.rows[0][1] == 'say "hi"'
+
+
+def test_parse_unbalanced_quote_keeps_raw_text(tmp_path: Path) -> None:
+    """A1: C3-fallback line keeps raw plain-split text (no invented unquote)."""
+    path = tmp_path / "inch.csv"
+    path.write_text('id;size;n\n1;5" pipe;3\n', encoding="utf-8")
+    prepared = prepare_messy_csv(path, sep=";")
+    assert prepared.rows[0] == ["1", '5" pipe', "3"]
+
+
+def test_parse_preserves_leading_trailing_whitespace(tmp_path: Path) -> None:
+    """A1: whitespace is not stripped (csv.reader skipinitialspace=False)."""
+    path = tmp_path / "ws.csv"
+    path.write_text("id,note\n1,  hi  \n", encoding="utf-8")
+    prepared = prepare_messy_csv(path)
+    assert prepared.rows[0][1] == "  hi  "
 
 
 def test_protocol_column_promotion_and_nulls() -> None:
@@ -483,14 +643,32 @@ def test_sampling_rows_via_option_map(spark: Any, tmp_path: Path) -> None:
 
 
 def test_smart_csv_sep_refuses_non_single_char(spark: Any, tmp_path: Path) -> None:
-    """smartCsv sep= empty / multi-char must refuse IllegalArgumentException (not TypeError)."""
+    """smartCsv sep= empty / multi-char / newline / CR / quote refuse loud."""
     from repark.errors import IllegalArgumentException
 
     path = tmp_path / "sep.csv"
     path.write_text("a,b\n1,2\n", encoding="utf-8")
-    for bad in ("", "||", "sep"):
+    for bad in ("", "||", "sep", "\n", "\r", '"'):
         with pytest.raises(IllegalArgumentException, match="single character"):
             spark.read.smartCsv(str(path), sep=bad)
+
+
+def test_smart_csv_option_empty_sep_refuses_and_does_not_fall_through(
+    spark: Any, tmp_path: Path
+) -> None:
+    """option('sep','') refuses; it must not fall through to option('delimiter', ';')."""
+    from repark.errors import IllegalArgumentException
+
+    path = tmp_path / "sep.csv"
+    path.write_text("a,b\n1,2\n", encoding="utf-8")
+    with pytest.raises(IllegalArgumentException, match="single character"):
+        spark.read.option("sep", "").smartCsv(str(path))
+    with pytest.raises(IllegalArgumentException, match="single character"):
+        spark.read.option("sep", "").option("delimiter", ";").smartCsv(str(path))
+    frame = spark.read.option("sep", ",").smartCsv(str(path), header=True)
+    assert frame.columns == ["a", "b"]
+    frame_control = spark.read.smartCsv(str(path), sep="\x01")
+    assert frame_control.describe_ingest()["delimiter"] == "\x01"
 
 
 def test_sampling_rows_empty_string_loud_refuse(spark: Any, tmp_path: Path) -> None:

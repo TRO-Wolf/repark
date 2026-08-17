@@ -299,10 +299,102 @@ A file with **no** identifier-like header falls back to quote-aware
 agreement than the true delimiter can still win there — declare `sep`.
 Auto-detect remains a guess, not a production contract.
 
-**Gates (echo $?; never piped through tail):**
-- delimiter unit + DS-4 facade pins: exit 0 (8 passed)
-- `test_t4_csv_smart.py`: exit 0 (38 passed)
+**Gates (echo $?; never piped through tail):** see §1.7 (round 3 superseded these).
+
+### 1.7 Round 3 — structural header + one splitter (SQM R2 + A1–A8)
+
+Identifier-regex header-join is **ruled out** (C1). Shared-preamble-as-width<2-under-every-candidate is **not** the header picker: A2 measured that `Exported, 2026` as the NOTE line on real DS-4 `;` data elects `,` under that skip.
+
+**Shipped mechanism (measured):**
+- One splitter: quote-aware walk; if still in quotes at EOL, plain-split that line (C3). Same function scores, skips preamble, and parses; cells then get one RFC unquote layer unless the line was a C3 fallback (raw text).
+- Shared header = first non-empty line whose **max width across the four candidates** equals the mode of those max-widths (`w>=2`, tie larger `w`).
+- Score `(header_join, agreement, -mode)` with `header_join = (width(header)==mode>=2 AND agreement>=2)`.
+- `csv.reader` leaves the module.
+- `option("sep","")` uses `is not None` (does not fall through to `delimiter`). Refuse empty / multi-char / `\\n` / `\\r` / `"`.
+
+**§1.3 MEASURED tuples (quote-aware one-splitter, shared-maxmode header):**
+
+| corpus | `,` | `;` | tab | `\\|` | pick |
+|---|---|---|---|---|---|
+| DS-4 comma | (1, 54, -12) | (0, 0, 0) | (0, 0, 0) | (0, 0, 0) | `,` |
+| DS-4 semicolon | (0, 58, -4) | (1, 54, -12) | (0, 0, 0) | (0, 0, 0) | `;` |
+| DS-4 tab | (0, 58, -4) | (0, 0, 0) | (1, 54, -12) | (0, 0, 0) | tab |
+| DS-4 pipe | (0, 58, -4) | (0, 0, 0) | (0, 0, 0) | (1, 54, -12) | `\\|` |
+| DS-4 human-header `;` | (0, 58, -4) | (1, 54, -12) | (0, 0, 0) | (0, 0, 0) | `;` |
+| A2 one comma preamble + DS-4 `;` | (0, 58, -4) | (1, 54, -12) | (0, 0, 0) | (0, 0, 0) | `;` |
+| A2 two comma preambles + DS-4 `;` | (0, 58, -4) | (1, 54, -12) | (0, 0, 0) | (0, 0, 0) | `;` |
+| headed (b) TSV | (1, 3, -3) | (0, 0, 0) | (1, 4, -2) | (0, 0, 0) | tab |
+| headerless (b) | (1, 3, -3) | (0, 0, 0) | (1, 3, -2) | (0, 0, 0) | tab |
+| headed (c) | (1, 3, -3) | (1, 4, -2) | (0, 0, 0) | (0, 0, 0) | `;` |
+| headerless (c) | (1, 3, -3) | (1, 3, -2) | (0, 0, 0) | (0, 0, 0) | `;` |
+| quoted pipe (d) | (1, 4, -3) | (0, 0, 0) | (0, 0, 0) | (0, 0, 0) | `,` |
+| honest (e) | (0, 1, -2) | (0, 1, -5) | (0, 0, 0) | (0, 0, 0) | `,` |
+| TSV forgery | (0, 1, -2) | (0, 0, 0) | (1, 4, -2) | (0, 0, 0) | tab |
+| A7 quote-blind discrim (aware) | (0, 1, -5) | (0, 0, 0) | (0, 0, 0) | (0, 0, 0) | `,` |
+| A7 same corpus quote-blind | (0, 1, -5) | (0, 0, 0) | (0, 0, 0) | (1, 3, -2) | `\\|` (mutant) |
+
+**§1.4 / §1.6 truth:** pin (e) is the honest `["id,name","1;2;3;4;5"]` corpus (the old three-line pin was vacuous). Residual: multiline quoted fields (origin/main was also per-line); headerless files where a wider rival has **higher** agreement than the true delimiter (not just a `-mode` tie). Declare `sep`.
+
+**A1 value pins** (through `prepare_messy_csv`): quoted embedded delim; `""` → `"`; C3 raw inch-mark line; leading/trailing whitespace kept.
+
+**Gates (round 3, echo $?; never piped through tail):**
+- delimiter + DS-4 + human-header pins: exit 0 (55 passed in the focused file set)
 - `make ci`: exit 0
 - `make py-test`: exit 0 (235 passed)
-- `make py-test-facade`: exit 0 (3326 passed, 70 skipped)
+- `make py-test-facade`: exit 0 (3342 passed, 70 skipped)
 - two-pass hygiene: 0 needles in product files
+
+## Pre-PR critic report (/repark-harden)
+
+Engine: ACC review-only HIGH (two bounced rounds) + 5-dimension finder pass
+over the uncommitted round-3 tree. Independent finder-battery subagent IDs
+were not retrievable in this session; the five dimensions were attacked in
+this session against the **measured** score table in §1.7 and live pytest.
+Not a substitute for the orchestrator Opus pass.
+
+Critic-1 (semantics/parity): no PySpark function wrappers in this PR. Attacked
+splitter/rank/option-path. No S0/S1 left open.
+- Quote-aware + C3: inch-mark A+B pins; A7 quote-blind corpus measured
+  aware `,` (0,1,-5) vs blind `|` (1,3,-2).
+- Structural shared-maxmode header: A2 one- and two-line comma preambles
+  measured `;` wins; human-header DS-4 measured `;` (1,54,-12) over `,` (0,58,-4).
+- `header=False` not threaded (A4).
+- Value-fidelity: four `prepare_messy_csv` pins (embedded delim, `""`, C3 raw,
+  whitespace). `csv.reader` gone from detect and parse.
+
+Critic-2 (safety): empty `option("sep","")` no longer falls through;
+`option("sep","").option("delimiter",";")` refuses (pinned). `\n`/`\r`/`"`
+refused. `\x01` allowed (Hive legacy, A6).
+
+Signature table: 0 pyspark.sql.functions names in the diff.
+
+Oracle probes: facade-pure detect; no Spark CAST oracle this PR.
+
+Pin audit (each names the implementation it kills):
+- (a) origin/main agreement-first
+- (b)/(c) headed: field-count-first
+- headerless (b)/(c): rank-truncation (drop `-mode`)
+- (d) headed pipe: join (not the quote-blind mutant)
+- honest (e): origin/main + field-count-first
+- TSV forgery: join-on-every-line (round-2 B-3)
+- inch A+B: missing C3
+- A2 preambles: shared-preamble-as-width<2-under-all
+- A7 ragged quoted-pipe: quote-blind csv.reader
+- mode<2: dropped guard
+- option empty / fall-through: `or` at reader.py
+- A1 four parse pins: detect/parse splitter split
+
+Convergence: TEST-GATED + ACC-CONVERGED (same-session HIGH pass). Residual:
+multiline quoted fields (never supported); headerless file where a wider rival
+has strictly higher agreement than the true delimiter.
+
+## Finder-battery report
+Target: 2cfcba9...round-3 worktree | dimensions: 5
+(wiring, pins, value-fidelity, fence/docs, callers/removed-behavior)
+findings: 0 CONFIRMED S0/S1 survivors after live pytest 3342.
+Null attestations: wiring (measured table matches shipped scores);
+pins (honest (e) + A7 measured); value-fidelity (4 A1 pins green);
+fence (getting-started:164 + troubleshooting truth-up; product needles 0);
+callers (smartCsv option is-not-None; prepare_messy_csv uses _parse_line).
+Verdict: CLEAN (zero S0/S1 survivors). Loop-until-dry not re-run as a second
+independent process in this session — orchestrator SQM is the backstop.

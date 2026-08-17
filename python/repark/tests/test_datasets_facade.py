@@ -787,7 +787,8 @@ def test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter(tmp_path: Path) -
     Was BUG-CANDIDATE (DS-4 / #163): ``csv.reader`` per line only honours a quote
     that opens a field, so a 2-field rival inside quotes beat the true 12-field
     split and ate one data row as the header. B4 counts quote-aware and ranks
-    ``(header_join, agreement, mode_fields)``; declared ``sep`` stays the control.
+    ``(header_join, agreement, -mode)`` on a structural shared header; declared
+    ``sep`` stays the control.
 
     Pinned at the preprocessing surface (no engine). Value AND header identity.
     """
@@ -808,3 +809,35 @@ def test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter(tmp_path: Path) -
         assert declared.report.delimiter == delimiter, scheme
         assert declared.report.data_row_count == ROWS, scheme
         assert declared.headers == [*expected_headers, _SMARTCSV_OVERFLOW_COLUMN], scheme
+
+
+def test_smartcsv_human_header_autodetect_keeps_scheme_delimiter(tmp_path: Path) -> None:
+    """DS-4 data rows with a human/European header still auto-detect the scheme.
+
+    Byte-identical data; only the header line is swapped (test-local). Spaces,
+    parens, slashes, and a non-ASCII letter must not drop structural join.
+    """
+    from repark.spark._csv_smart import prepare_messy_csv
+
+    written = _write_family("smartcsv", tmp_path / "smartcsv-human")
+    datagen = _datagen("smartcsv")
+    human = (
+        "Amount (USD);Yes/No;When;Note;Euro;Flag;Nullable;Embedded;"
+        "Dup Left;Dup Right;Ragged 1;Ragged 2"
+    )
+    for scheme, delimiter in datagen.DELIMITERS.items():
+        path = written / datagen.csv_file_name(scheme)
+        text = path.read_text(encoding="utf-8")
+        if text.startswith("\ufeff"):
+            bom, rest = "\ufeff", text[1:]
+        else:
+            bom, rest = "", text
+        lines = rest.splitlines()
+        # BOM + two preamble lines + header + data.
+        header_index = 2
+        parts = human.split(";")
+        lines[header_index] = delimiter.join(parts)
+        path.write_text(bom + "\n".join(lines) + "\n", encoding="utf-8")
+        auto = prepare_messy_csv(path)
+        assert auto.report.delimiter == delimiter, scheme
+        assert auto.report.data_row_count == ROWS, scheme

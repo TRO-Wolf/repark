@@ -158,9 +158,11 @@ class DataFrameReader:
                 "smartCsv does not accept multi-path lists yet (pass a single path)"
             )
         # Snake-case locals (N806); kwargs keep PySpark-shaped camelCase names.
-        resolved_sep = (
-            sep if sep is not None else (self._option_str("sep") or self._option_str("delimiter"))
-        )
+        if sep is not None:
+            resolved_sep = sep
+        else:
+            sep_option = self._option_str("sep")
+            resolved_sep = sep_option if sep_option is not None else self._option_str("delimiter")
         resolved_null = nullValue if nullValue is not None else self._option_str("nullvalue")
         resolved_case = (
             normalizeHeaderCase
@@ -238,10 +240,13 @@ class DataFrameReader:
             resolved_sampling = sampling_int
 
         if resolved_sep is not None and (
-            not isinstance(resolved_sep, str) or len(resolved_sep) != 1
+            not isinstance(resolved_sep, str)
+            or len(resolved_sep) != 1
+            or resolved_sep in {"\n", "\r", '"'}
         ):
             raise IllegalArgumentException(
-                f"smartCsv sep must be a single character, got {resolved_sep!r}"
+                "smartCsv sep must be a single character other than newline, "
+                f"carriage return, or quote, got {resolved_sep!r}"
             )
 
         frame, report = load_smart_csv(

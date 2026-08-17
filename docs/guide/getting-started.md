@@ -161,7 +161,8 @@ spark.read.json("out/events.json").orderBy("id").collect()
 auto-detect, null-padded ragged rows, and a type-inference ladder that samples the first 10 000
 data rows (the full file is always read for *data*; `df.describe_ingest()` reports what inference
 actually saw). Reach for plain `.csv()` with an explicit `sep=` when you already know the shape —
-auto-detection is a guess, and the tour notebook shows a corpus where it guesses wrong.
+auto-detection is a guess. The tour notebook's delimiter zoo now auto-detects each scheme (B4);
+the euro-comma cast refusal on that corpus is still open.
 
 ## Your first `dynamicFlatten`
 

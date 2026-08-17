@@ -41,8 +41,9 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   **F-3 (2026-08-17):** `probe`, the temp-view existence closure inside `resolve_table_name`,
   gained a docstring; docstring-only, and the file stays under its 2500-line ceiling.
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination).
-  **B4:** `sep` / `delimiter` must be a single character (empty / multi-char refuse
-  `IllegalArgumentException`); auto-detect lives in `_csv_smart.detect_delimiter`.
+  **B4:** `sep` / `delimiter` resolved with the `is not None` idiom (empty does
+  not fall through); refuse empty / multi-char / newline / CR / quote. Auto-detect
+  lives in `_csv_smart.detect_delimiter`.
 - `sql_udf.py` — UDFRegistration
 - `create_dataframe.py` — region marker + SparkSession/ReParkSession aliases
 - `catalog.py` — re-export binding region note (r27 T1 no-stub mark)

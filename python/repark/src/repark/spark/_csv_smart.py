@@ -18,7 +18,6 @@ pins stand).
 
 from __future__ import annotations
 
-import csv
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -72,12 +71,10 @@ _SCI_RE = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)[eE][+-]?\d+$")
 
 _DEFAULT_NULL_TOKENS: frozenset[str] = frozenset({"", "null", "none", "na", "n/a", "nan"})
 
-# Auto-detect candidates (deterministic order). A declared ``preferred`` may be any
-# single character; empty / multi-char values refuse loud.
+# Auto-detect candidates (deterministic order). A declared preferred may be any
+# single character except newline / carriage return / quote.
 _DELIMITER_CANDIDATES: tuple[str, ...] = (",", ";", "\t", "|")
-# Header-join: a line whose quote-aware cells are all identifier tokens. Hyphen is
-# allowed so names like ``ragged-tail`` still qualify; spaces / punctuation do not.
-_HEADER_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
+_REFUSED_DELIMITERS: frozenset[str] = frozenset({"\n", "\r", '"'})
 
 
 # ==================================================================================================
@@ -506,14 +503,13 @@ def _strip_bom(text: str) -> tuple[str, bool]:
     return text, False
 
 
-def _split_quote_aware(line: str, delimiter: str) -> list[str]:
+def _split_quote_aware(line: str, delimiter: str) -> tuple[list[str], bool]:
     """Split one record on ``delimiter``, ignoring separators inside quotes.
 
-    Quote handling is RFC-style and **delimiter-independent**: a ``"`` toggles
-    quoted state anywhere (not only at a field start), and ``""`` inside quotes
-    is a literal quote. A rival inside a quoted cell therefore contributes no
-    splits — unlike ``csv.reader`` per line, which only honours a quote that
-    *opens* a field under the candidate delimiter.
+    Quote handling is delimiter-independent: a ``"`` toggles quoted state
+    anywhere, and ``""`` inside quotes is a literal quote. Returns
+    ``(cells, balanced)``. If still in quotes at EOL, ``balanced`` is False
+    and the caller must plain-split (one stray quote must not zero a candidate).
     """
     cells: list[str] = []
     current: list[str] = []
@@ -539,81 +535,111 @@ def _split_quote_aware(line: str, delimiter: str) -> list[str]:
         current.append(char)
         index += 1
     cells.append("".join(current))
-    return cells
+    return cells, not in_quotes
 
 
-def _header_token(cell: str) -> str:
-    """Strip whitespace and one layer of surrounding quotes from a header cell."""
-    text = cell.strip()
-    if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
-        return text[1:-1].replace('""', '"')
-    return text
+def _split_fields(line: str, delimiter: str) -> list[str]:
+    """The one splitter: quote-aware, or plain split when quotes do not close."""
+    cells, balanced = _split_quote_aware(line, delimiter)
+    if balanced:
+        return cells
+    return line.split(delimiter)
 
 
-def _is_identifier_header(cells: list[str]) -> bool:
-    """True when every cell is a non-empty identifier token (header-join probe)."""
-    if len(cells) < 2:
-        return False
-    for cell in cells:
-        token = _header_token(cell)
-        if _HEADER_NAME_RE.match(token) is None:
-            return False
-    return True
+def _unquote_cell(cell: str) -> str:
+    """One RFC layer of quotes, matching ``csv.reader`` QUOTE_MINIMAL (no strip)."""
+    if len(cell) >= 2 and cell[0] == '"' and cell[-1] == '"':
+        return cell[1:-1].replace('""', '"')
+    return cell
+
+
+def _parse_line(line: str, delimiter: str) -> list[str]:
+    """Split + unquote. A C3-fallback line keeps raw plain-split text."""
+    cells, balanced = _split_quote_aware(line, delimiter)
+    if not balanced:
+        return line.split(delimiter)
+    return [_unquote_cell(cell) for cell in cells]
 
 
 def _require_single_char_delimiter(value: str, *, what: str) -> str:
-    """Refuse empty / multi-char delimiter declarations (csv.reader TypeError trap)."""
-    if len(value) != 1:
-        raise ValueError(f"{what} must be a single character, got {value!r}")
+    """Refuse empty, multi-char, newline, carriage return, or quote."""
+    if len(value) != 1 or value in _REFUSED_DELIMITERS:
+        raise ValueError(
+            f"{what} must be a single character other than newline, "
+            f"carriage return, or quote, got {value!r}"
+        )
     return value
 
 
-def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int, int]:
-    """Score one candidate: ``(header_join, agreement, mode_fields)``.
-
-    Counts are quote-aware. ``header_join`` is 1 when some line splits into
-    ``mode_fields`` identifier tokens — the header joins the mode. Unusable
-    candidates (no rows, or modal field count < 2) score ``(0, 0, 0)``.
-    """
-    counts: list[int] = []
-    identifier_widths: set[int] = set()
-    for line in lines:
-        if not line.strip():
-            continue
-        cells = _split_quote_aware(line, delimiter)
-        width = len(cells)
-        counts.append(width)
-        if _is_identifier_header(cells):
-            identifier_widths.add(width)
+def _mode_and_agreement(counts: list[int]) -> tuple[int, int]:
+    """Modal width among counts >= 2, tie-break larger width. Else (0, 0)."""
     if not counts:
-        return 0, 0, 0
+        return 0, 0
     frequency: dict[int, int] = {}
     for count in counts:
         frequency[count] = frequency.get(count, 0) + 1
-    mode_count = max(frequency, key=lambda key: (frequency[key], key))
+    candidates = [width for width in frequency if width >= 2]
+    if not candidates:
+        return 0, 0
+    mode_count = max(candidates, key=lambda width: (frequency[width], width))
+    return mode_count, frequency[mode_count]
+
+
+def _shared_header_line(lines: list[str]) -> str:
+    """First line whose max-across-candidates width equals the mode of those maxes.
+
+    Structural (no identifier regex). A comma-bearing preamble (max width 2)
+    loses to a 12-field table block, so it cannot become the join header.
+    """
+    nonempty = [line for line in lines if line.strip()]
+    if not nonempty:
+        return ""
+    max_widths: list[int] = []
+    for line in nonempty:
+        max_widths.append(
+            max(len(_split_fields(line, candidate)) for candidate in _DELIMITER_CANDIDATES)
+        )
+    mode_max, _agreement = _mode_and_agreement(max_widths)
+    if mode_max < 2:
+        return nonempty[0]
+    for line, width in zip(nonempty, max_widths, strict=True):
+        if width == mode_max:
+            return line
+    return nonempty[0]
+
+
+def _score_delimiter(lines: list[str], delimiter: str, header_line: str) -> tuple[int, int, int]:
+    """Score one candidate: ``(header_join, agreement, -mode_fields)``.
+
+    ``header_join`` is 1 when the shared header line splits to the modal width
+    and that mode agrees on at least two rows. Unusable candidates score
+    ``(0, 0, 0)``.
+    """
+    counts = [len(_split_fields(line, delimiter)) for line in lines if line.strip()]
+    mode_count, agreement = _mode_and_agreement(counts)
     if mode_count < 2:
         return 0, 0, 0
-    agreement = frequency[mode_count]
-    header_join = 1 if mode_count in identifier_widths else 0
-    return header_join, agreement, mode_count
+    header_width = len(_split_fields(header_line, delimiter)) if header_line else 0
+    header_join = 1 if header_width == mode_count and agreement >= 2 else 0
+    return header_join, agreement, -mode_count
 
 
 def detect_delimiter(lines: list[str], *, preferred: str | None = None) -> str:
-    """Pick the delimiter with the strongest quote-aware, header-joined agreement.
+    """Pick the delimiter with the strongest structural header-joined agreement.
 
-    Rank ``(header_join, agreement, mode_fields)`` over ``, ; \\t |`` in that
-    order. Quote-aware counts close the mid-field-quote class (a rival inside
-    quotes contributes no splits). Agreement stays primary among candidates
-    that split an identifier header into the modal width; modal field count is
-    only the last tie-break, so one wide line cannot elect a rival on a small
-    file. A declared ``preferred`` must be a single character.
+    Rank ``(header_join, agreement, -mode_fields)`` over ``, ; \\t |``. Counts
+    use the one quote-aware splitter (plain-split fallback if quotes do not
+    close). The shared header is the first line whose max-across-candidates
+    width equals the mode of those maxes — structural, not lexical. A declared
+    ``preferred`` must be a single character other than newline, CR, or quote.
     """
     if preferred is not None:
         return _require_single_char_delimiter(preferred, what="preferred delimiter")
+    header_line = _shared_header_line(lines)
     best = ","
     best_score = (-1, -1, -1)
     for candidate in _DELIMITER_CANDIDATES:
-        score = _score_delimiter(lines, candidate)
+        score = _score_delimiter(lines, candidate, header_line)
         if score > best_score:
             best_score = score
             best = candidate
@@ -623,34 +649,18 @@ def detect_delimiter(lines: list[str], *, preferred: str | None = None) -> str:
 def detect_preamble_skip(lines: list[str], delimiter: str) -> int:
     """Return how many leading lines to skip before a consistent tabular block.
 
-    Scans for the first line whose field count matches the modal field count of the
-    remaining non-empty lines (delimiter-consistency). Blank lines at the top count as skip.
+    First line whose one-splitter field count matches the modal field count of
+    the non-empty lines. Blank lines at the top count as skip.
     """
     non_empty_indices = [index for index, line in enumerate(lines) if line.strip()]
     if not non_empty_indices:
         return 0
-    # Modal field count over all non-empty lines.
-    field_counts: list[tuple[int, int]] = []  # (line_index, n_fields)
+    field_counts: list[tuple[int, int]] = []
     for index in non_empty_indices:
-        try:
-            row = next(csv.reader([lines[index]], delimiter=delimiter))
-        except csv.Error:
-            continue
-        field_counts.append((index, len(row)))
-    if not field_counts:
-        return 0
-    frequency: dict[int, int] = {}
-    for _index, count in field_counts:
-        frequency[count] = frequency.get(count, 0) + 1
-    # Prefer the highest agreement with count >= 2; tie-break larger count.
-    mode_fields = max(
-        (count for count in frequency if count >= 2),
-        key=lambda count: (frequency[count], count),
-        default=1,
-    )
+        field_counts.append((index, len(_split_fields(lines[index], delimiter))))
+    mode_fields, _agreement = _mode_and_agreement([count for _index, count in field_counts])
     if mode_fields < 2:
         return 0
-    # First line that has mode_fields starts the table.
     for index, count in field_counts:
         if count == mode_fields:
             return index
@@ -739,13 +749,7 @@ def prepare_messy_csv(
     # Remove fully blank lines inside the table (count as non-data).
     dense_lines = [line for line in table_lines if line.strip()]
 
-    parsed_rows: list[list[str]] = []
-    for line in dense_lines:
-        try:
-            row = next(csv.reader([line], delimiter=delimiter))
-        except csv.Error:
-            row = line.split(delimiter)
-        parsed_rows.append(row)
+    parsed_rows: list[list[str]] = [_parse_line(line, delimiter) for line in dense_lines]
 
     null_tokens: set[str] = set(_DEFAULT_NULL_TOKENS)
     if null_value is not None:

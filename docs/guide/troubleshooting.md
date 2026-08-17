@@ -283,21 +283,24 @@ auto.describe_ingest()["delimiter"], auto.describe_ingest()["skipped_lines"]
 **Why it used to fail.** Detection scored the four candidates (comma, semicolon, tab, pipe) by raw field-count agreement, and
 `csv.reader` per line only honours a quote that *starts* a field. `;` inside `"a;b"` therefore
 split every line into a tidy 2 and beat the ragged comma table; the header was voted out as
-preamble. Detection now (1) ignores delimiters inside quotes and (2) prefers a candidate that
-splits an identifier header into the modal width, then ranks agreement.
+preamble. Detection now (1) uses one quote-aware splitter for score and parse (a stray quote
+falls back to a plain split) and (2) ranks `(header_join, agreement, -mode)` against a
+structural header — the first line whose widest candidate-split equals the mode of those
+widest splits. Identifier spelling of the header cells does not matter.
 
 **What to do.** Declare the delimiter whenever you know it. `sep=` short-circuits detection
-entirely and must be a **single character** (empty / multi-char raises
-`IllegalArgumentException`):
+entirely and must be a **single character** other than newline, CR, or quote (empty /
+multi-char / those three raise `IllegalArgumentException`). `option("sep", "")` does **not**
+fall through to `option("delimiter", ...)`:
 
 ```python
 spark.read.smartCsv(str(p), sep=",").show()
 ```
 
 `.option("sep", ...)` / `.option("delimiter", ...)` on the reader resolve to the same parameter.
-Auto-detection is still a **guess** — a header that is not identifier-like, or a file with no
-header, falls back to quote-aware agreement and can still pick a rival that lives unquoted in
-every value. Treat auto-detect as a convenience for exploration, not a production contract.
+Auto-detection is still a **guess** — a file with no usable structural header falls back to
+agreement then narrower-mode, and can still pick a rival that lives unquoted in every value.
+Treat auto-detect as a convenience for exploration, not a production contract.
 Pinned by
 `python/repark/tests/test_datasets_facade.py::test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter`
 and the (a)–(e) unit pins in `python/repark/tests/test_t4_csv_smart.py`.
