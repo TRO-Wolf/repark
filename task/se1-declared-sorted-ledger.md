@@ -149,3 +149,32 @@ loud with the row indices and the view still answering afterwards; transformed f
 (`filter` / `select` / `withColumn`) refusing with the source-frames message; no keys;
 unknown name listing the available ones; case-insensitive resolution of capitalized fields;
 snake and camel being one function; declaring twice being idempotent.
+
+# PR-C — the null-placement gap: measured dead end, and the one lever that works (2026-08-17)
+
+The PR-B residue chartered "declare both null placements when the verification scan proves
+the keys null-free." Implemented and measured: **DataFusion 54.1 cannot consume the second
+ordering.** `OrderingEquivalenceClass::get_options` returns the FIRST declared ordering whose
+leading expression matches, and `options_compatible` is plain equality for a nullable column —
+so a dual `[ASC NULLS LAST, ASC NULLS FIRST]` declaration leaves the second ordering
+unreachable (SortExec stays ×1 under NULLS FIRST). Not a bug in our seam; an upstream
+representation limit.
+
+What DOES work, measured: tightening the re-registered MemTable's verified null-free key
+fields to `nullable: false` — `options_compatible` then ignores placement, and ALL cells
+elide including the facade `Window.partitionBy(sym).orderBy(ts)` serving shape (SortExec
+1 → 0 in every cell, results identical). But that narrows the frame's REPORTED schema
+(`df.schema`, `to_arrow()` — and an Iceberg write of a declared frame would emit `required`
+fields), which falsifies the door's "planner hint, nothing else" contract on a
+PySpark-visible surface. That is an OWNER decision, not an increment:
+
+- (a) allow `declareSorted` to narrow verified-null-free key nullability, disclosed in the
+  door docstring + guide + this ledger (schema-truth argument: the scan PROVED null-free);
+  two PR-B pins re-anchor to value + non-key-type identity; Iceberg `required` consequence
+  documented; or
+- (b) keep the door a pure hint — the Spark-default-window gap stays open, marked
+  closed-upstream-only (DataFusion would need multi-placement ordering equivalence).
+
+**Default in force until the owner rules: (b)** — no schema change; the door remains exactly
+as PR-B shipped it. The null-free detection built for the probe (`Array::null_count()` per
+key per batch during verification) is the right input for (a) and drops in unchanged.
