@@ -19,6 +19,12 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   (already applied at Rust `build()`; a runtime SET of it refuses and names `TMPDIR`).
   **F-3 (2026-08-17):** the last undocumented public name here, `int_size_to_ok` inside
   `_supported_array_typecodes`, gained a docstring; docstring-only, ceiling unmoved.
+  **SE-1 PR-B (2026-08-17):** both `__repark_cdf_*` materializers
+  (`_materialize_values_as_memtable_frame`, `_materialize_arrow_as_memtable_frame`) stamp
+  `frame._source_view_name = view_name` on the frame they hand back. That tag is the only
+  thing `DataFrame.declareSorted` will declare against, and no `_spawn` path copies it — so
+  the door reaches exactly the createDataFrame source frames and refuses loud on every
+  transform of one. Ledger: `task/se1-declared-sorted-ledger.md`.
 - `builder_conf.py` — SparkContext, RuntimeConfig.
   **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
   **S-1 R1:** RuntimeConfig docs — `datafusion.runtime.memory_limit` swaps a new

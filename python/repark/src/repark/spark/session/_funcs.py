@@ -3390,6 +3390,16 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 
     _register_cdf_view_cleanup(session, frame, view_name)
 
+    # === SE-1: declared-sorted door ===
+
+    # Tag the handed-back frame as the *source* frame over this MemTable view, so
+
+    # ``DataFrame.declareSorted`` knows which registered view to verify and declare.
+
+    # Transformed frames get a fresh handle from ``_spawn`` and never inherit the tag.
+
+    frame._source_view_name = view_name
+
     return frame
 
 
@@ -3466,6 +3476,16 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
         raise
 
     _register_cdf_view_cleanup(session, frame, view_name)
+
+    # === SE-1: declared-sorted door ===
+
+    # Tag the handed-back frame as the *source* frame over this MemTable view, so
+
+    # ``DataFrame.declareSorted`` knows which registered view to verify and declare.
+
+    # Transformed frames get a fresh handle from ``_spawn`` and never inherit the tag.
+
+    frame._source_view_name = view_name
 
     return frame
 

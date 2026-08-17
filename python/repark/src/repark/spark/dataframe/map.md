@@ -4,7 +4,9 @@
 
 DataFrame facade package under `repark.spark.dataframe` (Q1 re-home, 2026-08-14).
 r26 T1 package-split the former monolith; **r27 T0** made the region split real
-(technique A: nested-class extract + owned helpers).
+(technique A: nested-class extract + owned helpers); **T0b** (SE-1 PR-B) moved the
+module-level plan-collapse / show-format / qcol-rewrite helper block out to
+`plan_collapse.py`, which is where `core.py`'s remaining headroom came from.
 
 ## Contents
 
@@ -35,14 +37,38 @@ r26 T1 package-split the former monolith; **r27 T0** made the region split real
   through `_bound_generator_array` (`column.py`) so string-form `explode` /
   `explode_outer` keep createDataFrame case (`Legs`); compounds and unresolved
   names keep `generator._inner`.
+  **SE-1 PR-B (2026-08-17):** `DataFrame.declareSorted` / `declare_sorted` — the
+  disclosed repark extension (no PySpark twin) that declares a `createDataFrame`
+  source frame pre-sorted so DataFusion elides the window `SortExec`. It refuses
+  loud on a transformed frame (the `_source_view_name` slot is set only by the
+  session's `__repark_cdf_*` materializers and never copied by `_spawn`), refuses
+  on a cached/persisted/checkpointed handle (caching redirects `_inner` to a cache
+  view in place — declare first, cache afterwards; SQM finding), resolves
+  keys through the same `_resolve_getitem_column_name` + `_engine_field_for_display`
+  pair `select` uses, hands ENGINE field names to the native
+  `declare_temp_view_sorted` (which ALWAYS verifies and refuses loud on
+  out-of-order data), and then **re-plans its own `_inner`** — the logical plan
+  captured the pre-declaration table source, so without the re-plan the declaring
+  frame would be the one frame that never sees the elision. See
+  `task/se1-declared-sorted-ledger.md`.
+- `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
+  move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
+  same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
+  duckdb formatters, the Arrow→display and Arrow→SQL type mappers, the r24 DF1
+  `dynamicFlatten` struct expander and the r20 H1 join-qcol token rewriters.
+  Imports nothing from `core` at module scope (annotations only, under `TYPE_CHECKING`);
+  `core.py` re-exports every name callers use, so `repark.spark.dataframe.core` and
+  `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A).
   **F-3 (2026-08-17):** the six undocumented `DataFrameStatFunctions` methods gained
   docstrings — the five delegating ones point at their `DataFrame` twin (which holds the
   real semantics, so there is one truth), and `freqItems` says plainly that it refuses.
-  `core.py` is the one file F-3 left alone: its 11 remaining nested helpers are deferred
-  because the file sits at 8199 of its 8200-line ceiling, so they wait on the next extract.
+  `core.py` is the one file F-3 left alone: its 11 remaining nested helpers were deferred
+  because the file sat at 8199 of its then 8200-line ceiling. The T0b extract below freed
+  that headroom (core.py ~7224, ceiling ratcheted to 7350), so the deferral is now a
+  choice, not a wall.
 - `actions_export.py` — `DataFrameNaFunctions` (real body; technique A).
 - `__init__.py` — frozen public imports (star-bind of core for private parity).
 
@@ -51,6 +77,8 @@ r26 T1 package-split the former monolith; **r27 T0** made the region split real
 | Task | Go to |
 |---|---|
 | Change DataFrame methods / plan glue | `core.py` |
+| Change the declared-sorted door (SE-1) | `core.py` (`declare_sorted`) + `../session/_funcs.py` (`_source_view_name`) |
+| Change show/eager-eval formatting, Arrow type labels, plan-collapse or qcol rewrite | `plan_collapse.py` |
 | Change generator mid-project name bind | `../column.py` (`_bound_generator_array`) + `core.py` (`_select_with_generator`) |
 | Change `join` how-aliases / semi-family routing | `core.py` (`DataFrame.join` + `_SEMI_JOIN_HOWS`) |
 | Change semi/anti origin-map join-type awareness | `core.py` (`_origin_not_emitted` + `_remember_unemitted_right_origins`) |
