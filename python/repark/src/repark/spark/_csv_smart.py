@@ -72,6 +72,13 @@ _SCI_RE = re.compile(r"^[+-]?(?:\d+\.?\d*|\.\d+)[eE][+-]?\d+$")
 
 _DEFAULT_NULL_TOKENS: frozenset[str] = frozenset({"", "null", "none", "na", "n/a", "nan"})
 
+# Auto-detect candidates (deterministic order). A declared ``preferred`` may be any
+# single character; empty / multi-char values refuse loud.
+_DELIMITER_CANDIDATES: tuple[str, ...] = (",", ";", "\t", "|")
+# Header-join: a line whose quote-aware cells are all identifier tokens. Hyphen is
+# allowed so names like ``ragged-tail`` still qualify; spaces / punctuation do not.
+_HEADER_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_-]*$")
+
 
 # ==================================================================================================
 # Diagnostics report
@@ -499,48 +506,114 @@ def _strip_bom(text: str) -> tuple[str, bool]:
     return text, False
 
 
-def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
-    """Score delimiter consistency: (mode_field_count_or_0, agreement_rows).
+def _split_quote_aware(line: str, delimiter: str) -> list[str]:
+    """Split one record on ``delimiter``, ignoring separators inside quotes.
 
-    Returns (0, 0) when unusable (no rows, or modal field count < 2).
+    Quote handling is RFC-style and **delimiter-independent**: a ``"`` toggles
+    quoted state anywhere (not only at a field start), and ``""`` inside quotes
+    is a literal quote. A rival inside a quoted cell therefore contributes no
+    splits — unlike ``csv.reader`` per line, which only honours a quote that
+    *opens* a field under the candidate delimiter.
+    """
+    cells: list[str] = []
+    current: list[str] = []
+    in_quotes = False
+    index = 0
+    length = len(line)
+    while index < length:
+        char = line[index]
+        if char == '"':
+            if in_quotes and index + 1 < length and line[index + 1] == '"':
+                current.append('"')
+                index += 2
+                continue
+            in_quotes = not in_quotes
+            current.append(char)
+            index += 1
+            continue
+        if char == delimiter and not in_quotes:
+            cells.append("".join(current))
+            current = []
+            index += 1
+            continue
+        current.append(char)
+        index += 1
+    cells.append("".join(current))
+    return cells
+
+
+def _header_token(cell: str) -> str:
+    """Strip whitespace and one layer of surrounding quotes from a header cell."""
+    text = cell.strip()
+    if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
+        return text[1:-1].replace('""', '"')
+    return text
+
+
+def _is_identifier_header(cells: list[str]) -> bool:
+    """True when every cell is a non-empty identifier token (header-join probe)."""
+    if len(cells) < 2:
+        return False
+    for cell in cells:
+        token = _header_token(cell)
+        if _HEADER_NAME_RE.match(token) is None:
+            return False
+    return True
+
+
+def _require_single_char_delimiter(value: str, *, what: str) -> str:
+    """Refuse empty / multi-char delimiter declarations (csv.reader TypeError trap)."""
+    if len(value) != 1:
+        raise ValueError(f"{what} must be a single character, got {value!r}")
+    return value
+
+
+def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int, int]:
+    """Score one candidate: ``(header_join, agreement, mode_fields)``.
+
+    Counts are quote-aware. ``header_join`` is 1 when some line splits into
+    ``mode_fields`` identifier tokens — the header joins the mode. Unusable
+    candidates (no rows, or modal field count < 2) score ``(0, 0, 0)``.
     """
     counts: list[int] = []
+    identifier_widths: set[int] = set()
     for line in lines:
         if not line.strip():
             continue
-        try:
-            row = next(csv.reader([line], delimiter=delimiter))
-        except csv.Error:
-            continue
-        counts.append(len(row))
+        cells = _split_quote_aware(line, delimiter)
+        width = len(cells)
+        counts.append(width)
+        if _is_identifier_header(cells):
+            identifier_widths.add(width)
     if not counts:
-        return 0, 0
-    # Mode field count.
+        return 0, 0, 0
     frequency: dict[int, int] = {}
     for count in counts:
         frequency[count] = frequency.get(count, 0) + 1
     mode_count = max(frequency, key=lambda key: (frequency[key], key))
     if mode_count < 2:
-        return 0, 0
+        return 0, 0, 0
     agreement = frequency[mode_count]
-    return mode_count, agreement
+    header_join = 1 if mode_count in identifier_widths else 0
+    return header_join, agreement, mode_count
 
 
 def detect_delimiter(lines: list[str], *, preferred: str | None = None) -> str:
-    """Pick the delimiter with the strongest field-count consistency (deterministic order).
+    """Pick the delimiter with the strongest quote-aware, header-joined agreement.
 
-    Rank **modal field count** first, then agreement. A 2-field perfect-agreement
-    rival (a quote that only starts a field under the true delimiter) must not beat
-    a wider split whose agreement is slightly lower because of ragged rows.
+    Rank ``(header_join, agreement, mode_fields)`` over ``, ; \\t |`` in that
+    order. Quote-aware counts close the mid-field-quote class (a rival inside
+    quotes contributes no splits). Agreement stays primary among candidates
+    that split an identifier header into the modal width; modal field count is
+    only the last tie-break, so one wide line cannot elect a rival on a small
+    file. A declared ``preferred`` must be a single character.
     """
     if preferred is not None:
-        return preferred
-    candidates = (",", ";", "\t", "|")
+        return _require_single_char_delimiter(preferred, what="preferred delimiter")
     best = ","
-    best_score = (-1, -1)  # (mode_fields, agreement)
-    for candidate in candidates:
-        mode_fields, agreement = _score_delimiter(lines, candidate)
-        score = (mode_fields, agreement)
+    best_score = (-1, -1, -1)
+    for candidate in _DELIMITER_CANDIDATES:
+        score = _score_delimiter(lines, candidate)
         if score > best_score:
             best_score = score
             best = candidate

@@ -14,7 +14,7 @@ not this directory.
 
 - [c25-bugfix-ledger.md](c25-bugfix-ledger.md) — **conductor-25 (2026-08-17):**
   DS-4 / F-4 bug-candidate fix round (B4→B1→B6→B2→B3→B5). Single ledger, appended
-  per PR. B4: smartCsv delimiter auto-detect ranks modal field count first.
+  per PR. B4: smartCsv delimiter auto-detect is quote-aware + header-join rank.
 - [f3-docstring-ledger.md](f3-docstring-ledger.md) — **F-3 (2026-08-17):** public-docstring
   backfill across the facade. Carries the AST census before/after per file (1117/1210 →
   1199/1210; 82 docstrings, 101 added lines, 0 deleted) and the measured `repark.polars`

@@ -784,10 +784,10 @@ def test_smartcsv_euro_comma_decimal_cast_refuses_loud(
 def test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter(tmp_path: Path) -> None:
     """Auto-detect picks each scheme's own delimiter on the delimiter-zoo corpus.
 
-    Was BUG-CANDIDATE (DS-4 / #163): ``detect_delimiter`` ranked raw agreement first, so
-    a 2-field perfect-agreement rival (quote mid-field under a wrong delimiter) beat the
-    true 12-field split and ate one data row as the header. B4 ranks modal field count
-    first so the wide split wins; declared ``sep`` stays the control.
+    Was BUG-CANDIDATE (DS-4 / #163): ``csv.reader`` per line only honours a quote
+    that opens a field, so a 2-field rival inside quotes beat the true 12-field
+    split and ate one data row as the header. B4 counts quote-aware and ranks
+    ``(header_join, agreement, mode_fields)``; declared ``sep`` stays the control.
 
     Pinned at the preprocessing surface (no engine). Value AND header identity.
     """

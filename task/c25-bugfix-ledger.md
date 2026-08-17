@@ -193,27 +193,116 @@ of `core.py`, `crates/repark-core/src/session.rs` declare seam,
 
 ---
 
-## 1. B4 — delimiter auto-detect (2026-08-17)
+## 1. B4 — delimiter auto-detect (2026-08-17, SQM rework)
 
-**Branch:** `grok/c25-b4-csv-delimiter` · **Base:** `2cfcba9` (GO SHA)
+**Branch:** `grok/c25-b4-csv-delimiter` · **Base:** `2cfcba9` (GO SHA) · **PR:** #175
 
-**Decision:** rank `(mode_fields, agreement)` instead of `(agreement, mode_fields)`.
-A 2-field rival with perfect agreement (quote mid-field under the wrong
-delimiter) no longer beats a 12-field split whose agreement is lower because
-of ragged rows. True 2-column `;` files still win: the comma candidate's
-modal count is < 2 and scores `(0, 0)`.
+### 1.1 First cut (rejected by SQM)
 
-**Tests (same names, flipped — A5):**
-- `test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter` now asserts
-  auto-detect == declared scheme delimiter, `data_row_count == 64`, headers
-  match (incl. `_c12`).
-- New unit pin: `test_detect_delimiter_prefers_wide_split_over_two_field_rival`
-  in `test_t4_csv_smart.py`.
+The first cut ranked `(mode_fields, agreement)` instead of `(agreement, mode_fields)`.
+That closed DS-4's 12-vs-2 case and **regressed** every true-narrow file whose
+text column embeds a wider rival. The ledger line that "true 2-column `;` files
+still win because the comma candidate's modal count is < 2" is **false** — a
+2-col TSV with commas in the text column scores `,` → `(3, 3)` vs `\\t` →
+`(2, 4)` under the new key, and origin/main detected tab correctly.
+
+The registered class was also not closed: `csv.reader` per line only honours a
+quote that *opens* a field, so a quoted pipe-list (`"a|b|c|d"`) still splits
+under `|` and beats comma under field-count-first. The t4 pin
+`test_detect_delimiter_prefers_wide_split_over_two_field_rival` was vacuous
+(`,` → `(4, 4)` vs `;` → `(2, 3)`: comma wins under **both** keys).
+
+### 1.2 Real root cause
+
+Two independent defects, in this order:
+
+1. **Quote-blind counting.** Per-line `csv.reader([line], delimiter=candidate)`
+   treats a `"` as a field opener only. Under a *wrong* candidate the quote sits
+   mid-field, so every rival inside a quoted cell becomes a split. That is how
+   DS-4's quoted `embedded_delims` (`r{n},s;t\\tu|v`) gives every rival a
+   perfect 2-field agreement of 64.
+2. **Agreement-only ranking, with no header join.** After (1) is fixed, the
+   DS-4 comma scheme is already solved (rivals fall to 1 field). The
+   semicolon / tab / pipe schemes still lose under agreement-primary: unquoted
+   `,` in `euro_decimal` / `amount_currency` scores `,` → quote-aware
+   `(mode 4, agr 58)` vs the true delimiter `(mode 12, agr 54)`. The commas
+   never appear in the **header names**.
+
+Field-count-first is not a fix for (2): it inverts the 2-col TSV / 2-col `;`
+class (SQM R1) and lets a single wide line decide on a small file (R4).
+
+### 1.3 Derived rank key (from the fixtures)
+
+1. **Count quote-aware** (delimiter-independent `"` toggle, `""` escape). A
+   rival inside quotes contributes no splits. This is *not* `csv.reader` on the
+   whole file — stream `csv.reader` is still delimiter-dependent and scores the
+   quoted-pipe case the same as the per-line reader (`|` → `(4, 3)`).
+2. **Rank `(header_join, agreement, mode_fields)`.** `header_join` is 1 when
+   some line splits into `mode_fields` identifier tokens
+   (`^[A-Za-z_][A-Za-z0-9_-]*$`). Agreement stays primary among header-joining
+   candidates; modal field count is only the last tie-break.
+
+Measured on the real DS-4 generator (`render_csv(64, 42, scheme)`) and the
+SQM counterexamples (quote-aware counts):
+
+| corpus | `,` | `;` | tab | `\|` | winner |
+|---|---|---|---|---|---|
+| DS-4 comma | header (12, 54) | (0, 0) | (0, 0) | (0, 0) | `,` |
+| DS-4 semicolon | (4, 58), no header | header (12, 54) | (0, 0) | (0, 0) | `;` |
+| DS-4 tab | (4, 58), no header | (0, 0) | header (12, 54) | (0, 0) | tab |
+| DS-4 pipe | (4, 58), no header | (0, 0) | (0, 0) | header (12, 54) | `\|` |
+| TSV + commas | (3, 2), no header | (0, 0) | header (2, 4) | (0, 0) | tab |
+| 2-col `;` + commas | (3, 3), no header | header (2, 4) | (0, 0) | (0, 0) | `;` |
+| quoted pipe-list | header (3, 4) | (0, 0) | (0, 0) | (0, 0) | `,` |
+| small-file one wide line | header (2, 2) | (5, 1), no header | (0, 0) | (0, 0) | `,` |
+| troubleshooting:248 repro | header (3, 2) | (0, 0) quote-aware | — | — | `,` |
+
+Without header-join, agreement-primary would pick comma on DS-4 semicolon /
+tab / pipe (58 > 54). That is the derived refinement, justified against every
+SQM counterexample: the unquoted rival never splits the identifier header, so
+`header_join=0` and loses to the true delimiter.
+
+`preferred=` empty / multi-char now raises `ValueError` (unit) /
+`IllegalArgumentException` (smartCsv door). Previously returned unvalidated
+and escaped as a raw `csv.reader` TypeError.
+
+### 1.4 Pins (each fails origin/main **or** the naive re-rank)
+
+Same names flipped (A5):
+- `test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter` — auto ==
+  declared, `data_row_count == 64`, headers incl. `_c12`.
+
+New unit pins in `test_t4_csv_smart.py` (vacuous wide-split pin deleted):
+- (a) `test_detect_delimiter_ds4_ragged_wide_beats_quoted_two_field_rival`
+- (b) `test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab`
+- (c) `test_detect_delimiter_two_column_semicolon_beats_wider_comma`
+- (d) `test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe`
+- (e) `test_detect_delimiter_small_file_one_wide_line_does_not_decide`
+- refinement `test_detect_delimiter_header_join_beats_unquoted_data_commas`
+- `test_detect_delimiter_preferred_refuses_non_single_char`
+- `test_smart_csv_sep_refuses_non_single_char`
 
 **Generators:** untouched.
 
-**Gates (echo \$?; never piped through tail):**
-- flipped + unit pins: exit 0 (2 passed, 0.71s)
-- `make py-test`: exit 0 (235 passed)
+### 1.5 Doc truth-ups (same PR)
+
+- `docs/guide/troubleshooting.md` — the :248 repro now shows the correct
+  comma parse (`delimiter=','`, `skipped_lines=0`); executed against the
+  built module.
+- `task/c18-datasets-ledger.md` C-043 row + finding 2 marked FIXED.
+- `examples/notebooks/map.md` + `datasets_tour.ipynb` zoo / autodetect cells.
+
+### 1.6 Residual
+
+A file with **no** identifier-like header falls back to quote-aware
+`(0, agreement, mode_fields)`. An unquoted rival that appears with higher
+agreement than the true delimiter can still win there — declare `sep`.
+Auto-detect remains a guess, not a production contract.
+
+**Gates (echo $?; never piped through tail):**
+- delimiter unit + DS-4 facade pins: exit 0 (8 passed)
+- `test_t4_csv_smart.py`: exit 0 (38 passed)
 - `make ci`: exit 0
-- `make py-test-facade`: exit 0 (3319 passed, 70 skipped)
+- `make py-test`: exit 0 (235 passed)
+- `make py-test-facade`: exit 0 (3326 passed, 70 skipped)
+- two-pass hygiene: 0 needles in product files

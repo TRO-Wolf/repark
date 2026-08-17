@@ -128,7 +128,7 @@ class DataFrameReader:
 
         **Not** a Spark API. Default :meth:`csv` is unchanged (byte-identical r20-R1 pins).
 
-        * Delimiter auto-detect (unless ``sep`` given)
+        * Delimiter auto-detect (unless ``sep`` given; ``sep`` must be one character)
         * Leading junk/preamble skip (delimiter-consistency scan)
         * Header auto-detect (override with ``header=True/False``)
         * Ragged rows null-padded (count in :meth:`~repark.dataframe.DataFrame.describe_ingest`)
@@ -236,6 +236,13 @@ class DataFrameReader:
                     f"smartCsv samplingRows must be > 0, got {sampling_int}"
                 )
             resolved_sampling = sampling_int
+
+        if resolved_sep is not None and (
+            not isinstance(resolved_sep, str) or len(resolved_sep) != 1
+        ):
+            raise IllegalArgumentException(
+                f"smartCsv sep must be a single character, got {resolved_sep!r}"
+            )
 
         frame, report = load_smart_csv(
             self._session,

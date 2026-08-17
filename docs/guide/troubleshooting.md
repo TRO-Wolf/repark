@@ -248,7 +248,10 @@ and called out in the tour notebook where it bites.
 ## `smartCsv` picked the wrong delimiter
 
 **Symptom.** No error at all — a silently wrong parse. The column names are data, and a row has
-gone missing:
+gone missing.
+
+That used to happen on files like this, where a rival delimiter lived *inside quoted cells* and
+the rows were ragged. Auto-detect now counts quote-aware and keeps the comma:
 
 ```python
 p = Path(tmpdir) / "ragged.csv"
@@ -259,39 +262,7 @@ auto.show()
 ```
 
 ```text
-['1,"a', 'b",x']
-+------+-----------------+
-| 1,"a | b",x            |
-+------+-----------------+
-| 2,"c | d",y,extra      |
-| 3,"e | f",z,extra,more |
-+------+-----------------+
-```
-
-**Why.** Delimiter detection scores the candidates `, ; \t |` purely by **field-count agreement**
-across lines. Here the comma-delimited rows are ragged (3, 4, 5 fields), while a rival `;` — which
-only appears inside quoted values — splits every line into a consistent 2, because a quote is only
-honoured when it *starts* a field. `;` wins the agreement contest, and the header detector then
-votes the real header line out as preamble.
-
-`describe_ingest()` tells you exactly what happened, which is the fastest way to confirm it:
-
-```python
-auto.describe_ingest()["delimiter"], auto.describe_ingest()["skipped_lines"]
-```
-
-```text
-(';', 1)
-```
-
-**What to do.** Declare the delimiter whenever you know it. `sep=` short-circuits detection
-entirely:
-
-```python
-spark.read.smartCsv(str(p), sep=",").show()
-```
-
-```text
+['id', 'name', 'note', '_c3', '_c4']
 +----+------+------+-------+------+
 | id | name | note | _c3   | _c4  |
 +----+------+------+-------+------+
@@ -301,10 +272,35 @@ spark.read.smartCsv(str(p), sep=",").show()
 +----+------+------+-------+------+
 ```
 
+```python
+auto.describe_ingest()["delimiter"], auto.describe_ingest()["skipped_lines"]
+```
+
+```text
+(',', 0)
+```
+
+**Why it used to fail.** Detection scored the four candidates (comma, semicolon, tab, pipe) by raw field-count agreement, and
+`csv.reader` per line only honours a quote that *starts* a field. `;` inside `"a;b"` therefore
+split every line into a tidy 2 and beat the ragged comma table; the header was voted out as
+preamble. Detection now (1) ignores delimiters inside quotes and (2) prefers a candidate that
+splits an identifier header into the modal width, then ranks agreement.
+
+**What to do.** Declare the delimiter whenever you know it. `sep=` short-circuits detection
+entirely and must be a **single character** (empty / multi-char raises
+`IllegalArgumentException`):
+
+```python
+spark.read.smartCsv(str(p), sep=",").show()
+```
+
 `.option("sep", ...)` / `.option("delimiter", ...)` on the reader resolve to the same parameter.
-Auto-detection is a **guess**; treat it as a convenience for exploration, not a production
-contract. An **open finding**, pinned by
-`python/repark/tests/test_datasets_facade.py::test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter`.
+Auto-detection is still a **guess** — a header that is not identifier-like, or a file with no
+header, falls back to quote-aware agreement and can still pick a rival that lives unquoted in
+every value. Treat auto-detect as a convenience for exploration, not a production contract.
+Pinned by
+`python/repark/tests/test_datasets_facade.py::test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter`
+and the (a)–(e) unit pins in `python/repark/tests/test_t4_csv_smart.py`.
 
 ---
 
