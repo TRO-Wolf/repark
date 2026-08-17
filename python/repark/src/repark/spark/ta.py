@@ -1858,4 +1858,5 @@ __all__ = [
     "wclprice",
     "willr",
     "with_indicators",
+    "wma",
 ]

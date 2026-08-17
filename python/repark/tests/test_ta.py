@@ -1008,3 +1008,22 @@ def test_sequential_withcolumn_same_spec_merges_window_aggs(bars: object) -> Non
         left_arr = left.column(name).to_numpy(zero_copy_only=False)
         right_arr = right.column(name).to_numpy(zero_copy_only=False)
         _assert_bit_exact(left_arr, right_arr)
+
+
+def test_all_covers_every_public_ta_entry_point() -> None:
+    """``ta.__all__`` lists every public def — ``wma`` was silently missing (F-4 finding),
+    so ``from repark.spark.ta import *`` skipped it. This pin closes the class."""
+    import ast
+    import inspect
+
+    from repark.spark import ta
+
+    tree = ast.parse(inspect.getsource(ta))
+    public = {
+        node.name
+        for node in ast.iter_child_nodes(tree)
+        if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and not node.name.startswith("_")
+    }
+    missing = public - set(ta.__all__)
+    assert not missing, f"public names absent from ta.__all__: {sorted(missing)}"
+    assert "wma" in ta.__all__
