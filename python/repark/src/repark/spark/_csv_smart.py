@@ -531,6 +531,7 @@ def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
         counts.append(len(row))
     if not counts:
         return 0, 0
+    # Mode field count.
     frequency: dict[int, int] = {}
     for count in counts:
         frequency[count] = frequency.get(count, 0) + 1
@@ -572,6 +573,7 @@ def detect_preamble_skip(lines: list[str], delimiter: str) -> int:
     non_empty_indices = [index for index, line in enumerate(lines) if line.strip()]
     if not non_empty_indices:
         return 0
+    # Modal field count over all non-empty lines.
     field_counts: list[tuple[int, int]] = []  # (line_index, n_fields)
     for index in non_empty_indices:
         try:
@@ -584,6 +586,7 @@ def detect_preamble_skip(lines: list[str], delimiter: str) -> int:
     frequency: dict[int, int] = {}
     for _index, count in field_counts:
         frequency[count] = frequency.get(count, 0) + 1
+    # Prefer the highest agreement with count >= 2; tie-break larger count.
     mode_fields = max(
         (count for count in frequency if count >= 2),
         key=lambda count: (frequency[count], count),
@@ -591,6 +594,7 @@ def detect_preamble_skip(lines: list[str], delimiter: str) -> int:
     )
     if mode_fields < 2:
         return 0
+    # First line that has mode_fields starts the table.
     for index, count in field_counts:
         if count == mode_fields:
             return index

@@ -235,7 +235,8 @@ class (SQM R1) and lets a single wide line decide on a small file (R4).
 
 ~~Round-2 table below is STRUCK. SQM round 3 found it fabricated / not
 re-measured against the shipped code. Do not cite these tuples. Corrected
-origin/main `csv.reader` scores are in §1.8.~~
+origin/main `csv.reader` scores are in the **Correction** paragraph
+immediately below this table (not §1.8 — that pointer was wrong).~~
 
 1. ~~**Count quote-aware** (delimiter-independent `"` toggle, `""` escape).~~
 2. ~~**Rank `(header_join, agreement, mode_fields)`.**~~
@@ -270,36 +271,29 @@ comma. Two-inch-mark row under declared comma parses as four cells.
 
 ### 1.4 Pins (each fails origin/main **or** the naive re-rank)
 
-Same names flipped (A5):
-- `test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter` — auto ==
-  declared, `data_row_count == 64`, headers incl. `_c12`.
-
-New unit pins in `test_t4_csv_smart.py` (vacuous wide-split pin deleted):
-- (a) `test_detect_delimiter_ds4_ragged_wide_beats_quoted_two_field_rival`
-- (b) `test_detect_delimiter_tsv_with_unquoted_commas_keeps_tab`
-- (c) `test_detect_delimiter_two_column_semicolon_beats_wider_comma`
-- (d) `test_detect_delimiter_quoted_pipe_list_does_not_elect_pipe`
-- (e) `test_detect_delimiter_small_file_one_wide_line_does_not_decide`
-- refinement `test_detect_delimiter_header_join_beats_unquoted_data_commas`
-- `test_detect_delimiter_preferred_refuses_non_single_char`
-- `test_smart_csv_sep_refuses_non_single_char`
-
-**Generators:** untouched.
+~~STRUCK (SQM round 4 L1). This subsection claimed the DS-4 facade pin
+asserts the *fix* and named three detect pins that are not in the tree
+(`…_wide_beats_quoted_two_field_rival`, `…_small_file_one_wide_line_does_not_decide`,
+`…_header_join_beats_unquoted_data_commas`). Round-4 D5 restored the
+DS-4 pin to `misdetected` + `ROWS-1`. Live detect pin names are in §1.8 D5.
+Do not cite this list.~~
 
 ### 1.5 Doc truth-ups (same PR)
 
-- `docs/guide/troubleshooting.md` — the :248 repro now shows the correct
-  comma parse (`delimiter=','`, `skipped_lines=0`); executed against the
-  built module.
-- `task/c18-datasets-ledger.md` C-043 row + finding 2 marked FIXED.
-- `examples/notebooks/map.md` + `datasets_tour.ipynb` zoo / autodetect cells.
+~~STRUCK (SQM round 4 L1). This subsection said troubleshooting :248 shows
+a correct comma parse and that C-043 is FIXED. Round-4 D3 reversed those
+claims: the miss is a documented known-limit; C-043 is restored to
+known-limit; `sep=';'` is the remedy. Live doc state is §1.8 D3.~~
 
 ### 1.6 Residual
 
-A file with **no** identifier-like header falls back to quote-aware
-`(0, agreement, mode_fields)`. An unquoted rival that appears with higher
-agreement than the true delimiter can still win there — declare `sep`.
-Auto-detect remains a guess, not a production contract.
+~~STRUCK (SQM round 4 L1). This paragraph described a quote-aware
+`(0, agreement, mode_fields)` fallback that was deleted in D1.~~
+
+**Live residual (round 4, origin/main `csv.reader` + `(agreement, mode)`):**
+an unquoted rival with higher agreement than the true delimiter still
+wins auto-detect (the DS-4 class). Declare `sep`. Auto-detect is a guess,
+not a production contract. See §1.8 residuals.
 
 **Gates (echo $?; never piped through tail):** see §1.7 (round 3 superseded these).
 
@@ -356,6 +350,7 @@ Not a substitute for the orchestrator Opus pass.
 
 Critic-1 (semantics/parity): no PySpark function wrappers in this PR. Attacked
 splitter/rank/option-path. No S0/S1 left open.
+**Superseded by SQM rounds 3–4 — not an SQM CLEAN verdict.**
 - Quote-aware + C3: inch-mark A+B pins; A7 quote-blind corpus measured
   aware `,` (0,1,-5) vs blind `|` (1,3,-2).
 - Structural shared-maxmode header: A2 one- and two-line comma preambles
@@ -400,6 +395,8 @@ fence (getting-started:164 + troubleshooting truth-up; product needles 0);
 callers (smartCsv option is-not-None; prepare_messy_csv uses _parse_line).
 Verdict: CLEAN (zero S0/S1 survivors). Loop-until-dry not re-run as a second
 independent process in this session — orchestrator SQM is the backstop.
+**Superseded by SQM round 3 (FIX REQUIRED — descope) and SQM round 4
+(NEAR-CLEAN polish).** This CLEAN is a same-session report, not an SQM verdict.
 
 ---
 
@@ -429,7 +426,8 @@ remedy is `sep=';'`. C-043 restored to known-limit. Registry row is
 orchestrator-side (this lane does not edit `docs/spark-sql-iceberg-parity.md`).
 
 **D4 (this section).** Three-round history stays above; §1.3 table struck
-with visible correction, not deleted.
+with visible correction, not deleted. Measured origin/main scores live in
+the Correction paragraph under §1.3 (not a second table here).
 
 **D5 (pins).** Surviving detect pins assert origin/main measured winners.
 DS-4 facade pin restored to `misdetected` + `ROWS-1` + declared-sep control.
@@ -441,8 +439,9 @@ Human-header "fix" pin deleted.
 - Headerless 2-col TSV/`;` with rival chars elects the wider rival.
 - Equal-width rival preamble can hijack detect (round-3 class; origin/main
   also susceptible when preamble agreement matches).
-- One-rival-char-per-row ties: narrower candidate can win on mode
-  (origin/main last slot is `+mode`, so *wider* wins a pure agr tie).
+- One-rival-char-per-row agr ties: shipped key is `(agreement, mode)` so
+  the *wider* candidate wins a pure agreement tie. The A3 `-mode`
+  narrower-wins class is gone with the revert (unreachable under this key).
 - Multiline quoted fields: never supported (per-line reader).
 - Inch-mark *values* are fine on origin/main `csv.reader` (declared sep);
   they were a round-3 one-splitter regression, now gone.
@@ -461,12 +460,14 @@ parse==detect splitter, DS-4 pin polarity, headed TSV/`;`/pipe pins,
 honest-(e) `-mode` mutant, parse value pins, D2 option vs kwargs,
 preamble skip, C-043/maps/notebook, registry non-edit, headerless
 residual. Findings: 0 S0/S1. Verdict CLEAN.
+**Superseded by SQM round 4 (NEAR-CLEAN polish) — not an SQM verdict.**
 
 Critic-2 (safety/option-path/values): traced `option("sep","")` and
 `option("sep","").option("delimiter",";")` — empty is sticky-present,
 does not fall through; refuse `len!=1` / `\n` `\r` `"`. Declared-sep
 two-inch-mark row stays 4 cells via `csv.reader`. `\x01` allowed.
 Findings: 0. Verdict CLEAN.
+**Superseded by SQM round 4 (NEAR-CLEAN polish) — not an SQM verdict.**
 
 Signature table: 0 `pyspark.sql.functions` names (facade-pure reader).
 Oracle probes: facade-pure; csv.reader is the oracle for this unit
@@ -494,6 +495,8 @@ Null attestations:
 Verdict: CLEAN (zero S0/S1 survivors). Loop-until-dry second quiet round
 not re-run (standard tier; first 5-dim round was quiet). Verifiers not
 spawned because deduped finding count was 0.
+**Superseded by SQM round 4 (NEAR-CLEAN — L1–L3 polish).** This CLEAN is
+a same-session report, not an SQM verdict.
 
 First background spawn batch (7 agents) was not retrievable by task-id
 in this session; the reports above are from a second blocking spawn of
@@ -502,3 +505,69 @@ quiet round.
 
 Halt for orchestrator SQM. Same branch; no second B4 PR. B1 stays HELD
 until merge.
+
+### 1.9 Round 5 — L1–L3 polish (RESUME 2026-08-17)
+
+Scope only the SQM round-4 polish list. No rank-key or detect/parse change
+beyond L3 single-sourcing.
+
+**L1.** §1.4 / §1.5 / §1.6 visibly STRUCK. §1.3 pointer no longer claims
+§1.8 has a score table. §1.8 residual: *wider* wins a pure agr tie under
+`(agreement, mode)`. Round-3 and round-4 CLEAN banners carry
+superseded-by-SQM.
+
+**L2 (measured).** Three parse pins + the old `a,b` positive option arm
+are green on origin/main. Parse pins relabeled non-discriminating
+regression guards. Option pin now uses the troubleshooting ragged file:
+measured auto-detect `;` vs declared `option("sep", ",")` → `,` / header
+`id`. Refuse arms still kill origin/main unvalidated / falsy fall-through.
+Honest-(e) pin documented as green on origin/main and field-count-first
+(kills `-mode` only).
+
+**L3.** `reader.py` calls `_require_single_char_delimiter` and wraps
+`ValueError` as `IllegalArgumentException` (same "single character"
+message). Four origin/main comments restored in `_csv_smart.py`.
+Troubleshooting empty-sep example is the refuse, not a comma `show()`.
+
+**Gates:** `make preflight` `preflight_exit=0` (facade 3330 passed, 70
+skipped). Focused L1–L3 pins 7 passed.
+
+## Pre-PR critic report (/repark-harden) — round 5 polish
+
+Engine: ACC review-only standard — tier standard (docs/ledger + reader
+single-source; no engine crate). Finder-battery: 3 dimensions × 1
+verifier slot (no candidates → 0 verifiers spawned).
+
+Critic-1 (quality/parity): attacked L1 strikes, L2 pin honesty, L3
+refuse wrap, detect/parse vs 2cfcba9. Findings: 2×S3 (round-4 ACC CLEAN
+untagged — remediating in this section; honest-(e) vs r1 labeled).
+0 S0/S1. Verdict CLEAN.
+
+Critic-2 (security/safety): attacked empty-sep refuse, option+delimiter
+fall-through, refuse-set single-source, declared-sep inch marks,
+sep-as-path. Findings: 0. Verdict CLEAN. Null reports C2-N-001…007.
+
+Signature table: 0 `pyspark.sql.functions` names.
+Oracle probes: facade-pure; measured rival-file auto-detect `;`.
+Pin audit: refuse trio + rival-file option arm name the implementation
+they kill; four parse pins honestly labeled non-discriminating.
+
+Convergence: ACC-CONVERGED (spawned Critic-1 + Critic-2 CLEAN, S3
+remediated) + TEST-GATED (`make preflight` exit 0).
+
+## Finder-battery report
+
+Target: 2cfcba9...worktree + uncommitted L1–L3 | dimensions: 3
+(wiring/semantics, pins/tests, fence/docs) | findings: 0 raw → 0 deduped
+Survivors: none
+Refuted: n/a
+Null attestations:
+- wiring: (agreement, mode) + csv.reader; D2 refuse wrap only
+- pins: parse relabels honest; option pin reds if option ignored
+- fence: §1.4–1.6 struck; pointer fixed; residual wider-wins; CLEAN
+  banners superseded; troubleshooting refuse example
+Verdict: CLEAN (zero S0/S1 survivors). Verifiers not spawned (0
+candidates). Agents spawned (explore): Critic-1, Critic-2, three
+finders — not NOT-RUN.
+
+Keep #175 DRAFT. B1 not started.

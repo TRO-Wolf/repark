@@ -304,8 +304,9 @@ NOT in that file is a defect, not a decision.
   default `.csv` r20-R1 regression guards. **B4 (round 4):** detect pins origin/main
   agreement-first (DS-4 known-limit elects the rival; headed TSV/`;`/quoted-pipe
   keep origin/main winners) plus D2 refuse (empty / multi-char / newline / CR /
-  quote; `option("sep","")` does not fall through). Parse pins origin/main
-  `csv.reader` values.
+  quote; `option("sep","")` does not fall through; a present `option("sep", ",")`
+  on a file whose auto-detect elects `;` still parses as comma). Parse pins are
+  labeled non-discriminating origin/main `csv.reader` regression guards.
 - `test_r1_read_formats.py` — R1 CSV/JSON read+write: header/inferSchema/schema/sep/nullValue/
   multiLine readers; format().load; write→read Arrow value+type (flat + nested JSON); empty
   overwrite; unsupported parse options + orc DATA_SOURCE_NOT_FOUND; **octo:** numeric nullValue,

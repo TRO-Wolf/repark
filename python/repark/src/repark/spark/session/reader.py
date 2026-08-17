@@ -239,15 +239,18 @@ class DataFrameReader:
                 )
             resolved_sampling = sampling_int
 
-        if resolved_sep is not None and (
-            not isinstance(resolved_sep, str)
-            or len(resolved_sep) != 1
-            or resolved_sep in {"\n", "\r", '"'}
-        ):
-            raise IllegalArgumentException(
-                "smartCsv sep must be a single character other than newline, "
-                f"carriage return, or quote, got {resolved_sep!r}"
-            )
+        if resolved_sep is not None:
+            from repark.spark._csv_smart import _require_single_char_delimiter
+
+            if not isinstance(resolved_sep, str):
+                raise IllegalArgumentException(
+                    "smartCsv sep must be a single character other than newline, "
+                    f"carriage return, or quote, got {resolved_sep!r}"
+                )
+            try:
+                resolved_sep = _require_single_char_delimiter(resolved_sep, what="smartCsv sep")
+            except ValueError as error:
+                raise IllegalArgumentException(str(error)) from error
 
         frame, report = load_smart_csv(
             self._session,

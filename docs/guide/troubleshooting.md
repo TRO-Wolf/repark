@@ -293,7 +293,16 @@ auto.describe_ingest()["delimiter"], auto.describe_ingest()["skipped_lines"]
 and any file whose values embed a rival — pass `sep=';'` (or the known delimiter). `sep=`
 short-circuits detection entirely and must be a **single character** other than newline, CR,
 or quote (empty / multi-char / those three raise `IllegalArgumentException`).
-`option("sep", "")` does **not** fall through to `option("delimiter", ...)`:
+`option("sep", "")` does **not** fall through to `option("delimiter", ...)` —
+the empty string is a present value and refuses loud:
+
+```python
+spark.read.option("sep", "").option("delimiter", ";").smartCsv(str(p))
+# IllegalArgumentException: smartCsv sep must be a single character ...
+```
+
+When you *do* know the delimiter, pass it (kwarg or option) and the ragged
+comma file above parses as comma:
 
 ```python
 spark.read.smartCsv(str(p), sep=",").show()

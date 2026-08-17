@@ -43,7 +43,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination).
   **B4 (round 4 salvage):** `sep` / `delimiter` resolved with the `is not None`
   idiom (empty does not fall through); refuse empty / multi-char / newline / CR /
-  quote. Auto-detect stays origin/main agreement-first in `_csv_smart.detect_delimiter`.
+  quote via `_require_single_char_delimiter` (L3 single-source). Auto-detect stays
+  origin/main agreement-first in `_csv_smart.detect_delimiter`.
 - `sql_udf.py` — UDFRegistration
 - `create_dataframe.py` — region marker + SparkSession/ReParkSession aliases
 - `catalog.py` — re-export binding region note (r27 T1 no-stub mark)
