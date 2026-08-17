@@ -17,6 +17,7 @@ import pytest
 from repark import ReparkSession
 from repark.spark._csv_smart import (
     RUNG_ORDER,
+    detect_delimiter,
     resolve_cell_rung,
     resolve_column_type,
 )
@@ -66,6 +67,22 @@ def test_protocol_cell_rungs() -> None:
     assert resolve_cell_rung("2020-01-15T12:30:00") == "timestamp"
     assert resolve_cell_rung("2020-01-15 12:30:00.123") == "timestamp"
     assert resolve_cell_rung("not-a-type") == "string"
+
+
+def test_detect_delimiter_prefers_wide_split_over_two_field_rival() -> None:
+    """A 2-field perfect-agreement rival must not beat a wider ragged split."""
+    # Header + three 4-field comma rows + one short row (3 fields). Semicolon
+    # appears once per data line inside a quoted cell, so `;` splits every data
+    # line into exactly two fields (higher agreement, fewer columns).
+    lines = [
+        "a,b,c,d",
+        '1,2,3,"x;y"',
+        '4,5,6,"p;q"',
+        "7,8,9",
+        '10,11,12,"r;s"',
+    ]
+    assert detect_delimiter(lines) == ","
+    assert detect_delimiter(lines, preferred=";") == ";"
 
 
 def test_protocol_column_promotion_and_nulls() -> None:

@@ -782,36 +782,29 @@ def test_smartcsv_euro_comma_decimal_cast_refuses_loud(
 
 
 def test_smartcsv_delimiter_autodetect_picks_a_rival_delimiter(tmp_path: Path) -> None:
-    """BUG-CANDIDATE — auto-detect picks the wrong delimiter on the delimiter-zoo corpus.
+    """Auto-detect picks each scheme's own delimiter on the delimiter-zoo corpus.
 
-    ``detect_delimiter`` scores candidates by how many lines agree on a field count, and
-    ``csv.reader`` only honors a quote that starts a field. In the comma-scheme file the
-    ``embedded_delims`` value is quoted for the comma, so a rival candidate (``;``) sees
-    that quote mid-field, treats it as literal, and splits every data line into exactly
-    two fields — perfect agreement, and it beats the correct 12-field split. The header
-    line then fails the field-count vote too, so one data row is eaten as the header.
+    Was BUG-CANDIDATE (DS-4 / #163): ``detect_delimiter`` ranked raw agreement first, so
+    a 2-field perfect-agreement rival (quote mid-field under a wrong delimiter) beat the
+    true 12-field split and ate one data row as the header. B4 ranks modal field count
+    first so the wide split wins; declared ``sep`` stays the control.
 
-    Pinned at the preprocessing surface (no engine) because the mis-split header names
-    are not usable identifiers. Declaring ``sep`` reads the file correctly — that is what
-    every other smartcsv pin here does. If this reds because detection learned to respect
-    quoting, that is the fix: re-point the pin at the scheme's own delimiter.
+    Pinned at the preprocessing surface (no engine). Value AND header identity.
     """
     from repark.spark._csv_smart import prepare_messy_csv
 
     written = _write_family("smartcsv", tmp_path / "smartcsv")
     datagen = _datagen("smartcsv")
-    misdetected = {"comma": ";", "semicolon": "\t", "tab": ";", "pipe": ";"}
+    expected_headers = [field.name for field in datagen.SCHEMA]
 
     for scheme, delimiter in datagen.DELIMITERS.items():
         path = written / datagen.csv_file_name(scheme)
         auto = prepare_messy_csv(path)
-        assert auto.report.delimiter == misdetected[scheme], scheme
-        assert auto.report.delimiter != delimiter, scheme
-        # One data row is consumed as the header row under the wrong split.
-        assert auto.report.data_row_count == ROWS - 1, scheme
+        assert auto.report.delimiter == delimiter, scheme
+        assert auto.report.data_row_count == ROWS, scheme
+        assert auto.headers == [*expected_headers, _SMARTCSV_OVERFLOW_COLUMN], scheme
 
         declared = prepare_messy_csv(path, sep=delimiter)
         assert declared.report.delimiter == delimiter, scheme
         assert declared.report.data_row_count == ROWS, scheme
-        expected_headers = [field.name for field in datagen.SCHEMA]
         assert declared.headers == [*expected_headers, _SMARTCSV_OVERFLOW_COLUMN], scheme

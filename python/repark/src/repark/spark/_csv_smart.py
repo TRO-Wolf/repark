@@ -502,7 +502,7 @@ def _strip_bom(text: str) -> tuple[str, bool]:
 def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
     """Score delimiter consistency: (mode_field_count_or_0, agreement_rows).
 
-    Higher agreement with field_count >= 2 wins. Returns (0, 0) when unusable.
+    Returns (0, 0) when unusable (no rows, or modal field count < 2).
     """
     counts: list[int] = []
     for line in lines:
@@ -527,15 +527,20 @@ def _score_delimiter(lines: list[str], delimiter: str) -> tuple[int, int]:
 
 
 def detect_delimiter(lines: list[str], *, preferred: str | None = None) -> str:
-    """Pick the delimiter with the strongest field-count consistency (deterministic order)."""
+    """Pick the delimiter with the strongest field-count consistency (deterministic order).
+
+    Rank **modal field count** first, then agreement. A 2-field perfect-agreement
+    rival (a quote that only starts a field under the true delimiter) must not beat
+    a wider split whose agreement is slightly lower because of ragged rows.
+    """
     if preferred is not None:
         return preferred
     candidates = (",", ";", "\t", "|")
     best = ","
-    best_score = (-1, -1)  # (agreement, mode_fields)
+    best_score = (-1, -1)  # (mode_fields, agreement)
     for candidate in candidates:
         mode_fields, agreement = _score_delimiter(lines, candidate)
-        score = (agreement, mode_fields)
+        score = (mode_fields, agreement)
         if score > best_score:
             best_score = score
             best = candidate
