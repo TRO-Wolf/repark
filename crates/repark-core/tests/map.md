@@ -16,7 +16,11 @@ behavior only reachable end-to-end.
   keys, non-`MemTable` provider, idempotent redeclaration). **PR-D1:** tighten tags only
   flipped fields, refuses a NULL key, hint-after-tighten restores, `SELECT *` keeps the
   metadata, tighten vs hint values match, top-level schema metadata survives tighten
-  and restore (SQM F2). `RepartitionExec` presence is
+  and restore (SQM F2). Round-3: cache remint re-stamps provenance (R-A),
+  subquery-expression sources are visible to the walk (R-B), all-nullable
+  projections are allowed (R-D), export strip drops the tag and keeps
+  non-nullability, lazy `into_view` hops stay visible to the CREATE walk
+  (Q-001). `RepartitionExec` presence is
   deliberately NOT pinned (size/config-dependent; see the SE-1 unit ledger).
 
 ## I want to…

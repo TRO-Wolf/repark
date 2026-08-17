@@ -31,9 +31,10 @@ wrapper.
   rollback_to_snapshot; LOCAL catalogs only); 3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
-  **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source is tagged
-  `repark.tighten_nulls` (source walk, SQM F1) or the output schema still carries the
-  tag (the write-boundary relax is PR-D2).
+  **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including
+  expression subqueries, R-B) is tighten-derived AND the output has a
+  non-nullable field (R-D), or the output schema still carries the tag. The
+  write-boundary relax is PR-D2 (via the same source walk).
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **TZ-4 PR-1:** default `TIMESTAMP` → Iceberg `timestamptz`,
   `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). **Q10:** bare

@@ -59,8 +59,10 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   **SE-1 PR-D1:** keyword-only `tightenNulls: bool = False` (one name, both
   spellings) unlocks full elision by flipping verified-null-free keys to
   non-nullable; a NULL key refuses; a later default-flag call restores.
-  `_tighten_derived` is spawn-propagated so writer CREATE paths refuse before the
-  temp-view hop (SQM F1). See `task/se1-declared-sorted-ledger.md`.
+  `_tighten_derived` is OR'd across every parent in `_spawn` (R-C; union/join/
+  intersect/subtract/crossJoin right-side + `mapInArrow` via `_spawn`). Writer
+  CREATE paths refuse on that marker when the output has a non-nullable field
+  (R-D). See `task/se1-declared-sorted-ledger.md`.
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
@@ -71,11 +73,13 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   Imports nothing from `core` at module scope (annotations only, under `TYPE_CHECKING`);
   `core.py` re-exports every name callers use, so `repark.spark.dataframe.core` and
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
+  **SE-1 R-3:** `_strip_internal_tighten_metadata` lives here so `to_arrow()` /
+  `to_arrow_batches` drop the internal `repark.tighten_nulls` tag.
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A). **SE-1 PR-D1 SQM F1:** CREATE paths
   (`saveAsTable` create, `writeTo().create()` / `createOrReplace` / `replace`) refuse
-  a `_tighten_derived` frame before the temp-view hop.
+  a `_tighten_derived` frame with a non-nullable output field (R-D).
   **F-3 (2026-08-17):** the six undocumented `DataFrameStatFunctions` methods gained
   docstrings — the five delegating ones point at their `DataFrame` twin (which holds the
   real semantics, so there is one truth), and `freqItems` says plainly that it refuses.
@@ -86,7 +90,7 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   census is 1211/1211 by the ledger's own AST rule. Nine of the eleven are nested rendering
   closures and two are `@overload` typing stubs; none is a user-facing API name.
   No ceiling was raised (`core.py` 7253 of 7350, `plan_collapse.py` 1103 of 2500
-  at F-4 close; DF-2 live sizes are in the Debug note below).
+  at F-4 close; DF-2/D1 live sizes are in the Debug note below).
 - `actions_export.py` — `DataFrameNaFunctions` (real body; technique A).
 - `__init__.py` — frozen public imports (star-bind of core for private parity).
 

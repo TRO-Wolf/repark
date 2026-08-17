@@ -374,8 +374,18 @@ the same always-verify scan, a NULL in a declared key refuses (name the key; dro
 schema (`df.schema`, `to_arrow()`), which is the lever DataFusion needs to treat every null
 placement as compatible. That is a plan property the caller asked for by typing the flag, not
 a data-contract change: Iceberg CREATE of a tightened frame is refused until the write-boundary
-relax (PR-D2) lands. A later `declareSorted(...)` without the flag restores the original
-nullability.
+relax (PR-D2) lands, **when the SELECT would persist a non-nullable column**. CREATE of an
+all-nullable projection is allowed; INSERT/append into an existing table stays allowed
+(target schema wins). A later `declareSorted(...)` without the flag restores the original
+nullability **on that source frame**. Already-derived frames (`select` / join / union /
+cache of a tightened source) cannot be re-declared — `declareSorted` is source-frames
+only — so they keep the derived plan's nullability. Inherently non-null outputs over a
+tightened source (literals, aggregates) are refused conservatively. Internal
+`repark.tighten_nulls` tags are stripped from user-visible `to_arrow()` export.
+
+Parquet path-writes are an accepted residual: the Parquet writer enforces non-null
+physically, so tighten provenance ends at that boundary (a later read is not
+tighten-derived). Iceberg CREATE is the data-contract seam this flag governs.
 
 ```python
 spark.createDataFrame(bars, cols).declareSorted("symbol", "ts", tightenNulls=True)

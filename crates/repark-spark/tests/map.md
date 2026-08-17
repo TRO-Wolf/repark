@@ -15,8 +15,10 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   execution-layer pin that `tightenNulls` elides `SortExec` on the serving-shape window
   (`ORDER BY ts` = NULLS FIRST over nullable keys) via `create_physical_plan` (not EXPLAIN);
   hint mode keeps the sort; Iceberg CTAS of a tightened frame refuses; CTAS of a
-  derived expression over a tightened source refuses (SQM F1); INSERT into an
-  existing table stays allowed.
+  derived expression over a tightened source refuses (SQM F1); a one-statement
+  CTAS with the tightened view in an EXISTS subquery refuses (R-B); cache remint
+  of a derived plan still refuses (R-A); a lazy `into_view` hop still
+  refuses (Q-001); all-nullable projection CREATE + INSERT stay allowed (R-D).
 - [ddl_sessions.rs](ddl_sessions.rs) — deferred rows #2, #4, #5, #6, #7 (phase-2 PR-3a): CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

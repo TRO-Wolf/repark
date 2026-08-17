@@ -44,6 +44,8 @@ not this directory.
   `declareSorted` door + the `plan_collapse.py` headroom extract that made room for it.
   **PR-D1 (2026-08-17):** `tightenNulls` (c+) — verified-null-free keys flip to
   non-nullable; Iceberg CREATE of a tightened frame refuses until PR-D2.
+  **Round 3:** R-A cache remint stamp, R-B subquery walk, R-C right-side
+  marker, R-D refuse predicate.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

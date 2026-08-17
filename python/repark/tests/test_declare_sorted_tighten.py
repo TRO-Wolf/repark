@@ -41,7 +41,11 @@ def spark() -> ReparkSession:
 
 
 def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSession) -> None:
-    """Value-identical to hint; tightened keys are non-nullable on the Arrow path."""
+    """Value-identical to hint; tightened keys are non-nullable on the Arrow path.
+
+    Also pins exact ``df.schema`` types (R-3 type-exactness) and that the internal
+    ``repark.tighten_nulls`` tag is stripped from user-visible ``to_arrow()``.
+    """
     hint = spark.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted("sym", "ts")
     tight = spark.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted("sym", "ts", tightenNulls=True)
     window = Window.partitionBy("sym").orderBy("ts")
@@ -60,6 +64,17 @@ def test_tighten_results_match_hint_and_keys_report_non_nullable(spark: ReparkSe
     assert tight.schema["ts"].nullable is False
     assert hint.schema["sym"].nullable is True
     assert hint.schema["ts"].nullable is True
+    assert isinstance(tight.schema["sym"].dataType, StringType)
+    assert isinstance(tight.schema["ts"].dataType, LongType)
+    assert isinstance(tight.schema["val"].dataType, DoubleType)
+    assert tight.schema["val"].nullable is True
+    assert tight_arrow.schema.field("val").nullable is True
+    ts_meta = tight_arrow.schema.field("ts").metadata or {}
+    assert b"repark.tighten_nulls" not in ts_meta
+    assert "repark.tighten_nulls" not in ts_meta
+    table_meta = tight_arrow.schema.metadata or {}
+    assert b"repark.tighten_nulls" not in table_meta
+    assert "repark.tighten_nulls" not in table_meta
 
 
 def test_tighten_refuses_nulls_in_a_declared_key(spark: ReparkSession) -> None:
@@ -120,3 +135,117 @@ def test_write_to_create_refuses_tightened_and_derived(spark_catalog: ReparkSess
         tight.writeTo("glue_catalog.writer_ns.wt_src").create()
     with pytest.raises(AnalysisException, match="tightenNulls"):
         derived.writeTo("glue_catalog.writer_ns.wt_derived").create()
+
+
+def test_facade_layer_refuses_when_engine_source_walk_is_silent(
+    spark_catalog: ReparkSession,
+) -> None:
+    """Kills: deleting ``_refuse_tightened_iceberg_create`` from saveAsTable / writeTo.
+
+    Engine plan-source walk is silent here (no tagged scan). Only the facade marker
+    refuses. A delete-the-facade-layer mutant lets CREATE succeed.
+    """
+    loose = spark_catalog.createDataFrame([(1,)], "x INT")
+    marked = loose.select(F.lit(1).alias("one"))
+    marked._tighten_derived = True
+    assert marked.schema["one"].nullable is False
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        marked.write.saveAsTable("glue_catalog.writer_ns.facade_only")
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        marked.writeTo("glue_catalog.writer_ns.facade_only_wt").create()
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        marked.writeTo("glue_catalog.writer_ns.facade_only_cor").createOrReplace()
+
+
+def test_right_side_combinators_propagate_tighten_marker(spark: ReparkSession) -> None:
+    """Kills: ``_spawn`` copying ``_tighten_derived`` from self only (R-C)."""
+    loose = spark.createDataFrame(SORTED_ROWS, SCHEMA)
+    tight = spark.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted("sym", "ts", tightenNulls=True)
+    assert loose.union(tight)._tighten_derived is True
+    assert loose.unionByName(tight)._tighten_derived is True
+    assert loose.intersect(tight)._tighten_derived is True
+    assert loose.subtract(tight)._tighten_derived is True
+    assert loose.crossJoin(tight.limit(1))._tighten_derived is True
+    assert loose.join(tight, "sym")._tighten_derived is True
+
+    def _identity(batches: object) -> object:
+        yield from batches  # type: ignore[misc]
+
+    mapped = tight.mapInArrow(_identity, SCHEMA)
+    assert mapped._tighten_derived is True
+    joined = loose.pl.join(tight.pl, on="sym").spark
+    assert joined._tighten_derived is True
+
+
+def test_cache_of_derived_still_refuses_iceberg_create(spark_catalog: ReparkSession) -> None:
+    """Kills: cache/persist remint dropping tighten provenance (R-A)."""
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    derived = tight.select((F.col("ts") + 1).alias("ts2"))
+    cached = derived.cache()
+    cached.count()
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        cached.write.saveAsTable("glue_catalog.writer_ns.cached_derived")
+    cached.createOrReplaceTempView("cached_derived")
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        spark_catalog.sql(
+            "CREATE TABLE glue_catalog.writer_ns.cached_sql AS SELECT * FROM cached_derived"
+        )
+
+
+def test_all_nullable_projection_create_and_insert_are_allowed(
+    spark_catalog: ReparkSession,
+) -> None:
+    """Kills: hoisting refuse onto all-nullable CREATE or onto INSERT/append (R-D)."""
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    only_val = tight.select("val")
+    only_val.write.saveAsTable("glue_catalog.writer_ns.nullable_only")
+    only_val.write.mode("append").saveAsTable("glue_catalog.writer_ns.nullable_only")
+
+
+def test_literal_over_tightened_source_is_refused(spark_catalog: ReparkSession) -> None:
+    """Kills: dropping the facade R-D half (marker ∧ non-null output).
+
+    Engine source-walk is covered by the Rust/SQL-door conservative pins, not this node.
+    """
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        tight.select(F.lit(1).alias("one")).write.saveAsTable(
+            "glue_catalog.writer_ns.lit_over_tight"
+        )
+
+
+def test_sql_derived_write_and_lazy_view_create_refuse(
+    spark_catalog: ReparkSession,
+) -> None:
+    """Kills: engine walk that does not enter into_view / lazy temp-view plans (Q-001)."""
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    tight.createOrReplaceTempView("tight_src")
+    derived_sql = spark_catalog.sql("SELECT ts + 1 AS ts2 FROM tight_src")
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        derived_sql.write.saveAsTable("glue_catalog.writer_ns.sql_derived_write")
+    derived = tight.select((F.col("ts") + 1).alias("ts2"))
+    derived.createOrReplaceTempView("d")
+    with pytest.raises(AnalysisException, match="tightenNulls"):
+        spark_catalog.sql("CREATE TABLE glue_catalog.writer_ns.view_hop AS SELECT * FROM d")
+
+
+def test_declare_sorted_docstring_examples_execute() -> None:
+    """Kills: fabricated ``>>>`` examples that raise when run as doctest."""
+    import doctest
+
+    from repark.spark.dataframe.core import DataFrame as FacadeDataFrame
+
+    finder = doctest.DocTestFinder()
+    runner = doctest.DocTestRunner(optionflags=doctest.ELLIPSIS | doctest.NORMALIZE_WHITESPACE)
+    failed = 0
+    for test in finder.find(FacadeDataFrame.declare_sorted, name="declare_sorted"):
+        failed += runner.run(test).failed
+    assert failed == 0

@@ -61,8 +61,9 @@ reach delegation through the ordinary arm.
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution, staged create/replace, and the service-managed
   create-first path. **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan`
-  source is tagged `repark.tighten_nulls` (source walk, SQM F1) or the output schema
-  still carries the tag (the write-boundary relax is PR-D2). Tests:
+  source (including expression subqueries, R-B) is tighten-derived AND the
+  output has a non-nullable field (R-D), or the output schema still carries
+  the tag. The write-boundary relax is PR-D2 (via the same source walk). Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`,
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,

@@ -1,11 +1,12 @@
 """Plan-collapse / show-format / qcol-rewrite region — module-level helpers (r27 T0b).
 
-Extracted VERBATIM from ``core.py`` (SE-1 PR-B headroom): the r23b N2 plan-collapse
+Extracted from ``core.py`` (SE-1 PR-B headroom): the r23b N2 plan-collapse
 helpers plus the show/eager-eval formatters, Arrow type labels, generator SQL-type
-mapping and the H1 join-qcol rewriters that trailed them. Move-only — no behaviour
-change. ``core.py`` re-exports every name from its tail bind block, so
-``repark.spark.dataframe.core`` / ``repark.spark.dataframe`` import paths are unchanged
-(Q7 import freeze).
+mapping and the H1 join-qcol rewriters that trailed them. ``core.py`` re-exports
+every name from its tail bind block, so ``repark.spark.dataframe.core`` /
+``repark.spark.dataframe`` import paths are unchanged (Q7 import freeze).
+**SE-1 R-3:** also owns ``_strip_internal_tighten_metadata`` (export-boundary
+strip of ``repark.tighten_nulls``).
 
 Nothing here imports ``core`` at module scope (the region modules' circular-import rule);
 the one ``core``-side type it needs is a ``TYPE_CHECKING`` annotation only.
@@ -26,6 +27,31 @@ if TYPE_CHECKING:
     from repark.spark.types import StructType
 
 logger = logging.getLogger("repark.spark.dataframe")
+
+
+def _strip_internal_tighten_metadata(table: Any) -> Any:
+    """Drop ``repark.tighten_nulls`` from user-visible Arrow export (not a data column)."""
+    import pyarrow as pa
+
+    key = b"repark.tighten_nulls"
+    schema = table.schema
+    fields = []
+    changed = False
+    for field in schema:
+        meta = field.metadata
+        if meta and key in meta:
+            fields.append(field.with_metadata({k: v for k, v in meta.items() if k != key}))
+            changed = True
+        else:
+            fields.append(field)
+    schema_meta = schema.metadata
+    if schema_meta and key in schema_meta:
+        schema_meta = {k: v for k, v in schema_meta.items() if k != key}
+        changed = True
+    if not changed:
+        return table
+    new_schema = pa.schema(fields, metadata=schema_meta)
+    return type(table).from_arrays(list(table.columns), schema=new_schema)
 
 
 # ==================================================================================================

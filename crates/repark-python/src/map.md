@@ -210,7 +210,9 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   **`analyzed_arrow_schema`** (analysis-only Arrow C schema `PyCapsule` — physical field types for
   plan-only consumers; U7 pandas_udf pass-through / octo C6-Q-001; **P2b:** `OnceLock<SchemaRef>`
   cache on the plan handle — first `analyzed_arrow_schema_native` pays analysis, later
-  `columns`/`schema`/stream-open reuse the same `SchemaRef`, never invalidate); `limit(n)`;
+  `columns`/`schema`/stream-open reuse the same `SchemaRef`, never invalidate;
+  **SE-1 R-3:** `strip_tighten_export_metadata` so user-visible `to_arrow()` /
+  `df.schema` do not leak `repark.tighten_nulls`); `limit(n)`;
   **`limit_with_skip(skip, fetch)`** (DataFusion `Limit` with non-zero skip — R-DISPLAY facade
   `_preview_tail_rows` tail preview; shareable with a later public `DataFrame.tail`);
   `show(n)` (engine-side limit then collect; returns the rendered table string); `__arrow_c_stream__`

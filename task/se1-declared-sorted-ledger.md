@@ -241,8 +241,15 @@ Iceberg writes stay optional (CREATE refused this PR; exact relax is PR-D2).
   - Facade: `_tighten_derived` is set on a successful `tightenNulls=True` and
     copied by `_spawn`; `saveAsTable` create / `writeTo().create()` /
     `createOrReplace` / `replace` refuse on that marker **before** the temp-view
-    re-registration hop (which would also drop tags).
+    re-registration hop.
   INSERT into an existing table stays allowed.
+
+  **Correction (round 3, measured):** the temp-view re-registration hop does
+  **not** drop field tags on DataFusion 54.1 `SELECT *` / Column refs. The
+  earlier claim that the hop drops tags is struck. Tags *do* drop on computed
+  expressions (the F1 class) and on cache/persist remint of those derived
+  schemas (R-A). The facade marker remains defense-in-depth for writer paths
+  that never hit a tagged scan (delete-the-layer pin).
 - Facade: keyword-only `tightenNulls: bool = False` on both spellings. Docstring +
   `docs/guide/ta-guide.md` disclose the in-engine schema change. No parity-corpus row
   (no Spark twin). Orchestrator owns `docs/spark-sql-iceberg-parity.md` from the
@@ -268,7 +275,103 @@ Iceberg writes stay optional (CREATE refused this PR; exact relax is PR-D2).
 
 ## Residue
 
-- PR-D2: relax exactly the tagged fields at
-  `arrow_schema_to_schema_auto_assign_ids` (both doors); remove the CREATE refuse.
+- PR-D2: **do not** relax "exactly the tagged fields" — tags do not survive
+  derivation (this PR's F1 evidence). Relax via the **same source walk** used
+  by the CREATE refuse (orchestrator re-rules D2's charter at its Q&A). Until
+  then the CREATE refuse stays.
 - PR-D3: attach Spark ORDER BY rewrite to `DfStatement::Explain`; re-anchor the
   PR-B EXPLAIN pin.
+- Accepted residual: parquet path-write round-trip laundering — the parquet
+  writer enforces non-null physically, so provenance ends there. Documented in
+  `docs/guide/ta-guide.md`; no code.
+
+# PR-D1 round 3 — close the seams (2026-08-17)
+
+SQM round-2 (33 agents) validated the source-based design and confirmed F1–F4
+fixed. Round 3 is incremental: same architecture, three incomplete seams.
+
+- **R-A:** `register_collected_memtable` (shared by cache / persist / checkpoint
+  / createDataFrame remint) runs the source walk and stamps schema-level
+  `repark.tighten_nulls=1` onto the new MemTable when any source is
+  tighten-derived. Re-minted handles inherit detection.
+- **R-B:** `refuse_iceberg_create_of_tightened_plan` uses
+  `LogicalPlan::apply_with_subqueries` so a one-statement CTAS with the
+  tightened view in a scalar/IN/EXISTS subquery refuses.
+- **R-C:** `_spawn(*others)` ORs `_tighten_derived` across every parent;
+  `union` / `unionByName` / `intersect` / `subtract` / `crossJoin` / `join`
+  pass the right operand; `mapInArrow` (and `mapInPandas` through it) routes
+  through `_spawn`.
+- **R-D:** refuse iff (a source is tightened) AND (≥1 output field is
+  non-nullable). Conservative class (literals / aggregates over a tightened
+  source) stays refused and is documented. All-nullable projection CREATE and
+  INSERT/append stay allowed (allowed-side pin).
+- Export: `repark.tighten_nulls` is stripped at the Arrow export boundary
+  (`_strip_internal_tighten_metadata` on `to_arrow` / `to_arrow_batches`).
+- Pins added to discriminate: delete-the-facade-layer mutant (saveAsTable /
+  writeTo create + createOrReplace); right-side combinators; cache remint;
+  R-D allowed + conservative; `df.schema` type-exactness; executed docstring
+  examples.
+- Critic remediations (round-3 ACC): schema-level stamp even when no field
+  flipped (L-004); remint also field-tags untagged non-null outputs so hint
+  restore cannot leave required untagged columns (L-001); R-D walks nested
+  Arrow types (L-002). Walk follows `TableSource::get_logical_plan` so a
+  lazy `into_view` / `createOrReplaceTempView` hop cannot hide the tightened
+  `MemTable` (Q-001 / L-1); `PolarsFrame.join` ORs the marker (L-2); hint
+  restore keeps the schema-level remint stamp (Q-002).
+- SAF-001 remediating: walk also recurses `TableSource::get_logical_plan`
+  (lazy `into_view` / ViewTable). Pin:
+  `lazy_view_of_derived_plan_is_visible_to_the_create_walk`.
+- Residual (L-003 + parquet, accepted — SQM-ruled): provenance ends at any
+  plan-less remint that keeps Arrow `nullable: false` and drops tags. Named
+  members: parquet path-write (physically required); `to_arrow()` /
+  `register_record_batches_as_temp_view` / `register_arrow_stream_as_temp_view`;
+  `mapInArrow` remint (declared schema is typically optional; SQL after
+  register is untagged). Facade CREATE on the still-marked handle refuses.
+  R-A closes collect-once remints only (`register_collected_memtable`).
+  `session.rs` is at its 1650 ceiling — no third remint door this round.
+
+## Pre-PR critic report (/repark-harden)
+
+Engine: ACC review-only high (Critic-1 quality + Critic-2 safety + Critic-3
+logic + Critic-4 claims) — tier high (`session.rs` / CREATE refuse in the
+diff). Actor phase was the R-A..R-D seam close; critics attacked the
+post-remediation tree.
+
+Critic-1 (quality/parity): attacked crates contract, pin discrimination,
+two-doors, CLOSED surfaces, docstring examples — 1 finding (S3 Q-001
+createOrReplace unpinned) remediating (pin added). Null-report: unwrap/
+expect, session.rs 1650, CLOSED set, hop-drops struck.
+
+Critic-2 (security/safety): attacked CREATE bypass, ViewTable hop, INSERT
+over-refusal, metadata leak, injection, recursion — SAF-001 (ViewTable)
+already remediating via `TableSource::get_logical_plan`. Null-report:
+atomicity of remint-before-register, size-guard, INSERT allowed, no
+secrets, no CLOSED writes.
+
+Critic-3 (logic): L-001 remint+hint (REMEDIATED: remint field-tags
+non-null outputs); L-002 nested R-D (REMEDIATED: `field_or_child`);
+L-003 MIA remint (ACCEPTED_FLAGGED: all-nullable remint, ledger residual);
+L-004 already-non-null stamp (REMEDIATED: schema-level stamp).
+
+Critic-4 (claims): CL-001/002 comment honesty remediating; CL-003 EXISTS
+not scalar remediating; CL-004 conservative pin docstring remediating.
+CL-IDENTITY: existing commits `%ae`/`%ce` byte-exact
+`64240326+TRO-Wolf@users.noreply.github.com`.
+
+Signature table: n/a (no PySpark function wrap).
+Oracle probes: n/a (no Spark twin; tighten is a repark extension).
+Pin audit: delete-facade-layer (saveAsTable + writeTo create +
+createOrReplace) live; right-side combinators live; cache remint live;
+EXISTS + lazy view live; R-D allowed + INSERT live; remint hint restore
++ already-non-null stamp + nested schema helper live. Accepted residual
+pins do not claim to kill parquet remint.
+
+Finder-battery: 6 dimensions spawned (wiring, pins, fence, removed-behavior,
+cross-file, domain). 5 reports in; wiring still in-flight at ready.
+S1 candidates 3-vote: parquet residual REFUTED (SQM-accepted); to_arrow
+remint REFUTED (L-003 class); MIA REQUIRED persist REFUTED (declared
+schema always nullable). Quiet-1 spawned (3 dims); quiet-2 NOT-RUN.
+Verdict: FIX-REQUIRED closed on S0/S1; battery not two-quiet CLEAN.
+
+Convergence: ACC-CONVERGED on S0/S1 (residuals accepted-flagged below
+floor or SQM-ruled). Not OCTO-CONVERGED (ACC high, not 8-cycle octo).

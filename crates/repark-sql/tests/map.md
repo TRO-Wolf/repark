@@ -19,8 +19,10 @@ belongs out here is what must be observed from outside the crate.
   (`sql_with(AnsiDialect)`). Literal + CAST agree with the Spark door, value
   AND Arrow type (naive µs).
 - `declared_sorted_tighten.rs` — **SE-1 PR-D1:** ANSI-door CTAS of a `tightenNulls` frame
-  refuses (names the flag + PR-D2), including a derived-expression SELECT (SQM F1);
-  INSERT into an existing table stays allowed.
+  refuses (names the flag + PR-D2), including a derived-expression SELECT (SQM F1),
+  an EXISTS-subquery SELECT (R-B), a cache-reminted derived view (R-A),
+  and a lazy `into_view` hop (Q-001); all-nullable projection CREATE + INSERT
+  stay allowed (R-D).
 - `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` installed on a real
   `ReparkSession` through `ReparkSessionBuilder::with_sql_dialect`, driving schema DDL, CTAS,
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session

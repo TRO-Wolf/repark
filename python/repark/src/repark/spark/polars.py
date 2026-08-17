@@ -240,7 +240,8 @@ class PolarsFrame:
             select_clause = f"{left_view}.*" + (f", {select_right}" if select_right else "")
             sql = f"SELECT {select_clause} FROM {left_view} {join_kw} {right_view} ON {on_sql}"
             planned = session.sql(sql)
-            return PolarsFrame(DataFrame(planned, session, self._frame._alive_token))
+            child = self._frame._spawn(planned, right)
+            return PolarsFrame(child)
         finally:
             # Drop join staging views (octo C1-SEC-003); plan already holds MemTable/scan.
             session.drop_temp_view(left_view)

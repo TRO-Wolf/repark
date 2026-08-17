@@ -378,6 +378,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - **combine octo C5 (2026-07-31):** plan-stable `_plan()` for alias/sample/randomSplit/summary/set-ops/crossJoin/unpivot + cube SQL agg (C5-Q-001/L-001); generator alias/cast sticky aggregate bits (C5-Q-002); unpivot free-SQL quoting (C5-SEC-001); cube/rollup `AS` agg names (C5-L-002).
 - **combine octo C6 (2026-07-31):** MIAxexplode non-idempotent call-count (C6-Q-001); polars `_sort_key` generator sticky (C6-Q-002); cube free-SQL no count(Int64(1)) substring rewrite + GroupedData.count structural count(*) (C6-SAF-001); lit NaN/Inf CAST embeds (C6-SAF-002).
 - **combine octo C7 (2026-07-31):** `_identity_child` copies `_mia_plan_ready` with bridge so post-prepare repartition/coalesce/hint/offset(0)/toDF peers do not re-snapshot non-idempotent mapInArrow (C7-Q-001); `polars.join` registers `_plan()` (not action `create_or_replace_temp_view`) so post-prepare pl.join agrees with DataFrame.join (C7-Q-002).
+  **SE-1 R-C:** `PolarsFrame.join` now `_spawn(planned, right)` so `_tighten_derived`
+  ORs the right parent (same as `DataFrame.join`).
 - **octo mapInArrow C1 (2026-07-31):** SMALLINT/TINYINT/FLOAT schema widths; upstream close; cache/unpersist re-run; MIA finalize+hide; peek isEmpty/take/show; incremental/mapInPandas pins.
 
 - **R-DF-BATCH2 (lint-clean cov/sampleBy)**: cube/rollup/unpivot/explain/createTempView; loud toJSON/stat

@@ -108,7 +108,12 @@ NOT in that file is a defect, not a decision.
   to hint with key fields non-nullable on `to_arrow()` **and** `df.schema` (SQM F4);
   refuse-on-nulls (names the flag); hint-after-tighten restores; both spellings share the
   keyword; `saveAsTable` create and `writeTo().create()` refuse a tightened frame and a
-  tighten-derived frame (SQM F3). Serving-shape elision is the Rust Spark-door pin.
+  tighten-derived frame (SQM F3). Round-3: delete-the-facade-layer mutant pin; right-side
+  combinator marker (R-C); cache remint refuse (R-A); all-nullable CREATE + INSERT
+  allowed and literal-over-tight refused (R-D); `df.schema` type-exactness; export
+  metadata stripped; doctest examples execute; SQL-derived write + lazy-view
+  CREATE refuse (Q-001); polars join marker (R-C). Serving-shape elision is the
+  Rust Spark-door pin.
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
 

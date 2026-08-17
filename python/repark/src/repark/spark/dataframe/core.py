@@ -34,6 +34,16 @@ from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
 
+def _output_field_would_persist_required(field: Any) -> bool:
+    """True when this field or a nested child would persist Iceberg-required."""
+    if not field.nullable:
+        return True
+    children = getattr(field.dataType, "fields", None)
+    if children is not None:
+        return any(_output_field_would_persist_required(child) for child in children)
+    return False
+
+
 def _arrow_map_pairs(value: Any) -> list[tuple[Any, Any]] | None:
     """Normalize an Arrow ``to_pylist`` map cell to ``list[(key, value)]``, or ``None``.
 
@@ -813,8 +823,10 @@ class DataFrame:
         # copied by _spawn / _spawn_preserving_identity / _identity_child, so a transformed
         # frame refuses :meth:`declare_sorted` loudly instead of declaring the wrong view.
         self._source_view_name: str | None = None
-        # SE-1 PR-D1 SQM F1: True after tightenNulls=True; copied by every spawn so a
-        # derived frame cannot Iceberg-CREATE through a temp-view hop that drops tags.
+        # SE-1 PR-D1: True after tightenNulls=True; OR'd across every _spawn parent
+        # (R-C). Defense-in-depth for writer CREATE when the engine walk is silent
+        # (no tagged scan). DF 54.1 SELECT * / Column refs keep field tags (the
+        # hop-drops-tags claim is struck).
         self._tighten_derived: bool = False
 
     def _ensure_alive(self) -> None:
@@ -822,7 +834,7 @@ class DataFrame:
         if not self._alive_token.get("alive", True):
             raise RuntimeError(_STOPPED_MESSAGE)
 
-    def _spawn(self, inner: Any) -> DataFrame:
+    def _spawn(self, inner: Any, *others: DataFrame) -> DataFrame:
         """Return a child DataFrame sharing this frame's session + liveness token.
 
         Children do **not** inherit the parent's cache mark (object-identity caching only —
@@ -831,11 +843,15 @@ class DataFrame:
         :meth:`_spawn_preserving_identity`. Semi/anti unemitted-origin ids **are**
         (Q-002: a later ``select(right[…])`` on a spawn descendant must still raise).
         Emitting joins subtract the newly-emitted right ids (Q-001).
+        ``_tighten_derived`` is OR'd across this frame and every other parent
+        (SE-1 R-C: right-side union/join/intersect must not drop the marker).
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
         child._origin_not_emitted = self._origin_not_emitted
-        child._tighten_derived = self._tighten_derived
+        child._tighten_derived = self._tighten_derived or any(
+            other._tighten_derived for other in others
+        )
         return child
 
     def _spawn_preserving_identity(self, inner: Any) -> DataFrame:
@@ -1372,7 +1388,7 @@ class DataFrame:
             with contextlib.suppress(Exception):
                 self._session.drop_temp_view(view_name)
             raise
-        out = DataFrame(placeholder_inner, self._session, self._alive_token)
+        out = self._spawn(placeholder_inner)
         out._track_mia_view(view_name, replace_ephemeral=False)
         out._map_bridge = {
             "parent": self,
@@ -2737,7 +2753,9 @@ class DataFrame:
             key refuses (name the key; drop ``tightenNulls`` or clean the data); otherwise
             the in-engine schema of those keys becomes non-nullable
             (``df.schema`` / ``to_arrow()``). That is a plan property, not a data contract
-            — Iceberg CREATE of a tightened frame is refused until PR-D2.
+            — Iceberg CREATE is refused until PR-D2 when the SELECT would persist a
+            non-nullable column (all-nullable projections are allowed). Internal
+            ``repark.tighten_nulls`` tags are stripped from ``to_arrow()`` export.
 
         Returns
         -------
@@ -2746,10 +2764,20 @@ class DataFrame:
 
         Examples
         --------
-        >>> spark.createDataFrame(bars, cols).declareSorted("symbol", "ts")
-        >>> spark.createDataFrame(bars, cols).declareSorted(
+        >>> from repark import ReparkSession
+        >>> spark = ReparkSession.builder.appName("doctest-declare-sorted").getOrCreate()
+        >>> bars = [("AAA", 1), ("AAA", 2), ("BBB", 1)]
+        >>> frame = spark.createDataFrame(bars, ["symbol", "ts"]).declareSorted(
+        ...     "symbol", "ts"
+        ... )
+        >>> frame.columns
+        ['symbol', 'ts']
+        >>> tight = spark.createDataFrame(bars, ["symbol", "ts"]).declareSorted(
         ...     "symbol", "ts", tightenNulls=True
         ... )
+        >>> tight.schema["ts"].nullable
+        False
+        >>> spark.stop()
 
         Valid only on a source frame — the frame ``createDataFrame`` handed back. Any
         transformed frame (``select`` / ``filter`` / join / agg output) refuses loudly;
@@ -2759,7 +2787,9 @@ class DataFrame:
 
         Replacing the underlying view drops the declaration (it lives on the registered
         table, not on this handle). Each call is a fresh verify-then-register: a later
-        default-flag call after a tighten restores original key nullability.
+        default-flag call after a tighten restores original key nullability **on that
+        source frame**. Already-derived frames cannot be re-declared (source-frames
+        only), so they keep the derived plan's nullability.
         """
         self._ensure_alive()
         if not cols:
@@ -2804,8 +2834,13 @@ class DataFrame:
         return self
 
     def _refuse_tightened_iceberg_create(self) -> None:
-        """Refuse Iceberg CREATE of a tightened (or tighten-derived) frame until PR-D2."""
+        """Refuse Iceberg CREATE of a tighten-derived frame that would persist a required field.
+
+        R-D: skip when every output field is nullable (no required column would be written).
+        """
         if not self._tighten_derived:
+            return
+        if not any(_output_field_would_persist_required(field) for field in self.schema.fields):
             return
         raise AnalysisException(
             "Iceberg CREATE of a frame declared with tightenNulls=True is refused until "
@@ -5130,7 +5165,7 @@ class DataFrame:
             left = self
             right = other
         if isinstance(on, str):
-            child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how))
+            child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -5146,7 +5181,7 @@ class DataFrame:
                         "If this is intended, set spark.sql.crossJoin.enabled=true to allow them."
                     )
                 return left.crossJoin(right)
-            child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how))
+            child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -5261,7 +5296,7 @@ class DataFrame:
                     f"{how_sql} JOIN {_quote_ident(right_alias)} ON {on_sql}"
                 )
             planned = self._session.sql(join_sql)
-            child = self._spawn(planned)
+            child = self._spawn(planned, other)
             # Always attach identity when any display name collides OR origin map needed.
             child._display_names = display_names
             child._engine_names = engine_names
@@ -5737,7 +5772,7 @@ class DataFrame:
         **not** deduplicate (Spark ``union`` is UNION ALL). The two frames must have the same
         number of columns.
         """
-        child = self._spawn(self._plan().union(other._plan(), False))
+        child = self._spawn(self._plan().union(other._plan(), False), other)
         # H1: keep left-side display identity when present (union-by-position inherits
         # left engine field names — Spark keeps left display names).
         if self._display_names is not None and self._engine_names is not None:
@@ -5768,7 +5803,7 @@ class DataFrame:
                     "allowMissingColumns=True; mismatched columns: "
                     f"{sorted(missing)}"
                 )
-        return self._spawn(self._plan().union(other._plan(), True))
+        return self._spawn(self._plan().union(other._plan(), True), other)
 
     # PySpark spells this ``unionByName``.
     unionByName = union_by_name  # noqa: N815 — deliberate PySpark-compatible camelCase alias
@@ -5786,7 +5821,7 @@ class DataFrame:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} {op_sql} SELECT * FROM {right}")
-            child = self._spawn(planned)
+            child = self._spawn(planned, other)
             # H1: re-attach left multi-name display maps after SQL set-op.
             if self._display_names is not None and self._engine_names is not None:
                 child._display_names = list(self._display_names)
@@ -5853,7 +5888,7 @@ class DataFrame:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} CROSS JOIN {right}")
-            return self._spawn(planned)
+            return self._spawn(planned, other)
         finally:
             self._session.drop_temp_view(left)
             other._session.drop_temp_view(right)
@@ -6675,6 +6710,7 @@ class DataFrame:
         Engine field names (``__repark_l_…``) stay under the hood for planning; action/export
         surfaces Spark-legal display names (duplicate names preserved positionally).
         """
+        table = _strip_internal_tighten_metadata(table)
         if self._display_names is None or self._engine_names is None:
             return table
         display = list(self._display_names)
@@ -7301,6 +7337,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _sql_embed_expr_fragment,
     _sql_ident_bare_name,
     _sql_string_literal,
+    _strip_internal_tighten_metadata,
     _style_type_label,
     _table_to_cell_rows,
     _uniform_window_key_from_map,

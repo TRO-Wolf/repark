@@ -1085,16 +1085,7 @@ impl ReparkSession {
         name: &str,
         frame: DataFrame,
     ) -> Result<()> {
-        let schema = Arc::new(frame.schema().as_arrow().clone());
-        let batches = frame.collect().await.map_err(engine_err)?;
-        let partitions = if batches.is_empty() {
-            // MemTable with known schema and no rows — empty createDataFrame still needs a view.
-            vec![vec![]]
-        } else {
-            vec![batches]
-        };
-        let table = MemTable::try_new(schema, partitions).map_err(engine_err)?;
-        self.replace_view(name, Arc::new(table))
+        self.register_collected_memtable(name, frame, None).await
     }
 
     // === r23 CACHE1: cache-honesty ===
@@ -1123,28 +1114,8 @@ impl ReparkSession {
         frame: DataFrame,
         max_bytes: Option<u64>,
     ) -> Result<()> {
-        let schema = Arc::new(frame.schema().as_arrow().clone());
-        let batches = frame.collect().await.map_err(engine_err)?;
-        if let Some(limit) = max_bytes {
-            let total: u64 = batches
-                .iter()
-                .map(|batch| u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX))
-                .fold(0_u64, u64::saturating_add);
-            if total > limit {
-                return Err(Error::Config(format!(
-                    "cache materialize size {total} bytes exceeds repark.cache.max_bytes={limit}; \
-                     raise the conf or avoid cache()/persist() on this plan (single-node MemTable \
-                     pin; no disk spill)"
-                )));
-            }
-        }
-        let partitions = if batches.is_empty() {
-            vec![vec![]]
-        } else {
-            vec![batches]
-        };
-        let table = MemTable::try_new(schema, partitions).map_err(engine_err)?;
-        self.replace_view(name, Arc::new(table))
+        self.register_collected_memtable(name, frame, max_bytes)
+            .await
     }
 
     /// ===========================================================================================
@@ -1223,6 +1194,42 @@ impl ReparkSession {
         let table = MemTable::try_new(schema, partitions)
             .map_err(engine_err)?
             .with_sort_order(crate::sorted_view::declared_sort_order(keys));
+        self.replace_view(name, Arc::new(table))
+    }
+
+    /// Collect `frame` once, re-stamp tighten provenance when any plan source is
+    /// tighten-derived (SE-1 R-A), then register a `MemTable`. Shared by createDataFrame
+    /// materialize and cache/persist/checkpoint.
+    async fn register_collected_memtable(
+        &self,
+        name: &str,
+        frame: DataFrame,
+        max_bytes: Option<u64>,
+    ) -> Result<()> {
+        let plan = frame.logical_plan().clone();
+        let schema = Arc::new(frame.schema().as_arrow().clone());
+        let batches = frame.collect().await.map_err(engine_err)?;
+        if let Some(limit) = max_bytes {
+            let total: u64 = batches
+                .iter()
+                .map(|batch| u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX))
+                .fold(0_u64, u64::saturating_add);
+            if total > limit {
+                return Err(Error::Config(format!(
+                    "cache materialize size {total} bytes exceeds repark.cache.max_bytes={limit}; \
+                     raise the conf or avoid cache()/persist() on this plan (single-node MemTable \
+                     pin; no disk spill)"
+                )));
+            }
+        }
+        let (schema, batches) =
+            crate::sorted_view::apply_tighten_provenance_on_materialize(&plan, schema, batches)?;
+        let partitions = if batches.is_empty() {
+            vec![vec![]]
+        } else {
+            vec![batches]
+        };
+        let table = MemTable::try_new(schema, partitions).map_err(engine_err)?;
         self.replace_view(name, Arc::new(table))
     }
 

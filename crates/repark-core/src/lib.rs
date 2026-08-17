@@ -74,7 +74,7 @@ pub use repark_common::{Error, ErrorClass, Result};
 pub use sorted_view::{
     TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
     refuse_iceberg_create_of_tightened_plan, refuse_iceberg_create_of_tightened_schema,
-    tightened_field_names,
+    schema_is_tighten_derived, strip_tighten_export_metadata, tightened_field_names,
 };
 
 // --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6). ---

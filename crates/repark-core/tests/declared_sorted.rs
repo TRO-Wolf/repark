@@ -10,9 +10,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use arrow::array::{Float64Array, Int64Array, StringArray};
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use arrow::datatypes::{DataType, Field, Fields, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
-use repark_core::{Error, ReparkSession, TIGHTEN_NULLS_METADATA_KEY, tightened_field_names};
+use repark_core::{
+    Error, ReparkSession, TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
+    refuse_iceberg_create_of_tightened_plan, schema_is_tighten_derived,
+    strip_tighten_export_metadata, tightened_field_names,
+};
 
 fn schema(nullable_ts: bool) -> SchemaRef {
     Arc::new(Schema::new(vec![
@@ -554,5 +558,229 @@ async fn tighten_preserves_top_level_schema_metadata() {
         restored.metadata().get("owner").map(String::as_str),
         Some("se1-d1"),
         "hint restore must not drop top-level schema metadata"
+    );
+}
+
+#[tokio::test]
+async fn materialize_of_derived_plan_restamps_tighten_provenance() {
+    // Kills: cache/persist/checkpoint collect dropping the tighten tag (R-A).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let derived = session
+        .context()
+        .sql("SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .unwrap();
+    assert!(
+        tightened_field_names(derived.schema().as_arrow()).is_empty(),
+        "computed columns drop field metadata — the materialize stamp is the seam"
+    );
+    session
+        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .await
+        .unwrap();
+    let cached = view_schema(&session, "cached").await;
+    assert!(
+        schema_is_tighten_derived(&cached),
+        "cache remint must carry tighten provenance"
+    );
+    let planned = session.context().sql("SELECT * FROM cached").await.unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect_err("cached derived scan must still refuse CREATE");
+}
+
+#[tokio::test]
+async fn subquery_expression_source_is_visible_to_the_create_walk() {
+    // Kills: TreeNode::apply (direct inputs only) missing expression-subquery scans (R-B).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("plain", rows.schema(), vec![rows.clone()])
+        .unwrap();
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let planned = session
+        .context()
+        .sql("SELECT 1 AS n FROM plain WHERE EXISTS (SELECT 1 FROM tight)")
+        .await
+        .unwrap();
+    let error = refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect_err("EXISTS subquery over a tightened source must refuse");
+    let Error::Analysis(message) = error else {
+        panic!("expected Analysis, got {error:?}");
+    };
+    assert!(
+        message.contains("tightenNulls"),
+        "names the flag: {message}"
+    );
+}
+
+#[tokio::test]
+async fn all_nullable_projection_over_tightened_source_is_allowed() {
+    // Kills: refusing a CREATE that would persist no required column (R-D allowed side).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let planned = session
+        .context()
+        .sql("SELECT CAST(NULL AS BIGINT) AS n FROM tight")
+        .await
+        .unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect("all-nullable output must be allowed");
+}
+
+#[tokio::test]
+async fn lazy_view_of_derived_plan_is_visible_to_the_create_walk() {
+    // Kills: into_view / createOrReplaceTempView hiding a tightened MemTable (Q-001).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let derived = session
+        .context()
+        .sql("SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .unwrap();
+    session
+        .create_or_replace_temp_view_from("d", &derived)
+        .unwrap();
+    let planned = session.context().sql("SELECT * FROM d").await.unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect_err("lazy view hop must still refuse CREATE");
+}
+
+#[tokio::test]
+async fn tighten_of_already_non_null_keys_stamps_schema_provenance() {
+    // Kills: apply_tighten returning untagged when every key was already required (L-004).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], false);
+    session
+        .register_record_batches_as_temp_view("t", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("t", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let schema = view_schema(&session, "t").await;
+    assert!(
+        schema_is_tighten_derived(&schema),
+        "successful tighten must stamp the provider even when no field flipped"
+    );
+    assert!(
+        tightened_field_names(&schema).is_empty(),
+        "already-required keys stay untagged"
+    );
+}
+
+#[tokio::test]
+async fn remint_hint_restore_does_not_leave_required_untagged_fields() {
+    // Kills: remint schema-stamp-only + hint declare dropping the stamp (L-001).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let derived = session
+        .context()
+        .sql("SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .unwrap();
+    session
+        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .await
+        .unwrap();
+    session
+        .declare_temp_view_sorted("cached", &keys(&["ts2"]), false)
+        .await
+        .unwrap();
+    let after_hint = view_schema(&session, "cached").await;
+    assert!(
+        after_hint.field_with_name("ts2").unwrap().is_nullable(),
+        "hint restore after remint must not leave a required untagged column"
+    );
+    let planned = session.context().sql("SELECT * FROM cached").await.unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect("restored remint must not refuse — no required column remains");
+}
+
+#[test]
+fn nested_non_null_child_is_treated_as_required_output() {
+    // Kills: R-D looking only at top-level nullability (L-002).
+    let schema = Schema::new_with_metadata(
+        vec![Field::new(
+            "wrapper",
+            DataType::Struct(Fields::from(vec![Field::new("ts", DataType::Int64, false)])),
+            true,
+        )],
+        HashMap::from([(
+            TIGHTEN_NULLS_METADATA_KEY.to_string(),
+            TIGHTEN_NULLS_METADATA_VALUE.to_string(),
+        )]),
+    );
+    repark_core::refuse_iceberg_create_of_tightened_schema(&schema)
+        .expect_err("nullable struct with a required child must refuse");
+}
+
+#[tokio::test]
+async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
+    // Kills: leaking repark.tighten_nulls into user-visible to_arrow()/df.schema export.
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let internal = view_schema(&session, "tight").await;
+    assert!(
+        internal
+            .field_with_name("ts")
+            .unwrap()
+            .metadata()
+            .contains_key(TIGHTEN_NULLS_METADATA_KEY),
+        "internal provider must keep the tag"
+    );
+    let exported = strip_tighten_export_metadata(internal);
+    assert!(
+        !exported
+            .field_with_name("ts")
+            .unwrap()
+            .metadata()
+            .contains_key(TIGHTEN_NULLS_METADATA_KEY),
+        "export must strip the tag"
+    );
+    assert!(
+        !exported.field_with_name("ts").unwrap().is_nullable(),
+        "export must keep the non-null lever"
     );
 }

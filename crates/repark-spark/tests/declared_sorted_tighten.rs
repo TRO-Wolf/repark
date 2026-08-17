@@ -197,3 +197,171 @@ async fn iceberg_create_from_derived_expression_over_tightened_source_refuses() 
         "names the flag: {message}"
     );
 }
+
+#[tokio::test]
+async fn iceberg_create_from_subquery_over_tightened_source_refuses() {
+    // Kills: plan.apply (no subquery walk) letting a scalar-subquery CTAS persist required (R-B).
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = spark_session();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]),
+        )
+        .await
+        .unwrap();
+    let rows = nullable_sorted_rows(4);
+    session
+        .register_record_batches_as_temp_view("plain", rows.schema(), vec![rows.clone()])
+        .unwrap();
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(), true)
+        .await
+        .unwrap();
+    let refused = session
+        .sql(
+            "CREATE TABLE ice.sales.subq AS SELECT 1 AS n FROM plain \
+             WHERE EXISTS (SELECT 1 FROM tight)",
+        )
+        .await
+        .expect_err("subquery-expression CTAS must refuse via apply_with_subqueries");
+    assert!(
+        refused.to_string().contains("tightenNulls"),
+        "names the flag: {refused}"
+    );
+}
+
+#[tokio::test]
+async fn iceberg_create_from_cached_derived_frame_refuses() {
+    // Kills: cache remint dropping provenance so both doors go blind (R-A).
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = spark_session();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]),
+        )
+        .await
+        .unwrap();
+    let rows = nullable_sorted_rows(4);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(), true)
+        .await
+        .unwrap();
+    let derived = session
+        .sql("SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .unwrap();
+    session
+        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .await
+        .unwrap();
+    let refused = session
+        .sql("CREATE TABLE ice.sales.cached AS SELECT * FROM cached")
+        .await
+        .expect_err("cached derived CTAS must refuse");
+    assert!(
+        refused.to_string().contains("tightenNulls"),
+        "names the flag: {refused}"
+    );
+}
+
+#[tokio::test]
+async fn iceberg_create_of_all_nullable_projection_is_allowed() {
+    // Kills: hoisting refuse onto CREATEs that persist no required column (R-D allowed).
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = spark_session();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]),
+        )
+        .await
+        .unwrap();
+    let rows = nullable_sorted_rows(4);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(), true)
+        .await
+        .unwrap();
+    session
+        .sql("CREATE TABLE ice.sales.nullable_only AS SELECT CAST(NULL AS BIGINT) AS n FROM tight")
+        .await
+        .expect("all-nullable projection must be allowed");
+    session
+        .sql("INSERT INTO ice.sales.nullable_only SELECT CAST(NULL AS BIGINT) FROM tight")
+        .await
+        .expect("INSERT into existing stays allowed")
+        .collect()
+        .await
+        .expect("collect insert");
+}
+
+#[tokio::test]
+async fn iceberg_create_from_lazy_view_of_derived_plan_refuses() {
+    // Kills: into_view hop hiding the tightened MemTable on the Spark door (Q-001).
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = spark_session();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]),
+        )
+        .await
+        .unwrap();
+    let rows = nullable_sorted_rows(4);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(), true)
+        .await
+        .unwrap();
+    let derived = session
+        .sql("SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .unwrap();
+    session
+        .create_or_replace_temp_view_from("d", &derived)
+        .unwrap();
+    let refused = session
+        .sql("CREATE TABLE ice.sales.viewhop AS SELECT * FROM d")
+        .await
+        .expect_err("lazy view of derived plan must refuse");
+    assert!(
+        refused.to_string().contains("tightenNulls"),
+        "names the flag: {refused}"
+    );
+}
