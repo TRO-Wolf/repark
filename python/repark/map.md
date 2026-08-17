@@ -21,7 +21,9 @@ remains the deprecation shim. Native lazy DataFrame API is not this phase.
 
 - `pyproject.toml` — maturin build backend; `manifest-path = ../../crates/repark-python/Cargo.toml`;
   **Version (release PR, 2026-08-14):** `dynamic = ["version"]` — maturin injects the Cargo workspace version; never a literal here. Pin: `tests/test_version_ssot.py`.
-  `module-name = repark._native`; `python-source = src`; `features = ["extension-module"]`.
+  `module-name = repark._native`; `python-source = src`; `features = ["extension-module",
+  "allocator-mimalloc"]` — the wheel ships the mimalloc global allocator (AL-1b verdict,
+  2026-08-16; rationale comment sits on the line, numbers in the parity bench map).
   Runtime dep is exactly one (`pyarrow>=25`); `numpy` / `pandas` / `polars` / `ml-ext` are lazy
   extras. Version is `0.0.0` until the release PR makes it `dynamic` (design §4 Q6).
 - `README.md` — package front door (the `readme` referenced by `pyproject.toml`).
