@@ -19,16 +19,17 @@ ignore = [
   "RUSTSEC-2024-0436",
   # quick-xml DoS advisories, 2026-06-29 (RUSTSEC-2026-0194 quadratic duplicate-attribute check;
   # RUSTSEC-2026-0195 unbounded namespace-declaration allocation in `NsReader`). The fixed version
-  # (>=0.41.0) is semver-unreachable: quick-xml enters the tree twice, as 0.38.x via
-  # object_store 0.12.5 (which requires ^0.38 and is itself pinned by the DataFusion 52 family) and
-  # as 0.37.x via reqsign 0.16.5 (which requires ^0.37; pulled by the owned fork's opendal storage
-  # layer). Exposure is DoS-only and the parser here only ever sees S3 API responses — XML authored
-  # by AWS endpoints, not attacker-controlled input. Revisit at the next DataFusion-family bump
-  # (object_store moves past 0.12) and when the fork bumps opendal/reqsign. Tracked in task/todo.md.
+  # is >=0.41.0 and is semver-unreachable from every entry path in this tree. Verified against the
+  # live lockfile on 2026-08-18 with `cargo tree --workspace -i quick-xml@<v>` and a `cargo audit`
+  # run with these two ids un-ignored (6 findings = 3 copies x 2 advisories) — quick-xml enters
+  # THREE times:
+  #   * 0.39.4 <- object_store 0.13.2 (requires ^0.39.0) <- datafusion 54.1.0
+  #   * 0.38.4 <- opendal 0.55.0 (requires ^0.38) <- the owned fork's iceberg-storage-opendal 0.9.1
+  #   * 0.37.5 <- reqsign 0.16.5 (requires ^0.37) <- opendal 0.55.0 / iceberg-storage-opendal 0.9.1
+  # Exposure is DoS-only and the parser here only ever sees S3 API responses — XML authored by AWS
+  # endpoints, not attacker-controlled input. Revisit at the next DataFusion-family bump (when
+  # object_store moves past ^0.39) and when the fork bumps opendal/reqsign. Tracked in task/todo.md.
   # Mirrored in .cargo/audit.toml.
-  # (2026-08-06: in this phase-1 graph the two entry paths resolve as quick-xml 0.38.4 via
-  # object_store 0.13.1 / DataFusion 54.1 family and 0.37.5 via reqsign 0.16.5 — same
-  # semver-unreachable situation, versions updated.)
   "RUSTSEC-2026-0194",
   "RUSTSEC-2026-0195",
 ]

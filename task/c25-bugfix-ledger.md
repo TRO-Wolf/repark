@@ -846,3 +846,268 @@ the StringType fail-open on the Debug-spelled void key.
 F1, F2, F3, F5, P2, P3, P4, SEC-002 (8) plus refuted W1, W2, W3, P1, F4
 (5). Header recounted to "13 raw → 13 deduped (8 survivors + 5 refuted)".
 No finding was added or dropped; only the count is corrected.
+
+---
+
+## G3b — GA4 item_params spelling + honesty riders (2026-08-18)
+
+**Lane:** repark · **Executor:** Claude (Opus 5) as ACTOR in an Actor-Critic round ·
+**Worktree:** `/tmp/fable-trees/fable-rel031` · **Branch:** `fix/g3b-ga4-item-params` ·
+**BASE-of-round:** `95cfaf9` (= merged main). Everything below is UNCOMMITTED.
+**Scope:** four confirmed Group-3 findings — D-1 (S1), D-3 (S3), D-4 (S3), D-5 (S3 ruling).
+Scratch probes lived in the session scratchpad (uncommitted, outside the tree).
+
+**No Rust was touched** (measured, not assumed: `git diff --stat` lists only
+`.cargo/audit.toml`, `deny.toml`, two `docs/` files, two `python/…/src` modules, two test
+modules, four `map.md`). So no `make develop` and no `cargo test` were needed; the native
+module in `.venv` is the one the round started with.
+
+### D-1 (S1) — nested arrays were spelled postfix `[]`, which the parser re-binds
+
+**Root cause, measured.** `python/repark/src/repark/spark/dataframe/plan_collapse.py` spelled a
+nested array as `{inner}[]`. Probed straight at the engine with
+`SELECT make_array(CAST(NULL AS <spelling>))`:
+
+| spelling handed to the engine | what the engine parsed it as | faithful? |
+|---|---|---|
+| `BIGINT[]` | `array<bigint>` | yes |
+| `array<BIGINT>` | `array<bigint>` | yes |
+| `BIGINT[][]` | `array<array<bigint>>` | yes |
+| `array<array<BIGINT>>` | `array<array<bigint>>` | yes |
+| `struct<x:VARCHAR,nums:BIGINT[]>` | `struct<x,nums:array<bigint>>` | yes |
+| `struct<x:VARCHAR,nums:array<BIGINT>>` | `struct<x,nums:array<bigint>>` | yes |
+| `struct<item_id:VARCHAR,item_params:struct<key:VARCHAR,value:struct<sv:VARCHAR>>[]>` | `struct<item_id, item_params:struct<key, value:array<struct<sv>>>>` | **NO — `[]` migrated onto `value`** |
+| `struct<item_id:VARCHAR,item_params:array<struct<key:VARCHAR,value:struct<sv:VARCHAR>>>>` | `struct<item_id, item_params:array<struct<key, value:struct<sv>>>>` | yes |
+
+So the postfix form binds correctly only while `inner` does **not** end in `>`. Once it does,
+the `[]` walks inward to the innermost field. That made the two arms of the `explode_outer`
+`CASE WHEN` rewrite disagree, and the engine refused with `type_coercion` /
+"Failed to coerce … CASE WHEN".
+
+**Fix.** New helper `_sql_array_of(inner) -> f"array<{inner}>"`, used by **both** postfix sites —
+`_spark_array_element_to_sql` (Spark simpleString path) and `_arrow_debug_type_to_sql`
+(Arrow-debug `List(…)` path; the brief asked for that audit and it had the identical hazard).
+The angle form round-trips exactly for scalar inners too, so it is applied **uniformly** — one
+honest spelling, not a shape-dependent pair.
+
+**Minimal repro, both doors, BASE vs fix (MEASURED):**
+
+| door on `array<struct<item_id, item_params:array<struct<key, value:struct<sv>>>>>` | BASE `95cfaf9` | fixed |
+|---|---|---|
+| `df.dynamicFlatten()` | `AnalysisException type_coercion` | 4 rows, cols `ev / items_item_id / items_item_params_key / items_item_params_value_sv` |
+| `df.select(F.explode_outer("items"))` | `AnalysisException type_coercion` | 3 rows |
+
+**FULL 192-leaf GA4 end-to-end** — schema parsed programmatically from the operator's
+`ga4_events_schema.md` tree (31 top-level fields, leaf count asserted `== 192`), five-row
+corpus, `dynamicFlatten()` at defaults. Flattened column count came back **192**, matching the
+doc's leaf count exactly, and `items_item_params_*` is present with values:
+
+| # | row flavor | description | BASE `95cfaf9` | fixed |
+|---|---|---|---|---|
+| 1 | `full` | every array non-empty (2 elems), `items[].item_params[]` populated | raises | **16 rows** |
+| 2 | `empty_arrays` | every array `[]` | raises | **1 row** |
+| 3 | `null_arrays` | every array NULL | raises | **1 row** |
+| 4 | `items_no_params` | `items[]` present, `items[].item_params[]` NULL | raises | **1 row** |
+| 5 | `all_null_leaves` | arrays present, every scalar leaf NULL | raises | **1 row** |
+| | | **survival under defaults** | **0/5** | **5/5** |
+
+BASE fails the whole frame with `type_coercion` naming `"item_params": Struct(… value: List(…))`
+on one arm against `"item_params": List(Struct(… value: Struct(…)))` on the other — the migrated
+`[]`, verbatim. The `full` row's 16 = 2 `event_params` x 2 `user_properties` x 2 `items` x 2
+`item_params`, and `items_item_params_key` carries a real value (not all-NULL).
+
+**Adjacent shapes still correct (MEASURED, fixed tree):** `array<struct<x, nums:array<bigint>>>`
+flattens to 3 rows with `a_nums` `int64`; `explode_outer` on `array<array<bigint>>` still returns
+the inner list; a 4-deep `array<struct<p:array<struct<q:array<struct<z>>>>>>` flattens to
+`t_p_q_z`.
+
+**Refuse class preserved — the brief's explicit rider.** Shapes that still cannot spell refuse
+**loud**, with the documented pre-#176 message class, unchanged:
+`AnalysisException: explode_outer cannot resolve SQL element type for array column '…'
+(engine type 'array<map<string,string>>'); cast the array or use a supported element type`.
+Pinned by the new `test_dynamic_flatten_map_element_still_refuses_loud`. The fix widens what
+spells; it does **not** fail open on what does not.
+
+**Pins added / changed.**
+- `test_dynamic_flatten.py::test_dynamic_flatten_array_of_struct_inside_array_element_struct` —
+  the minimal repro, both doors.
+- `test_dynamic_flatten.py` GA4 family — `_GA4_ITEM` now carries a **real** `item_params`
+  (`ArrayType(_GA4_PARAM)`) with values on the purchase row, `_GA4_COLUMNS` grew the five
+  `items_item_params_*` columns. **This fixture gap is how the defect shipped**: the old
+  fixture stopped at the scalar item fields, so nothing exercised the shape.
+- `test_dynamic_flatten.py::test_dynamic_flatten_scalar_array_inside_array_element_struct` and
+  `::test_dynamic_flatten_map_element_still_refuses_loud` — the two riders above.
+- `test_explode_rewrite.py::test_nested_array_cast_spelling_round_trips_in_engine` — asserts the
+  emitted spelling parses back to the identical type, so the defect class itself is pinned, not
+  just this one shape.
+- `test_explode_rewrite.py::test_spark_array_element_to_sql_struct_and_map` — the unit pin that
+  **locked in the defect** (`…Fills:struct<fill_id:BIGINT>[]>`) now demands the angle form, plus
+  four new spelling assertions.
+
+**Mutant check (MEASURED).** Reverting `_sql_array_of` to `f"{inner}[]"`:
+4 pins red (`test_dynamic_flatten_ga4_empty_as_null_keeps_export_rows`,
+`test_dynamic_flatten_array_of_struct_inside_array_element_struct`,
+`test_nested_array_cast_spelling_round_trips_in_engine`,
+`test_spark_array_element_to_sql_struct_and_map`) and the 192-leaf GA4 run drops to 0/5.
+Restored → 87 passed.
+
+### D-3 (S3) — troubleshooting.md said the wrong cause; the finding's own premise was also wrong
+
+`docs/guide/troubleshooting.md` "count() fails on a deep dynamicFlatten plan" rewritten.
+
+**PARTIAL REFUTATION of the finding as written, with evidence.** The finding asserted
+"the polarity is inverted — `count()` SUCCEEDS". **It does not.** Measured on this tree, on the
+doc's own repro, on BASE `95cfaf9` **and** on the fixed tree (byte-identical results — D-1 does
+not touch this path): `deep.count()` **raises** `push_down_leaf_projections`. The doc's headline
+is true. What is false is its **cause** and the completeness of its **remedy** — and on that the
+finding is confirmed. Full measured surface:
+
+| operation | result |
+|---|---|
+| `to_arrow()` / `collect()` / `show()` | 2 rows |
+| `filter(...)`, `limit(1)`, `orderBy(...)`, `distinct()`, `drop("Legs_Fills_f")` | works |
+| `select("*")`, `select(*deep.columns)`, any 3-of-4 keeping `Tags` | 2 rows |
+| `select("Tags")`, `select("Tags","id")`, `select("Legs_leg_id","Tags")` | 2 rows |
+| `select("id")`, `select("Legs_leg_id")`, `select("Legs_Fills_f")`, `select("Legs_leg_id","id")` | **raises** |
+| `count()`, `agg(F.count(...))` | **raises** |
+
+The exact trigger (measured over all 15 non-empty column subsets): a projection that **drops the
+column the LAST explode pass produced** (`Tags` here). `count()`/`agg` are the extreme case —
+they drop every column. The doc's old claim "it is `count()` that triggers the rule; the export
+path never reaches it" is refuted twice over: the export path raises too once narrowed, and it is
+the projection, not the action, that trips the rule.
+
+It is also **order-dependent** (measured): rename `Tags` → `Alpha` so the sibling array explodes
+*first*, and **all 15 subsets plus `count()` succeed** on identical data.
+
+**Remedy verified live** (this is what the rewrite now recommends): `cache()` →
+`cached.count()` = 2, `cached.select("Legs_Fills_f").to_arrow().to_pylist()` =
+`[{'Legs_Fills_f': 1.0}, {'Legs_Fills_f': 1.0}]`, `cached.agg(F.sum("Legs_leg_id"))` = 2. An
+Arrow round-trip also works. The engine defect itself is **DEFECT-2, chartered separately and
+NOT touched here**; the existing pin
+`test_datasets_facade.py::test_nested_dynamic_flatten_count_action_refuses_loud` still holds
+unchanged.
+
+### D-4 (S3) — quick-xml ignore rationale did not match the live lockfile
+
+Verified myself with `cargo tree --workspace -i quick-xml@<v> -e normal` and `cargo metadata`:
+
+| copy | pulled by | requirement | via |
+|---|---|---|---|
+| 0.39.4 | `object_store 0.13.2` | `^0.39.0` | `datafusion 54.1.0` |
+| 0.38.4 | `opendal 0.55.0` | `^0.38` | fork's `iceberg-storage-opendal 0.9.1` |
+| 0.37.5 | `reqsign 0.16.5` | `^0.37` | `opendal 0.55.0` / `iceberg-storage-opendal 0.9.1` |
+
+**Three** copies, not two. The stale text claimed two, named `object_store 0.13.1` (live is
+`0.13.2`), and attributed 0.38.4 to `object_store` — actually `opendal`. Independent
+confirmation: `cargo audit` with only `RUSTSEC-2024-0436` ignored reports **6 vulnerabilities**
+= 3 copies x 2 advisories, each `Solution: Upgrade to >=0.41.0`.
+
+The *substance* of the ignore survives: `>=0.41.0` is semver-unreachable from **every** path
+(`^0.39.0` / `^0.38` / `^0.37`), and exposure is DoS-only against AWS-authored S3 XML. Both
+`deny.toml` and `.cargo/audit.toml` rewritten to the measured graph, kept mirrored, with the
+verification method and date in the comment. Gates re-run after the edit: `cargo audit` clean,
+`cargo deny check advisories` → `advisories ok`.
+
+**Observation for the orchestrator (not fixed here):**
+`docs/history/port-v2/p1b-repark-iceberg-ledger.md:124` carries the same stale
+"0.38.4 via object_store 0.13.1" text. It is a *historical* ledger recording what was true then,
+so I left it alone rather than rewrite history — flagging it in case you want it annotated.
+
+### D-5 (S3 ruling) — rung (1) HONOR was reachable, and is what shipped
+
+**Measured on BASE first.** The silent substitution was **wider than the finding stated**: it is
+not only `ArrayType(NullType())`. A bare `NullType()` leaf is substituted too.
+
+| requested (explicit schema) | BASE `95cfaf9` reported | fixed |
+|---|---|---|
+| `struct<v:void>` | `struct<v:string>` (arrow `string`) | `struct<v:void>` (arrow `null`) |
+| `struct<a:array<void>>` | `struct<a:array<string>>` (arrow `list<item: string>`) | `struct<a:array<void>>` (arrow `list<item: null>`) |
+| `struct<s:struct<x:array<void>>>` | `struct<s:struct<x:array<string>>>` | `struct<s:struct<x:array<void>>>` |
+| `struct<a:array<array<void>>>` | `struct<a:array<array<string>>>` | `struct<a:array<array<void>>>` |
+| DDL `"a ARRAY<VOID>"` | `struct<a:array<string>>` | `struct<a:array<void>>` |
+| empty-frame seed, same schema | `struct<v:string,a:array<string>>` | `struct<v:void,a:array<void>>` |
+
+No warning, no refuse, on any of them.
+
+**Rung selection.** Rung (1) HONOR was probed before committing to it, by monkeypatching the two
+mappers in a scratch process: reported schema, Arrow (`null` / `list<item: null>`), `collect()`,
+`count()`, `dynamicFlatten()` and `dynamicFlatten(drop_null_lists=False)`, **and** the
+`CAST(NULL AS VOID)` empty-frame seed all worked end to end. Rung (1) is cheap and correct, so
+rungs (2)/(3) were not taken.
+
+**Fix** (`python/repark/src/repark/spark/session/_funcs.py`, two hunks):
+`_data_type_to_sql_type(NullType())` returns `"VOID"` (was `"VARCHAR"`), and `_sql_type_to_arrow`
+maps `VOID` / `NULL` to `pa.null()`. The engine already carried void everywhere else — the DF-2
+machinery (`make_array(NULL)`, `drop_null_lists`, the `Null` Debug-key arm from the earlier
+W-1 fix) needed no change; ingest was the one dishonest door.
+
+**Pin.** `test_dynamic_flatten.py::test_create_dataframe_honors_requested_void` — reported
+schema, `.dtypes`, Arrow types, values, `count()`, nested + DDL doors, empty-frame seed, the
+DF-2 flatten behaviours, and a control that `array<string>` is untouched. **Two mutants, both
+red (MEASURED):** restoring `return "VARCHAR"`, and separately dropping the `VOID`/`NULL` entries
+from `_sql_type_to_arrow`.
+
+**Blast radius: zero.** The full Python suite passes; the only pre-existing text that referenced
+the substitution was a docstring in `test_drop_null_typed_list` explaining the workaround, now
+updated to point at the new pin.
+
+**Registry question — NOT RUN, orchestrator decision.** No PySpark oracle exists in this
+worktree or on this machine (checked `.venv`, `/tmp/grok-c25-pyspark` from the c25 section
+above — gone — and a filesystem search; `import pyspark` fails). So I did **not** verify real
+Spark's behaviour for an explicit `ArrayType(NullType())` at `createDataFrame`.
+My expectation is that Spark honors it and reports `array<void>`, which would make this fix
+**convergence** and mean **no registry row is needed** — but that is unverified reasoning, not a
+measurement. Per the brief I did not edit the registry. If your oracle shows Spark diverging,
+the candidate row text is:
+
+> `createDataFrame` with an explicit `NullType()` / `ArrayType(NullType())` — repark honors the
+> requested void end to end (reported schema `void` / `array<void>`, Arrow `null` /
+> `list<item: null>`, `CAST(NULL AS VOID)` on the empty-frame seed). Spark <describe measured
+> Spark behaviour>. Pin:
+> `python/repark/tests/test_dynamic_flatten.py::test_create_dataframe_honors_requested_void`.
+
+### Gates
+
+| gate | result |
+|---|---|
+| `pytest test_dynamic_flatten.py test_explode_rewrite.py -q` | **87 passed** (BASE: 82) |
+| `pytest python/repark/tests -q` | **3393 passed, 70 skipped** (BASE: 3388 / 70; +5 new pins) |
+| `make check-lib-py` | `69 files clean (ceilings held; no-stub rule held)` |
+| `cargo audit` | clean |
+| `cargo deny check advisories` | `advisories ok` |
+| `ruff check` / `ruff format` | clean (two test files reformatted after edit) |
+| Rust crates touched | **none** — so no `cargo test`, no `make develop` |
+| hygiene grep over the diff | **0 matches** for the round's forbidden-token pattern (org names, home paths, account id, AWS ARNs, session/agent URLs, planning-dir references) |
+| `docs/spark-sql-iceberg-parity.md` | **untouched** (no ruling above authorised a row) |
+| `map.md` lockstep | 4 updated: `python/repark/src/repark/spark/dataframe/`, `python/repark/src/repark/spark/session/`, `python/repark/tests/`, `docs/guide/` |
+
+### NOT RUN (honesty)
+
+- **`make preflight`** — forbidden by the round's hard rules.
+- **Real-PySpark oracle for D-5** — no PySpark on this machine (see the registry question above).
+  This is the one claim in this section resting on reasoning rather than measurement, and it is
+  the reason the registry row is left to the orchestrator.
+- **`cargo test` / `make develop`** — deliberately skipped, and the skip is *measured*: no Rust
+  source changed. The two Rust-side files edited (`deny.toml`, `.cargo/audit.toml`) are gate
+  configs, and both their gates were re-run.
+- **`docs/spark-sql-iceberg-parity.md` rows** — none added; no ruling authorised one.
+- **The DEFECT-2 projection bug behind D-3** — chartered separately, explicitly not fixed. Only
+  the documentation of it was corrected.
+- **`docs/history/port-v2/p1b-repark-iceberg-ledger.md`** — its stale quick-xml sentence was left
+  as historical record; flagged, not edited.
+
+### G3b residual disclosures (round critic, S3)
+
+- **D-5 side effect, disclosed:** honoring `ArrayType(NullType())` at ingest makes a
+  void array NESTED inside an array-element struct reachable by `dynamicFlatten` /
+  `explode_outer` — where it hits the DF-2 D-1 nested-void refuse and now refuses
+  LOUD (`explode_outer cannot resolve SQL element type …`). Previously the silent
+  string substitution masked the shape entirely. Loud refuse over silent wrong is
+  the intended trade; same class as the pinned `struct<x:void>` mapper refuse.
+- **192-leaf provenance:** the full-GA4 end-to-end table above was built from an
+  operator-supplied schema document outside the repo; it is NOT repo-reproducible
+  as written. The repo-committed pins carry the load: the real `item_params`
+  fixture in `test_dynamic_flatten.py` (the shape that was broken) plus the
+  minimal-repro and round-trip pins. The table is evidence of the session run,
+  not a repo artifact.

@@ -70,6 +70,12 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `dynamicFlatten` struct expander, Spark-simpleString struct-element CAST spelling
   for `explode_outer` (void / `Null` → `_UNTYPED_NULL_ELEMENT` / `make_array(NULL)`),
   and the r20 H1 join-qcol token rewriters.
+  **G3b:** nested arrays inside that CAST spelling go through `_sql_array_of`, which emits
+  the **angle** form `array<inner>` — never postfix `inner[]`. Measured: postfix migrates the
+  `[]` onto the innermost field once `inner` ends in `>`, which is what made GA4's real
+  `items[].item_params[]` (array-of-struct inside an array-element struct) refuse with
+  `type_coercion` / "Failed to coerce … CASE WHEN". Angle round-trips exactly for scalar
+  inners too, so it is the single uniform spelling.
   Imports nothing from `core` at module scope (annotations only, under `TYPE_CHECKING`);
   `core.py` re-exports every name callers use, so `repark.spark.dataframe.core` and
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).

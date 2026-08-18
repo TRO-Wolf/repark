@@ -17,7 +17,11 @@ not this directory.
   Single ledger, appended per PR. B4 (#175) CLOSED. **DF-2:** `explode_outer`
   struct-element CAST + `dynamicFlatten(empty_as_null=True)` default (branch
   `grok/c25-df2-outer-flatten`; SQM #176 V-2: void `make_array(NULL)`).
-  B1 stays queued behind DF-2.
+  **G3b (2026-08-18):** angle-spelling CAST for nested arrays (the postfix `[]`
+  mis-bind that refused GA4 `items[].item_params[]`), troubleshooting-doc
+  polarity truth-up, audit-ignore rationale re-derivation, and
+  `createDataFrame` honoring `NullType`/`array<void>` instead of silently
+  substituting string. B1 stays queued behind DF-2.
 - [fn-gt2-ledger.md](fn-gt2-ledger.md) — **FN-GT2 (2026-08-17):** leftover
   datetime/collections/url/bitmap thin-wires + SQM rework (W1–W5 / P1–P5 / R1)
   on `grok/c20-fngt2-thin-wire` (PR #174).

@@ -204,6 +204,12 @@ NOT in that file is a defect, not a decision.
   `drop_null_lists=False` void column + void-sibling SKU pin (SQM #176 V-2),
   the kept void column also pins `.schema`/`.dtypes` as `NullType`/`void`
   (SQM #176 W-1 Debug-spelling fail-open);
+  **G3b (2026-08-18):** the GA4 fixture now carries the REAL `items[].item_params[]`
+  (array-of-struct inside an array-element struct — the shape whose absence let the
+  postfix-`[]` spelling defect ship), plus a standalone minimal repro of that shape on both
+  doors, a scalar-inner nested-array guard, a map-element still-refuses-loud rider, and
+  `test_create_dataframe_honors_requested_void` (D-5: explicit `NullType()` /
+  `ArrayType(NullType())` is honored end to end instead of silently becoming string);
   max_depth LOUD refuse;
   bool flag type gates (incl. `empty_as_null`);
   name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
@@ -515,6 +521,10 @@ NOT in that file is a defect, not a decision.
   reports `NullType`/`void` from `.schema`/`.dtypes` (SQM #176 W-1);
   map element still refuses (non-discriminating regression guard);
   struct/map/void mapper unit pin;
+  **G3b (2026-08-18):** the mapper unit pin now demands the **angle** nested-array spelling
+  (`array<inner>`, never postfix `inner[]`), and
+  `test_nested_array_cast_spelling_round_trips_in_engine` asserts the emitted spelling parses
+  back to the same type through `make_array(CAST(NULL AS …))`;
   **U-DF-1:** string-form / `F.col` / getitem / casefold explode of
   createDataFrame `Legs`, `explode_outer('Legs')` null/empty keep, absent name still loud;
   octo c2: pre-aliased sibling, Timestamp outer type, reserved/mixed-case

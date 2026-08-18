@@ -338,6 +338,35 @@ def test_explode_outer_nested_list_element_type(spark: ReparkSession) -> None:
     assert table.schema.field("e").type.value_type == pa.int64()
 
 
+def test_nested_array_cast_spelling_round_trips_in_engine(spark: ReparkSession) -> None:
+    """G3b: the emitted nested-array CAST spelling must parse back to the SAME type.
+
+    Red on BASE (95cfaf9): the postfix ``…[]`` spelling this module used to emit binds the
+    ``[]`` to the INNERMOST field when the inner spelling ends in ``>`` — measured:
+    ``struct<item_id:VARCHAR,item_params:struct<key:VARCHAR,value:struct<sv:VARCHAR>>[]>``
+    parses as ``item_params: struct<key, value: array<struct<sv>>>``. That mis-parse is
+    what made the explode_outer CASE-WHEN arms disagree on GA4 ``items[].item_params[]``.
+    Mutation-proof: reverting ``_sql_array_of`` to ``f"{inner}[]"`` fails the item_params row.
+    """
+    from repark.spark.dataframe.plan_collapse import _spark_array_element_to_sql
+
+    cases = [
+        ("bigint", "array<bigint>"),
+        ("array<bigint>", "array<array<bigint>>"),
+        ("struct<a:string>", "array<struct<a:string>>"),
+        (
+            "struct<item_id:string,item_params:array<struct<key:string,value:struct<sv:string>>>>",
+            "array<struct<item_id:string,item_params:"
+            "array<struct<key:string,value:struct<sv:string>>>>>",
+        ),
+    ]
+    for element, expected_simple in cases:
+        spelled = _spark_array_element_to_sql(element)
+        assert spelled is not None, element
+        frame = spark.sql(f"SELECT make_array(CAST(NULL AS {spelled})) AS c")
+        assert frame.schema.simpleString() == f"struct<c:{expected_simple}>", element
+
+
 def test_explode_hostile_fn_call_column_name_not_sql(frame: object) -> None:
     """ColumnOrName shaped like a fn-call must not execute as free SQL (C3-SEC-001).
 
@@ -1083,7 +1112,22 @@ def test_spark_array_element_to_sql_struct_and_map() -> None:
     spelled = _spark_array_element_to_sql(
         "struct<leg_id:bigint,side:string,Fills:array<struct<fill_id:bigint>>>"
     )
-    assert spelled == "struct<leg_id:BIGINT,side:VARCHAR,Fills:struct<fill_id:BIGINT>[]>"
+    # G3b: nested arrays MUST spell angle (``array<…>``), never postfix (``…[]``). The
+    # postfix form migrates the ``[]`` onto the innermost field when the inner spelling
+    # ends in ``>`` — see _sql_array_of and the GA4 item_params pins below.
+    assert spelled == "struct<leg_id:BIGINT,side:VARCHAR,Fills:array<struct<fill_id:BIGINT>>>"
+    assert _spark_array_element_to_sql("array<bigint>") == "array<BIGINT>"
+    assert _spark_array_element_to_sql("array<array<bigint>>") == "array<array<BIGINT>>"
+    assert _spark_array_element_to_sql(
+        "struct<item_id:string,item_params:array<struct<key:string,value:struct<sv:string>>>>"
+    ) == ("struct<item_id:VARCHAR,item_params:array<struct<key:VARCHAR,value:struct<sv:VARCHAR>>>>")
+    assert (
+        _parse_list_element_sql_type(
+            "List(Field { data_type: List(Field { data_type: Int64, nullable: true }), "
+            "nullable: true })"
+        )
+        == "array<BIGINT>"
+    )
     nested = _spark_array_element_to_sql(
         "struct<category:string,web_info:struct<hostname:string,browser:string>>"
     )

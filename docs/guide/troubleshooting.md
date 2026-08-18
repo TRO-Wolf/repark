@@ -201,10 +201,11 @@ GA4-shaped frame with empty `items` / `user_properties` does not vanish. Pass
 
 ---
 
-## `count()` fails on a deep `dynamicFlatten` plan
+## `count()` — and any narrowing `select` — fails on a deep `dynamicFlatten` plan
 
-**Symptom.** The flatten itself is fine, and `to_arrow()` returns the right rows — only `count()`
-reds, inside a DataFusion optimizer rule:
+**Symptom.** The flatten itself is fine and the whole-frame export returns the right rows. What
+reds is `count()` — and, on the same plan, any `select(...)` narrow enough to drop the column the
+**last** explode pass produced. Both doors raise the same DataFusion optimizer error:
 
 ```python
 rows = [{"id": 1, "Legs": [{"leg_id": 1, "Fills": [{"f": 1.0}]}], "Tags": ["a", "b"]}]
@@ -220,22 +221,40 @@ caused by
 Internal error: Assertion failed: expr.is_empty(): Unnest(Unnest { … })      ← plan dump elided
 ```
 
-**Why.** Two array levels plus a sibling top-level array means several explode passes, and the
-plan `dynamicFlatten` builds leaves a qualified field beside its unqualified twin.
-`push_down_leaf_projections` trips over that pair — and it is `count()` that triggers the rule; the
-export path never reaches it.
+**Why.** Two array levels plus a sibling top-level array means several explode passes. When the
+**last** pass is the sibling array (`Tags` above), any projection that removes that pass's output
+column leaves `push_down_leaf_projections` with an empty projection over the `Unnest` node, and the
+rule asserts. `count()` and every aggregate are just the extreme case — they project *all* columns
+away. Measured on the frame above (`.to_arrow()` on each):
 
-**What to do.** Count through the export path, which returns the correct rows:
+| operation | result |
+|---|---|
+| `deep.to_arrow()` / `collect()` / `show()` | 2 rows |
+| `filter(...)`, `limit(1)`, `orderBy(...)`, `distinct()` | works |
+| `select("*")`, `select(*deep.columns)` | 2 rows |
+| `select("Tags")`, `select("Tags", "id")`, `select("Legs_leg_id", "Tags")` | 2 rows |
+| `select("id")`, `select("Legs_leg_id")`, `select("Legs_leg_id", "id")` | **raises** |
+| `count()`, `agg(F.count(...))` | **raises** |
+
+It is not "counts do not work", and it is not the export path being immune — the export path raises
+too as soon as you narrow past the last-pass column. It is also **order-dependent**: rename `Tags`
+to `Alpha` so the sibling array explodes *first* and every projection above — including `count()` —
+succeeds on the identical data.
+
+**What to do.** `cache()` the flattened frame, which materialises it to a MemTable and retires the
+`Unnest` plan the rule chokes on. Verified live on the frame above:
 
 ```python
-deep.to_arrow().num_rows
+cached = deep.cache()
+cached.count()                                   # 2
+cached.select("Legs_Fills_f").to_arrow().to_pylist()   # [{'Legs_Fills_f': 1.0}, …]
 ```
 
-```text
-2
-```
+Without caching, you can still count through the whole-frame export (`deep.to_arrow().num_rows`
+→ `2`), keep the last-pass column in every `select`, or flatten shallowly — a single explode pass
+counts fine on the same data.
 
-…or flatten shallowly (a single explode pass counts fine on the same data). An **open finding**,
+An **open finding** (the projection defect itself, tracked separately from the flatten spelling),
 pinned by
 `python/repark/tests/test_datasets_facade.py::test_nested_dynamic_flatten_count_action_refuses_loud`,
 and called out in the tour notebook where it bites.
