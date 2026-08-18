@@ -160,7 +160,7 @@ value). Neither is in this PR: PR-B's fence is facade-only.
 - No session-wide "assume sorted" conf, no unverified fast path, no parquet/Iceberg ordering
   (all still PR-A's non-goals).
 
-## Pins (`python/repark/tests/test_declare_sorted.py`, 13 nodes)
+## Pins (`python/repark/tests/test_declare_sorted.py`, 11 nodes)
 
 Results bit-identical declared vs undeclared (`to_arrow().equals`); the plan pin both ways
 plus the `output_ordering=… ASC NULLS LAST` the scan now advertises; unsorted data refusing
@@ -256,7 +256,7 @@ Iceberg writes stay optional (CREATE refused this PR; exact relax is PR-D2).
   payload below.
 - Rebuilds use `Schema::new_with_metadata` so top-level schema metadata survives
   tighten and hint-restore (SQM F2).
-- Pins: existing 13 `test_declare_sorted.py` nodes untouched. Facade file
+- Pins: existing hint-mode `test_declare_sorted.py` nodes untouched. Facade file
   `test_declare_sorted_tighten.py` (value+type on `to_arrow()` **and** `df.schema`
   — SQM F4; writer CREATE refuse on source and derived — SQM F3). Rust
   execution-layer serving-shape pin plus derived-expression CTAS refuse in
@@ -316,8 +316,21 @@ fixed. Round 3 is incremental: same architecture, three incomplete seams.
   restore cannot leave required untagged columns (L-001); R-D walks nested
   Arrow types (L-002). Walk follows `TableSource::get_logical_plan` so a
   lazy `into_view` / `createOrReplaceTempView` hop cannot hide the tightened
-  `MemTable` (Q-001 / L-1); `PolarsFrame.join` ORs the marker (L-2); hint
-  restore keeps the schema-level remint stamp (Q-002).
+  `MemTable` (Q-001 / L-1); `PolarsFrame.join` ORs the marker (L-2).
+  **Correction (Q-002):** an earlier draft kept the remint schema-stamp across
+  hint restore and over-refused an all-nullable restored remint. Restore now
+  removes field tags **and** the schema stamp; remint field-tags computed
+  non-nulls (including nested struct children / list items / map values) so
+  those fields can unflip (L-001 / C1-L-001). Skip-by-name remint tagging
+  was rejected (C2-Q-001): `ts + 1 AS symbol` would stay required. Remint
+  tags every reminted required field; remint+hint may widen originally-
+  required columns (conservative for Iceberg). Pins:
+  `remint_hint_restore_does_not_leave_required_untagged_fields`,
+  `remint_hint_unflips_name_colliding_computed_column`,
+  `remint_hint_restore_unflips_nested_required_child`.
+- Walk visit budget is 4096 inner-plan visits with a **generic** overflow
+  error (never a `tightenNulls` CREATE refusal) — C1-Q-001. Pin:
+  `wide_lazy_view_union_without_tighten_is_not_refused`.
 - SAF-001 remediating: walk also recurses `TableSource::get_logical_plan`
   (lazy `into_view` / ViewTable). Pin:
   `lazy_view_of_derived_plan_is_visible_to_the_create_walk`.
@@ -332,49 +345,71 @@ fixed. Round 3 is incremental: same architecture, three incomplete seams.
 
 ## Pre-PR critic report (/repark-harden)
 
-Engine: ACC review-only high (Critic-1 quality + Critic-2 safety + Critic-3
-logic + Critic-4 claims) — tier high (`session.rs` / CREATE refuse in the
-diff). Actor phase was the R-A..R-D seam close; critics attacked the
-post-remediation tree.
+Engine: critic-octo N=3 × CCC findings-only → fix — tier high
+(`session.rs` / CREATE refuse / remint in the diff). Actor phase was
+R-A..R-D; octo attacked the post-seam tree.
 
 Critic-1 (quality/parity): attacked crates contract, pin discrimination,
-two-doors, CLOSED surfaces, docstring examples — 1 finding (S3 Q-001
-createOrReplace unpinned) remediating (pin added). Null-report: unwrap/
-expect, session.rs 1650, CLOSED set, hop-drops struck.
+two-doors, CLOSED surfaces, walk budget, remint tagging. Cycle-1 S1
+C1-Q-001 (64-visit width cap + `tightenNulls` lie) remediating (4096
+generic overflow + 65-wide UNION pin). Cycle-2 S1 C2-Q-001 (skip-by-name
+CREATE leak on `ts+1 AS symbol`) remediating (skip removed; remint tags
+every reminted required field). Cycle-3 S0/S1 CLEAN; leftover S2s
+(Python map strip rebuild, dead skip param, Python strip depth) remediating.
+Null-report: unwrap/expect, session.rs 1650, CLOSED set
+(`function_dispatch.rs` / facade `functions*.py` / `repark-ta`).
 
-Critic-2 (security/safety): attacked CREATE bypass, ViewTable hop, INSERT
-over-refusal, metadata leak, injection, recursion — SAF-001 (ViewTable)
-already remediating via `TableSource::get_logical_plan`. Null-report:
-atomicity of remint-before-register, size-guard, INSERT allowed, no
-secrets, no CLOSED writes.
+Critic-2 (security/safety): attacked CREATE bypass, remint atomicity,
+INSERT over-refusal, export leak, walk DoS. C1-SAF-001 remediating with
+Q-001. C2-SAF-001 (unbounded remint/restore/strip) remediating (depth 32
++ deep-struct pin). C1-SAF-002 `replace_view` two-step ACCEPTED_FLAGGED
+S3 (pre-existing). Cycle-3 CLEAN. Null-report: mid-collect cannot leave
+a half-stamped view; no secrets; no CLOSED writes.
 
-Critic-3 (logic): L-001 remint+hint (REMEDIATED: remint field-tags
-non-null outputs); L-002 nested R-D (REMEDIATED: `field_or_child`);
-L-003 MIA remint (ACCEPTED_FLAGGED: all-nullable remint, ledger residual);
-L-004 already-non-null stamp (REMEDIATED: schema-level stamp).
+Critic-3 (logic): C1-L-001 nested remint+hint remediating (recursive
+tag/restore + pin). C2 skip-by-name leftovers remediating by deletion.
+Originally-required widen on remint+hint ACCEPTED conservative (Iceberg
+writes stay nullable). Cycle-3 CLEAN — no new CREATE allow/refuse invert.
 
-Critic-4 (claims): CL-001/002 comment honesty remediating; CL-003 EXISTS
-not scalar remediating; CL-004 conservative pin docstring remediating.
-CL-IDENTITY: existing commits `%ae`/`%ce` byte-exact
-`64240326+TRO-Wolf@users.noreply.github.com`.
+Critic-4 (claims): Q-002 keep-stamp dual-home remediating (restore removes
+stamp). EXISTS-not-scalar comment remediating. Serving-shape docstring
+remediating. Literal pin docstring remediating. "13 nodes" remediating
+to "hint-mode" / 11. Cycle-3 CLEAN. CL-IDENTITY: `%ae`/`%ce` byte-exact
+`64240326+TRO-Wolf@users.noreply.github.com` on all three branch commits.
 
 Signature table: n/a (no PySpark function wrap).
 Oracle probes: n/a (no Spark twin; tighten is a repark extension).
 Pin audit: delete-facade-layer (saveAsTable + writeTo create +
-createOrReplace) live; right-side combinators live; cache remint live;
-EXISTS + lazy view live; R-D allowed + INSERT live; remint hint restore
-+ already-non-null stamp + nested schema helper live. Accepted residual
-pins do not claim to kill parquet remint.
+createOrReplace) live; right-side combinators live; cache remint live
+(SQL half isolates remint); EXISTS + lazy view live; R-D allowed +
+INSERT live; remint+hint restore + name-colliding computed + nested
+child + 65-wide UNION + deep-struct strip live. Accepted residual pins
+do not claim to kill parquet remint.
 
-Finder-battery: 6 dimensions spawned (wiring, pins, fence, removed-behavior,
-cross-file, domain). 5 reports in; wiring still in-flight at ready.
-S1 candidates 3-vote: parquet residual REFUTED (SQM-accepted); to_arrow
-remint REFUTED (L-003 class); MIA REQUIRED persist REFUTED (declared
-schema always nullable). Quiet-1 spawned (3 dims); quiet-2 NOT-RUN.
-Verdict: FIX-REQUIRED closed on S0/S1; battery not two-quiet CLEAN.
+## Finder-battery report
 
-Convergence: ACC-CONVERGED on S0/S1 (residuals accepted-flagged below
-floor or SQM-ruled). Not OCTO-CONVERGED (ACC high, not 8-cycle octo).
+Target: `origin/main (b628b0f)..working tree` | dimensions: 6 then quiet-1
+(3 dims) | findings: 20+ raw → ~12 deduped
+Survivors (0 S0/S1 after 3-vote):
+  (none)
+Refuted (S1 candidates, 3-vote):
+  C-stream batch.schema leak — 3× REFUTED (declared stream schema is
+  stripped; FFI rebuilds batches under that schema)
+  ListView required-item persist — persist REFUTED (fork conversion
+  fail-closed); refuse-message gap only
+  depth-33 remint+hint CREATE — 2× REFUTED as hostile/non-shipping
+  (facade cannot hint after cache)
+Null attestations: R-A/R-B/R-C engine wiring; INSERT allowed; CLOSED
+surfaces; two-doors CTAS twins; removed-behavior R-D all-nullable skip
+is the ruled refinement.
+Quiet-1: CLEAN (wiring / pins / CREATE domain) — 0 new S0/S1.
+Two consecutive quiet: first battery 0 S0/S1 survivors + quiet-1.
+Verdict: CLEAN on S0/S1 (not a substitute for gates).
+
+Convergence: **OCTO-CONVERGED** (3 cycles; cycle 3 S0/S1 CLEAN;
+cycle-3 leftover S2s remediating). `make verify` 0 on the remediating
+tree; `make preflight` 0 on the seam tree before the last critic
+polish (`preflight_exit=0`, 3343 passed / 70 skipped).
 
 # PR-D1 round 4 — post-rebase integration + the Y battery (2026-08-17)
 

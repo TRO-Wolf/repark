@@ -45,7 +45,9 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   namespace + contradictory explicit location fails loud naming both paths;
   matching / no-request-location stay idempotent), the temp-view family
   (`create_or_replace_temp_view` / `materialize_dataframe_as_temp_view` /
-  `materialize_dataframe_as_cache_view` / `create_or_replace_temp_view_from` /
+  `materialize_dataframe_as_cache_view` — both collect remints share
+  `register_collected_memtable` which re-stamps tighten provenance (R-A) —
+  / `create_or_replace_temp_view_from` / `declare_temp_view_sorted` /
   `drop_temp_view`), `table_exists` (quote-aware segment parse; path-escape segments reject),
   the listing families (`list_iceberg_table_names` live list-on-access / `list_temp_view_names`
   / `list_df_schema_table_names`), `refresh_catalog_provider`, `read_parquet` (an
@@ -158,10 +160,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   tag flipped fields with `repark.tighten_nulls=1`; rebuilds via
   `Schema::new_with_metadata` so top-level schema metadata survives). Public
   `refuse_iceberg_create_of_tightened_plan` (walk `TableScan` source schemas
-  **with subqueries** — SQM F1 / R-B) plus `refuse_iceberg_create_of_tightened_schema`
-  (output-tag belt). R-D: refuse only when a tightened source would persist a
-  non-nullable output. Cache/persist/checkpoint remint re-stamps schema-level
-  provenance (R-A). Both SQL doors call the refuse at CTAS derivation.
+  **with subqueries** — SQM F1 / R-B — and follow `TableSource::get_logical_plan`
+  so a lazy `into_view` hop cannot hide the `MemTable`; iterative, visit-budgeted
+  with a generic overflow error — not a `tightenNulls` CREATE refusal)
+  plus `refuse_iceberg_create_of_tightened_schema` (output-tag belt). R-D: refuse
+  only when a tightened source would persist a non-nullable output. Cache/persist/
+  checkpoint remint re-stamps schema-level provenance (R-A). Both SQL doors call
+  the refuse at CTAS derivation.
   **Round 4 (Y-3/Y-4):** `refuse_iceberg_create_of_tightened_ddl` closes the DDL-SINK door
   — `CREATE VIEW cat.ns.v AS …` and `SELECT … INTO cat.ns.t` never reach CTAS derivation
   (both routers drop them into their catch-all) yet the Iceberg schema provider's
@@ -170,12 +175,12 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   three-part name in a registered Iceberg catalog (session-scoped views persist nothing and
   stay allowed). Called from `repark_spark::spark_ast::execute_passthrough` and
   `repark_sql::router::delegate`, next to each door's SEC-02 plan guard.
-  **Round 4 (Y-2):** the `TableSource::get_logical_plan` recurse in `collect_tighten_sources`
-  is unreachable from any SQL-door statement on DataFusion 54.1 (`LogicalPlanBuilder::scan`
-  inlines a source that has a logical plan) — measured, all four lazy-view pins stayed green
-  with the recurse deleted. It is live for a scan the builder does NOT inline (non-empty
-  `filters`), which is what `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse`
-  pins.
+  **Round 4 (Y-2):** the `get_logical_plan` follow is unreachable from any SQL-door
+  statement on DataFusion 54.1 (`LogicalPlanBuilder::scan` inlines a source that has a
+  logical plan) — measured, all four lazy-view pins stayed green with the follow deleted.
+  It is live for a scan the builder does NOT inline (non-empty `filters`), which is what
+  `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse` pins.
+
   The public door is `session.rs::declare_temp_view_sorted(..., tighten_nulls)`: verify
   FIRST, then apply nullability, then re-register the `MemTable` `with_sort_order`.
   Trust model is declare + ALWAYS-verify, refuse loud — no unverified fast path, by design

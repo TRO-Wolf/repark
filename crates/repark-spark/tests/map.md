@@ -16,7 +16,8 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   (`ORDER BY ts` = NULLS FIRST over nullable keys) via `create_physical_plan` (not EXPLAIN);
   hint mode keeps the sort; Iceberg CTAS of a tightened frame refuses; CTAS of a
   derived expression over a tightened source refuses (SQM F1); a one-statement
-  CTAS with the tightened view in an EXISTS subquery refuses (R-B); cache remint
+  CTAS with the tightened view in an EXISTS subquery refuses (R-B; pin comment
+  names EXISTS, not scalar); cache remint
   of a derived plan still refuses (R-A); a lazy `into_view` hop still
   refuses (Q-001); all-nullable projection CREATE + INSERT stay allowed (R-D).
   Round-4 (Y-3/Y-4): `CREATE VIEW ice.ns.v AS … LIMIT 0` / `… WHERE false` and

@@ -29,22 +29,81 @@ if TYPE_CHECKING:
 logger = logging.getLogger("repark.spark.dataframe")
 
 
+def _output_field_would_persist_required(field: Any) -> bool:
+    """True when this field or a nested child would persist Iceberg-required."""
+    if not field.nullable:
+        return True
+    return _data_type_has_required_child(field.dataType)
+
+
+def _data_type_has_required_child(data_type: Any) -> bool:
+    """Walk Struct / Array / Map the way the engine ``field_or_child`` helper does."""
+    children = getattr(data_type, "fields", None)
+    if children is not None:
+        return any(_output_field_would_persist_required(child) for child in children)
+    element = getattr(data_type, "elementType", None)
+    if element is not None:
+        if not getattr(data_type, "containsNull", True):
+            return True
+        return _data_type_has_required_child(element)
+    value_type = getattr(data_type, "valueType", None)
+    if value_type is not None:
+        if not getattr(data_type, "valueContainsNull", True):
+            return True
+        return _data_type_has_required_child(value_type)
+    return False
+
+
 def _strip_internal_tighten_metadata(table: Any) -> Any:
     """Drop ``repark.tighten_nulls`` from user-visible Arrow export (not a data column)."""
     import pyarrow as pa
 
     key = b"repark.tighten_nulls"
-    schema = table.schema
-    fields = []
-    changed = False
-    for field in schema:
+
+    def strip_field(field: Any, depth: int = 0) -> tuple[Any, bool]:
+        if depth > 32:
+            return field, False
+        changed = False
         meta = field.metadata
         if meta and key in meta:
-            fields.append(field.with_metadata({k: v for k, v in meta.items() if k != key}))
+            meta = {k: v for k, v in meta.items() if k != key}
             changed = True
-        else:
-            fields.append(field)
-    schema_meta = schema.metadata
+        new_type, type_changed = strip_type(field.type, depth)
+        changed = changed or type_changed
+        if not changed:
+            return field, False
+        return field.with_type(new_type).with_metadata(meta), True
+
+    def strip_type(data_type: Any, depth: int) -> tuple[Any, bool]:
+        if pa.types.is_struct(data_type):
+            fields = []
+            changed = False
+            for index in range(data_type.num_fields):
+                child, child_changed = strip_field(data_type.field(index), depth + 1)
+                fields.append(child)
+                changed = changed or child_changed
+            return (pa.struct(fields) if changed else data_type, changed)
+        if pa.types.is_list(data_type) or pa.types.is_large_list(data_type):
+            child, child_changed = strip_field(data_type.value_field, depth + 1)
+            if not child_changed:
+                return data_type, False
+            if pa.types.is_large_list(data_type):
+                return pa.large_list(child), True
+            return pa.list_(child), True
+        if pa.types.is_map(data_type):
+            value_field, value_changed = strip_field(data_type.item_field, depth + 1)
+            if not value_changed:
+                return data_type, False
+            return pa.map_(data_type.key_field, value_field), True
+        return data_type, False
+
+    fields = []
+    changed = False
+    for field in table.schema:
+        new_field, field_changed = strip_field(field)
+        fields.append(new_field)
+        changed = changed or field_changed
+    schema_meta = table.schema.metadata
     if schema_meta and key in schema_meta:
         schema_meta = {k: v for k, v in schema_meta.items() if k != key}
         changed = True

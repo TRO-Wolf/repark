@@ -1,6 +1,6 @@
 """SE-1 PR-D1 facade pins for ``declareSorted(..., tightenNulls=True)``.
 
-The existing 13 nodes in ``test_declare_sorted.py`` stay byte-identical (hint mode).
+The existing hint-mode nodes in ``test_declare_sorted.py`` stay byte-identical.
 This file pins the c+ flag: value AND type, refuse-on-nulls, and hint-after-tighten
 restore. Serving-shape SortExec elision is the Rust Spark-door execution-layer pin
 (``crates/repark-spark/tests/declared_sorted_tighten.rs``) — facade EXPLAIN is still
@@ -17,7 +17,14 @@ from repark import ReparkSession
 from repark import functions as F  # noqa: N812 — PySpark idiom
 from repark.errors import AnalysisException
 from repark.spark.dataframe import DataFrame
-from repark.spark.types import DoubleType, LongType, StringType, StructField, StructType
+from repark.spark.types import (
+    ArrayType,
+    DoubleType,
+    LongType,
+    StringType,
+    StructField,
+    StructType,
+)
 from repark.spark.window import Window
 
 SCHEMA = StructType(
@@ -373,6 +380,21 @@ def test_session_scoped_create_view_and_select_into_stay_allowed(
     assert spark_catalog.sql("SELECT count(*) AS n FROM session_v").collect()[0]["n"] == len(
         SORTED_ROWS
     )
+
+
+def test_facade_rd_walks_array_and_map_element_nullability() -> None:
+    """Kills: facade R-D looking only at StructType.fields (C1-Q-003)."""
+    from repark.spark.dataframe.plan_collapse import _output_field_would_persist_required
+    from repark.spark.types import IntegerType, MapType
+
+    required_element = StructField("arr", ArrayType(LongType(), False), True)
+    optional_element = StructField("arr", ArrayType(LongType(), True), True)
+    required_value = StructField("m", MapType(StringType(), IntegerType(), False), True)
+    optional_value = StructField("m", MapType(StringType(), IntegerType(), True), True)
+    assert _output_field_would_persist_required(required_element)
+    assert not _output_field_would_persist_required(optional_element)
+    assert _output_field_would_persist_required(required_value)
+    assert not _output_field_would_persist_required(optional_value)
 
 
 def test_declare_sorted_docstring_examples_execute() -> None:

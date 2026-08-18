@@ -951,3 +951,136 @@ fn list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk() {
             });
     }
 }
+
+#[tokio::test]
+async fn wide_lazy_view_union_without_tighten_is_not_refused() {
+    // Kills: a 64-visit "depth" cap treating width as depth and refusing an
+    // innocent CREATE with a tightenNulls message (C1-Q-001).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA"], &[Some(1)], true);
+    let mut parts: Vec<String> = Vec::new();
+    for index in 0..65 {
+        let source = format!("plain_{index}");
+        let view = format!("lazy_{index}");
+        session
+            .register_record_batches_as_temp_view(&source, rows.schema(), vec![rows.clone()])
+            .unwrap();
+        let derived = session
+            .context()
+            .sql(&format!("SELECT * FROM {source}"))
+            .await
+            .unwrap();
+        session
+            .create_or_replace_temp_view_from(&view, &derived)
+            .unwrap();
+        parts.push(format!("SELECT * FROM {view}"));
+    }
+    let planned = session
+        .context()
+        .sql(&parts.join(" UNION ALL "))
+        .await
+        .unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan()).expect(
+        "wide non-tighten lazy-view UNION must not refuse and must not mention tightenNulls",
+    );
+}
+
+#[tokio::test]
+async fn remint_hint_unflips_name_colliding_computed_column() {
+    // Kills: skip-by-name leaving `ts + 1 AS symbol` required+untagged after
+    // hint restore so CREATE persists a tighten-propagated required column
+    // (C2-Q-001). Originally-required columns may also widen — conservative.
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let derived = session
+        .context()
+        .sql("SELECT ts + 1 AS symbol FROM tight")
+        .await
+        .unwrap();
+    session
+        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .await
+        .unwrap();
+    session
+        .declare_temp_view_sorted("cached", &keys(&["symbol"]), false)
+        .await
+        .unwrap();
+    let after_hint = view_schema(&session, "cached").await;
+    assert!(
+        after_hint.field_with_name("symbol").unwrap().is_nullable(),
+        "computed column aliased onto an already-required name must unflip"
+    );
+    let planned = session.context().sql("SELECT * FROM cached").await.unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect("unflipped colliding remint must not refuse");
+}
+
+#[tokio::test]
+async fn remint_hint_restore_unflips_nested_required_child() {
+    // Kills: remint tagging only top-level fields so hint restore leaves a
+    // nested required child untagged and CREATE persists it (C1-L-001).
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let derived = session
+        .context()
+        .sql("SELECT ts + 1 AS ts2, named_struct('k', ts + 1) AS wrapper FROM tight")
+        .await
+        .unwrap_or_else(|_| panic!("named_struct must parse so the nested remint pin can run"));
+    session
+        .materialize_dataframe_as_cache_view("cached", derived, None)
+        .await
+        .unwrap();
+    session
+        .declare_temp_view_sorted("cached", &keys(&["ts2"]), false)
+        .await
+        .unwrap();
+    let after_hint = view_schema(&session, "cached").await;
+    let wrapper = after_hint.field_with_name("wrapper").unwrap();
+    let DataType::Struct(children) = wrapper.data_type() else {
+        panic!("wrapper must stay a struct, got {:?}", wrapper.data_type());
+    };
+    assert!(
+        children
+            .iter()
+            .all(|child| child.is_nullable() || child.name() != "k"),
+        "nested reminted required child must unflip on hint restore"
+    );
+    let planned = session.context().sql("SELECT * FROM cached").await.unwrap();
+    refuse_iceberg_create_of_tightened_plan(planned.logical_plan())
+        .expect("restored remint with unflipped nested child must not refuse");
+}
+
+#[test]
+fn export_strip_does_not_stack_overflow_on_deep_struct() {
+    // Kills: remint/restore/strip recursing without a depth cap (C2-SAF-001).
+    let mut data_type = DataType::Int64;
+    for _ in 0..40 {
+        data_type = DataType::Struct(Fields::from(vec![Field::new("f", data_type, true)]));
+    }
+    let schema = Arc::new(Schema::new_with_metadata(
+        vec![Field::new("wrapper", data_type, true)],
+        HashMap::from([(
+            TIGHTEN_NULLS_METADATA_KEY.to_string(),
+            TIGHTEN_NULLS_METADATA_VALUE.to_string(),
+        )]),
+    ));
+    let exported = strip_tighten_export_metadata(schema);
+    assert!(
+        !exported.metadata().contains_key(TIGHTEN_NULLS_METADATA_KEY),
+        "deep-struct export must still drop the schema stamp"
+    );
+}

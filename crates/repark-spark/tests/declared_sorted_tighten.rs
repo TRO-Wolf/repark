@@ -205,7 +205,8 @@ async fn iceberg_create_from_subquery_over_tightened_source_refuses() {
     // the SQL below is and always was `WHERE EXISTS (SELECT 1 FROM tight)`. The core twin
     // (`subquery_expression_source_is_visible_to_the_create_walk`) and the ANSI twin
     // (`ansi_ctas_from_subquery_over_tightened_source_refuses`) both said "expression-subquery"
-    // and needed no change — checked, this door was the only drifted one.
+    // and needed no change — checked, this door was the only drifted one. (The lane's octo
+    // remediation round made the same correction independently.)
     let warehouse_dir = TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = spark_session();

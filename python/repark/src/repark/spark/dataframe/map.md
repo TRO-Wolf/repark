@@ -75,6 +75,8 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
   **SE-1 R-3:** `_strip_internal_tighten_metadata` lives here so `to_arrow()` /
   `to_arrow_batches` drop the internal `repark.tighten_nulls` tag.
+  **Round 3:** `_output_field_would_persist_required` (R-D nested Struct/Array/Map)
+  lives here so `core.py` stays under its ceiling.
   **CEIL-1 (D1 #173, move-only):** the six remaining `core.py` tail helpers moved here
   VERBATIM — `_is_native_pure_global_aggregate`, `_parse_count_distinct_simple_names`,
   `_global_agg_sql_parts`, `_pandas_udf_window_frame_bounds`, `_reject_partition_transform`,
@@ -124,9 +126,10 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (D1 #173, post-CEIL-1 extract): `core.py` 7257 of 7350,
-  `plan_collapse.py` 1373 of 2500. (Was 7380 of 7350 — RED — when D1 and DF-2 landed
-  together; the CEIL-1 move-only extract below bought the room. Ceiling unchanged.)
+- Live file sizes (D1 #173, post-CEIL-1 extract + octo-remediation integration):
+  `core.py` 7250 of 7350, `plan_collapse.py` 1432 of 2500. (Was 7380 of 7350 — RED —
+  when D1 and DF-2 landed together; the CEIL-1 move-only extract below bought the
+  room. Ceiling unchanged.)
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).

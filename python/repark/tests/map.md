@@ -102,8 +102,8 @@ NOT in that file is a defect, not a decision.
   one function; declaring twice is idempotent. Disclosed in the module docstring: the window
   ordering in the plan pin is spelled `ASC NULLS LAST` because Spark's `ASC` default is
   NULLS FIRST while the engine declares NULLS LAST. Ledger:
-  `task/se1-declared-sorted-ledger.md`. **PR-D1 does not edit this file** (13 nodes stay
-  byte-identical).
+  `task/se1-declared-sorted-ledger.md`. **PR-D1 does not edit this file** (hint-mode
+  nodes stay byte-identical).
 - `test_declare_sorted_tighten.py` — **SE-1 PR-D1:** `tightenNulls=True` value-identical
   to hint with key fields non-nullable on `to_arrow()` **and** `df.schema` (SQM F4);
   refuse-on-nulls (names the flag); hint-after-tighten restores; both spellings share the
@@ -112,7 +112,8 @@ NOT in that file is a defect, not a decision.
   combinator marker (R-C); cache remint refuse (R-A); all-nullable CREATE + INSERT
   allowed and literal-over-tight refused (R-D); `df.schema` type-exactness; export
   metadata stripped; doctest examples execute; SQL-derived write + lazy-view
-  CREATE refuse (Q-001); polars join marker (R-C). Serving-shape elision is the
+  CREATE refuse (Q-001); polars join marker (R-C); facade R-D Array/Map
+  element-nullability helper (C1-Q-003). Serving-shape elision is the
   Rust Spark-door pin.
   Round-4: `CREATE VIEW <catalog>.<ns>.v` and `SELECT … INTO <catalog>.<ns>.t` over a
   tightened source refuse (Y-3 / Y-4 — both leaked on BASE, measured on the pre-fix native

@@ -13,7 +13,7 @@ use std::sync::Arc;
 use arrow::array::ArrayRef;
 use arrow::compute::concat;
 use arrow::compute::kernels::sort::{LexicographicalComparator, SortColumn, SortOptions};
-use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use arrow::datatypes::{DataType, Field, Fields, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use datafusion::common::Column;
 use datafusion::common::TableReference;
@@ -189,7 +189,10 @@ pub fn tightened_field_names(schema: &Schema) -> Vec<String> {
 #[must_use]
 pub fn schema_is_tighten_derived(schema: &Schema) -> bool {
     schema_has_tighten_provenance(schema)
-        || schema.fields().iter().any(|field| is_tighten_tagged(field))
+        || schema
+            .fields()
+            .iter()
+            .any(|field| field_or_descendant_is_tagged(field, 0))
 }
 
 /// ===========================================================================================
@@ -295,7 +298,8 @@ pub(crate) fn apply_tighten_provenance_on_materialize(
     schema: SchemaRef,
     batches: Vec<RecordBatch>,
 ) -> Result<(SchemaRef, Vec<RecordBatch>)> {
-    if !plan_has_tightened_source(plan)? {
+    let walked = walk_tighten_sources(plan)?;
+    if !walked.has_tightened_source {
         return Ok((schema, batches));
     }
     let mut metadata = schema.metadata().clone();
@@ -303,20 +307,15 @@ pub(crate) fn apply_tighten_provenance_on_materialize(
         TIGHTEN_NULLS_METADATA_KEY.to_string(),
         TIGHTEN_NULLS_METADATA_VALUE.to_string(),
     );
+    // Tag every reminted required field (top-level and nested). Do not skip
+    // by source-column name: `ts + 1 AS symbol` would then stay required and
+    // untagged after hint restore, and CREATE would persist it (C2-Q-001).
+    // Originally-required columns may widen to nullable on remint+hint — that
+    // is conservative for the Iceberg "writes stay nullable" contract.
     let fields: Vec<Field> = schema
         .fields()
         .iter()
-        .map(|field| {
-            if is_tighten_tagged(field) || field.is_nullable() {
-                return field.as_ref().clone();
-            }
-            let mut field_metadata = field.metadata().clone();
-            field_metadata.insert(
-                TIGHTEN_NULLS_METADATA_KEY.to_string(),
-                TIGHTEN_NULLS_METADATA_VALUE.to_string(),
-            );
-            field.as_ref().clone().with_metadata(field_metadata)
-        })
+        .map(|field| remint_annotate_field(field.as_ref()))
         .collect();
     rebuild_batches(
         Arc::new(Schema::new_with_metadata(fields, metadata)),
@@ -324,47 +323,71 @@ pub(crate) fn apply_tighten_provenance_on_materialize(
     )
 }
 
-fn plan_has_tightened_source(plan: &LogicalPlan) -> Result<bool> {
-    collect_tighten_sources(plan).map(|(has, _)| has)
+struct TightenSourceWalk {
+    has_tightened_source: bool,
+    tagged: Vec<String>,
+}
+
+fn collect_tighten_sources(plan: &LogicalPlan) -> Result<(bool, Vec<String>)> {
+    walk_tighten_sources(plan).map(|walked| (walked.has_tightened_source, walked.tagged))
 }
 
 /// Walk `TableScan`s, expression subqueries, and lazy view/`into_view` inner plans
 /// (`TableSource::get_logical_plan`). A `ViewTable` schema is the *output* of the
 /// stored plan, so computed columns drop field tags unless this recurse happens.
-fn collect_tighten_sources(plan: &LogicalPlan) -> Result<(bool, Vec<String>)> {
-    let mut tagged: Vec<String> = Vec::new();
-    let mut has_tightened_source = false;
-    let mut nested: Vec<LogicalPlan> = Vec::new();
+///
+/// Iterative (no extra Rust stack per hop). A visit budget bounds cyclic
+/// `createOrReplaceTempView` graphs. The budget counts inner-plan *visits*
+/// (width + depth), not nesting depth. Overflow is a generic walk error — never
+/// a `tightenNulls` CREATE refusal — so a wide non-tighten UNION/CTAS/cache
+/// cannot be mis-blamed on `declareSorted` (C1-Q-001).
+fn walk_tighten_sources(plan: &LogicalPlan) -> Result<TightenSourceWalk> {
+    const MAX_VIEW_VISITS: usize = 4096;
+    let mut walked = TightenSourceWalk {
+        has_tightened_source: false,
+        tagged: Vec::new(),
+    };
+    let mut pending: Vec<LogicalPlan> = Vec::new();
+    visit_tighten_sources(plan, &mut walked, &mut pending)?;
+    let mut visits = 0_usize;
+    while let Some(inner) = pending.pop() {
+        visits += 1;
+        if visits > MAX_VIEW_VISITS {
+            return Err(Error::Analysis(
+                "tighten-source walk exceeded view-visit budget \
+                 (cyclic or extremely wide temp-view graph)"
+                    .to_string(),
+            ));
+        }
+        visit_tighten_sources(&inner, &mut walked, &mut pending)?;
+    }
+    Ok(walked)
+}
+
+fn visit_tighten_sources(
+    plan: &LogicalPlan,
+    walked: &mut TightenSourceWalk,
+    pending: &mut Vec<LogicalPlan>,
+) -> Result<()> {
     plan.apply_with_subqueries(|node| {
         if let LogicalPlan::TableScan(scan) = node {
             let source_schema = scan.source.schema();
             if schema_is_tighten_derived(source_schema.as_ref()) {
-                has_tightened_source = true;
+                walked.has_tightened_source = true;
                 for name in tightened_field_names(source_schema.as_ref()) {
-                    if !tagged.iter().any(|existing| existing == &name) {
-                        tagged.push(name);
+                    if !walked.tagged.iter().any(|existing| existing == &name) {
+                        walked.tagged.push(name);
                     }
                 }
             }
             if let Some(inner) = scan.source.get_logical_plan() {
-                nested.push(inner.into_owned());
+                pending.push(inner.into_owned());
             }
         }
         Ok(TreeNodeRecursion::Continue)
     })
-    .map_err(engine_err)?;
-    for inner in nested {
-        let (inner_has, inner_tagged) = collect_tighten_sources(&inner)?;
-        if inner_has {
-            has_tightened_source = true;
-            for name in inner_tagged {
-                if !tagged.iter().any(|existing| existing == &name) {
-                    tagged.push(name);
-                }
-            }
-        }
-    }
-    Ok((has_tightened_source, tagged))
+    .map_err(engine_err)
+    .map(|_| ())
 }
 
 /// ===========================================================================================
@@ -374,24 +397,19 @@ fn collect_tighten_sources(plan: &LogicalPlan) -> Result<(bool, Vec<String>)> {
 #[must_use]
 pub fn strip_tighten_export_metadata(schema: SchemaRef) -> SchemaRef {
     let has_schema_tag = schema_has_tighten_provenance(schema.as_ref());
-    let has_field_tag = schema.fields().iter().any(|field| is_tighten_tagged(field));
+    let has_field_tag = schema
+        .fields()
+        .iter()
+        .any(|field| field_or_descendant_is_tagged(field, 0));
     if !has_schema_tag && !has_field_tag {
         return schema;
     }
     let fields: Vec<Field> = schema
         .fields()
         .iter()
-        .map(|field| {
-            if !is_tighten_tagged(field) {
-                return field.as_ref().clone();
-            }
-            let mut metadata = field.metadata().clone();
-            metadata.remove(TIGHTEN_NULLS_METADATA_KEY);
-            field.as_ref().clone().with_metadata(metadata)
-        })
+        .map(|field| strip_field_export(field.as_ref()))
         .collect();
-    let mut metadata = schema.metadata().clone();
-    metadata.remove(TIGHTEN_NULLS_METADATA_KEY);
+    let metadata = unstamp_tighten_metadata(schema.metadata().clone());
     Arc::new(Schema::new_with_metadata(fields, metadata))
 }
 
@@ -404,22 +422,33 @@ fn plan_has_non_nullable_output(plan: &LogicalPlan) -> bool {
 }
 
 fn field_or_child_is_non_nullable(field: &Field) -> bool {
+    field_or_child_is_non_nullable_at(field, 0)
+}
+
+const MAX_NESTED_TYPE_DEPTH: usize = 32;
+
+fn field_or_child_is_non_nullable_at(field: &Field, depth: usize) -> bool {
+    if depth > MAX_NESTED_TYPE_DEPTH {
+        // Fail closed: treat as required so CREATE refuses rather than
+        // stack-overflow on a hostile nested type (C1-CRATE-001).
+        return true;
+    }
     if !field.is_nullable() {
         return true;
     }
     match field.data_type() {
         DataType::Struct(fields) => fields
             .iter()
-            .any(|child| field_or_child_is_non_nullable(child)),
+            .any(|child| field_or_child_is_non_nullable_at(child, depth + 1)),
         DataType::List(inner) | DataType::LargeList(inner) | DataType::FixedSizeList(inner, _) => {
-            field_or_child_is_non_nullable(inner)
+            field_or_child_is_non_nullable_at(inner, depth + 1)
         }
         DataType::Map(entries, _) => match entries.data_type() {
             // Arrow map entries are a non-null struct; Iceberg requiredness of the
             // map column is the map field itself. Only a required *value* persists
             // a nested required Iceberg field (keys are spec-required).
             DataType::Struct(fields) if fields.len() >= 2 => {
-                field_or_child_is_non_nullable(fields[1].as_ref())
+                field_or_child_is_non_nullable_at(fields[1].as_ref(), depth + 1)
             }
             _ => false,
         },
@@ -447,6 +476,195 @@ fn is_tighten_tagged(field: &Field) -> bool {
         .is_some_and(|value| value == TIGHTEN_NULLS_METADATA_VALUE)
 }
 
+fn stamp_tighten_metadata(
+    mut metadata: std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    metadata.insert(
+        TIGHTEN_NULLS_METADATA_KEY.to_string(),
+        TIGHTEN_NULLS_METADATA_VALUE.to_string(),
+    );
+    metadata
+}
+
+fn unstamp_tighten_metadata(
+    mut metadata: std::collections::HashMap<String, String>,
+) -> std::collections::HashMap<String, String> {
+    metadata.remove(TIGHTEN_NULLS_METADATA_KEY);
+    metadata
+}
+
+fn field_or_descendant_is_tagged(field: &Field, depth: usize) -> bool {
+    if is_tighten_tagged(field) {
+        return true;
+    }
+    if depth > MAX_NESTED_TYPE_DEPTH {
+        return false;
+    }
+    match field.data_type() {
+        DataType::Struct(fields) => fields
+            .iter()
+            .any(|child| field_or_descendant_is_tagged(child, depth + 1)),
+        DataType::List(inner) | DataType::LargeList(inner) | DataType::FixedSizeList(inner, _) => {
+            field_or_descendant_is_tagged(inner, depth + 1)
+        }
+        DataType::Map(entries, _) => match entries.data_type() {
+            DataType::Struct(fields) if fields.len() >= 2 => {
+                field_or_descendant_is_tagged(fields[1].as_ref(), depth + 1)
+            }
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+/// Tag reminted required fields (including nested struct children / list items /
+/// map values) so hint restore can unflip them. Depth-capped: a hostile nest
+/// must not stack-overflow remint/restore/export (C2-SAF-001).
+fn remint_annotate_field(field: &Field) -> Field {
+    remint_annotate_field_at(field, 0)
+}
+
+fn remint_annotate_field_at(field: &Field, depth: usize) -> Field {
+    if depth > MAX_NESTED_TYPE_DEPTH {
+        return field.clone();
+    }
+    let data_type = remint_annotate_data_type(field.data_type(), depth);
+    let mut out = field.clone().with_data_type(data_type);
+    if !is_tighten_tagged(field) && !field.is_nullable() {
+        out = out.with_metadata(stamp_tighten_metadata(field.metadata().clone()));
+    }
+    out
+}
+
+fn remint_annotate_data_type(data_type: &DataType, depth: usize) -> DataType {
+    match data_type {
+        DataType::Struct(fields) => DataType::Struct(Fields::from(
+            fields
+                .iter()
+                .map(|child| remint_annotate_field_at(child.as_ref(), depth + 1))
+                .collect::<Vec<Field>>(),
+        )),
+        DataType::List(inner) => {
+            DataType::List(Arc::new(remint_annotate_field_at(inner, depth + 1)))
+        }
+        DataType::LargeList(inner) => {
+            DataType::LargeList(Arc::new(remint_annotate_field_at(inner, depth + 1)))
+        }
+        DataType::FixedSizeList(inner, size) => {
+            DataType::FixedSizeList(Arc::new(remint_annotate_field_at(inner, depth + 1)), *size)
+        }
+        DataType::Map(entries, sorted) => match entries.data_type() {
+            DataType::Struct(fields) if fields.len() >= 2 => {
+                let key = fields[0].as_ref().clone();
+                let value = remint_annotate_field_at(fields[1].as_ref(), depth + 1);
+                let rebuilt = entries
+                    .as_ref()
+                    .clone()
+                    .with_data_type(DataType::Struct(Fields::from(vec![key, value])));
+                DataType::Map(Arc::new(rebuilt), *sorted)
+            }
+            _ => data_type.clone(),
+        },
+        other => other.clone(),
+    }
+}
+
+fn restore_field(field: &Field) -> Field {
+    restore_field_at(field, 0)
+}
+
+fn restore_field_at(field: &Field, depth: usize) -> Field {
+    if depth > MAX_NESTED_TYPE_DEPTH {
+        return field.clone();
+    }
+    let data_type = restore_data_type(field.data_type(), depth);
+    let mut out = field.clone().with_data_type(data_type);
+    if is_tighten_tagged(field) {
+        out = out
+            .with_nullable(true)
+            .with_metadata(unstamp_tighten_metadata(field.metadata().clone()));
+    }
+    out
+}
+
+fn restore_data_type(data_type: &DataType, depth: usize) -> DataType {
+    match data_type {
+        DataType::Struct(fields) => DataType::Struct(Fields::from(
+            fields
+                .iter()
+                .map(|child| restore_field_at(child.as_ref(), depth + 1))
+                .collect::<Vec<Field>>(),
+        )),
+        DataType::List(inner) => DataType::List(Arc::new(restore_field_at(inner, depth + 1))),
+        DataType::LargeList(inner) => {
+            DataType::LargeList(Arc::new(restore_field_at(inner, depth + 1)))
+        }
+        DataType::FixedSizeList(inner, size) => {
+            DataType::FixedSizeList(Arc::new(restore_field_at(inner, depth + 1)), *size)
+        }
+        DataType::Map(entries, sorted) => match entries.data_type() {
+            DataType::Struct(fields) if fields.len() >= 2 => {
+                let key = fields[0].as_ref().clone();
+                let value = restore_field_at(fields[1].as_ref(), depth + 1);
+                let rebuilt = entries
+                    .as_ref()
+                    .clone()
+                    .with_data_type(DataType::Struct(Fields::from(vec![key, value])));
+                DataType::Map(Arc::new(rebuilt), *sorted)
+            }
+            _ => data_type.clone(),
+        },
+        other => other.clone(),
+    }
+}
+
+fn strip_field_export(field: &Field) -> Field {
+    strip_field_export_at(field, 0)
+}
+
+fn strip_field_export_at(field: &Field, depth: usize) -> Field {
+    if depth > MAX_NESTED_TYPE_DEPTH {
+        return field.clone();
+    }
+    let data_type = strip_data_type_export(field.data_type(), depth);
+    let mut out = field.clone().with_data_type(data_type);
+    if is_tighten_tagged(field) {
+        out = out.with_metadata(unstamp_tighten_metadata(field.metadata().clone()));
+    }
+    out
+}
+
+fn strip_data_type_export(data_type: &DataType, depth: usize) -> DataType {
+    match data_type {
+        DataType::Struct(fields) => DataType::Struct(Fields::from(
+            fields
+                .iter()
+                .map(|child| strip_field_export_at(child.as_ref(), depth + 1))
+                .collect::<Vec<Field>>(),
+        )),
+        DataType::List(inner) => DataType::List(Arc::new(strip_field_export_at(inner, depth + 1))),
+        DataType::LargeList(inner) => {
+            DataType::LargeList(Arc::new(strip_field_export_at(inner, depth + 1)))
+        }
+        DataType::FixedSizeList(inner, size) => {
+            DataType::FixedSizeList(Arc::new(strip_field_export_at(inner, depth + 1)), *size)
+        }
+        DataType::Map(entries, sorted) => match entries.data_type() {
+            DataType::Struct(fields) if fields.len() >= 2 => {
+                let key = fields[0].as_ref().clone();
+                let value = strip_field_export_at(fields[1].as_ref(), depth + 1);
+                let rebuilt = entries
+                    .as_ref()
+                    .clone()
+                    .with_data_type(DataType::Struct(Fields::from(vec![key, value])));
+                DataType::Map(Arc::new(rebuilt), *sorted)
+            }
+            _ => data_type.clone(),
+        },
+        other => other.clone(),
+    }
+}
+
 fn schema_has_tighten_provenance(schema: &Schema) -> bool {
     schema
         .metadata()
@@ -458,7 +676,10 @@ fn restore_tighten_metadata(
     schema: SchemaRef,
     batches: Vec<RecordBatch>,
 ) -> Result<(SchemaRef, Vec<RecordBatch>)> {
-    let has_field_tags = schema.fields().iter().any(|field| is_tighten_tagged(field));
+    let has_field_tags = schema
+        .fields()
+        .iter()
+        .any(|field| field_or_descendant_is_tagged(field, 0));
     let has_schema_tag = schema_has_tighten_provenance(schema.as_ref());
     if !has_field_tags && !has_schema_tag {
         return Ok((schema, batches));
@@ -466,21 +687,9 @@ fn restore_tighten_metadata(
     let fields: Vec<Field> = schema
         .fields()
         .iter()
-        .map(|field| {
-            if !is_tighten_tagged(field) {
-                return field.as_ref().clone();
-            }
-            let mut metadata = field.metadata().clone();
-            metadata.remove(TIGHTEN_NULLS_METADATA_KEY);
-            field
-                .as_ref()
-                .clone()
-                .with_nullable(true)
-                .with_metadata(metadata)
-        })
+        .map(|field| restore_field(field.as_ref()))
         .collect();
-    let mut metadata = schema.metadata().clone();
-    metadata.remove(TIGHTEN_NULLS_METADATA_KEY);
+    let metadata = unstamp_tighten_metadata(schema.metadata().clone());
     rebuild_batches(
         Arc::new(Schema::new_with_metadata(fields, metadata)),
         batches,

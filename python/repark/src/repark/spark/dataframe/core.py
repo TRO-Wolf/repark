@@ -34,16 +34,6 @@ from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
 
-def _output_field_would_persist_required(field: Any) -> bool:
-    """True when this field or a nested child would persist Iceberg-required."""
-    if not field.nullable:
-        return True
-    children = getattr(field.dataType, "fields", None)
-    if children is not None:
-        return any(_output_field_would_persist_required(child) for child in children)
-    return False
-
-
 def _arrow_map_pairs(value: Any) -> list[tuple[Any, Any]] | None:
     """Normalize an Arrow ``to_pylist`` map cell to ``list[(key, value)]``, or ``None``.
 
@@ -2748,10 +2738,11 @@ class DataFrame:
             Sort keys, in order. At least one is required.
         tightenNulls:
             Default ``False`` keeps the door a pure hint (schema unchanged). ``True``
-            unlocks elision on every query shape, including
-            ``Window.partitionBy(...).orderBy(...)``: after verify, a NULL in a declared
-            key refuses (name the key; drop ``tightenNulls`` or clean the data); otherwise
-            the in-engine schema of those keys becomes non-nullable
+            unlocks elision on the serving-shape window
+            (``Window.partitionBy(...).orderBy(...)`` over the declared keys): after
+            verify, a NULL in a declared key refuses (name the key; drop
+            ``tightenNulls`` or clean the data); otherwise the in-engine schema of
+            those keys becomes non-nullable
             (``df.schema`` / ``to_arrow()``). That is a plan property, not a data contract
             — Iceberg CREATE is refused until PR-D2 when the SELECT would persist a
             non-nullable column (all-nullable projections are allowed). Internal
@@ -7192,6 +7183,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _column_may_reference_names,
     _column_widths,
     _column_window_spec,
+    _data_type_has_required_child,
     _decode_qcol_field,
     _display_type_labels_from_arrow,
     _dynamic_flatten_unnest_structs,
@@ -7204,6 +7196,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _is_compound_sql_expr,
     _list_field_element_debug,
     _null_safe_equi_join_sql,
+    _output_field_would_persist_required,
     _parse_list_element_sql_type,
     _reject_non_numeric_range_order,
     _rewrite_join_qcol_sql,

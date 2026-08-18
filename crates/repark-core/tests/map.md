@@ -20,7 +20,13 @@ behavior only reachable end-to-end.
   subquery-expression sources are visible to the walk (R-B), all-nullable
   projections are allowed (R-D), export strip drops the tag and keeps
   non-nullability, lazy `into_view` hops stay visible to the CREATE walk
-  (Q-001). Round-4: `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse`
+  (Q-001), remint+hint restore unflips reminted required fields, already-required
+  keys still stamp schema provenance (L-004), nested required children refuse
+  (L-002), a 65-wide lazy-view UNION without tighten is not refused (C1-Q-001),
+  remint+hint unflips a computed column aliased onto an already-required
+  name (C2-Q-001), remint+hint unflips nested reminted required children
+  (C1-L-001).
+  Round-4: `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse`
   (Y-2 — the one node that kills the delete-the-recurse mutant; no SQL-door statement reaches
   that branch on DF 54.1, measured) and
   `list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk` (Y-8 / verifier P-5 — a
