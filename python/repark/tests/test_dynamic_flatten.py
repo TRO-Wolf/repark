@@ -17,12 +17,23 @@ from repark.errors import AnalysisException, PySparkTypeError, PySparkValueError
 from repark.spark.session import _reset_active_session_for_tests
 from repark.spark.types import (
     ArrayType,
+    DoubleType,
+    FloatType,
     LongType,
     NullType,
     StringType,
     StructField,
     StructType,
 )
+
+
+def _is_arrow_string_type(data_type: pa.DataType) -> bool:
+    """Utf8 / large_string / string_view — CAST(VARCHAR) may emit any of these."""
+    return (
+        pa.types.is_string(data_type)
+        or pa.types.is_large_string(data_type)
+        or pa.types.is_string_view(data_type)
+    )
 
 
 @pytest.fixture
@@ -242,7 +253,7 @@ def test_list_of_struct_explodes_then_unnests(spark: ReparkSession) -> None:
         {"id": 2, "legs_leg_id": 9, "legs_side": "Buy"},
     ]
     assert table.schema.field("legs_leg_id").type == pa.int64()
-    assert table.schema.field("legs_side").type in (pa.string(), pa.large_string())
+    assert _is_arrow_string_type(table.schema.field("legs_side").type)
 
 
 def test_list_of_struct_capitalized_legs_and_sibling_struct(spark: ReparkSession) -> None:
@@ -295,7 +306,7 @@ def test_list_of_struct_capitalized_legs_and_sibling_struct(spark: ReparkSession
     ]
     assert table.schema.field("Meta_account").type in (pa.string(), pa.large_string())
     assert table.schema.field("Legs_leg_id").type == pa.int64()
-    assert table.schema.field("Legs_side").type in (pa.string(), pa.large_string())
+    assert _is_arrow_string_type(table.schema.field("Legs_side").type)
 
 
 def test_multi_list_serial_explode_order(spark: ReparkSession) -> None:
@@ -447,21 +458,101 @@ def test_drop_null_typed_list(spark: ReparkSession) -> None:
 
 
 def test_drop_null_lists_false_keeps_null_list_column(spark: ReparkSession) -> None:
-    """``drop_null_lists=False`` leaves ``array<void>`` for explode (no silent drop)."""
+    """``drop_null_lists=False`` keeps the ``array<void>`` column as one null-element row.
+
+    Discriminates THIS PR (SQM #176 V-1/V-2). MEASURED: BASE b628b0f and
+    f6aed24 inner-explode the empty void list → ``count()==0``. After the
+    untyped ``make_array(NULL)`` arm the row survives with ``props`` NULL.
+    Kills: void inner-explode fallback; missing ``make_array(NULL)`` CASE.
+
+    Schema-mapper leg MEASURED on this round's BASE c38578d: the kept flat
+    ``props`` column carries the Arrow Debug type key ``'Null'``, which the
+    lowercase-only void arm missed, so ``.schema['props'].dataType`` was
+    ``StringType()`` and ``.dtypes`` said ``('props', 'string')`` while
+    ``to_arrow()`` was already ``pa.null()``. After the ``'Null'`` arm:
+    ``NullType()`` / ``('props', 'void')``.
+    Kills: the StringType fail-open on the Debug-spelled void key (DF-2 W-1).
+    """
     frame = spark.sql("SELECT 1 AS id, make_array() AS props")
     props_type = frame.schema["props"].dataType
     assert isinstance(props_type, ArrayType)
     assert isinstance(props_type.elementType, NullType)
-    # explode empty → no rows (Spark explode drops null/empty).
     flat = frame.dynamicFlatten(drop_null_lists=False)
     assert flat.columns == ["id", "props"]
-    assert flat.count() == 0
+    table = flat.to_arrow()
+    assert table.to_pylist() == [{"id": 1, "props": None}]
+    assert pa.types.is_null(table.schema.field("props").type)
+    # DF-2 W-1: reported schema must agree with the Arrow type, not fail open to string.
+    assert isinstance(flat.schema["props"].dataType, NullType)
+    assert ("props", "void") in flat.dtypes
+
+
+def test_drop_null_lists_false_void_sibling_keeps_typed_list_rows(
+    spark: ReparkSession,
+) -> None:
+    """Empty ``array<void>`` sibling must not cartesian-drop typed lists (SQM #176 V-2).
+
+    MEASURED on f6aed24: ``{props: [] void, items: [{item_id: SKU}]}`` with
+    ``drop_null_lists=False`` (default ``empty_as_null=True``) returned 0 rows;
+    default ``drop_null_lists=True`` kept SKU; typed-empty sibling contrast
+    kept SKU. After ``make_array(NULL)`` the void-empty row survives.
+    Kills: void inner-explode fallback that annihilates sibling lists.
+    """
+    frame = spark.sql(
+        """
+        SELECT 1 AS id,
+               make_array() AS props,
+               make_array(named_struct('item_id', 'SKU')) AS items
+        """
+    )
+    props_type = frame.schema["props"].dataType
+    assert isinstance(props_type, ArrayType)
+    assert isinstance(props_type.elementType, NullType)
+
+    default_drop = frame.dynamicFlatten()
+    assert default_drop.columns == ["id", "items_item_id"]
+    assert default_drop.to_arrow().to_pylist() == [{"id": 1, "items_item_id": "SKU"}]
+
+    kept = frame.dynamicFlatten(drop_null_lists=False)
+    kept_table = kept.to_arrow()
+    kept_rows = kept_table.to_pylist()
+    assert len(kept_rows) == 1
+    assert kept_rows[0]["items_item_id"] == "SKU"
+    assert kept_rows[0]["props"] is None
+    assert pa.types.is_null(kept_table.schema.field("props").type)
+    assert _is_arrow_string_type(kept_table.schema.field("items_item_id").type)
+
+    # empty_as_null=False: EMPTY void drops (polars ≥2.0), same as typed empty.
+    empty_drops = frame.dynamicFlatten(drop_null_lists=False, empty_as_null=False)
+    assert empty_drops.count() == 0
+
+    # NULL void + typed items: False still keeps the row (NULL-only CASE).
+    # Input type is pinned: a scalar-null props would skip explode_keep_null
+    # and stay green on BASE inner-explode (Critic-1 Q-010).
+    null_void = spark.sql(
+        """
+        SELECT 1 AS id,
+               CASE WHEN false THEN make_array() END AS props,
+               make_array(named_struct('item_id', 'SKU')) AS items
+        """
+    )
+    null_props_type = null_void.schema["props"].dataType
+    assert isinstance(null_props_type, ArrayType)
+    assert isinstance(null_props_type.elementType, NullType)
+    null_kept = null_void.dynamicFlatten(drop_null_lists=False, empty_as_null=False)
+    null_table = null_kept.to_arrow()
+    null_rows = null_table.to_pylist()
+    assert len(null_rows) == 1
+    assert null_rows[0]["items_item_id"] == "SKU"
+    assert null_rows[0]["props"] is None
+    assert pa.types.is_null(null_table.schema.field("props").type)
 
 
 def test_explode_null_and_empty_array_values_drop_rows(spark: ReparkSession) -> None:
-    """Spark ``explode`` residual: null/empty array *values* drop the row (vs polars null-keep).
+    """Default ``empty_as_null=True`` keeps NULL and EMPTY lists as one null-element row.
 
-    Honest pin of engine-bound divergence from the polars reference (ledger residual).
+    ``empty_as_null=False`` is the polars ≥2.0 default (NULL kept, EMPTY dropped).
+    Name kept (flip-don't-delete of the pre-fix inner-explode drop pin).
     """
     schema = StructType(
         [
@@ -477,13 +568,24 @@ def test_explode_null_and_empty_array_values_drop_rows(spark: ReparkSession) -> 
         ],
         schema=schema,
     )
-    flat = frame.dynamicFlatten().orderBy("id", "xs")
-    table = flat.to_arrow()
+    default = frame.dynamicFlatten().orderBy("id")
+    table = default.to_arrow()
     assert table.to_pylist() == [
+        {"id": 1, "xs": None},
+        {"id": 2, "xs": None},
         {"id": 3, "xs": 7},
         {"id": 3, "xs": 8},
     ]
     assert table.schema.field("xs").type == pa.int64()
+
+    dropped_empty = frame.dynamicFlatten(empty_as_null=False).orderBy("id")
+    dropped_table = dropped_empty.to_arrow()
+    assert dropped_table.to_pylist() == [
+        {"id": 1, "xs": None},
+        {"id": 3, "xs": 7},
+        {"id": 3, "xs": 8},
+    ]
+    assert dropped_table.schema.field("xs").type == pa.int64()
 
 
 # ==================================================================================================
@@ -541,6 +643,8 @@ def test_bool_flag_type_gates(spark: ReparkSession) -> None:
         frame.dynamicFlatten(explode_lists="yes")  # type: ignore[arg-type]
     with pytest.raises(PySparkTypeError, match="drop_null_lists"):
         frame.dynamicFlatten(drop_null_lists=1)  # type: ignore[arg-type]
+    with pytest.raises(PySparkTypeError, match="empty_as_null"):
+        frame.dynamicFlatten(empty_as_null="yes")  # type: ignore[arg-type]
 
 
 # ==================================================================================================
@@ -824,3 +928,177 @@ def test_dynamic_flatten_plan_build_does_not_force_collect(
     table = planned.to_arrow()
     assert "to_arrow" in actions
     assert table.to_pylist() == [{"id": 1, "outer_inner_x": 2, "legs_leg_id": 3}]
+
+
+# ==================================================================================================
+# GA4-shaped fixture (empty_as_null both flag states)
+# ==================================================================================================
+
+
+_GA4_VALUE = StructType(
+    [
+        StructField("string_value", StringType(), True),
+        StructField("int_value", LongType(), True),
+        StructField("float_value", FloatType(), True),
+        StructField("double_value", DoubleType(), True),
+    ]
+)
+_GA4_PARAM = StructType(
+    [
+        StructField("key", StringType(), True),
+        StructField("value", _GA4_VALUE, True),
+    ]
+)
+_GA4_ITEM = StructType(
+    [
+        StructField("item_id", StringType(), True),
+        StructField("price", DoubleType(), True),
+        StructField("quantity", LongType(), True),
+    ]
+)
+_GA4_DEVICE = StructType(
+    [
+        StructField("category", StringType(), True),
+        StructField(
+            "web_info",
+            StructType(
+                [
+                    StructField("hostname", StringType(), True),
+                    StructField("browser", StringType(), True),
+                ]
+            ),
+            True,
+        ),
+    ]
+)
+_GA4_SCHEMA = StructType(
+    [
+        StructField("event_name", StringType(), False),
+        StructField("event_params", ArrayType(_GA4_PARAM), True),
+        StructField("user_properties", ArrayType(_GA4_PARAM), True),
+        StructField("items", ArrayType(_GA4_ITEM), True),
+        StructField("device", _GA4_DEVICE, True),
+    ]
+)
+_GA4_COLUMNS = [
+    "event_name",
+    "event_params_key",
+    "event_params_value_string_value",
+    "event_params_value_int_value",
+    "event_params_value_float_value",
+    "event_params_value_double_value",
+    "user_properties_key",
+    "user_properties_value_string_value",
+    "user_properties_value_int_value",
+    "user_properties_value_float_value",
+    "user_properties_value_double_value",
+    "items_item_id",
+    "items_price",
+    "items_quantity",
+    "device_category",
+    "device_web_info_hostname",
+    "device_web_info_browser",
+]
+
+
+def _ga4_param(key: str, string_value: str) -> dict[str, object]:
+    return {
+        "key": key,
+        "value": {
+            "string_value": string_value,
+            "int_value": None,
+            "float_value": None,
+            "double_value": None,
+        },
+    }
+
+
+def _ga4_rows() -> list[dict[str, object]]:
+    """In-test GA4-shaped events: params-only / all-three / NULL-arrays."""
+    return [
+        {
+            "event_name": "page_view",
+            "event_params": [_ga4_param("page_location", "https://example.test/")],
+            "user_properties": [],
+            "items": [],
+            "device": {
+                "category": "desktop",
+                "web_info": {"hostname": "example.test", "browser": "Chrome"},
+            },
+        },
+        {
+            "event_name": "purchase",
+            "event_params": [_ga4_param("currency", "USD")],
+            "user_properties": [_ga4_param("user_id", "u-1")],
+            "items": [{"item_id": "SKU-1", "price": 9.99, "quantity": 1}],
+            "device": {
+                "category": "mobile",
+                "web_info": {"hostname": "shop.example.test", "browser": "Safari"},
+            },
+        },
+        {
+            "event_name": "session_start",
+            "event_params": None,
+            "user_properties": None,
+            "items": None,
+            "device": {
+                "category": "desktop",
+                "web_info": {"hostname": "example.test", "browser": "Firefox"},
+            },
+        },
+    ]
+
+
+def test_dynamic_flatten_ga4_empty_as_null_keeps_export_rows(spark: ReparkSession) -> None:
+    """GA4-shaped 3-row frame: default empty_as_null keeps all three event_names.
+
+    page_view has EMPTY user_properties/items; session_start has NULL arrays;
+    purchase has all three lists non-empty. Default True returns all three
+    (the 0-rows class is dead). False returns purchase + session_start only
+    (polars ≥2.0: empty drops, NULL keeps).
+    """
+    frame = spark.createDataFrame(_ga4_rows(), schema=_GA4_SCHEMA)
+
+    default = frame.dynamicFlatten().orderBy("event_name")
+    assert default.columns == _GA4_COLUMNS
+    default_table = default.to_arrow()
+    default_rows = default_table.to_pylist()
+    assert [row["event_name"] for row in default_rows] == [
+        "page_view",
+        "purchase",
+        "session_start",
+    ]
+    by_name = {row["event_name"]: row for row in default_rows}
+    assert by_name["page_view"]["items_item_id"] is None
+    assert by_name["page_view"]["event_params_key"] == "page_location"
+    assert by_name["session_start"]["event_params_key"] is None
+    assert by_name["session_start"]["items_item_id"] is None
+    assert by_name["session_start"]["user_properties_key"] is None
+    assert by_name["purchase"]["items_item_id"] == "SKU-1"
+    assert by_name["purchase"]["items_price"] == 9.99
+    assert by_name["purchase"]["items_quantity"] == 1
+
+    assert _is_arrow_string_type(default_table.schema.field("items_item_id").type)
+    assert default_table.schema.field("items_price").type == pa.float64()
+    assert default_table.schema.field("items_quantity").type == pa.int64()
+    assert default_table.schema.field("event_params_value_int_value").type == pa.int64()
+    assert default_table.schema.field("event_params_value_float_value").type == pa.float32()
+    assert default_table.schema.field("event_params_value_double_value").type == pa.float64()
+    assert _is_arrow_string_type(default_table.schema.field("device_web_info_hostname").type)
+
+    dropped = frame.dynamicFlatten(empty_as_null=False).orderBy("event_name")
+    assert dropped.columns == _GA4_COLUMNS
+    dropped_table = dropped.to_arrow()
+    dropped_rows = dropped_table.to_pylist()
+    dropped_names = [row["event_name"] for row in dropped_rows]
+    assert dropped_names == ["purchase", "session_start"]
+    dropped_by_name = {row["event_name"]: row for row in dropped_rows}
+    assert dropped_by_name["purchase"]["items_item_id"] == "SKU-1"
+    assert dropped_by_name["purchase"]["items_price"] == 9.99
+    assert dropped_by_name["purchase"]["items_quantity"] == 1
+    assert dropped_by_name["session_start"]["items_item_id"] is None
+    assert (
+        dropped_table.schema.field("items_item_id").type
+        == default_table.schema.field("items_item_id").type
+    )
+    assert dropped_table.schema.field("items_price").type == pa.float64()

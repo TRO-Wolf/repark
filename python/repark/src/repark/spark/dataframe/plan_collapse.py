@@ -660,14 +660,118 @@ def _parse_list_element_sql_type(type_key: str) -> str | None:
     return _arrow_debug_type_to_sql(element)
 
 
+def _split_angle_csv(text: str) -> list[str]:
+    """Split a comma-separated Spark type-arg list.
+
+    Honors nested ``<>`` / ``()`` and backticks so ``decimal(10,2)`` commas
+    do not split fields.
+    """
+    parts: list[str] = []
+    start = 0
+    depth = 0
+    in_backtick = False
+    for index, char in enumerate(text):
+        if char == "`":
+            in_backtick = not in_backtick
+        elif not in_backtick:
+            if char in "<(":
+                depth += 1
+            elif char in ">)":
+                depth -= 1
+            elif char == "," and depth == 0:
+                parts.append(text[start:index].strip())
+                start = index + 1
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _split_struct_field(field: str) -> tuple[str, str] | None:
+    """Split one ``name:type`` field at the first colon outside ``<>`` / ``()`` / backticks."""
+    depth = 0
+    in_backtick = False
+    for index, char in enumerate(field):
+        if char == "`":
+            in_backtick = not in_backtick
+        elif not in_backtick:
+            if char in "<(":
+                depth += 1
+            elif char in ">)":
+                depth -= 1
+            elif char == ":" and depth == 0:
+                name = field[:index].strip()
+                type_text = field[index + 1 :].strip()
+                if name and type_text:
+                    return name, type_text
+                return None
+    return None
+
+
+_SIMPLE_IDENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_DECIMAL_SQL_RE = re.compile(r"decimal\(\d+,\s*\d+\)", re.IGNORECASE)
+
+# Sentinel: void / Null elements have no CAST spelling. explode_outer emits
+# make_array(NULL) and must never interpolate this token into CAST(... AS ...).
+_UNTYPED_NULL_ELEMENT = "__repark_untyped_null__"
+
+
+def _struct_field_name_for_cast(name: str) -> str | None:
+    """Allowlist a struct field name before embedding it in CAST SQL.
+
+    Hostile names (``:``, spaces, comments) are not quoted into the CAST
+    target — explode_outer refuses loud, same class as an unmapped type.
+    """
+    text = name.strip()
+    if text.startswith("`") and text.endswith("`") and len(text) >= 3:
+        text = text[1:-1]
+    if _SIMPLE_IDENT_RE.fullmatch(text):
+        return text
+    return None
+
+
+def _spark_struct_element_to_sql(raw: str) -> str | None:
+    """Map Spark ``struct<field:type,…>`` to a CAST-accepted struct spelling.
+
+    Engine SQL accepts Spark-style ``struct<name:TYPE>`` (including nested
+    ``array<…>`` / ``struct<…>``). Field names keep their original case. ``map<…>``
+    fields have no CAST spelling — refuse (same message class as other unmapped
+    element types). ``timestamp_ntz`` rewrites to ``TIMESTAMP``.
+    """
+    inner = raw.strip()[len("struct<") : -1]
+    fields = _split_angle_csv(inner)
+    if not fields:
+        return None
+    parts: list[str] = []
+    for field in fields:
+        split = _split_struct_field(field)
+        if split is None:
+            return None
+        name, type_text = split
+        safe_name = _struct_field_name_for_cast(name)
+        mapped = _spark_array_element_to_sql(type_text)
+        if safe_name is None or mapped is None or mapped == _UNTYPED_NULL_ELEMENT:
+            return None
+        parts.append(f"{safe_name}:{mapped}")
+    return "struct<" + ",".join(parts) + ">"
+
+
 def _spark_array_element_to_sql(element: str) -> str | None:
     """Map Spark simpleString array element token → DataFusion SQL cast target."""
-    token = element.strip().lower()
+    raw = element.strip()
+    token = raw.lower()
     if token.startswith("array<") and token.endswith(">"):
-        inner = _spark_array_element_to_sql(token[len("array<") : -1].strip())
-        if inner is None:
+        inner = _spark_array_element_to_sql(raw[len("array<") : -1].strip())
+        # Nested array<void> has no CAST spelling (leaf void uses make_array(NULL)).
+        if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
         return f"{inner}[]"
+    if token.startswith("struct<") and token.endswith(">"):
+        return _spark_struct_element_to_sql(raw)
+    if token.startswith("map<"):
+        return None
+    if token in {"null", "void"}:
+        return _UNTYPED_NULL_ELEMENT
     mapping = {
         "tinyint": "TINYINT",
         "byte": "TINYINT",
@@ -685,11 +789,14 @@ def _spark_array_element_to_sql(element: str) -> str | None:
         "binary": "BYTEA",
         "date": "DATE",
         "timestamp": "TIMESTAMP",
+        "timestamp_ntz": "TIMESTAMP",
     }
     if token in mapping:
         return mapping[token]
     if token.startswith("decimal"):
-        return token.upper()
+        if _DECIMAL_SQL_RE.fullmatch(token):
+            return token.upper()
+        return None
     return None
 
 
@@ -712,7 +819,8 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
     text = element.strip()
     if text.startswith("List("):
         inner = _parse_list_element_sql_type(text)
-        if inner is None:
+        # Nested void has no CAST spelling (same refuse as simpleString array<null>).
+        if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
         return f"{inner}[]"
     if text.startswith("Timestamp"):
@@ -743,7 +851,7 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
             return f"DECIMAL({decimal_match.group(1)}, {decimal_match.group(2)})"
         return "DECIMAL(38, 18)"
     if text.startswith("Null"):
-        return "BIGINT"
+        return _UNTYPED_NULL_ELEMENT
     # Struct / Map / Union / Dictionary — unsupported for make_array(NULL) guard.
     return None
 

@@ -157,50 +157,47 @@ is the pin. It has no registry row.
 
 ---
 
-## `explode_outer` refuses on an array of structs
+## `explode_outer` on an array of structs
 
-**Symptom.**
+**Symptom (resolved).** `explode_outer` on `array<struct<…>>` used to refuse because the
+null/empty guard could not spell a struct element type. It now keeps NULL and empty lists
+as one null-element row, matching Spark:
 
 ```python
 from repark.spark import functions as F
 
 legs = spark.createDataFrame(
-    [{"id": 1, "Legs": [{"leg_id": 1, "px": 1.5}, {"leg_id": 2, "px": 2.5}]}]
+    [
+        {"id": 1, "Legs": [{"leg_id": 1, "px": 1.5}, {"leg_id": 2, "px": 2.5}]},
+        {"id": 2, "Legs": []},
+        {"id": 3, "Legs": None},
+    ]
 )
-legs.select(F.explode_outer("Legs").alias("leg"))
+legs.select("id", F.explode_outer("Legs").alias("leg")).orderBy("id").show()
 ```
 
 ```text
-AnalysisException: explode_outer cannot resolve SQL element type for array column
-'__repark_arr_…' (engine type 'array<struct<leg_id:bigint,px:double>>'); cast the array or use a
-supported element type
++---+----------------------+
+| id|                   leg|
++---+----------------------+
+|  1| {'leg_id': 1, 'px... |
+|  1| {'leg_id': 2, 'px... |
+|  2|                  NULL|
+|  3|                  NULL|
++---+----------------------+
 ```
 
-**Why.** `explode_outer` has to preserve a row when the array is NULL or empty, so it builds a
-guard of the shape `CASE WHEN … THEN [CAST(NULL AS <element type>)] ELSE array END` — which needs a
-**SQL spelling** for the element type. There is no spelling for a struct element, and the code
-refuses rather than defaulting to something plausible (defaulting would corrupt the guard for
-VARCHAR and TIMESTAMP elements).
-
-**What to do.** Plain `explode` has no such guard and unnests fine — at the cost of dropping rows
-whose array is NULL or empty:
-
-```python
-legs.select(F.explode("Legs").alias("leg")).show()
-```
-
-```text
-+----------------------+
-| leg                  |
-+----------------------+
-| {'leg_id': 1, 'px... |
-| {'leg_id': 2, 'px... |
-+----------------------+
-```
-
-If you need the outer behaviour, `explode` the array and union the null/empty rows back yourself.
-An **open finding**, pinned by
+**Why it works.** The guard is `CASE WHEN array IS NULL OR empty THEN make_array(CAST(NULL
+AS struct<…>)) ELSE array END`. Engine SQL accepts that CAST. Void / `array<Null>`
+elements have no CAST spelling — the same CASE uses untyped `make_array(NULL)` so
+an empty void sibling cannot cartesian-drop typed sibling lists. Map element types, and
+struct fields whose names are not simple identifiers, still refuse loud (no safe CAST
+spelling). Pin:
 `python/repark/tests/test_datasets_facade.py::test_nested_explode_outer_on_array_of_struct_refuses_loud`.
+
+`dynamicFlatten()` defaults to the same keep-both behaviour (`empty_as_null=True`) so a
+GA4-shaped frame with empty `items` / `user_properties` does not vanish. Pass
+`empty_as_null=False` for the polars ≥2.0 default (NULL kept, empty dropped).
 
 ---
 

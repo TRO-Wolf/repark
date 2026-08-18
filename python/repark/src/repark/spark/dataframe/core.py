@@ -3332,7 +3332,7 @@ class DataFrame:
         ``array_length`` is 0; null stays NULL (``coalesce(..., 0)``).
         """
         kind = generator._generator
-        if kind not in {"explode", "explode_outer"}:
+        if kind not in {"explode", "explode_outer", "explode_keep_null"}:
             raise UnsupportedOperationException(
                 f"generator {kind!r} is not supported on the guarded-unnest path"
             )
@@ -3365,16 +3365,29 @@ class DataFrame:
             where = f"({array_sql}) IS NOT NULL AND {length_expr} > 0"
             unnest_expr = f"unnest({array_sql})"
         else:
-            # explode_outer: null/empty → single-element array of NULL of element type.
+            # explode_outer / explode_keep_null: CASE + NULL element.
             # Type is taken from the intermediate field (covers coalesce/compounds —
-            # octo C3-L-002); never fail-open to BIGINT.
+            # octo C3-L-002); never fail-open to BIGINT. Void / Null elements have
+            # no CAST spelling — untyped make_array(NULL) (SQM #176 V-2).
             element_sql_type = mid._array_element_sql_type(array_sql, generator)
-            guarded = (
-                f"CASE WHEN ({array_sql}) IS NULL OR {length_expr} = 0 "
-                f"THEN make_array(CAST(NULL AS {element_sql_type})) "
-                f"ELSE ({array_sql}) END"
-            )
-            where = None
+            if element_sql_type == _UNTYPED_NULL_ELEMENT:
+                null_array_sql = "make_array(NULL)"
+            else:
+                null_array_sql = f"make_array(CAST(NULL AS {element_sql_type}))"
+            if kind == "explode_keep_null":
+                # NULL list → one null-element row; EMPTY list stays empty and drops.
+                guarded = (
+                    f"CASE WHEN ({array_sql}) IS NULL THEN {null_array_sql} ELSE ({array_sql}) END"
+                )
+                where = f"({array_sql}) IS NULL OR {length_expr} > 0"
+            else:
+                # explode_outer: null/empty → single-element array of NULL of element type.
+                guarded = (
+                    f"CASE WHEN ({array_sql}) IS NULL OR {length_expr} = 0 "
+                    f"THEN {null_array_sql} "
+                    f"ELSE ({array_sql}) END"
+                )
+                where = None
             unnest_expr = f"unnest({guarded})"
         # Element cast after unnest (explode(...).cast(...)) — sticky via _generator_cast.
         # Re-validate each Spark token before SQL embed (defense-in-depth; Column.cast already
@@ -3455,7 +3468,7 @@ class DataFrame:
         parsed = _parse_list_element_sql_type(type_key)
         if parsed is not None:
             return parsed
-        # Field bound but element type unsupported (struct / map / …).
+        # Field bound but element type unsupported (map / nested-void / …).
         raise AnalysisException(
             f"explode_outer cannot resolve SQL element type for array column {bare!r} "
             f"(engine type {type_key!r}); cast the array or use a supported element type"
@@ -4123,7 +4136,10 @@ class DataFrame:
                 data_type = DateType()
             elif type_key == "timestamp":
                 data_type = TimestampType()
-            elif type_key == "void" or type_key == "null":
+            # "Null" is the Arrow Debug spelling, which reaches every flat void column —
+            # a plain NULL literal included, not just a void explode (engine spells every
+            # other standard type lowercase) — DF-2 W-1.
+            elif type_key in ("void", "null", "Null"):
                 data_type = NullType()
             elif type_key.startswith("decimal("):
                 # decimal(p,s)
@@ -6003,6 +6019,7 @@ class DataFrame:
         separator: str = "_",
         explode_lists: bool = True,
         drop_null_lists: bool = True,
+        empty_as_null: bool = True,
         max_depth: int = 100,
     ) -> DataFrame:
         """Recursively flatten nested structs (and optionally explode lists) — repark extension.
@@ -6011,13 +6028,18 @@ class DataFrame:
         (``specs/dynamic-flatten-reference.md`` / r24 DF1). **Not** a PySpark API — documented
         as a repark-extra in ``docs/spark-sql-iceberg-parity.md``.
 
-        Defaults (match the reference):
+        Defaults (match the reference, except ``empty_as_null`` — see below):
           * ``separator=\"_\"`` — parent-path prefix for struct field names so colliding
             inner field names never clash (``a.x`` + ``b.x`` → ``a_x``, ``b_x``).
           * ``explode_lists=True`` — list columns are exploded one-at-a-time (list-of-struct
             becomes a struct and is unnested on a later pass).
           * ``drop_null_lists=True`` — ``array<void>`` / ``List(Null)`` columns are dropped
             instead of exploded.
+          * ``empty_as_null=True`` — repark default: NULL **and** EMPTY lists each become
+            one null-element row. ``False`` is the polars ≥2.0 default (NULL kept, EMPTY
+            dropped). The True default **diverges from polars ≥2.0 deliberately**: GA4-class
+            exports materialize absent repeated fields as empty arrays, and default
+            ``dynamicFlatten()`` must keep those parent rows.
           * ``max_depth=100`` — hard bound. Unlike the polars reference (silent leave-nested),
             repark **refuses LOUD** if nested work remains after the cap (never silent truncate).
 
@@ -6028,7 +6050,14 @@ class DataFrame:
              (``CASE WHEN parent IS NULL THEN NULL ELSE parent.field END``), drop the parent
              struct column, and re-read schema (nested structs surface next pass).
           3. Else if ``explode_lists`` and list columns remain: drop ``array<void>`` when
-             ``drop_null_lists``, else ``explode`` keeping the column name; re-read next pass.
+             ``drop_null_lists``. Remaining lists — including void — explode with
+             ``empty_as_null`` (True uses ``explode_outer``; False keeps NULL lists and
+             drops EMPTY). Void elements have no CAST spelling; the NULL-guard is
+             untyped ``make_array(NULL)``. Under True, empty or null void siblings
+             become one null-element row and cannot cartesian-drop typed sibling
+             lists. Under False, EMPTY void lists still drop (polars ≥2.0),
+             including rows that carry typed sibling lists; NULL void lists are
+             kept. Re-read next pass.
           4. Else break (fully flat under the chosen flags).
 
         Name collisions: the parent-path prefix is the disambiguator. If a prefixed name still
@@ -6051,6 +6080,10 @@ class DataFrame:
             raise PySparkTypeError(
                 f"drop_null_lists must be bool, got {type(drop_null_lists).__name__}",
             )
+        if isinstance(empty_as_null, bool) is False:
+            raise PySparkTypeError(
+                f"empty_as_null must be bool, got {type(empty_as_null).__name__}",
+            )
         if isinstance(max_depth, bool) or not isinstance(max_depth, int):
             raise PySparkTypeError(
                 f"max_depth must be int, got {type(max_depth).__name__}",
@@ -6059,6 +6092,7 @@ class DataFrame:
             raise PySparkValueError(f"max_depth must be >= 0, got {max_depth}")
 
         from repark.spark import functions as functions_mod
+        from repark.spark.functions_expr import _explode_keep_null
         from repark.spark.types import ArrayType, NullType
         from repark.spark.types import StructType as StructTypeType
 
@@ -6089,7 +6123,15 @@ class DataFrame:
                     # One generator per select (R-EXPLODE-REWRITE); keep the list column name
                     # so a list-of-struct surfaces as a same-name struct on the next pass.
                     # Preserve column position (polars explode is in-place) — C4-Q-001.
-                    exploded = functions_mod.explode(list_field.name).alias(list_field.name)
+                    # void / array<Null>: untyped make_array(NULL) CASE (explode_outer /
+                    # explode_keep_null). Do not inner-explode — that cartesian-drops
+                    # sibling lists (SQM #176 V-2).
+                    if empty_as_null:
+                        exploded = functions_mod.explode_outer(list_field.name).alias(
+                            list_field.name
+                        )
+                    else:
+                        exploded = _explode_keep_null(list_field.name).alias(list_field.name)
                     select_items: list[object] = []
                     for column_name in current.columns:
                         if column_name == list_field.name:
@@ -7208,6 +7250,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _rewrite_qcol_tokens_local,
     _same_object_qcol_alternation_safe,
     _spark_array_element_to_sql,
+    _UNTYPED_NULL_ELEMENT,
     _sql_embed_expr_fragment,
     _sql_ident_bare_name,
     _sql_string_literal,

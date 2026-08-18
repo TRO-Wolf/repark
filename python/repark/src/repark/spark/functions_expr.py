@@ -1513,8 +1513,9 @@ def explode(column: Column | str) -> Column:
 def explode_outer(column: Column | str) -> Column:
     """Generator: one row per element; null/empty arrays yield one null row (``explode_outer``).
 
-    Lowered via ``unnest(CASE WHEN null/empty THEN array(NULL) ELSE col END)`` so DataFusion's
-    null-list ``unnest`` gap is avoided without forking the engine (R-EXPLODE-REWRITE).
+    Lowered via ``unnest(CASE WHEN null/empty THEN make_array(CAST(NULL AS <element>))
+    ELSE col END)``; void elements use untyped ``make_array(NULL)``. Avoids DataFusion's
+    null-list ``unnest`` gap without forking the engine (R-EXPLODE-REWRITE / DF-2).
 
     A bare ``str`` is a column name, not a literal (octo C1-Q-001). Pre-aliased inputs
     strip trailing ``AS name`` (octo C1-Q-005). Nested generators refuse loud (octo C5-L-002).
@@ -1530,6 +1531,25 @@ def explode_outer(column: Column | str) -> Column:
         sql_expr=array_sql,
         projection_name="col",
         generator="explode_outer",
+    )
+
+
+def _explode_keep_null(column: Column | str) -> Column:
+    """Private generator: keep NULL lists as one null row; drop EMPTY lists.
+
+    Used only by ``dynamicFlatten(empty_as_null=False)`` (polars ≥2.0 default).
+    Not a public PySpark name — do not re-export.
+    """
+    array_column = _column_argument(column)
+    array_column._reject_nested_generator("explode")
+    _reject_aggregate_generator_argument(array_column, "explode")
+    array_sql = array_column.sql_expr_without_alias()
+    return Column(
+        array_column._inner,
+        spark_display=f"explode({array_sql})",
+        sql_expr=array_sql,
+        projection_name="col",
+        generator="explode_keep_null",
     )
 
 

@@ -33,8 +33,9 @@ illustrative. A claim with no verified basis does not go in.
   filter / groupBy / joins (incl. the semi family and the conditionless refusal, G4-3) / window
   functions; the action table (`collect` / `to_arrow` / `to_arrow_batches` / `toPandas` /
   `to_polars` / `toLocalIterator`) with peak-memory cost; ingestion shapes and map-vs-struct dict
-  inference under the FA-4 default; struct-field addressing; `dynamicFlatten` flags and
-  mixed-case `explode`; and the limits worth knowing (FA-1, ID-1, ID-3, G10-1, TY-4/TY-5, FA-3).
+  inference under the FA-4 default; struct-field addressing; `dynamicFlatten` flags
+  (including `empty_as_null`) and mixed-case `explode`; and the limits worth knowing
+  (FA-1, ID-1, ID-3, G10-1, TY-4/TY-5, FA-3).
 - [sql-doors.md](sql-doors.md) — the two SQL surfaces honestly: the Spark-facade door
   (`spark.sql`, Spark dialect, your session) and the native door (`repark.sql`, stock
   DataFusion/ANSI, its own process-wide session); the no-blended-parser rule (ADR-0002); why two
@@ -58,8 +59,9 @@ illustrative. A claim with no verified basis does not go in.
   travel both spellings plus the reader options, the fifteen metadata tables, maintenance `CALL`,
   and the registry sections that govern each.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
-  dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals, `explode_outer`
-  on `array<struct>`, `count()` on a deep `dynamicFlatten`, `smartCsv` delimiter auto-detect,
+  dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,
+  `explode_outer` on `array<struct>` (now keeps null/empty rows), `count()` on a deep
+  `dynamicFlatten`, `smartCsv` delimiter auto-detect,
   the wrong-door `ParserError`, the UTC timezone default (TZ-2 / TZ-3), and the install smoke.
 - `map.md` — this file.
 

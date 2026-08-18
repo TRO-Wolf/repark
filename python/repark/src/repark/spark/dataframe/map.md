@@ -36,7 +36,13 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   **U-DF-1:** `_select_with_generator` mid-project binds a single-ident generator
   through `_bound_generator_array` (`column.py`) so string-form `explode` /
   `explode_outer` keep createDataFrame case (`Legs`); compounds and unresolved
-  names keep `generator._inner`.
+  names keep `generator._inner`. **DF-2:** `dynamicFlatten(empty_as_null=True)`
+  uses `explode_outer` on typed **and** void lists (False uses private
+  `explode_keep_null`); void NULL-guard is untyped `make_array(NULL)` (no CAST).
+  **DF-2 W-1:** the `schema` flat-column type mapper also accepts the Arrow Debug
+  spelling `Null` (every flat void column carries it — a plain `SELECT NULL`
+  literal included, not just an exploded void column), so `.schema` / `.dtypes`
+  report `NullType` / `void` instead of falling open to `StringType`.
   **SE-1 PR-B (2026-08-17):** `DataFrame.declareSorted` / `declare_sorted` — the
   disclosed repark extension (no PySpark twin) that declares a `createDataFrame`
   source frame pre-sorted so DataFusion elides the window `SortExec`. It refuses
@@ -55,7 +61,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
   duckdb formatters, the Arrow→display and Arrow→SQL type mappers, the r24 DF1
-  `dynamicFlatten` struct expander and the r20 H1 join-qcol token rewriters.
+  `dynamicFlatten` struct expander, Spark-simpleString struct-element CAST spelling
+  for `explode_outer` (void / `Null` → `_UNTYPED_NULL_ELEMENT` / `make_array(NULL)`),
+  and the r20 H1 join-qcol token rewriters.
   Imports nothing from `core` at module scope (annotations only, under `TYPE_CHECKING`);
   `core.py` re-exports every name callers use, so `repark.spark.dataframe.core` and
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
@@ -71,7 +79,8 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `plan_collapse.py` — the extract moved seven of them with their bodies), so the facade
   census is 1211/1211 by the ledger's own AST rule. Nine of the eleven are nested rendering
   closures and two are `@overload` typing stubs; none is a user-facing API name.
-  No ceiling was raised (`core.py` 7253 of 7350, `plan_collapse.py` 1103 of 2500).
+  No ceiling was raised (`core.py` 7253 of 7350, `plan_collapse.py` 1103 of 2500
+  at F-4 close; DF-2 live sizes are in the Debug note below).
 - `actions_export.py` — `DataFrameNaFunctions` (real body; technique A).
 - `__init__.py` — frozen public imports (star-bind of core for private parity).
 
@@ -96,6 +105,7 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
+- Live file sizes (DF-2 / #176): `core.py` 7296 of 7350, `plan_collapse.py` 1211 of 2500.
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).
