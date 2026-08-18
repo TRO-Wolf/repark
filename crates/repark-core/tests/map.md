@@ -47,6 +47,31 @@ behavior only reachable end-to-end.
   `nested_export_strip_covers_every_container_the_tagger_walks` (Z-7: FixedSizeList / List /
   LargeList / Struct / Map-value; no other container is walked by tagger, detector, or strip). `RepartitionExec` presence is
   deliberately NOT pinned (size/config-dependent; see the SE-1 unit ledger).
+  Round-6: the Z-1/Z-2 refuse pins gained the UNPUBLISHED half — each refusal now also asserts
+  `table_exists` FALSE for the name the statement resolves to (R6-4), and their MEASURED-on-BASE
+  docstrings are true per ROW rather than in blanket (R6-3/R6-6). Round 6's own new nodes went
+  into `temp_view_doors.rs`, not here — this file was at its line ceiling.
+- `temp_view_doors.rs` — **SQM round 6.** `qualified_temp_view_name_refuses_and_persists_nothing`
+  + `set_default_catalog_cannot_move_a_temp_view_into_a_catalog` (R6-1: the temp-view API was a
+  THIRD write door into an Iceberg catalog — a qualified name, or a one-part name after
+  `SET datafusion.catalog.default_catalog`, registered through the catalog provider and persisted
+  a `tightenNulls` `required: true` table without any statement ever being planned, so no guard
+  could see it; now one loud `Error::Analysis` and a build-time-pinned home);
+  `context_sql_is_a_known_unguarded_hatch` (R6-2: the DOCUMENTED hatch — `context().sql` still
+  persists what the guarded doors refuse; the pin exists so the hatch cannot change silently);
+  `prepare_of_a_tightened_ddl_sink_is_inert_today` (R6-5: `PREPARE` stores an unguarded
+  `CreateView`, but DF 54.1 cannot execute a prepared DDL — measured floor, pinned so it moves
+  the day that changes);
+  `a_catalog_over_the_build_time_default_is_not_a_temp_view_home` (R6-1 S1 second pass: pinning
+  the home to the CONFIGURED default-catalog NAME pinned the leak IN — `default_catalog` is a
+  BUILD-time key too, so `register_memory_catalog` took the home name over and the payload
+  persisted again; the home now carries the schema PROVIDER and every entry point refuses loud
+  when a catalog holds it); `a_quoted_dotted_temp_view_name_round_trips_through_table_exists`
+  (the allowed `"a.b"` spelling was creatable/listable/droppable but `table_exists` re-parsed the
+  stripped segment and refused it — and the fix must keep BASE's case fold);
+  `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read` (the disclosed CHANGE:
+  the write is immune to `SET`, the read is still DataFusion's, so a bare-name round trip that
+  worked on BASE now misses — measured both sides).
 
 ## I want to…
 

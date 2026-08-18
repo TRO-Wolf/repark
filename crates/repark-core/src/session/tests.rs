@@ -1,5 +1,5 @@
 use super::*;
-use arrow::array::{Date32Array, Int32Array, StringArray};
+use arrow::array::{Date32Array, Int32Array, RecordBatch, StringArray};
 use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::DataFusionError;
 use iceberg::ErrorKind;

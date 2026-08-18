@@ -19,6 +19,16 @@
 //! | Spark (`repark_spark::spark_ast::execute_passthrough`) | `guard` on the statement's plan |
 //! | ANSI CTAS derivation (`repark_sql::create_table`) | `plan` → `guard` → `execute` (never `ctx.sql`, which executes eagerly — Z-3) |
 //!
+//! **What the belt does NOT see, measured (round 6, R6-5): `PREPARE`.** A `PREPARE p AS CREATE
+//! VIEW <iceberg>.ns.v AS …` reaches [`PreExecute::guard`] as a `Statement::Prepare`, whose
+//! stored body the guard does not descend into — [`refuse_iceberg_create_of_tightened_ddl`]
+//! matches an EXECUTED `DdlStatement`, not a prepared one. That class is **inert today** and
+//! measured so, not assumed: on DataFusion 54.1 the `PREPARE` itself persists nothing, and
+//! `EXECUTE p` fails at collect with `NotImplemented: Unsupported logical plan: CreateView` —
+//! a prepared DDL cannot run at all. Pinned by `prepare_of_a_tightened_ddl_sink_is_inert_today`
+//! (`repark-core/tests/temp_view_doors.rs`), which goes red the day `EXECUTE` starts running
+//! stored DDL — at which point the guard must descend into the prepared body.
+//!
 //! The belt deliberately does NOT absorb door-specific guards (`refuse_local_filesystem_plan`,
 //! the Spark AST rewrites, the eager-command fold): those differ per door and belong to the
 //! door. What it owns is the sequencing rule — *nothing executes before the planned statement

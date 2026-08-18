@@ -37,12 +37,10 @@ DEFAULT_CEILING = 1500
 # each reason; ceilings include small slack so a one-line edit does not force
 # a table churn.
 EXCEPTIONS: dict[str, tuple[int, str]] = {
-    "crates/repark-core/src/session.rs": (
-        1650,  # measured 1579
-        "Session builder + catalog register + everything-through-Session surface "
-        "(ExecutionBackend seam, Iceberg register, read_* entrypoints); "
-        "RATCHET: after further session extract",
-    ),
+    # RATCHETED OUT (SQM round 6): the temp-view family moved to
+    # crates/repark-core/src/session/temp_views.rs, so session.rs is 1465 lines and passes the
+    # DEFAULT ceiling unlisted. The exception (1650) is deleted rather than lowered — ceilings
+    # ratchet down only, and this one no longer earns a row.
     "crates/repark-functions/src/datetime.rs": (
         2100,  # measured 2020
         "Spark-semantics calendar/datetime family (Time+Timestamp extractors, "

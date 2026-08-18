@@ -373,9 +373,16 @@ async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
     // Z-1, ANSI door. Kills: gating the DDL refuse on the three-part SPELLING. With
     // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a one-part
     // or two-part name resolves into the Iceberg catalog and persists the same required
-    // columns. MEASURED on BASE (675a413) through this door's `delegate`: both returned Ok.
-    // Deleting the resolve in `refuse_iceberg_create_of_tightened_ddl` (gating on
+    // columns. Deleting the resolve in `refuse_iceberg_create_of_tightened_ddl` (gating on
     // `TableReference::Full` again) turns this red.
+    //
+    // MEASURED on BASE (675a413) through this door's `delegate`, PER ROW (R6-3 discipline):
+    // the Bare and Partial rows returned **Ok** (the reds this pin kills); the Full row
+    // **already refused** on BASE (round 4 wired the three-part spelling on this door) and is
+    // here as the regression fence.
+    //
+    // R6-4 (round 6): each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
+    // the name the statement resolves to.
     let (_dir, session) = ansi_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -385,12 +392,24 @@ async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
         .sql("SET datafusion.catalog.default_schema = 'sales'")
         .await
         .expect("SET default_schema");
-    for sql in [
-        "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
-        "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
-        "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+    for (sql, resolved) in [
+        (
+            "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.v_bare",
+        ),
+        (
+            "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.t_bare",
+        ),
+        (
+            "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.v_partial",
+        ),
         // Three-part still refuses — round 4's behaviour is not traded away.
-        "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        (
+            "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.v_full",
+        ),
     ] {
         let error = session
             .sql(sql)
@@ -400,6 +419,10 @@ async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
         assert!(
             error.to_string().contains("tightenNulls"),
             "names the flag for `{sql}`: {error}"
+        );
+        assert!(
+            !session.table_exists(resolved).await.unwrap(),
+            "`{sql}` refused but `{resolved}` was persisted anyway (R6-4 unpublished half)"
         );
     }
 }

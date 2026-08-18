@@ -798,8 +798,12 @@ async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
 
 #[tokio::test]
 async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse() {
-    // Y-2 (round 4). Kills: deleting the `TableSource::get_logical_plan` recurse in
-    // `collect_tighten_sources`.
+    // Y-2 (round 4). Kills: deleting the `TableSource::get_logical_plan` recurse in the walk —
+    // which since the round-4 octo rewrite lives in the iterative
+    // `walk_tighten_sources` / `visit_tighten_sources` pair, NOT in `collect_tighten_sources`
+    // (that name is now a two-line adapter over `walk_tighten_sources`). R6-6 (round 6): the
+    // prose named the adapter, so the mutant it describes was not where the code is; Z-5 flagged
+    // the same drift in the ledger and missed this comment.
     //
     // MEASURED on this tree: with the recurse deleted, ALL FOUR existing Q-001 lazy-view pins
     // (this file's `lazy_view_of_derived_plan_is_visible_to_the_create_walk`, the Spark-door
@@ -1134,12 +1138,27 @@ async fn native_door_ddl_sink_over_tightened_source_refuses() {
     // returned Ok and the persisted Iceberg table reported `symbol` / `ts` as required.
     // Deleting the `PreExecute::guard` call in `pre_execute::PreExecute::run` (or reverting
     // `DataFusionDialect::execute` to `cx.ctx.sql`) turns this red.
+    //
+    // R6-4 (round 6): each refusal also asserts the UNPUBLISHED half — `table_exists` FALSE for
+    // the target. The message-only assertion would pass even if the write had gone through.
     let (_dir, session) = native_ddl_sink_session().await;
-    for sql in [
-        "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
-        "CREATE VIEW ice.sales.v_false AS SELECT * FROM tight WHERE false",
-        "SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0",
-        "SELECT * INTO ice.sales.t_false FROM tight WHERE false",
+    for (sql, target) in [
+        (
+            "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
+            "ice.sales.v_limit",
+        ),
+        (
+            "CREATE VIEW ice.sales.v_false AS SELECT * FROM tight WHERE false",
+            "ice.sales.v_false",
+        ),
+        (
+            "SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0",
+            "ice.sales.t_limit",
+        ),
+        (
+            "SELECT * INTO ice.sales.t_false FROM tight WHERE false",
+            "ice.sales.t_false",
+        ),
     ] {
         let error = session
             .sql(sql)
@@ -1149,6 +1168,10 @@ async fn native_door_ddl_sink_over_tightened_source_refuses() {
         assert!(
             error.to_string().contains("tightenNulls"),
             "names the flag for `{sql}`: {error}"
+        );
+        assert!(
+            !session.table_exists(target).await.unwrap(),
+            "`{sql}` refused but `{target}` was persisted anyway (R6-4 unpublished half)"
         );
     }
 }
@@ -1183,9 +1206,17 @@ async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses
     // Z-1. Kills: gating the DDL refuse on the `TableReference::Full` SPELLING. With
     // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a ONE-part
     // `CREATE VIEW v AS …` / `SELECT … INTO t` resolves into the Iceberg catalog and persists
-    // the same required columns as the three-part spelling — MEASURED on BASE (675a413): both
-    // returned Ok. The source is named through its own catalog because the SET moves default
-    // resolution away from the temp-view schema.
+    // the same required columns as the three-part spelling. The source is named through its own
+    // catalog because the SET moves default resolution away from the temp-view schema.
+    //
+    // MEASURED on BASE (675a413), PER ROW (R6-3 discipline — no blanket claim): every row below,
+    // INCLUDING the Full one, returned Ok on THIS door, because on BASE the native door had no
+    // guard at all (that is Z-2). On the Spark and ANSI doors the Full row already refused on
+    // BASE; only Bare/Partial were red there.
+    //
+    // R6-4 (round 6): each refusal now also asserts the UNPUBLISHED half — `table_exists` is
+    // FALSE for the name the statement would have resolved to. A refusal that still persisted
+    // would pass a message-only assertion.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("SET datafusion.catalog.default_catalog = 'ice'")
@@ -1195,14 +1226,29 @@ async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses
         .sql("SET datafusion.catalog.default_schema = 'sales'")
         .await
         .expect("SET default_schema");
-    for sql in [
-        "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
-        "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
+    for (sql, resolved) in [
+        (
+            "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.v_bare",
+        ),
+        (
+            "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.t_bare",
+        ),
         // Two-part (Partial) spelling: catalog still comes from the session default.
-        "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
-        "SELECT * INTO sales.t_partial FROM datafusion.public.tight LIMIT 0",
-        // Three-part still refuses — the round-4 behaviour is not traded away.
-        "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        (
+            "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.v_partial",
+        ),
+        (
+            "SELECT * INTO sales.t_partial FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.t_partial",
+        ),
+        // Three-part: on THIS door it also returned Ok on BASE (no native guard existed).
+        (
+            "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+            "ice.sales.v_full",
+        ),
     ] {
         let error = session
             .sql(sql)
@@ -1212,6 +1258,10 @@ async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses
         assert!(
             error.to_string().contains("tightenNulls"),
             "names the flag for `{sql}`: {error}"
+        );
+        assert!(
+            !session.table_exists(resolved).await.unwrap(),
+            "`{sql}` refused but `{resolved}` was persisted anyway (R6-4 unpublished half)"
         );
     }
 }

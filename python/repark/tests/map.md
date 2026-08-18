@@ -123,6 +123,20 @@ NOT in that file is a defect, not a decision.
   and honestly relabelled: the literal-over-tightened node is belt-and-suspenders, not a
   facade discriminator (Y-1), and the cache node's `saveAsTable` half is guarded by the facade
   marker while its SQL half is the R-A discriminator (Y-7 / verifier P-3).
+  Round-6 (R6-1): `createOrReplaceTempView` is not a catalog-write door — a QUALIFIED name
+  refuses (`AnalysisException`, `tableExists` false for both the 3-part and 2-part spellings),
+  a one-part name stays SESSION-LOCAL under `SET datafusion.catalog.default_catalog`
+  (`tableExists` false on the catalog name, true on the bare one), and the ordinary one-part
+  registration still reads back (the allowed side). Measured on BASE: the lazy/empty body
+  PERSISTED a `required: true` Iceberg table through this API, with no statement planned and so
+  no guard in the path.
+  Round-6 second pass (critic S1):
+  `test_a_catalog_over_the_build_time_default_is_not_a_temp_view_home` — pinning the home to the
+  configured default-catalog NAME was not enough, because `datafusion.catalog.default_catalog` is
+  a supported BUILD-time conf: MEASURED on that fix, `createDataFrame([])` +
+  `createOrReplaceTempView("v_leak")` both returned Ok and `tableExists("ice.sales.v_leak")` was
+  **True**. The home now carries the schema PROVIDER, so such a session has no session-local home
+  and every temp-view mint refuses loud.
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
 

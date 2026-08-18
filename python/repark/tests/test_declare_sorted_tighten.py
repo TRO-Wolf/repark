@@ -409,3 +409,88 @@ def test_declare_sorted_docstring_examples_execute() -> None:
     for test in finder.find(FacadeDataFrame.declare_sorted, name="declare_sorted"):
         failed += runner.run(test).failed
     assert failed == 0
+
+
+# ===========================================================================================
+# SQM round 6 (R6-1) — the temp-view API is not a catalog-write door.
+# ===========================================================================================
+
+
+def test_qualified_temp_view_name_refuses_and_persists_nothing(
+    spark_catalog: ReparkSession,
+) -> None:
+    """R6-1 facade half. Kills: ``createOrReplaceTempView`` forwarding a qualified name to the
+    engine's ``register_table``, which resolved it into the Iceberg catalog provider and
+    PERSISTED a real table — carrying the ``tightenNulls`` ``required: True`` payload the DDL
+    doors refuse.
+
+    MEASURED on BASE (``68e98f4``) through the same fixture: a 3-part name with a LAZY/empty body
+    returned success and ``tableExists`` was **True**; with a non-empty body the Iceberg provider
+    itself errored ("register_table does not support tables with data"). Both are now one loud
+    ``AnalysisException`` and nothing reaches the catalog.
+    """
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    for name in ("glue_catalog.writer_ns.tv3", "writer_ns.tv2"):
+        with pytest.raises(AnalysisException, match="SESSION-LOCAL"):
+            tight.createOrReplaceTempView(name)
+    assert not spark_catalog.catalog.tableExists("glue_catalog.writer_ns.tv3")
+    assert not spark_catalog.catalog.tableExists("glue_catalog.writer_ns.tv2")
+
+
+def test_one_part_temp_view_stays_session_local_under_set_default_catalog(
+    spark_catalog: ReparkSession,
+) -> None:
+    """R6-1 facade half, the ``SET`` leg. Kills: resolving a one-part temp-view name against the
+    LIVE ``datafusion.catalog.default_catalog``.
+
+    MEASURED on BASE: after ``SET datafusion.catalog.default_catalog = 'glue_catalog'`` the
+    registration left the session and hit the Iceberg schema provider. Now the view registers in
+    the session's pinned home, ``tableExists`` on the catalog name is FALSE, and the one-part
+    name still answers True.
+    """
+    tight = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).declareSorted(
+        "sym", "ts", tightenNulls=True
+    )
+    spark_catalog.sql("SET datafusion.catalog.default_catalog = 'glue_catalog'")
+    spark_catalog.sql("SET datafusion.catalog.default_schema = 'writer_ns'")
+    tight.createOrReplaceTempView("tv_bare")
+    assert not spark_catalog.catalog.tableExists("glue_catalog.writer_ns.tv_bare")
+    assert spark_catalog.catalog.tableExists("tv_bare")
+
+
+def test_one_part_temp_view_still_works_and_reads_back(spark: ReparkSession) -> None:
+    """R6-1 allowed side. Kills: the refusal turning into a blanket temp-view refusal — the
+    ordinary one-part ``createOrReplaceTempView`` must be untouched, value for value."""
+    frame = spark.createDataFrame(SORTED_ROWS, SCHEMA)
+    frame.createOrReplaceTempView("plain_tv")
+    assert spark.sql("SELECT count(*) AS n FROM plain_tv").collect()[0]["n"] == len(SORTED_ROWS)
+    assert spark.catalog.tableExists("plain_tv")
+
+
+def test_a_catalog_over_the_build_time_default_is_not_a_temp_view_home(tmp_path: Path) -> None:
+    """R6-1 second pass (round-6 critic S1), facade half. Kills: pinning the temp-view home to
+    the CONFIGURED default-catalog NAME.
+
+    ``datafusion.catalog.default_catalog`` is a supported BUILD-time conf, so a session built
+    with it pointing at the name a catalog is registered under had its home taken over by that
+    catalog. MEASURED on the name-only fix, this exact session shape:
+    ``createDataFrame([], schema)`` = Ok, ``df.createOrReplaceTempView("v_leak")`` = Ok,
+    ``spark.catalog.tableExists("ice.sales.v_leak")`` = **True** — the ``required: True``
+    tighten payload PERSISTED through the temp-view API.
+
+    MEASURED now: the session-local home is gone, so the very first temp-view mint
+    (``createDataFrame`` itself) refuses ``AnalysisException`` and the catalog stays empty.
+    """
+    session = (
+        ReparkSession.builder.appName("pytest-temp-view-home")
+        .config("datafusion.catalog.default_catalog", "ice")
+        .config("datafusion.catalog.default_schema", "sales")
+        .getOrCreate()
+    )
+    session.register_memory_catalog("ice", tmp_path)
+    session.sql("CREATE NAMESPACE IF NOT EXISTS ice.sales")
+    with pytest.raises(AnalysisException, match="SESSION-LOCAL"):
+        session.createDataFrame(SORTED_ROWS, SCHEMA).createOrReplaceTempView("v_leak")
+    assert not session.catalog.tableExists("ice.sales.v_leak")

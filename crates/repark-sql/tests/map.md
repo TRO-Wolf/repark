@@ -30,6 +30,8 @@ belongs out here is what must be observed from outside the crate.
   `ansi_ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table` (Z-3 — BASE
   returned Ok and persisted BOTH the inner sink and the outer table) and
   `ansi_plain_ctas_still_derives_and_writes` (the plan-before-execute allowed side).
+  Round-6 (R6-4): every refuse row in the Z-1/Z-3 nodes also asserts the sink is
+  UNPUBLISHED (`table_exists` false) — refusal message alone no longer carries the pin.
 - `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` installed on a real
   `ReparkSession` through `ReparkSessionBuilder::with_sql_dialect`, driving schema DDL, CTAS,
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session

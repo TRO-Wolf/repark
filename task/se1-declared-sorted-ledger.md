@@ -651,7 +651,10 @@ Anything not run is listed under "NOT-RUN after round 5". Struck claims are stru
 ## Z-2 (S1) — the native door had no guard at all, and per-door wiring is why
 
 `DataFusionDialect::execute` was `cx.ctx.sql(query)`. That is the door behind
-`ReparkSession::sql` / `session.context().sql` — every `repark-core` embedder — and rounds 3
+~~`ReparkSession::sql` / `session.context().sql`~~ → **`ReparkSession::sql` only** (round-6
+R6-2 correction: the belt closed `ReparkSession::sql` on `DataFusionDialect`; it does **not**
+and cannot close `session.context().sql`, which is the raw DataFusion context and bypasses
+every product guard — see "R6-2" in round 6 below) — every `repark-core` embedder — and rounds 3
 and 4 wired the tighten refuses into the Spark door and then the ANSI door, twice missing it.
 
 MEASURED on BASE (`675a413`), native door, tightened temp view `tight` in an `ice` memory
@@ -854,3 +857,305 @@ test NAME changed (relocation-discipline identity gate untouched).
 - One measured boundary worth naming: the Iceberg schema provider's `register_table` refuses a
   NON-EMPTY body ("register_table does not support tables with data"), which is why the whole
   DDL-sink family is pinned on `LIMIT 0` / `WHERE false` bodies. Measured this round, recorded.
+
+---
+
+# Round 6 (SQM r6) — the temp-view API was a third write door
+
+BASE-of-this-round = **`68e98f4`** as checked out. **Every table below is MEASURED on this tree.**
+Anything not run is listed under "NOT-RUN after round 6". Struck claims are struck visibly.
+
+## R6-1 (S1) — `createOrReplaceTempView` registered INTO the Iceberg catalog
+
+`ReparkSession::create_or_replace_temp_view_from` (and every sibling) forwarded the caller's raw
+name to `replace_view` → `SessionContext::register_table`, which parses a `&str` into a
+`TableReference` and resolves it. Two consequences, both measured, neither of which any guard
+could see — **no statement is ever planned on this path**, so the round-5 `PreExecute` belt is
+structurally out of the picture.
+
+MEASURED on BASE (`68e98f4`), memory catalog `ice` + namespace `ice.sales`, tightened temp view
+`tight` (`declare_temp_view_sorted(..., tighten_nulls = true)`):
+
+| call | BASE result | BASE `table_exists` |
+|---|---|---|
+| `register_record_batches_as_temp_view("ice.sales.vempty", <tightened schema>, [])` | **Ok** | **true** |
+| `create_or_replace_temp_view_from("ice.sales.vlazy", <tightened `LIMIT 0` frame>)` | **Ok** | **true** |
+| `materialize_dataframe_as_temp_view("ice.sales.vmat", <tightened `LIMIT 0` frame>)` | **Ok** | **true** |
+| the persisted `ice.sales.vmat` provider schema | `symbol` / `ts` / `close` all **required**, `PARQUET:field_id` 1/2/3 — a real format-v2 table | — |
+| `create_or_replace_temp_view("ice.sales.v3", <NON-empty batches>)` | Err — Iceberg "register_table does not support tables with data" | false |
+| `create_or_replace_temp_view("vbare", <non-empty>)` **after** `SET datafusion.catalog.default_catalog='ice'` + `default_schema='sales'` | Err — the SAME Iceberg provider error: the ONE-part registration had left the session | false |
+
+So the `tightenNulls` `required: true` payload the belt refuses on all three SQL doors persisted
+freely through the temp-view API, and `SET default_catalog` broke one-part `createOrReplaceTempView`
+outright. (The non-empty rows error only because the Iceberg provider refuses data — the same
+boundary round 5 recorded. The empty/lazy rows are the leak.)
+
+**Fix — the shared choke point, not the callers.** New `crates/repark-core/src/temp_view.rs`:
+`TempViewHome` (the `catalog.schema` a session's temp views live in, snapshotted ONCE at
+`build()` from the final config) + `temp_view_ref(home, name)`:
+
+- a **qualified** name refuses `Error::Analysis` (→ facade `AnalysisException`);
+- a **one-part** name is built `Full` against the home, so a later `SET` cannot move it;
+- parsing is DataFusion's own `TableReference::parse_str` — the same parse `register_table(&str)`
+  performed on BASE — so identifier normalization is byte-identical (`MyView` → `myview`,
+  `"MyView"` → `MyView`).
+
+MEASURED sub-finding that shaped the predicate: `TableReference::parse_str("a.b.c.d")` returns
+**`Bare { table: "a.b.c.d" }`** — past three parts DataFusion falls back to "one identifier". A
+`Bare` check alone would therefore have let a four-part spelling through as one oddly-named view,
+so the predicate is `Bare` **and** (quoted **or** no embedded dot). Pinned by
+`qualified_names_refuse_at_every_arity` / `identifier_normalization_matches_datafusions_own_parse`.
+
+Every sibling path was audited and routes through the one seam (`replace_view` for registration;
+`temp_view_ref` directly where the path does not register):
+
+| path | before | after |
+|---|---|---|
+| `create_or_replace_temp_view` (batches) | raw name → `replace_view` | `replace_view` → `temp_view_ref` |
+| `create_or_replace_temp_view_from` (plan) | idem | idem |
+| `register_record_batches_as_temp_view` | idem | idem |
+| `materialize_dataframe_as_temp_view` / `materialize_dataframe_as_cache_view` | via `register_collected_memtable` → `replace_view` | idem |
+| `declare_temp_view_sorted` | `ctx.table_provider(name)` / `ctx.table(name)` / `replace_view` | all three on the pinned ref |
+| `drop_temp_view` | `ctx.deregister_table(name)` | pinned ref (a name that cannot be created cannot be dropped) |
+| `table_exists`, one-part arm | `ctx.table_exist(segment)` — live default catalog | pinned ref |
+| `list_temp_view_names` | read the LIVE `default_catalog`/`default_schema` (after a `SET` it listed the Iceberg catalog's tables as "temp views") | reads the pinned home |
+
+MEASURED on the fixed tree:
+
+| observable | fixed |
+|---|---|
+| 3-part / 2-part / 4-part `createOrReplaceTempView` | `Error::Analysis`, message says SESSION-LOCAL |
+| `table_exists` for every refused name | **false** |
+| `create_or_replace_temp_view("vbare", …)` after `SET default_catalog='ice'` | **Ok** |
+| `table_exists("ice.sales.vbare")` after that | **false** |
+| `table_exists("vbare")` / `list_temp_view_names()` after that | **true** / contains `vbare` |
+| one-part `createOrReplaceTempView` + `SELECT count(*)` (facade) | unchanged, reads back |
+
+**This table is the FIRST pass and is incomplete.** It measures a home pinned to the configured
+default-catalog NAME; that home is still an Iceberg catalog when `default_catalog` is set at BUILD
+time. See "R6-1 second pass" below, where the leak is measured open on this very tree and closed.
+
+**Recorded honestly, scoped OUT:** while `SET datafusion.catalog.default_catalog='ice'` is in
+force, `SELECT * FROM vbare` does NOT resolve the temp view (DataFusion resolves a bare name in a
+SQL body against the live default too, and has no temp-view namespace to search first);
+`SELECT * FROM datafusion.public.vbare` finds it. Spark would find it either way. R6-1 is about the
+API never WRITING a catalog; making READ resolution Spark-shaped would mean a resolver in front of
+DataFusion. ~~Measured and asserted as the current behaviour in
+`set_default_catalog_cannot_move_a_temp_view_into_a_catalog`, not left as a belief.~~ **STRUCK
+(round-6 second pass, critic S3):** calling it "the current behaviour" implied nothing moved. It
+moved. The WRITE side is now pinned to the home, so a create-then-read-by-bare-name round trip that
+worked on BASE under a `SET` to **any** other catalog — including a plain non-Iceberg one — now
+misses. Measured both sides and pinned in
+`set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`; see "R6-1 second pass"
+below.
+
+**File-size consequence, disclosed.** The fix pushed `session.rs` from 1579 to 1724 lines, over its
+1650 exception. Sanctioned out (1) taken: the temp-view family moved to
+`crates/repark-core/src/session/temp_views.rs` (311 lines after the second pass), leaving
+`session.rs` at **1477** — under the DEFAULT 1500, so its EXCEPTIONS row was **deleted**, not
+raised (ceilings ratchet down only). (First-pass counts were 276/1465; trued after the
+round-6 critic's second-pass additions.)
+`tests/declared_sorted.rs` hit the same ceiling and round 6's new nodes went to
+`tests/temp_view_doors.rs` rather than into it.
+
+## R6-2 (RULED: documentation, not a guard) — `context()` is a raw hatch
+
+(a) `ReparkSession::context`'s rustdoc now states that the returned `SessionContext` bypasses
+**every** product guard — the pre-execute belt and the tighten DDL-sink refuse, the door dialects
+and their routers, and the R6-1 temp-view choke point — that closing it would mean wrapping
+DataFusion, and that embedders own the risk.
+
+(b) The round-5 Z-2 claim is **struck in place**: ~~"the door behind `ReparkSession::sql` /
+`session.context().sql`"~~ → the belt closed `ReparkSession::sql` on `DataFusionDialect`;
+`context().sql` is raw and remains so.
+
+(c) MEASURED and pinned as a KNOWN HATCH (`context_sql_is_a_known_unguarded_hatch`):
+
+| statement | via `context().sql` | via `session.sql` (the product door) |
+|---|---|---|
+| `CREATE VIEW ice.sales.v_* AS SELECT * FROM tight LIMIT 0` | **Ok**, `table_exists` **true** | refuses naming `tightenNulls`, `table_exists` **false** |
+
+The pin asserts the hatch's CURRENT behaviour, so a future guard moves a pin instead of passing
+silently.
+
+## R6-3 (S2) — the Z-1 Spark-door docstring was false for one row
+
+`crates/repark-spark/tests/declared_sorted_tighten.rs` claimed "MEASURED on BASE (675a413): every
+statement below returned Ok on this door". ~~every statement~~ → true per ROW: Bare and Partial
+returned Ok (the round-5 reds); the **Full** row already refused on BASE (round 4 wired the
+three-part spelling on this door) and is a regression fence, not a red. Corrected per row on the
+Spark door, and the same per-row truth written on the ANSI door (identical shape) and the NATIVE
+door (where the Full row DID return Ok on BASE, because that door had no guard at all — the
+existing comment's "round-4 behaviour is not traded away" did not hold for it).
+
+## R6-4 (S3) — the refuse pins asserted the message only
+
+Every Z-1 / Z-2 refuse row on all three doors now also asserts `table_exists(<resolved name>) ==
+false`. A refusal that still persisted would have passed the old message-only assertion. Rows
+covered: native Z-2 ×4, native Z-1 ×5, ANSI Z-1 ×4, Spark Z-1 ×4.
+
+## R6-5 (S3) — PREPARE: measured inert, pinned, documented
+
+MEASURED on THIS head, native door:
+
+| step | result | `table_exists("ice.sales.v_prepared")` |
+|---|---|---|
+| `PREPARE p_sink AS CREATE VIEW ice.sales.v_prepared AS SELECT * FROM tight LIMIT 0` | **Ok** | **false** |
+| `.collect()` on the PREPARE | **Ok**, 0 batches | **false** |
+| `EXECUTE p_sink` | Ok (plans) | — |
+| `.collect()` on the EXECUTE | **Err** — `NotImplemented`: "Unsupported logical plan: CreateView" | **false** |
+
+So the class is inert on DataFusion 54.1: a prepared DDL cannot execute at all. No guard added
+(there is nothing to guard today); the floor is pinned by
+`prepare_of_a_tightened_ddl_sink_is_inert_today` and the class is named in `pre_execute.rs`'s
+module docs as measured-inert-today, with the condition that would make it live.
+
+## R6-6 (S3) — the Y-2 `Kills:` comment named the adapter
+
+`crates/repark-core/tests/declared_sorted.rs` still said the recurse lives in
+~~`collect_tighten_sources`~~ → it lives in the iterative `walk_tighten_sources` /
+`visit_tighten_sources` pair; `collect_tighten_sources` has been a two-line adapter since the
+round-4 octo rewrite. Z-5 corrected the ledger's copy of this and missed the comment; corrected.
+
+## R6-7 (S3) — `map.md` stated the three-part gate and then its negation
+
+`crates/repark-core/src/map.md` said the DDL refuse fires "ONLY when the target is a three-part
+name in a registered Iceberg catalog", immediately before the Z-1 paragraph saying the gate is the
+RESOLVED name. The stale clause is deleted; the map now reads as one truth. The same entry was
+trued for R6-1 (temp-view family re-homed; `table_exists`'s one-part arm asks the pinned home), and
+`temp_view.rs` / `session/temp_views.rs` / `tests/temp_view_doors.rs` were added to their
+directories' maps in lockstep.
+
+## R6-1 second pass (round-6 critic S1) — the home NAME was not the home
+
+The first pass pinned the temp-view home to the **configured** `datafusion.catalog.default_catalog`
+/ `default_schema`. That defends against a runtime `SET` and nothing else. `datafusion.*` is a
+first-class BUILDER prefix (`DATAFUSION_CONFIG_PREFIX`, `session.rs`), so a session can be built
+with `default_catalog = ice` — and `register_memory_catalog("ice")` then REPLACES the provider that
+name resolves to with the Iceberg one. The fix had pinned the leak IN.
+
+MEASURED on the name-only fix (core, `ReparkSession::builder().config("datafusion.catalog.default_catalog","ice").config("datafusion.catalog.default_schema","sales")` + `register_memory_catalog("ice")` + `create_namespace("ice","sales")`):
+
+| observable | name-only fix | after this pass |
+|---|---|---|
+| `register_record_batches_as_temp_view("vempty", <required schema>, [])` | **Ok** | **Err(Analysis)**, says SESSION-LOCAL |
+| `create_or_replace_temp_view("vbatch", <rows>)` | (same door) | **Err(Analysis)** |
+| `drop_temp_view` / `declare_temp_view_sorted` | (same door) | **Err(Analysis)** |
+| `table_exists("ice.sales.vempty")` | **true** | **false** |
+| persisted provider schema | `[("symbol", nullable=false), ("ts", true), ("close", false)]` — the `required: true` tighten payload PERSISTED via the temp-view API | nothing persisted |
+| `list_temp_view_names()` | `["vempty"]` — simultaneously reported as a session temp view | **Err(Analysis)** (it will not report a CATALOG's tables as temp views) |
+| `table_exists("vempty")` (one-part) | — | **Err(Analysis)** |
+
+MEASURED facade half (same conf via `spark.sql.catalog.ice.type=memory` + the two `datafusion.*`
+confs): name-only fix → `createDataFrame([], schema)` Ok, `df.createOrReplaceTempView("v_leak")`
+Ok, `spark.catalog.tableExists("ice.sales.v_leak")` **True**. After this pass → the first temp-view
+mint (`createDataFrame` itself) raises `AnalysisException` naming SESSION-LOCAL, and
+`tableExists("ice.sales.v_leak")` is **False**.
+
+**The mechanism.** `TempViewHome` now carries the schema **provider handle** snapshotted at build
+alongside the name, and `temp_view::assert_home_intact` re-checks — at EVERY temp-view entry point,
+via the same `temp_view_ref` seam — that the live provider under the home name is still that same
+object. Identity (`Arc::ptr_eq`), not a type check: no downcast, and it also catches a plain
+re-registration of the default catalog. MEASURED discrimination: `Arc::ptr_eq(before, after)` is
+**false** across `register_memory_catalog("ice")` and **true** for repeated lookups of an untouched
+home (so the check cannot false-refuse an ordinary session — the 3359-node facade suite and the
+1054-node Rust suite are the wide evidence for that).
+
+Collateral this closes, MEASURED by the critic and confirmed here: under the same conf an ordinary
+non-empty `createDataFrame` used to hard-fail with the Iceberg engine's own
+"register_table does not support tables with data". That confusing engine error is now a loud
+product refusal that names the cause and the fix.
+
+**Also this pass:**
+
+- **`table_exists` on the allowed quoted-dotted spelling.** `"a.b"` is a legitimate ONE-identifier
+  temp-view name (C2-L-006 quote rules) — it could be created, listed and dropped, but
+  `table_exists` re-parsed the ALREADY-stripped segment `a.b`, saw an embedded dot, and refused it
+  as "qualified". MEASURED: `create` Ok / `list` `["a.b"]` / `drop` Ok(true) /
+  ~~`table_exists` Err(Analysis "… is qualified …")~~ → now **Ok(true)**. (On BASE it was Ok(false)
+  — also wrong, but not an error.) Fixed with a segment overload
+  (`temp_view_ref_from_segment`) that normalizes like `TableReference::parse_str` instead of
+  re-parsing: quoted verbatim, unquoted ASCII-folded — MEASURED `table_exists("MyView")` and
+  `table_exists("myview")` both true, so BASE's case fold is not traded away. Pinned by
+  `a_quoted_dotted_temp_view_name_round_trips_through_table_exists` (integration) and
+  `the_segment_overload_normalizes_like_parse_str` (unit).
+- **The read/write divergence is a CHANGE, and is now pinned as one.** MEASURED both sides with a
+  plain non-Iceberg second catalog (`mem`) and `SET datafusion.catalog.default_catalog = 'mem'`;
+  the BASE side is BASE's own call replayed byte-for-byte
+  (`context().register_table(<raw &str>, provider)` — what BASE's `replace_view` did):
+
+  | | BASE mechanism | fixed |
+  |---|---|---|
+  | registration | Ok — landed in `mem.public` (`table_names() == ["v2"]`) | Ok — landed in `datafusion.public`, `mem.public` stays **empty** |
+  | `SELECT * FROM v2` | **Ok** | **Err(Analysis "table 'mem.public.v2' not found")** |
+  | `SELECT * FROM datafusion.public.v2` | — | **Ok** |
+  | `table_exists("v2")` | true | **true** |
+
+  So the WRITE side is immune to `SET` (the point of R6-1) and the READ side is still DataFusion's
+  live-default resolution, which means a create-then-read-by-bare-name round trip that worked on
+  BASE now misses under such a `SET`. Reachability is low — the facade's
+  `currentCatalog`/`setCurrentCatalog` is facade-only state and never issues this SET
+  (`python/repark/src/repark/spark/catalog.py`), so only a raw `spark.sql("SET datafusion...")`
+  reaches it — but it is a real regression class and is pinned as such by
+  `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`, not narrated as
+  "unchanged behaviour" (that wording is struck in R6-1 above).
+- **Two stale citations struck.** `session.rs`'s `context()` rustdoc and `pre_execute.rs`'s module
+  docs pointed at `tests/declared_sorted.rs` for `context_sql_is_a_known_unguarded_hatch` /
+  `prepare_of_a_tightened_ddl_sink_is_inert_today`; both live in `tests/temp_view_doors.rs`
+  (round 6 put them there because `declared_sorted.rs` was at its ceiling). Both now resolve.
+- **The `# Errors` doc-contract gap closed.** `register_record_batches_as_temp_view`,
+  `materialize_dataframe_as_temp_view`, `materialize_dataframe_as_cache_view` and
+  `declare_temp_view_sorted` documented only `DataFusion`/`Config` while refusing
+  `Error::Analysis` for a qualified name (and the pins assert that they do). All four now document
+  it, matching their `create_or_replace_temp_view*` / `drop_temp_view` siblings.
+
+## Round-6 test counts (all green on the fixed tree)
+
+| gate | result |
+|---|---|
+| `cargo test -p repark-core -p repark-spark -p repark-sql` | **1054 passed**, 0 failed, 0 ignored (round-5 BASE: 1043). repark-core lib **139** (+4 `temp_view::tests`), `declared_sorted` **37**, `temp_view_doors` **7** (new binary), repark-spark lib 473, repark-sql lib 251 |
+| `pytest python/repark/tests/test_declare_sorted_tighten.py` | **22 passed** (18 on BASE + 4 new R6-1 facade nodes) |
+| `pytest test_declare_sorted_tighten.py test_declare_sorted.py test_cache_persist.py test_create_dataframe_materialize.py test_catalog_flow.py test_catalog_surface.py` | **121 passed** (the temp-view-adjacent facade sweep for the R6-1 behaviour change) |
+| `pytest python/repark/tests` (the WHOLE facade suite — run because R6-1 changes engine behaviour every temp-view caller rides) | **3359 passed, 70 skipped**, 0 failed (round 4's sweep: 3354/70) |
+| `make check-lib-py` (the lib-py guard step) | `lib-py: 67 files clean (ceilings held; no-stub rule held)` |
+| `make rust-clippy` / `make rust-fmt-check` | clean |
+| `make check-rust-file-size` | `238 files clean (default ceiling 1500; 12 exceptions)` — one exception fewer than round 5 |
+| `make check-lib-rs` / `make check-crate-dag` / `make check-manifest` / `make check-map-md` / `make rust-panic-ban` | clean |
+
+New nodes across round 6: **7 core integration** (`temp_view_doors.rs`) + **4 core unit**
+(`temp_view/tests.rs`) + **4 facade** = 15. Seventeen existing refuse rows gained the
+`table_exists` half (R6-4) and four docstrings were trued (R6-3/R6-6) — no test NAME changed, so
+the relocation-discipline identity gate is untouched.
+
+## NOT-RUN after round 6
+
+- `make preflight` (the orchestrator runs it, by instruction) — and with it `py-test-facade`, the
+  audit and the workflow lint. (The facade suite it wraps was run directly this round, above.)
+- **The exact PySpark error text for a qualified `createOrReplaceTempView`.** No JVM in this tier,
+  so the message was NOT measured against real PySpark. What is mirrored is the **class**
+  (`AnalysisException`); repark's message text is its own and says so in `temp_view.rs`'s rustdoc.
+  Recorded as a scope decision, not as parity evidence.
+- The parity-live / tier-2 live-oracle tier (JVM + env arm): unchanged — `tightenNulls` has no
+  PySpark twin.
+- Spark-shaped temp-view READ resolution under `SET default_catalog` (see the scoped-out note in
+  R6-1) — measured on both sides and deliberately not changed. It is a MEASURED CHANGE from BASE,
+  not "unchanged current behaviour" (that wording is struck above).
+- Whether the R6-1 second-pass home check behaves the same for a **Glue / S3 Tables** catalog type
+  as for the memory catalog: NOT-RUN (no AWS in this tier). The mechanism is provider identity
+  under the home name, which is catalog-type-agnostic, but that is reasoning, not a measurement.
+- The payload class "`CREATE VIEW` in an Iceberg catalog persists a TABLE at all" — measured in
+  round 4, still deliberately not fixed.
+
+## Payload finding — time-travel ephemeral view rides the raw context (round-6 critic, S3)
+
+`crates/repark-core/src/time_travel.rs` `read_table_at` registers its ephemeral
+`__repark_tt_<n>` view with a raw BARE name via `ctx.register_table` — the same
+resolution hazard class R6-1 closed for the user temp-view API, in a sibling
+OUTSIDE that finding's scope. Under `SET datafusion.catalog.default_catalog =
+<iceberg catalog>` the bare registration resolves into that catalog: a
+snapshot WITH data fails loud today (fork `register_table` refuses tables with
+data), an EMPTY snapshot could persist a junk table. NOT fixed this round —
+the clean fix threads `TempViewHome` through `EngineContext` (crate-boundary
+surgery) and is out of proportion for an S3 on an internal short-lived view.
+Recorded here so the next tighten/temp-view unit picks it up; not pinned
+(a pin needs a time-travel fixture under SET, deferred with the fix).

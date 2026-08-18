@@ -33,9 +33,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
-use arrow::array::RecordBatch;
 use aws_config::{BehaviorVersion, SdkConfig};
-use datafusion::datasource::MemTable;
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
@@ -47,6 +45,7 @@ use crate::catalog_state::{CatalogRegistry, LocationPolicy};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
+use crate::temp_view::TempViewHome;
 use crate::time_travel::{self, TimeTravelSpec};
 // v1's two test-only re-exports, re-homed with the test module (they rode the v1 crate root,
 // which the module split made this file's parent — `use super::*;` in `session/tests.rs`
@@ -62,6 +61,7 @@ use crate::{
 };
 
 mod spill;
+mod temp_views;
 
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
@@ -466,6 +466,27 @@ impl ReparkSessionBuilder {
         let runtime = runtime.build_arc().map_err(engine_err)?;
 
         let context = SessionContext::new_with_config_rt(config, runtime);
+        // R6-1: the temp-view home is captured ONCE, here, from the FINAL build-time config —
+        // never re-read at registration time. `SET datafusion.catalog.default_catalog = <iceberg>`
+        // must not be able to move where `createOrReplaceTempView` writes.
+        // The name alone is NOT enough: `default_catalog` is also a build-time key, so the home
+        // name can be the name a catalog is registered under later — snapshot the session-local
+        // schema PROVIDER too and re-check its identity at every temp-view call
+        // (`temp_view::assert_home_intact`; round-6 critic S1, MEASURED).
+        let temp_view_home = {
+            let options = context.copied_config();
+            let catalog_options = &options.options().catalog;
+            let catalog_name = catalog_options.default_catalog.clone();
+            let schema_name = catalog_options.default_schema.clone();
+            let provider = context
+                .catalog(&catalog_name)
+                .and_then(|catalog| catalog.schema(&schema_name));
+            TempViewHome {
+                catalog: catalog_name,
+                schema: schema_name,
+                provider,
+            }
+        };
         // Extension hook 2 of 2 — REGISTER, at v1's inline position (immediately after context
         // creation). v1 inlined the Spark function registry, the expression-semantics analyzer
         // rules (appended after DataFusion's built-ins so they see type-coerced plans), and the
@@ -482,6 +503,7 @@ impl ReparkSessionBuilder {
             registered_s3_buckets: Arc::new(Mutex::new(HashSet::new())),
             s3_region_override: Arc::new(s3_region_override),
             session_time_zone: Arc::new(session_time_zone),
+            temp_view_home: Arc::new(temp_view_home),
             postgres_catalog_names: Arc::new(RwLock::new(HashSet::new())),
             aws_signaled,
             aws_sdk_config: Arc::new(OnceLock::new()),
@@ -527,6 +549,12 @@ pub struct ReparkSession {
     /// time (`docs/adr/0004-server-prep-disciplines.md`). Shared (`Arc`) so a session clone can
     /// never disagree with its origin about the zone.
     session_time_zone: Arc<SessionTimeZone>,
+    /// R6-1: where this session's temp views live, captured ONCE at
+    /// [`ReparkSessionBuilder::build`] from the final config. Every temp-view entry point
+    /// resolves against THIS, never against the live `datafusion.catalog.default_catalog`, so
+    /// a `SET` cannot move `createOrReplaceTempView` into a catalog. Shared (`Arc`) so a
+    /// session clone can never disagree with its origin about the home.
+    temp_view_home: Arc<TempViewHome>,
     /// E-2: whether this session signaled AWS use at build time (an AWS-backed catalog spec, an
     /// S3-region conf, or the [`AWS_ENABLE_CONFIG_KEY`] opt-in). Consumed by the finalize pair,
     /// which resolves the AWS SDK chain only when this is set.
@@ -553,7 +581,22 @@ impl ReparkSession {
         Self::builder().build()
     }
 
-    /// The DataFusion context this session executes against (escape hatch for advanced wiring).
+    /// The DataFusion context this session executes against — a **raw, UNGUARDED escape hatch**.
+    ///
+    /// **A KNOWN HATCH, not an oversight (R6-2).** Everything reached through the returned
+    /// [`SessionContext`] — above all `context().sql(..)` — bypasses **every** product guard,
+    /// because the guards live in repark's layer above DataFusion, not inside it: the
+    /// pre-execute belt ([`crate::pre_execute::PreExecute`]) and with it the SE-1 `tightenNulls`
+    /// DDL-sink refuse, the door dialects and their routers (Spark AST rewrites, ANSI CTAS
+    /// derivation, `refuse_local_filesystem_plan`, the eager-command fold), and the temp-view
+    /// choke point ([`crate::temp_view`]). Measured consequence:
+    /// `context().sql("CREATE VIEW <iceberg>.ns.v AS SELECT * FROM <tightened> LIMIT 0")`
+    /// **persists a `required: true` Iceberg table** — pinned by
+    /// `context_sql_is_a_known_unguarded_hatch` in `tests/temp_view_doors.rs`.
+    ///
+    /// Closing it would mean wrapping DataFusion's `SessionContext`; that is not a guard we
+    /// have. **Embedders that call this own that risk** — route anything that should be guarded
+    /// through [`ReparkSession::sql`] / [`ReparkSession::sql_with`] instead.
     #[must_use]
     pub fn context(&self) -> &SessionContext {
         self.backend.session_context()
@@ -1000,17 +1043,16 @@ impl ReparkSession {
     /// ===========================================================================================
     ///
     /// # Errors
-    /// Currently infallible (missing default catalog/schema → empty list). `Result` kept for
-    /// API symmetry with other listing helpers.
+    /// [`Error::Analysis`] when this session has no session-local temp-view home left (a catalog
+    /// was registered over the build-time default catalog — round-6 critic S1); otherwise
+    /// infallible.
     pub fn list_temp_view_names(&self) -> Result<Vec<String>> {
-        let context = self.context();
-        let session_config = context.copied_config();
-        let catalog_name = session_config.options().catalog.default_catalog.clone();
-        let schema_name = session_config.options().catalog.default_schema.clone();
-        let Some(catalog) = context.catalog(&catalog_name) else {
-            return Ok(Vec::new());
-        };
-        let Some(schema) = catalog.schema(&schema_name) else {
+        // R6-1: list the pinned temp-view home, not the live default catalog — after
+        // `SET datafusion.catalog.default_catalog = ice` the old read listed the Iceberg
+        // catalog's tables as "temp views". S1: and refuse rather than list a CATALOG's tables
+        // as temp views when a catalog took the home name over.
+        crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
+        let Some(schema) = self.temp_view_home.provider.as_ref() else {
             return Ok(Vec::new());
         };
         Ok(schema.table_names())
@@ -1037,229 +1079,6 @@ impl ReparkSession {
         Ok(schema_provider.table_names())
     }
 
-    /// Register `batches` as a replaceable in-memory view named `name` (PySpark
-    /// `createOrReplaceTempView`). The schema is taken from the first batch.
-    ///
-    /// # Errors
-    /// Returns [`Error::DataFusion`] if `batches` is empty (no schema to infer) or registration
-    /// fails.
-    pub fn create_or_replace_temp_view(&self, name: &str, batches: Vec<RecordBatch>) -> Result<()> {
-        let schema = batches
-            .first()
-            .ok_or_else(|| {
-                Error::DataFusion(format!(
-                    "cannot register temp view '{name}': no batches to infer a schema from"
-                ))
-            })?
-            .schema();
-        let table = MemTable::try_new(schema, vec![batches]).map_err(engine_err)?;
-        self.replace_view(name, Arc::new(table))
-    }
-
-    /// Register a planned [`DataFrame`] as a replaceable temp view named `name` (PySpark
-    /// `DataFrame.createOrReplaceTempView`). The view is lazy, like Spark's: each reference
-    /// re-executes the plan (materialize with the batch overload above when that matters).
-    ///
-    /// # Errors
-    /// Returns [`Error::DataFusion`] if registration fails.
-    pub fn create_or_replace_temp_view_from(&self, name: &str, frame: &DataFrame) -> Result<()> {
-        self.replace_view(name, frame.clone().into_view())
-    }
-
-    /// ===========================================================================================
-    /// Collect `frame` **once** and re-register as a [`MemTable`] temp view so subsequent scans
-    /// are table scans, not re-execution of a VALUES (or other) body (R-PERF-VALUES).
-    ///
-    /// Empty results still register (schema from the plan, zero batches) so `.count()` / filters
-    /// on an empty createDataFrame stay correct.
-    ///
-    /// **Contract (r23 CACHE1):** this entry point is the createDataFrame / VALUES path. Do **not**
-    /// change its collect-once semantics for cache/persist — use
-    /// [`Self::materialize_dataframe_as_cache_view`] for the cache path (caller-level branch).
-    /// ===========================================================================================
-    ///
-    /// # Errors
-    /// Returns [`Error::DataFusion`] if collect or registration fails.
-    pub async fn materialize_dataframe_as_temp_view(
-        &self,
-        name: &str,
-        frame: DataFrame,
-    ) -> Result<()> {
-        self.register_collected_memtable(name, frame, None).await
-    }
-
-    // === r23 CACHE1: cache-honesty ===
-    /// ===========================================================================================
-    /// Cache-path materialize: collect once into a [`MemTable`] temp view with an optional
-    /// `max_bytes` size guard (facade conf ``repark.cache.max_bytes``).
-    ///
-    /// **Caller-level branch (OTH-014 / CACHE1):** `cache()` / `persist()` use this entry point.
-    /// createDataFrame / VALUES keep [`Self::materialize_dataframe_as_temp_view`] (byte-identical
-    /// collect-once; no size threshold — data was already Python-resident).
-    ///
-    /// Single-node [`MemTable`] only — no disk spill despite Spark `MEMORY_AND_DISK*` names. When
-    /// `max_bytes` is `Some(limit)` and the collected Arrow array memory exceeds `limit`, the
-    /// batches are dropped and [`Error::Config`] names the conf key (loud memory contract).
-    /// Size is measured **after** `collect` (refuses the pin; peak during collect is still
-    /// O(result)). `None` or an absent conf = no size guard (`FairSpillPool` still bounds
-    /// execution).
-    /// ===========================================================================================
-    ///
-    /// # Errors
-    /// Returns [`Error::DataFusion`] if collect or registration fails; [`Error::Config`] when
-    /// `max_bytes` is exceeded.
-    pub async fn materialize_dataframe_as_cache_view(
-        &self,
-        name: &str,
-        frame: DataFrame,
-        max_bytes: Option<u64>,
-    ) -> Result<()> {
-        self.register_collected_memtable(name, frame, max_bytes)
-            .await
-    }
-
-    /// ===========================================================================================
-    /// Register pre-built Arrow [`RecordBatch`]es as a [`MemTable`] temp view (R-PERF-ARROW-CDF).
-    ///
-    /// Used by createDataFrame after Python builds a `pyarrow.Table` — skips VALUES SQL entirely.
-    /// Empty `batches` still registers when `schema` is provided (zero-row frame).
-    /// ===========================================================================================
-    ///
-    /// # Errors
-    /// Returns [`Error::DataFusion`] if `MemTable` construction or registration fails.
-    pub fn register_record_batches_as_temp_view(
-        &self,
-        name: &str,
-        schema: arrow::datatypes::SchemaRef,
-        batches: Vec<RecordBatch>,
-    ) -> Result<()> {
-        let partitions = if batches.is_empty() {
-            vec![vec![]]
-        } else {
-            vec![batches]
-        };
-        let table = MemTable::try_new(schema, partitions).map_err(engine_err)?;
-        self.replace_view(name, Arc::new(table))
-    }
-
-    /// Declare an in-memory temp view as pre-sorted by `keys` (engine field names), so the
-    /// re-registered [`MemTable`] advertises the ordering and DataFusion elides redundant
-    /// `SortExec`s (SE-1). The claim is ALWAYS verified (O(n) adjacent-pair pass, ASC NULLS
-    /// LAST) before anything is replaced — a wrong claim refuses loudly and the original
-    /// registration stays untouched. `tighten_nulls` is the c+ lever: after verify, a NULL
-    /// in a key refuses; otherwise verified-null-free keys flip to non-nullable.
-    ///
-    /// # Errors
-    /// [`Error::Analysis`] for an unknown view, a non-in-memory provider, an unknown key,
-    /// empty keys, data that is not sorted as declared, or a NULL key under tighten;
-    /// [`Error::DataFusion`] for engine-level scan/registration failures.
-    pub async fn declare_temp_view_sorted(
-        &self,
-        name: &str,
-        keys: &[String],
-        tighten_nulls: bool,
-    ) -> Result<()> {
-        if keys.is_empty() {
-            return Err(Error::Analysis(
-                "declared-sorted view: at least one key column is required".to_string(),
-            ));
-        }
-        let provider = self.context().table_provider(name).await.map_err(|_| {
-            Error::Analysis(format!("declared-sorted view: no temp view named '{name}'"))
-        })?;
-        let provider_any: &dyn std::any::Any = provider.as_ref();
-        if provider_any.downcast_ref::<MemTable>().is_none() {
-            return Err(Error::Analysis(format!(
-                "declared-sorted view: '{name}' is not an in-memory frame — sortedness \
-                 declarations support createDataFrame/cache views only"
-            )));
-        }
-        let schema = provider.schema();
-        let batches = self
-            .context()
-            .table(name)
-            .await
-            .map_err(engine_err)?
-            .collect()
-            .await
-            .map_err(engine_err)?;
-        crate::sorted_view::verify_batches_sorted(&schema, &batches, keys)?;
-        let (schema, batches) =
-            crate::sorted_view::apply_declare_nullability(schema, batches, keys, tighten_nulls)?;
-        let partitions = if batches.is_empty() {
-            vec![vec![]]
-        } else {
-            vec![batches]
-        };
-        let table = MemTable::try_new(schema, partitions)
-            .map_err(engine_err)?
-            .with_sort_order(crate::sorted_view::declared_sort_order(keys));
-        self.replace_view(name, Arc::new(table))
-    }
-
-    /// Collect `frame` once, re-stamp tighten provenance when any plan source is
-    /// tighten-derived (SE-1 R-A), then register a `MemTable`. Shared by createDataFrame
-    /// materialize and cache/persist/checkpoint.
-    async fn register_collected_memtable(
-        &self,
-        name: &str,
-        frame: DataFrame,
-        max_bytes: Option<u64>,
-    ) -> Result<()> {
-        let plan = frame.logical_plan().clone();
-        let schema = Arc::new(frame.schema().as_arrow().clone());
-        let batches = frame.collect().await.map_err(engine_err)?;
-        if let Some(limit) = max_bytes {
-            let total: u64 = batches
-                .iter()
-                .map(|batch| u64::try_from(batch.get_array_memory_size()).unwrap_or(u64::MAX))
-                .fold(0_u64, u64::saturating_add);
-            if total > limit {
-                return Err(Error::Config(format!(
-                    "cache materialize size {total} bytes exceeds repark.cache.max_bytes={limit}; \
-                     raise the conf or avoid cache()/persist() on this plan (single-node MemTable \
-                     pin; no disk spill)"
-                )));
-            }
-        }
-        let (schema, batches) =
-            crate::sorted_view::apply_tighten_provenance_on_materialize(&plan, schema, batches)?;
-        let partitions = if batches.is_empty() {
-            vec![vec![]]
-        } else {
-            vec![batches]
-        };
-        let table = MemTable::try_new(schema, partitions).map_err(engine_err)?;
-        self.replace_view(name, Arc::new(table))
-    }
-
-    /// The shared "create OR REPLACE" registration: `register_table` errors on a name clash, so
-    /// drop any existing view first (a no-op returning `Ok(None)` when absent).
-    fn replace_view(
-        &self,
-        name: &str,
-        provider: Arc<dyn datafusion::datasource::TableProvider>,
-    ) -> Result<()> {
-        self.context().deregister_table(name).map_err(engine_err)?;
-        self.context()
-            .register_table(name, provider)
-            .map_err(engine_err)?;
-        Ok(())
-    }
-
-    /// Drop a temp view (PySpark `spark.catalog.dropTempView`). Returns whether a view of that
-    /// name existed — dropping a missing view is not an error, matching PySpark.
-    ///
-    /// # Errors
-    /// Returns [`Error::DataFusion`] if the name cannot be resolved as a table reference.
-    pub fn drop_temp_view(&self, name: &str) -> Result<bool> {
-        Ok(self
-            .context()
-            .deregister_table(name)
-            .map_err(engine_err)?
-            .is_some())
-    }
-
     /// Whether a table exists (PySpark `spark.catalog.tableExists`). A three-part
     /// `catalog.namespace.table` name asks the registered iceberg catalog (`false` when the
     /// namespace itself is absent, like PySpark); a one-part name checks the session's temp
@@ -1277,10 +1096,18 @@ impl ReparkSession {
             Error::DataFusion(format!("tableExists: invalid table identifier: {message}"))
         })?;
         match parts.as_slice() {
-            [view] => self
-                .context()
-                .table_exist(view.as_str())
-                .map_err(engine_err),
+            // R6-1: the one-part arm asks the pinned temp-view home, not the live default
+            // catalog — so `tableExists("v")` answers about the same registration
+            // `createOrReplaceTempView("v")` wrote, and stays FALSE for a name that was refused.
+            // The segment is ALREADY parsed (quotes stripped, case unfolded), so it goes through
+            // the segment overload rather than being re-parsed — re-parsing turned the allowed
+            // quoted spelling `"a.b"` into a "qualified" refusal (round-6 critic S3).
+            [view] => {
+                let quoted = name.trim().starts_with(['"', '`']);
+                self.context()
+                    .table_exist(self.temp_view_ref_from_segment(view, quoted)?)
+                    .map_err(engine_err)
+            }
             [catalog, namespace, table] => {
                 let handle = self.catalog_handle(catalog)?;
                 let namespace = NamespaceIdent::new(namespace.clone());

@@ -2,13 +2,28 @@
 
 ## Purpose
 
-File-backed test modules of `../session.rs` (`ReparkSession`). Two cohorts: the E-2 gate tests
+File-backed modules of `../session.rs` (`ReparkSession`): one behavior module (`temp_views.rs`)
+plus the test cohorts. Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
 battery (names under the declared-rename map; the not-yet-ported subset is listed in
 `task/port/deferred-tests.md`).
 
 ## Contents
 
+- `temp_views.rs` — **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
+  the choke-point fix pushed that file past its ceiling (the exception row was then ratcheted
+  out — `session.rs` passes the default 1500 unlisted). Holds `create_or_replace_temp_view`
+  (batches) / `create_or_replace_temp_view_from` (a plan),
+  `register_record_batches_as_temp_view`, `materialize_dataframe_as_temp_view` /
+  `materialize_dataframe_as_cache_view` and their shared `register_collected_memtable`,
+  `declare_temp_view_sorted`, the shared `replace_view` registration, `drop_temp_view`, and
+  `temp_view_ref` / `temp_view_ref_from_segment` — the wrappers over [`crate::temp_view`] that
+  EVERY member resolves names through, so a qualified name cannot register into a catalog and a
+  one-part name is immune to `SET datafusion.catalog.default_catalog`. They also re-check the
+  home PROVIDER live (`assert_home_intact`): a session built with
+  `datafusion.catalog.default_catalog = <a name a catalog is later registered under>` has no
+  session-local home at all, and the whole family refuses loud rather than write that catalog
+  (round-6 critic S1, MEASURED).
 - `spill.rs` — **S-1:** FairSpillPool install + runtime `SET datafusion.runtime.memory_limit`
   intercept (R1). DataFusion 54.1 has no in-place resize (`pool_size` lives outside the mutex),
   so SET **swaps** a new `FairSpillPool` (in-flight reservations stay on the old pool).

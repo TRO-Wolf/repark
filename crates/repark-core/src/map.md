@@ -43,12 +43,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `create_namespace` (mirrors `location` onto `location_uri` via
   `repark_iceberg::catalog::mirror_namespace_location_keys`; G-6 Q1: existing
   namespace + contradictory explicit location fails loud naming both paths;
-  matching / no-request-location stay idempotent), the temp-view family
+  matching / no-request-location stay idempotent), the temp-view family — which since round 6
+  lives in `session/temp_views.rs`, not in this file
   (`create_or_replace_temp_view` / `materialize_dataframe_as_temp_view` /
   `materialize_dataframe_as_cache_view` — both collect remints share
   `register_collected_memtable` which re-stamps tighten provenance (R-A) —
   / `create_or_replace_temp_view_from` / `declare_temp_view_sorted` /
-  `drop_temp_view`), `table_exists` (quote-aware segment parse; path-escape segments reject),
+  `drop_temp_view`, all resolving names through `temp_view.rs`),
+  `table_exists` (quote-aware segment parse; path-escape segments reject; the ONE-part arm asks
+  the pinned temp-view home, not the live default catalog — R6-1),
   the listing families (`list_iceberg_table_names` live list-on-access / `list_temp_view_names`
   / `list_df_schema_table_names`), `refresh_catalog_provider`, `read_parquet` (an
   `s3://`/`s3a://` path lazily registers that bucket's store once — per-session guard),
@@ -181,9 +184,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   — `CREATE VIEW cat.ns.v AS …` and `SELECT … INTO cat.ns.t` never reach CTAS derivation
   (both routers drop them into their catch-all) yet the Iceberg schema provider's
   `register_table` persists a real table. Same R-D predicate, applied to the planned
-  `DdlStatement::CreateView` / `CreateMemoryTable` body, and ONLY when the target is a
-  three-part name in a registered Iceberg catalog (session-scoped views persist nothing and
-  stay allowed).
+  `DdlStatement::CreateView` / `CreateMemoryTable` body.
   **Round 5 (Z-1):** the catalog gate is the RESOLVED name, not the spelling — the target is
   resolved through `TableReference::resolve` against `datafusion.catalog.default_catalog` /
   `default_schema`, because `SET datafusion.catalog.default_catalog = <iceberg>` makes a
@@ -217,8 +218,26 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TZ-8 (2026-08-14):** module docs now say `CAST(ts AS DATE)` / `to_date` honor the zone
   (NTZ stays the stored wall); `datediff` rides CAST; `last_day`/`date_add` over TIMESTAMP
   stay residual. Ledger: `task/r4-tz8-ledger.md`.
-- `session/` — `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
-  sibling of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
+- `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
+  `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
+  once) + `temp_view_ref`, which every temp-view entry point resolves names through. A QUALIFIED
+  name refuses loud (`Error::Analysis` → facade `AnalysisException`, mirroring PySpark's class):
+  `createOrReplaceTempView("ice.sales.v")` used to forward the raw name to `register_table`,
+  which resolved into the Iceberg catalog provider and PERSISTED a real table — a `tightenNulls`
+  `required: true` payload included, the very thing `pre_execute.rs` refuses on the SQL doors
+  (MEASURED, round-6 ledger). A one-part name is pinned `Full` against the home, so
+  `SET datafusion.catalog.default_catalog = <iceberg>` cannot move where a temp view registers.
+  The home is a NAME **and** the schema PROVIDER that sat under it at build (`assert_home_intact`,
+  `Arc::ptr_eq` at every entry point): `default_catalog` is also a BUILD-time key, so a session
+  built with `default_catalog = ice` had its home NAME taken over by the Iceberg catalog and
+  persisted the payload anyway (MEASURED — round-6 critic S1). With a catalog over the home the
+  whole family refuses loud rather than write or answer for it.
+  Parsing is DataFusion's own `TableReference::parse_str` — identifier normalization is
+  unchanged from BASE.
+- `session/` — `temp_views.rs` (the temp-view family: register / replace / materialize / cache /
+  declare-sorted / drop, all through `temp_view_ref`; split out of `session.rs` in round 6) and
+  `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
+  siblings of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
   (E-2 gate pins incl. the late-config region-signal pin, AWS-free),
   `namespace_create_tests.rs` (R-6 / G-6 Q1: create-new / same / conflicting / no-location),
   and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port

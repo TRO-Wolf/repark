@@ -127,6 +127,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   DOWN; family siblings use the default ceiling. Pure text — sub-second. Dual-wired:
   `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job step; also both
   pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
+  **SQM r6 (2026-08-18):** EXCEPTIONS key `crates/repark-core/src/session.rs` deleted
+  (temp-view family extracted to `session/temp_views.rs`; back under the default ceiling).
   **COLX (2026-08-15):** EXCEPTIONS key `crates/repark-python/src/column.rs` deleted;
   replaced by `crates/repark-python/src/column/mod.rs` (ratchet DOWN after helper extract).
   **FN-GX (2026-08-16):** `column/mod.rs` ceiling ratcheted DOWN after the `call_scalar` /
