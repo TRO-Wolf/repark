@@ -105,7 +105,7 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (DF-2 / #176): `core.py` 7293 of 7350, `plan_collapse.py` 1211 of 2500.
+- Live file sizes (DF-2 / #176): `core.py` 7296 of 7350, `plan_collapse.py` 1211 of 2500.
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).
