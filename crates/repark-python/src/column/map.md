@@ -26,6 +26,11 @@ without enabling PyO3 `multiple-pymethods`.
   `parse_url`/`try_parse_url`/`url_encode`/`url_decode`/`try_url_decode`/
   `bitmap_bit_position`/`bitmap_bucket_number`/`bitmap_count`).
   Rework: `str_to_map` now embeds the regex UDF from `repark-functions`.
+  **X-round (2026-08-18):** the `shuffle` arm takes 1 OR 2 args (the Spark 4.0
+  seed the facade used to drop — X2), and `shuffle` / `map_from_entries` /
+  `parse_url` / `try_parse_url` now embed repark shims rather than
+  `datafusion-spark`'s kernels, so a facade Column and `spark.sql()` resolve the
+  same UDF. Ledger: `task/fn-gt2-ledger.md`.
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,

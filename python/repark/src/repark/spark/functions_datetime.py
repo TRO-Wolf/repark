@@ -136,10 +136,18 @@ def make_date(
 ) -> Column:
     """Build a date from year/month/day (PySpark ``functions.make_date``).
 
+    **An invalid Y-M-D is NULL here, not an error.** Spark under ANSI raises
+    ``DATETIME_FIELD_OUT_OF_BOUNDS`` for e.g. ``make_date(2024, 2, 31)``; this
+    engine returns NULL on both doors. repark's ``spark.sql.ansi.enabled``
+    defaults to ``true``, but the documented scope of that flag is ``/`` and
+    ``%`` by zero — see ``docs/guide/session-and-conf.md``: "Do not read 'ANSI
+    on' as 'every arithmetic fault raises'". Invalid-date NULL is a recorded
+    divergence (FN-GT2 X9), not silent parity.
+
     Parameters
     ----------
     year, month, day : Column or str or int
-        Calendar parts. Invalid dates yield NULL.
+        Calendar parts. Invalid dates yield **NULL**.
 
     Returns
     -------

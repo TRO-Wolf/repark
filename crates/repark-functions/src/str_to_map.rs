@@ -74,8 +74,77 @@ fn map_utf8_type() -> DataType {
     )
 }
 
+/// ===========================================================================================
+/// Bind Java's Perl-class semantics onto a `regex`-crate pattern (X6).
+///
+/// `java.util.regex` without `UNICODE_CHARACTER_CLASS` (Spark never sets it) defines `\s` as
+/// `[ \t\n\x0B\f\r]`, `\d` as `[0-9]` and `\w` as `[a-zA-Z_0-9]` — **ASCII only**. The `regex`
+/// crate defines the same escapes over Unicode, so `\s` there also matches NBSP (U+00A0),
+/// U+2028, the U+2000 block … A `str_to_map(text, '\\s', ':')` over data containing a
+/// non-breaking space would therefore split where Spark does not — a silent row-shape
+/// divergence, not an error.
+///
+/// The rewrite is to the POSIX classes, which the `regex` crate defines ASCII-only and which
+/// are set-identical to Java's: `[:space:]` == `[ \t\n\v\f\r]` == Java `\s`, `[:digit:]` ==
+/// `\d`, `[:word:]` == `\w`. Inside a character class the bare form is spliced (`[\s,]` →
+/// `[[:space:],]`); outside it is bracketed. Negations use the negated POSIX spelling
+/// (`[[:^space:]]`), which is why this cannot be done with a blanket `unicode(false)` — that
+/// switch also makes `.` a byte matcher and rejects patterns that could match invalid UTF-8.
+/// ===========================================================================================
+fn bind_ascii_perl_classes(pattern: &str) -> String {
+    let mut out = String::with_capacity(pattern.len());
+    let mut chars = pattern.chars().peekable();
+    let mut in_class = false;
+    let mut class_start = false;
+    while let Some(c) = chars.next() {
+        if c == '\\' {
+            match chars.peek().copied() {
+                Some(escape @ ('s' | 'S' | 'd' | 'D' | 'w' | 'W')) => {
+                    chars.next();
+                    let name = match escape.to_ascii_lowercase() {
+                        's' => "space",
+                        'd' => "digit",
+                        _ => "word",
+                    };
+                    let caret = if escape.is_ascii_uppercase() { "^" } else { "" };
+                    if !in_class {
+                        out.push('[');
+                    }
+                    out.push_str("[:");
+                    out.push_str(caret);
+                    out.push_str(name);
+                    out.push_str(":]");
+                    if !in_class {
+                        out.push(']');
+                    }
+                }
+                Some(other) => {
+                    chars.next();
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            }
+            class_start = false;
+            continue;
+        }
+        if in_class {
+            if c == ']' && !class_start {
+                in_class = false;
+            }
+            class_start = class_start && c == '^';
+        } else if c == '[' {
+            in_class = true;
+            class_start = true;
+        }
+        out.push(c);
+    }
+    out
+}
+
 fn compile_delim(pattern: &str) -> Result<Regex> {
-    Regex::new(pattern).map_err(|error| {
+    let bound = bind_ascii_perl_classes(pattern);
+    Regex::new(&bound).map_err(|error| {
         datafusion::common::DataFusionError::Execution(format!(
             "str_to_map: invalid delimiter regex '{pattern}': {error}"
         ))
@@ -307,6 +376,60 @@ mod tests {
                 ("b".to_string(), Some("2".to_string())),
             ]
         );
+    }
+
+    /// X6: Java `\s` is ASCII-only. A non-breaking space must NOT split — the `regex` crate's
+    /// Unicode `\s` does, so dropping `bind_ascii_perl_classes` reds this with three entries.
+    #[tokio::test]
+    async fn backslash_s_is_ascii_only_so_nbsp_does_not_split() {
+        let entries = map_row("SELECT str_to_map('a:1 b:2\u{a0}c:3', '\\s', ':')").await;
+        assert_eq!(
+            entries,
+            vec![
+                ("a".to_string(), Some("1".to_string())),
+                ("b".to_string(), Some("2\u{a0}c:3".to_string())),
+            ]
+        );
+    }
+
+    /// The ASCII binding must still split on the characters Java's `\s` covers.
+    #[tokio::test]
+    async fn backslash_s_still_splits_on_ascii_whitespace() {
+        let entries = map_row("SELECT str_to_map('a:1\tb:2', '\\s', ':')").await;
+        assert_eq!(
+            entries,
+            vec![
+                ("a".to_string(), Some("1".to_string())),
+                ("b".to_string(), Some("2".to_string())),
+            ]
+        );
+    }
+
+    /// The splice must work inside a character class too (`[\s,]`, not `[[[:space:]],]`).
+    #[tokio::test]
+    async fn perl_class_inside_a_character_class_is_spliced() {
+        let entries = map_row("SELECT str_to_map('a:1,b:2 c:3', '[\\s,]', ':')").await;
+        assert_eq!(
+            entries,
+            vec![
+                ("a".to_string(), Some("1".to_string())),
+                ("b".to_string(), Some("2".to_string())),
+                ("c".to_string(), Some("3".to_string())),
+            ]
+        );
+    }
+
+    #[test]
+    fn ascii_binding_rewrites_only_the_perl_classes() {
+        use super::bind_ascii_perl_classes as bind;
+        assert_eq!(bind(r"\s"), "[[:space:]]");
+        assert_eq!(bind(r"\S"), "[[:^space:]]");
+        assert_eq!(bind(r"[\d,]"), "[[:digit:],]");
+        assert_eq!(bind(r"\w+"), "[[:word:]]+");
+        // An escaped backslash is not a class introducer.
+        assert_eq!(bind(r"\\s"), r"\\s");
+        assert_eq!(bind(r"[,c]"), "[,c]");
+        assert_eq!(bind("."), ".");
     }
 
     #[tokio::test]

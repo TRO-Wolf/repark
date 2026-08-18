@@ -786,9 +786,17 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             nested_fn::array_compact(exprs[0].clone())
         }
+        // X2: Spark 4.0 `shuffle(array, seed)`. The facade used to drop the seed; the SQL door
+        // already had it, so the two doors disagreed on a *deterministic* result.
         "shuffle" => {
-            need(1)?;
-            repark_functions::expr_fn::shuffle(exprs[0].clone())
+            need_at_least(1)?;
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::shuffle(exprs.clone())
         }
         "map_from_entries" => {
             need(1)?;

@@ -154,7 +154,7 @@ def arrays_overlap(a1: Column | str, a2: Column | str) -> Column:
 
 def get(
     col: Column | str,
-    index: Column | str | int | float | bool | None,
+    index: Column | str | int,
 ) -> Column:
     """0-based array element or map value (PySpark ``functions.get``).
 
@@ -162,10 +162,26 @@ def get(
     ``getitem`` and currently also serves maps (``test_get_map_by_key``).
     Contrast ``element_at`` (1-based; index 0 raises
     ``INVALID_INDEX_OF_ZERO``; maps by key).
+
+    Parameters
+    ----------
+    col : Column or str
+        Array (or, in this engine, map) column. A ``str`` is a column name.
+    index : Column or str or int
+        0-based index. An ``int`` is a literal; a ``str`` is a **column name**
+        (PySpark ``get`` is ``ColumnOrName``, and it only wraps ``int``), so
+        ``F.get('a', 'i')`` indexes by column ``i``.
+
+    Returns
+    -------
+    Column
+        The element, or NULL when the index is out of range.
+
+    Examples
+    --------
+    ``F.get(F.array(F.lit(10), F.lit(20)), 1)`` is ``20``.
     """
-    container = _as_column_arg(col, as_lit=False)
-    key = index if isinstance(index, Column) else lit(index)
-    return _scalar("getitem", container, key)
+    return _scalar("getitem", _as_column_arg(col, as_lit=False), index)
 
 
 def element_at(
@@ -179,6 +195,14 @@ def element_at(
     raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based; ``getitem``,
     including maps).
 
+    **Out of range is NULL here, not an error.** Spark under ANSI raises
+    ``INVALID_ARRAY_INDEX_IN_ELEMENT_AT``; this engine returns NULL on both
+    doors. repark's ``spark.sql.ansi.enabled`` defaults to ``true``, but the
+    documented scope of that flag is ``/`` and ``%`` by zero — see
+    ``docs/guide/session-and-conf.md``: "Do not read 'ANSI on' as 'every
+    arithmetic fault raises'". Element-at out-of-range is a recorded divergence
+    (FN-GT2 X9), not silent parity.
+
     Parameters
     ----------
     col : Column or str
@@ -189,7 +213,7 @@ def element_at(
     Returns
     -------
     Column
-        The element or map value; NULL when missing / out of range.
+        The element or map value; **NULL** when missing / out of range.
 
     Examples
     --------
@@ -226,16 +250,23 @@ def array_compact(col: Column | str) -> Column:
     return _scalar("array_compact", col)
 
 
-def shuffle(col: Column | str) -> Column:
+def shuffle(col: Column | str, seed: Column | int | None = None) -> Column:
     """Random permutation of an array (PySpark ``functions.shuffle``).
 
-    Non-deterministic. Tests pin type and length, not order.
-    PySpark 4.0+ ``seed`` is an honest cut (not wired).
+    Unseeded it is non-deterministic — pin type and length, not order. With
+    ``seed`` (PySpark 4.0+) the permutation is reproducible, and the facade and
+    the Spark SQL door produce the **same** permutation for the same seed
+    because both resolve one UDF.
+
+    ``NULL`` in is ``NULL`` out (Spark). ``CAST(NULL AS ARRAY<INT>)`` used to
+    panic the engine here — see the FN-GT2 X-round.
 
     Parameters
     ----------
     col : Column or str
         Array column.
+    seed : Column or int, optional
+        Permutation seed. Omitted → a fresh permutation on every call.
 
     Returns
     -------
@@ -247,7 +278,9 @@ def shuffle(col: Column | str) -> Column:
     ``F.shuffle(F.array(1, 2, 3))`` is a length-3 integer array whose
     sorted values are ``[1, 2, 3]``.
     """
-    return _scalar("shuffle", col)
+    if seed is None:
+        return _scalar("shuffle", col)
+    return _scalar("shuffle", col, seed)
 
 
 def map_from_entries(col: Column | str) -> Column:
@@ -262,6 +295,15 @@ def map_from_entries(col: Column | str) -> Column:
     -------
     Column
         A map.
+
+    Raises
+    ------
+    PySparkException
+        On a **duplicate key**. Spark's default
+        ``spark.sql.mapKeyDedupPolicy`` is ``EXCEPTION``, so
+        ``map_from_entries(array(struct('a', 1), struct('a', 2)))`` is an error,
+        not last-write-wins — the same rule ``map()`` and :func:`str_to_map`
+        already enforce here.
 
     Examples
     --------
@@ -281,6 +323,11 @@ def str_to_map(
     Defaults: pair delimiter ``,`` and key/value delimiter ``:``.
     Both delimiters are **regular expressions** (Spark). A Python ``str``
     delimiter is wrapped as a literal (the default path must be a literal).
+
+    The Perl classes are Java's, i.e. **ASCII-only**: ``\\s`` is
+    ``[ \\t\\n\\x0B\\f\\r]``, so a non-breaking space (U+00A0) does
+    *not* split. A duplicate key raises (``spark.sql.mapKeyDedupPolicy`` is
+    ``EXCEPTION``).
 
     Parameters
     ----------

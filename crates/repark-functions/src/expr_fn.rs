@@ -16,11 +16,9 @@ use std::sync::Arc;
 use arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Cast, Expr, ScalarUDF};
-use datafusion_spark::function::array::expr_fn as spark_array;
 use datafusion_spark::function::bitmap::expr_fn as spark_bitmap;
 use datafusion_spark::function::bitwise::expr_fn as spark_bitwise;
 use datafusion_spark::function::datetime::expr_fn as spark_datetime;
-use datafusion_spark::function::map::expr_fn as spark_map;
 use datafusion_spark::function::math::expr_fn as spark_math;
 use datafusion_spark::function::string::expr_fn as spark_string;
 use datafusion_spark::function::url as spark_url_udfs;
@@ -283,16 +281,19 @@ pub fn element_at(container: Expr, key: Expr) -> Expr {
     call(crate::collection::element_at_udf(), vec![container, key])
 }
 
-/// Spark `shuffle(array)` — random permutation (from `datafusion-spark`).
+/// Spark `shuffle(array[, seed])` — random permutation (X1 NULL-guarded shim).
+///
+/// `args` is the array alone, or the array plus the Spark 4.0 `Int64` seed. Both doors resolve
+/// the same UDF, so `F.shuffle(col, seed)` and `shuffle(col, seed)` in SQL are one permutation.
 #[must_use]
-pub fn shuffle(arg: Expr) -> Expr {
-    spark_array::shuffle(arg)
+pub fn shuffle(args: Vec<Expr>) -> Expr {
+    call(crate::collection::shuffle_udf(), args)
 }
 
-/// Spark `map_from_entries(array<struct<key,value>>)` (from `datafusion-spark`).
+/// Spark `map_from_entries(array<struct<key,value>>)` — duplicate keys raise (X7 shim).
 #[must_use]
 pub fn map_from_entries(arg: Expr) -> Expr {
-    spark_map::map_from_entries(arg)
+    call(crate::collection::map_from_entries_udf(), vec![arg])
 }
 
 /// Spark `str_to_map(text, pairDelim, keyValueDelim)` — regex delimiters (owned shim).
@@ -304,18 +305,17 @@ pub fn str_to_map(text: Expr, pair_delim: Expr, key_value_delim: Expr) -> Expr {
     )
 }
 
-/// Spark `parse_url` — 2 or 3 args. Spark 4.1.2 raises `INVALID_URL` on
-/// invalid input. The DF kernel yields NULL for schemeless text and raises
-/// on some `://`-malformed URLs.
+/// Spark `parse_url` — 2 or 3 args, on `java.net.URI` splitting (X8). An unparsable URL
+/// raises Spark's `INVALID_URL` on both doors.
 #[must_use]
 pub fn parse_url(args: Vec<Expr>) -> Expr {
-    spark_url_udfs::parse_url().call(args)
+    call(crate::url::parse_url_udf(), args)
 }
 
-/// Spark `try_parse_url` — 2 or 3 args; NULL on invalid URL.
+/// Spark `try_parse_url` — 2 or 3 args; NULL on invalid URL (X8 shim).
 #[must_use]
 pub fn try_parse_url(args: Vec<Expr>) -> Expr {
-    spark_url_udfs::try_parse_url().call(args)
+    call(crate::url::try_parse_url_udf(), args)
 }
 
 /// Spark `url_decode(str)` (from `datafusion-spark`).

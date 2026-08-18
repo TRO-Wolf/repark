@@ -1095,6 +1095,14 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **FN-GT2 (2026-08-17):** leftover THIN-WIRE datetime/collections/url/bitmap
   — 18 names. Wrappers in `functions_datetime.py` / `functions_collections.py`
   / `functions_url.py`. Binder arms in `column/function_dispatch.rs`.
+  **X-round (2026-08-18):** ColumnOrName parity — `parse_url` / `try_parse_url`
+  dropped the force-lit on `partToExtract` / `key` (a bare `str` is a COLUMN
+  NAME, PySpark 4.1.2), `get`'s `index` likewise (only a bare `int` is wrapped),
+  and `url_encode` / `url_decode` / `try_url_decode` renamed the parameter
+  `col` → `str` (PySpark's spelling; positional calls unaffected).
+  `shuffle(col, seed)` wires the Spark 4.0 seed. `element_at` / `make_date`
+  docstrings now STATE the ANSI-class NULL divergence. Ledger:
+  `task/fn-gt2-ledger.md` (X-round).
   **Rework (2026-08-17):** W1 `element_at` treats a `str` extraction as a
   literal key; W2 interval
   `str` parts are column names; W3 `unix_micros` casts timestamp first; W4

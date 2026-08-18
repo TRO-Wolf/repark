@@ -33,13 +33,39 @@ use datafusion::logical_expr::{
 #[path = "str_to_map.rs"]
 mod str_to_map;
 
+/// NULL-guarded `shuffle` (X1 — the upstream kernel panics on an all-NULL list).
+#[path = "shuffle.rs"]
+mod shuffle;
+
+/// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
+#[path = "map_from_entries.rs"]
+mod map_from_entries;
+
 /// ===========================================================================================
 /// The collection shims to register (after the defaults, so `element_at` sheds its
-/// `map_extract`-alias resolution and `str_to_map` overwrites the literal-split kernel).
+/// `map_extract`-alias resolution, `str_to_map` overwrites the literal-split kernel,
+/// `shuffle` sheds the all-NULL panic, and `map_from_entries` refuses duplicate keys).
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![element_at_udf(), str_to_map_udf()]
+    vec![
+        element_at_udf(),
+        str_to_map_udf(),
+        shuffle_udf(),
+        map_from_entries_udf(),
+    ]
+}
+
+/// Spark `shuffle` UDF (NULL-guarded permutation; optional Spark 4.0 seed).
+#[must_use]
+pub fn shuffle_udf() -> Arc<ScalarUDF> {
+    shuffle::shuffle_udf()
+}
+
+/// Spark `map_from_entries` UDF (duplicate keys raise `DUPLICATED_MAP_KEY`).
+#[must_use]
+pub fn map_from_entries_udf() -> Arc<ScalarUDF> {
+    map_from_entries::map_from_entries_udf()
 }
 
 /// Spark `str_to_map` UDF (regex pair + key/value delimiters).

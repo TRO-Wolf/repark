@@ -31,9 +31,12 @@ EXCEPTIONS: dict[str, tuple[int, str]] = {
     # repark-common exists, well under the default); entries are added with a measured count
     # and reason in the same change that makes a crate root exceed the default.
     "repark-functions": (
-        175,  # measured 167 after U5 `pub mod ansi;`
+        175,  # measured 168 after FN-GT2 X8 (`pub mod url;` in, shim_udf_boilerplate! out)
         "register_all / analyzer_rules registration glue is root-legitimate; "
         "U5 added the ANSI ConfigExtension module decl; "
+        "FN-GT2 X8 added `pub mod url;` + a four-line register_all loop and paid for them "
+        "net-negative via sanctioned out (1) — the `shim_udf_boilerplate!` body moved to "
+        "src/shim_macros.rs and is re-exported at the root, so the ceiling did NOT rise; "
         "RATCHET: if registration moves",
     ),
     "repark-python": (

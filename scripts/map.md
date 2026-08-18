@@ -66,7 +66,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `#[cfg(test)] mod {…}` (file-backed only; same-line `#[cfg(test)] mod … {` also fails);
   non-test line ceilings with an EXCEPTIONS-with-reason table in the `.py` (SSOT; ratchet down
   only; empty at phase-1 PR-A; rows so far: `repark-functions` — registration glue
-  (ceiling 175 after U5 `pub mod ansi;` — Q10 kept 175 by net-zero crate-doc, no raise),
+  (ceiling 175 after U5 `pub mod ansi;` — Q10 kept 175 by net-zero crate-doc, and FN-GT2 X8
+  kept 175 again by sanctioned out (1): `pub mod url;` + its `register_all` loop went in while
+  the `shim_udf_boilerplate!` body went out to `src/shim_macros.rs`, measured 168, no raise),
   `repark-python` — the 180-line PyO3 crate root, a MANIFEST (module decls incl. the
   file-backed `exceptions` taxonomy module, the two error folds, the `#[pymodule]`
   registration) that already uses the sanctioned file-backed test module (phase-3 PR-3, EC-10;

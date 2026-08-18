@@ -953,7 +953,7 @@ fn format_compiled_java_pattern(
     Ok(output)
 }
 
-// (`shim_udf_boilerplate!` comes from `lib.rs` via textual macro scope.)
+// (`crate::shim_udf_boilerplate!` is the crate-root re-export of `shim_macros.rs`.)
 
 // === r20 A1: saf-datetime ===
 // SAF-001: Date32 values outside chrono's `NaiveDate` range (≈ years −262143…+262142)
@@ -997,7 +997,7 @@ impl Hash for AddMonths {
 }
 
 impl ScalarUDFImpl for AddMonths {
-    shim_udf_boilerplate!("add_months");
+    crate::shim_udf_boilerplate!("add_months");
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(DataType::Date32)
@@ -1092,7 +1092,7 @@ impl Hash for TruncDate {
 }
 
 impl ScalarUDFImpl for TruncDate {
-    shim_udf_boilerplate!("trunc");
+    crate::shim_udf_boilerplate!("trunc");
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(DataType::Date32)
@@ -1176,7 +1176,7 @@ impl Hash for DateTrunc {
 }
 
 impl ScalarUDFImpl for DateTrunc {
-    shim_udf_boilerplate!("date_trunc");
+    crate::shim_udf_boilerplate!("date_trunc");
 
     fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
         let ntz = arg_types
@@ -1291,7 +1291,7 @@ impl Hash for DateFormat {
 }
 
 impl ScalarUDFImpl for DateFormat {
-    shim_udf_boilerplate!("date_format");
+    crate::shim_udf_boilerplate!("date_format");
 
     fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
         Ok(DataType::Utf8)

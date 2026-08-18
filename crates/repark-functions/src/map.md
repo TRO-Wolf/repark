@@ -84,8 +84,47 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `analyze_eagerly(state, plan)` — the ONE blessed way to run the analyzer before a plan's
   schema or expressions cross a boundary (`ctx.sql` plans are PRE-analysis; an un-analyzed
   schema over analyzed buffers bit-reinterprets at the Arrow export — consumed by
-  `repark-spark::spark_ast` and `repark-python::column::sql`) + the
-  `shim_udf_boilerplate!` macro every shim `ScalarUDFImpl` shares.
+  `repark-spark::spark_ast` and `repark-python::column::sql`) + the crate-root
+  re-export of `shim_udf_boilerplate!`.
+- `shim_macros.rs` — the `shim_udf_boilerplate!` (`name` / `signature`) macro every shim
+  `ScalarUDFImpl` shares, re-exported at the crate root so call sites keep saying
+  `crate::shim_udf_boilerplate!`. File-backed rather than root-inline because
+  `scripts/check_lib_rs.py` counts every `lib.rs` line and this root sits at its 175 ceiling —
+  FN-GT2 X8 paid for `pub mod url;` by moving this body out (sanctioned out (1)), so the
+  ceiling did not rise.
+- `url.rs` — **FN-GT2 X8:** Spark `parse_url` / `try_parse_url` re-kernelled on
+  `java.net.URI`-shaped splitting (sibling `java_uri.rs` via `#[path]`).
+  `datafusion-spark` 54.1 extracts with `url::Url`, a WHATWG-URL **normalizer**;
+  Spark uses `java.net.URI`, a **splitter**. Eleven measured divergences closed:
+  explicit `AUTHORITY` port kept, scheme/host case kept, dot segments unresolved,
+  IDN host → NULL (registry-based authority) not punycode, empty-userinfo
+  punctuation kept (`USERINFO` is `''`), opaque-URL `PATH` NULL, `%2e` kept
+  **verbatim** — never decoded, and so never resolved as a dot segment either.
+  Spark reads the **`Raw`** getters for `PATH` / `QUERY` / `REF` / `FILE` /
+  `AUTHORITY` / `USERINFO`; only `HOST` (`getHost`) and `PROTOCOL` (`getScheme`)
+  are non-`Raw`, and neither can hold an escape — so nothing this module serves
+  is percent-decoded (MEASURED-JAVAP over `ParseUrlEvaluator$`). Also: an
+  unparsable URL raises `INVALID_URL` on `parse_url` (upstream NULLed schemeless
+  text) and NULLs on `try_parse_url`; the `QUERY` key is a Java regex
+  (`(&|^)<key>=([^&]*)`, group 2) whose **compile failure raises under both**
+  UDFs (`TryParseUrl`'s replacement is `ParseUrl(params, failOnError = false)`,
+  not `TryEval`, and `getPattern` has no `catch`); and a 3-arg call with a
+  non-`QUERY` part short-circuits to NULL before the URL is parsed at all.
+  Registered from `lib.rs` after the `datafusion-spark` defaults so both doors
+  resolve it. **RESIDUAL this module introduced:** that key is a
+  `java.util.regex` pattern on Spark and a `regex`-crate pattern here, and the
+  `regex` crate is a finite automaton — `a(?=1)` lookahead, `(?<=&)b` lookbehind,
+  `(a)\1` backreference, `(?>a)` atomic group and `\Qa\E` quoting all compile on
+  Java and **raise** here (both UDFs). Everything else measured agrees, including
+  `\p{Alpha}`, `a++`, `[a-z&&[^b]]` and `(?<n>a)`. Pinned by
+  `url::tests::parse_url_query_key_regex_dialect_residual`; full agree/diverge
+  table in `task/fn-gt2-ledger.md` "X8 RESIDUAL".
+- `java_uri.rs` — the RFC-2396 splitter behind `url.rs`: scheme / authority
+  (server vs registry) / userinfo / host / port / path / query / fragment, and
+  Java's character classes and `scanEscape` rules. Every accessor is a `raw_*`
+  getter handing back the recorded span verbatim; there is **no decoder in the
+  module at all**, because a decoder could only ever reintroduce the divergence.
+  No normalization anywhere — that is the whole point.
 - `random.rs` — **r20 G2:** Spark `XORShiftRandom` + MurmurHash3 `hashSeed`; `rand`/`randn`
   ScalarUDFs (seed + partitionIndex=0; sequential within batch). Pins: first `rand(0)` value,
   sampleBy seed-0 count band.
@@ -180,7 +219,18 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `map_extract`, broken on every array): arrays are 1-based / negative-from-end / OOB → NULL
   with index 0 → error (Spark `INVALID_INDEX_OF_ZERO`); maps return the plain value-or-NULL
   (`map_extract` unwrapped through `array_element`). **FN-GT2 rework:**
-  `str_to_map.rs` (`#[path]`) regex `str_to_map` overwrites DF's literal split.
+  `str_to_map.rs` (`#[path]`) regex `str_to_map` overwrites DF's literal split
+  (**FN-GT2 X6:** `bind_ascii_perl_classes` binds `\s`/`\d`/`\w` to the POSIX
+  ASCII classes — Java's Perl classes are ASCII-only, the `regex` crate's are
+  Unicode, so NBSP used to split where Spark does not).
+  **FN-GT2 X1 / X7:** two more `#[path]` siblings registered from
+  `collection::functions()` — `shuffle.rs` (`ReparkShuffle`: the upstream kernel's
+  NULL-slot placeholder read panics `arrow-data` when the child values buffer is
+  empty, i.e. `CAST(NULL AS ARRAY<INT>)`; guarded input is returned as-is, and the
+  Spark 4.0 `shuffle(array, seed)` overload passes through) and
+  `map_from_entries.rs` (`ReparkMapFromEntries`: duplicate keys raise
+  `DUPLICATED_MAP_KEY` per `spark.sql.mapKeyDedupPolicy=EXCEPTION`, instead of the
+  upstream kernel's silent last-write-wins).
   Also `SparkArrayGet`
   (`__repark_array_get__`) — the embedded (never registered) `[]` subscript UDF the analyzer
   swaps in. **E1 octo C2:** `SparkGetItem` / `spark_get_item_udf` (`__repark_get_item__`) —
@@ -232,8 +282,10 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `map_from_entries` / `str_to_map` / URL + bitmap spark-reg builders.
   **FN-GT2 rework (2026-08-17):** `str_to_map.rs` (via `collection.rs` `#[path]`)
   overwrites the DF literal-split kernel — both delimiters are regex.
-  `parse_url` rustdoc: Spark raises on invalid URL; DF HOST is NULL on
-  schemeless text and raises on some `://`-malformed URLs.
+  **FN-GT2 X-round (2026-08-18):** `shuffle(args)` takes a `Vec<Expr>` (array,
+  optional seed) and `parse_url` / `try_parse_url` / `map_from_entries` / `shuffle`
+  now embed the repark shims instead of `datafusion-spark`'s, so the facade and the
+  SQL door are one kernel. Ledger: `task/fn-gt2-ledger.md`.
 
 ## Pointers
 

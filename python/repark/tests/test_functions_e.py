@@ -204,13 +204,23 @@ def test_get_is_zero_based_vs_sql_element_at(spark: ReparkSession) -> None:
 
 
 def test_get_map_by_key(spark: ReparkSession) -> None:
-    frame = spark.sql("SELECT map('k', 1, 'z', 2) AS m")
+    """Map lookup through ``get`` still works — but the key must be a Column.
+
+    UPDATED by FN-GT2 X4/X12: PySpark 4.1.2 ``get(col, index)`` is
+    ``ColumnOrName`` (it only wraps a bare ``int`` in ``lit``), so a bare
+    ``str`` is a **column name**, not a map key. The old spelling
+    ``F.get('m', 'z')`` meant the opposite of what the same call means on
+    Spark. ``F.element_at`` keeps the literal-key convenience (W1).
+    """
+    frame = spark.sql("SELECT map('k', 1, 'z', 2) AS m, 'z' AS which")
     table = _table(
         frame.select(
-            F.get("m", "z").alias("hit"),
-            F.get("m", "no").alias("miss"),
+            F.get("m", F.lit("z")).alias("hit"),
+            F.get("m", F.lit("no")).alias("miss"),
+            F.get("m", "which").alias("by_column_name"),
         )
     )
     assert table.column("hit").to_pylist() == [2]
     assert table.column("miss").to_pylist() == [None]
+    assert table.column("by_column_name").to_pylist() == [2]
     assert pa.types.is_integer(table.schema.field("hit").type)
