@@ -149,7 +149,7 @@ source through the frame schema, and its own pins live in `test_explode_rewrite.
 | C-035 | The same field resolves through the casefold, `F.col` and getitem spellings; `explode_outer` keeps the null/empty-list rows on the scalar-element lists while plain `explode` drops them. | PROVEN — `test_nested_explode_casefold_and_column_forms_agree`, `test_nested_explode_outer_keeps_null_and_empty_list_rows` (`Tags` 75+26, `Scores` 90+21) |
 | C-035b | BUG-CANDIDATE: `explode_outer` refuses on `array<struct>` where plain `explode` succeeds on the same column. Reported, not fixed. | PROVEN — `test_nested_explode_outer_on_array_of_struct_refuses_loud` (both the refusal needle and the plain-explode contrast) |
 | C-036 | A8 held pin: `dynamicFlatten` flattens struct columns with parent-path prefixes, in place, dropping the `array<void>` column — read through parquet (not dict rows, which infer as maps). | PROVEN — `test_nested_dynamic_flatten_unnests_struct_columns`, `test_nested_dynamic_flatten_full_depth_column_order` |
-| C-036b | BUG-CANDIDATE: `count()` on the full-depth flatten plan reds inside `push_down_leaf_projections` while `to_arrow()` on the same plan returns the correct rows; one explode pass counts fine. Reported, not fixed. | PROVEN — `test_nested_dynamic_flatten_count_action_refuses_loud` (export-path count, the refusal needle, and the two narrow controls) |
+| C-036b | BUG-CANDIDATE: `count()` on the full-depth flatten plan reds inside `push_down_leaf_projections` while `to_arrow()` on the same plan returns the correct rows; one explode pass counts fine. Reported, not fixed. **SUPERSEDED 2026-08-18 — FIXED as DEFECT-2 (`task/c25-bugfix-ledger.md`); the pin was flipped in place and renamed `test_nested_dynamic_flatten_count_action_is_green`.** | PROVEN — `test_nested_dynamic_flatten_count_action_refuses_loud` (export-path count, the refusal needle, and the two narrow controls) |
 | C-037 | POLICY (A5): an under-sampled smartCsv read misses the int32→int64 widening that sits past the cap; the full scan sees it. Pinned, not fixed. | PROVEN — `test_schema_inference_sampling_miss_is_policy` (capped `int32` vs full-scan `int64`, with the file's own values as the control) |
 | C-037b | POLICY: the under-widened column then fails LOUD on materialisation (`Cannot cast string '2147483648' to value of Int32 type`) instead of truncating or nulling, and the widened read materialises the same column cleanly as int64. | PROVEN — `test_schema_inference_undersampled_cast_refuses_loud` (both halves) |
 | C-038 | POLICY: zero-padded identifier strings resolve to `int32` (the padding is lost), and the recognized null-token spellings dominate `empty_or_null`. | PROVEN — `test_schema_inference_labeled_classes_resolve_as_documented` |
@@ -207,6 +207,9 @@ landing silently.
    would be ambiguous`. The multi-pass explode is what triggers it: one explode pass, and
    the shallow one-pass flatten, both count fine on the same corpus. Found by executing
    the tour notebook, which now counts through the export path and says why.
+   **SUPERSEDED 2026-08-18:** fixed as DEFECT-2 — the trip was DataFusion 54.1's
+   `push_down_leaf_projections`, which the core session now wraps so it declines on the
+   `Unnest`-carrying plans it miscompiles. The notebook counts both ways again.
 
 5. **Zero-padded identifiers lose their padding to inference (POLICY).** Documented ladder
    behavior — `000000` is an integer token — but it is exactly the "leading-zero ids"

@@ -60,8 +60,11 @@ use crate::{
     resolve_s3_region_override,
 };
 
+mod df_guards;
 mod spill;
 mod temp_views;
+
+use df_guards::{apply_df_54_1_config_guards, context_with_df_54_1_rule_guards};
 
 pub(crate) use spill::BYTES_PER_GB;
 pub use spill::REPARK_OWNED_DATAFUSION_PSEUDO_KEYS;
@@ -164,7 +167,8 @@ pub const DEFAULT_BATCH_SIZE: usize = 65536;
 /// Keys without the [`DATAFUSION_CONFIG_PREFIX`] are left alone (they belong to the catalog
 /// parser, the write-knob readers or the extension hook). Applied in sorted key order so a build
 /// is deterministic, and AFTER the typed setters + core defaults so an explicit conf wins over
-/// both — including the DF-54.1 subquery guard, which a user can knowingly re-enable.
+/// both — including the two DF-54.1 guards (scalar-subquery physical path, leaf-expression
+/// pushdown), which a user can knowingly re-enable.
 ///
 /// An unknown or unparsable `datafusion.*` key fails loud ([`Error::Config`]) rather than being
 /// dropped: a silently-inert conf key is exactly the defect this function exists to fix.
@@ -408,18 +412,7 @@ impl ReparkSessionBuilder {
             .clone()
             .unwrap_or_else(|| Arc::new(NoopSessionExtension));
         let mut config = SessionConfig::new();
-        // DF 54.1 REGRESSION GUARD: the new default-on physical uncorrelated-scalar-subquery
-        // path (`ScalarSubqueryExec` wrapping) drops the query's top-level Sort — `SELECT …
-        // WHERE x < (SELECT …) ORDER BY …` returns unsorted rows (fuzzer repros fuzz-42-1/2,
-        // 2026-08-01; minimal: no `SortExec` in the physical plan). Force the pre-54 rewrite
-        // (`ScalarSubqueryToJoin`) until upstream fixes; re-enable is gated on the banked
-        // repros passing WITH the flag on. Phase-2 design G8: this guard is a CORE session
-        // default, never a door-extension knob — an extension-less native session must carry
-        // it (pinned by `bare_session_without_extension_carries_df_54_1_subquery_guard`).
-        config
-            .options_mut()
-            .optimizer
-            .enable_physical_uncorrelated_scalar_subquery = false;
+        apply_df_54_1_config_guards(&mut config);
         config = repark_iceberg::write::with_merge_session_knobs(
             config,
             scan_pruning,
@@ -465,7 +458,9 @@ impl ReparkSessionBuilder {
         runtime = runtime.with_object_list_cache_limit(0);
         let runtime = runtime.build_arc().map_err(engine_err)?;
 
-        let context = SessionContext::new_with_config_rt(config, runtime);
+        // NOT `SessionContext::new_with_config_rt`: DF-54.1 regression guard 2 replaces ONE
+        // optimizer rule in the otherwise-stock state (`df_guards.rs`).
+        let context = context_with_df_54_1_rule_guards(config, runtime);
         // R6-1: the temp-view home is captured ONCE, here, from the FINAL build-time config —
         // never re-read at registration time. `SET datafusion.catalog.default_catalog = <iceberg>`
         // must not be able to move where `createOrReplaceTempView` writes.
@@ -1469,6 +1464,9 @@ impl std::fmt::Debug for ReparkSession {
 
 #[cfg(test)]
 mod aws_gate_tests;
+
+#[cfg(test)]
+mod df_guard_tests;
 
 #[cfg(test)]
 mod namespace_create_tests;

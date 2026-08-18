@@ -62,9 +62,12 @@ illustrative. A claim with no verified basis does not go in.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
   dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,
   `explode_outer` on `array<struct>` (now keeps null/empty rows), `count()` **and any
-  narrowing `select`** on a deep `dynamicFlatten` (G3b 2026-08-18: the old section named the
-  wrong cause and an incomplete remedy — rewritten to the measured trigger, the full
-  works/raises table, and the verified `cache()` remedy), `smartCsv` delimiter auto-detect,
+  narrowing `select`** on a deep `dynamicFlatten` — **FIXED, kept as a fixed entry**
+  (DEFECT-2 2026-08-18: the trigger was DataFusion 54.1's `push_down_leaf_projections`, which
+  the core session now wraps so it declines on the `Unnest` plans it miscompiles; the section
+  states the mechanism, the measured perf numbers on both sides of the scope choice, and
+  re-frames `cache()` as ordinary caching rather than a workaround),
+  `smartCsv` delimiter auto-detect,
   the wrong-door `ParserError`, the UTC timezone default (TZ-2 / TZ-3), and the install smoke.
 - `map.md` — this file.
 

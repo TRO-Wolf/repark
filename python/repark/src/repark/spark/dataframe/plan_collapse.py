@@ -1032,7 +1032,11 @@ def _dynamic_flatten_unnest_structs(
 
     Implemented via :meth:`DataFrame.selectExpr` with always-quoted idents — native
     ``get_field`` projections over createDataFrame MemTables leave qualified leaf names
-    that poison multi-pass unnest under ``push_down_leaf_projections``.
+    that poison multi-pass unnest under ``push_down_leaf_projections``. (DEFECT-2,
+    2026-08-18: that rule now declines on exactly these plans — see the DF-54.1 guard in
+    ``crates/repark-core/src/session/df_guards.rs`` — so this spelling is no longer
+    load-bearing against the optimizer trip. It stays because the quoted-ident form is what
+    keeps mixed-case / hostile field names resolving through the scratch-view chain.)
 
     Field projection is **null-safe**: ``CASE WHEN parent IS NULL THEN NULL ELSE
     parent.field END``. Bare ``parent.field`` on a null struct parent currently yields

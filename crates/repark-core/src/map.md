@@ -23,7 +23,13 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   setters + core defaults so an explicit conf wins, before the extension hook; an unknown key is
   an `Error::Config`, never silently inert — this is what makes
   `datafusion.catalog.information_schema = true` real and Q8's `SHOW TABLES` / `DESCRIBE` /
-  `information_schema.*` live in BOTH SQL doors), installs a
+  `information_schema.*` live in BOTH SQL doors), carries the **two DF-54.1 regression guards**
+  (`session/df_guards.rs`) at two different altitudes — a config default,
+  `optimizer.enable_physical_uncorrelated_scalar_subquery = false` (the 54.1 physical
+  scalar-subquery path drops a top-level Sort), and, since DEFECT-2 2026-08-18, a **scoped
+  optimizer rule**: DataFusion's rule list with `push_down_leaf_projections` wrapped so it
+  declines on the `Unnest`-carrying plans it miscompiles (the shape every repeated `explode` /
+  `dynamicFlatten` builds) and runs untouched everywhere else — installs a
   RAM-relative `FairSpillPool` when memory is unset (`clamp(0.6 × cgroup-or-MemTotal,
   1 MiB, 8 GiB)`; `memory_limit_bytes(0)` / `memory_limit_gb(0)` opt out to Infinite;
   non-zero budgets below 1 MiB refuse at build; runtime `SET datafusion.runtime.memory_limit`
@@ -266,6 +272,7 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
 | `s3a://` path not found but `s3://` works | Both schemes must be registered per bucket (`register_bucket_store` does both); DataFusion looks up `scheme://bucket` verbatim. |
 | `table_exists` on a quoted name misparses | Quote-aware `parse_table_identifier_segments` (double-quote/backtick; dots inside quotes OK); path-escape segments (`..` / `/` / `\`) reject at parse. |
 | `SHOW TABLES` / `DESCRIBE` refuses "unless information_schema is enabled" | Set it on the builder: `.config("datafusion.catalog.information_schema", "true")` (P2G R2 — `apply_datafusion_config_keys` in `session.rs`). It is OFF by default; nothing else enables it. |
+| A nested-column query got slower after 2026-08-18 | Only if the plan carries an `Unnest` (a repeated `explode` / multi-pass `dynamicFlatten`) AND `push_down_leaf_projections` fails on it: DF-54.1 guard 2 then keeps the unoptimized plan rather than the miscompiled one, so struct-field extraction is not hoisted toward the leaves for that subtree (`session/df_guards.rs`). Plans with no `Unnest` are untouched — MEASURED identical to stock DataFusion, plan and timing. There is deliberately no knob that restores the miscompile; `.config("datafusion.optimizer.enable_leaf_expression_pushdown", "false")` still turns the whole optimization off. Pins: `bare_session_keeps_leaf_expression_pushdown_enabled`, `a_plan_without_unnest_keeps_the_stock_leaf_pushdown`, `an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown`. |
 | A `datafusion.*` builder key fails the build | Intended: an unknown/unparseable key is `Error::Config` naming the key, so a typo cannot go silently inert. Check the spelling against DataFusion's `ConfigOptions`. |
 | `spark.sql.session.timeZone` seems to have no effect on `year`/`hour`/`date_trunc` | Since H-1a split B it DOES, on a Spark-extended session. On a session built without `SparkExtension` it does not, because stock DataFusion's `date_part` reads the array's own zone — the zone reaches the extractors through `SparkExtension::configure`. Pins: `crates/repark-spark/tests/session_timezone.rs`, `crates/repark-sql/tests/session_timezone_ansi_door.rs`. |
 | A session refuses to build naming `spark.sql.session.timeZone` | The zone is validated at construction (`session_time_zone.rs`): it must be an IANA id (`America/New_York`) or a fixed offset (`+05:00`). A differently-cased lookalike key is not this knob — there is exactly one spelling. |

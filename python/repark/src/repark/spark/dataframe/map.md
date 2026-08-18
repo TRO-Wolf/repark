@@ -81,6 +81,12 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
   **SE-1 R-3:** `_strip_internal_tighten_metadata` lives here so `to_arrow()` /
   `to_arrow_batches` drop the internal `repark.tighten_nulls` tag.
+  **DEFECT-2 (2026-08-18):** `_dynamic_flatten_unnest_structs`'s always-quoted
+  selectExpr spelling is no longer load-bearing against the DF-54.1
+  `push_down_leaf_projections` trip (the Unnest-safe guard in
+  `crates/repark-core/src/session/df_guards.rs` owns that now); the spelling
+  stays for mixed-case / hostile field-name resolution — its rationale note in
+  the helper says so.
   **Round 3:** `_output_field_would_persist_required` (R-D nested Struct/Array/Map)
   lives here so `core.py` stays under its ceiling.
   **CEIL-1 (D1 #173, move-only):** the six remaining `core.py` tail helpers moved here
