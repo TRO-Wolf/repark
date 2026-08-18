@@ -80,3 +80,7 @@ Campaign: [phase-3-python-facade.md](../../../../../docs/history/port-v2/phase-3
 - Model `copy(extra)` must apply Param overrides (LR/Logit/XGBRegressor/CV→bestModel) so `transform(df, params)` honors `predictionCol` (octo C4-L-002).
 - Hostile `relative_path` / stage uid with `..` → `IllegalArgumentException` (octo C2-SEC-001); stage `class` outside `repark.ml.*` or under `repark.ml.ext` → load refuse (octo C2-SEC-002).
 - M7 format/lint gate clean (ruff format + py-lint).
+- **SQM round 7 (R7-1):** ML scratch views (`__repark_cv_*`, `__repark_*eval_*`, `__repark_fw_*`,
+  the per-model predict views) are named through `repark.spark._temp_views.scratch_view_name`, so
+  the name is the home-qualified SQL reference; `__repark_cv_mat_*`-style prefix assertions
+  compare on `local_view_name(...)`.

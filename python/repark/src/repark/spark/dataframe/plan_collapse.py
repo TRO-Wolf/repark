@@ -1,11 +1,12 @@
 """Plan-collapse / show-format / qcol-rewrite region — module-level helpers (r27 T0b).
 
-Extracted VERBATIM from ``core.py`` (SE-1 PR-B headroom): the r23b N2 plan-collapse
+Extracted from ``core.py`` (SE-1 PR-B headroom): the r23b N2 plan-collapse
 helpers plus the show/eager-eval formatters, Arrow type labels, generator SQL-type
-mapping and the H1 join-qcol rewriters that trailed them. Move-only — no behaviour
-change. ``core.py`` re-exports every name from its tail bind block, so
-``repark.spark.dataframe.core`` / ``repark.spark.dataframe`` import paths are unchanged
-(Q7 import freeze).
+mapping and the H1 join-qcol rewriters that trailed them. ``core.py`` re-exports
+every name from its tail bind block, so ``repark.spark.dataframe.core`` /
+``repark.spark.dataframe`` import paths are unchanged (Q7 import freeze).
+**SE-1 R-3:** also owns ``_strip_internal_tighten_metadata`` (export-boundary
+strip of ``repark.tighten_nulls``).
 
 Nothing here imports ``core`` at module scope (the region modules' circular-import rule);
 the one ``core``-side type it needs is a ``TYPE_CHECKING`` annotation only.
@@ -26,6 +27,90 @@ if TYPE_CHECKING:
     from repark.spark.types import StructType
 
 logger = logging.getLogger("repark.spark.dataframe")
+
+
+def _output_field_would_persist_required(field: Any) -> bool:
+    """True when this field or a nested child would persist Iceberg-required."""
+    if not field.nullable:
+        return True
+    return _data_type_has_required_child(field.dataType)
+
+
+def _data_type_has_required_child(data_type: Any) -> bool:
+    """Walk Struct / Array / Map the way the engine ``field_or_child`` helper does."""
+    children = getattr(data_type, "fields", None)
+    if children is not None:
+        return any(_output_field_would_persist_required(child) for child in children)
+    element = getattr(data_type, "elementType", None)
+    if element is not None:
+        if not getattr(data_type, "containsNull", True):
+            return True
+        return _data_type_has_required_child(element)
+    value_type = getattr(data_type, "valueType", None)
+    if value_type is not None:
+        if not getattr(data_type, "valueContainsNull", True):
+            return True
+        return _data_type_has_required_child(value_type)
+    return False
+
+
+def _strip_internal_tighten_metadata(table: Any) -> Any:
+    """Drop ``repark.tighten_nulls`` from user-visible Arrow export (not a data column)."""
+    import pyarrow as pa
+
+    key = b"repark.tighten_nulls"
+
+    def strip_field(field: Any, depth: int = 0) -> tuple[Any, bool]:
+        if depth > 32:
+            return field, False
+        changed = False
+        meta = field.metadata
+        if meta and key in meta:
+            meta = {k: v for k, v in meta.items() if k != key}
+            changed = True
+        new_type, type_changed = strip_type(field.type, depth)
+        changed = changed or type_changed
+        if not changed:
+            return field, False
+        return field.with_type(new_type).with_metadata(meta), True
+
+    def strip_type(data_type: Any, depth: int) -> tuple[Any, bool]:
+        if pa.types.is_struct(data_type):
+            fields = []
+            changed = False
+            for index in range(data_type.num_fields):
+                child, child_changed = strip_field(data_type.field(index), depth + 1)
+                fields.append(child)
+                changed = changed or child_changed
+            return (pa.struct(fields) if changed else data_type, changed)
+        if pa.types.is_list(data_type) or pa.types.is_large_list(data_type):
+            child, child_changed = strip_field(data_type.value_field, depth + 1)
+            if not child_changed:
+                return data_type, False
+            if pa.types.is_large_list(data_type):
+                return pa.large_list(child), True
+            return pa.list_(child), True
+        if pa.types.is_map(data_type):
+            value_field, value_changed = strip_field(data_type.item_field, depth + 1)
+            if not value_changed:
+                return data_type, False
+            return pa.map_(data_type.key_field, value_field), True
+        return data_type, False
+
+    fields = []
+    changed = False
+    for field in table.schema:
+        new_field, field_changed = strip_field(field)
+        fields.append(new_field)
+        changed = changed or field_changed
+    schema_meta = table.schema.metadata
+    if schema_meta and key in schema_meta:
+        schema_meta = {k: v for k, v in schema_meta.items() if k != key}
+        changed = True
+    if not changed:
+        return table
+    new_schema = pa.schema(fields, metadata=schema_meta)
+    return type(table).from_arrays(list(table.columns), schema=new_schema)
 
 
 # ==================================================================================================
@@ -1127,27 +1212,27 @@ def _rewrite_join_qcol_sql(
             side_alias = left_alias if (same_object_token_index % 2 == 0) else right_alias
             same_object_token_index += 1
             engine = _side_engine(left, field)
-            return f"{_quote_ident(side_alias)}.{_quote_ident(engine)}"
+            return f"{side_alias}.{_quote_ident(engine)}"
         if plan_id == left._plan_id or (
             left._origin_map is not None and any(pid == plan_id for pid, _field in left._origin_map)
         ):
             # Prefer direct left plan_id; also accept nested origins that live on left.
             if plan_id == left._plan_id:
                 engine = _side_engine(left, field)
-                return f"{_quote_ident(left_alias)}.{_quote_ident(engine)}"
+                return f"{left_alias}.{_quote_ident(engine)}"
             if left._origin_map is not None and (plan_id, field) in left._origin_map:
                 engine = left._origin_map[(plan_id, field)]
-                return f"{_quote_ident(left_alias)}.{_quote_ident(engine)}"
+                return f"{left_alias}.{_quote_ident(engine)}"
         if plan_id == right._plan_id or (
             right._origin_map is not None
             and any(pid == plan_id for pid, _field in right._origin_map)
         ):
             if plan_id == right._plan_id:
                 engine = _side_engine(right, field)
-                return f"{_quote_ident(right_alias)}.{_quote_ident(engine)}"
+                return f"{right_alias}.{_quote_ident(engine)}"
             if right._origin_map is not None and (plan_id, field) in right._origin_map:
                 engine = right._origin_map[(plan_id, field)]
-                return f"{_quote_ident(right_alias)}.{_quote_ident(engine)}"
+                return f"{right_alias}.{_quote_ident(engine)}"
         # Unknown plan_id — leave token (should not happen for well-formed conditions).
         return match.group(0)
 
@@ -1209,3 +1294,139 @@ def _sql_embed_expr_fragment(fragment: str) -> str:
     if bare is not None:
         return _quote_ident_sql(bare)
     return fragment.strip()
+
+
+# ==================================================================================================
+# CEIL-1 (D1 #173): global-agg / partition-transform / pandas-UDF-frame gate helpers
+# moved VERBATIM from ``core.py``'s tail block (move-only; T0b precedent). ``core.py``
+# re-exports all six from its tail bind block, so every import path is unchanged (Q7 freeze).
+# ==================================================================================================
+
+
+def _is_native_pure_global_aggregate(column: Column) -> bool:
+    """True when ``DataFrame.aggregate`` can accept this column as an aggregate arg.
+
+    Bare ``F.sum``/… builders set ``_is_aggregate_function``; ``.alias`` / ``for_select``
+    preserve it. Cast / binary / unary / scalar wrappers clear it and need the SQL
+    global-agg path (metadata only — no display-string sniff; octo C2-Q-002 fallout).
+
+    Compound AF arguments (``sum((X + 1))``) keep nested parentheses in structural
+    ``sql_expr``; the native pure path cannot rebind those case-preserved leaves, so they
+    take the free-SQL global-agg path instead (octo C6-L-002).
+    """
+    if not (column._is_aggregate and column._is_aggregate_function):
+        return False
+    sql_text = column._sql_expr
+    if sql_text is None:
+        return True
+    open_paren = sql_text.find("(")
+    if open_paren < 0:
+        return True
+    # Nested ``(`` after the outer AF call → compound arg; free-SQL path keeps quotes.
+    return "(" not in sql_text[open_paren + 1 :]
+
+
+def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
+    """Extract simple leaf names from a ``count(DISTINCT …)`` display/sql fragment.
+
+    Supports bare/quoted simple names (``count(DISTINCT a, b)``, ``count(DISTINCT "A")``)
+    and the multi-col null-if-any pack form
+    ``count(DISTINCT CASE WHEN … THEN struct("a", "b") END)`` (octo C5-L-001). Compounds
+    (``count(DISTINCT (x + 1))``) return ``None`` so rebind leaves them alone.
+    """
+    stripped = text.strip()
+    if not stripped.startswith("count(DISTINCT ") or not stripped.endswith(")"):
+        return None
+    body = stripped[len("count(DISTINCT ") : -1].strip()
+    # Multi-col SQL pack: only the struct field list carries recoverable simple names.
+    case_match = re.fullmatch(
+        r"CASE WHEN .+ THEN struct\((.+)\) END",
+        body,
+        flags=re.DOTALL,
+    )
+    if case_match is not None:
+        body = case_match.group(1).strip()
+    # Comma-separated simple identifiers, each optionally double-quoted.
+    token = r'"?([A-Za-z_][A-Za-z0-9_]*)"?'
+    if re.fullmatch(token, body) is not None:
+        match = re.fullmatch(token, body)
+        return [match.group(1)] if match is not None else None
+    multi = re.fullmatch(
+        rf"(?:{token}\s*,\s*)+{token}",
+        body,
+    )
+    if multi is None:
+        return None
+    return re.findall(r'"?([A-Za-z_][A-Za-z0-9_]*)"?', body)
+
+
+def _global_agg_sql_parts(column: Column) -> tuple[str, str]:
+    """``(expression_sql, output_name)`` for the SQL global-agg select path.
+
+    Expression SQL comes from structural ``Column._sql_expr`` chains (aggregate builders
+    quote identifiers; ``alias`` does not embed ``AS name`` — octo C3-SEC-001 / C3-002).
+    Output names are always quoted by the caller via ``_quote_ident``.
+    """
+    if column._projection_name is not None:
+        output_name = column._projection_name
+    elif column._agg_name is not None:
+        output_name = column._agg_name
+    else:
+        output_name = column.spark_display_part()
+    return column.sql_expr_part(), output_name
+
+
+def _pandas_udf_window_frame_bounds(spec: Any) -> tuple[int | None, int | None]:
+    """Resolve rows-frame offsets for windowed GROUPED_AGG (M7).
+
+    Returns ``(start, end)`` relative to the current row: ``None`` = unbounded on that
+    side; ``0`` = current row. When G2 has not set ``_frame_start`` / ``_frame_end`` on
+    the :class:`~repark.window.WindowSpec`, ordered windows default to Spark's
+    ``ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`` → ``(None, 0)``.
+    """
+    from repark.spark.window import _JVM_LONG_MAX, _JVM_LONG_MIN
+
+    order_columns = list(getattr(spec, "_order_columns", []) or [])
+    if not order_columns:
+        return (None, None)
+    start = getattr(spec, "_frame_start", None)
+    end = getattr(spec, "_frame_end", None)
+    if start is None and end is None:
+        # G2's WindowSpec always declares the attrs (None until rowsBetween sets ints);
+        # ordered window with no explicit frame keeps the Spark default.
+        return (None, 0)
+    # G2 normalizes ±unbounded to JVM long sentinels — map back to None (unbounded side).
+    if start is not None:
+        start = None if int(start) <= _JVM_LONG_MIN else int(start)
+    if end is not None:
+        end = None if int(end) >= _JVM_LONG_MAX else int(end)
+    return (start, end)
+
+
+def _reject_partition_transform(column: Column) -> None:
+    """Raise if ``column`` is an ``F.years``/``months``/``days``/``hours`` partition transform.
+
+    Those expressions are valid only inside :meth:`DataFrameWriterV2.partitionedBy` (live PySpark
+    4.1.2: ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
+    """
+    transform = getattr(column, "_partition_transform", None)
+    if transform is not None:
+        raise AnalysisException(
+            f"[PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY] The expression "
+            f"{transform!r} must be inside 'partitionedBy'."
+        )
+
+
+def _reject_aggregate_in_with_column(column: Column, *, surface: str) -> None:
+    """Refuse sticky aggregates on ``withColumn`` / ``withColumns`` (combine octo C3-001).
+
+    Spark rejects aggregate expressions outside ``select`` / ``agg`` / ``groupBy``. Without
+    this gate, ``withColumns`` projects via :meth:`DataFrame.select` and F1 pure-global
+    routing silently collapses every row to one global-agg row.
+    """
+    if bool(getattr(column, "_is_aggregate", False)):
+        raise AnalysisException(
+            f"[INVALID_USAGE_OF_AGGREGATE] Aggregate expressions are not allowed in "
+            f"{surface} (use select/agg for global aggregates; Spark rejects "
+            f"aggregates in withColumn/withColumns)."
+        )

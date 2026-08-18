@@ -17,7 +17,6 @@ foreign objects (real PySpark DataFrames, pandas frames) are refused loud.
 from __future__ import annotations
 
 import contextlib
-import uuid
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -25,6 +24,7 @@ from repark.errors import AnalysisException, IllegalArgumentException, PySparkTy
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.param import HasInputCol, HasOutputCol, Param, Params
 
 if TYPE_CHECKING:
@@ -75,7 +75,7 @@ def _require_dense_feature_width(
     otherwise silently yield NULL for out-of-range indices.
     """
     quoted = _quote_ident(features_col)
-    view = f"__repark_fw_{uuid.uuid4().hex[:12]}"
+    view = scratch_view_name(frame._session, "__repark_fw_")
     frame.createOrReplaceTempView(view)
     try:
         sql = (

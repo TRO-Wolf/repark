@@ -11,6 +11,7 @@ import weakref
 from typing import Any
 
 from repark.errors import IllegalArgumentException
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.ext._deps import require_numpy
 
 # Match crates/repark-ml MAX_FEATURES — data-controlled densify must not OOM (octo C1-SAF-002).
@@ -316,7 +317,6 @@ def reenter_with_prediction(
     dropped on GC (and on register/sql failure before ownership transfers).
     """
     import io
-    import uuid
 
     import pyarrow as pa
     import pyarrow.ipc as pa_ipc
@@ -340,8 +340,8 @@ def reenter_with_prediction(
     with pa_ipc.new_stream(sink, new_table.schema) as writer:
         for batch in new_table.to_batches():
             writer.write_batch(batch)
-    view_name = f"__repark_ml_ext_{uuid.uuid4().hex}"
     session = frame._session
+    view_name = scratch_view_name(session, "__repark_ml_ext_")
     owned = False
     try:
         # frame._session is native PyReparkSession (see dataframe.py mapInArrow notes).

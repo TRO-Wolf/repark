@@ -19,6 +19,7 @@ from repark.errors import IllegalArgumentException, PySparkTypeError
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import Estimator, Model, _require_repark_dataframe
 from repark.spark.ml.evaluation import Evaluator
 from repark.spark.ml.param import Param, TypeConverters
@@ -223,8 +224,8 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
         ``bestModel`` selection (octo C1-L-001).
         """
         fold_col = f"__cv_fold_{uuid.uuid4().hex[:8]}"
-        view = f"__repark_cv_src_{uuid.uuid4().hex[:12]}"
-        mat_view = f"__repark_cv_mat_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_cv_src_")
+        mat_view = scratch_view_name(frame._session, "__repark_cv_mat_")
         frame.createOrReplaceTempView(view)
         # Deterministic fold: hash(row_number || seed) % num_folds — stable on row order.
         sql = (
@@ -271,7 +272,7 @@ class CrossValidator(Estimator["CrossValidatorModel"]):
     ) -> tuple[Any, Any, str]:
         """Build train/test frames for one fold; return ``(train, test, train_view)``."""
         quoted_fold = _quote_ident(fold_col)
-        train_view = f"__repark_cv_tr_{uuid.uuid4().hex[:12]}"
+        train_view = scratch_view_name(frame._session, "__repark_cv_tr_")
         folded.createOrReplaceTempView(train_view)
         try:
             train = frame._spawn(

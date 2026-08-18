@@ -407,20 +407,29 @@ impl PyReparkSession {
     /// claim before re-registering — a wrong claim raises `AnalysisException` and the view is
     /// untouched. The facade resolves display→engine names before calling.
     ///
+    /// `tighten_nulls` (facade `tightenNulls`) is the c+ lever: after verify, a NULL in a
+    /// key refuses; otherwise verified-null-free keys flip to non-nullable.
+    ///
     /// Releases the GIL for the verification scan (O(n) over the sort keys).
     ///
     /// # Errors
-    /// `AnalysisException` for unknown view/key, non-in-memory frames, or unsorted data.
+    /// `AnalysisException` for unknown view/key, non-in-memory frames, unsorted data, or a
+    /// NULL key under tighten.
+    #[pyo3(signature = (name, keys, tighten_nulls=false))]
     pub fn declare_temp_view_sorted(
         &self,
         py: Python<'_>,
         name: &str,
         keys: Vec<String>,
+        tighten_nulls: bool,
     ) -> PyResult<()> {
         fenced!("PyReparkSession.declare_temp_view_sorted", {
             py.detach(|| {
-                self.runtime
-                    .block_on(self.session.declare_temp_view_sorted(name, &keys))
+                self.runtime.block_on(self.session.declare_temp_view_sorted(
+                    name,
+                    &keys,
+                    tighten_nulls,
+                ))
             })
             .map_err(to_py_err)
         })
@@ -599,6 +608,44 @@ impl PyReparkSession {
             py.detach(|| self.runtime.block_on(self.session.table_exists(name)))
                 .map_err(to_py_err)
         })
+    }
+
+    /// This session's temp-view home as `[catalog, schema]` (R7-1) — the prefix the facade puts
+    /// on the internal scratch views it mints, so the read that follows the mint cannot be
+    /// re-resolved against the live `datafusion.catalog.default_catalog`.
+    ///
+    /// # Errors
+    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
+    /// catalog.
+    pub fn temp_view_home(&self) -> PyResult<Vec<String>> {
+        fenced!("PyReparkSession.temp_view_home", {
+            self.session.temp_view_home().map_err(to_py_err)
+        })
+    }
+
+    /// The home-qualified `[catalog, schema, table]` segments a one-part temp-view `name`
+    /// resolves to, or `None` when no such view lives in this session's temp-view home (R7-1).
+    ///
+    /// The facade's name resolver calls this instead of `table_exists` + "keep the bare name":
+    /// the bare spelling is re-resolved against the LIVE
+    /// `datafusion.catalog.default_catalog`, so under a `SET` to another catalog the product
+    /// read paths (`spark.table`, cache/persist re-scan, the internal scratch views) missed a
+    /// view `tableExists` reported present. One call answers both halves — does it exist, and
+    /// what does a read path emit for it.
+    ///
+    /// # Errors
+    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
+    /// catalog, or when the engine lookup fails.
+    pub fn resolve_temp_view_home_ref(&self, name: &str) -> PyResult<Option<Vec<String>>> {
+        fenced_span!(
+            "py.catalog",
+            "PyReparkSession.resolve_temp_view_home_ref",
+            {
+                self.session
+                    .resolve_temp_view_home_ref(name)
+                    .map_err(to_py_err)
+            }
+        )
     }
 
     /// Register the AWS-free in-memory Iceberg catalog (local-filesystem `warehouse`) under

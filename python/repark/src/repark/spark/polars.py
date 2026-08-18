@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import PySparkTypeError, PySparkValueError
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.functions import col as spark_col
 from repark.spark.functions import lit as spark_lit
@@ -193,10 +194,9 @@ class PolarsFrame:
         if how not in {"inner", "left", "left_outer"}:
             raise PySparkValueError(f"join how={how!r} not supported on repark (inner/left only)")
         join_kw = "LEFT JOIN" if how in {"left", "left_outer"} else "INNER JOIN"
-        import uuid
 
-        left_view = f"__rp_jl_{uuid.uuid4().hex}"
-        right_view = f"__rp_jr_{uuid.uuid4().hex}"
+        left_view = scratch_view_name(self._frame._session, "__rp_jl_")
+        right_view = scratch_view_name(right._session, "__rp_jr_")
         session = self._frame._session
         # Plan-stable MIA snapshots (combine C7-Q-002) — same as DataFrame.set-ops /
         # crossJoin. ``create_or_replace_temp_view`` → ``_native_for_registration`` is
@@ -240,7 +240,8 @@ class PolarsFrame:
             select_clause = f"{left_view}.*" + (f", {select_right}" if select_right else "")
             sql = f"SELECT {select_clause} FROM {left_view} {join_kw} {right_view} ON {on_sql}"
             planned = session.sql(sql)
-            return PolarsFrame(DataFrame(planned, session, self._frame._alive_token))
+            child = self._frame._spawn(planned, right)
+            return PolarsFrame(child)
         finally:
             # Drop join staging views (octo C1-SEC-003); plan already holds MemTable/scan.
             session.drop_temp_view(left_view)

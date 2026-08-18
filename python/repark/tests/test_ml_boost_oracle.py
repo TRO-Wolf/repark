@@ -51,6 +51,7 @@ from repark.errors import (
     IllegalArgumentException,
     UnsupportedOperationException,
 )
+from repark.spark._temp_views import local_view_name
 from repark.spark.ml.evaluation import (
     MULTICLASS_F1_SEED,
     MulticlassClassificationEvaluator,
@@ -832,7 +833,8 @@ def test_ext_transform_temp_view_owned_and_dropped() -> None:
         predicted = model.transform(assembled)
         registered = [name for action, name in events if action == "register"]
         assert registered, "transform must register an __repark_ml_ext_* MemTable"
-        assert all(name.startswith("__repark_ml_ext_") for name in registered)
+        # R7-1: the registered name is the scratch view's HOME-qualified spelling.
+        assert all(local_view_name(name).startswith("__repark_ml_ext_") for name in registered)
         rows_out = predicted.collect()
         assert len(rows_out) == 10
         # Success path must not eager-drop while the DF is live (plan still needs the view).
@@ -1328,7 +1330,11 @@ def test_cross_validator_materializes_fold_labels() -> None:
             "CrossValidator.fit must materialize fold labels via materialize_as_temp_view "
             "(octo C1-L-001 / C2-Q-001); calls empty → materialization removed"
         )
-        mat_names = [name for name in materialize_calls if name.startswith("__repark_cv_mat_")]
+        mat_names = [
+            name
+            for name in materialize_calls
+            if local_view_name(name).startswith("__repark_cv_mat_")  # R7-1 home spelling
+        ]
         assert mat_names, materialize_calls
         # C4-Q-001: fold frame must SELECT FROM the materialize view (not ignore it).
         used = any(any(mat_name in query for mat_name in mat_names) for query in sql_queries)

@@ -18,6 +18,20 @@ belongs out here is what must be observed from outside the crate.
   `spark.sql.timestampType=TIMESTAMP_NTZ` on a Spark-extended session
   (`sql_with(AnsiDialect)`). Literal + CAST agree with the Spark door, value
   AND Arrow type (naive µs).
+- `declared_sorted_tighten.rs` — **SE-1 PR-D1:** ANSI-door CTAS of a `tightenNulls` frame
+  refuses (names the flag + PR-D2), including a derived-expression SELECT (SQM F1),
+  an EXISTS-subquery SELECT (R-B), a cache-reminted derived view (R-A),
+  and a lazy `into_view` hop (Q-001); all-nullable projection CREATE + INSERT
+  stay allowed (R-D). Round-4 (Y-3/Y-4): the DDL-sink twins — `CREATE VIEW ice.ns.v`
+  (`LIMIT 0` / `WHERE false`) and `SELECT … INTO ice.ns.t` refuse; session-scoped
+  one-part names and untightened sources stay allowed. Round-5:
+  `ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses` (Z-1 — a bare/two-part
+  name under `SET datafusion.catalog.default_catalog = ice` resolves INTO the catalog),
+  `ansi_ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table` (Z-3 — BASE
+  returned Ok and persisted BOTH the inner sink and the outer table) and
+  `ansi_plain_ctas_still_derives_and_writes` (the plan-before-execute allowed side).
+  Round-6 (R6-4): every refuse row in the Z-1/Z-3 nodes also asserts the sink is
+  UNPUBLISHED (`table_exists` false) — refusal message alone no longer carries the pin.
 - `session_wiring.rs` — the door's REACHABILITY: `AnsiDialect` installed on a real
   `ReparkSession` through `ReparkSessionBuilder::with_sql_dialect`, driving schema DDL, CTAS,
   INSERT and a typed read through `session.sql`, plus a refusal that must survive the session

@@ -100,3 +100,18 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 | A second `getOrCreate` with a different zone warns and does not apply | Intended: the session zone joins the engine-knob set in `session_core.py`, so reuse never folds a zone the live engine session does not have into the facade conf. An INVALID zone on that path is not validated either (no session is built) — deliberate, D-A1, pinned by `test_getorcreate_reuse_with_an_invalid_zone_warns_and_does_not_raise`. |
 | `conf.get` returns a trimmed zone though the builder value was padded | Intended: `normalize_session_time_zone_config` strips the value exactly as the engine does before parsing, so facade and engine report the same zone. Whitespace only — validity is still decided in the engine. |
 | The zone is set but timestamp extraction did not move | Expected in this unit — the conf surface landed without the extraction fix; the recorded rows in `python/repark/tests/test_session_timezone_parity.py` pin the current divergence honestly. |
+**SQM round 7 (R7-1):** `resolve_table_name`'s temp-view arm no longer returns the BARE name. The
+`probe` closure in `session_core.py` now calls native `resolve_temp_view_home_ref` and returns the
+view's HOME segments (`_funcs.py` parameter renamed `temp_view_exists` → `temp_view_home_ref`), so
+`spark.table`, the free-SQL bare-name expander and every writer/reader path emit
+`"datafusion"."public"."v"` for a session-local view instead of a bare reference the engine would
+re-resolve against the live `datafusion.catalog.default_catalog`. `createDataFrame`'s scratch view
+is named through `repark.spark._temp_views.scratch_view_name`.
+
+**Group-1 confirmation (C-1).** Three `session_core.py` docstrings still said one-part temp views
+"stay bare" after R7-1 changed that — `_expand_bare_table_names_in_sql` (the statement-shape list),
+`_expand_from_join_table_refs_in_sql`, and `table`. MEASURED false:
+`_expand_bare_table_names_in_sql("SELECT * FROM tv")` → `SELECT * FROM "datafusion"."public"."tv"`,
+and `_sql_table_ref_resolved("tv", prefer_temp_view=True)` → `"datafusion"."public"."tv"`. All three
+trued (prose only, line-neutral — the file sits exactly at its 2500 ceiling); this paragraph was
+already correct and is what they now agree with.

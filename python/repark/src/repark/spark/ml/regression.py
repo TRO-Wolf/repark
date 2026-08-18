@@ -8,7 +8,6 @@ plan-built (dot product + intercept).
 from __future__ import annotations
 
 import contextlib
-import uuid
 from typing import Any
 
 from repark import _native
@@ -16,6 +15,7 @@ from repark.errors import IllegalArgumentException, UnsupportedOperationExceptio
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import (
     Estimator,
     Model,
@@ -264,7 +264,7 @@ class LinearRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
             # DataFusion array_element is 0-based (M2 ledger).
             terms.append(f"({_sql_float(coef)} * array_element({features}, {index}))")
         expr = " + ".join(terms) if terms else "CAST(0.0 AS DOUBLE)"
-        view = f"__repark_lr_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_lr_")
         frame.createOrReplaceTempView(view)
         sql = f"SELECT {view}.*, ({expr}) AS {prediction} FROM {view}"
         try:

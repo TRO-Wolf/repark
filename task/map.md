@@ -42,6 +42,40 @@ not this directory.
   `SortExec` elision; probe: 1→0 at tp=1 AND through the hash repartition at tp=default,
   results byte-identical). PR-A engine seam; **PR-B (2026-08-17)** lands the facade
   `declareSorted` door + the `plan_collapse.py` headroom extract that made room for it.
+  **PR-D1 (2026-08-17):** `tightenNulls` (c+) — verified-null-free keys flip to
+  non-nullable; Iceberg CREATE of a tightened frame refuses until PR-D2.
+  **Round 3:** R-A cache remint stamp, R-B subquery walk, R-C right-side
+  marker, R-D refuse predicate.
+  **Round 4 (post-rebase, Y-1..Y-8 + CEIL-1):** closes the DDL-SINK bypass on both
+  doors (`CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` persisted required keys —
+  measured on BASE) via `refuse_iceberg_create_of_tightened_ddl`; makes the
+  `get_logical_plan` recurse a live pinned branch; relabels three non-discriminating
+  pin claims with MEASURED tables; runs the two NOT-RUN verifiers (P-3 cache cell,
+  P-5 List/Map child requiredness); and pays back the `core.py` lib-py ceiling with a
+  MOVE-ONLY extract (ceiling NOT raised). Records one payload finding: `CREATE VIEW`
+  in an Iceberg catalog persists a TABLE, predating this branch and NOT fixed here.
+  **Round 5 (Z-1..Z-7):** the ALTITUDE fix — one shared pre-execute belt
+  (`repark-core/src/pre_execute.rs`, `PreExecute` plan → guard → execute) that every door
+  passes through, because per-door wiring twice missed the NATIVE door (`DataFusionDialect`
+  persisted tightened `CREATE VIEW` / `SELECT … INTO`, measured Ok on BASE); the DDL gate now
+  reads the RESOLVED catalog, so `SET datafusion.catalog.default_catalog` cannot launder a
+  bare name; the ANSI CTAS derivation plans before executing (its eager `ctx.sql` published an
+  inner DDL sink AND returned Ok, measured); the two NOT-RUN verifiers are run (visit-budget
+  overflow reachability, nested export strip); and the round-4 node counts / `core.py` line
+  numbers are trued to the composed head.
+  **Round 6 (R6-1..R6-7):** temp-view WRITES become session-local via the
+  `repark-core/src/temp_view.rs` seam (`TempViewHome` = build-time name + provider handle,
+  `assert_home_intact`), so a `SET` of the default catalog can no longer persist a "temp" view
+  into an Iceberg catalog.
+  **Round 7 (R7-1..R7-3):** the READ half — a one-part name that is a session-local view now
+  resolves to its HOME-qualified spelling on every facade product path
+  (`repark/spark/_temp_views.py` + the `resolve_table_name` temp arm), because a bare reference
+  follows the LIVE default catalog and under a `SET` missed views `tableExists` reported present
+  (measured on BASE). Raw user-typed SQL bodies on the native door keep DataFusion resolution by
+  decision. Two number truth-ups (the round-4 facade count, the `check_rust_file_size.py`
+  ratchet-out comment) and one DISCLOSED round-8 residual: the engine crates' own bare scratch
+  registrations (`repark-iceberg` MERGE / identity DML, `__repark_tt_*` time travel) stay red
+  under that same `SET` — measured equally red on BASE, so unchanged by this round.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

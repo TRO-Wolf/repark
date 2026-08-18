@@ -43,10 +43,15 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `create_namespace` (mirrors `location` onto `location_uri` via
   `repark_iceberg::catalog::mirror_namespace_location_keys`; G-6 Q1: existing
   namespace + contradictory explicit location fails loud naming both paths;
-  matching / no-request-location stay idempotent), the temp-view family
+  matching / no-request-location stay idempotent), the temp-view family — which since round 6
+  lives in `session/temp_views.rs`, not in this file
   (`create_or_replace_temp_view` / `materialize_dataframe_as_temp_view` /
-  `materialize_dataframe_as_cache_view` / `create_or_replace_temp_view_from` /
-  `drop_temp_view`), `table_exists` (quote-aware segment parse; path-escape segments reject),
+  `materialize_dataframe_as_cache_view` — both collect remints share
+  `register_collected_memtable` which re-stamps tighten provenance (R-A) —
+  / `create_or_replace_temp_view_from` / `declare_temp_view_sorted` /
+  `drop_temp_view`, all resolving names through `temp_view.rs`),
+  `table_exists` (quote-aware segment parse; path-escape segments reject; the ONE-part arm asks
+  the pinned temp-view home, not the live default catalog — R6-1),
   the listing families (`list_iceberg_table_names` live list-on-access / `list_temp_view_names`
   / `list_df_schema_table_names`), `refresh_catalog_provider`, `read_parquet` (an
   `s3://`/`s3a://` path lazily registers that bucket's store once — per-session guard),
@@ -97,10 +102,20 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
+- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):**
+  `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
+  pre-execute refusals; today the tighten DDL-sink refuse) → `execute`. The native door
+  (`DataFusionDialect`) runs the whole belt; `repark_sql::router::delegate`,
+  `repark_sql::create_table` (CTAS derivation) and `repark_spark::spark_ast::execute_passthrough`
+  call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
+  AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
+  at a door — per-door wiring missed the native door twice (measured).
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2) + `SqlDialect` +
-  `DataFusionDialect` (the phase-1 default: plain `SessionContext::sql`). `#[async_trait(?Send)]`
+  `DataFusionDialect` (the phase-1 default: DataFusion semantics — round 5 Z-2 routes its
+  `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
+  door is guarded like the two SQL doors). `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
 - `runtime.rs` (+ `runtime/tests.rs`) — **`EngineRuntime`** (phase-3 PR-3, EC-5 / design §4 Q7):
   the name the engine gives the **embedding's** Tokio runtime — a cloneable `Arc<Runtime>` handle
@@ -153,11 +168,41 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `LIKE '__repark_tt%'` assertion in `crates/repark-sql/tests/introspection.rs`.
 - `sorted_view.rs` — SE-1 declared-sorted temp views: `verify_batches_sorted` (the O(n)
   adjacent-pair lexicographic check, ASC NULLS LAST, cross-batch) + `declared_sort_order`
-  (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class).
-  The public door is `session.rs::declare_temp_view_sorted`: verify FIRST, then re-register
-  the `MemTable` `with_sort_order` so DataFusion elides redundant window `SortExec`s.
+  (`Column::from_name`, never ident-parsing `col()` — the U-DF-1 lowercase-fold class)
+  + **PR-D1 `tightenNulls`:** `apply_declare_nullability` (restore then optional tighten;
+  tag flipped fields with `repark.tighten_nulls=1`; rebuilds via
+  `Schema::new_with_metadata` so top-level schema metadata survives). Public
+  `refuse_iceberg_create_of_tightened_plan` (walk `TableScan` source schemas
+  **with subqueries** — SQM F1 / R-B — and follow `TableSource::get_logical_plan`
+  so a lazy `into_view` hop cannot hide the `MemTable`; iterative, visit-budgeted
+  with a generic overflow error — not a `tightenNulls` CREATE refusal)
+  plus `refuse_iceberg_create_of_tightened_schema` (output-tag belt). R-D: refuse
+  only when a tightened source would persist a non-nullable output. Cache/persist/
+  checkpoint remint re-stamps schema-level provenance (R-A). Both SQL doors call
+  the refuse at CTAS derivation.
+  **Round 4 (Y-3/Y-4):** `refuse_iceberg_create_of_tightened_ddl` closes the DDL-SINK door
+  — `CREATE VIEW cat.ns.v AS …` and `SELECT … INTO cat.ns.t` never reach CTAS derivation
+  (both routers drop them into their catch-all) yet the Iceberg schema provider's
+  `register_table` persists a real table. Same R-D predicate, applied to the planned
+  `DdlStatement::CreateView` / `CreateMemoryTable` body.
+  **Round 5 (Z-1):** the catalog gate is the RESOLVED name, not the spelling — the target is
+  resolved through `TableReference::resolve` against `datafusion.catalog.default_catalog` /
+  `default_schema`, because `SET datafusion.catalog.default_catalog = <iceberg>` makes a
+  one- or two-part `CREATE VIEW` / `SELECT … INTO` persist into the Iceberg catalog exactly
+  like the three-part spelling (measured on all three doors). The function therefore takes the
+  `SessionContext`. **Round 5 (Z-2):** it is no longer called from the doors directly — every
+  door reaches it through `pre_execute.rs`'s `PreExecute::guard`.
+  **Round 4 (Y-2):** the `get_logical_plan` follow is unreachable from any SQL-door
+  statement on DataFusion 54.1 (`LogicalPlanBuilder::scan` inlines a source that has a
+  logical plan) — measured, all four lazy-view pins stayed green with the follow deleted.
+  It is live for a scan the builder does NOT inline (non-empty `filters`), which is what
+  `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse` pins.
+
+  The public door is `session.rs::declare_temp_view_sorted(..., tighten_nulls)`: verify
+  FIRST, then apply nullability, then re-register the `MemTable` `with_sort_order`.
   Trust model is declare + ALWAYS-verify, refuse loud — no unverified fast path, by design
-  (a wrong claim would silently corrupt every window result). Plan pins + refusal battery:
+  (a wrong claim would silently corrupt every window result). A NULL key under tighten
+  refuses naming the key and `tightenNulls`. Plan pins + refusal battery:
   `../tests/declared_sorted.rs`.
 - `session_time_zone.rs` (+ `session_time_zone/tests.rs`) — the session timezone
   (`spark.sql.session.timeZone`). Holds the **one** authoritative spelling of that conf key
@@ -173,8 +218,26 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   **TZ-8 (2026-08-14):** module docs now say `CAST(ts AS DATE)` / `to_date` honor the zone
   (NTZ stays the stored wall); `datediff` rides CAST; `last_day`/`date_add` over TIMESTAMP
   stay residual. Ledger: `task/r4-tz8-ledger.md`.
-- `session/` — `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
-  sibling of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
+- `temp_view.rs` (+ `temp_view/tests.rs`) — **the temp-view NAME choke point (round 6, R6-1):**
+  `TempViewHome` (the build-time `catalog.schema` a session's temp views live in, snapshotted
+  once) + `temp_view_ref`, which every temp-view entry point resolves names through. A QUALIFIED
+  name refuses loud (`Error::Analysis` → facade `AnalysisException`, mirroring PySpark's class):
+  `createOrReplaceTempView("ice.sales.v")` used to forward the raw name to `register_table`,
+  which resolved into the Iceberg catalog provider and PERSISTED a real table — a `tightenNulls`
+  `required: true` payload included, the very thing `pre_execute.rs` refuses on the SQL doors
+  (MEASURED, round-6 ledger). A one-part name is pinned `Full` against the home, so
+  `SET datafusion.catalog.default_catalog = <iceberg>` cannot move where a temp view registers.
+  The home is a NAME **and** the schema PROVIDER that sat under it at build (`assert_home_intact`,
+  `Arc::ptr_eq` at every entry point): `default_catalog` is also a BUILD-time key, so a session
+  built with `default_catalog = ice` had its home NAME taken over by the Iceberg catalog and
+  persisted the payload anyway (MEASURED — round-6 critic S1). With a catalog over the home the
+  whole family refuses loud rather than write or answer for it.
+  Parsing is DataFusion's own `TableReference::parse_str` — identifier normalization is
+  unchanged from BASE.
+- `session/` — `temp_views.rs` (the temp-view family: register / replace / materialize / cache /
+  declare-sorted / drop, all through `temp_view_ref`; split out of `session.rs` in round 6) and
+  `spill.rs` (S-1: FairSpillPool install + runtime SET intercept; production
+  siblings of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
   (E-2 gate pins incl. the late-config region-signal pin, AWS-free),
   `namespace_create_tests.rs` (R-6 / G-6 Q1: create-new / same / conflicting / no-location),
   and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
@@ -222,3 +285,11 @@ First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map
   domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
   that read it. Sites here: `catalog_config.rs` — the module-doc config-block lead-in, the
   acceptance-matrix table row, and the `glue_catalog_config` doc line.
+**SQM round 7 (R7-1).** `session/temp_views.rs` gained the READ half of the temp-view seam:
+`temp_view_home()` (the `[catalog, schema]` a product read path prefixes a session-local view
+with) and `resolve_temp_view_home_ref(name)` (the `[catalog, schema, table]` a one-part name
+resolves to, or `None`). Both re-check `assert_home_intact`, so the read side cannot become a way
+around the R6-1 home check. `temp_view.rs` additionally accepts the session's OWN home spelling
+(`<home.catalog>.<home.schema>.<view>`) as that same session-local view — any other qualified
+name still refuses. Raw SQL bodies on `Session::sql` are unchanged (still DataFusion's
+live-default resolution; pinned by `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`).

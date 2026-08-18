@@ -225,12 +225,18 @@ async fn execute_time_travelled(
 /// The guard sits BETWEEN planning and execution because that is the only place the target of a
 /// `COPY TO` / `CREATE EXTERNAL TABLE` is known as data rather than as text.
 async fn delegate(cx: &EngineContext<'_>, sql: &str) -> Result<DataFrame> {
-    let plan = match cx.ctx.state().create_logical_plan(sql).await {
+    // SE-1 D1 round 5 (Z-2): plan / guard / execute all come from the shared belt
+    // (`repark_core::PreExecute`) — this door no longer owns a private copy of the sequence,
+    // and the tighten DDL-sink refuse it used to call directly now lives inside `belt.guard`.
+    let belt = repark_core::PreExecute::from_engine_context(cx);
+    let plan = match belt.plan(sql).await {
         Ok(plan) => plan,
         Err(err) => return Err(sniff::upgrade_error(sql, err)),
     };
+    // Door-specific (SEC-02): the belt deliberately does not own the local-filesystem gate.
     guards::refuse_local_filesystem_plan(cx.ctx, cx.catalogs, &plan)?;
-    cx.ctx.execute_logical_plan(plan).await
+    belt.guard(&plan)?;
+    belt.execute(plan).await
 }
 
 /// A `CREATE SCHEMA`'s name, which sqlparser models as either a plain name or a `<name>

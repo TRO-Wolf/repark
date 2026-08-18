@@ -102,7 +102,41 @@ NOT in that file is a defect, not a decision.
   one function; declaring twice is idempotent. Disclosed in the module docstring: the window
   ordering in the plan pin is spelled `ASC NULLS LAST` because Spark's `ASC` default is
   NULLS FIRST while the engine declares NULLS LAST. Ledger:
-  `task/se1-declared-sorted-ledger.md`.
+  `task/se1-declared-sorted-ledger.md`. **PR-D1 does not edit this file** (hint-mode
+  nodes stay byte-identical).
+- `test_declare_sorted_tighten.py` — **SE-1 PR-D1:** `tightenNulls=True` value-identical
+  to hint with key fields non-nullable on `to_arrow()` **and** `df.schema` (SQM F4);
+  refuse-on-nulls (names the flag); hint-after-tighten restores; both spellings share the
+  keyword; `saveAsTable` create and `writeTo().create()` refuse a tightened frame and a
+  tighten-derived frame (SQM F3). Round-3: delete-the-facade-layer mutant pin; right-side
+  combinator marker (R-C); cache remint refuse (R-A); all-nullable CREATE + INSERT
+  allowed and literal-over-tight refused (R-D); `df.schema` type-exactness; export
+  metadata stripped; doctest examples execute; SQL-derived write + lazy-view
+  CREATE refuse (Q-001); polars join marker (R-C); facade R-D Array/Map
+  element-nullability helper (C1-Q-003). Serving-shape elision is the
+  Rust Spark-door pin.
+  Round-4: `CREATE VIEW <catalog>.<ns>.v` and `SELECT … INTO <catalog>.<ns>.t` over a
+  tightened source refuse (Y-3 / Y-4 — both leaked on BASE, measured on the pre-fix native
+  module), session-scoped names stay allowed, and the analyzed-schema export carries no
+  `repark.tighten_nulls` tag (Y-6 — the node that kills the Rust strip mutant; the
+  `to_arrow()` metadata assertions do NOT, and say so). Two `Kills:` claims were re-measured
+  and honestly relabelled: the literal-over-tightened node is belt-and-suspenders, not a
+  facade discriminator (Y-1), and the cache node's `saveAsTable` half is guarded by the facade
+  marker while its SQL half is the R-A discriminator (Y-7 / verifier P-3).
+  Round-6 (R6-1): `createOrReplaceTempView` is not a catalog-write door — a QUALIFIED name
+  refuses (`AnalysisException`, `tableExists` false for both the 3-part and 2-part spellings),
+  a one-part name stays SESSION-LOCAL under `SET datafusion.catalog.default_catalog`
+  (`tableExists` false on the catalog name, true on the bare one), and the ordinary one-part
+  registration still reads back (the allowed side). Measured on BASE: the lazy/empty body
+  PERSISTED a `required: true` Iceberg table through this API, with no statement planned and so
+  no guard in the path.
+  Round-6 second pass (critic S1):
+  `test_a_catalog_over_the_build_time_default_is_not_a_temp_view_home` — pinning the home to the
+  configured default-catalog NAME was not enough, because `datafusion.catalog.default_catalog` is
+  a supported BUILD-time conf: MEASURED on that fix, `createDataFrame([])` +
+  `createOrReplaceTempView("v_leak")` both returned Ok and `tableExists("ice.sales.v_leak")` was
+  **True**. The home now carries the schema PROVIDER, so such a session has no session-local home
+  and every temp-view mint refuses loud.
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
 
@@ -1883,6 +1917,7 @@ NOT in that file is a defect, not a decision.
 | Add a Group I `writeTo` / path parquet / `sortWithinPartitions` / `F.weekday` test | `test_writer_v2.py` (octo r1–r4 + 2026-07-22 review: empty stage-swap, sticky transforms incl. Window.partitionBy, same-session path read after overwrite; overwritePartitions now a LOUD gate — raise + target untouched, both spellings (the empty-wipe pin replaced); C1-Q-005 option warn-once; C3-SEC-001 transform identity quoting pin (now incl. `bucket`); O3-C1-Q-003 `insertInto` empty overwrite wipe pin; Group P: `test_bucket_partitioned_by_round_trips_e2e` + `test_years_partitioned_by_round_trips_e2e` — non-identity transform CTAS works end-to-end (replaced the old transform-gate rejects)) |
 | Add a Window / date-function / row_number test | `test_functions_dates.py` |
 | Add a `declareSorted` / sort-elimination plan or refusal test | `test_declare_sorted.py` |
+| Add a `tightenNulls` facade pin | `test_declare_sorted_tighten.py` |
 | Add an FN-A ordering / null / math function test | `test_functions_a.py` |
 | Add an FN-B string-function test | `test_functions_b.py` |
 | Add an FN-C aggregate / window-alias function test | `test_functions_c.py` |
@@ -2126,3 +2161,19 @@ First checks: rebuild the wheel and reinstall by path. Escalate to: [../map.md#d
   **Test NAMES were deliberately left alone** — a test rename is a declared-rename unit that
   ships alone (docs/testing.md "Relocation discipline") and would move the facade census's
   collected-name multiset.
+**SQM round 7 (R7-1):** `test_declare_sorted_tighten.py` gains
+`test_named_read_paths_find_a_temp_view_under_set_default_catalog` (under a `SET` to another
+catalog, `tableExists` / `spark.table` / free SQL / cache / persist / checkpoint /
+`createDataFrame` / `selectExpr` / `alias` all agree on the view's rows — every one of them
+MEASURED red on the round-7 BASE `3910ac7`),
+`test_no_set_leaves_every_named_read_path_byte_identical` (the no-SET leg: same rows, same
+columns, `list_temp_view_names` still ONE-part — the home spelling is a SQL reference, never a
+rename) and `test_a_catalog_over_the_home_refuses_the_read_spelling_too`. Tests that compare a
+facade-minted view NAME (`test_cache_persist.py`, `test_create_dataframe_materialize.py`,
+`test_ml_boost_oracle.py`) now go through `repark.spark._temp_views.local_view_name`, because the
+handles carry the home-qualified spelling; `test_e2_readwriter.py::test_resolve_prefer_temp_view`
+pins the new resolver contract (home segments in, home-qualified name out, `None` → catalog
+qualification unchanged). The under-`SET` pin's docstring states its SCOPE: it covers facade
+spellings only, NOT the engine crates' own bare scratch registrations (`repark-iceberg` MERGE /
+identity DML, `__repark_tt_*`), which stay red under the same `SET` on BASE and on this tree
+alike — a disclosed round-8 residual, deliberately unpinned.

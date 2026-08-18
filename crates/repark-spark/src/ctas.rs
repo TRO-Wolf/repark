@@ -248,6 +248,10 @@ pub(crate) async fn execute_ctas(
         repark_functions::analyze_eagerly(&ctx.state(), query.logical_plan().clone())?;
     let query = ctx.execute_logical_plan(analyzed_plan).await?;
     let arrow_schema = Arc::new(query.schema().as_arrow().clone());
+    repark_core::refuse_iceberg_create_of_tightened_plan(query.logical_plan())
+        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+    repark_core::refuse_iceberg_create_of_tightened_schema(arrow_schema.as_ref())
+        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &ctas.partition_fields)?;

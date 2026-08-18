@@ -22,6 +22,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe.core import (
     DataFrame,
@@ -386,10 +387,10 @@ class GroupedData:
         # ``IS NOT DISTINCT FROM`` so NULL group keys match (Spark treats null as a
         # group; name-list equi-join drops them — octo M6 C1). The **joined** result is
         # also materialized so intermediate views can be dropped without dangling plan refs.
-        udf_view = f"__repark_mix_u_{uuid.uuid4().hex[:12]}"
-        builtin_view = f"__repark_mix_b_{uuid.uuid4().hex[:12]}"
-        out_view = f"__repark_mix_o_{uuid.uuid4().hex[:12]}"
         session = frame._session
+        udf_view = scratch_view_name(session, "__repark_mix_u_")
+        builtin_view = scratch_view_name(session, "__repark_mix_b_")
+        out_view = scratch_view_name(session, "__repark_mix_o_")
         try:
             # Ensure mapInArrow / applyInPandas bridge is plan-ready before materialize.
             udf_frame._prepare_for_plan()
@@ -538,7 +539,7 @@ class GroupedData:
             column._reject_nested_generator("agg")
         frame = self._dataframe
         frame._ensure_alive()
-        view = f"__repark_gs_{uuid.uuid4().hex}"
+        view = scratch_view_name(frame._session, "__repark_gs_")
         # Plan-stable MIA snapshot (combine C5-L-001) — not DF createOrReplaceTempView
         # action re-run. Mirrors selectExpr / global-agg SQL (C2 / C4).
         plan = frame._plan()

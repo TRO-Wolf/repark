@@ -364,23 +364,32 @@ DataSourceExec: partitions=1, partition_sizes=[1],
 output_ordering=symbol@0 ASC NULLS LAST, ts@1 ASC NULLS LAST
 ```
 
-So: **SQL windows elide today, and the DataFrame `Window` spec does not** — because an ascending
-facade window key plans `NULLS FIRST`, which is not the ordering that was declared. The headline
-serving shape, `Window.partitionBy(sym).orderBy(ts)` over a nullable `ts`, does not yet elide. The
-door works, is verified, and is pinned; this is the boundary it currently has.
+So: **the default door is a pure hint** — SQL windows spelled `NULLS LAST` elide, and the
+DataFrame `Window` spec over a *nullable* key does not, because Spark's ascending default is
+`NULLS FIRST`. That is still the table above.
 
-Closing it is an engine decision, not a facade one, and the measurement has already been done.
-Declaring *both* null placements when the verification scan proves the keys null-free was
-implemented and measured: DataFusion 54.1 cannot consume the second ordering — its
-ordering-equivalence class returns the first declared ordering whose leading expression matches,
-and compatibility is plain equality for a nullable column, so the second declaration is
-unreachable. What *does* work — tightening verified-null-free key fields to non-nullable — would
-narrow the frame's **reported** schema (`df.schema`, `to_arrow()`, and an Iceberg write would emit
-`required` fields), which falsifies the door's "planner hint, nothing else" contract on a
-PySpark-visible surface. That is an owner decision; until it is ruled, the door stays exactly as
-shipped — a pure hint, with the facade-window gap open.
+`declareSorted(..., tightenNulls=True)` is the opt-in that closes the serving-shape gap. After
+the same always-verify scan, a NULL in a declared key refuses (name the key; drop
+`tightenNulls` or clean the data). Otherwise those keys become non-nullable on the in-engine
+schema (`df.schema`, `to_arrow()`), which is the lever DataFusion needs to treat every null
+placement as compatible. That is a plan property the caller asked for by typing the flag, not
+a data-contract change: Iceberg CREATE of a tightened frame is refused until the write-boundary
+relax (PR-D2) lands, **when the SELECT would persist a non-nullable column**. CREATE of an
+all-nullable projection is allowed; INSERT/append into an existing table stays allowed
+(target schema wins). A later `declareSorted(...)` without the flag restores the original
+nullability **on that source frame**. Already-derived frames (`select` / join / union /
+cache of a tightened source) cannot be re-declared — `declareSorted` is source-frames
+only — so they keep the derived plan's nullability. Inherently non-null outputs over a
+tightened source (literals, aggregates) are refused conservatively. Internal
+`repark.tighten_nulls` tags are stripped from user-visible `to_arrow()` export.
 
-If you want the elision today, run the window through `spark.sql`.
+Parquet path-writes are an accepted residual: the Parquet writer enforces non-null
+physically, so tighten provenance ends at that boundary (a later read is not
+tighten-derived). Iceberg CREATE is the data-contract seam this flag governs.
+
+```python
+spark.createDataFrame(bars, cols).declareSorted("symbol", "ts", tightenNulls=True)
+```
 
 ## Benchmarking TA
 

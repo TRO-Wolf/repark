@@ -60,7 +60,20 @@ reach delegation through the ordinary arm.
   catalog or LOUD refuse — never a silent `MemTable`), clause refusals, A11 nanosecond-timestamp
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution, staged create/replace, and the service-managed
-  create-first path. Tests: [create_table/map.md](create_table/map.md).
+  create-first path. **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan`
+  source (including expression subqueries, R-B) is tighten-derived AND the
+  output has a non-nullable field (R-D), or the output schema still carries
+  the tag. The write-boundary relax is PR-D2 (via the same source walk). **Round 4
+  (Y-3/Y-4):** `router.rs::delegate` additionally calls
+  `repark_core::refuse_iceberg_create_of_tightened_ddl` on the planned DDL, so the
+  `CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` sinks that fall through the `_ =>` arm
+  cannot persist a required column either — the ANSI twin of the Spark-door fix.
+  **Round 5 (Z-2/Z-3):** both live through the shared belt now — `router.rs::delegate` is
+  `PreExecute::plan` → SEC-02 → `PreExecute::guard` → `PreExecute::execute`, and the CTAS
+  derivation here plans WITHOUT executing (`ctx.sql(&query.to_string())` executed the SELECT
+  eagerly, so an inner `SELECT … INTO ice.ns.x` was published before the refuse saw the plan —
+  measured Ok + both tables persisted on BASE). Tests:
+  [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`,
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,
   and the reserved refusals (`sorted_by`, ORC/AVRO) that name their triggers.

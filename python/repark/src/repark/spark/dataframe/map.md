@@ -55,8 +55,14 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `declare_temp_view_sorted` (which ALWAYS verifies and refuses loud on
   out-of-order data), and then **re-plans its own `_inner`** — the logical plan
   captured the pre-declaration table source, so without the re-plan the declaring
-  frame would be the one frame that never sees the elision. See
-  `task/se1-declared-sorted-ledger.md`.
+  frame would be the one frame that never sees the elision.
+  **SE-1 PR-D1:** keyword-only `tightenNulls: bool = False` (one name, both
+  spellings) unlocks full elision by flipping verified-null-free keys to
+  non-nullable; a NULL key refuses; a later default-flag call restores.
+  `_tighten_derived` is OR'd across every parent in `_spawn` (R-C; union/join/
+  intersect/subtract/crossJoin right-side + `mapInArrow` via `_spawn`). Writer
+  CREATE paths refuse on that marker when the output has a non-nullable field
+  (R-D). See `task/se1-declared-sorted-ledger.md`.
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
@@ -67,9 +73,23 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   Imports nothing from `core` at module scope (annotations only, under `TYPE_CHECKING`);
   `core.py` re-exports every name callers use, so `repark.spark.dataframe.core` and
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
+  **SE-1 R-3:** `_strip_internal_tighten_metadata` lives here so `to_arrow()` /
+  `to_arrow_batches` drop the internal `repark.tighten_nulls` tag.
+  **Round 3:** `_output_field_would_persist_required` (R-D nested Struct/Array/Map)
+  lives here so `core.py` stays under its ceiling.
+  **CEIL-1 (D1 #173, move-only):** the six remaining `core.py` tail helpers moved here
+  VERBATIM — `_is_native_pure_global_aggregate`, `_parse_count_distinct_simple_names`,
+  `_global_agg_sql_parts`, `_pandas_udf_window_frame_bounds`, `_reject_partition_transform`,
+  `_reject_aggregate_in_with_column`. D1 + DF-2 each fit the 7350 ceiling alone and
+  together did not; the extract restored headroom without raising the ceiling. `core.py`
+  re-exports all six from its tail bind block, so `joins_columns`'s
+  `from …core import _global_agg_sql_parts` (and every other import path) is unchanged
+  (Q7 freeze).
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
-  + write helpers (real body; technique A).
+  + write helpers (real body; technique A). **SE-1 PR-D1 SQM F1:** CREATE paths
+  (`saveAsTable` create, `writeTo().create()` / `createOrReplace` / `replace`) refuse
+  a `_tighten_derived` frame with a non-nullable output field (R-D).
   **F-3 (2026-08-17):** the six undocumented `DataFrameStatFunctions` methods gained
   docstrings — the five delegating ones point at their `DataFrame` twin (which holds the
   real semantics, so there is one truth), and `freqItems` says plainly that it refuses.
@@ -80,7 +100,7 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   census is 1211/1211 by the ledger's own AST rule. Nine of the eleven are nested rendering
   closures and two are `@overload` typing stubs; none is a user-facing API name.
   No ceiling was raised (`core.py` 7253 of 7350, `plan_collapse.py` 1103 of 2500
-  at F-4 close; DF-2 live sizes are in the Debug note below).
+  at F-4 close; DF-2/D1 live sizes are in the Debug note below).
 - `actions_export.py` — `DataFrameNaFunctions` (real body; technique A).
 - `__init__.py` — frozen public imports (star-bind of core for private parity).
 
@@ -91,6 +111,7 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 | Change DataFrame methods / plan glue | `core.py` |
 | Change the declared-sorted door (SE-1) | `core.py` (`declare_sorted`) + `../session/_funcs.py` (`_source_view_name`) |
 | Change show/eager-eval formatting, Arrow type labels, plan-collapse or qcol rewrite | `plan_collapse.py` |
+| Change global-agg routing, the partition-transform gate, or pandas-UDF window frames | `plan_collapse.py` (CEIL-1 moved them out of `core.py`) |
 | Change generator mid-project name bind | `../column.py` (`_bound_generator_array`) + `core.py` (`_select_with_generator`) |
 | Change `join` how-aliases / semi-family routing | `core.py` (`DataFrame.join` + `_SEMI_JOIN_HOWS`) |
 | Change semi/anti origin-map join-type awareness | `core.py` (`_origin_not_emitted` + `_remember_unemitted_right_origins`) |
@@ -105,8 +126,19 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (DF-2 / #176): `core.py` 7296 of 7350, `plan_collapse.py` 1211 of 2500.
+- Live file sizes (D1 #173, post-CEIL-1 extract + octo-remediation integration):
+  `core.py` 7250 of 7350, `plan_collapse.py` 1432 of 2500. (Was 7380 of 7350 — RED —
+  when D1 and DF-2 landed together; the CEIL-1 move-only extract below bought the
+  room. Ceiling unchanged.)
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).
 - Census / collect identity regressions → move-only regression; restore from base and re-slice.
+**SQM round 7 (R7-1):** every internal scratch view in `core.py` / `joins_columns.py` /
+`writer_readwriter.py` is named through `repark.spark._temp_views.scratch_view_name`, so the name
+is the home-qualified SQL reference and the mint→scan pair cannot be split by a raw `SET
+datafusion.catalog.default_catalog`. Consequence for call sites: the returned string is ALREADY
+quoted — `core.py`'s join/select paths and `plan_collapse.py`'s qualifier tokens no longer wrap it
+in `quote_ident`. `DataFrame.alias` keeps the user's one-part NAME and reads it via
+`home_view_ref`; `_cache_view` now holds the home-qualified spelling (use `local_view_name` to
+compare against `list_temp_view_names`).

@@ -29,6 +29,7 @@ from repark.errors import (
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
@@ -748,6 +749,8 @@ class DataFrame:
         # source frame; None on every transformed/derived frame (see declare_sorted).
         "_source_view_name",
         "_storage_level",
+        # Spawn-propagated: True on a tightened source and every descendant (SQM F1).
+        "_tighten_derived",
     )
 
     def __init__(
@@ -811,13 +814,18 @@ class DataFrame:
         # copied by _spawn / _spawn_preserving_identity / _identity_child, so a transformed
         # frame refuses :meth:`declare_sorted` loudly instead of declaring the wrong view.
         self._source_view_name: str | None = None
+        # SE-1 PR-D1: True after tightenNulls=True; OR'd across every _spawn parent
+        # (R-C). Defense-in-depth for writer CREATE when the engine walk is silent
+        # (no tagged scan). DF 54.1 SELECT * / Column refs keep field tags (the
+        # hop-drops-tags claim is struck).
+        self._tighten_derived: bool = False
 
     def _ensure_alive(self) -> None:
         """Raise if the owning :class:`ReparkSession` has been stopped."""
         if not self._alive_token.get("alive", True):
             raise RuntimeError(_STOPPED_MESSAGE)
 
-    def _spawn(self, inner: Any) -> DataFrame:
+    def _spawn(self, inner: Any, *others: DataFrame) -> DataFrame:
         """Return a child DataFrame sharing this frame's session + liveness token.
 
         Children do **not** inherit the parent's cache mark (object-identity caching only —
@@ -826,10 +834,15 @@ class DataFrame:
         :meth:`_spawn_preserving_identity`. Semi/anti unemitted-origin ids **are**
         (Q-002: a later ``select(right[…])`` on a spawn descendant must still raise).
         Emitting joins subtract the newly-emitted right ids (Q-001).
+        ``_tighten_derived`` is OR'd across this frame and every other parent
+        (SE-1 R-C: right-side union/join/intersect must not drop the marker).
         """
         self._ensure_alive()
         child = DataFrame(inner, self._session, self._alive_token)
         child._origin_not_emitted = self._origin_not_emitted
+        child._tighten_derived = self._tighten_derived or any(
+            other._tighten_derived for other in others
+        )
         return child
 
     def _spawn_preserving_identity(self, inner: Any) -> DataFrame:
@@ -909,7 +922,7 @@ class DataFrame:
             if is_checkpoint:
                 self._map_bridge = None
         prefix = "__repark_ckpt_" if is_checkpoint else _CACHE_VIEW_PREFIX
-        view_name = f"{prefix}{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
             max_bytes = _resolve_cache_max_bytes(self._alive_token)
             # Cache path only — never route VALUES/createDataFrame through this entry point.
@@ -1276,7 +1289,7 @@ class DataFrame:
         """
         import contextlib
 
-        view_name = f"__repark_mia_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, "__repark_mia_")
         tracked = False
         try:
             self._session.register_arrow_stream_as_temp_view(view_name, stream_obj)
@@ -1302,7 +1315,7 @@ class DataFrame:
         """
         import contextlib
 
-        view_name = f"__repark_mia_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, "__repark_mia_")
         tracked = False
         try:
             self._session.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
@@ -1356,7 +1369,7 @@ class DataFrame:
         sink = io.BytesIO()
         with pa_ipc.new_stream(sink, arrow_schema):
             pass
-        view_name = f"__repark_mia_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, "__repark_mia_")
         # If sql fails after register, drop eagerly so the MemTable is not orphaned without a
         # finalize owner (octo C3-SAF-001). Track immediately after a successful sql.
         self._session.register_ipc_stream_as_temp_view(view_name, sink.getvalue())
@@ -1366,7 +1379,7 @@ class DataFrame:
             with contextlib.suppress(Exception):
                 self._session.drop_temp_view(view_name)
             raise
-        out = DataFrame(placeholder_inner, self._session, self._alive_token)
+        out = self._spawn(placeholder_inner)
         out._track_mia_view(view_name, replace_ephemeral=False)
         out._map_bridge = {
             "parent": self,
@@ -2293,10 +2306,10 @@ class DataFrame:
         # ``IS NOT DISTINCT FROM`` so NULL partition keys match (Spark null-group parity;
         # name-list equi-join drops them — octo M6 C1). Final result is also materialized
         # so intermediate views can be dropped.
-        left_view = f"__repark_win_l_{uuid.uuid4().hex[:12]}"
-        agg_view = f"__repark_win_a_{uuid.uuid4().hex[:12]}"
-        out_view = f"__repark_win_o_{uuid.uuid4().hex[:12]}"
         session = self._session
+        left_view = scratch_view_name(session, "__repark_win_l_")
+        agg_view = scratch_view_name(session, "__repark_win_a_")
+        out_view = scratch_view_name(session, "__repark_win_o_")
         try:
             left._prepare_for_plan()
             agg_frame._prepare_for_plan()
@@ -2703,7 +2716,11 @@ class DataFrame:
     createOrReplaceTempView = create_or_replace_temp_view  # noqa: N815 — PySpark camelCase alias
 
     # === SE-1: declared-sorted door ===
-    def declare_sorted(self, *cols: str) -> DataFrame:
+    def declare_sorted(
+        self,
+        *cols: str,
+        tightenNulls: bool = False,  # noqa: N803 — repark-extra camelCase keyword
+    ) -> DataFrame:
         """Declare this source frame already sorted by ``cols`` — a repark **extension**.
 
         Not a PySpark API. Declares ASC NULLS LAST ordering (per key, in the order given)
@@ -2716,6 +2733,44 @@ class DataFrame:
         raises :class:`~repark.errors.AnalysisException` naming the first offending row
         indices, and the view is left exactly as it was. There is no unverified fast path.
 
+        Parameters
+        ----------
+        cols:
+            Sort keys, in order. At least one is required.
+        tightenNulls:
+            Default ``False`` keeps the door a pure hint (schema unchanged). ``True``
+            unlocks elision on the serving-shape window
+            (``Window.partitionBy(...).orderBy(...)`` over the declared keys): after
+            verify, a NULL in a declared key refuses (name the key; drop
+            ``tightenNulls`` or clean the data); otherwise the in-engine schema of
+            those keys becomes non-nullable
+            (``df.schema`` / ``to_arrow()``). That is a plan property, not a data contract
+            — Iceberg CREATE is refused until PR-D2 when the SELECT would persist a
+            non-nullable column (all-nullable projections are allowed). Internal
+            ``repark.tighten_nulls`` tags are stripped from ``to_arrow()`` export.
+
+        Returns
+        -------
+        DataFrame
+            ``self``, so the call chains.
+
+        Examples
+        --------
+        >>> from repark import ReparkSession
+        >>> spark = ReparkSession.builder.appName("doctest-declare-sorted").getOrCreate()
+        >>> bars = [("AAA", 1), ("AAA", 2), ("BBB", 1)]
+        >>> frame = spark.createDataFrame(bars, ["symbol", "ts"]).declareSorted(
+        ...     "symbol", "ts"
+        ... )
+        >>> frame.columns
+        ['symbol', 'ts']
+        >>> tight = spark.createDataFrame(bars, ["symbol", "ts"]).declareSorted(
+        ...     "symbol", "ts", tightenNulls=True
+        ... )
+        >>> tight.schema["ts"].nullable
+        False
+        >>> spark.stop()
+
         Valid only on a source frame — the frame ``createDataFrame`` handed back. Any
         transformed frame (``select`` / ``filter`` / join / agg output) refuses loudly;
         declare on the source, then transform. Names resolve case-insensitively through the
@@ -2723,7 +2778,10 @@ class DataFrame:
         declared with any spelling; an unknown name refuses and lists the available columns.
 
         Replacing the underlying view drops the declaration (it lives on the registered
-        table, not on this handle). Returns ``self`` so the call chains.
+        table, not on this handle). Each call is a fresh verify-then-register: a later
+        default-flag call after a tighten restores original key nullability **on that
+        source frame**. Already-derived frames cannot be re-declared (source-frames
+        only), so they keep the derived plan's nullability.
         """
         self._ensure_alive()
         if not cols:
@@ -2759,12 +2817,28 @@ class DataFrame:
             canonical = self._resolve_getitem_column_name(name)
             engine_keys.append(self._engine_field_for_display(canonical))
         view = self._source_view_name
-        self._session.declare_temp_view_sorted(view, engine_keys)
+        self._session.declare_temp_view_sorted(view, engine_keys, tightenNulls)
         # The declaration re-registers the view's MemTable, but this frame's logical plan
         # still holds the table source captured when the scan was planned — re-resolve it,
         # or the frame that declared would be the one frame that never sees the elision.
         self._inner = self._session.sql(f"SELECT * FROM {view}")
+        self._tighten_derived = tightenNulls
         return self
+
+    def _refuse_tightened_iceberg_create(self) -> None:
+        """Refuse Iceberg CREATE of a tighten-derived frame that would persist a required field.
+
+        R-D: skip when every output field is nullable (no required column would be written).
+        """
+        if not self._tighten_derived:
+            return
+        if not any(_output_field_would_persist_required(field) for field in self.schema.fields):
+            return
+        raise AnalysisException(
+            "Iceberg CREATE of a frame declared with tightenNulls=True is refused until "
+            "PR-D2 (the write-boundary relax). Drop tightenNulls or wait for the "
+            "create-path relax."
+        )
 
     # repark extension (no PySpark equivalent); camelCase is the disclosed repark spelling.
     declareSorted = declare_sorted  # noqa: N815 — repark-extra camelCase surface
@@ -3286,7 +3360,7 @@ class DataFrame:
         self._ensure_alive()
         # One plan-stable snapshot for uncached mapInArrow (and no-op for ordinary frames).
         plan = self._plan()
-        view = f"__repark_select_agg_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_select_agg_")
         # Register the prepared plan — never the empty MIA placeholder (raw ``_inner``
         # before prepare) and never a second action re-run via DF createOrReplaceTempView.
         self._session.create_or_replace_temp_view(view, plan)
@@ -3414,7 +3488,7 @@ class DataFrame:
                 quoted = _quote_ident_sql(name)
                 select_parts.append(f"{quoted} AS {quoted}")
 
-        view = f"__repark_expl_{uuid.uuid4().hex}"
+        view = scratch_view_name(mid._session, "__repark_expl_")
         mid._session.create_or_replace_temp_view(view, mid._inner)
         try:
             sql = f"SELECT {', '.join(select_parts)} FROM {view}"
@@ -3680,10 +3754,10 @@ class DataFrame:
             if column._origin_plan_id is not None and column._origin_field is not None:
                 origin_map[(column._origin_plan_id, column._origin_field)] = engine
 
-        view = f"_repark_h1_sel_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(self._session, "_repark_h1_sel_")
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
-            planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {_quote_ident(view)}")
+            planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
             child = self._spawn(planned)
             if h1_display_names is not None:
                 child._display_names = h1_display_names
@@ -4347,7 +4421,7 @@ class DataFrame:
         # H1: bare ``*`` keeps multi-name display identity via select("*") (octo H1-C7).
         if len(expr) == 1 and expr[0].strip() == "*":
             return self.select("*")
-        view = f"__repark_selx_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_selx_")
         # Plan-stable MIA snapshot (combine C4-L-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -4376,7 +4450,10 @@ class DataFrame:
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         # Mirrors selectExpr / select / filter so post-prepare alias agrees with peers.
         self._session.create_or_replace_temp_view(name, self._plan())
-        child = self._spawn(self._session.sql(f'SELECT * FROM "{name}"'))
+        # R7-1: the NAME stays one-part (the user chose it), but the read is home-pinned —
+        # a bare/quoted one-part reference is re-resolved against the live default catalog.
+        home_ref = home_view_ref(self._session, name)
+        child = self._spawn(self._session.sql(f"SELECT * FROM {home_ref}"))
         # H1: SQL SELECT * surfaces engine field names — re-attach display identity so
         # multi-name joins keep Spark-legal duplicate columns() (octo H1-C3-002).
         if self._display_names is not None and self._engine_names is not None:
@@ -4453,7 +4530,7 @@ class DataFrame:
             raise IllegalArgumentException(
                 f"requirement failed: Fraction must be in [0, 1], but got {fraction_value}"
             )
-        view = f"__repark_samp_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_samp_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -4568,7 +4645,7 @@ class DataFrame:
         for weight in normalized:
             running += weight
             bounds.append(running)
-        view = f"__repark_rsplit_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_rsplit_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -4591,7 +4668,7 @@ class DataFrame:
                     f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
                     f")"
                 )
-            scored_name = f"__repark_rsplit_s_{uuid.uuid4().hex}"
+            scored_name = scratch_view_name(self._session, "__repark_rsplit_s_")
             scored = self._session.sql(bucket_sql)
             self._session.create_or_replace_temp_view(scored_name, scored)
             try:
@@ -4665,7 +4742,7 @@ class DataFrame:
         if not target_pairs:
             raise AnalysisException("summary/describe on a zero-column frame is undefined")
         # Build one row per statistic via SQL aggregations, UNION ALL.
-        view = f"__repark_sum_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_sum_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -5083,7 +5160,7 @@ class DataFrame:
             left = self
             right = other
         if isinstance(on, str):
-            child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how))
+            child = left._spawn(left._plan().join_on_names(right._plan(), [on], engine_how), other)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -5099,7 +5176,7 @@ class DataFrame:
                         "If this is intended, set spark.sql.crossJoin.enabled=true to allow them."
                     )
                 return left.crossJoin(right)
-            child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how))
+            child = left._spawn(left._plan().join_on_names(right._plan(), keys, engine_how), other)
             child._remember_unemitted_right_origins(
                 self, other, left_only=engine_how in _SEMI_JOIN_HOWS
             )
@@ -5123,8 +5200,8 @@ class DataFrame:
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
-        left_alias = f"_repark_jl_{uuid.uuid4().hex[:12]}"
-        right_alias = f"_repark_jr_{uuid.uuid4().hex[:12]}"
+        left_alias = scratch_view_name(self._session, "_repark_jl_")
+        right_alias = scratch_view_name(self._session, "_repark_jr_")
         how_sql = {
             "inner": "INNER",
             "left": "LEFT OUTER",
@@ -5185,8 +5262,7 @@ class DataFrame:
                     else:
                         engine_out = display
                     proj_parts.append(
-                        f"{_quote_ident(side_alias)}.{_quote_ident(source_engine)} "
-                        f"AS {_quote_ident(engine_out)}"
+                        f"{side_alias}.{_quote_ident(source_engine)} AS {_quote_ident(engine_out)}"
                     )
                     display_names.append(display)
                     engine_names.append(engine_out)
@@ -5205,16 +5281,15 @@ class DataFrame:
 
             if engine_how == "cross":
                 join_sql = (
-                    f"SELECT {', '.join(proj_parts)} FROM {_quote_ident(left_alias)} "
-                    f"CROSS JOIN {_quote_ident(right_alias)}"
+                    f"SELECT {', '.join(proj_parts)} FROM {left_alias} CROSS JOIN {right_alias}"
                 )
             else:
                 join_sql = (
-                    f"SELECT {', '.join(proj_parts)} FROM {_quote_ident(left_alias)} "
-                    f"{how_sql} JOIN {_quote_ident(right_alias)} ON {on_sql}"
+                    f"SELECT {', '.join(proj_parts)} FROM {left_alias} "
+                    f"{how_sql} JOIN {right_alias} ON {on_sql}"
                 )
             planned = self._session.sql(join_sql)
-            child = self._spawn(planned)
+            child = self._spawn(planned, other)
             # Always attach identity when any display name collides OR origin map needed.
             child._display_names = display_names
             child._engine_names = engine_names
@@ -5326,7 +5401,7 @@ class DataFrame:
         if not value_list:
             raise AnalysisException("unpivot values list must be non-empty")
         self._ensure_alive()
-        view = f"__repark_unpivot_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_unpivot_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -5363,7 +5438,7 @@ class DataFrame:
         reserved for ``mode`` values that explicitly name cost/analyze (X3 census hang fix).
         """
         self._ensure_alive()
-        view = f"__repark_explain_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_explain_")
         self.create_or_replace_temp_view(view)
         try:
             # Only modes that Spark documents as executing get ANALYZE. extended=True is print-only.
@@ -5690,7 +5765,7 @@ class DataFrame:
         **not** deduplicate (Spark ``union`` is UNION ALL). The two frames must have the same
         number of columns.
         """
-        child = self._spawn(self._plan().union(other._plan(), False))
+        child = self._spawn(self._plan().union(other._plan(), False), other)
         # H1: keep left-side display identity when present (union-by-position inherits
         # left engine field names — Spark keeps left display names).
         if self._display_names is not None and self._engine_names is not None:
@@ -5721,7 +5796,7 @@ class DataFrame:
                     "allowMissingColumns=True; mismatched columns: "
                     f"{sorted(missing)}"
                 )
-        return self._spawn(self._plan().union(other._plan(), True))
+        return self._spawn(self._plan().union(other._plan(), True), other)
 
     # PySpark spells this ``unionByName``.
     unionByName = union_by_name  # noqa: N815 — deliberate PySpark-compatible camelCase alias
@@ -5730,8 +5805,8 @@ class DataFrame:
         """Register both frames as temp views, plan ``SELECT * FROM a {op} SELECT * FROM b``."""
         self._ensure_alive()
         other._ensure_alive()
-        left = f"__repark_set_l_{uuid.uuid4().hex}"
-        right = f"__repark_set_r_{uuid.uuid4().hex}"
+        left = scratch_view_name(self._session, "__repark_set_l_")
+        right = scratch_view_name(self._session, "__repark_set_r_")
         # Materialize + register both under try/finally so a right-side MIA failure after
         # left registration cannot leak the left staging MemTable (octo C4-SAF-001).
         # Plan-stable MIA snapshots (combine C5-Q-001) — not action re-run registration.
@@ -5739,7 +5814,7 @@ class DataFrame:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} {op_sql} SELECT * FROM {right}")
-            child = self._spawn(planned)
+            child = self._spawn(planned, other)
             # H1: re-attach left multi-name display maps after SQL set-op.
             if self._display_names is not None and self._engine_names is not None:
                 child._display_names = list(self._display_names)
@@ -5798,15 +5873,15 @@ class DataFrame:
         """Cartesian product (PySpark ``DataFrame.crossJoin``)."""
         self._ensure_alive()
         other._ensure_alive()
-        left = f"__repark_x_l_{uuid.uuid4().hex}"
-        right = f"__repark_x_r_{uuid.uuid4().hex}"
+        left = scratch_view_name(self._session, "__repark_x_l_")
+        right = scratch_view_name(self._session, "__repark_x_r_")
         # Materialize + register both under try/finally (octo C4-SAF-001; same as set-ops).
         # Plan-stable MIA snapshots (combine C5-Q-001) — not action re-run registration.
         try:
             self._session.create_or_replace_temp_view(left, self._plan())
             other._session.create_or_replace_temp_view(right, other._plan())
             planned = self._session.sql(f"SELECT * FROM {left} CROSS JOIN {right}")
-            return self._spawn(planned)
+            return self._spawn(planned, other)
         finally:
             self._session.drop_temp_view(left)
             other._session.drop_temp_view(right)
@@ -6628,6 +6703,7 @@ class DataFrame:
         Engine field names (``__repark_l_…``) stay under the hood for planning; action/export
         surfaces Spark-legal display names (duplicate names preserved positionally).
         """
+        table = _strip_internal_tighten_metadata(table)
         if self._display_names is None or self._engine_names is None:
             return table
         display = list(self._display_names)
@@ -7084,135 +7160,6 @@ class DataFrame:
         return np.column_stack([column.to_numpy(zero_copy_only=False) for column in table.columns])
 
 
-def _is_native_pure_global_aggregate(column: Column) -> bool:
-    """True when ``DataFrame.aggregate`` can accept this column as an aggregate arg.
-
-    Bare ``F.sum``/… builders set ``_is_aggregate_function``; ``.alias`` / ``for_select``
-    preserve it. Cast / binary / unary / scalar wrappers clear it and need the SQL
-    global-agg path (metadata only — no display-string sniff; octo C2-Q-002 fallout).
-
-    Compound AF arguments (``sum((X + 1))``) keep nested parentheses in structural
-    ``sql_expr``; the native pure path cannot rebind those case-preserved leaves, so they
-    take the free-SQL global-agg path instead (octo C6-L-002).
-    """
-    if not (column._is_aggregate and column._is_aggregate_function):
-        return False
-    sql_text = column._sql_expr
-    if sql_text is None:
-        return True
-    open_paren = sql_text.find("(")
-    if open_paren < 0:
-        return True
-    # Nested ``(`` after the outer AF call → compound arg; free-SQL path keeps quotes.
-    return "(" not in sql_text[open_paren + 1 :]
-
-
-def _parse_count_distinct_simple_names(text: str) -> list[str] | None:
-    """Extract simple leaf names from a ``count(DISTINCT …)`` display/sql fragment.
-
-    Supports bare/quoted simple names (``count(DISTINCT a, b)``, ``count(DISTINCT "A")``)
-    and the multi-col null-if-any pack form
-    ``count(DISTINCT CASE WHEN … THEN struct("a", "b") END)`` (octo C5-L-001). Compounds
-    (``count(DISTINCT (x + 1))``) return ``None`` so rebind leaves them alone.
-    """
-    stripped = text.strip()
-    if not stripped.startswith("count(DISTINCT ") or not stripped.endswith(")"):
-        return None
-    body = stripped[len("count(DISTINCT ") : -1].strip()
-    # Multi-col SQL pack: only the struct field list carries recoverable simple names.
-    case_match = re.fullmatch(
-        r"CASE WHEN .+ THEN struct\((.+)\) END",
-        body,
-        flags=re.DOTALL,
-    )
-    if case_match is not None:
-        body = case_match.group(1).strip()
-    # Comma-separated simple identifiers, each optionally double-quoted.
-    token = r'"?([A-Za-z_][A-Za-z0-9_]*)"?'
-    if re.fullmatch(token, body) is not None:
-        match = re.fullmatch(token, body)
-        return [match.group(1)] if match is not None else None
-    multi = re.fullmatch(
-        rf"(?:{token}\s*,\s*)+{token}",
-        body,
-    )
-    if multi is None:
-        return None
-    return re.findall(r'"?([A-Za-z_][A-Za-z0-9_]*)"?', body)
-
-
-def _global_agg_sql_parts(column: Column) -> tuple[str, str]:
-    """``(expression_sql, output_name)`` for the SQL global-agg select path.
-
-    Expression SQL comes from structural ``Column._sql_expr`` chains (aggregate builders
-    quote identifiers; ``alias`` does not embed ``AS name`` — octo C3-SEC-001 / C3-002).
-    Output names are always quoted by the caller via ``_quote_ident``.
-    """
-    if column._projection_name is not None:
-        output_name = column._projection_name
-    elif column._agg_name is not None:
-        output_name = column._agg_name
-    else:
-        output_name = column.spark_display_part()
-    return column.sql_expr_part(), output_name
-
-
-def _pandas_udf_window_frame_bounds(spec: Any) -> tuple[int | None, int | None]:
-    """Resolve rows-frame offsets for windowed GROUPED_AGG (M7).
-
-    Returns ``(start, end)`` relative to the current row: ``None`` = unbounded on that
-    side; ``0`` = current row. When G2 has not set ``_frame_start`` / ``_frame_end`` on
-    the :class:`~repark.window.WindowSpec`, ordered windows default to Spark's
-    ``ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW`` → ``(None, 0)``.
-    """
-    from repark.spark.window import _JVM_LONG_MAX, _JVM_LONG_MIN
-
-    order_columns = list(getattr(spec, "_order_columns", []) or [])
-    if not order_columns:
-        return (None, None)
-    start = getattr(spec, "_frame_start", None)
-    end = getattr(spec, "_frame_end", None)
-    if start is None and end is None:
-        # G2's WindowSpec always declares the attrs (None until rowsBetween sets ints);
-        # ordered window with no explicit frame keeps the Spark default.
-        return (None, 0)
-    # G2 normalizes ±unbounded to JVM long sentinels — map back to None (unbounded side).
-    if start is not None:
-        start = None if int(start) <= _JVM_LONG_MIN else int(start)
-    if end is not None:
-        end = None if int(end) >= _JVM_LONG_MAX else int(end)
-    return (start, end)
-
-
-def _reject_partition_transform(column: Column) -> None:
-    """Raise if ``column`` is an ``F.years``/``months``/``days``/``hours`` partition transform.
-
-    Those expressions are valid only inside :meth:`DataFrameWriterV2.partitionedBy` (live PySpark
-    4.1.2: ``PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY``).
-    """
-    transform = getattr(column, "_partition_transform", None)
-    if transform is not None:
-        raise AnalysisException(
-            f"[PARTITION_TRANSFORM_EXPRESSION_NOT_IN_PARTITIONED_BY] The expression "
-            f"{transform!r} must be inside 'partitionedBy'."
-        )
-
-
-def _reject_aggregate_in_with_column(column: Column, *, surface: str) -> None:
-    """Refuse sticky aggregates on ``withColumn`` / ``withColumns`` (combine octo C3-001).
-
-    Spark rejects aggregate expressions outside ``select`` / ``agg`` / ``groupBy``. Without
-    this gate, ``withColumns`` projects via :meth:`DataFrame.select` and F1 pure-global
-    routing silently collapses every row to one global-agg row.
-    """
-    if bool(getattr(column, "_is_aggregate", False)):
-        raise AnalysisException(
-            f"[INVALID_USAGE_OF_AGGREGATE] Aggregate expressions are not allowed in "
-            f"{surface} (use select/agg for global aggregates; Spark rejects "
-            f"aggregates in withColumn/withColumns)."
-        )
-
-
 # =============================================================================
 # r27 T0 re-export binds — nested classes in region modules (technique A).
 # Package + core paths + private helpers remain importable (Q7 freeze).
@@ -7223,6 +7170,12 @@ def _reject_aggregate_in_with_column(column: Column, *, surface: str) -> None:
 # which is also why this block stays hand-ordered (I001) instead of alphabetised.
 from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _G2_RANGE_NUMERIC_DTYPES,
+    _global_agg_sql_parts,
+    _is_native_pure_global_aggregate,
+    _pandas_udf_window_frame_bounds,
+    _parse_count_distinct_simple_names,
+    _reject_aggregate_in_with_column,
+    _reject_partition_transform,
     _QCOL_SIDE_BOUNDARY_RE,
     _QCOL_TOKEN_RE,
     _arrow_debug_type_to_sql,
@@ -7232,6 +7185,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _column_may_reference_names,
     _column_widths,
     _column_window_spec,
+    _data_type_has_required_child,
     _decode_qcol_field,
     _display_type_labels_from_arrow,
     _dynamic_flatten_unnest_structs,
@@ -7244,6 +7198,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _is_compound_sql_expr,
     _list_field_element_debug,
     _null_safe_equi_join_sql,
+    _output_field_would_persist_required,
     _parse_list_element_sql_type,
     _reject_non_numeric_range_order,
     _rewrite_join_qcol_sql,
@@ -7254,6 +7209,7 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _sql_embed_expr_fragment,
     _sql_ident_bare_name,
     _sql_string_literal,
+    _strip_internal_tighten_metadata,
     _style_type_label,
     _table_to_cell_rows,
     _uniform_window_key_from_map,

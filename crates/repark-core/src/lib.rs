@@ -24,11 +24,13 @@ mod extension;
 mod idents;
 mod namespace_create;
 mod object_store_s3;
+mod pre_execute;
 mod read_options;
 mod runtime;
 mod session;
 mod session_time_zone;
 mod sorted_view;
+mod temp_view;
 mod time_travel;
 
 // --- The Session surface (v1 names, courtesy `Session` alias). ---
@@ -45,7 +47,11 @@ pub use session_time_zone::{
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
+
+// --- The shared pre-execute belt (SQM round 5 Z-2): plan → guard → execute, the ONE choke
+// point every door's planned statement passes through before it runs. ---
 pub use extension::{SessionBuildConf, SessionExtension};
+pub use pre_execute::PreExecute;
 
 // --- The embedding's executor handle (EC-5 / design §4 Q7). Additive: the TYPE is named here;
 // core never constructs one and never blocks — the INSTANCE lives in the embedding.
@@ -68,6 +74,15 @@ pub use time_travel::{
 // --- Error surface: the classifier fold + the seed re-export (bindings import one crate). ---
 pub use error_map::engine_err;
 pub use repark_common::{Error, ErrorClass, Result};
+
+// --- SE-1 tightenNulls (PR-D1): the metadata key + the Iceberg-CREATE refuse both doors
+// call at CTAS schema derivation. The flip itself stays crate-private in `sorted_view`. ---
+pub use sorted_view::{
+    TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
+    refuse_iceberg_create_of_tightened_ddl, refuse_iceberg_create_of_tightened_plan,
+    refuse_iceberg_create_of_tightened_schema, schema_is_tighten_derived,
+    strip_tighten_export_metadata, tightened_field_names,
+};
 
 // --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6). ---
 pub use datafusion::prelude::DataFrame;

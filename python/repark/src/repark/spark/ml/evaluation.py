@@ -9,13 +9,13 @@ sparse-aware index lookup on the ``{size,indices,values}`` struct path (M7).
 from __future__ import annotations
 
 import contextlib
-import uuid
 from typing import Any
 
 from repark.errors import IllegalArgumentException, UnsupportedOperationException
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import _require_repark_dataframe
 from repark.spark.ml.param import HasLabelCol, HasPredictionCol, Param, Params, TypeConverters
 
@@ -143,7 +143,7 @@ class RegressionEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
         label = _quote_ident(self.getLabelCol())
         pred = _quote_ident(self.getPredictionCol())
         metric = self.getMetricName().lower()
-        view = f"__repark_reval_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_reval_")
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="RegressionEvaluator.evaluate")
@@ -237,7 +237,7 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             )
         label = _quote_ident(self.getLabelCol())
         pred = _quote_ident(self.getPredictionCol())
-        view = f"__repark_beval_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_beval_")
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="BinaryClassificationEvaluator.evaluate")
@@ -336,8 +336,8 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             frame, verb="BinaryClassificationEvaluator.areaUnderROC"
         )
         label = _quote_ident(label_name)
-        view = f"__repark_auc_{uuid.uuid4().hex[:12]}"
-        scored = f"__repark_auc_sc_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_auc_")
+        scored = scratch_view_name(frame._session, "__repark_auc_sc_")
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="BinaryClassificationEvaluator.areaUnderROC")
@@ -459,8 +459,8 @@ class BinaryClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator):
             frame, verb="BinaryClassificationEvaluator.areaUnderPR"
         )
         label = _quote_ident(label_name)
-        view = f"__repark_aupr_{uuid.uuid4().hex[:12]}"
-        scored = f"__repark_aupr_sc_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_aupr_")
+        scored = scratch_view_name(frame._session, "__repark_aupr_sc_")
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="BinaryClassificationEvaluator.areaUnderPR")
@@ -635,7 +635,7 @@ class MulticlassClassificationEvaluator(HasLabelCol, HasPredictionCol, Evaluator
             )
         label = _quote_ident(self.getLabelCol())
         pred = _quote_ident(self.getPredictionCol())
-        view = f"__repark_meval_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_meval_")
         frame.createOrReplaceTempView(view)
         try:
             _require_nonempty_eval(frame, view, verb="MulticlassClassificationEvaluator.evaluate")

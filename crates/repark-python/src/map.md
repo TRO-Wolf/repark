@@ -125,7 +125,8 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   tree yet) — they need MULTIPLE bases, which
   `pyo3::create_exception!` cannot express, and no Rust code raises them.
 - `session.rs` — `PyReparkSession`; includes `declare_temp_view_sorted` (SE-1: verified
-  sortedness declaration → window `SortExec` elision; GIL released for the scan);
+  sortedness declaration → window `SortExec` elision; GIL released for the scan;
+  **PR-D1** `tighten_nulls: bool = false` thin call-through);
   `materialize_as_temp_view` (VALUES) +
   `materialize_as_cache_view` (r23 CACHE1 cache path, optional max_bytes); R-PERF-ARROW-CDF
   `register_ipc_stream_as_temp_view` (IPC ingest; **P1a:** createDataFrame facade prefers
@@ -209,7 +210,9 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   **`analyzed_arrow_schema`** (analysis-only Arrow C schema `PyCapsule` — physical field types for
   plan-only consumers; U7 pandas_udf pass-through / octo C6-Q-001; **P2b:** `OnceLock<SchemaRef>`
   cache on the plan handle — first `analyzed_arrow_schema_native` pays analysis, later
-  `columns`/`schema`/stream-open reuse the same `SchemaRef`, never invalidate); `limit(n)`;
+  `columns`/`schema`/stream-open reuse the same `SchemaRef`, never invalidate;
+  **SE-1 R-3:** `strip_tighten_export_metadata` so user-visible `to_arrow()` /
+  `df.schema` do not leak `repark.tighten_nulls`); `limit(n)`;
   **`limit_with_skip(skip, fetch)`** (DataFusion `Limit` with non-zero skip — R-DISPLAY facade
   `_preview_tail_rows` tail preview; shareable with a later public `DataFrame.tail`);
   `show(n)` (engine-side limit then collect; returns the rendered table string); `__arrow_c_stream__`
@@ -335,3 +338,7 @@ as_any trait methods removed (DF54 trait upcasting); Cast uses field-aware API w
 - r25 morning critic fix: `collapse_identity_alias_chain` (column/expr_build.rs) preserves the outer
   Alias `relation` + field `metadata` and passes a lone Alias through untouched; pin
   `collapse_identity_alias_chain_preserves_qualifier_and_metadata`.
+**SQM round 7 (R7-1):** `session.rs` exposes `temp_view_home()` and
+`resolve_temp_view_home_ref(name)` — the two lookups `python/repark/src/repark/spark/_temp_views.py`
+uses to spell a session-local view against its home instead of emitting a bare reference the
+engine would re-resolve against the live `datafusion.catalog.default_catalog`.

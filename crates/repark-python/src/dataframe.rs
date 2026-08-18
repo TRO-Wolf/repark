@@ -201,7 +201,9 @@ impl PyDataFrame {
         let (state, plan) = self.df.clone().into_parts();
         let analyzed =
             repark_functions::analyze_eagerly(&state, plan).map_err(datafusion_to_py_err)?;
-        let schema: SchemaRef = Arc::new(analyzed.schema().as_arrow().clone());
+        let schema: SchemaRef = repark_core::strip_tighten_export_metadata(Arc::new(
+            analyzed.schema().as_arrow().clone(),
+        ));
         // First writer wins under concurrent first-touch; losers drop their compute result.
         let _ = self.analyzed_schema.set(Arc::clone(&schema));
         Ok(self.analyzed_schema.get().map(Arc::clone).unwrap_or(schema))

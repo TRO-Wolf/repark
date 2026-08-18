@@ -201,7 +201,10 @@ class ReparkSession:
         """Qualify ``table_name`` under current catalog/database (E2 shared resolution).
 
         Returns an unquoted multipart identifier. Use :func:`_sql_table_ref` for SQL embeds.
-        When ``prefer_temp_view`` is true, a one-part name that exists as a temp view stays bare.
+        When ``prefer_temp_view`` is true, a one-part name that exists as a temp view resolves to
+        that view's session-local HOME, **not** the bare name (R7-1) — a bare reference follows
+        the LIVE ``datafusion.catalog.default_catalog``, so under a raw ``SET`` the product read
+        paths missed a view ``tableExists`` reported present (``repark.spark._temp_views``).
         """
         state = self._catalog_state()
         known: set[str] = state.get("known_catalogs") or set()
@@ -209,12 +212,12 @@ class ReparkSession:
         if prefer_temp_view:
             inner = self._ensure_alive()
 
-            def probe(name: str) -> bool:
-                """True when ``name`` resolves to an existing table/temp view."""
+            def probe(name: str) -> list[str] | None:
+                """The temp view's home segments, or ``None`` when it is not a temp view."""
                 try:
-                    return bool(inner.table_exists(name))
+                    return inner.resolve_temp_view_home_ref(name)
                 except Exception:
-                    return False
+                    return None
 
         return resolve_table_name(
             table_name,
@@ -222,7 +225,7 @@ class ReparkSession:
             current_database=str(state["current_database"]),
             known_catalogs=known,
             prefer_temp_view=prefer_temp_view,
-            temp_view_exists=probe,
+            temp_view_home_ref=probe,
             default_catalog_is_auto=bool(state.get("auto_default_catalog")),
         )
 
@@ -249,7 +252,7 @@ class ReparkSession:
         * ``MERGE INTO target [AS a] USING source [AS b] ON …`` (F1 — target + source)
         * ``UPDATE name [alias] SET … [WHERE …]`` (G1 — target; SET body never regexed)
         * ``DELETE FROM name [alias] [WHERE …]`` (G1 — target; WHERE-subquery FROM via walker)
-        * ``SELECT`` / ``WITH`` … (F1 — FROM/JOIN/comma table refs; one-part temp views stay bare)
+        * ``SELECT`` / ``WITH`` … (F1 — FROM/JOIN/comma refs; a one-part temp view = its HOME)
 
         Does **not** rewrite multi-statement scripts. Leading SQL comments / whitespace are
         stripped for classification then re-prefixed (octo C1-Q-006).
@@ -509,7 +512,7 @@ class ReparkSession:
         * SQL comments ``--`` / ``/* … */`` (octo C1-Q-005)
 
         Comma-separated FROM lists (``FROM a, b``) expand each relation (octo C1-Q-002).
-        One-part names that resolve as temp views stay bare (``prefer_temp_view=True``).
+        One-part temp views expand to their session-local HOME, never bare (R7-1, MEASURED).
 
         Non-recursive ``WITH`` bodies only see *prior* CTE names so
         ``WITH t AS (SELECT * FROM t)`` expands the body table (octo C4-Q-001).
@@ -1001,10 +1004,10 @@ class ReparkSession:
 
         Implemented as ``SELECT * FROM <quoted multipart identifier>`` through the SQL path so
         Iceberg catalog tables and temporary views both resolve. Bare and two-part names expand
-        under the session default catalog + namespace (E2); one-part temp views stay bare when
-        present. Only identifier segments are accepted (``catalog.db.table``); SQL fragments
-        (``UNION``, ``JOIN``, subqueries) raise :class:`~repark.errors.AnalysisException` —
-        this is an identifier API, not free SQL.
+        under the session default catalog + namespace (E2); a one-part temp view resolves to its
+        HOME, never bare (R7-1). Only identifier segments are accepted (``catalog.db.table``);
+        SQL fragments (``UNION``, ``JOIN``, subqueries) raise
+        :class:`~repark.errors.AnalysisException` — this is an identifier API, not free SQL.
         """
         if not isinstance(table_name, str):
             from repark.errors import PySparkTypeError

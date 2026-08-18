@@ -7,7 +7,6 @@ Default Spark ``initMode`` is k-means|| — we **refuse** it loud and require
 from __future__ import annotations
 
 import contextlib
-import uuid
 from typing import Any
 
 from repark import _native
@@ -15,6 +14,7 @@ from repark.errors import IllegalArgumentException, UnsupportedOperationExceptio
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import (
     Estimator,
     Model,
@@ -194,7 +194,7 @@ class KMeansModel(HasFeaturesCol, HasPredictionCol, Model):
             cond = others_ge if not stricter else f"({others_ge}) AND ({stricter})"
             case_arms.append(f"WHEN {cond} THEN CAST({index} AS DOUBLE)")
         case_sql = "CASE " + " ".join(case_arms) + " ELSE CAST(0 AS DOUBLE) END"
-        view = f"__repark_km_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_km_")
         frame.createOrReplaceTempView(view)
         sql = f"SELECT {view}.*, ({case_sql}) AS {prediction} FROM {view}"
         try:

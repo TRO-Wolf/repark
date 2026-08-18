@@ -11,6 +11,25 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
 - [session_extension.rs](session_extension.rs) — deferred test #1
   (`temp_view_then_sql_runs_the_spark_function_shim`): temp view + `session.sql` reaches the
   Spark date shim (`year`, `weekofyear`) through the installed extension + dialect.
+- [declared_sorted_tighten.rs](declared_sorted_tighten.rs) — **SE-1 PR-D1:** Spark-door
+  execution-layer pin that `tightenNulls` elides `SortExec` on the serving-shape window
+  (`ORDER BY ts` = NULLS FIRST over nullable keys) via `create_physical_plan` (not EXPLAIN);
+  hint mode keeps the sort; Iceberg CTAS of a tightened frame refuses; CTAS of a
+  derived expression over a tightened source refuses (SQM F1); a one-statement
+  CTAS with the tightened view in an EXISTS subquery refuses (R-B; pin comment
+  names EXISTS, not scalar); cache remint
+  of a derived plan still refuses (R-A); a lazy `into_view` hop still
+  refuses (Q-001); all-nullable projection CREATE + INSERT stay allowed (R-D).
+  Round-4 (Y-3/Y-4): `CREATE VIEW ice.ns.v AS … LIMIT 0` / `… WHERE false` and
+  `SELECT … INTO ice.ns.t` refuse (both were Ok on BASE and persisted required keys —
+  measured); session-scoped one-part names and untightened sources stay allowed.
+  Y-5: the EXISTS-subquery node's `Kills:` prose said "scalar-subquery" and was corrected.
+  Round-5: `default_catalog_bare_name_ddl_over_tightened_source_refuses` (Z-1 — bare/two-part
+  names under `SET datafusion.catalog.default_catalog = ice`; all four statements were Ok on
+  BASE) and `ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table` (Z-3 — green
+  on BASE for this door; the regression fence for the outcome the ANSI door was fixed to match).
+  Round-6 (R6-3/R6-4): the Z-1 MEASURED docstring is per-row (Full VIEW already refused on r4);
+  every refuse row also asserts the sink UNPUBLISHED (`table_exists` false).
 - [ddl_sessions.rs](ddl_sessions.rs) — deferred rows #2, #4, #5, #6, #7 (phase-2 PR-3a): CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

@@ -22,6 +22,7 @@ from repark.errors import (
     UnsupportedOperationException,
 )
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.dataframe.core import (
     DataFrame,
@@ -221,6 +222,7 @@ class DataFrameWriter:
         session = self._dataframe._session
         normalized_mode = "error" if self._mode == "errorifexists" else self._mode
         if not session.table_exists(qualified):
+            self._dataframe._refuse_tightened_iceberg_create()
             self._run_through_temp_view(lambda view: self._ctas_sql(table_ref, view=view))
             return
         if normalized_mode == "error":
@@ -930,7 +932,7 @@ class DataFrameWriter:
         # Materialize pending mapInArrow / cache so uncached MIA is not an empty wipe
         # (octo C2-Q-001 / C2-SAF-001 / C2-L-001).
         session = self._dataframe._session
-        view_name = f"_repark_writer_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(session, "_repark_writer_")
         session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
         try:
             # CTAS / INSERT / COPY execute eagerly at `sql()` (the engine's eager-command
@@ -1140,6 +1142,7 @@ class DataFrameWriterV2:
                 "because it already exists. Choose a different name, drop or replace the existing "
                 "object, or use createOrReplace()."
             )
+        self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=False)
 
     def createOrReplace(self) -> None:  # noqa: N802 — PySpark method name
@@ -1148,6 +1151,7 @@ class DataFrameWriterV2:
         Routes to ``CREATE OR REPLACE TABLE … AS SELECT`` (engine path already supported).
         """
         self._dataframe._ensure_alive()
+        self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
 
     create_or_replace = createOrReplace
@@ -1166,6 +1170,7 @@ class DataFrameWriterV2:
                 f"[TABLE_OR_VIEW_NOT_FOUND] Cannot replace table {self._table!r} because it does "
                 "not exist. Use create() or createOrReplace() to create it."
             )
+        self._dataframe._refuse_tightened_iceberg_create()
         self._run_ctas(or_replace=True)
 
     def append(self) -> None:
@@ -1343,7 +1348,7 @@ class DataFrameWriterV2:
         """
         self._dataframe._ensure_alive()
         session = self._dataframe._session
-        view_name = f"_repark_writer_v2_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(session, "_repark_writer_v2_")
         session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
         try:
             session.sql(build_sql(view_name))
