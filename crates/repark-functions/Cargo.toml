@@ -25,6 +25,7 @@ datafusion-spark.workspace = true
 # as `repark-core`'s declaration (h1a-ledger.md finding S-6).
 arrow = { workspace = true, features = ["chrono-tz"] }
 chrono.workspace = true
+regex.workspace = true
 
 [dev-dependencies]
 # `#[tokio::test]` — the date-shim tests register the UDFs into a SessionContext and run SQL.

@@ -1,8 +1,9 @@
-"""Bitwise facade wrappers (FN-F + FN-GT1).
+"""Bitwise facade wrappers (FN-F + FN-GT1 + FN-GT2 bitmap).
 
 Public names are re-exported from ``functions.py``. ``bitwise_not`` is a SHIM
 (``Column.bitwiseXOR(lit(-1))``). FN-GT1 wires ``bit_count`` / ``bit_get`` /
-shifts through ``call_scalar``.
+shifts through ``call_scalar``. FN-GT2 bitmap helpers live here (bit-family
+sibling of the URL wrappers).
 """
 
 from __future__ import annotations
@@ -151,3 +152,66 @@ def shiftrightunsigned(col: Column | str, num_bits: Column | str | int) -> Colum
     ``F.shiftrightunsigned(8, 1)`` is ``4``.
     """
     return _scalar("shiftrightunsigned", col, num_bits, lit_indices=frozenset({1}))
+
+
+def bitmap_bit_position(col: Column | str) -> Column:
+    """Bit position for a bitmap child (PySpark ``functions.bitmap_bit_position``).
+
+    Parameters
+    ----------
+    col : Column or str
+        Integral input.
+
+    Returns
+    -------
+    Column
+        Int64 bit position (``bitmap_bit_position(1)`` is ``0``;
+        ``bitmap_bit_position(123)`` is ``122``).
+
+    Examples
+    --------
+    ``F.bitmap_bit_position(F.lit(1))`` is ``0``.
+    ``F.bitmap_bit_position(F.lit(123))`` is ``122``.
+    """
+    return _scalar("bitmap_bit_position", col)
+
+
+def bitmap_bucket_number(col: Column | str) -> Column:
+    """Bucket number for a bitmap child (PySpark ``functions.bitmap_bucket_number``).
+
+    Parameters
+    ----------
+    col : Column or str
+        Integral input.
+
+    Returns
+    -------
+    Column
+        Int64 bucket (``bitmap_bucket_number(1)`` is ``1``;
+        ``bitmap_bucket_number(0)`` is ``0``).
+
+    Examples
+    --------
+    ``F.bitmap_bucket_number(F.lit(1))`` is ``1``.
+    """
+    return _scalar("bitmap_bucket_number", col)
+
+
+def bitmap_count(col: Column | str) -> Column:
+    """Number of set bits in a binary bitmap (PySpark ``functions.bitmap_count``).
+
+    Parameters
+    ----------
+    col : Column or str
+        Binary bitmap.
+
+    Returns
+    -------
+    Column
+        Int64 population count.
+
+    Examples
+    --------
+    ``F.bitmap_count(F.unhex(F.lit('FF')))`` is ``8``.
+    """
+    return _scalar("bitmap_count", col)

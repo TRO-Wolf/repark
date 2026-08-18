@@ -8,8 +8,8 @@ with their canonical. ``unix_seconds`` / ``unix_millis`` pin toward-zero truncat
 Deferred this batch (no stubs): charter ENGINE-WORK
 (``make_timestamp_ltz`` / ``make_timestamp_ntz``, ``make_ym_interval``,
 ``to_timestamp_ltz``, ``convert_timezone``, ``timestamp_add`` / ``timestamp_diff``)
-plus honest-cut ``make_date`` / ``make_interval`` / ``make_dt_interval`` /
-``unix_micros`` (``call_scalar`` miss) and SEMANTIC-HAZARD ``date_diff`` /
+FN-GT2 later shipped ``make_date`` / ``make_interval`` / ``make_dt_interval`` /
+``unix_micros`` / ``date_diff``. Remaining honest-cut / DESIGN-GATED:
 ``localtimestamp`` / ``to_timestamp_ntz``.
 """
 
@@ -28,11 +28,7 @@ from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
 
 _FN_D_DEFERRED: tuple[str, ...] = (
     "convert_timezone",
-    "date_diff",
     "localtimestamp",
-    "make_date",
-    "make_dt_interval",
-    "make_interval",
     "make_timestamp_ltz",
     "make_timestamp_ntz",
     "make_ym_interval",
@@ -40,7 +36,6 @@ _FN_D_DEFERRED: tuple[str, ...] = (
     "timestamp_diff",
     "to_timestamp_ltz",
     "to_timestamp_ntz",
-    "unix_micros",
 )
 
 

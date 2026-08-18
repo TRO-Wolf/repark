@@ -18,21 +18,9 @@
 //! does not depend on `repark-core`. The `DataFusionError -> repark_core::Error` conversion
 //! happens one layer up, in `repark-core`.
 
-/// The `as_any` / `name` / `signature` boilerplate every shim `ScalarUDFImpl` shares. Pairs
-/// with `Signature::user_defined`, which defers coercion to each impl's `coerce_types`, so a
-/// single overload accepts Spark's full input range instead of a fixed type list.
-macro_rules! shim_udf_boilerplate {
-    ($name_literal:literal) => {
-        fn name(&self) -> &str {
-            $name_literal
-        }
-        fn signature(&self) -> &Signature {
-            &self.signature
-        }
-    };
-}
-
-pub(crate) use shim_udf_boilerplate;
+mod shim_macros;
+/// Re-exported at the crate root so call sites keep saying `crate::shim_udf_boilerplate!`.
+pub(crate) use shim_macros::shim_udf_boilerplate;
 
 pub mod aggregate;
 pub mod analyzer;
@@ -49,6 +37,7 @@ pub mod session_time_zone;
 pub mod string;
 pub mod timestamp_cast;
 pub mod timestamp_type;
+pub mod url;
 
 use std::sync::Arc;
 
@@ -115,6 +104,10 @@ pub fn register_all(ctx: &SessionContext) {
         ctx.register_udf(udf.as_ref().clone());
     }
     for udf in collection::functions() {
+        ctx.register_udf(udf.as_ref().clone());
+    }
+    // X8: parse_url / try_parse_url on java.net.URI splitting (upstream normalizes with url::Url).
+    for udf in url::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
     // r20 G2: Spark XORShift rand/randn (overwrites DF unseeded `random`).

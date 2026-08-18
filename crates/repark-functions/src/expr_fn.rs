@@ -16,10 +16,12 @@ use std::sync::Arc;
 use arrow::datatypes::DataType;
 use datafusion::logical_expr::expr::ScalarFunction;
 use datafusion::logical_expr::{Cast, Expr, ScalarUDF};
+use datafusion_spark::function::bitmap::expr_fn as spark_bitmap;
 use datafusion_spark::function::bitwise::expr_fn as spark_bitwise;
 use datafusion_spark::function::datetime::expr_fn as spark_datetime;
 use datafusion_spark::function::math::expr_fn as spark_math;
 use datafusion_spark::function::string::expr_fn as spark_string;
+use datafusion_spark::function::url as spark_url_udfs;
 
 use crate::datetime;
 
@@ -241,4 +243,113 @@ pub fn is_valid_utf8(arg: Expr) -> Expr {
 #[must_use]
 pub fn make_valid_utf8(arg: Expr) -> Expr {
     spark_string::make_valid_utf8(arg)
+}
+
+/// Spark `make_date(year, month, day)` — repark registered UDF (not a CAST chain).
+#[must_use]
+pub fn make_date(year: Expr, month: Expr, day: Expr) -> Expr {
+    call(datetime::make_date_udf(), vec![year, month, day])
+}
+
+/// Spark `make_interval(...)` — 0..=7 args (years…secs); kernel accepts each arity.
+#[must_use]
+pub fn make_interval(args: Vec<Expr>) -> Expr {
+    datafusion_spark::function::datetime::make_interval().call(args)
+}
+
+/// Spark `make_dt_interval(...)` — 0..=4 args (days, hours, mins, secs).
+#[must_use]
+pub fn make_dt_interval(args: Vec<Expr>) -> Expr {
+    datafusion_spark::function::datetime::make_dt_interval().call(args)
+}
+
+/// Spark `unix_micros(ts)` — microseconds since epoch (from `datafusion-spark`).
+#[must_use]
+pub fn unix_micros(arg: Expr) -> Expr {
+    spark_datetime::unix_micros(arg)
+}
+
+/// Spark `date_diff(end, start)` — days from `start` to `end` (from `datafusion-spark`).
+#[must_use]
+pub fn date_diff(end: Expr, start: Expr) -> Expr {
+    spark_datetime::date_diff(end, start)
+}
+
+/// Spark `element_at(container, key)` — 1-based array / map-by-key (repark shim).
+#[must_use]
+pub fn element_at(container: Expr, key: Expr) -> Expr {
+    call(crate::collection::element_at_udf(), vec![container, key])
+}
+
+/// Spark `shuffle(array[, seed])` — random permutation (X1 NULL-guarded shim).
+///
+/// `args` is the array alone, or the array plus the Spark 4.0 `Int64` seed. Both doors resolve
+/// the same UDF, so `F.shuffle(col, seed)` and `shuffle(col, seed)` in SQL are one permutation.
+#[must_use]
+pub fn shuffle(args: Vec<Expr>) -> Expr {
+    call(crate::collection::shuffle_udf(), args)
+}
+
+/// Spark `map_from_entries(array<struct<key,value>>)` — duplicate keys raise (X7 shim).
+#[must_use]
+pub fn map_from_entries(arg: Expr) -> Expr {
+    call(crate::collection::map_from_entries_udf(), vec![arg])
+}
+
+/// Spark `str_to_map(text, pairDelim, keyValueDelim)` — regex delimiters (owned shim).
+#[must_use]
+pub fn str_to_map(text: Expr, pair_delim: Expr, key_value_delim: Expr) -> Expr {
+    call(
+        crate::collection::str_to_map_udf(),
+        vec![text, pair_delim, key_value_delim],
+    )
+}
+
+/// Spark `parse_url` — 2 or 3 args, on `java.net.URI` splitting (X8). An unparsable URL
+/// raises Spark's `INVALID_URL` on both doors.
+#[must_use]
+pub fn parse_url(args: Vec<Expr>) -> Expr {
+    call(crate::url::parse_url_udf(), args)
+}
+
+/// Spark `try_parse_url` — 2 or 3 args; NULL on invalid URL (X8 shim).
+#[must_use]
+pub fn try_parse_url(args: Vec<Expr>) -> Expr {
+    call(crate::url::try_parse_url_udf(), args)
+}
+
+/// Spark `url_decode(str)` (from `datafusion-spark`).
+#[must_use]
+pub fn url_decode(arg: Expr) -> Expr {
+    spark_url_udfs::url_decode().call(vec![arg])
+}
+
+/// Spark `url_encode(str)` (from `datafusion-spark`).
+#[must_use]
+pub fn url_encode(arg: Expr) -> Expr {
+    spark_url_udfs::url_encode().call(vec![arg])
+}
+
+/// Spark `try_url_decode(str)` — NULL on invalid encoding.
+#[must_use]
+pub fn try_url_decode(arg: Expr) -> Expr {
+    spark_url_udfs::try_url_decode().call(vec![arg])
+}
+
+/// Spark `bitmap_bit_position(n)` (from `datafusion-spark`).
+#[must_use]
+pub fn bitmap_bit_position(arg: Expr) -> Expr {
+    spark_bitmap::bitmap_bit_position(arg)
+}
+
+/// Spark `bitmap_bucket_number(n)` (from `datafusion-spark`).
+#[must_use]
+pub fn bitmap_bucket_number(arg: Expr) -> Expr {
+    spark_bitmap::bitmap_bucket_number(arg)
+}
+
+/// Spark `bitmap_count(bitmap)` — popcount of a binary bitmap.
+#[must_use]
+pub fn bitmap_count(arg: Expr) -> Expr {
+    spark_bitmap::bitmap_count(arg)
 }

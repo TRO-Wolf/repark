@@ -1074,6 +1074,33 @@ the pin rather than obeying it.
 > [`task/s5-v-landing-ledger.md`](../task/s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
 
+### FN-1 — `element_at` out of range is NULL under ANSI
+
+- **repark** — `element_at(array(1, 2), 5)` and `element_at(array(1, 2), -5)` are
+  NULL at the element type on BOTH doors (Spark `.sql()` and the facade
+  DataFrame API). Index `0` still raises `INVALID_INDEX_OF_ZERO`.
+- **Apache Spark** — under ANSI (the Spark 4 default, and repark's) raises
+  `INVALID_ARRAY_INDEX_IN_ELEMENT_AT`. *(oracle: documented Spark 4.1.2; not
+  re-derived live — this needs **Spark**, and no pyspark is installed in this
+  worktree's `.venv`. The repair round's JVM probe is `java.net.URI`, which has
+  nothing to say about ANSI `element_at`.)*
+- **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
+- **Rationale** — BACKLOG. repark's `spark.sql.ansi.enabled` is TRUE by default
+  but its implemented scope is `/` and `%` by zero
+  (`crates/repark-functions/src/ansi.rs`; docs/guide/session-and-conf.md). NULL
+  vs raise is an integrity divergence for any consumer that distinguishes an
+  error from a missing value. Same class as DEC-6/DEC-7.
+
+### FN-2 — `make_date` with an invalid Y-M-D is NULL under ANSI
+
+- **repark** — `make_date(2024, 2, 31)` and `make_date(2024, 13, 1)` are NULL at
+  `date32` on BOTH doors.
+- **Apache Spark** — under ANSI raises `DATETIME_FIELD_OUT_OF_BOUNDS`.
+  *(oracle: documented Spark 4.1.2; not re-derived live.)*
+- **Pin** — `python/repark/tests/test_functions_gt2.py::test_ansi_pair_is_null_not_a_raise`
+- **Rationale** — BACKLOG, same class and same rationale as FN-1.
+
+
 ### G6-3 — DATE→INT: Spark refuses; repark yields days-since-epoch
 
 > **CLOSED 2026-08-15.** `CAST`/`TRY_CAST` between `DATE` and any signed integer width now

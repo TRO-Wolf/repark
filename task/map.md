@@ -18,6 +18,9 @@ not this directory.
   struct-element CAST + `dynamicFlatten(empty_as_null=True)` default (branch
   `grok/c25-df2-outer-flatten`; SQM #176 V-2: void `make_array(NULL)`).
   B1 stays queued behind DF-2.
+- [fn-gt2-ledger.md](fn-gt2-ledger.md) — **FN-GT2 (2026-08-17):** leftover
+  datetime/collections/url/bitmap thin-wires + SQM rework (W1–W5 / P1–P5 / R1)
+  on `grok/c20-fngt2-thin-wire` (PR #174).
 - [f3-docstring-ledger.md](f3-docstring-ledger.md) — **F-3 (2026-08-17):** public-docstring
   backfill across the facade. Carries the AST census before/after per file (1117/1210 →
   1199/1210; 82 docstrings, 101 added lines, 0 deleted) and the measured `repark.polars`

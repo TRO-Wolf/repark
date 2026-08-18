@@ -743,6 +743,121 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::make_valid_utf8(exprs[0].clone())
         }
+        // ---- FN-GT2: leftover THIN-WIRE datetime / collections / url / bitmap ---------------
+        "make_date" => {
+            need(3)?;
+            repark_functions::expr_fn::make_date(
+                exprs[0].clone(),
+                exprs[1].clone(),
+                exprs[2].clone(),
+            )
+        }
+        "make_interval" => {
+            if exprs.len() > 7 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at most 7 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::make_interval(exprs.clone())
+        }
+        "make_dt_interval" => {
+            if exprs.len() > 4 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects at most 4 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::make_dt_interval(exprs.clone())
+        }
+        "unix_micros" => {
+            need(1)?;
+            repark_functions::expr_fn::unix_micros(exprs[0].clone())
+        }
+        "date_diff" => {
+            need(2)?;
+            repark_functions::expr_fn::date_diff(exprs[0].clone(), exprs[1].clone())
+        }
+        "element_at" => {
+            need(2)?;
+            repark_functions::expr_fn::element_at(exprs[0].clone(), exprs[1].clone())
+        }
+        "array_compact" => {
+            need(1)?;
+            nested_fn::array_compact(exprs[0].clone())
+        }
+        // X2: Spark 4.0 `shuffle(array, seed)`. The facade used to drop the seed; the SQL door
+        // already had it, so the two doors disagreed on a *deterministic* result.
+        "shuffle" => {
+            need_at_least(1)?;
+            if exprs.len() > 2 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 or 2 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::shuffle(exprs.clone())
+        }
+        "map_from_entries" => {
+            need(1)?;
+            repark_functions::expr_fn::map_from_entries(exprs[0].clone())
+        }
+        "str_to_map" => {
+            need_at_least(1)?;
+            if exprs.len() > 3 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 1 to 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            let pair_delim = exprs.get(1).cloned().unwrap_or_else(|| lit(","));
+            let key_value_delim = exprs.get(2).cloned().unwrap_or_else(|| lit(":"));
+            repark_functions::expr_fn::str_to_map(exprs[0].clone(), pair_delim, key_value_delim)
+        }
+        "parse_url" => {
+            need_at_least(2)?;
+            if exprs.len() > 3 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 or 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::parse_url(exprs.clone())
+        }
+        "try_parse_url" => {
+            need_at_least(2)?;
+            if exprs.len() > 3 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 or 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::try_parse_url(exprs.clone())
+        }
+        "url_decode" => {
+            need(1)?;
+            repark_functions::expr_fn::url_decode(exprs[0].clone())
+        }
+        "url_encode" => {
+            need(1)?;
+            repark_functions::expr_fn::url_encode(exprs[0].clone())
+        }
+        "try_url_decode" => {
+            need(1)?;
+            repark_functions::expr_fn::try_url_decode(exprs[0].clone())
+        }
+        "bitmap_bit_position" => {
+            need(1)?;
+            repark_functions::expr_fn::bitmap_bit_position(exprs[0].clone())
+        }
+        "bitmap_bucket_number" => {
+            need(1)?;
+            repark_functions::expr_fn::bitmap_bucket_number(exprs[0].clone())
+        }
+        "bitmap_count" => {
+            need(1)?;
+            repark_functions::expr_fn::bitmap_count(exprs[0].clone())
+        }
         other => {
             return Err(PyValueError::new_err(format!(
                 "call_scalar: unsupported function {other:?}"

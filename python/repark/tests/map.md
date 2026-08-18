@@ -41,6 +41,46 @@ NOT in that file is a defect, not a decision.
   `lag`/`lead`/`nth_value`/`percent_rank`/`cume_dist`).
   (2026-08-17): **FN-GT1 moved the pin** 296→315 (18 leftover thin-wires +
   `getbit` alias of `bit_get`).
+  (2026-08-17): **FN-GT2 moved the pin** 315→333 (18 datetime/collections/url/bitmap).
+- [test_functions_gt2.py](test_functions_gt2.py) — FN-GT2 (2026-08-17): leftover
+  THIN-WIRE datetime/collections/url/bitmap through Arrow (value AND type).
+  ``datediff`` stub stays; ``element_at`` pins 1-based + zero-index refuse +
+  string-key map extraction; ``shuffle`` pins type+length; ``array_compact``
+  drops NULLs only. Rework: exact interval/bitmap/unix_micros values, regex
+  ``str_to_map``, NULL rows, non-UTC session pins, docstring-example execute.
+  Honesty: W2 MonthDayNano; ``date_diff`` int32; bitmap 0/−1; unix_micros LA
+  column.
+  **X-round (2026-08-18), repair round** — 30 tests. New pins: ``shuffle(NULL array)`` is NULL
+  on the Spark door AND the facade (X1, was an arrow-data panic) with the ANSI
+  door's ``Invalid function 'shuffle'`` recorded as the not-reachable matrix row;
+  seeded ``shuffle`` agrees across doors (X2); ``parse_url``/``try_parse_url``/
+  ``get``/``url_*`` column-name direction (X3/X4/X5/X12); ``str_to_map`` ``\s``
+  is ASCII so NBSP does not split (X6); ``map_from_entries`` duplicate key raises
+  (X7); the seven ``java.net.URI`` vs ``url::Url`` recipes, both doors, each row
+  naming the normalized answer it used to give (X8); ``element_at`` OOB and
+  ``make_date`` invalid-Y-M-D are NULL while ``1 / 0`` still raises (X9);
+  ``try_parse_url`` / ``try_url_decode`` success paths (X11); ``unix_micros(DATE)``
+  LA 28.8e9 (X13). ``parse_url`` schemeless now RAISES ``INVALID_URL`` and the
+  QUERY key is a Java regex — both previously-recorded residuals, now closed.
+  ``test_functions_e.py::test_get_map_by_key`` updated in lockstep: map lookup
+  through ``get`` needs ``F.lit(key)`` now that a bare ``str`` is a column name.
+  The repair round re-derived every X8 expectation against a live
+  ``java.net.URI`` probe (MEASURED-JVM, OpenJDK 11.0.31) driven through the
+  disassembled ``ParseUrlEvaluator$`` getter map, and added
+  ``test_parse_url_hostile_urls_split_like_java_net_uri`` (15 hostile rows —
+  IPv6/IPv4 hosts, registry-based fallback where HOST is NULL but AUTHORITY is
+  not, empty query/ref/authority, malformed escape) plus the compile-ORDER block
+  in ``test_parse_url_query_key_is_a_java_regex``. Two Spark divergences the
+  probe exposed are now pinned rather than documented: an uncompilable QUERY key
+  raises on ``try_parse_url`` too (``TryParseUrl`` is
+  ``ParseUrl(failOnError=False)``, not ``TryEval``), and a 3-arg call with a
+  non-``QUERY`` part is NULL before the URL is parsed at all. The X8 regex-key
+  work also **introduced** a residual, now pinned rather than left silent:
+  ``test_parse_url_query_key_regex_dialect_residual`` fixes both halves of the
+  ``java.util.regex`` vs ``regex``-crate gap — twelve keys that agree
+  (``\p{Alpha}``, ``a++``, ``[a-z&&[^b]]``, ``(?<n>a)``, …) and five that do not
+  (lookahead, lookbehind, backreference, atomic group, ``\Q…\E``), which raise
+  here under both UDFs.
 - [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17): leftover
   THIN-WIRE math/string/bitwise/utf8 through `ReparkSession` Arrow `to_arrow()`
   (value AND type). `factorial` pins Spark domain `[0, 20]` → NULL outside;

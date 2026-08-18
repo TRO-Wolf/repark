@@ -1,11 +1,8 @@
-"""Collection facade wrappers (FN-E).
+"""Collection facade wrappers (FN-E + FN-GT2).
 
-Aliases and shims over existing ``functions`` / ``functions_expr`` helpers.
-Public names are re-exported from ``functions.py``.
-
-Higher-order / JSON / generator names stay deferred (lambda module empty;
-``call_scalar`` has no arms). ``concat`` is string-only (casts Utf8) — array
-append/prepend cannot use it.
+Public names are re-exported from ``functions.py``. FN-GT2 wires leftover
+``element_at`` / ``array_compact`` / ``shuffle`` / ``map_from_entries`` /
+``str_to_map``.
 """
 
 from __future__ import annotations
@@ -157,14 +154,206 @@ def arrays_overlap(a1: Column | str, a2: Column | str) -> Column:
 
 def get(
     col: Column | str,
-    index: Column | str | int | float | bool | None,
+    index: Column | str | int,
 ) -> Column:
     """0-based array element or map value (PySpark ``functions.get``).
 
-    SEMANTIC-HAZARD vs SQL ``element_at`` (1-based; index 0 raises
-    ``INVALID_INDEX_OF_ZERO``). ``call_scalar`` has no ``element_at`` arm, so
-    the 1-based spelling is not a facade name — pin the base contrast here.
+    Spark 4.1.2 ``get`` is array-only (maps refuse). This FN-E wrapper is
+    ``getitem`` and currently also serves maps (``test_get_map_by_key``).
+    Contrast ``element_at`` (1-based; index 0 raises
+    ``INVALID_INDEX_OF_ZERO``; maps by key).
+
+    Parameters
+    ----------
+    col : Column or str
+        Array (or, in this engine, map) column. A ``str`` is a column name.
+    index : Column or str or int
+        0-based index. An ``int`` is a literal; a ``str`` is a **column name**
+        (PySpark ``get`` is ``ColumnOrName``, and it only wraps ``int``), so
+        ``F.get('a', 'i')`` indexes by column ``i``.
+
+    Returns
+    -------
+    Column
+        The element, or NULL when the index is out of range.
+
+    Examples
+    --------
+    ``F.get(F.array(F.lit(10), F.lit(20)), 1)`` is ``20``.
     """
-    container = _as_column_arg(col, as_lit=False)
-    key = index if isinstance(index, Column) else lit(index)
-    return _scalar("getitem", container, key)
+    return _scalar("getitem", _as_column_arg(col, as_lit=False), index)
+
+
+def element_at(
+    col: Column | str,
+    extraction: Column | str | int,
+) -> Column:
+    """1-based array element or map value (PySpark ``functions.element_at``).
+
+    A Python ``str`` extraction is a **literal** map key (or never a column
+    name). Pass a :class:`Column` to extract by another column. Index ``0``
+    raises ``INVALID_INDEX_OF_ZERO``. Contrast :func:`get` (0-based; ``getitem``,
+    including maps).
+
+    **Out of range is NULL here, not an error.** Spark under ANSI raises
+    ``INVALID_ARRAY_INDEX_IN_ELEMENT_AT``; this engine returns NULL on both
+    doors. repark's ``spark.sql.ansi.enabled`` defaults to ``true``, but the
+    documented scope of that flag is ``/`` and ``%`` by zero — see
+    ``docs/guide/session-and-conf.md``: "Do not read 'ANSI on' as 'every
+    arithmetic fault raises'". Element-at out-of-range is a recorded divergence
+    (FN-GT2 X9), not silent parity.
+
+    Parameters
+    ----------
+    col : Column or str
+        Array or map column.
+    extraction : Column or str or int
+        1-based array index, or map key. A bare ``str`` is ``lit(extraction)``.
+
+    Returns
+    -------
+    Column
+        The element or map value; **NULL** when missing / out of range.
+
+    Examples
+    --------
+    ``F.element_at(F.array(10, 20, 30), 1)`` is ``10``.
+    On a map, ``F.element_at(..., 'b')`` treats ``'b'`` as a literal key.
+    """
+    return _scalar(
+        "element_at",
+        col,
+        extraction,
+        lit_indices=frozenset({} if isinstance(extraction, Column) else {1}),
+    )
+
+
+def array_compact(col: Column | str) -> Column:
+    """Drop NULL elements from an array (PySpark ``functions.array_compact``).
+
+    Does not de-duplicate — that was the FN-E honest-cut miss.
+
+    Parameters
+    ----------
+    col : Column or str
+        Array column.
+
+    Returns
+    -------
+    Column
+        Array with NULL elements removed (duplicates kept).
+
+    Examples
+    --------
+    ``F.array_compact(F.array(1, None, 1))`` is ``[1, 1]``.
+    """
+    return _scalar("array_compact", col)
+
+
+def shuffle(col: Column | str, seed: Column | int | None = None) -> Column:
+    """Random permutation of an array (PySpark ``functions.shuffle``).
+
+    Unseeded it is non-deterministic — pin type and length, not order. With
+    ``seed`` (PySpark 4.0+) the permutation is reproducible, and the facade and
+    the Spark SQL door produce the **same** permutation for the same seed
+    because both resolve one UDF.
+
+    ``NULL`` in is ``NULL`` out (Spark). ``CAST(NULL AS ARRAY<INT>)`` used to
+    panic the engine here — see the FN-GT2 X-round.
+
+    Parameters
+    ----------
+    col : Column or str
+        Array column.
+    seed : Column or int, optional
+        Permutation seed. Omitted → a fresh permutation on every call.
+
+    Returns
+    -------
+    Column
+        An array of the same elements in random order.
+
+    Examples
+    --------
+    ``F.shuffle(F.array(1, 2, 3))`` is a length-3 integer array whose
+    sorted values are ``[1, 2, 3]``.
+    """
+    if seed is None:
+        return _scalar("shuffle", col)
+    return _scalar("shuffle", col, seed)
+
+
+def map_from_entries(col: Column | str) -> Column:
+    """Map from ``array<struct<key, value>>`` (PySpark ``functions.map_from_entries``).
+
+    Parameters
+    ----------
+    col : Column or str
+        Array of key/value structs.
+
+    Returns
+    -------
+    Column
+        A map.
+
+    Raises
+    ------
+    PySparkException
+        On a **duplicate key**. Spark's default
+        ``spark.sql.mapKeyDedupPolicy`` is ``EXCEPTION``, so
+        ``map_from_entries(array(struct('a', 1), struct('a', 2)))`` is an error,
+        not last-write-wins — the same rule ``map()`` and :func:`str_to_map`
+        already enforce here.
+
+    Examples
+    --------
+    ``F.map_from_entries(F.array(F.struct(F.lit('a').alias('key'), F.lit(1).alias('value'))))``
+    is ``{'a': 1}``.
+    """
+    return _scalar("map_from_entries", col)
+
+
+def str_to_map(
+    text: Column | str,
+    pairDelim: Column | str | None = None,  # noqa: N803 — PySpark keyword
+    keyValueDelim: Column | str | None = None,  # noqa: N803 — PySpark keyword
+) -> Column:
+    """Split a string into a map (PySpark ``functions.str_to_map``).
+
+    Defaults: pair delimiter ``,`` and key/value delimiter ``:``.
+    Both delimiters are **regular expressions** (Spark). A Python ``str``
+    delimiter is wrapped as a literal (the default path must be a literal).
+
+    The Perl classes are Java's, i.e. **ASCII-only**: ``\\s`` is
+    ``[ \\t\\n\\x0B\\f\\r]``, so a non-breaking space (U+00A0) does
+    *not* split. A duplicate key raises (``spark.sql.mapKeyDedupPolicy`` is
+    ``EXCEPTION``).
+
+    Parameters
+    ----------
+    text : Column or str
+        Input string.
+    pairDelim : Column or str, optional
+        Regex between pairs (default ``,``).
+    keyValueDelim : Column or str, optional
+        Regex between key and value (default ``:``).
+
+    Returns
+    -------
+    Column
+        ``map<string, string>``.
+
+    Examples
+    --------
+    ``F.str_to_map(F.lit('a:1,b:2'))`` is ``{'a': '1', 'b': '2'}``.
+    ``F.str_to_map(F.lit('a:1,b:2c:3'), F.lit('[,c]'), F.lit(':'))`` is
+    ``{'a': '1', 'b': '2', '': '3'}``.
+    """
+    pair = "," if pairDelim is None else pairDelim
+    key_value = ":" if keyValueDelim is None else keyValueDelim
+    lit_indices: set[int] = set()
+    if not isinstance(pair, Column):
+        lit_indices.add(1)
+    if not isinstance(key_value, Column):
+        lit_indices.add(2)
+    return _scalar("str_to_map", text, pair, key_value, lit_indices=frozenset(lit_indices))
