@@ -1331,3 +1331,134 @@ def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
         ).schema.simpleString()
         == "struct<a:array<string>>"
     )
+
+
+# ==================================================================================================
+# DEFECT-2 — projection over a multi-pass dynamicFlatten (task/c25-bugfix-ledger.md, 2026-08-18)
+# ==================================================================================================
+#
+# The defect (pre-existing, measured twice before the fix): after a flatten that takes 2+ explode
+# passes, a projection that DROPPED the output of an explode whose ``Unnest`` sits UNDER another
+# ``Unnest`` (an earlier prose said "the LAST explode pass's column" — retracted, the sibling
+# exploded second is the trigger here) raised inside DataFusion 54.1's
+# ``push_down_leaf_projections``. Two distinct upstream failures on one plan:
+#
+#   * ``Internal error: Assertion failed: expr.is_empty(): Unnest(…)`` — the rule pushes into a
+#     node's inputs with ``node.with_new_exprs(node.expressions(), …)``, and ``Unnest`` reports
+#     an exec column from ``expressions()`` while its ``with_new_exprs`` asserts the vector empty;
+#   * ``Schema error: Schema contains qualified field name <scratch-view>.id and unqualified field
+#     name id which would be ambiguous`` — merging a pushed pass-through column into a projection
+#     that already re-aliases the same name puts both spellings into one ``DFSchema``.
+#
+# Neither is reachable from repark's plan shape, and both are optimizer-only. The fix is a
+# SCOPED rule, not a flag: the core session installs DataFusion's own rule list with
+# ``push_down_leaf_projections`` wrapped so it declines on the ``Unnest``-carrying plans it
+# miscompiles and runs untouched everywhere else (``crates/repark-core/src/session/df_guards.rs``;
+# ``datafusion.optimizer.enable_leaf_expression_pushdown`` stays at DataFusion's default, because
+# turning it off measured up to ~8x in one run on a filtered wide-struct parquet scan —
+# load-sensitive ratio, ledger §3).
+# Engine-side pins: the five ``session::df_guard_tests::*leaf_pushdown*`` tests.
+# These are the facade halves — they red the moment that wrapper is removed.
+
+
+def _defect2_frame(spark: ReparkSession, sibling: str):
+    """The troubleshooting-section repro shape with a renameable sibling list.
+
+    ``Legs`` is a list-of-struct whose element carries its own ``Fills`` list → two explode
+    passes; ``sibling`` is a flat top-level list. Which of the two explodes LAST is decided by
+    the column name, which is what made the defect order-dependent.
+    """
+    rows = [{"id": 1, "Legs": [{"leg_id": 1, "Fills": [{"f": 1.0}]}], sibling: ["a", "b"]}]
+    return spark.createDataFrame(rows).dynamicFlatten()
+
+
+@pytest.mark.parametrize("sibling", ["Tags", "Alpha"])
+def test_multi_pass_flatten_every_projection_subset_is_green(
+    spark: ReparkSession, sibling: str
+) -> None:
+    """Every non-empty projection subset works, in BOTH explode orders, value-checked.
+
+    ``sibling="Tags"`` is the order that reded before the fix (the sibling list explodes LAST, so
+    every subset dropping it raised); ``sibling="Alpha"`` is the order that always worked. Same
+    data, same 15 subsets — the pin is that the two orders are now indistinguishable.
+
+    Values are compared against the whole-frame ``to_arrow`` export (the path that stayed correct
+    throughout), so this pins results, not merely "did not raise".
+    """
+    import itertools
+
+    frame = _defect2_frame(spark, sibling)
+    columns = frame.columns
+    assert len(columns) == 4
+    whole = frame.to_arrow().to_pylist()
+    assert len(whole) == 2
+
+    subsets = [
+        subset
+        for size in range(1, len(columns) + 1)
+        for subset in itertools.combinations(columns, size)
+    ]
+    assert len(subsets) == 15
+    for subset in subsets:
+        got = frame.select(*subset).to_arrow().to_pylist()
+        assert got == [{name: row[name] for name in subset} for row in whole], subset
+
+
+@pytest.mark.parametrize("sibling", ["Tags", "Alpha"])
+def test_multi_pass_flatten_count_and_agg_are_green(spark: ReparkSession, sibling: str) -> None:
+    """``count()`` / ``agg`` — the extreme case that projects every column away — both orders.
+
+    Before the fix ``count()`` raised on the ``Tags`` order while the same frame's
+    ``to_arrow().num_rows`` returned the right number: the row count was reachable and correct
+    on the export path while the cheapest way to ask for it failed.
+    """
+    from repark import functions as F  # noqa: N812
+
+    frame = _defect2_frame(spark, sibling)
+    exported = frame.to_arrow().num_rows
+    assert exported == 2
+    assert frame.count() == exported
+    assert frame.agg(F.count(F.lit(1))).to_arrow().to_pylist() == [{"count(1)": exported}]
+
+
+def test_ga4_real_shape_flatten_then_project(spark: ReparkSession) -> None:
+    """The GA4 ``items[].item_params[]`` frame: flatten, then project every single column.
+
+    MEASURED: this shape did **not** reproduce the defect on the base tree (its last explode pass
+    is the one every subset keeps), so it is a coverage pin for the real-world shape rather than a
+    second reproduction. It holds the multi-pass real-data path against a regression in the guard.
+    """
+    from repark import functions as F  # noqa: N812
+
+    frame = spark.createDataFrame(_ga4_rows(), schema=_GA4_SCHEMA).dynamicFlatten()
+    assert frame.columns == _GA4_COLUMNS
+    whole = frame.to_arrow().to_pylist()
+    assert frame.count() == len(whole)
+    assert frame.agg(F.count(F.lit(1))).to_arrow().to_pylist() == [{"count(1)": len(whole)}]
+    for name in frame.columns:
+        got = frame.select(name).to_arrow().to_pylist()
+        assert got == [{name: row[name]} for row in whole], name
+    # A narrowing multi-column projection that drops the flattened array columns entirely.
+    narrow = ("event_name", "device_category", "device_web_info_browser")
+    assert frame.select(*narrow).to_arrow().to_pylist() == [
+        {name: row[name] for name in narrow} for row in whole
+    ]
+
+
+def test_multi_pass_flatten_cache_is_still_a_plain_pattern(spark: ReparkSession) -> None:
+    """The retired workaround still works as an ordinary pattern (it is no longer required).
+
+    ``cache()`` used to be the documented escape hatch for the defect. It is now just caching:
+    the cached and uncached frames agree, column for column.
+    """
+    frame = _defect2_frame(spark, "Tags")
+    cached = frame.cache()
+    try:
+        assert cached.count() == frame.count() == 2
+        assert cached.to_arrow().to_pylist() == frame.to_arrow().to_pylist()
+        assert (
+            cached.select("Legs_Fills_f").to_arrow().to_pylist()
+            == frame.select("Legs_Fills_f").to_arrow().to_pylist()
+        )
+    finally:
+        cached.unpersist()

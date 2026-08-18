@@ -24,7 +24,9 @@ is needed; a cell that fails Ruff fails the canonical gate.
   rival delimiter on the embedded-delimiter corpus (declare `sep=`; European-locale
   files use `sep=';'`), and the euro-comma column infers `decimal128` but refuses its
   cast — which is why the CSV cells declare `sep=` and project the columns they are
-  about.
+  about. A third finding shown there is now retired: the nested cell counted through the
+  export path because `deep.count()` reded in `push_down_leaf_projections`; DEFECT-2
+  (2026-08-18) fixed that rule for `Unnest` plans, so the cell counts both ways.
 - `map.md` — this file.
 
 ## I want to…

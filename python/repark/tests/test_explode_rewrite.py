@@ -1165,3 +1165,67 @@ def test_spark_array_element_to_sql_struct_and_map() -> None:
     assert _spark_array_element_to_sql("decimal(10,2);drop") is None
     assert _spark_array_element_to_sql("struct<x:y:bigint>") is None
     assert _spark_array_element_to_sql("struct<not a name:bigint>") is None
+
+
+# ==================================================================================================
+# DEFECT-2 — narrowing projection over a two-pass explode chain (c25-bugfix-ledger, 2026-08-18)
+# ==================================================================================================
+
+
+def test_two_pass_explode_chain_survives_a_narrowing_projection(spark: ReparkSession) -> None:
+    """Hand-written explode chain (no ``dynamicFlatten``): the SAME plan shape, the same pin.
+
+    ``dynamicFlatten`` is not the defect's cause — it is only the surface that reaches the shape
+    first. What reds is a chain of guarded ``unnest`` scratch views with a struct-field extract
+    between the passes: DataFusion 54.1's ``push_down_leaf_projections`` then tries to push the
+    ``get_field`` leaf through an ``Unnest`` node and either asserts (``expr.is_empty()``) or
+    builds a ``DFSchema`` holding a qualified and an unqualified spelling of one name. The
+    trigger is a projection that drops the column an inner explode pass produced (``Tags``).
+
+    MEASURED on the base tree with the guard off: ``select("id")`` → the qualified/unqualified
+    ambiguity, ``select("Legs_leg_id", "Legs_Fills_f")`` and ``count()`` → the ``Unnest``
+    assertion, while ``select("Tags")`` and the whole-frame export stayed green. Pinned on the
+    export path, value AND Arrow type.
+    """
+    rows = [{"id": 1, "Legs": [{"leg_id": 1, "Fills": [{"f": 1.0}]}], "Tags": ["a", "b"]}]
+    frame = spark.createDataFrame(rows)
+
+    # Pass 1: explode the outer list-of-struct, then the top-level sibling list.
+    legs = frame.select(F.explode_outer("Legs").alias("Legs"), "Tags", "id")
+    tagged = legs.select("Legs", F.explode_outer("Tags").alias("Tags"), "id")
+    # Struct extract between the passes — the leaf expression the optimizer rule wants to push.
+    fields = tagged.selectExpr(
+        'CASE WHEN "Legs" IS NULL THEN NULL ELSE "Legs"."leg_id" END AS "Legs_leg_id"',
+        'CASE WHEN "Legs" IS NULL THEN NULL ELSE "Legs"."Fills" END AS "Legs_Fills"',
+        '"Tags" AS "Tags"',
+        '"id" AS "id"',
+    )
+    # Pass 2: explode the inner list, then extract its struct field.
+    fills = fields.select(
+        "Legs_leg_id", F.explode_outer("Legs_Fills").alias("Legs_Fills"), "Tags", "id"
+    )
+    wide = fills.selectExpr(
+        '"Legs_leg_id" AS "Legs_leg_id"',
+        'CASE WHEN "Legs_Fills" IS NULL THEN NULL ELSE "Legs_Fills"."f" END AS "Legs_Fills_f"',
+        '"Tags" AS "Tags"',
+        '"id" AS "id"',
+    )
+
+    whole = wide.to_arrow()
+    assert whole.schema.field("Legs_Fills_f").type == pa.float64()
+    assert whole.schema.field("Legs_leg_id").type == pa.int64()
+    assert whole.to_pylist() == [
+        {"Legs_leg_id": 1, "Legs_Fills_f": 1.0, "Tags": "a", "id": 1},
+        {"Legs_leg_id": 1, "Legs_Fills_f": 1.0, "Tags": "b", "id": 1},
+    ]
+
+    # The projections that drop ``Tags`` — the defect's whole family.
+    assert wide.select("id").to_arrow().to_pylist() == [{"id": 1}, {"id": 1}]
+    assert wide.select("Legs_leg_id", "Legs_Fills_f").to_arrow().to_pylist() == [
+        {"Legs_leg_id": 1, "Legs_Fills_f": 1.0},
+        {"Legs_leg_id": 1, "Legs_Fills_f": 1.0},
+    ]
+    # The subsets that KEPT ``Tags`` were green before the fix too — they must stay green.
+    assert wide.select("Tags").to_arrow().to_pylist() == [{"Tags": "a"}, {"Tags": "b"}]
+    assert wide.count() == whole.num_rows == 2
+    assert wide.agg(F.count(F.lit(1))).to_arrow().to_pylist() == [{"count(1)": 2}]

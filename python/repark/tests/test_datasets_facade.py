@@ -379,33 +379,32 @@ def test_nested_dynamic_flatten_full_depth_column_order(
     assert _is_arrow_string(table.schema.field("Legs_Fills_Meta_Extra_Deep_note").type)
 
 
-def test_nested_dynamic_flatten_count_action_refuses_loud(
-    spark: ReparkSession, tmp_path: Path
-) -> None:
-    """BUG-CANDIDATE — ``count()`` on the full-depth flatten plan trips an optimizer rule.
+def test_nested_dynamic_flatten_count_action_is_green(spark: ReparkSession, tmp_path: Path) -> None:
+    """DEFECT-2 FIXED — ``count()`` on the full-depth flatten plan equals the export row count.
 
-    The very same plan exports fine through ``to_arrow`` (pinned above; row count is
-    the outer-explode cartesian from ``_nested_full_flatten_rows``), but the
-    ``count()`` action reds inside ``push_down_leaf_projections``: the
-    multi-pass explode leaves a qualified ``<explode-alias>."Legs"`` beside the
-    unqualified ``Legs`` and the rule calls the pair ambiguous. So the row count is
-    reachable and correct on the export path while the cheapest way to ask for it fails.
+    This pin was the BUG-CANDIDATE ``…_count_action_refuses_loud``: the same plan exported fine
+    through ``to_arrow`` while ``count()`` reded inside DataFusion 54.1's
+    ``push_down_leaf_projections``, so the row count was reachable and correct on the export path
+    while the cheapest way to ask for it failed. That docstring said "if this reds because the
+    optimizer stopped tripping, that is the fix — swap it for the ``count() ==
+    to_arrow().num_rows`` equality"; the fix landed (the core session wraps
+    ``push_down_leaf_projections`` so it declines on the ``Unnest`` plans it miscompiles —
+    ``crates/repark-core/src/session/df_guards.rs``, task/c25-bugfix-ledger.md 2026-08-18) and
+    this is that swap.
 
-    Reported, not fixed. The shallow one-pass flatten and a plain explode both count
-    fine, which is what makes this specific rather than "counts do not work". If this
-    reds because the optimizer stopped tripping, that is the fix — swap it for the
-    ``count() == to_arrow().num_rows`` equality.
+    The narrow one-pass companions stay: they are what made the old finding specific rather than
+    "counts do not work", and they still pin the shallow path.
     """
-    from repark.errors import AnalysisException
-
     written = _write_family("nested", tmp_path / "nested")
     frame = spark.read.parquet(str(written / "data.parquet"))
     expected = _nested_full_flatten_rows(_nested_truth())
 
     deep = frame.dynamicFlatten()
-    assert deep.to_arrow().num_rows == expected  # the export path is correct
-    with pytest.raises(AnalysisException, match=r"push_down_leaf_projections"):
-        deep.count()
+    assert deep.to_arrow().num_rows == expected  # the export path
+    assert deep.count() == expected  # …and the cheap door now agrees
+    assert deep.agg(F.count(F.lit(1))).to_arrow().to_pylist() == [{"count(1)": expected}]
+    # A narrowing projection over the same plan — the other half of the defect.
+    assert deep.select("id").to_arrow().num_rows == expected
 
     # Narrow, not general: one explode pass counts fine on the same corpus.
     legs = frame.select(frame.id, F.explode("Legs").alias("leg"))

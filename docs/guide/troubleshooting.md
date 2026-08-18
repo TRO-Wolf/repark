@@ -201,63 +201,90 @@ GA4-shaped frame with empty `items` / `user_properties` does not vanish. Pass
 
 ---
 
-## `count()` — and any narrowing `select` — fails on a deep `dynamicFlatten` plan
+## `count()` — and any narrowing `select` — on a deep `dynamicFlatten` plan (FIXED)
 
-**Symptom.** The flatten itself is fine and the whole-frame export returns the right rows. What
-reds is `count()` — and, on the same plan, any `select(...)` narrow enough to drop the column the
-**last** explode pass produced. Both doors raise the same DataFusion optimizer error:
+**Status: fixed** (2026-08-18, `task/c25-bugfix-ledger.md` → *DEFECT-2*). The section stays as a
+fixed entry: the behaviour it used to describe is now pinned *absent*, and the `cache()` line
+below is no longer a workaround — it is just caching.
+
+**What used to happen.** After a `dynamicFlatten` that takes two or more explode passes, the
+flatten itself and the whole-frame export were fine, but `count()` — and any `select(...)` narrow
+enough to drop an inner explode pass's output column — raised out of a DataFusion optimizer rule:
+
+```text
+PySparkException: datafusion engine error: Optimizer rule 'push_down_leaf_projections' failed
+caused by
+Internal error: Assertion failed: expr.is_empty(): Unnest(Unnest { … })
+```
+
+…or, on other subsets of the same plan:
+
+```text
+Schema error: Schema contains qualified field name datafusion.public.__repark_expl_…."Legs"
+and unqualified field name "Legs" which would be ambiguous
+```
+
+It was **order-dependent**: renaming the sibling list so it exploded in a different position made
+all 15 non-empty projection subsets — and `count()` — succeed on identical data.
+
+**Why it happened, and what changed.** Both errors came from `push_down_leaf_projections`, the
+pass-2 half of DataFusion 54.1's leaf-expression extraction. On a plan that stacks `Unnest` nodes
+under a projection carrying a `get_field` leaf — the shape every multi-pass flatten and every
+repeated `explode` produces — the rule pushes into a node's inputs with
+`with_new_exprs(node.expressions(), …)`, and `Unnest` hands out an exec column from
+`expressions()` while its own `with_new_exprs` asserts that vector empty; on the other subsets it
+merges a pushed pass-through column into a projection that already re-aliases the same name and
+lands a qualified and an unqualified spelling of one field in a single schema. Neither is
+reachable from repark's plan shape, and both are optimizer-only — with the rule declining, the
+identical plan executes and returns the identical rows.
+
+So repark keeps the rule and takes it away from the plans it breaks. The core session installs
+DataFusion's own optimizer rule list, in DataFusion's own order, with `push_down_leaf_projections`
+wrapped: no `Unnest` in the subtree and the rule runs untouched (its errors included); an `Unnest`
+in the subtree and repark tries the rule and keeps the unrewritten plan only if it actually fails.
+
+**Perf (measured, not argued).** A query with no `Unnest` optimizes to the byte-identical plan
+stock DataFusion produces, at the same speed — which matters, because turning the rule off wholesale
+would have cost up to ~8x in one measured run (ratio is load-sensitive; direction and width-monotonicity reproduce) on a filtered wide-struct parquet scan (500k rows × 60 struct fields,
+0.167s → 1.297s), and declining on the mere *presence* of an `Unnest` would have cost **11.8x** on
+a wide-struct scan that merely had an unnest alongside (9.1s → 107.5s). What remains is bounded to
+the shapes the rule genuinely fails on, which keep the correct, unoptimized plan.
+
+`datafusion.optimizer.enable_leaf_expression_pushdown` is untouched at DataFusion's default and
+still yours to set to `false` if you want the optimization off entirely. There is deliberately no
+knob that restores the miscompile.
+
+**What works now.** Every projection subset, in either explode order:
 
 ```python
 rows = [{"id": 1, "Legs": [{"leg_id": 1, "Fills": [{"f": 1.0}]}], "Tags": ["a", "b"]}]
 deep = spark.createDataFrame(rows).dynamicFlatten()
-print(deep.columns)
-deep.count()
+print(deep.columns)                     # ['Legs_leg_id', 'Legs_Fills_f', 'Tags', 'id']
+deep.count()                            # 2  — equals deep.to_arrow().num_rows
+deep.select("id").to_arrow().num_rows   # 2
+deep.agg(F.count(F.lit(1))).to_arrow().to_pylist()   # [{'count(1)': 2}]
 ```
 
-```text
-['Legs_leg_id', 'Legs_Fills_f', 'Tags', 'id']
-PySparkException: datafusion engine error: Optimizer rule 'push_down_leaf_projections' failed
-caused by
-Internal error: Assertion failed: expr.is_empty(): Unnest(Unnest { … })      ← plan dump elided
-```
-
-**Why.** Two array levels plus a sibling top-level array means several explode passes. When the
-**last** pass is the sibling array (`Tags` above), any projection that removes that pass's output
-column leaves `push_down_leaf_projections` with an empty projection over the `Unnest` node, and the
-rule asserts. `count()` and every aggregate are just the extreme case — they project *all* columns
-away. Measured on the frame above (`.to_arrow()` on each):
-
-| operation | result |
-|---|---|
-| `deep.to_arrow()` / `collect()` / `show()` | 2 rows |
-| `filter(...)`, `limit(1)`, `orderBy(...)`, `distinct()` | works |
-| `select("*")`, `select(*deep.columns)` | 2 rows |
-| `select("Tags")`, `select("Tags", "id")`, `select("Legs_leg_id", "Tags")` | 2 rows |
-| `select("id")`, `select("Legs_leg_id")`, `select("Legs_leg_id", "id")` | **raises** |
-| `count()`, `agg(F.count(...))` | **raises** |
-
-It is not "counts do not work", and it is not the export path being immune — the export path raises
-too as soon as you narrow past the last-pass column. It is also **order-dependent**: rename `Tags`
-to `Alpha` so the sibling array explodes *first* and every projection above — including `count()` —
-succeeds on the identical data.
-
-**What to do.** `cache()` the flattened frame, which materialises it to a MemTable and retires the
-`Unnest` plan the rule chokes on. Verified live on the frame above:
+`cache()` still works exactly as it always did — as caching, not as an escape hatch:
 
 ```python
 cached = deep.cache()
-cached.count()                                   # 2
-cached.select("Legs_Fills_f").to_arrow().to_pylist()   # [{'Legs_Fills_f': 1.0}, …]
+cached.count()                                          # 2
+cached.select("Legs_Fills_f").to_arrow().to_pylist()    # [{'Legs_Fills_f': 1.0}, …]
 ```
 
-Without caching, you can still count through the whole-frame export (`deep.to_arrow().num_rows`
-→ `2`), keep the last-pass column in every `select`, or flatten shallowly — a single explode pass
-counts fine on the same data.
-
-An **open finding** (the projection defect itself, tracked separately from the flatten spelling),
-pinned by
-`python/repark/tests/test_datasets_facade.py::test_nested_dynamic_flatten_count_action_refuses_loud`,
-and called out in the tour notebook where it bites.
+Pinned by
+`python/repark/tests/test_dynamic_flatten.py::test_multi_pass_flatten_every_projection_subset_is_green`
+(the full 15-subset matrix, both explode orders),
+`…::test_multi_pass_flatten_count_and_agg_are_green`,
+`python/repark/tests/test_explode_rewrite.py::test_two_pass_explode_chain_survives_a_narrowing_projection`
+(the same shape without `dynamicFlatten`),
+`python/repark/tests/test_datasets_facade.py::test_nested_dynamic_flatten_count_action_is_green`,
+and engine-side by
+`crates/repark-core/src/session/df_guards.rs` → the five
+`session::df_guard_tests::*leaf_pushdown*` pins (the flag stays enabled, the wrapper is installed, a
+no-`Unnest` plan matches stock DataFusion byte for byte, an `Unnest` plan the rule can rewrite
+still gets the optimization, and an explicit conf can still disable it).
 
 ---
 

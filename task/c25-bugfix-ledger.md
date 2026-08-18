@@ -1111,3 +1111,345 @@ the candidate row text is:
   fixture in `test_dynamic_flatten.py` (the shape that was broken) plus the
   minimal-repro and round-trip pins. The table is evidence of the session run,
   not a repo artifact.
+
+---
+
+## DEFECT-2 — flatten projection pushdown (2026-08-18)
+
+Charter: the projection defect behind G3b/D-3 (documented there, explicitly not fixed) and behind
+the Group-3 C-036b BUG-CANDIDATE. Base of round: `5480b2b`. Round shape: Actor/Critic, **cycle 2**
+— cycle 1's fix was correct but at the wrong altitude (a blanket optimizer-flag skip) and the
+critic MEASURED its cost; §3 records the retraction, the scoped replacement, and the numbers on
+both sides of the scope choice.
+
+### 1. Reproduced firsthand (BASE `5480b2b`, MEASURED)
+
+The troubleshooting section's own repro, extended to the full 15-subset matrix and both explode
+orders. Whole-frame export = 2 rows in every cell.
+
+```python
+rows = [{"id": 1, "Legs": [{"leg_id": 1, "Fills": [{"f": 1.0}]}], "Tags": ["a", "b"]}]
+deep = spark.createDataFrame(rows).dynamicFlatten()   # ['Legs_leg_id','Legs_Fills_f','Tags','id']
+```
+
+| subset (`.select(*subset).to_arrow()`) | BASE | after fix |
+|---|---|---|
+| `('Tags',)`, `('Tags','id')`, `('Legs_leg_id','Tags')`, `('Legs_Fills_f','Tags')`, `('Legs_leg_id','Legs_Fills_f','Tags')`, `('Legs_leg_id','Tags','id')`, `('Legs_Fills_f','Tags','id')`, all four | 2 rows | 2 rows |
+| `('Legs_leg_id',)` | **RAISE** — Unnest assertion | 2 rows |
+| `('Legs_Fills_f',)` | **RAISE** — Unnest assertion | 2 rows |
+| `('Legs_leg_id','Legs_Fills_f')` | **RAISE** — Unnest assertion | 2 rows |
+| `('id',)` | **RAISE** — qualified/unqualified ambiguity | 2 rows |
+| `('Legs_leg_id','id')` | **RAISE** — ambiguity | 2 rows |
+| `('Legs_Fills_f','id')` | **RAISE** — ambiguity | 2 rows |
+| `('Legs_leg_id','Legs_Fills_f','id')` | **RAISE** — ambiguity | 2 rows |
+| `count()` | **RAISE** — Unnest assertion | 2 |
+| `agg(F.count(F.lit(1)))` | **RAISE** — Unnest assertion | 2 |
+
+BASE totals: **7 of 15 subsets red** plus `count()`/`agg`. Rename `Tags` → `Alpha` (so the sibling
+list explodes in a different position) and BASE is **0 of 15 red** with `count() == 2` — the
+order-dependence, reproduced. After the fix both orders are **0 of 15 red**, and every subset's
+values are compared cell-for-cell against the whole-frame `to_arrow()` export, not merely checked
+for "did not raise".
+
+**Correction to the earlier record (D-3 and the troubleshooting section).** Both said the trigger
+is dropping "the column the **LAST** explode pass produced". Measured here, the last explode pass
+on this frame is `Legs_Fills` (pass order: `Legs` → `Tags` → `Legs_Fills`), and the failing family
+is exactly the 7 subsets that drop **`Tags`** — the *sibling top-level* list, exploded second of
+three. The trigger is dropping the output of an explode pass whose `Unnest` node sits *under*
+another `Unnest` in the chain. The old wording predicted the wrong 7 subsets; the matrix above is
+the correction. Also new here: D-3 recorded only the ambiguity error. There are **two** distinct
+failures, split cleanly across the failing subsets (table above).
+
+### 2. Diagnosis — mechanism, not symptom
+
+`push_down_leaf_projections` is **not a repark rule**. It is the pass-2 half of DataFusion 54.1's
+leaf-expression extraction (`datafusion-optimizer-54.1.0/src/extract_leaf_expressions.rs`,
+`PushDownLeafProjections`, rule #24). It fires whenever a `Projection` carries a
+`MoveTowardsLeafNodes` expression — for us, the `get_field` that
+`_dynamic_flatten_unnest_structs` emits for every struct field — and walks the plan top-down
+trying to relocate that expression toward the scan.
+
+repark's explode lowering (`_select_with_generator`, `python/repark/src/repark/spark/dataframe/
+core.py`) builds one scratch-view hop per pass: a native mid `Projection` → temp view
+(`SubqueryAlias __repark_expl_<uuid>`) → SQL `SELECT unnest(guard) AS "col", … FROM view`. A
+multi-pass `dynamicFlatten` therefore stacks `Unnest` over `Unnest` with `get_field` projections
+between them. On that shape the rule has two independent bugs:
+
+1. **`Unnest` assertion.** `try_push_into_inputs` rebuilds the node it is pushing through with
+   `node.with_new_exprs(node.expressions(), new_inputs)`. `LogicalPlan::Unnest::expressions()`
+   returns the unnest exec column, while `Unnest::with_new_exprs` asserts `expr.is_empty()` →
+   `Internal error: Assertion failed: expr.is_empty(): Unnest(Unnest { … })`. The rule has no
+   business pushing into an `Unnest` at all; nothing about our plan makes it do so beyond having
+   an `Unnest` in the path.
+2. **Qualified/unqualified schema ambiguity.** `build_extraction_projection_impl`, merging into an
+   existing projection, appends the pass-through columns it needs as `Expr::Column(q.name)`
+   resolved against the projection's *input*. Our mid projection carries `q."id" AS "id"` (the
+   identity alias `_bind_schema_column` attaches to keep the requested spelling), whose output
+   field is **unqualified** `id`. The merge therefore lands qualified `__repark_expl_….id`
+   beside unqualified `id` in one `DFSchema` → `Schema error: Schema contains qualified field
+   name datafusion.public.__repark_expl_….id and unqualified field name id which would be
+   ambiguous`. This is what the "qualified-field-name error" means about the scratch-view chain:
+   the scratch views are the *source* of the qualifier, and the rule re-introduces the qualified
+   spelling of a column the projection already exposes unqualified.
+
+Why the order-dependence: the rule only trips when the extraction it wants to push has to travel
+*through* an inner `Unnest`. When the sibling list explodes first, the `get_field` projections and
+the `Unnest` they need to cross line up so the rule either finds nothing to push or bails on its
+own schema check. Nothing about the data changes — only where the rule's walk lands.
+
+**Falsified fix hypothesis (MEASURED, kept because it is the altitude question).** Failure (2)
+*is* plan-shape reachable: rebuilding the mid projection's pass-through columns without the
+identity alias (bare `PyColumn.column(quoted)` when the requested spelling equals the engine
+field) removed every ambiguity error. It did **not** fix the defect — the same 7 subsets then
+failed with the `Unnest` assertion instead, 7 red either way. Failure (1) has no plan-shape
+escape: any multi-pass unnest carrying a struct extract reaches it. So a plan-shape fix would be
+half a fix that looks like a whole one; it was abandoned, and the identity alias was left alone
+(it is load-bearing for `select("X")` on field `x`).
+
+### 3. The fix, and why that altitude
+
+**Cycle 1 shipped the wrong altitude and the critic was right.** It set
+`config.options_mut().optimizer.enable_leaf_expression_pushdown = false` as a core session
+default and recorded the perf cost as NOT-RUN. The critic MEASURED that cost — up to 23x on a
+filtered wide-struct parquet read — and pointed out that `PushDownLeafProjections` is a public
+`OptimizerRule`, so a wrapper that declines only on `Unnest`-carrying plans was directly
+available. Both premises verified here: `pub struct PushDownLeafProjections` +
+`impl OptimizerRule` at `datafusion-optimizer-54.1.0/src/extract_leaf_expressions.rs:713,721`
+inside `pub mod extract_leaf_expressions` (`lib.rs:60`), and `SessionStateBuilder` takes
+`with_optimizer_rules`. The cycle-1 sentence *"the skip is unconditional because DataFusion
+offers no per-plan disable"* was **false** and is retracted.
+
+**Cycle 2 — the shipped fix.** `crates/repark-core/src/session/df_guards.rs`. The two DF-54.1
+guards now sit at two different altitudes, because the two bugs are:
+
+* Guard 1 (scalar subquery) stays a `SessionConfig` default — a whole physical planning mode is
+  bad, there is no safe sub-shape, DataFusion's flag is the switch.
+* Guard 2 (leaf-projection pushdown) is a **scoped optimizer rule**. `build()` spells out what
+  `SessionContext::new_with_config_rt` does and adds one thing:
+
+```rust
+let state = SessionStateBuilder::new()
+    .with_config(config)
+    .with_runtime_env(runtime)
+    .with_default_features()
+    .with_optimizer_rules(unnest_safe_optimizer_rules())   // DF's list, ONE rule wrapped
+    .build();
+let context = SessionContext::new_with_state(state);
+```
+
+`unnest_safe_optimizer_rules()` is `Optimizer::new().rules` — the exact list
+`SessionStateBuilder` installs by itself — with the element named `push_down_leaf_projections`
+replaced by `UnnestSafeLeafProjectionPushdown`, which delegates `name()` and `apply_order()` and
+gates `rewrite` in **two steps**:
+
+1. **No `Unnest` in the subtree → delegate untouched, errors included.** `apply_order` is
+   `TopDown`, so the `plan` a rule sees is the subtree the push can reach; without an `Unnest` in
+   it neither bug is reachable. No clone, no catch, and a rule failure still propagates loud, so
+   an unrelated upstream bug cannot hide behind this guard.
+2. **`Unnest` in the subtree → try the rule; keep the unrewritten plan only if it fails.**
+
+Altitude reasoning:
+
+- The bug is **upstream and optimizer-only**. Both failures are inside a DataFusion rule; with
+  the rule declining, the *identical* logical plan executes and returns the *identical* rows.
+  Nothing in repark's own lowering is wrong (§2's falsified plan-shape hypothesis).
+- **Not a whitelist.** No `count()` case, no per-subset branch. All 15 subsets, both explode
+  orders, `count()` and `agg` take one path.
+- **Core session default, not a door-extension knob** (design §2 G8): the facade's explode
+  rewrite plans through the core session, and an extension-less native session builds the same
+  `Unnest` chain from SQL.
+- **The scope is by failure, not by shape**, because shape alone is too coarse — see the numbers
+  below.
+
+#### PERF — MEASURED this round, replacing cycle 1's NOT-RUN
+
+Machine: this worktree, best-of-3.
+
+**(a) What a blanket flag-off would have cost** (facade, 500k-row parquet, `SELECT s.f1 AS a FROM
+t WHERE k > 10`, rule ON vs rule OFF — the OFF column is exactly cycle 1's shipped behavior):
+
+| struct width | rule on | blanket off | ratio |
+|---|---|---|---|
+| 4 | 0.170s | 0.234s | 1.38x |
+| 20 | 0.148s | 0.522s | 3.52x |
+| 60 | 0.167s | 1.297s | 7.78x |
+| 60, **no** `WHERE` | 0.037s | 0.036s | 0.96x (no delta) |
+
+Same direction, same monotonicity in struct width, and the same "only with the filter" signature
+the critic measured (they saw 2.2x / 8.1x / 23.3x on their machine). **The scoped fix pays none
+of this**: those plans carry no `Unnest`, so they run the stock rule — pinned as a plan by
+`a_plan_without_unnest_keeps_the_stock_leaf_pushdown` (byte-identical to stock DataFusion's
+optimized plan).
+
+**(b) What declining by SHAPE would have cost** (Rust, 500k rows × 60 struct fields, stock
+`SessionContext` vs `ReparkSession`, same SQL, best-of-3):
+
+| shape | stock DF | repark, decline-by-shape | repark, shipped (try-then-decline) |
+|---|---|---|---|
+| wide-struct filtered scan **with an unnest alongside** | 9.192s | 107.466s (**11.8x**) | 9.178s (parity) |
+| the same scan, no unnest | 0.162s | 0.154s | 0.154s |
+
+That 11.8x is why the wrapper declines on the rule's actual failure rather than on the presence
+of an `Unnest`. It is also why the first cycle-2 draft (decline-by-shape) was itself rejected.
+
+**The trade that remains, recorded.** Inside an `Unnest`-carrying subtree the rule's error is
+*swallowed*: repark-core carries no logging dependency, so the decline is silent, and the shape
+keeps the correct-but-unoptimized plan. It is observable where it matters — `EXPLAIN` shows the
+un-pushed plan — and it is the same bargain DataFusion's own `skip_failed_rules` option makes
+globally. Bounded to a rule that is a pure optimization, the worst case is a slower plan, never a
+wrong one.
+
+**No knob restores the miscompile.** `datafusion.optimizer.enable_leaf_expression_pushdown` is
+untouched at DataFusion's default and still disables the whole optimization when set to `false`
+(the wrapped rule reads the flag itself) — pinned by
+`explicit_conf_can_still_disable_leaf_expression_pushdown`.
+
+### 4. Pins (all new/changed pins, and what each holds)
+
+| pin | holds |
+|---|---|
+| `session/df_guard_tests.rs::bare_session_keeps_leaf_expression_pushdown_enabled` | the ANTI-BLANKET-SKIP pin: the flag stays at DataFusion's default, so no future round can quietly re-ship cycle 1 |
+| `session/df_guard_tests.rs::bare_session_without_extension_scopes_leaf_projection_pushdown` | a bare no-extension `build()` installs the wrapper — under DataFusion's own rule NAME, in DataFusion's own rule ORDER, with every other rule untouched (CORE altitude, design G8) |
+| `…::a_plan_without_unnest_keeps_the_stock_leaf_pushdown` | the perf finding pinned as a *plan*: a no-`Unnest` query optimizes byte-identically to stock DataFusion, extraction still hoisted below the filter |
+| `…::an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown` | the try-then-decline altitude: an `Unnest` in the subtree is not by itself a reason to lose the optimization |
+| `…::explicit_conf_can_still_disable_leaf_expression_pushdown` | the DataFusion flag still reaches `SessionConfig` through the wrapper |
+| `test_dynamic_flatten.py::test_multi_pass_flatten_every_projection_subset_is_green[Tags\|Alpha]` | all 15 subsets, BOTH explode orders, values equal to the whole-frame export |
+| `test_dynamic_flatten.py::test_multi_pass_flatten_count_and_agg_are_green[Tags\|Alpha]` | `count()` / `agg` == `to_arrow().num_rows`, both orders |
+| `test_dynamic_flatten.py::test_ga4_real_shape_flatten_then_project` | the GA4 `item_params` fixture flatten-then-project, every column + a narrowing multi-column projection |
+| `test_dynamic_flatten.py::test_multi_pass_flatten_cache_is_still_a_plain_pattern` | the retired workaround still works as ordinary caching |
+| `test_explode_rewrite.py::test_two_pass_explode_chain_survives_a_narrowing_projection` | the same shape **without** `dynamicFlatten` — proves the defect was the plan shape, not the helper |
+| `test_datasets_facade.py::test_nested_dynamic_flatten_count_action_is_green` | C-036b flipped in place on the 64-row nested corpus |
+
+**Declared rename (testing.md relocation discipline).** Three test names changed. One is the
+BUG-CANDIDATE flip its own docstring instructed; two are cycle-1 pins whose *subject* changed
+when the fix moved from a flag to a rule (a pin asserting the flag is `false` cannot survive a
+fix that keeps the flag `true`), so they were replaced rather than renamed:
+
+| old | new |
+|---|---|
+| `test_datasets_facade.py::test_nested_dynamic_flatten_count_action_refuses_loud` | `…::test_nested_dynamic_flatten_count_action_is_green` |
+| `session/tests.rs::bare_session_without_extension_carries_df_54_1_leaf_pushdown_guard` (cycle 1) | `…::bare_session_keeps_leaf_expression_pushdown_enabled` + `…::bare_session_without_extension_scopes_leaf_projection_pushdown` (its assertion INVERTS: the flag must now stay enabled) |
+| `session/tests.rs::explicit_conf_re_enables_leaf_expression_pushdown` (cycle 1) | `…::explicit_conf_can_still_disable_leaf_expression_pushdown` (the conf's job is the opposite direction now) |
+
+**Honest coverage note.** The GA4 real-shape pin did **NOT** reproduce the defect on BASE
+(measured: all 22 single-column projections, `count()` and `agg` were already green there — its
+explode order is the lucky one). It is a coverage pin for the real-world shape, not a second
+reproduction, and it is labelled that way in its docstring.
+
+### 5. Mutant check (three mutants, MEASURED)
+
+Each mutant was applied to `df_guards.rs`, rebuilt (`cargo test` + `make develop`), and the pins
+re-run.
+
+**M1 — the wrapper is never installed (== BASE / stock DataFusion).**
+
+```
+FAILED test_dynamic_flatten.py::test_multi_pass_flatten_every_projection_subset_is_green[Tags]
+FAILED test_dynamic_flatten.py::test_multi_pass_flatten_count_and_agg_are_green[Tags]
+FAILED test_explode_rewrite.py::test_two_pass_explode_chain_survives_a_narrowing_projection
+FAILED test_datasets_facade.py::test_nested_dynamic_flatten_count_action_is_green
+4 failed, 111 passed
+```
+
+…and Rust: `bare_session_without_extension_scopes_leaf_projection_pushdown` FAILED. The `[Alpha]`
+order and the GA4 shape stayed green — exactly the cells that never reproduced, which is the
+honest signal, not a gap.
+
+**M2 — decline by SHAPE instead of by failure** (the first cycle-2 draft). Rust:
+`an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown` FAILED, everything else green;
+Python 115 passed. Correct but 11.8x slower on the shape in §3(b) — which is precisely what that
+one pin exists to catch.
+
+**M3 — cycle 1's blanket `enable_leaf_expression_pushdown = false`.** Rust: 4 of the 5 new pins
+FAILED (`bare_session_keeps_leaf_expression_pushdown_enabled`,
+`bare_session_without_extension_scopes_leaf_projection_pushdown`,
+`a_plan_without_unnest_keeps_the_stock_leaf_pushdown`,
+`an_unnest_plan_the_rule_can_rewrite_still_gets_leaf_pushdown`); Python 115 passed. Cycle 1 was
+correct and slow; the pins now hold that door shut.
+
+Guard restored, `make develop` re-run, all green.
+
+### 6. Docs / workaround retirement
+
+- `docs/guide/troubleshooting.md` — the section is kept as a **fixed entry** (repo convention: the
+  pin holds the absence). Retitled `… (FIXED)`, opens with the status line + ledger pointer, keeps
+  both real error texts, states the mechanism and the scoped rule, carries the measured perf
+  numbers on **both** sides of the scope choice, shows the now-working code, and re-frames
+  `cache()` as ordinary caching rather than an escape hatch.
+- `examples/notebooks/datasets_tour.ipynb` — the cell that counted through the export path "on
+  purpose" now counts both ways and says the defect was fixed.
+- `task/c18-datasets-ledger.md` — C-036b and finding 4 carry **SUPERSEDED** riders pointing here
+  (historical rows are not rewritten, they are annotated).
+- `python/repark/src/repark/spark/dataframe/plan_collapse.py` —
+  `_dynamic_flatten_unnest_structs`'s docstring said the `selectExpr` spelling exists to avoid
+  poisoning multi-pass unnest under `push_down_leaf_projections`; that rationale is now stale, so
+  it is marked stale and the still-live reason (quoted idents for mixed-case/hostile names) is
+  named.
+- **Stale-pointer sweep (critic S3).** Every reference that pointed the leaf-pushdown guard at
+  `crates/repark-core/src/session.rs` now names `crates/repark-core/src/session/df_guards.rs`:
+  `python/repark/tests/map.md`, `docs/guide/troubleshooting.md`,
+  `python/repark/tests/test_dynamic_flatten.py`,
+  `python/repark/src/repark/spark/dataframe/plan_collapse.py`, and this ledger's §3/§5/§7.
+  Verified: `grep -rn "session\.rs" ` over the changed files returns no leaf-pushdown row.
+- `map.md` lockstep: `python/repark/tests/map.md`, `crates/repark-core/src/map.md` (the bullet now
+  describes the two altitudes; the debug-table row routes "nested query got slower" to the real,
+  narrow answer), `crates/repark-core/src/session/map.md`, `docs/guide/map.md`,
+  `examples/notebooks/map.md`.
+- `docs/spark-sql-iceberg-parity.md` — **untouched** (no ruling authorised a row).
+
+### 7. Files changed
+
+| file | change |
+|---|---|
+| `crates/repark-core/src/session/df_guards.rs` | **new** — guard 1 as a config default (`apply_df_54_1_config_guards`) + guard 2 as the scoped rule (`unnest_safe_optimizer_rules` + `UnnestSafeLeafProjectionPushdown` + `carries_unnest`). Lifted out of `session.rs`'s `build()`, which had crossed clippy `too_many_lines` and then the 1500-line file ceiling; splitting the module is the sanctioned out, not an EXCEPTIONS row |
+| `crates/repark-core/src/session.rs` | `build()` calls `apply_df_54_1_config_guards`, then builds the `SessionState` explicitly (`SessionStateBuilder` + `with_optimizer_rules(unnest_safe_optimizer_rules())`) instead of `SessionContext::new_with_config_rt` — one `SessionStateBuilder` import; `apply_datafusion_config_keys` rustdoc names both guards |
+| `crates/repark-core/src/session/df_guard_tests.rs` | **new** — the six guard pins (2 cycle-1 pins replaced, 3 new, plus the pre-existing scalar-subquery pin moved here); `tests.rs` was at 1487/1500 and the cohort would have pushed it to 1600, so the module was split rather than an EXCEPTIONS row added |
+| `crates/repark-core/src/session/tests.rs` | the DF-54.1 guard cohort moved out to `df_guard_tests.rs` (1449 → 1432 lines) |
+| `python/repark/tests/test_dynamic_flatten.py` | 4 pins (2 parametrized ×2 orders) |
+| `python/repark/tests/test_explode_rewrite.py` | 1 pin |
+| `python/repark/tests/test_datasets_facade.py` | C-036b flipped + renamed |
+| `python/repark/src/repark/spark/dataframe/plan_collapse.py` | stale-rationale rider on `_dynamic_flatten_unnest_structs` (docstring only — no behavior) |
+| `docs/guide/troubleshooting.md`, `examples/notebooks/datasets_tour.ipynb`, `task/c18-datasets-ledger.md` | workaround retirement / superseded riders |
+| `map.md` lockstep | `crates/repark-core/src/map.md`, `crates/repark-core/src/session/map.md`, `python/repark/tests/map.md`, `docs/guide/map.md`, `examples/notebooks/map.md` |
+
+### 8. Suites (exact counts, this tree, MEASURED)
+
+| command | result |
+|---|---|
+| `pytest test_dynamic_flatten.py test_explode_rewrite.py test_datasets_facade.py -q` | **115 passed** |
+| `make py-test-facade` (whole facade suite) | **3400 passed, 70 skipped** (BASE was 3393 / 70; +7 = the 7 new facade pins) |
+| `make check-lib-py` | `lib-py: 69 files clean` |
+| `cargo test -p repark-core` (the only crate whose source changed) | **145 + 37 + 8 passed, 1 doctest**, 0 failed |
+| `cargo test --workspace` | **1920 passed, 0 failed** (BASE 1917; +3 = the net new Rust pins) |
+| `make verify` | exit 0 |
+| `make preflight` | exit 0 (verify + facade suite + audit + workflow lint; zizmor: no findings) |
+
+### 9. NOT-RUN (declared)
+
+- **`make parity-live`** — needs a JVM; nothing in this round touched a Spark-parity semantic (the
+  plans and rows are identical either side of the guard).
+- **The packaged-wheel smoke (`wheels.yml`)** — CI-side job, not runnable here; the change is a
+  session default, not a boundary/PyO3 seam change, so the `maturin develop` facade suite is the
+  right tier for it.
+- **`docs/spark-sql-iceberg-parity.md`** — untouched; no ruling authorised a row.
+- **A microbenchmark of the wrapper's own overhead.** `carries_unnest` is one short-circuiting
+  tree walk per node the `TopDown` rule visits — O(plan²) in the worst case on a plan with no
+  `Unnest` anywhere, since nothing short-circuits it — plus a `LogicalPlan` clone on
+  `Unnest`-carrying subtrees only. Not isolated: it is *inside* the §3(b) numbers, where repark
+  reaches parity with stock DataFusion on both shapes, so on those plans it is below the
+  measurement's noise. Not separately quantified, and NOT measured on a pathologically deep plan
+  — that is the shape where the quadratic term could surface.
+- **The DataFusion upstream issue.** Both failures are upstream bugs worth filing
+  (`Unnest::with_new_exprs` vs `LogicalPlan::expressions`; the merge that mixes qualified and
+  unqualified spellings in `build_extraction_projection_impl`). Not filed from this round — no
+  authority to open an upstream issue on the project's behalf. Flagged for the orchestrator.
+
+### DEFECT-2 round critic S3 riders (applied at close-out)
+
+- The "7.78x" ratio in the width table above is ONE best-of-3 run; the critic's
+  rerun of the same recipe reproduced the direction and width-monotonicity but
+  not the exact ratio (load-sensitive). All prose citations now say "up to ~8x
+  in one measured run"; the table keeps the raw numbers as the run's record.
+- The test_dynamic_flatten.py DEFECT-2 module header carried the retracted
+  "LAST explode pass" trigger wording; corrected to the measured
+  Unnest-under-Unnest trigger.
