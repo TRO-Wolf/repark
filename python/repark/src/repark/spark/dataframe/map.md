@@ -75,6 +75,14 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
   **SE-1 R-3:** `_strip_internal_tighten_metadata` lives here so `to_arrow()` /
   `to_arrow_batches` drop the internal `repark.tighten_nulls` tag.
+  **CEIL-1 (D1 #173, move-only):** the six remaining `core.py` tail helpers moved here
+  VERBATIM — `_is_native_pure_global_aggregate`, `_parse_count_distinct_simple_names`,
+  `_global_agg_sql_parts`, `_pandas_udf_window_frame_bounds`, `_reject_partition_transform`,
+  `_reject_aggregate_in_with_column`. D1 + DF-2 each fit the 7350 ceiling alone and
+  together did not; the extract restored headroom without raising the ceiling. `core.py`
+  re-exports all six from its tail bind block, so `joins_columns`'s
+  `from …core import _global_agg_sql_parts` (and every other import path) is unchanged
+  (Q7 freeze).
 - `joins_columns.py` — `GroupedData` + pivot helpers (real body; technique A).
 - `writer_readwriter.py` — `DataFrameWriter`, `DataFrameWriterV2`, `DataFrameStatFunctions`
   + write helpers (real body; technique A). **SE-1 PR-D1 SQM F1:** CREATE paths
@@ -101,6 +109,7 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 | Change DataFrame methods / plan glue | `core.py` |
 | Change the declared-sorted door (SE-1) | `core.py` (`declare_sorted`) + `../session/_funcs.py` (`_source_view_name`) |
 | Change show/eager-eval formatting, Arrow type labels, plan-collapse or qcol rewrite | `plan_collapse.py` |
+| Change global-agg routing, the partition-transform gate, or pandas-UDF window frames | `plan_collapse.py` (CEIL-1 moved them out of `core.py`) |
 | Change generator mid-project name bind | `../column.py` (`_bound_generator_array`) + `core.py` (`_select_with_generator`) |
 | Change `join` how-aliases / semi-family routing | `core.py` (`DataFrame.join` + `_SEMI_JOIN_HOWS`) |
 | Change semi/anti origin-map join-type awareness | `core.py` (`_origin_not_emitted` + `_remember_unemitted_right_origins`) |
@@ -115,7 +124,9 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (DF-2 / #176): `core.py` 7296 of 7350, `plan_collapse.py` 1211 of 2500.
+- Live file sizes (D1 #173, post-CEIL-1 extract): `core.py` 7257 of 7350,
+  `plan_collapse.py` 1373 of 2500. (Was 7380 of 7350 — RED — when D1 and DF-2 landed
+  together; the CEIL-1 move-only extract below bought the room. Ceiling unchanged.)
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).

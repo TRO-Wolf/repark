@@ -114,6 +114,14 @@ NOT in that file is a defect, not a decision.
   metadata stripped; doctest examples execute; SQL-derived write + lazy-view
   CREATE refuse (Q-001); polars join marker (R-C). Serving-shape elision is the
   Rust Spark-door pin.
+  Round-4: `CREATE VIEW <catalog>.<ns>.v` and `SELECT … INTO <catalog>.<ns>.t` over a
+  tightened source refuse (Y-3 / Y-4 — both leaked on BASE, measured on the pre-fix native
+  module), session-scoped names stay allowed, and the analyzed-schema export carries no
+  `repark.tighten_nulls` tag (Y-6 — the node that kills the Rust strip mutant; the
+  `to_arrow()` metadata assertions do NOT, and say so). Two `Kills:` claims were re-measured
+  and honestly relabelled: the literal-over-tightened node is belt-and-suspenders, not a
+  facade discriminator (Y-1), and the cache node's `saveAsTable` half is guarded by the facade
+  marker while its SQL half is the R-A discriminator (Y-7 / verifier P-3).
 
 - `test_t4_csv_smart.py` — r26 T2 decimal-union + sampling pins
 

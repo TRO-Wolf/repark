@@ -258,3 +258,108 @@ async fn ansi_ctas_from_lazy_view_of_derived_plan_refuses() {
         "names the flag: {refused}"
     );
 }
+
+/// Shared fixture for the round-4 DDL-sink pins (Y-3 / Y-4, ANSI door).
+async fn ansi_ddl_sink_session() -> (TempDir, ReparkSession) {
+    let warehouse_dir = TempDir::new().expect("warehouse tempdir");
+    let warehouse = warehouse_dir.path().to_str().expect("utf8").to_string();
+    let session = ansi_session(&warehouse).await;
+    session
+        .sql(&format!(
+            "CREATE SCHEMA ice.sales WITH (location = '{warehouse}/sales')"
+        ))
+        .await
+        .expect("CREATE SCHEMA must run");
+    let rows = nullable_sorted_rows();
+    session
+        .register_record_batches_as_temp_view("plain", rows.schema(), vec![rows.clone()])
+        .unwrap();
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &["symbol".to_string(), "ts".to_string()], true)
+        .await
+        .unwrap();
+    (warehouse_dir, session)
+}
+
+#[tokio::test]
+async fn ansi_create_view_in_iceberg_catalog_over_tightened_source_refuses() {
+    // Y-3, ANSI twin. Kills: the ANSI router's `_ => delegate` arm letting `CREATE VIEW
+    // ice.ns.v AS …` reach the Iceberg schema provider's `register_table` sink (which persists
+    // a real table — MEASURED on BASE through the Spark door with the same provider).
+    // Deleting the `refuse_iceberg_create_of_tightened_ddl` call in `router::delegate`
+    // turns this red.
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    for sql in [
+        "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
+        "CREATE VIEW ice.sales.v_false AS SELECT * FROM tight WHERE false",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("`{sql}` must refuse — it persists an Iceberg table"));
+        assert!(
+            error.to_string().contains("tightenNulls"),
+            "names the flag for `{sql}`: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ansi_select_into_iceberg_catalog_over_tightened_source_refuses() {
+    // Y-4, ANSI twin. Independent statement (`CreateMemoryTable`, not `CreateView`): a fix
+    // wired only to the `CreateView` DDL arm leaves this green — measured both ways.
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    for sql in [
+        "SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0",
+        "SELECT * INTO ice.sales.t_false FROM tight WHERE false",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("`{sql}` must refuse — it persists an Iceberg table"));
+        assert!(
+            error.to_string().contains("tightenNulls"),
+            "names the flag for `{sql}`: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ansi_session_scoped_create_view_and_select_into_stay_allowed() {
+    // Allowed side. Kills: a blanket DDL refuse — a one-part name is not a registered Iceberg
+    // catalog and persists nothing.
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    session
+        .sql("CREATE VIEW session_v AS SELECT * FROM tight")
+        .await
+        .expect("session-scoped CREATE VIEW must stay allowed")
+        .collect()
+        .await
+        .expect("collect create view");
+    session
+        .sql("SELECT * INTO session_t FROM tight")
+        .await
+        .expect("session-scoped SELECT INTO must stay allowed")
+        .collect()
+        .await
+        .expect("collect select into");
+}
+
+#[tokio::test]
+async fn ansi_create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() {
+    // The PAYLOAD boundary: `CREATE VIEW` persisting an Iceberg table at all predates this
+    // branch. This round fixes only the tighten leak — the untightened statement is unchanged.
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    session
+        .sql("CREATE VIEW ice.sales.v_plain AS SELECT * FROM plain LIMIT 0")
+        .await
+        .expect("untightened CREATE VIEW is unchanged by this round")
+        .collect()
+        .await
+        .expect("collect");
+}

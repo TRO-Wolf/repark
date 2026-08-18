@@ -751,7 +751,18 @@ fn nested_non_null_child_is_treated_as_required_output() {
 
 #[tokio::test]
 async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
-    // Kills: leaking repark.tighten_nulls into user-visible to_arrow()/df.schema export.
+    // Kills: `strip_tighten_export_metadata` no longer removing the tag (or removing the
+    // non-null lever with it). UNIT SCOPE — this node calls the helper directly.
+    // Y-6 (round 4): the old "Kills: leaking repark.tighten_nulls into user-visible
+    // to_arrow()/df.schema export" claim is ~~struck~~ — this node never touched either export
+    // path. MEASURED: the binding surface the helper actually guards is
+    // `PyDataFrame::analyzed_arrow_schema` (`crates/repark-python/src/dataframe.rs`), and with
+    // the helper no-oped that capsule reports `{b"repark.tighten_nulls": b"1"}` on both keys.
+    // Coverage extended rather than narrowed: the facade node
+    // `test_analyzed_schema_export_carries_no_tighten_tag` pins that boundary and is the node
+    // the helper mutant kills there. `to_arrow()` is NOT covered by either — DataFusion drops
+    // field metadata across physical execution, so the collected schema is already tag-free
+    // with both strip layers no-oped (measured).
     let session = ReparkSession::new().unwrap();
     let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
     session
@@ -783,4 +794,160 @@ async fn export_strip_drops_tighten_tags_and_keeps_non_nullability() {
         !exported.field_with_name("ts").unwrap().is_nullable(),
         "export must keep the non-null lever"
     );
+}
+
+#[tokio::test]
+async fn filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse() {
+    // Y-2 (round 4). Kills: deleting the `TableSource::get_logical_plan` recurse in
+    // `collect_tighten_sources`.
+    //
+    // MEASURED on this tree: with the recurse deleted, ALL FOUR existing Q-001 lazy-view pins
+    // (this file's `lazy_view_of_derived_plan_is_visible_to_the_create_walk`, the Spark-door
+    // and ANSI-door `*_lazy_view_of_derived_plan_refuses`, and the facade
+    // `test_sql_derived_write_and_lazy_view_create_refuse`) stayed GREEN — because
+    // DataFusion 54.1 `LogicalPlanBuilder::scan` INLINES a source that has a logical plan, so
+    // every SQL-door `SELECT * FROM <view>` puts the tightened `MemTable`'s `TableScan`
+    // directly in the outer plan and the walk never needs to recurse.
+    //
+    // The recurse is NOT dead code: `scan` skips the inline when `table_scan.filters` is
+    // non-empty (datafusion-expr 54.1 `builder.rs` L518), which leaves a real `TableScan`
+    // whose source still carries the view's plan. That is the shape below, built through the
+    // public `LogicalPlanBuilder` API against the public `refuse_iceberg_create_of_tightened_plan`
+    // entry point. No SQL-door statement reaches it today (measured above); it is the pin that
+    // makes the recurse a live branch instead of a belief about one DataFusion release.
+    use std::borrow::Cow;
+
+    use datafusion::catalog::TableProvider;
+    use datafusion::datasource::ViewTable;
+    use datafusion::logical_expr::{LogicalPlanBuilder, TableSource, lit};
+
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    let derived = session
+        .context()
+        .sql("SELECT ts + 1 AS ts2 FROM tight")
+        .await
+        .unwrap();
+    let view = Arc::new(ViewTable::new(derived.logical_plan().clone(), None));
+    assert!(
+        TableProvider::get_logical_plan(view.as_ref()).is_some(),
+        "the ViewTable must carry the inner plan — otherwise this pin proves nothing"
+    );
+    let source: Arc<dyn TableSource> =
+        datafusion::datasource::provider_as_source(Arc::clone(&view) as Arc<dyn TableProvider>);
+    // A non-empty filter list is exactly what makes `scan` keep the `TableScan` node instead of
+    // inlining the view — assert the shape before asserting the behavior.
+    let plan = LogicalPlanBuilder::scan_with_filters("v", source, None, vec![lit(true)])
+        .unwrap()
+        .build()
+        .unwrap();
+    let scan_sources_carry_plans = match &plan {
+        datafusion::logical_expr::LogicalPlan::TableScan(scan) => {
+            matches!(
+                scan.source.get_logical_plan(),
+                Some(Cow::Borrowed(_) | Cow::Owned(_))
+            )
+        }
+        other => panic!("expected a retained TableScan, got {other:?}"),
+    };
+    assert!(
+        scan_sources_carry_plans,
+        "the retained TableScan's source must still carry the view plan"
+    );
+    let error = refuse_iceberg_create_of_tightened_plan(&plan)
+        .expect_err("a filtered scan of a view over a tightened source must refuse");
+    let Error::Analysis(message) = error else {
+        panic!("expected Analysis, got {error:?}");
+    };
+    assert!(
+        message.contains("tightenNulls"),
+        "names the flag: {message}"
+    );
+}
+
+#[test]
+fn list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk() {
+    // Y-8 (round 4) — verifier P-5, previously NOT-RUN. Question: does
+    // `field_or_child_is_non_nullable` see a REQUIRED child inside a List / Map element field?
+    // MEASURED here, through the public schema entry point (the helper is crate-private):
+    //
+    //   shape                                                   verdict
+    //   ------------------------------------------------------  --------
+    //   List<item: Int64 NOT NULL>            (outer nullable)   refuses
+    //   LargeList<item: Int64 NOT NULL>       (outer nullable)   refuses
+    //   FixedSizeList<item: Int64 NOT NULL,2> (outer nullable)   refuses
+    //   Map<key NOT NULL, value: Int64 NOT NULL> (outer nullable) refuses
+    //   Map<key NOT NULL, value: Int64 NULL>     (outer nullable) ALLOWED
+    //   List<item: Int64 NULL>                (outer nullable)   ALLOWED
+    //
+    // Kills: dropping the List/LargeList/FixedSizeList or the Map arm of
+    // `field_or_child_is_non_nullable` (measured: deleting either arm turns the matching rows
+    // red). The Map row's accepted scope is deliberate and pinned by the two Map rows together
+    // — Iceberg map KEYS are spec-required, so only a required VALUE persists a nested required
+    // field; a `Map<key NOT NULL, value NULL>` column must stay allowed.
+    fn tighten_derived(field: Field) -> Schema {
+        Schema::new_with_metadata(
+            vec![field],
+            HashMap::from([(
+                TIGHTEN_NULLS_METADATA_KEY.to_string(),
+                TIGHTEN_NULLS_METADATA_VALUE.to_string(),
+            )]),
+        )
+    }
+    fn map_field(value_nullable: bool) -> Field {
+        let entries = Field::new(
+            "entries",
+            DataType::Struct(Fields::from(vec![
+                Field::new("key", DataType::Utf8, false),
+                Field::new("value", DataType::Int64, value_nullable),
+            ])),
+            false,
+        );
+        Field::new("m", DataType::Map(Arc::new(entries), false), true)
+    }
+    let required_item = Arc::new(Field::new("item", DataType::Int64, false));
+    let nullable_item = Arc::new(Field::new("item", DataType::Int64, true));
+
+    for (label, field) in [
+        (
+            "List<required>",
+            Field::new("l", DataType::List(Arc::clone(&required_item)), true),
+        ),
+        (
+            "LargeList<required>",
+            Field::new("l", DataType::LargeList(Arc::clone(&required_item)), true),
+        ),
+        (
+            "FixedSizeList<required>",
+            Field::new(
+                "l",
+                DataType::FixedSizeList(Arc::clone(&required_item), 2),
+                true,
+            ),
+        ),
+        ("Map<value required>", map_field(false)),
+    ] {
+        repark_core::refuse_iceberg_create_of_tightened_schema(&tighten_derived(field)).expect_err(
+            &format!("{label} must refuse — it persists a required child"),
+        );
+    }
+    for (label, field) in [
+        (
+            "List<nullable>",
+            Field::new("l", DataType::List(Arc::clone(&nullable_item)), true),
+        ),
+        ("Map<value nullable>", map_field(true)),
+    ] {
+        repark_core::refuse_iceberg_create_of_tightened_schema(&tighten_derived(field))
+            .unwrap_or_else(|error| {
+                panic!("{label} persists no required child and must be allowed: {error:?}")
+            });
+    }
 }

@@ -230,6 +230,11 @@ async fn delegate(cx: &EngineContext<'_>, sql: &str) -> Result<DataFrame> {
         Err(err) => return Err(sniff::upgrade_error(sql, err)),
     };
     guards::refuse_local_filesystem_plan(cx.ctx, cx.catalogs, &plan)?;
+    // SE-1 D1 round 4 (Y-3 / Y-4): the ANSI twin of the Spark-door DDL-sink refuse.
+    // `CREATE VIEW cat.ns.v AS …` / `SELECT … INTO cat.ns.t` fall through the `_ =>` arm above
+    // to here, and the Iceberg schema provider's `register_table` persists a real table.
+    repark_core::refuse_iceberg_create_of_tightened_ddl(&plan, cx.catalogs)
+        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
     cx.ctx.execute_logical_plan(plan).await
 }
 

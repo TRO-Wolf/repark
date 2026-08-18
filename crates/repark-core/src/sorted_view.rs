@@ -16,8 +16,9 @@ use arrow::compute::kernels::sort::{LexicographicalComparator, SortColumn, SortO
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use datafusion::common::Column;
+use datafusion::common::TableReference;
 use datafusion::common::tree_node::TreeNodeRecursion;
-use datafusion::logical_expr::{Expr, LogicalPlan, SortExpr};
+use datafusion::logical_expr::{DdlStatement, Expr, LogicalPlan, SortExpr};
 
 use crate::error_map::engine_err;
 use repark_common::{Error, Result};
@@ -235,6 +236,49 @@ pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()>
         return Ok(());
     }
     refuse_tightened_create(&tagged)
+}
+
+/// ===========================================================================================
+/// Y-3 / Y-4 (round 4): the **DDL sink** door. `CREATE VIEW cat.ns.v AS SELECT …` and
+/// `SELECT … INTO cat.ns.t FROM …` never reach either door's CTAS derivation — both routers
+/// drop them into their catch-all passthrough/delegate arm. DataFusion plans them as
+/// `DdlStatement::CreateView` / `CreateMemoryTable` and registers the result through the
+/// target schema provider's `register_table`, which for an Iceberg catalog **persists a real
+/// format-v2 table** (measured — see `task/se1-declared-sorted-ledger.md` round 4). Applying
+/// the same R-D predicate to the DDL body closes the tighten leak on both statements.
+///
+/// Scope is deliberately narrow and matches the CTAS refuse exactly:
+/// - only when the DDL target resolves to a **registered Iceberg catalog** (a session-scoped
+///   `CREATE VIEW v AS …` / `SELECT … INTO t` persists nothing and stays allowed — the
+///   existing lazy-view pins depend on that);
+/// - only under the R-D predicate (tightened source AND ≥1 non-nullable output field).
+///
+/// This is NOT the fix for "CREATE VIEW persists a table at all" — that behaviour predates
+/// this branch (measured on BASE with an untightened source) and is recorded as a separate
+/// payload finding.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`Error::Analysis`] when the DDL body would persist a required column from a tightened
+/// source; [`Error::DataFusion`] if the plan walk fails.
+pub fn refuse_iceberg_create_of_tightened_ddl(
+    plan: &LogicalPlan,
+    catalogs: &crate::CatalogRegistry,
+) -> Result<()> {
+    let (name, input) = match plan {
+        LogicalPlan::Ddl(DdlStatement::CreateView(view)) => (&view.name, view.input.as_ref()),
+        LogicalPlan::Ddl(DdlStatement::CreateMemoryTable(table)) => {
+            (&table.name, table.input.as_ref())
+        }
+        _ => return Ok(()),
+    };
+    let TableReference::Full { catalog, .. } = name else {
+        return Ok(());
+    };
+    if catalogs.get(catalog.as_ref()).is_none() {
+        return Ok(());
+    }
+    refuse_iceberg_create_of_tightened_plan(input)
 }
 
 /// ===========================================================================================

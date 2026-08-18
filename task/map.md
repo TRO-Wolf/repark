@@ -46,6 +46,14 @@ not this directory.
   non-nullable; Iceberg CREATE of a tightened frame refuses until PR-D2.
   **Round 3:** R-A cache remint stamp, R-B subquery walk, R-C right-side
   marker, R-D refuse predicate.
+  **Round 4 (post-rebase, Y-1..Y-8 + CEIL-1):** closes the DDL-SINK bypass on both
+  doors (`CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` persisted required keys —
+  measured on BASE) via `refuse_iceberg_create_of_tightened_ddl`; makes the
+  `get_logical_plan` recurse a live pinned branch; relabels three non-discriminating
+  pin claims with MEASURED tables; runs the two NOT-RUN verifiers (P-3 cache cell,
+  P-5 List/Map child requiredness); and pays back the `core.py` lib-py ceiling with a
+  MOVE-ONLY extract (ceiling NOT raised). Records one payload finding: `CREATE VIEW`
+  in an Iceberg catalog persists a TABLE, predating this branch and NOT fixed here.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

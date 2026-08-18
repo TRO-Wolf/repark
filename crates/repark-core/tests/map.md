@@ -20,7 +20,14 @@ behavior only reachable end-to-end.
   subquery-expression sources are visible to the walk (R-B), all-nullable
   projections are allowed (R-D), export strip drops the tag and keeps
   non-nullability, lazy `into_view` hops stay visible to the CREATE walk
-  (Q-001). `RepartitionExec` presence is
+  (Q-001). Round-4: `filtered_scan_of_a_view_source_exercises_the_get_logical_plan_recurse`
+  (Y-2 — the one node that kills the delete-the-recurse mutant; no SQL-door statement reaches
+  that branch on DF 54.1, measured) and
+  `list_and_map_child_requiredness_is_seen_by_the_r_d_output_walk` (Y-8 / verifier P-5 — a
+  required child inside List / LargeList / FixedSizeList / Map-VALUE refuses; a nullable
+  element and a nullable map value stay allowed, the accepted scope). The `export_strip` node's
+  claim was narrowed: it is a UNIT pin on the helper; the export boundary it guards
+  (`analyzed_arrow_schema`) is pinned facade-side. `RepartitionExec` presence is
   deliberately NOT pinned (size/config-dependent; see the SE-1 unit ledger).
 
 ## I want to…

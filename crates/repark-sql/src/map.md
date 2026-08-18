@@ -63,7 +63,11 @@ reach delegation through the ordinary arm.
   create-first path. **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan`
   source (including expression subqueries, R-B) is tighten-derived AND the
   output has a non-nullable field (R-D), or the output schema still carries
-  the tag. The write-boundary relax is PR-D2 (via the same source walk). Tests:
+  the tag. The write-boundary relax is PR-D2 (via the same source walk). **Round 4
+  (Y-3/Y-4):** `router.rs::delegate` additionally calls
+  `repark_core::refuse_iceberg_create_of_tightened_ddl` on the planned DDL, so the
+  `CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` sinks that fall through the `_ =>` arm
+  cannot persist a required column either — the ANSI twin of the Spark-door fix. Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`,
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,

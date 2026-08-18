@@ -19,6 +19,10 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   CTAS with the tightened view in an EXISTS subquery refuses (R-B); cache remint
   of a derived plan still refuses (R-A); a lazy `into_view` hop still
   refuses (Q-001); all-nullable projection CREATE + INSERT stay allowed (R-D).
+  Round-4 (Y-3/Y-4): `CREATE VIEW ice.ns.v AS … LIMIT 0` / `… WHERE false` and
+  `SELECT … INTO ice.ns.t` refuse (both were Ok on BASE and persisted required keys —
+  measured); session-scoped one-part names and untightened sources stay allowed.
+  Y-5: the EXISTS-subquery node's `Kills:` prose said "scalar-subquery" and was corrected.
 - [ddl_sessions.rs](ddl_sessions.rs) — deferred rows #2, #4, #5, #6, #7 (phase-2 PR-3a): CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

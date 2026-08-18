@@ -73,8 +73,9 @@ pub use repark_common::{Error, ErrorClass, Result};
 // call at CTAS schema derivation. The flip itself stays crate-private in `sorted_view`. ---
 pub use sorted_view::{
     TIGHTEN_NULLS_METADATA_KEY, TIGHTEN_NULLS_METADATA_VALUE,
-    refuse_iceberg_create_of_tightened_plan, refuse_iceberg_create_of_tightened_schema,
-    schema_is_tighten_derived, strip_tighten_export_metadata, tightened_field_names,
+    refuse_iceberg_create_of_tightened_ddl, refuse_iceberg_create_of_tightened_plan,
+    refuse_iceberg_create_of_tightened_schema, schema_is_tighten_derived,
+    strip_tighten_export_metadata, tightened_field_names,
 };
 
 // --- Frame handle: DataFusion `DataFrame` re-exported — no wrapper (design §3 / O-6). ---
