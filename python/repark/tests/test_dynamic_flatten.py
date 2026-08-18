@@ -435,9 +435,10 @@ def test_struct_in_list_in_struct(spark: ReparkSession) -> None:
 def test_drop_null_typed_list(spark: ReparkSession) -> None:
     """``drop_null_lists=True`` drops ``array<void>`` / List(Null) instead of exploding.
 
-    Engine ``make_array()`` yields ``array<Null>`` (void element). Python
-    ``ArrayType(NullType())`` via createDataFrame currently coerces to array<string>,
-    so the pin uses the SQL path that preserves the null element type.
+    Engine ``make_array()`` yields ``array<Null>`` (void element). This pin uses the SQL
+    path; the createDataFrame door is pinned separately by
+    ``test_create_dataframe_honors_requested_void`` (G3b D-5 — it used to silently
+    substitute array<string>, it now honors the requested ``array<void>``).
     """
     frame = spark.sql(
         """
@@ -949,11 +950,15 @@ _GA4_PARAM = StructType(
         StructField("value", _GA4_VALUE, True),
     ]
 )
+# G3b: the real GA4 ``items`` element carries its OWN ``item_params`` array-of-struct.
+# The fixture used to stop at the scalar fields, which is exactly why the
+# array-of-struct-inside-an-array-element-struct spelling defect shipped unpinned.
 _GA4_ITEM = StructType(
     [
         StructField("item_id", StringType(), True),
         StructField("price", DoubleType(), True),
         StructField("quantity", LongType(), True),
+        StructField("item_params", ArrayType(_GA4_PARAM), True),
     ]
 )
 _GA4_DEVICE = StructType(
@@ -995,6 +1000,11 @@ _GA4_COLUMNS = [
     "items_item_id",
     "items_price",
     "items_quantity",
+    "items_item_params_key",
+    "items_item_params_value_string_value",
+    "items_item_params_value_int_value",
+    "items_item_params_value_float_value",
+    "items_item_params_value_double_value",
     "device_category",
     "device_web_info_hostname",
     "device_web_info_browser",
@@ -1030,7 +1040,14 @@ def _ga4_rows() -> list[dict[str, object]]:
             "event_name": "purchase",
             "event_params": [_ga4_param("currency", "USD")],
             "user_properties": [_ga4_param("user_id", "u-1")],
-            "items": [{"item_id": "SKU-1", "price": 9.99, "quantity": 1}],
+            "items": [
+                {
+                    "item_id": "SKU-1",
+                    "price": 9.99,
+                    "quantity": 1,
+                    "item_params": [_ga4_param("item_category", "shoes")],
+                }
+            ],
             "device": {
                 "category": "mobile",
                 "web_info": {"hostname": "shop.example.test", "browser": "Safari"},
@@ -1077,6 +1094,12 @@ def test_dynamic_flatten_ga4_empty_as_null_keeps_export_rows(spark: ReparkSessio
     assert by_name["purchase"]["items_item_id"] == "SKU-1"
     assert by_name["purchase"]["items_price"] == 9.99
     assert by_name["purchase"]["items_quantity"] == 1
+    # G3b: items[].item_params[] — an array-of-struct nested inside an array-element
+    # struct. Red on BASE (AnalysisException type_coercion, "Failed to coerce … CASE WHEN").
+    assert by_name["purchase"]["items_item_params_key"] == "item_category"
+    assert by_name["purchase"]["items_item_params_value_string_value"] == "shoes"
+    assert by_name["page_view"]["items_item_params_key"] is None
+    assert by_name["session_start"]["items_item_params_key"] is None
 
     assert _is_arrow_string_type(default_table.schema.field("items_item_id").type)
     assert default_table.schema.field("items_price").type == pa.float64()
@@ -1102,3 +1125,209 @@ def test_dynamic_flatten_ga4_empty_as_null_keeps_export_rows(spark: ReparkSessio
         == default_table.schema.field("items_item_id").type
     )
     assert dropped_table.schema.field("items_price").type == pa.float64()
+
+
+def test_dynamic_flatten_array_of_struct_inside_array_element_struct(
+    spark: ReparkSession,
+) -> None:
+    """G3b minimal repro: array-of-struct nested INSIDE an array-element struct.
+
+    This is GA4's real ``items[].item_params[]`` shape reduced to its smallest form.
+    Red on BASE (95cfaf9) for BOTH doors — ``dynamicFlatten()`` and a bare
+    ``explode_outer`` — with ``AnalysisException type_coercion`` / "Failed to coerce …
+    CASE WHEN", because the nested array was spelled postfix (``…[]``) and the engine
+    parser migrated the ``[]`` onto the innermost field. Mutation-proof: reverting
+    ``_sql_array_of`` to ``f"{inner}[]"`` restores the refuse on both doors.
+    """
+    param = StructType(
+        [
+            StructField("key", StringType(), True),
+            StructField("value", StructType([StructField("sv", StringType(), True)]), True),
+        ]
+    )
+    item = StructType(
+        [
+            StructField("item_id", StringType(), True),
+            StructField("item_params", ArrayType(param), True),
+        ]
+    )
+    schema = StructType(
+        [
+            StructField("ev", StringType(), True),
+            StructField("items", ArrayType(item), True),
+        ]
+    )
+    rows = [
+        ("purchase", [("SKU1", [("color", ("red",)), ("size", ("L",))]), ("SKU2", None)]),
+        ("view", None),
+    ]
+    frame = spark.createDataFrame(rows, schema)
+
+    flat = frame.dynamicFlatten()
+    assert flat.columns == [
+        "ev",
+        "items_item_id",
+        "items_item_params_key",
+        "items_item_params_value_sv",
+    ]
+    table = flat.to_arrow()
+    assert table.to_pylist() == [
+        {
+            "ev": "purchase",
+            "items_item_id": "SKU1",
+            "items_item_params_key": "color",
+            "items_item_params_value_sv": "red",
+        },
+        {
+            "ev": "purchase",
+            "items_item_id": "SKU1",
+            "items_item_params_key": "size",
+            "items_item_params_value_sv": "L",
+        },
+        {
+            "ev": "purchase",
+            "items_item_id": "SKU2",
+            "items_item_params_key": None,
+            "items_item_params_value_sv": None,
+        },
+        {
+            "ev": "view",
+            "items_item_id": None,
+            "items_item_params_key": None,
+            "items_item_params_value_sv": None,
+        },
+    ]
+    assert _is_arrow_string_type(table.schema.field("items_item_params_key").type)
+
+    # Second door: bare explode_outer on the same shape (also red on BASE).
+    from repark import functions as F  # noqa: N812
+
+    exploded = frame.select(F.explode_outer("items").alias("item")).to_arrow()
+    assert exploded.num_rows == 3
+
+
+def test_dynamic_flatten_scalar_array_inside_array_element_struct(
+    spark: ReparkSession,
+) -> None:
+    """G3b guard: the scalar-inner nested array (``array<struct<x, nums:array<bigint>>>``)
+    keeps flattening — the uniform angle spelling must not regress the shape that the
+    postfix spelling already handled.
+    """
+    schema = StructType(
+        [
+            StructField(
+                "a",
+                ArrayType(
+                    StructType(
+                        [
+                            StructField("x", StringType(), True),
+                            StructField("nums", ArrayType(LongType()), True),
+                        ]
+                    )
+                ),
+                True,
+            )
+        ]
+    )
+    frame = spark.createDataFrame([([("p", [1, 2]), ("q", None)],)], schema)
+    table = frame.dynamicFlatten().to_arrow()
+    assert table.to_pylist() == [
+        {"a_x": "p", "a_nums": 1},
+        {"a_x": "p", "a_nums": 2},
+        {"a_x": "q", "a_nums": None},
+    ]
+    assert table.schema.field("a_nums").type == pa.int64()
+
+
+def test_dynamic_flatten_map_element_still_refuses_loud(spark: ReparkSession) -> None:
+    """G3b honesty rider: shapes that still cannot spell keep the documented LOUD refuse.
+
+    The pre-#176 refuse message class ("cannot resolve SQL element type … cast the array
+    or use a supported element type") must survive the spelling fix for map elements —
+    the fix widens what spells, it must not silently fail open on what does not.
+    """
+    from repark import functions as F  # noqa: N812
+    from repark.spark.types import MapType
+
+    schema = StructType([StructField("m", ArrayType(MapType(StringType(), StringType())), True)])
+    frame = spark.createDataFrame([([{"a": "b"}],)], schema)
+    with pytest.raises(AnalysisException) as excinfo:
+        frame.select(F.explode_outer("m")).to_arrow()
+    message = str(excinfo.value)
+    assert "cannot resolve SQL element type" in message
+    assert "supported element type" in message
+
+
+def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
+    """G3b D-5: an explicitly requested void / array<void> is HONORED, not substituted.
+
+    Red on BASE (95cfaf9): ``_data_type_to_sql_type`` spelled ``NullType`` as ``VARCHAR``, so
+    ``createDataFrame`` returned ``struct<v:string, a:array<string>>`` for the schema below
+    with **no** warning or refuse — the only silent schema substitution on the ingest path.
+    Mutation-proof: restoring ``return "VARCHAR"`` (or dropping the ``VOID``/``NULL`` entries
+    from ``_sql_type_to_arrow``) reds every assertion here.
+
+    The ruling hierarchy was HONOR > refuse-loud > silent-substitute; HONOR is reachable
+    because the whole path already carries void: Arrow ``null`` / ``list<item: null>``, the
+    ``CAST(NULL AS VOID)`` empty-frame seed, and the DF-2 void machinery below.
+    """
+    schema = StructType(
+        [
+            StructField("v", NullType(), True),
+            StructField("a", ArrayType(NullType()), True),
+        ]
+    )
+    frame = spark.createDataFrame([(None, [None, None]), (None, None)], schema)
+
+    # 1. The reported schema is the requested schema.
+    assert frame.schema.simpleString() == "struct<v:void,a:array<void>>"
+    assert isinstance(frame.schema["v"].dataType, NullType)
+    element = frame.schema["a"].dataType
+    assert isinstance(element, ArrayType)
+    assert isinstance(element.elementType, NullType)
+    assert frame.dtypes == [("v", "void"), ("a", "array<void>")]
+
+    # 2. Arrow agrees — null / list<item: null>, not string / list<item: string>.
+    table = frame.to_arrow()
+    assert table.schema.field("v").type == pa.null()
+    assert table.schema.field("a").type == pa.list_(pa.null())
+    assert table.to_pylist() == [{"v": None, "a": [None, None]}, {"v": None, "a": None}]
+    assert frame.count() == 2
+    assert frame.collect() == frame.collect()
+
+    # 3. Nested + DDL doors spell it the same way.
+    nested = spark.createDataFrame(
+        [(([None],),)],
+        StructType(
+            [StructField("s", StructType([StructField("x", ArrayType(NullType()), True)]), True)]
+        ),
+    )
+    assert nested.schema.simpleString() == "struct<s:struct<x:array<void>>>"
+    assert spark.createDataFrame([([None],)], "a ARRAY<VOID>").schema.simpleString() == (
+        "struct<a:array<void>>"
+    )
+
+    # 4. Empty-frame seed (CAST(NULL AS VOID)) keeps the requested type too.
+    assert spark.createDataFrame([], schema).schema.simpleString() == (
+        "struct<v:void,a:array<void>>"
+    )
+
+    # 5. The DF-2 void machinery still holds on the ingested (not SQL-built) frame.
+    assert frame.dynamicFlatten().columns == ["v"]
+    kept = frame.dynamicFlatten(drop_null_lists=False)
+    assert kept.columns == ["v", "a"]
+    # MEASURED: the 2-element void list contributes one null row per element, the NULL
+    # array row contributes one — 3 rows, every cell NULL (void has no other value).
+    assert kept.to_arrow().to_pylist() == [
+        {"v": None, "a": None},
+        {"v": None, "a": None},
+        {"v": None, "a": None},
+    ]
+
+    # 6. Non-void requests are untouched (the substitution is gone, not inverted).
+    assert (
+        spark.createDataFrame(
+            [([None],)], StructType([StructField("a", ArrayType(StringType()), True)])
+        ).schema.simpleString()
+        == "struct<a:array<string>>"
+    )

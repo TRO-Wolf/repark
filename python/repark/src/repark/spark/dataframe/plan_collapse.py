@@ -801,6 +801,27 @@ _DECIMAL_SQL_RE = re.compile(r"decimal\(\d+,\s*\d+\)", re.IGNORECASE)
 _UNTYPED_NULL_ELEMENT = "__repark_untyped_null__"
 
 
+def _sql_array_of(inner: str) -> str:
+    """Spell "array of ``inner``" as ``array<inner>``, never postfix ``inner[]``.
+
+    G3b (GA4 ``items[].item_params[]``): the postfix form binds to the *innermost*
+    field when ``inner`` ends in ``>``. Measured against the engine parser via
+    ``SELECT make_array(CAST(NULL AS <spelling>))``::
+
+        struct<item_id:VARCHAR,item_params:struct<key:VARCHAR,value:struct<sv:VARCHAR>>[]>
+          parses as  item_params: struct<key, value: array<struct<sv>>>   <- [] migrated
+        struct<item_id:VARCHAR,item_params:array<struct<key:VARCHAR,value:struct<sv:VARCHAR>>>>
+          parses as  item_params: array<struct<key, value: struct<sv>>>   <- exact
+
+    The mis-parse made the ``CASE WHEN`` arms of the explode_outer rewrite disagree, so
+    dynamic_flatten / explode_outer refused an array-of-struct nested inside an
+    array-element struct. The angle form round-trips exactly for scalar inners too
+    (``array<BIGINT>`` == ``BIGINT[]``), so it is used uniformly — one honest spelling
+    rather than a shape-dependent pair.
+    """
+    return f"array<{inner}>"
+
+
 def _struct_field_name_for_cast(name: str) -> str | None:
     """Allowlist a struct field name before embedding it in CAST SQL.
 
@@ -850,7 +871,7 @@ def _spark_array_element_to_sql(element: str) -> str | None:
         # Nested array<void> has no CAST spelling (leaf void uses make_array(NULL)).
         if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
-        return f"{inner}[]"
+        return _sql_array_of(inner)
     if token.startswith("struct<") and token.endswith(">"):
         return _spark_struct_element_to_sql(raw)
     if token.startswith("map<"):
@@ -907,7 +928,7 @@ def _arrow_debug_type_to_sql(element: str) -> str | None:
         # Nested void has no CAST spelling (same refuse as simpleString array<null>).
         if inner is None or inner == _UNTYPED_NULL_ELEMENT:
             return None
-        return f"{inner}[]"
+        return _sql_array_of(inner)
     if text.startswith("Timestamp"):
         return "TIMESTAMP"
     if text.startswith("Date32") or text.startswith("Date64"):

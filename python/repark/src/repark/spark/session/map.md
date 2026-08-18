@@ -15,6 +15,12 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   in the divergence registry; `"false"` restores byte-identical PySpark inference).
   **G15:** `_data_type_to_sql_type` refuses a non-binary `StringType` (the silently-wrong-count
   path: collation was stripped to `STRING`).
+  **G3b D-5 (2026-08-18):** the same mapper now spells `NullType` as `VOID` (was `VARCHAR`) and
+  `_sql_type_to_arrow` maps `VOID`/`NULL` to `pa.null()`. An explicitly requested
+  `NullType()` / `ArrayType(NullType())` used to come back as `string` / `array<string>` with
+  no signal — the only *silent* schema substitution on the ingest path. Void now round-trips:
+  reported schema, Arrow (`null` / `list<item: null>`), the `CAST(NULL AS VOID)` empty-frame
+  seed, and the DF-2 void machinery (`drop_null_lists`, `make_array(NULL)`).
   **S-1 R2:** `_apply_builder_datafusion_conf` skips `datafusion.runtime.temp_directory`
   (already applied at Rust `build()`; a runtime SET of it refuses and names `TMPDIR`).
   **F-3 (2026-08-17):** the last undocumented public name here, `int_size_to_ok` inside

@@ -1930,7 +1930,15 @@ def _data_type_to_sql_type(data_type: Any) -> str:
         return f"DECIMAL({data_type.precision},{data_type.scale})"
 
     if isinstance(data_type, NullType):
-        return "VARCHAR"
+        # G3b D-5: HONOR the requested void instead of silently substituting VARCHAR.
+        # An explicit ``NullType()`` / ``ArrayType(NullType())`` used to come back as
+        # ``string`` / ``array<string>`` with no warning — the schema the caller asked for
+        # was not the schema they got, and nothing said so. VOID round-trips end to end:
+        # ``_sql_type_to_arrow`` maps it to ``pa.null()``, the engine accepts
+        # ``CAST(NULL AS VOID)`` on the empty-frame seed, and the DF-2 void machinery
+        # (drop_null_lists / make_array(NULL)) already handles ``array<void>``.
+
+        return "VOID"
 
     if isinstance(data_type, ArrayType):
         # Nested complex types are applied via Arrow schema (engine_types marker below).
@@ -4224,6 +4232,10 @@ def _sql_type_to_arrow(sql_type: str) -> Any:
         "TIMESTAMP_NTZ": pa.timestamp("us"),
         "BINARY": pa.binary(),
         "BYTEA": pa.binary(),
+        # G3b D-5: an explicitly requested void column stays void (pa.null()), never
+        # a silent pa.string() substitution.
+        "VOID": pa.null(),
+        "NULL": pa.null(),
     }
 
     if base in mapping:
