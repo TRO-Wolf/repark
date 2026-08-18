@@ -127,7 +127,9 @@ NOT in that file is a defect, not a decision.
   **DF-2:** default `empty_as_null=True` keeps NULL+EMPTY lists as a null-element row
   (`False` keeps NULL / drops EMPTY); in-test GA4 fixture pins both flag states
   (page_view empty / purchase full / session_start NULL);
-  `drop_null_lists=False` void column + void-sibling SKU pin (SQM #176 V-2);
+  `drop_null_lists=False` void column + void-sibling SKU pin (SQM #176 V-2),
+  the kept void column also pins `.schema`/`.dtypes` as `NullType`/`void`
+  (SQM #176 W-1 Debug-spelling fail-open);
   max_depth LOUD refuse;
   bool flag type gates (incl. `empty_as_null`);
   name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
@@ -435,7 +437,8 @@ NOT in that file is a defect, not a decision.
 - `test_explode_rewrite.py` — R-EXPLODE-REWRITE pins (null/empty, one-generator, posexplode*
   STOP, str ColumnOrName, cast sticky, withColumn unnest, pre-aliased AS strip, multi-array
   exact type bind; **DF-2:** `explode_outer` on `array<struct>` + nested `web_info` struct
-  keeps null/empty rows; void `array<Null>` keeps via `make_array(NULL)`;
+  keeps null/empty rows; void `array<Null>` keeps via `make_array(NULL)` and
+  reports `NullType`/`void` from `.schema`/`.dtypes` (SQM #176 W-1);
   map element still refuses (non-discriminating regression guard);
   struct/map/void mapper unit pin;
   **U-DF-1:** string-form / `F.col` / getitem / casefold explode of

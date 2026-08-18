@@ -39,6 +39,10 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   names keep `generator._inner`. **DF-2:** `dynamicFlatten(empty_as_null=True)`
   uses `explode_outer` on typed **and** void lists (False uses private
   `explode_keep_null`); void NULL-guard is untyped `make_array(NULL)` (no CAST).
+  **DF-2 W-1:** the `schema` flat-column type mapper also accepts the Arrow Debug
+  spelling `Null` (every flat void column carries it — a plain `SELECT NULL`
+  literal included, not just an exploded void column), so `.schema` / `.dtypes`
+  report `NullType` / `void` instead of falling open to `StringType`.
   **SE-1 PR-B (2026-08-17):** `DataFrame.declareSorted` / `declare_sorted` — the
   disclosed repark extension (no PySpark twin) that declares a `createDataFrame`
   source frame pre-sorted so DataFusion elides the window `SortExec`. It refuses

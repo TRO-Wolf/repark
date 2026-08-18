@@ -1027,6 +1027,14 @@ def test_explode_outer_void_array_keeps_null_and_empty(spark: ReparkSession) -> 
     spelling for void). After: empty and NULL void lists each yield one
     null element. Kills: missing ``_UNTYPED_NULL_ELEMENT`` arm;
     ``CAST(NULL AS void)`` attempt.
+
+    Schema-mapper leg MEASURED on this round's BASE c38578d: the exploded
+    column's engine type key is the Arrow Debug spelling ``'Null'``, so the
+    lowercase-only void arm missed and the else-arm fell open —
+    ``.schema['e'].dataType`` was ``StringType()`` and ``.dtypes`` said
+    ``('e', 'string')`` while ``to_arrow()`` was already ``pa.null()``.
+    After the ``'Null'`` arm: ``NullType()`` / ``('e', 'void')``.
+    Kills: the StringType fail-open on the Debug-spelled void key (DF-2 W-1).
     """
     frame = spark.sql(
         """
@@ -1044,6 +1052,10 @@ def test_explode_outer_void_array_keeps_null_and_empty(spark: ReparkSession) -> 
     assert rows[0]["e"] is None
     assert rows[1]["e"] is None
     assert pa.types.is_null(table.schema.field("e").type)
+    # DF-2 W-1: reported schema must agree with the Arrow type, not fail open to string.
+    exploded = frame.select(frame.id, F.explode_outer("props").alias("e"))
+    assert isinstance(exploded.schema["e"].dataType, NullType)
+    assert ("e", "void") in exploded.dtypes
 
 
 def test_explode_outer_map_element_still_refuses_loud(spark: ReparkSession) -> None:

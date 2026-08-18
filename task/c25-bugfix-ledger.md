@@ -767,8 +767,9 @@ Convergence: ACC-CONVERGED (Critic-1 CLEAN after Q-001/002/010;
 
 ## Finder-battery report — round 2
 Target: b628b0f...worktree DF-2 V-1/V-2 | dimensions: 3
-  (wiring/semantics, pins/tests, fence/docs) | findings: 12 raw → 12
-  deduped
+  (wiring/semantics, pins/tests, fence/docs) | findings: 13 raw → 13
+  deduped (8 survivors + 5 refuted; the earlier "12 → 12" header
+  miscounted the sections below — corrected in §2.5 W-2)
 Survivors after verify (ranked):
   [S1/CONFIRMED] F1 ledger pointed at missing round-2 reports — remediating
     in this section (this text).
@@ -806,3 +807,42 @@ Verdict: CLEAN after remediating F1–F3/F5/P2/P3 (zero remaining S0/S1).
   Verifiers spawned (7 explore). Finders spawned (3). Not NOT-RUN.
 
 B1 not started.
+
+### 2.5 SQM #176 ROUND 2 — W-1/W-2 (2026-08-17)
+
+**W-1 (S2, behavior).** `DataFrame.schema`'s flat-column mapper
+(`spark/dataframe/core.py`) matched only lowercase `"void"` / `"null"`,
+and its else-arm fails open to `StringType()`. The engine type key for
+EVERY flat void column is the Arrow Debug spelling `"Null"` (capital
+N — same spelling the V-2 list pins already carry as
+`List(Field { data_type: Null … })`), so `.schema` / `.dtypes` reported
+`string` while `to_arrow()` was `pa.null()`. The fail-open was never
+explode-specific — MEASURED on BASE, a plain `SELECT NULL AS n` also
+reported `('n', 'string')` — the void explode paths this unit opened are
+just the newly-pinned route. Fixed narrowly: the arm now
+also accepts `"Null"` (no casefold, no chain restructure — every other
+standard type key is engine-lowercase).
+
+MEASURED on this round's BASE c38578d (fix hunk stashed) vs fixed:
+
+| probe | BASE c38578d | with W-1 fix |
+|---|---|---|
+| `logical_schema_fields()` void column key | `'Null'` | `'Null'` (unchanged) |
+| `explode_outer(array<void>)` `.schema['e'].dataType` | `StringType()` | `NullType()` |
+| same, `.dtypes` entry | `('e', 'string')` | `('e', 'void')` |
+| same, `to_arrow()` field type | `null` | `null` (unchanged) |
+| `dynamicFlatten(drop_null_lists=False)` `.schema['props']` | `StringType()` | `NullType()` |
+| same, `.dtypes` entry | `('props', 'string')` | `('props', 'void')` |
+| same, `to_arrow()` field type | `null` | `null` (unchanged) |
+
+Pins extended (both go red with the hunk stashed — MEASURED, 2 failed):
+`test_explode_outer_void_array_keeps_null_and_empty` and
+`test_drop_null_lists_false_keeps_null_list_column` each now assert
+`NullType()` on `.schema[…]` and `(name, "void")` in `.dtypes`. They kill
+the StringType fail-open on the Debug-spelled void key.
+
+**W-2 (S3, honesty).** The round-2 finder-battery header read
+"12 raw → 12 deduped" while its own body names 13 IDs — survivors
+F1, F2, F3, F5, P2, P3, P4, SEC-002 (8) plus refuted W1, W2, W3, P1, F4
+(5). Header recounted to "13 raw → 13 deduped (8 survivors + 5 refuted)".
+No finding was added or dropped; only the count is corrected.

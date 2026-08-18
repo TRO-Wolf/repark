@@ -4136,7 +4136,10 @@ class DataFrame:
                 data_type = DateType()
             elif type_key == "timestamp":
                 data_type = TimestampType()
-            elif type_key == "void" or type_key == "null":
+            # "Null" is the Arrow Debug spelling, which reaches every flat void column —
+            # a plain NULL literal included, not just a void explode (engine spells every
+            # other standard type lowercase) — DF-2 W-1.
+            elif type_key in ("void", "null", "Null"):
                 data_type = NullType()
             elif type_key.startswith("decimal("):
                 # decimal(p,s)

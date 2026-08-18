@@ -464,6 +464,14 @@ def test_drop_null_lists_false_keeps_null_list_column(spark: ReparkSession) -> N
     f6aed24 inner-explode the empty void list → ``count()==0``. After the
     untyped ``make_array(NULL)`` arm the row survives with ``props`` NULL.
     Kills: void inner-explode fallback; missing ``make_array(NULL)`` CASE.
+
+    Schema-mapper leg MEASURED on this round's BASE c38578d: the kept flat
+    ``props`` column carries the Arrow Debug type key ``'Null'``, which the
+    lowercase-only void arm missed, so ``.schema['props'].dataType`` was
+    ``StringType()`` and ``.dtypes`` said ``('props', 'string')`` while
+    ``to_arrow()`` was already ``pa.null()``. After the ``'Null'`` arm:
+    ``NullType()`` / ``('props', 'void')``.
+    Kills: the StringType fail-open on the Debug-spelled void key (DF-2 W-1).
     """
     frame = spark.sql("SELECT 1 AS id, make_array() AS props")
     props_type = frame.schema["props"].dataType
@@ -474,6 +482,9 @@ def test_drop_null_lists_false_keeps_null_list_column(spark: ReparkSession) -> N
     table = flat.to_arrow()
     assert table.to_pylist() == [{"id": 1, "props": None}]
     assert pa.types.is_null(table.schema.field("props").type)
+    # DF-2 W-1: reported schema must agree with the Arrow type, not fail open to string.
+    assert isinstance(flat.schema["props"].dataType, NullType)
+    assert ("props", "void") in flat.dtypes
 
 
 def test_drop_null_lists_false_void_sibling_keeps_typed_list_rows(
