@@ -107,3 +107,11 @@ view's HOME segments (`_funcs.py` parameter renamed `temp_view_exists` → `temp
 `"datafusion"."public"."v"` for a session-local view instead of a bare reference the engine would
 re-resolve against the live `datafusion.catalog.default_catalog`. `createDataFrame`'s scratch view
 is named through `repark.spark._temp_views.scratch_view_name`.
+
+**Group-1 confirmation (C-1).** Three `session_core.py` docstrings still said one-part temp views
+"stay bare" after R7-1 changed that — `_expand_bare_table_names_in_sql` (the statement-shape list),
+`_expand_from_join_table_refs_in_sql`, and `table`. MEASURED false:
+`_expand_bare_table_names_in_sql("SELECT * FROM tv")` → `SELECT * FROM "datafusion"."public"."tv"`,
+and `_sql_table_ref_resolved("tv", prefer_temp_view=True)` → `"datafusion"."public"."tv"`. All three
+trued (prose only, line-neutral — the file sits exactly at its 2500 ceiling); this paragraph was
+already correct and is what they now agree with.

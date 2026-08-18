@@ -1354,3 +1354,181 @@ changed); every count below is identical to the pre-disclosure run.
 `catalog.listTables()`. Pre-existing (not introduced by any D1 round); listing
 hygiene, no data path. Left for the next facade-hygiene unit with the
 engine-side scratch-view SET family above.
+
+## Group-1 confirmation (2026-08-18)
+
+The round-7 verification that never ran, run firsthand on this worktree (head `147b79e`,
+BASE-of-round `5c66e83`, native module from the green preflight). Every row below was
+MEASURED this pass — nothing is carried over from an earlier round's table.
+
+### M-1 — mint-then-scan on every named facade read path
+
+One facade session, `register_memory_catalog("glue_catalog")`, `SET
+datafusion.catalog.default_catalog='glue_catalog'` + `default_schema='writer_ns'`, then mint
+`tv_read` via `createDataFrame(...).createOrReplaceTempView`. The no-SET column is the same
+script with the two `SET`s removed. "identical" = the two columns' results compared
+byte-for-byte after normalizing `[0-9a-f]{32}` (view uuids) to a token.
+
+| read path | under `SET` | vs no-`SET` |
+|---|---|---|
+| `spark.catalog.tableExists("tv_read")` | `True` | identical |
+| `spark.table("tv_read").collect()` | the 3 view rows | identical |
+| `spark.sql("SELECT * FROM tv_read")` | the 3 view rows | identical |
+| `.cache()` / `.persist()` / `.localCheckpoint(eager=True)` | the 3 view rows (each) | identical |
+| `createDataFrame(rows, schema)` internal re-scan | the 3 view rows | identical |
+| `selectExpr("sym, ts + 1 AS ts1")` | 3 rows, values correct | identical |
+| `alias("al")` | the 3 view rows | identical |
+| `resolve_table_name("tv_read", prefer_temp_view=True)` | `datafusion.public.tv_read` | identical |
+| `catalog.listTables()` names | one-part; `tv_read`, `al`, cache/ckpt scratch | identical (uuids aside) |
+| `listTables` / `tableExists` agreement (every listed name) | `True` | identical |
+| `toPandas()` / `to_arrow()` | `(3, 3)` / `3` | identical |
+| `groupBy("sym").count()` / self-join / `union` / `orderBy().limit()` | correct | identical |
+| `write.saveAsTable(<iceberg table>)` reading the view as source | 3 rows landed | identical |
+| `mapInArrow` scratch re-read | 3 | identical |
+| `dropTempView("tv_read")` | `True` | identical |
+
+Only two rows differed textually and both differ **only** in a view uuid (verified by the
+normalization above): the `listTables` name list, and an error message that is red on BOTH
+sides (see the pre-existing note below). So: every named read path returns the temp view's
+rows under the `SET`, and the no-`SET` pins are byte-identical.
+
+**BASE-red, measured not asserted.** The same script on the BASE facade source (`5c66e83`
+`python/repark/src` on `PYTHONPATH`, same native module) dies at the FIRST step under the
+`SET`: `createDataFrame` raises `AnalysisException: table
+'glue_catalog.writer_ns.__repark_cdf_<uuid>' not found`. Without the `SET` the BASE script
+completes. So the BASE/HEAD split in R7-1 is reproduced firsthand.
+
+**The two load-bearing mutants, re-run (edit applied to the working tree, then restored to a
+clean `git status`).**
+
+| mutant | measured | ledger claim |
+|---|---|---|
+| `scratch_view_name` returns the bare quoted name | `test_named_read_paths_find_a_temp_view_under_set_default_catalog` **FAILED**, 24 passed | matches |
+| `resolve_table_name` returns the bare name in the temp arm | that same pin **FAILED** (24 passed) **and** `test_e2_readwriter.py::test_resolve_prefer_temp_view` **FAILED** | matches |
+
+**Pre-existing, NOT a round-7 regression (checked because M-1 surfaced it).**
+`df.alias("x").selectExpr("x.k")` and `F.col("L.k")` after `alias` raise
+`Schema error: No field named …` — MEASURED **equally red on BASE** (`5c66e83` python, same
+native module), identical message modulo the uuid, and equally red with and without the `SET`.
+The supported alias idiom (`left.id == right.id`, `F.col("al.k")` in `select`, the SQL short
+qualifier `tv.k`, and the three-part `"datafusion"."public"."tv".*`) is green on both trees.
+One BASE-only breakage the fix incidentally cures: `alias("L")` (uppercase) on BASE raised
+`table 'datafusion.public.L' not found` — BASE re-read the quoted verbatim name against a
+registration the write seam had ASCII-folded; `home_view_ref` asks the native resolver and
+gets the folded segments, so it is green here.
+
+### M-2 — the arithmetic, recomputed
+
+| claim | recomputed | verdict |
+|---|---|---|
+| round-4 sweep 3355 (+4 round-6 nodes = 3359) | round 4's tree was NOT re-measured (it is not this worktree) — carried as the ledger's own R7-2 NOT-RUN | unchanged NOT-RUN |
+| BASE `5c66e83` facade suite = 3359 | **3359 passed, 70 skipped** (full run, BASE `python/repark/src` + BASE `python/repark/tests`) | confirmed |
+| HEAD facade suite = 3362 (+3, no node lost) | **3362 passed, 70 skipped**; `--collect-only` node-ID set diff BASE→HEAD = **3 gained, 0 lost** — `test_a_catalog_over_the_home_refuses_the_read_spelling_too`, `test_named_read_paths_find_a_temp_view_under_set_default_catalog`, `test_no_set_leaves_every_named_read_path_byte_identical` | confirmed |
+| `scripts/check_rust_file_size.py` comment says session.rs is 1477 | `wc -l crates/repark-core/src/session.rs` = **1477**; `scripts/map.md` also says 1477 | confirmed, lockstep holds |
+
+### M-3 — disclosure honesty on the engine-side bare-name sites
+
+Same fixture as R7-1's table; `glue_catalog.writer_ns.tgt` = `(1,10),(2,20),(3,30)`. Every
+call's effect on the table was read back immediately after.
+
+| call | no `SET` | under `SET` | table after the `SET` call |
+|---|---|---|---|
+| `mergeInto(tgt,"id").whenMatched().update({"ts": F.col("source.ts")}).whenNotMatched().insertAll().merge()` (`merge/mod.rs`) | Ok | **Err** `register_table does not support tables with data` | **UNCHANGED** |
+| `UPDATE … WHERE id IN (SELECT …)` (`predicate_dml.rs`) | Ok | **Err** (same message) | **UNCHANGED** |
+| `DELETE … WHERE id IN (SELECT …)` (`predicate_dml.rs`) | Ok | **Err** (same message) | **UNCHANGED** |
+| `SELECT * FROM tgt VERSION AS OF <snapshot>` (`time_travel.rs`) | Ok | **Err** `failed to register time-travel temp view __repark_tt_1: … register_table does not support tables with data` | **UNCHANGED** |
+| plain `INSERT` / `UPDATE` / `DELETE` (controls) | Ok | **Ok** | changed as expected |
+| `INSERT OVERWRITE tgt VALUES (9)` (`insert_overwrite.rs:311`) | Ok | **Ok** → `[(9,)]` | the green outlier, as disclosed |
+
+Four of the family spot-verified live (one MERGE, one identity-UPDATE, one identity-DELETE,
+one time-travel — the charter asked for two): all fail LOUD, none writes partially. The
+`insert_overwrite.rs` "same shape but green" disclosure is confirmed too.
+
+**The survey re-run, not trusted.** `grep -rn "register_table(" --include=*.rs crates/`, then
+each hit classified by hand: **7 production bare-name `ctx.register_table` sites** —
+`repark-iceberg` `merge/mod.rs:891`/`:1592`, `predicate_dml.rs:666`/`:753`;
+`repark-core/src/time_travel.rs:231`; `repark-spark/src/time_travel.rs:150`;
+`repark-sql/src/time_travel.rs:204` — plus `repark-spark/src/insert_overwrite.rs:311`. The
+three hits the ledger's survey does not name (`insert_gate.rs:178`, `scan_prune.rs:682`,
+`position_delete.rs:744`) are each inside a `mod tests` block (nearest enclosing guard
+checked per site); the rest are `CatalogProvider::register_table` impls. The survey is honest.
+
+**The two named pins re-run:** `cargo test -p repark-core --test temp_view_doors` → **8
+passed**, including `context_sql_is_a_known_unguarded_hatch` (the known hatch) and
+`set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read` (the raw-SQL
+asymmetry). Both hold.
+
+### M-4 — read sweep, fresh eyes
+
+**Write side (native).** Every public temp-view door in
+`crates/repark-core/src/session/temp_views.rs` — `create_or_replace_temp_view`,
+`create_or_replace_temp_view_from`, `register_record_batches_as_temp_view`,
+`materialize_dataframe_as_temp_view`, `materialize_dataframe_as_cache_view`,
+`declare_temp_view_sorted`, `drop_temp_view` — reaches the engine only through
+`replace_view` / `temp_view_ref`, and `temp_view_ref` runs `assert_home_intact`. The pyo3
+surface in `crates/repark-python/src/session.rs` exposes no raw registration; every method
+delegates to one of those. **No bypass found.**
+
+**Read side (facade).** Every remaining `uuid4().hex` in
+`python/repark/src/repark/spark` was classified: the four that look like view names
+(`__repark_gagg_in_`, `__repark_pudf_in_`, `__repark_udf_in_`, `__repark_arr_`) are COLUMN
+aliases passed to `Column.alias`, never a relation. Every relation-shaped SQL embed
+(`FROM {…}`, `JOIN {…}`, `USING {…}`, `INTO {…}`) traces back to `scratch_view_name`,
+`home_view_ref`, or `resolve_table_name`. The two one-part names that survive
+(`DataFrame.create_or_replace_temp_view`, `create_temp_view`) are user-chosen NAMES whose
+write is home-pinned natively — correct by design. Writer paths (`writer_readwriter.py`
+`_repark_writer_*`/`_repark_writer_v2_*`, `merge.py` `__repark_merge_src_*`),
+`toPandas`/`to_arrow`, `mapInArrow`/`mapInPandas` (`__repark_mia_*`), the ML scratch family
+and `polars.py` all mint through the seam. **No missed reader found.**
+
+**FINDING C-1 (S3, prose drift introduced by round 7) — fixed this pass.** Three
+`session_core.py` docstrings still described the pre-R7-1 behaviour, contradicting
+`session/map.md`'s own R7-1 paragraph in the same change set:
+
+| line | said | MEASURED |
+|---|---|---|
+| `_expand_bare_table_names_in_sql` shape list | "one-part temp views stay bare" | `SELECT * FROM tv` → `SELECT * FROM "datafusion"."public"."tv"` |
+| `_expand_from_join_table_refs_in_sql` | "One-part names that resolve as temp views stay bare" | `FROM tv a JOIN tv b` → both sides `"datafusion"."public"."tv"`; `MERGE … USING tv` likewise |
+| `ReparkSession.table` | "one-part temp views stay bare when present" | `_sql_table_ref_resolved("tv", prefer_temp_view=True)` → `"datafusion"."public"."tv"` |
+
+All three trued. Prose only — no executable line changed — and **line-neutral**, because
+`session_core.py` sits at exactly its 2500-line ceiling (`make check-lib-py`: `68 files clean`
+after the edit; it FAILED at 2505 on the first, longer draft). `session/map.md` carries the
+truth-up in lockstep.
+
+**Confirmed, not re-litigated:** the pre-existing `listTables` gap is real —
+`_hide_from_list_tables` (`catalog.py:87-91`) filters `__repark_cdf_` / `__repark_mia_` /
+`__repark_tt_` only, and the M-1 probe's `listTables()` did return live `__repark_cache_*`
+and `__repark_ckpt_*` names. Matches the round-7 residual exactly; still not fixed here.
+
+### M-5 — suite counts (this tree, after the C-1 fix)
+
+| gate | result |
+|---|---|
+| `cargo test -p repark-core -p repark-spark -p repark-sql` | **1056 passed**, 0 failed, 0 ignored — repark-core lib **140**, `declared_sorted` **37**, `temp_view_doors` **8**, repark-spark lib **473**, repark-sql lib **251** |
+| `pytest python/repark/tests/test_declare_sorted_tighten.py` | **25 passed** |
+| `pytest python/repark/tests` | **3362 passed, 70 skipped**, 0 failed |
+| `make check-lib-py` | `lib-py: 68 files clean (ceilings held; no-stub rule held)` |
+| `make rust-clippy` / `rust-fmt-check` / `py-lint` / `py-format-check` | clean |
+| `make check-rust-file-size` | `238 files clean (default ceiling 1500; 12 exceptions)` |
+| `make check-lib-rs` / `check-crate-dag` / `check-manifest` / `rust-panic-ban` | clean |
+
+Every count equals the round-7 table. The C-1 fix is prose-only and moved nothing.
+
+### NOT-RUN after this confirmation pass
+
+- `make preflight` (the orchestrator runs it, by instruction) — and with it `py-test-facade`,
+  the audit and the workflow lint. The facade suite it wraps was run directly, above.
+- `scripts/check_map_md.sh` still executes on STAGED files and nothing is staged (this
+  worktree stays uncommitted). Verified by hand for the C-1 fix: the one directory with a
+  touched `.py` (`python/repark/src/repark/spark/session/`) has its `map.md` in the same
+  change set.
+- The two RUST mutants in the round-7 table (drop the home-spelling arm in `temp_view_ref`;
+  read seam skips `assert_home_intact`) were NOT re-run — they need a `make develop` rebuild
+  per mutant, and the charter asked for two load-bearing pins, which the two PYTHON mutants
+  above supply. Their pins pass on the unmutated tree (`temp_view_doors` 8/8).
+- Round 4's tree (for the 3355 cell) — not this worktree, still not re-measured.
+- Glue / S3 Tables catalog types, real-PySpark message text, the JVM parity tier: unchanged
+  NOT-RUN from round 7 (no AWS and no JVM in this tier).
+- The engine-side bare-name family (7 sites) and the `listTables` cache/ckpt filter gap remain
+  disclosed-and-unfixed round-8 items; this pass verified the disclosures, not fixes.
