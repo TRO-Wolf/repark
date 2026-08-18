@@ -24,6 +24,7 @@ mod extension;
 mod idents;
 mod namespace_create;
 mod object_store_s3;
+mod pre_execute;
 mod read_options;
 mod runtime;
 mod session;
@@ -45,7 +46,11 @@ pub use session_time_zone::{
 // --- Seams. ---
 pub use backend::{ExecutionBackend, SingleNodeBackend};
 pub use dialect::{DataFusionDialect, EngineContext, SqlDialect};
+
+// --- The shared pre-execute belt (SQM round 5 Z-2): plan → guard → execute, the ONE choke
+// point every door's planned statement passes through before it runs. ---
 pub use extension::{SessionBuildConf, SessionExtension};
+pub use pre_execute::PreExecute;
 
 // --- The embedding's executor handle (EC-5 / design §4 Q7). Additive: the TYPE is named here;
 // core never constructs one and never blocks — the INSTANCE lives in the embedding.

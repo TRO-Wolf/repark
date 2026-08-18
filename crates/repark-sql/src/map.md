@@ -67,7 +67,12 @@ reach delegation through the ordinary arm.
   (Y-3/Y-4):** `router.rs::delegate` additionally calls
   `repark_core::refuse_iceberg_create_of_tightened_ddl` on the planned DDL, so the
   `CREATE VIEW cat.ns.v` / `SELECT … INTO cat.ns.t` sinks that fall through the `_ =>` arm
-  cannot persist a required column either — the ANSI twin of the Spark-door fix. Tests:
+  cannot persist a required column either — the ANSI twin of the Spark-door fix.
+  **Round 5 (Z-2/Z-3):** both live through the shared belt now — `router.rs::delegate` is
+  `PreExecute::plan` → SEC-02 → `PreExecute::guard` → `PreExecute::execute`, and the CTAS
+  derivation here plans WITHOUT executing (`ctx.sql(&query.to_string())` executed the SELECT
+  eagerly, so an inner `SELECT … INTO ice.ns.x` was published before the refuse saw the plan —
+  measured Ok + both tables persisted on BASE). Tests:
   [create_table/map.md](create_table/map.md).
 - `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`,
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,

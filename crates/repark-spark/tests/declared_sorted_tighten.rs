@@ -502,3 +502,69 @@ async fn create_view_in_iceberg_catalog_over_untightened_source_stays_allowed() 
         .await
         .expect("collect");
 }
+
+// ===========================================================================================
+// SQM round 5 — Spark door: resolved-catalog gating (Z-1) and the CTAS-wrapped DDL sink (Z-3).
+// ===========================================================================================
+
+#[tokio::test]
+async fn default_catalog_bare_name_ddl_over_tightened_source_refuses() {
+    // Z-1, Spark door. Kills: gating the DDL refuse on the three-part SPELLING — with
+    // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a one-part or
+    // two-part name resolves into the Iceberg catalog and persists the same required columns.
+    // MEASURED on BASE (675a413): every statement below returned Ok on this door.
+    let (_dir, session) = ddl_sink_session().await;
+    session
+        .sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .expect("SET default_catalog");
+    session
+        .sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .expect("SET default_schema");
+    for sql in [
+        "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
+        "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        // Three-part still refuses — round 4's behaviour is not traded away.
+        "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("`{sql}` must refuse — it resolves into `ice`"));
+        assert!(
+            error.to_string().contains("tightenNulls"),
+            "names the flag for `{sql}`: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table() {
+    // Z-3, Spark door. This door plans the CTAS body through `execute_passthrough`, which now
+    // runs the shared belt's guard on the planned statement — so the inner
+    // `SELECT … INTO ice.sales.wrap_inner` refuses BEFORE it can publish. MEASURED on BASE
+    // (675a413): already green on THIS door (round 4's passthrough refuse fires on the inner
+    // statement's plan) — it is here as the regression fence for the outcome the ANSI door had
+    // to be fixed to match, where BASE returned Ok and persisted BOTH tables.
+    let (_dir, session) = ddl_sink_session().await;
+    let sql =
+        "CREATE TABLE ice.sales.wrap AS SELECT * INTO ice.sales.wrap_inner FROM tight LIMIT 0";
+    let error = session
+        .sql(sql)
+        .await
+        .expect_err("a CTAS wrapping a tightened DDL sink must refuse");
+    assert!(
+        error.to_string().contains("tightenNulls"),
+        "names the flag: {error}"
+    );
+    assert!(
+        !session
+            .table_exists("ice.sales.wrap_inner")
+            .await
+            .expect("table_exists must answer"),
+        "the inner DDL sink must NOT have been published"
+    );
+}

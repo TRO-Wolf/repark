@@ -24,6 +24,10 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   `SELECT … INTO ice.ns.t` refuse (both were Ok on BASE and persisted required keys —
   measured); session-scoped one-part names and untightened sources stay allowed.
   Y-5: the EXISTS-subquery node's `Kills:` prose said "scalar-subquery" and was corrected.
+  Round-5: `default_catalog_bare_name_ddl_over_tightened_source_refuses` (Z-1 — bare/two-part
+  names under `SET datafusion.catalog.default_catalog = ice`; all four statements were Ok on
+  BASE) and `ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table` (Z-3 — green
+  on BASE for this door; the regression fence for the outcome the ANSI door was fixed to match).
 - [ddl_sessions.rs](ddl_sessions.rs) — deferred rows #2, #4, #5, #6, #7 (phase-2 PR-3a): CTAS
   end-to-end, namespace-`location` on a strict catalog (ADV-1 / N5), the BUG-001 dual-key
   property pin, the `spark.catalog` metadata surface, and the config-driven memory catalog —

@@ -55,6 +55,30 @@ use crate::partitioning::build_partition_spec;
 use crate::properties::{TableProperties, parse_with_options};
 use crate::schema_ddl::{iceberg_err, name_parts, reject_path_escape_ident};
 
+/// Plan the CTAS body **without executing it**, run the pre-execute guard and the tighten
+/// source-walk refuse on that plan, and only then execute it (SQM round 5, Z-3).
+///
+/// The previous shape was `cx.ctx.sql(&query.to_string())`, which plans AND executes: an inner
+/// DDL sink — `CREATE TABLE t AS (SELECT * INTO ice.ns.x FROM tight)` — published `x` before
+/// the refuse on the next line ever saw a plan. MEASURED on BASE (675a413): that statement
+/// returned **Ok**, with `x` persisted carrying required columns and the outer table created,
+/// because the eagerly-executed DDL hands back its own empty result whose plan carries no
+/// tightened source at all.
+///
+/// # Errors
+/// The plan error, the belt's refusal, the tighten source-walk refusal, or the execution error.
+async fn derive_ctas_query(
+    cx: &EngineContext<'_>,
+    query: &datafusion::sql::sqlparser::ast::Query,
+) -> Result<DataFrame> {
+    let belt = repark_core::PreExecute::new(cx.ctx, cx.catalogs);
+    let plan = belt.plan(&query.to_string()).await?;
+    belt.guard(&plan)?;
+    repark_core::refuse_iceberg_create_of_tightened_plan(&plan)
+        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+    belt.execute(plan).await
+}
+
 /// A create target that resolved to a registered Iceberg catalog.
 pub(crate) struct CreateTarget {
     pub(crate) catalog_name: String,
@@ -121,9 +145,7 @@ pub(crate) async fn execute_create_table(
     // Derive the table's Arrow schema. CTAS derives it from the SELECT's logical plan (no
     // execution needed); the column-def form derives it from the declared columns.
     let (arrow_schema, query) = if let Some(query) = create.query.as_ref() {
-        let frame = cx.ctx.sql(&query.to_string()).await?;
-        repark_core::refuse_iceberg_create_of_tightened_plan(frame.logical_plan())
-            .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+        let frame = derive_ctas_query(cx, query).await?;
         let schema = Arc::new(frame.schema().as_arrow().clone());
         (schema, Some(frame))
     } else {

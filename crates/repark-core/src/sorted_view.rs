@@ -16,9 +16,9 @@ use arrow::compute::kernels::sort::{LexicographicalComparator, SortColumn, SortO
 use arrow::datatypes::{DataType, Field, Fields, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 use datafusion::common::Column;
-use datafusion::common::TableReference;
 use datafusion::common::tree_node::TreeNodeRecursion;
 use datafusion::logical_expr::{DdlStatement, Expr, LogicalPlan, SortExpr};
+use datafusion::prelude::SessionContext;
 
 use crate::error_map::engine_err;
 use repark_common::{Error, Result};
@@ -251,7 +251,7 @@ pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()>
 /// the same R-D predicate to the DDL body closes the tighten leak on both statements.
 ///
 /// Scope is deliberately narrow and matches the CTAS refuse exactly:
-/// - only when the DDL target resolves to a **registered Iceberg catalog** (a session-scoped
+/// - only when the DDL target **resolves** to a registered Iceberg catalog (a session-scoped
 ///   `CREATE VIEW v AS …` / `SELECT … INTO t` persists nothing and stays allowed — the
 ///   existing lazy-view pins depend on that);
 /// - only under the R-D predicate (tightened source AND ≥1 non-nullable output field).
@@ -261,11 +261,21 @@ pub fn refuse_iceberg_create_of_tightened_plan(plan: &LogicalPlan) -> Result<()>
 /// payload finding.
 /// ===========================================================================================
 ///
+/// **Round 5 (Z-1): gate on the RESOLVED catalog, never on spelling.** A `Bare` / `Partial`
+/// name is not "session-scoped" — DataFusion resolves it against
+/// `datafusion.catalog.default_catalog` / `default_schema`, so after
+/// `SET datafusion.catalog.default_catalog = ice` a one-part `CREATE VIEW v AS …` registers
+/// into the Iceberg catalog and persists exactly the same required columns as the three-part
+/// spelling (MEASURED — round-5 ledger). The resolution below is DataFusion's own
+/// `TableReference::resolve` against this session's config, so the gate cannot drift from
+/// where the sink actually writes.
+///
 /// # Errors
 /// [`Error::Analysis`] when the DDL body would persist a required column from a tightened
 /// source; [`Error::DataFusion`] if the plan walk fails.
 pub fn refuse_iceberg_create_of_tightened_ddl(
     plan: &LogicalPlan,
+    ctx: &SessionContext,
     catalogs: &crate::CatalogRegistry,
 ) -> Result<()> {
     let (name, input) = match plan {
@@ -275,10 +285,13 @@ pub fn refuse_iceberg_create_of_tightened_ddl(
         }
         _ => return Ok(()),
     };
-    let TableReference::Full { catalog, .. } = name else {
-        return Ok(());
-    };
-    if catalogs.get(catalog.as_ref()).is_none() {
+    let config = ctx.copied_config();
+    let catalog_options = &config.options().catalog;
+    let resolved = name.clone().resolve(
+        &catalog_options.default_catalog,
+        &catalog_options.default_schema,
+    );
+    if catalogs.get(resolved.catalog.as_ref()).is_none() {
         return Ok(());
     }
     refuse_iceberg_create_of_tightened_plan(input)

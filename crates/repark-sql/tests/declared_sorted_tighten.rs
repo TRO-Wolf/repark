@@ -363,3 +363,103 @@ async fn ansi_create_view_in_iceberg_catalog_over_untightened_source_stays_allow
         .await
         .expect("collect");
 }
+
+// ===========================================================================================
+// SQM round 5 — ANSI door: resolved-catalog gating (Z-1) and plan-before-execute (Z-3).
+// ===========================================================================================
+
+#[tokio::test]
+async fn ansi_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
+    // Z-1, ANSI door. Kills: gating the DDL refuse on the three-part SPELLING. With
+    // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a one-part
+    // or two-part name resolves into the Iceberg catalog and persists the same required
+    // columns. MEASURED on BASE (675a413) through this door's `delegate`: both returned Ok.
+    // Deleting the resolve in `refuse_iceberg_create_of_tightened_ddl` (gating on
+    // `TableReference::Full` again) turns this red.
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    session
+        .sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .expect("SET default_catalog");
+    session
+        .sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .expect("SET default_schema");
+    for sql in [
+        "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
+        "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        // Three-part still refuses — round 4's behaviour is not traded away.
+        "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("`{sql}` must refuse — it resolves into `ice`"));
+        assert!(
+            error.to_string().contains("tightenNulls"),
+            "names the flag for `{sql}`: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn ansi_ctas_wrapping_a_ddl_sink_refuses_without_publishing_the_inner_table() {
+    // Z-3, ANSI door. Kills: `create_table.rs` deriving the CTAS schema with
+    // `cx.ctx.sql(&query.to_string())`, which EXECUTES the inner statement — so
+    // `SELECT … INTO ice.sales.inner_x` inside a CTAS published `inner_x` (tightened, required
+    // columns) BEFORE the next line's refuse ever saw the plan. MEASURED on BASE (675a413) —
+    // and it is worse than "refuses too late": the statement returned **Ok**, with
+    // `ice.sales.wrap_inner` persisted carrying required `symbol` / `ts`, and `ice.sales.wrap`
+    // created too. The eager `ctx.sql` returns the DDL's own empty result, so the
+    // next-line `refuse_iceberg_create_of_tightened_plan` walked an `EmptyRelation` and saw no
+    // tightened source at all. The Spark door refuses the same wrap; this pins the ANSI door to
+    // that outcome AND to not publishing the inner table.
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    let sql =
+        "CREATE TABLE ice.sales.wrap AS SELECT * INTO ice.sales.wrap_inner FROM tight LIMIT 0";
+    let error = session
+        .sql(sql)
+        .await
+        .expect_err("a CTAS wrapping a tightened DDL sink must refuse");
+    assert!(
+        error.to_string().contains("tightenNulls"),
+        "names the flag: {error}"
+    );
+    assert!(
+        !session
+            .table_exists("ice.sales.wrap_inner")
+            .await
+            .expect("table_exists must answer"),
+        "the inner DDL sink must NOT have been published — the refuse runs before execution"
+    );
+}
+
+#[tokio::test]
+async fn ansi_plain_ctas_still_derives_and_writes() {
+    // Z-3 allowed side. Kills: the plan-before-execute rewrite breaking ordinary CTAS schema
+    // derivation (the derived schema must still come from the same plan that is executed).
+    let (_dir, session) = ansi_ddl_sink_session().await;
+    session
+        .sql("CREATE TABLE ice.sales.plain_ctas AS SELECT symbol, ts FROM plain")
+        .await
+        .expect("plain CTAS must still derive")
+        .collect()
+        .await
+        .expect("collect");
+    let rows = session
+        .sql("SELECT * FROM ice.sales.plain_ctas")
+        .await
+        .expect("read back")
+        .collect()
+        .await
+        .expect("collect read back");
+    assert_eq!(
+        rows.iter()
+            .map(datafusion::arrow::record_batch::RecordBatch::num_rows)
+            .sum::<usize>(),
+        3,
+        "plain CTAS must write every source row"
+    );
+}

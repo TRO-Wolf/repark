@@ -1084,3 +1084,331 @@ fn export_strip_does_not_stack_overflow_on_deep_struct() {
         "deep-struct export must still drop the schema stamp"
     );
 }
+
+// ===========================================================================================
+// SQM round 5 — the NATIVE door (Z-2), resolved-name gating (Z-1), the walk's visit budget
+// (Z-6) and the nested export strip (Z-7).
+//
+// The native door is `ReparkSession::sql` on the default `DataFusionDialect`. Rounds 3 and 4
+// wired the tighten refuses into the Spark door and then the ANSI door; this door — the one
+// every `repark_core` embedder and every `pyspark`-free caller uses — had none, and persisted
+// `required: true` columns from a tightened frame. The pins below run on THIS door.
+// ===========================================================================================
+
+/// An Iceberg-catalog session on the native door with a tightened temp view `tight` and an
+/// untightened `plain`, plus namespace `ice.sales`.
+async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
+    let warehouse_dir = tempfile::TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = ReparkSession::new().unwrap();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace(
+            "ice",
+            "sales",
+            HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]),
+        )
+        .await
+        .unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("plain", rows.schema(), vec![rows.clone()])
+        .unwrap();
+    session
+        .register_record_batches_as_temp_view("tight", rows.schema(), vec![rows])
+        .unwrap();
+    session
+        .declare_temp_view_sorted("tight", &keys(&["symbol", "ts"]), true)
+        .await
+        .unwrap();
+    (warehouse_dir, session)
+}
+
+#[tokio::test]
+async fn native_door_ddl_sink_over_tightened_source_refuses() {
+    // Z-2. Kills: `DataFusionDialect::execute` being a bare `cx.ctx.sql(query)` — the native
+    // door with no pre-execute guard. MEASURED on BASE (675a413): every statement below
+    // returned Ok and the persisted Iceberg table reported `symbol` / `ts` as required.
+    // Deleting the `PreExecute::guard` call in `pre_execute::PreExecute::run` (or reverting
+    // `DataFusionDialect::execute` to `cx.ctx.sql`) turns this red.
+    let (_dir, session) = native_ddl_sink_session().await;
+    for sql in [
+        "CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0",
+        "CREATE VIEW ice.sales.v_false AS SELECT * FROM tight WHERE false",
+        "SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0",
+        "SELECT * INTO ice.sales.t_false FROM tight WHERE false",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("`{sql}` must refuse on the native door"));
+        assert!(
+            error.to_string().contains("tightenNulls"),
+            "names the flag for `{sql}`: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn native_door_session_scoped_and_untightened_ddl_stay_allowed() {
+    // Z-2 allowed side. Kills: the belt turning into a blanket DDL refuse — a session-scoped
+    // name persists nothing, and an untightened source into the Iceberg catalog is not this
+    // rule's business. Both halves must stay green with the guard installed.
+    let (_dir, session) = native_ddl_sink_session().await;
+    // (The Iceberg-catalog halves are `LIMIT 0`: that provider's `register_table` refuses a
+    // non-empty result — "register_table does not support tables with data" — which is why the
+    // whole DDL-sink family is pinned on empty bodies. MEASURED here, not assumed.)
+    for sql in [
+        "CREATE VIEW session_v AS SELECT * FROM tight",
+        "SELECT * INTO session_t FROM tight",
+        "CREATE VIEW ice.sales.v_plain AS SELECT * FROM plain LIMIT 0",
+        "SELECT * INTO ice.sales.t_plain FROM plain LIMIT 0",
+    ] {
+        session
+            .sql(sql)
+            .await
+            .unwrap_or_else(|error| panic!("`{sql}` must stay allowed: {error}"))
+            .collect()
+            .await
+            .unwrap_or_else(|error| panic!("`{sql}` must collect: {error}"));
+    }
+}
+
+#[tokio::test]
+async fn native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses() {
+    // Z-1. Kills: gating the DDL refuse on the `TableReference::Full` SPELLING. With
+    // `SET datafusion.catalog.default_catalog = ice` (+ `default_schema = sales`) a ONE-part
+    // `CREATE VIEW v AS …` / `SELECT … INTO t` resolves into the Iceberg catalog and persists
+    // the same required columns as the three-part spelling — MEASURED on BASE (675a413): both
+    // returned Ok. The source is named through its own catalog because the SET moves default
+    // resolution away from the temp-view schema.
+    let (_dir, session) = native_ddl_sink_session().await;
+    session
+        .sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .expect("SET default_catalog");
+    session
+        .sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .expect("SET default_schema");
+    for sql in [
+        "CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        "SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0",
+        // Two-part (Partial) spelling: catalog still comes from the session default.
+        "CREATE VIEW sales.v_partial AS SELECT * FROM datafusion.public.tight LIMIT 0",
+        "SELECT * INTO sales.t_partial FROM datafusion.public.tight LIMIT 0",
+        // Three-part still refuses — the round-4 behaviour is not traded away.
+        "CREATE VIEW ice.sales.v_full AS SELECT * FROM datafusion.public.tight LIMIT 0",
+    ] {
+        let error = session
+            .sql(sql)
+            .await
+            .err()
+            .unwrap_or_else(|| panic!("`{sql}` must refuse — it resolves into `ice`"));
+        assert!(
+            error.to_string().contains("tightenNulls"),
+            "names the flag for `{sql}`: {error}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn default_catalog_pointing_away_from_iceberg_keeps_session_ddl_allowed() {
+    // Z-1 allowed side. Kills: "any Bare name refuses" — the gate is the RESOLVED catalog, so
+    // with the default catalog left at `datafusion` (not a registered Iceberg catalog) the
+    // session-scoped DDL that the lazy-view pins depend on must keep working.
+    let (_dir, session) = native_ddl_sink_session().await;
+    session
+        .sql("CREATE VIEW still_session_v AS SELECT * FROM tight")
+        .await
+        .expect("default catalog is not an Iceberg catalog — must stay allowed")
+        .collect()
+        .await
+        .expect("collect");
+}
+
+/// Build a chain of `hops` retained `TableScan`s, each over a `ViewTable` wrapping the previous
+/// plan (Z-6 helper). A plain filter is what keeps DataFusion 54.1's `scan` from inlining the
+/// view — the same shape the Y-2 recurse pin above uses — so each hop costs the walk exactly
+/// one inner-plan visit.
+fn view_hop_chain(
+    base: datafusion::logical_expr::LogicalPlan,
+    hops: usize,
+) -> datafusion::logical_expr::LogicalPlan {
+    use datafusion::catalog::TableProvider;
+    use datafusion::datasource::ViewTable;
+    use datafusion::logical_expr::{LogicalPlanBuilder, TableSource, lit};
+
+    let mut plan = base;
+    for hop in 0..hops {
+        let view = Arc::new(ViewTable::new(plan, None));
+        let source: Arc<dyn TableSource> =
+            datafusion::datasource::provider_as_source(view as Arc<dyn TableProvider>);
+        plan = LogicalPlanBuilder::scan_with_filters(
+            format!("hop{hop}"),
+            source,
+            None,
+            vec![lit(true)],
+        )
+        .unwrap()
+        .build()
+        .unwrap();
+    }
+    plan
+}
+
+#[tokio::test]
+async fn view_visit_budget_overflow_is_a_generic_error_not_a_tighten_refusal() {
+    // Z-6. Kills: the walk's `MAX_VIEW_VISITS` overflow arm being unpinned — and, worse, an
+    // overflow message that blames `declareSorted` for a wide/deep non-tighten plan
+    // (C1-Q-001). The 65-wide UNION pin covers only the NOT-refused side.
+    //
+    // MEASURED while building this pin — the reachability question the battery flagged: a view
+    // graph written in SQL (or via `ctx.table`) cannot reach the budget at all, because
+    // DataFusion 54.1 INLINES a source that carries a logical plan (`SELECT * FROM v` and
+    // `ctx.table("v")` both plan to `SubqueryAlias` over the stored plan — a 5-level 8-way
+    // UNION of lazy views and a 4100-deep `into_view` chain each walked to ZERO inner visits).
+    // The budget is reachable exactly where the recurse is live: a RETAINED `TableScan` whose
+    // source still carries a plan, which `scan_with_filters` produces (the Y-2 pin's shape).
+    // 4100 such hops over an UNTIGHTENED source pass the 4096 budget.
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("plain", rows.schema(), vec![rows])
+        .unwrap();
+    let base = session
+        .context()
+        .sql("SELECT * FROM plain")
+        .await
+        .unwrap()
+        .logical_plan()
+        .clone();
+    let plan = view_hop_chain(base, 4100);
+    let error = refuse_iceberg_create_of_tightened_plan(&plan)
+        .expect_err("a plan past the view-visit budget must fail loud, not silently pass");
+    let message = error.to_string();
+    assert!(
+        message.contains("view-visit budget"),
+        "overflow names the budget: {message}"
+    );
+    assert!(
+        !message.contains("tightenNulls"),
+        "an untightened deep plan must never be blamed on tightenNulls: {message}"
+    );
+}
+
+#[tokio::test]
+async fn view_hop_chain_under_the_visit_budget_still_walks_clean() {
+    // Z-6 allowed side. Kills: a budget so tight that an ordinary retained-scan view chain
+    // overflows (the overflow arm is a safety net for cyclic/hostile graphs, not a feature),
+    // and a budget counted so loosely that 64 hops already trip it.
+    let session = ReparkSession::new().unwrap();
+    let rows = batch(&["AAA", "AAA"], &[Some(1), Some(2)], true);
+    session
+        .register_record_batches_as_temp_view("plain", rows.schema(), vec![rows])
+        .unwrap();
+    let base = session
+        .context()
+        .sql("SELECT * FROM plain")
+        .await
+        .unwrap()
+        .logical_plan()
+        .clone();
+    let plan = view_hop_chain(base, 64);
+    refuse_iceberg_create_of_tightened_plan(&plan)
+        .expect("a 64-hop untightened view chain must walk clean");
+}
+
+#[test]
+fn nested_export_strip_covers_every_container_the_tagger_walks() {
+    // Z-7. Kills: the export strip missing a nested Arrow container the DETECTOR still sees —
+    // that asymmetry leaks the internal `repark.tighten_nulls` key to a user-visible schema.
+    // Measured scope: the tagger, the detector, and the strip walk exactly Struct, List,
+    // LargeList, FixedSizeList, and the Map VALUE; every other container (Union, Dictionary,
+    // RunEndEncoded, the *View list types) is walked by NONE of the three, so nothing can be
+    // tagged inside one — recorded, not silently assumed.
+    let tagged = |name: &str, nullable: bool| {
+        Field::new(name, DataType::Int64, nullable).with_metadata(HashMap::from([(
+            TIGHTEN_NULLS_METADATA_KEY.to_string(),
+            TIGHTEN_NULLS_METADATA_VALUE.to_string(),
+        )]))
+    };
+    let map_entries = Field::new(
+        "entries",
+        DataType::Struct(Fields::from(vec![
+            Field::new("key", DataType::Utf8, false),
+            tagged("value", false),
+        ])),
+        false,
+    );
+    let containers = vec![
+        Field::new(
+            "fixed",
+            DataType::FixedSizeList(Arc::new(tagged("item", false)), 3),
+            true,
+        ),
+        Field::new(
+            "list",
+            DataType::List(Arc::new(tagged("item", false))),
+            true,
+        ),
+        Field::new(
+            "large",
+            DataType::LargeList(Arc::new(tagged("item", false))),
+            true,
+        ),
+        Field::new(
+            "strct",
+            DataType::Struct(Fields::from(vec![tagged("child", false)])),
+            true,
+        ),
+        Field::new("map", DataType::Map(Arc::new(map_entries), false), true),
+    ];
+    for field in containers {
+        let name = field.name().clone();
+        let schema: SchemaRef = Arc::new(Schema::new(vec![field]));
+        assert!(
+            schema_is_tighten_derived(&schema),
+            "`{name}`: the detector must see the nested tag"
+        );
+        let exported = strip_tighten_export_metadata(Arc::clone(&schema));
+        assert!(
+            !schema_is_tighten_derived(&exported),
+            "`{name}`: the export strip must remove every nested tag the detector sees"
+        );
+        assert_eq!(
+            nested_required_leaf_count(&exported),
+            nested_required_leaf_count(&schema),
+            "`{name}`: strip drops the tag only — nullability is untouched"
+        );
+    }
+}
+
+/// Count non-nullable leaves under a schema's nested containers (Z-7 helper): the strip must
+/// change metadata only, never requiredness.
+fn nested_required_leaf_count(schema: &Schema) -> usize {
+    fn count(data_type: &DataType) -> usize {
+        match data_type {
+            DataType::Struct(fields) => fields
+                .iter()
+                .map(|child| usize::from(!child.is_nullable()) + count(child.data_type()))
+                .sum(),
+            DataType::List(inner)
+            | DataType::LargeList(inner)
+            | DataType::FixedSizeList(inner, _)
+            | DataType::Map(inner, _) => {
+                usize::from(!inner.is_nullable()) + count(inner.data_type())
+            }
+            _ => 0,
+        }
+    }
+    schema
+        .fields()
+        .iter()
+        .map(|field| usize::from(!field.is_nullable()) + count(field.data_type()))
+        .sum()
+}

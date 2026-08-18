@@ -13,7 +13,7 @@
 use std::ops::ControlFlow;
 
 use datafusion::config::Dialect;
-use datafusion::error::{DataFusionError, Result};
+use datafusion::error::Result;
 use datafusion::execution::SessionState;
 use datafusion::logical_expr::LogicalPlan;
 use datafusion::prelude::{DataFrame, SessionContext};
@@ -143,12 +143,13 @@ pub(crate) async fn execute_passthrough(
     // r24 SB1 / SEC-02: refuse local CREATE EXTERNAL / COPY TO when conf is false (warehouse
     // grandfather still allowed). Must run before eager collect so a blocked COPY never writes.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
-    // SE-1 D1 round 4 (Y-3 / Y-4): `CREATE VIEW cat.ns.v AS …` and `SELECT … INTO cat.ns.t`
-    // reach the router's `_ =>` catch-all, so the CTAS tighten refuse never sees them — while
-    // the Iceberg schema provider's `register_table` sink persists a real table (measured).
-    // Same R-D predicate, applied to the DDL body, on the plan the sink will actually register.
-    repark_core::refuse_iceberg_create_of_tightened_ddl(&plan, catalogs)
-        .map_err(|error| DataFusionError::Plan(error.to_string()))?;
+    // SE-1 D1 round 4 (Y-3 / Y-4), re-routed in round 5 (Z-2): `CREATE VIEW cat.ns.v AS …` and
+    // `SELECT … INTO cat.ns.t` reach the router's `_ =>` catch-all, so the CTAS tighten refuse
+    // never sees them — while the Iceberg schema provider's `register_table` sink persists a
+    // real table (measured). The refuse now lives in the shared belt's `guard`, which this door
+    // calls on the plan the sink will actually register (the Spark door keeps its own
+    // plan/execute halves — AST rewrites, temporal range conform, the eager-command fold).
+    repark_core::PreExecute::new(ctx, catalogs).guard(&plan)?;
     // PySpark applies a command (INSERT / UPDATE / DELETE, and `COPY … TO`) eagerly at `sql()`;
     // DataFusion plans it lazily — the write commits only when the returned DataFrame is collected —
     // so a bare `spark.sql("INSERT …")` / `spark.sql("COPY …")` a migrated caller never collects

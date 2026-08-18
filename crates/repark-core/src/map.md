@@ -99,10 +99,20 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   load-bearing part, not the surface, which would have to widen (with its call sites) before a
   distributed backend could exist. Distribution is deferred by decision
   ([../../../docs/adr/0004-server-prep-disciplines.md](../../../docs/adr/0004-server-prep-disciplines.md)).
+- `pre_execute.rs` (+ `pre_execute/tests.rs`) — **the shared pre-execute belt (round 5, Z-2):**
+  `PreExecute` = plan (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
+  pre-execute refusals; today the tighten DDL-sink refuse) → `execute`. The native door
+  (`DataFusionDialect`) runs the whole belt; `repark_sql::router::delegate`,
+  `repark_sql::create_table` (CTAS derivation) and `repark_spark::spark_ast::execute_passthrough`
+  call `guard` on their own planned statement. Door-specific guards (SEC-02 local-fs, the Spark
+  AST rewrites) deliberately stay at the doors. New pre-execute refusals land in `guard`, never
+  at a door — per-door wiring missed the native door twice (measured).
 - `dialect.rs` (+ `dialect/tests.rs`) — the SQL dialect seam (design §3): `EngineContext`
   (`#[non_exhaustive]`, mirrors v1 `execute_with_read_only`'s field set; `EngineContext::new`
   is the sanctioned downstream constructor, added phase-2 PR-2) + `SqlDialect` +
-  `DataFusionDialect` (the phase-1 default: plain `SessionContext::sql`). `#[async_trait(?Send)]`
+  `DataFusionDialect` (the phase-1 default: DataFusion semantics — round 5 Z-2 routes its
+  `execute` through `PreExecute::run` instead of a bare `SessionContext::sql`, so the native
+  door is guarded like the two SQL doors). `#[async_trait(?Send)]`
   — rustc 1.96 HRTB + iceberg `Catalog` in `CatalogRegistry`; session awaits in place.
 - `runtime.rs` (+ `runtime/tests.rs`) — **`EngineRuntime`** (phase-3 PR-3, EC-5 / design §4 Q7):
   the name the engine gives the **embedding's** Tokio runtime — a cloneable `Arc<Runtime>` handle
@@ -173,8 +183,14 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   `register_table` persists a real table. Same R-D predicate, applied to the planned
   `DdlStatement::CreateView` / `CreateMemoryTable` body, and ONLY when the target is a
   three-part name in a registered Iceberg catalog (session-scoped views persist nothing and
-  stay allowed). Called from `repark_spark::spark_ast::execute_passthrough` and
-  `repark_sql::router::delegate`, next to each door's SEC-02 plan guard.
+  stay allowed).
+  **Round 5 (Z-1):** the catalog gate is the RESOLVED name, not the spelling — the target is
+  resolved through `TableReference::resolve` against `datafusion.catalog.default_catalog` /
+  `default_schema`, because `SET datafusion.catalog.default_catalog = <iceberg>` makes a
+  one- or two-part `CREATE VIEW` / `SELECT … INTO` persist into the Iceberg catalog exactly
+  like the three-part spelling (measured on all three doors). The function therefore takes the
+  `SessionContext`. **Round 5 (Z-2):** it is no longer called from the doors directly — every
+  door reaches it through `pre_execute.rs`'s `PreExecute::guard`.
   **Round 4 (Y-2):** the `get_logical_plan` follow is unreachable from any SQL-door
   statement on DataFusion 54.1 (`LogicalPlanBuilder::scan` inlines a source that has a
   logical plan) — measured, all four lazy-view pins stayed green with the follow deleted.

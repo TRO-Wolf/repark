@@ -54,6 +54,15 @@ not this directory.
   P-5 List/Map child requiredness); and pays back the `core.py` lib-py ceiling with a
   MOVE-ONLY extract (ceiling NOT raised). Records one payload finding: `CREATE VIEW`
   in an Iceberg catalog persists a TABLE, predating this branch and NOT fixed here.
+  **Round 5 (Z-1..Z-7):** the ALTITUDE fix — one shared pre-execute belt
+  (`repark-core/src/pre_execute.rs`, `PreExecute` plan → guard → execute) that every door
+  passes through, because per-door wiring twice missed the NATIVE door (`DataFusionDialect`
+  persisted tightened `CREATE VIEW` / `SELECT … INTO`, measured Ok on BASE); the DDL gate now
+  reads the RESOLVED catalog, so `SET datafusion.catalog.default_catalog` cannot launder a
+  bare name; the ANSI CTAS derivation plans before executing (its eager `ctx.sql` published an
+  inner DDL sink AND returned Ok, measured); the two NOT-RUN verifiers are run (visit-budget
+  overflow reachability, nested export strip); and the round-4 node counts / `core.py` line
+  numbers are trued to the composed head.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

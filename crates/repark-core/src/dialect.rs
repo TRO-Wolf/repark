@@ -107,7 +107,12 @@ impl SqlDialect for DataFusionDialect {
         cx: EngineContext<'_>,
         query: &str,
     ) -> datafusion::error::Result<DataFrame> {
-        cx.ctx.sql(query).await
+        // NOT `cx.ctx.sql(query)`. Round 5 (Z-2): the bare `sql` call made the native door the
+        // one door with no pre-execute guard, so `CREATE VIEW ice.ns.v AS <tightened>` /
+        // `SELECT … INTO ice.ns.t` persisted required columns here while both SQL doors refused
+        // them (MEASURED). The belt is plan → guard → execute; "DataFusion semantics" is about
+        // what a statement MEANS, not about skipping the engine's refusals.
+        crate::PreExecute::from_engine_context(&cx).run(query).await
     }
 }
 

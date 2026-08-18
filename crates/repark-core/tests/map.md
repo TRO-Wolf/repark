@@ -33,7 +33,19 @@ behavior only reachable end-to-end.
   required child inside List / LargeList / FixedSizeList / Map-VALUE refuses; a nullable
   element and a nullable map value stay allowed, the accepted scope). The `export_strip` node's
   claim was narrowed: it is a UNIT pin on the helper; the export boundary it guards
-  (`analyzed_arrow_schema`) is pinned facade-side. `RepartitionExec` presence is
+  (`analyzed_arrow_schema`) is pinned facade-side.
+  Round-5: the NATIVE-door battery — `native_door_ddl_sink_over_tightened_source_refuses`
+  (Z-2: `ReparkSession::sql` on the default dialect persisted `CREATE VIEW ice.ns.v` /
+  `SELECT … INTO ice.ns.t` with required columns, measured on BASE),
+  `native_door_session_scoped_and_untightened_ddl_stay_allowed`,
+  `native_door_default_catalog_bare_name_ddl_over_tightened_source_refuses` +
+  `default_catalog_pointing_away_from_iceberg_keeps_session_ddl_allowed` (Z-1: the gate is the
+  RESOLVED catalog, so `SET datafusion.catalog.default_catalog = ice` cannot launder a bare
+  name), `view_visit_budget_overflow_is_a_generic_error_not_a_tighten_refusal` +
+  `view_hop_chain_under_the_visit_budget_still_walks_clean` (Z-6: the walk's overflow arm,
+  reachable only through retained `TableScan`s — SQL and `ctx.table` both inline views), and
+  `nested_export_strip_covers_every_container_the_tagger_walks` (Z-7: FixedSizeList / List /
+  LargeList / Struct / Map-value; no other container is walked by tagger, detector, or strip). `RepartitionExec` presence is
   deliberately NOT pinned (size/config-dependent; see the SE-1 unit ledger).
 
 ## I want to…

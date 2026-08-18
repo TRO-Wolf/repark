@@ -35,11 +35,14 @@ wrapper.
   expression subqueries, R-B) is tighten-derived AND the output has a
   non-nullable field (R-D), or the output schema still carries the tag. The
   write-boundary relax is PR-D2 (via the same source walk).
-- `spark_ast.rs` — **SE-1 D1 round 4 (Y-3/Y-4):** after the SEC-02 plan guard, calls
-  `repark_core::refuse_iceberg_create_of_tightened_ddl` so `CREATE VIEW cat.ns.v AS …` and
+- `spark_ast.rs` — **SE-1 D1 round 4 (Y-3/Y-4), round 5 (Z-2):** after the SEC-02 plan guard,
+  calls the shared belt's `repark_core::PreExecute::guard` (which owns
+  `refuse_iceberg_create_of_tightened_ddl`) so `CREATE VIEW cat.ns.v AS …` and
   `SELECT … INTO cat.ns.t` — both of which reach here through the router's `_ =>` catch-all —
-  cannot persist a required column from a tighten-derived source. Untightened `CREATE VIEW`
-  behaviour is unchanged (that it persists an Iceberg table at all predates this branch).
+  cannot persist a required column from a tighten-derived source — including the one- and
+  two-part spellings that resolve into an Iceberg catalog via `SET
+  datafusion.catalog.default_catalog` (round 5, Z-1). Untightened `CREATE VIEW` behaviour is
+  unchanged (that it persists an Iceberg table at all predates this branch).
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **TZ-4 PR-1:** default `TIMESTAMP` → Iceberg `timestamptz`,
   `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). **Q10:** bare

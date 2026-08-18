@@ -160,7 +160,14 @@ value). Neither is in this PR: PR-B's fence is facade-only.
 - No session-wide "assume sorted" conf, no unverified fast path, no parquet/Iceberg ordering
   (all still PR-A's non-goals).
 
-## Pins (`python/repark/tests/test_declare_sorted.py`, 11 nodes)
+## Pins (`python/repark/tests/test_declare_sorted.py`, ~~11 nodes~~ **13 nodes** — Z-4, round 5)
+
+> **Z-4 truth-up (round 5, counted firsthand):**
+> `pytest python/repark/tests/test_declare_sorted.py --collect-only -q` → **13 tests collected**
+> on this head. Round 4's critic line "'13 nodes' remediating to 'hint-mode' / 11" claimed a
+> remediation that never landed in the count: the file has 13 collected nodes, and 11 was never
+> re-measured. The heading above is corrected; the prose below describes the hint-mode family
+> and is unchanged.
 
 Results bit-identical declared vs undeclared (`to_arrow().equals`); the plan pin both ways
 plus the `output_ordering=… ASC NULLS LAST` the scan now advertises; unsorted data refusing
@@ -373,8 +380,9 @@ writes stay nullable). Cycle-3 CLEAN — no new CREATE allow/refuse invert.
 
 Critic-4 (claims): Q-002 keep-stamp dual-home remediating (restore removes
 stamp). EXISTS-not-scalar comment remediating. Serving-shape docstring
-remediating. Literal pin docstring remediating. "13 nodes" remediating
-to "hint-mode" / 11. Cycle-3 CLEAN. CL-IDENTITY: `%ae`/`%ce` byte-exact
+remediating. Literal pin docstring remediating. ~~"13 nodes" remediating
+to "hint-mode" / 11.~~ **(STRUCK, Z-4: the file still collects 13 nodes —
+measured round 5; see the Pins heading.)** Cycle-3 CLEAN. CL-IDENTITY: `%ae`/`%ce` byte-exact
 `64240326+TRO-Wolf@users.noreply.github.com` on all three branch commits.
 
 Signature table: n/a (no PySpark function wrap).
@@ -433,11 +441,16 @@ their bodies changed; `core.py` re-exports all six from its existing hand-ordere
 block, so `joins_columns.py`'s `from …core import _global_agg_sql_parts` and every other
 import path is unchanged (Q7 freeze).
 
-| | before | after |
-|---|---|---|
-| `core.py` | 7380 (**RED**, ceiling 7350) | **7257** |
-| `plan_collapse.py` | 1237 | 1373 (default 2500 ceiling) |
-| ceiling | 7350 | **7350 — not raised** |
+| | before | after (at 6b08081) | **at the composed head (675a413), round-5 measurement** |
+|---|---|---|---|
+| `core.py` | 7380 (**RED**, ceiling 7350) | ~~7257~~ | **7250** |
+| `plan_collapse.py` | 1237 | ~~1373~~ | **1432** |
+| ceiling | 7350 | 7350 — not raised | 7350 — not raised |
+
+**Z-5 truth-up (round 5):** the "after" column above was measured on commit `6b08081`, not on
+the composed head. `wc -l` on `675a413` as checked out reports `core.py` **7250** and
+`plan_collapse.py` **1432** — the octo remediation commit moved more. The conclusion (ceiling
+held, not raised) is unchanged; the numbers are.
 
 `make check-lib-py`: `lib-py: 67 files clean (ceilings held; no-stub rule held)`.
 
@@ -503,7 +516,10 @@ the measurement in its docstring (DF-2 V-1 relabel precedent).
 
 ## Y-2 — the `get_logical_plan` recurse was dead under every pin
 
-MEASURED: deleting the `TableSource::get_logical_plan` recurse in `collect_tighten_sources`
+MEASURED: deleting the `TableSource::get_logical_plan` recurse in ~~`collect_tighten_sources`~~
+(**Z-5:** that walk was rewritten by the octo integration commit — `collect_tighten_sources` is
+now a two-line adapter over the ITERATIVE, visit-budgeted `walk_tighten_sources` /
+`visit_tighten_sources` pair, which is where the follow actually lives)
 left **all four** Q-001 lazy-view pins green — `lazy_view_of_derived_plan_is_visible_to_the_create_walk`
 (core), `iceberg_create_from_lazy_view_of_derived_plan_refuses` (Spark),
 `ansi_ctas_from_lazy_view_of_derived_plan_refuses` (ANSI),
@@ -604,8 +620,8 @@ now pinned instead of assumed.
 
 | gate | result |
 |---|---|
-| `cargo test -p repark-core -p repark-spark -p repark-sql` | **1023 passed + 1 doc-test, 0 failed, 0 ignored** across 25 test binaries (repark-core lib 132 + `declared_sorted` 26; repark-spark lib 473 + 7 integration files; repark-sql lib 251 + 12 integration files) |
-| `pytest test_declare_sorted_tighten.py test_dynamic_flatten.py` | **45 passed** (tighten file 17 nodes — was 13, +4 this round) |
+| `cargo test -p repark-core -p repark-spark -p repark-sql` | ~~**1023 passed + 1 doc-test**~~ — **Z-5: 1028 passed on the composed head** (repark-core lib 132 + `declared_sorted` **30**, not 26 — both counted firsthand on `675a413`); round 4's row describes `6b08081`, not `675a413` |
+| `pytest test_declare_sorted_tighten.py test_dynamic_flatten.py` | ~~**45 passed** (tighten file 17 nodes)~~ — **Z-5: 46 passed on the composed head, tighten file 18 nodes** (the octo commit added one); round 4's row was measured before composition |
 | `make check-lib-py` | `lib-py: 67 files clean (ceilings held; no-stub rule held)` |
 | whole facade suite (CEIL-1 move-only regression check) | **3354 passed, 70 skipped** |
 | `make rust-clippy` / `make rust-fmt-check` / `make py-lint` / `make py-format-check` | clean |
@@ -623,3 +639,218 @@ test NAME changed, so the relocation-discipline identity gate is untouched.
   — `tightenNulls` is a repark extension with no PySpark twin, so no parity-corpus row).
 - The payload class "`CREATE VIEW` in an Iceberg catalog persists a TABLE" is measured and
   recorded above but deliberately NOT fixed here.
+
+---
+
+# Round 5 (SQM r5) — the altitude fix: one pre-execute belt, one choke point
+
+BASE-of-this-round = **`675a413`** as checked out (the composed head). **Every table below is
+MEASURED on this tree** — each mutant applied in place, the named pins re-run, then reverted.
+Anything not run is listed under "NOT-RUN after round 5". Struck claims are struck visibly.
+
+## Z-2 (S1) — the native door had no guard at all, and per-door wiring is why
+
+`DataFusionDialect::execute` was `cx.ctx.sql(query)`. That is the door behind
+`ReparkSession::sql` / `session.context().sql` — every `repark-core` embedder — and rounds 3
+and 4 wired the tighten refuses into the Spark door and then the ANSI door, twice missing it.
+
+MEASURED on BASE (`675a413`), native door, tightened temp view `tight` in an `ice` memory
+catalog with namespace `ice.sales`:
+
+| statement (native door, BASE) | result | persisted? |
+|---|---|---|
+| `CREATE VIEW ice.sales.v_limit AS SELECT * FROM tight LIMIT 0` | **Ok** | `table_exists` **true**, columns `symbol`/`ts`/`close` all `required` |
+| `CREATE VIEW ice.sales.v_false AS SELECT * FROM tight WHERE false` | **Ok** | idem |
+| `SELECT * INTO ice.sales.t_limit FROM tight LIMIT 0` | **Ok** | idem |
+| `SELECT * INTO ice.sales.t_false FROM tight WHERE false` | **Ok** | idem |
+
+**Fix — the altitude, not the site.** New `crates/repark-core/src/pre_execute.rs`:
+`PreExecute` = `plan` (`create_logical_plan`, no execution) → `guard` (the ONE choke point for
+pre-execute refusals) → `execute`, plus `run` = all three. Every door now passes its planned
+statement through `guard`:
+
+| door | belt use |
+|---|---|
+| native (`DataFusionDialect::execute`) | `PreExecute::run` |
+| ANSI (`repark_sql::router::delegate`) | `plan` → SEC-02 local-fs guard (door-specific) → `guard` → `execute` |
+| Spark (`repark_spark::spark_ast::execute_passthrough`) | `guard` on the planned statement |
+| ANSI CTAS derivation (`repark_sql::create_table::derive_ctas_query`) | `plan` → `guard` → tighten source-walk refuse → `execute` |
+
+`refuse_iceberg_create_of_tightened_ddl` is no longer called from any door directly.
+
+| mutant | native pins | Spark-door pins | ANSI-door pins |
+|---|---|---|---|
+| BASE `675a413` (no belt) | **RED** ×2 | green (round-4 wiring) | green (round-4 wiring) |
+| `PreExecute::run`'s `guard` deleted | **RED** ×2 | green | green |
+| `spark_ast`'s `guard` deleted | green | **RED** ×4 | green |
+| `router::delegate`'s `guard` deleted | green | green | **RED** ×3 |
+| fixed | green | green | green |
+
+Belt unit pins (`crates/repark-core/src/pre_execute/tests.rs`): `plan` does not publish a
+`SELECT … INTO` target while `SessionContext::sql` does (the contrast half — this is the
+property that lets a guard sit between planning and execution), `run` returns rows, `guard` is
+a no-op for a plain SELECT.
+
+## Z-1 (S1) — the gate was the SPELLING, not the resolved catalog
+
+`refuse_iceberg_create_of_tightened_ddl` returned `Ok` for any name that was not
+`TableReference::Full`. DataFusion resolves a Bare/Partial name against
+`datafusion.catalog.default_catalog` / `default_schema`, so a `SET` moves one- and two-part DDL
+straight into the Iceberg catalog.
+
+MEASURED on BASE, after `SET datafusion.catalog.default_catalog = 'ice'` +
+`SET datafusion.catalog.default_schema = 'sales'` (source named as `datafusion.public.tight`
+because the SET moves default resolution away from the temp-view schema):
+
+| statement (BASE) | native | ANSI | Spark |
+|---|---|---|---|
+| `CREATE VIEW v_bare AS SELECT * FROM datafusion.public.tight LIMIT 0` | **Ok** — persisted as `ice.sales.v_bare`, all columns `required` | **Ok** | **Ok** |
+| `SELECT * INTO t_bare FROM datafusion.public.tight LIMIT 0` | **Ok** | **Ok** | **Ok** |
+| `CREATE VIEW sales.v_partial AS …` (two-part) | **Ok** | **Ok** | **Ok** |
+| `CREATE VIEW ice.sales.v_full AS …` (three-part) | refuses | refuses | refuses |
+
+**Fix:** resolve the planned target with `TableReference::resolve` against the session's
+`config_options().catalog` defaults, then look the RESOLVED catalog up in the registry. The
+function now takes the `SessionContext` (supplied by the belt).
+
+| mutant | Z-1 pins (3 doors) | session-scoped allowed pins |
+|---|---|---|
+| BASE (gate on `TableReference::Full`) | **RED** on all three doors | green |
+| fixed | green | green (`default_catalog_pointing_away_from_iceberg_keeps_session_ddl_allowed`: with the default catalog left at `datafusion`, a bare `CREATE VIEW` still persists nothing and stays allowed) |
+
+## Z-3 (S2) — the ANSI CTAS derivation executed the body before refusing
+
+`create_table.rs` derived the CTAS schema with `cx.ctx.sql(&query.to_string())`, which plans
+**and executes**.
+
+MEASURED on BASE, ANSI door,
+`CREATE TABLE ice.sales.wrap AS SELECT * INTO ice.sales.wrap_inner FROM tight LIMIT 0`:
+
+| observable (BASE) | value |
+|---|---|
+| statement result | ~~"errors after publishing"~~ → **`Ok(frame)`** — it did not refuse at all |
+| `ice.sales.wrap_inner` exists | **true**, schema `[(symbol, required), (ts, required)]` |
+| `ice.sales.wrap` exists | **true** |
+
+Root cause, measured: the eagerly-executed inner DDL hands back its **own** (empty) result, so
+the next line's `refuse_iceberg_create_of_tightened_plan` walked an `EmptyRelation` and saw no
+tightened source. The brief's "publishes x BEFORE the next-line refuse sees the plan" understates
+it — the refuse never fired.
+
+**Fix:** `derive_ctas_query` plans without executing, runs `belt.guard` and the tighten
+source-walk refuse on that plan, then executes.
+
+| mutant | `ansi_ctas_wrapping_a_ddl_sink_…` | `ansi_plain_ctas_still_derives_and_writes` | the 6 older ANSI CTAS pins |
+|---|---|---|---|
+| BASE / derivation back to eager `ctx.sql` | **RED** | green | green |
+| `belt.guard` deleted from `derive_ctas_query` only | green (see below) | green | green |
+| fixed | green | green | green |
+
+**Honest note on that middle row:** with plan-before-execute in place, the *existing* source-walk
+refuse already fires on the planned `CreateMemoryTable` (its input carries the tightened scan),
+so deleting `belt.guard` here alone is **not discriminating**. The discriminating mutant is the
+eager `ctx.sql` revert. `belt.guard` stays as the choke-point invariant (one door, one call),
+recorded as defense-in-depth rather than claimed as pinned-by-deletion.
+
+The Spark door reached the opposite outcome on BASE — that wrap already refused, because its
+CTAS body is planned through `execute_passthrough`, which carries round 4's DDL refuse. Both
+doors are now pinned to the same outcome (refuse + inner table NOT published).
+
+## Z-6 (S2, verify-or-fix) — the walk's visit-budget overflow: RUN, and the reachability measured
+
+Question: can the `MAX_VIEW_VISITS = 4096` overflow arm be reached, and is its error generic?
+
+MEASURED, three shapes:
+
+| shape | inner-plan visits | outcome |
+|---|---|---|
+| 5 stacked 8-way `UNION ALL` lazy views (SQL), untightened | **0** | no overflow — SQL planning INLINES a `ViewTable` as `SubqueryAlias` (plan printed and inspected) |
+| 4100-deep `into_view` chain reached via `ctx.table(name)` | **0** | no overflow — `ctx.table` inlines identically (`SubqueryAlias: hop2 / hop1 / hop0 / TableScan: plain`) |
+| 4100 retained `TableScan`s (`LogicalPlanBuilder::scan_with_filters` over `ViewTable`s) | 4100 | **overflow**, `Error::Analysis` naming "view-visit budget", message does **not** contain `tightenNulls` |
+
+So the budget is reachable exactly where the `get_logical_plan` follow is live — the
+non-inlined, filter-carrying scan shape that round 4's Y-2 pin already identified — and is
+unreachable from any SQL statement on DF 54.1. Both sides are now pinned:
+`view_visit_budget_overflow_is_a_generic_error_not_a_tighten_refusal` (overflow, generic
+message, no `tightenNulls`) and `view_hop_chain_under_the_visit_budget_still_walks_clean`
+(64 hops walk clean — the budget is a safety net, not a feature). No code change was needed;
+the verifier is closed with measurement plus pins.
+
+## Z-7 (S2, verify-or-fix) — nested export strip: FixedSizeList and every other walked container
+
+RUN. The three nested walkers — the tagger (`remint_annotate_field_at`), the detector
+(`field_or_descendant_is_tagged`), and the strip (`strip_field_export_at`) — were read side by
+side and exercised. MEASURED through the public `strip_tighten_export_metadata` /
+`schema_is_tighten_derived` pair:
+
+| container (tag on the nested leaf) | detector sees it | strip removes it | requiredness preserved |
+|---|---|---|---|
+| `FixedSizeList<item NOT NULL, 3>` | yes | yes | yes |
+| `List<item NOT NULL>` | yes | yes | yes |
+| `LargeList<item NOT NULL>` | yes | yes | yes |
+| `Struct<child NOT NULL>` | yes | yes | yes |
+| `Map<key, value NOT NULL>` (VALUE) | yes | yes | yes |
+
+**Measured scope, recorded rather than assumed:** Union, Dictionary, RunEndEncoded and the
+`*View` list types are walked by **none** of the three, so nothing can be tagged inside one and
+the tagger/detector/strip stay symmetric — no export leak, and no refusal gap beyond the one
+Y-8 already recorded. Pin: `nested_export_strip_covers_every_container_the_tagger_walks`
+(asserts detector-sees → strip-removes → requiredness unchanged, per container). No code change
+was needed.
+
+## Z-4 (S3) — the "13 → 11" node-count claim was false
+
+Counted firsthand on this head:
+`pytest python/repark/tests/test_declare_sorted.py --collect-only -q` → **13 tests collected**.
+Round 4's critic line claimed that count was remediated to 11; it was not. The Pins heading and
+the critic line are corrected in place, both struck visibly. (Round 5 adds no node to that file.)
+
+## Z-5 (S3) — the round-4 MEASURED tables described `6b08081`, not the composed head
+
+Re-measured on `675a413` as checked out:
+
+| claim (round 4) | round-4 value | **measured on `675a413`** |
+|---|---|---|
+| `core.py` lines after CEIL-1 | ~~7257~~ | **7250** |
+| `plan_collapse.py` lines | ~~1373~~ | **1432** |
+| `cargo test -p repark-core -p repark-spark -p repark-sql` | ~~1023 + 1 doc-test~~ | **1028 passed** |
+| `declared_sorted` nodes | ~~26~~ | **30** |
+| `pytest test_declare_sorted_tighten.py test_dynamic_flatten.py` | ~~45 (tighten 17)~~ | **46 (tighten 18)** |
+| Y-2 prose names `collect_tighten_sources` as the walk | — | that name is now a two-line adapter; the follow lives in the iterative `walk_tighten_sources` / `visit_tighten_sources` pair (prose corrected in place) |
+
+Conclusions of round 4 are unchanged (the ceiling held, the mutants were real); the numbers and
+the one function name were not true to the composed head and now are.
+
+## Round-5 test counts (all green on the fixed tree)
+
+| gate | result |
+|---|---|
+| `cargo test -p repark-core -p repark-spark -p repark-sql` | **1043 passed** (the total includes the 1 doc-test), 0 failed, 0 ignored, across 25 test binaries (repark-core lib **135** + `declared_sorted` **37**; repark-spark lib 473; repark-sql lib 251) — BASE was 1028 |
+| `pytest python/repark/tests/test_declare_sorted_tighten.py` | **18 passed** (unchanged — round 5 adds no facade node) |
+| `pytest test_declare_sorted_tighten.py test_dynamic_flatten.py` | **46 passed** |
+| `pytest python/repark/tests/test_declare_sorted.py` | **13 passed** (the Z-4 count) |
+| `make check-lib-py` (the lib-py guard step) | `lib-py: 67 files clean (ceilings held; no-stub rule held)` |
+| `make rust-clippy` / `make rust-fmt-check` | clean |
+| `make check-rust-file-size` / `make check-lib-rs` / `make check-crate-dag` / `make rust-panic-ban` / `make check-manifest` | clean |
+
+New nodes this round: **7 core** (4 native-door/resolved-catalog, 2 visit-budget, 1 nested-strip)
++ **3 belt unit** (`pre_execute/tests.rs`) + **3 ANSI-door** + **2 Spark-door** = 15. No existing
+test NAME changed (relocation-discipline identity gate untouched).
+
+## NOT-RUN after round 5
+
+- `make preflight` (the orchestrator runs it after this round, by instruction) — and with it
+  `py-test-facade`, the audit and the workflow lint.
+- The whole-facade pytest suite (round 4's 3354/70 regression sweep): round 5 changes no Python
+  file, and the facade rides the Spark door whose pins are green. Not re-run.
+- The parity-live / tier-2 live-oracle tier (needs a JVM + the env arm): unchanged —
+  `tightenNulls` is a repark extension with no PySpark twin.
+- Facade-level pins for Z-1/Z-2: deliberately none. The facade reaches the engine through the
+  Spark door only (the native `DataFusionDialect` door is a Rust-embedder surface), and the
+  Spark door's Z-1 behaviour is pinned in Rust. Recorded as a scope decision, not an oversight.
+- The payload class "`CREATE VIEW` in an Iceberg catalog persists a TABLE at all" — measured in
+  round 4, still deliberately NOT fixed here. Its allowed-side pins (untightened `CREATE VIEW`
+  stays Ok) remain green on all three doors.
+- One measured boundary worth naming: the Iceberg schema provider's `register_table` refuses a
+  NON-EMPTY body ("register_table does not support tables with data"), which is why the whole
+  DDL-sink family is pinned on `LIMIT 0` / `WHERE false` bodies. Measured this round, recorded.
