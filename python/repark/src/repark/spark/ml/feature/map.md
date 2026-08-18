@@ -62,3 +62,6 @@ Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../.
 - **F-3 (2026-08-17):** `_transformers.py` reached 100% public-docstring coverage — the one
   gap was `rec`, the monomial recursion inside `PolynomialExpansion`; it now states what it
   emits and what `start` bounds. Docstring-only, and the file's 2800-line ceiling is unmoved.
+- **SQM round 7 (R7-1):** `_register_temp` / `_materialize_rid_view` name their views through
+  `repark.spark._temp_views.scratch_view_name`, so the `{view}.*` reads and the `drop_temp_view`
+  that follows all use the same home-qualified spelling.

@@ -38,9 +38,11 @@ DEFAULT_CEILING = 1500
 # a table churn.
 EXCEPTIONS: dict[str, tuple[int, str]] = {
     # RATCHETED OUT (SQM round 6): the temp-view family moved to
-    # crates/repark-core/src/session/temp_views.rs, so session.rs is 1465 lines and passes the
-    # DEFAULT ceiling unlisted. The exception (1650) is deleted rather than lowered — ceilings
-    # ratchet down only, and this one no longer earns a row.
+    # crates/repark-core/src/session/temp_views.rs, so session.rs passes the DEFAULT ceiling
+    # unlisted. The exception (1650) is deleted rather than lowered — ceilings ratchet down
+    # only, and this one no longer earns a row. MEASURED session.rs: 1477 lines (SQM round 7,
+    # R7-3; the round-6 note said 1465, which was never the count on the delivered tree — the
+    # deletion stands either way, both are under the 1500 default).
     "crates/repark-functions/src/datetime.rs": (
         2100,  # measured 2020
         "Spark-semantics calendar/datetime family (Time+Timestamp extractors, "

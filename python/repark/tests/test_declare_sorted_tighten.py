@@ -494,3 +494,102 @@ def test_a_catalog_over_the_build_time_default_is_not_a_temp_view_home(tmp_path:
     with pytest.raises(AnalysisException, match="SESSION-LOCAL"):
         session.createDataFrame(SORTED_ROWS, SCHEMA).createOrReplaceTempView("v_leak")
     assert not session.catalog.tableExists("ice.sales.v_leak")
+
+
+def test_named_read_paths_find_a_temp_view_under_set_default_catalog(
+    spark_catalog: ReparkSession,
+) -> None:
+    """R7-1. Kills: product read paths emitting a BARE reference for a session-local view.
+
+    R6-1 pinned the temp-view WRITE to the session's build-time home; the READ side still emitted
+    the caller's bare name, which DataFusion re-resolves against the **live**
+    ``datafusion.catalog.default_catalog``. MEASURED on the round-7 BASE (``3910ac7``), this exact
+    shape — ``SET`` to a second catalog, then mint:
+
+    * ``spark.catalog.tableExists("tv")`` = **True** (it asks the home) —
+    * ``spark.table("tv")`` = ``AnalysisException: table 'glue_catalog.writer_ns.tv' not found``
+    * ``cache()`` / ``persist()`` = the same miss on ``__repark_cache_*``
+    * ``createDataFrame(...)`` = the same miss on ``__repark_cdf_*``
+    * ``selectExpr`` / ``alias`` = the same miss on ``__repark_selx_*`` / the alias name
+
+    So ``tableExists`` and every named read path DISAGREED. Now the facade spells a session-local
+    view against its home (``python/repark/src/repark/spark/_temp_views.py``) and they agree.
+
+    SCOPE, so this pin is not read as more than it proves: it covers the paths asserted below —
+    the FACADE's own view spellings. It does NOT cover the scratch relations the ENGINE crates
+    register for themselves under a bare name (`repark-iceberg`'s MERGE / identity-DML tables,
+    the `__repark_tt_*` time-travel view). Those are still RED under this same ``SET`` — MEASURED
+    equally red on the round-7 BASE, so round 7 neither caused nor cured them; they need the home
+    plumbed into those crates and are recorded as a round-8 item in
+    ``task/se1-declared-sorted-ledger.md``.
+    """
+    spark_catalog.sql("SET datafusion.catalog.default_catalog = 'glue_catalog'")
+    spark_catalog.sql("SET datafusion.catalog.default_schema = 'writer_ns'")
+    frame = spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA)
+    frame.createOrReplaceTempView("tv_read")
+
+    assert spark_catalog.catalog.tableExists("tv_read")
+    assert spark_catalog.table("tv_read").count() == len(SORTED_ROWS)
+    assert spark_catalog.sql("SELECT count(*) AS n FROM tv_read").collect()[0]["n"] == len(
+        SORTED_ROWS
+    )
+    # cache / persist / checkpoint all re-register a MemTable and re-scan it by name.
+    cached = spark_catalog.table("tv_read").cache()
+    assert cached.count() == len(SORTED_ROWS)
+    persisted = spark_catalog.table("tv_read").persist()
+    assert persisted.count() == len(SORTED_ROWS)
+    checkpointed = spark_catalog.table("tv_read").localCheckpoint(eager=True)
+    assert checkpointed.count() == len(SORTED_ROWS)
+    # createDataFrame materializes through its own internal scratch view, then re-scans it.
+    assert spark_catalog.createDataFrame(SORTED_ROWS, SCHEMA).count() == len(SORTED_ROWS)
+    # DataFrame ops that re-reference the source through a scratch view.
+    assert spark_catalog.table("tv_read").selectExpr("ts + 1 AS ts1").count() == len(SORTED_ROWS)
+    assert spark_catalog.table("tv_read").alias("tv_alias").count() == len(SORTED_ROWS)
+    # The value, not just the row count: the rows must be the VIEW's rows.
+    assert spark_catalog.table("tv_read").selectExpr("min(ts) AS lo").collect()[0]["lo"] == 0
+
+
+def test_no_set_leaves_every_named_read_path_byte_identical(spark: ReparkSession) -> None:
+    """R7-1 no-SET leg. Kills: the home spelling changing an ORDINARY session's results.
+
+    Without a ``SET`` the home IS the live default, so the fix must be invisible: same rows, same
+    column names, same ``listTables``/``tableExists`` answers (which stay ONE-part — the home
+    spelling is a SQL reference, never a rename).
+    """
+    frame = spark.createDataFrame(SORTED_ROWS, SCHEMA)
+    frame.createOrReplaceTempView("plain_read")
+    assert spark.table("plain_read").columns == ["sym", "ts", "val"]
+    assert spark.table("plain_read").count() == len(SORTED_ROWS)
+    assert spark.table("plain_read").selectExpr("ts + 1 AS ts1").columns == ["ts1"]
+    assert spark.catalog.tableExists("plain_read")
+    assert "plain_read" in spark.list_temp_view_names()
+    assert [name for name in spark.list_temp_view_names() if "." in name] == []
+    cached = spark.table("plain_read").cache()
+    assert cached.count() == len(SORTED_ROWS)
+    assert spark.table("plain_read").alias("plain_alias").columns == ["sym", "ts", "val"]
+
+
+def test_a_catalog_over_the_home_refuses_the_read_spelling_too(tmp_path: Path) -> None:
+    """R7-1 plus R6-1 S1. Kills: the read seam becoming a way AROUND ``assert_home_intact``.
+
+    A session built with ``default_catalog = ice`` and a catalog registered under that same name
+    has no session-local home. Asking for the home spelling must refuse exactly like the write
+    side, not hand back ``ice.sales.<view>`` — that would be a catalog read dressed as a temp
+    view. MEASURED: the mint refuses first, and the native home lookup refuses on its own.
+    """
+    session = (
+        ReparkSession.builder.appName("pytest-temp-view-home-read")
+        .config("datafusion.catalog.default_catalog", "ice")
+        .config("datafusion.catalog.default_schema", "sales")
+        .getOrCreate()
+    )
+    session.register_memory_catalog("ice", tmp_path)
+    session.sql("CREATE NAMESPACE IF NOT EXISTS ice.sales")
+    native = session._ensure_alive()
+    with pytest.raises(Exception, match="no session-local temp-view home"):
+        native.temp_view_home()
+    with pytest.raises(Exception, match="no session-local temp-view home"):
+        native.resolve_temp_view_home_ref("v")
+    with pytest.raises(AnalysisException, match="SESSION-LOCAL"):
+        session.createDataFrame(SORTED_ROWS, SCHEMA).createOrReplaceTempView("v_read_leak")
+    assert not session.catalog.tableExists("ice.sales.v_read_leak")

@@ -114,6 +114,15 @@ pub(crate) fn temp_view_ref_from_segment(
 /// PySpark strings are not measured here (no JVM in this tier; recorded NOT-RUN in the ledger).
 ///
 /// A **single-part** name is pinned `Full` against `home`, so a later `SET` cannot move it.
+///
+/// The session's OWN home spelling (`<home.catalog>.<home.schema>.<view>`, quoted or not) names
+/// the very same session-local view and is accepted as such (R7-1) — it is not a catalog write,
+/// it is the home written out. Product READ paths need that spelling: a bare reference inside a
+/// SQL body is re-resolved against the LIVE `datafusion.catalog.default_catalog`, so under a
+/// `SET` to another catalog the facade's internal scratch views (`__repark_selx_*`,
+/// `__repark_cache_*`, …) were minted in the home and then read in the other catalog — MEASURED
+/// missing. Any OTHER qualified spelling still refuses.
+///
 /// The name is parsed by DataFusion's own `TableReference::parse_str` — the same parse
 /// `register_table(&str)` did before this change — so identifier normalization (unquoted
 /// lowercasing, quote stripping) is byte-identical to BASE.
@@ -132,6 +141,16 @@ pub(crate) fn temp_view_ref(home: &TempViewHome, name: &str) -> Result<TableRefe
         TableReference::Bare { table } if quoted || !table.contains('.') => Ok(
             TableReference::full(home.catalog.clone(), home.schema.clone(), table),
         ),
+        // R7-1: the home written out is still the home — same view, same registration.
+        TableReference::Full {
+            catalog,
+            schema,
+            table,
+        } if *catalog == *home.catalog && *schema == *home.schema => Ok(TableReference::full(
+            home.catalog.clone(),
+            home.schema.clone(),
+            table,
+        )),
         _ => Err(Error::Analysis(format!(
             "temp view name '{name}' is qualified: a temporary view is SESSION-LOCAL and is \
              never created in a catalog or database — use a single-part name. (Writing a catalog \

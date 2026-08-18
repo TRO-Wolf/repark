@@ -428,6 +428,15 @@ async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
     // Reachability is low: the facade's currentCatalog/setCurrentCatalog is facade-only state and
     // never issues this SET (`python/repark/src/repark/spark/catalog.py`), so only a raw
     // `spark.sql("SET datafusion...")` reaches it.
+    //
+    // ROUND 7 (R7-1) narrowed what "the read" means here. This pin is now specifically about a
+    // RAW SQL BODY on the native door: a bare name inside `Session::sql` still resolves against
+    // the live default, and that is the pinned current behaviour. The facade's PRODUCT read
+    // paths no longer emit a bare reference at all — `spark.table`, cache/persist/checkpoint,
+    // `createDataFrame`'s re-scan and every internal scratch view now carry the HOME spelling,
+    // taken from `temp_view_home` / `resolve_temp_view_home_ref` (asserted at the end of this
+    // test) and from `python/repark/src/repark/spark/_temp_views.py` on the Python side. So the
+    // asymmetry that remains is: raw SQL body = DataFusion resolution, product API = home.
     let session = ReparkSession::new().unwrap();
     session.context().register_catalog(
         "mem",
@@ -470,4 +479,77 @@ async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
         .sql("SELECT * FROM datafusion.public.v2")
         .await
         .expect("naming the home reads it back");
+
+    // R7-1: the raw-SQL half above is the PINNED CURRENT BEHAVIOUR and is deliberately still
+    // DataFusion's. What round 7 changed is the PRODUCT read paths: the facade no longer emits a
+    // bare reference for a view that lives in the home, because the session can now hand it the
+    // home spelling. Both halves of that seam are pinned here so the SQL half and the product
+    // half cannot drift into each other unnoticed.
+    assert_eq!(
+        session.temp_view_home().unwrap(),
+        vec!["datafusion".to_string(), "public".to_string()],
+        "the home a product read path prefixes with is the BUILD-time home, not the SET default"
+    );
+    assert_eq!(
+        session.resolve_temp_view_home_ref("v2").unwrap(),
+        Some(vec![
+            "datafusion".to_string(),
+            "public".to_string(),
+            "v2".to_string()
+        ]),
+        "a view that exists in the home resolves to the home-qualified spelling under the SET"
+    );
+    assert_eq!(
+        session.resolve_temp_view_home_ref("nope").unwrap(),
+        None,
+        "a name that is no temp view answers None, so the caller falls back to catalog rules"
+    );
+    assert_eq!(
+        session.resolve_temp_view_home_ref("mem.public.v2").unwrap(),
+        None,
+        "a qualified name is not a temp-view spelling — it is not this resolver's question"
+    );
+    // The spelling the resolver hands back is accepted by the temp-view API as the SAME view.
+    session
+        .create_or_replace_temp_view("datafusion.public.v2", vec![rows()])
+        .expect("the session's own home spelling is the home, not a qualified refusal");
+    assert!(session.table_exists("v2").await.unwrap());
+    assert!(session.drop_temp_view("datafusion.public.v2").unwrap());
+    assert!(!session.table_exists("v2").await.unwrap());
+}
+
+#[tokio::test]
+async fn a_catalog_over_the_home_refuses_the_read_spelling_too() {
+    // R7-1 + R6-1 S1: the read-side seam must not become a way around `assert_home_intact`.
+    // A session built with `default_catalog = ice` and a catalog later registered under that
+    // same name has NO session-local home — asking for the spelling to read must refuse loud,
+    // exactly like the write side does, not hand back `ice.sales.<view>` (which would be a
+    // catalog read dressed as a temp view).
+    let warehouse_dir = tempfile::TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = ReparkSession::builder()
+        .config("datafusion.catalog.default_catalog", "ice")
+        .config("datafusion.catalog.default_schema", "sales")
+        .build()
+        .unwrap();
+    assert_eq!(
+        session.temp_view_home().unwrap(),
+        vec!["ice".to_string(), "sales".to_string()],
+        "before the catalog lands, the configured home is a real session-local schema"
+    );
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    for error in [
+        session.temp_view_home().unwrap_err(),
+        session.resolve_temp_view_home_ref("v").unwrap_err(),
+    ] {
+        let message = error.to_string();
+        assert!(
+            matches!(error, Error::Analysis(_))
+                && message.contains("no session-local temp-view home"),
+            "the read seam must refuse with the same home check as the write seam, got: {message}"
+        );
+    }
 }

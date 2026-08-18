@@ -129,6 +129,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
   **SQM r6 (2026-08-18):** EXCEPTIONS key `crates/repark-core/src/session.rs` deleted
   (temp-view family extracted to `session/temp_views.rs`; back under the default ceiling).
+  **SQM r7 (2026-08-18):** that ratchet-out comment's measured count trued — `session.rs` is
+  **1477** lines on the delivered tree, not the 1465 the r6 note wrote; still under the 1500
+  default, so the deletion stands unchanged (R7-3).
   **COLX (2026-08-15):** EXCEPTIONS key `crates/repark-python/src/column.rs` deleted;
   replaced by `crates/repark-python/src/column/mod.rs` (ratchet DOWN after helper extract).
   **FN-GX (2026-08-16):** `column/mod.rs` ceiling ratcheted DOWN after the `call_scalar` /

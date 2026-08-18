@@ -134,3 +134,11 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).
 - Census / collect identity regressions → move-only regression; restore from base and re-slice.
+**SQM round 7 (R7-1):** every internal scratch view in `core.py` / `joins_columns.py` /
+`writer_readwriter.py` is named through `repark.spark._temp_views.scratch_view_name`, so the name
+is the home-qualified SQL reference and the mint→scan pair cannot be split by a raw `SET
+datafusion.catalog.default_catalog`. Consequence for call sites: the returned string is ALREADY
+quoted — `core.py`'s join/select paths and `plan_collapse.py`'s qualifier tokens no longer wrap it
+in `quote_ident`. `DataFrame.alias` keeps the user's one-part NAME and reads it via
+`home_view_ref`; `_cache_view` now holds the home-qualified spelling (use `local_view_name` to
+compare against `list_temp_view_names`).

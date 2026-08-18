@@ -81,3 +81,7 @@ First checks: `cargo test -p repark-core session`. Escalate to: [../map.md#debug
   domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
   that read it. Sites here: `tests.rs` — the doc comment on
   `late_catalog_registration_adds_new_names_and_skips_existing`.
+**SQM round 7 (R7-1):** `temp_views.rs` also owns the READ spelling — `temp_view_home` and
+`resolve_temp_view_home_ref`, the two lookups the Python facade uses so a product read path never
+emits a BARE reference for a session-local view (a bare one is re-resolved against the LIVE
+`datafusion.catalog.default_catalog`). Both go through `assert_home_intact` first.

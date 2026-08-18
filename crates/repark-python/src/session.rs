@@ -610,6 +610,44 @@ impl PyReparkSession {
         })
     }
 
+    /// This session's temp-view home as `[catalog, schema]` (R7-1) — the prefix the facade puts
+    /// on the internal scratch views it mints, so the read that follows the mint cannot be
+    /// re-resolved against the live `datafusion.catalog.default_catalog`.
+    ///
+    /// # Errors
+    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
+    /// catalog.
+    pub fn temp_view_home(&self) -> PyResult<Vec<String>> {
+        fenced!("PyReparkSession.temp_view_home", {
+            self.session.temp_view_home().map_err(to_py_err)
+        })
+    }
+
+    /// The home-qualified `[catalog, schema, table]` segments a one-part temp-view `name`
+    /// resolves to, or `None` when no such view lives in this session's temp-view home (R7-1).
+    ///
+    /// The facade's name resolver calls this instead of `table_exists` + "keep the bare name":
+    /// the bare spelling is re-resolved against the LIVE
+    /// `datafusion.catalog.default_catalog`, so under a `SET` to another catalog the product
+    /// read paths (`spark.table`, cache/persist re-scan, the internal scratch views) missed a
+    /// view `tableExists` reported present. One call answers both halves — does it exist, and
+    /// what does a read path emit for it.
+    ///
+    /// # Errors
+    /// Returns `RuntimeError` when the session's temp-view home was taken over by a registered
+    /// catalog, or when the engine lookup fails.
+    pub fn resolve_temp_view_home_ref(&self, name: &str) -> PyResult<Option<Vec<String>>> {
+        fenced_span!(
+            "py.catalog",
+            "PyReparkSession.resolve_temp_view_home_ref",
+            {
+                self.session
+                    .resolve_temp_view_home_ref(name)
+                    .map_err(to_py_err)
+            }
+        )
+    }
+
     /// Register the AWS-free in-memory Iceberg catalog (local-filesystem `warehouse`) under
     /// `name` — local development and tests. (Glue / S3 Tables catalogs register through the
     /// `spark.sql.catalog.<name>.*` config path on the constructor, not a dedicated method.)

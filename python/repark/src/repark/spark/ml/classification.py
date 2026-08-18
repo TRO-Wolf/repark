@@ -7,7 +7,6 @@ Python never trains; the model holds coefficients / intercept only.
 from __future__ import annotations
 
 import contextlib
-import uuid
 from typing import Any
 
 from repark import _native
@@ -15,6 +14,7 @@ from repark.errors import IllegalArgumentException, UnsupportedOperationExceptio
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import (
     Estimator,
     Model,
@@ -191,7 +191,7 @@ class LogisticRegressionModel(HasFeaturesCol, HasPredictionCol, Model):
         eta = " + ".join(terms)
         # Stable-ish sigmoid via 1/(1+exp(-eta)); threshold at 0.5 ≡ eta >= 0.
         expr = f"CASE WHEN ({eta}) >= 0.0 THEN 1.0 ELSE 0.0 END"
-        view = f"__repark_logit_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(frame._session, "__repark_logit_")
         frame.createOrReplaceTempView(view)
         sql = f"SELECT {view}.*, ({expr}) AS {prediction} FROM {view}"
         try:

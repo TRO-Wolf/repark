@@ -338,3 +338,7 @@ as_any trait methods removed (DF54 trait upcasting); Cast uses field-aware API w
 - r25 morning critic fix: `collapse_identity_alias_chain` (column/expr_build.rs) preserves the outer
   Alias `relation` + field `metadata` and passes a lone Alias through untouched; pin
   `collapse_identity_alias_chain_preserves_qualifier_and_metadata`.
+**SQM round 7 (R7-1):** `session.rs` exposes `temp_view_home()` and
+`resolve_temp_view_home_ref(name)` — the two lookups `python/repark/src/repark/spark/_temp_views.py`
+uses to spell a session-local view against its home instead of emitting a bare reference the
+engine would re-resolve against the live `datafusion.catalog.default_catalog`.

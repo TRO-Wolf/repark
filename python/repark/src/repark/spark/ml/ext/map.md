@@ -67,3 +67,7 @@ Tuning (ParamGrid/CV): [../tuning.py](../tuning.py).
 - predictionCol collision → `AnalysisException` (no silent overwrite).
 - Orphaned `__repark_ml_ext_*` after transform GC → success path must `_own_ext_temp_view` (octo C1-SAF-001).
 - Lib-direct parity fails → seed / hyperparam mismatch vs oracle kwargs.
+- **SQM round 7 (R7-1):** `__repark_ml_ext_*` is minted through
+  `repark.spark._temp_views.scratch_view_name` (home-qualified spelling), so the IPC register →
+  `SELECT *` pair survives a raw `SET datafusion.catalog.default_catalog`; ownership/drop are
+  unchanged and prefix checks go through `local_view_name`.

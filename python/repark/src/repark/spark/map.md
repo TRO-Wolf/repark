@@ -1479,3 +1479,18 @@ First checks: `import repark` after `maturin develop`. Escalate to: [../../map.m
   0=Monday..6=Sunday, and `truncate` takes a Spark `date_trunc` granularity (not `"1mo"`).
   These are polars-only differences, so they stay docstring-local — the divergence registry
   takes rows only for pinned Spark differences. Docstring-only; no signature or logic moved.
+- `_temp_views.py` — **SQM round 7 (R7-1):** the temp-view SPELLING seam. `scratch_view_name`
+  mints an INTERNAL scratch-view name already spelled against the session's temp-view home
+  (always quoted — call sites must not re-quote it), so mint / every `FROM`-and-qualifier use /
+  drop all carry one home-pinned string; `home_view_ref` gives the home spelling of an EXISTING
+  user-named one-part view (`DataFrame.alias`); `local_view_name` goes back to the one-part name
+  for prefix checks and name-only APIs. Reason: a bare reference inside a SQL body is resolved by
+  DataFusion against the LIVE `datafusion.catalog.default_catalog`, so under a raw `SET` every
+  facade path that minted a view then scanned it by bare name missed while
+  `catalog.tableExists` (which asks the home) said True. Callers updated across `dataframe/`,
+  `ml/`, `merge.py`, `polars.py`, `session/`. **Boundary (round-8 residual, disclosed):** this
+  seam spells only the FACADE's own views. The ENGINE crates register their own scratch relations
+  under bare names — `repark-iceberg`'s MERGE and identity-`UPDATE`/`DELETE` tables and the
+  `__repark_tt_*` time-travel view — so `DataFrame.mergeInto(...).merge()`, `UPDATE`/`DELETE …
+  IN (SELECT …)` and `VERSION AS OF` stay RED under such a `SET`. MEASURED equally red on the
+  round-7 BASE; see `task/se1-declared-sorted-ledger.md` (round 7, "NOT-RUN").

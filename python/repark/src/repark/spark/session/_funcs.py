@@ -89,6 +89,7 @@ from repark.spark.session.session_time_zone import (
     DEFAULT_SESSION_TIME_ZONE,
     SESSION_TIME_ZONE_KEY,
 )
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.session.timestamp_type import (
     DEFAULT_TIMESTAMP_TYPE,
     TIMESTAMP_TYPE_KEY,
@@ -864,7 +865,7 @@ def resolve_table_name(
     current_database: str,
     known_catalogs: set[str] | None = None,
     prefer_temp_view: bool = False,
-    temp_view_exists: Any | None = None,
+    temp_view_home_ref: Any | None = None,
     default_catalog_is_auto: bool = False,
 ) -> str:
     """Qualify a bare / two-part table identifier under the session default catalog + NS (E2).
@@ -883,9 +884,9 @@ def resolve_table_name(
 
 
 
-    * **one-part** ``t`` → temp view (when ``prefer_temp_view`` + probe hits), else
+    * **one-part** ``t`` → the temp view's HOME-qualified name (when ``prefer_temp_view`` and
 
-      ``currentCatalog.currentDatabase.t``
+      ``temp_view_home_ref`` answers segments), else ``currentCatalog.currentDatabase.t``
 
     * **two-part** ``ns.t`` → ``currentCatalog.ns.t``
 
@@ -915,15 +916,27 @@ def resolve_table_name(
     if len(segments) == 1:
         bare = segments[0]
 
-        if prefer_temp_view and temp_view_exists is not None:
+        if prefer_temp_view and temp_view_home_ref is not None:
             try:
-                if bool(temp_view_exists(bare)):
-                    return _join_table_identifier_segments([bare])
+                home = temp_view_home_ref(bare)
 
             except Exception:
                 # Soften probe failures: fall through to catalog qualification.
 
-                pass
+                home = None
+
+            if home:
+                # R7-1: emit the HOME-qualified spelling, never the bare name. A bare
+
+                # reference is re-resolved by the engine against the LIVE
+
+                # `datafusion.catalog.default_catalog`, so under a `SET` to another catalog
+
+                # every product read path (spark.table, cache/persist re-scan, the internal
+
+                # scratch views) missed a view `tableExists` reported present (MEASURED).
+
+                return _join_table_identifier_segments(list(home))
 
         catalog = _alias_catalog_name(
             current_catalog,
@@ -3364,7 +3377,7 @@ def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: st
 
     ephemeral = session.sql(values_sql)
 
-    view_name = f"__repark_cdf_{uuid.uuid4().hex}"
+    view_name = scratch_view_name(session._ensure_alive(), "__repark_cdf_")
 
     native = session._ensure_alive()
 
@@ -3433,7 +3446,7 @@ def _materialize_arrow_as_memtable_frame(session: ReparkSession, table: Any) -> 
     if not isinstance(table, pa.Table):
         raise TypeError(f"expected pyarrow.Table, got {type(table).__name__}")
 
-    view_name = f"__repark_cdf_{uuid.uuid4().hex}"
+    view_name = scratch_view_name(session._ensure_alive(), "__repark_cdf_")
 
     native = session._ensure_alive()
 

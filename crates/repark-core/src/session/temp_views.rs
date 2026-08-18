@@ -271,6 +271,72 @@ impl ReparkSession {
         ))
     }
 
+    /// The session's temp-view home as `[catalog, schema]` — the spelling a product read path
+    /// prefixes a session-local view with so the engine cannot re-resolve it against the LIVE
+    /// `datafusion.catalog.default_catalog` (R7-1). The home is checked live: a session whose
+    /// home was taken over by a registered catalog has no temp-view home to name.
+    ///
+    /// # Errors
+    /// [`Error::Analysis`] when this session has no session-local temp-view home left.
+    pub fn temp_view_home(&self) -> Result<Vec<String>> {
+        crate::temp_view::assert_home_intact(self.context(), &self.temp_view_home)?;
+        Ok(vec![
+            self.temp_view_home.catalog.clone(),
+            self.temp_view_home.schema.clone(),
+        ])
+    }
+
+    /// ===========================================================================================
+    /// The home-qualified `[catalog, schema, table]` a one-part temp-view `name` resolves to —
+    /// `None` when no view of that name lives in this session's temp-view home (R7-1).
+    /// ===========================================================================================
+    ///
+    /// R6-1 pinned the temp-view WRITE to the build-time home; a product READ path that emits the
+    /// caller's BARE name still resolves it against the LIVE
+    /// `datafusion.catalog.default_catalog`, so after `SET datafusion.catalog.default_catalog =
+    /// <other>` a minted view was invisible to `spark.table` / cache / re-scan while
+    /// `table_exists` (which asks the home) said it was there (MEASURED on `3910ac7`; see
+    /// `task/se1-declared-sorted-ledger.md` round 7). Product read paths ask THIS for the
+    /// spelling to emit instead of assuming the bare name still resolves home.
+    ///
+    /// The probe mirrors [`Self::table_exists`]'s one-part arm exactly (quote-aware split, the
+    /// already-parsed segment overload, `SessionContext::table_exist`), so a caller cannot get a
+    /// `Some(..)` here that `table_exists` calls absent — the two answers come from one lookup
+    /// shape. A qualified `name` is not a temp-view spelling and answers `None` (not an error):
+    /// the callers are resolvers deciding *whether* the name is a temp view.
+    ///
+    /// This is deliberately NOT wired into raw SQL bodies — `session.sql("SELECT * FROM v")`
+    /// keeps DataFusion's own live-default resolution, pinned by
+    /// `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`.
+    ///
+    /// # Errors
+    /// [`Error::Analysis`] when this session has no session-local temp-view home left (a catalog
+    /// was registered over it — see [`crate::temp_view::assert_home_intact`]);
+    /// [`Error::DataFusion`] when the engine lookup fails.
+    pub fn resolve_temp_view_home_ref(&self, name: &str) -> Result<Option<Vec<String>>> {
+        let Ok(parts) = crate::parse_table_identifier_segments(name) else {
+            return Ok(None);
+        };
+        let [view] = parts.as_slice() else {
+            return Ok(None);
+        };
+        let quoted = name.trim().starts_with(['"', '`']);
+        let reference = self.temp_view_ref_from_segment(view, quoted)?;
+        if self
+            .context()
+            .table_exist(reference.clone())
+            .map_err(engine_err)?
+        {
+            Ok(Some(vec![
+                reference.catalog().unwrap_or_default().to_string(),
+                reference.schema().unwrap_or_default().to_string(),
+                reference.table().to_string(),
+            ]))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// The shared "create OR REPLACE" registration: `register_table` errors on a name clash, so
     /// drop any existing view first (a no-op returning `Ok(None)` when absent).
     ///

@@ -89,3 +89,12 @@ behavior only reachable end-to-end.
 - Plan-pin failures: run the query with `EXPLAIN` by hand via `ReparkSession::context()`;
   small row counts change DataFusion's repartition choices — the pins use 100k rows so the
   window path is stable.
+**SQM round 7 (R7-1):** `temp_view_doors.rs` gains
+`a_catalog_over_the_home_refuses_the_read_spelling_too` (the READ seam — `temp_view_home` /
+`resolve_temp_view_home_ref` — must refuse with the same home check as the write seam when a
+catalog has taken the home over), and
+`set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read` now also pins the read
+spelling the session hands back under that `SET` plus the round-trip through
+`create_or_replace_temp_view("datafusion.public.v2")` / `drop_temp_view`. That test's scope is
+narrowed in prose: it is the RAW SQL body that still follows the live default; the product read
+paths follow the home.

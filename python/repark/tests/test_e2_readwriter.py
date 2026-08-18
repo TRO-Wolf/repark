@@ -83,6 +83,12 @@ def test_resolve_spark_catalog_alias() -> None:
 
 
 def test_resolve_prefer_temp_view() -> None:
+    """R7-1: a one-part name that IS a temp view resolves to that view's session-local HOME.
+
+    It used to stay bare — and a bare reference is re-resolved by the engine against the live
+    ``datafusion.catalog.default_catalog``, which is exactly how ``spark.table`` missed a view
+    ``tableExists`` reported present. The probe now answers the home segments (or ``None``).
+    """
     known = {"glue_catalog"}
     assert (
         resolve_table_name(
@@ -91,9 +97,21 @@ def test_resolve_prefer_temp_view() -> None:
             current_database="default",
             known_catalogs=known,
             prefer_temp_view=True,
-            temp_view_exists=lambda name: name == "v",
+            temp_view_home_ref=lambda name: ["datafusion", "public", name] if name == "v" else None,
         )
-        == "v"
+        == "datafusion.public.v"
+    )
+    # No temp view of that name → ordinary catalog qualification, unchanged.
+    assert (
+        resolve_table_name(
+            "v",
+            current_catalog="glue_catalog",
+            current_database="default",
+            known_catalogs=known,
+            prefer_temp_view=True,
+            temp_view_home_ref=lambda name: None,
+        )
+        == "glue_catalog.default.v"
     )
 
 

@@ -10,7 +10,6 @@ error is intentional and disclosed in the unit ledger.
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -25,6 +24,7 @@ from repark.errors import (
 from repark.spark._idents import is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._idents import quote_ident_if_needed as _quote_assign_target
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 
 if TYPE_CHECKING:
@@ -153,7 +153,7 @@ class MergeIntoWriter:
         session = self._dataframe._session
         # Fill pending mapInArrow + cache so MERGE source is real rows, not the empty
         # schema-only MIA placeholder (octo C2-Q-001 / C2-SAF-001 / C2-L-001 / C2-L-005).
-        view_name = f"__repark_merge_src_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(session, "__repark_merge_src_")
         session.create_or_replace_temp_view(view_name, self._dataframe._native_for_registration())
         try:
             sql = self._render_sql(view_name)

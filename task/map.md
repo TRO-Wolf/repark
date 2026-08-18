@@ -63,6 +63,19 @@ not this directory.
   inner DDL sink AND returned Ok, measured); the two NOT-RUN verifiers are run (visit-budget
   overflow reachability, nested export strip); and the round-4 node counts / `core.py` line
   numbers are trued to the composed head.
+  **Round 6 (R6-1..R6-7):** temp-view WRITES become session-local via the
+  `repark-core/src/temp_view.rs` seam (`TempViewHome` = build-time name + provider handle,
+  `assert_home_intact`), so a `SET` of the default catalog can no longer persist a "temp" view
+  into an Iceberg catalog.
+  **Round 7 (R7-1..R7-3):** the READ half — a one-part name that is a session-local view now
+  resolves to its HOME-qualified spelling on every facade product path
+  (`repark/spark/_temp_views.py` + the `resolve_table_name` temp arm), because a bare reference
+  follows the LIVE default catalog and under a `SET` missed views `tableExists` reported present
+  (measured on BASE). Raw user-typed SQL bodies on the native door keep DataFusion resolution by
+  decision. Two number truth-ups (the round-4 facade count, the `check_rust_file_size.py`
+  ratchet-out comment) and one DISCLOSED round-8 residual: the engine crates' own bare scratch
+  registrations (`repark-iceberg` MERGE / identity DML, `__repark_tt_*` time travel) stay red
+  under that same `SET` — measured equally red on BASE, so unchanged by this round.
 - [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) — **T5
   (2026-08-15):** measurement-funded safe iterator rewrite of `rsi` and
   `sma` kernels only (P-3 `safe_iter`: RSI +5.15%, SMA +1.16%,

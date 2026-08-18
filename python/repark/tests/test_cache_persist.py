@@ -13,6 +13,7 @@ import warnings
 import pytest
 
 from repark import ReparkSession, StorageLevel
+from repark.spark._temp_views import local_view_name
 
 
 @pytest.fixture
@@ -117,13 +118,17 @@ def test_local_checkpoint_after_cache_truncates_lineage(spark: ReparkSession) ->
     assert frame.count() == 2
     old_cache_view = frame._cache_view
     assert old_cache_view is not None
-    assert old_cache_view.startswith("__repark_cache_")
+    # R7-1: the handle carries the HOME-qualified spelling (`"datafusion"."public"."…"`) so the
+    # scan that follows the materialize cannot be re-resolved against a `SET` default catalog;
+    # `list_temp_view_names` still answers one-part names, so compare on the local name.
+    old_cache_local = local_view_name(old_cache_view)
+    assert old_cache_local.startswith("__repark_cache_")
     frame.localCheckpoint(eager=True)
     assert frame.is_cached is False
     assert frame._checkpoint_lazy is False
     assert frame._lineage_inner is None
     assert frame._cache_view is None
-    assert old_cache_view not in spark.list_temp_view_names()
+    assert old_cache_local not in spark.list_temp_view_names()
     ckpt_views = [n for n in spark.list_temp_view_names() if n.startswith("__repark_ckpt_")]
     assert ckpt_views, "checkpoint must register a __repark_ckpt_* MemTable"
     assert frame.count() == 2
@@ -166,7 +171,8 @@ def test_clear_cache_drops_session_cache_views(spark: ReparkSession) -> None:
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").cache()
     assert frame.count() == 2
     assert frame._cache_view is not None
-    view_name = frame._cache_view
+    # R7-1: the handle keeps the HOME-qualified spelling; the session's name list is one-part.
+    view_name = local_view_name(frame._cache_view)
     assert view_name in spark.list_temp_view_names()
     assert spark.catalog.clearCache() is None
     assert frame.is_cached is False
@@ -196,8 +202,8 @@ def test_clear_cache_drops_orphan_cache_views(spark: ReparkSession) -> None:
 
     frame = spark.sql("SELECT 1 AS id UNION ALL SELECT 2").cache()
     assert frame.count() == 2
-    view_name = frame._cache_view
-    assert view_name is not None
+    assert frame._cache_view is not None
+    view_name = local_view_name(frame._cache_view)  # R7-1 home-qualified handle → local name
     assert view_name in spark.list_temp_view_names()
     proxy = weakref.ref(frame)
     del frame

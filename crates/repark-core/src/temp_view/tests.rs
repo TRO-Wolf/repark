@@ -77,3 +77,29 @@ fn the_segment_overload_normalizes_like_parse_str() {
     assert_eq!(reference.catalog(), Some("datafusion"));
     assert_eq!(reference.schema(), Some("public"));
 }
+
+/// Kills: dropping the R7-1 home-spelling arm (product read paths would lose the ONLY spelling
+/// that survives a `SET datafusion.catalog.default_catalog`), and kills widening it to "any
+/// three-part name" — a different catalog is still a refusal, which is the whole R6-1 rule.
+#[test]
+fn the_sessions_own_home_spelling_is_the_home_not_a_qualified_refusal() {
+    let home = home();
+    for spelling in [
+        "datafusion.public.v",
+        r#""datafusion"."public"."v""#,
+        "`datafusion`.`public`.`v`",
+    ] {
+        let reference = temp_view_ref(&home, spelling)
+            .unwrap_or_else(|error| panic!("home spelling {spelling} must resolve: {error}"));
+        assert_eq!(reference.catalog(), Some("datafusion"));
+        assert_eq!(reference.schema(), Some("public"));
+        assert_eq!(reference.table(), "v");
+    }
+    // Neighbouring three-part names that are NOT this home still refuse.
+    for other in ["ice.public.v", "datafusion.other.v"] {
+        let error = temp_view_ref(&home, other)
+            .expect_err("only the session's OWN home spelling is the home")
+            .to_string();
+        assert!(error.contains("SESSION-LOCAL"), "got: {error}");
+    }
+}

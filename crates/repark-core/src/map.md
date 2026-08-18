@@ -285,3 +285,11 @@ First checks: `cargo test -p repark-core`. Escalate to: [../map.md#debug](../map
   domain vocabulary. Outcome-neutral: every renamed fixture moved together with the assertions
   that read it. Sites here: `catalog_config.rs` — the module-doc config-block lead-in, the
   acceptance-matrix table row, and the `glue_catalog_config` doc line.
+**SQM round 7 (R7-1).** `session/temp_views.rs` gained the READ half of the temp-view seam:
+`temp_view_home()` (the `[catalog, schema]` a product read path prefixes a session-local view
+with) and `resolve_temp_view_home_ref(name)` (the `[catalog, schema, table]` a one-part name
+resolves to, or `None`). Both re-check `assert_home_intact`, so the read side cannot become a way
+around the R6-1 home check. `temp_view.rs` additionally accepts the session's OWN home spelling
+(`<home.catalog>.<home.schema>.<view>`) as that same session-local view — any other qualified
+name still refuses. Raw SQL bodies on `Session::sql` are unchanged (still DataFusion's
+live-default resolution; pinned by `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read`).

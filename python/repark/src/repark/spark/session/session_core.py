@@ -201,7 +201,10 @@ class ReparkSession:
         """Qualify ``table_name`` under current catalog/database (E2 shared resolution).
 
         Returns an unquoted multipart identifier. Use :func:`_sql_table_ref` for SQL embeds.
-        When ``prefer_temp_view`` is true, a one-part name that exists as a temp view stays bare.
+        When ``prefer_temp_view`` is true, a one-part name that exists as a temp view resolves to
+        that view's session-local HOME, **not** the bare name (R7-1) — a bare reference follows
+        the LIVE ``datafusion.catalog.default_catalog``, so under a raw ``SET`` the product read
+        paths missed a view ``tableExists`` reported present (``repark.spark._temp_views``).
         """
         state = self._catalog_state()
         known: set[str] = state.get("known_catalogs") or set()
@@ -209,12 +212,12 @@ class ReparkSession:
         if prefer_temp_view:
             inner = self._ensure_alive()
 
-            def probe(name: str) -> bool:
-                """True when ``name`` resolves to an existing table/temp view."""
+            def probe(name: str) -> list[str] | None:
+                """The temp view's home segments, or ``None`` when it is not a temp view."""
                 try:
-                    return bool(inner.table_exists(name))
+                    return inner.resolve_temp_view_home_ref(name)
                 except Exception:
-                    return False
+                    return None
 
         return resolve_table_name(
             table_name,
@@ -222,7 +225,7 @@ class ReparkSession:
             current_database=str(state["current_database"]),
             known_catalogs=known,
             prefer_temp_view=prefer_temp_view,
-            temp_view_exists=probe,
+            temp_view_home_ref=probe,
             default_catalog_is_auto=bool(state.get("auto_default_catalog")),
         )
 

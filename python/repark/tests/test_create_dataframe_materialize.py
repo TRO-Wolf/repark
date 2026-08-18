@@ -14,6 +14,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
+from repark.spark._temp_views import local_view_name
 from repark.spark.types import IntegerType, StringType, StructField, StructType
 
 
@@ -246,7 +247,7 @@ def test_create_dataframe_drops_view_when_sql_after_register_fails(spark: Repark
     assert len(proxy.stream_views) == 1
     assert proxy.dropped_views == proxy.stream_views
     # Orphan must not remain as a resolvable temp view.
-    assert not real.table_exists(proxy.stream_views[0])
+    assert not real.table_exists(local_view_name(proxy.stream_views[0]))
 
 
 def test_create_dataframe_drops_view_when_sql_after_ipc_register_fails(
@@ -265,7 +266,7 @@ def test_create_dataframe_drops_view_when_sql_after_ipc_register_fails(
     assert len(proxy.ipc_byte_lens) == 1 and proxy.ipc_byte_lens[0] > 0
     assert len(proxy.dropped_views) == 1
     assert proxy.stream_views == []
-    assert not real.table_exists(proxy.dropped_views[0])
+    assert not real.table_exists(local_view_name(proxy.dropped_views[0]))
 
 
 def test_create_dataframe_drops_view_when_sql_after_values_materialize_fails(
@@ -286,7 +287,7 @@ def test_create_dataframe_drops_view_when_sql_after_values_materialize_fails(
     assert proxy.dropped_views == proxy.materialize_views
     assert proxy.stream_views == []
     assert proxy.ipc_byte_lens == []
-    assert not real.table_exists(proxy.materialize_views[0])
+    assert not real.table_exists(local_view_name(proxy.materialize_views[0]))
 
 
 def test_create_dataframe_c_stream_error_does_not_fall_back_to_ipc(spark: ReparkSession) -> None:

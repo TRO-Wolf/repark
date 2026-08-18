@@ -1212,27 +1212,27 @@ def _rewrite_join_qcol_sql(
             side_alias = left_alias if (same_object_token_index % 2 == 0) else right_alias
             same_object_token_index += 1
             engine = _side_engine(left, field)
-            return f"{_quote_ident(side_alias)}.{_quote_ident(engine)}"
+            return f"{side_alias}.{_quote_ident(engine)}"
         if plan_id == left._plan_id or (
             left._origin_map is not None and any(pid == plan_id for pid, _field in left._origin_map)
         ):
             # Prefer direct left plan_id; also accept nested origins that live on left.
             if plan_id == left._plan_id:
                 engine = _side_engine(left, field)
-                return f"{_quote_ident(left_alias)}.{_quote_ident(engine)}"
+                return f"{left_alias}.{_quote_ident(engine)}"
             if left._origin_map is not None and (plan_id, field) in left._origin_map:
                 engine = left._origin_map[(plan_id, field)]
-                return f"{_quote_ident(left_alias)}.{_quote_ident(engine)}"
+                return f"{left_alias}.{_quote_ident(engine)}"
         if plan_id == right._plan_id or (
             right._origin_map is not None
             and any(pid == plan_id for pid, _field in right._origin_map)
         ):
             if plan_id == right._plan_id:
                 engine = _side_engine(right, field)
-                return f"{_quote_ident(right_alias)}.{_quote_ident(engine)}"
+                return f"{right_alias}.{_quote_ident(engine)}"
             if right._origin_map is not None and (plan_id, field) in right._origin_map:
                 engine = right._origin_map[(plan_id, field)]
-                return f"{_quote_ident(right_alias)}.{_quote_ident(engine)}"
+                return f"{right_alias}.{_quote_ident(engine)}"
         # Unknown plan_id — leave token (should not happen for well-formed conditions).
         return match.group(0)
 

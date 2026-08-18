@@ -2161,3 +2161,19 @@ First checks: rebuild the wheel and reinstall by path. Escalate to: [../map.md#d
   **Test NAMES were deliberately left alone** — a test rename is a declared-rename unit that
   ships alone (docs/testing.md "Relocation discipline") and would move the facade census's
   collected-name multiset.
+**SQM round 7 (R7-1):** `test_declare_sorted_tighten.py` gains
+`test_named_read_paths_find_a_temp_view_under_set_default_catalog` (under a `SET` to another
+catalog, `tableExists` / `spark.table` / free SQL / cache / persist / checkpoint /
+`createDataFrame` / `selectExpr` / `alias` all agree on the view's rows — every one of them
+MEASURED red on the round-7 BASE `3910ac7`),
+`test_no_set_leaves_every_named_read_path_byte_identical` (the no-SET leg: same rows, same
+columns, `list_temp_view_names` still ONE-part — the home spelling is a SQL reference, never a
+rename) and `test_a_catalog_over_the_home_refuses_the_read_spelling_too`. Tests that compare a
+facade-minted view NAME (`test_cache_persist.py`, `test_create_dataframe_materialize.py`,
+`test_ml_boost_oracle.py`) now go through `repark.spark._temp_views.local_view_name`, because the
+handles carry the home-qualified spelling; `test_e2_readwriter.py::test_resolve_prefer_temp_view`
+pins the new resolver contract (home segments in, home-qualified name out, `None` → catalog
+qualification unchanged). The under-`SET` pin's docstring states its SCOPE: it covers facade
+spellings only, NOT the engine crates' own bare scratch registrations (`repark-iceberg` MERGE /
+identity DML, `__repark_tt_*`), which stay red under the same `SET` on BASE and on this tree
+alike — a disclosed round-8 residual, deliberately unpinned.

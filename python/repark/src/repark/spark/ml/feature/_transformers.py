@@ -19,6 +19,7 @@ from repark.errors import (
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import Estimator, Model, Transformer, _require_repark_dataframe
 from repark.spark.ml.param import (
     HasHandleInvalid,
@@ -93,10 +94,9 @@ def _register_temp(dataset: Any, prefix: str = "ml") -> tuple[Any, str]:
 
     The frame's native session powers SQL; results are re-wrapped via ``frame._spawn``.
     """
-    import uuid
 
     frame = _require_repark_dataframe(dataset, verb="ml feature")
-    view = f"__repark_{prefix}_{uuid.uuid4().hex[:12]}"
+    view = scratch_view_name(frame._session, f"__repark_{prefix}_")
     frame.createOrReplaceTempView(view)
     return frame, view
 
@@ -119,10 +119,9 @@ def _materialize_rid_view(frame: Any, source_view: str, prefix: str) -> tuple[An
     to itself (octo F-Q1-009). Caching the rid-bearing plan materializes one assignment.
     Returns ``(host_frame, rid_view_name, rid_column_name)``.
     """
-    import uuid
 
     rid_col = f"__repark_{prefix}_rid"
-    rid_view = f"__repark_{prefix}_base_{uuid.uuid4().hex[:12]}"
+    rid_view = scratch_view_name(frame._session, f"__repark_{prefix}_base_")
     indexed = _sql_on(
         frame,
         f"SELECT row_number() OVER () AS {_quote_ident(rid_col)}, {source_view}.* "

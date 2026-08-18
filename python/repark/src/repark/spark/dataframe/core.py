@@ -29,6 +29,7 @@ from repark.errors import (
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
@@ -921,7 +922,7 @@ class DataFrame:
             if is_checkpoint:
                 self._map_bridge = None
         prefix = "__repark_ckpt_" if is_checkpoint else _CACHE_VIEW_PREFIX
-        view_name = f"{prefix}{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, prefix)
         if not is_checkpoint:
             max_bytes = _resolve_cache_max_bytes(self._alive_token)
             # Cache path only — never route VALUES/createDataFrame through this entry point.
@@ -1288,7 +1289,7 @@ class DataFrame:
         """
         import contextlib
 
-        view_name = f"__repark_mia_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, "__repark_mia_")
         tracked = False
         try:
             self._session.register_arrow_stream_as_temp_view(view_name, stream_obj)
@@ -1314,7 +1315,7 @@ class DataFrame:
         """
         import contextlib
 
-        view_name = f"__repark_mia_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, "__repark_mia_")
         tracked = False
         try:
             self._session.register_ipc_stream_as_temp_view(view_name, ipc_bytes)
@@ -1368,7 +1369,7 @@ class DataFrame:
         sink = io.BytesIO()
         with pa_ipc.new_stream(sink, arrow_schema):
             pass
-        view_name = f"__repark_mia_{uuid.uuid4().hex}"
+        view_name = scratch_view_name(self._session, "__repark_mia_")
         # If sql fails after register, drop eagerly so the MemTable is not orphaned without a
         # finalize owner (octo C3-SAF-001). Track immediately after a successful sql.
         self._session.register_ipc_stream_as_temp_view(view_name, sink.getvalue())
@@ -2305,10 +2306,10 @@ class DataFrame:
         # ``IS NOT DISTINCT FROM`` so NULL partition keys match (Spark null-group parity;
         # name-list equi-join drops them — octo M6 C1). Final result is also materialized
         # so intermediate views can be dropped.
-        left_view = f"__repark_win_l_{uuid.uuid4().hex[:12]}"
-        agg_view = f"__repark_win_a_{uuid.uuid4().hex[:12]}"
-        out_view = f"__repark_win_o_{uuid.uuid4().hex[:12]}"
         session = self._session
+        left_view = scratch_view_name(session, "__repark_win_l_")
+        agg_view = scratch_view_name(session, "__repark_win_a_")
+        out_view = scratch_view_name(session, "__repark_win_o_")
         try:
             left._prepare_for_plan()
             agg_frame._prepare_for_plan()
@@ -3359,7 +3360,7 @@ class DataFrame:
         self._ensure_alive()
         # One plan-stable snapshot for uncached mapInArrow (and no-op for ordinary frames).
         plan = self._plan()
-        view = f"__repark_select_agg_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_select_agg_")
         # Register the prepared plan — never the empty MIA placeholder (raw ``_inner``
         # before prepare) and never a second action re-run via DF createOrReplaceTempView.
         self._session.create_or_replace_temp_view(view, plan)
@@ -3487,7 +3488,7 @@ class DataFrame:
                 quoted = _quote_ident_sql(name)
                 select_parts.append(f"{quoted} AS {quoted}")
 
-        view = f"__repark_expl_{uuid.uuid4().hex}"
+        view = scratch_view_name(mid._session, "__repark_expl_")
         mid._session.create_or_replace_temp_view(view, mid._inner)
         try:
             sql = f"SELECT {', '.join(select_parts)} FROM {view}"
@@ -3753,10 +3754,10 @@ class DataFrame:
             if column._origin_plan_id is not None and column._origin_field is not None:
                 origin_map[(column._origin_plan_id, column._origin_field)] = engine
 
-        view = f"_repark_h1_sel_{uuid.uuid4().hex[:12]}"
+        view = scratch_view_name(self._session, "_repark_h1_sel_")
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
-            planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {_quote_ident(view)}")
+            planned = self._session.sql(f"SELECT {', '.join(proj_parts)} FROM {view}")
             child = self._spawn(planned)
             if h1_display_names is not None:
                 child._display_names = h1_display_names
@@ -4420,7 +4421,7 @@ class DataFrame:
         # H1: bare ``*`` keeps multi-name display identity via select("*") (octo H1-C7).
         if len(expr) == 1 and expr[0].strip() == "*":
             return self.select("*")
-        view = f"__repark_selx_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_selx_")
         # Plan-stable MIA snapshot (combine C4-L-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -4449,7 +4450,10 @@ class DataFrame:
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         # Mirrors selectExpr / select / filter so post-prepare alias agrees with peers.
         self._session.create_or_replace_temp_view(name, self._plan())
-        child = self._spawn(self._session.sql(f'SELECT * FROM "{name}"'))
+        # R7-1: the NAME stays one-part (the user chose it), but the read is home-pinned —
+        # a bare/quoted one-part reference is re-resolved against the live default catalog.
+        home_ref = home_view_ref(self._session, name)
+        child = self._spawn(self._session.sql(f"SELECT * FROM {home_ref}"))
         # H1: SQL SELECT * surfaces engine field names — re-attach display identity so
         # multi-name joins keep Spark-legal duplicate columns() (octo H1-C3-002).
         if self._display_names is not None and self._engine_names is not None:
@@ -4526,7 +4530,7 @@ class DataFrame:
             raise IllegalArgumentException(
                 f"requirement failed: Fraction must be in [0, 1], but got {fraction_value}"
             )
-        view = f"__repark_samp_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_samp_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -4641,7 +4645,7 @@ class DataFrame:
         for weight in normalized:
             running += weight
             bounds.append(running)
-        view = f"__repark_rsplit_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_rsplit_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -4664,7 +4668,7 @@ class DataFrame:
                     f"  SELECT *, row_number() OVER ({order_clause}) AS __repark_rn FROM {view}"
                     f")"
                 )
-            scored_name = f"__repark_rsplit_s_{uuid.uuid4().hex}"
+            scored_name = scratch_view_name(self._session, "__repark_rsplit_s_")
             scored = self._session.sql(bucket_sql)
             self._session.create_or_replace_temp_view(scored_name, scored)
             try:
@@ -4738,7 +4742,7 @@ class DataFrame:
         if not target_pairs:
             raise AnalysisException("summary/describe on a zero-column frame is undefined")
         # Build one row per statistic via SQL aggregations, UNION ALL.
-        view = f"__repark_sum_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_sum_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -5196,8 +5200,8 @@ class DataFrame:
         """
         from repark.spark._idents import quote_ident as _quote_ident
 
-        left_alias = f"_repark_jl_{uuid.uuid4().hex[:12]}"
-        right_alias = f"_repark_jr_{uuid.uuid4().hex[:12]}"
+        left_alias = scratch_view_name(self._session, "_repark_jl_")
+        right_alias = scratch_view_name(self._session, "_repark_jr_")
         how_sql = {
             "inner": "INNER",
             "left": "LEFT OUTER",
@@ -5258,8 +5262,7 @@ class DataFrame:
                     else:
                         engine_out = display
                     proj_parts.append(
-                        f"{_quote_ident(side_alias)}.{_quote_ident(source_engine)} "
-                        f"AS {_quote_ident(engine_out)}"
+                        f"{side_alias}.{_quote_ident(source_engine)} AS {_quote_ident(engine_out)}"
                     )
                     display_names.append(display)
                     engine_names.append(engine_out)
@@ -5278,13 +5281,12 @@ class DataFrame:
 
             if engine_how == "cross":
                 join_sql = (
-                    f"SELECT {', '.join(proj_parts)} FROM {_quote_ident(left_alias)} "
-                    f"CROSS JOIN {_quote_ident(right_alias)}"
+                    f"SELECT {', '.join(proj_parts)} FROM {left_alias} CROSS JOIN {right_alias}"
                 )
             else:
                 join_sql = (
-                    f"SELECT {', '.join(proj_parts)} FROM {_quote_ident(left_alias)} "
-                    f"{how_sql} JOIN {_quote_ident(right_alias)} ON {on_sql}"
+                    f"SELECT {', '.join(proj_parts)} FROM {left_alias} "
+                    f"{how_sql} JOIN {right_alias} ON {on_sql}"
                 )
             planned = self._session.sql(join_sql)
             child = self._spawn(planned, other)
@@ -5399,7 +5401,7 @@ class DataFrame:
         if not value_list:
             raise AnalysisException("unpivot values list must be non-empty")
         self._ensure_alive()
-        view = f"__repark_unpivot_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_unpivot_")
         # Plan-stable MIA snapshot (combine C5-Q-001) — not action re-run registration.
         self._session.create_or_replace_temp_view(view, self._plan())
         try:
@@ -5436,7 +5438,7 @@ class DataFrame:
         reserved for ``mode`` values that explicitly name cost/analyze (X3 census hang fix).
         """
         self._ensure_alive()
-        view = f"__repark_explain_{uuid.uuid4().hex}"
+        view = scratch_view_name(self._session, "__repark_explain_")
         self.create_or_replace_temp_view(view)
         try:
             # Only modes that Spark documents as executing get ANALYZE. extended=True is print-only.
@@ -5803,8 +5805,8 @@ class DataFrame:
         """Register both frames as temp views, plan ``SELECT * FROM a {op} SELECT * FROM b``."""
         self._ensure_alive()
         other._ensure_alive()
-        left = f"__repark_set_l_{uuid.uuid4().hex}"
-        right = f"__repark_set_r_{uuid.uuid4().hex}"
+        left = scratch_view_name(self._session, "__repark_set_l_")
+        right = scratch_view_name(self._session, "__repark_set_r_")
         # Materialize + register both under try/finally so a right-side MIA failure after
         # left registration cannot leak the left staging MemTable (octo C4-SAF-001).
         # Plan-stable MIA snapshots (combine C5-Q-001) — not action re-run registration.
@@ -5871,8 +5873,8 @@ class DataFrame:
         """Cartesian product (PySpark ``DataFrame.crossJoin``)."""
         self._ensure_alive()
         other._ensure_alive()
-        left = f"__repark_x_l_{uuid.uuid4().hex}"
-        right = f"__repark_x_r_{uuid.uuid4().hex}"
+        left = scratch_view_name(self._session, "__repark_x_l_")
+        right = scratch_view_name(self._session, "__repark_x_r_")
         # Materialize + register both under try/finally (octo C4-SAF-001; same as set-ops).
         # Plan-stable MIA snapshots (combine C5-Q-001) — not action re-run registration.
         try:
