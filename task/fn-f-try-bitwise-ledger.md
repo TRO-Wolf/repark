@@ -23,9 +23,9 @@ Registry / STATUS / lockfiles / `.github` / board / `crates/` closed.
 | current_database / current_schema | SHIM | SHIPPED — foldable snapshot of `Catalog.current_database` |
 | version | SEMANTIC-HAZARD | SHIPPED — `repark-<pep440>` matching `session.version`, **not** DF `version()` |
 | uuid | THIN-WIRE | SHIPPED via `PyColumn.sql("uuid()")` (nullary; pin type + uniqueness) |
-| bit_count | THIN-WIRE | **DEFERRED** — no `call_scalar` arm; popcount is not a Column-op shim |
-| getbit | ALIAS bit_get | **DEFERRED** — `bit_get` not on `call_scalar`; `PyColumn.sql` cannot bind columns |
-| shiftleft / shiftright / shiftrightunsigned | THIN-WIRE | **DEFERRED** — no `call_scalar` arm; `pow` is float; unsigned right-shift is a kernel |
+| bit_count | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| getbit | ALIAS bit_get | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| shiftleft / shiftright / shiftrightunsigned | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
 | shiftLeft / shiftRight / shiftRightUnsigned | ALIAS | **DEFERRED** — land together with the snake names (A8) |
 | try_sum | THIN-WIRE | **DEFERRED** — no `call_scalar` / aggregate arm; overflow→NULL is engine |
 | assert_true | SHIM | **DEFERRED** — `raise_error` is construction-time UOE, not an evaluable Column |

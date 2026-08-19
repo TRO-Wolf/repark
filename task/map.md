@@ -22,6 +22,11 @@ not this directory.
   polarity truth-up, audit-ignore rationale re-derivation, and
   `createDataFrame` honoring `NullType`/`array<void>` instead of silently
   substituting string. B1 stays queued behind DF-2.
+- [fn-gt1-ledger.md](fn-gt1-ledger.md) — **FN-GT1 retro / GT1-FIX (2026-08-18,
+  round-4 2026-08-19):** ColumnOrName wiring (G1–G8), oracle pins (P1–P5),
+  fence (F1–F3), `lit_indices` sweep, door-side `regexp_*` / length refuse /
+  F-5–F-7, then R4-1 positional mid-surrogate probe. Live PySpark 4.1.2.
+  0.4.0 release gate.
 - [fn-gt2-ledger.md](fn-gt2-ledger.md) — **FN-GT2 (2026-08-17):** leftover
   datetime/collections/url/bitmap thin-wires + SQM rework (W1–W5 / P1–P5 / R1)
   on `grok/c20-fngt2-thin-wire` (PR #174).
@@ -161,7 +166,7 @@ not this directory.
   (2026-08-15):** 10 try/session/bitwise facade names in
   `functions_bitwise.py` + `functions_session.py` + `test_functions_f.py`.
   `_PRE_SPLIT_ALL` pin moved 253→263. Deferred: remaining try_* /
-  to_number/to_binary + bit_count/getbit/shift* + assert_true.
+  to_number/to_binary + assert_true. **FN-GT1 shipped** bit_count/getbit/shift*.
 - [q10-timestamptype-ledger.md](q10-timestamptype-ledger.md) — **Q10
   (2026-08-15):** `spark.sql.timestampType` LTZ default + NTZ opt-in. Session
   conf + door type-resolution (literals / CAST / DDL). Existing default-mode
@@ -189,8 +194,8 @@ not this directory.
 - [fn-a-ordering-null-math-ledger.md](fn-a-ordering-null-math-ledger.md) — **FN-A
   (2026-08-15):** 25 ordering/null/math facade names in `functions_expr.py` +
   `test_functions_a.py`. `_PRE_SPLIT_ALL` pin moved 207→232. Deferred:
-  typeof/bround/conv + rint/factorial/bin/hex/unhex +
-  asc_nulls_last/desc_nulls_first.
+  typeof/bround/conv + asc_nulls_last/desc_nulls_first.
+  **FN-GT1 shipped** rint/factorial/bin/hex/unhex.
 - [fn-e-collections-ledger.md](fn-e-collections-ledger.md) — **FN-E (2026-08-15):**
   9 collection facade names in `functions_collections.py` + `test_functions_e.py`.
   `_PRE_SPLIT_ALL` pin moved 253→262. Deferred: map_from_entries/shuffle/create_map
@@ -198,7 +203,8 @@ not this directory.
 - [fn-b-strings-ledger.md](fn-b-strings-ledger.md) — **FN-B (2026-08-15):** 21
   string facade names in `functions_expr.py` + `test_functions_b.py`.
   `_PRE_SPLIT_ALL` pin moved 207→228. Deferred: regexp_extract_all/regexp_substr
-  + split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar.
+  + to_char/to_varchar. **FN-GT1 shipped** split_part/regexp_count/regexp_instr/
+  bit_length/octet_length.
 - [fn-d-datetime-ledger.md](fn-d-datetime-ledger.md) — **FN-D (2026-08-15):** 11
   datetime facade names in `functions_datetime.py` + `test_functions_d.py`.
   `_PRE_SPLIT_ALL` pin moved 253→264. Deferred: make_date/interval/dt_interval/

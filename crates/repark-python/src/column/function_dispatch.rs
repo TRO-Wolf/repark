@@ -695,45 +695,36 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "split_part" => {
             need(3)?;
-            expr_fn::split_part(exprs[0].clone(), exprs[1].clone(), exprs[2].clone())
-        }
-        "regexp_count" => {
-            need_at_least(2)?;
-            if exprs.len() > 4 {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 2 to 4 args, got {}",
-                    exprs.len()
-                )));
-            }
-            let start = exprs.get(2).cloned();
-            let flags = exprs.get(3).cloned();
-            expr_fn::regexp_count(exprs[0].clone(), exprs[1].clone(), start, flags)
-        }
-        "regexp_instr" => {
-            need_at_least(2)?;
-            if exprs.len() > 7 {
-                return Err(PyValueError::new_err(format!(
-                    "call_scalar({name}) expects 2 to 7 args, got {}",
-                    exprs.len()
-                )));
-            }
-            expr_fn::regexp_instr(
+            repark_functions::expr_fn::split_part(
                 exprs[0].clone(),
                 exprs[1].clone(),
-                exprs.get(2).cloned(),
-                exprs.get(3).cloned(),
-                exprs.get(4).cloned(),
-                exprs.get(5).cloned(),
-                exprs.get(6).cloned(),
+                exprs[2].clone(),
             )
+        }
+        "regexp_count" => {
+            // One semantics source: spark_regexp.rs (NULL-in NULL-out, int32).
+            need(2)?;
+            repark_functions::expr_fn::regexp_count(exprs[0].clone(), exprs[1].clone())
+        }
+        "regexp_instr" => {
+            // One semantics source: spark_regexp.rs. 3rd arg is Spark idx
+            // (NULL-propagate, value ignored) — never DataFusion start-position.
+            need_at_least(2)?;
+            if exprs.len() > 3 {
+                return Err(PyValueError::new_err(format!(
+                    "call_scalar({name}) expects 2 or 3 args, got {}",
+                    exprs.len()
+                )));
+            }
+            repark_functions::expr_fn::regexp_instr(exprs.clone())
         }
         "bit_length" => {
             need(1)?;
-            expr_fn::bit_length(exprs[0].clone())
+            repark_functions::expr_fn::bit_length(exprs[0].clone())
         }
         "octet_length" => {
             need(1)?;
-            expr_fn::octet_length(exprs[0].clone())
+            repark_functions::expr_fn::octet_length(exprs[0].clone())
         }
         "is_valid_utf8" => {
             need(1)?;

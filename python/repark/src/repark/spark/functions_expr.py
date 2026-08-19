@@ -1027,12 +1027,16 @@ def second(col: Column | str) -> Column:
     return _scalar("second", col)
 
 
-def date_part(field: str, source: Column | str) -> Column:
-    """Extract calendar field (PySpark ``functions.date_part``)."""
-    return _scalar("date_part", field, source, lit_indices=frozenset({0}))
+def date_part(field: Column | str, source: Column | str) -> Column:
+    """Extract calendar field (PySpark ``functions.date_part``).
+
+    ``field`` is de-facto ``ColumnOrName``: a bare ``str`` is a **column name**
+    (live PySpark 4.1.2). Pass ``F.lit('YEAR')`` for a literal field.
+    """
+    return _scalar("date_part", field, source)
 
 
-def extract(field: str, source: Column | str) -> Column:
+def extract(field: Column | str, source: Column | str) -> Column:
     """Alias of :func:`date_part` (PySpark ``functions.extract``)."""
     return date_part(field, source)
 
@@ -1817,27 +1821,35 @@ def right(str: Column | str, len: Column | int) -> Column:
 
 
 def contains(col: Column | str, value: Column | str) -> Column:
-    """Substring containment (PySpark ``functions.contains``)."""
-    lit_indices = frozenset({1}) if isinstance(value, str) else None
-    return _scalar("contains", col, value, lit_indices=lit_indices)
+    """Substring containment (PySpark ``functions.contains``).
+
+    ``value`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
+    return _scalar("contains", col, value)
 
 
 def like(col: Column | str, pattern: Column | str) -> Column:
-    """SQL LIKE (PySpark ``functions.like``)."""
-    lit_indices = frozenset({1}) if isinstance(pattern, str) else None
-    return _scalar("like", col, pattern, lit_indices=lit_indices)
+    """SQL LIKE (PySpark ``functions.like``).
+
+    ``pattern`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
+    return _scalar("like", col, pattern)
 
 
 def ilike(col: Column | str, pattern: Column | str) -> Column:
-    """Case-insensitive SQL LIKE (PySpark ``functions.ilike``)."""
-    lit_indices = frozenset({1}) if isinstance(pattern, str) else None
-    return _scalar("ilike", col, pattern, lit_indices=lit_indices)
+    """Case-insensitive SQL LIKE (PySpark ``functions.ilike``).
+
+    ``pattern`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
+    return _scalar("ilike", col, pattern)
 
 
 def regexp_like(col: Column | str, pattern: Column | str) -> Column:
-    """Regular-expression match (PySpark ``functions.regexp_like``)."""
-    lit_indices = frozenset({1}) if isinstance(pattern, str) else None
-    return _scalar("regexp_like", col, pattern, lit_indices=lit_indices)
+    """Regular-expression match (PySpark ``functions.regexp_like``).
+
+    ``pattern`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
+    return _scalar("regexp_like", col, pattern)
 
 
 def rlike(col: Column | str, pattern: Column | str) -> Column:
@@ -1851,23 +1863,29 @@ def regexp(col: Column | str, pattern: Column | str) -> Column:
 
 
 def btrim(col: Column | str, trim: Column | str | None = None) -> Column:
-    """Trim both sides (PySpark ``functions.btrim``)."""
+    """Trim both sides (PySpark ``functions.btrim``).
+
+    ``trim`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
     if trim is None:
         return _scalar("btrim", col)
-    lit_indices = frozenset({1}) if isinstance(trim, str) else None
-    return _scalar("btrim", col, trim, lit_indices=lit_indices)
+    return _scalar("btrim", col, trim)
 
 
 def startswith(col: Column | str, prefix: Column | str) -> Column:
-    """Prefix test (PySpark ``functions.startswith``)."""
-    lit_indices = frozenset({1}) if isinstance(prefix, str) else None
-    return _scalar("starts_with", col, prefix, lit_indices=lit_indices)
+    """Prefix test (PySpark ``functions.startswith``).
+
+    ``prefix`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
+    return _scalar("starts_with", col, prefix)
 
 
 def endswith(col: Column | str, suffix: Column | str) -> Column:
-    """Suffix test (PySpark ``functions.endswith``)."""
-    lit_indices = frozenset({1}) if isinstance(suffix, str) else None
-    return _scalar("ends_with", col, suffix, lit_indices=lit_indices)
+    """Suffix test (PySpark ``functions.endswith``).
+
+    ``suffix`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+    """
+    return _scalar("ends_with", col, suffix)
 
 
 def printf(format: str, *cols: Column | str) -> Column:
@@ -1897,8 +1915,14 @@ def quote(col: Column | str) -> Column:
     return concat(lit("'"), escaped, lit("'"))
 
 
-def split_part(src: Column | str, delimiter: Column | str, part_num: Column | str | int) -> Column:
+def split_part(
+    src: Column | str,
+    delimiter: Column | str,
+    partNum: Column | str | int,  # noqa: N803
+) -> Column:
     """Nth field after splitting on a delimiter (PySpark ``functions.split_part``).
+
+    All three arguments are ``ColumnOrName``: a bare ``str`` is a **column name**.
 
     Parameters
     ----------
@@ -1906,7 +1930,7 @@ def split_part(src: Column | str, delimiter: Column | str, part_num: Column | st
         Input string.
     delimiter : Column or str
         Field separator.
-    part_num : Column or str or int
+    partNum : Column or str or int
         1-based field index (negative counts from the end).
 
     Returns
@@ -1916,16 +1940,15 @@ def split_part(src: Column | str, delimiter: Column | str, part_num: Column | st
 
     Examples
     --------
-    ``F.split_part(F.lit('a.b.c'), '.', 2)`` is ``'b'``.
+    ``F.split_part(F.lit('a.b.c'), F.lit('.'), F.lit(2))`` is ``'b'``.
     """
-    lit_indices: set[int] = {2}
-    if not isinstance(delimiter, Column):
-        lit_indices.add(1)
-    return _scalar("split_part", src, delimiter, part_num, lit_indices=frozenset(lit_indices))
+    return _scalar("split_part", src, delimiter, partNum)
 
 
 def regexp_count(str: Column | str, regexp: Column | str) -> Column:
     """Count regex matches (PySpark ``functions.regexp_count``).
+
+    ``regexp`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
 
     Parameters
     ----------
@@ -1937,18 +1960,27 @@ def regexp_count(str: Column | str, regexp: Column | str) -> Column:
     Returns
     -------
     Column
-        Match count.
+        Match count. NULL when either input is NULL (Spark 4.1.2).
 
     Examples
     --------
-    ``F.regexp_count(F.lit('ababab'), 'ab')`` is ``3``.
+    ``F.regexp_count(F.lit('ababab'), F.lit('ab'))`` is ``3``.
     """
-    lit_indices = frozenset({1}) if not isinstance(regexp, Column) else frozenset()
-    return _scalar("regexp_count", str, regexp, lit_indices=lit_indices)
+    return _scalar("regexp_count", str, regexp)
 
 
-def regexp_instr(str: Column | str, regexp: Column | str) -> Column:
+def regexp_instr(
+    str: Column | str,
+    regexp: Column | str,
+    idx: Column | int | None = None,
+) -> Column:
     """1-based index of the first regex match (PySpark ``functions.regexp_instr``).
+
+    ``regexp`` is ``ColumnOrName``. ``idx`` is optional ``int`` or ``Column``
+    (a bare ``str`` is force-lit, then CAST to INT — Spark 4.1.2). Live Spark
+    ``RegExpInStr.nullSafeEval`` **ignores** the idx value and returns the
+    start of the whole match; a NULL idx still yields NULL. Omitted idx is
+    ``0`` (PySpark projects ``regexp_instr(s, re, 0)``).
 
     Parameters
     ----------
@@ -1956,6 +1988,9 @@ def regexp_instr(str: Column | str, regexp: Column | str) -> Column:
         Input string.
     regexp : Column or str
         Java/Spark regular expression.
+    idx : Column or int, optional
+        Spark's group-index slot. NULL-propagates; the position is always the
+        first-match start (1-based), or ``0`` when there is no match.
 
     Returns
     -------
@@ -1964,24 +1999,35 @@ def regexp_instr(str: Column | str, regexp: Column | str) -> Column:
 
     Examples
     --------
-    ``F.regexp_instr(F.lit('abcde'), 'c')`` is ``3``.
+    ``F.regexp_instr(F.lit('abcde'), F.lit('c'))`` is ``3``.
     """
-    lit_indices = frozenset({1}) if not isinstance(regexp, Column) else frozenset()
-    return _scalar("regexp_instr", str, regexp, lit_indices=lit_indices)
+    if idx is None:
+        idx = 0
+    return _scalar(
+        "regexp_instr",
+        str,
+        regexp,
+        idx,
+        lit_indices=frozenset({} if isinstance(idx, Column) else {2}),
+    )
 
 
 def bit_length(col: Column | str) -> Column:
     """Bit length of a string (PySpark ``functions.bit_length``).
 
+    Spark stringifies non-binary inputs (``bit_length(12)`` is ``16``) and
+    counts binary payloads as raw bytes. The engine kernel is that coercion
+    (G5); the wrapper stays a thin wire.
+
     Parameters
     ----------
     col : Column or str
-        String column.
+        String, binary, or stringify-able column.
 
     Returns
     -------
     Column
-        ``8 * octet_length``.
+        ``8 * octet_length`` as Spark INT.
 
     Examples
     --------
@@ -1993,15 +2039,18 @@ def bit_length(col: Column | str) -> Column:
 def octet_length(col: Column | str) -> Column:
     """Byte length of a string (PySpark ``functions.octet_length``).
 
+    Same Spark stringify-non-binary / pass-through-binary rule as
+    :func:`bit_length` (G5).
+
     Parameters
     ----------
     col : Column or str
-        String column.
+        String, binary, or stringify-able column.
 
     Returns
     -------
     Column
-        UTF-8 byte count.
+        UTF-8 / binary byte count as Spark INT.
 
     Examples
     --------

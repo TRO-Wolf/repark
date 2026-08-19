@@ -91,7 +91,7 @@ fn map_utf8_type() -> DataType {
 /// (`[[:^space:]]`), which is why this cannot be done with a blanket `unicode(false)` — that
 /// switch also makes `.` a byte matcher and rejects patterns that could match invalid UTF-8.
 /// ===========================================================================================
-fn bind_ascii_perl_classes(pattern: &str) -> String {
+pub(crate) fn bind_ascii_perl_classes(pattern: &str) -> String {
     let mut out = String::with_capacity(pattern.len());
     let mut chars = pattern.chars().peekable();
     let mut in_class = false;

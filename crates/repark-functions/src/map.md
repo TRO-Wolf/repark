@@ -7,6 +7,15 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 ## Contents
 
+- `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
+  `octet_length`. Stringifies non-binary; BINARY pass-through (including
+  Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
+  stringify. Ledger: `task/fn-gt1-ledger.md`.
+- `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
+  `regexp_instr` (Java find-loop; positional mid-surrogate probe, not
+  `is_match("")`; Dictionary(_, Utf8) coerce).
+- `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
+  Dictionary(_, Utf8); partNum 0 fail-loud.
 - `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line
   dropped so `pub mod timestamp_type` does not raise `check_lib_rs` EXCEPTIONS).
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
@@ -277,6 +286,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `datafusion-spark`. **FN-GT1 (2026-08-17):** also `bin`/`hex`/`unhex`/`factorial`
   (Int32 cast)/`rint`/`width_bucket`/`bit_count`/`bit_get`/shifts/`is_valid_utf8`/
   `make_valid_utf8` from `datafusion-spark` math/bitwise/string `expr_fn`.
+  **GT1-FIX (2026-08-18):** `bit_length` / `octet_length` embed `spark_length.rs`.
+  **GT1-FIX round-2 (2026-08-19):** `regexp_count` / `regexp_instr` / `split_part`
+  embed the Spark-shaped overwrites.
   **FN-GT2 (2026-08-17):** `make_date` (repark UDF) / `make_interval` /
   `make_dt_interval` / `unix_micros` / `date_diff` / `element_at` / `shuffle` /
   `map_from_entries` / `str_to_map` / URL + bitmap spark-reg builders.

@@ -48,7 +48,7 @@ def dateadd(start: Column | str, days: Column | int | str) -> Column:
     return date_add(start, days)
 
 
-def datepart(field: str, source: Column | str) -> Column:
+def datepart(field: Column | str, source: Column | str) -> Column:
     """Extract a calendar field (PySpark ``functions.datepart``; alias of ``date_part``)."""
     return date_part(field, source)
 

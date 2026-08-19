@@ -56,7 +56,7 @@ def bit_count(col: Column | str) -> Column:
 
     Examples
     --------
-    ``F.bit_count(7)`` is ``3``.
+    ``F.bit_count(F.lit(7))`` is ``3``.
     """
     return _scalar("bit_count", col)
 
@@ -69,7 +69,8 @@ def bit_get(col: Column | str, pos: Column | str | int) -> Column:
     col : Column or str
         Integral column.
     pos : Column or str or int
-        Bit position (0 is the least-significant bit).
+        Bit position (0 is the least-significant bit). A bare ``str`` is a
+        **column name** (PySpark 4.1.2 ``ColumnOrName``).
 
     Returns
     -------
@@ -78,25 +79,30 @@ def bit_get(col: Column | str, pos: Column | str | int) -> Column:
 
     Examples
     --------
-    ``F.bit_get(6, 1)`` is ``1`` (``6`` is ``0b110``).
+    ``F.bit_get(F.lit(6), F.lit(1))`` is ``1`` (``6`` is ``0b110``).
     """
-    return _scalar("bit_get", col, pos, lit_indices=frozenset({1}))
+    return _scalar("bit_get", col, pos)
 
 
 def getbit(col: Column | str, pos: Column | str | int) -> Column:
-    """Alias of :func:`bit_get` (PySpark ``functions.getbit``)."""
-    return bit_get(col, pos)
+    """Bit at a 0-based position (PySpark ``functions.getbit``).
+
+    Same kernel as :func:`bit_get`. The name ``getbit`` goes down the wire so
+    the projected column is ``getbit(...)``, not ``bit_get(...)``.
+    """
+    return _scalar("getbit", col, pos)
 
 
-def shiftleft(col: Column | str, num_bits: Column | str | int) -> Column:
+def shiftleft(col: Column | str, numBits: Column | str | int) -> Column:  # noqa: N803
     """Left shift (PySpark ``functions.shiftleft``).
 
     Parameters
     ----------
     col : Column or str
         Integral column.
-    num_bits : Column or str or int
-        Shift count.
+    numBits : int
+        Shift count (PySpark types this as a Python ``int``, not
+        ``ColumnOrName``).
 
     Returns
     -------
@@ -105,20 +111,20 @@ def shiftleft(col: Column | str, num_bits: Column | str | int) -> Column:
 
     Examples
     --------
-    ``F.shiftleft(2, 1)`` is ``4``.
+    ``F.shiftleft(F.lit(2), 1)`` is ``4``.
     """
-    return _scalar("shiftleft", col, num_bits, lit_indices=frozenset({1}))
+    return _scalar("shiftleft", col, numBits, lit_indices=frozenset({1}))
 
 
-def shiftright(col: Column | str, num_bits: Column | str | int) -> Column:
+def shiftright(col: Column | str, numBits: Column | str | int) -> Column:  # noqa: N803
     """Signed right shift (PySpark ``functions.shiftright``).
 
     Parameters
     ----------
     col : Column or str
         Integral column.
-    num_bits : Column or str or int
-        Shift count.
+    numBits : int
+        Shift count (PySpark types this as a Python ``int``).
 
     Returns
     -------
@@ -127,20 +133,20 @@ def shiftright(col: Column | str, num_bits: Column | str | int) -> Column:
 
     Examples
     --------
-    ``F.shiftright(-2, 1)`` is ``-1``.
+    ``F.shiftright(F.lit(-2), 1)`` is ``-1``.
     """
-    return _scalar("shiftright", col, num_bits, lit_indices=frozenset({1}))
+    return _scalar("shiftright", col, numBits, lit_indices=frozenset({1}))
 
 
-def shiftrightunsigned(col: Column | str, num_bits: Column | str | int) -> Column:
+def shiftrightunsigned(col: Column | str, numBits: Column | str | int) -> Column:  # noqa: N803
     """Unsigned right shift (PySpark ``functions.shiftrightunsigned``).
 
     Parameters
     ----------
     col : Column or str
         Integral column.
-    num_bits : Column or str or int
-        Shift count.
+    numBits : int
+        Shift count (PySpark types this as a Python ``int``).
 
     Returns
     -------
@@ -149,9 +155,9 @@ def shiftrightunsigned(col: Column | str, num_bits: Column | str | int) -> Colum
 
     Examples
     --------
-    ``F.shiftrightunsigned(8, 1)`` is ``4``.
+    ``F.shiftrightunsigned(F.lit(8), 1)`` is ``4``.
     """
-    return _scalar("shiftrightunsigned", col, num_bits, lit_indices=frozenset({1}))
+    return _scalar("shiftrightunsigned", col, numBits, lit_indices=frozenset({1}))
 
 
 def bitmap_bit_position(col: Column | str) -> Column:

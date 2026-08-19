@@ -20,8 +20,8 @@
 | replace | SHIPPED via escaped `regexp_replace`; pin vs regexp |
 | quote | SHIPPED (`concat` + doubled quotes) |
 | regexp_extract_all, regexp_substr | **DEFERRED** (charter) |
-| split_part, regexp_count, regexp_instr | **DEFERRED** — no `call_scalar` arm; `split` itself is UOE |
-| bit_length, octet_length | **DEFERRED** — no byte-length kernel on `call_scalar` |
+| split_part, regexp_count, regexp_instr | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| bit_length, octet_length | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
 | to_char, to_varchar | **DEFERRED** — no `call_scalar` arm; `date_format` is not Oracle `to_char` |
 
 `_PRE_SPLIT_ALL` pin move: 207 → 228 (21 shipped). Declared in the PR body.

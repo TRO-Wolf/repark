@@ -321,8 +321,9 @@ def str_to_map(
     """Split a string into a map (PySpark ``functions.str_to_map``).
 
     Defaults: pair delimiter ``,`` and key/value delimiter ``:``.
-    Both delimiters are **regular expressions** (Spark). A Python ``str``
-    delimiter is wrapped as a literal (the default path must be a literal).
+    Both delimiters are **regular expressions** (Spark). Omitted delimiters
+    stay the literal defaults ``,`` / ``:``. A user-supplied Python ``str``
+    is a **column name** (PySpark 4.1.2 ``ColumnOrName``).
 
     The Perl classes are Java's, i.e. **ASCII-only**: ``\\s`` is
     ``[ \\t\\n\\x0B\\f\\r]``, so a non-breaking space (U+00A0) does
@@ -334,9 +335,10 @@ def str_to_map(
     text : Column or str
         Input string.
     pairDelim : Column or str, optional
-        Regex between pairs (default ``,``).
+        Regex between pairs (default ``,``). A bare ``str`` is a **column
+        name** (PySpark 4.1.2 ``ColumnOrName``); pass ``F.lit(',')``.
     keyValueDelim : Column or str, optional
-        Regex between key and value (default ``:``).
+        Regex between key and value (default ``:``). Same column-name rule.
 
     Returns
     -------
@@ -351,9 +353,14 @@ def str_to_map(
     """
     pair = "," if pairDelim is None else pairDelim
     key_value = ":" if keyValueDelim is None else keyValueDelim
+    # PySpark 4.1.2 types pairDelim / keyValueDelim as Optional[ColumnOrName]:
+    # a bare str is a column name. Default "," / ":" stay Python str and
+    # _as_column_arg still wraps them as literals (not str-as-column — they are the
+    # default constants, not user-supplied names). User-supplied str names
+    # a column.
     lit_indices: set[int] = set()
-    if not isinstance(pair, Column):
+    if pairDelim is None:
         lit_indices.add(1)
-    if not isinstance(key_value, Column):
+    if keyValueDelim is None:
         lit_indices.add(2)
-    return _scalar("str_to_map", text, pair, key_value, lit_indices=frozenset(lit_indices))
+    return _scalar("str_to_map", text, pair, key_value, lit_indices=frozenset(lit_indices) or None)

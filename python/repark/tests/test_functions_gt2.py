@@ -441,10 +441,17 @@ def test_str_to_map_delimiters_are_regex(spark: ReparkSession) -> None:
     assert _as_dict(table.column("kv").to_pylist()[0]) == {"a": "1", "b": "2"}
     assert _as_dict(table.column("empty_pair").to_pylist()[0]) == {"": None, "a": "1", "b": "2"}
     assert pa.types.is_map(table.schema.field("r").type)
-    raw = _table(
-        spark.range(1).select(F.str_to_map(F.lit("a:1,b:2c:3"), "[,c]", ":").alias("raw_str"))
-    )
+    named = spark.createDataFrame([("a:1,b:2c:3", "[,c]", ":")], ["t", "pair", "kv"])
+    raw = _table(named.select(F.str_to_map("t", "pair", "kv").alias("raw_str")))
     assert _as_dict(raw.column("raw_str").to_pylist()[0]) == {"": "3", "a": "1", "b": "2"}
+    # Discrimination: the same Python strings as literals are regex delimiters
+    # only when wrapped in lit(); a bare str is a column name (GT1-FIX sweep).
+    lit_raw = _table(
+        spark.range(1).select(
+            F.str_to_map(F.lit("a:1,b:2c:3"), F.lit("[,c]"), F.lit(":")).alias("lit_str")
+        )
+    )
+    assert _as_dict(lit_raw.column("lit_str").to_pylist()[0]) == {"": "3", "a": "1", "b": "2"}
     sql_table = _table(spark.sql("SELECT str_to_map('a:1,b:2c:3', '[,c]', ':') AS m"))
     assert _as_dict(sql_table.column("m").to_pylist()[0]) == {"": "3", "a": "1", "b": "2"}
 
