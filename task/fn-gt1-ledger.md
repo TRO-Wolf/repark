@@ -114,6 +114,7 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 | Dictionary(_, Utf8) plan-refuse | `dictionary_utf8_column_is_accepted` (regexp + split_part) |
 | Dictionary(_, Binary) stringify | `dictionary_binary_uses_byte_length` (octet 1 for `0xFF`) |
 | `find_iter` empty-after-non-empty | `java_find_loop_matches_spark_zero_width` + `test_sql_door_regexp_count_zero_width_star` |
+| start-anchor mid-surrogate overcount (`is_match("")`) | `java_find_loop_matches_spark_zero_width` + `test_regexp_count_start_anchor_skips_mid_surrogate` (CAT/`^`=1; CAT+`\\n`+CAT/`(?m)^`=2) |
 | unsigned==signed on +8 | `test_shiftrightunsigned_negative_diverges` |
 | is_valid only on "ok" | `test_utf8_invalid_bytes` |
 | contains str force-lit | `test_fn_b_str_is_column_name` |
@@ -135,6 +136,8 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 |---|---|
 | `make preflight` (round-1) | exit **0**; facade **3418 passed / 70 skipped** |
 | `make preflight` (round-2) | exit **0**; facade **3427 passed / 70 skipped** |
+| `make preflight` (round-3) | exit **0**; facade **3429 passed / 70 skipped** |
+| `make preflight` (round-4) | exit **0**; facade **3430 passed / 70 skipped** |
 | two-pass hygiene | PASS1 added-line needles **0**; PASS2 new files **0** |
 
 ## Residuals (honest)
@@ -147,6 +150,9 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 - **R3-5a ANSI-off:** with `spark.sql.ansi.enabled=false` Spark `regexp_count(NULL)` is `-1` (`legacySizeOfNull`) and `CAST('i' AS INT)` is NULL; kernels hardcode the ANSI default (NULL / fail-loud CAST).
 - **R3-5b numeric implicit-cast breadth:** Spark stringifies numeric first args (`regexp_count(123,'2')=1`) and casts non-integer numerics for idx/partNum (`split_part(..., 2.0)='b'`); repark plan-refuses both doors (pre-existing, fail-loud).
 - **R3-5c split_part NULL str + non-foldable partNum 0:** Spark returns NULL (`ElementAt` short-circuits); repark exec-errors from the zero pre-scan.
+- **R4-2 mid-surrogate scan gap:** Java scans every UTF-16 index and can match at a mid-surrogate with no preceding empty match (`'ab'+🐈+'cd'`, `'\\B'` → Spark 3, repark 2). The find-loop only approximates that step; not fixable without a UTF-16 code-unit matcher.
+- **R4-3a Java non-MULTILINE `$`:** also matches before a final line terminator (`'a\\n','$'` → Spark 2, repark 1). regex-crate `$` is `\\z`-shaped.
+- **R4-3b Java `(?m)^`:** never matches at end-of-input (`'','(?m)^'` → Spark 0, repark 1). Java `(?m)` line terminators include `\\r`, `\\r\\n`, U+0085, U+2028, U+2029 (`'a\\rb','(?m)^'` → Spark 2, repark 1); regex-crate multiline is `\\n`-only.
 
 ## Round-2 (2026-08-19) — A1–A6
 
@@ -365,4 +371,42 @@ Verdict: **CLEAN** (zero S0/S1 survivors).
 
 Engine: ACC-style LIGHT (Critic-1 + Critic-3 on the delta; round-2 cited for unchanged) + 3-dim finder. **ACC-CONVERGED** (both CLEAN). Finder: **quiet** (0 S0/S1).
 Unchanged A1/A2/A3/F-6/F-7 surfaces: round-2 evidence.
+
+## Round-4 (2026-08-19) — R4-1..R4-3 (MICRO)
+
+- **R4-1 FIX:** mid-surrogate branch uses a positional probe (`U+FFFD`×2, `find_at` offset 3, `start == 3`) instead of `is_match("")`. Start-anchored patterns no longer overcount supplementary-plane chars. Pins: CAT/`^` = 1 both doors; CAT+newline+CAT/`(?m)^` = 2 via F.* (SQL literals do not process backslash escapes). Kernel cases in `java_find_loop_matches_spark_zero_width`.
+- **R4-2 NAMED:** find-loop comment softened ("approximates the mid-surrogate step"). Residuals row: mid-surrogate scan gap (`\\B` on `'ab'+🐈+'cd'` Spark 3 / repark 2).
+- **R4-3 NAMED:** two Residuals rows — non-MULTILINE `$` before a final line terminator; Java `(?m)^` end-of-input + extra line terminators vs regex-crate `\\n`-only.
+
+### Pre-PR critic report (/repark-harden) — Round-4
+
+Engine: ACC-style LIGHT (Critic-1 + Critic-3 on the delta; round-3 cited for
+unchanged surfaces) + 3-dim finder. **ACC-CONVERGED** (both CLEAN).
+Unchanged A1/A2/A3/R3 dict kernels / find-loop core: round-3 evidence.
+
+Critic-1 (quality/parity): attacked probe helper, pins, maps, unwrap — CLEAN.
+  Null-report: unwrap/expect in prod, truncating `as`, file-size (573/1500).
+  Pin skeptic: CAT/`^`=1 and CAT+NL+CAT/`(?m)^`=2 go red on `is_match("")`.
+Critic-2 (security/safety): N/A — no auth/unsafe/secrets/overflow surface in
+  the MICRO delta (round-3 C2 cited).
+Critic-3 (logic): attacked predicate `start==3` (not also `end==3`), `^` /
+  `(?m)^` overcount, `a*`=3 hold, probe offset vs U+FFFD utf8 length — CLEAN.
+Signature table: unchanged 19-row F-5 (round-2).
+Oracle probes: live Spark 4.1.2 CAT/`^`=1, CAT+NL+CAT/`(?m)^`=2 (dispatch).
+Pin audit: kernel + SQL/`^` + F.* both cases; mutation-proof table row added.
+Convergence: **ACC-CONVERGED** (LIGHT).
+
+### Finder-battery report (round-4)
+
+Target: uncommitted MICRO vs round-3 tip | dimensions: 3 (wiring, pins, fence) |
+rounds: 1
+
+Wiring: CLEAN — probe is U+FFFD×2, `find_at` offset 3, `start==3` only;
+`is_match("")` gone from the branch.
+Pins: CLEAN — pins red on `is_match("")`; SQL-door `^` present; `a*` /
+`2026-08-19` complementary (not the detector).
+Fence: two S1 map-lockstep misses REMEDIATED (`crates/repark-functions/src/map.md`,
+`task/map.md`). Residuals R4-2/R4-3 and “approximates” comment held.
+
+Verdict: **CLEAN** (zero S0/S1 survivors after lockstep).
 

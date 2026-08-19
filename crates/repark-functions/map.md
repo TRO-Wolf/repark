@@ -36,10 +36,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   Dictionary(_, Binary); refuse ARRAY/STRUCT/MAP; decimal scale-padded
   stringify). Wired from `string::functions()` + `expr_fn`. Ledger:
   `task/fn-gt1-ledger.md`.
-- `src/spark_regexp.rs` — **GT1-FIX A1/A2 / R3:** Spark `regexp_count` /
+- `src/spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (NULL-in NULL-out INT; idx ignore-value; UTF-16 start;
-  Java find-loop for empty-after-non-empty; Dictionary(_, Utf8) coerce).
-  Overwrite from `string::functions()` + `expr_fn`.
+  Java find-loop for empty-after-non-empty; positional mid-surrogate probe
+  not `is_match("")`; Dictionary(_, Utf8) coerce). Overwrite from
+  `string::functions()` + `expr_fn`.
 - `src/spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** Spark `split_part`
   STRING `partNum` implicit-cast; partNum 0 fail-loud; Dictionary(_, Utf8).
 - `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later

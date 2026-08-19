@@ -259,11 +259,31 @@ fn bump_count(count: i32) -> Result<i32> {
     count.checked_add(1).ok_or_else(count_overflow)
 }
 
+/// Two U+FFFD (3 UTF-8 bytes each). Offset 3 sits between them: a non-start,
+/// non-line-terminator position that reproduces the mid-surrogate context.
+const MID_SURROGATE_PROBE: &str = "\u{FFFD}\u{FFFD}";
+const MID_SURROGATE_PROBE_OFFSET: usize = 3;
+
+/// True when the pattern can match starting at a mid-surrogate UTF-16 index.
+///
+/// `is_match("")` is the wrong proxy: start-anchored patterns are nullable on
+/// `""` but a mid-surrogate index is always > 0 and never after a line
+/// terminator, so `^` / `(?m)^` overcounted every supplementary-plane char.
+/// Predicate is `start == offset` (any match starting there), **not** also
+/// `end == offset` — Java counts a non-empty match at the mid-surrogate too.
+fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
+    pattern
+        .find_at(MID_SURROGATE_PROBE, MID_SURROGATE_PROBE_OFFSET)
+        .is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)
+}
+
 /// Java `Matcher.find()`: report an empty match where a previous non-empty
-/// match ended, and advance empty matches by one UTF-16 unit (including a
-/// mid-surrogate step on supplementary-plane chars). The `regex` crate's
-/// `find_iter` suppresses the empty-after-non-empty case (`[0-9]*` on
-/// `2026-08-19` is 3 there, 6 in Spark).
+/// match ended, and advance empty matches by one UTF-16 unit. This loop
+/// approximates the mid-surrogate step on supplementary-plane chars with a
+/// positional probe; Java scans every UTF-16 index and can match there with
+/// no preceding empty match (not fixable without a UTF-16 code-unit matcher).
+/// The `regex` crate's `find_iter` suppresses the empty-after-non-empty case
+/// (`[0-9]*` on `2026-08-19` is 3 there, 6 in Spark).
 fn count_non_overlapping(text: &str, pattern: &Regex) -> Result<i32> {
     if pattern.as_str().is_empty() {
         let count = text.encode_utf16().count().saturating_add(1);
@@ -275,7 +295,7 @@ fn count_non_overlapping(text: &str, pattern: &Regex) -> Result<i32> {
     let mut mid_surrogate = false;
     loop {
         if mid_surrogate {
-            if pattern.is_match("") {
+            if matches_at_mid_surrogate_index(pattern) {
                 count = bump_count(count)?;
             }
             let Some(ch) = text.get(byte..).and_then(|rest| rest.chars().next()) else {
@@ -485,6 +505,23 @@ mod tests {
         assert_eq!(count_non_overlapping("abc", &stars).expect("c"), 4);
         let a_star = compile_spark_regex("a*").expect("a*");
         assert_eq!(count_non_overlapping("🐈", &a_star).expect("c"), 3);
+        // R4-1: `is_match("")` overcounts start-anchored patterns at a
+        // mid-surrogate (CAT = U+1F408). Live Spark 4.1.2: 1 / 1 / 2.
+        let caret = compile_spark_regex("^").expect("caret");
+        assert!(!matches_at_mid_surrogate_index(&caret));
+        assert_eq!(count_non_overlapping("🐈", &caret).expect("c"), 1);
+        let caret_digits = compile_spark_regex(r"^\d*").expect("caret digits");
+        assert_eq!(
+            count_non_overlapping("🐈2026", &caret_digits).expect("c"),
+            1
+        );
+        let multiline_caret = compile_spark_regex("(?m)^").expect("multiline caret");
+        assert!(!matches_at_mid_surrogate_index(&multiline_caret));
+        assert_eq!(
+            count_non_overlapping("🐈\n🐈", &multiline_caret).expect("c"),
+            2
+        );
+        assert!(matches_at_mid_surrogate_index(&a_star));
     }
 
     #[tokio::test]

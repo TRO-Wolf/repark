@@ -608,6 +608,26 @@ def test_sql_door_regexp_count_zero_width_star(spark: ReparkSession) -> None:
     assert facade.column("c").to_pylist() == [6]
 
 
+def test_regexp_count_start_anchor_skips_mid_surrogate(spark: ReparkSession) -> None:
+    """R4-1: start-anchored patterns must not overcount at a mid-surrogate.
+
+    ``is_match("")`` is a context-free proxy: ``^`` is nullable on ``""`` but a
+    mid-surrogate index is always > 0. CAT = U+1F408. Live Spark 4.1.2: 1 and 2.
+    The newline case is pinned through F.* — SQL literals do not process
+    backslash escapes.
+    """
+    cat = "🐈"
+    sql = _table(spark.sql("SELECT regexp_count('🐈', '^') AS c"))
+    assert sql.column("c").to_pylist() == [1]
+    assert sql.schema.field("c").type == pa.int32()
+    facade = _table(spark.range(1).select(F.regexp_count(F.lit(cat), F.lit("^")).alias("c")))
+    assert facade.column("c").to_pylist() == [1]
+    facade_ml = _table(
+        spark.range(1).select(F.regexp_count(F.lit(cat + "\n" + cat), F.lit("(?m)^")).alias("c"))
+    )
+    assert facade_ml.column("c").to_pylist() == [2]
+
+
 def test_sql_door_double_infinity_stringify_is_named_divergence(spark: ReparkSession) -> None:
     """R3-4 named residual: Spark ``'Infinity'`` (octet 8); Arrow ``'inf'`` (octet 3)."""
     table = _table(spark.sql("SELECT octet_length(CAST('Infinity' AS DOUBLE)) AS o"))

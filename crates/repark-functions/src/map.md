@@ -11,8 +11,9 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   `octet_length`. Stringifies non-binary; BINARY pass-through (including
   Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
   stringify. Ledger: `task/fn-gt1-ledger.md`.
-- `spark_regexp.rs` — **GT1-FIX A1/A2 / R3:** Spark `regexp_count` /
-  `regexp_instr` (Java find-loop; Dictionary(_, Utf8) coerce).
+- `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
+  `regexp_instr` (Java find-loop; positional mid-surrogate probe, not
+  `is_match("")`; Dictionary(_, Utf8) coerce).
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line
