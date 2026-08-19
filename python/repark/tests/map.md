@@ -203,7 +203,8 @@ NOT in that file is a defect, not a decision.
   (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
   getAll isolation pin (octo C2-Q-002);
   `getAll` redacts; `get(explicit)` unchanged.
-- `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`:
+- `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`
+  (planner is native `repark_core::dynamic_flatten`; this file is the facade contract):
   nested struct-in-struct; null parent/mid struct → NULL not zero; list-of-struct;
   **U-DF-1:** capitalized `Legs` list-of-struct + sibling struct (`Legs_leg_id`);
   multi-list serial explode order; list explode in-place column order;

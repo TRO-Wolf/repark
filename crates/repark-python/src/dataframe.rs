@@ -919,6 +919,31 @@ impl PyDataFrame {
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
     }
+
+    /// Recursively flatten nested structs (and optionally explode lists) — repark extra.
+    ///
+    /// # Errors
+    /// `AnalysisException` on name collision, empty-struct schema, or max-depth exhaustion.
+    pub fn dynamic_flatten(
+        &self,
+        separator: String,
+        explode_lists: bool,
+        drop_null_lists: bool,
+        empty_as_null: bool,
+        max_depth: usize,
+    ) -> PyResult<Self> {
+        fenced!("PyDataFrame.dynamic_flatten", {
+            let options = repark_core::DynamicFlattenOptions {
+                separator,
+                explode_lists,
+                drop_null_lists,
+                empty_as_null,
+                max_depth,
+            };
+            let df = repark_core::dynamic_flatten(self.df.clone(), options).map_err(to_py_err)?;
+            Ok(Self::new(df, Arc::clone(&self.runtime)))
+        })
+    }
 }
 
 #[cfg(test)]

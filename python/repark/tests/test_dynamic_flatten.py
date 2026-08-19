@@ -3,6 +3,8 @@
 Semantic pins against the operator-supplied polars ``unnest_lazyframe`` reference
 (``specs/dynamic-flatten-reference.md``). Arrow path: value **and** type (never only show).
 Synthetic fixtures only.
+
+The planner is native (``repark_core::dynamic_flatten``); this file remains the facade contract.
 """
 
 from __future__ import annotations

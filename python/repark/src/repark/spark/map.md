@@ -71,8 +71,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   EMPTY `array<void>` siblings that carry typed lists; NULL void lists are kept),
   `max_depth=100`
   LOUD refuse (never silent truncate); schema-only walks (no forced collect); prefixed name
-  collisions refuse LOUD (Q25). Helper `_dynamic_flatten_unnest_structs`.
-  Pins: `tests/test_dynamic_flatten.py`. Registry row is orchestrator-side.
+  collisions refuse LOUD (Q25). Planner is native (`repark_core::dynamic_flatten`);
+  the facade method is the type-gate + `_spawn`. Pins: `tests/test_dynamic_flatten.py`.
+  Registry row is orchestrator-side.
   Region: new method + helper only; H1/H2 identity, collect, writer frozen.
 - `dataframe.py` — GroupedData.pivot two-phase CASE aggregates (R-PIVOT; octo c1–c8:
   bare count, alias recovery, distinct.limit then sort ≤max, cube/rollup refuse,

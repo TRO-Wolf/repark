@@ -39,8 +39,10 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     rewrite an `Unnest`-over-`Unnest` chain carrying a `get_field` leaf — the shape every
     multi-pass `dynamicFlatten` / repeated `explode` builds — either asserting inside
     `Unnest::with_new_exprs` or landing a qualified and an unqualified spelling of one name in
-    one `DFSchema`. The wrapper delegates untouched (errors included) when the subtree has no
-    `Unnest`, and otherwise tries the rule and keeps the unrewritten plan only if it actually
+    one `DFSchema`. The wrapper's `apply_order` is `None` so it owns the TopDown walk: a
+    reconstruction error on `Unnest` children otherwise bypasses the per-node decline
+    (native `dynamic_flatten`). Delegates untouched (errors included) when the plan has no
+    `Unnest`; otherwise tries the walk and keeps the unrewritten plan only if it actually
     fails. `enable_leaf_expression_pushdown` therefore stays at DataFusion's default: the flag
     would have cost every nested-column query in the engine (measured up to ~8x in one run, load-sensitive ratio, on a filtered
     wide-struct parquet scan), and declining by shape alone would have cost 11.8x on a

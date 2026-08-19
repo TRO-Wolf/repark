@@ -24,7 +24,6 @@ from repark.spark.column import Column
 
 if TYPE_CHECKING:
     from repark.spark.dataframe.core import DataFrame
-    from repark.spark.types import StructType
 
 logger = logging.getLogger("repark.spark.dataframe")
 
@@ -1013,102 +1012,6 @@ def _null_safe_equi_join_sql(
     return (
         f"SELECT {', '.join(select_parts)} FROM {left_view} INNER JOIN {right_view} ON {on_clause}"
     )
-
-
-# === r24 DF1: dynamicFlatten helpers ==========================================================
-
-
-def _dynamic_flatten_unnest_structs(
-    frame: DataFrame,
-    schema: StructType,
-    separator: str,
-) -> DataFrame:
-    """One pass: expand every top-level StructType column with parent-path prefixes.
-
-    Surviving non-struct columns keep their names. Each struct field becomes
-    ``{parent}{separator}{field}``. If a prefixed name collides with a surviving
-    top-level name or with another prefixed name in this pass, raise LOUD
-    (Q25 — prefix is the disambiguator; refuse only when still colliding).
-
-    Implemented via :meth:`DataFrame.selectExpr` with always-quoted idents — native
-    ``get_field`` projections over createDataFrame MemTables leave qualified leaf names
-    that poison multi-pass unnest under ``push_down_leaf_projections``. (DEFECT-2,
-    2026-08-18: that rule now declines on exactly these plans — see the DF-54.1 guard in
-    ``crates/repark-core/src/session/df_guards.rs`` — so this spelling is no longer
-    load-bearing against the optimizer trip. It stays because the quoted-ident form is what
-    keeps mixed-case / hostile field names resolving through the scratch-view chain.)
-
-    Field projection is **null-safe**: ``CASE WHEN parent IS NULL THEN NULL ELSE
-    parent.field END``. Bare ``parent.field`` on a null struct parent currently yields
-    type defaults (0 / empty string / false) in the engine — silent corruption vs Spark
-    and the polars reference (null parent → null fields).
-    """
-    from repark.spark.types import StructType as StructTypeType
-
-    # Build projection in schema field order (polars select+unnest expands structs in place;
-    # do not hoist all non-structs before all expansions — C3-Q-001).
-    # name → source description for collision messages
-    claimed: dict[str, str] = {}
-    keep_names: list[str | None] = []  # None marks a struct expansion slot
-    expansions: list[tuple[str, list[tuple[str, str]]]] = []
-    any_expand_fields = False
-
-    for field in schema.fields:
-        if not isinstance(field.dataType, StructTypeType):
-            if field.name in claimed:
-                raise AnalysisException(
-                    f"[DYNAMIC_FLATTEN_NAME_COLLISION] dynamicFlatten: column {field.name!r} "
-                    f"collides with {claimed[field.name]} (parent-path prefix could not "
-                    f"disambiguate; rename before flatten)."
-                )
-            claimed[field.name] = f"top-level column {field.name!r}"
-            keep_names.append(field.name)
-            continue
-
-        nested_pairs: list[tuple[str, str]] = []
-        for nested in field.dataType.fields:
-            prefixed = f"{field.name}{separator}{nested.name}"
-            if prefixed in claimed:
-                raise AnalysisException(
-                    f"[DYNAMIC_FLATTEN_NAME_COLLISION] dynamicFlatten: prefixed field "
-                    f"{prefixed!r} (from struct {field.name!r}.{nested.name}) collides with "
-                    f"{claimed[prefixed]} (parent-path prefix could not disambiguate; "
-                    f"rename before flatten)."
-                )
-            claimed[prefixed] = f"struct field {field.name!r}.{nested.name}"
-            nested_pairs.append((nested.name, prefixed))
-            any_expand_fields = True
-        keep_names.append(None)
-        expansions.append((field.name, nested_pairs))
-
-    # Empty struct with no surviving columns → zero-width projection is invalid; refuse
-    # with a clear message rather than selectExpr("requires at least one expression").
-    has_keep = any(name is not None for name in keep_names)
-    if not has_keep and not any_expand_fields:
-        raise AnalysisException(
-            "[DYNAMIC_FLATTEN_EMPTY_STRUCT] dynamicFlatten: schema is only empty struct "
-            "column(s) with no fields to expand."
-        )
-
-    select_parts: list[str] = []
-    expansion_index = 0
-    for slot in keep_names:
-        if slot is not None:
-            quoted = _quote_ident_sql(slot)
-            select_parts.append(f"{quoted} AS {quoted}")
-            continue
-        struct_name, nested_pairs = expansions[expansion_index]
-        expansion_index += 1
-        parent_quoted = _quote_ident_sql(struct_name)
-        for nested_name, prefixed in nested_pairs:
-            field_quoted = _quote_ident_sql(nested_name)
-            out_quoted = _quote_ident_sql(prefixed)
-            # Null-safe field extract (C1-L-001): bare parent.field zero-fills null parents.
-            select_parts.append(
-                f"CASE WHEN {parent_quoted} IS NULL THEN NULL "
-                f"ELSE {parent_quoted}.{field_quoted} END AS {out_quoted}"
-            )
-    return frame.selectExpr(*select_parts)
 
 
 # === r20 H1: join/identity helpers ============================================================

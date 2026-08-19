@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [df1-rust-flatten-ledger.md](df1-rust-flatten-ledger.md) — **DF1 native
+  `dynamic_flatten`:** port of the Python Spark-facade planner into
+  `repark_core::dynamic_flatten` (plan rewrite, no new physical operator). Thin
+  PyO3 + type-gate facade; `_dynamic_flatten_unnest_structs` deleted.
 - [c25-bugfix-ledger.md](c25-bugfix-ledger.md) — **conductor-25 (2026-08-17):**
   DS-4 / F-4 bug-candidate fix round (B4→B1→B6→B2→B3→B5) plus escaped DF-2.
   Single ledger, appended per PR. B4 (#175) CLOSED. **DF-2:** `explode_outer`

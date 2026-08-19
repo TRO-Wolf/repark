@@ -62,6 +62,8 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `AwsConfigCredentialProvider` (aws-config default chain → `object_store::CredentialProvider`),
   `build_amazon_s3_store`, `register_bucket_store` (one store under BOTH scheme URLs),
   `parse_s3_bucket` / `is_s3_scheme`.
+- `src/dynamic_flatten.rs` — DF1 `dynamic_flatten` plan rewrite (free function +
+  `DynamicFlattenOptions`; re-exported at the crate root).
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,
@@ -82,6 +84,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
 | Map a `spark.sql.catalog.*` config block | `src/catalog_config.rs` (`parse_catalog_specs`) |
 | Change `s3://` / `s3a://` read routing or the AWS credential bridge | `src/object_store_s3.rs` |
 | Tune memory/spill/batch/partition defaults | `src/session.rs` (`FairSpillPool`, `target_partitions`, batch size) |
+| Change `dynamic_flatten` / `dynamicFlatten` | `src/dynamic_flatten.rs` |
 | Change error classification | `src/error_map.rs` (`engine_err` / `classify_datafusion_error`) |
 | Add the distribution backend (later) | [../../ARCHITECTURE.md](../../ARCHITECTURE.md) first — the seam's surface (and its call sites) widens before a new-crate `impl` is the work |
 | Plug a statement router / SQL front end | implement `SqlDialect` (`src/dialect.rs`) |
@@ -91,7 +94,7 @@ honestly"). SQL routing and session-build registration are seam-inverted
 
 - **Owns:** `ReparkSession` + builder (the engine API); the `ExecutionBackend` / `SqlDialect` /
   `SessionExtension` seams; catalog & namespace ops; readers (parquet / csv / json / iceberg + time
-  travel); temp views; `*.sql.catalog.*` config parsing; `s3://` / `s3a://` read routing + the AWS
+  travel); temp views; `dynamic_flatten` (the DF1 plan rewrite); `*.sql.catalog.*` config parsing; `s3://` / `s3a://` read routing + the AWS
   credential bridge; the error fold (`engine_err`).
 - **Does not own:** SQL grammar / routing (the doors, via `SqlDialect`); the write engine + catalog
   internals (repark-iceberg + the fork); Spark functions (repark-functions); the Python surface.

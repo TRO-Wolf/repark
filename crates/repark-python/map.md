@@ -96,7 +96,8 @@ PyCapsule interface** (`__arrow_c_stream__`), zero-copy. **This is the only crat
   `fit_kmeans` stream `DataFrame::execute_stream` batches into `repark-ml` accumulators
   (params-only results; never full-row materialization). Registered on the `_native` module.
 - `src/dataframe.rs` — `PyDataFrame`: wraps a DataFusion `DataFrame`; `count`/`show` /
-  `limit` / **`limit_with_skip(skip, fetch)`** (DataFusion `Limit` with non-zero skip — used by
+  `limit` / **`dynamic_flatten`** (thin bind over `repark_core::dynamic_flatten`) /
+  **`limit_with_skip(skip, fetch)`** (DataFusion `Limit` with non-zero skip — used by
   the facade display-style tail preview `_preview_tail_rows`, R-DISPLAY; shareable with a later
   public `DataFrame.tail`) + **`analyzed_arrow_schema`** (analysis-only Arrow C schema PyCapsule —
   physical types, no execution; U7 pandas_udf pass-through / octo C6-Q-001; **P2b**

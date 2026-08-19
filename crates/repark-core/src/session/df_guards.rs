@@ -23,7 +23,7 @@
 use std::sync::Arc;
 
 use datafusion::common::Result as DataFusionResult;
-use datafusion::common::tree_node::{Transformed, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNodeRecursion, TreeNodeRewriter};
 use datafusion::execution::SessionStateBuilder;
 use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::logical_expr::LogicalPlan;
@@ -161,10 +161,13 @@ impl OptimizerRule for UnnestSafeLeafProjectionPushdown {
         self.inner.name()
     }
 
-    /// Delegated, never hard-coded — the traversal the wrapper's scope reasoning depends on is
-    /// the inner rule's (`TopDown`), so it must follow it if upstream changes it.
+    /// `None`: this wrapper owns recursion. The inner rule is `TopDown`; if we delegated
+    /// `Some(TopDown)` the optimizer's `Rewriter` would reconstruct `Unnest` children
+    /// *outside* [`Self::rewrite`], and a schema error there would bypass the decline
+    /// (native `dynamic_flatten` Unnest+`get_field` plans). Catching the full walk keeps
+    /// the Python explode-rewrite plans working and covers that reconstruction path.
     fn apply_order(&self) -> Option<ApplyOrder> {
-        self.inner.apply_order()
+        None
     }
 
     fn rewrite(
@@ -174,15 +177,54 @@ impl OptimizerRule for UnnestSafeLeafProjectionPushdown {
     ) -> DataFusionResult<Transformed<LogicalPlan>> {
         if !carries_unnest(&plan)? {
             // Step 1: not our shape — stock rule, stock cost, stock errors.
-            return self.inner.rewrite(plan, config);
+            return walk_inner_rule(self.inner.as_ref(), plan, config);
         }
-        // Step 2: our shape. The clone is the price of being able to decline AFTER the failure
-        // instead of before it, and it is paid only on unnest-carrying subtrees.
+        // Step 2: our shape. The clone is the price of being able to decline AFTER the
+        // failure instead of before it, and it is paid only on unnest-carrying plans.
         let declined = plan.clone();
-        Ok(self
-            .inner
-            .rewrite(plan, config)
-            .unwrap_or(Transformed::no(declined)))
+        Ok(walk_inner_rule(self.inner.as_ref(), plan, config).unwrap_or(Transformed::no(declined)))
+    }
+}
+
+/// `TopDown` walk of the inner leaf-projection rule (the optimizer no longer recurses for us).
+fn walk_inner_rule(
+    inner: &dyn OptimizerRule,
+    plan: LogicalPlan,
+    config: &dyn OptimizerConfig,
+) -> DataFusionResult<Transformed<LogicalPlan>> {
+    let apply_order = inner.apply_order().unwrap_or(ApplyOrder::TopDown);
+    plan.rewrite_with_subqueries(&mut InnerRuleWalk {
+        inner,
+        config,
+        apply_order,
+    })
+}
+
+/// `TreeNodeRewriter` that applies one optimizer rule at `apply_order`, matching
+/// DataFusion's private `Rewriter`.
+struct InnerRuleWalk<'a> {
+    inner: &'a dyn OptimizerRule,
+    config: &'a dyn OptimizerConfig,
+    apply_order: ApplyOrder,
+}
+
+impl TreeNodeRewriter for InnerRuleWalk<'_> {
+    type Node = LogicalPlan;
+
+    fn f_down(&mut self, node: LogicalPlan) -> DataFusionResult<Transformed<LogicalPlan>> {
+        if self.apply_order == ApplyOrder::TopDown {
+            self.inner.rewrite(node, self.config)
+        } else {
+            Ok(Transformed::no(node))
+        }
+    }
+
+    fn f_up(&mut self, node: LogicalPlan) -> DataFusionResult<Transformed<LogicalPlan>> {
+        if self.apply_order == ApplyOrder::BottomUp {
+            self.inner.rewrite(node, self.config)
+        } else {
+            Ok(Transformed::no(node))
+        }
     }
 }
 
