@@ -81,10 +81,14 @@ NOT in that file is a defect, not a decision.
   (``\p{Alpha}``, ``a++``, ``[a-z&&[^b]]``, ``(?<n>a)``, …) and five that do not
   (lookahead, lookbehind, backreference, atomic group, ``\Q…\E``), which raise
   here under both UDFs.
-- [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17): leftover
+- [test_functions_gt1.py](test_functions_gt1.py) — FN-GT1 (2026-08-17) leftover
   THIN-WIRE math/string/bitwise/utf8 through `ReparkSession` Arrow `to_arrow()`
-  (value AND type). `factorial` pins Spark domain `[0, 20]` → NULL outside;
-  `getbit` aliases `bit_get`.
+  (value AND type). **GT1-FIX (2026-08-18):** ColumnOrName direction pins,
+  NULL-input rows (19 names; `regexp_count` NULL is NULL not 0), exact Arrow
+  types, unsigned-shift negative, invalid UTF-8 via unhex, `getbit` projection
+  name, `regexp_instr` idx (NULL-propagates; value ignored — live Spark
+  4.1.2), keyword forms (`numBits`/`numBucket`/`partNum`), docstring examples
+  execute. Ledger: `task/fn-gt1-ledger.md`.
 - [test_functions_w.py](test_functions_w.py) — FN-W (2026-08-15): window
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source

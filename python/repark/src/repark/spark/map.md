@@ -1050,15 +1050,16 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `functions_expr.py` (sign/ifnull/nvl/asc/desc/asc_nulls_first/desc_nulls_last/e/pi/
   negative/positive/pmod/expm1/ln/log2/log1p/degrees/radians/nvl2/nullif/equal_null/
   zeroifnull/nullifzero/isnotnull/cbrt). Deferred: typeof/bround/conv (charter);
-  rint/factorial/bin/hex/unhex (`call_scalar` allow-list — no crates/ edit);
   asc_nulls_last/desc_nulls_first (`_sort_specs` couples nulls to ascending).
+  **FN-GT1 shipped** rint/factorial/bin/hex/unhex.
   Pins: `tests/test_functions_a.py`. **Z-4 / Y-5 SAF-001:**
   `_scalar` wrappers). **FN-B (2026-08-15):** 21 string names in
   `functions_expr.py` (lcase/ucase/char/char_length/character_length/substring/substr/
   left/right/contains/like/ilike/regexp_like/rlike/regexp/btrim/startswith/endswith/
   printf/replace/quote). Deferred: regexp_extract_all/regexp_substr (charter);
-  split_part/regexp_count/regexp_instr/bit_length/octet_length/to_char/to_varchar
-  (`call_scalar` allow-list — no crates/ edit). Pins: `tests/test_functions_b.py`.
+  to_char/to_varchar (`call_scalar` allow-list — no crates/ edit).
+  **FN-GT1 shipped** split_part/regexp_count/regexp_instr/bit_length/octet_length.
+  Pins: `tests/test_functions_b.py`.
 - `functions_window.py` — **FN-W (2026-08-15):** 5 window names (`lag` /
   `lead` / `nth_value` / `percent_rank` / `cume_dist`) over DF 54.1 UDWFs via
   `PyColumn.window_udwf` (no IntegerType cast). Python owns PySpark signatures;
@@ -1113,12 +1114,14 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   names + `getbit` alias. Math wrappers in new `functions_math.py`; bitwise
   leftovers in `functions_bitwise.py`; string/utf8 leftovers in
   `functions_expr.py`. Binder arms in `column/function_dispatch.rs`.
+  **GT1-FIX (2026-08-18):** ColumnOrName wiring (G1–G8), oracle pins (P1–P5),
+  docstring examples (F3), `lit_indices` sweep. Ledger: `task/fn-gt1-ledger.md`.
   **FN-F (2026-08-15):** 10 try/session/bitwise names in `functions_bitwise.py` +
   `functions_session.py` (bitwise_not/bitwiseNOT, broadcast, current_user/user,
   current_catalog/current_database/current_schema, version, uuid). Deferred:
-  remaining try_* / to_number / to_binary (charter); bit_count/getbit/shift*
-  (`call_scalar` allow-list — no crates/ edit); assert_true (`raise_error` is
-  construction-time UOE). Pins: `tests/test_functions_f.py`.
+  remaining try_* / to_number / to_binary (charter); assert_true (`raise_error` is
+  construction-time UOE). **FN-GT1 shipped** bit_count/getbit/shift*. Pins:
+  `tests/test_functions_f.py`.
   **Z-4 / Y-5 SAF-001:**
   `_thread_origin` copies `_origin_plan_id` / `_origin_field` (and wrappers set
   `join_sql_expr`) through `abs`, `_scalar`, `_date_fn`, `coalesce`, `concat`,

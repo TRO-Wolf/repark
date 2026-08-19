@@ -59,12 +59,11 @@ both facts (Spark refuse + repark `getitem` still serves maps). Impl unchanged.
 - ~~Q-010: `parse_url` / `try_parse_url` / `str_to_map` bare-`str` part/key/delim
   is a convenience lit; Spark 4.1.2 `ColumnOrName` binds a column of that name.
   Pass `F.col(...)` for the Spark column-name path. ACCEPTED_FLAGGED S2.~~
-  **CLOSED for `parse_url` / `try_parse_url` (X3) and `get` (X4).** `str_to_map`'s
-  delimiters KEEP the literal wrap on purpose: PySpark's own signature is
-  `str_to_map(text, pairDelim: str = ',', keyValueDelim: str = ':')` — a plain
-  `str`, not `ColumnOrName` — so a bare `str` there is a delimiter, not a column
-  name. `element_at`'s `str` map key likewise stays literal (W1), and the two
-  docstrings now say which rule each one follows.
+  **CLOSED for `parse_url` / `try_parse_url` (X3) and `get` (X4).**
+  **STRUCK for `str_to_map` (GT1-FIX, 2026-08-18):** live PySpark 4.1.2 types
+  `pairDelim` / `keyValueDelim` as `Optional[ColumnOrName]`, not `str`. A
+  user-supplied bare `str` is a column name; only the omitted-arg defaults
+  stay literal `,` / `:`. `element_at`'s `str` map key remains a literal (W1).
 - ~~`parse_url` QUERY 3rd arg: Spark compiles an unquoted Java `Pattern`; DF is
   exact key equality. Pin: `'f.o'` on `?foo=1` → NULL (Spark `'1'`). DF-owned.~~
   **CLOSED (X8)** — the re-kernel compiles `(&|^)<key>=([^&]*)` and returns group
@@ -332,10 +331,9 @@ PySpark 4.1.2 spellings (DOC-SPARK):
 | X5 | the same three positionally | works | works (unchanged) | MEASURED-FIX |
 | X12 | `F.url_encode("raw")` / `F.url_decode("enc")` / `F.try_url_decode("enc")` by column name | works | works | MEASURED-FIX |
 
-**Deliberately NOT changed**, with the reason recorded rather than left implicit:
-`str_to_map`'s `pairDelim` / `keyValueDelim` (PySpark types them plain `str` with
-`','` / `':'` defaults — a bare `str` is a delimiter) and `element_at`'s `str` map
-key (W1). Both docstrings now state which rule they follow.
+**Deliberately NOT changed (GT2):** `element_at`'s `str` map key (W1).
+**STRUCK for `str_to_map` (GT1-FIX):** live 4.1.2 `pairDelim`/`keyValueDelim`
+are `ColumnOrName`; a user-supplied bare `str` is a column name.
 
 **MEASURED-MUTANT** (each fix reverted separately, no rebuild):
 
@@ -841,11 +839,8 @@ are kept — the point is that both directions now exist.
 ## X12 — column-name direction, everywhere it applies
 
 Covered above: `parse_url` / `try_parse_url` (X3), `get` (X4), `url_encode` /
-`url_decode` / `try_url_decode` (X5/X11), plus the deliberate non-changes
-(`str_to_map` delimiters, `element_at` key) with their reasons recorded in the
-Residuals list. The two lit-only signatures the prior battery flagged were exactly
-Q-010's set; nothing else in the 18 GT2 names takes a `ColumnOrName` that is still
-force-lit.
+`url_decode` / `try_url_decode` (X5/X11), plus `element_at` key (W1).
+`str_to_map` delimiters were **STRUCK in GT1-FIX** (live `ColumnOrName`).
 
 ## X13 — false claims STRUCK
 

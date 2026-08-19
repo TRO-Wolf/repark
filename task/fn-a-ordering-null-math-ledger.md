@@ -41,11 +41,11 @@ Registry / STATUS / lockfiles / `.github` / board / `crates/` closed.
 | nullifzero | SHIM `nullif(col, lit(0))` | SHIPPED |
 | isnotnull | SHIM `~isnull(col)` | SHIPPED |
 | cbrt | SHIM `pow(col, 1/3)` | SHIPPED with negative arm `-pow(-col, 1/3)` (IEEE `pow` is NaN on negatives) |
-| rint | THIN-WIRE | **DEFERRED** — HALF_EVEN kernel; existing `round` is HALF_UP; no `call_scalar` arm |
-| factorial | THIN-WIRE | **DEFERRED** — no `call_scalar` arm; no honest shim |
-| bin | THIN-WIRE | **DEFERRED** — no `call_scalar` arm; `PyColumn.sql` cannot bind columns |
-| hex | THIN-WIRE | **DEFERRED** — same |
-| unhex | THIN-WIRE | **DEFERRED** — same |
+| rint | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| factorial | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| bin | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| hex | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
+| unhex | THIN-WIRE | **SHIPPED FN-GT1** (2026-08-17); GT1-FIX 2026-08-18 |
 | asc_nulls_last | SEMANTIC-HAZARD | **DEFERRED** — `_sort_specs` sets `nulls_first = ascending` and ignores `_sort_nulls_first`; shipping a Column flag that `orderBy` drops is a lie. Out of T3 file grant (`dataframe/core.py`). |
 | desc_nulls_first | SEMANTIC-HAZARD | **DEFERRED** — same |
 | typeof | ENGINE-WORK | **DEFERRED** (charter; do not implement) |

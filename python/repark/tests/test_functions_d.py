@@ -22,7 +22,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
 
@@ -94,11 +94,19 @@ def test_datepart_alias_of_date_part(spark: ReparkSession) -> None:
     assert callable(F.datepart)
     frame = spark.sql("SELECT DATE '2020-02-29' AS d")
     table = _table(
-        frame.select(F.datepart("YEAR", "d").alias("a"), F.date_part("YEAR", "d").alias("b"))
+        frame.select(
+            F.datepart(F.lit("YEAR"), "d").alias("a"),
+            F.date_part(F.lit("YEAR"), "d").alias("b"),
+        )
     )
     assert table.column("a").to_pylist() == table.column("b").to_pylist() == [2020]
     assert table.schema.field("a").type == table.schema.field("b").type
     assert pa.types.is_integer(table.schema.field("a").type)
+    # Sweep FIX: a bare str field is a column name (Spark 4.1.2). DF's kernel
+    # still requires a constant field *value*, so the discriminating pin is
+    # unresolved-column vs F.lit('YEAR').
+    with pytest.raises(AnalysisException, match="No field named"):
+        frame.select(F.date_part("YEAR", "d")).to_arrow()
 
 
 def test_to_unix_timestamp_aliases_unix_timestamp_loud_gap() -> None:

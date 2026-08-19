@@ -55,8 +55,8 @@ def test_datetime_batch3_ok_pins(spark: ReparkSession) -> None:
         hour("t").alias("h"),
         minute("t").alias("mi"),
         second("t").alias("s"),
-        date_part("year", "d").alias("dp"),
-        extract("month", "d").alias("ex"),
+        date_part(lit("year"), "d").alias("dp"),
+        extract(lit("month"), "d").alias("ex"),
         timestamp_seconds(lit(0)).alias("ts0"),
         timestamp_millis(lit(0)).alias("tm0"),
     ).to_arrow()

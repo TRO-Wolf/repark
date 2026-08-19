@@ -98,9 +98,9 @@ def test_contains_startswith_endswith(spark: ReparkSession) -> None:
     frame = spark.createDataFrame([("Spark SQL",), ("hello",)], ["s"])
     table = _table(
         frame.select(
-            F.contains("s", "SQL").alias("c"),
-            F.startswith("s", "Spa").alias("st"),
-            F.endswith("s", "SQL").alias("en"),
+            F.contains("s", F.lit("SQL")).alias("c"),
+            F.startswith("s", F.lit("Spa")).alias("st"),
+            F.endswith("s", F.lit("SQL")).alias("en"),
         )
     )
     assert table.column("c").to_pylist() == [True, False]
@@ -115,11 +115,11 @@ def test_like_ilike_regexp_family(spark: ReparkSession) -> None:
     frame = spark.createDataFrame([("Spark",), ("spark",), ("SQL",)], ["s"])
     table = _table(
         frame.select(
-            F.like("s", "Spar%").alias("lk"),
-            F.ilike("s", "spar%").alias("il"),
-            F.regexp_like("s", "^S").alias("rl"),
-            F.rlike("s", "^S").alias("rk"),
-            F.regexp("s", "^S").alias("rg"),
+            F.like("s", F.lit("Spar%")).alias("lk"),
+            F.ilike("s", F.lit("spar%")).alias("il"),
+            F.regexp_like("s", F.lit("^S")).alias("rl"),
+            F.rlike("s", F.lit("^S")).alias("rk"),
+            F.regexp("s", F.lit("^S")).alias("rg"),
         )
     )
     assert table.column("lk").to_pylist() == [True, False, False]
@@ -132,9 +132,41 @@ def test_like_ilike_regexp_family(spark: ReparkSession) -> None:
 
 def test_btrim(spark: ReparkSession) -> None:
     frame = spark.createDataFrame([("  hi  ",), ("xxhixx",)], ["s"])
-    table = _table(frame.select(F.btrim("s").alias("a"), F.btrim("s", "x").alias("b")))
+    table = _table(frame.select(F.btrim("s").alias("a"), F.btrim("s", F.lit("x")).alias("b")))
     assert table.column("a").to_pylist()[0] == "hi"
     assert table.column("b").to_pylist()[1] == "hi"
+
+
+def test_fn_b_str_is_column_name(spark: ReparkSession) -> None:
+    """Sweep FIX: contains/like/ilike/regexp_like/btrim/starts/ends are ColumnOrName."""
+    frame = spark.createDataFrame(
+        [("xxhelloxx", "ell", "xx", "xx", "x", "%ell%", "%ELL%")],
+        ["s", "needle", "pre", "suf", "trimc", "pat", "ipat"],
+    )
+    table = _table(
+        frame.select(
+            F.contains("s", "needle").alias("c"),
+            F.contains("s", F.lit("needle")).alias("c_lit"),
+            F.like("s", "pat").alias("lk"),
+            F.ilike("s", "ipat").alias("il"),
+            F.ilike("s", F.lit("ipat")).alias("il_lit"),
+            F.startswith("s", "pre").alias("st"),
+            F.endswith("s", "suf").alias("en"),
+            F.btrim("s", "trimc").alias("bt"),
+            F.btrim("s", F.lit("trimc")).alias("bt_lit"),
+            F.regexp_like("s", "needle").alias("rl"),
+        )
+    )
+    assert table.column("c").to_pylist() == [True]
+    assert table.column("c_lit").to_pylist() == [False]
+    assert table.column("lk").to_pylist() == [True]
+    assert table.column("il").to_pylist() == [True]
+    assert table.column("il_lit").to_pylist() == [False]
+    assert table.column("st").to_pylist() == [True]
+    assert table.column("en").to_pylist() == [True]
+    assert table.column("bt").to_pylist() == ["hello"]
+    assert table.column("bt_lit").to_pylist() == ["xxhelloxx"]
+    assert table.column("rl").to_pylist() == [True]
 
 
 def test_replace_is_literal_not_regexp(spark: ReparkSession) -> None:

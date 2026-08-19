@@ -31,7 +31,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **r24 G10 / PERF-10:** crate-level `criterion` 0.8 dev-dep + `[[bench]] ratio_string_datetime`
   (never `[workspace.dependencies]`). See [benches/map.md](benches/map.md).
 - `benches/` — PERF-10 ratio micro-benches (`date_format`/`to_char`, `substring`/`upper`).
-- `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
+- `src/spark_length.rs` — **GT1-FIX G5:** Spark `bit_length` / `octet_length`
+  (stringify non-binary; BINARY pass-through; overwrite DF Utf8/Binary-exact
+  kernels). Wired from `string::functions()` + `expr_fn`. Ledger:
+  `task/fn-gt1-ledger.md`.
+- `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later)
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
   `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then

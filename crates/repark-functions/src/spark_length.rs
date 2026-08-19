@@ -1,0 +1,346 @@
+//! Spark `bit_length` / `octet_length` — stringifies non-binary inputs (G5).
+//!
+//! Spark 4.1.2 `bit_length` / `octet_length` accept STRING and BINARY, and
+//! stringify every other type (`bit_length(12)` is `16`, `bit_length(true)` is
+//! `32`). DataFusion's kernels are Utf8/Binary-exact, so an int/bool/float
+//! column fails. This shim coerces non-binary to `Utf8` then counts **bytes**
+//! (Spark `octet_length`) or `8 * bytes` (`bit_length`). `Binary` /
+//! `LargeBinary` / `BinaryView` / `FixedSizeBinary` pass through so `unhex`
+//! payloads stay bytes, not a stringified dump.
+
+use std::hash::{Hash, Hasher};
+use std::sync::Arc;
+
+use datafusion::arrow::array::{Array, ArrayRef, AsArray, Int32Array};
+use datafusion::arrow::compute::cast;
+use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
+use datafusion::common::{Result, exec_err};
+use datafusion::logical_expr::{
+    ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
+    TypeSignature, Volatility,
+};
+
+/// ===========================================================================================
+/// Spark `bit_length` UDF (overwrites DataFusion's Utf8/Binary-exact kernel).
+/// ===========================================================================================
+#[must_use]
+pub fn bit_length_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkBitLength::new()))
+}
+
+/// ===========================================================================================
+/// Spark `octet_length` UDF (overwrites DataFusion's Utf8/Binary-exact kernel).
+/// ===========================================================================================
+#[must_use]
+pub fn octet_length_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkOctetLength::new()))
+}
+
+#[derive(Debug)]
+struct SparkBitLength {
+    signature: Signature,
+}
+
+impl SparkBitLength {
+    fn new() -> Self {
+        Self {
+            signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SparkBitLength {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkBitLength {}
+
+impl Hash for SparkBitLength {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkBitLength {
+    crate::shim_udf_boilerplate!("bit_length");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Int32)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let nullable = args
+            .arg_fields
+            .first()
+            .is_none_or(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(
+            "bit_length",
+            DataType::Int32,
+            nullable,
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        coerce_length_arg(arg_types)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_length(&args, LengthKind::Bits)
+    }
+}
+
+#[derive(Debug)]
+struct SparkOctetLength {
+    signature: Signature,
+}
+
+impl SparkOctetLength {
+    fn new() -> Self {
+        Self {
+            signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SparkOctetLength {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkOctetLength {}
+
+impl Hash for SparkOctetLength {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkOctetLength {
+    crate::shim_udf_boilerplate!("octet_length");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Int32)
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        let nullable = args
+            .arg_fields
+            .first()
+            .is_none_or(|field| field.is_nullable());
+        Ok(Arc::new(Field::new(
+            "octet_length",
+            DataType::Int32,
+            nullable,
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        coerce_length_arg(arg_types)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_length(&args, LengthKind::Octets)
+    }
+}
+
+#[derive(Clone, Copy)]
+enum LengthKind {
+    Bits,
+    Octets,
+}
+
+fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
+    let Some(data_type) = arg_types.first() else {
+        return exec_err!("bit_length/octet_length expects 1 argument");
+    };
+    let coerced = match data_type {
+        DataType::Binary
+        | DataType::LargeBinary
+        | DataType::BinaryView
+        | DataType::FixedSizeBinary(_)
+        | DataType::Utf8
+        | DataType::LargeUtf8
+        | DataType::Utf8View => data_type.clone(),
+        _ => DataType::Utf8,
+    };
+    Ok(vec![coerced])
+}
+
+fn invoke_length(args: &ScalarFunctionArgs, kind: LengthKind) -> Result<ColumnarValue> {
+    let Some(arg) = args.args.first() else {
+        return exec_err!("bit_length/octet_length expects 1 argument");
+    };
+    let array = arg.to_array(args.number_rows)?;
+    let bytes = byte_lengths(array.as_ref())?;
+    let values = match kind {
+        LengthKind::Octets => bytes,
+        LengthKind::Bits => bit_lengths_from_octets(&bytes)?,
+    };
+    Ok(ColumnarValue::Array(Arc::new(values)))
+}
+
+fn bit_lengths_from_octets(bytes: &Int32Array) -> Result<Int32Array> {
+    let mut values = Vec::with_capacity(bytes.len());
+    for index in 0..bytes.len() {
+        if bytes.is_null(index) {
+            values.push(None);
+            continue;
+        }
+        let octets = bytes.value(index);
+        let Some(bits) = octets.checked_mul(8) else {
+            return exec_err!("bit_length exceeds Spark INT");
+        };
+        values.push(Some(bits));
+    }
+    Ok(values.into_iter().collect())
+}
+
+fn byte_lengths(array: &dyn Array) -> Result<Int32Array> {
+    match array.data_type() {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View => utf8_byte_lengths(array),
+        DataType::Binary | DataType::LargeBinary | DataType::BinaryView => {
+            binary_byte_lengths(array)
+        }
+        DataType::FixedSizeBinary(width) => {
+            let values: Int32Array = (0..array.len())
+                .map(|index| {
+                    if array.is_null(index) {
+                        None
+                    } else {
+                        Some(*width)
+                    }
+                })
+                .collect();
+            Ok(values)
+        }
+        _ => {
+            let as_utf8: ArrayRef = cast(array, &DataType::Utf8)?;
+            utf8_byte_lengths(as_utf8.as_ref())
+        }
+    }
+}
+
+fn spark_int_len(bytes: usize) -> Result<i32> {
+    i32::try_from(bytes).map_err(|_| {
+        datafusion::common::DataFusionError::Execution("octet_length exceeds Spark INT".to_owned())
+    })
+}
+
+fn utf8_byte_lengths(array: &dyn Array) -> Result<Int32Array> {
+    let mut values = Vec::with_capacity(array.len());
+    for index in 0..array.len() {
+        if array.is_null(index) {
+            values.push(None);
+            continue;
+        }
+        let bytes = match array.data_type() {
+            DataType::Utf8 => array.as_string::<i32>().value(index).len(),
+            DataType::LargeUtf8 => array.as_string::<i64>().value(index).len(),
+            DataType::Utf8View => array.as_string_view().value(index).len(),
+            _ => {
+                values.push(None);
+                continue;
+            }
+        };
+        values.push(Some(spark_int_len(bytes)?));
+    }
+    Ok(values.into_iter().collect())
+}
+
+fn binary_byte_lengths(array: &dyn Array) -> Result<Int32Array> {
+    let mut values = Vec::with_capacity(array.len());
+    for index in 0..array.len() {
+        if array.is_null(index) {
+            values.push(None);
+            continue;
+        }
+        let bytes = match array.data_type() {
+            DataType::Binary => array.as_binary::<i32>().value(index).len(),
+            DataType::LargeBinary => array.as_binary::<i64>().value(index).len(),
+            DataType::BinaryView => array.as_binary_view().value(index).len(),
+            _ => {
+                values.push(None);
+                continue;
+            }
+        };
+        values.push(Some(spark_int_len(bytes)?));
+    }
+    Ok(values.into_iter().collect())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use datafusion::arrow::array::AsArray;
+    use datafusion::prelude::SessionContext;
+
+    fn ctx() -> SessionContext {
+        let ctx = SessionContext::new();
+        ctx.register_udf(bit_length_udf().as_ref().clone());
+        ctx.register_udf(octet_length_udf().as_ref().clone());
+        ctx
+    }
+
+    async fn one_i32(ctx: &SessionContext, sql: &str) -> Option<i32> {
+        let batches = ctx
+            .sql(sql)
+            .await
+            .unwrap_or_else(|err| panic!("plan {sql}: {err}"))
+            .collect()
+            .await
+            .unwrap_or_else(|err| panic!("exec {sql}: {err}"));
+        let array = batches[0]
+            .column(0)
+            .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
+        if array.is_null(0) {
+            None
+        } else {
+            Some(array.value(0))
+        }
+    }
+
+    #[tokio::test]
+    async fn string_and_unicode_match_spark() {
+        let ctx = ctx();
+        assert_eq!(one_i32(&ctx, "SELECT octet_length('ab')").await, Some(2));
+        assert_eq!(one_i32(&ctx, "SELECT bit_length('ab')").await, Some(16));
+        assert_eq!(one_i32(&ctx, "SELECT octet_length('🐈')").await, Some(4));
+        assert_eq!(one_i32(&ctx, "SELECT bit_length('🐈')").await, Some(32));
+    }
+
+    #[tokio::test]
+    async fn stringify_int_and_bool_match_spark() {
+        let ctx = ctx();
+        // Spark: octet_length(12)=2 ("12"), bit_length(true)=32 ("true").
+        assert_eq!(one_i32(&ctx, "SELECT octet_length(12)").await, Some(2));
+        assert_eq!(one_i32(&ctx, "SELECT bit_length(12)").await, Some(16));
+        assert_eq!(one_i32(&ctx, "SELECT octet_length(true)").await, Some(4));
+        assert_eq!(one_i32(&ctx, "SELECT bit_length(true)").await, Some(32));
+        assert_eq!(one_i32(&ctx, "SELECT octet_length(1.5)").await, Some(3));
+        assert_eq!(one_i32(&ctx, "SELECT bit_length(1.5)").await, Some(24));
+    }
+
+    #[test]
+    fn spark_int_overflow_is_fail_loud() {
+        assert!(spark_int_len((i32::MAX as usize) + 1).is_err());
+        let too_many_octets = Int32Array::from(vec![Some(i32::MAX)]);
+        assert!(bit_lengths_from_octets(&too_many_octets).is_err());
+    }
+
+    #[tokio::test]
+    async fn null_in_null_out() {
+        let ctx = ctx();
+        assert_eq!(
+            one_i32(&ctx, "SELECT bit_length(CAST(NULL AS VARCHAR))").await,
+            None
+        );
+        assert_eq!(
+            one_i32(&ctx, "SELECT octet_length(CAST(NULL AS VARCHAR))").await,
+            None
+        );
+    }
+}

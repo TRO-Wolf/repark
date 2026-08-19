@@ -233,6 +233,18 @@ pub fn shiftrightunsigned(value: Expr, shift: Expr) -> Expr {
     spark_bitwise::shiftrightunsigned(value, shift)
 }
 
+/// Spark `bit_length(expr)` — byte-length × 8; stringifies non-binary (G5).
+#[must_use]
+pub fn bit_length(arg: Expr) -> Expr {
+    call(crate::spark_length::bit_length_udf(), vec![arg])
+}
+
+/// Spark `octet_length(expr)` — UTF-8 / binary byte length; stringifies non-binary (G5).
+#[must_use]
+pub fn octet_length(arg: Expr) -> Expr {
+    call(crate::spark_length::octet_length_udf(), vec![arg])
+}
+
 /// Spark `is_valid_utf8(expr)` (from `datafusion-spark`).
 #[must_use]
 pub fn is_valid_utf8(arg: Expr) -> Expr {
