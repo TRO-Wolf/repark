@@ -207,7 +207,8 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   Unit test: sequential sessions Arc-share the runtime.
 - `dataframe.rs` — `PyDataFrame`: wraps a DataFusion `DataFrame`; `count`; `column_names` /
   `logical_schema_fields` (post-`analyze_eagerly` metadata, **no execution**);
-  **`dynamic_flatten`** (thin bind over `repark_core::dynamic_flatten`);
+  **`dynamic_flatten`** (thin bind over `repark_core::dynamic_flatten`;
+  AnalysisException also on list-of-map `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`);
   **`analyzed_arrow_schema`** (analysis-only Arrow C schema `PyCapsule` — physical field types for
   plan-only consumers; U7 pandas_udf pass-through / octo C6-Q-001; **P2b:** `OnceLock<SchemaRef>`
   cache on the plan handle — first `analyzed_arrow_schema_native` pays analysis, later

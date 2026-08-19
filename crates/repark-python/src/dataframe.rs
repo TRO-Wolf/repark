@@ -923,7 +923,8 @@ impl PyDataFrame {
     /// Recursively flatten nested structs (and optionally explode lists) — repark extra.
     ///
     /// # Errors
-    /// `AnalysisException` on name collision, empty-struct schema, or max-depth exhaustion.
+    /// `AnalysisException` on name collision, empty-struct schema, max-depth
+    /// exhaustion, or unsupported list-of-map elements.
     pub fn dynamic_flatten(
         &self,
         separator: String,

@@ -22,12 +22,12 @@ RePark DataFrame newtype.
 | C-004 | Struct expand is Project + null-safe CASE + `get_field`; not DF struct `unnest_columns`. | PROVEN — pin 1 reds if CASE is removed |
 | C-005 | List explode uses `UnnestOptions { preserve_nulls: false }` via `unnest_columns_with_options` + `Column::new_unqualified`. Empty lists drop under that option (no `array_length` filter needed). | PROVEN — `null_and_empty_array_values` |
 | C-006 | Every schema field binds through `Column::new_unqualified`. | PROVEN — kernel; `s.f` pin |
-| C-007 | Errors are `Error::Analysis` with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`, `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`. | PROVEN |
+| C-007 | Errors are `Error::Analysis` with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`, `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`. | PROVEN |
 | C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + `_spawn`. | PROVEN |
-| C-009 | Python tests unchanged except a native-planner comment. | PROVEN |
+| C-009 | Python tests remain the facade contract; octo C1 added native-kernel docstring / list-of-map / dotted-Unnest pins. | PROVEN |
 | C-010 | `empty_as_null` is on `DynamicFlattenOptions` (omitted from the API sketch; required by the facade contract). | PROVEN |
 | C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7191). | PROVEN |
-| C-012 | `dataframe.rs` stays under 1500 (measured 1456). | PROVEN |
+| C-012 | `dataframe.rs` stays under 1500 (measured 1457). | PROVEN |
 
 ---
 
@@ -62,9 +62,12 @@ Facade contract: `python/repark/tests/test_dynamic_flatten.py` (unchanged assert
 - `python/repark/src/repark/spark/dataframe/plan_collapse.py`
 - `python/repark/src/repark/spark/dataframe/map.md`
 - `python/repark/src/repark/spark/map.md`
-- `python/repark/tests/test_dynamic_flatten.py` (comment only)
+- `python/repark/tests/test_dynamic_flatten.py`
 - `python/repark/tests/map.md`
 - `scripts/check_lib_py.py` (ceiling DOWN)
+- `scripts/map.md`
+- `crates/repark-core/src/session/df_guards.rs`
+- `crates/repark-core/src/session/map.md`
 - `task/df1-rust-flatten-ledger.md` (this file)
 - `task/map.md`
 
@@ -74,23 +77,45 @@ Facade contract: `python/repark/tests/test_dynamic_flatten.py` (unchanged assert
 
 | Gate | Exit |
 |---|---|
-| `cargo test -p repark-core dynamic_flatten` | 0 (27 passed) |
-| `make verify` | 0 |
-| `make develop` + pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (38 passed) |
+| `cargo test -p repark-core dynamic_flatten` | 0 (32 passed; octo C1) |
+| `make verify` | 0 (octo C1) |
+| `make develop` + pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (40 passed; octo C1) |
 
 ---
 
 ## 5. Notes
 
-- Test harness uses `SessionContext` with
-  `enable_leaf_expression_pushdown = false`. Stock `SessionContext::new()` leaves
-  DF-54.1 `push_down_leaf_projections` on, which miscompiles Unnest+`get_field`
-  (DEFECT-2). `ReparkSession` wraps that rule; this kernel harness is the
-  DataFusion DataFrame API.
+- Kernel harness uses `ReparkSession` (leaf pushdown ON, wrapped by
+  `UnnestSafeLeafProjectionPushdown`). Pin: `kernel_harness_installs_unnest_safe_leaf_pushdown`.
+  Disabling the flag instead of installing the wrapper is the blanket skip the
+  session pins forbid.
 - `preserve_nulls: false` **does** drop empty lists (pin decides: no extra
   `array_length` filter).
-- Maps are not unnested. Dictionary of Struct/List unwraps one level so the
-  walk does not skip Parquet dict-structs.
+- Maps are not unnested. List-of-map refuses LOUD
+  (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`). Dictionary of Struct/List unwraps
+  one level so the walk does not skip Parquet dict-structs; dict-lists are
+  **cast** to List before Unnest.
 - `UnnestSafeLeafProjectionPushdown` now owns the inner rule's TopDown walk
   (`apply_order = None`). Per-node `rewrite` missed `Unnest` child reconstruction
   errors on native Unnest+`get_field` plans. Existing DEFECT-2 pins stay green.
+
+---
+
+## 6. Octo cycle 1 (Half B)
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| C1-Q-001 | REMEDIATED | `test_dynamic_flatten_docstring_describes_native_kernel` |
+| C1-Q-002 | REMEDIATED | `list_of_map_refuses_loud` + `test_dynamic_flatten_map_element_still_refuses_loud` (`dynamicFlatten`) |
+| C1-Q-003 | REMEDIATED | `plan_build_does_not_execute` (`ScanForbidden`) |
+| C1-SEC-001 | REMEDIATED | `dotted_list_column_unnest_uses_unqualified_bind` + `test_custom_separator_list_column_unnest` |
+| C1-L-001 | REMEDIATED | `null_parent_struct_fields_are_null_not_zero` (dirty children) |
+| C1-L-002 | REMEDIATED | GA4 docstring no longer claims the guard; kernel `multi_pass_flatten_then_project_survives_leaf_pushdown` |
+| C1-L-003 | REMEDIATED | `kernel_harness_installs_unnest_safe_leaf_pushdown` |
+| C1-L-004 | REMEDIATED | `dictionary_list_is_unwrapped_one_level` |
+| C1-CL-001 | REMEDIATED | ledger link `../../../../task/…` |
+| C1-CL-002 | REMEDIATED | fence lists `scripts/map.md`, `df_guards.rs`, `session/map.md` |
+| C1-CL-003 | REMEDIATED | spark `map.md` region text |
+| C1-CL-004 | REMEDIATED | `Authored-By: Grok (grok-4.6)` on this commit |
+| C1-CL-005 | DEFERRED | skip (historical c25 ledger) |
+| C1-CL-006 | REMEDIATED | `task/map.md` Live unit ledgers row |

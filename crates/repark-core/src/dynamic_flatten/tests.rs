@@ -6,13 +6,18 @@
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, ArrayRef, DictionaryArray, Int32Array, Int64Array, ListArray, MapArray, NullArray,
-    StringArray, StructArray,
+    Array, ArrayRef, BooleanArray, DictionaryArray, Float64Array, Int32Array, Int64Array,
+    ListArray, MapArray, NullArray, StringArray, StructArray,
 };
 use arrow::buffer::{NullBuffer, OffsetBuffer, ScalarBuffer};
-use arrow::datatypes::{DataType, Field, Fields, Int32Type, Schema};
+use arrow::datatypes::{DataType, Field, Fields, Int32Type, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
-use datafusion::prelude::{SessionConfig, SessionContext};
+use async_trait::async_trait;
+use datafusion::catalog::{Session, TableProvider};
+use datafusion::datasource::TableType;
+use datafusion::error::DataFusionError;
+use datafusion::physical_plan::ExecutionPlan;
+use datafusion::prelude::SessionContext;
 use repark_common::Error;
 
 use super::{DynamicFlattenOptions, dynamic_flatten};
@@ -22,16 +27,13 @@ fn options() -> DynamicFlattenOptions {
 }
 
 fn test_context() -> SessionContext {
-    // `SessionContext::new()` leaves DF-54.1 `push_down_leaf_projections` on, which
-    // miscompiles Unnest+get_field (DEFECT-2). ReParkSession wraps that rule; this
-    // kernel harness is the DataFusion DataFrame API, so the broken pass is off here
-    // so collect can pin values. Schema-only assertions do not need the wrap.
-    let mut config = SessionConfig::new();
-    config
-        .options_mut()
-        .optimizer
-        .enable_leaf_expression_pushdown = false;
-    SessionContext::new_with_config(config)
+    // Same optimizer surface as ReparkSession: leaf pushdown stays ON, wrapped by
+    // UnnestSafeLeafProjectionPushdown (DEFECT-2). Disabling the flag instead is
+    // the blanket skip the session pins forbid.
+    crate::ReparkSession::new()
+        .expect("ReparkSession")
+        .context()
+        .clone()
 }
 
 fn read_batch(batch: RecordBatch) -> datafusion::prelude::DataFrame {
@@ -69,6 +71,14 @@ fn i64_array(values: Vec<Option<i64>>) -> ArrayRef {
 
 fn utf8_array(values: Vec<Option<&str>>) -> ArrayRef {
     Arc::new(StringArray::from(values))
+}
+
+fn bool_array(values: Vec<Option<bool>>) -> ArrayRef {
+    Arc::new(BooleanArray::from(values))
+}
+
+fn f64_array(values: Vec<Option<f64>>) -> ArrayRef {
+    Arc::new(Float64Array::from(values))
 }
 
 fn struct_array(
@@ -179,6 +189,52 @@ fn assert_utf8(batch: &RecordBatch, name: &str) {
     );
 }
 
+fn bool_cells(batch: &RecordBatch, name: &str) -> Vec<Option<bool>> {
+    let array = batch
+        .column_by_name(name)
+        .unwrap_or_else(|| panic!("missing column {name}"));
+    let flags = array
+        .as_any()
+        .downcast_ref::<BooleanArray>()
+        .unwrap_or_else(|| panic!("{name} is not Boolean, got {:?}", array.data_type()));
+    (0..flags.len())
+        .map(|index| {
+            if flags.is_null(index) {
+                None
+            } else {
+                Some(flags.value(index))
+            }
+        })
+        .collect()
+}
+
+fn f64_cells(batch: &RecordBatch, name: &str) -> Vec<Option<f64>> {
+    let array = batch
+        .column_by_name(name)
+        .unwrap_or_else(|| panic!("missing column {name}"));
+    let floats = array
+        .as_any()
+        .downcast_ref::<Float64Array>()
+        .unwrap_or_else(|| panic!("{name} is not Float64, got {:?}", array.data_type()));
+    (0..floats.len())
+        .map(|index| {
+            if floats.is_null(index) {
+                None
+            } else {
+                Some(floats.value(index))
+            }
+        })
+        .collect()
+}
+
+fn assert_boolean(batch: &RecordBatch, name: &str) {
+    assert_eq!(
+        field_type(batch, name),
+        DataType::Boolean,
+        "{name} Arrow type is not Boolean"
+    );
+}
+
 fn analysis_token(result: Result<datafusion::prelude::DataFrame, Error>, token: &str) {
     match result {
         Err(Error::Analysis(message)) => {
@@ -193,20 +249,26 @@ fn analysis_token(result: Result<datafusion::prelude::DataFrame, Error>, token: 
 // =================================================================================================
 
 /// Pin 1: null parent struct → NULL leaves, not 0/""/false. Removing the CASE must red this.
+/// Children at the parent-null slot are *dirty* (Some(0)/Some("")/Some(false)): `get_field`
+/// returns the raw child column and would leak those values without the CASE.
 #[tokio::test]
 async fn null_parent_struct_fields_are_null_not_zero() {
     let outer = struct_array(
         vec![
-            ("x", DataType::Int64, i64_array(vec![None, Some(5), None])),
+            (
+                "x",
+                DataType::Int64,
+                i64_array(vec![Some(0), Some(5), None]),
+            ),
             (
                 "label",
                 DataType::Utf8,
-                utf8_array(vec![None, Some("ok"), None]),
+                utf8_array(vec![Some(""), Some("ok"), None]),
             ),
             (
                 "flag",
-                DataType::Int64,
-                i64_array(vec![None, Some(1), None]),
+                DataType::Boolean,
+                bool_array(vec![Some(false), Some(true), None]),
             ),
         ],
         Some(vec![false, true, true]),
@@ -232,9 +294,9 @@ async fn null_parent_struct_fields_are_null_not_zero() {
         utf8_cells(&table, "outer_label"),
         [None, Some("ok".to_string()), None]
     );
-    assert_eq!(i64_cells(&table, "outer_flag"), [None, Some(1), None]);
+    assert_eq!(bool_cells(&table, "outer_flag"), [None, Some(true), None]);
     assert_int64(&table, "outer_x");
-    assert_int64(&table, "outer_flag");
+    assert_boolean(&table, "outer_flag");
     assert_utf8(&table, "outer_label");
 }
 
@@ -870,6 +932,41 @@ async fn custom_separator_names_column_literally() {
     assert_eq!(i64_cells(&table, "s.f"), [Some(3)]);
 }
 
+/// C1-SEC-001: `separator="."` produces a list column named `wrap.nums`.
+/// `DataFrame::unnest_columns` / `Column::from(&str)` would parse that as qualified
+/// `wrap`.`nums` and fail. Unnest must bind through `Column::new_unqualified`.
+#[tokio::test]
+async fn dotted_list_column_unnest_uses_unqualified_bind() {
+    let nums = list_of(
+        DataType::Int64,
+        [0, 2],
+        i64_array(vec![Some(1), Some(2)]),
+        None,
+    );
+    let wrap = struct_array(vec![("nums", nums.data_type().clone(), nums)], None);
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "wrap",
+            wrap.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(wrap)],
+    )
+    .expect("batch");
+
+    let frame = flatten(
+        batch,
+        DynamicFlattenOptions {
+            separator: ".".to_string(),
+            ..options()
+        },
+    );
+    assert_eq!(column_names(&frame), ["wrap.nums"]);
+    let table = collect_one(frame).await;
+    assert_eq!(i64_cells(&table, "wrap.nums"), [Some(1), Some(2)]);
+    assert_int64(&table, "wrap.nums");
+}
+
 #[tokio::test]
 async fn already_flat_is_idempotent() {
     let batch = RecordBatch::try_new(
@@ -893,23 +990,53 @@ async fn already_flat_is_idempotent() {
     assert_eq!(i64_cells(&table, "a"), [Some(1)]);
 }
 
+/// A [`TableProvider`] whose `scan` fails. Plan rewrite must never reach it.
+#[derive(Debug)]
+struct ScanForbidden {
+    schema: SchemaRef,
+}
+
+#[async_trait]
+impl TableProvider for ScanForbidden {
+    fn schema(&self) -> SchemaRef {
+        Arc::clone(&self.schema)
+    }
+
+    fn table_type(&self) -> TableType {
+        TableType::Base
+    }
+
+    async fn scan(
+        &self,
+        _state: &dyn Session,
+        _projection: Option<&Vec<usize>>,
+        _filters: &[datafusion::logical_expr::Expr],
+        _limit: Option<usize>,
+    ) -> datafusion::common::Result<Arc<dyn ExecutionPlan>> {
+        Err(DataFusionError::Internal(
+            "scan invoked; dynamic_flatten executed the plan".to_string(),
+        ))
+    }
+}
+
 #[test]
 fn plan_build_does_not_execute() {
-    let nested = struct_array(
-        vec![("v", DataType::Int64, i64_array(vec![Some(99)]))],
-        None,
-    );
-    let batch = RecordBatch::try_new(
-        Arc::new(Schema::new(vec![
-            Field::new("id", DataType::Int64, false),
-            Field::new("nested", nested.data_type().clone(), true),
-        ])),
-        vec![i64_array(vec![Some(1)]), Arc::new(nested)],
-    )
-    .expect("batch");
-
-    let frame = flatten(batch, options());
-    assert_eq!(column_names(&frame), ["id", "nested_v"]);
+    let nested = DataType::Struct(Fields::from(vec![Field::new("v", DataType::Int64, true)]));
+    let xs = DataType::List(Arc::new(Field::new("item", DataType::Int64, true)));
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("id", DataType::Int64, false),
+        Field::new("nested", nested, true),
+        Field::new("xs", xs, true),
+    ]));
+    let provider = Arc::new(ScanForbidden {
+        schema: Arc::clone(&schema),
+    });
+    let frame = test_context()
+        .read_table(provider)
+        .expect("read_table is plan-only");
+    let planned = dynamic_flatten(frame, options())
+        .expect("dynamic_flatten must rewrite the logical plan without scanning (C1-Q-003)");
+    assert_eq!(column_names(&planned), ["id", "nested_v", "xs"]);
 }
 
 #[tokio::test]
@@ -983,6 +1110,36 @@ async fn dictionary_struct_is_unwrapped_one_level() {
     assert_eq!(i64_cells(&table, "wrapped_x"), [Some(7)]);
 }
 
+/// C1-L-004: `list_element_type` unwraps Dictionary for detection; Unnest still needs
+/// the column cast to the List value type. Skipping the cast reds this (DF rejects
+/// Dictionary).
+#[tokio::test]
+async fn dictionary_list_is_unwrapped_one_level() {
+    let values = list_of(
+        DataType::Int64,
+        [0, 2],
+        i64_array(vec![Some(1), Some(2)]),
+        None,
+    );
+    let keys = Int32Array::from(vec![Some(0)]);
+    let dictionary = DictionaryArray::<Int32Type>::try_new(keys, values).expect("dict");
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "nums",
+            dictionary.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(dictionary)],
+    )
+    .expect("batch");
+
+    let frame = flatten(batch, options());
+    assert_eq!(column_names(&frame), ["nums"]);
+    let table = collect_one(frame).await;
+    assert_eq!(i64_cells(&table, "nums"), [Some(1), Some(2)]);
+    assert_int64(&table, "nums");
+}
+
 #[tokio::test]
 async fn map_column_is_not_unnested() {
     let keys = StringArray::from(vec!["k"]);
@@ -1023,6 +1180,50 @@ async fn map_column_is_not_unnested() {
     assert!(
         matches!(field_type(&table, "m"), DataType::Map(_, _)),
         "map column must stay a map"
+    );
+}
+
+/// C1-Q-002: `array<map<…>>` must refuse LOUD. Native Unnest would succeed and
+/// fail-open vs the old `explode_outer` CAST refuse.
+#[test]
+fn list_of_map_refuses_loud() {
+    let keys = StringArray::from(vec!["k"]);
+    let items = StringArray::from(vec!["v"]);
+    let entries = StructArray::try_new(
+        Fields::from(vec![
+            Field::new("key", DataType::Utf8, false),
+            Field::new("value", DataType::Utf8, true),
+        ]),
+        vec![Arc::new(keys), Arc::new(items)],
+        None,
+    )
+    .expect("entries");
+    let map = MapArray::try_new(
+        Arc::new(Field::new(
+            "entries",
+            DataType::Struct(entries.fields().clone()),
+            false,
+        )),
+        OffsetBuffer::new(ScalarBuffer::from(vec![0, 1])),
+        entries,
+        None,
+        false,
+    )
+    .expect("map");
+    let maps = list_of(map.data_type().clone(), [0, 1], Arc::new(map), None);
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "m",
+            maps.data_type().clone(),
+            true,
+        )])),
+        vec![maps],
+    )
+    .expect("batch");
+
+    analysis_token(
+        dynamic_flatten(read_batch(batch), options()),
+        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]",
     );
 }
 
@@ -1083,4 +1284,76 @@ async fn scalar_array_inside_array_element_struct() {
     );
     assert_eq!(i64_cells(&table, "a_nums"), [Some(1), Some(2), None]);
     assert_int64(&table, "a_nums");
+}
+
+/// C1-L-003: the kernel harness must install [`crate::ReparkSession`]'s wrapper with leaf
+/// pushdown left ON — not `enable_leaf_expression_pushdown = false`.
+#[test]
+fn kernel_harness_installs_unnest_safe_leaf_pushdown() {
+    let context = test_context();
+    assert!(
+        context
+            .copied_config()
+            .options()
+            .optimizer
+            .enable_leaf_expression_pushdown,
+        "kernel harness must keep leaf pushdown ON and wrap the rule, not disable it"
+    );
+    let wrapped = context
+        .state()
+        .optimizers()
+        .iter()
+        .find(|rule| rule.name() == "push_down_leaf_projections")
+        .map(|rule| format!("{rule:?}"))
+        .expect("leaf-projection rule");
+    assert!(
+        wrapped.contains("UnnestSafeLeafProjectionPushdown"),
+        "kernel harness must install ReparkSession's UnnestSafe wrapper, got {wrapped}"
+    );
+}
+
+/// C1-L-002: flatten then project-away the last explode. Stock DF-54.1
+/// `push_down_leaf_projections` miscompiles this shape (DEFECT-2). Green only
+/// because `test_context` installs `UnnestSafeLeafProjectionPushdown`.
+#[tokio::test]
+async fn multi_pass_flatten_then_project_survives_leaf_pushdown() {
+    let fill = struct_array(
+        vec![("f", DataType::Float64, f64_array(vec![Some(1.0)]))],
+        None,
+    );
+    let fills = list_of(fill.data_type().clone(), [0, 1], Arc::new(fill), None);
+    let leg = struct_array(
+        vec![
+            ("leg_id", DataType::Int64, i64_array(vec![Some(1)])),
+            ("Fills", fills.data_type().clone(), fills),
+        ],
+        None,
+    );
+    let legs = list_of(leg.data_type().clone(), [0, 1], Arc::new(leg), None);
+    let tags = list_of(
+        DataType::Utf8,
+        [0, 2],
+        utf8_array(vec![Some("a"), Some("b")]),
+        None,
+    );
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("Legs", legs.data_type().clone(), true),
+            Field::new("Tags", tags.data_type().clone(), true),
+        ])),
+        vec![i64_array(vec![Some(1)]), legs, tags],
+    )
+    .expect("batch");
+
+    let frame = flatten(batch, options());
+    assert_eq!(
+        column_names(&frame),
+        ["id", "Legs_leg_id", "Legs_Fills_f", "Tags"]
+    );
+    let projected = frame
+        .select(vec![super::project_as("Legs_Fills_f")])
+        .expect("select");
+    let table = collect_one(projected).await;
+    assert_eq!(f64_cells(&table, "Legs_Fills_f"), [Some(1.0), Some(1.0)]);
 }

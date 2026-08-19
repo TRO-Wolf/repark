@@ -226,7 +226,11 @@ NOT in that file is a defect, not a decision.
   name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
   in-place column order;
   idempotence on already-flat; both method names; custom separator; explode_lists=False;
-  schema-walk + plan-build collect/count/to_arrow spy pin. Arrow value+type pins. (octo: trailing newline W292.)
+  schema-walk + plan-build collect/count/to_arrow spy pin; native-kernel
+  docstring pin; dotted-separator list Unnest pin. Arrow value+type pins.
+  (octo: trailing newline W292.) **C1-Q-002:** map-element refuse pins
+  `dynamicFlatten` (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`) **and**
+  `explode_outer` CAST spelling.
   **DEFECT-2 (2026-08-18):** projection over a multi-pass flatten — the full 15-subset matrix
   value-checked against the whole-frame export in BOTH explode orders, `count()`/`agg`, the GA4
   real shape flatten-then-project (coverage, not a reproduction: measured green on BASE), and

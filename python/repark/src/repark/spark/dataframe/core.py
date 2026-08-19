@@ -6118,21 +6118,21 @@ class DataFrame:
           * ``max_depth=100`` — hard bound. Unlike the polars reference (silent leave-nested),
             repark **refuses LOUD** if nested work remains after the cap (never silent truncate).
 
-        Algorithm (schema-only walks — no forced ``collect``; native plan rewrite):
-          1. Read :attr:`schema` (logical / analyzed; no row execution).
-          2. If any top-level ``StructType`` columns exist, expand each field as
+        Algorithm (schema-only walks — no forced ``collect``; native plan rewrite
+        in ``repark_core::dynamic_flatten``):
+          1. Walk the logical schema (no row execution).
+          2. If any top-level struct columns exist, expand each field as
              ``{parent}{separator}{field}`` via null-safe ``get_field`` projection
              (``CASE WHEN parent IS NULL THEN <typed null> ELSE get_field(parent, field) END``),
-             drop the parent struct column, and re-read schema (nested structs surface next pass).
+             drop the parent struct column, and continue (nested structs surface next pass).
           3. Else if ``explode_lists`` and list columns remain: drop ``array<void>`` when
-             ``drop_null_lists``. Remaining lists — including void — explode with
-             ``empty_as_null`` (True uses ``explode_outer``; False keeps NULL lists and
-             drops EMPTY). Void elements have no CAST spelling; the NULL-guard is
-             untyped ``make_array(NULL)``. Under True, empty or null void siblings
-             become one null-element row and cannot cartesian-drop typed sibling
-             lists. Under False, EMPTY void lists still drop (polars ≥2.0),
-             including rows that carry typed sibling lists; NULL void lists are
-             kept. Re-read next pass.
+             ``drop_null_lists``. Remaining lists rewrite null/empty via a typed
+             singleton-null list (``empty_as_null=True``: NULL and EMPTY; ``False``:
+             NULL only) and explode in place with DataFusion ``Unnest``
+             (``preserve_nulls=False``, ``Column::new_unqualified``). Empty lists
+             therefore drop under False (polars ≥2.0), including EMPTY void siblings
+             that carry typed lists; NULL void lists are kept. List-of-map refuses
+             LOUD. Re-walk next pass.
           4. Else break (fully flat under the chosen flags).
 
         Name collisions: the parent-path prefix is the disambiguator. If a prefixed name still

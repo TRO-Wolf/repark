@@ -40,7 +40,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   type-gate + `_spawn(self._plan().dynamic_flatten(...))` over
   `repark_core::dynamic_flatten`. `empty_as_null=True` keeps NULL+EMPTY lists as
   a null-element row; False keeps NULL and drops EMPTY. Void lists drop when
-  `drop_null_lists=True`.
+  `drop_null_lists=True`. List-of-map refuses LOUD
+  (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`). Docstring describes the native
+  Unnest rewrite (not the retired SQL `explode_outer` / `make_array(NULL)` path).
   **DF-2 W-1:** the `schema` flat-column type mapper also accepts the Arrow Debug
   spelling `Null` (every flat void column carries it — a plain `SELECT NULL`
   literal included, not just an exploded void column), so `.schema` / `.dtypes`
@@ -142,9 +144,9 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (DF1 native flatten): `core.py` 7191 of 7225 (ceiling
-  ratcheted DOWN after the Python planner loop was deleted), `plan_collapse.py`
-  1360 of 2500.
+- Live file sizes (DF1 native flatten / octo C1): `core.py` stays under the
+  7225 ceiling (docstring retargeted to the native Unnest rewrite),
+  `plan_collapse.py` 1360 of 2500.
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).

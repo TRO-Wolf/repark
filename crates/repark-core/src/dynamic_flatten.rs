@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use arrow::datatypes::{DataType, Fields};
 use datafusion::common::{Column, ScalarValue, UnnestOptions};
-use datafusion::logical_expr::{Expr, LogicalPlanBuilder, or, when};
+use datafusion::logical_expr::{Expr, LogicalPlanBuilder, cast, or, when};
 use datafusion::prelude::{DataFrame, array_length, get_field, lit, make_array};
 
 use crate::{Error, Result, engine_err};
@@ -70,7 +70,8 @@ struct ExpandedField {
 /// # Errors
 ///
 /// [`Error::Analysis`] with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`,
-/// `[DYNAMIC_FLATTEN_MAX_DEPTH]`, or `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`.
+/// `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, or
+/// `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`.
 pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Result<DataFrame> {
     let DynamicFlattenOptions {
         separator,
@@ -216,22 +217,30 @@ fn explode_lists_in_schema_order(
     drop_null_lists: bool,
     empty_as_null: bool,
 ) -> Result<DataFrame> {
-    let list_columns: Vec<(String, DataType)> = frame
+    let list_columns: Vec<(String, DataType, DataType)> = frame
         .schema()
         .fields()
         .iter()
         .filter_map(|field| {
-            list_element_type(field.data_type())
-                .map(|element| (field.name().clone(), element.clone()))
+            list_element_type(field.data_type()).map(|element| {
+                (
+                    field.name().clone(),
+                    field.data_type().clone(),
+                    element.clone(),
+                )
+            })
         })
         .collect();
 
-    for (name, element_type) in list_columns {
+    for (name, column_type, element_type) in list_columns {
         if drop_null_lists && matches!(element_type, DataType::Null) {
             frame = drop_unqualified_column(frame, &name)?;
             continue;
         }
-        frame = explode_one_list(frame, &name, empty_as_null, &element_type)?;
+        if is_map_type(&element_type) {
+            return Err(map_element_refused(&name));
+        }
+        frame = explode_one_list(frame, &name, empty_as_null, &column_type, &element_type)?;
     }
     Ok(frame)
 }
@@ -243,9 +252,12 @@ fn explode_one_list(
     frame: DataFrame,
     name: &str,
     empty_as_null: bool,
+    column_type: &DataType,
     element_type: &DataType,
 ) -> Result<DataFrame> {
-    let column = unqualified_expr(name);
+    // Dictionary<_, List> is a list for the walk, but DataFusion Unnest rejects
+    // Dictionary. Unwrap one level (charter) so Parquet dict-lists explode.
+    let column = list_column_as_list(name, column_type);
     let singleton_null_list = make_array(vec![typed_null_literal(element_type)?]);
     let rewritten = if empty_as_null {
         let is_empty = array_length(column.clone()).eq(lit(0_u64));
@@ -336,6 +348,16 @@ fn typed_null_literal(data_type: &DataType) -> Result<Expr> {
     Ok(lit(scalar))
 }
 
+fn list_column_as_list(name: &str, column_type: &DataType) -> Expr {
+    let column = unqualified_expr(name);
+    match column_type {
+        DataType::Dictionary(_, value) if list_element_type(value.as_ref()).is_some() => {
+            cast(column, value.as_ref().clone())
+        }
+        _ => column,
+    }
+}
+
 fn unwrap_dictionary_one_level(data_type: &DataType) -> &DataType {
     match data_type {
         DataType::Dictionary(_, value) => value.as_ref(),
@@ -371,6 +393,10 @@ fn has_list_columns(fields: &Fields) -> bool {
         .any(|field| list_element_type(field.data_type()).is_some())
 }
 
+fn is_map_type(data_type: &DataType) -> bool {
+    matches!(unwrap_dictionary_one_level(data_type), DataType::Map(_, _))
+}
+
 fn format_fields(fields: &Fields) -> String {
     fields
         .iter()
@@ -384,6 +410,14 @@ fn top_level_collision(name: &str, existing: &str) -> Error {
         "[DYNAMIC_FLATTEN_NAME_COLLISION] dynamicFlatten: column {name:?} \
          collides with {existing} (parent-path prefix could not \
          disambiguate; rename before flatten)."
+    ))
+}
+
+fn map_element_refused(name: &str) -> Error {
+    Error::Analysis(format!(
+        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT] dynamicFlatten cannot explode \
+         list of map {name:?} (maps are not unnested; explode is unsupported \
+         for map elements — cast the array or use a supported element type)."
     ))
 }
 
