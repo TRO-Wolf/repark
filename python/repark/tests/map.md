@@ -91,7 +91,8 @@ NOT in that file is a defect, not a decision.
   execute. **Round-2 (2026-08-19):** Spark SQL door `regexp_count` NULL /
   `regexp_instr` idx-ignore matrix, ARRAY refuse, decimal 5/40, STRING
   `partNum`, `getbit` SQL name, omitted-idx display `, 0`, UTF-16 empty-count
-  / ASCII ``\\d``, partNum 0 fail-loud. Ledger: `task/fn-gt1-ledger.md`.
+  / ASCII ``\\d``, partNum 0 fail-loud, Java find-loop `[0-9]*` = 6, named
+  Infinity stringify residual. Ledger: `task/fn-gt1-ledger.md`.
 - [test_functions_w.py](test_functions_w.py) — FN-W (2026-08-15): window
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source

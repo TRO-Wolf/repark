@@ -550,6 +550,8 @@ def test_regexp_utf16_and_ascii_digit_both_doors(spark: ReparkSession) -> None:
         spark.sql(
             "SELECT regexp_instr('🐈ab', 'ab') AS i, "
             "regexp_count('🐈', '') AS c, "
+            # SQL-door ``'\\d'`` is two backslash chars in the parser (campaign
+            # residual); coincidence of double-escaping still yields Java ``\d``.
             "regexp_count('٣', '\\d') AS d"
         )
     )
@@ -590,6 +592,27 @@ def test_sql_door_bit_length_refuses_array(spark: ReparkSession) -> None:
         spark.sql("SELECT bit_length(named_struct('a', 1))").to_arrow()
     with pytest.raises(AnalysisException, match=r"STRING or BINARY"):
         spark.sql("SELECT bit_length(map('a', 1))").to_arrow()
+
+
+def test_sql_door_regexp_count_zero_width_star(spark: ReparkSession) -> None:
+    """R3-3: Java find() reports empty matches after a non-empty match.
+
+    ``[0-9]*`` on ``2026-08-19`` is 6 (Spark), not the regex-crate ``find_iter`` 3.
+    """
+    table = _table(spark.sql("SELECT regexp_count('2026-08-19', '[0-9]*') AS c"))
+    assert table.column("c").to_pylist() == [6]
+    assert table.schema.field("c").type == pa.int32()
+    facade = _table(
+        spark.range(1).select(F.regexp_count(F.lit("2026-08-19"), F.lit("[0-9]*")).alias("c"))
+    )
+    assert facade.column("c").to_pylist() == [6]
+
+
+def test_sql_door_double_infinity_stringify_is_named_divergence(spark: ReparkSession) -> None:
+    """R3-4 named residual: Spark ``'Infinity'`` (octet 8); Arrow ``'inf'`` (octet 3)."""
+    table = _table(spark.sql("SELECT octet_length(CAST('Infinity' AS DOUBLE)) AS o"))
+    assert table.column("o").to_pylist() == [3]
+    assert table.schema.field("o").type == pa.int32()
 
 
 def test_sql_door_decimal_length_scale_padding(spark: ReparkSession) -> None:

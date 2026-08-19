@@ -154,10 +154,13 @@ fn any_arg_nullable(fields: &[FieldRef]) -> bool {
 }
 
 fn is_utf8_family(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null
-    )
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null => true,
+        // Dictionary-encoded strings (Parquet) must not plan-refuse; coerced
+        // output is Utf8 and the planner inserts the cast (R3-1).
+        DataType::Dictionary(_, value_type) => is_utf8_family(value_type),
+        _ => false,
+    }
 }
 
 fn coerce_regexp_args(arg_types: &[DataType], allow_index: bool) -> Result<Vec<DataType>> {
@@ -248,17 +251,65 @@ fn compile_spark_regex(pattern: &str) -> Result<Regex> {
     })
 }
 
+fn count_overflow() -> DataFusionError {
+    DataFusionError::Execution("regexp_count exceeds Spark INT".to_owned())
+}
+
+fn bump_count(count: i32) -> Result<i32> {
+    count.checked_add(1).ok_or_else(count_overflow)
+}
+
+/// Java `Matcher.find()`: report an empty match where a previous non-empty
+/// match ended, and advance empty matches by one UTF-16 unit (including a
+/// mid-surrogate step on supplementary-plane chars). The `regex` crate's
+/// `find_iter` suppresses the empty-after-non-empty case (`[0-9]*` on
+/// `2026-08-19` is 3 there, 6 in Spark).
 fn count_non_overlapping(text: &str, pattern: &Regex) -> Result<i32> {
-    // Empty pattern: Java Matcher.find() yields a zero-width match at every
-    // UTF-16 index plus the end (`🐈` → 3, not 2 Unicode-scalar boundaries).
     if pattern.as_str().is_empty() {
         let count = text.encode_utf16().count().saturating_add(1);
-        return i32::try_from(count)
-            .map_err(|_| DataFusionError::Execution("regexp_count exceeds Spark INT".to_owned()));
+        return i32::try_from(count).map_err(|_| count_overflow());
     }
-    let count = pattern.find_iter(text).count();
-    i32::try_from(count)
-        .map_err(|_| DataFusionError::Execution("regexp_count exceeds Spark INT".to_owned()))
+
+    let mut count: i32 = 0;
+    let mut byte = 0usize;
+    let mut mid_surrogate = false;
+    loop {
+        if mid_surrogate {
+            if pattern.is_match("") {
+                count = bump_count(count)?;
+            }
+            let Some(ch) = text.get(byte..).and_then(|rest| rest.chars().next()) else {
+                break;
+            };
+            byte += ch.len_utf8();
+            mid_surrogate = false;
+            continue;
+        }
+        if byte > text.len() {
+            break;
+        }
+        let Some(found) = pattern.find_at(text, byte) else {
+            break;
+        };
+        count = bump_count(count)?;
+        if found.start() == found.end() {
+            if found.start() == text.len() {
+                break;
+            }
+            let Some(ch) = text[found.start()..].chars().next() else {
+                break;
+            };
+            if ch.len_utf16() == 2 {
+                mid_surrogate = true;
+                byte = found.start();
+            } else {
+                byte = found.start() + ch.len_utf8();
+            }
+        } else {
+            byte = found.end();
+        }
+    }
+    Ok(count)
 }
 
 fn first_match_utf16_start(text: &str, pattern: &Regex) -> Result<i32> {
@@ -424,6 +475,49 @@ mod tests {
             one_i32(&ctx, "SELECT regexp_instr('abcde', 'b(c)d', 99)").await,
             Some(2)
         );
+    }
+
+    #[test]
+    fn java_find_loop_matches_spark_zero_width() {
+        let digits = compile_spark_regex("[0-9]*").expect("digits");
+        assert_eq!(count_non_overlapping("2026-08-19", &digits).expect("c"), 6);
+        let stars = compile_spark_regex("b*").expect("b*");
+        assert_eq!(count_non_overlapping("abc", &stars).expect("c"), 4);
+        let a_star = compile_spark_regex("a*").expect("a*");
+        assert_eq!(count_non_overlapping("🐈", &a_star).expect("c"), 3);
+    }
+
+    #[tokio::test]
+    async fn dictionary_utf8_column_is_accepted() {
+        use datafusion::arrow::array::{DictionaryArray, Int8Array, StringArray};
+        use datafusion::arrow::datatypes::{Field, Int8Type, Schema};
+        use datafusion::arrow::record_batch::RecordBatch;
+
+        let ctx = ctx();
+        let values = StringArray::from(vec!["ababab", "xy"]);
+        let keys = Int8Array::from(vec![0_i8, 1, 0]);
+        let dict =
+            DictionaryArray::<Int8Type>::try_new(keys, Arc::new(values)).expect("dictionary");
+        let schema = Arc::new(Schema::new(vec![Field::new(
+            "s",
+            dict.data_type().clone(),
+            true,
+        )]));
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(dict)]).expect("batch");
+        ctx.register_batch("dict_strings", batch).expect("register");
+        let batches = ctx
+            .sql("SELECT regexp_count(s, 'ab') AS c FROM dict_strings")
+            .await
+            .expect("plan dict")
+            .collect()
+            .await
+            .expect("exec dict");
+        let array = batches[0]
+            .column(0)
+            .as_primitive::<datafusion::arrow::datatypes::Int32Type>();
+        assert_eq!(array.value(0), 3);
+        assert_eq!(array.value(1), 0);
+        assert_eq!(array.value(2), 3);
     }
 
     #[tokio::test]

@@ -111,6 +111,9 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 | STRING partNum planning-error | `test_sql_door_split_part_string_part_num` |
 | omitted idx 2-arg display | `test_regexp_instr_omitted_idx_projects_zero` (`…, 0`) |
 | getbit SQL renamed to bit_get | `test_sql_door_getbit_projects_getbit_name` |
+| Dictionary(_, Utf8) plan-refuse | `dictionary_utf8_column_is_accepted` (regexp + split_part) |
+| Dictionary(_, Binary) stringify | `dictionary_binary_uses_byte_length` (octet 1 for `0xFF`) |
+| `find_iter` empty-after-non-empty | `java_find_loop_matches_spark_zero_width` + `test_sql_door_regexp_count_zero_width_star` |
 | unsigned==signed on +8 | `test_shiftrightunsigned_negative_diverges` |
 | is_valid only on "ok" | `test_utf8_invalid_bytes` |
 | contains str force-lit | `test_fn_b_str_is_column_name` |
@@ -140,7 +143,10 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 - `date_part` column-valued field still fail-louds (`requires non-empty constant string`); bare `'YEAR'` is an unresolved column name (GT1 class).
 - `factorial` Int64 outside `i32` fail-louds on the CAST (pre-existing mold); domain `[0,20]` NULL is pinned for in-range Int32.
 - **F-6f (CAST, not a GT1 kernel):** `CAST(unhex('C3') AS STRING)` is Arrow-invalid (incomplete UTF-8). Spark preserves the byte in STRING (`is_valid_utf8` False). BINARY-typed invalid UTF-8 remains the P4 pin. Escalated as CAST(binary→utf8). Pin: `test_cast_invalid_utf8_string_is_fail_loud`.
-- **Java `.` vs Unicode scalar (named, not 0.4.0 matcher rewrite):** Spark `Matcher` treats `.` as one UTF-16 unit (`regexp_count('🐈', '.')` = 2). The `regex` crate matches one Unicode scalar (1). Empty-pattern count and `instr` start already use UTF-16. Escalated; not a NULL→0 class.
+- **R3-4 double stringify:** mainstream doubles match (`1.0`→3, `12.5`→4). `CAST('Infinity' AS DOUBLE)` is Arrow `'inf'` (octet 3) vs Spark `'Infinity'` (octet 8); `1.0E21` is `'1e21'` (4) vs Spark `'1.0E21'` (6). Pinned: `test_sql_door_double_infinity_stringify_is_named_divergence`.
+- **R3-5a ANSI-off:** with `spark.sql.ansi.enabled=false` Spark `regexp_count(NULL)` is `-1` (`legacySizeOfNull`) and `CAST('i' AS INT)` is NULL; kernels hardcode the ANSI default (NULL / fail-loud CAST).
+- **R3-5b numeric implicit-cast breadth:** Spark stringifies numeric first args (`regexp_count(123,'2')=1`) and casts non-integer numerics for idx/partNum (`split_part(..., 2.0)='b'`); repark plan-refuses both doors (pre-existing, fail-loud).
+- **R3-5c split_part NULL str + non-foldable partNum 0:** Spark returns NULL (`ElementAt` short-circuits); repark exec-errors from the zero pre-scan.
 
 ## Round-2 (2026-08-19) — A1–A6
 
@@ -338,10 +344,25 @@ Target: worktree `grok/c26-gt1-fix` working tree vs face7c96 | dimensions: 5
 (wiring, pins, fence, removed-behavior, cross-file) | rounds: 2
 
 R1: 0 S0/S1. S2 coverage (SQL instr NULL, F.* array refuse, decimal
-type) remediating. Java `.` on supplementary plane escalated (named
-residual). Fence+cross-file hung → tight retry: one UDF, lib.rs 171/175.
+type) remediating. R3-2 deleted the fictitious Java-`.` residual
+(Spark `regexp_count('🐈','.')` is 1, same as repark). Fence+cross-file
+hung → tight retry: one UDF, lib.rs 171/175.
 
 R2: wiring / pins / fence **quiet**.
 
 Verdict: **CLEAN** (zero S0/S1 survivors).
+
+## Round-3 (2026-08-19) — R3-1..R3-6 (LIGHT)
+
+- **R3-1 FIX:** `Dictionary(_, Utf8)` is utf8-family in `spark_regexp` + `spark_split_part`. `Dictionary(_, Binary)` unwraps to binary in `spark_length` (not stringify). Pins: `dictionary_utf8_column_is_accepted`, `dictionary_binary_uses_byte_length`.
+- **R3-2 DELETED:** fictitious Java-`.` residual. Live Spark `regexp_count('🐈','.')` = 1 = repark.
+- **R3-3 FIX:** Java `Matcher.find()` loop (empty after non-empty; UTF-16 empty advance). `regexp_count('2026-08-19','[0-9]*')` = 6.
+- **R3-4 NAMED:** Infinity/`1e21` double stringify. Pin: `test_sql_door_double_infinity_stringify_is_named_divergence`.
+- **R3-5:** three Residuals rows (ANSI-off; numeric implicit-cast; NULL-str + partNum 0).
+- **R3-6:** PR body round-1 SQL residuals annotated closed-in-round-2.
+
+### Pre-PR critic report (/repark-harden) — Round-3
+
+Engine: ACC-style LIGHT (Critic-1 + Critic-3 on the delta; round-2 cited for unchanged) + 3-dim finder. **ACC-CONVERGED** (both CLEAN). Finder: **quiet** (0 S0/S1).
+Unchanged A1/A2/A3/F-6/F-7 surfaces: round-2 evidence.
 

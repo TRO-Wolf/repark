@@ -169,6 +169,13 @@ fn is_nested_container(data_type: &DataType) -> bool {
     }
 }
 
+fn unwrap_dictionary(data_type: &DataType) -> &DataType {
+    match data_type {
+        DataType::Dictionary(_, value_type) => unwrap_dictionary(value_type),
+        other => other,
+    }
+}
+
 fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
     let Some(data_type) = arg_types.first() else {
         return exec_err!("bit_length/octet_length expects 1 argument");
@@ -178,7 +185,10 @@ fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
             "bit_length/octet_length requires STRING or BINARY, got {data_type}"
         )));
     }
-    let coerced = match data_type {
+    // Dictionary(_, Binary) must stay binary (byte length), not stringify.
+    // Dictionary(_, Utf8) unwraps to Utf8 so the planner inserts the cast (R3-1).
+    let inner = unwrap_dictionary(data_type);
+    let coerced = match inner {
         DataType::Binary
         | DataType::LargeBinary
         | DataType::BinaryView
@@ -189,7 +199,7 @@ fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
         | DataType::Decimal32(_, _)
         | DataType::Decimal64(_, _)
         | DataType::Decimal128(_, _)
-        | DataType::Decimal256(_, _) => data_type.clone(),
+        | DataType::Decimal256(_, _) => inner.clone(),
         _ => DataType::Utf8,
     };
     Ok(vec![coerced])
@@ -437,6 +447,35 @@ mod tests {
                 "Spark refuses nested input: {sql} -> {result:?}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn dictionary_binary_uses_byte_length() {
+        use datafusion::arrow::array::{BinaryArray, DictionaryArray, Int8Array};
+        use datafusion::arrow::datatypes::{Field, Int8Type, Schema};
+        use datafusion::arrow::record_batch::RecordBatch;
+
+        let ctx = ctx();
+        // One 0xFF byte: binary length 1. Utf8 stringify would fail or become U+FFFD (3).
+        let values = BinaryArray::from_vec(vec![&[0xFF_u8][..]]);
+        let keys = Int8Array::from(vec![0_i8]);
+        let dict =
+            DictionaryArray::<Int8Type>::try_new(keys, Arc::new(values)).expect("dictionary");
+        let schema = Arc::new(Schema::new(vec![Field::new(
+            "b",
+            dict.data_type().clone(),
+            true,
+        )]));
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(dict)]).expect("batch");
+        ctx.register_batch("dict_bin", batch).expect("register");
+        assert_eq!(
+            one_i32(&ctx, "SELECT octet_length(b) FROM dict_bin").await,
+            Some(1)
+        );
+        assert_eq!(
+            one_i32(&ctx, "SELECT bit_length(b) FROM dict_bin").await,
+            Some(8)
+        );
     }
 
     #[tokio::test]

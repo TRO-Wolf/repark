@@ -54,10 +54,11 @@ impl Hash for SparkSplitPart {
 }
 
 fn is_utf8_family(data_type: &DataType) -> bool {
-    matches!(
-        data_type,
-        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null
-    )
+    match data_type {
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View | DataType::Null => true,
+        DataType::Dictionary(_, value_type) => is_utf8_family(value_type),
+        _ => false,
+    }
 }
 
 impl ScalarUDFImpl for SparkSplitPart {
@@ -177,6 +178,32 @@ mod tests {
             .await
             .expect("plan");
         assert!(planned.collect().await.is_err());
+    }
+
+    #[tokio::test]
+    async fn dictionary_utf8_column_is_accepted() {
+        use datafusion::arrow::array::{DictionaryArray, Int8Array};
+        use datafusion::arrow::datatypes::{Field, Int8Type, Schema};
+        use datafusion::arrow::record_batch::RecordBatch;
+
+        let ctx = ctx();
+        let values = StringArray::from(vec!["a.b.c", "x-y-z"]);
+        let keys = Int8Array::from(vec![0_i8, 1]);
+        let dict =
+            DictionaryArray::<Int8Type>::try_new(keys, Arc::new(values)).expect("dictionary");
+        let schema = Arc::new(Schema::new(vec![Field::new(
+            "s",
+            dict.data_type().clone(),
+            true,
+        )]));
+        let batch = RecordBatch::try_new(schema, vec![Arc::new(dict)]).expect("batch");
+        ctx.register_batch("dict_parts", batch).expect("register");
+        assert_eq!(
+            one(&ctx, "SELECT split_part(s, '.', 2) FROM dict_parts")
+                .await
+                .as_deref(),
+            Some("b")
+        );
     }
 
     #[tokio::test]

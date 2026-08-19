@@ -7,14 +7,14 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
 
 ## Contents
 
-- `spark_length.rs` — **GT1-FIX G5 (2026-08-18) / A3 (2026-08-19):** Spark
-  `bit_length` / `octet_length` shim. Stringifies non-binary; BINARY pass-through;
-  refuses ARRAY/STRUCT/MAP; decimal scale-padded stringify. Ledger:
-  `task/fn-gt1-ledger.md`.
-- `spark_regexp.rs` — **GT1-FIX A1/A2:** Spark `regexp_count` / `regexp_instr`
-  (NULL-in NULL-out INT; idx ignore-value; UTF-16 start; ASCII `\d`/`\w`/`\s`).
-- `spark_split_part.rs` — **GT1-FIX F-6c:** STRING `partNum` casts to Int64;
-  partNum 0 fail-loud.
+- `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
+  `octet_length`. Stringifies non-binary; BINARY pass-through (including
+  Dictionary(_, Binary)); refuses ARRAY/STRUCT/MAP; decimal scale-padded
+  stringify. Ledger: `task/fn-gt1-ledger.md`.
+- `spark_regexp.rs` — **GT1-FIX A1/A2 / R3:** Spark `regexp_count` /
+  `regexp_instr` (Java find-loop; Dictionary(_, Utf8) coerce).
+- `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
+  Dictionary(_, Utf8); partNum 0 fail-loud.
 - `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line
   dropped so `pub mod timestamp_type` does not raise `check_lib_rs` EXCEPTIONS).
 - `timestamp_type.rs` — **Q10:** Spark-door `spark.sql.timestampType` carrier
