@@ -273,6 +273,36 @@ moving it. Nothing is described in both places.
   refused. Semantics + pins: registry §7 rows G3-E8 / G3-E8-NULL.
 - **`repark.sql` re-home** — **blocks the first tagged release** (not a correctness defect).
   See [docs/release.md](docs/release.md) "Hard blockers" and Deferred capabilities.
+- **`bin` / `rint` BOOLEAN over-accept** — **BACKLOG (2026-08-19)**: registry
+  [§7 BL-6](docs/spark-sql-iceberg-parity.md).
+- **`bit_length` / `octet_length` DOUBLE stringify (Infinity / E-notation)** — **BACKLOG
+  (2026-08-19)**: registry [§7 BL-7](docs/spark-sql-iceberg-parity.md).
+- **Regexp match-counting residual families (GT1-FIX #180, no disposition yet)** — the owned
+  `regexp_count` / `regexp_instr` kernel reproduces Java `Matcher.find()` for the mainstream
+  corpus (97%+ agreement over a 4118-case fuzz vs real OpenJDK) but four narrow families still
+  diverge, each live-verified against PySpark 4.1.2 on 2026-08-19: (1) Java can match at a
+  mid-surrogate UTF-16 index with no preceding empty match (`'\B'` on `ab🐈cd`: Spark 3,
+  repark 2) — not fixable without a UTF-16 code-unit matcher; (2) Java non-MULTILINE `$` also
+  matches before a final line terminator (`'a\n'`, `'$'`: Spark 2, repark 1); (3) Java `(?m)^`
+  never matches at end-of-input and its line terminators include `\r`, `\r\n`, U+0085, U+2028,
+  U+2029 (regex-crate multiline is `\n`-only); (4) ANSI-off conditional semantics
+  (`legacySizeOfNull` −1; string-idx CAST NULL) are not modeled — the kernels hardcode the
+  ANSI-ON default. Descriptions with examples:
+  [task/fn-gt1-ledger.md](task/fn-gt1-ledger.md) Residuals.
+- **Numeric implicit-cast breadth on string-function arguments (no disposition yet)** — Spark
+  implicitly casts numeric→string first args (`regexp_count(123,'2')` = 1) and non-integer
+  numerics for `regexp_instr` idx / `split_part` partNum (`split_part(…, 2.0)` = `'b'`); repark
+  plan-refuses both doors (fail-loud direction, pre-existing class). Also `split_part` with a
+  NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified
+  2026-08-19; [task/fn-gt1-ledger.md](task/fn-gt1-ledger.md) Residuals.
+- **SQL string literals do not process backslash escapes (no disposition yet)** — the SQL door
+  parses `'\d'` as two characters where Spark's parser processes the escape to one
+  (`length('\d')`: Spark 1, repark 2). Found 2026-08-19 during the GT1-FIX review; affects every
+  SQL-door string literal containing a backslash (regex patterns most visibly — a pattern spelled
+  `'\\d'` reaches the engine as `\d` on Spark but as `\\d` here). Engine parser level, undisposed.
+- **`CAST(x AS BINARY)` unimplemented on the SQL door (no disposition yet)** — plan-time
+  `Unsupported SQL type BINARY`; the facade `.cast("binary")` path is unaffected. Found
+  2026-08-19 during the GT1-FIX review.
 
 **Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
 **2026-08-10** — see

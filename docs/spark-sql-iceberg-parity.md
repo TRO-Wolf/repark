@@ -744,6 +744,34 @@ the pin rather than obeying it.
 > `CommitStateUnknownException` rethrow-before-cleanup rule), leaving those files to
 > orphan-file maintenance; an injection test for that path is a named residual.
 
+### BL-6 — `bin` / `rint` over-accept BOOLEAN where Spark analysis-refuses
+
+- **repark** — the facade lowers `F.bin(col)` as `bin(CAST(col AS BIGINT))` and `F.rint(col)` as
+  `rint(CAST(col AS DOUBLE))` (the G5 unix_date mold), so a BOOLEAN input is silently cast:
+  `F.bin(F.lit(True))` returns `"1"`, `F.rint(F.lit(True))` returns `1.0`.
+- **Apache Spark** — analysis-refuses BOOLEAN for both with
+  `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` (`bin` requires BIGINT; `rint` requires DOUBLE).
+  *(oracle: live — PySpark 4.1.2, 2026-08-18.)*
+- **Pin** — `python/repark/tests/test_functions_gt1.py::test_bin_bool_over_accepts_where_spark_refuses`
+  (covers both names).
+- **Rationale** — BACKLOG, intent to FIX (fail-loud on BOOLEAN before the cast). Deliberately kept
+  out of the GT1-FIX PR (#180, round-2 ruling A4): wrong-answer classes outranked over-accepts in
+  the 0.4.0 gate round, and an over-accept never corrupts a value a correct script produces.
+
+### BL-7 — `bit_length` / `octet_length` stringify DOUBLE with Arrow float formatting
+
+- **repark** — a DOUBLE input to the owned length kernel is stringified by the Arrow
+  `float64 → utf8` cast: `CAST('Infinity' AS DOUBLE)` becomes `'inf'` (octet_length 3) and
+  `1.0E21` becomes `'1e21'` (octet_length 4). Mainstream values agree with Spark (`1.0` → 3,
+  `12.5` → 4).
+- **Apache Spark** — stringifies via Java `Double.toString`: `'Infinity'` (octet_length 8),
+  `'1.0E21'` (octet_length 6). *(oracle: live — PySpark 4.1.2, 2026-08-19.)*
+- **Pin** — `python/repark/tests/test_functions_gt1.py::test_sql_door_double_infinity_stringify_is_named_divergence`
+  (codifies today's `3`; the fix reds it on purpose).
+- **Rationale** — BACKLOG, intent to FIX (Java-shaped double formatting in the decimal-style
+  path, GT1-FIX round-3 ruling R3-4). The divergence is confined to the E-notation thresholds and
+  the Infinity/NaN spellings; the common numeric range already matches.
+
 
 > **TZ-1 — timestamp extraction ignores the session zone — was CLOSED IN PART and CONVERTED on
 > 2026-08-10**, when H-1a split B landed the extraction fix (campaign decision D7). It does not
