@@ -8,7 +8,9 @@ Rust file-size default ceiling.
 ## Contents
 
 - `octo.rs` — octo C2/C3 kernel pins: `LargeList` / `FixedSizeList` explode,
-  `ListView` / `LargeListView` refuse, max-depth remaining-schema truncation.
+  `ListView` / `LargeListView` refuse, max-depth remaining-schema truncation
+  (`max_depth_remaining_schema_is_truncated` kills unbounded output —
+  token / "truncated" / len — not the join-then-truncate allocation path).
 
 ## Pointers
 

@@ -137,6 +137,11 @@ fn large_list_view_refuses_loud() {
 }
 
 /// C2-SAF-002: max-depth remaining-schema Debug is truncated, not unbounded.
+///
+/// This pin kills unbounded output (token / "truncated" / message length).
+/// It does not pin the allocation path: join-then-truncate of a full dump
+/// would still pass. C3-SAF-001's streaming writer is a code-path choice,
+/// not a property this pin can kill.
 #[test]
 fn max_depth_remaining_schema_is_truncated() {
     let names: Vec<String> = (0..30).map(|index| format!("f{index:02}")).collect();

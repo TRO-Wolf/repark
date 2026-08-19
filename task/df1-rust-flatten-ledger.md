@@ -164,10 +164,20 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 | C3-Q-001 | REMEDIATED | `large_list_view_refuses_loud` — `LargeListViewArray` + `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` (same token as `list_view_refuses_loud`). |
 | C3-L-001 | REMEDIATED | Same pin as C3-Q-001. |
 | C3-SEC-001 | WITHDRAWN | Flatten-emitted dotted names reparsed by `distinct_on` `col()` / filter SQL are pre-existing ident parsers; kernel Unnest bind is already `Column::new_unqualified`. Do not rewrite `distinct_on`. |
-| C3-SAF-001 | REMEDIATED | `format_fields` streams Debug into a 240-char writer (no join-then-truncate of the full dump). Pin `max_depth_remaining_schema_is_truncated`. |
+| C3-SAF-001 | REMEDIATED | `format_fields` streams Debug into a 240-char writer (code-path). Pin `max_depth_remaining_schema_is_truncated` kills unbounded output (C2-SAF-002: token / `"truncated"` / len) — it does **not** kill the allocation path (join-then-truncate of a full dump would still pass). |
 | C3-L-002 | WITHDRAWN | `mixed_plan` pin uses `BoomOnFilter`, not a real leaf-pushdown success-wrong rewrite. Residual oracle; DF-54.1 Unnest `with_new_exprs` still Err so the clone is kept. |
 | C3-L-003 | REMEDIATED | `null_mid_struct_fields_are_null_not_zero` asserts exact `[None, Some(9), None]`. |
 | C3-CL-001 | REMEDIATED | Re-measured `core.py` 7192 (`splitlines()` / `wc -l`); ledger C-011 + `check_lib_py.py` comment. |
 | C3-CL-002 | REMEDIATED | `test_dynamic_flatten_plan_build_does_not_force_collect` docstring cites C1-Q-003 (not C2-Q-003). |
 | C3-CL-003 | REMEDIATED | Fence lists `crates/repark-core/src/session/df_guard_tests.rs`. |
 | C3-CL-004 | REMEDIATED | `crates/repark-core/src/map.md` cites `dynamic_flatten/tests/octo.rs`. |
+
+---
+
+## 9. S1 review (comment honesty)
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| R-S1-001 | REMEDIATED | Facade `test_null_parent` / `test_null_mid` docstrings pin createDataFrame-door NULL leaves (Python `None`, clean children). They do not claim C1-L-001 CASE-drop; dirty-child CASE-drop stays the engine pins. |
+| R-S1-002 | REMEDIATED | Pin comment + this ledger's C3-SAF-001: `max_depth_remaining_schema_is_truncated` kills unbounded output (C2-SAF-002: token / `"truncated"` / len), not the allocation path. |
+| G3b | REMEDIATED | `test_dynamic_flatten_array_of_struct_inside_array_element_struct`: flatten is native Unnest; `_sql_array_of` postfix mutant only kills `explode_outer`. |

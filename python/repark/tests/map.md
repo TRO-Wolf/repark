@@ -205,7 +205,9 @@ NOT in that file is a defect, not a decision.
   `getAll` redacts; `get(explicit)` unchanged.
 - `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`
   (planner is native `repark_core::dynamic_flatten`; this file is the facade contract):
-  nested struct-in-struct; null parent/mid struct → NULL not zero; list-of-struct;
+  nested struct-in-struct; null parent/mid struct → NULL not zero
+  (createDataFrame-door Python `None` / clean children; CASE-drop is the engine
+  dirty-child pin, not these fixtures); list-of-struct;
   **U-DF-1:** capitalized `Legs` list-of-struct + sibling struct (`Legs_leg_id`);
   multi-list serial explode order; list explode in-place column order;
   struct-in-list-in-struct; null-typed list drop;
@@ -218,7 +220,8 @@ NOT in that file is a defect, not a decision.
   **G3b (2026-08-18):** the GA4 fixture now carries the REAL `items[].item_params[]`
   (array-of-struct inside an array-element struct — the shape whose absence let the
   postfix-`[]` spelling defect ship), plus a standalone minimal repro of that shape on both
-  doors, a scalar-inner nested-array guard, a map-element still-refuses-loud rider, and
+  doors (flatten is native Unnest; `_sql_array_of` postfix mutant only kills
+  `explode_outer`), a scalar-inner nested-array guard, a map-element still-refuses-loud rider, and
   `test_create_dataframe_honors_requested_void` (D-5: explicit `NullType()` /
   `ArrayType(NullType())` is honored end to end instead of silently becoming string);
   max_depth LOUD refuse (`[DYNAMIC_FLATTEN_MAX_DEPTH]` token);

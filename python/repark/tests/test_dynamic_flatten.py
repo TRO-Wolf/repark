@@ -138,8 +138,10 @@ def test_nested_struct_in_struct(spark: ReparkSession) -> None:
 def test_null_parent_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
     """Null parent struct → NULL leaf fields (not type defaults 0/''/False).
 
-    Mutation-proof for C1-L-001: bare ``parent.field`` selectExpr zero-fills null parents
-    in the engine; dynamicFlatten must use null-safe projection.
+    Pins the createDataFrame door: Python ``None`` parent (clean child slots).
+    Does **not** pin CASE-drop / C1-L-001 — that mutation is the engine pin of
+    the same name, with dirty children at the parent-null slot. Dict ``None``
+    does not emit dirty children, so this fixture cannot mutation-proof the CASE.
     """
     schema = StructType(
         [
@@ -177,7 +179,12 @@ def test_null_parent_struct_fields_are_null_not_zero(spark: ReparkSession) -> No
 
 
 def test_null_mid_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
-    """Null intermediate struct after first unnest → NULL leaves (multi-pass)."""
+    """Null intermediate struct after first unnest → NULL leaves (multi-pass).
+
+    Pins the createDataFrame door: Python ``None`` mid/outer (clean child slots).
+    Does **not** pin CASE-drop — dirty-child CASE-drop is the engine pin of the
+    same name (C2-L-001 / C3-L-003).
+    """
     schema = StructType(
         [
             StructField(
@@ -1181,8 +1188,11 @@ def test_dynamic_flatten_array_of_struct_inside_array_element_struct(
     Red on BASE (95cfaf9) for BOTH doors — ``dynamicFlatten()`` and a bare
     ``explode_outer`` — with ``AnalysisException type_coercion`` / "Failed to coerce …
     CASE WHEN", because the nested array was spelled postfix (``…[]``) and the engine
-    parser migrated the ``[]`` onto the innermost field. Mutation-proof: reverting
-    ``_sql_array_of`` to ``f"{inner}[]"`` restores the refuse on both doors.
+    parser migrated the ``[]`` onto the innermost field.
+
+    ``dynamicFlatten`` is native Unnest (``repark_core::dynamic_flatten``); it no
+    longer goes through ``_sql_array_of``. Reverting that helper to
+    ``f"{inner}[]"`` only kills the ``explode_outer`` door — not flatten.
     """
     param = StructType(
         [
