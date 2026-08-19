@@ -92,9 +92,9 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 
 | Finding | Edit |
 |---|---|
-| G5 | `crates/repark-functions/src/spark_length.rs` — `bit_length` / `octet_length` UDFs. Registered from `string::functions()` (SQL door overwrite) and `expr_fn::{bit_length,octet_length}` (facade). `bin`/`rint` are facade casts, not a new kernel. |
-| G6 | `function_dispatch.rs` `regexp_instr` arm: 2 or 3 args; 3rd is Spark idx (CASE WHEN null THEN null ELSE 2-arg DF regexp_instr). |
-| G7 | No kernel. Facade sends the name `"getbit"`; existing `"bit_get" \| "getbit"` arm is now reachable. |
+| G5 | `crates/repark-functions/src/spark_length.rs` — `bit_length` / `octet_length` UDFs. Registered from `string::functions()` (SQL door overwrite) and `expr_fn::{bit_length,octet_length}` (facade). `bin`/`rint` are facade casts, not a new kernel. Round-2 A3: refuse ARRAY/STRUCT/MAP; decimal scale-padded stringify (`12.50` → octet 5 / bit 40). |
+| G6 | Round-2 A1/A2: `spark_regexp.rs` is the **one** semantics source. `regexp_count` 2-arg NULL-in NULL-out INT. `regexp_instr` 2–3 args; 3rd is Spark idx (CAST to Int32, NULL-propagate, **value ignored** — never DF start). Dispatch + `expr_fn` embed the same UDF. |
+| G7 | No kernel. Facade sends the name `"getbit"`; existing `"bit_get" \| "getbit"` arm is now reachable. SQL door already projects `getbit(...)` via the datafusion-spark alias (F-6e REFUTED). |
 
 ## Mutation-proof pins
 
@@ -104,8 +104,13 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 | split_part delim force-lit | `test_split_part_str_is_column_name` |
 | bit_get pos force-lit | `test_bit_get_pos_is_column_name` |
 | getbit renamed to bit_get on the wire | `test_getbit_projects_getbit_name` (`getbit(x, 1)` vs `bit_get(x, 1)`) |
-| regexp_instr idx forwarded as DF start | `test_regexp_instr_idx_matches_live_spark` (`b(c)d` idx=1 is 2, not 3; idx=99 still 1) |
-| regexp_count NULL→0 | `test_null_inputs` |
+| regexp_instr idx forwarded as DF start | `test_regexp_instr_idx_matches_live_spark` + `test_sql_door_regexp_instr_idx_is_ignored` (`b(c)d` idx=1 is 2, not 3; idx=99 still 2) |
+| regexp_count NULL→0 | `test_null_inputs` + `test_sql_door_regexp_count_null_is_null` |
+| ARRAY stringify on bit_length | `test_sql_door_bit_length_refuses_array` |
+| decimal scale dropped | `test_sql_door_decimal_length_scale_padding` |
+| STRING partNum planning-error | `test_sql_door_split_part_string_part_num` |
+| omitted idx 2-arg display | `test_regexp_instr_omitted_idx_projects_zero` (`…, 0`) |
+| getbit SQL renamed to bit_get | `test_sql_door_getbit_projects_getbit_name` |
 | unsigned==signed on +8 | `test_shiftrightunsigned_negative_diverges` |
 | is_valid only on "ok" | `test_utf8_invalid_bytes` |
 | contains str force-lit | `test_fn_b_str_is_column_name` |
@@ -116,7 +121,7 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 
 - `python/repark/src/repark/spark/functions_{math,bitwise,expr,collections,datetime}.py`
 - `crates/repark-python/src/column/function_dispatch.rs` + `column/map.md`
-- `crates/repark-functions/src/spark_length.rs` (new) / `string.rs` / `expr_fn.rs` / `lib.rs` / `map.md`
+- `crates/repark-functions/src/spark_length.rs` / `spark_regexp.rs` / `spark_split_part.rs` / `string.rs` / `expr_fn.rs` / `lib.rs` / `map.md`
 - `python/repark/tests/test_functions_{gt1,gt2,b,d}.py` / `test_fn_batch3.py` / `tests/map.md`
 - `python/repark/src/repark/spark/map.md`
 - `task/fn-gt1-ledger.md` / `task/map.md`
@@ -125,15 +130,76 @@ GT1 class. `str_to_map` is FIX because live 4.1.2 contradicts the GT2 "plain
 
 | Gate | Result |
 |---|---|
-| `make preflight` | exit **0**; facade **3418 passed / 70 skipped** |
+| `make preflight` (round-1) | exit **0**; facade **3418 passed / 70 skipped** |
+| `make preflight` (round-2) | exit **0**; facade **3427 passed / 70 skipped** |
 | two-pass hygiene | PASS1 added-line needles **0**; PASS2 new files **0** |
 
 ## Residuals (honest)
 
-- Facade `F.bin(F.lit(True))` is `"1"` (CAST to long). Spark analysis-refuses BOOLEAN. Pinned: `test_bin_bool_over_accepts_where_spark_refuses`.
-- Spark SQL door `regexp_count(NULL, 'ab')` is still DF **0**. Facade P1 is NULL. Pinned: `test_sql_door_regexp_count_null_is_still_zero`. Same door still treats `regexp_instr` 3rd arg as DF start.
+- **A4 (kept, named):** Facade `F.bin(F.lit(True))` is `"1"`; `F.rint(F.lit(True))` is `1.0`. Spark 4.1.2 analysis-refuses BOOLEAN: `DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE` (`bin` requires BIGINT; `rint` requires DOUBLE). Pinned: `test_bin_bool_over_accepts_where_spark_refuses`. Registry row is orchestrator-side — not a 0.4.0 kernel fix.
 - `date_part` column-valued field still fail-louds (`requires non-empty constant string`); bare `'YEAR'` is an unresolved column name (GT1 class).
 - `factorial` Int64 outside `i32` fail-louds on the CAST (pre-existing mold); domain `[0,20]` NULL is pinned for in-range Int32.
+- **F-6f (CAST, not a GT1 kernel):** `CAST(unhex('C3') AS STRING)` is Arrow-invalid (incomplete UTF-8). Spark preserves the byte in STRING (`is_valid_utf8` False). BINARY-typed invalid UTF-8 remains the P4 pin. Escalated as CAST(binary→utf8). Pin: `test_cast_invalid_utf8_string_is_fail_loud`.
+- **Java `.` vs Unicode scalar (named, not 0.4.0 matcher rewrite):** Spark `Matcher` treats `.` as one UTF-16 unit (`regexp_count('🐈', '.')` = 2). The `regex` crate matches one Unicode scalar (1). Empty-pattern count and `instr` start already use UTF-16. Escalated; not a NULL→0 class.
+
+## Round-2 (2026-08-19) — A1–A6
+
+Binding: BRIEF-conductor-26.md addendum 2026-08-19. Same branch, no force-push.
+
+### A1 ignore-value probe (live PySpark 4.1.2, 2026-08-19)
+
+`SELECT regexp_instr('abcde', 'b(c)d', N)`:
+
+| N | Spark | group-index would be | DF start would be |
+|---|---|---|---|
+| 0 | 2 INT | — | 2 |
+| 1 | 2 INT | **3** | 2 |
+| 3 | 2 INT | — | 0 (past match) |
+| 99 | 2 INT | — | 0 |
+| NULL | NULL INT | NULL | 0 or error |
+
+Unicode: `regexp_instr('🐈ab','ab')` = **3** (Java UTF-16 code units — 🐈 is 2 — not UTF-8 bytes 5 and not Unicode scalars 2). Empty pattern: `regexp_count('aaa','')` = 4; `regexp_instr('aaa','')` = 1. Overlap: `regexp_count('aaa','aa')` = 1.
+
+**Do not "fix" idx back to group-index.** The discriminator is idx=1 → 2.
+
+### A2 kernel
+
+`spark_regexp.rs` registered from `string::functions()` (SQL overwrite) + `expr_fn` (facade). Dispatch arms call those builders only — no CASE wrap, no `spark_int32`. Residual SQL pins flipped to NULL and 2.
+
+### F-5 — 19-row per-name signature table (live `inspect.signature`, PySpark 4.1.2)
+
+| Name | PySpark 4.1.2 signature |
+|---|---|
+| `bin` | `(col: ColumnOrName) -> Column` |
+| `hex` | `(col: ColumnOrName) -> Column` |
+| `unhex` | `(col: ColumnOrName) -> Column` |
+| `factorial` | `(col: ColumnOrName) -> Column` |
+| `rint` | `(col: ColumnOrName) -> Column` |
+| `bit_count` | `(col: ColumnOrName) -> Column` |
+| `bit_get` | `(col: ColumnOrName, pos: ColumnOrName) -> Column` |
+| `getbit` | `(col: ColumnOrName, pos: ColumnOrName) -> Column` |
+| `shiftleft` | `(col: ColumnOrName, numBits: int) -> Column` |
+| `shiftright` | `(col: ColumnOrName, numBits: int) -> Column` |
+| `shiftrightunsigned` | `(col: ColumnOrName, numBits: int) -> Column` |
+| `split_part` | `(src: ColumnOrName, delimiter: ColumnOrName, partNum: ColumnOrName) -> Column` |
+| `regexp_count` | `(str: ColumnOrName, regexp: ColumnOrName) -> Column` |
+| `regexp_instr` | `(str: ColumnOrName, regexp: ColumnOrName, idx: Column \| int \| None = None) -> Column` |
+| `bit_length` | `(col: ColumnOrName) -> Column` |
+| `octet_length` | `(col: ColumnOrName) -> Column` |
+| `is_valid_utf8` | `(str: ColumnOrName) -> Column` |
+| `make_valid_utf8` | `(str: ColumnOrName) -> Column` |
+| `width_bucket` | `(v, min, max: ColumnOrName, numBucket: ColumnOrName \| int) -> Column` |
+
+### F-6 / F-7 dispositions
+
+| ID | Verdict | Evidence |
+|---|---|---|
+| F-6c | **FIX** | Spark `split_part('a.b.c', '.', '2')` → `'b'`. Repark planned `Int64` only. `spark_split_part.rs` coerces Utf8 → Int64. |
+| F-6d | **FIX** | Spark wraps a bare-str idx as a literal then `CAST` to INT (`CAST_INVALID_INPUT` on `'i'`). Kernel now coerces idx to Int32 so the CAST bites (was silently ignored). |
+| F-6e | **REFUTE** | SQL `SELECT getbit(6, 1)` already projects `getbit(...)` (datafusion-spark alias). Spark is `getbit(6, 1)`; DF wraps literals as `Int64(6)` — general display, not a rename to `bit_get`. Pin: name starts with `getbit(`. |
+| F-6f | **REFUTE** as CAST / escalate | `CAST(unhex('C3') AS STRING)`: Spark keeps invalid byte (hex `C3`, `is_valid_utf8` False). Arrow Utf8 cannot hold it — CAST fail-loud. P4 BINARY path is the GT1 pin. |
+| F-7 map.md | **FIX** | Stray `)` after "later" in `crates/repark-functions/map.md` `lib.rs` row. |
+| F-7 display | **FIX** | Omitted idx now wraps `0` as a literal so F.* projects `regexp_instr(abcde, c, 0)` (live Spark). |
 
 ## Octo cycle 1 remediations
 
@@ -162,9 +228,10 @@ ReDoS, panics), regexp CASE wrap, no secrets/injection. C1-SAF-001
 panics.
 
 Critic-3 (logic): attacked G6 idx, P1 NULL, C3 binary pass-through, SQL
-residuals, unsigned negative, getbit name. Residuals documented+pinned
-(bin-bool over-accept; Spark-SQL `regexp_count` NULL→0; SQL
-`regexp_instr` 3rd=DF start). Cycle 3 CLEAN.
+residuals, unsigned negative, getbit name. Round-1 residuals (SQL
+`regexp_count` NULL→0 / DF-start) are **closed in round-2** (A2 kernel +
+`test_sql_door_regexp_count_null_is_null` /
+`test_sql_door_regexp_instr_idx_is_ignored`). Cycle 3 CLEAN at round-1 tip.
 
 Critic-4 (claims): attacked G1–G8/P1–P5/F1–F3 vs tree, 38-row sweep vs
 remaining `lit_indices`, F2 Deferred lists, `str_to_map` STRUCK in
@@ -172,16 +239,17 @@ FN-GT2, mutation-table pointers. CL-IDENTITY N/A until this commit
 (`%ae`/`%ce` set on the branch commit). Cycle 3 CLEAN.
 
 Signature table: 19 GT1 names + 38 `lit_indices` sites checked against
-live PySpark 4.1.2 (`inspect.signature` + probes). 12 FIX (GT1 class
-ColumnOrName force-lit) + 26 PASS (literal-only in 4.1.2). No leftover
-force-lit on a live ColumnOrName param among the changed wrappers.
+live PySpark 4.1.2 (`inspect.signature` + probes). Sweep table: **14 FIX**
++ **24 PASS** (FIX includes `#6 str_to_map` and `#25 date_part`, live
+ColumnOrName, not the GT1-wrapper subset). No leftover force-lit on a
+live ColumnOrName param among the changed wrappers.
 
 Oracle probes: signatures, NULL-in, exact Arrow types, `regexp_instr`
 idx ignored (NULL-propagate), `getbit(x, 1)` projection,
 `shiftrightunsigned(-2)` = 2^63-1, `unhex('C3')` invalid UTF-8,
-direction pins, G5 stringify vs BINARY. Divergences found and either
-fixed (facade P1 NULL) or residual-pinned (SQL door DF leftovers;
-`F.bin(True)` over-accept).
+direction pins, G5 stringify vs BINARY. Round-2 closed the SQL-door
+DF leftovers (NULL-in NULL-out + idx ignore-value). Remaining named
+residual: `F.bin(True)` / `rint` BOOLEAN over-accept (A4).
 
 Pin audit: mutation-proof table in this ledger. Each named pin kills a
 named revert (force-lit, getbit rename, idx-as-DF-start via `i99`,
@@ -234,4 +302,46 @@ among changed wrappers: none.
 Verdict: **CLEAN** (zero S0/S1 survivors). Write paths not touched —
 one quiet round after remediations satisfies loop-until-dry. S2/S3
 left as report items (not a second Actor pass).
+
+## Pre-PR critic report (/repark-harden) — Round-2
+
+Engine: critic-octo N=3 (HIGH, claims_critic on) then finder-battery HIGH
+(5 dims × 3-vote intent; R1 two dims hung and were retried tight; R2
+quiet on wiring/pins/fence). Tier HIGH — engine kernels + 0.4.0 gate.
+
+Critic-1 (quality/parity): C1 CLEAN at S1 (S2 src/map.md + door-level 🐈
+pin remediating). C2 S2s remediating (F.split_part 0, UTF-16 rename,
+map blurbs, int32 on UTF-16 test). C3 CLEAN.
+
+Critic-2 (security/safety): C1–C3 CLEAN. Null-report: ReDoS (regex crate
+linear), batch-scoped cache, no prod unwrap, CAST fail-loud, no secrets.
+
+Critic-3 (logic): C1 S1 empty-pattern UTF-16 count remediating; S2 ASCII
+`\d` + split_part 0 remediating. C2–C3 CLEAN. A1 idx ignore-value holds.
+
+Critic-4 (claims): C1 stale residual prose + 14/24 sweep count remediating.
+C2 S3 pointer remediating. C3 CLEAN. CL-IDENTITY N/A until this commit.
+
+Signature table: 19-row F-5 table in this ledger (live inspect 4.1.2).
+Oracle probes: A1 matrix, UTF-16 🐈, empty count, ASCII `\d`, decimal
+5/40, ARRAY/STRUCT/MAP refuse, STRING partNum, partNum 0, CAST `'i'`,
+`getbit` SQL name, omitted-idx `, 0`.
+
+Pin audit: SQL NULL→NULL + idx 0/1/3/99→2 both doors; ARRAY refuse
+SQL+F.*; decimal 5/40 + int32; split_part `'2'` + 0; UTF-16 + `\d`.
+
+Convergence: **OCTO-CONVERGED** (N=3; cycle 3 all four CLEAN).
+
+### Finder-battery report (round-2)
+
+Target: worktree `grok/c26-gt1-fix` working tree vs face7c96 | dimensions: 5
+(wiring, pins, fence, removed-behavior, cross-file) | rounds: 2
+
+R1: 0 S0/S1. S2 coverage (SQL instr NULL, F.* array refuse, decimal
+type) remediating. Java `.` on supplementary plane escalated (named
+residual). Fence+cross-file hung → tight retry: one UDF, lib.rs 171/175.
+
+R2: wiring / pins / fence **quiet**.
+
+Verdict: **CLEAN** (zero S0/S1 survivors).
 

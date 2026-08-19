@@ -13,8 +13,10 @@ use std::sync::Arc;
 
 use datafusion::arrow::array::{Array, ArrayRef, AsArray, Int32Array};
 use datafusion::arrow::compute::cast;
-use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::{Result, exec_err};
+use datafusion::arrow::datatypes::{
+    DataType, Decimal32Type, Decimal64Type, Decimal128Type, Decimal256Type, Field, FieldRef,
+};
+use datafusion::common::{DataFusionError, Result, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
@@ -152,10 +154,30 @@ enum LengthKind {
     Octets,
 }
 
+fn is_nested_container(data_type: &DataType) -> bool {
+    match data_type {
+        DataType::List(_)
+        | DataType::LargeList(_)
+        | DataType::FixedSizeList(_, _)
+        | DataType::ListView(_)
+        | DataType::LargeListView(_)
+        | DataType::Struct(_)
+        | DataType::Map(_, _)
+        | DataType::Union(_, _) => true,
+        DataType::Dictionary(_, value_type) => is_nested_container(value_type),
+        _ => false,
+    }
+}
+
 fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
     let Some(data_type) = arg_types.first() else {
         return exec_err!("bit_length/octet_length expects 1 argument");
     };
+    if is_nested_container(data_type) {
+        return Err(DataFusionError::Plan(format!(
+            "bit_length/octet_length requires STRING or BINARY, got {data_type}"
+        )));
+    }
     let coerced = match data_type {
         DataType::Binary
         | DataType::LargeBinary
@@ -163,7 +185,11 @@ fn coerce_length_arg(arg_types: &[DataType]) -> Result<Vec<DataType>> {
         | DataType::FixedSizeBinary(_)
         | DataType::Utf8
         | DataType::LargeUtf8
-        | DataType::Utf8View => data_type.clone(),
+        | DataType::Utf8View
+        | DataType::Decimal32(_, _)
+        | DataType::Decimal64(_, _)
+        | DataType::Decimal128(_, _)
+        | DataType::Decimal256(_, _) => data_type.clone(),
         _ => DataType::Utf8,
     };
     Ok(vec![coerced])
@@ -216,11 +242,81 @@ fn byte_lengths(array: &dyn Array) -> Result<Int32Array> {
                 .collect();
             Ok(values)
         }
+        DataType::Decimal32(_, scale)
+        | DataType::Decimal64(_, scale)
+        | DataType::Decimal128(_, scale)
+        | DataType::Decimal256(_, scale) => decimal_byte_lengths(array, *scale),
         _ => {
             let as_utf8: ArrayRef = cast(array, &DataType::Utf8)?;
             utf8_byte_lengths(as_utf8.as_ref())
         }
     }
+}
+
+/// Spark `CAST(decimal AS STRING)`: keep scale padding (`12.50` not `12.5`).
+fn format_unscaled_i128(unscaled: i128, scale: i8) -> String {
+    let negative = unscaled < 0;
+    let digits = unscaled.unsigned_abs().to_string();
+    if scale <= 0 {
+        let extra = match scale.checked_neg() {
+            Some(zeros) => usize::try_from(zeros).unwrap_or(0),
+            None => 0,
+        };
+        let mut body = digits;
+        body.extend(std::iter::repeat_n('0', extra));
+        if negative { format!("-{body}") } else { body }
+    } else {
+        let scale_n = usize::try_from(scale).unwrap_or(0);
+        let mut padded = digits;
+        if padded.len() <= scale_n {
+            padded = format!("{padded:0>width$}", width = scale_n + 1);
+        }
+        let split_at = padded.len().saturating_sub(scale_n);
+        let (integer_part, fraction) = padded.split_at(split_at);
+        if negative {
+            format!("-{integer_part}.{fraction}")
+        } else {
+            format!("{integer_part}.{fraction}")
+        }
+    }
+}
+
+fn decimal_byte_lengths(array: &dyn Array, scale: i8) -> Result<Int32Array> {
+    let mut values = Vec::with_capacity(array.len());
+    for index in 0..array.len() {
+        if array.is_null(index) {
+            values.push(None);
+            continue;
+        }
+        let formatted = match array.data_type() {
+            DataType::Decimal32(_, _) => {
+                let unscaled = i128::from(array.as_primitive::<Decimal32Type>().value(index));
+                format_unscaled_i128(unscaled, scale)
+            }
+            DataType::Decimal64(_, _) => {
+                let unscaled = i128::from(array.as_primitive::<Decimal64Type>().value(index));
+                format_unscaled_i128(unscaled, scale)
+            }
+            DataType::Decimal128(_, _) => {
+                let unscaled = array.as_primitive::<Decimal128Type>().value(index);
+                format_unscaled_i128(unscaled, scale)
+            }
+            DataType::Decimal256(_, _) => {
+                let wide = array.as_primitive::<Decimal256Type>().value(index);
+                match wide.to_i128() {
+                    Some(unscaled) => format_unscaled_i128(unscaled, scale),
+                    None => {
+                        return exec_err!("decimal256 value does not fit Spark STRING length path");
+                    }
+                }
+            }
+            other => {
+                return exec_err!("decimal_byte_lengths on non-decimal {other}");
+            }
+        };
+        values.push(Some(spark_int_len(formatted.len())?));
+    }
+    Ok(values.into_iter().collect())
 }
 
 fn spark_int_len(bytes: usize) -> Result<i32> {
@@ -329,6 +425,49 @@ mod tests {
         assert!(spark_int_len((i32::MAX as usize) + 1).is_err());
         let too_many_octets = Int32Array::from(vec![Some(i32::MAX)]);
         assert!(bit_lengths_from_octets(&too_many_octets).is_err());
+    }
+
+    #[tokio::test]
+    async fn nested_container_is_fail_loud() {
+        let ctx = ctx();
+        for sql in ["SELECT bit_length([1, 2])", "SELECT octet_length([1, 2])"] {
+            let result = ctx.sql(sql).await;
+            assert!(
+                result.is_err(),
+                "Spark refuses nested input: {sql} -> {result:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn decimal_preserves_scale_padding() {
+        let ctx = ctx();
+        // Spark 4.1.2: CAST(12.50 AS DECIMAL(4,2)) → '12.50' → octet 5 / bit 40.
+        assert_eq!(
+            one_i32(&ctx, "SELECT octet_length(CAST(12.50 AS DECIMAL(4, 2)))").await,
+            Some(5)
+        );
+        assert_eq!(
+            one_i32(&ctx, "SELECT bit_length(CAST(12.50 AS DECIMAL(4, 2)))").await,
+            Some(40)
+        );
+        assert_eq!(
+            one_i32(&ctx, "SELECT octet_length(CAST(1.2 AS DECIMAL(5, 2)))").await,
+            Some(4)
+        );
+        assert_eq!(
+            one_i32(&ctx, "SELECT octet_length(CAST(-12.50 AS DECIMAL(5, 2)))").await,
+            Some(6)
+        );
+    }
+
+    #[test]
+    fn format_unscaled_matches_spark_cast_string() {
+        assert_eq!(format_unscaled_i128(1250, 2), "12.50");
+        assert_eq!(format_unscaled_i128(120, 2), "1.20");
+        assert_eq!(format_unscaled_i128(50, 2), "0.50");
+        assert_eq!(format_unscaled_i128(-1250, 2), "-12.50");
+        assert_eq!(format_unscaled_i128(12, 0), "12");
     }
 
     #[tokio::test]

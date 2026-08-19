@@ -88,7 +88,10 @@ NOT in that file is a defect, not a decision.
   types, unsigned-shift negative, invalid UTF-8 via unhex, `getbit` projection
   name, `regexp_instr` idx (NULL-propagates; value ignored — live Spark
   4.1.2), keyword forms (`numBits`/`numBucket`/`partNum`), docstring examples
-  execute. Ledger: `task/fn-gt1-ledger.md`.
+  execute. **Round-2 (2026-08-19):** Spark SQL door `regexp_count` NULL /
+  `regexp_instr` idx-ignore matrix, ARRAY refuse, decimal 5/40, STRING
+  `partNum`, `getbit` SQL name, omitted-idx display `, 0`, UTF-16 empty-count
+  / ASCII ``\\d``, partNum 0 fail-loud. Ledger: `task/fn-gt1-ledger.md`.
 - [test_functions_w.py](test_functions_w.py) — FN-W (2026-08-15): window
   wrappers through `ReparkSession` Arrow `to_arrow()` (value AND type).
   `lag`/`lead` default first/last-row NULL + explicit default + NULL-source

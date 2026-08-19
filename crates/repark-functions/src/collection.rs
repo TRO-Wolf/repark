@@ -32,6 +32,7 @@ use datafusion::logical_expr::{
 /// Sibling file so `lib.rs` stays at its crate-root ceiling.
 #[path = "str_to_map.rs"]
 mod str_to_map;
+pub(crate) use str_to_map::bind_ascii_perl_classes;
 
 /// NULL-guarded `shuffle` (X1 — the upstream kernel panics on an all-NULL list).
 #[path = "shuffle.rs"]

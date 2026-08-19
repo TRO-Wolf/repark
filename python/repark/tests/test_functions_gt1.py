@@ -13,6 +13,7 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
+from repark.errors import AnalysisException, PySparkException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 
@@ -483,21 +484,170 @@ def test_sql_door_bit_length_stringifies(spark: ReparkSession) -> None:
 
 
 def test_bin_bool_over_accepts_where_spark_refuses(spark: ReparkSession) -> None:
-    """G5 residual: facade CAST(long) lets BOOLEAN through; Spark analysis-refuses."""
+    """A4 named divergence: CAST(long) lets BOOLEAN through; Spark analysis-refuses.
+
+    Spark 4.1.2 citation: ``DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE`` — ``bin``
+    requires BIGINT, ``rint`` requires DOUBLE. Kept this round (wrong-answer
+    classes outrank over-accepts). Registry row is orchestrator-side.
+    """
     table = _table(
         spark.range(1).select(F.bin(F.lit(True)).alias("t"), F.bin(F.lit(False)).alias("f"))
     )
     assert table.column("t").to_pylist() == ["1"]
     assert table.column("f").to_pylist() == ["0"]
+    rint_table = _table(spark.range(1).select(F.rint(F.lit(True)).alias("r")))
+    assert rint_table.column("r").to_pylist() == [1.0]
 
 
-def test_sql_door_regexp_count_null_is_still_zero(spark: ReparkSession) -> None:
-    """SQL-door residual: DF regexp_count(NULL) is 0. Facade P1 is NULL."""
+def test_sql_door_regexp_count_null_is_null(spark: ReparkSession) -> None:
+    """A2: Spark SQL door regexp_count NULL-in is NULL (INT), same as F.* P1."""
     table = _table(spark.sql("SELECT regexp_count(CAST(NULL AS VARCHAR), 'ab') AS c"))
-    assert table.column("c").to_pylist() == [0]
+    assert table.column("c").to_pylist() == [None]
+    assert table.schema.field("c").type == pa.int32()
+    pattern_null = _table(spark.sql("SELECT regexp_count('ababab', CAST(NULL AS VARCHAR)) AS c"))
+    assert pattern_null.column("c").to_pylist() == [None]
+    instr_null = _table(
+        spark.sql(
+            "SELECT regexp_instr(CAST(NULL AS VARCHAR), 'ab') AS h, "
+            "regexp_instr('abcde', CAST(NULL AS VARCHAR)) AS p"
+        )
+    )
+    assert instr_null.column("h").to_pylist() == [None]
+    assert instr_null.column("p").to_pylist() == [None]
+    assert instr_null.schema.field("h").type == pa.int32()
 
 
-def test_sql_door_regexp_instr_third_arg_is_df_start(spark: ReparkSession) -> None:
-    """SQL-door residual: 3rd arg is DF start, not Spark idx. Facade G6 is 2."""
-    table = _table(spark.sql("SELECT regexp_instr('abcde', 'b(c)d', 99) AS i"))
-    assert table.column("i").to_pylist() == [0]
+def test_sql_door_regexp_instr_idx_is_ignored(spark: ReparkSession) -> None:
+    """A1: SQL-door idx is ignore-value, not DF start. Discriminator idx=1 → 2."""
+    table = _table(
+        spark.sql(
+            "SELECT regexp_instr('abcde', 'b(c)d', 0) AS i0, "
+            "regexp_instr('abcde', 'b(c)d', 1) AS i1, "
+            "regexp_instr('abcde', 'b(c)d', 3) AS i3, "
+            "regexp_instr('abcde', 'b(c)d', 99) AS i99, "
+            "regexp_instr('abcde', 'b(c)d', CAST(NULL AS INT)) AS nidx"
+        )
+    )
+    assert table.column("i0").to_pylist() == [2]
+    assert table.column("i1").to_pylist() == [2]
+    assert table.column("i3").to_pylist() == [2]
+    assert table.column("i99").to_pylist() == [2]
+    assert table.column("nidx").to_pylist() == [None]
+    assert table.schema.field("i1").type == pa.int32()
+    facade = _table(
+        spark.range(1).select(
+            F.regexp_instr(F.lit("abcde"), F.lit("b(c)d"), 1).alias("i1"),
+            F.regexp_instr(F.lit("abcde"), F.lit("b(c)d"), 99).alias("i99"),
+        )
+    )
+    assert facade.column("i1").to_pylist() == [2]
+    assert facade.column("i99").to_pylist() == [2]
+
+
+def test_regexp_utf16_and_ascii_digit_both_doors(spark: ReparkSession) -> None:
+    """A1 UTF-16 start + empty-count; Java ``\\d`` is ASCII (C1-L-001/002)."""
+    sql = _table(
+        spark.sql(
+            "SELECT regexp_instr('🐈ab', 'ab') AS i, "
+            "regexp_count('🐈', '') AS c, "
+            "regexp_count('٣', '\\d') AS d"
+        )
+    )
+    assert sql.column("i").to_pylist() == [3]
+    assert sql.column("c").to_pylist() == [3]
+    assert sql.column("d").to_pylist() == [0]
+    facade = _table(
+        spark.range(1).select(
+            F.regexp_instr(F.lit("🐈ab"), F.lit("ab")).alias("i"),
+            F.regexp_count(F.lit("🐈"), F.lit("")).alias("c"),
+            F.regexp_count(F.lit("٣"), F.lit(r"\d")).alias("d"),
+        )
+    )
+    assert facade.column("i").to_pylist() == [3]
+    assert facade.column("c").to_pylist() == [3]
+    assert facade.column("d").to_pylist() == [0]
+    assert sql.schema.field("i").type == pa.int32()
+    assert facade.schema.field("i").type == pa.int32()
+
+
+def test_sql_door_split_part_zero_is_fail_loud(spark: ReparkSession) -> None:
+    """C1-L-003: Spark rejects partNum 0; do not return empty string."""
+    with pytest.raises((AnalysisException, PySparkException), match=r"index 0"):
+        spark.sql("SELECT split_part('a.b.c', '.', 0)").to_arrow()
+    with pytest.raises((AnalysisException, PySparkException), match=r"index 0"):
+        _table(spark.range(1).select(F.split_part(F.lit("a.b.c"), F.lit("."), F.lit(0)).alias("p")))
+
+
+def test_sql_door_bit_length_refuses_array(spark: ReparkSession) -> None:
+    """A3: Spark DATATYPE_MISMATCH on ARRAY/STRUCT/MAP — refuse loud, do not stringify."""
+    with pytest.raises(AnalysisException, match=r"STRING or BINARY"):
+        _table(spark.range(1).select(F.bit_length(F.array(F.lit(1), F.lit(2)))))
+    with pytest.raises(AnalysisException, match=r"STRING or BINARY"):
+        spark.sql("SELECT bit_length(array(1, 2))").to_arrow()
+    with pytest.raises(AnalysisException, match=r"STRING or BINARY"):
+        spark.sql("SELECT octet_length(array(1, 2))").to_arrow()
+    with pytest.raises(AnalysisException, match=r"STRING or BINARY"):
+        spark.sql("SELECT bit_length(named_struct('a', 1))").to_arrow()
+    with pytest.raises(AnalysisException, match=r"STRING or BINARY"):
+        spark.sql("SELECT bit_length(map('a', 1))").to_arrow()
+
+
+def test_sql_door_decimal_length_scale_padding(spark: ReparkSession) -> None:
+    """A3: CAST(12.50 AS DECIMAL(4,2)) → octet 5 / bit 40 (Spark '12.50')."""
+    table = _table(
+        spark.sql(
+            "SELECT octet_length(CAST(12.50 AS DECIMAL(4,2))) AS o, "
+            "bit_length(CAST(12.50 AS DECIMAL(4,2))) AS b"
+        )
+    )
+    assert table.column("o").to_pylist() == [5]
+    assert table.column("b").to_pylist() == [40]
+    assert table.schema.field("o").type == pa.int32()
+    assert table.schema.field("b").type == pa.int32()
+    padded = _table(spark.sql("SELECT octet_length(CAST(1.2 AS DECIMAL(5,2))) AS o"))
+    assert padded.column("o").to_pylist() == [4]
+
+
+def test_sql_door_split_part_string_part_num(spark: ReparkSession) -> None:
+    """F-6c: Spark implicit-casts STRING partNum; both doors must."""
+    sql_table = _table(spark.sql("SELECT split_part('a.b.c', '.', '2') AS p"))
+    assert sql_table.column("p").to_pylist() == ["b"]
+    frame = spark.createDataFrame([("a.b.c", "2")], ["src", "n"])
+    facade = _table(frame.select(F.split_part("src", F.lit("."), "n").alias("p")))
+    assert facade.column("p").to_pylist() == ["b"]
+
+
+def test_sql_door_getbit_projects_getbit_name(spark: ReparkSession) -> None:
+    """F-6e: SQL ``getbit`` projects ``getbit(...)``, not ``bit_get`` (alias is real)."""
+    table = _table(spark.sql("SELECT getbit(6, 1)"))
+    name = table.schema.names[0]
+    assert name.startswith("getbit("), name
+    assert "bit_get" not in name
+    assert table.column(name).to_pylist() == [1]
+
+
+def test_regexp_instr_omitted_idx_projects_zero(spark: ReparkSession) -> None:
+    """F-7: PySpark 2-arg call projects ``regexp_instr(..., 0)`` (default idx)."""
+    table = _table(spark.range(1).select(F.regexp_instr(F.lit("abcde"), F.lit("c"))))
+    name = table.schema.names[0]
+    assert name == "regexp_instr(abcde, c, 0)", name
+    assert table.column(name).to_pylist() == [3]
+
+
+def test_cast_invalid_utf8_string_is_fail_loud(spark: ReparkSession) -> None:
+    """F-6f: CAST(unhex('C3') AS STRING) is unreachable on Arrow Utf8 (invalid bytes).
+
+    Spark preserves the incomplete sequence in STRING; Arrow refuses the CAST.
+    BINARY-typed invalid UTF-8 remains the P4 pin. This is a CAST limitation,
+    not an ``is_valid_utf8`` kernel gap.
+    """
+    with pytest.raises(PySparkException, match=r"UTF-8"):
+        spark.sql("SELECT is_valid_utf8(CAST(unhex('C3') AS STRING))").to_arrow()
+
+
+def test_regexp_instr_bare_str_idx_is_fail_loud(spark: ReparkSession) -> None:
+    """F-6d: bare-str idx is force-lit then CAST to INT — Spark CAST_INVALID_INPUT."""
+    with pytest.raises(PySparkException, match=r"Cannot cast string 'i'"):
+        _table(
+            spark.range(1).select(F.regexp_instr(F.lit("abcde"), F.lit("b(c)d"), "i").alias("x"))
+        )

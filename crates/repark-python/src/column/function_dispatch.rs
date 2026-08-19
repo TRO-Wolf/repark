@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::average::avg_udaf;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
@@ -19,29 +18,12 @@ use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
 use datafusion::logical_expr::expr::ScalarFunction;
-use datafusion::logical_expr::{AggregateUDF, Cast, Expr, lit, when};
+use datafusion::logical_expr::{AggregateUDF, Expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::expr_build::reciprocal_trig_or_inf;
-
-fn spark_int32(expr: Expr) -> Expr {
-    Expr::Cast(Cast::new(Box::new(expr), DataType::Int32))
-}
-
-fn spark_null_if_any_null(args: &[Expr], then_expr: Expr) -> PyResult<Expr> {
-    let Some((first, rest)) = args.split_first() else {
-        return Ok(then_expr);
-    };
-    let mut nulls = first.clone().is_null();
-    for arg in rest {
-        nulls = nulls.or(arg.clone().is_null());
-    }
-    when(nulls, lit(ScalarValue::Int32(None)))
-        .otherwise(then_expr)
-        .map_err(|err| PyValueError::new_err(err.to_string()))
-}
 
 /// ===========================================================================================
 /// Lower a facade `call_scalar` name + already-built argument [`Expr`]s.
@@ -713,27 +695,20 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "split_part" => {
             need(3)?;
-            expr_fn::split_part(exprs[0].clone(), exprs[1].clone(), exprs[2].clone())
-        }
-        "regexp_count" => {
-            // P1: Spark returns NULL when str or regexp is NULL; DF returns 0.
-            // P2: Spark INT (Arrow int32); DF hands back int64.
-            // Spark's Python wrapper is 2-arg only — do not open DF start/flags.
-            need(2)?;
-            let count = spark_int32(expr_fn::regexp_count(
+            repark_functions::expr_fn::split_part(
                 exprs[0].clone(),
                 exprs[1].clone(),
-                None,
-                None,
-            ));
-            spark_null_if_any_null(&exprs, count)?
+                exprs[2].clone(),
+            )
+        }
+        "regexp_count" => {
+            // One semantics source: spark_regexp.rs (NULL-in NULL-out, int32).
+            need(2)?;
+            repark_functions::expr_fn::regexp_count(exprs[0].clone(), exprs[1].clone())
         }
         "regexp_instr" => {
-            // G6: Spark 4.1.2 `regexp_instr(str, regexp, idx=None)` — `idx` is a
-            // TernaryExpression slot (NULL idx → NULL) but `RegExpInStr.nullSafeEval`
-            // ignores the value and always returns `MatchResult.start()+1`. DataFusion's
-            // 3rd arg is START POSITION — never forward idx there. Close the 3-arg
-            // arm before the facade opens the param. P2: Spark INT.
+            // One semantics source: spark_regexp.rs. 3rd arg is Spark idx
+            // (NULL-propagate, value ignored) — never DataFusion start-position.
             need_at_least(2)?;
             if exprs.len() > 3 {
                 return Err(PyValueError::new_err(format!(
@@ -741,16 +716,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
                     exprs.len()
                 )));
             }
-            let base = spark_int32(expr_fn::regexp_instr(
-                exprs[0].clone(),
-                exprs[1].clone(),
-                None,
-                None,
-                None,
-                None,
-                None,
-            ));
-            spark_null_if_any_null(&exprs, base)?
+            repark_functions::expr_fn::regexp_instr(exprs.clone())
         }
         "bit_length" => {
             need(1)?;

@@ -1977,9 +1977,10 @@ def regexp_instr(
     """1-based index of the first regex match (PySpark ``functions.regexp_instr``).
 
     ``regexp`` is ``ColumnOrName``. ``idx`` is optional ``int`` or ``Column``
-    (PySpark wraps a non-None value in ``lit(idx)``). Live Spark 4.1.2
+    (a bare ``str`` is force-lit, then CAST to INT — Spark 4.1.2). Live Spark
     ``RegExpInStr.nullSafeEval`` **ignores** the idx value and returns the
-    start of the whole match; a NULL idx still yields NULL.
+    start of the whole match; a NULL idx still yields NULL. Omitted idx is
+    ``0`` (PySpark projects ``regexp_instr(s, re, 0)``).
 
     Parameters
     ----------
@@ -2001,7 +2002,7 @@ def regexp_instr(
     ``F.regexp_instr(F.lit('abcde'), F.lit('c'))`` is ``3``.
     """
     if idx is None:
-        return _scalar("regexp_instr", str, regexp)
+        idx = 0
     return _scalar(
         "regexp_instr",
         str,

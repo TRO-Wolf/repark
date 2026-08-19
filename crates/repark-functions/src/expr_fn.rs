@@ -233,6 +233,27 @@ pub fn shiftrightunsigned(value: Expr, shift: Expr) -> Expr {
     spark_bitwise::shiftrightunsigned(value, shift)
 }
 
+/// Spark `split_part(src, delimiter, partNum)` — STRING `partNum` casts (F-6c).
+#[must_use]
+pub fn split_part(src: Expr, delimiter: Expr, part_num: Expr) -> Expr {
+    call(
+        crate::spark_split_part::split_part_udf(),
+        vec![src, delimiter, part_num],
+    )
+}
+
+/// Spark `regexp_count(str, regexp)` — NULL-in NULL-out, INT (P1 / A2).
+#[must_use]
+pub fn regexp_count(str: Expr, regexp: Expr) -> Expr {
+    call(crate::spark_regexp::regexp_count_udf(), vec![str, regexp])
+}
+
+/// Spark `regexp_instr(str, regexp[, idx])` — ignore idx value; first-match start.
+#[must_use]
+pub fn regexp_instr(args: Vec<Expr>) -> Expr {
+    call(crate::spark_regexp::regexp_instr_udf(), args)
+}
+
 /// Spark `bit_length(expr)` — byte-length × 8; stringifies non-binary (G5).
 #[must_use]
 pub fn bit_length(arg: Expr) -> Expr {

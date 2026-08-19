@@ -1115,7 +1115,10 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   leftovers in `functions_bitwise.py`; string/utf8 leftovers in
   `functions_expr.py`. Binder arms in `column/function_dispatch.rs`.
   **GT1-FIX (2026-08-18):** ColumnOrName wiring (G1–G8), oracle pins (P1–P5),
-  docstring examples (F3), `lit_indices` sweep. Ledger: `task/fn-gt1-ledger.md`.
+  docstring examples (F3), `lit_indices` sweep. **Round-2 (2026-08-19):**
+  door-side `regexp_*` / `split_part` kernels; omitted `regexp_instr` idx
+  projects `, 0`; UTF-16 empty-count / ASCII ``\\d``; partNum 0 fail-loud.
+  Ledger: `task/fn-gt1-ledger.md`.
   **FN-F (2026-08-15):** 10 try/session/bitwise names in `functions_bitwise.py` +
   `functions_session.py` (bitwise_not/bitwiseNOT, broadcast, current_user/user,
   current_catalog/current_database/current_schema, version, uuid). Deferred:

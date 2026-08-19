@@ -35,6 +35,8 @@ pub mod instant_ts;
 pub mod random;
 pub mod session_time_zone;
 pub mod spark_length;
+pub mod spark_regexp;
+pub mod spark_split_part;
 pub mod string;
 pub mod timestamp_cast;
 pub mod timestamp_type;

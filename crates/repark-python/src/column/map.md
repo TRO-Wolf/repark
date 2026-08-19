@@ -24,6 +24,8 @@ without enabling PyO3 `multiple-pymethods`.
   ignore value) — never DataFusion start-position. `getbit` stays a reachable
   name on the wire. `bit_length`/`octet_length` embed the repark stringify
   shim. Ledger: `task/fn-gt1-ledger.md`.
+  **GT1-FIX round-2 (2026-08-19):** `regexp_count` / `regexp_instr` / `split_part`
+  embed the `repark-functions` overwrites (one semantics source for both doors).
   **FN-GT2 (2026-08-17):** datetime/collections/url/bitmap leftover arms
   (`make_date`/`make_interval`/`make_dt_interval`/`unix_micros`/`date_diff`/
   `element_at`/`array_compact`/`shuffle`/`map_from_entries`/`str_to_map`/

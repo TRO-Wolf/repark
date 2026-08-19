@@ -31,11 +31,17 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **r24 G10 / PERF-10:** crate-level `criterion` 0.8 dev-dep + `[[bench]] ratio_string_datetime`
   (never `[workspace.dependencies]`). See [benches/map.md](benches/map.md).
 - `benches/` — PERF-10 ratio micro-benches (`date_format`/`to_char`, `substring`/`upper`).
-- `src/spark_length.rs` — **GT1-FIX G5:** Spark `bit_length` / `octet_length`
-  (stringify non-binary; BINARY pass-through; overwrite DF Utf8/Binary-exact
-  kernels). Wired from `string::functions()` + `expr_fn`. Ledger:
+- `src/spark_length.rs` — **GT1-FIX G5 / A3:** Spark `bit_length` / `octet_length`
+  (stringify non-binary; BINARY pass-through; refuse ARRAY/STRUCT/MAP; decimal
+  scale-padded stringify). Wired from `string::functions()` + `expr_fn`. Ledger:
   `task/fn-gt1-ledger.md`.
-- `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later)
+- `src/spark_regexp.rs` — **GT1-FIX A1/A2:** Spark `regexp_count` / `regexp_instr`
+  (NULL-in NULL-out INT; idx ignore-value; UTF-16 start/empty-count; ASCII
+  `\d`/`\w`/`\s`). Overwrite from `string::functions()` + `expr_fn`.
+- `src/spark_split_part.rs` — **GT1-FIX F-6c:** Spark `split_part` STRING
+  `partNum` implicit-cast to Int64; partNum 0 fail-loud. Overwrite from
+  `string::functions()`.
+- `src/lib.rs` — `register_all(ctx)` (datafusion-spark's full set, then the shims — later
   registration wins) + **Q1** `approx_percentile_cont` re-registered with aliases
   `percentile_approx` / `approx_percentile` via `AggregateUDF::with_aliases` +
   `spark_date_shim_functions()` + `analyzer_rules()` (`SparkDecimalPrecision` first, then
@@ -91,6 +97,7 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **D2** `concat` (`SparkConcat`) overwrites datafusion-spark: coerce all args → `Utf8`
   (Spark stringify), always emit `Utf8` (never `Utf8View`), any-NULL → NULL — fixes
   TPC-DS Q5/Q80/Q84; pins include `register_all` overwrite + multi-row null mask.
+  **GT1-FIX round-2:** also registers `regexp_count` / `regexp_instr` / `split_part`.
 - `src/str_to_map.rs` — **FN-GT2 rework:** regex `str_to_map` UDF (`#[path]` from
   `collection.rs`). Overwrites the DF literal-split kernel. Depends on workspace
   `regex`.
@@ -117,7 +124,8 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   **octo C2-Q-001:** compile pattern apostrophe/unterminated pins.
 - `src/expr_fn.rs` — logical-`Expr` builders for the date functions including Group I `weekday`
   (embed the UDF instance so a `PyColumn` gets a self-contained expression); `date_add`/`last_day`
-  come from `datafusion-spark`.
+  come from `datafusion-spark`. **GT1-FIX round-2:** `regexp_count` / `regexp_instr` /
+  `split_part` embed the Spark-shaped overwrites (same UDF the SQL door registers).
 
 ## I want to...
 
