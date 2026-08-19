@@ -1,9 +1,10 @@
-//! Octo cycle-2 kernel pins (file split so `tests.rs` stays under the 1500-line ceiling).
+//! Octo cycle-2/3 kernel pins (file split so `tests.rs` stays under the 1500-line ceiling).
 
 use std::sync::Arc;
 
 use arrow::array::{
-    Array, ArrayRef, FixedSizeListArray, LargeListArray, ListViewArray, StructArray,
+    Array, ArrayRef, FixedSizeListArray, LargeListArray, LargeListViewArray, ListViewArray,
+    StructArray,
 };
 use arrow::buffer::{NullBuffer, OffsetBuffer, ScalarBuffer};
 use arrow::datatypes::{DataType, Field, Fields, Schema};
@@ -93,6 +94,32 @@ fn list_view_refuses_loud() {
     let offsets = ScalarBuffer::from(vec![0_i32]);
     let sizes = ScalarBuffer::from(vec![2_i32]);
     let view = ListViewArray::try_new(field, offsets, sizes, values, None).expect("list_view");
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "xs",
+            view.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(view)],
+    )
+    .expect("batch");
+
+    analysis_token(
+        dynamic_flatten(read_batch(batch), options()),
+        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]",
+    );
+}
+
+/// C3-Q-001 / C3-L-001: `LargeListView` is not a leave-nested fail-open; refuse LOUD.
+/// Deleting the `LargeListView` arm of `is_list_view_type` must red this.
+#[test]
+fn large_list_view_refuses_loud() {
+    let values = i64_array(vec![Some(1), Some(2)]);
+    let field = Arc::new(Field::new("item", DataType::Int64, true));
+    let offsets = ScalarBuffer::from(vec![0_i64]);
+    let sizes = ScalarBuffer::from(vec![2_i64]);
+    let view =
+        LargeListViewArray::try_new(field, offsets, sizes, values, None).expect("large_list_view");
     let batch = RecordBatch::try_new(
         Arc::new(Schema::new(vec![Field::new(
             "xs",

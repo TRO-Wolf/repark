@@ -16,7 +16,7 @@ operator.
   Dictionary-of-List unwrap, dict-struct type + utf8 dict-struct, list-of-map
   refuse, dirty-child mid-struct nulls, ReparkSession wrapper harness,
   DEFECT-2 flatten-then-project.
-- `tests/` — octo C2 pins split out of `tests.rs` (file-size ceiling). See
+- `tests/` — octo C2/C3 pins split out of `tests.rs` (file-size ceiling). See
   [tests/map.md](tests/map.md).
 
 ## Pointers
@@ -35,7 +35,7 @@ operator.
 | `From<&str>` / `col(name)` on a `s.f` / `wrap.nums` column | Every schema field must bind through `Column::new_unqualified` — pin `dotted_list_column_unnest_uses_unqualified_bind`. |
 | Empty lists survive `empty_as_null=false` | Unnest drops zero-length arrays regardless of `preserve_nulls` (that flag only keeps NULL lists). `empty_as_null=true` rewrites EMPTY to a singleton-null list first — pin `null_and_empty_array_values`. |
 | `array<map>` explodes | List-of-map must refuse `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` — pin `list_of_map_refuses_loud`. |
-| ListView leave-nested | ListView / LargeListView refuse `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` — pin `list_view_refuses_loud`. |
+| ListView leave-nested | ListView / LargeListView refuse `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` — pins `list_view_refuses_loud`, `large_list_view_refuses_loud`. |
 | LargeList / FixedSizeList stay nested | Both arms of `list_element_type` explode — pins `large_list_explodes`, `fixed_size_list_explodes`. |
 | Dictionary list Unnest rejects | Cast Dictionary<_, List> to List before Unnest — pin `dictionary_list_is_unwrapped_one_level`. |
 

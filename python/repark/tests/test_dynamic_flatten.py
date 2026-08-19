@@ -924,7 +924,7 @@ def test_schema_walk_does_not_require_prior_collect(spark: ReparkSession) -> Non
 def test_dynamic_flatten_plan_build_does_not_force_collect(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Plan-time dynamicFlatten must not invoke collect / count / to_arrow (C2-Q-003)."""
+    """Plan-time dynamicFlatten must not invoke collect / count / to_arrow (C1-Q-003)."""
     from repark.spark.dataframe import DataFrame
 
     actions: list[str] = []

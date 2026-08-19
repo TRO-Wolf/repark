@@ -7,8 +7,8 @@ Rust file-size default ceiling.
 
 ## Contents
 
-- `octo.rs` — octo C2 kernel pins: `LargeList` / `FixedSizeList` explode,
-  `ListView` refuse, max-depth remaining-schema truncation.
+- `octo.rs` — octo C2/C3 kernel pins: `LargeList` / `FixedSizeList` explode,
+  `ListView` / `LargeListView` refuse, max-depth remaining-schema truncation.
 
 ## Pointers
 
@@ -19,6 +19,6 @@ Rust file-size default ceiling.
 | Symptom | First check |
 |---|---|
 | LargeList / FixedSizeList stay nested | Pins `large_list_explodes`, `fixed_size_list_explodes`. |
-| ListView leave-nested | Pin `list_view_refuses_loud`. |
+| ListView leave-nested | Pins `list_view_refuses_loud`, `large_list_view_refuses_loud`. |
 
 First checks: `cargo test -p repark-core dynamic_flatten`. Escalate to: [../map.md](../map.md).

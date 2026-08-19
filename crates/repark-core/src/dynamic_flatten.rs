@@ -6,6 +6,7 @@
 //! `unnest_columns` is not used (wrong names, wrong collisions, null-parent default-fill).
 
 use std::collections::HashMap;
+use std::fmt::Write;
 
 use arrow::datatypes::{DataType, Fields};
 use datafusion::common::{Column, ScalarValue, UnnestOptions};
@@ -411,20 +412,53 @@ fn is_map_type(data_type: &DataType) -> bool {
 /// Bound on remaining-schema Debug dumped into `[DYNAMIC_FLATTEN_MAX_DEPTH]`.
 const REMAINING_SCHEMA_CHAR_LIMIT: usize = 240;
 
-fn format_fields(fields: &Fields) -> String {
-    let rendered = fields
-        .iter()
-        .map(|field| format!("{}: {:?}", field.name(), field.data_type()))
-        .collect::<Vec<_>>()
-        .join(", ");
-    if rendered.chars().count() <= REMAINING_SCHEMA_CHAR_LIMIT {
-        return rendered;
+/// Streams remaining-schema Debug into a char-capped buffer (never joins the full dump first).
+struct RemainingSchemaWriter {
+    out: String,
+    remaining_chars: usize,
+}
+
+impl Write for RemainingSchemaWriter {
+    fn write_str(&mut self, text: &str) -> std::fmt::Result {
+        if self.remaining_chars == 0 {
+            return Err(std::fmt::Error);
+        }
+        for character in text.chars() {
+            if self.remaining_chars == 0 {
+                return Err(std::fmt::Error);
+            }
+            self.out.push(character);
+            self.remaining_chars -= 1;
+        }
+        Ok(())
     }
-    let truncated: String = rendered.chars().take(REMAINING_SCHEMA_CHAR_LIMIT).collect();
-    format!(
-        "{truncated}… ({} fields; remaining-schema text truncated)",
-        fields.len()
-    )
+}
+
+fn format_fields(fields: &Fields) -> String {
+    let mut writer = RemainingSchemaWriter {
+        out: String::new(),
+        remaining_chars: REMAINING_SCHEMA_CHAR_LIMIT,
+    };
+    let mut truncated = false;
+    for (index, field) in fields.iter().enumerate() {
+        if index > 0 && write!(writer, ", ").is_err() {
+            truncated = true;
+            break;
+        }
+        if write!(writer, "{}: {:?}", field.name(), field.data_type()).is_err() {
+            truncated = true;
+            break;
+        }
+    }
+    if truncated {
+        format!(
+            "{}… ({} fields; remaining-schema text truncated)",
+            writer.out,
+            fields.len()
+        )
+    } else {
+        writer.out
+    }
 }
 
 fn first_list_view_column(fields: &Fields) -> Option<String> {

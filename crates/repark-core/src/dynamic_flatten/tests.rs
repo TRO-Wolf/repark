@@ -513,10 +513,11 @@ async fn null_mid_struct_fields_are_null_not_zero() {
 
     let frame = flatten(batch, options());
     let table = collect_one(frame).await;
-    let values = i64_cells(&table, "o_inner_x");
-    let nulls = values.iter().filter(|value| value.is_none()).count();
-    assert_eq!(nulls, 2);
-    assert!(values.contains(&Some(9)));
+    assert_eq!(
+        i64_cells(&table, "o_inner_x"),
+        [None, Some(9), None],
+        "null outer / null mid must yield NULL leaves in row order, not 0"
+    );
     assert_int64(&table, "o_inner_x");
 }
 

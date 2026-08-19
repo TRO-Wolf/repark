@@ -228,7 +228,8 @@ NOT in that file is a defect, not a decision.
   (`[DYNAMIC_FLATTEN_EMPTY_STRUCT]`); interleaved
   in-place column order;
   idempotence on already-flat; both method names; custom separator; explode_lists=False;
-  schema-walk + plan-build collect/count/to_arrow spy pin; native-kernel
+  schema-walk + plan-build collect/count/to_arrow spy pin (C1-Q-003);
+  native-kernel
   docstring pin; dotted-separator list Unnest pin. Arrow value+type pins.
   (octo: trailing newline W292.) **C1-Q-002:** map-element refuse pins
   `dynamicFlatten` (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`) **and**

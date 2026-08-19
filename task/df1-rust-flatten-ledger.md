@@ -26,7 +26,7 @@ RePark DataFrame newtype.
 | C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + `_spawn`. | PROVEN |
 | C-009 | Python tests remain the facade contract; octo C1/C2 added native-kernel docstring, list-of-map, dotted-Unnest, empty-struct, and tightened token-regex pins. | PROVEN |
 | C-010 | `empty_as_null` is on `DynamicFlattenOptions` (omitted from the API sketch; required by the facade contract). | PROVEN |
-| C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7191). | PROVEN |
+| C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7192 via `splitlines()` / `wc -l`; C3-CL-001 auditor 7191 was off-by-one vs last line). | PROVEN |
 | C-012 | `dataframe.rs` stays under 1500 (measured 1457). | PROVEN |
 
 ---
@@ -71,6 +71,7 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 - `scripts/check_lib_py.py` (ceiling DOWN)
 - `scripts/map.md`
 - `crates/repark-core/src/session/df_guards.rs`
+- `crates/repark-core/src/session/df_guard_tests.rs`
 - `crates/repark-core/src/session/map.md`
 - `task/df1-rust-flatten-ledger.md` (this file)
 - `task/map.md`
@@ -81,9 +82,9 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 
 | Gate | Exit |
 |---|---|
-| `cargo test -p repark-core dynamic_flatten` | 0 (37 passed; octo C2) |
-| `make verify` | 0 (octo C2) |
-| `make develop` + pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (41 passed; octo C2) |
+| `cargo test -p repark-core dynamic_flatten` | 0 (38 passed; octo C3) |
+| `make verify` | 0 (octo C3) |
+| `make develop` + pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (41 passed; octo C3) |
 
 ---
 
@@ -153,3 +154,20 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 | C2-CL-001 | REMEDIATED | C-005 cause rewritten (empty ≠ null). |
 | C2-CL-002 | REMEDIATED | Re-measured `lib.rs` 101 (`splitlines` / `wc -l`); auditor 102 was off-by-one. |
 | C2-CL-003 | REMEDIATED | Pins section no longer says Python tests "(unchanged assertions)". |
+
+---
+
+## 8. Octo cycle 3 (Half B)
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| C3-Q-001 | REMEDIATED | `large_list_view_refuses_loud` — `LargeListViewArray` + `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` (same token as `list_view_refuses_loud`). |
+| C3-L-001 | REMEDIATED | Same pin as C3-Q-001. |
+| C3-SEC-001 | WITHDRAWN | Flatten-emitted dotted names reparsed by `distinct_on` `col()` / filter SQL are pre-existing ident parsers; kernel Unnest bind is already `Column::new_unqualified`. Do not rewrite `distinct_on`. |
+| C3-SAF-001 | REMEDIATED | `format_fields` streams Debug into a 240-char writer (no join-then-truncate of the full dump). Pin `max_depth_remaining_schema_is_truncated`. |
+| C3-L-002 | WITHDRAWN | `mixed_plan` pin uses `BoomOnFilter`, not a real leaf-pushdown success-wrong rewrite. Residual oracle; DF-54.1 Unnest `with_new_exprs` still Err so the clone is kept. |
+| C3-L-003 | REMEDIATED | `null_mid_struct_fields_are_null_not_zero` asserts exact `[None, Some(9), None]`. |
+| C3-CL-001 | REMEDIATED | Re-measured `core.py` 7192 (`splitlines()` / `wc -l`); ledger C-011 + `check_lib_py.py` comment. |
+| C3-CL-002 | REMEDIATED | `test_dynamic_flatten_plan_build_does_not_force_collect` docstring cites C1-Q-003 (not C2-Q-003). |
+| C3-CL-003 | REMEDIATED | Fence lists `crates/repark-core/src/session/df_guard_tests.rs`. |
+| C3-CL-004 | REMEDIATED | `crates/repark-core/src/map.md` cites `dynamic_flatten/tests/octo.rs`. |
