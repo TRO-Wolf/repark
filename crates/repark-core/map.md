@@ -63,8 +63,9 @@ honestly"). SQL routing and session-build registration are seam-inverted
   `build_amazon_s3_store`, `register_bucket_store` (one store under BOTH scheme URLs),
   `parse_s3_bucket` / `is_s3_scheme`.
 - `src/dynamic_flatten.rs` — DF1 `dynamic_flatten` plan rewrite (free function +
-  `DynamicFlattenOptions`; re-exported at the crate root). List-of-map refuses
-  LOUD; Dictionary-of-List is cast before Unnest.
+  `DynamicFlattenOptions`; re-exported at the crate root). List-of-map and
+  ListView refuse LOUD; Dictionary-of-List is cast before Unnest; LargeList /
+  FixedSizeList explode.
 - `src/lib.rs` — the crate-root manifest (module declarations + re-exports; no logic).
 - `src/dialect.rs` / `src/extension.rs` — the phase-2 seams: `SqlDialect` (+ `EngineContext`,
   default `DataFusionDialect`) and `SessionExtension` (configure/register hooks,

@@ -617,10 +617,10 @@ def test_max_depth_refuses_loud_never_silent_truncate(spark: ReparkSession) -> N
     )
     frame = spark.createDataFrame([{"a": {"b": {"c": 1}}}], schema=schema)
     # depth 1: unnest a → column a_b still struct → refuse
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_MAX_DEPTH|max_depth"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_MAX_DEPTH\]"):
         frame.dynamicFlatten(max_depth=1).collect()
     # depth 0 with nested work: refuse immediately
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_MAX_DEPTH|max_depth"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_MAX_DEPTH\]"):
         frame.dynamicFlatten(max_depth=0).collect()
     # ample depth succeeds
     ok = frame.dynamicFlatten(max_depth=5)
@@ -724,7 +724,7 @@ def test_prefixed_name_collision_with_top_level_refuses(spark: ReparkSession) ->
         ]
     )
     frame = spark.createDataFrame([{"a_x": 1, "a": {"x": 2}}], schema=schema)
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -751,7 +751,7 @@ def test_prefixed_name_collision_between_expansions_refuses(spark: ReparkSession
         [{"outer": {"inner_x": 1}, "outer_inner": {"x": 2}}],
         schema=schema,
     )
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -779,7 +779,7 @@ def test_cross_pass_prefixed_collision_refuses(spark: ReparkSession) -> None:
         [{"a_b_c": 1, "a": {"b": {"c": 2}}}],
         schema=schema,
     )
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -801,7 +801,15 @@ def test_list_explode_then_unnest_collision_with_top_level_refuses(
         [{"legs_leg_id": 9, "legs": [{"leg_id": 1}]}],
         schema=schema,
     )
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
+        frame.dynamicFlatten().collect()
+
+
+def test_empty_struct_only_schema_refuses_loud(spark: ReparkSession) -> None:
+    """Empty-struct-only schema refuses ``[DYNAMIC_FLATTEN_EMPTY_STRUCT]`` (C2-Q-002)."""
+    schema = StructType([StructField("hollow", StructType([]), True)])
+    frame = spark.createDataFrame([{"hollow": {}}], schema=schema)
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_EMPTY_STRUCT\]"):
         frame.dynamicFlatten().collect()
 
 

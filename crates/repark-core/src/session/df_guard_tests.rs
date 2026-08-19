@@ -6,6 +6,16 @@
 //! `push_down_leaf_projections` wrapped so it declines on the `Unnest`-carrying plans it
 //! miscompiles. Ledger: `task/c25-bugfix-ledger.md` -> DEFECT-2.
 
+use std::sync::Arc;
+
+use datafusion::common::tree_node::Transformed;
+use datafusion::error::DataFusionError;
+use datafusion::logical_expr::LogicalPlan;
+use datafusion::optimizer::{
+    ApplyOrder, Optimizer, OptimizerConfig, OptimizerContext, OptimizerRule,
+};
+
+use super::df_guards::wrap_leaf_rule_for_test;
 use crate::ReparkSession;
 
 /// G8 (phase-2 design): the DF-54.1 uncorrelated-scalar-subquery regression guard lives in
@@ -174,4 +184,54 @@ async fn explicit_conf_can_still_disable_leaf_expression_pushdown() {
             .enable_leaf_expression_pushdown,
         "an explicit datafusion.* conf must reach SessionConfig through the wrapper"
     );
+}
+
+/// C2-Q-001: swallow is the Unnest *path*, not whole-plan. A mixed plan (Filter
+/// with no `Unnest` UNION ALL an `Unnest`) must still surface an inner-rule error
+/// on the non-`Unnest` sibling — wrapping the full walk in `unwrap_or` reds this.
+#[tokio::test]
+async fn mixed_plan_non_unnest_inner_error_stays_loud() {
+    const SQL: &str = "SELECT value FROM generate_series(1, 3) WHERE value > 0 \
+         UNION ALL \
+         SELECT unnest([1, 2])";
+    let context = datafusion::prelude::SessionContext::new();
+    let plan = context.sql(SQL).await.unwrap().into_unoptimized_plan();
+    let display = plan.display_indent().to_string();
+    assert!(
+        display.contains("Filter") && display.contains("Unnest"),
+        "fixture must mix a non-Unnest Filter with an Unnest: {display}"
+    );
+
+    let optimizer = Optimizer::with_rules(vec![wrap_leaf_rule_for_test(Arc::new(BoomOnFilter))]);
+    let err = optimizer
+        .optimize(plan, &OptimizerContext::new(), |_, _| {})
+        .expect_err("non-Unnest Filter inner Err must stay loud on a mixed plan");
+    assert!(
+        err.to_string().contains("boom-on-filter"),
+        "expected boom-on-filter, got {err}"
+    );
+}
+
+#[derive(Debug)]
+struct BoomOnFilter;
+
+impl OptimizerRule for BoomOnFilter {
+    fn name(&self) -> &'static str {
+        "boom_on_filter"
+    }
+
+    fn apply_order(&self) -> Option<ApplyOrder> {
+        Some(ApplyOrder::TopDown)
+    }
+
+    fn rewrite(
+        &self,
+        plan: LogicalPlan,
+        _config: &dyn OptimizerConfig,
+    ) -> datafusion::common::Result<Transformed<LogicalPlan>> {
+        if matches!(plan, LogicalPlan::Filter(_)) {
+            return Err(DataFusionError::Internal("boom-on-filter".to_string()));
+        }
+        Ok(Transformed::no(plan))
+    }
 }

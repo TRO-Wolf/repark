@@ -141,10 +141,7 @@ fn i64_cells(batch: &RecordBatch, name: &str) -> Vec<Option<i64>> {
     decode_i64(array.as_ref())
 }
 
-fn utf8_cells(batch: &RecordBatch, name: &str) -> Vec<Option<String>> {
-    let array = batch
-        .column_by_name(name)
-        .unwrap_or_else(|| panic!("missing column {name}"));
+fn decode_utf8(array: &dyn Array) -> Vec<Option<String>> {
     if let Some(utf8) = array.as_any().downcast_ref::<StringArray>() {
         return (0..utf8.len())
             .map(|index| {
@@ -156,7 +153,27 @@ fn utf8_cells(batch: &RecordBatch, name: &str) -> Vec<Option<String>> {
             })
             .collect();
     }
-    panic!("{name} is not Utf8, got {:?}", array.data_type());
+    if let Some(dictionary) = array.as_any().downcast_ref::<DictionaryArray<Int32Type>>() {
+        let values = decode_utf8(dictionary.values().as_ref());
+        return (0..dictionary.len())
+            .map(|index| {
+                if dictionary.is_null(index) {
+                    None
+                } else {
+                    let key = dictionary.keys().value(index);
+                    values[usize::try_from(key).expect("non-negative dict key")].clone()
+                }
+            })
+            .collect();
+    }
+    panic!("not Utf8 (or dict-of-Utf8), got {:?}", array.data_type());
+}
+
+fn utf8_cells(batch: &RecordBatch, name: &str) -> Vec<Option<String>> {
+    let array = batch
+        .column_by_name(name)
+        .unwrap_or_else(|| panic!("missing column {name}"));
+    decode_utf8(array.as_ref())
 }
 
 fn field_type(batch: &RecordBatch, name: &str) -> DataType {
@@ -178,13 +195,21 @@ fn assert_int64(batch: &RecordBatch, name: &str) {
     assert!(is_int64, "{name} Arrow type {data_type:?} is not Int64");
 }
 
+fn is_string_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
+    ) || matches!(
+        data_type,
+        DataType::Dictionary(_, value)
+            if is_string_type(value)
+    )
+}
+
 fn assert_utf8(batch: &RecordBatch, name: &str) {
     let data_type = field_type(batch, name);
     assert!(
-        matches!(
-            data_type,
-            DataType::Utf8 | DataType::LargeUtf8 | DataType::Utf8View
-        ),
+        is_string_type(&data_type),
         "{name} Arrow type {data_type:?} is not a string"
     );
 }
@@ -461,9 +486,16 @@ async fn nested_struct_in_struct() {
 
 #[tokio::test]
 async fn null_mid_struct_fields_are_null_not_zero() {
+    // Dirty children at every null slot: valid inner + x=Some(0) under a null
+    // outer, and x=Some(0) under a null mid-struct. Already-null children would
+    // stay green if the CASE were dropped (C2-L-001).
     let inner = struct_array(
-        vec![("x", DataType::Int64, i64_array(vec![None, Some(9), None]))],
-        Some(vec![false, true, false]),
+        vec![(
+            "x",
+            DataType::Int64,
+            i64_array(vec![Some(0), Some(9), Some(0)]),
+        )],
+        Some(vec![false, true, true]),
     );
     let outer = struct_array(
         vec![("inner", inner.data_type().clone(), Arc::new(inner))],
@@ -1108,6 +1140,44 @@ async fn dictionary_struct_is_unwrapped_one_level() {
     assert_eq!(column_names(&frame), ["wrapped_x"]);
     let table = collect_one(frame).await;
     assert_eq!(i64_cells(&table, "wrapped_x"), [Some(7)]);
+    assert_int64(&table, "wrapped_x");
+    assert!(
+        matches!(
+            field_type(&table, "wrapped_x"),
+            DataType::Int64 | DataType::Dictionary(_, _)
+        ),
+        "dict-struct leaf must be Int64 or Dictionary-of-Int64, got {:?}",
+        field_type(&table, "wrapped_x")
+    );
+}
+
+/// C2-L-002: Utf8 dict-struct leaf. `decode_i64` cannot pass a leftover Dictionary.
+#[tokio::test]
+async fn dictionary_utf8_struct_is_unwrapped_one_level() {
+    let values = struct_array(
+        vec![("label", DataType::Utf8, utf8_array(vec![Some("ok")]))],
+        None,
+    );
+    let keys = Int32Array::from(vec![Some(0)]);
+    let dictionary = DictionaryArray::<Int32Type>::try_new(keys, Arc::new(values)).expect("dict");
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            "wrapped",
+            dictionary.data_type().clone(),
+            true,
+        )])),
+        vec![Arc::new(dictionary)],
+    )
+    .expect("batch");
+
+    let frame = flatten(batch, options());
+    assert_eq!(column_names(&frame), ["wrapped_label"]);
+    let table = collect_one(frame).await;
+    assert_eq!(
+        utf8_cells(&table, "wrapped_label"),
+        [Some("ok".to_string())]
+    );
+    assert_utf8(&table, "wrapped_label");
 }
 
 /// C1-L-004: `list_element_type` unwraps Dictionary for detection; Unnest still needs
@@ -1357,3 +1427,5 @@ async fn multi_pass_flatten_then_project_survives_leaf_pushdown() {
     let table = collect_one(projected).await;
     assert_eq!(f64_cells(&table, "Legs_Fills_f"), [Some(1.0), Some(1.0)]);
 }
+
+mod octo;

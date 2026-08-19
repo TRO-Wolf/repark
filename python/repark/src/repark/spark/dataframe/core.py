@@ -6115,8 +6115,9 @@ class DataFrame:
             dropped). The True default **diverges from polars ≥2.0 deliberately**: GA4-class
             exports materialize absent repeated fields as empty arrays, and default
             ``dynamicFlatten()`` must keep those parent rows.
-          * ``max_depth=100`` — hard bound. Unlike the polars reference (silent leave-nested),
-            repark **refuses LOUD** if nested work remains after the cap (never silent truncate).
+          * ``max_depth=100`` — rewrite-pass bound, not a row-cartesian or schema-width
+            memory limiter. Unlike the polars reference (silent leave-nested), repark
+            **refuses LOUD** if nested work remains after the cap (never silent truncate).
 
         Algorithm (schema-only walks — no forced ``collect``; native plan rewrite
         in ``repark_core::dynamic_flatten``):

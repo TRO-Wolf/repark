@@ -221,9 +221,11 @@ NOT in that file is a defect, not a decision.
   doors, a scalar-inner nested-array guard, a map-element still-refuses-loud rider, and
   `test_create_dataframe_honors_requested_void` (D-5: explicit `NullType()` /
   `ArrayType(NullType())` is honored end to end instead of silently becoming string);
-  max_depth LOUD refuse;
+  max_depth LOUD refuse (`[DYNAMIC_FLATTEN_MAX_DEPTH]` token);
   bool flag type gates (incl. `empty_as_null`);
-  name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
+  name-collision prefix + same-pass + cross-pass + list→unnest refuse
+  (`[DYNAMIC_FLATTEN_NAME_COLLISION]` token); empty-struct-only refuse
+  (`[DYNAMIC_FLATTEN_EMPTY_STRUCT]`); interleaved
   in-place column order;
   idempotence on already-flat; both method names; custom separator; explode_lists=False;
   schema-walk + plan-build collect/count/to_arrow spy pin; native-kernel

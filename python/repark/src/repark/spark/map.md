@@ -117,7 +117,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   octo c2: quoted idents (no double-AS), Timestamp/nested element types, asc/desc sticky,
   withColumn→select rewrite, exact element-type bind, strip AS on pre-aliased array;
   octo c3: two-phase native siblings + SQL unnest (compound mixed-case, size/cardinality,
-  ColumnOrName not free SQL); element type only for explode_outer / explode_keep_null
+  ColumnOrName not free SQL); element type only for explode_outer
+  (``_explode_keep_null`` deleted — unused leftover after DF1 native kernel);
   (DF-2: struct elements spell via CAST(NULL AS struct<…>); void uses
   untyped `make_array(NULL)`; map still refuses);
   no BIGINT fail-open;

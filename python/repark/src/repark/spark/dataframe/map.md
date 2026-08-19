@@ -40,9 +40,11 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   type-gate + `_spawn(self._plan().dynamic_flatten(...))` over
   `repark_core::dynamic_flatten`. `empty_as_null=True` keeps NULL+EMPTY lists as
   a null-element row; False keeps NULL and drops EMPTY. Void lists drop when
-  `drop_null_lists=True`. List-of-map refuses LOUD
-  (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`). Docstring describes the native
-  Unnest rewrite (not the retired SQL `explode_outer` / `make_array(NULL)` path).
+  `drop_null_lists=True`. List-of-map and ListView refuse LOUD
+  (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`). `max_depth` bounds rewrite passes,
+  not row cartesian. Empty-struct-only schemas refuse
+  (`[DYNAMIC_FLATTEN_EMPTY_STRUCT]`). Docstring describes the native Unnest
+  rewrite (not the retired SQL `explode_outer` / `make_array(NULL)` path).
   **DF-2 W-1:** the `schema` flat-column type mapper also accepts the Arrow Debug
   spelling `Null` (every flat void column carries it — a plain `SELECT NULL`
   literal included, not just an exploded void column), so `.schema` / `.dtypes`

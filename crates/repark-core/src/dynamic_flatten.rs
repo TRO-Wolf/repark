@@ -27,7 +27,8 @@ pub struct DynamicFlattenOptions {
     /// `true`: NULL and EMPTY lists become one null-element row. `false`: keep NULL,
     /// drop EMPTY (polars ≥2.0).
     pub empty_as_null: bool,
-    /// Hard bound. Remaining nested work after this many passes refuses LOUD.
+    /// Rewrite-pass bound, not a row-cartesian or schema-width memory limiter.
+    /// Remaining nested work after this many passes refuses LOUD.
     pub max_depth: usize,
 }
 
@@ -71,7 +72,7 @@ struct ExpandedField {
 ///
 /// [`Error::Analysis`] with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`,
 /// `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, or
-/// `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`.
+/// `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` (list-of-map and `ListView`).
 pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Result<DataFrame> {
     let DynamicFlattenOptions {
         separator,
@@ -89,7 +90,14 @@ pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Resu
             current = expand_structs(current, &separator)?;
             continue;
         }
-        if !explode_lists || !has_list_columns(current.schema().fields()) {
+        if !explode_lists {
+            completed_cleanly = true;
+            break;
+        }
+        if let Some(name) = first_list_view_column(current.schema().fields()) {
+            return Err(list_view_refused(&name));
+        }
+        if !has_list_columns(current.schema().fields()) {
             completed_cleanly = true;
             break;
         }
@@ -108,6 +116,9 @@ pub fn dynamic_flatten(frame: DataFrame, options: DynamicFlattenOptions) -> Resu
                 format_fields(fields)
             )));
         }
+    }
+    if explode_lists && let Some(name) = first_list_view_column(current.schema().fields()) {
+        return Err(list_view_refused(&name));
     }
     Ok(current)
 }
@@ -397,12 +408,40 @@ fn is_map_type(data_type: &DataType) -> bool {
     matches!(unwrap_dictionary_one_level(data_type), DataType::Map(_, _))
 }
 
+/// Bound on remaining-schema Debug dumped into `[DYNAMIC_FLATTEN_MAX_DEPTH]`.
+const REMAINING_SCHEMA_CHAR_LIMIT: usize = 240;
+
 fn format_fields(fields: &Fields) -> String {
-    fields
+    let rendered = fields
         .iter()
         .map(|field| format!("{}: {:?}", field.name(), field.data_type()))
         .collect::<Vec<_>>()
-        .join(", ")
+        .join(", ");
+    if rendered.chars().count() <= REMAINING_SCHEMA_CHAR_LIMIT {
+        return rendered;
+    }
+    let truncated: String = rendered.chars().take(REMAINING_SCHEMA_CHAR_LIMIT).collect();
+    format!(
+        "{truncated}… ({} fields; remaining-schema text truncated)",
+        fields.len()
+    )
+}
+
+fn first_list_view_column(fields: &Fields) -> Option<String> {
+    fields.iter().find_map(|field| {
+        if is_list_view_type(field.data_type()) {
+            Some(field.name().clone())
+        } else {
+            None
+        }
+    })
+}
+
+fn is_list_view_type(data_type: &DataType) -> bool {
+    matches!(
+        unwrap_dictionary_one_level(data_type),
+        DataType::ListView(_) | DataType::LargeListView(_)
+    )
 }
 
 fn top_level_collision(name: &str, existing: &str) -> Error {
@@ -418,6 +457,14 @@ fn map_element_refused(name: &str) -> Error {
         "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT] dynamicFlatten cannot explode \
          list of map {name:?} (maps are not unnested; explode is unsupported \
          for map elements — cast the array or use a supported element type)."
+    ))
+}
+
+fn list_view_refused(name: &str) -> Error {
+    Error::Analysis(format!(
+        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT] dynamicFlatten cannot explode \
+         list-view {name:?} (ListView / LargeListView are not exploded — cast \
+         to List first)."
     ))
 }
 
