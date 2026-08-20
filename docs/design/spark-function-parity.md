@@ -428,6 +428,35 @@ census rows flip out of the gap bucket, and does the work reuse a seam RePark al
 | **FNP-16** | **Declared families — register (D-7).** The 56 names of §8: sketches (32), CSV/XML/XPath (11), VARIANT (8), geospatial (5). Refusing stub plus a registry section per family. | 56 | Same mechanism as FNP-15, different reason — these are reachable and deferred by cost, not unreachable. The registry language must say so; conflating the two would misreport the engine's limits. |
 | **FNP-Z** | **Close-out.** `__all__` completion so C-009 holds, census re-run, STATUS truth-up, the `#[path]` conversion (R-5), the dispatch-table module split (D-6). | — | The unit that owns the closed paths. |
 
+### 7.1 Recommended sequence (revised 2026-08-20, on measured evidence)
+
+The table above is the unit roster. This is the ORDER, which changed once nine units had been
+delivered and the cheap seam turned out to be exhausted. The live copy is
+[STATUS.md](../../STATUS.md) "Active workstreams"; it is repeated here only as the reasoning.
+
+Three things moved:
+
+**Registration moved earlier.** FNP-15 and FNP-16 were planned near the end because they build
+nothing. That is exactly why they should be early: 62 names for stubs and registry sections, and
+they convert `AttributeError` — which reads as "repark is broken" — into a stated limit. It is the
+largest honesty gain per unit of work left, and it is what closes C-009.
+
+**The overflow fix became the gating dependency.** `CAST(2147483647 AS INT) + 1` returns
+`2147483648` where Spark raises `ARITHMETIC_OVERFLOW` — the already-tracked **F-Y10-1 / DEC U5 /
+G13**. A wrong answer on ordinary addition outranks any missing function, and four `try_*` names
+cannot be built honestly until it closes (§7's FNP-7b row).
+
+**Repatriation moved later.** FNP-8 is the campaign's strategic goal, and no user sees a
+difference the day it lands: it prevents future defects rather than fixing current ones. It earns
+its place after the visible gaps close, not before.
+
+Four units are deferred **with reasons rather than dropped** — FNP-6d (bitmap aggregates: UDAFs
+needing Spark's exact 4096-bit layout, unverifiable without a live Spark, least-used names in the
+gap), FNP-13 (collation), FNP-14 (crypto: a new cipher dependency for four names), and FNP-4b (the
+Spark-door dialect, blocked on the write-path change in §3.3). A deferral with no reason attached
+is indistinguishable from a name nobody looked at — a lesson this campaign learned four separate
+times from prior units' fences.
+
 ## 8. D-7 — the sub-project families (owner ruling, 2026-08-20)
 
 Fifty-six names are reachable without a JVM but each family behind them is a sub-project. They

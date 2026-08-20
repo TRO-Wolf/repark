@@ -170,6 +170,53 @@ history-rewrite; provenance and the options weighed:
   note's §7 do-not list (no math reordering, goldens bit-exact) is binding; `unsafe` remains
   workspace-forbidden.
 
+- **Spark function parity campaign** (active, chartered 2026-08-20; branch
+  `feat/spark-function-parity`, ten commits, not yet merged). Close the `pyspark.sql.functions`
+  gap and move the semantics behind every name out of Python into Rust. Design:
+  [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
+  [briefs/spark-function-parity.md](briefs/spark-function-parity.md); approval gate (12/12
+  `PROVEN`): [task/fnp-0-charter-ledger.md](task/fnp-0-charter-ledger.md); measured evidence:
+  [task/fnp-0-census/](task/fnp-0-census/map.md).
+
+  **Delivered so far** — `__all__` 333 → 360, **41 names** moved from refusing-or-absent to
+  working: two-door kernel parity (FNP-1), the null-ordering corners and five free names (FNP-2),
+  eleven de-stubs whose kernel already shipped (FNP-3), the higher-order/lambda seam with `exists`
+  (FNP-4a), thirteen aggregates the facade could not reach (FNP-5), and six new kernels
+  (FNP-6a/b/c). Thirty-six of the 41 needed **no new kernel** — the engine was already more
+  capable than the facade could reach, and that seam is now exhausted.
+
+  **Remaining work, in the recommended order** (design §7 carries the full unit table; this is the
+  sequence, revised 2026-08-20 on measured evidence):
+
+  1. **FNP-15 + FNP-16 — register what will not be built (62 names).** Moved EARLIER than the
+     original plan. These need refusing stubs and divergence-registry sections, not kernels, and
+     they turn `AttributeError` (reads as "repark is broken") into a stated limit. Largest honesty
+     gain per unit of work in the campaign, and what closes charter clause C-009.
+  2. **FNP-4c — the eight higher-order kernels** (`transform`, `filter`, `aggregate`, `zip_with`,
+     the four map forms) plus `forall` and `reduce`. The family users notice most; the seam it
+     needs already shipped in FNP-4a.
+  3. **F-Y10-1 (integer wrap) — not this campaign's unit, but its next dependency.** Measured
+     2026-08-20: `CAST(2147483647 AS INT) + 1` returns `2147483648`, where Spark raises
+     `ARITHMETIC_OVERFLOW`. A wrong answer on ordinary addition outranks any missing function, and
+     it is what blocks FNP-7b.
+  4. **FNP-7a** (8 `try_*` names whose raising path exists), **FNP-9** (collections/generators),
+     **FNP-10** (JSON).
+  5. **FNP-8 — repatriation of the 55 non-compliant facade functions.** The strategic goal, and
+     deliberately late: no user sees a difference the day it lands, it prevents future defects
+     rather than fixing current ones.
+  6. **FNP-11** (timestamp/TIME — needs a design pass first; entangled with the open TZ rows),
+     **FNP-12** (remaining aggregates + numeric formatting).
+  7. **Deferred with reasons, not dropped:** FNP-6d (three `bitmap_*_agg` — UDAFs needing Spark's
+     exact 4096-bit layout, unverifiable without a live Spark, least-used names in the gap);
+     FNP-13 (collation / G15 retirement); FNP-14 (crypto — needs a new cipher dependency for four
+     names); FNP-4b (the Spark-door dialect — blocked on making the engine's own generated SQL
+     dialect-independent, which is a write-path change).
+  8. **FNP-Z — close-out:** `__all__` completion, census re-run, STATUS truth-up, the `#[path]`
+     conversion, the dispatch-table module split, and the registry rows handed forward by
+     FNP-3 (`arrays_zip`, `json_tuple`), FNP-5 (`approx_count_distinct` returns `uint64` where
+     Spark returns signed bigint), FNP-6a (the mid-surrogate collector divergence) and FNP-6c (the
+     UTF-8 value-representation difference).
+
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
   campaign continues into H-2) — the first campaign to touch engine code since the port:
