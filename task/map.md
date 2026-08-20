@@ -12,6 +12,15 @@ not this directory.
 
 ## Contents
 
+- [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
+  scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
+  evidence behind it, and the one `OPEN` clause (C-007 — whether the four sub-project families
+  are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
+  [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
+  [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-0-census/](fnp-0-census/map.md) — the measured evidence that gate rests on: the facade
+  classification of all 345 functions, the PySpark 4.1.2 gap partition, the higher-order-function
+  spec, and the kernel ownership map.
 - [df1-rust-flatten-ledger.md](df1-rust-flatten-ledger.md) — **DF1 native
   `dynamic_flatten`:** port of the Python Spark-facade planner into
   `repark_core::dynamic_flatten` (plan rewrite, no new physical operator). Thin
