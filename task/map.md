@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [df1-rust-flatten-ledger.md](df1-rust-flatten-ledger.md) — **DF1 native
+  `dynamic_flatten`:** port of the Python Spark-facade planner into
+  `repark_core::dynamic_flatten` (plan rewrite, no new physical operator). Thin
+  PyO3 + type-gate facade; `_dynamic_flatten_unnest_structs` deleted.
 - [c25-bugfix-ledger.md](c25-bugfix-ledger.md) — **conductor-25 (2026-08-17):**
   DS-4 / F-4 bug-candidate fix round (B4→B1→B6→B2→B3→B5) plus escaped DF-2.
   Single ledger, appended per PR. B4 (#175) CLOSED. **DF-2:** `explode_outer`
@@ -490,6 +494,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 
 | Ledger | Unit |
 |---|---|
+| [df1-rust-flatten-ledger.md](df1-rust-flatten-ledger.md) | **DF1** native `dynamic_flatten` plan rewrite + thin facade |
 | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) | **T5** conductor-15 iterator-form `rsi`/`sma` (bit-exact) |
 | [s1-spill-truth-ledger.md](s1-spill-truth-ledger.md) | **S-1** spill truth and reach (FairSpillPool SET / temp_directory / RAM default) |
 | [c19-al1a-mimalloc-ledger.md](c19-al1a-mimalloc-ledger.md) | **AL-1a / conductor-19** feature-gated mimalloc (default off) |
@@ -531,6 +536,7 @@ A citation of `task/h1d-ledger.md` (or any row above) means the matching file un
 | ...do this | go to |
 |---|---|
 | See the live backlog / what happens next | [../STATUS.md](../STATUS.md) |
+| Read the DF1 native `dynamic_flatten` port | [df1-rust-flatten-ledger.md](df1-rust-flatten-ledger.md) |
 | Read the U-DF-1 explode mixed-case bind | [c17-explode-case-ledger.md](c17-explode-case-ledger.md) |
 | Read the T5 rsi/sma iterator-form rewrite | [rsix-rsi-sma-iter-ledger.md](rsix-rsi-sma-iter-ledger.md) |
 | Read the AL-1a feature-gated mimalloc spike | [c19-al1a-mimalloc-ledger.md](c19-al1a-mimalloc-ledger.md) |

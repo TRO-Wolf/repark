@@ -39,24 +39,28 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
     rewrite an `Unnest`-over-`Unnest` chain carrying a `get_field` leaf — the shape every
     multi-pass `dynamicFlatten` / repeated `explode` builds — either asserting inside
     `Unnest::with_new_exprs` or landing a qualified and an unqualified spelling of one name in
-    one `DFSchema`. The wrapper delegates untouched (errors included) when the subtree has no
-    `Unnest`, and otherwise tries the rule and keeps the unrewritten plan only if it actually
-    fails. `enable_leaf_expression_pushdown` therefore stays at DataFusion's default: the flag
+    one `DFSchema`. The wrapper's `apply_order` is `None` so it owns the TopDown walk
+    (a reconstruction error on a `Projection` under `Unnest` otherwise bypasses
+    per-node decline). Swallow is the Unnest *path*: this node is `Unnest`, has an
+    `Unnest` ancestor, or `carries_unnest` in this subtree — a mixed plan's
+    non-`Unnest` sibling stays loud. `enable_leaf_expression_pushdown` therefore
+    stays at DataFusion's default: the flag
     would have cost every nested-column query in the engine (measured up to ~8x in one run, load-sensitive ratio, on a filtered
     wide-struct parquet scan), and declining by shape alone would have cost 11.8x on a
     wide-struct scan that merely has an unnest nearby. Recorded trade: within an
     `Unnest`-carrying subtree the rule's error is swallowed (repark-core has no logging dep), so
     a genuinely-failing shape silently keeps the slower, correct plan.
-  Pins: all six live in `df_guard_tests.rs` (below), not in `tests.rs`;
+  Pins: all seven live in `df_guard_tests.rs` (below), not in `tests.rs`;
   ledger `task/c25-bugfix-ledger.md` → DEFECT-2.
-- `df_guard_tests.rs` — the six `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
+- `df_guard_tests.rs` — the seven `df_guards.rs` pins, split out of `tests.rs` when the DEFECT-2
   cohort pushed that file past the 1500-line ceiling (the sanctioned "split the module" out, not
   an EXCEPTIONS row). Guard 1: a bare no-extension session carries the scalar-subquery config
-  default. Guard 2, five pins: the `enable_leaf_expression_pushdown` flag stays ENABLED (the
+  default. Guard 2, six pins: the `enable_leaf_expression_pushdown` flag stays ENABLED (the
   anti-blanket-skip pin), the wrapper is installed under DataFusion's own rule name in
   DataFusion's own rule order, a no-`Unnest` plan optimizes byte-identically to stock DataFusion,
   an `Unnest` plan the rule CAN rewrite still gets the optimization (this is what makes the scope
-  "by failure", not "by shape"), and an explicit conf can still disable the optimization.
+  "by failure", not "by shape"), an explicit conf can still disable the optimization, and a mixed
+  plan's non-`Unnest` inner-rule error stays loud (`mixed_plan_non_unnest_inner_error_stays_loud`).
 - `spill.rs` — **S-1:** FairSpillPool install + runtime `SET datafusion.runtime.memory_limit`
   intercept (R1). DataFusion 54.1 has no in-place resize (`pool_size` lives outside the mutex),
   so SET **swaps** a new `FairSpillPool` (in-flight reservations stay on the old pool).

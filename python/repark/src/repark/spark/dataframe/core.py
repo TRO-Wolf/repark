@@ -6115,24 +6115,25 @@ class DataFrame:
             dropped). The True default **diverges from polars ≥2.0 deliberately**: GA4-class
             exports materialize absent repeated fields as empty arrays, and default
             ``dynamicFlatten()`` must keep those parent rows.
-          * ``max_depth=100`` — hard bound. Unlike the polars reference (silent leave-nested),
-            repark **refuses LOUD** if nested work remains after the cap (never silent truncate).
+          * ``max_depth=100`` — rewrite-pass bound, not a row-cartesian or schema-width
+            memory limiter. Unlike the polars reference (silent leave-nested), repark
+            **refuses LOUD** if nested work remains after the cap (never silent truncate).
 
-        Algorithm (schema-only walks — no forced ``collect``):
-          1. Read :attr:`schema` (logical / analyzed; no row execution).
-          2. If any top-level ``StructType`` columns exist, expand each field as
-             ``{parent}{separator}{field}`` via null-safe ``selectExpr`` field projection
-             (``CASE WHEN parent IS NULL THEN NULL ELSE parent.field END``), drop the parent
-             struct column, and re-read schema (nested structs surface next pass).
+        Algorithm (schema-only walks — no forced ``collect``; native plan rewrite
+        in ``repark_core::dynamic_flatten``):
+          1. Walk the logical schema (no row execution).
+          2. If any top-level struct columns exist, expand each field as
+             ``{parent}{separator}{field}`` via null-safe ``get_field`` projection
+             (``CASE WHEN parent IS NULL THEN <typed null> ELSE get_field(parent, field) END``),
+             drop the parent struct column, and continue (nested structs surface next pass).
           3. Else if ``explode_lists`` and list columns remain: drop ``array<void>`` when
-             ``drop_null_lists``. Remaining lists — including void — explode with
-             ``empty_as_null`` (True uses ``explode_outer``; False keeps NULL lists and
-             drops EMPTY). Void elements have no CAST spelling; the NULL-guard is
-             untyped ``make_array(NULL)``. Under True, empty or null void siblings
-             become one null-element row and cannot cartesian-drop typed sibling
-             lists. Under False, EMPTY void lists still drop (polars ≥2.0),
-             including rows that carry typed sibling lists; NULL void lists are
-             kept. Re-read next pass.
+             ``drop_null_lists``. Remaining lists rewrite null/empty via a typed
+             singleton-null list (``empty_as_null=True``: NULL and EMPTY; ``False``:
+             NULL only) and explode in place with DataFusion ``Unnest``
+             (``preserve_nulls=False``, ``Column::new_unqualified``). Empty lists
+             therefore drop under False (polars ≥2.0), including EMPTY void siblings
+             that carry typed lists; NULL void lists are kept. List-of-map refuses
+             LOUD. Re-walk next pass.
           4. Else break (fully flat under the chosen flags).
 
         Name collisions: the parent-path prefix is the disambiguator. If a prefixed name still
@@ -6141,6 +6142,11 @@ class DataFrame:
         overwrite.
 
         Both ``dynamicFlatten`` and ``dynamic_flatten`` are bound (Q26).
+
+        The plan rewrite is native (``repark_core::dynamic_flatten``); this method is the
+        type-gate + spawn. Already-flat (ordered engine field names unchanged) uses
+        :meth:`_spawn_preserving_identity` so H1 maps survive; expanding rewrites use
+        :meth:`_spawn` so a copied overlay cannot zip the wrong names.
         """
         self._ensure_alive()
         if not isinstance(separator, str):
@@ -6166,78 +6172,17 @@ class DataFrame:
         if max_depth < 0:
             raise PySparkValueError(f"max_depth must be >= 0, got {max_depth}")
 
-        from repark.spark import functions as functions_mod
-        from repark.spark.functions_expr import _explode_keep_null
-        from repark.spark.types import ArrayType, NullType
-        from repark.spark.types import StructType as StructTypeType
-
-        current: DataFrame = self
-        completed_cleanly = False
-        for _pass in range(max_depth):
-            schema = current.schema
-            struct_fields = [
-                field for field in schema.fields if isinstance(field.dataType, StructTypeType)
-            ]
-            list_fields = [
-                field for field in schema.fields if isinstance(field.dataType, ArrayType)
-            ]
-
-            if struct_fields:
-                current = _dynamic_flatten_unnest_structs(current, schema, separator)
-                continue
-
-            if not list_fields or not explode_lists:
-                completed_cleanly = True
-                break
-
-            for list_field in list_fields:
-                element_type = list_field.dataType.elementType  # type: ignore[union-attr]
-                if drop_null_lists and isinstance(element_type, NullType):
-                    current = current.drop(list_field.name)
-                else:
-                    # One generator per select (R-EXPLODE-REWRITE); keep the list column name
-                    # so a list-of-struct surfaces as a same-name struct on the next pass.
-                    # Preserve column position (polars explode is in-place) — C4-Q-001.
-                    # void / array<Null>: untyped make_array(NULL) CASE (explode_outer /
-                    # explode_keep_null). Do not inner-explode — that cartesian-drops
-                    # sibling lists (SQM #176 V-2).
-                    if empty_as_null:
-                        exploded = functions_mod.explode_outer(list_field.name).alias(
-                            list_field.name
-                        )
-                    else:
-                        exploded = _explode_keep_null(list_field.name).alias(list_field.name)
-                    select_items: list[object] = []
-                    for column_name in current.columns:
-                        if column_name == list_field.name:
-                            select_items.append(exploded)
-                        else:
-                            select_items.append(column_name)
-                    current = current.select(*select_items)
-
-            # Fall through to next pass — re-read schema (list-of-struct → struct).
-        else:
-            # Exhausted max_depth without a clean break.
-            completed_cleanly = False
-
-        if not completed_cleanly:
-            # Either the for-else path (cap hit) or we never set the flag: refuse if nested
-            # work remains under the same flags the loop would still process.
-            remaining = current.schema
-            still_structs = any(
-                isinstance(field.dataType, StructTypeType) for field in remaining.fields
-            )
-            still_lists = explode_lists and any(
-                isinstance(field.dataType, ArrayType) for field in remaining.fields
-            )
-            if still_structs or still_lists:
-                raise AnalysisException(
-                    f"[DYNAMIC_FLATTEN_MAX_DEPTH] dynamicFlatten exceeded max_depth={max_depth} "
-                    f"with nested columns remaining (repark refuses silent truncation; raise "
-                    f"max_depth or pre-flatten). Remaining schema: "
-                    f"{remaining.simpleString()}"
-                )
-        return current
+        planned = self._plan()
+        inner = planned.dynamic_flatten(
+            separator,
+            explode_lists,
+            drop_null_lists,
+            empty_as_null,
+            max_depth,
+        )
+        if self._display_names is not None and planned.column_names() == inner.column_names():
+            return self._spawn_preserving_identity(inner)
+        return self._spawn(inner)
 
     dynamic_flatten = dynamicFlatten
 
@@ -7188,7 +7133,6 @@ from repark.spark.dataframe.plan_collapse import (  # noqa: E402, I001
     _data_type_has_required_child,
     _decode_qcol_field,
     _display_type_labels_from_arrow,
-    _dynamic_flatten_unnest_structs,
     _format_duckdb_show,
     _format_eager_eval_table,
     _format_polars_show,

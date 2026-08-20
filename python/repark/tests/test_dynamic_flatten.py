@@ -3,6 +3,8 @@
 Semantic pins against the operator-supplied polars ``unnest_lazyframe`` reference
 (``specs/dynamic-flatten-reference.md``). Arrow path: value **and** type (never only show).
 Synthetic fixtures only.
+
+The planner is native (``repark_core::dynamic_flatten``); this file remains the facade contract.
 """
 
 from __future__ import annotations
@@ -84,6 +86,185 @@ def test_idempotent_on_already_flat(spark: ReparkSession) -> None:
     )
 
 
+def _bare_multi_name_join(spark: ReparkSession):
+    """Condition join that retains Spark-legal duplicate display names (H1 bare join)."""
+    frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
+    left = frame.select(frame.a.alias("aa"), frame.b)
+    joined = left.join(frame, left.b == frame.b)
+    return joined, left
+
+
+def test_already_flat_h1_join_preserves_display_overlay(spark: ReparkSession) -> None:
+    """Already-flat dynamicFlatten must keep H1 display names and origin binds.
+
+    Reverting the preserve branch (always ``_spawn``) leaks ``__repark_*`` engine
+    names on ``.columns`` / ``to_arrow`` and drops origin-qualified ``select(left["b"])``.
+    """
+    joined, left = _bare_multi_name_join(spark)
+    assert joined.columns == ["aa", "b", "a", "b"]
+    flat = joined.dynamicFlatten()
+    assert flat.columns == ["aa", "b", "a", "b"]
+    assert not any(name.startswith("__repark_") for name in flat.columns)
+    table = flat.to_arrow()
+    assert list(table.column_names) == ["aa", "b", "a", "b"]
+    assert not any(name.startswith("__repark_") for name in table.column_names)
+    selected = flat.select(left["b"])
+    assert selected.columns == ["b"]
+    assert not any(name.startswith("__repark_") for name in selected.columns)
+    selected_table = selected.to_arrow()
+    assert list(selected_table.column_names) == ["b"]
+    assert sorted(selected_table.column(0).to_pylist()) == [2, 4]
+
+
+def test_expanding_h1_flatten_drops_stale_overlay(spark: ReparkSession) -> None:
+    """Struct expand must not restuck H1 overlay onto renamed engine fields.
+
+    One-field struct ``payload{x}`` → ``payload_x`` keeps column count 1, so a
+    count-based preserve (or always-preserve) would zip parent display names onto
+    prefixed leaves. Reverting to always ``_spawn_preserving_identity`` reds this.
+    """
+    schema = StructType(
+        [
+            StructField("a", LongType(), True),
+            StructField("b", LongType(), True),
+            StructField(
+                "payload",
+                StructType([StructField("x", LongType(), True)]),
+                True,
+            ),
+        ]
+    )
+    left_frame = spark.createDataFrame(
+        [
+            {"a": 1, "b": 2, "payload": {"x": 10}},
+            {"a": 3, "b": 4, "payload": {"x": 20}},
+        ],
+        schema=schema,
+    )
+    right_frame = spark.createDataFrame(
+        [(1, 2), (3, 4)],
+        schema=StructType(
+            [
+                StructField("a", LongType(), True),
+                StructField("b", LongType(), True),
+            ]
+        ),
+    )
+    left = left_frame.select(left_frame.a.alias("aa"), left_frame.b, left_frame.payload)
+    joined = left.join(right_frame, left.b == right_frame.b)
+    assert joined.columns == ["aa", "b", "payload", "a", "b"]
+    assert "payload_x" not in joined.columns
+    flat = joined.dynamicFlatten()
+    # Schema-only overlay contract: prefixed leaf, not parent display name.
+    # ``to_arrow`` on this join+flatten plan is a kernel mixed-qualifier optimizer
+    # class (DEFECT-2 / Unnest already reprojects; struct expand is out of this slice).
+    assert "payload_x" in flat.columns
+    assert "payload" not in flat.columns
+    assert any(name.startswith("__repark_") for name in flat.columns)
+
+
+# ==================================================================================================
+# mapInArrow _plan() seam
+# ==================================================================================================
+
+
+def test_mapinarrow_dynamic_flatten_materializes_bridge(spark: ReparkSession) -> None:
+    """mapInArrow → dynamicFlatten materializes the bridge (UDF rows, not 0).
+
+    Uncached ``mapInArrow`` leaves ``_inner`` as an empty schema-only MemTable.
+    Flatten of that placeholder is an already-flat kernel no-op (engine field names
+    unchanged; spawn may preserve identity) and a child ``_spawn`` has no
+    ``_map_bridge``, so actions return zero rows while parent collect still re-runs
+    the UDF.
+
+    Reverting ``planned = self._plan()`` / ``planned.dynamic_flatten(...)`` to raw
+    ``self._inner.dynamic_flatten(...)`` reds this (0 rows). Ordinary
+    ``createDataFrame`` flatten tests stay green (``_inner == _plan()``).
+    """
+    calls = {"n": 0}
+
+    def double_id(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+        calls["n"] += 1
+        for batch in batches:
+            ids = [
+                None if value is None else int(value) * 2 for value in batch.column(0).to_pylist()
+            ]
+            names = list(batch.column(1).to_pylist())
+            yield pa.record_batch(
+                [
+                    pa.array(ids, type=pa.int32()),
+                    pa.array(names, type=pa.string()),
+                ],
+                names=["id", "name"],
+            )
+
+    frame = spark.createDataFrame([(1, "a"), (2, "b")], "id INT, name STRING")
+    mapped = frame.mapInArrow(double_id, "id INT, name STRING")
+    # Laziness: schema only — bridge not yet run.
+    assert mapped.columns == ["id", "name"]
+    assert mapped._map_bridge is not None
+
+    flat = mapped.dynamicFlatten()
+    table = flat.to_arrow()
+    # Discriminator: ``_inner`` revert is 0 rows (already-flat no-op over empty MemTable).
+    assert table.num_rows == 2
+    assert table.column_names == ["id", "name"]
+    assert table.schema.field("id").type == pa.int32()
+    assert _is_arrow_string_type(table.schema.field("name").type)
+    assert sorted((row["id"], row["name"]) for row in table.to_pylist()) == [
+        (2, "a"),
+        (4, "b"),
+    ]
+    assert mapped._mia_plan_ready is True
+    # Parent still re-runs on action (bridge kept after plan-child construction).
+    assert mapped._map_bridge is not None
+    parent_n = calls["n"]
+    parent_rows = sorted((row.id, row.name) for row in mapped.collect())
+    assert parent_rows == [(2, "a"), (4, "b")]
+    assert calls["n"] == parent_n + 1  # action re-run (not one-shot pin)
+
+
+def test_mapinarrow_nested_dynamic_flatten_materializes_bridge(
+    spark: ReparkSession,
+) -> None:
+    """mapInArrow nested struct → dynamicFlatten yields ``payload_x`` UDF values, not 0 rows.
+
+    Expanding rewrite (``payload{x}`` → ``payload_x``) still must go through
+    ``_plan()``. Flatten of the empty nested placeholder expands schema but the
+    child has no ``_map_bridge``, so collect is 0 rows on an ``_inner`` revert.
+    """
+    payload_type = pa.struct([("x", pa.int64())])
+
+    def wrap_payload(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+        for batch in batches:
+            xs = [
+                None if value is None else int(value) * 2 for value in batch.column(0).to_pylist()
+            ]
+            payload = pa.array(
+                [{"x": value} for value in xs],
+                type=payload_type,
+            )
+            yield pa.record_batch([payload], names=["payload"])
+
+    frame = spark.createDataFrame([(10,), (20,)], "x INT")
+    mapped = frame.mapInArrow(wrap_payload, "payload STRUCT<x: BIGINT>")
+    assert mapped.columns == ["payload"]
+    assert mapped._map_bridge is not None
+
+    flat = mapped.dynamicFlatten()
+    table = flat.to_arrow()
+    # Discriminator: ``_inner`` revert expands schema but still 0 rows (no bridge on child).
+    assert table.num_rows == 2
+    assert "payload_x" in table.column_names
+    assert "payload" not in table.column_names
+    assert table.schema.field("payload_x").type == pa.int64()
+    assert sorted(table.column("payload_x").to_pylist()) == [20, 40]
+    assert mapped._mia_plan_ready is True
+    assert mapped._map_bridge is not None
+    parent_xs = sorted(row.payload["x"] for row in mapped.collect())
+    assert parent_xs == [20, 40]
+
+
 # ==================================================================================================
 # Nested struct-in-struct
 # ==================================================================================================
@@ -136,8 +317,10 @@ def test_nested_struct_in_struct(spark: ReparkSession) -> None:
 def test_null_parent_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
     """Null parent struct → NULL leaf fields (not type defaults 0/''/False).
 
-    Mutation-proof for C1-L-001: bare ``parent.field`` selectExpr zero-fills null parents
-    in the engine; dynamicFlatten must use null-safe projection.
+    Pins the createDataFrame door: Python ``None`` parent (clean child slots).
+    Does **not** pin CASE-drop / C1-L-001 — that mutation is the engine pin of
+    the same name, with dirty children at the parent-null slot. Dict ``None``
+    does not emit dirty children, so this fixture cannot mutation-proof the CASE.
     """
     schema = StructType(
         [
@@ -175,7 +358,12 @@ def test_null_parent_struct_fields_are_null_not_zero(spark: ReparkSession) -> No
 
 
 def test_null_mid_struct_fields_are_null_not_zero(spark: ReparkSession) -> None:
-    """Null intermediate struct after first unnest → NULL leaves (multi-pass)."""
+    """Null intermediate struct after first unnest → NULL leaves (multi-pass).
+
+    Pins the createDataFrame door: Python ``None`` mid/outer (clean child slots).
+    Does **not** pin CASE-drop — dirty-child CASE-drop is the engine pin of the
+    same name (C2-L-001 / C3-L-003).
+    """
     schema = StructType(
         [
             StructField(
@@ -615,10 +803,10 @@ def test_max_depth_refuses_loud_never_silent_truncate(spark: ReparkSession) -> N
     )
     frame = spark.createDataFrame([{"a": {"b": {"c": 1}}}], schema=schema)
     # depth 1: unnest a → column a_b still struct → refuse
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_MAX_DEPTH|max_depth"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_MAX_DEPTH\]"):
         frame.dynamicFlatten(max_depth=1).collect()
     # depth 0 with nested work: refuse immediately
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_MAX_DEPTH|max_depth"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_MAX_DEPTH\]"):
         frame.dynamicFlatten(max_depth=0).collect()
     # ample depth succeeds
     ok = frame.dynamicFlatten(max_depth=5)
@@ -722,7 +910,7 @@ def test_prefixed_name_collision_with_top_level_refuses(spark: ReparkSession) ->
         ]
     )
     frame = spark.createDataFrame([{"a_x": 1, "a": {"x": 2}}], schema=schema)
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -749,7 +937,7 @@ def test_prefixed_name_collision_between_expansions_refuses(spark: ReparkSession
         [{"outer": {"inner_x": 1}, "outer_inner": {"x": 2}}],
         schema=schema,
     )
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -777,7 +965,7 @@ def test_cross_pass_prefixed_collision_refuses(spark: ReparkSession) -> None:
         [{"a_b_c": 1, "a": {"b": {"c": 2}}}],
         schema=schema,
     )
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -799,7 +987,15 @@ def test_list_explode_then_unnest_collision_with_top_level_refuses(
         [{"legs_leg_id": 9, "legs": [{"leg_id": 1}]}],
         schema=schema,
     )
-    with pytest.raises(AnalysisException, match=r"DYNAMIC_FLATTEN_NAME_COLLISION|collid"):
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_NAME_COLLISION\]"):
+        frame.dynamicFlatten().collect()
+
+
+def test_empty_struct_only_schema_refuses_loud(spark: ReparkSession) -> None:
+    """Empty-struct-only schema refuses ``[DYNAMIC_FLATTEN_EMPTY_STRUCT]`` (C2-Q-002)."""
+    schema = StructType([StructField("hollow", StructType([]), True)])
+    frame = spark.createDataFrame([{"hollow": {}}], schema=schema)
+    with pytest.raises(AnalysisException, match=r"\[DYNAMIC_FLATTEN_EMPTY_STRUCT\]"):
         frame.dynamicFlatten().collect()
 
 
@@ -853,6 +1049,41 @@ def test_custom_separator(spark: ReparkSession) -> None:
     assert flat.to_arrow().to_pylist() == [{"s.f": 3}]
 
 
+def test_custom_separator_list_column_unnest(spark: ReparkSession) -> None:
+    """``separator="."`` list names bind unqualified (C1-SEC-001)."""
+    schema = StructType(
+        [
+            StructField(
+                "wrap",
+                StructType([StructField("nums", ArrayType(LongType()), True)]),
+                True,
+            )
+        ]
+    )
+    frame = spark.createDataFrame([{"wrap": {"nums": [1, 2]}}], schema=schema)
+    flat = frame.dynamicFlatten(separator=".")
+    assert flat.columns == ["wrap.nums"]
+    table = flat.to_arrow()
+    assert table.to_pylist() == [{"wrap.nums": 1}, {"wrap.nums": 2}]
+    assert table.schema.field("wrap.nums").type == pa.int64()
+
+
+def test_dynamic_flatten_docstring_describes_native_kernel() -> None:
+    """C1-Q-001: the method docstring must describe the native plan rewrite.
+
+    Mutation-proof: restoring the retired SQL ``explode_outer`` / ``make_array(NULL)``
+    algorithm block reds this.
+    """
+    from repark.spark.dataframe import DataFrame
+
+    doc = DataFrame.dynamicFlatten.__doc__
+    assert doc is not None
+    assert "explode_outer" not in doc
+    assert "make_array(NULL)" not in doc
+    assert "repark_core::dynamic_flatten" in doc
+    assert "Unnest" in doc
+
+
 def test_schema_walk_does_not_require_prior_collect(spark: ReparkSession) -> None:
     """dynamicFlatten builds a plan from logical schema alone (lazy-equivalent)."""
     schema = StructType(
@@ -879,7 +1110,7 @@ def test_schema_walk_does_not_require_prior_collect(spark: ReparkSession) -> Non
 def test_dynamic_flatten_plan_build_does_not_force_collect(
     spark: ReparkSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Plan-time dynamicFlatten must not invoke collect / count / to_arrow (C2-Q-003)."""
+    """Plan-time dynamicFlatten must not invoke collect / count / to_arrow (C1-Q-003)."""
     from repark.spark.dataframe import DataFrame
 
     actions: list[str] = []
@@ -1136,8 +1367,11 @@ def test_dynamic_flatten_array_of_struct_inside_array_element_struct(
     Red on BASE (95cfaf9) for BOTH doors — ``dynamicFlatten()`` and a bare
     ``explode_outer`` — with ``AnalysisException type_coercion`` / "Failed to coerce …
     CASE WHEN", because the nested array was spelled postfix (``…[]``) and the engine
-    parser migrated the ``[]`` onto the innermost field. Mutation-proof: reverting
-    ``_sql_array_of`` to ``f"{inner}[]"`` restores the refuse on both doors.
+    parser migrated the ``[]`` onto the innermost field.
+
+    ``dynamicFlatten`` is native Unnest (``repark_core::dynamic_flatten``); it no
+    longer goes through ``_sql_array_of``. Reverting that helper to
+    ``f"{inner}[]"`` only kills the ``explode_outer`` door — not flatten.
     """
     param = StructType(
         [
@@ -1240,22 +1474,27 @@ def test_dynamic_flatten_scalar_array_inside_array_element_struct(
 
 
 def test_dynamic_flatten_map_element_still_refuses_loud(spark: ReparkSession) -> None:
-    """G3b honesty rider: shapes that still cannot spell keep the documented LOUD refuse.
+    """G3b honesty rider + C1-Q-002: list-of-map refuses LOUD on both doors.
 
-    The pre-#176 refuse message class ("cannot resolve SQL element type … cast the array
-    or use a supported element type") must survive the spelling fix for map elements —
-    the fix widens what spells, it must not silently fail open on what does not.
+    ``explode_outer`` keeps the CAST-spelling refuse. ``dynamicFlatten`` must not
+    fail-open through native Unnest — kernel token
+    ``[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]``.
     """
     from repark import functions as F  # noqa: N812
     from repark.spark.types import MapType
 
     schema = StructType([StructField("m", ArrayType(MapType(StringType(), StringType())), True)])
     frame = spark.createDataFrame([([{"a": "b"}],)], schema)
-    with pytest.raises(AnalysisException) as excinfo:
+    with pytest.raises(AnalysisException) as flatten_info:
+        frame.dynamicFlatten()
+    flatten_message = str(flatten_info.value)
+    assert "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]" in flatten_message
+    assert "supported element type" in flatten_message
+    with pytest.raises(AnalysisException) as explode_info:
         frame.select(F.explode_outer("m")).to_arrow()
-    message = str(excinfo.value)
-    assert "cannot resolve SQL element type" in message
-    assert "supported element type" in message
+    explode_message = str(explode_info.value)
+    assert "cannot resolve SQL element type" in explode_message
+    assert "supported element type" in explode_message
 
 
 def test_create_dataframe_honors_requested_void(spark: ReparkSession) -> None:
@@ -1424,9 +1663,10 @@ def test_multi_pass_flatten_count_and_agg_are_green(spark: ReparkSession, siblin
 def test_ga4_real_shape_flatten_then_project(spark: ReparkSession) -> None:
     """The GA4 ``items[].item_params[]`` frame: flatten, then project every single column.
 
-    MEASURED: this shape did **not** reproduce the defect on the base tree (its last explode pass
-    is the one every subset keeps), so it is a coverage pin for the real-world shape rather than a
-    second reproduction. It holds the multi-pass real-data path against a regression in the guard.
+    Coverage for the real-world shape only — MEASURED not to reproduce DEFECT-2
+    (deleting ``UnnestSafeLeafProjectionPushdown`` leaves this green). The guard
+    pin is ``test_multi_pass_flatten_every_projection_subset_is_green`` (and the
+    kernel twin ``multi_pass_flatten_then_project_survives_leaf_pushdown``).
     """
     from repark import functions as F  # noqa: N812
 

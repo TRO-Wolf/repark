@@ -36,9 +36,18 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   **U-DF-1:** `_select_with_generator` mid-project binds a single-ident generator
   through `_bound_generator_array` (`column.py`) so string-form `explode` /
   `explode_outer` keep createDataFrame case (`Legs`); compounds and unresolved
-  names keep `generator._inner`. **DF-2:** `dynamicFlatten(empty_as_null=True)`
-  uses `explode_outer` on typed **and** void lists (False uses private
-  `explode_keep_null`); void NULL-guard is untyped `make_array(NULL)` (no CAST).
+  names keep `generator._inner`. **DF-2 / DF1-native:** `dynamicFlatten` is a
+  type-gate + kernel (`self._plan().dynamic_flatten(...)`) over
+  `repark_core::dynamic_flatten`. `_spawn_preserving_identity` iff ordered engine
+  field names are unchanged (already-flat / schema no-op so H1 maps survive);
+  else `_spawn` (expanding rewrites must not restuck a stale overlay).
+  `empty_as_null=True` keeps NULL+EMPTY lists as
+  a null-element row; False keeps NULL and drops EMPTY. Void lists drop when
+  `drop_null_lists=True`. List-of-map and ListView refuse LOUD
+  (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`). `max_depth` bounds rewrite passes,
+  not row cartesian. Empty-struct-only schemas refuse
+  (`[DYNAMIC_FLATTEN_EMPTY_STRUCT]`). Docstring describes the native Unnest
+  rewrite (not the retired SQL `explode_outer` / `make_array(NULL)` path).
   **DF-2 W-1:** the `schema` flat-column type mapper also accepts the Arrow Debug
   spelling `Null` (every flat void column carries it — a plain `SELECT NULL`
   literal included, not just an exploded void column), so `.schema` / `.dtypes`
@@ -66,10 +75,12 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
-  duckdb formatters, the Arrow→display and Arrow→SQL type mappers, the r24 DF1
-  `dynamicFlatten` struct expander, Spark-simpleString struct-element CAST spelling
+  duckdb formatters, the Arrow→display and Arrow→SQL type mappers,
+  Spark-simpleString struct-element CAST spelling
   for `explode_outer` (void / `Null` → `_UNTYPED_NULL_ELEMENT` / `make_array(NULL)`),
-  and the r20 H1 join-qcol token rewriters.
+  and the r20 H1 join-qcol token rewriters. The r24 DF1 `dynamicFlatten` struct
+  expander `_dynamic_flatten_unnest_structs` is **deleted** — the rewrite is
+  `repark_core::dynamic_flatten`.
   **G3b:** nested arrays inside that CAST spelling go through `_sql_array_of`, which emits
   the **angle** form `array<inner>` — never postfix `inner[]`. Measured: postfix migrates the
   `[]` onto the innermost field once `inner` ends in `>`, which is what made GA4's real
@@ -81,12 +92,11 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   `repark.spark.dataframe` import paths are unchanged (Q7 freeze).
   **SE-1 R-3:** `_strip_internal_tighten_metadata` lives here so `to_arrow()` /
   `to_arrow_batches` drop the internal `repark.tighten_nulls` tag.
-  **DEFECT-2 (2026-08-18):** `_dynamic_flatten_unnest_structs`'s always-quoted
-  selectExpr spelling is no longer load-bearing against the DF-54.1
-  `push_down_leaf_projections` trip (the Unnest-safe guard in
-  `crates/repark-core/src/session/df_guards.rs` owns that now); the spelling
-  stays for mixed-case / hostile field-name resolution — its rationale note in
-  the helper says so.
+  **DEFECT-2 (2026-08-18):** the Unnest-safe guard in
+  `crates/repark-core/src/session/df_guards.rs` owns the DF-54.1
+  `push_down_leaf_projections` trip on multi-pass flatten / explode plans.
+  The deleted Python struct expander's quoted-ident spelling is no longer
+  load-bearing.
   **Round 3:** `_output_field_would_persist_required` (R-D nested Struct/Array/Map)
   lives here so `core.py` stays under its ceiling.
   **CEIL-1 (D1 #173, move-only):** the six remaining `core.py` tail helpers moved here
@@ -121,6 +131,7 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 | Task | Go to |
 |---|---|
 | Change DataFrame methods / plan glue | `core.py` |
+| Change `dynamicFlatten` | `core.py` (type-gate) + `crates/repark-core/src/dynamic_flatten.rs` |
 | Change the declared-sorted door (SE-1) | `core.py` (`declare_sorted`) + `../session/_funcs.py` (`_source_view_name`) |
 | Change show/eager-eval formatting, Arrow type labels, plan-collapse or qcol rewrite | `plan_collapse.py` |
 | Change global-agg routing, the partition-transform gate, or pandas-UDF window frames | `plan_collapse.py` (CEIL-1 moved them out of `core.py`) |
@@ -138,10 +149,9 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (D1 #173, post-CEIL-1 extract + octo-remediation integration):
-  `core.py` 7250 of 7350, `plan_collapse.py` 1432 of 2500. (Was 7380 of 7350 — RED —
-  when D1 and DF-2 landed together; the CEIL-1 move-only extract below bought the
-  room. Ceiling unchanged.)
+- Live file sizes (DF1 native flatten / octo C1): `core.py` stays under the
+  7225 ceiling (docstring retargeted to the native Unnest rewrite),
+  `plan_collapse.py` 1360 of 2500.
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).

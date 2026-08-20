@@ -18,12 +18,12 @@
 //!   MEASURED up to ~8x in one best-of-3 run on a filtered wide-struct parquet scan (load-sensitive; the direction and width-monotonicity reproduce, the exact ratio does not) (see `task/c25-bugfix-ledger.md` →
 //!   DEFECT-2 §3).
 //!
-//! Pins: `session/df_guard_tests.rs` (the whole file — six tests, one per guarantee).
+//! Pins: `session/df_guard_tests.rs` (the whole file — seven tests, one per guarantee).
 
 use std::sync::Arc;
 
 use datafusion::common::Result as DataFusionResult;
-use datafusion::common::tree_node::{Transformed, TreeNodeRecursion};
+use datafusion::common::tree_node::{Transformed, TreeNodeRecursion, TreeNodeRewriter};
 use datafusion::execution::SessionStateBuilder;
 use datafusion::execution::runtime_env::RuntimeEnv;
 use datafusion::logical_expr::LogicalPlan;
@@ -132,17 +132,23 @@ fn unnest_safe_optimizer_rules() -> Vec<Arc<dyn OptimizerRule + Send + Sync>> {
 ///    `datafusion.optimizer.enable_leaf_expression_pushdown = false` would have thrown away on
 ///    every query in the engine to fix a bug only unnest plans have.
 /// 2. **`Unnest` in the subtree → try the rule, and decline only if it actually fails.** The
-///    optimization still applies to every unnest plan the rule *can* rewrite; only the shapes it
-///    genuinely miscompiles keep the unoptimized plan. Declining by shape instead would have
-///    cost **11.8x** on a wide-struct scan that merely has an unnest elsewhere in the same
-///    subtree (MEASURED, same ledger section: 9.1s → 107.5s, 500k rows × 60 struct fields).
+///    inner rule errors on the `Projection` *above* an `Unnest` (`try_push_into_inputs` /
+///    `with_new_exprs`) **and** on a `Projection` *under* `Unnest` (mixed-qualifier `MemTable`
+///    scans). The swallow is therefore the Unnest *path*: this node is `Unnest`, has an
+///    `Unnest` ancestor, or `carries_unnest` in this subtree — not a whole-plan catch.
+///    The optimization still applies to every unnest plan the rule *can* rewrite; only the
+///    shapes it genuinely miscompiles keep the unoptimized plan. Declining by shape instead
+///    would have cost **11.8x** on a wide-struct scan that merely has an unnest elsewhere
+///    in the same subtree (MEASURED, same ledger section: 9.1s → 107.5s, 500k rows × 60
+///    struct fields).
 ///
 /// **The trade in step 2, recorded.** The error is swallowed rather than surfaced — repark-core
 /// carries no logging dependency, so the decline is silent. It is observable in the only place
-/// that matters: `EXPLAIN` shows the un-pushed plan. The swallow is bounded to
-/// `Unnest`-carrying subtrees and to a rule that is a pure optimization, so the worst case is a
-/// slower plan, never a wrong one — and DataFusion's own `skip_failed_rules` option is the same
-/// bargain made globally.
+/// that matters: `EXPLAIN` shows the un-pushed plan. The swallow is bounded to the Unnest
+/// *path* (not the whole plan) and to a rule that is a pure optimization, so a mixed plan's
+/// non-`Unnest` sibling still fails loud. The worst case on an Unnest path is a slower plan,
+/// never a wrong one — and DataFusion's own `skip_failed_rules` option is the same bargain
+/// made globally.
 ///
 /// The user-facing switch is unchanged and still DataFusion's: setting
 /// `datafusion.optimizer.enable_leaf_expression_pushdown = false` disables both leaf passes
@@ -161,10 +167,15 @@ impl OptimizerRule for UnnestSafeLeafProjectionPushdown {
         self.inner.name()
     }
 
-    /// Delegated, never hard-coded — the traversal the wrapper's scope reasoning depends on is
-    /// the inner rule's (`TopDown`), so it must follow it if upstream changes it.
+    /// `None`: this wrapper owns recursion. Delegating `Some(TopDown)` lets the
+    /// optimizer reconstruct `Unnest` children *outside* [`Self::rewrite`], so a
+    /// schema error on a `Projection` *under* `Unnest` (DEFECT-2 mixed-qualifier
+    /// `MemTable` scans) bypasses the decline. The owned walk still applies the inner
+    /// rule `TopDown` per node; swallow is scoped to the current Unnest *path*
+    /// (this node is `Unnest`, an `Unnest` ancestor, or `Unnest` in this subtree) —
+    /// a mixed plan's non-`Unnest` sibling still fails loud (C2-Q-001).
     fn apply_order(&self) -> Option<ApplyOrder> {
-        self.inner.apply_order()
+        None
     }
 
     fn rewrite(
@@ -172,18 +183,83 @@ impl OptimizerRule for UnnestSafeLeafProjectionPushdown {
         plan: LogicalPlan,
         config: &dyn OptimizerConfig,
     ) -> DataFusionResult<Transformed<LogicalPlan>> {
-        if !carries_unnest(&plan)? {
-            // Step 1: not our shape — stock rule, stock cost, stock errors.
-            return self.inner.rewrite(plan, config);
-        }
-        // Step 2: our shape. The clone is the price of being able to decline AFTER the failure
-        // instead of before it, and it is paid only on unnest-carrying subtrees.
-        let declined = plan.clone();
-        Ok(self
-            .inner
-            .rewrite(plan, config)
-            .unwrap_or(Transformed::no(declined)))
+        walk_inner_rule(self.inner.as_ref(), plan, config)
     }
+}
+
+/// `TopDown` walk of the inner leaf-projection rule (the optimizer no longer recurses for us).
+fn walk_inner_rule(
+    inner: &dyn OptimizerRule,
+    plan: LogicalPlan,
+    config: &dyn OptimizerConfig,
+) -> DataFusionResult<Transformed<LogicalPlan>> {
+    let apply_order = inner.apply_order().unwrap_or(ApplyOrder::TopDown);
+    plan.rewrite_with_subqueries(&mut InnerRuleWalk {
+        inner,
+        config,
+        apply_order,
+        inside_unnest_depth: 0,
+    })
+}
+
+/// `TreeNodeRewriter` that applies one optimizer rule at `apply_order`, matching
+/// DataFusion's private `Rewriter`, and declines only on the Unnest *path*.
+struct InnerRuleWalk<'a> {
+    inner: &'a dyn OptimizerRule,
+    config: &'a dyn OptimizerConfig,
+    apply_order: ApplyOrder,
+    /// `Unnest` ancestors of the current node (increment `f_down`, decrement `f_up`).
+    inside_unnest_depth: usize,
+}
+
+impl TreeNodeRewriter for InnerRuleWalk<'_> {
+    type Node = LogicalPlan;
+
+    fn f_down(&mut self, node: LogicalPlan) -> DataFusionResult<Transformed<LogicalPlan>> {
+        let is_unnest = matches!(node, LogicalPlan::Unnest(_));
+        if is_unnest {
+            self.inside_unnest_depth += 1;
+        }
+        if self.apply_order != ApplyOrder::TopDown {
+            return Ok(Transformed::no(node));
+        }
+        apply_inner_scoped(self.inner, node, self.config, self.inside_unnest_depth > 0)
+    }
+
+    fn f_up(&mut self, node: LogicalPlan) -> DataFusionResult<Transformed<LogicalPlan>> {
+        if matches!(node, LogicalPlan::Unnest(_)) {
+            self.inside_unnest_depth = self.inside_unnest_depth.saturating_sub(1);
+        }
+        if self.apply_order == ApplyOrder::BottomUp {
+            apply_inner_scoped(self.inner, node, self.config, self.inside_unnest_depth > 0)
+        } else {
+            Ok(Transformed::no(node))
+        }
+    }
+}
+
+/// Swallow inner-rule errors only on the Unnest path; other subtrees stay loud.
+fn apply_inner_scoped(
+    inner: &dyn OptimizerRule,
+    node: LogicalPlan,
+    config: &dyn OptimizerConfig,
+    inside_unnest: bool,
+) -> DataFusionResult<Transformed<LogicalPlan>> {
+    if !inside_unnest && !carries_unnest(&node)? {
+        return inner.rewrite(node, config);
+    }
+    let declined = node.clone();
+    Ok(inner
+        .rewrite(node, config)
+        .unwrap_or(Transformed::no(declined)))
+}
+
+/// Test seam: wrap an arbitrary inner rule with the same Unnest-scoped decline.
+#[cfg(test)]
+pub(super) fn wrap_leaf_rule_for_test(
+    inner: Arc<dyn OptimizerRule + Send + Sync>,
+) -> Arc<dyn OptimizerRule + Send + Sync> {
+    Arc::new(UnnestSafeLeafProjectionPushdown { inner })
 }
 
 /// ===========================================================================================

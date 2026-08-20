@@ -203,8 +203,11 @@ NOT in that file is a defect, not a decision.
   (conformance inventory covers every Rust arm + `bucket`/`arn` `_key` exclusions; octo C1-SEC-001);
   getAll isolation pin (octo C2-Q-002);
   `getAll` redacts; `get(explicit)` unchanged.
-- `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`:
-  nested struct-in-struct; null parent/mid struct → NULL not zero; list-of-struct;
+- `test_dynamic_flatten.py` — **r24 DF1** `DataFrame.dynamicFlatten` / `dynamic_flatten`
+  (planner is native `repark_core::dynamic_flatten`; this file is the facade contract):
+  nested struct-in-struct; null parent/mid struct → NULL not zero
+  (createDataFrame-door Python `None` / clean children; CASE-drop is the engine
+  dirty-child pin, not these fixtures); list-of-struct;
   **U-DF-1:** capitalized `Legs` list-of-struct + sibling struct (`Legs_leg_id`);
   multi-list serial explode order; list explode in-place column order;
   struct-in-list-in-struct; null-typed list drop;
@@ -217,15 +220,32 @@ NOT in that file is a defect, not a decision.
   **G3b (2026-08-18):** the GA4 fixture now carries the REAL `items[].item_params[]`
   (array-of-struct inside an array-element struct — the shape whose absence let the
   postfix-`[]` spelling defect ship), plus a standalone minimal repro of that shape on both
-  doors, a scalar-inner nested-array guard, a map-element still-refuses-loud rider, and
+  doors (flatten is native Unnest; `_sql_array_of` postfix mutant only kills
+  `explode_outer`), a scalar-inner nested-array guard, a map-element still-refuses-loud rider, and
   `test_create_dataframe_honors_requested_void` (D-5: explicit `NullType()` /
   `ArrayType(NullType())` is honored end to end instead of silently becoming string);
-  max_depth LOUD refuse;
+  max_depth LOUD refuse (`[DYNAMIC_FLATTEN_MAX_DEPTH]` token);
   bool flag type gates (incl. `empty_as_null`);
-  name-collision prefix + same-pass + cross-pass + list→unnest refuse; interleaved
+  name-collision prefix + same-pass + cross-pass + list→unnest refuse
+  (`[DYNAMIC_FLATTEN_NAME_COLLISION]` token); empty-struct-only refuse
+  (`[DYNAMIC_FLATTEN_EMPTY_STRUCT]`); interleaved
   in-place column order;
-  idempotence on already-flat; both method names; custom separator; explode_lists=False;
-  schema-walk + plan-build collect/count/to_arrow spy pin. Arrow value+type pins. (octo: trailing newline W292.)
+  idempotence on already-flat; H1 already-flat join preserves display overlay /
+  origin binds (`test_already_flat_h1_join_preserves_display_overlay`); expanding
+  one-field-struct H1 frame drops overlay (prefixed leaves, not parent display
+  names — `test_expanding_h1_flatten_drops_stale_overlay`); **DF1 MIA `_plan()`
+  pin:** uncached mapInArrow then `dynamicFlatten` materializes the bridge
+  (`test_mapinarrow_dynamic_flatten_materializes_bridge` already-flat doubling;
+  sibling `test_mapinarrow_nested_dynamic_flatten_materializes_bridge`
+  `payload STRUCT<x: BIGINT>` → `payload_x`); revert to `_inner.dynamic_flatten`
+  is 0 rows while createDataFrame flatten stays green; both method names;
+  custom separator; explode_lists=False;
+  schema-walk + plan-build collect/count/to_arrow spy pin (C1-Q-003);
+  native-kernel
+  docstring pin; dotted-separator list Unnest pin. Arrow value+type pins.
+  (octo: trailing newline W292.) **C1-Q-002:** map-element refuse pins
+  `dynamicFlatten` (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`) **and**
+  `explode_outer` CAST spelling.
   **DEFECT-2 (2026-08-18):** projection over a multi-pass flatten — the full 15-subset matrix
   value-checked against the whole-frame export in BOTH explode orders, `count()`/`agg`, the GA4
   real shape flatten-then-project (coverage, not a reproduction: measured green on BASE), and
