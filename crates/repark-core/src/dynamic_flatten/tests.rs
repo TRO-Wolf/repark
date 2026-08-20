@@ -1,7 +1,8 @@
 //! Engine pins for [`crate::dynamic_flatten`] — value AND Arrow type.
 //!
-//! The first four tests are the mutation pins that decide the design. The rest clone the
-//! Python suite's ENGINE cases (not the Python-only type-gate cases).
+//! The first four tests plus the Pin-1 list-child companion are the mutation pins
+//! that decide the design. The rest clone the Python suite's ENGINE cases (not the
+//! Python-only type-gate cases).
 
 use std::sync::Arc;
 
@@ -270,7 +271,7 @@ fn analysis_token(result: Result<datafusion::prelude::DataFrame, Error>, token: 
 }
 
 // =================================================================================================
-// FIRST FOUR MUTATION PINS
+// DESIGN MUTATION PINS (first four + Pin-1 list-child companion)
 // =================================================================================================
 
 /// Pin 1: null parent struct → NULL leaves, not 0/""/false. Removing the CASE must red this.
@@ -323,6 +324,42 @@ async fn null_parent_struct_fields_are_null_not_zero() {
     assert_int64(&table, "outer_x");
     assert_boolean(&table, "outer_flag");
     assert_utf8(&table, "outer_label");
+}
+
+/// Pin 1 list-child companion: null parent + dirty valid List → one typed-null
+/// explode row, not leaked elements. Skipping CASE only for list fields
+/// (`get_field` clones the raw child) must red this: Unnest would emit 99 and 100.
+#[tokio::test]
+async fn null_parent_dirty_list_child_is_null_not_exploded() {
+    let xs = list_of(
+        DataType::Int64,
+        [0, 2, 3],
+        i64_array(vec![Some(99), Some(100), Some(7)]),
+        Some(vec![true, true]),
+    );
+    let outer = struct_array(
+        vec![("xs", xs.data_type().clone(), xs)],
+        Some(vec![false, true]),
+    );
+    let batch = RecordBatch::try_new(
+        Arc::new(Schema::new(vec![
+            Field::new("id", DataType::Int64, false),
+            Field::new("outer", outer.data_type().clone(), true),
+        ])),
+        vec![i64_array(vec![Some(1), Some(2)]), Arc::new(outer)],
+    )
+    .expect("batch");
+
+    let frame = flatten(batch, options());
+    assert_eq!(column_names(&frame), ["id", "outer_xs"]);
+    let table = collect_one(frame).await;
+    assert_eq!(i64_cells(&table, "id"), [Some(1), Some(2)]);
+    assert_eq!(
+        i64_cells(&table, "outer_xs"),
+        [None, Some(7)],
+        "null parent must yield one typed-null explode row, not leaked 99/100"
+    );
+    assert_int64(&table, "outer_xs");
 }
 
 /// Pin 2: in-place column order `z, a_x, a_y, m`. Hoisting scalars first must red this.

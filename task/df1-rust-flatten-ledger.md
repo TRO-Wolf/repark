@@ -19,7 +19,7 @@ RePark DataFrame newtype.
 | C-001 | Kernel lives in `crates/repark-core/src/dynamic_flatten.rs` + file-backed tests + `dynamic_flatten/map.md`. | PROVEN |
 | C-002 | `lib.rs` re-exports `dynamic_flatten` and `DynamicFlattenOptions`; crate root stays under 150. | PROVEN — measured 101 (`splitlines` / `wc -l`; C2-CL-002 auditor 102 was off-by-one) |
 | C-003 | Algorithm: structs first (always), then lists one-at-a-time in schema order; list-of-struct becomes same-name struct. | PROVEN — pins 2 and 3 |
-| C-004 | Struct expand is Project + null-safe CASE + `get_field`; not DF struct `unnest_columns`. | PROVEN — pin 1 reds if CASE is removed |
+| C-004 | Struct expand is Project + null-safe CASE + `get_field`; not DF struct `unnest_columns`. | PROVEN — pin 1 reds if CASE is removed; list-child companion `null_parent_dirty_list_child_is_null_not_exploded` reds if CASE is skipped only for List fields |
 | C-005 | List explode uses `UnnestOptions { preserve_nulls: false }` via `unnest_columns_with_options` + `Column::new_unqualified`. Empty arrays drop because Unnest emits no rows for zero-length lists (empty ≠ null); `preserve_nulls` only keeps NULL lists. `empty_as_null=true` rewrites EMPTY to a singleton-null list so the row survives. | PROVEN — `null_and_empty_array_values` |
 | C-006 | Every schema field binds through `Column::new_unqualified`. | PROVEN — kernel; `s.f` pin |
 | C-007 | Errors are `Error::Analysis` with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`, `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`. | PROVEN |
@@ -38,6 +38,7 @@ First four (design mutation pins):
 | Pin | Claim |
 |---|---|
 | `null_parent_struct_fields_are_null_not_zero` | Null parent → NULL leaves, not 0/""/false |
+| `null_parent_dirty_list_child_is_null_not_exploded` | Null parent + dirty valid List `[99, 100]` → typed-null explode (`id` `[1, 2]`, `outer_xs` `[None, Some(7)]` Int64), not leaked extra rows. Mutant: skip CASE for list fields (`get_field` raw child → Unnest emits 99/100). |
 | `unnest_preserves_interleaved_column_order` | `z, a_x, a_y, m` — not survivors-first |
 | `list_of_struct_explodes_then_unnests` | `legs` → `legs_leg_id`, `legs_side` |
 | `prefixed_name_collision_with_top_level_refuses` | `a_x` + `a.x` refuses LOUD |
@@ -90,7 +91,7 @@ H1 two-path spawn (filed finding: already-flat `dynamicFlatten` dropped identity
 
 | Gate | Exit |
 |---|---|
-| `cargo test -p repark-core dynamic_flatten` | 0 (41 passed; R-S1-003) |
+| `cargo test -p repark-core dynamic_flatten` | 0 (42 passed; dirty-list null-parent pin) |
 | `make verify` | 0 (R-S3-H1) |
 | pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (43 passed; R-S3 two-path spawn pins) |
 
@@ -214,6 +215,19 @@ stale parent names onto prefixed leaves (one-field struct count-stable case).
 | R-S3-H1-flat | REMEDIATED | `test_already_flat_h1_join_preserves_display_overlay` |
 | R-S3-H1-expand | REMEDIATED | `test_expanding_h1_flatten_drops_stale_overlay` |
 | C-008 | REMEDIATED | Proposition restated to the two-path spawn. |
+
+---
+
+## 12. S1 review (null-parent dirty list child)
+
+Filed finding: Pin 1 and `null_mid` only plant dirty Int64/Utf8/Boolean
+children. No engine fixture with a dirty List under a null parent. If CASE
+were skipped only for nested lists, `get_field` would leak `[99, 100]` and
+Unnest would emit extra rows.
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| R-S1-list-null-parent | REMEDIATED | `null_parent_dirty_list_child_is_null_not_exploded`. Mutant: skip CASE for List fields. Production `null_safe_field` unchanged (type-agnostic CASE). |
 
 ---
 

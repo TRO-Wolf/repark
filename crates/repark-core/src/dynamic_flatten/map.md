@@ -11,11 +11,12 @@ operator.
 
 - `tests.rs` — Arrow value **and** type pins. The first four are the design
   mutation pins (null-parent CASE with dirty children, in-place column order,
-  list-of-struct then unnest, prefixed-name collision). Remaining engine cases
-  plus octo C1 pins: ScanForbidden plan-build spy, dotted-name Unnest bind,
-  Dictionary-of-List unwrap, dict-struct type + utf8 dict-struct, list-of-map
-  refuse, dirty-child mid-struct nulls, ReparkSession wrapper harness,
-  DEFECT-2 flatten-then-project.
+  list-of-struct then unnest, prefixed-name collision) plus Pin-1 list-child
+  companion `null_parent_dirty_list_child_is_null_not_exploded` (dirty valid
+  List under a null parent). Remaining engine cases plus octo C1 pins:
+  ScanForbidden plan-build spy, dotted-name Unnest bind, Dictionary-of-List
+  unwrap, dict-struct type + utf8 dict-struct, list-of-map refuse, dirty-child
+  mid-struct nulls, ReparkSession wrapper harness, DEFECT-2 flatten-then-project.
 - `tests/` — octo C2/C3 pins split out of `tests.rs` (file-size ceiling). See
   [tests/map.md](tests/map.md).
 
@@ -30,6 +31,7 @@ operator.
 | Symptom | First check |
 |---|---|
 | Null parent struct yields 0/""/false | The CASE `parent IS NULL THEN <typed null>` was dropped — pin `null_parent_struct_fields_are_null_not_zero` (dirty children at the parent-null slot). |
+| Null parent list explodes 99/100 | CASE skipped for List children — pin `null_parent_dirty_list_child_is_null_not_exploded` (dirty valid `[99, 100]` under a null parent). |
 | Null mid-struct yields 0 | Dirty children at the mid-null and outer-null slots — pin `null_mid_struct_fields_are_null_not_zero`. |
 | Column order is survivors-first | Expansion is not in schema field order — pin `unnest_preserves_interleaved_column_order`. |
 | `From<&str>` / `col(name)` on a `s.f` / `wrap.nums` column | Every schema field must bind through `Column::new_unqualified` — pin `dotted_list_column_unnest_uses_unqualified_bind`. |
