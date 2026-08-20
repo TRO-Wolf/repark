@@ -1296,6 +1296,12 @@ returned `Column` as the lambda body. Parameter names are `x`/`y`/`z` regardless
 wrote — they enter the plan, so a user-chosen name could collide with a column. `exists` ships
 here; the other ten Spark higher-order functions need kernels (FNP-4c).
 
+**FNP-5 (2026-08-20) — two-column aggregates have one builder.** `functions_expr.py` gains
+`_binary_aggregate(name, col1, col2)`; `corr`, `covar_pop`, `covar_samp` and the nine new `regr_*`
+all go through it. They thread `agg_name`, the quoted structural `sql_expr` free-SQL global-agg
+needs, and `partition_transform` — twelve hand-maintained copies of that is twelve chances to
+drift. Adding a thirteenth two-column aggregate means calling the helper, not copying a wrapper.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

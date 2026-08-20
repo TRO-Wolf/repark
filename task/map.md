@@ -18,6 +18,13 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-5-aggregates-ledger.md](fnp-5-aggregates-ledger.md) — **FNP-5 (2026-08-20):** thirteen
+  aggregates already in `all_default_aggregate_functions()` that the facade's dispatch could not
+  reach — the nine `regr_*` (pinned against an exact `y = 2x + 1` fit), `grouping`,
+  `approx_count_distinct`, `listagg`, `string_agg`; `__all__` 340 → 353. Corrects the design's
+  "16 wire-only": `sum_distinct` / `listagg_distinct` / `string_agg_distinct` are DISTINCT
+  modifiers, not kernels. `corr` / `covar_pop` / `covar_samp` collapse into one
+  `_binary_aggregate` helper the twelve two-column aggregates share.
 - [fnp-4a-lambda-seam-ledger.md](fnp-4a-lambda-seam-ledger.md) — **FNP-4a (2026-08-20):** the
   higher-order seam. One registry both doors read, `PyColumn::lambda_variable` /
   `call_higher_order`, lambda-variable resolution at every site that hands a column to DataFusion,

@@ -7,13 +7,20 @@
 
 use std::sync::Arc;
 
+use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
 use datafusion::functions_aggregate::covariance::{covar_pop_udaf, covar_samp_udaf};
 use datafusion::functions_aggregate::first_last::{first_value_udaf, last_value_udaf};
+use datafusion::functions_aggregate::grouping::grouping_udaf;
 use datafusion::functions_aggregate::median::median_udaf;
 use datafusion::functions_aggregate::min_max::{max_udaf, min_udaf};
+use datafusion::functions_aggregate::regr::{
+    regr_avgx_udaf, regr_avgy_udaf, regr_count_udaf, regr_intercept_udaf, regr_r2_udaf,
+    regr_slope_udaf, regr_sxx_udaf, regr_sxy_udaf, regr_syy_udaf,
+};
 use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
+use datafusion::functions_aggregate::string_agg::string_agg_udaf;
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
 use datafusion::logical_expr::expr::ScalarFunction;
@@ -913,6 +920,11 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bit_and" => bit_and_udaf(),
         "bit_or" => bit_or_udaf(),
         "bit_xor" => bit_xor_udaf(),
+        // FNP-5: already in `all_default_aggregate_functions()`, so the SQL door resolved these
+        // and only the facade had no arm. `approx_count_distinct` is Spark's spelling of
+        // DataFusion's `approx_distinct` — see the facade wrapper for the HLL/HLL++ divergence.
+        "approx_count_distinct" | "approx_distinct" => approx_distinct_udaf(),
+        "grouping" => grouping_udaf(),
         other => {
             return Err(PyValueError::new_err(format!(
                 "unknown aggregate function {other:?}"
@@ -930,6 +942,20 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "corr" => corr_udaf(),
         "covar_pop" => covar_pop_udaf(),
         "covar_samp" | "covar" => covar_samp_udaf(),
+        // FNP-5: the nine linear-regression aggregates. All are in
+        // `all_default_aggregate_functions()`, so `register_all` already put them on every
+        // session and the SQL door resolved them — only the facade had no arm.
+        "regr_avgx" => regr_avgx_udaf(),
+        "regr_avgy" => regr_avgy_udaf(),
+        "regr_count" => regr_count_udaf(),
+        "regr_intercept" => regr_intercept_udaf(),
+        "regr_r2" => regr_r2_udaf(),
+        "regr_slope" => regr_slope_udaf(),
+        "regr_sxx" => regr_sxx_udaf(),
+        "regr_sxy" => regr_sxy_udaf(),
+        "regr_syy" => regr_syy_udaf(),
+        // Spark `listagg` is `string_agg` under its Spark spelling (both take a delimiter).
+        "string_agg" | "listagg" => string_agg_udaf(),
         other_kind => {
             return Err(PyValueError::new_err(format!(
                 "unknown binary aggregate {other_kind:?}"

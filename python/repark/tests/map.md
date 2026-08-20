@@ -2001,6 +2001,13 @@ NOT in that file is a defect, not a decision.
   is wired but deliberately unpinned — it resolves against the LEFT schema only, which the test
   docstring says rather than implies.
 
+- `test_fnp5_aggregates.py` — **FNP-5 (2026-08-20):** the thirteen aggregates the facade could
+  not reach. The nine `regr_*` are pinned against an EXACT fit (`y = 2x + 1`), so slope 2,
+  intercept 1, r-squared 1, sxx 5, syy 20, sxy 10 are closed-form rather than repark agreeing with
+  itself, and each is cross-checked against the SQL door. `approx_count_distinct`'s `rsd` argument
+  is pinned as accepted-and-ignored (Spark uses HLL++, DataFusion HLL) — a signature contract, not
+  a claim the estimate matches Spark.
+
 ## I want to...
 
 | ...do this | go to |

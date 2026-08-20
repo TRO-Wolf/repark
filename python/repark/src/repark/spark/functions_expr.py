@@ -1185,49 +1185,158 @@ def median(col: Column | str) -> Column:
     )
 
 
-def corr(col1: Column | str, col2: Column | str) -> Column:
-    """Pearson correlation (PySpark ``functions.corr``)."""
+def grouping(col: Column | str) -> Column:
+    """1 when the row is aggregated over ``col`` in a CUBE/ROLLUP/grouping-set, else 0.
+
+    Only meaningful under a grouping-set query; outside one every row is ungrouped, so the answer
+    is always 0.
+    """
+    column, part = _aggregate_argument(col)
+    agg_name = f"grouping({part})"
+    return Column(
+        column._inner.aggregate("grouping", False),
+        agg_name=agg_name,
+        sql_expr=f"grouping({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+    )
+
+
+def approx_count_distinct(col: Column | str, rsd: float | None = None) -> Column:
+    """Approximate distinct count (PySpark ``functions.approx_count_distinct``).
+
+    ``rsd`` (the target relative standard deviation) is **accepted and ignored**: Spark's estimator
+    is HyperLogLog++ and DataFusion's is HyperLogLog, so the accuracy knob has no counterpart to
+    tune. The counts are close but not identical to Spark's — a value divergence, disclosed rather
+    than papered over. Same treatment as ``percentile_approx``'s accuracy argument.
+    """
+    del rsd
+    column, part = _aggregate_argument(col)
+    agg_name = f"approx_count_distinct({part})"
+    return Column(
+        column._inner.aggregate("approx_count_distinct", False),
+        agg_name=agg_name,
+        sql_expr=f"approx_count_distinct({column.sql_expr_part()})",
+        spark_display=agg_name,
+        projection_name=agg_name,
+    )
+
+
+def listagg(col: Column | str, delimiter: str = "") -> Column:
+    """Concatenate values with ``delimiter`` (PySpark ``functions.listagg``)."""
+    return _binary_aggregate("listagg", col, lit(delimiter))
+
+
+def string_agg(col: Column | str, delimiter: str = "") -> Column:
+    """Concatenate values with ``delimiter`` (PySpark ``functions.string_agg``; same as listagg)."""
+    return _binary_aggregate("string_agg", col, lit(delimiter))
+
+
+def _binary_aggregate(name: str, col1: Column | str, col2: Column | str) -> Column:
+    """A two-column aggregate: coerce both arguments, name the output the way PySpark does.
+
+    Every two-argument aggregate on this surface is this same shape, so it lives once. The
+    ``agg_name`` is what PySpark puts in the projection (``corr(x, y)``), and ``sql_expr`` carries
+    the quoted structural spelling free-SQL global-agg needs (octo C3-SEC-001).
+    """
     left, left_part = _aggregate_argument(col1)
     right, right_part = _aggregate_argument(col2)
-    agg_name = f"corr({left_part}, {right_part})"
+    agg_name = f"{name}({left_part}, {right_part})"
     return Column(
-        left._inner.aggregate_binary("corr", right._inner),
+        left._inner.aggregate_binary(name, right._inner),
         agg_name=agg_name,
-        sql_expr=f"corr({left.sql_expr_part()}, {right.sql_expr_part()})",
+        sql_expr=f"{name}({left.sql_expr_part()}, {right.sql_expr_part()})",
         spark_display=agg_name,
         projection_name=agg_name,
         partition_transform=_partition_transform_of(left, right),
     )
+
+
+def corr(col1: Column | str, col2: Column | str) -> Column:
+    """Pearson correlation (PySpark ``functions.corr``)."""
+    return _binary_aggregate("corr", col1, col2)
+
+
+def regr_avgx(y: Column | str, x: Column | str) -> Column:
+    """Average of the independent column over non-null pairs (PySpark ``functions.regr_avgx``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_avgx", y, x)
+
+
+def regr_avgy(y: Column | str, x: Column | str) -> Column:
+    """Average of the dependent column over non-null pairs (PySpark ``functions.regr_avgy``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_avgy", y, x)
+
+
+def regr_count(y: Column | str, x: Column | str) -> Column:
+    """Count of non-null ``(y, x)`` pairs (PySpark ``functions.regr_count``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_count", y, x)
+
+
+def regr_intercept(y: Column | str, x: Column | str) -> Column:
+    """Intercept of the least-squares fit (PySpark ``functions.regr_intercept``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_intercept", y, x)
+
+
+def regr_r2(y: Column | str, x: Column | str) -> Column:
+    """Coefficient of determination of the least-squares fit (PySpark ``functions.regr_r2``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_r2", y, x)
+
+
+def regr_slope(y: Column | str, x: Column | str) -> Column:
+    """Slope of the least-squares fit (PySpark ``functions.regr_slope``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_slope", y, x)
+
+
+def regr_sxx(y: Column | str, x: Column | str) -> Column:
+    """Sum of squares of the independent column (PySpark ``functions.regr_sxx``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_sxx", y, x)
+
+
+def regr_sxy(y: Column | str, x: Column | str) -> Column:
+    """Sum of products of the paired columns (PySpark ``functions.regr_sxy``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_sxy", y, x)
+
+
+def regr_syy(y: Column | str, x: Column | str) -> Column:
+    """Sum of squares of the dependent column (PySpark ``functions.regr_syy``).
+
+    Spark's argument order is ``(dependent, independent)``.
+    """
+    return _binary_aggregate("regr_syy", y, x)
 
 
 def covar_pop(col1: Column | str, col2: Column | str) -> Column:
     """Population covariance (PySpark ``functions.covar_pop``)."""
-    left, left_part = _aggregate_argument(col1)
-    right, right_part = _aggregate_argument(col2)
-    agg_name = f"covar_pop({left_part}, {right_part})"
-    return Column(
-        left._inner.aggregate_binary("covar_pop", right._inner),
-        agg_name=agg_name,
-        sql_expr=f"covar_pop({left.sql_expr_part()}, {right.sql_expr_part()})",
-        spark_display=agg_name,
-        projection_name=agg_name,
-        partition_transform=_partition_transform_of(left, right),
-    )
+    return _binary_aggregate("covar_pop", col1, col2)
 
 
 def covar_samp(col1: Column | str, col2: Column | str) -> Column:
     """Sample covariance (PySpark ``functions.covar_samp``)."""
-    left, left_part = _aggregate_argument(col1)
-    right, right_part = _aggregate_argument(col2)
-    agg_name = f"covar_samp({left_part}, {right_part})"
-    return Column(
-        left._inner.aggregate_binary("covar_samp", right._inner),
-        agg_name=agg_name,
-        sql_expr=f"covar_samp({left.sql_expr_part()}, {right.sql_expr_part()})",
-        spark_display=agg_name,
-        projection_name=agg_name,
-        partition_transform=_partition_transform_of(left, right),
-    )
+    return _binary_aggregate("covar_samp", col1, col2)
 
 
 def bit_and(col: Column | str) -> Column:

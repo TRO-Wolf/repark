@@ -48,6 +48,11 @@ without enabling PyO3 `multiple-pymethods`.
   (a placeholder for one lambda parameter) and `call_higher_order` (value arguments, then one
   lambda per `(params, body)`). Resolution of those placeholders is `PyDataFrame::bound`, not here
   — a `PyColumn` has no schema.
+- `function_dispatch.rs` also carries the **FNP-5 (2026-08-20)** aggregate arms: the nine
+  `regr_*` and `string_agg`/`listagg` in `binary_aggregate_udaf`, `grouping` and
+  `approx_count_distinct`/`approx_distinct` in `unary_aggregate_udaf`. Same story as the scalar
+  arms — every one of these was already registered by `register_all` and resolvable through
+  `spark.sql(...)`; the facade had no arm.
 - `door_parity_tests.rs` — **FNP-1 (2026-08-20):** the charter clause C-012 guard. Compares the
   UDF this crate's dispatch table embeds against the one `repark_functions::register_all` installs
   on a session, so the facade and the SQL door cannot silently resolve different kernels for the

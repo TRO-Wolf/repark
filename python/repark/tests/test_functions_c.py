@@ -6,11 +6,14 @@ with their canonical.
 
 Deferred this batch (no stubs): FN-W ships ``lag`` / ``lead`` / ``nth_value`` /
 ``percent_rank`` / ``cume_dist``; remaining A8 residuals stay absent:
-``sum_distinct`` / ``sumDistinct``, ``approx_count_distinct`` /
-``approxCountDistinct`` (no native distinct-on-sum / approx-distinct arm);
+``sum_distinct`` / ``sumDistinct`` (**not a kernel** — DataFusion spells it
+``sum(DISTINCT x)``, a modifier on the call, so it needs the DISTINCT path);
 charter ENGINE-WORK ``any_value``, ``max_by``, ``min_by``, ``product``,
-``grouping``, ``grouping_id``, ``percentile``, ``window``, ``window_time``,
-``session_window``.
+``grouping_id``, ``percentile``, ``window``, ``window_time``, ``session_window``.
+
+FNP-5 (2026-08-20) shipped ``grouping`` and ``approx_count_distinct`` out of that
+list — both were already registered and reachable through ``spark.sql(...)``, and
+only the facade's aggregate dispatch lacked an arm.
 """
 
 from __future__ import annotations
@@ -176,17 +179,26 @@ def test_bool_and_empty_group_is_null(spark: ReparkSession) -> None:
 
 
 def test_fn_c_deferred_names_are_absent() -> None:
-    """No stubs for remaining A8 residuals, distinct/approx arms, or charter ENGINE-WORK."""
+    """No stubs for the A8 residuals and charter ENGINE-WORK still outstanding.
+
+    The list RATCHETS DOWN. FNP-5 (2026-08-20) shipped ``grouping`` and
+    ``approx_count_distinct`` — both were already in
+    ``all_default_aggregate_functions()`` and reachable through ``spark.sql(...)``; only the
+    facade's aggregate dispatch had no arm. Behaviour: ``test_fnp5_aggregates.py``.
+
+    ``sum_distinct`` stays here for a reason worth recording: it is **not a kernel**. DataFusion
+    spells it ``sum(DISTINCT x)``, a modifier on the aggregate call, so it needs the facade's
+    DISTINCT path rather than a dispatch arm. The camelCase spellings are PySpark's deprecated
+    aliases and follow their snake_case originals.
+    """
     deferred = (
         "sum_distinct",
         "sumDistinct",
-        "approx_count_distinct",
         "approxCountDistinct",
         "any_value",
         "max_by",
         "min_by",
         "product",
-        "grouping",
         "grouping_id",
         "percentile",
         "window",
