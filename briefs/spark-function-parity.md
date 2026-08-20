@@ -44,7 +44,7 @@ These narrow [AGENTS.md](../AGENTS.md) "Delegated-agent standing rules"; they ne
 
 ## Sequencing
 
-Seventeen units, one branch, one PR. Each unit is one commit with its own
+Nineteen units, one branch, one PR. Each unit is one commit with its own
 `task/fnp-<n>-<slug>-ledger.md`. The full roster, scope and rationale is
 [docs/design/spark-function-parity.md §7](../docs/design/spark-function-parity.md); this slate
 adds the per-unit execution contract.
@@ -53,7 +53,7 @@ Correctness first, then free names, then the family the users notice, then the b
 
 ```
 FNP-1  two-door asymmetry        →  FNP-2  free names   →  FNP-3  de-stub what ships
-FNP-4  higher-order seam + the eleven
+FNP-4a seam + exists  →  FNP-4b Spark-door dialect  →  FNP-4c the eight kernels
 FNP-5  wire-only aggregates      →  FNP-6  reuse our kernels  →  FNP-7  try_* sweep
 FNP-8  repatriation (55)
 FNP-9  collections/generators    →  FNP-10 JSON  →  FNP-11 timestamp/TIME

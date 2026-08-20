@@ -24,8 +24,10 @@ use datafusion::functions_window::nth_value::nth_value_udwf;
 use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, percent_rank_udwf, rank_udwf};
 use datafusion::functions_window::row_number::row_number_udwf;
-use datafusion::logical_expr::expr::{NullTreatment, WindowFunction};
-use datafusion::logical_expr::{Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lit};
+use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, NullTreatment, WindowFunction};
+use datafusion::logical_expr::{
+    Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lambda_var, lit,
+};
 use datafusion::prelude::{SessionContext, col};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
@@ -148,6 +150,49 @@ impl PyColumn {
     ///
     /// # Errors
     /// Returns `ValueError` when `fields` is empty.
+    /// A reference to a lambda parameter (`x` inside `transform(a, x -> x + 1)`).
+    ///
+    /// The facade mints one of these per parameter, hands it to the user's Python callable, and
+    /// passes whatever the callable returns back as the lambda body. Variables built through the
+    /// expression API carry no field yet — the frame resolves them at plan-build time, which is
+    /// why every `PyDataFrame` method that consumes a column runs `resolve_lambda_variables`.
+    #[staticmethod]
+    pub fn lambda_variable(name: &str) -> PyResult<Self> {
+        fenced!("Column.lambda_variable", {
+            Ok(Self::from_expr(lambda_var(name)))
+        })
+    }
+
+    /// Invoke a higher-order function: value arguments first, then one lambda per `(params, body)`.
+    ///
+    /// Every Spark higher-order function has that shape — `transform(arr, f)`,
+    /// `aggregate(arr, init, merge, finish)`, `map_zip_with(m1, m2, f)` — so the split is the
+    /// signature, not a convention this layer invents.
+    ///
+    /// # Errors
+    /// `ValueError` if `name` is not a higher-order function the session registers. Resolution
+    /// goes through `repark_functions::higher_order::by_name`, the same table
+    /// `register_all` installs, so the facade and the SQL door cannot resolve different kernels.
+    #[staticmethod]
+    pub fn call_higher_order(
+        name: &str,
+        value_args: Vec<PyColumn>,
+        lambdas: Vec<(Vec<String>, PyColumn)>,
+    ) -> PyResult<Self> {
+        fenced!("Column.call_higher_order", {
+            let function = repark_functions::higher_order::by_name(name).ok_or_else(|| {
+                PyValueError::new_err(format!("unknown higher-order function {name:?}"))
+            })?;
+            let mut args: Vec<Expr> = value_args.iter().map(PyColumn::expr).collect();
+            for (params, body) in lambdas {
+                args.push(Expr::Lambda(Lambda::new(params, body.expr())));
+            }
+            Ok(Self::from_expr(Expr::HigherOrderFunction(
+                HigherOrderFunction::new(function, args),
+            )))
+        })
+    }
+
     #[staticmethod]
     pub fn make_struct(fields: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.make_struct", {

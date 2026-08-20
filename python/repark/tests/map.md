@@ -1994,6 +1994,13 @@ NOT in that file is a defect, not a decision.
   than against RePark's own output; `xxhash64` has no oracle available and pins determinism,
   distinctness and return type only, and says so.
 
+- `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
+  `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
+  null-array edges, an outer column captured in the body, loud refusals for wrong arity and a
+  non-Column return, and the four DataFrame entry points that resolve lambda variables. `join_on`
+  is wired but deliberately unpinned — it resolves against the LEFT schema only, which the test
+  docstring says rather than implies.
+
 ## I want to...
 
 | ...do this | go to |

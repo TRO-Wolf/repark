@@ -18,6 +18,13 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-4a-lambda-seam-ledger.md](fnp-4a-lambda-seam-ledger.md) — **FNP-4a (2026-08-20):** the
+  higher-order seam. One registry both doors read, `PyColumn::lambda_variable` /
+  `call_higher_order`, lambda-variable resolution at every site that hands a column to DataFusion,
+  and `exists` (an honest alias of `array_any_match` — three-valued nulls measured, not assumed).
+  Carries FNP-4b's evidence: the Spark-door dialect works but costs 5 cross-door DML tests because
+  the engine's own generated SQL quotes identifiers ANSI-style, which a Spark parser reads as
+  string literals. Split from FNP-4 on owner ruling.
 - [fnp-3-destub-ledger.md](fnp-3-destub-ledger.md) — **FNP-3 (2026-08-20):** the eleven names
   whose `datafusion-spark` kernel `register_all` already installed but the facade's dispatch table
   had no arm for, so `spark.sql(...)` evaluated them while `F.<name>(...)` raised. `sha1`, `sha`,

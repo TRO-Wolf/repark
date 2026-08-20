@@ -1590,6 +1590,9 @@ from repark.spark.functions_expr import (  # noqa: E402
     xxhash64,
     zeroifnull,
 )
+from repark.spark.functions_lambda import (  # noqa: E402
+    exists,
+)
 from repark.spark.functions_math import (  # noqa: E402
     bin,
     factorial,
@@ -1771,6 +1774,7 @@ __all__ = [
     "endswith",
     "equal_null",
     "every",
+    "exists",
     "exp",
     "explode",
     "explode_outer",

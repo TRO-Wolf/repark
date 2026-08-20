@@ -306,6 +306,15 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   PySpark output name `sum(x)`). The facade aliases each aggregate to its Spark output name; the
   returned expr is deliberately un-aliased.
 
+**FNP-4a (2026-08-20) — the lambda seam.** `column/mod.rs` gains `PyColumn::lambda_variable` (mints
+a placeholder for a lambda parameter) and `PyColumn::call_higher_order` (values first, then one
+lambda per `(params, body)` — every Spark higher-order signature's actual shape). `dataframe.rs`
+gains `PyDataFrame::bound`, which runs `resolve_lambda_variables` against the frame's schema:
+variables built through the expression API carry no field until a frame binds them, and an
+unresolved variable fails when the plan asks it for a type. **Every method that hands a `PyColumn`
+to DataFusion must go through `bound`** — `select`, `filter`, `with_column`, `sort`, `join_on`. A
+new one that calls `column.expr()` directly is a lambda that works everywhere except there.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

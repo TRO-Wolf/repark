@@ -163,6 +163,21 @@ pub struct PyDataFrame {
 }
 
 impl PyDataFrame {
+    /// This column's expression with any lambda variables bound to the frame's schema.
+    ///
+    /// A lambda built through the expression API (`F.transform(col, lambda x: ...)`) carries
+    /// UNRESOLVED variables — `LambdaVariable::field` is `None` — because the facade has no schema
+    /// when it builds the Column. DataFusion's SQL planner resolves them as it plans; the
+    /// expression API does not, and an unresolved variable fails when the plan asks it for a type.
+    /// Every method that hands a `PyColumn` to DataFusion goes through here.
+    fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
+        column
+            .expr()
+            .resolve_lambda_variables(self.df.schema())
+            .map(|transformed| transformed.data)
+            .map_err(datafusion_to_py_err)
+    }
+
     /// Wrap a planned [`DataFrame`]. Crate-internal: only [`crate::session::PyReparkSession`] mints
     /// these, threading through the runtime that owns the async engine.
     pub(crate) fn new(df: DataFrame, runtime: Arc<Runtime>) -> Self {
@@ -644,7 +659,7 @@ impl PyDataFrame {
             let df = self
                 .df
                 .clone()
-                .with_column(name, column.expr())
+                .with_column(name, self.bound(&column)?)
                 .map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
@@ -660,7 +675,7 @@ impl PyDataFrame {
             let df = self
                 .df
                 .clone()
-                .filter(predicate.expr())
+                .filter(self.bound(&predicate)?)
                 .map_err(datafusion_to_py_err)?;
             Ok(Self::new(df, Arc::clone(&self.runtime)))
         })
@@ -693,7 +708,10 @@ impl PyDataFrame {
     /// Returns `RuntimeError` if the projection cannot be planned.
     pub fn select(&self, columns: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("PyDataFrame.select", {
-            let expressions: Vec<Expr> = columns.iter().map(PyColumn::expr).collect();
+            let expressions: Vec<Expr> = columns
+                .iter()
+                .map(|column| self.bound(column))
+                .collect::<PyResult<_>>()?;
             let df = self
                 .df
                 .clone()
@@ -744,9 +762,9 @@ impl PyDataFrame {
                 .zip(ascending)
                 .zip(nulls_first)
                 .map(|((column, is_ascending), nulls_first)| {
-                    column.expr().sort(is_ascending, nulls_first)
+                    Ok(self.bound(column)?.sort(is_ascending, nulls_first))
                 })
-                .collect();
+                .collect::<PyResult<Vec<_>>>()?;
             let df = self
                 .df
                 .clone()
@@ -812,7 +830,7 @@ impl PyDataFrame {
             let joined = self
                 .df
                 .clone()
-                .join_on(right.df.clone(), join_type, [condition.expr()])
+                .join_on(right.df.clone(), join_type, [self.bound(&condition)?])
                 .map_err(datafusion_to_py_err)?;
             Ok(Self::new(joined, Arc::clone(&self.runtime)))
         })

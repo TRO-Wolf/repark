@@ -31,6 +31,7 @@ pub mod datetime;
 pub mod decimal_precision;
 pub mod decimal_spark;
 pub mod expr_fn;
+pub mod higher_order;
 pub mod instant_ts;
 pub mod random;
 pub mod session_time_zone;
@@ -117,6 +118,7 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in random::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    higher_order::register(ctx);
     // DEC-8: ExprPlanner must be on the session before BinaryExpr::get_type
     // refuses `(38,20)*(38,20)`. SparkExtension calls this function.
     decimal_spark::register_spark_decimal_planner(ctx);

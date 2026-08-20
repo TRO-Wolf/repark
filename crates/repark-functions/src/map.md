@@ -315,6 +315,17 @@ installs. These names evaluated correctly through `spark.sql(...)` and raised
 capability was present and only one door could reach it. When adding a kernel, wire the builder in
 the same change: a kernel registered but not dispatched is a refusal the SQL door does not share.
 
+**FNP-4a (2026-08-20) — `higher_order.rs`.** DataFusion keeps higher-order functions in a registry
+**separate** from scalar UDFs, which none of `register_all`'s loops touched, so a repark session
+carried DataFusion's three defaults and no Spark spellings. This module is one table read by two
+callers — `register` for the SQL door's session, `by_name` for the facade, whose `PyColumn` is
+standalone and has no session to resolve against. Reading one table is what stops the two doors
+resolving different kernels. A Spark spelling is attached only where semantics match: `exists` is
+an alias of `array_any_match`, while `transform` / `filter` deliberately are **not** aliased —
+those kernels declare one lambda parameter and Spark's `(element, index)` form is a hard plan
+error against them, so repark kernels will own the names (FNP-4c). A test pins that they do not
+resolve, so a well-meaning future alias reds the build.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

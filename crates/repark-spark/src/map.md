@@ -237,6 +237,13 @@ part of that section's pin — changing either one changes both.
 | Time-travel span scanning | `time_travel.rs` (pin half: `repark-core/src/time_travel.rs`) |
 | See what this door ships vs deliberately does NOT | `matrix.rs` (the Q13 surface matrix) |
 
+**FNP-4a (2026-08-20) — `apply_spark_parser_dialect`, present but NOT wired.** `extension.rs`
+carries the Spark-door dialect helper under `#[expect(dead_code)]` with its measurement: switching
+it on makes every Spark higher-order function reachable through SQL and breaks 5 `cross_door.rs`
+DML tests, because the engine's own generated SQL quotes identifiers with ANSI double quotes,
+which a Spark parser reads as string literals. FNP-4b wires it after internal SQL stops depending
+on the session dialect. Do not wire it without that work — the failures are in the write path.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

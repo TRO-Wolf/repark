@@ -1289,6 +1289,13 @@ and their two agreeing aliases were reachable, wrong and silent the moment `asc_
 `desc_nulls_first` exist. `Column`'s four sort spellings collapse to one `_with_sort_order`;
 adding a fifth means adding it there, not copying the constructor call again.
 
+**FNP-4a (2026-08-20) — `functions_lambda.py`.** The higher-order facade. A `Column` is standalone
+and has no schema, so the module cannot evaluate a user's callable against data and does not try:
+it mints one placeholder `Column` per lambda parameter, calls the callable **once**, and takes the
+returned `Column` as the lambda body. Parameter names are `x`/`y`/`z` regardless of what the caller
+wrote — they enter the plan, so a user-chosen name could collide with a column. `exists` ships
+here; the other ten Spark higher-order functions need kernels (FNP-4c).
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)
