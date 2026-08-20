@@ -1272,6 +1272,14 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Change `Row` (collect result / field access / asDict) | `row.py` (G-ROW pins in `tests/test_row.py`) |
 | Add a metadata (`spark.catalog`) operation | `catalog.py` |
 
+**FNP-3 (2026-08-20) — eleven stubs flipped to shipped.** `functions_expr.py` loses the loud
+refusals for `sha1`/`sha`, `crc32`, `xxhash64`, `soundex`, `format_string` (and therefore
+`printf`), `datediff`, `from_utc_timestamp`, `to_utc_timestamp` and `map_from_arrays`; each is a
+thin `_scalar` wrapper over a kernel `register_all` already installed. `arrays_zip` and
+`json_tuple` stay refusing — measured divergence from Spark, not a missing kernel.
+`functions_datetime.py`'s "do not alias `datediff`" note is gone: it was FN-D's scope fence, not a
+semantic ruling (`task/fnp-3-destub-ledger.md`).
+
 **FNP-2 (2026-08-20) — null ordering has one home.** `column.py` gains
 `sort_nulls_first_for(column, is_ascending)`, and every ordering path resolves null placement
 through it: `dataframe/core.py` `_sort_specs`, `window.py` `_order_specs`, and

@@ -2,8 +2,10 @@
 
 Public names are re-exported from ``functions.py``. FN-GT2 wires leftover
 ``make_date`` / interval constructors / ``unix_micros`` / ``date_diff``.
-``datediff`` stays the R-FN-BATCH1 DISPOSED-STUB — do not alias it onto
-``date_diff``.
+FNP-3 (2026-08-20) shipped ``datediff`` as the same engine arm: PySpark 4.1.2
+declares both spellings with the same ``(end, start)`` order over one Catalyst
+expression. The former "do not alias" note was FN-D's scope fence, not a
+semantic ruling — see ``task/fnp-3-destub-ledger.md``.
 """
 
 from __future__ import annotations
@@ -267,7 +269,7 @@ def unix_micros(col: Column | str) -> Column:
 def date_diff(end: Column | str, start: Column | str) -> Column:
     """Days from ``start`` to ``end`` (PySpark ``functions.date_diff``).
 
-    Distinct from the DISPOSED-STUB ``datediff`` (R-FN-BATCH1). Do not alias.
+    Spark's ``datediff`` is the same function under its older spelling (FNP-3).
     Date columns match Spark.
 
     Parameters

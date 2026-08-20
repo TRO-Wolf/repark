@@ -14,7 +14,6 @@ from repark.spark.functions import (
     dayofyear,
     extract,
     format_number,
-    from_utc_timestamp,
     hour,
     last_day,
     lit,
@@ -27,7 +26,6 @@ from repark.spark.functions import (
     timestamp_seconds,
     to_date,
     to_timestamp,
-    to_utc_timestamp,
     try_to_timestamp,
 )
 
@@ -95,9 +93,7 @@ def test_batch3_loud_unsupported(spark: ReparkSession) -> None:
         format_number("x", 2)
     with pytest.raises(UnsupportedOperationException, match="try_to_timestamp"):
         try_to_timestamp("x")
-    with pytest.raises(UnsupportedOperationException, match="to_utc_timestamp"):
-        to_utc_timestamp("t", "UTC")
-    with pytest.raises(UnsupportedOperationException, match="from_utc_timestamp"):
-        from_utc_timestamp("t", "UTC")
+    # FNP-3: to_utc_timestamp / from_utc_timestamp flipped to shipped (datafusion-spark
+    # kernels). Behaviour + the zone round trip: test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="make_timestamp"):
         make_timestamp(2020, 1, 2, 3, 4, 5)

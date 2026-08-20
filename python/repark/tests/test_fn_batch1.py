@@ -11,7 +11,6 @@ from repark.spark.functions import (
     ceil,
     concat_ws,
     current_date,
-    datediff,
     exp,
     floor,
     from_unixtime,
@@ -153,8 +152,8 @@ def test_greatest_least_dates(spark: ReparkSession) -> None:
 def test_unsupported_loud(spark: ReparkSession) -> None:
     with pytest.raises(UnsupportedOperationException, match="split"):
         split("s", ",")
-    with pytest.raises(UnsupportedOperationException, match="datediff"):
-        datediff("a", "b")
+    # FNP-3: datediff flipped to shipped — it is Spark's older spelling of date_diff and shares
+    # its engine arm. Behaviour: test_fnp3_destubbed.py.
 
 
 def test_null_arg_propagation_lower(spark: ReparkSession) -> None:

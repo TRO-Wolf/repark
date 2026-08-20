@@ -164,6 +164,73 @@ pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
 
+// ===========================================================================================
+// FNP-3 — facade-embed builders for `datafusion-spark` kernels the SQL door already resolved.
+// ===========================================================================================
+//
+// Each of these names worked through `spark.sql(...)` and raised
+// `UnsupportedOperationException` through the facade, because `register_all` installs the kernel
+// by name while the facade's dispatch table had no arm for it. Every builder below embeds the
+// SAME singleton the registry installs (`make_udf_function!` hands out one instance), so the two
+// doors cannot diverge — charter clause C-012.
+
+/// Spark `crc32(expr)` — CRC-32 checksum as a bigint.
+#[must_use]
+pub fn crc32(arg: Expr) -> Expr {
+    call(datafusion_spark::function::hash::crc32(), vec![arg])
+}
+
+/// Spark `sha1(expr)` — SHA-1 as a lowercase hex string. Also serves the `sha` spelling.
+#[must_use]
+pub fn sha1(arg: Expr) -> Expr {
+    call(datafusion_spark::function::hash::sha1(), vec![arg])
+}
+
+/// Spark `xxhash64(expr, ...)` — 64-bit xxHash of the arguments.
+#[must_use]
+pub fn xxhash64(args: Vec<Expr>) -> Expr {
+    call(datafusion_spark::function::hash::xxhash64(), args)
+}
+
+/// Spark `soundex(expr)` — the four-character Soundex code.
+#[must_use]
+pub fn soundex(arg: Expr) -> Expr {
+    call(datafusion_spark::function::string::soundex(), vec![arg])
+}
+
+/// Spark `format_string(fmt, ...)` — printf-style formatting.
+#[must_use]
+pub fn format_string(args: Vec<Expr>) -> Expr {
+    call(datafusion_spark::function::string::format_string(), args)
+}
+
+/// Spark `from_utc_timestamp(ts, tz)` — render a UTC instant in `tz`.
+#[must_use]
+pub fn from_utc_timestamp(timestamp: Expr, timezone: Expr) -> Expr {
+    call(
+        datafusion_spark::function::datetime::from_utc_timestamp(),
+        vec![timestamp, timezone],
+    )
+}
+
+/// Spark `to_utc_timestamp(ts, tz)` — read a wall clock in `tz` as a UTC instant.
+#[must_use]
+pub fn to_utc_timestamp(timestamp: Expr, timezone: Expr) -> Expr {
+    call(
+        datafusion_spark::function::datetime::to_utc_timestamp(),
+        vec![timestamp, timezone],
+    )
+}
+
+/// Spark `map_from_arrays(keys, values)` — a map from two equal-length arrays.
+#[must_use]
+pub fn map_from_arrays(keys: Expr, values: Expr) -> Expr {
+    call(
+        datafusion_spark::function::map::map_from_arrays(),
+        vec![keys, values],
+    )
+}
+
 /// Spark `to_timestamp(expr[, format])` — TZ-4 LTZ instant, session-zone localized.
 ///
 /// Variadic to match the kernel's own signature and the facade's arity gate.

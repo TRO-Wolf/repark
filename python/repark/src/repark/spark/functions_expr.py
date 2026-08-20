@@ -605,11 +605,12 @@ def regexp_extract(str: Column | str, pattern: str, idx: int) -> Column:
 
 
 def datediff(end: Column | str, start: Column | str) -> Column:
-    """Unsupported: engine has no ``datediff``."""
+    """Days from ``start`` to ``end`` (PySpark ``functions.datediff``).
 
-    raise UnsupportedOperationException(
-        "functions.datediff is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+    Spark's older spelling of :func:`date_diff`; PySpark 4.1.2 declares both with the same
+    ``(end, start)`` order over the same Catalyst expression, so they share one engine arm.
+    """
+    return _scalar("datediff", end, start)
 
 
 def months_between(date1: Column | str, date2: Column | str, roundOff: bool = True) -> Column:  # noqa: N803
@@ -710,11 +711,11 @@ def array_contains(col: Column | str, value: Column | str | int | float) -> Colu
 
 
 def format_string(format: str, *cols: Column | str) -> Column:
-    """Unsupported: ``format_string`` / printf not wired."""
+    """printf-style formatting (PySpark ``functions.format_string``).
 
-    raise UnsupportedOperationException(
-        "functions.format_string is not supported yet (engine gap; disclosed R-FN-BATCH1)"
-    )
+    ``format`` is always a literal; the remaining arguments follow ``ColumnOrName``.
+    """
+    return _scalar("format_string", format, *cols, lit_indices=frozenset({0}))
 
 
 # ---- R-FN-BATCH2: strings / regexp / collection wrappers --------------------------------------
@@ -972,11 +973,8 @@ def elt(n: Column | int, *inputs: Column | str) -> Column:
 
 
 def soundex(col: Column | str) -> Column:
-    """Unsupported: engine has no ``soundex`` (R-FN-BATCH2 census)."""
-
-    raise UnsupportedOperationException(
-        "functions.soundex is not supported yet (engine gap; disclosed R-FN-BATCH2)"
-    )
+    """Four-character Soundex code (PySpark ``functions.soundex``)."""
+    return _scalar("soundex", col)
 
 
 def sentences(col: Column | str, language: Column | str | None = None) -> Column:
@@ -996,12 +994,8 @@ def arrays_zip(*cols: Column | str) -> Column:
 
 
 def map_from_arrays(col1: Column | str, col2: Column | str) -> Column:
-    """Unsupported as Column builder (SQL ``map_from_arrays`` may work; R-FN-BATCH2)."""
-
-    raise UnsupportedOperationException(
-        "functions.map_from_arrays Column builder not supported yet "
-        "(use SQL map_from_arrays; disclosed R-FN-BATCH2)"
-    )
+    """Map from an array of keys and an array of values (PySpark ``functions.map_from_arrays``)."""
+    return _scalar("map_from_arrays", col1, col2)
 
 
 # ---- R-FN-BATCH3: datetime / interval / formatting --------------------------------------------
@@ -1081,17 +1075,13 @@ def try_to_timestamp(col: Column | str, format: str | None = None) -> Column:
 def to_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
     """Unsupported: timezone conversion not wired (R-FN-BATCH3 census)."""
 
-    raise UnsupportedOperationException(
-        "functions.to_utc_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
-    )
+    return _scalar("to_utc_timestamp", timestamp, tz, lit_indices=frozenset({1}))
 
 
 def from_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
     """Unsupported: timezone conversion not wired (R-FN-BATCH3 census)."""
 
-    raise UnsupportedOperationException(
-        "functions.from_utc_timestamp is not supported yet (engine gap; disclosed R-FN-BATCH3)"
-    )
+    return _scalar("from_utc_timestamp", timestamp, tz, lit_indices=frozenset({1}))
 
 
 def make_timestamp(
@@ -1297,25 +1287,24 @@ def sha2(col: Column | str, numBits: int) -> Column:  # noqa: N803
 def sha1(col: Column | str) -> Column:
     """Unsupported: engine has no ``sha1`` (use sha2(..., 256); R-FN-BATCH4)."""
 
-    raise UnsupportedOperationException(
-        "functions.sha1 is not supported yet (engine gap; disclosed R-FN-BATCH4)"
-    )
+    return _scalar("sha1", col)
+
+
+def sha(col: Column | str) -> Column:
+    """SHA-1 as a hex string (PySpark ``functions.sha``; Spark's older spelling of ``sha1``)."""
+    return _scalar("sha", col)
 
 
 def crc32(col: Column | str) -> Column:
     """Unsupported: engine has no ``crc32`` (R-FN-BATCH4)."""
 
-    raise UnsupportedOperationException(
-        "functions.crc32 is not supported yet (engine gap; disclosed R-FN-BATCH4)"
-    )
+    return _scalar("crc32", col)
 
 
 def xxhash64(col: Column | str) -> Column:
     """Unsupported: engine has no ``xxhash64`` (R-FN-BATCH4)."""
 
-    raise UnsupportedOperationException(
-        "functions.xxhash64 is not supported yet (engine gap; disclosed R-FN-BATCH4)"
-    )
+    return _scalar("xxhash64", col)
 
 
 def rand(seed: int | None = None) -> Column:

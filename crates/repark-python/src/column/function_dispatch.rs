@@ -764,7 +764,42 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::unix_micros(exprs[0].clone())
         }
-        "date_diff" => {
+        // ---- FNP-3: names the SQL door already resolved; the facade had no arm ---------
+        "crc32" => {
+            need(1)?;
+            repark_functions::expr_fn::crc32(exprs[0].clone())
+        }
+        "sha1" | "sha" => {
+            need(1)?;
+            repark_functions::expr_fn::sha1(exprs[0].clone())
+        }
+        "xxhash64" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::xxhash64(exprs.clone())
+        }
+        "soundex" => {
+            need(1)?;
+            repark_functions::expr_fn::soundex(exprs[0].clone())
+        }
+        "format_string" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::format_string(exprs.clone())
+        }
+        "from_utc_timestamp" => {
+            need(2)?;
+            repark_functions::expr_fn::from_utc_timestamp(exprs[0].clone(), exprs[1].clone())
+        }
+        "to_utc_timestamp" => {
+            need(2)?;
+            repark_functions::expr_fn::to_utc_timestamp(exprs[0].clone(), exprs[1].clone())
+        }
+        "map_from_arrays" => {
+            need(2)?;
+            repark_functions::expr_fn::map_from_arrays(exprs[0].clone(), exprs[1].clone())
+        }
+        // Spark's older spelling of `date_diff`; PySpark 4.1.2 defines both with the same
+        // (end, start) order over the same Catalyst expression, so they share one arm.
+        "date_diff" | "datediff" => {
             need(2)?;
             repark_functions::expr_fn::date_diff(exprs[0].clone(), exprs[1].clone())
         }

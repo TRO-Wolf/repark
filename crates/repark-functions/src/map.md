@@ -307,6 +307,14 @@ facade-embed builder for the first is `expr_fn::to_timestamp`; both are guarded 
 reaches means exposing it the same way — a private constructor forces the dispatch table to pick
 a different implementation, which is exactly how the divergence arose.
 
+**FNP-3 (2026-08-20) — eleven kernels became facade-reachable.** `expr_fn.rs` gains builders for
+`crc32`, `sha1`, `xxhash64`, `soundex`, `format_string`, `from_utc_timestamp`, `to_utc_timestamp`
+and `map_from_arrays`, each wrapping the `datafusion-spark` singleton `register_all` already
+installs. These names evaluated correctly through `spark.sql(...)` and raised
+`UnsupportedOperationException` through the facade, because the dispatch table had no arm — the
+capability was present and only one door could reach it. When adding a kernel, wire the builder in
+the same change: a kernel registered but not dispatched is a refusal the SQL door does not share.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

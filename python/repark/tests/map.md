@@ -1988,6 +1988,12 @@ NOT in that file is a defect, not a decision.
   override superseding a per-column marker, and the `column`/`negate`/`session_user` aliases on the
   Arrow path.
 
+- `test_fnp3_destubbed.py` — **FNP-3 (2026-08-20):** the eleven names whose kernel the engine
+  already shipped but the facade refused. Every row pinned on the Arrow path AND cross-checked
+  against the SQL door for value and type. `crc32`/`sha1` check against `zlib`/`hashlib` rather
+  than against RePark's own output; `xxhash64` has no oracle available and pins determinism,
+  distinctness and return type only, and says so.
+
 ## I want to...
 
 | ...do this | go to |

@@ -15,7 +15,6 @@ import pyarrow as pa
 import pytest
 
 from repark import ReparkSession
-from repark.errors import UnsupportedOperationException
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 
@@ -194,9 +193,8 @@ def test_quote_sql_literal(spark: ReparkSession) -> None:
     )
 
 
-def test_printf_aliases_format_string_loud_gap() -> None:
+def test_printf_aliases_format_string() -> None:
+    """FNP-3 flipped ``format_string`` to shipped; ``printf`` delegates to it, so both are live."""
     assert callable(F.printf)
-    with pytest.raises(UnsupportedOperationException, match="format_string"):
-        F.printf("%s", "x")
-    with pytest.raises(UnsupportedOperationException, match="format_string"):
-        F.format_string("%s", "x")
+    assert F.printf("%s", "x") is not None
+    assert F.format_string("%s", "x") is not None

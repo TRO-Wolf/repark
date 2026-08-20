@@ -12,6 +12,7 @@ from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 # Moved 2026-08-15 with FN-C, unioned with FN-D/E/F/W at SQM (was 253 on freeze cd0db4f).
 # Moved 2026-08-20 with FNP-2: 333 -> 338, adding asc_nulls_last, column, desc_nulls_first,
 # negate, session_user. Declared in the PR body per the discipline above.
+# Moved 2026-08-20 with FNP-3: 338 -> 339, adding sha (Spark's older spelling of sha1).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -278,6 +279,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "sentences",
     "sequence",
     "session_user",
+    "sha",
     "sha1",
     "sha2",
     "shiftleft",
@@ -356,7 +358,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 338
+    assert len(F.__all__) == 339
 
 
 def test_every_all_name_resolves() -> None:

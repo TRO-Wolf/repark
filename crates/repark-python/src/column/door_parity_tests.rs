@@ -97,6 +97,18 @@ const EXPECTED_DIVERGENCES: &[(&str, &str)] = &[
 const SCALAR_NAMES: &[(&str, usize)] = &[
     // The two live divergences this unit closes.
     ("to_timestamp", 1),
+    // FNP-3 — arms added for kernels the session already registered.
+    ("crc32", 1),
+    ("sha1", 1),
+    ("sha", 1),
+    ("soundex", 1),
+    ("xxhash64", 1),
+    ("format_string", 2),
+    ("map_from_arrays", 2),
+    ("datediff", 2),
+    ("date_diff", 2),
+    ("from_utc_timestamp", 2),
+    ("to_utc_timestamp", 2),
     // GT1/GT2-closed positive controls — these must agree.
     ("to_date", 1),
     ("make_date", 3),

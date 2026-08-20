@@ -18,6 +18,14 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-3-destub-ledger.md](fnp-3-destub-ledger.md) — **FNP-3 (2026-08-20):** the eleven names
+  whose `datafusion-spark` kernel `register_all` already installed but the facade's dispatch table
+  had no arm for, so `spark.sql(...)` evaluated them while `F.<name>(...)` raised. `sha1`, `sha`,
+  `crc32`, `xxhash64`, `soundex`, `format_string`, `printf`, `datediff`, `from_utc_timestamp`,
+  `to_utc_timestamp`, `map_from_arrays`; `__all__` 338 → 339. `arrays_zip` and `json_tuple` stay
+  refusing — both diverge from Spark (struct field naming; generator shape) and are handed to
+  FNP-Z for registry rows. Also overturns FN-D's "do not alias `datediff`" note, which its own
+  ledger shows was a scope fence rather than a semantic ruling.
 - [fnp-2-free-names-ledger.md](fnp-2-free-names-ledger.md) — **FNP-2 (2026-08-20):** the five
   names that needed no engine work (`asc_nulls_last`, `desc_nulls_first`, `column`, `negate`,
   `session_user`; `__all__` 333 → 338) and the ordering defect the first two exposed — three sites

@@ -1,8 +1,9 @@
 """FN-GT2 — leftover THIN-WIRE datetime / collections / url / bitmap.
 
 Each new ``functions`` name is pinned through ``ReparkSession`` on the Arrow
-path (``to_arrow()``): value AND type. ``datediff`` stays the DISPOSED-STUB.
-``shuffle`` pins type + length, not order.
+path (``to_arrow()``): value AND type. ``shuffle`` pins type + length, not order.
+``datediff`` was the DISPOSED-STUB here until FNP-3 (2026-08-20) shipped it as the
+same engine arm as ``date_diff``.
 
 Oracle — CORRECTED (this repair round; the previous line claimed "live PySpark
 4.1.2 against the pinned OpenJDK 21" and that is false for this file):
@@ -32,7 +33,6 @@ from repark import sql as repark_sql
 from repark.errors import (
     AnalysisException,
     PySparkException,
-    UnsupportedOperationException,
 )
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
@@ -213,9 +213,29 @@ def test_datetime_names_hold_under_non_utc_session() -> None:
     assert table.column("dt").to_pylist() == [datetime.timedelta(days=1)]
 
 
-def test_datediff_stub_untouched(spark: ReparkSession) -> None:
-    with pytest.raises(UnsupportedOperationException, match="datediff"):
-        F.datediff(F.lit(datetime.date(2020, 1, 3)), F.lit(datetime.date(2020, 1, 1)))
+def test_datediff_is_the_same_function_as_date_diff(spark: ReparkSession) -> None:
+    """FN-GT2 pinned ``datediff`` as an untouched stub; FNP-3 ships it.
+
+    The stub was never a semantic ruling. FN-D's ledger records the real reason it stayed —
+    that unit was fenced out of ``test_fn_batch1.py``, which asserted the refusal — and PySpark
+    4.1.2 declares ``datediff(end, start)`` and ``date_diff(end, start)`` with the same signature
+    over one Catalyst expression. This asserts the two spellings agree rather than that one of
+    them refuses.
+    """
+    frame = spark.sql("SELECT 1")
+    table = _table(
+        frame.select(
+            F.datediff(F.lit(datetime.date(2020, 1, 3)), F.lit(datetime.date(2020, 1, 1))).alias(
+                "a"
+            ),
+            F.date_diff(F.lit(datetime.date(2020, 1, 3)), F.lit(datetime.date(2020, 1, 1))).alias(
+                "b"
+            ),
+        )
+    )
+    assert table.column("a").to_pylist() == [2]
+    assert table.column("a").to_pylist() == table.column("b").to_pylist()
+    assert table.schema.field("a").type == table.schema.field("b").type
 
 
 def test_element_at_one_based_and_zero_refuses(spark: ReparkSession) -> None:
