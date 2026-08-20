@@ -7,22 +7,24 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-16._
+_Last updated: 2026-08-19._
 
 ## Release state
 
-Pre-alpha, **with v0.3.2 published to PyPI (2026-08-16)** — the fifth tag on proven machinery
-(v0.1.0 and v0.2.0: 2026-08-15; v0.3.0 / v0.3.1: 2026-08-16): tag-triggered `release.yml`, PyPI
+Pre-alpha, **with v0.4.0 published to PyPI (2026-08-19)** — the sixth tag on proven machinery
+(v0.1.0 / v0.2.0: 2026-08-15; v0.3.0–v0.3.2: 2026-08-16): tag-triggered `release.yml`, PyPI
 trusted publishing (the bootstrap token is revoked), `cp312-abi3` manylinux wheel, wheel-only
 (crates.io publishing is structurally deferred, see docs/release.md), version SSOT at the Cargo
-workspace (`0.3.2`). v0.3.1 was a perf patch (the measured single-write TA-kernel construction
-pass #148/#151 + bench coverage #149 + the owner roadmap #150). v0.3.2 is a bug-fix patch: the
-string-form `explode`/`explode_outer`/`dynamicFlatten` mixed-case bind fix (#154 — capitalized
-createDataFrame fields like `Legs` no longer fold to lowercase and fail), plus the torture-dataset
-scaffolding (#153), bench default-conf truth (#155), and the SE-1 declared-sorted engine seam
-(#156 — engine/binder only; the facade `declareSorted` door ships in a later tag). Pre-alpha
-still means the API can move between tags. Release mechanics:
-[docs/release.md](docs/release.md).
+workspace (`0.4.0`). v0.4.0 is a feature minor centered on the functions-surface campaign: the
+leftover math/string/bitwise (#172) and datetime/collections/url (#174) thin-wires over the
+extracted `call_scalar` match tables (#160), hardened by the FN-GT1 retro (#180 — ColumnOrName
+wiring, Spark-shaped `regexp_count`/`regexp_instr`/`split_part`/length kernels with live-oracle
+pins, registry rows BL-6/BL-7 #181). Also in the tag: the `declareSorted` facade door (#167),
+`tightenNulls` + Iceberg CREATE refuse (#173), `inferNestedDictAsStruct` defaulting true (#164),
+mimalloc wired into the wheel (#159/#162), and fixes — unnest-safe leaf-projection pushdown
+(#179), nested-array angle-spelling CAST (#178), `dynamicFlatten` GA4 outer-explode semantics
+(#176), CSV `sep` salvage refuse (#175), `wma` export (#170). Pre-alpha still means the API can
+move between tags. Release mechanics: [docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
@@ -351,7 +353,7 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v0.3.2 shipped 2026-08-16 (v0.3.0 / v0.3.1 same day; v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
+**None.** v0.4.0 shipped 2026-08-19 (v0.3.0–v0.3.2: 2026-08-16; v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
 [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace; wheel-only; crates.io
 publishing structurally deferred).
 
