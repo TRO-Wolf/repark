@@ -7,24 +7,25 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-19._
+_Last updated: 2026-08-20._
 
 ## Release state
 
-Pre-alpha, **with v0.4.0 published to PyPI (2026-08-19)** — the sixth tag on proven machinery
-(v0.1.0 / v0.2.0: 2026-08-15; v0.3.0–v0.3.2: 2026-08-16): tag-triggered `release.yml`, PyPI
-trusted publishing (the bootstrap token is revoked), `cp312-abi3` manylinux wheel, wheel-only
-(crates.io publishing is structurally deferred, see docs/release.md), version SSOT at the Cargo
-workspace (`0.4.0`). v0.4.0 is a feature minor centered on the functions-surface campaign: the
-leftover math/string/bitwise (#172) and datetime/collections/url (#174) thin-wires over the
-extracted `call_scalar` match tables (#160), hardened by the FN-GT1 retro (#180 — ColumnOrName
-wiring, Spark-shaped `regexp_count`/`regexp_instr`/`split_part`/length kernels with live-oracle
-pins, registry rows BL-6/BL-7 #181). Also in the tag: the `declareSorted` facade door (#167),
-`tightenNulls` + Iceberg CREATE refuse (#173), `inferNestedDictAsStruct` defaulting true (#164),
-mimalloc wired into the wheel (#159/#162), and fixes — unnest-safe leaf-projection pushdown
-(#179), nested-array angle-spelling CAST (#178), `dynamicFlatten` GA4 outer-explode semantics
-(#176), CSV `sep` salvage refuse (#175), `wma` export (#170). Pre-alpha still means the API can
-move between tags. Release mechanics: [docs/release.md](docs/release.md).
+Pre-alpha, **with v0.5.0 published to PyPI (2026-08-20)** — the seventh tag on proven machinery
+(v0.1.0 / v0.2.0: 2026-08-15; v0.3.0–v0.3.2: 2026-08-16; v0.4.0: 2026-08-19): tag-triggered
+`release.yml`, PyPI trusted publishing (the bootstrap token is revoked), `cp312-abi3` manylinux
+wheel, wheel-only (crates.io publishing is structurally deferred, see docs/release.md), version
+SSOT at the Cargo workspace (`0.5.0`). v0.5.0 is a feature minor with a single engine payload:
+the native `dynamicFlatten` plan rewrite (#183 — DF1). The Python planner loop moves into
+`repark_core::dynamic_flatten` (structs first, lists one at a time, null-safe `get_field`
+Project, unqualified Unnest) behind a thin PyO3 bind; the facade keeps only type-gates and
+`_spawn`, and `plan_collapse.py` / `_dynamic_flatten_unnest_structs` are deleted. Three octo
+remediation cycles pinned it fail-closed: list-of-map and `ListView`/`LargeListView` refuse
+LOUD, Dictionary and `LargeList`/`FixedSizeList` list unwrap before Unnest, mixed-plan inner
+errors stay loud, plus a `ScanForbidden` plan-build spy and the `df_guard_tests.rs` fence. Also
+in the tag: the `.agent/skills` runbooks (#184 — publish-pypi, compact-context-docs).
+Pre-alpha still means the API can move between tags. Release mechanics:
+[docs/release.md](docs/release.md).
 
 ## Delivered capabilities
 
@@ -353,7 +354,8 @@ Recorded, not built. Each names the trigger that would start it.
 
 ## Release blockers
 
-**None.** v0.4.0 shipped 2026-08-19 (v0.3.0–v0.3.2: 2026-08-16; v0.1.0 / v0.2.0: 2026-08-15). Future tags follow
+**None.** v0.5.0 shipped 2026-08-20 (v0.4.0: 2026-08-19; v0.3.0–v0.3.2: 2026-08-16; v0.1.0 / v0.2.0:
+2026-08-15). Future tags follow
 [docs/release.md](docs/release.md) (version SSOT at the Cargo workspace; wheel-only; crates.io
 publishing structurally deferred).
 
