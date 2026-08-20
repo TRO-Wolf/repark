@@ -26,7 +26,7 @@ RePark DataFrame newtype.
 | C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + two-path spawn (`_spawn_preserving_identity` iff ordered engine field names unchanged, else `_spawn`). | PROVEN |
 | C-009 | Python tests remain the facade contract; octo C1/C2 added native-kernel docstring, list-of-map, dotted-Unnest, empty-struct, and tightened token-regex pins. | PROVEN |
 | C-010 | `empty_as_null` is on `DynamicFlattenOptions` (omitted from the API sketch; required by the facade contract). | PROVEN |
-| C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7192 via `splitlines()` / `wc -l`; C3-CL-001 auditor 7191 was off-by-one vs last line). | PROVEN |
+| C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7196 via `splitlines()` at HEAD; C3-CL-001's 7192 was true at octo C3 `1627e46`; H1 spawn net +4. Ceiling unchanged. C3 auditor 7191 was off-by-one vs last line). | PROVEN |
 | C-012 | `dataframe.rs` stays under 1500 (measured 1457). | PROVEN |
 
 ---
@@ -175,7 +175,7 @@ H1 two-path spawn (filed finding: already-flat `dynamicFlatten` dropped identity
 | C3-SAF-001 | REMEDIATED | `format_fields` streams Debug into a 240-char writer (code-path). Pin `max_depth_remaining_schema_is_truncated` kills unbounded output (C2-SAF-002: token / `"truncated"` / len) — it does **not** kill the allocation path (join-then-truncate of a full dump would still pass). |
 | C3-L-002 | WITHDRAWN | `mixed_plan` pin uses `BoomOnFilter`, not a real leaf-pushdown success-wrong rewrite. Residual oracle; DF-54.1 Unnest `with_new_exprs` still Err so the clone is kept. |
 | C3-L-003 | REMEDIATED | `null_mid_struct_fields_are_null_not_zero` asserts exact `[None, Some(9), None]`. |
-| C3-CL-001 | REMEDIATED | Re-measured `core.py` 7192 (`splitlines()` / `wc -l`); ledger C-011 + `check_lib_py.py` comment. |
+| C3-CL-001 | REMEDIATED | Re-measured `core.py` 7192 at octo C3 (`1627e46`, `splitlines()` / `wc -l`); ledger C-011 + `check_lib_py.py` comment. HEAD remeasure: 7196 (still ≤7225). |
 | C3-CL-002 | REMEDIATED | `test_dynamic_flatten_plan_build_does_not_force_collect` docstring cites C1-Q-003 (not C2-Q-003). |
 | C3-CL-003 | REMEDIATED | Fence lists `crates/repark-core/src/session/df_guard_tests.rs`. |
 | C3-CL-004 | REMEDIATED | `crates/repark-core/src/map.md` cites `dynamic_flatten/tests/octo.rs`. |
@@ -214,3 +214,57 @@ stale parent names onto prefixed leaves (one-field struct count-stable case).
 | R-S3-H1-flat | REMEDIATED | `test_already_flat_h1_join_preserves_display_overlay` |
 | R-S3-H1-expand | REMEDIATED | `test_expanding_h1_flatten_drops_stale_overlay` |
 | C-008 | REMEDIATED | Proposition restated to the two-path spawn. |
+
+---
+
+## Pre-PR critic report (/repark-harden)
+
+Engine: critic-octo cycles=3 early_stop=true — tier high.
+
+Critic-1 (quality/parity): attacked crates contracts, pin adequacy,
+docstring honesty, Unnest-safe swallow, token regex,
+LargeList/FixedSizeList/ListView — S1s remediating across C1–C3;
+null-report: no prod unwrap, no `Result<_, String>`, no truncating as.
+
+Critic-2 (security/safety): attacked ident bind, max_depth as pass
+bound, error-string dump — kernel Unnest is `new_unqualified`;
+max_depth not a memory limiter WITHDRAWN; `format_fields` streaming
+remediating.
+
+Critic-3 (logic): dirty-child CASE pins remediating; ListView last-pass
+refuse remediating; all-lists-one-pass WITHDRAWN as contract.
+
+Critic-4 (claims): ghost link, fence undercount, spark map helper,
+Authored-By trailer remediating. Identity `%ae` TRO-Wolf noreply on all
+unit commits.
+
+Signature table: NOT-RUN — repark-extra, not `pyspark.sql.functions`.
+
+Oracle probes: NOT-RUN live Spark venv; value/type pins are
+kernel+facade fixtures.
+
+Pin audit: CASE dirty children, ScanForbidden, list-of-map,
+ListView/LargeListView (top-level + nested), LargeList/FixedSizeList
+explode, dotted Unnest, mixed-plan, H1 two-path spawn.
+
+Convergence: **OCTO-CONVERGED at `1627e46`** (not at HEAD). Later
+commits are **not** re-octo'd:
+
+| SHA | One-line |
+|---|---|
+| `87d6d94` | docs honesty |
+| `f009de05` | nested ListView pins (R-S1-003) |
+| `0107535` | H1 two-path spawn (final-battery S1 remediations) |
+
+### Finder-battery rehearsal
+
+CLEAN at the post-octo-docs/ListView HEAD (`f009de05`) — two consecutive
+quiet rounds. The rehearsal did **not** cover `0107535`.
+
+### Final-battery (same-session)
+
+First pass after `0107535` found S1 already-flat H1 `_spawn` (remediated
+in that commit) and S1 stale OCTO-CONVERGED-on-HEAD (octo stopped at
+`1627e46`; this commit). VF dict-struct dirty-child S1 3/3 REFUTED
+(CASE `is_null` uses Arrow `logical_nulls`, which unions dict key
+nulls with values-struct validity).
