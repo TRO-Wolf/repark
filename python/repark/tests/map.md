@@ -2019,6 +2019,11 @@ NOT in that file is a defect, not a decision.
   and a value pin would read as parity evidence while being repark agreeing with itself. Also pins
   that a NaN bound refuses distinctly from an inverted range.
 
+- `test_fnp6_validate.py` — **FNP-6c (2026-08-20):** the UTF-8 pair exercised on BINARY input,
+  which is the only place they can fail in repark (an Arrow `Utf8` array cannot hold invalid
+  UTF-8, while Spark's `UTF8String` can); plus `assert_true` raising on NULL as well as false,
+  and honouring a caller-supplied message.
+
 ## I want to...
 
 | ...do this | go to |

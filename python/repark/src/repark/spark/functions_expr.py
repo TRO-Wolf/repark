@@ -972,6 +972,32 @@ def elt(n: Column | int, *inputs: Column | str) -> Column:
     return _scalar("elt", n, *inputs)
 
 
+def validate_utf8(str: Column | str) -> Column:
+    """The input when it is valid UTF-8, an error otherwise (PySpark ``functions.validate_utf8``).
+
+    An Arrow string column cannot hold invalid UTF-8, so this only ever fails on **binary** input.
+    Spark's own strings are byte arrays that can carry invalid sequences, so a Spark program can
+    reach this on a STRING column where repark cannot — a difference in value representation, not
+    a behaviour choice.
+    """
+    return _scalar("validate_utf8", str)
+
+
+def try_validate_utf8(str: Column | str) -> Column:
+    """The input when valid UTF-8, NULL otherwise (PySpark ``functions.try_validate_utf8``)."""
+    return _scalar("try_validate_utf8", str)
+
+
+def assert_true(col: Column | str, errMsg: Column | str | None = None) -> Column:  # noqa: N803
+    """NULL when ``col`` is true, an error otherwise (PySpark ``functions.assert_true``).
+
+    NULL is **not** true: like Spark, a NULL condition raises rather than passing.
+    """
+    if errMsg is None:
+        return _scalar("assert_true", col)
+    return _scalar("assert_true", col, errMsg, lit_indices=frozenset({1}))
+
+
 def randstr(length: int | Column, seed: int | Column | None = None) -> Column:
     """A random string of ``length`` characters from 0-9, a-z, A-Z (PySpark ``functions.randstr``).
 

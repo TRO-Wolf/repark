@@ -20,6 +20,8 @@ from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 # (the campaign's first NEW kernels).
 # Moved 2026-08-20 with FNP-6b: 355 -> 357, adding randstr and uniform over the
 # XORShiftRandom rand/randn already use.
+# Moved 2026-08-20 with FNP-6c: 357 -> 360, adding validate_utf8, try_validate_utf8
+# and assert_true.
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -57,6 +59,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "ascii",
     "asin",
     "asinh",
+    "assert_true",
     "atan",
     "atan2",
     "atanh",
@@ -350,6 +353,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "try_parse_url",
     "try_to_timestamp",
     "try_url_decode",
+    "try_validate_utf8",
     "ucase",
     "udf",
     "udtf",
@@ -366,6 +370,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "url_encode",
     "user",
     "uuid",
+    "validate_utf8",
     "var_pop",
     "var_samp",
     "variance",
@@ -383,7 +388,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 357
+    assert len(F.__all__) == 360
 
 
 def test_every_all_name_resolves() -> None:

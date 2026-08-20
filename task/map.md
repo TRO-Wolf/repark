@@ -18,6 +18,10 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-6c-validate-ledger.md](fnp-6c-validate-ledger.md) — **FNP-6c (2026-08-20):**
+  `validate_utf8`, `try_validate_utf8`, `assert_true`. Records the value-representation difference
+  behind the UTF-8 pair, and the FOURTH prior-unit scope fence found as a passing assertion —
+  every remaining entry on FN-F's deferred list now carries its reason.
 - [fnp-6b-random-ledger.md](fnp-6b-random-ledger.md) — **FNP-6b (2026-08-20):** `randstr` and
   `uniform` over the Spark `XORShiftRandom` `rand`/`randn` already use. States the unit's honest
   limit: the STREAM is Spark-verified (r20 G2), the per-function derivation is DOC-SPARK, so the

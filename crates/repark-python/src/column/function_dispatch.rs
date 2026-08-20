@@ -784,6 +784,18 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need_at_least(1)?;
             repark_functions::expr_fn::xxhash64(exprs.clone())
         }
+        "validate_utf8" => {
+            need(1)?;
+            repark_functions::expr_fn::validate_utf8(exprs[0].clone())
+        }
+        "try_validate_utf8" => {
+            need(1)?;
+            repark_functions::expr_fn::try_validate_utf8(exprs[0].clone())
+        }
+        "assert_true" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::assert_true(exprs.clone())
+        }
         "randstr" => {
             need_at_least(1)?;
             repark_functions::expr_fn::randstr(exprs.clone())

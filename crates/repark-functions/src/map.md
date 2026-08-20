@@ -345,6 +345,14 @@ alternative failure — silently applying row zero to every row — produces pla
 **The stream is Spark-verified (r20 G2); the per-function derivation is DOC-SPARK**, so the tests
 pin documented properties and assert no specific generated values.
 
+**FNP-6c (2026-08-20) — `validate.rs`.** `validate_utf8`, `try_validate_utf8`, `assert_true`: one
+shape — inspect, pass through, or fail loudly — so they share a module. **The UTF-8 pair only ever
+fails on BINARY input**: an Arrow `Utf8` array cannot hold invalid UTF-8, while Spark's
+`UTF8String` can, so a Spark program reaches these on a STRING column where repark structurally
+cannot. A value-representation difference, not a behaviour choice. `assert_true` raises on NULL as
+well as false — only `true` passes. The module owns its own `register`, like `decimal_spark` and
+`higher_order`, because the crate root sits against its `check_lib_rs` ceiling.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

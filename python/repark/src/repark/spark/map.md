@@ -1313,6 +1313,12 @@ and `lit_indices` marks them so a column argument reaches the kernel's loud refu
 being read as row zero. `uniform`'s return type follows its bounds (two integers give an integer,
 anything else a double), which is a silent type change if got wrong and so is pinned on the type.
 
+**FNP-6c (2026-08-20).** `validate_utf8` / `try_validate_utf8` / `assert_true`. The UTF-8 pair
+only ever fails on **binary** input — an Arrow string column cannot hold invalid UTF-8, while
+Spark's `UTF8String` can, so a Spark program reaches these on a STRING column where repark
+structurally cannot. Stated in the facade docstrings as well, because a user seeing
+`validate_utf8('x')` always succeed deserves to know why rather than assuming it is unimplemented.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

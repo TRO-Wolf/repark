@@ -165,15 +165,28 @@ def test_uuid_type_and_uniqueness(spark: ReparkSession) -> None:
 @pytest.mark.parametrize(
     "name",
     [
-        "assert_true",
+        # camelCase bitwise spellings: PySpark's deprecated aliases of the snake_case originals.
         "shiftLeft",
         "shiftRight",
         "shiftRightUnsigned",
+        # The try_* family: only try_sum has a kernel in datafusion-spark; the rest are the
+        # ANSI-seam sweep (FNP-7), not eleven independent builds.
         "try_sum",
         "try_add",
+        # Numeric FORMAT-string conversions. DataFusion's to_char is a false friend — its own doc
+        # says numeric formatting is unsupported — so these need real kernels (FNP-12).
         "to_number",
         "to_binary",
     ],
 )
 def test_deferred_fn_f_names_are_absent(name: str) -> None:
+    """Names FN-F left absent, with the reason each is still absent.
+
+    RATCHETS DOWN. FNP-6c (2026-08-20) shipped ``assert_true`` off this list — it is a raise
+    kernel over the pattern ``ansi.rs`` already established, not the engine work the list implied.
+    Behaviour: ``test_fnp6_validate.py``.
+
+    A name on a deferred list with no reason is indistinguishable from a name nobody has looked
+    at, so each remaining entry now says why.
+    """
     assert not hasattr(F, name)

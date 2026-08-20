@@ -329,6 +329,24 @@ pub fn regexp_instr(args: Vec<Expr>) -> Expr {
     call(crate::spark_regexp::regexp_instr_udf(), args)
 }
 
+/// Spark `validate_utf8(expr)` — the input when it is valid UTF-8, an error otherwise.
+#[must_use]
+pub fn validate_utf8(arg: Expr) -> Expr {
+    call(crate::validate::validate_utf8_udf(), vec![arg])
+}
+
+/// Spark `try_validate_utf8(expr)` — the input when it is valid UTF-8, NULL otherwise.
+#[must_use]
+pub fn try_validate_utf8(arg: Expr) -> Expr {
+    call(crate::validate::try_validate_utf8_udf(), vec![arg])
+}
+
+/// Spark `assert_true(condition[, message])` — NULL when true, an error otherwise.
+#[must_use]
+pub fn assert_true(args: Vec<Expr>) -> Expr {
+    call(crate::validate::assert_true_udf(), args)
+}
+
 /// Spark `randstr(length[, seed])` — a random alphanumeric string.
 #[must_use]
 pub fn randstr(args: Vec<Expr>) -> Expr {
