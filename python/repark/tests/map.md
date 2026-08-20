@@ -230,7 +230,11 @@ NOT in that file is a defect, not a decision.
   (`[DYNAMIC_FLATTEN_NAME_COLLISION]` token); empty-struct-only refuse
   (`[DYNAMIC_FLATTEN_EMPTY_STRUCT]`); interleaved
   in-place column order;
-  idempotence on already-flat; both method names; custom separator; explode_lists=False;
+  idempotence on already-flat; H1 already-flat join preserves display overlay /
+  origin binds (`test_already_flat_h1_join_preserves_display_overlay`); expanding
+  one-field-struct H1 frame drops overlay (prefixed leaves, not parent display
+  names — `test_expanding_h1_flatten_drops_stale_overlay`); both method names;
+  custom separator; explode_lists=False;
   schema-walk + plan-build collect/count/to_arrow spy pin (C1-Q-003);
   native-kernel
   docstring pin; dotted-separator list Unnest pin. Arrow value+type pins.

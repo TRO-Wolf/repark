@@ -23,7 +23,7 @@ RePark DataFrame newtype.
 | C-005 | List explode uses `UnnestOptions { preserve_nulls: false }` via `unnest_columns_with_options` + `Column::new_unqualified`. Empty arrays drop because Unnest emits no rows for zero-length lists (empty ≠ null); `preserve_nulls` only keeps NULL lists. `empty_as_null=true` rewrites EMPTY to a singleton-null list so the row survives. | PROVEN — `null_and_empty_array_values` |
 | C-006 | Every schema field binds through `Column::new_unqualified`. | PROVEN — kernel; `s.f` pin |
 | C-007 | Errors are `Error::Analysis` with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`, `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`. | PROVEN |
-| C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + `_spawn`. | PROVEN |
+| C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + two-path spawn (`_spawn_preserving_identity` iff ordered engine field names unchanged, else `_spawn`). | PROVEN |
 | C-009 | Python tests remain the facade contract; octo C1/C2 added native-kernel docstring, list-of-map, dotted-Unnest, empty-struct, and tightened token-regex pins. | PROVEN |
 | C-010 | `empty_as_null` is on `DynamicFlattenOptions` (omitted from the API sketch; required by the facade contract). | PROVEN |
 | C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7192 via `splitlines()` / `wc -l`; C3-CL-001 auditor 7191 was off-by-one vs last line). | PROVEN |
@@ -45,6 +45,13 @@ First four (design mutation pins):
 Remaining engine cases live in `crates/repark-core/src/dynamic_flatten/tests.rs`.
 Facade contract: `python/repark/tests/test_dynamic_flatten.py` (C1/C2 added pins;
 token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
+
+H1 two-path spawn (filed finding: already-flat `dynamicFlatten` dropped identity maps):
+
+| Pin | Claim |
+|---|---|
+| `test_already_flat_h1_join_preserves_display_overlay` | Already-flat H1 join keeps Spark-legal duplicate display names, `to_arrow` overlay, and origin-qualified `select(left["b"])`. Reverting the preserve branch reds this. |
+| `test_expanding_h1_flatten_drops_stale_overlay` | One-field struct expand (`payload{x}` → `payload_x`, count-stable) does **not** restuck parent display names. Always-preserve reds this. |
 
 ---
 
@@ -84,8 +91,8 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 | Gate | Exit |
 |---|---|
 | `cargo test -p repark-core dynamic_flatten` | 0 (41 passed; R-S1-003) |
-| `make verify` | 0 (R-S1-003) |
-| `make develop` + pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (41 passed; octo C3) |
+| `make verify` | 0 (R-S3-H1) |
+| pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (43 passed; R-S3 two-path spawn pins) |
 
 ---
 
@@ -191,3 +198,19 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 | ID | Disposition | Pin / evidence |
 |---|---|---|
 | R-S2-fence | REMEDIATED | Fence lists `python/repark/src/repark/spark/functions_expr.py` (`_explode_keep_null` constructor deleted, C2-Q-004). |
+
+---
+
+## 11. S3 review (H1 already-flat spawn)
+
+Filed finding: already-flat `dynamicFlatten` always `_spawn`'d and dropped H1
+`_display_names` / `_engine_names` / `_origin_map`. Two-path spawn matches
+`filter` / `limit` / `sort` / `distinct`: preserve iff ordered engine field names
+are unchanged; expanding rewrites keep `_spawn` so a copied overlay cannot zip
+stale parent names onto prefixed leaves (one-field struct count-stable case).
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| R-S3-H1-flat | REMEDIATED | `test_already_flat_h1_join_preserves_display_overlay` |
+| R-S3-H1-expand | REMEDIATED | `test_expanding_h1_flatten_drops_stale_overlay` |
+| C-008 | REMEDIATED | Proposition restated to the two-path spawn. |

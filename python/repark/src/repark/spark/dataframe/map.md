@@ -37,8 +37,11 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   through `_bound_generator_array` (`column.py`) so string-form `explode` /
   `explode_outer` keep createDataFrame case (`Legs`); compounds and unresolved
   names keep `generator._inner`. **DF-2 / DF1-native:** `dynamicFlatten` is a
-  type-gate + `_spawn(self._plan().dynamic_flatten(...))` over
-  `repark_core::dynamic_flatten`. `empty_as_null=True` keeps NULL+EMPTY lists as
+  type-gate + kernel (`self._plan().dynamic_flatten(...)`) over
+  `repark_core::dynamic_flatten`. `_spawn_preserving_identity` iff ordered engine
+  field names are unchanged (already-flat / schema no-op so H1 maps survive);
+  else `_spawn` (expanding rewrites must not restuck a stale overlay).
+  `empty_as_null=True` keeps NULL+EMPTY lists as
   a null-element row; False keeps NULL and drops EMPTY. Void lists drop when
   `drop_null_lists=True`. List-of-map and ListView refuse LOUD
   (`[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`). `max_depth` bounds rewrite passes,

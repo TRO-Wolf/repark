@@ -86,6 +86,83 @@ def test_idempotent_on_already_flat(spark: ReparkSession) -> None:
     )
 
 
+def _bare_multi_name_join(spark: ReparkSession):
+    """Condition join that retains Spark-legal duplicate display names (H1 bare join)."""
+    frame = spark.createDataFrame([(1, 2), (3, 4)], ["a", "b"])
+    left = frame.select(frame.a.alias("aa"), frame.b)
+    joined = left.join(frame, left.b == frame.b)
+    return joined, left
+
+
+def test_already_flat_h1_join_preserves_display_overlay(spark: ReparkSession) -> None:
+    """Already-flat dynamicFlatten must keep H1 display names and origin binds.
+
+    Reverting the preserve branch (always ``_spawn``) leaks ``__repark_*`` engine
+    names on ``.columns`` / ``to_arrow`` and drops origin-qualified ``select(left["b"])``.
+    """
+    joined, left = _bare_multi_name_join(spark)
+    assert joined.columns == ["aa", "b", "a", "b"]
+    flat = joined.dynamicFlatten()
+    assert flat.columns == ["aa", "b", "a", "b"]
+    assert not any(name.startswith("__repark_") for name in flat.columns)
+    table = flat.to_arrow()
+    assert list(table.column_names) == ["aa", "b", "a", "b"]
+    assert not any(name.startswith("__repark_") for name in table.column_names)
+    selected = flat.select(left["b"])
+    assert selected.columns == ["b"]
+    assert not any(name.startswith("__repark_") for name in selected.columns)
+    selected_table = selected.to_arrow()
+    assert list(selected_table.column_names) == ["b"]
+    assert sorted(selected_table.column(0).to_pylist()) == [2, 4]
+
+
+def test_expanding_h1_flatten_drops_stale_overlay(spark: ReparkSession) -> None:
+    """Struct expand must not restuck H1 overlay onto renamed engine fields.
+
+    One-field struct ``payload{x}`` → ``payload_x`` keeps column count 1, so a
+    count-based preserve (or always-preserve) would zip parent display names onto
+    prefixed leaves. Reverting to always ``_spawn_preserving_identity`` reds this.
+    """
+    schema = StructType(
+        [
+            StructField("a", LongType(), True),
+            StructField("b", LongType(), True),
+            StructField(
+                "payload",
+                StructType([StructField("x", LongType(), True)]),
+                True,
+            ),
+        ]
+    )
+    left_frame = spark.createDataFrame(
+        [
+            {"a": 1, "b": 2, "payload": {"x": 10}},
+            {"a": 3, "b": 4, "payload": {"x": 20}},
+        ],
+        schema=schema,
+    )
+    right_frame = spark.createDataFrame(
+        [(1, 2), (3, 4)],
+        schema=StructType(
+            [
+                StructField("a", LongType(), True),
+                StructField("b", LongType(), True),
+            ]
+        ),
+    )
+    left = left_frame.select(left_frame.a.alias("aa"), left_frame.b, left_frame.payload)
+    joined = left.join(right_frame, left.b == right_frame.b)
+    assert joined.columns == ["aa", "b", "payload", "a", "b"]
+    assert "payload_x" not in joined.columns
+    flat = joined.dynamicFlatten()
+    # Schema-only overlay contract: prefixed leaf, not parent display name.
+    # ``to_arrow`` on this join+flatten plan is a kernel mixed-qualifier optimizer
+    # class (DEFECT-2 / Unnest already reprojects; struct expand is out of this slice).
+    assert "payload_x" in flat.columns
+    assert "payload" not in flat.columns
+    assert any(name.startswith("__repark_") for name in flat.columns)
+
+
 # ==================================================================================================
 # Nested struct-in-struct
 # ==================================================================================================

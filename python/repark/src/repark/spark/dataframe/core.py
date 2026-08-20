@@ -6144,7 +6144,9 @@ class DataFrame:
         Both ``dynamicFlatten`` and ``dynamic_flatten`` are bound (Q26).
 
         The plan rewrite is native (``repark_core::dynamic_flatten``); this method is the
-        type-gate + spawn.
+        type-gate + spawn. Already-flat (ordered engine field names unchanged) uses
+        :meth:`_spawn_preserving_identity` so H1 maps survive; expanding rewrites use
+        :meth:`_spawn` so a copied overlay cannot zip the wrong names.
         """
         self._ensure_alive()
         if not isinstance(separator, str):
@@ -6170,15 +6172,17 @@ class DataFrame:
         if max_depth < 0:
             raise PySparkValueError(f"max_depth must be >= 0, got {max_depth}")
 
-        return self._spawn(
-            self._plan().dynamic_flatten(
-                separator,
-                explode_lists,
-                drop_null_lists,
-                empty_as_null,
-                max_depth,
-            )
+        planned = self._plan()
+        inner = planned.dynamic_flatten(
+            separator,
+            explode_lists,
+            drop_null_lists,
+            empty_as_null,
+            max_depth,
         )
+        if self._display_names is not None and planned.column_names() == inner.column_names():
+            return self._spawn_preserving_identity(inner)
+        return self._spawn(inner)
 
     dynamic_flatten = dynamicFlatten
 

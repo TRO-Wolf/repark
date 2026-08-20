@@ -72,10 +72,13 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `max_depth=100`
   LOUD refuse (never silent truncate); schema-only walks (no forced collect); prefixed name
   collisions refuse LOUD (Q25). Planner is native (`repark_core::dynamic_flatten`);
-  the facade method is the type-gate + `_spawn`. Pins: `tests/test_dynamic_flatten.py`.
+  the facade method is the type-gate plus two-path spawn: `_spawn_preserving_identity`
+  when ordered engine field names are unchanged (H1 overlay survives the documented
+  already-flat no-op), else `_spawn` (expanding rewrites must not restuck a stale
+  overlay). Pins: `tests/test_dynamic_flatten.py`.
   Registry row is orchestrator-side.
-  Region: type-gate + `_spawn` only (Python helper deleted); H1/H2 identity,
-  collect, writer frozen.
+  Region: type-gate + two-path spawn (Python helper deleted); expanding flatten
+  drops H1 identity; already-flat preserves it. collect, writer frozen.
 - `dataframe.py` — GroupedData.pivot two-phase CASE aggregates (R-PIVOT; octo c1–c8:
   bare count, alias recovery, distinct.limit then sort ≤max, cube/rollup refuse,
   simple-name-only inputs, first/last ignorenulls=True, avg/min/max pins;
