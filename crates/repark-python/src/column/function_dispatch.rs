@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use datafusion::functions_aggregate::average::avg_udaf;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
 use datafusion::functions_aggregate::covariance::{covar_pop_udaf, covar_samp_udaf};
@@ -308,7 +307,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "to_timestamp" => {
             need_at_least(1)?;
-            expr_fn::to_timestamp(exprs.clone())
+            repark_functions::expr_fn::to_timestamp(exprs.clone())
         }
         "from_unixtime" => {
             // Spark returns a STRING formatted timestamp, not a timestamp type.
@@ -865,7 +864,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
 pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "sum" => sum_udaf(),
-        "avg" => avg_udaf(),
+        "avg" => repark_functions::aggregate::avg_udaf(),
         "min" => min_udaf(),
         "max" => max_udaf(),
         "first" => first_value_udaf(),

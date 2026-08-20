@@ -35,6 +35,8 @@ use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
 use crate::AnalysisException;
 use crate::fence::fenced;
 
+#[cfg(test)]
+mod door_parity_tests;
 mod expr_build;
 mod function_dispatch;
 mod window;

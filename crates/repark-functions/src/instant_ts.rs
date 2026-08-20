@@ -64,7 +64,13 @@ fn current_timestamp_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkNow::current_timestamp()))
 }
 
-fn to_timestamp_udf() -> Arc<ScalarUDF> {
+/// The instant-typed `to_timestamp` the SQL door resolves.
+///
+/// Public so the facade's dispatch table embeds this exact kernel rather than DataFusion-core's
+/// `to_timestamp`, which returns `Timestamp(ns, None)` and so drops both the TZ-4 PR-1 LTZ wire
+/// type and the PR-2 session-zone localization (charter clause C-012).
+#[must_use]
+pub fn to_timestamp_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkToTimestamp::new()))
 }
 

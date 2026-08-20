@@ -18,6 +18,13 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-1-two-door-asymmetry-ledger.md](fnp-1-two-door-asymmetry-ledger.md) — **FNP-1
+  (2026-08-20):** clause C-012 made mechanical. `column/door_parity_tests.rs` compares the UDF the
+  facade embeds against the one `register_all` installs, with the GT1/GT2-closed names as positive
+  controls and a ratchets-DOWN-only table for the latent set. Closes the two live divergences —
+  `to_timestamp` (facade was bypassing `SparkToTimestamp`, losing TZ-4 typing and session-zone
+  localization) and `avg` (bypassing `SparkAvgWithRetract`) — and corrects the census: the live
+  set is 18, not 19, because `cardinality` already agreed.
 - [fnp-0-census/](fnp-0-census/map.md) — the measured evidence that gate rests on: the facade
   classification of all 345 functions, the PySpark 4.1.2 gap partition, the higher-order-function
   spec, and the kernel ownership map.

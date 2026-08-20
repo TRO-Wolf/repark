@@ -1975,6 +1975,13 @@ NOT in that file is a defect, not a decision.
   by design — nothing to compare; the Glue location-mismatch guard is intentionally not called).
   Runbook: `REPARK_AWS_ACCEPTANCE=1 TABLE_BUCKET_ARN=<us-east-2 ARN> AWS_REGION=us-east-2`.
 
+- `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
+  layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
+  whether it is called as `F.f(x)` or `spark.sql("SELECT f(x)")`. Written because the whole facade
+  suite passed unchanged across a fix that moved `F.to_timestamp` from `timestamp[ns]` to
+  `timestamp[us, tz=UTC]` — no row compared the two doors, so the divergence was invisible. The
+  Rust half of the same clause is `crates/repark-python/src/column/door_parity_tests.rs`.
+
 ## I want to...
 
 | ...do this | go to |

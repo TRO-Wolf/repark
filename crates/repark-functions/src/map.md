@@ -299,6 +299,14 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   now embed the repark shims instead of `datafusion-spark`'s, so the facade and the
   SQL door are one kernel. Ledger: `task/fn-gt2-ledger.md`.
 
+**FNP-1 (2026-08-20) — two kernels became facade-reachable.** `instant_ts::to_timestamp_udf` and
+the new `aggregate::avg_udaf` are `pub` so `repark-python`'s dispatch table can embed the exact
+kernel `register_all` installs, instead of DataFusion-core's (charter clause C-012). The
+facade-embed builder for the first is `expr_fn::to_timestamp`; both are guarded by
+`crates/repark-python/src/column/door_parity_tests.rs`. Adding a kernel that the facade also
+reaches means exposing it the same way — a private constructor forces the dispatch table to pick
+a different implementation, which is exactly how the divergence arose.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

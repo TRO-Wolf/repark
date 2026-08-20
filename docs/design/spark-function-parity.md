@@ -108,6 +108,15 @@ the same UDF."* `to_timestamp` and `avg` are the two remaining holes in a policy
 already adopted. This is a silent-wrong-results class and it is the campaign's first correctness
 unit.
 
+*Correction (2026-08-20, FNP-1).* Two claims above were measured wrong by the census and are
+corrected here rather than rewritten away. **The latent set is 18, not 19** — `cardinality`
+already resolved the same kernel on both doors, caught by the ratchet test on its first run. And
+**`avg` is behaviourally latent, not semantically live**: no input was found on which DF-core
+`Avg` and `SparkAvgWithRetract` disagree (all-null, empty frame, and the sliding-window retract
+path all agree), so its fix rests on the two-doors-one-kernel policy rather than on a demonstrated
+wrong answer. `to_timestamp` is live as described and was proven so both ways. Detail:
+[task/fnp-1-two-door-asymmetry-ledger.md](../../task/fnp-1-two-door-asymmetry-ledger.md).
+
 ## 3. The higher-order (lambda) seam
 
 ### 3.1 What was actually wrong

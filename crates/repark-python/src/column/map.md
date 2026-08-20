@@ -39,6 +39,12 @@ without enabling PyO3 `multiple-pymethods`.
   same UDF. Ledger: `task/fn-gt2-ledger.md`.
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
+- `door_parity_tests.rs` — **FNP-1 (2026-08-20):** the charter clause C-012 guard. Compares the
+  UDF this crate's dispatch table embeds against the one `repark_functions::register_all` installs
+  on a session, so the facade and the SQL door cannot silently resolve different kernels for the
+  same spelling. Carries `EXPECTED_DIVERGENCES`, a sanctioned-out table that **ratchets DOWN
+  only** — a listed name that has quietly been fixed fails the build. Ledger:
+  [../../../../../task/fnp-1-two-door-asymmetry-ledger.md](../../../../../task/fnp-1-two-door-asymmetry-ledger.md).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,
   alias collapse, projection extract, reciprocal-trig Inf CASE, `collect_aggregate` /
   `count_distinct_argument`) plus the unit tests that pin those helpers.
@@ -55,6 +61,7 @@ without enabling PyO3 `multiple-pymethods`.
 | window frame bound wrong | `window.rs` `spark_window_frame` / `spark_offset_to_bound` |
 | `sec`/`csc` at zero is NULL not Inf | `function_dispatch.rs` `sec`/`csc` arms + `expr_build.rs` `reciprocal_trig_or_inf` |
 | `call_scalar` unknown name / arity | `function_dispatch.rs` `call_scalar_expr` |
+| `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door |
 | unknown `aggregate` / `aggregate_binary` kind | `function_dispatch.rs` `unary_aggregate_udaf` / `binary_aggregate_udaf` |
 | `… AS x AS x` in a plan | `expr_build.rs` `collapse_identity_alias_chain` |
 

@@ -164,6 +164,14 @@ pub fn to_date(arg: Expr) -> Expr {
     call(crate::timestamp_cast::to_date_udf(), vec![arg])
 }
 
+/// Spark `to_timestamp(expr[, format])` — TZ-4 LTZ instant, session-zone localized.
+///
+/// Variadic to match the kernel's own signature and the facade's arity gate.
+#[must_use]
+pub fn to_timestamp(args: Vec<Expr>) -> Expr {
+    call(crate::instant_ts::to_timestamp_udf(), args)
+}
+
 /// Spark `bin(expr)` — binary string of a long (from `datafusion-spark`).
 #[must_use]
 pub fn bin(arg: Expr) -> Expr {
