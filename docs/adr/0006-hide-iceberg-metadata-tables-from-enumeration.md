@@ -6,7 +6,7 @@
   synthesizes the names), [0002-two-sql-doors.md](0002-two-sql-doors.md) (why this cannot be a door
   parser's decision), [../../STATUS.md](../../STATUS.md) "Known correctness issues" (the entry this
   ADR closes), [../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md) §2.1 (the metadata-
-  table rows this is *not*), [../../task/h1c-ledger.md](../../task/h1c-ledger.md) (the unit that
+  table rows this is *not*), [../../task/h1c-ledger.md](../history/hardening-h1/h1c-ledger.md) (the unit that
   gathered the evidence), [../design/v2-engine-hardening.md](../design/v2-engine-hardening.md)
   decision D2 (the ruling that this be decided in the unit).
 

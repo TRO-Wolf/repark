@@ -3,7 +3,7 @@
 **Settled 2026-08-10** · supersedes the `SessionExtension` half of the seam freeze in
 [session-api.md](session-api.md) § "Seam freeze (2026-08-08, phase-2 PR-6)", repeated in
 [sql-doors.md](sql-doors.md) §3 · implemented by V2 Engine Hardening unit **H-1a split B**
-(ledger [`task/h1a-ledger.md`](../../task/h1a-ledger.md) "§ Split B", decision D-B6) ·
+(ledger [`docs/history/hardening-h1/h1a-ledger.md`](../history/hardening-h1/h1a-ledger.md) "§ Split B", decision D-B6) ·
 `SqlDialect::execute` is **not** touched and stays frozen exactly as shipped.
 
 ## Why this note exists at all
@@ -60,7 +60,9 @@ Three ways to get the value across were considered:
   `repark_ta::TaExtension` (a defaulted pass-through), and `repark_core`'s test-only
   `RecordingExtension`. A fourth, `NoopExtension`, uses the default body.
 * **No external implementors.** `SessionExtension` is not exported from the wheel and appears in no
-  published API surface; `repark` v0.0.0 has never shipped.
+  published API surface. At settlement (2026-08-10) `repark` had never shipped at all; wheels have
+  shipped since (release state: [STATUS.md](../../STATUS.md)), but the seam is still unexported, so
+  the cost claim holds unchanged.
 * **The hook order pin was strengthened rather than merely fixed:** it now sets a *padded* zone
   (`"  Asia/Tokyo "`), so a door that re-parsed the map instead of taking the resolved value reds
   — option A is now mechanically excluded, not merely argued against.

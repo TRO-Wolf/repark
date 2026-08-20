@@ -45,7 +45,7 @@ never training rows.
 
 ## Pointers
 
-Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../../../docs/design/python-facade.md) §4 Q3.
+Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../../../../docs/design/python-facade.md) §4 Q3.
 Oracle: `python/repark/tests/test_ml_boost_oracle.py`.
 Tuning (ParamGrid/CV): [../tuning.py](../tuning.py).
 

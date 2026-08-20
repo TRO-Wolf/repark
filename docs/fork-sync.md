@@ -4,8 +4,7 @@ RePark consumes the whole `iceberg*` family from the owned fork via `[patch.crat
 **rev-pinned**: five `rev = "…"` lines in the root [Cargo.toml](../Cargo.toml) that must stay
 byte-identical (the **single-writer-per-pin** invariant). This page is the *sync contract* —
 the structural decision that the fork stays a sibling repo is
-[ADR-0002](adr/0002-own-iceberg-fork.md) /
-[ADR-0003](adr/0003-consume-fork-datafusion-integration.md) and is not restated here.
+[ADR-0001](adr/0001-own-iceberg-fork.md) and is not restated here.
 
 ## The three rules
 

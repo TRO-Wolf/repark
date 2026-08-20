@@ -98,7 +98,7 @@ wrapper.
   `spark_ast.rs` (executing parse) and the router's successful parse (intercepted
   CREATE/ALTER). `refuse_collation_in_sql` is `pub` for the Python binding (`F.expr`,
   `filter_sql`). Pins: [`tests/collation.rs`](tests/map.md). Ledger:
-  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/y7-collation-refuse-ledger.md).
+  [`../../../task/y7-collation-refuse-ledger.md`](../../../task/y7-collation-refuse-ledger.md).
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then
