@@ -15,6 +15,8 @@ knowledge. The authority move that makes this possible is recorded in
 - `claude.md` — points Claude sessions at [../CLAUDE.md](../CLAUDE.md) and
   [../docs/skills/](../docs/skills/).
 - `codex.md`, `cursor.md` — one-line stubs pointing inward; no tool mechanics recorded yet.
+- `skills/` — agent-facing runbook skills (release-to-PyPI, context-doc truth-up): proven
+  step sequences, pointer-thin, zero authoritative facts. See [skills/map.md](skills/map.md).
 
 ## I want to...
 
@@ -22,6 +24,7 @@ knowledge. The authority move that makes this possible is recorded in
 |---|---|
 | Onboard any agent, tool-agnostic | `common.md` → [../AGENTS.md](../AGENTS.md) |
 | Onboard a Claude session | `claude.md` → [../CLAUDE.md](../CLAUDE.md) |
+| Run a recurring operation (release, doc truth-up) | [skills/map.md](skills/map.md) |
 | Add mechanics for a new tool | add `.agent/<tool>.md` (pointer + tool mechanics only) + a Contents row here |
 | Read the authoritative contract | [../AGENTS.md](../AGENTS.md) |
 

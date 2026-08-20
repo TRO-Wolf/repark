@@ -86,7 +86,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
 - `.agent/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
-  `cursor.md` stubs); each is a thin pointer into the spine, carrying no authoritative facts. See
+  `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc
+  truth-up); each is a thin pointer into the spine, carrying no authoritative facts. See
   [.agent/map.md](.agent/map.md).
 
 ## I want to...
