@@ -329,6 +329,18 @@ pub fn regexp_instr(args: Vec<Expr>) -> Expr {
     call(crate::spark_regexp::regexp_instr_udf(), args)
 }
 
+/// Spark `regexp_extract_all(str, regexp[, idx])` — every match's `idx`-th group, as an array.
+#[must_use]
+pub fn regexp_extract_all(args: Vec<Expr>) -> Expr {
+    call(crate::spark_regexp::regexp_extract_all_udf(), args)
+}
+
+/// Spark `regexp_substr(str, regexp)` — the first match, NULL when there is none.
+#[must_use]
+pub fn regexp_substr(str: Expr, regexp: Expr) -> Expr {
+    call(crate::spark_regexp::regexp_substr_udf(), vec![str, regexp])
+}
+
 /// Spark `bit_length(expr)` — byte-length × 8; stringifies non-binary (G5).
 #[must_use]
 pub fn bit_length(arg: Expr) -> Expr {

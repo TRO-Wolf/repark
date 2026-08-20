@@ -1302,6 +1302,12 @@ all go through it. They thread `agg_name`, the quoted structural `sql_expr` free
 needs, and `partition_transform` — twelve hand-maintained copies of that is twelve chances to
 drift. Adding a thirteenth two-column aggregate means calling the helper, not copying a wrapper.
 
+**FNP-6a (2026-08-20).** `regexp_extract_all` / `regexp_substr` take `regexp` as **ColumnOrName**,
+like `regexp_count` and like PySpark — a bare `str` is a **column name**, and a pattern literal
+needs `F.lit(...)`. Writing them with `lit_indices` instead was caught by the tests and is
+recorded as F-FNP6A-1: it is the same defect class GT1 found in 38 wrappers, reproduced by someone
+who had just read the rule.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

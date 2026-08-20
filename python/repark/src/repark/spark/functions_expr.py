@@ -972,6 +972,36 @@ def elt(n: Column | int, *inputs: Column | str) -> Column:
     return _scalar("elt", n, *inputs)
 
 
+def regexp_extract_all(
+    str: Column | str,
+    regexp: Column | str,
+    idx: int | Column | None = None,
+) -> Column:
+    """Every match's ``idx``-th group, as an array (PySpark ``functions.regexp_extract_all``).
+
+    ``regexp`` is ``ColumnOrName``: a bare ``str`` is a **column name**, matching
+    :func:`regexp_count` and PySpark itself. Pass ``F.lit(...)`` for a pattern literal.
+
+    ``idx`` 0 (the default) is the whole match. No match yields an EMPTY array, not NULL — NULL is
+    reserved for a NULL input, a distinction ``regexp_extract``'s empty-string convention cannot
+    make.
+    """
+    if idx is None:
+        return _scalar("regexp_extract_all", str, regexp)
+    return _scalar("regexp_extract_all", str, regexp, idx)
+
+
+def regexp_substr(str: Column | str, regexp: Column | str) -> Column:
+    """The first match, or NULL when there is none (PySpark ``functions.regexp_substr``).
+
+    ``regexp`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+
+    Deliberately unlike ``regexp_extract``, which returns an empty string on no match; Spark keeps
+    the two conventions apart.
+    """
+    return _scalar("regexp_substr", str, regexp)
+
+
 def soundex(col: Column | str) -> Column:
     """Four-character Soundex code (PySpark ``functions.soundex``)."""
     return _scalar("soundex", col)

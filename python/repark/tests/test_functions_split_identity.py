@@ -16,6 +16,8 @@ from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 # Moved 2026-08-20 with FNP-4a: 339 -> 340, adding exists (the first higher-order function).
 # Moved 2026-08-20 with FNP-5: 340 -> 353, adding the nine regr_*, grouping,
 # approx_count_distinct, listagg and string_agg.
+# Moved 2026-08-20 with FNP-6a: 353 -> 355, adding regexp_extract_all and regexp_substr
+# (the campaign's first NEW kernels).
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -265,9 +267,11 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "regexp",
     "regexp_count",
     "regexp_extract",
+    "regexp_extract_all",
     "regexp_instr",
     "regexp_like",
     "regexp_replace",
+    "regexp_substr",
     "regr_avgx",
     "regr_avgy",
     "regr_count",
@@ -375,7 +379,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 353
+    assert len(F.__all__) == 355
 
 
 def test_every_all_name_resolves() -> None:

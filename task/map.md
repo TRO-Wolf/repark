@@ -18,6 +18,12 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-6a-regexp-ledger.md](fnp-6a-regexp-ledger.md) — **FNP-6a (2026-08-20):** the campaign's
+  first NEW kernels — `regexp_extract_all`, `regexp_substr` — over the `Matcher.find()` walk
+  `regexp_count` already implemented, with the one thing the collector cannot reproduce (the
+  mid-surrogate probe) documented from both sides. Records **F-FNP6A-1**: writing them, I produced
+  the same `lit_indices` column-vs-literal defect GT1 found in 38 wrappers, minutes after reading
+  the rule — direct evidence for design §4.5.
 - [fnp-5-aggregates-ledger.md](fnp-5-aggregates-ledger.md) — **FNP-5 (2026-08-20):** thirteen
   aggregates already in `all_default_aggregate_functions()` that the facade's dispatch could not
   reach — the nine `regr_*` (pinned against an exact `y = 2x + 1` fit), `grouping`,

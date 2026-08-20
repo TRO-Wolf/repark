@@ -2008,6 +2008,11 @@ NOT in that file is a defect, not a decision.
   is pinned as accepted-and-ignored (Spark uses HLL++, DataFusion HLL) — a signature contract, not
   a claim the estimate matches Spark.
 
+- `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
+  against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
+  apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an
+  empty-matching pattern so the shared `Matcher.find()` walk cannot drift between them.
+
 ## I want to...
 
 | ...do this | go to |

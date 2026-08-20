@@ -326,6 +326,16 @@ those kernels declare one lambda parameter and Spark's `(element, index)` form i
 error against them, so repark kernels will own the names (FNP-4c). A test pins that they do not
 resolve, so a well-meaning future alias reds the build.
 
+**FNP-6a (2026-08-20) — the campaign's first NEW kernels.** `spark_regexp.rs` gains
+`regexp_extract_all` and `regexp_substr`. Both reuse `collect_matches`, a generalization of the
+`Matcher.find()` walk `regexp_count` already implemented — Java reports an empty match where a
+previous non-empty match ended, which the `regex` crate's `find_iter` suppresses. **The collector
+cannot reproduce one thing the counter does**: the counting walk probes mid-surrogate UTF-16
+indices, which are not `&str` byte boundaries and so have no extractable range, so on astral text
+with an empty-matching pattern `regexp_count` can exceed `size(regexp_extract_all(...))`.
+Documented at the function. Note the three no-match conventions Spark keeps apart:
+`regexp_extract` returns `''`, `regexp_extract_all` an empty array, `regexp_substr` NULL.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)
