@@ -784,6 +784,14 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need_at_least(1)?;
             repark_functions::expr_fn::xxhash64(exprs.clone())
         }
+        "randstr" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::randstr(exprs.clone())
+        }
+        "uniform" => {
+            need_at_least(2)?;
+            repark_functions::expr_fn::uniform(exprs.clone())
+        }
         "regexp_extract_all" => {
             need_at_least(2)?;
             repark_functions::expr_fn::regexp_extract_all(exprs.clone())

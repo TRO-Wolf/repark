@@ -55,6 +55,8 @@ without enabling PyO3 `multiple-pymethods`.
   `spark.sql(...)`; the facade had no arm.
 - `function_dispatch.rs` gains the **FNP-6a (2026-08-20)** arms for `regexp_extract_all` and
   `regexp_substr`, both over repark-owned kernels rather than DataFusion's.
+- `function_dispatch.rs` gains the **FNP-6b (2026-08-20)** arms for `randstr` and `uniform`,
+  both over repark-owned kernels on the Spark `XORShiftRandom` stream.
 - `door_parity_tests.rs` — **FNP-1 (2026-08-20):** the charter clause C-012 guard. Compares the
   UDF this crate's dispatch table embeds against the one `repark_functions::register_all` installs
   on a session, so the facade and the SQL door cannot silently resolve different kernels for the

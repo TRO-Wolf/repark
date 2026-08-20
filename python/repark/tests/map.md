@@ -2013,6 +2013,12 @@ NOT in that file is a defect, not a decision.
   apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an
   empty-matching pattern so the shared `Matcher.find()` walk cannot drift between them.
 
+- `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
+  Spark's docs state — length, character pool, range, the integer-vs-double return rule,
+  determinism per seed — and deliberately NOT on generated values, since no live Spark runs here
+  and a value pin would read as parity evidence while being repark agreeing with itself. Also pins
+  that a NaN bound refuses distinctly from an inverted range.
+
 ## I want to...
 
 | ...do this | go to |

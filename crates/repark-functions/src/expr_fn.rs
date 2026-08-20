@@ -329,6 +329,18 @@ pub fn regexp_instr(args: Vec<Expr>) -> Expr {
     call(crate::spark_regexp::regexp_instr_udf(), args)
 }
 
+/// Spark `randstr(length[, seed])` — a random alphanumeric string.
+#[must_use]
+pub fn randstr(args: Vec<Expr>) -> Expr {
+    call(crate::random::spark_randstr_udf(), args)
+}
+
+/// Spark `uniform(min, max[, seed])` — i.i.d. values in `[min, max)`.
+#[must_use]
+pub fn uniform(args: Vec<Expr>) -> Expr {
+    call(crate::random::spark_uniform_udf(), args)
+}
+
 /// Spark `regexp_extract_all(str, regexp[, idx])` — every match's `idx`-th group, as an array.
 #[must_use]
 pub fn regexp_extract_all(args: Vec<Expr>) -> Expr {

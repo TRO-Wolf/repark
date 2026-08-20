@@ -18,6 +18,11 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-6b-random-ledger.md](fnp-6b-random-ledger.md) — **FNP-6b (2026-08-20):** `randstr` and
+  `uniform` over the Spark `XORShiftRandom` `rand`/`randn` already use. States the unit's honest
+  limit: the STREAM is Spark-verified (r20 G2), the per-function derivation is DOC-SPARK, so the
+  pins assert documented properties and no generated values — closing that to MEASURED-SPARK is a
+  FNP-Z live-oracle item.
 - [fnp-6a-regexp-ledger.md](fnp-6a-regexp-ledger.md) — **FNP-6a (2026-08-20):** the campaign's
   first NEW kernels — `regexp_extract_all`, `regexp_substr` — over the `Matcher.find()` walk
   `regexp_count` already implemented, with the one thing the collector cannot reproduce (the

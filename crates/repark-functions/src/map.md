@@ -336,6 +336,15 @@ with an empty-matching pattern `regexp_count` can exceed `size(regexp_extract_al
 Documented at the function. Note the three no-match conventions Spark keeps apart:
 `regexp_extract` returns `''`, `regexp_extract_all` an empty array, `regexp_substr` NULL.
 
+**FNP-6b (2026-08-20).** `random.rs` gains `randstr` and `uniform`, drawing from the SAME
+`XORShiftRandom` stream `rand`/`randn` use rather than a second PRNG — a pin asserts the integer
+and float forms of `uniform` are one draw sequence scaled two ways. `RANDSTR_POOL`'s ORDER is
+load-bearing: the index comes from that stream, so reordering the pool changes the output for a
+given seed. Both refuse a non-constant bound loudly, because Spark requires literals and the
+alternative failure — silently applying row zero to every row — produces plausible output forever.
+**The stream is Spark-verified (r20 G2); the per-function derivation is DOC-SPARK**, so the tests
+pin documented properties and assert no specific generated values.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

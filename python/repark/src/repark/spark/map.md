@@ -1308,6 +1308,11 @@ needs `F.lit(...)`. Writing them with `lit_indices` instead was caught by the te
 recorded as F-FNP6A-1: it is the same defect class GT1 found in 38 wrappers, reproduced by someone
 who had just read the rule.
 
+**FNP-6b (2026-08-20).** `randstr` / `uniform` take **constant** bounds — Spark requires literals,
+and `lit_indices` marks them so a column argument reaches the kernel's loud refusal rather than
+being read as row zero. `uniform`'s return type follows its bounds (two integers give an integer,
+anything else a double), which is a silent type change if got wrong and so is pinned on the type.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

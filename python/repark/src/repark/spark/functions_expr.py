@@ -972,6 +972,32 @@ def elt(n: Column | int, *inputs: Column | str) -> Column:
     return _scalar("elt", n, *inputs)
 
 
+def randstr(length: int | Column, seed: int | Column | None = None) -> Column:
+    """A random string of ``length`` characters from 0-9, a-z, A-Z (PySpark ``functions.randstr``).
+
+    ``length`` must be a **constant** — Spark requires a literal SMALLINT/INT, and a column
+    argument is refused loudly rather than silently reading the first row.
+    """
+    if seed is None:
+        return _scalar("randstr", length, lit_indices=frozenset({0}))
+    return _scalar("randstr", length, seed, lit_indices=frozenset({0, 1}))
+
+
+def uniform(
+    min: int | float | Column,
+    max: int | float | Column,
+    seed: int | Column | None = None,
+) -> Column:
+    """A random value in ``[min, max)`` (PySpark ``functions.uniform``).
+
+    Both bounds must be constant. **The result type follows them**: two integers give an integer,
+    anything else gives a double — Spark's documented rule, and a silent type change if got wrong.
+    """
+    if seed is None:
+        return _scalar("uniform", min, max, lit_indices=frozenset({0, 1}))
+    return _scalar("uniform", min, max, seed, lit_indices=frozenset({0, 1, 2}))
+
+
 def regexp_extract_all(
     str: Column | str,
     regexp: Column | str,
