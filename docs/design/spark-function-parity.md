@@ -400,7 +400,7 @@ module tree. This campaign adds eight kernels to the same crate, so the conversi
 rather than accruing. (The two remaining `#[path]` sites, in `repark-iceberg`'s
 `predicate_dml.rs`, are test-file inclusions and are the documented exception.)
 
-## 7. The plan — seventeen units, one branch, one PR
+## 7. The plan — twenty units, one branch, one PR
 
 Ordering weighs three things: is the kernel already compiled into the shipping wheel, how many
 census rows flip out of the gap bucket, and does the work reuse a seam RePark already owns.
@@ -415,7 +415,8 @@ census rows flip out of the gap bucket, and does the work reuse a seam RePark al
 | **FNP-4c** | **The eight new kernels**, plus `forall` (an `array_any_match` rewrite) and `reduce` (an alias of `aggregate`). Per §3.5: one RePark kernel per name declaring `[element, index]`, so both Spark arities are served and the index costs nothing when unused. | 10 | The bulk of the lambda work; ~2,700–3,200 impl lines. |
 | **FNP-5** | **Wire-only aggregates.** The nine `regr_*`, `grouping`, `approx_count_distinct`, `listagg`, `string_agg`. | 13 | All already in `all_default_aggregate_functions()` and registered on every session. *Corrected 2026-08-20:* `sum_distinct`, `listagg_distinct` and `string_agg_distinct` are **not** kernels — DataFusion spells them as a `DISTINCT` modifier on the aggregate call, so they need the facade's DISTINCT path, not a dispatch arm. |
 | **FNP-6** | **Reuse RePark's own kernels.** `regexp_extract_all`, `regexp_substr`, `randstr`, `uniform`, `validate_utf8`, `try_validate_utf8`, the three `bitmap_*_agg`, `assert_true`. | 10 | The hard semantics — Java regex dialect, Spark's PRNG, the bitmap layout — were already paid for. |
-| **FNP-7** | **The `try_*` sweep.** | 12 | One systematic pass over the ANSI seam RePark already owns (`SparkAnsiConfig`, DEC-6/DEC-7). One rule, twelve names, one ledger — not twelve builds. |
+| **FNP-7a** | **The `try_*` names whose raising path exists.** `try_divide`, `try_mod` (divide-by-zero raises today), `try_element_at`, `try_to_date`, `try_to_number`, `try_to_binary`, `try_to_time` (parse raises), `try_sum` (a `datafusion-spark` kernel). | 8 | Each is genuinely the inversion the design described: a path that raises, made to yield NULL. |
+| **FNP-7b** | **BLOCKED on F-Y10-1.** `try_add`, `try_subtract`, `try_multiply`, `try_avg`. | 4 | *Measured 2026-08-20:* repark's integer arithmetic **widens rather than overflowing** — `CAST(2147483647 AS INT) + 1` returns `2147483648` as int64, where Spark under ANSI raises `ARITHMETIC_OVERFLOW`. Spark's `try_add` returns NULL exactly where `+` would raise, so with no raising path these would be no-op wrappers **asserting a parity that does not exist**. The gap is the already-tracked **F-Y10-1 integer wrap (DEC U5 / G13)**, open from the V2 Engine Hardening campaign and named in STATUS. Ship these after it closes, not before. |
 | **FNP-8** | **Repatriation.** The 55 non-compliant functions of §4. | 55 | The owner's "own the semantics" decision. Sized against the ~287-line median kernel. |
 | **FNP-9** | **Collections, generators, dispatch.** `create_map`, `map_concat`, `array_insert`, `inline`, `inline_outer`, `stack`, `call_udf`, `call_function`. | 8 | `inline` is `dynamicFlatten` machinery that already shipped in v0.5.0. |
 | **FNP-10** | **JSON.** `from_json`, `to_json`, `get_json_object`, `json_array_length`, `json_object_keys`, plus the stubbed `schema_of_json`. | 6 | `serde_json` is already a workspace dep and `types.py` already parses DDL schemas. A real build, high user value. |

@@ -44,7 +44,7 @@ These narrow [AGENTS.md](../AGENTS.md) "Delegated-agent standing rules"; they ne
 
 ## Sequencing
 
-Nineteen units, one branch, one PR. Each unit is one commit with its own
+Twenty units, one branch, one PR. Each unit is one commit with its own
 `task/fnp-<n>-<slug>-ledger.md`. The full roster, scope and rationale is
 [docs/design/spark-function-parity.md §7](../docs/design/spark-function-parity.md); this slate
 adds the per-unit execution contract.
@@ -54,7 +54,7 @@ Correctness first, then free names, then the family the users notice, then the b
 ```
 FNP-1  two-door asymmetry        →  FNP-2  free names   →  FNP-3  de-stub what ships
 FNP-4a seam + exists  →  FNP-4b Spark-door dialect  →  FNP-4c the eight kernels
-FNP-5  wire-only aggregates      →  FNP-6  reuse our kernels  →  FNP-7  try_* sweep
+FNP-5  wire-only aggregates      →  FNP-6  reuse our kernels  →  FNP-7a try_* (raising paths)  →  FNP-7b BLOCKED on F-Y10-1
 FNP-8  repatriation (55)
 FNP-9  collections/generators    →  FNP-10 JSON  →  FNP-11 timestamp/TIME
 FNP-12 aggregates + formatting   →  FNP-13 collation (G15 retirement)  →  FNP-14 crypto + mask
@@ -124,6 +124,14 @@ Every unit, without exception:
 - **FNP-16** registers 56 names as deferred-by-cost, which is **not** the same claim as FNP-15's
   unreachable. The registry language must distinguish them; writing "unsupported" for both would
   misreport what the engine can do.
+- **FNP-7b must not ship before F-Y10-1.** repark's `int + int` widens to int64 instead of
+  overflowing, so `try_add`/`try_subtract`/`try_multiply`/`try_avg` have no raising path to
+  invert. Implementing them anyway produces functions that never return NULL and therefore look
+  correct while diverging from Spark on every overflow. The dependency is on a tracked open item
+  (F-Y10-1 / DEC U5 / G13), not on this campaign.
+- **FNP-6d** (the three `bitmap_*_agg`) is sequenced AFTER FNP-7a deliberately: they are UDAFs
+  needing Spark's exact 4096-bit bitmap layout, which cannot be verified without a live Spark, and
+  they are among the least-used names in the gap. Effort high, confidence low, value low.
 - **FNP-Z** — owns the `#[path]` conversion (design R-5) and the `function_dispatch.rs` split into
   `column/dispatch/`. Both are mechanical and both are gate-driven; neither may be done piecemeal
   inside a feature unit.
