@@ -18,6 +18,12 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-2-free-names-ledger.md](fnp-2-free-names-ledger.md) — **FNP-2 (2026-08-20):** the five
+  names that needed no engine work (`asc_nulls_last`, `desc_nulls_first`, `column`, `negate`,
+  `session_user`; `__all__` 333 → 338) and the ordering defect the first two exposed — three sites
+  derived NULL placement from the sort direction and discarded the column's own marker, including
+  the plan-collapse window key, which merged two specs differing only in it. All three now resolve
+  through `column.sort_nulls_first_for`. Scope corrections: `sha` → FNP-3, `typeof` → FNP-12.
 - [fnp-1-two-door-asymmetry-ledger.md](fnp-1-two-door-asymmetry-ledger.md) — **FNP-1
   (2026-08-20):** clause C-012 made mechanical. `column/door_parity_tests.rs` compares the UDF the
   facade embeds against the one `register_all` installs, with the GT1/GT2-closed names as positive

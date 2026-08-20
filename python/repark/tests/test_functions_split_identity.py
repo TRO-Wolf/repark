@@ -10,6 +10,8 @@ from __future__ import annotations
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 # Moved 2026-08-15 with FN-C, unioned with FN-D/E/F/W at SQM (was 253 on freeze cd0db4f).
+# Moved 2026-08-20 with FNP-2: 333 -> 338, adding asc_nulls_last, column, desc_nulls_first,
+# negate, session_user. Declared in the PR body per the discipline above.
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -42,6 +44,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "arrays_zip",
     "asc",
     "asc_nulls_first",
+    "asc_nulls_last",
     "ascii",
     "asin",
     "asinh",
@@ -79,6 +82,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "col",
     "collect_list",
     "collect_set",
+    "column",
     "concat",
     "concat_ws",
     "contains",
@@ -125,6 +129,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "degrees",
     "dense_rank",
     "desc",
+    "desc_nulls_first",
     "desc_nulls_last",
     "e",
     "element_at",
@@ -216,6 +221,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "months_between",
     "named_struct",
     "nanvl",
+    "negate",
     "negative",
     "next_day",
     "now",
@@ -271,6 +277,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "second",
     "sentences",
     "sequence",
+    "session_user",
     "sha1",
     "sha2",
     "shiftleft",
@@ -349,7 +356,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 333
+    assert len(F.__all__) == 338
 
 
 def test_every_all_name_resolves() -> None:

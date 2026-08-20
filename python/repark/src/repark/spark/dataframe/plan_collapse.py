@@ -195,6 +195,9 @@ def _window_spec_structural_key(spec: Any) -> tuple[Any, ...] | None:
             (
                 column._projection_name or column.spark_display_part(),
                 True if column._sort_ascending is None else bool(column._sort_ascending),
+                # Null placement is part of the spec's identity: two window specs that differ
+                # only in it are different windows, and merging them silently reorders rows.
+                column._sort_nulls_first,
             )
             for column in spec._order_columns
         )

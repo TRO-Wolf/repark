@@ -1610,13 +1610,23 @@ def desc(col: Column | str) -> Column:
 
 
 def asc_nulls_first(col: Column | str) -> Column:
-    """Ascending sort, nulls first (PySpark ``functions.asc_nulls_first``; alias of ``asc``)."""
-    return asc(col)
+    """Ascending sort, nulls first (PySpark ``functions.asc_nulls_first``; same as ``asc``)."""
+    return _as_column_arg(col, as_lit=False).asc_nulls_first()
+
+
+def asc_nulls_last(col: Column | str) -> Column:
+    """Ascending sort, nulls LAST (PySpark ``functions.asc_nulls_last``)."""
+    return _as_column_arg(col, as_lit=False).asc_nulls_last()
+
+
+def desc_nulls_first(col: Column | str) -> Column:
+    """Descending sort, nulls FIRST (PySpark ``functions.desc_nulls_first``)."""
+    return _as_column_arg(col, as_lit=False).desc_nulls_first()
 
 
 def desc_nulls_last(col: Column | str) -> Column:
-    """Descending sort, nulls last (PySpark ``functions.desc_nulls_last``; alias of ``desc``)."""
-    return desc(col)
+    """Descending sort, nulls last (PySpark ``functions.desc_nulls_last``; same as ``desc``)."""
+    return _as_column_arg(col, as_lit=False).desc_nulls_last()
 
 
 def e() -> Column:
@@ -1649,6 +1659,10 @@ def pi() -> Column:
 def negative(col: Column | str) -> Column:
     """Unary minus (PySpark ``functions.negative``)."""
     return -_as_column_arg(col, as_lit=False)
+
+
+negate = negative
+"""PySpark ``functions.negate`` — the Spark spelling of ``negative`` (``builtin.py`` aliases it)."""
 
 
 def positive(col: Column | str) -> Column:

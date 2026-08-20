@@ -143,6 +143,13 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 | Change na.fill / drop / replace | `actions_export.py` |
 | Public import surface | `__init__.py` |
 
+**FNP-2 (2026-08-20).** `core.py` `_sort_specs` and `plan_collapse.py`'s window structural key
+both resolve null placement through `repark.spark.column.sort_nulls_first_for` instead of
+deriving it from the sort direction. The structural key now *includes* null placement: two window
+specs differing only in it are different windows, and merging them silently reorders rows. Note
+the one deliberate exception — an explicit `orderBy(..., ascending=…)` re-marks the columns
+wholesale, so it supersedes any per-column marker on direction AND nulls.
+
 ## Pointers
 
 Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df-regions-ledger.md`.

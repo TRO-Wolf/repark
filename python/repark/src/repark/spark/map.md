@@ -1272,6 +1272,15 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Change `Row` (collect result / field access / asDict) | `row.py` (G-ROW pins in `tests/test_row.py`) |
 | Add a metadata (`spark.catalog`) operation | `catalog.py` |
 
+**FNP-2 (2026-08-20) — null ordering has one home.** `column.py` gains
+`sort_nulls_first_for(column, is_ascending)`, and every ordering path resolves null placement
+through it: `dataframe/core.py` `_sort_specs`, `window.py` `_order_specs`, and
+`dataframe/plan_collapse.py`'s window structural key. All three previously derived null placement
+from the sort DIRECTION and discarded the column's own marker — correct while only `asc`/`desc`
+and their two agreeing aliases were reachable, wrong and silent the moment `asc_nulls_last` /
+`desc_nulls_first` exist. `Column`'s four sort spellings collapse to one `_with_sort_order`;
+adding a fifth means adding it there, not copying the constructor call again.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

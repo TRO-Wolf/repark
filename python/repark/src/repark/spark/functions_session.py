@@ -80,6 +80,13 @@ def current_user() -> Column:
 
 
 user = current_user
+session_user = current_user
+"""PySpark ``functions.session_user`` — the same session identity as ``current_user``/``user``.
+
+Spark distinguishes ``current_user`` (the effective user) from ``session_user`` (the login user);
+with no authentication layer there is one identity, so all three spellings return it. Recorded as
+a divergence only if an identity layer ever makes them differ.
+"""
 
 
 def current_catalog() -> Column:

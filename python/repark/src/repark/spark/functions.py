@@ -1221,6 +1221,10 @@ def bucket(numBuckets: int | Column, col: Column | str) -> Column:  # noqa: N803
     )
 
 
+column = col
+"""PySpark ``functions.column`` — ``builtin.py`` defines it as a bare alias of ``col``."""
+
+
 # ---- R-FN-BATCH1: top-N scalar wrappers over engine call_scalar / Column methods ---------------
 
 
@@ -1390,6 +1394,7 @@ from repark.spark.functions_expr import (  # noqa: E402
     arrays_zip,
     asc,
     asc_nulls_first,
+    asc_nulls_last,
     ascii,
     asin,
     asinh,
@@ -1428,6 +1433,7 @@ from repark.spark.functions_expr import (  # noqa: E402
     decode,
     degrees,
     desc,
+    desc_nulls_first,
     desc_nulls_last,
     e,
     elt,
@@ -1492,6 +1498,7 @@ from repark.spark.functions_expr import (  # noqa: E402
     monthname,
     months_between,
     nanvl,
+    negate,
     negative,
     next_day,
     nullif,
@@ -1596,6 +1603,7 @@ from repark.spark.functions_session import (  # noqa: E402
     current_database,
     current_schema,
     current_user,
+    session_user,
     user,
     uuid,
     version,
@@ -1668,6 +1676,7 @@ __all__ = [
     "arrays_zip",
     "asc",
     "asc_nulls_first",
+    "asc_nulls_last",
     "ascii",
     "asin",
     "asinh",
@@ -1705,6 +1714,7 @@ __all__ = [
     "col",
     "collect_list",
     "collect_set",
+    "column",
     "concat",
     "concat_ws",
     "contains",
@@ -1751,6 +1761,7 @@ __all__ = [
     "degrees",
     "dense_rank",
     "desc",
+    "desc_nulls_first",
     "desc_nulls_last",
     "e",
     "element_at",
@@ -1842,6 +1853,7 @@ __all__ = [
     "months_between",
     "named_struct",
     "nanvl",
+    "negate",
     "negative",
     "next_day",
     "now",
@@ -1897,6 +1909,7 @@ __all__ = [
     "second",
     "sentences",
     "sequence",
+    "session_user",
     "sha1",
     "sha2",
     "shiftleft",

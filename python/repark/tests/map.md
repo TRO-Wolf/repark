@@ -1982,6 +1982,12 @@ NOT in that file is a defect, not a decision.
   `timestamp[us, tz=UTC]` — no row compared the two doors, so the divergence was invisible. The
   Rust half of the same clause is `crates/repark-python/src/column/door_parity_tests.rs`.
 
+- `test_fnp2_free_names.py` — **FNP-2 (2026-08-20):** all four null-ordering corners pinned by
+  observed ROW ORDER (not by which method they delegate to), the same four through `Window.orderBy`,
+  the plan-collapse non-merge of two specs differing only in null placement, the `ascending=`
+  override superseding a per-column marker, and the `column`/`negate`/`session_user` aliases on the
+  Arrow path.
+
 ## I want to...
 
 | ...do this | go to |

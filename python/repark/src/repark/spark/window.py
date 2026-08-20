@@ -253,17 +253,21 @@ class WindowSpec:
     def _order_specs(self) -> tuple[list[Any], list[bool], list[bool]]:
         """Parallel (native order columns, ascending, nulls_first) vectors for the native ``over``.
 
-        Each ordering column's direction comes from its ``asc()`` / ``desc()`` marker (defaulting to
-        ascending); Spark's null ordering follows the direction (ascending → nulls first, descending
-        → nulls last).
+        Each ordering column's direction comes from its ``asc()`` / ``desc()`` marker (defaulting
+        to ascending); null placement comes from
+        :func:`repark.spark.column.sort_nulls_first_for`, so an explicit ``asc_nulls_last`` /
+        ``desc_nulls_first`` marker is honoured here exactly as it is in ``DataFrame.orderBy``.
         """
+        from repark.spark.column import sort_nulls_first_for
+
         natives: list[Any] = []
         ascending: list[bool] = []
+        nulls_first: list[bool] = []
         for column in self._order_columns:
             is_ascending = True if column._sort_ascending is None else column._sort_ascending
             natives.append(column._inner)
             ascending.append(is_ascending)
-        nulls_first = list(ascending)
+            nulls_first.append(sort_nulls_first_for(column, is_ascending))
         return natives, ascending, nulls_first
 
     def _frame_args(self) -> tuple[str | None, int | None, int | None]:

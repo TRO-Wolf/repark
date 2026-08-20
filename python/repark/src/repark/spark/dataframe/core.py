@@ -30,7 +30,7 @@ from repark.errors import (
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
-from repark.spark.column import Column, _bound_generator_array
+from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -6329,6 +6329,7 @@ class DataFrame:
             raise PySparkValueError("orderBy/sort requires at least one column")
         columns: list[Any] = []
         ascending_flags: list[bool] = []
+        order_columns: list[Any] = []
         for item in cols:
             column = self._column_of(item)
             _reject_partition_transform(column)
@@ -6339,10 +6340,17 @@ class DataFrame:
             is_ascending = True if column._sort_ascending is None else column._sort_ascending
             columns.append(column._inner)
             ascending_flags.append(is_ascending)
+            order_columns.append(column)
         if ascending is not None:
+            # PySpark's `ascending=` re-marks the columns wholesale, so it supersedes any
+            # per-column marker — direction AND null placement both follow the override.
             ascending_flags = self._apply_ascending_override(ascending_flags, ascending)
-        # Spark null ordering: ascending → nulls first, descending → nulls last.
-        nulls_first_flags = list(ascending_flags)
+            nulls_first_flags = list(ascending_flags)
+        else:
+            nulls_first_flags = [
+                sort_nulls_first_for(column, is_ascending)
+                for column, is_ascending in zip(order_columns, ascending_flags, strict=True)
+            ]
         return columns, ascending_flags, nulls_first_flags
 
     @staticmethod
