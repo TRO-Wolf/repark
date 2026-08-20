@@ -66,6 +66,7 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 - `python/repark/src/repark/spark/dataframe/plan_collapse.py`
 - `python/repark/src/repark/spark/dataframe/map.md`
 - `python/repark/src/repark/spark/map.md`
+- `python/repark/src/repark/spark/functions_expr.py` (`_explode_keep_null` constructor deleted)
 - `python/repark/tests/test_dynamic_flatten.py`
 - `python/repark/tests/map.md`
 - `scripts/check_lib_py.py` (ceiling DOWN)
@@ -82,8 +83,8 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 
 | Gate | Exit |
 |---|---|
-| `cargo test -p repark-core dynamic_flatten` | 0 (38 passed; octo C3) |
-| `make verify` | 0 (octo C3) |
+| `cargo test -p repark-core dynamic_flatten` | 0 (41 passed; R-S1-003) |
+| `make verify` | 0 (R-S1-003) |
 | `make develop` + pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (41 passed; octo C3) |
 
 ---
@@ -180,4 +181,13 @@ token regexes require the bracketed `[DYNAMIC_FLATTEN_*]` tokens).
 |---|---|---|
 | R-S1-001 | REMEDIATED | Facade `test_null_parent` / `test_null_mid` docstrings pin createDataFrame-door NULL leaves (Python `None`, clean children). They do not claim C1-L-001 CASE-drop; dirty-child CASE-drop stays the engine pins. |
 | R-S1-002 | REMEDIATED | Pin comment + this ledger's C3-SAF-001: `max_depth_remaining_schema_is_truncated` kills unbounded output (C2-SAF-002: token / `"truncated"` / len), not the allocation path. |
+| R-S1-003 | REMEDIATED | Nested struct-wrap `ListView` / `LargeListView` + `max_depth=1` refuse `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]` (`nested_list_view_max_depth_one_refuses_loud`, `nested_large_list_view_max_depth_one_refuses_loud`). Top-level `ListView` + `max_depth=0`: `top_level_list_view_max_depth_zero_refuses_loud`. Existing `list_view_refuses_loud` stays default-depth top-level. |
 | G3b | REMEDIATED | `test_dynamic_flatten_array_of_struct_inside_array_element_struct`: flatten is native Unnest; `_sql_array_of` postfix mutant only kills `explode_outer`. |
+
+---
+
+## 10. S2 review
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| R-S2-fence | REMEDIATED | Fence lists `python/repark/src/repark/spark/functions_expr.py` (`_explode_keep_null` constructor deleted, C2-Q-004). |

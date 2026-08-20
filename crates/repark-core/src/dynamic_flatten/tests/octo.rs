@@ -39,6 +39,53 @@ fn fixed_size_list_of(
     Arc::new(FixedSizeListArray::try_new(field, size, values, nulls).expect("fixed_size_list"))
 }
 
+fn list_view_i64() -> ArrayRef {
+    let values = i64_array(vec![Some(1), Some(2)]);
+    let field = Arc::new(Field::new("item", DataType::Int64, true));
+    let offsets = ScalarBuffer::from(vec![0_i32]);
+    let sizes = ScalarBuffer::from(vec![2_i32]);
+    Arc::new(ListViewArray::try_new(field, offsets, sizes, values, None).expect("list_view"))
+}
+
+fn large_list_view_i64() -> ArrayRef {
+    let values = i64_array(vec![Some(1), Some(2)]);
+    let field = Arc::new(Field::new("item", DataType::Int64, true));
+    let offsets = ScalarBuffer::from(vec![0_i64]);
+    let sizes = ScalarBuffer::from(vec![2_i64]);
+    Arc::new(
+        LargeListViewArray::try_new(field, offsets, sizes, values, None).expect("large_list_view"),
+    )
+}
+
+fn named_column_batch(name: &str, array: ArrayRef) -> RecordBatch {
+    RecordBatch::try_new(
+        Arc::new(Schema::new(vec![Field::new(
+            name,
+            array.data_type().clone(),
+            true,
+        )])),
+        vec![array],
+    )
+    .expect("batch")
+}
+
+fn struct_wrap_batch(parent: &str, child: &str, array: ArrayRef) -> RecordBatch {
+    let wrap = StructArray::try_new(
+        Fields::from(vec![Field::new(child, array.data_type().clone(), true)]),
+        vec![array],
+        None,
+    )
+    .expect("wrap");
+    named_column_batch(parent, Arc::new(wrap))
+}
+
+fn refuse_unsupported_element(batch: RecordBatch, options: DynamicFlattenOptions) {
+    analysis_token(
+        dynamic_flatten(read_batch(batch), options),
+        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]",
+    );
+}
+
 /// C2-Q-003: `list_element_type` `LargeList` arm. Deleting it must red this.
 #[tokio::test]
 async fn large_list_explodes() {
@@ -87,52 +134,60 @@ async fn fixed_size_list_explodes() {
 }
 
 /// C2-L-004: `ListView` is not a leave-nested fail-open; refuse LOUD.
+/// Default `max_depth`, top-level column only. Nested / `max_depth=0` are
+/// `nested_list_view_max_depth_one_refuses_loud` and
+/// `top_level_list_view_max_depth_zero_refuses_loud`.
 #[test]
 fn list_view_refuses_loud() {
-    let values = i64_array(vec![Some(1), Some(2)]);
-    let field = Arc::new(Field::new("item", DataType::Int64, true));
-    let offsets = ScalarBuffer::from(vec![0_i32]);
-    let sizes = ScalarBuffer::from(vec![2_i32]);
-    let view = ListViewArray::try_new(field, offsets, sizes, values, None).expect("list_view");
-    let batch = RecordBatch::try_new(
-        Arc::new(Schema::new(vec![Field::new(
-            "xs",
-            view.data_type().clone(),
-            true,
-        )])),
-        vec![Arc::new(view)],
-    )
-    .expect("batch");
-
-    analysis_token(
-        dynamic_flatten(read_batch(batch), options()),
-        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]",
-    );
+    refuse_unsupported_element(named_column_batch("xs", list_view_i64()), options());
 }
 
 /// C3-Q-001 / C3-L-001: `LargeListView` is not a leave-nested fail-open; refuse LOUD.
 /// Deleting the `LargeListView` arm of `is_list_view_type` must red this.
 #[test]
 fn large_list_view_refuses_loud() {
-    let values = i64_array(vec![Some(1), Some(2)]);
-    let field = Arc::new(Field::new("item", DataType::Int64, true));
-    let offsets = ScalarBuffer::from(vec![0_i64]);
-    let sizes = ScalarBuffer::from(vec![2_i64]);
-    let view =
-        LargeListViewArray::try_new(field, offsets, sizes, values, None).expect("large_list_view");
-    let batch = RecordBatch::try_new(
-        Arc::new(Schema::new(vec![Field::new(
-            "xs",
-            view.data_type().clone(),
-            true,
-        )])),
-        vec![Arc::new(view)],
-    )
-    .expect("batch");
+    refuse_unsupported_element(named_column_batch("xs", large_list_view_i64()), options());
+}
 
-    analysis_token(
-        dynamic_flatten(read_batch(batch), options()),
-        "[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]",
+/// R-S1-003: one struct-expand pass surfaces a nested `ListView`; refuse
+/// `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`, not `[DYNAMIC_FLATTEN_MAX_DEPTH]`
+/// and not leave-nested. Deleting the post-loop `ListView` check greens the
+/// default-depth top-level pin and reds this (`max_depth=1` never re-enters
+/// the in-loop check).
+#[test]
+fn nested_list_view_max_depth_one_refuses_loud() {
+    refuse_unsupported_element(
+        struct_wrap_batch("wrap", "xs", list_view_i64()),
+        DynamicFlattenOptions {
+            max_depth: 1,
+            ..options()
+        },
+    );
+}
+
+/// R-S1-003: same post-loop refuse after one expand for `LargeListView`.
+#[test]
+fn nested_large_list_view_max_depth_one_refuses_loud() {
+    refuse_unsupported_element(
+        struct_wrap_batch("wrap", "xs", large_list_view_i64()),
+        DynamicFlattenOptions {
+            max_depth: 1,
+            ..options()
+        },
+    );
+}
+
+/// R-S1-003: `max_depth=0` skips the in-loop `ListView` check; top-level
+/// `ListView` must still refuse `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`
+/// (not `MAX_DEPTH`, not Ok).
+#[test]
+fn top_level_list_view_max_depth_zero_refuses_loud() {
+    refuse_unsupported_element(
+        named_column_batch("xs", list_view_i64()),
+        DynamicFlattenOptions {
+            max_depth: 0,
+            ..options()
+        },
     );
 }
 

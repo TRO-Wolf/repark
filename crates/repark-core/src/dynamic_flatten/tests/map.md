@@ -8,9 +8,10 @@ Rust file-size default ceiling.
 ## Contents
 
 - `octo.rs` — octo C2/C3 kernel pins: `LargeList` / `FixedSizeList` explode,
-  `ListView` / `LargeListView` refuse, max-depth remaining-schema truncation
-  (`max_depth_remaining_schema_is_truncated` kills unbounded output —
-  token / "truncated" / len — not the join-then-truncate allocation path).
+  `ListView` / `LargeListView` refuse (default-depth top-level plus R-S1-003
+  nested `max_depth=1` and top-level `max_depth=0`), max-depth remaining-schema
+  truncation (`max_depth_remaining_schema_is_truncated` kills unbounded output
+  — token / "truncated" / len — not the join-then-truncate allocation path).
 
 ## Pointers
 
@@ -21,6 +22,6 @@ Rust file-size default ceiling.
 | Symptom | First check |
 |---|---|
 | LargeList / FixedSizeList stay nested | Pins `large_list_explodes`, `fixed_size_list_explodes`. |
-| ListView leave-nested | Pins `list_view_refuses_loud`, `large_list_view_refuses_loud`. |
+| ListView leave-nested | Pins `list_view_refuses_loud`, `large_list_view_refuses_loud` (default depth, top-level). Nested struct wrap + `max_depth=1`: `nested_list_view_max_depth_one_refuses_loud`, `nested_large_list_view_max_depth_one_refuses_loud`. Top-level `max_depth=0`: `top_level_list_view_max_depth_zero_refuses_loud`. |
 
 First checks: `cargo test -p repark-core dynamic_flatten`. Escalate to: [../map.md](../map.md).
