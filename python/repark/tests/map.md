@@ -233,7 +233,12 @@ NOT in that file is a defect, not a decision.
   idempotence on already-flat; H1 already-flat join preserves display overlay /
   origin binds (`test_already_flat_h1_join_preserves_display_overlay`); expanding
   one-field-struct H1 frame drops overlay (prefixed leaves, not parent display
-  names — `test_expanding_h1_flatten_drops_stale_overlay`); both method names;
+  names — `test_expanding_h1_flatten_drops_stale_overlay`); **DF1 MIA `_plan()`
+  pin:** uncached mapInArrow then `dynamicFlatten` materializes the bridge
+  (`test_mapinarrow_dynamic_flatten_materializes_bridge` already-flat doubling;
+  sibling `test_mapinarrow_nested_dynamic_flatten_materializes_bridge`
+  `payload STRUCT<x: BIGINT>` → `payload_x`); revert to `_inner.dynamic_flatten`
+  is 0 rows while createDataFrame flatten stays green; both method names;
   custom separator; explode_lists=False;
   schema-walk + plan-build collect/count/to_arrow spy pin (C1-Q-003);
   native-kernel

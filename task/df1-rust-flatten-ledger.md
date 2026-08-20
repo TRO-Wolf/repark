@@ -23,7 +23,7 @@ RePark DataFrame newtype.
 | C-005 | List explode uses `UnnestOptions { preserve_nulls: false }` via `unnest_columns_with_options` + `Column::new_unqualified`. Empty arrays drop because Unnest emits no rows for zero-length lists (empty ≠ null); `preserve_nulls` only keeps NULL lists. `empty_as_null=true` rewrites EMPTY to a singleton-null list so the row survives. | PROVEN — `null_and_empty_array_values` |
 | C-006 | Every schema field binds through `Column::new_unqualified`. | PROVEN — kernel; `s.f` pin |
 | C-007 | Errors are `Error::Analysis` with tokens `[DYNAMIC_FLATTEN_NAME_COLLISION]`, `[DYNAMIC_FLATTEN_MAX_DEPTH]`, `[DYNAMIC_FLATTEN_EMPTY_STRUCT]`, `[DYNAMIC_FLATTEN_UNSUPPORTED_ELEMENT]`. | PROVEN |
-| C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + two-path spawn (`_spawn_preserving_identity` iff ordered engine field names unchanged, else `_spawn`). | PROVEN |
+| C-008 | Facade is type-gates + `_plan().dynamic_flatten(...)` + two-path spawn (`_spawn_preserving_identity` iff ordered engine field names unchanged, else `_spawn`). | PROVEN — still `_plan()`; `_inner` revert reds `test_mapinarrow_dynamic_flatten_materializes_bridge` |
 | C-009 | Python tests remain the facade contract; octo C1/C2 added native-kernel docstring, list-of-map, dotted-Unnest, empty-struct, and tightened token-regex pins. | PROVEN |
 | C-010 | `empty_as_null` is on `DynamicFlattenOptions` (omitted from the API sketch; required by the facade contract). | PROVEN |
 | C-011 | `core.py` ceiling ratcheted DOWN (7350 → 7225; measured 7196 via `splitlines()` at HEAD; C3-CL-001's 7192 was true at octo C3 `1627e46`; H1 spawn net +4. Ceiling unchanged. C3 auditor 7191 was off-by-one vs last line). | PROVEN |
@@ -53,6 +53,14 @@ H1 two-path spawn (filed finding: already-flat `dynamicFlatten` dropped identity
 |---|---|
 | `test_already_flat_h1_join_preserves_display_overlay` | Already-flat H1 join keeps Spark-legal duplicate display names, `to_arrow` overlay, and origin-qualified `select(left["b"])`. Reverting the preserve branch reds this. |
 | `test_expanding_h1_flatten_drops_stale_overlay` | One-field struct expand (`payload{x}` → `payload_x`, count-stable) does **not** restuck parent display names. Always-preserve reds this. |
+
+mapInArrow `_plan()` seam (filed finding: flatten of uncached MIA via raw `_inner`
+is an already-flat no-op over the empty placeholder; child has no `_map_bridge`):
+
+| Pin | Claim |
+|---|---|
+| `test_mapinarrow_dynamic_flatten_materializes_bridge` | Already-flat doubling MIA + `dynamicFlatten()` has UDF rows (not 0). Parent `_map_bridge` kept. Revert to `_inner.dynamic_flatten` reds this. createDataFrame flatten stays green. |
+| `test_mapinarrow_nested_dynamic_flatten_materializes_bridge` | UDF `payload STRUCT<x: BIGINT>` + flatten yields `payload_x` values, not 0 rows. Same `_inner` revert. |
 
 ---
 
@@ -93,7 +101,7 @@ H1 two-path spawn (filed finding: already-flat `dynamicFlatten` dropped identity
 |---|---|
 | `cargo test -p repark-core dynamic_flatten` | 0 (42 passed; dirty-list null-parent pin) |
 | `make verify` | 0 (R-S3-H1) |
-| pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (43 passed; R-S3 two-path spawn pins) |
+| pytest `python/repark/tests/test_dynamic_flatten.py` | 0 (45 passed; R-S3 two-path spawn + MIA `_plan()` pins) |
 
 ---
 
@@ -228,6 +236,23 @@ Unnest would emit extra rows.
 | ID | Disposition | Pin / evidence |
 |---|---|---|
 | R-S1-list-null-parent | REMEDIATED | `null_parent_dirty_list_child_is_null_not_exploded`. Mutant: skip CASE for List fields. Production `null_safe_field` unchanged (type-agnostic CASE). |
+
+---
+
+## 13. S1 review (mapInArrow flatten `_plan` vs `_inner`)
+
+Filed finding: `dynamicFlatten` correctly calls `self._plan().dynamic_flatten(...)`,
+but nothing reds a revert to raw `_inner`. Uncached `mapInArrow` leaves `_inner` as
+an empty schema-only MemTable; flatten of that placeholder is an already-flat no-op
+and a child `_spawn` has no `_map_bridge`, so actions return zero rows while parent
+collect still re-runs the UDF. Ordinary `createDataFrame` flatten tests stay green
+(`_inner == _plan()`). Production is unchanged (still `_plan()`); this is a pin gap.
+
+| ID | Disposition | Pin / evidence |
+|---|---|---|
+| R-S1-mia-plan | REMEDIATED | `test_mapinarrow_dynamic_flatten_materializes_bridge` (already-flat doubling). Mutant: `self._inner.dynamic_flatten(...)` → 0 rows. |
+| R-S1-mia-nested | REMEDIATED | `test_mapinarrow_nested_dynamic_flatten_materializes_bridge` (`payload_x` values, not 0 rows). |
+| C-008 | PROVEN | still `_plan().dynamic_flatten(...)` + two-path spawn. New pin reds the `_inner` revert. |
 
 ---
 

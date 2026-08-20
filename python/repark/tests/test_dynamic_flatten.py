@@ -164,6 +164,108 @@ def test_expanding_h1_flatten_drops_stale_overlay(spark: ReparkSession) -> None:
 
 
 # ==================================================================================================
+# mapInArrow _plan() seam
+# ==================================================================================================
+
+
+def test_mapinarrow_dynamic_flatten_materializes_bridge(spark: ReparkSession) -> None:
+    """mapInArrow → dynamicFlatten materializes the bridge (UDF rows, not 0).
+
+    Uncached ``mapInArrow`` leaves ``_inner`` as an empty schema-only MemTable.
+    Flatten of that placeholder is an already-flat kernel no-op (engine field names
+    unchanged; spawn may preserve identity) and a child ``_spawn`` has no
+    ``_map_bridge``, so actions return zero rows while parent collect still re-runs
+    the UDF.
+
+    Reverting ``planned = self._plan()`` / ``planned.dynamic_flatten(...)`` to raw
+    ``self._inner.dynamic_flatten(...)`` reds this (0 rows). Ordinary
+    ``createDataFrame`` flatten tests stay green (``_inner == _plan()``).
+    """
+    calls = {"n": 0}
+
+    def double_id(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+        calls["n"] += 1
+        for batch in batches:
+            ids = [
+                None if value is None else int(value) * 2 for value in batch.column(0).to_pylist()
+            ]
+            names = list(batch.column(1).to_pylist())
+            yield pa.record_batch(
+                [
+                    pa.array(ids, type=pa.int32()),
+                    pa.array(names, type=pa.string()),
+                ],
+                names=["id", "name"],
+            )
+
+    frame = spark.createDataFrame([(1, "a"), (2, "b")], "id INT, name STRING")
+    mapped = frame.mapInArrow(double_id, "id INT, name STRING")
+    # Laziness: schema only — bridge not yet run.
+    assert mapped.columns == ["id", "name"]
+    assert mapped._map_bridge is not None
+
+    flat = mapped.dynamicFlatten()
+    table = flat.to_arrow()
+    # Discriminator: ``_inner`` revert is 0 rows (already-flat no-op over empty MemTable).
+    assert table.num_rows == 2
+    assert table.column_names == ["id", "name"]
+    assert table.schema.field("id").type == pa.int32()
+    assert _is_arrow_string_type(table.schema.field("name").type)
+    assert sorted((row["id"], row["name"]) for row in table.to_pylist()) == [
+        (2, "a"),
+        (4, "b"),
+    ]
+    assert mapped._mia_plan_ready is True
+    # Parent still re-runs on action (bridge kept after plan-child construction).
+    assert mapped._map_bridge is not None
+    parent_n = calls["n"]
+    parent_rows = sorted((row.id, row.name) for row in mapped.collect())
+    assert parent_rows == [(2, "a"), (4, "b")]
+    assert calls["n"] == parent_n + 1  # action re-run (not one-shot pin)
+
+
+def test_mapinarrow_nested_dynamic_flatten_materializes_bridge(
+    spark: ReparkSession,
+) -> None:
+    """mapInArrow nested struct → dynamicFlatten yields ``payload_x`` UDF values, not 0 rows.
+
+    Expanding rewrite (``payload{x}`` → ``payload_x``) still must go through
+    ``_plan()``. Flatten of the empty nested placeholder expands schema but the
+    child has no ``_map_bridge``, so collect is 0 rows on an ``_inner`` revert.
+    """
+    payload_type = pa.struct([("x", pa.int64())])
+
+    def wrap_payload(batches: Iterator[pa.RecordBatch]) -> Iterator[pa.RecordBatch]:
+        for batch in batches:
+            xs = [
+                None if value is None else int(value) * 2 for value in batch.column(0).to_pylist()
+            ]
+            payload = pa.array(
+                [{"x": value} for value in xs],
+                type=payload_type,
+            )
+            yield pa.record_batch([payload], names=["payload"])
+
+    frame = spark.createDataFrame([(10,), (20,)], "x INT")
+    mapped = frame.mapInArrow(wrap_payload, "payload STRUCT<x: BIGINT>")
+    assert mapped.columns == ["payload"]
+    assert mapped._map_bridge is not None
+
+    flat = mapped.dynamicFlatten()
+    table = flat.to_arrow()
+    # Discriminator: ``_inner`` revert expands schema but still 0 rows (no bridge on child).
+    assert table.num_rows == 2
+    assert "payload_x" in table.column_names
+    assert "payload" not in table.column_names
+    assert table.schema.field("payload_x").type == pa.int64()
+    assert sorted(table.column("payload_x").to_pylist()) == [20, 40]
+    assert mapped._mia_plan_ready is True
+    assert mapped._map_bridge is not None
+    parent_xs = sorted(row.payload["x"] for row in mapped.collect())
+    assert parent_xs == [20, 40]
+
+
+# ==================================================================================================
 # Nested struct-in-struct
 # ==================================================================================================
 
