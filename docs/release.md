@@ -1,11 +1,13 @@
 # Release engineering
 
-Documentation only in phase 0: nothing here is wired yet. The release workflow (`release.yml`)
-lands at the **first tagged release** — not before — and publishes via trusted publishing (OIDC)
-on both registries, so no long-lived upload tokens live in the repo or its secrets.
+`release.yml` is **wired and proven**: it fires on `v*` tags and publishes the wheel via trusted
+publishing (OIDC), so no long-lived upload token lives in the repo or its secrets. Which versions
+have shipped is [STATUS.md](../STATUS.md) "Release state" — not restated here. The agent-facing
+runbook for cutting a tag is [`.agent/skills/publish-pypi.md`](../.agent/skills/publish-pypi.md);
+this page is the registry-side contract and the standing deferrals.
 
-Public ≠ released: the API-forever clock starts at the first tagged PyPI release, not when the
-repo went public.
+Public ≠ released: the API-forever clock started at the first tagged PyPI release (2026-08-15),
+not when the repo went public. Pre-1.0, the API can still move between tags.
 
 ## PyPI — trusted publishing (OIDC)
 
@@ -13,7 +15,8 @@ The `repark` project on PyPI publishes via [trusted
 publishing](https://docs.pypi.org/trusted-publishers/): PyPI trusts short-lived OIDC tokens
 minted by GitHub Actions for a specific repo + workflow, so no API token is stored anywhere.
 
-Maintainer setup (registry-side, one-time, done when `release.yml` lands):
+Maintainer setup (registry-side, one-time — **done 2026-08-15**, recorded here so the wiring
+stays auditable):
 
 1. Log in to PyPI as the project owner and open the `repark` project → **Publishing**.
 2. **Add a new publisher** with:
@@ -29,8 +32,7 @@ Maintainer setup (registry-side, one-time, done when `release.yml` lands):
    are only for names that do not exist yet. *(Corrected 2026-08-09; the earlier wording
    described the pending-publisher flow.)*
 
-The publishing job in `release.yml` (when it exists) needs `permissions: id-token: write` on the
-publish job only, and uses `pypa/gh-action-pypi-publish` (SHA-pinned, like every action here).
+The publishing job in `release.yml` needs `permissions: id-token: write` on the publish job only, and uses `pypa/gh-action-pypi-publish` (SHA-pinned, like every action here).
 
 ## crates.io — Trusted Publishing (DEFERRED — structurally blocked)
 
@@ -60,20 +62,28 @@ No registry token is ever stored as a GitHub Actions secret.
   callable. `python -c "import repark.sql"` fails; `release.yml` re-verifies this on every
   tag build (the import smoke fails the release if the alias package ever returns).
 
-No hard blocker remains. The first tag is an owner action: registry-side trusted-publisher
-setup below, then `git tag v<version> && git push origin v<version>`.
+No hard blocker remains, and none has since the first tag. Cutting a tag is an owner action;
+the prepared-and-verified sequence is [`.agent/skills/publish-pypi.md`](../.agent/skills/publish-pypi.md).
 
-## Open items (decide before the first tagged release)
+## Settled at the first tags
 
-- **Wheel matrix** — which platforms/architectures get prebuilt wheels (manylinux x86_64 is the
-  floor; macOS arm64, Windows, musllinux TBD).
-- **abi3** — whether the PyO3 cdylib builds abi3 wheels (one wheel per platform) or per-Python
-  wheels. *(Effectively settled by the v1 pin: `abi3-py312`, one `cp312-abi3` wheel per
-  platform — confirm and close at release; design §4 Q6.)*
-- **Python floor** — the minimum supported Python version at release (≥ 3.12 is the working
-  assumption; confirm at release).
-- **Cadence** — release cadence and versioning policy (pre-1.0 semantics). Version SSOT shape is
-  recorded (design §4 Q6): `dynamic = ["version"]` from the crate version + a wheel-path test —
-  the edit rides the release PR.
-- **Signing / attestation** — PyPI attestations come free with trusted publishing; decide
-  whether to add Sigstore signing for the crates and GitHub release artifacts.
+Each of these was an open question before 2026-08-15 and is now decided by what actually ships.
+They are recorded — not re-opened — so a later change is a deliberate one.
+
+- **abi3 — settled.** One `cp312-abi3` wheel per platform, from the `abi3-py312` PyO3 pin
+  (design §4 Q6). Every shipped tag has produced exactly this.
+- **Python floor — settled at ≥ 3.12**, the direct consequence of the `abi3-py312` pin.
+- **Version SSOT — settled.** `[workspace.package] version` in the root `Cargo.toml`, injected
+  into the wheel by maturin (`dynamic = ["version"]`), with the tag/version consistency check in
+  `release.yml` as the mechanical gate. The bump rides the release PR.
+
+## Open items
+
+- **Wheel matrix** — which platforms/architectures get prebuilt wheels beyond the manylinux
+  x86_64 floor that ships today (macOS arm64, Windows, musllinux TBD).
+- **Cadence** — release cadence and versioning policy remain **unwritten** (pre-1.0 semantics).
+  Practice so far: feature work cuts a minor, fixes cut a patch. Not a rule until it is written
+  here.
+- **Signing / attestation** — PyPI attestations already come free with trusted publishing and
+  are present on the shipped wheels; whether to add Sigstore signing for the crates and GitHub
+  release artifacts is still open.

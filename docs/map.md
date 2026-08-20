@@ -72,9 +72,10 @@ repo.
   pre-check: an existing scratch database is adopted idempotently and keeps its OLD
   `LocationUri`). Corrections carried back from the first green live run, 2026-08-10; the run's
   status itself lives in [../STATUS.md](../STATUS.md).
-- [release.md](release.md) — release engineering (documentation only this phase): PyPI /
-  crates.io trusted publishing setup, bootstrap-token revocation, the first-tag hard blockers
-  (incl. the `repark.sql` re-home gate), open items.
+- [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
+  setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
+  settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
+  the cut-a-tag runbook is [../.agent/skills/publish-pypi.md](../.agent/skills/publish-pypi.md).
 
 ## I want to...
 

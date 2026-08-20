@@ -551,7 +551,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `pyo3::create_exception!` cannot express, and no Rust code raises them — hence Python-side.
   Widening only: `except TypeError`/`ValueError`/`AttributeError` still catches, and a migrated
   `except PySparkException` now catches too. Exception-class hierarchy vs Spark is registry
-  [FA-3](../../../../docs/spark-sql-iceberg-parity.md#fa-3--python-argument-wrappers-subclass-runtimeerror).
+  [FA-3](../../../../../docs/spark-sql-iceberg-parity.md#fa-3--python-argument-wrappers-subclass-runtimeerror).
   A leaf type ships only with ≥1 reachable raise (the Group S no-stubs rule).
 - `session.py` — **getOrCreate reuse path (R-GETORCREATE, 2026-07-28):** a later builder's
   Combine note: `Builder.config` routes conf/map/kv uniformly through
@@ -731,8 +731,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   Optional list* `pattern` uses Spark filterPattern (`*` / `|`;
   Python `re` `\A…\Z` anchors — not Rust `\z`). Non-str args → `PySparkTypeError`. Listing
   divergences rowed as
-  [FA-2](../../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none) /
-  [ST-1](../../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented).
+  [FA-2](../../../../../docs/spark-sql-iceberg-parity.md#fa-2--listdatabases-leaves-description-and-locationuri-as-none) /
+  [ST-1](../../../../../docs/spark-sql-iceberg-parity.md#st-1--show-tables-in-is-unimplemented).
   Pins in `../../tests/test_catalog_surface.py` (incl. isolation + pattern + type pins from
   critic-octo) + `test_time_travel.py` (tt hide).
 - `row.py` — PySpark-compatible `Row` for `DataFrame.collect` (**G-ROW**, live PySpark 4.1.2;
@@ -882,7 +882,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   candidate, and omits Spark's `SQLSTATE: 42704` suffix (no repark error carries SQLSTATE).
   **Disclosed divergences — the refusal covers the bare SQL-string form ONLY, and the
   protected-span list is NOT exhaustive.** Both are registry rows, not restated here:
-  [`docs/spark-sql-iceberg-parity.md`](../../../../docs/spark-sql-iceberg-parity.md) §3 **ID-2**
+  [`docs/spark-sql-iceberg-parity.md`](../../../../../docs/spark-sql-iceberg-parity.md) §3 **ID-2**
   (the spellings that bypass the refusal) and §7 **BL-2** (backticks are not a protected span).
   Each row holds repark's behavior, Spark's, its pin in
   `tests/test_filter_predicate_rewrite.py`, and the rationale; both are re-derived nightly by the
@@ -1266,7 +1266,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Add a window builder (`Window`/`WindowSpec`) method | `window.py` |
 | Add a TA indicator (`repark.ta`) | `ta.py` (+ the kernel + UDF in `repark-ta`) |
 | Add / change the TA serving helper (`with_indicators`) | `ta.py` (TA-2; required `partition`/`order`) |
-| Add ML pipeline / feature / estimator (`repark.ml`) | [ml/map.md](ml/map.md) + [docs/design/python-facade.md](../../../../docs/design/python-facade.md) §4 Q3 + `crates/repark-ml` |
+| Add ML pipeline / feature / estimator (`repark.ml`) | [ml/map.md](ml/map.md) + [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) §4 Q3 + `crates/repark-ml` |
 | Add a Spark cast type object | `types.py` |
 | Add / change an exception type (the error taxonomy) | `errors.py` (+ the `create_exception!` block and `to_py_err` in `crates/repark-python/src/lib.rs`) |
 | Change `Row` (collect result / field access / asDict) | `row.py` (G-ROW pins in `tests/test_row.py`) |
@@ -1275,7 +1275,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 ## Pointers
 
 - Up: [../../map.md](../../map.md)
-- Native module: [../../../../crates/repark-python/map.md](../../../../crates/repark-python/map.md).
+- Native module: [../../../../../crates/repark-python/map.md](../../../../../crates/repark-python/map.md).
 
 ## Debug
 

@@ -26,7 +26,7 @@ Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`
 
 ## Pointers
 
-Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../../../docs/design/python-facade.md) §4 Q3.
+Up: [../map.md](../map.md). Design: [docs/design/python-facade.md](../../../../../../../docs/design/python-facade.md) §4 Q3.
 
 ## Debug
 

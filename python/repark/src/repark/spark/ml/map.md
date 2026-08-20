@@ -8,7 +8,7 @@ native estimators (M3), delegated backends + tuning (M4).
 **Rust rule:** feature `fit` = session queries; estimator `fit` = multi-pass Rust Arrow
 stream (params only); `transform` = plan expressions; Python never trains / never caches
 training rows — **except** M4 `repark.ml.ext` (optional external lib on `to_arrow()`;
-see [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) §4 Q3).
+see [docs/design/python-facade.md](../../../../../../docs/design/python-facade.md) §4 Q3).
 
 ## Contents
 
@@ -46,12 +46,12 @@ see [docs/design/python-facade.md](../../../../../docs/design/python-facade.md) 
 ## Pointers
 
 Up: [../map.md](../map.md). Phase-3 scope of `repark-ml` (crate + facade package):
-[docs/design/python-facade.md](../../../../../docs/design/python-facade.md) §4 Q3.
+[docs/design/python-facade.md](../../../../../../docs/design/python-facade.md) §4 Q3.
 Layout / fit-rule / divergence facts live in-module (`linalg.py`, `base.py`,
 `regression.py`, …) — not in that design record.
 Oracles: `test_ml_skeleton_oracle.py`, `test_ml_feature_oracle.py`, `test_ml_estimators_oracle.py`,
 `test_ml_boost_oracle.py` (M4).
-Campaign: [phase-3-python-facade.md](../../../../../docs/history/port-v2/phase-3-python-facade.md).
+Campaign: [phase-3-python-facade.md](../../../../../../docs/history/port-v2/phase-3-python-facade.md).
 
 ## Debug
 

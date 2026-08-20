@@ -199,7 +199,7 @@ therefore has a precondition it does not itself satisfy: the predecessor's fix e
   > future-drop are deliberately outside it (`PinnedViews` carries no `Drop` impl — it would have
   > to own a `SessionContext` clone — and neither source exists today: panics are banned in prod
   > and the PyO3 facade drives this via `block_on`). The error-path half of the sentence IS
-  > delivered and pinned. Decision D-1 + evidence: [../task/h1b-ledger.md](../task/h1b-ledger.md).
+  > delivered and pinned. Decision D-1 + evidence: [../task/h1b-ledger.md](../docs/history/hardening-h1/h1b-ledger.md).
 - **Pins on both doors and the facade**: an ephemeral view created by a time-travel rewrite is gone
   after the statement completes, and gone after the statement *fails*.
 - **Move the issue's STATUS row** from "Known correctness issues" to fixed in the same PR, and

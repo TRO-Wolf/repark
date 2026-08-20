@@ -69,7 +69,7 @@ rather than a design question.
 > exactly the part that ported. (b) "Every exit path" overstates what either door does or intends:
 > the guarantee is "every `?` / `return` path", with unwind and future-drop deliberately excluded
 > (no `Drop` impl; neither source exists today). Evidence and decisions:
-> [../../task/h1b-ledger.md](../../task/h1b-ledger.md).
+> [../history/hardening-h1/h1b-ledger.md](../history/hardening-h1/h1b-ledger.md).
 
 ### 2.2 The verification surface, as it actually is
 
