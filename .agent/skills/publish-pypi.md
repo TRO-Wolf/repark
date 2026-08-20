@@ -15,7 +15,10 @@ agent prepares and verifies; it does not merge and it does not self-approve.
 
 - The release gate in [STATUS.md](../../STATUS.md) is satisfied and the owner has said "release".
 - `main` is green and your working tree sits on a fresh `origin/main`.
-- The version to cut is decided (pre-1.0 semantics; see docs/release.md "Cadence").
+- The version to cut is decided — minor for a feature or any API move, patch for fixes and perf
+  only, and a patch never breaks. The rule (and what a "break" is) is
+  [docs/release.md](../../docs/release.md) "Cadence and versioning (pre-1.0)"; this runbook
+  states no version policy of its own.
 
 ## 1. The release PR (precedent shape — four files, nothing else)
 
@@ -62,8 +65,10 @@ docs/release.md. The pipeline publishes the wheel only.
 
 ## 4. Verify on the registry, then close out
 
-1. `https://pypi.org/pypi/repark/json` — the latest version equals the tag and the wheel
-   filename is `repark-<version>-cp312-abi3-manylinux…`.
+1. `https://pypi.org/simple/repark/` — the wheel is listed and its filename is
+   `repark-<version>-cp312-abi3-manylinux…`. The simple index is what `pip` resolves against,
+   so it is the check that matters; `https://pypi.org/pypi/repark/<version>/json` gives the
+   same answer with upload time and size.
 2. Run the [compact-context-docs](compact-context-docs.md) ritual so STATUS.md and every doc
    that names release state reflect the shipped tag.
 
@@ -76,3 +81,7 @@ docs/release.md. The pipeline publishes the wheel only.
   run finished instead of retrying.
 - The lock delta drifting beyond the nine member lines means `cargo update` pulled dependency
   churn — regenerate offline, never ship extra churn in a release PR.
+- The **aggregate** `https://pypi.org/pypi/repark/json` endpoint is CDN-cached and can still
+  report the *previous* version for minutes after a successful publish (seen at v0.5.0). That is
+  cache lag, not a failed upload — check the simple index or the version-specific JSON endpoint
+  before concluding anything went wrong, and never re-run a publish on this evidence.
