@@ -161,6 +161,9 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
+**The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
+(rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
+
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **next work
   group, not yet started**). Four Python rules the owner stated, now written into the contract:
   types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
@@ -191,6 +194,12 @@ history-rewrite; provenance and the options weighed:
     not pass. Several seeded rows are expected to end as pragmas rather than as lifts — the signal
     handlers in the two bench runners, the `udtf` decorator's builder, and the per-type verifier in
     `types.py`, whose returned closure IS the function's product.
+  - **Sequenced** in [briefs/next-sequence.md](briefs/next-sequence.md) as PYC-1 (the two
+    DataFrame modules, 35 of the 66 nested defs), PYC-2 (the remaining 14 shipped, several of which
+    should end as pragmas rather than lifts), PYC-3 (the two shipped `dataclass` containers, where
+    the added-validation hazard is real because `merge.py`'s records come from a public builder
+    API), PYC-4 (the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores), and
+    PYC-5 (close, including re-measuring the guard's hook cost against its budget).
   - **Rationale and the arming method are a portable skill**,
     [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for

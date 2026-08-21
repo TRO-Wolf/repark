@@ -10,6 +10,14 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
+- [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
+  ordered queue across three open tracks (format-v3, the PYC conventions burn-down, the held
+  maintenance units) plus the A13 write-path item, with the reasoning for the order rather than
+  just the order — why V3-1 leads, why PYC does not lead despite being freshly measured, why MW-4
+  preempts everything the moment OD-3 lands, and why A13 sits last while its guard holds. Carries
+  the PYC unit definitions and the two hazards a pure-refactor campaign has to name in advance.
+  Unlike the campaign slates below, it is rolling: a unit leaves when it merges.
+
 - [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW slate (2026-08-21):**
   one invariant (no refusal becomes silent), the per-unit contract, the destructive-surface
   discipline MW-3 inverts its defaults for, and the load-bearing reason the six units run in the
