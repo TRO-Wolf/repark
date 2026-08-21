@@ -75,7 +75,7 @@ repo.
 - [release.md](release.md) — release engineering (wired and proven): PyPI trusted-publishing
   setup, bootstrap-token revocation, the structural crates.io deferral, what the first tags
   settled, and the still-open items. Which versions shipped is [../STATUS.md](../STATUS.md);
-  the cut-a-tag runbook is [../.agent/skills/publish-pypi.md](../.agent/skills/publish-pypi.md).
+  the cut-a-tag runbook is [../.agent/skills/publish-pypi/SKILL.md](../.agent/skills/publish-pypi/SKILL.md).
 
 ## I want to...
 

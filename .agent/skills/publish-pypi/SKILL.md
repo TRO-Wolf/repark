@@ -1,11 +1,26 @@
+---
+name: publish-pypi
+description: >-
+  Cut a versioned RePark release and publish the wheel to PyPI. Records the
+  proven sequence every shipped tag has followed: the four-file release PR
+  (Cargo.toml, Cargo.lock, STATUS.md, root map.md), the squash tree-equality
+  check that is the only guard against unreviewed content reaching a tag, the
+  annotated tag, the release.yml pipeline and its owner-approved deployment
+  gate, and registry verification. Use this skill when the user asks to cut a
+  release, tag a version, ship a wheel, or publish to PyPI. Do NOT use it to
+  decide WHETHER to release — that gate lives in STATUS.md and the go/no-go is
+  the owner's. The merge, the deployment approval, and the go/no-go are owner
+  actions; an agent prepares and verifies.
+---
+
 # Skill: publish-pypi — tag a release and publish the wheel
 
 An agent-facing runbook for cutting a versioned release to PyPI. It records the **proven
 sequence** (the shape every shipped tag has followed); it defines no policy. On any conflict,
-the spine wins: [AGENTS.md](../../AGENTS.md) (precedence, hygiene, gates),
-[docs/release.md](../../docs/release.md) (registry setup, crates.io deferral),
-[.github/workflows/release.yml](../../.github/workflows/release.yml) (the pipeline itself),
-and [STATUS.md](../../STATUS.md) (whether a release gate is even open).
+the spine wins: [AGENTS.md](../../../AGENTS.md) (precedence, hygiene, gates),
+[docs/release.md](../../../docs/release.md) (registry setup, crates.io deferral),
+[.github/workflows/release.yml](../../../.github/workflows/release.yml) (the pipeline itself),
+and [STATUS.md](../../../STATUS.md) (whether a release gate is even open).
 
 **Owner actions are owner actions.** The squash-merge of the release PR, the approval of the
 `release` deployment environment, and the go/no-go itself belong to the repository owner. An
@@ -13,7 +28,7 @@ agent prepares and verifies; it does not merge and it does not self-approve.
 
 ## 0. Preconditions
 
-- The release gate in [STATUS.md](../../STATUS.md) is satisfied and the owner has said "release".
+- The release gate in [STATUS.md](../../../STATUS.md) is satisfied and the owner has said "release".
 - `main` is green and your working tree sits on a fresh `origin/main`.
 - The version to cut is decided (pre-1.0 semantics; see docs/release.md "Cadence").
 
@@ -64,7 +79,7 @@ docs/release.md. The pipeline publishes the wheel only.
 
 1. `https://pypi.org/pypi/repark/json` — the latest version equals the tag and the wheel
    filename is `repark-<version>-cp312-abi3-manylinux…`.
-2. Run the [compact-context-docs](compact-context-docs.md) ritual so STATUS.md and every doc
+2. Run the [compact-context-docs](../compact-context-docs/SKILL.md) ritual so STATUS.md and every doc
    that names release state reflect the shipped tag.
 
 ## Gotchas (each has bitten a real release)

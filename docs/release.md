@@ -3,7 +3,7 @@
 `release.yml` is **wired and proven**: it fires on `v*` tags and publishes the wheel via trusted
 publishing (OIDC), so no long-lived upload token lives in the repo or its secrets. Which versions
 have shipped is [STATUS.md](../STATUS.md) "Release state" — not restated here. The agent-facing
-runbook for cutting a tag is [`.agent/skills/publish-pypi.md`](../.agent/skills/publish-pypi.md);
+runbook for cutting a tag is [`.agent/skills/publish-pypi/SKILL.md`](../.agent/skills/publish-pypi/SKILL.md);
 this page is the registry-side contract and the standing deferrals.
 
 Public ≠ released: the API-forever clock started at the first tagged PyPI release (2026-08-15),
@@ -63,7 +63,7 @@ No registry token is ever stored as a GitHub Actions secret.
   tag build (the import smoke fails the release if the alias package ever returns).
 
 No hard blocker remains, and none has since the first tag. Cutting a tag is an owner action;
-the prepared-and-verified sequence is [`.agent/skills/publish-pypi.md`](../.agent/skills/publish-pypi.md).
+the prepared-and-verified sequence is [`.agent/skills/publish-pypi/SKILL.md`](../.agent/skills/publish-pypi/SKILL.md).
 
 ## Settled at the first tags
 

@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-20._
+_Last updated: 2026-08-21._
 
 ## Release state
 
@@ -214,6 +214,64 @@ history-rewrite; provenance and the options weighed:
     own answer back as if it were Spark's** and was checked against the oracle before the pin was
     committed — the exact failure `docs/testing.md` names, caught one step before it would have
     been pinned as truth.
+
+- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; four of six units merged). Merge-on-read
+  was production-grade as a *write* path and fenced off as an *operational* one: the maintenance
+  procedures refused on exactly the catalogs holding production data. Design:
+  [docs/design/iceberg-maintenance-wave.md](docs/design/iceberg-maintenance-wave.md); slate:
+  [briefs/iceberg-maintenance-wave.md](briefs/iceberg-maintenance-wave.md); charter:
+  [task/mw-0-charter-ledger.md](task/mw-0-charter-ledger.md).
+  - **Delivered:** MW-0 the measured charter ([#195](https://github.com/TRO-Wolf/repark/pull/195)),
+    MW-1 the fence lifted for both catalog policies plus the expire over-count
+    ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`
+    wired and the last omitted Spark column closed
+    ([#197](https://github.com/TRO-Wolf/repark/pull/197)), MW-3 `remove_orphan_files`
+    ([#198](https://github.com/TRO-Wolf/repark/pull/198)). **Five procedures now run through
+    `CALL`, and no procedure omits a Spark column.**
+  - **The baseline this has to move** (MW-0, measured): ten sequential MERGEs into a v2
+    merge-on-read table grow delete files one per merge and never reclaim them, and scan cost
+    tracks that growth **2.1× from merge 2 to merge 10 on a table whose contents never change**.
+    MW-5 re-runs the identical demo and records the delta.
+  - **MW-4 is blocked on the owner.** It is the campaign's only real-catalog evidence — everything
+    above is unit-test evidence, and the existing live evidence covers copy-on-write only. It
+    needs **OD-3**: scoped delete on the tier-2 acceptance role's scratch prefix, which the owner
+    executes. The campaign never touches IAM itself. MW-5 (registry close, re-measured delta,
+    scorecard) is queued behind it.
+  - **Four divergences registered rather than forced** — `MOR-1`, `MOR-2`, `ORPHAN-1`, `ORPHAN-2`
+    in [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Two of them
+    (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert Spark's defaults on
+    the one procedure with no undo, under owner decision **OD-2**.
+  - **MW-3 surfaced a data-loss vector and guarded it rather than fixing it mid-unit.** The
+    in-memory catalog's namespace-without-location fallback is keyed by name alone, so two
+    sessions sharing `mem.ns.events` share one directory; orphan cleanup there could delete
+    another session's live files. The procedure now refuses that root. The underlying write-path
+    behaviour is roadmap **A13** in
+    [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), not closed.
+
+- **Format-v3 track** (roadmap **A12** in
+  [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), owner-scheduled
+  2026-08-21; audit merged, no unit started).
+  Design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
+  [task/v3-0-charter-ledger.md](task/v3-0-charter-ledger.md).
+  - **V3-0** ([#199](https://github.com/TRO-Wolf/repark/pull/199)) ran the surfaces A12 had only
+    read. Two claims were too pessimistic: **reading** a Spark-written v3 table with Puffin
+    deletion vectors is already correct (857 rows, `sum(id) = 428429` — Spark's numbers exactly),
+    and **appending** is correct including the row lineage v3 mandates, round-tripped through
+    Spark. Neither had been claimed.
+  - **One surface was wrong and is now guarded.** `rewrite_data_files` had no format-version check
+    and reassigned every row's `_row_id` while returning correct rows, where Spark carries lineage
+    through unchanged. Reachable on a v3 table already sitting in a Glue catalog, which is the
+    drop-in case. Registry row `V3-LINEAGE-1` — **stricter than Spark on purpose, reversible in
+    one line** if the owner would rather match it. The underlying fix is fork work.
+  - **Queued, not forced:** `V3-DANGLE-1` (made unreachable by the guard), `V3-ROWID-1` (V3-4
+    owns row lineage), `V3-ADOPT-1` (Hadoop-convention metadata pointers read but do not write).
+    `B-MOR-3`'s repark half is now measured but still needs a CI-runnable fixture, so it stays
+    queued rather than promoted.
+  - **Next is V3-1** — wire `CALL system.register_table` (the addressing question is settled:
+    adoption, which the fork implements for memory and Glue and S3 Tables refuses cleanly) and
+    land the cross-engine fixture. It can run alongside MW; **V3-2 and later want MW closed
+    first**, so a second format version is not introduced underneath the campaign's only
+    real-catalog evidence.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
