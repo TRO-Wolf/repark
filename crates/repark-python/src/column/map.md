@@ -85,6 +85,7 @@ without enabling PyO3 `multiple-pymethods`.
 |---|---|
 | `cast` / `try_cast` rejects a type string | vocabulary lives in `expr_build.rs` `parse_data_type` |
 | window frame bound wrong | `window.rs` `spark_window_frame` / `spark_offset_to_bound` |
+| a window with no `ORDER BY` errors, or answers where Spark refuses | `window.rs` `unordered_window_frame` — aggregates get Spark's whole-partition ROWS frame, window UDFs get Spark's "requires window to be ordered" (LRS-7) |
 | `sec`/`csc` at zero is NULL not Inf | `function_dispatch.rs` `sec`/`csc` arms + `expr_build.rs` `reciprocal_trig_or_inf` |
 | `call_scalar` unknown name / arity | `function_dispatch.rs` `call_scalar_expr` |
 | `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door |

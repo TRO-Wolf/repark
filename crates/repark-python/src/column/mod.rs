@@ -50,7 +50,7 @@ use expr_build::{
 use function_dispatch::{
     binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
 };
-use window::spark_window_frame;
+use window::{spark_window_frame, unordered_window_frame};
 
 /// ===========================================================================================
 /// The Python-facing `Column` (`repark._native.PyColumn`).
@@ -739,6 +739,12 @@ impl PyColumn {
                     column.expr().sort(is_ascending, nulls_first)
                 })
                 .collect();
+            // The frame decision reads the built function, so take it before the builder moves it.
+            let unordered_frame = order_by
+                .is_empty()
+                .then(|| unordered_window_frame(&window_expr))
+                .transpose()
+                .map_err(crate::AnalysisException::new_err)?;
             let mut builder = window_expr.partition_by(partitions).order_by(orderings);
             if let Some(units_text) = frame_units.as_deref() {
                 let start = frame_start.ok_or_else(|| {
@@ -748,6 +754,8 @@ impl PyColumn {
                     .ok_or_else(|| PyValueError::new_err("over frame_units requires frame_end"))?;
                 let frame =
                     spark_window_frame(units_text, start, end).map_err(PyValueError::new_err)?;
+                builder = builder.window_frame(frame);
+            } else if let Some(frame) = unordered_frame {
                 builder = builder.window_frame(frame);
             }
             let windowed = builder.build().map_err(|err| {

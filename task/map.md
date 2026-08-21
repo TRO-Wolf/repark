@@ -39,6 +39,12 @@ not this directory.
   oracle **refuted two of the three fixes the review suggested** — accepting `xxhash64()` and
   rejecting positional-only parameters would both have shipped divergences — so the refutations are
   pinned, not just recorded.
+- [lrs-7-unordered-window-ledger.md](lrs-7-unordered-window-ledger.md) — **LRS-7 (2026-08-20):**
+  `count(v).over(Window.partitionBy("k"))` — ordinary PySpark — failed with a DataFusion internal
+  error for every column. Found by an LRS-1 pin whose only job was to prove a different fix did not
+  over-fire. The first version of the fix would have made five ordering-requiring functions answer
+  where Spark refuses; the oracle caught it, and the split is now read off the function's kind
+  rather than a name list.
 - [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
   `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
   three new `map.md` files, which were written rather than waived.

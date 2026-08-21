@@ -2050,6 +2050,11 @@ NOT in that file is a defect, not a decision.
   Three of the seven pins hold behaviour the Critic round wanted CHANGED and the oracle said was
   already right — a pin is how a refuted suggestion stops coming back.
 
+- `test_lrs7_unordered_window.py` — **LRS-7 (2026-08-20):** the unordered-window default frame.
+  Eleven window functions measured on both sides; every expected value is Spark's own answer. One
+  pin guards the interaction with the round-2 unsigned-count CAST, which `over` peels and re-applies
+  around the code this unit changed.
+
 ## I want to...
 
 | ...do this | go to |
