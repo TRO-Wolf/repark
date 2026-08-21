@@ -2060,6 +2060,13 @@ NOT in that file is a defect, not a decision.
   new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
   unsigned, so closing the row reds it on purpose.
 
+- `test_sem4_regex_group_index_message.py` — **SEM-4 (2026-08-21):** the group-index refusal now
+  raises Spark's own `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`, one condition covering both a
+  negative and an over-large index where repark had two messages of its own; and the four regexp
+  kernels name themselves in their planning errors instead of borrowing a hard-coded
+  `regexp_count` / `regexp_instr`. Message-only — the two legal-index assertions are the control
+  that proves the accepting path is untouched.
+
 - `test_lrs6_regexp_divergences.py` — **LRS-6 (2026-08-20):** pins that CODIFY today's behavior
   for registry rows `RE-1` and `RE-2`, so the unit that fixes either turns its pin red on purpose.
   `RE-1` is the sweep's highest-value find: the two-argument `regexp_extract_all` returns group 0

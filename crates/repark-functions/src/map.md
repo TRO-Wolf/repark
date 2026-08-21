@@ -19,7 +19,11 @@ sit beside `collection/`.
   stringify. Ledger: `task/fn-gt1-ledger.md`.
 - `spark_regexp.rs` — **GT1-FIX A1/A2 / R3 / R4-1:** Spark `regexp_count` /
   `regexp_instr` (Java find-loop; positional mid-surrogate probe, not
-  `is_match("")`; Dictionary(_, Utf8) coerce).
+  `is_match("")`; Dictionary(_, Utf8) coerce). **SEM-4 (2026-08-21):**
+  `validate_group_index` carries Spark's `REGEX_GROUP_INDEX` condition (one
+  message for negative and over-large alike); `extract_rows` passes the index
+  raw because the bound needs the compiled regex; `coerce_regexp_args` takes
+  the caller's name. Ledger: `task/sem-4-regexp-messages-ledger.md`.
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line
