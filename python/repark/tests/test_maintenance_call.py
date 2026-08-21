@@ -210,17 +210,28 @@ def test_rewrite_data_files_preserves_multiset_and_reduces_files(spark: ReparkSe
     assert n_files_before >= 5
 
     result = spark.sql("CALL mem.system.rewrite_data_files(table => 'ns.compact')").to_arrow()
+    # MW-2 closed the fifth column. Spark's five, in Spark's order, all non-nullable — measured
+    # on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
     assert _schema_names(result) == [
         "rewritten_data_files_count",
         "added_data_files_count",
         "rewritten_bytes_count",
         "failed_data_files_count",
+        "removed_delete_files_count",
     ]
     assert result.schema.field("rewritten_data_files_count").type == pa.int32()
     assert result.schema.field("added_data_files_count").type == pa.int32()
     assert result.schema.field("rewritten_bytes_count").type == pa.int64()
+    assert result.schema.field("failed_data_files_count").type == pa.int32()
+    assert result.schema.field("removed_delete_files_count").type == pa.int32()
+    for field in result.schema:
+        assert not field.nullable, f"Spark declares {field.name} non-nullable"
     rewritten = result.column("rewritten_data_files_count")[0].as_py()
     assert rewritten >= 2
+    # Spark reports 0 here whenever `remove-dangling-deletes` is off, and its default is off
+    # (`RewriteDataFiles.REMOVE_DANGLING_DELETES_DEFAULT`). This procedure refuses the options
+    # map, so the non-default path is unreachable and the zero is a real count.
+    assert result.column("removed_delete_files_count")[0].as_py() == 0
 
     after = spark.sql(f"SELECT id, name FROM {table} ORDER BY id").to_arrow()
     assert _arrow_ids(after) == before_ids

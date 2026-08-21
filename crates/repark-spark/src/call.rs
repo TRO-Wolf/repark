@@ -1,7 +1,7 @@
 //! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router (I3 /
 //! R-MAINTENANCE-CALL).
 //!
-//! v1 ships **exactly three** procedures that the owned fork already provides:
+//! Four procedures, each backed by an action the owned fork already provides:
 //!
 //! 1. `expire_snapshots` — fork R133 `Transaction::expire_snapshots` +
 //!    `ExpireSnapshotsCleanup::commit_and_clean`
@@ -10,7 +10,10 @@
 //! 2. `rewrite_data_files` — fork R135 bin-pack
 //!    (`crates/iceberg/src/maintenance/rewrite_data_files.rs`
 //!    `RewriteDataFiles::new(table).execute(&catalog)`).
-//! 3. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
+//! 3. `rewrite_position_delete_files` — fork R136
+//!    (`crates/iceberg/src/maintenance/rewrite_position_delete_files.rs`
+//!    `RewritePositionDeleteFiles::new(table).execute(&catalog)`), wired by MW-2 on 2026-08-21.
+//! 4. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
 //!    (`crates/iceberg/src/transaction/manage_snapshots.rs:164-167`).
 //!
 //! **Every catalog policy** (MW-1, 2026-08-21). The v1 surface refused Glue and S3 Tables as a
@@ -29,13 +32,18 @@
 //! "CALL supports passing arguments by name (recommended) or by position."
 //! <https://iceberg.apache.org/docs/latest/spark-procedures/#usage>
 //!
-//! **Result rows:** column names/types pin to Spark's documented output schema where the
-//! fork exposes an honest metric; divergence-pin (name differ / absent-with-disclosure)
-//! where it does not. Counts are **never fabricated**.
+//! **Result rows:** every procedure here returns Spark's full column list, in Spark's order, with
+//! Spark's types and nullability, each value measured against a live oracle rather than inferred.
+//! Counts are **never fabricated**: a column the engine cannot source honestly does not get a
+//! made-up number. As of MW-2 no procedure omits a Spark column.
 //!
 //! **Out of scope (loud):**
-//! - `remove_orphan_files` — fork-queue residual (do not hand-roll file listing).
+//! - `remove_orphan_files` — MW-3 (do not hand-roll file listing; the fork's `DeleteOrphanFiles`
+//!   is the surface).
 //! - rewrite `strategy` / `sort_order` other than default bin-pack — R135 deferred list.
+//! - the `options` map and the `where` filter on both rewrite procedures.
+//! - format-v3 deletion-vector maintenance — `rewrite_position_delete_files` REFUSES a table
+//!   holding live Puffin deletion vectors rather than reporting a partial result.
 //! - any other `system.*` procedure.
 
 use std::collections::HashMap;
@@ -48,8 +56,8 @@ use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     Expr, Function, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
 };
-use iceberg::maintenance::RewriteDataFiles;
-use iceberg::spec::DataContentType;
+use iceberg::maintenance::{RewriteDataFiles, RewritePositionDeleteFiles};
+use iceberg::spec::{DataContentType, DataFileFormat};
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
@@ -63,6 +71,7 @@ use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, r
 const SUPPORTED_PROCEDURES: &[&str] = &[
     "expire_snapshots",
     "rewrite_data_files",
+    "rewrite_position_delete_files",
     "rollback_to_snapshot",
 ];
 
@@ -88,6 +97,9 @@ pub async fn execute_call(
         "expire_snapshots" => execute_expire_snapshots(ctx, catalog, &catalog_name, &args).await,
         "rewrite_data_files" => {
             execute_rewrite_data_files(ctx, catalog, &catalog_name, &args).await
+        }
+        "rewrite_position_delete_files" => {
+            execute_rewrite_position_delete_files(ctx, catalog, &catalog_name, &args).await
         }
         "rollback_to_snapshot" => {
             execute_rollback_to_snapshot(ctx, catalog, &catalog_name, &args).await
@@ -431,6 +443,16 @@ fn count_as_i32(count: usize) -> Result<i32> {
     })
 }
 
+/// Byte totals arrive from the fork as `u64`; Spark's column is a signed `bigint`. Refuse rather
+/// than saturate, for the same reason the count helpers do.
+fn bytes_as_i64(bytes: u64) -> Result<i64> {
+    i64::try_from(bytes).map_err(|_| {
+        DataFusionError::Plan(format!(
+            "CALL result byte count {bytes} does not fit i64 (refusing to fabricate MAX)"
+        ))
+    })
+}
+
 // ===========================================================================================
 // expire_snapshots
 // ===========================================================================================
@@ -690,21 +712,30 @@ async fn execute_rewrite_data_files(
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
 
-    // Spark: rewritten_data_files_count (int), added_data_files_count (int),
-    // rewritten_bytes_count (long), failed_data_files_count (int), removed_delete_files_count (int).
-    // Fork exposes the first three. failed is always 0 (partial-progress deferred — honest zero).
-    // removed_delete_files_count is ABSENT (fork does not expose dangling-delete removal here).
-    let rewritten_bytes = i64::try_from(result.rewritten_bytes_count).map_err(|_| {
-        DataFusionError::Plan(format!(
-            "CALL rewrite rewritten_bytes_count {} does not fit i64 (refusing to fabricate MAX)",
-            result.rewritten_bytes_count
-        ))
-    })?;
+    // Spark's five columns, all of them, all non-nullable (MW-2 closed the fifth).
+    //
+    // | Spark column | Source |
+    // |---|---|
+    // | `rewritten_data_files_count` | `result.rewritten_data_files_count` |
+    // | `added_data_files_count` | `result.added_data_files_count` |
+    // | `rewritten_bytes_count` | `result.rewritten_bytes_count` |
+    // | `failed_data_files_count` | always 0 — partial progress is deferred, so nothing can fail |
+    // | `removed_delete_files_count` | always 0 — see below |
+    //
+    // `removed_delete_files_count` counts what Java's RemoveDanglingDeletes sub-action removed.
+    // That sub-action runs only under the `remove-dangling-deletes` option, whose Java default is
+    // false (`RewriteDataFiles.REMOVE_DANGLING_DELETES_DEFAULT`, javap-verified), and this
+    // procedure refuses the options map above — so the non-default path is unreachable here and
+    // the count of removals is genuinely zero. Measured against a live Spark 4.0.1 + Iceberg
+    // 1.10.0 oracle, which reported 0 on every fixture tried, with the option both off AND
+    // explicitly on. This is an honest count of a real quantity, not a placeholder for a number
+    // the engine could not obtain.
     let schema = Arc::new(Schema::new(vec![
         Field::new("rewritten_data_files_count", DataType::Int32, false),
         Field::new("added_data_files_count", DataType::Int32, false),
         Field::new("rewritten_bytes_count", DataType::Int64, false),
         Field::new("failed_data_files_count", DataType::Int32, false),
+        Field::new("removed_delete_files_count", DataType::Int32, false),
     ]));
     let batch = RecordBatch::try_new(
         schema,
@@ -715,8 +746,165 @@ async fn execute_rewrite_data_files(
             Arc::new(Int32Array::from(vec![count_as_i32(
                 result.added_data_files_count,
             )?])),
-            Arc::new(Int64Array::from(vec![rewritten_bytes])),
+            Arc::new(Int64Array::from(vec![bytes_as_i64(
+                result.rewritten_bytes_count,
+            )?])),
             Arc::new(Int32Array::from(vec![0])),
+            Arc::new(Int32Array::from(vec![0])),
+        ],
+    )?;
+    ctx.read_batches(vec![batch])
+}
+
+// ===========================================================================================
+// rewrite_position_delete_files
+// ===========================================================================================
+
+/// Whether a live manifest entry is a Puffin DELETION VECTOR — a format-v3 delete file this
+/// procedure cannot compact.
+///
+/// The rule is exactly the fork collector's skip clause, inverted: a delete entry (position or
+/// equality) whose file format is not Parquet. A deletion vector is file-scoped — one per data
+/// file, never bin-packed across files — so [`RewritePositionDeleteFiles`] skips it by design and
+/// returns it in no count.
+pub(crate) const fn is_deletion_vector(content: DataContentType, format: DataFileFormat) -> bool {
+    !matches!(content, DataContentType::Data) && !matches!(format, DataFileFormat::Parquet)
+}
+
+/// Count the live Puffin deletion vectors in the table's CURRENT snapshot.
+///
+/// Errors propagate. A guard that passes quietly when it could not read the manifests is the same
+/// silent-success failure it exists to prevent, so this walk does not swallow load errors the way
+/// [`classify_content_files`] does — that one is rebuilding counts and degrades to "unclassified",
+/// while this one is deciding whether it is safe to proceed at all.
+pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -> Result<usize> {
+    let metadata = table.metadata();
+    let Some(snapshot) = metadata.current_snapshot() else {
+        return Ok(0);
+    };
+    let file_io = table.file_io();
+    let manifest_list = snapshot
+        .load_manifest_list(file_io, metadata)
+        .await
+        .map_err(iceberg_err)?;
+    let mut vectors = 0;
+    for manifest_file in manifest_list.entries() {
+        let manifest = manifest_file
+            .load_manifest(file_io)
+            .await
+            .map_err(iceberg_err)?;
+        for entry in manifest.entries() {
+            if entry.is_alive() && is_deletion_vector(entry.content_type(), entry.file_format()) {
+                vectors += 1;
+            }
+        }
+    }
+    Ok(vectors)
+}
+
+/// Spark's four-column output, all of it. Measured by EXECUTING the procedure on a live
+/// Spark 4.0.1 + Iceberg 1.10.0 oracle, not read from a constant.
+///
+/// | Spark column | Type | Nullable | Source |
+/// |---|---|---|---|
+/// | `rewritten_delete_files_count` | int | false | `result.rewritten_delete_files_count` |
+/// | `added_delete_files_count` | int | false | `result.added_delete_files_count` |
+/// | `rewritten_bytes_count` | bigint | false | `result.rewritten_bytes_count` |
+/// | `added_bytes_count` | bigint | false | `result.added_bytes_count` |
+///
+/// Nothing is fabricated and nothing is omitted: the fork's `RewritePositionDeleteFilesResult`
+/// mirrors Java's `RewritePositionDeleteFiles$Result` one accessor at a time, so this is the one
+/// procedure whose schema the engine did not have to choose.
+///
+/// **A live Puffin deletion vector refuses.** Format-v3 tables carry deletion vectors instead of
+/// Parquet position deletes, and a vector is file-scoped — never bin-packed — so the fork's action
+/// skips it and returns it in no count. Without a guard this procedure would answer four zeros on
+/// such a table, which reads exactly like "nothing to compact" while every delete file stays put.
+/// See [`count_live_deletion_vectors`].
+///
+/// **`added_delete_files_count` diverges on a file-granularity table** (registry row `MOR-1`).
+/// The fork writes ONE compacted delete file per `(spec, partition)` group; Spark honours
+/// `write.delete.granularity`, whose default is `file`, and writes one per data file. On a table
+/// this engine wrote the two agree, because this engine's own merge-on-read writer is
+/// partition-granularity already. On a table Spark wrote at the default granularity they do not.
+/// The live row set is identical either way — this is file layout, not contents.
+async fn execute_rewrite_position_delete_files(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    args: &CallArgs,
+) -> Result<DataFrame> {
+    args.reject_unknown_named(&["table", "options", "where"])?;
+    // Only `table` is supported positionally; `options` / `where` are named-only deferred, so an
+    // extra positional refuses as excess arity rather than under a misleading argument name.
+    args.reject_excess_positional(1)?;
+    if args.has_named("options") {
+        return Err(DataFusionError::NotImplemented(
+            "CALL rewrite_position_delete_files options map is not supported in v1 — use table \
+             properties / defaults (fork bin-pack planner groups by (spec, partition))"
+                .to_string(),
+        ));
+    }
+    if args.has_named("where") {
+        return Err(DataFusionError::NotImplemented(
+            "CALL rewrite_position_delete_files where filter is not supported in v1 (the fork \
+             exposes RewritePositionDeleteFiles::filter but it is not wired through CALL yet)"
+                .to_string(),
+        ));
+    }
+
+    let table_arg = args.require_string("table", 0)?;
+    let ident = resolve_table_ident(catalog_name, &table_arg)?;
+    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+
+    // Refuse rather than under-report. Without this the procedure returns four zeros on a table
+    // whose delete files are deletion vectors, which reads exactly like "nothing to compact" —
+    // so an operator runs the reclaim procedure forever on a table that never reclaims. Refusing
+    // on ANY live vector, including a table that also holds compactable Parquet position deletes,
+    // is deliberate: this procedure's contract to its caller is the table's position deletes, and
+    // silently doing part of that job is the failure this campaign exists to prevent.
+    let vectors = count_live_deletion_vectors(&table).await?;
+    if vectors > 0 {
+        return Err(DataFusionError::NotImplemented(format!(
+            "CALL rewrite_position_delete_files found {vectors} live Puffin deletion vector(s) on \
+             `{table_arg}` and will not report a partial result. A deletion vector is file-scoped \
+             and is never bin-packed, so this procedure cannot compact one; running anyway would \
+             return counts that silently exclude every vector. Format-v3 deletion-vector \
+             maintenance is not ported (fork R136 scope is V2 Parquet position deletes). This \
+             engine writes neither: it creates tables at format v2 and refuses merge-on-read \
+             writes on v3."
+        )));
+    }
+
+    let result = RewritePositionDeleteFiles::new(table)
+        .execute(catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
+
+    let namespace = crate::namespace_schema_name(ident.namespace());
+    reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
+
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("rewritten_delete_files_count", DataType::Int32, false),
+        Field::new("added_delete_files_count", DataType::Int32, false),
+        Field::new("rewritten_bytes_count", DataType::Int64, false),
+        Field::new("added_bytes_count", DataType::Int64, false),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int32Array::from(vec![count_as_i32(
+                result.rewritten_delete_files_count,
+            )?])),
+            Arc::new(Int32Array::from(vec![count_as_i32(
+                result.added_delete_files_count,
+            )?])),
+            Arc::new(Int64Array::from(vec![bytes_as_i64(
+                result.rewritten_bytes_count,
+            )?])),
+            Arc::new(Int64Array::from(vec![bytes_as_i64(
+                result.added_bytes_count,
+            )?])),
         ],
     )?;
     ctx.read_batches(vec![batch])

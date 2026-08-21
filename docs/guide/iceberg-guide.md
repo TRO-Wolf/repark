@@ -360,19 +360,57 @@ They are also hidden from `SHOW TABLES` and `information_schema` while staying a
 
 ## Maintenance
 
-Three procedures run through `CALL`:
+Four procedures run through `CALL`, each returning Spark's full column list:
 
 ```python
 spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show()
 ```
 
 ```text
-+----------------------------+------------------------+-----------------------+-------------------------+
-| rewritten_data_files_count | added_data_files_count | rewritten_bytes_count | failed_data_files_count |
-+----------------------------+------------------------+-----------------------+-------------------------+
-| 0                          | 0                      | 0                     | 0                       |
-+----------------------------+------------------------+-----------------------+-------------------------+
++----------------------------+------------------------+-----------------------+-------------------------+----------------------------+
+| rewritten_data_files_count | added_data_files_count | rewritten_bytes_count | failed_data_files_count | removed_delete_files_count |
++----------------------------+------------------------+-----------------------+-------------------------+----------------------------+
+| 0                          | 0                      | 0                     | 0                       | 0                          |
++----------------------------+------------------------+-----------------------+-------------------------+----------------------------+
 ```
+
+### Compacting position deletes
+
+On a merge-on-read table every `MERGE`, `UPDATE` and `DELETE` leaves a position-delete file
+behind, and scans get slower as they pile up. `rewrite_position_delete_files` merges them:
+
+```python
+spark.sql(
+    "CALL local.system.rewrite_position_delete_files(table => 'sales.orders')"
+).show()
+```
+
+```text
++------------------------------+--------------------------+-----------------------+-------------------+
+| rewritten_delete_files_count | added_delete_files_count | rewritten_bytes_count | added_bytes_count |
++------------------------------+--------------------------+-----------------------+-------------------+
+| 8                            | 1                        | 12104                 | 2110              |
++------------------------------+--------------------------+-----------------------+-------------------+
+```
+
+The row set is unchanged — compaction rewrites which files mask the deleted rows, never which
+rows are masked. When there is nothing to compact you get four zeros rather than an error.
+
+On a **format-v3** table this refuses instead of running. Those tables carry Puffin deletion
+vectors rather than Parquet position deletes, and a deletion vector is file-scoped, so there is
+nothing to bin-pack. The refusal names how many it found; it does not return zeros and leave you
+thinking the table was already clean. repark writes no v3 delete files itself — it creates tables
+at format v2 and refuses merge-on-read writes on v3 — so this only comes up on a table another
+engine wrote.
+
+Two differences from Spark are worth knowing before you port a maintenance job, and neither
+changes what a query returns:
+
+- repark compacts a group of 2 or more delete files; Spark waits for 5
+  ([MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
+  You get more compaction than Spark would do, not less.
+- repark writes one delete file per partition where Spark's default writes one per data file
+  ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)).
 
 `expire_snapshots` and `rollback_to_snapshot` are the other two, and `expire_snapshots` returns
 Spark's full six-column result:
@@ -410,7 +448,8 @@ Anything else refuses and lists what is supported, rather than pretending:
 ```text
 UnsupportedOperationException: This feature is not implemented: CALL
 system.remove_orphan_files is not supported — do not hand-roll orphan file listing in RePark …
-Supported procedures: expire_snapshots, rewrite_data_files, rollback_to_snapshot.
+Supported procedures: expire_snapshots, rewrite_data_files,
+rewrite_position_delete_files, rollback_to_snapshot.
 ```
 
 ## Listing what is there

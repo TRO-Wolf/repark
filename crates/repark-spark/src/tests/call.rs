@@ -849,3 +849,575 @@ async fn call_still_refuses_an_unknown_catalog() {
         "refusal must name the unknown catalog, got: {message}"
     );
 }
+
+/// MW-2: Spark's four-column `rewrite_position_delete_files` result, in Spark's order,
+/// types and nullability.
+///
+/// Every value here was measured by EXECUTING the procedure on a live Spark 4.0.1 +
+/// Iceberg 1.10.0 oracle. The schema needed no choosing — the fork's
+/// `RewritePositionDeleteFilesResult` mirrors Java's `RewritePositionDeleteFiles$Result` one
+/// accessor at a time.
+fn assert_rpdf_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    let names: Vec<_> = batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            "rewritten_delete_files_count",
+            "added_delete_files_count",
+            "rewritten_bytes_count",
+            "added_bytes_count",
+        ]
+    );
+    let types: Vec<_> = batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.data_type().clone())
+        .collect();
+    assert_eq!(
+        types,
+        vec![
+            DataType::Int32,
+            DataType::Int32,
+            DataType::Int64,
+            DataType::Int64,
+        ],
+        "Spark: two ints then two bigints"
+    );
+    assert!(
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .all(|field| !field.is_nullable()),
+        "Spark declares all four rewrite_position_delete_files columns NON-nullable, unlike \
+         expire_snapshots' six"
+    );
+}
+
+/// Read an `Int32` or `Int64` result column as `i64`, so one helper serves both rewrite
+/// procedures' mixed int/bigint schemas.
+fn call_count(batch: &datafusion::arrow::array::RecordBatch, name: &str) -> i64 {
+    let index = batch.schema().index_of(name).expect("column present");
+    let column = batch.column(index);
+    column
+        .as_any()
+        .downcast_ref::<datafusion::arrow::array::Int32Array>()
+        .map_or_else(
+            || {
+                column
+                    .as_any()
+                    .downcast_ref::<Int64Array>()
+                    .expect("Int32 or Int64 count column")
+                    .value(0)
+            },
+            |array| i64::from(array.value(0)),
+        )
+}
+
+/// Build a merge-on-read table with `data_files` single-row data files, then run `merges`
+/// separate MOR MERGEs, each rewriting one row in a distinct data file. Returns the number of
+/// live position-delete files.
+async fn seed_mor_delete_files(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    data_files: i32,
+    merges: i32,
+) -> usize {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, v STRING) USING iceberg \
+             TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read')"
+        ),
+    )
+    .await;
+    for id in 1..=data_files {
+        run(
+            ctx,
+            catalogs,
+            &format!("INSERT INTO ice.sales.{table} VALUES ({id}, 'v{id}')"),
+        )
+        .await;
+    }
+    for id in 1..=merges {
+        run(
+            ctx,
+            catalogs,
+            &format!(
+                "MERGE INTO ice.sales.{table} AS t USING (SELECT {id} AS id, 'm{id}' AS v) AS s \
+                 ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = s.v"
+            ),
+        )
+        .await;
+    }
+    rows(
+        ctx,
+        catalogs,
+        &format!("SELECT * FROM ice.sales.{table}.files WHERE content = 1"),
+    )
+    .await
+}
+
+/// MW-2: `rewrite_position_delete_files` compacts position deletes and reports Spark's counts.
+///
+/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0, on a table at
+/// `write.delete.granularity = 'partition'` (the granularity this engine's own merge-on-read
+/// writer produces, per `mor2_merge_writes_one_position_delete_per_partition`):
+///
+/// ```text
+/// 8 delete files → rewritten_delete_files_count=8  added_delete_files_count=1
+///                  delete files 8 → 1              rows 72 → 72
+/// ```
+///
+/// The two counts match exactly. The two BYTE columns are asserted as an ordering rather than as
+/// values: they are real parquet sizes, and this engine's writer does not produce byte-identical
+/// files to Spark's. Pinning Spark's 11429/1454 here would be pinning Spark's parquet encoder.
+#[tokio::test]
+async fn call_rewrite_position_delete_files_compacts_like_spark() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let before = seed_mor_delete_files(&ctx, &catalogs, "mor", 8, 8).await;
+    assert_eq!(
+        before, 8,
+        "fixture must strand 8 position-delete files, else the compaction below proves nothing"
+    );
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor").await;
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.mor')",
+    )
+    .await
+    .expect("rewrite_position_delete_files CALL");
+    let batches = result.collect().await.expect("collect rpdf result");
+    let batch = &batches[0];
+    assert_rpdf_schema_is_sparks(batch);
+
+    assert_eq!(
+        call_count(batch, "rewritten_delete_files_count"),
+        8,
+        "Spark rewrote all 8; so must this engine"
+    );
+    assert_eq!(
+        call_count(batch, "added_delete_files_count"),
+        1,
+        "one compacted file per (spec, partition) group — Spark's partition-granularity answer"
+    );
+    let rewritten_bytes = call_count(batch, "rewritten_bytes_count");
+    let added_bytes = call_count(batch, "added_bytes_count");
+    assert!(
+        rewritten_bytes > added_bytes && added_bytes > 0,
+        "compaction must shrink the delete-file footprint and still write something: \
+         rewritten={rewritten_bytes} added={added_bytes}"
+    );
+
+    let after = rows(
+        &ctx,
+        &catalogs,
+        "SELECT * FROM ice.sales.mor.files WHERE content = 1",
+    )
+    .await;
+    assert_eq!(after, 1, "8 live position-delete files became 1");
+    // The correctness half. Compaction rewrites which FILES mask the rows, never WHICH rows are
+    // masked, so the live row set is identical across the call.
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor").await,
+        live_before,
+        "compaction must not change the live row set"
+    );
+}
+
+/// MW-2: nothing to compact is a zero result, not an error.
+///
+/// Oracle — live Spark 4.0.1: on a table with no delete files at all, and on a table with exactly
+/// one, all four columns are `0` and the table is untouched.
+#[tokio::test]
+async fn call_rewrite_position_delete_files_is_a_zero_result_when_there_is_nothing_to_do() {
+    for (table, merges) in [("clean", 0), ("single", 1)] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup(&wh).await;
+        let before = seed_mor_delete_files(&ctx, &catalogs, table, 8, merges).await;
+        assert_eq!(before, usize::try_from(merges).expect("small"));
+
+        let result = execute(
+            &ctx,
+            &catalogs,
+            &format!("CALL ice.system.rewrite_position_delete_files(table => 'sales.{table}')"),
+        )
+        .await
+        .expect("rewrite_position_delete_files CALL");
+        let batches = result.collect().await.expect("collect rpdf result");
+        let batch = &batches[0];
+        assert_rpdf_schema_is_sparks(batch);
+        for column in [
+            "rewritten_delete_files_count",
+            "added_delete_files_count",
+            "rewritten_bytes_count",
+            "added_bytes_count",
+        ] {
+            assert_eq!(
+                call_count(batch, column),
+                0,
+                "{table}: {column} must be zero when there is nothing to compact"
+            );
+        }
+        assert_eq!(
+            rows(
+                &ctx,
+                &catalogs,
+                &format!("SELECT * FROM ice.sales.{table}.files WHERE content = 1")
+            )
+            .await,
+            before,
+            "{table}: a zero result must leave the delete files alone"
+        );
+    }
+}
+
+/// Registry row `MOR-1` — this engine compacts position deletes below Spark's
+/// `min-input-files` floor.
+///
+/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0, `write.delete.granularity = 'partition'`, one
+/// group, varying the live position-delete file count:
+///
+/// | delete files | Spark | repark |
+/// |---:|---|---|
+/// | 1 | `0, 0, 0, 0` | `0, 0, 0, 0` |
+/// | 2 | `0, 0, 0, 0` | `2, 1, …` |
+/// | 4 | `0, 0, 0, 0` | `4, 1, …` |
+/// | 8 | `8, 1, …` | `8, 1, …` |
+///
+/// Spark's planner extends `SizeBasedFileRewritePlanner`, whose `MIN_INPUT_FILES_DEFAULT` is 5;
+/// the fork's `RewritePositionDeleteFiles` drops only single-file groups (`entries.len() < 2`).
+/// The fork's `RewriteDataFiles` in the same crate DOES implement the full gate, so this is one
+/// action out of step rather than a missing capability.
+///
+/// This pin holds the divergence at exactly 4, the largest count where the two still disagree.
+#[tokio::test]
+async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let before = seed_mor_delete_files(&ctx, &catalogs, "mor", 8, 4).await;
+    assert_eq!(
+        before, 4,
+        "four delete files — one below Spark's floor of 5"
+    );
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor").await;
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.mor')",
+    )
+    .await
+    .expect("rewrite_position_delete_files CALL");
+    let batches = result.collect().await.expect("collect rpdf result");
+    let batch = &batches[0];
+
+    // Spark returns 0 here. This engine compacts. Pinned so the fork's planner gaining the
+    // size-based gate REDS this test on purpose rather than passing unnoticed.
+    assert_eq!(
+        call_count(batch, "rewritten_delete_files_count"),
+        4,
+        "MOR-1: this engine rewrites where Spark's min-input-files floor declines to"
+    );
+    assert_eq!(call_count(batch, "added_delete_files_count"), 1);
+    // The divergence is how much compaction happens, never what the table contains.
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor").await,
+        live_before,
+        "MOR-1 is a file-layout divergence; the live row set is identical to Spark's"
+    );
+}
+
+/// Registry row `MOR-2` — this engine's merge-on-read writer is partition-granularity.
+///
+/// One MERGE touching six distinct data files writes ONE position-delete file here. Spark's
+/// default is `write.delete.granularity = 'file'` (`TableProperties.DELETE_GRANULARITY_DEFAULT`,
+/// confirmed on the oracle by leaving the property unset: eight deletes across eight data files
+/// produced eight delete files), so Spark writes six. This engine reads no granularity property
+/// at all.
+///
+/// It is pinned in MW-2 because it is what makes
+/// `call_rewrite_position_delete_files_compacts_like_spark` legitimate: the parity that pin
+/// asserts is parity with Spark on a **partition-granularity** table, and this is the measurement
+/// showing that is the only kind of table this engine writes.
+#[tokio::test]
+async fn call_mor2_merge_writes_one_position_delete_per_partition() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.gran (id INT, v STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read')",
+    )
+    .await;
+    for id in 1..=6 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.gran VALUES ({id}, 'v{id}')"),
+        )
+        .await;
+    }
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT * FROM ice.sales.gran.files WHERE content = 0"
+        )
+        .await,
+        6,
+        "six distinct data files, so Spark's file granularity would write six delete files"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.gran AS t USING (SELECT 1 AS id UNION ALL SELECT 2 UNION ALL \
+         SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 UNION ALL SELECT 6) AS s \
+         ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = 'merged'",
+    )
+    .await;
+
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT * FROM ice.sales.gran.files WHERE content = 1"
+        )
+        .await,
+        1,
+        "MOR-2: one delete file for the whole unpartitioned table, where Spark's default \
+         granularity writes one per data file"
+    );
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.gran").await,
+        6,
+        "the granularity divergence changes file layout, not the live row set"
+    );
+}
+
+/// MW-2 keeps the austerity `rewrite_data_files` already has: the `options` map and the `where`
+/// filter refuse loudly rather than being silently ignored.
+#[tokio::test]
+async fn call_rewrite_position_delete_files_refuses_options_and_where() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_mor_delete_files(&ctx, &catalogs, "mor", 3, 2).await;
+
+    for (argument, needle) in [
+        ("options => map('a', 'b')", "options map is not supported"),
+        ("where => 'id = 1'", "where filter is not supported"),
+    ] {
+        let err = execute(
+            &ctx,
+            &catalogs,
+            &format!(
+                "CALL ice.system.rewrite_position_delete_files(table => 'sales.mor', {argument})"
+            ),
+        )
+        .await
+        .expect_err("deferred argument must refuse");
+        let message = err.to_string();
+        assert!(
+            message.contains(needle),
+            "refusal must name the deferred argument, got: {message}"
+        );
+    }
+}
+
+/// MW-2: `rewrite_data_files` returns Spark's FIVE columns — the fifth was previously omitted.
+///
+/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0. `removed_delete_files_count` read `0` on every
+/// fixture measured, including a partitioned table with six data files per partition and twelve
+/// live position deletes, run BOTH with `options => map('remove-dangling-deletes','true')` and
+/// with the default options. The Java default for that option is false
+/// (`RewriteDataFiles.REMOVE_DANGLING_DELETES_DEFAULT`, javap-verified against the shipping jar),
+/// and this procedure refuses the options map, so the non-default path is unreachable here.
+///
+/// Before MW-2 a job migrating off Spark got a missing-column error where it read this.
+#[tokio::test]
+async fn call_rewrite_data_files_returns_sparks_five_columns() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.rw5 AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+    for index in 2..=6 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.rw5 SELECT {index} AS id, 'x' AS name"),
+        )
+        .await;
+    }
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.rw5')",
+    )
+    .await
+    .expect("rewrite CALL");
+    let batches = result.collect().await.expect("collect rewrite result");
+    let batch = &batches[0];
+
+    let names: Vec<_> = batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            "rewritten_data_files_count",
+            "added_data_files_count",
+            "rewritten_bytes_count",
+            "failed_data_files_count",
+            "removed_delete_files_count",
+        ]
+    );
+    assert!(
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .all(|field| !field.is_nullable()),
+        "Spark declares all five rewrite_data_files columns non-nullable"
+    );
+    assert!(
+        call_count(batch, "rewritten_data_files_count") >= 2,
+        "the fixture must actually compact, else the columns beside it prove nothing"
+    );
+    assert_eq!(
+        call_count(batch, "removed_delete_files_count"),
+        0,
+        "no dangling delete removal runs on this path, and Spark's default reports 0 too"
+    );
+}
+
+/// MW-2 guard: the deletion-vector classification rule, pinned directly.
+///
+/// The rule decides whether `rewrite_position_delete_files` refuses. It is pinned as a table
+/// rather than through a fixture because **this engine cannot produce a deletion vector**: it
+/// creates tables at format v2 (`'format-version' = '3'` refuses at CREATE) and refuses
+/// merge-on-read writes on a v3 table. Pinning the vector-present path end to end needs a v3
+/// table written by another engine, which is a cross-engine fixture and belongs with the v3
+/// porting work, not here. What IS pinned end to end is the other half — that the guard does not
+/// fire on the v2 tables this engine does write — by every other rewrite pin in this file, and
+/// explicitly by `call_rewrite_position_delete_files_guard_passes_a_v2_table`.
+#[test]
+fn call_deletion_vector_rule_matches_the_forks_skip_clause() {
+    use iceberg::spec::{DataContentType, DataFileFormat};
+
+    use crate::call::is_deletion_vector;
+
+    // Puffin delete files are deletion vectors — position or equality alike.
+    assert!(is_deletion_vector(
+        DataContentType::PositionDeletes,
+        DataFileFormat::Puffin
+    ));
+    assert!(is_deletion_vector(
+        DataContentType::EqualityDeletes,
+        DataFileFormat::Puffin
+    ));
+    // Parquet delete files are what this procedure compacts.
+    assert!(!is_deletion_vector(
+        DataContentType::PositionDeletes,
+        DataFileFormat::Parquet
+    ));
+    assert!(!is_deletion_vector(
+        DataContentType::EqualityDeletes,
+        DataFileFormat::Parquet
+    ));
+    // A DATA file is never a delete file, whatever its format — the clause must not catch a
+    // Puffin statistics-adjacent data entry and refuse a healthy table.
+    assert!(!is_deletion_vector(
+        DataContentType::Data,
+        DataFileFormat::Puffin
+    ));
+    assert!(!is_deletion_vector(
+        DataContentType::Data,
+        DataFileFormat::Parquet
+    ));
+}
+
+/// MW-2 guard: it does not fire on the format-v2 tables this engine writes.
+///
+/// The half of the guard a fixture CAN reach. A guard that refuses everything would also make
+/// the silent-zeros bug impossible, so this pin is what distinguishes a fix from a wrecking ball.
+#[tokio::test]
+async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
+    use crate::call::count_live_deletion_vectors;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let before = seed_mor_delete_files(&ctx, &catalogs, "mor", 8, 8).await;
+    assert_eq!(before, 8, "eight Parquet position deletes, no vectors");
+
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "mor".into());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    assert_eq!(
+        count_live_deletion_vectors(&table).await.unwrap(),
+        0,
+        "a v2 merge-on-read table this engine wrote holds no deletion vectors"
+    );
+
+    execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.mor')",
+    )
+    .await
+    .expect("the guard must not refuse a table it can actually compact");
+}
+
+/// MW-2 guard: a table with NO current snapshot is not a vector table.
+///
+/// The empty-table path returns before the manifest walk, so it is pinned separately — an
+/// early return that got the sense backwards would refuse every freshly created table.
+#[tokio::test]
+async fn call_deletion_vector_guard_handles_a_table_with_no_snapshot() {
+    use crate::call::count_live_deletion_vectors;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.empty (id INT, v STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read')",
+    )
+    .await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "empty".into());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    assert!(
+        table.metadata().current_snapshot().is_none(),
+        "fixture must have no snapshot, else it does not exercise the early return"
+    );
+    assert_eq!(count_live_deletion_vectors(&table).await.unwrap(), 0);
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.empty')",
+    )
+    .await
+    .expect("an empty table compacts to four zeros, it does not refuse");
+    let batches = result.collect().await.expect("collect rpdf result");
+    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 0);
+}

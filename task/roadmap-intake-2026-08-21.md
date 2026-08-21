@@ -102,9 +102,12 @@ an operator compacting. **Never:** blind retry after `CommitStateUnknown`; flipp
 on a table with incremental CDC consumers; DELETE-then-INSERT as an upsert pattern; multi-writer
 on one table.
 
-**Watch, do not schedule:** `WHEN NOT MATCHED BY SOURCE`; format v3 and deletion vectors;
-REST/Hive/Nessie catalogs; branch-targeted writes (REF-1, fork API work); sort/z-order rewrite
-strategies; incremental snapshot reads; `remove_dangling_delete_files` as its own procedure.
+**Watch, do not schedule:** `WHEN NOT MATCHED BY SOURCE`; REST/Hive/Nessie catalogs;
+branch-targeted writes (REF-1, fork API work); sort/z-order rewrite strategies; incremental
+snapshot reads; `remove_dangling_delete_files` as its own procedure.
+
+**Format v3 and deletion vectors left this list on 2026-08-21** — owner-scheduled after MW-2
+measured the exposure. See **A12**.
 
 ### A3. Function-surface completion (the largest open program)
 
@@ -254,6 +257,73 @@ Datasets workstream (a) fully landed (#153/#158/#161/#163). Still queued:
   publishing is live and proven (seven tags).
 - Release runbooks now exist in-repo (`.agent/skills/`); keep them in lockstep with
   `docs/release.md` (whose "phase 0 / nothing wired" opening is stale — truth-up pending).
+
+### A12. Format-v3 and deletion vectors — **owner-scheduled 2026-08-21**
+
+Promoted out of "watch, do not schedule" after MW-2 found the engine reports a **silent no-op** on
+a v3 table: `rewrite_position_delete_files` returned four zeros where every delete file stayed
+put. MW-2 shipped a loud refusal (queued divergence `B-MOR-3`), which closes the safety hole and
+leaves the capability gap.
+
+**The fork is far ahead of the engine here, and that is the headline.** Read at pin `0c5fd58`,
+the fork already ships deletion-vector **read and write** — `delete_vector.rs`, a full `puffin/`
+module (blob / metadata / reader / writer), `writer/base_writer/deletion_vector_writer.rs` with
+`DVFileWriter::{with_previous_deletes, delete, close_with_result}`, DV application on scan through
+`arrow/delete_filter.rs` + `caching_delete_file_loader.rs` — plus row-lineage fields in the spec
+and the v3 types (`Variant`, `TimestampNs`, `Unknown`). So this track is **mostly engine-side
+wiring**, not a fork campaign. That is the opposite of the assumption behind the old "watch" line,
+and it is why the item moved.
+
+**Where the engine stands today**, measured rather than assumed:
+
+| Surface | State | Site |
+|---|---|---|
+| `CREATE TABLE … 'format-version' = '3'` | Refuses loudly | `create_table.rs:158`, `ctas.rs:153` |
+| Merge-on-read `MERGE` on v3 | Refuses loudly | `merge/mod.rs` `resolve_merge_mode` |
+| Merge-on-read `DELETE` / `UPDATE` on v3 | Refuses loudly | `predicate_dml.rs:835` |
+| `rewrite_position_delete_files` on v3 | **Refuses loudly (MW-2)** | `call.rs` deletion-vector guard |
+| **Reading** a foreign v3 table | **Not gated — unverified** | no format-version check on the read path |
+| v3 types (`variant`, `timestamp_ns`, `unknown`, geo) | Not wired | — |
+
+The read path is the one line above with no refusal and no evidence, and it is the first thing
+V3-1 settles.
+
+**Proposed units.** Sequenced so the first one is also the fixture every later one needs.
+
+- **V3-1 — read a v3 table, and build the cross-engine fixture.** A v3 table with Puffin deletion
+  vectors, written by the Spark 4.0.1 oracle, read back by this engine with the vectors applied
+  and the row set proven against Spark's. Blocked on a way to address a foreign table at all:
+  this engine has no Hadoop-catalog surface, so the fixture needs either a catalog shim or an
+  adopt-existing-table path — **that decision is V3-1's first question, not an implementation
+  detail.** Lands the pin that promotes `B-MOR-3` to a row, and unblocks everything below.
+- **V3-2 — create v3 tables.** Lift the CREATE/CTAS refusal behind an explicit opt-in; the
+  default stays v2 until V3-3 lands, because a v3 table this engine cannot do row-level writes on
+  is a trap.
+- **V3-3 — merge-on-read writes on v3.** The big one. Swap the position-delete writer for the
+  fork's `DVFileWriter` when the table is v3, and lift the three write-side refusals together —
+  `MERGE`, `DELETE`, `UPDATE`. Everything downstream of it (`row_delta`, validation) is fork-side
+  and already there.
+- **V3-4 — row lineage.** v3 **mandates** it (`_row_id`, `_last_updated_sequence_number`). Needs
+  its own scope pass: it is a per-row obligation on every write path, not a column to add.
+- **V3-5 — v3 maintenance.** Note the MW-2 refusal may be **permanent and correct**: a deletion
+  vector is file-scoped and is never bin-packed, so `rewrite_position_delete_files` has nothing to
+  do on a DV table by design — Spark's own answer there is zeros. What v3 needs instead is
+  DV-shaped maintenance, and the fork's `remove_dangling_delete_files` is the surface. Do not
+  scope this as "make the MW-2 refusal go away".
+- **V3-6 — v3 types.** `variant` overlaps the already-ratified **H6 VARIANT** item in A3, which
+  names Iceberg V3 variant as a later fork-gated increment; `timestamp_ns` overlaps the landed
+  ANSI nanosecond-timestamp refusal (A11 branch). Reconcile with those rather than duplicating.
+
+**Sequencing against MW.** V3-1 can run any time — it touches no MW surface and produces the pin
+MW-2 could not. V3-2 and later want MW closed first: MW-4's live acceptance is the campaign's only
+real-catalog evidence, and adding a second format version underneath it before it runs would mean
+proving two things at once.
+
+**One decision for the owner, and it is not urgent.** MW-2's refusal is **stricter than Spark**,
+which returns zeros. That is the same shape as OD-2's dry-run default and was taken on the same
+reasoning, but it is a drop-in break: a Glue job calling this on a v3 table gets an error where
+Spark gave it a useless success. Reversible in one line if you would rather match Spark. See
+`B-MOR-3`.
 
 ### A11. Strategy horizon (context for the owner only — NOT for the public repo)
 

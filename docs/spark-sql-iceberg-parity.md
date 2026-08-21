@@ -1622,6 +1622,56 @@ the pin rather than obeying it.
   shape, the ratchet move it forces, and the adjacent missing `F.log` overload) is
   [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
 
+### MOR-1 — `rewrite_position_delete_files` compacts below Spark's `min-input-files` floor
+
+- **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` compacts any
+  `(spec, partition)` group holding **two or more** live position-delete files. On a group of 4 it
+  returns `rewritten_delete_files_count = 4`, `added_delete_files_count = 1`, and the table drops
+  to one delete file.
+- **Apache Spark** — declines to rewrite the same group and returns all four counts as `0`,
+  leaving the 4 delete files in place. Spark's planner extends `SizeBasedFileRewritePlanner`,
+  whose `MIN_INPUT_FILES_DEFAULT` is 5, and it rewrites a group only when
+  `enoughInputFiles || enoughContent || tooMuchContent`. Measured across the boundary on a table
+  at `write.delete.granularity = 'partition'` — 1 delete file: both return zeros; 2 and 4: Spark
+  zeros, repark compacts; 8: both return `rewritten = 8`, `added = 1`.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0. The pinned 4.1.2 oracle cannot execute
+  Iceberg maintenance procedures at all: Spark's `DataSourceV2Relation.create` signature changed
+  between 4.0 and 4.1, so the shipping jar dies with `NoSuchMethodError`.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call.rs::call_mor1_compacts_below_sparks_min_input_files_floor`
+- **Rationale** — BACKLOG, and the fix belongs in the owned fork rather than here. The fork's
+  `RewritePositionDeleteFiles` drops only single-file groups (`entries.len() < 2`) where its own
+  `RewriteDataFiles`, in the same crate, implements Java's full size-based gate including
+  `min_input_files = 5`. So this is one action out of step with its neighbour, not a missing
+  capability, and closing it means giving the position-delete planner the gate the data-file
+  planner already has. Held as a row rather than worked around in the CALL router, because
+  re-implementing planner admission outside the planner is how two sources of truth start.
+  **The divergence is file layout, never contents** — the live row set is identical either way,
+  and repark's answer is the more aggressive one, so a migrating job sees more compaction than
+  Spark would do, not less.
+
+### MOR-2 — merge-on-read delete files are partition-granularity, where Spark's default is per file
+
+- **repark** — one `MERGE` touching six distinct data files writes **one** position-delete file.
+  The engine reads no `write.delete.granularity` property at all; its merge-on-read writer emits
+  one delete file per `(spec, partition)` group per commit, which is what Iceberg calls
+  `partition` granularity.
+- **Apache Spark** — writes **one delete file per data file**, because
+  `TableProperties.DELETE_GRANULARITY_DEFAULT` is `file`. Confirmed by leaving the property unset
+  on the oracle: eight `DELETE`s across eight data files produced eight delete files, and the same
+  table at `'partition'` produced counts matching repark's.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-1.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call.rs::call_mor2_merge_writes_one_position_delete_per_partition`
+- **Rationale** — BACKLOG. Pre-existing write-path behavior, surfaced by MW-2 rather than
+  introduced by it, and registered here because it is what determines
+  `rewrite_position_delete_files`'s `added_delete_files_count`. On a table this engine wrote, that
+  column matches Spark's partition-granularity answer exactly; on a table Spark wrote at its own
+  default it will not, because the two started from different file layouts. Closing the row means
+  honouring `write.delete.granularity` in the merge-on-read writer, which is a write-path feature
+  and outside the maintenance campaign. **Contents are unaffected** — the same rows are masked
+  either way.
+
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
 
 - **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns
@@ -1639,8 +1689,8 @@ the pin rather than obeying it.
 
 ### Surfaced, awaiting pins — not yet rows
 
-Four candidates surfaced by the session-timezone unit still carry **no pin yet**, so under §6 they are
-not admitted as rows; they are queued here so the surfacing is on the record, and each becomes a
+Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
+here so the surfacing is on the record, and each becomes a
 row in the change that lands its pin (the unit ledger `docs/history/hardening-h1/h1a-ledger.md` §6 carries the full
 observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3 / #90).**
 
@@ -1652,6 +1702,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **B-TZ-5** — the SQL `SET` door does not reach the `spark.*` conf namespace at all
   (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
   than the session zone; it wants its own decision rather than a fold into the extraction unit.
+
+- **B-MOR-3** — `rewrite_position_delete_files` **refuses** a format-v3 table holding live Puffin
+  deletion vectors, where **Spark returns all four counts as `0` and does nothing**. Measured on
+  the Spark half: a live PySpark 4.0.1 + Iceberg 1.10.0 session created a v3 table, three MOR
+  `DELETE`s produced three `PUFFIN` delete files, and the procedure returned `0, 0, 0, 0` leaving
+  all three in place. So Spark's own answer on a v3 table is the silent no-op this engine refuses
+  to give — the divergence is **deliberately stricter than Spark**, on the same reasoning as the
+  orphan-files dry-run default (owner decision OD-2): on a maintenance surface a silent zero is
+  indistinguishable from "already clean", and the operator never learns the reclaim never
+  happened. Queued rather than admitted because the **repark half has no end-to-end pin**: this
+  engine cannot write a deletion vector (it creates tables at format v2 and refuses merge-on-read
+  writes on v3), so firing the refusal needs a v3 table written by another engine. What IS pinned
+  today is the decision rule (`call_deletion_vector_rule_matches_the_forks_skip_clause`,
+  mutation-checked) and both no-false-positive paths. It becomes a row in the change that lands
+  the cross-engine v3 fixture — the **V3-1** unit of the format-v3 track
+  ([task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md) A12).
 
 ---
 
