@@ -2024,6 +2024,13 @@ NOT in that file is a defect, not a decision.
   UTF-8, while Spark's `UTF8String` can); plus `assert_true` raising on NULL as well as false,
   and honouring a caller-supplied message.
 
+- `test_fnp_critic_remediation.py` — **Critic round 1 (2026-08-20):** regression pins for the
+  findings two independent adversarial passes raised on this branch, including the S0 (nested
+  higher-order functions returned an inverted boolean), the `ascending=` override matrix, the
+  empty-pattern count-vs-collect agreement, `groupBy`/`agg` over a higher-order column, `randstr`
+  refusing an enormous length instead of aborting the process, and a structural check that no
+  working function still documents itself as unsupported.
+
 ## I want to...
 
 | ...do this | go to |

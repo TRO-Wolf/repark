@@ -353,6 +353,13 @@ cannot. A value-representation difference, not a behaviour choice. `assert_true`
 well as false — only `true` passes. The module owns its own `register`, like `decimal_spark` and
 `higher_order`, because the crate root sits against its `check_lib_rs` ceiling.
 
+**Critic round 1 (2026-08-20) — two kernel corrections.** `spark_regexp.rs`'s `collect_matches`
+no longer returns early on an empty pattern: Java's `Matcher` matches at every position plus the
+end, which `count_non_overlapping` counted while the collector returned `[]`, so two functions in
+one module disagreed on plain ASCII. `random.rs` bounds a `randstr` length literal —
+without a cap the failure was not an error at all but a process abort (SIGABRT, no traceback),
+while every other refusal here is catchable.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

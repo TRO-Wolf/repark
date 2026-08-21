@@ -520,6 +520,18 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
 fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex::Match<'text>>> {
     let mut found_all = Vec::new();
     if pattern.as_str().is_empty() {
+        // Java's `Matcher` on `Pattern.compile("")` finds an empty match at EVERY position plus
+        // the end, which is what `count_non_overlapping` counts. Returning early here made the
+        // two disagree on plain ASCII — `regexp_count('abc', '')` was 4 while
+        // `size(regexp_extract_all('abc', ''))` was 0 (F-CSP-3 / F-CFS-3).
+        // One empty match at every char boundary, plus one at the end — `find_at` returns Some
+        // at each of them for an empty pattern, and a None is simply nothing to collect rather
+        // than an impossible state to panic on.
+        let boundaries = text
+            .char_indices()
+            .map(|(offset, _)| offset)
+            .chain([text.len()]);
+        found_all.extend(boundaries.filter_map(|offset| pattern.find_at(text, offset)));
         return Ok(found_all);
     }
     let mut byte = 0usize;

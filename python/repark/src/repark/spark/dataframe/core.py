@@ -6341,35 +6341,45 @@ class DataFrame:
             columns.append(column._inner)
             ascending_flags.append(is_ascending)
             order_columns.append(column)
-        if ascending is not None:
-            # PySpark's `ascending=` re-marks the columns wholesale, so it supersedes any
-            # per-column marker — direction AND null placement both follow the override.
-            ascending_flags = self._apply_ascending_override(ascending_flags, ascending)
-            nulls_first_flags = list(ascending_flags)
-        else:
-            nulls_first_flags = [
-                sort_nulls_first_for(column, is_ascending)
-                for column, is_ascending in zip(order_columns, ascending_flags, strict=True)
-            ]
-        return columns, ascending_flags, nulls_first_flags
+        # PySpark's `DataFrame._sort_cols`:
+        #     if isinstance(ascending, (bool, int)):
+        #         if not ascending: jcols = [jc.desc() for jc in jcols]
+        #     elif isinstance(ascending, list):
+        #         jcols = [jc if asc else jc.desc() for asc, jc in zip(ascending, jcols)]
+        # A FALSY entry replaces that column's marker with `desc()` — descending, nulls last. A
+        # TRUTHY entry is a NO-OP: the column keeps whatever it arrived carrying, marker and all.
+        # Treating the override as wholesale re-marking silently reordered rows (F-CSP-2/F-CFS-4).
+        remark = self._ascending_remark_flags(len(order_columns), ascending)
+        directions: list[bool] = []
+        nulls_first_flags: list[bool] = []
+        for column, is_ascending, remarked in zip(
+            order_columns, ascending_flags, remark, strict=True
+        ):
+            if remarked:
+                # `.desc()` — descending, nulls last.
+                directions.append(False)
+                nulls_first_flags.append(False)
+            else:
+                directions.append(is_ascending)
+                nulls_first_flags.append(sort_nulls_first_for(column, is_ascending))
+        return columns, directions, nulls_first_flags
 
     @staticmethod
-    def _apply_ascending_override(
-        ascending_flags: list[bool],
-        ascending: bool | list[bool],
-    ) -> list[bool]:
-        """Apply the ``ascending`` keyword (a bool for all, or a per-column list)."""
-        if isinstance(ascending, bool):
-            return [ascending] * len(ascending_flags)
+    def _ascending_remark_flags(count: int, ascending: bool | list[bool] | None) -> list[bool]:
+        """Which positions the ``ascending`` keyword re-marks as ``desc()`` — falsy ones only."""
+        if ascending is None:
+            return [False] * count
+        if isinstance(ascending, bool | int):
+            return [not ascending] * count
         if isinstance(ascending, (list, tuple)):
-            if len(ascending) != len(ascending_flags):
+            if len(ascending) != count:
                 raise PySparkValueError(
                     "ascending list length must match the number of sort columns "
-                    f"({len(ascending)} != {len(ascending_flags)})"
+                    f"({len(ascending)} != {count})"
                 )
-            return [bool(flag) for flag in ascending]
-        raise PySparkTypeError(
-            f"ascending expects a bool or a list of bools, got {type(ascending).__name__}"
+            return [not flag for flag in ascending]
+        raise PySparkValueError(
+            f"ascending must be a bool or a list of bools, got {type(ascending).__name__}"
         )
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:

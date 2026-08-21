@@ -18,6 +18,12 @@ not this directory.
   are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-critic-round-1-ledger.md](fnp-critic-round-1-ledger.md) — **Critic round 1 (2026-08-20):**
+  two independent adversarial passes over the whole branch under a HARD context break (separate
+  fresh agents, not this repo's default procedural break). Both NOT_CONVERGED: 25 findings, 10 at
+  or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
+  were in units already signed off, including a fix applied before its evidence and a verification
+  guard that silently skipped half its own table.
 - [fnp-6c-validate-ledger.md](fnp-6c-validate-ledger.md) — **FNP-6c (2026-08-20):**
   `validate_utf8`, `try_validate_utf8`, `assert_true`. Records the value-representation difference
   behind the UTF-8 pair, and the FOURTH prior-unit scope fence found as a passing assertion —

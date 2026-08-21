@@ -29,67 +29,95 @@ use super::function_dispatch::{call_scalar_expr, unary_aggregate_udaf};
 /// not an oversight. The seventeen below are the latent set measured 2026-08-20 — the facade
 /// lowers each to a DataFusion-core builder while the session resolves the `datafusion-spark`
 /// kernel — and each needs its own semantic adjudication before it can be closed or registered.
-const EXPECTED_DIVERGENCES: &[(&str, &str)] = &[
+/// How the facade reaches a diverging name.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FacadeShape {
+    /// The facade embeds a single `ScalarUDF` — a DIFFERENT one from the door's. Checkable by
+    /// UDF identity, and the row leaves this table when the two are made to agree.
+    Kernel(usize),
+    /// The facade does not call a kernel at all — it composes (`sec` is `1/cos`, `elt` is
+    /// `make_array` + `array_element`, `like` builds `Expr::Like`). Identity cannot be compared,
+    /// so the assertion is that it is STILL composed: turning one into a kernel must move the row.
+    Composed,
+}
+
+const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
     (
         "ascii",
+        FacadeShape::Kernel(1),
         "facade expr_fn::ascii vs datafusion-spark ascii — codepoint vs byte on non-ASCII",
     ),
     (
         "base64",
+        FacadeShape::Kernel(1),
         "facade lowers to encode(x, 'base64'); spark kernel chunks at 76 chars",
     ),
-    ("unbase64", "mirror of base64"),
+    ("unbase64", FacadeShape::Kernel(1), "mirror of base64"),
     (
         "ceil",
+        FacadeShape::Kernel(1),
         "DF-core ceil is float-first; spark ceil carries the decimal target-scale arm",
     ),
-    ("ceiling", "alias of ceil"),
-    ("floor", "mirror of ceil"),
+    ("ceiling", FacadeShape::Kernel(1), "alias of ceil"),
+    ("floor", FacadeShape::Kernel(1), "mirror of ceil"),
     (
         "round",
+        FacadeShape::Kernel(1),
         "DF-core round vs spark HALF_UP with a decimal target scale",
     ),
     (
         "length",
+        FacadeShape::Kernel(1),
         "DF-core length is chars; spark length is chars for string, bytes for binary",
     ),
-    ("character_length", "alias of length"),
+    (
+        "character_length",
+        FacadeShape::Kernel(1),
+        "alias of length",
+    ),
     (
         "like",
+        FacadeShape::Composed,
         "DF-core LIKE vs spark like with an explicit escape argument",
     ),
-    ("ilike", "mirror of like"),
+    ("ilike", FacadeShape::Composed, "mirror of like"),
     (
         "elt",
+        FacadeShape::Kernel(2),
         "facade lowers to make_array + array_element; spark elt has its own null/bounds rule",
     ),
     (
         "size",
+        FacadeShape::Kernel(1),
         "DF-core cardinality vs spark size with spark.sql.legacy.sizeOfNull",
     ),
     (
         "sec",
+        FacadeShape::Composed,
         "facade lowers to 1/cos; spark sec is a kernel with its own overflow behaviour",
     ),
-    ("csc", "mirror of sec"),
+    ("csc", FacadeShape::Composed, "mirror of sec"),
     (
         "slice",
+        FacadeShape::Kernel(3),
         "DF-core array_slice is 0-based-tolerant; spark slice is 1-based and raises on 0",
     ),
     (
         "array_repeat",
+        FacadeShape::Kernel(2),
         "DF-core array_repeat vs spark array_repeat on negative counts",
     ),
     (
         "array_contains",
+        FacadeShape::Kernel(2),
         "DF-core array_has vs spark array_contains three-valued null",
     ),
-    ("array_has", "alias of array_contains"),
     (
         "date_part",
+        FacadeShape::Kernel(2),
         "DF-core date_part vs spark date_part field-name set",
     ),
-    ("datepart", "alias of date_part"),
+    ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
 ];
 
 /// Scalar spellings this guard checks. Positive controls (the GT1/GT2-closed names) are included
@@ -180,14 +208,35 @@ fn expected_divergences_are_all_still_real() {
     let ctx = registered_session();
     let mut already_fixed = Vec::new();
 
-    for (name, _reason) in EXPECTED_DIVERGENCES {
-        let (Some(facade), Ok(door)) = (facade_udf(name, 1), ctx.udf(name)) else {
-            continue; // arity or registration mismatch — not this test's claim
-        };
-        if *facade == *door {
-            already_fixed.push(*name);
+    let mut unbuildable = Vec::new();
+    for (name, shape, _reason) in EXPECTED_DIVERGENCES {
+        // Skipping silently is how a ratchet rots: every row whose facade arm needed more than
+        // one argument used to fall through a `continue`, so roughly half this table was never
+        // checked and a quietly-fixed row would never have been noticed (F-CSP-11 / F-CFS-8).
+        match shape {
+            FacadeShape::Kernel(arity) => {
+                let (Some(facade), Ok(door)) = (facade_udf(name, *arity), ctx.udf(name)) else {
+                    unbuildable.push(*name);
+                    continue;
+                };
+                if *facade == *door {
+                    already_fixed.push(*name);
+                }
+            }
+            FacadeShape::Composed => {
+                // Still composed? If the facade has been given a real kernel, the row is stale.
+                if facade_udf(name, 1).is_some() || facade_udf(name, 2).is_some() {
+                    already_fixed.push(*name);
+                }
+            }
         }
     }
+
+    assert!(
+        unbuildable.is_empty(),
+        "these rows could not be checked at their declared arity, so the ratchet was not applied \
+         to them — fix the arity or remove the row: {unbuildable:?}"
+    );
 
     assert!(
         already_fixed.is_empty(),

@@ -1319,6 +1319,14 @@ Spark's `UTF8String` can, so a Spark program reaches these on a STRING column wh
 structurally cannot. Stated in the facade docstrings as well, because a user seeing
 `validate_utf8('x')` always succeed deserves to know why rather than assuming it is unimplemented.
 
+**Critic round 1 (2026-08-20) — two corrections to this layer.** `functions_lambda.py` mints a
+UNIQUE plan name per lambda (`x_0`, `x_1`, …) while keeping `x`/`y`/`z` for display: two lambdas
+sharing a plan name made a nested one bind to the enclosing variable and answer wrongly with no
+error. And `dataframe/core.py`'s `_sort_specs` now mirrors PySpark's `_sort_cols` line for line —
+a FALSY `ascending=` entry replaces that column's marker with `desc()`, a TRUTHY one changes
+nothing at all. The previous "the override supersedes the marker wholesale" premise was invented,
+and it made `orderBy("v", ascending=False)` place nulls wrongly.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

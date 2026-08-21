@@ -183,6 +183,15 @@ pub fn spark_uniform_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkUniform::new()))
 }
 
+/// Upper bound on a `randstr` length literal.
+///
+/// Spark's own literal is a two- or four-byte integer, so past `i32::MAX` is already out of
+/// contract. The cap matters because the failure mode WITHOUT it is not an error at all:
+/// `String::with_capacity(length)` per row aborts the process on a large constant — SIGABRT, no
+/// traceback, the whole session lost — while every other refusal in this module is catchable
+/// (F-CFS-1).
+const MAX_RANDSTR_LENGTH: i64 = 1_000_000;
+
 /// Spark `randstr`'s character pool, in Spark's own order: digits, then lower, then upper.
 ///
 /// The order is load-bearing, not cosmetic — the index comes from the same `XORShift` stream
@@ -421,6 +430,15 @@ impl ScalarUDFImpl for SparkRandstr {
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
         let length = constant_i64(args.args.first(), "randstr length")?;
+        // Spark's own literal is a two- or four-byte integer, so past i32::MAX is already out
+        // of contract. The cap matters because the failure mode without it is not an error at
+        // all: `String::with_capacity(length)` per row ABORTS the process on a large constant
+        // (SIGABRT, no traceback, whole session lost) rather than raising (F-CFS-1).
+        if !(0..=MAX_RANDSTR_LENGTH).contains(&length) {
+            return exec_err!(
+                "randstr length must be between 0 and {MAX_RANDSTR_LENGTH}, got {length}"
+            );
+        }
         let length = usize::try_from(length).map_err(|_| {
             DataFusionError::Execution(format!("randstr length must not be negative, got {length}"))
         })?;

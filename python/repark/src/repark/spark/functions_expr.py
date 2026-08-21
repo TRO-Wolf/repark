@@ -1155,14 +1155,12 @@ def try_to_timestamp(col: Column | str, format: str | None = None) -> Column:
 
 
 def to_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
-    """Unsupported: timezone conversion not wired (R-FN-BATCH3 census)."""
-
+    """Read a wall clock in ``tz`` as a UTC instant (PySpark ``functions.to_utc_timestamp``)."""
     return _scalar("to_utc_timestamp", timestamp, tz, lit_indices=frozenset({1}))
 
 
 def from_utc_timestamp(timestamp: Column | str, tz: str) -> Column:
-    """Unsupported: timezone conversion not wired (R-FN-BATCH3 census)."""
-
+    """Render a UTC instant in ``tz`` (PySpark ``functions.from_utc_timestamp``)."""
     return _scalar("from_utc_timestamp", timestamp, tz, lit_indices=frozenset({1}))
 
 
@@ -1476,8 +1474,7 @@ def sha2(col: Column | str, numBits: int) -> Column:  # noqa: N803
 
 
 def sha1(col: Column | str) -> Column:
-    """Unsupported: engine has no ``sha1`` (use sha2(..., 256); R-FN-BATCH4)."""
-
+    """SHA-1 as a lowercase hex string (PySpark ``functions.sha1``)."""
     return _scalar("sha1", col)
 
 
@@ -1487,15 +1484,18 @@ def sha(col: Column | str) -> Column:
 
 
 def crc32(col: Column | str) -> Column:
-    """Unsupported: engine has no ``crc32`` (R-FN-BATCH4)."""
-
+    """CRC-32 checksum as a bigint (PySpark ``functions.crc32``)."""
     return _scalar("crc32", col)
 
 
-def xxhash64(col: Column | str) -> Column:
-    """Unsupported: engine has no ``xxhash64`` (R-FN-BATCH4)."""
+def xxhash64(*cols: Column | str) -> Column:
+    """64-bit xxHash of the arguments (PySpark ``functions.xxhash64``).
 
-    return _scalar("xxhash64", col)
+    **Variadic**, like PySpark's — this function exists mainly to hash a composite key across
+    several columns, and the one-column form is the uncommon case. The Rust builder and the
+    dispatch arm were already variadic; only this signature was not (F-CSP-5 / F-CFS-9).
+    """
+    return _scalar("xxhash64", *cols)
 
 
 def rand(seed: int | None = None) -> Column:

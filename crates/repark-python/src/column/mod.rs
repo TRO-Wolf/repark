@@ -45,7 +45,7 @@ mod window;
 
 use expr_build::{
     TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
-    strip_outer_alias,
+    refuse_nested_higher_order, strip_outer_alias,
 };
 use function_dispatch::{binary_aggregate_udaf, call_scalar_expr, unary_aggregate_udaf};
 use window::spark_window_frame;
@@ -185,7 +185,9 @@ impl PyColumn {
             })?;
             let mut args: Vec<Expr> = value_args.iter().map(PyColumn::expr).collect();
             for (params, body) in lambdas {
-                args.push(Expr::Lambda(Lambda::new(params, body.expr())));
+                let body = body.expr();
+                refuse_nested_higher_order(&body, name)?;
+                args.push(Expr::Lambda(Lambda::new(params, body)));
             }
             Ok(Self::from_expr(Expr::HigherOrderFunction(
                 HigherOrderFunction::new(function, args),
@@ -936,6 +938,15 @@ impl PyColumn {
             }
             let udaf = unary_aggregate_udaf(kind)?;
             let base = udaf.call(vec![self.expr.clone()]);
+            // `approx_distinct` materializes UInt64 while `DataFrame.schema` reports bigint, and
+            // one arithmetic step then turns a count into DECIMAL(21,0) instead of BIGINT — which
+            // is what lands in Parquet/Iceberg. Spark's answer is a signed bigint, so cast at the
+            // expression level rather than leaving schema and buffer disagreeing (F-CFS-5).
+            let base = if kind == "approx_count_distinct" || kind == "approx_distinct" {
+                Expr::Cast(Cast::new(Box::new(base), DataType::Int64))
+            } else {
+                base
+            };
             // A plain `call` is already a usable aggregate `Expr`; only IGNORE NULLS needs the
             // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`).
             let expr = if ignore_nulls {

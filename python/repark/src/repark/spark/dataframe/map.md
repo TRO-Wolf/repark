@@ -150,6 +150,12 @@ specs differing only in it are different windows, and merging them silently reor
 the one deliberate exception — an explicit `orderBy(..., ascending=…)` re-marks the columns
 wholesale, so it supersedes any per-column marker on direction AND nulls.
 
+**Critic round 1 (2026-08-20).** `core.py`'s `_sort_specs` mirrors PySpark's `DataFrame._sort_cols`
+line for line: a FALSY `ascending=` entry replaces that column's marker with `desc()` (descending,
+nulls last); a TRUTHY entry changes **nothing at all**. The previous code asserted the override
+re-marked wholesale — a premise that was invented rather than read — and it placed nulls wrongly
+for `orderBy("v", ascending=False)`. `_apply_ascending_override` is gone with it.
+
 ## Pointers
 
 Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df-regions-ledger.md`.

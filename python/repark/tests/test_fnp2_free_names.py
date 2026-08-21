@@ -133,19 +133,26 @@ def test_window_specs_differing_only_in_null_placement_do_not_merge() -> None:
     )
 
 
-def test_ascending_keyword_supersedes_a_per_column_null_marker() -> None:
-    """``orderBy(..., ascending=…)`` re-marks the columns wholesale, direction AND nulls.
+def test_ascending_keyword_remarks_only_on_a_falsy_flag() -> None:
+    """``orderBy(..., ascending=…)`` follows PySpark: only a FALSY flag re-marks a column.
 
-    Routing null placement through the column's marker made this path a behaviour change by
-    accident: a column carrying ``asc()`` (nulls first) under ``ascending=False`` would have kept
-    nulls first while sorting descending. PySpark's ``ascending`` replaces the marker, so the
-    override wins on both halves — pinned here because nothing else covers the interaction.
+    This test previously asserted the opposite — that the override supersedes an explicit marker
+    on both direction and null placement. That premise was invented, not read: PySpark's
+    ``DataFrame._sort_cols`` does ``if not ascending: jcols = [jc.desc() ...]`` and, for a list,
+    ``jc if asc else jc.desc()``, so a truthy flag is a no-op that PRESERVES the marker. Two
+    independent Critic passes caught it (F-CSP-2 / F-CFS-4); the full matrix now lives in
+    ``test_fnp_critic_remediation.py``.
     """
     spark = _session()
     frame = spark.createDataFrame([(2,), (None,), (1,)], "v int")
 
-    out = frame.orderBy(F.col("v").asc(), ascending=False).toArrow().column("v").to_pylist()
-    assert out == [2, 1, None], (
-        "ascending=False must give descending order with nulls last, regardless of the marker "
-        "the column arrived carrying"
-    )
+    # Truthy override: the asc_nulls_last marker survives.
+    assert frame.orderBy(F.asc_nulls_last("v"), ascending=True).toArrow().column(
+        "v"
+    ).to_pylist() == [1, 2, None]
+    # Falsy override: the column is re-marked, so nulls follow the new direction.
+    assert frame.orderBy(F.col("v").asc(), ascending=False).toArrow().column("v").to_pylist() == [
+        2,
+        1,
+        None,
+    ]

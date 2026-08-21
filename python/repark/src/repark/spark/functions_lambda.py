@@ -14,12 +14,21 @@ callable's own signature — and hands the tree to Rust.
 
 **Parameter names are ours, not the user's.** PySpark names lambda parameters ``x``/``y``/``z``
 regardless of what the caller wrote, because the names travel into the plan and a user-chosen name
-could collide with a column. This module does the same.
+could collide with a column. This module does the same *for display*.
+
+**The plan name must additionally be unique per lambda.** Two lambdas that both mint ``x`` are
+indistinguishable to ``resolve_lambda_variables``, so a lambda nested inside another binds its
+body to the OUTER variable and the result is silently wrong — measured as an exactly inverted
+answer for ``exists(a, x -> exists(b, y -> ...))`` (F-CSP-1). Spark solves this with
+``UnresolvedNamedLambdaVariable.freshVarName``; this module does the same with a process-wide
+counter, and keeps ``x``/``y``/``z`` for the rendered display so projection names stay
+PySpark-shaped.
 """
 
 from __future__ import annotations
 
 import inspect
+import itertools
 from collections.abc import Callable
 
 from repark import _native
@@ -27,8 +36,21 @@ from repark.errors import PySparkValueError
 from repark.spark.column import Column
 from repark.spark.functions import _as_column_arg
 
-# PySpark's own parameter names, in order (`builtin.py` `_get_lambda_parameters`).
+# PySpark's own parameter names, in order (`builtin.py` `_get_lambda_parameters`). These are the
+# DISPLAY names; the plan name adds a unique suffix — see `_fresh_parameter_names`.
 _LAMBDA_PARAMETER_NAMES = ("x", "y", "z")
+
+# Spark's `UnresolvedNamedLambdaVariable.freshVarName`. Two lambdas minting the same plan name are
+# indistinguishable to lambda-variable resolution, so a nested lambda would capture the outer
+# binding and answer wrongly with no error (F-CSP-1).
+_LAMBDA_SEQUENCE = itertools.count()
+
+
+def _fresh_parameter_names(arity: int) -> tuple[list[str], list[str]]:
+    """``(plan names, display names)`` for one lambda — unique in the plan, x/y/z on screen."""
+    ordinal = next(_LAMBDA_SEQUENCE)
+    display = list(_LAMBDA_PARAMETER_NAMES[:arity])
+    return [f"{name}_{ordinal}" for name in display], display
 
 
 def _lambda_arity(function: Callable[..., Column], *, allowed: tuple[int, ...]) -> int:
@@ -51,18 +73,25 @@ def _lambda_arity(function: Callable[..., Column], *, allowed: tuple[int, ...]) 
     return arity
 
 
-def _build_lambda(function: Callable[..., Column], arity: int) -> tuple[list[str], Column]:
-    """Mint placeholder columns, call the user's callable, and return ``(param names, body)``."""
-    names = list(_LAMBDA_PARAMETER_NAMES[:arity])
+def _build_lambda(
+    function: Callable[..., Column], arity: int
+) -> tuple[list[str], list[str], Column]:
+    """Mint placeholders, call the user's callable, return ``(plan names, display names, body)``.
+
+    The plan names are unique per call so a nested lambda cannot capture an enclosing one's
+    binding; the display names stay ``x``/``y``/``z`` so the projection reads like PySpark's.
+    """
+    plan_names, display_names = _fresh_parameter_names(arity)
     placeholders = [
-        Column(_native.PyColumn.lambda_variable(name), spark_display=name) for name in names
+        Column(_native.PyColumn.lambda_variable(plan), spark_display=shown)
+        for plan, shown in zip(plan_names, display_names, strict=True)
     ]
     body = function(*placeholders)
     if not isinstance(body, Column):
         raise PySparkValueError(
             f"a higher-order function lambda must return a Column, got {type(body).__name__}"
         )
-    return names, body
+    return plan_names, display_names, body
 
 
 def _higher_order(
@@ -82,7 +111,8 @@ def _higher_order(
     ]
 
     display_lambdas = [
-        f"{', '.join(names)} -> {body.spark_wrap_display_part()}" for names, body in built
+        f"{', '.join(display)} -> {body.spark_wrap_display_part()}"
+        for _plan, display, body in built
     ]
     display_parts = [column.spark_wrap_display_part() for column in value_columns]
     sql_parts = [column.sql_expr_part() for column in value_columns]
@@ -93,7 +123,7 @@ def _higher_order(
         _native.PyColumn.call_higher_order(
             name,
             [column._inner for column in value_columns],
-            [(names, body._inner) for names, body in built],
+            [(plan, body._inner) for plan, _display, body in built],
         ),
         spark_display=shown,
         projection_name=shown,

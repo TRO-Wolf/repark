@@ -169,7 +169,11 @@ impl PyDataFrame {
     /// UNRESOLVED variables — `LambdaVariable::field` is `None` — because the facade has no schema
     /// when it builds the Column. DataFusion's SQL planner resolves them as it plans; the
     /// expression API does not, and an unresolved variable fails when the plan asks it for a type.
-    /// Every method that hands a `PyColumn` to DataFusion goes through here.
+    /// Every method that hands a `PyColumn` to DataFusion goes through here — `select`, `filter`,
+    /// `with_column`, `sort`, `join_on` and `aggregate`. The domain is `grep -n 'PyColumn::expr'`
+    /// in this file; a method that maps that directly instead of calling `bound` is a lambda that
+    /// works everywhere except there. `aggregate` was exactly that gap (F-CSP-4 / F-CFS-2), and
+    /// the claim of totality is what stopped it being looked for.
     fn bound(&self, column: &PyColumn) -> PyResult<Expr> {
         column
             .expr()
@@ -849,8 +853,14 @@ impl PyDataFrame {
     /// unknown column).
     pub fn aggregate(&self, group_by: Vec<PyColumn>, aggregates: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("PyDataFrame.aggregate", {
-            let group_exprs: Vec<Expr> = group_by.iter().map(PyColumn::expr).collect();
-            let aggregate_exprs: Vec<Expr> = aggregates.iter().map(PyColumn::expr).collect();
+            let group_exprs: Vec<Expr> = group_by
+                .iter()
+                .map(|column| self.bound(column))
+                .collect::<PyResult<_>>()?;
+            let aggregate_exprs: Vec<Expr> = aggregates
+                .iter()
+                .map(|column| self.bound(column))
+                .collect::<PyResult<_>>()?;
             let df = self
                 .df
                 .clone()
