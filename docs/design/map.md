@@ -10,6 +10,12 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 ## Contents
 
+- [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW campaign's design
+  (2026-08-21):** why merge-on-read is written but not operated, and why closing that is small.
+  Carries the measured baseline the campaign must move, the four procedure result schemas every
+  pin will assert, and §6 — what lifting the fence for both catalogs actually exposes, which is a
+  commit conflict the fork already catches rather than the corruption risk it was taken for.
+
 - [session-api.md](session-api.md) — the phase-1 repark-core Session API design (settled
   2026-08-06): the three-crate layout (`repark-common` / `repark-iceberg` / `repark-core`), the
   Session type and two-phase lifecycle, the internal engine API with the `SqlDialect` /

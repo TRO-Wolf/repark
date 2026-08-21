@@ -10,6 +10,11 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
+- [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW slate (2026-08-21):**
+  one invariant (no refusal becomes silent), the per-unit contract, the destructive-surface
+  discipline MW-3 inverts its defaults for, and the load-bearing reason the six units run in the
+  order they do.
+
 - [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** slate
   (2026-08-20, awaiting its approval gate): fourteen units on one branch closing the
   `pyspark.sql.functions` gap and moving the semantics behind every name out of Python into Rust.
