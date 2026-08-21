@@ -187,15 +187,19 @@ history-rewrite; provenance and the options weighed:
     ordinary calls on common functions. **Both went to the owner, who ruled on 2026-08-21:**
     `RE-1` closes (SEM-1, below), `LOG-1` is **tabled** and keeps its row.
 
-- **The Spark semantics fixes (SEM)** (chartered 2026-08-21, **gate ruled the same day**; branch
-  `fix/spark-semantics` off `main` @ `8c660f6`, not yet merged). Charter and measured scope:
-  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
-  - **The owner's ruling, 2026-08-21:** `RE-1` closes; **`LOG-1` is TABLED** and keeps its BACKLOG
-    row; the adjacent defects and the message work go ahead.
+- **The Spark semantics fixes (SEM)** (chartered 2026-08-21, **gate ruled the same day**). First
+  four units **MERGED** as [#192](https://github.com/TRO-Wolf/repark/pull/192) / `f3eaa9d`; SEM-6
+  follows on branch `fix/re3-substr-null` off `main` @ `f3eaa9d`, not yet merged. Charter and
+  measured scope: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+  - **The owner's rulings:** 2026-08-21 — `RE-1` closes, **`LOG-1` is TABLED** and keeps its
+    BACKLOG row, the adjacent defects and the message work go ahead. Then, after `RE-3` was
+    registered: close that one too.
   - **Delivered:** SEM-4 (the regexp refusals carry Spark's `REGEX_GROUP_INDEX` condition, and the
     four regexp kernels stop naming each other in their own planning errors), SEM-1 (`RE-1` closed
-    — the two-argument `regexp_extract_all` defaults to capture group 1 on both doors, and the
-    row is retired from the registry).
+    — the two-argument `regexp_extract_all` defaults to capture group 1 on both doors), SEM-3 (the
+    string-`idx` regression), SEM-5 (`RE-3` split out of `RE-2`), SEM-6 (**`RE-3` closed** —
+    `regexp_substr` returns NULL for a zero-width match). Both closed rows are retired from the
+    registry; `RE-2` keeps only the surrogate-bound count divergence it was always about.
   - **SEM-2 (`LOG-1`) is tabled, not dropped.** Its measured scope stays in the charter: a new
     dual-arity, null-guarded `log` kernel over DataFusion's `LogFunc` (`datafusion-spark` 54.1.0
     ships no `log`), which would also move the C-012 ratchet from 24 rows to 23. **`F.log`'s
@@ -204,12 +208,12 @@ history-rewrite; provenance and the options weighed:
     answer that is silently wrong on six edges.
   - **This campaign changes what a working query returns**, deliberately and for the first time
     since the port. That is the whole reason the LRS registered `RE-1` rather than fixing it.
-  - **One new divergence registered, not fixed:** `RE-3` — `regexp_substr` returns `''` for a
-    zero-width match where Spark returns NULL, on any text. It was split out of `RE-2`, which had
-    filed it under a surrogate-position heading it has nothing to do with. Found because a **draft
-    SEM-1 assertion read repark's own answer back as if it were Spark's** and was checked against
-    the oracle before the pin was committed — the exact failure `docs/testing.md` names, caught one
-    step before it would have been pinned as truth.
+  - **`RE-3` was registered by SEM-5 and closed by SEM-6**, in that order and on purpose: it is a
+    value change, so it was measured and written down before it was fixed, and the owner ruled on a
+    row rather than on a proposal. It exists at all because a **draft SEM-1 assertion read repark's
+    own answer back as if it were Spark's** and was checked against the oracle before the pin was
+    committed — the exact failure `docs/testing.md` names, caught one step before it would have
+    been pinned as truth.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

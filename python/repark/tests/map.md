@@ -2060,6 +2060,12 @@ NOT in that file is a defect, not a decision.
   new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
   unsigned, so closing the row reds it on purpose.
 
+- `test_sem6_substr_zero_width_null.py` — **SEM-6 (2026-08-21):** `regexp_substr` returns NULL for
+  a zero-width match, closing registry row `RE-3`. Seven divergent cases and six controls; the
+  controls are the point, because `a*` on `'ab'` (first match non-empty) is what distinguishes the
+  correct rule from "empty pattern → NULL", which would pass every divergent case and still be
+  wrong.
+
 - `test_sem3_string_idx.py` — **SEM-3 (2026-08-21):** `regexp_extract_all` accepts a string `idx`
   as a literal group index, which Spark, repark's own SQL door and repark's own `regexp_instr` all
   already did. A regression from F-FNP6A-1, which removed `lit_indices` entirely when only position
