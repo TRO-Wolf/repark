@@ -1,10 +1,24 @@
+---
+name: compact-context-docs
+description: >-
+  Run the post-landing truth-up that keeps RePark's context documents lean,
+  current, and single-homed: reconcile STATUS.md to what actually merged,
+  replace restatements elsewhere with pointers, sweep stale lifecycle claims
+  ("not yet", "planned", old phase numbers), keep every touched map.md in
+  lockstep, archive closed campaigns to docs/history/, and validate with
+  make ci. Use this skill after a unit, campaign, or release lands, or when a
+  stale claim is spotted in a document agents are expected to trust. The goal
+  is compaction, not deletion — a closed campaign's record moves to the
+  archive; truth is never simply removed.
+---
+
 # Skill: compact-context-docs — true up and compress the context documents
 
 An agent-facing runbook for the post-landing ritual that keeps the repository's context
 documents lean, current, and single-homed. Run it after a unit, campaign, or release lands —
 or whenever a stale claim is spotted in a document an agent is expected to trust. It defines
-no policy; on any conflict the spine wins: [AGENTS.md](../../AGENTS.md) (precedence — in
-particular the single-home rule) and [STATUS.md](../../STATUS.md) (the single source of truth
+no policy; on any conflict the spine wins: [AGENTS.md](../../../AGENTS.md) (precedence — in
+particular the single-home rule) and [STATUS.md](../../../STATUS.md) (the single source of truth
 for current state).
 
 **The goal is compaction, not deletion.** A closed campaign's record moves to the archive
@@ -13,7 +27,7 @@ leaves them, not because it disappears.
 
 ## What counts as a context document
 
-- **[STATUS.md](../../STATUS.md)** — release state, delivery, active/deferred workstreams.
+- **[STATUS.md](../../../STATUS.md)** — release state, delivery, active/deferred workstreams.
   Every other document that mentions state must *point here*, never restate it.
 - **Every touched directory's `map.md`** — navigation truth, kept in lockstep by
   `scripts/check_map_md.sh` (the pre-commit oracle).
@@ -39,7 +53,7 @@ leaves them, not because it disappears.
 4. **map.md lockstep.** Every directory whose contents changed gets its `map.md` updated in
    the same commit. New directory → new `map.md` + a Contents row in the parent's map.
 5. **Archive what closed.** A finished campaign's brief and working record move to
-   `docs/history/` per [docs/history/map.md](../../docs/history/map.md); its cost/caught/missed
+   `docs/history/` per [docs/history/map.md](../../../docs/history/map.md); its cost/caught/missed
    row lands in `task/metrics.md`; `briefs/` keeps only running campaigns (or only its map).
 6. **Validate mechanically.** `make ci` — the manifest checker and map oracle turn structural
    drift into a red gate. Fix red before opening the PR.
