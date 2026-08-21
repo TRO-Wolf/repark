@@ -42,7 +42,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
   refusal, its v2 control, and a fixture assertion — the fixture is built by upgrading an
   engine-created table through the fork's own `Transaction::upgrade_table_version`, because
   nothing on the engine's surface creates a v3 table, and the assertion exists so the refusal pin
-  cannot pass on a table that silently stayed v2),
+  cannot pass on a table that silently stayed v2. A fourth pin holds the guard's blast-radius
+  claim — all four doors to a v3 table refuse — and it lives here rather than with the CREATE
+  tests because the claim is what makes a refusal stricter than Spark defensible; its `ALTER`
+  half is an UPSTREAM behaviour, so the pin doubles as the detector for the fork changing it),
   `call_orphan` (**MW-3**, split out of `call` when that module crossed the 1500-line ceiling —
   `remove_orphan_files` and nothing else, because every test in it is about the blast radius of a
   deletion rather than a shared mechanism, which is also why its fixture helpers live there and

@@ -702,9 +702,15 @@ fn expire_result_dataframe(
 /// Refusing is stricter than Spark, which performs the rewrite correctly. It is the trade MW-2
 /// took for deletion vectors and for the same reason: this procedure runs unattended, and a
 /// plausible wrong answer is worse than a loud stop. The engine cannot create a v3 table
-/// (`create_table.rs` and `ctas.rs` both refuse `format-version`), so nothing this engine wrote
-/// is affected — the reachable case is a v3 table that was already in the catalog when the engine
-/// was pointed at it.
+/// (`create_table.rs` and `ctas.rs` refuse `format-version` at CREATE and CTAS; `ALTER TABLE …
+/// SET TBLPROPERTIES` is refused one layer down, by the fork rejecting reserved properties), so
+/// nothing this engine wrote is affected — the reachable case is a v3 table that was already in
+/// the catalog when the engine was pointed at it. All four doors are pinned together in
+/// `tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`, because this guard's whole
+/// blast-radius argument rests on them and one of them is an upstream behaviour.
+///
+/// The comparison is `< V3`, so a format version *above* v3 refuses too — fail-closed is the
+/// right default for a version whose lineage rules are not known yet.
 ///
 /// Registry row `V3-LINEAGE-1`. Lifting this is fork work, not router work.
 pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
@@ -715,12 +721,12 @@ pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
         return Ok(());
     }
     Err(DataFusionError::NotImplemented(format!(
-        "CALL rewrite_data_files will not compact `{table_arg}`: it is a V3 table, and V3 \
-         mandates row lineage (`_row_id`, `_last_updated_sequence_number`) which this engine's \
-         rewrite does not carry through. The row data would be correct and every row's lineage \
-         would be reassigned, telling downstream consumers that all of them changed. Spark \
-         preserves lineage across the same rewrite — compact this table there until the fork \
-         does the same"
+        "CALL rewrite_data_files will not compact `{table_arg}`: it is a {format_version:?} \
+         table, and V3 onward mandates row lineage (`_row_id`, \
+         `_last_updated_sequence_number`) which this engine's rewrite does not carry through. \
+         The row data would be correct and every row's lineage would be reassigned, telling \
+         downstream consumers that all of them changed. Spark preserves lineage across the same \
+         rewrite — compact this table there until the fork does the same"
     )))
 }
 

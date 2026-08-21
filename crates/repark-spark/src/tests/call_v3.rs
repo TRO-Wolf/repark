@@ -155,3 +155,60 @@ async fn call_rewrite_data_files_still_compacts_a_v2_table() {
         "six single-row files must still be compacted on v2"
     );
 }
+
+/// The guard's blast-radius argument, pinned instead of asserted.
+///
+/// `V3-LINEAGE-1` claims the refusal costs nothing on tables this engine wrote, because this
+/// engine cannot write a v3 table. That claim is doing real work — it is why a refusal stricter
+/// than Spark is defensible — so every door to a v3 table is pinned here rather than left to the
+/// prose. This test lives beside the guard for that reason, not because it is about `CALL`.
+///
+/// The `ALTER` doors are the ones worth having. They are refused **one layer down**, by the
+/// fork's `set_properties` rejecting reserved properties — nothing in this engine looks at
+/// `format-version` on the `ALTER` path. That makes it an upstream behaviour the guard's argument
+/// depends on, and the fork's own doc comment on that function describes the opposite policy
+/// ("the corresponding action is performed"). If the fork ever matches its comment, this pin goes
+/// red and the reachability claim gets revisited before the guard does.
+#[tokio::test]
+async fn the_engine_still_cannot_produce_a_v3_table() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v2only AS SELECT 1 AS id, 'a' AS name",
+    )
+    .await;
+
+    for sql in [
+        "CREATE TABLE ice.sales.c3 (id BIGINT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+        "CREATE TABLE ice.sales.c4 USING iceberg TBLPROPERTIES ('format-version' = '3') \
+         AS SELECT 1 AS id",
+        "ALTER TABLE ice.sales.v2only SET TBLPROPERTIES ('format-version' = '3')",
+        "ALTER TABLE ice.sales.v2only SET TBLPROPERTIES ('format-version' = '3', 'k' = 'v')",
+    ] {
+        let outcome = match execute(&ctx, &catalogs, sql).await {
+            Ok(frame) => frame.collect().await.err().map(|err| err.to_string()),
+            Err(err) => Some(err.to_string()),
+        };
+        assert!(
+            outcome.is_some(),
+            "this door produced a v3 table, so the guard's blast-radius claim is wrong: {sql}"
+        );
+    }
+
+    // And the table it did create is still v2 — a refusal that fired after a partial upgrade
+    // would satisfy the loop above while breaking the claim.
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    let ident = TableIdent::from_strs(["sales", "v2only"]).unwrap();
+    assert_eq!(
+        catalog
+            .load_table(&ident)
+            .await
+            .unwrap()
+            .metadata()
+            .format_version(),
+        FormatVersion::V2
+    );
+}

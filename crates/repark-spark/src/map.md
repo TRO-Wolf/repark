@@ -53,7 +53,11 @@ wrapper.
   format-v3 table (registry `V3-LINEAGE-1`). It is not a capability gap — the rewrite ran and
   produced the right rows — it reassigned every row's `_row_id`, which on v3 tells a downstream
   consumer that all of them changed. The fork's rewrite action carries no lineage, so the fix is
-  fork-side and the refusal is stricter than Spark on purpose. The same finding annotates
+  fork-side and the refusal is stricter than Spark on purpose. The comparison is `< V3`, so a
+  future version above v3 refuses too — fail-closed for a version whose lineage rules are unknown.
+  Its blast-radius claim (this engine cannot make a v3 table) is **pinned, not asserted**, across
+  all four doors including the two `ALTER … SET TBLPROPERTIES` shapes, which the fork refuses
+  rather than this router — so that pin is also the detector for the fork changing its mind. The same finding annotates
   `removed_delete_files_count`, whose honest constant `0` holds on v2 and stops holding the moment
   v3 is admitted.
   3 in-module tests.

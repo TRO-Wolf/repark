@@ -1755,8 +1755,11 @@ the pin rather than obeying it.
   same trade as
   [B-MOR-3](#surfaced-awaiting-pins--not-yet-rows) — an unattended procedure gets a loud stop
   rather than a plausible wrong answer. **Not reachable on anything this engine wrote**: `CREATE
-  TABLE` and CTAS both refuse `format-version`, so a v3 table only exists here if it was already
-  in the catalog.
+  TABLE` and CTAS refuse `format-version`, and `ALTER TABLE … SET TBLPROPERTIES` is refused a
+  layer down by the fork rejecting reserved properties — all four doors pinned together by
+  `crates/repark-spark/src/tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`, because
+  this claim is what makes a refusal stricter than Spark defensible. A v3 table only exists here
+  if it was already in the catalog.
 
 ### Surfaced, awaiting pins — not yet rows
 

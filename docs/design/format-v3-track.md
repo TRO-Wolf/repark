@@ -185,6 +185,8 @@ Neither blocks V3-1.
   table with expirable snapshots.
 - **No equality-delete or partitioned v3 fixture was built.** Both fixtures are unpartitioned and
   carry only position-style deletes.
+- **V1 is unpinned and unpinnable.** The guard admits it (correctly — v1 has no row lineage), but
+  no test can build a v1 fixture: the catalog creates v2 and the fork refuses a downgrade.
 - **The row-lineage guard is pinned on an upgraded table, not a Spark-written one.** The pin
   builds v3 through the fork's own `upgrade_table_version` so it runs in CI with no oracle. The
   Spark-written half is measured in the ledger and cannot be a pin until V3-1 lands a fixture CI

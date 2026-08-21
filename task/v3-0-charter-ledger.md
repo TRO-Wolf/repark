@@ -172,10 +172,18 @@ fixture is built by upgrading an engine-created table through the fork's own
 | `v3_fixture_really_is_format_v3` | the table is v2 before the upgrade and v3 after — without this the refusal pin would pass unchanged if the upgrade silently no-opped |
 | `call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage` | the refusal fires, and its message names both row lineage and the format version |
 | `call_rewrite_data_files_still_compacts_a_v2_table` | the incidental control — six files still compact to one on v2, still five columns |
+| `the_engine_still_cannot_produce_a_v3_table` | all four doors to a v3 table refuse — CREATE, CTAS, and both `ALTER … SET TBLPROPERTIES` shapes — and the table survives as v2. Added by the Critic pass (F1) |
 
 The control is the one that matters most. The guard is a format-version comparison, and its
 plausible failure is firing one version early and quietly disabling compaction on every table the
 engine actually creates.
+
+**The enumerated domain is `{V1, V2, V3}`** — the fork's `FormatVersion` has exactly those three
+variants, `#[repr(u8)]` 1/2/3 with an explicit `Ord` on the discriminant, so `< V3` is precisely
+"V1 or V2". V2 and V3 are pinned. **V1 is not, and cannot be**: the memory catalog creates v2 and
+`upgrade_format_version` refuses a downgrade, so no test can construct a v1 fixture. Allowing v1
+is correct on its own terms — v1 has no row lineage to lose — and it is recorded here rather than
+left as a silent hole in the partition.
 
 Watched red before the guard existed: the refusal pin failed, the other two passed. That ordering
 is what proves the fixture is sound and the guard is what changed the outcome.
@@ -202,3 +210,50 @@ read. That is the same reason `B-MOR-3` is still queued rather than promoted.
   Glue implements `register_table` is read at the fork pin, not run.
 - **MW is still open.** MW-4 waits on OD-3, which the owner executes. V3-1 can run alongside it;
   V3-2 and later should not.
+
+## 8. Critic pass (SEPMO R3–R6)
+
+Context break executed procedurally, in-session, per the binding manifest's
+`context_break_mechanics` — named honestly: this is not a fresh context, so the compensating
+control below carries the weight rather than the isolation.
+
+**Fresh executions (R3 step 5, `s0_fresh_execution`).** This unit's failure class is silently
+wrong results, so the Critic chose its own novel inputs and ran them during its own pass. All four
+target elements no committed test covers.
+
+| # | Input | Entry point | Observed vs expected |
+|---|---|---|---|
+| 1 | **Partitioned** v2 table, 7 files across 2 partitions | facade on the built wheel, values via `toArrow` | all five counts `0`, rows preserved. Spark on the identical shape: all five `0`. Parity — both decline groups of 4 and 3 under `min-input-files = 5` |
+| 2 | **Partitioned** v2 table, 12 files in one partition | same | `rewritten = 12, added = 1, failed = 0, removed = 0`; Spark `rewritten = 12, added = 1, removed = 0`. Counts match; `rewritten_bytes_count` differs (10608 vs 7655) because it measures this engine's own files |
+| 3 | **Foreign, Spark-written, partitioned** v3 table with 6 live Puffin vectors | SQL door (`router::execute`) after `register_table` | read returned 545 rows / `sum(id) = 163365`, Spark's exact truth; `CALL rewrite_data_files` refused with the full message. The committed pin uses an upgraded in-engine table, so this is the first run against a real foreign artifact |
+| 4 | v3 table with **no snapshot at all** | SQL door | refused consistently; no panic on the empty-snapshot path |
+
+Input 1 is the one worth keeping: zeros on a partitioned table look exactly like a guard
+misfiring, and only the Spark comparison distinguishes "correctly declined" from "silently broken".
+
+**Mutation checks (AT-10), run rather than reasoned.** `< V3` → `<= V3`: the refusal pin fails,
+the control passes. `< V3` → `< V2`: the control fails, the refusal pin passes. The
+`format-version` CREATE refusal inverted: the new reachability pin fails, naming the door. Every
+branch the diff adds has an input that changes the outcome.
+
+**Findings and dispositions.** Severity floor S1; nothing reached it.
+
+| ID | Sev | Finding | Disposition |
+|---|---|---|---|
+| F1 | S2 | The blast-radius claim enumerated CREATE and CTAS but not `ALTER … SET TBLPROPERTIES`. That door is refused **by the fork**, not by this engine, and the fork's own doc comment on `set_properties` describes the opposite policy ("the corresponding action is performed"). An upstream relaxation would silently hand the engine a v3-creation path and quietly falsify the guard's rationale. | **REMEDIATED** — `the_engine_still_cannot_produce_a_v3_table` pins all four doors and the post-state; the guard's doc names the `ALTER` layer. Characterization pin, so R5's failed-then-passed form does not apply: its job is to go red if the fork changes. Mutation-checked live. |
+| F2 | S3 | The refusal message hardcoded "V3" where the guard admits every version **at or above** V3. Unreachable today — `FormatVersion` has no V4 — but the text would misreport the first version that exists. | **REMEDIATED** — the message interpolates the actual version (`{format_version:?}`), and the doc states the fail-closed intent explicitly. |
+| F3 | S3 | V1 was absent from the ledger's partition of the format-version domain. | **REMEDIATED** — §5 now enumerates all three and records why V1 cannot be pinned. |
+
+**Attestation.** AT-1 spec conformance, AT-2 boundaries, AT-3 failure modes, AT-6 data integrity,
+AT-8 dependency contracts and AT-10 test adequacy: `ATTACKED`, evidence above. AT-4 state and
+ordering: `ATTACKED` — a concurrent `upgrade_format_version` between `load_table` and the rewrite
+commit degrades to a commit conflict rather than silent corruption, because the fork re-gates a
+buffered action against the refreshed base on every retry
+(`transaction/snapshot.rs`, "re-gated against the upgraded version on every retry"). AT-5 security:
+`N/A` — the diff adds a pure comparison over already-loaded metadata and a message; the only
+external value is `table_arg`, validated upstream. AT-7 resources: `ATTACKED`, clean — the guard
+reads a field and performs no I/O, unlike the manifest walk MW-2's deletion-vector guard needs.
+AT-9 observability: `ATTACKED` — the refusal names the table, the version, the cause and the
+workaround.
+
+**Noise ratio:** 3 filed, 0 withdrawn. No disputes.
