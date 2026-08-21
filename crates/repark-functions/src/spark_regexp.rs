@@ -457,8 +457,15 @@ fn invoke_substr(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     let values = extract_rows(args, "regexp_substr", |row| {
         Ok(match row {
             None => None,
-            // NULL on no match, deliberately unlike `regexp_extract`'s empty string.
-            Some((text, regex, _group)) => regex.find(text).map(|found| found.as_str().to_owned()),
+            // NULL on no match, deliberately unlike `regexp_extract`'s empty string — and NULL
+            // for a ZERO-WIDTH match too (RE-3, closed by SEM-6). Spark takes the FIRST match and
+            // nulls it when empty; it does not look for a later non-empty one, so
+            // `regexp_substr('a1b2', '[0-9]*')` is NULL even though `'1'` matches at position 1.
+            Some((text, regex, _group)) => regex
+                .find(text)
+                .map(|found| found.as_str())
+                .filter(|matched| !matched.is_empty())
+                .map(str::to_owned),
         })
     })?;
     let array: ArrayRef = Arc::new(StringArray::from(values));

@@ -26,7 +26,10 @@ sit beside `collection/`.
   the caller's name. Ledger: `task/sem-4-regexp-messages-ledger.md`. **SEM-1
   (2026-08-21):** the two-argument default is capture group **1**, Spark's,
   not the whole match — one knob for both doors, closing registry row `RE-1`.
-  Ledger: `task/sem-1-extract-all-group-default-ledger.md`.
+  Ledger: `task/sem-1-extract-all-group-default-ledger.md`. **SEM-6 (2026-08-21):**
+  `invoke_substr` returns NULL for a ZERO-WIDTH match, not `''` — Spark takes
+  the first match and nulls it when empty, closing registry row `RE-3`.
+  Ledger: `task/sem-6-substr-zero-width-null-ledger.md`.
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line

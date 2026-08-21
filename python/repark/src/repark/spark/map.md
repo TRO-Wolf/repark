@@ -1315,6 +1315,11 @@ kernel's default the only default and one knob enough for both doors. A pattern 
 group therefore raises on the two-argument form, as it does in Spark. Ledger:
 `task/sem-1-extract-all-group-default-ledger.md`.
 
+**SEM-6 (2026-08-21).** `regexp_substr`'s docstring names **both** NULL cases: no match, and a
+first match that is **zero-width**. Spark nulls an empty first match rather than looking for a later
+non-empty one, so `regexp_substr('a1b2', '[0-9]*')` is NULL. Naming only "no match" is how the
+zero-width half went unexamined. Ledger: `task/sem-6-substr-zero-width-null-ledger.md`.
+
 **SEM-3 (2026-08-21).** `regexp_extract_all`'s **`idx`** is forced-lit (`lit_indices={2}`) when it
 is not a `Column`, so a string `"1"` is a group index rather than a column name. Position 1 stays
 free — the FNP-6a note above is still the rule for `regexp`; F-FNP6A-1 simply removed both

@@ -24,6 +24,13 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-6-substr-zero-width-null-ledger.md](sem-6-substr-zero-width-null-ledger.md) — **SEM-6
+  (2026-08-21):** `RE-3` closed — `regexp_substr` returns NULL for a zero-width match. Spark takes
+  the FIRST match and nulls it when empty rather than looking for a later non-empty one, which is
+  the distinction that makes `a*` on `'ab'` the control that keeps the fix honest: "empty pattern →
+  NULL" would pass all seven divergent cases and still be wrong. Registered by SEM-5 one commit
+  earlier and closed here, so the decision was taken against a measured row rather than a patch.
+
 - [sem-5-substr-zero-width-ledger.md](sem-5-substr-zero-width-ledger.md) — **SEM-5
   (2026-08-21):** registration only. `regexp_substr` returns `''` for a zero-width match where
   Spark returns NULL — on plain ASCII, not just astral text — so it is split out of `RE-2` as its

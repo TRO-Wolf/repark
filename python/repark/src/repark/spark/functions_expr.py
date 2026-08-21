@@ -1056,9 +1056,13 @@ def regexp_extract_all(
 
 
 def regexp_substr(str: Column | str, regexp: Column | str) -> Column:
-    """The first match, or NULL when there is none (PySpark ``functions.regexp_substr``).
+    """The first match, or NULL (PySpark ``functions.regexp_substr``).
 
     ``regexp`` is ``ColumnOrName``: a bare ``str`` is a **column name**.
+
+    NULL covers **two** cases, not one: no match at all, and a first match that is **zero-width**.
+    Spark takes the first match and nulls it when empty rather than looking for a later non-empty
+    one, so ``regexp_substr('a1b2', '[0-9]*')`` is NULL even though ``'1'`` matches at position 1.
 
     Deliberately unlike ``regexp_extract``, which returns an empty string on no match; Spark keeps
     the two conventions apart.

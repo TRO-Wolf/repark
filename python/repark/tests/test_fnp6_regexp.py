@@ -89,7 +89,9 @@ def test_substr_returns_null_on_no_match_not_empty_string() -> None:
         .to_pylist()
     )
     assert got == ["100", None, None]
-    assert got[1] is not "", "no match is NULL for regexp_substr, not an empty string"  # noqa: F632
+    # Was `is not ""` (F632-suppressed): an identity test that only caught the empty string by the
+    # accident of interning, and would have read as passing for any other falsy value. SEM-6.
+    assert got[1] is None, "no match is NULL for regexp_substr, not an empty string"
 
 
 def test_substr_matches_the_re_oracle() -> None:
