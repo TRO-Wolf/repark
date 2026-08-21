@@ -7,17 +7,24 @@
 
 use std::sync::Arc;
 
-use datafusion::functions_aggregate::average::avg_udaf;
+use datafusion::arrow::datatypes::DataType;
+use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
 use datafusion::functions_aggregate::covariance::{covar_pop_udaf, covar_samp_udaf};
 use datafusion::functions_aggregate::first_last::{first_value_udaf, last_value_udaf};
+use datafusion::functions_aggregate::grouping::grouping_udaf;
 use datafusion::functions_aggregate::median::median_udaf;
 use datafusion::functions_aggregate::min_max::{max_udaf, min_udaf};
+use datafusion::functions_aggregate::regr::{
+    regr_avgx_udaf, regr_avgy_udaf, regr_count_udaf, regr_intercept_udaf, regr_r2_udaf,
+    regr_slope_udaf, regr_sxx_udaf, regr_sxy_udaf, regr_syy_udaf,
+};
 use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
+use datafusion::functions_aggregate::string_agg::string_agg_udaf;
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::expr::{Cast, ScalarFunction};
 use datafusion::logical_expr::{AggregateUDF, Expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
@@ -308,7 +315,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
         }
         "to_timestamp" => {
             need_at_least(1)?;
-            expr_fn::to_timestamp(exprs.clone())
+            repark_functions::expr_fn::to_timestamp(exprs.clone())
         }
         "from_unixtime" => {
             // Spark returns a STRING formatted timestamp, not a timestamp type.
@@ -765,7 +772,70 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
             need(1)?;
             repark_functions::expr_fn::unix_micros(exprs[0].clone())
         }
-        "date_diff" => {
+        // ---- FNP-3: names the SQL door already resolved; the facade had no arm ---------
+        "crc32" => {
+            need(1)?;
+            repark_functions::expr_fn::crc32(exprs[0].clone())
+        }
+        "sha1" | "sha" => {
+            need(1)?;
+            repark_functions::expr_fn::sha1(exprs[0].clone())
+        }
+        "xxhash64" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::xxhash64(exprs.clone())
+        }
+        "validate_utf8" => {
+            need(1)?;
+            repark_functions::expr_fn::validate_utf8(exprs[0].clone())
+        }
+        "try_validate_utf8" => {
+            need(1)?;
+            repark_functions::expr_fn::try_validate_utf8(exprs[0].clone())
+        }
+        "assert_true" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::assert_true(exprs.clone())
+        }
+        "randstr" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::randstr(exprs.clone())
+        }
+        "uniform" => {
+            need_at_least(2)?;
+            repark_functions::expr_fn::uniform(exprs.clone())
+        }
+        "regexp_extract_all" => {
+            need_at_least(2)?;
+            repark_functions::expr_fn::regexp_extract_all(exprs.clone())
+        }
+        "regexp_substr" => {
+            need(2)?;
+            repark_functions::expr_fn::regexp_substr(exprs[0].clone(), exprs[1].clone())
+        }
+        "soundex" => {
+            need(1)?;
+            repark_functions::expr_fn::soundex(exprs[0].clone())
+        }
+        "format_string" => {
+            need_at_least(1)?;
+            repark_functions::expr_fn::format_string(exprs.clone())
+        }
+        "from_utc_timestamp" => {
+            need(2)?;
+            repark_functions::expr_fn::from_utc_timestamp(exprs[0].clone(), exprs[1].clone())
+        }
+        "to_utc_timestamp" => {
+            need(2)?;
+            repark_functions::expr_fn::to_utc_timestamp(exprs[0].clone(), exprs[1].clone())
+        }
+        "map_from_arrays" => {
+            need(2)?;
+            repark_functions::expr_fn::map_from_arrays(exprs[0].clone(), exprs[1].clone())
+        }
+        // Spark's older spelling of `date_diff`; PySpark 4.1.2 defines both with the same
+        // (end, start) order over the same Catalyst expression, so they share one arm.
+        "date_diff" | "datediff" => {
             need(2)?;
             repark_functions::expr_fn::date_diff(exprs[0].clone(), exprs[1].clone())
         }
@@ -865,7 +935,7 @@ pub(super) fn call_scalar_expr(name: &str, exprs: Vec<Expr>) -> PyResult<Expr> {
 pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
     let udaf = match kind {
         "sum" => sum_udaf(),
-        "avg" => avg_udaf(),
+        "avg" => repark_functions::aggregate::avg_udaf(),
         "min" => min_udaf(),
         "max" => max_udaf(),
         "first" => first_value_udaf(),
@@ -879,6 +949,11 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "bit_and" => bit_and_udaf(),
         "bit_or" => bit_or_udaf(),
         "bit_xor" => bit_xor_udaf(),
+        // FNP-5: already in `all_default_aggregate_functions()`, so the SQL door resolved these
+        // and only the facade had no arm. `approx_count_distinct` is Spark's spelling of
+        // DataFusion's `approx_distinct` — see the facade wrapper for the HLL/HLL++ divergence.
+        "approx_count_distinct" | "approx_distinct" => approx_distinct_udaf(),
+        "grouping" => grouping_udaf(),
         other => {
             return Err(PyValueError::new_err(format!(
                 "unknown aggregate function {other:?}"
@@ -889,6 +964,29 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
 }
 
 /// ===========================================================================================
+/// Cast an aggregate whose declared return type is unsigned to `Int64`.
+///
+/// Spark has no unsigned integer type, so an unsigned result is a fidelity defect however it
+/// arises: `DataFrame.schema` reports bigint while the buffer holds `UInt64`, one arithmetic step
+/// then widens the count to DECIMAL(21,0), and that is what lands in Parquet/Iceberg — where
+/// Spark reads it back as decimal(20,0) and the file does not round-trip.
+///
+/// Measured from the UDAF rather than keyed on a name, so an aggregate added to either dispatch
+/// table is covered the day it is added (F-CFS-5 fixed `approx_count_distinct` by name and left
+/// its sibling `regr_count` unsigned — FNP-R3-1). The probe uses Int64 arguments: the count-like
+/// aggregates return unsigned for every numeric input, and a UDAF that rejects the probe (the
+/// string ones) keeps its own type.
+/// ===========================================================================================
+pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
+    match udaf.return_type(&vec![DataType::Int64; arity]) {
+        Ok(returned) if returned.is_unsigned_integer() => {
+            Expr::Cast(Cast::new(Box::new(expr), DataType::Int64))
+        }
+        _ => expr,
+    }
+}
+
+/// ===========================================================================================
 /// Binary aggregate UDAF for [`super::PyColumn::aggregate_binary`].
 /// ===========================================================================================
 pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
@@ -896,6 +994,20 @@ pub(super) fn binary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         "corr" => corr_udaf(),
         "covar_pop" => covar_pop_udaf(),
         "covar_samp" | "covar" => covar_samp_udaf(),
+        // FNP-5: the nine linear-regression aggregates. All are in
+        // `all_default_aggregate_functions()`, so `register_all` already put them on every
+        // session and the SQL door resolved them — only the facade had no arm.
+        "regr_avgx" => regr_avgx_udaf(),
+        "regr_avgy" => regr_avgy_udaf(),
+        "regr_count" => regr_count_udaf(),
+        "regr_intercept" => regr_intercept_udaf(),
+        "regr_r2" => regr_r2_udaf(),
+        "regr_slope" => regr_slope_udaf(),
+        "regr_sxx" => regr_sxx_udaf(),
+        "regr_sxy" => regr_sxy_udaf(),
+        "regr_syy" => regr_syy_udaf(),
+        // Spark `listagg` is `string_agg` under its Spark spelling (both take a delimiter).
+        "string_agg" | "listagg" => string_agg_udaf(),
         other_kind => {
             return Err(PyValueError::new_err(format!(
                 "unknown binary aggregate {other_kind:?}"

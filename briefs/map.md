@@ -10,6 +10,16 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 
 ## Contents
 
+- [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** slate
+  (2026-08-20, awaiting its approval gate): fourteen units on one branch closing the
+  `pyspark.sql.functions` gap and moving the semantics behind every name out of Python into Rust.
+  Carries the orchestration rules, the restated testing contract, the sequencing, the per-unit
+  execution contract, and the unit notes that are easy to get wrong (do not alias Spark
+  `transform`/`filter` onto the arity-deficient DataFusion kernels; do not set the dialect
+  session-wide; DataFusion's `to_char` is a false friend). Executes the design in
+  [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); gated by
+  [../task/fnp-0-charter-ledger.md](../task/fnp-0-charter-ledger.md), which does **not** pass yet
+  — clause C-007 is `OPEN` pending one owner ruling.
 - [v2-engine-hardening.md](v2-engine-hardening.md) — the **V2 Engine Hardening** slate
   (2026-08-10, running): the campaign's per-unit definitions and acceptance gates — H-1's four
   correctness units (the divergence registry, session timezone, the time-travel view leak, the
@@ -43,6 +53,7 @@ its design and its one unit ledger. Where the next campaign stands is
 | I want to... | go to |
 |---|---|
 | Read the running campaign's slate | [v2-engine-hardening.md](v2-engine-hardening.md) |
+| Read the queued campaign's slate | [spark-function-parity.md](spark-function-parity.md) — gated on [../task/fnp-0-charter-ledger.md](../task/fnp-0-charter-ledger.md) |
 | See what the running campaign DECIDED and why | [../docs/design/v2-engine-hardening.md](../docs/design/v2-engine-hardening.md) |
 | See what a delivered unit was ASKED to do | the dated brief for its slate — in this directory while the campaign runs, in [../docs/history/](../docs/history/map.md) once it closes |
 | Find the standing rules briefs inherit | [../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules" |

@@ -1975,6 +1975,70 @@ NOT in that file is a defect, not a decision.
   by design — nothing to compare; the Glue location-mismatch guard is intentionally not called).
   Runbook: `REPARK_AWS_ACCEPTANCE=1 TABLE_BUCKET_ARN=<us-east-2 ARN> AWS_REGION=us-east-2`.
 
+- `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
+  layer. Pins that a name reachable from both doors returns the same Arrow **type and value**
+  whether it is called as `F.f(x)` or `spark.sql("SELECT f(x)")`. Written because the whole facade
+  suite passed unchanged across a fix that moved `F.to_timestamp` from `timestamp[ns]` to
+  `timestamp[us, tz=UTC]` — no row compared the two doors, so the divergence was invisible. The
+  Rust half of the same clause is `crates/repark-python/src/column/door_parity_tests.rs`.
+
+- `test_fnp2_free_names.py` — **FNP-2 (2026-08-20):** all four null-ordering corners pinned by
+  observed ROW ORDER (not by which method they delegate to), the same four through `Window.orderBy`,
+  the plan-collapse non-merge of two specs differing only in null placement, the `ascending=`
+  override superseding a per-column marker, and the `column`/`negate`/`session_user` aliases on the
+  Arrow path.
+
+- `test_fnp3_destubbed.py` — **FNP-3 (2026-08-20):** the eleven names whose kernel the engine
+  already shipped but the facade refused. Every row pinned on the Arrow path AND cross-checked
+  against the SQL door for value and type. `crc32`/`sha1` check against `zlib`/`hashlib` rather
+  than against RePark's own output; `xxhash64` has no oracle available and pins determinism,
+  distinctness and return type only, and says so.
+
+- `test_fnp4_lambda_seam.py` — **FNP-4a (2026-08-20):** a Python lambda reaching the engine.
+  `exists` through the Column API, Spark's three-valued null semantics, the empty-array and
+  null-array edges, an outer column captured in the body, loud refusals for wrong arity and a
+  non-Column return, and the four DataFrame entry points that resolve lambda variables. `join_on`
+  is wired but deliberately unpinned — it resolves against the LEFT schema only, which the test
+  docstring says rather than implies.
+
+- `test_fnp5_aggregates.py` — **FNP-5 (2026-08-20):** the thirteen aggregates the facade could
+  not reach. The nine `regr_*` are pinned against an EXACT fit (`y = 2x + 1`), so slope 2,
+  intercept 1, r-squared 1, sxx 5, syy 20, sxy 10 are closed-form rather than repark agreeing with
+  itself, and each is cross-checked against the SQL door. `approx_count_distinct`'s `rsd` argument
+  is pinned as accepted-and-ignored (Spark uses HLL++, DataFusion HLL) — a signature contract, not
+  a claim the estimate matches Spark. **Critic round 2 (2026-08-20):** the two-door check gained
+  `DOOR_RETURNS_UNSIGNED`, a RATCHET holding the one name whose doors reach the same kernel but
+  hand back different types — the facade casts `regr_count` to Spark's signed bigint, the SQL door
+  still returns the engine's `UInt64`. Fixing the door turns this test red on purpose.
+
+- `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
+  against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
+  apart, door agreement, and a pin tying `regexp_count` to `size(regexp_extract_all(...))` on an
+  empty-matching pattern so the shared `Matcher.find()` walk cannot drift between them.
+
+- `test_fnp6_random.py` — **FNP-6b (2026-08-20):** `randstr` / `uniform` pinned on the properties
+  Spark's docs state — length, character pool, range, the integer-vs-double return rule,
+  determinism per seed — and deliberately NOT on generated values, since no live Spark runs here
+  and a value pin would read as parity evidence while being repark agreeing with itself. Also pins
+  that a NaN bound refuses distinctly from an inverted range.
+
+- `test_fnp6_validate.py` — **FNP-6c (2026-08-20):** the UTF-8 pair exercised on BINARY input,
+  which is the only place they can fail in repark (an Arrow `Utf8` array cannot hold invalid
+  UTF-8, while Spark's `UTF8String` can); plus `assert_true` raising on NULL as well as false,
+  and honouring a caller-supplied message.
+
+- `test_fnp_critic_remediation.py` — **Critic round 1 (2026-08-20):** regression pins for the
+  findings two independent adversarial passes raised on this branch, including the S0 (nested
+  higher-order functions returned an inverted boolean), the `ascending=` override matrix, the
+  empty-pattern count-vs-collect agreement, `groupBy`/`agg` over a higher-order column, `randstr`
+  refusing an enormous length instead of aborting the process, and a structural check that no
+  working function still documents itself as unsupported. **Critic round 2 (2026-08-20):** pins for
+  the three S1 defects that remediation itself introduced — every dispatched aggregate run through
+  `.over()` (a CAST must not hide an aggregate from the window path), `regr_count` as a signed
+  bigint through arithmetic (the unsigned fix was keyed on a name and missed its sibling), and an
+  unaliased higher-order column keeping the same output name on every build (the uniqueness
+  counter leaked into the schema).
+
 ## I want to...
 
 | ...do this | go to |

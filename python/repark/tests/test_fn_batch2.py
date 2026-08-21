@@ -36,7 +36,6 @@ from repark.spark.functions import (
     lit,
     locate,
     map_entries,
-    map_from_arrays,
     map_keys,
     map_values,
     overlay,
@@ -48,7 +47,6 @@ from repark.spark.functions import (
     size,
     slice,
     sort_array,
-    soundex,
     substring_index,
     translate,
     unbase64,
@@ -180,14 +178,13 @@ def test_map_batch2(spark: ReparkSession) -> None:
 
 
 def test_batch2_loud_unsupported(spark: ReparkSession) -> None:
-    with pytest.raises(UnsupportedOperationException, match="soundex"):
-        soundex("s")
+    # FNP-3: soundex flipped to shipped (datafusion-spark kernel). See test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="sentences"):
         sentences("s")
     with pytest.raises(UnsupportedOperationException, match="arrays_zip"):
         arrays_zip("a", "b")
-    with pytest.raises(UnsupportedOperationException, match="map_from_arrays"):
-        map_from_arrays("a", "b")
+    # FNP-3: map_from_arrays flipped to shipped — the stub's own docstring already noted the SQL
+    # door resolved it. See test_fnp3_destubbed.py.
     with pytest.raises(UnsupportedOperationException, match="locate"):
         locate("b", "s", pos=2)
 

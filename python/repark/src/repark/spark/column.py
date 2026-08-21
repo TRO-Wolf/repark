@@ -1373,12 +1373,19 @@ class Column:
             window_spec=window,
         )
 
-    def asc(self) -> Column:
-        """Mark this column for ascending order (PySpark ``Column.asc``; nulls first)."""
+    def _with_sort_order(self, *, ascending: bool, nulls_first: bool) -> Column:
+        """This column carrying a sort marker, with every other tracked attribute preserved.
+
+        The marker is the ONLY thing that changes. Dropping any of the carried attributes here
+        silently breaks a different subsystem: `sql_expr` keeps free-SQL global-agg from falling
+        back to unquoted display (octo C4-SEC-002), `generator` keeps explode rewrite alive
+        through an `orderBy` marker (octo C2-Q-005 / C2-L-003), and the origin fields keep join
+        identity through `orderBy(parent.col.desc())` (H1).
+        """
         return Column(
             self._inner,
-            sort_ascending=True,
-            sort_nulls_first=True,
+            sort_ascending=ascending,
+            sort_nulls_first=nulls_first,
             spark_display=self._spark_display,
             projection_name=self._projection_name,
             stable_name=self._stable_name,
@@ -1389,47 +1396,38 @@ class Column:
             has_ungroupable=self._has_ungroupable,
             is_aggregate_function=self._is_aggregate_function,
             partition_transform=self._partition_transform,
-            # Keep structural sql_expr so free-SQL global-agg does not fall back to
-            # unquoted display after sort markers (octo C4-SEC-002).
             sql_expr=self._sql_expr,
-            # Keep generators sticky — orderBy markers must not drop explode rewrite
-            # (octo C2-Q-005 / C2-L-003).
             generator=self._generator,
             generator_cast=self._generator_cast,
             when_pairs=self._when_pairs,
-            # H1: sort markers must not drop join identity (orderBy(parent.col.desc())).
             origin_plan_id=self._origin_plan_id,
             origin_field=self._origin_field,
             join_sql_expr=self._join_sql_expr,
         )
 
+    def asc(self) -> Column:
+        """Mark this column for ascending order (PySpark ``Column.asc``; nulls first)."""
+        return self._with_sort_order(ascending=True, nulls_first=True)
+
+    def asc_nulls_first(self) -> Column:
+        """Ascending order, nulls first (PySpark ``Column.asc_nulls_first``; same as ``asc``)."""
+        return self._with_sort_order(ascending=True, nulls_first=True)
+
+    def asc_nulls_last(self) -> Column:
+        """Ascending order, nulls LAST (PySpark ``Column.asc_nulls_last``)."""
+        return self._with_sort_order(ascending=True, nulls_first=False)
+
     def desc(self) -> Column:
         """Mark this column for descending order (PySpark ``Column.desc``; nulls last)."""
-        return Column(
-            self._inner,
-            sort_ascending=False,
-            sort_nulls_first=False,
-            spark_display=self._spark_display,
-            projection_name=self._projection_name,
-            stable_name=self._stable_name,
-            agg_name=self._agg_name,
-            is_aggregate=self._is_aggregate,
-            is_foldable=self._is_foldable,
-            has_free_attribute=self._has_free_attribute,
-            has_ungroupable=self._has_ungroupable,
-            is_aggregate_function=self._is_aggregate_function,
-            partition_transform=self._partition_transform,
-            # Keep structural sql_expr so free-SQL global-agg does not fall back to
-            # unquoted display after sort markers (octo C4-SEC-002).
-            sql_expr=self._sql_expr,
-            generator=self._generator,
-            generator_cast=self._generator_cast,
-            when_pairs=self._when_pairs,
-            # H1: sort markers must not drop join identity (orderBy(parent.col.desc())).
-            origin_plan_id=self._origin_plan_id,
-            origin_field=self._origin_field,
-            join_sql_expr=self._join_sql_expr,
-        )
+        return self._with_sort_order(ascending=False, nulls_first=False)
+
+    def desc_nulls_first(self) -> Column:
+        """Descending order, nulls FIRST (PySpark ``Column.desc_nulls_first``)."""
+        return self._with_sort_order(ascending=False, nulls_first=True)
+
+    def desc_nulls_last(self) -> Column:
+        """Descending order, nulls last (PySpark ``Column.desc_nulls_last``; same as ``desc``)."""
+        return self._with_sort_order(ascending=False, nulls_first=False)
 
     def for_select(self) -> Column:
         """Return this column with the native expression aliased to the Spark projection name.
@@ -1609,3 +1607,19 @@ def _bound_generator_array(frame: Any, generator: Column) -> Any:
         return frame._bind_schema_column(name)._inner
     except AnalysisException:
         return generator._inner
+
+
+def sort_nulls_first_for(column: Column, is_ascending: bool) -> bool:
+    """Where NULLs go for one ordering column.
+
+    An explicit ``asc_nulls_last`` / ``desc_nulls_first`` marker wins; a column with no marker
+    follows Spark's default, which is derived from the direction (ascending → nulls first,
+    descending → nulls last).
+
+    The default USED to be the whole story, because only ``asc``/``asc_nulls_first`` and
+    ``desc``/``desc_nulls_last`` were reachable and each agreed with the derivation. Deriving is
+    wrong the moment the other two corners exist, and it is wrong silently — the rows come back in
+    a plausible order. Every ordering path resolves null placement through here.
+    """
+    explicit = column._sort_nulls_first
+    return is_ascending if explicit is None else bool(explicit)

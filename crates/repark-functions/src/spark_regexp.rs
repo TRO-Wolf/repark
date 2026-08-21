@@ -15,7 +15,9 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, AsArray, Int32Array};
+use datafusion::arrow::array::{
+    Array, ArrayRef, AsArray, Int32Array, ListBuilder, StringArray, StringBuilder,
+};
 use datafusion::arrow::compute::cast;
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
 use datafusion::common::{DataFusionError, Result, exec_err};
@@ -39,6 +41,29 @@ pub fn regexp_count_udf() -> Arc<ScalarUDF> {
 #[must_use]
 pub fn regexp_instr_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRegexpInstr::new()))
+}
+
+/// ===========================================================================================
+/// Spark `regexp_extract_all(str, regexp[, idx])` UDF (FNP-6).
+/// ===========================================================================================
+///
+/// Every match's `idx`-th capture group, as an array. `idx` defaults to 0 (the whole match).
+/// No match yields an EMPTY array, not NULL — NULL is reserved for a NULL input, which is the
+/// distinction `regexp_extract`'s empty-string-on-no-match convention loses.
+#[must_use]
+pub fn regexp_extract_all_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkRegexpExtractAll::new()))
+}
+
+/// ===========================================================================================
+/// Spark `regexp_substr(str, regexp)` UDF (FNP-6).
+/// ===========================================================================================
+///
+/// The first match, or **NULL** when there is none — deliberately unlike `regexp_extract`, which
+/// returns an empty string. Spark keeps the two conventions apart and so does this.
+#[must_use]
+pub fn regexp_substr_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkRegexpSubstr::new()))
 }
 
 #[derive(Clone, Copy)]
@@ -149,6 +174,109 @@ impl ScalarUDFImpl for SparkRegexpInstr {
     }
 }
 
+#[derive(Debug)]
+struct SparkRegexpExtractAll {
+    signature: Signature,
+}
+
+impl SparkRegexpExtractAll {
+    fn new() -> Self {
+        Self {
+            signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SparkRegexpExtractAll {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkRegexpExtractAll {}
+
+impl Hash for SparkRegexpExtractAll {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkRegexpExtractAll {
+    crate::shim_udf_boilerplate!("regexp_extract_all");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(list_of_utf8())
+    }
+
+    fn return_field_from_args(&self, args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        Ok(Arc::new(Field::new(
+            "regexp_extract_all",
+            list_of_utf8(),
+            any_arg_nullable(args.arg_fields),
+        )))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        coerce_regexp_args(arg_types, true)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_extract_all(&args)
+    }
+}
+
+#[derive(Debug)]
+struct SparkRegexpSubstr {
+    signature: Signature,
+}
+
+impl SparkRegexpSubstr {
+    fn new() -> Self {
+        Self {
+            signature: Signature::new(TypeSignature::UserDefined, Volatility::Immutable),
+        }
+    }
+}
+
+impl PartialEq for SparkRegexpSubstr {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkRegexpSubstr {}
+
+impl Hash for SparkRegexpSubstr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkRegexpSubstr {
+    crate::shim_udf_boilerplate!("regexp_substr");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Utf8)
+    }
+
+    fn return_field_from_args(&self, _args: ReturnFieldArgs<'_>) -> Result<FieldRef> {
+        // Always nullable: "no match" is NULL even when every input is non-null.
+        Ok(Arc::new(Field::new("regexp_substr", DataType::Utf8, true)))
+    }
+
+    fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
+        coerce_regexp_args(arg_types, false)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        invoke_substr(&args)
+    }
+}
+
+fn list_of_utf8() -> DataType {
+    DataType::List(Arc::new(Field::new("item", DataType::Utf8, true)))
+}
+
 fn any_arg_nullable(fields: &[FieldRef]) -> bool {
     fields.iter().any(|field| field.is_nullable())
 }
@@ -243,6 +371,103 @@ fn invoke_regexp(args: &ScalarFunctionArgs, kind: RegexpKind) -> Result<Columnar
     Ok(ColumnarValue::Array(Arc::new(Int32Array::from(values))))
 }
 
+/// Shared row walk for the two collecting kernels: NULL-in NULL-out, one compiled regex per
+/// distinct pattern, and the group index validated once per row.
+fn extract_rows<T>(
+    args: &ScalarFunctionArgs,
+    name: &str,
+    mut per_row: impl FnMut(Option<(&str, &Regex, usize)>) -> Result<T>,
+) -> Result<Vec<T>> {
+    let arrays = ColumnarValue::values_to_arrays(&args.args)?;
+    if arrays.len() < 2 {
+        return exec_err!("{name} expects at least 2 arguments");
+    }
+    let strings = cast(arrays[0].as_ref(), &DataType::Utf8)?;
+    let strings = strings.as_string::<i32>();
+    let patterns = cast(arrays[1].as_ref(), &DataType::Utf8)?;
+    let patterns = patterns.as_string::<i32>();
+    let group_index = match arrays.get(2) {
+        Some(array) => Some(cast(array.as_ref(), &DataType::Int32)?),
+        None => None,
+    };
+
+    let mut cache: HashMap<String, Regex> = HashMap::new();
+    let mut out = Vec::with_capacity(strings.len());
+    for row in 0..strings.len() {
+        let index_is_null = group_index.as_ref().is_some_and(|index| index.is_null(row));
+        if strings.is_null(row) || patterns.is_null(row) || index_is_null {
+            out.push(per_row(None)?);
+            continue;
+        }
+        let group = match group_index.as_ref() {
+            Some(index) => {
+                let raw = index
+                    .as_primitive::<datafusion::arrow::datatypes::Int32Type>()
+                    .value(row);
+                if raw < 0 {
+                    return exec_err!("{name} group index must not be negative, got {raw}");
+                }
+                usize::try_from(raw).unwrap_or(0)
+            }
+            None => 0,
+        };
+        let pattern_text = patterns.value(row);
+        if !cache.contains_key(pattern_text) {
+            cache.insert(pattern_text.to_owned(), compile_spark_regex(pattern_text)?);
+        }
+        let regex = cache
+            .get(pattern_text)
+            .ok_or_else(|| DataFusionError::Internal("regexp cache insert vanished".to_owned()))?;
+        out.push(per_row(Some((strings.value(row), regex, group)))?);
+    }
+    Ok(out)
+}
+
+fn invoke_extract_all(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let mut builder = ListBuilder::new(StringBuilder::new());
+    extract_rows(args, "regexp_extract_all", |row| {
+        match row {
+            None => builder.append(false),
+            Some((text, regex, group)) => {
+                if group >= regex.captures_len() {
+                    return exec_err!(
+                        "regexp_extract_all group index {group} is out of range for a pattern with \
+                         {} groups",
+                        regex.captures_len().saturating_sub(1)
+                    );
+                }
+                for found in collect_matches(text, regex)? {
+                    // Re-capture at the match's own start so group offsets are this match's.
+                    let captured = regex
+                        .captures_at(text, found.start())
+                        .and_then(|caps| caps.get(group).map(|m| m.as_str().to_owned()));
+                    match captured {
+                        // An optional group that did not participate is an empty string in Spark.
+                        Some(value) => builder.values().append_value(value),
+                        None => builder.values().append_value(""),
+                    }
+                }
+                builder.append(true);
+            }
+        }
+        Ok(())
+    })?;
+    let array: ArrayRef = Arc::new(builder.finish());
+    Ok(ColumnarValue::Array(array))
+}
+
+fn invoke_substr(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
+    let values = extract_rows(args, "regexp_substr", |row| {
+        Ok(match row {
+            None => None,
+            // NULL on no match, deliberately unlike `regexp_extract`'s empty string.
+            Some((text, regex, _group)) => regex.find(text).map(|found| found.as_str().to_owned()),
+        })
+    })?;
+    let array: ArrayRef = Arc::new(StringArray::from(values));
+    Ok(ColumnarValue::Array(array))
+}
+
 fn compile_spark_regex(pattern: &str) -> Result<Regex> {
     // Java/Spark `\d` `\w` `\s` are ASCII; the regex crate's are Unicode.
     let bound = crate::collection::bind_ascii_perl_classes(pattern);
@@ -277,6 +502,65 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
         .is_some_and(|found| found.start() == MID_SURROGATE_PROBE_OFFSET)
 }
 
+/// ===========================================================================================
+/// The `Matcher.find()` walk again, yielding match byte-ranges instead of a count (FNP-6).
+/// ===========================================================================================
+///
+/// `regexp_extract_all` and `regexp_substr` need the SAME stepping rule
+/// [`count_non_overlapping`] implements — an empty match is reported where a previous non-empty
+/// match ended, and empty matches advance — but they need *where* each match is, not how many.
+///
+/// **One documented difference from the counting walk, and it is deliberate.** The counting walk
+/// probes for matches at mid-surrogate UTF-16 indices, which Java can reach and Rust's `&str`
+/// cannot address: such a position is not a byte boundary, so there is no range to extract. This
+/// collector therefore steps over supplementary-plane characters whole. The consequence is that
+/// on a supplementary-plane input `regexp_count` can exceed `size(regexp_extract_all(...))` — a
+/// real divergence between two of our own functions, recorded rather than hidden, and reachable
+/// only with an empty-matching pattern over astral text.
+fn collect_matches<'text>(text: &'text str, pattern: &Regex) -> Result<Vec<regex::Match<'text>>> {
+    let mut found_all = Vec::new();
+    if pattern.as_str().is_empty() {
+        // Java's `Matcher` on `Pattern.compile("")` finds an empty match at EVERY position plus
+        // the end, which is what `count_non_overlapping` counts. Returning early here made the
+        // two disagree on plain ASCII — `regexp_count('abc', '')` was 4 while
+        // `size(regexp_extract_all('abc', ''))` was 0 (F-CSP-3 / F-CFS-3).
+        // One empty match at every char boundary, plus one at the end — `find_at` returns Some
+        // at each of them for an empty pattern, and a None is simply nothing to collect rather
+        // than an impossible state to panic on.
+        let boundaries = text
+            .char_indices()
+            .map(|(offset, _)| offset)
+            .chain([text.len()]);
+        found_all.extend(boundaries.filter_map(|offset| pattern.find_at(text, offset)));
+        return Ok(found_all);
+    }
+    let mut byte = 0usize;
+    loop {
+        if byte > text.len() {
+            break;
+        }
+        let Some(found) = pattern.find_at(text, byte) else {
+            break;
+        };
+        found_all.push(found);
+        if found_all.len() > usize::try_from(i32::MAX).unwrap_or(usize::MAX) {
+            return Err(count_overflow());
+        }
+        if found.start() == found.end() {
+            if found.start() == text.len() {
+                break;
+            }
+            let Some(ch) = text[found.start()..].chars().next() else {
+                break;
+            };
+            byte = found.start() + ch.len_utf8();
+        } else {
+            byte = found.end();
+        }
+    }
+    Ok(found_all)
+}
+
 /// Java `Matcher.find()`: report an empty match where a previous non-empty
 /// match ended, and advance empty matches by one UTF-16 unit. This loop
 /// approximates the mid-surrogate step on supplementary-plane chars with a
@@ -284,6 +568,9 @@ fn matches_at_mid_surrogate_index(pattern: &Regex) -> bool {
 /// no preceding empty match (not fixable without a UTF-16 code-unit matcher).
 /// The `regex` crate's `find_iter` suppresses the empty-after-non-empty case
 /// (`[0-9]*` on `2026-08-19` is 3 there, 6 in Spark).
+///
+/// [`collect_matches`] is the same walk yielding positions; it cannot reproduce the
+/// mid-surrogate probe, which is why the two can disagree on astral text.
 fn count_non_overlapping(text: &str, pattern: &Regex) -> Result<i32> {
     if pattern.as_str().is_empty() {
         let count = text.encode_utf16().count().saturating_add(1);

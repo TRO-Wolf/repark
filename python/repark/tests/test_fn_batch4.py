@@ -18,7 +18,6 @@ from repark.spark.functions import (
     corr,
     covar_pop,
     covar_samp,
-    crc32,
     first,
     input_file_name,
     kurtosis,
@@ -28,7 +27,6 @@ from repark.spark.functions import (
     monotonically_increasing_id,
     percentile_approx,
     rand,
-    sha1,
     sha2,
     skewness,
     spark_partition_id,
@@ -36,7 +34,6 @@ from repark.spark.functions import (
     stddev_pop,
     var_pop,
     variance,
-    xxhash64,
 )
 
 
@@ -179,12 +176,8 @@ def test_batch4_loud_unsupported(spark: ReparkSession) -> None:
     # test_percentile_approx_scalar_bounds); remain loud-unsupported for the rest.
     with pytest.raises(UnsupportedOperationException, match="mode"):
         mode("x")
-    with pytest.raises(UnsupportedOperationException, match="sha1"):
-        sha1("s")
-    with pytest.raises(UnsupportedOperationException, match="crc32"):
-        crc32("s")
-    with pytest.raises(UnsupportedOperationException, match="xxhash64"):
-        xxhash64("s")
+    # FNP-3: sha1 / crc32 / xxhash64 flipped to shipped (datafusion-spark hash kernels); keep
+    # the other loud stubs. Behaviour: test_fnp3_destubbed.py.
     # r20 G2: randn is live (XORShift Gaussian); keep other loud stubs.
     with pytest.raises(UnsupportedOperationException, match="monotonically_increasing_id"):
         monotonically_increasing_id()

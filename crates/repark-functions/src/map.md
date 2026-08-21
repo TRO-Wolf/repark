@@ -299,6 +299,67 @@ collection), and the Spark expression-semantics analyzer rule. See [../map.md](.
   now embed the repark shims instead of `datafusion-spark`'s, so the facade and the
   SQL door are one kernel. Ledger: `task/fn-gt2-ledger.md`.
 
+**FNP-1 (2026-08-20) — two kernels became facade-reachable.** `instant_ts::to_timestamp_udf` and
+the new `aggregate::avg_udaf` are `pub` so `repark-python`'s dispatch table can embed the exact
+kernel `register_all` installs, instead of DataFusion-core's (charter clause C-012). The
+facade-embed builder for the first is `expr_fn::to_timestamp`; both are guarded by
+`crates/repark-python/src/column/door_parity_tests.rs`. Adding a kernel that the facade also
+reaches means exposing it the same way — a private constructor forces the dispatch table to pick
+a different implementation, which is exactly how the divergence arose.
+
+**FNP-3 (2026-08-20) — eleven kernels became facade-reachable.** `expr_fn.rs` gains builders for
+`crc32`, `sha1`, `xxhash64`, `soundex`, `format_string`, `from_utc_timestamp`, `to_utc_timestamp`
+and `map_from_arrays`, each wrapping the `datafusion-spark` singleton `register_all` already
+installs. These names evaluated correctly through `spark.sql(...)` and raised
+`UnsupportedOperationException` through the facade, because the dispatch table had no arm — the
+capability was present and only one door could reach it. When adding a kernel, wire the builder in
+the same change: a kernel registered but not dispatched is a refusal the SQL door does not share.
+
+**FNP-4a (2026-08-20) — `higher_order.rs`.** DataFusion keeps higher-order functions in a registry
+**separate** from scalar UDFs, which none of `register_all`'s loops touched, so a repark session
+carried DataFusion's three defaults and no Spark spellings. This module is one table read by two
+callers — `register` for the SQL door's session, `by_name` for the facade, whose `PyColumn` is
+standalone and has no session to resolve against. Reading one table is what stops the two doors
+resolving different kernels. A Spark spelling is attached only where semantics match: `exists` is
+an alias of `array_any_match`, while `transform` / `filter` deliberately are **not** aliased —
+those kernels declare one lambda parameter and Spark's `(element, index)` form is a hard plan
+error against them, so repark kernels will own the names (FNP-4c). A test pins that they do not
+resolve, so a well-meaning future alias reds the build.
+
+**FNP-6a (2026-08-20) — the campaign's first NEW kernels.** `spark_regexp.rs` gains
+`regexp_extract_all` and `regexp_substr`. Both reuse `collect_matches`, a generalization of the
+`Matcher.find()` walk `regexp_count` already implemented — Java reports an empty match where a
+previous non-empty match ended, which the `regex` crate's `find_iter` suppresses. **The collector
+cannot reproduce one thing the counter does**: the counting walk probes mid-surrogate UTF-16
+indices, which are not `&str` byte boundaries and so have no extractable range, so on astral text
+with an empty-matching pattern `regexp_count` can exceed `size(regexp_extract_all(...))`.
+Documented at the function. Note the three no-match conventions Spark keeps apart:
+`regexp_extract` returns `''`, `regexp_extract_all` an empty array, `regexp_substr` NULL.
+
+**FNP-6b (2026-08-20).** `random.rs` gains `randstr` and `uniform`, drawing from the SAME
+`XORShiftRandom` stream `rand`/`randn` use rather than a second PRNG — a pin asserts the integer
+and float forms of `uniform` are one draw sequence scaled two ways. `RANDSTR_POOL`'s ORDER is
+load-bearing: the index comes from that stream, so reordering the pool changes the output for a
+given seed. Both refuse a non-constant bound loudly, because Spark requires literals and the
+alternative failure — silently applying row zero to every row — produces plausible output forever.
+**The stream is Spark-verified (r20 G2); the per-function derivation is DOC-SPARK**, so the tests
+pin documented properties and assert no specific generated values.
+
+**FNP-6c (2026-08-20) — `validate.rs`.** `validate_utf8`, `try_validate_utf8`, `assert_true`: one
+shape — inspect, pass through, or fail loudly — so they share a module. **The UTF-8 pair only ever
+fails on BINARY input**: an Arrow `Utf8` array cannot hold invalid UTF-8, while Spark's
+`UTF8String` can, so a Spark program reaches these on a STRING column where repark structurally
+cannot. A value-representation difference, not a behaviour choice. `assert_true` raises on NULL as
+well as false — only `true` passes. The module owns its own `register`, like `decimal_spark` and
+`higher_order`, because the crate root sits against its `check_lib_rs` ceiling.
+
+**Critic round 1 (2026-08-20) — two kernel corrections.** `spark_regexp.rs`'s `collect_matches`
+no longer returns early on an empty pattern: Java's `Matcher` matches at every position plus the
+end, which `count_non_overlapping` counted while the collector returned `[]`, so two functions in
+one module disagreed on plain ASCII. `random.rs` bounds a `randstr` length literal —
+without a cap the failure was not an error at all but a process abort (SIGABRT, no traceback),
+while every other refusal here is catchable.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

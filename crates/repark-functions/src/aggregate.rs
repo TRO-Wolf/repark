@@ -38,9 +38,17 @@ use datafusion::logical_expr::{
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
-    vec![Arc::new(AggregateUDF::new_from_impl(
-        SparkAvgWithRetract::new(),
-    ))]
+    vec![avg_udaf()]
+}
+
+/// The Spark-compatible `avg` the SQL door resolves.
+///
+/// Public so the facade's aggregate dispatch embeds this exact kernel rather than
+/// DataFusion-core's `Avg`, which loses the Spark i64-count and null-on-empty arms and accepts a
+/// `Duration` argument Spark does not (charter clause C-012).
+#[must_use]
+pub fn avg_udaf() -> Arc<AggregateUDF> {
+    Arc::new(AggregateUDF::new_from_impl(SparkAvgWithRetract::new()))
 }
 
 /// Spark-compatible AVG: Float64 retract (X2) plus Spark-typed decimal avg with retract (DEC-5).

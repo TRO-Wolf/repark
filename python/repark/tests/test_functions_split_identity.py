@@ -10,6 +10,18 @@ from __future__ import annotations
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 # Moved 2026-08-15 with FN-C, unioned with FN-D/E/F/W at SQM (was 253 on freeze cd0db4f).
+# Moved 2026-08-20 with FNP-2: 333 -> 338, adding asc_nulls_last, column, desc_nulls_first,
+# negate, session_user. Declared in the PR body per the discipline above.
+# Moved 2026-08-20 with FNP-3: 338 -> 339, adding sha (Spark's older spelling of sha1).
+# Moved 2026-08-20 with FNP-4a: 339 -> 340, adding exists (the first higher-order function).
+# Moved 2026-08-20 with FNP-5: 340 -> 353, adding the nine regr_*, grouping,
+# approx_count_distinct, listagg and string_agg.
+# Moved 2026-08-20 with FNP-6a: 353 -> 355, adding regexp_extract_all and regexp_substr
+# (the campaign's first NEW kernels).
+# Moved 2026-08-20 with FNP-6b: 355 -> 357, adding randstr and uniform over the
+# XORShiftRandom rand/randn already use.
+# Moved 2026-08-20 with FNP-6c: 357 -> 360, adding validate_utf8, try_validate_utf8
+# and assert_true.
 _PRE_SPLIT_ALL: tuple[str, ...] = (
     "PandasUDFType",
     "PythonUDFColumn",
@@ -19,6 +31,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "acos",
     "acosh",
     "add_months",
+    "approx_count_distinct",
     "approx_percentile",
     "array",
     "array_agg",
@@ -42,9 +55,11 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "arrays_zip",
     "asc",
     "asc_nulls_first",
+    "asc_nulls_last",
     "ascii",
     "asin",
     "asinh",
+    "assert_true",
     "atan",
     "atan2",
     "atanh",
@@ -79,6 +94,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "col",
     "collect_list",
     "collect_set",
+    "column",
     "concat",
     "concat_ws",
     "contains",
@@ -125,6 +141,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "degrees",
     "dense_rank",
     "desc",
+    "desc_nulls_first",
     "desc_nulls_last",
     "e",
     "element_at",
@@ -133,6 +150,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "endswith",
     "equal_null",
     "every",
+    "exists",
     "exp",
     "explode",
     "explode_outer",
@@ -154,6 +172,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "get",
     "getbit",
     "greatest",
+    "grouping",
     "hash",
     "hex",
     "hour",
@@ -181,6 +200,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "length",
     "levenshtein",
     "like",
+    "listagg",
     "lit",
     "ln",
     "locate",
@@ -216,6 +236,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "months_between",
     "named_struct",
     "nanvl",
+    "negate",
     "negative",
     "next_day",
     "now",
@@ -247,13 +268,25 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "rand",
     "randn",
     "random",
+    "randstr",
     "rank",
     "regexp",
     "regexp_count",
     "regexp_extract",
+    "regexp_extract_all",
     "regexp_instr",
     "regexp_like",
     "regexp_replace",
+    "regexp_substr",
+    "regr_avgx",
+    "regr_avgy",
+    "regr_count",
+    "regr_intercept",
+    "regr_r2",
+    "regr_slope",
+    "regr_sxx",
+    "regr_sxy",
+    "regr_syy",
     "repeat",
     "replace",
     "reverse",
@@ -271,6 +304,8 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "second",
     "sentences",
     "sequence",
+    "session_user",
+    "sha",
     "sha1",
     "sha2",
     "shiftleft",
@@ -297,6 +332,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "stddev_pop",
     "stddev_samp",
     "str_to_map",
+    "string_agg",
     "struct",
     "substr",
     "substring",
@@ -317,11 +353,13 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "try_parse_url",
     "try_to_timestamp",
     "try_url_decode",
+    "try_validate_utf8",
     "ucase",
     "udf",
     "udtf",
     "unbase64",
     "unhex",
+    "uniform",
     "unix_date",
     "unix_micros",
     "unix_millis",
@@ -332,6 +370,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
     "url_encode",
     "user",
     "uuid",
+    "validate_utf8",
     "var_pop",
     "var_samp",
     "variance",
@@ -349,7 +388,7 @@ _PRE_SPLIT_ALL: tuple[str, ...] = (
 
 def test_functions_all_matches_pre_split_inventory() -> None:
     assert tuple(F.__all__) == _PRE_SPLIT_ALL
-    assert len(F.__all__) == 333
+    assert len(F.__all__) == 360
 
 
 def test_every_all_name_resolves() -> None:

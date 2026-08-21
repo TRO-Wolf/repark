@@ -143,6 +143,27 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 | Change na.fill / drop / replace | `actions_export.py` |
 | Public import surface | `__init__.py` |
 
+**FNP-2 (2026-08-20).** `core.py` `_sort_specs` and `plan_collapse.py`'s window structural key
+both resolve null placement through `repark.spark.column.sort_nulls_first_for` instead of
+deriving it from the sort direction. The structural key now *includes* null placement: two window
+specs differing only in it are different windows, and merging them silently reorders rows. Note
+the one deliberate exception — an explicit `orderBy(..., ascending=…)` re-marks the columns
+wholesale, so it supersedes any per-column marker on direction AND nulls.
+
+**Critic round 1 (2026-08-20).** `core.py`'s `_sort_specs` follows PySpark's
+`DataFrame._sort_cols` re-marking rule: a FALSY `ascending=` entry replaces that column's marker
+with `desc()` (descending, nulls last); a TRUTHY entry changes **nothing at all**. The previous
+code asserted the override re-marked wholesale — a premise that was invented rather than read —
+and it placed nulls wrongly for `orderBy("v", ascending=False)`. `_apply_ascending_override` is
+gone with it.
+
+**Critic round 2 (2026-08-20).** The re-marking rule is exact; the code around it deliberately is
+not, and now says so. PySpark's `zip` truncates a short `ascending` list and silently leaves the
+trailing columns unmarked, so `_ascending_remark_flags` raises instead; a tuple, which PySpark's
+`isinstance` check rejects, is accepted here as a sequence. Its bad-type branch also raises
+`PySparkTypeError` again — PySpark's `NOT_BOOL_OR_LIST` is a type error, and round 1 had regressed
+it to a value error.
+
 ## Pointers
 
 Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df-regions-ledger.md`.

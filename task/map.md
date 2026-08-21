@@ -12,6 +12,77 @@ not this directory.
 
 ## Contents
 
+- [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
+  scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
+  evidence behind it, and the one `OPEN` clause (C-007 — whether the four sub-project families
+  are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
+  [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); slate:
+  [../briefs/spark-function-parity.md](../briefs/spark-function-parity.md).
+- [fnp-critic-round-1-ledger.md](fnp-critic-round-1-ledger.md) — **Critic round 1 (2026-08-20):**
+  two independent adversarial passes over the whole branch under a HARD context break (separate
+  fresh agents, not this repo's default procedural break). Both NOT_CONVERGED: 25 findings, 10 at
+  or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
+  were in units already signed off, including a fix applied before its evidence and a verification
+  guard that silently skipped half its own table.
+- [fnp-critic-round-2-ledger.md](fnp-critic-round-2-ledger.md) — **Critic round 2 (2026-08-20):**
+  two more fresh agents under the same hard break, aimed at round 1's own fixes. Both
+  NOT_CONVERGED: 17 findings, 4 at or above the floor, and every one of those was a defect the
+  round-1 remediation INTRODUCED or left half-done — a name-keyed fix that missed its sibling, a
+  CAST that hid an aggregate from `over`, and a uniqueness counter that made the output schema
+  non-deterministic. `make preflight` was green over all three.
+- [fnp-6c-validate-ledger.md](fnp-6c-validate-ledger.md) — **FNP-6c (2026-08-20):**
+  `validate_utf8`, `try_validate_utf8`, `assert_true`. Records the value-representation difference
+  behind the UTF-8 pair, and the FOURTH prior-unit scope fence found as a passing assertion —
+  every remaining entry on FN-F's deferred list now carries its reason.
+- [fnp-6b-random-ledger.md](fnp-6b-random-ledger.md) — **FNP-6b (2026-08-20):** `randstr` and
+  `uniform` over the Spark `XORShiftRandom` `rand`/`randn` already use. States the unit's honest
+  limit: the STREAM is Spark-verified (r20 G2), the per-function derivation is DOC-SPARK, so the
+  pins assert documented properties and no generated values — closing that to MEASURED-SPARK is a
+  FNP-Z live-oracle item.
+- [fnp-6a-regexp-ledger.md](fnp-6a-regexp-ledger.md) — **FNP-6a (2026-08-20):** the campaign's
+  first NEW kernels — `regexp_extract_all`, `regexp_substr` — over the `Matcher.find()` walk
+  `regexp_count` already implemented, with the one thing the collector cannot reproduce (the
+  mid-surrogate probe) documented from both sides. Records **F-FNP6A-1**: writing them, I produced
+  the same `lit_indices` column-vs-literal defect GT1 found in 38 wrappers, minutes after reading
+  the rule — direct evidence for design §4.5.
+- [fnp-5-aggregates-ledger.md](fnp-5-aggregates-ledger.md) — **FNP-5 (2026-08-20):** thirteen
+  aggregates already in `all_default_aggregate_functions()` that the facade's dispatch could not
+  reach — the nine `regr_*` (pinned against an exact `y = 2x + 1` fit), `grouping`,
+  `approx_count_distinct`, `listagg`, `string_agg`; `__all__` 340 → 353. Corrects the design's
+  "16 wire-only": `sum_distinct` / `listagg_distinct` / `string_agg_distinct` are DISTINCT
+  modifiers, not kernels. `corr` / `covar_pop` / `covar_samp` collapse into one
+  `_binary_aggregate` helper the twelve two-column aggregates share.
+- [fnp-4a-lambda-seam-ledger.md](fnp-4a-lambda-seam-ledger.md) — **FNP-4a (2026-08-20):** the
+  higher-order seam. One registry both doors read, `PyColumn::lambda_variable` /
+  `call_higher_order`, lambda-variable resolution at every site that hands a column to DataFusion,
+  and `exists` (an honest alias of `array_any_match` — three-valued nulls measured, not assumed).
+  Carries FNP-4b's evidence: the Spark-door dialect works but costs 5 cross-door DML tests because
+  the engine's own generated SQL quotes identifiers ANSI-style, which a Spark parser reads as
+  string literals. Split from FNP-4 on owner ruling.
+- [fnp-3-destub-ledger.md](fnp-3-destub-ledger.md) — **FNP-3 (2026-08-20):** the eleven names
+  whose `datafusion-spark` kernel `register_all` already installed but the facade's dispatch table
+  had no arm for, so `spark.sql(...)` evaluated them while `F.<name>(...)` raised. `sha1`, `sha`,
+  `crc32`, `xxhash64`, `soundex`, `format_string`, `printf`, `datediff`, `from_utc_timestamp`,
+  `to_utc_timestamp`, `map_from_arrays`; `__all__` 338 → 339. `arrays_zip` and `json_tuple` stay
+  refusing — both diverge from Spark (struct field naming; generator shape) and are handed to
+  FNP-Z for registry rows. Also overturns FN-D's "do not alias `datediff`" note, which its own
+  ledger shows was a scope fence rather than a semantic ruling.
+- [fnp-2-free-names-ledger.md](fnp-2-free-names-ledger.md) — **FNP-2 (2026-08-20):** the five
+  names that needed no engine work (`asc_nulls_last`, `desc_nulls_first`, `column`, `negate`,
+  `session_user`; `__all__` 333 → 338) and the ordering defect the first two exposed — three sites
+  derived NULL placement from the sort direction and discarded the column's own marker, including
+  the plan-collapse window key, which merged two specs differing only in it. All three now resolve
+  through `column.sort_nulls_first_for`. Scope corrections: `sha` → FNP-3, `typeof` → FNP-12.
+- [fnp-1-two-door-asymmetry-ledger.md](fnp-1-two-door-asymmetry-ledger.md) — **FNP-1
+  (2026-08-20):** clause C-012 made mechanical. `column/door_parity_tests.rs` compares the UDF the
+  facade embeds against the one `register_all` installs, with the GT1/GT2-closed names as positive
+  controls and a ratchets-DOWN-only table for the latent set. Closes the two live divergences —
+  `to_timestamp` (facade was bypassing `SparkToTimestamp`, losing TZ-4 typing and session-zone
+  localization) and `avg` (bypassing `SparkAvgWithRetract`) — and corrects the census: the live
+  set is 18, not 19, because `cardinality` already agreed.
+- [fnp-0-census/](fnp-0-census/map.md) — the measured evidence that gate rests on: the facade
+  classification of all 345 functions, the PySpark 4.1.2 gap partition, the higher-order-function
+  spec, and the kernel ownership map.
 - [df1-rust-flatten-ledger.md](df1-rust-flatten-ledger.md) — **DF1 native
   `dynamic_flatten`:** port of the Python Spark-facade planner into
   `repark_core::dynamic_flatten` (plan rewrite, no new physical operator). Thin

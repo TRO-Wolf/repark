@@ -74,6 +74,52 @@ pub(crate) fn apply_spark_float_as_decimal(mut config: SessionConfig) -> Session
     config
 }
 
+/// ===========================================================================================
+/// Spark-door parser dialect (FNP-4): the door that speaks Spark parses with a Spark dialect.
+///
+/// `sqlparser`'s `Dialect::supports_lambda_functions()` is `false` by default, so under
+/// DataFusion's `Generic` the lambda arrow parses as PostgreSQL's JSON `->` operator:
+/// `transform(a, x -> x + 1)` becomes a binary op over a column named `x`, and planning fails
+/// with `FieldNotFound`. Every Spark higher-order function is unreachable through SQL until the
+/// dialect changes.
+///
+/// **Per door, never per session.** Setting `sql_parser.dialect` on the shared session default
+/// was measured against the workspace suite on 2026-08-20 and fails 8 tests — 2 in `repark-core`
+/// (`DuckDB` struct literals `{'f1': …}` that `Generic` accepts and Databricks rejects) and 6 in
+/// `repark-sql/tests/cross_door.rs`, the suite whose whole job is asserting the two doors agree.
+/// It would also blend the doors that [ADR-0002] keeps separate. This helper follows
+/// [`apply_spark_float_as_decimal`] exactly: a Spark-door parser default the ANSI door never
+/// calls.
+///
+/// Setting it HERE, on the session, is what keeps the Spark door's routing parse and its
+/// executing parse in lockstep — both read `state.config().options().sql_parser.dialect`, and a
+/// door that routes with one parser and executes with another is fail-open for every statement
+/// the two disagree about (`repark_sql::router::PARSER_DIALECT`'s note). Naming the dialect at
+/// the parse call sites instead would have reopened exactly that class.
+///
+/// DataFusion's `Dialect` enum has no `Spark` variant; `Databricks` is the closest available and
+/// `sqlparser`'s `DatabricksDialect` is near-identical to its `SparkSqlDialect`.
+///
+/// [ADR-0002]: https://github.com/TRO-Wolf/repark/blob/main/docs/adr/0002-two-sql-doors.md
+/// ===========================================================================================
+///
+/// **NOT WIRED YET — FNP-4b.** Measured 2026-08-20: switching this on makes every Spark
+/// higher-order function reachable through SQL and breaks 5 `cross_door.rs` DML tests, because
+/// repark's own internally-generated SQL (`predicate_dml`, `merge`) quotes identifiers with
+/// ANSI double quotes, which a Spark dialect reads as STRING LITERALS —
+/// `SELECT "_file", "_pos"` selects two strings, and the position-delete path fails with
+/// ``identity SELECT `_pos` column is not Int64``. The fix belongs to the write path and is
+/// judged on its own evidence, not as a passenger here. Ledger:
+/// `task/fnp-4a-lambda-seam-ledger.md`.
+#[expect(
+    dead_code,
+    reason = "wired by FNP-4b once internal SQL is dialect-independent"
+)]
+pub(crate) fn apply_spark_parser_dialect(mut config: SessionConfig) -> SessionConfig {
+    config.options_mut().sql_parser.dialect = datafusion::config::Dialect::Databricks;
+    config
+}
+
 impl SessionExtension for SparkExtension {
     /// v1 position: after the engine write knobs, before the `RuntimeEnv` is assembled —
     /// the r24 SB1 cardinality / `repark.sql.*` `ConfigExtension` install, the Spark-door

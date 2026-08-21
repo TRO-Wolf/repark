@@ -24,8 +24,10 @@ use datafusion::functions_window::nth_value::nth_value_udwf;
 use datafusion::functions_window::ntile::ntile_udwf;
 use datafusion::functions_window::rank::{dense_rank_udwf, percent_rank_udwf, rank_udwf};
 use datafusion::functions_window::row_number::row_number_udwf;
-use datafusion::logical_expr::expr::{NullTreatment, WindowFunction};
-use datafusion::logical_expr::{Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lit};
+use datafusion::logical_expr::expr::{HigherOrderFunction, Lambda, NullTreatment, WindowFunction};
+use datafusion::logical_expr::{
+    Case, Cast, Expr, ExprFunctionExt, WindowFunctionDefinition, lambda_var, lit,
+};
 use datafusion::prelude::{SessionContext, col};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
@@ -35,15 +37,19 @@ use pyo3::types::{PyBool, PyFloat, PyInt, PyString};
 use crate::AnalysisException;
 use crate::fence::fenced;
 
+#[cfg(test)]
+mod door_parity_tests;
 mod expr_build;
 mod function_dispatch;
 mod window;
 
 use expr_build::{
     TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
-    strip_outer_alias,
+    refuse_nested_higher_order, strip_outer_alias,
 };
-use function_dispatch::{binary_aggregate_udaf, call_scalar_expr, unary_aggregate_udaf};
+use function_dispatch::{
+    binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
+};
 use window::spark_window_frame;
 
 /// ===========================================================================================
@@ -146,6 +152,51 @@ impl PyColumn {
     ///
     /// # Errors
     /// Returns `ValueError` when `fields` is empty.
+    /// A reference to a lambda parameter (`x` inside `transform(a, x -> x + 1)`).
+    ///
+    /// The facade mints one of these per parameter, hands it to the user's Python callable, and
+    /// passes whatever the callable returns back as the lambda body. Variables built through the
+    /// expression API carry no field yet — the frame resolves them at plan-build time, which is
+    /// why every `PyDataFrame` method that consumes a column runs `resolve_lambda_variables`.
+    #[staticmethod]
+    pub fn lambda_variable(name: &str) -> PyResult<Self> {
+        fenced!("Column.lambda_variable", {
+            Ok(Self::from_expr(lambda_var(name)))
+        })
+    }
+
+    /// Invoke a higher-order function: value arguments first, then one lambda per `(params, body)`.
+    ///
+    /// Every Spark higher-order function has that shape — `transform(arr, f)`,
+    /// `aggregate(arr, init, merge, finish)`, `map_zip_with(m1, m2, f)` — so the split is the
+    /// signature, not a convention this layer invents.
+    ///
+    /// # Errors
+    /// `ValueError` if `name` is not a higher-order function the session registers. Resolution
+    /// goes through `repark_functions::higher_order::by_name`, the same table
+    /// `register_all` installs, so the facade and the SQL door cannot resolve different kernels.
+    #[staticmethod]
+    pub fn call_higher_order(
+        name: &str,
+        value_args: Vec<PyColumn>,
+        lambdas: Vec<(Vec<String>, PyColumn)>,
+    ) -> PyResult<Self> {
+        fenced!("Column.call_higher_order", {
+            let function = repark_functions::higher_order::by_name(name).ok_or_else(|| {
+                PyValueError::new_err(format!("unknown higher-order function {name:?}"))
+            })?;
+            let mut args: Vec<Expr> = value_args.iter().map(PyColumn::expr).collect();
+            for (params, body) in lambdas {
+                let body = body.expr();
+                refuse_nested_higher_order(&body, name)?;
+                args.push(Expr::Lambda(Lambda::new(params, body)));
+            }
+            Ok(Self::from_expr(Expr::HigherOrderFunction(
+                HigherOrderFunction::new(function, args),
+            )))
+        })
+    }
+
     #[staticmethod]
     pub fn make_struct(fields: Vec<PyColumn>) -> PyResult<Self> {
         fenced!("Column.make_struct", {
@@ -639,19 +690,20 @@ impl PyColumn {
                     "over expects order_by, order_ascending, and order_nulls_first of equal length",
                 ));
             }
-            // Window UDF / CAST(window) / Aggregate → WindowFunction.
-            let (window_expr, cast_type) = match &self.expr {
-                Expr::WindowFunction(_) => (self.expr.clone(), None),
-                Expr::Cast(cast) if matches!(*cast.expr, Expr::WindowFunction(_)) => {
-                    ((*cast.expr).clone(), Some(cast.field.data_type().clone()))
-                }
-                Expr::AggregateFunction(agg) => {
-                    let window = Expr::from(WindowFunction::new(
-                        WindowFunctionDefinition::AggregateUDF(std::sync::Arc::clone(&agg.func)),
-                        agg.params.args.clone(),
-                    ));
-                    (window, None)
-                }
+            // Window UDF / aggregate → WindowFunction, under an optional CAST that is peeled
+            // here and re-applied to the window result. The facade casts count-like aggregates
+            // to Int64 (Spark has no unsigned type), so `over` must look through a CAST to find
+            // the aggregate or the windowed form refuses a call the grouped form accepts.
+            let (inner, cast_type) = match &self.expr {
+                Expr::Cast(cast) => (&*cast.expr, Some(cast.field.data_type().clone())),
+                other => (other, None),
+            };
+            let window_expr = match inner {
+                Expr::WindowFunction(_) => inner.clone(),
+                Expr::AggregateFunction(agg) => Expr::from(WindowFunction::new(
+                    WindowFunctionDefinition::AggregateUDF(std::sync::Arc::clone(&agg.func)),
+                    agg.params.args.clone(),
+                )),
                 _ => {
                     return Err(PyValueError::new_err(
                         "over() applies only to a window or aggregate function column \
@@ -890,7 +942,9 @@ impl PyColumn {
             let udaf = unary_aggregate_udaf(kind)?;
             let base = udaf.call(vec![self.expr.clone()]);
             // A plain `call` is already a usable aggregate `Expr`; only IGNORE NULLS needs the
-            // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`).
+            // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`). The
+            // unsigned cast wraps the finished aggregate, since the builder chain only accepts
+            // a bare aggregate as its receiver.
             let expr = if ignore_nulls {
                 base.null_treatment(NullTreatment::IgnoreNulls)
                     .build()
@@ -902,7 +956,9 @@ impl PyColumn {
             } else {
                 base
             };
-            Ok(Self::from_expr(expr))
+            Ok(Self::from_expr(cast_unsigned_count_to_signed(
+                &udaf, 1, expr,
+            )))
         })
     }
 
@@ -911,7 +967,9 @@ impl PyColumn {
         fenced!("Column.aggregate_binary", {
             let udaf = binary_aggregate_udaf(kind)?;
             let expr = udaf.call(vec![self.expr.clone(), other.expr.clone()]);
-            Ok(Self::from_expr(expr))
+            Ok(Self::from_expr(cast_unsigned_count_to_signed(
+                &udaf, 2, expr,
+            )))
         })
     }
 

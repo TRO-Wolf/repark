@@ -30,7 +30,7 @@ from repark.errors import (
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
-from repark.spark.column import Column, _bound_generator_array
+from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -6329,6 +6329,7 @@ class DataFrame:
             raise PySparkValueError("orderBy/sort requires at least one column")
         columns: list[Any] = []
         ascending_flags: list[bool] = []
+        order_columns: list[Any] = []
         for item in cols:
             column = self._column_of(item)
             _reject_partition_transform(column)
@@ -6339,29 +6340,52 @@ class DataFrame:
             is_ascending = True if column._sort_ascending is None else column._sort_ascending
             columns.append(column._inner)
             ascending_flags.append(is_ascending)
-        if ascending is not None:
-            ascending_flags = self._apply_ascending_override(ascending_flags, ascending)
-        # Spark null ordering: ascending → nulls first, descending → nulls last.
-        nulls_first_flags = list(ascending_flags)
-        return columns, ascending_flags, nulls_first_flags
+            order_columns.append(column)
+        # PySpark's `DataFrame._sort_cols`:
+        #     if isinstance(ascending, (bool, int)):
+        #         if not ascending: jcols = [jc.desc() for jc in jcols]
+        #     elif isinstance(ascending, list):
+        #         jcols = [jc if asc else jc.desc() for asc, jc in zip(ascending, jcols)]
+        # A FALSY entry replaces that column's marker with `desc()` — descending, nulls last. A
+        # TRUTHY entry is a NO-OP: the column keeps whatever it arrived carrying, marker and all.
+        # Treating the override as wholesale re-marking silently reordered rows (F-CSP-2/F-CFS-4).
+        # That re-marking rule is exact; two things around it deliberately are not. PySpark's `zip`
+        # truncates a short `ascending` list and leaves the trailing columns unmarked — a silent
+        # partial application, so this raises instead. And a tuple, which PySpark's `isinstance`
+        # check rejects, is accepted here as a sequence (round 2 F-R3-5 / FNP-R3-5).
+        remark = self._ascending_remark_flags(len(order_columns), ascending)
+        directions: list[bool] = []
+        nulls_first_flags: list[bool] = []
+        for column, is_ascending, remarked in zip(
+            order_columns, ascending_flags, remark, strict=True
+        ):
+            if remarked:
+                # `.desc()` — descending, nulls last.
+                directions.append(False)
+                nulls_first_flags.append(False)
+            else:
+                directions.append(is_ascending)
+                nulls_first_flags.append(sort_nulls_first_for(column, is_ascending))
+        return columns, directions, nulls_first_flags
 
     @staticmethod
-    def _apply_ascending_override(
-        ascending_flags: list[bool],
-        ascending: bool | list[bool],
-    ) -> list[bool]:
-        """Apply the ``ascending`` keyword (a bool for all, or a per-column list)."""
-        if isinstance(ascending, bool):
-            return [ascending] * len(ascending_flags)
+    def _ascending_remark_flags(count: int, ascending: bool | list[bool] | None) -> list[bool]:
+        """Which positions the ``ascending`` keyword re-marks as ``desc()`` — falsy ones only."""
+        if ascending is None:
+            return [False] * count
+        if isinstance(ascending, bool | int):
+            return [not ascending] * count
         if isinstance(ascending, (list, tuple)):
-            if len(ascending) != len(ascending_flags):
+            if len(ascending) != count:
                 raise PySparkValueError(
                     "ascending list length must match the number of sort columns "
-                    f"({len(ascending)} != {len(ascending_flags)})"
+                    f"({len(ascending)} != {count})"
                 )
-            return [bool(flag) for flag in ascending]
+            return [not flag for flag in ascending]
+        # PySpark raises NOT_BOOL_OR_LIST here, which is a `PySparkTypeError`; a wrong TYPE for
+        # the keyword must not arrive as a value error.
         raise PySparkTypeError(
-            f"ascending expects a bool or a list of bools, got {type(ascending).__name__}"
+            f"ascending must be a bool or a list of bools, got {type(ascending).__name__}"
         )
 
     def __arrow_c_stream__(self, requested_schema: object | None = None) -> object:

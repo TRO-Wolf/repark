@@ -1272,6 +1272,69 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 | Change `Row` (collect result / field access / asDict) | `row.py` (G-ROW pins in `tests/test_row.py`) |
 | Add a metadata (`spark.catalog`) operation | `catalog.py` |
 
+**FNP-3 (2026-08-20) — eleven stubs flipped to shipped.** `functions_expr.py` loses the loud
+refusals for `sha1`/`sha`, `crc32`, `xxhash64`, `soundex`, `format_string` (and therefore
+`printf`), `datediff`, `from_utc_timestamp`, `to_utc_timestamp` and `map_from_arrays`; each is a
+thin `_scalar` wrapper over a kernel `register_all` already installed. `arrays_zip` and
+`json_tuple` stay refusing — measured divergence from Spark, not a missing kernel.
+`functions_datetime.py`'s "do not alias `datediff`" note is gone: it was FN-D's scope fence, not a
+semantic ruling (`task/fnp-3-destub-ledger.md`).
+
+**FNP-2 (2026-08-20) — null ordering has one home.** `column.py` gains
+`sort_nulls_first_for(column, is_ascending)`, and every ordering path resolves null placement
+through it: `dataframe/core.py` `_sort_specs`, `window.py` `_order_specs`, and
+`dataframe/plan_collapse.py`'s window structural key. All three previously derived null placement
+from the sort DIRECTION and discarded the column's own marker — correct while only `asc`/`desc`
+and their two agreeing aliases were reachable, wrong and silent the moment `asc_nulls_last` /
+`desc_nulls_first` exist. `Column`'s four sort spellings collapse to one `_with_sort_order`;
+adding a fifth means adding it there, not copying the constructor call again.
+
+**FNP-4a (2026-08-20) — `functions_lambda.py`.** The higher-order facade. A `Column` is standalone
+and has no schema, so the module cannot evaluate a user's callable against data and does not try:
+it mints one placeholder `Column` per lambda parameter, calls the callable **once**, and takes the
+returned `Column` as the lambda body. Parameter names are `x`/`y`/`z` regardless of what the caller
+wrote — they enter the plan, so a user-chosen name could collide with a column. `exists` ships
+here; the other ten Spark higher-order functions need kernels (FNP-4c).
+
+**FNP-5 (2026-08-20) — two-column aggregates have one builder.** `functions_expr.py` gains
+`_binary_aggregate(name, col1, col2)`; `corr`, `covar_pop`, `covar_samp` and the nine new `regr_*`
+all go through it. They thread `agg_name`, the quoted structural `sql_expr` free-SQL global-agg
+needs, and `partition_transform` — twelve hand-maintained copies of that is twelve chances to
+drift. Adding a thirteenth two-column aggregate means calling the helper, not copying a wrapper.
+
+**FNP-6a (2026-08-20).** `regexp_extract_all` / `regexp_substr` take `regexp` as **ColumnOrName**,
+like `regexp_count` and like PySpark — a bare `str` is a **column name**, and a pattern literal
+needs `F.lit(...)`. Writing them with `lit_indices` instead was caught by the tests and is
+recorded as F-FNP6A-1: it is the same defect class GT1 found in 38 wrappers, reproduced by someone
+who had just read the rule.
+
+**FNP-6b (2026-08-20).** `randstr` / `uniform` take **constant** bounds — Spark requires literals,
+and `lit_indices` marks them so a column argument reaches the kernel's loud refusal rather than
+being read as row zero. `uniform`'s return type follows its bounds (two integers give an integer,
+anything else a double), which is a silent type change if got wrong and so is pinned on the type.
+
+**FNP-6c (2026-08-20).** `validate_utf8` / `try_validate_utf8` / `assert_true`. The UTF-8 pair
+only ever fails on **binary** input — an Arrow string column cannot hold invalid UTF-8, while
+Spark's `UTF8String` can, so a Spark program reaches these on a STRING column where repark
+structurally cannot. Stated in the facade docstrings as well, because a user seeing
+`validate_utf8('x')` always succeed deserves to know why rather than assuming it is unimplemented.
+
+**Critic round 1 (2026-08-20) — two corrections to this layer.** `functions_lambda.py` gives each
+lambda a plan name distinct from any ENCLOSING one while keeping `x`/`y`/`z` for display: two
+lambdas sharing a plan name made a nested one bind to the enclosing variable and answer wrongly
+with no error. And `dataframe/core.py`'s `_sort_specs` now follows PySpark's `_sort_cols`
+re-marking rule — a FALSY `ascending=` entry replaces that column's marker with `desc()`, a TRUTHY
+one changes nothing at all. The previous "the override supersedes the marker wholesale" premise
+was invented, and it made `orderBy("v", ascending=False)` place nulls wrongly.
+
+**Critic round 2 (2026-08-20).** The lambda plan name is the lambda's nesting DEPTH, not a
+process-wide counter. The counter reached the output schema on any higher-order column the facade
+does not name — `groupBy(F.exists(...))` is one — so the same query built twice in a session
+produced two different schemas. Depth is what the collision was ever about: an inner lambda still
+cannot collide with an enclosing one, and siblings share a name harmlessly because they occupy
+disjoint scopes. A `ContextVar` holds it, so concurrent builds on different threads cannot
+interleave.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

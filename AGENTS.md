@@ -182,6 +182,11 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   - The few v1 helper scripts not yet re-homed are listed in [scripts/map.md](scripts/map.md)
     "Not re-homed"; each **returns only with a concrete driver** (named per script there). Do not
     re-invent one ahead of its driver; re-home v1's script.
+- **Rust module layout is the default one** — `mod foo;` resolved by `foo.rs`, `foo/mod.rs`, or
+  `foo/*.rs`. `#[path = "…"]` is not a module-inclusion mechanism here: move the file into the
+  canonical tree instead. A generated-code, FFI, or test-fixture case that genuinely cannot sit in
+  the tree keeps the attribute local to that one item and states in a comment why the canonical
+  layout cannot work.
 - **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;
@@ -189,6 +194,35 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
 - **Spell things out** — no casual abbreviations (`config` not `cfg`, `index` not `idx`).
 - **Tier-2 CI (live AWS) never runs against unmerged code**; nightly on `main` + manual dispatch via
   OIDC only. No self-hosted runners in any tier. No secrets in tier-1 workflows.
+
+## Change discipline
+
+How a change is shaped, independent of where it lands.
+
+- **Fixes stay narrow.** Implement the requested behaviour and stop. A semantic-adjacent rewrite is
+  a separate change with its own review — never a passenger on a fix, and never at all while
+  touching a sensitive path (the write/commit path, the catalog, the exception taxonomy, anything
+  under "Safety" below).
+- **Do not refactor existing code only to make it easier to unit test.** Test the code as it
+  stands, or argue the refactor on its own merits as its own change.
+- **The smallest readable design wins.** Reach for an existing abstraction before adding one.
+  Parallel managers, factories, adapters, and wrappers introduced to make a design *look*
+  extensible are defects; extensibility is earned by a second real caller, not anticipated.
+- **Comments carry the non-obvious reason, the assumption, or the invariant** — in the shortest
+  complete form. Length follows the invariant: `SAFETY`, lock ordering, durability, and
+  compatibility contracts may need a short list of conditions. A comment never narrates the next
+  line, restates a signature, or records change history. Durable design rationale goes to
+  [ARCHITECTURE.md](ARCHITECTURE.md), a `map.md`, or [docs/adr/](docs/adr/map.md) — not inline.
+
+## Working style and communication
+
+- **Stop gathering once you can act.** Redundant file reads, repeated commands, and exploratory
+  work past the point of sufficient context are waste — and in a delegated unit they are the main
+  way a context budget is lost.
+- **Answer in the language the requester used.** Source code, comments, identifiers, commit
+  messages, and PR titles and bodies stay **English** regardless.
+- **Be concise.** No sycophantic openers, no closing filler, no narrated status. Plain words over
+  ceremony: say what changed, what it cost, and what is still open.
 
 ## PyO3 build notes
 
@@ -243,6 +277,25 @@ with `apache/iceberg-rust` is **not a constraint** — upstreaming a primitive i
 **optional/opportunistic**, not an obligation. We still **cherry-pick upstream improvements** into
 the fork when useful.
 
+## Resource discipline — disk and artifacts
+
+Builds, test runs, coverage, and per-unit worktrees are the largest consumers of disk here, and a
+disk that fills halts a campaign mid-unit.
+
+- **Check free space before you spend it** — before creating a worktree, and before any dependency
+  download, build, test run, coverage run, or other artifact-heavy command.
+- **Re-check at phase boundaries** on long-running or artifact-heavy work, and again before broad
+  validation. If the remaining space may not safely carry the next command, stop and reclaim
+  task-owned artifacts before continuing — never start the command hoping it fits.
+- **Cleanup is scoped.** Remove the generated build, test, and coverage artifacts and temporary
+  files *this* task created, once they are no longer needed. **Never delete another task's
+  worktree, and never delete uncommitted files** — a dirty tree that is not yours is someone
+  else's unit in flight, not garbage.
+- **Share caches instead of duplicating them.** Where a tool supports a shared dependency or build
+  cache, point worktrees at it rather than giving each one its own copy of the same large artifact.
+- **Report it at handoff:** the disk checks you ran, the cleanup you performed, and any worktree or
+  artifact you deliberately kept, with the reason it is still needed.
+
 ## Safety — destructive / outward-facing operations
 
 The engine touches AWS (Glue, S3 Tables, S3). **Never drop or delete a Glue table, an S3 Tables
@@ -277,6 +330,8 @@ never relax them.
 - **Test relocations follow docs/testing.md "Relocation discipline":** move-only = identity-diff
   gate (`--list` / `--collect-only` empty); path-changing regroups are declared-rename units that
   ship alone with an explicit name map.
+- **Disk:** the pre-spend checks, the scoped cleanup, and the handoff report in
+  ["Resource discipline"](#resource-discipline--disk-and-artifacts) bind every unit.
 - **Never:** AWS credentials/envs, `Cargo.toml [patch]` changes, `.github/` changes,
   secrets in any output. Clean STOP states only — a dirty worktree is not a delivered unit.
 

@@ -306,6 +306,22 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   PySpark output name `sum(x)`). The facade aliases each aggregate to its Spark output name; the
   returned expr is deliberately un-aliased.
 
+**FNP-4a (2026-08-20) — the lambda seam.** `column/mod.rs` gains `PyColumn::lambda_variable` (mints
+a placeholder for a lambda parameter) and `PyColumn::call_higher_order` (values first, then one
+lambda per `(params, body)` — every Spark higher-order signature's actual shape). `dataframe.rs`
+gains `PyDataFrame::bound`, which runs `resolve_lambda_variables` against the frame's schema:
+variables built through the expression API carry no field until a frame binds them, and an
+unresolved variable fails when the plan asks it for a type. **Every method that hands a `PyColumn`
+to DataFusion must go through `bound`** — `select`, `filter`, `with_column`, `sort`, `join_on`. A
+new one that calls `column.expr()` directly is a lambda that works everywhere except there.
+
+**Critic round 1 (2026-08-20).** `dataframe.rs`'s `bound` now covers `aggregate` too — it was the
+one `PyColumn`-consuming method that never resolved lambda variables, so `groupBy(exists(...))`
+hard-failed while a docstring asserted every site was wired. The claim of totality is what stopped
+the gap being found, so it now names the sites and the `grep -n 'PyColumn::expr'` that defines the
+domain. `column/expr_build.rs` gained `refuse_nested_higher_order` (the guard lives with the other
+expression-construction helpers, not in the `#[pymethods]` module).
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

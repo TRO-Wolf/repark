@@ -21,12 +21,13 @@
     clippy::cast_sign_loss
 )]
 
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use datafusion::arrow::array::Float64Array;
+use datafusion::arrow::array::{Float64Array, Int64Array, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, FieldRef};
-use datafusion::common::{Result, ScalarValue, exec_err};
+use datafusion::common::{DataFusionError, Result, ScalarValue, exec_err};
 use datafusion::logical_expr::{
     ColumnarValue, ReturnFieldArgs, ScalarFunctionArgs, ScalarUDF, ScalarUDFImpl, Signature,
     TypeSignature, Volatility,
@@ -150,7 +151,12 @@ fn murmur3_x86_32(data: &[u8], seed: u32) -> u32 {
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<ScalarUDF>> {
-    vec![spark_rand_udf(), spark_randn_udf()]
+    vec![
+        spark_rand_udf(),
+        spark_randn_udf(),
+        spark_randstr_udf(),
+        spark_uniform_udf(),
+    ]
 }
 
 /// Spark `rand([seed])` — uniform [0, 1). Alias `random` overwrites DF's unseeded `random()`.
@@ -164,6 +170,33 @@ pub fn spark_rand_udf() -> Arc<ScalarUDF> {
 pub fn spark_randn_udf() -> Arc<ScalarUDF> {
     Arc::new(ScalarUDF::from(SparkRandn::new()))
 }
+
+/// Spark `randstr(length[, seed])` — a random alphanumeric string (FNP-6b).
+#[must_use]
+pub fn spark_randstr_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkRandstr::new()))
+}
+
+/// Spark `uniform(min, max[, seed])` — i.i.d. values in `[min, max)` (FNP-6b).
+#[must_use]
+pub fn spark_uniform_udf() -> Arc<ScalarUDF> {
+    Arc::new(ScalarUDF::from(SparkUniform::new()))
+}
+
+/// Upper bound on a `randstr` length literal.
+///
+/// Spark's own literal is a two- or four-byte integer, so past `i32::MAX` is already out of
+/// contract. The cap matters because the failure mode WITHOUT it is not an error at all:
+/// `String::with_capacity(length)` per row aborts the process on a large constant — SIGABRT, no
+/// traceback, the whole session lost — while every other refusal in this module is catchable
+/// (F-CFS-1).
+const MAX_RANDSTR_LENGTH: i64 = 1_000_000;
+
+/// Spark `randstr`'s character pool, in Spark's own order: digits, then lower, then upper.
+///
+/// The order is load-bearing, not cosmetic — the index comes from the same `XORShift` stream
+/// `rand` uses, so a different ordering yields a different string for the same seed.
+const RANDSTR_POOL: &[u8] = b"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /// ===========================================================================================
 /// Shared seed extraction (null seed → 0 like Spark `UnresolvedSeed` fallback examples).
@@ -352,5 +385,203 @@ mod tests {
             }
         }
         assert!((35..=36).contains(&count), "count={count}");
+    }
+}
+
+/// ===========================================================================================
+/// `SparkRandstr` — `randstr(length[, seed])`.
+/// ===========================================================================================
+///
+/// Spark requires `length` to be a **constant** SMALLINT/INT, so a column argument is refused
+/// loudly rather than silently reading the first row.
+#[derive(Debug)]
+struct SparkRandstr {
+    signature: Signature,
+}
+
+impl SparkRandstr {
+    fn new() -> Self {
+        Self {
+            signature: Signature::variadic_any(Volatility::Volatile),
+        }
+    }
+}
+
+impl PartialEq for SparkRandstr {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkRandstr {}
+
+impl Hash for SparkRandstr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkRandstr {
+    crate::shim_udf_boilerplate!("randstr");
+
+    fn return_type(&self, _arg_types: &[DataType]) -> Result<DataType> {
+        Ok(DataType::Utf8)
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let length = constant_i64(args.args.first(), "randstr length")?;
+        // Spark's own literal is a two- or four-byte integer, so past i32::MAX is already out
+        // of contract. The cap matters because the failure mode without it is not an error at
+        // all: `String::with_capacity(length)` per row ABORTS the process on a large constant
+        // (SIGABRT, no traceback, whole session lost) rather than raising (F-CFS-1).
+        if !(0..=MAX_RANDSTR_LENGTH).contains(&length) {
+            return exec_err!(
+                "randstr length must be between 0 and {MAX_RANDSTR_LENGTH}, got {length}"
+            );
+        }
+        let length = usize::try_from(length).map_err(|_| {
+            DataFusionError::Execution(format!("randstr length must not be negative, got {length}"))
+        })?;
+        let seed = extract_seed(args.args.get(1..).unwrap_or_default())?;
+        let mut rng = XorShiftRandom::new(seed);
+        let mut values = Vec::with_capacity(args.number_rows);
+        for _ in 0..args.number_rows {
+            let mut text = String::with_capacity(length);
+            for _ in 0..length {
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    clippy::cast_sign_loss,
+                    reason = "next_double is in [0, 1), so the product is in [0, pool_len)"
+                )]
+                let index = (rng.next_double() * RANDSTR_POOL.len() as f64) as usize;
+                let byte = RANDSTR_POOL[index.min(RANDSTR_POOL.len() - 1)];
+                text.push(char::from(byte));
+            }
+            values.push(Some(text));
+        }
+        Ok(ColumnarValue::Array(Arc::new(StringArray::from(values))))
+    }
+}
+
+/// ===========================================================================================
+/// `SparkUniform` — `uniform(min, max[, seed])`.
+/// ===========================================================================================
+///
+/// **The return type follows the argument types**, which is Spark's documented rule: two integer
+/// bounds give an integer result, anything else gives a double. Getting this wrong would be a
+/// silent type change rather than an error, so the bounds are inspected at planning time.
+#[derive(Debug)]
+struct SparkUniform {
+    signature: Signature,
+}
+
+impl SparkUniform {
+    fn new() -> Self {
+        Self {
+            signature: Signature::variadic_any(Volatility::Volatile),
+        }
+    }
+}
+
+impl PartialEq for SparkUniform {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl Eq for SparkUniform {}
+
+impl Hash for SparkUniform {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name().hash(state);
+    }
+}
+
+impl ScalarUDFImpl for SparkUniform {
+    crate::shim_udf_boilerplate!("uniform");
+
+    fn return_type(&self, arg_types: &[DataType]) -> Result<DataType> {
+        let integral = arg_types
+            .iter()
+            .take(2)
+            .all(datafusion::arrow::datatypes::DataType::is_integer);
+        Ok(if integral {
+            DataType::Int64
+        } else {
+            DataType::Float64
+        })
+    }
+
+    fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
+        let low = constant_f64(args.args.first(), "uniform min")?;
+        let high = constant_f64(args.args.get(1), "uniform max")?;
+        // `partial_cmp` rather than `!(low <= high)`: a NaN bound is INCOMPARABLE, not merely
+        // out of order, and both cases must refuse. Clippy is right that the negated form hides
+        // which of the two is being caught.
+        match low.partial_cmp(&high) {
+            Some(Ordering::Less | Ordering::Equal) => {}
+            Some(Ordering::Greater) => {
+                return exec_err!("uniform min must not exceed max, got {low} and {high}");
+            }
+            None => return exec_err!("uniform bounds must not be NaN, got {low} and {high}"),
+        }
+        let seed = extract_seed(args.args.get(2..).unwrap_or_default())?;
+        let mut rng = XorShiftRandom::new(seed);
+        let integral = matches!(args.return_field.data_type(), DataType::Int64);
+
+        if integral {
+            let mut values = Vec::with_capacity(args.number_rows);
+            for _ in 0..args.number_rows {
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    reason = "bounds are finite and the draw stays within them"
+                )]
+                let drawn = low.mul_add(1.0, (high - low) * rng.next_double()) as i64;
+                values.push(Some(drawn));
+            }
+            Ok(ColumnarValue::Array(Arc::new(Int64Array::from(values))))
+        } else {
+            let mut values = Vec::with_capacity(args.number_rows);
+            for _ in 0..args.number_rows {
+                values.push(low + (high - low) * rng.next_double());
+            }
+            Ok(ColumnarValue::Array(Arc::new(Float64Array::from(values))))
+        }
+    }
+}
+
+/// A bound that Spark requires to be constant — a column argument is a loud refusal, never a
+/// silent read of row zero.
+fn constant_i64(value: Option<&ColumnarValue>, what: &str) -> Result<i64> {
+    match value {
+        Some(ColumnarValue::Scalar(scalar)) => match scalar {
+            ScalarValue::Int64(Some(v)) => Ok(*v),
+            ScalarValue::Int32(Some(v)) => Ok(i64::from(*v)),
+            ScalarValue::Int16(Some(v)) => Ok(i64::from(*v)),
+            other => exec_err!("{what} must be a non-null integer constant, got {other}"),
+        },
+        Some(ColumnarValue::Array(_)) => {
+            exec_err!("{what} must be a constant, not a column (Spark requires a literal)")
+        }
+        None => exec_err!("{what} is required"),
+    }
+}
+
+fn constant_f64(value: Option<&ColumnarValue>, what: &str) -> Result<f64> {
+    match value {
+        Some(ColumnarValue::Scalar(scalar)) => scalar
+            .cast_to(&DataType::Float64)
+            .ok()
+            .and_then(|cast| match cast {
+                ScalarValue::Float64(Some(v)) => Some(v),
+                _ => None,
+            })
+            .ok_or_else(|| {
+                DataFusionError::Execution(format!("{what} must be a non-null numeric constant"))
+            }),
+        Some(ColumnarValue::Array(_)) => {
+            exec_err!("{what} must be a constant, not a column (Spark requires a literal)")
+        }
+        None => exec_err!("{what} is required"),
     }
 }

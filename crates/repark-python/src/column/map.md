@@ -39,6 +39,38 @@ without enabling PyO3 `multiple-pymethods`.
   same UDF. Ledger: `task/fn-gt2-ledger.md`.
 - `window.rs` — `window_udwf` / `window_udwf_i32` inherent helpers (`pub(super)`) and Spark
   `rowsBetween` / `rangeBetween` frame translation (`spark_window_frame`, offset/bound scalars).
+- `function_dispatch.rs` gained the **FNP-3 (2026-08-20)** arms — `crc32`, `sha1`/`sha`,
+  `xxhash64`, `soundex`, `format_string`, `from_utc_timestamp`, `to_utc_timestamp`,
+  `map_from_arrays`, and `datediff` sharing `date_diff`'s arm. Each of these names already
+  evaluated through `spark.sql(...)`; the missing arm was the whole refusal. A kernel registered
+  by `register_all` but absent from this table is a facade-only `UnsupportedOperationException`.
+- `mod.rs` also carries the **FNP-4a (2026-08-20)** lambda constructors: `lambda_variable`
+  (a placeholder for one lambda parameter) and `call_higher_order` (value arguments, then one
+  lambda per `(params, body)`). Resolution of those placeholders is `PyDataFrame::bound`, not here
+  — a `PyColumn` has no schema.
+- `function_dispatch.rs` also carries the **FNP-5 (2026-08-20)** aggregate arms: the nine
+  `regr_*` and `string_agg`/`listagg` in `binary_aggregate_udaf`, `grouping` and
+  `approx_count_distinct`/`approx_distinct` in `unary_aggregate_udaf`. Same story as the scalar
+  arms — every one of these was already registered by `register_all` and resolvable through
+  `spark.sql(...)`; the facade had no arm.
+- `function_dispatch.rs` gains the **FNP-6a (2026-08-20)** arms for `regexp_extract_all` and
+  `regexp_substr`, both over repark-owned kernels rather than DataFusion's.
+- `function_dispatch.rs` gains the **FNP-6b (2026-08-20)** arms for `randstr` and `uniform`,
+  both over repark-owned kernels on the Spark `XORShiftRandom` stream.
+- `function_dispatch.rs` gains the **FNP-6c (2026-08-20)** arms for `validate_utf8`,
+  `try_validate_utf8` and `assert_true`.
+- `expr_build.rs` also holds `refuse_nested_higher_order` (**Critic round 1**): a higher-order
+  function nested inside another one's lambda is refused at build time. **This is an upstream
+  DataFusion 54.1 limit, measured** — such a plan fails at evaluation through DataFusion's own SQL
+  planner too (`Field of physical LambdaVariable with index 0 doesn't match batch field`). Before
+  the refusal, and before lambda parameters got unique plan names, the inner body bound to the
+  OUTER variable and returned an exactly inverted boolean with no error.
+- `door_parity_tests.rs` — **FNP-1 (2026-08-20):** the charter clause C-012 guard. Compares the
+  UDF this crate's dispatch table embeds against the one `repark_functions::register_all` installs
+  on a session, so the facade and the SQL door cannot silently resolve different kernels for the
+  same spelling. Carries `EXPECTED_DIVERGENCES`, a sanctioned-out table that **ratchets DOWN
+  only** — a listed name that has quietly been fixed fails the build. Ledger:
+  [../../../../../task/fnp-1-two-door-asymmetry-ledger.md](../../../../../task/fnp-1-two-door-asymmetry-ledger.md).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,
   alias collapse, projection extract, reciprocal-trig Inf CASE, `collect_aggregate` /
   `count_distinct_argument`) plus the unit tests that pin those helpers.
@@ -55,7 +87,12 @@ without enabling PyO3 `multiple-pymethods`.
 | window frame bound wrong | `window.rs` `spark_window_frame` / `spark_offset_to_bound` |
 | `sec`/`csc` at zero is NULL not Inf | `function_dispatch.rs` `sec`/`csc` arms + `expr_build.rs` `reciprocal_trig_or_inf` |
 | `call_scalar` unknown name / arity | `function_dispatch.rs` `call_scalar_expr` |
+| `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door |
+| `F.f(x)` and `spark.sql` disagree but the row is in `EXPECTED_DIVERGENCES` | that table classifies each row by MEASURED shape (`Kernel(arity)` / `Composed`) and FAILS on a row it cannot check — it used to `continue` past half of them |
+| a name works in SQL but raises through `F.` | `function_dispatch.rs` has no arm for it — the kernel is registered, the facade cannot reach it |
 | unknown `aggregate` / `aggregate_binary` kind | `function_dispatch.rs` `unary_aggregate_udaf` / `binary_aggregate_udaf` |
+| an aggregate returns `uint64`, or arithmetic on it widens to DECIMAL(21,0) | `function_dispatch.rs` `cast_unsigned_count_to_signed` — the cast is measured from the UDAF's declared return type, not keyed on a name (round 2 FNP-R3-1) |
+| `over()` says a column is not an aggregate when it is | `mod.rs` `over` peels an optional CAST first; an aggregate wrapped by the unsigned cast used to fall to the catch-all (round 2 F-R3-2) |
 | `… AS x AS x` in a plan | `expr_build.rs` `collapse_identity_alias_chain` |
 
 First checks: `cargo test -p repark-python column`. Escalate to: [../map.md#debug](../map.md).

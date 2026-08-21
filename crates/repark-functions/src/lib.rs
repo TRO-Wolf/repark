@@ -31,6 +31,7 @@ pub mod datetime;
 pub mod decimal_precision;
 pub mod decimal_spark;
 pub mod expr_fn;
+pub mod higher_order;
 pub mod instant_ts;
 pub mod random;
 pub mod session_time_zone;
@@ -41,6 +42,7 @@ pub mod string;
 pub mod timestamp_cast;
 pub mod timestamp_type;
 pub mod url;
+pub mod validate;
 
 use std::sync::Arc;
 
@@ -83,14 +85,12 @@ pub fn register_all(ctx: &SessionContext) {
     // Q1 R-ML-QUANTILE: Spark SQL names `percentile_approx` / `approx_percentile` as aliases
     // over DataFusion's t-digest `approx_percentile_cont` (engine already exposes the cont form;
     // Spark uses Greenwald-Khanna — accuracy arg accepted+ignored at the facade).
-    {
-        use datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf;
-        let approx = approx_percentile_cont_udaf()
+    ctx.register_udaf(
+        datafusion::functions_aggregate::approx_percentile_cont::approx_percentile_cont_udaf()
             .as_ref()
             .clone()
-            .with_aliases(["percentile_approx", "approx_percentile"]);
-        ctx.register_udaf(approx);
-    }
+            .with_aliases(["percentile_approx", "approx_percentile"]),
+    );
     for udwf in datafusion_spark::all_default_window_functions() {
         ctx.register_udwf(udwf.as_ref().clone());
     }
@@ -117,6 +117,8 @@ pub fn register_all(ctx: &SessionContext) {
     for udf in random::functions() {
         ctx.register_udf(udf.as_ref().clone());
     }
+    validate::register(ctx);
+    higher_order::register(ctx);
     // DEC-8: ExprPlanner must be on the session before BinaryExpr::get_type
     // refuses `(38,20)*(38,20)`. SparkExtension calls this function.
     decimal_spark::register_spark_decimal_planner(ctx);
