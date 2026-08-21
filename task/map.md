@@ -12,6 +12,16 @@ not this directory.
 
 ## Contents
 
+- [mw-0-charter-ledger.md](mw-0-charter-ledger.md) — **MW-0 (2026-08-21):** the charter for the
+  Iceberg write-path maintenance wave, and the campaign's whole measured floor. Merge-on-read
+  writes are correct and merge-on-read is not operable: ten sequential MERGEs grow delete files
+  one per merge and never reclaim them, costing **2.1x on scan while the answer stays 1,000
+  rows**. Procedure result schemas measured before any pin exists — two executed on a live
+  oracle, two read from the shipping Iceberg jar's own constant because a Spark 4.0-to-4.1 binary
+  break stops them executing. Gate **RULED**: the fence lifts for BOTH remote catalog policies,
+  which moves a hazard rather than removing it (C-210). **Read §5 for the two claims that changed
+  under re-verification**, including an "undeclared divergence" that turned out to be declared.
+
 - [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake
   (2026-08-21):** every campaign brief, queue, and grant that had existed only in planning space,
   reduced to eleven open workstreams, one closed ledger, and five items needing verification
