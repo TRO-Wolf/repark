@@ -1572,34 +1572,19 @@ the pin rather than obeying it.
   Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
   the gap is on disk, not just in a schema string.
 
-### RE-1 — `regexp_extract_all` defaults to group 0, Spark defaults to group 1
-
-- **repark** — `regexp_extract_all(str, regexp)` returns the **whole match**:
-  `regexp_extract_all('a1b2', '([a-z])([0-9])')` → `['a1', 'b2']`, on the facade and the SQL door
-  alike. A pattern with no capture group returns matches rather than raising.
-- **Apache Spark** — the two-argument form defaults `idx` to **1**, so the same call returns
-  `['a', 'b']`, and a pattern with no group raises
-  `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`. *(oracle: live — PySpark 4.1.2, both doors.)*
-- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re1_extract_all_two_argument_form_returns_group_zero`
-- **Rationale** — BACKLOG, and **the highest-value row on this list**: it is a silently wrong answer
-  on ordinary input, not an edge case. It is not fixed here because this campaign's invariant is
-  that no working query changes its result, and this one changes `['a1','b2']` to `['a','b']` for
-  every two-argument caller. That is a decision to take deliberately, with the three-argument form
-  and `regexp_substr` (which agrees with Spark at `'a1'`) checked in the same change. The pin
-  codifies today's behavior so the fix reds it on purpose. **Scope for closing it** (the single
-  default site, its three collateral test failures, and the adjacent string-`idx` defect) is
-  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-1 — queued, gate held.
-
 ### RE-2 — a zero-width match at a mid-surrogate position
 
 - **repark** — `regexp_extract_all('🎉ab', '', 0)` returns **4** empty strings and
-  `regexp_extract_all('🎉ab', 'b*', 0)` returns 4 elements; `regexp_substr('🎉ab', '')` returns
-  `''`. `regexp_count` on the same inputs returns **5**, so two functions in this repository
-  disagree.
-- **Apache Spark** — **5** in every case (`['','','','','']`, `['','','','b','']`), and
-  `regexp_substr('🎉ab', '')` returns **NULL**. Java's `Matcher` finds an empty match at every
-  UTF-16 code-unit index, including the one *inside* a surrogate pair.
-  *(oracle: live — PySpark 4.1.2.)*
+  `regexp_extract_all('🎉ab', 'b*', 0)` returns 4 elements. `regexp_count` on the same inputs
+  returns **5**, so two functions in this repository disagree.
+- **Apache Spark** — **5** in every case (`['','','','','']`, `['','','','b','']`). Java's
+  `Matcher` finds an empty match at every UTF-16 code-unit index, including the one *inside* a
+  surrogate pair. *(oracle: live — PySpark 4.1.2.)*
+- **Narrowed 2026-08-21 (SEM-5).** This row used to also carry `regexp_substr('🎉ab', '')` → `''`
+  vs Spark's NULL, which put a **general** difference under a surrogate-shaped heading. Measurement
+  shows `regexp_substr` returns `''` for a zero-width match on **plain ASCII** too, so that half is
+  not about surrogates at all and moved to its own row, [RE-3](#re-3--regexp_substr-returns--for-a-zero-width-match-spark-returns-null).
+  What remains here is genuinely surrogate-bound: the count.
 - **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
 - **Rationale** — BACKLOG. `regexp_count` walks UTF-16 code units and is already right;
   `collect_matches` walks Unicode scalars, because a mid-surrogate offset is **not a byte boundary**
@@ -1607,6 +1592,24 @@ the pin rather than obeying it.
   means running the collector in UTF-16 space and mapping back, which is a restructure of a hot
   path, not an edge-case patch. The row exists so the number 4 is a known, measured difference
   rather than an assumption that the two functions agree.
+
+### RE-3 — `regexp_substr` returns `''` for a zero-width match, Spark returns NULL
+
+- **repark** — any pattern whose match is empty yields the **empty string**:
+  `regexp_substr('ab', '')`, `regexp_substr('a1b2', '[0-9]*')` and `regexp_substr('ab', 'b*')` all
+  return `''`. A pattern that genuinely does not match (`regexp_substr('ab', 'x')`) correctly
+  returns NULL, and a non-empty match (`regexp_substr('a1b2', '[0-9]+')` → `'1'`) is correct too,
+  so the difference is exactly the zero-width case.
+- **Apache Spark** — **NULL** for all three. *(oracle: live — PySpark 4.1.2, measured on plain
+  ASCII, not astral text.)*
+- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re3_substr_of_a_zero_width_match_is_empty_not_null`
+- **Rationale** — BACKLOG. Split out of [RE-2](#re-2--a-zero-width-match-at-a-mid-surrogate-position)
+  on 2026-08-21, where it had been filed as part of a surrogate-position problem it has nothing to
+  do with. The measurement that produced it was a **draft SEM-1 assertion that read repark's own
+  answer back as if it were Spark's** — `regexp_substr('a1b2','[0-9]*') == ''` — caught only
+  because the value was checked against the oracle before the pin was committed. Not closed here:
+  it changes what a working query returns, which needs its own dated decision, and the owner's
+  2026-08-21 ruling covered `RE-1` only.
 
 ### LOG-1 — SQL-door `log` is base 10, Spark's is natural
 

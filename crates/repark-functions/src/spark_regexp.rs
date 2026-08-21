@@ -47,7 +47,9 @@ pub fn regexp_instr_udf() -> Arc<ScalarUDF> {
 /// Spark `regexp_extract_all(str, regexp[, idx])` UDF (FNP-6).
 /// ===========================================================================================
 ///
-/// Every match's `idx`-th capture group, as an array. `idx` defaults to 0 (the whole match).
+/// Every match's `idx`-th capture group, as an array. `idx` defaults to **1** — Spark's default,
+/// not the whole match. A pattern with no capture group therefore RAISES on the two-argument
+/// form; pass `idx = 0` for the whole match.
 /// No match yields an EMPTY array, not NULL — NULL is reserved for a NULL input, which is the
 /// distinction `regexp_extract`'s empty-string-on-no-match convention loses.
 #[must_use]
@@ -115,7 +117,7 @@ impl ScalarUDFImpl for SparkRegexpCount {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        coerce_regexp_args(arg_types, false)
+        coerce_regexp_args(arg_types, "regexp_count", false)
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -166,7 +168,7 @@ impl ScalarUDFImpl for SparkRegexpInstr {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        coerce_regexp_args(arg_types, true)
+        coerce_regexp_args(arg_types, "regexp_instr", true)
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -217,7 +219,7 @@ impl ScalarUDFImpl for SparkRegexpExtractAll {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        coerce_regexp_args(arg_types, true)
+        coerce_regexp_args(arg_types, "regexp_extract_all", true)
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -265,7 +267,7 @@ impl ScalarUDFImpl for SparkRegexpSubstr {
     }
 
     fn coerce_types(&self, arg_types: &[DataType]) -> Result<Vec<DataType>> {
-        coerce_regexp_args(arg_types, false)
+        coerce_regexp_args(arg_types, "regexp_substr", false)
     }
 
     fn invoke_with_args(&self, args: ScalarFunctionArgs) -> Result<ColumnarValue> {
@@ -291,12 +293,11 @@ fn is_utf8_family(data_type: &DataType) -> bool {
     }
 }
 
-fn coerce_regexp_args(arg_types: &[DataType], allow_index: bool) -> Result<Vec<DataType>> {
-    let name = if allow_index {
-        "regexp_instr"
-    } else {
-        "regexp_count"
-    };
+fn coerce_regexp_args(
+    arg_types: &[DataType],
+    name: &str,
+    allow_index: bool,
+) -> Result<Vec<DataType>> {
     let max_args = if allow_index { 3 } else { 2 };
     if arg_types.len() < 2 || arg_types.len() > max_args {
         return Err(DataFusionError::Plan(format!(
@@ -324,7 +325,7 @@ fn coerce_regexp_args(arg_types: &[DataType], allow_index: bool) -> Result<Vec<D
             index_type.is_integer() || is_utf8_family(index_type) || *index_type == DataType::Null;
         if !ok {
             return Err(DataFusionError::Plan(format!(
-                "'regexp_instr' idx must be an integer (Spark casts STRING), got {index_type}"
+                "'{name}' idx must be an integer (Spark casts STRING), got {index_type}"
             )));
         }
         coerced.push(DataType::Int32);
@@ -372,11 +373,16 @@ fn invoke_regexp(args: &ScalarFunctionArgs, kind: RegexpKind) -> Result<Columnar
 }
 
 /// Shared row walk for the two collecting kernels: NULL-in NULL-out, one compiled regex per
-/// distinct pattern, and the group index validated once per row.
+/// distinct pattern, and the group index passed through RAW.
+///
+/// The index is deliberately NOT validated here. Spark reports one condition for both an
+/// over-large and a negative index, and its text carries the pattern's group count — which is
+/// only known once the regex is compiled, i.e. in the caller. `regexp_substr` never sees a third
+/// argument (`coerce_regexp_args(.., false)` caps it at two), so it has nothing to validate.
 fn extract_rows<T>(
     args: &ScalarFunctionArgs,
     name: &str,
-    mut per_row: impl FnMut(Option<(&str, &Regex, usize)>) -> Result<T>,
+    mut per_row: impl FnMut(Option<(&str, &Regex, i32)>) -> Result<T>,
 ) -> Result<Vec<T>> {
     let arrays = ColumnarValue::values_to_arrays(&args.args)?;
     if arrays.len() < 2 {
@@ -400,16 +406,13 @@ fn extract_rows<T>(
             continue;
         }
         let group = match group_index.as_ref() {
-            Some(index) => {
-                let raw = index
-                    .as_primitive::<datafusion::arrow::datatypes::Int32Type>()
-                    .value(row);
-                if raw < 0 {
-                    return exec_err!("{name} group index must not be negative, got {raw}");
-                }
-                usize::try_from(raw).unwrap_or(0)
-            }
-            None => 0,
+            Some(index) => index
+                .as_primitive::<datafusion::arrow::datatypes::Int32Type>()
+                .value(row),
+            // Spark's default is capture group 1, not the whole match (RE-1, closed by SEM-1).
+            // One knob for both doors: the facade omits this argument rather than defaulting it.
+            // `regexp_substr` shares this walk but binds the group as `_group` and never reads it.
+            None => 1,
         };
         let pattern_text = patterns.value(row);
         if !cache.contains_key(pattern_text) {
@@ -428,14 +431,8 @@ fn invoke_extract_all(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     extract_rows(args, "regexp_extract_all", |row| {
         match row {
             None => builder.append(false),
-            Some((text, regex, group)) => {
-                if group >= regex.captures_len() {
-                    return exec_err!(
-                        "regexp_extract_all group index {group} is out of range for a pattern with \
-                         {} groups",
-                        regex.captures_len().saturating_sub(1)
-                    );
-                }
+            Some((text, regex, raw_group)) => {
+                let group = validate_group_index(raw_group, regex)?;
                 for found in collect_matches(text, regex)? {
                     // Re-capture at the match's own start so group offsets are this match's.
                     let captured = regex
@@ -466,6 +463,26 @@ fn invoke_substr(args: &ScalarFunctionArgs) -> Result<ColumnarValue> {
     })?;
     let array: ArrayRef = Arc::new(StringArray::from(values));
     Ok(ColumnarValue::Array(array))
+}
+
+/// Spark's one condition for a group index outside `0 ..= <group count>`, in Spark's own words.
+///
+/// Spark folds "negative" and "too large" into a single `REGEX_GROUP_INDEX`, so repark does too —
+/// it had two messages of its own and neither was greppable by the condition name a migrating
+/// user already knows. Text taken verbatim from a live PySpark 4.1.2 (`-1`, `3` and `99` all
+/// produce it, with the bound filled in).
+fn validate_group_index(raw_group: i32, regex: &Regex) -> Result<usize> {
+    let bound = regex.captures_len().saturating_sub(1);
+    let group = usize::try_from(raw_group)
+        .ok()
+        .filter(|index| *index <= bound);
+    group.ok_or_else(|| {
+        DataFusionError::Execution(format!(
+            "[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX] The value of parameter(s) `idx` in \
+             `regexp_extract_all` is invalid: Expects group index between 0 and {bound}, but got \
+             {raw_group}. SQLSTATE: 22023"
+        ))
+    })
 }
 
 fn compile_spark_regex(pattern: &str) -> Result<Regex> {

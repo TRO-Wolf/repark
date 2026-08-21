@@ -1,14 +1,15 @@
 # Charter ledger — SEM-0 · the two silently wrong answers
 
-**Date:** 2026-08-21 · **Branch:** not opened · **Base:** `fix/low-risk-sweep`, or `main` once
-[#191](https://github.com/TRO-Wolf/repark/pull/191) merges · **Rows it closes:**
-[`RE-1`](../docs/spark-sql-iceberg-parity.md#re-1--regexp_extract_all-defaults-to-group-0-spark-defaults-to-group-1)
-and [`LOG-1`](../docs/spark-sql-iceberg-parity.md#log-1--sql-door-log-is-base-10-sparks-is-natural)
+**Date:** 2026-08-21 · **Branch:** `fix/spark-semantics` · **Base:** `8c660f6` (`main`, post-#191) ·
+**Rows in scope:** `RE-1` — **CLOSED by SEM-1**, so its row is retired from the registry; and
+[`LOG-1`](../docs/spark-sql-iceberg-parity.md#log-1--sql-door-log-is-base-10-sparks-is-natural) —
+**TABLED by the owner**, so its row stands
 
-Queued, not running. The low-risk sweep found two ordinary calls on common functions that return a
-plausible wrong number, registered both as BACKLOG rows under its own invariant (no working query
-changes its answer), and stopped. This ledger is the scope audit for the change that lifts that
-invariant deliberately. **It is held at the APPROVAL_GATE** — see below.
+The low-risk sweep found two ordinary calls on common functions that return a plausible wrong
+number, registered both as BACKLOG rows under its own invariant (no working query changes its
+answer), and stopped. This ledger is the scope audit for the change that lifts that
+invariant deliberately. **The gate was ruled on 2026-08-21** — see below; `RE-1` closes, `LOG-1`
+is tabled.
 
 Everything here was measured on `7d14a6f` against the live PySpark 4.1.2 oracle
 ([design §7](../docs/design/low-risk-sweep.md)), not inferred from the registry rows.
@@ -35,7 +36,7 @@ Two things already exist and are not part of the work:
 
 | Site | How it goes red |
 |---|---|
-| `python/repark/tests/test_lrs6_regexp_divergences.py::test_re1_extract_all_two_argument_form_returns_group_zero` | **By design** — the RE-1 pin. Flip `['a1','b2']` → `['a','b']`. |
+| `python/repark/tests/test_lrs6_regexp_divergences.py::test_re1_extract_all_two_argument_form_returns_group_zero` | **By design** — the RE-1 pin. *(Outcome: both RE-1 pins were retired from that file rather than flipped; `test_sem1_extract_all_group_default.py` owns the assertions now, and the row left the registry.)* |
 | `python/repark/tests/test_fnp6_regexp.py::…` (the `[0-9]*` stepping test, line ~137) | **A runtime error, not an assertion.** The pattern has zero capture groups, so an `idx` of 1 now raises. Wants an explicit `idx=0` — it tests the stepping walk, not the group default. |
 | `python/repark/tests/test_fnp_critic_remediation.py::…` (the empty-pattern test, line ~97, **all four parametrizations**) | Same mechanism, same fix. |
 
@@ -114,10 +115,37 @@ in its own first commit — but it is recorded so it is not discovered at pre-co
 
 ## APPROVAL_GATE
 
-**HELD.** Queued on the owner's instruction of 2026-08-21 ("add that to the short term task
-work"), which schedules the work; it does not by itself authorize the value change.
+**RULED 2026-08-21.** First queued on the owner's instruction ("add that to the short term task
+work"), which scheduled the work without authorizing the value change. The owner then ruled:
 
-What needs a dated owner ruling before SEM-1 or SEM-2 writes code:
+> "Lets table the LOG-1 issue and then fix the others as soon as possible"
+
+Read against the three questions below:
+
+1. **The value change is authorized for `RE-1` and refused for `LOG-1`.** `RE-1` closes and its row
+   leaves the registry; `LOG-1` stays a BACKLOG row with its pins intact, and SEM-2 is **tabled,
+   not dropped** — the scope in §SEM-2 above stands as written for whenever it is untabled.
+2. **The adjacent defects go ahead**, minus one. The string-`idx` regression is SEM-3. The missing
+   `F.log` two-argument overload is **tabled with SEM-2**: the only kernel available for it today
+   is DataFusion's, the one without Spark's null-guard, so shipping the overload alone would trade
+   a crash for an answer that is silently wrong on six edges — the exact failure mode this campaign
+   exists to remove. Raised with the owner before starting.
+3. **The `REGEX_GROUP_INDEX` message is its own unit**, SEM-4, and was sequenced FIRST rather than
+   last: SEM-1 makes that refusal reachable from an ordinary two-argument call, so its pins had to
+   assert the final wording rather than one about to change.
+
+Delivery is one branch, one PR, matching the last two campaigns.
+
+## Unit roster, as ruled
+
+| Unit | Scope | State |
+|---|---|---|
+| **SEM-4** | The regexp refusals say Spark's words; the four kernels name themselves | Delivered |
+| **SEM-1** | `RE-1` — the two-argument `regexp_extract_all` defaults to group 1 | Delivered |
+| **SEM-3** | The string-`idx` regression from F-FNP6A-1 | Queued |
+| **SEM-2** | `LOG-1` + the `F.log` overload | **TABLED** by the owner |
+
+The three questions the gate was held on, kept for the record:
 
 1. **Do these two answers change?** `regexp_extract_all(s, p)` starts returning group 1, and
    `spark.sql("SELECT log(x)")` starts returning the natural log. Any caller relying on today's

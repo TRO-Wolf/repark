@@ -24,6 +24,31 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-5-substr-zero-width-ledger.md](sem-5-substr-zero-width-ledger.md) — **SEM-5
+  (2026-08-21):** registration only. `regexp_substr` returns `''` for a zero-width match where
+  Spark returns NULL — on plain ASCII, not just astral text — so it is split out of `RE-2` as its
+  own row `RE-3`, and the LRS-6 claim that both RE-2 divergences are confined to
+  supplementary-plane text is corrected. **Read this one for how it was found:** a draft SEM-1
+  assertion read repark's own answer back as if it were Spark's, and was caught one step before it
+  would have been pinned as truth.
+
+- [sem-3-string-idx-ledger.md](sem-3-string-idx-ledger.md) — **SEM-3 (2026-08-21):** the string
+  `idx` regression closed by narrowing `lit_indices` to `{2}` rather than restoring `{1, 2}`.
+  Records the shape worth remembering: F-FNP6A-1 removed a correct half along with an incorrect
+  one, which is the same over-correction that produced three of the parity campaign's round-2 S1s.
+
+- [sem-1-extract-all-group-default-ledger.md](sem-1-extract-all-group-default-ledger.md) —
+  **SEM-1 (2026-08-21):** `RE-1` closed. One line in `extract_rows` serves both doors, exactly as
+  the charter predicted; the collateral was the work, and two of its three sites failed as runtime
+  errors rather than assertion diffs. Also records a draft assertion that read repark's own answer
+  back as if it were Spark's, caught by measuring it — the finding became SEM-5.
+
+- [sem-4-regexp-messages-ledger.md](sem-4-regexp-messages-ledger.md) — **SEM-4 (2026-08-21):**
+  the regexp refusals say Spark's words. One `REGEX_GROUP_INDEX` condition replaces repark's two
+  group-index messages, and the four regexp kernels stop reporting themselves as each other in
+  planning errors — `regexp_extract_all` had been calling itself `regexp_instr`. Message-only;
+  sequenced before SEM-1, which makes that refusal reachable from an ordinary two-argument call.
+
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,

@@ -2060,10 +2060,33 @@ NOT in that file is a defect, not a decision.
   new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
   unsigned, so closing the row reds it on purpose.
 
+- `test_sem3_string_idx.py` — **SEM-3 (2026-08-21):** `regexp_extract_all` accepts a string `idx`
+  as a literal group index, which Spark, repark's own SQL door and repark's own `regexp_instr` all
+  already did. A regression from F-FNP6A-1, which removed `lit_indices` entirely when only position
+  1 was wrong. The bare-string-`regexp` and `Column`-`idx` assertions are the controls that stop
+  the narrowing from swinging back the other way.
+
+- `test_sem1_extract_all_group_default.py` — **SEM-1 (2026-08-21):** the two-argument
+  `regexp_extract_all` defaults to capture group 1, as Spark does — the first change since the port
+  that makes a working query return a different value, taken on the owner's dated ruling. Closes
+  registry row `RE-1`. The zero-group cases pin the consequence: with a default of 1 and no group
+  to take, the call now RAISES, which is what turned two unrelated tests red as runtime errors.
+
+- `test_sem4_regex_group_index_message.py` — **SEM-4 (2026-08-21):** the group-index refusal now
+  raises Spark's own `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`, one condition covering both a
+  negative and an over-large index where repark had two messages of its own; and the four regexp
+  kernels name themselves in their planning errors instead of borrowing a hard-coded
+  `regexp_count` / `regexp_instr`. Message-only — the two legal-index assertions are the control
+  that proves the accepting path is untouched.
+
 - `test_lrs6_regexp_divergences.py` — **LRS-6 (2026-08-20):** pins that CODIFY today's behavior
   for registry rows `RE-1` and `RE-2`, so the unit that fixes either turns its pin red on purpose.
   `RE-1` is the sweep's highest-value find: the two-argument `regexp_extract_all` returns group 0
-  where Spark returns group 1.
+  where Spark returns group 1. **SEM-1 (2026-08-21):** `RE-1` closed, so its two pins left this
+  file — `test_sem1_extract_all_group_default.py` owns those assertions now. **SEM-5
+  (2026-08-21):** the `regexp_substr` pin is now `RE-3`, its own row, measured on plain ASCII; the
+  BMP-bound test's claim that both RE-2 divergences are confined to supplementary-plane text was
+  false for the substr half and is corrected.
 
 - `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for the two registry rows the widened
   C-012 guard produced — `LOG-1` (the SQL door's `log` is base 10, Spark's is natural) and `UNIX-1`
