@@ -1277,9 +1277,7 @@ fn object_name_parts(name: &ObjectName) -> Vec<String> {
 }
 
 #[cfg(test)]
-#[path = "predicate_dml_tests.rs"]
 mod predicate_dml_tests;
 
 #[cfg(test)]
-#[path = "predicate_dml_update_tests.rs"]
 mod predicate_dml_update_tests;

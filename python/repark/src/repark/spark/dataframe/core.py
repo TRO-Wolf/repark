@@ -5371,6 +5371,7 @@ class DataFrame:
             # generator would GROUP BY the array placeholder (octo C7-Q-003 / C7-L-001;
             # Spark UNSUPPORTED_GENERATOR). Mirrors groupBy refuse (C6-Q-002).
             column._reject_nested_generator("cube/rollup/groupingSets")
+            column._reject_higher_order("cube/rollup/groupingSets")
         if bare:
             sql_group = clause
         else:

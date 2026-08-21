@@ -100,13 +100,19 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   (Spark stringify), always emit `Utf8` (never `Utf8View`), any-NULL → NULL — fixes
   TPC-DS Q5/Q80/Q84; pins include `register_all` overwrite + multi-row null mask.
   **GT1-FIX round-2:** also registers `regexp_count` / `regexp_instr` / `split_part`.
-- `src/str_to_map.rs` — **FN-GT2 rework:** regex `str_to_map` UDF (`#[path]` from
-  `collection.rs`). Overwrites the DF literal-split kernel. Depends on workspace
-  `regex`.
+- `src/collection/str_to_map.rs` — **FN-GT2 rework:** regex `str_to_map` UDF. Overwrites the DF
+  literal-split kernel. Depends on workspace `regex`. **LRS-5 (2026-08-20):** moved from
+  `src/str_to_map.rs` into the canonical module tree, with `src/collection/shuffle.rs`,
+  `src/collection/map_from_entries.rs` and `src/url/java_uri.rs` — the four `#[path]` inclusions
+  this crate carried are gone.
 - `src/collection.rs` — Spark `element_at` (arrays + maps) + the embedded `__repark_array_get__`
   subscript UDF + **`spark_get_item_udf` / `__repark_get_item__`** (polymorphic array 0-based or
   map-by-key for facade `Column.__getitem__` non-int/non-str keys — octo C2-L-001).
   Registers the `str_to_map` overwrite.
+- `src/aggregate.rs` — **LRS-3 (2026-08-20):** also carries `approx_count_distinct_udaf`, which
+  registers DataFusion's `approx_distinct` under Spark's spelling as well. It lives in
+  `functions()` rather than `register_all` because the crate root is at its ceiling, and because
+  `functions()` is already the list `register_all` installs.
 - `src/instant_ts.rs` — **TZ-4 PR-1:** `now` / `current_timestamp` / `to_timestamp` emit
   `timestamp[us, tz=UTC]`; analyzer wrap of leftover ns-naive TIMESTAMP expressions. Zoneless
   values not localized (PR-2). **Q10:** NTZ opt-in arm of the CAST/literal rewrite.

@@ -59,16 +59,23 @@ def _parameter_names(arity: int, depth: int) -> tuple[list[str], list[str]]:
     return [f"{name}_{depth}" for name in display], display
 
 
+# The parameter kinds a higher-order lambda may use. Spark's own check reads "should use only
+# POSITIONAL or POSITIONAL OR KEYWORD arguments", and `lambda x, /: x > 2` does work there
+# (measured, LRS-2) — so positional-only is allowed and only the other three kinds are refused.
+_LAMBDA_PARAMETER_KINDS = (
+    inspect.Parameter.POSITIONAL_ONLY,
+    inspect.Parameter.POSITIONAL_OR_KEYWORD,
+)
+
+
 def _lambda_arity(function: Callable[..., Column], *, allowed: tuple[int, ...]) -> int:
     """How many parameters the callable takes, refused loudly if Spark does not accept that many."""
     parameters = inspect.signature(function).parameters
-    if any(
-        parameter.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
-        for parameter in parameters.values()
-    ):
+    if any(parameter.kind not in _LAMBDA_PARAMETER_KINDS for parameter in parameters.values()):
         raise PySparkValueError(
-            "higher-order function lambdas take a fixed number of positional parameters; "
-            "*args / **kwargs are not supported"
+            f"[UNSUPPORTED_PARAM_TYPE_FOR_HIGHER_ORDER_FUNCTION] Function "
+            f"`{getattr(function, '__name__', type(function).__name__)}` should use only "
+            "POSITIONAL or POSITIONAL OR KEYWORD arguments."
         )
     arity = len(parameters)
     if arity not in allowed:

@@ -24,6 +24,61 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
+  its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
+  sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
+  Spark to 1) and `LOG-1` (the Spark door's `log` is base 10, Spark's is natural). Carries the
+  measured implementation scope for both: RE-1's single default site and its three collateral test
+  failures (two of which fail as runtime errors and appear in no other RE-1 document), LOG-1's need
+  for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
+  comes with it, and the two adjacent defects that should ride along. Both units change a computed
+  answer, so the gate wants a dated owner ruling before either writes code.
+- [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
+  the invariant held, and the two findings that matter most were both found while doing something
+  else — `RE-1` and `LOG-1`, silently wrong answers on common functions. Also: the live Spark
+  oracle refuted three of the Critic round's suggested fixes and one of mine.
+- [lrs-0-charter-ledger.md](lrs-0-charter-ledger.md) — **LRS-0 (2026-08-20):** charter for the
+  low-risk sweep, the campaign that works the sub-floor remainder the two Critic rounds forwarded.
+  Nine clauses PROVEN, zero OPEN; the tiering rule (blast radius, not effort) is C-004 so it can be
+  disputed on evidence. Design: [../docs/design/low-risk-sweep.md](../docs/design/low-risk-sweep.md);
+  slate: [../briefs/low-risk-sweep.md](../briefs/low-risk-sweep.md).
+- [lrs-1-higher-order-refusals-ledger.md](lrs-1-higher-order-refusals-ledger.md) — **LRS-1
+  (2026-08-20):** four paths that handed the user a DataFusion internal error now refuse and name
+  the workaround. All four work in Spark, so the messages say so. `Window.partitionBy` was not in
+  any finding — it was found by checking the `orderBy` defect's sibling position, and had the same
+  problem with a different internal error. Turned up LRS-7 on the way.
+- [lrs-2-argument-contracts-ledger.md](lrs-2-argument-contracts-ledger.md) — **LRS-2
+  (2026-08-20):** `xxhash64()` and the lambda parameter-kind gate now match PySpark. The live Spark
+  oracle **refuted two of the three fixes the review suggested** — accepting `xxhash64()` and
+  rejecting positional-only parameters would both have shipped divergences — so the refutations are
+  pinned, not just recorded.
+- [lrs-7-unordered-window-ledger.md](lrs-7-unordered-window-ledger.md) — **LRS-7 (2026-08-20):**
+  `count(v).over(Window.partitionBy("k"))` — ordinary PySpark — failed with a DataFusion internal
+  error for every column. Found by an LRS-1 pin whose only job was to prove a different fix did not
+  over-fire. The first version of the fix would have made five ordering-requiring functions answer
+  where Spark refuses; the oracle caught it, and the split is now read off the function's kind
+  rather than a name list.
+- [lrs-3-registered-divergences-ledger.md](lrs-3-registered-divergences-ledger.md) — **LRS-3
+  (2026-08-20):** two of the parity branch's "registry row handed forward" promises became actual
+  rows with pins (`RAND-1`, `BL-8`), and their descriptions left STATUS so nothing is stated twice.
+  Also: `randstr` refuses a batch that would overflow Arrow's i32 string offsets instead of
+  panicking, and the SQL door learned Spark's own `approx_count_distinct` spelling — a gap no test
+  could see, because the facade never went through the door for that name.
+- [lrs-6-regexp-measured-ledger.md](lrs-6-regexp-measured-ledger.md) — **LRS-6 (2026-08-20):**
+  scoped wrong twice, and the second correction is the useful one — deciding what the right answer
+  is turned out to be the cheap half of closing an astral-text regex gap. Shipped as measurement +
+  registry rows `RE-1` / `RE-2`. On the way it found the sweep's highest-value defect:
+  `regexp_extract_all(str, regexp)` returns group 0 where Spark returns group 1 — a silently wrong
+  answer on ordinary input, on both doors.
+- [lrs-4-door-domain-ledger.md](lrs-4-door-domain-ledger.md) — **LRS-4 (2026-08-20):** the C-012
+  guard now walks the session's own registry instead of a hand-maintained list — domain 20 names →
+  **341**. Found four kernel divergences on the first run, including `LOG-1`: `SELECT log(x)`
+  through the SQL door returns DataFusion's base-10 answer where Spark returns the natural log. A
+  plausible-looking wrong number that no test could see, because the guard's domain did not include
+  the name.
+- [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
+  `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
+  three new `map.md` files, which were written rather than waived.
 - [fnp-critic-round-2-ledger.md](fnp-critic-round-2-ledger.md) — **Critic round 2 (2026-08-20):**
   two more fresh agents under the same hard break, aimed at round 1's own fixes. Both
   NOT_CONVERGED: 17 findings, 4 at or above the floor, and every one of those was a defect the

@@ -91,7 +91,6 @@ use datafusion::logical_expr::{
 };
 use regex::Regex;
 
-#[path = "java_uri.rs"]
 mod java_uri;
 
 use java_uri::JavaUri;

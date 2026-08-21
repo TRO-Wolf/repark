@@ -1335,6 +1335,17 @@ cannot collide with an enclosing one, and siblings share a name harmlessly becau
 disjoint scopes. A `ContextVar` holds it, so concurrent builds on different threads cannot
 interleave.
 
+**LRS-1 (2026-08-20).** `column.py` gains `_reject_higher_order`, and `window.py`'s single
+partitionBy/orderBy normalizer calls it. A higher-order column in a window key failed at physical
+planning (`orderBy`) or with DataFusion's "ORDER BY column cannot be empty … likely caused by a
+bug" (`partitionBy`); both work in Spark, so the refusal says so and names the workaround. The
+predicate asks the native expression (`PyColumn.contains_higher_order`), not the rendered SQL text.
+
+**LRS-2 (2026-08-20).** `functions_expr.py`'s `xxhash64` refuses the zero-argument form with
+Spark's `WRONG_NUM_ARGS` rather than letting the dispatcher's arity message out, and
+`functions_lambda.py`'s `_lambda_arity` checks parameter kinds against an allowlist
+(`POSITIONAL_ONLY`, `POSITIONAL_OR_KEYWORD`) — positional-only works in Spark, so it works here.
+
 ## Pointers
 
 - Up: [../../map.md](../../map.md)

@@ -29,17 +29,14 @@ use datafusion::logical_expr::{
 };
 
 /// Regex `str_to_map` (Spark treats both delimiters as regular expressions).
-/// Sibling file so `lib.rs` stays at its crate-root ceiling.
-#[path = "str_to_map.rs"]
+/// Child module of `collection` so `lib.rs` stays at its crate-root ceiling.
 mod str_to_map;
 pub(crate) use str_to_map::bind_ascii_perl_classes;
 
 /// NULL-guarded `shuffle` (X1 — the upstream kernel panics on an all-NULL list).
-#[path = "shuffle.rs"]
 mod shuffle;
 
 /// `map_from_entries` with Spark's `EXCEPTION` map-key dedup policy (X7).
-#[path = "map_from_entries.rs"]
 mod map_from_entries;
 
 /// ===========================================================================================

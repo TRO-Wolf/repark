@@ -442,6 +442,18 @@ impl ScalarUDFImpl for SparkRandstr {
         let length = usize::try_from(length).map_err(|_| {
             DataFusionError::Execution(format!("randstr length must not be negative, got {length}"))
         })?;
+        // The per-row cap is not enough on its own: `StringArray` addresses its values with i32
+        // offsets, so a legal length times a large batch still overflows and panics inside
+        // arrow-rs. Caught at the PyO3 boundary rather than aborting, but a panic is not a
+        // contract — state the limit instead (round 2 F-R3-9).
+        if length.saturating_mul(args.number_rows) > i32::MAX as usize {
+            return exec_err!(
+                "randstr would build {length} characters x {} rows, past the {} byte limit of a \
+                 string column; reduce the length or the batch",
+                args.number_rows,
+                i32::MAX
+            );
+        }
         let seed = extract_seed(args.args.get(1..).unwrap_or_default())?;
         let mut rng = XorShiftRandom::new(seed);
         let mut values = Vec::with_capacity(args.number_rows);

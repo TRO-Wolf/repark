@@ -545,6 +545,25 @@ them, and the document is ordered by surface, never by date.
 
 ---
 
+### RAND-1 — `randstr` refuses a length Spark accepts
+
+- **repark** — `randstr(n, seed)` refuses `n` above **1,000,000** with a catchable
+  `randstr length must be between 0 and 1000000, got …`, and refuses a request whose
+  `length x batch rows` would exceed `i32::MAX` bytes with
+  `randstr would build … characters x … rows, past the … byte limit of a string column`.
+- **Apache Spark** — has no cap. `SELECT length(randstr(5000000, 1))` returns **5000000**.
+  *(oracle: live — PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_lrs3_registered_divergences.py::test_randstr_refuses_a_length_spark_accepts`
+  and `::test_randstr_refuses_a_batch_that_would_overflow_string_offsets`
+- **Rationale** — DECLARED, as a **safety limit rather than a parity claim**, which is why it needs
+  a row: nothing else says it is deliberate. The failure mode without the per-row cap is not an
+  error at all — `String::with_capacity(n)` per row aborts the process on a large constant, SIGABRT
+  with no traceback and the session lost, where every other refusal in that module is catchable
+  (F-CFS-1). The batch bound was added for the same reason at a different scale: a *legal* length
+  times a large batch overflows the i32 offsets of an Arrow `StringArray` and panics inside
+  arrow-rs. That panic is caught at the PyO3 boundary rather than aborting, but a caught panic is
+  not a contract (round 2 F-R3-9). Raising either bound is a decision, not a bug fix.
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
@@ -1531,6 +1550,106 @@ the pin rather than obeying it.
   evaluation; ABSENCE IS LOUD) and A10 (parse-altitude refuse on `spark_ast.rs` + repark-sql
   guard sites; G3-E8 lesson). Keep this row until collation is implemented or the product
   permanently documents absence without a silent path.
+
+### BL-8 — SQL-door count-like aggregates return `UInt64`
+
+- **repark** — the **facade** casts a count-like aggregate to signed `bigint`
+  (`df.agg(F.regr_count("y", "x"))` → `int64`, `F.approx_count_distinct` likewise), taken from the
+  aggregate's own declared return type rather than a name list. The **SQL door** does not:
+  `SELECT regr_count(y, x)` and `SELECT approx_distinct(g)` hand back Arrow `UInt64`. So the two
+  doors reach the same kernel and disagree on the result type.
+- **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
+  *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
+  `approx_count_distinct` → `struct<r:bigint>`.)*
+- **Pin** — `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`,
+  whose `DOOR_RETURNS_UNSIGNED` set is a **ratchet**: the pin asserts the door still returns
+  unsigned, so closing this row turns it RED on purpose.
+- **Rationale** — BACKLOG, split deliberately. The facade is the surface the parity campaign is
+  about and it is now correct; correcting the door means moving the cast into the shared analyzer
+  layer, where the rewrite must be idempotent across re-analysis and must not rename an `Aggregate`
+  node's output field that a parent `Projection` refers to by name. That is an engine-semantics
+  unit. Recorded rather than left as a STATUS promise, because a `UInt64` column written to
+  Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
+  the gap is on disk, not just in a schema string.
+
+### RE-1 — `regexp_extract_all` defaults to group 0, Spark defaults to group 1
+
+- **repark** — `regexp_extract_all(str, regexp)` returns the **whole match**:
+  `regexp_extract_all('a1b2', '([a-z])([0-9])')` → `['a1', 'b2']`, on the facade and the SQL door
+  alike. A pattern with no capture group returns matches rather than raising.
+- **Apache Spark** — the two-argument form defaults `idx` to **1**, so the same call returns
+  `['a', 'b']`, and a pattern with no group raises
+  `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`. *(oracle: live — PySpark 4.1.2, both doors.)*
+- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re1_extract_all_two_argument_form_returns_group_zero`
+- **Rationale** — BACKLOG, and **the highest-value row on this list**: it is a silently wrong answer
+  on ordinary input, not an edge case. It is not fixed here because this campaign's invariant is
+  that no working query changes its result, and this one changes `['a1','b2']` to `['a','b']` for
+  every two-argument caller. That is a decision to take deliberately, with the three-argument form
+  and `regexp_substr` (which agrees with Spark at `'a1'`) checked in the same change. The pin
+  codifies today's behavior so the fix reds it on purpose. **Scope for closing it** (the single
+  default site, its three collateral test failures, and the adjacent string-`idx` defect) is
+  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-1 — queued, gate held.
+
+### RE-2 — a zero-width match at a mid-surrogate position
+
+- **repark** — `regexp_extract_all('🎉ab', '', 0)` returns **4** empty strings and
+  `regexp_extract_all('🎉ab', 'b*', 0)` returns 4 elements; `regexp_substr('🎉ab', '')` returns
+  `''`. `regexp_count` on the same inputs returns **5**, so two functions in this repository
+  disagree.
+- **Apache Spark** — **5** in every case (`['','','','','']`, `['','','','b','']`), and
+  `regexp_substr('🎉ab', '')` returns **NULL**. Java's `Matcher` finds an empty match at every
+  UTF-16 code-unit index, including the one *inside* a surrogate pair.
+  *(oracle: live — PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
+- **Rationale** — BACKLOG. `regexp_count` walks UTF-16 code units and is already right;
+  `collect_matches` walks Unicode scalars, because a mid-surrogate offset is **not a byte boundary**
+  and Rust's `&str` cannot address one — there is no `regex::Match` to build there. Closing this
+  means running the collector in UTF-16 space and mapping back, which is a restructure of a hot
+  path, not an edge-case patch. The row exists so the number 4 is a known, measured difference
+  rather than an assumption that the two functions agree.
+
+### LOG-1 — SQL-door `log` is base 10, Spark's is natural
+
+- **repark** — on the **Spark facade's SQL door** (`SparkSession.sql`; the native ANSI door is a
+  separate contract per [ADR-0002](adr/0002-two-sql-doors.md) and is not in this row). The facade's
+  `F.log(8.0)` is right at `2.0794415416798357` — it lowers straight to `ln`, bypassing the registry
+  entirely — while `SELECT log(8)` returns `0.9030899869919434`, DataFusion's base-10 `LogFunc`.
+  **Corrected 2026-08-21:** this row first said "`log(2, 8)` gives `3.0` on both, so only the
+  one-argument form diverges". That is **false**. The two-argument form agrees only on positive
+  operands; on any non-positive one it diverges too, because DataFusion's `LogFunc` has no
+  null-guard — `log(0, 8)` → `-0.0`, `log(-2, 8)` → `NaN`, `log(10, 0)` → `-inf`,
+  `log(10, -1)` → `NaN`, and the one-argument `log(0)` → `-inf`, `log(-1)` → `NaN`.
+- **Apache Spark** — `log(8)` → `2.0794415416798357`, `log(2, 8)` → `3.0`, and **NULL** for every
+  one of the six non-positive cases above (`Logarithm.nullSafeEval`). `log(1, 8)` → `inf` on both.
+  *(oracle: live — PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_log1_sql_door_log_is_base_ten`
+  and `::test_log1_the_two_argument_form_diverges_on_non_positive_operands`
+- **Rationale** — BACKLOG, and it is a **silently wrong answer on a common function**: a query
+  that reads `log(x)` through `spark.sql` gets a number that is off by a constant factor and looks
+  perfectly plausible. Not closed here because it needs a Spark-semantics `log` kernel registered
+  over DataFusion's — a new kernel and a changed answer, which is outside this campaign's
+  invariant. The kernel must carry Spark's null-guard at **both** arities; redirecting the
+  one-argument form to `ln` and leaving DataFusion's two-argument formula in place would close half
+  the row and leave the other half silently open, which is the failure mode the correction above
+  records. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
+  own 341, which is the argument for that change on its own. **Scope for closing it** (the kernel
+  shape, the ratchet move it forces, and the adjacent missing `F.log` overload) is
+  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
+
+### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
+
+- **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns
+  a TIMESTAMP value for the same call.
+- **Apache Spark** — returns a STRING: `SELECT from_unixtime(0)` has schema `struct<r:string>`.
+  *(oracle: live — PySpark 4.1.2. Its value there is `'1969-12-31 19:00:00'` because the oracle's
+  session zone is not UTC; repark's default zone is UTC by registry row
+  [TZ-2](#tz-2--the-session-timezone-default-is-utc), so the instant is the same and the rendering
+  differs by that already-declared row, not by this one.)*
+- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_unix1_sql_door_from_unixtime_is_a_timestamp`
+- **Rationale** — BACKLOG. The **type** is the divergence, and it is the facade that matches Spark.
+  A consumer that writes `SELECT from_unixtime(t)` to Parquet gets a timestamp column where Spark
+  would have written a string. Not closed here for the same reason as `LOG-1`: it changes what a
+  working query returns.
 
 ### Surfaced, awaiting pins — not yet rows
 

@@ -2039,6 +2039,42 @@ NOT in that file is a defect, not a decision.
   unaliased higher-order column keeping the same output name on every build (the uniqueness
   counter leaked into the schema).
 
+- `test_lrs1_higher_order_refusals.py` — **LRS-1 (2026-08-20):** the four paths that leaked a
+  DataFusion internal error for a higher-order column now refuse. Two of the nine pins exist only
+  to BOUND the change (ordinary columns still pass those paths; higher-order columns still work
+  where they worked), because a refusal that over-fires is worse than the error it replaced. One
+  pin runs the workaround the messages name.
+
+- `test_lrs2_argument_contracts.py` — **LRS-2 (2026-08-20):** `xxhash64()` refuses by its own
+  name with Spark's `WRONG_NUM_ARGS`, and the lambda parameter-kind gate uses Spark's allowlist.
+  Three of the seven pins hold behaviour the Critic round wanted CHANGED and the oracle said was
+  already right — a pin is how a refuted suggestion stops coming back.
+
+- `test_lrs7_unordered_window.py` — **LRS-7 (2026-08-20):** the unordered-window default frame.
+  Eleven window functions measured on both sides; every expected value is Spark's own answer. One
+  pin guards the interaction with the round-2 unsigned-count CAST, which `over` peels and re-applies
+  around the code this unit changed.
+
+- `test_lrs3_registered_divergences.py` — **LRS-3 (2026-08-20):** the pins that let registry rows
+  `RAND-1` and `BL-8` land (§6: a row lands with its pin or it does not land), plus the SQL door's
+  new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
+  unsigned, so closing the row reds it on purpose.
+
+- `test_lrs6_regexp_divergences.py` — **LRS-6 (2026-08-20):** pins that CODIFY today's behavior
+  for registry rows `RE-1` and `RE-2`, so the unit that fixes either turns its pin red on purpose.
+  `RE-1` is the sweep's highest-value find: the two-argument `regexp_extract_all` returns group 0
+  where Spark returns group 1.
+
+- `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for the two registry rows the widened
+  C-012 guard produced — `LOG-1` (the SQL door's `log` is base 10, Spark's is natural) and `UNIX-1`
+  (`from_unixtime` returns TIMESTAMP on the door, STRING in Spark). Both codify today's behavior.
+  **2026-08-21:** gained `test_log1_the_two_argument_form_diverges_on_non_positive_operands`. The
+  original pin asserted only `log(2, 8) == 3.0` and the row concluded from it that just the
+  one-argument form diverged — a claim drawn from one positive-operand sample. DataFusion's
+  `LogFunc` has no null-guard, so all six non-positive edges diverge too (Spark returns NULL for
+  every one), and a fix that only redirects the one-argument form to `ln` would close half the row
+  silently.
+
 ## I want to...
 
 | ...do this | go to |

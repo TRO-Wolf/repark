@@ -5,6 +5,12 @@
 Source for `repark-functions` — Spark function registry, the function shims (date / string /
 collection), and the Spark expression-semantics analyzer rule. See [../map.md](../map.md).
 
+**LRS-5 (2026-08-20):** the four files this directory carried only so a `#[path = "…"]` could
+include them now live under the parent module they belong to —
+[`collection/`](collection/map.md) (`str_to_map`, `shuffle`, `map_from_entries`) and
+[`url/`](url/map.md) (`java_uri`). Nothing was renamed to `mod.rs`: Rust 2018 lets `collection.rs`
+sit beside `collection/`.
+
 ## Contents
 
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /
@@ -359,6 +365,14 @@ end, which `count_non_overlapping` counted while the collector returned `[]`, so
 one module disagreed on plain ASCII. `random.rs` bounds a `randstr` length literal —
 without a cap the failure was not an error at all but a process abort (SIGABRT, no traceback),
 while every other refusal here is catchable.
+
+**LRS-3 (2026-08-20).** `random.rs` bounds `randstr` a second time, by TOTAL size: the per-row cap
+let a legal length times a large batch overflow the i32 offsets of an Arrow `StringArray` and panic
+inside arrow-rs — caught at the PyO3 boundary rather than aborting, but a caught panic is not a
+contract. Both bounds are now registry row `RAND-1` in
+[../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md), because they are a
+deliberate safety limit and Spark has no cap at all. `aggregate.rs` also registers
+`approx_distinct` under Spark's `approx_count_distinct` spelling, which the SQL door did not know.
 
 ## Pointers
 

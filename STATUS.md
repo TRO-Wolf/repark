@@ -161,6 +161,44 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
+- **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
+  eleven commits, **open as [#191](https://github.com/TRO-Wolf/repark/pull/191), not yet merged**).
+  Chartered off `feat/spark-function-parity` @ `8a28057`; rebased onto `main` on 2026-08-21 when
+  that campaign squash-merged as `65bacdf`, tree-identical both before and after. Works the
+  sub-floor remainder the two Critic rounds forwarded. Design: [docs/design/low-risk-sweep.md](docs/design/low-risk-sweep.md);
+  slate: [briefs/low-risk-sweep.md](briefs/low-risk-sweep.md); approval gate (10/10 `PROVEN`):
+  [task/lrs-0-charter-ledger.md](task/lrs-0-charter-ledger.md).
+  - **Delivered:** LRS-5 (canonical Rust module layout — all six `#[path]` sites gone), LRS-1
+    (four facade paths refuse a higher-order column instead of leaking a DataFusion internal),
+    LRS-2 (argument contracts matched to Spark), LRS-7 (a window with no `ORDER BY` frames the
+    whole partition), LRS-3 (registry rows `RAND-1` / `BL-8` landed with pins; `randstr` batch
+    bound; the SQL door learned `approx_count_distinct`), LRS-6 and LRS-4 (measurement +
+    registration).
+  - **The campaign's invariant held:** no query that worked before returns a different value.
+    Every change turns a failure into a better failure, or registers something already decided.
+  - **A live PySpark 4.1.2 + JVM oracle** is installed on this machine and was used to scope every
+    unit. It refuted **three** of the Critic round's suggested fixes and one of my own — see
+    design §7. It is not a build dependency and CI cannot reach it; every answer it gave is
+    transcribed into the ledger that used it.
+  - **Two silently wrong answers found and registered, not fixed** (each changes what a working
+    query returns, which the charter forbids): `RE-1` — `regexp_extract_all(str, regexp)` returns
+    capture group 0 where Spark returns group 1, on both doors; `LOG-1` — `SELECT log(x)` through
+    the SQL door returns DataFusion's base-10 answer where Spark returns the natural log. Both are
+    ordinary calls on common functions. **These are the two the owner should look at first.**
+
+- **The two semantics fixes (SEM) — queued, held at its approval gate (scoped 2026-08-21).** The
+  scope audit for closing `RE-1` and `LOG-1`, the two rows above:
+  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md). Two units, independent, either
+  order. **SEM-1** is one default in `extract_rows` (`crates/repark-functions/src/spark_regexp.rs`)
+  — one knob for both doors, because the facade passes no default of its own — plus three
+  collateral test sites, two of which fail as *runtime errors* rather than assertion diffs and are
+  named in no other RE-1 document. **SEM-2** needs a new Spark-semantics `log` kernel over
+  DataFusion's `LogFunc` (`datafusion-spark` 54.1.0 ships no `log`), dual-arity and null-guarded at
+  both — measured: repark returns `-0.0` / `NaN` / `-inf` on the six non-positive edges where Spark
+  returns NULL — and it moves the C-012 ratchet from 24 rows to 23. The two defects below ride
+  along, one per unit. **Both units change what a working query returns**, which is exactly why the
+  LRS registered them instead of fixing them; the gate wants a dated owner ruling first.
+
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
   perf note's §8 battery: kernel race, many-symbols scaling, wide serving SELECT, batch-size
@@ -170,8 +208,9 @@ history-rewrite; provenance and the options weighed:
   note's §7 do-not list (no math reordering, goldens bit-exact) is binding; `unsafe` remains
   workspace-forbidden.
 
-- **Spark function parity campaign** (active, chartered 2026-08-20; branch
-  `feat/spark-function-parity`, ten commits, not yet merged). Close the `pyspark.sql.functions`
+- **Spark function parity campaign** (active, chartered 2026-08-20; first tranche **MERGED
+  2026-08-21** as [#190](https://github.com/TRO-Wolf/repark/pull/190) / `65bacdf` — thirteen
+  commits squashed into one, two adversarial Critic rounds). Close the `pyspark.sql.functions`
   gap and move the semantics behind every name out of Python into Rust. Design:
   [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
   [briefs/spark-function-parity.md](briefs/spark-function-parity.md); approval gate (12/12
@@ -211,21 +250,16 @@ history-rewrite; provenance and the options weighed:
      FNP-13 (collation / G15 retirement); FNP-14 (crypto — needs a new cipher dependency for four
      names); FNP-4b (the Spark-door dialect — blocked on making the engine's own generated SQL
      dialect-independent, which is a write-path change).
-  8. **FNP-Z — close-out:** `__all__` completion, census re-run, STATUS truth-up, the `#[path]`
-     conversion, the dispatch-table module split, and the registry rows handed forward by
-     FNP-3 (`arrays_zip`, `json_tuple`), FNP-6a (the empty-pattern collector still disagrees with
-     `regexp_count` on astral text, and both diverge from Java's `Matcher` — round 2 F-R3-4),
-     FNP-6b (the 1,000,000-character `randstr` cap is a safety limit, not a Spark parity claim)
-     and FNP-6c (the UTF-8 value-representation difference). The FNP-5 unsigned-count row is
-     **closed at the facade**, not forwarded: the cast is now taken from the aggregate's own
-     declared return type, which covers `regr_count` as well as `approx_count_distinct`. What it
-     does NOT cover is the SQL door — `SELECT regr_count(...)` and `SELECT approx_distinct(...)`
-     still hand back `UInt64`, so the two doors now differ in type on those two names. Correcting
-     the door means moving the cast into the shared analyzer layer, which is an engine-semantics
-     unit rather than a facade one; the divergence is pinned as a ratchet in
-     `test_fnp5_aggregates.py` so fixing the door goes red rather than unnoticed. The SQL door
-     also does not know the name `approx_count_distinct` at all (only DataFusion's
-     `approx_distinct`), which is a separate registration gap.
+  8. **FNP-Z — close-out:** `__all__` completion, census re-run, STATUS truth-up, the
+     dispatch-table module split, and the registry rows handed forward by FNP-3 (`arrays_zip`,
+     `json_tuple`) and FNP-6c (the UTF-8 value-representation difference). The `#[path]` conversion
+     is **done** (LRS-5); FNP-6a's empty-pattern residual is decided and scheduled as LRS-6; the
+     `randstr` cap is disposed of as registry row
+     [RAND-1](docs/spark-sql-iceberg-parity.md#rand-1--randstr-refuses-a-length-spark-accepts). The FNP-5 unsigned-count row is
+     **closed at the facade** and the door half is disposed of as registry row
+     [BL-8](docs/spark-sql-iceberg-parity.md#bl-8--sql-door-count-like-aggregates-return-uint64),
+     which is where its semantics now live. The `approx_count_distinct` door-name gap is
+     **closed** (LRS-3).
 
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
@@ -266,6 +300,27 @@ close) — its semantics move to the divergence registry,
 of state plus a link. A known **defect with its fix scheduled** is not a divergence and gets no
 row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
 moving it. Nothing is described in both places.
+
+- **`F.regexp_extract_all` rejects a string `idx` that every other door accepts** — measured
+  2026-08-21. `F.regexp_extract_all(s, pattern, "1")` raises `AnalysisException: No field named
+  "1"` — the string is read as a column name. Spark accepts it (`['a','b']`), repark's own SQL door
+  accepts it, and repark's own sibling `F.regexp_instr(s, pattern, "0")` accepts it. A **regression
+  from the FNP-6a critic remediation**: `task/fnp-6a-regexp-ledger.md` records the wrapper as having
+  carried `lit_indices={1, 2}`, and the F-FNP6A-1 fix stripped `lit_indices` entirely instead of
+  narrowing it to `{2}`. Defect with a scheduled fix, so it stays here rather than becoming a
+  registry row. Fix it with, or immediately after,
+  [RE-1](docs/spark-sql-iceberg-parity.md) — same function, same remediation window, and RE-1's
+  test pass is the cheapest place to catch it. Scoped into SEM-1:
+  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+
+- **`F.log` has no two-argument form** — measured 2026-08-21. PySpark's signature is
+  `log(arg1, arg2=None)`, where the two-argument form is `log(base, x)`; repark's is
+  `log(col)` only (`python/repark/src/repark/spark/functions_expr.py`), and
+  `crates/repark-python/src/column/function_dispatch.rs`'s `"log" | "ln"` arm has no two-argument
+  case at all, so `F.log(2.0, col)` fails in Python before reaching Rust. Distinct from
+  [LOG-1](docs/spark-sql-iceberg-parity.md), which is about the SQL door's base; this is a missing
+  facade overload. Natural to land in the same unit — a Spark-semantics `log` kernel is what both
+  need. Scoped into SEM-2: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
 
 - **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
   is the divergence registry's first declared row, with its behavior, its rationale and its pin:

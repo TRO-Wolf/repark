@@ -85,14 +85,16 @@ without enabling PyO3 `multiple-pymethods`.
 |---|---|
 | `cast` / `try_cast` rejects a type string | vocabulary lives in `expr_build.rs` `parse_data_type` |
 | window frame bound wrong | `window.rs` `spark_window_frame` / `spark_offset_to_bound` |
+| a window with no `ORDER BY` errors, or answers where Spark refuses | `window.rs` `unordered_window_frame` — aggregates get Spark's whole-partition ROWS frame, window UDFs get Spark's "requires window to be ordered" (LRS-7) |
 | `sec`/`csc` at zero is NULL not Inf | `function_dispatch.rs` `sec`/`csc` arms + `expr_build.rs` `reciprocal_trig_or_inf` |
 | `call_scalar` unknown name / arity | `function_dispatch.rs` `call_scalar_expr` |
-| `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door |
+| `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door. **LRS-4:** the guard walks the SESSION registry (341 names), not a hand-listed set, so a new arm joins its domain automatically |
 | `F.f(x)` and `spark.sql` disagree but the row is in `EXPECTED_DIVERGENCES` | that table classifies each row by MEASURED shape (`Kernel(arity)` / `Composed`) and FAILS on a row it cannot check — it used to `continue` past half of them |
 | a name works in SQL but raises through `F.` | `function_dispatch.rs` has no arm for it — the kernel is registered, the facade cannot reach it |
 | unknown `aggregate` / `aggregate_binary` kind | `function_dispatch.rs` `unary_aggregate_udaf` / `binary_aggregate_udaf` |
 | an aggregate returns `uint64`, or arithmetic on it widens to DECIMAL(21,0) | `function_dispatch.rs` `cast_unsigned_count_to_signed` — the cast is measured from the UDAF's declared return type, not keyed on a name (round 2 FNP-R3-1) |
 | `over()` says a column is not an aggregate when it is | `mod.rs` `over` peels an optional CAST first; an aggregate wrapped by the unsigned cast used to fall to the catch-all (round 2 F-R3-2) |
 | `… AS x AS x` in a plan | `expr_build.rs` `collapse_identity_alias_chain` |
+| a higher-order column is refused by a facade path | `expr_build.rs` `contains_higher_order` is the predicate; `PyColumn::contains_higher_order` exposes it, and `refuse_nested_higher_order` checks BOTH argument positions (LRS-1) |
 
 First checks: `cargo test -p repark-python column`. Escalate to: [../map.md#debug](../map.md).

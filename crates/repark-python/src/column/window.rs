@@ -62,6 +62,41 @@ pub(super) fn spark_window_frame(
     Ok(WindowFrame::new_bounds(units, start_bound, end_bound))
 }
 
+/// The frame a window with **no** `ORDER BY` gets — or the error Spark gives instead.
+///
+/// Spark documents two defaults: an ordered window frames `RANGE BETWEEN UNBOUNDED PRECEDING AND
+/// CURRENT ROW`, an unordered one frames `ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED
+/// FOLLOWING`. DataFusion supplies the first and has no answer for the second — an unordered
+/// window reaches physical planning and fails with `Internal error: ORDER BY column cannot be
+/// empty. This issue was likely caused by a bug in DataFusion's code`, for
+/// `count(v).over(Window.partitionBy("k"))`, which is ordinary PySpark.
+///
+/// The default applies to **aggregates only**. Spark requires an ordering for every ranking and
+/// offset function, and refuses `row_number`, `rank`, `dense_rank`, `percent_rank`, `cume_dist`,
+/// `ntile`, `lag`, `lead` and `nth_value` over an unordered window (measured, LRS-7). That set is
+/// exactly the window UDFs — `first` / `last`, which Spark allows, arrive as aggregates — so the
+/// split is read off the function's kind rather than a name list that would drift.
+///
+/// # Errors
+/// The message Spark and DataFusion both give, so the four DataFusion already catches keep the
+/// wording they had and the five it does not are refused the same way.
+pub(super) fn unordered_window_frame(window_expr: &Expr) -> Result<WindowFrame, String> {
+    if let Expr::WindowFunction(function) = window_expr
+        && matches!(function.fun, WindowFunctionDefinition::WindowUDF(_))
+    {
+        let name = function.fun.name();
+        return Err(format!(
+            "Window function {name}() requires window to be ordered, please add ORDER BY clause. \
+             For example SELECT {name}() OVER (PARTITION BY ... ORDER BY ...)"
+        ));
+    }
+    Ok(WindowFrame::new_bounds(
+        WindowFrameUnits::Rows,
+        WindowFrameBound::Preceding(unbounded_scalar(WindowFrameUnits::Rows)),
+        WindowFrameBound::Following(unbounded_scalar(WindowFrameUnits::Rows)),
+    ))
+}
+
 fn spark_offset_to_bound(offset: i64, units: WindowFrameUnits) -> Result<WindowFrameBound, String> {
     // Mirror PySpark `Window` JVM-long clamping (facade already clamps to `i64` extremes).
     if offset == i64::MIN {

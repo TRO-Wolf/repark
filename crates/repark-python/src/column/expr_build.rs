@@ -230,25 +230,39 @@ fn parse_decimal_type(spec: &str) -> Result<DataType, String> {
 ///   => Field { "y": Int32 } != Field { "x": Int32 }
 /// ```
 ///
+/// Both argument positions are checked, not just the lambda: a higher-order call in a VALUE
+/// argument reaches `unresolved LambdaVariable x_0` instead, which is the same class of internal
+/// error this refusal exists to replace.
+///
 /// Refusing here turns a cryptic execution-time error into a statement of the limit. It also
 /// closes the S0 this replaced: before lambda parameters were given unique plan names, two
 /// lambdas both minting `x` made the inner body bind to the OUTER variable, and
 /// `exists(a, x -> exists(b, y -> y > 4))` returned an exactly INVERTED boolean with no error.
-pub(super) fn refuse_nested_higher_order(body: &Expr, name: &str) -> PyResult<()> {
-    let mut nested = false;
-    body.apply(|expr| {
-        if matches!(expr, Expr::HigherOrderFunction(_)) {
-            nested = true;
+pub(super) fn contains_higher_order(expr: &Expr) -> PyResult<bool> {
+    let mut found = false;
+    expr.apply(|node| {
+        if matches!(node, Expr::HigherOrderFunction(_)) {
+            found = true;
             return Ok(TreeNodeRecursion::Stop);
         }
         Ok(TreeNodeRecursion::Continue)
     })
     .map_err(crate::datafusion_to_py_err)?;
-    if nested {
+    Ok(found)
+}
+
+pub(super) fn refuse_nested_higher_order(
+    argument: &Expr,
+    name: &str,
+    position: &str,
+) -> PyResult<()> {
+    if contains_higher_order(argument)? {
         return Err(crate::UnsupportedOperationException::new_err(format!(
-            "{name}: a higher-order function nested inside another one's lambda is not supported \
-             (DataFusion 54.1 fails such a plan at evaluation, through its own SQL planner too). \
-             Compute the inner result in a separate column first."
+            "{name}: a higher-order function nested inside another one's {position} is not \
+             supported. Spark evaluates it; repark cannot, because DataFusion 54.1 fails such a \
+             plan — at evaluation for a nested lambda body (through its own SQL planner too), and \
+             at lambda-variable resolution for a value argument. Compute the inner result in a \
+             separate column first."
         )));
     }
     Ok(())

@@ -26,6 +26,7 @@ use arrow::datatypes::{
 };
 use datafusion::common::types::{NativeType, logical_float64};
 use datafusion::common::{Result, ScalarValue, exec_err, not_impl_err};
+use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::logical_expr::function::{AccumulatorArgs, StateFieldsArgs};
 use datafusion::logical_expr::utils::format_state_name;
 use datafusion::logical_expr::{
@@ -38,7 +39,23 @@ use datafusion::logical_expr::{
 /// ===========================================================================================
 #[must_use]
 pub fn functions() -> Vec<Arc<AggregateUDF>> {
-    vec![avg_udaf()]
+    vec![avg_udaf(), approx_count_distinct_udaf()]
+}
+
+/// DataFusion's `approx_distinct` under Spark's spelling as well as its own.
+///
+/// Spark SQL has `approx_count_distinct`; DataFusion has `approx_distinct`. The facade resolved
+/// both from its own dispatch table, so `SELECT approx_count_distinct(x)` failed with
+/// `Invalid function` on the door alone — a two-door gap that no test could see because the
+/// facade never went through the door for it (LRS-3).
+#[must_use]
+pub fn approx_count_distinct_udaf() -> Arc<AggregateUDF> {
+    Arc::new(
+        approx_distinct_udaf()
+            .as_ref()
+            .clone()
+            .with_aliases(["approx_count_distinct"]),
+    )
 }
 
 /// The Spark-compatible `avg` the SQL door resolves.

@@ -50,7 +50,7 @@ use expr_build::{
 use function_dispatch::{
     binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
 };
-use window::spark_window_frame;
+use window::{spark_window_frame, unordered_window_frame};
 
 /// ===========================================================================================
 /// The Python-facing `Column` (`repark._native.PyColumn`).
@@ -152,6 +152,20 @@ impl PyColumn {
     ///
     /// # Errors
     /// Returns `ValueError` when `fields` is empty.
+    /// Whether this column carries a higher-order function anywhere in its expression.
+    ///
+    /// The facade asks the expression rather than reading its own rendered SQL text, because the
+    /// paths that need this — `Window.orderBy`, `cube` / `rollup` — refuse BEFORE any text is
+    /// built, and a string check would be answering a different question.
+    ///
+    /// # Errors
+    /// Propagates a tree-walk failure as `ValueError`.
+    pub fn contains_higher_order(&self) -> PyResult<bool> {
+        fenced!("Column.contains_higher_order", {
+            expr_build::contains_higher_order(&self.expr)
+        })
+    }
+
     /// A reference to a lambda parameter (`x` inside `transform(a, x -> x + 1)`).
     ///
     /// The facade mints one of these per parameter, hands it to the user's Python callable, and
@@ -185,10 +199,15 @@ impl PyColumn {
             let function = repark_functions::higher_order::by_name(name).ok_or_else(|| {
                 PyValueError::new_err(format!("unknown higher-order function {name:?}"))
             })?;
-            let mut args: Vec<Expr> = value_args.iter().map(PyColumn::expr).collect();
+            let mut args: Vec<Expr> = Vec::with_capacity(value_args.len() + lambdas.len());
+            for value in &value_args {
+                let value = value.expr();
+                refuse_nested_higher_order(&value, name, "value argument")?;
+                args.push(value);
+            }
             for (params, body) in lambdas {
                 let body = body.expr();
-                refuse_nested_higher_order(&body, name)?;
+                refuse_nested_higher_order(&body, name, "lambda")?;
                 args.push(Expr::Lambda(Lambda::new(params, body)));
             }
             Ok(Self::from_expr(Expr::HigherOrderFunction(
@@ -720,6 +739,12 @@ impl PyColumn {
                     column.expr().sort(is_ascending, nulls_first)
                 })
                 .collect();
+            // The frame decision reads the built function, so take it before the builder moves it.
+            let unordered_frame = order_by
+                .is_empty()
+                .then(|| unordered_window_frame(&window_expr))
+                .transpose()
+                .map_err(crate::AnalysisException::new_err)?;
             let mut builder = window_expr.partition_by(partitions).order_by(orderings);
             if let Some(units_text) = frame_units.as_deref() {
                 let start = frame_start.ok_or_else(|| {
@@ -729,6 +754,8 @@ impl PyColumn {
                     .ok_or_else(|| PyValueError::new_err("over frame_units requires frame_end"))?;
                 let frame =
                     spark_window_frame(units_text, start, end).map_err(PyValueError::new_err)?;
+                builder = builder.window_frame(frame);
+            } else if let Some(frame) = unordered_frame {
                 builder = builder.window_frame(frame);
             }
             let windowed = builder.build().map_err(|err| {
