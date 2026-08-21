@@ -10,6 +10,14 @@ changing a decision here means a new dated design pass, not an in-place edit.
 
 ## Contents
 
+- [format-v3-track.md](format-v3-track.md) — **the format-v3 track's scope audit
+  (2026-08-21):** what roadmap item A12 got wrong once the surfaces were actually run. The engine
+  already reads Spark-written deletion vectors and appends to a v3 table with correct row
+  lineage, both verified by round trip; `rewrite_data_files` silently reassigned that lineage,
+  which is why the audit ships a guard. Carries the `system.register_table` signature read from
+  the Iceberg jar (§4), the revised six-unit slate (§5), the two fork items the track needs (§6),
+  and §7 — what was measured and what is not claimed.
+
 - [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW campaign's design
   (2026-08-21):** why merge-on-read is written but not operated, and why closing that is small.
   Carries the measured baseline the campaign must move, the four procedure result schemas every

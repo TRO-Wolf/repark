@@ -49,6 +49,17 @@ wrapper.
   shared `<temp>/repark_ctas` fallback root REFUSES — that path is keyed by name alone, so two
   sessions can share it and one session's "orphan" is another's live file. Only this procedure
   cares: every other one touches solely what its own metadata references.
+  **V3-0 added the second format-version guard on this surface**: `rewrite_data_files` refuses a
+  format-v3 table (registry `V3-LINEAGE-1`). It is not a capability gap — the rewrite ran and
+  produced the right rows — it reassigned every row's `_row_id`, which on v3 tells a downstream
+  consumer that all of them changed. The fork's rewrite action carries no lineage, so the fix is
+  fork-side and the refusal is stricter than Spark on purpose. The comparison is `< V3`, so a
+  future version above v3 refuses too — fail-closed for a version whose lineage rules are unknown.
+  Its blast-radius claim (this engine cannot make a v3 table) is **pinned, not asserted**, across
+  all four doors including the two `ALTER … SET TBLPROPERTIES` shapes, which the fork refuses
+  rather than this router — so that pin is also the detector for the fork changing its mind. The same finding annotates
+  `removed_delete_files_count`, whose honest constant `0` holds on v2 and stops holding the moment
+  v3 is admitted.
   3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.

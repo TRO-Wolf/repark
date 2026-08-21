@@ -260,6 +260,22 @@ Datasets workstream (a) fully landed (#153/#158/#161/#163). Still queued:
 
 ### A12. Format-v3 and deletion vectors — **owner-scheduled 2026-08-21**
 
+> **Audited and revised 2026-08-21 by V3-0** (`task/v3-0-charter-ledger.md`,
+> `docs/design/format-v3-track.md`). This section was written from source reading; the audit ran
+> the surfaces. Three corrections, and the slate below is superseded by the design doc's §5:
+>
+> 1. **Reading a v3 table is correct, not merely ungated.** 857 rows and `sum(id) = 428429` on a
+>    Spark-written table with Puffin deletion vectors — Spark's numbers exactly.
+> 2. **Appending is correct too, including row lineage**, round-tripped through Spark. Nobody had
+>    claimed this.
+> 3. **`rewrite_data_files` was missing from the table below and was the one thing wrong.** It
+>    reassigned every row's lineage while returning correct rows. V3-0 guarded it
+>    (`V3-LINEAGE-1`); the underlying fix is fork work.
+>
+> The addressing question the V3-1 bullet calls "V3-1's first question" is **answered**: adoption
+> via `Catalog::register_table`, exposed as Spark's `system.register_table`. Signature measured in
+> the design doc §4.
+
 Promoted out of "watch, do not schedule" after MW-2 found the engine reports a **silent no-op** on
 a v3 table: `rewrite_position_delete_files` returned four zeros where every delete file stayed
 put. MW-2 shipped a loud refusal (queued divergence `B-MOR-3`), which closes the safety hole and
@@ -282,7 +298,9 @@ and it is why the item moved.
 | Merge-on-read `MERGE` on v3 | Refuses loudly | `merge/mod.rs` `resolve_merge_mode` |
 | Merge-on-read `DELETE` / `UPDATE` on v3 | Refuses loudly | `predicate_dml.rs:835` |
 | `rewrite_position_delete_files` on v3 | **Refuses loudly (MW-2)** | `call.rs` deletion-vector guard |
-| **Reading** a foreign v3 table | **Not gated — unverified** | no format-version check on the read path |
+| **Reading** a foreign v3 table | **Not gated — and V3-0 verified it is correct** | no format-version check on the read path |
+| `INSERT` into a v3 table | **Not gated — and V3-0 verified it is correct, row lineage included** | no format-version check on the append path |
+| `rewrite_data_files` on v3 | **Refuses loudly (V3-0)** — it reassigned row lineage | `call.rs` row-lineage guard |
 | v3 types (`variant`, `timestamp_ns`, `unknown`, geo) | Not wired | — |
 
 The read path is the one line above with no refusal and no evidence, and it is the first thing
