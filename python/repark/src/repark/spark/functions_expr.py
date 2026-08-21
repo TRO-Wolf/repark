@@ -1043,7 +1043,16 @@ def regexp_extract_all(
     """
     if idx is None:
         return _scalar("regexp_extract_all", str, regexp)
-    return _scalar("regexp_extract_all", str, regexp, idx)
+    # A plain-string idx is a literal group index, not a column name — the same contract
+    # `regexp_instr` carries. F-FNP6A-1 correctly removed position 1 (a bare `regexp` IS a column
+    # name) but took position 2 with it; SEM-3 narrows rather than restores.
+    return _scalar(
+        "regexp_extract_all",
+        str,
+        regexp,
+        idx,
+        lit_indices=None if isinstance(idx, Column) else frozenset({2}),
+    )
 
 
 def regexp_substr(str: Column | str, regexp: Column | str) -> Column:

@@ -1315,6 +1315,11 @@ kernel's default the only default and one knob enough for both doors. A pattern 
 group therefore raises on the two-argument form, as it does in Spark. Ledger:
 `task/sem-1-extract-all-group-default-ledger.md`.
 
+**SEM-3 (2026-08-21).** `regexp_extract_all`'s **`idx`** is forced-lit (`lit_indices={2}`) when it
+is not a `Column`, so a string `"1"` is a group index rather than a column name. Position 1 stays
+free — the FNP-6a note above is still the rule for `regexp`; F-FNP6A-1 simply removed both
+positions when only one was wrong. Ledger: `task/sem-3-string-idx-ledger.md`.
+
 **FNP-6b (2026-08-20).** `randstr` / `uniform` take **constant** bounds — Spark requires literals,
 and `lit_indices` marks them so a column argument reaches the kernel's loud refusal rather than
 being read as row zero. `uniform`'s return type follows its bounds (two integers give an integer,

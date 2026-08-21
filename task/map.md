@@ -24,6 +24,11 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-3-string-idx-ledger.md](sem-3-string-idx-ledger.md) — **SEM-3 (2026-08-21):** the string
+  `idx` regression closed by narrowing `lit_indices` to `{2}` rather than restoring `{1, 2}`.
+  Records the shape worth remembering: F-FNP6A-1 removed a correct half along with an incorrect
+  one, which is the same over-correction that produced three of the parity campaign's round-2 S1s.
+
 - [sem-1-extract-all-group-default-ledger.md](sem-1-extract-all-group-default-ledger.md) —
   **SEM-1 (2026-08-21):** `RE-1` closed. One line in `extract_rows` serves both doors, exactly as
   the charter predicted; the collateral was the work, and two of its three sites failed as runtime

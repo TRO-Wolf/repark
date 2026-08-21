@@ -2060,6 +2060,12 @@ NOT in that file is a defect, not a decision.
   new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
   unsigned, so closing the row reds it on purpose.
 
+- `test_sem3_string_idx.py` — **SEM-3 (2026-08-21):** `regexp_extract_all` accepts a string `idx`
+  as a literal group index, which Spark, repark's own SQL door and repark's own `regexp_instr` all
+  already did. A regression from F-FNP6A-1, which removed `lit_indices` entirely when only position
+  1 was wrong. The bare-string-`regexp` and `Column`-`idx` assertions are the controls that stop
+  the narrowing from swinging back the other way.
+
 - `test_sem1_extract_all_group_default.py` — **SEM-1 (2026-08-21):** the two-argument
   `regexp_extract_all` defaults to capture group 1, as Spark does — the first change since the port
   that makes a working query return a different value, taken on the owner's dated ruling. Closes
