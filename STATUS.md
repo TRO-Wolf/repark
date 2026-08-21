@@ -169,7 +169,9 @@ history-rewrite; provenance and the options weighed:
   types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
   defined inside another function; functions named as verb phrases for the work they do. The rules
   themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
-  [docs/skills/](docs/skills/map.md); the conformance work is what remains.
+  [docs/skills/](docs/skills/map.md) with the guard that holds two of them, **merged as
+  [#201](https://github.com/TRO-Wolf/repark/pull/201)** / `5f05d8c`; the conformance work is what
+  remains.
   - **Measured debt (AST scan of the tree at this commit, not an estimate):**
     - *Types.* The shipped package is already clean — 2,170 functions, **zero** missing a return
       annotation, because Ruff's `ANN` rules are selected in [pyproject.toml](pyproject.toml) and
