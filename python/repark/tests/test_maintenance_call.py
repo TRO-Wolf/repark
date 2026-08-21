@@ -21,6 +21,7 @@ Fork pin ``4723104b``:
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import pyarrow as pa
@@ -250,12 +251,76 @@ def test_unknown_procedure_lists_supported(spark: ReparkSession) -> None:
         spark.sql("CALL mem.system.not_a_real_proc(table => 'ns.events')")
 
 
-def test_remove_orphan_files_refuses_loud(spark: ReparkSession) -> None:
+def test_remove_orphan_files_requires_an_explicit_older_than(spark: ReparkSession) -> None:
+    """MW-3 / registry row ORPHAN-1.
+
+    Spark defaults ``older_than`` to ``now - 3 days`` and runs; this engine refuses. The
+    procedure deletes files with no rollback, so the most dangerous argument must not be the one
+    the caller never typed. Replaces the pre-MW-3 pin that asserted the whole procedure was
+    unsupported.
+    """
     with pytest.raises(
         (UnsupportedOperationException, PySparkException),
-        match=r"remove_orphan_files",
+        match=r"requires an explicit `older_than`",
     ):
         spark.sql("CALL mem.system.remove_orphan_files(table => 'ns.events')")
+
+
+def test_remove_orphan_files_dry_run_is_the_default(spark: ReparkSession, tmp_path: Path) -> None:
+    """MW-3 / registry row ORPHAN-2.
+
+    Spark's ``dry_run`` defaults to false and DELETES. This engine defaults it to true. The
+    result shape is Spark's either way: one row per orphan, ``orphan_file_location`` a
+    non-nullable string, measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
+
+    A table with no orphans lists none — the zero-row control that proves the column shape is
+    real rather than an artefact of the fixture.
+    """
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.owned LOCATION '{owned}'")
+    spark.sql(
+        f"CREATE TABLE mem.owned.events USING iceberg TBLPROPERTIES ({COW}) "
+        "AS SELECT 1 AS id, 'a' AS name"
+    )
+    older_than_ms = int(time.time() * 1000) - 2 * 24 * 60 * 60 * 1000
+    result = spark.sql(
+        "CALL mem.system.remove_orphan_files("
+        f"table => 'owned.events', older_than => {older_than_ms})"
+    ).to_arrow()
+    assert _schema_names(result) == ["orphan_file_location"]
+    assert result.schema.field("orphan_file_location").type == pa.string()
+    assert not result.schema.field("orphan_file_location").nullable
+    assert result.num_rows == 0
+
+
+def test_remove_orphan_files_floor_matches_spark(spark: ReparkSession, tmp_path: Path) -> None:
+    """MW-3: the 24-hour floor is PARITY with Spark, not a stricter posture.
+
+    Measured across the boundary on the oracle: ``now`` refuses, ``now - 23h`` refuses,
+    ``now - 25h`` runs. Java enforces it in ``RemoveOrphanFilesProcedure`` rather than the
+    Action API, which is why this engine carries it in the CALL router too.
+    """
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.owned LOCATION '{owned}'")
+    spark.sql(
+        f"CREATE TABLE mem.owned.events USING iceberg TBLPROPERTIES ({COW}) "
+        "AS SELECT 1 AS id, 'a' AS name"
+    )
+    now_ms = int(time.time() * 1000)
+    hour_ms = 60 * 60 * 1000
+    with pytest.raises(
+        (UnsupportedOperationException, PySparkException),
+        match=r"less than 24 hours",
+    ):
+        spark.sql(
+            "CALL mem.system.remove_orphan_files("
+            f"table => 'owned.events', older_than => {now_ms - 23 * hour_ms})"
+        )
+    # The control: just outside the floor, it runs.
+    spark.sql(
+        "CALL mem.system.remove_orphan_files("
+        f"table => 'owned.events', older_than => {now_ms - 25 * hour_ms})"
+    ).to_arrow()
 
 
 def test_rewrite_sort_strategy_refuses_loud(spark: ReparkSession) -> None:
@@ -283,3 +348,31 @@ def test_positional_rollback_args(spark: ReparkSession, multi_snapshot: dict[str
     assert result.column("current_snapshot_id")[0].as_py() == s1
     after = spark.sql(f"SELECT id FROM {TABLE} ORDER BY id").to_arrow()
     assert _arrow_ids(after) == multi_snapshot["ids_s1"]
+
+
+def test_remove_orphan_files_refuses_the_shared_ctas_fallback_root(
+    spark: ReparkSession,
+) -> None:
+    """MW-3: a table in the shared CTAS fallback root is not sweepable.
+
+    ``register_memory_catalog`` carries a ``TempFallbackAllowed`` policy, so a namespace created
+    with no ``location`` places its tables at ``<temp>/repark_ctas/<catalog>/<ns>/<table>`` — a
+    path derived from NAMES alone, shared by any other process using the same names. Orphan
+    removal deletes what one table's metadata does not reference, which in a shared directory
+    includes another session's live files.
+
+    Found while writing the MW-3 pins: the facade fixture's ``mem.ns.events`` resolved into that
+    shared root and a dry run listed 139,179 files left there by unrelated runs.
+    """
+    spark.sql(
+        f"CREATE TABLE {TABLE} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
+    )
+    older_than_ms = int(time.time() * 1000) - 2 * 24 * 60 * 60 * 1000
+    with pytest.raises(
+        (UnsupportedOperationException, PySparkException),
+        match=r"shared CTAS fallback root",
+    ):
+        spark.sql(
+            "CALL mem.system.remove_orphan_files("
+            f"table => 'ns.events', older_than => {older_than_ms})"
+        )

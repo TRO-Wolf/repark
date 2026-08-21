@@ -12,6 +12,15 @@ not this directory.
 
 ## Contents
 
+- [mw-3-remove-orphan-files-ledger.md](mw-3-remove-orphan-files-ledger.md) —
+  **MW-3 (2026-08-21):** `remove_orphan_files` is wired — the only procedure on this surface that
+  destroys data, and the only one whose defaults invert Spark's. `older_than` is required
+  (`ORPHAN-1`) and `dry_run` defaults to true (`ORPHAN-2`), both owner decision OD-2. **Read §1**
+  for the correction that made the unit smaller: the charter predicted the 24-hour floor would be
+  stricter than Spark, and Spark turned out to enforce the same floor, in the same layer, for the
+  same reason. §5 records why the fixture must back-date its planted orphans, which is a property
+  of the production path too and not a test trick.
+
 - [mw-2-rewrite-position-deletes-ledger.md](mw-2-rewrite-position-deletes-ledger.md) —
   **MW-2 (2026-08-21):** `rewrite_position_delete_files` is wired, so merge-on-read tables can
   finally reclaim the delete files MW-0 measured piling up. `rewrite_data_files` gained Spark's

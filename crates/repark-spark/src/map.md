@@ -28,7 +28,7 @@ wrapper.
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff; 14 in-module tests.
 - `call.rs` — maintenance `CALL` procedures (expire_snapshots / rewrite_data_files /
-  **rewrite_position_delete_files** / rollback_to_snapshot; **every catalog policy since MW-1** —
+  rewrite_position_delete_files / **remove_orphan_files** / rollback_to_snapshot; **every catalog policy since MW-1** —
   the v1 LOCAL-only fence was blast-radius policy, not capability, and what it guarded against is
   a commit conflict the fork's own validation already catches loudly). Every procedure returns
   Spark's full column list, in Spark's order, types and nullability; **no procedure omits a Spark
@@ -41,6 +41,14 @@ wrapper.
   "already clean". **MW-2 divergences:** compaction runs below Spark's `min-input-files` floor
   (registry `MOR-1`, a fork-planner gap) and the merge-on-read writer is partition-granularity
   where Spark defaults to per-file (registry `MOR-2`). Both are file layout; neither changes a row.
+  **MW-3 wired `remove_orphan_files`, the only procedure here that destroys data**, and inverted
+  two of Spark's defaults for it: `older_than` is required (`ORPHAN-1`) and `dry_run` defaults to
+  true (`ORPHAN-2`). Its 24-hour floor is parity, not strictness — Java enforces the same floor in
+  its procedure layer rather than the Action API, which is why it lives in this router and not in
+  the fork. A partial delete fails loudly rather than reporting success, and a table sitting in the
+  shared `<temp>/repark_ctas` fallback root REFUSES — that path is keyed by name alone, so two
+  sessions can share it and one session's "orphan" is another's live file. Only this procedure
+  cares: every other one touches solely what its own metadata references.
   3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.

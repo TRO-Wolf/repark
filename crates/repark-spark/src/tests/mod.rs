@@ -6,6 +6,7 @@ mod common;
 
 mod alter;
 mod call;
+mod call_orphan;
 mod catalog_ops;
 mod collation;
 mod create_table;

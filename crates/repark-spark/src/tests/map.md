@@ -37,6 +37,13 @@ code is not here — only tests, shared fixtures, and the module manifest.
   partition-granularity writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
   vector-present path has no fixture because this engine cannot write one),
+  `call_orphan` (**MW-3**, split out of `call` when that module crossed the 1500-line ceiling —
+  `remove_orphan_files` and nothing else, because every test in it is about the blast radius of a
+  deletion rather than a shared mechanism, which is also why its fixture helpers live there and
+  not in `common`. The armed pin compares the WHOLE table directory before and after, so it proves
+  the run deleted the orphans AND not one live file; `plant_orphans` back-dates its files through
+  `std::fs::FileTimes` because the fork cuts on the listed file's `last_modified` and the 24-hour
+  floor forbids a cutoff young enough for a freshly written one),
   `ref_ddl`,
   `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact

@@ -1,7 +1,7 @@
 //! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router (I3 /
 //! R-MAINTENANCE-CALL).
 //!
-//! Four procedures, each backed by an action the owned fork already provides:
+//! Five procedures, each backed by an action the owned fork already provides:
 //!
 //! 1. `expire_snapshots` — fork R133 `Transaction::expire_snapshots` +
 //!    `ExpireSnapshotsCleanup::commit_and_clean`
@@ -13,8 +13,18 @@
 //! 3. `rewrite_position_delete_files` — fork R136
 //!    (`crates/iceberg/src/maintenance/rewrite_position_delete_files.rs`
 //!    `RewritePositionDeleteFiles::new(table).execute(&catalog)`), wired by MW-2 on 2026-08-21.
-//! 4. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
+//! 4. `remove_orphan_files` — fork `DeleteOrphanFiles`
+//!    (`crates/iceberg/src/maintenance/delete_orphan_files.rs`
+//!    `DeleteOrphanFiles::new(table).older_than(ms).execute()`), wired by MW-3 on 2026-08-21.
+//! 5. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
 //!    (`crates/iceberg/src/transaction/manage_snapshots.rs:164-167`).
+//!
+//! **`remove_orphan_files` is the only one that destroys data, and its defaults invert Spark's.**
+//! `older_than` is REQUIRED where Spark defaults it to `now - 3 days`, and `dry_run` defaults to
+//! TRUE where Spark defaults it to false and deletes (owner decision OD-2; registry rows
+//! `ORPHAN-1` and `ORPHAN-2`). Every other procedure here is recoverable — a bad compaction is
+//! compacted again — while this one has no rollback. The 24-hour `older_than` floor is NOT part
+//! of that stricter posture: it is measured parity with Spark's own floor.
 //!
 //! **Every catalog policy** (MW-1, 2026-08-21). The v1 surface refused Glue and S3 Tables as a
 //! blast-radius fence; nothing downstream of that gate ever assumed a local filesystem, so
@@ -38,9 +48,9 @@
 //! made-up number. As of MW-2 no procedure omits a Spark column.
 //!
 //! **Out of scope (loud):**
-//! - `remove_orphan_files` — MW-3 (do not hand-roll file listing; the fork's `DeleteOrphanFiles`
-//!   is the surface).
 //! - rewrite `strategy` / `sort_order` other than default bin-pack — R135 deferred list.
+//! - `remove_orphan_files`' `max_concurrent_deletes` / `file_list_view` / `equal_schemes` /
+//!   `equal_authorities` / `prefix_mismatch_mode` / `prefix_listing`.
 //! - the `options` map and the `where` filter on both rewrite procedures.
 //! - format-v3 deletion-vector maintenance — `rewrite_position_delete_files` REFUSES a table
 //!   holding live Puffin deletion vectors rather than reporting a partial result.
@@ -49,21 +59,21 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Int32Array, Int64Array, RecordBatch};
+use datafusion::arrow::array::{Int32Array, Int64Array, RecordBatch, StringArray};
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::sqlparser::ast::{
     Expr, Function, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
 };
-use iceberg::maintenance::{RewriteDataFiles, RewritePositionDeleteFiles};
+use iceberg::maintenance::{DeleteOrphanFiles, RewriteDataFiles, RewritePositionDeleteFiles};
 use iceberg::spec::{DataContentType, DataFileFormat};
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
-use repark_core::{CatalogRegistry, parse_timestamp_to_ms};
+use repark_core::{CatalogRegistry, LocationPolicy, parse_timestamp_to_ms};
 
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
@@ -71,6 +81,7 @@ use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, r
 const SUPPORTED_PROCEDURES: &[&str] = &[
     "expire_snapshots",
     "rewrite_data_files",
+    "remove_orphan_files",
     "rewrite_position_delete_files",
     "rollback_to_snapshot",
 ];
@@ -104,12 +115,16 @@ pub async fn execute_call(
         "rollback_to_snapshot" => {
             execute_rollback_to_snapshot(ctx, catalog, &catalog_name, &args).await
         }
-        "remove_orphan_files" => Err(DataFusionError::NotImplemented(format!(
-            "CALL system.remove_orphan_files is not supported — do not hand-roll orphan \
-             file listing in RePark; queue on the owned iceberg-rust fork's DeleteOrphanFiles \
-             surface (R-MAINTENANCE-CALL residual / fork-queue). Supported procedures: {}.",
-            SUPPORTED_PROCEDURES.join(", ")
-        ))),
+        "remove_orphan_files" => {
+            execute_remove_orphan_files(
+                ctx,
+                catalog,
+                &catalog_name,
+                catalogs.location_policy(&catalog_name),
+                &args,
+            )
+            .await
+        }
         other => Err(DataFusionError::NotImplemented(format!(
             "CALL system.{other} is not supported. Supported procedures: {}.",
             SUPPORTED_PROCEDURES.join(", ")
@@ -237,6 +252,18 @@ impl CallArgs {
             && let Some(expr) = self.positional.get(index)
         {
             return expr_as_i64(expr, name).map(Some);
+        }
+        Ok(None)
+    }
+
+    fn optional_bool(&self, name: &str, position: Option<usize>) -> Result<Option<bool>> {
+        if let Some(expr) = self.named.get(name) {
+            return expr_as_bool(expr, name).map(Some);
+        }
+        if let Some(index) = position
+            && let Some(expr) = self.positional.get(index)
+        {
+            return expr_as_bool(expr, name).map(Some);
         }
         Ok(None)
     }
@@ -423,6 +450,21 @@ fn resolve_table_ident(catalog_name: &str, table_arg: &str) -> Result<TableIdent
         ))),
         _ => Err(DataFusionError::Plan(format!(
             "CALL table `{table_arg}` must be `namespace.table` or `catalog.namespace.table`"
+        ))),
+    }
+}
+
+/// A boolean CALL argument. Spark's procedure layer accepts the SQL boolean literals only, so a
+/// quoted `'true'` is refused rather than coerced — on a procedure that deletes files, guessing
+/// what a caller meant by a string is not a service.
+fn expr_as_bool(expr: &Expr, name: &str) -> Result<bool> {
+    match expr {
+        Expr::Value(ValueWithSpan {
+            value: Value::Boolean(value),
+            ..
+        }) => Ok(*value),
+        other => Err(DataFusionError::Plan(format!(
+            "CALL argument `{name}` must be a boolean literal (true / false), got `{other}`"
         ))),
     }
 }
@@ -908,6 +950,220 @@ async fn execute_rewrite_position_delete_files(
         ],
     )?;
     ctx.read_batches(vec![batch])
+}
+
+// ===========================================================================================
+// remove_orphan_files
+// ===========================================================================================
+
+/// Java's floor, enforced here because here is where Java enforces it.
+///
+/// `RemoveOrphanFilesProcedure` refuses an interval under 24 hours with the reasoning that a
+/// short interval "may corrupt the table if other operations are happening at the same time",
+/// and its own message points callers at the Action API to bypass it. The floor is therefore a
+/// PROCEDURE-layer rule in Java, not an action-layer one — the fork's `DeleteOrphanFiles` has no
+/// floor for exactly that reason. This router is the procedure layer, so the floor belongs here.
+///
+/// Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle: `older_than = now` refuses,
+/// `now - 23h` refuses, `now - 25h` runs.
+const ORPHAN_OLDER_THAN_FLOOR_MS: i64 = 24 * 60 * 60 * 1000;
+
+/// Refuse to sweep a table sitting in the shared CTAS temp-fallback root.
+///
+/// A [`LocationPolicy::TempFallbackAllowed`] catalog whose namespace carries no `location`
+/// property places tables at `<root>/repark_ctas/<catalog>/<namespace>/<table>` (`ctas.rs`
+/// `resolve_create_location`). That path is derived from NAMES alone, so it is shared by every
+/// process on the machine that happens to use the same catalog, namespace and table name — two
+/// independent sessions both using `mem.ns.events` get the same directory.
+///
+/// Orphan removal decides what to delete by subtracting ONE table's reachable set from a
+/// directory listing. In a shared directory, another session's live files are not in this
+/// session's reachable set, so they look exactly like orphans. Sweeping there can delete live data
+/// belonging to a table this catalog has never heard of.
+///
+/// Every other procedure on this surface only ever touches files its own metadata references, so
+/// none of them care. This one lists a directory, so it does.
+///
+/// A namespace created WITH a location is unaffected: its tables live under the caller's own
+/// warehouse and the fallback never fires.
+pub(crate) fn refuse_shared_temp_fallback_location(
+    policy: Option<&LocationPolicy>,
+    table_location: &str,
+    table_arg: &str,
+) -> Result<()> {
+    let Some(LocationPolicy::TempFallbackAllowed { root }) = policy else {
+        return Ok(());
+    };
+    let mut fallback_root = root.clone();
+    fallback_root.push("repark_ctas");
+    if !std::path::Path::new(table_location).starts_with(&fallback_root) {
+        return Ok(());
+    }
+    Err(DataFusionError::Plan(format!(
+        "CALL remove_orphan_files refuses to sweep `{table_arg}`: it lives at `{table_location}`, \
+         under the shared CTAS fallback root `{}`. That path is derived from the catalog, \
+         namespace and table NAME alone, so any other process using the same names writes to the \
+         same directory — and this procedure deletes whatever the table's own metadata does not \
+         reference, which would include another session's live files. Re-create the namespace \
+         with an explicit location (`CREATE NAMESPACE <catalog>.<namespace> LOCATION '<path>'`) so \
+         the table owns its directory, then sweep it.",
+        fallback_root.display()
+    )))
+}
+
+/// Wall-clock millis since the epoch, for the `older_than` floor.
+///
+/// `std::time` rather than `chrono`, which is a DEV dependency of this crate on purpose — the
+/// floor is the only production code here that needs a clock, and it is not worth promoting a
+/// dependency for one subtraction.
+fn now_millis() -> Result<i64> {
+    let since_epoch = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| {
+            DataFusionError::Execution(
+                "system clock is before the Unix epoch, so the remove_orphan_files floor cannot \
+                 be evaluated — refusing rather than deleting against an unknown cutoff"
+                    .to_string(),
+            )
+        })?;
+    i64::try_from(since_epoch.as_millis()).map_err(|_| {
+        DataFusionError::Execution(
+            "system clock is beyond the representable millisecond range — refusing rather than \
+             deleting against an unknown cutoff"
+                .to_string(),
+        )
+    })
+}
+
+/// Spark's one-column output: one ROW PER ORPHAN, not a summary count.
+///
+/// | Spark column | Type | Nullable |
+/// |---|---|---|
+/// | `orphan_file_location` | string | false |
+///
+/// Measured by executing the procedure on a live Spark 4.0.1 + Iceberg 1.10.0 oracle. The dry-run
+/// and armed forms return the SAME shape — Spark's `dry_run => true` still lists every orphan —
+/// so the listing IS the Spark-shaped result rather than a second surface bolted on.
+fn orphan_result_dataframe(ctx: &SessionContext, locations: &[String]) -> Result<DataFrame> {
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "orphan_file_location",
+        DataType::Utf8,
+        false,
+    )]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![Arc::new(StringArray::from(locations.to_vec()))],
+    )?;
+    ctx.read_batches(vec![batch])
+}
+
+/// The one procedure here that destroys data, and the only one whose defaults invert Spark's.
+///
+/// **`older_than` is REQUIRED** where Spark defaults it to `now - 3 days`, and **`dry_run`
+/// defaults to TRUE** where Spark defaults it to false and deletes. Both are owner decision OD-2
+/// and both are declared registry rows (`ORPHAN-1`, `ORPHAN-2`) rather than silent improvements.
+/// The reasoning is that every other procedure on this surface is recoverable — a bad compaction
+/// is compacted again — while this one has no rollback: the files are gone.
+///
+/// The 24-hour floor is NOT stricter than Spark; it is [`ORPHAN_OLDER_THAN_FLOOR_MS`], measured.
+async fn execute_remove_orphan_files(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    policy: Option<LocationPolicy>,
+    args: &CallArgs,
+) -> Result<DataFrame> {
+    args.reject_unknown_named(&[
+        "table",
+        "older_than",
+        "location",
+        "dry_run",
+        "max_concurrent_deletes",
+        "file_list_view",
+        "equal_schemes",
+        "equal_authorities",
+        "prefix_mismatch_mode",
+        "prefix_listing",
+    ])?;
+    // Spark positional order: table, older_than, location, dry_run.
+    args.reject_excess_positional(4)?;
+    for unsupported in [
+        "max_concurrent_deletes",
+        "file_list_view",
+        "equal_schemes",
+        "equal_authorities",
+        "prefix_mismatch_mode",
+        "prefix_listing",
+    ] {
+        if args.has_named(unsupported) {
+            return Err(DataFusionError::NotImplemented(format!(
+                "CALL remove_orphan_files argument `{unsupported}` is not supported in v1 \
+                 (supported: table, older_than, location, dry_run)"
+            )));
+        }
+    }
+
+    let table_arg = args.require_string("table", 0)?;
+
+    // REQUIRED, unlike Spark. A defaulted `older_than` on a procedure with no rollback means the
+    // most dangerous argument is the one the caller never typed (registry row ORPHAN-1).
+    let older_than_ms = args
+        .optional_timestamp_ms("older_than", Some(1))?
+        .ok_or_else(|| {
+            DataFusionError::Plan(
+            "CALL remove_orphan_files requires an explicit `older_than` (named or positional #1). \
+             Spark defaults it to `now - 3 days`; this engine does not, because the procedure \
+             deletes files with no rollback and a defaulted cutoff is the argument a caller never \
+             thinks about. Pass a timestamp at least 24 hours in the past."
+                .to_string(),
+        )
+        })?;
+
+    // Java's floor, same threshold, same reason (see ORPHAN_OLDER_THAN_FLOOR_MS).
+    let floor_ms = now_millis()? - ORPHAN_OLDER_THAN_FLOOR_MS;
+    if older_than_ms > floor_ms {
+        return Err(DataFusionError::Plan(
+            "CALL remove_orphan_files refuses an `older_than` less than 24 hours in the past. A \
+             short interval can delete files an in-flight commit has written but not yet \
+             referenced, which corrupts the table. This matches Apache Spark's own floor."
+                .to_string(),
+        ));
+    }
+
+    let location = args.optional_string("location")?;
+    // Defaults TRUE, inverting Spark (registry row ORPHAN-2).
+    let dry_run = args.optional_bool("dry_run", Some(3))?.unwrap_or(true);
+
+    let ident = resolve_table_ident(catalog_name, &table_arg)?;
+    let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    refuse_shared_temp_fallback_location(policy.as_ref(), table.metadata().location(), &table_arg)?;
+
+    let mut action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
+    if let Some(location) = location {
+        action = action.location(location);
+    }
+    if dry_run {
+        // The fork returns the full orphan list regardless of the deleter, so swapping in a
+        // no-op deleter yields Spark's exact dry-run result: every orphan listed, none removed.
+        action = action.delete_with(|_path| Box::pin(async { Ok(()) }));
+    }
+    let result = action.execute().await.map_err(iceberg_err)?;
+
+    // Never report a partial delete as a success. The rows say "these were orphans"; if some
+    // could not be removed, saying so is the whole difference between a report and a lie.
+    if let Some(first) = result.delete_failures.first() {
+        return Err(DataFusionError::Execution(format!(
+            "CALL remove_orphan_files deleted {deleted} of {total} orphan files; {failed} could \
+             not be removed. First failure: `{path}` — {error}. Re-run to retry the remainder.",
+            deleted = result.orphan_file_locations.len() - result.delete_failures.len(),
+            total = result.orphan_file_locations.len(),
+            failed = result.delete_failures.len(),
+            path = first.path,
+            error = first.error,
+        )));
+    }
+
+    orphan_result_dataframe(ctx, &result.orphan_file_locations)
 }
 
 // ===========================================================================================

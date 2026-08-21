@@ -64,28 +64,6 @@ async fn call_unknown_procedure_refuses_loud_listing_supported() {
 }
 
 /// `remove_orphan_files` is a deliberate loud-unsupported (fork-queue; do not hand-roll).
-#[tokio::test]
-async fn call_remove_orphan_files_refuses_loud_with_fork_queue() {
-    let wh = TempDir::new().unwrap();
-    let (ctx, catalogs) = setup(&wh).await;
-    let error = execute(
-        &ctx,
-        &catalogs,
-        "CALL ice.system.remove_orphan_files(table => 'sales.t')",
-    )
-    .await
-    .expect_err("remove_orphan_files must refuse loud");
-    let message = error.to_string();
-    assert!(
-        message.contains("remove_orphan_files") && message.contains("not supported"),
-        "error must name remove_orphan_files, got: {message}"
-    );
-    assert!(
-        message.contains("fork") || message.contains("orphan"),
-        "error must point at fork-queue residual, got: {message}"
-    );
-}
-
 /// I3: `rollback_to_snapshot` restores the prior multiset; result columns match Spark.
 #[tokio::test]
 async fn call_rollback_to_snapshot_restores_multiset() {
