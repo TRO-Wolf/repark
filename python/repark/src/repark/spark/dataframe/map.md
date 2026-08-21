@@ -164,6 +164,13 @@ trailing columns unmarked, so `_ascending_remark_flags` raises instead; a tuple,
 `PySparkTypeError` again — PySpark's `NOT_BOOL_OR_LIST` is a type error, and round 1 had regressed
 it to a value error.
 
+**LRS-1 (2026-08-20).** `core.py`'s `_grouping_sets_grouped` — the one entry for `cube` /
+`rollup` / `groupingSets` — refuses a higher-order group key alongside the partition-transform and
+nested-generator rejections it already carried. Those paths lower a `Column` to SQL TEXT that the
+facade's own dialect cannot read back, so the user saw a raw `ParserError` quoting an offset into
+generated SQL. Refused BEFORE the text is built; refusing after the parser failed would reformat
+the same error.
+
 ## Pointers
 
 Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df-regions-ledger.md`.

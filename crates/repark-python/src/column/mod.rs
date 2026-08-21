@@ -152,6 +152,20 @@ impl PyColumn {
     ///
     /// # Errors
     /// Returns `ValueError` when `fields` is empty.
+    /// Whether this column carries a higher-order function anywhere in its expression.
+    ///
+    /// The facade asks the expression rather than reading its own rendered SQL text, because the
+    /// paths that need this — `Window.orderBy`, `cube` / `rollup` — refuse BEFORE any text is
+    /// built, and a string check would be answering a different question.
+    ///
+    /// # Errors
+    /// Propagates a tree-walk failure as `ValueError`.
+    pub fn contains_higher_order(&self) -> PyResult<bool> {
+        fenced!("Column.contains_higher_order", {
+            expr_build::contains_higher_order(&self.expr)
+        })
+    }
+
     /// A reference to a lambda parameter (`x` inside `transform(a, x -> x + 1)`).
     ///
     /// The facade mints one of these per parameter, hands it to the user's Python callable, and
@@ -185,10 +199,15 @@ impl PyColumn {
             let function = repark_functions::higher_order::by_name(name).ok_or_else(|| {
                 PyValueError::new_err(format!("unknown higher-order function {name:?}"))
             })?;
-            let mut args: Vec<Expr> = value_args.iter().map(PyColumn::expr).collect();
+            let mut args: Vec<Expr> = Vec::with_capacity(value_args.len() + lambdas.len());
+            for value in &value_args {
+                let value = value.expr();
+                refuse_nested_higher_order(&value, name, "value argument")?;
+                args.push(value);
+            }
             for (params, body) in lambdas {
                 let body = body.expr();
-                refuse_nested_higher_order(&body, name)?;
+                refuse_nested_higher_order(&body, name, "lambda")?;
                 args.push(Expr::Lambda(Lambda::new(params, body)));
             }
             Ok(Self::from_expr(Expr::HigherOrderFunction(

@@ -66,6 +66,11 @@ def _window_column(item: Column | str) -> Column:
             f"{transform!r} must be inside 'partitionedBy'."
         )
     column._reject_nested_generator("window partitionBy/orderBy")
+    # Both window positions fail on a higher-order column, and each fails differently and
+    # internally: `orderBy` at physical planning with a SanityCheckPlan dump, `partitionBy` with
+    # DataFusion's "ORDER BY column cannot be empty … likely caused by a bug" internal error.
+    # Spark evaluates both (measured, LRS-1).
+    column._reject_higher_order("Window partitionBy/orderBy")
     return column
 
 

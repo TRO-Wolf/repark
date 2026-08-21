@@ -29,6 +29,11 @@ not this directory.
   Nine clauses PROVEN, zero OPEN; the tiering rule (blast radius, not effort) is C-004 so it can be
   disputed on evidence. Design: [../docs/design/low-risk-sweep.md](../docs/design/low-risk-sweep.md);
   slate: [../briefs/low-risk-sweep.md](../briefs/low-risk-sweep.md).
+- [lrs-1-higher-order-refusals-ledger.md](lrs-1-higher-order-refusals-ledger.md) — **LRS-1
+  (2026-08-20):** four paths that handed the user a DataFusion internal error now refuse and name
+  the workaround. All four work in Spark, so the messages say so. `Window.partitionBy` was not in
+  any finding — it was found by checking the `orderBy` defect's sibling position, and had the same
+  problem with a different internal error. Turned up LRS-7 on the way.
 - [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
   `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
   three new `map.md` files, which were written rather than waived.

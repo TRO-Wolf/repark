@@ -2039,6 +2039,12 @@ NOT in that file is a defect, not a decision.
   unaliased higher-order column keeping the same output name on every build (the uniqueness
   counter leaked into the schema).
 
+- `test_lrs1_higher_order_refusals.py` — **LRS-1 (2026-08-20):** the four paths that leaked a
+  DataFusion internal error for a higher-order column now refuse. Two of the nine pins exist only
+  to BOUND the change (ordinary columns still pass those paths; higher-order columns still work
+  where they worked), because a refusal that over-fires is worse than the error it replaced. One
+  pin runs the workaround the messages name.
+
 ## I want to...
 
 | ...do this | go to |

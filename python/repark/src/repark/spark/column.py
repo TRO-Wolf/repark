@@ -14,7 +14,13 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from repark import _native
-from repark.errors import AnalysisException, ParseException, PySparkTypeError, PySparkValueError
+from repark.errors import (
+    AnalysisException,
+    ParseException,
+    PySparkTypeError,
+    PySparkValueError,
+    UnsupportedOperationException,
+)
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_sql_field_ident
@@ -289,6 +295,23 @@ class Column:
                 f"cannot be nested inside {operation} "
                 "(Spark: only one explode/explode_outer as a top-level select projection; "
                 "posexplode is unsupported)."
+            )
+
+    def _reject_higher_order(self, operation: str) -> None:
+        """Refuse paths that lower a higher-order ``Column`` to SQL text or to a window ordering.
+
+        Spark evaluates all of these. repark cannot yet: the Spark facade's own generated SQL is
+        read back by a dialect that parses ``x -> y`` as an operator, and the window path fails at
+        physical planning. Both surface as an engine internal — a `ParserError` naming a column
+        offset, a `SanityCheckPlan` dump — so the honest answer is a refusal that names the
+        workaround, which does work.
+        """
+        if self._inner.contains_higher_order():
+            raise UnsupportedOperationException(
+                f"{operation} does not support a higher-order function column "
+                f"({self.spark_display_part()}). Spark supports it; repark does not yet. "
+                "Project the higher-order result into a column first "
+                "(select it with an alias), then use that column here."
             )
 
     def _binary(

@@ -94,5 +94,6 @@ without enabling PyO3 `multiple-pymethods`.
 | an aggregate returns `uint64`, or arithmetic on it widens to DECIMAL(21,0) | `function_dispatch.rs` `cast_unsigned_count_to_signed` — the cast is measured from the UDAF's declared return type, not keyed on a name (round 2 FNP-R3-1) |
 | `over()` says a column is not an aggregate when it is | `mod.rs` `over` peels an optional CAST first; an aggregate wrapped by the unsigned cast used to fall to the catch-all (round 2 F-R3-2) |
 | `… AS x AS x` in a plan | `expr_build.rs` `collapse_identity_alias_chain` |
+| a higher-order column is refused by a facade path | `expr_build.rs` `contains_higher_order` is the predicate; `PyColumn::contains_higher_order` exposes it, and `refuse_nested_higher_order` checks BOTH argument positions (LRS-1) |
 
 First checks: `cargo test -p repark-python column`. Escalate to: [../map.md#debug](../map.md).
