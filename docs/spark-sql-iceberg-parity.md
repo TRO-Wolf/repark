@@ -1572,6 +1572,40 @@ the pin rather than obeying it.
   Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
   the gap is on disk, not just in a schema string.
 
+### RE-1 — `regexp_extract_all` defaults to group 0, Spark defaults to group 1
+
+- **repark** — `regexp_extract_all(str, regexp)` returns the **whole match**:
+  `regexp_extract_all('a1b2', '([a-z])([0-9])')` → `['a1', 'b2']`, on the facade and the SQL door
+  alike. A pattern with no capture group returns matches rather than raising.
+- **Apache Spark** — the two-argument form defaults `idx` to **1**, so the same call returns
+  `['a', 'b']`, and a pattern with no group raises
+  `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`. *(oracle: live — PySpark 4.1.2, both doors.)*
+- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re1_extract_all_two_argument_form_returns_group_zero`
+- **Rationale** — BACKLOG, and **the highest-value row on this list**: it is a silently wrong answer
+  on ordinary input, not an edge case. It is not fixed here because this campaign's invariant is
+  that no working query changes its result, and this one changes `['a1','b2']` to `['a','b']` for
+  every two-argument caller. That is a decision to take deliberately, with the three-argument form
+  and `regexp_substr` (which agrees with Spark at `'a1'`) checked in the same change. The pin
+  codifies today's behavior so the fix reds it on purpose.
+
+### RE-2 — a zero-width match at a mid-surrogate position
+
+- **repark** — `regexp_extract_all('🎉ab', '', 0)` returns **4** empty strings and
+  `regexp_extract_all('🎉ab', 'b*', 0)` returns 4 elements; `regexp_substr('🎉ab', '')` returns
+  `''`. `regexp_count` on the same inputs returns **5**, so two functions in this repository
+  disagree.
+- **Apache Spark** — **5** in every case (`['','','','','']`, `['','','','b','']`), and
+  `regexp_substr('🎉ab', '')` returns **NULL**. Java's `Matcher` finds an empty match at every
+  UTF-16 code-unit index, including the one *inside* a surrogate pair.
+  *(oracle: live — PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re2_zero_width_matches_skip_the_mid_surrogate_position`
+- **Rationale** — BACKLOG. `regexp_count` walks UTF-16 code units and is already right;
+  `collect_matches` walks Unicode scalars, because a mid-surrogate offset is **not a byte boundary**
+  and Rust's `&str` cannot address one — there is no `regex::Match` to build there. Closing this
+  means running the collector in UTF-16 space and mapping back, which is a restructure of a hot
+  path, not an edge-case patch. The row exists so the number 4 is a known, measured difference
+  rather than an assumption that the two functions agree.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Four candidates surfaced by the session-timezone unit still carry **no pin yet**, so under §6 they are

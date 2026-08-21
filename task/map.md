@@ -51,6 +51,12 @@ not this directory.
   Also: `randstr` refuses a batch that would overflow Arrow's i32 string offsets instead of
   panicking, and the SQL door learned Spark's own `approx_count_distinct` spelling — a gap no test
   could see, because the facade never went through the door for that name.
+- [lrs-6-regexp-measured-ledger.md](lrs-6-regexp-measured-ledger.md) — **LRS-6 (2026-08-20):**
+  scoped wrong twice, and the second correction is the useful one — deciding what the right answer
+  is turned out to be the cheap half of closing an astral-text regex gap. Shipped as measurement +
+  registry rows `RE-1` / `RE-2`. On the way it found the sweep's highest-value defect:
+  `regexp_extract_all(str, regexp)` returns group 0 where Spark returns group 1 — a silently wrong
+  answer on ordinary input, on both doors.
 - [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
   `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
   three new `map.md` files, which were written rather than waived.

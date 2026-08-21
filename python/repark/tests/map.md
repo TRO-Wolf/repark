@@ -2060,6 +2060,11 @@ NOT in that file is a defect, not a decision.
   new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
   unsigned, so closing the row reds it on purpose.
 
+- `test_lrs6_regexp_divergences.py` — **LRS-6 (2026-08-20):** pins that CODIFY today's behavior
+  for registry rows `RE-1` and `RE-2`, so the unit that fixes either turns its pin red on purpose.
+  `RE-1` is the sweep's highest-value find: the two-argument `regexp_extract_all` returns group 0
+  where Spark returns group 1.
+
 ## I want to...
 
 | ...do this | go to |
