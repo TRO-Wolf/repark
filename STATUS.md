@@ -161,9 +161,11 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
-- **Low-risk sweep (LRS)** (active, chartered 2026-08-20; branch `fix/low-risk-sweep` **off**
-  `feat/spark-function-parity`, seven commits, not yet merged). Works the sub-floor remainder the
-  two Critic rounds forwarded. Design: [docs/design/low-risk-sweep.md](docs/design/low-risk-sweep.md);
+- **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
+  eleven commits, **open as [#191](https://github.com/TRO-Wolf/repark/pull/191), not yet merged**).
+  Chartered off `feat/spark-function-parity` @ `8a28057`; rebased onto `main` on 2026-08-21 when
+  that campaign squash-merged as `65bacdf`, tree-identical both before and after. Works the
+  sub-floor remainder the two Critic rounds forwarded. Design: [docs/design/low-risk-sweep.md](docs/design/low-risk-sweep.md);
   slate: [briefs/low-risk-sweep.md](briefs/low-risk-sweep.md); approval gate (10/10 `PROVEN`):
   [task/lrs-0-charter-ledger.md](task/lrs-0-charter-ledger.md).
   - **Delivered:** LRS-5 (canonical Rust module layout — all six `#[path]` sites gone), LRS-1
@@ -206,9 +208,9 @@ history-rewrite; provenance and the options weighed:
   note's §7 do-not list (no math reordering, goldens bit-exact) is binding; `unsafe` remains
   workspace-forbidden.
 
-- **Spark function parity campaign** (active, chartered 2026-08-20; branch
-  `feat/spark-function-parity`, **thirteen commits, two adversarial Critic rounds, not yet
-  merged**). Close the `pyspark.sql.functions`
+- **Spark function parity campaign** (active, chartered 2026-08-20; first tranche **MERGED
+  2026-08-21** as [#190](https://github.com/TRO-Wolf/repark/pull/190) / `65bacdf` — thirteen
+  commits squashed into one, two adversarial Critic rounds). Close the `pyspark.sql.functions`
   gap and move the semantics behind every name out of Python into Rust. Design:
   [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
   [briefs/spark-function-parity.md](briefs/spark-function-parity.md); approval gate (12/12

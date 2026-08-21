@@ -1,7 +1,7 @@
 # Charter ledger — SEM-0 · the two silently wrong answers
 
-**Date:** 2026-08-21 · **Branch:** not opened · **Base:** `fix/low-risk-sweep` (or `main` once the
-two branches ahead of it merge) · **Rows it closes:**
+**Date:** 2026-08-21 · **Branch:** not opened · **Base:** `fix/low-risk-sweep`, or `main` once
+[#191](https://github.com/TRO-Wolf/repark/pull/191) merges · **Rows it closes:**
 [`RE-1`](../docs/spark-sql-iceberg-parity.md#re-1--regexp_extract_all-defaults-to-group-0-spark-defaults-to-group-1)
 and [`LOG-1`](../docs/spark-sql-iceberg-parity.md#log-1--sql-door-log-is-base-10-sparks-is-natural)
 
