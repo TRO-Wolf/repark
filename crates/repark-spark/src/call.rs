@@ -13,9 +13,16 @@
 //! 3. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
 //!    (`crates/iceberg/src/transaction/manage_snapshots.rs:164-167`).
 //!
-//! **LOCAL catalogs only** ([`LocationPolicy::TempFallbackAllowed`]). Glue / S3 Tables
-//! (`RequireExplicitLocation` / `ServiceManagedLocation`) refuse every procedure loud —
-//! expire/cleanup never touch remote object storage through this surface.
+//! **Every catalog policy** (MW-1, 2026-08-21). The v1 surface refused Glue and S3 Tables as a
+//! blast-radius fence; nothing downstream of that gate ever assumed a local filesystem, so
+//! lifting it was policy, not machinery.
+//!
+//! **On a service-managed (S3 Tables) catalog, expect commit conflicts and retry them.** The
+//! service runs its own compaction and snapshot expiry, committing concurrently with this engine
+//! (fork `ENGINE_CONTRACT` §8). `CommitFailed` requirement mismatches are ROUTINE there, and
+//! `validate_data_files_exist` trips when service compaction rewrites a file an in-flight
+//! position delete references. The commit fails loudly and the table is not damaged — this is
+//! Iceberg's optimistic concurrency working, not a sign of corruption. Re-run the procedure.
 //!
 //! **Parsing:** named (`arg => value`) and positional arguments are both accepted —
 //! Apache Iceberg Spark Procedures docs:
@@ -42,12 +49,13 @@ use datafusion::sql::sqlparser::ast::{
     Expr, Function, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
 };
 use iceberg::maintenance::RewriteDataFiles;
+use iceberg::spec::DataContentType;
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
-use repark_core::{CatalogRegistry, LocationPolicy, parse_timestamp_to_ms};
+use repark_core::{CatalogRegistry, parse_timestamp_to_ms};
 
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
@@ -74,7 +82,6 @@ pub async fn execute_call(
 ) -> Result<DataFrame> {
     let (catalog_name, procedure) = resolve_call_target(&function.name)?;
     let catalog = Arc::clone(catalog_handle(catalogs, &catalog_name)?);
-    refuse_non_local_catalog(catalogs, &catalog_name)?;
     let args = CallArgs::parse(&function.args)?;
 
     match procedure.as_str() {
@@ -111,27 +118,6 @@ fn resolve_call_target(
         }
         _ => Err(DataFusionError::Plan(format!(
             "CALL expects `catalog.system.<procedure>(…)`, got `{name}`"
-        ))),
-    }
-}
-
-/// LOCAL-only hard line: maintenance CALL never runs against Glue / S3 Tables catalogs.
-fn refuse_non_local_catalog(catalogs: &CatalogRegistry, catalog_name: &str) -> Result<()> {
-    match catalogs.location_policy(catalog_name) {
-        // E-4 (phase-1 forced edit): the variant carries the resolved fallback root now.
-        Some(LocationPolicy::TempFallbackAllowed { .. }) => Ok(()),
-        Some(LocationPolicy::RequireExplicitLocation) => Err(DataFusionError::Plan(format!(
-            "CALL system.* maintenance procedures are LOCAL-only in v1 — catalog \
-             `{catalog_name}` is a Glue/remote catalog (RequireExplicitLocation). \
-             Refuse expire/rewrite/rollback against Glue/S3; use a memory/local catalog."
-        ))),
-        Some(LocationPolicy::ServiceManagedLocation) => Err(DataFusionError::Plan(format!(
-            "CALL system.* maintenance procedures are LOCAL-only in v1 — catalog \
-             `{catalog_name}` is S3 Tables (ServiceManagedLocation). Refuse expire/rewrite/\
-             rollback against remote object storage."
-        ))),
-        None => Err(DataFusionError::Plan(format!(
-            "unknown catalog `{catalog_name}`"
         ))),
     }
 }
@@ -449,17 +435,21 @@ fn count_as_i32(count: usize) -> Result<i32> {
 // expire_snapshots
 // ===========================================================================================
 
-/// Spark output (docs) + fork [`CleanupReport`] divergence:
+/// Spark's six-column output, all of it (MW-1). Measured against a live Spark 4.0.1 +
+/// Iceberg 1.10.0 oracle.
 ///
-/// | Spark column | Fork source |
+/// | Spark column | Source |
 /// |---|---|
-/// | `deleted_data_files_count` | **divergence:** fork `deleted_content_files` is ALL content \
-///   (data + pos/eq delete + DV puffins) in one funnel — not split. Reported under Spark's \
-///   `deleted_data_files_count` name; pos/eq Spark columns are **omitted** (absent-with-\
-///   disclosure) rather than zero-filled. |
+/// | `deleted_data_files_count` | funnel entries classified [`DataContentType::Data`] |
+/// | `deleted_position_delete_files_count` | classified [`DataContentType::PositionDeletes`] |
+/// | `deleted_equality_delete_files_count` | classified [`DataContentType::EqualityDeletes`] |
 /// | `deleted_manifest_files_count` | `deleted_manifests.len()` |
 /// | `deleted_manifest_lists_count` | `deleted_manifest_lists.len()` |
 /// | `deleted_statistics_files_count` | `deleted_statistics_files.len()` |
+///
+/// The fork returns the first three as ONE funnel; [`classify_content_files`] rebuilds the split
+/// from the manifest entries' own `content_type()`. Counts are still never fabricated — an
+/// unclassifiable path lands in none of the three columns.
 async fn execute_expire_snapshots(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -513,6 +503,10 @@ async fn execute_expire_snapshots(
         action = action.retain_last(retain);
     }
 
+    // Classify BEFORE the cleanup runs: afterwards the files and their manifests are gone, and
+    // the funnel the fork returns is paths only. This is the one ordering the split depends on.
+    let classified = classify_content_files(&table).await;
+
     let tx = Transaction::new(&table);
     let tx = action.apply(tx).map_err(iceberg_err)?;
     let cleanup = ExpireSnapshotsCleanup::new(table.file_io().clone());
@@ -520,25 +514,97 @@ async fn execute_expire_snapshots(
         .commit_and_clean(tx, catalog.as_ref())
         .await
         .map_err(iceberg_err)?;
+    let counts = ExpireCounts::tally(&report.deleted_content_files, &classified);
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
-    expire_result_dataframe(ctx, &report)
+    expire_result_dataframe(ctx, &report, &counts)
 }
 
-fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Result<DataFrame> {
+/// Classify every content file the table can currently reach, by Spark's three-way split.
+///
+/// MW-1. The fork's [`CleanupReport`] returns ONE funnel — `deleted_content_files` holds data,
+/// position-delete, equality-delete and DV puffin paths together — because
+/// `expire_cleanup` collects `entry.file_path()` into a path set and drops the classification.
+/// Spark reports the three separately, and on a merge-on-read table the difference is not
+/// cosmetic: measured against a live Spark 4.0.1 + Iceberg 1.10.0 oracle, three MERGEs plus a
+/// compaction expire as `deleted_data_files_count=4`, `deleted_position_delete_files_count=2`.
+/// Reporting the funnel under Spark's data-file name over-counts by exactly the delete files.
+///
+/// The classification is not lost, only discarded: every [`ManifestEntry`] carries
+/// `content_type()`. So this walks the table as it stands BEFORE expiry — every file expiry can
+/// delete is reachable from some snapshot at that point — and builds path → content type. The
+/// counts stay honest: a path the map cannot classify is counted nowhere and reported through
+/// [`ExpireCounts::unclassified`], never folded into a column to make the arithmetic look tidy.
+async fn classify_content_files(table: &iceberg::table::Table) -> HashMap<String, DataContentType> {
+    let metadata = table.metadata();
+    let file_io = table.file_io();
+    let mut classified = HashMap::new();
+    for snapshot in metadata.snapshots() {
+        let Ok(manifest_list) = snapshot.load_manifest_list(file_io, metadata).await else {
+            // Best-effort: an unreadable manifest list leaves its files unclassified, which is
+            // visible in the result rather than silently miscounted.
+            continue;
+        };
+        for manifest_file in manifest_list.entries() {
+            let Ok(manifest) = manifest_file.load_manifest(file_io).await else {
+                continue;
+            };
+            for entry in manifest.entries() {
+                classified.insert(entry.file_path().to_string(), entry.content_type());
+            }
+        }
+    }
+    classified
+}
+
+/// The three content-file counts Spark reports, plus what could not be classified.
+#[derive(Debug, Default)]
+struct ExpireCounts {
+    data: i64,
+    position_deletes: i64,
+    equality_deletes: i64,
+    /// Deleted paths absent from the pre-expiry classification. Never folded into a column.
+    unclassified: i64,
+}
+
+impl ExpireCounts {
+    fn tally(deleted: &[String], classified: &HashMap<String, DataContentType>) -> Self {
+        let mut counts = Self::default();
+        for path in deleted {
+            match classified.get(path) {
+                Some(DataContentType::Data) => counts.data += 1,
+                Some(DataContentType::PositionDeletes) => counts.position_deletes += 1,
+                Some(DataContentType::EqualityDeletes) => counts.equality_deletes += 1,
+                None => counts.unclassified += 1,
+            }
+        }
+        counts
+    }
+}
+
+fn expire_result_dataframe(
+    ctx: &SessionContext,
+    report: &CleanupReport,
+    counts: &ExpireCounts,
+) -> Result<DataFrame> {
+    // Spark declares every one of these NULLABLE (jar `OUTPUT_TYPE`, `iconst_1` per StructField),
+    // unlike its two rewrite procedures, which it declares non-nullable. Match Spark per
+    // procedure rather than applying one blanket rule across the surface.
     let schema = Arc::new(Schema::new(vec![
-        Field::new("deleted_data_files_count", DataType::Int64, false),
-        Field::new("deleted_manifest_files_count", DataType::Int64, false),
-        Field::new("deleted_manifest_lists_count", DataType::Int64, false),
-        Field::new("deleted_statistics_files_count", DataType::Int64, false),
+        Field::new("deleted_data_files_count", DataType::Int64, true),
+        Field::new("deleted_position_delete_files_count", DataType::Int64, true),
+        Field::new("deleted_equality_delete_files_count", DataType::Int64, true),
+        Field::new("deleted_manifest_files_count", DataType::Int64, true),
+        Field::new("deleted_manifest_lists_count", DataType::Int64, true),
+        Field::new("deleted_statistics_files_count", DataType::Int64, true),
     ]));
     let batch = RecordBatch::try_new(
         schema,
         vec![
-            Arc::new(Int64Array::from(vec![count_as_i64(
-                report.deleted_content_files.len(),
-            )?])),
+            Arc::new(Int64Array::from(vec![counts.data])),
+            Arc::new(Int64Array::from(vec![counts.position_deletes])),
+            Arc::new(Int64Array::from(vec![counts.equality_deletes])),
             Arc::new(Int64Array::from(vec![count_as_i64(
                 report.deleted_manifests.len(),
             )?])),

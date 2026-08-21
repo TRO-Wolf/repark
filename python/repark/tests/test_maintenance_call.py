@@ -131,14 +131,23 @@ def test_expire_snapshots_keeps_tag_reachable(
         f"CALL mem.system.expire_snapshots("
         f"table => 'ns.events', older_than => {older_than_ms}, retain_last => 1)"
     ).to_arrow()
-    # Divergence schema: combined content under deleted_data_files_count; pos/eq ABSENT.
+    # MW-1: Spark's full six-column result, in Spark's order. The fork returns all content files
+    # in ONE funnel, so this used to report position-delete files under the data-file name and
+    # omit the pos/eq columns entirely; `classify_content_files` rebuilds the split from the
+    # manifest entries' own content type. Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.
     assert _schema_names(result) == [
         "deleted_data_files_count",
+        "deleted_position_delete_files_count",
+        "deleted_equality_delete_files_count",
         "deleted_manifest_files_count",
         "deleted_manifest_lists_count",
         "deleted_statistics_files_count",
     ]
-    assert result.schema.field("deleted_data_files_count").type == pa.int64()
+    # All six are bigint and NULLABLE — Spark declares them so (jar `OUTPUT_TYPE`, `iconst_1` per
+    # StructField), unlike its two rewrite procedures. Matched per procedure, not by one rule.
+    for name in _schema_names(result):
+        assert result.schema.field(name).type == pa.int64()
+        assert result.schema.field(name).nullable
 
     # s1 still resolvable via VERSION AS OF (tag kept it).
     pinned = spark.sql(f"SELECT id FROM {TABLE} VERSION AS OF {s1} ORDER BY id").to_arrow()

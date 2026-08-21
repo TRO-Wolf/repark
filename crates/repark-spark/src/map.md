@@ -28,7 +28,12 @@ wrapper.
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff; 14 in-module tests.
 - `call.rs` — I3 maintenance `CALL` procedures (expire_snapshots / rewrite_data_files /
-  rollback_to_snapshot; LOCAL catalogs only); 3 in-module tests.
+  rollback_to_snapshot; **every catalog policy since MW-1** — the v1 LOCAL-only fence was
+  blast-radius policy, not capability, and what it guarded against is a commit conflict the
+  fork's own validation already catches loudly). `expire_snapshots` returns Spark's full
+  six-column result: the fork funnels all content files into one list, so
+  `classify_content_files` rebuilds the data / position-delete / equality-delete split from
+  the manifest entries' own `content_type()` before cleanup runs. 3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
   **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan` source (including

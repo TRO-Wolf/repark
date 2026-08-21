@@ -3,6 +3,42 @@
 use super::super::*;
 use super::common::*;
 
+/// MW-1: Spark's full six-column `expire_snapshots` result, in Spark's order and nullability.
+///
+/// Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle — the 4.1.2 oracle cannot execute this
+/// procedure (a Spark 4.0-to-4.1 `DataSourceV2Relation.create` signature break), which is why the
+/// campaign runs two. Nullability comes from the shipping jar's `OUTPUT_TYPE` constant:
+/// `iconst_1` on each `StructField`. This engine had pinned all six non-nullable while agreeing
+/// with Spark on the two rewrite procedures — one procedure out of step, not a blanket policy.
+fn assert_expire_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
+    assert_eq!(batch.num_columns(), 6, "expire result schema is Spark's");
+    let names: Vec<_> = batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|field| field.name().clone())
+        .collect();
+    assert_eq!(
+        names,
+        vec![
+            "deleted_data_files_count",
+            "deleted_position_delete_files_count",
+            "deleted_equality_delete_files_count",
+            "deleted_manifest_files_count",
+            "deleted_manifest_lists_count",
+            "deleted_statistics_files_count",
+        ]
+    );
+    assert!(
+        batch
+            .schema()
+            .fields()
+            .iter()
+            .all(|field| field.is_nullable()),
+        "Spark declares all six expire columns nullable"
+    );
+}
+
 #[tokio::test]
 async fn call_unknown_procedure_refuses_loud_listing_supported() {
     let wh = TempDir::new().unwrap();
@@ -197,26 +233,7 @@ async fn call_expire_snapshots_keeps_tag_reachable() {
     .await
     .expect("expire CALL");
     let batches = result.collect().await.expect("collect expire result");
-    assert_eq!(
-        batches[0].num_columns(),
-        4,
-        "expire result schema (divergence set)"
-    );
-    let names: Vec<_> = batches[0]
-        .schema()
-        .fields()
-        .iter()
-        .map(|field| field.name().clone())
-        .collect();
-    assert_eq!(
-        names,
-        vec![
-            "deleted_data_files_count",
-            "deleted_manifest_files_count",
-            "deleted_manifest_lists_count",
-            "deleted_statistics_files_count",
-        ]
-    );
+    assert_expire_schema_is_sparks(&batches[0]);
 
     let table = catalogs["ice"].load_table(&ident).await.unwrap();
     assert!(
@@ -646,51 +663,189 @@ async fn call_rollback_non_ancestor_refuses_loud() {
     );
 }
 
-/// LOCAL-only: Glue-policy catalog refuses CALL expire/rewrite/rollback.
+/// MW-1: the expire result splits content files the way Spark does, with real numbers behind it.
+///
+/// **Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.** Three merge-on-read MERGEs plus a
+/// compaction expire as `deleted_data_files_count=4` and
+/// `deleted_position_delete_files_count=2`. The fork hands back ONE funnel
+/// (`CleanupReport.deleted_content_files`) holding every path, so reporting it under Spark's
+/// data-file name over-counts by exactly the delete files — on the very workload this campaign
+/// exists for.
+///
+/// The classification is not lost, only discarded: every manifest entry carries `content_type()`.
+///
+/// **Why this reaches the position-delete column by rollback rather than by compaction:** this
+/// engine's `rewrite_data_files` rewrites data files and KEEPS the position deletes (verified —
+/// the compacted table still reads correctly, with the deletes still applied). Orphaning a
+/// delete file through compaction is what `rewrite_position_delete_files` is for, and that is
+/// MW-2. Rolling back past the MERGEs strands their delete files now, without waiting.
 #[tokio::test]
-async fn call_refuses_non_local_catalog() {
+async fn call_expire_splits_content_files_like_spark() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
-    // Re-tag the same memory catalog as RequireExplicitLocation (Glue posture).
-    let mut remote = CatalogRegistry::new();
-    remote.insert(
-        "ice".to_string(),
-        Arc::clone(&catalogs["ice"]),
-        LocationPolicy::RequireExplicitLocation,
-    );
-    // Need the provider still registered under ice — setup already did.
-    let error = execute(
+    run(
         &ctx,
-        &remote,
-        "CALL ice.system.expire_snapshots(table => 'sales.t')",
+        &catalogs,
+        "CREATE TABLE ice.sales.mor (id INT, v STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read')",
     )
-    .await
-    .expect_err("Glue-policy catalog must refuse CALL");
-    let message = error.to_string();
+    .await;
+    for id in 1..=3 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.mor VALUES ({id}, 'v{id}')"),
+        )
+        .await;
+    }
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "mor".into());
+    let pre_merge = catalogs["ice"]
+        .load_table(&ident)
+        .await
+        .unwrap()
+        .metadata()
+        .current_snapshot_id()
+        .expect("pre-merge snapshot");
+
+    // Two merge-on-read MERGEs, each rewriting the same row: position deletes accumulate.
+    for value in ["x", "y"] {
+        run(
+            &ctx,
+            &catalogs,
+            &format!(
+                "MERGE INTO ice.sales.mor AS t USING (SELECT 1 AS id, '{value}' AS v) AS s \
+                 ON t.id = s.id WHEN MATCHED THEN UPDATE SET t.v = s.v"
+            ),
+        )
+        .await;
+    }
+    let delete_files = i64::try_from(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT * FROM ice.sales.mor.files WHERE content != 0",
+        )
+        .await,
+    )
+    .expect("delete-file count fits i64");
     assert!(
-        message.contains("LOCAL-only") || message.contains("RequireExplicitLocation"),
-        "must name LOCAL gate, got: {message}"
+        delete_files > 0,
+        "the MERGEs must actually write position deletes, else the split below proves nothing"
     );
 
-    // C1-Q-002: ServiceManagedLocation (S3 Tables) is a distinct arm — pin both policies.
-    let mut s3_tables = CatalogRegistry::new();
-    s3_tables.insert(
-        "ice".to_string(),
-        Arc::clone(&catalogs["ice"]),
-        LocationPolicy::ServiceManagedLocation,
-    );
-    let error = execute(
+    // Roll back past both MERGEs: their delete files are now unreachable from any live snapshot.
+    execute(
         &ctx,
-        &s3_tables,
-        "CALL ice.system.expire_snapshots(table => 'sales.t')",
+        &catalogs,
+        &format!(
+            "CALL ice.system.rollback_to_snapshot(table => 'sales.mor', snapshot_id => {pre_merge})"
+        ),
     )
     .await
-    .expect_err("S3 Tables policy catalog must refuse CALL");
+    .expect("rollback CALL");
+
+    let older_than_ms = chrono::Utc::now().timestamp_millis() + 86_400_000;
+    let result = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.expire_snapshots(\
+                 table => 'sales.mor', older_than => {older_than_ms}, retain_last => 1)"
+        ),
+    )
+    .await
+    .expect("expire CALL");
+    let batches = result.collect().await.expect("collect expire result");
+    let column = |name: &str| -> i64 {
+        let index = batches[0].schema().index_of(name).expect("column present");
+        batches[0]
+            .column(index)
+            .as_any()
+            .downcast_ref::<Int64Array>()
+            .expect("Int64 count column")
+            .value(0)
+    };
+    let data = column("deleted_data_files_count");
+    let position = column("deleted_position_delete_files_count");
+    let equality = column("deleted_equality_delete_files_count");
+
+    assert_eq!(
+        position, delete_files,
+        "every stranded position delete must be reported under Spark's position-delete column, \
+         not funnelled into the data-file count"
+    );
+    assert_eq!(
+        equality, 0,
+        "nothing here writes equality deletes — a measured control, not a placeholder"
+    );
+    // The control that makes this a SPLIT rather than a relabel: the rollback strands the
+    // MERGEs' new data files too, so both columns must carry independent non-zero counts. Before
+    // MW-1 the single funnel reported `data + position` under the data-file name alone.
+    assert!(
+        data > 0,
+        "the rolled-back MERGEs strand data files as well; got {data}"
+    );
+}
+
+/// MW-1: the maintenance fence is lifted for BOTH remote catalog policies.
+///
+/// The refusal was a v1 blast-radius decision, not a capability gap — nothing downstream of the
+/// gate assumes a local filesystem. The owner ruled on 2026-08-21 to lift for both, so a
+/// Glue-policy and an S3-Tables-policy catalog each execute the three procedures. What the fence
+/// guarded against is a commit conflict the fork's own `validate_data_files_exist` already
+/// catches loudly (fork `ENGINE_CONTRACT` §8), not corruption.
+#[tokio::test]
+async fn call_runs_against_both_remote_catalog_policies() {
+    for policy in [
+        LocationPolicy::RequireExplicitLocation,
+        LocationPolicy::ServiceManagedLocation,
+    ] {
+        let wh = TempDir::new().unwrap();
+        let (ctx, catalogs) = setup(&wh).await;
+        run(
+            &ctx,
+            &catalogs,
+            "CREATE TABLE ice.sales.fence (id INT) USING iceberg",
+        )
+        .await;
+        run(&ctx, &catalogs, "INSERT INTO ice.sales.fence VALUES (1)").await;
+
+        let mut remote = CatalogRegistry::new();
+        remote.insert(
+            "ice".to_string(),
+            Arc::clone(&catalogs["ice"]),
+            policy.clone(),
+        );
+
+        for procedure in [
+            "expire_snapshots(table => 'sales.fence')",
+            "rewrite_data_files(table => 'sales.fence')",
+        ] {
+            execute(&ctx, &remote, &format!("CALL ice.system.{procedure}"))
+                .await
+                .unwrap_or_else(|error| {
+                    panic!("{policy:?} must execute {procedure} after MW-1, got: {error}")
+                });
+        }
+    }
+}
+
+/// MW-1 refusal preservation: an unknown catalog still refuses, on every policy. Lifting the
+/// fence must not turn a typo into a silent no-op.
+#[tokio::test]
+async fn call_still_refuses_an_unknown_catalog() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let error = execute(
+        &ctx,
+        &catalogs,
+        "CALL nosuchcatalog.system.expire_snapshots(table => 'sales.t')",
+    )
+    .await
+    .expect_err("unknown catalog must refuse");
     let message = error.to_string();
     assert!(
-        message.contains("LOCAL-only")
-            || message.contains("ServiceManagedLocation")
-            || message.contains("S3 Tables"),
-        "must name S3/LOCAL gate, got: {message}"
+        message.contains("nosuchcatalog"),
+        "refusal must name the unknown catalog, got: {message}"
     );
 }
