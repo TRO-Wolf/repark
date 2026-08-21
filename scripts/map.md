@@ -120,6 +120,23 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
   `make check-lib-py` and the ci.yml `python` job in the same PR.
 
+- `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
+  guard: the two rules Ruff cannot express, and the SSOT for both. Over every `*.py` under
+  `python/repark/src`, `python/repark-parity` and `scripts/`: (1) **no function defined inside
+  another function**, with an inline `# nested-def: <reason>` pragma for the three sanctioned
+  cases (a decorator closing over its own arguments, a callback whose closure over local state is
+  the point, a `functools.wraps` wrapper — an empty reason does NOT pass) and a
+  `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
+  or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
+  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other two Python
+  conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
+  rule set, and naming is a review duty. Seeded from the measured tree (2026-08-21): 66 nested
+  defs in 21 files, 23 files importing `dataclasses`. Fail-closed on an unreadable file, a parse
+  failure, an empty scan set, or a stale `EXCEPTIONS` key. Measured 0.94 s — the slowest
+  hook-eligible guard. Dual-wired `make check-python-conventions` (in the `make ci` chain) +
+  ci.yml's `python` job, and in both pre-commit paths. Rationale and the arming method:
+  [../skills/code-quality/SKILL.md](../skills/code-quality/SKILL.md).
+
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
   (G-8 companion to `check_lib_rs`). Over every `*.rs` under `crates/**` (recursive): a per-file
   line ceiling with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN only). Default
@@ -176,6 +193,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
 | Raise/lower a facade `.py` line ceiling | `check_lib_py.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Raise/lower a general Rust file line ceiling | `check_rust_file_size.py` (`EXCEPTIONS` — reason required, ratchet down only) |
+| Sanction a nested `def`, or lower a nested-def ceiling | `check_python_conventions.py` (`# nested-def: <reason>` pragma for the three allowed cases; `NESTED_DEF_EXCEPTIONS` for debt — ratchet down only) |
+| Keep a `dataclass` that cannot become a `BaseModel` | `check_python_conventions.py` (`DATACLASS_EXCEPTIONS` — reason required; no inline pragma exists on purpose) |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Check `make parity-live` still matches `parity-live.yml` | `make check-parity-live-dual-wire` |
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
@@ -215,6 +234,9 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `rust-file-size: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_rust_file_size.py` with a reason (ceilings ratchet down only) |
 | `rust-file-size: … scan set is empty` | Fail-closed: the guard found zero `crates/**/*.rs` files — fix the tree or the scan root |
 | `rust-file-size: EXCEPTIONS key has no file on disk` | Remove the stale row or restore the path (fail-closed; not a silent skip) |
+| `python-conventions: … defines N nested function(s)` | Lift the definition to module or class level and pass what it needs as arguments; or add `# nested-def: <reason>` if it is a decorator factory, a state-capturing callback, or a `functools.wraps` wrapper; or raise the `NESTED_DEF_EXCEPTIONS` row with a reason (ratchet down only) |
+| `python-conventions: … imports \`dataclasses\`` | Convert the container to a Pydantic v2 `BaseModel` (`model_config = ConfigDict(frozen=True)` for the frozen case), or add a `DATACLASS_EXCEPTIONS` row with a reason |
+| `python-conventions: … does not parse` / `scan set is empty` | Fail-closed: the guard refuses to report success over a file it could not read or a tree it could not find |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
@@ -224,7 +246,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `matrix-test-liveness: FAIL` / dead cite | A `matrix.rs` `Tested` row names a test `cargo test -- --list` does not print — rename the cite with the test, or flip the row to `DeliberatelyAbsent`. A parse miss or cargo non-zero is also red (fail-closed); SSOT: `check_matrix_test_liveness.py` |
 
 First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
-`bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`, `bash scripts/check_manifest.sh`,
+`bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`,
+`bash scripts/check_python_conventions.sh`, `bash scripts/check_manifest.sh`,
 `bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,
 `make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).

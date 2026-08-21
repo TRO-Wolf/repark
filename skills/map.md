@@ -11,6 +11,11 @@ agent runs *under* — they bind to, and defer to, the repo's engineering contra
 - [sepmo/](sepmo/map.md) — the **SEPMO** governance-and-orchestration control plane (state machine +
   scope-audit gate + adversarial Actor–Critic) and its binding manifest (the one file mapping SEPMO's
   abstract roles to this repo).
+- [code-quality/](code-quality/map.md) — the portable **code-quality convention set**: the four
+  Python rules, the failure each prevents, whether it is held by a linter, a gate or review, and the
+  ratchet method for arming a convention against a codebase that already violates it. The rule of
+  record stays [../AGENTS.md](../AGENTS.md) "Python"; the enforcement SSOT is
+  [../scripts/check_python_conventions.py](../scripts/check_python_conventions.py).
 
 ## I want to...
 
@@ -18,6 +23,7 @@ agent runs *under* — they bind to, and defer to, the repo's engineering contra
 |---|---|
 | Operate under / understand SEPMO | [sepmo/map.md](sepmo/map.md) → [sepmo/SKILL.md](sepmo/SKILL.md) |
 | See SEPMO's bindings to this repo | [sepmo/binding-manifest.md](sepmo/binding-manifest.md) |
+| Write or review Python under the conventions | [code-quality/map.md](code-quality/map.md) → [code-quality/SKILL.md](code-quality/SKILL.md) |
 
 ## Pointers
 

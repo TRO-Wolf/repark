@@ -177,10 +177,24 @@ history-rewrite; provenance and the options weighed:
     - *Nested functions.* **66** nested `def`s in 21 files. Two files carry more than half of them:
       `spark/dataframe/core.py` (23) and `spark/dataframe/plan_collapse.py` (12).
     - *Names.* Not machine-countable; it rides along with whatever the other three touch.
-  - **No lint rule enforces two of the four.** Ruff has no check for a nested `def` and none for
-    "Pydantic rather than `dataclass`", so unless a repo guard is written in the style of
-    `scripts/check_lib_py.py`, these two rules hold only by review. Deciding whether to write that
-    guard is part of the unit, not a foregone conclusion.
+  - **The guard is armed** (owner ruled 2026-08-21). Ruff has no check for a nested `def` and none
+    for "Pydantic rather than `dataclass`", so those two rules now live in
+    `scripts/check_python_conventions.py`, dual-wired `make check-python-conventions` (in the
+    `make ci` chain) + ci.yml's `python` job, and in both pre-commit paths. The measured debt above
+    is seeded into its two EXCEPTIONS tables, so the tree is green today and **cannot get worse**:
+    a new nested `def` or a new `dataclass` import is red on the commit that writes it. PYC is now
+    the burn-down of those tables rather than a rule nobody can enforce. The other two rules stay
+    where they already work — Ruff `ANN` for types, review for naming.
+  - **The nested-`def` rule ships with an inline pragma**, `# nested-def: <reason>`, for the three
+    cases the contract sanctions: a decorator closing over its own arguments, a callback whose
+    closure over local state is the point, and a `functools.wraps` wrapper. An empty reason does
+    not pass. Several seeded rows are expected to end as pragmas rather than as lifts — the signal
+    handlers in the two bench runners, the `udtf` decorator's builder, and the per-type verifier in
+    `types.py`, whose returned closure IS the function's product.
+  - **Rationale and the arming method are a portable skill**,
+    [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md): each rule with the failure it
+    prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
+    arming a convention against a codebase that already violates it.
   - **The risk this unit carries is that it is a pure refactor of working code.** The facade has
     3,639 passing tests and none of them are about where a `def` sits. Lifting a closure changes
     what it can see; converting a `dataclass` to a `BaseModel` adds validation that was not running
