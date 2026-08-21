@@ -34,6 +34,11 @@ not this directory.
   the workaround. All four work in Spark, so the messages say so. `Window.partitionBy` was not in
   any finding — it was found by checking the `orderBy` defect's sibling position, and had the same
   problem with a different internal error. Turned up LRS-7 on the way.
+- [lrs-2-argument-contracts-ledger.md](lrs-2-argument-contracts-ledger.md) — **LRS-2
+  (2026-08-20):** `xxhash64()` and the lambda parameter-kind gate now match PySpark. The live Spark
+  oracle **refuted two of the three fixes the review suggested** — accepting `xxhash64()` and
+  rejecting positional-only parameters would both have shipped divergences — so the refutations are
+  pinned, not just recorded.
 - [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
   `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
   three new `map.md` files, which were written rather than waived.

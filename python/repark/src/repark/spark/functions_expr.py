@@ -1494,7 +1494,16 @@ def xxhash64(*cols: Column | str) -> Column:
     **Variadic**, like PySpark's — this function exists mainly to hash a composite key across
     several columns, and the one-column form is the uncommon case. The Rust builder and the
     dispatch arm were already variadic; only this signature was not (F-CSP-5 / F-CFS-9).
+
+    The signature accepts zero arguments and Spark does not: it raises `WRONG_NUM_ARGS`, through
+    the facade and through SQL alike (measured, LRS-2). Refused here so the message names this
+    function rather than the internal dispatcher the user never called.
     """
+    if not cols:
+        raise AnalysisException(
+            "[WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `xxhash64` requires > 0 parameters "
+            "but the actual number is 0."
+        )
     return _scalar("xxhash64", *cols)
 
 

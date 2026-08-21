@@ -2045,6 +2045,11 @@ NOT in that file is a defect, not a decision.
   where they worked), because a refusal that over-fires is worse than the error it replaced. One
   pin runs the workaround the messages name.
 
+- `test_lrs2_argument_contracts.py` — **LRS-2 (2026-08-20):** `xxhash64()` refuses by its own
+  name with Spark's `WRONG_NUM_ARGS`, and the lambda parameter-kind gate uses Spark's allowlist.
+  Three of the seven pins hold behaviour the Critic round wanted CHANGED and the oracle said was
+  already right — a pin is how a refuted suggestion stops coming back.
+
 ## I want to...
 
 | ...do this | go to |
