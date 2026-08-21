@@ -24,6 +24,10 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
+  the invariant held, and the two findings that matter most were both found while doing something
+  else — `RE-1` and `LOG-1`, silently wrong answers on common functions. Also: the live Spark
+  oracle refuted three of the Critic round's suggested fixes and one of mine.
 - [lrs-0-charter-ledger.md](lrs-0-charter-ledger.md) — **LRS-0 (2026-08-20):** charter for the
   low-risk sweep, the campaign that works the sub-floor remainder the two Critic rounds forwarded.
   Nine clauses PROVEN, zero OPEN; the tiering rule (blast radius, not effort) is C-004 so it can be
