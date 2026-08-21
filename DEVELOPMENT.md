@@ -41,7 +41,8 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
 | `make develop` | Build + install the native module editable into the root `.venv` (`maturin develop`), for exercising the Python facade against real compiled code. |
 | `make build-wheel` | Build the release wheel with maturin. |
-| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + rust file-size + structural manifest + fmt/taplo/typos). Do this once per clone. |
+| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + rust file-size + Python conventions + structural manifest + fmt/taplo/typos). Do this once per clone. |
+| `make check-python-conventions` | The Python conventions guard on its own: no `def` nested inside a `def`, no `dataclasses`/`attrs` import. Measured at **0.94 s** on the tree at arming, which makes it the slowest hook-eligible guard; if it outgrows the hook budget it is dropped from pre-commit and stays dual-wired in `make ci` + CI. |
 
 ### Test-command discipline (hard)
 
@@ -93,6 +94,7 @@ Tier-2 (live AWS / real Spark) **never runs against unmerged code** — nightly 
 |---|---|
 | `cargo test --all-features` fails to link (libpython) | Never use `--all-features`; use `cargo test --workspace`. See the discipline note above. |
 | Pre-commit hook rejects a commit | Run `bash scripts/check_map_md.sh` — the touched directory's `map.md` must be staged in the same commit. `make install-hooks` if the hook is not wired. |
+| `python-conventions: FAIL` | A `def` inside a `def`, or a `dataclasses`/`attrs` import. Lift the function to module or class level, or add an inline `# nested-def: <reason>` pragma if it is one of the three sanctioned cases; use a Pydantic `BaseModel` instead of a `dataclass`. The EXCEPTIONS tables in `scripts/check_python_conventions.py` ratchet **down** only. Reasoning: [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md). |
 | `crate-dag: layering inversion` | A new dependency points up a tier — see `scripts/check_crate_dag.py` (the SSOT) and [crates/map.md](crates/map.md). |
 | `undeclared dependency edge` / `dependency kind not permitted` (the crate-DAG guard) | Every internal edge is declared with its kind (`normal`/`optional`/`dev`/`build`) in `scripts/check_crate_dag.py` `ALLOWED_EDGES`; add the row with a reason, or drop the dependency. |
 | `manifest: FAIL` | `repo-manifest.toml` disagrees with reality — a Cargo member is undeclared, a declared doc or `make` target is gone, STATUS.md moved the milestone, or a crate map lags. `make check-manifest` names the field. |
