@@ -374,8 +374,38 @@ spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show(
 +----------------------------+------------------------+-----------------------+-------------------------+
 ```
 
-`expire_snapshots` and `rollback_to_snapshot` are the other two. Anything else refuses and lists
-what is supported, rather than pretending:
+`expire_snapshots` and `rollback_to_snapshot` are the other two, and `expire_snapshots` returns
+Spark's full six-column result:
+
+```python
+spark.sql(
+    "CALL local.system.expire_snapshots(table => 'sales.orders', retain_last => 5)"
+).show()
+```
+
+```text
++--------------------------+-------------------------------------+--------------------------------------+
+| deleted_data_files_count | deleted_position_delete_files_count | deleted_equality_delete_files_count  |
++--------------------------+-------------------------------------+--------------------------------------+
+| 4                        | 2                                   | 0                                    |
++--------------------------+-------------------------------------+--------------------------------------+
+```
+
+(plus `deleted_manifest_files_count`, `deleted_manifest_lists_count` and
+`deleted_statistics_files_count`.) On a merge-on-read table the three-way split matters: the
+position-delete files are counted separately rather than folded into the data-file total.
+
+### Maintenance on Glue and S3 Tables
+
+These procedures run against every catalog, including Glue and S3 Tables.
+
+**On S3 Tables, expect an occasional commit conflict and retry it.** The service runs its own
+compaction and snapshot expiry, which commits alongside yours. When the service rewrites a file
+that one of your in-flight position deletes refers to, Iceberg's validation catches it and the
+commit fails. That is the concurrency control working. Your table is not damaged, and re-running
+the procedure is the correct response.
+
+Anything else refuses and lists what is supported, rather than pretending:
 
 ```text
 UnsupportedOperationException: This feature is not implemented: CALL

@@ -26,7 +26,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   same / conflicting / no-location twins; the old silent-adopt fixture now matches
   location), `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
-  `merge`, `call`, `ref_ddl`, `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
+  `merge`, `call` (**MW-1:** the LOCAL-only fence is gone — both remote catalog policies
+  execute, an unknown catalog still refuses, and expire pins Spark's six-column result with
+  the content-file funnel split by manifest `content_type()`; the split pin strands its
+  position deletes by ROLLBACK, because compaction keeps them until MW-2), `ref_ddl`,
+  `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names. **U2 (2026-08-13):**

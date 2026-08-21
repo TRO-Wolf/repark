@@ -12,6 +12,16 @@ not this directory.
 
 ## Contents
 
+- [mw-1-lift-fence-ledger.md](mw-1-lift-fence-ledger.md) — **MW-1 (2026-08-21):** the
+  maintenance fence comes down for every catalog policy, and `expire_snapshots` stops
+  over-counting. The fork returns all content files in one funnel, so this engine reported
+  position-delete files under Spark's data-file column and omitted two columns entirely — a
+  migrating Glue job got a wrong number where it looked and an error where it read.
+  `classify_content_files` rebuilds Spark's three-way split from the manifest entries' own
+  `content_type()`, and counts nothing it cannot classify. **Read §5** for two scenarios that
+  looked like bugs and were not: compaction below the binpack floor is a silent no-op, and this
+  engine's `rewrite_data_files` keeps position deletes on purpose.
+
 - [mw-0-charter-ledger.md](mw-0-charter-ledger.md) — **MW-0 (2026-08-21):** the charter for the
   Iceberg write-path maintenance wave, and the campaign's whole measured floor. Merge-on-read
   writes are correct and merge-on-read is not operable: ten sequential MERGEs grow delete files
