@@ -12,6 +12,16 @@ not this directory.
 
 ## Contents
 
+- [mw-2-rewrite-position-deletes-ledger.md](mw-2-rewrite-position-deletes-ledger.md) —
+  **MW-2 (2026-08-21):** `rewrite_position_delete_files` is wired, so merge-on-read tables can
+  finally reclaim the delete files MW-0 measured piling up. `rewrite_data_files` gained Spark's
+  fifth column, and **no procedure on this surface omits a Spark column any more**. Two
+  divergences were measured across their boundary and registered rather than forced: `MOR-1`
+  (compaction runs below Spark's `min-input-files` floor — a gap in the fork's position-delete
+  planner that its data-file planner does not have) and `MOR-2` (the merge-on-read writer is
+  partition-granularity where Spark defaults to per-file). **Read §3** for why the MOR-1 fix was
+  left in the fork instead of worked around in the CALL router.
+
 - [mw-1-lift-fence-ledger.md](mw-1-lift-fence-ledger.md) — **MW-1 (2026-08-21):** the
   maintenance fence comes down for every catalog policy, and `expire_snapshots` stops
   over-counting. The fork returns all content files in one funnel, so this engine reported

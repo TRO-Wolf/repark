@@ -29,7 +29,13 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `merge`, `call` (**MW-1:** the LOCAL-only fence is gone — both remote catalog policies
   execute, an unknown catalog still refuses, and expire pins Spark's six-column result with
   the content-file funnel split by manifest `content_type()`; the split pin strands its
-  position deletes by ROLLBACK, because compaction keeps them until MW-2), `ref_ddl`,
+  position deletes by ROLLBACK, because compaction keeps them until MW-2. **MW-2:**
+  `rewrite_position_delete_files` is wired and pinned against a live Spark 4.0.1 oracle —
+  8 delete files compact to 1 with the row set unchanged, nothing-to-do returns four zeros,
+  and `rewrite_data_files` grew Spark's fifth column. Two divergence pins ride along:
+  `call_mor1_…` holds the sub-`min-input-files` compaction and `call_mor2_…` holds the
+  partition-granularity writer, which is what makes the parity pin's comparison legitimate),
+  `ref_ddl`,
   `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
