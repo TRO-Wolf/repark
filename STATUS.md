@@ -204,6 +204,12 @@ history-rewrite; provenance and the options weighed:
     answer that is silently wrong on six edges.
   - **This campaign changes what a working query returns**, deliberately and for the first time
     since the port. That is the whole reason the LRS registered `RE-1` rather than fixing it.
+  - **One new divergence registered, not fixed:** `RE-3` — `regexp_substr` returns `''` for a
+    zero-width match where Spark returns NULL, on any text. It was split out of `RE-2`, which had
+    filed it under a surrogate-position heading it has nothing to do with. Found because a **draft
+    SEM-1 assertion read repark's own answer back as if it were Spark's** and was checked against
+    the oracle before the pin was committed — the exact failure `docs/testing.md` names, caught one
+    step before it would have been pinned as truth.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

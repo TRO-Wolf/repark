@@ -42,15 +42,31 @@ def test_re2_zero_width_matches_skip_the_mid_surrogate_position() -> None:
     assert _sql(f"SELECT regexp_extract_all('{ASTRAL}', 'b*', 0) AS r") == ["", "", "b", ""]
 
 
-def test_re2_substr_of_an_empty_pattern_on_astral_text_is_empty_not_null() -> None:
-    """Spark returns NULL here; repark returns the empty string. Same root cause as above."""
+def test_re3_substr_of_a_zero_width_match_is_empty_not_null() -> None:
+    """**Spark returns NULL for every zero-width match**, on any text; repark returns ``''``.
+
+    Split out of RE-2 on 2026-08-21 (SEM-5). It had been filed under a surrogate-position heading,
+    but plain ASCII shows the same difference, so the surrogate framing was wrong — the cause is
+    the empty match, not where it sits. The two controls below bound the row: a pattern that truly
+    does not match already returns NULL, and a non-empty match is already correct.
+    """
+    assert _sql("SELECT regexp_substr('ab', '') AS r") == ""
+    assert _sql("SELECT regexp_substr('a1b2', '[0-9]*') AS r") == ""
+    assert _sql("SELECT regexp_substr('ab', 'b*') AS r") == ""
     assert _sql(f"SELECT regexp_substr('{ASTRAL}', '') AS r") == ""
+    # Controls — already Spark's answers, and they are what keep the row narrow.
+    assert _sql("SELECT regexp_substr('ab', 'x') AS r") is None
+    assert _sql("SELECT regexp_substr('a1b2', '[0-9]+') AS r") == "1"
 
 
-def test_bmp_text_already_agrees_with_spark_everywhere() -> None:
-    """The bound on RE-2: both divergences are confined to supplementary-plane text. On BMP input
-    every one of these matches Spark exactly, which is why the row is narrow rather than a general
-    statement that repark's regex engine differs.
+def test_bmp_counting_and_collecting_already_agree_with_spark() -> None:
+    """The bound on RE-2 — and it is narrower than this file first claimed.
+
+    **Corrected 2026-08-21 (SEM-5).** This test's docstring used to read "both divergences are
+    confined to supplementary-plane text". That is true of the COUNT, which is what these
+    assertions cover, and false of ``regexp_substr``, which returns ``''`` for a zero-width match
+    on plain ASCII as well. The substr half is now its own row, RE-3, and the claim here is
+    restricted to what it actually tested.
     """
     assert _sql("SELECT regexp_count('ab', '') AS r") == 3
     assert _sql("SELECT regexp_extract_all('ab', '', 0) AS r") == ["", "", ""]

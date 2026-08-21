@@ -24,6 +24,14 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-5-substr-zero-width-ledger.md](sem-5-substr-zero-width-ledger.md) — **SEM-5
+  (2026-08-21):** registration only. `regexp_substr` returns `''` for a zero-width match where
+  Spark returns NULL — on plain ASCII, not just astral text — so it is split out of `RE-2` as its
+  own row `RE-3`, and the LRS-6 claim that both RE-2 divergences are confined to
+  supplementary-plane text is corrected. **Read this one for how it was found:** a draft SEM-1
+  assertion read repark's own answer back as if it were Spark's, and was caught one step before it
+  would have been pinned as truth.
+
 - [sem-3-string-idx-ledger.md](sem-3-string-idx-ledger.md) — **SEM-3 (2026-08-21):** the string
   `idx` regression closed by narrowing `lit_indices` to `{2}` rather than restoring `{1, 2}`.
   Records the shape worth remembering: F-FNP6A-1 removed a correct half along with an incorrect

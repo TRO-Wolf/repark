@@ -2082,7 +2082,11 @@ NOT in that file is a defect, not a decision.
 - `test_lrs6_regexp_divergences.py` — **LRS-6 (2026-08-20):** pins that CODIFY today's behavior
   for registry rows `RE-1` and `RE-2`, so the unit that fixes either turns its pin red on purpose.
   `RE-1` is the sweep's highest-value find: the two-argument `regexp_extract_all` returns group 0
-  where Spark returns group 1.
+  where Spark returns group 1. **SEM-1 (2026-08-21):** `RE-1` closed, so its two pins left this
+  file — `test_sem1_extract_all_group_default.py` owns those assertions now. **SEM-5
+  (2026-08-21):** the `regexp_substr` pin is now `RE-3`, its own row, measured on plain ASCII; the
+  BMP-bound test's claim that both RE-2 divergences are confined to supplementary-plane text was
+  false for the substr half and is corrected.
 
 - `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for the two registry rows the widened
   C-012 guard produced — `LOG-1` (the SQL door's `log` is base 10, Spark's is natural) and `UNIX-1`
