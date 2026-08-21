@@ -360,7 +360,7 @@ They are also hidden from `SHOW TABLES` and `information_schema` while staying a
 
 ## Maintenance
 
-Four procedures run through `CALL`, each returning Spark's full column list:
+Five procedures run through `CALL`, each returning Spark's full column list:
 
 ```python
 spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show()
@@ -433,6 +433,57 @@ spark.sql(
 `deleted_statistics_files_count`.) On a merge-on-read table the three-way split matters: the
 position-delete files are counted separately rather than folded into the data-file total.
 
+### Removing orphan files
+
+Files that no snapshot references — an aborted write, a crashed job — are invisible to Iceberg and
+cost storage forever. `remove_orphan_files` finds them.
+
+**It is the only procedure here that destroys data, so its defaults are not Spark's.**
+
+```python
+spark.sql(
+    "CALL local.system.remove_orphan_files("
+    "table => 'sales.orders', older_than => TIMESTAMP '2026-08-18 00:00:00')"
+).show()
+```
+
+```text
++-----------------------------------------------+
+| orphan_file_location                          |
++-----------------------------------------------+
+| s3://bucket/sales/orders/data/00003-abc.parquet|
++-----------------------------------------------+
+```
+
+That call **listed** those files. It did not delete them. Two differences from Spark, both
+deliberate, both registry rows:
+
+- **`older_than` is required**
+  ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
+  Spark defaults it to `now - 3 days`. Deleted files do not come back, so the cutoff is not
+  something to leave to a default.
+- **`dry_run` defaults to true**
+  ([ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-defaults-to-a-dry-run-spark-defaults-to-deleting)).
+  Spark's default deletes. Read the listing first, then arm it:
+
+```python
+spark.sql(
+    "CALL local.system.remove_orphan_files("
+    "table => 'sales.orders', older_than => TIMESTAMP '2026-08-18 00:00:00', "
+    "dry_run => false)"
+).show()
+```
+
+`dry_run` takes a boolean literal. A quoted `'false'` refuses rather than being read as false, so
+a typo cannot arm the deletion.
+
+One rule is **not** a repark invention: an `older_than` less than 24 hours in the past refuses,
+because a short interval can delete files an in-flight commit has written but not yet referenced.
+Apache Spark enforces the same floor for the same reason.
+
+If some files cannot be deleted, the call fails and says how many — it never reports a partial
+delete as a success.
+
 ### Maintenance on Glue and S3 Tables
 
 These procedures run against every catalog, including Glue and S3 Tables.
@@ -447,9 +498,9 @@ Anything else refuses and lists what is supported, rather than pretending:
 
 ```text
 UnsupportedOperationException: This feature is not implemented: CALL
-system.remove_orphan_files is not supported — do not hand-roll orphan file listing in RePark …
-Supported procedures: expire_snapshots, rewrite_data_files,
-rewrite_position_delete_files, rollback_to_snapshot.
+system.rewrite_manifests is not supported. Supported procedures: expire_snapshots,
+remove_orphan_files, rewrite_data_files, rewrite_position_delete_files,
+rollback_to_snapshot.
 ```
 
 ## Listing what is there

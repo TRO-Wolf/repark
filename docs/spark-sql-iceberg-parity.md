@@ -1622,6 +1622,46 @@ the pin rather than obeying it.
   shape, the ratchet move it forces, and the adjacent missing `F.log` overload) is
   [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
 
+### ORPHAN-1 — `remove_orphan_files` requires `older_than`; Spark defaults it
+
+- **repark** — `CALL <catalog>.system.remove_orphan_files(table => …)` with no `older_than`
+  **refuses** at plan time and names the argument. Nothing is listed and nothing is deleted.
+- **Apache Spark** — runs, defaulting `older_than` to `now - 3 days`, and **deletes** the orphans
+  it finds. Measured: two planted orphans aged ten days were listed and removed from disk by a
+  bare `CALL … remove_orphan_files(table => 't')`.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0. The pinned 4.1.2 oracle cannot execute
+  Iceberg maintenance procedures: `DataSourceV2Relation.create` changed signature between Spark
+  4.0 and 4.1, so the shipping jar dies with `NoSuchMethodError`.)*
+- **Pin** — `crates/repark-spark/src/tests/call.rs::call_orphan1_requires_an_explicit_older_than`
+  and `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_requires_an_explicit_older_than`
+- **Rationale** — DECLARED, and deliberately stricter than Spark (owner decision OD-2). This is
+  the only procedure on the surface that destroys data with no rollback: a bad compaction is
+  compacted again, deleted files are gone. A defaulted cutoff makes the single most dangerous
+  argument the one the caller never typed, and the default is not conservative — three days is
+  short enough to catch a long-running write. The refusal costs a migrating job one argument and
+  is the cheapest possible place to spend that. **Not to be confused with the 24-hour floor**,
+  which repark also enforces and which is *parity* with Spark, not a stricter posture.
+
+### ORPHAN-2 — `remove_orphan_files` defaults to a dry run; Spark defaults to deleting
+
+- **repark** — `dry_run` defaults to **true**. The default call LISTS every orphan and removes
+  nothing; deleting requires `dry_run => false` explicitly. `dry_run` accepts a boolean literal
+  only — a quoted `'false'` refuses rather than being coerced, so a typo cannot arm the deletion.
+- **Apache Spark** — `dry_run` defaults to **false**: the default call deletes. Measured on the
+  same fixture — the bare call left three data files where five had been; `dry_run => true`
+  returned the same two rows and left all five in place.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as ORPHAN-1.)*
+- **Pin** — `crates/repark-spark/src/tests/call.rs::call_remove_orphan_files_dry_run_lists_without_deleting`,
+  `::call_remove_orphan_files_armed_deletes_orphans_and_nothing_else`,
+  `::call_remove_orphan_files_refuses_a_quoted_dry_run`, and
+  `python/repark/tests/test_maintenance_call.py::test_remove_orphan_files_dry_run_is_the_default`
+- **Rationale** — DECLARED, deliberately stricter than Spark (owner decision OD-2). The **result
+  shape is identical either way** — one row per orphan, `orphan_file_location`, exactly Spark's
+  schema — so the dry run is not a second surface bolted on beside the real one; it is Spark's own
+  result with the deletion withheld. A caller who reads the listing and re-runs with
+  `dry_run => false` gets Spark's behaviour exactly. What changes is which of the two a caller
+  gets by typing nothing, and on an unrecoverable operation that default should be the safe one.
+
 ### MOR-1 — `rewrite_position_delete_files` compacts below Spark's `min-input-files` floor
 
 - **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` compacts any

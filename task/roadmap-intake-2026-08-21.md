@@ -325,6 +325,37 @@ reasoning, but it is a drop-in break: a Glue job calling this on a v3 table gets
 Spark gave it a useless success. Reversible in one line if you would rather match Spark. See
 `B-MOR-3`.
 
+### A13. The shared CTAS fallback root — **surfaced by MW-3, 2026-08-21**
+
+`register_memory_catalog(name, warehouse)` accepts a warehouse and, for a namespace created
+without a `location` property, does not write there. Tables land at
+`<std::env::temp_dir()>/repark_ctas/<catalog>/<namespace>/<table>` via the E-4 fallback
+(`ctas.rs::resolve_create_location`). Reproduced outside the test harness: the supplied warehouse
+stayed **empty** while both CTAS and `CREATE` + `INSERT` wrote to the shared root.
+
+This is the documented fallback, not a defect, and it is not being called one here. Three
+consequences are worth a decision rather than a shrug:
+
+1. **The path is keyed by names alone.** Nothing process-specific is in it, so two independent
+   sessions using `mem.ns.events` share one directory on the machine. In this repo's own test
+   tree that directory had grown to **2.7 GB** across 100+ table names, and one table's directory
+   held 139,179 files.
+2. **A warehouse argument that is silently ignored is a surprising API.** The caller passed a
+   path; nothing tells them it was not used. The `RequireExplicitLocation` error message already
+   coaches callers to create the namespace with a location "so RePark writes to the intended
+   warehouse instead of a temporary directory" — the local catalog just never says it.
+3. **It is the one place a maintenance procedure can destroy another session's data.** MW-3's
+   `remove_orphan_files` now REFUSES a table under that root, because orphan removal subtracts one
+   table's reachable set from a directory listing and in a shared directory another session's live
+   files look exactly like orphans. That guard is a fence around the symptom.
+
+**Options, none of them scoped yet:** default the fallback under the supplied warehouse rather than
+the process temp dir; make the fallback per-session (a run id in the path); warn once when the
+fallback fires; or leave it and keep the MW-3 fence. The first is the smallest change that removes
+the sharing, and it also makes the warehouse argument mean what it appears to mean.
+
+Write-path work, so deliberately outside the MW campaign.
+
 ### A11. Strategy horizon (context for the owner only — NOT for the public repo)
 
 An enterprise-platform strategy memo and a competitive analysis exist as owner-side documents
