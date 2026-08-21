@@ -545,6 +545,25 @@ them, and the document is ordered by surface, never by date.
 
 ---
 
+### RAND-1 — `randstr` refuses a length Spark accepts
+
+- **repark** — `randstr(n, seed)` refuses `n` above **1,000,000** with a catchable
+  `randstr length must be between 0 and 1000000, got …`, and refuses a request whose
+  `length x batch rows` would exceed `i32::MAX` bytes with
+  `randstr would build … characters x … rows, past the … byte limit of a string column`.
+- **Apache Spark** — has no cap. `SELECT length(randstr(5000000, 1))` returns **5000000**.
+  *(oracle: live — PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_lrs3_registered_divergences.py::test_randstr_refuses_a_length_spark_accepts`
+  and `::test_randstr_refuses_a_batch_that_would_overflow_string_offsets`
+- **Rationale** — DECLARED, as a **safety limit rather than a parity claim**, which is why it needs
+  a row: nothing else says it is deliberate. The failure mode without the per-row cap is not an
+  error at all — `String::with_capacity(n)` per row aborts the process on a large constant, SIGABRT
+  with no traceback and the session lost, where every other refusal in that module is catchable
+  (F-CFS-1). The batch bound was added for the same reason at a different scale: a *legal* length
+  times a large batch overflows the i32 offsets of an Arrow `StringArray` and panics inside
+  arrow-rs. That panic is caught at the PyO3 boundary rather than aborting, but a caught panic is
+  not a contract (round 2 F-R3-9). Raising either bound is a decision, not a bug fix.
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
@@ -1531,6 +1550,27 @@ the pin rather than obeying it.
   evaluation; ABSENCE IS LOUD) and A10 (parse-altitude refuse on `spark_ast.rs` + repark-sql
   guard sites; G3-E8 lesson). Keep this row until collation is implemented or the product
   permanently documents absence without a silent path.
+
+### BL-8 — SQL-door count-like aggregates return `UInt64`
+
+- **repark** — the **facade** casts a count-like aggregate to signed `bigint`
+  (`df.agg(F.regr_count("y", "x"))` → `int64`, `F.approx_count_distinct` likewise), taken from the
+  aggregate's own declared return type rather than a name list. The **SQL door** does not:
+  `SELECT regr_count(y, x)` and `SELECT approx_distinct(g)` hand back Arrow `UInt64`. So the two
+  doors reach the same kernel and disagree on the result type.
+- **Apache Spark** — `bigint` on both, and Spark has no unsigned type at all.
+  *(oracle: live — PySpark 4.1.2: `regr_count` → `struct<r:bigint>`,
+  `approx_count_distinct` → `struct<r:bigint>`.)*
+- **Pin** — `python/repark/tests/test_fnp5_aggregates.py::test_regression_aggregates_agree_with_the_sql_door`,
+  whose `DOOR_RETURNS_UNSIGNED` set is a **ratchet**: the pin asserts the door still returns
+  unsigned, so closing this row turns it RED on purpose.
+- **Rationale** — BACKLOG, split deliberately. The facade is the surface the parity campaign is
+  about and it is now correct; correcting the door means moving the cast into the shared analyzer
+  layer, where the rewrite must be idempotent across re-analysis and must not rename an `Aggregate`
+  node's output field that a parent `Projection` refers to by name. That is an engine-semantics
+  unit. Recorded rather than left as a STATUS promise, because a `UInt64` column written to
+  Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
+  the gap is on disk, not just in a schema string.
 
 ### Surfaced, awaiting pins — not yet rows
 

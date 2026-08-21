@@ -45,6 +45,12 @@ not this directory.
   over-fire. The first version of the fix would have made five ordering-requiring functions answer
   where Spark refuses; the oracle caught it, and the split is now read off the function's kind
   rather than a name list.
+- [lrs-3-registered-divergences-ledger.md](lrs-3-registered-divergences-ledger.md) — **LRS-3
+  (2026-08-20):** two of the parity branch's "registry row handed forward" promises became actual
+  rows with pins (`RAND-1`, `BL-8`), and their descriptions left STATUS so nothing is stated twice.
+  Also: `randstr` refuses a batch that would overflow Arrow's i32 string offsets instead of
+  panicking, and the SQL door learned Spark's own `approx_count_distinct` spelling — a gap no test
+  could see, because the facade never went through the door for that name.
 - [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
   `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
   three new `map.md` files, which were written rather than waived.

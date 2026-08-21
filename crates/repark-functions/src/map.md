@@ -366,6 +366,14 @@ one module disagreed on plain ASCII. `random.rs` bounds a `randstr` length liter
 without a cap the failure was not an error at all but a process abort (SIGABRT, no traceback),
 while every other refusal here is catchable.
 
+**LRS-3 (2026-08-20).** `random.rs` bounds `randstr` a second time, by TOTAL size: the per-row cap
+let a legal length times a large batch overflow the i32 offsets of an Arrow `StringArray` and panic
+inside arrow-rs — caught at the PyO3 boundary rather than aborting, but a caught panic is not a
+contract. Both bounds are now registry row `RAND-1` in
+[../../docs/spark-sql-iceberg-parity.md](../../docs/spark-sql-iceberg-parity.md), because they are a
+deliberate safety limit and Spark has no cap at all. `aggregate.rs` also registers
+`approx_distinct` under Spark's `approx_count_distinct` spelling, which the SQL door did not know.
+
 ## Pointers
 
 - Up: [../map.md](../map.md)

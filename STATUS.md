@@ -211,21 +211,16 @@ history-rewrite; provenance and the options weighed:
      FNP-13 (collation / G15 retirement); FNP-14 (crypto — needs a new cipher dependency for four
      names); FNP-4b (the Spark-door dialect — blocked on making the engine's own generated SQL
      dialect-independent, which is a write-path change).
-  8. **FNP-Z — close-out:** `__all__` completion, census re-run, STATUS truth-up, the `#[path]`
-     conversion, the dispatch-table module split, and the registry rows handed forward by
-     FNP-3 (`arrays_zip`, `json_tuple`), FNP-6a (the empty-pattern collector still disagrees with
-     `regexp_count` on astral text, and both diverge from Java's `Matcher` — round 2 F-R3-4),
-     FNP-6b (the 1,000,000-character `randstr` cap is a safety limit, not a Spark parity claim)
-     and FNP-6c (the UTF-8 value-representation difference). The FNP-5 unsigned-count row is
-     **closed at the facade**, not forwarded: the cast is now taken from the aggregate's own
-     declared return type, which covers `regr_count` as well as `approx_count_distinct`. What it
-     does NOT cover is the SQL door — `SELECT regr_count(...)` and `SELECT approx_distinct(...)`
-     still hand back `UInt64`, so the two doors now differ in type on those two names. Correcting
-     the door means moving the cast into the shared analyzer layer, which is an engine-semantics
-     unit rather than a facade one; the divergence is pinned as a ratchet in
-     `test_fnp5_aggregates.py` so fixing the door goes red rather than unnoticed. The SQL door
-     also does not know the name `approx_count_distinct` at all (only DataFusion's
-     `approx_distinct`), which is a separate registration gap.
+  8. **FNP-Z — close-out:** `__all__` completion, census re-run, STATUS truth-up, the
+     dispatch-table module split, and the registry rows handed forward by FNP-3 (`arrays_zip`,
+     `json_tuple`) and FNP-6c (the UTF-8 value-representation difference). The `#[path]` conversion
+     is **done** (LRS-5); FNP-6a's empty-pattern residual is decided and scheduled as LRS-6; the
+     `randstr` cap is disposed of as registry row
+     [RAND-1](docs/spark-sql-iceberg-parity.md#rand-1--randstr-refuses-a-length-spark-accepts). The FNP-5 unsigned-count row is
+     **closed at the facade** and the door half is disposed of as registry row
+     [BL-8](docs/spark-sql-iceberg-parity.md#bl-8--sql-door-count-like-aggregates-return-uint64),
+     which is where its semantics now live. The `approx_count_distinct` door-name gap is
+     **closed** (LRS-3).
 
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);

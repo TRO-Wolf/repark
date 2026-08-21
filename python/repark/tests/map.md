@@ -2055,6 +2055,11 @@ NOT in that file is a defect, not a decision.
   pin guards the interaction with the round-2 unsigned-count CAST, which `over` peels and re-applies
   around the code this unit changed.
 
+- `test_lrs3_registered_divergences.py` — **LRS-3 (2026-08-20):** the pins that let registry rows
+  `RAND-1` and `BL-8` land (§6: a row lands with its pin or it does not land), plus the SQL door's
+  new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
+  unsigned, so closing the row reds it on purpose.
+
 ## I want to...
 
 | ...do this | go to |
