@@ -166,6 +166,16 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     `make check-rust-file-size` (in the `make ci` chain) + the ci.yml `guards` job, and in both
     pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`). Prose points at the
     script; ceilings are never restated here.
+  - *Python conventions* (`scripts/check_python_conventions.py` — the SSOT for the two Python
+    rules Ruff cannot express: the **nested-`def` ban**, with an inline `# nested-def: <reason>`
+    pragma for the three sanctioned cases and a per-file ceiling table that **ratchets DOWN only**,
+    and the **`dataclasses`/`attrs` ban**, with an exceptions table and no inline pragma on
+    purpose) is **armed** since PYC over `python/repark/src`, `python/repark-parity` and
+    `scripts/`, dual-wired `make check-python-conventions` (in the `make ci` chain) + ci.yml's
+    `python` job, and in both pre-commit paths. The other two Python rules are held elsewhere and
+    are deliberately not duplicated: type coverage is Ruff's `ANN` rule set, naming is a review
+    duty. Prose points at the script; the tables are never restated here. Rationale and the
+    method for arming a convention: [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md).
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
     inventory, phase, canonical gate commands and documentation index are machine-readable and
     validated against the workspace, the Makefile, STATUS.md, the declared documents and the
@@ -189,8 +199,10 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   layout cannot work.
 - **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
-- **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;
-  `logging`; f-strings; never bare `except`; Ruff `line-length=100`.
+- **Python:** type hints on every parameter, every return and every public attribute; Pydantic v2
+  `BaseModel` for all structured data, never `dataclasses` or `attrs`; define functions at module
+  or class level rather than nested inside another function; name a function for the work it does,
+  as a verb phrase; `pathlib`; `logging`; f-strings; never bare `except`; Ruff `line-length=100`.
 - **Spell things out** — no casual abbreviations (`config` not `cfg`, `index` not `idx`).
 - **Tier-2 CI (live AWS) never runs against unmerged code**; nightly on `main` + manual dispatch via
   OIDC only. No self-hosted runners in any tier. No secrets in tier-1 workflows.

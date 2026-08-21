@@ -66,3 +66,8 @@ repos:
         entry: scripts/check_lib_py.sh
         language: script
         pass_filenames: false
+      - id: python-conventions-guard
+        name: Python conventions guard (nested def + Pydantic)
+        entry: scripts/check_python_conventions.sh
+        language: script
+        pass_filenames: false

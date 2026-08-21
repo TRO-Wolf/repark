@@ -300,7 +300,7 @@ Whenever you feel the pull to abbreviate, write the full name first, then ask: "
 ### Verification commands (canonical — referenced by §4 and the Pre-Flight checklist)
 
 - **Rust:** `make verify` runs the gate; the underlying commands are `cargo check` · `cargo clippy --all-targets --workspace -- -D warnings` · `cargo fmt --check` · `cargo test --workspace` (**never** `--all-features` — the PyO3 cdylib test binary breaks under it; see [AGENTS.md](../../AGENTS.md)). Workspace lints in [Cargo.toml](../../Cargo.toml) `[workspace.lints]`; formatter in [rustfmt.toml](../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
-- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`. Ruff config in repo-root [pyproject.toml](../../pyproject.toml) `[tool.ruff]`; line length 100.
+- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`, plus `make check-python-conventions` for the two rules Ruff cannot express (nested `def`; `dataclasses`/`attrs`). Ruff config in repo-root [pyproject.toml](../../pyproject.toml) `[tool.ruff]`; line length 100. Both are in the `make ci` chain — the conventions guard is the SSOT for its own tables, and the reasoning behind the rules lives in [../../skills/code-quality/SKILL.md](../../skills/code-quality/SKILL.md).
 
 ### Rust
 
@@ -365,12 +365,21 @@ DO NOT: `.unwrap()`, `.unwrap_err()`, or `.expect(...)` in any production path �
 
 ### Python
 
-- Type hints on every function signature and every public attribute.
+- **Type everything.** Every parameter, every return, every public attribute and every module-level constant carries an annotation. An untyped signature is not a shortcut; it is a hole in the contract Ruff's `ANN` rules exist to close.
 - Use `pydantic` v2 `BaseModel` for ALL structured data — configs, API payloads, internal records, value objects, function arguments that group fields, anything that holds named fields together.
 - Do NOT use `dataclasses` or `attrs`. Pydantic is the single standard data container in this codebase; it provides validation, serialization, JSON schema generation, and `.model_dump()` / `.model_validate()` round-tripping in addition to plain data-holding.
 - For immutability, set `model_config = ConfigDict(frozen=True)` on the model rather than reaching for a frozen dataclass.
 - Make illegal states unrepresentable: prefer `Literal` types and discriminated Pydantic models over free strings and parallel booleans, and `model_validate(...)` untrusted input at the boundary so the typed model is trusted everywhere inside (§9, Risk-First).
 - Use `polars` for DataFrame work by default; `pandas` only when an external library forces it.
+- **Do not nest function definitions.** A `def` inside another `def` is invisible to tests, to
+  imports and to the reader scanning the module for what it contains, and it is re-created on every
+  call. Lift it to module or class level and pass what it needs as arguments. The exceptions are
+  narrow and each needs a reason on the line: a decorator that must close over its own arguments, a
+  callback whose closure over local state is the point, and `functools.wraps` wrappers.
+- **Name a function for the work it does**, as a verb phrase a reader can check against the body:
+  `resolve_partition_spec`, not `handle` / `process` / `do_work` / `helper` / `_inner`. A name that
+  would fit any function in the module is not a name. See "Naming Conventions" above; it binds
+  Python as much as Rust.
 - Prefer `pathlib.Path` over string paths.
 - Use `logging` (not `print`) for any code that runs in production.
 - Use f-strings; never `%` formatting or old `.format()` style.

@@ -17,8 +17,9 @@ files than specified, **stop and hand back** to the orchestrating session rather
   you change/add tests; if you cannot, hand back.
 - **`map.md` in every touched directory, same change.**
 - **House style:** Rust 91-`=` banners + one blank line between items, `max_width=100`, clippy
-  `-D warnings`, no `unsafe` outside `crates/repark-python`, no panics in prod (no `unwrap`/`expect`). Python: type hints,
-  `logging`, f-strings, no bare `except`, Ruff `line-length=100`.
+  `-D warnings`, no `unsafe` outside `crates/repark-python`, no panics in prod (no `unwrap`/`expect`). Python: type hints on
+  everything, Pydantic v2 `BaseModel` not `dataclasses`, no nested `def`, verb-phrase function
+  names, `logging`, f-strings, no bare `except`, Ruff `line-length=100`.
 - **Verify before done:** `make verify` (or at minimum the gate for the file type you changed). Test
   with `cargo test --workspace`, never `--all-features` (see [AGENTS.md](../../AGENTS.md)).
 

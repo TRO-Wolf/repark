@@ -161,6 +161,55 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
+**The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
+(rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
+
+- **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **next work
+  group, not yet started**). Four Python rules the owner stated, now written into the contract:
+  types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
+  defined inside another function; functions named as verb phrases for the work they do. The rules
+  themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
+  [docs/skills/](docs/skills/map.md); the conformance work is what remains.
+  - **Measured debt (AST scan of the tree at this commit, not an estimate):**
+    - *Types.* The shipped package is already clean — 2,170 functions, **zero** missing a return
+      annotation, because Ruff's `ANN` rules are selected in [pyproject.toml](pyproject.toml) and
+      gate CI. `python/repark-parity` has **10** unannotated returns; `scripts/` has zero.
+    - *Pydantic.* **3** files under the shipped package and `scripts/` still use `dataclasses`
+      (`spark/merge.py`, `spark/_csv_smart.py`, `check_parity_live_dual_wire.py`); **20** files
+      under `python/repark-parity` do.
+    - *Nested functions.* **66** nested `def`s in 21 files. Two files carry more than half of them:
+      `spark/dataframe/core.py` (23) and `spark/dataframe/plan_collapse.py` (12).
+    - *Names.* Not machine-countable; it rides along with whatever the other three touch.
+  - **The guard is armed** (owner ruled 2026-08-21). Ruff has no check for a nested `def` and none
+    for "Pydantic rather than `dataclass`", so those two rules now live in
+    `scripts/check_python_conventions.py`, dual-wired `make check-python-conventions` (in the
+    `make ci` chain) + ci.yml's `python` job, and in both pre-commit paths. The measured debt above
+    is seeded into its two EXCEPTIONS tables, so the tree is green today and **cannot get worse**:
+    a new nested `def` or a new `dataclass` import is red on the commit that writes it. PYC is now
+    the burn-down of those tables rather than a rule nobody can enforce. The other two rules stay
+    where they already work — Ruff `ANN` for types, review for naming.
+  - **The nested-`def` rule ships with an inline pragma**, `# nested-def: <reason>`, for the three
+    cases the contract sanctions: a decorator closing over its own arguments, a callback whose
+    closure over local state is the point, and a `functools.wraps` wrapper. An empty reason does
+    not pass. Several seeded rows are expected to end as pragmas rather than as lifts — the signal
+    handlers in the two bench runners, the `udtf` decorator's builder, and the per-type verifier in
+    `types.py`, whose returned closure IS the function's product.
+  - **Sequenced** in [briefs/next-sequence.md](briefs/next-sequence.md) as PYC-1 (the two
+    DataFrame modules, 35 of the 66 nested defs), PYC-2 (the remaining 14 shipped, several of which
+    should end as pragmas rather than lifts), PYC-3 (the two shipped `dataclass` containers, where
+    the added-validation hazard is real because `merge.py`'s records come from a public builder
+    API), PYC-4 (the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores), and
+    PYC-5 (close, including re-measuring the guard's hook cost against its budget).
+  - **Rationale and the arming method are a portable skill**,
+    [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md): each rule with the failure it
+    prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
+    arming a convention against a codebase that already violates it.
+  - **The risk this unit carries is that it is a pure refactor of working code.** The facade has
+    3,639 passing tests and none of them are about where a `def` sits. Lifting a closure changes
+    what it can see; converting a `dataclass` to a `BaseModel` adds validation that was not running
+    before and can reject input the old container accepted. The invariant to hold is the LRS one:
+    no query that worked before returns a different value.
+
 - **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
   eleven commits, **merged as [#191](https://github.com/TRO-Wolf/repark/pull/191)** / `8c660f6`).
   Chartered off `feat/spark-function-parity` @ `8a28057`; rebased onto `main` on 2026-08-21 when

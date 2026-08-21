@@ -27,6 +27,7 @@ named component limitation in
 | Read the full engineering contract for a session | [Opus.md](Opus.md) |
 | Brief a delegated implementation agent (Sonnet tier) | [Sonnet.md](Sonnet.md) |
 | Brief a narrow/mechanical agent (Haiku tier) | [Haiku.md](Haiku.md) |
+| Look up the Python conventions (types, Pydantic, no nested `def`, naming) | [Opus.md](Opus.md) "Python" — the rule of record is [../../AGENTS.md](../../AGENTS.md) "Python" |
 | Apply the trait-wrapping both-sides audit | [../../AGENTS.md](../../AGENTS.md) "Version-pin contract" (see above) |
 
 ## Pointers
