@@ -18,9 +18,11 @@ not this directory.
   one per merge and never reclaim them, costing **2.1x on scan while the answer stays 1,000
   rows**. Procedure result schemas measured before any pin exists — two executed on a live
   oracle, two read from the shipping Iceberg jar's own constant because a Spark 4.0-to-4.1 binary
-  break stops them executing. Gate **RULED**: the fence lifts for BOTH remote catalog policies,
-  which moves a hazard rather than removing it (C-210). **Read §5 for the two claims that changed
-  under re-verification**, including an "undeclared divergence" that turned out to be declared.
+  break stops them executing. Gate **RULED**, no open clauses: the fence lifts for BOTH remote
+  catalog policies. **Read §5 for the three claims that changed under re-verification** — an
+  "undeclared divergence" that turned out to be declared, and a hazard this orchestrator
+  overstated from a secondhand citation, which shrank MW-1 from building a mitigation to
+  documenting a failure mode.
 
 - [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake
   (2026-08-21):** every campaign brief, queue, and grant that had existed only in planning space,

@@ -6,11 +6,11 @@ Charter and approval gate: [../task/mw-0-charter-ledger.md](../task/mw-0-charter
 
 ## The one invariant
 
-**No refusal becomes silent.** This campaign's whole subject is loud refusals that are being
-lifted or replaced. Every one of them either stays refused with its text pinned, or is replaced
-by something equally visible at the point of use — a documented condition, a dry-run default, a
-declared registry row. A refusal that quietly becomes an unremarked risk is the failure mode this
-slate exists to prevent, and it is worse than either keeping the fence or lifting it openly.
+**No refusal becomes silent.** This campaign's subject is loud refusals that are being lifted or
+replaced. Each one either stays refused with its text pinned, or is replaced by something equally
+visible at the point of use: a documented failure mode, a dry-run default, a declared registry
+row. Removing a refusal is fine. Removing it and leaving nothing in its place is not, because the
+condition the refusal described does not go away when the message does.
 
 ## Per-unit contract
 
@@ -62,9 +62,12 @@ MW-0 → MW-1 → MW-2 → MW-3 → MW-4 → MW-5, and the order is load-bearing
 
 ## Unit notes that are easy to get wrong
 
-- **MW-1 must not lift-and-say-nothing.** The owner ruled the fence lifts for *both* catalog
-  policies. That moves the service-side-maintenance race from "fenced off" to "must be handled",
-  and MW-1 owns choosing the replacement mitigation. See design §6.
+- **MW-1's obligation is documentation, not machinery.** The owner ruled the fence lifts for
+  *both* catalog policies. What the fence guarded against turns out to be a commit conflict the
+  fork's own `validate_data_files_exist` already catches, so the commit fails loudly and the table
+  is not damaged. MW-1 has to say so — in the guide and on the procedure surface — because an
+  operator whose maintenance command fails for a reason unrelated to their command has no way to
+  tell routine from broken. See design §6.
 - **MW-1 carries a nullability fix.** Spark declares `expire_snapshots`'s result columns nullable;
   the engine pins them non-nullable. The other two procedures agree with Spark. Fix or register —
   do not leave it unremarked a second time.

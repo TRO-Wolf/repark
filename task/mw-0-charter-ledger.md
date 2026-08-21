@@ -92,6 +92,13 @@ Recorded because the campaign's own discipline is that measured beats inherited:
 2. **The evaluations disagreed about the fence's nature.** Reading the execute paths settled it:
    nothing downstream of `refuse_non_local_catalog` assumes a local filesystem. The fence is pure
    policy, which is what makes MW-1 small.
+3. **The service-side-maintenance race was overstated, by this orchestrator, from a secondhand
+   citation.** The recommendation to keep the service-managed catalog fenced rested on a hazard
+   whose primary source had not been read. The fork's engine contract §8 describes a **commit
+   conflict**, not corruption: `validate_data_files_exist` trips and the commit fails. The
+   validation is implemented fork-side. The owner's ruling to lift for both was therefore better
+   supported than the recommendation against it, and MW-1 shrinks from "build a mitigation" to
+   "document a failure mode".
 
 ## Propositions
 
@@ -106,11 +113,12 @@ Recorded because the campaign's own discipline is that measured beats inherited:
 | C-207 | **The existing result-schema divergences are decided, not defective.** | PROVEN | §4 — both disclosed in `call.rs` doc tables with reasoning consistent with the module's never-fabricate rule. The deliverable is registry rows, not fixes. |
 | C-208 | **The campaign changes no query's answer.** | PROVEN | Every unit adds or unfences a maintenance procedure. No kernel, no planner, no type. The one behavioral change to an existing surface is `expire_snapshots`'s result nullability (§4), which is metadata, not a value. |
 | C-209 | **No forbidden surface.** | PROVEN | MW-0 touches three new documents and two maps. No AWS credential or environment, no `Cargo.toml [patch]`, no `.github/` change, no lockfile edit. MW-4 needs an IAM change that **the owner executes** (OD-3) — the campaign never touches IAM itself. |
-| C-210 | **The lifted fence's hazard has an owner and a deadline.** | OPEN | The owner ruled the fence lifts for both catalog policies, which moves the service-side-maintenance race from "fenced off" to "must be handled". MW-1 owns choosing the replacement mitigation; the slate forbids lifting silently. Provable only when MW-1 fixes the mitigation's shape, which is its first step. |
+| C-210 | **The lifted fence exposes a conflict, not a corruption.** | PROVEN | Fork engine contract §8, read directly: service-side compaction on S3 Tables commits concurrently, so `CommitFailed` requirement mismatches are routine and `validate_data_files_exist` trips when the service rewrites a file an in-flight position delete references. That validation is implemented fork-side (`transaction/row_delta.rs`). The commit fails loudly; the table is not damaged. MW-1's obligation is to document the failure mode, not to build a mitigation. |
 
-**OPEN clauses: C-210.** It does not hold the gate — it is the first decision inside MW-1, not a
-precondition for starting — but it is recorded here so the ruling's consequence is not
-rediscovered at review time.
+**OPEN clauses: none.** C-210 was drafted OPEN, on the assumption that lifting the fence left a
+hazard needing a replacement mitigation. Reading the fork's engine contract closed it: the
+hazard is a commit conflict that Iceberg's own validation already catches. §5.3 records the
+correction.
 
 ## APPROVAL_GATE
 
@@ -121,7 +129,7 @@ rediscovered at review time.
 
 | ID | Decision | Ruling |
 |---|---|---|
-| OD-1 | Lift the maintenance fence for the service-managed catalog too, or the explicit-location catalog only? | **Lift for BOTH.** This overrides the recommendation to keep the service-managed catalog fenced. The hazard it was fencing does not disappear — MW-1 must handle it explicitly rather than avoid it (design §6). |
+| OD-1 | Lift the maintenance fence for the service-managed catalog too, or the explicit-location catalog only? | **Lift for BOTH.** This overrides the recommendation to keep the service-managed catalog fenced. On re-verification the recommendation was the weaker position: what the fence guarded against is a commit conflict the fork already catches, not corruption (§5.3, design §6). MW-1 documents the failure mode. |
 | OD-2 | Orphan-files safety posture: dry-run default plus a minimum `older_than` floor. | **Adopt both**, and declare the divergence from Spark's more dangerous default as a registry row. |
 | OD-3 | Extend the tier-2 acceptance role with scoped delete on the scratch prefix. | **Yes**, owner executes. Gates MW-4 and no other unit. |
 | OD-4 | Campaign green-light and priority against the standing queue. | **Green-lit, start immediately.** |
@@ -132,8 +140,10 @@ The three questions this gate is read against:
 1. **Is the change authorized?** Yes, and broader than recommended: both catalog policies, not
    one. Recorded as an override rather than a concurrence, so the reasoning behind the narrower
    recommendation stays legible if it is ever revisited.
-2. **Does anything become silently riskier?** One thing would, and the slate's single invariant
-   exists to stop it: lifting the fence without replacing the mitigation. C-210 tracks it.
+2. **Does anything become silently riskier?** No. The concern that produced the narrower
+   recommendation was a service-side-maintenance race, and the fork's validation already fails
+   that commit loudly rather than corrupting the table (C-210). What remains is a failure mode an
+   operator could find confusing, which the slate requires MW-1 to document.
 3. **Is the destructive unit adequately fenced?** MW-3 inverts the usual defaults — required
    `older_than`, enforced floor, dry-run default, and a fixture that proves the armed run deletes
    the orphans *and provably not one live file*. The stricter-than-Spark posture is declared, not
@@ -144,7 +154,7 @@ The three questions this gate is read against:
 | Unit | Scope | State |
 |---|---|---|
 | **MW-0** | Charter, design, slate, measured floor, procedure schemas | **This commit** |
-| **MW-1** | Lift the fence on the three existing procedures, both catalog policies; the nullability item; the hazard mitigation | Queued |
+| **MW-1** | Lift the fence on the three existing procedures, both catalog policies; the nullability item; document the service-side conflict failure mode | Queued |
 | **MW-2** | Wire `rewrite_position_delete_files` | Queued |
 | **MW-3** | Wire `remove_orphan_files`, dry-run default, floor, registry row | Queued |
 | **MW-4** | MOR leg in the tier-2 AWS acceptance | Queued behind OD-3 |

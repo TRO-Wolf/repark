@@ -122,23 +122,37 @@ One item is genuinely undisclosed, found while measuring: **Spark declares `expi
 result columns nullable; the engine pins them non-nullable.** For the other two procedures Spark
 pins non-nullable and the engine agrees. Small, and real. MW-1 fixes or registers it.
 
-## 6. The hazard the owner's ruling moved rather than removed
+## 6. What the lifted fence actually exposes
 
 The intake recommended keeping the service-managed catalog fenced. **The owner ruled on
 2026-08-21 to lift for both**, on the grounds that the service-managed surface is arguably the
-more important of the two. That ruling stands and this campaign implements it.
+more important of the two. This campaign implements that ruling.
 
-It does not make the hazard go away, so the campaign has to carry it explicitly. The
-service-managed catalog runs its own compaction and expiry, and service-side maintenance racing
-an in-flight engine position-delete is a named hazard class in the fork's engine contract. Under
-the previous recommendation the fence *was* the mitigation. With the fence lifted, the mitigation
-has to be something else, and MW-1 owns choosing it: at minimum a loud, documented operational
-condition at the point of use; at most a refusal narrowed to the genuinely racy window rather
-than the whole catalog.
+The recommendation to keep the fence was made without reading the primary source. Having read
+it, the fork's engine contract §8 says this:
 
-**What MW-1 may not do is lift the fence and say nothing.** That would convert a deliberate,
-visible refusal into an invisible risk, which is the one outcome worse than either the fence or a
-documented lift.
+> S3 Tables runs **service-side maintenance** (compaction, snapshot expiry) that commits
+> concurrently with the engine — treat `CommitFailed` requirement mismatches as routine there,
+> and expect `validate_data_files_exist` trips when service compaction rewrites files referenced
+> by in-flight position deletes.
+
+**That is a commit-conflict hazard, not a corruption hazard**, and the difference decides how much
+MW-1 has to build. `validate_data_files_exist` lives in the fork's `row_delta` transaction path
+and is already implemented. When the service rewrites a file that an in-flight position delete
+refers to, the validation trips and the commit fails. The failure is loud, and the table is not
+damaged. Iceberg's optimistic concurrency is doing exactly the job it exists to do.
+
+So the fork already handles the unsafe part. What the fence was actually buying was not safety
+but the absence of a confusing failure mode: an operator running maintenance against S3 Tables
+can see a commit fail for a reason that has nothing to do with their command.
+
+**MW-1's obligation is therefore documentation, not machinery.** The procedure surface and the
+guide have to say that maintenance against a service-managed catalog can fail on a conflict, that
+this is routine rather than a sign of damage, and that the response is to retry. The refusal text
+that exists today should point at that guidance instead of refusing.
+
+What MW-1 may not do is lift the fence and say nothing at all. A conflict failure with no
+explanation anywhere is how a safe, correct refusal turns into a support question.
 
 ## 7. Excluded, with the reason
 
