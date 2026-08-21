@@ -119,6 +119,32 @@ const EXPECTED_DIVERGENCES: &[(&str, FacadeShape, &str)] = &[
         "DF-core date_part vs spark date_part field-name set",
     ),
     ("datepart", FacadeShape::Kernel(2), "alias of date_part"),
+    // LRS-4 — surfaced the day the guard's domain went from 20 hand-listed names to the session's
+    // own 341. Each is adjudicated in the ledger; two are user-visible enough to be registry rows.
+    (
+        "log",
+        FacadeShape::Kernel(1),
+        "SQL door `log` is DataFusion's base-10, Spark's is natural — registry row LOG-1. The \
+         facade is right (`ln`); the door answers 0.903 for log(8) where Spark answers 2.079",
+    ),
+    (
+        "from_unixtime",
+        FacadeShape::Kernel(1),
+        "SQL door returns TIMESTAMP, the facade and Spark return STRING — registry row UNIX-1",
+    ),
+    (
+        "array",
+        FacadeShape::Kernel(1),
+        "facade builds `make_array`, the door resolves the `array` alias; values agree, only the \
+         kernel identity differs",
+    ),
+    (
+        "array_element",
+        FacadeShape::Kernel(2),
+        "a DataFusion name Spark does not have at all (`UNRESOLVED_ROUTINE` there). The facade \
+         reaches `element_at`; the door's own `array_element` returns NULL for a valid index, \
+         which is an engine defect on a non-Spark spelling",
+    ),
 ];
 
 /// Scalar spellings this guard checks. Positive controls (the GT1/GT2-closed names) are included
@@ -210,7 +236,7 @@ fn expected_divergences_are_all_still_real() {
     // raising it is a decision that has to be made here, in the same commit as the new row.
     assert_eq!(
         EXPECTED_DIVERGENCES.len(),
-        20,
+        24,
         "the sanctioned-out table changed size — ratchet DOWN, or justify the new row"
     );
     let ctx = registered_session();
@@ -250,5 +276,48 @@ fn expected_divergences_are_all_still_real() {
         already_fixed.is_empty(),
         "these names are listed as expected divergences but both doors already agree — the table \
          ratchets DOWN, so remove them: {already_fixed:?}"
+    );
+}
+
+/// Every registered name the facade can also reach must resolve the same kernel.
+///
+/// The hand-listed [`SCALAR_NAMES`] is a domain someone has to remember to extend, so the kernels
+/// a campaign adds sit outside the guard until they are noticed — "makes the policy mechanical"
+/// claimed more than it enforced (round 2 FNP-R3-7). This walks the SESSION's own registry
+/// instead: whatever `register_all` installed, at every arity the facade will build, with
+/// [`EXPECTED_DIVERGENCES`] as the only way out. A name added to either side joins the checked set
+/// on the day it is added, with nobody maintaining a list.
+#[test]
+fn every_registered_name_the_facade_reaches_resolves_the_same_kernel() {
+    let ctx = registered_session();
+    let sanctioned: std::collections::HashSet<&str> = EXPECTED_DIVERGENCES
+        .iter()
+        .map(|(name, _shape, _reason)| *name)
+        .collect();
+    let mut disagreements = Vec::new();
+
+    let mut names: Vec<String> = ctx.state().scalar_functions().keys().cloned().collect();
+    names.sort();
+    for name in &names {
+        if sanctioned.contains(name.as_str()) {
+            continue;
+        }
+        let Ok(door) = ctx.udf(name) else { continue };
+        // Arity is not knowable from the registry, so try the shapes the facade builds and take
+        // the first that resolves — a name the facade cannot reach at any of them is simply not
+        // in this guard's domain, which is the honest reading of "the facade reaches it".
+        let reached = (0..=3).find_map(|arity| facade_udf(name, arity));
+        let Some(facade) = reached else { continue };
+        if *facade != *door {
+            disagreements.push(name.clone());
+        }
+    }
+
+    assert!(
+        disagreements.is_empty(),
+        "{} of {} registered names resolve a different kernel on the facade than on the SQL door: \
+         {disagreements:?}. Close each, or move it into EXPECTED_DIVERGENCES with its reason.",
+        disagreements.len(),
+        names.len()
     );
 }

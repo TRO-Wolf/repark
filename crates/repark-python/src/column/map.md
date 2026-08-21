@@ -88,7 +88,7 @@ without enabling PyO3 `multiple-pymethods`.
 | a window with no `ORDER BY` errors, or answers where Spark refuses | `window.rs` `unordered_window_frame` — aggregates get Spark's whole-partition ROWS frame, window UDFs get Spark's "requires window to be ordered" (LRS-7) |
 | `sec`/`csc` at zero is NULL not Inf | `function_dispatch.rs` `sec`/`csc` arms + `expr_build.rs` `reciprocal_trig_or_inf` |
 | `call_scalar` unknown name / arity | `function_dispatch.rs` `call_scalar_expr` |
-| `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door |
+| `F.f(x)` and `spark.sql("SELECT f(x)")` disagree | `door_parity_tests.rs` — the name resolves a different kernel per door. **LRS-4:** the guard walks the SESSION registry (341 names), not a hand-listed set, so a new arm joins its domain automatically |
 | `F.f(x)` and `spark.sql` disagree but the row is in `EXPECTED_DIVERGENCES` | that table classifies each row by MEASURED shape (`Kernel(arity)` / `Composed`) and FAILS on a row it cannot check — it used to `continue` past half of them |
 | a name works in SQL but raises through `F.` | `function_dispatch.rs` has no arm for it — the kernel is registered, the facade cannot reach it |
 | unknown `aggregate` / `aggregate_binary` kind | `function_dispatch.rs` `unary_aggregate_udaf` / `binary_aggregate_udaf` |

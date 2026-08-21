@@ -1606,6 +1606,36 @@ the pin rather than obeying it.
   path, not an edge-case patch. The row exists so the number 4 is a known, measured difference
   rather than an assumption that the two functions agree.
 
+### LOG-1 — SQL-door `log` is base 10, Spark's is natural
+
+- **repark** — the **facade** is right: `F.log(8.0)` returns `2.0794415416798357`, the natural log,
+  because it lowers to `ln`. The **SQL door** returns `0.9030899869919434` — DataFusion's `log`,
+  which is base 10. `SELECT log(2, 8)` gives `3.0` on both, so only the one-argument form diverges.
+- **Apache Spark** — `SELECT log(8)` returns `2.0794415416798357`; `log(2, 8)` returns `3.0`.
+  *(oracle: live — PySpark 4.1.2.)*
+- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_log1_sql_door_log_is_base_ten`
+- **Rationale** — BACKLOG, and it is a **silently wrong answer on a common function**: a query
+  that reads `log(x)` through `spark.sql` gets a number that is off by a constant factor and looks
+  perfectly plausible. Not closed here because it needs a Spark-semantics `log` kernel registered
+  over DataFusion's — a new kernel and a changed answer, which is outside this campaign's
+  invariant. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
+  own 341, which is the argument for that change on its own.
+
+### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
+
+- **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns
+  a TIMESTAMP value for the same call.
+- **Apache Spark** — returns a STRING: `SELECT from_unixtime(0)` has schema `struct<r:string>`.
+  *(oracle: live — PySpark 4.1.2. Its value there is `'1969-12-31 19:00:00'` because the oracle's
+  session zone is not UTC; repark's default zone is UTC by registry row
+  [TZ-2](#tz-2--the-session-timezone-default-is-utc), so the instant is the same and the rendering
+  differs by that already-declared row, not by this one.)*
+- **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_unix1_sql_door_from_unixtime_is_a_timestamp`
+- **Rationale** — BACKLOG. The **type** is the divergence, and it is the facade that matches Spark.
+  A consumer that writes `SELECT from_unixtime(t)` to Parquet gets a timestamp column where Spark
+  would have written a string. Not closed here for the same reason as `LOG-1`: it changes what a
+  working query returns.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Four candidates surfaced by the session-timezone unit still carry **no pin yet**, so under §6 they are

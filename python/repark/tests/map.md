@@ -2065,6 +2065,10 @@ NOT in that file is a defect, not a decision.
   `RE-1` is the sweep's highest-value find: the two-argument `regexp_extract_all` returns group 0
   where Spark returns group 1.
 
+- `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for the two registry rows the widened
+  C-012 guard produced — `LOG-1` (the SQL door's `log` is base 10, Spark's is natural) and `UNIX-1`
+  (`from_unixtime` returns TIMESTAMP on the door, STRING in Spark). Both codify today's behavior.
+
 ## I want to...
 
 | ...do this | go to |

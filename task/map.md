@@ -57,6 +57,12 @@ not this directory.
   registry rows `RE-1` / `RE-2`. On the way it found the sweep's highest-value defect:
   `regexp_extract_all(str, regexp)` returns group 0 where Spark returns group 1 — a silently wrong
   answer on ordinary input, on both doors.
+- [lrs-4-door-domain-ledger.md](lrs-4-door-domain-ledger.md) — **LRS-4 (2026-08-20):** the C-012
+  guard now walks the session's own registry instead of a hand-maintained list — domain 20 names →
+  **341**. Found four kernel divergences on the first run, including `LOG-1`: `SELECT log(x)`
+  through the SQL door returns DataFusion's base-10 answer where Spark returns the natural log. A
+  plausible-looking wrong number that no test could see, because the guard's domain did not include
+  the name.
 - [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
   `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
   three new `map.md` files, which were written rather than waived.
