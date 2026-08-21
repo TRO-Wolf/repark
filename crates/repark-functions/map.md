@@ -100,9 +100,11 @@ collection shims), and carry the analyzer rule that rewrites raw DataFusion oper
   (Spark stringify), always emit `Utf8` (never `Utf8View`), any-NULL → NULL — fixes
   TPC-DS Q5/Q80/Q84; pins include `register_all` overwrite + multi-row null mask.
   **GT1-FIX round-2:** also registers `regexp_count` / `regexp_instr` / `split_part`.
-- `src/str_to_map.rs` — **FN-GT2 rework:** regex `str_to_map` UDF (`#[path]` from
-  `collection.rs`). Overwrites the DF literal-split kernel. Depends on workspace
-  `regex`.
+- `src/collection/str_to_map.rs` — **FN-GT2 rework:** regex `str_to_map` UDF. Overwrites the DF
+  literal-split kernel. Depends on workspace `regex`. **LRS-5 (2026-08-20):** moved from
+  `src/str_to_map.rs` into the canonical module tree, with `src/collection/shuffle.rs`,
+  `src/collection/map_from_entries.rs` and `src/url/java_uri.rs` — the four `#[path]` inclusions
+  this crate carried are gone.
 - `src/collection.rs` — Spark `element_at` (arrays + maps) + the embedded `__repark_array_get__`
   subscript UDF + **`spark_get_item_udf` / `__repark_get_item__`** (polymorphic array 0-based or
   map-by-key for facade `Column.__getitem__` non-int/non-str keys — octo C2-L-001).

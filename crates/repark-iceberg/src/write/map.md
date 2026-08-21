@@ -38,8 +38,9 @@ repark-core's error map.
   `DELETE … IN` / `NOT IN (SELECT …)`, including the NULL 3VL trap, `[NOT] EXISTS` ±
   correlation, correlated IN, and identity `UPDATE … SET <scalar> WHERE col IN`). ANY/ALL
   stay refused (Spark 4.1.2 parse-fails quantified comparisons). Pins:
-  [predicate_dml_tests.rs](predicate_dml_tests.rs) +
-  [predicate_dml_update_tests.rs](predicate_dml_update_tests.rs). Isolation
+  [predicate_dml/predicate_dml_tests.rs](predicate_dml/predicate_dml_tests.rs) +
+  [predicate_dml/predicate_dml_update_tests.rs](predicate_dml/predicate_dml_update_tests.rs)
+  — **LRS-5 (2026-08-20):** moved into the canonical module tree, `#[path]` gone. Isolation
   property pins (M19 / A10: no trim, `to_ascii_lowercase`, default serializable,
   garbage ⇒ Plan `Invalid isolation level: {name}`) live in those two test
   files. Ledger:

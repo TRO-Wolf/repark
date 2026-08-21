@@ -5,6 +5,12 @@
 Source for `repark-functions` — Spark function registry, the function shims (date / string /
 collection), and the Spark expression-semantics analyzer rule. See [../map.md](../map.md).
 
+**LRS-5 (2026-08-20):** the four files this directory carried only so a `#[path = "…"]` could
+include them now live under the parent module they belong to —
+[`collection/`](collection/map.md) (`str_to_map`, `shuffle`, `map_from_entries`) and
+[`url/`](url/map.md) (`java_uri`). Nothing was renamed to `mod.rs`: Rust 2018 lets `collection.rs`
+sit beside `collection/`.
+
 ## Contents
 
 - `spark_length.rs` — **GT1-FIX G5 / A3 / R3-1:** Spark `bit_length` /

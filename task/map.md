@@ -24,6 +24,14 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [lrs-0-charter-ledger.md](lrs-0-charter-ledger.md) — **LRS-0 (2026-08-20):** charter for the
+  low-risk sweep, the campaign that works the sub-floor remainder the two Critic rounds forwarded.
+  Nine clauses PROVEN, zero OPEN; the tiering rule (blast radius, not effort) is C-004 so it can be
+  disputed on evidence. Design: [../docs/design/low-risk-sweep.md](../docs/design/low-risk-sweep.md);
+  slate: [../briefs/low-risk-sweep.md](../briefs/low-risk-sweep.md).
+- [lrs-5-module-layout-ledger.md](lrs-5-module-layout-ledger.md) — **LRS-5 (2026-08-20):** the six
+  `#[path = "…"]` module inclusions are gone; the files live where Rust expects them. Cost the repo
+  three new `map.md` files, which were written rather than waived.
 - [fnp-critic-round-2-ledger.md](fnp-critic-round-2-ledger.md) — **Critic round 2 (2026-08-20):**
   two more fresh agents under the same hard break, aimed at round 1's own fixes. Both
   NOT_CONVERGED: 17 findings, 4 at or above the floor, and every one of those was a defect the
