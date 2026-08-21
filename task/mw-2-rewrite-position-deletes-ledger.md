@@ -110,6 +110,19 @@ This engine writes neither half of the problem — it creates tables at format v
 table (`resolve_merge_mode`). The exposure is entirely tables written elsewhere, which is why it
 was invisible until the drop-in case was thought through.
 
+**Spark does the silent thing too, so this is stricter than Spark rather than a bug fix.**
+Measured after the guard was written, which is the right order only by luck: a live Spark 4.0.1 +
+Iceberg 1.10.0 session created a v3 table, three merge-on-read `DELETE`s produced three `PUFFIN`
+delete files, and `rewrite_position_delete_files` returned `0, 0, 0, 0` and left all three in
+place. Spark's own answer on a v3 table is the silent no-op this engine now refuses to give.
+
+That reframes the change. It is not restoring parity — it is a deliberate divergence, taken on the
+same reasoning as the orphan-files dry-run default the owner ruled in OD-2: on a maintenance
+surface a silent zero is indistinguishable from "already clean", and the operator never learns the
+reclaim never happened. It is also a drop-in break, because a job that called this on a v3 table
+under Spark got a useless success and now gets an error. Queued as `B-MOR-3` and flagged to the
+owner as reversible in one line.
+
 **What is and is not pinned.** The classification rule is pinned directly as a table, and a
 mutation dropping its data-file exclusion reds it. The no-false-positive half is pinned end to
 end: the guard reads zero on a v2 table this engine wrote, and on a table with no snapshot at all.
@@ -158,6 +171,13 @@ procedure that actually reclaims delete files is the one this unit wired.
 
 Zero of the three registry rows the charter queued — MW-1 closed the expire funnel, MW-2 closed
 the `rewrite_data_files` column. In their place MW-5 inherits **MOR-1 and MOR-2**, already landed
-as rows with pins, and one decision for the owner: whether the fork's position-delete planner gets
-the size-based gate its data-file neighbour already has. That is fork work, so it is a question,
-not a queued unit.
+as rows with pins, and two decisions for the owner. First, whether the fork's
+position-delete planner gets the size-based gate its data-file neighbour already has — fork work,
+so a question rather than a queued unit. Second, whether the deletion-vector refusal stays
+stricter than Spark (`B-MOR-3`).
+
+MW-2 also put **format v3 on the roadmap** as track A12, promoted out of "watch, do not schedule"
+by the owner on 2026-08-21. The measurement that moved it: the fork already ships deletion-vector
+read and write, Puffin, row-lineage spec fields and the v3 types, so v3 is mostly engine-side
+wiring rather than a fork campaign. Its first unit builds the cross-engine fixture this unit could
+not, which is what promotes `B-MOR-3` from a queued candidate to a row.

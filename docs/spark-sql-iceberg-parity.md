@@ -1689,8 +1689,8 @@ the pin rather than obeying it.
 
 ### Surfaced, awaiting pins — not yet rows
 
-Four candidates surfaced by the session-timezone unit still carry **no pin yet**, so under §6 they are
-not admitted as rows; they are queued here so the surfacing is on the record, and each becomes a
+Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
+here so the surfacing is on the record, and each becomes a
 row in the change that lands its pin (the unit ledger `docs/history/hardening-h1/h1a-ledger.md` §6 carries the full
 observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3 / #90).**
 
@@ -1702,6 +1702,22 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
 - **B-TZ-5** — the SQL `SET` door does not reach the `spark.*` conf namespace at all
   (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
   than the session zone; it wants its own decision rather than a fold into the extraction unit.
+
+- **B-MOR-3** — `rewrite_position_delete_files` **refuses** a format-v3 table holding live Puffin
+  deletion vectors, where **Spark returns all four counts as `0` and does nothing**. Measured on
+  the Spark half: a live PySpark 4.0.1 + Iceberg 1.10.0 session created a v3 table, three MOR
+  `DELETE`s produced three `PUFFIN` delete files, and the procedure returned `0, 0, 0, 0` leaving
+  all three in place. So Spark's own answer on a v3 table is the silent no-op this engine refuses
+  to give — the divergence is **deliberately stricter than Spark**, on the same reasoning as the
+  orphan-files dry-run default (owner decision OD-2): on a maintenance surface a silent zero is
+  indistinguishable from "already clean", and the operator never learns the reclaim never
+  happened. Queued rather than admitted because the **repark half has no end-to-end pin**: this
+  engine cannot write a deletion vector (it creates tables at format v2 and refuses merge-on-read
+  writes on v3), so firing the refusal needs a v3 table written by another engine. What IS pinned
+  today is the decision rule (`call_deletion_vector_rule_matches_the_forks_skip_clause`,
+  mutation-checked) and both no-false-positive paths. It becomes a row in the change that lands
+  the cross-engine v3 fixture — the **V3-1** unit of the format-v3 track
+  ([task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md) A12).
 
 ---
 
