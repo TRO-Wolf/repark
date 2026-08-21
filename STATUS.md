@@ -184,6 +184,19 @@ history-rewrite; provenance and the options weighed:
     the SQL door returns DataFusion's base-10 answer where Spark returns the natural log. Both are
     ordinary calls on common functions. **These are the two the owner should look at first.**
 
+- **The two semantics fixes (SEM) — queued, held at its approval gate (scoped 2026-08-21).** The
+  scope audit for closing `RE-1` and `LOG-1`, the two rows above:
+  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md). Two units, independent, either
+  order. **SEM-1** is one default in `extract_rows` (`crates/repark-functions/src/spark_regexp.rs`)
+  — one knob for both doors, because the facade passes no default of its own — plus three
+  collateral test sites, two of which fail as *runtime errors* rather than assertion diffs and are
+  named in no other RE-1 document. **SEM-2** needs a new Spark-semantics `log` kernel over
+  DataFusion's `LogFunc` (`datafusion-spark` 54.1.0 ships no `log`), dual-arity and null-guarded at
+  both — measured: repark returns `-0.0` / `NaN` / `-inf` on the six non-positive edges where Spark
+  returns NULL — and it moves the C-012 ratchet from 24 rows to 23. The two defects below ride
+  along, one per unit. **Both units change what a working query returns**, which is exactly why the
+  LRS registered them instead of fixing them; the gate wants a dated owner ruling first.
+
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
   perf note's §8 battery: kernel race, many-symbols scaling, wide serving SELECT, batch-size
@@ -295,7 +308,8 @@ moving it. Nothing is described in both places.
   narrowing it to `{2}`. Defect with a scheduled fix, so it stays here rather than becoming a
   registry row. Fix it with, or immediately after,
   [RE-1](docs/spark-sql-iceberg-parity.md) — same function, same remediation window, and RE-1's
-  test pass is the cheapest place to catch it.
+  test pass is the cheapest place to catch it. Scoped into SEM-1:
+  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
 
 - **`F.log` has no two-argument form** — measured 2026-08-21. PySpark's signature is
   `log(arg1, arg2=None)`, where the two-argument form is `log(base, x)`; repark's is
@@ -304,7 +318,7 @@ moving it. Nothing is described in both places.
   case at all, so `F.log(2.0, col)` fails in Python before reaching Rust. Distinct from
   [LOG-1](docs/spark-sql-iceberg-parity.md), which is about the SQL door's base; this is a missing
   facade overload. Natural to land in the same unit — a Spark-semantics `log` kernel is what both
-  need.
+  need. Scoped into SEM-2: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
 
 - **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
   is the divergence registry's first declared row, with its behavior, its rationale and its pin:

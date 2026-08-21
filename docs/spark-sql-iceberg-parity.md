@@ -1586,7 +1586,9 @@ the pin rather than obeying it.
   that no working query changes its result, and this one changes `['a1','b2']` to `['a','b']` for
   every two-argument caller. That is a decision to take deliberately, with the three-argument form
   and `regexp_substr` (which agrees with Spark at `'a1'`) checked in the same change. The pin
-  codifies today's behavior so the fix reds it on purpose.
+  codifies today's behavior so the fix reds it on purpose. **Scope for closing it** (the single
+  default site, its three collateral test failures, and the adjacent string-`idx` defect) is
+  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-1 — queued, gate held.
 
 ### RE-2 — a zero-width match at a mid-surrogate position
 
@@ -1630,7 +1632,9 @@ the pin rather than obeying it.
   one-argument form to `ln` and leaving DataFusion's two-argument formula in place would close half
   the row and leave the other half silently open, which is the failure mode the correction above
   records. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
-  own 341, which is the argument for that change on its own.
+  own 341, which is the argument for that change on its own. **Scope for closing it** (the kernel
+  shape, the ratchet move it forces, and the adjacent missing `F.log` overload) is
+  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
 

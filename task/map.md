@@ -24,6 +24,15 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
+  its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
+  sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
+  Spark to 1) and `LOG-1` (the Spark door's `log` is base 10, Spark's is natural). Carries the
+  measured implementation scope for both: RE-1's single default site and its three collateral test
+  failures (two of which fail as runtime errors and appear in no other RE-1 document), LOG-1's need
+  for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
+  comes with it, and the two adjacent defects that should ride along. Both units change a computed
+  answer, so the gate wants a dated owner ruling before either writes code.
 - [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
   the invariant held, and the two findings that matter most were both found while doing something
   else — `RE-1` and `LOG-1`, silently wrong answers on common functions. Also: the live Spark
