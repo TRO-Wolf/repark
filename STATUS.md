@@ -161,6 +161,32 @@ history-rewrite; provenance and the options weighed:
 
 ## Active workstreams
 
+- **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **next work
+  group, not yet started**). Four Python rules the owner stated, now written into the contract:
+  types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
+  defined inside another function; functions named as verb phrases for the work they do. The rules
+  themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
+  [docs/skills/](docs/skills/map.md); the conformance work is what remains.
+  - **Measured debt (AST scan of the tree at this commit, not an estimate):**
+    - *Types.* The shipped package is already clean — 2,170 functions, **zero** missing a return
+      annotation, because Ruff's `ANN` rules are selected in [pyproject.toml](pyproject.toml) and
+      gate CI. `python/repark-parity` has **10** unannotated returns; `scripts/` has zero.
+    - *Pydantic.* **3** files under the shipped package and `scripts/` still use `dataclasses`
+      (`spark/merge.py`, `spark/_csv_smart.py`, `check_parity_live_dual_wire.py`); **20** files
+      under `python/repark-parity` do.
+    - *Nested functions.* **66** nested `def`s in 21 files. Two files carry more than half of them:
+      `spark/dataframe/core.py` (23) and `spark/dataframe/plan_collapse.py` (12).
+    - *Names.* Not machine-countable; it rides along with whatever the other three touch.
+  - **No lint rule enforces two of the four.** Ruff has no check for a nested `def` and none for
+    "Pydantic rather than `dataclass`", so unless a repo guard is written in the style of
+    `scripts/check_lib_py.py`, these two rules hold only by review. Deciding whether to write that
+    guard is part of the unit, not a foregone conclusion.
+  - **The risk this unit carries is that it is a pure refactor of working code.** The facade has
+    3,639 passing tests and none of them are about where a `def` sits. Lifting a closure changes
+    what it can see; converting a `dataclass` to a `BaseModel` adds validation that was not running
+    before and can reject input the old container accepted. The invariant to hold is the LRS one:
+    no query that worked before returns a different value.
+
 - **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
   eleven commits, **merged as [#191](https://github.com/TRO-Wolf/repark/pull/191)** / `8c660f6`).
   Chartered off `feat/spark-function-parity` @ `8a28057`; rebased onto `main` on 2026-08-21 when

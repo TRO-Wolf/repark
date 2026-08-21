@@ -189,8 +189,10 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   layout cannot work.
 - **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
   local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
-- **Python:** type hints on every signature; Pydantic v2 for structured config; `pathlib`;
-  `logging`; f-strings; never bare `except`; Ruff `line-length=100`.
+- **Python:** type hints on every parameter, every return and every public attribute; Pydantic v2
+  `BaseModel` for all structured data, never `dataclasses` or `attrs`; define functions at module
+  or class level rather than nested inside another function; name a function for the work it does,
+  as a verb phrase; `pathlib`; `logging`; f-strings; never bare `except`; Ruff `line-length=100`.
 - **Spell things out** — no casual abbreviations (`config` not `cfg`, `index` not `idx`).
 - **Tier-2 CI (live AWS) never runs against unmerged code**; nightly on `main` + manual dispatch via
   OIDC only. No self-hosted runners in any tier. No secrets in tier-1 workflows.

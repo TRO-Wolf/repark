@@ -20,8 +20,10 @@ or implies an architectural choice, surface it rather than inventing one.
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic` `-D warnings`; `unsafe_code`
   forbidden outside `crates/repark-python`; `thiserror`(libs)/`anyhow`(bins); `tracing`; no panics in prod
   (no `unwrap`/`expect`).
-- **Python:** type hints everywhere; Pydantic v2 for structured config; `pathlib`; `logging`;
-  f-strings; never bare `except`; Ruff `line-length=100`.
+- **Python:** type hints on every parameter, return and public attribute; Pydantic v2 `BaseModel`
+  for all structured data, never `dataclasses`/`attrs`; no `def` nested inside another `def`;
+  functions named as verb phrases for the work they do; `pathlib`; `logging`; f-strings; never bare
+  `except`; Ruff `line-length=100`.
 - **Verify before done:** `make verify`. Test with `cargo test --workspace` (never `--all-features`
   — see [AGENTS.md](../../AGENTS.md) "PyO3 build notes").
 
