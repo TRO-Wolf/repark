@@ -12,6 +12,17 @@ not this directory.
 
 ## Contents
 
+- [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
+  **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
+  charter with no product change and it does not close that way. **Read §3 first**:
+  `rewrite_data_files` had no format-version check and reassigned every row's lineage on a v3
+  table while returning the correct rows, where Spark carries lineage through unchanged. It is
+  reachable on a v3 table that was already in the catalog, which is the drop-in case, so the
+  guard shipped with the audit (`V3-LINEAGE-1`). §2 is the other half of the news, and it is
+  good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
+  row lineage the format mandates. §4 answers A12's stated first question — adoption, through
+  `register_table`, whose Spark signature is measured there.
+
 - [mw-3-remove-orphan-files-ledger.md](mw-3-remove-orphan-files-ledger.md) —
   **MW-3 (2026-08-21):** `remove_orphan_files` is wired — the only procedure on this surface that
   destroys data, and the only one whose defaults invert Spark's. `older_than` is required

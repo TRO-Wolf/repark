@@ -37,6 +37,12 @@ code is not here — only tests, shared fixtures, and the module manifest.
   partition-granularity writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
   vector-present path has no fixture because this engine cannot write one),
+  `call_v3` (**V3-0**, split from `call` on subject the way `call_orphan` was: every test is about
+  one table property rather than one procedure. Holds the `rewrite_data_files` row-lineage
+  refusal, its v2 control, and a fixture assertion — the fixture is built by upgrading an
+  engine-created table through the fork's own `Transaction::upgrade_table_version`, because
+  nothing on the engine's surface creates a v3 table, and the assertion exists so the refusal pin
+  cannot pass on a table that silently stayed v2),
   `call_orphan` (**MW-3**, split out of `call` when that module crossed the 1500-line ceiling —
   `remove_orphan_files` and nothing else, because every test in it is about the blast radius of a
   deletion rather than a shared mechanism, which is also why its fixture helpers live there and

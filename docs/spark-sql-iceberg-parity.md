@@ -1727,6 +1727,37 @@ the pin rather than obeying it.
   would have written a string. Not closed here for the same reason as `LOG-1`: it changes what a
   working query returns.
 
+### V3-LINEAGE-1 — `rewrite_data_files` refuses a format-v3 table rather than reassign row lineage
+
+- **repark** — `CALL <catalog>.system.rewrite_data_files(table => …)` refuses outright when the
+  table is format-v3, naming row lineage and pointing the operator at Spark. Before the refusal
+  landed the procedure compacted the table and produced the **correct rows** while reassigning
+  every row's lineage: on a six-file v3 table with deletion vectors, `id=5099` moved from
+  `_row_id = 599, _last_updated_sequence_number = 6` to `_row_id = 691, seq = 9`, and the whole
+  546-row result carried the rewrite's sequence number.
+- **Apache Spark** — performs the rewrite and carries lineage through unchanged: the same row
+  reads `_row_id = 599, seq = 6` on both sides of the CALL, and the result is
+  `rewritten_data_files_count = 6`, `added_data_files_count = 1`,
+  `removed_delete_files_count = 6` (the six deletion vectors die with the files they were scoped
+  to). Round-tripped through the Spark reader afterwards to confirm the lineage columns, not
+  inferred from metadata.
+  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, format-v3 Hadoop-catalog fixture. The pinned
+  4.1.2 oracle cannot execute Iceberg maintenance procedures at all — same `DataSourceV2Relation`
+  break recorded under [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_v3.rs::call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage`
+- **Rationale** — DELIBERATE, and stricter than Spark on purpose. V3 makes row lineage mandatory
+  precisely so that moving a row between files does not look like changing it; a rewrite that
+  regenerates `_row_id` tells every downstream incremental consumer that all rows changed when
+  none did. The rows themselves are never wrong, which is what makes the failure quiet — the
+  result reads as a clean compaction. The fix is fork work: `maintenance/rewrite_data_files.rs`
+  has no row-lineage handling at all, while the spec layer around it does. Refusing follows the
+  same trade as
+  [B-MOR-3](#surfaced-awaiting-pins--not-yet-rows) — an unattended procedure gets a loud stop
+  rather than a plausible wrong answer. **Not reachable on anything this engine wrote**: `CREATE
+  TABLE` and CTAS both refuse `format-version`, so a v3 table only exists here if it was already
+  in the catalog.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
@@ -1758,6 +1789,36 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   mutation-checked) and both no-false-positive paths. It becomes a row in the change that lands
   the cross-engine v3 fixture — the **V3-1** unit of the format-v3 track
   ([task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md) A12).
+  **V3-0 measured the repark half and it holds**: against Spark-written v3 tables carrying real
+  Puffin vectors the refusal fired and counted them correctly, 1 vector on one fixture and 6 on
+  another. That measurement is recorded in `task/v3-0-charter-ledger.md` and is *not* a pin — it
+  needs a Spark oracle, so it cannot run in CI. The row still waits on a fixture that can.
+
+- **V3-DANGLE-1** — a v3 compaction leaves its deletion vectors behind. Before
+  [V3-LINEAGE-1](#v3-lineage-1--rewrite_data_files-refuses-a-format-v3-table-rather-than-reassign-row-lineage)
+  refused the rewrite, this engine compacted six v3 data files into one and left all six Puffin
+  vectors live in the manifest, where Spark removed them and reported
+  `removed_delete_files_count = 6`. The vectors were dangling — the data files they were scoped
+  to no longer existed — and nothing in this engine can reclaim them, since
+  `rewrite_position_delete_files` refuses deletion vectors (B-MOR-3) and `expire_snapshots` does
+  not touch live manifest entries. Queued rather than admitted because V3-LINEAGE-1 now makes it
+  **unreachable**: no v3 rewrite runs, so no vectors are stranded. It becomes a row only if that
+  guard is lifted, and whichever unit lifts it owns this.
+
+- **V3-ROWID-1** — `_row_id` and `_last_updated_sequence_number` are not readable. On a v3 table
+  Spark serves both as ordinary columns; this engine plans neither
+  (`Schema error: No field named _row_id`), so a consumer cannot see the lineage the format
+  guarantees. Queued for the **V3-4** unit, which owns row lineage as a whole; pinning it here
+  would pin half a decision.
+
+- **V3-ADOPT-1** — a table whose metadata pointer follows the Hadoop-catalog naming convention
+  (`v3.metadata.json`) reads correctly and cannot be written to. The fork's `MetadataLocation`
+  parser requires `<version>-<uuid>.metadata.json` to compute the next pointer, so `INSERT` and
+  `expire_snapshots` fail with `Invalid metadata file name format: v3.metadata.json` — an error
+  that names the symptom and not the cause. Renaming the same file to the expected shape makes
+  both succeed, which is how the cause was isolated. Not v3-specific and not reachable through
+  any surface this engine ships today, because there is no way to address a foreign table at all
+  (see V3-1). Queued for whichever unit lands the adopt path, which owns the error text.
 
 ---
 

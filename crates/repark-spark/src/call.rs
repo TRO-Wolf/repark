@@ -67,7 +67,7 @@ use datafusion::sql::sqlparser::ast::{
     Expr, Function, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
 };
 use iceberg::maintenance::{DeleteOrphanFiles, RewriteDataFiles, RewritePositionDeleteFiles};
-use iceberg::spec::{DataContentType, DataFileFormat};
+use iceberg::spec::{DataContentType, DataFileFormat, FormatVersion};
 use iceberg::transaction::{
     ApplyTransactionAction, CleanupReport, ExpireSnapshotsCleanup, Transaction,
 };
@@ -687,6 +687,43 @@ fn expire_result_dataframe(
 // rewrite_data_files
 // ===========================================================================================
 
+/// Refuse `rewrite_data_files` on a format-v3 table rather than silently reassign row lineage.
+///
+/// V3 makes row lineage mandatory: every row carries `_row_id` and
+/// `_last_updated_sequence_number`, and a data-file rewrite is required to carry both through
+/// unchanged — that is the whole point of the field, since a compaction changes where a row is
+/// stored and not what it is. Measured on Spark 4.0.1 + Iceberg 1.10.0 over a six-file v3 table
+/// with deletion vectors: `id=5099` kept `row_id=599, seq=6` on both sides of
+/// `CALL system.rewrite_data_files`. The same table compacted by this engine produced the right
+/// 546 rows and moved that row to `row_id=691, seq=9`, because the fork's
+/// `maintenance/rewrite_data_files.rs` has no row-lineage handling at all. The rows survive; the
+/// lineage does not, and a downstream consumer reading the result is told every row was updated.
+///
+/// Refusing is stricter than Spark, which performs the rewrite correctly. It is the trade MW-2
+/// took for deletion vectors and for the same reason: this procedure runs unattended, and a
+/// plausible wrong answer is worse than a loud stop. The engine cannot create a v3 table
+/// (`create_table.rs` and `ctas.rs` both refuse `format-version`), so nothing this engine wrote
+/// is affected — the reachable case is a v3 table that was already in the catalog when the engine
+/// was pointed at it.
+///
+/// Registry row `V3-LINEAGE-1`. Lifting this is fork work, not router work.
+pub(crate) fn refuse_v3_rewrite_that_would_lose_row_lineage(
+    format_version: FormatVersion,
+    table_arg: &str,
+) -> Result<()> {
+    if format_version < FormatVersion::V3 {
+        return Ok(());
+    }
+    Err(DataFusionError::NotImplemented(format!(
+        "CALL rewrite_data_files will not compact `{table_arg}`: it is a V3 table, and V3 \
+         mandates row lineage (`_row_id`, `_last_updated_sequence_number`) which this engine's \
+         rewrite does not carry through. The row data would be correct and every row's lineage \
+         would be reassigned, telling downstream consumers that all of them changed. Spark \
+         preserves lineage across the same rewrite — compact this table there until the fork \
+         does the same"
+    )))
+}
+
 async fn execute_rewrite_data_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -741,6 +778,7 @@ async fn execute_rewrite_data_files(
     let table_arg = args.require_string("table", 0)?;
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
+    refuse_v3_rewrite_that_would_lose_row_lineage(table.metadata().format_version(), &table_arg)?;
 
     // For multi-small-file fixtures under Spark's default min_input_files=5, pure inserts of a
     // few rows each are always "small". Lower min_input_files only when the caller cannot pass
@@ -772,6 +810,14 @@ async fn execute_rewrite_data_files(
     // 1.10.0 oracle, which reported 0 on every fixture tried, with the option both off AND
     // explicitly on. This is an honest count of a real quantity, not a placeholder for a number
     // the engine could not obtain.
+    //
+    // V3-0 found the one place that reasoning does not reach, and it is why the guard above
+    // exists. On a **v3** table the same oracle reported `removed_delete_files_count = 6` with no
+    // option set at all, because a deletion vector is scoped to one data file and dies when that
+    // file is rewritten — so compaction removes delete files on v3 as an ordinary consequence,
+    // not as an opt-in sub-action. The zero below is therefore correct for every version this
+    // procedure still runs on, and would be wrong the moment v3 is admitted. Whichever unit
+    // lifts the guard owns this column too.
     let schema = Arc::new(Schema::new(vec![
         Field::new("rewritten_data_files_count", DataType::Int32, false),
         Field::new("added_data_files_count", DataType::Int32, false),

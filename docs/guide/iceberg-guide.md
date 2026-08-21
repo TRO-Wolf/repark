@@ -374,6 +374,20 @@ spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show(
 +----------------------------+------------------------+-----------------------+-------------------------+----------------------------+
 ```
 
+On a **format-v3** table this one refuses rather than running:
+
+```text
+CALL rewrite_data_files will not compact `sales.orders`: it is a V3 table, and V3 mandates row
+lineage (`_row_id`, `_last_updated_sequence_number`) which this engine's rewrite does not carry
+through...
+```
+
+RePark creates tables at format v2, so this only reaches a v3 table that was already in your
+catalog. The rewrite would return the right rows and give every one of them a new `_row_id`,
+which tells anything reading the table incrementally that all of them changed. Spark carries
+lineage through the same compaction unchanged, so compact v3 tables there for now. Registry row
+`V3-LINEAGE-1`.
+
 ### Compacting position deletes
 
 On a merge-on-read table every `MERGE`, `UPDATE` and `DELETE` leaves a position-delete file
