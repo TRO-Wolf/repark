@@ -162,7 +162,7 @@ history-rewrite; provenance and the options weighed:
 ## Active workstreams
 
 - **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
-  eleven commits, **open as [#191](https://github.com/TRO-Wolf/repark/pull/191), not yet merged**).
+  eleven commits, **merged as [#191](https://github.com/TRO-Wolf/repark/pull/191)** / `8c660f6`).
   Chartered off `feat/spark-function-parity` @ `8a28057`; rebased onto `main` on 2026-08-21 when
   that campaign squash-merged as `65bacdf`, tree-identical both before and after. Works the
   sub-floor remainder the two Critic rounds forwarded. Design: [docs/design/low-risk-sweep.md](docs/design/low-risk-sweep.md);
@@ -189,7 +189,7 @@ history-rewrite; provenance and the options weighed:
 
 - **The Spark semantics fixes (SEM)** (chartered 2026-08-21, **gate ruled the same day**). First
   four units **MERGED** as [#192](https://github.com/TRO-Wolf/repark/pull/192) / `f3eaa9d`; SEM-6
-  follows on branch `fix/re3-substr-null` off `main` @ `f3eaa9d`, not yet merged. Charter and
+  followed as [#193](https://github.com/TRO-Wolf/repark/pull/193) / `a547905`. Charter and
   measured scope: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
   - **The owner's rulings:** 2026-08-21 — `RE-1` closes, **`LOG-1` is TABLED** and keeps its
     BACKLOG row, the adjacent defects and the message work go ahead. Then, after `RE-3` was
