@@ -38,12 +38,36 @@ def test_log1_sql_door_log_is_base_ten() -> None:
     assert door == 0.9030899869919434, "the SQL door is base 10 — close LOG-1 and this goes red"
 
 
-def test_log1_the_two_argument_form_already_agrees() -> None:
-    """Only the one-argument form diverges, which is what makes the fix a kernel swap rather than
-    a rewrite.
+def test_log1_the_two_argument_form_agrees_on_positive_operands() -> None:
+    """The happy path agrees, which is what made it look like only the one-argument form was
+    broken. It is not — see the pin below.
     """
     _frame()
     assert _session().sql("SELECT log(2, 8) AS r FROM lrs4_probe").collect()[0][0] == 3.0
+
+
+def test_log1_the_two_argument_form_diverges_on_non_positive_operands() -> None:
+    """**Spark returns NULL for every one of these** (``Logarithm.nullSafeEval``).
+
+    DataFusion's ``LogFunc`` has no null-guard, so it hands back IEEE junk instead. This pin exists
+    because the first version of registry row ``LOG-1`` claimed only the one-argument form
+    diverged — it was written from ``log(2, 8) == 3.0``, which is true and proves nothing about
+    the operand domain. A fix that redirects the one-argument form to ``ln`` and leaves
+    DataFusion's two-argument formula alone would close half the row and leave this half silently
+    open.
+    """
+    _frame()
+    session = _session()
+
+    def door(text: str):
+        return session.sql(f"SELECT {text} AS r FROM lrs4_probe").collect()[0][0]
+
+    assert door("log(0, 8)") == 0.0  # -0.0; Spark: NULL
+    assert str(door("log(-2, 8)")) == "nan"  # Spark: NULL
+    assert door("log(10, 0)") == float("-inf")  # Spark: NULL
+    assert str(door("log(10, -1)")) == "nan"  # Spark: NULL
+    assert door("log(0)") == float("-inf")  # Spark: NULL
+    assert str(door("log(-1)")) == "nan"  # Spark: NULL
 
 
 def test_unix1_sql_door_from_unixtime_is_a_timestamp() -> None:

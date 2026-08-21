@@ -286,6 +286,26 @@ of state plus a link. A known **defect with its fix scheduled** is not a diverge
 row: it stays described here until the fix lands, and the fixing unit deletes the entry rather than
 moving it. Nothing is described in both places.
 
+- **`F.regexp_extract_all` rejects a string `idx` that every other door accepts** — measured
+  2026-08-21. `F.regexp_extract_all(s, pattern, "1")` raises `AnalysisException: No field named
+  "1"` — the string is read as a column name. Spark accepts it (`['a','b']`), repark's own SQL door
+  accepts it, and repark's own sibling `F.regexp_instr(s, pattern, "0")` accepts it. A **regression
+  from the FNP-6a critic remediation**: `task/fnp-6a-regexp-ledger.md` records the wrapper as having
+  carried `lit_indices={1, 2}`, and the F-FNP6A-1 fix stripped `lit_indices` entirely instead of
+  narrowing it to `{2}`. Defect with a scheduled fix, so it stays here rather than becoming a
+  registry row. Fix it with, or immediately after,
+  [RE-1](docs/spark-sql-iceberg-parity.md) — same function, same remediation window, and RE-1's
+  test pass is the cheapest place to catch it.
+
+- **`F.log` has no two-argument form** — measured 2026-08-21. PySpark's signature is
+  `log(arg1, arg2=None)`, where the two-argument form is `log(base, x)`; repark's is
+  `log(col)` only (`python/repark/src/repark/spark/functions_expr.py`), and
+  `crates/repark-python/src/column/function_dispatch.rs`'s `"log" | "ln"` arm has no two-argument
+  case at all, so `F.log(2.0, col)` fails in Python before reaching Rust. Distinct from
+  [LOG-1](docs/spark-sql-iceberg-parity.md), which is about the SQL door's base; this is a missing
+  facade overload. Natural to land in the same unit — a Spark-semantics `log` kernel is what both
+  need.
+
 - **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
   is the divergence registry's first declared row, with its behavior, its rationale and its pin:
   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) §3 row ID-1. It stays listed

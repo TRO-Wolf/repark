@@ -2068,6 +2068,12 @@ NOT in that file is a defect, not a decision.
 - `test_lrs4_door_domain.py` — **LRS-4 (2026-08-20):** pins for the two registry rows the widened
   C-012 guard produced — `LOG-1` (the SQL door's `log` is base 10, Spark's is natural) and `UNIX-1`
   (`from_unixtime` returns TIMESTAMP on the door, STRING in Spark). Both codify today's behavior.
+  **2026-08-21:** gained `test_log1_the_two_argument_form_diverges_on_non_positive_operands`. The
+  original pin asserted only `log(2, 8) == 3.0` and the row concluded from it that just the
+  one-argument form diverged — a claim drawn from one positive-operand sample. DataFusion's
+  `LogFunc` has no null-guard, so all six non-positive edges diverge too (Spark returns NULL for
+  every one), and a fix that only redirects the one-argument form to `ln` would close half the row
+  silently.
 
 ## I want to...
 

@@ -1608,17 +1608,28 @@ the pin rather than obeying it.
 
 ### LOG-1 — SQL-door `log` is base 10, Spark's is natural
 
-- **repark** — the **facade** is right: `F.log(8.0)` returns `2.0794415416798357`, the natural log,
-  because it lowers to `ln`. The **SQL door** returns `0.9030899869919434` — DataFusion's `log`,
-  which is base 10. `SELECT log(2, 8)` gives `3.0` on both, so only the one-argument form diverges.
-- **Apache Spark** — `SELECT log(8)` returns `2.0794415416798357`; `log(2, 8)` returns `3.0`.
+- **repark** — on the **Spark facade's SQL door** (`SparkSession.sql`; the native ANSI door is a
+  separate contract per [ADR-0002](adr/0002-two-sql-doors.md) and is not in this row). The facade's
+  `F.log(8.0)` is right at `2.0794415416798357` — it lowers straight to `ln`, bypassing the registry
+  entirely — while `SELECT log(8)` returns `0.9030899869919434`, DataFusion's base-10 `LogFunc`.
+  **Corrected 2026-08-21:** this row first said "`log(2, 8)` gives `3.0` on both, so only the
+  one-argument form diverges". That is **false**. The two-argument form agrees only on positive
+  operands; on any non-positive one it diverges too, because DataFusion's `LogFunc` has no
+  null-guard — `log(0, 8)` → `-0.0`, `log(-2, 8)` → `NaN`, `log(10, 0)` → `-inf`,
+  `log(10, -1)` → `NaN`, and the one-argument `log(0)` → `-inf`, `log(-1)` → `NaN`.
+- **Apache Spark** — `log(8)` → `2.0794415416798357`, `log(2, 8)` → `3.0`, and **NULL** for every
+  one of the six non-positive cases above (`Logarithm.nullSafeEval`). `log(1, 8)` → `inf` on both.
   *(oracle: live — PySpark 4.1.2.)*
 - **Pin** — `python/repark/tests/test_lrs4_door_domain.py::test_log1_sql_door_log_is_base_ten`
+  and `::test_log1_the_two_argument_form_diverges_on_non_positive_operands`
 - **Rationale** — BACKLOG, and it is a **silently wrong answer on a common function**: a query
   that reads `log(x)` through `spark.sql` gets a number that is off by a constant factor and looks
   perfectly plausible. Not closed here because it needs a Spark-semantics `log` kernel registered
   over DataFusion's — a new kernel and a changed answer, which is outside this campaign's
-  invariant. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
+  invariant. The kernel must carry Spark's null-guard at **both** arities; redirecting the
+  one-argument form to `ln` and leaving DataFusion's two-argument formula in place would close half
+  the row and leave the other half silently open, which is the failure mode the correction above
+  records. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
   own 341, which is the argument for that change on its own.
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
