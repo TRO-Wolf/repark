@@ -62,24 +62,39 @@ should refuse in the shape `refuse_nested_higher_order` already uses — name th
 limit, name the workaround (project the higher-order result into a column first, then group or
 order by that column, which does work).
 
-**Not in scope:** making any of these three shapes *work*. Two of them wait on FNP-4b (the Spark-door
-dialect), which is deferred and blocked on a write-path change.
+**All three shapes work in Spark** (oracle, §7): body nesting, value-argument nesting, a
+higher-order column as a window ordering key, and `cube` / `rollup` over one all return answers.
+These are therefore real gaps, and each refusal must say so — a message that implies Spark does not
+support the shape either would be false.
+
+**Not in scope:** making any of these three shapes *work*. Two of them wait on FNP-4b (the
+Spark-door dialect), which is deferred and blocked on a write-path change.
 
 ### LRS-2 — argument contracts that match PySpark *(2 findings, S3)*
 
-- `F.xxhash64()` with no arguments is rejected with `call_scalar(xxhash64) expects at least 1 args,
-  got 0` — the *dispatcher's* message, naming an internal function the user never called. PySpark
-  accepts the zero-argument form. Either accept it or refuse it by its own name.
-- `_lambda_arity` rejects only `*args` / `**kwargs`, so a keyword-only or positional-only parameter
-  passes the gate and fails later as a raw Python `TypeError: <lambda>() takes 0 positional
-  arguments but 1 was given`. One predicate — every parameter must be `POSITIONAL_OR_KEYWORD` —
-  covers all four kinds, which is what PySpark checks. A non-callable second argument fails as
-  `TypeError: 'not callable' is not a callable object`; guard it first.
+**Scoped by the oracle (§7), which refuted two of the three suggested fixes.**
+
+- `F.xxhash64()` is rejected with `call_scalar(xxhash64) expects at least 1 args, got 0` — the
+  *dispatcher's* message, naming an internal function the user never called. Round 2 suggested
+  accepting the zero-argument form and emitting `lit(42)`. **Spark raises**:
+  `AnalysisException: [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The 'xxhash64' requires > 0 parameters but
+  the actual number is 0`, through the facade and through SQL alike. So the fix is to refuse by the
+  function's own name, not to accept.
+- `_lambda_arity` rejects only `*args` / `**kwargs`, so a keyword-only parameter passes the gate and
+  fails later as a raw Python `TypeError: <lambda>() takes 0 positional arguments but 1 was given`.
+  Spark raises `PySparkValueError [UNSUPPORTED_PARAM_TYPE_FOR_HIGHER_ORDER_FUNCTION]` — "should use
+  only POSITIONAL or POSITIONAL OR KEYWORD arguments". Round 2 suggested rejecting everything that
+  is not `POSITIONAL_OR_KEYWORD`; **that would be wrong**, because `lambda x, /: x > 2` works in
+  Spark. The predicate is: reject `KEYWORD_ONLY`, `VAR_POSITIONAL`, `VAR_KEYWORD`.
+- **No change** for a non-callable second argument. Round 2 suggested guarding it with a
+  `PySparkValueError`; Spark raises a plain `TypeError: 'nope' is not a callable object`, which is
+  byte-for-byte what repark already raises. Fixing it would have *created* a divergence.
 
 ### LRS-3 — write down what was already decided *(1 finding S3, plus one gap this campaign found)*
 
 - The 1,000,000-character `randstr` cap is a **deliberate safety limit**, not a Spark parity claim,
-  and it appears in no registry. Register it. Round 2 also showed the cap is **per row**: a legal
+  and it appears in no registry. Confirmed a divergence by the oracle: Spark returns a 5,000,000-
+  character string for `randstr(5000000, 1)` without complaint. Register it. Round 2 also showed the cap is **per row**: a legal
   length times a large batch still overflows arrow-rs's i32 string offsets. It is caught at the
   boundary rather than aborting, so this is a message quality issue, not a safety one — bound
   `length × batch_size` so the refusal is stated rather than discovered.
@@ -128,7 +143,7 @@ low-risk.
 |---|---|---|
 | the unsigned-count cast moved into the shared analyzer, so the SQL door matches the facade | High | the rewrite must be idempotent across re-analysis, and must not rename an `Aggregate` node's output field that a parent `Projection` refers to by name. Engine semantics. |
 | `groupBy` naming an expression key from the facade's projection name instead of the engine's spelling | Medium | changes the output schema of every unaliased expression group key, not just higher-order ones. A sensitive shared path. |
-| the empty-pattern collector agreeing with `regexp_count` on astral text | Medium | changes matching semantics, and needs a live Java `Matcher` oracle to say which of the two is right. Both currently diverge from Java. |
+| the empty-pattern collector agreeing with `regexp_count` on astral text | Medium → **decided, LRS-6** | the oracle settled it (§7): Spark gives **5** for both `regexp_count('🎉ab','')` and `size(regexp_extract_all('🎉ab','',0))`. repark's `regexp_count` already gives 5; only `collect_matches` is wrong, at 4. It is the one unit here that changes a computed answer, so it ships last, alone, and against a recorded oracle. |
 | `_sort_specs` adopting PySpark's truncating `zip` and its list-of-columns form | Medium | changes what a working `orderBy` returns. The current strictness is louder than PySpark and was a deliberate call. |
 | FNP-15/16 (62 names), FNP-4c (8 lambda kernels), FNP-8 (repatriation of 55) | — | campaign units with their own charters, not sweep items. Sized in the parity design §7.1. |
 
@@ -141,3 +156,30 @@ low-risk.
 4. `make preflight` exit 0, captured alone, its own `$?` read immediately.
 5. Anything a unit declines to fix is registered where the next reader will find it, with its
    reason — never dropped, and never left as a promise without an artifact.
+
+
+## 7. The oracle
+
+A live **PySpark 4.1.2** on a JVM is installed on this machine, outside the repo, in a virtualenv
+this document calls `<pyspark-4.1.2-oracle>` — run its `bin/python` with `JAVA_HOME` pointed at a
+JDK 17 or newer (Spark 4 refuses JDK 11). It runs. That makes it an **independent oracle** in the sense [../testing.md](../testing.md) requires — real
+Spark answering, not repark agreeing with itself, and not a signature read off a docstring.
+
+It was used to scope this campaign before any unit was written, and it changed three answers:
+
+| Question | Round 2 assumed | Spark actually |
+|---|---|---|
+| `F.xxhash64()` | accepted, returns the seed | **raises** `WRONG_NUM_ARGS.WITHOUT_SUGGESTION` |
+| `lambda x, /: …` as a higher-order body | should be rejected | **works** |
+| a non-callable passed as `f` | should raise `PySparkValueError` | raises plain `TypeError` — already what repark does |
+| `regexp_extract_all('🎉ab', '', 0)` | undecided, "needs a Java oracle" | `['','','','','']` — **5**, matching `regexp_count` |
+| `randstr(5000000, 1)` | cap assumed to be a parity question | returns 5,000,000 characters; Spark has no cap |
+| `groupBy(F.exists(...))` column name | PySpark shows `x` | shows `namedlambdavariable()` — Spark's own name is opaque too |
+
+Three suggested fixes from the Critic round were **wrong**, and following them would have shipped
+new divergences. That is the argument for reaching for the oracle rather than the docstring, and it
+is now written down so the next campaign does not re-derive it.
+
+The oracle is *outside* this repository and is not a build dependency; nothing in CI can reach it.
+It is a measurement tool for the author, and every answer it gives is transcribed into the unit
+ledger that used it, so a reader who does not have it can still check the reasoning.
