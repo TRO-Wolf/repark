@@ -4,7 +4,7 @@ Each row here failed before its fix and passes after. They live in one file beca
 provenance — an adversarial review — rather than a subsystem, and because a reader asking "what
 did the critics actually catch?" should get one answer.
 
-Ledger: ``task/fnp-critic-round-1-ledger.md``.
+Ledgers: ``task/fnp-critic-round-1-ledger.md``, ``task/fnp-critic-round-2-ledger.md``.
 """
 
 from __future__ import annotations
@@ -184,3 +184,106 @@ def test_no_working_function_still_documents_itself_as_unsupported() -> None:
         and not any(isinstance(inner, ast.Raise) for inner in ast.walk(node))
     ]
     assert stale == [], f"these work but document themselves as unsupported: {stale}"
+
+
+# ---- Round 2 --------------------------------------------------------------------------------
+# The second pass attacked round 1's own fixes. Three of its findings are defects the first
+# remediation introduced or left half-done, so their pins sit next to the ones they correct.
+
+
+@pytest.mark.parametrize(
+    ("name", "arity"),
+    [
+        ("sum", 1),
+        ("avg", 1),
+        ("min", 1),
+        ("max", 1),
+        ("stddev", 1),
+        ("var_pop", 1),
+        ("median", 1),
+        ("bit_xor", 1),
+        ("approx_count_distinct", 1),
+        ("corr", 2),
+        ("covar_pop", 2),
+        ("regr_count", 2),
+        ("regr_slope", 2),
+    ],
+)
+def test_every_dispatched_aggregate_can_be_used_in_a_window(name: str, arity: int) -> None:
+    """Casting an aggregate must not hide it from ``over``.
+
+    The signed-bigint fix wrapped the aggregate in a CAST, and ``over`` matched
+    ``Cast(WindowFunction)`` but not ``Cast(AggregateFunction)`` — so the one aggregate the fix
+    touched became the only one that could not be windowed, with an error claiming it was not an
+    aggregate. Parametrized across both dispatch tables so the next cast-wrapping fix cannot
+    repeat it on a different name.
+    """
+    from repark.spark import Window
+
+    frame = _session().createDataFrame([(1, 1), (1, 2), (1, 1), (2, 5)], "k int, v int")
+    window = Window.partitionBy("k").orderBy("v")
+    arguments = ["v"] * arity
+    got = frame.select(getattr(F, name)(*arguments).over(window).alias("o")).toArrow()
+    assert got.num_rows == 4
+
+
+def test_approx_count_distinct_stays_a_signed_bigint_in_a_window() -> None:
+    """The CAST peeled off by ``over`` is re-applied to the window result, so the windowed form
+    has the same type as the grouped form rather than falling back to the engine's unsigned one.
+    """
+    from repark.spark import Window
+
+    frame = _session().createDataFrame([(1, 1), (1, 2), (1, 1), (2, 5)], "k int, v int")
+    window = Window.partitionBy("k").orderBy("v")
+    got = frame.select(F.approx_count_distinct("v").over(window).alias("o")).toArrow()
+    assert str(got.schema.field("o").type) == "int64"
+
+
+def test_regr_count_is_a_signed_bigint_through_arithmetic() -> None:
+    """The same defect as ``approx_count_distinct``, at the sibling dispatch table.
+
+    Fixing the first one by name left this one unsigned: ``schema`` reported bigint, the buffer
+    held UInt64, one addition widened the count to DECIMAL(21,0), and a uint64 column written to
+    Parquet reads back in Spark as decimal(20,0). The cast is now taken from the aggregate's own
+    declared return type, so it does not depend on anyone remembering a name.
+    """
+    frame = _session().createDataFrame([(1.0, 2.0), (2.0, 4.1), (3.0, 5.9)], "y double, x double")
+    out = frame.agg(
+        F.regr_count("y", "x").alias("o"),
+        (F.regr_count("y", "x") + F.lit(1)).alias("d"),
+    ).toArrow()
+    assert str(out.schema.field("o").type) == "int64"
+    assert str(out.schema.field("d").type) == "int64"
+
+
+def test_an_unaliased_higher_order_column_has_the_same_name_on_every_build() -> None:
+    """Lambda plan names came from a process-wide counter, so the same query built twice in one
+    session produced two different output schemas — anything pinning a column name, diffing a
+    schema, or writing with inferred names became non-reproducible.
+
+    ``groupBy`` is the path that shows it: it does not apply the facade's projection name, so the
+    plan name reaches the schema. The name is now the lambda's nesting depth, which is what the
+    collision was ever about.
+    """
+    frame = _session().createDataFrame([([1, 2, 3], 1)], "a array<int>, k int")
+    first = frame.groupBy(F.exists("a", lambda x: x > 2)).count().columns
+    second = frame.groupBy(F.exists("a", lambda x: x > 2)).count().columns
+    assert first == second
+
+
+def test_sibling_lambdas_share_a_name_and_still_evaluate_independently() -> None:
+    """Depth-based names mean two lambdas side by side mint the same name.
+
+    That is sound and deliberate: they occupy disjoint scopes, so only an ENCLOSING binding can
+    capture. Pinned because it is the case the counter used to cover by accident.
+    """
+    frame = _session().createDataFrame([([1, 2, 3],)], "a array<int>")
+    got = (
+        frame.select(
+            F.exists("a", lambda x: x > 1).alias("wide"),
+            F.exists("a", lambda x: x > 5).alias("narrow"),
+        )
+        .toArrow()
+        .to_pylist()
+    )
+    assert got == [{"wide": True, "narrow": False}]

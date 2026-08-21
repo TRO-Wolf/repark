@@ -7,6 +7,7 @@
 
 use std::sync::Arc;
 
+use datafusion::arrow::datatypes::DataType;
 use datafusion::functions_aggregate::approx_distinct::approx_distinct_udaf;
 use datafusion::functions_aggregate::bit_and_or_xor::{bit_and_udaf, bit_or_udaf, bit_xor_udaf};
 use datafusion::functions_aggregate::correlation::corr_udaf;
@@ -23,7 +24,7 @@ use datafusion::functions_aggregate::stddev::{stddev_pop_udaf, stddev_udaf};
 use datafusion::functions_aggregate::string_agg::string_agg_udaf;
 use datafusion::functions_aggregate::sum::sum_udaf;
 use datafusion::functions_aggregate::variance::{var_pop_udaf, var_samp_udaf};
-use datafusion::logical_expr::expr::ScalarFunction;
+use datafusion::logical_expr::expr::{Cast, ScalarFunction};
 use datafusion::logical_expr::{AggregateUDF, Expr, lit};
 use datafusion::scalar::ScalarValue;
 use pyo3::exceptions::PyValueError;
@@ -960,6 +961,29 @@ pub(super) fn unary_aggregate_udaf(kind: &str) -> PyResult<Arc<AggregateUDF>> {
         }
     };
     Ok(udaf)
+}
+
+/// ===========================================================================================
+/// Cast an aggregate whose declared return type is unsigned to `Int64`.
+///
+/// Spark has no unsigned integer type, so an unsigned result is a fidelity defect however it
+/// arises: `DataFrame.schema` reports bigint while the buffer holds `UInt64`, one arithmetic step
+/// then widens the count to DECIMAL(21,0), and that is what lands in Parquet/Iceberg — where
+/// Spark reads it back as decimal(20,0) and the file does not round-trip.
+///
+/// Measured from the UDAF rather than keyed on a name, so an aggregate added to either dispatch
+/// table is covered the day it is added (F-CFS-5 fixed `approx_count_distinct` by name and left
+/// its sibling `regr_count` unsigned — FNP-R3-1). The probe uses Int64 arguments: the count-like
+/// aggregates return unsigned for every numeric input, and a UDAF that rejects the probe (the
+/// string ones) keeps its own type.
+/// ===========================================================================================
+pub(super) fn cast_unsigned_count_to_signed(udaf: &AggregateUDF, arity: usize, expr: Expr) -> Expr {
+    match udaf.return_type(&vec![DataType::Int64; arity]) {
+        Ok(returned) if returned.is_unsigned_integer() => {
+            Expr::Cast(Cast::new(Box::new(expr), DataType::Int64))
+        }
+        _ => expr,
+    }
 }
 
 /// ===========================================================================================

@@ -47,7 +47,9 @@ use expr_build::{
     TIMESTAMP_UNIT, collapse_identity_alias_chain, extract_projection_expr, parse_data_type,
     refuse_nested_higher_order, strip_outer_alias,
 };
-use function_dispatch::{binary_aggregate_udaf, call_scalar_expr, unary_aggregate_udaf};
+use function_dispatch::{
+    binary_aggregate_udaf, call_scalar_expr, cast_unsigned_count_to_signed, unary_aggregate_udaf,
+};
 use window::spark_window_frame;
 
 /// ===========================================================================================
@@ -688,19 +690,20 @@ impl PyColumn {
                     "over expects order_by, order_ascending, and order_nulls_first of equal length",
                 ));
             }
-            // Window UDF / CAST(window) / Aggregate → WindowFunction.
-            let (window_expr, cast_type) = match &self.expr {
-                Expr::WindowFunction(_) => (self.expr.clone(), None),
-                Expr::Cast(cast) if matches!(*cast.expr, Expr::WindowFunction(_)) => {
-                    ((*cast.expr).clone(), Some(cast.field.data_type().clone()))
-                }
-                Expr::AggregateFunction(agg) => {
-                    let window = Expr::from(WindowFunction::new(
-                        WindowFunctionDefinition::AggregateUDF(std::sync::Arc::clone(&agg.func)),
-                        agg.params.args.clone(),
-                    ));
-                    (window, None)
-                }
+            // Window UDF / aggregate → WindowFunction, under an optional CAST that is peeled
+            // here and re-applied to the window result. The facade casts count-like aggregates
+            // to Int64 (Spark has no unsigned type), so `over` must look through a CAST to find
+            // the aggregate or the windowed form refuses a call the grouped form accepts.
+            let (inner, cast_type) = match &self.expr {
+                Expr::Cast(cast) => (&*cast.expr, Some(cast.field.data_type().clone())),
+                other => (other, None),
+            };
+            let window_expr = match inner {
+                Expr::WindowFunction(_) => inner.clone(),
+                Expr::AggregateFunction(agg) => Expr::from(WindowFunction::new(
+                    WindowFunctionDefinition::AggregateUDF(std::sync::Arc::clone(&agg.func)),
+                    agg.params.args.clone(),
+                )),
                 _ => {
                     return Err(PyValueError::new_err(
                         "over() applies only to a window or aggregate function column \
@@ -938,17 +941,10 @@ impl PyColumn {
             }
             let udaf = unary_aggregate_udaf(kind)?;
             let base = udaf.call(vec![self.expr.clone()]);
-            // `approx_distinct` materializes UInt64 while `DataFrame.schema` reports bigint, and
-            // one arithmetic step then turns a count into DECIMAL(21,0) instead of BIGINT — which
-            // is what lands in Parquet/Iceberg. Spark's answer is a signed bigint, so cast at the
-            // expression level rather than leaving schema and buffer disagreeing (F-CFS-5).
-            let base = if kind == "approx_count_distinct" || kind == "approx_distinct" {
-                Expr::Cast(Cast::new(Box::new(base), DataType::Int64))
-            } else {
-                base
-            };
             // A plain `call` is already a usable aggregate `Expr`; only IGNORE NULLS needs the
-            // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`).
+            // builder chain (`ExprFunctionExt` on `Expr` → `ExprFuncBuilder` → `build`). The
+            // unsigned cast wraps the finished aggregate, since the builder chain only accepts
+            // a bare aggregate as its receiver.
             let expr = if ignore_nulls {
                 base.null_treatment(NullTreatment::IgnoreNulls)
                     .build()
@@ -960,7 +956,9 @@ impl PyColumn {
             } else {
                 base
             };
-            Ok(Self::from_expr(expr))
+            Ok(Self::from_expr(cast_unsigned_count_to_signed(
+                &udaf, 1, expr,
+            )))
         })
     }
 
@@ -969,7 +967,9 @@ impl PyColumn {
         fenced!("Column.aggregate_binary", {
             let udaf = binary_aggregate_udaf(kind)?;
             let expr = udaf.call(vec![self.expr.clone(), other.expr.clone()]);
-            Ok(Self::from_expr(expr))
+            Ok(Self::from_expr(cast_unsigned_count_to_signed(
+                &udaf, 2, expr,
+            )))
         })
     }
 

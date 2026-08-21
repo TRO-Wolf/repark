@@ -1319,13 +1319,21 @@ Spark's `UTF8String` can, so a Spark program reaches these on a STRING column wh
 structurally cannot. Stated in the facade docstrings as well, because a user seeing
 `validate_utf8('x')` always succeed deserves to know why rather than assuming it is unimplemented.
 
-**Critic round 1 (2026-08-20) — two corrections to this layer.** `functions_lambda.py` mints a
-UNIQUE plan name per lambda (`x_0`, `x_1`, …) while keeping `x`/`y`/`z` for display: two lambdas
-sharing a plan name made a nested one bind to the enclosing variable and answer wrongly with no
-error. And `dataframe/core.py`'s `_sort_specs` now mirrors PySpark's `_sort_cols` line for line —
-a FALSY `ascending=` entry replaces that column's marker with `desc()`, a TRUTHY one changes
-nothing at all. The previous "the override supersedes the marker wholesale" premise was invented,
-and it made `orderBy("v", ascending=False)` place nulls wrongly.
+**Critic round 1 (2026-08-20) — two corrections to this layer.** `functions_lambda.py` gives each
+lambda a plan name distinct from any ENCLOSING one while keeping `x`/`y`/`z` for display: two
+lambdas sharing a plan name made a nested one bind to the enclosing variable and answer wrongly
+with no error. And `dataframe/core.py`'s `_sort_specs` now follows PySpark's `_sort_cols`
+re-marking rule — a FALSY `ascending=` entry replaces that column's marker with `desc()`, a TRUTHY
+one changes nothing at all. The previous "the override supersedes the marker wholesale" premise
+was invented, and it made `orderBy("v", ascending=False)` place nulls wrongly.
+
+**Critic round 2 (2026-08-20).** The lambda plan name is the lambda's nesting DEPTH, not a
+process-wide counter. The counter reached the output schema on any higher-order column the facade
+does not name — `groupBy(F.exists(...))` is one — so the same query built twice in a session
+produced two different schemas. Depth is what the collision was ever about: an inner lambda still
+cannot collide with an enclosing one, and siblings share a name harmlessly because they occupy
+disjoint scopes. A `ContextVar` holds it, so concurrent builds on different threads cannot
+interleave.
 
 ## Pointers
 

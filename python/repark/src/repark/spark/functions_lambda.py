@@ -16,19 +16,24 @@ callable's own signature — and hands the tree to Rust.
 regardless of what the caller wrote, because the names travel into the plan and a user-chosen name
 could collide with a column. This module does the same *for display*.
 
-**The plan name must additionally be unique per lambda.** Two lambdas that both mint ``x`` are
-indistinguishable to ``resolve_lambda_variables``, so a lambda nested inside another binds its
-body to the OUTER variable and the result is silently wrong — measured as an exactly inverted
-answer for ``exists(a, x -> exists(b, y -> ...))`` (F-CSP-1). Spark solves this with
-``UnresolvedNamedLambdaVariable.freshVarName``; this module does the same with a process-wide
-counter, and keeps ``x``/``y``/``z`` for the rendered display so projection names stay
-PySpark-shaped.
+**The plan name must additionally differ from every enclosing lambda's.** Two lambdas that both
+mint ``x`` are indistinguishable to ``resolve_lambda_variables``, so a lambda nested inside
+another binds its body to the OUTER variable and the result is silently wrong — measured as an
+exactly inverted answer for ``exists(a, x -> exists(b, y -> ...))`` (F-CSP-1). The plan name
+therefore carries the lambda's nesting depth, which is what the collision is actually about;
+``x``/``y``/``z`` stay as the rendered display so projection names stay PySpark-shaped.
+
+Depth rather than a running counter because the plan name reaches the output schema on any
+higher-order column the facade does not name — ``groupBy(F.exists(...))`` is one — and a counter
+makes the same query produce a different schema on each build (F-R3-1). Sibling lambdas share a
+depth and so share a name, which is sound: they occupy disjoint scopes, and only an enclosing
+binding can capture.
 """
 
 from __future__ import annotations
 
+import contextvars
 import inspect
-import itertools
 from collections.abc import Callable
 
 from repark import _native
@@ -37,20 +42,21 @@ from repark.spark.column import Column
 from repark.spark.functions import _as_column_arg
 
 # PySpark's own parameter names, in order (`builtin.py` `_get_lambda_parameters`). These are the
-# DISPLAY names; the plan name adds a unique suffix — see `_fresh_parameter_names`.
+# DISPLAY names; the plan name adds a depth suffix — see `_parameter_names`.
 _LAMBDA_PARAMETER_NAMES = ("x", "y", "z")
 
-# Spark's `UnresolvedNamedLambdaVariable.freshVarName`. Two lambdas minting the same plan name are
-# indistinguishable to lambda-variable resolution, so a nested lambda would capture the outer
-# binding and answer wrongly with no error (F-CSP-1).
-_LAMBDA_SEQUENCE = itertools.count()
+# How many lambdas enclose the one being built. A `ContextVar` rather than a plain global so two
+# threads building lambdas at once cannot interleave each other's depth; each thread runs in its
+# own context and so keeps its own count.
+_LAMBDA_DEPTH: contextvars.ContextVar[int] = contextvars.ContextVar(
+    "repark_lambda_depth", default=0
+)
 
 
-def _fresh_parameter_names(arity: int) -> tuple[list[str], list[str]]:
-    """``(plan names, display names)`` for one lambda — unique in the plan, x/y/z on screen."""
-    ordinal = next(_LAMBDA_SEQUENCE)
+def _parameter_names(arity: int, depth: int) -> tuple[list[str], list[str]]:
+    """``(plan names, display names)`` — depth-tagged in the plan, x/y/z on screen."""
     display = list(_LAMBDA_PARAMETER_NAMES[:arity])
-    return [f"{name}_{ordinal}" for name in display], display
+    return [f"{name}_{depth}" for name in display], display
 
 
 def _lambda_arity(function: Callable[..., Column], *, allowed: tuple[int, ...]) -> int:
@@ -78,15 +84,23 @@ def _build_lambda(
 ) -> tuple[list[str], list[str], Column]:
     """Mint placeholders, call the user's callable, return ``(plan names, display names, body)``.
 
-    The plan names are unique per call so a nested lambda cannot capture an enclosing one's
-    binding; the display names stay ``x``/``y``/``z`` so the projection reads like PySpark's.
+    The plan names carry this lambda's nesting depth, so a lambda built inside the callable cannot
+    capture an enclosing one's binding; the display names stay ``x``/``y``/``z`` so the projection
+    reads like PySpark's. The depth is raised for the duration of the callable — that call is
+    exactly the window in which a nested lambda can be built — and restored afterwards, so two
+    builds of the same expression mint the same names.
     """
-    plan_names, display_names = _fresh_parameter_names(arity)
+    depth = _LAMBDA_DEPTH.get()
+    plan_names, display_names = _parameter_names(arity, depth)
     placeholders = [
         Column(_native.PyColumn.lambda_variable(plan), spark_display=shown)
         for plan, shown in zip(plan_names, display_names, strict=True)
     ]
-    body = function(*placeholders)
+    token = _LAMBDA_DEPTH.set(depth + 1)
+    try:
+        body = function(*placeholders)
+    finally:
+        _LAMBDA_DEPTH.reset(token)
     if not isinstance(body, Column):
         raise PySparkValueError(
             f"a higher-order function lambda must return a Column, got {type(body).__name__}"

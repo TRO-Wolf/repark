@@ -213,9 +213,19 @@ history-rewrite; provenance and the options weighed:
      dialect-independent, which is a write-path change).
   8. **FNP-Z — close-out:** `__all__` completion, census re-run, STATUS truth-up, the `#[path]`
      conversion, the dispatch-table module split, and the registry rows handed forward by
-     FNP-3 (`arrays_zip`, `json_tuple`), FNP-5 (`approx_count_distinct` returns `uint64` where
-     Spark returns signed bigint), FNP-6a (the mid-surrogate collector divergence) and FNP-6c (the
-     UTF-8 value-representation difference).
+     FNP-3 (`arrays_zip`, `json_tuple`), FNP-6a (the empty-pattern collector still disagrees with
+     `regexp_count` on astral text, and both diverge from Java's `Matcher` — round 2 F-R3-4),
+     FNP-6b (the 1,000,000-character `randstr` cap is a safety limit, not a Spark parity claim)
+     and FNP-6c (the UTF-8 value-representation difference). The FNP-5 unsigned-count row is
+     **closed at the facade**, not forwarded: the cast is now taken from the aggregate's own
+     declared return type, which covers `regr_count` as well as `approx_count_distinct`. What it
+     does NOT cover is the SQL door — `SELECT regr_count(...)` and `SELECT approx_distinct(...)`
+     still hand back `UInt64`, so the two doors now differ in type on those two names. Correcting
+     the door means moving the cast into the shared analyzer layer, which is an engine-semantics
+     unit rather than a facade one; the divergence is pinned as a ratchet in
+     `test_fnp5_aggregates.py` so fixing the door goes red rather than unnoticed. The SQL door
+     also does not know the name `approx_count_distinct` at all (only DataFusion's
+     `approx_distinct`), which is a separate registration gap.
 
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);

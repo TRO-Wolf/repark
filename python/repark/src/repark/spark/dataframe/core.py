@@ -6349,6 +6349,10 @@ class DataFrame:
         # A FALSY entry replaces that column's marker with `desc()` — descending, nulls last. A
         # TRUTHY entry is a NO-OP: the column keeps whatever it arrived carrying, marker and all.
         # Treating the override as wholesale re-marking silently reordered rows (F-CSP-2/F-CFS-4).
+        # That re-marking rule is exact; two things around it deliberately are not. PySpark's `zip`
+        # truncates a short `ascending` list and leaves the trailing columns unmarked — a silent
+        # partial application, so this raises instead. And a tuple, which PySpark's `isinstance`
+        # check rejects, is accepted here as a sequence (round 2 F-R3-5 / FNP-R3-5).
         remark = self._ascending_remark_flags(len(order_columns), ascending)
         directions: list[bool] = []
         nulls_first_flags: list[bool] = []
@@ -6378,7 +6382,9 @@ class DataFrame:
                     f"({len(ascending)} != {count})"
                 )
             return [not flag for flag in ascending]
-        raise PySparkValueError(
+        # PySpark raises NOT_BOOL_OR_LIST here, which is a `PySparkTypeError`; a wrong TYPE for
+        # the keyword must not arrive as a value error.
+        raise PySparkTypeError(
             f"ascending must be a bool or a list of bools, got {type(ascending).__name__}"
         )
 

@@ -2006,7 +2006,10 @@ NOT in that file is a defect, not a decision.
   intercept 1, r-squared 1, sxx 5, syy 20, sxy 10 are closed-form rather than repark agreeing with
   itself, and each is cross-checked against the SQL door. `approx_count_distinct`'s `rsd` argument
   is pinned as accepted-and-ignored (Spark uses HLL++, DataFusion HLL) — a signature contract, not
-  a claim the estimate matches Spark.
+  a claim the estimate matches Spark. **Critic round 2 (2026-08-20):** the two-door check gained
+  `DOOR_RETURNS_UNSIGNED`, a RATCHET holding the one name whose doors reach the same kernel but
+  hand back different types — the facade casts `regr_count` to Spark's signed bigint, the SQL door
+  still returns the engine's `UInt64`. Fixing the door turns this test red on purpose.
 
 - `test_fnp6_regexp.py` — **FNP-6a (2026-08-20):** `regexp_extract_all` / `regexp_substr`
   against Python's `re` as an independent oracle, the three no-match conventions Spark keeps
@@ -2029,7 +2032,12 @@ NOT in that file is a defect, not a decision.
   higher-order functions returned an inverted boolean), the `ascending=` override matrix, the
   empty-pattern count-vs-collect agreement, `groupBy`/`agg` over a higher-order column, `randstr`
   refusing an enormous length instead of aborting the process, and a structural check that no
-  working function still documents itself as unsupported.
+  working function still documents itself as unsupported. **Critic round 2 (2026-08-20):** pins for
+  the three S1 defects that remediation itself introduced — every dispatched aggregate run through
+  `.over()` (a CAST must not hide an aggregate from the window path), `regr_count` as a signed
+  bigint through arithmetic (the unsigned fix was keyed on a name and missed its sibling), and an
+  unaliased higher-order column keeping the same output name on every build (the uniqueness
+  counter leaked into the schema).
 
 ## I want to...
 

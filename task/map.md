@@ -24,6 +24,12 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [fnp-critic-round-2-ledger.md](fnp-critic-round-2-ledger.md) — **Critic round 2 (2026-08-20):**
+  two more fresh agents under the same hard break, aimed at round 1's own fixes. Both
+  NOT_CONVERGED: 17 findings, 4 at or above the floor, and every one of those was a defect the
+  round-1 remediation INTRODUCED or left half-done — a name-keyed fix that missed its sibling, a
+  CAST that hid an aggregate from `over`, and a uniqueness counter that made the output schema
+  non-deterministic. `make preflight` was green over all three.
 - [fnp-6c-validate-ledger.md](fnp-6c-validate-ledger.md) — **FNP-6c (2026-08-20):**
   `validate_utf8`, `try_validate_utf8`, `assert_true`. Records the value-representation difference
   behind the UTF-8 pair, and the FOURTH prior-unit scope fence found as a passing assertion —

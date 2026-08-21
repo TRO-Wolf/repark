@@ -26,9 +26,10 @@ use super::function_dispatch::{call_scalar_expr, unary_aggregate_udaf};
 /// Names whose two doors are still known to resolve different kernels, with the reason.
 ///
 /// RATCHETS DOWN ONLY. Every row is a live two-door divergence; leaving one here is a decision,
-/// not an oversight. The seventeen below are the latent set measured 2026-08-20 — the facade
-/// lowers each to a DataFusion-core builder while the session resolves the `datafusion-spark`
-/// kernel — and each needs its own semantic adjudication before it can be closed or registered.
+/// not an oversight. They are the latent set measured 2026-08-20 — the facade lowers each to a
+/// DataFusion-core builder while the session resolves the `datafusion-spark` kernel — and each
+/// needs its own semantic adjudication before it can be closed or registered. The count is
+/// asserted rather than written in prose, because a number in a comment cannot ratchet.
 /// How the facade reaches a diverging name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum FacadeShape {
@@ -205,6 +206,13 @@ fn facade_avg_is_the_repark_retracting_kernel_not_datafusion_core() {
 /// that has quietly been fixed must be removed, or the table stops meaning anything.
 #[test]
 fn expected_divergences_are_all_still_real() {
+    // The ratchet's size, asserted where it can go red. Lowering this number is the whole point;
+    // raising it is a decision that has to be made here, in the same commit as the new row.
+    assert_eq!(
+        EXPECTED_DIVERGENCES.len(),
+        20,
+        "the sanctioned-out table changed size — ratchet DOWN, or justify the new row"
+    );
     let ctx = registered_session();
     let mut already_fixed = Vec::new();
 

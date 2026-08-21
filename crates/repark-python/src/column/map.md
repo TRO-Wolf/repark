@@ -91,6 +91,8 @@ without enabling PyO3 `multiple-pymethods`.
 | `F.f(x)` and `spark.sql` disagree but the row is in `EXPECTED_DIVERGENCES` | that table classifies each row by MEASURED shape (`Kernel(arity)` / `Composed`) and FAILS on a row it cannot check — it used to `continue` past half of them |
 | a name works in SQL but raises through `F.` | `function_dispatch.rs` has no arm for it — the kernel is registered, the facade cannot reach it |
 | unknown `aggregate` / `aggregate_binary` kind | `function_dispatch.rs` `unary_aggregate_udaf` / `binary_aggregate_udaf` |
+| an aggregate returns `uint64`, or arithmetic on it widens to DECIMAL(21,0) | `function_dispatch.rs` `cast_unsigned_count_to_signed` — the cast is measured from the UDAF's declared return type, not keyed on a name (round 2 FNP-R3-1) |
+| `over()` says a column is not an aggregate when it is | `mod.rs` `over` peels an optional CAST first; an aggregate wrapped by the unsigned cast used to fall to the catch-all (round 2 F-R3-2) |
 | `… AS x AS x` in a plan | `expr_build.rs` `collapse_identity_alias_chain` |
 
 First checks: `cargo test -p repark-python column`. Escalate to: [../map.md#debug](../map.md).

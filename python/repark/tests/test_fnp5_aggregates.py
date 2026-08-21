@@ -53,8 +53,21 @@ def test_regression_aggregate_matches_the_closed_form(name: str, expected: float
     assert got == [expected], f"{name} on y = 2x + 1"
 
 
+# Names whose two doors reach the same kernel but hand back different TYPES, with the reason.
+# RATCHETS DOWN ONLY. The facade casts a count-like aggregate to signed bigint because Spark has
+# no unsigned integer type; the SQL door still returns the engine's `UInt64`, so the two disagree
+# until the correction moves into the shared analyzer layer where both doors would see it. Fixing
+# the door turns this test red — which is the point: the row leaves, it does not get widened.
+DOOR_RETURNS_UNSIGNED = {"regr_count"}
+
+
 def test_regression_aggregates_agree_with_the_sql_door() -> None:
-    """C-012 at the aggregate layer: the facade must reach the kernel the SQL door reaches."""
+    """C-012 at the aggregate layer: the facade must reach the kernel the SQL door reaches.
+
+    Kernel identity is what the clause requires, and values are how it is checked here. Type
+    equality is checked too, and the one name that is deliberately allowed to differ has to say so
+    in ``DOOR_RETURNS_UNSIGNED`` above.
+    """
     frame = _exact_fit()
     frame.createOrReplaceTempView("fnp5_fit")
     spark = _session()
@@ -63,6 +76,13 @@ def test_regression_aggregates_agree_with_the_sql_door() -> None:
         facade = frame.select(getattr(F, name)("y", "x").alias("r")).toArrow()
         door = spark.sql(f"SELECT {name}(y, x) AS r FROM fnp5_fit").toArrow()
         assert facade.column("r").to_pylist() == door.column("r").to_pylist(), name
+        if name in DOOR_RETURNS_UNSIGNED:
+            assert str(facade.schema.field("r").type) == "int64", name
+            assert str(door.schema.field("r").type) == "uint64", (
+                f"{name}: the SQL door no longer returns unsigned — drop it from "
+                "DOOR_RETURNS_UNSIGNED, the table ratchets down"
+            )
+            continue
         assert facade.schema.field("r").type == door.schema.field("r").type, name
 
 
