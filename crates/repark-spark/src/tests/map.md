@@ -34,7 +34,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   8 delete files compact to 1 with the row set unchanged, nothing-to-do returns four zeros,
   and `rewrite_data_files` grew Spark's fifth column. Two divergence pins ride along:
   `call_mor1_…` holds the sub-`min-input-files` compaction and `call_mor2_…` holds the
-  partition-granularity writer, which is what makes the parity pin's comparison legitimate),
+  partition-granularity writer, which is what makes the parity pin's comparison legitimate.
+  The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
+  vector-present path has no fixture because this engine cannot write one),
   `ref_ddl`,
   `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact

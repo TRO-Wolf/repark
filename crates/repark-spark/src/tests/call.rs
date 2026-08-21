@@ -1309,3 +1309,115 @@ async fn call_rewrite_data_files_returns_sparks_five_columns() {
         "no dangling delete removal runs on this path, and Spark's default reports 0 too"
     );
 }
+
+/// MW-2 guard: the deletion-vector classification rule, pinned directly.
+///
+/// The rule decides whether `rewrite_position_delete_files` refuses. It is pinned as a table
+/// rather than through a fixture because **this engine cannot produce a deletion vector**: it
+/// creates tables at format v2 (`'format-version' = '3'` refuses at CREATE) and refuses
+/// merge-on-read writes on a v3 table. Pinning the vector-present path end to end needs a v3
+/// table written by another engine, which is a cross-engine fixture and belongs with the v3
+/// porting work, not here. What IS pinned end to end is the other half — that the guard does not
+/// fire on the v2 tables this engine does write — by every other rewrite pin in this file, and
+/// explicitly by `call_rewrite_position_delete_files_guard_passes_a_v2_table`.
+#[test]
+fn call_deletion_vector_rule_matches_the_forks_skip_clause() {
+    use iceberg::spec::{DataContentType, DataFileFormat};
+
+    use crate::call::is_deletion_vector;
+
+    // Puffin delete files are deletion vectors — position or equality alike.
+    assert!(is_deletion_vector(
+        DataContentType::PositionDeletes,
+        DataFileFormat::Puffin
+    ));
+    assert!(is_deletion_vector(
+        DataContentType::EqualityDeletes,
+        DataFileFormat::Puffin
+    ));
+    // Parquet delete files are what this procedure compacts.
+    assert!(!is_deletion_vector(
+        DataContentType::PositionDeletes,
+        DataFileFormat::Parquet
+    ));
+    assert!(!is_deletion_vector(
+        DataContentType::EqualityDeletes,
+        DataFileFormat::Parquet
+    ));
+    // A DATA file is never a delete file, whatever its format — the clause must not catch a
+    // Puffin statistics-adjacent data entry and refuse a healthy table.
+    assert!(!is_deletion_vector(
+        DataContentType::Data,
+        DataFileFormat::Puffin
+    ));
+    assert!(!is_deletion_vector(
+        DataContentType::Data,
+        DataFileFormat::Parquet
+    ));
+}
+
+/// MW-2 guard: it does not fire on the format-v2 tables this engine writes.
+///
+/// The half of the guard a fixture CAN reach. A guard that refuses everything would also make
+/// the silent-zeros bug impossible, so this pin is what distinguishes a fix from a wrecking ball.
+#[tokio::test]
+async fn call_rewrite_position_delete_files_guard_passes_a_v2_table() {
+    use crate::call::count_live_deletion_vectors;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let before = seed_mor_delete_files(&ctx, &catalogs, "mor", 8, 8).await;
+    assert_eq!(before, 8, "eight Parquet position deletes, no vectors");
+
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "mor".into());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    assert_eq!(
+        count_live_deletion_vectors(&table).await.unwrap(),
+        0,
+        "a v2 merge-on-read table this engine wrote holds no deletion vectors"
+    );
+
+    execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.mor')",
+    )
+    .await
+    .expect("the guard must not refuse a table it can actually compact");
+}
+
+/// MW-2 guard: a table with NO current snapshot is not a vector table.
+///
+/// The empty-table path returns before the manifest walk, so it is pinned separately — an
+/// early return that got the sense backwards would refuse every freshly created table.
+#[tokio::test]
+async fn call_deletion_vector_guard_handles_a_table_with_no_snapshot() {
+    use crate::call::count_live_deletion_vectors;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.empty (id INT, v STRING) USING iceberg \
+         TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read')",
+    )
+    .await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "empty".into());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    assert!(
+        table.metadata().current_snapshot().is_none(),
+        "fixture must have no snapshot, else it does not exercise the early return"
+    );
+    assert_eq!(count_live_deletion_vectors(&table).await.unwrap(), 0);
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.empty')",
+    )
+    .await
+    .expect("an empty table compacts to four zeros, it does not refuse");
+    let batches = result.collect().await.expect("collect rpdf result");
+    assert_eq!(call_count(&batches[0], "rewritten_delete_files_count"), 0);
+}

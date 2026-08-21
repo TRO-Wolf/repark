@@ -396,6 +396,13 @@ spark.sql(
 The row set is unchanged — compaction rewrites which files mask the deleted rows, never which
 rows are masked. When there is nothing to compact you get four zeros rather than an error.
 
+On a **format-v3** table this refuses instead of running. Those tables carry Puffin deletion
+vectors rather than Parquet position deletes, and a deletion vector is file-scoped, so there is
+nothing to bin-pack. The refusal names how many it found; it does not return zeros and leave you
+thinking the table was already clean. repark writes no v3 delete files itself — it creates tables
+at format v2 and refuses merge-on-read writes on v3 — so this only comes up on a table another
+engine wrote.
+
 Two differences from Spark are worth knowing before you port a maintenance job, and neither
 changes what a query returns:
 

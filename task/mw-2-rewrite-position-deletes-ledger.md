@@ -87,6 +87,36 @@ here rather than left for MW-5 because it is what makes the parity pin honest: t
 parity with Spark **on a partition-granularity table**, and MOR-2 is the measurement showing that
 is the only kind of table this engine writes.
 
+## 3a. The guard: a deletion vector refuses rather than reporting zeros
+
+Found by asking what the MOR-1 and MOR-2 measurements imply for a table this engine did not
+write, which is exactly MW-4's case.
+
+A format-v3 table carries **Puffin deletion vectors** instead of Parquet position deletes. A
+vector is file-scoped — one per data file, never bin-packed — so the fork's collector skips it by
+design (`data_file.file_format() != DataFileFormat::Parquet`) and returns it in no count. Wired
+naively, this procedure answers four zeros on such a table. That is indistinguishable from
+"nothing to compact", so an operator runs the reclaim procedure forever on a table that never
+reclaims, and the campaign's one invariant — no refusal becomes silent — is broken by a surface
+this very unit added.
+
+It now refuses, naming the count. Refusing on **any** live vector, including a mixed table that
+also holds compactable Parquet position deletes, is deliberate: the procedure's contract to its
+caller is the table's position deletes, and silently doing part of that job is the failure being
+prevented.
+
+This engine writes neither half of the problem — it creates tables at format v2
+(`'format-version' = '3'` refuses at CREATE, verified) and refuses merge-on-read writes on a v3
+table (`resolve_merge_mode`). The exposure is entirely tables written elsewhere, which is why it
+was invisible until the drop-in case was thought through.
+
+**What is and is not pinned.** The classification rule is pinned directly as a table, and a
+mutation dropping its data-file exclusion reds it. The no-false-positive half is pinned end to
+end: the guard reads zero on a v2 table this engine wrote, and on a table with no snapshot at all.
+The **vector-present path has no fixture**, because this engine cannot produce a deletion vector;
+pinning it needs a v3 table written by another engine. That is a cross-engine fixture and belongs
+with the v3 porting work, not here — recorded rather than papered over.
+
 ## 4. The pins, and what each one is for
 
 | Pin | Asserts | Red before |
@@ -97,6 +127,9 @@ is the only kind of table this engine writes.
 | `call_rewrite_data_files_returns_sparks_five_columns` | Spark's five, all non-nullable, fifth reads 0 | 4 columns |
 | `call_mor1_compacts_below_sparks_min_input_files_floor` | The divergence held at 4, the largest count where the two disagree | (green — pins existing behavior) |
 | `call_mor2_merge_writes_one_position_delete_per_partition` | One delete file where Spark's default writes six | (green — pins existing behavior) |
+| `call_deletion_vector_rule_matches_the_forks_skip_clause` | The refuse rule, including that a DATA file is never caught | (new; mutation-checked) |
+| `call_rewrite_position_delete_files_guard_passes_a_v2_table` | The guard does not refuse a table it can compact | (new; the pin that separates a fix from a wrecking ball) |
+| `call_deletion_vector_guard_handles_a_table_with_no_snapshot` | The early return, so a fresh table is not refused | (new) |
 
 The four procedure pins were run against the unfixed `call.rs` and all four went red for the
 stated reason. The two divergence pins are green by construction, which is what a BACKLOG row's

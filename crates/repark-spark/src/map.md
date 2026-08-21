@@ -36,7 +36,9 @@ wrapper.
   files into one list, so `classify_content_files` rebuilds the data / position-delete /
   equality-delete split from the manifest entries' own `content_type()` before cleanup runs;
   `rewrite_position_delete_files` needs none, because the fork result mirrors Java's four
-  accessors exactly. **MW-2 divergences:** compaction runs below Spark's `min-input-files` floor
+  accessors exactly, but it **refuses a table holding live Puffin deletion vectors** — the fork
+  skips them by design, so without the guard a format-v3 table would get four zeros that read as
+  "already clean". **MW-2 divergences:** compaction runs below Spark's `min-input-files` floor
   (registry `MOR-1`, a fork-planner gap) and the merge-on-read writer is partition-granularity
   where Spark defaults to per-file (registry `MOR-2`). Both are file layout; neither changes a row.
   3 in-module tests.
