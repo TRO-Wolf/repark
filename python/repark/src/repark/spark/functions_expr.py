@@ -1034,9 +1034,12 @@ def regexp_extract_all(
     ``regexp`` is ``ColumnOrName``: a bare ``str`` is a **column name**, matching
     :func:`regexp_count` and PySpark itself. Pass ``F.lit(...)`` for a pattern literal.
 
-    ``idx`` 0 (the default) is the whole match. No match yields an EMPTY array, not NULL — NULL is
-    reserved for a NULL input, a distinction ``regexp_extract``'s empty-string convention cannot
-    make.
+    ``idx`` defaults to **1** (the first capture group), which is Spark's default and not the whole
+    match — pass ``idx=0`` for that. A pattern with no capture group therefore RAISES on the
+    two-argument form, as it does in Spark.
+
+    No match yields an EMPTY array, not NULL — NULL is reserved for a NULL input, a distinction
+    ``regexp_extract``'s empty-string convention cannot make.
     """
     if idx is None:
         return _scalar("regexp_extract_all", str, regexp)

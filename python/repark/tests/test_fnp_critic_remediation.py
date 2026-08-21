@@ -90,11 +90,15 @@ def test_empty_pattern_agrees_between_counting_and_collecting(text: str) -> None
     ``regexp_count`` counted those; ``regexp_extract_all`` returned ``[]`` — so two functions in
     one module disagreed on plain ASCII, and a user reading ``[]`` as "no matches" would drop
     every row while the count said otherwise.
+
+    ``idx=0`` is named explicitly (SEM-1, 2026-08-21). The empty pattern has no capture group, and
+    the two-argument default is now Spark's group 1, which RAISES on such a pattern — this test is
+    about counting and collecting agreeing, not about the group default.
     """
     frame = _session().createDataFrame([(text,)], "t string")
     out = frame.select(
         F.regexp_count("t", F.lit("")).alias("n"),
-        F.size(F.regexp_extract_all("t", F.lit(""))).alias("sz"),
+        F.size(F.regexp_extract_all("t", F.lit(""), 0)).alias("sz"),
     ).toArrow()
     assert out.column("n").to_pylist() == out.column("sz").to_pylist()
 

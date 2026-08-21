@@ -130,10 +130,14 @@ def test_extract_all_reuses_the_java_matcher_stepping() -> None:
 
     ``[0-9]*`` on ``2026`` matches at every position plus the end — Java's stepping, which the
     ``regex`` crate's ``find_iter`` does not reproduce. Counting and collecting must not disagree.
+
+    ``idx=0`` is named explicitly (SEM-1, 2026-08-21). ``[0-9]*`` has no capture group, and the
+    two-argument default is now Spark's group 1, which RAISES on such a pattern — this test is
+    about the stepping walk, not about the group default, so it asks for the whole match.
     """
     frame = _session().createDataFrame([("2026",)], "s string")
     out = frame.select(
         F.regexp_count("s", F.lit("[0-9]*")).alias("n"),
-        F.size(F.regexp_extract_all("s", F.lit("[0-9]*"))).alias("collected"),
+        F.size(F.regexp_extract_all("s", F.lit("[0-9]*"), 0)).alias("collected"),
     ).toArrow()
     assert out.column("n").to_pylist() == out.column("collected").to_pylist()

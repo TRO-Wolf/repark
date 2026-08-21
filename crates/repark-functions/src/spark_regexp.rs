@@ -47,7 +47,9 @@ pub fn regexp_instr_udf() -> Arc<ScalarUDF> {
 /// Spark `regexp_extract_all(str, regexp[, idx])` UDF (FNP-6).
 /// ===========================================================================================
 ///
-/// Every match's `idx`-th capture group, as an array. `idx` defaults to 0 (the whole match).
+/// Every match's `idx`-th capture group, as an array. `idx` defaults to **1** — Spark's default,
+/// not the whole match. A pattern with no capture group therefore RAISES on the two-argument
+/// form; pass `idx = 0` for the whole match.
 /// No match yields an EMPTY array, not NULL — NULL is reserved for a NULL input, which is the
 /// distinction `regexp_extract`'s empty-string-on-no-match convention loses.
 #[must_use]
@@ -407,7 +409,10 @@ fn extract_rows<T>(
             Some(index) => index
                 .as_primitive::<datafusion::arrow::datatypes::Int32Type>()
                 .value(row),
-            None => 0,
+            // Spark's default is capture group 1, not the whole match (RE-1, closed by SEM-1).
+            // One knob for both doors: the facade omits this argument rather than defaulting it.
+            // `regexp_substr` shares this walk but binds the group as `_group` and never reads it.
+            None => 1,
         };
         let pattern_text = patterns.value(row);
         if !cache.contains_key(pattern_text) {

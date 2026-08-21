@@ -1308,6 +1308,13 @@ needs `F.lit(...)`. Writing them with `lit_indices` instead was caught by the te
 recorded as F-FNP6A-1: it is the same defect class GT1 found in 38 wrappers, reproduced by someone
 who had just read the rule.
 
+**SEM-1 (2026-08-21).** `regexp_extract_all`'s `idx` defaults to **1** (the first capture group),
+Spark's default, not the whole match — the docstring says so and registry row `RE-1` is retired.
+The wrapper keeps passing NO third argument when the caller omits one, which is what makes the Rust
+kernel's default the only default and one knob enough for both doors. A pattern with no capture
+group therefore raises on the two-argument form, as it does in Spark. Ledger:
+`task/sem-1-extract-all-group-default-ledger.md`.
+
 **FNP-6b (2026-08-20).** `randstr` / `uniform` take **constant** bounds — Spark requires literals,
 and `lit_indices` marks them so a column argument reaches the kernel's loud refusal rather than
 being read as row zero. `uniform`'s return type follows its bounds (two integers give an integer,

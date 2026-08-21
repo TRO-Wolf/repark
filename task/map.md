@@ -24,6 +24,12 @@ not this directory.
   or above the S1 floor, one S0 — over a branch where `make preflight` was green. Three blockers
   were in units already signed off, including a fix applied before its evidence and a verification
   guard that silently skipped half its own table.
+- [sem-1-extract-all-group-default-ledger.md](sem-1-extract-all-group-default-ledger.md) —
+  **SEM-1 (2026-08-21):** `RE-1` closed. One line in `extract_rows` serves both doors, exactly as
+  the charter predicted; the collateral was the work, and two of its three sites failed as runtime
+  errors rather than assertion diffs. Also records a draft assertion that read repark's own answer
+  back as if it were Spark's, caught by measuring it — the finding became SEM-5.
+
 - [sem-4-regexp-messages-ledger.md](sem-4-regexp-messages-ledger.md) — **SEM-4 (2026-08-21):**
   the regexp refusals say Spark's words. One `REGEX_GROUP_INDEX` condition replaces repark's two
   group-index messages, and the four regexp kernels stop reporting themselves as each other in

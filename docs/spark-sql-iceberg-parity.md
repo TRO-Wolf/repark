@@ -1572,24 +1572,6 @@ the pin rather than obeying it.
   Parquet or Iceberg is read back by Spark as `decimal(20,0)` and does not round-trip — the cost of
   the gap is on disk, not just in a schema string.
 
-### RE-1 — `regexp_extract_all` defaults to group 0, Spark defaults to group 1
-
-- **repark** — `regexp_extract_all(str, regexp)` returns the **whole match**:
-  `regexp_extract_all('a1b2', '([a-z])([0-9])')` → `['a1', 'b2']`, on the facade and the SQL door
-  alike. A pattern with no capture group returns matches rather than raising.
-- **Apache Spark** — the two-argument form defaults `idx` to **1**, so the same call returns
-  `['a', 'b']`, and a pattern with no group raises
-  `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`. *(oracle: live — PySpark 4.1.2, both doors.)*
-- **Pin** — `python/repark/tests/test_lrs6_regexp_divergences.py::test_re1_extract_all_two_argument_form_returns_group_zero`
-- **Rationale** — BACKLOG, and **the highest-value row on this list**: it is a silently wrong answer
-  on ordinary input, not an edge case. It is not fixed here because this campaign's invariant is
-  that no working query changes its result, and this one changes `['a1','b2']` to `['a','b']` for
-  every two-argument caller. That is a decision to take deliberately, with the three-argument form
-  and `regexp_substr` (which agrees with Spark at `'a1'`) checked in the same change. The pin
-  codifies today's behavior so the fix reds it on purpose. **Scope for closing it** (the single
-  default site, its three collateral test failures, and the adjacent string-`idx` defect) is
-  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-1 — queued, gate held.
-
 ### RE-2 — a zero-width match at a mid-surrogate position
 
 - **repark** — `regexp_extract_all('🎉ab', '', 0)` returns **4** empty strings and

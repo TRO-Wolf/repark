@@ -23,7 +23,10 @@ sit beside `collection/`.
   `validate_group_index` carries Spark's `REGEX_GROUP_INDEX` condition (one
   message for negative and over-large alike); `extract_rows` passes the index
   raw because the bound needs the compiled regex; `coerce_regexp_args` takes
-  the caller's name. Ledger: `task/sem-4-regexp-messages-ledger.md`.
+  the caller's name. Ledger: `task/sem-4-regexp-messages-ledger.md`. **SEM-1
+  (2026-08-21):** the two-argument default is capture group **1**, Spark's,
+  not the whole match — one knob for both doors, closing registry row `RE-1`.
+  Ledger: `task/sem-1-extract-all-group-default-ledger.md`.
 - `spark_split_part.rs` — **GT1-FIX F-6c / R3-1:** STRING `partNum` +
   Dictionary(_, Utf8); partNum 0 fail-loud.
 - `lib.rs` — **Q10 remediating:** crate-root stays **175** (one crate-doc line

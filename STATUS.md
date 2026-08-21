@@ -184,20 +184,26 @@ history-rewrite; provenance and the options weighed:
     query returns, which the charter forbids): `RE-1` — `regexp_extract_all(str, regexp)` returns
     capture group 0 where Spark returns group 1, on both doors; `LOG-1` — `SELECT log(x)` through
     the SQL door returns DataFusion's base-10 answer where Spark returns the natural log. Both are
-    ordinary calls on common functions. **These are the two the owner should look at first.**
+    ordinary calls on common functions. **Both went to the owner, who ruled on 2026-08-21:**
+    `RE-1` closes (SEM-1, below), `LOG-1` is **tabled** and keeps its row.
 
-- **The two semantics fixes (SEM) — queued, held at its approval gate (scoped 2026-08-21).** The
-  scope audit for closing `RE-1` and `LOG-1`, the two rows above:
-  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md). Two units, independent, either
-  order. **SEM-1** is one default in `extract_rows` (`crates/repark-functions/src/spark_regexp.rs`)
-  — one knob for both doors, because the facade passes no default of its own — plus three
-  collateral test sites, two of which fail as *runtime errors* rather than assertion diffs and are
-  named in no other RE-1 document. **SEM-2** needs a new Spark-semantics `log` kernel over
-  DataFusion's `LogFunc` (`datafusion-spark` 54.1.0 ships no `log`), dual-arity and null-guarded at
-  both — measured: repark returns `-0.0` / `NaN` / `-inf` on the six non-positive edges where Spark
-  returns NULL — and it moves the C-012 ratchet from 24 rows to 23. The two defects below ride
-  along, one per unit. **Both units change what a working query returns**, which is exactly why the
-  LRS registered them instead of fixing them; the gate wants a dated owner ruling first.
+- **The Spark semantics fixes (SEM)** (chartered 2026-08-21, **gate ruled the same day**; branch
+  `fix/spark-semantics` off `main` @ `8c660f6`, not yet merged). Charter and measured scope:
+  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+  - **The owner's ruling, 2026-08-21:** `RE-1` closes; **`LOG-1` is TABLED** and keeps its BACKLOG
+    row; the adjacent defects and the message work go ahead.
+  - **Delivered:** SEM-4 (the regexp refusals carry Spark's `REGEX_GROUP_INDEX` condition, and the
+    four regexp kernels stop naming each other in their own planning errors), SEM-1 (`RE-1` closed
+    — the two-argument `regexp_extract_all` defaults to capture group 1 on both doors, and the
+    row is retired from the registry).
+  - **SEM-2 (`LOG-1`) is tabled, not dropped.** Its measured scope stays in the charter: a new
+    dual-arity, null-guarded `log` kernel over DataFusion's `LogFunc` (`datafusion-spark` 54.1.0
+    ships no `log`), which would also move the C-012 ratchet from 24 rows to 23. **`F.log`'s
+    missing two-argument overload is tabled with it** — the only kernel available for it today is
+    the one without Spark's null-guard, so shipping the overload alone would trade a crash for an
+    answer that is silently wrong on six edges.
+  - **This campaign changes what a working query returns**, deliberately and for the first time
+    since the port. That is the whole reason the LRS registered `RE-1` rather than fixing it.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
@@ -309,9 +315,8 @@ moving it. Nothing is described in both places.
   carried `lit_indices={1, 2}`, and the F-FNP6A-1 fix stripped `lit_indices` entirely instead of
   narrowing it to `{2}`. Defect with a scheduled fix, so it stays here rather than becoming a
   registry row. Fix it with, or immediately after,
-  [RE-1](docs/spark-sql-iceberg-parity.md) — same function, same remediation window, and RE-1's
-  test pass is the cheapest place to catch it. Scoped into SEM-1:
-  [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+  `RE-1` — same function, same remediation window, and its test pass is the cheapest place to catch
+  it. Scheduled as SEM-3: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
 
 - **`F.log` has no two-argument form** — measured 2026-08-21. PySpark's signature is
   `log(arg1, arg2=None)`, where the two-argument form is `log(base, x)`; repark's is

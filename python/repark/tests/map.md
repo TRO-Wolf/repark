@@ -2060,6 +2060,12 @@ NOT in that file is a defect, not a decision.
   new `approx_count_distinct` spelling. The `BL-8` pin is a ratchet — it asserts the door is STILL
   unsigned, so closing the row reds it on purpose.
 
+- `test_sem1_extract_all_group_default.py` — **SEM-1 (2026-08-21):** the two-argument
+  `regexp_extract_all` defaults to capture group 1, as Spark does — the first change since the port
+  that makes a working query return a different value, taken on the owner's dated ruling. Closes
+  registry row `RE-1`. The zero-group cases pin the consequence: with a default of 1 and no group
+  to take, the call now RAISES, which is what turned two unrelated tests red as runtime errors.
+
 - `test_sem4_regex_group_index_message.py` — **SEM-4 (2026-08-21):** the group-index refusal now
   raises Spark's own `[INVALID_PARAMETER_VALUE.REGEX_GROUP_INDEX]`, one condition covering both a
   negative and an over-large index where repark had two messages of its own; and the four regexp
