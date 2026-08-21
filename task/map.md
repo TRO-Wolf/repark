@@ -12,6 +12,10 @@ not this directory.
 
 ## Contents
 
+- [v3-1-charter-ledger.md](v3-1-charter-ledger.md) —
+  **V3-1 (2026-08-21):** `CALL system.register_table` + the CI-runnable Spark-written format-v3
+  fixture. Promotes `B-MOR-3` and `V3-ADOPT-1`. Does not create v3 tables (V3-2).
+
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:

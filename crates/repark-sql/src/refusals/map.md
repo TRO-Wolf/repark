@@ -10,6 +10,8 @@ it names the shape, and it names what to do instead — not by its exact wording
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../refusals.rs`.
+  **V3-1:** the Q7 CALL pin uses `ice.system.register_table` so the ANSI-door refusal is
+  named for the new procedure, not only `rewrite_data_files`.
 
 ## Pointers
 

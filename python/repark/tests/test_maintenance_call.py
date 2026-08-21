@@ -246,9 +246,40 @@ def test_rewrite_data_files_preserves_multiset_and_reduces_files(spark: ReparkSe
 def test_unknown_procedure_lists_supported(spark: ReparkSession) -> None:
     with pytest.raises(
         (UnsupportedOperationException, PySparkException),
-        match=r"expire_snapshots|rewrite_data_files|not supported",
+        match=r"expire_snapshots|rewrite_data_files|register_table|not supported",
     ):
         spark.sql("CALL mem.system.not_a_real_proc(table => 'ns.events')")
+
+
+def test_register_table_adopts_and_returns_spark_columns(
+    spark: ReparkSession, tmp_path: Path
+) -> None:
+    """V3-1 — facade door. Spark's three nullable BIGINT columns, then the adopted table reads."""
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.owned LOCATION '{owned}'")
+    spark.sql(
+        f"CREATE TABLE mem.owned.src USING iceberg TBLPROPERTIES ({COW}) AS "
+        "SELECT 1 AS id, 'a' AS name"
+    )
+    metadata_dir = owned / "src" / "metadata"
+    metadata_files = sorted(metadata_dir.glob("*.metadata.json"))
+    assert metadata_files, f"engine-created table must write metadata under {metadata_dir}"
+    metadata_file = metadata_files[-1]
+    result = spark.sql(
+        "CALL mem.system.register_table("
+        f"table => 'owned.adopted', metadata_file => '{metadata_file}')"
+    ).to_arrow()
+    assert _schema_names(result) == [
+        "current_snapshot_id",
+        "total_records_count",
+        "total_data_files_count",
+    ]
+    assert result.schema.field("current_snapshot_id").nullable
+    assert result.schema.field("total_records_count").nullable
+    assert result.schema.field("total_data_files_count").nullable
+    assert result.column("total_records_count")[0].as_py() == 1
+    adopted = spark.sql("SELECT id FROM mem.owned.adopted").to_arrow()
+    assert _arrow_ids(adopted) == [1]
 
 
 def test_remove_orphan_files_requires_an_explicit_older_than(spark: ReparkSession) -> None:

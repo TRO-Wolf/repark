@@ -277,8 +277,9 @@ history-rewrite; provenance and the options weighed:
     ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`
     wired and the last omitted Spark column closed
     ([#197](https://github.com/TRO-Wolf/repark/pull/197)), MW-3 `remove_orphan_files`
-    ([#198](https://github.com/TRO-Wolf/repark/pull/198)). **Five procedures now run through
-    `CALL`, and no procedure omits a Spark column.**
+    ([#198](https://github.com/TRO-Wolf/repark/pull/198)). **Five maintenance procedures** ran
+    through `CALL` at MW-3 close, and no procedure omits a Spark column. V3-1 adds
+    `register_table` (adoption, not maintenance).
   - **The baseline this has to move** (MW-0, measured): ten sequential MERGEs into a v2
     merge-on-read table grow delete files one per merge and never reclaim them, and scan cost
     tracks that growth **2.1× from merge 2 to merge 10 on a table whose contents never change**.
@@ -301,7 +302,7 @@ history-rewrite; provenance and the options weighed:
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), owner-scheduled
-  2026-08-21; audit merged, no unit started).
+  2026-08-21; V3-0 audit merged; **V3-1 in flight**).
   Design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/v3-0-charter-ledger.md](task/v3-0-charter-ledger.md).
   - **V3-0** ([#199](https://github.com/TRO-Wolf/repark/pull/199)) ran the surfaces A12 had only
@@ -315,14 +316,14 @@ history-rewrite; provenance and the options weighed:
     drop-in case. Registry row `V3-LINEAGE-1` — **stricter than Spark on purpose, reversible in
     one line** if the owner would rather match it. The underlying fix is fork work.
   - **Queued, not forced:** `V3-DANGLE-1` (made unreachable by the guard), `V3-ROWID-1` (V3-4
-    owns row lineage), `V3-ADOPT-1` (Hadoop-convention metadata pointers read but do not write).
-    `B-MOR-3`'s repark half is now measured but still needs a CI-runnable fixture, so it stays
-    queued rather than promoted.
-  - **Next is V3-1** — wire `CALL system.register_table` (the addressing question is settled:
-    adoption, which the fork implements for memory and Glue and S3 Tables refuses cleanly) and
-    land the cross-engine fixture. It can run alongside MW; **V3-2 and later want MW closed
-    first**, so a second format version is not introduced underneath the campaign's only
-    real-catalog evidence.
+    owns row lineage).
+  - **V3-1 is the active unit** (branch `feat/v3-1-register-table`): `CALL system.register_table`
+    is wired (Spark's two arguments and three nullable BIGINT columns, measured from the 1.10.0
+    jar); a Spark-written format-v3 fixture is checked in so CI can load Puffin vectors with no
+    JVM; `B-MOR-3` and `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table`
+    in the fork (`FeatureUnsupported`); this engine does not swallow that. **V3-2 and later want
+    MW closed first**, so a second format version is not introduced underneath the campaign's
+    only real-catalog evidence.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

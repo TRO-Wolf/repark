@@ -1,7 +1,7 @@
 //! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router (I3 /
 //! R-MAINTENANCE-CALL).
 //!
-//! Five procedures, each backed by an action the owned fork already provides:
+//! Six procedures, each backed by an action the owned fork already provides:
 //!
 //! 1. `expire_snapshots` — fork R133 `Transaction::expire_snapshots` +
 //!    `ExpireSnapshotsCleanup::commit_and_clean`
@@ -18,6 +18,11 @@
 //!    `DeleteOrphanFiles::new(table).older_than(ms).execute()`), wired by MW-3 on 2026-08-21.
 //! 5. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
 //!    (`crates/iceberg/src/transaction/manage_snapshots.rs:164-167`).
+//! 6. `register_table` — fork `Catalog::register_table` (V3-1). Adoption, not create: the
+//!    metadata file is read and validated before the pointer is claimed. Spark signature
+//!    measured from the Iceberg 1.10.0 jar (`table` STRING, `metadata_file` STRING → three
+//!    nullable BIGINT columns). S3 Tables refuses `FeatureUnsupported` in the fork; this
+//!    router does not swallow that.
 //!
 //! **`remove_orphan_files` is the only one that destroys data, and its defaults invert Spark's.**
 //! `older_than` is REQUIRED where Spark defaults it to `now - 3 days`, and `dry_run` defaults to
@@ -80,6 +85,7 @@ use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, r
 /// Procedures supported by this router (listed in unknown-proc errors).
 const SUPPORTED_PROCEDURES: &[&str] = &[
     "expire_snapshots",
+    "register_table",
     "rewrite_data_files",
     "remove_orphan_files",
     "rewrite_position_delete_files",
@@ -125,6 +131,7 @@ pub async fn execute_call(
             )
             .await
         }
+        "register_table" => execute_register_table(ctx, catalog, &catalog_name, &args).await,
         other => Err(DataFusionError::NotImplemented(format!(
             "CALL system.{other} is not supported. Supported procedures: {}.",
             SUPPORTED_PROCEDURES.join(", ")
@@ -1271,6 +1278,90 @@ async fn execute_rollback_to_snapshot(
         ],
     )?;
     ctx.read_batches(vec![batch])
+}
+
+// ===========================================================================================
+// register_table
+// ===========================================================================================
+
+/// Spark Iceberg `CALL system.register_table(table, metadata_file)`.
+///
+/// Measured from the 1.10.0 jar's own bytecode (V3-0 ledger §4), not from documentation:
+///
+/// | Spark column | Type | Nullable | Source |
+/// |---|---|---|---|
+/// | `current_snapshot_id` | bigint | true | current snapshot id, or null if the table has none |
+/// | `total_records_count` | bigint | true | snapshot summary `total-records` |
+/// | `total_data_files_count` | bigint | true | snapshot summary `total-data-files` |
+///
+/// All three are null when there is no current snapshot. A missing or unparsable summary
+/// property is also null — this engine does not fabricate a count from a walk of the files.
+///
+/// This is adoption, not create: [`Catalog::register_table`] reads the metadata file and
+/// validates it before claiming the catalog pointer. Empty `metadata_file` refuses here, before
+/// the catalog sees it. Hadoop-catalog `vN.metadata.json` pointers register and read; a later
+/// write fails with the wrapped [`crate::iceberg_err`] text (registry `V3-ADOPT-1`).
+///
+/// # Errors
+/// Plan errors for missing/empty arguments; catalog errors (unknown ident, already exists,
+/// unreadable metadata, S3 Tables `FeatureUnsupported`) via [`crate::iceberg_err`].
+async fn execute_register_table(
+    ctx: &SessionContext,
+    catalog: Arc<dyn Catalog>,
+    catalog_name: &str,
+    args: &CallArgs,
+) -> Result<DataFrame> {
+    args.reject_unknown_named(&["table", "metadata_file"])?;
+    args.reject_excess_positional(2)?;
+    let table_arg = args.require_string("table", 0)?;
+    let metadata_file = args.require_string("metadata_file", 1)?;
+    if metadata_file.trim().is_empty() {
+        return Err(DataFusionError::Plan(
+            "CALL register_table requires a non-empty `metadata_file`".to_string(),
+        ));
+    }
+
+    let ident = resolve_table_ident(catalog_name, &table_arg)?;
+    let table = catalog
+        .register_table(&ident, metadata_file)
+        .await
+        .map_err(iceberg_err)?;
+
+    let namespace = crate::namespace_schema_name(ident.namespace());
+    reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
+
+    let snapshot = table.metadata().current_snapshot();
+    let current_snapshot_id = snapshot.map(|snap| snap.snapshot_id());
+    let total_records_count = snapshot.and_then(|snap| summary_i64(snap, "total-records"));
+    let total_data_files_count = snapshot.and_then(|snap| summary_i64(snap, "total-data-files"));
+
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("current_snapshot_id", DataType::Int64, true),
+        Field::new("total_records_count", DataType::Int64, true),
+        Field::new("total_data_files_count", DataType::Int64, true),
+    ]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![
+            Arc::new(Int64Array::from(vec![current_snapshot_id])),
+            Arc::new(Int64Array::from(vec![total_records_count])),
+            Arc::new(Int64Array::from(vec![total_data_files_count])),
+        ],
+    )?;
+    ctx.read_batches(vec![batch])
+}
+
+/// Snapshot-summary integer, or none if the key is absent or not an i64.
+///
+/// Spark reads these from the current snapshot summary and nulls the column when the table has
+/// no snapshot. Fabricating a count by walking files would disagree with Spark on a summary that
+/// is simply missing the key.
+fn summary_i64(snapshot: &iceberg::spec::Snapshot, key: &str) -> Option<i64> {
+    snapshot
+        .summary()
+        .additional_properties
+        .get(key)
+        .and_then(|raw| raw.parse::<i64>().ok())
 }
 
 #[cfg(test)]

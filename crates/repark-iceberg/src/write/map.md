@@ -50,7 +50,8 @@ repark-core's error map.
   overflow never NULLs) → identity-partition fanout write → ONE stamped `fast_append` commit
   (append×append commutes via the fork's refresh-and-re-apply retry; empty input commits an
   empty stamped snapshot). Also `write_partitioned_data_files(_from_stream)` — the partitioned
-  staged-write core.
+  staged-write core. **V3-1:** `iceberg_err` now goes through `catalog::iceberg_to_datafusion`
+  so a Hadoop `vN.metadata.json` pointer names the convention (registry `V3-ADOPT-1`).
 - `overwrite.rs` — exclusive full-table `INSERT OVERWRITE` stage-then-swap:
   `write_overwrite_staged_files_from_stream` (positional map + **WI-1** store-assignment gate +
   stream stage) + `commit_overwrite_replace_all` + `parse_overwrite_isolation`

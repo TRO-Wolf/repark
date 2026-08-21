@@ -172,6 +172,19 @@ pub(crate) fn clone_props<S: BuildHasher>(
 
 /// Fold an iceberg error into a DataFusion error so the session layer can carry it as one engine
 /// error type. (`iceberg::Error` is a `std::error::Error`, so it nests via `External`.)
-pub(crate) fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
+///
+/// Hadoop-catalog `vN.metadata.json` pointers register and read, but the fork cannot compute the
+/// next metadata pointer from that name. The raw error names the filename; this names the
+/// convention (registry `V3-ADOPT-1`).
+pub fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
+    let message = err.to_string();
+    if message.contains("Invalid metadata file name format:") {
+        return DataFusionError::Plan(format!(
+            "{message}. This engine's commit path requires a version-uuid metadata pointer \
+             (`<version>-<uuid>.metadata.json`). The Hadoop catalog convention `vN.metadata.json` \
+             registers and reads, but cannot be written; copy the file to a version-uuid name, \
+             or adopt from a catalog that writes that shape (Glue)."
+        ));
+    }
     DataFusionError::External(Box::new(err))
 }

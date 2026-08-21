@@ -60,6 +60,12 @@ wrapper.
   rather than this router — so that pin is also the detector for the fork changing its mind. The same finding annotates
   `removed_delete_files_count`, whose honest constant `0` holds on v2 and stops holding the moment
   v3 is admitted.
+  **V3-1 wired `register_table`**, the sixth procedure: adoption via the fork's
+  `Catalog::register_table` (memory and Glue implement it; S3 Tables refuses
+  `FeatureUnsupported`). Spark's two required strings and three nullable BIGINT columns, measured
+  from the 1.10.0 jar. Hadoop-named `vN.metadata.json` pointers register and read; a CALL write
+  then names the convention (registry `V3-ADOPT-1`). The Spark-written v3 fixture that lands with
+  this unit is what promotes `B-MOR-3` from a queued candidate to a row.
   3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.

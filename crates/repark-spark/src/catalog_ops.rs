@@ -213,6 +213,12 @@ pub(crate) fn namespace_schema_name(namespace: &NamespaceIdent) -> String {
 }
 
 /// Fold an iceberg error into a DataFusion error (the session layer carries one engine error type).
+///
+/// Hadoop-catalog metadata pointers (`vN.metadata.json`) register and read, but the fork's
+/// [`iceberg::catalog::MetadataLocation`] parser cannot compute the next pointer from that
+/// name — writes then fail with `Invalid metadata file name format`. That message names the
+/// symptom. This wrapper names the convention and the shape that works, which is what V3-1
+/// owns on the adopt path (registry `V3-ADOPT-1`).
 pub(crate) fn iceberg_err(err: iceberg::Error) -> DataFusionError {
-    DataFusionError::External(Box::new(err))
+    repark_iceberg::catalog::iceberg_to_datafusion(err)
 }

@@ -27,11 +27,8 @@ fn insert_overwrite_refusal_steers_three_ways_and_cites_the_evidence() {
 /// Q7: CALL steers to the callable operation and names the trigger that would change the answer.
 #[test]
 fn call_refusal_steers_to_callable_ops_and_names_the_trigger() {
-    let message = maintenance_call("ice.system.rewrite_data_files").to_string();
-    assert!(
-        message.contains("ice.system.rewrite_data_files"),
-        "{message}"
-    );
+    let message = maintenance_call("ice.system.register_table").to_string();
+    assert!(message.contains("ice.system.register_table"), "{message}");
     assert!(message.contains("CALLABLE OPERATION"), "{message}");
     assert!(
         message.contains("TRIGGER"),
