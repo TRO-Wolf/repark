@@ -12,6 +12,16 @@ not this directory.
 
 ## Contents
 
+- [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake
+  (2026-08-21):** every campaign brief, queue, and grant that had existed only in planning space,
+  reduced to eleven open workstreams, one closed ledger, and five items needing verification
+  before anything asserts them. Read it to find out whether a piece of work is real, already
+  landed, or merely proposed — it is an intake, not a plan of record, and STATUS.md stays the
+  SSOT. It carries the **MW campaign** (Iceberg merge-on-read operability), chartered and
+  green-lit by the owner on 2026-08-21 with all four of its decisions ruled, plus the
+  intake-time measurements MW-0 starts from — including an undeclared `rewrite_data_files`
+  result-schema divergence found while verifying the scope.
+
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it, and the one `OPEN` clause (C-007 — whether the four sub-project families
