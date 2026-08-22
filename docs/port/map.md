@@ -10,7 +10,8 @@ phase by phase, and what "done" means mechanically.
 - [PLAN.md](PLAN.md) — copy-then-re-home rules, the four phases, the census-multiset acceptance
   gate, v1-freeze trigger, public ≠ released, the cutover open item.
 - [census.md](census.md) — the recorded census procedure (phase-3 PR-4): the pinned environment
-  recipe and why the pandas major is load-bearing; the exact argument vectors for all four
+  recipe and why the pandas major is load-bearing; **PYC-3** adds `pydantic>=2.10,<3` as the
+  wheel's second hard runtime dep; the exact argument vectors for all four
   cohorts on **both** sides (the classic cohort runs `--classic` here and an explicit
   `--modules` list on the port source — never `--stretch`); the mandatory stability run and the
   quarantine rule; the full-extras facade cohort with its environment clauses; the comparator's

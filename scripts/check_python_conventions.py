@@ -57,9 +57,10 @@ NESTED_DEF_PRAGMA = "# nested-def:"
 # Seeded from the measured tree at the commit that armed this guard (2026-08-21):
 # 66 nested defs across 21 files. PYC-1 deleted the core.py (23) and
 # plan_collapse.py (12) rows. PYC-2 deleted the remaining 10 shipped-package
-# rows (12 lifts + 2 pragmas). Every remaining row is debt, not a sanction —
-# the ceiling is the count on that day, it goes DOWN as PYC lands, and a row
-# whose file drops to zero is deleted rather than kept at 0.
+# rows (12 lifts + 2 pragmas). PYC-3 does not touch this table. Every remaining
+# row is debt, not a sanction — the ceiling is the count on that day, it goes
+# DOWN as PYC lands, and a row whose file drops to zero is deleted rather than
+# kept at 0.
 NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark-parity/bench/fuzz/bank.py": (
         1,
@@ -107,7 +108,8 @@ NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
 # repo-relative posix path -> reason. Keys sorted alphabetically. Every row is
 # debt: the file still imports `dataclasses` and PYC converts it to Pydantic.
 # A row is deleted when its file converts; rows are never added without the
-# owner ruling that the file genuinely cannot take a BaseModel.
+# owner ruling that the file genuinely cannot take a BaseModel. PYC-3 deleted
+# the two shipped-package rows (merge.py, _csv_smart.py).
 DATACLASS_EXCEPTIONS: dict[str, str] = {
     "python/repark-parity/bench/fuzz/bank.py": "fuzz corpus records; RATCHET: PYC",
     "python/repark-parity/bench/fuzz/compare.py": "fuzz comparison rows; RATCHET: PYC",
@@ -129,12 +131,6 @@ DATACLASS_EXCEPTIONS: dict[str, str] = {
     "python/repark-parity/compat/compare_reports.py": "report diff rows; RATCHET: PYC",
     "python/repark-parity/compat/fetch.py": "upstream fetch options; RATCHET: PYC",
     "python/repark-parity/compat/runner.py": "compat run configuration; RATCHET: PYC",
-    "python/repark/src/repark/spark/_csv_smart.py": (
-        "CSV type-inference state carried through the smart reader; RATCHET: PYC"
-    ),
-    "python/repark/src/repark/spark/merge.py": (
-        "MERGE INTO clause records built by the builder API; RATCHET: PYC"
-    ),
     "scripts/check_parity_live_dual_wire.py": "dual-wire comparison rows; RATCHET: PYC",
 }
 

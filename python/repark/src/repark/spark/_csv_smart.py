@@ -20,11 +20,12 @@ from __future__ import annotations
 
 import csv
 import re
-from dataclasses import dataclass, field
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # ==================================================================================================
 # Protocol constants
@@ -83,9 +84,10 @@ _REFUSED_DELIMITERS: frozenset[str] = frozenset({"\n", "\r", '"'})
 # ==================================================================================================
 
 
-@dataclass
-class ColumnIngestReport:
+class ColumnIngestReport(BaseModel):
     """Per-column inference diagnostics (surfaceable; no silent magic)."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     name: str
     resolved_type: str
@@ -111,9 +113,11 @@ class ColumnIngestReport:
         return payload
 
 
-@dataclass
-class IngestReport:
+class IngestReport(BaseModel):
     """Full smartCsv ingest diagnostics."""
+
+    # Mutated after init by prepare_messy_csv / load_smart_csv — not frozen.
+    model_config = ConfigDict(extra="forbid", strict=True)
 
     source: str = "smartCsv"
     path: str = ""
@@ -123,8 +127,8 @@ class IngestReport:
     bom_stripped: bool = False
     ragged_rows_padded: int = 0
     header_normalized: bool = False
-    null_tokens: list[str] = field(default_factory=list)
-    columns: list[ColumnIngestReport] = field(default_factory=list)
+    null_tokens: list[str] = Field(default_factory=list)
+    columns: list[ColumnIngestReport] = Field(default_factory=list)
     synthesized_headers: bool = False
     data_row_count: int = 0
     # r26 Q4 sampling diagnostics (inference-only; data read is always full file).
@@ -335,9 +339,10 @@ def resolve_cell_rung(raw: str) -> str:
 # ==================================================================================================
 
 
-@dataclass
-class ColumnResolution:
+class ColumnResolution(BaseModel):
     """Resolved column type + diagnostics counters."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     rung: str
     fallback_count: int
@@ -642,9 +647,10 @@ def normalize_header_name(name: str, *, case: str | None) -> str:
     return text
 
 
-@dataclass
-class PreparedCsv:
+class PreparedCsv(BaseModel):
     """Result of messy-CSV preprocessing ready for engine read + inference."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     headers: list[str]
     rows: list[list[str | None]]  # null-normalized cells

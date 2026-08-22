@@ -27,7 +27,8 @@ result**, not a detail of how it was obtained. Both sides run the identical reci
 |---|---|---|
 | Python | **3.12** | `.python-version`; abi3-py312 floor |
 | `pyspark` | **==4.1.2** | the Apache test tree is fetched at the tag matching this version |
-| `pyarrow` | `>=25` | the wheel's single runtime dependency |
+| `pyarrow` | `>=25` | wheel hard runtime dep |
+| `pydantic` | `>=2.10,<3` | **PYC-3:** second wheel hard dep (BaseModel) |
 | `pandas` | **`>=2.1,<3`** | the major is load-bearing — see below |
 | `maturin` | **1.14.1** | same pin as the Makefile / workflows |
 | `uv` | **0.9.5** | same pin as the Makefile `UV_VERSION` / every `setup-uv` job |

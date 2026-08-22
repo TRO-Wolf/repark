@@ -47,6 +47,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   release-prep gate (§4), the three hard findings handled (§5), the end-to-end census +
   acceptance procedure with the stability run and the report comparator (§6), the CI delta
   incl. the net-new tier-2 live-AWS design (§7), and the seven-PR slate (§9).
+  **PYC-3 (2026-08-22):** dated footnote — pydantic v2 is a second wheel hard dep.
 - [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** campaign
   design (settled 2026-08-20): close the `pyspark.sql.functions` gap and move the semantics behind
   every name out of Python into Rust. Goal and the three done-criteria (§1), the measured ground

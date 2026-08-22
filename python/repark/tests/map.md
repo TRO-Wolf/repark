@@ -22,6 +22,11 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_pyc_3_dataclasses.py](test_pyc_3_dataclasses.py) — **PYC-3 (2026-08-22):**
+  accepted-input set of `merge._Clause` and the four `_csv_smart` records
+  (including empty `PreparedCsv`); extra/strict/frozen pins; `to_dict` key set;
+  pydantic wheel-dep token; the two DATACLASS_EXCEPTIONS rows deleted not zeroed.
+  Behaviour stays on `test_merge_into.py` / `test_t4_csv_smart.py`.
 - [test_pyc_2_nested_defs.py](test_pyc_2_nested_defs.py) — **PYC-2 (2026-08-22):**
   AST pin that the eight lifted shipped modules have zero nested `def`s (ancestor
   walk, including `try` / `if`); `types.py` `verifier` and `udtf._build` stay
@@ -726,7 +731,7 @@ NOT in that file is a defect, not a decision.
 - `test_merge_into.py` — **R-MERGEINTO**: builder upsert equals SQL-MERGE (COW + MoR); delete /
   partial update / insert dict; Column condition; temp-view cleanup (success + failure);
   no-clause `[NO_MERGE_ACTION_SPECIFIED]`; `whenNotMatchedBySource` engine reject; type errors;
-  `withSchemaEvolution` returns self; equi-join sugar unit pin. Arrow path for row sets.
+  `withSchemaEvolution` refuses loud; equi-join sugar unit pin. Arrow path for row sets.
 - `test_merge_scan_prune_semantics.py` — **MG-1 (2026-08-15):** MERGE residual-probe
   hardening pins (r1/M1 Utf8→INT 2-row upsert; r2/M6 BIGINT 3e9 vs INT no-abort;
   r3/M5 `t.city = 'Zürich'` battery shape + backtick `` t.`Zürich` `` column;
