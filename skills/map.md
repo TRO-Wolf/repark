@@ -13,7 +13,7 @@ agent runs *under* — they bind to, and defer to, the repo's engineering contra
   abstract roles to this repo).
 
 The portable **code-quality** convention set lives with the other agent-facing skills at
-[../.agent/skills/code-quality/map.md](../.agent/skills/code-quality/map.md). The rule of record
+[../.agents/skills/code-quality/map.md](../.agents/skills/code-quality/map.md). The rule of record
 stays [../AGENTS.md](../AGENTS.md) "Python".
 
 ## I want to...
@@ -22,7 +22,7 @@ stays [../AGENTS.md](../AGENTS.md) "Python".
 |---|---|
 | Operate under / understand SEPMO | [sepmo/map.md](sepmo/map.md) → [sepmo/SKILL.md](sepmo/SKILL.md) |
 | See SEPMO's bindings to this repo | [sepmo/binding-manifest.md](sepmo/binding-manifest.md) |
-| Write or review Python under the conventions | [../.agent/skills/code-quality/map.md](../.agent/skills/code-quality/map.md) → [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md) |
+| Write or review Python under the conventions | [../.agents/skills/code-quality/map.md](../.agents/skills/code-quality/map.md) → [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md) |
 
 ## Pointers
 

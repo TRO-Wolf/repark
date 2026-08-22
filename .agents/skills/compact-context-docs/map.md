@@ -1,4 +1,4 @@
-# map — .agent/skills/compact-context-docs/
+# map — .agents/skills/compact-context-docs/
 
 ## Purpose
 

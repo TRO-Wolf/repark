@@ -19,7 +19,7 @@ to disagree, the design wins and the disagreement is raised, not silently resolv
   standing rules" — this brief **references** those rules and never restates or relaxes them. It
   may narrow them for a unit.
 - **Capability-tier choices are tool mechanics**, not project rules: they live in the tool adapters
-  ([../.agent/](../.agent/map.md)), never here and never in the design.
+  ([../.agents/](../.agents/map.md)), never here and never in the design.
 - **Verification panel per unit:** FULL (adversarial review with the lenses the unit names) for any
   unit that touches engine code, harness code, or a mechanical gate; SLIM (one adversarial verifier)
   for documentation-only units. Each unit below declares its panel.

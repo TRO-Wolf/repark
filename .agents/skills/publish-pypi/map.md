@@ -1,4 +1,4 @@
-# map — .agent/skills/publish-pypi/
+# map — .agents/skills/publish-pypi/
 
 ## Purpose
 

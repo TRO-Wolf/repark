@@ -34,6 +34,16 @@ CLAUDE.md restates nothing. Follow the pointers:
 CLAUDE.md keeps this filename so Claude tooling that auto-loads it still fires and lands you on
 AGENTS.md on turn 1.
 
+## Claude tool mechanics — skills are invocable here
+
+`.claude/skills` is a symlink to `../.agents/skills` (git mode `120000`), so every runbook there
+loads natively in a Claude session and can be invoked by name rather than opened by path. The
+skills keep their single home under `.agents/`; this directory adds no second copy and states no
+rule. Roster and reasoning: [.agents/skills/map.md](.agents/skills/map.md).
+
+The SEPMO control plane under [skills/](skills/map.md) is a separate tree and is **not** covered by
+that symlink; it is invoked deliberately, not discovered.
+
 ## Claude tool mechanics — capability tiers and sub-agents
 
 These are Claude-family orchestration mechanics, **not** project rules. AGENTS.md "Delegated work"

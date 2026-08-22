@@ -7,7 +7,7 @@ boundaries. When a rule changes, it changes **here**; other files point at this 
 not restate it.
 
 Tool-specific onboarding lives in clearly-labelled **adapter** files that carry no authoritative
-facts (so they cannot drift): [CLAUDE.md](CLAUDE.md) and [.agent/](.agent/map.md). Deleting any
+facts (so they cannot drift): [CLAUDE.md](CLAUDE.md) and [.agents/](.agents/map.md). Deleting any
 adapter loses no project knowledge.
 
 ## Read first
@@ -175,7 +175,7 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     `python` job, and in both pre-commit paths. The other two Python rules are held elsewhere and
     are deliberately not duplicated: type coverage is Ruff's `ANN` rule set, naming is a review
     duty. Prose points at the script; the tables are never restated here. Rationale and the
-    method for arming a convention: [.agent/skills/code-quality/SKILL.md](.agent/skills/code-quality/SKILL.md).
+    method for arming a convention: [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md).
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
     inventory, phase, canonical gate commands and documentation index are machine-readable and
     validated against the workspace, the Makefile, STATUS.md, the declared documents and the
@@ -355,7 +355,7 @@ implementation**, never for architectural judgement. Every delegated unit inheri
 rules above and the approval boundaries in "Destructive / outward-facing operations" — a delegated
 unit may narrow those, never relax them. Any capability-tier choices for delegated agents (which
 model does what, when a stronger tier needs an explicit request) are **tool mechanics**, recorded in
-the relevant tool adapter ([CLAUDE.md](CLAUDE.md) / [.agent/](.agent/map.md)), not here.
+the relevant tool adapter ([CLAUDE.md](CLAUDE.md) / [.agents/](.agents/map.md)), not here.
 
 ## Process governance (SEPMO)
 

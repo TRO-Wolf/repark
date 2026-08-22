@@ -144,7 +144,7 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   failure, an empty scan set, or a stale `EXCEPTIONS` key. Measured 0.94 s — the slowest
   hook-eligible guard. Dual-wired `make check-python-conventions` (in the `make ci` chain) +
   ci.yml's `python` job, and in both pre-commit paths. Rationale and the arming method:
-  [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md).
+  [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md).
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
   (G-8 companion to `check_lib_rs`). Over every `*.rs` under `crates/**` (recursive): a per-file

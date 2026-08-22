@@ -96,14 +96,14 @@ FD-1 ──▶ FD-2 ──▶ FD-3 ──▶ FD-4 ──▶ FD-5
   neutral contract). Zero authoritative facts.
 - **Recast the `docs/skills/` tier manuals** as the Claude tier manuals, reachable from the Claude
   adapter only.
-- **`.agent/`:** `common.md` (points to the neutral spine) + `claude.md` (real) + `codex.md`/`cursor.md`
+- **`.agents/`:** `common.md` (points to the neutral spine) + `claude.md` (real) + `codex.md`/`cursor.md`
   (one-line stubs pointing inward) — pending owner answer on open-question 2.
 - **Component contracts** (proposal §8): add a standardized `## Component contract` section to each of
   the 9 crate-root `map.md` files (Owns / Does-not-own / public inputs / public outputs / state+lifecycle
   / allowed internal deps / failure model / extension points / test strategy / known limitations).
 
 **Acceptance gate**
-- Deleting any one vendor adapter (`CLAUDE.md`, `.agent/*`) loses **no** project knowledge (every fact
+- Deleting any one vendor adapter (`CLAUDE.md`, `.agents/*`) loses **no** project knowledge (every fact
   it references resolves in the neutral spine).
 - A tier/vendor grep over `AGENTS.md` → no authoritative rule matches (only cross-references, if any).
 - The precedence chain appears in exactly one file (AGENTS.md); CLAUDE.md/CONTRIBUTING/PROJECT point to

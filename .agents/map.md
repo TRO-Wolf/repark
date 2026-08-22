@@ -1,4 +1,4 @@
-# map — .agent/
+# map — .agents/
 
 ## Purpose
 
@@ -19,7 +19,8 @@ knowledge. The authority move that makes this possible is recorded in
   headroom, the parity audit) plus the code-quality convention reasoning for Python and the
   Rust review procedure: proven sequences / reasoning, pointer-thin, zero authoritative facts.
   Each is a directory with a frontmatter-carrying `SKILL.md`, so it is discoverable rather than
-  merely present. See [skills/map.md](skills/map.md).
+  merely present, and `../.claude/skills` symlinks here so Claude sessions can invoke them
+  natively. See [skills/map.md](skills/map.md).
 
 ## I want to...
 
@@ -31,7 +32,7 @@ knowledge. The authority move that makes this possible is recorded in
 | Write or review Python under the conventions | [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md) |
 | Review a Rust PR or commit | [skills/rust-code-quality/SKILL.md](skills/rust-code-quality/SKILL.md) |
 | Audit parity or triage a parity-live red | [skills/audit-repark-parity/SKILL.md](skills/audit-repark-parity/SKILL.md) |
-| Add mechanics for a new tool | add `.agent/<tool>.md` (pointer + tool mechanics only) + a Contents row here |
+| Add mechanics for a new tool | add `.agents/<tool>.md` (pointer + tool mechanics only) + a Contents row here |
 | Read the authoritative contract | [../AGENTS.md](../AGENTS.md) |
 
 ## Pointers

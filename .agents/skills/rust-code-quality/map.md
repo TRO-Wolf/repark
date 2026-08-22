@@ -1,4 +1,4 @@
-# map — .agent/skills/rust-code-quality/
+# map — .agents/skills/rust-code-quality/
 
 ## Purpose
 
@@ -41,5 +41,5 @@ conflict those win.
 | Symptom | First check |
 |---|---|
 | A checklist item duplicates a gate | Bug — delete the item, cite the gate ([SKILL.md](SKILL.md) "What the gates already hold") |
-| The skill states a project rule | Bug — move it to the spine, leave a pointer (`.agent/` contract) |
+| The skill states a project rule | Bug — move it to the spine, leave a pointer (`.agents/` contract) |
 | A cited file or make target no longer exists | Fix the skill in the same PR as the change that falsified it |

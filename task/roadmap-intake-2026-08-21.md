@@ -255,7 +255,7 @@ Datasets workstream (a) fully landed (#153/#158/#161/#163). Still queued:
 - **crates.io publishing: structurally deferred** — the `[patch.crates-io]` fork pin cannot
   ship in published crates; unblock = publish the fork crates under owned names. PyPI wheel
   publishing is live and proven (seven tags).
-- Release runbooks now exist in-repo (`.agent/skills/`); keep them in lockstep with
+- Release runbooks now exist in-repo (`.agents/skills/`); keep them in lockstep with
   `docs/release.md` (whose "phase 0 / nothing wired" opening is stale — truth-up pending).
 
 ### A12. Format-v3 and deletion vectors — **owner-scheduled 2026-08-21**
