@@ -141,8 +141,9 @@ write failed with `Invalid metadata file name format: v3.metadata.json`, because
 `MetadataLocation` parser requires `<version>-<uuid>.metadata.json` to compute the next pointer.
 Copying the identical file to a name of that shape made `INSERT` and `expire_snapshots` both
 succeed, which is how the cause was isolated from anything to do with v3. Catalogs that write
-version-uuid pointers, Glue among them, are unaffected. Queued as `V3-ADOPT-1`; the error names
-the symptom rather than the cause, and whichever unit lands the adopt path owns that text.
+version-uuid pointers, Glue among them, are unaffected. **Admitted as registry row
+`V3-ADOPT-1` by V3-1 (2026-08-21):** the CALL write now names the Hadoop convention and the
+version-uuid shape; the fork still cannot compute the next pointer from `vN.metadata.json`.
 
 ## 5. The unit slate, as revised
 

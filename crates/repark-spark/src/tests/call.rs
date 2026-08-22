@@ -1294,8 +1294,8 @@ async fn call_rewrite_data_files_returns_sparks_five_columns() {
 /// rather than through a fixture because **this engine cannot produce a deletion vector**: it
 /// creates tables at format v2 (`'format-version' = '3'` refuses at CREATE) and refuses
 /// merge-on-read writes on a v3 table. Pinning the vector-present path end to end needs a v3
-/// table written by another engine, which is a cross-engine fixture and belongs with the v3
-/// porting work, not here. What IS pinned end to end is the other half — that the guard does not
+/// table written by another engine. That fixture landed in V3-1 (`fixtures/v3-spark-mor/` +
+/// `call_register.rs`). What IS pinned here is the other half — that the guard does not
 /// fire on the v2 tables this engine does write — by every other rewrite pin in this file, and
 /// explicitly by `call_rewrite_position_delete_files_guard_passes_a_v2_table`.
 #[test]

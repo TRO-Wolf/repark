@@ -16,7 +16,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
   lineage, both verified by round trip; `rewrite_data_files` silently reassigned that lineage,
   which is why the audit ships a guard. Carries the `system.register_table` signature read from
   the Iceberg jar (§4), the revised six-unit slate (§5), the two fork items the track needs (§6),
-  and §7 — what was measured and what is not claimed.
+  and §7 — what was measured and what is not claimed. **V3-1 (2026-08-21):** §4's
+  `V3-ADOPT-1` is an admitted registry row, not queued; the CALL write names the Hadoop
+  convention.
 
 - [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW campaign's design
   (2026-08-21):** why merge-on-read is written but not operated, and why closing that is small.

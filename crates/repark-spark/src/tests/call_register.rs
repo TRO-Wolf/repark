@@ -201,6 +201,11 @@ async fn call_register_table_of_a_table_with_no_snapshot_returns_three_nulls() {
     .await
     .expect("collect");
     let batch = &batches[0];
+    assert_eq!(
+        batch.num_rows(),
+        1,
+        "Spark returns one row of nulls, not an empty batch"
+    );
     assert_eq!(i64_cell(batch, 0), None, "current_snapshot_id must be null");
     assert_eq!(i64_cell(batch, 1), None, "total_records_count must be null");
     assert_eq!(
@@ -327,16 +332,25 @@ async fn call_register_table_of_hadoop_named_metadata_writes_name_the_convention
         "CALL ice.system.expire_snapshots(table => 'sales.hadoop', retain_last => 1)",
     )
     .await
-    .expect_err("write against a Hadoop pointer must fail")
-    .to_string();
+    .expect_err("write against a Hadoop pointer must fail");
+    let message = err.to_string();
     assert!(
-        err.contains("vN.metadata.json") || err.contains("Hadoop"),
-        "write error must name the Hadoop convention, not only the filename: {err}"
+        message.contains("vN.metadata.json") || message.contains("Hadoop"),
+        "write error must name the Hadoop convention, not only the filename: {message}"
     );
     assert!(
-        err.contains("version-uuid") || err.contains("<version>-<uuid>"),
-        "write error must name the pointer shape that works: {err}"
+        message.contains("version-uuid") || message.contains("<version>-<uuid>"),
+        "write error must name the pointer shape that works: {message}"
     );
+    match err {
+        DataFusionError::External(inner) => {
+            assert!(
+                inner.downcast_ref::<iceberg::Error>().is_some(),
+                "Hadoop wrap must stay iceberg::Error so session classification is Iceberg, not DataFusion"
+            );
+        }
+        other => panic!("Hadoop write must stay External(iceberg::Error), got {other}"),
+    }
 }
 
 #[tokio::test]

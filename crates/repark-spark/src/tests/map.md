@@ -37,7 +37,7 @@ code is not here — only tests, shared fixtures, and the module manifest.
   partition-granularity writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
   vector-present path is the Spark-written fixture under `fixtures/v3-spark-mor/`, adopted by
-  `call_register` / V3-1),
+  `call_register` / V3-1 — the MW-2 rule-table pin's rustdoc says so too),
   `call_v3` (**V3-0**, split from `call` on subject the way `call_orphan` was: every test is about
   one table property rather than one procedure. Holds the `rewrite_data_files` row-lineage
   refusal, its v2 control, and a fixture assertion — the fixture is built by upgrading an
