@@ -12,7 +12,7 @@ version = "0.0.0"
 description = "Spark-parity differential test harness for repark (null-aware Arrow comparison)."
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
-dependencies = ["pyarrow>=25.0.0"]
+dependencies = ["pyarrow>=25.0.0", "pydantic>=2.10,<3"]
 
 [project.optional-dependencies]
 # Heavyweight + needs a JVM; used only to (re)record golden fixtures, never in routine CI.

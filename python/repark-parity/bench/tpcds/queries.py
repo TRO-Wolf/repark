@@ -8,13 +8,15 @@ extension (``tpcds_queries()``) — **not** vendored TPC Council specification t
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
 
-@dataclass(frozen=True)
-class TpcdsQuery:
+
+class TpcdsQuery(BaseModel):
     """One TPC-DS query with optional dialect rewrite applied for repark."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     query_nr: int
     original_sql: str

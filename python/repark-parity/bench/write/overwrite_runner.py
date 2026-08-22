@@ -17,9 +17,10 @@ import platform
 import shutil
 import time
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .runner import (
     StageTiming,
@@ -47,9 +48,10 @@ PINNED_TARGET_FILE_SIZE: Final[int] = 256 * 1024 * 1024
 BASELINE_TARGET_ROWS: Final[int] = 1_000
 
 
-@dataclass
-class OverwriteCellResult:
+class OverwriteCellResult(BaseModel):
     """One (source_rows, width) INSERT OVERWRITE cell."""
+
+    model_config = ConfigDict(extra="forbid")
 
     source_rows: int
     width: str
@@ -80,17 +82,18 @@ class OverwriteCellResult:
         return None
 
 
-@dataclass
-class OverwriteBoard:
+class OverwriteBoard(BaseModel):
     """INSERT OVERWRITE RSS scoreboard."""
+
+    model_config = ConfigDict(extra="forbid")
 
     row_counts: list[int]
     widths: list[str]
-    cells: list[OverwriteCellResult] = field(default_factory=list)
-    environment: dict[str, str] = field(default_factory=dict)
-    findings: list[str] = field(default_factory=list)
+    cells: list[OverwriteCellResult] = Field(default_factory=list)
+    environment: dict[str, str] = Field(default_factory=dict)
+    findings: list[str] = Field(default_factory=list)
     release_build_disclosed: bool = False
-    pinned_knobs: dict[str, str] = field(default_factory=dict)
+    pinned_knobs: dict[str, str] = Field(default_factory=dict)
 
 
 def _fresh_warehouse(root: Path, label: str) -> Path:
@@ -405,7 +408,7 @@ def board_to_dict(board: OverwriteBoard) -> dict[str, Any]:
         "pinned_knobs": board.pinned_knobs,
         "cells": [
             {
-                **{key: value for key, value in asdict(cell).items() if key != "stages"},
+                **{key: value for key, value in cell.model_dump().items() if key != "stages"},
                 "stages": [{"name": stage.name, "seconds": stage.seconds} for stage in cell.stages],
                 "overwrite_s": cell.overwrite_s,
                 "ctas_baseline_s": cell.ctas_baseline_s,

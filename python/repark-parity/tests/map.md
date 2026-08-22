@@ -7,6 +7,16 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_pyc_4_parity_harness.py` — **PYC-4 (2026-08-22):** nested-def EXCEPTIONS
+  table empty; DATACLASS_EXCEPTIONS is only the dual-wire script; 20 converted
+  files import-free of `dataclasses`; every converted `BaseModel` AST-pins
+  `extra="forbid"` and not `strict=True`; lifted modules have zero nested `def`s;
+  signal-handler / shrink-predicate / spy / dual-wire comparator keep a
+  `# nested-def:` pragma *on the def line*; `CensusRow` extra-field refuse + int
+  `test_id` refuse; recorded-denominator dummy ids are strings; `repark-parity`
+  declares `pydantic>=2.10,<3`; isolated `make py-test` / ci.yml `--with pydantic`
+  (C1-Q-001); root Ruff ANN ignores split so parity tests see ANN201/ANN202.
+  Behaviour stays on `test_compare_reports.py` / `test_compat_harness.py`.
 - `test_datasets_secrets.py` — **DS-3** secrets fixture: A9 defaults, table-identity
   determinism, manifest class→column coverage in schema order, the needle labels
   re-derived with the `prop_key_is_secret` fold (lowercase, hyphen/dot → underscore,

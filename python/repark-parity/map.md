@@ -8,7 +8,10 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 
 ## Contents
 
-- `pyproject.toml` — hatchling package; `pyarrow` dep; `record` extra (`pyspark`) for golden refresh.
+- `pyproject.toml` — hatchling package; `pyarrow>=25` and `pydantic>=2.10,<3`
+  (**PYC-4**, 2026-08-22 — harness records are BaseModel; dual-wire stays a
+  dataclass because it runs as bare `python3`); `record` extra (`pyspark`) for
+  golden refresh.
 - `src/repark_parity/` — `compare.py` (the comparison core), `__init__.py`, `py.typed`.
 - `tests/` — unit tests for the comparison core **and the dataset generators**.
 - `datasets/` — torture-dataset generators (cache-root outputs, data never committed);

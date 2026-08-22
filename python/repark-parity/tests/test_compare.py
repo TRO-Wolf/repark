@@ -8,58 +8,58 @@ import pytest
 from repark_parity import FrameMismatchError, assert_frames_equal
 
 
-def _table(ids, names):
+def _table(ids: list[int | None], names: list[str | None]) -> pa.Table:
     return pa.table({"id": ids, "name": names})
 
 
-def test_identical_frames_pass():
+def test_identical_frames_pass() -> None:
     assert_frames_equal(_table([1, 2, 3], ["a", "b", "c"]), _table([1, 2, 3], ["a", "b", "c"]))
 
 
-def test_row_order_ignored_by_default():
+def test_row_order_ignored_by_default() -> None:
     left = _table([1, 2, 3], ["a", "b", "c"])
     right = _table([3, 1, 2], ["c", "a", "b"])
     assert_frames_equal(left, right)
 
 
-def test_order_sensitive_detects_reordering():
+def test_order_sensitive_detects_reordering() -> None:
     left = _table([1, 2], ["a", "b"])
     right = _table([2, 1], ["b", "a"])
     with pytest.raises(FrameMismatchError):
         assert_frames_equal(left, right, order_sensitive=True)
 
 
-def test_value_difference_raises():
+def test_value_difference_raises() -> None:
     left = _table([1, 2], ["a", "b"])
     right = _table([1, 2], ["a", "X"])
     with pytest.raises(FrameMismatchError, match="value mismatch"):
         assert_frames_equal(left, right)
 
 
-def test_schema_difference_raises():
+def test_schema_difference_raises() -> None:
     left = _table([1], ["a"])
     right = pa.table({"id": [1], "name": ["a"], "extra": [9]})
     with pytest.raises(FrameMismatchError, match="schema mismatch"):
         assert_frames_equal(left, right)
 
 
-def test_row_count_difference_raises():
+def test_row_count_difference_raises() -> None:
     with pytest.raises(FrameMismatchError, match="row count mismatch"):
         assert_frames_equal(_table([1, 2], ["a", "b"]), _table([1], ["a"]))
 
 
-def test_nulls_at_matching_positions_are_equal():
+def test_nulls_at_matching_positions_are_equal() -> None:
     left = _table([1, None, 3], ["a", None, "c"])
     right = _table([1, None, 3], ["a", None, "c"])
     assert_frames_equal(left, right)
 
 
-def test_null_versus_value_raises():
+def test_null_versus_value_raises() -> None:
     with pytest.raises(FrameMismatchError):
         assert_frames_equal(_table([1, None], ["a", "b"]), _table([1, 2], ["a", "b"]))
 
 
-def test_nullability_difference_raises():
+def test_nullability_difference_raises() -> None:
     # Field nullability is part of the schema signature: same name/type/values but a differing
     # `nullable` flag is a parity failure (Spark's non-null guarantees are contractual).
     values = [1, 2, 3]

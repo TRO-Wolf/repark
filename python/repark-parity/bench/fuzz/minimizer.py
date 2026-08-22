@@ -20,17 +20,19 @@ from __future__ import annotations
 
 import copy
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 from .compare import CompareResult, compare_result_sets
 from .datagen import FuzzDatabase, FuzzTable
 from .generator import GeneratedQuery, QuerySpec
 
 
-@dataclass
-class MinimizedRepro:
+class MinimizedRepro(BaseModel):
     """Minimal divergence witness."""
+
+    model_config = ConfigDict(extra="forbid")
 
     seed: int
     query_index: int
@@ -62,7 +64,7 @@ def minimize_divergence(
     spec = copy.deepcopy(query.spec)
     db = _clone_database(database)
 
-    def still_diverges(
+    def still_diverges(  # nested-def: shrink-loop predicate closes over execute
         candidate_spec: QuerySpec,
         candidate_db: FuzzDatabase,
     ) -> tuple[bool, CompareResult | None, list[tuple[Any, ...]], list[tuple[Any, ...]]]:

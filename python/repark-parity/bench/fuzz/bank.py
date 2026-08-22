@@ -18,11 +18,12 @@ import ast
 import json
 import math
 import re
-from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 from .datagen import FuzzDatabase, FuzzTable
 from .minimizer import MinimizedRepro
@@ -30,9 +31,10 @@ from .minimizer import MinimizedRepro
 REPROS_DIR_NAME = "repros"
 
 
-@dataclass(frozen=True)
-class BankedRepro:
+class BankedRepro(BaseModel):
     """Index entry for one banked repro."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     seed: int
     query_index: int
@@ -155,7 +157,7 @@ def write_corpus_index(
     payload = {
         "corpus_count": len(banked),
         "empty": len(banked) == 0,
-        "repros": [asdict(item) for item in banked],
+        "repros": [item.model_dump() for item in banked],
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -243,6 +245,23 @@ def _decode_row_json(raw: str) -> tuple[Any, ...]:
     return tuple(cells)
 
 
+def _flush_parsed_table(
+    tables: dict[str, FuzzTable],
+    current_name: str | None,
+    current_cols: list[tuple[str, str]],
+    current_rows: list[tuple[Any, ...]],
+) -> tuple[str | None, list[tuple[str, str]], list[tuple[Any, ...]]]:
+    """Commit one TABLE block into ``tables`` and reset the current buffers."""
+    if current_name is None:
+        return None, current_cols, current_rows
+    tables[current_name] = FuzzTable(
+        name=current_name,
+        columns=tuple(current_cols),
+        rows=tuple(current_rows),
+    )
+    return None, [], []
+
+
 def parse_minimized_tables(text: str) -> dict[str, FuzzTable]:
     """Parse ``-- TABLE`` / ``--   ROW […]`` comments into ``FuzzTable``s.
 
@@ -253,23 +272,12 @@ def parse_minimized_tables(text: str) -> dict[str, FuzzTable]:
     current_cols: list[tuple[str, str]] = []
     current_rows: list[tuple[Any, ...]] = []
 
-    def flush() -> None:
-        nonlocal current_name, current_cols, current_rows
-        if current_name is None:
-            return
-        tables[current_name] = FuzzTable(
-            name=current_name,
-            columns=tuple(current_cols),
-            rows=tuple(current_rows),
-        )
-        current_name = None
-        current_cols = []
-        current_rows = []
-
     for line in text.splitlines():
         header = _TABLE_HEADER.match(line)
         if header is not None:
-            flush()
+            current_name, current_cols, current_rows = _flush_parsed_table(
+                tables, current_name, current_cols, current_rows
+            )
             current_name = header.group("name")
             current_cols = []
             for part in header.group("cols").split(","):
@@ -293,7 +301,7 @@ def parse_minimized_tables(text: str) -> dict[str, FuzzTable]:
             if not isinstance(parsed, tuple):
                 parsed = (parsed,)
             current_rows.append(tuple(parsed))
-    flush()
+    _flush_parsed_table(tables, current_name, current_cols, current_rows)
     return tables
 
 

@@ -35,7 +35,7 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 | `make test` | The **Rust workspace** suite (`cargo test --locked --workspace`) — and that is deliberately all of it. The Python suites need something `cargo test` cannot give them (see below). |
 | `make verify` | `ci` + `test` — full local verification. **A change is not done until `make verify` is green** and the touched directories' `map.md` files are current. |
 | `make py-test-facade` | The **facade** suite (`python/repark/tests`) against the real native module: provisions the four declared extras (`numpy`, `pandas`, `polars`, `ml-ext`) from `uv.lock`, runs `maturin develop`, then pytest. Run it when you touch the facade — `make verify` does not. |
-| `make py-test` | The **parity** harness (`python/repark-parity/tests`) — pure pyarrow, no native build, no JVM. Mirrors the CI step. |
+| `make py-test` | The **parity** harness (`python/repark-parity/tests`) — pyarrow + pydantic (PYC-4), no native build, no JVM. Mirrors the CI step. |
 | `make preflight` | The pre-PR gate: `verify` + the facade suite (`make py-test-facade`) + the security/workflow gates CI also runs. Roster: [AGENTS.md](AGENTS.md) "Verify before done". |
 | `make format` | Autoformat Rust + Python (`cargo fmt`, `ruff format`). |
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |

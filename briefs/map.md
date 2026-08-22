@@ -14,7 +14,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   ordered queue across three open tracks (format-v3, the PYC conventions burn-down, the held
   maintenance units) plus the A13 write-path item, with the reasoning for the order rather than
   just the order — V3-1 merged as #203 and left; PYC-1 merged as #204 and left; PYC-2 merged
-  as #207 and left; PYC-3 leaves with this change; MW-4 still preempts everything the moment OD-3 lands; A13 sits last while
+  as #207 and left; PYC-3 merged as #208 and left; PYC-4 leaves with this change; MW-4 still preempts everything the moment OD-3 lands; A13 sits last while
   its guard holds. Carries the PYC unit definitions, the two hazards a pure-refactor campaign
   has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
   subset proposed as the PYC-6 decision; `PL`/`A`/`print()` measured and declined with

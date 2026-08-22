@@ -26,6 +26,7 @@ NOT in that file is a defect, not a decision.
   accepted-input set of `merge._Clause` and the four `_csv_smart` records
   (including empty `PreparedCsv`); extra/strict/frozen pins; `to_dict` key set;
   pydantic wheel-dep token; the two DATACLASS_EXCEPTIONS rows deleted not zeroed.
+  **PYC-4:** remaining-key pin is dual-wire only (parity dataclass rows converted).
   Behaviour stays on `test_merge_into.py` / `test_t4_csv_smart.py`.
 - [test_pyc_2_nested_defs.py](test_pyc_2_nested_defs.py) — **PYC-2 (2026-08-22):**
   AST pin that the eight lifted shipped modules have zero nested `def`s (ancestor

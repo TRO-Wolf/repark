@@ -48,6 +48,7 @@ _CLAUSE_SHAPES: tuple[dict[str, object], ...] = (
 def _dataclass_exception_keys() -> list[str]:
     conventions = Path(__file__).resolve().parents[3] / "scripts" / "check_python_conventions.py"
     tree = ast.parse(conventions.read_text(encoding="utf-8"))
+    found_table = False
     keys: list[str] = []
     for node in tree.body:
         target_name = None
@@ -60,10 +61,11 @@ def _dataclass_exception_keys() -> list[str]:
                 target_name, value = target.id, node.value
         if target_name != "DATACLASS_EXCEPTIONS" or not isinstance(value, ast.Dict):
             continue
+        found_table = True
         for key in value.keys:
             if isinstance(key, ast.Constant) and isinstance(key.value, str):
                 keys.append(key.value)
-    assert keys, "did not bind DATACLASS_EXCEPTIONS as a module-level dict literal"
+    assert found_table, "did not bind DATACLASS_EXCEPTIONS as a module-level dict literal"
     return keys
 
 
@@ -353,4 +355,3 @@ def test_pyc_3_exception_rows_deleted_not_zeroed() -> None:
     still_present = [key for key in _PYC_3_DATACLASS_KEYS if key in keys]
     assert still_present == [], f"PYC-3 rows were zeroed instead of deleted: {still_present}"
     assert "scripts/check_parity_live_dual_wire.py" in keys
-    assert any(key.startswith("python/repark-parity/") for key in keys)

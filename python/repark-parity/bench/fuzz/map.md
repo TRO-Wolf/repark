@@ -9,16 +9,22 @@ is the deliverable; engine product fixes mid-unit are **out of scope** (bank + p
 ## Contents
 
 - `generator.py` — pure-Python query AST generator (`random.Random(seed)` only).
+  **PYC-4:** query-shape records are Pydantic `BaseModel`.
 - `datagen.py` — seeded multi-table fixture (int32/int64/float64/decimal/utf8/date/timestamp/bool, NULL ≥10%).
+  **PYC-4:** `FuzzTable` / `FuzzDatabase` are `BaseModel`.
 - `compare.py` — TPC-H-class compare (ints exact; non-integral Decimals exact; non-integral floats 1e-6 rel; int≠fractional float; ORDER BY → order-sensitive). **TZ-4 PR-2:** tz-aware UTC datetimes normalize to naive UTC walls so DuckDB (naive) does not false-red LTZ export.
+  **PYC-4:** comparison rows are `BaseModel`.
 - `runner.py` — end-to-end run + census (`REPARK_FUZZ_SEED`, `REPARK_FUZZ_N`);
-  statuses OK | WRONG-RESULT | ERROR (no SKIP).
+  statuses OK | WRONG-RESULT | ERROR (no SKIP). **PYC-4:** outcomes are `BaseModel`;
+  `_execute_minimize_pair` is module-level.
 - `minimizer.py` — greedy shrink (drop LIMIT/ORDER leftmost-first/WHERE/joins/columns/rows;
   scrub ORDER BY when SELECT/GROUP keys drop; clear WHERE on dropped join tables;
-  clear LIMIT if ORDER empties).
+  clear LIMIT if ORDER empties). **PYC-4:** shrink records are `BaseModel`;
+  `still_diverges` stays a nested-def pragma (callback case).
 - `bank.py` — write `repros/<seed>-<n>.sql` (no overwrite; `next_bank_sequence` continues);
   corpus index scans full on-disk dir; header includes `has_order_by`;
-  `load_minimized_database` for pin replay.
+  `load_minimized_database` for pin replay. **PYC-4:** `BankedRepro` is `BaseModel`;
+  `_flush_parsed_table` is module-level.
 - `run_fuzz.py` / `__main__.py` — CLI entry (path bootstrap for script invocation).
 - `repros/` — banked minimal repros (may be empty — see [repros/map.md](repros/map.md)).
 - `__init__.py` — package exports.

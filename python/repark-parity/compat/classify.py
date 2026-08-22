@@ -11,8 +11,9 @@ from __future__ import annotations
 import re
 import traceback
 import unittest
-from dataclasses import asdict, dataclass, field
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 CENSUS_CLASSES: tuple[str, ...] = (
     "PASS",
@@ -120,9 +121,10 @@ _HARNESS_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 )
 
 
-@dataclass
-class CensusRow:
+class CensusRow(BaseModel):
     """One Apache test result in the census."""
+
+    model_config = ConfigDict(extra="forbid")
 
     test_id: str
     module: str
@@ -134,10 +136,10 @@ class CensusRow:
     harness_justification: str = ""
     error_type: str = ""
     raw_traceback: str = ""
-    tags: list[str] = field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return self.model_dump()
 
 
 def classify_success(*, test_id: str, module: str, duration_s: float | None = None) -> CensusRow:
