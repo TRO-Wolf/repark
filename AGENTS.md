@@ -175,7 +175,7 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     `python` job, and in both pre-commit paths. The other two Python rules are held elsewhere and
     are deliberately not duplicated: type coverage is Ruff's `ANN` rule set, naming is a review
     duty. Prose points at the script; the tables are never restated here. Rationale and the
-    method for arming a convention: [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md).
+    method for arming a convention: [.agent/skills/code-quality/SKILL.md](.agent/skills/code-quality/SKILL.md).
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
     inventory, phase, canonical gate commands and documentation index are machine-readable and
     validated against the workspace, the Makefile, STATUS.md, the declared documents and the

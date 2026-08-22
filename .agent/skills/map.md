@@ -23,6 +23,10 @@ deleting a skill loses a convenience, never a project truth.
 - [check-disk-headroom/](check-disk-headroom/map.md) — is there room to do this? Measured
   consumers (`target/debug` dominates), how to budget for the operation rather than the repo at
   rest, and a reclaim order that says what **not** to delete as clearly as what to.
+- [code-quality/](code-quality/map.md) — portable convention reasoning (types, Pydantic not
+  dataclasses, no nested `def`, names as verb phrases) plus the ratchet for arming a rule.
+  The host rule of record is [AGENTS.md](../../AGENTS.md) "Python"; this skill is not a second
+  contract.
 
 ## I want to...
 
@@ -31,6 +35,7 @@ deleting a skill loses a convenience, never a project truth.
 | Release a new version to PyPI | [publish-pypi/SKILL.md](publish-pypi/SKILL.md) |
 | True up the docs after work lands | [compact-context-docs/SKILL.md](compact-context-docs/SKILL.md) |
 | Find out whether there is disk room for a big build | [check-disk-headroom/SKILL.md](check-disk-headroom/SKILL.md) |
+| Write or review Python under the conventions | [code-quality/SKILL.md](code-quality/SKILL.md) |
 | Add a new skill | a `<verb-noun>/` directory here with `SKILL.md` (frontmatter + pointers, no policy) and its own `map.md`, plus a Contents row |
 | Read the authoritative contract | [../../AGENTS.md](../../AGENTS.md) |
 
