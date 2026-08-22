@@ -25,7 +25,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-6** (decision) | conventions | PYC-5 (this change) + **owner ruling** | S |
+| 1 | **PYC-6** (decision) | conventions | **owner ruling** | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -48,10 +48,11 @@ pragmas); dual-wire stays a dataclass because the gate runs as bare `python3`;
 the ten unannotated returns in `test_compare.py` are annotated and the ANN
 ignores are split.
 
-**PYC-5 leaves this file with this change:** hook re-measured n=5 median **0.996 s**
-(max 1.011 s) over 164 files and dropped from pre-commit (stays in `make ci` +
-CI); facade tests no longer ignore ANN201; dual-wire dataclass row stays the
-sanctioned leftover. PYC-6 is the docstring-presence decision (owner ruling).
+**PYC-5 merged as [#211](https://github.com/TRO-Wolf/repark/pull/211)** and left this file:
+hook re-measured n=5 median **0.996 s** (max 1.011 s) over 164 files and dropped
+from pre-commit (stays in `make ci` + CI); facade tests no longer ignore ANN201;
+dual-wire dataclass row stays the sanctioned leftover. PYC-6 is the
+docstring-presence decision (owner ruling).
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -99,7 +100,7 @@ comparator ended as pragmas; bootstrap factories lifted together. Dual-wire kept
 one DATACLASS_EXCEPTIONS row (bare `python3`). ANN ignores split:
 `python/repark/tests/**` kept ANN201/ANN202; `python/repark-parity/tests/**` does not.
 
-### PYC-5 — done (this change)
+### PYC-5 — done (merged #211)
 
 Tables: nested-def EXCEPTIONS empty; one sanctioned DATACLASS row (dual-wire). ANN:
 facade tests dropped ANN201 (isolated count 0); two nested helpers annotated
