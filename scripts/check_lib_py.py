@@ -26,9 +26,10 @@ DEFAULT_CEILING = 2500
 # repo-relative posix path -> (ceiling, reason). Keys sorted. Ceilings DOWN only.
 EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark/src/repark/spark/dataframe/core.py": (
-        7225,  # measured 7196 after DF1 native dynamic_flatten (planner loop deleted)
+        6880,  # measured 6866 after PYC-1 nested-def lift (udf_bridge + _emit_join_side_columns)
         "DataFrame class + plan glue after the T0 nested-class and T0b plan-collapse "
-        "extracts; RATCHET: after method-region mixins (technique B) if shipped",
+        "extracts and PYC-1 UDF-callback extract; RATCHET: after method-region mixins "
+        "(technique B) if shipped",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
         2800,  # measured ~2733

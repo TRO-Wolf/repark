@@ -114,7 +114,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   DOWN after the T0b `plan_collapse.py` extract; the new module is under the default ceiling
   and needs no row. **DF1 (2026-08-19):** `core.py` ceiling ratcheted DOWN again after
   the Python `dynamicFlatten` planner loop was deleted; re-measured
-  7196 via `splitlines()` at HEAD), plus the no-stub rule (a module whose body
+  7196 via `splitlines()` at HEAD. **PYC-1 (2026-08-22):** `core.py` ceiling
+  ratcheted DOWN again after UDF action callbacks moved to `udf_bridge.py`;
+  re-measured 6866 via `splitlines()` at the PYC-1 tip), plus the no-stub rule (a module whose body
   is only a docstring + imports/re-exports/`__all__`/`pass` must open its docstring with the
   exact substring `re-export binding`; package `__init__.py` files are exempt from the no-stub
   rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
@@ -131,7 +133,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other two Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, and naming is a review duty. Seeded from the measured tree (2026-08-21): 66 nested
-  defs in 21 files, 23 files importing `dataclasses`. Fail-closed on an unreadable file, a parse
+  defs in 21 files, 23 files importing `dataclasses`. **PYC-1** deleted the `core.py` (23) and
+  `plan_collapse.py` (12) nested-def rows. Fail-closed on an unreadable file, a parse
   failure, an empty scan set, or a stale `EXCEPTIONS` key. Measured 0.94 s — the slowest
   hook-eligible guard. Dual-wired `make check-python-conventions` (in the `make ci` chain) +
   ci.yml's `python` job, and in both pre-commit paths. Rationale and the arming method:

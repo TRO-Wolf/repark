@@ -22,6 +22,9 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_pyc_1_nested_defs.py](test_pyc_1_nested_defs.py) — **PYC-1 (2026-08-22):**
+  AST pin that `core.py`, `plan_collapse.py`, and `udf_bridge.py` have zero nested
+  `def`s. Behaviour stays on the existing show / UDF / filter / sample pins.
 - [test_timestamp_type.py](test_timestamp_type.py) — **Q10:** facade
   `spark.sql.timestampType` — default get, get/set round-trip, invalid set +
   builder refusal naming both tokens, NTZ opt-in SQL literal/CAST +

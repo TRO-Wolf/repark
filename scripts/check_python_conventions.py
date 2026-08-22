@@ -55,9 +55,10 @@ NESTED_DEF_PRAGMA = "# nested-def:"
 
 # repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically.
 # Seeded from the measured tree at the commit that armed this guard (2026-08-21):
-# 66 nested defs across 21 files. Every row is debt, not a sanction — the ceiling
-# is the count on that day, it goes DOWN as PYC lands, and a row whose file drops
-# to zero is deleted rather than kept at 0.
+# 66 nested defs across 21 files. PYC-1 deleted the core.py (23) and
+# plan_collapse.py (12) rows. Every remaining row is debt, not a sanction — the
+# ceiling is the count on that day, it goes DOWN as PYC lands, and a row whose
+# file drops to zero is deleted rather than kept at 0.
 NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark-parity/bench/fuzz/bank.py": (
         1,
@@ -96,21 +97,9 @@ NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
         2,
         "a spy and a suite walker local to two tests; RATCHET: PYC",
     ),
-    "python/repark/src/repark/spark/dataframe/core.py": (
-        23,
-        "pandas/Arrow UDF execution — per-invocation closures over the user's "
-        "UDF object, its slot bindings and the batch iterator; RATCHET: PYC "
-        "(lift to module-level helpers taking an explicit context object)",
-    ),
     "python/repark/src/repark/spark/dataframe/joins_columns.py": (
         2,
         "grouped-map Arrow/pandas UDF wrappers closing over the user function; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/dataframe/plan_collapse.py": (
-        12,
-        "show/explain table formatters (closing over computed column widths) "
-        "plus SQL token rewriters (closing over the join side map); "
-        "RATCHET: PYC (the formatters lift cleanly)",
     ),
     "python/repark/src/repark/spark/functions.py": (
         1,
