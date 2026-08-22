@@ -227,8 +227,8 @@ history-rewrite; provenance and the options weighed:
     the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores),
     and PYC-5 (merged as [#211](https://github.com/TRO-Wolf/repark/pull/211): close —
     hook off pre-commit, unearned facade ANN201 dropped, dual-wire dataclass row
-    stays the sanctioned leftover). PYC-6 is the remaining decision (docstring
-    presence; owner ruling).
+    stays the sanctioned leftover). PYC-6 — arming the docstring-presence subset —
+    was owner-ruled 2026-08-22 and is the remaining chartered unit.
   - **Rationale and the arming method are a portable skill**,
     [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
