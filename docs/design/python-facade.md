@@ -128,7 +128,10 @@ python/
 ```
 
 The wheel's runtime dependency stays exactly one (`pyarrow>=25`); `numpy`, `pandas`, `polars` and
-`ml-ext` stay extras, lazy-imported. The uv workspace root returns as a **virtual** root with both
+`ml-ext` stay extras, lazy-imported.
+**PYC-3 (2026-08-22):** pydantic v2 (`>=2.10,<3`) is a second hard runtime dep — `BaseModel`
+replaces the two shipped dataclasses (`spark/merge.py`, `spark/_csv_smart.py`). Extras stay
+lazy. This footnote dates the change; it does not rewrite the original freeze. The uv workspace root returns as a **virtual** root with both
 members, the dev group, `known-first-party`, and — load-bearing — the four ruff per-file-ignore
 blocks (`**/tests/**`, `ml/**`, `session/**`, `dataframe/**`). Those ignores are not style
 preferences: `import *`, `F821`, and `E402` are how the region splits preserve pre-split import
@@ -483,7 +486,8 @@ Both sides run the identical recipe:
 
 - Python 3.12; `pyspark==4.1.2`; JDK Temurin 17 where a JVM is needed (it is not needed for the
   cohorts themselves — the redirect replaces pyspark's SQL layer — but the pin must be stated);
-  `pyarrow>=25`; **`pandas>=2.1,<3`**; `maturin` 1.14.1; `uv` 0.9.5; Rust 1.96.0.
+  `pyarrow>=25`; **`pandas>=2.1,<3`**; `pydantic>=2.10,<3` (**PYC-3** wheel hard dep);
+  `maturin` 1.14.1; `uv` 0.9.5; Rust 1.96.0.
 - The pandas major is load-bearing and non-negotiable: 55 rows in the always-green pin list were
   excluded because Apache's own test helpers import a pandas internal removed in pandas 3. A census
   run under pandas 3 is a different measurement.

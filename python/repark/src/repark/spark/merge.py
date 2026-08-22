@@ -10,8 +10,9 @@ error is intentional and disclosed in the unit ledger.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from repark.errors import (
     AnalysisException,
@@ -71,14 +72,15 @@ def _on_sql(condition: Column | str) -> str:
     )
 
 
-@dataclass
-class _Clause:
+class _Clause(BaseModel):
     """One WHEN clause accumulated before ``merge()`` renders SQL."""
+
+    model_config = ConfigDict(extra="forbid", strict=True, frozen=True)
 
     kind: str  # matched | not_matched | not_matched_by_source
     action: str  # update_all | update | delete | insert_all | insert
     predicate_sql: str | None = None
-    assignments: dict[str, str] = field(default_factory=dict)
+    assignments: dict[str, str] = Field(default_factory=dict)
 
 
 class MergeIntoWriter:

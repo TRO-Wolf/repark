@@ -25,10 +25,9 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-3** | conventions | — | S |
-| 2 | **PYC-4** | conventions | — | M |
-| 3 | **PYC-5** | conventions | PYC-3..4 | S |
-| 4 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
+| 1 | **PYC-4** | conventions | — | M |
+| 2 | **PYC-5** | conventions | PYC-4 | S |
+| 3 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -37,10 +36,14 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
 rolling rule): 35 nested defs lifted across the two DataFrame modules plus `_emit_side`, the two
 EXCEPTIONS rows deleted.
-**PYC-2 leaves this file with this change:** 12 lifts + 2 pragmas across the remaining ten
-shipped files, plus `session_core.probe` under `if` (gate-invisible; ancestor-set emptied).
-Ten EXCEPTIONS rows deleted. Remaining debt: **17 nested defs across 9 rows, 23 dataclass
-rows** (measured 2026-08-22, `make check-python-conventions` green). PYC-3 is unblocked.
+**PYC-2 merged as [#207](https://github.com/TRO-Wolf/repark/pull/207)** and left this file:
+12 lifts + 2 pragmas across the remaining ten shipped files, plus `session_core.probe`
+under `if`. Ten nested-def EXCEPTIONS rows deleted.
+**PYC-3 leaves this file with this change:** `spark/merge.py` `_Clause` and the four
+`_csv_smart.py` records are Pydantic v2 `BaseModel`; those two DATACLASS_EXCEPTIONS rows
+are deleted, not zeroed; `pydantic>=2.10,<3` is the wheel's second hard runtime dep.
+Remaining debt: **17 nested defs across 9 rows, 21 dataclass rows** (parity harness +
+`scripts/check_parity_live_dual_wire.py`). PYC-4 is unblocked.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -79,16 +82,6 @@ clothes and belongs in its own commit with its own justification.
 - **`dataclass` → `BaseModel` adds validation that was not running.** It can reject input the old
   container silently accepted. That is usually the bug being found rather than introduced, but it
   is a behaviour change and it goes in the commit message.
-
-### PYC-3 — the two shipped `dataclass` containers
-
-`spark/merge.py` (MERGE INTO clause records built by the builder API) and `spark/_csv_smart.py`
-(CSV type-inference state).
-
-Small, but it is the unit where the validation hazard is real: `merge.py`'s records are built by a
-public builder API, so a `BaseModel` will now validate whatever a user's MERGE chain produces.
-**Pin the current accepted-input set before converting**, then confirm the model accepts exactly
-that set and no less. A conversion that narrows what the builder accepts is a breaking change.
 
 ### PYC-4 — the parity harness and `scripts/`
 

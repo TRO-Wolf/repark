@@ -16,7 +16,8 @@ description = "Near-drop-in PySpark API on a pure-Rust, no-JVM Apache Iceberg en
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
-dependencies = ["pyarrow>=25.0.0"]
+# PYC-3: pydantic is the second hard runtime dep (BaseModel for MERGE / smartCsv records).
+dependencies = ["pyarrow>=25.0.0", "pydantic>=2.10,<3"]
 
 [project.optional-dependencies]
 # numpy is its own extra: pyarrow>=18 no longer hard-depends on numpy, so to_numpy() cannot

@@ -12,7 +12,10 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 
 - **r26 T1 packages:** `dataframe/` (was `dataframe.py`) and `session/` (was `session.py`); public import paths frozen. `DataFrameReader.smartCsv` lives in `session/reader.py`.
 
-- `_csv_smart.py (r26 T2: decimal union; samplingRows/10k cap)` — **r25 T4 csv-smart** (`# === r25 T4: csv-smart ===`): Q1 inference
+- `_csv_smart.py (r26 T2: decimal union; samplingRows/10k cap)` — **PYC-3:**
+  `ColumnIngestReport` / `IngestReport` / `ColumnResolution` / `PreparedCsv` are
+  Pydantic v2 `BaseModel` (`extra="forbid"`, `strict=True`; `IngestReport` is not
+  frozen — assigned after init). **r25 T4 csv-smart** (`# === r25 T4: csv-smart ===`): Q1 inference
   PROTOCOL (bool→int32→int64→decimal128→float64→date→timestamp→string; fail falls back;
   terminal string; deterministic) + messy-CSV prep (BOM, preamble skip, delimiter detect
   (origin/main ``csv.reader`` agreement-first; known-limit on embedded-rival files —
@@ -794,10 +797,11 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   on the same builder refuses loud. Helpers: `_forward_datafusion_conf`,
   `_looks_like_datafusion_conf_key`, `_refuse_dual_memory_pool_knobs`,
   `_refuse_runtime_memory_limit_gb`, `_apply_builder_datafusion_conf`.
-- `merge.py` — **R-MERGEINTO** `MergeIntoWriter` (PySpark 4.0+): clause accumulation
+- `merge.py` — **PYC-3:** `_Clause` is a frozen Pydantic v2 `BaseModel`
+  (`extra="forbid"`, `strict=True`). **R-MERGEINTO** `MergeIntoWriter` (PySpark 4.0+): clause accumulation
   (`whenMatched` / `whenNotMatched` / `whenNotMatchedBySource` → `updateAll`/`update`/`delete`/
   `insertAll`/`insert`), bare-name equi-join sugar for condition str, `withSchemaEvolution`
-  accept-and-record (no engine flag). `merge()` → register temp view → `session.sql` → drop view
+  refuses loud (no engine flag). `merge()` → register temp view → `session.sql` → drop view
   (returns `None`). `whenNotMatchedBySource` renders SQL; engine rejects (disclosed). Column
   assignments use `Column.sql_expr_part()` so `lit("x")` embeds as a SQL string literal.
 - `dataframe.py` — `DataFrame` (carries the native session handle that minted it):

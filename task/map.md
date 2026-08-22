@@ -12,6 +12,12 @@ not this directory.
 
 ## Contents
 
+- [pyc-3-shipped-dataclasses-ledger.md](pyc-3-shipped-dataclasses-ledger.md) —
+  **PYC-3 (2026-08-22):** convert `spark/merge.py` `_Clause` and the four
+  `_csv_smart.py` records from dataclass to Pydantic v2 `BaseModel`. Accepted-input
+  set pinned first. Two DATACLASS_EXCEPTIONS rows deleted. Adds `pydantic>=2.10,<3`
+  as the wheel's second hard runtime dep.
+
 - [pyc-2-shipped-nested-defs-ledger.md](pyc-2-shipped-nested-defs-ledger.md) —
   **PYC-2 (2026-08-22):** remaining shipped nested `def`s (14 gate-counted across
   10 files, plus `session_core.probe` under `if`). 12 lifts + 2 pragmas
