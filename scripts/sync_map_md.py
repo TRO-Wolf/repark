@@ -223,7 +223,7 @@ def drop_dead_rows(
     for lineno, _target, problem in dead:
         # An absolute target is a misspelling of a link that may well resolve
         # once repointed; deleting the row would throw away a live description.
-        if problem is not MISSING:
+        if problem != MISSING:
             continue
         start = lineno - 1
         if start in doomed or not LIST_ITEM_PATTERN.match(lines[start]):
