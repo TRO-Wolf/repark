@@ -15,6 +15,34 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `Cargo.toml`/`pyproject.toml` file's directory has no same-change `map.md` update (lockfiles
   excluded; root-level manifests map to `map.md`, not `./map.md`). Invoked by
   `.pre-commit-config.yaml`, `make check-map-md`, and the hook installed by `make install-hooks`.
+- `sync_map_md.py` — the map.md **content** guard, companion to `check_map_md.sh` (that one forces
+  a map to be TOUCHED; this one checks what the map actually says) and the SSOT for both rules.
+  Over every tracked `map.md` (`git ls-files`, so untracked build trees are never walked):
+  (1) **link validity** — every relative markdown link resolves to an existing file or directory
+  (`http(s)`/`mailto` links and bare `#anchors` are out of scope, nothing local can check them;
+  an ABSOLUTE target like `/docs/foo.md` is a finding of its own, since resolving it would mean
+  asking the machine's filesystem root; only inline `[text](target)` links are parsed, so
+  reference-style links get no checking);
+  (2) **coverage**, behind `--strict` — every mappable tracked file in the map's own directory
+  (`.rs` `.py` `.sh` `.md` `.toml`, minus `map.md` itself, lockfiles and dotfiles) is mentioned in
+  the map by name. Measured before arming (2026-08-22): link validity **2** findings, both
+  path-depth typos fixed in the arming commit; coverage **24** pre-existing unmentioned files — a
+  FLOOR, not an exact debt, because a name counts as mentioned wherever it appears as a whole
+  token — so the coverage rule is deliberately NOT armed: it lives behind `--strict` and is run by
+  hand (`python3 scripts/sync_map_md.py --check --strict`). `--fix` is mechanical only: it deletes
+  a missing-target row when that row is a list item whose ONLY link is the dead one, taking the
+  item's wrapped continuation lines with it, and appends a `- [name](name) — TODO(describe)` stub
+  for an unmentioned file. It refuses to delete a row carrying a nested sub-list (the children
+  would be orphaned) and never deletes an absolute-target row (repointing it is the repair),
+  reporting both for a hand edit. It never writes a description —
+  the description is the whole value of a map, and a generated one would be a lie with a link on
+  it. Exit 0 clean / 1 findings / 2 usage or environment error; fail-closed when the tree has no
+  tracked `map.md` at all. Wired into `make check-map-sync`, `.pre-commit-config.yaml`
+  (`map-sync-guard`) and the hook `make install-hooks` writes — measured n=5 **median 0.08 s**
+  over 143 maps, well inside the sub-second hook budget. Wired at every LOCAL path
+  `check_map_md.sh` uses; unlike it, there is no ci.yml step yet — that half is an owner-scoped
+  `.github/` change. The document-lifecycle rules it serves are
+  [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
 - `check_workflows_parse.py` — every GitHub Actions workflow must be parseable YAML. zizmor
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would
   pass the blocking lint gate while GitHub silently never runs it. Wired as a prerequisite of
@@ -199,6 +227,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | I want to... | go to |
 |---|---|
 | Understand why a commit was blocked on map.md | `check_map_md.sh` |
+| Find map.md links that no longer resolve | `make check-map-sync` (`sync_map_md.py`) |
+| See which files their directory's map never mentions | `python3 scripts/sync_map_md.py --check --strict` (not armed — measured 24 at 2026-08-22) |
 | Change or inspect the crate tier map | `check_crate_dag.py` (`TIERS` — the SSOT) |
 | Add / remove an internal crate dependency | `check_crate_dag.py` (`ALLOWED_EDGES` — declare the edge, its kind and a reason) |
 | Declare a new crate, doc, or gate command | [`../repo-manifest.toml`](../repo-manifest.toml), then `bash scripts/check_manifest.sh` |
@@ -249,6 +279,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `python-conventions: … defines N nested function(s)` | Lift the definition to module or class level and pass what it needs as arguments; or add `# nested-def: <reason>` if it is a decorator factory, a state-capturing callback, or a `functools.wraps` wrapper; or raise the `NESTED_DEF_EXCEPTIONS` row with a reason (ratchet down only) |
 | `python-conventions: … imports \`dataclasses\`` | Convert the container to a Pydantic v2 `BaseModel` (`model_config = ConfigDict(frozen=True)` for the frozen case), or add a `DATACLASS_EXCEPTIONS` row with a reason |
 | `python-conventions: … does not parse` / `scan set is empty` | Fail-closed: the guard refuses to report success over a file it could not read or a tree it could not find |
+| `map-sync: … dead link` | The map points at a path that moved or was deleted — repoint it, or `python3 scripts/sync_map_md.py --fix` if the whole list row should go |
+| `map-sync: … unmentioned` | Only under `--strict`: the directory's map never names that file — add a row with a real description (`--fix` writes a `TODO(describe)` stub, never prose) |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
 | `run_census.sh` fails on `python/repark` | The facade package arrives with the facade PR; until then only the port-source side of the procedure is runnable |
 | A census cohort's denominator looks blended | `--stretch` was used for the classic cohort; use `--classic` ([../docs/port/census.md](../docs/port/census.md) §2) |
@@ -257,7 +289,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `parity-live dual-wire: FAIL` / parse incomplete | A load-bearing flag drifted between `Makefile` `parity-live` and `.github/workflows/parity-live.yml` — change one, change the other. A parse miss is also red (fail-closed); fix the surface or the extractor in `check_parity_live_dual_wire.py` |
 | `matrix-test-liveness: FAIL` / dead cite | A `matrix.rs` `Tested` row names a test `cargo test -- --list` does not print — rename the cite with the test, or flip the row to `DeliberatelyAbsent`. A parse miss or cargo non-zero is also red (fail-closed); SSOT: `check_matrix_test_liveness.py` |
 
-First checks: `bash scripts/check_map_md.sh`, `bash scripts/check_crate_dag.sh`,
+First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --check`,
+`bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`,
 `bash scripts/check_python_conventions.sh`, `bash scripts/check_manifest.sh`,
 `bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,

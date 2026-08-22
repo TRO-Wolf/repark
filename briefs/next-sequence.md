@@ -18,6 +18,11 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 4. **Gate alone.** `make preflight` runs by itself and its own exit code is read immediately.
 5. **`map.md` in lockstep, in the same commit.** Not a follow-up.
 6. **One group at a time**, manual PR, owner merges.
+7. **Pickup ritual first, departure edit last.** First act of a unit: fetch, confirm the prior
+   unit's PR merged and that the local base carries its departure edit, run the drift checks
+   (`make check-map-sync`), and compact the context docs **against the just-merged delta only**,
+   as a docs-only first commit. Last commit of the unit: the departure edit to this file, STATUS
+   trued up for what this unit changed and nothing else, `map.md` in lockstep.
 
 ---
 

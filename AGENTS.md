@@ -228,6 +228,42 @@ How a change is shaped, independent of where it lands.
   line, restates a signature, or records change history. Durable design rationale goes to
   [ARCHITECTURE.md](ARCHITECTURE.md), a `map.md`, or [docs/adr/](docs/adr/map.md) — not inline.
 
+## Markdown document lifecycle
+
+Every markdown document here belongs to **exactly one class**, and the class decides how it is
+amended, what retires it, and where its record goes afterwards. Classification is not decoration:
+it is what keeps a live document from silently accumulating a closed campaign's detail.
+
+| Class | Members | Lifecycle |
+|---|---|---|
+| **contract** | [AGENTS.md](AGENTS.md), [docs/testing.md](docs/testing.md), [PROJECT.md](PROJECT.md) | permanent; amended deliberately, never as a passenger on another change |
+| **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so they carry no changelog section |
+| **navigation** | every `map.md` | lockstep with the directory's content, in the same commit |
+| **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) when the campaign closes |
+| **ledger** | `task/<unit>-ledger.md` | append-only while the unit runs; frozen at merge; archived with its campaign |
+| **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a rule measured and **declined** is written down so nobody re-litigates it |
+
+The rules that bind all six:
+
+- **A document names the event that retires it at birth.** "This file closes when X merges" belongs
+  in its first commit, not in a later discovery. If nothing can retire a document, it is a contract
+  or a state document — or it should not have been created.
+- **Truth moves, it is never deleted.** Compaction is archival, not removal: a closed campaign's
+  record goes to `docs/history/`. The only deletable documents are working notes that produced no
+  decision.
+- **A claim that can go stale carries its date.** Measurements, counts, timings, "not yet", "planned",
+  and phase words are dated where they are written, so a reader can tell rot from truth.
+- **An archived document is corrected only by a dated errata note at its top**, never rewritten. The
+  archive's value is that it says what was believed at the time.
+- **Every fact is single-homed**; every other mention is a pointer (the rule in
+  [`## Precedence`](#precedence) applied to documents).
+
+The **executor** is the [compact-context-docs](.agents/skills/compact-context-docs/SKILL.md) skill —
+the pickup ritual at the start of a unit and the truth-up after one lands. This section states the
+classes and the rules; the skill states the procedure and is not restated here. The navigation class
+has a mechanical half: `make check-map-sync` (`scripts/sync_map_md.py` — the SSOT) fails a map whose
+relative links no longer resolve, with the coverage rule available behind `--strict`.
+
 ## Working style and communication
 
 - **Stop gathering once you can act.** Redundant file reads, repeated commands, and exploratory

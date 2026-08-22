@@ -61,7 +61,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   SSOT in `scripts/check_crate_dag.py`. Structural drift is a red gate, not a stale sentence.
 - `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
   tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
-  oracle; `make install-hooks` wires it). `.typos.toml`'s `extend-words` carries the domain
+  oracle and `scripts/sync_map_md.py` its content companion — every relative link in every map
+  must resolve; `make install-hooks` wires both). `.typos.toml`'s `extend-words` carries the domain
   vocabulary the checker would otherwise "correct" — including the TA-Lib indicator names
   (`TEMA`, `CMO`) that arrived with `crates/repark-ta`; the lines are carried from the
   port-source pin's own config, never invented to silence a real misspelling.
@@ -85,7 +86,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `skills/` — the SEPMO control plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
   work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
-  chain, invariants, safety boundaries; written for any human or agent, names no tool).
+  chain, invariants, safety boundaries, and the markdown document lifecycle — which class every
+  doc belongs to and what retires it; written for any human or agent, names no tool).
   `ARCHITECTURE.md` — component boundaries, the crate DAG, and the three runtime flows.
   `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
   `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
@@ -112,6 +114,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Onboard as an agent (any tool) | [.agents/map.md](.agents/map.md) |
 | Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |
 | Read/extend the testing contract | [docs/testing.md](docs/testing.md) |
+| Know which class a markdown doc belongs to, and what retires it | [AGENTS.md](AGENTS.md) "Markdown document lifecycle" |
 | Find how repark differs from Apache Spark, and why | [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) (the divergence registry) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |

@@ -301,6 +301,20 @@ check-manifest: ## Structural-manifest guard (repo-manifest.toml vs workspace, d
 check-map-md: ## map.md lockstep guard over staged changes (also wired into the pre-commit hook)
 	bash scripts/check_map_md.sh
 
+.PHONY: check-map-sync
+check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)
+	@# Companion to check-map-md: that one forces a map to be TOUCHED, this one checks what it
+	@# says. SSOT: scripts/sync_map_md.py. Link validity is armed here and on both pre-commit
+	@# paths (measured n=5 median 0.08 s over 143 maps). The COVERAGE rule — every mappable
+	@# tracked file mentioned by its directory's map — is behind `--strict` and NOT armed: the
+	@# tree measured 24 pre-existing unmentioned files at the arming commit (2026-08-22) — a
+	@# FLOOR, since a name counts as mentioned anywhere it appears as a whole token — and a
+	@# gate nobody can run green is not a gate. Run it by hand:
+	@#   python3 scripts/sync_map_md.py --check --strict
+	@# `--fix` is mechanical only (drop dead link rows, append TODO(describe) stubs); it never
+	@# writes a description.
+	python3 scripts/sync_map_md.py --check
+
 # ------------------------------------------------------------------------------------------------
 # Security gates (mirror cargo-deny.yml / zizmor.yml)
 # ------------------------------------------------------------------------------------------------
@@ -353,7 +367,7 @@ bump-fork-pin: ## Bump the iceberg-rust fork pin: make bump-fork-pin REV=<sha|br
 	@scripts/bump_fork_pin.sh "$(REV)"
 
 .PHONY: install-hooks
-install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + rust file-size + Python thinness + manifest guards + cargo fmt + taplo + typos
+install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links + crate-DAG + lib.rs + rust file-size + Python thinness + manifest guards + cargo fmt + taplo + typos
 	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast
 	@# (sub-second: a `cargo metadata` read and a pure text scan). Hook budget stays < 1 s
 	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class),
@@ -361,6 +375,8 @@ install-hooks: ## Wire .git/hooks/pre-commit to map.md + crate-DAG + lib.rs + ru
 	@# check_rust_file_size.sh joined at G-8 (same pure-text class as check_lib_rs).
 	@# check_python_conventions.sh left the hook at PYC-5: n=5 median 0.996 s (max
 	@# 1.011 s) over 164 files, at the sub-second budget line. It stays in `make ci` + ci.yml.
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@# sync_map_md.py --check joined at the markdown-lifecycle unit: n=5 median 0.08 s over
+	@# 143 maps (pure text + one `git ls-files`), comfortably inside the hook budget.
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\npython3 scripts/sync_map_md.py --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"

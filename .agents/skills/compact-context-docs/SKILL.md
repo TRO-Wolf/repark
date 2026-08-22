@@ -7,9 +7,10 @@ description: >-
   ("not yet", "planned", old phase numbers), keep every touched map.md in
   lockstep, archive closed campaigns to docs/history/, and validate with
   make ci. Use this skill after a unit, campaign, or release lands, or when a
-  stale claim is spotted in a document agents are expected to trust. The goal
-  is compaction, not deletion — a closed campaign's record moves to the
-  archive; truth is never simply removed.
+  stale claim is spotted in a document agents are expected to trust — and also
+  as the PICKUP RITUAL at the start of a unit, scoped to the delta that just
+  merged. The goal is compaction, not deletion — a closed campaign's record
+  moves to the archive; truth is never simply removed.
 ---
 
 # Skill: compact-context-docs — true up and compress the context documents
@@ -59,6 +60,25 @@ leaves them, not because it disappears.
    drift into a red gate. Fix red before opening the PR.
 7. **One PR, normal review.** Doc truth-ups follow the same PR discipline as code: full CI,
    content hygiene, owner merge. Never fold an unrelated doc sweep into a feature PR.
+
+## Pickup ritual (scoped mode)
+
+The same ritual runs at the *start* of a unit, not only after one lands — a unit that begins on a
+stale base spends its first hour disbelieving the documents. Scoped mode is the whole ritual with
+one narrow subject:
+
+1. **Confirm the base.** Fetch, confirm the prior unit's PR actually merged, and confirm the local
+   base contains that unit's departure edit (the slate/brief row it removed or rewrote). If either
+   is missing, stop and rebase before anything else.
+2. **Run the drift checks.** `make check-map-sync` (map links) and `make ci` as usual — structural
+   drift is read from a gate, not from memory.
+3. **Scope the compaction to the just-merged delta only.** Steps 1–5 above apply to what that PR
+   changed and to nothing else.
+4. **Land it as a docs-only first commit** on the new branch, before any code of the unit.
+
+**This mode is not a license for a general doc rewrite.** A stale claim outside the merged delta is
+noted for its own unit; widening the scope here buries the unit's real diff under a doc sweep, which
+the ritual's step 7 already forbids.
 
 ## Gotchas
 

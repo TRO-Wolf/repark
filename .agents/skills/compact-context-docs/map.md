@@ -2,22 +2,25 @@
 
 ## Purpose
 
-One skill: the post-landing truth-up that keeps the context documents lean, current, and
-single-homed. It records a **ritual**, not policy — the single-home rule it enforces is
-[AGENTS.md](../../../AGENTS.md)'s, and the state it reconciles to is
+One skill: the truth-up that keeps the context documents lean, current, and single-homed — run
+after a unit lands, and again in scoped form as the **pickup ritual** when the next unit starts.
+It records a **ritual**, not policy — the document classes and lifecycle rules it executes are
+[AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle", and the state it reconciles to is
 [STATUS.md](../../../STATUS.md)'s.
 
 ## Contents
 
 - [SKILL.md](SKILL.md) — the runbook: what counts as a context document, the seven-step ritual
   (STATUS.md first, then restatements, stale lifecycle claims, `map.md` lockstep, archiving to
-  `docs/history/`, `make ci`, one PR), and the gotchas — chiefly that runbooks and onboarding
-  docs rot fastest because nothing mechanical validates their prose.
+  `docs/history/`, `make ci`, one PR), the **pickup ritual (scoped mode)** — confirm the prior
+  PR merged and its departure edit is in the local base, run the drift checks, compact against
+  the just-merged delta only, land it as a docs-only first commit — and the gotchas, chiefly
+  that runbooks and onboarding docs rot fastest because nothing mechanical validates their prose.
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Runs before: nothing — it is the closing ritual. Called by
+- Runs at both ends of a unit: scoped mode opens it, the full ritual closes it. Called by
   [../publish-pypi/SKILL.md](../publish-pypi/SKILL.md) at close-out.
 - Authoritative: [../../../AGENTS.md](../../../AGENTS.md), [../../../STATUS.md](../../../STATUS.md)
 
