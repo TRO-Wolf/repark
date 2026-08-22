@@ -421,6 +421,57 @@ async fn call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors
 }
 
 #[tokio::test]
+async fn call_register_table_of_an_occupied_ident_refuses_and_keeps_the_original_rows() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.keep AS SELECT * FROM src",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.other AS SELECT 9 AS id, 'z' AS name",
+    )
+    .await;
+    let other = catalogs
+        .get("ice")
+        .unwrap()
+        .load_table(&TableIdent::from_strs(["sales", "other"]).unwrap())
+        .await
+        .unwrap();
+    let other_meta = other
+        .metadata_location()
+        .expect("other table pointer")
+        .to_string();
+
+    let err = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.register_table(table => 'sales.keep', \
+             metadata_file => '{other_meta}')"
+        ),
+    )
+    .await
+    .expect_err("occupied ident must refuse, not swap the pointer")
+    .to_string();
+    assert!(
+        err.to_ascii_lowercase().contains("already")
+            || err.contains("exists")
+            || err.contains("Occupied"),
+        "occupied-ident refusal must name already-exists, not succeed: {err}"
+    );
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.keep").await,
+        3,
+        "failed register must leave the original table's rows in place"
+    );
+}
+
+#[tokio::test]
 async fn call_register_table_refuses_an_unknown_named_argument() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;

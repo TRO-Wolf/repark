@@ -366,8 +366,8 @@ list; the sixth is adoption:
 ```python
 spark.sql(
     "CALL local.system.register_table("
-    "table => 'sales.foreign', metadata_file => '/warehouse/sales/foreign/metadata/"
-    "00001-….metadata.json')"
+    "table => 'sales.sparkv3', "
+    "metadata_file => '/tmp/repark-v3-1-spark-mor/metadata/v8.metadata.json')"
 ).show()
 ```
 
@@ -378,6 +378,10 @@ spark.sql(
 | 4803484336433650168 | 40                 | 4                     |
 +---------------------+--------------------+-----------------------+
 ```
+
+Those three numbers are the Spark-written format-v3 fixture this engine ships for CI
+(`crates/repark-spark/src/tests/fixtures/v3-spark-mor/`). Live `SELECT` after the three
+Puffin vectors apply is 37 rows.
 
 That is how a table another engine already wrote — including a format-v3 table with Puffin
 deletion vectors — becomes visible here. The engine still cannot *create* a v3 table. Hadoop

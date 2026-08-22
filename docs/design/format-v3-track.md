@@ -152,7 +152,7 @@ A12's six units still hold in outline. Three change.
 | Unit | Scope | Change from A12 |
 |---|---|---|
 | **V3-0** | This audit, and the `rewrite_data_files` row-lineage guard | New — A12 had no charter unit |
-| **V3-1** | Wire `CALL system.register_table`; land the cross-engine v3 fixture and promote `B-MOR-3` and `V3-ADOPT-1` to rows | Was "read a v3 table and build the fixture, blocked on an addressing decision". The decision is made (§4) and the read half is already verified (§2), so what is left is the surface and the pins |
+| **V3-1** | Wire `CALL system.register_table`; land the cross-engine v3 fixture and promote `B-MOR-3` and `V3-ADOPT-1` to rows | **Landed 2026-08-21** (`feat/v3-1-register-table`). Was "read a v3 table and build the fixture, blocked on an addressing decision". |
 | **V3-2** | Create v3 tables behind an explicit opt-in | Unchanged, still wants MW closed first |
 | **V3-3** | Merge-on-read writes on v3 via the fork's `DVFileWriter` | Unchanged, still the big one |
 | **V3-4** | Row lineage as a read surface and a write obligation | Grows a read half: `_row_id` and `_last_updated_sequence_number` are not plannable columns today (`V3-ROWID-1`), where Spark serves both |

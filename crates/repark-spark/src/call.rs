@@ -47,8 +47,10 @@
 //! "CALL supports passing arguments by name (recommended) or by position."
 //! <https://iceberg.apache.org/docs/latest/spark-procedures/#usage>
 //!
-//! **Result rows:** every procedure here returns Spark's full column list, in Spark's order, with
-//! Spark's types and nullability, each value measured against a live oracle rather than inferred.
+//! **Result rows:** every *maintenance* procedure here returns Spark's full column list, in
+//! Spark's order, with Spark's types and nullability, each value measured against a live oracle
+//! rather than inferred. `register_table`'s three columns were read from the Iceberg 1.10.0
+//! jar's bytecode (V3-0), not from a live CALL.
 //! Counts are **never fabricated**: a column the engine cannot source honestly does not get a
 //! made-up number. As of MW-2 no procedure omits a Spark column.
 //!

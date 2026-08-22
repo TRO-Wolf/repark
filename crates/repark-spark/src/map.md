@@ -66,8 +66,9 @@ wrapper.
   from the 1.10.0 jar. Hadoop-named `vN.metadata.json` pointers register and read; a CALL write
   then names the convention (registry `V3-ADOPT-1`). The Spark-written v3 fixture that lands with
   this unit is what promotes `B-MOR-3` from a queued candidate to a row. A schema-only
-  CREATE adopt returns three nulls (never a fabricated zero). `execute_call`'s banner names
-  six procedures.
+  CREATE adopt returns three nulls (never a fabricated zero). Occupied ident refuses and keeps
+  the original rows. `execute_call`'s banner names six procedures; register_table's schema is
+  jar-measured, not a live-oracle result.
   3 in-module tests.
 - `ctas.rs` — CTAS staged create/replace (fork `StagedTableTransaction`, one catalog publish),
   service-managed (S3 Tables) create-first path, create-clause refuse helpers.
