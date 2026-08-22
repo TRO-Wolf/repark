@@ -533,7 +533,7 @@ fn strict_cast() -> CastOptions<'static> {
 
 /// Fold an iceberg error into the DataFusion error this crate's callers carry.
 fn iceberg_err(err: iceberg::Error) -> DataFusionError {
-    DataFusionError::External(Box::new(err))
+    crate::catalog::iceberg_to_datafusion(err)
 }
 
 /// ===============================================================================================

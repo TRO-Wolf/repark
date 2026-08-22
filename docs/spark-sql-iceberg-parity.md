@@ -1753,13 +1753,56 @@ the pin rather than obeying it.
   result reads as a clean compaction. The fix is fork work: `maintenance/rewrite_data_files.rs`
   has no row-lineage handling at all, while the spec layer around it does. Refusing follows the
   same trade as
-  [B-MOR-3](#surfaced-awaiting-pins--not-yet-rows) — an unattended procedure gets a loud stop
+  [B-MOR-3](#b-mor-3--rewrite_position_delete_files-refuses-live-puffin-deletion-vectors) — an unattended procedure gets a loud stop
   rather than a plausible wrong answer. **Not reachable on anything this engine wrote**: `CREATE
   TABLE` and CTAS refuse `format-version`, and `ALTER TABLE … SET TBLPROPERTIES` is refused a
   layer down by the fork rejecting reserved properties — all four doors pinned together by
   `crates/repark-spark/src/tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`, because
   this claim is what makes a refusal stricter than Spark defensible. A v3 table only exists here
   if it was already in the catalog.
+
+### B-MOR-3 — `rewrite_position_delete_files` refuses live Puffin deletion vectors
+
+- **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` refuses when the
+  current snapshot holds any live Puffin deletion vector, naming the count. A Spark-written
+  format-v3 table with three vectors returns
+  `found 3 live Puffin deletion vector(s)` rather than four zeros.
+- **Apache Spark** — returns all four counts as `0` and does nothing. Measured on a live
+  PySpark 4.0.1 + Iceberg 1.10.0 session: three MOR `DELETE`s produced three `PUFFIN` files, and
+  the procedure left them in place. Spark's own answer on v3 is the silent no-op this engine
+  refuses to give.
+  *(oracle: live — PySpark 4.0.1 + Iceberg 1.10.0, Hadoop-catalog fixture. The pinned 4.1.2
+  oracle cannot execute Iceberg maintenance procedures — same `DataSourceV2Relation` break as
+  [MOR-1](#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor).)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`
+  (CI-runnable Spark-written fixture; 37 live rows after the vectors apply, pinned beside it by
+  `call_register_table_adopts_a_spark_written_v3_table_with_puffin_vectors`).
+- **Rationale** — DELIBERATE, stricter than Spark on purpose, same reasoning as the orphan-files
+  dry-run default (owner decision OD-2): on a maintenance surface a silent zero is
+  indistinguishable from "already clean", and the operator never learns the reclaim never
+  happened. A deletion vector is file-scoped and is never bin-packed, so this procedure cannot
+  compact one. Format-v3 deletion-vector maintenance is V3-3/V3-5, not this row.
+
+### V3-ADOPT-1 — Hadoop `vN.metadata.json` pointers register and read, but cannot be written
+
+- **repark** — `CALL system.register_table` of a metadata file named `vN.metadata.json` (the
+  Hadoop catalog convention) succeeds and subsequent reads return the adopted rows. A later
+  write that has to compute the next metadata pointer — `CALL expire_snapshots` is the CALL
+  write this engine owns — fails and names **both** the Hadoop convention and the
+  version-uuid shape (`<version>-<uuid>.metadata.json`) that works. Glue is unaffected: it
+  already writes version-uuid pointers.
+- **Apache Spark** — registers the Hadoop-named pointer the same way; reads work; writes also
+  work, because Spark's Hadoop catalog writes the next `v(N+1).metadata.json` itself.
+  *(oracle: recorded — V3-0 isolated the cause by copying the identical file to a version-uuid
+  name, after which `INSERT` and `expire_snapshots` both succeeded on this engine.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_register.rs::call_register_table_of_hadoop_named_metadata_writes_name_the_convention`
+- **Rationale** — DELIBERATE error-quality, not a write-path fix. The fork's
+  `MetadataLocation` parser requires `<version>-<uuid>.metadata.json` to compute the next
+  pointer (fork work, format-v3-track §6). This row exists so the operator is told the
+  convention, not only the filename. Catalogs that already write version-uuid pointers never
+  hit it.
 
 ### Surfaced, awaiting pins — not yet rows
 
@@ -1777,26 +1820,6 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (`Could not find config namespace "spark"`) — pre-existing for every `spark.*` key and wider
   than the session zone; it wants its own decision rather than a fold into the extraction unit.
 
-- **B-MOR-3** — `rewrite_position_delete_files` **refuses** a format-v3 table holding live Puffin
-  deletion vectors, where **Spark returns all four counts as `0` and does nothing**. Measured on
-  the Spark half: a live PySpark 4.0.1 + Iceberg 1.10.0 session created a v3 table, three MOR
-  `DELETE`s produced three `PUFFIN` delete files, and the procedure returned `0, 0, 0, 0` leaving
-  all three in place. So Spark's own answer on a v3 table is the silent no-op this engine refuses
-  to give — the divergence is **deliberately stricter than Spark**, on the same reasoning as the
-  orphan-files dry-run default (owner decision OD-2): on a maintenance surface a silent zero is
-  indistinguishable from "already clean", and the operator never learns the reclaim never
-  happened. Queued rather than admitted because the **repark half has no end-to-end pin**: this
-  engine cannot write a deletion vector (it creates tables at format v2 and refuses merge-on-read
-  writes on v3), so firing the refusal needs a v3 table written by another engine. What IS pinned
-  today is the decision rule (`call_deletion_vector_rule_matches_the_forks_skip_clause`,
-  mutation-checked) and both no-false-positive paths. It becomes a row in the change that lands
-  the cross-engine v3 fixture — the **V3-1** unit of the format-v3 track
-  ([task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md) A12).
-  **V3-0 measured the repark half and it holds**: against Spark-written v3 tables carrying real
-  Puffin vectors the refusal fired and counted them correctly, 1 vector on one fixture and 6 on
-  another. That measurement is recorded in `task/v3-0-charter-ledger.md` and is *not* a pin — it
-  needs a Spark oracle, so it cannot run in CI. The row still waits on a fixture that can.
-
 - **V3-DANGLE-1** — a v3 compaction leaves its deletion vectors behind. Before
   [V3-LINEAGE-1](#v3-lineage-1--rewrite_data_files-refuses-a-format-v3-table-rather-than-reassign-row-lineage)
   refused the rewrite, this engine compacted six v3 data files into one and left all six Puffin
@@ -1813,15 +1836,6 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   (`Schema error: No field named _row_id`), so a consumer cannot see the lineage the format
   guarantees. Queued for the **V3-4** unit, which owns row lineage as a whole; pinning it here
   would pin half a decision.
-
-- **V3-ADOPT-1** — a table whose metadata pointer follows the Hadoop-catalog naming convention
-  (`v3.metadata.json`) reads correctly and cannot be written to. The fork's `MetadataLocation`
-  parser requires `<version>-<uuid>.metadata.json` to compute the next pointer, so `INSERT` and
-  `expire_snapshots` fail with `Invalid metadata file name format: v3.metadata.json` — an error
-  that names the symptom and not the cause. Renaming the same file to the expected shape makes
-  both succeed, which is how the cause was isolated. Not v3-specific and not reachable through
-  any surface this engine ships today, because there is no way to address a foreign table at all
-  (see V3-1). Queued for whichever unit lands the adopt path, which owns the error text.
 
 ---
 

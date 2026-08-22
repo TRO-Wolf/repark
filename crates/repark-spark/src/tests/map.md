@@ -36,7 +36,8 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `call_mor1_…` holds the sub-`min-input-files` compaction and `call_mor2_…` holds the
   partition-granularity writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
-  vector-present path has no fixture because this engine cannot write one),
+  vector-present path is the Spark-written fixture under `fixtures/v3-spark-mor/`, adopted by
+  `call_register` / V3-1 — the MW-2 rule-table pin's rustdoc says so too),
   `call_v3` (**V3-0**, split from `call` on subject the way `call_orphan` was: every test is about
   one table property rather than one procedure. Holds the `rewrite_data_files` row-lineage
   refusal, its v2 control, and a fixture assertion — the fixture is built by upgrading an
@@ -46,6 +47,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   claim — all four doors to a v3 table refuse — and it lives here rather than with the CREATE
   tests because the claim is what makes a refusal stricter than Spark defensible; its `ALTER`
   half is an UPSTREAM behaviour, so the pin doubles as the detector for the fork changing it),
+  `call_register` (**V3-1**: `CALL system.register_table` — Spark's two arguments and three
+  nullable BIGINT columns; engine-written adopt + read-back; occupied ident refuses and keeps
+  the original rows; Hadoop `vN.metadata.json` error text; Spark-written format-v3 fixture under
+  `fixtures/v3-spark-mor/` which is what promotes `B-MOR-3`),
+  `fixtures/` (Spark-written on-disk Iceberg tables CI can adopt with no JVM),
   `call_orphan` (**MW-3**, split out of `call` when that module crossed the 1500-line ceiling —
   `remove_orphan_files` and nothing else, because every test in it is about the blast radius of a
   deletion rather than a shared mechanism, which is also why its fixture helpers live there and

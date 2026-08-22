@@ -268,8 +268,8 @@ async fn execute_inner(
         Statement::Delete(delete) => execute_delete(ctx, catalogs, sql, delete).await,
         Statement::Update(update) => execute_update(ctx, catalogs, sql, update).await,
         // Iceberg `CALL catalog.system.<proc>(…)` — I3 / R-MAINTENANCE-CALL.
-        // Three procedures v1 (expire_snapshots / rewrite_data_files / rollback_to_snapshot);
-        // unknown + remove_orphan_files refuse loud listing the supported set (C3-L-001 residual).
+        // Six procedures (five maintenance + `register_table`); unknown names refuse listing the
+        // supported set.
         Statement::Call(function) => call::execute_call(ctx, catalogs, function).await,
         // `TRUNCATE TABLE` is planned (parity §2.3) but not wired — fail loud with a targeted
         // message rather than DF's opaque Unsupported (C4-L-001). Prefer empty INSERT OVERWRITE

@@ -360,7 +360,36 @@ They are also hidden from `SHOW TABLES` and `information_schema` while staying a
 
 ## Maintenance
 
-Five procedures run through `CALL`, each returning Spark's full column list:
+Six procedures run through `CALL`. Five of them are maintenance and return Spark's full column
+list; the sixth is adoption:
+
+```python
+spark.sql(
+    "CALL local.system.register_table("
+    "table => 'sales.sparkv3', "
+    "metadata_file => '/tmp/repark-v3-1-spark-mor/metadata/v8.metadata.json')"
+).show()
+```
+
+```text
++---------------------+--------------------+-----------------------+
+| current_snapshot_id | total_records_count| total_data_files_count|
++---------------------+--------------------+-----------------------+
+| 4803484336433650168 | 40                 | 4                     |
++---------------------+--------------------+-----------------------+
+```
+
+Those three numbers are the Spark-written format-v3 fixture this engine ships for CI
+(`crates/repark-spark/src/tests/fixtures/v3-spark-mor/`). Live `SELECT` after the three
+Puffin vectors apply is 37 rows.
+
+That is how a table another engine already wrote — including a format-v3 table with Puffin
+deletion vectors — becomes visible here. The engine still cannot *create* a v3 table. Hadoop
+catalog pointers named `vN.metadata.json` register and read; a later write names that
+convention rather than only the filename (registry `V3-ADOPT-1`). S3 Tables refuses
+registration in the fork; Glue implements it.
+
+Five maintenance procedures return Spark's full column list:
 
 ```python
 spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show()
@@ -513,7 +542,7 @@ Anything else refuses and lists what is supported, rather than pretending:
 ```text
 UnsupportedOperationException: This feature is not implemented: CALL
 system.rewrite_manifests is not supported. Supported procedures: expire_snapshots,
-remove_orphan_files, rewrite_data_files, rewrite_position_delete_files,
+register_table, remove_orphan_files, rewrite_data_files, rewrite_position_delete_files,
 rollback_to_snapshot.
 ```
 

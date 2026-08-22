@@ -44,7 +44,7 @@ pub use provider::{
 // `refresh_catalog_provider` escape hatch's engine-side adapter.
 pub use catalog_ops::reregister_catalog_provider;
 // r25 T2 item 0: projection wrap for fork metadata-table providers (registered via provider).
-pub use builders::{glue_catalog, memory_catalog, s3tables_catalog};
+pub use builders::{glue_catalog, iceberg_to_datafusion, memory_catalog, s3tables_catalog};
 pub use location::{
     NAMESPACE_LOCATION_PROPERTY, NAMESPACE_LOCATION_URI_PROPERTY, file_io_for_location,
     mirror_namespace_location_keys, resolve_namespace_location, storage_factory_for_location,
@@ -52,7 +52,6 @@ pub use location::{
 pub use metadata_projection::{MetadataProjectionSchemaProvider, ProjectingMetadataTableProvider};
 
 // Crate-private helpers used by listing/register still in this root and by sibling modules.
-pub(crate) use builders::iceberg_to_datafusion;
 
 // File-backed tests.rs historically resolved these via `use super::*` when co-located in
 // lib.rs. Keep them at this module root under cfg(test) so the test battery stays MOVE-ONLY.
