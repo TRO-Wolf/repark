@@ -36,7 +36,8 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `call_mor1_…` holds the sub-`min-input-files` compaction and `call_mor2_…` holds the
   partition-granularity writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
-  vector-present path has no fixture because this engine cannot write one),
+  vector-present path is the Spark-written fixture under `fixtures/v3-spark-mor/`, adopted by
+  `call_register` / V3-1),
   `call_v3` (**V3-0**, split from `call` on subject the way `call_orphan` was: every test is about
   one table property rather than one procedure. Holds the `rewrite_data_files` row-lineage
   refusal, its v2 control, and a fixture assertion — the fixture is built by upgrading an

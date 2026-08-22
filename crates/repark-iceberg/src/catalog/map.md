@@ -26,7 +26,9 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   fail-loud (naming the key) before construction, then pass every other prop through to Iceberg
   `FileIO`; prop helpers + the `iceberg_to_datafusion` error map (**V3-1:** Hadoop
   `vN.metadata.json` pointer errors name the convention, not only the filename — registry
-  `V3-ADOPT-1`; now `pub` so the Spark CALL router shares the wrap). Catalog-edge spans record
+  `V3-ADOPT-1`; now `pub` so the Spark CALL router shares the wrap; the wrap stays
+  `External` and implements `Error::source` so Iceberg classification is not remapped to
+  Plan). Catalog-edge spans record
   **prop key names only**, never values.
 - `location.rs` — namespace-location key identity (`NAMESPACE_LOCATION_PROPERTY` `"location"` /
   `NAMESPACE_LOCATION_URI_PROPERTY` `"location_uri"`; `resolve_namespace_location` read

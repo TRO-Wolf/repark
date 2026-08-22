@@ -162,6 +162,55 @@ async fn call_register_table_adopts_an_engine_written_table_and_returns_sparks_t
 }
 
 #[tokio::test]
+async fn call_register_table_of_a_table_with_no_snapshot_returns_three_nulls() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.empty (id BIGINT, name STRING) USING iceberg",
+    )
+    .await;
+    let ident = TableIdent::from_strs(["sales", "empty"]).unwrap();
+    let empty = catalogs
+        .get("ice")
+        .unwrap()
+        .load_table(&ident)
+        .await
+        .unwrap();
+    assert!(
+        empty.metadata().current_snapshot_id().is_none(),
+        "schema-only CREATE is the no-snapshot fixture; if this stamps a snapshot the pin is testing the wrong thing"
+    );
+    let metadata_file = empty
+        .metadata_location()
+        .expect("schema-only CREATE still has a metadata pointer")
+        .to_string();
+
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        &format!(
+            "CALL ice.system.register_table(table => 'sales.empty_adopted', \
+             metadata_file => '{metadata_file}')"
+        ),
+    )
+    .await
+    .expect("register of a no-snapshot table")
+    .collect()
+    .await
+    .expect("collect");
+    let batch = &batches[0];
+    assert_eq!(i64_cell(batch, 0), None, "current_snapshot_id must be null");
+    assert_eq!(i64_cell(batch, 1), None, "total_records_count must be null");
+    assert_eq!(
+        i64_cell(batch, 2),
+        None,
+        "total_data_files_count must be null — never a fabricated zero or file walk"
+    );
+}
+
+#[tokio::test]
 async fn call_register_table_accepts_positional_arguments() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&warehouse).await;

@@ -1,12 +1,8 @@
 """I3 / R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 
-Three procedures v1 (fork-backed, LOCAL memory catalog only):
-
-1. ``expire_snapshots`` — R133 + cleanup; tag-reachable snapshots survive.
-2. ``rewrite_data_files`` — R135 bin-pack; row multiset preserved; file count drops.
-3. ``rollback_to_snapshot`` — R98 ManageSnapshots.rollback_to; read = old multiset.
-
-Unknown / ``remove_orphan_files`` refuse loud listing supported procs.
+Six procedures: expire_snapshots, rewrite_data_files, rewrite_position_delete_files,
+remove_orphan_files, rollback_to_snapshot, and register_table (V3-1 adoption).
+Unknown names refuse loud listing the supported set.
 
 Oracle discipline: Arrow ``to_arrow`` value AND type pins (docs/testing.md
 divergence-class). Result schemas pin Spark names where the fork exposes honest
@@ -246,7 +242,7 @@ def test_rewrite_data_files_preserves_multiset_and_reduces_files(spark: ReparkSe
 def test_unknown_procedure_lists_supported(spark: ReparkSession) -> None:
     with pytest.raises(
         (UnsupportedOperationException, PySparkException),
-        match=r"expire_snapshots|rewrite_data_files|register_table|not supported",
+        match=r"register_table",
     ):
         spark.sql("CALL mem.system.not_a_real_proc(table => 'ns.events')")
 
@@ -277,6 +273,9 @@ def test_register_table_adopts_and_returns_spark_columns(
     assert result.schema.field("current_snapshot_id").nullable
     assert result.schema.field("total_records_count").nullable
     assert result.schema.field("total_data_files_count").nullable
+    assert result.schema.field("current_snapshot_id").type == pa.int64()
+    assert result.schema.field("total_records_count").type == pa.int64()
+    assert result.schema.field("total_data_files_count").type == pa.int64()
     assert result.column("total_records_count")[0].as_py() == 1
     adopted = spark.sql("SELECT id FROM mem.owned.adopted").to_arrow()
     assert _arrow_ids(adopted) == [1]

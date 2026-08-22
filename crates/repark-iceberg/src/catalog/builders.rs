@@ -3,12 +3,14 @@
 //! Extracted from `lib.rs` in r26 LR3 (root-logic slim). Public paths re-exported from the crate root.
 
 use std::collections::HashMap;
+use std::error::Error as StdError;
+use std::fmt;
 use std::hash::BuildHasher;
 use std::sync::Arc;
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
-use iceberg::{Catalog, CatalogBuilder};
+use iceberg::{Catalog, CatalogBuilder, ErrorKind};
 use iceberg_catalog_glue::{GLUE_CATALOG_PROP_WAREHOUSE, GlueCatalogBuilder};
 use iceberg_catalog_s3tables::{S3TABLES_CATALOG_PROP_TABLE_BUCKET_ARN, S3TablesCatalogBuilder};
 use tracing::Instrument;
@@ -175,16 +177,38 @@ pub(crate) fn clone_props<S: BuildHasher>(
 ///
 /// Hadoop-catalog `vN.metadata.json` pointers register and read, but the fork cannot compute the
 /// next metadata pointer from that name. The raw error names the filename; this names the
-/// convention (registry `V3-ADOPT-1`).
+/// convention (registry `V3-ADOPT-1`). The wrap stays `External` (not `Plan`) so Iceberg
+/// classification is preserved, and [`StdError::source`] keeps the inner fork error.
 pub fn iceberg_to_datafusion(err: iceberg::Error) -> DataFusionError {
-    let message = err.to_string();
-    if message.contains("Invalid metadata file name format:") {
-        return DataFusionError::Plan(format!(
-            "{message}. This engine's commit path requires a version-uuid metadata pointer \
-             (`<version>-<uuid>.metadata.json`). The Hadoop catalog convention `vN.metadata.json` \
-             registers and reads, but cannot be written; copy the file to a version-uuid name, \
-             or adopt from a catalog that writes that shape (Glue)."
-        ));
+    if err.kind() == ErrorKind::Unexpected
+        && err.message().contains("Invalid metadata file name format:")
+    {
+        return DataFusionError::External(Box::new(HadoopMetadataPointerError { inner: err }));
     }
     DataFusionError::External(Box::new(err))
+}
+
+/// Operator-facing wrap of a Hadoop-named metadata pointer the fork cannot write.
+#[derive(Debug)]
+struct HadoopMetadataPointerError {
+    inner: iceberg::Error,
+}
+
+impl fmt::Display for HadoopMetadataPointerError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "{}. This engine's commit path requires a version-uuid metadata pointer \
+             (`<version>-<uuid>.metadata.json`). The Hadoop catalog convention `vN.metadata.json` \
+             registers and reads, but cannot be written; copy the file to a version-uuid name, \
+             or adopt from a catalog that writes that shape (Glue).",
+            self.inner
+        )
+    }
+}
+
+impl StdError for HadoopMetadataPointerError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        Some(&self.inner)
+    }
 }

@@ -95,8 +95,8 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
 /// ===========================================================================================
 /// Execute one `CALL catalog.system.<proc>(…)` statement.
 ///
-/// Routes the three v1 maintenance procedures; unknown / deferred procedures fail loud with
-/// the supported list. Enforces the LOCAL-catalog gate before any table load.
+/// Routes the six CALL procedures (five maintenance + `register_table`); unknown / deferred
+/// procedures fail loud with the supported list. Every catalog policy (MW-1).
 /// ===========================================================================================
 ///
 /// # Errors
