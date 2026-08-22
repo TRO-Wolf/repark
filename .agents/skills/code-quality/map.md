@@ -44,4 +44,4 @@ the spine wins.
 
 First checks: a red `make check-python-conventions` prints the file, the sites and the sanctioned
 outs — read those before editing the tables. The gate is dual-wired (`make ci` + ci.yml's `python`
-job) and runs in both pre-commit paths. Escalate to: [../map.md#debug](../map.md).
+job). **Not** on the pre-commit hook as of PYC-5. Escalate to: [../map.md#debug](../map.md).

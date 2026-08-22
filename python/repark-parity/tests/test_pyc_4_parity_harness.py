@@ -351,14 +351,14 @@ def test_pyc_4_isolated_py_test_installs_pydantic() -> None:
 
 
 def test_pyc_4_ann_ignores_split_parity_from_facade() -> None:
-    """Parity tests no longer inherit ANN201/ANN202; facade tests still do."""
+    """Parity tests do not inherit ANN201/ANN202. PYC-5 dropped unearned facade ANN201."""
     with (_REPO / "pyproject.toml").open("rb") as handle:
         pyproject = tomllib.load(handle)
     ignores: dict[str, list[str]] = pyproject["tool"]["ruff"]["lint"]["per-file-ignores"]
     assert "**/tests/**" not in ignores
     facade = ignores["python/repark/tests/**"]
     parity = ignores["python/repark-parity/tests/**"]
-    assert "ANN201" in facade
+    assert "ANN201" not in facade
     assert "ANN202" in facade
     assert "ANN201" not in parity
     assert "ANN202" not in parity

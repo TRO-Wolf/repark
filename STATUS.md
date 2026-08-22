@@ -171,8 +171,9 @@ history-rewrite; provenance and the options weighed:
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
   merged as [#207](https://github.com/TRO-Wolf/repark/pull/207)**; **PYC-3
-  merged as [#208](https://github.com/TRO-Wolf/repark/pull/208)**; **PYC-4** is
-  this change — the parity harness and `scripts/`). Four Python rules the owner stated, now written into the contract:
+  merged as [#208](https://github.com/TRO-Wolf/repark/pull/208)**; **PYC-4
+  merged as [#209](https://github.com/TRO-Wolf/repark/pull/209)**; **PYC-5** is
+  this change — close). Four Python rules the owner stated, now written into the contract:
   types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
   defined inside another function; functions named as verb phrases for the work they do. The rules
   themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
@@ -183,8 +184,9 @@ history-rewrite; provenance and the options weighed:
     - *Types.* The shipped package is already clean — 2,170 functions, **zero** missing a return
       annotation, because Ruff's `ANN` rules are selected in [pyproject.toml](pyproject.toml) and
       gate CI. **PYC-4** split the tests glob so `python/repark-parity/tests/**` no longer
-      inherits ANN201/ANN202 and annotated the ten returns in `test_compare.py`. `scripts/`
-      has zero unannotated returns.
+      inherits ANN201/ANN202 and annotated the ten returns in `test_compare.py`. **PYC-5**
+      dropped unearned facade `ANN201` (isolated count 0); `ANN202` stays for private
+      helpers. `scripts/` has zero unannotated returns.
     - *Pydantic.* **PYC-3** converted `spark/merge.py` and `spark/_csv_smart.py` to
       Pydantic v2 `BaseModel` (and added `pydantic>=2.10,<3` as the wheel's second hard
       runtime dep). **PYC-4** converted the 20 `python/repark-parity` dataclass files
@@ -202,11 +204,14 @@ history-rewrite; provenance and the options weighed:
   - **The guard is armed** (owner ruled 2026-08-21). Ruff has no check for a nested `def` and none
     for "Pydantic rather than `dataclass`", so those two rules now live in
     `scripts/check_python_conventions.py`, dual-wired `make check-python-conventions` (in the
-    `make ci` chain) + ci.yml's `python` job, and in both pre-commit paths. The measured debt above
-    is seeded into its two EXCEPTIONS tables, so the tree is green today and **cannot get worse**:
-    a new nested `def` or a new `dataclass` import is red on the commit that writes it. PYC is now
-    the burn-down of those tables rather than a rule nobody can enforce. The other two rules stay
-    where they already work — Ruff `ANN` for types, review for naming.
+    `make ci` chain) + ci.yml's `python` job. **Not** on the pre-commit hook as of PYC-5. The
+    measured debt above is seeded into its two EXCEPTIONS tables, so the tree is green today and
+    **cannot get worse**: a new nested `def` or a new `dataclass` import is red on `make ci` / CI.
+    PYC is now the burn-down of those tables rather than a rule nobody can enforce. **PYC-5**
+    re-measured the hook at n=5 median **0.996 s** (max 1.011 s) over **164** files — at the
+    sub-second budget line, with the max already over it — and dropped it from pre-commit; it
+    stays dual-wired in `make ci` + CI. The other two rules stay where they already work — Ruff
+    `ANN` for types, review for naming.
   - **The nested-`def` rule ships with an inline pragma**, `# nested-def: <reason>`, for the three
     cases the contract sanctions: a decorator closing over its own arguments, a callback whose
     closure over local state is the point, and a `functools.wraps` wrapper. An empty reason does
@@ -218,9 +223,10 @@ history-rewrite; provenance and the options weighed:
     `udtf` builder and `types.py` verifier ended as pragmas, not lifts), PYC-3
     (merged as [#208](https://github.com/TRO-Wolf/repark/pull/208): the two shipped
     `dataclass` containers → `BaseModel`; accepted-input set pinned; pydantic
-    becomes a wheel hard dep), PYC-4 (this change: the parity harness and
-    `scripts/`, plus narrowing the `ANN` per-file ignores), and PYC-5 (close,
-    including re-measuring the guard's hook cost against its budget).
+    becomes a wheel hard dep), PYC-4 (merged as [#209](https://github.com/TRO-Wolf/repark/pull/209):
+    the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores),
+    and PYC-5 (this change: close — hook off pre-commit, unearned facade ANN201
+    dropped, dual-wire dataclass row stays the sanctioned leftover).
   - **Rationale and the arming method are a portable skill**,
     [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
