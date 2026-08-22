@@ -71,7 +71,7 @@ def test_collect_import_message_without_polars(
 
     real_import = builtins.__import__
 
-    def guarded(name: str, *args: object, **kwargs: object):  # type: ignore[no-untyped-def]
+    def guarded(name: str, *args: object, **kwargs: object) -> object:
         if name == "polars" or name.startswith("polars."):
             raise ImportError("forced missing polars")
         return real_import(name, *args, **kwargs)

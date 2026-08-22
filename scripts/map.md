@@ -141,9 +141,11 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   pragma) and converted the 20 parity dataclass files; remaining dataclass row is
   `scripts/check_parity_live_dual_wire.py` (runs as bare `python3`, no venv pydantic).
   Fail-closed on an unreadable file, a parse
-  failure, an empty scan set, or a stale `EXCEPTIONS` key. Measured 0.94 s — the slowest
-  hook-eligible guard. Dual-wired `make check-python-conventions` (in the `make ci` chain) +
-  ci.yml's `python` job, and in both pre-commit paths. Rationale and the arming method:
+  failure, an empty scan set, or a stale `EXCEPTIONS` key. **PYC-5:** re-measured n=5
+  median **0.996 s** (max 1.011 s) over 164 files — at the sub-second budget line, with
+  the max already over it, so not on pre-commit. Dual-wired
+  `make check-python-conventions` (in the `make ci` chain) + ci.yml's `python` job.
+  Rationale and the arming method:
   [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md).
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard

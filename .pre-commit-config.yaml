@@ -1,6 +1,8 @@
 # Alternate local-gate path for devs who use the `pre-commit` framework
-# (`pipx install pre-commit && pre-commit install`). The canonical gate is `make ci`; both invoke
-# the same underlying tools so they cannot drift. Pins are kept current by Dependabot /
+# (`pipx install pre-commit && pre-commit install`). The canonical gate is `make ci`.
+# Hook-eligible tools listed here must stay a subset of `make ci`; PYC-5 dropped
+# python-conventions from this file (and from `make install-hooks`) because it
+# sits on the sub-second budget line. Pins are kept current by Dependabot /
 # `pre-commit autoupdate`.
 
 repos:
@@ -64,10 +66,5 @@ repos:
       - id: lib-py-guard
         name: facade .py thinness guard
         entry: scripts/check_lib_py.sh
-        language: script
-        pass_filenames: false
-      - id: python-conventions-guard
-        name: Python conventions guard (nested def + Pydantic)
-        entry: scripts/check_python_conventions.sh
         language: script
         pass_filenames: false

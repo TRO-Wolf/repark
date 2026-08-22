@@ -59,7 +59,7 @@ def test_log1_the_two_argument_form_diverges_on_non_positive_operands() -> None:
     _frame()
     session = _session()
 
-    def door(text: str):
+    def door(text: str) -> object:
         return session.sql(f"SELECT {text} AS r FROM lrs4_probe").collect()[0][0]
 
     assert door("log(0, 8)") == 0.0  # -0.0; Spark: NULL

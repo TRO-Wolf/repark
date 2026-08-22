@@ -172,8 +172,10 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     and the **`dataclasses`/`attrs` ban**, with an exceptions table and no inline pragma on
     purpose) is **armed** since PYC over `python/repark/src`, `python/repark-parity` and
     `scripts/`, dual-wired `make check-python-conventions` (in the `make ci` chain) + ci.yml's
-    `python` job, and in both pre-commit paths. The other two Python rules are held elsewhere and
-    are deliberately not duplicated: type coverage is Ruff's `ANN` rule set, naming is a review
+    `python` job. **Not** on the pre-commit hook as of PYC-5: n=5 median 0.996 s (max 1.011 s)
+    over 164 files, at the sub-second budget line, with the max already over it. The other two
+    Python rules are held elsewhere and are deliberately not duplicated: type coverage is
+    Ruff's `ANN` rule set, naming is a review
     duty. Prose points at the script; the tables are never restated here. Rationale and the
     method for arming a convention: [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md).
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component

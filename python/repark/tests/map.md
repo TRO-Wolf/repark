@@ -22,6 +22,10 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_lrs4_door_domain.py](test_lrs4_door_domain.py) / [test_polars_core.py](test_polars_core.py) —
+  **PYC-5:** nested helpers `door` and `guarded` gained return annotations
+  (typed signatures; ruff classifies them as ANN202, which stays ignored).
+  The ANN201 ignore drop is the isolated public-function count of 0.
 - [test_pyc_3_dataclasses.py](test_pyc_3_dataclasses.py) — **PYC-3 (2026-08-22):**
   accepted-input set of `merge._Clause` and the four `_csv_smart` records
   (including empty `PreparedCsv`); extra/strict/frozen pins; `to_dict` key set;
