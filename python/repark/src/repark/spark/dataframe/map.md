@@ -11,7 +11,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 ## Contents
 
 - `core.py` — `DataFrame` class + plan/export helpers; re-exports nested classes and
-  moved private helpers (Q7 freeze: package + `core` + `_` binds). **G4b:** `DataFrame.join`'s
+  moved private helpers (Q7 freeze: package + `core` + `_` binds). **PYC-1 (2026-08-22):**
+  nested `def`s lifted; pandas/Arrow/classic UDF action callbacks live in `udf_bridge.py`
+  so this file stays under the ratcheted `check_lib_py` ceiling. **G4b:** `DataFrame.join`'s
   `how_aliases` carries the semi family (`semi`/`leftsemi`, `anti`/`leftanti` — `left_semi` /
   `left_anti` fold in via the existing `.replace("_", "")`), routed to the engine tokens listed
   in the module-level `_SEMI_JOIN_HOWS`. Those tokens take two side paths: `_join_on_condition_h1`
@@ -72,6 +74,11 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   intersect/subtract/crossJoin right-side + `mapInArrow` via `_spawn`). Writer
   CREATE paths refuse on that marker when the output has a non-nullable field
   (R-D). See `task/se1-declared-sorted-ledger.md`.
+- `udf_bridge.py` — **PYC-1:** action-time mapInArrow callbacks for `mapInPandas`,
+  scalar `pandas_udf`, and classic `udf`, plus the ordered-window GROUPED_AGG body
+  passed into `GroupedData.applyInPandas`. The `applyInPandas` method itself stays
+  in `joins_columns.py` (PYC-2). Imports no `DataFrame` at module scope. `core.py`
+  wires the helpers with `functools.partial`.
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /
@@ -133,6 +140,8 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 | Change DataFrame methods / plan glue | `core.py` |
 | Change `dynamicFlatten` | `core.py` (type-gate) + `crates/repark-core/src/dynamic_flatten.rs` |
 | Change the declared-sorted door (SE-1) | `core.py` (`declare_sorted`) + `../session/_funcs.py` (`_source_view_name`) |
+| Change pandas/classic UDF mapInArrow action callbacks, or the ordered-window GROUPED_AGG body | `udf_bridge.py` |
+| Change `GroupedData.applyInPandas` | `joins_columns.py` |
 | Change show/eager-eval formatting, Arrow type labels, plan-collapse or qcol rewrite | `plan_collapse.py` |
 | Change global-agg routing, the partition-transform gate, or pandas-UDF window frames | `plan_collapse.py` (CEIL-1 moved them out of `core.py`) |
 | Change generator mid-project name bind | `../column.py` (`_bound_generator_array`) + `core.py` (`_select_with_generator`) |
@@ -177,9 +186,10 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (DF1 native flatten / octo C1): `core.py` stays under the
-  7225 ceiling (docstring retargeted to the native Unnest rewrite),
-  `plan_collapse.py` 1360 of 2500.
+- Live file sizes (PYC-1): `core.py` 6866 of the ratcheted 6880 ceiling (UDF
+  callbacks extracted to `udf_bridge.py`), `plan_collapse.py` under the 2500
+  default (formatters and qcol rewriters lifted in place), `udf_bridge.py`
+  under the 2500 default.
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).

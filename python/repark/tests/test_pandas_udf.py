@@ -246,18 +246,20 @@ def test_pandas_udf_lazy_until_action(spark: SparkSession, monkeypatch: pytest.M
 def test_pandas_udf_bridge_defers_pandas_import() -> None:
     """pandas import lives inside the mapInArrow callback, not at select entry (octo C6-Q-001).
 
-    MUTATION: move ``import pandas as pd`` back to the top of ``_select_with_pandas_udfs``
-    (before the callback) → this pin fails red.
+    MUTATION: move ``import pandas as pd`` into ``_select_with_pandas_udfs`` (plan time)
+    → this pin fails red. PYC-1 lifted the callback to ``udf_bridge``; the contract is
+    still plan-time vs action-time, not the nested-def spelling.
     """
     import inspect
 
+    from repark.spark.dataframe import udf_bridge
+
     source = inspect.getsource(DataFrame._select_with_pandas_udfs)
-    before_callback, separator, after_callback = source.partition("def _arrow_pandas_udf_func")
-    assert separator, "expected mapInArrow callback in _select_with_pandas_udfs"
-    assert "import pandas" not in before_callback, (
+    assert "import pandas" not in source and '__import__("pandas")' not in source, (
         "pandas must not be imported at select/withColumn plan time"
     )
-    assert "import pandas" in after_callback, (
+    callback_source = inspect.getsource(udf_bridge._run_pandas_udf_arrow_batches)
+    assert '__import__("pandas")' in callback_source, (
         "pandas import must live inside the mapInArrow action callback"
     )
 

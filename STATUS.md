@@ -7,7 +7,7 @@
 > [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-21._
+_Last updated: 2026-08-22._
 
 ## Release state
 
@@ -164,23 +164,26 @@ history-rewrite; provenance and the options weighed:
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
-- **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **next work
-  group, not yet started**). Four Python rules the owner stated, now written into the contract:
+- **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1 in
+  flight** on `feat/pyc-1-dataframe-nested-defs`). Four Python rules the owner stated, now written into the contract:
   types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
   defined inside another function; functions named as verb phrases for the work they do. The rules
   themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
   [docs/skills/](docs/skills/map.md) with the guard that holds two of them, **merged as
   [#201](https://github.com/TRO-Wolf/repark/pull/201)** / `5f05d8c`; the conformance work is what
   remains.
-  - **Measured debt (AST scan of the tree at this commit, not an estimate):**
+  - **Measured debt (AST scan at guard arming 2026-08-21, not an estimate):**
     - *Types.* The shipped package is already clean — 2,170 functions, **zero** missing a return
       annotation, because Ruff's `ANN` rules are selected in [pyproject.toml](pyproject.toml) and
       gate CI. `python/repark-parity` has **10** unannotated returns; `scripts/` has zero.
     - *Pydantic.* **3** files under the shipped package and `scripts/` still use `dataclasses`
       (`spark/merge.py`, `spark/_csv_smart.py`, `check_parity_live_dual_wire.py`); **20** files
       under `python/repark-parity` do.
-    - *Nested functions.* **66** nested `def`s in 21 files. Two files carry more than half of them:
-      `spark/dataframe/core.py` (23) and `spark/dataframe/plan_collapse.py` (12).
+    - *Nested functions.* **66** nested `def`s in 21 files at arming. **PYC-1** (in flight)
+      lifts the 35 the gate counted in `spark/dataframe/core.py` (23) and
+      `spark/dataframe/plan_collapse.py` (12), plus `_emit_side` under `try:` which that
+      walker missed — those exception rows are deleted, not zeroed; remaining debt is
+      PYC-2..5 (31 nested defs across 19 files).
     - *Names.* Not machine-countable; it rides along with whatever the other three touch.
   - **The guard is armed** (owner ruled 2026-08-21). Ruff has no check for a nested `def` and none
     for "Pydantic rather than `dataclass`", so those two rules now live in
@@ -206,11 +209,12 @@ history-rewrite; provenance and the options weighed:
     [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
     arming a convention against a codebase that already violates it.
-  - **The risk this unit carries is that it is a pure refactor of working code.** The facade has
-    3,639 passing tests and none of them are about where a `def` sits. Lifting a closure changes
-    what it can see; converting a `dataclass` to a `BaseModel` adds validation that was not running
-    before and can reject input the old container accepted. The invariant to hold is the LRS one:
-    no query that worked before returns a different value.
+  - **The risk this unit carries is that it is a pure refactor of working code.** The facade
+    suite at arming was 3,639 passing tests, none of them about where a `def` sits; PYC-1
+    adds layout pins for that. Lifting a closure changes what it can see; converting a
+    `dataclass` to a `BaseModel` adds validation that was not running before and can reject
+    input the old container accepted. The invariant to hold is the LRS one: no query that
+    worked before returns a different value.
 
 - **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
   eleven commits, **merged as [#191](https://github.com/TRO-Wolf/repark/pull/191)** / `8c660f6`).
@@ -302,7 +306,8 @@ history-rewrite; provenance and the options weighed:
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), owner-scheduled
-  2026-08-21; V3-0 audit merged; **V3-1 in flight**).
+  2026-08-21; V3-0 audit merged; **V3-1 merged** as
+  [#203](https://github.com/TRO-Wolf/repark/pull/203) / `d3152b1`).
   Design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/v3-0-charter-ledger.md](task/v3-0-charter-ledger.md).
   - **V3-0** ([#199](https://github.com/TRO-Wolf/repark/pull/199)) ran the surfaces A12 had only
@@ -317,12 +322,12 @@ history-rewrite; provenance and the options weighed:
     one line** if the owner would rather match it. The underlying fix is fork work.
   - **Queued, not forced:** `V3-DANGLE-1` (made unreachable by the guard), `V3-ROWID-1` (V3-4
     owns row lineage).
-  - **V3-1 is the active unit** (branch `feat/v3-1-register-table`): `CALL system.register_table`
-    is wired (Spark's two arguments and three nullable BIGINT columns, measured from the 1.10.0
-    jar); a Spark-written format-v3 fixture is checked in so CI can load Puffin vectors with no
-    JVM; `B-MOR-3` and `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table`
-    in the fork (`FeatureUnsupported`); this engine does not swallow that. **V3-2 and later want
-    MW closed first**, so a second format version is not introduced underneath the campaign's
+  - **V3-1 delivered:** `CALL system.register_table` is wired (Spark's two arguments and
+    three nullable BIGINT columns, measured from the 1.10.0 jar); a Spark-written format-v3
+    fixture is checked in so CI can load Puffin vectors with no JVM; `B-MOR-3` and
+    `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table` in the fork
+    (`FeatureUnsupported`); this engine does not swallow that. **V3-2 and later want MW
+    closed first**, so a second format version is not introduced underneath the campaign's
     only real-catalog evidence.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**

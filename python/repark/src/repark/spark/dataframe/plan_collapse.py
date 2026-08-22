@@ -14,6 +14,7 @@ the one ``core``-side type it needs is a ``TYPE_CHECKING`` annotation only.
 
 from __future__ import annotations
 
+import functools
 import logging
 import re
 from typing import TYPE_CHECKING, Any
@@ -53,53 +54,69 @@ def _data_type_has_required_child(data_type: Any) -> bool:
     return False
 
 
+def _strip_tighten_nulls_field(
+    field: Any,
+    *,
+    key: bytes,
+    depth: int = 0,
+) -> tuple[Any, bool]:
+    """Walk one Arrow field, dropping ``repark.tighten_nulls`` metadata (depth-bounded)."""
+    if depth > 32:
+        return field, False
+    changed = False
+    meta = field.metadata
+    if meta and key in meta:
+        meta = {k: v for k, v in meta.items() if k != key}
+        changed = True
+    new_type, type_changed = _strip_tighten_nulls_type(field.type, key=key, depth=depth)
+    changed = changed or type_changed
+    if not changed:
+        return field, False
+    return field.with_type(new_type).with_metadata(meta), True
+
+
+def _strip_tighten_nulls_type(data_type: Any, *, key: bytes, depth: int) -> tuple[Any, bool]:
+    """Walk one Arrow type, stripping tighten-nulls metadata from nested fields."""
+    import pyarrow as pa
+
+    if pa.types.is_struct(data_type):
+        fields = []
+        changed = False
+        for index in range(data_type.num_fields):
+            child, child_changed = _strip_tighten_nulls_field(
+                data_type.field(index), key=key, depth=depth + 1
+            )
+            fields.append(child)
+            changed = changed or child_changed
+        return (pa.struct(fields) if changed else data_type, changed)
+    if pa.types.is_list(data_type) or pa.types.is_large_list(data_type):
+        child, child_changed = _strip_tighten_nulls_field(
+            data_type.value_field, key=key, depth=depth + 1
+        )
+        if not child_changed:
+            return data_type, False
+        if pa.types.is_large_list(data_type):
+            return pa.large_list(child), True
+        return pa.list_(child), True
+    if pa.types.is_map(data_type):
+        value_field, value_changed = _strip_tighten_nulls_field(
+            data_type.item_field, key=key, depth=depth + 1
+        )
+        if not value_changed:
+            return data_type, False
+        return pa.map_(data_type.key_field, value_field), True
+    return data_type, False
+
+
 def _strip_internal_tighten_metadata(table: Any) -> Any:
     """Drop ``repark.tighten_nulls`` from user-visible Arrow export (not a data column)."""
     import pyarrow as pa
 
     key = b"repark.tighten_nulls"
-
-    def strip_field(field: Any, depth: int = 0) -> tuple[Any, bool]:
-        if depth > 32:
-            return field, False
-        changed = False
-        meta = field.metadata
-        if meta and key in meta:
-            meta = {k: v for k, v in meta.items() if k != key}
-            changed = True
-        new_type, type_changed = strip_type(field.type, depth)
-        changed = changed or type_changed
-        if not changed:
-            return field, False
-        return field.with_type(new_type).with_metadata(meta), True
-
-    def strip_type(data_type: Any, depth: int) -> tuple[Any, bool]:
-        if pa.types.is_struct(data_type):
-            fields = []
-            changed = False
-            for index in range(data_type.num_fields):
-                child, child_changed = strip_field(data_type.field(index), depth + 1)
-                fields.append(child)
-                changed = changed or child_changed
-            return (pa.struct(fields) if changed else data_type, changed)
-        if pa.types.is_list(data_type) or pa.types.is_large_list(data_type):
-            child, child_changed = strip_field(data_type.value_field, depth + 1)
-            if not child_changed:
-                return data_type, False
-            if pa.types.is_large_list(data_type):
-                return pa.large_list(child), True
-            return pa.list_(child), True
-        if pa.types.is_map(data_type):
-            value_field, value_changed = strip_field(data_type.item_field, depth + 1)
-            if not value_changed:
-                return data_type, False
-            return pa.map_(data_type.key_field, value_field), True
-        return data_type, False
-
     fields = []
     changed = False
     for field in table.schema:
-        new_field, field_changed = strip_field(field)
+        new_field, field_changed = _strip_tighten_nulls_field(field, key=key)
         fields.append(new_field)
         changed = changed or field_changed
     schema_meta = table.schema.metadata
@@ -331,6 +348,16 @@ def _sql_string_literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+def _show_grid_row(cells: list[str], widths: list[int]) -> str:
+    """Render one ``| a | b |`` Spark-show grid line, each cell left-padded to its column width."""
+    return "| " + " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(cells)) + " |"
+
+
+def _eager_eval_grid_row(cells: list[str], widths: list[int]) -> str:
+    """Render one abutted ``|a|b|`` REPL line, each cell right-aligned to its column width."""
+    return "|" + "|".join(cell.rjust(widths[i]) for i, cell in enumerate(cells)) + "|"
+
+
 def _format_show_table(table: Any, *, truncate_at: int | None) -> str:
     """Render a small Arrow table as a PySpark-style ASCII grid."""
     names = list(table.column_names)
@@ -340,14 +367,10 @@ def _format_show_table(table: Any, *, truncate_at: int | None) -> str:
         for index, cell in enumerate(row):
             widths[index] = max(widths[index], len(cell))
 
-    def fmt_row(cells: list[str]) -> str:
-        """Render one ``| a | b |`` grid line, each cell left-padded to its column width."""
-        return "| " + " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(cells)) + " |"
-
     separator = "+-" + "-+-".join("-" * width for width in widths) + "-+"
-    lines = [separator, fmt_row(names), separator]
+    lines = [separator, _show_grid_row(names, widths), separator]
     for row in raw_rows:
-        lines.append(fmt_row(row))
+        lines.append(_show_grid_row(row, widths))
     lines.append(separator)
     return "\n".join(lines)
 
@@ -370,14 +393,10 @@ def _format_eager_eval_table(table: Any, *, truncate_at: int | None) -> str:
         for index, cell in enumerate(row):
             widths[index] = max(widths[index], len(cell))
 
-    def fmt_row(cells: list[str]) -> str:
-        """Render one abutted ``|a|b|`` REPL line, each cell right-aligned to its column width."""
-        return "|" + "|".join(cell.rjust(widths[i]) for i, cell in enumerate(cells)) + "|"
-
     separator = "+" + "+".join("-" * width for width in widths) + "+"
-    lines = [separator, fmt_row(names), separator]
+    lines = [separator, _eager_eval_grid_row(names, widths), separator]
     for row in raw_rows:
-        lines.append(fmt_row(row))
+        lines.append(_eager_eval_grid_row(row, widths))
     lines.append(separator)
     return "\n".join(lines)
 
@@ -588,6 +607,54 @@ def _column_widths(
     return widths
 
 
+def _box_rule(
+    segment_widths: list[int],
+    left: str,
+    mid: str,
+    right: str,
+    fill: str = "─",
+) -> str:
+    """Join ``fill * width`` segments with ``mid``, capped by ``left`` / ``right`` glyphs."""
+    return left + mid.join(fill * width for width in segment_widths) + right
+
+
+def _polars_row_line(cells: list[str], widths: list[int], *, align: str = "left") -> str:
+    """Render one polars body line; ``align="center"`` centres each cell in its column."""
+    parts: list[str] = []
+    for index, width in enumerate(widths):
+        cell = cells[index] if index < len(cells) else ""
+        if align == "center":
+            parts.append(f" {cell.center(width)} ")
+        else:
+            parts.append(f" {cell.ljust(width)} ")
+    return "│" + "┆".join(parts) + "│"
+
+
+def _duckdb_cell_is_numeric(text: str) -> bool:
+    """Report whether a rendered cell should right-align (a number, not NULL / NaN / a dot)."""
+    if text in {"NULL", "null", "nan", "NaN", "…", "·"}:
+        return False
+    try:
+        float(text)
+        return True
+    except ValueError:
+        return False
+
+
+def _duckdb_row_line(cells: list[str], widths: list[int], *, center: bool = False) -> str:
+    """Render one DuckDB body line; headers centre, numeric cells right-align."""
+    parts: list[str] = []
+    for index, width in enumerate(widths):
+        cell = cells[index] if index < len(cells) else ""
+        if center:
+            parts.append(f" {cell.center(width)} ")
+        elif _duckdb_cell_is_numeric(cell):
+            parts.append(f" {cell.rjust(width)} ")
+        else:
+            parts.append(f" {cell.ljust(width)} ")
+    return "│" + "│".join(parts) + "│"
+
+
 def _format_polars_show(
     names: list[str],
     type_labels: list[str],
@@ -608,36 +675,21 @@ def _format_polars_show(
     # polars pads cells with one space each side inside the box.
     inner_widths = [width + 2 for width in widths]
 
-    def hline(left: str, mid: str, right: str, fill: str = "─") -> str:
-        """Draw one polars box rule from the given corner / junction / corner glyphs."""
-        return left + mid.join(fill * width for width in inner_widths) + right
-
-    def row_line(cells: list[str], *, align: str = "left") -> str:
-        """Render one polars body line; ``align="center"`` centres each cell in its column."""
-        parts: list[str] = []
-        for index, width in enumerate(widths):
-            cell = cells[index] if index < len(cells) else ""
-            if align == "center":
-                parts.append(f" {cell.center(width)} ")
-            else:
-                parts.append(f" {cell.ljust(width)} ")
-        return "│" + "┆".join(parts) + "│"
-
     lines = [
         f"shape: ({total_rows}, {len(names)})",
-        hline("┌", "┬", "┐"),
-        row_line(names),
-        row_line(["---"] * len(names)),
-        row_line(type_labels),
-        hline("╞", "╪", "╡", fill="═"),
+        _box_rule(inner_widths, "┌", "┬", "┐"),
+        _polars_row_line(names, widths),
+        _polars_row_line(["---"] * len(names), widths),
+        _polars_row_line(type_labels, widths),
+        _box_rule(inner_widths, "╞", "╪", "╡", fill="═"),
     ]
     for row in head_rows:
-        lines.append(row_line(row))
+        lines.append(_polars_row_line(row, widths))
     if show_ellipsis:
-        lines.append(row_line(["…"] * len(names)))
+        lines.append(_polars_row_line(["…"] * len(names), widths))
         for row in tail_rows:
-            lines.append(row_line(row))
-    lines.append(hline("└", "┴", "┘"))
+            lines.append(_polars_row_line(row, widths))
+    lines.append(_box_rule(inner_widths, "└", "┴", "┘"))
     return "\n".join(lines)
 
 
@@ -671,54 +723,28 @@ def _format_duckdb_show(
         widths[0] += footer_need - table_inner
         table_inner = footer_need
 
-    def hline(left: str, mid: str, right: str, fill: str = "─") -> str:
-        """Draw one DuckDB box rule from the given corner / junction / corner glyphs."""
-        return left + mid.join(fill * (width + 2) for width in widths) + right
-
-    def is_numeric_cell(text: str) -> bool:
-        """Report whether a rendered cell should right-align (a number, not NULL / NaN / a dot)."""
-        if text in {"NULL", "null", "nan", "NaN", "…", "·"}:
-            return False
-        try:
-            float(text)
-            return True
-        except ValueError:
-            return False
-
-    def row_line(cells: list[str], *, center: bool = False) -> str:
-        """Render one DuckDB body line; headers centre, numeric cells right-align."""
-        parts: list[str] = []
-        for index, width in enumerate(widths):
-            cell = cells[index] if index < len(cells) else ""
-            if center:
-                parts.append(f" {cell.center(width)} ")
-            elif is_numeric_cell(cell):
-                parts.append(f" {cell.rjust(width)} ")
-            else:
-                parts.append(f" {cell.ljust(width)} ")
-        return "│" + "│".join(parts) + "│"
-
+    padded_widths = [width + 2 for width in widths]
     lines = [
-        hline("┌", "┬", "┐"),
-        row_line(names, center=True),
-        row_line(type_labels, center=True),
+        _box_rule(padded_widths, "┌", "┬", "┐"),
+        _duckdb_row_line(names, widths, center=True),
+        _duckdb_row_line(type_labels, widths, center=True),
     ]
     has_body = bool(head_rows) or show_ellipsis or bool(tail_rows)
     if has_body:
-        lines.append(hline("├", "┼", "┤"))
+        lines.append(_box_rule(padded_widths, "├", "┼", "┤"))
         for row in head_rows:
-            lines.append(row_line(row))
+            lines.append(_duckdb_row_line(row, widths))
         if show_ellipsis:
-            lines.append(row_line(["·"] * len(names), center=True))
-            lines.append(row_line(["·"] * len(names), center=True))
-            lines.append(row_line(["·"] * len(names), center=True))
+            lines.append(_duckdb_row_line(["·"] * len(names), widths, center=True))
+            lines.append(_duckdb_row_line(["·"] * len(names), widths, center=True))
+            lines.append(_duckdb_row_line(["·"] * len(names), widths, center=True))
             for row in tail_rows:
-                lines.append(row_line(row))
+                lines.append(_duckdb_row_line(row, widths))
         # Footer: collapse column dividers into a single spanning cell.
         lines.append("├" + "┴".join("─" * (width + 2) for width in widths) + "┤")
     else:
         # Empty body: one separator under the type row, then the footer (duckdb-style).
-        lines.append(hline("├", "┼", "┤"))
+        lines.append(_box_rule(padded_widths, "├", "┼", "┤"))
     span = table_inner
     lines.append(f"│{footer_main.center(span + 2)}│")
     if footer_shown:
@@ -1051,6 +1077,22 @@ def _decode_qcol_field(field_enc: str) -> str:
     return field_enc.replace("\\_\\_", "__").replace("\\n", "\n").replace("\\\\", "\\")
 
 
+def _replace_local_qcol_token(
+    match: re.Match[str],
+    *,
+    origin_map: dict[tuple[str, str], str],
+    frame: DataFrame,
+) -> str:
+    """Rewrite one ``__REPARK_QCOL_*`` token against a single frame's origin map."""
+    plan_id = match.group(1)
+    field = _decode_qcol_field(match.group(2))
+    frame._raise_if_origin_not_emitted(plan_id, field)
+    engine = origin_map.get((plan_id, field))
+    if engine is None:
+        return match.group(0)
+    return _quote_ident_sql(engine)
+
+
 def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame) -> str:
     """Rewrite ``__REPARK_QCOL_*`` tokens to quoted engine fields on *one* post-join frame.
 
@@ -1058,22 +1100,13 @@ def _rewrite_qcol_tokens_local(join_sql: str, frame: DataFrame) -> str:
     parent-origin Columns (``left.b > 1``, ``left.b.isNotNull()``) where origin bits were
     cleared by the op but ``join_sql_expr`` still carries side tokens.
     """
-    from repark.spark._idents import quote_ident as _quote_ident
-
     origin_map = frame._origin_map
     if origin_map is None:
         return join_sql
-
-    def _replace(match: re.Match[str]) -> str:
-        plan_id = match.group(1)
-        field = _decode_qcol_field(match.group(2))
-        frame._raise_if_origin_not_emitted(plan_id, field)
-        engine = origin_map.get((plan_id, field))
-        if engine is None:
-            return match.group(0)
-        return _quote_ident(engine)
-
-    return _QCOL_TOKEN_RE.sub(_replace, join_sql)
+    return _QCOL_TOKEN_RE.sub(
+        functools.partial(_replace_local_qcol_token, origin_map=origin_map, frame=frame),
+        join_sql,
+    )
 
 
 def _rewrite_join_qcol_sql(
@@ -1100,28 +1133,6 @@ def _rewrite_join_qcol_sql(
     post-join parent-Column origin identity is required (same-object origin map cannot
     split one plan_id across two sides).
     """
-    from repark.spark._idents import quote_ident as _quote_ident
-
-    def _side_engine(frame: DataFrame, field: str) -> str:
-        # Prefer origin map (nested), else display→engine, else bare field.
-        if frame._origin_map is not None:
-            for (plan_id, origin_field), engine in frame._origin_map.items():
-                if origin_field == field and plan_id == frame._plan_id:
-                    return engine
-            # Any origin entry for this field on the frame (chained).
-            for (_plan_id, origin_field), engine in frame._origin_map.items():
-                if origin_field == field:
-                    return engine
-        if frame._display_names is not None and frame._engine_names is not None:
-            matches = [
-                engine
-                for name, engine in zip(frame._display_names, frame._engine_names, strict=True)
-                if name == field
-            ]
-            if len(matches) == 1:
-                return matches[0]
-        return field
-
     # H2: same Python object → same plan_id on both sides; alternate token sides when safe.
     same_object = left is right
     if same_object and not _same_object_qcol_alternation_safe(join_sql):
@@ -1131,43 +1142,91 @@ def _rewrite_join_qcol_sql(
             'mis-bind columns). Use df.alias("l").join(df.alias("r"), …) so each side '
             "has a distinct plan id."
         )
-    same_object_token_index = 0
+    rewriter = _JoinQcolRewriter(
+        left=left,
+        right=right,
+        left_alias=left_alias,
+        right_alias=right_alias,
+        same_object=same_object,
+    )
+    return _QCOL_TOKEN_RE.sub(rewriter, join_sql)
 
-    def _replace(match: re.Match[str]) -> str:
-        nonlocal same_object_token_index
+
+def _join_side_engine(frame: DataFrame, field: str) -> str:
+    """Resolve a join-ON field name to the engine column on ``frame``."""
+    # Prefer origin map (nested), else display→engine, else bare field.
+    if frame._origin_map is not None:
+        for (plan_id, origin_field), engine in frame._origin_map.items():
+            if origin_field == field and plan_id == frame._plan_id:
+                return engine
+        # Any origin entry for this field on the frame (chained).
+        for (_plan_id, origin_field), engine in frame._origin_map.items():
+            if origin_field == field:
+                return engine
+    if frame._display_names is not None and frame._engine_names is not None:
+        matches = [
+            engine
+            for name, engine in zip(frame._display_names, frame._engine_names, strict=True)
+            if name == field
+        ]
+        if len(matches) == 1:
+            return matches[0]
+    return field
+
+
+class _JoinQcolRewriter:
+    """Rewrite ``__REPARK_QCOL_*`` tokens in a join ON clause; holds the occurrence counter."""
+
+    def __init__(
+        self,
+        *,
+        left: DataFrame,
+        right: DataFrame,
+        left_alias: str,
+        right_alias: str,
+        same_object: bool,
+    ) -> None:
+        self.left = left
+        self.right = right
+        self.left_alias = left_alias
+        self.right_alias = right_alias
+        self.same_object = same_object
+        self.token_index = 0
+
+    def __call__(self, match: re.Match[str]) -> str:
         plan_id = match.group(1)
         field_enc = match.group(2)
         field = field_enc.replace("\\_\\_", "__").replace("\\n", "\n").replace("\\\\", "\\")
-        if same_object and plan_id == left._plan_id:
+        left = self.left
+        right = self.right
+        if self.same_object and plan_id == left._plan_id:
             # Occurrence 0,2,… → left alias; 1,3,… → right (equi self-join sugar).
-            side_alias = left_alias if (same_object_token_index % 2 == 0) else right_alias
-            same_object_token_index += 1
-            engine = _side_engine(left, field)
-            return f"{side_alias}.{_quote_ident(engine)}"
+            side_alias = self.left_alias if (self.token_index % 2 == 0) else self.right_alias
+            self.token_index += 1
+            engine = _join_side_engine(left, field)
+            return f"{side_alias}.{_quote_ident_sql(engine)}"
         if plan_id == left._plan_id or (
             left._origin_map is not None and any(pid == plan_id for pid, _field in left._origin_map)
         ):
             # Prefer direct left plan_id; also accept nested origins that live on left.
             if plan_id == left._plan_id:
-                engine = _side_engine(left, field)
-                return f"{left_alias}.{_quote_ident(engine)}"
+                engine = _join_side_engine(left, field)
+                return f"{self.left_alias}.{_quote_ident_sql(engine)}"
             if left._origin_map is not None and (plan_id, field) in left._origin_map:
                 engine = left._origin_map[(plan_id, field)]
-                return f"{left_alias}.{_quote_ident(engine)}"
+                return f"{self.left_alias}.{_quote_ident_sql(engine)}"
         if plan_id == right._plan_id or (
             right._origin_map is not None
             and any(pid == plan_id for pid, _field in right._origin_map)
         ):
             if plan_id == right._plan_id:
-                engine = _side_engine(right, field)
-                return f"{right_alias}.{_quote_ident(engine)}"
+                engine = _join_side_engine(right, field)
+                return f"{self.right_alias}.{_quote_ident_sql(engine)}"
             if right._origin_map is not None and (plan_id, field) in right._origin_map:
                 engine = right._origin_map[(plan_id, field)]
-                return f"{right_alias}.{_quote_ident(engine)}"
+                return f"{self.right_alias}.{_quote_ident_sql(engine)}"
         # Unknown plan_id — leave token (should not happen for well-formed conditions).
         return match.group(0)
-
-    return _QCOL_TOKEN_RE.sub(_replace, join_sql)
 
 
 def _sql_ident_bare_name(fragment: str) -> str | None:

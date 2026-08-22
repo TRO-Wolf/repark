@@ -25,24 +25,24 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **V3-1** | format-v3 | — | M |
-| 2 | **PYC-1** | conventions | — | M |
-| 3 | **PYC-2** | conventions | PYC-1 | S |
-| 4 | **PYC-3** | conventions | — | S |
-| 5 | **PYC-4** | conventions | — | M |
-| 6 | **PYC-5** | conventions | PYC-1..4 | S |
+| 1 | **PYC-1** | conventions | — | M |
+| 2 | **PYC-2** | conventions | PYC-1 | S |
+| 3 | **PYC-3** | conventions | — | S |
+| 4 | **PYC-4** | conventions | — | M |
+| 5 | **PYC-5** | conventions | PYC-1..4 | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
 
-**V3-1 leads because it is the only capability work in the queue.** Everything else is
-conformance, close-out, or blocked. It is also Rust-side, so it does not contend with the PYC
-units for the same files.
+**V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
+**PYC-1 is in flight** on `feat/pyc-1-dataframe-nested-defs`: the two DataFrame modules
+(the 35 nested defs the gate counted at arming, plus `_emit_side` under `try:` which
+that walker missed).
 
-**PYC does not lead, despite being freshly measured.** The gate is already armed, so new Python
-cannot make the debt worse while it waits — which is precisely the property that makes it safe to
-schedule behind product work rather than ahead of it. Burning the tables down is valuable; it is
-not urgent, and it is the one track in this queue with no user-visible outcome.
+**PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
+new Python cannot make the debt worse while it waits — which is precisely the property that
+made it safe to schedule behind V3-1 rather than ahead of it. Burning the tables down is
+valuable; it is not urgent, and it is the one track in this queue with no user-visible outcome.
 
 **MW-4 preempts everything the moment OD-3 lands.** It is the maintenance campaign's only
 real-catalog evidence, and the campaign cannot close without it. If the owner executes OD-3 mid-
@@ -143,22 +143,6 @@ counts re-measured rather than left at the seed numbers.
 **Also re-measure the hook cost.** The guard was 0.94 s at arming, against a stated sub-second
 budget. If PYC leaves it above that, the honest outcome is dropping it from pre-commit and leaving
 it dual-wired in `make ci` + CI, not quietly keeping a hook that everyone starts skipping.
-
----
-
-## V3-1 — `CALL system.register_table` and the cross-engine fixture
-
-Scope is settled by V3-0 and lives in [../docs/design/format-v3-track.md](../docs/design/format-v3-track.md)
-§4–5. The addressing question is answered: adoption via `Catalog::register_table`, which the fork
-implements for memory and Glue and which S3 Tables refuses cleanly.
-
-- Signature comes from the Iceberg jar's own bytecode, already read and transcribed in
-  [../task/v3-0-charter-ledger.md](../task/v3-0-charter-ledger.md). Do not re-derive it from docs.
-- The cross-engine fixture is what promotes `B-MOR-3` from "measured on the repark half" to a real
-  registry row. Without a CI-runnable fixture it stays queued, so the fixture is the unit, not a
-  nicety attached to it.
-- **`V3-2` and later want MW closed first.** Do not let V3-1 grow into introducing a second format
-  version underneath the maintenance campaign's only real-catalog evidence.
 
 ---
 

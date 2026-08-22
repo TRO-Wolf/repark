@@ -9,6 +9,7 @@ no public constructor beyond wrapping an existing handle.
 from __future__ import annotations
 
 import contextlib
+import functools
 import logging
 import re
 import uuid
@@ -31,6 +32,12 @@ from repark.errors import (
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import home_view_ref, scratch_view_name
 from repark.spark.column import Column, _bound_generator_array, sort_nulls_first_for
+from repark.spark.dataframe.udf_bridge import (
+    _apply_ordered_window_pandas_udf,
+    _map_in_pandas_arrow_batches,
+    _run_pandas_udf_arrow_batches,
+    _run_python_udf_arrow_batches,
+)
 from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
@@ -190,6 +197,14 @@ _EXPORT_MEMORY_ERROR_MARKERS: tuple[str, ...] = (
 _PYARROW_DYNAMIC_SOURCE_NOISE = "dynamically evaluated source"
 
 
+def _export_error_message_is_noise(message: str) -> bool:
+    """True when ``message`` is pyarrow capsule noise that hides the engine payload."""
+    lower = message.lower()
+    return _PYARROW_DYNAMIC_SOURCE_NOISE in lower and not any(
+        marker in lower for marker in _EXPORT_MEMORY_ERROR_MARKERS
+    )
+
+
 def _export_error_message(error: BaseException) -> str:
     """Extract the best human message from a mid-stream Arrow/engine export failure.
 
@@ -225,13 +240,7 @@ def _export_error_message(error: BaseException) -> str:
     if not candidates:
         return repr(error)
 
-    def _is_noise(message: str) -> bool:
-        lower = message.lower()
-        return _PYARROW_DYNAMIC_SOURCE_NOISE in lower and not any(
-            marker in lower for marker in _EXPORT_MEMORY_ERROR_MARKERS
-        )
-
-    useful = [message for message in candidates if not _is_noise(message)]
+    useful = [message for message in candidates if not _export_error_message_is_noise(message)]
     if not useful:
         useful = candidates
     # Prefer the longest non-noise candidate that still carries engine detail.
@@ -263,6 +272,94 @@ def _export_engine_error(error: BaseException) -> PySparkException:
             "(runtime; same pool — one truth, not two knobs)."
         )
     return PySparkException(message)
+
+
+def _drop_mia_temp_views(session: Any, names: list[str]) -> None:
+    """Drop mapInArrow scratch views recorded on a DataFrame being finalized."""
+    for view_name in list(names):
+        with contextlib.suppress(Exception):
+            session.drop_temp_view(view_name)
+    names.clear()
+
+
+def _coerce_sample_seed(value: object, *, label: str) -> int:
+    """Coerce a ``sample()`` seed argument to int; bools and non-numerics refuse."""
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise TypeError(f"sample() {label} must be int, got {type(value).__name__}")
+    return int(value)
+
+
+def _quote_filter_ident_token(
+    match: re.Match[str],
+    *,
+    columns_by_fold: dict[str, list[str]],
+) -> str:
+    """Quote one matched filter token, or return it unchanged when it names no column."""
+    token = match.group(1)
+    if token.casefold() in _SQL_LITERAL_KEYWORDS:
+        return token
+    matches = columns_by_fold.get(token.casefold())
+    if matches is None:
+        return token
+    if len(matches) > 1:
+        candidates = ", ".join(f"`{name}`" for name in matches)
+        raise AnalysisException(
+            f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, could be: [{candidates}]."
+        )
+    return _quote_ident_sql(matches[0])
+
+
+def _quote_filter_idents_in_fragment(
+    fragment: str,
+    *,
+    ident_pattern: re.Pattern[str],
+    columns_by_fold: dict[str, list[str]],
+) -> str:
+    """Quote every bare identifier in ``fragment`` that names a column of this frame."""
+    return ident_pattern.sub(
+        functools.partial(_quote_filter_ident_token, columns_by_fold=columns_by_fold),
+        fragment,
+    )
+
+
+def _emit_join_side_columns(
+    side_frame: DataFrame,
+    side_alias: str,
+    side_tag: str,
+    *,
+    display_counts: dict[str, int],
+    proj_parts: list[str],
+    display_names: list[str],
+    engine_names: list[str],
+    origin_map: dict[tuple[str, str], str],
+) -> None:
+    """Project one join side into ``proj_parts`` / origin map (walk by position)."""
+    # Walk by position so frames that already carry duplicate display names
+    # (chained joins) do not hit AMBIGUOUS_REFERENCE on name lookup.
+    if side_frame._display_names is not None and side_frame._engine_names is not None:
+        pairs = list(zip(side_frame._display_names, side_frame._engine_names, strict=True))
+    else:
+        pairs = [(name, name) for name in side_frame.columns]
+    for display, source_engine in pairs:
+        if display_counts.get(display, 0) > 1:
+            # Ordinal = len(engine_names) so chained joins that already carry
+            # duplicate display names on one side never collide (octo H1-C1-001).
+            engine_out = f"__repark_{side_tag}_{side_frame._plan_id}_{len(engine_names)}_{display}"
+        else:
+            engine_out = display
+        proj_parts.append(
+            f"{side_alias}.{_quote_ident_sql(source_engine)} AS {_quote_ident_sql(engine_out)}"
+        )
+        display_names.append(display)
+        engine_names.append(engine_out)
+        # Direct binds from this side's plan_id (last-write if display dups —
+        # bare joined["b"] stays AMBIGUOUS; parent origins use nested map).
+        origin_map[(side_frame._plan_id, display)] = engine_out
+        # Propagate nested origin map (chained joins / prior selects).
+        if side_frame._origin_map is not None:
+            for (plan_id, field), nested_engine in side_frame._origin_map.items():
+                if nested_engine == source_engine:
+                    origin_map[(plan_id, field)] = engine_out
 
 
 def _coerce_map_in_arrow_schema(schema: Any) -> tuple[StructType, Any]:
@@ -1054,18 +1151,7 @@ class DataFrame:
         import weakref
 
         self._mia_cleanup_registered = True
-        session = self._session
-        names = self._mia_temp_views
-
-        def _drop_all() -> None:
-            import contextlib
-
-            for view_name in list(names):
-                with contextlib.suppress(Exception):
-                    session.drop_temp_view(view_name)
-            names.clear()
-
-        weakref.finalize(self, _drop_all)
+        weakref.finalize(self, _drop_mia_temp_views, self._session, self._mia_temp_views)
 
     def _track_mia_view(self, view_name: str, *, replace_ephemeral: bool) -> None:
         """Record a ``__repark_mia_*`` view for GC cleanup; optionally drop prior action ephemerals.
@@ -1126,13 +1212,10 @@ class DataFrame:
                 f"mapInArrow failed opening upstream Arrow stream: {error}"
             ) from error
 
-        def _input_batches() -> Iterator[Any]:
-            yield from input_reader
-
         rows_kept = 0
         try:
             try:
-                output = func(_input_batches())
+                output = func(iter(input_reader))
             except PySparkException:
                 raise
             except Exception as error:
@@ -1403,50 +1486,19 @@ class DataFrame:
         """
         self._ensure_alive()
         try:
-            import pandas as pd
+            __import__("pandas")
         except ImportError as error:
             raise ImportError(
                 "mapInPandas requires pandas (pip install 'repark[pandas]')"
             ) from error
-        import pyarrow as pa
 
         if not callable(func):
             raise PySparkTypeError(f"mapInPandas func must be callable, got {type(func).__name__}")
 
-        def _arrow_func(input_batches: Iterator[Any]) -> Iterator[Any]:
-            # Name the parameter something other than a name we assign when emitting
-            # output. ``_pdf_iter`` closes over this free variable — rebinding it to
-            # ``table.to_batches()`` (old ``batches = …``) made yield-before-consume
-            # UDFs pull output (or []) as if it were input (octo C8-L-001).
-            def _pdf_iter() -> Iterator[Any]:
-                for batch in input_batches:
-                    yield batch.to_pandas()
-
-            out = func(_pdf_iter())
-            # Loud None — same contract as mapInArrow (octo C3-L-002). Do not treat None as
-            # an empty iterator (silent empty multiset).
-            if out is None:
-                raise PySparkException(
-                    "mapInPandas user function must return an iterator of "
-                    "pandas.DataFrame (got None)"
-                )
-            for pdf in out:
-                table = pa.Table.from_pandas(pdf, preserve_index=False)
-                output_batches = table.to_batches()
-                if not output_batches:
-                    # Zero-row pandas frames produce ``to_batches() → []``, which would skip
-                    # mapInArrow's per-batch schema check and silently accept wrong names/types
-                    # as an empty multiset under the declared schema (octo C6-L-001). Emit a
-                    # 0-row RecordBatch carrying the table schema so validation stays loud —
-                    # same contract as mapInArrow empty RecordBatch yields.
-                    yield pa.RecordBatch.from_arrays(
-                        [pa.array([], type=field.type) for field in table.schema],
-                        schema=table.schema,
-                    )
-                else:
-                    yield from output_batches
-
-        return self.mapInArrow(_arrow_func, schema)
+        return self.mapInArrow(
+            functools.partial(_map_in_pandas_arrow_batches, user_func=func),
+            schema,
+        )
 
     map_in_pandas = mapInPandas
 
@@ -1480,8 +1532,6 @@ class DataFrame:
         Requires the optional ``pandas`` extra **at action time** (imported inside the
         mapInArrow callback — not at ``select``/``withColumn`` plan time).
         """
-        import traceback
-
         import pyarrow as pa
 
         from repark.spark.functions import PandasUDFColumn, PandasUDFType
@@ -1653,239 +1703,24 @@ class DataFrame:
         result_schema = StructType(struct_fields)
         expected_arrow = pa.schema(expected_arrow_fields)
 
-        # Capture slot plan for the bridge closure (one-pass multi-UDF / iterator adapter).
-        slots = output_slots
         needs_scalar_iter = any(
             slot["kind"] == "pudf" and slot.get("function_type") == PandasUDFType.SCALAR_ITER
-            for slot in slots
+            for slot in output_slots
         )
-
-        def _arrow_pandas_udf_func(input_batches: Iterator[Any]) -> Iterator[Any]:
-            # pandas is optional (repark[pandas]) and required only when an action streams
-            # batches — not at select/withColumn plan time (octo C6-Q-001).
-            try:
-                import pandas as pd
-            except ImportError as error:
-                raise ImportError(
-                    "pandas_udf requires pandas (pip install 'repark[pandas]')"
-                ) from error
-
-            def _arrow_array_to_pandas_series(array: Any) -> Any:
-                """Arrow column → pandas Series without null-integer→float64 demotion.
-
-                Bare ``Array.to_pandas()`` turns null int/bool columns into float64/object, which
-                breaks the common ``series * 2`` → long path and loses integer precision (octo
-                C1-Q-003). Prefer pandas nullable dtypes for numeric/boolean physical types.
-                """
-                import pyarrow.types as pat
-
-                def _nullable_mapper(arrow_type: Any) -> Any:
-                    if pat.is_int8(arrow_type):
-                        return pd.Int8Dtype()
-                    if pat.is_int16(arrow_type):
-                        return pd.Int16Dtype()
-                    if pat.is_int32(arrow_type):
-                        return pd.Int32Dtype()
-                    if pat.is_int64(arrow_type):
-                        return pd.Int64Dtype()
-                    if pat.is_uint8(arrow_type):
-                        return pd.UInt8Dtype()
-                    if pat.is_uint16(arrow_type):
-                        return pd.UInt16Dtype()
-                    if pat.is_uint32(arrow_type):
-                        return pd.UInt32Dtype()
-                    if pat.is_uint64(arrow_type):
-                        return pd.UInt64Dtype()
-                    if pat.is_boolean(arrow_type):
-                        return pd.BooleanDtype()
-                    if pat.is_float32(arrow_type):
-                        return pd.Float32Dtype()
-                    if pat.is_float64(arrow_type):
-                        return pd.Float64Dtype()
-                    return None
-
-                try:
-                    return array.to_pandas(types_mapper=_nullable_mapper)
-                except (TypeError, ValueError, pa.ArrowInvalid, pa.ArrowNotImplementedError):
-                    return array.to_pandas()
-
-            def _series_args_for_slot(batch: Any, slot: dict[str, Any]) -> list[Any]:
-                series_args: list[Any] = []
-                for input_name in slot["input_inter_names"]:
-                    if input_name not in batch.schema.names:
-                        raise PySparkException(
-                            "pandas_udf input column missing from streamed batch: "
-                            f"{input_name!r}; batch fields={list(batch.schema.names)}"
-                        )
-                    series_args.append(_arrow_array_to_pandas_series(batch.column(input_name)))
-                return series_args
-
-            def _validate_series_result(
-                result: Any,
-                *,
-                function_name: str,
-                expected_rows: int,
-            ) -> Any:
-                if result is None:
-                    raise PySparkException(
-                        f"pandas_udf {function_name!r} must return a pandas.Series (got None)"
-                    )
-                # Refuse non-Series entirely — do not ``pd.Series(result)`` coerce.
-                # ``pd.Series("abc")`` on a 3-row batch is length-3 character-split
-                # (silent wrong multiset); dict/set similarly index-split (octo C7-Q-001).
-                if not isinstance(result, pd.Series):
-                    raise PySparkException(
-                        f"pandas_udf {function_name!r} must return a "
-                        f"pandas.Series; got {type(result).__name__}"
-                    )
-                if len(result) != expected_rows:
-                    raise PySparkException(
-                        f"pandas_udf {function_name!r} returned {len(result)} "
-                        f"values; expected {expected_rows} (one per input row)"
-                    )
-                return result
-
-            def _series_to_arrow(result: Any, slot: dict[str, Any]) -> Any:
-                out_name = slot["out_name"]
-                field = expected_arrow.field(out_name)
-                try:
-                    return pa.Array.from_pandas(result, type=field.type, safe=True)
-                except (pa.ArrowInvalid, pa.ArrowTypeError, ValueError, TypeError) as error:
-                    raise PySparkException(
-                        f"pandas_udf {slot['function_name']!r} failed converting result "
-                        f"to declared type {field.type} "
-                        f"({slot['return_type_sql']}): {error}"
-                    ) from error
-
-            def _run_scalar_on_batch(batch: Any, slot: dict[str, Any]) -> Any:
-                series_args = _series_args_for_slot(batch, slot)
-                try:
-                    result = slot["user_func"](*series_args)
-                except PySparkException:
-                    raise
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        "pandas_udf "
-                        f"{slot['function_name']!r} raised {type(error).__name__}: "
-                        f"{error}\n{detail}"
-                    ) from error
-                return _validate_series_result(
-                    result,
-                    function_name=slot["function_name"],
-                    expected_rows=batch.num_rows,
-                )
-
-            def _run_scalar_iter(batch_list: list[Any], slot: dict[str, Any]) -> list[Any]:
-                """Batch-iterator adapter: Iterator[Series|tuple] → Iterator[Series]."""
-
-                def _input_iter() -> Iterator[Any]:
-                    for batch in batch_list:
-                        series_args = _series_args_for_slot(batch, slot)
-                        if len(series_args) == 1:
-                            yield series_args[0]
-                        else:
-                            yield tuple(series_args)
-
-                try:
-                    out_iter = slot["user_func"](_input_iter())
-                except PySparkException:
-                    raise
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        "pandas_udf "
-                        f"{slot['function_name']!r} raised {type(error).__name__}: "
-                        f"{error}\n{detail}"
-                    ) from error
-                if out_iter is None:
-                    raise PySparkException(
-                        f"pandas_udf {slot['function_name']!r} (SCALAR_ITER) must return "
-                        "an iterator of pandas.Series (got None)"
-                    )
-                try:
-                    results = list(out_iter)
-                except PySparkException:
-                    raise
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        "pandas_udf "
-                        f"{slot['function_name']!r} raised {type(error).__name__} while "
-                        f"consuming SCALAR_ITER output: {error}\n{detail}"
-                    ) from error
-                if len(results) != len(batch_list):
-                    raise PySparkException(
-                        f"pandas_udf {slot['function_name']!r} (SCALAR_ITER) yielded "
-                        f"{len(results)} Series; expected {len(batch_list)} "
-                        "(one Series per input batch)"
-                    )
-                validated: list[Any] = []
-                for batch, result in zip(batch_list, results, strict=True):
-                    validated.append(
-                        _validate_series_result(
-                            result,
-                            function_name=slot["function_name"],
-                            expected_rows=batch.num_rows,
-                        )
-                    )
-                return validated
-
-            def _emit_batch(
-                batch: Any,
-                pudf_series_by_slot: dict[int, Any],
-            ) -> Any:
-                arrays: list[Any] = []
-                names: list[str] = []
-                for slot_index, slot in enumerate(slots):
-                    out_name = slot["out_name"]
-                    if slot["kind"] == "pass":
-                        arrays.append(batch.column(slot["inter_name"]))
-                        names.append(out_name)
-                        continue
-                    arrays.append(_series_to_arrow(pudf_series_by_slot[slot_index], slot))
-                    names.append(out_name)
-                return pa.RecordBatch.from_arrays(arrays, names=names)
-
-            # SCALAR_ITER (or any mix that includes it) buffers batches so each iterator UDF
-            # can consume the full stream once; pure-SCALAR stays streaming one-pass (U7).
-            if needs_scalar_iter:
-                batch_list = list(input_batches)
-                if not batch_list:
-                    return
-                # slot_index → list[Series] aligned with batch_list (SCALAR fills per-batch).
-                per_slot_results: dict[int, list[Any]] = {}
-                for slot_index, slot in enumerate(slots):
-                    if slot["kind"] != "pudf":
-                        continue
-                    if slot.get("function_type") == PandasUDFType.SCALAR_ITER:
-                        per_slot_results[slot_index] = _run_scalar_iter(batch_list, slot)
-                    else:
-                        per_slot_results[slot_index] = [
-                            _run_scalar_on_batch(batch, slot) for batch in batch_list
-                        ]
-                for batch_index, batch in enumerate(batch_list):
-                    pudf_series = {
-                        slot_index: results[batch_index]
-                        for slot_index, results in per_slot_results.items()
-                    }
-                    yield _emit_batch(batch, pudf_series)
-                return
-
-            # Pure SCALAR: stream one pass per batch (U7 multi-UDF one-pass).
-            for batch in input_batches:
-                pudf_series: dict[int, Any] = {}
-                for slot_index, slot in enumerate(slots):
-                    if slot["kind"] != "pudf":
-                        continue
-                    pudf_series[slot_index] = _run_scalar_on_batch(batch, slot)
-                yield _emit_batch(batch, pudf_series)
 
         # mapInArrow coerces StructType→Arrow and rebuilds logical schema via
         # ``struct_type_from_arrow`` — that drops timestamp tz on pass slots (octo C2-L-002)
         # and collapses ``timestamp_ntz`` / ``varchar(n)`` / ``char(n)`` to timestamp/string
         # (octo C4-Q-001). Patch both bridge halves with the identity we built above.
-        result = intermediate.mapInArrow(_arrow_pandas_udf_func, result_schema)
+        result = intermediate.mapInArrow(
+            functools.partial(
+                _run_pandas_udf_arrow_batches,
+                slots=output_slots,
+                expected_arrow=expected_arrow,
+                needs_scalar_iter=needs_scalar_iter,
+            ),
+            result_schema,
+        )
         if result._map_bridge is not None:
             result._map_bridge["arrow_schema"] = expected_arrow
             result._map_bridge["schema"] = result_schema
@@ -1913,8 +1748,6 @@ class DataFrame:
 
         Does **not** require pandas (pure Python scalars + pyarrow).
         """
-        import traceback
-
         import pyarrow as pa
 
         from repark.spark.functions import (
@@ -2043,101 +1876,14 @@ class DataFrame:
             struct_fields.append(StructField(out_name, data_type, True))
         result_schema = StructType(struct_fields)
         expected_arrow = pa.schema(expected_arrow_fields)
-        slots = output_slots
-
-        def _arrow_python_udf_func(input_batches: Iterator[Any]) -> Iterator[Any]:
-            def _column_python_values(batch: Any, name: str) -> list[Any]:
-                if name not in batch.schema.names:
-                    raise PySparkException(
-                        "udf input column missing from streamed batch: "
-                        f"{name!r}; batch fields={list(batch.schema.names)}"
-                    )
-                # to_pylist: Arrow null → Python None (Spark scalar UDF null contract).
-                return batch.column(name).to_pylist()
-
-            def _run_udf_on_batch(batch: Any, slot: dict[str, Any]) -> list[Any]:
-                input_columns = [
-                    _column_python_values(batch, input_name)
-                    for input_name in slot["input_inter_names"]
-                ]
-                row_count = batch.num_rows
-                user_func = slot["user_func"]
-                function_name = slot["function_name"]
-                results: list[Any] = []
-                try:
-                    if not input_columns:
-                        for _ in range(row_count):
-                            results.append(user_func())
-                    else:
-                        for row_index in range(row_count):
-                            args = [column[row_index] for column in input_columns]
-                            results.append(user_func(*args))
-                except PySparkException:
-                    raise
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        f"udf {function_name!r} raised {type(error).__name__}: {error}\n{detail}"
-                    ) from error
-                if len(results) != row_count:
-                    raise PySparkException(
-                        f"udf {function_name!r} produced {len(results)} values; "
-                        f"expected {row_count} (one per input row)"
-                    )
-                return results
-
-            def _results_to_arrow(results: list[Any], slot: dict[str, Any]) -> Any:
-                out_name = slot["out_name"]
-                field = expected_arrow.field(out_name)
-                coerced = results
-                # Decimal returnType: accept int/float like Spark Python UDF (octo C2-L-002).
-                if pa.types.is_decimal(field.type):
-                    from decimal import Decimal, InvalidOperation
-
-                    converted: list[Any] = []
-                    for value in results:
-                        if value is None:
-                            converted.append(None)
-                            continue
-                        if isinstance(value, Decimal):
-                            converted.append(value)
-                            continue
-                        if isinstance(value, (int, float)) and not isinstance(value, bool):
-                            try:
-                                converted.append(Decimal(str(value)))
-                            except (InvalidOperation, ValueError) as error:
-                                raise PySparkException(
-                                    f"udf {slot['function_name']!r} failed converting result "
-                                    f"to declared type {field.type} "
-                                    f"({slot['return_type_sql']}): {error}"
-                                ) from error
-                            continue
-                        converted.append(value)
-                    coerced = converted
-                try:
-                    return pa.array(coerced, type=field.type, from_pandas=False)
-                except (pa.ArrowInvalid, pa.ArrowTypeError, ValueError, TypeError) as error:
-                    raise PySparkException(
-                        f"udf {slot['function_name']!r} failed converting result "
-                        f"to declared type {field.type} "
-                        f"({slot['return_type_sql']}): {error}"
-                    ) from error
-
-            for batch in input_batches:
-                arrays: list[Any] = []
-                names: list[str] = []
-                for slot in slots:
-                    out_name = slot["out_name"]
-                    if slot["kind"] == "pass":
-                        arrays.append(batch.column(slot["inter_name"]))
-                        names.append(out_name)
-                        continue
-                    row_results = _run_udf_on_batch(batch, slot)
-                    arrays.append(_results_to_arrow(row_results, slot))
-                    names.append(out_name)
-                yield pa.RecordBatch.from_arrays(arrays, names=names)
-
-        result = intermediate.mapInArrow(_arrow_python_udf_func, result_schema)
+        result = intermediate.mapInArrow(
+            functools.partial(
+                _run_python_udf_arrow_batches,
+                slots=output_slots,
+                expected_arrow=expected_arrow,
+            ),
+            result_schema,
+        )
         if result._map_bridge is not None:
             result._map_bridge["arrow_schema"] = expected_arrow
             result._map_bridge["schema"] = result_schema
@@ -2444,79 +2190,19 @@ class DataFrame:
             struct_fields.append(StructField(spec["out_name"], data_type, True))
         result_schema = StructType(struct_fields)
 
-        specs = udf_specs
-        order_cols = list(order_names)
-        start_bound = frame_start
-        end_bound = frame_end
-
-        def _ordered_window_func(pdf: Any) -> Any:
-            import traceback
-
-            try:
-                import pandas as pd
-            except ImportError as error:
-                raise ImportError(
-                    "windowed pandas_udf requires pandas (pip install 'repark[pandas]')"
-                ) from error
-
-            if len(pdf) == 0:
-                return pd.DataFrame(columns=[field.name for field in struct_fields])
-            # Stable sort so equal order keys keep physical order (matches midrank spirit).
-            sort_by = [name for name in order_cols if name in pdf.columns]
-            if sort_by:
-                pdf = pdf.sort_values(by=sort_by, kind="mergesort").reset_index(drop=True)
-            else:
-                pdf = pdf.reset_index(drop=True)
-            n_rows = len(pdf)
-            for spec in specs:
-                results: list[Any] = []
-                for row_index in range(n_rows):
-                    lo = 0 if start_bound is None else max(0, row_index + int(start_bound))
-                    hi = (
-                        n_rows if end_bound is None else min(n_rows, row_index + int(end_bound) + 1)
-                    )
-                    if lo >= hi:
-                        # Empty frame — Spark GROUPED_AGG on empty typically yields null.
-                        results.append(None)
-                        continue
-                    frame_pdf = pdf.iloc[lo:hi]
-                    series_args: list[Any] = []
-                    for input_name in spec["input_names"]:
-                        if input_name not in frame_pdf.columns:
-                            raise PySparkException(
-                                "windowed pandas_udf input column missing from frame: "
-                                f"{input_name!r}"
-                            )
-                        series_args.append(frame_pdf[input_name])
-                    try:
-                        value = spec["user_func"](*series_args)
-                    except PySparkException:
-                        raise
-                    except Exception as error:
-                        detail = traceback.format_exc()
-                        raise PySparkException(
-                            "windowed GROUPED_AGG pandas_udf "
-                            f"{spec['function_name']!r} raised {type(error).__name__}: "
-                            f"{error}\n{detail}"
-                        ) from error
-                    if isinstance(value, pd.Series):
-                        raise PySparkException(
-                            f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
-                            f"scalar; got pandas.Series (length {len(value)})"
-                        )
-                    if isinstance(value, pd.DataFrame):
-                        raise PySparkException(
-                            f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
-                            f"scalar; got pandas.DataFrame"
-                        )
-                    results.append(value)
-                pdf[spec["out_name"]] = results
-            # Column order must match declared schema.
-            return pdf[[field.name for field in struct_fields]]
-
         group_cols = [projected._bind_schema_column(name) for name in key_names]
         grouped = GroupedData(projected, group_cols)
-        result = grouped.applyInPandas(_ordered_window_func, result_schema)
+        result = grouped.applyInPandas(
+            functools.partial(
+                _apply_ordered_window_pandas_udf,
+                specs=udf_specs,
+                order_cols=list(order_names),
+                start_bound=frame_start,
+                end_bound=frame_end,
+                struct_fields=struct_fields,
+            ),
+            result_schema,
+        )
 
         # Final projection: match select item order (last-wins on duplicate names).
         if plain_items:
@@ -4005,27 +3691,6 @@ class DataFrame:
         # — P5C5-Q-001). Do not rewrite SQL boolean/null literals even if a column collides.
         ident_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b(?!\s*\()")
 
-        def replace_idents(fragment: str) -> str:
-            """Quote every bare identifier in ``fragment`` that names a column of this frame."""
-
-            def replacer(match: re.Match[str]) -> str:
-                """Quote one matched token, or return it unchanged when it names no column."""
-                token = match.group(1)
-                if token.casefold() in _SQL_LITERAL_KEYWORDS:
-                    return token
-                matches = columns_by_fold.get(token.casefold())
-                if matches is None:
-                    return token
-                if len(matches) > 1:
-                    candidates = ", ".join(f"`{name}`" for name in matches)
-                    raise AnalysisException(
-                        f"[AMBIGUOUS_REFERENCE] Reference `{token}` is ambiguous, "
-                        f"could be: [{candidates}]."
-                    )
-                return _quote_ident_sql(matches[0])
-
-            return ident_pattern.sub(replacer, fragment)
-
         # Protect single-quoted SQL string literals, then double-quoted idents inside the rest.
         pieces = re.split(r"('(?:[^']|'')*')", sql)
         rebuilt: list[str] = []
@@ -4038,7 +3703,13 @@ class DataFrame:
                 if subpiece.startswith('"'):
                     rebuilt.append(subpiece)
                 else:
-                    rebuilt.append(replace_idents(subpiece))
+                    rebuilt.append(
+                        _quote_filter_idents_in_fragment(
+                            subpiece,
+                            ident_pattern=ident_pattern,
+                            columns_by_fold=columns_by_fold,
+                        )
+                    )
         return "".join(rebuilt)
 
     def _rebind_stable_name_column(self, column: Column) -> Column:
@@ -4577,18 +4248,13 @@ class DataFrame:
         # Default plan-stable seed when the caller omits seed (Spark planning-time embed).
         default_seed = 42
 
-        def _coerce_seed(value: object, *, label: str) -> int:
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise TypeError(f"sample() {label} must be int, got {type(value).__name__}")
-            return int(value)
-
         # sample(withReplacement=bool, fraction=float [, seed])
         if (
             isinstance(withReplacement, bool)
             and isinstance(fraction, (int, float))
             and not (isinstance(fraction, bool))
         ):
-            plan_seed = default_seed if seed is None else _coerce_seed(seed, label="seed")
+            plan_seed = default_seed if seed is None else _coerce_sample_seed(seed, label="seed")
             return withReplacement, float(fraction), plan_seed
 
         # sample(fraction=float [, seed=…])  — keyword fraction, optional seed kw
@@ -4597,14 +4263,14 @@ class DataFrame:
             and isinstance(fraction, (int, float))
             and not isinstance(fraction, bool)
         ):
-            plan_seed = default_seed if seed is None else _coerce_seed(seed, label="seed")
+            plan_seed = default_seed if seed is None else _coerce_sample_seed(seed, label="seed")
             return False, float(fraction), plan_seed
 
         # sample(0.5 [, seed])  — first positional is fraction; second positional is seed.
         # PySpark ignores the seed= keyword on this form (only the fraction-slot seed counts).
         if isinstance(withReplacement, (int, float)) and not isinstance(withReplacement, bool):
             if fraction is not None:
-                plan_seed = _coerce_seed(fraction, label="seed")
+                plan_seed = _coerce_sample_seed(fraction, label="seed")
             else:
                 plan_seed = default_seed
             return False, float(withReplacement), plan_seed
@@ -5198,8 +4864,6 @@ class DataFrame:
         a ``LEFT SEMI``/``LEFT ANTI`` join contributes no right-hand columns, so emitting them
         would be an unresolvable reference rather than a wider result.
         """
-        from repark.spark._idents import quote_ident as _quote_ident
-
         left_alias = scratch_view_name(self._session, "_repark_jl_")
         right_alias = scratch_view_name(self._session, "_repark_jr_")
         how_sql = {
@@ -5238,46 +4902,27 @@ class DataFrame:
             engine_names: list[str] = []
             origin_map: dict[tuple[str, str], str] = {}
 
-            def _emit_side(
-                side_frame: DataFrame,
-                side_alias: str,
-                side_tag: str,
-            ) -> None:
-                # Walk by position so frames that already carry duplicate display names
-                # (chained joins) do not hit AMBIGUOUS_REFERENCE on name lookup.
-                if side_frame._display_names is not None and side_frame._engine_names is not None:
-                    pairs = list(
-                        zip(side_frame._display_names, side_frame._engine_names, strict=True)
-                    )
-                else:
-                    pairs = [(name, name) for name in side_frame.columns]
-                for display, source_engine in pairs:
-                    if display_counts.get(display, 0) > 1:
-                        # Ordinal = len(engine_names) so chained joins that already carry
-                        # duplicate display names on one side never collide (octo H1-C1-001).
-                        engine_out = (
-                            f"__repark_{side_tag}_{side_frame._plan_id}_"
-                            f"{len(engine_names)}_{display}"
-                        )
-                    else:
-                        engine_out = display
-                    proj_parts.append(
-                        f"{side_alias}.{_quote_ident(source_engine)} AS {_quote_ident(engine_out)}"
-                    )
-                    display_names.append(display)
-                    engine_names.append(engine_out)
-                    # Direct binds from this side's plan_id (last-write if display dups —
-                    # bare joined["b"] stays AMBIGUOUS; parent origins use nested map).
-                    origin_map[(side_frame._plan_id, display)] = engine_out
-                    # Propagate nested origin map (chained joins / prior selects).
-                    if side_frame._origin_map is not None:
-                        for (plan_id, field), nested_engine in side_frame._origin_map.items():
-                            if nested_engine == source_engine:
-                                origin_map[(plan_id, field)] = engine_out
-
-            _emit_side(self, left_alias, "l")
+            _emit_join_side_columns(
+                self,
+                left_alias,
+                "l",
+                display_counts=display_counts,
+                proj_parts=proj_parts,
+                display_names=display_names,
+                engine_names=engine_names,
+                origin_map=origin_map,
+            )
             if not left_only:
-                _emit_side(other, right_alias, "r")
+                _emit_join_side_columns(
+                    other,
+                    right_alias,
+                    "r",
+                    display_counts=display_counts,
+                    proj_parts=proj_parts,
+                    display_names=display_names,
+                    engine_names=engine_names,
+                    origin_map=origin_map,
+                )
 
             if engine_how == "cross":
                 join_sql = (

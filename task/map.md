@@ -12,6 +12,13 @@ not this directory.
 
 ## Contents
 
+- [pyc-1-dataframe-nested-defs-ledger.md](pyc-1-dataframe-nested-defs-ledger.md) —
+  **PYC-1 (2026-08-22):** lift every nested `def` in `spark/dataframe/core.py` (23)
+  and `plan_collapse.py` (12). UDF action callbacks move to `udf_bridge.py` so
+  `core.py` stays under its ratcheted line ceiling. LRS invariant: no call that
+  worked before returns a different value. Exception rows for those two files
+  are deleted, not zeroed.
+
 - [v3-1-charter-ledger.md](v3-1-charter-ledger.md) —
   **V3-1 (2026-08-21):** `CALL system.register_table` + the CI-runnable Spark-written format-v3
   fixture. Promotes `B-MOR-3` and `V3-ADOPT-1`. Does not create v3 tables (V3-2).
