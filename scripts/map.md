@@ -31,7 +31,10 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   token — so the coverage rule is deliberately NOT armed: it lives behind `--strict` and is run by
   hand (`python3 scripts/sync_map_md.py --check --strict`). `--fix` is mechanical only: it deletes
   a missing-target row when that row is a list item whose ONLY link is the dead one, taking the
-  item's wrapped continuation lines with it, and appends a `- [name](name) — TODO(describe)` stub
+  item's wrapped continuation lines with it — the deleted span is the bullet line plus every
+  following indented line, ending at the first blank line, the first unindented line, or the first
+  nested list item (which refuses the deletion outright) — and appends a
+  `- [name](name) — TODO(describe)` stub
   for an unmentioned file. It refuses to delete a row carrying a nested sub-list (the children
   would be orphaned) and never deletes an absolute-target row (repointing it is the repair),
   reporting both for a hand edit. It never writes a description —

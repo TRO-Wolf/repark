@@ -191,6 +191,13 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     `uv run --locked --no-sync` + pytest path, `REPARK_PARITY_LIVE` / `SPARK_LOCAL_IP` env pins).
     There is no third hand-maintained expected-flags list. Fail-closed on a parse miss. Dual-wired
     `make check-parity-live-dual-wire` (in the `make ci` chain) + the ci.yml `guards` job.
+  - *`map.md` content* (`scripts/sync_map_md.py` — the SSOT for both map rules, companion to
+    `check_map_md.sh`'s lockstep half): **link validity** is armed — every relative link in every
+    tracked `map.md` must resolve, and an absolute target is a finding of its own — dual-wired
+    `make check-map-sync` + `.pre-commit-config.yaml`'s `map-sync-guard`; **coverage** (every
+    mappable file mentioned in its directory's map) is measured but deliberately behind `--strict`,
+    run by hand. The policy it serves is ["Markdown document lifecycle"](#markdown-document-lifecycle)
+    below; this row is the wiring only.
   - The few v1 helper scripts not yet re-homed are listed in [scripts/map.md](scripts/map.md)
     "Not re-homed"; each **returns only with a concrete driver** (named per script there). Do not
     re-invent one ahead of its driver; re-home v1's script.
