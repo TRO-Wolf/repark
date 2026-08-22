@@ -1,9 +1,10 @@
 # Alternate local-gate path for devs who use the `pre-commit` framework
 # (`pipx install pre-commit && pre-commit install`). The canonical gate is `make ci`.
-# Hook-eligible tools listed here must stay a subset of `make ci`; PYC-5 dropped
-# python-conventions from this file (and from `make install-hooks`) because it
-# sits on the sub-second budget line. Pins are kept current by Dependabot /
-# `pre-commit autoupdate`.
+# Hook-eligible tools listed here must stay a subset of the Makefile targets;
+# PYC-5 dropped python-conventions from this file (and from `make install-hooks`)
+# because it sits on the sub-second budget line. `map-sync-guard`
+# (`make check-map-sync`) joined at n=5 median 0.08 s over 143 maps. Pins are
+# kept current by Dependabot / `pre-commit autoupdate`.
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -42,6 +43,11 @@ repos:
         name: map.md lockstep guard
         entry: scripts/check_map_md.sh
         language: script
+        pass_filenames: false
+      - id: map-sync-guard
+        name: map.md link-validity guard
+        entry: python3 scripts/sync_map_md.py --check
+        language: system
         pass_filenames: false
       - id: crate-dag-guard
         name: crate dependency-policy guard

@@ -22,9 +22,11 @@ See [../../.claude/map.md](../../.claude/map.md).
 - [publish-pypi/](publish-pypi/map.md) — cut a versioned release: the release-PR shape, squash
   tree verification, the annotated tag, the `release.yml` pipeline with its owner approval gate,
   registry verification. Owner merges and approvals stay owner actions.
-- [compact-context-docs/](compact-context-docs/map.md) — the post-landing truth-up ritual:
-  reconcile STATUS.md, sweep restatements and stale lifecycle claims, keep `map.md` lockstep,
-  archive closed campaigns to `docs/history/`, validate with `make ci`.
+- [compact-context-docs/](compact-context-docs/map.md) — the truth-up ritual at both ends of a
+  unit: reconcile STATUS.md, sweep restatements and stale lifecycle claims, keep `map.md`
+  lockstep, archive closed campaigns to `docs/history/`, validate with `make ci` — plus the
+  scoped **pickup** mode that opens a unit against the just-merged delta only. Executes
+  [AGENTS.md](../../AGENTS.md) "Markdown document lifecycle".
 - [check-disk-headroom/](check-disk-headroom/map.md) — is there room to do this? Measured
   consumers (`target/debug` dominates), how to budget for the operation rather than the repo at
   rest, and a reclaim order that says what **not** to delete as clearly as what to.
@@ -46,7 +48,7 @@ See [../../.claude/map.md](../../.claude/map.md).
 | ...do this | go to |
 |---|---|
 | Release a new version to PyPI | [publish-pypi/SKILL.md](publish-pypi/SKILL.md) |
-| True up the docs after work lands | [compact-context-docs/SKILL.md](compact-context-docs/SKILL.md) |
+| True up the docs after work lands, or run the pickup ritual before it | [compact-context-docs/SKILL.md](compact-context-docs/SKILL.md) |
 | Find out whether there is disk room for a big build | [check-disk-headroom/SKILL.md](check-disk-headroom/SKILL.md) |
 | Write or review Python under the conventions | [code-quality/SKILL.md](code-quality/SKILL.md) |
 | Review a Rust PR or commit | [rust-code-quality/SKILL.md](rust-code-quality/SKILL.md) |

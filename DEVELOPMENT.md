@@ -41,7 +41,8 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
 | `make develop` | Build + install the native module editable into the root `.venv` (`maturin develop`), for exercising the Python facade against real compiled code. |
 | `make build-wheel` | Build the release wheel with maturin. |
-| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + rust file-size + structural manifest + fmt/taplo/typos). Do this once per clone. |
+| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + map.md link validity + crate dependency policy + thinness guards + rust file-size + structural manifest + fmt/taplo/typos). Do this once per clone. |
+| `make check-map-sync` | The map.md **content** guard: every relative link in every tracked `map.md` resolves. Measured n=5 median **0.08 s** over 143 maps, so it is on pre-commit. The coverage rule (every mappable file mentioned by its directory's map) is behind `--strict` and **not** armed — 24 pre-existing findings at 2026-08-22, a floor rather than an exact debt; run `python3 scripts/sync_map_md.py --check --strict` by hand. |
 | `make check-python-conventions` | The Python conventions guard on its own: no `def` nested inside a `def`, no `dataclasses`/`attrs` import. Re-measured at PYC-5: n=5 median **0.996 s** (max 1.011 s) over 164 files — at the sub-second hook budget line, with the max already over it, so it is **not** on pre-commit; dual-wired `make ci` + CI. |
 
 ### Test-command discipline (hard)
@@ -94,6 +95,7 @@ Tier-2 (live AWS / real Spark) **never runs against unmerged code** — nightly 
 |---|---|
 | `cargo test --all-features` fails to link (libpython) | Never use `--all-features`; use `cargo test --workspace`. See the discipline note above. |
 | Pre-commit hook rejects a commit | Run `bash scripts/check_map_md.sh` — the touched directory's `map.md` must be staged in the same commit. `make install-hooks` if the hook is not wired. |
+| `map-sync: … dead link` | A `map.md` points at a path that moved or was deleted. Repoint the link, or `python3 scripts/sync_map_md.py --fix` when the whole list row should go (mechanical only — it never writes a description). |
 | `python-conventions: FAIL` | A `def` inside a `def`, or a `dataclasses`/`attrs` import. Lift the function to module or class level, or add an inline `# nested-def: <reason>` pragma if it is one of the three sanctioned cases; use a Pydantic `BaseModel` instead of a `dataclass`. The EXCEPTIONS tables in `scripts/check_python_conventions.py` ratchet **down** only. Reasoning: [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md). |
 | `crate-dag: layering inversion` | A new dependency points up a tier — see `scripts/check_crate_dag.py` (the SSOT) and [crates/map.md](crates/map.md). |
 | `undeclared dependency edge` / `dependency kind not permitted` (the crate-DAG guard) | Every internal edge is declared with its kind (`normal`/`optional`/`dev`/`build`) in `scripts/check_crate_dag.py` `ALLOWED_EDGES`; add the row with a reason, or drop the dependency. |
