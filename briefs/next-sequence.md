@@ -29,7 +29,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 | 2 | **PYC-3** | conventions | — | S |
 | 3 | **PYC-4** | conventions | — | M |
 | 4 | **PYC-5** | conventions | PYC-2..4 | S |
-| 5 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
+| 5 | **PYC-6** | conventions | PYC-5 | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -131,25 +131,27 @@ counts re-measured rather than left at the seed numbers.
 budget. If PYC leaves it above that, the honest outcome is dropping it from pre-commit and leaving
 it dual-wired in `make ci` + CI, not quietly keeping a hook that everyone starts skipping.
 
-### PYC-6 (decision) — arm a docstring-presence subset, and the declined armings
+### PYC-6 — arm the docstring-presence subset (owner-ruled), and the declined armings
 
 **Measured 2026-08-22** with the pinned Ruff (`uvx ruff@0.15.22`), check-only, recorded here per
 the arming method in [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md)
 "Arming a rule" — a rule measured and declined is written down so nobody re-litigates it from a
 fresh `--select` run. The armed baseline config is **clean: 0 findings** repo-wide.
 
-**Proposed to arm (owner decision required): the docstring *presence* rules only.** Full `D`
-costs 803 findings (556 facade / 234 parity / 13 scripts). The split matters:
+**Owner-ruled 2026-08-22: arm the docstring *presence* rules only.** Full `D` costs 803 findings
+(556 facade / 234 parity / 13 scripts). The split the ruling turns on:
 
 - Presence rules — `D103` undocumented function (163), `D105` magic method (57), `D102` public
   method (27), `D107` `__init__` (17), `D101` class (2) — ≈266 findings, and they enforce the
   conventions' "every function has a docstring" rule mechanically.
 - Style rules — `D401` imperative mood (193), `D202`/`D205`/`D413` blank-line shape (289),
   the rest — are churn on a facade whose docstrings deliberately mirror upstream PySpark's own
-  text. **Declined.**
+  text. **Declined permanently, same ruling.**
 
-If armed: seeded ratchet table (measure first, per-file rows with reasons, ceilings down only),
-per-file ignore for tests kept.
+The unit: select the five presence rules, re-measure at execution time (the 266 is today's
+count, not the seed), seed the ratchet table from that measurement with per-file rows and
+reasons (ceilings down only), keep the tests per-file ignore, and ship the gate with
+provocation proofs per [../docs/testing.md](../docs/testing.md).
 
 **Measured and declined, with the reasons:**
 

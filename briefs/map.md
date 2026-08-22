@@ -16,8 +16,8 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   just the order — V3-1 merged as #203 and left; PYC-1 merged as #204 and left; MW-4 still
   preempts everything the moment OD-3 lands; A13 sits last while its guard holds. Carries the PYC
   unit definitions, the two hazards a pure-refactor campaign has to name in advance, and the
-  2026-08-22 arming-measurements record (docstring-presence subset proposed as the PYC-6
-  decision; `PL`/`A`/`print()` measured and declined with reasons). Unlike the campaign slates
+  2026-08-22 arming-measurements record (docstring-presence subset owner-ruled as PYC-6;
+  `PL`/`A`/`print()` measured and declined with reasons). Unlike the campaign slates
   below, it is rolling: a unit leaves when it merges.
 
 - [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW slate (2026-08-21):**
