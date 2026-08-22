@@ -25,9 +25,8 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-4** | conventions | — | M |
-| 2 | **PYC-5** | conventions | PYC-4 | S |
-| 3 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
+| 1 | **PYC-5** | conventions | PYC-4 (this change) | S |
+| 2 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -39,11 +38,17 @@ EXCEPTIONS rows deleted.
 **PYC-2 merged as [#207](https://github.com/TRO-Wolf/repark/pull/207)** and left this file:
 12 lifts + 2 pragmas across the remaining ten shipped files, plus `session_core.probe`
 under `if`. Ten nested-def EXCEPTIONS rows deleted.
-**PYC-3 leaves this file with this change:** `spark/merge.py` `_Clause` and the four
-`_csv_smart.py` records are Pydantic v2 `BaseModel`; those two DATACLASS_EXCEPTIONS rows
-are deleted, not zeroed; `pydantic>=2.10,<3` is the wheel's second hard runtime dep.
-Remaining debt: **17 nested defs across 9 rows, 21 dataclass rows** (parity harness +
-`scripts/check_parity_live_dual_wire.py`). PYC-4 is unblocked.
+**PYC-3 merged as [#208](https://github.com/TRO-Wolf/repark/pull/208)** and left this file:
+`spark/merge.py` `_Clause` and the four `_csv_smart.py` records are Pydantic v2
+`BaseModel`; those two DATACLASS_EXCEPTIONS rows are deleted, not zeroed;
+`pydantic>=2.10,<3` is the wheel's second hard runtime dep.
+
+**PYC-4 leaves this file with this change:** 20 parity dataclass files → `BaseModel`;
+nested-def EXCEPTIONS emptied (lifts + pragmas); dual-wire stays a dataclass because
+the gate runs as bare `python3`; the ten unannotated returns in `test_compare.py` are
+annotated and the ANN ignores are split. Remaining debt: **1 dataclass row**
+(`scripts/check_parity_live_dual_wire.py`, sanctioned) and the PYC-5 close
+(re-measure hook cost, STATUS/guard docstring counts). PYC-5 is unblocked.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -83,19 +88,13 @@ clothes and belongs in its own commit with its own justification.
   container silently accepted. That is usually the bug being found rather than introduced, but it
   is a behaviour change and it goes in the commit message.
 
-### PYC-4 — the parity harness and `scripts/`
+### PYC-4 — done (this change)
 
-20 `dataclass` files plus 16 nested defs plus 10 unannotated returns under `python/repark-parity`,
-and one of each under `scripts/`.
-
-Larger by file count and far lower risk: none of it ships in the wheel. The two signal handlers in
-the TPC-H and TPC-DS bench runners close over the per-query timeout and are the callback case
-(pragma). `compat/bootstrap.py`'s five monkeypatched setUp/tearDown factories each close over the
-class being patched — judge them together, since they stand or fall as one pattern.
-
-Fix the 10 unannotated returns in the same unit. They are already red under Ruff `ANN` in intent;
-they survive only because the per-file ignores are broader than they need to be. **Narrow the
-ignores rather than annotating around them**, and say in the ledger which ignores narrowed.
+20 `dataclass` files plus nested defs plus 10 unannotated returns under `python/repark-parity`,
+and one of each under `scripts/`. Signal handlers / shrink predicate / spy / dual-wire
+comparator ended as pragmas; bootstrap factories lifted together. Dual-wire kept as the
+one DATACLASS_EXCEPTIONS row (bare `python3`). ANN ignores split:
+`python/repark/tests/**` keeps ANN201/ANN202; `python/repark-parity/tests/**` does not.
 
 ### PYC-5 — close
 

@@ -14,9 +14,10 @@ import platform
 import shutil
 import time
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .runner import (
     StageTiming,
@@ -48,9 +49,10 @@ PINNED_TARGET_FILE_SIZE: Final[int] = 256 * 1024 * 1024
 MergeMode = Literal["mor", "cow"]
 
 
-@dataclass
-class MergeCellResult:
+class MergeCellResult(BaseModel):
     """One (rows, width, K) MERGE cell - MoR + optional COW stages."""
+
+    model_config = ConfigDict(extra="forbid")
 
     target_rows: int
     source_rows: int
@@ -78,19 +80,20 @@ class MergeCellResult:
         return _stage(self.stages, "ctas_target_mor")
 
 
-@dataclass
-class MergeBoard:
+class MergeBoard(BaseModel):
     """MERGE matrix scoreboard."""
+
+    model_config = ConfigDict(extra="forbid")
 
     row_counts: list[int]
     widths: list[str]
     k_values: list[int]
     source_fraction: float
-    cells: list[MergeCellResult] = field(default_factory=list)
-    environment: dict[str, str] = field(default_factory=dict)
-    findings: list[str] = field(default_factory=list)
+    cells: list[MergeCellResult] = Field(default_factory=list)
+    environment: dict[str, str] = Field(default_factory=dict)
+    findings: list[str] = Field(default_factory=list)
     release_build_disclosed: bool = False
-    pinned_knobs: dict[str, str] = field(default_factory=dict)
+    pinned_knobs: dict[str, str] = Field(default_factory=dict)
 
 
 def _stage(stages: Sequence[StageTiming], name: str) -> float | None:
@@ -474,7 +477,7 @@ def board_to_dict(board: MergeBoard) -> dict[str, Any]:
         "pinned_knobs": board.pinned_knobs,
         "cells": [
             {
-                **{key: value for key, value in asdict(cell).items() if key != "stages"},
+                **{key: value for key, value in cell.model_dump().items() if key != "stages"},
                 "stages": [{"name": stage.name, "seconds": stage.seconds} for stage in cell.stages],
                 "merge_mor_s": cell.merge_mor_s,
                 "merge_cow_s": cell.merge_cow_s,

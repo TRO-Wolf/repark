@@ -12,10 +12,14 @@ no AWS; no product-engine fixes here. Mirrors `../tpch/` shape.
   (private; not sticky /tmp) (24 TPC-DS tables via DuckDB `dsdgen`).
 - `queries.py` — load 99 texts from DuckDB `tpcds_queries()` + optional dialect rewrite table;
   ORDER BY detection for ordered compare. Provenance = DuckDB extension (not TPC-spec text).
+  **PYC-4:** `TpcdsQuery` is a Pydantic `BaseModel`.
 - `compare.py` — sorted-row multiset **or** ordered compare; ints/integral exact; non-integral
-  floats `1e-6` relative.
+  floats `1e-6` relative. **PYC-4:** comparison rows are `BaseModel`.
 - `runner.py` — scoreboard matrix (OK / WRONG-RESULT / ERROR / TIMEOUT / DIED), 120s + one
   300s retry (Slow vs hung), SF1 disk/OOM gate → SKIP FINDING, gap census, MD report.
+  **PYC-4:** scoreboard records are `BaseModel`; `_alarm_handler` stays a nested-def pragma.
+  `QueryResult.status` is `str` (not Literal) so unknown labels still construct — the
+  ledger/exit-code gates refuse a green board.
 - `run_tpcds.py` — CLI entry (`--sf`, `--report`, `--ledger`, `--repeats`, `--timeout`,
   `--timeout-retry`, `--queries`, `--isolation`).
 - `query_worker.py` — isolated child for one query (JSON config/result; optional subprocess).

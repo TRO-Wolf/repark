@@ -18,9 +18,10 @@ import sys
 import tempfile
 import types
 from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,9 +30,10 @@ _SQL_TESTS_INJECTED = False
 _PATCH_LOG: list[str] = []
 
 
-@dataclass(frozen=True)
-class PatchEntry:
+class PatchEntry(BaseModel):
     """One documented redirect from a pyspark symbol to a repark object."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     target: str
     source: str
@@ -480,96 +482,101 @@ def _overlay_public_names(target: Any, source: Any) -> int:
     return count
 
 
+def _reused_pyspark_setup(cls: type) -> None:
+    """No-op parent setup — do not construct a JVM SparkContext."""
+    cls.sc = None  # type: ignore[attr-defined]
+    _log(f"factory: ReusedPySparkTestCase.setUpClass skipped JVM for {cls.__name__}")
+
+
+def _reused_pyspark_teardown(cls: type) -> None:
+    sc = getattr(cls, "sc", None)
+    if sc is not None and hasattr(sc, "stop"):
+        with contextlib.suppress(Exception):
+            sc.stop()
+
+
+def _reused_sql_setup(cls: type) -> None:
+    """Build a repark session; mirror Apache's cls.spark / cls.df fixtures."""
+    from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
+    from repark.spark.row import Row
+    from repark.spark.session import ReparkSession, _reset_active_session_for_tests
+
+    _reset_active_session_for_tests()
+    # Parent would start SparkContext — skip it intentionally.
+    _reused_pyspark_setup(cls)
+
+    cls.spark = (  # type: ignore[attr-defined]
+        ReparkSession.builder.master("local[4]").appName(cls.__name__).getOrCreate()
+    )
+    # E2: Apache sqlutils bare names (``saveAsTable("t")``, ``DROP TABLE t``) need a
+    # registered default catalog + namespace. Spark's ``spark_catalog.default`` always
+    # exists; repark seeds an in-memory Iceberg catalog under that name for the suite.
+    warehouse = Path(tempfile.mkdtemp(prefix="repark-compat-warehouse-"))
+    cls._repark_compat_warehouse = warehouse  # type: ignore[attr-defined]
+    try:
+        cls.spark.register_memory_catalog(DEFAULT_CATALOG_NAME, warehouse)  # type: ignore[attr-defined]
+        # Ensure current catalog/database stay at the Spark oracle defaults +
+        # create the default namespace (Spark's default database always exists).
+        state = cls.spark._catalog_state()  # type: ignore[attr-defined]
+        state["current_catalog"] = DEFAULT_CATALOG_NAME
+        state["current_database"] = DEFAULT_DATABASE_NAME
+        with contextlib.suppress(Exception):
+            cls.spark.create_namespace(  # type: ignore[attr-defined]
+                DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
+            )
+    except Exception as error:
+        LOGGER.warning("compat: default spark_catalog memory registration failed: %s", error)
+    # repark's minimal SparkContext (no JVM). Tests that touch _jvm / parallelize
+    # classify as NEEDS-JVM at runtime.
+    cls.sc = cls.spark.sparkContext  # type: ignore[attr-defined]
+    cls._legacy_sc = cls.sc  # type: ignore[attr-defined]
+
+    # Mirror Apache: NamedTemporaryFile(delete=False) + unlink leaves a path name for
+    # tests that write under cls.tempdir.name (not a held open handle).
+    temp_handle = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
+    temp_handle.close()
+    Path(temp_handle.name).unlink(missing_ok=True)
+    cls.tempdir = temp_handle  # type: ignore[attr-defined]
+    cls.testData = [Row(key=index, value=str(index)) for index in range(100)]  # type: ignore[attr-defined]
+    try:
+        cls.df = cls.spark.createDataFrame(cls.testData)  # type: ignore[attr-defined]
+    except Exception as error:
+        LOGGER.warning("createDataFrame(testData) failed in setUpClass: %s", error)
+        cls.df = None  # type: ignore[attr-defined]
+    _log(f"factory: ReusedSQLTestCase.setUpClass → ReparkSession for {cls.__name__}")
+
+
+def _reused_sql_teardown(cls: type) -> None:
+    spark = getattr(cls, "spark", None)
+    if spark is not None and hasattr(spark, "stop"):
+        with contextlib.suppress(Exception):
+            spark.stop()
+    tempdir = getattr(cls, "tempdir", None)
+    if tempdir is not None:
+        shutil.rmtree(getattr(tempdir, "name", tempdir), ignore_errors=True)
+    warehouse = getattr(cls, "_repark_compat_warehouse", None)
+    if warehouse is not None:
+        shutil.rmtree(warehouse, ignore_errors=True)
+    from repark.spark.session import _reset_active_session_for_tests
+
+    _reset_active_session_for_tests()
+
+
+def _reused_sql_instance_teardown(self: Any) -> None:
+    """Skip JVM worker-log cleanup; keep unittest tearDown chain minimal."""
+    # Intentionally empty: Apache calls self.spark._jsparkSession.cleanupPythonWorkerLogs().
+
+
 def _patch_test_case_factories() -> None:
     """Replace ReusedSQLTestCase / ReusedPySparkTestCase session factories."""
     import pyspark.testing.sqlutils as sqlutils
     import pyspark.testing.utils as testing_utils
 
-    def reused_pyspark_setup(cls: type) -> None:
-        """No-op parent setup — do not construct a JVM SparkContext."""
-        cls.sc = None  # type: ignore[attr-defined]
-        _log(f"factory: ReusedPySparkTestCase.setUpClass skipped JVM for {cls.__name__}")
-
-    def reused_pyspark_teardown(cls: type) -> None:
-        sc = getattr(cls, "sc", None)
-        if sc is not None and hasattr(sc, "stop"):
-            with contextlib.suppress(Exception):
-                sc.stop()
-
-    def reused_sql_setup(cls: type) -> None:
-        """Build a repark session; mirror Apache's cls.spark / cls.df fixtures."""
-        from repark.spark.catalog import DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
-        from repark.spark.row import Row
-        from repark.spark.session import ReparkSession, _reset_active_session_for_tests
-
-        _reset_active_session_for_tests()
-        # Parent would start SparkContext — skip it intentionally.
-        reused_pyspark_setup(cls)
-
-        cls.spark = (  # type: ignore[attr-defined]
-            ReparkSession.builder.master("local[4]").appName(cls.__name__).getOrCreate()
-        )
-        # E2: Apache sqlutils bare names (``saveAsTable("t")``, ``DROP TABLE t``) need a
-        # registered default catalog + namespace. Spark's ``spark_catalog.default`` always
-        # exists; repark seeds an in-memory Iceberg catalog under that name for the suite.
-        warehouse = Path(tempfile.mkdtemp(prefix="repark-compat-warehouse-"))
-        cls._repark_compat_warehouse = warehouse  # type: ignore[attr-defined]
-        try:
-            cls.spark.register_memory_catalog(DEFAULT_CATALOG_NAME, warehouse)  # type: ignore[attr-defined]
-            # Ensure current catalog/database stay at the Spark oracle defaults +
-            # create the default namespace (Spark's default database always exists).
-            state = cls.spark._catalog_state()  # type: ignore[attr-defined]
-            state["current_catalog"] = DEFAULT_CATALOG_NAME
-            state["current_database"] = DEFAULT_DATABASE_NAME
-            with contextlib.suppress(Exception):
-                cls.spark.create_namespace(  # type: ignore[attr-defined]
-                    DEFAULT_CATALOG_NAME, DEFAULT_DATABASE_NAME
-                )
-        except Exception as error:
-            LOGGER.warning("compat: default spark_catalog memory registration failed: %s", error)
-        # repark's minimal SparkContext (no JVM). Tests that touch _jvm / parallelize
-        # classify as NEEDS-JVM at runtime.
-        cls.sc = cls.spark.sparkContext  # type: ignore[attr-defined]
-        cls._legacy_sc = cls.sc  # type: ignore[attr-defined]
-
-        # Mirror Apache: NamedTemporaryFile(delete=False) + unlink leaves a path name for
-        # tests that write under cls.tempdir.name (not a held open handle).
-        temp_handle = tempfile.NamedTemporaryFile(delete=False)  # noqa: SIM115
-        temp_handle.close()
-        Path(temp_handle.name).unlink(missing_ok=True)
-        cls.tempdir = temp_handle  # type: ignore[attr-defined]
-        cls.testData = [Row(key=index, value=str(index)) for index in range(100)]  # type: ignore[attr-defined]
-        try:
-            cls.df = cls.spark.createDataFrame(cls.testData)  # type: ignore[attr-defined]
-        except Exception as error:
-            LOGGER.warning("createDataFrame(testData) failed in setUpClass: %s", error)
-            cls.df = None  # type: ignore[attr-defined]
-        _log(f"factory: ReusedSQLTestCase.setUpClass → ReparkSession for {cls.__name__}")
-
-    def reused_sql_teardown(cls: type) -> None:
-        spark = getattr(cls, "spark", None)
-        if spark is not None and hasattr(spark, "stop"):
-            with contextlib.suppress(Exception):
-                spark.stop()
-        tempdir = getattr(cls, "tempdir", None)
-        if tempdir is not None:
-            shutil.rmtree(getattr(tempdir, "name", tempdir), ignore_errors=True)
-        warehouse = getattr(cls, "_repark_compat_warehouse", None)
-        if warehouse is not None:
-            shutil.rmtree(warehouse, ignore_errors=True)
-        from repark.spark.session import _reset_active_session_for_tests
-
-        _reset_active_session_for_tests()
-
-    def reused_sql_instance_teardown(self: Any) -> None:
-        """Skip JVM worker-log cleanup; keep unittest tearDown chain minimal."""
-        # Intentionally empty: Apache calls self.spark._jsparkSession.cleanupPythonWorkerLogs().
-
-    testing_utils.ReusedPySparkTestCase.setUpClass = classmethod(reused_pyspark_setup)  # type: ignore[method-assign, assignment]
-    testing_utils.ReusedPySparkTestCase.tearDownClass = classmethod(reused_pyspark_teardown)  # type: ignore[method-assign, assignment]
-    sqlutils.ReusedSQLTestCase.setUpClass = classmethod(reused_sql_setup)  # type: ignore[method-assign, assignment]
-    sqlutils.ReusedSQLTestCase.tearDownClass = classmethod(reused_sql_teardown)  # type: ignore[method-assign, assignment]
-    sqlutils.ReusedSQLTestCase.tearDown = reused_sql_instance_teardown  # type: ignore[method-assign, assignment]
+    testing_utils.ReusedPySparkTestCase.setUpClass = classmethod(_reused_pyspark_setup)  # type: ignore[method-assign, assignment]
+    testing_utils.ReusedPySparkTestCase.tearDownClass = classmethod(_reused_pyspark_teardown)  # type: ignore[method-assign, assignment]
+    sqlutils.ReusedSQLTestCase.setUpClass = classmethod(_reused_sql_setup)  # type: ignore[method-assign, assignment]
+    sqlutils.ReusedSQLTestCase.tearDownClass = classmethod(_reused_sql_teardown)  # type: ignore[method-assign, assignment]
+    sqlutils.ReusedSQLTestCase.tearDown = _reused_sql_instance_teardown  # type: ignore[method-assign, assignment]
     _log("factory: patched ReusedSQLTestCase + ReusedPySparkTestCase session lifecycle")
 
 

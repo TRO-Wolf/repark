@@ -17,8 +17,9 @@ import os
 import re
 import shutil
 import subprocess
-from dataclasses import dataclass
 from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
 
 LOGGER = logging.getLogger(__name__)
 
@@ -37,9 +38,10 @@ CLONE_TIMEOUT_S = 600
 _TAG_RE = re.compile(r"^v?\d+(?:\.\d+)*$")
 
 
-@dataclass(frozen=True)
-class SparkTestsProvenance:
+class SparkTestsProvenance(BaseModel):
     """Where the Apache test sources came from (report provenance)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     tag: str
     commit_sha: str

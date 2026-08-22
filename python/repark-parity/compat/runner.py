@@ -24,10 +24,11 @@ import time
 import traceback
 import unittest
 from collections.abc import Sequence
-from dataclasses import dataclass, field, fields
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # Allow `python -m compat.runner` when python/repark-parity is on PYTHONPATH.
 from compat.bootstrap import (
@@ -148,15 +149,16 @@ EXIT_WORKER_FAIL = 3
 EXIT_TIMEOUT = 5
 
 
-@dataclass
-class ModuleCensus:
+class ModuleCensus(BaseModel):
     """Per-module census block."""
+
+    model_config = ConfigDict(extra="forbid")
 
     module: str
     import_name: str
     wall_s: float
     timed_out: bool
-    rows: list[CensusRow] = field(default_factory=list)
+    rows: list[CensusRow] = Field(default_factory=list)
     error: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -170,9 +172,10 @@ class ModuleCensus:
         }
 
 
-@dataclass
-class CompatReport:
+class CompatReport(BaseModel):
     """Full harness run payload (JSON-serializable)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     generated_at: str
     pyspark_version: str
@@ -180,9 +183,9 @@ class CompatReport:
     spark_commit_sha: str
     repark_version: str
     python_version: str
-    modules: list[ModuleCensus] = field(default_factory=list)
-    patch_log: list[str] = field(default_factory=list)
-    findings: list[str] = field(default_factory=list)
+    modules: list[ModuleCensus] = Field(default_factory=list)
+    patch_log: list[str] = Field(default_factory=list)
+    findings: list[str] = Field(default_factory=list)
 
     def all_rows(self) -> list[CensusRow]:
         rows: list[CensusRow] = []
@@ -499,29 +502,36 @@ def _deselect_known_fatal(
     fatal_set = set(fatal_methods)
     kept = unittest.TestSuite()
     rows: list[CensusRow] = []
-
-    def walk(items: Sequence[Any]) -> None:
-        for item in items:
-            if isinstance(item, unittest.TestSuite):
-                walk(list(item))
-            elif _test_method_name(item.id()) in fatal_set:
-                rows.append(
-                    CensusRow(
-                        test_id=item.id(),
-                        module=module_short,
-                        status="NEEDS-JVM",
-                        cause=(
-                            "deliberate worker-crash test (ctypes segfault) — requires "
-                            "Spark's process-isolated Python UDF workers; repark executes "
-                            "UDFs in-process (documented divergence, U8 ledger)"
-                        ),
-                    )
-                )
-            else:
-                kept.addTest(item)
-
-    walk(list(suite))
+    _walk_drop_fatal_tests(list(suite), fatal_set, module_short, kept, rows)
     return kept, rows
+
+
+def _walk_drop_fatal_tests(
+    items: Sequence[Any],
+    fatal_set: set[str],
+    module_short: str,
+    kept: unittest.TestSuite,
+    rows: list[CensusRow],
+) -> None:
+    """Accumulate kept tests and NEEDS-JVM rows for known-fatal methods."""
+    for item in items:
+        if isinstance(item, unittest.TestSuite):
+            _walk_drop_fatal_tests(list(item), fatal_set, module_short, kept, rows)
+        elif _test_method_name(item.id()) in fatal_set:
+            rows.append(
+                CensusRow(
+                    test_id=item.id(),
+                    module=module_short,
+                    status="NEEDS-JVM",
+                    cause=(
+                        "deliberate worker-crash test (ctypes segfault) — requires "
+                        "Spark's process-isolated Python UDF workers; repark executes "
+                        "UDFs in-process (documented divergence, U8 ledger)"
+                    ),
+                )
+            )
+        else:
+            kept.addTest(item)
 
 
 def _filter_matches_test_id(test_id: str, test_filter: str) -> bool:
@@ -548,33 +558,43 @@ def _filter_suite(suite: unittest.TestSuite, test_filter: str) -> unittest.TestS
       (``*foo*`` → ``foo`` in id); plain substrings no longer match prefixes
     """
     kept = unittest.TestSuite()
-
-    def walk(items: Sequence[Any]) -> None:
-        for item in items:
-            if isinstance(item, unittest.TestSuite):
-                walk(list(item))
-            elif _filter_matches_test_id(item.id(), test_filter):
-                kept.addTest(item)
-
-    walk(list(suite))
+    _walk_keep_matching_ids(list(suite), test_filter, kept)
     return kept
+
+
+def _walk_keep_matching_ids(
+    items: Sequence[Any],
+    test_filter: str,
+    kept: unittest.TestSuite,
+) -> None:
+    """Keep tests whose id matches ``test_filter``."""
+    for item in items:
+        if isinstance(item, unittest.TestSuite):
+            _walk_keep_matching_ids(list(item), test_filter, kept)
+        elif _filter_matches_test_id(item.id(), test_filter):
+            kept.addTest(item)
 
 
 def _filter_suite_defined_in(suite: unittest.TestSuite, import_name: str) -> unittest.TestSuite:
     """Drop imported base TestCase classes (ReusedSQLTestCase, …) from the suite."""
     kept = unittest.TestSuite()
-
-    def walk(items: Sequence[Any]) -> None:
-        for item in items:
-            if isinstance(item, unittest.TestSuite):
-                walk(list(item))
-            else:
-                defining = getattr(item, "__class__", type(item)).__module__
-                if defining == import_name:
-                    kept.addTest(item)
-
-    walk(list(suite))
+    _walk_keep_defined_in(list(suite), import_name, kept)
     return kept
+
+
+def _walk_keep_defined_in(
+    items: Sequence[Any],
+    import_name: str,
+    kept: unittest.TestSuite,
+) -> None:
+    """Keep tests whose defining module is ``import_name``."""
+    for item in items:
+        if isinstance(item, unittest.TestSuite):
+            _walk_keep_defined_in(list(item), import_name, kept)
+        else:
+            defining = getattr(item, "__class__", type(item)).__module__
+            if defining == import_name:
+                kept.addTest(item)
 
 
 def run_module_subprocess(
@@ -676,7 +696,9 @@ def _install_worker_alarm(timeout_s: float) -> None:
     if not hasattr(signal, "SIGALRM"):
         return
 
-    def _handler(signum: int, frame: Any) -> None:
+    def _handler(  # nested-def: SIGALRM handler closes over the module wall timeout
+        signum: int, frame: Any
+    ) -> None:
         raise TimeoutError(f"module wall exceeded {timeout_s:.0f}s")
 
     signal.signal(signal.SIGALRM, _handler)
@@ -733,7 +755,7 @@ def _census_row_from_dict(row: dict[str, Any]) -> CensusRow:
 
     Unknown ``status`` values are clamped to ``FAIL-VALUE`` (same as rank/denominators).
     """
-    allowed = {item.name for item in fields(CensusRow)}
+    allowed = set(CensusRow.model_fields)
     cleaned = {key: value for key, value in row.items() if key in allowed}
     status = cleaned.get("status")
     if isinstance(status, str) and status not in CENSUS_CLASSES:

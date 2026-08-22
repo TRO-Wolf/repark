@@ -21,8 +21,9 @@ Exclusions (generator-side — full rationale in map.md EXCLUSIONS):
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
 from typing import Final, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .datagen import TABLE_NAMES, TABLE_SCHEMAS, ColumnType, FuzzDatabase
 
@@ -33,34 +34,37 @@ JoinKind = Literal["INNER", "LEFT"]
 AggName = Literal["COUNT", "SUM", "AVG", "MIN", "MAX"]
 
 
-@dataclass(frozen=True)
-class JoinClause:
+class JoinClause(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     kind: JoinKind
     right_table: str
     left_key: str
     right_key: str
 
 
-@dataclass(frozen=True)
-class OrderItem:
+class OrderItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     expr: str
     direction: Literal["ASC", "DESC"]
     nulls: Literal["FIRST", "LAST"] | None
 
 
-@dataclass
-class QuerySpec:
+class QuerySpec(BaseModel):
     """Structured query AST — used for rendering and greedy minimization."""
+
+    model_config = ConfigDict(extra="forbid")
 
     index: int
     kind: Literal["project", "aggregate", "join"]
     from_table: str
-    select_exprs: list[str] = field(default_factory=list)
-    select_aliases: list[str] = field(default_factory=list)
-    joins: list[JoinClause] = field(default_factory=list)
+    select_exprs: list[str] = Field(default_factory=list)
+    select_aliases: list[str] = Field(default_factory=list)
+    joins: list[JoinClause] = Field(default_factory=list)
     where_sql: str | None = None
-    group_by: list[str] = field(default_factory=list)
-    order_by: list[OrderItem] = field(default_factory=list)
+    group_by: list[str] = Field(default_factory=list)
+    order_by: list[OrderItem] = Field(default_factory=list)
     limit: int | None = None
 
     @property
@@ -96,9 +100,10 @@ class QuerySpec:
         return sql
 
 
-@dataclass(frozen=True)
-class GeneratedQuery:
+class GeneratedQuery(BaseModel):
     """One generated query with its index, SQL text, and AST."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     index: int
     sql: str

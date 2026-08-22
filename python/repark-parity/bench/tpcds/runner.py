@@ -24,9 +24,10 @@ import tempfile
 import time
 from collections.abc import Callable
 from concurrent.futures import TimeoutError as FuturesTimeout
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .compare import compare_result_sets
 from .datagen import TABLES, default_data_root, ensure_parquet_sf
@@ -53,12 +54,15 @@ EXIT_DIED: Final[int] = 6
 SUBPROCESS_HARD_TIMEOUT_GRACE_S: Final[float] = 30.0
 
 
-@dataclass
-class QueryResult:
+class QueryResult(BaseModel):
     """Per-query scoreboard row."""
 
+    model_config = ConfigDict(extra="forbid")
+
     query_nr: int
-    status: StatusKind
+    # str, not Literal: dataclass stored unknown labels; status_ledger / exit_code
+    # are the gates (BANANA must construct, then refuse a green exit).
+    status: str
     repark_wall_s: float | None
     duckdb_wall_s: float | None
     ratio: float | None
@@ -78,16 +82,17 @@ class QueryResult:
     ordered_compare: bool = False
 
 
-@dataclass
-class Scoreboard:
+class Scoreboard(BaseModel):
     """Full SF run matrix + environment disclosure."""
+
+    model_config = ConfigDict(extra="forbid")
 
     scale_factor: float
     data_dir: str
     environment: dict[str, str]
-    queries: list[QueryResult] = field(default_factory=list)
-    rewrites: list[dict[str, str]] = field(default_factory=list)
-    findings: list[str] = field(default_factory=list)
+    queries: list[QueryResult] = Field(default_factory=list)
+    rewrites: list[dict[str, str]] = Field(default_factory=list)
+    findings: list[str] = Field(default_factory=list)
     skipped: bool = False
     rss_peak_kb_max: int | None = None
 
@@ -96,7 +101,7 @@ class Scoreboard:
             "scale_factor": self.scale_factor,
             "data_dir": self.data_dir,
             "environment": self.environment,
-            "queries": [asdict(query) for query in self.queries],
+            "queries": [query.model_dump() for query in self.queries],
             "rewrites": self.rewrites,
             "findings": self.findings,
             "skipped": self.skipped,
@@ -127,7 +132,7 @@ def sf_disk_gate(
 
 def query_result_to_dict(result: QueryResult) -> dict[str, Any]:
     """Serialize a :class:`QueryResult` for the subprocess worker."""
-    return asdict(result)
+    return result.model_dump()
 
 
 def _optional_float(value: Any) -> float | None:
@@ -1219,7 +1224,9 @@ def _timed_call(
         msg = f"timeout_s must be positive, got {timeout_s}"
         raise ValueError(msg)
 
-    def _alarm_handler(_signum: int, _frame: object) -> None:
+    def _alarm_handler(  # nested-def: SIGALRM handler closes over the per-query timeout
+        _signum: int, _frame: object
+    ) -> None:
         raise TimeoutError(f"TPC-DS query exceeded {timeout_s}s wall")
 
     # SIGALRM only works on the main thread of the main interpreter.

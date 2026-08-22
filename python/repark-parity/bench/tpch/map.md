@@ -47,9 +47,12 @@ Sail is prior-art only — never a RePark product dependency (no pysail in uv.lo
 - **octo C5:** `_timed_call` mutable box keep-result; repark timeout keep-and-compare unit-pinned.
 - `datagen.py` — `ensure_parquet_sf(sf)` → `$XDG_CACHE_HOME/repark-tpch/sf{N}/{table}.parquet` (private; not sticky /tmp) (8 tables).
 - `queries.py` — load 22 texts from DuckDB `tpch_queries()` + optional dialect rewrite table.
+  **PYC-4:** `TpchQuery` is a Pydantic `BaseModel`.
 - `compare.py` — sorted-row compare; ints/integral exact; non-integral floats `1e-6` relative.
+  **PYC-4:** comparison rows are `BaseModel`.
 - `runner.py` — scoreboard matrix (OK / WRONG-RESULT / ERROR / TIMEOUT / DIED), gap census, MD report;
-  three-way repark/Sail/DuckDB walls when `engine=both`.
+  three-way repark/Sail/DuckDB walls when `engine=both`. **PYC-4:** scoreboard records are
+  `BaseModel`; `_alarm_handler` stays a nested-def pragma (SIGALRM callback).
 - `run_tpch.py` — CLI entry (`--sf`, `--report`, `--report-append`, `--ledger`, `--repeats`,
   `--timeout`, `--timeout-retry`, `--storage`, `--isolation`, `--engine`, `--sail-python`).
 - `sf1_status_ledger.json` — frozen SF1 status map consumed by `test_tpch_smoke.py` pins.

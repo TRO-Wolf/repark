@@ -20,10 +20,15 @@ fork, or knob-default changes. Outputs feed `task/write-bench-report-*.md`.
   row-count integrity (2× source after CTAS+append); release-build assertion probe;
   markdown + JSON report; **stall-or-not verdict** per the R-WRITE-BENCH seed decision tree
   (local-fs disclosure: upload-latency conclusions bounded — no AWS; K proven on CTAS path).
+  **PYC-4:** matrix records are Pydantic `BaseModel`. `StageTiming` keeps a
+  positional `__init__(name, seconds)` because production and unit tests construct
+  that way.
 - `merge_runner.py` — MERGE matrix (MoR + optional COW): rows × width × K; rule-10 knob
-  pins (`spark.sql.shuffle.partitions=8`, target-file-size 256 MiB).
+  pins (`spark.sql.shuffle.partitions=8`, target-file-size 256 MiB). **PYC-4:** cell/board
+  records are `BaseModel`.
 - `overwrite_runner.py` — INSERT OVERWRITE peak RSS vs source size (OTH-004 MemTable
-  materialize path); rows × width; K pinned (not swept).
+  materialize path); rows × width; K pinned (not swept). **PYC-4:** cell/board records
+  are `BaseModel`.
 - `run_write_bench.py` — CLI entry (`--mode ctas|merge|overwrite|extension|all`, `--sf`,
   `--k`, `--file-sizes`, `--rows`, `--width`, `--report`, `--out`, `--warehouse`,
   `--repeats`, `--assert-release`, `--no-cow`).

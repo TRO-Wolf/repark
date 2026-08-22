@@ -107,6 +107,7 @@ def test_pyc_1_exception_rows_deleted_not_zeroed() -> None:
     """C-002: emptied files leave the EXCEPTIONS table, they are not kept at 0."""
     conventions = Path(__file__).resolve().parents[3] / "scripts" / "check_python_conventions.py"
     tree = ast.parse(conventions.read_text(encoding="utf-8"))
+    found_table = False
     keys: list[str] = []
     for node in tree.body:
         target_name = None
@@ -119,10 +120,11 @@ def test_pyc_1_exception_rows_deleted_not_zeroed() -> None:
                 target_name, value = target.id, node.value
         if target_name != "NESTED_DEF_EXCEPTIONS" or not isinstance(value, ast.Dict):
             continue
+        found_table = True
         for key in value.keys:
             if isinstance(key, ast.Constant) and isinstance(key.value, str):
                 keys.append(key.value)
-    assert keys, "did not bind NESTED_DEF_EXCEPTIONS as a module-level dict literal"
+    assert found_table, "did not bind NESTED_DEF_EXCEPTIONS as a module-level dict literal"
     assert "python/repark/src/repark/spark/dataframe/core.py" not in keys
     assert "python/repark/src/repark/spark/dataframe/plan_collapse.py" not in keys
 

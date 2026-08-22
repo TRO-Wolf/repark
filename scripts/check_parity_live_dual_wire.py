@@ -365,7 +365,9 @@ def compare(left: Surface, right: Surface) -> list[str]:
     """Return human-readable drift lines naming the side and the differing token."""
     errors: list[str] = []
 
-    def field(name: str, left_value: object, right_value: object) -> None:
+    def field(  # nested-def: comparator closes over both surfaces and the error list
+        name: str, left_value: object, right_value: object
+    ) -> None:
         if left_value != right_value:
             errors.append(
                 f"parity-live dual-wire drift on {name}: "

@@ -210,9 +210,10 @@ jobs:
       - name: uv lock --locked
         run: uv lock --locked
       # Parity-harness tests (mirrors `make py-test`): the comparison core + census-machinery
-      # unit tests. Cheap enough to run on every event.
+      # unit tests. Cheap enough to run on every event. pydantic is a PYC-4 hard dep of
+      # converted census/fuzz records (`--no-project` does not read pyproject.toml).
       - name: parity-harness tests
         run: >
           PYTHONPATH=python/repark-parity/src
-          uv run --no-project --with pyarrow --with pytest
+          uv run --no-project --with pyarrow --with pytest --with 'pydantic>=2.10,<3'
           pytest python/repark-parity/tests -q

@@ -136,8 +136,11 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   defs in 21 files, 23 files importing `dataclasses`. **PYC-1** deleted the `core.py` (23) and
   `plan_collapse.py` (12) nested-def rows. **PYC-2** deleted the remaining ten
   shipped-package nested-def rows (12 lifts + 2 pragmas). **PYC-3** deleted the two
-  shipped-package dataclass rows (`merge.py`, `_csv_smart.py`); remaining dataclass
-  rows are 21. Fail-closed on an unreadable file, a parse
+  shipped-package dataclass rows (`merge.py`, `_csv_smart.py`). **PYC-4** emptied
+  `NESTED_DEF_EXCEPTIONS` (lifts + pragmas in the harness; dual-wire `field` is a
+  pragma) and converted the 20 parity dataclass files; remaining dataclass row is
+  `scripts/check_parity_live_dual_wire.py` (runs as bare `python3`, no venv pydantic).
+  Fail-closed on an unreadable file, a parse
   failure, an empty scan set, or a stale `EXCEPTIONS` key. Measured 0.94 s — the slowest
   hook-eligible guard. Dual-wired `make check-python-conventions` (in the `make ci` chain) +
   ci.yml's `python` job, and in both pre-commit paths. Rationale and the arming method:
@@ -172,7 +175,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `SPARK_LOCAL_IP`). No third hand-maintained expected-flags list. Fail-closed on a parse miss.
   Scope is this one pair only (a one-line extensibility comment lives in the `.py`; there is no
   multi-pair framework). Dual-wired: `make check-parity-live-dual-wire` (in `make ci`) AND the
-  ci.yml `guards`-job step.
+  ci.yml `guards`-job step. **PYC-4:** this file stays a `dataclass` (the script is invoked as
+  bare `python3` from make, no wheel venv); `field` is a nested-def pragma.
 
 - `check_matrix_test_liveness.sh` + `check_matrix_test_liveness.py` — the **surface-matrix
   test-name liveness** guard (H-2 G8). Diffs every `Row::Tested { test }` in

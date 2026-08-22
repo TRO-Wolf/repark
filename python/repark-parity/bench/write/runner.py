@@ -23,9 +23,10 @@ import shutil
 import statistics
 import time
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .datagen import DEFAULT_SOURCE_TABLE, ensure_source_parquet
 
@@ -53,17 +54,23 @@ STALL_SPEEDUP_THRESHOLD: Final[float] = 1.15  # <15% gain -> no clear K benefit
 PLATEAU_RATIO: Final[float] = 1.05
 
 
-@dataclass
-class StageTiming:
+class StageTiming(BaseModel):
     """One named stage wall-clock sample (seconds)."""
+
+    model_config = ConfigDict(extra="forbid")
 
     name: str
     seconds: float
 
+    def __init__(self, name: str, seconds: float, **extra: Any) -> None:
+        # Production and unit tests construct positionally: StageTiming("ctas", wall).
+        super().__init__(name=name, seconds=seconds, **extra)
 
-@dataclass
-class CellResult:
+
+class CellResult(BaseModel):
     """One (K, target_file_size) matrix cell."""
+
+    model_config = ConfigDict(extra="forbid")
 
     concurrency: int
     target_file_size_bytes: int
@@ -89,9 +96,10 @@ class CellResult:
         return _stage_seconds(self.stages, "seed_parquet_view")
 
 
-@dataclass
-class MatrixBoard:
+class MatrixBoard(BaseModel):
     """Full K x file-size scoreboard + environment disclosure."""
+
+    model_config = ConfigDict(extra="forbid")
 
     scale_factor: float
     source_table: str
@@ -99,9 +107,9 @@ class MatrixBoard:
     source_bytes: int
     k_values: list[int]
     file_size_bytes: list[int]
-    cells: list[CellResult] = field(default_factory=list)
-    environment: dict[str, str] = field(default_factory=dict)
-    findings: list[str] = field(default_factory=list)
+    cells: list[CellResult] = Field(default_factory=list)
+    environment: dict[str, str] = Field(default_factory=dict)
+    findings: list[str] = Field(default_factory=list)
     verdict: str = ""
     release_build_disclosed: bool = True
 
@@ -631,7 +639,7 @@ def board_to_dict(board: MatrixBoard) -> dict[str, Any]:
         "release_build_disclosed": board.release_build_disclosed,
         "cells": [
             {
-                **{key: value for key, value in asdict(cell).items() if key != "stages"},
+                **{key: value for key, value in cell.model_dump().items() if key != "stages"},
                 "stages": [{"name": stage.name, "seconds": stage.seconds} for stage in cell.stages],
                 "ctas_s": cell.ctas_s,
                 "append_s": cell.append_s,
