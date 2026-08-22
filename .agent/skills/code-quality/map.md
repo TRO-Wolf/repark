@@ -2,10 +2,13 @@
 
 ## Purpose
 
-The portable **code-quality convention set**: the four Python rules (types on everything, Pydantic
-v2 rather than `dataclasses`/`attrs`, no nested function definitions, names that carry the work),
-the general rules they sit inside, and the method for turning a convention into a gate without a
-flag day.
+The portable **Python code-quality convention set** (v2.0): Ruff as the single lint/format tool,
+types on everything with named intermediate steps, Pydantic v2 rather than `dataclasses`/`attrs`,
+no nested function definitions and no unbounded recursion, names that carry the work, import and
+lazy-dataframe discipline, comments written for the eventual reader in Simplified Technical
+English, mandatory tests with a verification gate — and the method for turning a convention into
+a gate without a flag day. Rust review lives in its own skill:
+[../rust-code-quality/SKILL.md](../rust-code-quality/SKILL.md).
 
 It is tool-agnostic and repo-agnostic on purpose. For **this** repo the authoritative statement is
 [../../../AGENTS.md](../../../AGENTS.md) "Python"; the skill explains the reasoning and the arming
@@ -14,9 +17,12 @@ the spine wins.
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the rules, each with the failure it prevents and how it is held (linter,
-  purpose-built gate, or review), plus the ratchet pattern for arming a rule against a codebase
-  that already violates it.
+- [SKILL.md](SKILL.md) — fourteen sections: the Ruff baseline (§1, an illustrative floor — the
+  host repo's `pyproject.toml` is SSOT), the language and typing rules (§2–§3), function shape
+  (§4), naming (§5), imports (§6), pre-built-first (§7), lazy dataframes (§8), eventual-reader
+  comment discipline (§9), testing and the verification gate (§10–§11), condensed principles
+  (§12), the arming ratchet (§13), and the sweep invariant for existing code (§14). Each rule is
+  tagged with how it is held: linter, purpose-built gate, or review.
 
 ## I want to...
 

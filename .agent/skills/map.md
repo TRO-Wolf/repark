@@ -23,10 +23,18 @@ deleting a skill loses a convenience, never a project truth.
 - [check-disk-headroom/](check-disk-headroom/map.md) — is there room to do this? Measured
   consumers (`target/debug` dominates), how to budget for the operation rather than the repo at
   rest, and a reclaim order that says what **not** to delete as clearly as what to.
-- [code-quality/](code-quality/map.md) — portable convention reasoning (types, Pydantic not
-  dataclasses, no nested `def`, names as verb phrases) plus the ratchet for arming a rule.
-  The host rule of record is [AGENTS.md](../../AGENTS.md) "Python"; this skill is not a second
-  contract.
+- [code-quality/](code-quality/map.md) — the portable Python conventions (v2.0: Ruff baseline,
+  types + named steps, Pydantic not dataclasses, no nested `def`, lazy dataframes,
+  eventual-reader comments) plus the ratchet for arming a rule. The host rule of record is
+  [AGENTS.md](../../AGENTS.md) "Python"; this skill is not a second contract.
+- [rust-code-quality/](rust-code-quality/map.md) — the Rust review procedure for what the armed
+  gates cannot catch: escape hatches, Spark-visible behavior, ANSI dual-door coverage, float
+  semantics, hot-path allocation, the error contract. Severity ordered for a query engine
+  (silently wrong results outrank crashes).
+- [audit-repark-parity/](audit-repark-parity/map.md) — measure a surface against the pinned live
+  PySpark oracle and classify every divergence (product bug / disposed / stale) before repairing.
+  Mandatory first step of a parity-live nightly-red triage; required sweep in any PR that flips a
+  Spark-visible default or error contract; periodic pre-release pass.
 
 ## I want to...
 
@@ -36,6 +44,8 @@ deleting a skill loses a convenience, never a project truth.
 | True up the docs after work lands | [compact-context-docs/SKILL.md](compact-context-docs/SKILL.md) |
 | Find out whether there is disk room for a big build | [check-disk-headroom/SKILL.md](check-disk-headroom/SKILL.md) |
 | Write or review Python under the conventions | [code-quality/SKILL.md](code-quality/SKILL.md) |
+| Review a Rust PR or commit | [rust-code-quality/SKILL.md](rust-code-quality/SKILL.md) |
+| Triage a parity-live red, or flip a Spark-visible default | [audit-repark-parity/SKILL.md](audit-repark-parity/SKILL.md) |
 | Add a new skill | a `<verb-noun>/` directory here with `SKILL.md` (frontmatter + pointers, no policy) and its own `map.md`, plus a Contents row |
 | Read the authoritative contract | [../../AGENTS.md](../../AGENTS.md) |
 
