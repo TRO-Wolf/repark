@@ -1,4 +1,4 @@
-# map — .agent/skills/
+# map — .agents/skills/
 
 ## Purpose
 
@@ -9,8 +9,13 @@ a `description` that says when to reach for it **and when not to**), the same sh
 rather than a file an agent has to already know to open. A skill records a proven *sequence*; it
 defines no policy and carries no authoritative project fact — every rule it leans on is a pointer into the spine
 ([AGENTS.md](../../AGENTS.md) + [STATUS.md](../../STATUS.md) + the doc each step cites), and on
-any conflict the spine wins. This keeps the `.agent/` zero-authoritative-facts contract intact:
+any conflict the spine wins. This keeps the `.agents/` zero-authoritative-facts contract intact:
 deleting a skill loses a convenience, never a project truth.
+
+**Claude discovers these through a symlink.** `.claude/skills` points at this directory (git mode
+`120000`), because Claude Code loads skills only from `.claude/skills/`. The skills keep their
+single home here; adding a directory below makes it invocable with no change on the Claude side.
+See [../../.claude/map.md](../../.claude/map.md).
 
 ## Contents
 
@@ -59,6 +64,7 @@ deleting a skill loses a convenience, never a project truth.
 
 | Symptom | First check |
 |---|---|
-| A skill states a project rule | Bug — move the rule to the spine, leave a pointer (`.agent/` contract) |
+| A skill states a project rule | Bug — move the rule to the spine, leave a pointer (`.agents/` contract) |
 | A skill is a bare `.md`, not a directory | Pre-2026-08-21 shape — convert it to `<name>/SKILL.md` with frontmatter + a `map.md` |
+| A skill will not load in a Claude session | `ls -l .claude/skills` resolves here, and the skill's `SKILL.md` carries `name` + `description` frontmatter |
 | A skill step no longer matches reality | Fix the skill in the same PR as the change that falsified it |

@@ -1,4 +1,4 @@
-# map — .agent/skills/code-quality/
+# map — .agents/skills/code-quality/
 
 ## Purpose
 

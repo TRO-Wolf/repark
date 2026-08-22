@@ -59,7 +59,7 @@ REJECTED / DEFERRED, with the reconciliation noted.
 | # | Proposal recommendation | Disposition | Reconciliation note |
 |---|---|---|---|
 | 1 | Neutral documentation spine (STATUS/ARCHITECTURE/DEVELOPMENT/CONTRIBUTING/AGENTS/adr) | **ACCEPT-MODIFIED** | Add `STATUS.md`, `ARCHITECTURE.md`, `DEVELOPMENT.md` (new neutral homes). `CONTRIBUTING.md`, `README.md`, `docs/adr/` already exist. `PROJECT.md` **kept** as stable product charter (vision/intent only); its "Current state" moves to `STATUS.md`. Status stops living in CLAUDE.md/Cargo comments/maps. |
-| 2 | Vendor-neutral `AGENTS.md` + thin `.agent/` adapters | **ACCEPT-MODIFIED** | The heart of the campaign. AGENTS.md becomes THE single neutral authoritative contract (see §4). `docs/skills/` tier manuals are recast as the **Claude adapter**; `CLAUDE.md` → thin pointer. `.agent/{common,claude,codex,cursor}.md` optional; codex/cursor land as stubs pointing inward. |
+| 2 | Vendor-neutral `AGENTS.md` + thin `.agents/` adapters | **ACCEPT-MODIFIED** | The heart of the campaign. AGENTS.md becomes THE single neutral authoritative contract (see §4). `docs/skills/` tier manuals are recast as the **Claude adapter**; `CLAUDE.md` → thin pointer. `.agents/{common,claude,codex,cursor}.md` optional; codex/cursor land as stubs pointing inward. |
 | 3 | Machine-readable `repo-manifest.toml` + CI validation | **ACCEPT** | Structural SSOT: crate inventory, phase, gate commands, doc index, component status. Validator wired into `make ci` + CI. Complements (does not duplicate) `scripts/check_crate_dag.py`. |
 | 4 | Replace universal `map.md` with generated navigation | **REJECT** (owner ruling) | `map.md` stays everywhere, hand-written. No generator. We *may* add a manifest↔crate-root-map **consistency check** (map must exist + agree with manifest), never generation. |
 | 5 | Archive completed campaign artifacts → `docs/history/` | **ACCEPT** | Move phase-0…3 briefs, `task/p*-ledger.md`, census narratives, retrospectives into `docs/history/port-v2/`. **Promote-before-archive**: any still-active lesson goes to an authoritative home first. Census evidence stays reachable via a STATUS pointer. |
@@ -167,9 +167,9 @@ every removed section to its new authoritative or historical home" safeguard dem
 ## 8. Open questions for the owner (none block FD-1)
 
 1. ~~**Authority model (§4):**~~ **RESOLVED — Option A** (single neutral AGENTS.md) confirmed 2026-08-08.
-2. ~~**`.agent/` adapters:**~~ **RESOLVED at FD-2** (#25, 2026-08-09, dated correction added
+2. ~~**`.agents/` adapters:**~~ **RESOLVED at FD-2** (#25, 2026-08-09, dated correction added
    2026-08-10) — the default was taken: a real adapter plus one-line stubs pointing inward.
-   Navigation: [.agent/](../../../.agent/map.md).
+   Navigation: [.agents/](../../../.agents/map.md).
 3. **Sequencing vs. the two parked lanes:** this campaign is doc/tooling and conflicts with nothing, so
    it can run *before, after, or interleaved with* the `repark.sql` re-home and dbt-repark lane. Default:
    run FD-1…FD-3 first (they make the repo more legible for that lane), FD-4…FD-5 after.

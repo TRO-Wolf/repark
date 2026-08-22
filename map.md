@@ -85,11 +85,14 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
   `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
-- `.agent/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
+- `.agents/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
   `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc
   truth-up, disk headroom; plus the portable code-quality convention reasoning);
   each is a thin pointer into the spine, carrying no authoritative facts. See
-  [.agent/map.md](.agent/map.md).
+  [.agents/map.md](.agents/map.md).
+- `.claude/` — one entry, `skills/`, a symlink to `../.agents/skills`. Claude Code only discovers
+  skills under `.claude/skills/`, so the symlink makes the `.agents/skills/` runbooks natively
+  invocable without giving them a second home to drift from. See [.claude/map.md](.claude/map.md).
 
 ## I want to...
 
@@ -101,13 +104,13 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Follow the authoritative contributor contract | [AGENTS.md](AGENTS.md) |
 | Understand the architecture / crate DAG / runtime flows | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Build / test / verify locally (setup, `make` targets, CI) | [DEVELOPMENT.md](DEVELOPMENT.md) |
-| Onboard as an agent (any tool) | [.agent/map.md](.agent/map.md) |
+| Onboard as an agent (any tool) | [.agents/map.md](.agents/map.md) |
 | Understand the port plan / what arrives when | [docs/port/PLAN.md](docs/port/PLAN.md) |
 | Read/extend the testing contract | [docs/testing.md](docs/testing.md) |
 | Find how repark differs from Apache Spark, and why | [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) (the divergence registry) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
-| Read the code-quality conventions and why each is held by a linter, a gate, or review | [.agent/skills/code-quality/SKILL.md](.agent/skills/code-quality/SKILL.md) |
+| Read the code-quality conventions and why each is held by a linter, a gate, or review | [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md) |
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
 | Read how the engine got here (the archived port record) | [docs/history/port-v2/README.md](docs/history/port-v2/README.md) |

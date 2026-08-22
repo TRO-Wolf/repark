@@ -1,4 +1,4 @@
-# .agent/common.md — shared, tool-neutral entry point
+# .agents/common.md — shared, tool-neutral entry point
 
 Any agent working in this repo starts here, then reads the authoritative spine. This file carries
 **no project rules** — only pointers.

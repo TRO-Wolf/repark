@@ -4,7 +4,7 @@
 > what is delivered, what is in flight, and what is deferred. Intent and the "why" live in
 > [PROJECT.md](PROJECT.md) (product charter) and [docs/adr/](docs/adr/) (load-bearing decisions);
 > the day-to-day contract is [AGENTS.md](AGENTS.md) (with [CLAUDE.md](CLAUDE.md) and
-> [.agent/](.agent/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
+> [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
 _Last updated: 2026-08-22._
@@ -23,7 +23,7 @@ Project, unqualified Unnest) behind a thin PyO3 bind; the facade keeps only type
 remediation cycles pinned it fail-closed: list-of-map and `ListView`/`LargeListView` refuse
 LOUD, Dictionary and `LargeList`/`FixedSizeList` list unwrap before Unnest, mixed-plan inner
 errors stay loud, plus a `ScanForbidden` plan-build spy and the `df_guard_tests.rs` fence. Also
-in the tag: the `.agent/skills` runbooks (#184 — publish-pypi, compact-context-docs).
+in the tag: the `.agents/skills` runbooks (#184 — publish-pypi, compact-context-docs).
 Pre-alpha still means the API can move between tags. Release mechanics:
 [docs/release.md](docs/release.md).
 
@@ -216,7 +216,7 @@ history-rewrite; provenance and the options weighed:
     `scripts/`, plus narrowing the `ANN` per-file ignores), and PYC-5 (close, including
     re-measuring the guard's hook cost against its budget).
   - **Rationale and the arming method are a portable skill**,
-    [.agent/skills/code-quality/SKILL.md](.agent/skills/code-quality/SKILL.md): each rule with the failure it
+    [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
     arming a convention against a codebase that already violates it.
   - **The risk this unit carries is that it is a pure refactor of working code.** The facade

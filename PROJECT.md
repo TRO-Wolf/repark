@@ -76,7 +76,7 @@ The reasons someone picks this over DuckDB or Polars; everything else is table s
   `Cargo.lock` checked in.
 - **Distribution is deferred** behind the `ExecutionBackend` seam.
 - **[AGENTS.md](AGENTS.md) is the single authoritative contract** (it holds the precedence chain);
-  tool adapters ([CLAUDE.md](CLAUDE.md), [.agent/](.agent/map.md)) carry no authoritative facts and
+  tool adapters ([CLAUDE.md](CLAUDE.md), [.agents/](.agents/map.md)) carry no authoritative facts and
   cannot drift.
 
 ## Target architecture (crate skeleton — the port's destination)

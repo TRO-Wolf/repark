@@ -1,4 +1,4 @@
-# map — .agent/skills/audit-repark-parity/
+# map — .agents/skills/audit-repark-parity/
 
 ## Purpose
 
@@ -40,4 +40,4 @@ which wins on any conflict.
 |---|---|
 | The audit "found nothing" fast | Step 0 stop conditions — did a named path fail to resolve and get skipped? |
 | A pin the audit blessed goes red later | The cause-string assertions — did the failure *mode* change? Re-run the audit, do not patch the pin |
-| The skill states a project rule | Bug — move it to the spine, leave a pointer (`.agent/` contract) |
+| The skill states a project rule | Bug — move it to the spine, leave a pointer (`.agents/` contract) |

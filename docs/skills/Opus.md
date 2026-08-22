@@ -300,7 +300,7 @@ Whenever you feel the pull to abbreviate, write the full name first, then ask: "
 ### Verification commands (canonical — referenced by §4 and the Pre-Flight checklist)
 
 - **Rust:** `make verify` runs the gate; the underlying commands are `cargo check` · `cargo clippy --all-targets --workspace -- -D warnings` · `cargo fmt --check` · `cargo test --workspace` (**never** `--all-features` — the PyO3 cdylib test binary breaks under it; see [AGENTS.md](../../AGENTS.md)). Workspace lints in [Cargo.toml](../../Cargo.toml) `[workspace.lints]`; formatter in [rustfmt.toml](../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
-- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`, plus `make check-python-conventions` for the two rules Ruff cannot express (nested `def`; `dataclasses`/`attrs`). Ruff config in repo-root [pyproject.toml](../../pyproject.toml) `[tool.ruff]`; line length 100. Both are in the `make ci` chain — the conventions guard is the SSOT for its own tables, and the reasoning behind the rules lives in [../../.agent/skills/code-quality/SKILL.md](../../.agent/skills/code-quality/SKILL.md).
+- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`, plus `make check-python-conventions` for the two rules Ruff cannot express (nested `def`; `dataclasses`/`attrs`). Ruff config in repo-root [pyproject.toml](../../pyproject.toml) `[tool.ruff]`; line length 100. Both are in the `make ci` chain — the conventions guard is the SSOT for its own tables, and the reasoning behind the rules lives in [../../.agents/skills/code-quality/SKILL.md](../../.agents/skills/code-quality/SKILL.md).
 
 ### Rust
 

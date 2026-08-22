@@ -1,4 +1,4 @@
-# map — .agent/skills/check-disk-headroom/
+# map — .agents/skills/check-disk-headroom/
 
 ## Purpose
 

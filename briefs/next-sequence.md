@@ -67,7 +67,7 @@ deletion. If that guard were ever relaxed, A13 becomes the first item in this fi
 **Context.** `scripts/check_python_conventions.py` is armed and holds the measured debt in two
 EXCEPTIONS tables. The tree is green and cannot regress. PYC empties those tables. The rules
 themselves are [../AGENTS.md](../AGENTS.md) "Python"; the reasoning and the sanctioned exceptions
-are [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md).
+are [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md).
 
 **The campaign invariant, and it is the LRS one:** *no call that worked before returns a different
 value.* Every unit here is a refactor of working code that 3,639 passing facade tests were never
@@ -110,7 +110,7 @@ it dual-wired in `make ci` + CI, not quietly keeping a hook that everyone starts
 ### PYC-6 (decision) — arm a docstring-presence subset, and the declined armings
 
 **Measured 2026-08-22** with the pinned Ruff (`uvx ruff@0.15.22`), check-only, recorded here per
-the arming method in [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md)
+the arming method in [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md)
 "Arming a rule" — a rule measured and declined is written down so nobody re-litigates it from a
 fresh `--select` run. The armed baseline config is **clean: 0 findings** repo-wide.
 
