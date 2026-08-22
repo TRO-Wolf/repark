@@ -12,6 +12,11 @@ not this directory.
 
 ## Contents
 
+- [pyc-6-docstring-presence-ledger.md](pyc-6-docstring-presence-ledger.md) —
+  **PYC-6 (2026-08-22):** arm public-docstring presence (`D101`/`D102`/`D103`/
+  `D105`/`D107`) with a seeded ratchet; style `D` declined permanently; tests
+  keep the per-file ignore.
+
 - [pyc-5-close-ledger.md](pyc-5-close-ledger.md) —
   **PYC-5 (2026-08-22):** campaign close. Hook re-measured n=5 median 0.996 s
   (max 1.011 s) over 164 files and dropped from pre-commit; facade ANN201

@@ -7,6 +7,11 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22):** five presence
+  rules only; style `D` not in py-lint select; tests keep the `D` per-file
+  ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;
+  Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
+  pre-commit hook (conventions stays off).
 - `test_pyc_5_close.py` — **PYC-5 (2026-08-22):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
   conventions guard is not on the pre-commit hook and stays in `make ci` +

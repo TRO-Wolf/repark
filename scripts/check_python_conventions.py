@@ -6,9 +6,10 @@ rule. Prose (AGENTS.md "Python", .agents/skills/code-quality/SKILL.md, docs/skil
 points here and never restates the tables. Mirrors the check_rust_file_size
 dual-wire shape (py = logic + SSOT, sh = wrapper).
 
-The other two Python conventions are already mechanically enforced and are
+The other Python conventions are already mechanically enforced and are
 deliberately NOT re-implemented here: type coverage is Ruff's `ANN` rule set
-(selected in pyproject.toml) and naming is a review duty no linter can judge.
+(selected in pyproject.toml), public-docstring presence is
+`check_docstring_presence.py`, and naming is a review duty no linter can judge.
 
 Rules over every *.py under SCAN_ROOTS (recursive):
 

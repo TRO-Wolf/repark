@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-manifest check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -144,6 +144,13 @@ check-python-conventions: ## The two Python rules Ruff cannot express (nested de
 	@# python job. Companion to check-lib-py (facade thinness). Ceilings ratchet down only;
 	@# prose points at the script and never restates the tables.
 	@./scripts/check_python_conventions.sh
+
+.PHONY: check-docstring-presence
+check-docstring-presence: ## Public-docstring presence (D101/D102/D103/D105/D107) with a ratchet
+	@# Rules + EXCEPTIONS SSOT: scripts/check_docstring_presence.py — dual-wired with ci.yml's
+	@# python job. Ruff is the parser; the wrapper is the per-file ceiling table. Ceilings
+	@# ratchet down only; prose points at the script and never restates the table.
+	@./scripts/check_docstring_presence.sh
 
 .PHONY: check-parity-live-dual-wire
 check-parity-live-dual-wire: ## Fail if make parity-live and parity-live.yml drift (load-bearing flags)
@@ -367,7 +374,7 @@ bump-fork-pin: ## Bump the iceberg-rust fork pin: make bump-fork-pin REV=<sha|br
 	@scripts/bump_fork_pin.sh "$(REV)"
 
 .PHONY: install-hooks
-install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links + crate-DAG + lib.rs + rust file-size + Python thinness + manifest guards + cargo fmt + taplo + typos
+install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links + crate-DAG + lib.rs + rust file-size + Python thinness + docstring presence + manifest guards + cargo fmt + taplo + typos
 	@# check_crate_dag.sh and check_lib_rs.sh are hook-eligible because they are measured fast
 	@# (sub-second: a `cargo metadata` read and a pure text scan). Hook budget stays < 1 s
 	@# beyond cargo fmt; check_lib_py.sh rejoined at phase-3 PR-5 (same sub-second class),
@@ -377,6 +384,8 @@ install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links +
 	@# 1.011 s) over 164 files, at the sub-second budget line. It stays in `make ci` + ci.yml.
 	@# sync_map_md.py --check joined at the markdown-lifecycle unit: n=5 median 0.08 s over
 	@# 143 maps (pure text + one `git ls-files`), comfortably inside the hook budget.
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\npython3 scripts/sync_map_md.py --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@# check_docstring_presence.sh joined at PYC-6: n=5 median 0.13 s (uvx ruff JSON +
+	@# ratchet compare), well inside the sub-second hook budget.
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\npython3 scripts/sync_map_md.py --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"

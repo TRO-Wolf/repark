@@ -200,6 +200,13 @@ history-rewrite; provenance and the options weighed:
       not zeroed. **PYC-4** emptied `NESTED_DEF_EXCEPTIONS`: walkers/factories/flush/
       execute lifted; signal handlers, shrink predicate, spy, and dual-wire comparator
       ended as `# nested-def:` pragmas. Dataclass remaining after **PYC-4**: 1 row.
+    - *Docstrings.* **PYC-6** armed presence-only (`D101`/`D102`/`D103`/`D105`/`D107`)
+      over the same SCAN_ROOTS as the conventions guard, tests excluded. Seeded
+      2026-08-22 at **136** findings across **39** files (the slate's ~266 included
+      tests). Style `D` (`D401`/`D202`/`D205`/`D413` and the rest) declined
+      permanently — facade docstrings mirror PySpark. `PL` / `A` / `print()` stay
+      declined with the reasons recorded in [briefs/next-sequence.md](briefs/next-sequence.md)
+      (the declined-armings record; PYC-6 left the rolling queue).
     - *Names.* Not machine-countable; it rides along with whatever the other three touch.
   - **The guard is armed** (owner ruled 2026-08-21). Ruff has no check for a nested `def` and none
     for "Pydantic rather than `dataclass`", so those two rules now live in
@@ -210,8 +217,10 @@ history-rewrite; provenance and the options weighed:
     PYC is now the burn-down of those tables rather than a rule nobody can enforce. **PYC-5**
     re-measured the hook at n=5 median **0.996 s** (max 1.011 s) over **164** files — at the
     sub-second budget line, with the max already over it — and dropped it from pre-commit; it
-    stays dual-wired in `make ci` + CI. The other two rules stay where they already work — Ruff
-    `ANN` for types, review for naming.
+    stays dual-wired in `make ci` + CI. **PYC-6** added `scripts/check_docstring_presence.py`
+    for public-docstring presence, dual-wired `make check-docstring-presence` + ci.yml's
+    `python` job, and on the pre-commit hook (n=5 median **0.13 s**). Ruff `ANN` still
+    holds types; naming stays review.
   - **The nested-`def` rule ships with an inline pragma**, `# nested-def: <reason>`, for the three
     cases the contract sanctions: a decorator closing over its own arguments, a callback whose
     closure over local state is the point, and a `functools.wraps` wrapper. An empty reason does
@@ -227,8 +236,11 @@ history-rewrite; provenance and the options weighed:
     the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores),
     and PYC-5 (merged as [#211](https://github.com/TRO-Wolf/repark/pull/211): close —
     hook off pre-commit, unearned facade ANN201 dropped, dual-wire dataclass row
-    stays the sanctioned leftover). PYC-6 — arming the docstring-presence subset —
-    was owner-ruled 2026-08-22 and is the remaining chartered unit.
+    stays the sanctioned leftover), and PYC-6 (this change: public-docstring
+    presence `D101`/`D102`/`D103`/`D105`/`D107` armed with a seeded ratchet;
+    style `D` declined permanently). No further chartered PYC unit. The dual-wire
+    dataclass leftover and the D-presence EXCEPTIONS table are remaining debt,
+    not sequenced work.
   - **Rationale and the arming method are a portable skill**,
     [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for

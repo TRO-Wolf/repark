@@ -30,10 +30,9 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-6** | conventions | — | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
-| — | **A13** | write path | — | M |
+| 1 | **A13** | write path | — | M |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -56,8 +55,14 @@ ignores are split.
 **PYC-5 merged as [#211](https://github.com/TRO-Wolf/repark/pull/211)** and left this file:
 hook re-measured n=5 median **0.996 s** (max 1.011 s) over 164 files and dropped
 from pre-commit (stays in `make ci` + CI); facade tests no longer ignore ANN201;
-dual-wire dataclass row stays the sanctioned leftover. PYC-6 — the
-docstring-presence arming — was owner-ruled 2026-08-22 and is now chartered.
+dual-wire dataclass row stays the sanctioned leftover.
+
+**PYC-6 lands with this change and leaves this file:** public-docstring presence
+(`D101`/`D102`/`D103`/`D105`/`D107`) armed with a seeded ratchet (136 findings /
+39 files, tests excluded) in `scripts/check_docstring_presence.py`; style `D`
+declined permanently. The dual-wire dataclass leftover and the D-presence
+EXCEPTIONS table are remaining debt, not sequenced work. A13 is the runnable
+next item; MW-4 still preempts if OD-3 lands.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -112,7 +117,7 @@ facade tests dropped ANN201 (isolated count 0); two nested helpers annotated
 (ANN202; not what earned the drop). ANN202 stays. Guard: 164 files, n=5 median
 0.996 s (max 1.011 s). Hook dropped from pre-commit; dual-wired in `make ci` + CI.
 
-### PYC-6 — arm the docstring-presence subset (owner-ruled), and the declined armings
+### PYC-6 — done (this change): arm the docstring-presence subset, and the declined armings
 
 **Measured 2026-08-22** with the pinned Ruff (`uvx ruff@0.15.22`), check-only, recorded here per
 the arming method in [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md)
