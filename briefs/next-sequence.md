@@ -25,7 +25,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-6** (decision) | conventions | **owner ruling** | S |
+| 1 | **PYC-6** | conventions | — | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -51,8 +51,8 @@ ignores are split.
 **PYC-5 merged as [#211](https://github.com/TRO-Wolf/repark/pull/211)** and left this file:
 hook re-measured n=5 median **0.996 s** (max 1.011 s) over 164 files and dropped
 from pre-commit (stays in `make ci` + CI); facade tests no longer ignore ANN201;
-dual-wire dataclass row stays the sanctioned leftover. PYC-6 is the
-docstring-presence decision (owner ruling).
+dual-wire dataclass row stays the sanctioned leftover. PYC-6 — the
+docstring-presence arming — was owner-ruled 2026-08-22 and is now chartered.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -107,25 +107,27 @@ facade tests dropped ANN201 (isolated count 0); two nested helpers annotated
 (ANN202; not what earned the drop). ANN202 stays. Guard: 164 files, n=5 median
 0.996 s (max 1.011 s). Hook dropped from pre-commit; dual-wired in `make ci` + CI.
 
-### PYC-6 (decision) — arm a docstring-presence subset, and the declined armings
+### PYC-6 — arm the docstring-presence subset (owner-ruled), and the declined armings
 
 **Measured 2026-08-22** with the pinned Ruff (`uvx ruff@0.15.22`), check-only, recorded here per
 the arming method in [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md)
 "Arming a rule" — a rule measured and declined is written down so nobody re-litigates it from a
 fresh `--select` run. The armed baseline config is **clean: 0 findings** repo-wide.
 
-**Proposed to arm (owner decision required): the docstring *presence* rules only.** Full `D`
-costs 803 findings (556 facade / 234 parity / 13 scripts). The split matters:
+**Owner-ruled 2026-08-22: arm the docstring *presence* rules only.** Full `D` costs 803 findings
+(556 facade / 234 parity / 13 scripts). The split the ruling turns on:
 
 - Presence rules — `D103` undocumented function (163), `D105` magic method (57), `D102` public
   method (27), `D107` `__init__` (17), `D101` class (2) — ≈266 findings, and they enforce the
   conventions' "every function has a docstring" rule mechanically.
 - Style rules — `D401` imperative mood (193), `D202`/`D205`/`D413` blank-line shape (289),
   the rest — are churn on a facade whose docstrings deliberately mirror upstream PySpark's own
-  text. **Declined.**
+  text. **Declined permanently, same ruling.**
 
-If armed: seeded ratchet table (measure first, per-file rows with reasons, ceilings down only),
-per-file ignore for tests kept.
+The unit: select the five presence rules, re-measure at execution time (the 266 is today's
+count, not the seed), seed the ratchet table from that measurement with per-file rows and
+reasons (ceilings down only), keep the tests per-file ignore, and ship the gate with
+provocation proofs per [../docs/testing.md](../docs/testing.md).
 
 **Measured and declined, with the reasons:**
 
