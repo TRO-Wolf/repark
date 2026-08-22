@@ -44,7 +44,7 @@ delivered:
 [crates/map.md](crates/map.md)): `repark-common`, `repark-core`, `repark-iceberg`,
 `repark-functions`, `repark-spark`, `repark-sql`, `repark-ta`, `repark-ml`, `repark-python`. The
 Python tree ships `python/repark` (the PySpark facade wheel) and `python/repark-parity` (the
-differential harness); a wheel is buildable but not yet tagged.
+differential harness). The published wheel is in [Release state](#release-state) above.
 
 **Acceptance:** the v2 test census is byte-flat against the port-source pin baseline
 `fc3f48102`, exit 0 on all four cohorts — classic `142/345`, expand `44/171`, expand2 `87/167`,
@@ -172,8 +172,8 @@ history-rewrite; provenance and the options weighed:
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
   merged as [#207](https://github.com/TRO-Wolf/repark/pull/207)**; **PYC-3
   merged as [#208](https://github.com/TRO-Wolf/repark/pull/208)**; **PYC-4
-  merged as [#209](https://github.com/TRO-Wolf/repark/pull/209)**; **PYC-5** is
-  this change — close). Four Python rules the owner stated, now written into the contract:
+  merged as [#209](https://github.com/TRO-Wolf/repark/pull/209)**; **PYC-5
+  merged as [#211](https://github.com/TRO-Wolf/repark/pull/211)** / `b966c9b`). Four Python rules the owner stated, now written into the contract:
   types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
   defined inside another function; functions named as verb phrases for the work they do. The rules
   themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
@@ -225,13 +225,15 @@ history-rewrite; provenance and the options weighed:
     `dataclass` containers → `BaseModel`; accepted-input set pinned; pydantic
     becomes a wheel hard dep), PYC-4 (merged as [#209](https://github.com/TRO-Wolf/repark/pull/209):
     the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores),
-    and PYC-5 (this change: close — hook off pre-commit, unearned facade ANN201
-    dropped, dual-wire dataclass row stays the sanctioned leftover).
+    and PYC-5 (merged as [#211](https://github.com/TRO-Wolf/repark/pull/211): close —
+    hook off pre-commit, unearned facade ANN201 dropped, dual-wire dataclass row
+    stays the sanctioned leftover). PYC-6 is the remaining decision (docstring
+    presence; owner ruling).
   - **Rationale and the arming method are a portable skill**,
     [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
     arming a convention against a codebase that already violates it.
-  - **The risk this unit carries is that it is a pure refactor of working code.** The facade
+  - **The risk this campaign carries is that it is a pure refactor of working code.** The facade
     suite at arming was 3,639 passing tests, none of them about where a `def` sits; PYC-1
     and PYC-2 add layout pins for that, PYC-3 pins the accepted-input set of the two
     shipped containers, PYC-4 pins EXCEPTIONS identity plus the CensusRow type check
