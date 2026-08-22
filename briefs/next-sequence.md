@@ -25,19 +25,20 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-1** | conventions | — | M |
-| 2 | **PYC-2** | conventions | PYC-1 | S |
-| 3 | **PYC-3** | conventions | — | S |
-| 4 | **PYC-4** | conventions | — | M |
-| 5 | **PYC-5** | conventions | PYC-1..4 | S |
+| 1 | **PYC-2** | conventions | — | S |
+| 2 | **PYC-3** | conventions | — | S |
+| 3 | **PYC-4** | conventions | — | M |
+| 4 | **PYC-5** | conventions | PYC-2..4 | S |
+| 5 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
-**PYC-1 is in flight** on `feat/pyc-1-dataframe-nested-defs`: the two DataFrame modules
-(the 35 nested defs the gate counted at arming, plus `_emit_side` under `try:` which
-that walker missed).
+**PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
+rolling rule): 35 nested defs lifted across the two DataFrame modules plus `_emit_side`, the two
+EXCEPTIONS rows deleted. Remaining debt after it: **31 nested defs across 19 rows, 23 dataclass
+rows** (measured 2026-08-22, `make check-python-conventions` green). PYC-2 is unblocked.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -76,20 +77,6 @@ clothes and belongs in its own commit with its own justification.
 - **`dataclass` → `BaseModel` adds validation that was not running.** It can reject input the old
   container silently accepted. That is usually the bug being found rather than introduced, but it
   is a behaviour change and it goes in the commit message.
-
-### PYC-1 — the two DataFrame modules (35 of the 66 nested defs)
-
-`spark/dataframe/core.py` (23) and `spark/dataframe/plan_collapse.py` (12).
-
-- `core.py` is pandas/Arrow UDF execution: per-invocation closures over the user's UDF object, its
-  slot bindings and the batch iterator. The fix is an explicit context object passed to
-  module-level helpers, not a mechanical lift — several of these read three or four parent locals.
-- `plan_collapse.py` splits cleanly in two: the `show`/`explain` formatters (`hline`, `row_line`,
-  `fmt_row`, `is_numeric_cell`) close over computed column widths and lift by taking the width as
-  an argument; the SQL token rewriters close over the join side map and need a context argument.
-- **Start with the formatters.** They are the lowest-risk half of the lowest-risk file and they
-  establish the lift pattern the rest of the unit reuses.
-- Ratchet both ceilings down in the same commit; do not delete the rows until the count is zero.
 
 ### PYC-2 — the remaining shipped nested defs (14 across 10 files)
 
@@ -143,6 +130,44 @@ counts re-measured rather than left at the seed numbers.
 **Also re-measure the hook cost.** The guard was 0.94 s at arming, against a stated sub-second
 budget. If PYC leaves it above that, the honest outcome is dropping it from pre-commit and leaving
 it dual-wired in `make ci` + CI, not quietly keeping a hook that everyone starts skipping.
+
+### PYC-6 (decision) — arm a docstring-presence subset, and the declined armings
+
+**Measured 2026-08-22** with the pinned Ruff (`uvx ruff@0.15.22`), check-only, recorded here per
+the arming method in [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md)
+"Arming a rule" — a rule measured and declined is written down so nobody re-litigates it from a
+fresh `--select` run. The armed baseline config is **clean: 0 findings** repo-wide.
+
+**Proposed to arm (owner decision required): the docstring *presence* rules only.** Full `D`
+costs 803 findings (556 facade / 234 parity / 13 scripts). The split matters:
+
+- Presence rules — `D103` undocumented function (163), `D105` magic method (57), `D102` public
+  method (27), `D107` `__init__` (17), `D101` class (2) — ≈266 findings, and they enforce the
+  conventions' "every function has a docstring" rule mechanically.
+- Style rules — `D401` imperative mood (193), `D202`/`D205`/`D413` blank-line shape (289),
+  the rest — are churn on a facade whose docstrings deliberately mirror upstream PySpark's own
+  text. **Declined.**
+
+If armed: seeded ratchet table (measure first, per-file rows with reasons, ceilings down only),
+per-file ignore for tests kept.
+
+**Measured and declined, with the reasons:**
+
+- **`PL` (1068: 738 facade / 326 parity / 4 scripts).** `PLC0415` import-outside-top-level (416
+  facade) is the sanctioned lazy-import pattern — heavy imports moved into functions to keep
+  parse/startup fast. `PLR0124` self-comparison (26) is the `value != value` NaN check (verified:
+  `spark/_csv_smart.py:268`, `spark/dataframe/core.py:5157` and siblings) — flagging it would flag
+  correct code. The `PLR09xx` complexity counters are refactor *indicators*, not gates.
+- **`A` builtin shadowing (75, all facade).** The facade faithfully mirrors PySpark's API, which
+  shadows `filter`/`type`/`id`/`format` by upstream design; renaming breaks the drop-in contract.
+- **`print()` ban.** The four `dataframe/core.py` sites implement `df.show()`'s stdout contract
+  (Spark itself prints there); the parity CLIs (`compat/redact.py`, `compat/runner.py`,
+  `compat/compare_reports.py`) own their stdout as their interface.
+
+**Standing constraint for every PYC unit:** `dataframe/core.py` sits ~14 lines under its 6880
+`check_lib_py` ceiling and `ml/feature/_transformers.py` ~67 under 2800 (per the EXCEPTIONS
+comments — re-measure before relying on either number). A unit that adds lines there budgets the
+next split or the ratchet-raise reason first; it does not discover the ceiling at commit time.
 
 ---
 

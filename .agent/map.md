@@ -16,10 +16,10 @@ knowledge. The authority move that makes this possible is recorded in
   [../docs/skills/](../docs/skills/).
 - `codex.md`, `cursor.md` — one-line stubs pointing inward; no tool mechanics recorded yet.
 - `skills/` — agent-facing runbook skills (release-to-PyPI, context-doc truth-up, disk
-  headroom) plus the portable code-quality convention reasoning: proven sequences / reasoning,
-  pointer-thin, zero authoritative facts. Each is a directory with a frontmatter-carrying
-  `SKILL.md`, so it is discoverable rather than merely present. See
-  [skills/map.md](skills/map.md).
+  headroom, the parity audit) plus the code-quality convention reasoning for Python and the
+  Rust review procedure: proven sequences / reasoning, pointer-thin, zero authoritative facts.
+  Each is a directory with a frontmatter-carrying `SKILL.md`, so it is discoverable rather than
+  merely present. See [skills/map.md](skills/map.md).
 
 ## I want to...
 
@@ -29,6 +29,8 @@ knowledge. The authority move that makes this possible is recorded in
 | Onboard a Claude session | `claude.md` → [../CLAUDE.md](../CLAUDE.md) |
 | Run a recurring operation (release, doc truth-up, disk check) | [skills/map.md](skills/map.md) |
 | Write or review Python under the conventions | [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md) |
+| Review a Rust PR or commit | [skills/rust-code-quality/SKILL.md](skills/rust-code-quality/SKILL.md) |
+| Audit parity or triage a parity-live red | [skills/audit-repark-parity/SKILL.md](skills/audit-repark-parity/SKILL.md) |
 | Add mechanics for a new tool | add `.agent/<tool>.md` (pointer + tool mechanics only) + a Contents row here |
 | Read the authoritative contract | [../AGENTS.md](../AGENTS.md) |
 
