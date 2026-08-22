@@ -7,6 +7,17 @@ from typing import Any
 from repark.errors import PySparkAttributeError, PySparkValueError
 
 
+def _convert_nested_row_value(obj: Any) -> Any:
+    """Turn nested ``Row`` values (and Rows inside lists/dicts) into dicts."""
+    if isinstance(obj, Row):
+        return obj.asDict(recursive=True)
+    if isinstance(obj, list):
+        return [_convert_nested_row_value(item) for item in obj]
+    if isinstance(obj, dict):
+        return {key: _convert_nested_row_value(value) for key, value in obj.items()}
+    return obj
+
+
 class Row:
     """A single collected row (near-drop-in for ``pyspark.sql.Row``).
 
@@ -159,20 +170,10 @@ class Row:
         if not recursive:
             return dict(zip(self.__field_names, self.__field_values, strict=True))
 
-        def convert(obj: Any) -> Any:
-            """Recursively turn nested Rows (and Rows inside lists/dicts) into dicts."""
-            if isinstance(obj, Row):
-                return obj.asDict(recursive=True)
-            if isinstance(obj, list):
-                return [convert(item) for item in obj]
-            if isinstance(obj, dict):
-                return {key: convert(value) for key, value in obj.items()}
-            return obj
-
         return dict(
             zip(
                 self.__field_names,
-                (convert(value) for value in self.__field_values),
+                (_convert_nested_row_value(value) for value in self.__field_values),
                 strict=True,
             )
         )

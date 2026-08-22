@@ -136,6 +136,26 @@ def lit(value: Any) -> Column:
     )
 
 
+def _lit_list_item_kind(item: Any) -> str | None:
+    """Coercion bucket for one ``lit([...])`` leaf — ``None`` for null."""
+    import numbers
+
+    if item is None:
+        return None
+    if isinstance(item, bool):
+        return "bool"
+    # numbers.Integral covers int + numpy integer scalars (not bool — checked above).
+    if isinstance(item, numbers.Integral):
+        return "int"
+    if isinstance(item, numbers.Real):
+        return "float"
+    if isinstance(item, str):
+        return "str"
+    if isinstance(item, (list, tuple)):
+        return "list"
+    return type(item).__name__
+
+
 def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
     """Coerce mixed-type ``lit([...])`` elements (Spark non-ANSI + numeric promotion).
 
@@ -147,26 +167,7 @@ def _coerce_lit_list_mixed_to_string(values: list[Any]) -> list[Any]:
     leaf becomes ``str(...)`` matching live Spark 4.1.2. Nested lists are walked the same way
     (Apache ``test_lit_list`` jagged mixed arrays — F2).
     """
-    import numbers
-
-    def kind(item: Any) -> str | None:
-        """Coercion bucket for one leaf — ``None`` for null, else bool/int/float/str/list."""
-        if item is None:
-            return None
-        if isinstance(item, bool):
-            return "bool"
-        # numbers.Integral covers int + numpy integer scalars (not bool — checked above).
-        if isinstance(item, numbers.Integral):
-            return "int"
-        if isinstance(item, numbers.Real):
-            return "float"
-        if isinstance(item, str):
-            return "str"
-        if isinstance(item, (list, tuple)):
-            return "list"
-        return type(item).__name__
-
-    kinds = {kind(item) for item in values if item is not None}
+    kinds = {_lit_list_item_kind(item) for item in values if item is not None}
     if "list" in kinds:
         # Nested arrays: coerce each sublist independently (may mix at this level too).
         if kinds == {"list"} or kinds <= {"list"}:

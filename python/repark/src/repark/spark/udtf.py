@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import functools
 import inspect
 import re
 from collections.abc import Callable, Iterator
@@ -221,6 +222,72 @@ def _build_output_batch(
     return pa.record_batch(columns, schema=arrow_schema)
 
 
+def _map_udtf_batches(
+    batches: Iterator[Any],
+    *,
+    handler_cls: type[Any],
+    arg_count: int,
+    field_names: list[str],
+    arrow_schema: Any,
+    surface: str,
+) -> Iterator[Any]:
+    """Expand one UDTF handler across streamed argument batches (mapInArrow body)."""
+    import traceback
+
+    handler = handler_cls()
+    out_rows: list[tuple[Any, ...]] = []
+    # start + eval share the same finally so terminate always runs after
+    # construction (octo C2-Q-001) — including when start() raises.
+    try:
+        start = getattr(handler, "start", None)
+        if callable(start):
+            try:
+                start()
+            except Exception as error:
+                detail = traceback.format_exc()
+                raise PySparkException(
+                    f"UDTF {surface} start() raised {type(error).__name__}: {error}\n{detail}"
+                ) from error
+
+        for batch in batches:
+            for row_index in range(batch.num_rows):
+                if arg_count == 0:
+                    python_args: tuple[Any, ...] = ()
+                else:
+                    python_args = tuple(
+                        batch.column(column_index)[row_index].as_py()
+                        for column_index in range(arg_count)
+                    )
+                try:
+                    result = handler.eval(*python_args)
+                except PySparkException:
+                    raise
+                except Exception as error:
+                    detail = traceback.format_exc()
+                    raise PySparkException(
+                        f"UDTF {surface} eval() raised {type(error).__name__}: {error}\n{detail}"
+                    ) from error
+                out_rows.extend(
+                    _normalize_eval_rows(
+                        result,
+                        expected_width=len(field_names),
+                        surface=surface,
+                    )
+                )
+    finally:
+        terminate = getattr(handler, "terminate", None)
+        if callable(terminate):
+            try:
+                terminate()
+            except Exception as error:
+                detail = traceback.format_exc()
+                raise PySparkException(
+                    f"UDTF {surface} terminate() raised {type(error).__name__}: {error}\n{detail}"
+                ) from error
+
+    yield _build_output_batch(out_rows, field_names, arrow_schema)
+
+
 def _execute_scalar_udtf(
     *,
     session: Any,
@@ -250,66 +317,17 @@ def _execute_scalar_udtf(
 
     _declared, arrow_schema = _coerce_map_in_arrow_schema(schema_ddl)
     field_names = [field.name for field in return_struct.fields]
-
-    def _map_batches(batches: Iterator[Any]) -> Iterator[Any]:
-        import traceback
-
-        handler = handler_cls()
-        out_rows: list[tuple[Any, ...]] = []
-        # start + eval share the same finally so terminate always runs after
-        # construction (octo C2-Q-001) — including when start() raises.
-        try:
-            start = getattr(handler, "start", None)
-            if callable(start):
-                try:
-                    start()
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        f"UDTF {surface} start() raised {type(error).__name__}: {error}\n{detail}"
-                    ) from error
-
-            for batch in batches:
-                for row_index in range(batch.num_rows):
-                    if arg_count == 0:
-                        python_args: tuple[Any, ...] = ()
-                    else:
-                        python_args = tuple(
-                            batch.column(column_index)[row_index].as_py()
-                            for column_index in range(arg_count)
-                        )
-                    try:
-                        result = handler.eval(*python_args)
-                    except PySparkException:
-                        raise
-                    except Exception as error:
-                        detail = traceback.format_exc()
-                        raise PySparkException(
-                            f"UDTF {surface} eval() raised {type(error).__name__}: "
-                            f"{error}\n{detail}"
-                        ) from error
-                    out_rows.extend(
-                        _normalize_eval_rows(
-                            result,
-                            expected_width=len(field_names),
-                            surface=surface,
-                        )
-                    )
-        finally:
-            terminate = getattr(handler, "terminate", None)
-            if callable(terminate):
-                try:
-                    terminate()
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        f"UDTF {surface} terminate() raised {type(error).__name__}: "
-                        f"{error}\n{detail}"
-                    ) from error
-
-        yield _build_output_batch(out_rows, field_names, arrow_schema)
-
-    return arg_frame.mapInArrow(_map_batches, schema_ddl)
+    return arg_frame.mapInArrow(
+        functools.partial(
+            _map_udtf_batches,
+            handler_cls=handler_cls,
+            arg_count=arg_count,
+            field_names=field_names,
+            arrow_schema=arrow_schema,
+            surface=surface,
+        ),
+        schema_ddl,
+    )
 
 
 class UserDefinedTableFunction:
@@ -458,16 +476,14 @@ def udtf(
     """
     _ = useArrow
 
-    def _build(handler: type[Any]) -> UserDefinedTableFunction:
+    def _build(  # nested-def: decorator factory closes over returnType
+        handler: type[Any],
+    ) -> UserDefinedTableFunction:
         return UserDefinedTableFunction(handler, returnType=returnType)
 
     # @udtf / @udtf(returnType=...) — decorator form (no positional handler yet).
     if cls is None:
-
-        def _decorator(handler: type[Any]) -> UserDefinedTableFunction:
-            return _build(handler)
-
-        return _decorator
+        return _build
 
     # Direct: udtf(Handler, returnType=...) — non-class raises INVALID_UDTF_HANDLER_TYPE
     # inside UserDefinedTableFunction (Spark errorClass parity).

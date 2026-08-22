@@ -28,7 +28,7 @@ never training rows.
 | `__init__.py` | Lazy `__getattr__` exports; bare import OK; `PICKLE_FORBIDDEN_REASON` / `SKLEARN_SAVE_UNSUPPORTED` / `EXT_SAVE_UNSUPPORTED` |
 | `_deps.py` | `require_xgboost` / `require_lightgbm` / `require_sklearn` / numpy / pandas |
 | `_persist.py` | **M8** shared envelope helpers: atomic `write_ext_model_tree`, `load_ext_model_envelope`, blob path confinement, library-major version guard, pickle-forbid constants |
-| `_arrow_util.py` | Dense feature matrix from Arrow (`MAX_EXT_FEATURES=4096` densify cap on **sparse size/width and nnz** + dense width); null/`len` probes **before** `as_py()` (octo C4-SAF-001); predict re-entry via Arrow MemTable with GC-owned `__repark_ml_ext_*` views |
+| `_arrow_util.py` | Dense feature matrix from Arrow (`MAX_EXT_FEATURES=4096` densify cap on **sparse size/width and nnz** + dense width); null/`len` probes **before** `as_py()` (octo C4-SAF-001); predict re-entry via Arrow MemTable with GC-owned `__repark_ml_ext_*` views. **PYC-2:** `_drop_ext_temp_view` + `weakref.finalize(frame, func, session, name)` extra-args |
 | `_xgboost.py` | `XGBoostRegressor` / `XGBoostClassifier` + models; **M8** both models booster-bytes save/load (`save_raw` ubj + M1 envelope + atomic + version guard) |
 | `_lightgbm.py` | LightGBM twins; **M8** both models `model_to_string` text blob save/load + `_LgbmPredictShell` post-load predict |
 | `_sklearn.py` | sklearn `RandomForest*`; **M8** pin-refuse save/write with `PICKLE_FORBIDDEN_REASON` |

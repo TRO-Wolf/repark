@@ -12,6 +12,13 @@ not this directory.
 
 ## Contents
 
+- [pyc-2-shipped-nested-defs-ledger.md](pyc-2-shipped-nested-defs-ledger.md) —
+  **PYC-2 (2026-08-22):** remaining shipped nested `def`s (14 gate-counted across
+  10 files, plus `session_core.probe` under `if`). 12 lifts + 2 pragmas
+  (`types.py` verifier, `udtf._build`); temp-view cleanups use finalize extra-args.
+  Ten EXCEPTIONS rows deleted. Remaining nested-def debt is the parity harness
+  and `scripts/` (PYC-4).
+
 - [pyc-1-dataframe-nested-defs-ledger.md](pyc-1-dataframe-nested-defs-ledger.md) —
   **PYC-1 (2026-08-22):** lift every nested `def` in `spark/dataframe/core.py` (23)
   and `plan_collapse.py` (12). UDF action callbacks move to `udf_bridge.py` so

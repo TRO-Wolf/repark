@@ -1499,10 +1499,6 @@ def _supported_array_typecodes() -> frozenset[str]:
 
     import sys
 
-    def int_size_to_ok(bit_width: int) -> bool:
-        """True when ``bit_width`` still fits a signed JVM integral type."""
-        return bit_width <= 64
-
     supported: set[str] = {"f", "d"}
 
     for typecode, ctype in (
@@ -1511,7 +1507,7 @@ def _supported_array_typecodes() -> frozenset[str]:
         ("i", ctypes.c_int),
         ("l", ctypes.c_long),
     ):
-        if int_size_to_ok(ctypes.sizeof(ctype) * 8):
+        if ctypes.sizeof(ctype) * 8 <= 64:
             supported.add(typecode)
 
     for typecode, ctype in (
@@ -1522,7 +1518,7 @@ def _supported_array_typecodes() -> frozenset[str]:
     ):
         # JVM has no unsigned — need signed slot at least 1 bit larger.
 
-        if int_size_to_ok(ctypes.sizeof(ctype) * 8 + 1):
+        if ctypes.sizeof(ctype) * 8 + 1 <= 64:
             supported.add(typecode)
 
     if sys.version_info[0] < 4:
@@ -3345,6 +3341,13 @@ def _create_dataframe_from_rows_inner(
     return _materialize_arrow_as_memtable_frame(session, arrow_table)
 
 
+def _drop_cdf_temp_view(session_ref: ReparkSession, name: str) -> None:
+    """Best-effort drop of a createDataFrame scratch view on DataFrame GC."""
+    with contextlib.suppress(Exception):
+        # Session may already be stopped; best-effort cleanup only.
+        session_ref._ensure_alive().drop_temp_view(name)
+
+
 def _register_cdf_view_cleanup(session: ReparkSession, frame: DataFrame, view_name: str) -> None:
     """Drop ``__repark_cdf_*`` when the owning DataFrame is GC'd (R-FACADE-HYGIENE W7).
 
@@ -3358,16 +3361,7 @@ def _register_cdf_view_cleanup(session: ReparkSession, frame: DataFrame, view_na
 
     import weakref
 
-    def _drop_view(
-        session_ref: ReparkSession = session,
-        name: str = view_name,
-    ) -> None:
-        with contextlib.suppress(Exception):
-            # Session may already be stopped; best-effort cleanup only.
-
-            session_ref._ensure_alive().drop_temp_view(name)
-
-    weakref.finalize(frame, _drop_view)
+    weakref.finalize(frame, _drop_cdf_temp_view, session, view_name)
 
 
 def _materialize_values_as_memtable_frame(session: ReparkSession, values_sql: str) -> DataFrame:

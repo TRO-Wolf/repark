@@ -1952,6 +1952,38 @@ class SQLTransformer(Transformer):
         return cls(statement=params.get("statement"))
 
 
+def _polynomial_expansion_monomials(
+    *,
+    start: int,
+    remaining: int,
+    factors: list[str],
+    width: int,
+    quoted_input: str,
+) -> list[str]:
+    """Every monomial of ``remaining`` degree, drawing factors from ``start`` onward.
+
+    Recursion is the combinatorial tree (width * remaining). The caller caps
+    ``degree`` at 3 and ``width`` at 8, so stack depth cannot exceed 3.
+    """
+    if remaining == 0:
+        if factors:
+            return ["*".join(factors)]
+        return []
+    terms: list[str] = []
+    for index in range(start, width):
+        element = f"array_element({quoted_input}, {index})"
+        terms.extend(
+            _polynomial_expansion_monomials(
+                start=index,
+                remaining=remaining - 1,
+                factors=[*factors, element],
+                width=width,
+                quoted_input=quoted_input,
+            )
+        )
+    return terms
+
+
 class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
     """Polynomial expansion of a dense vector (degree >= 2)."""
 
@@ -1998,20 +2030,17 @@ class PolynomialExpansion(HasInputCol, HasOutputCol, Transformer):
             )
         # Generate monomials in Spark's poly expand order via nested loops.
         terms: list[str] = []
-
-        def rec(start: int, remaining: int, factors: list[str]) -> None:
-            """Emit every monomial of the remaining degree, drawing factors from ``start`` on."""
-            if remaining == 0:
-                if factors:
-                    terms.append("*".join(factors))
-                return
-            for index in range(start, width):
-                elem = f"array_element({quoted}, {index})"
-                rec(index, remaining - 1, [*factors, elem])
-
         # Spark includes degree 1..degree interactions (not degree 0).
         for deg in range(1, degree + 1):
-            rec(0, deg, [])
+            terms.extend(
+                _polynomial_expansion_monomials(
+                    start=0,
+                    remaining=deg,
+                    factors=[],
+                    width=width,
+                    quoted_input=quoted,
+                )
+            )
         # Spark order is more subtle; for degree=2 width=2: x, x^2, y, x*y, y^2
         # Rebuild explicitly for small cases to match Spark better.
         if degree == 2:

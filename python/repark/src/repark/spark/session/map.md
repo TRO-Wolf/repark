@@ -7,6 +7,9 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 
 ## Contents
 
+- `_coerce.py` — **PYC-2:** `range_bound_as_int` and `sql_clause_end_after`, lifted
+  out of nested defs in `session_core.py` so that file stays under the default
+  2500-line `check_lib_py` ceiling.
 - `_funcs.py` — free functions (shared name binding for class modules); includes
   `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
   widths refuse loud — layout home `repark.ml.linalg`).
@@ -25,6 +28,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   (already applied at Rust `build()`; a runtime SET of it refuses and names `TMPDIR`).
   **F-3 (2026-08-17):** the last undocumented public name here, `int_size_to_ok` inside
   `_supported_array_typecodes`, gained a docstring; docstring-only, ceiling unmoved.
+  **PYC-2 (2026-08-22):** that helper is inlined (`bit_width <= 64`); the CDF
+  temp-view cleanup is `weakref.finalize(frame, _drop_cdf_temp_view, session, name)`.
   **SE-1 PR-B (2026-08-17):** both `__repark_cdf_*` materializers
   (`_materialize_values_as_memtable_frame`, `_materialize_arrow_as_memtable_frame`) stamp
   `frame._source_view_name = view_name` on the frame they hand back. That tag is the only
@@ -46,6 +51,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   `_config` key cannot silently store (SEC-003).
   **F-3 (2026-08-17):** `probe`, the temp-view existence closure inside `resolve_table_name`,
   gained a docstring; docstring-only, and the file stays under its 2500-line ceiling.
+  **PYC-2 (2026-08-22):** `range` / SQL-clause helpers move to `_coerce.py`; `probe`
+  lifts to `_temp_view_home_ref` (it sat under `if`, so the gate never counted it).
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination).
   **B4 (round 4 salvage):** `sep` / `delimiter` resolved with the `is not None`
   idiom (empty does not fall through); refuse empty / multi-char / newline / CR /
@@ -107,7 +114,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 | `conf.get` returns a trimmed zone though the builder value was padded | Intended: `normalize_session_time_zone_config` strips the value exactly as the engine does before parsing, so facade and engine report the same zone. Whitespace only — validity is still decided in the engine. |
 | The zone is set but timestamp extraction did not move | Expected in this unit — the conf surface landed without the extraction fix; the recorded rows in `python/repark/tests/test_session_timezone_parity.py` pin the current divergence honestly. |
 **SQM round 7 (R7-1):** `resolve_table_name`'s temp-view arm no longer returns the BARE name. The
-`probe` closure in `session_core.py` now calls native `resolve_temp_view_home_ref` and returns the
+temp-view home probe in `session_core.py` (`_temp_view_home_ref`, PYC-2) calls native
+`resolve_temp_view_home_ref` and returns the
 view's HOME segments (`_funcs.py` parameter renamed `temp_view_exists` → `temp_view_home_ref`), so
 `spark.table`, the free-SQL bare-name expander and every writer/reader path emit
 `"datafusion"."public"."v"` for a session-local view instead of a bare reference the engine would

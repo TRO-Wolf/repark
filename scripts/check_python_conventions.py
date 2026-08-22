@@ -56,9 +56,10 @@ NESTED_DEF_PRAGMA = "# nested-def:"
 # repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically.
 # Seeded from the measured tree at the commit that armed this guard (2026-08-21):
 # 66 nested defs across 21 files. PYC-1 deleted the core.py (23) and
-# plan_collapse.py (12) rows. Every remaining row is debt, not a sanction — the
-# ceiling is the count on that day, it goes DOWN as PYC lands, and a row whose
-# file drops to zero is deleted rather than kept at 0.
+# plan_collapse.py (12) rows. PYC-2 deleted the remaining 10 shipped-package
+# rows (12 lifts + 2 pragmas). Every remaining row is debt, not a sanction —
+# the ceiling is the count on that day, it goes DOWN as PYC lands, and a row
+# whose file drops to zero is deleted rather than kept at 0.
 NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark-parity/bench/fuzz/bank.py": (
         1,
@@ -96,48 +97,6 @@ NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
     "python/repark-parity/tests/test_compat_harness.py": (
         2,
         "a spy and a suite walker local to two tests; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/dataframe/joins_columns.py": (
-        2,
-        "grouped-map Arrow/pandas UDF wrappers closing over the user function; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/functions.py": (
-        1,
-        "literal-list kind probe local to the mixed-type coercion; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/ml/ext/_arrow_util.py": (
-        1,
-        "temp-view drop callback registered for cleanup; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/ml/feature/_transformers.py": (
-        1,
-        "recursive record walker local to _transform; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/polars.py": (
-        1,
-        "identifier quoter local to join(); RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/row.py": (
-        1,
-        "recursive asDict converter; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/session/_funcs.py": (
-        2,
-        "temp-view cleanup callback and an array-typecode size probe; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/session/session_core.py": (
-        2,
-        "SQL clause-end scanner and the range() argument coercer; RATCHET: PYC",
-    ),
-    "python/repark/src/repark/spark/types.py": (
-        1,
-        "the per-type verifier, built and returned by _make_type_verifier; "
-        "RATCHET: PYC (the closure IS the return value — likely a pragma)",
-    ),
-    "python/repark/src/repark/spark/udtf.py": (
-        2,
-        "UDTF batch mapper and the udtf decorator's builder; RATCHET: PYC "
-        "(the builder is the decorator-factory case — may end as a pragma)",
     ),
     "scripts/check_parity_live_dual_wire.py": (
         1,

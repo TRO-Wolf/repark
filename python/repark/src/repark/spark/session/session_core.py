@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import functools
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-
 from typing import Any
 
 import repark.spark.session._funcs as _sf
+from repark.spark.session._coerce import range_bound_as_int as _range_bound_as_int
+from repark.spark.session._coerce import sql_clause_end_after as _sql_clause_end_after
 from repark.spark.session.builder_conf import RuntimeConfig, SparkContext
 from repark.spark.session.session_time_zone import (
     SESSION_TIME_ZONE_KEYS,
@@ -23,6 +25,14 @@ for _name in dir(_sf):
     globals()[_name] = getattr(_sf, _name)
 # keep module ref for active-session mutations (do not del _sf)
 del _name
+
+
+def _temp_view_home_ref(inner: Any, name: str) -> list[str] | None:
+    """The temp view's home segments, or ``None`` when it is not a temp view."""
+    try:
+        return inner.resolve_temp_view_home_ref(name)
+    except Exception:
+        return None
 
 
 class ReparkSession:
@@ -210,14 +220,7 @@ class ReparkSession:
         known: set[str] = state.get("known_catalogs") or set()
         probe = None
         if prefer_temp_view:
-            inner = self._ensure_alive()
-
-            def probe(name: str) -> list[str] | None:
-                """The temp view's home segments, or ``None`` when it is not a temp view."""
-                try:
-                    return inner.resolve_temp_view_home_ref(name)
-                except Exception:
-                    return None
+            probe = functools.partial(_temp_view_home_ref, self._ensure_alive())
 
         return resolve_table_name(
             table_name,
@@ -1074,29 +1077,20 @@ class ReparkSession:
         (no Spark Range stats shortcut on the single-node backend).
         """
         self._ensure_alive()
-        from repark.errors import IllegalArgumentException, PySparkTypeError
-
-        def _as_int(name: str, value: int | float | None) -> int:
-            if value is None:
-                raise PySparkTypeError(f"range {name} must not be None")
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
-                raise PySparkTypeError(
-                    f"range {name} must be int or float, got {type(value).__name__}"
-                )
-            return int(value)
+        from repark.errors import IllegalArgumentException
 
         if end is None:
             range_start = 0
-            range_end = _as_int("end", start)
+            range_end = _range_bound_as_int("end", start)
         else:
-            range_start = _as_int("start", start)
-            range_end = _as_int("end", end)
-        range_step = _as_int("step", step)
+            range_start = _range_bound_as_int("start", start)
+            range_end = _range_bound_as_int("end", end)
+        range_step = _range_bound_as_int("step", step)
         if range_step == 0:
             raise IllegalArgumentException("range step must not be zero")
         # Accepted for Spark API parity; single-node backend has no partition fan-out.
         if numPartitions is not None:
-            _ = _as_int("numPartitions", numPartitions)
+            _ = _range_bound_as_int("numPartitions", numPartitions)
             if int(numPartitions) < 1:
                 raise IllegalArgumentException("numPartitions must be >= 1 when set")
 
@@ -1794,23 +1788,11 @@ class ReparkSession:
         having_index = _sql_top_level_keyword_index(body_for_scan, "HAVING")
         order_index = _sql_top_level_keyword_index(body_for_scan, "ORDER BY")
         limit_index = _sql_top_level_keyword_index(body_for_scan, "LIMIT")
-
-        def _clause_end_after(start: int | None) -> int:
-            if start is None:
-                return len(body_for_scan)
-            ends = [
-                index
-                for index in (
-                    where_index,
-                    group_index,
-                    having_index,
-                    order_index,
-                    limit_index,
-                    len(body_for_scan),
-                )
-                if index is not None and index > start
-            ]
-            return min(ends) if ends else len(body_for_scan)
+        clause_end = functools.partial(
+            _sql_clause_end_after,
+            later=(where_index, group_index, having_index, order_index, limit_index),
+            body_length=len(body_for_scan),
+        )
 
         # Set operations cannot be rewritten as a single SELECT-list materialization
         # (U9-C2-002 — refuse with an accurate shape message, not "outside SELECT list").
@@ -1847,13 +1829,13 @@ class ReparkSession:
             if index < select_end:
                 continue  # SELECT-list — U9
             # U10: WHERE / GROUP BY / HAVING spans (top-level keywords only).
-            if where_index is not None and where_index <= index < _clause_end_after(where_index):
+            if where_index is not None and where_index <= index < clause_end(where_index):
                 continue
-            if group_index is not None and group_index <= index < _clause_end_after(group_index):
+            if group_index is not None and group_index <= index < clause_end(group_index):
                 continue
-            if having_index is not None and having_index <= index < _clause_end_after(having_index):
+            if having_index is not None and having_index <= index < clause_end(having_index):
                 continue
-            if order_index is not None and order_index <= index < _clause_end_after(order_index):
+            if order_index is not None and order_index <= index < clause_end(order_index):
                 raise UnsupportedOperationException(
                     f"registered Python UDF {registered_name!r} in ORDER BY expressions "
                     "is not supported in repark v1 (order by the SELECT-list UDF output "
