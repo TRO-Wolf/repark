@@ -12,6 +12,11 @@ not this directory.
 
 ## Contents
 
+- [pyc-5-close-ledger.md](pyc-5-close-ledger.md) —
+  **PYC-5 (2026-08-22):** campaign close. Hook re-measured n=5 median 0.996 s
+  (max 1.011 s) over 164 files and dropped from pre-commit; facade ANN201
+  dropped; dual-wire dataclass row stays.
+
 - [pyc-4-parity-harness-ledger.md](pyc-4-parity-harness-ledger.md) —
   **PYC-4 (2026-08-22):** convert the 20 `python/repark-parity` dataclass files to
   Pydantic v2 `BaseModel`; lift or pragma the remaining nested defs; dual-wire

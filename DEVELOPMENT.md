@@ -41,8 +41,8 @@ The Spark door parses floating-point SQL literals (e.g. `1.5`) as DECIMAL, match
 | `make lint` | Clippy `-D warnings` + ruff (autofix Python). |
 | `make develop` | Build + install the native module editable into the root `.venv` (`maturin develop`), for exercising the Python facade against real compiled code. |
 | `make build-wheel` | Build the release wheel with maturin. |
-| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + rust file-size + Python conventions + structural manifest + fmt/taplo/typos). Do this once per clone. |
-| `make check-python-conventions` | The Python conventions guard on its own: no `def` nested inside a `def`, no `dataclasses`/`attrs` import. Measured at **0.94 s** on the tree at arming, which makes it the slowest hook-eligible guard; if it outgrows the hook budget it is dropped from pre-commit and stays dual-wired in `make ci` + CI. |
+| `make install-hooks` | Wire the pre-commit hook (map.md lockstep + crate dependency policy + thinness guards + rust file-size + structural manifest + fmt/taplo/typos). Do this once per clone. |
+| `make check-python-conventions` | The Python conventions guard on its own: no `def` nested inside a `def`, no `dataclasses`/`attrs` import. Re-measured at PYC-5: n=5 median **0.996 s** (max 1.011 s) over 164 files — at the sub-second hook budget line, with the max already over it, so it is **not** on pre-commit; dual-wired `make ci` + CI. |
 
 ### Test-command discipline (hard)
 

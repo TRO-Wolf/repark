@@ -37,8 +37,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   per-file-ignore blocks (`spark/ml/**`, `spark/session/**`, `spark/dataframe/**`) are
   **load-bearing**, not style — they are how the r26 region splits keep their pre-split
   import paths after the Q1 re-home (design §2.3 / §4 Q1). **PYC-4:** the tests glob is
-  split — `python/repark/tests/**` keeps ANN201/ANN202; `python/repark-parity/tests/**`
-  does not (the ten unannotated returns in `test_compare.py` are now visible and annotated).
+  split — `python/repark-parity/tests/**` does not inherit ANN201/ANN202 (the ten
+  unannotated returns in `test_compare.py` became visible and annotated). **PYC-5:**
+  facade tests dropped ANN201 (isolated count 0); ANN202 stays for private helpers.
   Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
   `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.

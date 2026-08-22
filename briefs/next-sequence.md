@@ -25,8 +25,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-5** | conventions | PYC-4 (this change) | S |
-| 2 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
+| 1 | **PYC-6** (decision) | conventions | PYC-5 (this change) + **owner ruling** | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -43,12 +42,16 @@ under `if`. Ten nested-def EXCEPTIONS rows deleted.
 `BaseModel`; those two DATACLASS_EXCEPTIONS rows are deleted, not zeroed;
 `pydantic>=2.10,<3` is the wheel's second hard runtime dep.
 
-**PYC-4 leaves this file with this change:** 20 parity dataclass files → `BaseModel`;
-nested-def EXCEPTIONS emptied (lifts + pragmas); dual-wire stays a dataclass because
-the gate runs as bare `python3`; the ten unannotated returns in `test_compare.py` are
-annotated and the ANN ignores are split. Remaining debt: **1 dataclass row**
-(`scripts/check_parity_live_dual_wire.py`, sanctioned) and the PYC-5 close
-(re-measure hook cost, STATUS/guard docstring counts). PYC-5 is unblocked.
+**PYC-4 merged as [#209](https://github.com/TRO-Wolf/repark/pull/209)** and left this file:
+20 parity dataclass files → `BaseModel`; nested-def EXCEPTIONS emptied (lifts +
+pragmas); dual-wire stays a dataclass because the gate runs as bare `python3`;
+the ten unannotated returns in `test_compare.py` are annotated and the ANN
+ignores are split.
+
+**PYC-5 leaves this file with this change:** hook re-measured n=5 median **0.996 s**
+(max 1.011 s) over 164 files and dropped from pre-commit (stays in `make ci` +
+CI); facade tests no longer ignore ANN201; dual-wire dataclass row stays the
+sanctioned leftover. PYC-6 is the docstring-presence decision (owner ruling).
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -88,23 +91,20 @@ clothes and belongs in its own commit with its own justification.
   container silently accepted. That is usually the bug being found rather than introduced, but it
   is a behaviour change and it goes in the commit message.
 
-### PYC-4 — done (this change)
+### PYC-4 — done (merged #209)
 
 20 `dataclass` files plus nested defs plus 10 unannotated returns under `python/repark-parity`,
 and one of each under `scripts/`. Signal handlers / shrink predicate / spy / dual-wire
 comparator ended as pragmas; bootstrap factories lifted together. Dual-wire kept as the
 one DATACLASS_EXCEPTIONS row (bare `python3`). ANN ignores split:
-`python/repark/tests/**` keeps ANN201/ANN202; `python/repark-parity/tests/**` does not.
+`python/repark/tests/**` kept ANN201/ANN202; `python/repark-parity/tests/**` does not.
 
-### PYC-5 — close
+### PYC-5 — done (this change)
 
-Tables emptied or reduced to genuinely-sanctioned rows; the `pyproject.toml` per-file `ANN` ignores
-reviewed and narrowed to what tests actually need; STATUS.md truthed up; the guard's docstring
-counts re-measured rather than left at the seed numbers.
-
-**Also re-measure the hook cost.** The guard was 0.94 s at arming, against a stated sub-second
-budget. If PYC leaves it above that, the honest outcome is dropping it from pre-commit and leaving
-it dual-wired in `make ci` + CI, not quietly keeping a hook that everyone starts skipping.
+Tables: nested-def EXCEPTIONS empty; one sanctioned DATACLASS row (dual-wire). ANN:
+facade tests dropped ANN201 (isolated count 0); two nested helpers annotated
+(ANN202; not what earned the drop). ANN202 stays. Guard: 164 files, n=5 median
+0.996 s (max 1.011 s). Hook dropped from pre-commit; dual-wired in `make ci` + CI.
 
 ### PYC-6 (decision) — arm a docstring-presence subset, and the declined armings
 
