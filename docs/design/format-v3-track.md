@@ -152,7 +152,7 @@ A12's six units still hold in outline. Three change.
 | Unit | Scope | Change from A12 |
 |---|---|---|
 | **V3-0** | This audit, and the `rewrite_data_files` row-lineage guard | New — A12 had no charter unit |
-| **V3-1** | Wire `CALL system.register_table`; land the cross-engine v3 fixture and promote `B-MOR-3` to a row | Was "read a v3 table and build the fixture, blocked on an addressing decision". The decision is made (§4) and the read half is already verified (§2), so what is left is the surface and the pins |
+| **V3-1** | Wire `CALL system.register_table`; land the cross-engine v3 fixture and promote `B-MOR-3` and `V3-ADOPT-1` to rows | Was "read a v3 table and build the fixture, blocked on an addressing decision". The decision is made (§4) and the read half is already verified (§2), so what is left is the surface and the pins |
 | **V3-2** | Create v3 tables behind an explicit opt-in | Unchanged, still wants MW closed first |
 | **V3-3** | Merge-on-read writes on v3 via the fork's `DVFileWriter` | Unchanged, still the big one |
 | **V3-4** | Row lineage as a read surface and a write obligation | Grows a read half: `_row_id` and `_last_updated_sequence_number` are not plannable columns today (`V3-ROWID-1`), where Spark serves both |
@@ -189,6 +189,7 @@ Neither blocks V3-1.
 - **V1 is unpinned and unpinnable.** The guard admits it (correctly — v1 has no row lineage), but
   no test can build a v1 fixture: the catalog creates v2 and the fork refuses a downgrade.
 - **The row-lineage guard is pinned on an upgraded table, not a Spark-written one.** The pin
-  builds v3 through the fork's own `upgrade_table_version` so it runs in CI with no oracle. The
-  Spark-written half is measured in the ledger and cannot be a pin until V3-1 lands a fixture CI
-  can read.
+  builds v3 through the fork's own `upgrade_table_version` so it runs in CI with no oracle.
+  **V3-1 (2026-08-21) landed the Spark-written fixture** (`crates/repark-spark/src/tests/fixtures/v3-spark-mor/`)
+  and uses it for `register_table` + `B-MOR-3`; the V3-0 lineage-refusal pin itself is still the
+  upgraded-table one.

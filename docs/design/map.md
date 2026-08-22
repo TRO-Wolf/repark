@@ -18,7 +18,7 @@ changing a decision here means a new dated design pass, not an in-place edit.
   the Iceberg jar (§4), the revised six-unit slate (§5), the two fork items the track needs (§6),
   and §7 — what was measured and what is not claimed. **V3-1 (2026-08-21):** §4's
   `V3-ADOPT-1` is an admitted registry row, not queued; the CALL write names the Hadoop
-  convention.
+  convention. §5 and §7 name the Spark-written fixture as landed.
 
 - [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW campaign's design
   (2026-08-21):** why merge-on-read is written but not operated, and why closing that is small.
