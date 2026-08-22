@@ -55,83 +55,23 @@ NESTED_DEF_PRAGMA = "# nested-def:"
 
 # repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically.
 # Seeded from the measured tree at the commit that armed this guard (2026-08-21):
-# 66 nested defs across 21 files. PYC-1 deleted the core.py (23) and
-# plan_collapse.py (12) rows. PYC-2 deleted the remaining 10 shipped-package
-# rows (12 lifts + 2 pragmas). PYC-3 does not touch this table. Every remaining
-# row is debt, not a sanction — the ceiling is the count on that day, it goes
-# DOWN as PYC lands, and a row whose file drops to zero is deleted rather than
-# kept at 0.
-NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {
-    "python/repark-parity/bench/fuzz/bank.py": (
-        1,
-        "row-buffer flush local to the minimized-table parser; RATCHET: PYC",
-    ),
-    "python/repark-parity/bench/fuzz/minimizer.py": (
-        1,
-        "the still-diverges predicate handed to the shrink loop; RATCHET: PYC "
-        "(a callback whose closure is arguably the point — may end as a pragma)",
-    ),
-    "python/repark-parity/bench/fuzz/runner.py": (
-        1,
-        "the execute callback passed into the minimizer; RATCHET: PYC",
-    ),
-    "python/repark-parity/bench/tpcds/runner.py": (
-        1,
-        "SIGALRM handler closing over the per-query timeout; RATCHET: PYC "
-        "(signal handlers are the callback case — may end as a pragma)",
-    ),
-    "python/repark-parity/bench/tpch/runner.py": (
-        1,
-        "SIGALRM handler closing over the per-query timeout; RATCHET: PYC "
-        "(signal handlers are the callback case — may end as a pragma)",
-    ),
-    "python/repark-parity/compat/bootstrap.py": (
-        5,
-        "monkeypatched setUp/tearDown factories for the reused PySpark session; "
-        "each closes over the class being patched; RATCHET: PYC",
-    ),
-    "python/repark-parity/compat/runner.py": (
-        4,
-        "recursive suite walkers plus the worker alarm handler; RATCHET: PYC "
-        "(the walkers lift to module level with an accumulator argument)",
-    ),
-    "python/repark-parity/tests/test_compat_harness.py": (
-        2,
-        "a spy and a suite walker local to two tests; RATCHET: PYC",
-    ),
-    "scripts/check_parity_live_dual_wire.py": (
-        1,
-        "field comparator local to compare(); RATCHET: PYC",
-    ),
-}
+# 66 nested defs across 21 files. PYC-1..3 emptied the shipped package. PYC-4
+# lifted the harness walkers/factories/flush/execute; remaining nested defs
+# are inline `# nested-def:` pragmas (signal handlers, shrink predicate, spy,
+# dual-wire comparator) so they do not need EXCEPTIONS rows. A row whose file
+# drops to zero is deleted rather than kept at 0.
+NESTED_DEF_EXCEPTIONS: dict[str, tuple[int, str]] = {}
 
 # repo-relative posix path -> reason. Keys sorted alphabetically. Every row is
 # debt: the file still imports `dataclasses` and PYC converts it to Pydantic.
 # A row is deleted when its file converts; rows are never added without the
 # owner ruling that the file genuinely cannot take a BaseModel. PYC-3 deleted
-# the two shipped-package rows (merge.py, _csv_smart.py).
+# the two shipped-package rows. PYC-4 converted the harness; this script is
+# invoked as bare ``python3`` from make (no venv pydantic).
 DATACLASS_EXCEPTIONS: dict[str, str] = {
-    "python/repark-parity/bench/fuzz/bank.py": "fuzz corpus records; RATCHET: PYC",
-    "python/repark-parity/bench/fuzz/compare.py": "fuzz comparison rows; RATCHET: PYC",
-    "python/repark-parity/bench/fuzz/datagen.py": "generated-column specs; RATCHET: PYC",
-    "python/repark-parity/bench/fuzz/generator.py": "query-shape specs; RATCHET: PYC",
-    "python/repark-parity/bench/fuzz/minimizer.py": "shrink-step records; RATCHET: PYC",
-    "python/repark-parity/bench/fuzz/runner.py": "fuzz run configuration; RATCHET: PYC",
-    "python/repark-parity/bench/tpcds/compare.py": "TPC-DS comparison rows; RATCHET: PYC",
-    "python/repark-parity/bench/tpcds/queries.py": "TPC-DS query records; RATCHET: PYC",
-    "python/repark-parity/bench/tpcds/runner.py": "TPC-DS run configuration; RATCHET: PYC",
-    "python/repark-parity/bench/tpch/compare.py": "TPC-H comparison rows; RATCHET: PYC",
-    "python/repark-parity/bench/tpch/queries.py": "TPC-H query records; RATCHET: PYC",
-    "python/repark-parity/bench/tpch/runner.py": "TPC-H run configuration; RATCHET: PYC",
-    "python/repark-parity/bench/write/merge_runner.py": "MERGE bench config; RATCHET: PYC",
-    "python/repark-parity/bench/write/overwrite_runner.py": "overwrite bench config; RATCHET: PYC",
-    "python/repark-parity/bench/write/runner.py": "write bench config; RATCHET: PYC",
-    "python/repark-parity/compat/bootstrap.py": "harness bootstrap options; RATCHET: PYC",
-    "python/repark-parity/compat/classify.py": "census classification rows; RATCHET: PYC",
-    "python/repark-parity/compat/compare_reports.py": "report diff rows; RATCHET: PYC",
-    "python/repark-parity/compat/fetch.py": "upstream fetch options; RATCHET: PYC",
-    "python/repark-parity/compat/runner.py": "compat run configuration; RATCHET: PYC",
-    "scripts/check_parity_live_dual_wire.py": "dual-wire comparison rows; RATCHET: PYC",
+    "scripts/check_parity_live_dual_wire.py": (
+        "CI dual-wire guard runs as python3 without the wheel venv; cannot take pydantic"
+    ),
 }
 
 _BANNED_CONTAINER_MODULES = frozenset({"dataclasses", "attr", "attrs"})

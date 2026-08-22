@@ -14,9 +14,10 @@ import logging
 import os
 import time
 import traceback
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Final, Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from .bank import (
     BankedRepro,
@@ -44,9 +45,10 @@ ENV_SEED: Final[str] = "REPARK_FUZZ_SEED"
 ENV_N: Final[str] = "REPARK_FUZZ_N"
 
 
-@dataclass
-class QueryOutcome:
+class QueryOutcome(BaseModel):
     """Per-query fuzzer result."""
+
+    model_config = ConfigDict(extra="forbid")
 
     index: int
     sql: str
@@ -62,15 +64,16 @@ class QueryOutcome:
     pin_id: str | None = None
 
 
-@dataclass
-class FuzzRunResult:
+class FuzzRunResult(BaseModel):
     """Full fuzzer run census."""
+
+    model_config = ConfigDict(extra="forbid")
 
     seed: int
     query_count: int
-    environment: dict[str, str] = field(default_factory=dict)
-    outcomes: list[QueryOutcome] = field(default_factory=list)
-    banked: list[BankedRepro] = field(default_factory=list)
+    environment: dict[str, str] = Field(default_factory=dict)
+    outcomes: list[QueryOutcome] = Field(default_factory=list)
+    banked: list[BankedRepro] = Field(default_factory=list)
     wall_s: float = 0.0
 
     @property
@@ -111,8 +114,8 @@ class FuzzRunResult:
             "environment": self.environment,
             "wall_s": self.wall_s,
             "census": self.census(),
-            "outcomes": [asdict(outcome) for outcome in self.outcomes],
-            "banked": [asdict(item) for item in self.banked],
+            "outcomes": [outcome.model_dump() for outcome in self.outcomes],
+            "banked": [item.model_dump() for item in self.banked],
         }
 
 
@@ -322,53 +325,55 @@ def _run_one(
     )
 
 
+def _execute_minimize_pair(
+    sql: str,
+    db: FuzzDatabase,
+    order_sensitive: bool,
+) -> tuple[
+    list[tuple[Any, ...]] | None,
+    list[tuple[Any, ...]] | None,
+    str | None,
+    str | None,
+]:
+    """Run one candidate SQL on repark and DuckDB for the minimizer."""
+    del order_sensitive
+    repark_session = None
+    duck_conn = None
+    try:
+        repark_session = _open_repark(db)
+        duck_conn = _open_duckdb(db)
+        try:
+            repark_rows = _repark_collect(repark_session, sql)
+            repark_err = None
+        except Exception as exc:
+            repark_rows = None
+            repark_err = f"{type(exc).__name__}: {exc}"
+        try:
+            duck_rows = _duck_collect(duck_conn, sql)
+            duck_err = None
+        except Exception as exc:
+            duck_rows = None
+            duck_err = f"{type(exc).__name__}: {exc}"
+        return repark_rows, duck_rows, repark_err, duck_err
+    finally:
+        if repark_session is not None:
+            _close_repark(repark_session)
+        if duck_conn is not None:
+            _close_duckdb(duck_conn)
+
+
 def _try_minimize(
     *,
     seed: int,
     query: GeneratedQuery,
     database: FuzzDatabase,
 ) -> MinimizedRepro | None:
-    def execute(
-        sql: str,
-        db: FuzzDatabase,
-        order_sensitive: bool,
-    ) -> tuple[
-        list[tuple[Any, ...]] | None,
-        list[tuple[Any, ...]] | None,
-        str | None,
-        str | None,
-    ]:
-        del order_sensitive
-        repark_session = None
-        duck_conn = None
-        try:
-            repark_session = _open_repark(db)
-            duck_conn = _open_duckdb(db)
-            try:
-                repark_rows = _repark_collect(repark_session, sql)
-                repark_err = None
-            except Exception as exc:
-                repark_rows = None
-                repark_err = f"{type(exc).__name__}: {exc}"
-            try:
-                duck_rows = _duck_collect(duck_conn, sql)
-                duck_err = None
-            except Exception as exc:
-                duck_rows = None
-                duck_err = f"{type(exc).__name__}: {exc}"
-            return repark_rows, duck_rows, repark_err, duck_err
-        finally:
-            if repark_session is not None:
-                _close_repark(repark_session)
-            if duck_conn is not None:
-                _close_duckdb(duck_conn)
-
     try:
         return minimize_divergence(
             seed=seed,
             query=query,
             database=database,
-            execute=execute,
+            execute=_execute_minimize_pair,
         )
     except Exception:
         LOGGER.exception("minimizer failed for seed=%s index=%s", seed, query.index)

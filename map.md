@@ -36,7 +36,11 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   Both members are declared (`python/repark`, `python/repark-parity`); the three facade
   per-file-ignore blocks (`spark/ml/**`, `spark/session/**`, `spark/dataframe/**`) are
   **load-bearing**, not style — they are how the r26 region splits keep their pre-split
-  import paths after the Q1 re-home (design §2.3 / §4 Q1).
+  import paths after the Q1 re-home (design §2.3 / §4 Q1). **PYC-4:** the tests glob is
+  split — `python/repark/tests/**` keeps ANN201/ANN202; `python/repark-parity/tests/**`
+  does not (the ten unannotated returns in `test_compare.py` are now visible and annotated).
+  Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
+  `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
 - `Makefile` — developer command surface (`make help`). `make ci` is the canonical gate;
   `make verify` = ci + rust-test (JVM-free, native-build-free); `make preflight` = verify +

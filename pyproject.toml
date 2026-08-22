@@ -22,7 +22,11 @@ select = ["E", "F", "I", "W", "UP", "B", "SIM", "C4", "PTH", "RUF", "N", "ANN", 
 ignore = ["ANN401"]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**" = ["ANN201", "ANN202", "ANN001", "S101"]
+# PYC-4: split the tests glob so facade keeps the old ANN blanket and the
+# parity harness's ten unannotated returns in test_compare.py become visible.
+# Argument annotations on tests stay ignored (pytest fixtures).
+"python/repark/tests/**" = ["ANN201", "ANN202", "ANN001", "S101"]
+"python/repark-parity/tests/**" = ["ANN001", "S101"]
 # repark.ml mirrors pyspark.ml camelCase API (toArray, saveImpl, getOrDefault, …)
 # and Spark-shaped Generic type vars; do not rename for PEP8.
 "python/repark/src/repark/spark/ml/**" = ["N802", "UP046"]

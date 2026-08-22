@@ -12,6 +12,12 @@ not this directory.
 
 ## Contents
 
+- [pyc-4-parity-harness-ledger.md](pyc-4-parity-harness-ledger.md) —
+  **PYC-4 (2026-08-22):** convert the 20 `python/repark-parity` dataclass files to
+  Pydantic v2 `BaseModel`; lift or pragma the remaining nested defs; dual-wire
+  stays a dataclass (bare `python3`). Narrow ANN ignores for parity tests.
+  `NESTED_DEF_EXCEPTIONS` emptied; one DATACLASS_EXCEPTIONS row remains.
+
 - [pyc-3-shipped-dataclasses-ledger.md](pyc-3-shipped-dataclasses-ledger.md) —
   **PYC-3 (2026-08-22):** convert `spark/merge.py` `_Clause` and the four
   `_csv_smart.py` records from dataclass to Pydantic v2 `BaseModel`. Accepted-input

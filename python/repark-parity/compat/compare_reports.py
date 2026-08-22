@@ -57,10 +57,11 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from compat.classify import CensusRow, denominators
 
@@ -134,15 +135,16 @@ class ComparatorError(Exception):
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class Side:
+class Side(BaseModel):
     """One side of the comparison: its rows, its manifest, and where it came from."""
+
+    model_config = ConfigDict(extra="forbid")
 
     label: str
     path: Path
     manifest: dict[str, str]
     classes: dict[str, str]
-    recorded_denominators: dict[str, Any] = field(default_factory=dict)
+    recorded_denominators: dict[str, Any] = Field(default_factory=dict)
     # The raw status multiset as CARRIED by the report, duplicates included — the recorded
     # denominator block is validated against this, while `classes` (deduped; quarantined ids
     # may repeat at load) drives the comparison. None for junit sides.
@@ -418,7 +420,12 @@ def check_recorded_denominators(side: Side, *, junit: bool) -> None:
     carried = (
         side.carried_statuses if side.carried_statuses is not None else list(side.classes.values())
     )
-    actual = compute_denominators(dict(enumerate(carried)), junit=False)
+    # Dummy ids: denominators inspect status only. Keys must be str — CensusRow.test_id
+    # is str, and pydantic rejects the int keys dict(enumerate(...)) used to produce.
+    carried_classes: dict[str, str] = {
+        f"carried-{index}": status for index, status in enumerate(carried)
+    }
+    actual = compute_denominators(carried_classes, junit=False)
     mismatches: list[str] = []
     for key in GATED_DENOMINATOR_KEYS:
         if key not in side.recorded_denominators:
@@ -439,15 +446,16 @@ def _is_pass(value: str, *, junit: bool) -> bool:
     return value == ("passed" if junit else "PASS")
 
 
-@dataclass
-class Delta:
+class Delta(BaseModel):
     """The grouped difference between two sides."""
 
-    pass_to_fail: list[tuple[str, str, str]] = field(default_factory=list)
-    fail_to_pass: list[tuple[str, str, str]] = field(default_factory=list)
-    class_change: list[tuple[str, str, str]] = field(default_factory=list)
-    appeared: list[tuple[str, str]] = field(default_factory=list)
-    vanished: list[tuple[str, str]] = field(default_factory=list)
+    model_config = ConfigDict(extra="forbid")
+
+    pass_to_fail: list[tuple[str, str, str]] = Field(default_factory=list)
+    fail_to_pass: list[tuple[str, str, str]] = Field(default_factory=list)
+    class_change: list[tuple[str, str, str]] = Field(default_factory=list)
+    appeared: list[tuple[str, str]] = Field(default_factory=list)
+    vanished: list[tuple[str, str]] = Field(default_factory=list)
 
     def is_empty(self) -> bool:
         return not (
@@ -617,9 +625,10 @@ def _delta_lines(delta: Delta, *, baseline_label: str, candidate_label: str) -> 
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class ComparisonResult:
+class ComparisonResult(BaseModel):
     """The verdict plus everything the report printed."""
+
+    model_config = ConfigDict(extra="forbid")
 
     exit_code: int
     lines: list[str]

@@ -54,6 +54,20 @@ from compat.runner import (  # noqa: E402
     validate_module_short,
 )
 
+
+def _collect_suite_test_ids(items: list[object]) -> list[str]:
+    """Flatten a unittest suite tree to test ids."""
+    import unittest
+
+    ids: list[str] = []
+    for item in items:
+        if isinstance(item, unittest.TestSuite):
+            ids.extend(_collect_suite_test_ids(list(item)))
+        else:
+            ids.append(item.id())  # type: ignore[union-attr]
+    return ids
+
+
 # ---------------------------------------------------------------------------
 # tag_for_pyspark_version
 # ---------------------------------------------------------------------------
@@ -883,16 +897,7 @@ def test_filter_suite_method_name_not_prefix() -> None:
     suite = loader.loadTestsFromTestCase(Sample)
     # Force module-like ids: unittest id is module.Class.method
     filtered = _filter_suite(suite, "test_day")
-    ids = []
-
-    def walk(items: list) -> None:
-        for item in items:
-            if isinstance(item, unittest.TestSuite):
-                walk(list(item))
-            else:
-                ids.append(item.id())
-
-    walk(list(filtered))
+    ids = _collect_suite_test_ids(list(filtered))
     assert len(ids) == 1
     assert ids[0].endswith(".test_day")
     assert not any(item.endswith(".test_dayofweek") for item in ids)
@@ -1005,7 +1010,7 @@ def test_cli_classic_flag_reaches_the_resolver() -> None:
     """
     captured: dict[str, object] = {}
 
-    def spy(**kwargs: object) -> list[str]:
+    def spy(**kwargs: object) -> list[str]:  # nested-def: spy closes over captured kwargs
         captured.update(kwargs)
         raise ValueError("stubbed: abort before any census work")
 

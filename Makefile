@@ -53,8 +53,8 @@ ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check
 #     build step — locally `make py-test-facade` (maturin develop + pytest, extras provisioned);
 #     in CI the wheels.yml `smoke` job, which runs the same suite against the PACKAGED wheel (a
 #     facade regression must not pass CI on an import smoke alone).
-#   * the PARITY harness (python/repark-parity/tests) is pure pyarrow — `make py-test`, mirrored
-#     by ci.yml's `parity-harness tests` step.
+#   * the PARITY harness (python/repark-parity/tests) is pyarrow + pydantic (PYC-4 records) —
+#     `make py-test`, mirrored by ci.yml's `parity-harness tests` step.
 #   * the LIVE oracle tier needs a JVM — `make parity-live` / parity-live.yml, never in `verify`.
 # `make verify` = `ci` + `test`; it is JVM-free and native-build-free on purpose
 # (inner-loop speed). The compiled-module facade suite is `make py-test-facade` and is
@@ -184,7 +184,7 @@ py-format-check: ## ruff format --check
 .PHONY: py-test
 py-test: ## Parity-harness tests (isolated env; no native build) — mirrors ci.yml python step
 	PYTHONPATH=python/repark-parity/src \
-		uv run --no-project --with pyarrow --with pytest \
+		uv run --no-project --with pyarrow --with pytest --with 'pydantic>=2.10,<3' \
 		pytest python/repark-parity/tests -q
 
 .PHONY: parity

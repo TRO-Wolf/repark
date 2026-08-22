@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Final
+
+from pydantic import BaseModel, ConfigDict, Field
 
 # Table names used by the generator (≤3 tables for joins).
 TABLE_NAMES: Final[tuple[str, ...]] = ("t0", "t1", "t2")
@@ -77,9 +78,10 @@ STRING_POOL: Final[tuple[str, ...]] = (
 )
 
 
-@dataclass(frozen=True)
-class FuzzTable:
+class FuzzTable(BaseModel):
     """One generated table: name, column types, and row tuples."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     name: str
     columns: tuple[tuple[str, ColumnType], ...]
@@ -94,12 +96,13 @@ class FuzzTable:
         return dict(self.columns)
 
 
-@dataclass
-class FuzzDatabase:
+class FuzzDatabase(BaseModel):
     """Full multi-table fixture produced from a seed."""
 
+    model_config = ConfigDict(extra="forbid")
+
     seed: int
-    tables: dict[str, FuzzTable] = field(default_factory=dict)
+    tables: dict[str, FuzzTable] = Field(default_factory=dict)
 
     def table(self, name: str) -> FuzzTable:
         return self.tables[name]

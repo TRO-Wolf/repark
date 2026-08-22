@@ -518,6 +518,7 @@ version = "0.0.0"
 source = { editable = "python/repark-parity" }
 dependencies = [
     { name = "pyarrow" },
+    { name = "pydantic" },
 ]
 
 [package.optional-dependencies]
@@ -528,6 +529,7 @@ record = [
 [package.metadata]
 requires-dist = [
     { name = "pyarrow", specifier = ">=25.0.0" },
+    { name = "pydantic", specifier = ">=2.10,<3" },
     { name = "pyspark", marker = "extra == 'record'", specifier = "==4.1.2" },
 ]
 provides-extras = ["record"]

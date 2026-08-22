@@ -117,6 +117,7 @@ def test_pyc_2_udtf_builder_stays_a_pragma() -> None:
 def _nested_def_exception_keys() -> list[str]:
     conventions = Path(__file__).resolve().parents[3] / "scripts" / "check_python_conventions.py"
     tree = ast.parse(conventions.read_text(encoding="utf-8"))
+    found_table = False
     keys: list[str] = []
     for node in tree.body:
         target_name = None
@@ -129,10 +130,11 @@ def _nested_def_exception_keys() -> list[str]:
                 target_name, value = target.id, node.value
         if target_name != "NESTED_DEF_EXCEPTIONS" or not isinstance(value, ast.Dict):
             continue
+        found_table = True
         for key in value.keys:
             if isinstance(key, ast.Constant) and isinstance(key.value, str):
                 keys.append(key.value)
-    assert keys, "did not bind NESTED_DEF_EXCEPTIONS as a module-level dict literal"
+    assert found_table, "did not bind NESTED_DEF_EXCEPTIONS as a module-level dict literal"
     return keys
 
 

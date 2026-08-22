@@ -18,16 +18,18 @@ be massaged away.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any
+
+from pydantic import BaseModel, ConfigDict
 
 RELATIVE_TOLERANCE: float = 1e-6
 
 
-@dataclass(frozen=True)
-class CompareResult:
+class CompareResult(BaseModel):
     """Outcome of comparing repark vs DuckDB result sets."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     equal: bool
     message: str

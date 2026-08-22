@@ -6,13 +6,15 @@ semantic weakening of the benchmark.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Final
 
+from pydantic import BaseModel, ConfigDict
 
-@dataclass(frozen=True)
-class TpchQuery:
+
+class TpchQuery(BaseModel):
     """One TPC-H query with optional dialect rewrite applied for repark."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     query_nr: int
     original_sql: str
