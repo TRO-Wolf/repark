@@ -77,7 +77,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   backlog itself lives in [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are
   still running (currently the V2 Engine Hardening slate; a closed campaign's slate is archived
   with it, and between campaigns the directory holds only its `map.md`).
-  `skills/` — the SEPMO control plane and the code-quality convention set. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
+  `skills/` — the SEPMO control plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
   work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
   chain, invariants, safety boundaries; written for any human or agent, names no tool).
@@ -87,7 +87,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
 - `.agent/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
   `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc
-  truth-up); each is a thin pointer into the spine, carrying no authoritative facts. See
+  truth-up, disk headroom; plus the portable code-quality convention reasoning);
+  each is a thin pointer into the spine, carrying no authoritative facts. See
   [.agent/map.md](.agent/map.md).
 
 ## I want to...
@@ -106,7 +107,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Find how repark differs from Apache Spark, and why | [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md) (the divergence registry) |
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
-| Read the code-quality conventions and why each is held by a linter, a gate, or review | [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md) |
+| Read the code-quality conventions and why each is held by a linter, a gate, or review | [.agent/skills/code-quality/SKILL.md](.agent/skills/code-quality/SKILL.md) |
 | Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
 | Read how the engine got here (the archived port record) | [docs/history/port-v2/README.md](docs/history/port-v2/README.md) |

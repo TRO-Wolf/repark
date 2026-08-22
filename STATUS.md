@@ -148,9 +148,13 @@ create-only OIDC role; its AWS-side configuration (OIDC role, variables/secrets 
 [docs/tier2-aws.md](docs/tier2-aws.md)) is in place, and what that bring-up taught is folded back
 into that runbook (the catalog-wide Glue LIST statement that registration's provider walk
 requires, the environment-scoped secret preference, the stale-namespace pre-check). The
-parity-live half was **discharged** earlier: the armed nightly has run green on merged `main`
-(first runs 2026-08-09/10), so the live-oracle first-run evidence exists without a manual
-dispatch. On repository housekeeping, none remains: the stale merged `phase-2/*` branches that
+parity-live half was **discharged** on first-run evidence (green on merged `main`
+2026-08-09/10). From 2026-08-14 through 2026-08-22 the armed nightly was red on three
+stale always-PASS Apache smoke pins — G15/Y-7
+[#71](https://github.com/TRO-Wolf/repark/pull/71) collation refuse and FA-4
+[#164](https://github.com/TRO-Wolf/repark/pull/164) nested-dict-as-struct —
+disposed divergences whose pin list was never updated. Those three are now
+known-FAIL meta pins; the nightly is a live signal again. On repository housekeeping, none remains: the stale merged `phase-2/*` branches that
 once carried easy-to-find copies of pre-scrub
 content are already gone from the remote. Per the forward-scrub rule (fix content in a new commit,
 never rewrite published history), pre-scrub content remains reachable in already-published history —
@@ -206,7 +210,7 @@ history-rewrite; provenance and the options weighed:
     API), PYC-4 (the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores), and
     PYC-5 (close, including re-measuring the guard's hook cost against its budget).
   - **Rationale and the arming method are a portable skill**,
-    [skills/code-quality/SKILL.md](skills/code-quality/SKILL.md): each rule with the failure it
+    [.agent/skills/code-quality/SKILL.md](.agent/skills/code-quality/SKILL.md): each rule with the failure it
     prevents and whether it is held by a linter, a gate, or review, plus the ratchet pattern for
     arming a convention against a codebase that already violates it.
   - **The risk this unit carries is that it is a pure refactor of working code.** The facade

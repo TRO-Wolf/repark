@@ -2,7 +2,8 @@
 
 Pins:
 1. **Meta** — redirect seam installs repark into the pyspark namespace; no JVM gateway.
-2. **Meta** — a known-FAIL Apache case stays classified (FAIL-MISSING), not a crash.
+2. **Meta** — known-FAIL Apache cases stay classified (exact status + cause fragment),
+   not a crash. ``test_field_accessor`` plus the FA-4 / G15 demotions below.
 3. **Census subset** — every Apache test that PASSed at the X1 tip (functions+column
    growth) plus the still-green pins from other modules (types / dataframe / stretch).
 
@@ -219,8 +220,6 @@ _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
     "pyspark.sql.tests.test_types.TypesTests.test_geography_json_serde",
     "pyspark.sql.tests.test_types.TypesTests.test_geometry_json_serde",
     "pyspark.sql.tests.test_types.TypesTests.test_infer_array_element_type_empty",
-    "pyspark.sql.tests.test_types.TypesTests.test_infer_map_pair_type_empty",
-    "pyspark.sql.tests.test_types.TypesTests.test_infer_map_pair_type_with_nested_maps",
     "pyspark.sql.tests.test_types.TypesTests.test_infer_nested_array_element_type_with_struct",
     "pyspark.sql.tests.test_types.TypesTests.test_infer_schema_not_enough_names",
     "pyspark.sql.tests.test_types.TypesTests.test_map_type_from_json",
@@ -244,7 +243,6 @@ _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_should_not_accept_noncallable_object",
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_256_args",
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_array_type",
-    "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_collated_string_types",
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_column_vector",
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_decorator",
     "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_rand",
@@ -266,23 +264,42 @@ _PINNED_PASSING_APACHE_TESTS: tuple[str, ...] = (
 # Known-FAIL meta pin: nested dotted field resolve residual (df["r.a"] / df["r.b"]).
 # F2 landed mixed-type lit(list) + global regexp_replace (test_lit_list → PASS); wall moved
 # off lit cast. r16 lesson: pin BOTH status AND cause-string when the wall moves.
-# Pin list / exact-count assert remain morning-mega owned — not edited here.
 _KNOWN_FAIL_TEST_ID = "pyspark.sql.tests.test_column.ColumnTests.test_field_accessor"
 _KNOWN_FAIL_STATUS = "FAIL-VALUE"
+
+# FA-4 #164 / G15 Y-7 #71: disposed divergences that used to sit in the always-PASS
+# list. Demoted 2026-08-22 so the nightly is a live signal again. A row returning
+# to the PASS tuple without deleting its meta pin is a silent double-count; the
+# disjointness assert below is the fence.
+_KNOWN_FAIL_MAP_EMPTY_ID = "pyspark.sql.tests.test_types.TypesTests.test_infer_map_pair_type_empty"
+_KNOWN_FAIL_MAP_NESTED_ID = (
+    "pyspark.sql.tests.test_types.TypesTests.test_infer_map_pair_type_with_nested_maps"
+)
+_KNOWN_FAIL_COLLATED_UDF_ID = (
+    "pyspark.sql.tests.test_udf.UDFTests.test_udf_with_collated_string_types"
+)
+_KNOWN_FAIL_DEMOTED_IDS: tuple[str, ...] = (
+    _KNOWN_FAIL_MAP_EMPTY_ID,
+    _KNOWN_FAIL_MAP_NESTED_ID,
+    _KNOWN_FAIL_COLLATED_UDF_ID,
+)
 
 # Exact pin count = the r22 morning-mega census PASS union (classic five 142 +
 # C3 expand 40 + C4 expand2 87 = 269; sole-owner regeneration, 2026-08-03) MINUS
 # 55 pandas-version-sensitive rows: Apache's pyspark.testing helpers import
 # pandas.core.common._builtin_table, removed in pandas 3 — those rows PASS under
 # the census venv (pandas 2.x, the record env the harness requires) but classify
-# HARNESS under the uv.lock env (pandas 3.0.3) that parity-live runs. Pins must be
-# always-green in the locked env; census reports record the pandas-2 PASS honestly.
-# The excluded set is regenerated each morning by running the suite in the locked
-# env and dropping the _builtin_table-class failures — never hand-curated.
+# HARNESS under the uv.lock env (pandas 3.0.3) that parity-live runs, MINUS the
+# three FA-4 / G15 demotions above (218 → 215). Pins must be always-green in the
+# locked env; census reports record the pandas-2 PASS honestly.
 # Dropping a pin silently re-opens charter G9.
-assert len(_PINNED_PASSING_APACHE_TESTS) == 218, (
-    f"smoke pin count must stay 218 always-green Apache PASSes "
+assert len(_PINNED_PASSING_APACHE_TESTS) == 215, (
+    f"smoke pin count must stay 215 always-green Apache PASSes "
     f"(got {len(_PINNED_PASSING_APACHE_TESTS)})"
+)
+assert not (set(_KNOWN_FAIL_DEMOTED_IDS) & set(_PINNED_PASSING_APACHE_TESTS)), (
+    "demoted known-FAIL ids must not remain in the always-PASS tuple: "
+    f"{sorted(set(_KNOWN_FAIL_DEMOTED_IDS) & set(_PINNED_PASSING_APACHE_TESTS))}"
 )
 
 
@@ -364,6 +381,44 @@ def test_meta_known_fail_stays_classified(_compat_provenance: object) -> None:
     assert row.status != "MODULE-TIMEOUT"
 
 
+def test_meta_known_fail_infer_map_pair_type_empty(_compat_provenance: object) -> None:
+    """FA-4 #164 owner default inferNestedDictAsStruct=true.
+
+    Empty dict infers struct, not map.
+    """
+    _assert_known_fail_apache(
+        _compat_provenance,
+        test_id=_KNOWN_FAIL_MAP_EMPTY_ID,
+        expected_status="FAIL-VALUE",
+        cause_needles=("f1={}", "{'a': None}"),
+    )
+
+
+def test_meta_known_fail_infer_map_pair_type_with_nested_maps(
+    _compat_provenance: object,
+) -> None:
+    """FA-4 #164 owner default inferNestedDictAsStruct=true.
+
+    Mixed map values stay typed struct fields (Spark stringifies).
+    """
+    _assert_known_fail_apache(
+        _compat_provenance,
+        test_id=_KNOWN_FAIL_MAP_NESTED_ID,
+        expected_status="FAIL-VALUE",
+        cause_needles=("{'payment': '200.5'", "{'payment': 200.5"),
+    )
+
+
+def test_meta_known_fail_udf_with_collated_string_types(_compat_provenance: object) -> None:
+    """G15/Y-7 #71 refuse-loud; UDF returnType 'string collate fr' is not accepted."""
+    _assert_known_fail_apache(
+        _compat_provenance,
+        test_id=_KNOWN_FAIL_COLLATED_UDF_ID,
+        expected_status="FAIL-MISSING",
+        cause_needles=("string collate fr", "does not implement collation"),
+    )
+
+
 def _module_short(test_id: str) -> str:
     """``pyspark.sql.tests.test_dataframe.DataFrameTests.test_x`` → ``test_dataframe``."""
     parts = test_id.split(".")
@@ -374,6 +429,34 @@ def _module_short(test_id: str) -> str:
 
 def _method_name(test_id: str) -> str:
     return test_id.rsplit(".", 1)[-1]
+
+
+def _assert_known_fail_apache(
+    provenance: object,
+    *,
+    test_id: str,
+    expected_status: str,
+    cause_needles: tuple[str, ...],
+) -> None:
+    """Row exists, exact status class, and every cause needle appears (case-insensitive)."""
+    census = run_module_inprocess(
+        _module_short(test_id),
+        provenance=provenance,  # type: ignore[arg-type]
+        test_filter=_method_name(test_id),
+    )
+    row = next((item for item in census.rows if item.test_id == test_id), None)
+    assert row is not None, f"missing {test_id} in {[item.test_id for item in census.rows]}"
+    assert row.status in CENSUS_CLASSES
+    assert row.status == expected_status, (
+        f"{test_id} classified {row.status}: {row.cause} @ {row.divergent_frame}"
+    )
+    cause_lower = row.cause.lower()
+    missing = [needle for needle in cause_needles if needle.lower() not in cause_lower]
+    assert not missing, (
+        f"{test_id} cause must mention {cause_needles!r} (missing {missing!r}; got {row.cause!r})"
+    )
+    assert row.status != "HARNESS"
+    assert row.status != "MODULE-TIMEOUT"
 
 
 @pytest.mark.parametrize("test_id", _PINNED_PASSING_APACHE_TESTS)

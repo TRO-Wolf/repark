@@ -2,7 +2,7 @@
 """Enforce the two Python conventions Ruff cannot express.
 
 SSOT for the nested-`def` ban and the "Pydantic, never `dataclasses`/`attrs`"
-rule. Prose (AGENTS.md "Python", skills/code-quality/SKILL.md, docs/skills/*)
+rule. Prose (AGENTS.md "Python", .agent/skills/code-quality/SKILL.md, docs/skills/*)
 points here and never restates the tables. Mirrors the check_rust_file_size
 dual-wire shape (py = logic + SSOT, sh = wrapper).
 

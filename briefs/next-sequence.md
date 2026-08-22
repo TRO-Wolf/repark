@@ -61,7 +61,7 @@ deletion. If that guard were ever relaxed, A13 becomes the first item in this fi
 **Context.** `scripts/check_python_conventions.py` is armed and holds the measured debt in two
 EXCEPTIONS tables. The tree is green and cannot regress. PYC empties those tables. The rules
 themselves are [../AGENTS.md](../AGENTS.md) "Python"; the reasoning and the sanctioned exceptions
-are [../skills/code-quality/SKILL.md](../skills/code-quality/SKILL.md).
+are [../.agent/skills/code-quality/SKILL.md](../.agent/skills/code-quality/SKILL.md).
 
 **The campaign invariant, and it is the LRS one:** *no call that worked before returns a different
 value.* Every unit here is a refactor of working code that 3,639 passing facade tests were never
