@@ -111,7 +111,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **U-DF-1:** `_bound_generator_array` rebinds a single-ident explode source through
   the frame schema at select mid-project (unquoted native `col` folds case). Pins:
   `tests/test_explode_rewrite.py`, `tests/test_dynamic_flatten.py`.
-- `functions.py` — **r24 A3 octo C1-Q-001:** `posexplode` STOP message has no embedded
+- `functions.py` — **PYC-2:** mixed-`lit([...])` kind probe is module-level
+  `_lit_list_item_kind`. **r24 A3 octo C1-Q-001:** `posexplode` STOP message has no embedded
   DataFusion major (was stale "52.x" while pin is 54.1); pin in `test_explode_rewrite`.
   **G15:** `collate` / `collation` are **not** stubbed — absence is already `AttributeError`
   (A5); documented in `tests/test_collation_refuse.py`.
@@ -293,7 +294,8 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 - `udtf.py` / `functions.py` / `session.py` / `catalog.py` — **r23 C6 / U12 UDTF
   scalar-arg phase-2 core** (`# === r23 C6: udtf-phase2-core ===`): `@udtf` /
   `udtf(Handler, returnType=…)` / `UserDefinedTableFunction` / `spark.udtf`
-  (`UDTFRegistration`). Handler validation still uses Spark `INVALID_UDTF_*` /
+  (`UDTFRegistration`). **PYC-2:** `_map_udtf_batches` is module-level; `_build`
+  is a `# nested-def:` decorator-factory pragma. Handler validation still uses Spark `INVALID_UDTF_*` /
   `CANNOT_REGISTER_UDTF`. **Call** with foldable lit/Python scalars builds a
   DataFrame via synthetic one-row arg frame + `mapInArrow` expansion of
   `eval` iterators. **register** stores on session `_udtf_registry`; SQL
@@ -407,7 +409,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
 
 - **octo-extra C1 (2026-07-30):** cache take/isEmpty; MERGE table ref; set-ops loud; polars join quote/drop
 
-- **R-POLARS-CORE** (`polars.py` + `DataFrame.pl`): polars-style API; collect lazy-imports real polars. (rider 2026-07-31: sort honors polars null placement via interleaved null-indicator keys — was silently Spark-coupled; zip strict=; combine C7-Q-002: `join` registers `_plan()` not action temp-view)
+- **R-POLARS-CORE** (`polars.py` + `DataFrame.pl`): polars-style API; collect lazy-imports real polars. (rider 2026-07-31: sort honors polars null placement via interleaved null-indicator keys — was silently Spark-coupled; zip strict=; combine C7-Q-002: `join` registers `_plan()` not action temp-view). **PYC-2:** join-key quoter is `_quote_join_ident`.
 - **octo-extra C3: to_date/to_timestamp format= refused**
 
 - **octo-extra C2: __all__ exports batch funcs**
@@ -475,7 +477,9 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   `MERGE INTO` via a generated `__repark_merge_src_<uuid>` temp view; pins in
   `tests/test_merge_into.py`.
 
-- `types.py` — **E1 (2026-08-05):** `DayTimeIntervalType` / `YearMonthIntervalType` with
+- `types.py` — **PYC-2:** `_make_type_verifier`'s returned `verifier` is a
+  `# nested-def:` pragma (the closure is the function's product).
+  **E1 (2026-08-05):** `DayTimeIntervalType` / `YearMonthIntervalType` with
   `INVALID_INTERVAL_CASTING` → `PySparkRuntimeError` (both start_field **and** end_field
   membership — pins include bare invalid ints + bad end; octo C7-Q-001); `ClassVar` field
   maps; treeString prints interval ranges.
@@ -736,6 +740,7 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   Pins in `../../tests/test_catalog_surface.py` (incl. isolation + pattern + type pins from
   critic-octo) + `test_time_travel.py` (tt hide).
 - `row.py` — PySpark-compatible `Row` for `DataFrame.collect` (**G-ROW**, live PySpark 4.1.2;
+  **PYC-2:** recursive `asDict` converter is `_convert_nested_row_value`.
   **r21 T3** `from_ordered_fields` preserves Spark-legal duplicate display names on collect;
   **F-T3-002** `__reduce__` pickles via `from_ordered_fields` so multi-name Rows do not drop
   dup values)

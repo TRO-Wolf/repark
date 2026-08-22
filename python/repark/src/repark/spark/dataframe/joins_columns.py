@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import logging
 import math
 import re
@@ -40,6 +41,145 @@ from repark.spark.row import Row
 from repark.spark.types import DataType, StructField, StructType
 
 logger = logging.getLogger("repark.spark.dataframe")
+
+
+def _grouped_agg_pandas(pdf: Any, *, keys: list[str], specs: list[dict[str, Any]]) -> Any:
+    """One GROUPED_AGG pandas_udf group → one output row (applyInPandas callback)."""
+    try:
+        import pandas as pd
+    except ImportError as error:
+        raise ImportError(
+            "GROUPED_AGG pandas_udf requires pandas (pip install 'repark[pandas]')"
+        ) from error
+
+    row: dict[str, Any] = {}
+    for key_name in keys:
+        if key_name not in pdf.columns:
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf missing group key {key_name!r} in group frame"
+            )
+        row[key_name] = pdf[key_name].iloc[0] if len(pdf) > 0 else None
+    for spec in specs:
+        series_args: list[Any] = []
+        for input_name in spec["input_inter_names"]:
+            if input_name not in pdf.columns:
+                raise PySparkException(
+                    f"GROUPED_AGG pandas_udf input column missing from group frame: {input_name!r}"
+                )
+            series_args.append(pdf[input_name])
+        try:
+            value = spec["user_func"](*series_args)
+        except PySparkException:
+            raise
+        except Exception as error:
+            detail = traceback.format_exc()
+            raise PySparkException(
+                "GROUPED_AGG pandas_udf "
+                f"{spec['function_name']!r} raised {type(error).__name__}: "
+                f"{error}\n{detail}"
+            ) from error
+        if value is None:
+            row[spec["out_name"]] = None
+        elif isinstance(value, pd.Series):
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
+                f"scalar; got pandas.Series (length {len(value)})"
+            )
+        elif isinstance(value, pd.DataFrame):
+            raise PySparkException(
+                f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
+                f"scalar; got pandas.DataFrame"
+            )
+        else:
+            row[spec["out_name"]] = value
+    return pd.DataFrame([row], columns=[*keys, *[spec["out_name"] for spec in specs]])
+
+
+def _apply_in_pandas_arrow_batches(
+    input_batches: Iterator[Any],
+    *,
+    user_func: Callable[[Any], Any],
+    key_names: list[str],
+    expected_names: list[str],
+    expected_arrow: Any,
+) -> Iterator[Any]:
+    """Per-group pandas callback over streamed Arrow batches (applyInPandas body)."""
+    import pandas as pd
+    import pyarrow as pa
+
+    for group_table in _iter_apply_in_pandas_group_tables(input_batches, key_names):
+        pdf = group_table.to_pandas()
+        try:
+            out_pdf = user_func(pdf)
+        except PySparkException:
+            raise
+        except Exception as error:
+            detail = traceback.format_exc()
+            raise PySparkException(
+                f"applyInPandas user function raised {type(error).__name__}: {error}\n{detail}"
+            ) from error
+        if out_pdf is None:
+            raise PySparkException(
+                "applyInPandas user function must return a pandas.DataFrame (got None)"
+            )
+        if not isinstance(out_pdf, pd.DataFrame):
+            raise PySparkException(
+                "applyInPandas user function must return a pandas.DataFrame; "
+                f"got {type(out_pdf).__name__}"
+            )
+        # Spark RESULT_COLUMN_NAMES_MISMATCH class — before Arrow cast so empty
+        # wrong/partial/extra frames cannot be re-labeled as the declared schema.
+        _validate_apply_in_pandas_result_columns(out_pdf, expected_names)
+        # Zero-column empty frame (Spark-accepted empty group result): emit a 0-row
+        # batch under the declared schema so mapInArrow validation still runs.
+        if len(out_pdf) == 0 and len(out_pdf.columns) == 0:
+            yield pa.RecordBatch.from_arrays(
+                [pa.array([], type=field.type) for field in expected_arrow],
+                schema=expected_arrow,
+            )
+            continue
+        try:
+            out_table = pa.Table.from_pandas(out_pdf, schema=expected_arrow, preserve_index=False)
+        except (
+            pa.ArrowInvalid,
+            pa.ArrowTypeError,
+            pa.ArrowNotImplementedError,
+            ValueError,
+            TypeError,
+            KeyError,
+        ) as error:
+            # Prefer a loud, column-naming cast error for overflow / conversion
+            # failures (octo U6 C3). Falling through to untyped Arrow would only
+            # surface a later mapInArrow type mismatch on an unrelated field
+            # (e.g. int64 vs int32 on the first column while ``total`` overflowed).
+            error_text = str(error)
+            if (
+                "Conversion failed" in error_text
+                or "not in range" in error_text
+                or "Could not convert" in error_text
+            ):
+                raise PySparkException(
+                    f"applyInPandas failed converting pandas output to declared schema: {error}"
+                ) from error
+            # Otherwise fall through to untyped conversion so mapInArrow validation
+            # names the field/type mismatch (same loud class as mapInArrow pins).
+            try:
+                out_table = pa.Table.from_pandas(out_pdf, preserve_index=False)
+            except Exception:
+                raise PySparkException(
+                    f"applyInPandas failed converting pandas output to Arrow: {error}"
+                ) from error
+        output_batches = out_table.to_batches()
+        if not output_batches:
+            # Zero-row group result: yield under *out_table* schema so a mismatched
+            # empty frame cannot be silently rewritten as expected_arrow (C6-L-001 /
+            # U6 C1). Name check above already accepted column sets.
+            yield pa.RecordBatch.from_arrays(
+                [pa.array([], type=field.type) for field in out_table.schema],
+                schema=out_table.schema,
+            )
+        else:
+            yield from output_batches
 
 
 class GroupedData:
@@ -284,59 +424,11 @@ class GroupedData:
         specs = udf_specs
         keys = list(key_names)
 
-        def _grouped_agg_func(pdf: Any) -> Any:
-            try:
-                import pandas as pd
-            except ImportError as error:
-                raise ImportError(
-                    "GROUPED_AGG pandas_udf requires pandas (pip install 'repark[pandas]')"
-                ) from error
-
-            row: dict[str, Any] = {}
-            for key_name in keys:
-                if key_name not in pdf.columns:
-                    raise PySparkException(
-                        f"GROUPED_AGG pandas_udf missing group key {key_name!r} in group frame"
-                    )
-                row[key_name] = pdf[key_name].iloc[0] if len(pdf) > 0 else None
-            for spec in specs:
-                series_args: list[Any] = []
-                for input_name in spec["input_inter_names"]:
-                    if input_name not in pdf.columns:
-                        raise PySparkException(
-                            "GROUPED_AGG pandas_udf input column missing from group frame: "
-                            f"{input_name!r}"
-                        )
-                    series_args.append(pdf[input_name])
-                try:
-                    value = spec["user_func"](*series_args)
-                except PySparkException:
-                    raise
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        "GROUPED_AGG pandas_udf "
-                        f"{spec['function_name']!r} raised {type(error).__name__}: "
-                        f"{error}\n{detail}"
-                    ) from error
-                if value is None:
-                    row[spec["out_name"]] = None
-                elif isinstance(value, pd.Series):
-                    raise PySparkException(
-                        f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
-                        f"scalar; got pandas.Series (length {len(value)})"
-                    )
-                elif isinstance(value, pd.DataFrame):
-                    raise PySparkException(
-                        f"GROUPED_AGG pandas_udf {spec['function_name']!r} must return a "
-                        f"scalar; got pandas.DataFrame"
-                    )
-                else:
-                    row[spec["out_name"]] = value
-            return pd.DataFrame([row], columns=[*keys, *[spec["out_name"] for spec in specs]])
-
         grouped = GroupedData(projected, [projected._bind_schema_column(name) for name in keys])
-        udf_frame = grouped.applyInPandas(_grouped_agg_func, result_schema)
+        udf_frame = grouped.applyInPandas(
+            functools.partial(_grouped_agg_pandas, keys=keys, specs=specs),
+            result_schema,
+        )
 
         if not other_exprs:
             return udf_frame
@@ -1032,6 +1124,9 @@ class GroupedData:
             ) from error
         import pyarrow as pa
 
+        # Fail-loud at applyInPandas(); the mapInArrow callback re-imports both.
+        _ = (pd, pa)
+
         key_names = self._apply_in_pandas_group_key_names()
         # Coerce once so the pandas→Arrow path can cast to the declared schema (Spark
         # applyInPandas converts via schema; bare from_pandas yields int64/large_string).
@@ -1045,86 +1140,16 @@ class GroupedData:
 
         expected_names = list(expected_arrow.names)
 
-        def _arrow_grouped_func(input_batches: Iterator[Any]) -> Iterator[Any]:
-            for group_table in _iter_apply_in_pandas_group_tables(input_batches, key_names):
-                pdf = group_table.to_pandas()
-                try:
-                    out_pdf = func(pdf)
-                except PySparkException:
-                    raise
-                except Exception as error:
-                    detail = traceback.format_exc()
-                    raise PySparkException(
-                        "applyInPandas user function raised "
-                        f"{type(error).__name__}: {error}\n{detail}"
-                    ) from error
-                if out_pdf is None:
-                    raise PySparkException(
-                        "applyInPandas user function must return a pandas.DataFrame (got None)"
-                    )
-                if not isinstance(out_pdf, pd.DataFrame):
-                    raise PySparkException(
-                        "applyInPandas user function must return a pandas.DataFrame; "
-                        f"got {type(out_pdf).__name__}"
-                    )
-                # Spark RESULT_COLUMN_NAMES_MISMATCH class — before Arrow cast so empty
-                # wrong/partial/extra frames cannot be re-labeled as the declared schema.
-                _validate_apply_in_pandas_result_columns(out_pdf, expected_names)
-                # Zero-column empty frame (Spark-accepted empty group result): emit a 0-row
-                # batch under the declared schema so mapInArrow validation still runs.
-                if len(out_pdf) == 0 and len(out_pdf.columns) == 0:
-                    yield pa.RecordBatch.from_arrays(
-                        [pa.array([], type=field.type) for field in expected_arrow],
-                        schema=expected_arrow,
-                    )
-                    continue
-                try:
-                    out_table = pa.Table.from_pandas(
-                        out_pdf, schema=expected_arrow, preserve_index=False
-                    )
-                except (
-                    pa.ArrowInvalid,
-                    pa.ArrowTypeError,
-                    pa.ArrowNotImplementedError,
-                    ValueError,
-                    TypeError,
-                    KeyError,
-                ) as error:
-                    # Prefer a loud, column-naming cast error for overflow / conversion
-                    # failures (octo U6 C3). Falling through to untyped Arrow would only
-                    # surface a later mapInArrow type mismatch on an unrelated field
-                    # (e.g. int64 vs int32 on the first column while ``total`` overflowed).
-                    error_text = str(error)
-                    if (
-                        "Conversion failed" in error_text
-                        or "not in range" in error_text
-                        or "Could not convert" in error_text
-                    ):
-                        raise PySparkException(
-                            "applyInPandas failed converting pandas output to declared "
-                            f"schema: {error}"
-                        ) from error
-                    # Otherwise fall through to untyped conversion so mapInArrow validation
-                    # names the field/type mismatch (same loud class as mapInArrow pins).
-                    try:
-                        out_table = pa.Table.from_pandas(out_pdf, preserve_index=False)
-                    except Exception:
-                        raise PySparkException(
-                            f"applyInPandas failed converting pandas output to Arrow: {error}"
-                        ) from error
-                output_batches = out_table.to_batches()
-                if not output_batches:
-                    # Zero-row group result: yield under *out_table* schema so a mismatched
-                    # empty frame cannot be silently rewritten as expected_arrow (C6-L-001 /
-                    # U6 C1). Name check above already accepted column sets.
-                    yield pa.RecordBatch.from_arrays(
-                        [pa.array([], type=field.type) for field in out_table.schema],
-                        schema=out_table.schema,
-                    )
-                else:
-                    yield from output_batches
-
-        return sorted_parent.mapInArrow(_arrow_grouped_func, schema)
+        return sorted_parent.mapInArrow(
+            functools.partial(
+                _apply_in_pandas_arrow_batches,
+                user_func=func,
+                key_names=key_names,
+                expected_names=expected_names,
+                expected_arrow=expected_arrow,
+            ),
+            schema,
+        )
 
     apply_in_pandas = applyInPandas
 

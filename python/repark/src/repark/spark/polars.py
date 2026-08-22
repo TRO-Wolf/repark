@@ -10,6 +10,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import PySparkTypeError, PySparkValueError
+from repark.spark._idents import is_plain_ident
+from repark.spark._idents import quote_ident as _quote_ident_ssot
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
 from repark.spark.functions import col as spark_col
@@ -50,6 +52,13 @@ class _WhenBuilder:
     def then(self, value: Column | Any) -> Column:
         """Complete the arm with ``value``, yielding a repark ``when`` :class:`Column`."""
         return spark_when(self._condition, value)
+
+
+def _quote_join_ident(name: str) -> str:
+    """Quote a polars-join key, rejecting anything that is not a bare SQL identifier."""
+    if not is_plain_ident(name):
+        raise PySparkValueError(f"join column must be a bare SQL identifier, got {name!r}")
+    return _quote_ident_ssot(name)
 
 
 def _reject_polars_expr(value: Any, *, surface: str) -> None:
@@ -205,37 +214,28 @@ class PolarsFrame:
         self._frame._ensure_alive()
         right._ensure_alive()
 
-        # === r23 QI1: idents ===
-        # Polars join keys: bare-only validation (pre-existing) + always-quote SSOT.
-        from repark.spark._idents import is_plain_ident
-        from repark.spark._idents import quote_ident as _quote_ident_ssot
-
-        def quote_ident(name: str) -> str:
-            """Quote a join key, rejecting anything that is not a bare SQL identifier."""
-            if not is_plain_ident(name):
-                raise PySparkValueError(f"join column must be a bare SQL identifier, got {name!r}")
-            return _quote_ident_ssot(name)
-
         try:
             session.create_or_replace_temp_view(left_view, self._frame._plan())
             right._session.create_or_replace_temp_view(right_view, right._plan())
             if on is None and left_on is not None and right_on is not None:
                 on_sql = (
-                    f"{left_view}.{quote_ident(left_on)} = {right_view}.{quote_ident(right_on)}"
+                    f"{left_view}.{_quote_join_ident(left_on)} = "
+                    f"{right_view}.{_quote_join_ident(right_on)}"
                 )
                 # Keep right key (polars/Spark condition-join; octo C2-L-004).
                 right_extra = list(right.columns)
             elif on is not None:
                 on_list = [on] if isinstance(on, str) else list(on)
                 on_sql = " AND ".join(
-                    f"{left_view}.{quote_ident(key)} = {right_view}.{quote_ident(key)}"
+                    f"{left_view}.{_quote_join_ident(key)} = {right_view}.{_quote_join_ident(key)}"
                     for key in on_list
                 )
                 right_extra = [c for c in right.columns if c not in on_list]
             else:
                 raise PySparkValueError("join requires on= or left_on/right_on")
             select_right = ", ".join(
-                f"{right_view}.{quote_ident(c)} AS {quote_ident(c)}" for c in right_extra
+                f"{right_view}.{_quote_join_ident(c)} AS {_quote_join_ident(c)}"
+                for c in right_extra
             )
             select_clause = f"{left_view}.*" + (f", {select_right}" if select_right else "")
             sql = f"SELECT {select_clause} FROM {left_view} {join_kw} {right_view} ON {on_sql}"

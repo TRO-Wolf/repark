@@ -25,11 +25,10 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **PYC-2** | conventions | — | S |
-| 2 | **PYC-3** | conventions | — | S |
-| 3 | **PYC-4** | conventions | — | M |
-| 4 | **PYC-5** | conventions | PYC-2..4 | S |
-| 5 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
+| 1 | **PYC-3** | conventions | — | S |
+| 2 | **PYC-4** | conventions | — | M |
+| 3 | **PYC-5** | conventions | PYC-3..4 | S |
+| 4 | **PYC-6** (decision) | conventions | PYC-5 + **owner ruling** | S |
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 | — | **A13** | write path | — | M |
@@ -37,8 +36,11 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
 rolling rule): 35 nested defs lifted across the two DataFrame modules plus `_emit_side`, the two
-EXCEPTIONS rows deleted. Remaining debt after it: **31 nested defs across 19 rows, 23 dataclass
-rows** (measured 2026-08-22, `make check-python-conventions` green). PYC-2 is unblocked.
+EXCEPTIONS rows deleted.
+**PYC-2 leaves this file with this change:** 12 lifts + 2 pragmas across the remaining ten
+shipped files, plus `session_core.probe` under `if` (gate-invisible; ancestor-set emptied).
+Ten EXCEPTIONS rows deleted. Remaining debt: **17 nested defs across 9 rows, 23 dataclass
+rows** (measured 2026-08-22, `make check-python-conventions` green). PYC-3 is unblocked.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -77,25 +79,6 @@ clothes and belongs in its own commit with its own justification.
 - **`dataclass` → `BaseModel` adds validation that was not running.** It can reject input the old
   container silently accepted. That is usually the bug being found rather than introduced, but it
   is a behaviour change and it goes in the commit message.
-
-### PYC-2 — the remaining shipped nested defs (14 across 10 files)
-
-`joins_columns.py` (2), `session/session_core.py` (2), `session/_funcs.py` (2), `udtf.py` (2),
-`types.py` (1), `functions.py` (1), `polars.py` (1), `row.py` (1), `ml/ext/_arrow_util.py` (1),
-`ml/feature/_transformers.py` (1).
-
-**Some of these are expected to end as pragmas, not lifts, and the unit fails if it forces them:**
-
-- `types.py` — `_make_type_verifier` builds a verifier per type and **returns it**. The closure is
-  the function's product. This is the callback case; it takes a pragma.
-- `udtf.py` — the `udtf` decorator's `_build` is a decorator factory closing over its own
-  arguments. Pragma.
-- The two temp-view cleanup callbacks (`session/_funcs.py`, `ml/ext/_arrow_util.py`) are registered
-  for later invocation and close over the view name. Judge each on whether passing it explicitly is
-  clearer, not on whether it is possible.
-
-The recursive walkers (`row.py`'s `asDict` converter, `_transformers.py`'s record walker) lift with
-an accumulator argument and get shorter doing it.
 
 ### PYC-3 — the two shipped `dataclass` containers
 

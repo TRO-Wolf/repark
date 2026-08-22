@@ -12,7 +12,7 @@ Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`
 | Path | Role |
 |---|---|
 | `__init__.py` | Public exports (incl. Q1 quantile + CV/IDF + RegexTokenizer) |
-| `_transformers.py` | VectorAssembler (**M7 `sparseOutput`** → sparse struct; default dense `make_array`), StringIndexer/IndexToString (`handleInvalid` ∈ error\|keep\|skip loud), OHE, scalers, Bucketizer, Imputer(mean/median/mode), Tokenizer, RegexTokenizer, StopWordsRemover, SQLTransformer, Binarizer, PolynomialExpansion, RobustScaler, QuantileDiscretizer, CountVectorizer, IDF |
+| `_transformers.py` | VectorAssembler (**M7 `sparseOutput`** → sparse struct; default dense `make_array`), StringIndexer/IndexToString (`handleInvalid` ∈ error\|keep\|skip loud), OHE, scalers, Bucketizer, Imputer(mean/median/mode), Tokenizer, RegexTokenizer, StopWordsRemover, SQLTransformer, Binarizer, PolynomialExpansion, RobustScaler, QuantileDiscretizer, CountVectorizer, IDF. **PYC-2:** PolynomialExpansion monomial walker is `_polynomial_expansion_monomials` (depth bound 3) |
 | Status constants | `QUANTILE_FAMILY_STATUS` / `COUNT_VECTORIZER_STATUS` / `IDF_STATUS` (SHIPPED Q1); `REGEX_TOKENIZER_GAPS_FALSE_STATUS` (SEED) |
 | OneHotEncoder | Singular `inputCol`/`outputCol` **and** plural `inputCols`/`outputCols` (M4 merge-bar); always sparse struct; `handleInvalid` ∈ {error,keep,skip} loud; refuses pre-existing outputCols |
 

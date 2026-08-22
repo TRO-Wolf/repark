@@ -22,6 +22,12 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_pyc_2_nested_defs.py](test_pyc_2_nested_defs.py) — **PYC-2 (2026-08-22):**
+  AST pin that the eight lifted shipped modules have zero nested `def`s (ancestor
+  walk, including `try` / `if`); `types.py` `verifier` and `udtf._build` stay
+  pragma-sanctioned; the ten EXCEPTIONS rows are deleted not zeroed; CDF/ext
+  finalize uses extra-args. Behaviour stays on existing applyInPandas / row /
+  range / UDTF / lit / verifier pins.
 - [test_pyc_1_nested_defs.py](test_pyc_1_nested_defs.py) — **PYC-1 (2026-08-22):**
   AST pin that `core.py`, `plan_collapse.py`, and `udf_bridge.py` have zero nested
   `def`s. Behaviour stays on the existing show / UDF / filter / sample pins.

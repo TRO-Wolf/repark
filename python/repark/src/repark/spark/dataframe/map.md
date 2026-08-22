@@ -76,9 +76,11 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
   (R-D). See `task/se1-declared-sorted-ledger.md`.
 - `udf_bridge.py` — **PYC-1:** action-time mapInArrow callbacks for `mapInPandas`,
   scalar `pandas_udf`, and classic `udf`, plus the ordered-window GROUPED_AGG body
-  passed into `GroupedData.applyInPandas`. The `applyInPandas` method itself stays
-  in `joins_columns.py` (PYC-2). Imports no `DataFrame` at module scope. `core.py`
-  wires the helpers with `functools.partial`.
+  passed into `GroupedData.applyInPandas`. Imports no `DataFrame` at module scope.
+  `core.py` wires the helpers with `functools.partial`.
+- `joins_columns.py` — **PYC-2:** `applyInPandas` and GROUPED_AGG pandas_udf
+  callbacks lift to module-level `_apply_in_pandas_arrow_batches` /
+  `_grouped_agg_pandas`; the methods wire them with `functools.partial`.
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /

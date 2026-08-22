@@ -287,18 +287,19 @@ def label_vector_from_arrow(table: Any, label_col: str) -> Any:
     return np.asarray(values, dtype=np.float64)
 
 
+def _drop_ext_temp_view(session: Any, view_name: str) -> None:
+    """Best-effort drop of an ext-estimator scratch view on DataFrame GC."""
+    with contextlib.suppress(Exception):
+        session.drop_temp_view(view_name)
+
+
 def _own_ext_temp_view(result_frame: Any, session: Any, view_name: str) -> None:
     """Drop ``view_name`` when ``result_frame`` is GC'd (mapInArrow-class ownership).
 
     Success-path re-entry must not orphan ``__repark_ml_ext_*`` MemTables across
     transform / CV folds (octo C1-Q-002 / C1-SAF-001).
     """
-
-    def _drop() -> None:
-        with contextlib.suppress(Exception):
-            session.drop_temp_view(view_name)
-
-    weakref.finalize(result_frame, _drop)
+    weakref.finalize(result_frame, _drop_ext_temp_view, session, view_name)
 
 
 def reenter_with_prediction(
