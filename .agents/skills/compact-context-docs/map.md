@@ -10,12 +10,14 @@ It records a **ritual**, not policy — the document classes and lifecycle rules
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the runbook: what counts as a context document, the seven-step ritual
-  (STATUS.md first, then restatements, stale lifecycle claims, `map.md` lockstep, archiving to
-  `docs/history/`, `make ci`, one PR), the **pickup ritual (scoped mode)** — confirm the prior
-  PR merged and its departure edit is in the local base, run the drift checks, compact against
-  the just-merged delta only, land it as a docs-only first commit — and the gotchas, chiefly
-  that runbooks and onboarding docs rot fastest because nothing mechanical validates their prose.
+- [SKILL.md](SKILL.md) — the runbook: what counts as a context document, the ritual (step 0
+  `make ledger-archive` — mechanical, zero tokens — then STATUS.md first, restatements, stale
+  lifecycle claims, `map.md` lockstep, the unit's ledger `move`d to `completed/` and campaign
+  briefs to `docs/history/`, `make ci`, one PR), the **pickup ritual (scoped mode)** — confirm
+  the prior PR merged and its departure edit is in the local base, file the finished ledgers,
+  run the drift checks, compact against the just-merged delta only, land it as a docs-only first
+  commit; delegable to a smaller model under orchestrator review — and the gotchas, chiefly that
+  runbooks and onboarding docs rot fastest because nothing mechanical validates their prose.
 
 ## Pointers
 
