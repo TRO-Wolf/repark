@@ -1984,8 +1984,10 @@ NOT in that file is a defect, not a decision.
   AST pin that the wrapper calls `getDatabase` (not DESCRIBE). **MW-4 (2026-08-23):** MOR
   TBLPROPERTIES is merge-on-read not copy-on-write (COW block unchanged), CALL SQL shape, expected
   row oracle, always-run memory analog of `run_mor_merge_compact_expire`, DROP/DELETE scan of
-  `_acceptance.py`, Glue MOR AST pin (location guard, `uuid4`, `testing_mw4_mor_`), S3 Tables
-  must not call the MOR helper, identical-MERGE source pin `[updates[-1]]`.
+  `_acceptance.py`, Glue MOR AST pin (location guard; `table_name` is `mw4_mor_` plus
+  `uuid4`, not a docstring token), S3 Tables must not call the MOR helper, identical-MERGE
+  source pin `[updates[-1]]`, dual-probe AST (`require_snapshot_readable` in the runner,
+  `require_snapshot_expired` in the asserter).
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors

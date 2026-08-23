@@ -19,7 +19,7 @@ import pyarrow as pa
 
 from repark import Window
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.errors import AnalysisException, UnsupportedOperationException
+from repark.errors import AnalysisException
 from repark.spark.dataframe import DataFrame
 
 # ==============================================================================================
@@ -496,19 +496,20 @@ def require_snapshot_readable(spark: object, table: str, snapshot_id: int, id_co
 
 
 def require_snapshot_expired(spark: object, table: str, snapshot_id: int) -> None:
-    """Fail unless ``VERSION AS OF snapshot_id`` is an analysis error naming the snapshot.
+    """Fail unless ``VERSION AS OF`` is the unknown-snapshot analysis error.
 
-    Catching the ``PySparkException`` base would treat parse/IO/commit failures as expire
-    success (octo C1-Q-001). Unknown-snapshot is ``AnalysisException``
-    (``test_time_travel.py``); some CALL paths raise ``UnsupportedOperationException``.
+    Needle is the engine string in ``time_travel.rs`` (also ``test_time_travel.py``):
+    ``unknown Iceberg snapshot id {id}: not found in table metadata``. A generic
+    ``AnalysisException`` that only mentions ``snapshot``, or echoes the SQL id,
+    is not expire proof (octo C2-Q-001).
     """
     try:
         spark.sql(  # type: ignore[attr-defined]
             f"SELECT id FROM {table} VERSION AS OF {snapshot_id}"
         ).to_arrow()
-    except (AnalysisException, UnsupportedOperationException) as error:
-        text = str(error).lower()
-        if str(snapshot_id) in str(error) or "snapshot" in text:
+    except AnalysisException as error:
+        text = str(error)
+        if "unknown Iceberg snapshot id" in text and str(snapshot_id) in text:
             return
         raise
     raise AssertionError(

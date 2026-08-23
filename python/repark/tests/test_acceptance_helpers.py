@@ -378,9 +378,30 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
     assert mor_guard, "MW-4 Glue leg must call assert_glue_scratch_namespace_location"
     assert min(mor_create) < min(mor_guard), "MW-4 guard must run after ensure-namespace"
     assert "run_mor_merge_compact_expire" in mor_names
-    assert "uuid4" in mor_names
-    mor_source = ast.get_source_segment(source, mor) or ""
-    assert "testing_mw4_mor_" in mor_source
+    table_name_bound_to_uuid = False
+    for node in ast.walk(mor):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        if "table_name" not in targets:
+            continue
+        has_uuid4 = False
+        has_mw4_prefix = False
+        for child in ast.walk(node.value):
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr == "uuid4"
+            ):
+                has_uuid4 = True
+            if (
+                isinstance(child, ast.Constant)
+                and isinstance(child.value, str)
+                and "mw4_mor_" in child.value
+            ):
+                has_mw4_prefix = True
+        table_name_bound_to_uuid = has_uuid4 and has_mw4_prefix
+    assert table_name_bound_to_uuid, "table_name must be mw4_mor_ plus uuid4, not a docstring"
 
 
 def test_glue_location_guard_calls_get_database() -> None:
@@ -453,6 +474,25 @@ def test_mor_helper_replays_the_last_merge() -> None:
     helper_source = ast.get_source_segment(source, helper)
     assert helper_source is not None
     assert "[updates[-1]]" in helper_source
+    helper_calls = {
+        node.func.id
+        for node in ast.walk(helper)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "require_snapshot_readable" in helper_calls
+
+    asserter = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "assert_mor_maintenance_outcome":
+            asserter = node
+            break
+    assert asserter is not None
+    asserter_calls = {
+        node.func.id
+        for node in ast.walk(asserter)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "require_snapshot_expired" in asserter_calls
 
 
 def test_maintenance_call_sql_is_catalog_dot_system() -> None:
