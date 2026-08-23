@@ -12,6 +12,12 @@ not this directory.
 
 ## Contents
 
+- [a13-shared-ctas-fallback-ledger.md](a13-shared-ctas-fallback-ledger.md) —
+  **A13 (2026-08-23):** `register_memory_catalog` uses the supplied warehouse as the
+  location-less CTAS fallback root, so two sessions with different warehouses no longer
+  share `<temp>/repark_ctas/<catalog>/<ns>/<table>`. MW-3 orphan refuse stays on the
+  fallback tree.
+
 - [pyc-6-docstring-presence-ledger.md](pyc-6-docstring-presence-ledger.md) —
   **PYC-6 (2026-08-22):** arm public-docstring presence (`D101`/`D102`/`D103`/
   `D105`/`D107`) with a seeded ratchet; style `D` declined permanently; tests

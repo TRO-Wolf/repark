@@ -736,8 +736,8 @@ async fn tblproperties_on_create_refuses_with_a_steer() {
     );
 }
 
-/// A create whose schema has NO location falls back to the registration-time temp root on a
-/// `TempFallbackAllowed` catalog — offline work keeps running without a configured warehouse.
+/// A create whose schema has NO location falls back to the registration-time root on a
+/// `TempFallbackAllowed` catalog — offline work keeps running without a namespace location.
 #[tokio::test]
 async fn location_less_schema_falls_back_on_a_temp_fallback_catalog() {
     let door = door().await;
@@ -752,10 +752,10 @@ async fn location_less_schema_falls_back_on_a_temp_fallback_catalog() {
     door.ok("CREATE TABLE ice.nowhere.t AS SELECT 1 AS id")
         .await;
     let table = door.table("nowhere", "t").await;
+    let location = table.metadata().location();
     assert!(
-        table.metadata().location().contains("repark_ansi_ctas"),
-        "the temp fallback must be used, got {}",
-        table.metadata().location()
+        location.contains("repark_ansi_ctas") && location.starts_with(&door.warehouse),
+        "A13: fallback under the warehouse, got {location}"
     );
 }
 

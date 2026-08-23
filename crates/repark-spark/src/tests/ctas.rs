@@ -35,9 +35,10 @@ async fn ctas_from_temp_view_into_iceberg_round_trips() {
 /// silently placing data under `$TMPDIR` — the audit's BUG-002 / SEC-003 fix. The error names
 /// the namespace and points at BOTH ways to set the location — the SQL
 /// `CREATE NAMESPACE … LOCATION` / `WITH DBPROPERTIES` path (WG-5) and the programmatic
-/// `create_namespace` (ADV-2 wording, updated by WG-5). (Memory catalogs keep the offline temp
-/// fallback: every other CTAS test registers via `CatalogRegistry::from`, which tags
-/// `TempFallbackAllowed`, and stays green.)
+/// `create_namespace` (ADV-2 wording, updated by WG-5). (Memory catalogs keep
+/// `TempFallbackAllowed`: `register_memory_catalog` uses the warehouse as `root`; the
+/// `CatalogRegistry::from` helper still uses `temp_dir()`. Most CTAS tests here still go
+/// through `From` + a namespace `location`, so they never hit the fallback.)
 #[tokio::test]
 async fn ctas_location_less_namespace_fails_loud_for_non_memory_catalog() {
     let wh = TempDir::new().unwrap();
@@ -1325,5 +1326,59 @@ fn build_ctas_rejects_missing_query_without_panicking() {
     assert!(
         error.to_string().contains("CTAS"),
         "error should name the missing-CTAS cause, got: {error}"
+    );
+}
+
+/// A13 product path: `register_memory_catalog` + location-less Spark CTAS lands under the
+/// warehouse, not `<temp>/repark_ctas`.
+#[tokio::test]
+async fn register_memory_catalog_location_less_ctas_lands_under_warehouse() {
+    use std::sync::Arc;
+
+    use repark_core::ReparkSession;
+
+    use crate::{SparkDialect, SparkExtension};
+
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = ReparkSession::builder()
+        .with_extension(Arc::new(SparkExtension))
+        .with_sql_dialect(Arc::new(SparkDialect))
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("a13mem", &warehouse)
+        .await
+        .unwrap();
+    session
+        .create_namespace("a13mem", "a13ns", HashMap::new())
+        .await
+        .unwrap();
+    session
+        .sql("CREATE TABLE a13mem.a13ns.events USING iceberg AS SELECT 1 AS id")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+
+    let under_warehouse = warehouse_dir
+        .path()
+        .join("repark_ctas")
+        .join("a13mem")
+        .join("a13ns")
+        .join("events");
+    assert!(
+        under_warehouse.exists(),
+        "location-less Spark CTAS must write under the warehouse, missing {under_warehouse:?}"
+    );
+    let global = std::env::temp_dir()
+        .join("repark_ctas")
+        .join("a13mem")
+        .join("a13ns")
+        .join("events");
+    assert!(
+        !global.exists(),
+        "must not share the process-temp root, found {global:?}"
     );
 }

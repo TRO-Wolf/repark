@@ -421,8 +421,9 @@ pub(crate) async fn resolve_create_plan_for(
 /// database's `locationUri` — audit BUG-001 / U2) as the deterministic fallback, so a
 /// pre-existing Glue database resolves without any `RePark`-written property. When NEITHER key is
 /// present the behaviour depends on the catalog's [`LocationPolicy`]:
-/// - [`LocationPolicy::TempFallbackAllowed`] (in-memory / `LocalFs`): fall back to a process-temp
-///   root so offline CTAS runs without a configured warehouse.
+/// - [`LocationPolicy::TempFallbackAllowed`] (in-memory / `LocalFs`): fall back to the
+///   registration-time root (the memory catalog's warehouse; A13) so offline CTAS runs without a
+///   namespace `location`.
 /// - [`LocationPolicy::RequireExplicitLocation`] (Glue / S3 Tables): **fail loud**. Silently placing
 ///   a real warehouse's data under `$TMPDIR` is the audit's BUG-002 / SEC-003 mis-placement hole; the
 ///   error names the namespace and points at BOTH ways to set the location — SQL
@@ -466,7 +467,8 @@ pub(crate) async fn resolve_table_create_location(
     match policy {
         // E-4 (phase-1 forced edit): the fallback root is resolved ONCE at catalog-registration
         // time (`ReparkSession::register_memory_catalog`) and carried on the policy — no
-        // `std::env::temp_dir()` read at query time (v1 read the env here).
+        // `std::env::temp_dir()` read at query time (v1 read the env here). A13: that root is
+        // the warehouse argument, not the process temp dir.
         LocationPolicy::TempFallbackAllowed { root } => {
             let mut path = root;
             path.push("repark_ctas");

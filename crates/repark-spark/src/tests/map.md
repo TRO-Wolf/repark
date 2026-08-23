@@ -22,11 +22,15 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `ctas_of_instant_producers_stores_timestamptz` (SQL `current_timestamp` / `to_timestamp(Z)`
   / identity-partitioned CTAS).
 - **Production-aligned leaves** (flat tests gained one path segment `tests::<leaf>::…`):
-  `ctas`, `create_table`, `namespace_ddl` (R-6 / G-6 Q1: `IF NOT EXISTS` create-new /
+  `ctas` (**A13:** `register_memory_catalog` location-less CTAS lands under the warehouse, not
+  `<temp>/repark_ctas`), `create_table`, `namespace_ddl` (R-6 / G-6 Q1: `IF NOT EXISTS` create-new /
   same / conflicting / no-location twins; the old silent-adopt fixture now matches
   location), `catalog_ops`, `describe_show`, `alter`, `dml`
   (DELETE/UPDATE + BUG-001 valve; no production `delete`/`update` module), `insert_overwrite`,
-  `merge`, `call` (**MW-1:** the LOCAL-only fence is gone — both remote catalog policies
+  `merge`, `call` / `call_orphan` (**A13:**
+  `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root` is the
+  execute-path CALL `location` refuse in `call_orphan.rs`;
+  `call_orphan_shared_ctas_root_rule` is the helper table). **MW-1:** the LOCAL-only fence is gone — both remote catalog policies
   execute, an unknown catalog still refuses, and expire pins Spark's six-column result with
   the content-file funnel split by manifest `content_type()`; the split pin strands its
   position deletes by ROLLBACK, because compaction keeps them until MW-2. **MW-2:**

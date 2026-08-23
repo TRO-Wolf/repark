@@ -20,6 +20,8 @@ reach delegation through the ordinary arm.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
+  CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
   valve → match → the two DML valves → delegate) and the delegation path that carries the SEC-02
   guard. Delegation
@@ -59,7 +61,8 @@ reach delegation through the ordinary arm.
 - `create_table.rs` — CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
   catalog or LOUD refuse — never a silent `MemTable`), clause refusals, A11 nanosecond-timestamp
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
-  three-way `LocationPolicy` resolution, staged create/replace, and the service-managed
+  three-way `LocationPolicy` resolution (**A13:** `TempFallbackAllowed` root is the memory
+  catalog warehouse on the `register_memory_catalog` path), staged create/replace, and the service-managed
   create-first path. **SE-1 PR-D1:** refuses Iceberg CREATE when any `TableScan`
   source (including expression subqueries, R-B) is tighten-derived AND the
   output has a non-nullable field (R-D), or the output schema still carries
@@ -126,7 +129,9 @@ reach delegation through the ordinary arm.
 - `tests.rs` (`#[cfg(test)]`) — the end-to-end door battery on a NATIVE session (no extension),
   asserted on the Arrow path, value AND type. **BL-4 (2026-08-15):**
   `merge_update_boolean_to_int_refuses` + `merge_update_numeric_widening_still_updates`
-  — UPDATE SET store-assignment through this door (needle + widening pass).
+  — UPDATE SET store-assignment through this door (needle + widening pass). The `door()`
+  helper already used the warehouse as `TempFallbackAllowed.root`; A13's
+  `register_memory_catalog` pin lives in `a13_fallback.rs`.
 
 ## I want to...
 

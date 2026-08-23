@@ -46,9 +46,12 @@ wrapper.
   true (`ORPHAN-2`). Its 24-hour floor is parity, not strictness — Java enforces the same floor in
   its procedure layer rather than the Action API, which is why it lives in this router and not in
   the fork. A partial delete fails loudly rather than reporting success, and a table sitting in the
-  shared `<temp>/repark_ctas` fallback root REFUSES — that path is keyed by name alone, so two
-  sessions can share it and one session's "orphan" is another's live file. Only this procedure
-  cares: every other one touches solely what its own metadata references.
+  catalog's `{root}/repark_ctas` and `{root}/repark_ansi_ctas` fallback trees REFUSES — after
+  A13 `root` is the warehouse for `register_memory_catalog`, so two sessions with different
+  warehouses no longer collide, but two processes sharing one warehouse and the same names
+  still do. The refuse covers the table location, a CALL `location` argument, a parent that
+  would list those trees, `file://` aliases, and lexical `..`. Only this procedure cares:
+  every other one touches solely what its own metadata references.
   **V3-0 added the second format-version guard on this surface**: `rewrite_data_files` refuses a
   format-v3 table (registry `V3-LINEAGE-1`). It is not a capability gap — the rewrite ran and
   produced the right rows — it reassigned every row's `_row_id`, which on v3 tells a downstream

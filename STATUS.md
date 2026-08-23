@@ -337,11 +337,13 @@ history-rewrite; provenance and the options weighed:
     (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert Spark's defaults on
     the one procedure with no undo, under owner decision **OD-2**.
   - **MW-3 surfaced a data-loss vector and guarded it rather than fixing it mid-unit.** The
-    in-memory catalog's namespace-without-location fallback is keyed by name alone, so two
-    sessions sharing `mem.ns.events` share one directory; orphan cleanup there could delete
-    another session's live files. The procedure now refuses that root. The underlying write-path
-    behaviour is roadmap **A13** in
-    [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), not closed.
+    in-memory catalog's namespace-without-location fallback is keyed by name under the catalog
+    root, so two processes sharing one warehouse and `mem.ns.events` share one directory; orphan
+    cleanup there could delete another process's live files. The procedure still refuses that
+    fallback tree. **A13** (this change) set `register_memory_catalog`'s fallback root to the
+    supplied warehouse rather than `<temp>/repark_ctas`, so two sessions with different
+    warehouses no longer share files. See
+    [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md) A13.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), owner-scheduled

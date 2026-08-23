@@ -22,8 +22,8 @@
 //!
 //! An explicit `WITH (location = …)` wins. Otherwise the namespace's `location` property is used.
 //! Otherwise the catalog's [`LocationPolicy`] decides: `TempFallbackAllowed { root }` falls back
-//! to the registration-time temp root (offline development), `RequireExplicitLocation` fails LOUD
-//! (a real warehouse must never have data placed under `$TMPDIR`), and `ServiceManagedLocation`
+//! to the registration-time root (the memory catalog's warehouse; A13), `RequireExplicitLocation`
+//! fails LOUD (a real warehouse must never have data placed under `$TMPDIR`), and `ServiceManagedLocation`
 //! (S3 Tables) cannot stage at all — the service assigns the location at create — so it routes to
 //! create-first + append + drop-on-abort.
 //!

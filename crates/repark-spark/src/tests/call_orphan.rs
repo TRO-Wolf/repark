@@ -472,4 +472,92 @@ fn call_orphan_shared_ctas_root_rule() {
     }
     refuse_shared_temp_fallback_location(None, "/scratch/repark_ctas/mem/ns/t", "x")
         .expect("no policy, no rule");
+
+    // Parent of the fallback tree (the warehouse itself) would list repark_ctas recursively.
+    let err = refuse_shared_temp_fallback_location(Some(&policy), "/scratch", "owned.t")
+        .expect_err("a parent of the fallback root must refuse");
+    assert!(
+        err.to_string().contains("shared CTAS fallback root"),
+        "{err}"
+    );
+
+    refuse_shared_temp_fallback_location(
+        Some(&policy),
+        "file:///scratch/repark_ctas/mem/ns/events",
+        "x",
+    )
+    .expect_err("file:// aliases must refuse");
+    refuse_shared_temp_fallback_location(
+        Some(&policy),
+        "/scratch/owned/../repark_ctas/mem/ns/events",
+        "x",
+    )
+    .expect_err("lexically equivalent .. paths must refuse");
+    refuse_shared_temp_fallback_location(Some(&policy), "/scratch/repark_ansi_ctas/ice/ns/t", "x")
+        .expect_err("the ANSI fallback prefix must refuse");
+    refuse_shared_temp_fallback_location(
+        Some(&policy),
+        "file:/scratch/repark_ctas/mem/ns/events",
+        "x",
+    )
+    .expect_err("file:/ (one slash) must refuse — FileIO lists it as /scratch/repark_ctas");
+    refuse_shared_temp_fallback_location(
+        Some(&policy),
+        "file://scratch/repark_ctas/mem/ns/events",
+        "x",
+    )
+    .expect_err("hostless file://path must refuse — FileIO treats it as absolute");
+}
+
+/// A13: CALL `location` pointing at the fallback tree must refuse on the execute path
+/// (a helper-only pin stays green if the `location` arm is deleted).
+#[tokio::test]
+async fn call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root() {
+    use std::sync::Arc;
+
+    use repark_core::ReparkSession;
+
+    use crate::{SparkDialect, SparkExtension};
+
+    let warehouse_dir = TempDir::new().unwrap();
+    let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
+    let session = ReparkSession::builder()
+        .with_extension(Arc::new(SparkExtension))
+        .with_sql_dialect(Arc::new(SparkDialect))
+        .build()
+        .unwrap();
+    session
+        .register_memory_catalog("ice", &warehouse)
+        .await
+        .unwrap();
+    let owned = format!("{warehouse}/owned");
+    session
+        .create_namespace(
+            "ice",
+            "owned",
+            HashMap::from([("location".to_string(), owned)]),
+        )
+        .await
+        .unwrap();
+    session
+        .sql("CREATE TABLE ice.owned.t USING iceberg AS SELECT 1 AS id")
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let fallback = warehouse_dir.path().join("repark_ctas");
+    let err = session
+        .sql(&format!(
+            "CALL ice.system.remove_orphan_files(table => 'owned.t', older_than => {}, \
+             location => '{}')",
+            older_than_two_days_ago_ms(),
+            fallback.display()
+        ))
+        .await
+        .expect_err("CALL location under the fallback root must refuse");
+    assert!(
+        err.to_string().contains("shared CTAS fallback root"),
+        "{err}"
+    );
 }

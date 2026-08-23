@@ -78,25 +78,22 @@ facade gate depends on it, so rebuild it in the same breath).
 
 ## 4. `/tmp/repark_ctas` is a bug's exhaust, not a cache
 
-Tables created in a namespace with no `location` property fall back to
-`<temp_dir>/repark_ctas/<catalog>/<namespace>/<table>` (`ctas.rs::resolve_create_location`, the
-E-4 fallback). That path is keyed by **names alone** — nothing process-specific — so every session
-that ever used `mem.ns.events` wrote into one shared directory.
+Until A13, tables created in a namespace with no `location` property fell back to
+`<temp_dir>/repark_ctas/<catalog>/<namespace>/<table>` (`ctas.rs::resolve_create_location`).
+That path was keyed by **names alone**, so every session that used `mem.ns.events` wrote into
+one shared directory. Measured 2026-08-21: **2.7 G across 22 catalog names**.
 
-Measured 2026-08-21: **2.7 G across 22 catalog names**, `mem` alone holding 1.9 G, and one table
-directory holding 139,179 files. It is safe to delete in full, and it will come back.
+**A13** (`register_memory_catalog`) sets the fallback root to the supplied warehouse, so new
+writes land at `<warehouse>/repark_ctas/…`. A leftover `/tmp/repark_ctas` from older sessions
+and from the `CatalogRegistry::from` test helper (no warehouse argument) may still exist. It is
+safe to delete in full.
 
-Two consequences worth knowing rather than rediscovering:
+`remove_orphan_files` still refuses a table sitting under the catalog's fallback root — two
+processes that pass the same warehouse and the same names still share a directory, and
+memory-catalog metadata is process-local.
 
-- **`remove_orphan_files` refuses to run on a table sitting under that root.** One session's
-  "orphan" is another session's live file, and that procedure has no undo. The refusal is
-  deliberate (MW-3); it names the hazard and tells the caller to create the namespace with an
-  explicit `LOCATION`.
-- **The underlying behaviour is open as roadmap A13**
-  ([task/roadmap-intake-2026-08-21.md](../../../task/roadmap-intake-2026-08-21.md)) — a warehouse
-  argument that is silently ignored. Until that closes, this directory regrows.
-
-Avoid feeding it: create namespaces with an explicit `LOCATION` in tests and scratch work.
+Prefer an explicit namespace `LOCATION` in tests and scratch work so the table owns its
+directory.
 
 ## Gotchas
 

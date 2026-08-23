@@ -41,7 +41,7 @@ use repark_common::{Error, Result};
 
 use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
-use crate::catalog_state::{CatalogRegistry, LocationPolicy};
+use crate::catalog_state::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 use crate::dialect::{DataFusionDialect, EngineContext, SqlDialect};
 use crate::extension::{NoopSessionExtension, SessionBuildConf, SessionExtension};
 use crate::session_time_zone::{SessionTimeZone, resolve_session_time_zone};
@@ -905,7 +905,7 @@ impl ReparkSession {
     }
 
     /// A cheap clone of the catalog registry (keys + `Arc`s) for passing to the SQL layer.
-    fn catalogs_snapshot(&self) -> CatalogRegistry {
+    pub(crate) fn catalogs_snapshot(&self) -> CatalogRegistry {
         self.catalogs
             .read()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -1145,15 +1145,17 @@ impl ReparkSession {
         let catalog = repark_iceberg::catalog::memory_catalog(warehouse)
             .await
             .map_err(engine_err)?;
-        // The in-memory / LocalFs catalog keeps the offline temp-location fallback for CTAS into a
-        // namespace with no `location` property (real warehouses fail loud instead). E-4: the
-        // fallback ROOT is resolved here, once, at registration time — the CTAS consumer reads
-        // the policy's `root` and never touches the process environment at query time.
+        // The in-memory / LocalFs catalog keeps the offline fallback for CTAS into a namespace
+        // with no `location` property (real warehouses fail loud instead). E-4: the fallback ROOT
+        // is resolved here, once, at registration time — the CTAS consumer reads the policy's
+        // `root` and never touches the process environment at query time. A13: `root` is the
+        // supplied warehouse, not `std::env::temp_dir()`, so two sessions with different
+        // warehouses do not share a directory keyed by names alone.
         self.register_iceberg_catalog_with_policy(
             name,
             catalog,
             LocationPolicy::TempFallbackAllowed {
-                root: std::env::temp_dir(),
+                root: memory_warehouse_fallback_root(warehouse),
             },
         )
         .await?;
@@ -1471,5 +1473,7 @@ mod df_guard_tests;
 #[cfg(test)]
 mod namespace_create_tests;
 
+#[cfg(test)]
+mod a13_tests;
 #[cfg(test)]
 mod tests;

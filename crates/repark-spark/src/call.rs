@@ -64,6 +64,7 @@
 //! - any other `system.*` procedure.
 
 use std::collections::HashMap;
+use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Int32Array, Int64Array, RecordBatch, StringArray};
@@ -80,7 +81,9 @@ use iceberg::transaction::{
 };
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
-use repark_core::{CatalogRegistry, LocationPolicy, parse_timestamp_to_ms};
+use repark_core::{
+    CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root, parse_timestamp_to_ms,
+};
 
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
@@ -1033,9 +1036,11 @@ const ORPHAN_OLDER_THAN_FLOOR_MS: i64 = 24 * 60 * 60 * 1000;
 ///
 /// A [`LocationPolicy::TempFallbackAllowed`] catalog whose namespace carries no `location`
 /// property places tables at `<root>/repark_ctas/<catalog>/<namespace>/<table>` (`ctas.rs`
-/// `resolve_create_location`). That path is derived from NAMES alone, so it is shared by every
-/// process on the machine that happens to use the same catalog, namespace and table name — two
-/// independent sessions both using `mem.ns.events` get the same directory.
+/// `resolve_create_location`). That path is derived from NAMES under `root`. A13 made `root`
+/// the catalog warehouse for `register_memory_catalog`, so two sessions with *different*
+/// warehouses no longer collide. Two processes that pass the *same* warehouse and the same
+/// names still share a directory, and memory-catalog metadata is process-local, so sweeping
+/// there can still delete another process's live files.
 ///
 /// Orphan removal decides what to delete by subtracting ONE table's reachable set from a
 /// directory listing. In a shared directory, another session's live files are not in this
@@ -1055,21 +1060,48 @@ pub(crate) fn refuse_shared_temp_fallback_location(
     let Some(LocationPolicy::TempFallbackAllowed { root }) = policy else {
         return Ok(());
     };
-    let mut fallback_root = root.clone();
-    fallback_root.push("repark_ctas");
-    if !std::path::Path::new(table_location).starts_with(&fallback_root) {
-        return Ok(());
+    let scan = normalize_orphan_scan_path(table_location);
+    for segment in ["repark_ctas", "repark_ansi_ctas"] {
+        let mut fallback_root = root.clone();
+        fallback_root.push(segment);
+        let fallback_root = normalize_lexically(&fallback_root);
+        if scan_hits_fallback(&scan, &fallback_root) {
+            return Err(DataFusionError::Plan(format!(
+                "CALL remove_orphan_files refuses to sweep `{table_arg}`: path `{table_location}` \
+                 sits in or contains the shared CTAS fallback root `{}`. That path is derived \
+                 from the catalog, namespace and table NAME alone, so any other process using \
+                 the same names writes to the same directory — and this procedure deletes \
+                 whatever the table's own metadata does not reference, which would include \
+                 another session's live files. Re-create the namespace with an explicit location \
+                 (`CREATE NAMESPACE <catalog>.<namespace> LOCATION '<path>'`) so the table owns \
+                 its directory, then sweep it.",
+                fallback_root.display()
+            )));
+        }
     }
-    Err(DataFusionError::Plan(format!(
-        "CALL remove_orphan_files refuses to sweep `{table_arg}`: it lives at `{table_location}`, \
-         under the shared CTAS fallback root `{}`. That path is derived from the catalog, \
-         namespace and table NAME alone, so any other process using the same names writes to the \
-         same directory — and this procedure deletes whatever the table's own metadata does not \
-         reference, which would include another session's live files. Re-create the namespace \
-         with an explicit location (`CREATE NAMESPACE <catalog>.<namespace> LOCATION '<path>'`) so \
-         the table owns its directory, then sweep it.",
-        fallback_root.display()
-    )))
+    Ok(())
+}
+
+fn normalize_orphan_scan_path(location: &str) -> PathBuf {
+    normalize_lexically(&memory_warehouse_fallback_root(location))
+}
+
+fn normalize_lexically(path: &Path) -> PathBuf {
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                out.pop();
+            }
+            other => out.push(other),
+        }
+    }
+    out
+}
+
+fn scan_hits_fallback(scan: &Path, fallback_root: &Path) -> bool {
+    scan.starts_with(fallback_root) || fallback_root.starts_with(scan)
 }
 
 /// Wall-clock millis since the epoch, for the `older_than` floor.
@@ -1198,6 +1230,9 @@ async fn execute_remove_orphan_files(
     let ident = resolve_table_ident(catalog_name, &table_arg)?;
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     refuse_shared_temp_fallback_location(policy.as_ref(), table.metadata().location(), &table_arg)?;
+    if let Some(scan_location) = location.as_deref() {
+        refuse_shared_temp_fallback_location(policy.as_ref(), scan_location, &table_arg)?;
+    }
 
     let mut action = DeleteOrphanFiles::new(table).older_than(older_than_ms);
     if let Some(location) = location {
