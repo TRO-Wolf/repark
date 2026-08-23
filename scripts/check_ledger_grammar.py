@@ -62,7 +62,6 @@ CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 # filed. A ledger not listed allows zero and must file its attestation.
 EXCEPTIONS: dict[str, tuple[int, bool]] = {
     "fnp-0-charter-ledger.md": (12, False),
-    "mw-0-charter-ledger.md": (10, False),
     "sem-0-charter-ledger.md": (9, False),
     "v3-0-charter-ledger.md": (0, False),
 }

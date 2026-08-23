@@ -627,6 +627,17 @@ Ledgers archived in 2026-08; immutable — corrections are dated errata at the t
   (2026-08-23):** the ledger grammar, checked by `scripts/check_ledger_grammar.py` — clause rows,
   `pins:` citations binding tests to clauses, the Critic's attestation form; XML measured and
   declined. Stacked on DL-1 (PR #221).
+- [2026-08-23-mw-0-charter-ledger.md](2026-08-23-mw-0-charter-ledger.md) — **MW-0 (2026-08-21):** the charter for the
+  Iceberg write-path maintenance wave, and the campaign's whole measured floor. Merge-on-read
+  writes are correct and merge-on-read is not operable: ten sequential MERGEs grow delete files
+  one per merge and never reclaim them, costing **2.1x on scan while the answer stays 1,000
+  rows**. Procedure result schemas measured before any pin exists — two executed on a live
+  oracle, two read from the shipping Iceberg jar's own constant because a Spark 4.0-to-4.1 binary
+  break stops them executing. Gate **RULED**, no open clauses: the fence lifts for BOTH remote
+  catalog policies. **Read §5 for the three claims that changed under re-verification** — an
+  "undeclared divergence" that turned out to be declared, and a hazard this orchestrator
+  overstated from a secondhand citation, which shrank MW-1 from building a mitigation to
+  documenting a failure mode.
 - [2026-08-23-mw-4-mor-acceptance-ledger.md](2026-08-23-mw-4-mor-acceptance-ledger.md) —
   **MW-4 (2026-08-23):** Glue live merge-on-read compact+expire in the aws-acceptance
   module. OD-3 scoped `s3:DeleteObject` on the warehouse scratch prefix. Unique
@@ -637,6 +648,11 @@ Ledgers archived in 2026-08; immutable — corrections are dated errata at the t
   **MW-4b (2026-08-23):** Glue/HMS hierarchical-namespace `DataInvalid` on the Spark
   metadata-table "real table wins" probe. MW-4 live `table.snapshots` died here;
   the `$` rewrite now treats that error as absent.
+- [2026-08-23-mw-5-campaign-close-ledger.md](2026-08-23-mw-5-campaign-close-ledger.md) — **MW-5 (2026-08-23):**
+  campaign close. Re-runs the MW-0 1,000-row / ten-MERGE demo, pins delete-file growth
+  1→10 then compact+expire 10→1 with Arrow `COUNT(*)` 1,000 `int64`, records wall-clock
+  in the ledger (not a CI timing pin), STATUS scorecard, guide lockstep. S3 Tables MOR
+  stays out. Original charter registry rows were closed in MW-1/MW-2.
 
 ## Pointers
 - Up: [../map.md](../map.md)

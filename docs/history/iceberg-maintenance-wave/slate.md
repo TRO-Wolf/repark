@@ -9,7 +9,7 @@
 **Chartered 2026-08-21**, green-lit by the owner for immediate start. Design:
 [design.md](design.md).
 Charter and approval gate:
-[../../../task/ledgers/completed/mw-0-charter-ledger.md](../../../task/ledgers/completed/mw-0-charter-ledger.md).
+[../../../task/ledgers/completed/mw-0-charter-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-23-mw-0-charter-ledger.md).
 
 ## The one invariant
 

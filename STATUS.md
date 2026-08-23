@@ -344,7 +344,7 @@ history-rewrite; provenance and the options weighed:
   Design and slate:
   [docs/history/iceberg-maintenance-wave/](docs/history/iceberg-maintenance-wave/README.md)
   (archived 2026-08-23). Charter:
-  [task/ledgers/completed/mw-0-charter-ledger.md](task/ledgers/completed/mw-0-charter-ledger.md).
+  [task/ledgers/completed/mw-0-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-mw-0-charter-ledger.md).
   - **Delivered:** MW-0 the measured charter ([#195](https://github.com/TRO-Wolf/repark/pull/195)),
     MW-1 the fence lifted for both catalog policies plus Spark's six-column `expire_snapshots`
     ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`

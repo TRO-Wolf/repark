@@ -60,7 +60,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
   `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
-  floor per ledger (31 unpinned `PROVEN` clauses across three charters; attestation not required
+  floor per ledger (31 unpinned `PROVEN` clauses across three charters at arming; rows ratchet
+  away as their ledgers retire — mw-0's went with MW-5; attestation not required
   of the five ledgers that predate the rule), ratchets down only, and a row naming a ledger in no
   live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
   `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
