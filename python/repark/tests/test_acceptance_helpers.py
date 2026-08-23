@@ -34,11 +34,13 @@ from _acceptance import (
     mor_acceptance_expected_rows,
     mor_ctas_sql,
     normalize_location_uri,
+    require_snapshot_expired,
     run_mor_merge_compact_expire,
     s3tables_catalog_config,
 )
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 
 _TESTS_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -532,6 +534,49 @@ def test_maintenance_call_sql_is_catalog_dot_system() -> None:
     assert sql.startswith("CALL glue_catalog.system.expire_snapshots(")
     assert "table => 'testing_repark_acceptance.testing_mw4'" in sql
     assert "retain_last => 1" in sql
+
+
+class _RaisingSql:
+    """Session stub whose ``sql`` always raises ``AnalysisException``."""
+
+    def __init__(self, message: str) -> None:
+        self._message = message
+
+    def sql(self, statement: str) -> object:
+        raise AnalysisException(self._message)
+
+
+class _OkSql:
+    """Session stub whose ``sql`` returns an object with ``to_arrow``."""
+
+    def sql(self, statement: str) -> object:
+        return self
+
+    def to_arrow(self) -> object:
+        return self
+
+
+def test_require_snapshot_expired_rejects_id_echo_and_generic_snapshot() -> None:
+    """C4-L-001: id-echo or 'snapshot' alone is not expire proof."""
+    with pytest.raises(AnalysisException):
+        require_snapshot_expired(_RaisingSql("VERSION AS OF 99 failed"), "t", 99)
+    with pytest.raises(AnalysisException):
+        require_snapshot_expired(_RaisingSql("snapshot time travel not supported"), "t", 99)
+
+
+def test_require_snapshot_expired_accepts_the_engine_needle() -> None:
+    require_snapshot_expired(
+        _RaisingSql(
+            "Error during planning: unknown Iceberg snapshot id 99: not found in table metadata"
+        ),
+        "t",
+        99,
+    )
+
+
+def test_require_snapshot_expired_still_resolves_is_a_no_op() -> None:
+    with pytest.raises(AssertionError, match="expire was a no-op"):
+        require_snapshot_expired(_OkSql(), "t", 99)
 
 
 def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> None:

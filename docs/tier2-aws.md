@@ -111,8 +111,9 @@ behaves locally).
 already exists in Glue from earlier hand testing, it carries the `LocationUri` it was created with
 — and the harness's create is *idempotent*, so it adopts the existing database silently rather
 than failing. Every table write then lands under the OLD warehouse, and the only thing standing
-between you and writes outside the prefix you scoped in §2 is the create-only role's denial. A
-denial is a stop, not a design. Check first, with owner credentials:
+between you and writes outside the prefix you scoped in §2 is that scratch-scoped IAM (Glue
+writes and OD-3 `s3:DeleteObject` stay on that prefix; bronze is read-only). A denial is a
+stop, not a design. Check first, with owner credentials:
 
 ```bash
 aws glue get-database --name testing_repark_acceptance   # inspect LocationUri
@@ -122,7 +123,8 @@ aws glue get-tables    --database-name testing_repark_acceptance   # expect only
 Read the `LocationUri`: it must be the `REPARK_ACCEPT_WAREHOUSE` prefix you configured in §4
 (`s3://<your-warehouse>/…`), not an older one. If it is stale — or `get-tables` shows anything
 that is not a `testing_*` scratch table — delete the database with **owner** credentials before
-the first dispatch, never from CI (the role has no delete actions, by design — §2):
+the first dispatch, never from CI (the role has no `glue:DeleteTable` /
+`glue:DeleteDatabase`, by design — §2):
 
 ```bash
 aws glue delete-database --name testing_repark_acceptance
