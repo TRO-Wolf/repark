@@ -11,6 +11,9 @@ Current state (release, delivered surface, what happens next) is **[../STATUS.md
 not this directory.
 
 ## Contents
+- [ledgers/](ledgers/map.md) — **the ledger bins (DL-1, 2026-08-23):** `staging/` →
+  `completed/` → `archive/yyyy-mm/`; the directory is the status. The DL-1 charter lives in
+  `staging/`; the finished ledgers below move to the archive with DL-1's backfill.
 
 - [mw-4b-glue-metadata-rewrite-ledger.md](mw-4b-glue-metadata-rewrite-ledger.md) —
   **MW-4b (2026-08-23):** Glue/HMS hierarchical-namespace `DataInvalid` on the Spark
