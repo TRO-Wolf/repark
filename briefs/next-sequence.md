@@ -179,6 +179,15 @@ MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline, score
 flip) is queued behind MW-4b and a green live Glue dispatch. Small once the live
 MOR compact+expire proof is actually green.
 
+**Post-MW-4 remainder, evaluated 2026-08-23:** the candidate units after MW-5 (MW-6
+`rewrite_manifests` through MW-9, the DML units, the RP-1 fork repin) and the
+window-operator measurement track are an **intake, not sequenced work**, in
+[../task/roadmap-intake-2026-08-23.md](../task/roadmap-intake-2026-08-23.md); the
+fork-side queue they feed is
+[../task/iceberg-rust-handoff-2026-08-23.md](../task/iceberg-rust-handoff-2026-08-23.md).
+Its `[OWNER]` recommendation is MW-6 beside the dispatch now; nothing here moves until
+the owner charters it.
+
 ---
 
 ## A13 — done (merged #217): warehouse-keyed CTAS fallback
