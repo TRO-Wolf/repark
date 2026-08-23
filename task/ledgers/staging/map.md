@@ -5,10 +5,14 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [dl-2-ledger-grammar-charter-ledger.md](dl-2-ledger-grammar-charter-ledger.md) — **DL-2
+  (2026-08-23):** the ledger grammar, checked by `scripts/check_ledger_grammar.py` — clause rows,
+  `pins:` citations binding tests to clauses, the Critic's attestation form; XML measured and
+  declined. Stacked on DL-1 (PR #221).
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
-  evidence behind it, and the one `OPEN` clause (C-007 — whether the four sub-project families
-  are built or declared absent-and-loud). No campaign unit opens until this gate passes. Design:
+  evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
+  2026-08-20 and the gate passed. Design:
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
 - [mw-0-charter-ledger.md](mw-0-charter-ledger.md) — **MW-0 (2026-08-21):** the charter for the
