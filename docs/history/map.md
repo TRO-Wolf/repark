@@ -37,7 +37,7 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 | Check that an archived rule still binds — and where it lives now | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) · [frontdoor/retrospective.md](frontdoor/retrospective.md) "Promotion check" · [hardening-h1/promotion-ledger.md](hardening-h1/promotion-ledger.md) |
 | Find a unit's gate evidence / provocation proofs / census arithmetic | the unit's ledger in [port-v2/](port-v2/map.md), [frontdoor/](frontdoor/map.md), or [hardening-h1/](hardening-h1/map.md) |
 | See what a closed campaign cost, caught and missed | that campaign's retrospective + [../../task/metrics.md](../../task/metrics.md) |
-| Archive a completed campaign or closed phase | run its promotion audit first, then `git mv` into a new `docs/history/<campaign>/` with its own `README.md` + `map.md` |
+| Archive a completed campaign or closed phase | run its promotion audit first, then `git mv` its briefs and designs into a new `docs/history/<campaign>/` with its own `README.md` + `map.md`. Its unit ledgers are **not** moved: since DL-1 (2026-08-23) they are already in [../../task/ledgers/archive/](../../task/ledgers/archive/map.md) by merge month, and the campaign folder links to them there |
 
 ## Pointers
 
