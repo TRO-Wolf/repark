@@ -62,12 +62,13 @@ dual-wire dataclass row stays the sanctioned leftover.
 declined permanently. The dual-wire dataclass leftover and the D-presence
 EXCEPTIONS table are remaining debt, not sequenced work.
 
-**A13 lands with this change and leaves this file:** `register_memory_catalog`
-uses the supplied warehouse as the location-less CTAS fallback root, so two
-sessions with different warehouses no longer share `<temp>/repark_ctas/<catalog>/<ns>/<table>`.
-Same warehouse + same names still share; MW-3 refuse stays on that fallback
-tree. The dual-wire dataclass leftover is remaining debt, not sequenced work.
-The queue is MW-4 (blocked on OD-3) and MW-5.
+**A13 merged as [#217](https://github.com/TRO-Wolf/repark/pull/217) and left this file:**
+`register_memory_catalog` uses the supplied warehouse as the location-less CTAS
+fallback root, so two sessions with different warehouses no longer share
+`<temp>/repark_ctas/<catalog>/<ns>/<table>`. Same warehouse + same names still
+share; MW-3 refuse stays on that fallback tree. The dual-wire dataclass leftover
+is remaining debt, not sequenced work. The queue is MW-4 (blocked on OD-3) and
+MW-5.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that

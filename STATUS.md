@@ -340,9 +340,9 @@ history-rewrite; provenance and the options weighed:
     in-memory catalog's namespace-without-location fallback is keyed by name under the catalog
     root, so two processes sharing one warehouse and `mem.ns.events` share one directory; orphan
     cleanup there could delete another process's live files. The procedure still refuses that
-    fallback tree. **A13** (this change) set `register_memory_catalog`'s fallback root to the
-    supplied warehouse rather than `<temp>/repark_ctas`, so two sessions with different
-    warehouses no longer share files. See
+    fallback tree. **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
+    `register_memory_catalog`'s fallback root to the supplied warehouse rather than
+    `<temp>/repark_ctas`, so two sessions with different warehouses no longer share files. See
     [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md) A13.
 
 - **Format-v3 track** (roadmap **A12** in
