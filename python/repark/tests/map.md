@@ -1987,7 +1987,8 @@ NOT in that file is a defect, not a decision.
   `_acceptance.py`, Glue MOR AST pin (location guard; `table_name` is `mw4_mor_` plus
   `uuid4`, not a docstring token), S3 Tables must not call the MOR helper, identical-MERGE
   source pin `[updates[-1]]`, dual-probe AST (`require_snapshot_readable` in the runner,
-  `require_snapshot_expired` in the asserter).
+  `require_snapshot_expired(outcome.first_snapshot_id)` in the asserter), live test must
+  call the asserter with `table_name` as the helper's fourth argument.
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors

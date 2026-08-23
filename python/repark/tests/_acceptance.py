@@ -508,8 +508,8 @@ def require_snapshot_expired(spark: object, table: str, snapshot_id: int) -> Non
             f"SELECT id FROM {table} VERSION AS OF {snapshot_id}"
         ).to_arrow()
     except AnalysisException as error:
-        text = str(error)
-        if "unknown Iceberg snapshot id" in text and str(snapshot_id) in text:
+        needle = f"unknown Iceberg snapshot id {snapshot_id}: not found in table metadata"
+        if needle in str(error):
             return
         raise
     raise AssertionError(

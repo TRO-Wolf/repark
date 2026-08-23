@@ -378,6 +378,19 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
     assert mor_guard, "MW-4 Glue leg must call assert_glue_scratch_namespace_location"
     assert min(mor_create) < min(mor_guard), "MW-4 guard must run after ensure-namespace"
     assert "run_mor_merge_compact_expire" in mor_names
+    assert "assert_mor_maintenance_outcome" in mor_names
+    helper_call = None
+    for node in ast.walk(mor):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "run_mor_merge_compact_expire"
+        ):
+            helper_call = node
+    assert helper_call is not None
+    assert len(helper_call.args) >= 4
+    fourth = helper_call.args[3]
+    assert isinstance(fourth, ast.Name) and fourth.id == "table_name"
     table_name_bound_to_uuid = False
     for node in ast.walk(mor):
         if not isinstance(node, ast.Assign):
@@ -493,6 +506,20 @@ def test_mor_helper_replays_the_last_merge() -> None:
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
     }
     assert "require_snapshot_expired" in asserter_calls
+    expired_uses_outcome_id = False
+    for node in ast.walk(asserter):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "require_snapshot_expired"
+        ):
+            continue
+        if len(node.args) < 3:
+            continue
+        snapshot_arg = node.args[2]
+        if isinstance(snapshot_arg, ast.Attribute) and snapshot_arg.attr == "first_snapshot_id":
+            expired_uses_outcome_id = True
+    assert expired_uses_outcome_id, "expire probe must use outcome.first_snapshot_id"
 
 
 def test_maintenance_call_sql_is_catalog_dot_system() -> None:
