@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-22._
+_Last updated: 2026-08-23._
 
 ## Release state
 
@@ -236,7 +236,8 @@ history-rewrite; provenance and the options weighed:
     the parity harness and `scripts/`, plus narrowing the `ANN` per-file ignores),
     and PYC-5 (merged as [#211](https://github.com/TRO-Wolf/repark/pull/211): close —
     hook off pre-commit, unearned facade ANN201 dropped, dual-wire dataclass row
-    stays the sanctioned leftover), and PYC-6 (this change: public-docstring
+    stays the sanctioned leftover), and PYC-6 (merged as
+    [#216](https://github.com/TRO-Wolf/repark/pull/216): public-docstring
     presence `D101`/`D102`/`D103`/`D105`/`D107` armed with a seeded ratchet;
     style `D` declined permanently). No further chartered PYC unit. The dual-wire
     dataclass leftover and the D-presence EXCEPTIONS table are remaining debt,
