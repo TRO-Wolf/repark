@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [dl-3-archive-map-compaction-charter-ledger.md](dl-3-archive-map-compaction-charter-ledger.md) —
+  **DL-3 (2026-08-23):** archive month maps become one line per ledger (owner ruling: the record
+  is the ledger, the row is navigation); `_condense_row` in the lifecycle script + the 2026-08
+  migration (~55 kB → ~15 kB) + the off-the-read-path note.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
