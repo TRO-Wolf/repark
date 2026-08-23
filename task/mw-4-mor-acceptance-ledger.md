@@ -24,10 +24,10 @@ Entry-point matrix: Spark facade only (`CALL` + `table.files` / `VERSION AS OF`)
 | C-001 | Existing COW publish path is unchanged (LRS). | PROVEN | `ICEBERG_TABLE_PROPERTIES` still copy-on-write; `_bronze_dedup_publish_idempotent` untouched. |
 | C-002 | Glue is the OD-3 surface. S3 Tables MOR compact+expire is out of this unit. | PROVEN | OD-3 is `s3:DeleteObject` on `REPARK_ACCEPT_WAREHOUSE` + `testing_repark_acceptance/`. Table-bucket delete is still denied in the runbook. |
 | C-003 | Sequence: CTAS MOR → MERGEs that strand position-delete files → identical MERGE → compact + expire → Arrow row equality (value AND type). | PROVEN | `run_mor_merge_compact_expire` + `assert_mor_maintenance_outcome`. |
-| C-004 | Expire mutation-proof: CTAS snapshot is unreadable via `VERSION AS OF` after `retain_last=1`. | PROVEN | `assert_mor_maintenance_outcome` fails if the snapshot still resolves. |
+| C-004 | Expire mutation-proof: CTAS snapshot is unreadable via `VERSION AS OF` after `retain_last=1`. | PROVEN | Dual probe: `require_snapshot_readable` before expire, `require_snapshot_expired` after (analysis error naming the snapshot, not the `PySparkException` base). |
 | C-005 | Compact mutation-proof: ≥2 position-delete files before `rewrite_position_delete_files`; fewer after. | PROVEN | `MOR_MIN_POSITION_DELETE_FILES`; helper raises if compact is a no-op. |
 | C-006 | No DROP TABLE / DROP NAMESPACE / DELETE FROM. Unique `testing_mw4_mor_*` name per live run. Glue tables still accumulate. | PROVEN | `mor_ctas_sql` has no `IF NOT EXISTS`; live test uses `uuid4`; structural guard. |
-| C-007 | Structural guard still forbids DROP TABLE / DELETE FROM / DROP NAMESPACE. | PROVEN | `test_the_gated_harness_has_no_drop_or_delete_against_aws`. |
+| C-007 | Structural guard still forbids DROP TABLE / DELETE FROM / DROP NAMESPACE. | PROVEN | `test_the_gated_harness_has_no_drop_or_delete_against_aws` scans both `test_aws_acceptance.py` and `_acceptance.py`. |
 | C-008 | Always-run memory analog uses the same helper as the Glue live test. | PROVEN | `test_mor_merge_compact_expire_on_memory_catalog`. |
 | C-009 | COW TBLPROPERTIES builder is not reused for the MOR table. | PROVEN | `test_mor_ctas_sql_is_merge_on_read_not_copy_on_write`. |
 | C-010 | Runbook + workflow comments record OD-3 object-delete on the scratch prefix; Glue table-delete stays denied. | PROVEN | `docs/tier2-aws.md` §2; `aws-acceptance.yml` comments. |

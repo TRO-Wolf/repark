@@ -1,8 +1,9 @@
 """AWS-free unit tests for the acceptance-harness helpers — these run EVERYWHERE (no gate).
 
-They cover the pure builders + the ``deduplicate`` transform in ``_acceptance``, and assert the
-gated harness (``test_aws_acceptance.py``) carries no DROP/DELETE SQL against AWS. The gated
-real-AWS test itself lives in ``test_aws_acceptance.py`` behind the ``REPARK_AWS_ACCEPTANCE`` gate.
+They cover the publish-job builders + ``deduplicate`` in ``_acceptance``, the MW-4
+merge-on-read compact+expire helper (memory analog), and assert the gated harness plus
+``_acceptance.py`` carry no DROP/DELETE SQL against AWS. The gated real-AWS test itself lives
+in ``test_aws_acceptance.py`` behind the ``REPARK_AWS_ACCEPTANCE`` gate.
 """
 
 from __future__ import annotations
@@ -151,13 +152,14 @@ def test_the_gated_harness_has_no_drop_or_delete_against_aws() -> None:
     # Structural guard: the harness must NEVER emit DROP TABLE / DELETE FROM / DROP NAMESPACE.
     # CALL expire_snapshots / rewrite_* may remove expired snapshot *files* under the scratch
     # prefix (OD-3); that is not table teardown. Tables still accumulate.
-    source = (_TESTS_DIR / "test_aws_acceptance.py").read_text(encoding="utf-8")
-    upper = source.upper()
-    assert "DROP TABLE" not in upper
-    assert "DELETE FROM" not in upper
-    assert "DROP NAMESPACE" not in upper
-    # The only DROP the harness uses is dropTempView (a session-local view, never an AWS object).
-    assert "DROP_TABLE" not in upper
+    # MW-4 live SQL lives in `_acceptance.py` as well as the gated module (octo C1-Q-002).
+    for filename in ("test_aws_acceptance.py", "_acceptance.py"):
+        source = (_TESTS_DIR / filename).read_text(encoding="utf-8")
+        upper = source.upper()
+        assert "DROP TABLE" not in upper, filename
+        assert "DELETE FROM" not in upper, filename
+        assert "DROP NAMESPACE" not in upper, filename
+        assert "DROP_TABLE" not in upper, filename
 
 
 def test_deduplicate_keeps_the_newest_row_per_id() -> None:
@@ -361,8 +363,24 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
     assert min(create_lines) < min(guard_lines), "guard must run after ensure-namespace"
     s3_names = {name for name, _ in _call_names(s3)}
     assert "assert_glue_scratch_namespace_location" not in s3_names
+    assert "run_mor_merge_compact_expire" not in s3_names
     s3_source = ast.get_source_segment(source, s3) or ""
     assert "S3 Tables namespaces carry no location by design" in s3_source
+
+    mor = _function("test_mor_merge_compact_expire_against_glue")
+    mor_calls = _call_names(mor)
+    mor_create = [line for name, line in mor_calls if name == "create_namespace"]
+    mor_guard = [
+        line for name, line in mor_calls if name == "assert_glue_scratch_namespace_location"
+    ]
+    mor_names = {name for name, _ in mor_calls}
+    assert mor_create, "MW-4 Glue leg must call create_namespace"
+    assert mor_guard, "MW-4 Glue leg must call assert_glue_scratch_namespace_location"
+    assert min(mor_create) < min(mor_guard), "MW-4 guard must run after ensure-namespace"
+    assert "run_mor_merge_compact_expire" in mor_names
+    assert "uuid4" in mor_names
+    mor_source = ast.get_source_segment(source, mor) or ""
+    assert "testing_mw4_mor_" in mor_source
 
 
 def test_glue_location_guard_calls_get_database() -> None:
@@ -405,6 +423,36 @@ def test_mor_acceptance_expected_rows_renames_the_first_three() -> None:
     assert rows[2] == {"id": 3, "name": "m3"}
     assert rows[3] == {"id": 4, "name": "n4"}
     assert rows[-1] == {"id": MOR_SEED_ROW_COUNT, "name": f"n{MOR_SEED_ROW_COUNT}"}
+
+
+def test_mor_helper_replays_the_last_merge() -> None:
+    """C1-Q-004: the identical MERGE is a second ``merge_named_updates`` of ``[updates[-1]]``.
+
+    Removing that replay must turn this pin red; a row-set compare around a deleted call
+    would stay green.
+    """
+    import ast
+
+    source = (_TESTS_DIR / "_acceptance.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    helper = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "run_mor_merge_compact_expire":
+            helper = node
+            break
+    assert helper is not None
+    merge_calls = 0
+    for node in ast.walk(helper):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "merge_named_updates"
+        ):
+            merge_calls += 1
+    assert merge_calls >= 2
+    helper_source = ast.get_source_segment(source, helper)
+    assert helper_source is not None
+    assert "[updates[-1]]" in helper_source
 
 
 def test_maintenance_call_sql_is_catalog_dot_system() -> None:

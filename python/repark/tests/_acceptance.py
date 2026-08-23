@@ -1,11 +1,12 @@
-"""Pure, AWS-free helpers for the real-AWS acceptance harness.
+"""Shared helpers for the real-AWS acceptance harness.
 
 Kept in a non-``test_`` module (pytest does not collect it) so both the gated harness
 (``test_aws_acceptance.py``) and its always-run unit tests (``test_acceptance_helpers.py``) share
-one definition. Nothing here touches AWS or constructs a session — just constants and pure
-builders, plus the ``deduplicate`` transform (which operates on an already-constructed DataFrame).
+one definition.
 
-These mirror the shape of the source publish job.
+The publish-job constants, SQL builders, and ``deduplicate`` transform do not construct a
+session. MW-4 ``run_mor_merge_compact_expire`` / ``assert_mor_maintenance_outcome`` drive an
+already-built session (memory analog or Glue live) through CTAS / MERGE / CALL.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ import pyarrow as pa
 
 from repark import Window
 from repark import functions as F  # noqa: N812 — PySpark idiom: `import ...functions as F`
-from repark.errors import PySparkException, UnsupportedOperationException
+from repark.errors import AnalysisException, UnsupportedOperationException
 from repark.spark.dataframe import DataFrame
 
 # ==============================================================================================
@@ -408,13 +409,22 @@ def run_mor_merge_compact_expire(
 
     snapshots_after_ctas = snapshot_ids_oldest_first(spark, table)
     first_snapshot_id = snapshots_after_ctas[0]
+    # Dual probe (MW-1 C1-Q-001): the CTAS snapshot must be readable *before* expire.
+    require_snapshot_readable(spark, table, first_snapshot_id, id_col)
 
     updates: list[tuple[int, str]] = [
         (index, f"m{index}") for index in range(1, MOR_UPDATED_ID_COUNT + 1)
     ]
     merge_named_updates(spark, table, view, id_col, updates)
+    rows_after_updates = ordered_id_name_rows(spark, table, id_col)
     # Identical replay of the last MERGE: row-set idempotency, not file-count idempotency.
     merge_named_updates(spark, table, view, id_col, [updates[-1]])
+    rows_after_replay = ordered_id_name_rows(spark, table, id_col)
+    if rows_after_replay != rows_after_updates:
+        raise AssertionError(
+            f"identical MERGE changed the live row set on {table}: "
+            f"before={rows_after_updates!r} after={rows_after_replay!r}"
+        )
 
     deletes_before = position_delete_file_count(spark, table)
     if deletes_before < MOR_MIN_POSITION_DELETE_FILES:
@@ -465,6 +475,47 @@ def run_mor_merge_compact_expire(
     )
 
 
+def ordered_id_name_rows(spark: object, table: str, id_col: str) -> list[dict[str, object]]:
+    """Live ``(id, name)`` rows in id order as Python dicts."""
+    arrow = spark.sql(  # type: ignore[attr-defined]
+        f"SELECT {id_col}, name FROM {table} ORDER BY {id_col}"
+    ).to_arrow()
+    return [{"id": int(row[id_col]), "name": row["name"]} for row in arrow.to_pylist()]
+
+
+def require_snapshot_readable(spark: object, table: str, snapshot_id: int, id_col: str) -> None:
+    """Fail if ``VERSION AS OF snapshot_id`` does not return the CTAS row count."""
+    arrow = spark.sql(  # type: ignore[attr-defined]
+        f"SELECT {id_col} FROM {table} VERSION AS OF {snapshot_id}"
+    ).to_arrow()
+    if arrow.num_rows != MOR_SEED_ROW_COUNT:
+        raise AssertionError(
+            f"VERSION AS OF {snapshot_id} returned {arrow.num_rows} rows; "
+            f"expected {MOR_SEED_ROW_COUNT} on {table}"
+        )
+
+
+def require_snapshot_expired(spark: object, table: str, snapshot_id: int) -> None:
+    """Fail unless ``VERSION AS OF snapshot_id`` is an analysis error naming the snapshot.
+
+    Catching the ``PySparkException`` base would treat parse/IO/commit failures as expire
+    success (octo C1-Q-001). Unknown-snapshot is ``AnalysisException``
+    (``test_time_travel.py``); some CALL paths raise ``UnsupportedOperationException``.
+    """
+    try:
+        spark.sql(  # type: ignore[attr-defined]
+            f"SELECT id FROM {table} VERSION AS OF {snapshot_id}"
+        ).to_arrow()
+    except (AnalysisException, UnsupportedOperationException) as error:
+        text = str(error).lower()
+        if str(snapshot_id) in str(error) or "snapshot" in text:
+            return
+        raise
+    raise AssertionError(
+        f"VERSION AS OF {snapshot_id} still resolved after expire on {table}; expire was a no-op"
+    )
+
+
 def assert_mor_maintenance_outcome(spark: object, outcome: MorMaintenanceOutcome) -> None:
     """Pin compact, Arrow value+type, and expire mutation-proof on a finished outcome."""
     if outcome.position_deletes_before < MOR_MIN_POSITION_DELETE_FILES:
@@ -491,18 +542,7 @@ def assert_mor_maintenance_outcome(spark: object, outcome: MorMaintenanceOutcome
     if got != expected:
         raise AssertionError(f"row set {got!r} != {expected!r}")
 
-    expired = False
-    try:
-        spark.sql(  # type: ignore[attr-defined]
-            f"SELECT id FROM {outcome.table} VERSION AS OF {outcome.first_snapshot_id}"
-        ).to_arrow()
-    except (UnsupportedOperationException, PySparkException):
-        expired = True
-    if not expired:
-        raise AssertionError(
-            f"VERSION AS OF {outcome.first_snapshot_id} still resolved after expire on "
-            f"{outcome.table}; expire was a no-op"
-        )
+    require_snapshot_expired(spark, outcome.table, outcome.first_snapshot_id)
 
     current = spark.sql(  # type: ignore[attr-defined]
         f"SELECT id FROM {outcome.table} ORDER BY id"

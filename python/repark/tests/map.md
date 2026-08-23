@@ -1970,7 +1970,8 @@ NOT in that file is a defect, not a decision.
   (S3TablesCatalog impl, ARN as `warehouse` → RePark's `table_bucket_arn`) + the non-secret
   `S3TABLES_CATALOG` name — the table-bucket ARN is a RUNTIME arg from `TABLE_BUCKET_ARN`, never a
   committed literal. **MW-4:** `MOR_ICEBERG_TABLE_PROPERTIES`, `mor_ctas_sql`,
-  `run_mor_merge_compact_expire` / `assert_mor_maintenance_outcome` (shared by the memory analog
+  `run_mor_merge_compact_expire` / `assert_mor_maintenance_outcome` /
+  `require_snapshot_readable` / `require_snapshot_expired` (shared by the memory analog
   and the Glue live leg).
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
@@ -1982,8 +1983,9 @@ NOT in that file is a defect, not a decision.
   no-location, DESCRIBE-row extraction). **Y-3:** Glue wrapper stub drives `getDatabase`;
   AST pin that the wrapper calls `getDatabase` (not DESCRIBE). **MW-4 (2026-08-23):** MOR
   TBLPROPERTIES is merge-on-read not copy-on-write (COW block unchanged), CALL SQL shape, expected
-  row oracle, and the always-run memory analog of `run_mor_merge_compact_expire` (position-delete
-  compact, Arrow value+type, expire hides the CTAS snapshot).
+  row oracle, always-run memory analog of `run_mor_merge_compact_expire`, DROP/DELETE scan of
+  `_acceptance.py`, Glue MOR AST pin (location guard, `uuid4`, `testing_mw4_mor_`), S3 Tables
+  must not call the MOR helper, identical-MERGE source pin `[updates[-1]]`.
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors

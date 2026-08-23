@@ -30,7 +30,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | **MW-4** | maintenance | **OD-3 (owner)** | M |
+| — | **MW-4** | maintenance | OD-3 executed | M |
 | — | **MW-5** | maintenance | MW-4 | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
@@ -67,17 +67,16 @@ EXCEPTIONS table are remaining debt, not sequenced work.
 fallback root, so two sessions with different warehouses no longer share
 `<temp>/repark_ctas/<catalog>/<ns>/<table>`. Same warehouse + same names still
 share; MW-3 refuse stays on that fallback tree. The dual-wire dataclass leftover
-is remaining debt, not sequenced work. The queue is MW-4 (blocked on OD-3) and
-MW-5.
+is remaining debt, not sequenced work. The queue is MW-4 (OD-3 executed; this
+unit) and MW-5.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
 made it safe to schedule behind V3-1 rather than ahead of it. Burning the tables down is
 valuable; it is not urgent, and it is the one track in this queue with no user-visible outcome.
 
-**MW-4 preempts everything the moment OD-3 lands.** It is the maintenance campaign's only
-real-catalog evidence, and the campaign cannot close without it. If the owner executes OD-3 mid-
-sequence, the unit in flight finishes and MW-4 goes next.
+**MW-4 is in flight.** OD-3 is owner-executed. It is the maintenance campaign's only
+real-catalog evidence, and the campaign cannot close without it. MW-5 stays behind it.
 
 **A13 sat last on purpose** because MW-3 already refused the dangerous sweep, so the
 exposure was a shared scratch root rather than a deletion. That write-path addressing
@@ -163,19 +162,16 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 
 ---
 
-## MW-4 / MW-5 — held on the owner
+## MW-4 / MW-5 — OD-3 executed; MW-4 is this unit
 
-**MW-4 needs OD-3**: scoped delete on the tier-2 acceptance role's scratch prefix. The owner
-executes it; the campaign never touches IAM. Until then MW-4 cannot run, and everything the
-campaign claims about merge-on-read operability rests on unit-test evidence while the existing
-live evidence covers copy-on-write only.
-
-MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline, scorecard flip) is queued
-behind it and is small.
+**OD-3 is owner-executed (2026-08-23):** scoped `s3:DeleteObject` on the tier-2 acceptance
+role's warehouse scratch prefix. The campaign never touches IAM. MW-4 stays on this slate
+until it merges. MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline,
+scorecard flip) is queued behind it and is small.
 
 ---
 
-## A13 — done (this change): warehouse-keyed CTAS fallback
+## A13 — done (merged #217): warehouse-keyed CTAS fallback
 
 Roadmap item in [../task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md),
 surfaced by MW-3. `register_memory_catalog`'s location-less fallback root is now the

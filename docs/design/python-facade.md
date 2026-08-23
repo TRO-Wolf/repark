@@ -697,11 +697,8 @@ only, merged code only, no self-hosted runners.
 - **Environment gate:** the job runs in a GitHub **environment** (`aws-acceptance`) carrying
   deployment protection — a manual dispatch still requires a human approval step before credentials
   can be minted.
-- **Trust policy (user-side):** the IAM role trusts the GitHub OIDC provider with the subject
-  constrained to **both** the default branch of this repository **and** the `aws-acceptance`
-  environment — not the whole repo, and not a wildcard; a compromised workflow file on a topic
-  branch cannot assume the role. Its permission policy is least-privilege over one scratch Glue
-  database, one scratch S3 prefix, and one S3 Tables bucket.
+- **Trust policy (user-side):** OIDC trust and permission ARNs live only in
+  [tier2-aws.md](../tier2-aws.md) §1–§2. This design does not restate the `sub` claim.
 - **Never-teardown as a permissions fact, not a convention:** the role's policy grants **no
   table-delete**. Object-delete was originally denied too; **OD-3** (2026-08-21, owner-executed)
   adds `s3:DeleteObject` on the warehouse scratch prefix only so `expire_snapshots` / rewrite
