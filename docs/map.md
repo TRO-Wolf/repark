@@ -64,8 +64,9 @@ repo.
   read to work in this repository.
 - [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
 - [tier2-aws.md](tier2-aws.md) — operator runbook for the tier-2 live-AWS workflow: environment,
-  the repo+branch+environment-scoped OIDC trust policy, the create-only/no-delete IAM posture
-  (§2 — including the **separate catalog-wide read-only `glue:GetDatabases`/`glue:GetTables`
+  the repo+branch+environment-scoped OIDC trust policy, the scratch-only IAM posture
+  (§2 — Glue still no-delete; **OD-3 `s3:DeleteObject` on the warehouse scratch prefix**;
+  including the **separate catalog-wide read-only `glue:GetDatabases`/`glue:GetTables`
   statement** that registration's provider walk requires, which cannot be scratch-scoped),
   the S3 lifecycle expiry, variable/secret names (§4 — **environment scope preferred**,
   repository level equivalent), first-dispatch acceptance (§5 — including the stale-namespace

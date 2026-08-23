@@ -309,7 +309,8 @@ history-rewrite; provenance and the options weighed:
     committed — the exact failure `docs/testing.md` names, caught one step before it would have
     been pinned as truth.
 
-- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; four of six units merged). Merge-on-read
+- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; four of six units merged, MW-4 this
+  change). Merge-on-read
   was production-grade as a *write* path and fenced off as an *operational* one: the maintenance
   procedures refused on exactly the catalogs holding production data. Design:
   [docs/design/iceberg-maintenance-wave.md](docs/design/iceberg-maintenance-wave.md); slate:
@@ -327,11 +328,15 @@ history-rewrite; provenance and the options weighed:
     merge-on-read table grow delete files one per merge and never reclaim them, and scan cost
     tracks that growth **2.1× from merge 2 to merge 10 on a table whose contents never change**.
     MW-5 re-runs the identical demo and records the delta.
-  - **MW-4 is blocked on the owner.** It is the campaign's only real-catalog evidence — everything
-    above is unit-test evidence, and the existing live evidence covers copy-on-write only. It
-    needs **OD-3**: scoped delete on the tier-2 acceptance role's scratch prefix, which the owner
-    executes. The campaign never touches IAM itself. MW-5 (registry close, re-measured delta,
-    scorecard) is queued behind it.
+  - **MW-4 (this change).** OD-3 is owner-executed: the aws-acceptance role may
+    `s3:DeleteObject` on the warehouse scratch prefix. The Glue live leg is
+    `test_mor_merge_compact_expire_against_glue` in `test_aws_acceptance.py`: a unique
+    `testing_mw4_mor_*` table, CTAS at merge-on-read, MERGEs that strand position-delete
+    files, compact + expire, Arrow row parity. The same helper runs always as a memory-catalog
+    analog. S3 Tables MOR compact+expire is out of this unit (OD-3 is the Glue warehouse
+    prefix). Glue tables still cannot be dropped. MW-5 (registry close, re-measured delta,
+    scorecard) is queued behind it. The live proof is the post-merge `aws-acceptance`
+    dispatch; locally the Glue test is skip-gated.
   - **Four divergences registered rather than forced** — `MOR-1`, `MOR-2`, `ORPHAN-1`, `ORPHAN-2`
     in [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Two of them
     (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert Spark's defaults on

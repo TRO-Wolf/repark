@@ -16,9 +16,11 @@
 #     download, or restored cache ever runs inside the credentialed window.
 #   - `mask-aws-account-id: true` registers the account id (and thus every ARN printed by a pytest
 #     traceback) as a secret value in the public run log.
-#   - NEVER-TEARDOWN AS A PERMISSIONS FACT: the role's policy grants no table-delete and no
-#     object-delete permission of any kind. Scratch accumulation is an S3 lifecycle expiry
-#     configured once by a human, outside this workflow (never a delete path in CI).
+#   - NEVER-TEARDOWN OF TABLES AS A PERMISSIONS FACT: the role still has no glue:DeleteTable /
+#     glue:DeleteDatabase. OD-3 (owner-executed) adds s3:DeleteObject on the warehouse scratch
+#     prefix only so CALL expire_snapshots / rewrite_* can remove expired snapshot files.
+#     Scratch *tables* still accumulate; an S3 lifecycle expiry on the prefix is configured
+#     once by a human (docs/tier2-aws.md).
 #   - The job runs the acceptance MODULE only, never the full facade suite (blast radius + minutes).
 #   - The harness refuses to run against the committed placeholder buckets (assert_real_buckets_
 #     configured): the operator MUST supply their own buckets via REPARK_ACCEPT_BRONZE_BUCKET /
@@ -50,7 +52,7 @@ concurrency:
 
 jobs:
   live-aws:
-    name: tier-2 live AWS acceptance (Glue + S3 Tables, create-only)
+    name: tier-2 live AWS acceptance (Glue + S3 Tables, scratch-only)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: aws-acceptance
@@ -93,11 +95,12 @@ jobs:
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-acceptance
           mask-aws-account-id: true
-      # The acceptance MODULE only. The harness is create-only into the scratch namespace with a
-      # scratch table prefix and has NO teardown path (and the role has no delete permission — the
-      # posture is enforced twice). It refuses the committed placeholder buckets. The S3 Tables leg
-      # self-skips when TABLE_BUCKET_ARN is unset. `--no-project` + VIRTUAL_ENV makes the maturin
-      # develop install authoritative (the py-test-facade pattern).
+      # The acceptance MODULE only. The harness creates into the scratch namespace with a
+      # scratch table prefix and has no DROP TABLE path (Glue delete stays denied). OD-3 allows
+      # s3:DeleteObject on the warehouse scratch prefix for expire/rewrite. It refuses the
+      # committed placeholder buckets. The S3 Tables leg self-skips when TABLE_BUCKET_ARN is
+      # unset. `--no-project` + VIRTUAL_ENV makes the maturin develop install authoritative
+      # (the py-test-facade pattern).
       - name: acceptance module (REPARK_AWS_ACCEPTANCE=1)
         env:
           REPARK_AWS_ACCEPTANCE: "1"

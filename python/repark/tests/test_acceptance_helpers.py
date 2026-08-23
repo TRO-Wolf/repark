@@ -15,9 +15,12 @@ from _acceptance import (
     ACCEPTANCE_TABLE_PREFIX,
     GLUE_WAREHOUSE,
     ICEBERG_TABLE_PROPERTIES,
+    MOR_ICEBERG_TABLE_PROPERTIES,
+    MOR_SEED_ROW_COUNT,
     PRODUCTION_NAMESPACE,
     TARGET_FILE_SIZE_BYTES,
     acceptance_namespace_location,
+    assert_mor_maintenance_outcome,
     assert_namespace_location_matches,
     bronze_path,
     ctas_sql,
@@ -25,8 +28,12 @@ from _acceptance import (
     fq_table,
     glue_catalog_config,
     location_from_describe_rows,
+    maintenance_call_sql,
     merge_sql,
+    mor_acceptance_expected_rows,
+    mor_ctas_sql,
     normalize_location_uri,
+    run_mor_merge_compact_expire,
     s3tables_catalog_config,
 )
 
@@ -141,8 +148,9 @@ def test_scratch_namespace_is_never_the_production_namespace() -> None:
 
 
 def test_the_gated_harness_has_no_drop_or_delete_against_aws() -> None:
-    # Structural guard: the harness must NEVER emit a DROP/DELETE. Read the gated module's source
-    # and assert no destructive SQL keyword appears (belt-and-suspenders for cleanup-is-manual).
+    # Structural guard: the harness must NEVER emit DROP TABLE / DELETE FROM / DROP NAMESPACE.
+    # CALL expire_snapshots / rewrite_* may remove expired snapshot *files* under the scratch
+    # prefix (OD-3); that is not table teardown. Tables still accumulate.
     source = (_TESTS_DIR / "test_aws_acceptance.py").read_text(encoding="utf-8")
     upper = source.upper()
     assert "DROP TABLE" not in upper
@@ -378,3 +386,45 @@ def test_glue_location_guard_calls_get_database() -> None:
     assert "getDatabase" in call_names
     assert "probe_namespace_location_via_describe" not in call_names
     assert "sql" not in call_names
+
+
+def test_mor_ctas_sql_is_merge_on_read_not_copy_on_write() -> None:
+    sql = mor_ctas_sql("glue_catalog.testing_repark_acceptance.testing_mw4_mor", "src")
+    assert "merge-on-read" in sql
+    assert "copy-on-write" not in sql
+    assert "CREATE TABLE IF NOT EXISTS" not in sql
+    assert MOR_ICEBERG_TABLE_PROPERTIES in sql
+    assert ICEBERG_TABLE_PROPERTIES not in sql
+    assert TARGET_FILE_SIZE_BYTES in sql
+
+
+def test_mor_acceptance_expected_rows_renames_the_first_three() -> None:
+    rows = mor_acceptance_expected_rows()
+    assert len(rows) == MOR_SEED_ROW_COUNT
+    assert rows[0] == {"id": 1, "name": "m1"}
+    assert rows[2] == {"id": 3, "name": "m3"}
+    assert rows[3] == {"id": 4, "name": "n4"}
+    assert rows[-1] == {"id": MOR_SEED_ROW_COUNT, "name": f"n{MOR_SEED_ROW_COUNT}"}
+
+
+def test_maintenance_call_sql_is_catalog_dot_system() -> None:
+    sql = maintenance_call_sql(
+        "glue_catalog",
+        "expire_snapshots",
+        "testing_repark_acceptance.testing_mw4",
+        extra="retain_last => 1",
+    )
+    assert sql.startswith("CALL glue_catalog.system.expire_snapshots(")
+    assert "table => 'testing_repark_acceptance.testing_mw4'" in sql
+    assert "retain_last => 1" in sql
+
+
+def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> None:
+    """Always-run analog of the Glue MW-4 leg. Same helper, local warehouse."""
+    spark = ReparkSession.builder.appName("pytest-mw4-mor").getOrCreate()
+    spark.register_memory_catalog("mem", tmp_path)
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.ns LOCATION '{owned}'")
+
+    outcome = run_mor_merge_compact_expire(spark, "mem", "ns", "mw4mor")
+    assert_mor_maintenance_outcome(spark, outcome)

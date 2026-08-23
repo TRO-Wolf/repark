@@ -16,18 +16,20 @@ non-collected ``_acceptance`` module and are unit-tested AWS-free (everywhere) i
 
 --------------------------------------------------------------------------------------------------
 CLEANUP IS THE USER'S MANUAL CALL.
-This harness NEVER drops or deletes any AWS object. It creates (namespace / table) and upserts
-into the scratch namespace ``testing_repark_acceptance`` only (tables carry a ``testing_`` prefix
-too); it never touches production ``example_silver``.
-There is no teardown against AWS. If the scratch tables should be removed after a run, the user
-does that by hand — the harness deliberately has no DROP/DELETE path (``dropTempView`` drops only
-a session-local view, never an AWS object).
+This harness NEVER drops or deletes any Glue table or namespace. It creates (namespace / table)
+and upserts into the scratch namespace ``testing_repark_acceptance`` only (tables carry a
+``testing_`` prefix too); it never touches production ``example_silver``.
+There is no table-teardown against AWS. If the scratch tables should be removed after a run, the
+user does that by hand. ``dropTempView`` drops only a session-local view, never an AWS object.
+MW-4 ``CALL expire_snapshots`` / ``rewrite_*`` may remove expired snapshot *files* under the
+warehouse scratch prefix (OD-3 scoped object-delete). Glue tables still accumulate.
 --------------------------------------------------------------------------------------------------
 """
 
 from __future__ import annotations
 
 import os
+import uuid
 
 import pytest
 from _acceptance import (
@@ -39,6 +41,7 @@ from _acceptance import (
     TEMP_VIEW,
     acceptance_namespace_location,
     assert_glue_scratch_namespace_location,
+    assert_mor_maintenance_outcome,
     assert_real_buckets_configured,
     bronze_path,
     ctas_sql,
@@ -46,6 +49,7 @@ from _acceptance import (
     fq_table,
     glue_catalog_config,
     merge_sql,
+    run_mor_merge_compact_expire,
     s3tables_catalog_config,
 )
 
@@ -197,3 +201,34 @@ def test_process_silver_acceptance_against_s3tables() -> None:
             raise
     table = fq_table(S3TABLES_CATALOG, ACCEPTANCE_NAMESPACE, f"{ACCEPTANCE_TABLE_PREFIX}{entity}")
     _bronze_dedup_publish_idempotent(spark, table, entity, ds, id_col)
+
+
+def test_mor_merge_compact_expire_against_glue() -> None:
+    """MW-4: merge-on-read CTAS → MERGE → compact + expire on real Glue + S3.
+
+    A new ``testing_mw4_mor_*`` table each run (never-teardown: tables accumulate). OD-3
+    scoped object-delete on the warehouse scratch prefix is what lets expire remove
+    snapshot files. S3 Tables is out of this unit: OD-3 is the Glue warehouse prefix,
+    not the table bucket.
+    """
+    assert_real_buckets_configured()
+
+    builder = ReparkSession.builder.appName("mw4-mor-acceptance")
+    for key, value in glue_catalog_config(SILVER_CATALOG, GLUE_WAREHOUSE).items():
+        builder = builder.config(key, value)
+    spark = builder.getOrCreate()
+
+    try:
+        spark.create_namespace(
+            SILVER_CATALOG,
+            ACCEPTANCE_NAMESPACE,
+            location=acceptance_namespace_location(GLUE_WAREHOUSE),
+        )
+    except RuntimeError as error:
+        if "exist" not in str(error).lower():
+            raise
+    assert_glue_scratch_namespace_location(spark, GLUE_WAREHOUSE)
+
+    table_name = f"{ACCEPTANCE_TABLE_PREFIX}mw4_mor_{uuid.uuid4().hex[:12]}"
+    outcome = run_mor_merge_compact_expire(spark, SILVER_CATALOG, ACCEPTANCE_NAMESPACE, table_name)
+    assert_mor_maintenance_outcome(spark, outcome)
