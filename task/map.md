@@ -12,11 +12,17 @@ not this directory.
 
 ## Contents
 
+- [mw-4b-glue-metadata-rewrite-ledger.md](mw-4b-glue-metadata-rewrite-ledger.md) —
+  **MW-4b (2026-08-23):** Glue/HMS hierarchical-namespace `DataInvalid` on the Spark
+  metadata-table "real table wins" probe. MW-4 live `table.snapshots` died here;
+  the `$` rewrite now treats that error as absent.
+
 - [mw-4-mor-acceptance-ledger.md](mw-4-mor-acceptance-ledger.md) —
   **MW-4 (2026-08-23):** Glue live merge-on-read compact+expire in the aws-acceptance
   module. OD-3 scoped `s3:DeleteObject` on the warehouse scratch prefix. Unique
   `testing_mw4_mor_*` table per run; always-run memory analog of the same helper.
-  S3 Tables MOR compact+expire out of unit.
+  S3 Tables MOR compact+expire out of unit. Live dispatch after #218 failed on
+  `table.snapshots`; repaired by MW-4b.
 
 - [a13-shared-ctas-fallback-ledger.md](a13-shared-ctas-fallback-ledger.md) —
   **A13 (2026-08-23):** `register_memory_catalog` uses the supplied warehouse as the

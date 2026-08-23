@@ -670,3 +670,241 @@ async fn metadata_table_projection_honor_all_types() {
         }
     }
 }
+
+/// Glue/HMS `validate_namespace`: a namespace that is not exactly one level is
+/// `ErrorKind::DataInvalid`, not `NamespaceNotFound`. MW-4 live Glue failed here:
+/// `cat.ns.tbl.snapshots` probes ident `{ns:[ns, tbl], table: snapshots}`.
+fn glue_hierarchical_namespace_error(namespace: &NamespaceIdent) -> iceberg::Error {
+    iceberg::Error::new(
+        iceberg::ErrorKind::DataInvalid,
+        format!("Invalid database name: {namespace:?}, hierarchical namespaces are not supported"),
+    )
+}
+
+/// How `table_exists` fails on a two-level namespace. `Glue` is the live AWS shape.
+#[derive(Debug, Clone, Copy)]
+enum HierarchicalExistsProbe {
+    Glue,
+    Unexpected,
+    AlwaysDataInvalid,
+}
+
+/// Memory catalog plus Glue/HMS namespace-shape rules on `table_exists` only.
+#[derive(Debug)]
+struct GlueNamespaceShapeCatalog {
+    inner: Arc<dyn Catalog>,
+    probe: HierarchicalExistsProbe,
+}
+
+#[async_trait::async_trait]
+impl Catalog for GlueNamespaceShapeCatalog {
+    async fn list_namespaces(
+        &self,
+        parent: Option<&NamespaceIdent>,
+    ) -> iceberg::Result<Vec<NamespaceIdent>> {
+        self.inner.list_namespaces(parent).await
+    }
+
+    async fn create_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> iceberg::Result<iceberg::Namespace> {
+        self.inner.create_namespace(namespace, properties).await
+    }
+
+    async fn get_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+    ) -> iceberg::Result<iceberg::Namespace> {
+        self.inner.get_namespace(namespace).await
+    }
+
+    async fn namespace_exists(&self, namespace: &NamespaceIdent) -> iceberg::Result<bool> {
+        self.inner.namespace_exists(namespace).await
+    }
+
+    async fn update_namespace(
+        &self,
+        namespace: &NamespaceIdent,
+        properties: HashMap<String, String>,
+    ) -> iceberg::Result<()> {
+        self.inner.update_namespace(namespace, properties).await
+    }
+
+    async fn drop_namespace(&self, namespace: &NamespaceIdent) -> iceberg::Result<()> {
+        self.inner.drop_namespace(namespace).await
+    }
+
+    async fn list_tables(&self, namespace: &NamespaceIdent) -> iceberg::Result<Vec<TableIdent>> {
+        self.inner.list_tables(namespace).await
+    }
+
+    async fn create_table(
+        &self,
+        namespace: &NamespaceIdent,
+        creation: TableCreation,
+    ) -> iceberg::Result<iceberg::table::Table> {
+        self.inner.create_table(namespace, creation).await
+    }
+
+    async fn load_table(&self, table: &TableIdent) -> iceberg::Result<iceberg::table::Table> {
+        self.inner.load_table(table).await
+    }
+
+    async fn drop_table(&self, table: &TableIdent) -> iceberg::Result<()> {
+        self.inner.drop_table(table).await
+    }
+
+    async fn table_exists(&self, table: &TableIdent) -> iceberg::Result<bool> {
+        let level_count = table.namespace().as_ref().len();
+        match self.probe {
+            HierarchicalExistsProbe::Glue if level_count != 1 => {
+                return Err(glue_hierarchical_namespace_error(table.namespace()));
+            }
+            HierarchicalExistsProbe::Unexpected if level_count != 1 => {
+                return Err(iceberg::Error::new(
+                    iceberg::ErrorKind::Unexpected,
+                    "injected hierarchical Unexpected",
+                ));
+            }
+            HierarchicalExistsProbe::AlwaysDataInvalid => {
+                return Err(iceberg::Error::new(
+                    iceberg::ErrorKind::DataInvalid,
+                    "Invalid database, provided namespace is empty.",
+                ));
+            }
+            _ => {}
+        }
+        self.inner.table_exists(table).await
+    }
+
+    async fn rename_table(&self, src: &TableIdent, dest: &TableIdent) -> iceberg::Result<()> {
+        self.inner.rename_table(src, dest).await
+    }
+
+    async fn register_table(
+        &self,
+        table: &TableIdent,
+        metadata_location: String,
+    ) -> iceberg::Result<iceberg::table::Table> {
+        self.inner.register_table(table, metadata_location).await
+    }
+
+    async fn update_table(
+        &self,
+        commit: iceberg::TableCommit,
+    ) -> iceberg::Result<iceberg::table::Table> {
+        self.inner.update_table(commit).await
+    }
+}
+
+fn glue_shaped_registry(
+    inner: Arc<dyn Catalog>,
+    probe: HierarchicalExistsProbe,
+) -> CatalogRegistry {
+    let wrapped: Arc<dyn Catalog> = Arc::new(GlueNamespaceShapeCatalog { inner, probe });
+    let mut catalogs = CatalogRegistry::new();
+    catalogs.insert(
+        "glue_catalog".to_string(),
+        wrapped,
+        LocationPolicy::RequireExplicitLocation,
+    );
+    catalogs
+}
+
+/// MW-4 live Glue: `SELECT … FROM glue_catalog.ns.tbl.snapshots` must rewrite to `$`
+/// even though Glue `table_exists` on the 4-part path is `DataInvalid`, not not-found.
+#[tokio::test]
+async fn glue_shaped_catalog_rewrites_four_part_snapshots_and_files() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mt AS SELECT * FROM src",
+    )
+    .await;
+    let inner = catalogs.get("ice").expect("ice catalog").clone();
+    let glue_catalogs = glue_shaped_registry(inner, HierarchicalExistsProbe::Glue);
+
+    let snapshots = metadata_tables::prepare_metadata_table_sql(
+        &glue_catalogs,
+        "SELECT snapshot_id FROM glue_catalog.sales.mt.snapshots ORDER BY committed_at",
+    )
+    .await
+    .expect("Glue-shaped snapshots probe must not surface DataInvalid")
+    .expect("must rewrite to $ form");
+    assert!(
+        snapshots.contains("mt$snapshots"),
+        "Glue-shaped .snapshots must rewrite, got: {snapshots}"
+    );
+    assert!(
+        !snapshots.contains(".snapshots"),
+        "rewritten SQL must not keep the dotted suffix: {snapshots}"
+    );
+
+    let files = metadata_tables::prepare_metadata_table_sql(
+        &glue_catalogs,
+        "SELECT content FROM glue_catalog.sales.mt.files",
+    )
+    .await
+    .expect("Glue-shaped files probe must not surface DataInvalid")
+    .expect("must rewrite files");
+    assert!(
+        files.contains("mt$files"),
+        "Glue-shaped .files must rewrite, got: {files}"
+    );
+}
+
+#[tokio::test]
+async fn glue_shaped_unexpected_on_hierarchical_namespace_stays_fatal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mt AS SELECT * FROM src",
+    )
+    .await;
+    let inner = catalogs.get("ice").expect("ice catalog").clone();
+    let glue_catalogs = glue_shaped_registry(inner, HierarchicalExistsProbe::Unexpected);
+
+    let error = metadata_tables::prepare_metadata_table_sql(
+        &glue_catalogs,
+        "SELECT snapshot_id FROM glue_catalog.sales.mt.snapshots",
+    )
+    .await
+    .expect_err("Unexpected on a hierarchical probe must stay fatal");
+    let message = error.to_string();
+    assert!(
+        message.contains("Unexpected") || message.contains("injected hierarchical"),
+        "must not swallow Unexpected as a rewrite, got: {message}"
+    );
+}
+
+#[tokio::test]
+async fn glue_shaped_data_invalid_on_single_level_namespace_stays_fatal() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&warehouse).await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.mt AS SELECT * FROM src",
+    )
+    .await;
+    let inner = catalogs.get("ice").expect("ice catalog").clone();
+    let glue_catalogs = glue_shaped_registry(inner, HierarchicalExistsProbe::AlwaysDataInvalid);
+
+    let error = metadata_tables::prepare_metadata_table_sql(
+        &glue_catalogs,
+        "SELECT snapshot_id FROM glue_catalog.sales.mt.snapshots",
+    )
+    .await
+    .expect_err("single-level DataInvalid must stay fatal");
+    let message = error.to_string();
+    assert!(
+        message.contains("DataInvalid") || message.contains("Invalid database"),
+        "must not treat every DataInvalid as absent, got: {message}"
+    );
+}
