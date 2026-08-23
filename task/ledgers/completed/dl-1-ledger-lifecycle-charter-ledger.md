@@ -232,3 +232,19 @@ working tree was restored but the index and HEAD were not. Recovered by re-homin
 (`reset --soft` to the charter commit), deleting the branch and dropping the stash by SHA;
 nothing reached `main` or the main checkout. The lesson is in
 [../../lessons.md](../../lessons.md) (2026-08-23).
+
+**Two corrections after the gates (2026-08-23, same branch, before the PR):**
+
+- **`check-ledgers` was not in `make ci`.** Commit 6 said it was; the target's comment had been
+  edited but the `ci:` prerequisite list had not (an edit script aborted on an earlier
+  assertion and the Makefile line never ran). `make preflight` passed without it — which is
+  exactly why the log was read for the `ledger-check:` line and not only for the exit code.
+  Fixed in `b4c3bab`.
+- **The census eviction broke two pins.** `test_deferred_ledger.py` reads
+  `task/census/baseline-fc3f48102/facade/{collected.txt,facade.xml}`; `make preflight` does not
+  run the parity suite (it is CI's python job), so the red showed only when that suite was run
+  by hand. §1 of this ledger called the census "regenerable"; the facade cohort is also a gate
+  **input**, which should have been checked before ruling "evict" — `docs/history/map.md` even
+  said so. Scope of the ruling narrowed by the minimum: that one directory (5 files, 0.5 MB)
+  is back from `b13b22c`, the other 59 files (4.0 MB) stay evicted. Fixed in the commit after
+  `b4c3bab`. `task/` on disk: 6.6 MB → **2.3 MB** (not the 1.9 MB stated above).
