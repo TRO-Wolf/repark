@@ -314,8 +314,8 @@ check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link
 	@# an archive name whose date prefix disagrees with its month directory, a dead `-ledger.md`
 	@# link in ANY tracked markdown (sync_map_md covers maps only), and a completed/ or archive/
 	@# ledger edited beyond a link repair or a prepended errata note. Policy: AGENTS.md
-	@# "Markdown document lifecycle". In the `make ci` chain; the ci.yml half is an owner-scoped
-	@# .github/ change.
+	@# "Markdown document lifecycle". DUAL-WIRED: the `ledger lifecycle guard` step in ci.yml's
+	@# guards job mirrors this target (fetch-depth: 0 there). Change one, change the other.
 	python3 scripts/ledger_lifecycle.py check
 
 .PHONY: check-ledger-grammar
@@ -323,7 +323,8 @@ check-ledger-grammar: ## Ledger grammar guard: clause rows, pins: citations, the
 	@# SSOT: scripts/check_ledger_grammar.py — over task/ledgers/{staging,completed}/ (the archive
 	@# is immutable and read for citations only). Meanings stay in skills/sepmo (SKILL.md "The gate is a ledger, not a score",
 	@# references/05-critic.md); the script owns the shape. EXCEPTIONS (seeded 2026-08-23) ratchet
-	@# down only. The ci.yml half is an owner-scoped .github/ change.
+	@# down only. DUAL-WIRED: the `ledger grammar guard` step in ci.yml's guards job mirrors
+	@# this target. Change one, change the other.
 	python3 scripts/check_ledger_grammar.py
 
 .PHONY: ledger-archive
@@ -336,8 +337,9 @@ ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)
 	@# Companion to check-map-md: that one forces a map to be TOUCHED, this one checks what it
-	@# says. SSOT: scripts/sync_map_md.py. Link validity is armed here and on both pre-commit
-	@# paths (measured n=5 median 0.08 s over 143 maps). The COVERAGE rule — every mappable
+	@# says. SSOT: scripts/sync_map_md.py. Link validity is armed here, on both pre-commit
+	@# paths (measured n=5 median 0.08 s over 143 maps) and — since 2026-08-23 — as the
+	@# `map.md link-validity guard` step in ci.yml's guards job. Change one, change the other. The COVERAGE rule — every mappable
 	@# tracked file mentioned by its directory's map — is behind `--strict` and NOT armed: the
 	@# tree measured 24 pre-existing unmentioned files at the arming commit (2026-08-22) — a
 	@# FLOOR, since a name counts as mentioned anywhere it appears as a whole token — and a

@@ -128,12 +128,17 @@ jobs:
         run: df -h /
 
   guards:
+    # The display name is a required status check in branch protection — keyed by this exact
+    # string. Add steps below freely; renaming the job leaves the PR "waiting for status".
     name: Repo guards (map.md + workflow parse + crate-DAG + lib.rs)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+          # check-ledgers diffs the frozen ledger bins against the merge-base with origin/main;
+          # a shallow checkout has no origin/main and the guard refuses to pass closed (exit 2).
+          fetch-depth: 0
       # Needed by the crate-DAG guard: its wrapper runs `cargo metadata --locked` (a manifest
       # read, no build). SHA-pinned — see the rust job note.
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
@@ -174,6 +179,23 @@ jobs:
       # SSOT: scripts/check_parity_live_dual_wire.py.
       - name: parity-live dual-wire guard
         run: ./scripts/check_parity_live_dual_wire.sh
+      # map.md link validity: every relative link in every tracked map resolves (an absolute
+      # target is a finding of its own). Dual-wired with `make check-map-sync` and the pre-commit
+      # `map-sync-guard`. SSOT: scripts/sync_map_md.py.
+      - name: map.md link-validity guard (sync_map_md)
+        run: python3 scripts/sync_map_md.py --check
+      # Ledger lifecycle guard: a *-ledger.md under task/ outside its bin, an archive name whose
+      # date prefix disagrees with its month, a dead -ledger.md link in ANY tracked markdown, and a
+      # completed/ or archive/ ledger edited beyond a link repair or a prepended errata note.
+      # Needs fetch-depth: 0 above. Dual-wired with `make check-ledgers`.
+      # SSOT: scripts/ledger_lifecycle.py (DL-1).
+      - name: ledger lifecycle guard (check_ledgers)
+        run: python3 scripts/ledger_lifecycle.py check
+      # Ledger grammar guard over task/ledgers/{staging,completed}/: clause rows, `pins:` citations
+      # binding tests to clauses, the Critic's attestation form; EXCEPTIONS ratchet down only.
+      # Dual-wired with `make check-ledger-grammar`. SSOT: scripts/check_ledger_grammar.py (DL-2).
+      - name: ledger grammar guard (check_ledger_grammar)
+        run: python3 scripts/check_ledger_grammar.py
       # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
       # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
       # Mirrors `make workflows-parse`.
