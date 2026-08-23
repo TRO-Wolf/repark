@@ -142,7 +142,7 @@ wrapper.
   `spark_ast.rs` (executing parse) and the router's successful parse (intercepted
   CREATE/ALTER). `refuse_collation_in_sql` is `pub` for the Python binding (`F.expr`,
   `filter_sql`). Pins: [`tests/collation.rs`](tests/map.md). Ledger:
-  [`../../../task/y7-collation-refuse-ledger.md`](../../../task/y7-collation-refuse-ledger.md).
+  [`../../../task/y7-collation-refuse-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
 - `spark_ast.rs` — the Spark passthrough: ORDER BY null-placement defaults, eager analysis,
   eager DML/`COPY` commands (F-BR-2), SEC-02 gate call, the **G15 collation valve**
   (`refuse_type_position_collation_in_sql` on the raw executing-parse text, then
@@ -178,10 +178,10 @@ wrapper.
   R4 stays recorded (DF 54.1.0 range-search; sqlparser 0.62 `EXCLUDE` TBD). ANSI-door
   wrapping is a named residual (this seam is Spark-door only).
   Pins: [`tests/window_temporal_range.rs`](tests/map.md); ledgers
-  [`../../../task/g5b-temporal-range-ledger.md`](../../../task/g5b-temporal-range-ledger.md),
-  [`../../../task/g5br-range-residuals-ledger.md`](../../../task/g5br-range-residuals-ledger.md),
-  [`../../../task/z4-residuals-ledger.md`](../../../task/z4-residuals-ledger.md),
-  [`../../../task/w4-z-residuals-ledger.md`](../../../task/w4-z-residuals-ledger.md).
+  [`../../../task/g5b-temporal-range-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-12-g5b-temporal-range-ledger.md),
+  [`../../../task/g5br-range-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-g5br-range-residuals-ledger.md),
+  [`../../../task/z4-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-z4-residuals-ledger.md),
+  [`../../../task/w4-z-residuals-ledger.md`](../../../task/ledgers/archive/2026-08/2026-08-13-w4-z-residuals-ledger.md).
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction).
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);

@@ -1104,21 +1104,21 @@ the pin rather than obeying it.
 >
 > **The 2026-08-13 Y-wave increment (Z-5)** pasted the merged Y-wave §6 handoffs after
 > re-verifying each against frozen `9b2dce3` (PRs #66–#72). Classification:
-> [`task/z5-landing-increment-ledger.md`](../task/z5-landing-increment-ledger.md).
+> [`task/z5-landing-increment-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-z5-landing-increment-ledger.md).
 >
 > **The 2026-08-13 Z-wave increment (W-5)** pasted the merged Z-wave §6 handoffs after
 > re-verifying each against frozen `c7e6589` (PRs #75–#79). Classification:
-> [`task/w5-z-landing-ledger.md`](../task/w5-z-landing-ledger.md). TZ-6 / TZ-7 sections
+> [`task/w5-z-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md). TZ-6 / TZ-7 sections
 > were not touched (PR-2 owns those two headings). No new `live-mirror:` tokens.
 >
 > **The 2026-08-13 W-wave increment (V-5)** pasted the merged W-wave §6 handoffs after
 > re-verifying each against frozen `8d325d4` (PRs #81–#85). Classification:
-> [`task/v5-w-landing-ledger.md`](../task/v5-w-landing-ledger.md). TZ-6 / TZ-7 FIXED
+> [`task/v5-w-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
 >
 > **The 2026-08-14 V-wave increment (S-5)** pasted the merged V-wave §6 handoffs after
 > re-verifying each against frozen `d9a7391` (PRs #87–#91). Classification:
-> [`task/s5-v-landing-ledger.md`](../task/s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
+> [`task/s5-v-landing-ledger.md`](../task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md). TZ-6 / TZ-7 FIXED
 > notes were already in-file from #85 (not duplicated). No new `live-mirror:` tokens.
 
 ### FN-1 — `element_at` out of range is NULL under ANSI
@@ -1620,7 +1620,7 @@ the pin rather than obeying it.
   records. Found the day the C-012 guard's domain grew from 20 hand-listed names to the session's
   own 341, which is the argument for that change on its own. **Scope for closing it** (the kernel
   shape, the ratchet move it forces, and the adjacent missing `F.log` overload) is
-  [task/sem-0-charter-ledger.md](../task/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
+  [task/sem-0-charter-ledger.md](../task/ledgers/staging/sem-0-charter-ledger.md), SEM-2 — queued, gate held.
 
 ### ORPHAN-1 — `remove_orphan_files` requires `older_than`; Spark defaults it
 

@@ -41,7 +41,7 @@ is needed; a cell that fails Ruff fails the canonical gate.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../../task/c18-datasets-ledger.md](../../task/c18-datasets-ledger.md) — what
+- Related: [../../task/c18-datasets-ledger.md](../../task/ledgers/archive/2026-08/2026-08-16-c18-datasets-ledger.md) — what
   each dataset increment delivered and reported.
 
 ## Debug

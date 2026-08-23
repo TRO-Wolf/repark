@@ -19,7 +19,7 @@ what each build target produces is [DEVELOPMENT.md](../../../DEVELOPMENT.md)'s.
 
 - Up: [../map.md](../map.md)
 - Related: roadmap **A13** in
-  [../../../task/roadmap-intake-2026-08-21.md](../../../task/roadmap-intake-2026-08-21.md) —
+  [../../../task/roadmap-intake-2026-08-21.md](../../../task/roadmap/mid-term/roadmap-intake-2026-08-21.md) —
   closed: `register_memory_catalog` uses the warehouse as the fallback root. §4 records the
   leftover directory.
 - Authoritative: [../../../AGENTS.md](../../../AGENTS.md),

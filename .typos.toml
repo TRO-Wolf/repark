@@ -7,9 +7,9 @@ extend-exclude = [
   "target/",
   ".venv/",
   "*.svg",
-  # Recorded census evidence (task/census/**): report/junit/freeze artifacts embed verbatim
-  # Apache-suite tracebacks and third-party identifiers (`tpe`, …). Evidence is never
-  # hand-edited, so it is excluded rather than "fixed" (phase-3 PR-4).
+  # Recorded census evidence (task/census/**): report/junit artifacts embed verbatim
+  # Apache-suite tracebacks and third-party identifiers. Evidence is never hand-edited, so it
+  # is excluded rather than "fixed" (phase-3 PR-4; reduced to the facade pin by DL-1).
   "task/census/",
   # Spark-written Iceberg fixture (Avro/Parquet/Puffin). Binary; not prose.
   "crates/repark-spark/src/tests/fixtures/",

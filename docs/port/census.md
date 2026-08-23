@@ -163,7 +163,8 @@ never a write to a tracked file:
 
 The four JSON reports, the four markdown reports, the stability self-diff, the quarantine list
 (empty if nothing was quarantined — an empty ledger is a result, an absent one is exit 2), and the
-freeze manifest are committed **here** under `task/census/baseline-<pin>/`. They are **evidence,
+freeze manifest are committed under `task/census/baseline-<pin>/` (§7 — evicted to history once
+superseded). They are **evidence,
 not source**: never hand-edited, and a re-run replaces the whole directory in one commit.
 
 **Every committed artifact must parse.** Before the commit, assert it mechanically — every
@@ -346,7 +347,21 @@ is unchanged.
 
 ---
 
-## 7. What a complete census submission contains
+## 7. The recorded runs — evicted from the tree 2026-08-23
+
+The two recorded runs — `baseline-fc3f48102/` (the port-source pin) and `v2-a5be8a7/` (the
+milestone-one acceptance run, byte-flat on all four cohorts) — were carried in the working tree
+under `task/census/` (4.5 MB, 68 % of `task/`) until DL-1 evicted them on 2026-08-23 (owner
+ruling) — all but the baseline's `facade/` cohort (0.5 MB: `collected.txt`, `facade.xml`), which
+stays because `python/repark-parity/tests/test_deferred_ledger.py` reads it; evidence a gate
+consumes is an input, not an archive. The rest is history, not deleted: `main` commit **`b13b22c`** carries the directory whole —
+`git show b13b22c:task/census/map.md` is the index, `git show b13b22c:task/census/v2-a5be8a7/map.md` the
+acceptance run. The procedure above is unchanged: a comparable run is generated the same way, and
+a run that must be cited as evidence is committed under `task/census/<run>/` in one commit and
+evicted again the same way once it has been superseded. Eviction shrinks the checkout and the
+maps, not the pack — that is the point.
+
+## 8. What a complete census submission contains
 
 1. The four baseline reports (JSON + markdown) plus the freeze manifest, committed — including the
    stability-run self-diff and any quarantined rows, **named**.

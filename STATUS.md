@@ -50,7 +50,10 @@ differential harness). The published wheel is in [Release state](#release-state)
 `fc3f48102`, exit 0 on all four cohorts — classic `142/345`, expand `44/171`, expand2 `87/167`,
 and the facade cohort `(2,499 − 2 added) ∪ 12 deferred = pin 2,509`. Census procedure:
 [docs/port/census.md](docs/port/census.md); evidence:
-[task/census/baseline-fc3f48102](task/census/) and [task/census/v2-a5be8a7](task/census/); deferred
+`task/census/baseline-fc3f48102/` and `task/census/v2-a5be8a7/`, evicted from the tree by DL-1 on
+2026-08-23 and reachable at `main` `b13b22c` ([docs/port/census.md](docs/port/census.md) §7) —
+except the baseline's [facade cohort](task/census/baseline-fc3f48102/facade/map.md), which the
+deferred-ledger tests read; deferred
 and added acceptance inputs (live ledgers, still consumed by the comparator):
 [task/port/](task/port/). The port's full record — the four phase briefs, the seventeen unit
 ledgers, the retrospectives — is archived at
@@ -98,7 +101,7 @@ What happens next, in order:
    F-Y10-1 integer wrap (DEC U5 / G13). Semantics of each landed or still-open class: the
    divergence registry
    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md); completeness
-   table: [task/z5-landing-increment-ledger.md](task/z5-landing-increment-ledger.md).
+   table: [task/z5-landing-increment-ledger.md](task/ledgers/archive/2026-08/2026-08-13-z5-landing-increment-ledger.md).
    Z-wave (Z-1…Z-5) is in flight on that frozen SHA.
    **2026-08-13 — Z wave landed ×5; W wave in flight.** Z-wave PRs **#75–#79** are on
    `main` (this increment's base `c7e6589` / `#79` tip; `#73` also on `main`). Closed
@@ -111,7 +114,7 @@ What happens next, in order:
    `timestamp_ns`, Python `TimestampType` mapping), DEC-1 (W-2 in flight) and
    DEC-2/3/5–9, TY-3 still DECLARED, G5b-R1 / R4 / R5 (W-4 in flight), G8, G10
    follow-on, F-Y10-1. Completeness table:
-   [task/w5-z-landing-ledger.md](task/w5-z-landing-ledger.md).
+   [task/w5-z-landing-ledger.md](task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md).
    **2026-08-13 — W wave landed ×5; V wave in flight (night 1 of the 48-hour push).**
    W-wave PRs **#81–#85** are on `main` (this increment's base `8d325d4` / `#85` tip;
    `#80` also on `main`). Closed as code: Z-wave §6 landing (#81), G5b-R1/R5 + Q-002
@@ -122,7 +125,7 @@ What happens next, in order:
    gate not met), TZ-4 residues (B-TZ-4, ANSI column-def `timestamp_ns`), DEC-2/3/5–9,
    TY-3 still DECLARED (U3 revisit rides with V-2), G5b-R4, G8, G10 follow-on,
    F-Y10-1. Completeness table:
-   [task/v5-w-landing-ledger.md](task/v5-w-landing-ledger.md).
+   [task/v5-w-landing-ledger.md](task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md).
    **2026-08-14 — V wave landed ×5; S wave in flight (night 2 of the 48-hour push).**
    V-wave PRs **#87–#91** are on `main` (this increment's base `d9a7391` / `#91` tip;
    `#86` also on `main`). Closed as code: W-wave §6 landing (#87), write-path
@@ -132,7 +135,7 @@ What happens next, in order:
    by this increment: G3-E8 residual UPDATE IN + correlated IN/ANY/ALL, TZ-8 date-cast,
    DEC-2 `/` (U4b), registry DEC-8 plan-refuse, DEC-6/7/9, TY-3 still DECLARED,
    F-V4-1/2 fork-wave, G5b-R4, G8, the `repark.sql` re-home. Completeness table:
-   [task/s5-v-landing-ledger.md](task/s5-v-landing-ledger.md).
+   [task/s5-v-landing-ledger.md](task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md).
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
@@ -167,6 +170,18 @@ history-rewrite; provenance and the options weighed:
 
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
+
+- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 delivered with this
+  change**). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
+  `completed/` (the unit's last commit) → `archive/yyyy-mm/` (the script's move at pickup,
+  immutable) — and `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting
+  every link as it goes; `make check-ledgers` (in `make ci`) holds the bins, the archive names,
+  every ledger link in the repository and the frozen rule. Backfilled the same day: 122 ledgers
+  to `archive/2026-08/`, four open charters (MW-0, SEM-0, FNP-0, V3-0) in `staging/`. The roadmap
+  has two bins by horizon, [task/roadmap/](task/roadmap/map.md) `mid-term/` and `epic-term/`
+  (short-term stays the slate). `task/census/` is evicted from the tree (reachable at `b13b22c`,
+  [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
+  [task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md).
 
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
@@ -261,7 +276,7 @@ history-rewrite; provenance and the options weighed:
   that campaign squash-merged as `65bacdf`, tree-identical both before and after. Works the
   sub-floor remainder the two Critic rounds forwarded. Design: [docs/design/low-risk-sweep.md](docs/design/low-risk-sweep.md);
   slate: [briefs/low-risk-sweep.md](briefs/low-risk-sweep.md); approval gate (10/10 `PROVEN`):
-  [task/lrs-0-charter-ledger.md](task/lrs-0-charter-ledger.md).
+  [task/lrs-0-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-21-lrs-0-charter-ledger.md).
   - **Delivered:** LRS-5 (canonical Rust module layout — all six `#[path]` sites gone), LRS-1
     (four facade paths refuse a higher-order column instead of leaking a DataFusion internal),
     LRS-2 (argument contracts matched to Spark), LRS-7 (a window with no `ORDER BY` frames the
@@ -284,7 +299,7 @@ history-rewrite; provenance and the options weighed:
 - **The Spark semantics fixes (SEM)** (chartered 2026-08-21, **gate ruled the same day**). First
   four units **MERGED** as [#192](https://github.com/TRO-Wolf/repark/pull/192) / `f3eaa9d`; SEM-6
   followed as [#193](https://github.com/TRO-Wolf/repark/pull/193) / `a547905`. Charter and
-  measured scope: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+  measured scope: [task/sem-0-charter-ledger.md](task/ledgers/staging/sem-0-charter-ledger.md).
   - **The owner's rulings:** 2026-08-21 — `RE-1` closes, **`LOG-1` is TABLED** and keeps its
     BACKLOG row, the adjacent defects and the message work go ahead. Then, after `RE-3` was
     registered: close that one too.
@@ -314,7 +329,7 @@ history-rewrite; provenance and the options weighed:
   procedures refused on exactly the catalogs holding production data. Design:
   [docs/design/iceberg-maintenance-wave.md](docs/design/iceberg-maintenance-wave.md); slate:
   [briefs/iceberg-maintenance-wave.md](briefs/iceberg-maintenance-wave.md); charter:
-  [task/mw-0-charter-ledger.md](task/mw-0-charter-ledger.md).
+  [task/mw-0-charter-ledger.md](task/ledgers/staging/mw-0-charter-ledger.md).
   - **Delivered:** MW-0 the measured charter ([#195](https://github.com/TRO-Wolf/repark/pull/195)),
     MW-1 the fence lifted for both catalog policies plus the expire over-count
     ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`
@@ -350,14 +365,14 @@ history-rewrite; provenance and the options weighed:
     fallback tree. **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse rather than
     `<temp>/repark_ctas`, so two sessions with different warehouses no longer share files. See
-    [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md) A13.
+    [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md) A13.
 
 - **Format-v3 track** (roadmap **A12** in
-  [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), owner-scheduled
+  [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
   2026-08-21; V3-0 audit merged; **V3-1 merged** as
   [#203](https://github.com/TRO-Wolf/repark/pull/203) / `d3152b1`).
   Design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
-  [task/v3-0-charter-ledger.md](task/v3-0-charter-ledger.md).
+  [task/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **V3-0** ([#199](https://github.com/TRO-Wolf/repark/pull/199)) ran the surfaces A12 had only
     read. Two claims were too pessimistic: **reading** a Spark-written v3 table with Puffin
     deletion vectors is already correct (857 rows, `sum(id) = 428429` — Spark's numbers exactly),
@@ -393,7 +408,7 @@ history-rewrite; provenance and the options weighed:
   gap and move the semantics behind every name out of Python into Rust. Design:
   [docs/design/spark-function-parity.md](docs/design/spark-function-parity.md); slate:
   [briefs/spark-function-parity.md](briefs/spark-function-parity.md); approval gate (12/12
-  `PROVEN`): [task/fnp-0-charter-ledger.md](task/fnp-0-charter-ledger.md); measured evidence:
+  `PROVEN`): [task/fnp-0-charter-ledger.md](task/ledgers/staging/fnp-0-charter-ledger.md); measured evidence:
   [task/fnp-0-census/](task/fnp-0-census/map.md).
 
   **Delivered so far** — `__all__` 333 → 360, **41 names** moved from refusing-or-absent to
@@ -489,7 +504,7 @@ moving it. Nothing is described in both places.
   narrowing it to `{2}`. Defect with a scheduled fix, so it stays here rather than becoming a
   registry row. Fix it with, or immediately after,
   `RE-1` — same function, same remediation window, and its test pass is the cheapest place to catch
-  it. Scheduled as SEM-3: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+  it. Scheduled as SEM-3: [task/sem-0-charter-ledger.md](task/ledgers/staging/sem-0-charter-ledger.md).
 
 - **`F.log` has no two-argument form** — measured 2026-08-21. PySpark's signature is
   `log(arg1, arg2=None)`, where the two-argument form is `log(base, x)`; repark's is
@@ -498,7 +513,7 @@ moving it. Nothing is described in both places.
   case at all, so `F.log(2.0, col)` fails in Python before reaching Rust. Distinct from
   [LOG-1](docs/spark-sql-iceberg-parity.md), which is about the SQL door's base; this is a missing
   facade overload. Natural to land in the same unit — a Spark-semantics `log` kernel is what both
-  need. Scoped into SEM-2: [task/sem-0-charter-ledger.md](task/sem-0-charter-ledger.md).
+  need. Scoped into SEM-2: [task/sem-0-charter-ledger.md](task/ledgers/staging/sem-0-charter-ledger.md).
 
 - **Identifier case folding diverges from Apache Spark** — **DECLARED (2026-08-10)**, not open. It
   is the divergence registry's first declared row, with its behavior, its rationale and its pin:
@@ -581,13 +596,13 @@ moving it. Nothing is described in both places.
   U+2029 (regex-crate multiline is `\n`-only); (4) ANSI-off conditional semantics
   (`legacySizeOfNull` −1; string-idx CAST NULL) are not modeled — the kernels hardcode the
   ANSI-ON default. Descriptions with examples:
-  [task/fn-gt1-ledger.md](task/fn-gt1-ledger.md) Residuals.
+  [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
 - **Numeric implicit-cast breadth on string-function arguments (no disposition yet)** — Spark
   implicitly casts numeric→string first args (`regexp_count(123,'2')` = 1) and non-integer
   numerics for `regexp_instr` idx / `split_part` partNum (`split_part(…, 2.0)` = `'b'`); repark
   plan-refuses both doors (fail-loud direction, pre-existing class). Also `split_part` with a
   NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified
-  2026-08-19; [task/fn-gt1-ledger.md](task/fn-gt1-ledger.md) Residuals.
+  2026-08-19; [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
 - **SQL string literals do not process backslash escapes (no disposition yet)** — the SQL door
   parses `'\d'` as two characters where Spark's parser processes the escape to one
   (`length('\d')`: Spark 1, repark 2). Found 2026-08-19 during the GT1-FIX review; affects every

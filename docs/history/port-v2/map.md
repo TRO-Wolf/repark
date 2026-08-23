@@ -55,7 +55,7 @@ and dated corrections (see [README.md](README.md) "Rules for this directory").
 | See what a phase was asked to deliver | that phase's brief |
 | See what a PR actually delivered, and at what cost | that unit's ledger |
 | Read a phase retrospective | [port-execution-log.md](port-execution-log.md) |
-| Find the census evidence itself (still live) | [task/census/](../../../task/census/map.md) |
+| Find the census evidence itself (in history since 2026-08-23) | [../../port/census.md](../../port/census.md) §7 |
 | Run or compare a census today | [../../port/census.md](../../port/census.md) |
 | See the current backlog instead | [STATUS.md](../../../STATUS.md) |
 
@@ -64,7 +64,7 @@ and dated corrections (see [README.md](README.md) "Rules for this directory").
 - Up: [../map.md](../map.md)
 - Plan of record for the port (still live): [../../port/PLAN.md](../../port/PLAN.md)
 - Live acceptance inputs the archive refers to: [task/port/](../../../task/port/map.md) (deferred +
-  added test ledgers), [task/census/](../../../task/census/map.md) (recorded runs).
+  added test ledgers); the recorded census runs: [../../port/census.md](../../port/census.md) §7.
 
 ## Debug
 

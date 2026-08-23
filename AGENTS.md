@@ -256,7 +256,7 @@ it is what keeps a live document from silently accumulating a closed campaign's 
 | **state** | [STATUS.md](STATUS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DEVELOPMENT.md](DEVELOPMENT.md) | trued up at every unit close **and** at pickup; git is their history, so they carry no changelog section |
 | **navigation** | every `map.md` | lockstep with the directory's content, in the same commit |
 | **campaign** | [briefs/](briefs/map.md), [docs/design/](docs/design/map.md) | amended in place, dated; frozen and archived to [docs/history/](docs/history/map.md) when the campaign closes |
-| **ledger** | `task/<unit>-ledger.md` | append-only while the unit runs; frozen at merge; archived with its campaign |
+| **ledger** | [task/ledgers/](task/ledgers/map.md): `staging/<unit>-ledger.md` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<unit>-ledger.md` | the directory is the status. Append-only in `staging/` while the unit runs (a charter stays until the event it names); `move`d to `completed/` in the unit's last commit and frozen; filed to `archive/` by `make ledger-archive` at the next pickup, immutable. A campaign's `docs/history/` folder links to its ledgers in the monthly archive; the folders archived before 2026-08-23 keep theirs |
 | **skill** | [.agents/skills/](.agents/skills/map.md) | versioned with the procedure it records; a rule measured and **declined** is written down so nobody re-litigates it |
 
 The rules that bind all six:
@@ -278,7 +278,10 @@ The **executor** is the [compact-context-docs](.agents/skills/compact-context-do
 the pickup ritual at the start of a unit and the truth-up after one lands. This section states the
 classes and the rules; the skill states the procedure and is not restated here. The navigation class
 has a mechanical half: `make check-map-sync` (`scripts/sync_map_md.py` — the SSOT) fails a map whose
-relative links no longer resolve, with the coverage rule available behind `--strict`.
+relative links no longer resolve, with the coverage rule available behind `--strict`. The ledger
+class has one too: `make check-ledgers` (`scripts/ledger_lifecycle.py` — the SSOT for the bins and
+the moves) fails a ledger outside its bin, a dead ledger link in any tracked markdown, and a
+`completed/` or `archive/` ledger edited beyond a link repair or a dated errata note.
 
 ## Working style and communication
 
@@ -385,8 +388,9 @@ never relax them.
 - **Gates:** every unit gates (`make verify`), including STOP / report-only units; check REAL
   exit codes (never a pipe's); lint only via the Makefile's pinned toolchain targets. Before a
   PR: `make preflight` (verify + `py-test-facade` + audit + workflow lint).
-- **Ledgers:** one `task/<unit>-ledger.md` per unit, linked from `task/map.md` in the same
-  commit. Ledger presence is a gate item.
+- **Ledgers:** one `task/ledgers/staging/<unit>-ledger.md` per unit, linked from that
+  directory's `map.md` in the same commit; `move`d to `completed/` in the unit's last commit.
+  Ledger presence is a gate item.
 - **Oracles:** oracle/differential test files are NAMED deliverables per unit; live-oracle
   output recorded verbatim; hand-computed expectations are not an oracle. Divergences get
   honest `_divergence` pins, never silent absorption.

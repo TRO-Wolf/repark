@@ -32,7 +32,7 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
   `transform`/`filter` onto the arity-deficient DataFusion kernels; do not set the dialect
   session-wide; DataFusion's `to_char` is a false friend). Executes the design in
   [../docs/design/spark-function-parity.md](../docs/design/spark-function-parity.md); gated by
-  [../task/fnp-0-charter-ledger.md](../task/fnp-0-charter-ledger.md), which does **not** pass yet
+  [../task/fnp-0-charter-ledger.md](../task/ledgers/staging/fnp-0-charter-ledger.md), which does **not** pass yet
   — clause C-007 is `OPEN` pending one owner ruling.
 - [v2-engine-hardening.md](v2-engine-hardening.md) — the **V2 Engine Hardening** slate
   (2026-08-10, running): the campaign's per-unit definitions and acceptance gates — H-1's four
@@ -67,7 +67,7 @@ its design and its one unit ledger. Where the next campaign stands is
 | I want to... | go to |
 |---|---|
 | Read the running campaign's slate | [v2-engine-hardening.md](v2-engine-hardening.md) |
-| Read the queued campaign's slate | [spark-function-parity.md](spark-function-parity.md) — gated on [../task/fnp-0-charter-ledger.md](../task/fnp-0-charter-ledger.md) |
+| Read the queued campaign's slate | [spark-function-parity.md](spark-function-parity.md) — gated on [../task/fnp-0-charter-ledger.md](../task/ledgers/staging/fnp-0-charter-ledger.md) |
 | See what the running campaign DECIDED and why | [../docs/design/v2-engine-hardening.md](../docs/design/v2-engine-hardening.md) |
 | See what a delivered unit was ASKED to do | the dated brief for its slate — in this directory while the campaign runs, in [../docs/history/](../docs/history/map.md) once it closes |
 | Find the standing rules briefs inherit | [../AGENTS.md](../AGENTS.md) "Delegated-agent standing rules" |

@@ -81,7 +81,7 @@ behavior only reachable end-to-end.
 ## Pointers
 
 - [../src/map.md](../src/map.md) — module inventory.
-- [../../../task/se1-declared-sorted-ledger.md](../../../task/se1-declared-sorted-ledger.md)
+- [../../../task/se1-declared-sorted-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-16-se1-declared-sorted-ledger.md)
   — the SE-1 unit ledger (probe evidence, funded ceiling).
 
 ## Debug

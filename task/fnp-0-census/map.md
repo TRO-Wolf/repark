@@ -3,7 +3,7 @@
 ## Purpose
 
 The measured evidence behind the Spark function parity campaign's approval gate
-([../fnp-0-charter-ledger.md](../fnp-0-charter-ledger.md)). Produced 2026-08-20 by a nine-agent
+([../fnp-0-charter-ledger.md](../ledgers/staging/fnp-0-charter-ledger.md)). Produced 2026-08-20 by a nine-agent
 read-only census; nothing here was hand-estimated. These files are **evidence, not status** — when
 a number changes, the campaign re-runs the census and replaces the file; STATUS.md remains the
 single source of truth for current state.
@@ -32,7 +32,7 @@ single source of truth for current state.
 ## Pointers
 
 Up: [../map.md](../map.md) (the `task/` container).
-Related: [../fnp-0-charter-ledger.md](../fnp-0-charter-ledger.md) (the gate this evidence serves),
+Related: [../fnp-0-charter-ledger.md](../ledgers/staging/fnp-0-charter-ledger.md) (the gate this evidence serves),
 [../../docs/design/spark-function-parity.md](../../docs/design/spark-function-parity.md) (the
 design that consumes it),
 [../../briefs/spark-function-parity.md](../../briefs/spark-function-parity.md) (the slate).

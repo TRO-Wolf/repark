@@ -29,5 +29,5 @@ Hadoop `.crc` sidecar files are omitted; LocalFs does not consult them.
 ## Pointers
 
 - Tests: [../../call_register.rs](../../call_register.rs)
-- Ledger: [../../../../../../task/v3-1-charter-ledger.md](../../../../../../task/v3-1-charter-ledger.md)
+- Ledger: [../../../../../../task/v3-1-charter-ledger.md](../../../../../../task/ledgers/archive/2026-08/2026-08-21-v3-1-charter-ledger.md)
 - Up: [../../map.md](../../map.md)

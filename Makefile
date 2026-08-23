@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -307,6 +307,23 @@ check-manifest: ## Structural-manifest guard (repo-manifest.toml vs workspace, d
 .PHONY: check-map-md
 check-map-md: ## map.md lockstep guard over staged changes (also wired into the pre-commit hook)
 	bash scripts/check_map_md.sh
+
+.PHONY: check-ledgers
+check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link, frozen bins (DL-1)
+	@# SSOT: scripts/ledger_lifecycle.py `check` — a `*-ledger.md` under task/ outside its bins,
+	@# an archive name whose date prefix disagrees with its month directory, a dead `-ledger.md`
+	@# link in ANY tracked markdown (sync_map_md covers maps only), and a completed/ or archive/
+	@# ledger edited beyond a link repair or a prepended errata note. Policy: AGENTS.md
+	@# "Markdown document lifecycle". In the `make ci` chain; the ci.yml half is an owner-scoped
+	@# .github/ change.
+	python3 scripts/ledger_lifecycle.py check
+
+.PHONY: ledger-archive
+ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy-mm/ (zero tokens)
+	@# Dates come from `main`'s first-parent history, never the clock; links across the tree are
+	@# rewritten and the result is staged. Idempotent. Mark a unit finished with
+	@#   python3 scripts/ledger_lifecycle.py move task/ledgers/staging/<unit>-ledger.md completed
+	python3 scripts/ledger_lifecycle.py archive
 
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)

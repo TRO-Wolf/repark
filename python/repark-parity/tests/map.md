@@ -7,6 +7,15 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
+  script on a scratch git repository: `archive` moves a `completed/` ledger to
+  its dated archive name, rewrites every link to it (fragments kept, code spans
+  untouched), re-expresses the ledger's own links, relocates its map row and
+  stages the lot; idempotent; refuses a ledger not on `main`; `move` to
+  `completed`; `archive` is not a `move` target. The provocation proofs of
+  `check`: a ledger outside the bins, an archive prefix disagreeing with its
+  month, a dead ledger link in a non-map document, and the frozen rule (link
+  repair and a prepended errata pass; a prose edit and a deletion fail).
 - `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22):** five presence
   rules only; style `D` not in py-lint select; tests keep the `D` per-file
   ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;

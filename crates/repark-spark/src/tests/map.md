@@ -107,7 +107,7 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `SQLConf` key (helper + `execute` + parenthesized SET), `execute_passthrough` +
   spark_ast source attach (Q-001), a string-literal negative (incl. CAST-in-literal),
   and a default (non-COLLATE) `ORDER BY` untouched pin. Ledger:
-  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/y7-collation-refuse-ledger.md).
+  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
 - **G5b temporal-`RANGE` pins (2026-08-11)** — `window_temporal_range.rs`, a NEW leaf (not a
   relocation): five tests over the Spark door's `RANGE` frames on datetime order keys, holding
   the two arms of `../window_range.rs` plus the paths it must NOT disturb —
@@ -121,7 +121,7 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `python/repark/tests/test_window_parity.py` pins — one oracle, two halves. Leaf-private
   fixtures (`register_timestamp_seed`, `register_date_seed`, `seed_micros`,
   `days_from_civil`) stay out of `common.rs`: only this leaf uses them. Ledger:
-  [`../../../../task/g5b-temporal-range-ledger.md`](../../../../task/g5b-temporal-range-ledger.md).
+  [`../../../../task/g5b-temporal-range-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-12-g5b-temporal-range-ledger.md).
 - **G5b-R residual pins (Y-1, 2026-08-12)** — same leaf, five added tests:
   `temporal_range_negative_offset_is_spark_empty_frame` (R3 HIGH — TIMESTAMP
   `INTERVAL '-1' DAY` is Spark's empty frame; DATE stays empty and is not refused),
@@ -139,9 +139,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `-1 PRECEDING AND 0 FOLLOWING`, direct `2 FOLLOWING AND 1 FOLLOWING` — Spark
   `WRONG_COMPARISON`, wrapping `-1` is gone; no `10000 YEAR` pair) and
   `temporal_range_mixed_negative_timestamp_and_numeric_bare_refuses` (Q-003). Ledger:
-  [`../../../../task/g5br-range-residuals-ledger.md`](../../../../task/g5br-range-residuals-ledger.md),
-  [`../../../../task/z4-residuals-ledger.md`](../../../../task/z4-residuals-ledger.md),
-  [`../../../../task/w4-z-residuals-ledger.md`](../../../../task/w4-z-residuals-ledger.md).
+  [`../../../../task/g5br-range-residuals-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-g5br-range-residuals-ledger.md),
+  [`../../../../task/z4-residuals-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-z4-residuals-ledger.md),
+  [`../../../../task/w4-z-residuals-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-w4-z-residuals-ledger.md).
 - **MG-2 MERGE lowering strictness (2026-08-15)** — `merge.rs` gains execute-path
   pins for M2 (`merge_oracle_style_update_where_refuses` / `_delete_where_` /
   `_insert_where_`), M3 (`merge_source_qualified_set_target_refuses`,
@@ -169,20 +169,20 @@ code is not here — only tests, shared fixtures, and the module manifest.
 - **Z-1 / G3-E8 PR-1 (2026-08-13)** — IN-DELETE flips from refuse to execute
   (`g3e8_delete_in_subquery_deletes_exactly_the_matching_row`, quoted + temp-view,
   FROM-less IN). Residual refuse family + valve-ORDER pin restated over NOT IN / EXISTS.
-  Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/z1-g3e8-pr1-ledger.md).
+  Ledger: [`../../../../task/z1-g3e8-pr1-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-z1-g3e8-pr1-ledger.md).
 - **W-3 / G3-E8 PR-2 (2026-08-13)** — NOT IN + NULL trap execute
   (`g3e8_delete_not_in_subquery_*`, empty subquery, quoted + FROM-less). Residual refuse
   family + valve-ORDER pin restated over EXISTS / nested / UPDATE. Ledger:
-  [`../../../../task/w3-g3e8-pr2-ledger.md`](../../../../task/w3-g3e8-pr2-ledger.md).
+  [`../../../../task/w3-g3e8-pr2-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-w3-g3e8-pr2-ledger.md).
 - **V-1 / G3-E8 PR-3 (2026-08-13)** — `[NOT] EXISTS` ± correlation execute
   (`g3e8_delete_exists_uncorrelated_and_correlated_execute`). Residual refuse family +
   valve-ORDER pin restated over correlated IN / nested / scalar / UPDATE. Ledger:
-  [`../../../../task/v1-g3e8-pr3-ledger.md`](../../../../task/v1-g3e8-pr3-ledger.md).
+  [`../../../../task/v1-g3e8-pr3-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-v1-g3e8-pr3-ledger.md).
 - **R-1 / G3-E8 PR-4 (2026-08-14)** — correlated IN + identity UPDATE IN execute
   (`g3e8_delete_correlated_in_deletes_exactly_the_matching_row`,
   `g3e8_update_in_subquery_rewrites_only_the_matching_row`). Residual refuse family
   restated as the permanent v1 valve (ANY/ALL / nested / scalar / mixed / UPDATE NOT IN).
-  Ledger: [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/r1-g3e8-pr4-ledger.md).
+  Ledger: [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
   `normalize.rs` gained **2**: the detector unit pin
   (`g3e8_subquery_detector_fires_on_every_spelling_and_no_other`) and the statement-level valve
   pin (`g3e8_statement_valve_covers_both_verbs_and_renders_the_parsed_target`, the entry point

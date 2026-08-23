@@ -19,10 +19,12 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 5. **`map.md` in lockstep, in the same commit.** Not a follow-up.
 6. **One group at a time**, manual PR, owner merges.
 7. **Pickup ritual first, departure edit last.** First act of a unit: fetch, confirm the prior
-   unit's PR merged and that the local base carries its departure edit, run the drift checks
-   (`make check-map-sync`), and compact the context docs **against the just-merged delta only**,
+   unit's PR merged and that the local base carries its departure edit, `make ledger-archive`
+   (files the prior unit's ledger; zero tokens), run the drift checks (`make check-map-sync`,
+   `make check-ledgers`), and compact the context docs **against the just-merged delta only**,
    as a docs-only first commit. Last commit of the unit: the departure edit to this file, STATUS
-   trued up for what this unit changed and nothing else, `map.md` in lockstep.
+   trued up for what this unit changed and nothing else, the unit's ledger `move`d from
+   `task/ledgers/staging/` to `completed/`, `map.md` in lockstep.
 
 ---
 
@@ -74,11 +76,16 @@ file:** Glue live merge-on-read compact+expire in the aws-acceptance module
 object-delete is on the warehouse scratch prefix; Glue tables still accumulate.
 S3 Tables MOR compact+expire is out of this unit.
 
-**MW-4b lands with this change and leaves this file:** Glue/HMS
-`table_exists` `DataInvalid` on a two-level namespace no longer aborts the Spark
-dotted metadata-table rewrite. The MW-4 live `table.snapshots` probe can rewrite
-to `$`. MW-5 stays queued behind this PR merging and a green `aws-acceptance`
-dispatch.
+**MW-4b merged as [#219](https://github.com/TRO-Wolf/repark/pull/219) and left this
+file:** Glue/HMS `table_exists` `DataInvalid` on a two-level namespace no longer
+aborts the Spark dotted metadata-table rewrite. MW-5 stays queued behind a green
+`aws-acceptance` dispatch.
+
+**DL-1 lands with this change and leaves this file** (chartered 2026-08-23 outside the slate,
+run before MW-5 because it rewrites every ledger link and conflicts with anything in flight):
+the ledger bins under `task/ledgers/`, `scripts/ledger_lifecycle.py` + `make check-ledgers` in
+`make ci`, the 122-ledger backfill, `task/roadmap/{mid-term,epic-term}/`, the census eviction.
+The queue is unchanged: MW-5.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -182,9 +189,9 @@ MOR compact+expire proof is actually green.
 **Post-MW-4 remainder, evaluated 2026-08-23:** the candidate units after MW-5 (MW-6
 `rewrite_manifests` through MW-9, the DML units, the RP-1 fork repin) and the
 window-operator measurement track are an **intake, not sequenced work**, in
-[../task/roadmap-intake-2026-08-23.md](../task/roadmap-intake-2026-08-23.md); the
+[../task/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md); the
 fork-side queue they feed is
-[../task/iceberg-rust-handoff-2026-08-23.md](../task/iceberg-rust-handoff-2026-08-23.md).
+[../task/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md).
 Its `[OWNER]` recommendation is MW-6 beside the dispatch now; nothing here moves until
 the owner charters it.
 
@@ -192,10 +199,10 @@ the owner charters it.
 
 ## A13 — done (merged #217): warehouse-keyed CTAS fallback
 
-Roadmap item in [../task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md),
+Roadmap item in [../task/roadmap-intake-2026-08-21.md](../task/roadmap/mid-term/roadmap-intake-2026-08-21.md),
 surfaced by MW-3. `register_memory_catalog`'s location-less fallback root is now the
 supplied warehouse (`{warehouse}/repark_ctas|repark_ansi_ctas/…`). Two sessions with
 different warehouses no longer share a directory. Same warehouse + same names still
 share; `remove_orphan_files` still refuses that fallback tree (table location, CALL
 `location`, parent prefix, `file://` aliases). Ledger:
-[../task/a13-shared-ctas-fallback-ledger.md](../task/a13-shared-ctas-fallback-ledger.md).
+[../task/a13-shared-ctas-fallback-ledger.md](../task/ledgers/archive/2026-08/2026-08-23-a13-shared-ctas-fallback-ledger.md).

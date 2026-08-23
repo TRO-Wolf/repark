@@ -70,7 +70,7 @@ without enabling PyO3 `multiple-pymethods`.
   on a session, so the facade and the SQL door cannot silently resolve different kernels for the
   same spelling. Carries `EXPECTED_DIVERGENCES`, a sanctioned-out table that **ratchets DOWN
   only** — a listed name that has quietly been fixed fails the build. Ledger:
-  [../../../../task/fnp-1-two-door-asymmetry-ledger.md](../../../../task/fnp-1-two-door-asymmetry-ledger.md).
+  [../../../../task/fnp-1-two-door-asymmetry-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-21-fnp-1-two-door-asymmetry-ledger.md).
 - `expr_build.rs` — expression-construction helpers (`parse_data_type` / `parse_decimal_type`,
   alias collapse, projection extract, reciprocal-trig Inf CASE, `collect_aggregate` /
   `count_distinct_argument`) plus the unit tests that pin those helpers.

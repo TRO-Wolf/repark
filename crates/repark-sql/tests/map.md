@@ -73,7 +73,7 @@ belongs out here is what must be observed from outside the crate.
   the SQL same-OVER fusion pin — named `OVER w` and inline same-spec each plan one
   `WindowAggExec`; an intervening filter between two live windows stacks two. Same SQL
   shapes as `../../repark-spark/tests/ta_window.rs`. Ledger:
-  [../../../task/ta1-sql-fusion-ledger.md](../../../task/ta1-sql-fusion-ledger.md).
+  [../../../task/ta1-sql-fusion-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-ta1-sql-fusion-ledger.md).
 
 - `cross_door.rs` (PR-6, Q13 / graft G5) — the **two-session** cross-door protocol: a native
   `AnsiDialect` session and a Spark-extended `SparkDialect` session, each over its OWN in-memory
