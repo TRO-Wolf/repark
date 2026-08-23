@@ -697,16 +697,13 @@ only, merged code only, no self-hosted runners.
 - **Environment gate:** the job runs in a GitHub **environment** (`aws-acceptance`) carrying
   deployment protection — a manual dispatch still requires a human approval step before credentials
   can be minted.
-- **Trust policy (user-side):** the IAM role trusts the GitHub OIDC provider with the subject
-  constrained to **both** the default branch of this repository **and** the `aws-acceptance`
-  environment — not the whole repo, and not a wildcard; a compromised workflow file on a topic
-  branch cannot assume the role. Its permission policy is least-privilege over one scratch Glue
-  database, one scratch S3 prefix, and one S3 Tables bucket.
+- **Trust policy (user-side):** OIDC trust and permission ARNs live only in
+  [tier2-aws.md](../tier2-aws.md) §1–§2. This design does not restate the `sub` claim.
 - **Never-teardown as a permissions fact, not a convention:** the role's policy grants **no
-  table-delete and no object-delete permission of any kind**. The harness's documented posture
-  (create-only, scratch namespace, scratch prefix, no teardown path) is thereby enforced by IAM
-  rather than promised by a docstring — a compromised or buggy job *cannot* delete, regardless of
-  what it runs.
+  table-delete**. Object-delete was originally denied too; **OD-3** (2026-08-21, owner-executed)
+  adds `s3:DeleteObject` on the warehouse scratch prefix only so `expire_snapshots` / rewrite
+  can remove expired snapshot files. Glue `DeleteTable`/`DeleteDatabase` stay denied. Live IAM
+  shape: [tier2-aws.md](../tier2-aws.md) §2 — this design does not restate the policy.
 - **Scope:** the job runs the acceptance test module only — never the full facade suite. Blast
   radius and runner minutes both.
 - **Inputs:** the acceptance gate variable set to exactly `"1"`; the three entity/date/id-column
@@ -718,10 +715,11 @@ only, merged code only, no self-hosted runners.
   the ported test module already behaves. The OIDC trust sub is a SINGLE environment-form claim in
   GitHub's immutable subject format (one sub per run); branch binding comes from the environment's
   deployment-branch policy, not the sub — full shape in `docs/tier2-aws.md`.
-- **Scratch accumulation:** a nightly create-only job accumulates scratch tables. Handled outside
-  the workflow entirely: an S3 lifecycle expiry on the scratch prefix, configured once by a human —
-  neither a delete path in CI nor a human remembering to reap. Glue scratch-database entries are
-  reviewed manually at a documented cadence in the runbook.
+- **Scratch accumulation:** a nightly scratch-only job accumulates scratch *tables*. Object
+  files from expired snapshots may be removed by CALL expire (OD-3). Table accumulation is
+  handled outside the workflow: an S3 lifecycle expiry on the scratch prefix, configured once
+  by a human. Glue scratch-database entries are reviewed manually at a documented cadence in
+  the runbook.
 - **Hygiene:** `timeout-minutes` set (this workflow, unlike the ported ones, gets an explicit wall);
   concurrency group with cancel-in-progress; all actions SHA-pinned; no secret ever echoed.
 
@@ -861,7 +859,8 @@ Not delegable, and none of it blocks the engineering slate except where noted:
 1. Branch-protection context updates after each job split or rename (an engineering PR proposes them;
    only a maintainer can apply them).
 2. The AWS role, its OIDC trust policy scoped to the default branch **and** the `aws-acceptance`
-   environment, its least-privilege no-delete policy, the S3 lifecycle expiry on the scratch prefix,
+   environment, its least-privilege scratch policy (OD-3 later added scoped object-delete on the
+   warehouse prefix; live shape in `docs/tier2-aws.md`), the S3 lifecycle expiry on the scratch prefix,
    and the repository variables and secret the tier-2 workflow reads — **blocks PR-6's first green
    run**, not its merge.
 3. The first `workflow_dispatch` acceptance run of the live oracle and live AWS workflows: runner

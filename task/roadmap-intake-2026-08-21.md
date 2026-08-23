@@ -343,7 +343,7 @@ reasoning, but it is a drop-in break: a Glue job calling this on a v3 table gets
 Spark gave it a useless success. Reversible in one line if you would rather match Spark. See
 `B-MOR-3`.
 
-### A13. The shared CTAS fallback root — **surfaced by MW-3, 2026-08-21; closed this change**
+### A13. The shared CTAS fallback root — **surfaced by MW-3, 2026-08-21; closed as [#217](https://github.com/TRO-Wolf/repark/pull/217)**
 
 **Was:** `register_memory_catalog(name, warehouse)` accepted a warehouse and, for a namespace
 created without a `location` property, did not write there. Tables landed at

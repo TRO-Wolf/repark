@@ -12,6 +12,12 @@ not this directory.
 
 ## Contents
 
+- [mw-4-mor-acceptance-ledger.md](mw-4-mor-acceptance-ledger.md) —
+  **MW-4 (2026-08-23):** Glue live merge-on-read compact+expire in the aws-acceptance
+  module. OD-3 scoped `s3:DeleteObject` on the warehouse scratch prefix. Unique
+  `testing_mw4_mor_*` table per run; always-run memory analog of the same helper.
+  S3 Tables MOR compact+expire out of unit.
+
 - [a13-shared-ctas-fallback-ledger.md](a13-shared-ctas-fallback-ledger.md) —
   **A13 (2026-08-23):** `register_memory_catalog` uses the supplied warehouse as the
   location-less CTAS fallback root, so two sessions with different warehouses no longer

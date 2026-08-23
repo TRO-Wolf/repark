@@ -18,7 +18,7 @@ Create environment **`aws-acceptance`** (Settings → Environments):
   push access dispatch a modified workflow from a topic branch (the `environment:` line, hence the
   OIDC sub, is unchanged), and the only remaining gate would be the reviewer.
 
-## 2. IAM role (OIDC trust: one environment sub; permissions: create-only, no delete)
+## 2. IAM role (OIDC trust: one environment sub; permissions: create-only tables, scoped object-delete)
 
 **Trust policy.** GitHub sends exactly ONE `sub` claim per run, and because the job sets
 `environment: aws-acceptance` the sub is the *environment* form (never the ref form). This repo was
@@ -47,12 +47,16 @@ from §1's deployment-branch policy, not from the sub. Confirm the exact sub wit
 `AssumeRoleWithWebIdentity` CloudTrail event of a first (failing) dispatch.
 
 **Permission policy** — least-privilege over the scratch surface only, scoped by explicit
-**resource ARN** (never `Resource: "*"`), and **no delete of any kind**:
+**resource ARN** (never `Resource: "*"`). Glue tables still cannot be deleted. Object-delete is
+the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
 
 - `s3:GetObject` / `s3:ListBucket` on the **bronze** bucket + prefix the harness reads
   (`REPARK_ACCEPT_BRONZE_BUCKET`) — read-only.
-- `s3:PutObject` / `s3:GetObject` / `s3:ListBucket` on the **warehouse** scratch prefix only
-  (`REPARK_ACCEPT_WAREHOUSE` + the `testing_repark_acceptance/` namespace). **No `s3:DeleteObject`.**
+- `s3:PutObject` / `s3:GetObject` / `s3:ListBucket` / **`s3:DeleteObject`** on the **warehouse**
+  scratch prefix only (`REPARK_ACCEPT_WAREHOUSE` + the `testing_repark_acceptance/` namespace).
+  `s3:DeleteObject` is **OD-3** (2026-08-21, owner-executed 2026-08-23): `expire_snapshots` and
+  rewrite procedures remove expired snapshot files. It is not table teardown. Bronze stays
+  read-only. Never `Resource: "*"`.
 - `glue:CreateDatabase` / `glue:GetDatabase` / `glue:CreateTable` / `glue:GetTable` /
   `glue:UpdateTable` on the scratch database resource ARN only — never the production database.
   **No `glue:DeleteTable` / `glue:DeleteDatabase`.**
@@ -68,9 +72,10 @@ from §1's deployment-branch policy, not from the sub. Confirm the exact sub wit
   runbook records what the current engine requires and promises no engine change.)
 - S3 Tables (optional leg): create/get on the one table bucket ARN only. **No delete actions.**
 
-Never-teardown is thereby a PERMISSIONS FACT: the harness is create-only into the scratch namespace
-with a scratch table prefix and has no teardown path, and a compromised or buggy job cannot delete
-regardless of what it runs.
+Never-teardown of **tables** is still a PERMISSIONS FACT: the harness creates into the scratch
+namespace with a scratch table prefix, has no DROP TABLE path, and the role still has no
+`glue:DeleteTable` / `glue:DeleteDatabase`. A compromised job can remove objects under the
+warehouse scratch prefix (OD-3) and cannot drop Glue tables or touch bronze.
 
 ## 3. Scratch expiry (outside the workflow)
 
@@ -106,8 +111,9 @@ behaves locally).
 already exists in Glue from earlier hand testing, it carries the `LocationUri` it was created with
 — and the harness's create is *idempotent*, so it adopts the existing database silently rather
 than failing. Every table write then lands under the OLD warehouse, and the only thing standing
-between you and writes outside the prefix you scoped in §2 is the create-only role's denial. A
-denial is a stop, not a design. Check first, with owner credentials:
+between you and writes outside the prefix you scoped in §2 is that scratch-scoped IAM (Glue
+writes and OD-3 `s3:DeleteObject` stay on that prefix; bronze is read-only). A denial is a
+stop, not a design. Check first, with owner credentials:
 
 ```bash
 aws glue get-database --name testing_repark_acceptance   # inspect LocationUri
@@ -117,7 +123,8 @@ aws glue get-tables    --database-name testing_repark_acceptance   # expect only
 Read the `LocationUri`: it must be the `REPARK_ACCEPT_WAREHOUSE` prefix you configured in §4
 (`s3://<your-warehouse>/…`), not an older one. If it is stale — or `get-tables` shows anything
 that is not a `testing_*` scratch table — delete the database with **owner** credentials before
-the first dispatch, never from CI (the role has no delete actions, by design — §2):
+the first dispatch, never from CI (the role has no `glue:DeleteTable` /
+`glue:DeleteDatabase`, by design — §2):
 
 ```bash
 aws glue delete-database --name testing_repark_acceptance

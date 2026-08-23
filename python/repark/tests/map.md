@@ -1969,7 +1969,10 @@ NOT in that file is a defect, not a decision.
   (**Y-3:** reads `spark.catalog.getDatabase(…).locationUri`). **A2 second bullet:** `s3tables_catalog_config`
   (S3TablesCatalog impl, ARN as `warehouse` → RePark's `table_bucket_arn`) + the non-secret
   `S3TABLES_CATALOG` name — the table-bucket ARN is a RUNTIME arg from `TABLE_BUCKET_ARN`, never a
-  committed literal.
+  committed literal. **MW-4:** `MOR_ICEBERG_TABLE_PROPERTIES`, `mor_ctas_sql`,
+  `run_mor_merge_compact_expire` / `assert_mor_maintenance_outcome` /
+  `require_snapshot_readable` / `require_snapshot_expired` (shared by the memory analog
+  and the Glue live leg).
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL
   shape keyed on the id column, the real TBLPROPERTIES block, and `acceptance_namespace_location`
@@ -1978,7 +1981,16 @@ NOT in that file is a defect, not a decision.
   FROM`/`DROP NAMESPACE`, the `deduplicate` transform against a memory session (newest row per id),
   and the G-6 location-mismatch guard's pure comparison edges (match, mismatch naming both values,
   no-location, DESCRIBE-row extraction). **Y-3:** Glue wrapper stub drives `getDatabase`;
-  AST pin that the wrapper calls `getDatabase` (not DESCRIBE).
+  AST pin that the wrapper calls `getDatabase` (not DESCRIBE). **MW-4 (2026-08-23):** MOR
+  TBLPROPERTIES is merge-on-read not copy-on-write (COW block unchanged), CALL SQL shape, expected
+  row oracle, always-run memory analog of `run_mor_merge_compact_expire`, DROP/DELETE scan of
+  `_acceptance.py`, Glue MOR AST pin (location guard; `table_name` is `mw4_mor_` plus
+  `uuid4`, not a docstring token), S3 Tables must not call the MOR helper, identical-MERGE
+  source pin `[updates[-1]]`, dual-probe AST (`require_snapshot_readable` in the runner,
+  `require_snapshot_expired(outcome.first_snapshot_id)` in the asserter), live test must
+  call the asserter with `table_name` as the helper's fourth argument. Fake-session pins:
+  id-echo / generic `snapshot` AnalysisException is not expire; the engine needle is;
+  a successful VERSION AS OF is expire-no-op.
 - `test_aws_acceptance.py` — WG4 the env-gated real-AWS acceptance harness: a **module-level**
   `pytest.mark.skipif` on `REPARK_AWS_ACCEPTANCE != "1"` skips the whole module by default (CI
   stays AWS-free; the single sanctioned real-AWS run is the Fable audit's). Gated in, it mirrors
@@ -1989,14 +2001,21 @@ NOT in that file is a defect, not a decision.
   "already exists") → **G-6: `assert_glue_scratch_namespace_location`** (`getDatabase.locationUri`
   + exact match to the intended warehouse path; fail loud on stale LocationUri) →
   `tableExists`→CTAS-or-MERGE → idempotent second MERGE into `testing_repark_acceptance`.
-  Oracles: bronze rows > 0, published == deduped (fresh CTAS), second pass count unchanged. NO
-  DROP/DELETE of any AWS object — cleanup is the user's manual call. **A2 second bullet
+  Oracles: bronze rows > 0, published == deduped (fresh CTAS), second pass count unchanged.
+  No DROP TABLE / DROP NAMESPACE / DELETE FROM — tables accumulate; MW-4 CALL expire may
+  remove expired snapshot files under the scratch prefix. **A2 second bullet
   (`test_process_silver_acceptance_against_s3tables`):** the same shared publish path
   (`_bronze_dedup_publish_idempotent`) against an **S3 Tables** catalog — additionally gated on
   `TABLE_BUCKET_ARN` (SKIP, not fail, when absent, so a Glue-only run is unaffected); ARN read from
   env, never logged; namespace created WITHOUT a `location` (S3 Tables namespaces carry no location
   by design — nothing to compare; the Glue location-mismatch guard is intentionally not called).
   Runbook: `REPARK_AWS_ACCEPTANCE=1 TABLE_BUCKET_ARN=<us-east-2 ARN> AWS_REGION=us-east-2`.
+  **MW-4 (2026-08-23):** `test_mor_merge_compact_expire_against_glue` — a unique
+  `testing_mw4_mor_*` table per run; CTAS merge-on-read → MERGEs that strand position-delete
+  files → identical MERGE → `rewrite_position_delete_files` + `rewrite_data_files` +
+  `expire_snapshots` → Arrow row parity and VERSION AS OF of the CTAS snapshot fails. S3 Tables
+  MOR compact+expire is out of this unit (OD-3 is the Glue warehouse prefix, not the table
+  bucket). No DROP TABLE.
 
 - `test_two_door_kernel_parity.py` — **FNP-1 (2026-08-20):** charter clause C-012 at the facade
   layer. Pins that a name reachable from both doors returns the same Arrow **type and value**

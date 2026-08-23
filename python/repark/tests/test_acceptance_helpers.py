@@ -1,8 +1,9 @@
 """AWS-free unit tests for the acceptance-harness helpers — these run EVERYWHERE (no gate).
 
-They cover the pure builders + the ``deduplicate`` transform in ``_acceptance``, and assert the
-gated harness (``test_aws_acceptance.py``) carries no DROP/DELETE SQL against AWS. The gated
-real-AWS test itself lives in ``test_aws_acceptance.py`` behind the ``REPARK_AWS_ACCEPTANCE`` gate.
+They cover the publish-job builders + ``deduplicate`` in ``_acceptance``, the MW-4
+merge-on-read compact+expire helper (memory analog), and assert the gated harness plus
+``_acceptance.py`` carry no DROP/DELETE SQL against AWS. The gated real-AWS test itself lives
+in ``test_aws_acceptance.py`` behind the ``REPARK_AWS_ACCEPTANCE`` gate.
 """
 
 from __future__ import annotations
@@ -15,9 +16,12 @@ from _acceptance import (
     ACCEPTANCE_TABLE_PREFIX,
     GLUE_WAREHOUSE,
     ICEBERG_TABLE_PROPERTIES,
+    MOR_ICEBERG_TABLE_PROPERTIES,
+    MOR_SEED_ROW_COUNT,
     PRODUCTION_NAMESPACE,
     TARGET_FILE_SIZE_BYTES,
     acceptance_namespace_location,
+    assert_mor_maintenance_outcome,
     assert_namespace_location_matches,
     bronze_path,
     ctas_sql,
@@ -25,12 +29,18 @@ from _acceptance import (
     fq_table,
     glue_catalog_config,
     location_from_describe_rows,
+    maintenance_call_sql,
     merge_sql,
+    mor_acceptance_expected_rows,
+    mor_ctas_sql,
     normalize_location_uri,
+    require_snapshot_expired,
+    run_mor_merge_compact_expire,
     s3tables_catalog_config,
 )
 
 from repark import ReparkSession
+from repark.errors import AnalysisException
 
 _TESTS_DIR = pathlib.Path(__file__).resolve().parent
 
@@ -141,15 +151,17 @@ def test_scratch_namespace_is_never_the_production_namespace() -> None:
 
 
 def test_the_gated_harness_has_no_drop_or_delete_against_aws() -> None:
-    # Structural guard: the harness must NEVER emit a DROP/DELETE. Read the gated module's source
-    # and assert no destructive SQL keyword appears (belt-and-suspenders for cleanup-is-manual).
-    source = (_TESTS_DIR / "test_aws_acceptance.py").read_text(encoding="utf-8")
-    upper = source.upper()
-    assert "DROP TABLE" not in upper
-    assert "DELETE FROM" not in upper
-    assert "DROP NAMESPACE" not in upper
-    # The only DROP the harness uses is dropTempView (a session-local view, never an AWS object).
-    assert "DROP_TABLE" not in upper
+    # Structural guard: the harness must NEVER emit DROP TABLE / DELETE FROM / DROP NAMESPACE.
+    # CALL expire_snapshots / rewrite_* may remove expired snapshot *files* under the scratch
+    # prefix (OD-3); that is not table teardown. Tables still accumulate.
+    # MW-4 live SQL lives in `_acceptance.py` as well as the gated module (octo C1-Q-002).
+    for filename in ("test_aws_acceptance.py", "_acceptance.py"):
+        source = (_TESTS_DIR / filename).read_text(encoding="utf-8")
+        upper = source.upper()
+        assert "DROP TABLE" not in upper, filename
+        assert "DELETE FROM" not in upper, filename
+        assert "DROP NAMESPACE" not in upper, filename
+        assert "DROP_TABLE" not in upper, filename
 
 
 def test_deduplicate_keeps_the_newest_row_per_id() -> None:
@@ -353,8 +365,58 @@ def test_glue_harness_calls_location_guard_and_s3tables_does_not() -> None:
     assert min(create_lines) < min(guard_lines), "guard must run after ensure-namespace"
     s3_names = {name for name, _ in _call_names(s3)}
     assert "assert_glue_scratch_namespace_location" not in s3_names
+    assert "run_mor_merge_compact_expire" not in s3_names
     s3_source = ast.get_source_segment(source, s3) or ""
     assert "S3 Tables namespaces carry no location by design" in s3_source
+
+    mor = _function("test_mor_merge_compact_expire_against_glue")
+    mor_calls = _call_names(mor)
+    mor_create = [line for name, line in mor_calls if name == "create_namespace"]
+    mor_guard = [
+        line for name, line in mor_calls if name == "assert_glue_scratch_namespace_location"
+    ]
+    mor_names = {name for name, _ in mor_calls}
+    assert mor_create, "MW-4 Glue leg must call create_namespace"
+    assert mor_guard, "MW-4 Glue leg must call assert_glue_scratch_namespace_location"
+    assert min(mor_create) < min(mor_guard), "MW-4 guard must run after ensure-namespace"
+    assert "run_mor_merge_compact_expire" in mor_names
+    assert "assert_mor_maintenance_outcome" in mor_names
+    helper_call = None
+    for node in ast.walk(mor):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "run_mor_merge_compact_expire"
+        ):
+            helper_call = node
+    assert helper_call is not None
+    assert len(helper_call.args) >= 4
+    fourth = helper_call.args[3]
+    assert isinstance(fourth, ast.Name) and fourth.id == "table_name"
+    table_name_bound_to_uuid = False
+    for node in ast.walk(mor):
+        if not isinstance(node, ast.Assign):
+            continue
+        targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+        if "table_name" not in targets:
+            continue
+        has_uuid4 = False
+        has_mw4_prefix = False
+        for child in ast.walk(node.value):
+            if (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr == "uuid4"
+            ):
+                has_uuid4 = True
+            if (
+                isinstance(child, ast.Constant)
+                and isinstance(child.value, str)
+                and "mw4_mor_" in child.value
+            ):
+                has_mw4_prefix = True
+        table_name_bound_to_uuid = has_uuid4 and has_mw4_prefix
+    assert table_name_bound_to_uuid, "table_name must be mw4_mor_ plus uuid4, not a docstring"
 
 
 def test_glue_location_guard_calls_get_database() -> None:
@@ -378,3 +440,151 @@ def test_glue_location_guard_calls_get_database() -> None:
     assert "getDatabase" in call_names
     assert "probe_namespace_location_via_describe" not in call_names
     assert "sql" not in call_names
+
+
+def test_mor_ctas_sql_is_merge_on_read_not_copy_on_write() -> None:
+    sql = mor_ctas_sql("glue_catalog.testing_repark_acceptance.testing_mw4_mor", "src")
+    assert "merge-on-read" in sql
+    assert "copy-on-write" not in sql
+    assert "CREATE TABLE IF NOT EXISTS" not in sql
+    assert MOR_ICEBERG_TABLE_PROPERTIES in sql
+    assert ICEBERG_TABLE_PROPERTIES not in sql
+    assert TARGET_FILE_SIZE_BYTES in sql
+
+
+def test_mor_acceptance_expected_rows_renames_the_first_three() -> None:
+    rows = mor_acceptance_expected_rows()
+    assert len(rows) == MOR_SEED_ROW_COUNT
+    assert rows[0] == {"id": 1, "name": "m1"}
+    assert rows[2] == {"id": 3, "name": "m3"}
+    assert rows[3] == {"id": 4, "name": "n4"}
+    assert rows[-1] == {"id": MOR_SEED_ROW_COUNT, "name": f"n{MOR_SEED_ROW_COUNT}"}
+
+
+def test_mor_helper_replays_the_last_merge() -> None:
+    """C1-Q-004: the identical MERGE is a second ``merge_named_updates`` of ``[updates[-1]]``.
+
+    Removing that replay must turn this pin red; a row-set compare around a deleted call
+    would stay green.
+    """
+    import ast
+
+    source = (_TESTS_DIR / "_acceptance.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    helper = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "run_mor_merge_compact_expire":
+            helper = node
+            break
+    assert helper is not None
+    merge_calls = 0
+    for node in ast.walk(helper):
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "merge_named_updates"
+        ):
+            merge_calls += 1
+    assert merge_calls >= 2
+    helper_source = ast.get_source_segment(source, helper)
+    assert helper_source is not None
+    assert "[updates[-1]]" in helper_source
+    helper_calls = {
+        node.func.id
+        for node in ast.walk(helper)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "require_snapshot_readable" in helper_calls
+
+    asserter = None
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name == "assert_mor_maintenance_outcome":
+            asserter = node
+            break
+    assert asserter is not None
+    asserter_calls = {
+        node.func.id
+        for node in ast.walk(asserter)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+    }
+    assert "require_snapshot_expired" in asserter_calls
+    expired_uses_outcome_id = False
+    for node in ast.walk(asserter):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "require_snapshot_expired"
+        ):
+            continue
+        if len(node.args) < 3:
+            continue
+        snapshot_arg = node.args[2]
+        if isinstance(snapshot_arg, ast.Attribute) and snapshot_arg.attr == "first_snapshot_id":
+            expired_uses_outcome_id = True
+    assert expired_uses_outcome_id, "expire probe must use outcome.first_snapshot_id"
+
+
+def test_maintenance_call_sql_is_catalog_dot_system() -> None:
+    sql = maintenance_call_sql(
+        "glue_catalog",
+        "expire_snapshots",
+        "testing_repark_acceptance.testing_mw4",
+        extra="retain_last => 1",
+    )
+    assert sql.startswith("CALL glue_catalog.system.expire_snapshots(")
+    assert "table => 'testing_repark_acceptance.testing_mw4'" in sql
+    assert "retain_last => 1" in sql
+
+
+class _RaisingSql:
+    """Session stub whose ``sql`` always raises ``AnalysisException``."""
+
+    def __init__(self, message: str) -> None:
+        self._message = message
+
+    def sql(self, statement: str) -> object:
+        raise AnalysisException(self._message)
+
+
+class _OkSql:
+    """Session stub whose ``sql`` returns an object with ``to_arrow``."""
+
+    def sql(self, statement: str) -> object:
+        return self
+
+    def to_arrow(self) -> object:
+        return self
+
+
+def test_require_snapshot_expired_rejects_id_echo_and_generic_snapshot() -> None:
+    """C4-L-001: id-echo or 'snapshot' alone is not expire proof."""
+    with pytest.raises(AnalysisException):
+        require_snapshot_expired(_RaisingSql("VERSION AS OF 99 failed"), "t", 99)
+    with pytest.raises(AnalysisException):
+        require_snapshot_expired(_RaisingSql("snapshot time travel not supported"), "t", 99)
+
+
+def test_require_snapshot_expired_accepts_the_engine_needle() -> None:
+    require_snapshot_expired(
+        _RaisingSql(
+            "Error during planning: unknown Iceberg snapshot id 99: not found in table metadata"
+        ),
+        "t",
+        99,
+    )
+
+
+def test_require_snapshot_expired_still_resolves_is_a_no_op() -> None:
+    with pytest.raises(AssertionError, match="expire was a no-op"):
+        require_snapshot_expired(_OkSql(), "t", 99)
+
+
+def test_mor_merge_compact_expire_on_memory_catalog(tmp_path: pathlib.Path) -> None:
+    """Always-run analog of the Glue MW-4 leg. Same helper, local warehouse."""
+    spark = ReparkSession.builder.appName("pytest-mw4-mor").getOrCreate()
+    spark.register_memory_catalog("mem", tmp_path)
+    owned = tmp_path / "owned"
+    spark.sql(f"CREATE NAMESPACE mem.ns LOCATION '{owned}'")
+
+    outcome = run_mor_merge_compact_expire(spark, "mem", "ns", "mw4mor")
+    assert_mor_maintenance_outcome(spark, outcome)
