@@ -1,7 +1,7 @@
 # Format-v3 — the scope audit, and what it changed
 
 **Settled 2026-08-21 · V3-0 · base `a893c3b` (`main`, post-#198) ·
-roadmap item [A12](../../task/roadmap-intake-2026-08-21.md#a12-format-v3-and-deletion-vectors--owner-scheduled-2026-08-21) ·
+roadmap item [A12](../../task/roadmap/mid-term/roadmap-intake-2026-08-21.md#a12-format-v3-and-deletion-vectors--owner-scheduled-2026-08-21) ·
 ledger [`task/v3-0-charter-ledger.md`](../../task/ledgers/staging/v3-0-charter-ledger.md)**
 
 A12 was written during roadmap intake, from source reading rather than execution. It described a

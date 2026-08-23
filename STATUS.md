@@ -351,10 +351,10 @@ history-rewrite; provenance and the options weighed:
     fallback tree. **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse rather than
     `<temp>/repark_ctas`, so two sessions with different warehouses no longer share files. See
-    [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md) A13.
+    [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md) A13.
 
 - **Format-v3 track** (roadmap **A12** in
-  [task/roadmap-intake-2026-08-21.md](task/roadmap-intake-2026-08-21.md), owner-scheduled
+  [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
   2026-08-21; V3-0 audit merged; **V3-1 merged** as
   [#203](https://github.com/TRO-Wolf/repark/pull/203) / `d3152b1`).
   Design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:

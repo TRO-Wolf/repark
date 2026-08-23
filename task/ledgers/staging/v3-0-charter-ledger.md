@@ -4,7 +4,7 @@
 
 **Date:** 2026-08-21 · **Branch:** `feat/v3-0-lineage-guard` · **Base:** `a893c3b` (`main`,
 post-#198) · **Design:** [../docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) ·
-**Roadmap item:** [roadmap-intake-2026-08-21.md](../../roadmap-intake-2026-08-21.md) A12
+**Roadmap item:** [roadmap-intake-2026-08-21.md](../../roadmap/mid-term/roadmap-intake-2026-08-21.md) A12
 
 A12 promoted format-v3 out of "watch, do not schedule" on the strength of MW-2's finding, and
 sketched six units from source reading. This unit is the scope audit that sketch never got: the

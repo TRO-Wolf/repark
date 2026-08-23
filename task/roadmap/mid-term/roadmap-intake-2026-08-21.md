@@ -2,8 +2,8 @@
 
 **What this is.** The single record of every campaign brief, design note, queue, and grant that
 had existed only in planning space and never in either repository. It is an **intake**, not a
-plan of record: [../STATUS.md](../STATUS.md) remains the SSOT for current state, and each item
-below graduates into the spine (STATUS.md deferred capabilities / [../PROJECT.md](../PROJECT.md)
+plan of record: [../STATUS.md](../../../STATUS.md) remains the SSOT for current state, and each item
+below graduates into the spine (STATUS.md deferred capabilities / [../PROJECT.md](../../../PROJECT.md)
 roadmap sections) as it is chartered. Nothing here is authoritative merely by being written down.
 
 **Evidence date.** Every status below was verified 2026-08-21 against the merged-PR history of
@@ -388,7 +388,7 @@ Evidence: merged-PR mapping. Format: brief → landing.
 - **Overnight/day conductor waves 2–15** (G-sweeps, H-2 corpus, O/X/Y/Z/W/V/S/R waves,
   MG-1/MG-2, M-audit fixes, FN-A..F, TA-VOL, DS-1..4, BH-1/AL-1, spill c1, M11, splits):
   all landed — repark #47–#165 span. Per-unit mapping lives with the campaigns' own ledgers
-  in this directory and under [../docs/history/](../docs/history/map.md).
+  in this directory and under [../docs/history/](../../../docs/history/map.md).
 - **Conductor-16 fork partitioning campaign** → fork #200–#206 (complete).
 - **Conductor-17 explode case-loss** → #154; **conductor-18 datasets** → #153/#158/#161/#163;
   **conductor-19 bench+allocator** → #155/#159/#162 (mimalloc wired on measured win).

@@ -15,8 +15,8 @@ actually pins. The owner asked whether the six window-operator optimizations Duc
 2025-02-14 (Richard Wesley, "window function performance" — segment-tree vectorization, constant
 aggregation, streaming windows, partition-major evaluation, out-of-memory operation, shared
 expressions) should be added to this engine. This note records the evaluation and the candidate
-units. It is an **intake**, not a plan of record: [../STATUS.md](../STATUS.md) stays the SSOT,
-and each unit below graduates into a brief under [../briefs/](../briefs/map.md) only when the
+units. It is an **intake**, not a plan of record: [../STATUS.md](../../../STATUS.md) stays the SSOT,
+and each unit below graduates into a brief under [../briefs/](../../../briefs/map.md) only when the
 owner charters it. Companion to [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md)
 (whose A7 performance track points here).
 
@@ -24,13 +24,13 @@ owner charters it. Companion to [roadmap-intake-2026-08-21.md](roadmap-intake-20
 **DataFusion 54.1.0** sources the workspace pins (`datafusion-physical-plan`,
 `datafusion-physical-expr`, `datafusion-functions-aggregate`, `datafusion-optimizer`), not from
 memory. Re-verify on any family bump — the version-pin contract in
-[../AGENTS.md](../AGENTS.md) "Version-pin contract" means these statements have a shelf life.
+[../AGENTS.md](../../../AGENTS.md) "Version-pin contract" means these statements have a shelf life.
 
 **Retirement event.** Track A closes when **W-0 is chartered** (its content moves into the W-0
 brief) or when the owner declines the track (a dated line in
-[../briefs/next-sequence.md](../briefs/next-sequence.md) "declined armings"). Track B closes
+[../briefs/next-sequence.md](../../../briefs/next-sequence.md) "declined armings"). Track B closes
 when **MW-5 merges** and the MW-6…MW-9 candidates below are each chartered or declined. The
-file is archived to [../docs/history/](../docs/history/map.md) when the later of the two
+file is archived to [../docs/history/](../../../docs/history/map.md) when the later of the two
 closes, with the rulings at its top.
 
 ---
@@ -38,7 +38,7 @@ closes, with the rulings at its top.
 ## 1. The framing constraint
 
 This engine **does not own a window operator**. DataFusion does, and "DataFusion is built ON,
-not forked" is a [../PROJECT.md](../PROJECT.md) non-negotiable. So every DuckDB item lands in
+not forked" is a [../PROJECT.md](../../../PROJECT.md) non-negotiable. So every DuckDB item lands in
 exactly one of three homes:
 
 1. **Already in DataFusion 54.1** — nothing to build; prove the path is taken.
@@ -106,19 +106,19 @@ not a target.
 
 ### 2.3 Partition-major parallelism — measured, and upstream
 
-P-2 ([p2-ta-pipeline-benches-ledger.md](ledgers/archive/2026-08/2026-08-15-p2-ta-pipeline-benches-ledger.md)) measured that the
+P-2 ([p2-ta-pipeline-benches-ledger.md](../../ledgers/archive/2026-08/2026-08-15-p2-ta-pipeline-benches-ledger.md)) measured that the
 *partitioned* shape is already fine: `target_partitions=64` + `partitionBy` beats polars `.over`
 (26 vs 52 ns/row). The unmeasured shape is the **unpartitioned** `Window.orderBy(ts)` — common in
 migrated pipelines (Spark warns about it too) and part of the single-symbol host tax (ema 72.5 vs
 9.7 ns/row). Splitting one partition across threads with prefix-merge is deep operator work;
-[../AGENTS.md](../AGENTS.md) "the smallest readable design wins" does not let this engine own it.
+[../AGENTS.md](../../../AGENTS.md) "the smallest readable design wins" does not let this engine own it.
 File upstream with the W-0 numbers.
 
 ### 2.4 Out-of-memory — an unfilled row of the spill-coverage matrix
 
 S-1 (#143) installed the FairSpillPool and made the "one truth" claim true. The window operator
 is the next row: a full-partition window over a series larger than the pool fails, and the
-matrix should say *how* — per [../PROJECT.md](../PROJECT.md) "spills where the engine can,
+matrix should say *how* — per [../PROJECT.md](../../../PROJECT.md) "spills where the engine can,
 documented where it cannot". Guaranteeing ordering (§2.2) routes more queries through the
 bounded-memory exec; that is the repark-owned half.
 
@@ -133,7 +133,7 @@ a single multi-output UDF + struct projection is the CSE-friendly replacement.
 
 Adopt DuckDB's list as a **measurement battery and a parity checklist, not an implementation
 slate.** Candidate units, dependency-ordered, all measure-first under the performance campaign's
-standing rule ([../PROJECT.md](../PROJECT.md) Goals, "measure first, then implement"):
+standing rule ([../PROJECT.md](../../../PROJECT.md) Goals, "measure first, then implement"):
 
 | Unit | Scope | Size | Home |
 |---|---|---|---|
@@ -146,13 +146,13 @@ standing rule ([../PROJECT.md](../PROJECT.md) Goals, "measure first, then implem
 **Constraints to state at charter time:**
 
 - A repark-owned window *operator* is exactly the "parallel manager introduced to look
-  extensible" that [../AGENTS.md](../AGENTS.md) calls a defect until a second real caller earns
+  extensible" that [../AGENTS.md](../../../AGENTS.md) calls a defect until a second real caller earns
   it. W-1 is one `WindowExpr`, not an exec.
 - Segment trees are irrelevant to the TA kernels regardless: they are not aggregates, and the
   goldens forbid any reassociation (`crates/repark-ta/src/lib.rs` numerics contract).
 - W-0 runs on the same noisy `schedutil` box as P-2 — ratios over absolutes, and the numbers live
   planning-side, as P-2's do.
-- `[OWNER]` Sequence against the open queue in [../briefs/next-sequence.md](../briefs/next-sequence.md)
+- `[OWNER]` Sequence against the open queue in [../briefs/next-sequence.md](../../../briefs/next-sequence.md)
   (MW-4/MW-5 on OD-3, the V3 track, FNP remainder). This note does not decide that.
 
 ## 4. Out of scope
@@ -253,7 +253,7 @@ vectors; schema / partition-field / branch-tag DDL; time travel; metadata tables
 | **DML-C — TRUNCATE** | A dedicated truncate over an empty overwrite (the DML-2 substitute made first-class). | S | none |
 | **Watch, do not schedule** | `remove_dangling_delete_files` / `convert_equality_delete_files` as procedures (equality deletes only arrive from other engines); `rewrite_data_files` `where` / `sort_order` / strategy (R135); `expire_snapshots` incremental cleanup (fork R133 remainder); branch-targeted writes (fork handoff F-6). | — | — |
 
-**`[OWNER]` sequence** against [../briefs/next-sequence.md](../briefs/next-sequence.md): the
+**`[OWNER]` sequence** against [../briefs/next-sequence.md](../../../briefs/next-sequence.md): the
 recommendation is MW-6 now (it needs nothing the dispatch produces), MW-5 as soon as the
 dispatch has a result, then MW-7 → MW-8, with MW-4b on the OD-3b ruling and MW-9 and the DML
 units by workload need.

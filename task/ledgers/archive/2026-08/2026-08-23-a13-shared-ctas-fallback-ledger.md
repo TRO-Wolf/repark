@@ -3,7 +3,7 @@
 **Unit:** A13 · write path · **Date:** 2026-08-23
 **Branch:** `feat/a13-shared-ctas-fallback`
 **Brief:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) A13 +
-[roadmap-intake-2026-08-21.md](../../../roadmap-intake-2026-08-21.md) A13.
+[roadmap-intake-2026-08-21.md](../../../roadmap/mid-term/roadmap-intake-2026-08-21.md) A13.
 **SEPMO:** `/sepmo-octo` · critic_engine `octo` · `cycles=4` · `early_stop=true` ·
 `claims_critic=true` · severity floor S1.
 

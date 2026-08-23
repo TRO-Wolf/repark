@@ -182,9 +182,9 @@ MOR compact+expire proof is actually green.
 **Post-MW-4 remainder, evaluated 2026-08-23:** the candidate units after MW-5 (MW-6
 `rewrite_manifests` through MW-9, the DML units, the RP-1 fork repin) and the
 window-operator measurement track are an **intake, not sequenced work**, in
-[../task/roadmap-intake-2026-08-23.md](../task/roadmap-intake-2026-08-23.md); the
+[../task/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md); the
 fork-side queue they feed is
-[../task/iceberg-rust-handoff-2026-08-23.md](../task/iceberg-rust-handoff-2026-08-23.md).
+[../task/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md).
 Its `[OWNER]` recommendation is MW-6 beside the dispatch now; nothing here moves until
 the owner charters it.
 
@@ -192,7 +192,7 @@ the owner charters it.
 
 ## A13 — done (merged #217): warehouse-keyed CTAS fallback
 
-Roadmap item in [../task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md),
+Roadmap item in [../task/roadmap-intake-2026-08-21.md](../task/roadmap/mid-term/roadmap-intake-2026-08-21.md),
 surfaced by MW-3. `register_memory_catalog`'s location-less fallback root is now the
 supplied warehouse (`{warehouse}/repark_ctas|repark_ansi_ctas/…`). Two sessions with
 different warehouses no longer share a directory. Same warehouse + same names still

@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Working state for **current** work: the rules in force, the ledger of each unit in flight, and the
-acceptance inputs that gates still read. Finished **phases and campaigns** do not accumulate here —
+Working state for **current** work: the rules in force, the unit ledgers by state, the roadmap by
+horizon, and the acceptance inputs that gates still read. Finished **phases and campaigns** do not accumulate here —
 they are archived under [../docs/history/](../docs/history/map.md) once their rules have been
 promoted to a current document (mid-campaign phase promotions are allowed; see hardening-h1).
 
@@ -14,34 +14,9 @@ not this directory.
 - [ledgers/](ledgers/map.md) — **the ledger bins (DL-1, 2026-08-23):** `staging/` →
   `completed/` → `archive/yyyy-mm/`; the directory is the status. Every unit ledger lives there
   (the 2026-08 backfill moved 122 to the archive and left four open charters in `staging/`).
-
-- [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md) — **the fork-side
-  handoff (2026-08-23):** the document handed to the owned `iceberg-rust` fork's orchestrator —
-  every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
-  expire-report split, dangling-delete removal in rewrite, `RewriteManifests` result counts,
-  `ReplacePartitions` remainder, branch commit target, metadata-table projection, S3 Tables
-  `register_table`, declared sort order → output ordering), each with the engine-side evidence,
-  the consumed surfaces a change must not break, and the engine pin that flips when it lands.
-
-- [roadmap-intake-2026-08-23.md](roadmap-intake-2026-08-23.md) — **roadmap intake
-  (2026-08-23), two tracks.** Track A: the six DuckDB window-operator optimizations evaluated
-  against the pinned DataFusion 54.1.0 sources — two already in DataFusion, two upstream
-  operator work this engine should not own, two real gaps (non-retractable aggregates over
-  sliding frames; sort elision via Iceberg ordering provenance) — proposed as a measure-first
-  W-0 battery plus W-1…W-3. Track B: Iceberg merge-on-read readiness at format v2 — the
-  verdict (correctness production-grade, operability wired, evidence missing), the ranked gaps,
-  and the post-#218 units — the Glue dispatch, MW-4b (S3 Tables leg, owner-gated), MW-5…MW-9,
-  DML-A/B/C. Track C points at the fork handoff.
-
-- [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake
-  (2026-08-21):** every campaign brief, queue, and grant that had existed only in planning space,
-  reduced to eleven open workstreams, one closed ledger, and five items needing verification
-  before anything asserts them. Read it to find out whether a piece of work is real, already
-  landed, or merely proposed — it is an intake, not a plan of record, and STATUS.md stays the
-  SSOT. It carries the **MW campaign** (Iceberg merge-on-read operability), chartered and
-  green-lit by the owner on 2026-08-21 with all four of its decisions ruled, plus the
-  intake-time measurements MW-0 starts from — including an undeclared `rewrite_data_files`
-  result-schema divergence found while verifying the scope.
+- [roadmap/](roadmap/map.md) — **the roadmap by horizon (DL-1, 2026-08-23):** `mid-term/`
+  (evaluated intakes awaiting a charter — the two 2026-08 intakes and the fork handoff) and
+  `epic-term/` (north-star tracks). Short-term stays [../briefs/next-sequence.md](../briefs/next-sequence.md).
 
 - [lrs-z-retrospective.md](lrs-z-retrospective.md) — **LRS close-out (2026-08-20):** seven units,
   the invariant held, and the two findings that matter most were both found while doing something
