@@ -32,7 +32,6 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 |---|---|---|---|---|
 | — | **MW-4** | maintenance | **OD-3 (owner)** | M |
 | — | **MW-5** | maintenance | MW-4 | S |
-| 1 | **A13** | write path | — | M |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -61,8 +60,14 @@ dual-wire dataclass row stays the sanctioned leftover.
 (`D101`/`D102`/`D103`/`D105`/`D107`) armed with a seeded ratchet (136 findings /
 39 files, tests excluded) in `scripts/check_docstring_presence.py`; style `D`
 declined permanently. The dual-wire dataclass leftover and the D-presence
-EXCEPTIONS table are remaining debt, not sequenced work. A13 is the runnable
-next item; MW-4 still preempts if OD-3 lands.
+EXCEPTIONS table are remaining debt, not sequenced work.
+
+**A13 lands with this change and leaves this file:** `register_memory_catalog`
+uses the supplied warehouse as the location-less CTAS fallback root, so two
+sessions with different warehouses no longer share `<temp>/repark_ctas/<catalog>/<ns>/<table>`.
+Same warehouse + same names still share; MW-3 refuse stays on that fallback
+tree. The dual-wire dataclass leftover is remaining debt, not sequenced work.
+The queue is MW-4 (blocked on OD-3) and MW-5.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -73,11 +78,9 @@ valuable; it is not urgent, and it is the one track in this queue with no user-v
 real-catalog evidence, and the campaign cannot close without it. If the owner executes OD-3 mid-
 sequence, the unit in flight finishes and MW-4 goes next.
 
-**A13 sits last on purpose, and that placement is worth challenging.** It is a data-loss vector:
-the in-memory catalog's namespace-without-location fallback is keyed by name alone, so two
-sessions sharing `mem.ns.events` share one directory. It ranks last only because MW-3 already
-made the dangerous path refuse, so the exposure today is a shared scratch root rather than a
-deletion. If that guard were ever relaxed, A13 becomes the first item in this file.
+**A13 sat last on purpose** because MW-3 already refused the dangerous sweep, so the
+exposure was a shared scratch root rather than a deletion. That write-path addressing
+is now warehouse-keyed.
 
 ---
 
@@ -171,12 +174,12 @@ behind it and is small.
 
 ---
 
-## A13 — the shared CTAS fallback root
+## A13 — done (this change): warehouse-keyed CTAS fallback
 
 Roadmap item in [../task/roadmap-intake-2026-08-21.md](../task/roadmap-intake-2026-08-21.md),
-surfaced by MW-3. The in-memory catalog's namespace-without-location fallback is keyed by name
-alone, so two sessions sharing a namespace name share one directory on disk.
-
-`remove_orphan_files` already refuses that root, which is why this is queued rather than urgent.
-The write-path behaviour behind it is not fixed, and the guard is a fence around one procedure
-rather than a fix to the addressing.
+surfaced by MW-3. `register_memory_catalog`'s location-less fallback root is now the
+supplied warehouse (`{warehouse}/repark_ctas|repark_ansi_ctas/…`). Two sessions with
+different warehouses no longer share a directory. Same warehouse + same names still
+share; `remove_orphan_files` still refuses that fallback tree (table location, CALL
+`location`, parent prefix, `file://` aliases). Ledger:
+[../task/a13-shared-ctas-fallback-ledger.md](../task/a13-shared-ctas-fallback-ledger.md).
