@@ -279,9 +279,13 @@ the pickup ritual at the start of a unit and the truth-up after one lands. This 
 classes and the rules; the skill states the procedure and is not restated here. The navigation class
 has a mechanical half: `make check-map-sync` (`scripts/sync_map_md.py` — the SSOT) fails a map whose
 relative links no longer resolve, with the coverage rule available behind `--strict`. The ledger
-class has one too: `make check-ledgers` (`scripts/ledger_lifecycle.py` — the SSOT for the bins and
+class has two: `make check-ledgers` (`scripts/ledger_lifecycle.py` — the SSOT for the bins and
 the moves) fails a ledger outside its bin, a dead ledger link in any tracked markdown, and a
-`completed/` or `archive/` ledger edited beyond a link repair or a dated errata note.
+`completed/` or `archive/` ledger edited beyond a link repair or a dated errata note; and
+`make check-ledger-grammar` (`scripts/check_ledger_grammar.py` — the SSOT for the *shape* of a
+live ledger) fails a malformed clause row, a `PROVEN` clause no test cites
+([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and a malformed or missing
+Critic attestation — the meanings stay in [skills/sepmo/](skills/sepmo/map.md).
 
 ## Working style and communication
 
