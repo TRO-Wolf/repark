@@ -4,7 +4,7 @@
 post-#225) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" ·
 **Handoff:** [../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 
-**Retires:** this ledger moves to `../completed/` in the unit's last commit.
+**Retires:** moved to `completed/` in this departure commit.
 
 Owner-chartered 2026-08-23 as the first row of the post-MW sequence. The engine pin
 `0c5fd58d4ab73a0113a8b28b717cf5d002b0f8f2` is a genuine ancestor of fork `main`

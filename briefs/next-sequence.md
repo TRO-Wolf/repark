@@ -32,11 +32,10 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **RP-1** | Iceberg | — | S |
-| 2 | **MW-6** | Iceberg | RP-1 | S/M |
-| 3 | **MW-7** | Iceberg | MW-6 | M |
-| 4 | **MW-8** | Iceberg | MW-6, MW-7 | S |
-| 5 | **V3-2** | Format v3 | RP-1 (MW closed) | S |
+| 1 | **MW-6** | Iceberg | — | S/M |
+| 2 | **MW-7** | Iceberg | MW-6 | M |
+| 3 | **MW-8** | Iceberg | MW-6, MW-7 | S |
+| 4 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -111,9 +110,13 @@ month map cost ~13k tokens to read): archive month maps condense to one line per
 **2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
 ([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
 
-**Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. **RP-1 first**
-(the fork batch the intake treated as future has landed: F-0 `#214`, F-1 through
-`#213`, F-2 `#215`; engine pin is 20 commits behind fork `main`). Then **MW-6**
+**RP-1 lands with this change and leaves this file:** re-pin `iceberg*` to fork
+`main` `5e7b2e4` (F-0 `#214`, F-1 floor 5, F-2 `#215`, F-8a last-`$`; T6
+name-directory freeze; Spark `position_deletes` rewrite). Family frozen. Ledger
+in `task/ledgers/completed/`. **MW-6** is next.
+
+**Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
+(the fork batch the intake treated as future had landed). Then **MW-6**
 `rewrite_manifests`, **MW-7** scale measurement, **MW-8** the Airflow-shaped
 runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
 the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) stays gated on MW-7's
@@ -219,36 +222,18 @@ Design and slate are in
 **Post-MW remainder, owner-chartered 2026-08-23** (intake remains the evidence
 home: [../task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md);
 fork queue: [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
-The intake's "MW-6 now" line is stale: F-0 and F-2 landed fork-side after it
-was written, so **RP-1 leads**. MW-9 is not in the table — MW-7 decides whether
+The intake's "MW-6 now" line was stale: F-0 and F-2 landed fork-side after it
+was written, so **RP-1 led**. MW-9 is not in the table — MW-7 decides whether
 it is urgent.
 
-### RP-1 — fork repin (this unit)
+### RP-1 — done (lands with this change)
 
-Re-pin `[patch.crates-io]` `iceberg*` to current fork `main`
-(`5e7b2e4f8fcb`, 20 commits past `0c5fd58`). Family (`datafusion` /
-`datafusion-spark` / `arrow*` / `parquet` / `rust-toolchain.toml`) does **not**
-move — the fork did not change its DataFusion base. Standing repin duties
-(Catalog trait re-enumeration, metadata-projection shim criterion, two
-emptiness pins, IcebergSchemaProvider name-directory freeze) plus the landed F-item flips:
-
-- **F-0** (`#214`, behaviour change): `Operation::Replace` in both files-exist
-  conflict guards. Engine follow-up: `write.merge.isolation-level = snapshot`
-  **is** exposed (drops `validate_no_conflicting_data`); pin that arm against
-  the gap F-0 closed, either way.
-- **F-1** (breaking default, floor 2 → 5): flip
-  `call_mor1_compacts_below_sparks_min_input_files_floor` to equality, retire
-  `MOR-1`, check no engine test leaned on two-file compaction.
-- **F-2** (`#215`, additive; `CleanupReport` is `#[non_exhaustive]`): emit
-  Spark's six `expire_snapshots` columns from the fork's typed views; retire
-  `ExpireCounts::tally` / the pre-expiry walk.
-- **F-8a:** retire the `a$b` "unresolvable" residue note; the ADR-0006
-  enumeration filter **stays** (`table_names` still synthesizes).
-
-Do not wait for open fork **F-3** (`#216`). Do not mix this with MW-6 (handoff
-§5: one engine repin per landed batch, never a passenger).
-
-Ledger: [../task/ledgers/staging/rp-1-fork-repin-ledger.md](../task/ledgers/staging/rp-1-fork-repin-ledger.md).
+Re-pin `[patch.crates-io]` `iceberg*` to fork `main` `5e7b2e4` (20 commits past
+`0c5fd58`). Family frozen. F-0 Replace in files-exist; F-1 RPDF floor 5 (`MOR-1`
+retired); F-2 expire typed views; F-8a last-`$` filter. Readiness also froze the
+fork's lazy name directory at snapshot (C-011) and added Spark `position_deletes`
+rewrite (C-012, schema-only collect refuse). Ledger:
+[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/completed/rp-1-fork-repin-ledger.md).
 
 ### MW-6 — `CALL system.rewrite_manifests`
 

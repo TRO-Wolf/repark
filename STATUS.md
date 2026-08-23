@@ -392,7 +392,7 @@ history-rewrite; provenance and the options weighed:
   - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
     orphan cleanup of that fallback tree.
-  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 (this pin) → MW-6
+  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 (lands with this change) → MW-6
     `rewrite_manifests` → MW-7 scale measurement → MW-8 runbook → V3-2 create-v3 opt-in.
     Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 and the
     intake S3 Tables MOR leg stay unsequenced.
@@ -422,8 +422,9 @@ history-rewrite; provenance and the options weighed:
     three nullable BIGINT columns, measured from the 1.10.0 jar); a Spark-written format-v3
     fixture is checked in so CI can load Puffin vectors with no JVM; `B-MOR-3` and
     `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table` in the fork
-    (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 is now
-    sequenced on [briefs/next-sequence.md](briefs/next-sequence.md), behind RP-1.
+    (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 is
+    sequenced on [briefs/next-sequence.md](briefs/next-sequence.md) (RP-1 lands with this
+    change).
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
