@@ -32,7 +32,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | **MW-5** | maintenance | MW-4b merge + green live dispatch | S |
+| — | *(empty)* | — | — | — |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -78,14 +78,13 @@ S3 Tables MOR compact+expire is out of this unit.
 
 **MW-4b merged as [#219](https://github.com/TRO-Wolf/repark/pull/219) and left this
 file:** Glue/HMS `table_exists` `DataInvalid` on a two-level namespace no longer
-aborts the Spark dotted metadata-table rewrite. MW-5 stays queued behind a green
-`aws-acceptance` dispatch.
+aborts the Spark dotted metadata-table rewrite.
 
 **DL-1 merged as [#221](https://github.com/TRO-Wolf/repark/pull/221) and left this file**
 (chartered 2026-08-23 outside the slate, run before MW-5 because it rewrites every ledger
 link and conflicts with anything in flight): the ledger bins under `task/ledgers/`,
 `scripts/ledger_lifecycle.py` + `make check-ledgers` in `make ci`, the 122-ledger backfill,
-`task/roadmap/{mid-term,epic-term}/`, the census eviction. The queue is unchanged: MW-5.
+`task/roadmap/{mid-term,epic-term}/`, the census eviction.
 
 **DL-2 merged as [#222](https://github.com/TRO-Wolf/repark/pull/222) and left this file**
 (stacked on DL-1; chartered 2026-08-23 from the owner's SEPMO architecture note): the ledger
@@ -93,16 +92,20 @@ grammar gate `make check-ledger-grammar` in `make ci` — clause rows, `pins:` c
 Critic's attestation form — with the measured floor seeded and XML declined. Every unit from
 here on pins its `PROVEN` clauses from its tests and files its attestation before the
 departure `move`. [#223](https://github.com/TRO-Wolf/repark/pull/223) dual-wired those
-guards into `ci.yml` (owner-granted; not a slate unit). The queue is unchanged: MW-5.
+guards into `ci.yml` (owner-granted; not a slate unit).
+
+**MW-5 lands with this change and leaves this file:** campaign close. The MW-0
+1,000-row / ten-MERGE demo is re-run and pinned (delete files 1→10 then compact
+10→1, data files →1, `COUNT(*)` 1,000 `int64`, live names and CTAS identity,
+expire needle). STATUS scorecard; guide lockstep; design and slate archived at
+[../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
+The rolling queue is empty. Post-MW remainder stays an intake, not sequenced
+work.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
 made it safe to schedule behind V3-1 rather than ahead of it. Burning the tables down is
 valuable; it is not urgent, and it is the one track in this queue with no user-visible outcome.
-
-**MW-5 is next.** It is the maintenance campaign close: registry rows, STATUS
-scorecard, guide + map lockstep, re-measured MW-0 delta. It waits on this PR
-merging and a green `aws-acceptance` dispatch.
 
 **A13 sat last on purpose** because MW-3 already refused the dangerous sweep, so the
 exposure was a shared scratch root rather than a deletion. That write-path addressing
@@ -188,11 +191,12 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 
 ---
 
-## MW-5 — queued behind this merge
+## MW-5 — done (lands with this change)
 
-MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline, scorecard
-flip) is queued behind MW-4b and a green live Glue dispatch. Small once the live
-MOR compact+expire proof is actually green.
+Registry close as a pointer: MW-1/MW-2 closed the schema gaps as columns; remaining
+rows stay MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3. The MW-0 demo is pinned.
+Design and slate are in
+[../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
 
 **Post-MW-4 remainder, evaluated 2026-08-23:** the candidate units after MW-5 (MW-6
 `rewrite_manifests` through MW-9, the DML units, the RP-1 fork repin) and the

@@ -3,8 +3,8 @@
 **Unit:** MW-5 · **Date:** 2026-08-23 · **Branch:** `feat/mw-5-campaign-close` ·
 **Base:** `d01c3b6` (`main`, #223) · **Pickup:** `b651f6f`
 **Charter:** [mw-0-charter-ledger.md](mw-0-charter-ledger.md) · **Design:**
-[../../../docs/design/iceberg-maintenance-wave.md](../../../docs/design/iceberg-maintenance-wave.md)
-**Slate:** [../../../briefs/iceberg-maintenance-wave.md](../../../briefs/iceberg-maintenance-wave.md)
+[../../../docs/history/iceberg-maintenance-wave/design.md](../../../docs/history/iceberg-maintenance-wave/design.md)
+**Slate:** [../../../docs/history/iceberg-maintenance-wave/slate.md](../../../docs/history/iceberg-maintenance-wave/slate.md)
 
 ## Path + critic engine
 

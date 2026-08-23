@@ -1,8 +1,14 @@
 # Design — the Iceberg write-path maintenance wave (MW)
 
+> **ARCHIVED 2026-08-23 (MW-5).** Present state:
+> [STATUS.md](../../../STATUS.md) Iceberg maintenance wave. Dated correction:
+> §5's "MW-5 lands them" (expire-funnel / omitted-column registry rows) did
+> not happen — MW-1 and MW-2 closed those as Spark columns, not registry rows.
+> Remaining rows: MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3.
+
 **Chartered:** 2026-08-21 · **Base:** `1a36b72` (`main`, post-#194) ·
-**Charter ledger:** [../../task/mw-0-charter-ledger.md](../../task/ledgers/staging/mw-0-charter-ledger.md) ·
-**Slate:** [../../briefs/iceberg-maintenance-wave.md](../../briefs/iceberg-maintenance-wave.md)
+**Charter ledger:** [../../../task/ledgers/completed/mw-0-charter-ledger.md](../../../task/ledgers/completed/mw-0-charter-ledger.md) ·
+**Slate:** [slate.md](slate.md)
 
 ## 1. The problem, stated as narrowly as it actually is
 

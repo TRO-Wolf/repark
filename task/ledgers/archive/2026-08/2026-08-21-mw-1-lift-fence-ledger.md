@@ -1,8 +1,8 @@
 # MW-1 — the fence comes down, and expire tells the truth about delete files
 
 **Date:** 2026-08-21 · **Branch:** `feat/mw-1-lift-fence` · **Base:** `53c8987` (`main`,
-post-#195) · **Charter:** [mw-0-charter-ledger.md](../../staging/mw-0-charter-ledger.md) · **Design:**
-[../docs/design/iceberg-maintenance-wave.md](../../../../docs/design/iceberg-maintenance-wave.md)
+post-#195) · **Charter:** [mw-0-charter-ledger.md](../../completed/mw-0-charter-ledger.md) · **Design:**
+[../docs/design/iceberg-maintenance-wave.md](../../../../docs/history/iceberg-maintenance-wave/design.md)
 
 ## What changed, and why it grew
 

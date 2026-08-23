@@ -13,16 +13,11 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 - [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
   ordered queue across the held maintenance units, with the reasoning for the order rather than
   just the order — V3-1 merged as #203 and left; PYC-1 merged as #204 and left; PYC-2 merged
-  as #207 and left; PYC-3 merged as #208 and left; PYC-4 merged as #209 and left; PYC-5 merged as #211 and left; PYC-6 merged as #216 and left; A13 merged as #217 and left; MW-4 merged as #218 and left; MW-4b merged as #219 and left; DL-1 merged as #221 and left; DL-2 merged as #222 and left; MW-5 remains.
+  as #207 and left; PYC-3 merged as #208 and left; PYC-4 merged as #209 and left; PYC-5 merged as #211 and left; PYC-6 merged as #216 and left; A13 merged as #217 and left; MW-4 merged as #218 and left; MW-4b merged as #219 and left; DL-1 merged as #221 and left; DL-2 merged as #222 and left; MW-5 leaves with this change; the rolling queue is empty.
   Carries the PYC unit definitions, the two hazards a pure-refactor campaign
   has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
   subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with
   reasons). Unlike the campaign slates below, it is rolling: a unit leaves when it merges.
-
-- [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW slate (2026-08-21):**
-  one invariant (no refusal becomes silent), the per-unit contract, the destructive-surface
-  discipline MW-3 inverts its defaults for, and the load-bearing reason the six units run in the
-  order they do.
 
 - [spark-function-parity.md](spark-function-parity.md) — the **Spark function parity** slate
   (2026-08-20, awaiting its approval gate): fourteen units on one branch closing the
@@ -75,6 +70,7 @@ its design and its one unit ledger. Where the next campaign stands is
 | Read the port briefs (phases 0–3) | [../docs/history/port-v2/README.md](../docs/history/port-v2/README.md) |
 | See the port phases those briefs executed against | [../docs/port/PLAN.md](../docs/port/PLAN.md) |
 | Read the Front-Door campaign's slate, design and retrospective | [../docs/history/frontdoor/README.md](../docs/history/frontdoor/README.md) |
+| Read the Iceberg maintenance-wave slate and design | [../docs/history/iceberg-maintenance-wave/README.md](../docs/history/iceberg-maintenance-wave/README.md) |
 | Read the settled designs the port phases implemented | [../docs/design/map.md](../docs/design/map.md) |
 
 ## Pointers

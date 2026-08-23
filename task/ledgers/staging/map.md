@@ -11,22 +11,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   2026-08-20 and the gate passed. Design:
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
-- [mw-5-campaign-close-ledger.md](mw-5-campaign-close-ledger.md) — **MW-5 (2026-08-23):**
-  campaign close. Re-runs the MW-0 1,000-row / ten-MERGE demo, pins delete-file growth
-  1→10 then compact+expire 10→1 with Arrow `COUNT(*)` 1,000 `int64`, records wall-clock
-  in the ledger (not a CI timing pin), STATUS scorecard, guide lockstep. S3 Tables MOR
-  stays out. Original charter registry rows were closed in MW-1/MW-2.
-- [mw-0-charter-ledger.md](mw-0-charter-ledger.md) — **MW-0 (2026-08-21):** the charter for the
-  Iceberg write-path maintenance wave, and the campaign's whole measured floor. Merge-on-read
-  writes are correct and merge-on-read is not operable: ten sequential MERGEs grow delete files
-  one per merge and never reclaim them, costing **2.1x on scan while the answer stays 1,000
-  rows**. Procedure result schemas measured before any pin exists — two executed on a live
-  oracle, two read from the shipping Iceberg jar's own constant because a Spark 4.0-to-4.1 binary
-  break stops them executing. Gate **RULED**, no open clauses: the fence lifts for BOTH remote
-  catalog policies. **Read §5 for the three claims that changed under re-verification** — an
-  "undeclared divergence" that turned out to be declared, and a hazard this orchestrator
-  overstated from a secondhand citation, which shrank MW-1 from building a mitigation to
-  documenting a failure mode.
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk
   sweep registered rather than fixed — `RE-1` (`regexp_extract_all` defaults to capture group 0,
