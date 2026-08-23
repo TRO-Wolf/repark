@@ -108,6 +108,18 @@ v1 crate-root re-export lists.
     silently re-exposes them — re-run the two emptiness pins
     (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests/metadata_tables.rs`)
     at every repin, not just the compile.
+  - **`IcebergSchemaProvider` name-directory population is lazy at pin `5e7b2e4`.** `try_new`
+    no longer `list_tables`; first `table` / `table_names` / `table_exist` lists live and
+    then freezes. `ReparkCatalogProvider` eager-lists at snapshot and namespace-refresh
+    (`freeze_fork_name_directory` in `src/catalog/provider.rs`) so an out-of-band create
+    stays invisible to free SQL until invalidate (ADR-0004 T6). Pins:
+    `full_rebuild_lists_every_namespace`,
+    `incremental_provider_preserves_oob_staleness_residual`,
+    `empty_invalidate_is_noop_not_full_rebuild`,
+    `rebuild_same_catalog_heals_oob_and_stays_repark_provider`.
+    **Repin duty:** if a future rev lists at construction again the freeze is a no-op; if a
+    rev lists on every access (never freezes) those four pins fail-closed.
+    pins: rp-1-fork-repin/C-011
 
 ## Pointers
 

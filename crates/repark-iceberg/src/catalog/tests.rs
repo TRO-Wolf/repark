@@ -1172,6 +1172,7 @@ async fn invalidate_one_namespace_is_o1_not_o_databases() {
 }
 
 /// Baseline contrast: a full rebuild lists every namespace's tables (O(databases)).
+/// pins: rp-1-fork-repin/C-011
 #[tokio::test]
 async fn full_rebuild_lists_every_namespace() {
     let wh = TempDir::new().unwrap();
@@ -1204,6 +1205,7 @@ async fn full_rebuild_lists_every_namespace() {
 
 /// Product-style invalidation keeps T6 residual honesty: OOB create without invalidate stays
 /// invisible to the DF provider; live list still sees it.
+/// pins: rp-1-fork-repin/C-011
 #[tokio::test]
 async fn incremental_provider_preserves_oob_staleness_residual() {
     let wh = TempDir::new().unwrap();
@@ -1376,6 +1378,7 @@ async fn drop_namespace_from_provider_is_zero_list() {
 }
 
 /// PERF-07 / octo C1-Q-002: empty invalidate is a no-op (does not silently full-rebuild / heal OOB).
+/// pins: rp-1-fork-repin/C-011
 #[tokio::test]
 async fn empty_invalidate_is_noop_not_full_rebuild() {
     let wh = TempDir::new().expect("tempdir");
@@ -1542,6 +1545,7 @@ async fn invalidate_preserves_sibling_schema_arc_identity() {
 }
 
 /// PERF-07 / octo C5-Q-001: same-Arc rebuild is the ADR-0004 escape hatch (in-place heal).
+/// pins: rp-1-fork-repin/C-011
 #[tokio::test]
 async fn rebuild_same_catalog_heals_oob_and_stays_repark_provider() {
     let wh = TempDir::new().expect("tempdir");

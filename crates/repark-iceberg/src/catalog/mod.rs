@@ -66,12 +66,15 @@ pub(crate) use std::collections::HashMap;
 
 // === r21 T6: catalog-staleness ================================================================
 //
-// CQ-008 / BUG-007: the fork's `IcebergCatalogProvider` snapshots namespace + table *names* at
-// `try_new`. RePark-owned SQL mutators re-register after DDL; out-of-band creates/drops stay
-// invisible to DataFusion's name directory until a refresh. The Spark Catalog facade
-// (`listTables`) must not inherit that snapshot: it lists live via [`list_table_names`].
-// Full DF provider freshness for free SQL still needs [`build_iceberg_catalog_provider`] /
-// re-register (residual → ADR-0004 / FK6 if the fork gains list-on-access).
+// CQ-008 / BUG-007: the fork's `IcebergCatalogProvider` walks namespaces at `try_new`.
+// At pin `5e7b2e4` table *names* are listed lazily on first access, then frozen —
+// [`ReparkCatalogProvider`] eager-lists at snapshot / namespace-refresh so that
+// residual still starts at refresh time (ADR-0004 T6). RePark-owned SQL mutators
+// invalidate after DDL; out-of-band creates/drops stay invisible to DataFusion's
+// name directory until a refresh. The Spark Catalog facade (`listTables`) must
+// not inherit that snapshot: it lists live via [`list_table_names`]. Full DF
+// provider freshness for free SQL still needs [`build_iceberg_catalog_provider`]
+// / re-register.
 //
 // r24 PERF-07: product DDL invalidates via [`invalidate_catalog_namespaces`] (O(1) per
 // namespace) on [`ReparkCatalogProvider`] rather than a full O(databases) `try_new` rebuild.

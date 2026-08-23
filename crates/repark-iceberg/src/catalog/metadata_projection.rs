@@ -322,12 +322,11 @@ mod tests {
 
         fn table_exist(&self, name: &str) -> bool {
             // Last-`$` + vocabulary, matching fork `IcebergSchemaProvider` at pin 5e7b2e4.
-            if let Some((base, kind)) = name.rsplit_once('$') {
-                if !base.is_empty() {
-                    if MetadataTableType::try_from(kind).is_ok() {
-                        return self.base_tables.iter().any(|table| table == base);
-                    }
-                }
+            if let Some((base, kind)) = name.rsplit_once('$')
+                && !base.is_empty()
+                && MetadataTableType::try_from(kind).is_ok()
+            {
+                return self.base_tables.iter().any(|table| table == base);
             }
             self.base_tables.iter().any(|table| table == name)
         }

@@ -183,10 +183,11 @@ wrapper.
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction).
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
-  19 in-module tests. **MW-4b:** Glue/HMS `table_exists` returns `DataInvalid` for a
-  two-level namespace (not `NamespaceNotFound`). The "real table wins" probe on
-  `cat.ns.tbl.snapshots` treats that as absent so the `$` rewrite runs; single-level
-  `DataInvalid` and `Unexpected` stay fatal.
+  19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
+  `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS
+  `table_exists` returns `DataInvalid` for a two-level namespace (not `NamespaceNotFound`).
+  The "real table wins" probe on `cat.ns.tbl.snapshots` treats that as absent so the `$`
+  rewrite runs; single-level `DataInvalid` and `Unexpected` stay fatal.
 - `time_travel.rs` — I1 SQL-TEXT half: token span scan + FROM/JOIN splice to snapshot-pinned
   static providers; the pin half (spec/parsers/resolution/`read_table_at`) is
   `repark_core::time_travel`. 8 in-module tests (2 rode the phase-1 hoist).

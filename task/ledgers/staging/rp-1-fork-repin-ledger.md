@@ -26,10 +26,15 @@ unit. DataFusion family does not move. MW-6 is a later unit, never a passenger.
 | C-008 | No remaining engine test requires compaction of a 2-file or 4-file position-delete group. | `rg` for rewritten_delete_files_count assertions at 2 or 4, and for `min-input-files` / `entries.len() < 2`. | PROVEN | `_acceptance.py` `MOR_MIN_POSITION_DELETE_FILES = 5`; 4-file CALL pin expects zeros. |
 | C-009 | `execute_expire_snapshots` fills Spark's three content-file columns from `CleanupReport`'s typed views; `ExpireCounts::tally` and `classify_content_files` are deleted; `call_expire_splits_content_files_like_spark` still holds. | Diff `crates/repark-spark/src/call.rs`; re-run that test. | PROVEN | typed views; expire pin `data == 4`, `position == 2`, `assert_ne`. |
 | C-010 | `write.merge.isolation-level = snapshot` remains a supported opt-down (drops `validate_no_conflicting_data`); a pin records that a successful MOR delete is not undone by a concurrent `Replace` on that arm after F-0. | Existing snapshot OCC tests stay green; add or retarget a files-exist/`Replace` pin on the snapshot arm. | PROVEN | `commit_row_delta_snapshot_rejects_concurrent_replace_compaction_of_referenced_file` |
+| C-011 | DF free-SQL name directories are captured at snapshot / namespace-refresh, not at first access: an out-of-band `create_table` stays invisible until invalidate; a full rebuild still `list_tables` once per namespace. | Re-run `full_rebuild_lists_every_namespace`, `incremental_provider_preserves_oob_staleness_residual`, `empty_invalidate_is_noop_not_full_rebuild`, `rebuild_same_catalog_heals_oob_and_stays_repark_provider`. | PROVEN | fork `try_new` is lazy at `5e7b2e4`; `freeze_fork_name_directory` eager-lists; those four pins hold. |
+| C-012 | `METADATA_TABLE_NAMES` contains every `MetadataTableType::as_str` including `position_deletes`; Spark `.position_deletes` rewrites onto `$position_deletes`; schema plans; collect refuses loud (fork schema-only). | `metadata_names_cover_fork_set`; `metadata_table_projection_honor_all_types` iterates `all_types`. | PROVEN | 16th type added; plan advertises schema; collect is "not yet ported". |
 
-VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 10/10.
+VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 12/12.
 
-Clauses flipped PROVEN after Actor + cycle-1 remediations. Attestation below.
+Clauses flipped PROVEN after Actor + cycle-1 remediations. C-011 and C-012
+added at readiness (`make verify` red): fork `IcebergSchemaProvider::try_new`
+stopped listing at construction, and `position_deletes` joined `all_types`.
+Attestation below.
 
 ```yaml
 KILLED_ASSUMPTIONS:
@@ -43,6 +48,12 @@ RISK_HEATMAP:
   - risk: F-1 floor 5 makes MW-5's 10-delete compact still work (10 >= 5) but any 2-file helper in MW-2 tests breaks
     severity_if_realized: S1
     mitigation: C-007, C-008
+  - risk: IcebergSchemaProvider lists on first access then freezes, so an OOB create is visible to free SQL without invalidate
+    severity_if_realized: S1
+    mitigation: C-011
+  - risk: a new MetadataTableType (position_deletes) is missing from the Spark-door static suffix list, so `.position_deletes` never rewrites
+    severity_if_realized: S1
+    mitigation: C-012
 CLARIFYING_QUESTIONS: []
 ```
 
@@ -53,14 +64,15 @@ COVERAGE_ATTESTATION:
     - id: AT-1
       status: ATTACKED
       evidence: >
-        C-001..C-010 cited from tests and maps; pin rev 5e7b2e4; family freeze.
+        C-001..C-012 cited from tests and maps; pin rev 5e7b2e4; family freeze.
       artifacts: [Cargo.toml, crates/repark-iceberg/map.md]
     - id: AT-2
       status: ATTACKED
       evidence: >
         4-file RPDF zeros; 5-file compact; expire data==4 and position==2
-        (assert_ne); snapshot Replace reject names the path.
-      artifacts: [call_mor1_compacts_below_sparks_min_input_files_floor, call_rpdf_compacts_at_sparks_min_input_files_floor, call_expire_splits_content_files_like_spark, commit_row_delta_snapshot_rejects_concurrent_replace_compaction_of_referenced_file]
+        (assert_ne); snapshot Replace reject names the path; T6 OOB pins;
+        position_deletes rewrite + scan-refuse.
+      artifacts: [call_mor1_compacts_below_sparks_min_input_files_floor, call_rpdf_compacts_at_sparks_min_input_files_floor, call_expire_splits_content_files_like_spark, commit_row_delta_snapshot_rejects_concurrent_replace_compaction_of_referenced_file, full_rebuild_lists_every_namespace, incremental_provider_preserves_oob_staleness_residual, metadata_names_cover_fork_set, metadata_table_projection_honor_all_types]
     - id: AT-3
       status: ATTACKED
       evidence: >
@@ -71,7 +83,8 @@ COVERAGE_ATTESTATION:
       status: ATTACKED
       evidence: >
         Snapshot isolation still opt-down; F-0 Replace in files-exist pinned on that arm.
-      artifacts: [occ_tests.rs]
+        T6 residual: OOB create stays invisible until invalidate (C-011 freeze).
+      artifacts: [occ_tests.rs, empty_invalidate_is_noop_not_full_rebuild, rebuild_same_catalog_heals_oob_and_stays_repark_provider]
     - id: AT-5
       status: N/A
       justification: no AWS/credentials/IAM in this unit; pin is a git SHA.

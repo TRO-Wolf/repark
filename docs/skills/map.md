@@ -29,6 +29,7 @@ named component limitation in
 | Brief a narrow/mechanical agent (Haiku tier) | [Haiku.md](Haiku.md) |
 | Look up the Python conventions (types, Pydantic, no nested `def`, naming) | [Opus.md](Opus.md) "Python" — the rule of record is [../../AGENTS.md](../../AGENTS.md) "Python" |
 | Apply the trait-wrapping both-sides audit | [../../AGENTS.md](../../AGENTS.md) "Version-pin contract" (see above) |
+| Re-check IcebergSchemaProvider name-directory freeze at a fork repin | [../../AGENTS.md](../../AGENTS.md) "Version-pin contract"; limitation in [../../crates/repark-iceberg/map.md](../../crates/repark-iceberg/map.md) "Known limitations" |
 
 ## Pointers
 

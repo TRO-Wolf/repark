@@ -641,6 +641,17 @@ async fn call_rollback_non_ancestor_refuses_loud() {
     );
 }
 
+/// First-row Int64 cell of a named expire-result column.
+fn expire_result_i64(batches: &[RecordBatch], name: &str) -> i64 {
+    let index = batches[0].schema().index_of(name).expect("column present");
+    batches[0]
+        .column(index)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("Int64 count column")
+        .value(0)
+}
+
 /// pins: rp-1-fork-repin/C-009
 ///
 /// MW-1: the expire result splits content files the way Spark does, with real numbers behind it.
@@ -743,18 +754,9 @@ async fn call_expire_splits_content_files_like_spark() {
     .await
     .expect("expire CALL");
     let batches = result.collect().await.expect("collect expire result");
-    let column = |name: &str| -> i64 {
-        let index = batches[0].schema().index_of(name).expect("column present");
-        batches[0]
-            .column(index)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .expect("Int64 count column")
-            .value(0)
-    };
-    let data = column("deleted_data_files_count");
-    let position = column("deleted_position_delete_files_count");
-    let equality = column("deleted_equality_delete_files_count");
+    let data = expire_result_i64(&batches, "deleted_data_files_count");
+    let position = expire_result_i64(&batches, "deleted_position_delete_files_count");
+    let equality = expire_result_i64(&batches, "deleted_equality_delete_files_count");
 
     assert_eq!(
         position, delete_files,

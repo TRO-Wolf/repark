@@ -230,7 +230,7 @@ Re-pin `[patch.crates-io]` `iceberg*` to current fork `main`
 `datafusion-spark` / `arrow*` / `parquet` / `rust-toolchain.toml`) does **not**
 move — the fork did not change its DataFusion base. Standing repin duties
 (Catalog trait re-enumeration, metadata-projection shim criterion, two
-emptiness pins) plus the landed F-item flips:
+emptiness pins, IcebergSchemaProvider name-directory freeze) plus the landed F-item flips:
 
 - **F-0** (`#214`, behaviour change): `Operation::Replace` in both files-exist
   conflict guards. Engine follow-up: `write.merge.isolation-level = snapshot`

@@ -314,11 +314,12 @@ path (read a ref, then re-pin it with `CREATE OR REPLACE BRANCH`).
 
 ## Metadata tables
 
-Address them as `catalog.namespace.table.<suffix>`. Fifteen exist:
+Address them as `catalog.namespace.table.<suffix>`. Sixteen exist at pin `5e7b2e4`:
 
 `snapshots` · `manifests` · `all_manifests` · `files` · `data_files` · `delete_files` ·
 `all_files` · `all_data_files` · `all_delete_files` · `entries` · `all_entries` · `history` ·
-`refs` · `metadata_log_entries` · `partitions`
+`refs` · `metadata_log_entries` · `partitions` · `position_deletes` (schema only; scan
+refuses until the fork ports `PositionDeletesBatchScan`)
 
 ```python
 spark.sql(

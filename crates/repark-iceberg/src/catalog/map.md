@@ -52,7 +52,10 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
   is a no-op; DROP NAMESPACE is a zero-list map remove; invalidate/drop fail loud when the DF
   catalog name is not registered. Every schema snapshot/refresh wraps with
-  `MetadataProjectionSchemaProvider`. Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
+  `MetadataProjectionSchemaProvider` and **eager-lists** the fork's lazy name directory
+  (`freeze_fork_name_directory`, pin `5e7b2e4` — `IcebergSchemaProvider::try_new` no longer
+  `list_tables`; first access would otherwise freeze *after* an OOB create and drop T6
+  residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
   stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
 - `namespace_scoped_tests.rs` — G17 wrapper pins (file-backed): `publish_replace_table`
@@ -61,9 +64,11 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   `list_views` reaches the inner (not `FeatureUnsupported`).
 - `tests.rs` — the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
   validation + namespace construction, live-list staleness pins, O(1) invalidation pins,
-  scheme-selection + key-identity partitions, span secret-hygiene pins, and the fork-patch
+  scheme-selection + key-identity partitions, span secret-hygiene pins, the fork-patch
   proof test (`fork_patch_in_effect_deletefilter_is_public` — names a fork-only public symbol,
-  cannot compile against crates.io iceberg 0.9.1).
+  cannot compile against crates.io iceberg 0.9.1), and **RP-1 / C-011** T6 residual pins
+  against the fork's lazy name-directory (`full_rebuild_lists_every_namespace` plus the
+  three OOB-invisibility tests).
 
 **CTAS reality:** `IcebergSchemaProvider::register_table` is schema-only (rejects a `MemTable`
 with data), so CTAS-from-SELECT must be decomposed into `CREATE (cols)` + `INSERT INTO` by the

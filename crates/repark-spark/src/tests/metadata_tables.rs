@@ -537,6 +537,8 @@ async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_
 ///
 /// Root cause: fork `IcebergMetadataTableProvider::scan` ignores projection; wrap
 /// at `SchemaProvider` registration with `ProjectionExec` (never collect-then-project).
+///
+/// pins: rp-1-fork-repin/C-012 — `position_deletes` is schema-only at this pin; scan refuses.
 #[tokio::test]
 #[allow(clippy::too_many_lines)] // one flat battery over the full MetadataTableType set
 async fn metadata_table_projection_honor_all_types() {
@@ -555,26 +557,31 @@ async fn metadata_table_projection_honor_all_types() {
     )
     .await;
 
-    // Every fork MetadataTableType::as_str (same static set as metadata_tables::METADATA_TABLE_NAMES).
-    let all_meta = [
-        "snapshots",
-        "manifests",
-        "files",
-        "data_files",
-        "delete_files",
-        "entries",
-        "all_files",
-        "all_data_files",
-        "all_delete_files",
-        "all_entries",
-        "history",
-        "refs",
-        "metadata_log_entries",
-        "partitions",
-        "all_manifests",
-    ];
-    for suffix in all_meta {
+    // Every fork MetadataTableType::as_str (same set as metadata_tables::METADATA_TABLE_NAMES).
+    for metadata_type in iceberg::inspect::MetadataTableType::all_types() {
+        let suffix = metadata_type.as_str();
         let table_path = format!("ice.sales.proj.{suffix}");
+
+        // Fork schema-only at pin 5e7b2e4: rewrite and schema plan; collect refuses loud.
+        if suffix == "position_deletes" {
+            let planned = execute(&ctx, &catalogs, &format!("SELECT * FROM {table_path}"))
+                .await
+                .expect("position_deletes must rewrite and plan");
+            assert!(
+                !planned.schema().fields().is_empty(),
+                "position_deletes schema must be advertised"
+            );
+            let err = planned
+                .collect()
+                .await
+                .expect_err("position_deletes collect must refuse");
+            let message = err.to_string();
+            assert!(
+                message.contains("position_deletes") && message.contains("not yet ported"),
+                "fork schema-only refuse, got: {message}"
+            );
+            continue;
+        }
 
         // Full SELECT * — plan schema non-empty + collect must not Internal-error.
         let star_df = execute(&ctx, &catalogs, &format!("SELECT * FROM {table_path}"))

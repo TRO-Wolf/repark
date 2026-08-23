@@ -89,8 +89,10 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   `skills/` — the SEPMO control plane. `.github/` — tier-1 CI + Dependabot. `PROJECT.md` — north-star charter. `STATUS.md` — the
   single source of truth for current state (release state, delivery, active workstreams, deferred
   work). `AGENTS.md` — **the single authoritative contributor contract** (holds the precedence
-  chain, invariants, safety boundaries, and the markdown document lifecycle — which class every
-  doc belongs to and what retires it; written for any human or agent, names no tool).
+  chain, invariants, safety boundaries, the markdown document lifecycle — which class every
+  doc belongs to and what retires it — and the version-pin duties: metadata-projection shim,
+  Catalog wrap, IcebergSchemaProvider name-directory freeze; written for any human or agent,
+  names no tool).
   `ARCHITECTURE.md` — component boundaries, the crate DAG, and the three runtime flows.
   `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
   `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
