@@ -126,6 +126,14 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
             assert count_type == pa.int64(), f"COUNT(*) type {count_type} != int64"
             scan_at_merge[merge_index] = scan_seconds
 
+        ctas_via_as_of: pa.Table = spark.sql(
+            f"SELECT id, name FROM {TABLE} VERSION AS OF {first_snapshot_id} ORDER BY id"
+        ).to_arrow()
+        assert ctas_via_as_of.num_rows == SEED_ROW_COUNT
+        assert ctas_via_as_of.to_pylist() == [
+            {"id": index, "name": f"n{index}"} for index in range(1, SEED_ROW_COUNT + 1)
+        ]
+
         deletes_before_compact: int = position_delete_file_count(spark, TABLE)
         data_files_before_compact: int = _data_file_count(spark, TABLE)
         assert deletes_before_compact == MERGE_COUNT

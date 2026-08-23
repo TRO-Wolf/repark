@@ -358,11 +358,13 @@ history-rewrite; provenance and the options weighed:
   - **Scorecard.** The MW-0 growth demo reproduces: ten sequential MERGEs into a 1,000-row v2
     merge-on-read table, each touching the same 200 ids, grow position-delete files **1→10**.
     After `rewrite_position_delete_files` + `rewrite_data_files` + `expire_snapshots`, delete
-    files are **10→1**, data files on this run **41→1**, and `COUNT(*)` stays **1,000**
-    (`int64`) on the Arrow path. Pin:
-    `python/repark/tests/test_mw5_baseline_delta.py::test_mw0_demo_delete_files_grow_then_compact_reclaims`.
-    Wall-clock on this host (2026-08-23, not a CI pin): merge 2 **56.1 ms**, merge 10
-    **131.3 ms** (**2.3×**, MW-0 was 60.1→127.9 ms / 2.1×), warmed post-maintenance **96.6 ms**.
+    files are **10→1** and data files are **1**. Pin:
+    `python/repark/tests/test_mw5_baseline_delta.py::test_mw0_demo_delete_files_grow_then_compact_reclaims`
+    (`assert` 10 then 1 deletes; `assert` 1 data file after rewrite+expire). `COUNT(*)` stays
+    **1,000** (`int64`) on the Arrow path. Data-file count *before* compact was **41** on this
+    host (2026-08-23, logged, not asserted). Wall-clock on this host (not a CI pin): merge 2
+    **56.1 ms**, merge 10 **131.3 ms** (**2.3×**, MW-0 was 60.1→127.9 ms / 2.1×), warmed
+    post-maintenance **96.6 ms**.
     Scan cost still tracks delete-file growth; compact reclaims the files. It does not restore
     merge-2 wall-clock on this machine, and MW-5 does not claim a timing SLA.
   - **Live Glue proof.** Post-#219 `aws-acceptance` dispatch
