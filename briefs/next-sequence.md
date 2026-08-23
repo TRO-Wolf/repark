@@ -87,6 +87,12 @@ the ledger bins under `task/ledgers/`, `scripts/ledger_lifecycle.py` + `make che
 `make ci`, the 122-ledger backfill, `task/roadmap/{mid-term,epic-term}/`, the census eviction.
 The queue is unchanged: MW-5.
 
+**DL-2 lands with this change and leaves this file** (stacked on DL-1; chartered 2026-08-23 from
+the owner's SEPMO architecture note): the ledger grammar gate `make check-ledger-grammar` in
+`make ci` — clause rows, `pins:` citations, the Critic's attestation form — with the measured floor
+seeded and XML declined. Every unit from here on pins its `PROVEN` clauses from its tests and files
+its attestation before the departure `move`. The queue is unchanged: MW-5.
+
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
 made it safe to schedule behind V3-1 rather than ahead of it. Burning the tables down is

@@ -10,7 +10,7 @@ JVM, no repark required). See [../map.md](../map.md).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`
-  clause and a dead `pins:` citation go red, an archived clause can be cited; the attestation is
+  clause and a dead `pins:` citation go red, archived and completed clauses can be cited; the attestation is
   required once no clause is `OPEN` and its shape defects (no artifacts, no justification, a
   missing category, an inconsistent `complete:`) go red; a ledger with no clause table goes
   red; `FINDING:` fields are checked; a raised ceiling or a stale `EXCEPTIONS` row goes red

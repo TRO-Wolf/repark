@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Check the shape of live ledgers so the Scope Auditor and the Critic do not have to.
 
-Scope: every tracked `*-ledger.md` under `task/ledgers/staging/` (the archive is
-immutable by the DL-1 rule, so there is never a retrofit debt). Three rules,
+Scope: every tracked `*-ledger.md` under `task/ledgers/staging/` and
+`completed/` — the live bins; a ledger retires into `completed/` in its own
+departure commit, so CI meets it there (the archive is immutable by the DL-1
+rule and is read for citations only). Three rules,
 chartered by DL-2 (2026-08-23) on top of the SEPMO skill's meanings:
 
 A. **Clause rows.** A clause table is any markdown table whose data rows begin
@@ -19,7 +21,8 @@ B. **Pin binding.** A test cites a clause with `pins: <unit>/C-NNN[, C-MMM...]`
    archive, without its `yyyy-mm-dd-` prefix). Every `PROVEN` clause in a
    staging ledger must be cited at least once — the measured floor is seeded
    per ledger in EXCEPTIONS and only ratchets down — and every citation must
-   resolve to a clause that exists in `staging/` or the archive.
+   resolve to a clause that exists in any bin (`staging/`, `completed/`, the
+   archive).
 
 C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a
    fenced block) lists `AT-1`..`AT-10` exactly once each; `ATTACKED` needs a
@@ -46,6 +49,7 @@ import sys
 from pathlib import Path
 
 STAGING = "task/ledgers/staging"
+COMPLETED = "task/ledgers/completed"
 ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
 # Where tests live; `pins:` citations are read from every tracked file here.
@@ -57,6 +61,7 @@ CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 # ratchet DOWN only; a row is deleted when it reaches zero and the block is
 # filed. A ledger not listed allows zero and must file its attestation.
 EXCEPTIONS: dict[str, tuple[int, bool]] = {
+    "dl-1-ledger-lifecycle-charter-ledger.md": (0, False),
     "fnp-0-charter-ledger.md": (12, False),
     "mw-0-charter-ledger.md": (10, False),
     "sem-0-charter-ledger.md": (9, False),
@@ -267,9 +272,13 @@ def run(repo: Path) -> int:
     except (subprocess.CalledProcessError, OSError) as error:
         print(f"ERROR: cannot list tracked files ({error})", file=sys.stderr)
         return 2
-    staging = [p for p in tracked if p.startswith(STAGING + "/") and p.endswith(LEDGER_SUFFIX)]
+    live = [
+        p
+        for p in tracked
+        if p.startswith((STAGING + "/", COMPLETED + "/")) and p.endswith(LEDGER_SUFFIX)
+    ]
     archived = [p for p in tracked if p.startswith(ARCHIVE + "/") and p.endswith(LEDGER_SUFFIX)]
-    if not staging and not archived:
+    if not live and not archived:
         print("ERROR: no ledgers found under task/ledgers — refuse to pass closed", file=sys.stderr)
         return 2
 
@@ -277,11 +286,11 @@ def run(repo: Path) -> int:
     known: set[tuple[str, str]] = set()
     proven: dict[str, list[str]] = {}
     clauses = 0
-    for path in staging + archived:
+    for path in live + archived:
         text = (repo / path).read_text(encoding="utf-8")
         rows = clause_rows(text)
         unit = unit_of(path)
-        if path in staging:
+        if path in live:
             row_findings, verdicts = check_rows(path, rows)
             findings.extend(row_findings)
             clauses += len(rows)
@@ -316,8 +325,8 @@ def run(repo: Path) -> int:
                 "ratchet it down in EXCEPTIONS"
             )
     for name in sorted(EXCEPTIONS):
-        if f"{STAGING}/{name}" not in staging:
-            findings.append(f"EXCEPTIONS names {name}, which is not in {STAGING}/ — delete the row")
+        if f"{STAGING}/{name}" not in live and f"{COMPLETED}/{name}" not in live:
+            findings.append(f"EXCEPTIONS names {name}, which is in no live bin — delete the row")
 
     if findings:
         for finding in findings:
@@ -325,7 +334,7 @@ def run(repo: Path) -> int:
         print(f"ledger-grammar: FAIL — {len(findings)} finding(s)", file=sys.stderr)
         return 1
     print(
-        f"ledger-grammar: {len(staging)} staging ledgers clean ({clauses} clauses, "
+        f"ledger-grammar: {len(live)} live ledgers clean ({clauses} clauses, "
         f"{len(cited)} pinned clause ids, {len(EXCEPTIONS)} exception rows)"
     )
     return 0

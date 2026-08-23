@@ -90,12 +90,12 @@ def repo(tmp_path: Path) -> Path:
 
 
 def test_clean_shape_is_green_and_counts(repo: Path) -> None:
-    # pins: dl-2-ledger-grammar-charter/C-002
+    # pins: dl-2-ledger-grammar-charter/C-002, C-006
     result = _run(repo)
     assert result.returncode == 0, result.stderr
     legacy = sum(ceiling for ceiling, _governed in _exceptions().values())
     assert (
-        f"{len(_exceptions()) + 1} staging ledgers clean ({3 + legacy} clauses, 2 pinned clause ids"
+        f"{len(_exceptions()) + 1} live ledgers clean ({3 + legacy} clauses, 2 pinned clause ids"
         in result.stdout
     )
 
@@ -133,15 +133,22 @@ def test_unpinned_proven_clause_and_dead_citation_go_red(repo: Path) -> None:
     )
 
 
-def test_archived_clause_can_be_cited(repo: Path) -> None:
+def test_archived_and_completed_clauses_can_be_cited(repo: Path) -> None:
     # pins: dl-2-ledger-grammar-charter/C-003
     _write(
         repo,
         "task/ledgers/archive/2026-08/2026-08-20-old-unit-ledger.md",
         "| C-001 | Old. | — | PROVEN | x |\n",
     )
-    old = "old-unit"  # built, not literal: the real tree's scan must not see a citation here
-    _write(repo, _TEST, f"// pins: {_UNIT}/C-001, C-002\n// pins: {old}/C-001\n")
+    _write(
+        repo,
+        "task/ledgers/completed/done-unit-ledger.md",  # a retired unit: attested, pinned below
+        "| C-001 | Done. | — | PROVEN | x |\n" + _ATTESTATION,
+    )
+    old, done = "old-unit", "done-unit"  # built, not literal: the real tree must not see these
+    _write(
+        repo, _TEST, f"// pins: {_UNIT}/C-001, C-002\n// pins: {old}/C-001\n// pins: {done}/C-001\n"
+    )
     assert _run(repo).returncode == 0
 
 
@@ -201,7 +208,7 @@ def test_finding_record_fields_are_checked(repo: Path) -> None:
 def test_exceptions_table_ratchets_down_only(tmp_path: Path) -> None:
     # pins: dl-2-ledger-grammar-charter/C-005
     # The real table against the real tree: a ceiling above the measured count, or a row for a
-    # ledger no longer in staging, is a finding — provoked by editing a copy of the script.
+    # ledger in no live bin, is a finding — provoked by editing a copy of the script.
     source = _SCRIPT.read_text(encoding="utf-8")
     assert '"fnp-0-charter-ledger.md": (12, False)' in source
     raised = source.replace(
@@ -221,4 +228,13 @@ def test_exceptions_table_ratchets_down_only(tmp_path: Path) -> None:
     )
     assert result.returncode == 1
     assert "ceiling 13 is above the measured 12" in result.stderr
-    assert "EXCEPTIONS names gone-ledger.md, which is not in task/ledgers/staging/" in result.stderr
+    assert "EXCEPTIONS names gone-ledger.md, which is in no live bin" in result.stderr
+
+
+def test_refuses_to_pass_closed_with_no_ledgers(tmp_path: Path) -> None:
+    # pins: dl-2-ledger-grammar-charter/C-004
+    _git(tmp_path, "init", "-q", "-b", "main")
+    _write(tmp_path, "README.md", "# empty\n")
+    result = _run(tmp_path)
+    assert result.returncode == 2
+    assert "refuse to pass closed" in result.stderr

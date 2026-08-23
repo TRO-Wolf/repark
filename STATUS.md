@@ -182,6 +182,16 @@ history-rewrite; provenance and the options weighed:
   (short-term stays the slate). `task/census/` is evicted from the tree (reachable at `b13b22c`,
   [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
   [task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md).
+  **DL-2 delivered with this change (stacked on DL-1):** the ledger *grammar* —
+  `scripts/check_ledger_grammar.py` / `make check-ledger-grammar` (in `make ci`) holds the shape
+  of every live ledger: clause rows (`C-NNN`, one verdict, evidence), the `pins: <unit>/C-NNN`
+  citation that binds a test to the clause it discharges
+  ([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and the Critic's
+  `COVERAGE_ATTESTATION` in ref 05's shape, required once no clause is `OPEN`. Measured floor
+  seeded (31 unpinned `PROVEN` clauses across three live charters; ratchets down only). XML as
+  the ledger carrier was measured and declined. Bound in
+  [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Record:
+  [task/ledgers/completed/dl-2-ledger-grammar-charter-ledger.md](task/ledgers/completed/dl-2-ledger-grammar-charter-ledger.md).
 
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2

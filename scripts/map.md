@@ -46,8 +46,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `check_map_md.sh` uses; unlike it, there is no ci.yml step yet — that half is an owner-scoped
   `.github/` change. The document-lifecycle rules it serves are
   [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
-- `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2, 2026-08-23), over
-  `task/ledgers/staging/` only (the archive is immutable, so there is no retrofit debt). Three
+- `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2, 2026-08-23), over the live
+  bins `task/ledgers/staging/` and `completed/` (a ledger retires into `completed/` in its own
+  departure commit, so CI meets it there; the archive is immutable and read for citations only). Three
   rules, shape only — the meanings stay in `skills/sepmo/`: **(A)** every clause row (`| C-NNN |`)
   has a unique id, exactly one verdict cell (`PROVEN` / `OPEN` / `REJECTED`, bold or a
   parenthetical allowed — measured: 12 of 32 live verdict cells are annotated) and an evidence
@@ -55,13 +56,13 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `pins: <unit>/C-NNN[, C-MMM]` (`<unit>` = the ledger filename without `-ledger.md` and, in the
   archive, without its date prefix), read from every tracked file under `crates/`, `python/`,
   `scripts/` — every `PROVEN` clause in staging must be cited, every citation must resolve to a
-  clause in staging or the archive; **(C)** the `COVERAGE_ATTESTATION:` block (ref 05's shape) is
+  clause in any bin (staging, completed, the archive); **(C)** the `COVERAGE_ATTESTATION:` block (ref 05's shape) is
   checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
   `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
   floor per ledger (31 unpinned `PROVEN` clauses across three charters; attestation not required
-  of the four live staging ledgers), ratchets down only, and a row naming a ledger no longer in
-  staging is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
+  of the five ledgers that predate the rule), ratchets down only, and a row naming a ledger in no
+  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
   `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain. Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.

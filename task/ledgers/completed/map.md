@@ -12,6 +12,10 @@ else. The next pickup's `make ledger-archive` files everything here under
   (2026-08-23):** the charter for the ledger lifecycle itself — three bins, a deterministic
   archive script and gate, two roadmap bins, the census eviction, the one-PR backfill. Four
   owner rulings in §2.
+- [dl-2-ledger-grammar-charter-ledger.md](dl-2-ledger-grammar-charter-ledger.md) — **DL-2
+  (2026-08-23):** the ledger grammar, checked by `scripts/check_ledger_grammar.py` — clause rows,
+  `pins:` citations binding tests to clauses, the Critic's attestation form; XML measured and
+  declined. Stacked on DL-1 (PR #221).
 
 ## Pointers
 - Up: [../map.md](../map.md)
