@@ -308,6 +308,22 @@ check-manifest: ## Structural-manifest guard (repo-manifest.toml vs workspace, d
 check-map-md: ## map.md lockstep guard over staged changes (also wired into the pre-commit hook)
 	bash scripts/check_map_md.sh
 
+.PHONY: check-ledgers
+check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link, frozen bins (DL-1)
+	@# SSOT: scripts/ledger_lifecycle.py `check` — a `*-ledger.md` under task/ outside its bins,
+	@# an archive name whose date prefix disagrees with its month directory, a dead `-ledger.md`
+	@# link in ANY tracked markdown (sync_map_md covers maps only), and a completed/ or archive/
+	@# ledger edited beyond a link repair or a prepended errata note. Policy: AGENTS.md
+	@# "Markdown document lifecycle". The ci.yml half is an owner-scoped .github/ change.
+	python3 scripts/ledger_lifecycle.py check
+
+.PHONY: ledger-archive
+ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy-mm/ (zero tokens)
+	@# Dates come from `main`'s first-parent history, never the clock; links across the tree are
+	@# rewritten and the result is staged. Idempotent. Mark a unit finished with
+	@#   python3 scripts/ledger_lifecycle.py move task/ledgers/staging/<unit>-ledger.md completed
+	python3 scripts/ledger_lifecycle.py archive
+
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)
 	@# Companion to check-map-md: that one forces a map to be TOUCHED, this one checks what it

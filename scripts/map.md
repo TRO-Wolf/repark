@@ -46,6 +46,31 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `check_map_md.sh` uses; unlike it, there is no ci.yml step yet — that half is an owner-scoped
   `.github/` change. The document-lifecycle rules it serves are
   [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
+- `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
+  its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
+  and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
+  `completed/` (or the paths given) under a date read from `main`'s first-parent history — never
+  the clock, so any machine produces the same name and a ledger not yet on `main` is refused;
+  `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions
+  (`mid-term` / `epic-term`; `archive` is not a `move` target); `check` is the gate. The rewrite
+  is resolution-based — a link changes only if it *resolved* to the moved file — and covers the
+  moved file's own outgoing links and its `map.md` row — the bullet plus every indented line
+  under it, wrapped text and sub-lists alike — which travels to the destination map with its
+  description; nothing is written unless every rewritten link resolves, and the result is staged
+  as one change. Prose mentions in code spans are not links and are left alone (the basename
+  survives the move, so they still find the file). `check` fails on a `*-ledger.md` under `task/` outside the bins, an
+  archive name whose date prefix disagrees with its month directory, a dead `-ledger.md` link in
+  **any** tracked markdown (`sync_map_md.py` covers maps only), and a `completed/` or `archive/`
+  file changed since the base commit beyond a link repair or a prepended errata note (the frozen
+  and immutable rules; no rename heuristics — a vanished `completed/` ledger must have its dated
+  twin by name; a target carrying whitespace is prose, not a path, and stays in the comparison).
+  Refuses to pass closed when no base commit resolves (`--base`, else the merge-base with
+  `origin/main` / `main`). Reuses `sync_map_md.py`'s link parser. Exit 0 / 1 findings or
+  refused / 2 usage. Reviewed adversarially before its first real run (2026-08-23): the
+  blocker it caught — a map row wrapped onto a line starting with `+ ` read as a nested bullet
+  and split — is pinned in the tests. Wired as `make check-ledgers` and `make ledger-archive`; armed in `make ci` by the DL-1
+  backfill commit (the tree is red until the ledgers are in their bins). Proofs:
+  `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`.
 - `check_workflows_parse.py` — every GitHub Actions workflow must be parseable YAML. zizmor
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would
   pass the blocking lint gate while GitHub silently never runs it. Wired as a prerequisite of
