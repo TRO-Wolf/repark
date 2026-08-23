@@ -257,7 +257,9 @@ def test_frozen_rule_sees_prose_smuggled_into_a_link_target(repo: Path) -> None:
 
 
 def test_an_archive_month_map_row_is_one_line_first_sentence(repo: Path) -> None:
-    # pins: dl-3-archive-map-compaction-charter/C-001
+    # pins: dl-3-archive-map-compaction-charter/C-001, C-003
+    # (C-003's migration ran this same function over the real 2026-08 map; the
+    # tree-level evidence is the migration commit's recorded gate runs.)
     _write(
         repo,
         "task/ledgers/completed/map.md",

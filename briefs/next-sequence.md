@@ -99,6 +99,11 @@ guards into `ci.yml` (owner-granted; not a slate unit).
 10→1, data files →1, `COUNT(*)` 1,000 `int64`, live names and CTAS identity,
 expire needle). STATUS scorecard; guide lockstep; design and slate archived at
 [../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
+**DL-3 lands with this change and leaves this file** (chartered 2026-08-23 outside the slate,
+from an agent's report that the 2026-08 archive month map cost ~13k tokens to read): archive
+month maps condense to one line per ledger (`_condense_row`, the 2026-08 migration
+55.5 kB → 29.3 kB, the off-the-read-path note). The rolling queue is otherwise unchanged.
+
 The rolling queue is empty. Post-MW remainder stays an intake, not sequenced
 work.
 
