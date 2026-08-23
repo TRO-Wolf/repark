@@ -5,6 +5,9 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [rp-1-fork-repin-ledger.md](rp-1-fork-repin-ledger.md) — **RP-1 (2026-08-23):** re-pin
+  `iceberg*` to fork `main` `5e7b2e4` (F-0/F-1/F-2 landed; F-8a note retire; standing
+  Catalog-trait and metadata-projection duties). First row of the post-MW sequence.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

@@ -32,7 +32,11 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | *(empty)* | — | — | — |
+| 1 | **RP-1** | Iceberg | — | S |
+| 2 | **MW-6** | Iceberg | RP-1 | S/M |
+| 3 | **MW-7** | Iceberg | MW-6 | M |
+| 4 | **MW-8** | Iceberg | MW-6, MW-7 | S |
+| 5 | **V3-2** | Format v3 | RP-1 (MW closed) | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -106,11 +110,15 @@ month map cost ~13k tokens to read): archive month maps condense to one line per
 
 **2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
 ([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
-The next sequencing move is a v3 intake evaluating that track into mid-term units (V3-2 first,
-per the design's slate); nothing is queued until the owner charters it.
 
-The rolling queue is empty. Post-MW remainder stays an intake, not sequenced
-work.
+**Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. **RP-1 first**
+(the fork batch the intake treated as future has landed: F-0 `#214`, F-1 through
+`#213`, F-2 `#215`; engine pin is 20 commits behind fork `main`). Then **MW-6**
+`rewrite_manifests`, **MW-7** scale measurement, **MW-8** the Airflow-shaped
+runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
+the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) stays gated on MW-7's
+numbers. S3 Tables MOR (intake "MW-4b") stays owner-gated on OD-3b. DML-A/B/C
+and Track A W-0 are not in this queue.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -201,21 +209,82 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 
 ---
 
-## MW-5 — done (lands with this change)
+## MW-5 — done (merged #224)
 
 Registry close as a pointer: MW-1/MW-2 closed the schema gaps as columns; remaining
 rows stay MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3. The MW-0 demo is pinned.
 Design and slate are in
 [../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
 
-**Post-MW-4 remainder, evaluated 2026-08-23:** the candidate units after MW-5 (MW-6
-`rewrite_manifests` through MW-9, the DML units, the RP-1 fork repin) and the
-window-operator measurement track are an **intake, not sequenced work**, in
-[../task/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md); the
-fork-side queue they feed is
-[../task/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md).
-Its `[OWNER]` recommendation is MW-6 beside the dispatch now; nothing here moves until
-the owner charters it.
+**Post-MW remainder, owner-chartered 2026-08-23** (intake remains the evidence
+home: [../task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md);
+fork queue: [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
+The intake's "MW-6 now" line is stale: F-0 and F-2 landed fork-side after it
+was written, so **RP-1 leads**. MW-9 is not in the table — MW-7 decides whether
+it is urgent.
+
+### RP-1 — fork repin (this unit)
+
+Re-pin `[patch.crates-io]` `iceberg*` to current fork `main`
+(`5e7b2e4f8fcb`, 20 commits past `0c5fd58`). Family (`datafusion` /
+`datafusion-spark` / `arrow*` / `parquet` / `rust-toolchain.toml`) does **not**
+move — the fork did not change its DataFusion base. Standing repin duties
+(Catalog trait re-enumeration, metadata-projection shim criterion, two
+emptiness pins) plus the landed F-item flips:
+
+- **F-0** (`#214`, behaviour change): `Operation::Replace` in both files-exist
+  conflict guards. Engine follow-up: `write.merge.isolation-level = snapshot`
+  **is** exposed (drops `validate_no_conflicting_data`); pin that arm against
+  the gap F-0 closed, either way.
+- **F-1** (breaking default, floor 2 → 5): flip
+  `call_mor1_compacts_below_sparks_min_input_files_floor` to equality, retire
+  `MOR-1`, check no engine test leaned on two-file compaction.
+- **F-2** (`#215`, additive; `CleanupReport` is `#[non_exhaustive]`): emit
+  Spark's six `expire_snapshots` columns from the fork's typed views; retire
+  `ExpireCounts::tally` / the pre-expiry walk.
+- **F-8a:** retire the `a$b` "unresolvable" residue note; the ADR-0006
+  enumeration filter **stays** (`table_names` still synthesizes).
+
+Do not wait for open fork **F-3** (`#216`). Do not mix this with MW-6 (handoff
+§5: one engine repin per landed batch, never a passenger).
+
+Ledger: [../task/ledgers/staging/rp-1-fork-repin-ledger.md](../task/ledgers/staging/rp-1-fork-repin-ledger.md).
+
+### MW-6 — `CALL system.rewrite_manifests`
+
+Engine-only. Fork action is already there (R100 ✅). F-4 answered: counts from
+the new snapshot summary, `manifests-replaced` → `rewritten_manifests_count`,
+`manifests-created` → `added_manifests_count` (fork-pinned keys). Oracle-pin
+Spark's result schema (`rewritten_manifests_count:int`,
+`added_manifests_count:int`) from the 1.10.0 jar constant if the 4.1.2 oracle
+cannot execute it (Q5 precedent). `spec_id` refuses loud (no fork filter);
+`use_caching` is a documented no-op. First missing procedure operators run
+after every MOR merge.
+
+### MW-7 — scale measurement (measure-only)
+
+A partitioned v2 table, 1e7 rows, 100 MERGEs touching ~2 % of rows each, MOR
+and COW legs: delete files, manifests, manifest-list size, `COUNT(*)` and a
+predicate scan p50/p99 per 10 merges, then the full maintenance sequence and
+the same scans again. Peak RSS. Numbers planning-side like P-2; ratios over
+absolutes on this box. **Gates MW-8's defaults and decides whether MW-9 is
+urgent.** No product change.
+
+### MW-8 — the maintenance runbook
+
+Docs + one executable local-catalog test of the Airflow-shaped sequence:
+merge → `rewrite_position_delete_files` → `rewrite_data_files` →
+`rewrite_manifests` → `expire_snapshots` → `remove_orphan_files` dry-run →
+armed. S3 Tables conflict-retry guidance folded in; defaults from MW-7.
+No engine change.
+
+### V3-2 — create v3 tables behind an explicit opt-in
+
+Lift the CREATE/CTAS `format-version = 3` refusal behind an explicit opt-in;
+the default stays v2 until V3-3 lands, because a v3 table this engine cannot
+do row-level writes on is a trap. MW is closed, so the "wait for live-catalog
+evidence" hold is gone. V3-3 (DV writes) is the large unit after that;
+`V3-LINEAGE-1` / `B-MOR-3` stay fork-blocked for maintenance.
 
 ---
 
