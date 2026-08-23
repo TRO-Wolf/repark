@@ -140,9 +140,12 @@ What happens next, in order:
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
    ([docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover").
-4. **The first tagged release** — **held by the owner**, and still blocked by the
-   `repark.sql` re-home ([docs/release.md](docs/release.md) "Hard blockers"). It starts the
-   "API is forever" clock.
+4. **The first tagged release** — **DONE**: v0.1.0 shipped 2026-08-15 (v0.5.0 current; see
+   Release state above), unblocked by the `repark.sql` re-home landing 2026-08-14
+   ([docs/release.md](docs/release.md) "RESOLVED", #95). Pre-alpha still means the API can
+   move between tags (the design ruling that the API-forever clock starts at the first tag —
+   [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at the v1.0
+   north-star API review).
 
 Owner-side actions that rode this sequence rather than gating it are **DISCHARGED — no owner-side
 tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) workflow's first dispatch ran
@@ -393,6 +396,9 @@ history-rewrite; provenance and the options weighed:
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
   2026-08-21; V3-0 audit merged; **V3-1 merged** as
   [#203](https://github.com/TRO-Wolf/repark/pull/203) / `d3152b1`).
+  **The owner set the v1.0 north star on 2026-08-23: full production-grade format-v3.**
+  Definition and acceptance gate:
+  [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md).
   Design: [docs/design/format-v3-track.md](docs/design/format-v3-track.md); audit:
   [task/v3-0-charter-ledger.md](task/ledgers/staging/v3-0-charter-ledger.md).
   - **V3-0** ([#199](https://github.com/TRO-Wolf/repark/pull/199)) ran the surfaces A12 had only
@@ -492,11 +498,9 @@ its two remaining acceptance items discharged at close-out. It is no longer a wo
 record is [docs/history/frontdoor/](docs/history/frontdoor/README.md) and its process metrics are
 [task/metrics.md](task/metrics.md).
 
-Parked lanes (drawn up, not started; they conflict with nothing and can interleave):
-
-- **`repark.sql` re-home** — the deferred native-door `repark.sql()` relocation, gated on
-  release-prep (design ruling in [docs/design/python-facade.md](docs/design/python-facade.md) §4).
-  This is also the **hard blocker for the first tag**.
+Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
+[docs/release.md](docs/release.md) "RESOLVED"; design ruling
+[docs/design/python-facade.md](docs/design/python-facade.md) §4).
 
 **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
 insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2
@@ -600,8 +604,6 @@ moving it. Nothing is described in both places.
   the dbt-upgrade gate is MET. The family is **not** closed: UPDATE IN + correlated
   IN / ANY / ALL stay valved. G3-E8-NULL DELETE half matches Spark; UPDATE half stays
   refused. Semantics + pins: registry §7 rows G3-E8 / G3-E8-NULL.
-- **`repark.sql` re-home** — **blocks the first tagged release** (not a correctness defect).
-  See [docs/release.md](docs/release.md) "Hard blockers" and Deferred capabilities.
 - **`bin` / `rint` BOOLEAN over-accept** — **BACKLOG (2026-08-19)**: registry
   [§7 BL-6](docs/spark-sql-iceberg-parity.md).
 - **`bit_length` / `octet_length` DOUBLE stringify (Infinity / E-notation)** — **BACKLOG

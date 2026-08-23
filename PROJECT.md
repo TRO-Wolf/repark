@@ -28,8 +28,11 @@ the dialect layers are thin translators.
 
 ## Goals
 
-- Full Iceberg integration against AWS **Glue (primary)** + **S3 Tables (secondary)**, tracking the
-  latest Iceberg features (V3: deletion vectors, row lineage, variant type) over time.
+- Full Iceberg integration against AWS **Glue (primary)** + **S3 Tables (secondary)**. **The v1.0
+  north star (owner-set 2026-08-23) is full production-grade Iceberg format-v3 support** —
+  deletion vectors, row lineage, the v3 types — defined, with the acceptance gate that decides
+  the v1.0 tag, in
+  [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md).
 - Single binary / single `pip install` — no JVM, no cluster, no daemon; cold start under a second.
 - Predictable memory via spill-to-disk by default. (*The "never OOM on data larger than RAM" claim
   is pending a spill-coverage spike — DataFusion's operator spill coverage is partial; the honest

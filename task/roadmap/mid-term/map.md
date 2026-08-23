@@ -11,8 +11,11 @@ declines it (a dated ruling in the intake, then the archive).
   every fork-side item the 2026-08-23 intake surfaced (position-delete rewrite admission gate,
   expire-report split, dangling-delete removal in rewrite, `RewriteManifests` result counts,
   `ReplacePartitions` remainder, branch commit target, metadata-table projection, S3 Tables
-  `register_table`, declared sort order → output ordering), each with the engine-side evidence,
-  the consumed surfaces a change must not break, and the engine pin that flips when it lands.
+  `register_table`, declared sort order → output ordering, and the format-v3 spine (F-7,
+  plus F-13–F-15 added 2026-08-23 with the v1.0 north-star ruling): the deletion-vector write
+  path, the Hadoop metadata-pointer math, the v3 type system), each with the engine-side
+  evidence, the consumed surfaces a change must not break, and the engine pin that flips when
+  it lands (F-15 excepted — it carries neither observation nor pin until V3-6 charters).
 - [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake
   (2026-08-21):** every campaign brief, queue, and grant that had existed only in planning space,
   reduced to eleven open workstreams, one closed ledger, and five items needing verification
