@@ -348,7 +348,7 @@ never hand-edited — a re-run replaces the whole directory in one commit. The c
 losslessly reversible in any case: the textual transform collapsed escaped `\"` and genuine
 string-terminating `"` into the same character, so a blanket un-escape breaks the other case.
 The defects are enumerated with reproductions in
-[`task/census/baseline-fc3f48102/map.md`](../../../task/census/baseline-fc3f48102/map.md) "REGENERATION
+[`task/census/baseline-fc3f48102/map.md`](../../port/census.md) "REGENERATION
 REQUIRED", and in summary:
 
 1. All four `compat-report.json` files are **invalid JSON** (214/214/137/110 broken escape sites);

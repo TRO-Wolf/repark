@@ -1,6 +1,0 @@
-{
-  "pandas_version": "2.3.3",
-  "pyarrow_version": "25.0.0",
-  "pyspark_version": "4.1.2",
-  "python_version": "3.12.3"
-}

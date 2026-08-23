@@ -712,10 +712,6 @@ not this directory.
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its
   mirror additions ledger ([port/added-python-tests.txt](port/added-python-tests.txt)). The census
   comparator still subtracts these, so they are not history.
-- [census/](census/map.md) — **evidence**: the recorded census runs, `baseline-fc3f48102/` (the port
-  pin) and `v2-a5be8a7/` (the acceptance run). Never hand-edited; a re-run replaces a whole
-  directory in one commit.
-
 - [wc-check-lib-rs-stale-ledger.md](wc-check-lib-rs-stale-ledger.md) — WC: `check_lib_rs` stale-EXCEPTIONS crate-key fail-closed (G-8 mold backport).
 - [xc-product-statements-ledger.md](xc-product-statements-ledger.md) — **XC (docs):** G3-E3/E4/E7
   product statements → [`docs/design/product-contract.md`](../docs/design/product-contract.md)

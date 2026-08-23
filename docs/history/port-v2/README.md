@@ -46,7 +46,7 @@ comparator, with two checked-in ledgers (deferred, added) as the only permitted 
 
 - **The procedure** is [docs/port/census.md](../../port/census.md) (live — it is still the recipe for
   running one).
-- **The evidence** is committed under [task/census/](../../../task/census/map.md):
+- **The evidence** is committed under `task/census/` (evicted from the tree 2026-08-23, reachable by SHA: [docs/port/census.md](../../port/census.md) §7):
   `baseline-fc3f48102/` (the pin) and `v2-a5be8a7/` (the acceptance run). It is evidence, never
   hand-edited; a re-run replaces a whole directory in one commit.
 - **The ledgers** are live acceptance inputs: [task/port/](../../../task/port/map.md).

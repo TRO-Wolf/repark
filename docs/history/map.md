@@ -45,9 +45,9 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 - Archived material is **immutable** except link repair and dated corrections; archived status claims
   carry an effective date. The full rule set is in
   [port-v2/README.md](port-v2/README.md) "Rules for this directory".
-- Evidence that is still an **input** to a gate does not belong here: the census artifacts
-  ([task/census/](../../task/census/map.md)) and the deferred/added test ledgers
-  ([task/port/](../../task/port/map.md)) stay live.
+- Evidence that is still an **input** to a gate does not belong here: the deferred/added test
+  ledgers ([task/port/](../../task/port/map.md)) stay live. The recorded census runs were evicted
+  from the tree on 2026-08-23 and are reachable by SHA ([docs/port/census.md](../port/census.md) §7).
 
 ## Debug
 
