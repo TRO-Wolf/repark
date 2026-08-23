@@ -755,12 +755,13 @@ async fn call_expire_splits_content_files_like_spark() {
         equality, 0,
         "nothing here writes equality deletes — a measured control, not a placeholder"
     );
-    // The control that makes this a SPLIT rather than a relabel: the rollback strands the
-    // MERGEs' new data files too, so both columns must carry independent non-zero counts. Before
-    // MW-1 the single funnel reported `data + position` under the data-file name alone.
-    assert!(
-        data > 0,
-        "the rolled-back MERGEs strand data files as well; got {data}"
+    // Two MERGEs strand two data files. Independent of the position column so a mutation that
+    // fills deleted_data_files_count from the content-file UNION (data+position) goes red
+    // (would report 2+position, not 2). pins: rp-1-fork-repin/C-009
+    assert_eq!(
+        data, 2,
+        "each rolled-back MERGE strands one data file; got {data} (a union-len data column \
+         would be 2 + {position})"
     );
 }
 
@@ -1107,6 +1108,39 @@ async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
         .await,
         4,
         "the four delete files stay; the planner did not rewrite them"
+    );
+}
+
+/// Exact Spark floor: five files is the smallest group that compact. A gate of 6 would leave
+/// the 4-zero and 8-compact pins green.
+///
+/// pins: rp-1-fork-repin/C-007, C-008
+#[tokio::test]
+async fn call_rpdf_compacts_at_sparks_min_input_files_floor() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let before = seed_mor_delete_files(&ctx, &catalogs, "floor5", 8, 5).await;
+    assert_eq!(
+        before, 5,
+        "five delete files — Spark's min-input-files floor"
+    );
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.floor5").await;
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.floor5')",
+    )
+    .await
+    .expect("rewrite_position_delete_files CALL");
+    let batches = result.collect().await.expect("collect rpdf result");
+    let batch = &batches[0];
+    assert_eq!(call_count(batch, "rewritten_delete_files_count"), 5);
+    assert_eq!(call_count(batch, "added_delete_files_count"), 1);
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.floor5").await,
+        live_before,
+        "compact must not change the live row set"
     );
 }
 

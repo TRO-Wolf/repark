@@ -212,7 +212,7 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 ## MW-5 — done (merged #224)
 
 Registry close as a pointer: MW-1/MW-2 closed the schema gaps as columns; remaining
-rows stay MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3. The MW-0 demo is pinned.
+rows stay MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3 (`MOR-1` retired at RP-1). The MW-0 demo is pinned.
 Design and slate are in
 [../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
 

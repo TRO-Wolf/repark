@@ -108,11 +108,14 @@ MOR_ICEBERG_TABLE_PROPERTIES = (
 # Iceberg FileContent::PositionDeletes. Used to count live delete files via ``table.files``.
 POSITION_DELETE_CONTENT = 1
 MOR_SEED_ROW_COUNT = 20
-MOR_UPDATED_ID_COUNT = 3
+# Five distinct MERGE commits (plus the idempotent replay of the last) so the
+# live position-delete group meets MOR_MIN_POSITION_DELETE_FILES after F-1.
+MOR_UPDATED_ID_COUNT = 5
 MW4_TEMP_VIEW = "mw4_staging_view"
-# Compact is a no-op on a single delete file (MW-2). The sequence writes this many MERGEs so
-# rewrite_position_delete_files has something to fold.
-MOR_MIN_POSITION_DELETE_FILES = 2
+# Compact is a no-op below Spark's min-input-files floor of 5 (RP-1 / F-1). The sequence
+# writes this many MERGEs so rewrite_position_delete_files has something to fold.
+# pins: rp-1-fork-repin/C-008
+MOR_MIN_POSITION_DELETE_FILES = 5
 # Far-future older_than so expire is driven by retain_last, not file age (same pattern as
 # test_maintenance_call.py).
 EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
@@ -395,7 +398,7 @@ def run_mor_merge_compact_expire(
     table_name: str,
     id_col: str = "id",
 ) -> MorMaintenanceOutcome:
-    """CTAS merge-on-read → three MERGEs → identical MERGE → compact deletes → expire.
+    """CTAS merge-on-read → five MERGEs → identical MERGE → compact deletes → expire.
 
     Shared by the always-run memory analog and the Glue live leg. Does not drop the table.
     """

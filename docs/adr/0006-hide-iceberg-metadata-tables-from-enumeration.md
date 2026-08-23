@@ -19,8 +19,9 @@
 not report what the catalog holds. For **every** base table it lists, it also *synthesizes* one name
 per `MetadataTableType` — `snapshots`, `manifests`, `files`, `data_files`, `delete_files`, `entries`,
 `all_files`, `all_data_files`, `all_delete_files`, `all_entries`, `history`, `refs`,
-`metadata_log_entries`, `partitions`, `all_manifests`: fifteen today. A namespace of N tables
-therefore enumerated as 16 N names in `SHOW TABLES` and every `information_schema` view.
+`metadata_log_entries`, `partitions`, `all_manifests`, and (from pin `5e7b2e4`) `position_deletes`:
+sixteen types. A namespace of N tables therefore enumerates as 17 N names in `SHOW TABLES` and
+every `information_schema` view without the filter.
 
 Resolution is a **separate** path in the same provider: `table()` and `table_exist()` split a name on
 `$` and build the metadata table on demand, entirely independently of what `table_names()` returned.
@@ -80,12 +81,12 @@ posture rejects.
 
 1. **Metadata tables do not enumerate.** `MetadataProjectionSchemaProvider::table_names`
    (`crates/repark-iceberg/src/catalog/metadata_projection.rs`) filters out exactly the synthesized
-   names whose base table contains no `$`. That decorator already wraps **every** schema provider
-   the engine registers — full snapshot, single-namespace refresh, and `register_schema` — so there
-   is no unwrapped path. (A base table with a `$` in its own name — `a$b` — still enumerates its
-   fifteen synthesized names, because the predicate splits on the first `$` exactly as the fork's
-   own resolution does; all sixteen of those names are unresolvable through the fork either way.
-   Fork limitation, recorded under "Consequences" and pinned in the decorator's unit tests.)
+   names whose suffix is a fork `MetadataTableType` and whose base the wrapped provider knows.
+   That decorator already wraps **every** schema provider the engine registers — full snapshot,
+   single-namespace refresh, and `register_schema` — so there is no unwrapped path. The split is
+   last-`$` plus the fork vocabulary (RP-1 / F-8a): a base named `a$b` lists as itself;
+   `a$b$snapshots` is hidden and still resolvable. Inherent Spark-convention residue: a base
+   literally named `foo$files`.
 2. **Hidden, never removed.** `table()` and `table_exist()` are unchanged. `t$snapshots` stays
    addressable by name through both doors and the facade, and the Spark door's `t.snapshots`
    spelling — which rewrites onto exactly that name — keeps working. This is the Trino shape.

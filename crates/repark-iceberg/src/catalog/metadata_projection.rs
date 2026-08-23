@@ -23,9 +23,9 @@
 //! metadata tables as queryable-but-unlisted), and DataFusion's `information_schema` builders
 //! call `table()` / `table_type()` **per enumerated name**. Resolving one synthesized name costs
 //! TWO `load_table` round-trips in the fork (`IcebergTableProvider::try_new`, then
-//! `metadata_table()`), so leaving them in costs **thirty** extra round-trips per base table on
-//! every introspection query — measured, not argued: a one-base-table namespace ran 31
-//! `load_table` calls before the filter and 1 after.
+//! `metadata_table()`), so leaving them in costs **32** extra round-trips per base table
+//! (sixteen types × two loads). Measured on the fifteen-type pin: 31 calls before the
+//! filter and 1 after; the identity is `1 + 2×N`.
 //!
 //! [`MetadataProjectionSchemaProvider::table_names`] therefore drops exactly the synthesized
 //! names (last-`$` + [`MetadataTableType`] vocabulary, matching the fork at pin `5e7b2e4`).
@@ -437,13 +437,13 @@ mod tests {
         assert_eq!(
             listed,
             vec!["a$b".to_string()],
-            "ADR-0006: a `$`-in-the-base table lists as itself, not its fifteen twins: {listed:?}"
+            "ADR-0006: a `$`-in-the-base table lists as itself, not its sixteen twins: {listed:?}"
         );
     }
 
     /// Vocabulary liveness: the filter must cover **every** type the fork synthesizes, including
     /// one added by a future fork rev. Both sides read `MetadataTableType`, so this asserts the
-    /// shared-SSOT property rather than a hard-coded list of fifteen.
+    /// shared-SSOT property rather than a hard-coded list of sixteen.
     ///
     /// Risk pinned: a hand-copied name list here would silently stop covering a new fork
     /// metadata table, which would then reappear in `SHOW TABLES` with nothing red.

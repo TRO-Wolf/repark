@@ -37,7 +37,8 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `rewrite_position_delete_files` is wired and pinned against a live Spark 4.0.1 oracle —
   8 delete files compact to 1 with the row set unchanged, nothing-to-do returns four zeros,
   and `rewrite_data_files` grew Spark's fifth column. **RP-1** flipped `call_mor1_…` to
-  equality at floor 5 (row retired). `call_mor2_…` still holds the partition-granularity
+  equality at floor 5 (row retired); `call_rpdf_compacts_at_sparks_min_input_files_floor` pins
+  the exact floor. `call_mor2_…` still holds the partition-granularity
   writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
   vector-present path is the Spark-written fixture under `fixtures/v3-spark-mor/`, adopted by

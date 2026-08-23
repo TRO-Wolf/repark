@@ -1980,7 +1980,8 @@ NOT in that file is a defect, not a decision.
   committed literal. **MW-4:** `MOR_ICEBERG_TABLE_PROPERTIES`, `mor_ctas_sql`,
   `run_mor_merge_compact_expire` / `assert_mor_maintenance_outcome` /
   `require_snapshot_readable` / `require_snapshot_expired` (shared by the memory analog
-  and the Glue live leg). **MW-5:** `require_snapshot_readable` takes `expected_rows`
+  and the Glue live leg). **RP-1:** `MOR_MIN_POSITION_DELETE_FILES = 5` (F-1 floor);
+  five MERGEs plus the idempotent replay. **MW-5:** `require_snapshot_readable` takes `expected_rows`
   (default `MOR_SEED_ROW_COUNT`; the 1,000-row demo passes 1000).
 - `test_acceptance_helpers.py` — WG4 AWS-free unit tests for `_acceptance` that run **everywhere**
   (no gate): the builder outputs (s3a bronze path, the measured glue config block, CTAS/MERGE SQL

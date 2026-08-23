@@ -54,7 +54,7 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   catalog name is not registered. Every schema snapshot/refresh wraps with
   `MetadataProjectionSchemaProvider`. Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
-  stated omissions (see crate-root map "Known limitations").
+  stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
 - `namespace_scoped_tests.rs` — G17 wrapper pins (file-backed): `publish_replace_table`
   reaches a spy inner; `name()` returns the inner value; stated-omission
   `update_namespace_properties` composes via forwarded `get_namespace`/`update_namespace`;

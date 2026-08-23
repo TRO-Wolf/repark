@@ -591,7 +591,7 @@ impl Catalog for NamespaceScopedCatalog {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Stated omissions (3 of 16 defaulted methods at fork pin b009ac1).
+    // Stated omissions (3 of 16 defaulted methods at fork pin 5e7b2e4).
     //
     // These trait defaults compose only from methods already forwarded above — they do not
     // call an overridable default that an inner catalog might replace with real work, so leaving
