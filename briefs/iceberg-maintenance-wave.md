@@ -2,7 +2,7 @@
 
 **Chartered 2026-08-21**, green-lit by the owner for immediate start. Design:
 [../docs/design/iceberg-maintenance-wave.md](../docs/design/iceberg-maintenance-wave.md).
-Charter and approval gate: [../task/mw-0-charter-ledger.md](../task/mw-0-charter-ledger.md).
+Charter and approval gate: [../task/mw-0-charter-ledger.md](../task/ledgers/staging/mw-0-charter-ledger.md).
 
 ## The one invariant
 

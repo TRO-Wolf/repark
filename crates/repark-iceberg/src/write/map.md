@@ -44,7 +44,7 @@ repark-core's error map.
   property pins (M19 / A10: no trim, `to_ascii_lowercase`, default serializable,
   garbage ⇒ Plan `Invalid isolation level: {name}`) live in those two test
   files. Ledger:
-  [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/r1-g3e8-pr4-ledger.md).
+  [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
   extra / duplicate column = loud error; **WI-1** ANSI store-assignment gate then strict casts,
   overflow never NULLs) → identity-partition fanout write → ONE stamped `fast_append` commit
@@ -66,7 +66,7 @@ repark-core's error map.
   reaches this projection already conformed, as a bare column, and is invisible to the rule.
   Named residual: `Cast(Literal, …)` inside a `Values` node, where the synthesized and explicit
   forms are byte-identical. Ledger:
-  [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/wi2-g6-cast-integrity-ledger.md).
+  [`../../../../task/wi2-g6-cast-integrity-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-16-wi2-g6-cast-integrity-ledger.md).
 - `store_assign.rs` (crate-private) — **WI-1 (2026-08-15):** the ONE home for Spark's ANSI
   store-assignment matrix (`Cast.canANSIStoreAssign` → Arrow):
   `ansi_store_assignable` / `normalize_for_assignment` /
@@ -79,7 +79,7 @@ repark-core's error map.
   write-path entry point excuses NESTED pairs (the v1 matrix judges them by identity, which
   would be a NEW refusal on paths that conform `List<Utf8View>` → `List<Utf8>` correctly today).
   **Not** a CAST-legality matrix — see `planning/hardening/G63-DATE-INT-DESIGN.md` §3.3.
-  Ledger: [`../../../../task/wi1-insert-store-gate-ledger.md`](../../../../task/wi1-insert-store-gate-ledger.md).
+  Ledger: [`../../../../task/wi1-insert-store-gate-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-wi1-insert-store-gate-ledger.md).
 - `alter.rs` — `ALTER TABLE` primitives on iceberg-rust public API: SET/UNSET TBLPROPERTIES
   (`alter_table_properties(sets, unsets)` commits both as ONE action — no half-applied state),
   `rename_table`, schema evolution (`apply_schema_changes` / `SchemaChange` → fork
@@ -101,7 +101,7 @@ repark-core's error map.
   skip-conjunct helpers (`identical_int_key_width`, `unique_schema_field`,
   `residual_bounds_predicate`) — identical Int32/Int64 only, probe failures skip, source
   column resolved case-insensitively then quoted. Ledger:
-  [`../../../../task/mg1-scanprune-hardening-ledger.md`](../../../../task/mg1-scanprune-hardening-ledger.md).
+  [`../../../../task/mg1-scanprune-hardening-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-mg1-scanprune-hardening-ledger.md).
 - `file_scoped_rewrite.rs` — filter `FileScanTask`s by affected-path allowlist
   (`repark.merge.file-scoped-rewrite`); refuses a non-empty allowlist matching zero or partial
   path set (survivor-loss guard). Test helper `dummy_task` constructs `#183` Arc innards
@@ -117,7 +117,7 @@ repark-core's error map.
   never the table's current default spec). Unpartitioned groups keep `partition_key = None`;
   an evolved unpartitioned spec whose id is not 0 also chains `.with_partition_spec(spec)`
   so the fork does not fall back to stamping spec 0 (**M16**,
-  [`../../../../task/m16-posdelete-specid-ledger.md`](../../../../task/m16-posdelete-specid-ledger.md)).
+  [`../../../../task/m16-posdelete-specid-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-m16-posdelete-specid-ledger.md)).
   `#182` `PartitionKey::new` is fallible (`validate_partition_data`); this module maps
   `iceberg::Error` through `iceberg_err`. Also hosts the BUG-001 P0 valve
   (`MorDmlKind` + `refuse_mor_unpartitioned_multi_spec_dml`, hoisted from the v1 SQL crate in

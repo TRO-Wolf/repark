@@ -24,7 +24,7 @@ operator.
 
 - Up: [../map.md](../map.md)
 - Facade contract: `python/repark/tests/test_dynamic_flatten.py`
-- Ledger: [../../../../task/df1-rust-flatten-ledger.md](../../../../task/df1-rust-flatten-ledger.md)
+- Ledger: [../../../../task/df1-rust-flatten-ledger.md](../../../../task/ledgers/archive/2026-08/2026-08-20-df1-rust-flatten-ledger.md)
 
 ## Debug
 

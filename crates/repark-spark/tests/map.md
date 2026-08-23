@@ -96,7 +96,7 @@ rows that needed the door installed, per `task/port/deferred-tests.md`).
   `ta_*(…) OVER (PARTITION BY … ORDER BY …)` each plan one `WindowAggExec` (EXPLAIN +
   `create_physical_plan`); an intervening filter between two live windows stacks two
   (`sql_intervening_filter_between_windows_stacks_window_agg_exec`). Ledger:
-  [../../../task/ta1-sql-fusion-ledger.md](../../../task/ta1-sql-fusion-ledger.md).
+  [../../../task/ta1-sql-fusion-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-ta1-sql-fusion-ledger.md).
 
 ## I want to...
 

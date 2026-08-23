@@ -68,8 +68,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `origin/main` / `main`). Reuses `sync_map_md.py`'s link parser. Exit 0 / 1 findings or
   refused / 2 usage. Reviewed adversarially before its first real run (2026-08-23): the
   blocker it caught — a map row wrapped onto a line starting with `+ ` read as a nested bullet
-  and split — is pinned in the tests. Wired as `make check-ledgers` and `make ledger-archive`; armed in `make ci` by the DL-1
-  backfill commit (the tree is red until the ledgers are in their bins). Proofs:
+  and split — is pinned in the tests. Wired as `make check-ledgers` (in the `make ci` chain since
+  the DL-1 backfill, the commit that made the tree pass it) and `make ledger-archive`. Proofs:
   `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`.
 - `check_workflows_parse.py` — every GitHub Actions workflow must be parseable YAML. zizmor
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would

@@ -1,7 +1,7 @@
 # Design — the Iceberg write-path maintenance wave (MW)
 
 **Chartered:** 2026-08-21 · **Base:** `1a36b72` (`main`, post-#194) ·
-**Charter ledger:** [../../task/mw-0-charter-ledger.md](../../task/mw-0-charter-ledger.md) ·
+**Charter ledger:** [../../task/mw-0-charter-ledger.md](../../task/ledgers/staging/mw-0-charter-ledger.md) ·
 **Slate:** [../../briefs/iceberg-maintenance-wave.md](../../briefs/iceberg-maintenance-wave.md)
 
 ## 1. The problem, stated as narrowly as it actually is

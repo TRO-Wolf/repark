@@ -27,7 +27,7 @@ baseline; it does not gate wall time).
 | Compare BBANDS sibling tax vs one kernel | `bbands_three_sibling_n1e6` / `bbands_cold_n1e6` / `bbands_cache_hit_shape_n1e6` |
 | Measure a construction change on one kernel | `cargo bench -p repark-ta --bench ta_kernels -- --save-baseline pre_<kernel> <kernel>_n1e6` then re-run with `--baseline pre_<kernel>` |
 | Bench the Wilder / statistic sweep subjects | `trange_n1e6` / `atr_n1e6` / `adx_n1e6` / `macd_n1e6` / `linearreg_n1e6` / `stddev_n1e6` |
-| See why the UDF TLS cache is not timed here | [../../../task/p1-ta-kernel-benches-ledger.md](../../../task/p1-ta-kernel-benches-ledger.md) FINDING F-P1-1 |
+| See why the UDF TLS cache is not timed here | [../../../task/p1-ta-kernel-benches-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-p1-ta-kernel-benches-ledger.md) FINDING F-P1-1 |
 
 ## Pointers
 
@@ -35,7 +35,7 @@ baseline; it does not gate wall time).
 - Criterion pin: crate-level `Cargo.toml` dev-dep (never `[workspace.dependencies]`);
   feature set matches [../../repark-functions/benches/map.md](../../repark-functions/benches/map.md)
 - p1c convention (test, not this bench): [../tests/p1c_microbench.rs](../tests/p1c_microbench.rs)
-- Ledger: [../../../task/p1-ta-kernel-benches-ledger.md](../../../task/p1-ta-kernel-benches-ledger.md)
+- Ledger: [../../../task/p1-ta-kernel-benches-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-15-p1-ta-kernel-benches-ledger.md)
 - Numbers stay planning-side (`planning/hardening/BENCH-BASELINE-2026-08.md`); not in-repo
 
 ## Debug

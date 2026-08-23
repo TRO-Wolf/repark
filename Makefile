@@ -314,7 +314,8 @@ check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link
 	@# an archive name whose date prefix disagrees with its month directory, a dead `-ledger.md`
 	@# link in ANY tracked markdown (sync_map_md covers maps only), and a completed/ or archive/
 	@# ledger edited beyond a link repair or a prepended errata note. Policy: AGENTS.md
-	@# "Markdown document lifecycle". The ci.yml half is an owner-scoped .github/ change.
+	@# "Markdown document lifecycle". In the `make ci` chain; the ci.yml half is an owner-scoped
+	@# .github/ change.
 	python3 scripts/ledger_lifecycle.py check
 
 .PHONY: ledger-archive

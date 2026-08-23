@@ -269,7 +269,7 @@ existing-project flow); the first dispatch of each tier-2 workflow.
       `return` path); the Spark door's fix is a **declared divergence-with-issue** (port fidelity
       says never fix silently): apply the same release idiom + a divergence note, ideally
       alongside the matching v1 bugfix. Found by the PR-6 verify panel (p2g ledger).
-      **Closed by H-1b (2026-08-11), see [task/h1b-ledger.md](../../../task/h1b-ledger.md)** —
+      **Closed by H-1b (2026-08-11), see [task/h1b-ledger.md](../hardening-h1/h1b-ledger.md)** —
       and the outcome was "no divergence row at all": a fixed defect is not a divergence.
 - [ ] **`$`-metadata-table filtering in introspection** — carried forward as an open fork/core
       rider from PR-6's Q8 delivery (see p2g ledger).

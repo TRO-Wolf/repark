@@ -106,7 +106,7 @@ not a target.
 
 ### 2.3 Partition-major parallelism — measured, and upstream
 
-P-2 ([p2-ta-pipeline-benches-ledger.md](p2-ta-pipeline-benches-ledger.md)) measured that the
+P-2 ([p2-ta-pipeline-benches-ledger.md](ledgers/archive/2026-08/2026-08-15-p2-ta-pipeline-benches-ledger.md)) measured that the
 *partitioned* shape is already fine: `target_partitions=64` + `partitionBy` beats polars `.over`
 (26 vs 52 ns/row). The unmeasured shape is the **unpartitioned** `Window.orderBy(ts)` — common in
 migrated pipelines (Spark warns about it too) and part of the single-symbol host tax (ema 72.5 vs

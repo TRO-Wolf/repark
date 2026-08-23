@@ -1,7 +1,7 @@
 # Campaign retrospective — the low-risk sweep (LRS)
 
 **Date:** 2026-08-20 · **Branch:** `fix/low-risk-sweep` off `feat/spark-function-parity` @
-`8a28057` · **Charter:** [lrs-0-charter-ledger.md](lrs-0-charter-ledger.md)
+`8a28057` · **Charter:** [lrs-0-charter-ledger.md](ledgers/archive/2026-08/2026-08-21-lrs-0-charter-ledger.md)
 
 **Rebased 2026-08-21:** `feat/spark-function-parity` squash-merged as [#190](https://github.com/TRO-Wolf/repark/pull/190) / `65bacdf`, whose tree is byte-identical to `8a28057`, so this branch was replayed onto `main` with zero conflicts and a byte-identical result tree. The base commit named above is the one the work was actually done on; it is unreachable from `main` post-squash, which is this repo's normal squash-merge outcome.
 

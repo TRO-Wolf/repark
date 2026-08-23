@@ -198,4 +198,4 @@ supplied warehouse (`{warehouse}/repark_ctas|repark_ansi_ctas/…`). Two session
 different warehouses no longer share a directory. Same warehouse + same names still
 share; `remove_orphan_files` still refuses that fallback tree (table location, CALL
 `location`, parent prefix, `file://` aliases). Ledger:
-[../task/a13-shared-ctas-fallback-ledger.md](../task/a13-shared-ctas-fallback-ledger.md).
+[../task/a13-shared-ctas-fallback-ledger.md](../task/ledgers/archive/2026-08/2026-08-23-a13-shared-ctas-fallback-ledger.md).
