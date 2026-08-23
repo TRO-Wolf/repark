@@ -81,17 +81,19 @@ file:** Glue/HMS `table_exists` `DataInvalid` on a two-level namespace no longer
 aborts the Spark dotted metadata-table rewrite. MW-5 stays queued behind a green
 `aws-acceptance` dispatch.
 
-**DL-1 lands with this change and leaves this file** (chartered 2026-08-23 outside the slate,
-run before MW-5 because it rewrites every ledger link and conflicts with anything in flight):
-the ledger bins under `task/ledgers/`, `scripts/ledger_lifecycle.py` + `make check-ledgers` in
-`make ci`, the 122-ledger backfill, `task/roadmap/{mid-term,epic-term}/`, the census eviction.
-The queue is unchanged: MW-5.
+**DL-1 merged as [#221](https://github.com/TRO-Wolf/repark/pull/221) and left this file**
+(chartered 2026-08-23 outside the slate, run before MW-5 because it rewrites every ledger
+link and conflicts with anything in flight): the ledger bins under `task/ledgers/`,
+`scripts/ledger_lifecycle.py` + `make check-ledgers` in `make ci`, the 122-ledger backfill,
+`task/roadmap/{mid-term,epic-term}/`, the census eviction. The queue is unchanged: MW-5.
 
-**DL-2 lands with this change and leaves this file** (stacked on DL-1; chartered 2026-08-23 from
-the owner's SEPMO architecture note): the ledger grammar gate `make check-ledger-grammar` in
-`make ci` — clause rows, `pins:` citations, the Critic's attestation form — with the measured floor
-seeded and XML declined. Every unit from here on pins its `PROVEN` clauses from its tests and files
-its attestation before the departure `move`. The queue is unchanged: MW-5.
+**DL-2 merged as [#222](https://github.com/TRO-Wolf/repark/pull/222) and left this file**
+(stacked on DL-1; chartered 2026-08-23 from the owner's SEPMO architecture note): the ledger
+grammar gate `make check-ledger-grammar` in `make ci` — clause rows, `pins:` citations, the
+Critic's attestation form — with the measured floor seeded and XML declined. Every unit from
+here on pins its `PROVEN` clauses from its tests and files its attestation before the
+departure `move`. [#223](https://github.com/TRO-Wolf/repark/pull/223) dual-wired those
+guards into `ci.yml` (owner-granted; not a slate unit). The queue is unchanged: MW-5.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that

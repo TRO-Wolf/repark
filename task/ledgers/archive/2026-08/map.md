@@ -623,6 +623,10 @@ Ledgers archived in 2026-08; immutable — corrections are dated errata at the t
   (2026-08-23):** the charter for the ledger lifecycle itself — three bins, a deterministic
   archive script and gate, two roadmap bins, the census eviction, the one-PR backfill. Four
   owner rulings in §2.
+- [2026-08-23-dl-2-ledger-grammar-charter-ledger.md](2026-08-23-dl-2-ledger-grammar-charter-ledger.md) — **DL-2
+  (2026-08-23):** the ledger grammar, checked by `scripts/check_ledger_grammar.py` — clause rows,
+  `pins:` citations binding tests to clauses, the Critic's attestation form; XML measured and
+  declined. Stacked on DL-1 (PR #221).
 - [2026-08-23-mw-4-mor-acceptance-ledger.md](2026-08-23-mw-4-mor-acceptance-ledger.md) —
   **MW-4 (2026-08-23):** Glue live merge-on-read compact+expire in the aws-acceptance
   module. OD-3 scoped `s3:DeleteObject` on the warehouse scratch prefix. Unique

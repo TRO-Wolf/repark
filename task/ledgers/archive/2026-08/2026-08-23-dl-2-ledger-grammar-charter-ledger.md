@@ -1,9 +1,9 @@
 # Charter ledger — DL-2 · the ledger grammar, checked by a script
 
 **Date:** 2026-08-23 · **Branch:** `feat/dl-2-ledger-grammar` (stacked on `feat/dl-1-ledger-lifecycle`,
-PR #221) · **Base:** `3f1aa22` · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) "Markdown document
-lifecycle" · **Governs:** [../../../skills/sepmo/SKILL.md](../../../skills/sepmo/SKILL.md) "The gate
-is a ledger, not a score" and [../../../skills/sepmo/references/05-critic.md](../../../skills/sepmo/references/05-critic.md)
+PR #221) · **Base:** `3f1aa22` · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) "Markdown document
+lifecycle" · **Governs:** [../../../skills/sepmo/SKILL.md](../../../../skills/sepmo/SKILL.md) "The gate
+is a ledger, not a score" and [../../../skills/sepmo/references/05-critic.md](../../../../skills/sepmo/references/05-critic.md)
 "Coverage attestation format"
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit; the first pickup after
@@ -84,14 +84,14 @@ A `FINDING:` record, where present, carries `id`, `severity` in `S0..S3`, `categ
 `AT-1..AT-10`, at least one `clause`, and a `disposition` from ref 05's enumeration.
 
 Exit 0 clean / 1 findings / 2 usage. Armed in `make ci`; the ci.yml half is an owner-scoped
-`.github/` change. Provocation proofs per [../../../docs/testing.md](../../../docs/testing.md) on a
+`.github/` change. Provocation proofs per [../../../docs/testing.md](../../../../docs/testing.md) on a
 scratch tree, one per rule and direction.
 
 ## 4. What the skill stops describing
 
 The Scope Auditor reference and the Critic reference keep the *meaning* of the verdicts, the
 taxonomy and the attestation; the *shape* is now the script's, and both references point at it. The
-pin-citation convention is homed in [../../../docs/testing.md](../../../docs/testing.md) (it is a
+pin-citation convention is homed in [../../../docs/testing.md](../../../../docs/testing.md) (it is a
 testing-discipline fact), and AGENTS.md's ledger row gains the pointer to the gate.
 
 ## 5. Commits, in order

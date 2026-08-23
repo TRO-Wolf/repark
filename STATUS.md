@@ -171,27 +171,31 @@ history-rewrite; provenance and the options weighed:
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
-- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 delivered with this
-  change**). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
-  `completed/` (the unit's last commit) → `archive/yyyy-mm/` (the script's move at pickup,
-  immutable) — and `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting
-  every link as it goes; `make check-ledgers` (in `make ci`) holds the bins, the archive names,
-  every ledger link in the repository and the frozen rule. Backfilled the same day: 122 ledgers
-  to `archive/2026-08/`, four open charters (MW-0, SEM-0, FNP-0, V3-0) in `staging/`. The roadmap
+- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 merged as
+  [#221](https://github.com/TRO-Wolf/repark/pull/221)**). Unit ledgers live in
+  [task/ledgers/](task/ledgers/map.md) by state — `staging/` → `completed/` (the unit's last
+  commit) → `archive/yyyy-mm/` (the script's move at pickup, immutable) — and
+  `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting every link as it
+  goes; `make check-ledgers` (in `make ci`) holds the bins, the archive names, every ledger
+  link in the repository and the frozen rule. Backfilled the same day: 122 ledgers to
+  `archive/2026-08/`, four open charters (MW-0, SEM-0, FNP-0, V3-0) in `staging/`. The roadmap
   has two bins by horizon, [task/roadmap/](task/roadmap/map.md) `mid-term/` and `epic-term/`
-  (short-term stays the slate). `task/census/` is evicted from the tree (reachable at `b13b22c`,
-  [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
+  (short-term stays the slate). `task/census/` is evicted from the tree (reachable at
+  `b13b22c`, [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
   [task/ledgers/archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md).
-  **DL-2 delivered with this change (stacked on DL-1):** the ledger *grammar* —
-  `scripts/check_ledger_grammar.py` / `make check-ledger-grammar` (in `make ci`) holds the shape
-  of every live ledger: clause rows (`C-NNN`, one verdict, evidence), the `pins: <unit>/C-NNN`
-  citation that binds a test to the clause it discharges
+  **DL-2 merged as [#222](https://github.com/TRO-Wolf/repark/pull/222)** (stacked on DL-1): the
+  ledger *grammar* — `scripts/check_ledger_grammar.py` / `make check-ledger-grammar` (in
+  `make ci`) holds the shape of every live ledger: clause rows (`C-NNN`, one verdict,
+  evidence), the `pins: <unit>/C-NNN` citation that binds a test to the clause it discharges
   ([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and the Critic's
   `COVERAGE_ATTESTATION` in ref 05's shape, required once no clause is `OPEN`. Measured floor
   seeded (31 unpinned `PROVEN` clauses across three live charters; ratchets down only). XML as
   the ledger carrier was measured and declined. Bound in
   [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Record:
-  [task/ledgers/completed/dl-2-ledger-grammar-charter-ledger.md](task/ledgers/completed/dl-2-ledger-grammar-charter-ledger.md).
+  [task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md).
+  **[#223](https://github.com/TRO-Wolf/repark/pull/223)** (owner-granted, not a slate unit)
+  dual-wired the map-link, ledger-lifecycle, and ledger-grammar guards into `ci.yml`'s
+  `guards` job (`fetch-depth: 0` so the frozen-bin diff has `origin/main`).
 
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
