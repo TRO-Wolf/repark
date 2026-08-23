@@ -28,6 +28,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   workspace lints (`unsafe_code = "forbid"`) and the clippy `disallowed-methods` panic/spawn bans
   are in force. The iceberg* `[patch.crates-io]` family is a single shared `rev` (five lines);
   each dedicated bump is one row in the [docs/fork-sync.md](docs/fork-sync.md) pin-history table.
+  **RP-1 (2026-08-23):** `5e7b2e4` (F-0 / F-1 / F-2 / F-8a); DataFusion family frozen.
   Optional `mimalloc = "0.1"` (conductor-19 AL-1a; default-off `allocator-mimalloc` on
   `repark-python` only — not a family pin).
 - `crates/` — the Cargo workspace members (the engine). See [crates/map.md](crates/map.md).

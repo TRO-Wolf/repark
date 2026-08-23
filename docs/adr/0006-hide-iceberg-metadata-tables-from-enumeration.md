@@ -1,6 +1,9 @@
 # ADR 0006 — Hide Iceberg `$`-metadata tables from enumeration, at the catalog layer
 
-- **Status:** Accepted (2026-08-10)
+- **Status:** Accepted (2026-08-10); **corrected 2026-08-23 (RP-1)** — type count is sixteen at
+  fork pin `5e7b2e4` (`position_deletes` added); the filter splits on the last `$` matching the
+  fork's resolver, so a base named `a$b` no longer enumerates its twins. Inherent residue is a
+  base literally named `foo$files`.
 - **Deciders:** project owner + Claude
 - **Related:** [0001-own-iceberg-fork.md](0001-own-iceberg-fork.md) (the fork whose schema provider
   synthesizes the names), [0002-two-sql-doors.md](0002-two-sql-doors.md) (why this cannot be a door
@@ -147,6 +150,10 @@ disclosure. Rejected on four grounds:
   it belongs in the fork's schema provider, not in this decorator; the decorator's unit test
   `the_filter_keeps_names_the_fork_did_not_synthesize` pins the 16-name listing so the residue
   cannot drift unnoticed, and `task/h1c-ledger.md` F-2 carries the fork-side follow-up.
+  **Correction 2026-08-23 (RP-1 / F-8a):** the fork now splits on the last `$` plus the metadata
+  vocabulary, so `a$b` is a real base and `a$b$snapshots` resolves. The decorator matches that
+  parse; `the_filter_keeps_names_the_fork_did_not_synthesize` now asserts the listing is `a$b`
+  alone. Inherent residue (Spark's `$` convention): a base literally named `foo$files`.
 - **Cost:** `information_schema.columns` no longer describes metadata tables, because it enumerates
   through the same method. That is the Trino/Spark shape and is what removes the round-trips; the
   columns are still reachable through `DESCRIBE ns."t$snapshots"`, which resolves by name.

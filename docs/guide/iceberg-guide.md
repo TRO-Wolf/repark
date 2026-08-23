@@ -455,9 +455,8 @@ engine wrote.
 Two differences from Spark are worth knowing before you port a maintenance job, and neither
 changes what a query returns:
 
-- repark compacts a group of 2 or more delete files; Spark waits for 5
-  ([MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
-  You get more compaction than Spark would do, not less.
+- repark and Spark both wait for 5 delete files in a group before compacting
+  (RP-1 / fork F-1 retired [MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
 - repark writes one delete file per partition where Spark's default writes one per data file
   ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)).
 

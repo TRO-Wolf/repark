@@ -422,6 +422,8 @@ async fn metadata_tables_spark_dot_form_and_guards() {
 ///
 /// Mutation: drop the `.filter(…)` in `MetadataProjectionSchemaProvider::table_names` → the two
 /// emptiness assertions red.
+///
+/// pins: rp-1-fork-repin/C-005
 #[tokio::test]
 async fn metadata_tables_are_hidden_from_enumeration_but_stay_queryable_through_the_spark_door() {
     let wh = TempDir::new().unwrap();

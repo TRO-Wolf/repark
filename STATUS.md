@@ -382,9 +382,10 @@ history-rewrite; provenance and the options weighed:
     out of this campaign** (OD-3 is the Glue warehouse prefix). The 2026-08-23 intake's
     "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
     MW-4b (#219) and is not sequenced.
-  - **Divergences that remain rows**, not closed here — `MOR-1`, `MOR-2`, `ORPHAN-1`,
+  - **Divergences that remain rows**, not closed here — `MOR-2`, `ORPHAN-1`,
     `ORPHAN-2`, `B-MOR-3` in
-    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). The two result-schema
+    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
+    RP-1 (fork F-1, floor 5). The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
     remaining rows (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert
     Spark's defaults on the one procedure with no undo, under owner decision **OD-2**.

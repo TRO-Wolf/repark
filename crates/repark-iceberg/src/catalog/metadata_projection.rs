@@ -17,8 +17,8 @@
 //!
 //! The fork's `IcebergSchemaProvider::table_names` (iceberg-datafusion `schema.rs`) does not
 //! return what the catalog holds: for **every** listed base table it also **synthesizes** one
-//! name per [`MetadataTableType`] — fifteen today — so a namespace of N tables enumerates as
-//! 16 N names. Both engines the two SQL doors point at hide those names from enumeration (Apache
+//! name per [`MetadataTableType`] (sixteen at pin `5e7b2e4`) so a namespace of N tables
+//! enumerates as 17 N names. Both engines the two SQL doors point at hide those names from enumeration (Apache
 //! Spark's Iceberg extension lists only what `Catalog::list_tables` returns; Trino documents
 //! metadata tables as queryable-but-unlisted), and DataFusion's `information_schema` builders
 //! call `table()` / `table_type()` **per enumerated name**. Resolving one synthesized name costs
@@ -27,10 +27,12 @@
 //! every introspection query — measured, not argued: a one-base-table namespace ran 31
 //! `load_table` calls before the filter and 1 after.
 //!
-//! [`MetadataProjectionSchemaProvider::table_names`] therefore drops exactly the synthesized names
-//! whose base contains no `$`; a base table with a `$` in its own name still enumerates its fifteen
-//! synthesized names (see [`is_synthesized_metadata_table_name`] — a fork limitation, and those
-//! names are unresolvable through the fork either way).
+//! [`MetadataProjectionSchemaProvider::table_names`] therefore drops exactly the synthesized
+//! names (last-`$` + [`MetadataTableType`] vocabulary, matching the fork at pin `5e7b2e4`).
+//! A base named `a$b` lists as itself; `a$b$snapshots` is hidden and still resolvable.
+//! Inherent residue: a base literally named `foo$files`.
+//!
+//! pins: rp-1-fork-repin/C-004, C-006
 //! `table()` / `table_exist()` are deliberately **unchanged**: `t$snapshots` stays
 //! addressable by name (and so does the Spark door's `t.snapshots` spelling, which rewrites onto
 //! it), which is the Trino shape — hidden from the listing, not removed from the engine. The
@@ -178,18 +180,19 @@ fn apply_projection_exec(
 /// the point of ADR-0006, so "nothing is hidden" is never the claim; the claim is that nothing
 /// stops being addressable and nothing ordinary stops being listed.)
 ///
-/// Known residue: the split takes the FIRST `$`, so a base table whose own name contains `$`
-/// (`a$b`) yields `a$b$snapshots`, which splits to base `a` / suffix `b$snapshots` — not a
-/// `MetadataTableType`, so all fifteen synthesized names stay listed. `rsplit_once` would not fix
-/// it, because the fork's own `table_exist("a$b")` splits the same way and returns false, so the
-/// base-existence guard could never confirm such a base; `a$b` and its synthesized names are
-/// unresolvable through the fork either way. Fork limitation, pinned below in
-/// `the_filter_keeps_names_the_fork_did_not_synthesize` and flagged F-2 in `task/h1c-ledger.md`.
+/// Split is last-`$` plus the fork's metadata-type vocabulary — the same parse the fork's
+/// `table()` / `table_exist()` use at pin `5e7b2e4` (F-8a). A base named `a$b` therefore
+/// hides `a$b$snapshots` from enumeration while remaining listed itself. Residual inherent
+/// in Spark's `$` convention: a base literally named `foo$files` is indistinguishable from
+/// the `files` twin of `foo`.
 /// ===========================================================================================
 fn is_synthesized_metadata_table_name(inner: &dyn SchemaProvider, name: &str) -> bool {
-    let Some((base, metadata_table_type)) = name.split_once('$') else {
+    let Some((base, metadata_table_type)) = name.rsplit_once('$') else {
         return false;
     };
+    if base.is_empty() {
+        return false;
+    }
     MetadataTableType::try_from(metadata_table_type).is_ok() && inner.table_exist(base)
 }
 
@@ -318,13 +321,15 @@ mod tests {
         }
 
         fn table_exist(&self, name: &str) -> bool {
-            match name.split_once('$') {
-                Some((base, kind)) => {
-                    MetadataTableType::try_from(kind).is_ok()
-                        && self.base_tables.iter().any(|table| table == base)
+            // Last-`$` + vocabulary, matching fork `IcebergSchemaProvider` at pin 5e7b2e4.
+            if let Some((base, kind)) = name.rsplit_once('$') {
+                if !base.is_empty() {
+                    if MetadataTableType::try_from(kind).is_ok() {
+                        return self.base_tables.iter().any(|table| table == base);
+                    }
                 }
-                None => self.base_tables.iter().any(|table| table == name),
             }
+            self.base_tables.iter().any(|table| table == name)
         }
     }
 
@@ -333,15 +338,15 @@ mod tests {
     ///
     /// Risk pinned: an introspection surface that buries real tables under synthesized noise and
     /// pays a `load_table` per synthesized name. Mutation: delete the `.filter(…)` in
-    /// `table_names` → the assertion sees 32 names.
+    /// `table_names` → the assertion sees 34 names (2 × (1 + 16 types) at pin `5e7b2e4`).
     #[test]
     fn table_names_hides_the_forks_synthesized_metadata_names() {
         let inner: Arc<dyn SchemaProvider> =
             Arc::new(ForkShapedSchemaProvider::new(&["orders", "customers"]));
         assert_eq!(
             inner.table_names().len(),
-            32,
-            "fixture must reproduce the fork's synthesis (2 bases × (1 + 15 metadata types))"
+            34,
+            "fixture must reproduce the fork's synthesis (2 bases × (1 + 16 metadata types))"
         );
 
         let wrapped = MetadataProjectionSchemaProvider::wrap(inner);
@@ -397,11 +402,10 @@ mod tests {
     /// silent disappearance from `SHOW TABLES`) and would hide `ghost$snapshots`, a name whose
     /// base does not exist — leaving a user with no listing and no error.
     ///
-    /// The last block pins the RESIDUE the narrowness costs, so it is recorded rather than latent:
-    /// a base table whose own name contains `$` still enumerates its fifteen synthesized names,
-    /// because the predicate (like the fork's own `table()` / `table_exist()`) splits on the FIRST
-    /// `$`. Every one of those sixteen names is unresolvable through the fork, so listing them is
-    /// the visible-and-broken side of the trade, not a silent disappearance — ledger flag F-2.
+    /// F-8a: last-`$` + vocabulary hides `a$b$snapshots` when `a$b` is a real base. The names
+    /// the fork did not synthesize stay listed. Inherent residue: a base named `foo$files`.
+    ///
+    /// pins: rp-1-fork-repin/C-006
     #[test]
     fn the_filter_keeps_names_the_fork_did_not_synthesize() {
         let inner: Arc<dyn SchemaProvider> = Arc::new(ForkShapedSchemaProvider::new(&["orders"]));
@@ -423,22 +427,17 @@ mod tests {
             "the synthesized shape is the one thing that IS filtered"
         );
 
-        // Residue: a `$`-in-the-base table. The fork synthesizes `a$b$<type>` for it, and the
-        // first-`$` split makes every one of those names un-filterable — so the listing keeps all
-        // sixteen. Pinned as the known cost of narrowness (F-2), not as desired behavior.
         let dollar_base: Arc<dyn SchemaProvider> =
             Arc::new(ForkShapedSchemaProvider::new(&["a$b"]));
         assert!(
-            !is_synthesized_metadata_table_name(dollar_base.as_ref(), "a$b$snapshots"),
-            "first-`$` split: `a$b$snapshots` reads as base `a` / suffix `b$snapshots`, not a \
-             metadata table — so the filter cannot drop it"
+            is_synthesized_metadata_table_name(dollar_base.as_ref(), "a$b$snapshots"),
+            "last-`$` + vocabulary: `a$b$snapshots` is the snapshots twin of base `a$b`"
         );
         let listed = MetadataProjectionSchemaProvider::wrap(dollar_base).table_names();
         assert_eq!(
-            listed.len(),
-            16,
-            "a `$`-base still enumerates its fifteen synthesized names plus itself (fork \
-             limitation; all sixteen are unresolvable through the fork): {listed:?}"
+            listed,
+            vec!["a$b".to_string()],
+            "ADR-0006: a `$`-in-the-base table lists as itself, not its fifteen twins: {listed:?}"
         );
     }
 

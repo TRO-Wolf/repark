@@ -31,14 +31,14 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `call_remove_orphan_files_refuses_a_location_arg_under_the_fallback_root` is the
   execute-path CALL `location` refuse in `call_orphan.rs`;
   `call_orphan_shared_ctas_root_rule` is the helper table). **MW-1:** the LOCAL-only fence is gone — both remote catalog policies
-  execute, an unknown catalog still refuses, and expire pins Spark's six-column result with
-  the content-file funnel split by manifest `content_type()`; the split pin strands its
+  execute, an unknown catalog still refuses, and expire pins Spark's six-column result from
+  the fork's typed `CleanupReport` views (RP-1 / F-2); the split pin strands its
   position deletes by ROLLBACK, because compaction keeps them until MW-2. **MW-2:**
   `rewrite_position_delete_files` is wired and pinned against a live Spark 4.0.1 oracle —
   8 delete files compact to 1 with the row set unchanged, nothing-to-do returns four zeros,
-  and `rewrite_data_files` grew Spark's fifth column. Two divergence pins ride along:
-  `call_mor1_…` holds the sub-`min-input-files` compaction and `call_mor2_…` holds the
-  partition-granularity writer, which is what makes the parity pin's comparison legitimate.
+  and `rewrite_data_files` grew Spark's fifth column. **RP-1** flipped `call_mor1_…` to
+  equality at floor 5 (row retired). `call_mor2_…` still holds the partition-granularity
+  writer, which is what makes the parity pin's comparison legitimate.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
   vector-present path is the Spark-written fixture under `fixtures/v3-spark-mor/`, adopted by
   `call_register` / V3-1 — the MW-2 rule-table pin's rustdoc says so too),

@@ -2,6 +2,8 @@
 //!
 //! Pins the both-sides trait-wrapping audit: every defaulted `Catalog` method is either an
 //! explicit forward or a stated omission; silent fall-throughs are gone.
+//!
+//! pins: rp-1-fork-repin/C-003
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

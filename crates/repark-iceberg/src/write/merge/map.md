@@ -46,7 +46,8 @@ lives as this module directory (move-only; pub surface frozen).
   `write.merge.isolation-level` (default serializable; snapshot drops
   `validate_no_conflicting_data` / `validate_no_conflicting_data_files`;
   M15 AlwaysTrue is more conservative than the residual). Pins in
-  `occ_tests.rs` (M13 parse + M19-A snapshot split).
+  `occ_tests.rs` (M13 parse + M19-A snapshot split + RP-1 F-0 Replace
+  files-exist pin on the snapshot arm).
 - `tests.rs` — primary unit battery
 - `occ_tests.rs` — OCC / commit conflict pins + M13 isolation parse +
   M19-A serializable-vs-snapshot split

@@ -516,16 +516,16 @@ fn bytes_as_i64(bytes: u64) -> Result<i64> {
 ///
 /// | Spark column | Source |
 /// |---|---|
-/// | `deleted_data_files_count` | funnel entries classified [`DataContentType::Data`] |
-/// | `deleted_position_delete_files_count` | classified [`DataContentType::PositionDeletes`] |
-/// | `deleted_equality_delete_files_count` | classified [`DataContentType::EqualityDeletes`] |
+/// | `deleted_data_files_count` | [`CleanupReport::deleted_data_files`] |
+/// | `deleted_position_delete_files_count` | [`CleanupReport::deleted_position_delete_files`] |
+/// | `deleted_equality_delete_files_count` | [`CleanupReport::deleted_equality_delete_files`] |
 /// | `deleted_manifest_files_count` | `deleted_manifests.len()` |
 /// | `deleted_manifest_lists_count` | `deleted_manifest_lists.len()` |
 /// | `deleted_statistics_files_count` | `deleted_statistics_files.len()` |
 ///
-/// The fork returns the first three as ONE funnel; [`classify_content_files`] rebuilds the split
-/// from the manifest entries' own `content_type()`. Counts are still never fabricated — an
-/// unclassifiable path lands in none of the three columns.
+/// RP-1 / fork F-2: the three content-file columns come from the report's typed views
+/// (derived from the union + `deleted_content_file_types`). A path the fork did not
+/// classify is in none of the three views. Counts are still never fabricated.
 async fn execute_expire_snapshots(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,
@@ -579,10 +579,6 @@ async fn execute_expire_snapshots(
         action = action.retain_last(retain);
     }
 
-    // Classify BEFORE the cleanup runs: afterwards the files and their manifests are gone, and
-    // the funnel the fork returns is paths only. This is the one ordering the split depends on.
-    let classified = classify_content_files(&table).await;
-
     let tx = Transaction::new(&table);
     let tx = action.apply(tx).map_err(iceberg_err)?;
     let cleanup = ExpireSnapshotsCleanup::new(table.file_io().clone());
@@ -590,80 +586,14 @@ async fn execute_expire_snapshots(
         .commit_and_clean(tx, catalog.as_ref())
         .await
         .map_err(iceberg_err)?;
-    let counts = ExpireCounts::tally(&report.deleted_content_files, &classified);
 
     let namespace = crate::namespace_schema_name(ident.namespace());
     reregister(ctx, Arc::clone(&catalog), catalog_name, &namespace).await?;
-    expire_result_dataframe(ctx, &report, &counts)
+    expire_result_dataframe(ctx, &report)
 }
 
-/// Classify every content file the table can currently reach, by Spark's three-way split.
-///
-/// MW-1. The fork's [`CleanupReport`] returns ONE funnel — `deleted_content_files` holds data,
-/// position-delete, equality-delete and DV puffin paths together — because
-/// `expire_cleanup` collects `entry.file_path()` into a path set and drops the classification.
-/// Spark reports the three separately, and on a merge-on-read table the difference is not
-/// cosmetic: measured against a live Spark 4.0.1 + Iceberg 1.10.0 oracle, three MERGEs plus a
-/// compaction expire as `deleted_data_files_count=4`, `deleted_position_delete_files_count=2`.
-/// Reporting the funnel under Spark's data-file name over-counts by exactly the delete files.
-///
-/// The classification is not lost, only discarded: every [`ManifestEntry`] carries
-/// `content_type()`. So this walks the table as it stands BEFORE expiry — every file expiry can
-/// delete is reachable from some snapshot at that point — and builds path → content type. The
-/// counts stay honest: a path the map cannot classify is counted nowhere and reported through
-/// [`ExpireCounts::unclassified`], never folded into a column to make the arithmetic look tidy.
-async fn classify_content_files(table: &iceberg::table::Table) -> HashMap<String, DataContentType> {
-    let metadata = table.metadata();
-    let file_io = table.file_io();
-    let mut classified = HashMap::new();
-    for snapshot in metadata.snapshots() {
-        let Ok(manifest_list) = snapshot.load_manifest_list(file_io, metadata).await else {
-            // Best-effort: an unreadable manifest list leaves its files unclassified, which is
-            // visible in the result rather than silently miscounted.
-            continue;
-        };
-        for manifest_file in manifest_list.entries() {
-            let Ok(manifest) = manifest_file.load_manifest(file_io).await else {
-                continue;
-            };
-            for entry in manifest.entries() {
-                classified.insert(entry.file_path().to_string(), entry.content_type());
-            }
-        }
-    }
-    classified
-}
-
-/// The three content-file counts Spark reports, plus what could not be classified.
-#[derive(Debug, Default)]
-struct ExpireCounts {
-    data: i64,
-    position_deletes: i64,
-    equality_deletes: i64,
-    /// Deleted paths absent from the pre-expiry classification. Never folded into a column.
-    unclassified: i64,
-}
-
-impl ExpireCounts {
-    fn tally(deleted: &[String], classified: &HashMap<String, DataContentType>) -> Self {
-        let mut counts = Self::default();
-        for path in deleted {
-            match classified.get(path) {
-                Some(DataContentType::Data) => counts.data += 1,
-                Some(DataContentType::PositionDeletes) => counts.position_deletes += 1,
-                Some(DataContentType::EqualityDeletes) => counts.equality_deletes += 1,
-                None => counts.unclassified += 1,
-            }
-        }
-        counts
-    }
-}
-
-fn expire_result_dataframe(
-    ctx: &SessionContext,
-    report: &CleanupReport,
-    counts: &ExpireCounts,
-) -> Result<DataFrame> {
+/// pins: rp-1-fork-repin/C-009
+fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Result<DataFrame> {
     // Spark declares every one of these NULLABLE (jar `OUTPUT_TYPE`, `iconst_1` per StructField),
     // unlike its two rewrite procedures, which it declares non-nullable. Match Spark per
     // procedure rather than applying one blanket rule across the surface.
@@ -678,9 +608,15 @@ fn expire_result_dataframe(
     let batch = RecordBatch::try_new(
         schema,
         vec![
-            Arc::new(Int64Array::from(vec![counts.data])),
-            Arc::new(Int64Array::from(vec![counts.position_deletes])),
-            Arc::new(Int64Array::from(vec![counts.equality_deletes])),
+            Arc::new(Int64Array::from(vec![count_as_i64(
+                report.deleted_data_files().len(),
+            )?])),
+            Arc::new(Int64Array::from(vec![count_as_i64(
+                report.deleted_position_delete_files().len(),
+            )?])),
+            Arc::new(Int64Array::from(vec![count_as_i64(
+                report.deleted_equality_delete_files().len(),
+            )?])),
             Arc::new(Int64Array::from(vec![count_as_i64(
                 report.deleted_manifests.len(),
             )?])),
@@ -880,9 +816,7 @@ pub(crate) const fn is_deletion_vector(content: DataContentType, format: DataFil
 /// Count the live Puffin deletion vectors in the table's CURRENT snapshot.
 ///
 /// Errors propagate. A guard that passes quietly when it could not read the manifests is the same
-/// silent-success failure it exists to prevent, so this walk does not swallow load errors the way
-/// [`classify_content_files`] does — that one is rebuilding counts and degrades to "unclassified",
-/// while this one is deciding whether it is safe to proceed at all.
+/// silent-success failure it exists to prevent, so this walk does not swallow load errors.
 pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -> Result<usize> {
     let metadata = table.metadata();
     let Some(snapshot) = metadata.current_snapshot() else {
@@ -928,7 +862,7 @@ pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -
 /// such a table, which reads exactly like "nothing to compact" while every delete file stays put.
 /// See [`count_live_deletion_vectors`].
 ///
-/// **`added_delete_files_count` diverges on a file-granularity table** (registry row `MOR-1`).
+/// **`added_delete_files_count` diverges on a file-granularity table** (registry row `MOR-2`).
 /// The fork writes ONE compacted delete file per `(spec, partition)` group; Spark honours
 /// `write.delete.granularity`, whose default is `file`, and writes one per data file. On a table
 /// this engine wrote the two agree, because this engine's own merge-on-read writer is

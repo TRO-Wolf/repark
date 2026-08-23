@@ -78,17 +78,19 @@ v1 crate-root re-export lists.
   deliberately, and **both are re-verified at every fork repin**
   ([../../AGENTS.md](../../AGENTS.md) "Version-pin contract"):
   - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) both-sides trait-wrapping audit
-    (G17) is CLOSED.** At fork pin `b009ac1` the `Catalog` trait has 14 required + **16
-    defaulted** methods. The wrapper explicitly forwards all 14 required methods (with
-    `list_namespaces` filtered to one namespace) and **13 of 16** defaulted methods — including
-    the HIGH `publish_replace_table` (whose trait default is `FeatureUnsupported` and would
-    swallow `MemoryCatalog`'s CAS replace). The remaining **3** defaulted methods
+    (G17) is CLOSED.** At fork pin `5e7b2e4` (RP-1) the `Catalog` trait has 14 required + **16
+    defaulted** methods — same counts as the previous pin; no new defaulted method landed.
+    The wrapper explicitly forwards all 14 required methods (with `list_namespaces` filtered
+    to one namespace) and **13 of 16** defaulted methods — including the HIGH
+    `publish_replace_table` (whose trait default is `FeatureUnsupported` and would swallow
+    `MemoryCatalog`'s CAS replace). The remaining **3** defaulted methods
     (`update_namespace_properties` / `set_namespace_properties` /
     `remove_namespace_properties`) are **stated omissions**: the trait defaults compose only
     from methods already forwarded. Pins live in
     `src/catalog/namespace_scoped_tests.rs`. **Repin duty:** re-enumerate the fork trait
     surface; a method that newly gains a real override (no longer a pure composition default)
     becomes an explicit forward.
+    pins: rp-1-fork-repin/C-001, C-002, C-003
   - **The metadata-projection shim (`src/catalog/metadata_projection.rs`) is still required.** The
     fork's metadata-table `scan` ignores `projection`; the shim goes only when a fork rev honors
     it, empty-projection case included. The gap is not yet filed in the fork's own
@@ -96,17 +98,16 @@ v1 crate-root re-export lists.
     lives ONLY in the fork).
   - **The metadata-table enumeration filter (same module) is coupled to the fork's synthesis.**
     The fork's `IcebergSchemaProvider::table_names` invents `<base>$<MetadataTableType::as_str()>`
-    for every listed table; `MetadataProjectionSchemaProvider::table_names` drops exactly that set
-    for every base table whose own name contains no `$` — a `$`-in-the-base table (`a$b`) still
-    enumerates its fifteen synthesized names, because the predicate splits on the first `$` exactly
-    as the fork's own resolution does, and all sixteen of those names are unresolvable through the
-    fork either way (fork limitation, ADR-0006 "Residue", ledger F-2)
+    for every listed table; `MetadataProjectionSchemaProvider::table_names` drops exactly that
+    set using last-`$` + the same vocabulary (F-8a: a base named `a$b` lists as itself;
+    `a$b$snapshots` is hidden and still resolvable). The ADR-0006 filter **stays** — the fork
+    still synthesizes in `table_names`. Inherent residue: a base literally named `foo$files`.
     ([ADR-0006](../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md)). **Removal
     criterion:** a fork rev that stops synthesizing those names in `table_names` makes the filter a
     no-op, and it goes. **Breakage criterion:** a fork rev that changes the synthesized *spelling*
     silently re-exposes them — re-run the two emptiness pins
-    (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests.rs`) at every
-    repin, not just the compile.
+    (`crates/repark-sql/tests/introspection.rs`, `crates/repark-spark/src/tests/metadata_tables.rs`)
+    at every repin, not just the compile.
 
 ## Pointers
 
