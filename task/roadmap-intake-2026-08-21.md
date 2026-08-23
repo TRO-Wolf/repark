@@ -109,6 +109,11 @@ snapshot reads; `remove_dangling_delete_files` as its own procedure.
 **Format v3 and deletion vectors left this list on 2026-08-21** — owner-scheduled after MW-2
 measured the exposure. See **A12**.
 
+**The post-#218 remainder (2026-08-23)** — the Glue dispatch, MW-4b (S3 Tables leg, owner-gated
+OD-3b), MW-5 re-measure, MW-6 `rewrite_manifests`, MW-7 scale measurement, MW-8 runbook, MW-9
+delete granularity, and the DML-A/B/C statement units — is sequenced in [roadmap-intake-2026-08-23.md](roadmap-intake-2026-08-23.md) Track B; not restated
+here.
+
 ### A3. Function-surface completion (the largest open program)
 
 **FNP campaign — openly incomplete.** #190 (41 names, `__all__` 333→360) + follow-ups
@@ -221,6 +226,9 @@ Landed: session-lifetime P0 (dbt-repark #6). Open, in order:
   artifact — confirm or re-run.
 - **Window frame R4 (120 vs 90)**: parked until a DataFusion-compatible seam appears; do not
   bump deps for it.
+- **Window-operator optimizations (the DuckDB list), 2026-08-23:** evaluated and sequenced as
+  candidate units W-0…W-3 in [roadmap-intake-2026-08-23.md](roadmap-intake-2026-08-23.md)
+  Track A; not restated here.
 
 ### A8. Fork track (owned iceberg-rust)
 
@@ -239,6 +247,9 @@ Landed: session-lifetime P0 (dbt-repark #6). Open, in order:
   accepted-finer position-delete-rewrite grouping (documented, by design).
 - Fork maintenance actions (orphan files, position-delete rewrite): shipped fork-side; the
   engine-side wiring is the MW campaign (A2).
+- **Fork-side queue handed off 2026-08-23:** every fork item the MOR-readiness and window
+  evaluations surfaced is in [iceberg-rust-handoff-2026-08-23.md](iceberg-rust-handoff-2026-08-23.md)
+  (the document the fork orchestrator works from); not restated here.
 
 ### A9. Validation & documentation workstreams (owner roadmap additions of 2026-08-16)
 
