@@ -18,8 +18,9 @@ JVM, no repark required). See [../map.md](../map.md).
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
-  untouched), re-expresses the ledger's own links, relocates its map row and
-  stages the lot; idempotent; a ledger not on `main` is left when unnamed (the pickup case)
+  untouched), re-expresses the ledger's own links, relocates its map row — whole
+  into the live bins, condensed to one line (first sentence, `+ `-continuations
+  joined) into an archive month map (DL-3) — and stages the lot; idempotent; a ledger not on `main` is left when unnamed (the pickup case)
   and refused when named; `move` to
   `completed`; `archive` is not a `move` target. The provocation proofs of
   `check`: a ledger outside the bins, an archive prefix disagreeing with its

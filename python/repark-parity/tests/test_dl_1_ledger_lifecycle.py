@@ -111,14 +111,13 @@ def test_archive_moves_rewrites_and_relocates_the_map_row(repo: Path) -> None:
     archived = (repo / _ARCHIVED).read_text()
     assert "(../../../../AGENTS.md)" in archived
     assert "(../../../../docs/note.md)" in archived
-    # The row left completed/map.md for the month map, description intact.
+    # The row left completed/map.md for the month map, condensed to one line (DL-3).
     assert "x1-demo-ledger" not in (repo / "task/ledgers/completed/map.md").read_text()
     month_map = (repo / "task/ledgers/archive/2026-08/map.md").read_text()
     assert (
-        "- [2026-08-20-x1-demo-ledger.md](2026-08-20-x1-demo-ledger.md) — **X1:** the demo"
-        in month_map
+        "- [2026-08-20-x1-demo-ledger.md](2026-08-20-x1-demo-ledger.md) — "
+        "**X1:** the demo unit, wrapped.\n" in month_map
     )
-    assert "  unit, wrapped." in month_map
     assert (
         "- [2026-08/](2026-08/map.md) — 1 ledger"
         in (repo / "task/ledgers/archive/map.md").read_text()
@@ -214,9 +213,12 @@ def test_a_moved_ledger_keeps_its_sibling_links_true(repo: Path) -> None:
     assert "(../../completed/map.md)" in (repo / _ARCHIVED).read_text()
 
 
-def test_a_row_travels_whole_with_its_plus_continuation_and_sub_list(repo: Path) -> None:
+def test_a_plus_continuation_is_joined_not_split(repo: Path) -> None:
     # Review finding (2026-08-23): `task/map.md` wraps three descriptions onto lines that
-    # begin with `+ `, which a list-item regex reads as a nested bullet.
+    # begin with `+ `, which a list-item regex reads as a nested bullet. Under DL-3 the
+    # archive destination condenses to the first sentence — the `+ ` line must be IN it,
+    # joined, never orphaned in the source map. Live bins carry rows whole
+    # (test_a_move_to_a_live_bin_still_carries_the_whole_row).
     _write(
         repo,
         "task/ledgers/completed/map.md",
@@ -227,7 +229,10 @@ def test_a_row_travels_whole_with_its_plus_continuation_and_sub_list(repo: Path)
     _commit(repo, "wrapped row")
     assert _run(repo, "archive").returncode == 0
     month_map = (repo / "task/ledgers/archive/2026-08/map.md").read_text()
-    assert "  + c/d and the rest.\n  - [sub](../../../../docs/note.md) — a child row\n" in month_map
+    assert (
+        "- [2026-08-20-x1-demo-ledger.md](2026-08-20-x1-demo-ledger.md) — "
+        "shipped a/b + c/d and the rest.\n" in month_map
+    )
     completed_map = (repo / "task/ledgers/completed/map.md").read_text()
     assert "c/d" not in completed_map and "child row" not in completed_map
     assert "\n\n\n" not in completed_map
@@ -249,3 +254,40 @@ def test_frozen_rule_sees_prose_smuggled_into_a_link_target(repo: Path) -> None:
     result = _run(repo, "check", "--base", base)
     assert result.returncode == 1
     assert "frozen ledger edited beyond" in result.stderr
+
+
+def test_an_archive_month_map_row_is_one_line_first_sentence(repo: Path) -> None:
+    # pins: dl-3-archive-map-compaction-charter/C-001
+    _write(
+        repo,
+        "task/ledgers/completed/map.md",
+        "# map\n\n## Contents\n- [x1-demo-ledger.md](x1-demo-ledger.md) — **X1:** shipped the\n"
+        "  demo end to end. Second sentence with detail.\n  + wrapped tail on a bullet-like line.\n"
+        "\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _commit(repo, "wrapped multi-sentence row")
+    assert _run(repo, "archive").returncode == 0
+    month_map = (repo / "task/ledgers/archive/2026-08/map.md").read_text()
+    row = (
+        "- [2026-08-20-x1-demo-ledger.md](2026-08-20-x1-demo-ledger.md) — "
+        "**X1:** shipped the demo end to end.\n"
+    )
+    assert row in month_map
+    assert "Second sentence" not in month_map and "wrapped tail" not in month_map
+    # pins: dl-3-archive-map-compaction-charter/C-004
+    assert "do not read this file whole" in month_map
+
+
+def test_a_move_to_a_live_bin_still_carries_the_whole_row(repo: Path) -> None:
+    # pins: dl-3-archive-map-compaction-charter/C-002
+    _write(
+        repo,
+        "task/ledgers/staging/map.md",
+        "# map\n\n## Contents\n- [z3-live-ledger.md](z3-live-ledger.md) — first. Second\n"
+        "  sentence, wrapped.\n\n## Pointers\n- Up: [../map.md](../map.md)\n",
+    )
+    _write(repo, "task/ledgers/staging/z3-live-ledger.md", "# Z3\n")
+    _commit(repo, "z3")
+    assert _run(repo, "move", "task/ledgers/staging/z3-live-ledger.md", "completed").returncode == 0
+    completed_map = (repo / "task/ledgers/completed/map.md").read_text()
+    assert "— first. Second\n  sentence, wrapped.\n" in completed_map
