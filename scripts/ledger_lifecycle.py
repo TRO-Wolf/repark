@@ -20,7 +20,9 @@ Three subcommands:
 - `archive [PATH ...]` — every ledger in `completed/` (or the paths given) moves
   to the monthly archive. The date is the author date of the `--first-parent`
   commit on `main` that added the file at its current path, so two machines
-  produce the same name and a ledger that is not on `main` yet is refused.
+  produce the same name. A ledger not on `main` yet is the current unit's own
+  (retired in its departure commit): left for the next pickup when unnamed,
+  refused when named explicitly.
   `archive/map.md` is regenerated (one row per month, newest first).
 - `move PATH BIN` — the agent's `staging` → `completed` step and the roadmap
   promotions (`mid-term`, `epic-term`). `archive` is not a `move` target.
@@ -434,7 +436,8 @@ def execute(
 def run_archive(repo: Path, paths: list[str]) -> int:
     """`archive`: file `completed/` (or the given paths) into the monthly archive."""
     tracked = MAPS.tracked_paths(repo)
-    if not paths:
+    named = bool(paths)
+    if not named:
         prefix = BINS["completed"] + "/"
         paths = [p for p in tracked if p.startswith(prefix) and Path(p).name != MAP_NAME]
     moves: dict[str, str] = {}
@@ -444,11 +447,15 @@ def run_archive(repo: Path, paths: list[str]) -> int:
             return 2
         date = archive_date(repo, path)
         if date is None:
-            print(
-                f"ERROR: {path} is not on main yet — archive runs at pickup, after the merge",
-                file=sys.stderr,
-            )
-            return 1
+            if named:
+                print(
+                    f"ERROR: {path} is not on main yet — archive runs at pickup, after the merge",
+                    file=sys.stderr,
+                )
+                return 1
+            # The current unit's own retired ledger: it waits for its merge.
+            print(f"ledger-lifecycle: {path} is not on main yet — left for the next pickup")
+            continue
         new = f"{ARCHIVE_DIR}/{date[:7]}/{date}-{Path(path).name}"
         if new in tracked or (repo / new).exists():
             print(f"ERROR: {new} already exists", file=sys.stderr)

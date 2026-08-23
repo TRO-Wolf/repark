@@ -141,6 +141,24 @@ provocation identifiers. Where a gate matches compiled paths rather than source 
 canonical spelling. A gate with no recorded provocation is treated as unproven — same standing as
 an untested behavior.
 
+## Pinning a charter clause
+
+A unit's scope is a ledger of checkable propositions (`C-001`, `C-002`, … — the SEPMO gate rule);
+the test that discharges one says so where the test is, not only where the ledger is:
+
+```rust
+// pins: a13-shared-ctas-fallback/C-003, C-004
+```
+
+`pins: <unit>/C-NNN` — `<unit>` is the ledger's filename without `-ledger.md` (and, once archived,
+without its date prefix); further ids after a comma inherit the unit. Any comment syntax works
+(`//`, `#`, a docstring); `scripts/check_ledger_grammar.py` (`make check-ledger-grammar`) reads
+every tracked file under `crates/`, `python/` and `scripts/`. The rule it holds: every `PROVEN`
+clause in a live ledger is cited by at least one test, and every citation names a clause that
+exists — a `PROVEN` clause nobody pins is the "green pin that proves nothing" above, in ledger
+form. The measured floor at arming (2026-08-23) is seeded per ledger in the script and ratchets
+down only. The citation is a binding, not a generator: no script derives a test from a clause.
+
 ## Relocation discipline
 
 The port depends on this section: phases 1–3 move tests between repositories, and the acceptance

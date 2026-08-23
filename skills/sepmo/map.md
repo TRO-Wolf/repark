@@ -31,7 +31,10 @@ binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision
   Portable canon, same edit rule as the spine.
 - [binding-manifest.md](binding-manifest.md) — the **only** project-specific SEPMO file: declares
   `spine_version: v2.2`, resolves every abstract role to its canonical home here (all BIND;
-  PR-unit grouping is BIND-and-map to `briefs/`) and carries the tunables (`severity_floor`,
+  PR-unit grouping is BIND-and-map to `briefs/`; since DL-2, 2026-08-23, a **ledger grammar
+  instrument** row binds the shape of the proposition ledger, the `pins:` citation and the
+  Critic's attestation to `scripts/check_ledger_grammar.py`, XML measured and declined) and
+  carries the tunables (`severity_floor`,
   `green_commands` — two named gates + the exception-record rule, `light_thresholds`,
   `context_break_mechanics`, `s0_fresh_execution` — entry-point surface, standing detector,
   masking surfaces, `metrics_ledger_location`, `taxonomy_extensions`).
