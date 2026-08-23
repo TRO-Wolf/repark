@@ -58,14 +58,14 @@ COVERAGE_ATTESTATION:
     - id: AT-2
       status: ATTACKED
       evidence: >
-        4-file RPDF zeros; 5-file compact; expire data==2 independent of position;
-        snapshot Replace reject names the path.
+        4-file RPDF zeros; 5-file compact; expire data==4 and position==2
+        (assert_ne); snapshot Replace reject names the path.
       artifacts: [call_mor1_compacts_below_sparks_min_input_files_floor, call_rpdf_compacts_at_sparks_min_input_files_floor, call_expire_splits_content_files_like_spark, commit_row_delta_snapshot_rejects_concurrent_replace_compaction_of_referenced_file]
     - id: AT-3
       status: ATTACKED
       evidence: >
         Compact no-op is rewritten=0 and leftover file count; expire no-op would
-        fail data==2 / position==delete_files.
+        fail data==4 / position==delete_files.
       artifacts: [call.rs tests]
     - id: AT-4
       status: ATTACKED
