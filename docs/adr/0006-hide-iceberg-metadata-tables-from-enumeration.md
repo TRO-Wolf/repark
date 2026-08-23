@@ -140,21 +140,12 @@ disclosure. Rejected on four grounds:
 - **Positive:** `SHOW TABLES` and `information_schema` show the catalog's tables; introspection stops
   paying a per-metadata-table metadata read; the behavior matches both engines RePark's two doors
   point at; the decision lives at one layer and reaches all four entry points from there.
-- **Residue (fork-level, documented not engineered around):** a base table whose *own* name contains
-  `$` — `a$b` — still enumerates its fifteen synthesized names. The predicate splits on the first
-  `$`, so `a$b$snapshots` reads as base `a` / suffix `b$snapshots`, which is not a
-  `MetadataTableType`. Splitting from the right would not help: the fork's own `table_exist("a$b")`
-  splits on the first `$` too and answers false, so the base-existence guard can never confirm such
-  a base — and `a$b` itself is unreachable through the fork today (its `table()` fails with
-  `invalid metadata table type: b`). All sixteen names are therefore unresolvable either way, and
-  the choice is between listing broken names and hiding them silently; this ADR lists them. Fixing
-  it belongs in the fork's schema provider, not in this decorator; the decorator's unit test
-  `the_filter_keeps_names_the_fork_did_not_synthesize` pins the 16-name listing so the residue
-  cannot drift unnoticed, and `task/h1c-ledger.md` F-2 carries the fork-side follow-up.
-  **Correction 2026-08-23 (RP-1 / F-8a):** the fork now splits on the last `$` plus the metadata
-  vocabulary, so `a$b` is a real base and `a$b$snapshots` resolves. The decorator matches that
-  parse; `the_filter_keeps_names_the_fork_did_not_synthesize` now asserts the listing is `a$b`
-  alone. Inherent residue (Spark's `$` convention): a base literally named `foo$files`.
+- **Residue (Spark `$` convention, RP-1 / F-8a):** a base table literally named `foo$files` is
+  indistinguishable from the `files` twin of `foo`. The decorator and the fork both split on the
+  last `$` plus the metadata vocabulary: a base named `a$b` lists as itself; `a$b$snapshots` is
+  hidden and still resolvable. (Until 2026-08-23 the first-`$` parse listed fifteen unresolvable
+  twins of `a$b`; that residue closed when the fork grew last-`$` resolution and this filter
+  matched it.) Pin: `the_filter_keeps_names_the_fork_did_not_synthesize`.
 - **Cost:** `information_schema.columns` no longer describes metadata tables, because it enumerates
   through the same method. That is the Trino/Spark shape and is what removes the round-trips; the
   columns are still reachable through `DESCRIBE ns."t$snapshots"`, which resolves by name.

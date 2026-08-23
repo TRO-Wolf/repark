@@ -696,6 +696,16 @@ async fn call_expire_splits_content_files_like_spark() {
         )
         .await;
     }
+    // Append-only files after the MERGEs so expired *data* count ≠ expired *position-delete*
+    // count. A swap of the two typed views then reds (both would otherwise be 2).
+    for id in 10..=11 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.mor VALUES ({id}, 'extra{id}')"),
+        )
+        .await;
+    }
     let delete_files = i64::try_from(
         rows(
             &ctx,
@@ -755,13 +765,16 @@ async fn call_expire_splits_content_files_like_spark() {
         equality, 0,
         "nothing here writes equality deletes — a measured control, not a placeholder"
     );
-    // Two MERGEs strand two data files. Independent of the position column so a mutation that
-    // fills deleted_data_files_count from the content-file UNION (data+position) goes red
-    // (would report 2+position, not 2). pins: rp-1-fork-repin/C-009
+    // Two MERGEs strand two data files plus two post-MERGE appends (no extra deletes).
+    // data (4) ≠ position (2), so swapping the typed views reds. Union-len data would be 6.
+    // pins: rp-1-fork-repin/C-009
     assert_eq!(
-        data, 2,
-        "each rolled-back MERGE strands one data file; got {data} (a union-len data column \
-         would be 2 + {position})"
+        data, 4,
+        "two MERGE data files + two post-MERGE appends; got {data}"
+    );
+    assert_ne!(
+        data, position,
+        "data and position columns must disagree so a view swap cannot stay green"
     );
 }
 

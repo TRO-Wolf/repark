@@ -228,7 +228,7 @@ engine's V3-2+ sequencing rather than "when the owner sequences it".
 > (`schema.rs:157–172`: last-`$` + vocabulary parse, `a$b` included) — the engine map's
 > "unresolvable" residue note is stale and retires at the repin. **But the engine's enumeration
 > filter does not go with it**: it exists for *enumeration* parity (engine ADR-0006 — Spark's
-> `SHOW TABLES` lists only catalog entries, never the fifteen metadata names), and `table_names`
+> `SHOW TABLES` lists only catalog entries, never the synthesized metadata names), and `table_names`
 > at `main` (`schema.rs:210–218`) still synthesizes them. The original ask below said "either
 > stop synthesizing or make them resolvable — the engine does not mind which"; that was
 > misworded. **The ask is: stop synthesizing in `table_names` (resolution stays).** The filter's

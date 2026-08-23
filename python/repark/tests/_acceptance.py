@@ -332,7 +332,7 @@ def mor_seed_select_sql() -> str:
 
 
 def mor_acceptance_expected_rows() -> list[dict[str, object]]:
-    """Post-MERGE oracle: ids 1..3 renamed ``mN``, the rest keep ``nN``."""
+    """Post-MERGE oracle: ids 1..MOR_UPDATED_ID_COUNT renamed ``mN``, the rest keep ``nN``."""
     rows: list[dict[str, object]] = []
     for index in range(1, MOR_SEED_ROW_COUNT + 1):
         name = f"m{index}" if index <= MOR_UPDATED_ID_COUNT else f"n{index}"

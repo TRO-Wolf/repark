@@ -32,7 +32,8 @@ code is not here — only tests, shared fixtures, and the module manifest.
   execute-path CALL `location` refuse in `call_orphan.rs`;
   `call_orphan_shared_ctas_root_rule` is the helper table). **MW-1:** the LOCAL-only fence is gone — both remote catalog policies
   execute, an unknown catalog still refuses, and expire pins Spark's six-column result from
-  the fork's typed `CleanupReport` views (RP-1 / F-2); the split pin strands its
+  the fork's typed `CleanupReport` views (RP-1 / F-2); the split pin strands two
+  MERGE deletes plus two post-MERGE appends so data≠position; it strands its
   position deletes by ROLLBACK, because compaction keeps them until MW-2. **MW-2:**
   `rewrite_position_delete_files` is wired and pinned against a live Spark 4.0.1 oracle —
   8 delete files compact to 1 with the row set unchanged, nothing-to-do returns four zeros,
