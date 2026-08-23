@@ -1,7 +1,7 @@
 # Charter ledger — DL-3 · the archive month map reads like an index, not a book
 
 **Date:** 2026-08-23 · **Branch:** `feat/dl-3-archive-map-compaction` · **Base:** `3e9a0d1`
-(`main`, post-#224) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) "Markdown document
+(`main`, post-#224) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) "Markdown document
 lifecycle" · **Changes:** `scripts/ledger_lifecycle.py` (a DL-1 surface) + one migration
 
 **Retires:** this ledger moves to `../completed/` in the unit's last commit; the first pickup after

@@ -94,15 +94,15 @@ here on pins its `PROVEN` clauses from its tests and files its attestation befor
 departure `move`. [#223](https://github.com/TRO-Wolf/repark/pull/223) dual-wired those
 guards into `ci.yml` (owner-granted; not a slate unit).
 
-**MW-5 lands with this change and leaves this file:** campaign close. The MW-0
-1,000-row / ten-MERGE demo is re-run and pinned (delete files 1→10 then compact
-10→1, data files →1, `COUNT(*)` 1,000 `int64`, live names and CTAS identity,
+**MW-5 merged as [#224](https://github.com/TRO-Wolf/repark/pull/224) and left this file:**
+campaign close. The MW-0 1,000-row / ten-MERGE demo is re-run and pinned (delete files 1→10
+then compact 10→1, data files →1, `COUNT(*)` 1,000 `int64`, live names and CTAS identity,
 expire needle). STATUS scorecard; guide lockstep; design and slate archived at
 [../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
-**DL-3 lands with this change and leaves this file** (chartered 2026-08-23 outside the slate,
-from an agent's report that the 2026-08 archive month map cost ~13k tokens to read): archive
-month maps condense to one line per ledger (`_condense_row`, the 2026-08 migration
-55.5 kB → 29.3 kB, the off-the-read-path note). The rolling queue is otherwise unchanged.
+**DL-3 merged as [#225](https://github.com/TRO-Wolf/repark/pull/225) and left this file**
+(chartered 2026-08-23 outside the slate, from an agent's report that the 2026-08 archive
+month map cost ~13k tokens to read): archive month maps condense to one line per ledger
+(`_condense_row`, the 2026-08 migration 55.5 kB → 29.3 kB, the off-the-read-path note).
 
 **2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
 ([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
