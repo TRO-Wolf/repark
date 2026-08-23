@@ -30,7 +30,7 @@ the spine wins.
 |---|---|
 | Read the rule of record for this repo | [../../../AGENTS.md](../../../AGENTS.md) "Python" |
 | Understand why a rule exists, and its sanctioned exceptions | [SKILL.md](SKILL.md) |
-| See the enforcement tables (ceilings, exception rows) | [../../../scripts/check_python_conventions.py](../../../scripts/check_python_conventions.py) — the SSOT; prose never restates them |
+| See the enforcement tables (ceilings, exception rows) | [../../../scripts/check_python_conventions.py](../../../scripts/check_python_conventions.py) (nested-def + dataclass) and [../../../scripts/check_docstring_presence.py](../../../scripts/check_docstring_presence.py) (D-presence) — the SSOTs; prose never restates them |
 | Arm a new convention as a gate | [SKILL.md](SKILL.md) "Arming a rule" |
 | Find the conformance work still outstanding | [../../../STATUS.md](../../../STATUS.md) "Active workstreams" (PYC) |
 
@@ -43,5 +43,7 @@ the spine wins.
 ## Debug
 
 First checks: a red `make check-python-conventions` prints the file, the sites and the sanctioned
-outs — read those before editing the tables. The gate is dual-wired (`make ci` + ci.yml's `python`
-job). **Not** on the pre-commit hook as of PYC-5. Escalate to: [../map.md#debug](../map.md).
+outs — read those before editing the tables. Nested-def/dataclass dual-wired (`make ci` + ci.yml's
+`python` job). **Not** on the pre-commit hook as of PYC-5. Docstring presence:
+`make check-docstring-presence` — dual-wired the same way **and** on the hook (PYC-6, 0.13 s).
+Escalate to: [../map.md#debug](../map.md).

@@ -40,6 +40,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   split — `python/repark-parity/tests/**` does not inherit ANN201/ANN202 (the ten
   unannotated returns in `test_compare.py` became visible and annotated). **PYC-5:**
   facade tests dropped ANN201 (isolated count 0); ANN202 stays for private helpers.
+  **PYC-6:** both tests globs keep `D` so the presence ratchet cannot flag tests.
   Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
   `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.

@@ -178,6 +178,13 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     Ruff's `ANN` rule set, naming is a review
     duty. Prose points at the script; the tables are never restated here. Rationale and the
     method for arming a convention: [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md).
+  - *Public-docstring presence* (`scripts/check_docstring_presence.py` — the SSOT for Ruff
+    `D101`/`D102`/`D103`/`D105`/`D107` with a per-file ceiling table that **ratchets DOWN only**)
+    is **armed** since PYC-6 over `python/repark/src`, `python/repark-parity` and `scripts/`
+    excluding `**/tests/**`. Style `D` is declined permanently (facade docstrings mirror
+    PySpark). Dual-wired `make check-docstring-presence` (in the `make ci` chain) + ci.yml's
+    `python` job, and on the pre-commit hook (n=5 median 0.13 s). Ruff is the parser; the
+    wrapper is the ratchet. Prose points at the script; the table is never restated here.
   - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
     inventory, phase, canonical gate commands and documentation index are machine-readable and
     validated against the workspace, the Makefile, STATUS.md, the declared documents and the
@@ -211,7 +218,9 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
 - **Python:** type hints on every parameter, every return and every public attribute; Pydantic v2
   `BaseModel` for all structured data, never `dataclasses` or `attrs`; define functions at module
   or class level rather than nested inside another function; name a function for the work it does,
-  as a verb phrase; `pathlib`; `logging`; f-strings; never bare `except`; Ruff `line-length=100`.
+  as a verb phrase; a docstring on every public function, class, method, `__init__`, and magic
+  method (presence held by `scripts/check_docstring_presence.py`; style `D` declined); `pathlib`;
+  `logging`; f-strings; never bare `except`; Ruff `line-length=100`.
 - **Spell things out** — no casual abbreviations (`config` not `cfg`, `index` not `idx`).
 - **Tier-2 CI (live AWS) never runs against unmerged code**; nightly on `main` + manual dispatch via
   OIDC only. No self-hosted runners in any tier. No secrets in tier-1 workflows.

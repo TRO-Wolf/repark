@@ -205,6 +205,8 @@ jobs:
 
       - name: Python conventions guard (check_python_conventions)
         run: ./scripts/check_python_conventions.sh
+      - name: Python docstring-presence guard (check_docstring_presence)
+        run: ./scripts/check_docstring_presence.sh
       # Lockfile-freshness gate (mirrors `make py-lock-check`): RED if uv.lock lags its
       # pyproject floors. Validates only — never rewrites the lock.
       - name: uv lock --locked

@@ -161,9 +161,10 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   the point, a `functools.wraps` wrapper — an empty reason does NOT pass) and a
   `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
   or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
-  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other two Python
+  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
-  rule set, and naming is a review duty. Seeded from the measured tree (2026-08-21): 66 nested
+  rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
+  duty. Seeded from the measured tree (2026-08-21): 66 nested
   defs in 21 files, 23 files importing `dataclasses`. **PYC-1** deleted the `core.py` (23) and
   `plan_collapse.py` (12) nested-def rows. **PYC-2** deleted the remaining ten
   shipped-package nested-def rows (12 lifts + 2 pragmas). **PYC-3** deleted the two
@@ -178,6 +179,19 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make check-python-conventions` (in the `make ci` chain) + ci.yml's `python` job.
   Rationale and the arming method:
   [../.agents/skills/code-quality/SKILL.md](../.agents/skills/code-quality/SKILL.md).
+
+- `check_docstring_presence.sh` + `check_docstring_presence.py` — the **public-docstring
+  presence** guard (PYC-6, 2026-08-22): Ruff `D101`/`D102`/`D103`/`D105`/`D107` with an
+  `EXCEPTIONS` per-file ceiling table that ratchets DOWN only. SSOT for the five presence
+  rules the owner ruled; style `D` is declined permanently (facade docstrings mirror
+  PySpark) and is not selected. Over every `*.py` under `python/repark/src`,
+  `python/repark-parity` and `scripts/` except `**/tests/**`. Seeded from the measured
+  tree at arming: **136** findings across **39** files (the slate's ~266 included tests).
+  Ruff is the parser (`uvx ruff@0.15.22`, pin locked to the Makefile); this wrapper is
+  the ratchet. Fail-closed on a missing ruff, a JSON parse miss, an empty scan, a stale
+  key, or a row whose file dropped to zero (delete it). Dual-wired `make
+  check-docstring-presence` (in the `make ci` chain) + ci.yml's `python` job, and on
+  pre-commit (n=5 median **0.13 s**, inside the sub-second hook budget).
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
   (G-8 companion to `check_lib_rs`). Over every `*.rs` under `crates/**` (recursive): a per-file
@@ -240,6 +254,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Raise/lower a general Rust file line ceiling | `check_rust_file_size.py` (`EXCEPTIONS` — reason required, ratchet down only) |
 | Sanction a nested `def`, or lower a nested-def ceiling | `check_python_conventions.py` (`# nested-def: <reason>` pragma for the three allowed cases; `NESTED_DEF_EXCEPTIONS` for debt — ratchet down only) |
 | Keep a `dataclass` that cannot become a `BaseModel` | `check_python_conventions.py` (`DATACLASS_EXCEPTIONS` — reason required; no inline pragma exists on purpose) |
+| Lower a docstring-presence ceiling, or add a row | `check_docstring_presence.py` (`EXCEPTIONS` — reason required; ceilings ratchet down only; tests are out of scope) |
 | Validate workflow YAML locally | `make workflows-parse` |
 | Check `make parity-live` still matches `parity-live.yml` | `make check-parity-live-dual-wire` |
 | Check a matrix.rs Tested cite still exists | `make check-matrix-test-liveness` |
@@ -282,6 +297,9 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `python-conventions: … defines N nested function(s)` | Lift the definition to module or class level and pass what it needs as arguments; or add `# nested-def: <reason>` if it is a decorator factory, a state-capturing callback, or a `functools.wraps` wrapper; or raise the `NESTED_DEF_EXCEPTIONS` row with a reason (ratchet down only) |
 | `python-conventions: … imports \`dataclasses\`` | Convert the container to a Pydantic v2 `BaseModel` (`model_config = ConfigDict(frozen=True)` for the frozen case), or add a `DATACLASS_EXCEPTIONS` row with a reason |
 | `python-conventions: … does not parse` / `scan set is empty` | Fail-closed: the guard refuses to report success over a file it could not read or a tree it could not find |
+| `docstring-presence: … undocumented public name(s)` | Add a Google-style docstring, or add/raise an `EXCEPTIONS` row in `check_docstring_presence.py` with a reason (ratchet down only). Tests are out of scope; style `D` is declined |
+| `docstring-presence: EXCEPTIONS key … measures 0` | Delete the row rather than keep a zero — the file converted |
+| `docstring-presence: ruff … refuse to pass closed` | `uvx`/`ruff@0.15.22` missing, ruff exit other than 0/1, or JSON did not parse — environment error, not a finding |
 | `map-sync: … dead link` | The map points at a path that moved or was deleted — repoint it, or `python3 scripts/sync_map_md.py --fix` if the whole list row should go |
 | `map-sync: … unmentioned` | Only under `--strict`: the directory's map never names that file — add a row with a real description (`--fix` writes a `TODO(describe)` stub, never prose) |
 | `workflows-parse` red | Fix the named workflow's YAML — GitHub would never run it as-is |
@@ -295,7 +313,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 First checks: `bash scripts/check_map_md.sh`, `python3 scripts/sync_map_md.py --check`,
 `bash scripts/check_crate_dag.sh`,
 `bash scripts/check_lib_rs.sh`, `bash scripts/check_lib_py.sh`,
-`bash scripts/check_python_conventions.sh`, `bash scripts/check_manifest.sh`,
+`bash scripts/check_python_conventions.sh`, `bash scripts/check_docstring_presence.sh`,
+`bash scripts/check_manifest.sh`,
 `bash scripts/check_parity_live_dual_wire.sh`, `bash scripts/check_matrix_test_liveness.sh`,
 `make workflows-parse`. Escalate to:
 [../map.md#debug](../map.md).
