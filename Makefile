@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -317,6 +317,14 @@ check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link
 	@# "Markdown document lifecycle". In the `make ci` chain; the ci.yml half is an owner-scoped
 	@# .github/ change.
 	python3 scripts/ledger_lifecycle.py check
+
+.PHONY: check-ledger-grammar
+check-ledger-grammar: ## Ledger grammar guard: clause rows, pins: citations, the Critic's attestation form (DL-2)
+	@# SSOT: scripts/check_ledger_grammar.py — over task/ledgers/staging/ only (the archive is
+	@# immutable). Meanings stay in skills/sepmo (SKILL.md "The gate is a ledger, not a score",
+	@# references/05-critic.md); the script owns the shape. EXCEPTIONS (seeded 2026-08-23) ratchet
+	@# down only. The ci.yml half is an owner-scoped .github/ change.
+	python3 scripts/check_ledger_grammar.py
 
 .PHONY: ledger-archive
 ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy-mm/ (zero tokens)

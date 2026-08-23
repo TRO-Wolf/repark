@@ -7,6 +7,14 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
+  tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
+  a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`
+  clause and a dead `pins:` citation go red, an archived clause can be cited; the attestation is
+  required once no clause is `OPEN` and its shape defects (no artifacts, no justification, a
+  missing category, an inconsistent `complete:`) go red; a ledger with no clause table goes
+  red; `FINDING:` fields are checked; a raised ceiling or a stale `EXCEPTIONS` row goes red
+  against the real tree. Each test cites the DL-2 clause it pins.
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
