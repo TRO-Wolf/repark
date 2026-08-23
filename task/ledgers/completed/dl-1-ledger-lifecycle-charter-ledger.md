@@ -182,3 +182,53 @@ Size **S/M**: one script (~300 lines), one gate, six doc edits, one mechanical m
 A derived dataset *outside* the tree — ledger path, unit, dates, PR, the `task/metrics.md`
 row — built from the archive by a script into parquet, queryable with this engine. Derived, never
 the source; it earns its own intake when the metrics questions are written down.
+
+## 8. Execution record (2026-08-23, same day)
+
+Eight commits on `feat/dl-1-ledger-lifecycle`, in the §5 order, with two deviations stated:
+
+| # | Commit | What | Deviation |
+|---|---|---|---|
+| 1 | `5db92db` | this charter + the `task/ledgers/` maps | — |
+| 2 | `f8457ea` | `scripts/ledger_lifecycle.py` (≈620 lines) + 11 provocation proofs + `make check-ledgers` / `make ledger-archive` | **not** in `make ci` yet — the tree was red on 126 ledgers outside the bins, and a gate is armed in the commit that makes the tree pass it |
+| 3 | `c0487f1` | AGENTS.md ledger row + mechanical half; `docs/history/map.md` archiving row | — |
+| 4 | `a29f21d` | skill split: step 0 `make ledger-archive`; `move` in "Archive what closed"; delegable pickup | — |
+| 5 | `2daf156` | `git rm -r task/census/` (64 files, 4.5 MB); pointer = `docs/port/census.md` §7 naming `b13b22c` | — |
+| 6 | `5ed8800` | the backfill: 4 `move`s to `staging/` (+ dated `**Retires:**` lines), `archive` over 122; 378 links / 74 files by the script; 3 pre-existing dead `h1b` links repaired; `check-ledgers` joins `make ci` | the gate's arming moved here from commit 2 |
+| 7 | `4cc69ab` | `task/roadmap/{mid-term,epic-term}/`; the three 2026-08 documents `move`d (46 links / 18 files) | — |
+| 8 | — | this record; STATUS, slate, lessons; this ledger `move`d to `completed/` | — |
+
+**Measured after (at commit 7):** `task/map.md` 137 rows → **12**; `task/` on disk 6.6 MB →
+**1.9 MB**; 127 ledgers in bins (122 archived under `archive/2026-08/`, 5 in `staging/`);
+**517** ledger links resolve repo-wide (the first time that number has been checked at all);
+`map-sync: 139 maps clean`. The script's first real run was a clone dry-run first, then the
+tree; both produced the same 122 names (dates come from git, not the clock).
+
+**Provocation proofs** — each gate rule red on a planted violation, then green — are the 11
+tests in `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`, run on a scratch git
+repository with a pinned author date (`make py-test`); the tree-level run is commit 6's
+`check` going from 129 findings (126 outside-bins + 3 dead links) to clean. A ledger at
+`task/stray-ledger.md`, an archive file under the wrong month, a dead `-ledger.md` link in a
+non-map document, a prose edit to a frozen ledger, a deletion, a link carrying smuggled prose,
+and `check --base no/such/ref` all fail; a link repair and a prepended errata note pass.
+
+**The adversarial review, before the first real run** (three lenses — link rewriting, git
+semantics, gate soundness — 31 agents, each finding refuted independently): 28 findings, 8
+survived. Fixed in commit 2 and pinned: (1) **blocker** — three `task/map.md` rows wrap onto a
+line beginning with `+ `, which a list-item regex reads as a nested bullet, so the backfill
+would have split those rows and left orphan bullets behind, silently, exit 0 — the row model is
+now "a top-level bullet plus every indented line under it"; (2) nested sub-lists detached on
+paste; (3) `check` with no base commit exited 0 claiming "frozen rule clean" — it now refuses
+to pass closed; (4) prose inside a link destination was invisible to the frozen rule; (5) a
+same-named ledger in two archive months read as a deletion; (6) cut rows left blank lines.
+Refuted and left alone, recorded so nobody re-litigates them: code-span mentions of ledger
+paths are not links and are not rewritten (the basename survives the move); the outside-bins
+rule is scoped to `task/` because `docs/history/` legitimately holds ledgers; `archive_date`
+takes the latest add (a file added, deleted and re-added is dated by its return).
+
+**One process incident.** A review agent, told the worktree was read-only, created a branch
+and a WIP commit in it, ran the archive there, and pushed a stash onto the shared stack; the
+working tree was restored but the index and HEAD were not. Recovered by re-homing HEAD
+(`reset --soft` to the charter commit), deleting the branch and dropping the stash by SHA;
+nothing reached `main` or the main checkout. The lesson is in
+[../../lessons.md](../../lessons.md) (2026-08-23).

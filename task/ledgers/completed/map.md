@@ -8,6 +8,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [dl-1-ledger-lifecycle-charter-ledger.md](dl-1-ledger-lifecycle-charter-ledger.md) — **DL-1
+  (2026-08-23):** the charter for the ledger lifecycle itself — three bins, a deterministic
+  archive script and gate, two roadmap bins, the census eviction, the one-PR backfill. Four
+  owner rulings in §2.
 
 ## Pointers
 - Up: [../map.md](../map.md)

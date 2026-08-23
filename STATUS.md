@@ -169,6 +169,18 @@ history-rewrite; provenance and the options weighed:
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
+- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 delivered with this
+  change**). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
+  `completed/` (the unit's last commit) → `archive/yyyy-mm/` (the script's move at pickup,
+  immutable) — and `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting
+  every link as it goes; `make check-ledgers` (in `make ci`) holds the bins, the archive names,
+  every ledger link in the repository and the frozen rule. Backfilled the same day: 122 ledgers
+  to `archive/2026-08/`, four open charters (MW-0, SEM-0, FNP-0, V3-0) in `staging/`. The roadmap
+  has two bins by horizon, [task/roadmap/](task/roadmap/map.md) `mid-term/` and `epic-term/`
+  (short-term stays the slate). `task/census/` is evicted from the tree (reachable at `b13b22c`,
+  [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
+  [task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md).
+
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
   merged as [#207](https://github.com/TRO-Wolf/repark/pull/207)**; **PYC-3

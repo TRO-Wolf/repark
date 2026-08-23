@@ -2,7 +2,7 @@
 
 ## Purpose
 The per-unit ledgers, filed by state: the directory is the status (chartered by
-[staging/dl-1-ledger-lifecycle-charter-ledger.md](staging/dl-1-ledger-lifecycle-charter-ledger.md),
+[staging/dl-1-ledger-lifecycle-charter-ledger.md](completed/dl-1-ledger-lifecycle-charter-ledger.md),
 2026-08-23; backfilled the same day — 122 ledgers archived by merge date, four open charters
 left in `staging/`).
 
