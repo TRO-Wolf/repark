@@ -35,6 +35,9 @@ not this directory.
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
   shipped, environment drift events). Append a section per campaign; never rewrite an earlier one.
   Created 2026-08-10 with the Front-Door campaign's numbers.
+- [census/](census/map.md) — what a gate still reads of the recorded census runs: the
+  baseline's facade cohort (`collected.txt`, `facade.xml`), pinned by `test_deferred_ledger.py`.
+  The rest was evicted 2026-08-23 and lives at `b13b22c` ([../docs/port/census.md](../docs/port/census.md) §7).
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its

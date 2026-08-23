@@ -80,7 +80,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   closed campaigns — the v1 → v2 port and the Agent-Agnostic Front-Door campaign, both off the
   normal read path; see [docs/history/map.md](docs/history/map.md)).
   `task/` — the rules in force (`lessons.md`), the process metrics ledger (`metrics.md`), the
-  ledgers by state (`task/ledgers/`), and the live acceptance inputs (`task/port/`); the
+  ledgers by state (`task/ledgers/`), and the live acceptance inputs (`task/port/`, the facade
+  pin under `task/census/`); the
   backlog itself lives in [STATUS.md](STATUS.md). `briefs/` — slate briefs for campaigns that are
   still running (currently the V2 Engine Hardening slate; a closed campaign's slate is archived
   with it, and between campaigns the directory holds only its `map.md`).

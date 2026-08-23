@@ -51,7 +51,9 @@ differential harness). The published wheel is in [Release state](#release-state)
 and the facade cohort `(2,499 − 2 added) ∪ 12 deferred = pin 2,509`. Census procedure:
 [docs/port/census.md](docs/port/census.md); evidence:
 `task/census/baseline-fc3f48102/` and `task/census/v2-a5be8a7/`, evicted from the tree by DL-1 on
-2026-08-23 and reachable at `main` `b13b22c` ([docs/port/census.md](docs/port/census.md) §7); deferred
+2026-08-23 and reachable at `main` `b13b22c` ([docs/port/census.md](docs/port/census.md) §7) —
+except the baseline's [facade cohort](task/census/baseline-fc3f48102/facade/map.md), which the
+deferred-ledger tests read; deferred
 and added acceptance inputs (live ledgers, still consumed by the comparator):
 [task/port/](task/port/). The port's full record — the four phase briefs, the seventeen unit
 ledgers, the retrospectives — is archived at

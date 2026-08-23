@@ -352,7 +352,9 @@ is unchanged.
 The two recorded runs — `baseline-fc3f48102/` (the port-source pin) and `v2-a5be8a7/` (the
 milestone-one acceptance run, byte-flat on all four cohorts) — were carried in the working tree
 under `task/census/` (4.5 MB, 68 % of `task/`) until DL-1 evicted them on 2026-08-23 (owner
-ruling). They are history, not deleted: `main` commit **`b13b22c`** carries the directory whole —
+ruling) — all but the baseline's `facade/` cohort (0.5 MB: `collected.txt`, `facade.xml`), which
+stays because `python/repark-parity/tests/test_deferred_ledger.py` reads it; evidence a gate
+consumes is an input, not an archive. The rest is history, not deleted: `main` commit **`b13b22c`** carries the directory whole —
 `git show b13b22c:task/census/map.md` is the index, `git show b13b22c:task/census/v2-a5be8a7/map.md` the
 acceptance run. The procedure above is unchanged: a comparable run is generated the same way, and
 a run that must be cited as evidence is committed under `task/census/<run>/` in one commit and
