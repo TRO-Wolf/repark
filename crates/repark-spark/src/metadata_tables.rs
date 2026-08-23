@@ -303,6 +303,20 @@ async fn resolve_candidate(
 ///
 /// Missing namespace / missing table → `false` (not an error): multi-level probes for the
 /// "real table wins" check routinely ask about namespaces that do not exist.
+///
+/// Glue and HMS `validate_namespace` return [`ErrorKind::DataInvalid`] when the namespace
+/// is not exactly one level (`Invalid database name: … hierarchical namespaces are not
+/// supported`). A Spark 4-part metadata path (`cat.ns.tbl.snapshots`) probes exactly that
+/// shape, so the probe must treat it as "not a real table" and fall through to the `$`
+/// rewrite. Single-level `DataInvalid` and any other kind stay fatal.
+fn table_exists_probe_from_error(ident: &TableIdent, error: iceberg::Error) -> Result<bool> {
+    match error.kind() {
+        ErrorKind::NamespaceNotFound | ErrorKind::TableNotFound => Ok(false),
+        ErrorKind::DataInvalid if ident.namespace().as_ref().len() > 1 => Ok(false),
+        _ => Err(iceberg_err(error)),
+    }
+}
+
 async fn table_exists_parts(catalogs: &CatalogRegistry, parts: &[String]) -> Result<bool> {
     if parts.len() < 2 {
         return Ok(false);
@@ -316,11 +330,7 @@ async fn table_exists_parts(catalogs: &CatalogRegistry, parts: &[String]) -> Res
         if let Some(ident) = table_ident_from_parts(rest) {
             return match catalog.table_exists(&ident).await {
                 Ok(exists) => Ok(exists),
-                Err(error) => match error.kind() {
-                    // Multi-level "real table wins" probes routinely miss namespaces.
-                    ErrorKind::NamespaceNotFound | ErrorKind::TableNotFound => Ok(false),
-                    _ => Err(iceberg_err(error)),
-                },
+                Err(error) => table_exists_probe_from_error(&ident, error),
             };
         }
         return Ok(false);
@@ -1091,6 +1101,47 @@ mod tests {
             &vec!["ns".to_string(), "nested".to_string()]
         );
     }
-}
 
-// PROBE - will remove - cycle2 investigation only if we add test in half B
+    #[test]
+    fn hierarchical_data_invalid_is_absent_not_fatal() {
+        let namespace = NamespaceIdent::from_vec(vec!["sales".into(), "mt".into()])
+            .expect("two-level namespace");
+        let ident = TableIdent::new(namespace.clone(), "snapshots".into());
+        let error = iceberg::Error::new(
+            ErrorKind::DataInvalid,
+            format!(
+                "Invalid database name: {namespace:?}, hierarchical namespaces are not supported"
+            ),
+        );
+        let exists = table_exists_probe_from_error(&ident, error).expect("must map to absent");
+        assert!(!exists);
+    }
+
+    #[test]
+    fn single_level_data_invalid_stays_fatal() {
+        let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "mt".into());
+        let error = iceberg::Error::new(
+            ErrorKind::DataInvalid,
+            "Invalid database, provided namespace is empty.",
+        );
+        assert!(table_exists_probe_from_error(&ident, error).is_err());
+    }
+
+    #[test]
+    fn hierarchical_unexpected_stays_fatal() {
+        let namespace = NamespaceIdent::from_vec(vec!["sales".into(), "mt".into()])
+            .expect("two-level namespace");
+        let ident = TableIdent::new(namespace, "snapshots".into());
+        let error = iceberg::Error::new(ErrorKind::Unexpected, "injected");
+        assert!(table_exists_probe_from_error(&ident, error).is_err());
+    }
+
+    #[test]
+    fn missing_namespace_and_table_are_absent() {
+        let ident = TableIdent::new(NamespaceIdent::new("sales".into()), "mt".into());
+        let missing_ns = iceberg::Error::new(ErrorKind::NamespaceNotFound, "ns");
+        let missing_table = iceberg::Error::new(ErrorKind::TableNotFound, "tbl");
+        assert!(!table_exists_probe_from_error(&ident, missing_ns).expect("ns missing"));
+        assert!(!table_exists_probe_from_error(&ident, missing_table).expect("table missing"));
+    }
+}

@@ -64,7 +64,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `std::fs::FileTimes` because the fork cuts on the listed file's `last_modified` and the 24-hour
   floor forbids a cutoff young enough for a freshly written one),
   `ref_ddl`,
-  `time_travel`, `metadata_tables`, `normalize`, `local_fs_ddl`,
+  `time_travel`, `metadata_tables` (**MW-4b:** Glue-shaped `table_exists` — 4-part
+  `.snapshots`/`.files` rewrites to `$` despite hierarchical `DataInvalid`; Unexpected
+  and single-level DataInvalid stay fatal), `normalize`, `local_fs_ddl`,
   `router` (multi-statement, F-BR-2 eager DML, TRUNCATE refuse), `decimal` (G-7b bit-exact
   `Decimal128` i128 pins — literal / division / 38-clamp / avg+promotion / overflow+div-zero /
   nullability; cites Python corpus row names. **U2 (2026-08-13):**
