@@ -11,11 +11,10 @@ branch. (Same contract as the private v1 repository's `briefs/` directory.)
 ## Contents
 
 - [next-sequence.md](next-sequence.md) — **the next-sequence slate (2026-08-21, rolling):** one
-  ordered queue across three open tracks (format-v3, the PYC conventions burn-down, the held
-  maintenance units) plus the A13 write-path item, with the reasoning for the order rather than
+  ordered queue across the held maintenance units, with the reasoning for the order rather than
   just the order — V3-1 merged as #203 and left; PYC-1 merged as #204 and left; PYC-2 merged
-  as #207 and left; PYC-3 merged as #208 and left; PYC-4 merged as #209 and left; PYC-5 merged as #211 and left; PYC-6 leaves with this change; MW-4 still preempts everything the moment OD-3 lands; A13 is the runnable next item while
-  its guard holds. Carries the PYC unit definitions, the two hazards a pure-refactor campaign
+  as #207 and left; PYC-3 merged as #208 and left; PYC-4 merged as #209 and left; PYC-5 merged as #211 and left; PYC-6 merged as #216 and left; A13 leaves with this change; MW-4 still preempts everything the moment OD-3 lands.
+  Carries the PYC unit definitions, the two hazards a pure-refactor campaign
   has to name in advance, and the 2026-08-22 arming-measurements record (docstring-presence
   subset owner-ruled and armed as PYC-6; `PL`/`A`/`print()` measured and declined with
   reasons). Unlike the campaign slates below, it is rolling: a unit leaves when it merges.

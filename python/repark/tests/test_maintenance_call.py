@@ -386,10 +386,10 @@ def test_remove_orphan_files_refuses_the_shared_ctas_fallback_root(
     """MW-3: a table in the shared CTAS fallback root is not sweepable.
 
     ``register_memory_catalog`` carries a ``TempFallbackAllowed`` policy, so a namespace created
-    with no ``location`` places its tables at ``<temp>/repark_ctas/<catalog>/<ns>/<table>`` — a
-    path derived from NAMES alone, shared by any other process using the same names. Orphan
-    removal deletes what one table's metadata does not reference, which in a shared directory
-    includes another session's live files.
+    with no ``location`` places its tables at ``<warehouse>/repark_ctas/<catalog>/<ns>/<table>``
+    (A13: ``warehouse`` is the catalog argument, not the process temp dir). That path is still
+    derived from NAMES under the warehouse, so two processes sharing one warehouse share the
+    directory. Orphan removal deletes what one table's metadata does not reference.
 
     Found while writing the MW-3 pins: the facade fixture's ``mem.ns.events`` resolved into that
     shared root and a dry run listed 139,179 files left there by unrelated runs.

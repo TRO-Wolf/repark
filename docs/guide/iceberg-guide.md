@@ -147,6 +147,10 @@ spark.sql(
 spark.sql("SELECT * FROM local.sales.orders ORDER BY id").show()
 ```
 
+A namespace created without `LOCATION` still writes under that warehouse
+(`…/repark_ctas/local/sales/<table>`). Pass `LOCATION` when the table should own a
+subdirectory of its own.
+
 ```text
 +----+--------+--------+
 | id | region | amount |

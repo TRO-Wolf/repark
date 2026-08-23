@@ -159,8 +159,11 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   "resolved once, at construction" literally true rather than approximately true.
 - `catalog_state.rs` — the engine-side `CatalogRegistry` (iceberg `Catalog` handles by name) +
   `LocationPolicy` (staged-CTAS location resolution: `RequireExplicitLocation` /
-  `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the temp root resolves once
-  at registration, never at query time). Hoisted MOVE-ONLY from the v1 SQL crate.
+  `ServiceManagedLocation` / `TempFallbackAllowed { root }` — E-4: the root resolves once
+  at registration, never at query time). **A13:** `register_memory_catalog` sets `root` to the
+  warehouse (`memory_warehouse_fallback_root`, also used to normalize CALL `location`
+  strings); `CatalogRegistry::from` still uses `std::env::temp_dir()`. Hoisted MOVE-ONLY
+  from the v1 SQL crate.
 - `time_travel.rs` (+ `time_travel/tests.rs`) — `TimeTravelSpec` + parsers
   (`parse_version_value`, `parse_timestamp_to_ms`), snapshot resolution, `read_table_at`
   (snapshot-pinned static provider via `iceberg-datafusion`), and **`next_temp_view_name` — the

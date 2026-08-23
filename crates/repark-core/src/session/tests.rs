@@ -1430,3 +1430,56 @@ async fn builder_pseudo_key_typo_still_fails_loud() {
         );
     }
 }
+
+/// A13: `register_memory_catalog`'s fallback root is the supplied warehouse, not `$TMPDIR`.
+///
+/// Reverting the registration to `std::env::temp_dir()` makes this pin red. The door tests pin
+/// that files actually land under that root.
+#[tokio::test]
+async fn register_memory_catalog_fallback_root_is_the_warehouse() {
+    use tempfile::TempDir;
+
+    use crate::LocationPolicy;
+
+    let warehouse = TempDir::new().unwrap();
+    let warehouse_path = warehouse.path().to_path_buf();
+    let session = ReparkSession::new().unwrap();
+    session
+        .register_memory_catalog("ice", warehouse_path.to_str().unwrap())
+        .await
+        .unwrap();
+    match session.catalogs_snapshot().location_policy("ice") {
+        Some(LocationPolicy::TempFallbackAllowed { root }) => {
+            assert_eq!(root, warehouse_path, "fallback root must be the warehouse");
+            assert_ne!(
+                root,
+                std::env::temp_dir(),
+                "the process temp dir is the pre-A13 shared root"
+            );
+        }
+        other => panic!("expected TempFallbackAllowed, got {other:?}"),
+    }
+}
+
+/// A13: the `spark.sql.catalog.*.type=memory` config path uses the same warehouse root.
+#[tokio::test]
+async fn configured_memory_catalog_fallback_root_is_the_warehouse() {
+    use tempfile::TempDir;
+
+    use crate::LocationPolicy;
+
+    let warehouse = TempDir::new().unwrap();
+    let warehouse_str = warehouse.path().to_str().unwrap();
+    let session = ReparkSession::builder()
+        .config("spark.sql.catalog.mem.type", "memory")
+        .config("spark.sql.catalog.mem.warehouse", warehouse_str)
+        .build()
+        .unwrap();
+    session.register_configured_catalogs().await.unwrap();
+    match session.catalogs_snapshot().location_policy("mem") {
+        Some(LocationPolicy::TempFallbackAllowed { root }) => {
+            assert_eq!(root, warehouse.path());
+        }
+        other => panic!("expected TempFallbackAllowed, got {other:?}"),
+    }
+}

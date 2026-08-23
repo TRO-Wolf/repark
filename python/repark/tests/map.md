@@ -22,6 +22,10 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_a13_ctas_fallback.py](test_a13_ctas_fallback.py) — **A13 (2026-08-23):**
+  location-less Spark CTAS after `register_memory_catalog` writes under the warehouse,
+  not `<temp>/repark_ctas`; two sessions with different warehouses and the same
+  `mem.ns.events` names do not share a directory.
 - [test_lrs4_door_domain.py](test_lrs4_door_domain.py) / [test_polars_core.py](test_polars_core.py) —
   **PYC-5:** nested helpers `door` and `guarded` gained return annotations
   (typed signatures; ruff classifies them as ANN202, which stays ignored).

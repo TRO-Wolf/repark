@@ -50,4 +50,6 @@ mod matrix;
 // End-to-end door tests on a NATIVE session (no extension installed) — the profile every ANSI
 // matrix row claims. File-backed per the crate-root thinness guard.
 #[cfg(test)]
+mod a13_fallback;
+#[cfg(test)]
 mod tests;

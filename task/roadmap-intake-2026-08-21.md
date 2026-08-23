@@ -343,34 +343,21 @@ reasoning, but it is a drop-in break: a Glue job calling this on a v3 table gets
 Spark gave it a useless success. Reversible in one line if you would rather match Spark. See
 `B-MOR-3`.
 
-### A13. The shared CTAS fallback root — **surfaced by MW-3, 2026-08-21**
+### A13. The shared CTAS fallback root — **surfaced by MW-3, 2026-08-21; closed this change**
 
-`register_memory_catalog(name, warehouse)` accepts a warehouse and, for a namespace created
-without a `location` property, does not write there. Tables land at
+**Was:** `register_memory_catalog(name, warehouse)` accepted a warehouse and, for a namespace
+created without a `location` property, did not write there. Tables landed at
 `<std::env::temp_dir()>/repark_ctas/<catalog>/<namespace>/<table>` via the E-4 fallback
-(`ctas.rs::resolve_create_location`). Reproduced outside the test harness: the supplied warehouse
-stayed **empty** while both CTAS and `CREATE` + `INSERT` wrote to the shared root.
+(`ctas.rs::resolve_table_create_location`). Reproduced outside the test harness: the supplied
+warehouse stayed **empty** while both CTAS and `CREATE` + `INSERT` wrote to the shared root.
 
-This is the documented fallback, not a defect, and it is not being called one here. Three
-consequences are worth a decision rather than a shrug:
-
-1. **The path is keyed by names alone.** Nothing process-specific is in it, so two independent
-   sessions using `mem.ns.events` share one directory on the machine. In this repo's own test
-   tree that directory had grown to **2.7 GB** across 100+ table names, and one table's directory
-   held 139,179 files.
-2. **A warehouse argument that is silently ignored is a surprising API.** The caller passed a
-   path; nothing tells them it was not used. The `RequireExplicitLocation` error message already
-   coaches callers to create the namespace with a location "so RePark writes to the intended
-   warehouse instead of a temporary directory" — the local catalog just never says it.
-3. **It is the one place a maintenance procedure can destroy another session's data.** MW-3's
-   `remove_orphan_files` now REFUSES a table under that root, because orphan removal subtracts one
-   table's reachable set from a directory listing and in a shared directory another session's live
-   files look exactly like orphans. That guard is a fence around the symptom.
-
-**Options, none of them scoped yet:** default the fallback under the supplied warehouse rather than
-the process temp dir; make the fallback per-session (a run id in the path); warn once when the
-fallback fires; or leave it and keep the MW-3 fence. The first is the smallest change that removes
-the sharing, and it also makes the warehouse argument mean what it appears to mean.
+**Closed:** the location-less fallback root is the supplied warehouse, so tables land at
+`<warehouse>/repark_ctas/<catalog>/<namespace>/<table>` (Spark) or
+`<warehouse>/repark_ansi_ctas/…` (ANSI). Two sessions with different warehouses no longer share
+a directory. Same warehouse + same names still share; MW-3 `remove_orphan_files` refuses a scan
+of `{root}/repark_ctas` and `{root}/repark_ansi_ctas` (and a parent that would list them).
+`CatalogRegistry::from` (test helper, no warehouse) still uses `std::env::temp_dir()`.
+Per-session run-ids and a one-shot warning were declined.
 
 Write-path work, so deliberately outside the MW campaign.
 
