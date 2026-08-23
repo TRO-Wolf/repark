@@ -181,7 +181,7 @@ history-rewrite; provenance and the options weighed:
   has two bins by horizon, [task/roadmap/](task/roadmap/map.md) `mid-term/` and `epic-term/`
   (short-term stays the slate). `task/census/` is evicted from the tree (reachable at `b13b22c`,
   [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
-  [task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/completed/dl-1-ledger-lifecycle-charter-ledger.md).
+  [task/ledgers/archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md).
   **DL-2 delivered with this change (stacked on DL-1):** the ledger *grammar* —
   `scripts/check_ledger_grammar.py` / `make check-ledger-grammar` (in `make ci`) holds the shape
   of every live ledger: clause rows (`C-NNN`, one verdict, evidence), the `pins: <unit>/C-NNN`

@@ -1,8 +1,8 @@
 # Charter ledger — DL-1 · the ledger lifecycle, run by a script
 
 **Date:** 2026-08-23 · **Branch:** `feat/dl-1-ledger-lifecycle` · **Base:** `b13b22c` (`main`,
-post-#220) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle" ·
-**Executor today:** [../../../.agents/skills/compact-context-docs/SKILL.md](../../../.agents/skills/compact-context-docs/SKILL.md)
+post-#220) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) "Markdown document lifecycle" ·
+**Executor today:** [../../../.agents/skills/compact-context-docs/SKILL.md](../../../../.agents/skills/compact-context-docs/SKILL.md)
 
 **Retires:** this ledger moves to `task/ledgers/completed/` in the unit's last commit — it is the
 first ledger to use the mechanism it charters — and the first pickup after the merge archives it.
@@ -97,7 +97,7 @@ file whose `yyyy-mm-dd-` prefix does not match its `yyyy-mm/` directory; a relat
 anywhere in the repository's markdown (not only maps) whose target is a `-ledger.md` that does
 not exist; a `completed/` or `archive/` ledger modified in the diff under check other than a
 link repair (the "frozen" and "immutable" rules, enforced for the first time). Each failure is
-a provocation proof in the unit's tests ([../../../docs/testing.md](../../../docs/testing.md)
+a provocation proof in the unit's tests ([../../../docs/testing.md](../../../../docs/testing.md)
 "the gate goes red on a planted violation, then green").
 
 ### 3.4 The roadmap bins
@@ -234,7 +234,7 @@ nothing reached `main` or the main checkout. A second agent removed the `origin`
 the shared `.git` (`.git/config` mtime 11:46:55, inside the review window; every
 `refs/remotes/origin/*` ref went with it) — found when the pre-push hook's scope became 253
 commits; restored from the owner's own `FETCH_HEAD` record (`https://github.com/TRO-Wolf/repark`)
-and re-fetched (67 refs). The lesson is in [../../lessons.md](../../lessons.md) (2026-08-23).
+and re-fetched (67 refs). The lesson is in [../../lessons.md](../../../lessons.md) (2026-08-23).
 
 **Two corrections after the gates (2026-08-23, same branch, before the PR):**
 

@@ -70,7 +70,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
   and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
   `completed/` (or the paths given) under a date read from `main`'s first-parent history — never
-  the clock, so any machine produces the same name and a ledger not yet on `main` is refused;
+  the clock, so any machine produces the same name; a ledger not yet on `main` (the current unit's
+  own, retired in its departure commit) is left for the next pickup when unnamed and refused when
+  named (found by the first real pickup, DL-2);
   `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions
   (`mid-term` / `epic-term`; `archive` is not a `move` target); `check` is the gate. The rewrite
   is resolution-based — a link changes only if it *resolved* to the moved file — and covers the

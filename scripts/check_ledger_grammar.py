@@ -61,7 +61,6 @@ CITATION_ROOTS: tuple[str, ...] = ("crates/", "python/", "scripts/")
 # ratchet DOWN only; a row is deleted when it reaches zero and the block is
 # filed. A ledger not listed allows zero and must file its attestation.
 EXCEPTIONS: dict[str, tuple[int, bool]] = {
-    "dl-1-ledger-lifecycle-charter-ledger.md": (0, False),
     "fnp-0-charter-ledger.md": (12, False),
     "mw-0-charter-ledger.md": (10, False),
     "sem-0-charter-ledger.md": (9, False),

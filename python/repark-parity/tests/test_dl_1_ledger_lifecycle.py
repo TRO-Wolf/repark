@@ -129,7 +129,7 @@ def test_archive_moves_rewrites_and_relocates_the_map_row(repo: Path) -> None:
     assert _run(repo, "check").returncode == 0
 
 
-def test_archive_is_idempotent_and_refuses_a_ledger_not_on_main(repo: Path) -> None:
+def test_archive_is_idempotent_and_leaves_or_refuses_a_ledger_not_on_main(repo: Path) -> None:
     assert _run(repo, "archive").returncode == 0
     _commit(repo, "archived")
     again = _run(repo, "archive")
@@ -137,7 +137,13 @@ def test_archive_is_idempotent_and_refuses_a_ledger_not_on_main(repo: Path) -> N
     _git(repo, "checkout", "-q", "-b", "unit")
     _write(repo, "task/ledgers/completed/y2-new-ledger.md", "# Y2\n")
     _commit(repo, "finish y2 on the branch")
-    refused = _run(repo, "archive")
+    # Unnamed (the pickup's `make ledger-archive`): the unit's own ledger is left, exit 0.
+    left = _run(repo, "archive")
+    assert left.returncode == 0, left.stderr
+    assert "y2-new-ledger.md is not on main yet — left for the next pickup" in left.stdout
+    assert (repo / "task/ledgers/completed/y2-new-ledger.md").is_file()
+    # Named explicitly: refused, nothing changed.
+    refused = _run(repo, "archive", "task/ledgers/completed/y2-new-ledger.md")
     assert refused.returncode == 1
     assert "not on main yet" in refused.stderr
     assert (repo / "task/ledgers/completed/y2-new-ledger.md").is_file()

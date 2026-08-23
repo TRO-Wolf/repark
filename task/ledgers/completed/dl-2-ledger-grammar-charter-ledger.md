@@ -205,3 +205,15 @@ COVERAGE_ATTESTATION:
   reattested: []
   complete: true
 ```
+
+**Pickup after #221 (2026-08-23, same branch).** #221 squash-merged as `4fdf368` while this unit was
+in flight, so the branch was rebased onto `main` and the pickup ritual's new step 0 ran for the first
+time for real: `make ledger-archive` filed DL-1's ledger as
+`archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md` (7 links rewritten) and the
+grammar gate then went red on its own `EXCEPTIONS` row for that ledger — "in no live bin — delete
+the row" — which is the ratchet working. One defect in DL-1's `archive` surfaced and is fixed here:
+unnamed, it took all of `completed/` and refused atomically because this unit's own retired ledger
+is not on `main` yet — the normal state at pickup. Now an unnamed ledger not on `main` is left for
+the next pickup with a note; a named one is still refused (`test_dl_1_ledger_lifecycle.py`).
+Tree after: `ledger-grammar: 5 live ledgers clean (38 clauses, 6 pinned clause ids, 4 exception
+rows)`; `ledger-check: 128 ledgers in bins (123 archived), 520 ledger links resolve`.

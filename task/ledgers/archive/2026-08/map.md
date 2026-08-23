@@ -619,6 +619,10 @@ Ledgers archived in 2026-08; immutable — corrections are dated errata at the t
   location-less CTAS fallback root, so two sessions with different warehouses no longer
   share `<temp>/repark_ctas/<catalog>/<ns>/<table>`. MW-3 orphan refuse stays on the
   fallback tree.
+- [2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md](2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md) — **DL-1
+  (2026-08-23):** the charter for the ledger lifecycle itself — three bins, a deterministic
+  archive script and gate, two roadmap bins, the census eviction, the one-PR backfill. Four
+  owner rulings in §2.
 - [2026-08-23-mw-4-mor-acceptance-ledger.md](2026-08-23-mw-4-mor-acceptance-ledger.md) —
   **MW-4 (2026-08-23):** Glue live merge-on-read compact+expire in the aws-acceptance
   module. OD-3 scoped `s3:DeleteObject` on the warehouse scratch prefix. Unique
