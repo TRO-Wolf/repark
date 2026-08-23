@@ -30,7 +30,8 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | **MW-5** | maintenance | MW-4 merge | S |
+| — | **MW-4b** | maintenance | MW-4 live Glue dispatch | S |
+| — | **MW-5** | maintenance | MW-4b merge + green live dispatch | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -68,20 +69,29 @@ fallback root, so two sessions with different warehouses no longer share
 share; MW-3 refuse stays on that fallback tree. The dual-wire dataclass leftover
 is remaining debt, not sequenced work.
 
-**MW-4 lands with this change and leaves this file:** Glue live merge-on-read
-compact+expire in the aws-acceptance module (`testing_mw4_mor_*`, same helper as
-the always-run memory analog). OD-3 scoped object-delete is on the warehouse
-scratch prefix; Glue tables still accumulate. S3 Tables MOR compact+expire is
-out of this unit. The queue is MW-5.
+**MW-4 merged as [#218](https://github.com/TRO-Wolf/repark/pull/218) and left this
+file:** Glue live merge-on-read compact+expire in the aws-acceptance module
+(`testing_mw4_mor_*`, same helper as the always-run memory analog). OD-3 scoped
+object-delete is on the warehouse scratch prefix; Glue tables still accumulate.
+S3 Tables MOR compact+expire is out of this unit.
+
+**MW-4b is this change.** The post-merge `aws-acceptance` dispatch failed on
+`SELECT … FROM glue_catalog.ns.tbl.snapshots`: Glue (and HMS) `table_exists`
+calls `validate_namespace` and returns `DataInvalid` for a two-level namespace.
+The Spark metadata-table rewrite's "real table wins" probe used that 4-part path
+and treated anything other than `NamespaceNotFound`/`TableNotFound` as fatal, so
+the `$` rewrite never ran. Memory catalog analog stayed green because it allows
+hierarchical namespaces. Fix is in `repark-spark` `table_exists_parts`. MW-5
+stays queued behind a green live dispatch.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
 made it safe to schedule behind V3-1 rather than ahead of it. Burning the tables down is
 valuable; it is not urgent, and it is the one track in this queue with no user-visible outcome.
 
-**MW-5 is next.** It is the maintenance campaign close: registry rows, STATUS
-scorecard, guide + map lockstep, re-measured MW-0 delta. It waits on this PR
-merging.
+**MW-5 is next after MW-4b.** It is the maintenance campaign close: registry
+rows, STATUS scorecard, guide + map lockstep, re-measured MW-0 delta. It waits
+on MW-4b merging and a green `aws-acceptance` dispatch.
 
 **A13 sat last on purpose** because MW-3 already refused the dangerous sweep, so the
 exposure was a shared scratch root rather than a deletion. That write-path addressing
@@ -167,11 +177,20 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 
 ---
 
-## MW-5 — queued behind this merge
+## MW-4b — this change: Glue dotted metadata-table probe
+
+The MW-4 live leg died before compact/expire: `snapshot_ids_oldest_first` queries
+`{table}.snapshots`, Glue rejects the 4-part ident as a hierarchical namespace,
+and the rewrite never mapped it onto `table$snapshots`. Pin a Glue-shaped
+`table_exists` (exact `DataInvalid` message) through `prepare_metadata_table_sql`
+and treat that error as "not a real table" when the namespace has more than one
+level. Single-level `DataInvalid` and `Unexpected` stay fatal.
+
+## MW-5 — queued behind MW-4b
 
 MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline, scorecard
-flip) is queued behind MW-4 and is small. The live Glue MOR compact+expire proof is
-the post-merge `aws-acceptance` dispatch.
+flip) is queued behind MW-4b and a green live Glue dispatch. Small once the live
+MOR compact+expire proof is actually green.
 
 ---
 
