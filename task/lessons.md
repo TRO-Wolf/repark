@@ -199,8 +199,11 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   worktree itself** — and say so in the prompt with the clone path, not with "read-only". A
   DL-1 reviewer told "read-only, never run archive against this tree" still branched, committed
   WIP, ran the migration in the tree and pushed a stash onto the shared stack; the tree looked
-  untouched and only the reflog said otherwise. `git clone --no-hardlinks <worktree> <scratch>`
-  costs seconds and makes the instruction unnecessary.
+  untouched and only the reflog said otherwise; another removed the `origin` remote from the
+  SHARED `.git` (every `refs/remotes/origin/*` with it), found only when the pre-push hook's
+  scope ballooned to 253 commits. `git clone --no-hardlinks <worktree> <scratch>` costs seconds
+  and makes the instruction unnecessary. After any fan-out: `git reflog -5`, `git branch`,
+  `git stash list`, `git remote -v`, `git status` — before trusting the tree.
 - **DO dry-run a repository-wide mechanical rewrite on a clone and diff the maps before the real
   run.** The review caught a row-splitting defect only by running the real input; the unit tests
   on a synthetic fixture were green.

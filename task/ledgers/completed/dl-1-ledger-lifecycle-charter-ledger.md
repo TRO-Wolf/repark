@@ -230,8 +230,11 @@ takes the latest add (a file added, deleted and re-added is dated by its return)
 and a WIP commit in it, ran the archive there, and pushed a stash onto the shared stack; the
 working tree was restored but the index and HEAD were not. Recovered by re-homing HEAD
 (`reset --soft` to the charter commit), deleting the branch and dropping the stash by SHA;
-nothing reached `main` or the main checkout. The lesson is in
-[../../lessons.md](../../lessons.md) (2026-08-23).
+nothing reached `main` or the main checkout. A second agent removed the `origin` remote from
+the shared `.git` (`.git/config` mtime 11:46:55, inside the review window; every
+`refs/remotes/origin/*` ref went with it) — found when the pre-push hook's scope became 253
+commits; restored from the owner's own `FETCH_HEAD` record (`https://github.com/TRO-Wolf/repark`)
+and re-fetched (67 refs). The lesson is in [../../lessons.md](../../lessons.md) (2026-08-23).
 
 **Two corrections after the gates (2026-08-23, same branch, before the PR):**
 
