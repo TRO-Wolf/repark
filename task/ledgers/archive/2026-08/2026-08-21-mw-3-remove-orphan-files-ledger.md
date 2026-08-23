@@ -1,8 +1,8 @@
 # MW-3 — the procedure with no undo
 
 **Date:** 2026-08-21 · **Branch:** `feat/mw-3-remove-orphan-files` · **Base:** `1e73ef6`
-(`main`, post-#197) · **Charter:** [mw-0-charter-ledger.md](../../staging/mw-0-charter-ledger.md) ·
-**Slate:** [../briefs/iceberg-maintenance-wave.md](../../../../briefs/iceberg-maintenance-wave.md)
+(`main`, post-#197) · **Charter:** [mw-0-charter-ledger.md](../../completed/mw-0-charter-ledger.md) ·
+**Slate:** [../briefs/iceberg-maintenance-wave.md](../../../../docs/history/iceberg-maintenance-wave/slate.md)
 
 `remove_orphan_files` deletes files that no snapshot references. Every other procedure in this
 campaign is recoverable — a bad compaction is compacted again, an expired snapshot was already

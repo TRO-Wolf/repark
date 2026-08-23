@@ -483,15 +483,26 @@ def ordered_id_name_rows(spark: object, table: str, id_col: str) -> list[dict[st
     return [{"id": int(row[id_col]), "name": row["name"]} for row in arrow.to_pylist()]
 
 
-def require_snapshot_readable(spark: object, table: str, snapshot_id: int, id_col: str) -> None:
-    """Fail if ``VERSION AS OF snapshot_id`` does not return the CTAS row count."""
+def require_snapshot_readable(
+    spark: object,
+    table: str,
+    snapshot_id: int,
+    id_col: str,
+    expected_rows: int = MOR_SEED_ROW_COUNT,
+) -> None:
+    """Fail if ``VERSION AS OF snapshot_id`` does not return ``expected_rows``.
+
+    Dual probe with :func:`require_snapshot_expired`: the snapshot must be
+    readable *before* expire. MW-4's CTAS is ``MOR_SEED_ROW_COUNT`` rows; MW-5's
+    demo is 1,000.
+    """
     arrow = spark.sql(  # type: ignore[attr-defined]
         f"SELECT {id_col} FROM {table} VERSION AS OF {snapshot_id}"
     ).to_arrow()
-    if arrow.num_rows != MOR_SEED_ROW_COUNT:
+    if arrow.num_rows != expected_rows:
         raise AssertionError(
             f"VERSION AS OF {snapshot_id} returned {arrow.num_rows} rows; "
-            f"expected {MOR_SEED_ROW_COUNT} on {table}"
+            f"expected {expected_rows} on {table}"
         )
 
 

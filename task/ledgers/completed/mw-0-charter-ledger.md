@@ -3,8 +3,8 @@
 **Retires (line added 2026-08-23 by DL-1's backfill):** this charter moves to `../completed/` when MW-5, the maintenance-wave close, merges.
 
 **Date:** 2026-08-21 · **Branch:** `feat/mw-maintenance-wave` · **Base:** `1a36b72` (`main`,
-post-#194) · **Design:** [../docs/design/iceberg-maintenance-wave.md](../../../docs/design/iceberg-maintenance-wave.md) ·
-**Slate:** [../briefs/iceberg-maintenance-wave.md](../../../briefs/iceberg-maintenance-wave.md)
+post-#194) · **Design:** [../../../docs/history/iceberg-maintenance-wave/design.md](../../../docs/history/iceberg-maintenance-wave/design.md) ·
+**Slate:** [../../../docs/history/iceberg-maintenance-wave/slate.md](../../../docs/history/iceberg-maintenance-wave/slate.md)
 
 Three independent evaluations of whether merge-on-read is production grade converged on one
 verdict from three different tree snapshots: **the write path is production-grade in correctness

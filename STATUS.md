@@ -171,27 +171,31 @@ history-rewrite; provenance and the options weighed:
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
-- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 delivered with this
-  change**). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
-  `completed/` (the unit's last commit) → `archive/yyyy-mm/` (the script's move at pickup,
-  immutable) — and `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting
-  every link as it goes; `make check-ledgers` (in `make ci`) holds the bins, the archive names,
-  every ledger link in the repository and the frozen rule. Backfilled the same day: 122 ledgers
-  to `archive/2026-08/`, four open charters (MW-0, SEM-0, FNP-0, V3-0) in `staging/`. The roadmap
+- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 merged as
+  [#221](https://github.com/TRO-Wolf/repark/pull/221)**). Unit ledgers live in
+  [task/ledgers/](task/ledgers/map.md) by state — `staging/` → `completed/` (the unit's last
+  commit) → `archive/yyyy-mm/` (the script's move at pickup, immutable) — and
+  `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting every link as it
+  goes; `make check-ledgers` (in `make ci`) holds the bins, the archive names, every ledger
+  link in the repository and the frozen rule. Backfilled the same day: 122 ledgers to
+  `archive/2026-08/`, four open charters (MW-0, SEM-0, FNP-0, V3-0) in `staging/`. The roadmap
   has two bins by horizon, [task/roadmap/](task/roadmap/map.md) `mid-term/` and `epic-term/`
-  (short-term stays the slate). `task/census/` is evicted from the tree (reachable at `b13b22c`,
-  [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
+  (short-term stays the slate). `task/census/` is evicted from the tree (reachable at
+  `b13b22c`, [docs/port/census.md](docs/port/census.md) §7). Charter and execution record:
   [task/ledgers/archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-1-ledger-lifecycle-charter-ledger.md).
-  **DL-2 delivered with this change (stacked on DL-1):** the ledger *grammar* —
-  `scripts/check_ledger_grammar.py` / `make check-ledger-grammar` (in `make ci`) holds the shape
-  of every live ledger: clause rows (`C-NNN`, one verdict, evidence), the `pins: <unit>/C-NNN`
-  citation that binds a test to the clause it discharges
+  **DL-2 merged as [#222](https://github.com/TRO-Wolf/repark/pull/222)** (stacked on DL-1): the
+  ledger *grammar* — `scripts/check_ledger_grammar.py` / `make check-ledger-grammar` (in
+  `make ci`) holds the shape of every live ledger: clause rows (`C-NNN`, one verdict,
+  evidence), the `pins: <unit>/C-NNN` citation that binds a test to the clause it discharges
   ([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and the Critic's
   `COVERAGE_ATTESTATION` in ref 05's shape, required once no clause is `OPEN`. Measured floor
   seeded (31 unpinned `PROVEN` clauses across three live charters; ratchets down only). XML as
   the ledger carrier was measured and declined. Bound in
   [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Record:
-  [task/ledgers/completed/dl-2-ledger-grammar-charter-ledger.md](task/ledgers/completed/dl-2-ledger-grammar-charter-ledger.md).
+  [task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md).
+  **[#223](https://github.com/TRO-Wolf/repark/pull/223)** (owner-granted, not a slate unit)
+  dual-wired the map-link, ledger-lifecycle, and ledger-grammar guards into `ci.yml`'s
+  `guards` job (`fetch-depth: 0` so the frozen-bin diff has `origin/main`).
 
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
@@ -334,48 +338,51 @@ history-rewrite; provenance and the options weighed:
     committed — the exact failure `docs/testing.md` names, caught one step before it would have
     been pinned as truth.
 
-- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; five of six units merged). Merge-on-read
+- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; **closed by MW-5**). Merge-on-read
   was production-grade as a *write* path and fenced off as an *operational* one: the maintenance
   procedures refused on exactly the catalogs holding production data. Design:
-  [docs/design/iceberg-maintenance-wave.md](docs/design/iceberg-maintenance-wave.md); slate:
-  [briefs/iceberg-maintenance-wave.md](briefs/iceberg-maintenance-wave.md); charter:
-  [task/mw-0-charter-ledger.md](task/ledgers/staging/mw-0-charter-ledger.md).
+  Design and slate:
+  [docs/history/iceberg-maintenance-wave/](docs/history/iceberg-maintenance-wave/README.md)
+  (archived 2026-08-23). Charter:
+  [task/ledgers/completed/mw-0-charter-ledger.md](task/ledgers/completed/mw-0-charter-ledger.md).
   - **Delivered:** MW-0 the measured charter ([#195](https://github.com/TRO-Wolf/repark/pull/195)),
-    MW-1 the fence lifted for both catalog policies plus the expire over-count
+    MW-1 the fence lifted for both catalog policies plus Spark's six-column `expire_snapshots`
     ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`
-    wired and the last omitted Spark column closed
+    and Spark's fifth `rewrite_data_files` column
     ([#197](https://github.com/TRO-Wolf/repark/pull/197)), MW-3 `remove_orphan_files`
-    ([#198](https://github.com/TRO-Wolf/repark/pull/198)). **Five maintenance procedures** ran
-    through `CALL` at MW-3 close, and no procedure omits a Spark column. V3-1 adds
+    ([#198](https://github.com/TRO-Wolf/repark/pull/198)), MW-4 Glue live MOR compact+expire
+    ([#218](https://github.com/TRO-Wolf/repark/pull/218)), MW-4b Glue dotted metadata-table
+    rewrite ([#219](https://github.com/TRO-Wolf/repark/pull/219)). **Five maintenance
+    procedures** run through `CALL`; no procedure omits a Spark column. V3-1 adds
     `register_table` (adoption, not maintenance).
-  - **The baseline this has to move** (MW-0, measured): ten sequential MERGEs into a v2
-    merge-on-read table grow delete files one per merge and never reclaim them, and scan cost
-    tracks that growth **2.1× from merge 2 to merge 10 on a table whose contents never change**.
-    MW-5 re-runs the identical demo and records the delta.
-  - **MW-4 merged [#218](https://github.com/TRO-Wolf/repark/pull/218).** OD-3 is
-    owner-executed: the aws-acceptance role may `s3:DeleteObject` on the warehouse
-    scratch prefix. The Glue live leg is `test_mor_merge_compact_expire_against_glue`
-    in `test_aws_acceptance.py`: a unique `testing_mw4_mor_*` table, CTAS at
-    merge-on-read, MERGEs that strand position-delete files, compact + expire, Arrow
-    row parity. The same helper runs always as a memory-catalog analog. S3 Tables
-    MOR compact+expire is out of this unit (OD-3 is the Glue warehouse prefix). Glue
-    tables still cannot be dropped. The post-merge `aws-acceptance` dispatch failed
-    on `glue_catalog.ns.tbl.snapshots`: Glue `table_exists` returns `DataInvalid`
-    for a two-level namespace instead of not-found, so the Spark dotted metadata-table
-    rewrite never ran. That repair is this change; MW-5 stays queued behind a green
-    live dispatch.
-  - **Four divergences registered rather than forced** — `MOR-1`, `MOR-2`, `ORPHAN-1`, `ORPHAN-2`
-    in [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Two of them
-    (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert Spark's defaults on
-    the one procedure with no undo, under owner decision **OD-2**.
-  - **MW-3 surfaced a data-loss vector and guarded it rather than fixing it mid-unit.** The
-    in-memory catalog's namespace-without-location fallback is keyed by name under the catalog
-    root, so two processes sharing one warehouse and `mem.ns.events` share one directory; orphan
-    cleanup there could delete another process's live files. The procedure still refuses that
-    fallback tree. **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
-    `register_memory_catalog`'s fallback root to the supplied warehouse rather than
-    `<temp>/repark_ctas`, so two sessions with different warehouses no longer share files. See
-    [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md) A13.
+  - **Scorecard.** The MW-0 growth demo reproduces: ten sequential MERGEs into a 1,000-row v2
+    merge-on-read table, each touching the same 200 ids, grow position-delete files **1→10**.
+    After `rewrite_position_delete_files` + `rewrite_data_files` + `expire_snapshots`, delete
+    files are **10→1** and data files are **1**. Pin:
+    `python/repark/tests/test_mw5_baseline_delta.py::test_mw0_demo_delete_files_grow_then_compact_reclaims`
+    (`assert` 10 then 1 deletes; `assert` 1 data file after rewrite+expire). `COUNT(*)` stays
+    **1,000** (`int64`) on the Arrow path. Data-file count *before* compact was **41** on this
+    host (2026-08-23, logged, not asserted). Wall-clock on this host (not a CI pin): merge 2
+    **56.1 ms**, merge 10 **131.3 ms** (**2.3×**, MW-0 was 60.1→127.9 ms / 2.1×), warmed
+    post-maintenance **96.6 ms**.
+    Scan cost still tracks delete-file growth; compact reclaims the files. It does not restore
+    merge-2 wall-clock on this machine, and MW-5 does not claim a timing SLA.
+  - **Live Glue proof.** Post-#219 `aws-acceptance` dispatch
+    [32640855145](https://github.com/TRO-Wolf/repark/actions/runs/32640855145) on `d3c248c`
+    (2026-08-23 12:56Z) is green. OD-3 is owner-executed `s3:DeleteObject` on the warehouse
+    scratch prefix. Glue tables still cannot be dropped. **S3 Tables MOR compact+expire is
+    out of this campaign** (OD-3 is the Glue warehouse prefix). The 2026-08-23 intake's
+    "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
+    MW-4b (#219) and is not sequenced.
+  - **Divergences that remain rows**, not closed here — `MOR-1`, `MOR-2`, `ORPHAN-1`,
+    `ORPHAN-2`, `B-MOR-3` in
+    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). The two result-schema
+    gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
+    remaining rows (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert
+    Spark's defaults on the one procedure with no undo, under owner decision **OD-2**.
+  - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
+    `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
+    orphan cleanup of that fallback tree.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
@@ -399,9 +406,8 @@ history-rewrite; provenance and the options weighed:
     three nullable BIGINT columns, measured from the 1.10.0 jar); a Spark-written format-v3
     fixture is checked in so CI can load Puffin vectors with no JVM; `B-MOR-3` and
     `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table` in the fork
-    (`FeatureUnsupported`); this engine does not swallow that. **V3-2 and later want MW
-    closed first**, so a second format version is not introduced underneath the campaign's
-    only real-catalog evidence.
+    (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 and
+    later are no longer waiting on this campaign's live-catalog evidence.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

@@ -1,8 +1,15 @@
 # Slate — the Iceberg write-path maintenance wave (MW)
 
+> **ARCHIVED 2026-08-23 (MW-5).** Present state:
+> [STATUS.md](../../../STATUS.md) Iceberg maintenance wave. Dated correction:
+> "MW-5 inherits three registry rows" did not happen — MW-1/MW-2 closed the
+> schema gaps as columns; remaining rows are MOR-1, MOR-2, ORPHAN-1, ORPHAN-2,
+> B-MOR-3.
+
 **Chartered 2026-08-21**, green-lit by the owner for immediate start. Design:
-[../docs/design/iceberg-maintenance-wave.md](../docs/design/iceberg-maintenance-wave.md).
-Charter and approval gate: [../task/mw-0-charter-ledger.md](../task/ledgers/staging/mw-0-charter-ledger.md).
+[design.md](design.md).
+Charter and approval gate:
+[../../../task/ledgers/completed/mw-0-charter-ledger.md](../../../task/ledgers/completed/mw-0-charter-ledger.md).
 
 ## The one invariant
 

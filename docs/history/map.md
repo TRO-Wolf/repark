@@ -20,6 +20,10 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
   FD-1…FD-5 slate, the one unit ledger the campaign filed, and the
   [retrospective](frontdoor/retrospective.md) whose "Promotion check" section is this archival's
   lossless audit. Start at [frontdoor/README.md](frontdoor/README.md).
+- [iceberg-maintenance-wave/](iceberg-maintenance-wave/map.md) — the Iceberg write-path
+  maintenance wave (2026-08-21 → 2026-08-23, closed by MW-5): the design, the slate, and
+  the promotion check. Unit ledgers stay in [task/ledgers/](../../task/ledgers/map.md).
+  Start at [iceberg-maintenance-wave/README.md](iceberg-maintenance-wave/README.md).
 - [hardening-h1/](hardening-h1/map.md) — V2 Engine Hardening **H-1 phase** (mid-campaign promotion
   2026-08-11, G-9): the ten unit ledgers delivered through the H-1 close gate (repark #35–#46),
   including the parallel G/N corpus units, plus `g4-artifacts/` and the
@@ -34,7 +38,8 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
 | Understand how the engine got here | [port-v2/README.md](port-v2/README.md) |
 | Understand how the front door got here | [frontdoor/README.md](frontdoor/README.md) |
 | Read the H-1 phase record (mid-campaign) | [hardening-h1/README.md](hardening-h1/README.md) |
-| Check that an archived rule still binds — and where it lives now | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) · [frontdoor/retrospective.md](frontdoor/retrospective.md) "Promotion check" · [hardening-h1/promotion-ledger.md](hardening-h1/promotion-ledger.md) |
+| Read the Iceberg maintenance-wave record | [iceberg-maintenance-wave/README.md](iceberg-maintenance-wave/README.md) |
+| Check that an archived rule still binds — and where it lives now | [port-v2/promotion-ledger.md](port-v2/promotion-ledger.md) · [frontdoor/retrospective.md](frontdoor/retrospective.md) "Promotion check" · [hardening-h1/promotion-ledger.md](hardening-h1/promotion-ledger.md) · [iceberg-maintenance-wave/README.md](iceberg-maintenance-wave/README.md) "Promotion check" |
 | Find a unit's gate evidence / provocation proofs / census arithmetic | the unit's ledger in [port-v2/](port-v2/map.md), [frontdoor/](frontdoor/map.md), or [hardening-h1/](hardening-h1/map.md) |
 | See what a closed campaign cost, caught and missed | that campaign's retrospective + [../../task/metrics.md](../../task/metrics.md) |
 | Archive a completed campaign or closed phase | run its promotion audit first, then `git mv` its briefs and designs into a new `docs/history/<campaign>/` with its own `README.md` + `map.md`. Its unit ledgers are **not** moved: since DL-1 (2026-08-23) they are already in [../../task/ledgers/archive/](../../task/ledgers/archive/map.md) by merge month, and the campaign folder links to them there |

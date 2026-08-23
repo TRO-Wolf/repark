@@ -20,12 +20,6 @@ changing a decision here means a new dated design pass, not an in-place edit.
   `V3-ADOPT-1` is an admitted registry row, not queued; the CALL write names the Hadoop
   convention. §5 and §7 name the Spark-written fixture as landed.
 
-- [iceberg-maintenance-wave.md](iceberg-maintenance-wave.md) — **the MW campaign's design
-  (2026-08-21):** why merge-on-read is written but not operated, and why closing that is small.
-  Carries the measured baseline the campaign must move, the four procedure result schemas every
-  pin will assert, and §6 — what lifting the fence for both catalogs actually exposes, which is a
-  commit conflict the fork already catches rather than the corruption risk it was taken for.
-
 - [session-api.md](session-api.md) — the phase-1 repark-core Session API design (settled
   2026-08-06): the three-crate layout (`repark-common` / `repark-iceberg` / `repark-core`), the
   Session type and two-phase lifecycle, the internal engine API with the `SqlDialect` /
@@ -75,8 +69,10 @@ changing a decision here means a new dated design pass, not an in-place edit.
 **A campaign design leaves this directory when its campaign closes.** The Agent-Agnostic Front-Door
 design (settled 2026-08-08, implemented by FD-1…FD-5) moved to
 [../history/frontdoor/agent-agnostic-frontdoor.md](../history/frontdoor/agent-agnostic-frontdoor.md)
-at that campaign's close-out on 2026-08-10, with its slate and its unit ledger. The phase designs
-and product-contract stay live because the engine still obeys them.
+at that campaign's close-out on 2026-08-10, with its slate and its unit ledger. The Iceberg
+write-path maintenance wave (settled 2026-08-21, MW-0…MW-5) moved to
+[../history/iceberg-maintenance-wave/](../history/iceberg-maintenance-wave/README.md) on
+2026-08-23. The phase designs and product-contract stay live because the engine still obeys them.
 
 ## I want to...
 
@@ -92,6 +88,7 @@ and product-contract stay live because the engine still obeys them.
 | See what a hardening unit must do and how it is accepted | [../../briefs/v2-engine-hardening.md](../../briefs/v2-engine-hardening.md) |
 | See the product contracts for list_tables / sql() boundaries / post-DDL visibility | [product-contract.md](product-contract.md) |
 | Understand the Agent-Agnostic Front-Door campaign | [../history/frontdoor/README.md](../history/frontdoor/README.md) (archived 2026-08-10) |
+| Understand the Iceberg maintenance wave | [../history/iceberg-maintenance-wave/README.md](../history/iceberg-maintenance-wave/README.md) (archived 2026-08-23) |
 | Read the brief that executed the phase-1 design | [docs/history/port-v2/phase-1-engine-core.md](../history/port-v2/phase-1-engine-core.md) |
 | Read the brief that executed the phase-2 design | [docs/history/port-v2/phase-2-sql-doors.md](../history/port-v2/phase-2-sql-doors.md) |
 | Read the brief that executed the phase-3 design | [docs/history/port-v2/phase-3-python-facade.md](../history/port-v2/phase-3-python-facade.md) |
