@@ -42,9 +42,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   it. Exit 0 clean / 1 findings / 2 usage or environment error; fail-closed when the tree has no
   tracked `map.md` at all. Wired into `make check-map-sync`, `.pre-commit-config.yaml`
   (`map-sync-guard`) and the hook `make install-hooks` writes — measured n=5 **median 0.08 s**
-  over 143 maps, well inside the sub-second hook budget. Wired at every LOCAL path
-  `check_map_md.sh` uses; unlike it, there is no ci.yml step yet — that half is an owner-scoped
-  `.github/` change. The document-lifecycle rules it serves are
+  over 143 maps, well inside the sub-second hook budget. Wired at every path
+  `check_map_md.sh` uses, including ci.yml's guards job (owner-granted wiring, 2026-08-23). The
+  document-lifecycle rules it serves are
   [../AGENTS.md](../AGENTS.md) "Markdown document lifecycle".
 - `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2, 2026-08-23), over the live
   bins `task/ledgers/staging/` and `completed/` (a ledger retires into `completed/` in its own
@@ -64,7 +64,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   of the five ledgers that predate the rule), ratchets down only, and a row naming a ledger in no
   live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
   `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
-  0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain. Proofs:
+  0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
+  grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
@@ -91,7 +92,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   refused / 2 usage. Reviewed adversarially before its first real run (2026-08-23): the
   blocker it caught — a map row wrapped onto a line starting with `+ ` read as a nested bullet
   and split — is pinned in the tests. Wired as `make check-ledgers` (in the `make ci` chain since
-  the DL-1 backfill, the commit that made the tree pass it) and `make ledger-archive`. Proofs:
+  the DL-1 backfill, the commit that made the tree pass it; and as ci.yml's `ledger lifecycle guard`
+  step with `fetch-depth: 0`, dual-wired 2026-08-23) and `make ledger-archive`. Proofs:
   `python/repark-parity/tests/test_dl_1_ledger_lifecycle.py`.
 - `check_workflows_parse.py` — every GitHub Actions workflow must be parseable YAML. zizmor
   SKIPS files it cannot parse (exits 0 with "no auditable inputs"), so a broken workflow would
