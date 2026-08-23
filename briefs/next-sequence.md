@@ -30,8 +30,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | **MW-4** | maintenance | OD-3 executed | M |
-| — | **MW-5** | maintenance | MW-4 | S |
+| — | **MW-5** | maintenance | MW-4 merge | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -67,16 +66,22 @@ EXCEPTIONS table are remaining debt, not sequenced work.
 fallback root, so two sessions with different warehouses no longer share
 `<temp>/repark_ctas/<catalog>/<ns>/<table>`. Same warehouse + same names still
 share; MW-3 refuse stays on that fallback tree. The dual-wire dataclass leftover
-is remaining debt, not sequenced work. The queue is MW-4 (OD-3 executed; this
-unit) and MW-5.
+is remaining debt, not sequenced work.
+
+**MW-4 lands with this change and leaves this file:** Glue live merge-on-read
+compact+expire in the aws-acceptance module (`testing_mw4_mor_*`, same helper as
+the always-run memory analog). OD-3 scoped object-delete is on the warehouse
+scratch prefix; Glue tables still accumulate. S3 Tables MOR compact+expire is
+out of this unit. The queue is MW-5.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
 made it safe to schedule behind V3-1 rather than ahead of it. Burning the tables down is
 valuable; it is not urgent, and it is the one track in this queue with no user-visible outcome.
 
-**MW-4 is in flight.** OD-3 is owner-executed. It is the maintenance campaign's only
-real-catalog evidence, and the campaign cannot close without it. MW-5 stays behind it.
+**MW-5 is next.** It is the maintenance campaign close: registry rows, STATUS
+scorecard, guide + map lockstep, re-measured MW-0 delta. It waits on this PR
+merging.
 
 **A13 sat last on purpose** because MW-3 already refused the dangerous sweep, so the
 exposure was a shared scratch root rather than a deletion. That write-path addressing
@@ -162,12 +167,11 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 
 ---
 
-## MW-4 / MW-5 — OD-3 executed; MW-4 is this unit
+## MW-5 — queued behind this merge
 
-**OD-3 is owner-executed (2026-08-23):** scoped `s3:DeleteObject` on the tier-2 acceptance
-role's warehouse scratch prefix. The campaign never touches IAM. MW-4 stays on this slate
-until it merges. MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline,
-scorecard flip) is queued behind it and is small.
+MW-5 (registry close, the re-measured delta against MW-0's 2.1× baseline, scorecard
+flip) is queued behind MW-4 and is small. The live Glue MOR compact+expire proof is
+the post-merge `aws-acceptance` dispatch.
 
 ---
 

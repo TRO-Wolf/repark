@@ -30,7 +30,7 @@ Entry-point matrix: Spark facade only (`CALL` + `table.files` / `VERSION AS OF`)
 | C-007 | Structural guard still forbids DROP TABLE / DELETE FROM / DROP NAMESPACE. | PROVEN | `test_the_gated_harness_has_no_drop_or_delete_against_aws` scans both `test_aws_acceptance.py` and `_acceptance.py`. |
 | C-008 | Always-run memory analog uses the same helper as the Glue live test. | PROVEN | `test_mor_merge_compact_expire_on_memory_catalog`. |
 | C-009 | COW TBLPROPERTIES builder is not reused for the MOR table. | PROVEN | `test_mor_ctas_sql_is_merge_on_read_not_copy_on_write`. |
-| C-010 | Runbook + workflow comments record OD-3 object-delete on the scratch prefix; Glue table-delete stays denied. | PROVEN | `docs/tier2-aws.md` §2; `aws-acceptance.yml` comments. |
+| C-010 | Runbook + workflow comments record OD-3 object-delete on the scratch prefix; Glue table-delete stays denied. | PROVEN | `docs/tier2-aws.md` §2 and §5; `aws-acceptance.yml` comments. |
 | C-011 | `map.md` lockstep + this ledger. | PROVEN | `task/map.md`, `python/repark/tests/map.md`, `docs/map.md`, `.github/workflows/map.md`. |
 | C-012 | No AWS credentials in the tree; no `Cargo.toml [patch]`; IAM is owner-side. | PROVEN | diff. |
 | C-013 | Local gate is the memory analog + helper pins. Glue live is skip-gated; post-merge `aws-acceptance` dispatch is the live proof. | PROVEN | module `pytestmark`; STATUS. |
