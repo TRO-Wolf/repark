@@ -26,8 +26,10 @@ NOT in that file is a defect, not a decision.
   the MW-0 growth demo re-run: 1,000-row v2 merge-on-read, ten MERGEs of the same
   200 ids, position-delete files 1→10 then compact 10→1 and data files →1,
   `COUNT(*)` 1,000 `int64` throughout. After the MERGEs, `VERSION AS OF` the CTAS
-  snapshot still returns seed names `n{id}` (not live `m{id}`); after expire it
-  is the unknown-snapshot needle. Wall-clock is logged, not asserted.
+  snapshot still returns seed names `n{id}`; live rows after the MERGEs are
+  `m{id}` for ids 1..200 and `n{id}` otherwise (oracled, not only contrasted).
+  After expire the CTAS snapshot is the unknown-snapshot needle. Wall-clock is
+  logged, not asserted.
 - [test_a13_ctas_fallback.py](test_a13_ctas_fallback.py) — **A13 (2026-08-23):**
   location-less Spark CTAS after `register_memory_catalog` writes under the warehouse,
   not `<temp>/repark_ctas`; two sessions with different warehouses and the same

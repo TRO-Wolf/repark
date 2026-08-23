@@ -66,6 +66,15 @@ def _merge_rows() -> list[tuple[int, str]]:
     return [(index, f"m{index}") for index in range(1, IDS_PER_MERGE + 1)]
 
 
+def _live_rows_after_merges() -> list[dict[str, object]]:
+    """Oracle after the ten MERGEs: ids 1..200 renamed ``mN``, the rest ``nN``."""
+    rows: list[dict[str, object]] = []
+    for index in range(1, SEED_ROW_COUNT + 1):
+        name = f"m{index}" if index <= IDS_PER_MERGE else f"n{index}"
+        rows.append({"id": index, "name": name})
+    return rows
+
+
 def _data_file_count(spark: ReparkSession, table: str) -> int:
     """Live data files (``files.content = 0``) on ``table``."""
     files: pa.Table = spark.sql(f"SELECT content FROM {table}.files").to_arrow()
@@ -141,7 +150,7 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
         rows_before: pa.Table = spark.sql(f"SELECT id, name FROM {TABLE} ORDER BY id").to_arrow()
         assert rows_before.schema.field("id").type == pa.int64()
         assert rows_before.schema.field("name").type == pa.string()
-        assert rows_before.num_rows == SEED_ROW_COUNT
+        assert rows_before.to_pylist() == _live_rows_after_merges()
 
         spark.sql(
             maintenance_call_sql(CATALOG, "rewrite_position_delete_files", TABLE_ARG)
