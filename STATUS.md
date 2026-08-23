@@ -193,6 +193,11 @@ history-rewrite; provenance and the options weighed:
   the ledger carrier was measured and declined. Bound in
   [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Record:
   [task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md).
+  **DL-3 delivered with this change:** archive month maps are an index, not a book — one line
+  per ledger (owner ruling 2026-08-23: the record is the ledger; git history keeps the long
+  rows), `_condense_row` in the lifecycle script, the 2026-08 map 55.5 kB → 29.3 kB, and the
+  maps now say they are off the normal read path. Record:
+  [task/ledgers/completed/dl-3-archive-map-compaction-charter-ledger.md](task/ledgers/completed/dl-3-archive-map-compaction-charter-ledger.md).
   **[#223](https://github.com/TRO-Wolf/repark/pull/223)** (owner-granted, not a slate unit)
   dual-wired the map-link, ledger-lifecycle, and ledger-grammar guards into `ci.yml`'s
   `guards` job (`fetch-depth: 0` so the frozen-bin diff has `origin/main`).
@@ -344,7 +349,7 @@ history-rewrite; provenance and the options weighed:
   Design and slate:
   [docs/history/iceberg-maintenance-wave/](docs/history/iceberg-maintenance-wave/README.md)
   (archived 2026-08-23). Charter:
-  [task/ledgers/completed/mw-0-charter-ledger.md](task/ledgers/completed/mw-0-charter-ledger.md).
+  [task/ledgers/completed/mw-0-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-mw-0-charter-ledger.md).
   - **Delivered:** MW-0 the measured charter ([#195](https://github.com/TRO-Wolf/repark/pull/195)),
     MW-1 the fence lifted for both catalog policies plus Spark's six-column `expire_snapshots`
     ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`

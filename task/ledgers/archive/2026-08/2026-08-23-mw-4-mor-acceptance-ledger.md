@@ -5,7 +5,7 @@
 
 **Design:** [../docs/design/iceberg-maintenance-wave.md](../../../../docs/history/iceberg-maintenance-wave/design.md) §4
 **Slate:** [../briefs/iceberg-maintenance-wave.md](../../../../docs/history/iceberg-maintenance-wave/slate.md)
-**Charter:** [mw-0-charter-ledger.md](../../completed/mw-0-charter-ledger.md) OD-3
+**Charter:** [mw-0-charter-ledger.md](2026-08-23-mw-0-charter-ledger.md) OD-3
 **Runbook:** [../docs/tier2-aws.md](../../../../docs/tier2-aws.md) §2
 
 ## Path + critic engine

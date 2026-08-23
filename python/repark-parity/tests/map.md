@@ -14,12 +14,14 @@ JVM, no repark required). See [../map.md](../map.md).
   required once no clause is `OPEN` and its shape defects (no artifacts, no justification, a
   missing category, an inconsistent `complete:`) go red; a ledger with no clause table goes
   red; `FINDING:` fields are checked; a raised ceiling or a stale `EXCEPTIONS` row goes red
-  against the real tree. Each test cites the DL-2 clause it pins.
+  against the real tree. Each test cites the DL-2 clause it pins. The DL-1 file's archive-row
+  tests likewise cite the DL-3 clauses (the condense rule).
 - `test_dl_1_ledger_lifecycle.py` — **DL-1 (2026-08-23):** the ledger lifecycle
   script on a scratch git repository: `archive` moves a `completed/` ledger to
   its dated archive name, rewrites every link to it (fragments kept, code spans
-  untouched), re-expresses the ledger's own links, relocates its map row and
-  stages the lot; idempotent; a ledger not on `main` is left when unnamed (the pickup case)
+  untouched), re-expresses the ledger's own links, relocates its map row — whole
+  into the live bins, condensed to one line (first sentence, `+ `-continuations
+  joined) into an archive month map (DL-3) — and stages the lot; idempotent; a ledger not on `main` is left when unnamed (the pickup case)
   and refused when named; `move` to
   `completed`; `archive` is not a `move` target. The provocation proofs of
   `check`: a ledger outside the bins, an archive prefix disagreeing with its

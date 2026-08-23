@@ -1,7 +1,7 @@
 # MW-2 — the procedure that reclaims what merge-on-read leaves behind
 
 **Date:** 2026-08-21 · **Branch:** `feat/mw-2-rewrite-position-deletes` · **Base:** `90431bf`
-(`main`, post-#196) · **Charter:** [mw-0-charter-ledger.md](../../completed/mw-0-charter-ledger.md) · **Design:**
+(`main`, post-#196) · **Charter:** [mw-0-charter-ledger.md](2026-08-23-mw-0-charter-ledger.md) · **Design:**
 [../docs/design/iceberg-maintenance-wave.md](../../../../docs/history/iceberg-maintenance-wave/design.md)
 
 MW-0 measured the campaign's thesis: ten merge-on-read MERGEs grow delete files one per merge and

@@ -7,7 +7,7 @@
 > Remaining rows: MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3.
 
 **Chartered:** 2026-08-21 · **Base:** `1a36b72` (`main`, post-#194) ·
-**Charter ledger:** [../../../task/ledgers/completed/mw-0-charter-ledger.md](../../../task/ledgers/completed/mw-0-charter-ledger.md) ·
+**Charter ledger:** [../../../task/ledgers/completed/mw-0-charter-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-23-mw-0-charter-ledger.md) ·
 **Slate:** [slate.md](slate.md)
 
 ## 1. The problem, stated as narrowly as it actually is

@@ -60,7 +60,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
   `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
-  floor per ledger (31 unpinned `PROVEN` clauses across three charters; attestation not required
+  floor per ledger (31 unpinned `PROVEN` clauses across three charters at arming; rows ratchet
+  away as their ledgers retire — mw-0's went with MW-5; attestation not required
   of the five ledgers that predate the rule), ratchets down only, and a row naming a ledger in no
   live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
   `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
@@ -79,7 +80,10 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   is resolution-based — a link changes only if it *resolved* to the moved file — and covers the
   moved file's own outgoing links and its `map.md` row — the bullet plus every indented line
   under it, wrapped text and sub-lists alike — which travels to the destination map with its
-  description; nothing is written unless every rewritten link resolves, and the result is staged
+  description. Rows travel **whole into the live bins**; into an **archive month map** they are
+  condensed to one line, link plus first sentence (DL-3, owner ruling 2026-08-23 — the record is
+  the ledger, git history keeps the long row, and the month maps say so in their Purpose).
+  Nothing is written unless every rewritten link resolves, and the result is staged
   as one change. Prose mentions in code spans are not links and are left alone (the basename
   survives the move, so they still find the file). `check` fails on a `*-ledger.md` under `task/` outside the bins, an
   archive name whose date prefix disagrees with its month directory, a dead `-ledger.md` link in
