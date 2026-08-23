@@ -25,6 +25,7 @@ from _acceptance import (
     merge_sql,
     position_delete_file_count,
     require_snapshot_expired,
+    require_snapshot_readable,
     snapshot_ids_oldest_first,
 )
 
@@ -105,6 +106,9 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
         spark.catalog.dropTempView(SEED_VIEW)
 
         first_snapshot_id: int = snapshot_ids_oldest_first(spark, TABLE)[0]
+        require_snapshot_readable(
+            spark, TABLE, first_snapshot_id, "id", expected_rows=SEED_ROW_COUNT
+        )
         scan_at_merge: dict[int, float] = {}
 
         merge_index: int
@@ -135,9 +139,9 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
             maintenance_call_sql(CATALOG, "rewrite_position_delete_files", TABLE_ARG)
         ).to_arrow()
         deletes_after_compact: int = position_delete_file_count(spark, TABLE)
-        assert deletes_after_compact < deletes_before_compact, (
-            f"rewrite_position_delete_files did not reclaim: "
-            f"{deletes_before_compact} → {deletes_after_compact}"
+        assert deletes_after_compact == 1, (
+            f"rewrite_position_delete_files: expected 1 live position-delete file, "
+            f"got {deletes_before_compact} → {deletes_after_compact}"
         )
 
         spark.sql(maintenance_call_sql(CATALOG, "rewrite_data_files", TABLE_ARG)).to_arrow()
@@ -162,6 +166,11 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
         assert count_after == SEED_ROW_COUNT
         assert count_after_type == pa.int64()
 
+        data_files_after: int = _data_file_count(spark, TABLE)
+        assert data_files_after == 1, (
+            f"rewrite_data_files+expire: expected 1 live data file, "
+            f"got {data_files_before_compact} → {data_files_after}"
+        )
         require_snapshot_expired(spark, TABLE, first_snapshot_id)
 
         LOGGER.info(
@@ -173,7 +182,7 @@ def test_mw0_demo_delete_files_grow_then_compact_reclaims(tmp_path: Path) -> Non
             deletes_before_compact,
             deletes_after_compact,
             data_files_before_compact,
-            _data_file_count(spark, TABLE),
+            data_files_after,
         )
     finally:
         spark.stop()

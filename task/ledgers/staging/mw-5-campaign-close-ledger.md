@@ -32,8 +32,8 @@ Tables MOR leg) is a different id and is out of this unit.
 | Clause | Proposition (checkable) | Proof obligation | Verdict | Evidence / open question |
 |--------|--------------------------|-------------------|---------|---------------------------|
 | C-001 | Ten sequential MERGEs into a 1,000-row v2 merge-on-read table, each touching the same 200 ids, grow live position-delete files one per MERGE, 1 through 10. | Facade pin that reds if a MERGE stops stranding a delete file. | PROVEN | `test_mw0_demo_delete_files_grow_then_compact_reclaims` |
-| C-002 | After those ten MERGEs, `rewrite_position_delete_files` reduces the live position-delete count; `rewrite_data_files` + `expire_snapshots` leave `COUNT(*)` = 1,000 as Arrow `int64`. | Value AND type on `to_arrow`; compact is not a no-op. | PROVEN | same test; this run delete files 10→1, data files 41→1 |
-| C-003 | The CTAS snapshot is unreadable via `VERSION AS OF` after `expire_snapshots(..., retain_last => 1)`. | Engine needle `unknown Iceberg snapshot id {id}: not found in table metadata`. | PROVEN | same test via `require_snapshot_expired` |
+| C-002 | After those ten MERGEs, `rewrite_position_delete_files` leaves **1** live position-delete file and `rewrite_data_files` + `expire_snapshots` leave **1** live data file; `COUNT(*)` = 1,000 as Arrow `int64`. | Exact after-counts, value AND type on `to_arrow`. | PROVEN | `test_mw0_demo_delete_files_grow_then_compact_reclaims` (`== 1` both counts) |
+| C-003 | The CTAS snapshot is readable before expire and unreadable via `VERSION AS OF` after `expire_snapshots(..., retain_last => 1)`. | Dual probe: `require_snapshot_readable(..., expected_rows=1000)` then engine needle. | PROVEN | same test |
 | C-004 | Wall-clock `COUNT(*)` scan times for merge 2, merge 10, and post-maintenance are recorded from a real run. They are not a CI assertion. | Ledger names the host run. | PROVEN | this ledger §Measured; `LOGGER.info` in the pin |
 | C-005 | STATUS MW workstream is a close scorecard: delivered units, live Glue proof, remaining registry rows as pointers, S3 Tables MOR out. | STATUS prose matches merged PRs and the pin. | PROVEN | `STATUS.md` Iceberg maintenance wave |
 | C-006 | The operator guide's position-delete section names the 1,000-row / ten-MERGE shape as what compact reclaims. | Guide sentence, verified against the pin. | PROVEN | `docs/guide/iceberg-guide.md` "Compacting position deletes" |
@@ -65,7 +65,7 @@ Merge 10 / merge 2 = **2.3×** (MW-0: 60.1 ms → 127.9 ms = 2.1×). Compact rec
 Post-maintenance wall-clock on this machine is not merge-2. MW-5 does not pin a timing SLA.
 
 Two earlier runs the same hour: merge2 0.0386 / 0.0571, merge10 0.1304 / 0.1313. Merge-10 is
-stable; merge-2 is noisy. The CI pin is the file counts and the row identity.
+stable; merge-2 is noisy. The CI pin is the exact after-counts (delete files 10→1, data files →1) and the row identity.
 
 ## Enumeration (C-001 / C-002)
 
