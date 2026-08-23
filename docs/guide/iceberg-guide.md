@@ -424,7 +424,9 @@ lineage through the same compaction unchanged, so compact v3 tables there for no
 ### Compacting position deletes
 
 On a merge-on-read table every `MERGE`, `UPDATE` and `DELETE` leaves a position-delete file
-behind, and scans get slower as they pile up. `rewrite_position_delete_files` merges them:
+behind, and scans get slower as they pile up. Ten sequential MERGEs of the same 200 ids into
+a 1,000-row table leave ten delete files; this CALL folds them (measured, STATUS MW
+scorecard). `rewrite_position_delete_files` merges them:
 
 ```python
 spark.sql(

@@ -11,6 +11,11 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   2026-08-20 and the gate passed. Design:
   [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
+- [mw-5-campaign-close-ledger.md](mw-5-campaign-close-ledger.md) — **MW-5 (2026-08-23):**
+  campaign close. Re-runs the MW-0 1,000-row / ten-MERGE demo, pins delete-file growth
+  1→10 then compact+expire 10→1 with Arrow `COUNT(*)` 1,000 `int64`, records wall-clock
+  in the ledger (not a CI timing pin), STATUS scorecard, guide lockstep. S3 Tables MOR
+  stays out. Original charter registry rows were closed in MW-1/MW-2.
 - [mw-0-charter-ledger.md](mw-0-charter-ledger.md) — **MW-0 (2026-08-21):** the charter for the
   Iceberg write-path maintenance wave, and the campaign's whole measured floor. Merge-on-read
   writes are correct and merge-on-read is not operable: ten sequential MERGEs grow delete files

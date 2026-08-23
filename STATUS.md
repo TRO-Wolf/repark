@@ -338,48 +338,49 @@ history-rewrite; provenance and the options weighed:
     committed — the exact failure `docs/testing.md` names, caught one step before it would have
     been pinned as truth.
 
-- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; five of six units merged). Merge-on-read
+- **Iceberg maintenance wave (MW)** (chartered 2026-08-21; **closed by MW-5**). Merge-on-read
   was production-grade as a *write* path and fenced off as an *operational* one: the maintenance
   procedures refused on exactly the catalogs holding production data. Design:
   [docs/design/iceberg-maintenance-wave.md](docs/design/iceberg-maintenance-wave.md); slate:
   [briefs/iceberg-maintenance-wave.md](briefs/iceberg-maintenance-wave.md); charter:
-  [task/mw-0-charter-ledger.md](task/ledgers/staging/mw-0-charter-ledger.md).
+  [task/mw-0-charter-ledger.md](task/ledgers/staging/mw-0-charter-ledger.md) (retires to
+  `completed/` in MW-5's departure).
   - **Delivered:** MW-0 the measured charter ([#195](https://github.com/TRO-Wolf/repark/pull/195)),
-    MW-1 the fence lifted for both catalog policies plus the expire over-count
+    MW-1 the fence lifted for both catalog policies plus Spark's six-column `expire_snapshots`
     ([#196](https://github.com/TRO-Wolf/repark/pull/196)), MW-2 `rewrite_position_delete_files`
-    wired and the last omitted Spark column closed
+    and Spark's fifth `rewrite_data_files` column
     ([#197](https://github.com/TRO-Wolf/repark/pull/197)), MW-3 `remove_orphan_files`
-    ([#198](https://github.com/TRO-Wolf/repark/pull/198)). **Five maintenance procedures** ran
-    through `CALL` at MW-3 close, and no procedure omits a Spark column. V3-1 adds
+    ([#198](https://github.com/TRO-Wolf/repark/pull/198)), MW-4 Glue live MOR compact+expire
+    ([#218](https://github.com/TRO-Wolf/repark/pull/218)), MW-4b Glue dotted metadata-table
+    rewrite ([#219](https://github.com/TRO-Wolf/repark/pull/219)). **Five maintenance
+    procedures** run through `CALL`; no procedure omits a Spark column. V3-1 adds
     `register_table` (adoption, not maintenance).
-  - **The baseline this has to move** (MW-0, measured): ten sequential MERGEs into a v2
-    merge-on-read table grow delete files one per merge and never reclaim them, and scan cost
-    tracks that growth **2.1× from merge 2 to merge 10 on a table whose contents never change**.
-    MW-5 re-runs the identical demo and records the delta.
-  - **MW-4 merged [#218](https://github.com/TRO-Wolf/repark/pull/218).** OD-3 is
-    owner-executed: the aws-acceptance role may `s3:DeleteObject` on the warehouse
-    scratch prefix. The Glue live leg is `test_mor_merge_compact_expire_against_glue`
-    in `test_aws_acceptance.py`: a unique `testing_mw4_mor_*` table, CTAS at
-    merge-on-read, MERGEs that strand position-delete files, compact + expire, Arrow
-    row parity. The same helper runs always as a memory-catalog analog. S3 Tables
-    MOR compact+expire is out of this unit (OD-3 is the Glue warehouse prefix). Glue
-    tables still cannot be dropped. The post-merge `aws-acceptance` dispatch failed
-    on `glue_catalog.ns.tbl.snapshots`: Glue `table_exists` returns `DataInvalid`
-    for a two-level namespace instead of not-found, so the Spark dotted metadata-table
-    rewrite never ran. That repair is this change; MW-5 stays queued behind a green
-    live dispatch.
-  - **Four divergences registered rather than forced** — `MOR-1`, `MOR-2`, `ORPHAN-1`, `ORPHAN-2`
-    in [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Two of them
-    (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert Spark's defaults on
-    the one procedure with no undo, under owner decision **OD-2**.
-  - **MW-3 surfaced a data-loss vector and guarded it rather than fixing it mid-unit.** The
-    in-memory catalog's namespace-without-location fallback is keyed by name under the catalog
-    root, so two processes sharing one warehouse and `mem.ns.events` share one directory; orphan
-    cleanup there could delete another process's live files. The procedure still refuses that
-    fallback tree. **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
-    `register_memory_catalog`'s fallback root to the supplied warehouse rather than
-    `<temp>/repark_ctas`, so two sessions with different warehouses no longer share files. See
-    [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md) A13.
+  - **Scorecard.** The MW-0 growth demo reproduces: ten sequential MERGEs into a 1,000-row v2
+    merge-on-read table, each touching the same 200 ids, grow position-delete files **1→10**.
+    After `rewrite_position_delete_files` + `rewrite_data_files` + `expire_snapshots`, delete
+    files are **10→1**, data files on this run **41→1**, and `COUNT(*)` stays **1,000**
+    (`int64`) on the Arrow path. Pin:
+    `python/repark/tests/test_mw5_baseline_delta.py::test_mw0_demo_delete_files_grow_then_compact_reclaims`.
+    Wall-clock on this host (2026-08-23, not a CI pin): merge 2 **56.1 ms**, merge 10
+    **131.3 ms** (**2.3×**, MW-0 was 60.1→127.9 ms / 2.1×), warmed post-maintenance **96.6 ms**.
+    Scan cost still tracks delete-file growth; compact reclaims the files. It does not restore
+    merge-2 wall-clock on this machine, and MW-5 does not claim a timing SLA.
+  - **Live Glue proof.** Post-#219 `aws-acceptance` dispatch
+    [32640855145](https://github.com/TRO-Wolf/repark/actions/runs/32640855145) on `d3c248c`
+    (2026-08-23 12:56Z) is green. OD-3 is owner-executed `s3:DeleteObject` on the warehouse
+    scratch prefix. Glue tables still cannot be dropped. **S3 Tables MOR compact+expire is
+    out of this campaign** (OD-3 is the Glue warehouse prefix). The 2026-08-23 intake's
+    "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
+    MW-4b (#219) and is not sequenced.
+  - **Divergences that remain rows**, not closed here — `MOR-1`, `MOR-2`, `ORPHAN-1`,
+    `ORPHAN-2`, `B-MOR-3` in
+    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). The two result-schema
+    gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
+    remaining rows (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert
+    Spark's defaults on the one procedure with no undo, under owner decision **OD-2**.
+  - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
+    `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
+    orphan cleanup of that fallback tree.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
@@ -403,9 +404,8 @@ history-rewrite; provenance and the options weighed:
     three nullable BIGINT columns, measured from the 1.10.0 jar); a Spark-written format-v3
     fixture is checked in so CI can load Puffin vectors with no JVM; `B-MOR-3` and
     `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table` in the fork
-    (`FeatureUnsupported`); this engine does not swallow that. **V3-2 and later want MW
-    closed first**, so a second format version is not introduced underneath the campaign's
-    only real-catalog evidence.
+    (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 and
+    later are no longer waiting on this campaign's live-catalog evidence.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

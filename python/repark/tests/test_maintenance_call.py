@@ -5,9 +5,9 @@ remove_orphan_files, rollback_to_snapshot, and register_table (V3-1 adoption).
 Unknown names refuse loud listing the supported set.
 
 Oracle discipline: Arrow ``to_arrow`` value AND type pins (docs/testing.md
-divergence-class). Result schemas pin Spark names where the fork exposes honest
-metrics; expire content-file count is a disclosed divergence (fork buckets all
-content together).
+divergence-class). Result schemas pin Spark names and types. MW-1 closed the
+expire content-file funnel (six Spark columns, all nullable); MW-2 closed
+``removed_delete_files_count`` (honest 0). Neither is a live divergence.
 
 Fork pin ``4723104b``:
 - expire: ``transaction/expire_snapshots.rs`` + ``expire_cleanup.rs``
