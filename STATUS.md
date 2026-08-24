@@ -463,8 +463,10 @@ history-rewrite; provenance and the options weighed:
     [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
   - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7, MW-8,
     **V3-2** ([#232](https://github.com/TRO-Wolf/repark/pull/232)), and **MW-9**
-    (this PR — `write.delete.granularity` / `MOR-2` for MERGE) are delivered.
-    The queue on [briefs/next-sequence.md](briefs/next-sequence.md) is empty.
+    ([#233](https://github.com/TRO-Wolf/repark/pull/233) —
+    `write.delete.granularity` / `MOR-2` for MERGE) are delivered.
+    The queue on [briefs/next-sequence.md](briefs/next-sequence.md) now carries
+    **Lane A, the v3 evidence intake** (owner-chartered 2026-08-24, V3E-1 first).
     V3-3 (deletion-vector writes) remains owner-sequenced. The intake S3 Tables
     MOR leg stays unsequenced.
 
@@ -499,7 +501,10 @@ history-rewrite; provenance and the options weighed:
     SQL must still request v3; unspecified create stays v2; ALTER stays refused;
     `rewrite_data_files` still hits `V3-LINEAGE-1`. Ledger:
     [task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](task/ledgers/archive/2026-08/2026-08-24-v3-2-create-v3-opt-in-ledger.md).
-    Next on the track is V3-3 (DV writes), owner-sequenced.
+    Next on the track is **Lane A, the v3 evidence intake**
+    (owner-chartered 2026-08-24: V3E-1..5 on [briefs/next-sequence.md](briefs/next-sequence.md);
+    table encryption keys ruled a dated DECLARED exclusion the same day). V3-3
+    (DV writes) remains owner-sequenced, gated on fork F-13.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
