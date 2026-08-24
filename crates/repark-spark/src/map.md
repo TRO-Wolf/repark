@@ -98,7 +98,8 @@ wrapper.
   datafusion.catalog.default_catalog` (round 5, Z-1). Untightened `CREATE VIEW` behaviour is
   unchanged (that it persists an Iceberg table at all predates this branch).
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
-  Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in);
+  Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
+  `Model: Grok 4.6 xHigh`);
   **TZ-4 PR-1:** default `TIMESTAMP` → Iceberg `timestamptz`,
   `TIMESTAMP_NTZ` stays `timestamp` (live Spark 4.1.2 CREATE probe). **Q10:** bare
   `TIMESTAMP` follows `spark.sql.timestampType` (`TIMESTAMP_NTZ` → Iceberg `timestamp`);

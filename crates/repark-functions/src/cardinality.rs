@@ -210,6 +210,8 @@ pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSet
 /// pins: v3-2-create-v3-opt-in/C-001, C-003, C-004
 /// ===========================================================================================
 ///
+/// Model: Grok 4.6 xHigh
+///
 /// # Errors
 /// Unsupported version, or v3 requested while the session opt-in is off.
 pub fn resolve_create_format_version(

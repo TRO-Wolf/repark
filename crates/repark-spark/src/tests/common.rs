@@ -105,6 +105,8 @@ pub(super) async fn setup_with_sql_settings(
 }
 
 /// pins: v3-2-create-v3-opt-in/C-005
+///
+/// Model: Grok 4.6 xHigh
 pub(super) async fn setup_allow_create_format_version_3(
     wh: &TempDir,
 ) -> (SessionContext, CatalogRegistry) {

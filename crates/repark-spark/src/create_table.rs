@@ -427,6 +427,8 @@ async fn execute_schema_create(
 
 /// Resolve CREATE/CTAS `TBLPROPERTIES ('format-version')` against the session opt-in.
 /// pins: v3-2-create-v3-opt-in/C-001, C-005
+///
+/// Model: Grok 4.6 xHigh
 pub(crate) fn iceberg_create_format_version(
     ctx: &SessionContext,
     requested: Option<&str>,

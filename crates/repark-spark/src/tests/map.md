@@ -12,7 +12,7 @@ code is not here — only tests, shared fixtures, and the module manifest.
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**
-  `setup_allow_create_format_version_3`. **U2:** `setup` /
+  `setup_allow_create_format_version_3` (`Model: Grok 4.6 xHigh`). **U2:** `setup` /
   `setup_allow_local_fs_ddl` / `setup_strict_catalog` call
   `crate::extension::apply_spark_float_as_decimal` so Spark-door unit fixtures match
   production `configure`. **R-2:** those fixtures plus `setup_with_ansi` also call
@@ -51,7 +51,7 @@ code is not here — only tests, shared fixtures, and the module manifest.
   engine-created table through the fork's own `Transaction::upgrade_table_version` so tests that
   must not depend on V3-2 CREATE still run. **V3-2** adds
   `opt_in_create_produces_v3_and_rewrite_still_refuses` (engine CREATE with the session
-  opt-in is V3 and still hits V3-LINEAGE-1). A fourth pin holds the guard's **default-session**
+  opt-in is V3 and still hits V3-LINEAGE-1; `Model: Grok 4.6 xHigh`). A fourth pin holds the guard's **default-session**
   blast-radius claim — all four doors to a v3 table refuse without the opt-in — and it lives here
   rather than with the CREATE tests because the claim is what makes a refusal stricter than Spark
   defensible; its `ALTER` half is an UPSTREAM behaviour, so the pin doubles as the detector for

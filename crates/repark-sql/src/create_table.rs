@@ -195,6 +195,7 @@ pub(crate) async fn execute_create_table(
     }
 }
 
+/// Model: Grok 4.6 xHigh
 #[allow(clippy::too_many_arguments)] // target + schema + V3-2 version + placement travel together
 async fn execute_staged_create(
     cx: &EngineContext<'_>,
@@ -391,6 +392,8 @@ const ALLOW_CREATE_FORMAT_VERSION_3_OPTION: &str = "repark.sql.allow_create_form
 /// Reads the knob through `ConfigOptions::entries()` so this door does not take a
 /// product `repark-functions` edge (same pattern as SEC-02). Absent extension → closed.
 /// pins: v3-2-create-v3-opt-in/C-006, C-013
+///
+/// Model: Grok 4.6 xHigh
 #[allow(clippy::too_many_arguments)] // schema + location + requested format-version travel together
 fn iceberg_table_creation(
     name: &str,
@@ -425,6 +428,7 @@ fn iceberg_table_creation(
     }
 }
 
+/// Model: Grok 4.6 xHigh
 fn iceberg_create_format_version(
     ctx: &SessionContext,
     requested: Option<&str>,
