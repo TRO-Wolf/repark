@@ -36,8 +36,8 @@ write + maintenance depth is where it gets decided.
 2. **Maintain v3.** Every Iceberg surface the engine offers on v2 — the five `CALL system.*`
    procedures, snapshot-ref DDL, time travel — runs on v3 with Spark-compared results:
    compaction that preserves lineage and removes the deletion vectors it strands, DV-aware
-   delete-file maintenance, expiry, orphan cleanup. (`rewrite_manifests` is not wired on any
-   version yet; it joins the roster first.)
+   delete-file maintenance, expiry, orphan cleanup. (`rewrite_manifests` joined the roster on
+   v2 — MW-6, [#230](https://github.com/TRO-Wolf/repark/pull/230); the v3 exercise remains.)
 3. **v3 types and schema features.** `variant`, `geometry`, `geography`, `timestamp_ns` /
    `timestamptz_ns`, `unknown`, and column default values (`initial-default` /
    `write-default`) — each readable and writable, or a dated DECLARED row saying exactly what
@@ -60,7 +60,7 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Read: equality deletes alongside DVs; delete-file metadata tables on v3 | ⚠ unmeasured | measured + Spark-compared, or DECLARED | evidence (intake) |
 | Read: `_row_id` / `_last_updated_sequence_number` | ❌ not plannable (registry V3-ROWID-1) | served as columns, Spark-equal | V3-4 |
 | Read/write: v3 types + default values | ❌ absent — no engine surface reaches one | per-feature support or DECLARED | V3-6 (+H6/H7) ← fork F-15 |
-| Table encryption keys (v3, optional) | ❌ absent | supported or a dated DECLARED exclusion | owner ruling at intake |
+| Table encryption keys (v3, optional) | ❌ absent — **owner ruled 2026-08-24: DECLARED exclusion** | the dated DECLARED registry row (Lane A writes it) | ruled |
 | Write: create v3 | ✅ opt-in CREATE/CTAS (`repark.sql.allowCreateFormatVersion3`, default false; V3-2) | stays opt-in until V3-3; default remains v2 | V3-2 |
 | Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (V3-2 kept ALTER refused; C-008) | in-place upgrade behind the create opt-in, or DECLARED | later |
 | Write: append incl. row lineage | ✅ Spark-verified (format-v3-track §2) | stays green + live leg | evidence (intake) |
@@ -70,12 +70,12 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Maintain: `rewrite_data_files` | 🚫 V3-LINEAGE-1 guard | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← fork F-7 |
 | Maintain: DV / delete-file maintenance | 🚫 B-MOR-3 refusal | DV-aware answer, Spark-compared | V3-5 ← fork F-7 |
 | Maintain: expiry / orphans on v3 | ⚠ never exercised with real work (format-v3-track §7) | exercised + Spark-compared | V3-5 |
-| Maintain: `rewrite_manifests` | ❌ not wired on any version (MW-6, un-chartered) | built, then exercised on v3 | MW-6 successor |
+| Maintain: `rewrite_manifests` | ✅ wired on v2 (MW-6, [#230](https://github.com/TRO-Wolf/repark/pull/230); rows MANIFEST-1/2/3) | exercised on v3 | evidence (intake) |
 | Refs + time travel on v3 (rollback, branch/tag DDL, `AS OF` over DVs) | ⚠ never exercised | exercised + Spark-compared | evidence (intake) |
 | Adopt: `register_table` | ✅ wired (#203) | stays; Hadoop-pointer writes → fork F-14; S3 Tables → fork F-9 | done + residues |
 | Live: Glue + S3 Tables v3 legs | ❌ nothing measured live (format-v3-track §7) | every green row re-proven live where the service supports it | evidence (intake) (+OD-3b) |
 | Nightly oracle: v3 leg | ❌ none | a v3 fixture leg in the nightly, green | evidence (intake) |
-| Scale | ❌ demo-sized only | recorded v3 MOR + compaction measurement at production shape | evidence (intake) |
+| Scale | ⚠ v2 measured at 1e7×50 (MW-7 — driver + census exist; ratios recorded) | the same measurement on a v3 table | evidence (intake) |
 
 **The gate.** v1.0 tags when every row above is ✅ or its residual is a dated DECLARED row —
 registry ([docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)) on the
