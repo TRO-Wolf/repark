@@ -5,6 +5,10 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [mw-7-scale-measurement-ledger.md](mw-7-scale-measurement-ledger.md) — **MW-7 (2026-08-23),
+  in flight:** the Iceberg scale measurement, measure-only. Ten machinery clauses pinned by
+  `python/repark/tests/test_mw7_scale_smoke.py`; the 1e7-row numbers are dated MEASUREMENTS,
+  not clauses. Leaves for `../completed/` in this unit's departure commit.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

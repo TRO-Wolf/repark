@@ -22,6 +22,18 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_mw7_scale_smoke.py](test_mw7_scale_smoke.py) — **MW-7 (2026-08-23):** the
+  scale-measurement driver (`python/repark-parity/bench/mw7/`) run at gate scale, pinning
+  the MACHINERY behind the 1e7-row numbers: the census equals an independent count over
+  `files` / `manifests` / `snapshots` and a `Path.stat` of the manifest list; merge-on-read
+  delete files grow exactly `partitions x merges` (one per `(spec, partition)` per commit —
+  registry `MOR-2`) while `COUNT(*)` holds; the copy-on-write leg writes zero delete files,
+  so it is a valid control; `rewrite_position_delete_files` folds the deletes to one per
+  partition and `rewrite_data_files` cuts the data files; `rewrite_manifests` drops the
+  manifest count on both legs; the maintenance sequence is the charter's five procedures in
+  order with orphan cleanup last and dry-run; every timing carries the answer it was
+  measured on and the answer does not move across maintenance; the generator is
+  deterministic. Wall-clock is recorded in the ledger, never asserted.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — **MW-5 (2026-08-23):**
   the MW-0 growth demo re-run: 1,000-row v2 merge-on-read, ten MERGEs of the same
   200 ids, position-delete files 1→10 then compact 10→1 and data files →1,
@@ -2179,6 +2191,7 @@ NOT in that file is a defect, not a decision.
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
 | Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
+| Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control, manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
 | Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |
