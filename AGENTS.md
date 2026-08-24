@@ -238,11 +238,69 @@ How a change is shaped, independent of where it lands.
 - **The smallest readable design wins.** Reach for an existing abstraction before adding one.
   Parallel managers, factories, adapters, and wrappers introduced to make a design *look*
   extensible are defects; extensibility is earned by a second real caller, not anticipated.
-- **Comments carry the non-obvious reason, the assumption, or the invariant** — in the shortest
-  complete form. Length follows the invariant: `SAFETY`, lock ordering, durability, and
-  compatibility contracts may need a short list of conditions. A comment never narrates the next
-  line, restates a signature, or records change history. Durable design rationale goes to
-  [ARCHITECTURE.md](ARCHITECTURE.md), a `map.md`, or [docs/adr/](docs/adr/map.md) — not inline.
+- **Comments carry the non-obvious reason, the assumption, or the invariant** — the full rule,
+  the Simplified-Technical-English table, and the docstring contract are the next section,
+  [Write for the eventual reader](#write-for-the-eventual-reader--comments-docstrings-and-prose).
+
+## Write for the eventual reader — comments, docstrings, and prose
+
+Owner-stated 2026-08-23. Write every markdown paragraph, code comment, piece of documentation,
+PR description, and GitHub issue for its **eventual reader**, not for the current agent
+conversation. Work out the reader's knowledge, purpose, and likely questions privately; do not
+add an audience-analysis section to the artifact itself.
+
+**Do not over-comment. Do not use ten lines of comment when two will do.** Three rules, applied
+to every comment and docstring:
+
+1. **Comment the WHY, never the WHAT.** `# increment the counter` above `i += 1` is noise — it
+   ages badly and teaches readers to skim past comments, including the one that mattered. A
+   clear name plus type hints documents the WHAT. What earns a comment: a race you prevent, an
+   ordering invariant, a cross-cutting contract ("this hash must match the initial-load output
+   byte-for-byte"), a deliberate loud failure, defensive code that looks dead but is not, and
+   the reason you did not do the obvious thing. Code gets rewritten; the reason it must not be
+   rewritten a particular wrong way is what the next reader needs.
+2. **Use the shortest form that carries the reason.** If 2 lines are enough, do not write 10.
+   Cut the restatement, the preamble, the second example. Keep the constraint and the failure
+   mode. Length follows the invariant: `SAFETY`, lock ordering, durability, and compatibility
+   contracts may need a short list of conditions. A comment never narrates the next line,
+   restates a signature, or records change history. Durable design rationale goes to
+   [ARCHITECTURE.md](ARCHITECTURE.md), a `map.md`, or [docs/adr/](docs/adr/map.md) — not inline.
+3. **Write comments and docstrings in ASD-STE100 Simplified Technical English.** A controlled
+   language: readers under time pressure — non-native English speakers, and future you at 2 a.m.
+   during an incident — parse simple sentences correctly and complex ones incorrectly.
+
+   | Do | Not |
+   |---|---|
+   | One idea per sentence. Max ~20 words. | Multi-clause sentences joined by em-dashes and semicolons. |
+   | Active voice: "the writer commits the batch". | Passive: "the batch is committed". |
+   | Present tense: "the retry fails". | "the retry would have failed". |
+   | One word, one meaning. Pick a term and reuse it. | Rotating synonyms — row / record / entry for one thing. |
+   | Plain verbs: "use", "read", "fail", "retry". | "leverage", "utilize", "surface", "orchestrate". |
+   | Say the thing. | Hedging, apology, or narration of your own reasoning. |
+
+   Bad: "It should be noted that, given the potential for concurrent writers to interleave, it
+   was decided to leverage an idempotency guarantee here." Good: "Two writers can interleave
+   here. The write is idempotent, so a retry is safe."
+
+When in doubt: delete what a competent reader derives from the code; keep what they cannot;
+then cut the keeper by half and check it still says the same thing.
+
+**Docstrings.** Every function has one, stating what it does, its inputs, and its outputs.
+Non-trivial functions use Google-style sections (`Args:` / `Returns:` / `Raises:` / `Notes:` —
+`Notes:` is for invariants and contract sensitivities the caller needs that fit none of the
+other three). Exception: facade docstrings mirror PySpark's where PySpark has one.
+
+**The 91-`=` banner keeps its form; its body obeys rules 1–2.** A banner that narrates the
+implementation, restates the signature, or walks unreachable cases at length is over the line.
+Consolidating existing long comments is chartered sweep work, never a passenger on a fix
+("Fixes stay narrow", above).
+
+**Held by:** review — except docstring **presence**, which
+`scripts/check_docstring_presence.py` holds (`make check-docstring-presence`, in `make ci` and
+the pre-commit hook). Ruff style `D` with `convention = "google"` stays unarmed (declined
+2026-08-22 — the facade mirrors PySpark; the declined-armings record is
+[briefs/next-sequence.md](briefs/next-sequence.md)); re-arming it is a gate decision under
+"Mechanical structure gates", not a drive-by.
 
 ## Markdown document lifecycle
 
