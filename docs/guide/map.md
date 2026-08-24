@@ -59,7 +59,9 @@ illustrative. A claim with no verified basis does not go in.
   through the facade, the write forms that refuse (DML-1 / DML-2 / `overwritePartitions`), time
   travel both spellings plus the reader options, the sixteen metadata tables, maintenance `CALL`
   plus `register_table` adoption (V3-1, including the Spark-written v3 fixture numbers),
-  and the registry sections that govern each.
+  and the registry sections that govern each. **MW-6** added "Compacting manifests"
+  (`rewrite_manifests`: the current-spec default, the `spec_id` refusal, and the delete manifests
+  Spark rewrites and this engine does not).
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
   dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,
   `explode_outer` on `array<struct>` (now keeps null/empty rows), `count()` **and any
