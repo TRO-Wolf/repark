@@ -25,7 +25,7 @@ reach delegation through the ordinary arm.
   (`Model: Grok 4.6 xHigh` on the module's functions).
 - `delete_granularity.rs` — **MW-9 (test-only):** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
-  on MERGE.
+  on MERGE (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
 - `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
