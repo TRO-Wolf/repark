@@ -1,6 +1,6 @@
-//! MW-9 — ANSI-door `write.delete.granularity` (MOR-2).
+//! ANSI-door pins for Iceberg `write.delete.granularity`.
 //!
-//! Lives beside `tests.rs` so that crate-root file stays under its rust-file-size ceiling.
+//! Split out of `tests.rs` so that crate-root file stays under its rust-file-size ceiling.
 
 use std::collections::HashSet;
 use std::sync::Arc;

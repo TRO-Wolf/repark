@@ -216,7 +216,7 @@ FINDING:
   clause: C-007
   disposition: REMEDIATED
   claim: ANSI SET PROPERTIES then MERGE unpinned
-  evidence: mw9_delete_granularity.rs::alter_set_granularity_is_honored_on_the_next_merge
+  evidence: delete_granularity.rs::alter_set_granularity_is_honored_on_the_next_merge
 
 FINDING:
   id: C2-Q-003
@@ -305,7 +305,7 @@ COVERAGE_ATTESTATION:
       artifacts: [crates/repark-iceberg/src/write/position_delete.rs]
     - id: AT-2
       status: ATTACKED
-      artifacts: [crates/repark-spark/src/tests/delete_granularity.rs, crates/repark-sql/src/mw9_delete_granularity.rs]
+      artifacts: [crates/repark-spark/src/tests/delete_granularity.rs, crates/repark-sql/src/delete_granularity.rs]
     - id: AT-3
       status: ATTACKED
       artifacts: [crates/repark-spark/src/tests/delete_granularity.rs::unknown_delete_granularity_refuses_before_any_write]
