@@ -59,7 +59,16 @@ illustrative. A claim with no verified basis does not go in.
   through the facade, the write forms that refuse (DML-1 / DML-2 / `overwritePartitions`), time
   travel both spellings plus the reader options, the sixteen metadata tables, maintenance `CALL`
   plus `register_table` adoption (V3-1, including the Spark-written v3 fixture numbers),
-  and the registry sections that govern each.
+  and the registry sections that govern each. **MW-6** added "Compacting manifests"
+  (`rewrite_manifests`: the current-spec default, the `spec_id` refusal, and the delete manifests
+  Spark rewrites and this engine does not). **MW-8 (2026-08-24)** added "The maintenance
+  runbook" — the seven-step Airflow-shaped cycle, the `expire_snapshots` cutoff and what it
+  costs in time travel, the cadence, the load-bearing order, the day of latency on the orphan
+  net, how to retry a step (the S3 Tables conflict and step 4's idle-cycle refusal), the six
+  edits a migrating Spark DAG needs, and the limit the cycle cannot cross (registry `RDF-1`).
+  MW-7's numbers are cited to
+  [../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)
+  §6, never restated.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
   dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,
   `explode_outer` on `array<struct>` (now keeps null/empty rows), `count()` **and any
@@ -85,6 +94,7 @@ illustrative. A claim with no verified basis does not go in.
 | Fit a model, or find out whether an estimator exists at all | [ml-guide.md](ml-guide.md) |
 | Point a session at Glue / S3 Tables, or read an Iceberg table | [iceberg-guide.md](iceberg-guide.md) |
 | Time-travel a table, or work out why a statement refuses | [iceberg-guide.md](iceberg-guide.md) |
+| Schedule table maintenance, or port a Spark maintenance DAG | [iceberg-guide.md](iceberg-guide.md) "The maintenance runbook" |
 | Diagnose a surprising result or a loud refusal | [troubleshooting.md](troubleshooting.md) |
 | Find out how repark differs from Apache Spark, and why | [../spark-sql-iceberg-parity.md](../spark-sql-iceberg-parity.md) (authoritative) |
 | Check release / delivery state | [../../STATUS.md](../../STATUS.md) (authoritative) |

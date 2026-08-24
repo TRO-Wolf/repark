@@ -28,7 +28,8 @@ wrapper.
 - `ref_ddl.rs` — I5 snapshot-ref DDL (CREATE/DROP/REPLACE BRANCH|TAG, retention) + the
   write-to-branch sniff; 14 in-module tests.
 - `call.rs` — maintenance `CALL` procedures (expire_snapshots / rewrite_data_files /
-  rewrite_position_delete_files / **remove_orphan_files** / rollback_to_snapshot; **every catalog policy since MW-1** —
+  rewrite_position_delete_files / **remove_orphan_files** / **rewrite_manifests** /
+  rollback_to_snapshot; **every catalog policy since MW-1** —
   the v1 LOCAL-only fence was blast-radius policy, not capability, and what it guarded against is
   a commit conflict the fork's own validation already catches loudly). Every procedure returns
   Spark's full column list, in Spark's order, types and nullability; **no procedure omits a Spark
@@ -39,6 +40,12 @@ wrapper.
   four zeros that read as "already clean". **RP-1 retired `MOR-1`** (floor 5). Remaining
   MW-2 divergence: the merge-on-read writer is partition-granularity where Spark defaults to
   per-file (registry `MOR-2`). File layout; does not change a row.
+  **MW-6 wired `rewrite_manifests`**, whose body lives in [call/map.md](call/map.md) because its
+  measured-parity documentation would push this module over its file-size ceiling. It is the one
+  procedure whose counts are not returned by the fork action: they are read from the new
+  snapshot's summary. It rewrites data manifests only, where Spark also rewrites delete manifests
+  (registry `MANIFEST-1`), and it refuses `spec_id` while accepting `use_caching` as a no-op
+  (registry `MANIFEST-2`).
   **MW-3 wired `remove_orphan_files`, the only procedure here that destroys data**, and inverted
   two of Spark's defaults for it: `older_than` is required (`ORPHAN-1`) and `dry_run` defaults to
   true (`ORPHAN-2`). Its 24-hour floor is parity, not strictness — Java enforces the same floor in
@@ -270,6 +277,7 @@ part of that section's pin — changing either one changes both.
 | INSERT OVERWRITE probe / OV1 swap | `insert_overwrite.rs` |
 | Branch/tag DDL, write-to-branch sniff | `ref_ddl.rs` |
 | Maintenance CALL procedures | `call.rs` |
+| `rewrite_manifests` counts, guards and Spark's no-op rule | [`call/`](call/map.md) |
 | CTAS lowering / location policy | `ctas.rs` |
 | Column-def CREATE / type mapping | `create_table.rs` |
 | ALTER TABLE / token rewrites | `alter.rs` |

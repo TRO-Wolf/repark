@@ -104,6 +104,19 @@ path that removes delete files is unreachable. Measured on v2, that is exactly r
 compacted six data files and reported `removed_delete_files_count = 0`, leaving all six position
 deletes in place.
 
+> **Errata 2026-08-24 (MW-7).** That v2 sentence is true of THIS fixture and is not general.
+> The six-file fixture deletes `id % 11 = 0` — roughly 9 % of each file — so no file is
+> delete-laden enough to matter. Re-measured on the same Spark 4.0.1 + Iceberg 1.10.0 oracle
+> with delete-heavy v2 shapes (tiling, and 30 % deleted), the same sequence ends with **zero**
+> delete files and zero delete records, still reporting `removed_delete_files_count = 0` and
+> still with `remove-dangling-deletes` off. Java's `BinPackRewriteFilePlanner` has a live
+> `tooHighDeleteRatio` clause at `DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`: past that ratio the
+> file is rewritten and its delete files die in the rewrite commit, with the count staying 0
+> because nothing was *removed as dangling*. So "delete files survive compaction on v2" is a
+> property of a low delete ratio, not of v2. The fork defers that clause, which is why this
+> engine retains them without bound — registry row
+> [RDF-1](../spark-sql-iceberg-parity.md), fork ask F-16.
+
 On v3 it is wrong. Spark reported `6` with no option set, because a deletion vector is scoped to a
 single data file and dies when that file is rewritten. Removal is an ordinary consequence of
 compaction there, not an opt-in sub-action. The constant is correct for every version this

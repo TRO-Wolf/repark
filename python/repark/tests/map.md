@@ -22,6 +22,45 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
+  `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
+  catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
+  censused after every step: the order is the MW-7 driver's, not a second copy; position
+  deletes fold 12 → 2 (one per partition — registry `MOR-2`); data files compact 50 → 6;
+  manifests drop 11 → 3 and the manifest list shrinks; `expire_snapshots` prunes 12 → 1
+  snapshots and reclaims exactly the 12 delete files step 2 folded; the orphan dry run answers
+  Spark's one column and zero rows, and the ARMED form refuses inside the 24-hour floor (the
+  cell MW-3's floor pin does not cover) and deletes nothing outside it; `COUNT(*)` holds 6,000
+  `int64` throughout. **The honest half (C-004):** both CTAS files sit inside Java's bin-pack
+  band and carry 3,600 dead rows through all seven steps — `removed_delete_files_count` is 0
+  and the delete files covering them survive, registry row `RDF-1`, mechanism pinned by MW-7
+  C-011. **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
+  out of its python block and compares procedure, order, argument names and literal argument
+  values (placeholders skipped) against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
+  cycle reds — it is what catches an `expire_snapshots` call with no `older_than`. C-009 is the
+  narrower companion: it checks that every home the section relies on is LINKED, and it does not
+  detect an uncited number.
+- [test_mw7_scale_smoke.py](test_mw7_scale_smoke.py) — **MW-7 (2026-08-23):** the
+  scale-measurement driver (`python/repark-parity/bench/mw7/`) run at gate scale, pinning
+  the MACHINERY behind the 1e7-row numbers: the census equals an independent count over
+  `files` / `manifests` / `snapshots` and a `Path.stat` of the manifest list; merge-on-read
+  delete files grow exactly `partitions x merges` (one per `(spec, partition)` per commit —
+  registry `MOR-2`) while `COUNT(*)` holds; the copy-on-write leg writes zero delete files,
+  so it is a valid control; `rewrite_position_delete_files` folds the deletes to one per
+  partition and `rewrite_data_files` cuts the data files; `rewrite_manifests` drops the
+  manifest count on both legs; the maintenance sequence is the charter's five procedures in
+  order with orphan cleanup last and dry-run; every timing carries the answer it was
+  measured on and the answer does not move across maintenance; the generator is
+  deterministic. Wall-clock is recorded in the ledger, never asserted.
+  **C-011 (2026-08-24, Critic remediation):**
+  `test_delete_laden_in_band_file_survives_the_runbook` characterizes registry row `RDF-1` —
+  a 2,500-row v2 merge-on-read table written as ONE data file inside Java's bin-pack band, then
+  a MERGE deleting every one of its rows. After the complete maintenance sequence the file is
+  still live with 2,500 dead rows, `removed_delete_files_count` is 0, and the surviving
+  position-delete file names a data file that is still LIVE (read out of the delete Parquet, not
+  inferred from a count). The fork at `5e7b2e4` defers Java's `tooHighDeleteRatio` clause, so a
+  correctly sized 100 %-dead file is never a rewrite candidate. Written to go RED when fork ask
+  F-16 lands.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — **MW-5 (2026-08-23):**
   the MW-0 growth demo re-run: 1,000-row v2 merge-on-read, ten MERGEs of the same
   200 ids, position-delete files 1→10 then compact 10→1 and data files →1,
@@ -2178,7 +2217,9 @@ NOT in that file is a defect, not a decision.
 | Add a `DESCRIBE NAMESPACE` / namespace-metadata-readback test | `test_describe_namespace.py` |
 | Add a `SHOW NAMESPACES` / namespace-listing / `LIKE`-pattern test | `test_show_namespaces.py` |
 | Add a bare-`spark.sql` eager-DML (INSERT/DELETE/UPDATE/empty OW wipe/CALL refuse) test | `test_sql_dml_eager.py` (C3-Q-002 empty OW facade pin; C3-L-001 residual unknown-CALL refuse; C5-Q-001 incompatible empty OW must not wipe; r25 T2 CREATE OR REPLACE / REPLACE BRANCH|TAG round-trip pin) |
-| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table` |
+| Add a maintenance `CALL system.*` oracle (I3) | `test_maintenance_call.py` — expire/rewrite/rollback + tag **and** branch dual probe (s1 kept, s2 expired) + positional sort refuse + previous_snapshot_id + unknown/orphan refuse. **MW-1:** expire pins Spark's full six-column result, all bigint and all nullable, after the content-file funnel was split into data / position-delete / equality-delete. **MW-2:** rewrite pins Spark's fifth column `removed_delete_files_count`, non-nullable and 0 — Java's `remove-dangling-deletes` defaults off and the options map refuses, so the zero is a real count. *(MW-7, 2026-08-24: the zero is real, but do not read it as "delete files therefore survive compaction" — on Spark they do not, because its planner rewrites delete-laden files outright. Registry `RDF-1`.)* **MW-3:** the pre-MW-3 orphan refuse pin is retired and replaced by three — `older_than` required (`ORPHAN-1`), dry-run default with Spark's one-column result shape (`ORPHAN-2`), the 24-hour floor measured across its boundary (parity, not strictness), and the shared-CTAS-root refusal pinned on the very fixture that surfaced it — a dry run there listed 139,179 leftover files. **V3-1:** `register_table` adopts an engine-written table and returns Spark's three nullable BIGINT columns (`pa.int64()`); unknown-proc pin is fail-closed on `register_table`. **MW-6:** `rewrite_manifests` pins Spark's two non-nullable `int32` columns and its counts (5 manifests → 1, `5, 1`), the no-op zeros with no new snapshot, and the argument surface — `spec_id` refuses, `use_caching` is accepted and changes nothing (`MANIFEST-2`) |
+| Pin the MW-7 scale-measurement machinery | `test_mw7_scale_smoke.py` — the bench driver at gate scale: census vs an independent count, delete files `partitions x merges` then folded to one per partition, COW zero-delete control (a control, not a clean delete-cost isolate — MOR-minus-COW bundles delete reads with MOR's data-file fan-out), manifest drop across `rewrite_manifests`, the five-procedure order, timings that carry their answer |
+| Characterize `RDF-1` (a 100 %-dead in-band data file is never compacted) | `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` — flips RED when fork ask F-16 lands |
 | Re-measure the MW-0 MOR growth demo (MW-5) | `test_mw5_baseline_delta.py` — 1,000 rows, ten MERGEs of 200 ids, delete files 1→10 then compact+expire 10→1, Arrow `COUNT(*)` 1,000 `int64`, expire mutation-proof. Wall-clock logged, not asserted |
 | Add a case-insensitive column-conform (MERGE star) facade test | `test_case_insensitive_conform.py` |
 | Add a drop-in no-op / accepted-ignored disclosure test (OTH-010) | `test_dropin_disclosure.py` |

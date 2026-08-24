@@ -6,6 +6,7 @@ mod common;
 
 mod alter;
 mod call;
+mod call_manifests;
 mod call_orphan;
 mod call_register;
 mod call_v3;

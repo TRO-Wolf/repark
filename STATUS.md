@@ -360,7 +360,8 @@ history-rewrite; provenance and the options weighed:
     ([#197](https://github.com/TRO-Wolf/repark/pull/197)), MW-3 `remove_orphan_files`
     ([#198](https://github.com/TRO-Wolf/repark/pull/198)), MW-4 Glue live MOR compact+expire
     ([#218](https://github.com/TRO-Wolf/repark/pull/218)), MW-4b Glue dotted metadata-table
-    rewrite ([#219](https://github.com/TRO-Wolf/repark/pull/219)). **Five maintenance
+    rewrite ([#219](https://github.com/TRO-Wolf/repark/pull/219)), MW-6 `rewrite_manifests`
+    (post-campaign, owner-chartered 2026-08-23). **Six maintenance
     procedures** run through `CALL`; no procedure omits a Spark column. V3-1 adds
     `register_table` (adoption, not maintenance).
   - **Scorecard.** The MW-0 growth demo reproduces: ten sequential MERGEs into a 1,000-row v2
@@ -383,7 +384,14 @@ history-rewrite; provenance and the options weighed:
     "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
     MW-4b (#219) and is not sequenced.
   - **Divergences that remain rows**, not closed here — `MOR-2`, `ORPHAN-1`,
-    `ORPHAN-2`, `B-MOR-3` in
+    `ORPHAN-2`, `B-MOR-3`, and MW-6's `MANIFEST-1` (delete manifests are not rewritten; Spark
+    rewrites them in a second leg), `MANIFEST-2` (`spec_id` refuses; `use_caching` is an
+    accepted no-op and takes a boolean literal where Spark also casts a string) and
+    `MANIFEST-3` (above `commit.manifest.target-size-bytes` the two engines write a different
+    number of manifests, so `added_manifests_count` diverges; the rewritten count matches), and
+    MW-7's `RDF-1` (a correctly sized data file whose rows are all deleted is never a
+    `rewrite_data_files` candidate, so its dead rows and the delete file covering it are
+    retained without bound; Spark reclaims both) in
     [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
     RP-1 (fork F-1, floor 5). The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
@@ -392,10 +400,67 @@ history-rewrite; provenance and the options weighed:
   - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
     orphan cleanup of that fallback tree.
-  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 (lands with this change) → MW-6
-    `rewrite_manifests` → MW-7 scale measurement → MW-8 runbook → V3-2 create-v3 opt-in.
-    Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 and the
-    intake S3 Tables MOR leg stay unsequenced.
+  - **MW-7 scale scorecard (measured 2026-08-24, this host — ratios, not absolutes).**
+    1e7-row partitioned v2 table, 50 MERGEs of 200,000 ids each (2 %), 8 partitions, a
+    merge-on-read leg and a copy-on-write leg. **The charter said 100 merges; the measured
+    projection put 1e7 × 100 at 3.72 h on top of 0.509 h already spent against a ~4 h budget,
+    so it ran 1e7 × 50** — the arithmetic is §1 of the ledger. Run wall 2:09:29, **peak RSS
+    4,461 MiB** (`getrusage` and `/usr/bin/time -v` agree).
+    Merge-on-read grows linearly per merge — four of the five census rates exact: **+8
+    position-delete files (one per partition — registry `MOR-2`), +200,000 delete records,
+    +32 data files, +2 manifests, ~479 manifest-list bytes (mean)**. Its predicate scans reach **4.18×** (point) and **4.58×**
+    (partition) the copy-on-write control by merge 50, crossing **2× at 19.6 merges**. The
+    copy-on-write control is **flat** over the same 50 merges (1.08× / 1.18×). The gap is the
+    delete files **plus the data-file fan-out** merge-on-read leaves behind — at merge 50 it
+    also carries 16.3× the control's data files and 1.83× its live bytes, because every MERGE
+    appends rather than rewrites; this unit does not separate the two. Copy-on-write pays on
+    write:
+    MERGE plateaus at **~113 s** against merge-on-read's **~28 s** (4.1×), and its warehouse
+    held **14,782 MB for a 342 MB table (43×)** until `expire_snapshots` ran.
+    The full maintenance sequence took **142.34 s** on the merge-on-read leg (delete files
+    400→8, data files 1,696→170, manifest list 25,665→3,659 B) and **21.2 s** on the
+    copy-on-write leg. **It does not close the gap:** 8 delete files holding
+    10,000,000 records survive and the table still reads at **2.45× / 2.02×** the control while
+    holding 1.90× its live bytes. They are **not dangling** — they name live data files.
+    `rewrite_data_files` never selects a delete-laden file, because the fork at `5e7b2e4` defers
+    Java's `tooHighDeleteRatio` clause (`DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`) and defaults the
+    delete-count threshold to `usize::MAX`, so a correctly sized 100 %-dead file is invisible to
+    compaction and its dead rows are retained without bound. Spark ends the same sequence at
+    **zero** delete files at both `write.delete.granularity` settings with
+    `remove-dangling-deletes` off. Registry row **`RDF-1`**, fork ask **F-16**, ledger finding
+    F-MW7-1 (OPEN), pinned by `test_delete_laden_in_band_file_survives_the_runbook`. Driver: `python/repark-parity/bench/mw7/`; machinery pin:
+    `python/repark/tests/test_mw7_scale_smoke.py`. Ledger:
+    [task/ledgers/completed/mw-7-scale-measurement-ledger.md](task/ledgers/completed/mw-7-scale-measurement-ledger.md).
+    **The verdict the charter asked for: MW-9 is urgent** — the point probe goes
+    **858 → 3,878 ms** for a predicate returning 0.02 % of the rows, because partition
+    granularity forces open every delete file in every partition it touches (400 files,
+    10,000,000 records, for 2,000 rows returned). MW-8's defaults follow from §6 there: run the
+    sequence every 10 merges, with merge 20 the ceiling that already measures 2.05×.
+  - **MW-8 the maintenance runbook (delivered 2026-08-24).** Docs plus one executable test; no
+    engine change. [docs/guide/iceberg-guide.md](docs/guide/iceberg-guide.md) "The maintenance
+    runbook" is the Airflow-shaped cycle — merge workload →
+    `rewrite_position_delete_files` → `rewrite_data_files` → `rewrite_manifests` →
+    `expire_snapshots` → orphan dry run → orphan armed — with the cadence, the load-bearing
+    order, the delete-file trigger, the day of latency on the orphan net, how to retry a step
+    and the six edits a migrating Spark DAG needs. MW-7's numbers are cited to that ledger
+    rather than re-homed. **`expire_snapshots` takes an explicit `older_than` here** (Critic
+    finding F-MW8-1): the engine passes a cutoff only when the argument is present, so the
+    fork falls back to `history.expire.max-snapshot-age-ms` (5 days) and a cycle without one
+    reclaimed nothing across three passes while the warehouse grew 6.00×. The cutoff is the
+    table's time-travel window, and the guide says what spending it costs. **The runbook's
+    stated limit is `RDF-1`:** a cycle does not return a table to baseline, so an operator sees
+    a merge-on-read table still reading at **2.02×** (point) / **2.45×** (partition) a
+    compacted control and holding **1.90×** its live bytes, with correct answers throughout.
+    Pin: `python/repark/tests/test_mw8_runbook.py` (ten clauses, one documented cycle censused
+    after every step, 4.4 s; C-010 parses the guide's printed `CALL` block and compares it to
+    the measured sequence). Ledger:
+    [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
+  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7 and MW-8 are
+    delivered; **V3-2** create-v3 opt-in is the remainder.
+    Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 is
+    **unsequenced but no longer ungated** — MW-7's numbers answered its gating question
+    "yes" on 2026-08-24; entering it in the queue is an owner call. The intake S3 Tables
+    MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled

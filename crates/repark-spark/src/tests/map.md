@@ -53,6 +53,15 @@ code is not here — only tests, shared fixtures, and the module manifest.
   claim — all four doors to a v3 table refuse — and it lives here rather than with the CREATE
   tests because the claim is what makes a refusal stricter than Spark defensible; its `ALTER`
   half is an UPSTREAM behaviour, so the pin doubles as the detector for the fork changing it),
+  `call_manifests` (**MW-6**: `CALL system.rewrite_manifests` — Spark's two non-nullable `int`
+  columns; five data manifests → one with the row set unchanged; the no-op answers two zeros and
+  commits NO snapshot; a table with no snapshot answers zeros where the fork action errors; the
+  current-spec filter is pinned through `ALTER TABLE … ADD PARTITION FIELD`, which is the only
+  fixture that makes that branch live; and both sides of the delete-manifest divergence —
+  a refusal when the answer would be zeros, the data-leg counts when it would not. **Critic
+  remediation:** a 4 KB-target fixture pins the ENGINE's `added_manifests_count` where it diverges
+  from Spark's (registry `MANIFEST-3`), and the no-op pin now asserts its SEEDING call's `5, 1`
+  first — without that, inverting the guard under test left the pin green),
   `call_register` (**V3-1**: `CALL system.register_table` — Spark's two arguments and three
   nullable BIGINT columns; engine-written adopt + read-back; occupied ident refuses and keeps
   the original rows; Hadoop `vN.metadata.json` error text; Spark-written format-v3 fixture under

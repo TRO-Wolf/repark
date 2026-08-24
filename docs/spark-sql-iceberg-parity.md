@@ -1701,6 +1701,135 @@ the pin rather than obeying it.
   and outside the maintenance campaign. **Contents are unaffected** — the same rows are masked
   either way.
 
+### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
+
+- **repark** — at fork pin `5e7b2e4` a data file is a rewrite candidate only when it is outside
+  the size band (`length < min_file_size || length > max_file_size`) or carries at least
+  `delete_file_threshold` delete files. That threshold defaults to `usize::MAX`
+  (`DELETE_FILE_THRESHOLD_DEFAULT`, `crates/iceberg/src/maintenance/rewrite_data_files.rs:177`),
+  and Java's THIRD candidate clause, `tooHighDeleteRatio`, is **deferred** in the fork — the
+  module doc says so in as many words: "the delete-RATIO candidate clause is not exposed … The
+  ratio clause never fires here" (same file, `:66-67` and `:138-140`). So a **correctly sized**
+  data file whose rows are 100 % deleted is invisible to compaction. It is kept, its dead rows
+  with it, and the position-delete file covering it survives too, **still naming a LIVE data
+  file** — it survives because its data file was never selected, not because of the
+  `removed_delete_files_count` constant (that counter and fork ask F-3 belong to the other
+  half: a delete file whose referent WAS rewritten). Measured on a 2,500-row v2 merge-on-read
+  fixture: one 68,523 B data file, inside the band for a 64 KiB target, and one `MERGE` deleting
+  all 2,500 of its rows. After the COMPLETE maintenance sequence
+  (`rewrite_position_delete_files` → `rewrite_data_files` → `rewrite_manifests` →
+  `expire_snapshots` → `remove_orphan_files`) the file is still live with 2,500 dead rows, and
+  one 8,240 B delete file still names it. At 1e7 rows × 50 MERGEs the same shape ended the
+  sequence with **8 delete files holding 10,000,000 delete records** (MW-7 §4.4).
+- **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
+  **zero** delete records, at **both** `write.delete.granularity` settings, with
+  `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default
+  `false`, javap-verified). `BinPackRewriteFilePlanner` carries
+  `DELETE_RATIO_THRESHOLD_DEFAULT = 0.3` and a live `tooHighDeleteRatio` clause: a delete-laden
+  file is a candidate **regardless of size**, the rewrite physically drops its deleted rows, and
+  the delete files covering it die in the rewrite commit.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, 200,000-row v2 merge-on-read
+  fixtures, tiling and 30 %-deleted shapes; measured 2026-08-24 during MW-7's Critic pass.)*
+- **Pin** —
+  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
+- **Rationale** — BACKLOG, and it is **fork** work (ask **F-16** in
+  [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
+  Three things this is **not**, each ruled out by measurement rather than assumed: it is not
+  format-v2 being v2 (Spark reaches zero on v2), not `write.delete.granularity` (Spark reaches
+  zero at both settings, so it is not `MOR-2` wearing a different hat), and not the missing
+  `remove-dangling-deletes` option (that option is OFF on the Spark side too, and the surviving
+  delete files here are not dangling — they name live files). **Contents are unaffected:** the
+  answers are correct at every point, which is exactly why this needs a registry row rather than
+  a refusal — nothing goes wrong loudly. What is retained is dead bytes and a delete file every
+  scan opens, without bound, and the maintenance runbook as documented cannot reclaim either.
+  Closing the row means porting Java's ratio clause into the fork's planner.
+
+### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
+
+- **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**
+  manifests of the current partition spec and reports only that leg. On a merge-on-read table
+  with four data manifests and three delete manifests it answers
+  `rewritten_manifests_count = 4`, `added_manifests_count = 1`, and the three delete manifests
+  are carried forward untouched. When the data leg has nothing to do **and** two or more delete
+  manifests are present, the call **refuses** rather than answering two zeros.
+- **Apache Spark** — runs two legs in one procedure and sums them. Measured on the same shapes:
+  five data manifests plus three delete manifests answered `8, 2` (both legs compacted, manifests
+  8 → 2); one data manifest plus two delete manifests answered `2, 1`; one data manifest plus one
+  delete manifest answered `0, 0`, because a single matching manifest per leg is already at
+  Spark's target.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-2. The pinned 4.1.2
+  oracle cannot execute Iceberg maintenance procedures.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests`
+  and `::call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay`
+- **Rationale** — BACKLOG, and it is fork work. The owned fork's `RewriteManifestsAction` keeps
+  every `Deletes`-content manifest byte-identical by design, so outstanding merge-on-read deletes
+  still apply after the rewrite; there is no delete leg to call. **Contents are unaffected** — the
+  live row set is identical either way, and this is manifest layout. The refusal covers the one
+  shape where the divergence would be invisible: two zeros read as "nothing to compact", so an
+  operator would run the procedure forever on a table that never compacts. Closing the row means a
+  delete-manifest rewrite in the fork.
+
+### MANIFEST-2 — `rewrite_manifests` refuses `spec_id`; `use_caching` is accepted and does nothing
+
+- **repark** — `spec_id` refuses loud, named or positional. The procedure always rewrites the
+  manifests of the table's **current** partition spec, which is Spark's default, and older specs'
+  manifests are kept. `use_caching` is accepted, type-checked as a boolean **literal**, and
+  changes nothing: a quoted `use_caching => 'true'` refuses here.
+- **Apache Spark** — takes both (`RewriteManifestsProcedure.PARAMETERS`: `table` STRING required,
+  `use_caching` BOOLEAN optional, `spec_id` INTEGER optional). `spec_id` selects the spec whose
+  manifests are rewritten and refuses an id the table does not have (`Invalid spec id 7`);
+  `use_caching` sets the action's `use-caching` option, which caches Spark's own manifest
+  DataFrame. Measured: `use_caching => true`, `use_caching => false` and the bare call all
+  answered `5, 1` on the same five-manifest table, and `spec_id => 0` on a spec-0 table answered
+  `5, 1` as well. Spark also **accepts a STRING literal** for it — `use_caching => 'true'`,
+  `'yes'` and `'no'` each executed and answered `5, 1`, because the procedure's typed parameter
+  casts the string — and refuses only a non-castable type: `use_caching => 1` fails analysis with
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] … requires the "BOOLEAN" type, however "1" has the
+  type "INT"`. So a migrating job written `use_caching => 'true'` runs on Spark and refuses here.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`
+  and `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted`
+- **Rationale** — DECLARED. `use_caching` is a Spark-side execution option with no counterpart
+  here, and accepting it keeps a migrating maintenance job's SQL unchanged while the type check
+  keeps a typo loud. The stricter literal rule is kept deliberately, and it is the same rule
+  `remove_orphan_files`' `dry_run` already carries: on this surface a quoted boolean is far more
+  likely a typo than an intent, and Spark's own cast would read `'yes'` as true and an
+  unrecognized string as null. The cost is one edit in a migrating job, and the refusal names the
+  argument. `spec_id` is a *behaviour* selector, so accepting it and ignoring it would
+  silently rewrite the wrong spec's manifests; refusing names what the engine actually does. The
+  fork exposes `RewriteManifestsAction::rewrite_if`, which this engine already uses to pin Spark's
+  default (current spec), so wiring the argument is possible — it is a scope decision, not a
+  capability gap.
+
+### MANIFEST-3 — above the manifest target size, `rewrite_manifests` writes a different number of manifests
+
+- **repark** — five over-target data manifests (17,777 B total at
+  `commit.manifest.target-size-bytes = 4096`) answer `rewritten_manifests_count = 5`,
+  `added_manifests_count = 3`, and the table holds 3 manifests afterwards. Twelve (42,682 B)
+  answer `12, 6`. The fork's action opens one writer per cluster key and rolls to a new manifest
+  when a RUNNING ESTIMATE of the open writer's size reaches the target — the estimate is the
+  source manifest's average per-entry size, because the Rust `ManifestWriter` buffers its entries
+  and exposes no incremental on-disk length.
+- **Apache Spark** — the same two fixtures answer `5, 5` and `12, 12`, leaving the manifest count
+  where it started. `RewriteManifestsSparkAction` computes
+  `targetNumManifests = ceil(total / target)` (9 and 21 here) and repartitions the manifest-entry
+  DataFrame into that many groups, so with more groups than entries every entry lands in its own
+  manifest.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_added_count_diverges_above_the_target_size`
+- **Rationale** — BACKLOG, and narrow: **only `added_manifests_count` moves.**
+  `rewritten_manifests_count` agreed with Spark on every shape measured, at both target sizes, and
+  the live row set is identical either way — this is how many files the entries are spread over,
+  not which entries are live. It does not appear at the default 8 MB target, where both engines
+  write one manifest and the counts agree; it needs a table whose manifests are individually over
+  target. Disclosed rather than refused, because the rewrite is correct and useful there: refusing
+  would deny manifest compaction to exactly the large tables that need it most, and the number the
+  engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
+  `ceil(total / target)` sizing, which is fork work.
+
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
 
 - **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns

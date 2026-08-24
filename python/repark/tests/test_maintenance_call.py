@@ -1,7 +1,8 @@
 """I3 / R-MAINTENANCE-CALL oracle — Spark ``CALL catalog.system.<proc>(…)``.
 
-Six procedures: expire_snapshots, rewrite_data_files, rewrite_position_delete_files,
-remove_orphan_files, rollback_to_snapshot, and register_table (V3-1 adoption).
+Seven procedures: expire_snapshots, rewrite_data_files, rewrite_position_delete_files,
+remove_orphan_files, rewrite_manifests (MW-6), rollback_to_snapshot, and register_table
+(V3-1 adoption).
 Unknown names refuse loud listing the supported set.
 
 Oracle discipline: Arrow ``to_arrow`` value AND type pins (docs/testing.md
@@ -406,3 +407,97 @@ def test_remove_orphan_files_refuses_the_shared_ctas_fallback_root(
             "CALL mem.system.remove_orphan_files("
             f"table => 'ns.events', older_than => {older_than_ms})"
         )
+
+
+def _manifest_count(spark: ReparkSession, table: str) -> int:
+    return spark.sql(f"SELECT path FROM {table}.manifests").to_arrow().num_rows
+
+
+def test_rewrite_manifests_compacts_like_spark(spark: ReparkSession) -> None:
+    """MW-6 — facade door. Spark's two non-nullable ``int`` columns, and Spark's counts.
+
+    Oracle — live Spark 4.0.1 + Iceberg 1.10.0, five single-row appends into an unpartitioned v2
+    table: ``rewritten_manifests_count=5``, ``added_manifests_count=1``, manifests 5 → 1, and the
+    row set unchanged. The schema is also the Iceberg 1.10.0 jar's ``OUTPUT_TYPE`` constant.
+
+    pins: mw-6-rewrite-manifests/C-001, C-002, C-003
+    """
+    table = "mem.ns.man"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
+    )
+    for index in range(2, 6):
+        spark.sql(f"INSERT INTO {table} SELECT {index} AS id, 'x' AS name")
+    assert _manifest_count(spark, table) == 5
+
+    before = _arrow_ids(spark.sql(f"SELECT id, name FROM {table} ORDER BY id").to_arrow())
+    result = spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.man')").to_arrow()
+    assert _schema_names(result) == ["rewritten_manifests_count", "added_manifests_count"]
+    assert result.schema.field("rewritten_manifests_count").type == pa.int32()
+    assert result.schema.field("added_manifests_count").type == pa.int32()
+    for field in result.schema:
+        assert not field.nullable, f"Spark declares {field.name} non-nullable"
+    assert result.column("rewritten_manifests_count")[0].as_py() == 5
+    assert result.column("added_manifests_count")[0].as_py() == 1
+
+    assert _manifest_count(spark, table) == 1
+    after = spark.sql(f"SELECT id, name FROM {table} ORDER BY id").to_arrow()
+    assert _arrow_ids(after) == before
+    assert after.schema.field("id").type == pa.int64()
+    assert after.schema.field("name").type == pa.string()
+
+
+def test_rewrite_manifests_no_op_returns_zeros(spark: ReparkSession) -> None:
+    """MW-6 — nothing to rewrite is two zeros, not an error and not a new snapshot.
+
+    Oracle — live Spark 4.0.1: the second call on a freshly rewritten table returns ``0, 0`` and
+    the snapshot list does not grow (Spark's ``targetNumManifests == 1 && matching.size() == 1``).
+
+    pins: mw-6-rewrite-manifests/C-004
+    """
+    table = "mem.ns.noop"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
+    )
+    for index in range(2, 6):
+        spark.sql(f"INSERT INTO {table} SELECT {index} AS id, 'x' AS name")
+    spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.noop')").to_arrow()
+    snapshots_before = spark.sql(f"SELECT snapshot_id FROM {table}.snapshots").to_arrow().num_rows
+
+    result = spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.noop')").to_arrow()
+    assert result.column("rewritten_manifests_count")[0].as_py() == 0
+    assert result.column("added_manifests_count")[0].as_py() == 0
+    after = spark.sql(f"SELECT snapshot_id FROM {table}.snapshots").to_arrow().num_rows
+    assert after == snapshots_before, "a no-op rewrite commits no snapshot"
+
+
+def test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted(
+    spark: ReparkSession,
+) -> None:
+    """MW-6 / registry row MANIFEST-2 — the argument surface.
+
+    Spark takes ``table``, ``use_caching`` and ``spec_id``. ``use_caching`` caches Spark's own
+    manifest DataFrame and changed no count on the oracle, so this engine accepts it and does
+    nothing with it. ``spec_id`` selects which partition spec to rewrite; this engine always
+    rewrites the current one and refuses the argument rather than accepting one value of it.
+
+    pins: mw-6-rewrite-manifests/C-007, C-008
+    """
+    table = "mem.ns.args"
+    spark.sql(
+        f"CREATE TABLE {table} USING iceberg TBLPROPERTIES ({COW}) AS SELECT 1 AS id, 'a' AS name"
+    )
+    for index in range(2, 6):
+        spark.sql(f"INSERT INTO {table} SELECT {index} AS id, 'x' AS name")
+
+    with pytest.raises(
+        (UnsupportedOperationException, PySparkException),
+        match=r"spec_id",
+    ):
+        spark.sql("CALL mem.system.rewrite_manifests(table => 'ns.args', spec_id => 0)")
+
+    result = spark.sql(
+        "CALL mem.system.rewrite_manifests(table => 'ns.args', use_caching => true)"
+    ).to_arrow()
+    assert result.column("rewritten_manifests_count")[0].as_py() == 5
+    assert result.column("added_manifests_count")[0].as_py() == 1
