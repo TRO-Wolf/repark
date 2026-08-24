@@ -1731,26 +1731,61 @@ the pin rather than obeying it.
 
 - **repark** — `spec_id` refuses loud, named or positional. The procedure always rewrites the
   manifests of the table's **current** partition spec, which is Spark's default, and older specs'
-  manifests are kept. `use_caching` is accepted, type-checked as a boolean literal, and changes
-  nothing.
+  manifests are kept. `use_caching` is accepted, type-checked as a boolean **literal**, and
+  changes nothing: a quoted `use_caching => 'true'` refuses here.
 - **Apache Spark** — takes both (`RewriteManifestsProcedure.PARAMETERS`: `table` STRING required,
   `use_caching` BOOLEAN optional, `spec_id` INTEGER optional). `spec_id` selects the spec whose
   manifests are rewritten and refuses an id the table does not have (`Invalid spec id 7`);
   `use_caching` sets the action's `use-caching` option, which caches Spark's own manifest
   DataFrame. Measured: `use_caching => true`, `use_caching => false` and the bare call all
   answered `5, 1` on the same five-manifest table, and `spec_id => 0` on a spec-0 table answered
-  `5, 1` as well.
+  `5, 1` as well. Spark also **accepts a STRING literal** for it — `use_caching => 'true'`,
+  `'yes'` and `'no'` each executed and answered `5, 1`, because the procedure's typed parameter
+  casts the string — and refuses only a non-castable type: `use_caching => 1` fails analysis with
+  `[DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] … requires the "BOOLEAN" type, however "1" has the
+  type "INT"`. So a migrating job written `use_caching => 'true'` runs on Spark and refuses here.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
 - **Pin** —
   `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`
   and `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted`
 - **Rationale** — DECLARED. `use_caching` is a Spark-side execution option with no counterpart
   here, and accepting it keeps a migrating maintenance job's SQL unchanged while the type check
-  keeps a typo loud. `spec_id` is a *behaviour* selector, so accepting it and ignoring it would
+  keeps a typo loud. The stricter literal rule is kept deliberately, and it is the same rule
+  `remove_orphan_files`' `dry_run` already carries: on this surface a quoted boolean is far more
+  likely a typo than an intent, and Spark's own cast would read `'yes'` as true and an
+  unrecognized string as null. The cost is one edit in a migrating job, and the refusal names the
+  argument. `spec_id` is a *behaviour* selector, so accepting it and ignoring it would
   silently rewrite the wrong spec's manifests; refusing names what the engine actually does. The
   fork exposes `RewriteManifestsAction::rewrite_if`, which this engine already uses to pin Spark's
   default (current spec), so wiring the argument is possible — it is a scope decision, not a
   capability gap.
+
+### MANIFEST-3 — above the manifest target size, `rewrite_manifests` writes a different number of manifests
+
+- **repark** — five over-target data manifests (35,404 B total at
+  `commit.manifest.target-size-bytes = 4096`) answer `rewritten_manifests_count = 5`,
+  `added_manifests_count = 3`, and the table holds 3 manifests afterwards. Twelve (85,000 B)
+  answer `12, 6`. The fork's action opens one writer per cluster key and rolls to a new manifest
+  when a RUNNING ESTIMATE of the open writer's size reaches the target — the estimate is the
+  source manifest's average per-entry size, because the Rust `ManifestWriter` buffers its entries
+  and exposes no incremental on-disk length.
+- **Apache Spark** — the same two fixtures answer `5, 5` and `12, 12`, leaving the manifest count
+  where it started. `RewriteManifestsSparkAction` computes
+  `targetNumManifests = ceil(total / target)` (9 and 21 here) and repartitions the manifest-entry
+  DataFrame into that many groups, so with more groups than entries every entry lands in its own
+  manifest.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_added_count_diverges_above_the_target_size`
+- **Rationale** — BACKLOG, and narrow: **only `added_manifests_count` moves.**
+  `rewritten_manifests_count` agreed with Spark on every shape measured, at both target sizes, and
+  the live row set is identical either way — this is how many files the entries are spread over,
+  not which entries are live. It does not appear at the default 8 MB target, where both engines
+  write one manifest and the counts agree; it needs a table whose manifests are individually over
+  target. Disclosed rather than refused, because the rewrite is correct and useful there: refusing
+  would deny manifest compaction to exactly the large tables that need it most, and the number the
+  engine reports is an honest count of what it wrote. Closing the row means giving the fork Java's
+  `ceil(total / target)` sizing, which is fork work.
 
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
 

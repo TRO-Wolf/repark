@@ -40,6 +40,9 @@ struct MatchingManifests {
 ///
 /// The fork's action returns no counts, so the numbers come from the summary it writes.
 ///
+/// `rewritten_manifests_count` matches Spark at every manifest size measured; the added side
+/// diverges above `commit.manifest.target-size-bytes` (registry `MANIFEST-3`).
+///
 /// **Spark rewrites delete manifests too; this engine cannot** (registry `MANIFEST-1`). The fork
 /// carries a delete manifest forward byte-identical so outstanding merge-on-read deletes still
 /// apply. A call that would answer two zeros while Spark would compact delete manifests refuses
@@ -58,8 +61,9 @@ pub(super) async fn execute_rewrite_manifests(
     // Spark positional order: table, use_caching, spec_id (jar `PARAMETERS`).
     args.reject_excess_positional(3)?;
     // Parse and drop. Spark's `use-caching` option caches its manifest DataFrame between the two
-    // legs of its own action. This engine reads manifests directly, so the value changes nothing
-    // here — but a non-boolean must still refuse, as it does on Spark (registry `MANIFEST-2`).
+    // legs of its own action. This engine reads manifests directly, so the value changes nothing.
+    // The type check is STRICTER than Spark, which casts a string literal and runs (registry
+    // `MANIFEST-2`): a quoted argument on a procedure this small is more likely a typo than intent.
     args.optional_bool("use_caching", Some(1))?;
     if args.optional_i32("spec_id", Some(2))?.is_some() {
         return Err(DataFusionError::NotImplemented(
@@ -90,9 +94,11 @@ pub(super) async fn execute_rewrite_manifests(
     let tx = Transaction::new(&table);
     let action = tx
         .rewrite_manifests()
-        // One cluster key, so every matching entry lands in one manifest per spec. Java sizes the
-        // same way: `targetNumManifests = ceil(total / commit.manifest.target-size-bytes)`, and
-        // the fork rolls a new manifest at that same property.
+        // One cluster key, so every matching entry lands in one manifest per spec. Both engines
+        // read `commit.manifest.target-size-bytes`, but they size differently above it: Java
+        // repartitions into `ceil(total / target)` groups, and the fork rolls on a running
+        // estimate. Below the target — the 8 MB default — both write one manifest and the counts
+        // agree; above it `added_manifests_count` diverges (registry `MANIFEST-3`).
         .cluster_by(|_| String::new())
         // Java's default filter — `RewriteManifestsSparkAction` rewrites the current spec only.
         // Without it a table whose spec evolved rewrites manifests Spark keeps.

@@ -180,12 +180,29 @@ async fn call_rewrite_manifests_no_op_returns_zeros_and_commits_nothing() {
     let (ctx, catalogs) = setup(&wh).await;
     seed_appends(&ctx, &catalogs, "noop", 5).await;
     let ident = sales("noop");
-    run(
+    // The seeding call must be asserted, not just run. It is the control: an INVERTED no-op guard
+    // makes the FIRST call answer zeros and commit nothing, which leaves five manifests standing
+    // and lets the second call answer zeros for the wrong reason.
+    let seeded = execute(
         &ctx,
         &catalogs,
         "CALL ice.system.rewrite_manifests(table => 'sales.noop')",
     )
-    .await;
+    .await
+    .expect("first rewrite_manifests CALL")
+    .collect()
+    .await
+    .expect("collect result");
+    assert_eq!(
+        call_manifest_count(&seeded[0], "rewritten_manifests_count"),
+        5
+    );
+    assert_eq!(call_manifest_count(&seeded[0], "added_manifests_count"), 1);
+    assert_eq!(
+        manifest_shape(catalogs["ice"].as_ref(), &ident).await,
+        (1, 0, 1),
+        "the second call must meet a single manifest, which is the no-op shape"
+    );
     let snapshots_before = snapshot_count(catalogs["ice"].as_ref(), &ident).await;
 
     let batches = execute(
@@ -473,7 +490,9 @@ async fn call_rewrite_manifests_rewrites_only_the_current_spec() {
 /// Oracle — live Spark 4.0.1 on a five-manifest table: `use_caching => true` and
 /// `use_caching => false` both answered `5, 1`, the same as the bare call, so the option is a
 /// Spark-side `DataFrame` cache and not a behaviour. `spec_id => 0` also answered `5, 1` there;
-/// this engine refuses the argument instead of accepting one value of it (registry `MANIFEST-2`).
+/// this engine refuses the argument instead of accepting one value of it. Spark also ACCEPTS a
+/// string literal (`'true'`, `'yes'`, `'no'` all ran) and refuses only a non-castable type; this
+/// engine refuses every non-boolean literal. Both differences are registry `MANIFEST-2`.
 ///
 /// pins: mw-6-rewrite-manifests/C-007, C-008
 #[tokio::test]
@@ -504,7 +523,9 @@ async fn call_rewrite_manifests_argument_surface_is_sparks() {
         .is_err(),
         "positional spec_id must refuse too"
     );
-    // A non-boolean use_caching refuses exactly as Spark's typed parameter does.
+    // A quoted use_caching refuses HERE and runs on Spark, which casts the string (measured:
+    // `'true'`, `'yes'` and `'no'` all executed and answered `5, 1`; only a non-castable type
+    // such as INT refuses there). Registry MANIFEST-2 carries the divergence.
     assert!(
         execute(
             &ctx,
@@ -548,4 +569,96 @@ fn call_manifest_count(batch: &datafusion::arrow::array::RecordBatch, name: &str
             .expect("Int32 count column")
             .value(0),
     )
+}
+
+/// Seed `appends` single-row appends under a 4 KB manifest target, so one manifest already
+/// exceeds the target and both engines must write more than one.
+async fn seed_tiny_target(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    appends: i32,
+) {
+    run(
+        ctx,
+        catalogs,
+        &format!(
+            "CREATE TABLE ice.sales.{table} (id INT, v STRING) USING iceberg TBLPROPERTIES \
+             ('format-version' = '2', 'commit.manifest.target-size-bytes' = '4096')"
+        ),
+    )
+    .await;
+    for id in 1..=appends {
+        run(
+            ctx,
+            catalogs,
+            &format!("INSERT INTO ice.sales.{table} VALUES ({id}, 'v{id}')"),
+        )
+        .await;
+    }
+}
+
+/// MW-6 / registry `MANIFEST-3`: above the target size the two engines write a different NUMBER
+/// of manifests, so `added_manifests_count` diverges. This pins the ENGINE's number.
+///
+/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0 at `commit.manifest.target-size-bytes = 4096`
+/// (each manifest is ~7 KB, so every one is over target):
+///
+/// ```text
+///  5 manifests, 35,404 B total: Spark 5, 5   (manifests stay 5)   engine 5, 3
+/// 12 manifests, 85,000 B total: Spark 12, 12 (manifests stay 12)  engine 12, 6
+/// ```
+///
+/// `rewritten_manifests_count` agrees on both shapes; only the added side moves. Java computes
+/// `ceil(total / target)` and repartitions the entries into that many groups, so an entry per
+/// group is its ceiling; the fork rolls a new manifest when a RUNNING ESTIMATE reaches the
+/// target. Below the target — the default 8 MB, and every fixture in this file bar this one —
+/// both write one manifest and the counts agree.
+///
+/// pins: mw-6-rewrite-manifests/C-011
+#[tokio::test]
+async fn call_rewrite_manifests_added_count_diverges_above_the_target_size() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    seed_tiny_target(&ctx, &catalogs, "tiny", 5).await;
+    let ident = sales("tiny");
+    assert_eq!(
+        manifest_shape(catalogs["ice"].as_ref(), &ident).await,
+        (5, 0, 5),
+        "fixture must strand five over-target data manifests"
+    );
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.tiny").await;
+
+    let batches = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_manifests(table => 'sales.tiny')",
+    )
+    .await
+    .expect("rewrite_manifests CALL")
+    .collect()
+    .await
+    .expect("collect result");
+    let batch = &batches[0];
+    assert_eq!(
+        call_manifest_count(batch, "rewritten_manifests_count"),
+        5,
+        "the rewritten side agrees with Spark at every target size"
+    );
+    assert_eq!(
+        call_manifest_count(batch, "added_manifests_count"),
+        3,
+        "the engine's own number — Spark answers 5 here (registry MANIFEST-3), and pinning \
+         Spark's number as ours would be the failure docs/testing.md names"
+    );
+    assert_eq!(
+        manifest_shape(catalogs["ice"].as_ref(), &ident).await,
+        (3, 0, 3),
+        "the result batch and the table must agree on how many manifests were written"
+    );
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.tiny").await,
+        live_before,
+        "manifest count is layout; the live row set is unaffected"
+    );
 }

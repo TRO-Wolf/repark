@@ -483,13 +483,14 @@ The live file set is identical before and after — a re-grouped entry keeps its
 id and sequence numbers, which is what keeps merge-on-read deletes and incremental scans correct.
 When there is nothing to re-group you get two zeros and no new snapshot, exactly as Spark does.
 
-Three things to know before you port a maintenance job:
+Four things to know before you port a maintenance job:
 
 - **Only the current partition spec is rewritten.** Manifests written under an older spec are kept
   as they are. That is Spark's default too.
 - **`spec_id` refuses**, because this engine always rewrites the current spec and will not accept
   an argument it would ignore. `use_caching` is accepted and does nothing — it tunes Spark's own
-  DataFrame cache
+  DataFrame cache — but it takes a boolean literal here, where Spark also accepts a quoted
+  `'true'`
   ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refuses-spec_id-use_caching-is-accepted-and-does-nothing)).
 - **Delete manifests are not rewritten.** Spark compacts them in a second leg of the same
   procedure; this engine reports the data leg only and leaves them in place
@@ -497,6 +498,12 @@ Three things to know before you port a maintenance job:
   If that leaves nothing for the data leg to do, the call refuses rather than returning two zeros
   that read as "already clean". Compacting the delete FILES first with
   `rewrite_position_delete_files` is what reduces them.
+- **On a table whose manifests are individually larger than
+  `commit.manifest.target-size-bytes`, `added_manifests_count` will not match Spark's**, because
+  the two engines split the entries over a different number of manifests
+  ([MANIFEST-3](../spark-sql-iceberg-parity.md#manifest-3--above-the-manifest-target-size-rewrite_manifests-writes-a-different-number-of-manifests)).
+  `rewritten_manifests_count` matches, and so does the row set. At the 8 MB default both engines
+  write one manifest and the counts are identical.
 
 `expire_snapshots` and `rollback_to_snapshot` are the other two, and `expire_snapshots` returns
 Spark's full six-column result:

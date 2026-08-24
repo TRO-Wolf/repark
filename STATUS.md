@@ -385,8 +385,10 @@ history-rewrite; provenance and the options weighed:
     MW-4b (#219) and is not sequenced.
   - **Divergences that remain rows**, not closed here — `MOR-2`, `ORPHAN-1`,
     `ORPHAN-2`, `B-MOR-3`, and MW-6's `MANIFEST-1` (delete manifests are not rewritten; Spark
-    rewrites them in a second leg) and `MANIFEST-2` (`spec_id` refuses, `use_caching` is an
-    accepted no-op) in
+    rewrites them in a second leg), `MANIFEST-2` (`spec_id` refuses; `use_caching` is an
+    accepted no-op and takes a boolean literal where Spark also casts a string) and
+    `MANIFEST-3` (above `commit.manifest.target-size-bytes` the two engines write a different
+    number of manifests, so `added_manifests_count` diverges; the rewritten count matches) in
     [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
     RP-1 (fork F-1, floor 5). The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
