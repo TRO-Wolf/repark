@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-23._
+_Last updated: 2026-08-24._
 
 ## Release state
 
@@ -432,7 +432,7 @@ history-rewrite; provenance and the options weighed:
     `remove-dangling-deletes` off. Registry row **`RDF-1`**, fork ask **F-16**, ledger finding
     F-MW7-1 (OPEN), pinned by `test_delete_laden_in_band_file_survives_the_runbook`. Driver: `python/repark-parity/bench/mw7/`; machinery pin:
     `python/repark/tests/test_mw7_scale_smoke.py`. Ledger:
-    [task/ledgers/completed/mw-7-scale-measurement-ledger.md](task/ledgers/completed/mw-7-scale-measurement-ledger.md).
+    [task/ledgers/completed/mw-7-scale-measurement-ledger.md](task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md).
     **The verdict the charter asked for: MW-9 is urgent** — the point probe goes
     **858 → 3,878 ms** for a predicate returning 0.02 % of the rows, because partition
     granularity forces open every delete file in every partition it touches (400 files,
@@ -456,7 +456,7 @@ history-rewrite; provenance and the options weighed:
     Pin: `python/repark/tests/test_mw8_runbook.py` (ten clauses, one documented cycle censused
     after every step, 4.4 s; C-010 parses the guide's printed `CALL` block and compares it to
     the measured sequence). Ledger:
-    [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
+    [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
   - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7 and MW-8 are
     delivered; **V3-2** create-v3 opt-in is the remainder.
     Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 is
@@ -490,8 +490,8 @@ history-rewrite; provenance and the options weighed:
     fixture is checked in so CI can load Puffin vectors with no JVM; `B-MOR-3` and
     `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table` in the fork
     (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 is
-    sequenced on [briefs/next-sequence.md](briefs/next-sequence.md) (RP-1 lands with this
-    change).
+    sequenced on [briefs/next-sequence.md](briefs/next-sequence.md) (RP-1 #228, MW-6/7/8
+    #230).
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

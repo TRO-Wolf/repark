@@ -132,6 +132,10 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-08-23-mw-4-mor-acceptance-ledger.md](2026-08-23-mw-4-mor-acceptance-ledger.md) — **MW-4 (2026-08-23):** Glue live merge-on-read compact+expire in the aws-acceptance module.
 - [2026-08-23-mw-4b-glue-metadata-rewrite-ledger.md](2026-08-23-mw-4b-glue-metadata-rewrite-ledger.md) — **MW-4b (2026-08-23):** Glue/HMS hierarchical-namespace `DataInvalid` on the Spark metadata-table "real table wins" probe.
 - [2026-08-23-mw-5-campaign-close-ledger.md](2026-08-23-mw-5-campaign-close-ledger.md) — **MW-5 (2026-08-23):** campaign close.
+- [2026-08-23-rp-1-fork-repin-ledger.md](2026-08-23-rp-1-fork-repin-ledger.md) — **RP-1 (2026-08-23):** re-pin `iceberg*` to fork `main` `5e7b2e4` (F-0/F-1/F-2/F-8a; T6 name-directory freeze; Spark `position_deletes` rewrite).
+- [2026-08-24-mw-6-rewrite-manifests-ledger.md](2026-08-24-mw-6-rewrite-manifests-ledger.md) — **MW-6 (2026-08-23):** `CALL system.rewrite_manifests` over the fork's `RewriteManifestsAction`; counts read from the new snapshot's summary; registry rows `MANIFEST-1` / `MANIFEST-2`.
+- [2026-08-24-mw-7-scale-measurement-ledger.md](2026-08-24-mw-7-scale-measurement-ledger.md) — **MW-7 (2026-08-24):** Iceberg scale measurement, measure-only.
+- [2026-08-24-mw-8-maintenance-runbook-ledger.md](2026-08-24-mw-8-maintenance-runbook-ledger.md) — **MW-8 (2026-08-24):** the Airflow-shaped maintenance runbook.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -2,10 +2,10 @@
 
 **Date:** 2026-08-23 · **Branch:** `feat/mw6-wave` · **Base:** `c8553d3` (`main`, post-#228) ·
 **Charter:** owner, 2026-08-23 (slate:
-[../../../briefs/next-sequence.md](../../../briefs/next-sequence.md) "MW-6"; evidence:
-[../../roadmap/mid-term/roadmap-intake-2026-08-23.md](../../roadmap/mid-term/roadmap-intake-2026-08-23.md)
+[../../../briefs/next-sequence.md](../../../../briefs/next-sequence.md) "MW-6"; evidence:
+[../../roadmap/mid-term/roadmap-intake-2026-08-23.md](../../../roadmap/mid-term/roadmap-intake-2026-08-23.md)
 row MW-6) · **Fork pin:** `5e7b2e4` (RP-1,
-[rp-1-fork-repin-ledger.md](rp-1-fork-repin-ledger.md))
+[rp-1-fork-repin-ledger.md](2026-08-23-rp-1-fork-repin-ledger.md))
 
 **Retires:** moved to `completed/` in this departure commit.
 
@@ -162,11 +162,11 @@ committed.
 - Registry: `MANIFEST-1` (delete manifests, BACKLOG — fork work), `MANIFEST-2` (`spec_id`
   refuses, `use_caching` no-op and boolean-literal-only, DECLARED) and `MANIFEST-3`
   (`added_manifests_count` above the manifest target size, BACKLOG — fork work) in
-  [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
+  [../../../docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md).
 - Guide: "Compacting manifests" in
-  [../../../docs/guide/iceberg-guide.md](../../../docs/guide/iceberg-guide.md); the
+  [../../../docs/guide/iceberg-guide.md](../../../../docs/guide/iceberg-guide.md); the
   unsupported-procedure example no longer names `rewrite_manifests`, which now works.
-- Maps: [../../../crates/repark-spark/src/call/map.md](../../../crates/repark-spark/src/call/map.md)
+- Maps: [../../../crates/repark-spark/src/call/map.md](../../../../crates/repark-spark/src/call/map.md)
   (new), `src/map.md`, `src/router/map.md`, `src/tests/map.md`,
   `python/repark/tests/map.md`.
 - STATUS: six maintenance procedures; the two new registry rows; the sequenced remainder is
