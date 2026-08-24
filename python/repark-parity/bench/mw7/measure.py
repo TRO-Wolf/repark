@@ -12,9 +12,11 @@ The shape, from the MW-7 charter:
 * then the full maintenance sequence, with a file census after every step;
 * then the same scans again.
 
-Two facts decide how the numbers are read. This engine writes ONE position-delete file per
-`(spec, partition)` per commit — Iceberg `partition` granularity, where Spark's default is
-`file` (registry row `MOR-2`). And the COW leg has no delete files at all, so it is the control.
+Two facts decide how the numbers are read. The MOR leg is created with
+`write.delete.granularity = 'partition'` so the recorded arithmetic stays the MW-7
+measurement (one position-delete file per `(spec, partition)` per commit). Spark's
+unset default is `file` (registry row `MOR-2`, closed by MW-9). And the COW leg has no
+delete files at all, so it is the control.
 
 Read the MOR-minus-COW gap as what merge-on-read costs on READ, not as a delete-file cost
 alone: the MOR leg also accumulates data files, because every MERGE appends the updated rows
@@ -51,10 +53,12 @@ EXPIRE_OLDER_THAN_FUTURE_MS = 86_400_000
 # construction — the wall clock of the walk is the number worth having, not the count.
 ORPHAN_OLDER_THAN_PAST_MS = 25 * 60 * 60 * 1000
 
+# pins: mw-9-delete-granularity/C-008
 MOR_PROPERTIES = (
     "'write.delete.mode' = 'merge-on-read', "
     "'write.update.mode' = 'merge-on-read', "
-    "'write.merge.mode' = 'merge-on-read'"
+    "'write.merge.mode' = 'merge-on-read', "
+    "'write.delete.granularity' = 'partition'"
 )
 COW_PROPERTIES = (
     "'write.delete.mode' = 'copy-on-write', "

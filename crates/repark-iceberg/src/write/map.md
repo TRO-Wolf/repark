@@ -43,7 +43,9 @@ repark-core's error map.
   — **LRS-5 (2026-08-20):** moved into the canonical module tree, `#[path]` gone. Isolation
   property pins (M19 / A10: no trim, `to_ascii_lowercase`, default serializable,
   garbage ⇒ Plan `Invalid isolation level: {name}`) live in those two test
-  files. Ledger:
+  files. **MW-9:** `resolve_write_mode` parses `write.delete.granularity` on the
+  MoR arm before identity UPDATE/DELETE writes parquet (same refuse-before-IO
+  class as `resolve_merge_mode`). Ledger:
   [`../../../../task/r1-g3e8-pr4-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-14-r1-g3e8-pr4-ledger.md).
 - `append.rs` — `append(catalog, ident, batches)`: public bulk append — conform (missing /
   extra / duplicate column = loud error; **WI-1** ANSI store-assignment gate then strict casts,
@@ -112,9 +114,10 @@ repark-core's error map.
 - `position_delete.rs` (crate-private; two `pub` re-exports via `mod.rs`) — merge-on-read
   WRITE primitive: turn `(_file, _pos)` pairs into committable position-delete `DataFile`s by
   driving the fork's production `PositionDeleteFileWriter`. Owns sort order (ascending
-  `(file_path, pos)`) and partition stamping (each delete file carries the `(spec_id,
-  partition)` of the data file it deletes from, resolved from the snapshot's DATA manifests —
-  never the table's current default spec). Unpartitioned groups keep `partition_key = None`;
+  `(file_path, pos)`), `write.delete.granularity` grouping (**MW-9:** unset → Spark `file`;
+  `'partition'` → one file per `(spec_id, partition)`), and partition stamping (each delete
+  file carries the `(spec_id, partition)` of the data file it deletes from, resolved from the
+  snapshot's DATA manifests — never the table's current default spec). Unpartitioned groups keep `partition_key = None`;
   an evolved unpartitioned spec whose id is not 0 also chains `.with_partition_spec(spec)`
   so the fork does not fall back to stamping spec 0 (**M16**,
   [`../../../../task/m16-posdelete-specid-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-15-m16-posdelete-specid-ledger.md)).

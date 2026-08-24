@@ -1475,7 +1475,15 @@ async fn merge_bucket_partition_key_changing_update_reroutes_survivor() {
 
 /// Table properties selecting merge-on-read.
 fn mor_props() -> HashMap<String, String> {
-    HashMap::from([(MERGE_MODE_PROP.to_string(), "merge-on-read".to_string())])
+    HashMap::from([
+        (MERGE_MODE_PROP.to_string(), "merge-on-read".to_string()),
+        // pins: mw-9-delete-granularity/C-008 — these fixtures were written against
+        // implicit partition grouping; keep that layout after the Spark-default flip.
+        (
+            crate::write::position_delete::DELETE_GRANULARITY_PROP.to_string(),
+            "partition".to_string(),
+        ),
+    ])
 }
 
 /// Table properties selecting copy-on-write EXPLICITLY (the T4 differential's control arm —

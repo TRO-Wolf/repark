@@ -52,6 +52,8 @@ mod matrix;
 #[cfg(test)]
 mod a13_fallback;
 #[cfg(test)]
+mod delete_granularity;
+#[cfg(test)]
 mod tests;
 #[cfg(test)]
 mod v3_create;

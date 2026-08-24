@@ -16,6 +16,7 @@ works, so the attribute is gone rather than documented.
   `[NOT] EXISTS` with and without correlation, correlated `IN`. Also the isolation-level property
   pins (M19 / A10).
 - `predicate_dml_update_tests.rs` — the identity `UPDATE … SET <scalar> WHERE col IN` arm.
+  **MW-9:** unknown `write.delete.granularity` refuses before any parquet write.
 
 ## Pointers
 

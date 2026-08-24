@@ -48,11 +48,15 @@ SEED_ROW_COUNT = 1000
 MERGE_COUNT = 10
 IDS_PER_MERGE = 200
 
+# pins: mw-9-delete-granularity/C-008 — 1→10 is one delete file per MERGE at
+# `'partition'` (unpartitioned table). Spark-default `file` would grow with the
+# data-file fan-out of each MATCHED UPDATE.
 MOR_PROPERTIES = (
     "'format-version' = '2', "
     "'write.delete.mode' = 'merge-on-read', "
     "'write.update.mode' = 'merge-on-read', "
-    "'write.merge.mode' = 'merge-on-read'"
+    "'write.merge.mode' = 'merge-on-read', "
+    "'write.delete.granularity' = 'partition'"
 )
 
 
@@ -93,7 +97,7 @@ def _count_star(spark: ReparkSession, table: str) -> tuple[int, pa.DataType, flo
 
 
 def _merge_two_hundred(spark: ReparkSession) -> None:
-    """One MERGE of the 200-id source. One commit, one position-delete file."""
+    """One MERGE of the 200-id source. One commit, one position-delete file at `'partition'`."""
     spark.createDataFrame(_merge_rows(), ["id", "name"]).createOrReplaceTempView(MERGE_VIEW)
     spark.sql(merge_sql(TABLE, MERGE_VIEW, "id"))
     spark.catalog.dropTempView(MERGE_VIEW)

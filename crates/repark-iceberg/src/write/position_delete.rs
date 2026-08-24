@@ -16,10 +16,12 @@
 //!     job, matching Java"). A concurrent Iceberg scan interleaves data files in arbitrary order, so
 //!     the pairs a MERGE collects are NOT sorted at collection time — [`sort_position_delete_pairs`]
 //!     restores spec order before anything is written.
-//!   * **Partition stamping.** A position-delete file is associated with the `(spec_id, partition)`
-//!     of the DATA file it deletes from — the commit validates the delete file's partition against
-//!     the registered spec. So the pairs are grouped by their target data file's OWN
-//!     `(spec_id, partition)` (read off the live manifests) and one delete file is written per group.
+//!   * **Partition stamping and grouping.** A position-delete file is associated with the
+//!     `(spec_id, partition)` of the DATA file it deletes from — the commit validates the delete
+//!     file's partition against the registered spec. Grouping follows `write.delete.granularity`
+//!     (absent → `file`, matching Spark): `file` writes one delete file per referenced data file;
+//!     `partition` writes one per `(spec_id, partition)` group. Either way the stamp is the data
+//!     file's own partition, read off the live manifests, never the table's current default spec.
 //!     A partitioned group is stamped with that group's [`PartitionKey`]. An unpartitioned group
 //!     still passes `partition_key = None` (empty-tuple semantics); when the resolved spec's id is
 //!     not 0 the writer is also chained `.with_partition_spec(spec)` so the file claims that spec
@@ -64,6 +66,27 @@ use crate::write::writer_props::writer_properties_for;
 /// writer stamps this when built with `partition_key = None` and no `.with_partition_spec`.
 const DEFAULT_PARTITION_SPEC_ID: i32 = 0;
 
+/// Iceberg table property for position-delete grouping. Spark's `SparkWriteConf` default is
+/// `file`; Iceberg-core's `TableProperties.DELETE_GRANULARITY_DEFAULT` is `partition`. This
+/// engine matches Spark (registry `MOR-2`).
+pub const DELETE_GRANULARITY_PROP: &str = "write.delete.granularity";
+
+/// How position-delete pairs are grouped into files. The fork writer has no knob — grouping
+/// is the engine's (`ENGINE_CONTRACT` §7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum DeleteGranularity {
+    /// One delete file per referenced data file (Spark default).
+    File,
+    /// One delete file per `(spec_id, partition)` group (Iceberg-core default).
+    Partition,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+enum PositionDeleteGroupKey {
+    Partition { spec_id: i32, partition: Struct },
+    File(Arc<str>),
+}
+
 // === r20 P2a: merge ===
 /// One deleted row's identity: the data file it lives in, and its 0-based ordinal within that file.
 /// Exactly the `(_file, _pos)` pair the pinned core scan surfaces (fork `metadata_columns.rs`).
@@ -88,6 +111,32 @@ pub(crate) fn sort_position_delete_pairs(pairs: &mut [PositionDeletePair]) {
 }
 
 /// ===========================================================================================
+/// Parse `write.delete.granularity`. Absent → [`DeleteGranularity::File`] (Spark). `'file'` /
+/// `'partition'` accepted case-insensitively. Anything else refuses loud.
+///
+/// Model: Grok 4.6 xHigh
+/// pins: mw-9-delete-granularity/C-001, C-004
+/// ===========================================================================================
+///
+/// # Errors
+/// Present-but-unrecognised value.
+pub(crate) fn parse_delete_granularity(raw: Option<&str>) -> Result<DeleteGranularity> {
+    let Some(value) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(DeleteGranularity::File);
+    };
+    if value.eq_ignore_ascii_case("file") {
+        return Ok(DeleteGranularity::File);
+    }
+    if value.eq_ignore_ascii_case("partition") {
+        return Ok(DeleteGranularity::Partition);
+    }
+    Err(DataFusionError::Plan(format!(
+        "table property `{DELETE_GRANULARITY_PROP}` = '{value}' is not supported \
+         (accepted: 'file', 'partition'; Spark default is 'file')"
+    )))
+}
+
+/// ===========================================================================================
 /// Write real Parquet position-delete file(s) for `pairs`, each stamped with the
 /// `(spec_id, partition)` of the DATA file it deletes from.
 ///
@@ -95,8 +144,9 @@ pub(crate) fn sort_position_delete_pairs(pairs: &mut [PositionDeletePair]) {
 /// file and ALL of them must be committed, or the deletes in a dropped file would be silently lost
 /// (rows resurrected on the next scan).
 ///
-/// **Every** pair is grouped by the `(spec_id, partition)` of the DATA FILE IT DELETES FROM —
-/// there is deliberately NO "the table is unpartitioned, so skip the lookup" fast path. Keying that
+/// **Every** pair is grouped by [`parse_delete_granularity`]: `file` (Spark default) keys on the
+/// data-file path; `partition` keys on the data file's `(spec_id, partition)`. There is
+/// deliberately NO "the table is unpartitioned, so skip the lookup" fast path. Keying that
 /// shortcut off the table's DEFAULT spec is the wrong predicate: under partition-spec evolution a
 /// table whose *current* default is unpartitioned can still hold live data files written under an
 /// earlier PARTITIONED spec, and those files' deletes must carry that spec's partition, not an empty
@@ -129,60 +179,7 @@ pub(crate) async fn write_position_deletes(
         return Ok(Vec::new());
     }
     let config = PositionDeleteWriterConfig::new().map_err(iceberg_err)?;
-    let metadata = table.metadata();
-
-    // Stamp each delete file with the partition of the data file it deletes FROM, never the table's
-    // current default — the deleted row physically lives in that file, under the spec that file was
-    // written with, and the commit validates the delete file's partition against it.
-    let partitions = data_file_partitions(table).await?;
-    let mut groups: HashMap<(i32, Struct), Vec<PositionDeletePair>> = HashMap::new();
-    for pair in pairs {
-        let key = partitions.get(pair.0.as_ref()).cloned().ok_or_else(|| {
-            DataFusionError::Internal(format!(
-                "position-delete: data file `{}` is not live in the current snapshot's manifests",
-                pair.0
-            ))
-        })?;
-        // Arc clone — not a path-string allocation (P2a).
-        groups
-            .entry(key)
-            .or_default()
-            .push((Arc::clone(&pair.0), pair.1));
-    }
-
-    // Sort each group before any write so per-file `(file_path, pos)` order is preserved even when
-    // groups are written concurrently (spec invariant is within-file, not across files).
-    let mut prepared = Vec::with_capacity(groups.len());
-    for ((spec_id, partition), mut group) in groups {
-        sort_position_delete_pairs(&mut group);
-        let spec = metadata
-            .partition_spec_by_id(spec_id)
-            .ok_or_else(|| {
-                DataFusionError::Internal(format!(
-                    "position-delete: data file references unknown partition spec {spec_id}"
-                ))
-            })?
-            .as_ref()
-            .clone();
-        // Unpartitioned groups keep `partition_key = None` (empty tuple). The fork then stamps
-        // spec id 0 unless the resolved spec is configured on the builder — required whenever
-        // the looked-up spec is unpartitioned-but-not-spec-0 (M16).
-        let builder_spec = if spec.is_unpartitioned() && spec.spec_id() != DEFAULT_PARTITION_SPEC_ID
-        {
-            Some(spec.clone())
-        } else {
-            None
-        };
-        let partition_key = if spec.is_unpartitioned() {
-            None
-        } else {
-            Some(
-                PartitionKey::new(spec, metadata.current_schema().clone(), partition)
-                    .map_err(iceberg_err)?,
-            )
-        };
-        prepared.push((group, partition_key, builder_spec));
-    }
+    let prepared = prepare_position_delete_groups(table, pairs).await?;
 
     let max_concurrent = concurrency.max_concurrent_files.max(1);
     if max_concurrent == 1 || prepared.len() <= 1 {
@@ -264,6 +261,92 @@ async fn data_file_partitions(table: &Table) -> Result<HashMap<String, (i32, Str
         }
     }
     Ok(partitions)
+}
+
+/// ===========================================================================================
+/// Group pairs by [`parse_delete_granularity`], sort each group, and stamp the data-file partition.
+///
+/// Model: Grok 4.6 xHigh
+/// ===========================================================================================
+async fn prepare_position_delete_groups(
+    table: &Table,
+    pairs: &[PositionDeletePair],
+) -> Result<
+    Vec<(
+        Vec<PositionDeletePair>,
+        Option<PartitionKey>,
+        Option<PartitionSpec>,
+    )>,
+> {
+    let metadata = table.metadata();
+    let granularity = parse_delete_granularity(
+        metadata
+            .properties()
+            .get(DELETE_GRANULARITY_PROP)
+            .map(String::as_str),
+    )?;
+    let partitions = data_file_partitions(table).await?;
+    let mut groups: HashMap<PositionDeleteGroupKey, Vec<PositionDeletePair>> = HashMap::new();
+    for pair in pairs {
+        let (spec_id, partition) = partitions.get(pair.0.as_ref()).cloned().ok_or_else(|| {
+            DataFusionError::Internal(format!(
+                "position-delete: data file `{}` is not live in the current snapshot's manifests",
+                pair.0
+            ))
+        })?;
+        let key = match granularity {
+            DeleteGranularity::Partition => {
+                PositionDeleteGroupKey::Partition { spec_id, partition }
+            }
+            DeleteGranularity::File => PositionDeleteGroupKey::File(Arc::clone(&pair.0)),
+        };
+        groups
+            .entry(key)
+            .or_default()
+            .push((Arc::clone(&pair.0), pair.1));
+    }
+
+    let mut prepared = Vec::with_capacity(groups.len());
+    for (key, mut group) in groups {
+        sort_position_delete_pairs(&mut group);
+        let (spec_id, partition) = match &key {
+            PositionDeleteGroupKey::Partition { spec_id, partition } => {
+                (*spec_id, partition.clone())
+            }
+            PositionDeleteGroupKey::File(path) => {
+                partitions.get(path.as_ref()).cloned().ok_or_else(|| {
+                    DataFusionError::Internal(format!(
+                        "position-delete: grouped data file `{path}` missing from live manifests"
+                    ))
+                })?
+            }
+        };
+        let spec = metadata
+            .partition_spec_by_id(spec_id)
+            .ok_or_else(|| {
+                DataFusionError::Internal(format!(
+                    "position-delete: data file references unknown partition spec {spec_id}"
+                ))
+            })?
+            .as_ref()
+            .clone();
+        let builder_spec = if spec.is_unpartitioned() && spec.spec_id() != DEFAULT_PARTITION_SPEC_ID
+        {
+            Some(spec.clone())
+        } else {
+            None
+        };
+        let partition_key = if spec.is_unpartitioned() {
+            None
+        } else {
+            Some(
+                PartitionKey::new(spec, metadata.current_schema().clone(), partition)
+                    .map_err(iceberg_err)?,
+            )
+        };
+        prepared.push((group, partition_key, builder_spec));
+    }
+    Ok(prepared)
 }
 
 /// ===========================================================================================
@@ -427,6 +510,42 @@ pub async fn refuse_mor_unpartitioned_multi_spec_dml(
 mod tests {
     use super::*;
 
+    /// pins: mw-9-delete-granularity/C-001, C-004
+    #[test]
+    fn parse_delete_granularity_spark_default_and_refuse() {
+        assert_eq!(
+            parse_delete_granularity(None).expect("absent"),
+            DeleteGranularity::File
+        );
+        assert_eq!(
+            parse_delete_granularity(Some("  ")).expect("whitespace-only is absent"),
+            DeleteGranularity::File
+        );
+        assert_eq!(
+            parse_delete_granularity(Some("file")).expect("file"),
+            DeleteGranularity::File
+        );
+        assert_eq!(
+            parse_delete_granularity(Some("FILE")).expect("FILE"),
+            DeleteGranularity::File
+        );
+        assert_eq!(
+            parse_delete_granularity(Some("partition")).expect("partition"),
+            DeleteGranularity::Partition
+        );
+        let err = parse_delete_granularity(Some("banana"))
+            .expect_err("unknown value")
+            .to_string();
+        assert!(
+            err.contains(DELETE_GRANULARITY_PROP)
+                && err.contains("'file'")
+                && err.contains("'partition'")
+                && err.contains("banana"),
+            "refuse must name the property, both quoted legal values, and the illegal \
+             value (unquoted `file` is already a substring of the property name): {err}"
+        );
+    }
+
     /// PIN T-SORT — [`sort_position_delete_pairs`] restores the Iceberg spec's ascending
     /// `(file_path, pos)` order from scan-interleaved input. The fork's writer is write-as-given
     /// (R113), so THIS is the only thing standing between an interleaved scan and a spec-violating
@@ -581,6 +700,62 @@ mod tests {
         );
     }
 
+    /// pins: mw-9-delete-granularity/C-001
+    #[tokio::test]
+    async fn default_file_granularity_writes_one_delete_file_per_data_file() {
+        let written = write_two_file_deletes(&HashMap::new()).await;
+        assert_eq!(
+            written.len(),
+            2,
+            "Spark default file granularity: one MERGE-shaped write across two data files \
+             must emit two delete files"
+        );
+    }
+
+    /// pins: mw-9-delete-granularity/C-002
+    #[tokio::test]
+    async fn explicit_file_granularity_writes_one_delete_file_per_data_file() {
+        let written = write_two_file_deletes(&HashMap::from([(
+            DELETE_GRANULARITY_PROP.to_string(),
+            "file".to_string(),
+        )]))
+        .await;
+        assert_eq!(written.len(), 2);
+    }
+
+    /// pins: mw-9-delete-granularity/C-003
+    #[tokio::test]
+    async fn partition_granularity_writes_one_delete_file_for_an_unpartitioned_table() {
+        let written = write_two_file_deletes(&HashMap::from([(
+            DELETE_GRANULARITY_PROP.to_string(),
+            "partition".to_string(),
+        )]))
+        .await;
+        assert_eq!(
+            written.len(),
+            1,
+            "partition granularity: the whole unpartitioned table is one group"
+        );
+    }
+
+    async fn write_two_file_deletes(properties: &HashMap<String, String>) -> Vec<DataFile> {
+        let warehouse = tempfile::TempDir::new().expect("temp warehouse");
+        let catalog = sales_memory_catalog(&warehouse).await;
+        let ident = create_unpartitioned_target_with(&catalog, "gran", properties).await;
+        append_id_v(&catalog, &ident, &[1], &["a"]).await;
+        append_id_v(&catalog, &ident, &[2], &["b"]).await;
+        let data_files = live_content_files(&catalog, &ident, DataContentType::Data).await;
+        assert_eq!(data_files.len(), 2);
+        let pairs: Vec<PositionDeletePair> = data_files
+            .iter()
+            .map(|file| (Arc::from(file.file_path()), 0))
+            .collect();
+        let table = catalog.load_table(&ident).await.expect("reload");
+        write_position_deletes(&table, &pairs, WriteConcurrency::new(1).expect("K=1"))
+            .await
+            .expect("write grouped deletes")
+    }
+
     async fn sales_memory_catalog(warehouse: &tempfile::TempDir) -> Arc<dyn Catalog> {
         use iceberg::NamespaceIdent;
         let warehouse_path = warehouse
@@ -629,6 +804,14 @@ mod tests {
     }
 
     async fn create_unpartitioned_target(catalog: &Arc<dyn Catalog>, name: &str) -> TableIdent {
+        create_unpartitioned_target_with(catalog, name, &HashMap::new()).await
+    }
+
+    async fn create_unpartitioned_target_with(
+        catalog: &Arc<dyn Catalog>,
+        name: &str,
+        properties: &HashMap<String, String>,
+    ) -> TableIdent {
         use iceberg::{NamespaceIdent, TableCreation};
         let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), name.to_string());
         catalog
@@ -637,6 +820,7 @@ mod tests {
                 TableCreation::builder()
                     .name(name.to_string())
                     .schema(id_v_schema())
+                    .properties(properties.clone())
                     .build(),
             )
             .await

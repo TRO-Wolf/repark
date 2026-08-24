@@ -928,7 +928,8 @@ async fn seed_mor_delete_files(
         catalogs,
         &format!(
             "CREATE TABLE ice.sales.{table} (id INT, v STRING) USING iceberg \
-             TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read')"
+             TBLPROPERTIES ('format-version' = '2', 'write.merge.mode' = 'merge-on-read', \
+             'write.delete.granularity' = 'partition')"
         ),
     )
     .await;
@@ -962,8 +963,8 @@ async fn seed_mor_delete_files(
 /// MW-2: `rewrite_position_delete_files` compacts position deletes and reports Spark's counts.
 ///
 /// Oracle — live Spark 4.0.1 + Iceberg 1.10.0, on a table at
-/// `write.delete.granularity = 'partition'` (the granularity this engine's own merge-on-read
-/// writer produces, per `mor2_merge_writes_one_position_delete_per_partition`):
+/// `write.delete.granularity = 'partition'` (explicit; MW-9's unset default is `file`).
+/// Seeded by eight separate MERGEs of one row each, so file vs partition counts match:
 ///
 /// ```text
 /// 8 delete files → rewritten_delete_files_count=8  added_delete_files_count=1
@@ -1159,20 +1160,17 @@ async fn call_rpdf_compacts_at_sparks_min_input_files_floor() {
     );
 }
 
-/// Registry row `MOR-2` — this engine's merge-on-read writer is partition-granularity.
+/// Registry row `MOR-2` closed for RePark-owned MERGE (fork SQL DELETE/UPDATE still
+/// partition-group; `fork_table_provider_delete_is_not_this_writer`).
 ///
-/// One MERGE touching six distinct data files writes ONE position-delete file here. Spark's
-/// default is `write.delete.granularity = 'file'` (`TableProperties.DELETE_GRANULARITY_DEFAULT`,
-/// confirmed on the oracle by leaving the property unset: eight deletes across eight data files
-/// produced eight delete files), so Spark writes six. This engine reads no granularity property
-/// at all.
+/// Spark-default `write.delete.granularity = 'file'`.
 ///
-/// It is pinned in MW-2 because it is what makes
-/// `call_rewrite_position_delete_files_compacts_like_spark` legitimate: the parity that pin
-/// asserts is parity with Spark on a **partition-granularity** table, and this is the measurement
-/// showing that is the only kind of table this engine writes.
+/// One MERGE touching six distinct data files writes SIX position-delete files. The MW-2 pin
+/// recorded the old implicit-partition layout (one file). MW-9 matches `SparkWriteConf`.
+///
+/// pins: mw-9-delete-granularity/C-001, C-006, C-009
 #[tokio::test]
-async fn call_mor2_merge_writes_one_position_delete_per_partition() {
+async fn call_mor2_merge_writes_one_position_delete_per_data_file_by_default() {
     let wh = TempDir::new().unwrap();
     let (ctx, catalogs) = setup(&wh).await;
     run(
@@ -1217,9 +1215,8 @@ async fn call_mor2_merge_writes_one_position_delete_per_partition() {
             "SELECT * FROM ice.sales.gran.files WHERE content = 1"
         )
         .await,
-        1,
-        "MOR-2: one delete file for the whole unpartitioned table, where Spark's default \
-         granularity writes one per data file"
+        6,
+        "MOR-2 closed: Spark default file granularity writes one delete file per data file"
     );
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.gran").await,

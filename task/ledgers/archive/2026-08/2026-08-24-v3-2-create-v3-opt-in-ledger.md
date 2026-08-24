@@ -1,8 +1,8 @@
 # V3-2 — CREATE/CTAS format-version=3 behind an explicit session opt-in
 
 **Date:** 2026-08-24 · **Branch:** `feat/v3-2-create-v3-opt-in` · **Base:** `fb91233` (`origin/main`) ·
-**Design:** [docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) §5 ·
-**Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
+**Design:** [docs/design/format-v3-track.md](../../../../docs/design/format-v3-track.md) §5 ·
+**Sequence:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, `/sepmo-core`) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1
 

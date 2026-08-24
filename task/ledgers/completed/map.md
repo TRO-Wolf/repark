@@ -8,10 +8,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [v3-2-create-v3-opt-in-ledger.md](v3-2-create-v3-opt-in-ledger.md) —
-  **V3-2 (2026-08-24):** CREATE/CTAS `format-version = 3` behind
-  `repark.sql.allowCreateFormatVersion3` (default false). Default create stays v2;
-  ALTER stays refused; V3-LINEAGE-1 is not lifted.
+- [mw-9-delete-granularity-ledger.md](mw-9-delete-granularity-ledger.md) —
+  **MW-9 (2026-08-24):** honor `write.delete.granularity` (`file` / `partition`);
+  Spark default `file`; close registry `MOR-2` for RePark-owned MERGE
+  (fork SQL DELETE/UPDATE still partition-group).
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -840,6 +840,15 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
                      '{MODE_COPY_ON_WRITE}' instead"
                 )));
             }
+            // pins: mw-9-delete-granularity/C-004 — same class as resolve_merge_mode: refuse
+            // unknown granularity BEFORE identity UPDATE/DELETE writes parquet.
+            crate::write::position_delete::parse_delete_granularity(
+                table
+                    .metadata()
+                    .properties()
+                    .get(crate::write::position_delete::DELETE_GRANULARITY_PROP)
+                    .map(String::as_str),
+            )?;
             Ok(DeleteWriteMode::MergeOnRead)
         }
         _ => Ok(DeleteWriteMode::CopyOnWrite),
