@@ -30,6 +30,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+- [v3-2-create-v3-opt-in-ledger.md](v3-2-create-v3-opt-in-ledger.md) —
+  **V3-2 (2026-08-24):** CREATE/CTAS `format-version = 3` behind
+  `repark.sql.allowCreateFormatVersion3` (default false). Default create stays v2;
+  ALTER stays refused; V3-LINEAGE-1 is not lifted.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -198,6 +198,7 @@ const ROWS: &[(SurfaceId, Row)] = &[
             SparkExtended,
         ),
     ),
+    // pins: v3-2-create-v3-opt-in/C-012
     (
         surfaces::TABLE_OPTION_FORMAT_VERSION,
         t(

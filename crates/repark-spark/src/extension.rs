@@ -139,6 +139,7 @@ impl SessionExtension for SparkExtension {
         session: SessionBuildConf<'_>,
         config: SessionConfig,
     ) -> datafusion::error::Result<SessionConfig> {
+        // pins: v3-2-create-v3-opt-in/C-009
         let settings =
             repark_functions::cardinality::repark_sql_settings_from_config_map(session.conf)?;
         let config = repark_functions::cardinality::with_repark_sql_config(config, settings);

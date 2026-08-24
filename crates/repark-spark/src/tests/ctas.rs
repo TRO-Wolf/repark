@@ -590,6 +590,7 @@ async fn ctas_parses_using_and_threads_tblproperties() {
 /// `'format-version' = 2`): '2' is consumed — iceberg-rust rejects reserved keys as plain
 /// properties and the engine's created tables are format v2 already — while any other
 /// version is rejected up front, never silently ignored.
+/// pins: v3-2-create-v3-opt-in/C-003, C-004, C-007
 #[tokio::test]
 async fn ctas_format_version_two_consumed_others_rejected() {
     use iceberg::spec::FormatVersion;
@@ -629,6 +630,75 @@ async fn ctas_format_version_two_consumed_others_rejected() {
         err.to_string().contains("format-version"),
         "expected the format-version reject, got: {err}"
     );
+
+    // pins: v3-2-create-v3-opt-in/C-004, C-007
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3 TBLPROPERTIES('format-version' = 3) \
+             AS SELECT * FROM src",
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        err.to_string()
+            .contains("repark.sql.allowCreateFormatVersion3")
+            && err.to_string().contains("format-version"),
+        "opt-in refuse must name conf and property: {err}"
+    );
+}
+
+/// pins: v3-2-create-v3-opt-in/C-002, C-005
+#[tokio::test]
+async fn ctas_format_version_three_needs_opt_in() {
+    use iceberg::spec::FormatVersion;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3 USING iceberg \
+             TBLPROPERTIES('format-version' = 3) AS SELECT * FROM src",
+    )
+    .await;
+    let ident = TableIdent::new(NamespaceIdent::new("sales".to_string()), "v3".to_string());
+    let table = catalogs["ice"].load_table(&ident).await.unwrap();
+    assert_eq!(table.metadata().format_version(), FormatVersion::V3);
+    assert!(!table.metadata().properties().contains_key("format-version"));
+    assert_eq!(rows(&ctx, &catalogs, "SELECT * FROM ice.sales.v3").await, 3);
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.still_v2 USING iceberg AS SELECT * FROM src",
+    )
+    .await;
+    let still = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "still_v2".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(still.metadata().format_version(), FormatVersion::V2);
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE OR REPLACE TABLE ice.sales.still_v2 USING iceberg \
+             TBLPROPERTIES('format-version' = 3) AS SELECT * FROM src",
+    )
+    .await;
+    let replaced = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "still_v2".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(replaced.metadata().format_version(), FormatVersion::V3);
 }
 
 /// `IF NOT EXISTS` is idempotent; a plain re-create errors.

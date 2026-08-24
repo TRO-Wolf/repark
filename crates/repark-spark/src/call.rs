@@ -660,13 +660,14 @@ fn expire_result_dataframe(ctx: &SessionContext, report: &CleanupReport) -> Resu
 ///
 /// Refusing is stricter than Spark, which performs the rewrite correctly. It is the trade MW-2
 /// took for deletion vectors and for the same reason: this procedure runs unattended, and a
-/// plausible wrong answer is worse than a loud stop. The engine cannot create a v3 table
-/// (`create_table.rs` and `ctas.rs` refuse `format-version` at CREATE and CTAS; `ALTER TABLE …
-/// SET TBLPROPERTIES` is refused one layer down, by the fork rejecting reserved properties), so
-/// nothing this engine wrote is affected — the reachable case is a v3 table that was already in
-/// the catalog when the engine was pointed at it. All four doors are pinned together in
-/// `tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`, because this guard's whole
-/// blast-radius argument rests on them and one of them is an upstream behaviour.
+/// plausible wrong answer is worse than a loud stop. **By default** the engine cannot create a
+/// v3 table (`create_table.rs` and `ctas.rs` refuse `format-version = 3` unless
+/// `repark.sql.allowCreateFormatVersion3` is true; `ALTER TABLE … SET TBLPROPERTIES` is refused
+/// one layer down, by the fork rejecting reserved properties). Opt-in CREATE is pinned to still
+/// hit this guard (`opt_in_create_produces_v3_and_rewrite_still_refuses`). The drop-in case is
+/// a v3 table that was already in the catalog. Default-session doors are pinned together in
+/// `tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`.
+/// pins: v3-2-create-v3-opt-in/C-011, C-014
 ///
 /// The comparison is `< V3`, so a format version *above* v3 refuses too — fail-closed is the
 /// right default for a version whose lineage rules are not known yet.

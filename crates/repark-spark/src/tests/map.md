@@ -11,7 +11,8 @@ code is not here — only tests, shared fixtures, and the module manifest.
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
-  `execute_without_collecting`, unsafe-cast walk helpers). **U2:** `setup` /
+  `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**
+  `setup_allow_create_format_version_3`. **U2:** `setup` /
   `setup_allow_local_fs_ddl` / `setup_strict_catalog` call
   `crate::extension::apply_spark_float_as_decimal` so Spark-door unit fixtures match
   production `configure`. **R-2:** those fixtures plus `setup_with_ansi` also call
@@ -47,12 +48,14 @@ code is not here — only tests, shared fixtures, and the module manifest.
   `call_v3` (**V3-0**, split from `call` on subject the way `call_orphan` was: every test is about
   one table property rather than one procedure. Holds the `rewrite_data_files` row-lineage
   refusal, its v2 control, and a fixture assertion — the fixture is built by upgrading an
-  engine-created table through the fork's own `Transaction::upgrade_table_version`, because
-  nothing on the engine's surface creates a v3 table, and the assertion exists so the refusal pin
-  cannot pass on a table that silently stayed v2. A fourth pin holds the guard's blast-radius
-  claim — all four doors to a v3 table refuse — and it lives here rather than with the CREATE
-  tests because the claim is what makes a refusal stricter than Spark defensible; its `ALTER`
-  half is an UPSTREAM behaviour, so the pin doubles as the detector for the fork changing it),
+  engine-created table through the fork's own `Transaction::upgrade_table_version` so tests that
+  must not depend on V3-2 CREATE still run. **V3-2** adds
+  `opt_in_create_produces_v3_and_rewrite_still_refuses` (engine CREATE with the session
+  opt-in is V3 and still hits V3-LINEAGE-1). A fourth pin holds the guard's **default-session**
+  blast-radius claim — all four doors to a v3 table refuse without the opt-in — and it lives here
+  rather than with the CREATE tests because the claim is what makes a refusal stricter than Spark
+  defensible; its `ALTER` half is an UPSTREAM behaviour, so the pin doubles as the detector for
+  the fork changing it),
   `call_manifests` (**MW-6**: `CALL system.rewrite_manifests` — Spark's two non-nullable `int`
   columns; five data manifests → one with the row set unchanged; the no-op answers two zeros and
   commits NO snapshot; a table with no snapshot answers zeros where the fork action errors; the

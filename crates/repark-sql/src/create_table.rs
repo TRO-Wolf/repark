@@ -36,6 +36,7 @@
 //! CTAS is out of scope (the SELECT's type is the table's type). The Spark door maps
 //! `TIMESTAMP` to Iceberg `timestamptz` in its own type table and is not this path.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use datafusion::arrow::datatypes::{DataType, Field, Schema as ArrowSchema, TimeUnit};
@@ -46,7 +47,7 @@ use datafusion::sql::sqlparser::ast::{
 };
 use iceberg::arrow::arrow_schema_to_schema_auto_assign_ids;
 use iceberg::io::FileIO;
-use iceberg::spec::UnboundPartitionSpec;
+use iceberg::spec::{FormatVersion, UnboundPartitionSpec};
 use iceberg::transaction::StagedTableTransaction;
 use iceberg::{Catalog, NamespaceIdent, TableCreation, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext, LocationPolicy};
@@ -158,6 +159,8 @@ pub(crate) async fn execute_create_table(
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &properties.partitioning)?;
+    let format_version =
+        iceberg_create_format_version(cx.ctx, properties.format_version.as_deref())?;
 
     // Resolve WHERE the table goes BEFORE running the SELECT: a misconfigured target must fail
     // loud without burning the source query.
@@ -171,60 +174,90 @@ pub(crate) async fn execute_create_table(
                 &properties,
                 iceberg_schema,
                 partition_spec,
+                format_version,
                 query,
             )
             .await
         }
         Placement::StagedReplace | Placement::StagedCreate { .. } => {
-            let staged = if let Placement::StagedCreate { location, file_io } = placement {
-                let creation = TableCreation::builder()
-                    .name(target.table.clone())
-                    .location(location)
-                    .schema(iceberg_schema)
-                    .partition_spec_opt(partition_spec)
-                    .properties(properties.extra_properties.clone())
-                    .build();
-                StagedTableTransaction::begin_create(*file_io, target.ident(), creation)
-                    .await
-                    .map_err(iceberg_err)?
-            } else {
-                // Replace stages against the existing table: it keeps its own location and
-                // FileIO, and the NEW definition is authoritative (Spark/Java
-                // `buildReplacement` semantics — no clause resets the table to unpartitioned).
-                let existing = target
-                    .catalog
-                    .load_table(&target.ident())
-                    .await
-                    .map_err(iceberg_err)?;
-                let creation = TableCreation::builder()
-                    .name(target.table.clone())
-                    .schema(iceberg_schema)
-                    .partition_spec_opt(partition_spec)
-                    .properties(properties.extra_properties.clone())
-                    .build();
-                StagedTableTransaction::begin_replace(&existing, creation)
-                    .await
-                    .map_err(iceberg_err)?
-            };
-
-            // STREAM the SELECT into the staged table: peak memory is O(batch × open writers),
-            // not O(result), and a mid-stream failure drops the staged transaction unpublished —
-            // the catalog pointer is never touched. One `commit` publishes.
-            let data_files = match query {
-                Some(frame) => {
-                    let stream = frame.execute_stream().await?;
-                    write_stream(cx.ctx, staged.table(), stream).await?
-                }
-                None => Vec::new(),
-            };
-            staged
-                .add_data_files(data_files)
-                .commit(target.catalog.as_ref())
-                .await
-                .map_err(iceberg_err)?;
-            finish(cx.ctx, &target).await
+            execute_staged_create(
+                cx,
+                &target,
+                &properties,
+                iceberg_schema,
+                partition_spec,
+                format_version,
+                query,
+                placement,
+            )
+            .await
         }
     }
+}
+
+#[allow(clippy::too_many_arguments)] // target + schema + V3-2 version + placement travel together
+async fn execute_staged_create(
+    cx: &EngineContext<'_>,
+    target: &CreateTarget,
+    properties: &TableProperties,
+    iceberg_schema: iceberg::spec::Schema,
+    partition_spec: Option<UnboundPartitionSpec>,
+    format_version: FormatVersion,
+    query: Option<DataFrame>,
+    placement: Placement,
+) -> Result<DataFrame> {
+    let staged = if let Placement::StagedCreate { location, file_io } = placement {
+        let creation = iceberg_table_creation(
+            &target.table,
+            iceberg_schema,
+            partition_spec,
+            format_version,
+            properties.extra_properties.clone(),
+            Some(location),
+            None,
+        );
+        StagedTableTransaction::begin_create(*file_io, target.ident(), creation)
+            .await
+            .map_err(iceberg_err)?
+    } else {
+        // Replace stages against the existing table: it keeps its own location and
+        // FileIO, and the NEW definition is authoritative (Spark/Java
+        // `buildReplacement` semantics — no clause resets the table to unpartitioned).
+        let existing = target
+            .catalog
+            .load_table(&target.ident())
+            .await
+            .map_err(iceberg_err)?;
+        let creation = iceberg_table_creation(
+            &target.table,
+            iceberg_schema,
+            partition_spec,
+            format_version,
+            properties.extra_properties.clone(),
+            None,
+            properties.format_version.as_deref(),
+        );
+        StagedTableTransaction::begin_replace(&existing, creation)
+            .await
+            .map_err(iceberg_err)?
+    };
+
+    // STREAM the SELECT into the staged table: peak memory is O(batch × open writers),
+    // not O(result), and a mid-stream failure drops the staged transaction unpublished —
+    // the catalog pointer is never touched. One `commit` publishes.
+    let data_files = match query {
+        Some(frame) => {
+            let stream = frame.execute_stream().await?;
+            write_stream(cx.ctx, staged.table(), stream).await?
+        }
+        None => Vec::new(),
+    };
+    staged
+        .add_data_files(data_files)
+        .commit(target.catalog.as_ref())
+        .await
+        .map_err(iceberg_err)?;
+    finish(cx.ctx, target).await
 }
 
 /// Where a create's data will live, resolved before the SELECT runs.
@@ -347,26 +380,111 @@ fn validate_identifiers(target: &CreateTarget) -> Result<()> {
     reject_path_escape_ident(&target.table, "table")
 }
 
+/// Canonical conf key (Spark-style camelCase). Default **false**.
+pub(crate) const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCreateFormatVersion3";
+
+/// The `snake_case` spelling DataFusion's `extensions_options!` macro registers the field under.
+const ALLOW_CREATE_FORMAT_VERSION_3_OPTION: &str = "repark.sql.allow_create_format_version_3";
+
+/// Resolve CREATE/CTAS `WITH (format_version)` against the session opt-in.
+///
+/// Reads the knob through `ConfigOptions::entries()` so this door does not take a
+/// product `repark-functions` edge (same pattern as SEC-02). Absent extension → closed.
+/// pins: v3-2-create-v3-opt-in/C-006, C-013
+#[allow(clippy::too_many_arguments)] // schema + location + requested format-version travel together
+fn iceberg_table_creation(
+    name: &str,
+    schema: iceberg::spec::Schema,
+    partition_spec: Option<UnboundPartitionSpec>,
+    format_version: FormatVersion,
+    extra_properties: HashMap<String, String>,
+    location: Option<String>,
+    requested_format_version: Option<&str>,
+) -> TableCreation {
+    let mut extra_properties = extra_properties;
+    if requested_format_version
+        .map(str::trim)
+        .is_some_and(|value| !value.is_empty())
+    {
+        let number = if format_version == FormatVersion::V3 {
+            "3"
+        } else {
+            "2"
+        };
+        extra_properties.insert("format-version".to_string(), number.to_string());
+    }
+    let builder = TableCreation::builder()
+        .name(name.to_string())
+        .schema(schema)
+        .partition_spec_opt(partition_spec)
+        .format_version(format_version)
+        .properties(extra_properties);
+    match location {
+        Some(location) => builder.location(location).build(),
+        None => builder.build(),
+    }
+}
+
+fn iceberg_create_format_version(
+    ctx: &SessionContext,
+    requested: Option<&str>,
+) -> Result<FormatVersion> {
+    let allow_v3 = ctx
+        .copied_config()
+        .options()
+        .entries()
+        .into_iter()
+        .find(|entry| entry.key == ALLOW_CREATE_FORMAT_VERSION_3_OPTION)
+        .and_then(|entry| entry.value)
+        .is_some_and(|value| {
+            matches!(
+                value.trim().to_ascii_lowercase().as_str(),
+                "true" | "1" | "yes"
+            )
+        });
+    let Some(raw) = requested.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(FormatVersion::V2);
+    };
+    match raw {
+        "2" => Ok(FormatVersion::V2),
+        "3" if allow_v3 => Ok(FormatVersion::V3),
+        "3" => Err(DataFusionError::NotImplemented(format!(
+            "WITH 'format_version' = '3' is not enabled — set `{ALLOW_CREATE_FORMAT_VERSION_3_KEY}` \
+             = true (v3 tables cannot yet do merge-on-read row-level writes; default create stays \
+             format v2)"
+        ))),
+        other => Err(DataFusionError::NotImplemented(format!(
+            "WITH 'format_version' = '{other}' is not supported (tables are created as Iceberg \
+             format v2)"
+        ))),
+    }
+}
+
 /// Create-first on a service-managed-location catalog (S3 Tables): the service generates the
 /// table's storage at create, and rejects a caller-supplied location, so a staged
 /// "pick location → write → register" is structurally impossible. Create, stream into the created
 /// table, commit ONE append, and on ANY post-create failure drop the table (Spark's non-staging
 /// `BasicStagedTable.abortStagedChanges`). An empty SELECT commits no snapshot — the created empty
 /// table IS the correct result.
+#[allow(clippy::too_many_arguments)] // placement + schema + the V3-2 format version travel together
 async fn create_first_service_managed(
     cx: &EngineContext<'_>,
     target: &CreateTarget,
     properties: &TableProperties,
     schema: iceberg::spec::Schema,
     partition_spec: Option<UnboundPartitionSpec>,
+    format_version: FormatVersion,
     query: Option<DataFrame>,
 ) -> Result<DataFrame> {
-    let creation = TableCreation::builder()
-        .name(target.table.clone())
-        .schema(schema)
-        .partition_spec_opt(partition_spec)
-        .properties(properties.extra_properties.clone())
-        .build();
+    let creation = iceberg_table_creation(
+        &target.table,
+        schema,
+        partition_spec,
+        format_version,
+        properties.extra_properties.clone(),
+        None,
+        None,
+    );
     let table = target
         .catalog
         .create_table(&target.namespace, creation)

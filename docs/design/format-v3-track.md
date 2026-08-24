@@ -74,8 +74,10 @@ contains no row-lineage handling at all, while the spec layer beneath it — `ma
 `table_metadata_builder.rs`, `snapshot.rs` — carries `first_row_id` throughout. One action is out
 of step with the crate around it, the same shape as MOR-1.
 
-**Reachability, stated plainly.** This engine cannot create a v3 table: `CREATE TABLE` and CTAS
-both refuse `format-version`. So nothing RePark wrote is exposed. What is exposed is a v3 table
+**Reachability, stated plainly.** By default this engine cannot create a v3 table: `CREATE TABLE`
+and CTAS refuse `format-version = 3` unless the session sets
+`repark.sql.allowCreateFormatVersion3` (V3-2). So nothing RePark wrote is exposed without that
+opt-in. What is still exposed without it is a v3 table
 that was already in the catalog when RePark was pointed at it — an existing Glue database holding
 tables written by Spark or Athena, which is precisely the drop-in case the product is for. MW-1
 lifted the maintenance fence on Glue and S3 Tables, so `CALL rewrite_data_files` reaches such a

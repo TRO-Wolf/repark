@@ -263,6 +263,7 @@ async fn column_def_location_and_ctas_temporary_refuse() {
     );
 
     // format-version=1 refuse on column-def (C6-F2).
+    // pins: v3-2-create-v3-opt-in/C-007
     let fv1 = execute(
         &ctx,
         &catalogs,
@@ -274,6 +275,31 @@ async fn column_def_location_and_ctas_temporary_refuse() {
     assert!(
         fv1.to_string().contains("format-version") && fv1.to_string().contains("not supported"),
         "got: {fv1}"
+    );
+
+    // pins: v3-2-create-v3-opt-in/C-004
+    let fv3 = execute(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.fv3 (id BIGINT) USING iceberg \
+             TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect_err("format-version=3 without opt-in");
+    assert!(
+        fv3.to_string()
+            .contains("repark.sql.allowCreateFormatVersion3")
+            && fv3.to_string().contains("format-version"),
+        "opt-in refuse must name conf and property: {fv3}"
+    );
+    assert!(
+        !catalogs["ice"]
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                "fv3".to_string(),
+            ))
+            .await
+            .unwrap()
     );
 
     // Schema-only → INSERT → CREATE BRANCH default (C6-F3).
@@ -580,5 +606,118 @@ async fn ctas_of_instant_producers_stores_timestamptz() {
             iceberg::spec::Type::Primitive(PrimitiveType::Timestamptz)
         ),
         "identity-partition key type follows the column: timestamptz"
+    );
+}
+
+/// pins: v3-2-create-v3-opt-in/C-002, C-005
+#[tokio::test]
+async fn column_def_create_format_version_three_needs_opt_in() {
+    use iceberg::spec::FormatVersion;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3c (id BIGINT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    let v3 = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "v3c".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(v3.metadata().format_version(), FormatVersion::V3);
+    assert!(!v3.metadata().properties().contains_key("format-version"));
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.still_v2 (id BIGINT) USING iceberg",
+    )
+    .await;
+    let v2 = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "still_v2".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        v2.metadata().format_version(),
+        FormatVersion::V2,
+        "opt-in must not change the unspecified default"
+    );
+}
+
+/// pins: v3-2-create-v3-opt-in/C-005, C-008
+#[tokio::test]
+async fn or_replace_applies_requested_v3_and_alter_still_refuses_with_opt_in() {
+    use iceberg::spec::FormatVersion;
+
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.up (id BIGINT) USING iceberg",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE OR REPLACE TABLE ice.sales.up (id BIGINT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    let upgraded = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "up".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(upgraded.metadata().format_version(), FormatVersion::V3);
+    assert!(
+        !upgraded
+            .metadata()
+            .properties()
+            .contains_key("format-version")
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE OR REPLACE TABLE ice.sales.up (id BIGINT) USING iceberg",
+    )
+    .await;
+    let kept = catalogs["ice"]
+        .load_table(&TableIdent::new(
+            NamespaceIdent::new("sales".to_string()),
+            "up".to_string(),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        kept.metadata().format_version(),
+        FormatVersion::V3,
+        "unspecified OR REPLACE must not force v2 onto an existing v3 table"
+    );
+
+    let alter = execute(
+        &ctx,
+        &catalogs,
+        "ALTER TABLE ice.sales.up SET TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await
+    .expect_err("ALTER format-version=3 must still refuse with the opt-in on");
+    assert!(
+        alter.to_string().contains("format-version") || alter.to_string().contains("reserved"),
+        "ALTER must name the reserved key: {alter}"
     );
 }

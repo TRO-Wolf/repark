@@ -50,6 +50,8 @@ pub(crate) struct TableProperties {
     pub(crate) partitioning: Vec<PartitionTransform>,
     /// Raw Iceberg table properties from `extra_properties`, applied at creation.
     pub(crate) extra_properties: HashMap<String, String>,
+    /// Requested `format_version`, consumed at execute (session opt-in for v3).
+    pub(crate) format_version: Option<String>,
 }
 
 /// ===========================================================================================
@@ -83,7 +85,12 @@ pub(crate) fn parse_with_options(options: &[SqlOption], form: &str) -> Result<Ta
 
         match name.as_str() {
             "format" => refuse_format_value(&string_value(value, &name, form)?, form)?,
-            "format_version" => validate_format_version(&scalar_value(value, &name, form)?, form)?,
+            "format_version" => {
+                properties.format_version = Some(parse_format_version(
+                    &scalar_value(value, &name, form)?,
+                    form,
+                )?);
+            }
             "location" => properties.location = Some(string_value(value, &name, form)?),
             "partitioning" => properties.partitioning = parse_partitioning(value, form)?,
             "sorted_by" => return Err(refuse_sorted_by(form)),
@@ -146,15 +153,15 @@ pub(crate) fn refuse_format_value(value: &str, form: &str) -> Result<()> {
     }
 }
 
-/// `format_version`: the engine creates Iceberg format **v2** tables. Asking for 2 is satisfied
-/// by consuming the key; anything else is a deterministic reject rather than a silently ignored
-/// request — the whole point of accepting the key at all.
-fn validate_format_version(value: &str, form: &str) -> Result<()> {
+/// `format_version`: `'2'` and `'3'` are stored for execute (v3 still needs the session opt-in).
+/// Anything else is a deterministic reject rather than a silently ignored request.
+fn parse_format_version(value: &str, form: &str) -> Result<String> {
     match value.trim() {
-        "2" => Ok(()),
+        version @ ("2" | "3") => Ok(version.to_string()),
         other => Err(DataFusionError::NotImplemented(format!(
             "{form} WITH: format_version = {other} is not supported — tables are created as \
-             Iceberg format v2"
+             Iceberg format v2 (format v3 requires session conf \
+             `repark.sql.allowCreateFormatVersion3` = true)"
         ))),
     }
 }

@@ -419,8 +419,9 @@ lineage (`_row_id`, `_last_updated_sequence_number`) which this engine's rewrite
 through...
 ```
 
-RePark creates tables at format v2, so this only reaches a v3 table that was already in your
-catalog. The rewrite would return the right rows and give every one of them a new `_row_id`,
+RePark creates tables at format v2 unless the session opts in with
+`repark.sql.allowCreateFormatVersion3` and the SQL asks for format v3, so without that this
+only reaches a v3 table that was already in your catalog. The rewrite would return the right rows and give every one of them a new `_row_id`,
 which tells anything reading the table incrementally that all of them changed. Spark carries
 lineage through the same compaction unchanged, so compact v3 tables there for now. Registry row
 `V3-LINEAGE-1`.

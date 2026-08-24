@@ -51,6 +51,20 @@ pub(super) async fn setup_with_ansi(
     wh: &TempDir,
     ansi_enabled: bool,
 ) -> (SessionContext, CatalogRegistry) {
+    setup_with_sql_settings(
+        wh,
+        ansi_enabled,
+        repark_functions::cardinality::ReparkSqlSettings::default(),
+    )
+    .await
+}
+
+/// Like [`setup`] with explicit `repark.sql.*` settings (V3-2 / SEC-02 fixtures).
+pub(super) async fn setup_with_sql_settings(
+    wh: &TempDir,
+    ansi_enabled: bool,
+    settings: repark_functions::cardinality::ReparkSqlSettings,
+) -> (SessionContext, CatalogRegistry) {
     let warehouse = wh.path().to_str().unwrap().to_string();
     let catalog: Arc<dyn Catalog> = Arc::new(
         MemoryCatalogBuilder::default()
@@ -67,7 +81,6 @@ pub(super) async fn setup_with_ansi(
         .create_namespace(&NamespaceIdent::new("sales".to_string()), ns_props)
         .await
         .unwrap();
-    let settings = repark_functions::cardinality::ReparkSqlSettings::default();
     let config = repark_functions::cardinality::with_repark_sql_config(
         crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new()),
         settings,
@@ -89,6 +102,21 @@ pub(super) async fn setup_with_ansi(
     // SEC-02 grandfather: warehouse root (memory catalog path).
     catalogs.note_local_warehouse_root(warehouse);
     (ctx, catalogs)
+}
+
+/// pins: v3-2-create-v3-opt-in/C-005
+pub(super) async fn setup_allow_create_format_version_3(
+    wh: &TempDir,
+) -> (SessionContext, CatalogRegistry) {
+    setup_with_sql_settings(
+        wh,
+        true,
+        repark_functions::cardinality::ReparkSqlSettings {
+            allow_create_format_version_3: true,
+            ..repark_functions::cardinality::ReparkSqlSettings::default()
+        },
+    )
+    .await
 }
 
 pub(super) async fn rows(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> usize {
@@ -281,43 +309,15 @@ pub(super) fn walk_parquet(dir: &std::path::Path, count: &mut usize) {
 /// Like [`setup`] but with `repark.sql.allowLocalFilesystemDDL=true` for COPY TO pins that
 /// deliberately write outside the warehouse (SEC-02 default is false).
 pub(super) async fn setup_allow_local_fs_ddl(wh: &TempDir) -> (SessionContext, CatalogRegistry) {
-    let warehouse = wh.path().to_str().unwrap().to_string();
-    let catalog: Arc<dyn Catalog> = Arc::new(
-        MemoryCatalogBuilder::default()
-            .with_storage_factory(Arc::new(LocalFsStorageFactory))
-            .load(
-                "memory",
-                HashMap::from([(MEMORY_CATALOG_WAREHOUSE.to_string(), warehouse.clone())]),
-            )
-            .await
-            .unwrap(),
-    );
-    let ns_props = HashMap::from([("location".to_string(), format!("{warehouse}/sales"))]);
-    catalog
-        .create_namespace(&NamespaceIdent::new("sales".to_string()), ns_props)
-        .await
-        .unwrap();
-    let settings = repark_functions::cardinality::ReparkSqlSettings {
-        allow_local_filesystem_ddl: true,
-        ..repark_functions::cardinality::ReparkSqlSettings::default()
-    };
-    let config = repark_functions::cardinality::with_repark_sql_config(
-        crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new()),
-        settings,
-    );
-    let config = repark_functions::ansi::with_spark_ansi_config(config, true);
-    let ctx = SessionContext::new_with_config(config);
-    repark_functions::decimal_spark::register_spark_decimal_planner(&ctx);
-    for rule in repark_functions::analyzer_rules() {
-        ctx.add_analyzer_rule(rule);
-    }
-    repark_iceberg::catalog::register_iceberg_catalog(&ctx, "ice", catalog.clone())
-        .await
-        .unwrap();
-    register_source(&ctx, "src", &[(1, "a"), (2, "b"), (3, "c")]);
-    let mut catalogs = CatalogRegistry::from([("ice".to_string(), catalog)]);
-    catalogs.note_local_warehouse_root(warehouse);
-    (ctx, catalogs)
+    setup_with_sql_settings(
+        wh,
+        true,
+        repark_functions::cardinality::ReparkSqlSettings {
+            allow_local_filesystem_ddl: true,
+            ..repark_functions::cardinality::ReparkSqlSettings::default()
+        },
+    )
+    .await
 }
 
 /// Register a two-column `(id, name)` in-memory source view for MERGE tests.

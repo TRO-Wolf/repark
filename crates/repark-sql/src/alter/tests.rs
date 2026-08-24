@@ -131,6 +131,7 @@ fn reserved_and_unchangeable_keys_refuse_loud() {
     let orc = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (format = 'ORC')");
     assert!(orc.contains("TRIGGER"), "{orc}");
 
+    // pins: v3-2-create-v3-opt-in/C-008
     let version = parse_error("ALTER TABLE ice.s.t SET PROPERTIES (format_version = '3')");
     assert!(version.contains("TRIGGER"), "{version}");
 

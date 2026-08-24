@@ -1872,12 +1872,15 @@ the pin rather than obeying it.
   has no row-lineage handling at all, while the spec layer around it does. Refusing follows the
   same trade as
   [B-MOR-3](#b-mor-3--rewrite_position_delete_files-refuses-live-puffin-deletion-vectors) — an unattended procedure gets a loud stop
-  rather than a plausible wrong answer. **Not reachable on anything this engine wrote**: `CREATE
-  TABLE` and CTAS refuse `format-version`, and `ALTER TABLE … SET TBLPROPERTIES` is refused a
-  layer down by the fork rejecting reserved properties — all four doors pinned together by
-  `crates/repark-spark/src/tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`, because
-  this claim is what makes a refusal stricter than Spark defensible. A v3 table only exists here
-  if it was already in the catalog.
+  rather than a plausible wrong answer. **Not reachable on anything this engine wrote by
+  default**: `CREATE TABLE` and CTAS refuse `format-version = 3` unless the session sets
+  `repark.sql.allowCreateFormatVersion3` (V3-2), and `ALTER TABLE … SET TBLPROPERTIES` is
+  refused a layer down by the fork rejecting reserved properties — default-session doors
+  pinned together by
+  `crates/repark-spark/src/tests/call_v3.rs::the_engine_still_cannot_produce_a_v3_table`.
+  Opt-in CREATE is pinned to still hit this guard
+  (`opt_in_create_produces_v3_and_rewrite_still_refuses`). A v3 table without the opt-in
+  only exists here if it was already in the catalog.
 
 ### B-MOR-3 — `rewrite_position_delete_files` refuses live Puffin deletion vectors
 

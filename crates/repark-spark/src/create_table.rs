@@ -39,6 +39,8 @@ struct SchemaCreate {
     properties: HashMap<String, String>,
     partition_fields: Vec<PartitionFieldSpec>,
     schema: Schema,
+    /// Requested `TBLPROPERTIES ('format-version' = …)`, consumed at execute (session opt-in).
+    format_version: Option<String>,
 }
 
 /// ===========================================================================================
@@ -155,14 +157,9 @@ fn build_schema_create(
             }
         }
     }
-    if let Some(version) = properties.remove("format-version")
-        && version.trim() != "2"
-    {
-        return Err(DataFusionError::NotImplemented(format!(
-            "TBLPROPERTIES 'format-version' = '{version}' is not supported (tables are created \
-             as Iceberg format v2)"
-        )));
-    }
+    // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute
+    // (V3-2: v3 needs `repark.sql.allowCreateFormatVersion3`).
+    let format_version = properties.remove("format-version");
 
     let schema = schema_from_column_defs(&create.columns, timestamp_type)?;
     let partition_spec = build_partition_spec(&schema, &partition_fields)?;
@@ -179,6 +176,7 @@ fn build_schema_create(
         properties,
         partition_fields,
         schema,
+        format_version,
     })
 }
 
@@ -354,18 +352,27 @@ async fn execute_schema_create(
     }
 
     let partition_spec = build_partition_spec(&create.schema, &create.partition_fields)?;
-
+    let format_version = iceberg_create_format_version(ctx, create.format_version.as_deref())?;
     if existed {
         // OR REPLACE: stage against the existing table (same path as CTAS replace).
+        // The fork upgrades format version from the reserved property, not
+        // `TableCreation.format_version` — stamp only on replace (create rejects reserved keys).
         let existing = catalog
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
+        let mut properties = create.properties.clone();
+        stamp_requested_format_version(
+            &mut properties,
+            create.format_version.as_deref(),
+            format_version,
+        );
         let creation = TableCreation::builder()
             .name(create.table.clone())
             .schema(create.schema)
             .partition_spec_opt(partition_spec)
-            .properties(create.properties)
+            .format_version(format_version)
+            .properties(properties)
             .build();
         let staged = StagedTableTransaction::begin_replace(&existing, creation)
             .await
@@ -383,7 +390,8 @@ async fn execute_schema_create(
             .name(create.table.clone())
             .schema(create.schema)
             .partition_spec_opt(partition_spec)
-            .properties(create.properties)
+            .format_version(format_version)
+            .properties(create.properties.clone())
             .build();
         catalog
             .create_table(&create.namespace, creation)
@@ -406,7 +414,8 @@ async fn execute_schema_create(
             &create.table,
             create.schema,
             partition_spec,
-            create.properties,
+            create.properties.clone(),
+            format_version,
         )
         .await?;
     }
@@ -414,6 +423,46 @@ async fn execute_schema_create(
     let namespace = namespace_schema_name(&create.namespace);
     reregister(ctx, catalog.clone(), &create.catalog, &namespace).await?;
     ctx.read_empty()
+}
+
+/// Resolve CREATE/CTAS `TBLPROPERTIES ('format-version')` against the session opt-in.
+/// pins: v3-2-create-v3-opt-in/C-001, C-005
+pub(crate) fn iceberg_create_format_version(
+    ctx: &SessionContext,
+    requested: Option<&str>,
+) -> Result<iceberg::spec::FormatVersion> {
+    use iceberg::spec::FormatVersion;
+    use repark_functions::cardinality::{
+        repark_sql_settings_from_options, resolve_create_format_version,
+    };
+    let allow = repark_sql_settings_from_options(ctx.copied_config().options())
+        .allow_create_format_version_3;
+    let number =
+        resolve_create_format_version(requested, allow, "format-version", "TBLPROPERTIES")?;
+    Ok(if number == 3 {
+        FormatVersion::V3
+    } else {
+        FormatVersion::V2
+    })
+}
+
+/// The fork's replace path upgrades format version from the reserved `format-version`
+/// property, not `TableCreation.format_version`. Stamp only when SQL requested a version
+/// so an unspecified OR REPLACE of a v3 table cannot force v2.
+pub(crate) fn stamp_requested_format_version(
+    properties: &mut HashMap<String, String>,
+    requested: Option<&str>,
+    format_version: iceberg::spec::FormatVersion,
+) {
+    if requested.map(str::trim).is_none_or(str::is_empty) {
+        return;
+    }
+    let number = if format_version == iceberg::spec::FormatVersion::V3 {
+        "3"
+    } else {
+        "2"
+    };
+    properties.insert("format-version".to_string(), number.to_string());
 }
 
 async fn validate_service_managed_create(
@@ -431,6 +480,7 @@ async fn validate_service_managed_create(
     reject_path_escape_ident(create.table.as_str(), "table")
 }
 
+#[allow(clippy::too_many_arguments)] // schema-only staged create carries location plan + V3-2 version
 async fn commit_staged_schema_only(
     catalog: &dyn Catalog,
     plan: CreatePlan,
@@ -439,12 +489,14 @@ async fn commit_staged_schema_only(
     schema: Schema,
     partition_spec: Option<UnboundPartitionSpec>,
     properties: HashMap<String, String>,
+    format_version: iceberg::spec::FormatVersion,
 ) -> Result<()> {
     let creation = TableCreation::builder()
         .name(table_name.to_string())
         .location(plan.location)
         .schema(schema)
         .partition_spec_opt(partition_spec)
+        .format_version(format_version)
         .properties(properties)
         .build();
     let staged = StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)

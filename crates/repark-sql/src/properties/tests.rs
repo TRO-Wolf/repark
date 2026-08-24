@@ -49,6 +49,7 @@ fn format_parquet_is_accepted() {
 /// `format_version = 2` is accepted as a number AND as a string (both spellings occur in the
 /// wild), and is CONSUMED — it never leaks into the table's plain properties, because Iceberg
 /// rejects it there.
+/// pins: v3-2-create-v3-opt-in/C-003
 #[test]
 fn format_version_two_is_accepted_and_consumed() {
     for spelling in ["2", "'2'"] {
@@ -58,6 +59,22 @@ fn format_version_two_is_accepted_and_consumed() {
             properties.extra_properties.is_empty(),
             "format_version must not become a table property"
         );
+        assert_eq!(properties.format_version.as_deref(), Some("2"));
+    }
+}
+
+/// `format_version = 3` is accepted at parse (execute still needs the session opt-in).
+/// pins: v3-2-create-v3-opt-in/C-006
+#[test]
+fn format_version_three_is_accepted_at_parse() {
+    for spelling in ["3", "'3'"] {
+        let properties = parse(&format!("format_version = {spelling}"))
+            .unwrap_or_else(|err| panic!("{spelling} must be accepted: {err}"));
+        assert!(
+            properties.extra_properties.is_empty(),
+            "format_version must not become a table property"
+        );
+        assert_eq!(properties.format_version.as_deref(), Some("3"));
     }
 }
 
@@ -172,10 +189,11 @@ fn unknown_format_refuses() {
     assert!(err.contains("'PARQUET'"), "must list the support: {err}");
 }
 
-/// A format version other than 2 refuses rather than being silently ignored.
+/// A format version other than 2 or 3 refuses rather than being silently ignored.
+/// pins: v3-2-create-v3-opt-in/C-007
 #[test]
 fn non_v2_format_version_refuses() {
-    for spelling in ["1", "3"] {
+    for spelling in ["1", "4"] {
         let err = parse(&format!("format_version = {spelling}"))
             .unwrap_err()
             .to_string();

@@ -72,7 +72,8 @@ sit beside `collection/`.
   "all IANA gaps are one hour" justification was false).
 - `cardinality.rs` — r24 SB1 SEC-01 ceilings + SEC-02 conf extension (const
   CAST / arithmetic / abs / coalesce / greatest / least / nullif / CASE /
-  arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded)
+  arrow_cast / utf8→int / float math / log*/exp/sqrt / bitwise / trivial scalar-subquery fold; depth-bounded).
+  **V3-2:** `allowCreateFormatVersion3` (default false) + `resolve_create_format_version`.
 
 
 - **R-FN-BATCH4** aggregate expansion.

@@ -547,6 +547,7 @@ async fn with_format_parquet_accepted_orc_and_avro_refuse_loud() {
 
 /// `format_version = 2` is accepted and the created table really is Iceberg v2; any other
 /// version refuses instead of being silently ignored.
+/// pins: v3-2-create-v3-opt-in/C-003, C-007
 #[tokio::test]
 async fn with_format_version_sets_the_table_format_version() {
     let door = door_with_schema().await;
