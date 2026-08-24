@@ -1837,6 +1837,14 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   guarantees. Queued for the **V3-4** unit, which owns row lineage as a whole; pinning it here
   would pin half a decision.
 
+- **V3-COW-1** — copy-on-write DML on an adopted v3 table runs unguarded. The merge-on-read
+  arms are v3-guarded (`write/predicate_dml.rs`, `write/merge/mod.rs` — the `!= V2` refusals),
+  but the copy-on-write arms never read the format version, so COW `DELETE` / `UPDATE` /
+  `MERGE` reach a `register_table`-adopted v3 table today. Surfaced by code-read during the
+  2026-08-23 north-star charter review; **unmeasured** — whether a rewritten row keeps its
+  `_row_id` (the V3-LINEAGE-1 class, on the DML path this time) has not been run. Queued for
+  the first v3 evidence unit to measure, then guard or fix; V3-4 owns row lineage as a whole.
+
 ---
 
 ## 8. Drop-in disclosure rationale

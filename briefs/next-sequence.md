@@ -104,6 +104,11 @@ from an agent's report that the 2026-08 archive month map cost ~13k tokens to re
 month maps condense to one line per ledger (`_condense_row`, the 2026-08 migration
 55.5 kB → 29.3 kB, the off-the-read-path note). The rolling queue is otherwise unchanged.
 
+**2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
+([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
+The next sequencing move is a v3 intake evaluating that track into mid-term units (V3-2 first,
+per the design's slate); nothing is queued until the owner charters it.
+
 The rolling queue is empty. Post-MW remainder stays an intake, not sequenced
 work.
 

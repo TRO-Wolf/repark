@@ -21,7 +21,7 @@ fork) governs *how* the work is done; this document only says *what* and *why*.
 
 **Retirement.** This handoff closes when each F-item below has a fork PR number or a dated
 "declined / permanent gap" ruling in the fork's `GAP_MATRIX.md`. The engine side then runs one
-repin unit per landed batch (§4) and archives this file.
+repin unit per landed batch (§5) and archives this file.
 
 ---
 
@@ -199,19 +199,28 @@ unblocks a chartered or proposed engine unit; **P3** = real, not urgent.
 - **Acceptance.** Engine pin `crates/repark-spark/src/tests/ref_ddl.rs::write_to_branch_refuses_loud_naming_fork_gap`
   is written to go red when a commit target exists; the engine then routes branch-targeted DML.
 
-### F-7 (A12-owned, plan now, start when the owner sequences it) — format v3 compaction
+### F-7 (A12-owned; unblocked 2026-08-23 — see the addendum below) — format v3 compaction
 
-Listed so the fork plans it; the engine's V3-2+ units deliberately wait for the MW campaign
-to close, and the engine refuses these paths today.
+Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
+for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
+these paths today.
 
 - **V3-LINEAGE-1** — `RewriteFiles` / `RewriteDataFiles` must carry row lineage (`_row_id`,
   `_last_updated_sequence_number`) through compaction unchanged, as Spark does; the engine
-  refuses v3 rewrite until it does.
+  refuses v3 rewrite until it does. The same carry applies to **any action that rewrites an
+  existing row** — the COW DML path (`OverwriteFiles`) included; engine registry queue
+  `V3-COW-1` (2026-08-23) records that path as reachable and unmeasured engine-side.
 - **B-MOR-3** — `RewritePositionDeleteFiles` refuses live Puffin deletion vectors; a DV-aware
   rewrite (or a DV-specific action) is the fork's call.
 - **V3-DANGLE-1** — a v3 compaction must drop the DVs scoped to the files it rewrote (Spark
   reported `removed_delete_files_count = 6` there with no option set). Unreachable on the engine
   side while V3-LINEAGE-1 holds; whoever lifts that guard owns this.
+
+*Addendum 2026-08-23:* the owner set v1.0's north star as **full production-grade format-v3**
+(engine charter: `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`), and the MW campaign
+closed the same day — the engine-side wait recorded above is over. F-7 plus **F-13/F-14/F-15**
+below (added with that ruling) are the fork lane's v3 spine; their priority now tracks the
+engine's V3-2+ sequencing rather than "when the owner sequences it".
 
 ### F-8 (P2) — metadata-table `TableProvider` projection and name synthesis — **half corrected**
 
@@ -287,6 +296,65 @@ compact + expire on a live catalog — once its post-merge `aws-acceptance` disp
 Tables has no MOR leg yet (engine MW-4b, owner-gated). That transcript is engine-side evidence
 the fork can cite, but the fork's own interop for R157 is the fork's to run. Coordinate rather
 than duplicate.
+
+### F-13 (north-star spine, added 2026-08-23) — Puffin deletion-vector write path
+
+The prerequisite for engine unit **V3-3** (merge-on-read DML on v3), the largest engine unit on
+the v1.0 path.
+
+- **Engine observation:** MOR `DELETE`/`UPDATE`/`MERGE` refuse on v3 by guard
+  (`repark-iceberg/src/write/merge/mod.rs` — "V3 mandates Puffin deletion vectors, which the
+  fork's `PositionDeleteFileWriter` does not produce", GAP row **R113**). v3 forbids new
+  position-delete files, so the engine cannot get a v3 MOR write wrong today — it cannot attempt
+  one.
+- **Fork location:** re-read at `main` — the engine track design references "the fork's
+  `DVFileWriter`"; verify what exists (own surface, upstream cherry-pick candidate, or absent)
+  before chartering, and record the answer in `GAP_MATRIX.md` either way.
+- **Java reference:** `DVFileWriter` / `BaseDVFileWriter` in `iceberg-core` 1.10.0 (Puffin
+  `delete-vector-v1` blobs, file-scoped, one vector per referenced data file), and `RowDelta`
+  admitting DV files.
+- **The ask:** a production DV write surface the engine's MOR arm can drive the way it drives
+  `PositionDeleteFileWriter` today — partition-spec stamping included — plus `RowDelta`
+  admission and the v2→v3 rule that a v3 commit carries DVs, never new position-delete files.
+- **Engine pin that flips:** none exists for MOR-on-v3 today — the guard-class pin in
+  `repark-iceberg/src/write/merge/` tests exercises **V1**
+  (`mor_on_v1_table_is_rejected_before_any_write`) and stays a refusal. V3-3 lands the first
+  v3 MOR pin, and that pin is the acceptance.
+
+### F-14 (north-star spine, added 2026-08-23) — `MetadataLocation` Hadoop pointer math
+
+- **Engine observation:** registry **V3-ADOPT-1** — a table registered from a Hadoop-convention
+  pointer (`vN.metadata.json`) reads correctly but every write fails: the fork's
+  `MetadataLocation` parser requires `<version>-<uuid>.metadata.json` to compute the next
+  pointer. Spark's Hadoop catalog writes `v(N+1).metadata.json` itself.
+- **Fork location:** the `MetadataLocation` parser (re-read at `main`; engine evidence isolated
+  the cause by renaming the identical file to a version-uuid shape, after which writes
+  succeeded).
+- **Java reference:** `HadoopTableOperations` version-pointer scheme in 1.10.0.
+- **The ask:** either compute the next pointer for `vN.metadata.json` names as Spark does, or a
+  dated permanent-gap ruling in `GAP_MATRIX.md`; the engine's refusal message already names both
+  conventions.
+- **Engine pin that flips:**
+  `repark-spark/src/tests/call_register.rs::call_register_table_of_hadoop_named_metadata_writes_name_the_convention`
+  — retargeted from "the refusal names the convention" to "the write succeeds" if the fork takes
+  the first branch.
+
+### F-15 (north-star spine, added 2026-08-23) — v3 type system and default values
+
+The prerequisite for engine unit **V3-6** (v3 types) and the H6 VARIANT design's fork-gated
+increments.
+
+- **Engine observation:** none yet — no engine surface can reach a v3 type today, which is
+  itself the point: this item exists so the fork plans the dependency order before V3-6
+  charters. No engine pin yet; V3-6's charter lands the first.
+- **The ask:** the v3 schema-model delta — `variant`, `geometry`, `geography`, `timestamp_ns` /
+  `timestamptz_ns`, `unknown`, and column `initial-default` / `write-default` — carried through
+  metadata (de)serialization and the Parquet IO mapping, feature by feature with `GAP_MATRIX.md`
+  rows (a per-type "not yet" row is a fine first landing). This item closes on the PR that
+  lands the schema-model delta with a `GAP_MATRIX.md` row per type — "not yet" rows
+  included — which satisfies the retirement rule above.
+- **Java reference:** `org.apache.iceberg.types` and the v3 spec's type/default-value sections,
+  1.10.0 bytecode where the spec is ambiguous.
 
 ## 4. Not fork work — do not pick these up
 
