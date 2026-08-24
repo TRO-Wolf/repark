@@ -365,6 +365,9 @@ They are also hidden from `SHOW TABLES` and `information_schema` while staying a
 
 ## Maintenance
 
+Each procedure is documented on its own below. [The maintenance
+sequence](#the-maintenance-sequence) is the order to run them in, and how often.
+
 Seven procedures run through `CALL`. Six of them are maintenance and return Spark's full column
 list; the seventh is adoption:
 
@@ -595,6 +598,122 @@ system.migrate is not supported. Supported procedures: expire_snapshots, registe
 rewrite_data_files, rewrite_manifests, remove_orphan_files, rewrite_position_delete_files,
 rollback_to_snapshot.
 ```
+
+### The maintenance sequence
+
+Table management is one scheduled sequence, not six separate procedures. Run the whole cycle
+behind your merge workload, in this order:
+
+1. Your merge workload runs: `MERGE`, `UPDATE`, `DELETE`.
+2. `rewrite_position_delete_files` folds the position deletes to one file per partition.
+3. `rewrite_data_files` compacts the data files those merges fanned out.
+4. `rewrite_manifests` re-groups the manifests the first two steps churned.
+5. `expire_snapshots` drops the snapshots that now hold only replaced files.
+6. `remove_orphan_files` lists what no snapshot references. This is the dry-run default.
+7. `remove_orphan_files` with `dry_run => false` deletes that listing, once you have read it.
+
+Each step is one task in an Airflow DAG. Each is a plain `CALL`:
+
+```python
+from datetime import UTC, datetime, timedelta
+
+CATALOG = "local"
+TABLE = "sales.orders"
+# `older_than` must clear the 24-hour floor. Compute it; never hard-code a date.
+CUTOFF = (datetime.now(UTC) - timedelta(days=3)).strftime("TIMESTAMP '%Y-%m-%d %H:%M:%S'")
+
+MAINTENANCE_CYCLE = [
+    f"CALL {CATALOG}.system.rewrite_position_delete_files(table => '{TABLE}')",
+    f"CALL {CATALOG}.system.rewrite_data_files(table => '{TABLE}')",
+    f"CALL {CATALOG}.system.rewrite_manifests(table => '{TABLE}')",
+    f"CALL {CATALOG}.system.expire_snapshots(table => '{TABLE}', retain_last => 1)",
+    f"CALL {CATALOG}.system.remove_orphan_files(table => '{TABLE}', older_than => {CUTOFF})",
+]
+
+for statement in MAINTENANCE_CYCLE:
+    spark.sql(statement).show()
+```
+
+**The order is load-bearing.** Fold the delete files before you compact the data. At 50 merges
+of debt, step 2 read 400 delete files and left 8, so step 3 read 8. Reverse the two and the
+expensive step reads 50 times the delete files
+([MW-7 §6.2](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)).
+
+**Run the cycle every 10 merges. Treat 20 merges as the ceiling.** Scans cross 2× the
+compacted control at 19.6 merges, and merge 20 already measures 2.05×. At 10 merges every
+probe still sits at or below the control. The ceiling tolerates about 2× degradation; it does
+not hold you under it
+([MW-7 §6.1](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)).
+
+**Trigger on the delete-file count where your platform reports it.** A scan opens delete files,
+so the file count is the closer proxy for what the debt costs. The same 2× crossing sits at
+about 157 delete files, because this engine writes one per partition per commit
+([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)),
+and the measured table had 8 partitions. A merge count stops meaning anything once the merge
+size changes. The file count keeps its meaning.
+
+**Never skip `expire_snapshots`.** Until it runs, every file the rewrites replaced stays
+reachable from the snapshot that wrote it. One measured copy-on-write warehouse held 14,782 MB
+for a 342 MB table. That is **43×**. This step took it back to 342 MB
+([MW-7 §6.3](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)).
+
+**`rewrite_manifests` and the orphan dry run are cheap, so run both every cycle.** They cost
+0.4 s and 0.1 s at 50 merges of debt. `rewrite_manifests` cut the manifest list from 25,665 to
+3,659 bytes, and every reader opens that file first
+([MW-7 §6.4](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)).
+
+**The orphan step is a net that lags by a day.** `older_than` must be at least 24 hours in the
+past, which is Apache Spark's floor too. So a cycle never sees the orphans that the same
+cycle's `expire_snapshots` just created. Step 6 catches yesterday's cycle, not today's.
+A dry run that lists nothing on a young warehouse is not a clean bill of health
+([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
+
+**Budget the cycle at about 2.5 minutes** for a 10-million-row merge-on-read table carrying 50
+merges of debt, and a fifth of that at the recommended cadence
+([MW-7 §6.5](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)).
+
+#### What this runbook cannot do
+
+**A pass does not return the table to baseline.** `rewrite_data_files` never selects a data
+file that is correctly sized, however many of its rows are deleted. Those dead rows stay, and
+the position-delete file covering them stays too. Apache Spark reclaims both. Registry row
+[RDF-1](../spark-sql-iceberg-parity.md#rdf-1--rewrite_data_files-never-selects-a-delete-laden-file-so-its-dead-rows-are-retained-forever);
+the fix is fork ask F-16.
+
+Here is what you see after a full pass, so you do not go looking for a fault. A merge-on-read
+table still reads at about **2×** a compacted copy-on-write table, and it still holds about
+1.9× the live bytes. Delete files survive with their records. Every answer is correct at every
+point, and nothing fails. Cadence bounds how far a scan degrades between passes. It does not
+bound the dead rows, which grow until the fork carries Java's delete-ratio clause
+([MW-7 §6.8](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)).
+
+#### On S3 Tables, retry a commit conflict
+
+The sequence runs unchanged on every catalog. **On S3 Tables, expect a step to fail on a commit
+conflict, and retry that step.** The service runs its own compaction alongside yours, so a
+serializable validation reject is routine. "Maintenance on Glue and S3 Tables" above says why
+that is the concurrency control working rather than damage. Retry the failed step. Do not
+restart the cycle.
+
+#### Porting a Spark maintenance DAG
+
+Five edits, and none of them changes what a query returns:
+
+- `remove_orphan_files` needs an explicit `older_than` here. Spark defaults it
+  ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
+- `remove_orphan_files` is a dry run here by default. Spark deletes. Step 7 needs
+  `dry_run => false`, as a boolean literal
+  ([ORPHAN-2](../spark-sql-iceberg-parity.md#orphan-2--remove_orphan_files-defaults-to-a-dry-run-spark-defaults-to-deleting)).
+- `rewrite_manifests` refuses `spec_id`, and takes a boolean literal for `use_caching` where
+  Spark also casts a quoted `'true'`
+  ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refuses-spec_id-use_caching-is-accepted-and-does-nothing)).
+- `rewrite_manifests` reports the data leg only. Spark compacts delete manifests in a second
+  leg
+  ([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrites-data-manifests-only-spark-rewrites-delete-manifests-too)).
+  Step 2 is what reduces the delete files themselves.
+- `added_manifests_count` diverges from Spark's above `commit.manifest.target-size-bytes`
+  ([MANIFEST-3](../spark-sql-iceberg-parity.md#manifest-3--above-the-manifest-target-size-rewrite_manifests-writes-a-different-number-of-manifests)).
+  The rewritten count matches, and so does the row set.
 
 ## Listing what is there
 

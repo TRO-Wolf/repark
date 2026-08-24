@@ -8,6 +8,9 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [mw-6-rewrite-manifests-ledger.md](mw-6-rewrite-manifests-ledger.md) — **MW-6 (2026-08-23):**
+  `CALL system.rewrite_manifests` over the fork's `RewriteManifestsAction`; counts read from the
+  new snapshot's summary; registry rows `MANIFEST-1` / `MANIFEST-2`.
 - [mw-7-scale-measurement-ledger.md](mw-7-scale-measurement-ledger.md) — **MW-7 (2026-08-24):**
   Iceberg scale measurement, measure-only. 1e7 rows x 50 MERGEs (substituted from the charter's
   100 — the projection arithmetic is §1), merge-on-read against a copy-on-write control. The
@@ -17,9 +20,14 @@ else. The next pickup's `make ledger-archive` files everything here under
   delete-laden data file, so its dead rows are retained without bound (F-MW7-1 — mechanism
   established by the Critic 2026-08-24, registry `RDF-1`, fork ask F-16, pinned by C-011); and
   position-delete compaction grows the delete bytes 31 % (F-MW7-2).
-- [mw-6-rewrite-manifests-ledger.md](mw-6-rewrite-manifests-ledger.md) — **MW-6 (2026-08-23):**
-  `CALL system.rewrite_manifests` over the fork's `RewriteManifestsAction`; counts read from the
-  new snapshot's summary; registry rows `MANIFEST-1` / `MANIFEST-2`.
+- [mw-8-maintenance-runbook-ledger.md](mw-8-maintenance-runbook-ledger.md) — **MW-8
+  (2026-08-24):** the Airflow-shaped maintenance runbook. Docs plus one executable test; no
+  engine change. The guide gains "The maintenance sequence" — seven numbered steps, why the
+  order is load-bearing, the cadence and its ceiling, the delete-file trigger, the day of
+  latency on the orphan net, the S3 Tables retry, the five edits a migrating Spark DAG needs,
+  and the honest limit: the sequence cannot reclaim delete-laden data files (registry `RDF-1`,
+  fork ask F-16), so a pass leaves a merge-on-read table at ≈2× a compacted control. Every
+  number is MW-7's and is cited, never re-homed; C-009 holds the citations mechanically.
 - [rp-1-fork-repin-ledger.md](rp-1-fork-repin-ledger.md) — **RP-1 (2026-08-23):** re-pin
   `iceberg*` to fork `main` `5e7b2e4` (F-0/F-1/F-2/F-8a; T6 name-directory freeze;
   Spark `position_deletes` rewrite). First row of the post-MW sequence.

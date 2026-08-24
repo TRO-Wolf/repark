@@ -32,8 +32,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **MW-8** | Iceberg | — (MW-7 landed, defaults set) | S |
-| 2 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
+| 1 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -152,7 +151,20 @@ pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runboo
 written to go RED when F-16 lands). The second finding stands as a disclosure: position-delete
 compaction cuts the file count 50× while growing the delete bytes 31 % (F-MW7-2, S3). Ledger:
 [../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/completed/mw-7-scale-measurement-ledger.md).
-**MW-8** is next, and §6 of that ledger is its defaults.
+
+**MW-8 lands with this change and leaves this file:** the Airflow-shaped runbook, docs plus one
+executable test, no engine change. The guide gains "The maintenance sequence" — seven numbered
+steps, the cadence (every 10 merges, ceiling 20), the load-bearing order, the delete-file
+trigger, the step nobody may skip, the day of latency on the orphan net, the S3 Tables retry,
+and the five edits a migrating Spark DAG needs. Every number is MW-7 §6's and is cited there,
+never re-homed; a clause holds those citations mechanically so the section cannot rot silently.
+**The runbook states its own limit:** it cannot reclaim delete-laden data files (registry
+`RDF-1`, fork ask F-16), so a pass leaves a merge-on-read table reading at about 2× a compacted
+control with every answer correct — documented so nobody debugs a ghost. The pin runs one
+documented cycle at gate scale and censuses after every step, including the ARMED orphan call
+against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
+[../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
+**V3-2** is next.
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
@@ -284,22 +296,18 @@ columns). The no-op answers two zeros and commits NO snapshot, which is Spark's
 rule, not the fork's. The delete-manifest leg is the one thing this engine cannot
 do, and it is a registry row rather than a silent partial answer.
 
-### MW-8 — the maintenance runbook — NEXT
+### MW-8 — done (lands with this change)
 
-Docs + one executable local-catalog test of the Airflow-shaped sequence:
-merge → `rewrite_position_delete_files` → `rewrite_data_files` →
-`rewrite_manifests` → `expire_snapshots` → `remove_orphan_files` dry-run →
-armed. S3 Tables conflict-retry guidance folded in. **The defaults are measured
-and waiting** in §6 of
-[../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/completed/mw-7-scale-measurement-ledger.md):
-cadence every 10 merges with a hard ceiling of 20 (2× degradation lands at ~19);
-the order is load-bearing (fold deletes before compacting data, or the expensive
-step reads 50× the delete files); `expire_snapshots` is the step nobody may skip
-(43× warehouse bloat); `rewrite_manifests` and the orphan dry run are free at
-0.4 s / 0.1 s and run every cycle; a zero-row orphan dry run on a young warehouse
-proves nothing. No engine change.
+The runbook is [../docs/guide/iceberg-guide.md](../docs/guide/iceberg-guide.md) "The maintenance
+sequence"; the pin is `python/repark/tests/test_mw8_runbook.py`. Two things the charter did not
+have, both from writing it. The **armed** orphan call had no floor pin — MW-3 pinned the floor on
+the dry-run form only, and `dry_run => false` is the one call in the cycle that destroys data.
+And the `RDF-1` residue needs no pathological fixture: the ordinary documented cycle at 6,000
+rows leaves both CTAS files inside Java's bin-pack band carrying 3,600 dead rows through all
+seven steps. Ledger:
+[../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
 
-### V3-2 — create v3 tables behind an explicit opt-in
+### V3-2 — create v3 tables behind an explicit opt-in — NEXT
 
 Lift the CREATE/CTAS `format-version = 3` refusal behind an explicit opt-in;
 the default stays v2 until V3-3 lands, because a v3 table this engine cannot

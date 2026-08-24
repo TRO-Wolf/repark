@@ -22,6 +22,20 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance
+  runbook `docs/guide/iceberg-guide.md` "The maintenance sequence" documents, run end to end
+  on a local catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.5 s). One
+  documented cycle, censused after every step: the order is the MW-7 driver's, not a second
+  copy; position deletes fold 12 → 2 (one per partition — registry `MOR-2`); data files
+  compact 50 → 6; manifests drop 11 → 3 and the manifest list shrinks; `expire_snapshots`
+  prunes 12 → 1 snapshots and reclaims exactly the 12 delete files step 2 folded; the orphan
+  dry run answers Spark's one column and zero rows, and the ARMED form refuses inside the
+  24-hour floor (the cell MW-3's floor pin does not cover) and deletes nothing outside it;
+  `COUNT(*)` holds 6,000 `int64` throughout. **The honest half (C-004):** both CTAS files sit
+  inside Java's bin-pack band and carry 3,600 dead rows through all seven steps —
+  `removed_delete_files_count` is 0 and the delete files covering them survive, registry row
+  `RDF-1`, mechanism pinned by MW-7 C-011. C-009 reads the guide and requires every number and
+  divergence in that section to link its home.
 - [test_mw7_scale_smoke.py](test_mw7_scale_smoke.py) — **MW-7 (2026-08-23):** the
   scale-measurement driver (`python/repark-parity/bench/mw7/`) run at gate scale, pinning
   the MACHINERY behind the 1e7-row numbers: the census equals an independent count over
