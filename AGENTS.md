@@ -387,8 +387,13 @@ swallowed-override bug:
   metadata-table `scan` honors `projection`, including the empty-projection case.
 - **Re-enumerate the wrapped catalog's trait surface** — a `Catalog` method that newly falls to a
   trait default is a new latent gap, not a no-op (the both-sides trait-wrapping audit).
-- Both duties, and the defects that motivate them, are recorded against the crate that owns the
-  code: [crates/repark-iceberg/map.md](crates/repark-iceberg/map.md) "Known limitations".
+- **Re-check `IcebergSchemaProvider` name-directory population** — at pin `5e7b2e4` `try_new`
+  does not `list_tables`; first access lists then freezes. Engine snapshot/refresh must
+  populate at snapshot time so ADR-0004 T6 residual stays. A future rev that lists at
+  construction makes the freeze a no-op; a rev that lists on every access (never freezes)
+  makes the T6 pins fail-closed.
+- Those duties, and the defects that motivate them, are recorded against the crate that owns
+  the code: [crates/repark-iceberg/map.md](crates/repark-iceberg/map.md) "Known limitations".
 
 ## Explicitly out of scope (do not reintroduce without a decision)
 

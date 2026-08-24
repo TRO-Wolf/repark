@@ -641,16 +641,26 @@ async fn call_rollback_non_ancestor_refuses_loud() {
     );
 }
 
+/// First-row Int64 cell of a named expire-result column.
+fn expire_result_i64(batches: &[RecordBatch], name: &str) -> i64 {
+    let index = batches[0].schema().index_of(name).expect("column present");
+    batches[0]
+        .column(index)
+        .as_any()
+        .downcast_ref::<Int64Array>()
+        .expect("Int64 count column")
+        .value(0)
+}
+
+/// pins: rp-1-fork-repin/C-009
+///
 /// MW-1: the expire result splits content files the way Spark does, with real numbers behind it.
 ///
 /// **Measured on a live Spark 4.0.1 + Iceberg 1.10.0 oracle.** Three merge-on-read MERGEs plus a
 /// compaction expire as `deleted_data_files_count=4` and
-/// `deleted_position_delete_files_count=2`. The fork hands back ONE funnel
-/// (`CleanupReport.deleted_content_files`) holding every path, so reporting it under Spark's
-/// data-file name over-counts by exactly the delete files — on the very workload this campaign
-/// exists for.
-///
-/// The classification is not lost, only discarded: every manifest entry carries `content_type()`.
+/// `deleted_position_delete_files_count=2`. RP-1 / fork F-2: the three content-file columns
+/// come from `CleanupReport`'s typed views. Before F-2 the engine rebuilt the split from a
+/// pre-expiry walk; this pin still holds the split, now sourced from the fork.
 ///
 /// **Why this reaches the position-delete column by rollback rather than by compaction:** this
 /// engine's `rewrite_data_files` rewrites data files and KEEPS the position deletes (verified —
@@ -697,6 +707,16 @@ async fn call_expire_splits_content_files_like_spark() {
         )
         .await;
     }
+    // Append-only files after the MERGEs so expired *data* count ≠ expired *position-delete*
+    // count. A swap of the two typed views then reds (both would otherwise be 2).
+    for id in 10..=11 {
+        run(
+            &ctx,
+            &catalogs,
+            &format!("INSERT INTO ice.sales.mor VALUES ({id}, 'extra{id}')"),
+        )
+        .await;
+    }
     let delete_files = i64::try_from(
         rows(
             &ctx,
@@ -734,18 +754,9 @@ async fn call_expire_splits_content_files_like_spark() {
     .await
     .expect("expire CALL");
     let batches = result.collect().await.expect("collect expire result");
-    let column = |name: &str| -> i64 {
-        let index = batches[0].schema().index_of(name).expect("column present");
-        batches[0]
-            .column(index)
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .expect("Int64 count column")
-            .value(0)
-    };
-    let data = column("deleted_data_files_count");
-    let position = column("deleted_position_delete_files_count");
-    let equality = column("deleted_equality_delete_files_count");
+    let data = expire_result_i64(&batches, "deleted_data_files_count");
+    let position = expire_result_i64(&batches, "deleted_position_delete_files_count");
+    let equality = expire_result_i64(&batches, "deleted_equality_delete_files_count");
 
     assert_eq!(
         position, delete_files,
@@ -756,12 +767,16 @@ async fn call_expire_splits_content_files_like_spark() {
         equality, 0,
         "nothing here writes equality deletes — a measured control, not a placeholder"
     );
-    // The control that makes this a SPLIT rather than a relabel: the rollback strands the
-    // MERGEs' new data files too, so both columns must carry independent non-zero counts. Before
-    // MW-1 the single funnel reported `data + position` under the data-file name alone.
-    assert!(
-        data > 0,
-        "the rolled-back MERGEs strand data files as well; got {data}"
+    // Two MERGEs strand two data files plus two post-MERGE appends (no extra deletes).
+    // data (4) ≠ position (2), so swapping the typed views reds. Union-len data would be 6.
+    // pins: rp-1-fork-repin/C-009
+    assert_eq!(
+        data, 4,
+        "two MERGE data files + two post-MERGE appends; got {data}"
+    );
+    assert_ne!(
+        data, position,
+        "data and position columns must disagree so a view swap cannot stay green"
     );
 }
 
@@ -958,6 +973,7 @@ async fn seed_mor_delete_files(
 /// The two counts match exactly. The two BYTE columns are asserted as an ordering rather than as
 /// values: they are real parquet sizes, and this engine's writer does not produce byte-identical
 /// files to Spark's. Pinning Spark's 11429/1454 here would be pinning Spark's parquet encoder.
+/// pins: rp-1-fork-repin/C-008
 #[tokio::test]
 async fn call_rewrite_position_delete_files_compacts_like_spark() {
     let wh = TempDir::new().unwrap();
@@ -1061,25 +1077,10 @@ async fn call_rewrite_position_delete_files_is_a_zero_result_when_there_is_nothi
     }
 }
 
-/// Registry row `MOR-1` — this engine compacts position deletes below Spark's
-/// `min-input-files` floor.
+/// Registry row `MOR-1` retired (RP-1 / fork F-1) — the position-delete planner now shares
+/// Spark's `min-input-files = 5` floor. Four files is the largest count that used to disagree.
 ///
-/// Oracle — live Spark 4.0.1 + Iceberg 1.10.0, `write.delete.granularity = 'partition'`, one
-/// group, varying the live position-delete file count:
-///
-/// | delete files | Spark | repark |
-/// |---:|---|---|
-/// | 1 | `0, 0, 0, 0` | `0, 0, 0, 0` |
-/// | 2 | `0, 0, 0, 0` | `2, 1, …` |
-/// | 4 | `0, 0, 0, 0` | `4, 1, …` |
-/// | 8 | `8, 1, …` | `8, 1, …` |
-///
-/// Spark's planner extends `SizeBasedFileRewritePlanner`, whose `MIN_INPUT_FILES_DEFAULT` is 5;
-/// the fork's `RewritePositionDeleteFiles` drops only single-file groups (`entries.len() < 2`).
-/// The fork's `RewriteDataFiles` in the same crate DOES implement the full gate, so this is one
-/// action out of step rather than a missing capability.
-///
-/// This pin holds the divergence at exactly 4, the largest count where the two still disagree.
+/// pins: rp-1-fork-repin/C-007
 #[tokio::test]
 async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
     let wh = TempDir::new().unwrap();
@@ -1101,19 +1102,60 @@ async fn call_mor1_compacts_below_sparks_min_input_files_floor() {
     let batches = result.collect().await.expect("collect rpdf result");
     let batch = &batches[0];
 
-    // Spark returns 0 here. This engine compacts. Pinned so the fork's planner gaining the
-    // size-based gate REDS this test on purpose rather than passing unnoticed.
+    // Equality with Spark: a 4-file group is below the floor, so both return zeros.
     assert_eq!(
         call_count(batch, "rewritten_delete_files_count"),
-        4,
-        "MOR-1: this engine rewrites where Spark's min-input-files floor declines to"
+        0,
+        "RP-1: four files is below min-input-files = 5; Spark and this engine both decline"
     );
-    assert_eq!(call_count(batch, "added_delete_files_count"), 1);
-    // The divergence is how much compaction happens, never what the table contains.
+    assert_eq!(call_count(batch, "added_delete_files_count"), 0);
     assert_eq!(
         rows(&ctx, &catalogs, "SELECT * FROM ice.sales.mor").await,
         live_before,
-        "MOR-1 is a file-layout divergence; the live row set is identical to Spark's"
+        "declining to compact must not change the live row set"
+    );
+    assert_eq!(
+        rows(
+            &ctx,
+            &catalogs,
+            "SELECT * FROM ice.sales.mor.files WHERE content = 1"
+        )
+        .await,
+        4,
+        "the four delete files stay; the planner did not rewrite them"
+    );
+}
+
+/// Exact Spark floor: five files is the smallest group that compact. A gate of 6 would leave
+/// the 4-zero and 8-compact pins green.
+///
+/// pins: rp-1-fork-repin/C-007, C-008
+#[tokio::test]
+async fn call_rpdf_compacts_at_sparks_min_input_files_floor() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup(&wh).await;
+    let before = seed_mor_delete_files(&ctx, &catalogs, "floor5", 8, 5).await;
+    assert_eq!(
+        before, 5,
+        "five delete files — Spark's min-input-files floor"
+    );
+    let live_before = rows(&ctx, &catalogs, "SELECT * FROM ice.sales.floor5").await;
+
+    let result = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_position_delete_files(table => 'sales.floor5')",
+    )
+    .await
+    .expect("rewrite_position_delete_files CALL");
+    let batches = result.collect().await.expect("collect rpdf result");
+    let batch = &batches[0];
+    assert_eq!(call_count(batch, "rewritten_delete_files_count"), 5);
+    assert_eq!(call_count(batch, "added_delete_files_count"), 1);
+    assert_eq!(
+        rows(&ctx, &catalogs, "SELECT * FROM ice.sales.floor5").await,
+        live_before,
+        "compact must not change the live row set"
     );
 }
 

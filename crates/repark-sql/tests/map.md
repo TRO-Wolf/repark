@@ -54,7 +54,7 @@ belongs out here is what must be observed from outside the crate.
   [ADR-0006](../../../docs/adr/0006-hide-iceberg-metadata-tables-from-enumeration.md))** — the
   ANSI-door half of the metadata-table enumeration claim: `$`-suffixed metadata tables are hidden
   from `information_schema.tables` **and** from its twin `SHOW TABLES`, while staying queryable as
-  `ns."t$snapshots"`. That row was formerly the opposite assertion
+  `ns."t$snapshots"` (RP-1 re-ran this emptiness pin at fork pin `5e7b2e4`). That row was formerly the opposite assertion
   (`metadata_tables_currently_enumerate_alongside_the_real_table`), left red-on-purpose so the
   decision could not be made silently; it was flipped in the same diff as the behavior. Also
   carries the leak pin: a `FOR … AS OF` read must leave no `__repark_ansi_tt_*` relation behind,

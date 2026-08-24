@@ -1,6 +1,9 @@
 # ADR 0006 — Hide Iceberg `$`-metadata tables from enumeration, at the catalog layer
 
-- **Status:** Accepted (2026-08-10)
+- **Status:** Accepted (2026-08-10); **corrected 2026-08-23 (RP-1)** — type count is sixteen at
+  fork pin `5e7b2e4` (`position_deletes` added); the filter splits on the last `$` matching the
+  fork's resolver, so a base named `a$b` no longer enumerates its twins. Inherent residue is a
+  base literally named `foo$files`.
 - **Deciders:** project owner + Claude
 - **Related:** [0001-own-iceberg-fork.md](0001-own-iceberg-fork.md) (the fork whose schema provider
   synthesizes the names), [0002-two-sql-doors.md](0002-two-sql-doors.md) (why this cannot be a door
@@ -16,8 +19,9 @@
 not report what the catalog holds. For **every** base table it lists, it also *synthesizes* one name
 per `MetadataTableType` — `snapshots`, `manifests`, `files`, `data_files`, `delete_files`, `entries`,
 `all_files`, `all_data_files`, `all_delete_files`, `all_entries`, `history`, `refs`,
-`metadata_log_entries`, `partitions`, `all_manifests`: fifteen today. A namespace of N tables
-therefore enumerated as 16 N names in `SHOW TABLES` and every `information_schema` view.
+`metadata_log_entries`, `partitions`, `all_manifests`, and (from pin `5e7b2e4`) `position_deletes`:
+sixteen types. A namespace of N tables therefore enumerates as 17 N names in `SHOW TABLES` and
+every `information_schema` view without the filter.
 
 Resolution is a **separate** path in the same provider: `table()` and `table_exist()` split a name on
 `$` and build the metadata table on demand, entirely independently of what `table_names()` returned.
@@ -77,12 +81,12 @@ posture rejects.
 
 1. **Metadata tables do not enumerate.** `MetadataProjectionSchemaProvider::table_names`
    (`crates/repark-iceberg/src/catalog/metadata_projection.rs`) filters out exactly the synthesized
-   names whose base table contains no `$`. That decorator already wraps **every** schema provider
-   the engine registers — full snapshot, single-namespace refresh, and `register_schema` — so there
-   is no unwrapped path. (A base table with a `$` in its own name — `a$b` — still enumerates its
-   fifteen synthesized names, because the predicate splits on the first `$` exactly as the fork's
-   own resolution does; all sixteen of those names are unresolvable through the fork either way.
-   Fork limitation, recorded under "Consequences" and pinned in the decorator's unit tests.)
+   names whose suffix is a fork `MetadataTableType` and whose base the wrapped provider knows.
+   That decorator already wraps **every** schema provider the engine registers — full snapshot,
+   single-namespace refresh, and `register_schema` — so there is no unwrapped path. The split is
+   last-`$` plus the fork vocabulary (RP-1 / F-8a): a base named `a$b` lists as itself;
+   `a$b$snapshots` is hidden and still resolvable. Inherent Spark-convention residue: a base
+   literally named `foo$files`.
 2. **Hidden, never removed.** `table()` and `table_exist()` are unchanged. `t$snapshots` stays
    addressable by name through both doors and the facade, and the Spark door's `t.snapshots`
    spelling — which rewrites onto exactly that name — keeps working. This is the Trino shape.
@@ -136,17 +140,12 @@ disclosure. Rejected on four grounds:
 - **Positive:** `SHOW TABLES` and `information_schema` show the catalog's tables; introspection stops
   paying a per-metadata-table metadata read; the behavior matches both engines RePark's two doors
   point at; the decision lives at one layer and reaches all four entry points from there.
-- **Residue (fork-level, documented not engineered around):** a base table whose *own* name contains
-  `$` — `a$b` — still enumerates its fifteen synthesized names. The predicate splits on the first
-  `$`, so `a$b$snapshots` reads as base `a` / suffix `b$snapshots`, which is not a
-  `MetadataTableType`. Splitting from the right would not help: the fork's own `table_exist("a$b")`
-  splits on the first `$` too and answers false, so the base-existence guard can never confirm such
-  a base — and `a$b` itself is unreachable through the fork today (its `table()` fails with
-  `invalid metadata table type: b`). All sixteen names are therefore unresolvable either way, and
-  the choice is between listing broken names and hiding them silently; this ADR lists them. Fixing
-  it belongs in the fork's schema provider, not in this decorator; the decorator's unit test
-  `the_filter_keeps_names_the_fork_did_not_synthesize` pins the 16-name listing so the residue
-  cannot drift unnoticed, and `task/h1c-ledger.md` F-2 carries the fork-side follow-up.
+- **Residue (Spark `$` convention, RP-1 / F-8a):** a base table literally named `foo$files` is
+  indistinguishable from the `files` twin of `foo`. The decorator and the fork both split on the
+  last `$` plus the metadata vocabulary: a base named `a$b` lists as itself; `a$b$snapshots` is
+  hidden and still resolvable. (Until 2026-08-23 the first-`$` parse listed fifteen unresolvable
+  twins of `a$b`; that residue closed when the fork grew last-`$` resolution and this filter
+  matched it.) Pin: `the_filter_keeps_names_the_fork_did_not_synthesize`.
 - **Cost:** `information_schema.columns` no longer describes metadata tables, because it enumerates
   through the same method. That is the Trino/Spark shape and is what removes the round-trips; the
   columns are still reachable through `DESCRIBE ns."t$snapshots"`, which resolves by name.

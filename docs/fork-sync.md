@@ -43,6 +43,7 @@ This table is append-only: one row per dedicated pin-bump PR (rule 1). Started 2
 
 | Date | Old pin | New pin | Notes |
 |---|---|---|---|
+| 2026-08-23 | `0c5fd58d4ab73a0113a8b28b717cf5d002b0f8f2` | `5e7b2e4f8fcb0ff65943cdbc10cdd8f4132fe0b6` | RP-1: consume fork F-0 `#214`, F-1 (RPDF floor 5), F-2 `#215`. Family frozen. F-8a last-`$` filter. |
 | 2026-08-15 | `b009ac158f7584a956fa9292c0e9675a411ecf0d` | `0c5fd58d4ab73a0113a8b28b717cf5d002b0f8f2` | AD-1 via `make bump-fork-pin` + `#182`/`#183` adapter. HALTED predecessor: repark `#102` (pin `1dae9b66`, never merged). `#186` is not a rider. |
 
 Riders on the 2026-08-15 row (FW-0's nine main-side commits plus `#192`–`#195`, content-present on the target):

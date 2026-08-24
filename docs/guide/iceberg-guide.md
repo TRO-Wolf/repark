@@ -314,11 +314,12 @@ path (read a ref, then re-pin it with `CREATE OR REPLACE BRANCH`).
 
 ## Metadata tables
 
-Address them as `catalog.namespace.table.<suffix>`. Fifteen exist:
+Address them as `catalog.namespace.table.<suffix>`. Sixteen exist at pin `5e7b2e4`:
 
 `snapshots` · `manifests` · `all_manifests` · `files` · `data_files` · `delete_files` ·
 `all_files` · `all_data_files` · `all_delete_files` · `entries` · `all_entries` · `history` ·
-`refs` · `metadata_log_entries` · `partitions`
+`refs` · `metadata_log_entries` · `partitions` · `position_deletes` (schema only; scan
+refuses until the fork ports `PositionDeletesBatchScan`)
 
 ```python
 spark.sql(
@@ -455,9 +456,8 @@ engine wrote.
 Two differences from Spark are worth knowing before you port a maintenance job, and neither
 changes what a query returns:
 
-- repark compacts a group of 2 or more delete files; Spark waits for 5
-  ([MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
-  You get more compaction than Spark would do, not less.
+- repark and Spark both wait for 5 delete files in a group before compacting
+  (RP-1 / fork F-1 retired [MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
 - repark writes one delete file per partition where Spark's default writes one per data file
   ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)).
 

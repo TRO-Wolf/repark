@@ -196,11 +196,11 @@ history-rewrite; provenance and the options weighed:
   the ledger carrier was measured and declined. Bound in
   [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Record:
   [task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md).
-  **DL-3 delivered with this change:** archive month maps are an index, not a book — one line
-  per ledger (owner ruling 2026-08-23: the record is the ledger; git history keeps the long
-  rows), `_condense_row` in the lifecycle script, the 2026-08 map 55.5 kB → 29.3 kB, and the
-  maps now say they are off the normal read path. Record:
-  [task/ledgers/completed/dl-3-archive-map-compaction-charter-ledger.md](task/ledgers/completed/dl-3-archive-map-compaction-charter-ledger.md).
+  **DL-3 merged as [#225](https://github.com/TRO-Wolf/repark/pull/225):** archive month maps are
+  an index, not a book — one line per ledger (owner ruling 2026-08-23: the record is the ledger;
+  git history keeps the long rows), `_condense_row` in the lifecycle script, the 2026-08 map
+  55.5 kB → 29.3 kB, and the maps now say they are off the normal read path. Record:
+  [task/ledgers/completed/dl-3-archive-map-compaction-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-3-archive-map-compaction-charter-ledger.md).
   **[#223](https://github.com/TRO-Wolf/repark/pull/223)** (owner-granted, not a slate unit)
   dual-wired the map-link, ledger-lifecycle, and ledger-grammar guards into `ci.yml`'s
   `guards` job (`fetch-depth: 0` so the frozen-bin diff has `origin/main`).
@@ -382,15 +382,20 @@ history-rewrite; provenance and the options weighed:
     out of this campaign** (OD-3 is the Glue warehouse prefix). The 2026-08-23 intake's
     "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
     MW-4b (#219) and is not sequenced.
-  - **Divergences that remain rows**, not closed here — `MOR-1`, `MOR-2`, `ORPHAN-1`,
+  - **Divergences that remain rows**, not closed here — `MOR-2`, `ORPHAN-1`,
     `ORPHAN-2`, `B-MOR-3` in
-    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). The two result-schema
+    [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
+    RP-1 (fork F-1, floor 5). The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
     remaining rows (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert
     Spark's defaults on the one procedure with no undo, under owner decision **OD-2**.
   - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
     orphan cleanup of that fallback tree.
+  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 (lands with this change) → MW-6
+    `rewrite_manifests` → MW-7 scale measurement → MW-8 runbook → V3-2 create-v3 opt-in.
+    Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 and the
+    intake S3 Tables MOR leg stay unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
@@ -417,8 +422,9 @@ history-rewrite; provenance and the options weighed:
     three nullable BIGINT columns, measured from the 1.10.0 jar); a Spark-written format-v3
     fixture is checked in so CI can load Puffin vectors with no JVM; `B-MOR-3` and
     `V3-ADOPT-1` are admitted rows. S3 Tables still refuses `register_table` in the fork
-    (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 and
-    later are no longer waiting on this campaign's live-catalog evidence.
+    (`FeatureUnsupported`); this engine does not swallow that. **MW is closed**; V3-2 is
+    sequenced on [briefs/next-sequence.md](briefs/next-sequence.md) (RP-1 lands with this
+    change).
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the

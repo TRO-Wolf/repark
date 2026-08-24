@@ -32,7 +32,10 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | *(empty)* | — | — | — |
+| 1 | **MW-6** | Iceberg | — | S/M |
+| 2 | **MW-7** | Iceberg | MW-6 | M |
+| 3 | **MW-8** | Iceberg | MW-6, MW-7 | S |
+| 4 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -94,23 +97,31 @@ here on pins its `PROVEN` clauses from its tests and files its attestation befor
 departure `move`. [#223](https://github.com/TRO-Wolf/repark/pull/223) dual-wired those
 guards into `ci.yml` (owner-granted; not a slate unit).
 
-**MW-5 lands with this change and leaves this file:** campaign close. The MW-0
-1,000-row / ten-MERGE demo is re-run and pinned (delete files 1→10 then compact
-10→1, data files →1, `COUNT(*)` 1,000 `int64`, live names and CTAS identity,
+**MW-5 merged as [#224](https://github.com/TRO-Wolf/repark/pull/224) and left this file:**
+campaign close. The MW-0 1,000-row / ten-MERGE demo is re-run and pinned (delete files 1→10
+then compact 10→1, data files →1, `COUNT(*)` 1,000 `int64`, live names and CTAS identity,
 expire needle). STATUS scorecard; guide lockstep; design and slate archived at
 [../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
-**DL-3 lands with this change and leaves this file** (chartered 2026-08-23 outside the slate,
-from an agent's report that the 2026-08 archive month map cost ~13k tokens to read): archive
-month maps condense to one line per ledger (`_condense_row`, the 2026-08 migration
-55.5 kB → 29.3 kB, the off-the-read-path note). The rolling queue is otherwise unchanged.
+**DL-3 merged as [#225](https://github.com/TRO-Wolf/repark/pull/225) and left this file**
+(chartered 2026-08-23 outside the slate, from an agent's report that the 2026-08 archive
+month map cost ~13k tokens to read): archive month maps condense to one line per ledger
+(`_condense_row`, the 2026-08 migration 55.5 kB → 29.3 kB, the off-the-read-path note).
 
 **2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
 ([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
-The next sequencing move is a v3 intake evaluating that track into mid-term units (V3-2 first,
-per the design's slate); nothing is queued until the owner charters it.
 
-The rolling queue is empty. Post-MW remainder stays an intake, not sequenced
-work.
+**RP-1 lands with this change and leaves this file:** re-pin `iceberg*` to fork
+`main` `5e7b2e4` (F-0 `#214`, F-1 floor 5, F-2 `#215`, F-8a last-`$`; T6
+name-directory freeze; Spark `position_deletes` rewrite). Family frozen. Ledger
+in `task/ledgers/completed/`. **MW-6** is next.
+
+**Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
+(the fork batch the intake treated as future had landed). Then **MW-6**
+`rewrite_manifests`, **MW-7** scale measurement, **MW-8** the Airflow-shaped
+runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
+the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) stays gated on MW-7's
+numbers. S3 Tables MOR (intake "MW-4b") stays owner-gated on OD-3b. DML-A/B/C
+and Track A W-0 are not in this queue.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
 new Python cannot make the debt worse while it waits — which is precisely the property that
@@ -201,21 +212,64 @@ next split or the ratchet-raise reason first; it does not discover the ceiling a
 
 ---
 
-## MW-5 — done (lands with this change)
+## MW-5 — done (merged #224)
 
 Registry close as a pointer: MW-1/MW-2 closed the schema gaps as columns; remaining
-rows stay MOR-1, MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3. The MW-0 demo is pinned.
+rows stay MOR-2, ORPHAN-1, ORPHAN-2, B-MOR-3 (`MOR-1` retired at RP-1). The MW-0 demo is pinned.
 Design and slate are in
 [../docs/history/iceberg-maintenance-wave/](../docs/history/iceberg-maintenance-wave/README.md).
 
-**Post-MW-4 remainder, evaluated 2026-08-23:** the candidate units after MW-5 (MW-6
-`rewrite_manifests` through MW-9, the DML units, the RP-1 fork repin) and the
-window-operator measurement track are an **intake, not sequenced work**, in
-[../task/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md); the
-fork-side queue they feed is
-[../task/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md).
-Its `[OWNER]` recommendation is MW-6 beside the dispatch now; nothing here moves until
-the owner charters it.
+**Post-MW remainder, owner-chartered 2026-08-23** (intake remains the evidence
+home: [../task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md);
+fork queue: [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
+The intake's "MW-6 now" line was stale: F-0 and F-2 landed fork-side after it
+was written, so **RP-1 led**. MW-9 is not in the table — MW-7 decides whether
+it is urgent.
+
+### RP-1 — done (lands with this change)
+
+Re-pin `[patch.crates-io]` `iceberg*` to fork `main` `5e7b2e4` (20 commits past
+`0c5fd58`). Family frozen. F-0 Replace in files-exist; F-1 RPDF floor 5 (`MOR-1`
+retired); F-2 expire typed views; F-8a last-`$` filter. Readiness also froze the
+fork's lazy name directory at snapshot (C-011) and added Spark `position_deletes`
+rewrite (C-012, schema-only collect refuse). Ledger:
+[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/completed/rp-1-fork-repin-ledger.md).
+
+### MW-6 — `CALL system.rewrite_manifests`
+
+Engine-only. Fork action is already there (R100 ✅). F-4 answered: counts from
+the new snapshot summary, `manifests-replaced` → `rewritten_manifests_count`,
+`manifests-created` → `added_manifests_count` (fork-pinned keys). Oracle-pin
+Spark's result schema (`rewritten_manifests_count:int`,
+`added_manifests_count:int`) from the 1.10.0 jar constant if the 4.1.2 oracle
+cannot execute it (Q5 precedent). `spec_id` refuses loud (no fork filter);
+`use_caching` is a documented no-op. First missing procedure operators run
+after every MOR merge.
+
+### MW-7 — scale measurement (measure-only)
+
+A partitioned v2 table, 1e7 rows, 100 MERGEs touching ~2 % of rows each, MOR
+and COW legs: delete files, manifests, manifest-list size, `COUNT(*)` and a
+predicate scan p50/p99 per 10 merges, then the full maintenance sequence and
+the same scans again. Peak RSS. Numbers planning-side like P-2; ratios over
+absolutes on this box. **Gates MW-8's defaults and decides whether MW-9 is
+urgent.** No product change.
+
+### MW-8 — the maintenance runbook
+
+Docs + one executable local-catalog test of the Airflow-shaped sequence:
+merge → `rewrite_position_delete_files` → `rewrite_data_files` →
+`rewrite_manifests` → `expire_snapshots` → `remove_orphan_files` dry-run →
+armed. S3 Tables conflict-retry guidance folded in; defaults from MW-7.
+No engine change.
+
+### V3-2 — create v3 tables behind an explicit opt-in
+
+Lift the CREATE/CTAS `format-version = 3` refusal behind an explicit opt-in;
+the default stays v2 until V3-3 lands, because a v3 table this engine cannot
+do row-level writes on is a trap. MW is closed, so the "wait for live-catalog
+evidence" hold is gone. V3-3 (DV writes) is the large unit after that;
+`V3-LINEAGE-1` / `B-MOR-3` stay fork-blocked for maintenance.
 
 ---
 

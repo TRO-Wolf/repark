@@ -1664,31 +1664,20 @@ the pin rather than obeying it.
 
 ### MOR-1 — `rewrite_position_delete_files` compacts below Spark's `min-input-files` floor
 
-- **repark** — `CALL <catalog>.system.rewrite_position_delete_files(table => …)` compacts any
-  `(spec, partition)` group holding **two or more** live position-delete files. On a group of 4 it
-  returns `rewritten_delete_files_count = 4`, `added_delete_files_count = 1`, and the table drops
-  to one delete file.
-- **Apache Spark** — declines to rewrite the same group and returns all four counts as `0`,
-  leaving the 4 delete files in place. Spark's planner extends `SizeBasedFileRewritePlanner`,
-  whose `MIN_INPUT_FILES_DEFAULT` is 5, and it rewrites a group only when
-  `enoughInputFiles || enoughContent || tooMuchContent`. Measured across the boundary on a table
-  at `write.delete.granularity = 'partition'` — 1 delete file: both return zeros; 2 and 4: Spark
-  zeros, repark compacts; 8: both return `rewritten = 8`, `added = 1`.
-  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0. The pinned 4.1.2 oracle cannot execute
-  Iceberg maintenance procedures at all: Spark's `DataSourceV2Relation.create` signature changed
-  between 4.0 and 4.1, so the shipping jar dies with `NoSuchMethodError`.)*
+> **FIXED 2026-08-23 (RP-1 / fork F-1).** The position-delete planner now shares
+> `MIN_INPUT_FILES_DEFAULT = 5` with `RewriteDataFiles`. The pin below flipped from
+> `rewritten = 4` to `rewritten = 0` on a 4-file group — that RED-then-GREEN is the
+> retirement evidence. This is no longer a divergence.
+
+- **repark** — a `(spec, partition)` group of 4 position-delete files returns all four
+  counts as `0` and leaves the files in place.
+- **Apache Spark** — the same zeros. Spark's planner extends `SizeBasedFileRewritePlanner`,
+  whose `MIN_INPUT_FILES_DEFAULT` is 5. Measured on live PySpark 4.0.1 + Iceberg 1.10.0
+  (the pinned 4.1.2 oracle cannot execute Iceberg maintenance procedures).
 - **Pin** —
   `crates/repark-spark/src/tests/call.rs::call_mor1_compacts_below_sparks_min_input_files_floor`
-- **Rationale** — BACKLOG, and the fix belongs in the owned fork rather than here. The fork's
-  `RewritePositionDeleteFiles` drops only single-file groups (`entries.len() < 2`) where its own
-  `RewriteDataFiles`, in the same crate, implements Java's full size-based gate including
-  `min_input_files = 5`. So this is one action out of step with its neighbour, not a missing
-  capability, and closing it means giving the position-delete planner the gate the data-file
-  planner already has. Held as a row rather than worked around in the CALL router, because
-  re-implementing planner admission outside the planner is how two sources of truth start.
-  **The divergence is file layout, never contents** — the live row set is identical either way,
-  and repark's answer is the more aggressive one, so a migrating job sees more compaction than
-  Spark would do, not less.
+- **Rationale** — retired. The owned fork closed the planner gap; this engine consumed it
+  at pin `5e7b2e4`.
 
 ### MOR-2 — merge-on-read delete files are partition-granularity, where Spark's default is per file
 

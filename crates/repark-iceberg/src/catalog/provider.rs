@@ -1,9 +1,11 @@
 //! Incremental DataFusion catalog provider for Iceberg (PERF-07 / r24 P7).
 //!
-//! The fork's [`IcebergCatalogProvider::try_new`] walks **every** namespace and
-//! `list_tables` each one — O(databases) Glue calls per product DDL when this
-//! engine re-registers. This module keeps a mutable name-directory map and rebuilds
-//! **only the touched namespace** via a single-namespace catalog view, so a
+//! The fork's [`IcebergCatalogProvider::try_new`] walks every namespace. At pin
+//! `5e7b2e4` it does **not** `list_tables` at construction — `IcebergSchemaProvider`
+//! lists on first access and then freezes. This module keeps a mutable
+//! name-directory map, **eager-lists at snapshot / namespace-refresh** so
+//! ADR-0004 T6 residual stays (an out-of-band create stays invisible to free SQL
+//! until invalidate), and rebuilds only the touched namespace so a
 //! CREATE/DROP/ALTER pays O(1) listing cost.
 //!
 //! Facade list-on-access ([`super::list_table_names`]) is unchanged: it still
@@ -293,7 +295,9 @@ async fn snapshot_all_schemas(
     for name in iceberg.schema_names() {
         if let Some(schema) = iceberg.schema(&name) {
             // r25 T2 item 0: honor projection on fork metadata-table providers (`table$meta`).
-            schemas.insert(name, MetadataProjectionSchemaProvider::wrap(schema));
+            let wrapped = MetadataProjectionSchemaProvider::wrap(schema);
+            freeze_fork_name_directory(wrapped.as_ref()).await?;
+            schemas.insert(name, wrapped);
         }
     }
     Ok(schemas)
@@ -362,7 +366,32 @@ async fn build_namespace_schema(
         ))
     })?;
     // r25 T2 item 0: same projection wrap as full snapshot (namespace refresh path).
-    Ok(MetadataProjectionSchemaProvider::wrap(schema))
+    let wrapped = MetadataProjectionSchemaProvider::wrap(schema);
+    freeze_fork_name_directory(wrapped.as_ref()).await?;
+    Ok(wrapped)
+}
+
+/// Name used only to drive [`SchemaProvider::table`] through the fork's
+/// `ensure_tables_listed`. Not a user-facing table. A collision would load that
+/// table's metadata at snapshot time (wasteful, still correct).
+const FORK_NAME_DIRECTORY_PROBE: &str = "__repark_snapshot_probe";
+
+/// ===========================================================================================
+/// Capture the fork schema-provider's table-name directory at snapshot time.
+///
+/// At pin `5e7b2e4`, `IcebergSchemaProvider::try_new` no longer calls `list_tables`.
+/// The first `table` / `table_names` / `table_exist` lists live and then freezes.
+/// If that first access is after an out-of-band create, ADR-0004's T6 residual
+/// disappears. Snapshot and namespace-refresh therefore probe here so the
+/// directory is captured at refresh time (the previous pin's construction
+/// semantics) and listing errors stay loud — unlike the sync `table_names`
+/// best-effort swallow.
+///
+/// pins: rp-1-fork-repin/C-011
+/// ===========================================================================================
+async fn freeze_fork_name_directory(schema: &dyn SchemaProvider) -> Result<()> {
+    let _ = schema.table(FORK_NAME_DIRECTORY_PROBE).await?;
+    Ok(())
 }
 
 /// Leaf schema name matching `IcebergCatalogProvider::try_new`'s flat-map of namespace parts.
@@ -591,7 +620,7 @@ impl Catalog for NamespaceScopedCatalog {
     }
 
     // -------------------------------------------------------------------------------------------
-    // Stated omissions (3 of 16 defaulted methods at fork pin b009ac1).
+    // Stated omissions (3 of 16 defaulted methods at fork pin 5e7b2e4).
     //
     // These trait defaults compose only from methods already forwarded above — they do not
     // call an overridable default that an inner catalog might replace with real work, so leaving

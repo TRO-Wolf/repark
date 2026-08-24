@@ -41,7 +41,7 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   (1) `ProjectingMetadataTableProvider` wraps a fork metadata provider so `scan` honors DF
   projection via `ProjectionExec` (never collect-then-project). (2)
   `MetadataProjectionSchemaProvider::table_names` **hides** the metadata names the fork
-  *synthesizes* (`<base>$<MetadataTableType>`, fifteen per base table) from enumeration —
+  *synthesizes* (`<base>$<MetadataTableType>`, sixteen per base table at pin `5e7b2e4`) from enumeration —
   ADR-0006, the Trino/Spark shape: hidden from `SHOW TABLES` and every `information_schema` view,
   still addressable by name because `table()` / `table_exist()` are untouched. The filter reads
   the fork's own `MetadataTableType` (so a fork rev that adds a type is covered) and requires the
@@ -52,18 +52,23 @@ DataFusion `CatalogProvider`, so `glue_catalog.namespace.table` resolves with ze
   `rebuild_catalog_provider`. Product DDL rebuilds only the touched namespace; empty invalidate
   is a no-op; DROP NAMESPACE is a zero-list map remove; invalidate/drop fail loud when the DF
   catalog name is not registered. Every schema snapshot/refresh wraps with
-  `MetadataProjectionSchemaProvider`. Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
+  `MetadataProjectionSchemaProvider` and **eager-lists** the fork's lazy name directory
+  (`freeze_fork_name_directory`, pin `5e7b2e4` — `IcebergSchemaProvider::try_new` no longer
+  `list_tables`; first access would otherwise freeze *after* an OOB create and drop T6
+  residual). Hosts `NamespaceScopedCatalog` (G17 closed): 14 required
   + 13 of 16 defaulted `Catalog` methods are explicit forwards; 3 composition defaults are
-  stated omissions (see crate-root map "Known limitations").
+  stated omissions at pin `5e7b2e4` (see crate-root map "Known limitations").
 - `namespace_scoped_tests.rs` — G17 wrapper pins (file-backed): `publish_replace_table`
   reaches a spy inner; `name()` returns the inner value; stated-omission
   `update_namespace_properties` composes via forwarded `get_namespace`/`update_namespace`;
   `list_views` reaches the inner (not `FeatureUnsupported`).
 - `tests.rs` — the file-backed unit battery (all AWS-free): CTAS reality, AWS-builder
   validation + namespace construction, live-list staleness pins, O(1) invalidation pins,
-  scheme-selection + key-identity partitions, span secret-hygiene pins, and the fork-patch
+  scheme-selection + key-identity partitions, span secret-hygiene pins, the fork-patch
   proof test (`fork_patch_in_effect_deletefilter_is_public` — names a fork-only public symbol,
-  cannot compile against crates.io iceberg 0.9.1).
+  cannot compile against crates.io iceberg 0.9.1), and **RP-1 / C-011** T6 residual pins
+  against the fork's lazy name-directory (`full_rebuild_lists_every_namespace` plus the
+  three OOB-invisibility tests).
 
 **CTAS reality:** `IcebergSchemaProvider::register_table` is schema-only (rejects a `MemTable`
 with data), so CTAS-from-SELECT must be decomposed into `CREATE (cols)` + `INSERT INTO` by the
@@ -99,7 +104,7 @@ SQL interception layer (phase-2 door). Locked down by tests here.
 | Hang on Glue/S3 catalog with no logs | enable `RUST_LOG=repark_iceberg=info`; expect `catalog.*` span close timings. Span fields are key names only |
 | `SHOW TABLES` does not list `t$snapshots` | expected since ADR-0006 — hidden from enumeration on purpose, still queryable as `ns."t$snapshots"` (or the Spark door's `ns.t.snapshots`) |
 | A `$`-metadata name reappears in `SHOW TABLES` after a fork repin | the fork changed the synthesized spelling; the filter matches `<base>$<MetadataTableType::as_str()>` exactly. See `crates/repark-iceberg/map.md` "Known limitations" (the repin duty) |
-| `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | known residue, not a regression: the predicate splits on the first `$`, as the fork's own `table()`/`table_exist()` do, so those names cannot be recognised — and `a$b` is unreachable through the fork anyway. ADR-0006 "Residue" + `docs/history/hardening-h1/h1c-ledger.md` F-2; pinned by `the_filter_keeps_names_the_fork_did_not_synthesize` |
+| `SHOW TABLES` lists `a$b$snapshots` (a `$` in the BASE table's name) | closed at RP-1: last-`$` + vocabulary hides it; `a$b` still lists. Inherent residue is a base literally named `foo$files`. Pin: `the_filter_keeps_names_the_fork_did_not_synthesize` |
 
 First checks: `cargo test -p repark-iceberg catalog::`. Escalate to: [../../map.md#debug](../../map.md).
 

@@ -6,7 +6,7 @@ use iceberg::io::LocalFsStorageFactory;
 use iceberg::memory::{MEMORY_CATALOG_WAREHOUSE, MemoryCatalogBuilder};
 use iceberg::spec::{
     DataContentType, DataFile, DataFileBuilder, DataFileFormat, ManifestContentType, NestedField,
-    PrimitiveType, Schema, Struct, Type,
+    Operation, PrimitiveType, Schema, Struct, Type,
 };
 use iceberg::table::Table;
 use iceberg::transaction::{ApplyTransactionAction, Transaction};
@@ -180,6 +180,22 @@ async fn concurrent_add_deletes(
     let action = tx.row_delta().add_deletes(deletes);
     let tx = action.apply(tx).expect("apply row_delta");
     tx.commit(catalog.as_ref()).await.expect("commit row_delta");
+}
+
+/// A concurrent compaction that rewrites `delete` into `add` as `Operation::Replace`.
+async fn concurrent_replace_compaction(
+    catalog: &Arc<dyn Catalog>,
+    ident: &TableIdent,
+    delete: DataFile,
+    add: DataFile,
+) -> Table {
+    let table = catalog.load_table(ident).await.expect("load table");
+    let tx = Transaction::new(&table);
+    let action = tx.rewrite_files(vec![delete], vec![add]);
+    let tx = action.apply(tx).expect("apply rewrite_files");
+    tx.commit(catalog.as_ref())
+        .await
+        .expect("commit replace compaction")
 }
 
 /// The set of live (Added/Existing) DATA-file paths in the table's current snapshot.
@@ -933,5 +949,61 @@ async fn commit_row_delta_snapshot_isolation_commits_through_conflicting_concurr
             "test/concurrent.parquet".to_string(),
         ]),
         "MoR snapshot MERGE leaves A + the concurrent add live, live={live:?}"
+    );
+}
+
+/// pins: rp-1-fork-repin/C-010
+///
+/// F-0 engine follow-up. Snapshot isolation is a supported opt-down (drops
+/// `validate_no_conflicting_data_files`) but still arms `validate_data_files_exist`. After
+/// fork `#214` that walk includes `Operation::Replace`. A concurrent compaction that
+/// REPLACES the referenced data file must reject the snapshot-arm row delta rather than
+/// committing a dangling position delete (silent resurrection).
+#[tokio::test]
+async fn commit_row_delta_snapshot_rejects_concurrent_replace_compaction_of_referenced_file() {
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let (catalog, ident) = setup_with_isolation(&warehouse, "snapshot").await;
+
+    let a = data_file("test/a.parquet");
+    let (table_at_pin, pin) = append(&catalog, &ident, vec![a.clone()]).await;
+
+    let compacted =
+        concurrent_replace_compaction(&catalog, &ident, a, data_file("test/a-compacted.parquet"))
+            .await;
+    let concurrent_snapshot = compacted
+        .metadata()
+        .current_snapshot()
+        .expect("the compaction produced a snapshot");
+    assert_eq!(
+        concurrent_snapshot.summary().operation,
+        Operation::Replace,
+        "the concurrent compaction must record Operation::Replace — otherwise this pin \
+         would not exercise F-0"
+    );
+
+    let error = commit_row_delta(
+        &catalog,
+        &table_at_pin,
+        Some(pin),
+        vec![(std::sync::Arc::<str>::from("test/a.parquet"), 0)],
+        Vec::new(),
+        crate::write::concurrency::WriteConcurrency::default(),
+    )
+    .await
+    .expect_err(
+        "snapshot MERGE must still reject a Replace-compaction of the referenced data file",
+    );
+
+    let ice = iceberg_error(&error);
+    assert_eq!(
+        ice.kind(),
+        iceberg::ErrorKind::DataInvalid,
+        "a dangling referenced data file is a non-retryable validation failure"
+    );
+    assert!(!ice.retryable());
+    assert!(
+        ice.message().contains("test/a.parquet"),
+        "the failure must NAME the missing referenced data file, got: {}",
+        ice.message()
     );
 }

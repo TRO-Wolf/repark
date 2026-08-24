@@ -18,6 +18,7 @@ from _acceptance import (
     ICEBERG_TABLE_PROPERTIES,
     MOR_ICEBERG_TABLE_PROPERTIES,
     MOR_SEED_ROW_COUNT,
+    MOR_UPDATED_ID_COUNT,
     PRODUCTION_NAMESPACE,
     TARGET_FILE_SIZE_BYTES,
     acceptance_namespace_location,
@@ -452,12 +453,20 @@ def test_mor_ctas_sql_is_merge_on_read_not_copy_on_write() -> None:
     assert TARGET_FILE_SIZE_BYTES in sql
 
 
-def test_mor_acceptance_expected_rows_renames_the_first_three() -> None:
+def test_mor_acceptance_expected_rows_renames_the_updated_ids() -> None:
     rows = mor_acceptance_expected_rows()
     assert len(rows) == MOR_SEED_ROW_COUNT
     assert rows[0] == {"id": 1, "name": "m1"}
-    assert rows[2] == {"id": 3, "name": "m3"}
-    assert rows[3] == {"id": 4, "name": "n4"}
+    last_updated = MOR_UPDATED_ID_COUNT - 1
+    assert rows[last_updated] == {
+        "id": MOR_UPDATED_ID_COUNT,
+        "name": f"m{MOR_UPDATED_ID_COUNT}",
+    }
+    first_seed = MOR_UPDATED_ID_COUNT
+    assert rows[first_seed] == {
+        "id": MOR_UPDATED_ID_COUNT + 1,
+        "name": f"n{MOR_UPDATED_ID_COUNT + 1}",
+    }
     assert rows[-1] == {"id": MOR_SEED_ROW_COUNT, "name": f"n{MOR_SEED_ROW_COUNT}"}
 
 

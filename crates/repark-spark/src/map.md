@@ -32,15 +32,13 @@ wrapper.
   the v1 LOCAL-only fence was blast-radius policy, not capability, and what it guarded against is
   a commit conflict the fork's own validation already catches loudly). Every procedure returns
   Spark's full column list, in Spark's order, types and nullability; **no procedure omits a Spark
-  column as of MW-2**. `expire_snapshots` needs work to get there — the fork funnels all content
-  files into one list, so `classify_content_files` rebuilds the data / position-delete /
-  equality-delete split from the manifest entries' own `content_type()` before cleanup runs;
-  `rewrite_position_delete_files` needs none, because the fork result mirrors Java's four
-  accessors exactly, but it **refuses a table holding live Puffin deletion vectors** — the fork
-  skips them by design, so without the guard a format-v3 table would get four zeros that read as
-  "already clean". **MW-2 divergences:** compaction runs below Spark's `min-input-files` floor
-  (registry `MOR-1`, a fork-planner gap) and the merge-on-read writer is partition-granularity
-  where Spark defaults to per-file (registry `MOR-2`). Both are file layout; neither changes a row.
+  column as of MW-2**. `expire_snapshots` reads Spark's three content-file columns from
+  `CleanupReport`'s typed views (RP-1 / fork F-2). `rewrite_position_delete_files` mirrors
+  Java's four accessors exactly, but it **refuses a table holding live Puffin deletion
+  vectors** — the fork skips them by design, so without the guard a format-v3 table would get
+  four zeros that read as "already clean". **RP-1 retired `MOR-1`** (floor 5). Remaining
+  MW-2 divergence: the merge-on-read writer is partition-granularity where Spark defaults to
+  per-file (registry `MOR-2`). File layout; does not change a row.
   **MW-3 wired `remove_orphan_files`, the only procedure here that destroys data**, and inverted
   two of Spark's defaults for it: `older_than` is required (`ORPHAN-1`) and `dry_run` defaults to
   true (`ORPHAN-2`). Its 24-hour floor is parity, not strictness — Java enforces the same floor in
@@ -185,10 +183,11 @@ wrapper.
 - `describe_show.rs` — Group Z `DESCRIBE NAMESPACE` + Group AB `SHOW NAMESPACES`
   (pyspark-4.0.0 v2-oracle-pinned rendering, LIKE patterns, secret redaction).
 - `metadata_tables.rs` — I2 metadata-table path rewrite (`.snapshots` → `$snapshots`);
-  19 in-module tests. **MW-4b:** Glue/HMS `table_exists` returns `DataInvalid` for a
-  two-level namespace (not `NamespaceNotFound`). The "real table wins" probe on
-  `cat.ns.tbl.snapshots` treats that as absent so the `$` rewrite runs; single-level
-  `DataInvalid` and `Unexpected` stay fatal.
+  19 in-module tests. **RP-1:** `METADATA_TABLE_NAMES` includes `position_deletes` (16th
+  `MetadataTableType` at pin `5e7b2e4`; scan is fork schema-only). **MW-4b:** Glue/HMS
+  `table_exists` returns `DataInvalid` for a two-level namespace (not `NamespaceNotFound`).
+  The "real table wins" probe on `cat.ns.tbl.snapshots` treats that as absent so the `$`
+  rewrite runs; single-level `DataInvalid` and `Unexpected` stay fatal.
 - `time_travel.rs` — I1 SQL-TEXT half: token span scan + FROM/JOIN splice to snapshot-pinned
   static providers; the pin half (spec/parsers/resolution/`read_table_at`) is
   `repark_core::time_travel`. 8 in-module tests (2 rode the phase-1 hoist).

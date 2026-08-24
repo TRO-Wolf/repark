@@ -19,13 +19,13 @@ repo.
 - [fork-sync.md](fork-sync.md) — the iceberg-rust fork **sync contract**: pin-bump procedure
   (`make bump-fork-pin`), green-before-pinnable, upstream-flows-through-the-fork, the
   weekly `fork-sync-drift` drift report with its thresholds, and the dated **pin-history**
-  table (one row per dedicated bump PR; started 2026-08-15).
+  table (one row per dedicated bump PR; started 2026-08-15; RP-1 `5e7b2e4` on 2026-08-23).
 - [spark-sql-iceberg-parity.md](spark-sql-iceberg-parity.md) — the **divergence registry**: the
   single home for how repark differs from Apache Spark. Four fields per row (repark's behavior,
   Spark's behavior with its oracle basis, the `path::test_name` that pins it, the rationale) and
   two classes — DECLARED (§2 statement-surface gaps by surface, §3 identifier resolution, §4 type
   and value semantics, §5 facade drop-in semantics) and BACKLOG (§7 "Known Spark-parity
-  divergences"). §6 is the lifecycle: how a row is added, mirrored and retired, and the boundary
+  divergences"; `MOR-1` retired 2026-08-23 / RP-1). §6 is the lifecycle: how a row is added, mirrored and retired, and the boundary
   with [../STATUS.md](../STATUS.md) — STATUS holds issue *state*, this file holds *semantics*, and
   neither restates the other. §8 is the drop-in disclosure rationale table. Cited by name from
   ~16 live sites (Rust refusal messages, facade docstrings, facade tests), and indexed in

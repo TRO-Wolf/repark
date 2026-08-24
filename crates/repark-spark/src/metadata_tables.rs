@@ -37,10 +37,10 @@ use crate::catalog_ops::iceberg_err;
 /// ===========================================================================================
 /// Whether `name` is a known Iceberg metadata-table suffix (case-insensitive).
 ///
-/// Mirrors fork `MetadataTableType::try_from` (`inspect/metadata_table.rs:99-121`, pin
-/// `4723104b`). Names: `snapshots`, `manifests`, `files`, `data_files`, `delete_files`,
+/// Mirrors fork `MetadataTableType::try_from` (`inspect/metadata_table.rs`, pin
+/// `5e7b2e4`). Names: `snapshots`, `manifests`, `files`, `data_files`, `delete_files`,
 /// `entries`, `all_files`, `all_data_files`, `all_delete_files`, `all_entries`, `history`,
-/// `refs`, `metadata_log_entries`, `partitions`, `all_manifests`.
+/// `refs`, `metadata_log_entries`, `partitions`, `all_manifests`, `position_deletes`.
 /// ===========================================================================================
 #[must_use]
 pub fn is_metadata_table_name(name: &str) -> bool {
@@ -64,6 +64,7 @@ const METADATA_TABLE_NAMES: &[&str] = &[
     "metadata_log_entries",
     "partitions",
     "all_manifests",
+    "position_deletes",
 ];
 
 /// Canonical lowercase metadata-table suffix, if `name` is a known type.
@@ -722,6 +723,7 @@ fn tokens_to_sql(tokens: &[Token]) -> String {
 mod tests {
     use super::*;
 
+    /// pins: rp-1-fork-repin/C-012
     #[test]
     fn metadata_names_cover_fork_set() {
         for name in METADATA_TABLE_NAMES {

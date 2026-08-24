@@ -57,7 +57,7 @@ illustrative. A claim with no verified basis does not go in.
   in-memory one), the `spark.sql.catalog.<name>.*` keys, accepted warehouse locations
   (`s3://` / `s3a://` / `file://` / bare absolute path) and their refusals, reading and writing
   through the facade, the write forms that refuse (DML-1 / DML-2 / `overwritePartitions`), time
-  travel both spellings plus the reader options, the fifteen metadata tables, maintenance `CALL`
+  travel both spellings plus the reader options, the sixteen metadata tables, maintenance `CALL`
   plus `register_table` adoption (V3-1, including the Spark-written v3 fixture numbers),
   and the registry sections that govern each.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:

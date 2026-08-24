@@ -8,10 +8,9 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [dl-3-archive-map-compaction-charter-ledger.md](dl-3-archive-map-compaction-charter-ledger.md) —
-  **DL-3 (2026-08-23):** archive month maps become one line per ledger (owner ruling: the record
-  is the ledger, the row is navigation); `_condense_row` in the lifecycle script + the 2026-08
-  migration (~55 kB → ~15 kB) + the off-the-read-path note.
+- [rp-1-fork-repin-ledger.md](rp-1-fork-repin-ledger.md) — **RP-1 (2026-08-23):** re-pin
+  `iceberg*` to fork `main` `5e7b2e4` (F-0/F-1/F-2/F-8a; T6 name-directory freeze;
+  Spark `position_deletes` rewrite). First row of the post-MW sequence.
 
 ## Pointers
 - Up: [../map.md](../map.md)

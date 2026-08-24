@@ -31,6 +31,7 @@ decision, numbered `NNNN-slug.md`. Supersede with a new ADR rather than rewritin
   never in a door parser; they stay addressable by name (the Trino shape). Records the evidence
   (both reference engines hide them; the live tier has no Iceberg and so cannot observe it), the
   rejected "keep and declare" alternative, and the fork-repin removal/breakage criteria.
+  **RP-1 (2026-08-23):** last-`$` split matches the fork; `a$b` residue closed; sixteen types.
 
 ## I want to...
 
