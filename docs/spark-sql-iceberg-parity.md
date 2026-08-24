@@ -1701,6 +1701,57 @@ the pin rather than obeying it.
   and outside the maintenance campaign. **Contents are unaffected** — the same rows are masked
   either way.
 
+### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
+
+- **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**
+  manifests of the current partition spec and reports only that leg. On a merge-on-read table
+  with four data manifests and three delete manifests it answers
+  `rewritten_manifests_count = 4`, `added_manifests_count = 1`, and the three delete manifests
+  are carried forward untouched. When the data leg has nothing to do **and** two or more delete
+  manifests are present, the call **refuses** rather than answering two zeros.
+- **Apache Spark** — runs two legs in one procedure and sums them. Measured on the same shapes:
+  five data manifests plus three delete manifests answered `8, 2` (both legs compacted, manifests
+  8 → 2); one data manifest plus two delete manifests answered `2, 1`; one data manifest plus one
+  delete manifest answered `0, 0`, because a single matching manifest per leg is already at
+  Spark's target.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-2. The pinned 4.1.2
+  oracle cannot execute Iceberg maintenance procedures.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_reports_the_data_leg_and_leaves_delete_manifests`
+  and `::call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay`
+- **Rationale** — BACKLOG, and it is fork work. The owned fork's `RewriteManifestsAction` keeps
+  every `Deletes`-content manifest byte-identical by design, so outstanding merge-on-read deletes
+  still apply after the rewrite; there is no delete leg to call. **Contents are unaffected** — the
+  live row set is identical either way, and this is manifest layout. The refusal covers the one
+  shape where the divergence would be invisible: two zeros read as "nothing to compact", so an
+  operator would run the procedure forever on a table that never compacts. Closing the row means a
+  delete-manifest rewrite in the fork.
+
+### MANIFEST-2 — `rewrite_manifests` refuses `spec_id`; `use_caching` is accepted and does nothing
+
+- **repark** — `spec_id` refuses loud, named or positional. The procedure always rewrites the
+  manifests of the table's **current** partition spec, which is Spark's default, and older specs'
+  manifests are kept. `use_caching` is accepted, type-checked as a boolean literal, and changes
+  nothing.
+- **Apache Spark** — takes both (`RewriteManifestsProcedure.PARAMETERS`: `table` STRING required,
+  `use_caching` BOOLEAN optional, `spec_id` INTEGER optional). `spec_id` selects the spec whose
+  manifests are rewritten and refuses an id the table does not have (`Invalid spec id 7`);
+  `use_caching` sets the action's `use-caching` option, which caches Spark's own manifest
+  DataFrame. Measured: `use_caching => true`, `use_caching => false` and the bare call all
+  answered `5, 1` on the same five-manifest table, and `spec_id => 0` on a spec-0 table answered
+  `5, 1` as well.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MANIFEST-1.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/call_manifests.rs::call_rewrite_manifests_argument_surface_is_sparks`
+  and `python/repark/tests/test_maintenance_call.py::test_rewrite_manifests_spec_id_refuses_and_use_caching_is_accepted`
+- **Rationale** — DECLARED. `use_caching` is a Spark-side execution option with no counterpart
+  here, and accepting it keeps a migrating maintenance job's SQL unchanged while the type check
+  keeps a typo loud. `spec_id` is a *behaviour* selector, so accepting it and ignoring it would
+  silently rewrite the wrong spec's manifests; refusing names what the engine actually does. The
+  fork exposes `RewriteManifestsAction::rewrite_if`, which this engine already uses to pin Spark's
+  default (current spec), so wiring the argument is possible — it is a scope decision, not a
+  capability gap.
+
 ### UNIX-1 — SQL-door `from_unixtime` returns TIMESTAMP, not STRING
 
 - **repark** — the **facade** returns a STRING (`'1970-01-01 00:00:00'`); the **SQL door** returns

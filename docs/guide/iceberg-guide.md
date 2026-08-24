@@ -365,8 +365,8 @@ They are also hidden from `SHOW TABLES` and `information_schema` while staying a
 
 ## Maintenance
 
-Six procedures run through `CALL`. Five of them are maintenance and return Spark's full column
-list; the sixth is adoption:
+Seven procedures run through `CALL`. Six of them are maintenance and return Spark's full column
+list; the seventh is adoption:
 
 ```python
 spark.sql(
@@ -394,7 +394,7 @@ catalog pointers named `vN.metadata.json` register and read; a later write names
 convention rather than only the filename (registry `V3-ADOPT-1`). S3 Tables refuses
 registration in the fork; Glue implements it.
 
-Five maintenance procedures return Spark's full column list:
+Six maintenance procedures return Spark's full column list:
 
 ```python
 spark.sql("CALL local.system.rewrite_data_files(table => 'sales.orders')").show()
@@ -460,6 +460,43 @@ changes what a query returns:
   (RP-1 / fork F-1 retired [MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
 - repark writes one delete file per partition where Spark's default writes one per data file
   ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)).
+
+### Compacting manifests
+
+Every commit writes a manifest, so a table that is appended to or merged into often ends up with
+hundreds of small ones, and every scan reads the whole manifest list first. `rewrite_manifests`
+re-groups the entries into fewer manifests without touching a single data file:
+
+```python
+spark.sql("CALL local.system.rewrite_manifests(table => 'sales.orders')").show()
+```
+
+```text
++---------------------------+-----------------------+
+| rewritten_manifests_count | added_manifests_count |
++---------------------------+-----------------------+
+| 5                         | 1                     |
++---------------------------+-----------------------+
+```
+
+The live file set is identical before and after — a re-grouped entry keeps its original snapshot
+id and sequence numbers, which is what keeps merge-on-read deletes and incremental scans correct.
+When there is nothing to re-group you get two zeros and no new snapshot, exactly as Spark does.
+
+Three things to know before you port a maintenance job:
+
+- **Only the current partition spec is rewritten.** Manifests written under an older spec are kept
+  as they are. That is Spark's default too.
+- **`spec_id` refuses**, because this engine always rewrites the current spec and will not accept
+  an argument it would ignore. `use_caching` is accepted and does nothing — it tunes Spark's own
+  DataFrame cache
+  ([MANIFEST-2](../spark-sql-iceberg-parity.md#manifest-2--rewrite_manifests-refuses-spec_id-use_caching-is-accepted-and-does-nothing)).
+- **Delete manifests are not rewritten.** Spark compacts them in a second leg of the same
+  procedure; this engine reports the data leg only and leaves them in place
+  ([MANIFEST-1](../spark-sql-iceberg-parity.md#manifest-1--rewrite_manifests-rewrites-data-manifests-only-spark-rewrites-delete-manifests-too)).
+  If that leaves nothing for the data leg to do, the call refuses rather than returning two zeros
+  that read as "already clean". Compacting the delete FILES first with
+  `rewrite_position_delete_files` is what reduces them.
 
 `expire_snapshots` and `rollback_to_snapshot` are the other two, and `expire_snapshots` returns
 Spark's full six-column result:
@@ -547,8 +584,8 @@ Anything else refuses and lists what is supported, rather than pretending:
 
 ```text
 UnsupportedOperationException: This feature is not implemented: CALL
-system.rewrite_manifests is not supported. Supported procedures: expire_snapshots,
-register_table, remove_orphan_files, rewrite_data_files, rewrite_position_delete_files,
+system.migrate is not supported. Supported procedures: expire_snapshots, register_table,
+rewrite_data_files, rewrite_manifests, remove_orphan_files, rewrite_position_delete_files,
 rollback_to_snapshot.
 ```
 

@@ -8,6 +8,9 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
+- [mw-6-rewrite-manifests-ledger.md](mw-6-rewrite-manifests-ledger.md) — **MW-6 (2026-08-23):**
+  `CALL system.rewrite_manifests` over the fork's `RewriteManifestsAction`; counts read from the
+  new snapshot's summary; registry rows `MANIFEST-1` / `MANIFEST-2`.
 - [rp-1-fork-repin-ledger.md](rp-1-fork-repin-ledger.md) — **RP-1 (2026-08-23):** re-pin
   `iceberg*` to fork `main` `5e7b2e4` (F-0/F-1/F-2/F-8a; T6 name-directory freeze;
   Spark `position_deletes` rewrite). First row of the post-MW sequence.

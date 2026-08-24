@@ -360,7 +360,8 @@ history-rewrite; provenance and the options weighed:
     ([#197](https://github.com/TRO-Wolf/repark/pull/197)), MW-3 `remove_orphan_files`
     ([#198](https://github.com/TRO-Wolf/repark/pull/198)), MW-4 Glue live MOR compact+expire
     ([#218](https://github.com/TRO-Wolf/repark/pull/218)), MW-4b Glue dotted metadata-table
-    rewrite ([#219](https://github.com/TRO-Wolf/repark/pull/219)). **Five maintenance
+    rewrite ([#219](https://github.com/TRO-Wolf/repark/pull/219)), MW-6 `rewrite_manifests`
+    (post-campaign, owner-chartered 2026-08-23). **Six maintenance
     procedures** run through `CALL`; no procedure omits a Spark column. V3-1 adds
     `register_table` (adoption, not maintenance).
   - **Scorecard.** The MW-0 growth demo reproduces: ten sequential MERGEs into a 1,000-row v2
@@ -383,7 +384,9 @@ history-rewrite; provenance and the options weighed:
     "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
     MW-4b (#219) and is not sequenced.
   - **Divergences that remain rows**, not closed here — `MOR-2`, `ORPHAN-1`,
-    `ORPHAN-2`, `B-MOR-3` in
+    `ORPHAN-2`, `B-MOR-3`, and MW-6's `MANIFEST-1` (delete manifests are not rewritten; Spark
+    rewrites them in a second leg) and `MANIFEST-2` (`spec_id` refuses, `use_caching` is an
+    accepted no-op) in
     [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
     RP-1 (fork F-1, floor 5). The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
@@ -392,8 +395,8 @@ history-rewrite; provenance and the options weighed:
   - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
     orphan cleanup of that fallback tree.
-  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 (lands with this change) → MW-6
-    `rewrite_manifests` → MW-7 scale measurement → MW-8 runbook → V3-2 create-v3 opt-in.
+  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 and MW-6 are delivered;
+    MW-7 scale measurement → MW-8 runbook → V3-2 create-v3 opt-in remain.
     Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 and the
     intake S3 Tables MOR leg stay unsequenced.
 

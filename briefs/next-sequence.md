@@ -32,10 +32,9 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **MW-6** | Iceberg | — | S/M |
-| 2 | **MW-7** | Iceberg | MW-6 | M |
-| 3 | **MW-8** | Iceberg | MW-6, MW-7 | S |
-| 4 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
+| 1 | **MW-7** | Iceberg | — (MW-6 landed) | M |
+| 2 | **MW-8** | Iceberg | MW-7 | S |
+| 3 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -110,10 +109,21 @@ month map cost ~13k tokens to read): archive month maps condense to one line per
 **2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
 ([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
 
-**RP-1 lands with this change and leaves this file:** re-pin `iceberg*` to fork
+**RP-1 merged and left this file:** re-pin `iceberg*` to fork
 `main` `5e7b2e4` (F-0 `#214`, F-1 floor 5, F-2 `#215`, F-8a last-`$`; T6
-name-directory freeze; Spark `position_deletes` rewrite). Family frozen. Ledger
-in `task/ledgers/completed/`. **MW-6** is next.
+name-directory freeze; Spark `position_deletes` rewrite). Family frozen. Ledger:
+[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/completed/rp-1-fork-repin-ledger.md).
+
+**MW-6 lands with this change and leaves this file:** `CALL system.rewrite_manifests`
+over the fork's `RewriteManifestsAction`. The counts come from the new snapshot's
+summary (`manifests-replaced` / `manifests-created`), because the action returns
+none. Two facts the charter did not have, both measured on the 4.0.1 oracle:
+Spark rewrites DELETE manifests in a second leg (the fork keeps them — registry
+`MANIFEST-1`, and a zero answer refuses rather than reading as "already clean"),
+and Spark's default filters to the CURRENT partition spec (the fork's `rewrite_if`
+pins that; `spec_id` still refuses — registry `MANIFEST-2`). Ledger:
+[../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md](../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md).
+**MW-7** is next.
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
@@ -235,18 +245,15 @@ fork's lazy name directory at snapshot (C-011) and added Spark `position_deletes
 rewrite (C-012, schema-only collect refuse). Ledger:
 [../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/completed/rp-1-fork-repin-ledger.md).
 
-### MW-6 — `CALL system.rewrite_manifests`
+### MW-6 — done (lands with this change)
 
-Engine-only. Fork action is already there (R100 ✅). F-4 answered: counts from
-the new snapshot summary, `manifests-replaced` → `rewritten_manifests_count`,
-`manifests-created` → `added_manifests_count` (fork-pinned keys). Oracle-pin
-Spark's result schema (`rewritten_manifests_count:int`,
-`added_manifests_count:int`) from the 1.10.0 jar constant if the 4.1.2 oracle
-cannot execute it (Q5 precedent). `spec_id` refuses loud (no fork filter);
-`use_caching` is a documented no-op. First missing procedure operators run
-after every MOR merge.
+Wired. The schema was read from the 1.10.0 jar constant AND executed on the live
+4.0.1 oracle, which agreed (`5, 1` on five manifests, two non-nullable `int`
+columns). The no-op answers two zeros and commits NO snapshot, which is Spark's
+rule, not the fork's. The delete-manifest leg is the one thing this engine cannot
+do, and it is a registry row rather than a silent partial answer.
 
-### MW-7 — scale measurement (measure-only)
+### MW-7 — scale measurement (measure-only) — NEXT
 
 A partitioned v2 table, 1e7 rows, 100 MERGEs touching ~2 % of rows each, MOR
 and COW legs: delete files, manifests, manifest-list size, `COUNT(*)` and a

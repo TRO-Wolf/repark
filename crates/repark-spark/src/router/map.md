@@ -11,8 +11,8 @@ their refuse tests were deleted with the arms. The ported v1 lib-root battery li
 ## Contents
 
 - `tests.rs` — `#[cfg(test)] mod tests;` in `../router.rs`.
-  **V3-1:** the CALL dispatch comment names six procedures (including `register_table`); the
-  leftover "three v1 / remove_orphan_files refuse" sentence is gone.
+  **MW-6:** the CALL dispatch comment names seven procedures (including `register_table`); the
+  leftover "three v1 / remove_orphan_files refuse" sentence went at V3-1.
 
 ## Pointers
 

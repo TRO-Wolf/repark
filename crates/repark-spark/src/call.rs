@@ -1,7 +1,7 @@
 //! Spark Iceberg `CALL catalog.system.<proc>(…)` maintenance procedure router (I3 /
 //! R-MAINTENANCE-CALL).
 //!
-//! Six procedures, each backed by an action the owned fork already provides:
+//! Seven procedures, each backed by an action the owned fork already provides:
 //!
 //! 1. `expire_snapshots` — fork R133 `Transaction::expire_snapshots` +
 //!    `ExpireSnapshotsCleanup::commit_and_clean`
@@ -16,9 +16,13 @@
 //! 4. `remove_orphan_files` — fork `DeleteOrphanFiles`
 //!    (`crates/iceberg/src/maintenance/delete_orphan_files.rs`
 //!    `DeleteOrphanFiles::new(table).older_than(ms).execute()`), wired by MW-3 on 2026-08-21.
-//! 5. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
+//! 5. `rewrite_manifests` — fork R100 `RewriteManifestsAction`
+//!    (`crates/iceberg/src/transaction/rewrite_manifests.rs`
+//!    `Transaction::rewrite_manifests()`), wired by MW-6 on 2026-08-23. Its counts come from the
+//!    new snapshot's summary, because the action returns none ([`rewrite_manifests`]).
+//! 6. `rollback_to_snapshot` — fork R98 `ManageSnapshotsAction::rollback_to`
 //!    (`crates/iceberg/src/transaction/manage_snapshots.rs:164-167`).
-//! 6. `register_table` — fork `Catalog::register_table` (V3-1). Adoption, not create: the
+//! 7. `register_table` — fork `Catalog::register_table` (V3-1). Adoption, not create: the
 //!    metadata file is read and validated before the pointer is claimed. Spark signature
 //!    measured from the Iceberg 1.10.0 jar (`table` STRING, `metadata_file` STRING → three
 //!    nullable BIGINT columns). S3 Tables refuses `FeatureUnsupported` in the fork; this
@@ -56,6 +60,7 @@
 //!
 //! **Out of scope (loud):**
 //! - rewrite `strategy` / `sort_order` other than default bin-pack — R135 deferred list.
+//! - `rewrite_manifests`' `spec_id` — the current spec is the only one it rewrites.
 //! - `remove_orphan_files`' `max_concurrent_deletes` / `file_list_view` / `equal_schemes` /
 //!   `equal_authorities` / `prefix_mismatch_mode` / `prefix_listing`.
 //! - the `options` map and the `where` filter on both rewrite procedures.
@@ -87,11 +92,14 @@ use repark_core::{
 
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
+mod rewrite_manifests;
+
 /// Procedures supported by this router (listed in unknown-proc errors).
 const SUPPORTED_PROCEDURES: &[&str] = &[
     "expire_snapshots",
     "register_table",
     "rewrite_data_files",
+    "rewrite_manifests",
     "remove_orphan_files",
     "rewrite_position_delete_files",
     "rollback_to_snapshot",
@@ -100,7 +108,7 @@ const SUPPORTED_PROCEDURES: &[&str] = &[
 /// ===========================================================================================
 /// Execute one `CALL catalog.system.<proc>(…)` statement.
 ///
-/// Routes the six CALL procedures (five maintenance + `register_table`); unknown / deferred
+/// Routes the seven CALL procedures (six maintenance + `register_table`); unknown / deferred
 /// procedures fail loud with the supported list. Every catalog policy (MW-1).
 /// ===========================================================================================
 ///
@@ -122,6 +130,9 @@ pub async fn execute_call(
         }
         "rewrite_position_delete_files" => {
             execute_rewrite_position_delete_files(ctx, catalog, &catalog_name, &args).await
+        }
+        "rewrite_manifests" => {
+            rewrite_manifests::execute_rewrite_manifests(ctx, catalog, &catalog_name, &args).await
         }
         "rollback_to_snapshot" => {
             execute_rollback_to_snapshot(ctx, catalog, &catalog_name, &args).await
