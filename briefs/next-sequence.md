@@ -299,12 +299,16 @@ do, and it is a registry row rather than a silent partial answer.
 ### MW-8 — done (lands with this change)
 
 The runbook is [../docs/guide/iceberg-guide.md](../docs/guide/iceberg-guide.md) "The maintenance
-sequence"; the pin is `python/repark/tests/test_mw8_runbook.py`. Two things the charter did not
-have, both from writing it. The **armed** orphan call had no floor pin — MW-3 pinned the floor on
-the dry-run form only, and `dry_run => false` is the one call in the cycle that destroys data.
-And the `RDF-1` residue needs no pathological fixture: the ordinary documented cycle at 6,000
-rows leaves both CTAS files inside Java's bin-pack band carrying 3,600 dead rows through all
-seven steps. Ledger:
+runbook"; the pin is `python/repark/tests/test_mw8_runbook.py`. Three things the charter did not
+have, all from writing it and from the Critic's pass. The **armed** orphan call had no floor pin
+— MW-3 pinned the floor on the dry-run form only, and `dry_run => false` is the one call in the
+cycle that destroys data. The `RDF-1` residue needs no pathological fixture: the ordinary
+documented cycle at 6,000 rows leaves both CTAS files inside Java's bin-pack band carrying 3,600
+dead rows through all seven steps. And **`expire_snapshots` needs an explicit `older_than`**
+(F-MW8-1): without it the fork falls back to a 5-day time-travel default, three documented cycles
+reclaimed nothing, and the warehouse grew 6.00× — the runbook producing the pathology it warns
+about. A docs unit needs a clause that reads the SQL it PRINTS, not only the prose around it;
+that is C-010. Ledger:
 [../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
 
 ### V3-2 — create v3 tables behind an explicit opt-in — NEXT

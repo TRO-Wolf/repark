@@ -18,7 +18,9 @@ sequence still cannot reclaim them — registry row `RDF-1`, fork ask F-16.
 
 from __future__ import annotations
 
+import ast
 import importlib
+import re
 import sys
 import time
 import types
@@ -34,7 +36,7 @@ from repark import ReparkSession
 from repark.errors import PySparkException
 
 # pins: mw-8-maintenance-runbook/C-001, C-002, C-003, C-004, C-005
-# pins: mw-8-maintenance-runbook/C-006, C-007, C-008, C-009
+# pins: mw-8-maintenance-runbook/C-006, C-007, C-008, C-009, C-010
 
 # The MW-7 driver lives under python/repark-parity/bench/, which is not on `repark_parity`'s
 # import path. It is loaded as a synthetic package — the shim `test_mw7_scale_smoke.py` and
@@ -77,6 +79,7 @@ ONE_HOUR_MS = 60 * 60 * 1000
 # that goes stale silently, so the citation is checked rather than trusted.
 REQUIRED_CITATIONS = [
     "mw-7-scale-measurement-ledger.md",
+    "mw-8-maintenance-runbook-ledger.md",
     "#rdf-1",
     "#mor-2",
     "#orphan-1",
@@ -86,7 +89,18 @@ REQUIRED_CITATIONS = [
     "#manifest-3",
 ]
 
-RUNBOOK_HEADING = "### The maintenance sequence"
+RUNBOOK_HEADING = "### The maintenance runbook"
+
+# `CALL {}.system.<procedure>(` — the catalog is an f-string placeholder in the guide's block
+# and a real name in the driver's, so the procedure is read after the placeholder either way.
+CALL_PROCEDURE = re.compile(r"system\.(\w+)\(")
+CALL_ARGUMENT = re.compile(r"(\w+)\s*=>\s*([^,)]+)")
+
+# The catalog and table the driver's sequence is rendered with for the comparison. Only the
+# procedure names and the ARGUMENT names are compared, never the values: the guide passes a
+# `TIMESTAMP` literal where the driver passes epoch milliseconds, and both are correct.
+DRIVER_CATALOG = "mw8"
+DRIVER_TABLE_ARG = "ns.orders"
 
 
 def _load_measure() -> Any:
@@ -100,6 +114,53 @@ def _load_measure() -> Any:
 
 
 measure = _load_measure()
+
+
+def _guide_section() -> str:
+    """The runbook section of the guide, from its heading to the next `##`."""
+    guide = _GUIDE.read_text(encoding="utf-8")
+    assert RUNBOOK_HEADING in guide, f"{_GUIDE} has no {RUNBOOK_HEADING!r} section"
+    return guide.split(RUNBOOK_HEADING, 1)[1].split("\n## ", 1)[0]
+
+
+def _f_string_text(node: ast.expr) -> str:
+    """The literal text of an f-string, with every placeholder rendered as `{}`."""
+    if isinstance(node, ast.Constant):
+        return str(node.value)
+    if not isinstance(node, ast.JoinedStr):
+        return ""
+    return "".join(
+        piece.value if isinstance(piece, ast.Constant) else "{}" for piece in node.values
+    )
+
+
+def _calls_of(statements: list[str]) -> list[tuple[str, list[tuple[str, str]]]]:
+    """Each `CALL` as `(procedure, [(argument name, argument text)])`, in source order."""
+    calls: list[tuple[str, list[tuple[str, str]]]] = []
+    for statement in statements:
+        procedure = CALL_PROCEDURE.search(statement)
+        assert procedure, f"not a CALL statement: {statement!r}"
+        arguments = [(name, value.strip()) for name, value in CALL_ARGUMENT.findall(statement)]
+        calls.append((procedure.group(1), arguments))
+    return calls
+
+
+def _printed_cycle() -> list[str]:
+    """The `MAINTENANCE_CYCLE` statements the guide prints, read out of its python block.
+
+    The block is PARSED, not pattern-matched over the page. Two of the statements are
+    f-strings split across two source lines, and a regex over the markdown silently keeps
+    only the first half — which is the half without the arguments that matter.
+    """
+    block = re.search(r"```python\n(.*?)```", _guide_section(), re.S)
+    assert block, "the runbook section must carry exactly one python block"
+    for node in ast.walk(ast.parse(block.group(1))):
+        if not isinstance(node, ast.Assign):
+            continue
+        names = [target.id for target in node.targets if isinstance(target, ast.Name)]
+        if "MAINTENANCE_CYCLE" in names and isinstance(node.value, ast.List):
+            return [_f_string_text(element) for element in node.value.elts]
+    raise AssertionError("the guide's python block defines no MAINTENANCE_CYCLE list")
 
 
 class RunbookCycle(BaseModel):
@@ -394,16 +455,61 @@ def test_the_runbook_never_changes_the_row_set(cycle: RunbookCycle) -> None:
     assert cycle.row_count_type == "int64"
 
 
-def test_the_guide_section_links_every_source_it_cites() -> None:
-    """C-009: the runbook section names the home of every number and every divergence.
+def test_the_guide_section_links_every_source_it_names() -> None:
+    """C-009: every source the runbook section relies on is linked from it.
 
-    A number copied into a guide without its home goes stale silently. The guide restates
-    nothing: the cadence and the budget belong to the MW-7 ledger, and each difference from
-    Apache Spark belongs to its registry row.
+    The cadence and the budget belong to the MW-7 ledger; each difference from Apache Spark
+    belongs to its registry row; the expire-cutoff measurements belong to this unit's ledger.
+    This checks that each of those homes is LINKED. It does not, and cannot cheaply, detect a
+    number in the prose that cites nothing — C-010 is the drift detector that reads the
+    statements the section actually prints.
     """
-    guide = _GUIDE.read_text(encoding="utf-8")
-    assert RUNBOOK_HEADING in guide, f"{_GUIDE} has no {RUNBOOK_HEADING!r} section"
-    section = guide.split(RUNBOOK_HEADING, 1)[1]
-    section = section.split("\n## ", 1)[0]
+    section = _guide_section()
     missing = [citation for citation in REQUIRED_CITATIONS if citation not in section]
-    assert not missing, f"the runbook section cites no home for: {', '.join(missing)}"
+    assert not missing, f"the runbook section links no home for: {', '.join(missing)}"
+
+
+def test_the_printed_cycle_matches_the_sequence_the_engine_runs() -> None:
+    """C-010: the SQL the guide prints is the SQL this unit measured, argument for argument.
+
+    An operator copies the block, not the prose around it. A statement that drifts from the
+    measured sequence is a runbook that documents one thing and proves another — and the
+    first way it drifts is by losing an argument, because a `CALL` with a missing argument
+    still runs and still answers a result shape that looks correct.
+
+    Values are deliberately not compared. The guide passes a `TIMESTAMP` literal where the
+    driver passes epoch milliseconds; both are correct and neither is the claim. Procedure
+    names, their order, and the argument NAMES are the claim.
+    """
+    printed = _calls_of(_printed_cycle())
+    driven = _calls_of(
+        [sql for _procedure, sql in measure.maintenance_sequence(DRIVER_CATALOG, DRIVER_TABLE_ARG)]
+    )
+    assert [procedure for procedure, _arguments in printed] == RUNBOOK_PROCEDURES
+    assert [procedure for procedure, _arguments in printed] == [
+        procedure for procedure, _arguments in driven
+    ]
+    for (procedure, printed_arguments), (_same, driven_arguments) in zip(
+        printed, driven, strict=True
+    ):
+        assert [name for name, _value in printed_arguments] == [
+            name for name, _value in driven_arguments
+        ], (
+            f"the guide's {procedure} call has drifted from the sequence this unit measured:\n"
+            f"  printed: {printed_arguments}\n  measured: {driven_arguments}"
+        )
+        # A value is comparable only where the guide prints a literal. `table` and `older_than`
+        # are f-string placeholders there and a name and epoch milliseconds here; `retain_last`
+        # is the same literal on both sides, and it decides how much history survives.
+        for (name, printed_value), (_name, driven_value) in zip(
+            printed_arguments, driven_arguments, strict=True
+        ):
+            if "{}" not in printed_value:
+                assert printed_value == driven_value, (
+                    f"the guide prints {procedure}({name} => {printed_value}) where this unit "
+                    f"measured {driven_value}"
+                )
+    orphan_arguments = [name for name, _value in dict(printed)["remove_orphan_files"]]
+    assert "dry_run" not in orphan_arguments, (
+        "step 6 must print the dry-run default (registry ORPHAN-2); step 7 arms it in prose"
+    )

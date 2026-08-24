@@ -438,16 +438,22 @@ history-rewrite; provenance and the options weighed:
     sequence every 10 merges, with merge 20 the ceiling that already measures 2.05×.
   - **MW-8 the maintenance runbook (delivered 2026-08-24).** Docs plus one executable test; no
     engine change. [docs/guide/iceberg-guide.md](docs/guide/iceberg-guide.md) "The maintenance
-    sequence" is the Airflow-shaped cycle — merge workload →
+    runbook" is the Airflow-shaped cycle — merge workload →
     `rewrite_position_delete_files` → `rewrite_data_files` → `rewrite_manifests` →
     `expire_snapshots` → orphan dry run → orphan armed — with the cadence, the load-bearing
-    order, the delete-file trigger, the day of latency on the orphan net, the S3 Tables retry
-    and the five edits a migrating Spark DAG needs. Its numbers are MW-7's, cited to that
-    ledger's §6 rather than re-homed. **The runbook's stated limit is `RDF-1`:** a pass does
-    not return a table to baseline, so an operator sees a merge-on-read table still reading at
-    about 2× a compacted control, with correct answers throughout. Pin:
-    `python/repark/tests/test_mw8_runbook.py` (nine clauses, one documented cycle censused
-    after every step, 4.5 s). Ledger:
+    order, the delete-file trigger, the day of latency on the orphan net, how to retry a step
+    and the six edits a migrating Spark DAG needs. MW-7's numbers are cited to that ledger
+    rather than re-homed. **`expire_snapshots` takes an explicit `older_than` here** (Critic
+    finding F-MW8-1): the engine passes a cutoff only when the argument is present, so the
+    fork falls back to `history.expire.max-snapshot-age-ms` (5 days) and a cycle without one
+    reclaimed nothing across three passes while the warehouse grew 6.00×. The cutoff is the
+    table's time-travel window, and the guide says what spending it costs. **The runbook's
+    stated limit is `RDF-1`:** a cycle does not return a table to baseline, so an operator sees
+    a merge-on-read table still reading at **2.02×** (point) / **2.45×** (partition) a
+    compacted control and holding **1.90×** its live bytes, with correct answers throughout.
+    Pin: `python/repark/tests/test_mw8_runbook.py` (ten clauses, one documented cycle censused
+    after every step, 4.4 s; C-010 parses the guide's printed `CALL` block and compares it to
+    the measured sequence). Ledger:
     [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
   - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7 and MW-8 are
     delivered; **V3-2** create-v3 opt-in is the remainder.
