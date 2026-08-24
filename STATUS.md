@@ -385,7 +385,7 @@ history-rewrite; provenance and the options weighed:
     out of this campaign** (OD-3 is the Glue warehouse prefix). The 2026-08-23 intake's
     "MW-4b" candidate (S3 Tables MOR leg, needs OD-3b) is a **different id** from campaign
     MW-4b (#219) and is not sequenced.
-  - **Divergences that remain rows**, not closed here — `MOR-2`, `ORPHAN-1`,
+  - **Divergences that remain rows**, not closed here — `ORPHAN-1`,
     `ORPHAN-2`, `B-MOR-3`, and MW-6's `MANIFEST-1` (delete manifests are not rewritten; Spark
     rewrites them in a second leg), `MANIFEST-2` (`spec_id` refuses; `use_caching` is an
     accepted no-op and takes a boolean literal where Spark also casts a string) and
@@ -395,7 +395,8 @@ history-rewrite; provenance and the options weighed:
     `rewrite_data_files` candidate, so its dead rows and the delete file covering it are
     retained without bound; Spark reclaims both) in
     [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
-    RP-1 (fork F-1, floor 5). The two result-schema
+    RP-1 (fork F-1, floor 5). `MOR-2` retired at MW-9 for RePark-owned MERGE (Spark-default
+    `file`); SQL `DELETE`/`UPDATE` via the fork `TableProvider` still partition-group. The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
     remaining rows (`ORPHAN-1` required `older_than`, `ORPHAN-2` dry-run by default) invert
     Spark's defaults on the one procedure with no undo, under owner decision **OD-2**.
@@ -409,7 +410,8 @@ history-rewrite; provenance and the options weighed:
     so it ran 1e7 × 50** — the arithmetic is §1 of the ledger. Run wall 2:09:29, **peak RSS
     4,461 MiB** (`getrusage` and `/usr/bin/time -v` agree).
     Merge-on-read grows linearly per merge — four of the five census rates exact: **+8
-    position-delete files (one per partition — registry `MOR-2`), +200,000 delete records,
+    position-delete files (one per partition — explicit `'partition'` layout; MW-9's unset
+    default is Spark `file`), +200,000 delete records,
     +32 data files, +2 manifests, ~479 manifest-list bytes (mean)**. Its predicate scans reach **4.18×** (point) and **4.58×**
     (partition) the copy-on-write control by merge 50, crossing **2× at 19.6 merges**. The
     copy-on-write control is **flat** over the same 50 merges (1.08× / 1.18×). The gap is the
@@ -433,10 +435,12 @@ history-rewrite; provenance and the options weighed:
     F-MW7-1 (OPEN), pinned by `test_delete_laden_in_band_file_survives_the_runbook`. Driver: `python/repark-parity/bench/mw7/`; machinery pin:
     `python/repark/tests/test_mw7_scale_smoke.py`. Ledger:
     [task/ledgers/completed/mw-7-scale-measurement-ledger.md](task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md).
-    **The verdict the charter asked for: MW-9 is urgent** — the point probe goes
-    **858 → 3,878 ms** for a predicate returning 0.02 % of the rows, because partition
-    granularity forces open every delete file in every partition it touches (400 files,
-    10,000,000 records, for 2,000 rows returned). MW-8's defaults follow from §6 there: run the
+    **The verdict the charter asked for: MW-9 was urgent** — the point probe went
+    **858 → 3,878 ms** for a predicate returning 0.02 % of the rows, because `'partition'`
+    granularity opens every delete file in every partition it touches (400 files,
+    10,000,000 records, for 2,000 rows returned). **MW-9 is delivered in this PR**
+    (unset default is Spark `file`; that measurement is the explicit-`'partition'` layout).
+    MW-8's defaults follow from §6 there: run the
     sequence every 10 merges, with merge 20 the ceiling that already measures 2.05×.
   - **MW-8 the maintenance runbook (delivered 2026-08-24).** Docs plus one executable test; no
     engine change. [docs/guide/iceberg-guide.md](docs/guide/iceberg-guide.md) "The maintenance
@@ -457,12 +461,12 @@ history-rewrite; provenance and the options weighed:
     after every step, 4.4 s; C-010 parses the guide's printed `CALL` block and compares it to
     the measured sequence). Ledger:
     [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
-  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7, MW-8 and
-    **V3-2** ([#232](https://github.com/TRO-Wolf/repark/pull/232)) are delivered.
-    **MW-9** (`write.delete.granularity` / `MOR-2`) is #1 on
-    [briefs/next-sequence.md](briefs/next-sequence.md) — owner sequenced 2026-08-24
-    after MW-7 ruled it urgent. V3-3 (deletion-vector writes) remains
-    owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
+  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7, MW-8,
+    **V3-2** ([#232](https://github.com/TRO-Wolf/repark/pull/232)), and **MW-9**
+    (this PR — `write.delete.granularity` / `MOR-2` for MERGE) are delivered.
+    The queue on [briefs/next-sequence.md](briefs/next-sequence.md) is empty.
+    V3-3 (deletion-vector writes) remains owner-sequenced. The intake S3 Tables
+    MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled

@@ -1,7 +1,7 @@
 # MW-9 — honor `write.delete.granularity` (close MOR-2)
 
 **Date:** 2026-08-24 · **Branch:** `feat/mw-9-delete-granularity` · **Base:** `70026af` (`origin/main`, #232) ·
-**Intake:** [task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../../../task/roadmap/mid-term/roadmap-intake-2026-08-23.md) ·
+**Intake:** [task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../../roadmap/mid-term/roadmap-intake-2026-08-23.md) ·
 **Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, `/sepmo-core`) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (Iceberg write path)
@@ -268,9 +268,9 @@ FINDING:
   severity: S1
   category: AT-10
   clause: C-009
-  disposition: DISPUTED
+  disposition: REMEDIATED
   claim: STATUS.md still lists MOR-2 as an open remaining row
-  evidence: briefs/next-sequence.md standing rule 7 — STATUS + slate departure are the unit's last commit, not this feat commit
+  evidence: departure commit — STATUS remaining-row list and MW-7 scorecard; slate queue empty
 ```
 
 ```yaml
@@ -296,8 +296,8 @@ COVERAGE_ATTESTATION:
   complete: true
   note: >
     Cycle 1 remediations then cycle 2 quad. Cycle-2 S1s remediating (identity UPDATE
-    refuse-before-IO, ANSI C-007, fork UPDATE pin, maps). C2-CL-003 DISPUTED
-    (STATUS/slate are the departure commit). Critics did not re-run after the
+    refuse-before-IO, ANSI C-007, fork UPDATE pin, maps). C2-CL-003 remediating
+    in this departure. Critics did not re-run after the
     cycle-2 fix half (max_cycles=2). make verify 2026-08-24 exit 0.
   categories:
     - id: AT-1
