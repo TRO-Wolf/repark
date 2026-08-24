@@ -14,8 +14,13 @@ The shape, from the MW-7 charter:
 
 Two facts decide how the numbers are read. This engine writes ONE position-delete file per
 `(spec, partition)` per commit — Iceberg `partition` granularity, where Spark's default is
-`file` (registry row `MOR-2`). And the COW leg has no delete files at all, so it is the
-control: the MOR-minus-COW gap on the same predicate is the delete-read cost.
+`file` (registry row `MOR-2`). And the COW leg has no delete files at all, so it is the control.
+
+Read the MOR-minus-COW gap as what merge-on-read costs on READ, not as a delete-file cost
+alone: the MOR leg also accumulates data files, because every MERGE appends the updated rows
+instead of rewriting in place (at 1e7 x 50 it held 16.3x the control's data files and 1.83x its
+live bytes). The gap is the delete files PLUS that fan-out. Separating them needs a third leg
+that compacts the deletes at every checkpoint, which this driver does not run.
 
 Wall-clock here is one machine's number, never a CI pin. Ratios are the deliverable.
 """

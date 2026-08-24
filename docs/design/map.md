@@ -19,6 +19,9 @@ changing a decision here means a new dated design pass, not an in-place edit.
   and §7 — what was measured and what is not claimed. **V3-1 (2026-08-21):** §4's
   `V3-ADOPT-1` is an admitted registry row, not queued; the CALL write names the Hadoop
   convention. §5 and §7 name the Spark-written fixture as landed.
+  **Errata 2026-08-24 (MW-7):** §3b's v2 sentence ("Spark … leaving all six position deletes in
+  place") holds for that 9 %-deleted fixture and is not general — on delete-heavy v2 shapes Spark
+  ends at zero delete files. Registry `RDF-1`.
 
 - [session-api.md](session-api.md) — the phase-1 repark-core Session API design (settled
   2026-08-06): the three-crate layout (`repark-common` / `repark-iceberg` / `repark-core`), the

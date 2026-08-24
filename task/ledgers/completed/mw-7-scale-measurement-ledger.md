@@ -40,7 +40,7 @@ count the charter fixed.
 
 | Probe | Merge wall seconds, in order | Reads as |
 |---|---|---|
-| 1e7 x 3, both legs (9:28 wall, peak RSS 3,936 MiB) | MOR 11.2 15.6 18.4 · COW 30.1 52.7 74.0 | COW +22 s per merge — a straight line, projecting **31 h** at 100 merges |
+| 1e7 x 3, both legs (9:28 wall, peak RSS 4,032 MiB) | MOR 11.2 15.6 18.4 · COW 30.1 52.7 74.0 | COW +22 s per merge — a straight line, projecting **31 h** at 100 merges |
 | 1e7 x 6, COW only (10.2 min) | 38.8 64.2 74.1 90.9 91.2 90.4 | not a line: a ramp into a **plateau at ~91 s** |
 | 1e7 x 10, MOR only (6.3 min) | 11.5 11.6 16.3 20.0 22.2 22.3 22.3 22.4 22.6 23.9 | a ramp into a **plateau at ~23 s** |
 
@@ -61,11 +61,21 @@ touches.
 | Maintenance, both legs | ~600 s = 0.17 h | ~400 s = 0.11 h |
 | **TOTAL** | **3.72 h** | **1.91 h** |
 
-The budget is "~4 hours for **everything**". The calibration and the two scaling probes had
-already spent **0.75 h** of it, so 1e7 x 100 lands the unit at **~4.5 h** — over. One rung
-down the ladder, 1e7 x 50 lands at **~2.7 h including what was already spent**, with margin
-for the +-25 % that a plateau extrapolated from ten points deserves. **The substitution is
-1e7 x 50 and this paragraph is the reason.**
+The budget is "~4 hours for **everything**". The calibration and the THREE scaling probes had
+already spent **0.509 h** of it, measured (270.5 + 568.2 + 612.9 + 379.1 s), so 1e7 x 100 lands
+the unit at **~4.23 h** — over. One rung down the ladder, 1e7 x 50 lands at **~2.42 h including
+what was already spent**, with margin for the +-25 % that a plateau extrapolated from ten points
+deserves. **The substitution is 1e7 x 50 and this paragraph is the reason.**
+
+*(Corrected 2026-08-24, Critic S3: the first draft said 0.75 h and "two probes". The measured
+figure is 0.509 h over three probes. The substitution still stands on the corrected number —
+4.23 h is over a ~4 h budget — and it would still stand anywhere in the +-25 % band around the
+3.72 h projection.)*
+
+**Projected 1.91 h, actual 2.158 h — +13.0 %.** The plateau was read off the COW probe at merge
+6, where it had reached 91 s; it kept climbing to ~113 s. The projection was low by exactly that
+amount, which is inside the band it was given, and it is stated here so a reader meets both
+numbers in one place instead of computing the gap from two sections.
 
 Two things the substitution does not cost, and one it does:
 
@@ -124,16 +134,17 @@ reading if the thing that produced it is checked, and this is what checks it.
 |---|---|---|---|---|
 | C-001 | The census counts what the table's metadata tables actually hold: data / delete file counts and bytes by `content`, `manifests`, `snapshots`, and the CURRENT snapshot's manifest-list size read off disk. | Rebuild a merge-on-read table by hand, count every field independently through SQL and `Path.stat`, require equality on all of them. | PROVEN | `test_census_matches_the_metadata_tables`. Provocation P1: dropping the `content` test makes `data_files` count the delete files too and the pin reds. |
 | C-002 | On the merge-on-read leg, position-delete files grow by exactly `partitions` per MERGE — one per `(spec, partition)` per commit, which is Iceberg `partition` granularity (registry `MOR-2`) — and `COUNT(*)` never moves. | Assert `delete_files == merges x partitions` at every checkpoint and `row_count == rows`. | PROVEN | `test_delete_files_grow_one_per_partition_per_merge`; delete records equal `merges x rows_per_merge`. Provocation P2: freezing `generation` in the merge source makes the MERGE a no-op update and the pin reds. |
-| C-003 | The copy-on-write leg writes ZERO delete files across the same MERGEs, so MOR-minus-COW on one predicate is the delete-read cost and nothing else. | Assert every COW checkpoint and the post-maintenance checkpoint report zero delete files, and that the leg still rewrites data files. | PROVEN | `test_copy_on_write_leg_is_a_zero_delete_control`. |
+| C-003 | The copy-on-write leg writes ZERO delete files across the same MERGEs, so MOR-minus-COW on one predicate isolates what merge-on-read costs on read: the delete files PLUS the data-file fan-out merge-on-read leaves behind. | Assert every COW checkpoint and the post-maintenance checkpoint report zero delete files, and that the leg still rewrites data files. | PROVEN | `test_copy_on_write_leg_is_a_zero_delete_control`. |
 | C-004 | `rewrite_position_delete_files` folds the accumulated delete files to one per partition, and `rewrite_data_files` reduces the data-file count; both are visible in the per-step census the driver records. | Compare the last checkpoint's census with the census after each maintenance step. | PROVEN | `test_compaction_reclaims_delete_files_and_data_files`. |
 | C-005 | `rewrite_manifests` reduces the manifest count on BOTH legs, and its result is Spark's two columns. | Assert the manifest count after the step is below the count after `rewrite_data_files`, on each leg, and check the result column names. | PROVEN | `test_rewrite_manifests_drops_the_manifest_count`. Rests on MW-6's wiring; this pin only holds that the driver observes the drop. |
 | C-006 | The sequence the driver runs is the charter's five procedures in the charter's order, with `remove_orphan_files` LAST, carrying no `dry_run` argument (the engine's default is true — `ORPHAN-2`) and an `older_than` clear of Spark's 24-hour floor. | Assert the recorded procedure list and the orphan SQL text. | PROVEN | `test_maintenance_is_the_charters_sequence`. Provocation P3: moving `remove_orphan_files` to the front reds it. |
 | C-007 | Every timing keeps its raw samples, reports `min <= p50 <= p99 <= max`, carries the rows the timed query returned, and is measured after at least one untimed warm-up pass so checkpoints are comparable to each other. The recorded answer does not move across the maintenance sequence. | Assert the ordering, the sample count, `warmups >= 1`, a non-empty answer, and equality of the last checkpoint's answer with the post-maintenance answer, per leg per scan. | PROVEN | `test_timings_carry_their_answer_and_are_ordered`. Provocation P4: reporting `p99` from the minimum sample reds it. The identity half caught a real effect — see §2. |
 | C-008 | The three probes keep byte-identical SQL at every checkpoint and after maintenance, so a checkpoint-to-checkpoint ratio compares like with like. | Assert the recorded `sql` per label equals `scan_specs`' output at every point. | PROVEN | `test_scan_battery_is_fixed_across_checkpoints`. Provocation P5: varying the probe partition per call reds it. |
 | C-009 | Peak RSS is reported as a process-wide monotone high-water mark, so the figure covers every leg the run executed. | Assert the per-leg peaks are non-decreasing and the run peak is at least the maximum of them. | PROVEN | `test_peak_rss_is_a_monotone_high_water_mark`; cross-checked against `/usr/bin/time -v` "Maximum resident set size" on every run in §4. |
+| C-011 | A data file that is correctly sized and whose rows are ALL deleted is never a `rewrite_data_files` candidate: it survives the complete maintenance sequence with its dead rows, `removed_delete_files_count` is 0, and the position-delete file covering it also survives — naming a data file that is still LIVE, not a dangling one. | Build a 2,500-row v2 merge-on-read table as one data file inside Java's bin-pack band; assert the band precondition; MERGE every id; run all five procedures; assert the seeded file is still live, the delete file's references are a subset of the live data files, and the row set is unchanged. | PROVEN | `test_delete_laden_in_band_file_survives_the_runbook`. Mechanism, oracle and remedy: finding F-MW7-1, registry `RDF-1`, fork ask F-16. Provocations P7a/P7b: moving the seeded file OUT of the band makes it a candidate, it is rewritten, and both the precondition and the still-live assertion red. |
 | C-010 | The generator is deterministic and typed: the same arguments rebuild byte-identical seed and merge frames with `id int64` / `part int32` / `value float64`, and every mutable column moves with the merge generation. | Build each frame twice and compare; compare two generations. | PROVEN | `test_generated_frames_are_deterministic`. This is what makes "generators checked in, data never committed" (PROJECT.md) true rather than aspirational. |
 
-VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 10/10.
+VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 11/11.
 
 ```yaml
 KILLED_ASSUMPTIONS:
@@ -141,9 +152,11 @@ KILLED_ASSUMPTIONS:
   - "Three points are enough to extrapolate a merge-cost curve": REMOVED (COW's first three merges at 1e7 read as a straight line of +22 s/merge and projected 31 h at 100 merges; six points showed a ramp into a plateau and projected 2.5 h)
   - "A partitioned 1e7-row table is a big table": REMOVED (the first seed compressed to 15 MB because every column was a counter or a modulo. It wrote ONE data file per partition, which leaves delete-file layout nothing to attach to. The seed now hashes id into two doubles: 185 MB, ~12 data files per partition)
   - "The merge-0 baseline is comparable to the later checkpoints": REMOVED (it was the only checkpoint whose files had never been read, and its COUNT(*) p50 ran 2.8x the merge-6 figure at 1e6 — a page-cache artefact pointing the wrong way. Every checkpoint now takes an untimed warm-up pass)
+  - "The delete files that survive the maintenance sequence are dangling, and the missing remove-dangling-deletes option is why": REMOVED (Critic, 2026-08-24. They are not dangling — they name LIVE data files. Spark ends the same sequence at ZERO delete files with that option OFF, at both write.delete.granularity settings. The real mechanism is the fork DEFERRING Java's tooHighDeleteRatio candidate clause, so a correctly sized 100 %-dead file is never selected for rewrite. One measured number — removed_delete_files_count = 0 — fit three stories and the first draft picked the wrong one without testing it. Now C-011, F-MW7-1, registry RDF-1, fork ask F-16)
+  - "The MOR-minus-COW gap is the delete files and nothing else": REMOVED (Critic, 2026-08-24. At merge 50 the merge-on-read leg also carries 16.3x the data files and 1.83x the live bytes of the control, because every MERGE appends rather than rewrites. The gap is delete files PLUS that fan-out, and this unit does not separate them)
   - "A float SUM is a safe identity probe across compaction": REMOVED (SUM(value) moved by one ULP across rewrite_data_files, because compaction re-groups rows and float addition is order-dependent. Correct engine behaviour; the probe now sums an integer column)
 CLARIFYING_QUESTIONS:
-  - "The charter fixed 1e7 x 100. The measured projection put that at 3.72 h of RUN time on top of the 0.75 h the calibration and the two scaling probes had already spent, i.e. ~4.5 h against a ~4 h budget for everything. The charter's ladder was taken one rung: 1e7 x 50, projected 1.91 h. The arithmetic is section 1."
+  - "The charter fixed 1e7 x 100. The measured projection put that at 3.72 h of RUN time on top of the 0.509 h the calibration and three scaling probes had already spent, i.e. ~4.23 h against a ~4 h budget for everything. The charter's ladder was taken one rung: 1e7 x 50, projected 1.91 h, actual 2.158 h (+13.0 %). The arithmetic is section 1."
   - "No COVERAGE_ATTESTATION is filed here, per the charter — the Critic files it. `make check-ledger-grammar` reds on exactly that finding until they do, because every clause above is PROVEN."
 ```
 
@@ -174,8 +187,10 @@ peak belongs to the COW leg — MOR's own peak was 2,970 MiB.
 | 50 | 1,696 | 400 | 10,000,000 | 101 | 25,665 | 12,605 ms | 2,341 / 2,354 ms | 3,878 / 3,968 ms |
 
 Everything is exactly linear in the merge count: **+32 data files, +8 delete files
-(one per partition — C-002), +200,000 delete records, +2 manifests and +478 manifest-list
-bytes per merge.** `COUNT(*)` holds 10,000,000 at every row. Live data bytes 260 MB -> 560 MB;
+(one per partition — C-002), +200,000 delete records, +2 manifests and ~479 manifest-list
+bytes per merge.** The first four are exact at every checkpoint; the manifest-list figure is a
+mean — the per-10-merge deltas are 4,804 / 4,785 / 4,780 / 4,802 / 4,776 B, so that file grows
+at a near-constant rate rather than an exactly constant one. `COUNT(*)` holds 10,000,000 at every row. Live data bytes 260 MB -> 560 MB;
 live delete bytes 0 -> 28.6 MB.
 
 **The merge-10 row reads faster than merge 0 and that is real, not noise.** At merge 0 the
@@ -203,8 +218,16 @@ the untouched original CTAS files. CTAS 87.3 s; 50 merges 1,297.7 s (mean 25.95 
 
 **Flat.** Over 50 MERGEs that rewrite every row in the table exactly once, `COUNT(*)` moves
 1.02x, the partition probe 1.18x and the point probe 1.08x. Data files stay near 100 and live
-bytes near 307 MB, because copy-on-write compacts as a side effect of rewriting. This is what
-makes it a control: a merge-on-read table's degradation is the delete files and nothing else.
+bytes near 307 MB, because copy-on-write compacts as a side effect of rewriting.
+
+**What the control isolates, stated precisely.** It is tempting to call the MOR/COW gap "the
+delete files and nothing else", and that is wrong. At merge 50 the merge-on-read table carries
+**1,696 data files against the control's 104 (16.3x)** and **560 MB of live data against 306 MB
+(1.83x)**, because every MERGE appends the updated rows as new small files instead of rewriting
+in place. So the gap is **the delete files PLUS the data-file fan-out merge-on-read leaves
+behind** — two costs with the same cause and different remedies (`rewrite_position_delete_files`
+for one, `rewrite_data_files` for the other). This unit does not separate them; a unit that wants
+the split needs a third leg with the deletes compacted at every checkpoint.
 
 MERGE wall seconds: 31 53 74 79 80 91 98 111 109 114 114 113 114 113 114 113 114 113 114 114
 114 115 114 114 114 114 113 113 113 112 112 112 111 113 112 113 113 112 113 114 113 113 113
@@ -216,7 +239,7 @@ The warehouse is the other half of it: **14,782 MB on disk for a 342 MB table** 
 `expire_snapshots` — **43x** — because every merge's rewritten files stay reachable from the
 snapshot that wrote them.
 
-### 4.3 MOR against the COW control — the delete-read cost, isolated
+### 4.3 MOR against the COW control — what merge-on-read costs on read
 
 | merges | point p50 MOR | point p50 COW | MOR/COW | partition MOR/COW | `COUNT(*)` MOR/COW | delete records read per row the point probe returns |
 |---:|---:|---:|---:|---:|---:|---:|
@@ -228,13 +251,18 @@ snapshot that wrote them.
 | 50 | 3,878 ms | 929 ms | **4.18x** | **4.58x** | 4.10x | 5,000 |
 | after maintenance | 1,945 ms | 961 ms | **2.02x** | **2.45x** | 0.63x | — |
 
-Both legs return byte-identical answers at every point — `{n: 625669, s: 3128924193}` for the
-partition probe and `{n: 2000, s: 9865011}` for the point probe, on two entirely different
-write paths. That cross-leg agreement is the correctness control under every timing above.
+The ratios above are **not** a delete-file cost alone (§4.2): at every row the merge-on-read
+leg is also carrying 16.3x the data files and 1.83x the live bytes of the control.
+
+Both legs return byte-identical answers at every checkpoint — the invariant is the **cross-leg
+identity**, on two entirely different write paths, not any particular literal. The values move
+as merges land; at merge 50 and after maintenance they are `{n: 625669, s: 3128924193}` for the
+partition probe and `{n: 2000, s: 9865011}` for the point probe. That agreement is the
+correctness control under every timing above.
 
 ### 4.4 The maintenance sequence at 50 merges of debt
 
-Merge-on-read leg, census after each step. **Total 142.4 s.**
+Merge-on-read leg, census after each step. **Total 142.34 s.**
 
 | step | wall s | result | data files | delete files | manifests | manifest-list B |
 |---|---:|---|---:|---:|---:|---:|
@@ -263,29 +291,62 @@ this leg, because after 50 merges every row carries the longer merged `name` and
 order has destroyed the seed's id clustering. That is fixture shape, recorded not diagnosed.
 
 **And the sequence does not close the gap.** After every procedure has run, the merge-on-read
-table still reads at **2.45x** (partition) and **2.02x** (point) the copy-on-write control.
-Finding F-MW7-1 below is why.
+table still reads at **2.45x** (partition) and **2.02x** (point) the copy-on-write control — and
+it is still carrying **1.90x the live bytes** (647 MB against 340 MB) and 1.75x the data files.
+So the residual, like the gap during the run, is delete files *and* retained data. Finding
+F-MW7-1 below is the mechanism behind both halves.
 
 ```yaml
 FINDING:
   id: F-MW7-1
   severity: S2
   category: AT-6
-  clause: C-004
+  clause: C-004, C-011
   disposition: OPEN
-  title: rewrite_data_files removes no delete files, so a full maintenance pass leaves a merge-on-read table at ~2x the copy-on-write control
+  title: rewrite_data_files never selects a delete-laden data file, so its dead rows and the delete file covering it are retained without bound
+  superseded_first_draft: >
+    The first draft of this finding (2026-08-23) said the surviving delete files were DANGLING,
+    blamed removed_delete_files_count / the remove-dangling-deletes option, and treated the
+    residue as a property of merge-on-read at v2. The Critic refuted all three on 2026-08-24 by
+    measurement and this text replaces it. The record is kept rather than quietly rewritten,
+    because the wrong mechanism is the interesting part: the count that WAS measured (0) fit
+    three different stories and the ledger picked the wrong one without testing it.
+  refuted: >
+    (1) Not dangling — the surviving delete files reference data files that are still LIVE
+    (16/16 references live on the Critic's tiling shape; the 2,500-row pin here asserts
+    references are a subset of the live set). (2) Not the missing option — Spark ends the SAME
+    sequence with ZERO delete files and zero delete records with remove-dangling-deletes OFF
+    (jar default false, javap-verified) and removed_delete_files_count still reported 0.
+    (3) Not write.delete.granularity — Spark reaches zero at BOTH granularity settings, so this
+    is not MOR-2 under another name.
+  mechanism: >
+    Java's BinPackRewriteFilePlanner has three candidate clauses; the fork at 5e7b2e4 wires two.
+    A file is selected when it is outside the size band, or when it carries at least
+    delete_file_threshold delete files — and that threshold defaults to usize::MAX
+    (DELETE_FILE_THRESHOLD_DEFAULT, crates/iceberg/src/maintenance/rewrite_data_files.rs:177).
+    The third clause, tooHighDeleteRatio at DELETE_RATIO_THRESHOLD_DEFAULT = 0.3, is DEFERRED:
+    the module doc at :66-67 and :138-140 states "the delete-RATIO candidate clause is not
+    exposed (it needs per-file known-deleted-record accounting) … The ratio clause never fires
+    here". In Java that clause makes a delete-laden file a candidate regardless of size, the
+    rewrite physically drops its deleted rows, and the delete files covering it die in the
+    rewrite commit. Here a correctly sized file that is 100 % dead is invisible to compaction,
+    and nothing else will ever remove it.
   evidence: >
-    At 50 merges the leg held 400 position-delete files with 10,000,000 delete records.
-    rewrite_position_delete_files folded them to 8 files, then rewrite_data_files rewrote
-    1,646 of 1,696 data files and reported removed_delete_files_count 0. The 8 delete files
-    survive with all 10,000,000 records and 37.4 MB, referencing data-file paths that expire
-    then deleted. The answers stay correct — both legs return identical rows — so the
-    surviving deletes filter nothing; a scan still opens and reads them. Measured cost after
-    the complete sequence: partition probe 1,034 ms against the control's 422 ms (2.45x),
-    point probe 1,945 ms against 961 ms (2.02x). An operator who runs the entire MW-8 runbook
-    cannot reach control cost on this engine.
-  remedy_exists: Java's rewrite_data_files remove-dangling-deletes option, which MW-2 recorded as defaulting off with the options map refused here
-  registry_candidate: a new row beside MOR-2 in docs/spark-sql-iceberg-parity.md; needs its own unit, measure-only here
+    Reproduced as a gate-scale pin (C-011): one 68,523 B data file, inside the bin-pack band for
+    a 64 KiB target, and one MERGE deleting all 2,500 of its rows. After the COMPLETE maintenance
+    sequence the file is still live carrying 2,500 dead rows, one 8,240 B delete file still names
+    it, that name is in the live data-file set, and rewrite_data_files reported
+    removed_delete_files_count 0 while rewriting 4 other files. At 1e7 x 50 the same shape ended
+    the sequence with 8 delete files holding 10,000,000 delete records, the table reading at
+    2.45x (partition) and 2.02x (point) the copy-on-write control and holding 1.90x its live
+    bytes. The answers are correct at every point, which is why this needs a registry row rather
+    than a refusal: nothing goes wrong loudly, it just never gets better.
+  consequence_for_mw8: >
+    The runbook as MW-8 will document it cannot reclaim delete-laden data files on this engine.
+    Cadence bounds how far the scan degrades between passes; it does not bound the retained dead
+    rows, which grow without limit until the fork ask lands.
+  registry: RDF-1 in docs/spark-sql-iceberg-parity.md (BACKLOG, fork work)
+  fork_ask: F-16 in task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md; the pin above is written to go RED when it lands
 FINDING:
   id: F-MW7-2
   severity: S3
@@ -305,33 +366,43 @@ FINDING:
 
 ## 5. The verdict the charter asked for: is MW-9 urgent?
 
-**Yes, and the number that decides it is that the delete-read cost does not shrink when the
-predicate does.** The point probe returns 2,000 rows out of 10,000,000 and Iceberg prunes it
-to a handful of data files; the partition probe returns 625,669 rows and reads a whole
-partition. At 50 merges they degrade to **4.18x** and **4.58x** the copy-on-write control
-respectively — essentially the same factor, for predicates whose data footprints differ by
-300x. Selectivity buys nothing back. That is the signature of `partition` granularity: this
-engine writes one position-delete file per `(spec, partition)` per commit (registry `MOR-2`),
-so a scan that prunes to sixteen data files must still consider all 400 delete files and
-10,000,000 delete records in the partitions it touched — **5,000 delete records read per row
-returned**. Under Spark's default `file` granularity a delete file names the one data file it
-belongs to, and delete reads prune with the data. The degradation is linear and it starts
-early: the partition probe is already at **2.05x** the control by merge 20, on a table where
-only 40 % of the rows have been rewritten once. F-MW7-1 makes it worse rather than better —
-running the entire maintenance runbook still leaves the table at 2.0-2.5x, so cadence alone
-cannot buy the operator out of this. **What this unit does NOT measure is what `file`
-granularity would cost here**, because the engine cannot write that layout; MW-9 must carry
-its own before/after on these same three probes rather than inheriting this verdict as proof
-of its own fix.
+**Yes. The deciding number is the point probe: 858 ms -> 3,878 ms as 50 MERGEs land, a 4.5x
+degradation on a predicate that returns 2,000 rows — 0.02 % of the table.** That probe is a
+narrow id window Iceberg can prune hard on the data side, and it touches all 8 partitions. This
+engine writes one position-delete file per `(spec, partition)` per commit — Iceberg `partition`
+granularity, registry `MOR-2` — so at merge 50 the probe must open every delete file in every
+partition it touches: **all 400 of them, 10,000,000 delete records, for 2,000 rows returned.**
+Under Spark's default `file` granularity a delete file names the one data file it belongs to,
+and delete reads prune alongside data reads instead of staying whole. The degradation is linear
+and it starts early — against the copy-on-write control the point probe is at 1.67x by merge 20,
+on a table where only 40 % of the rows have been rewritten once. F-MW7-1 makes it worse rather
+than better: running the entire maintenance runbook still leaves the table at 2.0-2.5x, so
+cadence alone cannot buy the operator out of this.
+
+Two things this verdict deliberately does **not** claim. It does not claim the partition probe
+as corroboration — that probe reads a whole partition, so its delete reads would not prune much
+under either granularity, and its similar ratio is not independent evidence. And it does not
+claim to know what `file` granularity would cost **here**: this engine cannot write that layout,
+so the counterfactual is unmeasured. **MW-9 must carry its own before/after on these same three
+probes** rather than inherit this verdict as proof of its own fix.
 
 ## 6. What the numbers set as MW-8's runbook defaults
 
-1. **Cadence: run the sequence every 10 MERGEs; hard ceiling 20.** Degradation against the
-   control crosses 2x at **~19 merges** on the earliest probe (partition: 0.86x at merge 10,
-   2.05x at merge 20) and ~24 merges on the point probe (1.67x -> 2.52x between 20 and 30).
-   At merge 10 every probe is still at or below the control. In table-relative terms the 2x
-   line sits near **delete records = 30-40 % of live rows**; state the trigger that way for
-   tables whose merges are not 2 %.
+1. **Cadence: run the sequence every 10 MERGEs. The ceiling is merge 20, which already
+   measures 2.05x — a ceiling that tolerates ~2x, not one that holds under it.** Interpolating
+   the control-relative curve puts the 2x crossing at **19.6 merges** on the earliest probe
+   (partition: 0.86x at merge 10, 2.05x at merge 20); the point probe crosses at ~24
+   (1.67x -> 2.52x between 20 and 30). At merge 10 every probe is still at or below the control.
+   **Caveat on the cadence-10 figure:** merge 10 reads better than merge 0 partly because 416
+   data files parallelise better than 96 (§4.1), so "at or below the control at merge 10"
+   carries a confound this unit did not separate. It is a safe recommendation because it errs
+   early, not because the confound was ruled out.
+   In table-relative terms the 2x line sits at **delete records = 39.2 % of live rows**
+   (19.6 x 200,000 / 10,000,000). State the trigger that way for tables whose merges are not
+   2 % — **but note the crossing may track the delete-FILE count (partitions x merges = 157 at
+   the crossing) rather than the record fraction.** This unit varied only the merge count, so
+   the two are collinear in it and it cannot say which drives the cost. MW-8 should prefer the
+   file-count trigger if it must pick one, because that is what a scan opens.
 2. **Order is the charter's, and the cost says why.** Position-delete compaction ran 44.3 s
    over 400 files and left 8; data compaction then ran 92.4 s reading those 8 instead of 400.
    Reversing the two makes the expensive step read 50x the delete files.
@@ -341,9 +412,13 @@ of its own fix.
    manifests and 67 manifest lists in 5.2 s.
 4. **`rewrite_manifests` and the orphan dry run are free — run both every cycle.** 0.4 s and
    0.1 s at 50 merges of debt. `rewrite_manifests` cut the manifest list **25,665 B ->
-   3,659 B (7.0x)**, which every reader pays on every scan.
+   3,659 B (7.0x)**, which every reader pays on every scan. **The orphan step is a lagging net,
+   by construction:** its 24-hour floor means a cycle never sees the orphans that the same
+   cycle's `expire_snapshots` just created. At a 10-merge cadence it is catching the previous
+   day's cycle, not this one. Document it as a safety net with a day of latency, never as
+   confirmation that the cycle just run left nothing behind.
 5. **Budget the whole sequence at ~2.5 minutes per 1e7-row merge-on-read table with 50
-   merges of debt** (142.4 s measured), and ~21 s for the copy-on-write equivalent. At the
+   merges of debt** (142.34 s measured), and 21.19 s for the copy-on-write equivalent. At the
    recommended cadence of 10 merges the debt is a fifth of that.
 6. **Tell the operator the write/read trade in numbers.** Merge-on-read MERGE plateaus at
    ~28 s where copy-on-write plateaus at ~113 s (**4.1x cheaper to write**), and
@@ -351,6 +426,12 @@ of its own fix.
    plus the runbook is the right default; merge-on-read without it is not.
 7. **The orphan dry run answering zero rows means nothing on a young warehouse** (24-hour
    floor). Do not document it as a clean bill of health.
+8. **State the limit of the runbook honestly.** On this engine the sequence cannot reclaim
+   delete-laden data files at all (F-MW7-1 / registry `RDF-1` / fork ask F-16). Cadence bounds
+   how far the SCAN degrades between passes; it does not bound the dead rows retained, which
+   grow without limit until the fork carries Java's delete-ratio clause. An MW-8 runbook that
+   promises a table returns to baseline after a pass would be promising something this engine
+   does not do.
 
 ## 7. Provocation proofs (pin liveness)
 
@@ -366,6 +447,14 @@ was reverted. Nothing below is committed.
 | P5 | the probe partition changes between calls (`int(time.time()) % partitions`) | `test_scan_battery_is_fixed_across_checkpoints` (C-008) | `assert {'count_star'…} == {'count_star'…}` — `Differing items` on `predicate_partition` |
 | P6 | `generation` dropped from every mutable column of the merge source | `test_generated_frames_are_deterministic` (C-010) | `assert not source.equals(overlap)` — `assert not True`; generations 3 and 4 build the same 50 rows, `m_149` in both |
 
+| P7a | C-011's target file size dropped to 8 KiB, putting the seeded file OUT of the bin-pack band | `test_delete_laden_in_band_file_survives_the_runbook` (C-011) | `AssertionError: seeded file 68523 B is outside the bin-pack band for 8192` — `assert 68523 <= (1.8 * 8192)` |
+| P7b | the same, with C-011's band precondition removed so the run continues | same | `AssertionError: the 100 %-dead seeded file is still live: it was never a rewrite candidate` — the out-of-band file WAS rewritten |
+
+P7a and P7b are the red-green pair that identifies the mechanism rather than just asserting the
+outcome. In band, the 100 %-dead file is kept forever; out of band, the very same file is
+rewritten and its delete file goes dangling. Size is the only thing that changed, which is the
+candidate filter and nothing else.
+
 C-003, C-005 and C-009 are held by the same battery and were not separately mutated: each
 asserts a shape the driver reports rather than a branch it chooses.
 
@@ -379,8 +468,15 @@ asserts a shape the driver reports rather than a branch it chooses.
   remainder becomes MW-8 -> V3-2.
 - Slate: MW-7 leaves [../../../briefs/next-sequence.md](../../../briefs/next-sequence.md);
   MW-8 is next and takes its defaults from §6.
-- Registry: two OPEN findings above are candidates for
-  [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md).
-  Measure-only unit; neither is written there by this unit.
+- Registry: **`RDF-1`** is written into
+  [../../../docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md) for
+  F-MW7-1 (2026-08-24, after the Critic established the mechanism and the Spark oracle).
+  F-MW7-2 stays a ledger finding — it is a disclosure about a count, not a behaviour claim.
+- Fork: ask **F-16** in
+  [../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md),
+  with C-011's pin named as the engine pin that flips when it lands.
+- Design: a dated errata on
+  [../../../docs/design/format-v3-track.md](../../../docs/design/format-v3-track.md) §3b — its
+  v2 sentence held for a 9 %-deleted fixture and is not general.
 - Scratch: the warehouses and Parquet trees under the run's `--scratch` root were deleted
   after the numbers were read. Nothing generated by this unit is committed.

@@ -126,21 +126,31 @@ pins that; `spec_id` still refuses — registry `MANIFEST-2`). Ledger:
 **The charter said 1e7 rows × 100 MERGEs; it ran 1e7 × 50.** A naive rows² projection off the
 mandated 1e6 × 10 calibration said 15.6 h; measuring the law at 1e7 instead showed both legs
 PLATEAU (merge-on-read ~28 s/merge, copy-on-write ~113 s), which put 1e7 × 100 at 3.72 h on
-top of the 0.75 h the calibration and two scaling probes had already spent — over a ~4 h
+top of the 0.509 h the calibration and three scaling probes had already spent — over a ~4 h
 budget for everything. One rung down the charter's own ladder: 1e7 × 50, projected 1.91 h,
-actual 2:09:29. Full arithmetic in §1 of the ledger.
+actual 2:09:29 (+13.0 %). Full arithmetic in §1 of the ledger.
 
 What the numbers say. Merge-on-read grows linearly and hard — **+8 delete files, +200,000
 delete records, +32 data files, +2 manifests per merge** — reaching **4.18×/4.58×** the
-copy-on-write control on the two predicate probes by merge 50 and crossing **2× at ~19
-merges**. The copy-on-write control is flat over the same 50 merges, so the whole degradation
-is delete-file reads. **MW-9 is urgent**, and the deciding number is that the cost does not
-shrink when the predicate does: a probe returning 2,000 rows and a probe returning 625,669
-degrade to the same ~4×, which is what `partition` granularity means. Two OPEN findings the
-unit records rather than fixes: `rewrite_data_files` removes no delete files, so the full
-runbook still leaves a merge-on-read table at **2.0–2.5×** the control (F-MW7-1, S2, registry
-candidate); and position-delete compaction cuts the file count 50× while growing the delete
-bytes 31 % (F-MW7-2, S3). Ledger:
+copy-on-write control on the two predicate probes by merge 50 and crossing **2× at 19.6
+merges**. The copy-on-write control is flat over the same 50 merges; the gap is delete files
+**plus the data-file fan-out** merge-on-read leaves behind (16.3× the control's data files at
+merge 50), which this unit does not separate. **MW-9 is urgent**, and the deciding number is
+the point probe: **858 → 3,878 ms** for a predicate that returns 0.02 % of the rows, because
+`partition` granularity forces open every delete file in every partition it touches — 400
+files and 10,000,000 delete records for 2,000 rows returned.
+
+**The Critic's pass (2026-08-24) refuted this unit's first mechanism and it is worth reading
+before MW-8 starts.** The delete files that survive the runbook are **not** dangling, the
+missing `remove-dangling-deletes` option is **not** why, and it is **not**
+`write.delete.granularity` — Spark ends the same sequence at zero delete files at both
+granularity settings with that option off. The fork at `5e7b2e4` **defers** Java's
+`tooHighDeleteRatio` candidate clause (`DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`), so a correctly
+sized data file whose rows are 100 % deleted is never a rewrite candidate and its dead rows are
+retained without bound. New registry row **`RDF-1`**, new fork ask **F-16**, characterization
+pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` (C-011,
+written to go RED when F-16 lands). The second finding stands as a disclosure: position-delete
+compaction cuts the file count 50× while growing the delete bytes 31 % (F-MW7-2, S3). Ledger:
 [../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/completed/mw-7-scale-measurement-ledger.md).
 **MW-8** is next, and §6 of that ledger is its defaults.
 

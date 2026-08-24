@@ -16,6 +16,11 @@ declines it (a dated ruling in the intake, then the archive).
   path, the Hadoop metadata-pointer math, the v3 type system), each with the engine-side
   evidence, the consumed surfaces a change must not break, and the engine pin that flips when
   it lands (F-15 excepted — it carries neither observation nor pin until V3-6 charters).
+  **F-16 added 2026-08-24 from MW-7:** the delete-RATIO candidate clause in `RewriteDataFiles`
+  (`tooHighDeleteRatio`, Java `DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`), deferred in the fork, so
+  a correctly sized 100 %-dead data file is never compacted and its dead rows are retained
+  without bound. Registry `RDF-1`; the engine pin that flips is
+  `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`.
 - [roadmap-intake-2026-08-21.md](roadmap-intake-2026-08-21.md) — **the roadmap intake
   (2026-08-21):** every campaign brief, queue, and grant that had existed only in planning space,
   reduced to eleven open workstreams, one closed ledger, and five items needing verification

@@ -388,7 +388,10 @@ history-rewrite; provenance and the options weighed:
     rewrites them in a second leg), `MANIFEST-2` (`spec_id` refuses; `use_caching` is an
     accepted no-op and takes a boolean literal where Spark also casts a string) and
     `MANIFEST-3` (above `commit.manifest.target-size-bytes` the two engines write a different
-    number of manifests, so `added_manifests_count` diverges; the rewritten count matches) in
+    number of manifests, so `added_manifests_count` diverges; the rewritten count matches), and
+    MW-7's `RDF-1` (a correctly sized data file whose rows are all deleted is never a
+    `rewrite_data_files` candidate, so its dead rows and the delete file covering it are
+    retained without bound; Spark reclaims both) in
     [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). `MOR-1` retired at
     RP-1 (fork F-1, floor 5). The two result-schema
     gaps the charter queued for MW-5 were **closed in MW-1/MW-2**, not registered. Two of the
@@ -406,23 +409,33 @@ history-rewrite; provenance and the options weighed:
     Merge-on-read grows exactly linearly per merge: **+8 position-delete files (one per
     partition — registry `MOR-2`), +200,000 delete records, +32 data files, +2 manifests,
     +478 manifest-list bytes**. Its predicate scans reach **4.18×** (point) and **4.58×**
-    (partition) the copy-on-write control by merge 50, crossing **2× at ~19 merges**. The
-    copy-on-write control is **flat** over the same 50 merges (1.08× / 1.18×) — so the
-    degradation is delete files and nothing else. Copy-on-write pays for it on write:
+    (partition) the copy-on-write control by merge 50, crossing **2× at 19.6 merges**. The
+    copy-on-write control is **flat** over the same 50 merges (1.08× / 1.18×). The gap is the
+    delete files **plus the data-file fan-out** merge-on-read leaves behind — at merge 50 it
+    also carries 16.3× the control's data files and 1.83× its live bytes, because every MERGE
+    appends rather than rewrites; this unit does not separate the two. Copy-on-write pays on
+    write:
     MERGE plateaus at **~113 s** against merge-on-read's **~28 s** (4.1×), and its warehouse
     held **14,782 MB for a 342 MB table (43×)** until `expire_snapshots` ran.
     The full maintenance sequence took **142.4 s** on the merge-on-read leg (delete files
     400→8, data files 1,696→170, manifest list 25,665→3,659 B) and **21.2 s** on the
-    copy-on-write leg. **It does not close the gap:** `rewrite_data_files` reported
-    `removed_delete_files_count` 0, so 8 dangling delete files holding 10,000,000 records
-    survive and the table still reads at **2.45× / 2.02×** the control (ledger finding
-    F-MW7-1, OPEN). Driver: `python/repark-parity/bench/mw7/`; machinery pin:
+    copy-on-write leg. **It does not close the gap:** 8 delete files holding
+    10,000,000 records survive and the table still reads at **2.45× / 2.02×** the control while
+    holding 1.90× its live bytes. They are **not dangling** — they name live data files.
+    `rewrite_data_files` never selects a delete-laden file, because the fork at `5e7b2e4` defers
+    Java's `tooHighDeleteRatio` clause (`DELETE_RATIO_THRESHOLD_DEFAULT = 0.3`) and defaults the
+    delete-count threshold to `usize::MAX`, so a correctly sized 100 %-dead file is invisible to
+    compaction and its dead rows are retained without bound. Spark ends the same sequence at
+    **zero** delete files at both `write.delete.granularity` settings with
+    `remove-dangling-deletes` off. Registry row **`RDF-1`**, fork ask **F-16**, ledger finding
+    F-MW7-1 (OPEN), pinned by `test_delete_laden_in_band_file_survives_the_runbook`. Driver: `python/repark-parity/bench/mw7/`; machinery pin:
     `python/repark/tests/test_mw7_scale_smoke.py`. Ledger:
     [task/ledgers/completed/mw-7-scale-measurement-ledger.md](task/ledgers/completed/mw-7-scale-measurement-ledger.md).
-    **The verdict the charter asked for: MW-9 is urgent** — the delete-read cost does not
-    shrink when the predicate does (two probes whose data footprints differ 300× degrade to
-    the same ~4×), which is the signature of partition granularity. MW-8's defaults follow
-    from §6 there: run the sequence every 10 merges, ceiling 20.
+    **The verdict the charter asked for: MW-9 is urgent** — the point probe goes
+    **858 → 3,878 ms** for a predicate returning 0.02 % of the rows, because partition
+    granularity forces open every delete file in every partition it touches (400 files,
+    10,000,000 records, for 2,000 rows returned). MW-8's defaults follow from §6 there: run the
+    sequence every 10 merges, with merge 20 the ceiling that already measures 2.05×.
   - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6 and MW-7 are delivered;
     MW-8 runbook → V3-2 create-v3 opt-in remain.
     Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 is

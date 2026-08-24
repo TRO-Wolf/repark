@@ -1701,6 +1701,48 @@ the pin rather than obeying it.
   and outside the maintenance campaign. **Contents are unaffected** — the same rows are masked
   either way.
 
+### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
+
+- **repark** — at fork pin `5e7b2e4` a data file is a rewrite candidate only when it is outside
+  the size band (`length < min_file_size || length > max_file_size`) or carries at least
+  `delete_file_threshold` delete files. That threshold defaults to `usize::MAX`
+  (`DELETE_FILE_THRESHOLD_DEFAULT`, `crates/iceberg/src/maintenance/rewrite_data_files.rs:177`),
+  and Java's THIRD candidate clause, `tooHighDeleteRatio`, is **deferred** in the fork — the
+  module doc says so in as many words: "the delete-RATIO candidate clause is not exposed … The
+  ratio clause never fires here" (same file, `:66-67` and `:138-140`). So a **correctly sized**
+  data file whose rows are 100 % deleted is invisible to compaction. It is kept, its dead rows
+  with it, and because `removed_delete_files_count` is a constant 0 (registry row context: the
+  fork composes no dangling-delete removal — fork ask F-3) the position-delete file covering it
+  survives too, **still naming a LIVE data file**. Measured on a 2,500-row v2 merge-on-read
+  fixture: one 68,523 B data file, inside the band for a 64 KiB target, and one `MERGE` deleting
+  all 2,500 of its rows. After the COMPLETE maintenance sequence
+  (`rewrite_position_delete_files` → `rewrite_data_files` → `rewrite_manifests` →
+  `expire_snapshots` → `remove_orphan_files`) the file is still live with 2,500 dead rows, and
+  one 8,240 B delete file still names it. At 1e7 rows × 50 MERGEs the same shape ended the
+  sequence with **8 delete files holding 10,000,000 delete records** (MW-7 §4.4).
+- **Apache Spark** — the same sequence on the same shape ends with **zero** delete files and
+  **zero** delete records, at **both** `write.delete.granularity` settings, with
+  `removed_delete_files_count` reported as 0 and `remove-dangling-deletes` OFF (jar default
+  `false`, javap-verified). `BinPackRewriteFilePlanner` carries
+  `DELETE_RATIO_THRESHOLD_DEFAULT = 0.3` and a live `tooHighDeleteRatio` clause: a delete-laden
+  file is a candidate **regardless of size**, the rewrite physically drops its deleted rows, and
+  the delete files covering it die in the rewrite commit.
+  *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, 200,000-row v2 merge-on-read
+  fixtures, tiling and 30 %-deleted shapes; measured 2026-08-24 during MW-7's Critic pass.)*
+- **Pin** —
+  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
+- **Rationale** — BACKLOG, and it is **fork** work (ask **F-16** in
+  [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
+  Three things this is **not**, each ruled out by measurement rather than assumed: it is not
+  format-v2 being v2 (Spark reaches zero on v2), not `write.delete.granularity` (Spark reaches
+  zero at both settings, so it is not `MOR-2` wearing a different hat), and not the missing
+  `remove-dangling-deletes` option (that option is OFF on the Spark side too, and the surviving
+  delete files here are not dangling — they name live files). **Contents are unaffected:** the
+  answers are correct at every point, which is exactly why this needs a registry row rather than
+  a refusal — nothing goes wrong loudly. What is retained is dead bytes and a delete file every
+  scan opens, without bound, and the maintenance runbook as documented cannot reclaim either.
+  Closing the row means porting Java's ratio clause into the fork's planner.
+
 ### MANIFEST-1 — `rewrite_manifests` rewrites data manifests only; Spark rewrites delete manifests too
 
 - **repark** — `CALL <catalog>.system.rewrite_manifests(table => …)` re-groups the **data**

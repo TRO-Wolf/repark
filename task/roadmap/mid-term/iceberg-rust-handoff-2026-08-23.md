@@ -356,13 +356,53 @@ increments.
 - **Java reference:** `org.apache.iceberg.types` and the v3 spec's type/default-value sections,
   1.10.0 bytecode where the spec is ambiguous.
 
+### F-16 (P1, added 2026-08-24 from MW-7) — `RewriteDataFiles`: the delete-RATIO candidate clause
+
+- **Engine observation.** MW-7 ran 1e7 rows × 50 MERGEs through the full maintenance sequence
+  and the merge-on-read table ended it holding **8 position-delete files with 10,000,000 delete
+  records**, still reading at 2.0-2.5× a copy-on-write control. The mechanism is not dangling
+  deletes and not `write.delete.granularity`: the surviving delete files name **live** data
+  files. Those files are correctly sized, so `outsideDesiredFileSizeRange` does not select them;
+  `delete_file_threshold` defaults to `usize::MAX`, so `tooManyDeletes` does not either; and the
+  third Java clause is deferred here. A data file whose rows are **100 % deleted** is therefore
+  never a rewrite candidate, and its dead rows are retained without bound under a runbook that
+  is being followed correctly. Reproduced at 2,500 rows: a 68,523 B file in-band for a 64 KiB
+  target, one MERGE deleting all of it, still live after the complete sequence.
+- **Fork location.** `crates/iceberg/src/maintenance/rewrite_data_files.rs` — the deferral is
+  stated at `:66-67` and `:138-140` ("the delete-RATIO candidate clause is not exposed (it needs
+  per-file known-deleted-record accounting); only the delete-COUNT threshold
+  (`delete_file_threshold`) is wired. The ratio clause never fires here"), and
+  `DELETE_FILE_THRESHOLD_DEFAULT: usize = usize::MAX` at `:177`. Read at pin `5e7b2e4`; re-read
+  at `main` before acting.
+- **Java reference.** `BinPackRewriteFilePlanner`: `DELETE_RATIO_THRESHOLD_DEFAULT = 0.3` with a
+  live `tooHighDeleteRatio` clause — a delete-laden file is a candidate regardless of size. On
+  the live Spark 4.0.1 + Iceberg 1.10.0 oracle the same sequence ends at **zero** delete files
+  and zero delete records, at both `write.delete.granularity` settings, with
+  `remove-dangling-deletes` OFF (jar default `false`, javap-verified). So this is a real
+  behaviour gap, not an option the engine forgot to pass.
+- **Ask.** Expose `delete_ratio_threshold` on `RewriteDataFiles` with Java's `0.3` default and
+  wire `tooHighDeleteRatio` into the candidate filter. It needs per-file known-deleted-record
+  accounting, which is why it was deferred; the planner already has each task's attached delete
+  files, so the accounting is the work.
+- **Acceptance.** The engine pin that flips is
+  `python/repark/tests/test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook`
+  — a characterization pin, written to go RED when this lands. Its fixture's 100 %-dead in-band
+  file must become a candidate, be rewritten, and take its delete file with it, leaving the
+  table at zero delete files with the same 2,500 rows. Registry row **RDF-1** retires with it.
+- **Relationship to F-3.** F-3 is the `remove-dangling-deletes` option for delete files whose
+  data file is GONE. This item is the other half: delete files whose data file is still there
+  and never gets selected. Landing F-3 alone does not close RDF-1, and the oracle shows why —
+  Spark reaches zero with that option off.
+
 ## 4. Not fork work — do not pick these up
 
 Listed so they are not re-proposed fork-side:
 
 - **MOR-2** (`write.delete.granularity`): the grouping is in the engine's MOR writer
   (`repark-iceberg/src/write/position_delete.rs`); the fork's `PositionDeleteFileWriter`
-  writes as given, matching Java. Engine MW-9.
+  writes as given, matching Java. Engine MW-9. *(2026-08-24: MW-7's delete-retention finding
+  looks adjacent but is NOT this — it reproduces at both granularities on the Spark oracle. It
+  is F-16 above.)*
 - Wiring `rewrite_manifests`, `remove_dangling_delete_files`, `convert_equality_delete_files`
   as `CALL` procedures — engine-side (MW-6 and "watch" items).
 - `WHEN NOT MATCHED BY SOURCE`, `TRUNCATE`, partition-scoped overwrite *statements* — engine
