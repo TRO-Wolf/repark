@@ -37,8 +37,8 @@ the spine wins.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../../../docs/skills/Opus.md](../../../docs/skills/Opus.md) (the per-tier operating
-  manual that restates these rules at working density).
+- Related: [../engineering-method/SKILL.md](../engineering-method/SKILL.md) (the working method
+  that restates these rules at working density).
 
 ## Debug
 

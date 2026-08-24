@@ -213,8 +213,10 @@ history-rewrite; provenance and the options weighed:
   merged as [#211](https://github.com/TRO-Wolf/repark/pull/211)** / `b966c9b`). Four Python rules the owner stated, now written into the contract:
   types on everything; Pydantic v2 `BaseModel` rather than `dataclasses`/`attrs`; no function
   defined inside another function; functions named as verb phrases for the work they do. The rules
-  themselves landed in [AGENTS.md](AGENTS.md) "Python" and in all three tier manuals under
-  [docs/skills/](docs/skills/map.md) with the guard that holds two of them, **merged as
+  themselves landed in [AGENTS.md](AGENTS.md) "Python" and in the tier manuals (since 2026-08-24
+  generalized into
+  [.agents/skills/engineering-method/SKILL.md](.agents/skills/engineering-method/SKILL.md)) with
+  the guard that holds two of them, **merged as
   [#201](https://github.com/TRO-Wolf/repark/pull/201)** / `5f05d8c`; the conformance work is what
   remains.
   - **Measured debt (AST scan at guard arming 2026-08-21, not an estimate):**

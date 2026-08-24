@@ -207,7 +207,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make check-lib-py` and the ci.yml `python` job in the same PR.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
-  guard: the two rules Ruff cannot express, and the SSOT for both. Over every `*.py` under
+  guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
+  it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
+  [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under
   `python/repark/src`, `python/repark-parity` and `scripts/`: (1) **no function defined inside
   another function**, with an inline `# nested-def: <reason>` pragma for the three sanctioned
   cases (a decorator closing over its own arguments, a callback whose closure over local state is

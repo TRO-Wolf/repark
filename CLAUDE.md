@@ -25,10 +25,10 @@ CLAUDE.md restates nothing. Follow the pointers:
 
 1. **[AGENTS.md](AGENTS.md) first**, then follow its "Read first" path
    (README → STATUS → ARCHITECTURE → DEVELOPMENT → AGENTS.md → docs/testing.md).
-2. **The operating manual for your model tier** in [docs/skills/](docs/skills/) — one model
-   family's view of the engineering conventions, not a separate source of truth:
-   [Opus.md](docs/skills/Opus.md) (the fullest write-up), [Sonnet.md](docs/skills/Sonnet.md), or
-   [Haiku.md](docs/skills/Haiku.md). Read the one matching the model you are running as.
+2. **The engineering method** —
+   [.agents/skills/engineering-method/SKILL.md](.agents/skills/engineering-method/SKILL.md), the
+   portable agent-agnostic working method (risk-first, workflow, naming, Rust/Python defaults,
+   debugging, the done gate). One instruction set for every tier — not a separate source of truth.
 3. The `map.md` of every directory your task will touch (AGENTS.md "`map.md` in every directory").
 
 CLAUDE.md keeps this filename so Claude tooling that auto-loads it still fires and lands you on
@@ -51,8 +51,13 @@ is the neutral rule; this is how it maps onto Claude tiers:
 
 - Opus orchestrates and owns architecture and assembly.
 - Delegated fan-out (search, mechanical edits, narrow implementation) defaults to **Sonnet** or
-  **Haiku** — pass the tier explicitly. See [docs/skills/Sonnet.md](docs/skills/Sonnet.md) and
-  [docs/skills/Haiku.md](docs/skills/Haiku.md).
+  **Haiku** — pass the tier explicitly, and brief the tier's posture: **Sonnet** is the delegated
+  implementation tier (executes well-scoped work; architecture and cross-cutting decisions stay
+  with the orchestrating session — surface ambiguity rather than inventing); **Haiku** is the
+  narrow mechanical tier (precisely specified edits; stop and hand back the moment the task needs
+  a design decision). Every tier reads the same
+  [engineering method](.agents/skills/engineering-method/SKILL.md); the non-negotiables are
+  identical across tiers.
 - **Do not spawn Opus sub-agents without a direct, explicit request naming Opus.**
 - Single agent in the main thread is the default; do not fan out unless the user asks.
 
