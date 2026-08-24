@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-24 · **Branch:** `feat/mw6-wave` · **Base:** `b96db91` (MW-7's departure
 commit on this branch) · **Charter:** owner, 2026-08-23 (slate:
-[../../../briefs/next-sequence.md](../../../briefs/next-sequence.md) "MW-8"; defaults: §6 of
-[mw-7-scale-measurement-ledger.md](mw-7-scale-measurement-ledger.md))
+[../../../briefs/next-sequence.md](../../../../briefs/next-sequence.md) "MW-8"; defaults: §6 of
+[mw-7-scale-measurement-ledger.md](2026-08-24-mw-7-scale-measurement-ledger.md))
 · **Fork pin:** `5e7b2e4` (RP-1)
 
 **Retires:** moved to `completed/` in this departure commit.
@@ -16,7 +16,7 @@ Table management in production is one scheduled CYCLE, not six separate procedur
 each documented on their own; the order, the cadence, the cutoff to pass, and the honest limit
 were not.
 
-- **The guide section** — [../../../docs/guide/iceberg-guide.md](../../../docs/guide/iceberg-guide.md)
+- **The guide section** — [../../../docs/guide/iceberg-guide.md](../../../../docs/guide/iceberg-guide.md)
   "The maintenance runbook", the last subsection of "Maintenance". Seven numbered steps an
   Airflow DAG mirrors, the executed `CALL` block, then the operating rules: the expire cutoff and
   what it costs in time travel, why the order is load-bearing, the cadence and its ceiling, the
@@ -278,19 +278,19 @@ a shape the recorded cycle reports rather than a branch anything chooses.
 
 ## 7. Lockstep
 
-- Guide: [../../../docs/guide/iceberg-guide.md](../../../docs/guide/iceberg-guide.md) "The
-  maintenance runbook", rowed in [../../../docs/guide/map.md](../../../docs/guide/map.md).
+- Guide: [../../../docs/guide/iceberg-guide.md](../../../../docs/guide/iceberg-guide.md) "The
+  maintenance runbook", rowed in [../../../docs/guide/map.md](../../../../docs/guide/map.md).
   **Verified by executing the printed block itself** — extracted from the page, run against the
   built module on the §3 fixture (6,000 rows, 2 partitions, six MERGEs), at three cutoffs. Steps
   2 to 4 did real work in every run (`12, 2`; 48 rewritten / 4 added; `9, 1`) and step 5's
   results are the §3.2 table. The earlier one-row check is withdrawn: it exercised no step.
 - Pin: `python/repark/tests/test_mw8_runbook.py`, rowed in
-  [../../../python/repark/tests/map.md](../../../python/repark/tests/map.md).
+  [../../../python/repark/tests/map.md](../../../../python/repark/tests/map.md).
 - Driver reuse: the census, the generator, the CTAS, the MERGE SQL and the sequence itself come
-  from [../../../python/repark-parity/bench/mw7/map.md](../../../python/repark-parity/bench/mw7/map.md).
+  from [../../../python/repark-parity/bench/mw7/map.md](../../../../python/repark-parity/bench/mw7/map.md).
   This unit adds no second implementation of any of them, and nothing under `bench/` changed.
 - STATUS: a dated MW-8 line on the MW scorecard; the remainder becomes V3-2.
-- Slate: MW-8 leaves [../../../briefs/next-sequence.md](../../../briefs/next-sequence.md); V3-2
+- Slate: MW-8 leaves [../../../briefs/next-sequence.md](../../../../briefs/next-sequence.md); V3-2
   is next.
 - Registry: no new row. `RDF-1`, `MOR-2`, `ORPHAN-1`, `ORPHAN-2`, `MANIFEST-1`, `MANIFEST-2` and
   `MANIFEST-3` are cited by the guide and unchanged by this unit. F-MW8-2 is the runbook meeting

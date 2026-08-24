@@ -20,6 +20,9 @@ reach delegation through the ordinary arm.
 ## Contents
 
 - `lib.rs` — manifest: module list, `pub use dialect::AnsiDialect`, `pub use router::execute`.
+- `v3_create.rs` — **V3-2 (test-only):** ANSI CREATE/CTAS `format_version = 3` opt-in pins,
+  split out of `tests.rs` so that file stays under its rust-file-size ceiling
+  (`Model: Grok 4.6 xHigh` on the module's functions).
 - `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation
@@ -51,6 +54,7 @@ reach delegation through the ordinary arm.
   private modules in `repark-spark`, and `repark-sql` must not take a door→door edge, nor the
   `repark-functions` edge the Spark gate uses to read its conf. Same conf key, same grandfather
   rule, same refusal class — read via `ConfigOptions::entries()`.
+  **V3-2** reads `repark.sql.allow_create_format_version_3` the same way.
   Tests: [guards/map.md](guards/map.md).
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
@@ -59,7 +63,10 @@ reach delegation through the ordinary arm.
   false-positive. Backticks are deliberately NOT treated as quoting (they are the Spark-ism the
   sniff reports). In-module tests.
 - `create_table.rs` — CTAS + column-def `CREATE TABLE`: Q15 target routing (registered Iceberg
-  catalog or LOUD refuse — never a silent `MemTable`), clause refusals, A11 nanosecond-timestamp
+  catalog or LOUD refuse — never a silent `MemTable`), clause refusals, **V3-2** `format_version`
+  resolved at execute against `repark.sql.allowCreateFormatVersion3` (default false; entries()
+  reader, no `repark-functions` product edge; `execute_staged_create` /
+  `iceberg_table_creation` / `iceberg_create_format_version` carry `Model: Grok 4.6 xHigh`), A11 nanosecond-timestamp
   refuse on the column-def path (column + precision 9 + `TIMESTAMP(6)`; CTAS untouched), the
   three-way `LocationPolicy` resolution (**A13:** `TempFallbackAllowed` root is the memory
   catalog warehouse on the `register_memory_catalog` path), staged create/replace, and the service-managed
@@ -77,7 +84,8 @@ reach delegation through the ordinary arm.
   eagerly, so an inner `SELECT … INTO ice.ns.x` was published before the refuse saw the plan —
   measured Ok + both tables persisted on BASE). Tests:
   [create_table/map.md](create_table/map.md).
-- `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`,
+- `properties.rs` — the curated `WITH (…)` vocabulary (Q1/G4/G9): `format`, `format_version`
+  (V3-2: `'2'` and `'3'` stored at parse; execute applies the session opt-in),
   `location`, `partitioning`, the `extra_properties = MAP(ARRAY[…], ARRAY[…])` raw-key hatch,
   and the reserved refusals (`sorted_by`, ORC/AVRO) that name their triggers.
   Tests: [properties/map.md](properties/map.md).

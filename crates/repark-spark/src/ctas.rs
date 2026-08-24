@@ -39,6 +39,8 @@ pub(crate) struct Ctas {
     or_replace: bool,
     /// `TBLPROPERTIES (...)` (e.g. `format-version`), applied at table creation.
     properties: HashMap<String, String>,
+    /// Requested `TBLPROPERTIES ('format-version' = …)`, consumed at execute (session opt-in).
+    format_version: Option<String>,
     /// The `PARTITIONED BY` fields, in clause order (empty = unpartitioned) — identity columns
     /// and non-identity transforms (`bucket`/`truncate`/`year[s]`/`month[s]`/`day[s]`/`hour[s]`).
     /// Extracted by the token pre-pass and validated in [`build_ctas`] (arity + width `> 0`);
@@ -146,18 +148,9 @@ pub(crate) fn build_ctas(
             }
         }
     }
-    // `format-version` is an Iceberg RESERVED property — iceberg-rust rejects it as a plain
-    // table property at creation. The engine creates format v2 tables (the iceberg-rust
-    // default), so requesting '2' is satisfied by consuming the key; any other version is a
-    // deterministic reject, never a silently ignored request.
-    if let Some(version) = properties.remove("format-version")
-        && version.trim() != "2"
-    {
-        return Err(DataFusionError::NotImplemented(format!(
-            "TBLPROPERTIES 'format-version' = '{version}' is not supported (tables are created \
-             as Iceberg format v2)"
-        )));
-    }
+    // Reserved Iceberg key — consumed here, applied as `TableCreation.format_version` at execute
+    // (V3-2: v3 needs `repark.sql.allowCreateFormatVersion3`).
+    let format_version = properties.remove("format-version");
 
     Ok(Ctas {
         catalog: catalog.clone(),
@@ -169,6 +162,7 @@ pub(crate) fn build_ctas(
         or_replace: create.or_replace,
         properties,
         partition_fields,
+        format_version,
     })
 }
 
@@ -255,6 +249,8 @@ pub(crate) async fn execute_ctas(
     let iceberg_schema =
         arrow_schema_to_schema_auto_assign_ids(arrow_schema.as_ref()).map_err(iceberg_err)?;
     let partition_spec = build_partition_spec(&iceberg_schema, &ctas.partition_fields)?;
+    let format_version =
+        crate::create_table::iceberg_create_format_version(ctx, ctas.format_version.as_deref())?;
 
     if matches!(mode, CtasMode::ServiceManagedCreate) {
         return execute_ctas_service_managed(
@@ -264,6 +260,7 @@ pub(crate) async fn execute_ctas(
             table_ident,
             iceberg_schema,
             partition_spec,
+            format_version,
             query,
         )
         .await;
@@ -279,6 +276,7 @@ pub(crate) async fn execute_ctas(
             .location(plan.location)
             .schema(iceberg_schema)
             .partition_spec_opt(partition_spec)
+            .format_version(format_version)
             .properties(ctas.properties.clone())
             .build();
         StagedTableTransaction::begin_create(plan.file_io, table_ident.clone(), creation)
@@ -294,11 +292,18 @@ pub(crate) async fn execute_ctas(
             .load_table(&table_ident)
             .await
             .map_err(iceberg_err)?;
+        let mut properties = ctas.properties.clone();
+        crate::create_table::stamp_requested_format_version(
+            &mut properties,
+            ctas.format_version.as_deref(),
+            format_version,
+        );
         let creation = TableCreation::builder()
             .name(ctas.table.clone())
             .schema(iceberg_schema)
             .partition_spec_opt(partition_spec)
-            .properties(ctas.properties.clone())
+            .format_version(format_version)
+            .properties(properties)
             .build();
         StagedTableTransaction::begin_replace(&existing, creation)
             .await
@@ -558,6 +563,7 @@ pub(crate) async fn execute_ctas_service_managed(
     table_ident: TableIdent,
     iceberg_schema: iceberg::spec::Schema,
     partition_spec: Option<UnboundPartitionSpec>,
+    format_version: iceberg::spec::FormatVersion,
     query: DataFrame,
 ) -> Result<DataFrame> {
     // Location deliberately not set: the service assigns it (a user-supplied one is rejected by
@@ -566,6 +572,7 @@ pub(crate) async fn execute_ctas_service_managed(
         .name(ctas.table.clone())
         .schema(iceberg_schema)
         .partition_spec_opt(partition_spec)
+        .format_version(format_version)
         .properties(ctas.properties.clone())
         .build();
     let table = catalog

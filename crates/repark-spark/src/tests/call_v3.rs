@@ -15,11 +15,12 @@ use iceberg::transaction::{ApplyTransactionAction, Transaction};
 
 /// Upgrade a table the engine created from v2 to v3, through the fork's own transaction action.
 ///
-/// This is the only way to get a v3 table into a test: `CREATE TABLE` refuses `format-version`
-/// (`create_table.rs`), and CTAS refuses it too, so nothing on the engine's own surface produces
-/// one. Going through `Transaction` rather than hand-writing metadata means the fixture is a v3
-/// table the fork itself considers valid, which is the point — a hand-rolled one could be wrong
-/// in exactly the way that makes the pin below pass for the wrong reason.
+/// Upgrade a v2 table the engine created. V3-2 can CREATE v3 behind a session opt-in; this
+/// helper stays for tests that must not depend on that path (the default-session blast-radius
+/// pin, and the lineage-refusal fixture that predates CREATE). Going through `Transaction`
+/// rather than hand-writing metadata means the fixture is a v3 table the fork itself considers
+/// valid — a hand-rolled one could be wrong in exactly the way that makes the pin below pass
+/// for the wrong reason.
 async fn upgrade_to_v3(catalog: &Arc<dyn Catalog>, ident: &TableIdent) {
     let table = catalog.load_table(ident).await.expect("load for upgrade");
     let transaction = Transaction::new(&table);
@@ -158,10 +159,12 @@ async fn call_rewrite_data_files_still_compacts_a_v2_table() {
 
 /// The guard's blast-radius argument, pinned instead of asserted.
 ///
-/// `V3-LINEAGE-1` claims the refusal costs nothing on tables this engine wrote, because this
-/// engine cannot write a v3 table. That claim is doing real work — it is why a refusal stricter
-/// than Spark is defensible — so every door to a v3 table is pinned here rather than left to the
-/// prose. This test lives beside the guard for that reason, not because it is about `CALL`.
+/// `V3-LINEAGE-1` claims the refusal costs nothing on tables this engine wrote **by default**,
+/// because CREATE/CTAS without the session opt-in still cannot write a v3 table. That claim is
+/// doing real work — it is why a refusal stricter than Spark is defensible on the drop-in path
+/// — so every default-session door to a v3 table is pinned here rather than left to the prose.
+/// Opt-in CREATE is a separate pin (`opt_in_create_produces_v3_and_rewrite_still_refuses`).
+/// This test lives beside the guard for that reason, not because it is about `CALL`.
 ///
 /// The `ALTER` doors are the ones worth having. They are refused **one layer down**, by the
 /// fork's `set_properties` rejecting reserved properties — nothing in this engine looks at
@@ -169,6 +172,7 @@ async fn call_rewrite_data_files_still_compacts_a_v2_table() {
 /// depends on, and the fork's own doc comment on that function describes the opposite policy
 /// ("the corresponding action is performed"). If the fork ever matches its comment, this pin goes
 /// red and the reachability claim gets revisited before the guard does.
+// pins: v3-2-create-v3-opt-in/C-004, C-008
 #[tokio::test]
 async fn the_engine_still_cannot_produce_a_v3_table() {
     let wh = TempDir::new().unwrap();
@@ -210,5 +214,84 @@ async fn the_engine_still_cannot_produce_a_v3_table() {
             .metadata()
             .format_version(),
         FormatVersion::V2
+    );
+}
+
+/// pins: v3-2-create-v3-opt-in/C-005, C-011, C-015
+///
+/// Model: Grok 4.6 xHigh
+#[tokio::test]
+async fn opt_in_create_produces_v3_and_rewrite_still_refuses() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3opt (id BIGINT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.v3opt SELECT 1 AS id",
+    )
+    .await;
+
+    let catalog = catalogs.get("ice").expect("ice catalog");
+    let ident = TableIdent::from_strs(["sales", "v3opt"]).unwrap();
+    assert_eq!(
+        catalog
+            .load_table(&ident)
+            .await
+            .unwrap()
+            .metadata()
+            .format_version(),
+        FormatVersion::V3
+    );
+
+    let rewrite = execute(
+        &ctx,
+        &catalogs,
+        "CALL ice.system.rewrite_data_files(table => 'sales.v3opt')",
+    )
+    .await
+    .expect_err("rewrite_data_files must still refuse an engine-created v3 table")
+    .to_string();
+    assert!(
+        rewrite.contains("row lineage") && rewrite.contains("V3"),
+        "V3-LINEAGE-1 must still fire on opt-in CREATE: {rewrite}"
+    );
+
+    run(
+        &ctx,
+        &catalogs,
+        "CREATE TABLE ice.sales.v3mor (id BIGINT) USING iceberg \
+         TBLPROPERTIES ('format-version' = '3', 'write.merge.mode' = 'merge-on-read')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.v3mor SELECT 1 AS id",
+    )
+    .await;
+    let merge = match execute(
+        &ctx,
+        &catalogs,
+        "MERGE INTO ice.sales.v3mor AS t USING (SELECT 1 AS id) AS s ON t.id = s.id \
+         WHEN MATCHED THEN UPDATE SET t.id = s.id \
+         WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id)",
+    )
+    .await
+    {
+        Ok(frame) => frame.collect().await.err().map(|err| err.to_string()),
+        Err(err) => Some(err.to_string()),
+    };
+    let merge = merge.expect("merge-on-read MERGE must still refuse a v3 table");
+    assert!(
+        merge.contains("V3"),
+        "non-v2 MoR MERGE guard must still fire: {merge}"
     );
 }

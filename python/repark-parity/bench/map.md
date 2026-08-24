@@ -46,7 +46,7 @@ no AWS. Outputs feed `task/perf-report-*.md`.
 | Run write-path K×file-size bench (SF1) | `write/run_write_bench.py --mode ctas --sf 1 --report task/write-bench-report-….md` |
 | Run the P-2 TA pipeline battery | `ta/bench_kernel_race.py` (and siblings); `--quick` for n=1e5 |
 | Run the MW-7 scale measurement | `mw7/run_mw7.py --rows N --merges M --scratch <dir>` |
-| Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md) |
+| Read MW-7's numbers | [../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md) |
 | Run r22 MERGE+OVERWRITE extension | `write/run_write_bench.py --mode extension --assert-release --report task/write-bench-report-r22-extension.md` |
 | Read TPC-H findings | `../../../task/tpch-report-2026-07-31.md` |
 | Read fuzzer long-pass census | `../../../task/d3-sql-fuzzer-ledger.md` |

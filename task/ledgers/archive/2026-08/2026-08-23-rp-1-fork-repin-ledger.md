@@ -1,8 +1,8 @@
 # Charter ledger — RP-1 · fork repin (F-0, F-1, F-2, F-8a)
 
 **Date:** 2026-08-23 · **Branch:** `feat/rp-1-fork-repin` · **Base:** `2b319de` (`main`,
-post-#225) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md) "Version-pin contract" ·
-**Handoff:** [../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
+post-#225) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md) "Version-pin contract" ·
+**Handoff:** [../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../../../roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)
 
 **Retires:** moved to `completed/` in this departure commit.
 

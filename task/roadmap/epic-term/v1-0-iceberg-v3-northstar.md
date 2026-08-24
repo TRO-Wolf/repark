@@ -61,8 +61,8 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Read: `_row_id` / `_last_updated_sequence_number` | ❌ not plannable (registry V3-ROWID-1) | served as columns, Spark-equal | V3-4 |
 | Read/write: v3 types + default values | ❌ absent — no engine surface reaches one | per-feature support or DECLARED | V3-6 (+H6/H7) ← fork F-15 |
 | Table encryption keys (v3, optional) | ❌ absent | supported or a dated DECLARED exclusion | owner ruling at intake |
-| Write: create v3 | 🚫 refuses, pinned (Spark door `the_engine_still_cannot_produce_a_v3_table`; ANSI door in `repark-sql` properties tests) | explicit opt-in create/CTAS | V3-2 |
-| Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (same Spark-door pin; ANSI door in `repark-sql` alter tests) | in-place upgrade behind the opt-in, or DECLARED | V3-2 |
+| Write: create v3 | ✅ opt-in CREATE/CTAS (`repark.sql.allowCreateFormatVersion3`, default false; V3-2) | stays opt-in until V3-3; default remains v2 | V3-2 |
+| Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (V3-2 kept ALTER refused; C-008) | in-place upgrade behind the create opt-in, or DECLARED | later |
 | Write: append incl. row lineage | ✅ Spark-verified (format-v3-track §2) | stays green + live leg | evidence (intake) |
 | Write: MOR DML via deletion vectors | 🚫 refuses (the R113 guard) | full DML, DV-writing, round-tripped | V3-3 ← fork F-13 |
 | Write: COW DML on an adopted v3 table | ⚠ **reachable and unguarded** — no format-version check, no lineage handling; unmeasured (registry queue V3-COW-1) | measured first; then lineage carried per spec, or guarded until it is | V3-4 ← fork F-7 |

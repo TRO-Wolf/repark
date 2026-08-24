@@ -22,6 +22,9 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
+  `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
+  CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`.
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
   `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
   catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,

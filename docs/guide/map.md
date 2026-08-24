@@ -67,7 +67,7 @@ illustrative. A claim with no verified basis does not go in.
   net, how to retry a step (the S3 Tables conflict and step 4's idle-cycle refusal), the six
   edits a migrating Spark DAG needs, and the limit the cycle cannot cross (registry `RDF-1`).
   MW-7's numbers are cited to
-  [../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md)
+  [../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md)
   §6, never restated.
 - [troubleshooting.md](troubleshooting.md) — the gotchas in one page, symptom → why → what to do:
   dict-cell struct inference (FA-4), dotted-path `select`, euro-comma CSV decimals,

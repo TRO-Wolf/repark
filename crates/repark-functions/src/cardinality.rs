@@ -36,6 +36,12 @@ pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY: &str = "repark.sql.allowLocalFilesyste
 /// Underscore alt accepted at builder parse time.
 pub const ALLOW_LOCAL_FILESYSTEM_DDL_KEY_ALT: &str = "repark.sql.allow_local_filesystem_ddl";
 
+/// Canonical conf key for CREATE/CTAS `format-version = 3` (V3-2). Default **false**.
+pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY: &str = "repark.sql.allowCreateFormatVersion3";
+
+/// Underscore alt accepted at builder parse time.
+pub const ALLOW_CREATE_FORMAT_VERSION_3_KEY_ALT: &str = "repark.sql.allow_create_format_version_3";
+
 /// Validated session knobs for plan-time SQL safety ceilings / gates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ReparkSqlSettings {
@@ -43,6 +49,9 @@ pub struct ReparkSqlSettings {
     pub max_array_elements: u64,
     /// When true, allow `CREATE EXTERNAL` / `COPY TO` local paths outside warehouse roots.
     pub allow_local_filesystem_ddl: bool,
+    /// When true, CREATE/CTAS may request Iceberg format v3. Default false: v3 tables cannot
+    /// yet do merge-on-read / deletion-vector writes (V3-3), so accidental create is a trap.
+    pub allow_create_format_version_3: bool,
 }
 
 impl Default for ReparkSqlSettings {
@@ -50,6 +59,7 @@ impl Default for ReparkSqlSettings {
         Self {
             max_array_elements: DEFAULT_MAX_ARRAY_ELEMENTS,
             allow_local_filesystem_ddl: false,
+            allow_create_format_version_3: false,
         }
     }
 }
@@ -86,6 +96,20 @@ impl ReparkSqlSettings {
             ))),
         }
     }
+
+    /// Parse `repark.sql.allowCreateFormatVersion3` (`true`/`false`, case-insensitive).
+    ///
+    /// # Errors
+    /// Unknown values fail loud naming the conf key.
+    pub fn parse_allow_create_format_version_3(raw: &str) -> Result<bool> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" => Ok(true),
+            "false" | "0" | "no" => Ok(false),
+            _ => Err(DataFusionError::Plan(format!(
+                "config `{ALLOW_CREATE_FORMAT_VERSION_3_KEY}` must be true or false (got {raw:?})"
+            ))),
+        }
+    }
 }
 
 /// ===========================================================================================
@@ -114,9 +138,17 @@ where
         Some(raw) => ReparkSqlSettings::parse_allow_local_filesystem_ddl(raw)?,
         None => false,
     };
+    let allow_create_format_version_3 = match config
+        .get(ALLOW_CREATE_FORMAT_VERSION_3_KEY)
+        .or_else(|| config.get(ALLOW_CREATE_FORMAT_VERSION_3_KEY_ALT))
+    {
+        Some(raw) => ReparkSqlSettings::parse_allow_create_format_version_3(raw)?,
+        None => false,
+    };
     Ok(ReparkSqlSettings {
         max_array_elements,
         allow_local_filesystem_ddl,
+        allow_create_format_version_3,
     })
 }
 
@@ -129,6 +161,8 @@ extensions_options! {
         pub max_array_elements: u64, default = 10_000_000_u64
         /// When true, local CREATE EXTERNAL / COPY TO outside warehouse roots is allowed.
         pub allow_local_filesystem_ddl: bool, default = false
+        /// When true, CREATE/CTAS may request Iceberg format v3.
+        pub allow_create_format_version_3: bool, default = false
     }
 }
 
@@ -144,6 +178,7 @@ pub fn with_repark_sql_config(config: SessionConfig, settings: ReparkSqlSettings
     config.with_option_extension(ReparkSqlConfig {
         max_array_elements: settings.max_array_elements,
         allow_local_filesystem_ddl: settings.allow_local_filesystem_ddl,
+        allow_create_format_version_3: settings.allow_create_format_version_3,
     })
 }
 
@@ -162,8 +197,45 @@ pub fn repark_sql_settings_from_options(options: &ConfigOptions) -> ReparkSqlSet
                 extension.max_array_elements
             },
             allow_local_filesystem_ddl: extension.allow_local_filesystem_ddl,
+            allow_create_format_version_3: extension.allow_create_format_version_3,
         })
         .unwrap_or_default()
+}
+
+/// ===========================================================================================
+/// Resolve CREATE/CTAS Iceberg format version. Default and `'2'` are v2. `'3'` requires
+/// [`ALLOW_CREATE_FORMAT_VERSION_3_KEY`]. Anything else refuses loud.
+///
+/// Returns `2` or `3`. Doors convert to `iceberg::spec::FormatVersion`.
+/// pins: v3-2-create-v3-opt-in/C-001, C-003, C-004
+/// ===========================================================================================
+///
+/// Model: Grok 4.6 xHigh
+///
+/// # Errors
+/// Unsupported version, or v3 requested while the session opt-in is off.
+pub fn resolve_create_format_version(
+    requested: Option<&str>,
+    allow_v3: bool,
+    property_name: &str,
+    form: &str,
+) -> Result<u8> {
+    let Some(raw) = requested.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(2);
+    };
+    match raw {
+        "2" => Ok(2),
+        "3" if allow_v3 => Ok(3),
+        "3" => Err(DataFusionError::NotImplemented(format!(
+            "{form} '{property_name}' = '3' is not enabled — set `{ALLOW_CREATE_FORMAT_VERSION_3_KEY}` \
+             = true (v3 tables cannot yet do merge-on-read row-level writes; default create stays \
+             format v2)"
+        ))),
+        other => Err(DataFusionError::NotImplemented(format!(
+            "{form} '{property_name}' = '{other}' is not supported (tables are created as Iceberg \
+             format v2)"
+        ))),
+    }
 }
 
 /// ===========================================================================================
@@ -649,6 +721,7 @@ mod tests {
         let settings = repark_sql_settings_from_config_map(&map).unwrap();
         assert_eq!(settings.max_array_elements, 42);
         assert!(settings.allow_local_filesystem_ddl);
+        assert!(!settings.allow_create_format_version_3);
 
         map.clear();
         map.insert(MAX_ARRAY_ELEMENTS_KEY_ALT.to_string(), "7".to_string());
@@ -656,16 +729,72 @@ mod tests {
             ALLOW_LOCAL_FILESYSTEM_DDL_KEY_ALT.to_string(),
             "false".to_string(),
         );
+        map.insert(
+            ALLOW_CREATE_FORMAT_VERSION_3_KEY_ALT.to_string(),
+            "true".to_string(),
+        );
         let settings = repark_sql_settings_from_config_map(&map).unwrap();
         assert_eq!(settings.max_array_elements, 7);
         assert!(!settings.allow_local_filesystem_ddl);
+        assert!(settings.allow_create_format_version_3);
+    }
+
+    // pins: v3-2-create-v3-opt-in/C-001, C-002, C-003, C-004, C-007
+    #[test]
+    fn resolve_create_format_version_v3_needs_opt_in() {
+        assert_eq!(
+            resolve_create_format_version(None, false, "format-version", "TBLPROPERTIES").unwrap(),
+            2
+        );
+        assert_eq!(
+            resolve_create_format_version(Some("2"), false, "format-version", "TBLPROPERTIES")
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            resolve_create_format_version(Some("3"), true, "format-version", "TBLPROPERTIES")
+                .unwrap(),
+            3
+        );
+        let err =
+            resolve_create_format_version(Some("3"), false, "format-version", "TBLPROPERTIES")
+                .unwrap_err()
+                .to_string();
+        assert!(
+            err.contains(ALLOW_CREATE_FORMAT_VERSION_3_KEY) && err.contains("format-version"),
+            "opt-in refuse must name conf and property: {err}"
+        );
+        let err = resolve_create_format_version(Some("1"), false, "format_version", "WITH")
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains("format_version") && err.contains('1'),
+            "v1 must refuse naming the key: {err}"
+        );
+        assert_eq!(
+            resolve_create_format_version(None, true, "format-version", "TBLPROPERTIES").unwrap(),
+            2,
+            "opt-in must not change the unspecified default"
+        );
+        assert_eq!(
+            resolve_create_format_version(Some("2"), true, "format-version", "TBLPROPERTIES")
+                .unwrap(),
+            2
+        );
+        let err = ReparkSqlSettings::parse_allow_create_format_version_3("notabool")
+            .unwrap_err()
+            .to_string();
+        assert!(
+            err.contains(ALLOW_CREATE_FORMAT_VERSION_3_KEY) && err.contains("notabool"),
+            "unparsable opt-in must fail loud naming the conf: {err}"
+        );
     }
 
     #[tokio::test]
     async fn analyzer_refuses_sql_array_repeat() {
         let settings = ReparkSqlSettings {
             max_array_elements: 100,
-            allow_local_filesystem_ddl: false,
+            ..ReparkSqlSettings::default()
         };
         let config = with_repark_sql_config(SessionConfig::new(), settings);
         let ctx = SessionContext::new_with_config(config);
@@ -690,7 +819,7 @@ mod tests {
     async fn analyzer_refuses_const_arithmetic_and_cast_counts() {
         let settings = ReparkSqlSettings {
             max_array_elements: 100,
-            allow_local_filesystem_ddl: false,
+            ..ReparkSqlSettings::default()
         };
         let config = with_repark_sql_config(SessionConfig::new(), settings);
         let ctx = SessionContext::new_with_config(config);
@@ -745,7 +874,7 @@ mod tests {
     async fn analyzer_allows_under_ceiling() {
         let settings = ReparkSqlSettings {
             max_array_elements: 100,
-            allow_local_filesystem_ddl: false,
+            ..ReparkSqlSettings::default()
         };
         let config = with_repark_sql_config(SessionConfig::new(), settings);
         let ctx = SessionContext::new_with_config(config);

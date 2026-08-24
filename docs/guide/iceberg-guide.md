@@ -419,8 +419,9 @@ lineage (`_row_id`, `_last_updated_sequence_number`) which this engine's rewrite
 through...
 ```
 
-RePark creates tables at format v2, so this only reaches a v3 table that was already in your
-catalog. The rewrite would return the right rows and give every one of them a new `_row_id`,
+RePark creates tables at format v2 unless the session opts in with
+`repark.sql.allowCreateFormatVersion3` and the SQL asks for format v3, so without that this
+only reaches a v3 table that was already in your catalog. The rewrite would return the right rows and give every one of them a new `_row_id`,
 which tells anything reading the table incrementally that all of them changed. Spark carries
 lineage through the same compaction unchanged, so compact v3 tables there for now. Registry row
 `V3-LINEAGE-1`.
@@ -647,7 +648,7 @@ time-travel default, not a maintenance one. The cycle then keeps five days of ev
 replaced. On a table younger than five days it reclaims nothing at all. Measured on a 6,000-row
 merge-on-read table: three cycles with no cutoff each answered six zeros. The warehouse grew
 **544 kB → 3,266 kB (6.0×)**
-([MW-8 §3](../../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md#3-measurements-the-expire-cutoff-and-the-idle-cycle-2026-08-24)).
+([MW-8 §3](../../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md#3-measurements-the-expire-cutoff-and-the-idle-cycle-2026-08-24)).
 The runbook itself then produces the growth the `expire_snapshots` rule below warns about.
 
 **The cutoff is your time-travel window, so pick it before you schedule the cycle.** A cycle
@@ -660,18 +661,18 @@ cutoff literal's second-granularity truncation, so it is not a stable number. Ti
 travel to the snapshot the CTAS wrote then failed with `unknown Iceberg snapshot id`. A cutoff
 one day in the future reclaimed 48 data files, 12 delete files, 39 manifests and 11 manifest
 lists. It left one snapshot
-([MW-8 §3](../../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md#3-measurements-the-expire-cutoff-and-the-idle-cycle-2026-08-24)).
+([MW-8 §3](../../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md#3-measurements-the-expire-cutoff-and-the-idle-cycle-2026-08-24)).
 
 **The order is load-bearing.** Fold the delete files before you compact the data. At 50 merges
 of debt, step 2 read 400 delete files and left 8, so step 3 read 8. Reverse the two and the
 expensive step reads 50 times the delete files
-([MW-7 §6.2](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+([MW-7 §6.2](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
 
 **Run the cycle every 10 merges. Treat 20 merges as the ceiling.** Scans cross 2× the compacted
 control at 19.6 merges, and merge 20 already measures 2.05×. At 10 merges every probe still sits
 at or below the control. The ceiling tolerates about 2× degradation. It does not hold you under
 it
-([MW-7 §6.1](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+([MW-7 §6.1](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
 
 **Trigger on the delete-file count where your platform reports it.** A scan opens delete files,
 so the file count is the closer proxy for what the debt costs. The same 2× crossing sits at
@@ -685,14 +686,14 @@ reachable from the snapshot that wrote it. One measured copy-on-write warehouse 
 for a 342 MB table. That is **43×**. The measured cycle took it back to 342 MB. It used a cutoff
 one day in the future with `retain_last => 1`. That expires every snapshot but the head, and it
 takes all time travel with it
-([MW-7 §6.3](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults),
-[§4.4](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#44-the-maintenance-sequence-at-50-merges-of-debt)).
+([MW-7 §6.3](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults),
+[§4.4](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#44-the-maintenance-sequence-at-50-merges-of-debt)).
 A production window is a trade against that. A window of zero is not a trade.
 
 **`rewrite_manifests` and the orphan dry run are cheap, so run both every cycle.** They cost
 0.4 s and 0.1 s at 50 merges of debt. `rewrite_manifests` cut the manifest list from 25,665 to
 3,659 bytes, and every reader opens that file first
-([MW-7 §6.4](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+([MW-7 §6.4](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
 
 **The orphan step is a net that lags by a day.** `older_than` must be at least 24 hours in the
 past, which is Apache Spark's floor too. So a cycle never sees the orphans that the same cycle's
@@ -702,7 +703,7 @@ lists nothing on a young warehouse is not a clean bill of health
 
 **Budget the cycle at about 2.5 minutes** for a 10-million-row merge-on-read table carrying 50
 merges of debt
-([MW-7 §6.5](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
+([MW-7 §6.5](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#6-what-the-numbers-set-as-mw-8s-runbook-defaults)).
 
 #### What the cycle cannot reclaim
 
@@ -715,8 +716,8 @@ The fix is fork ask F-16.
 Here is what you see after a cycle, so you do not go looking for a fault. A merge-on-read table
 still reads at **2.02×** the compacted copy-on-write control on a point predicate. On a partition
 predicate it reads at **2.45×**. It still holds **1.90×** the control's live bytes
-([MW-7 §4.3](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#43-mor-against-the-cow-control--what-merge-on-read-costs-on-read),
-[§4.4](../../task/ledgers/completed/mw-7-scale-measurement-ledger.md#44-the-maintenance-sequence-at-50-merges-of-debt)).
+([MW-7 §4.3](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#43-mor-against-the-cow-control--what-merge-on-read-costs-on-read),
+[§4.4](../../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md#44-the-maintenance-sequence-at-50-merges-of-debt)).
 Delete files survive with their records. Every answer is correct at every point, and nothing
 fails. Cadence bounds how far a scan degrades between cycles. It does not bound the dead rows,
 which grow until the fork carries Java's delete-ratio clause.

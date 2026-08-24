@@ -4,7 +4,7 @@
 
 File-backed tests for `SparkExtension` (`../extension.rs`): the `configure` hook's
 `repark.sql.*` `ConfigExtension` install (r24 SB1 re-home, incl. the fail-loud unparsable-value
-contract), **the Spark-door `spark.sql.ansi.enabled` carrier** (U5 / Q10=A — default TRUE;
+contract and **V3-2** `allowCreateFormatVersion3`), **the Spark-door `spark.sql.ansi.enabled` carrier** (U5 / Q10=A — default TRUE;
 `notabool` fail-louds; ANSI door never calls this hook), **the Spark-door
 `parse_float_as_decimal=true` default** (DEC-1 / U2 — bare
 floating-point SQL literals infer DECIMAL, matching Spark; ANSI door never calls this hook),

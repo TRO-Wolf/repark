@@ -32,7 +32,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
+| — | *(empty)* | — | owner sequences **MW-9** (urgent) or **V3-3** | — |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -107,12 +107,12 @@ month map cost ~13k tokens to read): archive month maps condense to one line per
 **2026-08-23 — the owner set the v1.0 north star: full production-grade format-v3**
 ([task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)).
 
-**RP-1 merged and left this file:** re-pin `iceberg*` to fork
+**RP-1 merged as [#228](https://github.com/TRO-Wolf/repark/pull/228) and left this file:** re-pin `iceberg*` to fork
 `main` `5e7b2e4` (F-0 `#214`, F-1 floor 5, F-2 `#215`, F-8a last-`$`; T6
 name-directory freeze; Spark `position_deletes` rewrite). Family frozen. Ledger:
-[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/completed/rp-1-fork-repin-ledger.md).
+[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/archive/2026-08/2026-08-23-rp-1-fork-repin-ledger.md).
 
-**MW-6 lands with this change and leaves this file:** `CALL system.rewrite_manifests`
+**MW-6 merged as [#230](https://github.com/TRO-Wolf/repark/pull/230) and left this file:** `CALL system.rewrite_manifests`
 over the fork's `RewriteManifestsAction`. The counts come from the new snapshot's
 summary (`manifests-replaced` / `manifests-created`), because the action returns
 none. Two facts the charter did not have, both measured on the 4.0.1 oracle:
@@ -120,8 +120,8 @@ Spark rewrites DELETE manifests in a second leg (the fork keeps them — registr
 `MANIFEST-1`, and a zero answer refuses rather than reading as "already clean"),
 and Spark's default filters to the CURRENT partition spec (the fork's `rewrite_if`
 pins that; `spec_id` still refuses — registry `MANIFEST-2`). Ledger:
-[../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md](../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md).
-**MW-7 lands with this change and leaves this file:** the scale measurement, measure-only.
+[../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-6-rewrite-manifests-ledger.md).
+**MW-7 merged as [#230](https://github.com/TRO-Wolf/repark/pull/230) and left this file:** the scale measurement, measure-only.
 **The charter said 1e7 rows × 100 MERGEs; it ran 1e7 × 50.** A naive rows² projection off the
 mandated 1e6 × 10 calibration said 15.6 h; measuring the law at 1e7 instead showed both legs
 PLATEAU (merge-on-read ~28 s/merge, copy-on-write ~113 s), which put 1e7 × 100 at 3.72 h on
@@ -150,9 +150,9 @@ retained without bound. New registry row **`RDF-1`**, new fork ask **F-16**, cha
 pin `test_mw7_scale_smoke.py::test_delete_laden_in_band_file_survives_the_runbook` (C-011,
 written to go RED when F-16 lands). The second finding stands as a disclosure: position-delete
 compaction cuts the file count 50× while growing the delete bytes 31 % (F-MW7-2, S3). Ledger:
-[../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/completed/mw-7-scale-measurement-ledger.md).
+[../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-7-scale-measurement-ledger.md).
 
-**MW-8 lands with this change and leaves this file:** the Airflow-shaped runbook, docs plus one
+**MW-8 merged as [#230](https://github.com/TRO-Wolf/repark/pull/230) and left this file:** the Airflow-shaped runbook, docs plus one
 executable test, no engine change. The guide gains "The maintenance sequence" — seven numbered
 steps, the cadence (every 10 merges, ceiling 20), the load-bearing order, the delete-file
 trigger, the step nobody may skip, the day of latency on the orphan net, the S3 Tables retry,
@@ -163,8 +163,8 @@ never re-homed; a clause holds those citations mechanically so the section canno
 2.45× (partition) a compacted control with every answer correct — documented so nobody debugs a ghost. The pin runs one
 documented cycle at gate scale and censuses after every step, including the ARMED orphan call
 against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
-[../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
-**V3-2** is next.
+[../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
+**V3-2 lands with this change.** The sequenced remainder is empty.
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
@@ -172,7 +172,8 @@ against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
 the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) was gated on MW-7's
 numbers; **they are in and they say it is urgent** (2026-08-24) — it is an owner
-call whether it enters this queue and where. S3 Tables MOR (intake "MW-4b") stays
+call whether it enters this queue and where. V3-3 (DV writes) is the next
+format-v3 unit, also owner-sequenced. S3 Tables MOR (intake "MW-4b") stays
 owner-gated on OD-3b. DML-A/B/C
 and Track A W-0 are not in this queue.
 
@@ -279,16 +280,16 @@ The intake's "MW-6 now" line was stale: F-0 and F-2 landed fork-side after it
 was written, so **RP-1 led**. MW-9 is not in the table — MW-7 was to decide whether
 it is urgent, and on 2026-08-24 it did: yes. Sequencing it is the owner's.
 
-### RP-1 — done (lands with this change)
+### RP-1 — done (merged #228)
 
 Re-pin `[patch.crates-io]` `iceberg*` to fork `main` `5e7b2e4` (20 commits past
 `0c5fd58`). Family frozen. F-0 Replace in files-exist; F-1 RPDF floor 5 (`MOR-1`
 retired); F-2 expire typed views; F-8a last-`$` filter. Readiness also froze the
 fork's lazy name directory at snapshot (C-011) and added Spark `position_deletes`
 rewrite (C-012, schema-only collect refuse). Ledger:
-[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/completed/rp-1-fork-repin-ledger.md).
+[../task/ledgers/completed/rp-1-fork-repin-ledger.md](../task/ledgers/archive/2026-08/2026-08-23-rp-1-fork-repin-ledger.md).
 
-### MW-6 — done (lands with this change)
+### MW-6 — done (merged #230)
 
 Wired. The schema was read from the 1.10.0 jar constant AND executed on the live
 4.0.1 oracle, which agreed (`5, 1` on five manifests, two non-nullable `int`
@@ -296,7 +297,7 @@ columns). The no-op answers two zeros and commits NO snapshot, which is Spark's
 rule, not the fork's. The delete-manifest leg is the one thing this engine cannot
 do, and it is a registry row rather than a silent partial answer.
 
-### MW-8 — done (lands with this change)
+### MW-8 — done (merged #230)
 
 The runbook is [../docs/guide/iceberg-guide.md](../docs/guide/iceberg-guide.md) "The maintenance
 runbook"; the pin is `python/repark/tests/test_mw8_runbook.py`. Three things the charter did not
@@ -309,15 +310,26 @@ dead rows through all seven steps. And **`expire_snapshots` needs an explicit `o
 reclaimed nothing, and the warehouse grew 6.00× — the runbook producing the pathology it warns
 about. A docs unit needs a clause that reads the SQL it PRINTS, not only the prose around it;
 that is C-010. Ledger:
-[../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).
+[../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
 
-### V3-2 — create v3 tables behind an explicit opt-in — NEXT
+### V3-2 — done (this PR): create v3 tables behind an explicit opt-in
 
-Lift the CREATE/CTAS `format-version = 3` refusal behind an explicit opt-in;
-the default stays v2 until V3-3 lands, because a v3 table this engine cannot
-do row-level writes on is a trap. MW is closed, so the "wait for live-catalog
-evidence" hold is gone. V3-3 (DV writes) is the large unit after that;
-`V3-LINEAGE-1` / `B-MOR-3` stay fork-blocked for maintenance.
+CREATE/CTAS `format-version = 3` (Spark) / `format_version = 3` (ANSI) behind
+`repark.sql.allowCreateFormatVersion3` (default false). SQL must still request
+v3; unspecified create stays v2; ALTER stays refused; `V3-LINEAGE-1` is not
+lifted. Copy-on-write MERGE/DELETE/UPDATE on v3 is the existing default and is
+not format-gated (V3-3 / V3-4). Ledger:
+[../task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](../task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md).
+
+The slate queue is empty. Two candidates, neither entered until the owner
+sequences them:
+
+- **MW-9** — `write.delete.granularity` / `MOR-2`. Urgent on MW-7's numbers
+  (point probe 858 → 3,878 ms at 0.02% of rows). Engine change on the MoR
+  writer; independent of V3-3.
+- **V3-3** — merge-on-read writes on v3 via the fork's `DVFileWriter`. The
+  large format-v3 unit; `V3-LINEAGE-1` / `B-MOR-3` stay fork-blocked for
+  maintenance.
 
 ---
 

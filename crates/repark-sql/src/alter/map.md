@@ -11,6 +11,7 @@ which are pure functions.
 ## Contents
 
 - `tests.rs` — the `#[cfg(test)] mod tests;` declared in `../alter.rs`.
+  **V3-2:** `format_version = 3` on `SET PROPERTIES` still refuses (C-008).
 
 ## Pointers
 
