@@ -184,3 +184,116 @@ executions matched the oracle on 15 other shapes, so nothing else moved.
 | F-MW6-3 (S3) | ledger said `call.rs` sits 105 lines under its ceiling | measured 1,406 of 1500 → 94 |
 | F-MW6-4 (S3) | `call/map.md` said the router kept "five procedures" | six (`grep -c '^async fn execute_' call.rs`) |
 | weak pin (M1) | the no-op pin survived an inverted guard, because the seeding rewrite no-opped too | the seeding call's `5, 1` is now asserted before the second call's zeros; the mutation trips it (§4 P5) |
+
+## Coverage attestation (Critic, reissued at `ed89617`)
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: MW-6
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        Walked C-001..C-011 against behaviour, not paraphrase. Re-read the upstream constants
+        independently of the Actor: RewriteManifestsProcedure.OUTPUT_TYPE and PARAMETERS in the
+        1.10.0 jar (javap -p -c, zulu-17) give two IntegerType fields with iconst_0 and the
+        table/use_caching/spec_id list; the fork at 5e7b2e4 writes manifests-created /
+        manifests-kept / manifests-replaced / entries-processed;
+        RewriteManifestsSparkAction bytecode gives the DATA-then-DELETES legs, the
+        empty-and-EMPTY_RESULT short circuits and the targetNumManifests == 1 &&
+        matching.size() == 1 no-op. Two clause-level refutations were raised and remediated in
+        ed89617 — C-008 no longer asserts an unmeasured Spark parity, and C-003 is scoped to the
+        default target with C-011 carrying the divergence above it. Re-read at ed89617: the
+        clause table, the guide section, the three registry rows and both maps agree with what
+        the engine does.
+      artifacts: [jar/rmsa.txt, jar/rmp.txt, crates/repark-spark/src/call/rewrite_manifests.rs, task/ledgers/completed/mw-6-rewrite-manifests-ledger.md, docs/spark-sql-iceberg-parity.md]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Nineteen shapes the committed tests did not cover, each run on the engine and on the
+        Spark 4.0.1 + Iceberg 1.10.0 oracle: exactly one delete manifest (the refusal boundary's
+        other side), two data plus one delete, twenty-four appends, a table after
+        expire_snapshots, ADD COLUMN schema evolution, a partitioned table over three
+        partitions, rewrite/MERGE/rewrite, the positional argument form, a missing table, four
+        positional arguments, no arguments, use_caching as INT and as three STRING spellings,
+        and the commit.manifest.target-size-bytes boundary at one, five and twelve manifests.
+        Sixteen matched Spark exactly; the three that did not are now registry rows.
+      artifacts: [test_critic_shapes.py, test_critic_shapes2.py, test_critic_bytes.py, oracle_critic.log, oracle_k2.log, oracle_r2.log]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        Failure paths exercised live: a missing table refuses TableNotFound before any commit;
+        an empty table answers zeros and commits nothing; a second call is a no-op, so the
+        procedure is idempotent under retry; the four argument refusals name the argument. The
+        missing-summary-key path was forced by mutation and errors instead of reporting a
+        fabricated zero.
+      artifacts: [test_critic_shapes.py::test_h_nonexistent_table, test_critic_shapes.py::test_k_argument_refusals, call_rewrite_manifests_on_a_table_with_no_snapshot_returns_zeros, summary_count]
+    - id: AT-4
+      status: ATTACKED
+      evidence: >
+        Sequential state transitions checked: rewrite then MERGE then rewrite keeps the merged
+        value and leaves the delete manifest in place; rewrite after expire_snapshots reads the
+        pruned manifest list correctly; both zero paths leave the snapshot count unchanged, so
+        no metadata grows for no work. Concurrency itself is the fork's OCC and this unit
+        changes no commit-validation code.
+      artifacts: [test_critic_shapes.py::test_i_rewrite_merge_rewrite, test_critic_shapes.py::test_c_after_expire_snapshots, test_critic_shapes.py::test_l_exactly_one_delete_manifest]
+    - id: AT-5
+      status: ATTACKED
+      evidence: >
+        The only privileged input is the table identifier. It resolves through the shared
+        resolve_table_ident, which refuses empty segments and path escapes for both the
+        namespace and the table before any file IO; the guard is reused unchanged and is already
+        pinned by C1-SEC-001. No new credential, deserialization or path surface is added.
+      artifacts: [crates/repark-spark/src/call.rs:445-465, resolve_table_ident_two_and_three_part]
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        The live row set was compared before and after the rewrite on ten shapes, including a
+        schema-evolved table where the pre-ADD COLUMN rows must read NULL for the new column, a
+        merge-on-read table where an outstanding position delete and a MERGE update must still
+        apply after the manifests are re-grouped, and both over-target fixtures where the
+        entries are spread over a different number of manifests. Every comparison was equal, and
+        the delete manifests were carried forward untouched.
+      artifacts: [test_critic_shapes.py::test_d_after_add_column, test_critic_shapes.py::test_i_rewrite_merge_rewrite, test_critic_shapes.py::test_a_two_data_one_delete, call_rewrite_manifests_added_count_diverges_above_the_target_size]
+    - id: AT-7
+      status: N/A
+      justification: >
+        The unit makes no performance claim, and nothing measured is system-breaking. The
+        twenty-four-manifest and twelve-manifest shapes rewrote in one commit with the manifest
+        list read once, the same way Spark reads it.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        Every upstream contract the unit depends on was re-derived rather than presumed: the
+        jar's result schema and parameter list, the fork's four summary keys, and Spark's
+        two-leg no-op arithmetic. Two contract breaks surfaced and both are now disclosed rather
+        than presumed — Spark casts a STRING literal for the BOOLEAN use_caching and runs
+        ('true', 'yes' and 'no' each answered 5, 1) while refusing INT, which MANIFEST-2 now
+        carries with its migration cost; and Spark's added_manifests_count follows
+        ceil(total / target) where the fork rolls on a running estimate (Spark 5,5 and 12,12
+        against the engine's 5,3 and 12,6), which MANIFEST-3 now carries. Both were re-measured
+        on the oracle at ed89617.
+      artifacts: [oracle_r2.log, oracle_k2.log, jar/rmsa.txt, docs/spark-sql-iceberg-parity.md]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        Every refusal was read verbatim from a live run. The delete-manifest refusal names the
+        count and the remedy procedure; spec_id names the argument and what the engine does
+        instead; the argument errors name the argument and the allowed list; the summary-key
+        error names the missing key. A silent zero is not reachable on any path measured, and
+        the one silently-different count is now a registry row and a guide bullet.
+      artifacts: [test_critic_shapes.py::test_k_argument_refusals, call_rewrite_manifests_refuses_zeros_while_delete_manifests_stay, refuse_uncompactable_delete_manifests, docs/guide/iceberg-guide.md]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Four mutations run in a scratch clone, each restored: inverting the no-op guard,
+        swapping manifests-replaced with manifests-created, widening the no-op count boundary to
+        two, and widening the delete-manifest threshold to three. Each reds at least one pin.
+        The one weak pin found in the first pass — the SQL-door no-op test survived the inverted
+        guard, because the inversion also no-opped its seeding rewrite — was remediated by
+        asserting the seeding call's 5, 1 first, and the mutation re-run at ed89617 now trips
+        that assert (left: 0, right: 5) and reds 8 pins instead of 6.
+      artifacts: [call_rewrite_manifests_no_op_returns_zeros_and_commits_nothing, the_no_op_rule_is_sparks_target_num_manifests_rule, zeros_refuse_only_when_spark_would_compact_delete_manifests, call_rewrite_manifests_added_count_diverges_above_the_target_size]
+  reattested: [F-MW6-1, F-MW6-2, F-MW6-3, F-MW6-4, AT-1, AT-2, AT-8, AT-10]
+  complete: true
+```

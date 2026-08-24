@@ -1762,9 +1762,9 @@ the pin rather than obeying it.
 
 ### MANIFEST-3 — above the manifest target size, `rewrite_manifests` writes a different number of manifests
 
-- **repark** — five over-target data manifests (35,404 B total at
+- **repark** — five over-target data manifests (17,777 B total at
   `commit.manifest.target-size-bytes = 4096`) answer `rewritten_manifests_count = 5`,
-  `added_manifests_count = 3`, and the table holds 3 manifests afterwards. Twelve (85,000 B)
+  `added_manifests_count = 3`, and the table holds 3 manifests afterwards. Twelve (42,682 B)
   answer `12, 6`. The fork's action opens one writer per cluster key and rolls to a new manifest
   when a RUNNING ESTIMATE of the open writer's size reaches the target — the estimate is the
   source manifest's average per-entry size, because the Rust `ManifestWriter` buffers its entries
