@@ -96,9 +96,9 @@ RUNBOOK_HEADING = "### The maintenance runbook"
 CALL_PROCEDURE = re.compile(r"system\.(\w+)\(")
 CALL_ARGUMENT = re.compile(r"(\w+)\s*=>\s*([^,)]+)")
 
-# The catalog and table the driver's sequence is rendered with for the comparison. Only the
-# procedure names and the ARGUMENT names are compared, never the values: the guide passes a
-# `TIMESTAMP` literal where the driver passes epoch milliseconds, and both are correct.
+# The catalog and table the driver's sequence is rendered with for the comparison. Procedure
+# names, argument names, and literal argument values are compared. A placeholder value is
+# skipped: the guide passes a `TIMESTAMP` literal where the driver passes epoch milliseconds.
 DRIVER_CATALOG = "mw8"
 DRIVER_TABLE_ARG = "ns.orders"
 
@@ -477,7 +477,8 @@ def test_the_printed_cycle_matches_the_sequence_the_engine_runs() -> None:
     first way it drifts is by losing an argument, because a `CALL` with a missing argument
     still runs and still answers a result shape that looks correct.
 
-    Values are deliberately not compared. The guide passes a `TIMESTAMP` literal where the
+    Values are compared wherever the guide prints a literal; a placeholder is skipped.
+    The guide passes a `TIMESTAMP` literal where the
     driver passes epoch milliseconds; both are correct and neither is the claim. Procedure
     names, their order, and the argument NAMES are the claim.
     """

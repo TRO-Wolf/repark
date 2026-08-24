@@ -159,8 +159,8 @@ trigger, the step nobody may skip, the day of latency on the orphan net, the S3 
 and the five edits a migrating Spark DAG needs. Every number is MW-7 §6's and is cited there,
 never re-homed; a clause holds those citations mechanically so the section cannot rot silently.
 **The runbook states its own limit:** it cannot reclaim delete-laden data files (registry
-`RDF-1`, fork ask F-16), so a pass leaves a merge-on-read table reading at about 2× a compacted
-control with every answer correct — documented so nobody debugs a ghost. The pin runs one
+`RDF-1`, fork ask F-16), so a cycle leaves a merge-on-read table reading at 2.02× (point) /
+2.45× (partition) a compacted control with every answer correct — documented so nobody debugs a ghost. The pin runs one
 documented cycle at gate scale and censuses after every step, including the ARMED orphan call
 against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 [../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md).

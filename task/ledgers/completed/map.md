@@ -26,7 +26,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   order is load-bearing, the cadence and its ceiling, the delete-file trigger, the day of
   latency on the orphan net, the S3 Tables retry, the five edits a migrating Spark DAG needs,
   and the honest limit: the sequence cannot reclaim delete-laden data files (registry `RDF-1`,
-  fork ask F-16), so a pass leaves a merge-on-read table at ≈2× a compacted control. Every
+  fork ask F-16), so a cycle leaves a merge-on-read table at 2.02× (point) / 2.45× (partition) a compacted control. Every
   number is MW-7's and is cited, never re-homed; C-009 holds the citations mechanically.
 - [rp-1-fork-repin-ledger.md](rp-1-fork-repin-ledger.md) — **RP-1 (2026-08-23):** re-pin
   `iceberg*` to fork `main` `5e7b2e4` (F-0/F-1/F-2/F-8a; T6 name-directory freeze;

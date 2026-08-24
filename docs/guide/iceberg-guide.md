@@ -608,7 +608,7 @@ your merge workload, in this order:
 2. `rewrite_position_delete_files` folds the position deletes to one file per partition.
 3. `rewrite_data_files` compacts the data files those merges fanned out.
 4. `rewrite_manifests` re-groups the manifests the first two steps churned.
-5. `expire_snapshots` drops the snapshots that now hold only replaced files.
+5. `expire_snapshots` drops every snapshot older than your cutoff.
 6. `remove_orphan_files` lists what no snapshot references. This is the dry-run default.
 7. `remove_orphan_files` with `dry_run => false` deletes that listing, once you have read it.
 
@@ -655,7 +655,8 @@ reclaims only what is older than the cutoff. `retain_last => 1` is a floor, not 
 the current snapshot and nothing else, so it never softens the cutoff. The block computes `now`
 once, at the top. So a cycle reclaims what earlier cycles left, never what it just wrote.
 Measured through this block on the same table. A seven-day window reclaimed nothing. It left
-[time travel](#time-travel) intact. A zero window took the table from 12 snapshots to 8. Time
+[time travel](#time-travel) intact. A zero window destroyed most of the history — the exact survivor count depends on the
+cutoff literal's second-granularity truncation, so it is not a stable number. Time
 travel to the snapshot the CTAS wrote then failed with `unknown Iceberg snapshot id`. A cutoff
 one day in the future reclaimed 48 data files, 12 delete files, 39 manifests and 11 manifest
 lists. It left one snapshot
@@ -740,10 +741,12 @@ exactly that.
 
 #### Porting a Spark maintenance DAG
 
-Six edits, and none of them changes what a query returns:
+One edit is hygiene, not a divergence: pass `expire_snapshots` an explicit `older_than`, as the
+block above does. Spark defaults the cutoff to the same five-day window, so a Spark DAG without
+the argument keeps five days of history there too.
 
-- `expire_snapshots` here has no default cutoff that suits a maintenance cycle. Pass `older_than`
-  explicitly, as the block above does.
+Five edits are divergences, and none of them changes what a query returns:
+
 - `remove_orphan_files` needs an explicit `older_than` here. Spark defaults it
   ([ORPHAN-1](../spark-sql-iceberg-parity.md#orphan-1--remove_orphan_files-requires-older_than-spark-defaults-it)).
 - `remove_orphan_files` is a dry run here by default. Spark deletes. Step 7 needs
@@ -759,6 +762,7 @@ Six edits, and none of them changes what a query returns:
 - `added_manifests_count` diverges from Spark's above `commit.manifest.target-size-bytes`
   ([MANIFEST-3](../spark-sql-iceberg-parity.md#manifest-3--above-the-manifest-target-size-rewrite_manifests-writes-a-different-number-of-manifests)).
   The rewritten count matches, and so does the row set.
+
 ## Listing what is there
 
 `SHOW NAMESPACES` needs an explicit catalog — repark has no "current catalog" concept, so there is

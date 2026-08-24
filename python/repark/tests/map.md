@@ -36,7 +36,7 @@ NOT in that file is a defect, not a decision.
   and the delete files covering them survive, registry row `RDF-1`, mechanism pinned by MW-7
   C-011. **C-010 (Critic remediation, F-MW8-1/F-MW8-3)** parses the guide's `MAINTENANCE_CYCLE`
   out of its python block and compares procedure, order, argument names and literal argument
-  values against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
+  values (placeholders skipped) against `measure.maintenance_sequence`'s, so printed SQL that drifts from the measured
   cycle reds — it is what catches an `expire_snapshots` call with no `older_than`. C-009 is the
   narrower companion: it checks that every home the section relies on is LINKED, and it does not
   detect an uncited number.
