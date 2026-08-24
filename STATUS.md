@@ -403,12 +403,12 @@ history-rewrite; provenance and the options weighed:
   - **MW-7 scale scorecard (measured 2026-08-24, this host — ratios, not absolutes).**
     1e7-row partitioned v2 table, 50 MERGEs of 200,000 ids each (2 %), 8 partitions, a
     merge-on-read leg and a copy-on-write leg. **The charter said 100 merges; the measured
-    projection put 1e7 × 100 at 3.72 h on top of 0.75 h already spent against a ~4 h budget,
+    projection put 1e7 × 100 at 3.72 h on top of 0.509 h already spent against a ~4 h budget,
     so it ran 1e7 × 50** — the arithmetic is §1 of the ledger. Run wall 2:09:29, **peak RSS
     4,461 MiB** (`getrusage` and `/usr/bin/time -v` agree).
-    Merge-on-read grows exactly linearly per merge: **+8 position-delete files (one per
-    partition — registry `MOR-2`), +200,000 delete records, +32 data files, +2 manifests,
-    +478 manifest-list bytes**. Its predicate scans reach **4.18×** (point) and **4.58×**
+    Merge-on-read grows linearly per merge — four of the five census rates exact: **+8
+    position-delete files (one per partition — registry `MOR-2`), +200,000 delete records,
+    +32 data files, +2 manifests, ~479 manifest-list bytes (mean)**. Its predicate scans reach **4.18×** (point) and **4.58×**
     (partition) the copy-on-write control by merge 50, crossing **2× at 19.6 merges**. The
     copy-on-write control is **flat** over the same 50 merges (1.08× / 1.18×). The gap is the
     delete files **plus the data-file fan-out** merge-on-read leaves behind — at merge 50 it
@@ -417,7 +417,7 @@ history-rewrite; provenance and the options weighed:
     write:
     MERGE plateaus at **~113 s** against merge-on-read's **~28 s** (4.1×), and its warehouse
     held **14,782 MB for a 342 MB table (43×)** until `expire_snapshots` ran.
-    The full maintenance sequence took **142.4 s** on the merge-on-read leg (delete files
+    The full maintenance sequence took **142.34 s** on the merge-on-read leg (delete files
     400→8, data files 1,696→170, manifest list 25,665→3,659 B) and **21.2 s** on the
     copy-on-write leg. **It does not close the gap:** 8 delete files holding
     10,000,000 records survive and the table still reads at **2.45× / 2.02×** the control while

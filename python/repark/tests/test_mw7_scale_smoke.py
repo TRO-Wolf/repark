@@ -218,7 +218,11 @@ def test_delete_files_grow_one_per_partition_per_merge(smoke_run: Any) -> None:
 
 
 def test_copy_on_write_leg_is_a_zero_delete_control(smoke_run: Any) -> None:
-    """C-003: the COW leg writes no delete files, so MOR-minus-COW is the delete cost."""
+    """C-003: the COW leg writes no delete files — the zero-delete control.
+
+    MOR-minus-COW bundles the delete-read cost with the data-file fan-out
+    merge-on-read leaves behind; this unit does not separate the two.
+    """
     leg = _leg(smoke_run, "cow")
     assert [point.census.delete_files for point in leg.checkpoints] == [0] * len(leg.checkpoints)
     assert leg.after_maintenance.census.delete_files == 0

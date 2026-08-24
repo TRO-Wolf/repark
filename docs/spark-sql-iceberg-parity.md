@@ -1711,9 +1711,10 @@ the pin rather than obeying it.
   module doc says so in as many words: "the delete-RATIO candidate clause is not exposed … The
   ratio clause never fires here" (same file, `:66-67` and `:138-140`). So a **correctly sized**
   data file whose rows are 100 % deleted is invisible to compaction. It is kept, its dead rows
-  with it, and because `removed_delete_files_count` is a constant 0 (registry row context: the
-  fork composes no dangling-delete removal — fork ask F-3) the position-delete file covering it
-  survives too, **still naming a LIVE data file**. Measured on a 2,500-row v2 merge-on-read
+  with it, and the position-delete file covering it survives too, **still naming a LIVE data
+  file** — it survives because its data file was never selected, not because of the
+  `removed_delete_files_count` constant (that counter and fork ask F-3 belong to the other
+  half: a delete file whose referent WAS rewritten). Measured on a 2,500-row v2 merge-on-read
   fixture: one 68,523 B data file, inside the band for a 64 KiB target, and one `MERGE` deleting
   all 2,500 of its rows. After the COMPLETE maintenance sequence
   (`rewrite_position_delete_files` → `rewrite_data_files` → `rewrite_manifests` →
