@@ -190,10 +190,10 @@ documented cycle at gate scale and censuses after every step, including the ARME
 against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 [../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
 **V3-2 merged as [#232](https://github.com/TRO-Wolf/repark/pull/232)** and left this file.
-**MW-9 ships in this PR** and leaves this file: honor `write.delete.granularity`
+**MW-9 merged as [#233](https://github.com/TRO-Wolf/repark/pull/233)** and leaves this file: honor `write.delete.granularity`
 (`file` / `partition`) on RePark-owned MERGE; Spark default `file`; fork SQL
 `DELETE`/`UPDATE` still partition-group. Ledger:
-[../task/ledgers/completed/mw-9-delete-granularity-ledger.md](../task/ledgers/completed/mw-9-delete-granularity-ledger.md).
+[../task/ledgers/completed/mw-9-delete-granularity-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-9-delete-granularity-ledger.md).
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
@@ -201,7 +201,7 @@ against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
 the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) was gated on MW-7's
 numbers; **they said it was urgent** (2026-08-24) — the owner sequenced it, and
-it ships in this PR. V3-3 (DV writes) is the next
+it merged as #233. V3-3 (DV writes) is the next
 format-v3 unit, still owner-sequenced. S3 Tables MOR (intake "MW-4b") stays
 owner-gated on OD-3b. DML-A/B/C
 and Track A W-0 are not in this queue.
@@ -351,7 +351,7 @@ lifted. Copy-on-write MERGE/DELETE/UPDATE on v3 is the existing default and is
 not format-gated (V3-3 / V3-4). Ledger:
 [../task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-v3-2-create-v3-opt-in-ledger.md).
 
-### MW-9 — ships in this PR: close MOR-2 (`write.delete.granularity`) for MERGE
+### MW-9 — done (merged #233): close MOR-2 (`write.delete.granularity`) for MERGE
 
 Honor `write.delete.granularity` (`file` / `partition`) in the merge-on-read
 writer. Spark's default is `file`. Fork SQL `DELETE`/`UPDATE` still
