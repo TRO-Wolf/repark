@@ -42,7 +42,7 @@ before/after identity check exact.
 | Reproduce the MW-7 calibration | `run_mw7.py --rows 1000000 --merges 10 --partitions 8 --checkpoint-every 1 --reps 7 --target-file-size-bytes 4194304 --scratch <dir>` |
 | Reproduce the MW-7 full run | `run_mw7.py --rows 10000000 --merges 50 --partitions 8 --checkpoint-every 10 --reps 7 --target-file-size-bytes 4194304 --scratch <dir>` |
 | Project a calibration onto a bigger run | add `--project-to 10000000:100` |
-| Read the numbers | [../../../../task/ledgers/staging/mw-7-scale-measurement-ledger.md](../../../../task/ledgers/staging/mw-7-scale-measurement-ledger.md) |
+| Read the numbers | [../../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../../../../task/ledgers/completed/mw-7-scale-measurement-ledger.md) |
 | Run the CI pin on this machinery | `python/repark/tests/test_mw7_scale_smoke.py` |
 
 ## Constraints

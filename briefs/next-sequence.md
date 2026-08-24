@@ -32,9 +32,8 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **MW-7** | Iceberg | — (MW-6 landed) | M |
-| 2 | **MW-8** | Iceberg | MW-7 | S |
-| 3 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
+| 1 | **MW-8** | Iceberg | — (MW-7 landed, defaults set) | S |
+| 2 | **V3-2** | Format v3 | — (MW closed; RP-1 landed) | S |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -123,14 +122,36 @@ Spark rewrites DELETE manifests in a second leg (the fork keeps them — registr
 and Spark's default filters to the CURRENT partition spec (the fork's `rewrite_if`
 pins that; `spec_id` still refuses — registry `MANIFEST-2`). Ledger:
 [../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md](../task/ledgers/completed/mw-6-rewrite-manifests-ledger.md).
-**MW-7** is next.
+**MW-7 lands with this change and leaves this file:** the scale measurement, measure-only.
+**The charter said 1e7 rows × 100 MERGEs; it ran 1e7 × 50.** A naive rows² projection off the
+mandated 1e6 × 10 calibration said 15.6 h; measuring the law at 1e7 instead showed both legs
+PLATEAU (merge-on-read ~28 s/merge, copy-on-write ~113 s), which put 1e7 × 100 at 3.72 h on
+top of the 0.75 h the calibration and two scaling probes had already spent — over a ~4 h
+budget for everything. One rung down the charter's own ladder: 1e7 × 50, projected 1.91 h,
+actual 2:09:29. Full arithmetic in §1 of the ledger.
+
+What the numbers say. Merge-on-read grows linearly and hard — **+8 delete files, +200,000
+delete records, +32 data files, +2 manifests per merge** — reaching **4.18×/4.58×** the
+copy-on-write control on the two predicate probes by merge 50 and crossing **2× at ~19
+merges**. The copy-on-write control is flat over the same 50 merges, so the whole degradation
+is delete-file reads. **MW-9 is urgent**, and the deciding number is that the cost does not
+shrink when the predicate does: a probe returning 2,000 rows and a probe returning 625,669
+degrade to the same ~4×, which is what `partition` granularity means. Two OPEN findings the
+unit records rather than fixes: `rewrite_data_files` removes no delete files, so the full
+runbook still leaves a merge-on-read table at **2.0–2.5×** the control (F-MW7-1, S2, registry
+candidate); and position-delete compaction cuts the file count 50× while growing the delete
+bytes 31 % (F-MW7-2, S3). Ledger:
+[../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/completed/mw-7-scale-measurement-ledger.md).
+**MW-8** is next, and §6 of that ledger is its defaults.
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
 `rewrite_manifests`, **MW-7** scale measurement, **MW-8** the Airflow-shaped
 runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
-the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) stays gated on MW-7's
-numbers. S3 Tables MOR (intake "MW-4b") stays owner-gated on OD-3b. DML-A/B/C
+the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) was gated on MW-7's
+numbers; **they are in and they say it is urgent** (2026-08-24) — it is an owner
+call whether it enters this queue and where. S3 Tables MOR (intake "MW-4b") stays
+owner-gated on OD-3b. DML-A/B/C
 and Track A W-0 are not in this queue.
 
 **PYC did not lead originally, despite being freshly measured.** The gate is already armed, so
@@ -233,8 +254,8 @@ Design and slate are in
 home: [../task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../task/roadmap/mid-term/roadmap-intake-2026-08-23.md);
 fork queue: [../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md](../task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md)).
 The intake's "MW-6 now" line was stale: F-0 and F-2 landed fork-side after it
-was written, so **RP-1 led**. MW-9 is not in the table — MW-7 decides whether
-it is urgent.
+was written, so **RP-1 led**. MW-9 is not in the table — MW-7 was to decide whether
+it is urgent, and on 2026-08-24 it did: yes. Sequencing it is the owner's.
 
 ### RP-1 — done (lands with this change)
 
@@ -253,22 +274,20 @@ columns). The no-op answers two zeros and commits NO snapshot, which is Spark's
 rule, not the fork's. The delete-manifest leg is the one thing this engine cannot
 do, and it is a registry row rather than a silent partial answer.
 
-### MW-7 — scale measurement (measure-only) — NEXT
-
-A partitioned v2 table, 1e7 rows, 100 MERGEs touching ~2 % of rows each, MOR
-and COW legs: delete files, manifests, manifest-list size, `COUNT(*)` and a
-predicate scan p50/p99 per 10 merges, then the full maintenance sequence and
-the same scans again. Peak RSS. Numbers planning-side like P-2; ratios over
-absolutes on this box. **Gates MW-8's defaults and decides whether MW-9 is
-urgent.** No product change.
-
-### MW-8 — the maintenance runbook
+### MW-8 — the maintenance runbook — NEXT
 
 Docs + one executable local-catalog test of the Airflow-shaped sequence:
 merge → `rewrite_position_delete_files` → `rewrite_data_files` →
 `rewrite_manifests` → `expire_snapshots` → `remove_orphan_files` dry-run →
-armed. S3 Tables conflict-retry guidance folded in; defaults from MW-7.
-No engine change.
+armed. S3 Tables conflict-retry guidance folded in. **The defaults are measured
+and waiting** in §6 of
+[../task/ledgers/completed/mw-7-scale-measurement-ledger.md](../task/ledgers/completed/mw-7-scale-measurement-ledger.md):
+cadence every 10 merges with a hard ceiling of 20 (2× degradation lands at ~19);
+the order is load-bearing (fold deletes before compacting data, or the expensive
+step reads 50× the delete files); `expire_snapshots` is the step nobody may skip
+(43× warehouse bloat); `rewrite_manifests` and the orphan dry run are free at
+0.4 s / 0.1 s and run every cycle; a zero-row orphan dry run on a young warehouse
+proves nothing. No engine change.
 
 ### V3-2 — create v3 tables behind an explicit opt-in
 

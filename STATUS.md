@@ -397,10 +397,38 @@ history-rewrite; provenance and the options weighed:
   - **A13** (merged [#217](https://github.com/TRO-Wolf/repark/pull/217)) set
     `register_memory_catalog`'s fallback root to the supplied warehouse. MW-3 still refuses
     orphan cleanup of that fallback tree.
-  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1 and MW-6 are delivered;
-    MW-7 scale measurement → MW-8 runbook → V3-2 create-v3 opt-in remain.
-    Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 and the
-    intake S3 Tables MOR leg stay unsequenced.
+  - **MW-7 scale scorecard (measured 2026-08-24, this host — ratios, not absolutes).**
+    1e7-row partitioned v2 table, 50 MERGEs of 200,000 ids each (2 %), 8 partitions, a
+    merge-on-read leg and a copy-on-write leg. **The charter said 100 merges; the measured
+    projection put 1e7 × 100 at 3.72 h on top of 0.75 h already spent against a ~4 h budget,
+    so it ran 1e7 × 50** — the arithmetic is §1 of the ledger. Run wall 2:09:29, **peak RSS
+    4,461 MiB** (`getrusage` and `/usr/bin/time -v` agree).
+    Merge-on-read grows exactly linearly per merge: **+8 position-delete files (one per
+    partition — registry `MOR-2`), +200,000 delete records, +32 data files, +2 manifests,
+    +478 manifest-list bytes**. Its predicate scans reach **4.18×** (point) and **4.58×**
+    (partition) the copy-on-write control by merge 50, crossing **2× at ~19 merges**. The
+    copy-on-write control is **flat** over the same 50 merges (1.08× / 1.18×) — so the
+    degradation is delete files and nothing else. Copy-on-write pays for it on write:
+    MERGE plateaus at **~113 s** against merge-on-read's **~28 s** (4.1×), and its warehouse
+    held **14,782 MB for a 342 MB table (43×)** until `expire_snapshots` ran.
+    The full maintenance sequence took **142.4 s** on the merge-on-read leg (delete files
+    400→8, data files 1,696→170, manifest list 25,665→3,659 B) and **21.2 s** on the
+    copy-on-write leg. **It does not close the gap:** `rewrite_data_files` reported
+    `removed_delete_files_count` 0, so 8 dangling delete files holding 10,000,000 records
+    survive and the table still reads at **2.45× / 2.02×** the control (ledger finding
+    F-MW7-1, OPEN). Driver: `python/repark-parity/bench/mw7/`; machinery pin:
+    `python/repark/tests/test_mw7_scale_smoke.py`. Ledger:
+    [task/ledgers/completed/mw-7-scale-measurement-ledger.md](task/ledgers/completed/mw-7-scale-measurement-ledger.md).
+    **The verdict the charter asked for: MW-9 is urgent** — the delete-read cost does not
+    shrink when the predicate does (two probes whose data footprints differ 300× degrade to
+    the same ~4×), which is the signature of partition granularity. MW-8's defaults follow
+    from §6 there: run the sequence every 10 merges, ceiling 20.
+  - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6 and MW-7 are delivered;
+    MW-8 runbook → V3-2 create-v3 opt-in remain.
+    Order and reasoning: [briefs/next-sequence.md](briefs/next-sequence.md). MW-9 is
+    **unsequenced but no longer ungated** — MW-7's numbers answered its gating question
+    "yes" on 2026-08-24; entering it in the queue is an owner call. The intake S3 Tables
+    MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
