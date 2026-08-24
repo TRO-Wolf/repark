@@ -37,9 +37,10 @@ wrapper.
   `CleanupReport`'s typed views (RP-1 / fork F-2). `rewrite_position_delete_files` mirrors
   Java's four accessors exactly, but it **refuses a table holding live Puffin deletion
   vectors** — the fork skips them by design, so without the guard a format-v3 table would get
-  four zeros that read as "already clean". **RP-1 retired `MOR-1`** (floor 5). Remaining
-  MW-2 divergence: the merge-on-read writer is partition-granularity where Spark defaults to
-  per-file (registry `MOR-2`). File layout; does not change a row.
+  four zeros that read as "already clean". **RP-1 retired `MOR-1`** (floor 5). **MW-9
+  closed `MOR-2` for RePark-owned MERGE:** the writer honors `write.delete.granularity`
+  (Spark default `file`). SQL `DELETE`/`UPDATE` via the fork `TableProvider` still
+  group by partition. File layout; does not change a row.
   **MW-6 wired `rewrite_manifests`**, whose body lives in [call/map.md](call/map.md) because its
   measured-parity documentation would push this module over its file-size ceiling. It is the one
   procedure whose counts are not returned by the fork action: they are read from the new

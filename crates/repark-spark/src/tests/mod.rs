@@ -15,6 +15,7 @@ mod collation;
 mod create_table;
 mod ctas;
 mod decimal;
+mod delete_granularity;
 mod describe_show;
 mod dml;
 mod float_agg;

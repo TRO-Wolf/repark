@@ -15,7 +15,9 @@ The generator is checked in; the data it makes never is (PROJECT.md, torture-dat
   `MaintenanceStep`, `LegResult`, `RunResult`), the polars seed and per-MERGE source
   frames, the census over `files` / `manifests` / `snapshots`, the timed scan battery, the
   five-procedure maintenance sequence, and `run_scale_measurement` which drives one leg per
-  write mode in ONE process (peak RSS is process-wide).
+  write mode in ONE process (peak RSS is process-wide). **MW-9:** MOR CTAS sets
+  `write.delete.granularity = 'partition'` so the recorded arithmetic stays the MW-7
+  measurement (Spark's unset default is now `file`).
 - `run_mw7.py` — CLI. `--rows`, `--merges`, `--partitions`, `--touch-fraction`,
   `--checkpoint-every`, `--reps`, `--target-file-size-bytes`, `--modes`, `--scratch`,
   `--out`, `--project-to` (the charter's feasibility projection).

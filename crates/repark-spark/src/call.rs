@@ -874,12 +874,9 @@ pub(crate) async fn count_live_deletion_vectors(table: &iceberg::table::Table) -
 /// such a table, which reads exactly like "nothing to compact" while every delete file stays put.
 /// See [`count_live_deletion_vectors`].
 ///
-/// **`added_delete_files_count` diverges on a file-granularity table** (registry row `MOR-2`).
-/// The fork writes ONE compacted delete file per `(spec, partition)` group; Spark honours
-/// `write.delete.granularity`, whose default is `file`, and writes one per data file. On a table
-/// this engine wrote the two agree, because this engine's own merge-on-read writer is
-/// partition-granularity already. On a table Spark wrote at the default granularity they do not.
-/// The live row set is identical either way — this is file layout, not contents.
+/// **`added_delete_files_count` after compact is still one per `(spec, partition)` group.**
+/// MW-9 closed writer-side `MOR-2`: this engine now honors `write.delete.granularity`
+/// (Spark default `file`). Compaction still groups by partition, matching Spark's rewrite.
 async fn execute_rewrite_position_delete_files(
     ctx: &SessionContext,
     catalog: Arc<dyn Catalog>,

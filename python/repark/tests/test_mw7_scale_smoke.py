@@ -201,9 +201,9 @@ def test_census_matches_the_metadata_tables(tmp_path: Path) -> None:
 def test_delete_files_grow_one_per_partition_per_merge(smoke_run: Any) -> None:
     """C-002: MOR delete files = partitions x merges, and `COUNT(*)` never moves.
 
-    This engine writes one position-delete file per `(spec, partition)` per commit —
-    Iceberg `partition` granularity, registry row `MOR-2`. The arithmetic below IS that
-    behaviour, so the growth curve in the ledger is not an artefact of the driver.
+    The MOR fixture sets `write.delete.granularity = 'partition'`, so delete files
+    equal `partitions x merges`. That is the MW-7 measurement; Spark's unset default
+    is `file` (MOR-2, closed by MW-9). The arithmetic below IS that layout.
     """
     leg = _leg(smoke_run, "mor")
     for point in leg.checkpoints:

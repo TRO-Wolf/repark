@@ -500,6 +500,15 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
              vectors, not yet supported) — use write.merge.mode = 'copy-on-write' instead"
         )));
     }
+    // pins: mw-9-delete-granularity/C-004 — refuse unknown granularity BEFORE any data write
+    // so a MATCHED UPDATE cannot orphan parquet (same class as the V2/format gate above).
+    crate::write::position_delete::parse_delete_granularity(
+        table
+            .metadata()
+            .properties()
+            .get(crate::write::position_delete::DELETE_GRANULARITY_PROP)
+            .map(String::as_str),
+    )?;
     Ok(MergeMode::MergeOnRead)
 }
 

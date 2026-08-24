@@ -9,6 +9,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
+  file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
+  residual, ALTER-then-MERGE).
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**
@@ -40,8 +43,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
   8 delete files compact to 1 with the row set unchanged, nothing-to-do returns four zeros,
   and `rewrite_data_files` grew Spark's fifth column. **RP-1** flipped `call_mor1_…` to
   equality at floor 5 (row retired); `call_rpdf_compacts_at_sparks_min_input_files_floor` pins
-  the exact floor. `call_mor2_…` still holds the partition-granularity
-  writer, which is what makes the parity pin's comparison legitimate.
+  the exact floor. `call_mor2_…` is the Spark-default **file** granularity pin
+  (MW-9 closed MOR-2 for MERGE; fork DELETE/UPDATE residual is
+  `delete_granularity.rs`). The rewrite-position-delete parity pin still seeds via
+  separate per-row MERGEs.
   The deletion-vector guard is pinned as a rule table plus both no-false-positive paths; the
   vector-present path is the Spark-written fixture under `fixtures/v3-spark-mor/`, adopted by
   `call_register` / V3-1 — the MW-2 rule-table pin's rustdoc says so too),

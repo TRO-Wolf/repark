@@ -462,8 +462,12 @@ changes what a query returns:
 
 - repark and Spark both wait for 5 delete files in a group before compacting
   (RP-1 / fork F-1 retired [MOR-1](../spark-sql-iceberg-parity.md#mor-1--rewrite_position_delete_files-compacts-below-sparks-min-input-files-floor)).
-- repark writes one delete file per partition where Spark's default writes one per data file
+- RePark-owned `MERGE` honors `write.delete.granularity` (`file` / `partition`). The unset
+  default is `file`, matching Spark
   ([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)).
+  SQL `DELETE`/`UPDATE` that go through the fork `TableProvider` still group by partition
+  and ignore the property. The MW-7 scale numbers and the runbook's delete-file arithmetic
+  were measured at `'partition'` (the engine's implicit MERGE layout before MW-9).
 
 ### Compacting manifests
 
@@ -676,9 +680,11 @@ it
 
 **Trigger on the delete-file count where your platform reports it.** A scan opens delete files,
 so the file count is the closer proxy for what the debt costs. The same 2× crossing sits at
-about 157 delete files. This engine writes one delete file per partition per commit
-([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)).
-The measured table had 8 partitions. A merge count stops meaning anything once the merge size
+about 157 delete files. That number is the `'partition'` layout MW-7 measured (8 partitions,
+one delete file per partition per MERGE). Unset `write.delete.granularity` is now `file`
+([MOR-2](../spark-sql-iceberg-parity.md#mor-2--merge-on-read-delete-files-are-partition-granularity-where-sparks-default-is-per-file)),
+so an unset table grows one delete file per touched data file. Set `'partition'` to keep
+the measured arithmetic. A merge count stops meaning anything once the merge size
 changes. The file count keeps its meaning.
 
 **Never skip `expire_snapshots`.** Until it runs, every file the rewrites replaced stays

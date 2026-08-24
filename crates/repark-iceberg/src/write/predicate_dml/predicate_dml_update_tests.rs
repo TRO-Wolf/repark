@@ -531,6 +531,77 @@ async fn identity_update_honors_write_update_mode_not_merge_or_delete_mode() {
     );
 }
 
+/// pins: mw-9-delete-granularity/C-004
+#[tokio::test]
+async fn unknown_granularity_refuses_identity_update_before_any_parquet_write() {
+    use crate::write::position_delete::DELETE_GRANULARITY_PROP;
+
+    let warehouse = TempDir::new().expect("temp warehouse");
+    let catalog = memory_catalog(&warehouse).await;
+    let ident = create_target(
+        &catalog,
+        "upd_banana",
+        HashMap::from([
+            (WRITE_UPDATE_MODE.to_string(), "merge-on-read".to_string()),
+            (DELETE_GRANULARITY_PROP.to_string(), "banana".to_string()),
+        ]),
+    )
+    .await;
+    append_file(
+        &catalog,
+        &ident,
+        consumer_batch(&[Some(1)], &[Some("keep")]),
+    )
+    .await;
+    let parquet_before = count_parquet_files(warehouse.path());
+    let ctx = SessionContext::new();
+    register_keys(&ctx, &[Some(1)]);
+    let err = execute_predicate_dml(
+        &ctx,
+        &catalog,
+        &update_spec("upd_banana", vec![("v", "'z'")]),
+    )
+    .await
+    .expect_err("unknown granularity must refuse identity UPDATE")
+    .to_string();
+    assert!(
+        err.contains(DELETE_GRANULARITY_PROP)
+            && err.contains("'file'")
+            && err.contains("'partition'")
+            && err.contains("banana"),
+        "refuse must name the property and both legal values: {err}"
+    );
+    assert_eq!(
+        count_parquet_files(warehouse.path()),
+        parquet_before,
+        "a refused identity UPDATE must not write new parquet"
+    );
+    assert_eq!(
+        read_back(&catalog, &ident).await,
+        vec![(Some(1), Some("keep".into()))]
+    );
+    assert_eq!(live_delete_file_count(&catalog, &ident).await, 0);
+}
+
+fn count_parquet_files(root: &std::path::Path) -> usize {
+    let mut stack = vec![root.to_path_buf()];
+    let mut count = 0;
+    while let Some(dir) = stack.pop() {
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                stack.push(path);
+            } else if path.extension().and_then(|ext| ext.to_str()) == Some("parquet") {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
 struct CorrelatedInCase {
     name: &'static str,
     target_ids: Vec<Option<i32>>,

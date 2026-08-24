@@ -23,6 +23,9 @@ reach delegation through the ordinary arm.
 - `v3_create.rs` — **V3-2 (test-only):** ANSI CREATE/CTAS `format_version = 3` opt-in pins,
   split out of `tests.rs` so that file stays under its rust-file-size ceiling
   (`Model: Grok 4.6 xHigh` on the module's functions).
+- `mw9_delete_granularity.rs` — **MW-9 (test-only):** ANSI `write.delete.granularity`
+  (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
+  on MERGE.
 - `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation

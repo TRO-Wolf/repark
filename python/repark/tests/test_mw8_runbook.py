@@ -324,9 +324,9 @@ def test_position_delete_compaction_folds_the_deletes_to_one_per_partition(
 ) -> None:
     """C-002: step 2 folds `partitions x merges` delete files down to one per partition.
 
-    This engine writes one position-delete file per `(spec, partition)` per commit — Iceberg
-    `partition` granularity, registry row `MOR-2`. So the count before the step is arithmetic,
-    not an observation, and the count after it is the floor the layout allows.
+    The fixture sets `write.delete.granularity = 'partition'` (the MW-7 layout). So the
+    count before the step is arithmetic, not an observation, and the count after it is the
+    floor that layout allows. Spark's unset default is `file` (MOR-2, closed by MW-9).
     """
     before = cycle.census_before.delete_files
     step = _step(cycle, "rewrite_position_delete_files")

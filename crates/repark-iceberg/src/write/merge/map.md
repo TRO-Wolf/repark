@@ -8,6 +8,11 @@ lives as this module directory (move-only; pub surface frozen).
 ## Contents
 
 - `mod.rs` — types, `execute_merge`, plan/SQL helpers, write/commit path.
+  **MW-9:** `resolve_merge_mode` parses `write.delete.granularity` on the MoR
+  arm (after the V2 gate, before any scan/write) so unknown values cannot
+  orphan MATCHED-UPDATE parquet. Identity DELETE/UPDATE share
+  `write_position_deletes` via `commit_row_delta_kind`; their refuse-before-IO
+  lives in `../predicate_dml.rs` `resolve_write_mode`.
   `mod abort;` is T5-owned. On `tx.commit` `Err`, `commit_overwrite` /
   `commit_row_delta_kind` best-effort-delete writer-result paths (M14 design A).
   **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`

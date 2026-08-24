@@ -20,6 +20,10 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
   comes with it, and the two adjacent defects that should ride along. Both units change a computed
   answer, so the gate wants a dated owner ruling before either writes code.
+- [mw-9-delete-granularity-ledger.md](mw-9-delete-granularity-ledger.md) —
+  **MW-9 (2026-08-24):** honor `write.delete.granularity` (`file` / `partition`);
+  Spark default `file`; close registry `MOR-2` for RePark-owned MERGE
+  (fork SQL DELETE/UPDATE still partition-group).
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:

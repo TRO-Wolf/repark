@@ -22,6 +22,8 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
+- [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
+  `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
   CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`.
@@ -29,7 +31,8 @@ NOT in that file is a defect, not a decision.
   `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
   catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
   censused after every step: the order is the MW-7 driver's, not a second copy; position
-  deletes fold 12 → 2 (one per partition — registry `MOR-2`); data files compact 50 → 6;
+  deletes fold 12 → 2 (one per partition — the fixture sets `write.delete.granularity =
+  'partition'`); data files compact 50 → 6;
   manifests drop 11 → 3 and the manifest list shrinks; `expire_snapshots` prunes 12 → 1
   snapshots and reclaims exactly the 12 delete files step 2 folded; the orphan dry run answers
   Spark's one column and zero rows, and the ARMED form refuses inside the 24-hour floor (the
@@ -48,7 +51,8 @@ NOT in that file is a defect, not a decision.
   the MACHINERY behind the 1e7-row numbers: the census equals an independent count over
   `files` / `manifests` / `snapshots` and a `Path.stat` of the manifest list; merge-on-read
   delete files grow exactly `partitions x merges` (one per `(spec, partition)` per commit —
-  registry `MOR-2`) while `COUNT(*)` holds; the copy-on-write leg writes zero delete files,
+  the fixture sets `write.delete.granularity = 'partition'`) while `COUNT(*)` holds; the
+  copy-on-write leg writes zero delete files,
   so it is a valid control; `rewrite_position_delete_files` folds the deletes to one per
   partition and `rewrite_data_files` cuts the data files; `rewrite_manifests` drops the
   manifest count on both legs; the maintenance sequence is the charter's five procedures in

@@ -1681,25 +1681,22 @@ the pin rather than obeying it.
 
 ### MOR-2 — merge-on-read delete files are partition-granularity, where Spark's default is per file
 
-- **repark** — one `MERGE` touching six distinct data files writes **one** position-delete file.
-  The engine reads no `write.delete.granularity` property at all; its merge-on-read writer emits
-  one delete file per `(spec, partition)` group per commit, which is what Iceberg calls
-  `partition` granularity.
-- **Apache Spark** — writes **one delete file per data file**, because
-  `TableProperties.DELETE_GRANULARITY_DEFAULT` is `file`. Confirmed by leaving the property unset
-  on the oracle: eight `DELETE`s across eight data files produced eight delete files, and the same
-  table at `'partition'` produced counts matching repark's.
+- **repark** — one `MERGE` touching six distinct data files writes **six** position-delete files
+  when the property is unset (Spark's `SparkWriteConf` default is `file`). Explicit
+  `'partition'` writes one file per `(spec, partition)` group. Iceberg-core's
+  `TableProperties.DELETE_GRANULARITY_DEFAULT` is `partition`; this engine matches Spark, not
+  that core default (fork ENGINE_CONTRACT §7).
+- **Apache Spark** — `MERGE` and `DELETE` both write **one delete file per data file** with
+  the property unset. Confirmed on the oracle: eight `DELETE`s across eight data files
+  produced eight delete files; `'partition'` produced one per partition.
   *(oracle: recorded — live PySpark 4.0.1 + Iceberg 1.10.0, same basis as MOR-1.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/call.rs::call_mor2_merge_writes_one_position_delete_per_partition`
-- **Rationale** — BACKLOG. Pre-existing write-path behavior, surfaced by MW-2 rather than
-  introduced by it, and registered here because it is what determines
-  `rewrite_position_delete_files`'s `added_delete_files_count`. On a table this engine wrote, that
-  column matches Spark's partition-granularity answer exactly; on a table Spark wrote at its own
-  default it will not, because the two started from different file layouts. Closing the row means
-  honouring `write.delete.granularity` in the merge-on-read writer, which is a write-path feature
-  and outside the maintenance campaign. **Contents are unaffected** — the same rows are masked
-  either way.
+  `crates/repark-spark/src/tests/call.rs::call_mor2_merge_writes_one_position_delete_per_data_file_by_default`
+  (MERGE writer). Residual: Spark SQL `DELETE`/`UPDATE` that hit the fork `TableProvider`
+  still group by partition (`fork_table_provider_delete_is_not_this_writer`).
+- **Rationale** — FIXED (MW-9) **for RePark-owned MERGE** (`write_position_deletes`).
+  Heading kept as the historical anchor. SQL `DELETE`/`UPDATE` via iceberg-datafusion
+  have no granularity knob (fork ENGINE_CONTRACT §7). Contents are unaffected.
 
 ### RDF-1 — `rewrite_data_files` never selects a delete-laden file, so its dead rows are retained forever
 
