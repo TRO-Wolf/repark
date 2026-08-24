@@ -168,15 +168,14 @@ A12's six units still hold in outline. Three change.
 |---|---|---|
 | **V3-0** | This audit, and the `rewrite_data_files` row-lineage guard | New — A12 had no charter unit |
 | **V3-1** | Wire `CALL system.register_table`; land the cross-engine v3 fixture and promote `B-MOR-3` and `V3-ADOPT-1` to rows | **Landed 2026-08-21** (`feat/v3-1-register-table`). Was "read a v3 table and build the fixture, blocked on an addressing decision". |
-| **V3-2** | Create v3 tables behind an explicit opt-in | Unchanged, still wants MW closed first |
+| **V3-2** | Create v3 tables behind an explicit opt-in | **Landed 2026-08-24** (`feat/v3-2-create-v3-opt-in`). ALTER upgrade stays refused. |
 | **V3-3** | Merge-on-read writes on v3 via the fork's `DVFileWriter` | Unchanged, still the big one |
 | **V3-4** | Row lineage as a read surface and a write obligation | Grows a read half: `_row_id` and `_last_updated_sequence_number` are not plannable columns today (`V3-ROWID-1`), where Spark serves both |
 | **V3-5** | v3 maintenance: lift V3-LINEAGE-1 once the fork carries lineage through a rewrite; `remove_dangling_delete_files` for `V3-DANGLE-1` | Grows a second obligation. A12 already warned not to scope this as "make the MW-2 refusal go away"; it now also owns `removed_delete_files_count` (§3b) |
 | **V3-6** | v3 types, reconciled with H6 VARIANT and the ANSI nanosecond work | Unchanged |
 
-**Sequencing against MW is unchanged and still binding.** V3-1 can run any time. V3-2 and later
-want MW-4's live acceptance behind them, because adding a second format version underneath the
-campaign's only real-catalog evidence would mean proving two things at once.
+**Sequencing against MW.** V3-1 ran before MW closed. V3-2 ran after MW closed. V3-3 and later
+are owner-sequenced; MW-9 is urgent on MW-7's numbers and is a separate owner call.
 
 ## 6. Fork work this track needs
 
