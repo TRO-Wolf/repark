@@ -185,7 +185,7 @@ executions matched the oracle on 15 other shapes, so nothing else moved.
 | F-MW6-4 (S3) | `call/map.md` said the router kept "five procedures" | six (`grep -c '^async fn execute_' call.rs`) |
 | weak pin (M1) | the no-op pin survived an inverted guard, because the seeding rewrite no-opped too | the seeding call's `5, 1` is now asserted before the second call's zeros; the mutation trips it (§4 P5) |
 
-## Coverage attestation (Critic, reissued at `ed89617`)
+## Coverage attestation (Critic, reissued at `2948e58`)
 
 ```yaml
 COVERAGE_ATTESTATION:
@@ -202,8 +202,8 @@ COVERAGE_ATTESTATION:
         RewriteManifestsSparkAction bytecode gives the DATA-then-DELETES legs, the
         empty-and-EMPTY_RESULT short circuits and the targetNumManifests == 1 &&
         matching.size() == 1 no-op. Two clause-level refutations were raised and remediated in
-        ed89617 — C-008 no longer asserts an unmeasured Spark parity, and C-003 is scoped to the
-        default target with C-011 carrying the divergence above it. Re-read at ed89617: the
+        2948e58 — C-008 no longer asserts an unmeasured Spark parity, and C-003 is scoped to the
+        default target with C-011 carrying the divergence above it. Re-read at 2948e58: the
         clause table, the guide section, the three registry rows and both maps agree with what
         the engine does.
       artifacts: [jar/rmsa.txt, jar/rmp.txt, crates/repark-spark/src/call/rewrite_manifests.rs, task/ledgers/completed/mw-6-rewrite-manifests-ledger.md, docs/spark-sql-iceberg-parity.md]
@@ -272,7 +272,7 @@ COVERAGE_ATTESTATION:
         carries with its migration cost; and Spark's added_manifests_count follows
         ceil(total / target) where the fork rolls on a running estimate (Spark 5,5 and 12,12
         against the engine's 5,3 and 12,6), which MANIFEST-3 now carries. Both were re-measured
-        on the oracle at ed89617.
+        on the oracle at 2948e58.
       artifacts: [oracle_r2.log, oracle_k2.log, jar/rmsa.txt, docs/spark-sql-iceberg-parity.md]
     - id: AT-9
       status: ATTACKED
@@ -291,7 +291,7 @@ COVERAGE_ATTESTATION:
         two, and widening the delete-manifest threshold to three. Each reds at least one pin.
         The one weak pin found in the first pass — the SQL-door no-op test survived the inverted
         guard, because the inversion also no-opped its seeding rewrite — was remediated by
-        asserting the seeding call's 5, 1 first, and the mutation re-run at ed89617 now trips
+        asserting the seeding call's 5, 1 first, and the mutation re-run at 2948e58 now trips
         that assert (left: 0, right: 5) and reds 8 pins instead of 6.
       artifacts: [call_rewrite_manifests_no_op_returns_zeros_and_commits_nothing, the_no_op_rule_is_sparks_target_num_manifests_rule, zeros_refuse_only_when_spark_would_compact_delete_manifests, call_rewrite_manifests_added_count_diverges_above_the_target_size]
   reattested: [F-MW6-1, F-MW6-2, F-MW6-3, F-MW6-4, AT-1, AT-2, AT-8, AT-10]
