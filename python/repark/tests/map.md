@@ -70,7 +70,9 @@ NOT in that file is a defect, not a decision.
   F-16 lands.
 - [test_mw5_baseline_delta.py](test_mw5_baseline_delta.py) — **MW-5 (2026-08-23):**
   the MW-0 growth demo re-run: 1,000-row v2 merge-on-read, ten MERGEs of the same
-  200 ids, position-delete files 1→10 then compact 10→1 and data files →1,
+  200 ids, position-delete files 1→10 then compact 10→1 and data files →1
+  (**MW-9:** the fixture sets `write.delete.granularity = 'partition'` so that
+  1-per-MERGE count survives the Spark-default `file` flip),
   `COUNT(*)` 1,000 `int64` throughout. After the MERGEs, `VERSION AS OF` the CTAS
   snapshot still returns seed names `n{id}`; live rows after the MERGEs are
   `m{id}` for ids 1..200 and `n{id}` otherwise (oracled, not only contrasted).
