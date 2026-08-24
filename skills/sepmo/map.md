@@ -6,23 +6,23 @@ The **SEPMO v2 control plane**: a portable software-engineering governance-and-o
 (proposition-ledger scope audit → adversarial Actor–Critic with coverage-attested review → per-PR
 delivery → quantitative retrospective) that sits **on top of** this repo's engineering contract and
 binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision to
-[CLAUDE.md](../../CLAUDE.md) / [AGENTS.md](../../AGENTS.md) (see [CLAUDE.md](../../CLAUDE.md)
-`## Precedence`).
+[AGENTS.md](../../AGENTS.md) (see its `## Precedence`).
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the **spine** (versioned canon, frontmatter `version: "2.2"` + changelog;
+- [SKILL.md](SKILL.md) — the **spine** (versioned canon, frontmatter `version: "2.3"` + changelog;
   verbatim and portable): the Iron State Machine (T1–T12), the ledger gate with the v2.2
-  **enumeration obligation** for quantified clauses, the S0–S3 scale, sub-machine rules R1–R10
+  **enumeration obligation** for quantified clauses, the S0–S3 scale, sub-machine rules R1–R13
   (v2.1: R7 two-tier green + R10 environment drift; v2.2: R2 per-element pinning + domain-growth
   inheritance, R3 fresh-execution with the novelty standard, incident retrospectives + asymmetric
-  feed-forward — every version a user-approved canon amendment), Invariant V, doctrines D1–D6, the
+  feed-forward; v2.3: R11 executable contingencies, R12 recorded dispositions, R13 remand, and
+  machinery-incident retrospectives — every version a user-approved canon amendment), Invariant V, doctrines D1–D6, the
   agent roster, and the routing map to `references/`. **Do not edit** — portable canon; project
   facts belong in the manifest; spine defects are filed to the user (D2), never patched here. The
   master home is the operator's SEPMO canon repository outside this repo — canon lands there and
   propagates here byte-identical.
 - [binding-manifest.template.md](binding-manifest.template.md) — the portable install template
-  (ships with the distribution, spine v2.2+): `> Fill:` protocol, role rows, tunables incl.
+  (ships with the distribution, spine v2.3+): `> Fill:` protocol, role rows, tunables incl.
   `s0_fresh_execution` and `taxonomy_extensions`, and the I-1…I-10 instantiation checklist.
   Instantiating it elsewhere is what produces that repo's `binding-manifest.md`; this repo's
   manifest is an instantiation of it, kept conformant by hand.
@@ -30,7 +30,7 @@ binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision
   orchestrator procedures, SLR format, actor/critic protocols, vigilance, delivery, retrospective).
   Portable canon, same edit rule as the spine.
 - [binding-manifest.md](binding-manifest.md) — the **only** project-specific SEPMO file: declares
-  `spine_version: v2.2`, resolves every abstract role to its canonical home here (all BIND;
+  `spine_version: v2.3` (re-bound 2026-08-24), resolves every abstract role to its canonical home here (all BIND;
   PR-unit grouping is BIND-and-map to `briefs/`; since DL-2, 2026-08-23, a **ledger grammar
   instrument** row binds the shape of the proposition ledger, the `pins:` citation and the
   Critic's attestation to `scripts/check_ledger_grammar.py`, XML measured and declined) and

@@ -202,6 +202,13 @@ here without exception: a proposal may raise the floor, never lower it below S1.
 tightened binding, a new attack category — **may land immediately** as stamped manifest updates (date +
 provenance recorded in the row), including mid-project when they come from an **incident
 retrospective** (the mini state-6 an escaped defect triggers — spine, *Incident retrospectives*).
+**Machinery incidents file the same section** *(spine v2.3)*: a failure of SEPMO's own
+machinery — an invalid contingency (R11), an unsettled disposition consumed downstream (R12), a
+gate bypassed — triggers the same immediate `kind: incident` filing as an escaped defect, whether
+or not any product defect escaped. The canonical trigger lives in the spine (*Incident
+retrospectives*); what this reference adds is the ledger's shape in that case: `coverage_misses`
+and `escaped_defects_by_origin` may be legitimately **empty** — the keys are still filed, and the
+incident's mechanism is named in the section body.
 **Bar-lowering or neutral changes always wait for the project boundary.** The asymmetry is
 stricter-interpretation-wins applied to feed-forward: the never-mid-project rule exists to stop the bar
 dropping under pressure, not to delay its rise. Canon changes are a different procedure entirely

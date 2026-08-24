@@ -39,12 +39,13 @@ PRE_EXECUTION_REVIEW:
       backward: SATISFIED (every PR unit traces to >=1 clause)      | OPEN (<orphan units, D5>)
     rubric_recorded: SATISFIED (<n>/<n> units carry a filed PROPORTIONALITY_RUBRIC, §3) | OPEN (<units missing one>)
     bindings_resolved: SATISFIED (models, tiers, and green commands all resolved in the binding manifest) | OPEN (<unresolved rows>)
+    contingencies_executable: SATISFIED (every named failure-path action is executable by its triggering role — additive or pre-authorized) | OPEN (<unexecutable contingencies>)   # R11, spine v2.3
   verdict: PROCEED | GAP_FOUND
   gap_route: APPROVAL_GATE | AGGRESSIVE_LOGIC_SCOPE_AUDIT | "—"   # required when GAP_FOUND, per T6
   gap_detail: <the specific unresolved item, or "—">
 ```
 
-`PROCEED` is legal only when all four checklist rows read `SATISFIED` — this is T5's guard. Any `OPEN`
+`PROCEED` is legal only when all five checklist rows read `SATISFIED` — this is T5's guard. Any `OPEN`
 row is a `GAP_FOUND` and routes backward via T6; it is **never** patched inline mid-review. Classify the
 gap before routing: a gap in the ledger's content itself — an ambiguous, missing, or newly surfaced
 clause, or a carving that cannot be made clause-complete without touching scope — goes to
@@ -53,6 +54,14 @@ an unfiled rubric result, an unresolved manifest binding, a carving omission tha
 changing scope — goes to APPROVAL_GATE, where the standing ledger and the fix are re-confirmed before
 PRE_EXECUTION_REVIEW is re-run. Either way the Orchestrator re-runs this whole review from a clean slate
 once the gap closes; a partially-checked plan does not carry forward.
+
+**Contingency executability (R11, spine v2.3) — the fifth confirmation.** Each failure-path action
+the plan names — parking, rollback, reset, abort — is executable *by the role that will trigger
+it*, under the live permission regime, at the moment it fires: either **additive by construction**
+(forward operations only — revert commits, superseding records) or **destructive and explicitly
+pre-authorized** in the user's sign-off for this plan. A contingency whose authority its executor
+does not hold is an unproven assumption wearing a safety label (D1), and the gap routes backward
+via T6 like any other.
 
 ## 3. PR_SCOPING — charter carving and the proportionality rubric
 
@@ -96,6 +105,36 @@ are reframed as a plain defect-fix slice — the record never says "the Critic f
 wrong and where, preserving the Actor's build-phase blindness (home: `04-actor.md`). **Convergence is the
 Critic's call, never the Orchestrator's and never the Actor's** (R4); the Orchestrator's job is to audit
 that the attestation is complete, not to count findings or push a unit forward on schedule pressure.
+
+**Every cap ends in a recorded disposition (R12, spine v2.3).** The escalation above is how a
+disposition is *reached*; it is never a substitute for recording one. Exactly one of:
+
+- **CONVERGED** — the Critic's declaration (R4), never the Orchestrator's.
+- **REMOVED** — the unit's effects are **verifiably absent** from the branch: checked against the
+  diff, not asserted from intent.
+- **REMANDED** — the unit is carried forward with its open findings enumerated, for the assembly's
+  closing authority to disposition (R13, below).
+
+Until one of the three is recorded, the unit is in a **blocking state**: no downstream stage runs,
+nothing builds atop it, nothing consumes it. A contingency that fired and *failed* leaves exactly
+this state — stop the line and settle it. Proceeding anyway is an Invariant V alarm in its own
+right (`06-vigilance.md`, VG-09 — *unsettled-disposition consumption*) **even when the breach was
+logged loudly**: logging is not settling.
+
+**Multi-unit assemblies — the R13 binding.** A group inside a bundled PR is not itself a PR, so
+"do not deliver a PR with an unconverged Critic" does not reach it; R13 does. Such a group either
+runs the escalation above or takes **REMOVED** or **REMANDED** directly, and a remand is
+**explicit, never implied by continuation**:
+
+- The **remand record** enumerates every open finding with its severity, and travels with the
+  assembly into its PR evidence (R8).
+- **Downstream groups proceed only where their scope is demonstrably disjoint** from the open
+  findings' blast radius, and the Orchestrator **records the disjointness claim** at the moment it
+  lets the next group start. An unrecorded claim is not a claim.
+- The Orchestrator hands the remand record to the assembly's **closing authority** — the
+  independent bundle-scope Critic — whose item-by-item disposition duty lives in `05-critic.md`.
+  Every user decision that duty produces (waive, strip, accept) is named as an **explicit merge
+  gate** in the PR description (R8), never left implicit in prose.
 
 ## 5. Context-break mechanics — implementing R3
 

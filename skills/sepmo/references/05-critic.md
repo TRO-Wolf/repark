@@ -160,6 +160,48 @@ findings to look thorough raises the noise ratio and is itself a Critic failure;
 dodge a dispute is the same failure in the other direction. Both are visible in the same two
 numbers — attestation completeness and noise ratio — and neither is a quota.
 
+## Closing authority — multi-unit assemblies (R13, spine v2.3)
+
+A **bundled PR** — several units assembled into one delivery — has a closing authority: the
+independent **bundle-scope Critic** that attests the assembly as a whole. When the assembly
+carries a **REMANDED** unit — one that reached its cycle cap without converging and was carried
+forward with its open findings enumerated (`02-orchestrator.md` §4, the cycle cap) — those
+findings become the closing authority's own duty:
+
+- **Disposition every enumerated finding, item by item.** Each one is closed **with evidence**,
+  disproved **with evidence**, or converted into a **recorded user decision** (waive, strip,
+  accept) — and every such decision is named as an explicit merge gate in the PR description (R8).
+- **A complete assembly-scope attestation does not by itself reach a remanded unit.** It covers
+  that unit only once each of its findings carries one of those three closings. A closing
+  authority that converges an assembly containing a remanded unit without the item-by-item
+  disposition **has not converged it**.
+- **Check the disjointness claims.** Downstream units may build atop a remanded unit only where
+  their scope is demonstrably disjoint from the open findings' blast radius; that claim is
+  recorded when the work starts, and testing it against the assembled diff is part of the closing
+  pass.
+
+## External critic engines (optional, manifest-bound; spine v2.3)
+
+The Critic stage described above is the default and needs nothing else. A project **may** bind an
+**external critic engine** — a multi-critic harness, a different runtime — for
+**STANDARD-and-above** units; that binding lives in the project's manifest (`critic_engine`),
+never in portable canon. An engine changes how the attack is *run*; it never becomes a way to
+*skip* one. Four constraints are normative:
+
+1. **An engine's convergence signal is never Delivery.** Its output maps into this reference's
+   instruments — a coverage attestation plus a findings ledger — and `PR_READINESS_AUDIT` then
+   proceeds exactly as always (R7). "The engine converged" is an unledgered claim until those
+   artifacts exist.
+2. **LIGHT units never select an external engine.** The proportionality rubric decides the path
+   first; a LIGHT unit runs the single in-line AC cycle.
+3. **The engine's attack taxonomy must satisfy R4.** Every category it works maps onto the
+   canonical categories above (plus any manifest `taxonomy_extensions`), or each unmapped category
+   is justified `N/A`. The taxonomy may be extended, never shrunk, and a differently-named
+   category is not a missing one.
+4. **Engine-specific tunables bind per project** — cycle counts, early-stop policy, scratch
+   locations — in the project's manifest. Canon carries the constraints; the project carries the
+   knobs.
+
 ## Routing
 
 - Sub-machine stage consuming this file: CRITIC_REVIEW, gated by "full coverage attestation filed

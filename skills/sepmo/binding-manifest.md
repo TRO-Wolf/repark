@@ -8,10 +8,12 @@ CREATE (a minimal file made at install) / DEFAULT (built-in fallback). **SEPMO b
 restate.**
 
 ## Spine version
-`spine_version:` **v2.2** — declared per the spine's versioned-canon convention; the master home is
+`spine_version:` **v2.3** — declared per the spine's versioned-canon convention; the master home is
 the operator's SEPMO canon repository outside this repo (kept byte-identical). Skew between this
 line and the master spine's frontmatter is an Invariant V staleness alarm: re-bind before the next
-project starts.
+project starts. *(Re-bound v2.2 → v2.3 on 2026-08-24: the disposition discipline — R11 executable
+contingencies, R12 recorded dispositions, R13 remand — plus machinery-incident retrospectives,
+the VG-09 watch item, and the optional `critic_engine` binding row below.)*
 
 ## Precedence
 SEPMO governs lifecycle/orchestration only. On any conflict the chain in [AGENTS.md](../../AGENTS.md)
@@ -54,6 +56,7 @@ changes wait for the project boundary.
 | `light_thresholds` | ≤ 150 changed lines and ≤ 5 files (spine defaults) + the six spine criteria all holding | `map.md`-only or docs-only edits are the typical LIGHT candidates here. |
 | `context_break_mechanics` | **Procedural in-session break** (default): one session runs Actor, then declares the break and shifts to Critic with inputs restricted per R3 — named honestly as procedural, not amnesia. **Sub-agent hard break**: only on explicit user opt-in per the sub-agent / tier policy row above (Sonnet/Haiku default; Opus only when the user names Opus). | R3 prefers the hard break; this repo's sub-agent policy gates it, so the procedural break is the standing default. |
 | `s0_fresh_execution` | For claims whose failure class is **silently wrong results** (engine-vs-reference divergence, numeric/type fidelity, Arrow-boundary schema): the Critic freshly executes ≥ 1 adversarial input through the **public entry point of the surface under claim** — once the engine lands (phase 1+), the native DataFrame / ANSI SQL door; once the facade lands (phase 3), the facade on the built wheel driving `collect`/`to_arrow` — and cites that run in the attestation (spine R3 / ref 05 step 5). Standing detector: the **entry-point matrix** mandated by [docs/testing.md](../../docs/testing.md) — new entry points must join the matrix; new divergence classes get a row per door. **Masking surfaces (never sole evidence):** `show`-style pretty-printed/preview output. At phase 0 the repo has no code surface, so no unit yet carries this failure class; the binding takes effect with the first ported surface. | The compensating control for this repo's procedural (non-amnesiac) break. |
+| `critic_engine` | **The spine's own Critic stage — the default, stated explicitly.** No external critic engine binds in this repo: the Critic stage runs per `context_break_mechanics` above (procedural in-session break by default; sub-agent hard break only on explicit user opt-in per the *Sub-agent / tier policy* row). No engine-specific tunables exist to record. | Optional row (spine v2.3+). The [references/05](references/05-critic.md) *External critic engines* constraints bite only if an external engine is ever bound here; binding one would be a manifest change with its own provenance stamp. |
 | `metrics_ledger_location` | `task/metrics.md` (CREATE — installed at the first retrospective) | One section per retrospective, the ref-08 metric set verbatim — eight metrics incl. `environment_drift_events` (spine v2.1+). |
 | `taxonomy_extensions` | **None** — the ten spine categories as canon defines them. | Extend-only; an extension widens the Critic's attestation duty on every subsequent unit — add deliberately, via feed-forward. |
 
