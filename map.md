@@ -124,7 +124,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 | Understand why a load-bearing decision was made | [docs/adr/map.md](docs/adr/map.md) |
 | Operate under the SEPMO control plane | [skills/map.md](skills/map.md) |
 | Read the code-quality conventions and why each is held by a linter, a gate, or review | [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md) |
-| Read the manual for your model tier | [docs/skills/map.md](docs/skills/map.md) |
+| Read the portable engineering method | [.agents/skills/engineering-method/SKILL.md](.agents/skills/engineering-method/SKILL.md) |
 | See in-flight work / lessons | [task/map.md](task/map.md) |
 | Read how the engine got here (the archived port record) | [docs/history/port-v2/README.md](docs/history/port-v2/README.md) |
 | Read how the front door got here (the archived campaign record) | [docs/history/frontdoor/README.md](docs/history/frontdoor/README.md) |

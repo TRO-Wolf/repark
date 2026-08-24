@@ -62,7 +62,6 @@ repo.
   [history/frontdoor/](history/frontdoor/map.md) — the Agent-Agnostic Front-Door campaign's design,
   slate, unit ledger and [retrospective](history/frontdoor/retrospective.md). Nothing here has to be
   read to work in this repository.
-- [skills/](skills/map.md) — per-model-tier operating manuals (Opus / Sonnet / Haiku).
 - [tier2-aws.md](tier2-aws.md) — operator runbook for the tier-2 live-AWS workflow: environment,
   the repo+branch+environment-scoped OIDC trust policy, the scratch-only IAM posture
   (§2 — Glue still no-delete; **OD-3 `s3:DeleteObject` on the warehouse scratch prefix**;
@@ -94,7 +93,7 @@ repo.
 | See the port phases / acceptance gate | [port/PLAN.md](port/PLAN.md) |
 | Run a census / compare two runs | [port/census.md](port/census.md) |
 | Understand why a load-bearing decision was made | [adr/map.md](adr/map.md) |
-| Read the manual for your tier | [skills/map.md](skills/map.md) |
+| Read the portable engineering method | [../.agents/skills/engineering-method/SKILL.md](../.agents/skills/engineering-method/SKILL.md) |
 | Set up trusted publishing / plan a release | [release.md](release.md) |
 | Find out how the engine got here (the port record) | [history/port-v2/README.md](history/port-v2/README.md) |
 | Read the Front-Door campaign's record and retrospective | [history/frontdoor/README.md](history/frontdoor/README.md) |

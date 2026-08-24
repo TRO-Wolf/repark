@@ -36,9 +36,9 @@ it.
 
 > **[AGENTS.md](AGENTS.md)** (the authoritative contract) **>** [PROJECT.md](PROJECT.md) (north-star
 > intent) **>** [STATUS.md](STATUS.md) (status SSOT) **>** engineering conventions
-> ([DEVELOPMENT.md](DEVELOPMENT.md) + [docs/testing.md](docs/testing.md); the per-tier manuals in
-> [docs/skills/](docs/skills/) are one model family's view of these same conventions) **>** SEPMO
-> ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md) — lifecycle/orchestration only).
+> ([DEVELOPMENT.md](DEVELOPMENT.md) + [docs/testing.md](docs/testing.md) + the portable working
+> method in [.agents/skills/engineering-method/SKILL.md](.agents/skills/engineering-method/SKILL.md))
+> **>** SEPMO ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md) — lifecycle/orchestration only).
 
 SEPMO governs *how work flows* (scope audit → Actor–Critic → PR → delivery → retrospective); it
 never overrides an engineering rule. When SEPMO and this contract appear to conflict, the contract

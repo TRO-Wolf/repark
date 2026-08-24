@@ -207,7 +207,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make check-lib-py` and the ci.yml `python` job in the same PR.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
-  guard: the two rules Ruff cannot express, and the SSOT for both. Over every `*.py` under
+  guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
+  it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
+  [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under
   `python/repark/src`, `python/repark-parity` and `scripts/`: (1) **no function defined inside
   another function**, with an inline `# nested-def: <reason>` pragma for the three sanctioned
   cases (a decorator closing over its own arguments, a callback whose closure over local state is
@@ -327,6 +329,7 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 |---|---|
 | Guard blocks a commit | Add/update the `map.md` in the directory of the staged code |
 | Guard not running | `make install-hooks` (or use the `pre-commit` framework) |
+| CI's Ruff job reds on a `scripts/*.py` edit that pre-commit let through | `scripts/` is inside the Ruff gate (repo-root `pyproject.toml`, line-length 100) but the pre-commit hook set does not run Ruff over it — run `uvx ruff@<pinned> check scripts/` locally before pushing, docstring-only edits included (an E501 here red CI on 2026-08-24) |
 | `crate-dag: layering inversion …` | The named edge points UP a tier. Either the edge is wrong (remove it) or the tier map is wrong — fix `check_crate_dag.py` `TIERS` and say why in the commit |
 | `ERROR: undeclared dependency edge …` | A new internal dependency landed without a policy row — declare it in `check_crate_dag.py` `ALLOWED_EDGES` with its kind and a reason, or drop the dependency |
 | `ERROR: dependency kind not permitted …` | The edge exists in the policy but not in this kind (the classic case: a `dev`-only cross-door edge promoted to `normal`) |

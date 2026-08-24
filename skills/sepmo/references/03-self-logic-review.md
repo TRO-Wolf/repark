@@ -38,6 +38,7 @@ SELF_LOGIC_REVIEW:
     - <precondition>: SATISFIED (<evidence>) | UNVERIFIED → HALT   # D1
   success_condition: <the one checkable test for "this action done right">   # D4
   step_risks: [ <what could go wrong with THIS step>: HANDLED(<how>) | OPEN ]
+  contingencies: [ <failure-path action>: EXECUTABLE(<additive | pre-authorized>) | NOT_EXECUTABLE -> HALT ]   # R11, spine v2.3
   tripwire_scan: CLEAN | FIRED on "<phrase>" → <resolution>   # D1
   uncertainty: NONE | <describe>                              # any non-NONE ⇒ HALT  (D2)
   verdict: PROCEED | HALT
@@ -46,7 +47,7 @@ SELF_LOGIC_REVIEW:
 
 No field is optional and no field is renamed, reordered, or dropped for either consumer. For the
 whole-plan review, `action` reads as a single sentence naming the plan ("execute PR-carved charter
-`<charter-id>`"), not a list of steps — the four state-3 checks live inside `preconditions` and
+`<charter-id>`"), not a list of steps — the five state-3 checks live inside `preconditions` and
 `success_condition`, per the mapping below.
 
 ## Field semantics

@@ -13,11 +13,12 @@ knowledge. The authority move that makes this possible is recorded in
 
 - `common.md` — the shared, tool-neutral start: read AGENTS.md first, then the spine. No rules.
 - `claude.md` — points Claude sessions at [../CLAUDE.md](../CLAUDE.md) and
-  [../docs/skills/](../docs/skills/).
+  [skills/engineering-method/](skills/engineering-method/map.md).
 - `codex.md`, `cursor.md` — one-line stubs pointing inward; no tool mechanics recorded yet.
 - `skills/` — agent-facing runbook skills (release-to-PyPI, context-doc truth-up, disk
-  headroom, the parity audit) plus the code-quality convention reasoning for Python and the
-  Rust review procedure: proven sequences / reasoning, pointer-thin, zero authoritative facts.
+  headroom, the parity audit) plus the portable engineering method, the code-quality convention
+  reasoning for Python and the Rust review procedure: proven sequences / reasoning,
+  pointer-thin, zero authoritative facts.
   Each is a directory with a frontmatter-carrying `SKILL.md`, so it is discoverable rather than
   merely present, and `../.claude/skills` symlinks here so Claude sessions can invoke them
   natively. See [skills/map.md](skills/map.md).

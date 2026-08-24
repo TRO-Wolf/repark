@@ -1,6 +1,6 @@
 ---
 name: sepmo
-version: "2.2"
+version: "2.3"
 description: >-
   Software Engineering Project Manager & Orchestration framework. Runs
   substantial software and data-engineering work through an audit-first state
@@ -184,9 +184,10 @@ Orchestrator logs one Self Logic Review (format: ref 03) over the complete
 plan, confirming at minimum: the charter is frozen; the PR carving is
 clause-complete (every clause maps to exactly one PR unit, every unit traces
 to clauses); each unit's path assignment (LIGHT/STANDARD, below) has a
-recorded rubric result; and the binding manifest resolves every open binding
-(models, tiers, green commands). A gap here routes backward via T6 — it never
-gets patched inline.
+recorded rubric result; the binding manifest resolves every open binding
+(models, tiers, green commands); and every named contingency is executable
+by the role that will trigger it (R11). A gap here routes backward via T6 —
+it never gets patched inline.
 
 ### Invariant V — Vigilance (not a state)
 
@@ -198,7 +199,7 @@ unledgered claims ("100/100" with no ledger, "converged" with no
 attestation), and proportionality-rubric violations. Protocol:
 `references/06-vigilance.md`.
 
-### Incident retrospectives — when a defect escapes
+### Incident retrospectives — when a defect escapes, or the machinery fails
 
 An **escaped defect** — one discovered after its PR was accepted — triggers
 an **incident retrospective** immediately: a mini state-6 scoped to the
@@ -215,6 +216,15 @@ delay its rise. The defect's remediation is its own unit through the normal
 machine, with R5's regression proof — and, where the defect falsified a
 quantified clause, a check that the clause's enumeration actually contained
 the failing element (if it did not, the enumeration was the defect; grow it).
+
+**A lifecycle-machinery incident triggers the same retrospective.** A failure
+of SEPMO's own machinery — an invalid contingency, an unsettled disposition
+consumed downstream, a gate bypassed — files the same immediate
+`kind: incident` metrics section and runs the same asymmetric feed-forward,
+whether or not any product defect escaped. In such a section,
+`coverage_misses` and `escaped_defects_by_origin` may be legitimately empty —
+the keys are still filed, and the incident's mechanism is named in the
+section body.
 
 ---
 
@@ -377,6 +387,47 @@ defect: route T9.** Environmental events are recorded in the retrospective
 metrics ledger as `environment_drift_events` — a distinct counter, not an
 escaped defect, because nothing in the AC loop could have caught it
 (canonical definition: ref 08).
+
+**R11 — Contingencies must be executable.** Every failure-path action named
+in a plan, bundle design, or orchestration script — parking, rollback,
+reset, abort — is part of the plan's proof obligation: it must be
+executable, under the live permission regime, by the role that will trigger
+it, at the moment it fires. A contingency requiring authority its executor
+lacks is not a contingency; it is an unproven assumption (D1), and
+PRE_EXECUTION_REVIEW verifies executability for every named contingency (a
+failure routes T6). Two valid forms: **(a) additive by construction** —
+implemented entirely with forward operations (revert commits, supersede
+records) that need no destructive authority; **(b) pre-authorized
+destructive** — the destructive operation is named, scoped, and explicitly
+granted in the user's sign-off for that plan. Default to (a); a destructive
+contingency on an unattended path is invalid even when convenient.
+
+**R12 — An unsettled disposition blocks the line.** Every unit — and every
+group inside a multi-unit assembly — ends in exactly one recorded
+disposition: **CONVERGED**, **REMOVED** (its effects verifiably absent from
+the branch), or **REMANDED** (R13). Work whose disposition is unresolved —
+including work whose contingency fired and failed — is a blocking state:
+nothing downstream may consume it or build atop it. *Interactive mode:*
+halt and escalate. *Delegated mode:* stop the line and flag; downstream
+stages do not run. Proceeding past an unsettled disposition is an Invariant
+V alarm in its own right — **unsettled-disposition consumption** — **even
+when the proceeding is loudly logged**: logging a breach is not settling it.
+
+**R13 — Remand.** In a multi-unit assembly (a bundled PR), a unit that
+reaches its cycle cap without convergence either follows *Cycle-cap
+escalation* (which terminates in a disposition) or takes one of two settled
+dispositions directly: **REMOVED**, or **REMANDED**. A remand is explicit,
+never implied by continuation: the remand record enumerates every open
+finding with its severity. Downstream units may proceed only where their
+scope is demonstrably disjoint from the open findings' blast radius, and the
+disjointness claim is recorded. The assembly's **closing authority** — the
+independent bundle-scope Critic — must disposition every enumerated finding
+**item by item**; its attestation covers the remanded unit only when each
+finding is closed with evidence, disproved with evidence, or converted into
+a **recorded user decision**, and every such user decision (waive, strip,
+accept) is named as an explicit merge gate in the PR (R8). A closing
+authority that converges an assembly containing a remanded unit without the
+item-by-item disposition has not converged it.
 
 ---
 
@@ -574,6 +625,33 @@ routes to them.
 
 ## Canon changelog
 
+- **v2.3 — 2026-07-26.** The disposition discipline lands: **R11**
+  (contingencies must be executable — additive-by-construction or
+  sign-off-pre-authorized, verified at PRE_EXECUTION_REVIEW), **R12** (every
+  unit and assembly group ends in a recorded disposition — CONVERGED /
+  REMOVED / REMANDED; an unsettled disposition blocks the line, and logging a
+  breach is not settling it), **R13** (remand to the assembly's closing
+  authority: explicit record with enumerated findings, recorded disjoint-scope
+  rule for downstream work, item-by-item closing disposition, user decisions
+  as named PR merge gates). The spine's *Incident retrospectives* section
+  widens its trigger to **lifecycle-machinery incidents** (Amendment D) —
+  machinery failures file the same immediate `kind: incident` section whether
+  or not a product defect escaped. Promoted from a consuming project's
+  incident retrospective: a bundle group parked on an open finding, its
+  destructive parking contingency proved unexecutable under the live
+  permission regime, downstream groups consumed the unsettled state, and the
+  bundle-scope closing Critic caught the breach and improvised what R13 now
+  legalizes. *Reference amendments required by this version:* ref 02 —
+  PRE_EXECUTION_REVIEW checklist gains contingency-executability; *Cycle-cap
+  escalation* gains the REMOVED/REMANDED dispositions and the
+  multi-unit-assembly binding; ref 03 — the review format gains a
+  contingency-executability line; ref 05 — the bundle-scope closing Critic's
+  item-by-item remand duty AND the external-critic-engine constraints
+  (Amendment E); ref 06 — new watch item at each lineage's next unused id
+  (**W9** in the master's references): unsettled-disposition consumption /
+  invalid contingency; ref 08 — mirrors Amendment D (canonical rule stays in
+  the spine); the template — the optional `critic_engine` binding row
+  (Amendment E, runtime-neutral).
 - **v2.2 — 2026-07-13.** The quantifier discipline lands: the ledger gains
   the **enumeration obligation** (a quantified proposition is `OPEN` until
   its domain is a finite, attackable partition) and R2 pins **per enumerated

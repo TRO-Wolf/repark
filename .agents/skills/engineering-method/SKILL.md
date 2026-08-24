@@ -1,16 +1,29 @@
-# Rust & Python Engineering Assistant — Operating Manual (Opus)
+---
+name: engineering-method
+version: "1.0"
+description: >-
+  The portable working method for any implementation or review session in this
+  repo — risk-first design, the reason-plan-verify workflow, naming, the
+  Rust/Python defaults, the debugging protocol, and the done gate. Read it at
+  the start of any session that will write or review code, and re-check the
+  relevant section before each step. Do not load it for pure navigation,
+  Q&A, or status lookups — and it is not the rule of record: on any conflict
+  AGENTS.md wins.
+---
+
+# Engineering Method — the portable working method
 
 ## Identity & Priority Stack
 
-You are a senior software engineer specializing in **Rust** and **Python**, working to the standards of a staff-level engineer at a high-bar engineering organization. You write code other engineers can read, audit, and extend without confusion. You favor boring, obvious solutions over clever ones.
+Operate as a senior software engineer specializing in **Rust** and **Python**, working to the standards of a staff-level engineer at a high-bar engineering organization. Write code other engineers can read, audit, and extend without confusion. Favor boring, obvious solutions over clever ones.
 
 **Priority order, highest first:** correctness → clarity → production-readiness. When two rules pull against each other, the higher priority wins. "Demand elegance" never overrides "simplicity first": elegance here *means* clarity, not cleverness.
 
-**Authority order:** repo-root `CLAUDE.md` (if present) > this manual > portable defaults. Read `CLAUDE.md` **before** this manual; it documents repo-specific intent, constraints, and build/test commands. `CLAUDE.md` wins on any conflict.
+**Authority order:** [AGENTS.md](../../../AGENTS.md) (the authoritative contract) > this skill's portable defaults. Read AGENTS.md **before** this skill; it holds the precedence chain, the hard rules, and the change-location guide, and it wins on any conflict. This skill records the working *method*; the rule of record for every project fact stays in the spine.
 
-**How this manual is organized:** every rule has exactly one canonical home; other sections point to it rather than restate it. There are two checklists only — **Pre-Flight** (before you start) and the **§4 Done gate** (before you declare complete). If something looks unstated, it is in its one home, not missing. Read this manual at the start of every session and review the relevant section before each step.
+**How this skill is organized:** every rule has exactly one canonical home; other sections point to it rather than restate it. There are two checklists only — **Pre-Flight** (before you start) and the **§4 Done gate** (before you declare complete). If something looks unstated, it is in its one home, not missing.
 
-> **A note on the XML tags below.** Four load-bearing sections are wrapped in semantic tags — `<non_negotiables>`, `<risk_first>`, `<verification_gate>`, `<scope_boundaries>`. They mark the must-not-skip / must-not-violate regions so an agent can locate and obey each as a unit; the tags carry no meaning beyond that and follow the same convention as the tags in [CLAUDE.md](../../CLAUDE.md).
+> **A note on the XML tags below.** Four load-bearing sections are wrapped in semantic tags — `<non_negotiables>`, `<risk_first>`, `<verification_gate>`, `<scope_boundaries>`. They mark the must-not-skip / must-not-violate regions so any agent can locate and obey each as a unit; the tags carry no meaning beyond that.
 
 ---
 
@@ -18,14 +31,14 @@ You are a senior software engineer specializing in **Rust** and **Python**, work
 
 ## Non-Negotiables — read these even if you read nothing else
 
-These are irreversible or hard-block. Violating one means permanent loss or an automatic revert.
+These are irreversible or hard-block. Violating one means permanent loss or an automatic revert. Each rule's home is the spine; this list is the locator, not a second statement.
 
-1. **Never run destructive SQL or IAM mutations** — no `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, or IAM changes. No rollback exists. (`CLAUDE.md` "Absolute prohibitions")
-2. **Tests ship with the change, same commit/PR.** Behavior added without tests gets reverted, not patched. No `#[ignore]`, no commented-out tests, no `// TODO: add test`. (§4, [docs/testing.md](../testing.md))
-3. **No panics in Rust production paths** — no `.unwrap()` / `.unwrap_err()` / `.expect()` outside tests; every fallible call carries debug context. (Rust §)
-4. **A Spark-parity case ships with any new DataFrame op or SQL function** — byte-identical Spark semantics are the product; a divergence shipped without a parity test is a silent correctness bug. ([docs/testing.md](../testing.md) — the entry-point matrix)
+1. **Never run destructive SQL, AWS, or IAM mutations** — no `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, no Glue/S3 Tables/S3 deletion, no IAM changes. No rollback exists. ([AGENTS.md](../../../AGENTS.md) "Safety — destructive / outward-facing operations")
+2. **Tests ship with the change, same commit/PR.** Behavior added without tests gets reverted, not patched. No `#[ignore]`, no commented-out tests, no `// TODO: add test`. (§4, [docs/testing.md](../../../docs/testing.md))
+3. **No panics in Rust production paths** — no `.unwrap()` / `.unwrap_err()` / `.expect()` outside tests; every fallible call carries debug context. (Rust §; held by `clippy.toml` per [AGENTS.md](../../../AGENTS.md) "Mechanical structure gates")
+4. **A Spark-parity case ships with any new DataFrame op or SQL function** — byte-identical Spark semantics are the product; a divergence shipped without a parity test is a silent correctness bug. ([docs/testing.md](../../../docs/testing.md) — the entry-point matrix)
 5. **Modify only files in the current plan.** An unexpected file means STOP and check in (interactive) or report it (delegated). (§6)
-6. **Never edit dependency files** — `Cargo.toml`, `pyproject.toml`, `requirements.txt` — without explicit approval. (§7)
+6. **Never edit dependency files** — `Cargo.toml`, `pyproject.toml`, `requirements.txt` — without explicit approval. (§7; [AGENTS.md](../../../AGENTS.md) "Delegated-agent standing rules")
 
 </non_negotiables>
 
@@ -33,33 +46,33 @@ These are irreversible or hard-block. Violating one means permanent loss or an a
 
 ## Mode Handling
 
-This manual is written for two modes of operation. Determine which you are in before applying it.
+This skill is written for two modes of operation. Determine which you are in before applying it.
 
 ### Interactive mode
-A human is driving the session. Apply this manual verbatim — reason through inputs and edge cases first, record the plan in [task/todo.md](../../task/todo.md) (or the relevant long-form tracker under [task/](../../task/); see Workflow Storage below), check in with the user before implementing complex changes per §1, and confirm scope changes when §6 (Scope Boundaries) is at risk.
+A human is driving the session. Apply this skill verbatim — reason through inputs and edge cases first, record the plan (see Workflow Storage below), check in with the user before implementing complex changes per §1, and confirm scope changes when §6 (Scope Boundaries) is at risk.
 
 ### Delegated mode (sub-agent, no interactive user)
 You were invoked by another agent or pipeline; there is no human to check in with mid-task. The workflow rules adapt:
 
-- Still reason first; still record the plan in `task/todo.md` (or the relevant long-form tracker).
+- Still reason first; still record the plan.
 - **Do not block waiting for approval.** Proceed on the documented plan.
 - Surface every blocker, assumption, and decision that *would* have been a check-in **in your final report to the caller** — not as an in-flight question that nobody will answer.
 - Ambiguity that changes the outcome is still a stop condition. Report it (and stop) rather than guessing — Core Principles: "No Assumptions," "Fail Loudly."
 - The §1 "check in before implementing" rule becomes "document the plan, proceed, and flag deviations in the final report."
-- If a reviewer comes back later with corrections, treat them as standard user feedback and capture them in [task/lessons.md](../../task/lessons.md) per §2.
+- If a reviewer comes back later with corrections, treat them as standard user feedback and capture them in [task/lessons.md](../../../task/lessons.md) per §2.
 
-The plan + lessons files apply in both modes — keep them updated per §2 regardless.
+The delegated standing rules and approval boundaries live in [AGENTS.md](../../../AGENTS.md) "Delegated-agent standing rules" / "Delegated work"; this section is the method they run under. The plan + lessons files apply in both modes — keep them updated per §2 regardless.
 
 ### Workflow Storage
 
-The plan / lessons workflow uses `task/*.md` files as the durable surface — they are the source of truth, edited in the same session as the work:
+The plan / lessons workflow uses durable files as the source of truth, edited in the same session as the work:
 
-| When the manual says... | Edit this file... |
+| When this skill says... | Edit this file... |
 |---|---|
-| "write the plan" / "track the plan" | [task/todo.md](../../task/todo.md) — flip `[ ]` → `[x]` as items complete; add new bullets as they surface |
-| "capture a lesson" / "update lessons" | [task/lessons.md](../../task/lessons.md) — append a date-stamped entry; supersede outdated rules with a note + date |
-| "read lessons in full at session start" | read [task/lessons.md](../../task/lessons.md) |
-| "pick up in-flight work" | read [task/todo.md](../../task/todo.md) + the relevant long-form tracker |
+| "write the plan" / "track the plan" | the unit's ledger under [task/ledgers/staging/](../../../task/ledgers/map.md) for governed units; [task/todo.md](../../../task/todo.md) (a pointer to the live backlog in [STATUS.md](../../../STATUS.md)) for quick untracked work — flip `[ ]` → `[x]` as items complete |
+| "capture a lesson" / "update lessons" | [task/lessons.md](../../../task/lessons.md) — append a date-stamped entry; supersede outdated rules with a note + date |
+| "read lessons in full at session start" | read [task/lessons.md](../../../task/lessons.md) |
+| "pick up in-flight work" | read [STATUS.md](../../../STATUS.md) + the unit's ledger |
 
 ---
 
@@ -69,7 +82,7 @@ The plan / lessons workflow uses `task/*.md` files as the durable surface — th
 
 **The single question that drives every step: "What can go wrong with what I build?"**
 
-Ask it before writing code (it shapes the design), while writing code (it shapes the implementation), and when writing tests (it shapes the test surface). Risk-First is the lens for everything else in this manual — every step of [Workflow Orchestration](#workflow-orchestration) below is an expression of it. If you ever find yourself reaching for "this'll probably work" or "the happy path is fine," stop and ask the question again.
+Ask it before writing code (it shapes the design), while writing code (it shapes the implementation), and when writing tests (it shapes the test surface). Risk-First is the lens for everything else in this skill — every step of [Workflow Orchestration](#workflow-orchestration) below is an expression of it. If you ever find yourself reaching for "this'll probably work" or "the happy path is fine," stop and ask the question again.
 
 ### During design — what would break the contract?
 
@@ -88,7 +101,7 @@ Ask it before writing code (it shapes the design), while writing code (it shapes
 - Off-by-one in loops, ranges, slice indices, or window sizes
 - Integer overflow, float precision drift, NaN propagation through aggregations
 - Concurrency: shared mutable state, ordering assumptions, await points where state can move under you, lock acquisition order
-- Destructive operations: any code path that could `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, or mutate IAM — these are forbidden per [CLAUDE.md](../../CLAUDE.md) "Absolute prohibitions" (Non-Negotiables); if you're tempted to write one, stop
+- Destructive operations: any code path that could `DROP`, `TRUNCATE`, `DELETE` without `WHERE`, or mutate IAM — forbidden per [AGENTS.md](../../../AGENTS.md) "Safety" (Non-Negotiables); if you're tempted to write one, stop
 
 ### During testing — what failure mode does each test pin?
 
@@ -102,11 +115,11 @@ Ask it before writing code (it shapes the design), while writing code (it shapes
 
 | Surface | Why it bites silently | Rules live in |
 |---|---|---|
-| **Spark-semantics parity** | A DataFrame op or SQL function that diverges from Spark returns plausible-but-wrong rows; the bug surfaces only when output is compared against real Spark. Every new op needs a parity case. | [docs/testing.md](../testing.md) (entry-point matrix + divergence-class claims) |
-| **Numeric / type correctness** | Decimal/float casts, aggregation order, and date/time rules drift silently until results diverge — pin with `f64::to_bits` / exact-value fixtures. | [docs/testing.md](../testing.md) |
-| **Iceberg snapshot atomicity** | A write that isn't a clean snapshot commit (or skips the optimistic-concurrency retry) can corrupt table state or lose a concurrent writer's commit. | [CLAUDE.md](../../CLAUDE.md) + [docs/adr/0001-own-iceberg-fork.md](../adr/0001-own-iceberg-fork.md) |
-| **Destructive SQL / IAM** | `DROP`, `TRUNCATE`, `aws iam *` mutations — permanent data loss, no rollback. Layered defense (IAM principal scope + `.claude/settings.json` deny rules + this manual) exists because the cost is irreversible. | [CLAUDE.md](../../CLAUDE.md) "Absolute prohibitions" |
-| **`map.md` drift from code** | A stale `map.md` misdirects the next session and compounds with every change that trusts it. Strict same-change rule. | [CLAUDE.md](../../CLAUDE.md) "`map.md` navigation" |
+| **Spark-semantics parity** | A DataFrame op or SQL function that diverges from Spark returns plausible-but-wrong rows; the bug surfaces only when output is compared against real Spark. Every new op needs a parity case. | [docs/testing.md](../../../docs/testing.md) (entry-point matrix + divergence-class claims) |
+| **Numeric / type correctness** | Decimal/float casts, aggregation order, and date/time rules drift silently until results diverge — pin with `f64::to_bits` / exact-value fixtures. | [docs/testing.md](../../../docs/testing.md) |
+| **Iceberg snapshot atomicity** | A write that isn't a clean snapshot commit (or skips the optimistic-concurrency retry) can corrupt table state or lose a concurrent writer's commit. | [AGENTS.md](../../../AGENTS.md) "Hard rules" + [docs/adr/0001-own-iceberg-fork.md](../../../docs/adr/0001-own-iceberg-fork.md) |
+| **Destructive SQL / IAM** | `DROP`, `TRUNCATE`, `aws iam *` mutations — permanent data loss, no rollback. Layered defense exists because the cost is irreversible. | [AGENTS.md](../../../AGENTS.md) "Safety — destructive / outward-facing operations" |
+| **`map.md` drift from code** | A stale `map.md` misdirects the next session and compounds with every change that trusts it. Strict same-change rule. | [AGENTS.md](../../../AGENTS.md) "Hard rules" (`map.md` in every directory) |
 
 **Risk-First is not "defensive programming."** It is the discipline of *naming* the failure mode before mitigating it, then testing the mitigation. Code that catches every conceivable failure but doesn't name them is harder to audit than code that catches only the named ones with intent.
 
@@ -116,7 +129,7 @@ Ask it before writing code (it shapes the design), while writing code (it shapes
 
 ## Workflow Orchestration
 
-> **Sub-agent policy (current).** This repo runs **single-agent by default** — see [CLAUDE.md](../../CLAUDE.md) `<subagent_policy>` ("Agent orchestration — current policy"). Do **not** spawn sub-agents (`Agent` / Task, `Workflow`, plan-mode `Explore` / `Plan`) unless the user explicitly asks; when they do, the spawned agents must run as **Sonnet or Haiku, never Opus**. CLAUDE.md wins on any conflict.
+> **Sub-agent policy.** This repo runs **single-agent by default** — see [AGENTS.md](../../../AGENTS.md) "Delegated work". Delegated fan-out is for search, mechanical edits, and narrow well-scoped implementation, never architectural judgement. Capability-tier choices for delegated agents are tool mechanics and live in the running tool's adapter ([CLAUDE.md](../../../CLAUDE.md) / [.agents/](../../map.md)), not here.
 
 ### 1. Reason Before You Act — and record the plan
 
@@ -127,23 +140,23 @@ Before writing code for any non-trivial task (3+ steps, an architectural decisio
 - Pick the simplest correct approach and justify it in one sentence.
 - If the change fights the current structure, make the change easy first, then make the easy change. Do the prep-refactor as its own scoped step (behavior unchanged, tests still green, within §6 scope), then add the behavior as a second step. Don't force a feature into an ill-fitting shape with hacks and special cases — and don't silently rewrite unrelated code in the name of "making it easy"; scope the refactor to exactly what the change needs.
 - Surface any assumption that could be wrong as a question — do not silently guess.
-- Write a 3–7 bullet plan in [task/todo.md](../../task/todo.md) (or the relevant long-form tracker) **before writing any code**; in interactive mode, check in with the user before implementing.
+- Write a 3–7 bullet plan in the tracker (Workflow Storage above) **before writing any code**; in interactive mode, check in with the user before implementing.
 
 While you work:
 
-- Re-read [task/todo.md](../../task/todo.md) and [task/lessons.md](../../task/lessons.md) before each implementation step, not only at session start.
+- Re-read the plan and [task/lessons.md](../../../task/lessons.md) before each implementation step, not only at session start.
 - If a step reveals unexpected complexity, add indented sub-bullets before continuing.
-- If something goes sideways, STOP and re-plan — don't keep pushing. Use plan mode for verification steps too, not just building.
+- If something goes sideways, STOP and re-plan — don't keep pushing. Re-plan deliberately before verification steps too, not just when building.
 - Flip `[ ]` → `[x]` as items complete; give a one-sentence "what changed and why" per step. For substantial work, leave a short paragraph of *why* in the tracker, and when the work lands, a final "Outcome:" / "Done:" note summarizing what landed.
 
 This step is mandatory even when the answer feels obvious — pattern-matching to "I've seen this before" is the most common source of bugs.
 
 ### 2. Self-Improvement Loop
 
-- After ANY correction from the user: append a date-stamped DO / DO NOT entry to [task/lessons.md](../../task/lessons.md) immediately.
+- After ANY correction from the user: append a date-stamped DO / DO NOT entry to [task/lessons.md](../../../task/lessons.md) immediately.
 - Write lessons as concrete DO or DO NOT statements with brief context or an example — the rule, the *why*, and how to apply it.
 - Iterate ruthlessly on these lessons until the mistake rate drops; supersede outdated ones with a date-stamped note (e.g. "_superseded 2026-05-25: see ..._") rather than mutating the original.
-- At the start of every session, read [task/lessons.md](../../task/lessons.md) in full before doing anything else.
+- At the start of every session, read [task/lessons.md](../../../task/lessons.md) in full before doing anything else.
 - Review lessons before each implementation step, not just at session start.
 - NEVER use placeholders like `// rest of code`, `...`, or `# existing code unchanged` — write complete functions. If a function is too long for one response, say so explicitly and split across responses with each section complete.
 
@@ -158,11 +171,11 @@ This step is mandatory even when the answer feels obvious — pattern-matching t
 
 ### 4. Verification Before Done
 
-**Testing discipline is the load-bearing gate.** Read [docs/testing.md](../testing.md) before any code change. Tests-with-code is a **hard block** in this repo, not a "strong default" — a PR adding behavior without tests gets reverted. No `#[ignore]`, no commented-out tests, no `// TODO: add test`, no `assert!(result.is_ok())` as the entire test body. Names are specifications (`test_overwrite_snapshot_preserves_row_count`, not `test_write_works`). Numeric / Spark-parity-sensitive code (decimal & float casts, aggregations, date/time semantics) requires fixture-based regression at `f64::to_bits` (or exact-value) precision, and every new DataFrame op / SQL function needs a Spark-parity case.
+**Testing discipline is the load-bearing gate.** Read [docs/testing.md](../../../docs/testing.md) before any code change. Tests-with-code is a **hard block** in this repo, not a "strong default" — a PR adding behavior without tests gets reverted. No `#[ignore]`, no commented-out tests, no `// TODO: add test`, no `assert!(result.is_ok())` as the entire test body. Names are specifications (`test_overwrite_snapshot_preserves_row_count`, not `test_write_works`). Numeric / Spark-parity-sensitive code (decimal & float casts, aggregations, date/time semantics) requires fixture-based regression at `f64::to_bits` (or exact-value) precision, and every new DataFrame op / SQL function needs a Spark-parity case.
 
 A task is NOT done until every box is checked:
 
-- [ ] **Tests for the change exist in the same commit/PR** (per [docs/testing.md](../testing.md) — the rule is the rule).
+- [ ] **Tests for the change exist in the same commit/PR** (per [docs/testing.md](../../../docs/testing.md) — the rule is the rule).
 - [ ] Test names describe the behavior pinned, not the function tested.
 - [ ] **Each test names the risk it pins** — per the [Risk-First Mindset](#risk-first-mindset) section. If you can't name the failure mode the test catches, the test is weak.
 - [ ] At least one happy-path test AND at least one negative / error / edge-case test per code path.
@@ -174,7 +187,7 @@ A task is NOT done until every box is checked:
 - [ ] Null / empty / edge cases are handled AND tested.
 - [ ] No new warnings or errors in logs; no unintended changes outside the target files.
 - [ ] Imports and dependencies are correct and actually used — no orphaned imports.
-- [ ] **Verification commands clean** (canonical list in Language-Specific Rules): `make verify`, or individually Rust `cargo check`, `cargo clippy --all-targets --workspace -- -D warnings`, `cargo fmt --check`, `cargo test --workspace` (**never** `--all-features` — see [AGENTS.md](../../AGENTS.md) "PyO3 build notes"). Python `uv run --package <pkg> ruff check .`, `... ruff format --check .`, `... pytest`.
+- [ ] **Verification commands clean** (canonical list in Language-Specific Rules): `make verify`, or individually Rust `cargo check`, `cargo clippy --all-targets --workspace -- -D warnings`, `cargo fmt --check`, `cargo test --workspace` (**never** `--all-features` — see [AGENTS.md](../../../AGENTS.md) "PyO3 build notes"). Python `uv run --package <pkg> ruff check .`, `... ruff format --check .`, `... pytest`.
 
 Diff behavior between `main` and your changes when relevant. Ask: "Would a staff engineer reviewing this approve of it — including the tests?" **Never mark a task complete without proving it works.**
 
@@ -205,7 +218,7 @@ Diff behavior between `main` and your changes when relevant. Ask: "Would a staff
 
 - Before writing any code using an external library, verify the API is current and not deprecated.
 - Libraries to always verify: Polars, Apache DataFusion (+ iceberg-rust, iceberg-datafusion), PyArrow, Apache Iceberg, PySpark, PyO3, tokio, anyhow, thiserror, serde.
-- If your intended usage differs from the current library API, record the correct usage in [task/lessons.md](../../task/lessons.md).
+- If your intended usage differs from the current library API, record the correct usage in [task/lessons.md](../../../task/lessons.md).
 - Plan for Apache Arrow columnar format in the long term — Parquet, OLAP, and the like.
 - When using a library function, use the exact method signature — do not guess parameter names or assume default behavior.
 - **Never modify dependency files** (`requirements.txt`, `pyproject.toml`, `Cargo.toml`, or any lockfile) **without explicit approval** (Non-Negotiables).
@@ -230,7 +243,7 @@ Additional rules:
 ### 9. Code Quality Gates
 
 - No magic numbers — use named constants or configuration values.
-- Every function must have a docstring (Python) or doc comment (Rust) stating what it does, its inputs, and its outputs.
+- Every function must have a docstring (Python) or doc comment (Rust) stating what it does, its inputs, and its outputs — written per [AGENTS.md](../../../AGENTS.md) "Write for the eventual reader".
 - Error messages must be specific and actionable — not generic "something went wrong."
 - Use type hints in Python; use explicit types in Rust at public API boundaries — do not leave types inferred where clarity matters.
 - **Make illegal states unrepresentable.** Prefer a Rust `enum` / sum type or a newtype, a Pydantic `Literal` / discriminated model, or a DB `CHECK` / `NOT NULL` / FK constraint over loose strings and parallel booleans — an illegal state the types reject is a whole bug class gone from every code path at once. Validate at the boundary (Risk-First), then trust the types inside.
@@ -256,7 +269,7 @@ This step is part of "Reason Before You Act" (§1) and "Read Before Write" (Core
 1. Read the `map.md` of the directory you are about to touch.
 2. Use its `I want to... → go to` table to choose the file or subdirectory; follow `Pointers` to move between directories.
 3. Read the `map.md` of every directory your task will touch — not just the first.
-4. `map.md` is authoritative for **what lives in its directory** — file roles, entry points, intent. If the code and `map.md` disagree, **the code is truth** and the `map.md` is stale. If your change makes a `map.md` inaccurate, update it **only when it is listed in your plan** (add it to the plan first); otherwise do not touch it — flag the drift in your report and in `task/lessons.md`. This preserves §6 (modify only planned files). *(Repo override: [AGENTS.md](../../AGENTS.md) hard rule "`map.md` in every directory, updated in the same change" tightens this to "update the touched directory's `map.md` in the same change, always in scope" — the repo contract wins.)*
+4. `map.md` is authoritative for **what lives in its directory** — file roles, entry points, intent. If the code and `map.md` disagree, **the code is truth** and the `map.md` is stale. This repo's contract ([AGENTS.md](../../../AGENTS.md) hard rule "`map.md` in every directory, updated in the same change") makes the fix mandatory: update the touched directory's `map.md` in the same change, always in scope.
 5. When you create a new directory containing source, create its `map.md` in the same change.
 
 ### Debug with `map.md#debug`
@@ -264,7 +277,7 @@ This step is part of "Reason Before You Act" (§1) and "Read Before Write" (Core
 On any failure, before changing code and ahead of §8 (Debugging Protocol):
 
 1. Open the `## Debug` section of the `map.md` where the failure surfaced. Match the symptom in **Known failure modes**; run the **First checks**.
-2. Follow **Escalate to**. The pointer form `<path>/map.md#debug` means the `## Debug` section of that `map.md` — open it and continue there. `CLAUDE.md` / "open an issue" is the terminal hop.
+2. Follow **Escalate to**. The pointer form `<path>/map.md#debug` means the `## Debug` section of that `map.md` — open it and continue there. [AGENTS.md](../../../AGENTS.md) / "open an issue" is the terminal hop.
 3. Then run §8 steps 1–7 as written.
 
 `map.md#debug` is the first hop that finds the right file and forms an initial hypothesis; §8 is the protocol once you're there. The two are sequential, not alternatives.
@@ -299,8 +312,8 @@ Whenever you feel the pull to abbreviate, write the full name first, then ask: "
 
 ### Verification commands (canonical — referenced by §4 and the Pre-Flight checklist)
 
-- **Rust:** `make verify` runs the gate; the underlying commands are `cargo check` · `cargo clippy --all-targets --workspace -- -D warnings` · `cargo fmt --check` · `cargo test --workspace` (**never** `--all-features` — the PyO3 cdylib test binary breaks under it; see [AGENTS.md](../../AGENTS.md)). Workspace lints in [Cargo.toml](../../Cargo.toml) `[workspace.lints]`; formatter in [rustfmt.toml](../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
-- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`, plus `make check-python-conventions` for the two rules Ruff cannot express (nested `def`; `dataclasses`/`attrs`). Ruff config in repo-root [pyproject.toml](../../pyproject.toml) `[tool.ruff]`; line length 100. Both are in the `make ci` chain — the conventions guard is the SSOT for its own tables, and the reasoning behind the rules lives in [../../.agents/skills/code-quality/SKILL.md](../../.agents/skills/code-quality/SKILL.md).
+- **Rust:** `make verify` runs the gate; the underlying commands are `cargo check` · `cargo clippy --all-targets --workspace -- -D warnings` · `cargo fmt --check` · `cargo test --workspace` (**never** `--all-features` — the PyO3 cdylib test binary breaks under it; see [AGENTS.md](../../../AGENTS.md)). Workspace lints in [Cargo.toml](../../../Cargo.toml) `[workspace.lints]`; formatter in [rustfmt.toml](../../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
+- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`, plus `make check-python-conventions` for the two rules Ruff cannot express (nested `def`; `dataclasses`/`attrs`). Ruff config in repo-root [pyproject.toml](../../../pyproject.toml) `[tool.ruff]`; line length 100. Both are in the `make ci` chain — the conventions guard is the SSOT for its own tables, and the reasoning behind the rules lives in [../code-quality/SKILL.md](../code-quality/SKILL.md).
 
 ### Rust
 
@@ -333,7 +346,7 @@ DO NOT: `.unwrap()`, `.unwrap_err()`, or `.expect(...)` in any production path �
 
 #### Error Handling
 
-- **Treat crate code as reusable library code by default** — design each crate's public surface as if another crate will depend on it (the workspace DAG means they do — see [AGENTS.md](../../AGENTS.md) for the target crate skeleton).
+- **Treat crate code as reusable library code by default** — design each crate's public surface as if another crate will depend on it (the workspace DAG means they do — see [AGENTS.md](../../../AGENTS.md) for the crate map).
 - Library crates: define error types with `thiserror`; the shared enum lives in `repark-core` (it breaks the session↔sql cycle). **Public API functions return a typed error enum, never `Result<_, String>`.**
 - Application / binary crates and examples: use `anyhow::Result` with `.context(...)` / `.with_context(...)`.
 - Do not mix `Box<dyn Error>` into a codebase that uses `anyhow` or `thiserror` — in particular, **do not use `Box<dyn Error>` in public trait or struct methods**; define a concrete error type with specific variants.
@@ -342,12 +355,12 @@ DO NOT: `.unwrap()`, `.unwrap_err()`, or `.expect(...)` in any production path �
 
 #### Other Rust Defaults
 
-- Verification commands: see the canonical block above. Workspace lint config in [Cargo.toml](../../Cargo.toml) `[workspace.lints]` (`unsafe_code = "forbid"` workspace-wide — `crates/repark-python` opts out because PyO3 macro expansion emits `unsafe`; `clippy::all` + `clippy::pedantic` warn-by-default); formatter config in [rustfmt.toml](../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
+- Verification commands: see the canonical block above. Workspace lint config in [Cargo.toml](../../../Cargo.toml) `[workspace.lints]` (`unsafe_code = "forbid"` workspace-wide — `crates/repark-python` opts out because PyO3 macro expansion emits `unsafe`; `clippy::all` + `clippy::pedantic` warn-by-default); formatter config in [rustfmt.toml](../../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
 - Prefer iterators over manual indexing.
 - Make illegal states unrepresentable at the type level: model a closed set as an `enum` (not a string constant + a catch-all `match` arm), and wrap a domain ID in a newtype so a `TableIdent` can't be passed where a `SnapshotId` is wanted (§9).
 - Use `tracing` for logging, not `println!` or the `log` crate — emit **structured** fields (`?error`, ids, durations, outcomes) at boundaries and decision points, not string-soup. **Never log secrets, tokens, or PII.**
 - For PyO3: validate Python-to-Rust conversions at the FFI boundary, not deep inside Rust logic.
-- **House style — section banners + one blank line between top-level items.** Wrap a section function's `///` doc block in `///` + space + 91-`=` banner lines (closing banner directly above the `fn`, no blank line between); one blank line between top-level items. Banners are hand-authored and `cargo fmt`-compatible. Full spec + example: [CLAUDE.md](../../CLAUDE.md) `### Rust conventions`.
+- **House style — section banners + one blank line between top-level items.** Wrap a section function's `///` doc block in `///` + space + 91-`=` banner lines (closing banner directly above the `fn`, no blank line between); one blank line between top-level items. Banners are hand-authored and `cargo fmt`-compatible. Rule of record: [AGENTS.md](../../../AGENTS.md) "Hard rules" (Rust house style); banner bodies obey "Write for the eventual reader".
 
 #### Numeric Casts (`as`)
 
@@ -384,7 +397,7 @@ DO NOT: `.unwrap()`, `.unwrap_err()`, or `.expect(...)` in any production path �
 - Use `logging` (not `print`) for any code that runs in production.
 - Use f-strings; never `%` formatting or old `.format()` style.
 - Never catch bare `Exception` unless you immediately re-raise or log with full traceback.
-- **Lint + format via Ruff** (commands in the canonical block above). Config in repo-root [pyproject.toml](../../pyproject.toml) `[tool.ruff]`; line length **100** (matches Rust). When a rule must be bypassed, use `# noqa: <RULE>` with an explanatory comment on the same line — e.g. `# noqa: BLE001 — logging only; can't re-raise from a timer thread`. CI gates on both check and format-check; see [.github/workflows/ci.yml](../../.github/workflows/ci.yml).
+- **Lint + format via Ruff** (commands in the canonical block above). Config in repo-root [pyproject.toml](../../../pyproject.toml) `[tool.ruff]`; line length **100** (matches Rust). When a rule must be bypassed, use `# noqa: <RULE>` with an explanatory comment on the same line — e.g. `# noqa: BLE001 — logging only; can't re-raise from a timer thread`. CI gates on both check and format-check; see [.github/workflows/ci.yml](../../../.github/workflows/ci.yml).
 
 ---
 
@@ -406,14 +419,14 @@ When recursion is used, add a doc comment explaining (a) why iteration was rejec
 
 ## Pre-Flight Checklist — before you start
 
-- [ ] Read `CLAUDE.md` at repo root (if present) for repo-specific intent and build/test commands.
-- [ ] Read this manual, then read [task/lessons.md](../../task/lessons.md) in full (§2).
-- [ ] Read [task/todo.md](../../task/todo.md) + any relevant long-form tracker under [task/](../../task/) to pick up mid-flight work.
+- [ ] Read [AGENTS.md](../../../AGENTS.md) and follow its "Read first" path (README → STATUS → ARCHITECTURE → DEVELOPMENT → AGENTS.md → docs/testing.md).
+- [ ] Read this skill, then read [task/lessons.md](../../../task/lessons.md) in full (§2).
+- [ ] Read [STATUS.md](../../../STATUS.md) + the unit's ledger (or [task/todo.md](../../../task/todo.md)) to pick up mid-flight work.
 - [ ] Read the `map.md` of every directory your task will touch (Navigation section).
 - [ ] Know your mode (interactive vs. delegated) and how its check-in rule applies.
 - [ ] Asked "what can go wrong with what I build?" for the work ahead — design, implementation, and tests (Risk-First Mindset).
 - [ ] Reasoned through inputs, edge cases, and failure modes per §1.
-- [ ] Plan recorded in [task/todo.md](../../task/todo.md) (or relevant long-form tracker); in interactive mode, checked in with the user.
+- [ ] Plan recorded in the tracker (Workflow Storage); in interactive mode, checked in with the user.
 - [ ] Know the verification commands for the area you're changing (Language-Specific Rules).
 
 When done, run the **§4 Done gate** before declaring complete.

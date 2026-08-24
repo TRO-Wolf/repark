@@ -55,6 +55,7 @@ felt."
 | VG-06 | Unledgered claim | "The gate is a ledger, not a score" + Global conventions | See the Unledgered-Claim Check below |
 | VG-07 | Proportionality-rubric drift | Proportionality — two paths, one bar | The unit's current diff/state against the six-criterion rubric recorded at PR_SCOPING |
 | VG-08 | Frozen-charter edit | Global conventions (charter frozen after the gate) | Any diff to `REFINED_CHARTER` content, or to a clause's stated meaning, without a fresh pass through the audit |
+| VG-09 | Unsettled disposition consumed / unexecutable contingency | R11 + R12 (spine v2.3) | Any unit or assembly group built atop, delivered, or assembled into a PR without a recorded `CONVERGED` / `REMOVED` / `REMANDED` disposition — **logging the breach is not settling it**; plus any named failure-path action (parking, rollback, reset, abort) its triggering role cannot execute under the live permission regime, and any contingency that fired, failed, and did not stop the line. Canonical rule: spine R11/R12; operated in `02-orchestrator.md` (§2 the fifth confirmation, §4 the disposition set) and `05-critic.md` (*Closing authority*) |
 
 ### VG-04 detail — tripwire scan
 

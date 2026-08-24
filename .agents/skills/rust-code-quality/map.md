@@ -11,8 +11,8 @@ ordered for a query engine (silently wrong results outrank crashes).
 It is a review *sequence*, not a second contract: every rule it leans on points
 into [../../../AGENTS.md](../../../AGENTS.md),
 [../../../docs/testing.md](../../../docs/testing.md), or
-[../../../docs/skills/Opus.md](../../../docs/skills/Opus.md) "Rust", and on any
-conflict those win.
+[../engineering-method/SKILL.md](../engineering-method/SKILL.md) "Rust", and on
+any conflict those win.
 
 ## Contents
 
@@ -33,8 +33,8 @@ conflict those win.
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../../../docs/skills/Opus.md](../../../docs/skills/Opus.md) (the
-  per-tier manual whose "Rust" sections this skill cites rather than restates).
+- Related: [../engineering-method/SKILL.md](../engineering-method/SKILL.md) (the
+  working method whose "Rust" sections this skill cites rather than restates).
 
 ## Debug
 

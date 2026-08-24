@@ -19,6 +19,11 @@ See [../../.claude/map.md](../../.claude/map.md).
 
 ## Contents
 
+- [engineering-method/](engineering-method/map.md) — the portable, agent-agnostic working method
+  for implementation and review sessions: risk-first design, the reason-plan-verify workflow,
+  naming, the Rust/Python defaults, the debugging protocol, and the done gate. Generalized from
+  the former per-model-tier manuals (`docs/skills/`, removed 2026-08-24); tier postures moved to
+  the tool adapters. Rule of record stays [AGENTS.md](../../AGENTS.md).
 - [publish-pypi/](publish-pypi/map.md) — cut a versioned release: the release-PR shape, squash
   tree verification, the annotated tag, the `release.yml` pipeline with its owner approval gate,
   registry verification. Owner merges and approvals stay owner actions.
@@ -48,6 +53,7 @@ See [../../.claude/map.md](../../.claude/map.md).
 
 | ...do this | go to |
 |---|---|
+| Read the working method before writing or reviewing code | [engineering-method/SKILL.md](engineering-method/SKILL.md) |
 | Release a new version to PyPI | [publish-pypi/SKILL.md](publish-pypi/SKILL.md) |
 | True up the docs after work lands, or run the pickup ritual before it | [compact-context-docs/SKILL.md](compact-context-docs/SKILL.md) |
 | Find out whether there is disk room for a big build | [check-disk-headroom/SKILL.md](check-disk-headroom/SKILL.md) |
@@ -71,3 +77,12 @@ See [../../.claude/map.md](../../.claude/map.md).
 | A skill is a bare `.md`, not a directory | Pre-2026-08-21 shape — convert it to `<name>/SKILL.md` with frontmatter + a `map.md` |
 | A skill will not load in a Claude session | `ls -l .claude/skills` resolves here, and the skill's `SKILL.md` carries `name` + `description` frontmatter |
 | A skill step no longer matches reality | Fix the skill in the same PR as the change that falsified it |
+
+**`trait-wrapping` was never made a skill, and no longer needs to be** (recorded 2026-08-10 in the
+former `docs/skills/map.md`; note moved here 2026-08-24 when that directory was generalized into
+[engineering-method/](engineering-method/map.md)). The manual it would have carried — the
+silent-default gap when wrapping a trait: enumerate and forward every method, defaults included,
+audited from both sides — is a **rule in force**: the audit duty is in
+[../../AGENTS.md](../../AGENTS.md) "Version-pin contract" (re-enumerate the wrapped catalog's trait
+surface at every fork repin), and the one open instance is a named component limitation in
+[../../crates/repark-iceberg/map.md](../../crates/repark-iceberg/map.md) "Known limitations".
