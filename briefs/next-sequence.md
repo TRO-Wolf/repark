@@ -32,7 +32,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| — | *(empty)* | — | owner sequences **MW-9** (urgent) or **V3-3** | — |
+| 1 | **MW-9** | MW / MOR-2 | — | M |
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the
@@ -164,16 +164,16 @@ never re-homed; a clause holds those citations mechanically so the section canno
 documented cycle at gate scale and censuses after every step, including the ARMED orphan call
 against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 [../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
-**V3-2 lands with this change.** The sequenced remainder is empty.
+**V3-2 merged as [#232](https://github.com/TRO-Wolf/repark/pull/232)** and left this file.
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
 `rewrite_manifests`, **MW-7** scale measurement, **MW-8** the Airflow-shaped
 runbook, **V3-2** create-v3 opt-in (first format-v3 unit on that north star, after
 the fork pin). MW-9 (`MOR-2` / `write.delete.granularity`) was gated on MW-7's
-numbers; **they are in and they say it is urgent** (2026-08-24) — it is an owner
-call whether it enters this queue and where. V3-3 (DV writes) is the next
-format-v3 unit, also owner-sequenced. S3 Tables MOR (intake "MW-4b") stays
+numbers; **they are in and they say it is urgent** (2026-08-24) — the owner
+sequenced it into this queue on 2026-08-24. V3-3 (DV writes) is the next
+format-v3 unit, still owner-sequenced. S3 Tables MOR (intake "MW-4b") stays
 owner-gated on OD-3b. DML-A/B/C
 and Track A W-0 are not in this queue.
 
@@ -312,24 +312,22 @@ about. A docs unit needs a clause that reads the SQL it PRINTS, not only the pro
 that is C-010. Ledger:
 [../task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
 
-### V3-2 — done (this PR): create v3 tables behind an explicit opt-in
+### V3-2 — done (merged #232): create v3 tables behind an explicit opt-in
 
 CREATE/CTAS `format-version = 3` (Spark) / `format_version = 3` (ANSI) behind
 `repark.sql.allowCreateFormatVersion3` (default false). SQL must still request
 v3; unspecified create stays v2; ALTER stays refused; `V3-LINEAGE-1` is not
 lifted. Copy-on-write MERGE/DELETE/UPDATE on v3 is the existing default and is
 not format-gated (V3-3 / V3-4). Ledger:
-[../task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](../task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md).
+[../task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-v3-2-create-v3-opt-in-ledger.md).
 
-The slate queue is empty. Two candidates, neither entered until the owner
-sequences them:
+### MW-9 — in flight: close MOR-2 (`write.delete.granularity`)
 
-- **MW-9** — `write.delete.granularity` / `MOR-2`. Urgent on MW-7's numbers
-  (point probe 858 → 3,878 ms at 0.02% of rows). Engine change on the MoR
-  writer; independent of V3-3.
-- **V3-3** — merge-on-read writes on v3 via the fork's `DVFileWriter`. The
-  large format-v3 unit; `V3-LINEAGE-1` / `B-MOR-3` stay fork-blocked for
-  maintenance.
+Honor `write.delete.granularity` (`file` / `partition`) in the merge-on-read
+writer. Spark's default is `file`. MW-7's point probe (858 → 3,878 ms at 0.02%
+of rows) is why this is first. Independent of V3-3.
+
+V3-3 (DV writes) remains owner-sequenced.
 
 ---
 

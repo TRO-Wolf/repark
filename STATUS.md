@@ -458,10 +458,10 @@ history-rewrite; provenance and the options weighed:
     the measured sequence). Ledger:
     [task/ledgers/completed/mw-8-maintenance-runbook-ledger.md](task/ledgers/archive/2026-08/2026-08-24-mw-8-maintenance-runbook-ledger.md).
   - **Sequenced remainder (owner-chartered 2026-08-23):** RP-1, MW-6, MW-7, MW-8 and
-    **V3-2** are delivered. The slate queue is empty; [briefs/next-sequence.md](briefs/next-sequence.md)
-    holds the standing rules. MW-9 is **unsequenced but no longer ungated** — MW-7's
-    numbers answered its gating question "yes" on 2026-08-24; entering it in the queue
-    is an owner call. V3-3 (deletion-vector writes) is the next format-v3 unit, also
+    **V3-2** ([#232](https://github.com/TRO-Wolf/repark/pull/232)) are delivered.
+    **MW-9** (`write.delete.granularity` / `MOR-2`) is #1 on
+    [briefs/next-sequence.md](briefs/next-sequence.md) — owner sequenced 2026-08-24
+    after MW-7 ruled it urgent. V3-3 (deletion-vector writes) remains
     owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
@@ -494,7 +494,7 @@ history-rewrite; provenance and the options weighed:
     (ANSI) behind session conf `repark.sql.allowCreateFormatVersion3` (default false).
     SQL must still request v3; unspecified create stays v2; ALTER stays refused;
     `rewrite_data_files` still hits `V3-LINEAGE-1`. Ledger:
-    [task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md).
+    [task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](task/ledgers/archive/2026-08/2026-08-24-v3-2-create-v3-opt-in-ledger.md).
     Next on the track is V3-3 (DV writes), owner-sequenced.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
