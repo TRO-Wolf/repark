@@ -522,7 +522,7 @@ history-rewrite; provenance and the options weighed:
     `$delete_files` name Puffin content=1 and equality-delete content=2
     (`equality_ids=[1]`). Northstar §3 those two read cells are no longer
     unmeasured. Ledger:
-    [task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md](task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md).
+    [task/ledgers/archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md](task/ledgers/archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md).
     Next on the track is **V3E-4** (refs + time travel; expiry/orphans with
     real work) on [briefs/next-sequence.md](briefs/next-sequence.md), after
     DL-4 (the live-document compaction, chartered 2026-08-25). V3-3

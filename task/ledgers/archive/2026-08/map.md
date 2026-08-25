@@ -139,6 +139,7 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-08-24-mw-9-delete-granularity-ledger.md](2026-08-24-mw-9-delete-granularity-ledger.md) — **MW-9 (2026-08-24):** honor `write.delete.granularity` (`file` / `partition`); Spark default `file`; close registry `MOR-2` for RePark-owned MERGE (fork SQL DELETE/UPDATE still partition-group).
 - [2026-08-24-v3-2-create-v3-opt-in-ledger.md](2026-08-24-v3-2-create-v3-opt-in-ledger.md) — **V3-2 (2026-08-24):** CREATE/CTAS `format-version = 3` behind `repark.sql.allowCreateFormatVersion3` (default false).
 - [2026-08-24-v3e-1-2-cow-oracle-ledger.md](2026-08-24-v3e-1-2-cow-oracle-ledger.md) — **V3E-1 + V3E-2 (2026-08-24):** adopted v3 copy-on-write DML measurement and the v3 maintenance-oracle decision.
+- [2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md](2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — **V3E-3 (2026-08-24):** partitioned + equality-delete Spark-written format-v3 fixtures.
 
 ## Pointers
 - Up: [../map.md](../map.md)

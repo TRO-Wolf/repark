@@ -205,9 +205,6 @@ against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 contents correct; lineage reassigned (`next_row_id` 3→5/6/7); Spark DELETE preserves
 `_row_id`; ENC-1 DECLARED; maintenance oracle `pyspark-4.1.2+iceberg-1.11.0`. Ledger:
 [../task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-v3e-1-2-cow-oracle-ledger.md).
-**V3E-3 ships in this PR** and leaves this file: partitioned v3 DV fixture + equality-delete
-alongside DVs; live rows Spark-exact on three doors; `.delete_files` content 1/2. Ledger:
-[../task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md](../task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md).
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
