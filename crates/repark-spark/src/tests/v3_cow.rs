@@ -437,3 +437,75 @@ async fn adopted_v3_mor_delete_still_refuses() {
         before_rows
     );
 }
+
+/// CCC SEC-001 regression: with the session's `datafusion.catalog.default_catalog` /
+/// `default_schema` set, DataFusion resolves two-part and bare names — and before the fix the
+/// valve stepped aside below three parts, so `DELETE FROM sales.t` committed a v3 rewrite.
+/// Both short forms now refuse, and the table is untouched.
+///
+/// pins: v3r-1-rulings/C-001, C-002
+#[tokio::test]
+async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_cow_v3(&ctx, &catalogs, "seed_short", "adopt_short").await;
+    ctx.sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .expect("set default catalog");
+    ctx.sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .expect("set default schema");
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_short",
+        "DELETE FROM sales.adopt_short WHERE id = 2",
+        "DELETE",
+    )
+    .await;
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_short",
+        "UPDATE adopt_short SET name = 'x' WHERE id = 2",
+        "UPDATE",
+    )
+    .await;
+}
+
+/// CCC SEC-002 regression: a padded `' Merge-On-Read '` was merge-on-read to the valve's
+/// trim-and-case-fold check (which stepped aside) and copy-on-write to the fork, which
+/// committed the rewrite. The valve now refuses every v3 table whatever the mode says.
+///
+/// pins: v3r-1-rulings/C-004
+#[tokio::test]
+async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_pad",
+        "adopt_pad",
+        "'format-version' = '3', 'write.delete.mode' = ' Merge-On-Read '",
+    )
+    .await;
+    let before = lineage(&catalogs, "adopt_pad").await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_pad WHERE id = 2",
+    )
+    .await
+    .expect_err("a padded merge-on-read spelling on v3 must still refuse")
+    .to_string();
+    assert!(
+        err.contains("V3") && err.contains("deletion vectors"),
+        "the merge-on-read arm's reason: {err}"
+    );
+    assert_eq!(lineage(&catalogs, "adopt_pad").await, before, "no commit");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_pad").await,
+        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+    );
+}

@@ -327,9 +327,9 @@ async fn execute_delete(
             )?;
         }
     }
-    refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Delete).await?;
+    refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Delete).await?;
     // pins: v3r-1-rulings/C-001 — the passthrough seat of the V3-COW-1 guard.
-    refuse_v3_cow_dml(catalogs, object_name, MorDmlKind::Delete).await?;
+    refuse_v3_cow_dml(ctx, catalogs, object_name, MorDmlKind::Delete).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
@@ -358,9 +358,9 @@ async fn execute_update(
             )?;
         }
     }
-    refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Update).await?;
+    refuse_mor_unpartitioned_multi_spec_dml(ctx, catalogs, object_name, MorDmlKind::Update).await?;
     // pins: v3r-1-rulings/C-002 — the passthrough seat of the V3-COW-1 guard.
-    refuse_v3_cow_dml(catalogs, object_name, MorDmlKind::Update).await?;
+    refuse_v3_cow_dml(ctx, catalogs, object_name, MorDmlKind::Update).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 

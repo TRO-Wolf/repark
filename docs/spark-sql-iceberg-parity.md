@@ -1969,10 +1969,15 @@ the pin rather than obeying it.
   its snapshot, its rows and its lineage counters. The guard has two seats, both pinned: the
   write-mode resolver (`MERGE INTO` and the subquery-`WHERE` `DELETE` / `UPDATE` form) and a
   passthrough valve beside the BUG-001 valve on each SQL door (the plain-`WHERE` form, which
-  DataFusion plans onto the fork's `TableProvider` without consulting the resolver). The
-  merge-on-read arms refuse v3 independently (R113: v3 mandates deletion vectors), so **a v3
-  table is append-only in this engine** until the fork carries lineage through a row rewrite
-  (handoff F-7). Before the guard (V3E-1, 2026-08-24) the same statements committed the correct
+  DataFusion plans onto the fork's `TableProvider` without consulting the resolver). The valve
+  refuses **every** v3 table whatever `write.<verb>.mode` says — a merge-on-read table for the
+  merge-on-read reason (R113: v3 mandates deletion vectors), the rest for this row's — because
+  the fork parses the property on its own terms (a padded `' Merge-On-Read '` committed a
+  copy-on-write rewrite when the valve stepped aside). Short names complete from the session's
+  default catalog / schema and the ANSI door reads the target from the AST, so neither
+  `DELETE FROM sales.t` under a default catalog nor a quoted `"a.b"` slips past. With the
+  merge-on-read arms refusing v3 independently, **a v3 table is append-only in this engine**
+  until the fork carries lineage through a row rewrite (handoff F-7). Before the guard (V3E-1, 2026-08-24) the same statements committed the correct
   live rows while reassigning lineage: a 3-row seed (`next_row_id = 3`) became `5` after
   deleting one row (2 survivors rewritten), `6` after updating one row (3 rewritten), `7` after
   a MATCHED UPDATE + NOT MATCHED INSERT (3 rewritten + 1 insert). `_row_id` is still not
@@ -1983,9 +1988,11 @@ the pin rather than obeying it.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session.)*
 - **Pin** —
   `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage`
-  (UPDATE / MERGE siblings, the merge-on-read `DELETE` + `MERGE` refusals and a v2 control in
-  the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`; facade MERGE + DELETE +
-  UPDATE in `python/repark/tests/test_v3_cow_dml.py`)
+  (UPDATE / MERGE siblings, the default-catalog short-name and padded merge-on-read
+  regressions, the merge-on-read `DELETE` + `MERGE` refusals and a v2 control in the same
+  leaf; ANSI twins plus the subquery-`WHERE` resolver seat and the dotted quoted name in
+  `crates/repark-sql/src/v3_cow.rs`; facade MERGE + DELETE + UPDATE in
+  `python/repark/tests/test_v3_cow_dml.py`)
 - **Rationale** — BACKLOG, and stricter than Spark on purpose: **owner ruling 2026-08-25** on
   V3E-1's numbers, the trade V3-LINEAGE-1 took for `rewrite_data_files`. The rows are never
   wrong, which is what makes the failure quiet — a downstream incremental consumer is told

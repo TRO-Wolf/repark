@@ -149,7 +149,8 @@ wrapper.
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
   star rewrite call, partition-spec builders. V3R-1 (2026-08-25): `refuse_v3_cow_dml`, the passthrough seat of the
   format-v3 copy-on-write guard (registry `V3-COW-1`), sharing `dml_target_ident` with the
-  BUG-001 valve.
+  BUG-001 valve — short names complete from the session's default catalog / schema (CCC
+  SEC-001), so both valves now see `DELETE FROM sales.t`.
 - `collation.rs` — **G15 (2026-08-12):** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),

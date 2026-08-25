@@ -35,7 +35,9 @@ refusing everything.
   `CREATE TABLE` column `COLLATE`, `CAST AS STRING COLLATE`, SET / parenthesized SET,
   a string-literal negative, and an end-to-end refuse + default `SELECT 1` untouched
   (e2e also covers CAST + SET). Ledger:
-  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md).
+  [`../../../../task/y7-collation-refuse-ledger.md`](../../../../task/ledgers/archive/2026-08/2026-08-13-y7-collation-refuse-ledger.md). V3R-1 (2026-08-25): the MoR-valve wrapper test now
+  hands the valve a parsed `Statement` (the valves resolve the target from the AST, with short
+  names completed from the session defaults — CCC SEC-001 / SEC-003).
 
 ## Pointers
 

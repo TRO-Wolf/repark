@@ -58,12 +58,15 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
 /// doors delegate it to DataFusion, which plans it onto the fork's `TableProvider`, so the
 /// write-mode resolver above is never consulted. Each door calls this beside its BUG-001
 /// merge-on-read valve, before delegation. A missing table passes (the planner's own error is
-/// the better one); a merge-on-read table passes (the merge-on-read arm owns v3 refusal — row
-/// R113); everything else is the copy-on-write arm and refuses on v3.
+/// the better one). **Every format-v3 table refuses**, whatever `write.<verb>.mode` says: a
+/// merge-on-read table refuses for the merge-on-read reason (row R113 — v3 mandates deletion
+/// vectors), everything else for this row's. The valve never steps aside on the mode because
+/// the fork parses the property on its own terms — a padded `' Merge-On-Read '` was
+/// merge-on-read to a trim-and-case-fold check and copy-on-write to the fork, and the rewrite
+/// committed (CCC finding SEC-002).
 ///
 /// # Errors
-/// [`DataFusionError::NotImplemented`] from
-/// [`refuse_v3_cow_dml_that_would_reassign_row_lineage`].
+/// [`DataFusionError::NotImplemented`] naming the arm, the verb, the table and the row.
 pub async fn refuse_v3_cow_dml(
     catalog: &dyn Catalog,
     ident: &TableIdent,
@@ -72,13 +75,23 @@ pub async fn refuse_v3_cow_dml(
     let Ok(table) = catalog.load_table(ident).await else {
         return Ok(());
     };
+    let format_version = table.metadata().format_version();
+    if format_version < FormatVersion::V3 {
+        return Ok(());
+    }
     let is_merge_on_read = table
         .metadata()
         .properties()
         .get(kind.mode_property())
         .is_some_and(|mode| mode.trim().eq_ignore_ascii_case("merge-on-read"));
     if is_merge_on_read {
-        return Ok(());
+        return Err(DataFusionError::NotImplemented(format!(
+            "merge-on-read {verb} will not run on `{ident}`: it is a {format_version:?} table, \
+             and V3 mandates Puffin deletion vectors, which this engine does not write (row \
+             R113) — a v3 table is append-only in this engine for now (registry row V3-COW-1 \
+             covers the copy-on-write arm)",
+            verb = kind.verb(),
+        )));
     }
     refuse_v3_cow_dml_that_would_reassign_row_lineage(&table, kind.verb())
 }

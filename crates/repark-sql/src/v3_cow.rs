@@ -88,7 +88,7 @@ impl Door {
     async fn live_pairs(&self, table: &str) -> Vec<(i32, String)> {
         let batches = self
             .sql(&format!(
-                "SELECT id, name FROM ice.sales.{table} ORDER BY id"
+                "SELECT id, name FROM ice.sales.\"{table}\" ORDER BY id"
             ))
             .await
             .unwrap_or_else(|err| panic!("select: {err}"));
@@ -414,4 +414,86 @@ async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
         "UPDATE",
     )
     .await;
+}
+
+/// CCC SEC-001 regression (ANSI): default catalog / schema set on the session; two-part and
+/// bare names refuse, table untouched.
+///
+/// pins: v3r-1-rulings/C-001, C-002
+#[tokio::test]
+async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
+    let door = door_with_v3_opt_in().await;
+    adopt_cow_v3(&door, "seed_short", "adopt_short").await;
+    door.ctx
+        .sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .expect("set default catalog");
+    door.ctx
+        .sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .expect("set default schema");
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_short",
+        "DELETE FROM sales.adopt_short WHERE id = 2",
+        "DELETE",
+    )
+    .await;
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_short",
+        "UPDATE adopt_short SET name = 'x' WHERE id = 2",
+        "UPDATE",
+    )
+    .await;
+}
+
+/// CCC SEC-003 regression (ANSI): a dotted quoted table name — `ice.sales."a.b"` is creatable
+/// on this door — broke the text scraper the valve used, so the load failed, the valve stepped
+/// aside and the DELETE committed a v3 rewrite. The target now comes from the AST.
+///
+/// pins: v3r-1-rulings/C-001
+#[tokio::test]
+async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_refuses() {
+    let door = door_with_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.\"a.b\" (id INT, name VARCHAR) WITH (format_version = 3)")
+        .await;
+    door.ok("INSERT INTO ice.sales.\"a.b\" VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    assert_cow_refused_untouched(
+        &door,
+        "a.b",
+        "DELETE FROM ice.sales.\"a.b\" WHERE id = 2",
+        "DELETE",
+    )
+    .await;
+}
+
+/// CCC SEC-002 regression (ANSI): padded merge-on-read spelling still refuses on v3.
+///
+/// pins: v3r-1-rulings/C-004
+#[tokio::test]
+async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
+    let door = door_with_v3_opt_in().await;
+    adopt_v3(
+        &door,
+        "seed_pad",
+        "adopt_pad",
+        "format_version = 3, extra_properties = MAP(ARRAY['write.delete.mode'], \
+         ARRAY[' Merge-On-Read '])",
+    )
+    .await;
+    let before = door.lineage("adopt_pad").await;
+    let err = door
+        .err("DELETE FROM ice.sales.adopt_pad WHERE id = 2")
+        .await;
+    assert!(
+        err.contains("V3") && err.contains("deletion vectors"),
+        "the merge-on-read arm's reason: {err}"
+    );
+    assert_eq!(door.lineage("adopt_pad").await, before, "no commit");
+    assert_eq!(
+        door.live_pairs("adopt_pad").await,
+        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
+    );
 }

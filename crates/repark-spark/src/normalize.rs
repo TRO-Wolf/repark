@@ -7,6 +7,7 @@
 use std::ops::ControlFlow;
 
 use datafusion::error::{DataFusionError, Result};
+use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, Query, Statement, TableFactor, TableWithJoins, Value, Visit,
     Visitor,
@@ -310,6 +311,7 @@ pub(crate) fn delete_target_object_name(
 /// [`DataFusionError::Plan`] naming the fork hazard and copy-on-write / `MERGE` workarounds.
 /// ===========================================================================================
 pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
+    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: Option<&ObjectName>,
     kind: MorDmlKind,
@@ -317,7 +319,7 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     let Some(table_name) = table_name else {
         return Ok(());
     };
-    let Some((catalog_name, ident)) = dml_target_ident(table_name) else {
+    let Some((catalog_name, ident)) = dml_target_ident(ctx, table_name) else {
         return Ok(());
     };
     let Some(catalog) = catalogs.get(&catalog_name) else {
@@ -344,6 +346,7 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
 /// [`DataFusionError::NotImplemented`] naming row lineage, the verb and `V3-COW-1`.
 /// ===========================================================================================
 pub(crate) async fn refuse_v3_cow_dml(
+    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: Option<&ObjectName>,
     kind: MorDmlKind,
@@ -351,7 +354,7 @@ pub(crate) async fn refuse_v3_cow_dml(
     let Some(table_name) = table_name else {
         return Ok(());
     };
-    let Some((catalog_name, ident)) = dml_target_ident(table_name) else {
+    let Some((catalog_name, ident)) = dml_target_ident(ctx, table_name) else {
         return Ok(());
     };
     let Some(catalog) = catalogs.get(&catalog_name) else {
@@ -360,14 +363,24 @@ pub(crate) async fn refuse_v3_cow_dml(
     repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await
 }
 
-/// Resolve a DML target [`ObjectName`] into `(catalog name, table ident)`. Needs at least
-/// `catalog.namespace.table` (nested namespaces: `catalog.ns….table`, via
-/// [`NamespaceIdent::from_vec`]); two-part / bare names return `None` — they cannot be resolved
-/// without a session default catalog (residual), and the planner's own error is the better one.
-fn dml_target_ident(table_name: &ObjectName) -> Option<(String, TableIdent)> {
-    let parts = name_parts(table_name);
-    if parts.len() < 3 {
+/// Resolve a DML target [`ObjectName`] into `(catalog name, table ident)` the way DataFusion
+/// will: a bare name completes from the session's `datafusion.catalog.default_catalog` and
+/// `default_schema`, a two-part name from `default_catalog` alone, and `catalog.ns….table`
+/// (nested namespaces via [`NamespaceIdent::from_vec`]) is taken as written. Before V3R-1 the
+/// short forms returned `None` and every valve stepped aside — with a default catalog set, a
+/// `DELETE FROM sales.t` on a v3 table went straight to the fork and committed (CCC finding
+/// SEC-001). `None` only when the name is empty or the namespace cannot be built.
+fn dml_target_ident(ctx: &SessionContext, table_name: &ObjectName) -> Option<(String, TableIdent)> {
+    let mut parts = name_parts(table_name);
+    if parts.is_empty() {
         return None;
+    }
+    if parts.len() < 3 {
+        let (default_catalog, default_schema) = session_defaults(ctx);
+        if parts.len() == 1 {
+            parts.insert(0, default_schema);
+        }
+        parts.insert(0, default_catalog);
     }
     let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
     let table_leaf = parts[parts.len() - 1].clone();
@@ -1052,4 +1065,15 @@ pub(crate) fn build_partition_spec(
             .map_err(iceberg_err)?;
     }
     Ok(Some(builder.build()))
+}
+
+/// The session's `datafusion.catalog.default_catalog` / `default_schema`, cloned out of the
+/// state snapshot (the snapshot is a temporary; a borrow into it does not outlive the call).
+fn session_defaults(ctx: &SessionContext) -> (String, String) {
+    let state = ctx.state();
+    let catalog = &state.config().options().catalog;
+    (
+        catalog.default_catalog.clone(),
+        catalog.default_schema.clone(),
+    )
 }
