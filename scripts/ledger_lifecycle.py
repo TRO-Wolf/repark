@@ -15,7 +15,7 @@ untouched, and the moved file's own outgoing links are re-expressed from its new
 directory. The row for the file in its old directory's `map.md` travels to the
 new directory's map, description intact.
 
-Three subcommands:
+Four subcommands:
 
 - `archive [PATH ...]` — every ledger in `completed/` (or the paths given) moves
   to the monthly archive. The date is the author date of the `--first-parent`
@@ -32,6 +32,15 @@ Three subcommands:
   `-ledger.md` that does not exist; a `completed/` or `archive/` file changed
   since the base commit beyond a link repair or an errata note prepended at its
   top (the "frozen" and "immutable" rules).
+- `compact` — the live documents carry only live state (DL-4): every `unit`
+  marker in `briefs/next-sequence.md` whose ledger sits in `completed/` or the
+  archive leaves the slate whole (row, prose, no obituary), and every
+  `state=closed` ws block in `STATUS.md` moves to its campaign's
+  `docs/history/<dir>/status-record.md` (bin and `map.md` created, links
+  rewritten, refused on a dangling one) leaving one line in STATUS's
+  closed-campaigns list. Grammar and transforms: `scripts/doc_blocks.py`.
+  `archive` and a `move` to `completed/` run it themselves, so a pickup and a
+  departure never leave the slate or STATUS stale.
 
 Determinism: no wall clock (dates come from git), no network, sorted inputs,
 idempotent (`archive` over an empty `completed/` is a no-op). Nothing is
@@ -88,11 +97,29 @@ def _load_sync_map_md() -> ModuleType:
     if specification is None or specification.loader is None:
         raise RuntimeError(f"cannot load {location}")
     module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
     specification.loader.exec_module(module)
     return module
 
 
 MAPS = _load_sync_map_md()
+
+
+def _load_doc_blocks() -> ModuleType:
+    """The block grammar of the two live documents (DL-4)."""
+    location = Path(__file__).resolve().parent / "doc_blocks.py"
+    specification = importlib.util.spec_from_file_location("doc_blocks", location)
+    if specification is None or specification.loader is None:
+        raise RuntimeError(f"cannot load {location}")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[specification.name] = module
+    specification.loader.exec_module(module)
+    return module
+
+
+BLOCKS = _load_doc_blocks()
+HISTORY_DIR = "docs/history"
+STATUS_RECORD = "status-record.md"
 
 
 def git(repo: Path, *arguments: str) -> str:
@@ -494,7 +521,7 @@ def run_archive(repo: Path, paths: list[str]) -> int:
     after = [moves.get(p, p) for p in tracked] + [archive_map]
     (repo / archive_map).write_text(archive_map_text(after), encoding="utf-8")
     git(repo, "add", archive_map)
-    return 0
+    return run_compact(repo)
 
 
 def run_move(repo: Path, path: str, bin_name: str) -> int:
@@ -510,7 +537,121 @@ def run_move(repo: Path, path: str, bin_name: str) -> int:
     if new in tracked or (repo / new).exists():
         print(f"ERROR: {new} already exists", file=sys.stderr)
         return 1
-    return execute(repo, tracked, {path: new}, "moved", set())
+    status = execute(repo, tracked, {path: new}, "moved", set())
+    if status or bin_name != "completed":
+        return status
+    return run_compact(repo)
+
+
+def retired_ledgers(tracked: list[str]) -> list[str]:
+    """Every ledger in `completed/` or the archive — the units that have left."""
+    return sorted(
+        path
+        for path in tracked
+        if path.endswith(LEDGER_SUFFIX)
+        and (path.startswith(BINS["completed"] + "/") or path.startswith(ARCHIVE_DIR + "/"))
+    )
+
+
+def _history_purpose(directory: str) -> str:
+    """The Purpose line of a campaign's history bin the compaction creates."""
+    name = Path(directory).name
+    return (
+        f"Archived record of the {name} campaign, cut from STATUS.md when the owner ruled it "
+        "closed. History, not law. Current state: [STATUS.md](../../../STATUS.md)."
+    )
+
+
+def compact_plan(repo: Path, tracked: list[str]) -> tuple[dict[str, str], list[str], list[str]]:
+    """The compaction's new texts keyed by path, its log lines, and any dangling link. Pure."""
+    texts: dict[str, str] = {}
+    log: list[str] = []
+    known = known_paths(tracked)
+    slate_path, status_path = BLOCKS.SLATE_PATH, BLOCKS.STATUS_PATH
+    if slate_path in tracked:
+        slate = (repo / slate_path).read_text(encoding="utf-8")
+        parsed = BLOCKS.parse(slate, slate_path)
+        if parsed.findings:
+            return {}, [], [f"{slate_path}: {f}" for f in parsed.findings]
+        departed = BLOCKS.departed_units(parsed, retired_ledgers(tracked))
+        if departed:
+            new_slate, removed = BLOCKS.remove_units(slate, departed)
+            texts[slate_path] = new_slate
+            log.append(f"{', '.join(departed)} left the slate ({removed} block(s))")
+    if status_path in tracked:
+        status = (repo / status_path).read_text(encoding="utf-8")
+        parsed = BLOCKS.parse(status, status_path)
+        if parsed.findings:
+            return {}, [], [f"{status_path}: {f}" for f in parsed.findings]
+        new_status, cuts = BLOCKS.cut_closed(status)
+        history_map = f"{HISTORY_DIR}/{MAP_NAME}"
+        for block, content in cuts:
+            directory = block.attrs["history"].rstrip("/")
+            record = f"{directory}/{STATUS_RECORD}"
+            moved, _count = rewrite_links(content, "", directory, {}, known)
+            heading = (
+                f"## Cut from STATUS.md — closed {block.attrs['closed']} by {block.attrs['by']}\n\n"
+            )
+            previous = texts.get(record)
+            if previous is None and (repo / record).exists():
+                previous = (repo / record).read_text(encoding="utf-8")
+            if previous is None:
+                previous = f"# {Path(directory).name} — STATUS record\n\n"
+            texts[record] = previous + heading + moved
+            bin_map = f"{directory}/{MAP_NAME}"
+            if bin_map not in texts and not (repo / bin_map).exists():
+                texts[bin_map] = map_template(directory, _history_purpose(directory))
+                if history_map in tracked:
+                    parent = texts.get(history_map) or (repo / history_map).read_text(
+                        encoding="utf-8"
+                    )
+                    row = (
+                        f"- [{Path(directory).name}/]({Path(directory).name}/{MAP_NAME}) — "
+                        f"the {Path(directory).name} campaign's STATUS record, cut "
+                        f"{block.attrs['closed']}.\n"
+                    )
+                    texts[history_map] = paste_row(parent, row)
+            if bin_map in texts or not any(
+                STATUS_RECORD in line for line in (repo / bin_map).read_text().splitlines()
+            ):
+                current = texts.get(bin_map) or (repo / bin_map).read_text(encoding="utf-8")
+                texts[bin_map] = paste_row(
+                    current,
+                    f"- [{STATUS_RECORD}]({STATUS_RECORD}) — the workstream bullet as STATUS.md "
+                    f"carried it, cut {block.attrs['closed']}.\n",
+                )
+            new_status = BLOCKS.record_closed(new_status, block, content, record)
+            log.append(f"{block.id} left STATUS for {record}")
+        if cuts:
+            texts[status_path] = new_status
+    broken: list[str] = []
+    known_after = known | known_paths(sorted(texts))
+    for path, text in sorted(texts.items()):
+        for target in dangling(text, posixpath.dirname(path), known_after):
+            broken.append(f"{path}: `{target}` would not resolve")
+    return texts, log, broken
+
+
+def run_compact(repo: Path) -> int:
+    """`compact`: the live documents carry only live state."""
+    tracked = MAPS.tracked_paths(repo)
+    texts, log, broken = compact_plan(repo, tracked)
+    if broken:
+        for line in broken:
+            print(line, file=sys.stderr)
+        print(
+            f"docs-compaction: REFUSED — {len(broken)} finding(s); nothing changed",
+            file=sys.stderr,
+        )
+        return 1
+    if not texts:
+        print("docs-compaction: nothing to do")
+        return 0
+    written = apply(repo, {}, texts)
+    for line in log:
+        print(f"docs-compaction: {line}")
+    print(f"docs-compaction: wrote {written} file(s)")
+    return 0
 
 
 def _base_commit(repo: Path, base: str | None) -> str | None:
@@ -630,7 +771,7 @@ def run_check(repo: Path, base: str | None) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """The CLI surface: `archive`, `move`, `check`."""
+    """The CLI surface: `archive`, `move`, `compact`, `check`."""
     parser = argparse.ArgumentParser(
         prog="ledger_lifecycle.py", description=__doc__.split("\n\n")[0]
     )
@@ -644,6 +785,7 @@ def build_parser() -> argparse.ArgumentParser:
     move = commands.add_parser("move", help="relocate one document into a bin")
     move.add_argument("path")
     move.add_argument("bin", choices=sorted(BINS))
+    commands.add_parser("compact", help="merged units leave the slate; closed campaigns leave it")
     check = commands.add_parser("check", help="the gate")
     check.add_argument(
         "--base", default=None, help="commit to diff the frozen bins against (default: main)"
@@ -660,6 +802,8 @@ def main() -> int:
             return run_archive(repo, [posixpath.normpath(p) for p in arguments.paths])
         if arguments.command == "move":
             return run_move(repo, posixpath.normpath(arguments.path), arguments.bin)
+        if arguments.command == "compact":
+            return run_compact(repo)
         return run_check(repo, arguments.base)
     except (subprocess.CalledProcessError, OSError) as error:
         print(f"ERROR: {error}", file=sys.stderr)

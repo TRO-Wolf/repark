@@ -4,7 +4,8 @@
 # PYC-5 dropped python-conventions from this file (and from `make install-hooks`)
 # because it sits on the sub-second budget line. `map-sync-guard`
 # (`make check-map-sync`) joined at n=5 median 0.08 s over 143 maps.
-# `docstring-presence-guard` joined at PYC-6 (n=5 median 0.13 s). Pins are
+# `docstring-presence-guard` joined at PYC-6 (n=5 median 0.13 s); `docs-compaction-guard`
+# at DL-4 (n=5 median 0.05 s). Pins are
 # kept current by Dependabot / `pre-commit autoupdate`.
 
 repos:
@@ -79,4 +80,9 @@ repos:
         name: public-docstring presence ratchet
         entry: scripts/check_docstring_presence.sh
         language: script
+        pass_filenames: false
+      - id: docs-compaction-guard
+        name: live-document guard (DL-4)
+        entry: python3 scripts/check_docs_compaction.py
+        language: system
         pass_filenames: false

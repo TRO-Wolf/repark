@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -328,11 +328,22 @@ check-ledger-grammar: ## Ledger grammar guard: clause rows, pins: citations, the
 	python3 scripts/check_ledger_grammar.py
 
 .PHONY: ledger-archive
-ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy-mm/ (zero tokens)
+ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy-mm/, then compact + check (zero tokens)
 	@# Dates come from `main`'s first-parent history, never the clock; links across the tree are
 	@# rewritten and the result is staged. Idempotent. Mark a unit finished with
 	@#   python3 scripts/ledger_lifecycle.py move task/ledgers/staging/<unit>-ledger.md completed
+	@# Since DL-4 the archive step also runs `compact` (merged units leave the slate, closed
+	@# campaigns leave STATUS for docs/history/) and the gate reads the result.
 	python3 scripts/ledger_lifecycle.py archive
+	python3 scripts/check_docs_compaction.py
+
+.PHONY: check-docs-compaction
+check-docs-compaction: ## Live-document guard: no closed campaign in STATUS, no merged unit on the slate, every workstream marked, byte ceilings (DL-4)
+	@# SSOT: scripts/check_docs_compaction.py over STATUS.md + briefs/next-sequence.md; the block
+	@# grammar is scripts/doc_blocks.py and `ledger_lifecycle.py compact` is what keeps it green.
+	@# The byte ceilings are the load-bearing half: raise CEILINGS only in the PR that needs it.
+	@# Measured 2026-08-25: n=5 median 0.05 s (pure text + one `git ls-files`) — in the hook too.
+	python3 scripts/check_docs_compaction.py
 
 .PHONY: check-map-sync
 check-map-sync: ## map.md CONTENT guard: every relative link in every map resolves (add --strict for coverage)
@@ -413,6 +424,7 @@ install-hooks: ## Wire .git/hooks/pre-commit to map.md lockstep + map.md links +
 	@# 143 maps (pure text + one `git ls-files`), comfortably inside the hook budget.
 	@# check_docstring_presence.sh joined at PYC-6: n=5 median 0.13 s (uvx ruff JSON +
 	@# ratchet compare), well inside the sub-second hook budget.
-	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\npython3 scripts/sync_map_md.py --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
+	@# check_docs_compaction.py joined at DL-4: n=5 median 0.05 s (pure text + one `git ls-files`).
+	@printf '#!/usr/bin/env bash\nset -e\nscripts/check_map_md.sh\npython3 scripts/sync_map_md.py --check\nscripts/check_crate_dag.sh\nscripts/check_lib_rs.sh\nscripts/check_rust_file_size.sh\nscripts/check_lib_py.sh\nscripts/check_docstring_presence.sh\npython3 scripts/check_docs_compaction.py\nscripts/check_manifest.sh\ncargo fmt --check\n$(TAPLO) format --check\n$(TAPLO) lint\n$(TYPOS)\n' > .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "installed .git/hooks/pre-commit"
