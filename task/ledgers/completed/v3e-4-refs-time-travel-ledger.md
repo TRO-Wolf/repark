@@ -1,3 +1,9 @@
+> **Errata (2026-08-25):** ANSI test leaf renamed
+> `crates/repark-sql/src/v3_refs_time_travel.rs` →
+> `crates/repark-sql/src/v3_branch_tag_time_travel.rs`
+> (declared-rename; cargo `--list` module prefix only). Citations below keep
+> the old path.
+
 # V3E-4 — refs + time travel on v3; expiry/orphans with real work
 
 **Date:** 2026-08-25 · **Branch:** `feat/v3e-4-refs-time-travel` · **Base:** `b414225` (`origin/main`, #241) ·
