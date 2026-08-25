@@ -1,4 +1,4 @@
-# map — skills/sepmo/references/
+# map — .agents/skills/sepmo/references/
 
 ## Purpose
 

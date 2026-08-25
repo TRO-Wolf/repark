@@ -25,7 +25,7 @@ recorded.
 
 Work in this repo — by the maintainer and delegated agents — runs under an enforced discipline:
 
-- **SEPMO** ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md)) governs how work flows: scope audit →
+- **SEPMO** ([.agents/skills/sepmo/SKILL.md](.agents/skills/sepmo/SKILL.md)) governs how work flows: scope audit →
   adversarial Actor–Critic → per-PR delivery → retrospective.
 - **Briefs** ([briefs/](briefs/)) define delegated work units; standing rules live in
   [AGENTS.md](AGENTS.md) "Delegated-agent standing rules".

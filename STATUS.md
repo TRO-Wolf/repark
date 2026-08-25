@@ -194,7 +194,7 @@ history-rewrite; provenance and the options weighed:
   `COVERAGE_ATTESTATION` in ref 05's shape, required once no clause is `OPEN`. Measured floor
   seeded (31 unpinned `PROVEN` clauses across three live charters; ratchets down only). XML as
   the ledger carrier was measured and declined. Bound in
-  [skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Record:
+  [.agents/skills/sepmo/binding-manifest.md](.agents/skills/sepmo/binding-manifest.md). Record:
   [task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md](task/ledgers/archive/2026-08/2026-08-23-dl-2-ledger-grammar-charter-ledger.md).
   **DL-3 merged as [#225](https://github.com/TRO-Wolf/repark/pull/225):** archive month maps are
   an index, not a book — one line per ledger (owner ruling 2026-08-23: the record is the ledger;

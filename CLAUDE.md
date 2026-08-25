@@ -41,8 +41,9 @@ loads natively in a Claude session and can be invoked by name rather than opened
 skills keep their single home under `.agents/`; this directory adds no second copy and states no
 rule. Roster and reasoning: [.agents/skills/map.md](.agents/skills/map.md).
 
-The SEPMO control plane under [skills/](skills/map.md) is a separate tree and is **not** covered by
-that symlink; it is invoked deliberately, not discovered.
+The SEPMO control plane lives in that same home — [.agents/skills/sepmo/](.agents/skills/sepmo/map.md),
+moved from a top-level `skills/` tree on 2026-08-25 — so the symlink covers it and `/sepmo` is
+invocable by name. Discoverable is not auto-run: it is invoked deliberately for non-trivial work.
 
 ## Claude tool mechanics — capability tiers and sub-agents
 

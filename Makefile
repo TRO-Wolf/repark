@@ -321,7 +321,7 @@ check-ledgers: ## Ledger lifecycle guard: bins, archive names, every ledger link
 .PHONY: check-ledger-grammar
 check-ledger-grammar: ## Ledger grammar guard: clause rows, pins: citations, the Critic's attestation form (DL-2)
 	@# SSOT: scripts/check_ledger_grammar.py — over task/ledgers/{staging,completed}/ (the archive
-	@# is immutable and read for citations only). Meanings stay in skills/sepmo (SKILL.md "The gate is a ledger, not a score",
+	@# is immutable and read for citations only). Meanings stay in .agents/skills/sepmo (SKILL.md "The gate is a ledger, not a score",
 	@# references/05-critic.md); the script owns the shape. EXCEPTIONS (seeded 2026-08-23) ratchet
 	@# down only. DUAL-WIRED: the `ledger grammar guard` step in ci.yml's guards job mirrors
 	@# this target. Change one, change the other.
