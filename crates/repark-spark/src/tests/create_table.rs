@@ -722,12 +722,7 @@ async fn or_replace_applies_requested_v3_and_alter_still_refuses_with_opt_in() {
     );
 }
 
-/// V3R-1 (owner rulings 2026-08-25): `geometry` / `geography` are DECLARED out of v1.0
-/// (registry `V3-GEO-1`); `variant` stays V3-6 work (shredded variant DECLARED out of the gate,
-/// queued `V3-VARIANT-SHRED-1`). Today no engine surface reaches any of the three: CREATE
-/// refuses at the type mapping, naming the type, and leaves no table behind. A later landing
-/// reds this on purpose.
-///
+/// V3R-1: `geometry` / `geography` DECLARED out (`V3-GEO-1`), `variant` stays V3-6; all refuse.
 /// pins: v3r-1-rulings/C-008, C-009
 #[tokio::test]
 async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {

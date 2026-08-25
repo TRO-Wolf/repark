@@ -31,14 +31,10 @@ repark-core's error map.
   a public surface.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). See [merge/map.md](merge/map.md).
-- `row_lineage_guard.rs` (crate-private; `refuse_v3_cow_dml` re-exported via `mod.rs`) —
-  **V3R-1 (2026-08-25, registry `V3-COW-1`):** the format-v3 copy-on-write DML guard, two
-  seats: `refuse_v3_cow_dml_that_would_reassign_row_lineage` inside the write-mode resolvers
-  (`predicate_dml.rs`, `merge/mod.rs`) and the async passthrough valve both SQL doors call
-  beside the BUG-001 valve for the plain-`WHERE` DELETE/UPDATE DataFusion plans onto the
-  fork's `TableProvider`. The valve refuses every v3 table — merge-on-read for R113's reason,
-  the rest for `V3-COW-1`'s — never stepping aside on a mode spelling the fork may read
-  differently (CCC SEC-002); a v3 table is append-only until fork F-7.
+- `row_lineage_guard.rs` (crate-private; `refuse_v3_cow_dml` re-exported) — **V3R-1
+  (2026-08-25, `V3-COW-1`):** the format-v3 copy-on-write DML guard, two seats — the write-mode
+  resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough valve both doors call beside
+  the BUG-001 valve. Every v3 table refuses; append-only until fork F-7.
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

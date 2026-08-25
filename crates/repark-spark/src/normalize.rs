@@ -335,16 +335,7 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     .await
 }
 
-/// ===========================================================================================
-/// V3R-1 valve (owner ruling 2026-08-25, registry `V3-COW-1`): a plain-`WHERE` `DELETE` /
-/// `UPDATE` delegates to DataFusion and the fork's `TableProvider`, never reaching the
-/// `predicate_dml` write-mode resolver that guards the subquery-`WHERE` form — so the format-v3
-/// copy-on-write refusal needs this seat too. Same target resolution as the BUG-001 valve
-/// above; called right after it in the router, before passthrough.
-///
-/// # Errors
-/// [`DataFusionError::NotImplemented`] naming row lineage, the verb and `V3-COW-1`.
-/// ===========================================================================================
+/// V3R-1 valve (`V3-COW-1`) for the plain-`WHERE` DELETE / UPDATE; runs after the BUG-001 valve.
 pub(crate) async fn refuse_v3_cow_dml(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -363,13 +354,8 @@ pub(crate) async fn refuse_v3_cow_dml(
     repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await
 }
 
-/// Resolve a DML target [`ObjectName`] into `(catalog name, table ident)` the way DataFusion
-/// will: a bare name completes from the session's `datafusion.catalog.default_catalog` and
-/// `default_schema`, a two-part name from `default_catalog` alone, and `catalog.ns….table`
-/// (nested namespaces via [`NamespaceIdent::from_vec`]) is taken as written. Before V3R-1 the
-/// short forms returned `None` and every valve stepped aside — with a default catalog set, a
-/// `DELETE FROM sales.t` on a v3 table went straight to the fork and committed (CCC finding
-/// SEC-001). `None` only when the name is empty or the namespace cannot be built.
+/// Resolve a DML target as DataFusion will: short names complete from the session defaults
+/// (SEC-001); `None` when empty or the namespace cannot be built.
 fn dml_target_ident(ctx: &SessionContext, table_name: &ObjectName) -> Option<(String, TableIdent)> {
     let mut parts = name_parts(table_name);
     if parts.is_empty() {
@@ -1067,8 +1053,7 @@ pub(crate) fn build_partition_spec(
     Ok(Some(builder.build()))
 }
 
-/// The session's `datafusion.catalog.default_catalog` / `default_schema`, cloned out of the
-/// state snapshot (the snapshot is a temporary; a borrow into it does not outlive the call).
+/// The session's default catalog / schema, cloned out of the (temporary) state snapshot.
 fn session_defaults(ctx: &SessionContext) -> (String, String) {
     let state = ctx.state();
     let catalog = &state.config().options().catalog;

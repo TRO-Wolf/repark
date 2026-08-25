@@ -9,13 +9,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
-- `v3_cow.rs` — **V3R-1 (2026-08-25):** adopted-v3 copy-on-write DELETE / UPDATE / MERGE refuse
-  (registry `V3-COW-1`, both guard seats — resolver and passthrough valve), the CCC regressions
-  (default-catalog short names, a padded merge-on-read spelling), the merge-on-read DELETE +
-  MERGE refusals, a v2 control; keeps V3E-2's `V3_MAINTENANCE_ORACLE` constant and
-  ENC-1's pin. The pre-ruling "commits and reassigns" pins are in the archived V3E-1/2 ledger.
-- `create_table.rs` — also carries the V3R-1 (2026-08-25) type pin: `GEOMETRY` / `GEOGRAPHY` /
-  `VARIANT` columns refuse at CREATE, naming the type, no table left (registry `V3-GEO-1`).
+- `v3_cow.rs` — **V3R-1 (2026-08-25):** adopted-v3 copy-on-write DML refuses (`V3-COW-1`, both
+  seats), the CCC regressions (short names, padded merge-on-read), merge-on-read still refuses, a
+  v2 control; keeps `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
+- `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
+  CREATE (`V3-GEO-1`).
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse

@@ -1,20 +1,10 @@
-//! V3R-1 — copy-on-write DML on a format-v3 table refuses (registry `V3-COW-1`).
+//! V3R-1 (2026-08-25): every copy-on-write arm refuses a v3 table before any write (`V3-COW-1`);
+//! merge-on-read refuses too (R113) — append-only until fork F-7. No native `DataFrame` DML (C-012).
 //!
 //! Model: Claude Fable 5
 //! CodeQuality:S
 //!
-//! V3E-1 measured the copy-on-write arms committing on an adopted v3 table while reassigning
-//! row lineage (`next_row_id` 3 → 5 / 6 / 7 for DELETE / UPDATE / MERGE). The owner ruled the
-//! path guarded (2026-08-25): every copy-on-write arm now refuses a v3 table at write-mode
-//! resolution, before any data write, naming the row, the verb and row lineage; the table keeps
-//! its snapshot, its rows and its lineage counters. The merge-on-read arms still refuse v3
-//! (R113), so a v3 table is append-only here until fork F-7. Adoption uses the V3E-1 shape:
-//! CREATE v3 (opt-in) + seed, then `CALL system.register_table` under a second ident.
-//!
-//! Native `DataFrame` has no Iceberg DML write surface (C-012).
-//!
 //! V3E-2: [`V3_MAINTENANCE_ORACLE`] is the dated maintenance-oracle pair (charter §5).
-//!
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005, C-012
 //! pins: v3e-1-2-cow-oracle/C-009, C-010
 
@@ -158,9 +148,7 @@ fn v3_maintenance_oracle_is_the_recorded_pair() {
     );
 }
 
-/// Every copy-on-write arm refuses the same way: the error names the registry row, the verb
-/// and row lineage; afterwards the table has the same snapshot, the same live rows and the same
-/// lineage counters, and is still v3.
+/// The refusal names the row, the verb and row lineage; the table is untouched and still v3.
 async fn assert_cow_refused_untouched(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -402,10 +390,7 @@ async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
     );
 }
 
-/// V3R-1 measurement: the merge-on-read plain-`WHERE` `DELETE` on an adopted v3 table takes the
-/// passthrough path (the fork's `TableProvider`), where the V3-COW-1 seat deliberately steps
-/// aside. Pins that this path refuses too, naming format v3 — a v3 table is append-only.
-///
+/// Merge-on-read plain-`WHERE` DELETE on v3 takes the passthrough path; it refuses too.
 /// pins: v3r-1-rulings/C-004
 #[tokio::test]
 async fn adopted_v3_mor_delete_still_refuses() {
@@ -438,11 +423,7 @@ async fn adopted_v3_mor_delete_still_refuses() {
     );
 }
 
-/// CCC SEC-001 regression: with the session's `datafusion.catalog.default_catalog` /
-/// `default_schema` set, DataFusion resolves two-part and bare names — and before the fix the
-/// valve stepped aside below three parts, so `DELETE FROM sales.t` committed a v3 rewrite.
-/// Both short forms now refuse, and the table is untouched.
-///
+/// SEC-001: two-part and bare names under a session default catalog / schema refuse.
 /// pins: v3r-1-rulings/C-001, C-002
 #[tokio::test]
 async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
@@ -473,10 +454,7 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     .await;
 }
 
-/// CCC SEC-002 regression: a padded `' Merge-On-Read '` was merge-on-read to the valve's
-/// trim-and-case-fold check (which stepped aside) and copy-on-write to the fork, which
-/// committed the rewrite. The valve now refuses every v3 table whatever the mode says.
-///
+/// SEC-002: a padded `' Merge-On-Read '` (copy-on-write to the fork) still refuses on v3.
 /// pins: v3r-1-rulings/C-004
 #[tokio::test]
 async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {

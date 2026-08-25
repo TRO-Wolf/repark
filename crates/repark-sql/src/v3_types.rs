@@ -1,12 +1,8 @@
 //! Model: Claude Fable 5
 //! CodeQuality:S
 //!
-//! ANSI-door pins for the v3 type rulings (V3R-1, owner rulings 2026-08-25): `geometry` /
-//! `geography` are DECLARED out of v1.0 (registry `V3-GEO-1`); `variant` stays V3-6 work with
-//! shredded-Parquet variant DECLARED out of the gate (queued `V3-VARIANT-SHRED-1`). No
-//! ANSI-door surface reaches any of the three: CREATE refuses at type resolution, naming the
-//! type, and leaves no table behind. A later landing reds this on purpose.
-//!
+//! ANSI-door pins: `geometry` / `geography` DECLARED out (`V3-GEO-1`), `variant` stays V3-6;
+//! all three refuse at CREATE, naming the type.
 //! pins: v3r-1-rulings/C-008, C-009
 
 use iceberg::{NamespaceIdent, TableIdent};

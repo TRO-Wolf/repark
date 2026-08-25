@@ -1,13 +1,11 @@
 //! Model: Claude Fable 5
 //! CodeQuality:S
 //!
-//! ANSI-door pins: copy-on-write DML on a `register_table`-adopted format-v3 table refuses
-//! (registry `V3-COW-1`, owner ruling 2026-08-25) before any write, and the table is untouched.
+//! ANSI-door pins: copy-on-write DML on an adopted v3 table refuses (`V3-COW-1`, 2026-08-25).
 //!
 //! The ANSI door refuses `CALL` (Q7). Adoption uses the same `Catalog::register_table` the
 //! Spark procedure reaches. Memory-catalog `DROP TABLE` deletes the metadata pointer, so the
 //! seed ident stays; DML runs against the adopted ident.
-//!
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 
 use std::collections::HashSet;
@@ -232,8 +230,7 @@ async fn adopt_cow_v3(door: &Door, seed: &str, adopted: &str) {
     adopt_v3(door, seed, adopted, COW_V3).await;
 }
 
-/// Every copy-on-write arm refuses the same way, and the table keeps its snapshot, rows and
-/// lineage counters.
+/// The refusal names the row, the verb and row lineage; the table is untouched.
 async fn assert_cow_refused_untouched(door: &Door, table: &str, sql: &str, verb: &str) {
     let before_table = door.table(table).await;
     let before_snapshot = before_table.metadata().current_snapshot_id();
@@ -389,10 +386,7 @@ async fn adopted_v3_mor_merge_still_refuses() {
     );
 }
 
-/// The resolver seat: a subquery-`WHERE` `DELETE` / `UPDATE` takes the `predicate_dml` path on
-/// this door, which never sees the router valve, so the refusal must come from the write-mode
-/// resolver itself. Both verbs, same shape, table untouched.
-///
+/// Resolver seat: subquery-`WHERE` DELETE / UPDATE take `predicate_dml`, not the router valve.
 /// pins: v3r-1-rulings/C-001, C-002
 #[tokio::test]
 async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
@@ -416,9 +410,7 @@ async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
     .await;
 }
 
-/// CCC SEC-001 regression (ANSI): default catalog / schema set on the session; two-part and
-/// bare names refuse, table untouched.
-///
+/// SEC-001: two-part and bare names under a session default catalog / schema refuse.
 /// pins: v3r-1-rulings/C-001, C-002
 #[tokio::test]
 async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
@@ -448,10 +440,7 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     .await;
 }
 
-/// CCC SEC-003 regression (ANSI): a dotted quoted table name — `ice.sales."a.b"` is creatable
-/// on this door — broke the text scraper the valve used, so the load failed, the valve stepped
-/// aside and the DELETE committed a v3 rewrite. The target now comes from the AST.
-///
+/// SEC-003: a dotted quoted name `ice.sales."a.b"` (creatable here) refuses — target from the AST.
 /// pins: v3r-1-rulings/C-001
 #[tokio::test]
 async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_refuses() {
@@ -469,8 +458,7 @@ async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_refuses() {
     .await;
 }
 
-/// CCC SEC-002 regression (ANSI): padded merge-on-read spelling still refuses on v3.
-///
+/// SEC-002: a padded merge-on-read spelling still refuses on v3.
 /// pins: v3r-1-rulings/C-004
 #[tokio::test]
 async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {

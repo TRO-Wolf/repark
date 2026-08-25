@@ -1,24 +1,6 @@
-//! The format-v3 copy-on-write DML guard — registry row `V3-COW-1` (owner ruling 2026-08-25).
-//!
-//! V3E-1 measured that copy-on-write `DELETE` / `UPDATE` / `MERGE INTO` on a format-v3 table
-//! commit the correct rows while **reassigning** row lineage: every survivor rewritten into a
-//! new data file takes a fresh `_row_id`, and the snapshot's `first_row_id` / `added_rows`
-//! count the survivors as new rows. Spark preserves `_row_id` /
-//! `_last_updated_sequence_number` across the same statement. The rows are never wrong, which is
-//! what makes the failure quiet: every downstream incremental consumer is told that all rows
-//! changed when only the matched ones did.
-//!
-//! The owner ruled the path guarded, the trade `V3-LINEAGE-1` already took for
-//! `rewrite_data_files`: a loud stop rather than a plausible wrong answer, stricter than Spark
-//! on purpose, reversible in one line once the fork carries lineage through a row rewrite
-//! (handoff F-7). The merge-on-read arms refuse format v3 independently (row R113: v3 mandates
-//! deletion vectors), so until then **a v3 table is append-only in this engine** — `INSERT`
-//! carries lineage correctly and stays open.
-//!
-//! The guard runs at write-mode resolution, before any data file is written, so a refusal can
-//! never orphan a Parquet file. Whole-file deletes (every row of a file matched) would have been
-//! lineage-safe; they are refused with the rest — fail-closed is the cheaper mistake, and the
-//! lift is one line.
+//! Format-v3 copy-on-write DML guard — registry `V3-COW-1` (owner ruling 2026-08-25). V3E-1
+//! measured COW DML on v3 reassigning every survivor's `_row_id` (Spark preserves it); same trade
+//! as `V3-LINEAGE-1`: refuse before any write until fork F-7. merge-on-read refuses v3 too: append-only.
 
 use datafusion::error::{DataFusionError, Result};
 use iceberg::spec::FormatVersion;
@@ -27,11 +9,7 @@ use iceberg::{Catalog, TableIdent};
 
 use crate::write::position_delete::MorDmlKind;
 
-/// Refuse copy-on-write `verb` on a format-v3 (or later) table, naming registry row `V3-COW-1`,
-/// the verb, and row lineage. Format v1/v2 tables pass untouched.
-///
-/// The comparison is `< V3`, so a format version *above* v3 refuses too — fail-closed is the
-/// right default for a version whose lineage rules are not known yet.
+/// Refuse copy-on-write `verb` on a v3-or-later table; below v3 passes (above v3 fails closed).
 pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
     table: &Table,
     verb: &str,
@@ -53,20 +31,12 @@ pub(crate) fn refuse_v3_cow_dml_that_would_reassign_row_lineage(
     )))
 }
 
-/// The passthrough-path seat of the same guard. A plain-`WHERE` `DELETE` / `UPDATE` never
-/// reaches [`crate::write::predicate_dml`] (that path is the subquery-`WHERE` form): both SQL
-/// doors delegate it to DataFusion, which plans it onto the fork's `TableProvider`, so the
-/// write-mode resolver above is never consulted. Each door calls this beside its BUG-001
-/// merge-on-read valve, before delegation. A missing table passes (the planner's own error is
-/// the better one). **Every format-v3 table refuses**, whatever `write.<verb>.mode` says: a
-/// merge-on-read table refuses for the merge-on-read reason (row R113 — v3 mandates deletion
-/// vectors), everything else for this row's. The valve never steps aside on the mode because
-/// the fork parses the property on its own terms — a padded `' Merge-On-Read '` was
-/// merge-on-read to a trim-and-case-fold check and copy-on-write to the fork, and the rewrite
-/// committed (CCC finding SEC-002).
+/// Passthrough seat for the plain-`WHERE` DELETE / UPDATE both doors delegate to the fork's
+/// `TableProvider` (never reaching `predicate_dml`). Every v3 table refuses — never deciding on
+/// the mode alone, which the fork parses differently (SEC-002); a missing table passes.
 ///
 /// # Errors
-/// [`DataFusionError::NotImplemented`] naming the arm, the verb, the table and the row.
+/// [`DataFusionError::NotImplemented`].
 pub async fn refuse_v3_cow_dml(
     catalog: &dyn Catalog,
     ident: &TableIdent,

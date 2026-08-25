@@ -321,15 +321,8 @@ pub(crate) async fn refuse_mor_multi_spec_dml(
     refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
 }
 
-/// ===========================================================================================
-/// V3R-1 valve (owner ruling 2026-08-25, registry `V3-COW-1`): the delegated plain-`WHERE`
-/// `DELETE` / `UPDATE` never reaches the `predicate_dml` write-mode resolver, so the format-v3
-/// copy-on-write refusal needs this seat too. Same target resolution as the BUG-001 valve
-/// above; the router calls it right after that valve, before delegation.
-/// ===========================================================================================
-///
-/// # Errors
-/// [`DataFusionError::NotImplemented`] naming row lineage, the verb and `V3-COW-1`.
+/// V3R-1 valve (`V3-COW-1`) for the delegated plain-`WHERE` DELETE / UPDATE; runs after the
+/// BUG-001 valve.
 pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statement) -> Result<()> {
     let Some((kind, _target, catalog_name, ident)) = dml_target_ident(cx, statement) else {
         return Ok(());
@@ -340,17 +333,8 @@ pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statem
     refuse_v3_cow_dml_in_catalog(catalog.as_ref(), &ident, kind).await
 }
 
-/// Resolve a `DELETE` / `UPDATE` statement's target into `(verb, display target, catalog name,
-/// table ident)` from the **AST**, the way DataFusion will resolve it: a bare name completes
-/// from the session's `datafusion.catalog.default_catalog` and `default_schema`, a two-part
-/// name from `default_catalog` alone, and `catalog.ns….table` is taken as written (a quoted
-/// identifier is one part whatever it contains). `INSERT` writes no position deletes and
-/// `MERGE` runs the RePark-owned writer, so both return `None`; so does a name that cannot be
-/// read or a namespace that cannot be built — the planner's own error is the better one.
-///
-/// Before V3R-1 this read scrubbed text and split on `.`: a quoted `"a.b"` broke the split and
-/// a short name returned `None`, and in both cases every valve stepped aside — on a v3 table
-/// the DELETE then went to the fork and committed (CCC findings SEC-001, SEC-003).
+/// Resolve a `DELETE` / `UPDATE` target from the AST as DataFusion will: short names complete
+/// from the session defaults, a quoted identifier is one part (SEC-001 / SEC-003); else `None`.
 fn dml_target_ident(
     cx: &EngineContext<'_>,
     statement: &Statement,
@@ -387,8 +371,7 @@ fn dml_target_ident(
     Some((kind, name.to_string(), parts[0].clone(), ident))
 }
 
-/// The target of a parsed `DELETE`: the multi-delete `tables` form first, else the first FROM
-/// relation.
+/// A parsed `DELETE`'s target: the multi-delete `tables` form first, else the first FROM relation.
 fn delete_target_name(delete: &Delete) -> Option<&ObjectName> {
     if let Some(name) = delete.tables.first() {
         return Some(name);

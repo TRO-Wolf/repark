@@ -478,8 +478,7 @@ fn resolve_merge_mode(table: &Table) -> Result<MergeMode> {
     // Below this point the mode is merge-on-read; both other arms return.
     // Iceberg-Java's `RowLevelOperationMode.fromName` is equalsIgnoreCase, and the sibling MoR
     // valve (position_delete.rs) already trims+ignores case — match both (audit M12).
-    // pins: v3r-1-rulings/C-003 — both copy-on-write arms (unset and explicit) refuse a v3
-    // table BEFORE any data write (registry V3-COW-1, owner ruling 2026-08-25).
+    // pins: v3r-1-rulings/C-003 — V3-COW-1: both copy-on-write arms refuse v3 before any write.
     match table.metadata().properties().get(MERGE_MODE_PROP) {
         None => {
             crate::write::row_lineage_guard::refuse_v3_cow_dml_that_would_reassign_row_lineage(

@@ -851,8 +851,7 @@ fn resolve_write_mode(table: &Table, property: &str, verb: &str) -> Result<Delet
             )?;
             Ok(DeleteWriteMode::MergeOnRead)
         }
-        // pins: v3r-1-rulings/C-001, C-002 — copy-on-write on a v3 table refuses BEFORE any
-        // data write (registry V3-COW-1, owner ruling 2026-08-25); v1/v2 pass untouched.
+        // pins: v3r-1-rulings/C-001, C-002 — V3-COW-1: copy-on-write on v3 refuses before any write.
         _ => {
             crate::write::row_lineage_guard::refuse_v3_cow_dml_that_would_reassign_row_lineage(
                 table, verb,

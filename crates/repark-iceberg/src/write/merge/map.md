@@ -18,8 +18,7 @@ lives as this module directory (move-only; pub surface frozen).
   **M11:** `fold_discovery_batch_into_affected` / `consume_matched_work_batch`
   take a precomputed `skip_cardinality` (lone unconditional MATCHED DELETE);
   `match_count > 1` still folds mutations / pos-deletes (double-delete is
-  idempotent). V3R-1 (2026-08-25): both copy-on-write arms of `resolve_merge_mode` run
-  the format-v3 guard (`row_lineage_guard.rs`, registry `V3-COW-1`) before any write.
+  idempotent). V3R-1: both copy-on-write arms run the v3 guard (`V3-COW-1`) before any write.
 - `abort.rs` — `delete_written_files_best_effort` + `written_file_paths`. Delete
   set is threaded from writer results in hand; never re-derived from the table
   or manifests. `CommitStateUnknown` errors SKIP cleanup (the commit may have

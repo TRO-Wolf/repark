@@ -253,8 +253,7 @@ async fn mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate() {
         // DML the valve deliberately does not cover.
         "INSERT INTO ice.sales.t VALUES (1)",
         "MERGE INTO ice.sales.t USING s ON t.id = s.id WHEN MATCHED THEN DELETE",
-        // Short names complete from the session defaults (`datafusion` / `public` here),
-        // which name no registered catalog.
+        // Short names complete from the session defaults, which name no registered catalog.
         "DELETE FROM t WHERE id = 1",
         "UPDATE sales.t SET a = 1",
         // Three-part name, but no such catalog is registered.
