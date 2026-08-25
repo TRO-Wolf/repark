@@ -90,4 +90,3 @@ def test_v3_geometry_geography_variant_columns_refuse_naming_the_type(tmp_path: 
             assert not spark.catalog.tableExists(table)
     finally:
         spark.stop()
-

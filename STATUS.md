@@ -219,15 +219,20 @@ history-rewrite; provenance and the options weighed:
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
-    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — adopted-v3 COW DML
-    commits and returns the right rows but **reassigns** lineage (registry `V3-COW-1`, BACKLOG;
-    Spark preserves `_row_id`; guard-or-not is a later owner ruling), `ENC-1` DECLARED, the v3
-    maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0
+    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — measured adopted-v3
+    COW DML committing the right rows while **reassigning** lineage (Spark preserves `_row_id`),
+    `ENC-1` DECLARED, the v3 maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0
     ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
     equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
-    `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)). Ledgers in
+    `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
+    **the 2026-08-25 owner rulings:** COW DML on a v3 table is **guarded** (registry `V3-COW-1`
+    refuses on both doors before any write — with MOR refused too, a v3 table is append-only
+    here until fork F-7), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
+    shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live
+    legs are **in** (OD-3b; the scoped IAM statement is in `docs/tier2-aws.md` §2, owner-executed),
+    and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
-  - **Next:** V3E-4 (refs + time travel; expiry/orphans with real work) after DL-4, on
+  - **Next:** V3E-4 (refs + time travel; expiry/orphans with real work), on
     [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes) is owner-sequenced,
     gated on fork F-13.
 <!-- /ws -->

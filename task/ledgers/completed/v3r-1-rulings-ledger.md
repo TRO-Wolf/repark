@@ -134,7 +134,180 @@ CLARIFYING_QUESTIONS: []
 - First run of the rewritten pins: 2 of 8 Spark-door and 2 of 5 ANSI-door pins RED —
   DELETE/UPDATE still committed. Root cause: the plain-`WHERE` form bypasses `predicate_dml`.
   Second seat added; all green. That RED is the evidence the pins are not hollow.
-- Green: `cargo test -p repark-spark -p repark-sql --lib -- v3_cow create_table::v3_type
-  v3_types` 16 passed; `make test` (workspace) green; facade
+- Cycle-1 green: Spark 8 + ANSI 5 + 2 type pins; `make test` (workspace) green; facade
   `test_v3_cow_dml.py` + `test_v3_create_opt_in.py` 4 passed against `make develop`; parity
-  `test_v3r_1_rulings.py` 5 passed.
+  `test_v3r_1_rulings.py` 5 passed. Build commit `292b723`.
+- **CCC cycle 1 (procedural, scratch clone of `292b723`)** — three S1s, all in the guard's own
+  failure class (a v3 copy-on-write write that commits and reassigns lineage): SEC-001
+  short names under a session default catalog, SEC-002 a padded merge-on-read spelling,
+  SEC-003 a dotted quoted name on the ANSI door. Records below.
+- Cycle-2 remediation (the second code commit on the branch): the passthrough valve refuses **every** v3 table (the
+  merge-on-read reason for merge-on-read tables, `V3-COW-1`'s for the rest); both doors'
+  target resolution completes short names from `datafusion.catalog.default_catalog` /
+  `default_schema`; the ANSI door resolves the target from the AST (`delete_target_name` /
+  `object_name_of`) instead of the scrubbed-text scraper — the BUG-001 valve shares both
+  helpers and is tightened the same way (over-refuse is its documented direction). Five
+  regression pins (two Spark, three ANSI), each RED on the cycle-1 tree by construction of the
+  probe and GREEN after. Cycle-2 green: Spark 11, ANSI 9 + `v3_types` 1 + `guards::tests` 2;
+  `make test` workspace green; facade 4 passed against a rebuilt module; `make ci` clean except
+  the attestation this section files.
+- **CCC cycle 2 (fresh scratch clone of the cycle-2 tree)** — the three probes re-executed through
+  the public SQL entry points refuse with lineage `3 / 0 / 3`; mutation M1 (guard function
+  returns `Ok` unconditionally) reds 4 Spark + 6 ANSI copy-on-write pins and leaves every
+  merge-on-read / v2 / type pin green; mutation M3 (both routers' valve calls stripped) reds
+  exactly the passthrough-seat pins (4 Spark, 5 ANSI) and leaves the resolver-seat pins
+  (`MERGE`, the ANSI subquery-`WHERE`) green. The pins are load-bearing per seat.
+- **Process miss, owned:** the scratch clone built with `CARGO_TARGET_DIR` pointed at the
+  live worktree's `target/`; cargo then served the clone's **mutated** `repark-sql` test binary
+  to the live tree as fresh (5 live pins red until `cargo clean -p`). The live tree's source,
+  `git status`, stash list and remotes were untouched. Rule from here: a scratch clone builds
+  in its own target dir, never the live tree's.
+
+## CCC pass — findings and attestation
+
+Context break executed; attacking artifacts, not memory. Procedural (single session), so R3's
+compensation applies: every claim in the silently-wrong-results class was re-executed through
+the public SQL entry points with **novel** inputs absent from the committed tests at the time
+(probes P1–P5 in the cycle-1 clone; P1–P3 re-executed in the cycle-2 clone), cited below with
+observed-versus-expected. Risk tier high (the DML write path); Critic-1 crates contract applied
+to `crates/repark-iceberg/src/write/row_lineage_guard.rs` and the two door wrappers.
+
+```yaml
+FINDING:
+  id: SEC-001
+  severity: S1
+  category: AT-2
+  clause: C-001, C-002
+  disposition: REMEDIATED
+  claim: with `SET datafusion.catalog.default_catalog = 'ice'` / `default_schema = 'sales'`, `DELETE FROM sales.adopt_p1 WHERE id = 2` and `DELETE FROM adopt_p1 WHERE id = 3` on a v3 table bypassed the valve (`< 3 parts → Ok`) on BOTH doors and committed — next_row_id 3 → 6, rows [(1,a)]; expected a refusal and 3 / 0 / 3
+  evidence: probe P1 (cycle-1 clone, both doors); fix — `dml_target_ident` completes short names from the session defaults; pins `adopted_v3_cow_dml_with_default_catalog_short_names_refuses` (Spark + ANSI): red on the cycle-1 tree, green on the cycle-2 tree, red again under M1 and M3
+
+FINDING:
+  id: SEC-002
+  severity: S1
+  category: AT-8
+  clause: C-001, C-004
+  disposition: REMEDIATED
+  claim: `'write.delete.mode' = ' Merge-On-Read '` (padded) on a v3 table — the valve's trim + case-fold read it as merge-on-read and stepped aside; the fork read it as copy-on-write and committed a rewrite: next_row_id 3 → 5, zero delete files; expected a refusal
+  evidence: probe P3 (cycle-1 clone, Spark door); fix — the valve refuses every v3 table, branching only the message on the mode; pins `adopted_v3_padded_merge_on_read_spelling_still_refuses` (Spark + ANSI); the upstream-behaviour presumption (the fork's property parsing) is what AT-8 names
+
+FINDING:
+  id: SEC-003
+  severity: S1
+  category: AT-2
+  clause: C-001
+  disposition: REMEDIATED
+  claim: ANSI door — `CREATE TABLE ice.sales."a.b" … WITH (format_version = 3)` succeeds, and `DELETE FROM ice.sales."a.b" WHERE id = 2` committed (3 → 5): the text scraper split the quoted name on `.`, the load failed, the valve passed; expected a refusal
+  evidence: probe P2 (cycle-1 clone); fix — `dml_target_ident(cx, &Statement)` reads the target from the AST (quoted identifiers are one part); pin `adopted_v3_cow_delete_on_a_dotted_quoted_name_refuses`; the Spark door already used AST parts (`name_parts`) and was not affected
+
+FINDING:
+  id: Q-001
+  severity: S2
+  category: AT-10
+  clause: C-001
+  disposition: REMEDIATED
+  claim: the ANSI `live_pairs` helper built `ice.sales.a.b` unquoted, so the SEC-003 pin panicked in the helper (v3_cow.rs:94) rather than exercising the guard — a pin that cannot reach its claim
+  evidence: the leaf identifier is now double-quoted in the helper; the pin runs to its assertions and is red under M1 / M3
+
+FINDING:
+  id: Q-002
+  severity: S3
+  category: AT-8
+  clause: C-001
+  disposition: ACCEPTED_FLAGGED
+  claim: `dml_target_ident` (name → catalog + ident with session-default completion) exists once per door — `repark-spark::normalize` and `repark-sql::guards` are sibling crates with no shared home below `repark-iceberg`, whose valve takes the resolved ident
+  evidence: crate DAG (`make check-crate-dag`); the shared piece — the valve and its refusal — lives once in `row_lineage_guard.rs`; below the S1 floor, recorded for a later hoist if a third door appears
+
+FINDING:
+  id: Q-003
+  severity: S3
+  category: AT-7
+  clause: C-001, C-002
+  disposition: ACCEPTED_FLAGGED
+  claim: a plain-`WHERE` DELETE / UPDATE now loads table metadata twice before delegation (the BUG-001 valve and this valve each load) — one extra catalog round-trip per statement, not system-breaking
+  evidence: `refuse_mor_unpartitioned_multi_spec_dml` + `refuse_v3_cow_dml` both call `load_table`; folding them would couple two unrelated hazards behind one message; recorded, not blocking
+
+FINDING:
+  id: L-001
+  severity: S3
+  category: AT-1
+  clause: C-004
+  disposition: ACCEPTED_FLAGGED
+  claim: for a v3 table whose `write.delete.mode` is unknown / bogus, the valve (and the resolver) refuse with the copy-on-write reason — Iceberg's default for an unrecognised mode is copy-on-write, so the reason is right, but the message does not say the value was unrecognised
+  evidence: probe P5 (cycle-1 clone): `'write.delete.mode' = 'bogus'` → refused, lineage 3 / 0 / 3; the resolver's own unknown-mode refusal covers `MERGE`; the DELETE / UPDATE passthrough message names `V3-COW-1`, which is the operative fact
+
+FINDING:
+  id: CL-001
+  severity: S3
+  category: AT-10
+  clause: C-007, C-013
+  disposition: REMEDIATED
+  claim: the cycle-1 ledger and the registry row described the valve as stepping aside for merge-on-read tables and cited "16 passed" for a combined run — both stale after cycle 2
+  evidence: registry `V3-COW-1`, the three map rows and the execution record above rewritten to the cycle-2 behaviour with per-crate counts; identity across the branch is the repository's (`%ae` on every commit since the base equals the repository's configured author); zero co-author or session trailers on any commit; the diff touches no `.github/`, `Cargo.toml [patch]`, credentials, or home paths (`git diff b57d424..HEAD`)
+```
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: v3r-1-rulings
+  cycle: 2
+  risk_tier: high
+  critic_engine: ccc
+  complete: true
+  note: >
+    Actor, then CCC quad (claims_critic) on scratch clones of the cycle-1 and cycle-2 trees
+    (cycle 2). Cycle-1 S1s SEC-001/002/003 remediated with regression pins that are red
+    under mutation and green on the tree. Fresh execution (R3): probes P1-P5, novel inputs
+    through the public SQL entry points, observed vs expected recorded in the findings.
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3_cow.rs, python/repark/tests/test_v3_cow_dml.py, python/repark-parity/tests/test_v3r_1_rulings.py]
+    - id: AT-2
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3_cow.rs, crates/repark-spark/src/tests/create_table.rs, crates/repark-sql/src/v3_types.rs]
+    - id: AT-3
+      status: ATTACKED
+      artifacts: [crates/repark-iceberg/src/write/row_lineage_guard.rs, crates/repark-spark/src/tests/v3_cow.rs]
+    - id: AT-4
+      status: N/A
+      justification: the guard runs at write-mode resolution before any file is written and commits nothing; no shared state, no ordering with the OCC loop it precedes
+    - id: AT-5
+      status: ATTACKED
+      artifacts: [crates/repark-sql/src/guards.rs, crates/repark-spark/src/normalize.rs]
+    - id: AT-6
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3_cow.rs]
+    - id: AT-7
+      status: ATTACKED
+      artifacts: [crates/repark-iceberg/src/write/row_lineage_guard.rs]
+    - id: AT-8
+      status: ATTACKED
+      artifacts: [crates/repark-iceberg/src/write/row_lineage_guard.rs, crates/repark-spark/src/normalize.rs, crates/repark-sql/src/guards.rs]
+    - id: AT-9
+      status: ATTACKED
+      artifacts: [crates/repark-iceberg/src/write/row_lineage_guard.rs]
+    - id: AT-10
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3_cow.rs, crates/repark-sql/src/guards/tests.rs]
+```
+
+**Attack notes per category.** AT-1: every clause walked against the tree — C-001..C-006 by
+pin, C-007..C-011 by tree pin and the registry / north-star / runbook diff, C-012 by the
+rustdoc, C-013 by this departure. AT-2: novel inputs P1 (short names under a default
+catalog), P2 (dotted quoted name), P3 (padded mode spelling), P5 (bogus mode) — three found
+holes, remediated. AT-3: a refusal is a clean error before any write (the seed rows,
+snapshot and lineage counters are asserted unchanged by every pin); a missing table passes
+to the planner's own error. AT-5: the target resolution reads the AST — a quoted identifier
+cannot smuggle a second name part; the session defaults are the engine's own config, not user
+text. AT-6: the guard is the data-integrity control itself; the v2 control pins the guard
+does not reach v2, the seed INSERT in every pin proves append still assigns lineage. AT-7:
+one extra metadata load (Q-003), not system-breaking. AT-8: the fork's property parsing is no
+longer presumed (SEC-002); `MorDmlKind::verb` / `mode_property` contracts honoured; no
+`unwrap` / `expect` / panic in production code (`make rust-panic-ban`). AT-9: every refusal
+names the row, the verb, the table and the reason; nothing fails silently. AT-10: mutation M1
+/ M3 evidence above; the `guards::tests` valve test now feeds a parsed `Statement`.
+
+**Convergence: `CCC-CONVERGED`** — every required Critic phase has artifacts; no open finding
+at or above S1; the three S1s carry regression proof; `make verify` and `make preflight` green
+at departure (execution record); Critic-4 attestation above.
+

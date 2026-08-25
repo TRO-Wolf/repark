@@ -33,8 +33,9 @@ NOT in that file is a defect, not a decision.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
   CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`. Also the V3R-1
-  (2026-08-25) type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE
-  (registry `V3-GEO-1`).
+  (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:
+  `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE, no table left (registry
+  `V3-GEO-1`).
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
   `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
   catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
