@@ -7,8 +7,8 @@
 # V3E-4 — refs + time travel on v3; expiry/orphans with real work
 
 **Date:** 2026-08-25 · **Branch:** `feat/v3e-4-refs-time-travel` · **Base:** `b414225` (`origin/main`, #241) ·
-**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3 ·
-**Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
+**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3 ·
+**Sequence:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, in-repo CCC) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (Iceberg snapshot/maintenance on v3)
 
