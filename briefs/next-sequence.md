@@ -37,6 +37,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
+| 0 | **V3R-1** — the 2026-08-25 rulings: guard COW DML on v3 (`V3-COW-1`), geometry/geography + shredded variant DECLARED, OD-3b in, upgrade behind the opt-in | v3 rulings | — | S <!-- unit id=v3r-1 --> |
 | 1 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M <!-- unit id=v3e-4 --> |
 | 2 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S <!-- unit id=v3e-5 --> |
 

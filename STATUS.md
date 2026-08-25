@@ -88,8 +88,8 @@ What happens next, in order:
    promotion G-9 — ten unit ledgers + `g4-artifacts/` through the H-1 close gate #35–#46; campaign
    continues into **H-2**). **H-2 seed+tail progress (2026-08-12):** landed G1/G16, G2/G13,
    G3 guard-half, G4+G4b, G5+G5b, G6, G7, G12, G17, G18, G9-partial; **TZ-5 closed by #64**.
-   Still open: G8 (deliberately last), G10 (now unblocked by the X-5 comparator), G11/G15
-   (owner rulings), TZ-4 (design pass required), G3-E8 FIX, G5b-R. The engineering items
+   Still open: G8 (deliberately last), G10 (now unblocked by the X-5 comparator), TZ-4
+   (design pass required), G3-E8 FIX, G5b-R. The engineering items
    parked below (spill coverage, the `ReparkSession` decomposition trigger, the
    `ExecutionBackend` seam) are its natural inputs.
    **2026-08-13 — Y wave landed; Z wave in flight.** Y-wave PRs **#66–#72** are on `main`
@@ -189,7 +189,7 @@ history-rewrite; provenance and the options weighed:
   [#225](https://github.com/TRO-Wolf/repark/pull/225)). Records: the DL-1/2/3 charters in
   [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md); DL-4 (delivered
   2026-08-25: STATUS.md 65.9 → 30.1 kB, the slate 26.7 → 5.6 kB):
-  [the DL-4 ledger](task/ledgers/completed/dl-4-live-doc-compaction-charter-ledger.md).
+  [the DL-4 ledger](task/ledgers/archive/2026-08/2026-08-25-dl-4-live-doc-compaction-charter-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=sem ledgers=sem- state=held -->
