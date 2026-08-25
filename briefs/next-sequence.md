@@ -53,7 +53,8 @@ against the north-star matrix
    [#235](https://github.com/TRO-Wolf/repark/pull/235): COW DML on an adopted v3
    table commits and **reassigns** lineage (registry `V3-COW-1`, BACKLOG); Spark preserves
    `_row_id` on DELETE. **Guard-or-not is a second owner ruling on those numbers.** The v3
-   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-4 is #1.**
+   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-4 is Lane A's next unit** —
+   queue #2 behind DL-4 since 2026-08-25.
 2. **Table encryption keys are a dated DECLARED exclusion from the v1.0 gate.** Registry
    `ENC-1` ([#235](https://github.com/TRO-Wolf/repark/pull/235)).
 3. **A one-time scoped `.github/` grant** for V3E-5 only: add the v3 fixture leg to the nightly

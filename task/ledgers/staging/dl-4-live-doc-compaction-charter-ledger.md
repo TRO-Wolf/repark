@@ -105,8 +105,8 @@ measurement stood.
 **Rule text** — the smallest edits that make the behaviour a rule: `compact-context-docs`
 pickup step 2 (archive → compact → check) and a "delete, don't narrate" gotcha; the slate's
 "Rolling slate" line and standing rule 7; AGENTS.md "Markdown document lifecycle" (one
-sentence) and the gate roster row; `skills/sepmo/binding-manifest.md` "Unit pickup /
-departure"; `scripts/map.md`.
+sentence) and the gate roster row; `.agents/skills/sepmo/binding-manifest.md` "Unit pickup /
+departure" (the path after #238, which merges first); `scripts/map.md`.
 
 **Out of scope.** Generating "Known correctness issues" from the registry (declined: a pointer
 is enough and a generator is a second home); any ledger's content; `AGENTS.md` /
