@@ -15,7 +15,7 @@ knowledge. The authority move that makes this possible is recorded in
 - `claude.md` — points Claude sessions at [../CLAUDE.md](../CLAUDE.md) and
   [skills/engineering-method/](skills/engineering-method/map.md).
 - `codex.md`, `cursor.md` — one-line stubs pointing inward; no tool mechanics recorded yet.
-- `skills/` — agent-facing runbook skills (release-to-PyPI, context-doc truth-up, disk
+- `skills/` — agent-facing runbook skills and, since 2026-08-25, the SEPMO control plane (release-to-PyPI, context-doc truth-up, disk
   headroom, the parity audit) plus the portable engineering method, the code-quality convention
   reasoning for Python and the Rust review procedure: proven sequences / reasoning,
   pointer-thin, zero authoritative facts.

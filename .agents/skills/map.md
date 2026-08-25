@@ -5,12 +5,15 @@
 Agent-facing **runbook skills**: step-by-step procedures for recurring operations, written for
 any tool's agent. Each skill is a directory holding a `SKILL.md` with YAML frontmatter (`name` +
 a `description` that says when to reach for it **and when not to**), the same shape as
-[skills/sepmo/SKILL.md](../../skills/sepmo/SKILL.md), so a skill is discoverable and invocable
+[sepmo/SKILL.md](sepmo/SKILL.md), so a skill is discoverable and invocable
 rather than a file an agent has to already know to open. A skill records a proven *sequence*; it
-defines no policy and carries no authoritative project fact — every rule it leans on is a pointer into the spine
+defines no **engineering** policy and carries no authoritative project fact — every rule it leans on is a pointer into the spine
 ([AGENTS.md](../../AGENTS.md) + [STATUS.md](../../STATUS.md) + the doc each step cites), and on
 any conflict the spine wins. This keeps the `.agents/` zero-authoritative-facts contract intact:
-deleting a skill loses a convenience, never a project truth.
+deleting a skill loses a convenience, never a project truth. **One skill defines *process* policy:**
+[sepmo/](sepmo/map.md), the SEPMO control plane (moved here from a top-level `skills/` tree on
+2026-08-25 so every tool's agent loads it from the one skill home), and it cedes every engineering
+decision to the spine — [AGENTS.md](../../AGENTS.md) "Process governance" is the rule of record.
 
 **Claude discovers these through a symlink.** `.claude/skills` points at this directory (git mode
 `120000`), because Claude Code loads skills only from `.claude/skills/`. The skills keep their
@@ -19,6 +22,10 @@ See [../../.claude/map.md](../../.claude/map.md).
 
 ## Contents
 
+- [sepmo/](sepmo/map.md) — the **SEPMO** governance-and-orchestration control plane (state
+  machine + scope-audit gate + adversarial Actor–Critic) and its binding manifest, the one file
+  mapping SEPMO's abstract roles to this repo. Invoked deliberately for non-trivial work — its
+  description says when not to — never auto-run on a conversational turn.
 - [engineering-method/](engineering-method/map.md) — the portable, agent-agnostic working method
   for implementation and review sessions: risk-first design, the reason-plan-verify workflow,
   naming, the Rust/Python defaults, the debugging protocol, and the done gate. Generalized from
@@ -53,6 +60,8 @@ See [../../.claude/map.md](../../.claude/map.md).
 
 | ...do this | go to |
 |---|---|
+| Operate under / understand SEPMO | [sepmo/map.md](sepmo/map.md) → [sepmo/SKILL.md](sepmo/SKILL.md) |
+| See SEPMO's bindings to this repo | [sepmo/binding-manifest.md](sepmo/binding-manifest.md) |
 | Read the working method before writing or reviewing code | [engineering-method/SKILL.md](engineering-method/SKILL.md) |
 | Release a new version to PyPI | [publish-pypi/SKILL.md](publish-pypi/SKILL.md) |
 | True up the docs after work lands, or run the pickup ritual before it | [compact-context-docs/SKILL.md](compact-context-docs/SKILL.md) |

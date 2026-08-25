@@ -1,4 +1,4 @@
-# map — skills/sepmo/
+# map — .agents/skills/sepmo/
 
 ## Purpose
 
@@ -6,7 +6,7 @@ The **SEPMO v2 control plane**: a portable software-engineering governance-and-o
 (proposition-ledger scope audit → adversarial Actor–Critic with coverage-attested review → per-PR
 delivery → quantitative retrospective) that sits **on top of** this repo's engineering contract and
 binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision to
-[AGENTS.md](../../AGENTS.md) (see its `## Precedence`).
+[AGENTS.md](../../../AGENTS.md) (see its `## Precedence`).
 
 ## Contents
 
@@ -46,26 +46,26 @@ binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision
 | Understand the SEPMO lifecycle / gates / rules | [SKILL.md](SKILL.md) |
 | Run a phase (audit, orchestrate, build, critique, deliver, retro) | [references/map.md](references/map.md) → that phase's file |
 | See how a SEPMO role or tunable maps to this repo | [binding-manifest.md](binding-manifest.md) |
-| Find the engineering contract SEPMO defers to | [../../AGENTS.md](../../AGENTS.md) + [../../.agents/skills/engineering-method/SKILL.md](../../.agents/skills/engineering-method/SKILL.md) |
-| Find the precedence chain on a conflict | [../../AGENTS.md](../../AGENTS.md) `## Precedence` |
+| Find the engineering contract SEPMO defers to | [../../../AGENTS.md](../../../AGENTS.md) + [../../../.agents/skills/engineering-method/SKILL.md](../../../.agents/skills/engineering-method/SKILL.md) |
+| Find the precedence chain on a conflict | [../../../AGENTS.md](../../../AGENTS.md) `## Precedence` |
 | File the retrospective metrics | `task/metrics.md` (CREATE at the first retrospective — see the [manifest](binding-manifest.md) `metrics_ledger_location`) |
 | Re-port SEPMO to another repo | rewrite only [binding-manifest.md](binding-manifest.md) |
 
 ## Pointers
 
 - Up: [../map.md](../map.md)
-- Related: [../../AGENTS.md](../../AGENTS.md) (the authoritative contract + its `## Precedence`
-  chain); [../../CLAUDE.md](../../CLAUDE.md) (the Claude tool adapter).
+- Related: [../../../AGENTS.md](../../../AGENTS.md) (the authoritative contract + its `## Precedence`
+  chain); [../../../CLAUDE.md](../../../CLAUDE.md) (the Claude tool adapter).
 
 ## Debug
 
 | Symptom | First check |
 |---|---|
-| A SEPMO rule conflicts with an engineering rule | The contract wins ([../../AGENTS.md](../../AGENTS.md) `## Precedence`); fix the manifest/usage, never the spine or references |
+| A SEPMO rule conflicts with an engineering rule | The contract wins ([../../../AGENTS.md](../../../AGENTS.md) `## Precedence`); fix the manifest/usage, never the spine or references |
 | Prose disagrees with the state machine | The spine's transition table (T1–T12) is normative; the prose is the defect — file it |
 | A claim ("100/100", "converged", "mergeable") has no artifact | Invariant V alarm — demand the ledger / attestation / CI evidence ([references/06](references/06-vigilance.md)) |
 | A manifest row points at a missing file | Manifest is stale; fix the row |
 | Tempted to spawn sub-agents for the Actor–Critic loop | `context_break_mechanics` in the [manifest](binding-manifest.md): procedural break by default; fan out only on explicit request, Opus only when named |
 
 First checks: [binding-manifest.md](binding-manifest.md) resolves roles + tunables; [SKILL.md](SKILL.md)
-is the spine. Escalate to: [../map.md#debug](../map.md) → [../../CLAUDE.md](../../CLAUDE.md).
+is the spine. Escalate to: [../map.md#debug](../map.md) → [../../../CLAUDE.md](../../../CLAUDE.md).

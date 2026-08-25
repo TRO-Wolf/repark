@@ -10,7 +10,7 @@ commit on one branch, with its own `task/` ledger, so review runs commit by comm
 
 These narrow [AGENTS.md](../AGENTS.md) "Delegated-agent standing rules"; they never relax it.
 
-- **SEPMO governs the flow** ([skills/sepmo/SKILL.md](../skills/sepmo/SKILL.md)). Severity floor
+- **SEPMO governs the flow** ([.agents/skills/sepmo/SKILL.md](../.agents/skills/sepmo/SKILL.md)). Severity floor
   **S1**. Every unit runs at least one frontier Actor–Critic cycle; the Critic calls convergence,
   never the Actor.
 - **Actor–Critic on Opus** — the owner's standing grant. Review and critic sub-agents stay

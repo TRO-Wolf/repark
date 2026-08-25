@@ -31,14 +31,14 @@ Then the `map.md` of every directory your task will touch (see "`map.md` in ever
 
 The authority chain on any conflict, highest first. **This section is the chain's single home** —
 every other file ([CLAUDE.md](CLAUDE.md), [PROJECT.md](PROJECT.md),
-[skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md)) points here, never restates
+[.agents/skills/sepmo/binding-manifest.md](.agents/skills/sepmo/binding-manifest.md)) points here, never restates
 it.
 
 > **[AGENTS.md](AGENTS.md)** (the authoritative contract) **>** [PROJECT.md](PROJECT.md) (north-star
 > intent) **>** [STATUS.md](STATUS.md) (status SSOT) **>** engineering conventions
 > ([DEVELOPMENT.md](DEVELOPMENT.md) + [docs/testing.md](docs/testing.md) + the portable working
 > method in [.agents/skills/engineering-method/SKILL.md](.agents/skills/engineering-method/SKILL.md))
-> **>** SEPMO ([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md) — lifecycle/orchestration only).
+> **>** SEPMO ([.agents/skills/sepmo/SKILL.md](.agents/skills/sepmo/SKILL.md) — lifecycle/orchestration only).
 
 SEPMO governs *how work flows* (scope audit → Actor–Critic → PR → delivery → retrospective); it
 never overrides an engineering rule. When SEPMO and this contract appear to conflict, the contract
@@ -343,7 +343,7 @@ the moves) fails a ledger outside its bin, a dead ledger link in any tracked mar
 `make check-ledger-grammar` (`scripts/check_ledger_grammar.py` — the SSOT for the *shape* of a
 live ledger) fails a malformed clause row, a `PROVEN` clause no test cites
 ([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and a malformed or missing
-Critic attestation — the meanings stay in [skills/sepmo/](skills/sepmo/map.md).
+Critic attestation — the meanings stay in [.agents/skills/sepmo/](.agents/skills/sepmo/map.md).
 
 ## Working style and communication
 
@@ -485,10 +485,10 @@ the relevant tool adapter ([CLAUDE.md](CLAUDE.md) / [.agents/](.agents/map.md)),
 ## Process governance (SEPMO)
 
 Lifecycle/orchestration for non-trivial work runs under the **SEPMO control plane**
-([skills/sepmo/SKILL.md](skills/sepmo/SKILL.md)): scope audit (proposition-ledger gate: every clause
+([.agents/skills/sepmo/SKILL.md](.agents/skills/sepmo/SKILL.md)): scope audit (proposition-ledger gate: every clause
 `PROVEN`, zero `OPEN`/`REJECTED`) → adversarial Actor–Critic →
 per-PR delivery → retrospective. SEPMO governs **only how work flows** and **cedes every
 engineering decision to this contract** — on any conflict the precedence chain in
 [`## Precedence`](#precedence) above wins. SEPMO's abstract roles bind to this repo through
-[skills/sepmo/binding-manifest.md](skills/sepmo/binding-manifest.md). Its Actor–Critic runs
+[.agents/skills/sepmo/binding-manifest.md](.agents/skills/sepmo/binding-manifest.md). Its Actor–Critic runs
 **single-session by default** (sequential phases); sub-agent fan-out follows "Delegated work" above.
