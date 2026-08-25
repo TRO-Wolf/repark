@@ -20,10 +20,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
   comes with it, and the two adjacent defects that should ride along. Both units change a computed
   answer, so the gate wants a dated owner ruling before either writes code.
-- [v3e-4-refs-time-travel-ledger.md](v3e-4-refs-time-travel-ledger.md) —
-  **V3E-4 (2026-08-25):** refs + time travel on v3; expiry/orphans with real work.
-  PR-1 of the Lane A remainder group; V3E-5 (nightly v3 live-oracle leg) is PR-2
-  and does not share this ledger.
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:

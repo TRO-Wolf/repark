@@ -232,7 +232,9 @@ history-rewrite; provenance and the options weighed:
     legs are **in** (OD-3b; the scoped IAM statement is in `docs/tier2-aws.md` §2, owner-executed),
     and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
-  - **Next:** V3E-4 (refs + time travel; expiry/orphans with real work), on
+    V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
+    orphan 24h floor on adopted v3.
+  - **Next:** V3E-5 (nightly v3 live-oracle leg), on
     [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes) is owner-sequenced,
     gated on fork F-13.
 <!-- /ws -->

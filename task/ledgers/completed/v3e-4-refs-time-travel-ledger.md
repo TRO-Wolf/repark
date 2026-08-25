@@ -91,9 +91,9 @@ No AWS credentials, no `Cargo.toml [patch]`, no `.github/`.
 | C-013 | Northstar §3 cells “Refs + time travel on v3” and “Maintain: expiry / orphans on v3” are no longer “never exercised” | northstar edit | **PROVEN** | `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md` |
 | C-014 | On the same table, COW DML still refuses (`V3-COW-1`) | control pins | **PROVEN** | `cow_and_mor_dml_still_refuse_on_the_appended_v3_table`; ANSI + facade twins |
 | C-015 | This PR does not touch `.github/`, AWS, IAM, or `Cargo.toml [patch]` | diff | **PROVEN** | worktree diff: crates tests, northstar, ledger, maps, one facade test |
-| C-016 | Departure: ledger to `completed/`, V3E-4 leaves the slate with no obituary, STATUS v3 Next becomes V3E-5, maps lockstep, docs-compaction ceiling held | standing rule 7 | OPEN | departure commit |
+| C-016 | Departure: ledger to `completed/`, V3E-4 leaves the slate with no obituary, STATUS v3 Next becomes V3E-5, maps lockstep, docs-compaction ceiling held | standing rule 7 | **PROVEN** | this departure commit; rustdoc `pins: …/C-016` |
 
-VERDICT: FAIL (OPEN=1). LOGIC_SCORE = 15/16. C-016 is the departure row.
+VERDICT: PASS (OPEN=0). LOGIC_SCORE = 16/16.
 
 Group PR-2 (not this ledger): named dual-wired v3 live-oracle step; `REPARK_PARITY_LIVE=1` repark==Spark on V3E-3 fixtures; dual-wire green.
 
@@ -195,3 +195,75 @@ ACTOR_BUILD_SUMMARY:
   self_logic_reviews: [SLR-PER-V3E-4, SLR-V3E-4-ACTOR-CLOSE]
   status: CONCLUDED
 ```
+
+```yaml
+CONTEXT_BREAK:
+  id: CB-v3e-4-refs-time-travel-1
+  mechanism: PROCEDURAL_IN_SESSION
+  manifest_binding: context_break_mechanics procedural default; CCC review-only on scratch clone
+  handed_to_critic: [unit_charter_clauses, diff_and_artifacts, test_results, "attack_taxonomy (ref 05 + CCC)"]
+  withheld_until_initial_findings_filed: [actor_build_summary, actor_self_logic_review]
+  declaration_logged: "Context break executed; attacking artifacts, not memory."
+  honesty_note: procedural, not amnesia; scratch worktree /tmp/fable-trees/v3e-4-ccc at df58b78
+```
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: v3e-4-refs-time-travel
+  cycle: 1
+  risk_tier: high
+  critic_engine: ccc
+  complete: true
+  note: >
+    Procedural CCC quad on a detached scratch clone. make verify exit 0;
+    facade test_v3e4_refs_time_travel.py 1 passed. Novel Critic-3 input:
+    VERSION AS OF 'keep_dv' after expire → Spark DV live set (FRESH_OK).
+    No OPEN finding ≥ S1.
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, crates/repark-sql/src/v3_refs_time_travel.rs, python/repark/tests/test_v3e4_refs_time_travel.py]
+    - id: AT-2
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs]
+    - id: AT-3
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, python/repark/tests/test_v3e4_refs_time_travel.py]
+    - id: AT-4
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, python/repark/tests/test_v3e4_refs_time_travel.py]
+    - id: AT-5
+      status: ATTACKED
+      artifacts: [git diff --name-only origin/main...HEAD]
+    - id: AT-6
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md]
+    - id: AT-7
+      status: N/A
+      justification: test-only measurement; no new hot path
+    - id: AT-8
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, crates/repark-sql/src/v3_refs_time_travel.rs]
+    - id: AT-9
+      status: N/A
+      justification: test-only; no new operability surface
+    - id: AT-10
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e4.rs, python/repark/tests/test_v3e4_refs_time_travel.py]
+```
+
+```yaml
+PR_READINESS_CHECKLIST:
+  id: RA-v3e-4-refs-time-travel
+  self_run_by_orchestrator: false
+  checks:
+    ci_green: PASS (make verify exit 0; facade V3E-4 file 1 passed)
+    unit_clauses_proven: PASS (C-001..C-016)
+    coverage_attestation_attached: PASS (COVERAGE_ATTESTATION complete: true)
+    findings_ledger_closed: PASS (no OPEN ≥ S1)
+    clause_trace_complete: PASS (tests + northstar + ledger + maps)
+  verdict: READY
+  send_back_target: "N/A"
+```
+
+Disposition: CONVERGED (Critic, cycle 1). CCC-CONVERGED is not Delivery.
