@@ -77,9 +77,9 @@ None touched. No AWS credentials, no `Cargo.toml [patch]`, no `.github/`.
 | C-008 | Native DataFrame is N/A | surface matrix | **PROVEN** | no DataFrame Iceberg DML write surface; cited on Spark leaf rustdoc |
 | C-009 | Encryption keys: dated DECLARED registry row + pin that this engine does not implement table encryption | registry §2 ENC-1 + test | **PROVEN** | `v3_create_with_encryption_key_id_still_scans_without_a_kms`; property `encryption.key-id` |
 | C-010 | A dated V3E-2 decision names exactly one Spark+Iceberg pair as the v3 maintenance oracle | live transcript in this ledger; northstar §5; CI constant | **PROVEN** | Pair: `pyspark-4.1.2+iceberg-1.11.0`. Transcript below. Pin: `v3_maintenance_oracle_is_the_recorded_pair` |
-| C-011 | Pickup archives MW-9; departure empties V3E-1/2 from the slate (V3E-3 becomes #1) | standing rule 7 | **OPEN** | Pickup done (`f5cfda0`). Departure is the last commit |
+| C-011 | Pickup archives MW-9; departure empties V3E-1/2 from the slate (V3E-3 becomes #1) | standing rule 7 | **PROVEN** | Pickup `f5cfda0`; this departure commit; V3E-3 is #1 on `briefs/next-sequence.md`; rustdoc `pins: …/C-011` |
 
-VERDICT: Actor in flight (OPEN=1). LOGIC_SCORE = 10/11.
+VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 11/11.
 
 ```yaml
 KILLED_ASSUMPTIONS:

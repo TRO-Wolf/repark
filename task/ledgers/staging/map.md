@@ -20,9 +20,6 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
   comes with it, and the two adjacent defects that should ride along. Both units change a computed
   answer, so the gate wants a dated owner ruling before either writes code.
-- [v3e-1-2-cow-oracle-ledger.md](v3e-1-2-cow-oracle-ledger.md) —
-  **V3E-1 + V3E-2 (2026-08-24):** adopted v3 copy-on-write DML measurement and the v3
-  maintenance-oracle decision. In flight on `feat/v3e-1-2-cow-oracle`.
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:

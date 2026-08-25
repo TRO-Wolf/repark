@@ -15,7 +15,7 @@
 //!
 //! V3E-2: [`V3_MAINTENANCE_ORACLE`] is the dated maintenance-oracle pair (charter §5).
 //!
-//! pins: v3e-1-2-cow-oracle/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-010
+//! pins: v3e-1-2-cow-oracle/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-010, C-011
 
 use super::super::*;
 use super::common::*;
