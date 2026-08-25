@@ -78,7 +78,7 @@ None touched. No AWS credentials, no `Cargo.toml [patch]`, no `.github/`.
 | C-005 | Live Arrow row set with both delete kinds applied matches Spark `(2,b,0),(3,c,1)` | Spark-door pin | **PROVEN** | same test |
 | C-006 | `.delete_files` on the partitioned-DV fixture is Puffin `content=1` | Spark-door pin | **PROVEN** | `partitioned_v3_dv_delete_files_are_puffin_content_one` |
 | C-007 | `.delete_files` on the eq+DV fixture has `content=1` PUFFIN **and** `content=2` PARQUET with `equality_ids=[1]` | Spark-door pin | **PROVEN** | `equality_delete_alongside_dv_delete_files_name_both_kinds` |
-| C-008 | ANSI door live rows match C-002 and C-005 after `Catalog::register_table` | ANSI twins | **PROVEN** | `crates/repark-sql/src/v3e3.rs` |
+| C-008 | ANSI door live rows match C-002 and C-005 after `Catalog::register_table` | ANSI twins | **PROVEN** | `crates/repark-sql/src/v3_partitioned_equality_deletes.rs` |
 | C-009 | Facade Spark `.sql()` matches C-002, C-003, C-005, C-007, C-012 | `python/repark/tests/test_v3e3_fixtures.py` | **PROVEN** | facade tests (needs `make develop`) |
 | C-010 | Native `DataFrame` is N/A | surface matrix | **PROVEN** | rustdoc on Spark leaf |
 | C-011 | Northstar §3 read cells for partitioned DVs and equality-deletes-alongside-DVs are no longer "unmeasured" | northstar edit | **PROVEN** | `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`; rustdoc cites C-011 |
@@ -244,13 +244,13 @@ COVERAGE_ATTESTATION:
   categories:
     - id: AT-1
       status: ATTACKED
-      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3e3.rs, python/repark/tests/test_v3e3_fixtures.py]
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3_partitioned_equality_deletes.rs, python/repark/tests/test_v3e3_fixtures.py]
     - id: AT-2
       status: N/A
       justification: measure-only fixtures; no new input domain
     - id: AT-3
       status: ATTACKED
-      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3e3.rs]
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3_partitioned_equality_deletes.rs]
     - id: AT-4
       status: ATTACKED
       artifacts: [crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/test_v3e3_fixtures.py]

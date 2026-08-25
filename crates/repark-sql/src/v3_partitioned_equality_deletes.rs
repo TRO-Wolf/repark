@@ -87,7 +87,9 @@ fn materialize(
     dest: &str,
     metadata: &str,
 ) -> SparkFixture {
-    let held = lock.lock().expect("ansi v3e3 fixture lock");
+    let held = lock
+        .lock()
+        .expect("ansi partitioned-equality-delete fixture lock");
     let cross_process = DirLock::acquire(&format!("{dest}.lock"));
     let dest_path = PathBuf::from(dest);
     if dest_path.exists() {
