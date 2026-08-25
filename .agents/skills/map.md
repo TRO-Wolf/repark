@@ -69,7 +69,7 @@ See [../../.claude/map.md](../../.claude/map.md).
 | Write or review Python under the conventions | [code-quality/SKILL.md](code-quality/SKILL.md) |
 | Review a Rust PR or commit | [rust-code-quality/SKILL.md](rust-code-quality/SKILL.md) |
 | Triage a parity-live red, or flip a Spark-visible default | [audit-repark-parity/SKILL.md](audit-repark-parity/SKILL.md) |
-| Add a new skill | a `<verb-noun>/` directory here with `SKILL.md` (frontmatter + pointers, no policy) and its own `map.md`, plus a Contents row |
+| Add a new skill | a `<verb-noun>/` directory here with `SKILL.md` (frontmatter + pointers, no engineering policy) and its own `map.md`, plus a Contents row |
 | Read the authoritative contract | [../../AGENTS.md](../../AGENTS.md) |
 
 ## Pointers
