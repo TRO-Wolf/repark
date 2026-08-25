@@ -7,7 +7,7 @@
 > [.agents/](.agents/map.md) as thin tool adapters that carry no authoritative facts). When a current-state
 > fact changes, it changes **here** — other files point at this file, they do not restate it.
 
-_Last updated: 2026-08-24._
+_Last updated: 2026-08-25._
 
 ## Release state
 
@@ -204,6 +204,11 @@ history-rewrite; provenance and the options weighed:
   **[#223](https://github.com/TRO-Wolf/repark/pull/223)** (owner-granted, not a slate unit)
   dual-wired the map-link, ledger-lifecycle, and ledger-grammar guards into `ci.yml`'s
   `guards` job (`fetch-depth: 0` so the frozen-bin diff has `origin/main`).
+  **DL-4 chartered 2026-08-25, sequenced ahead of V3E-4:** the live documents carry only live
+  state — block markers on this section and the slate, `ledger_lifecycle.py compact` at pickup
+  (closed campaign diaries move to `docs/history/<campaign>/`, merged units leave the slate with
+  no obituary), a `check-docs-compaction` gate with a byte ratchet, one migration. Charter:
+  [task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md](task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md).
 
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
@@ -466,8 +471,9 @@ history-rewrite; provenance and the options weighed:
     ([#233](https://github.com/TRO-Wolf/repark/pull/233) —
     `write.delete.granularity` / `MOR-2` for MERGE) are delivered.
     The queue on [briefs/next-sequence.md](briefs/next-sequence.md) now carries
-    **Lane A remainder: V3E-4 first** (refs + time travel on v3; expiry/orphans
-    with real work). **V3E-3 ships in this PR.** V3-3 (deletion-vector writes)
+    **DL-4 (live-document compaction, chartered 2026-08-25) then the Lane A
+    remainder, V3E-4 first** (refs + time travel on v3; expiry/orphans
+    with real work). V3E-3 merged as [#236](https://github.com/TRO-Wolf/repark/pull/236). V3-3 (deletion-vector writes)
     remains owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
@@ -518,7 +524,8 @@ history-rewrite; provenance and the options weighed:
     unmeasured. Ledger:
     [task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md](task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md).
     Next on the track is **V3E-4** (refs + time travel; expiry/orphans with
-    real work) on [briefs/next-sequence.md](briefs/next-sequence.md). V3-3
+    real work) on [briefs/next-sequence.md](briefs/next-sequence.md), after
+    DL-4 (the live-document compaction, chartered 2026-08-25). V3-3
     (DV writes) remains owner-sequenced, gated on fork F-13.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
