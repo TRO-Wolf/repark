@@ -169,13 +169,17 @@ def test_pyc_6_dual_wired_make_ci_and_workflow() -> None:
 
 
 def test_pyc_6_prose_homes_name_the_gate() -> None:
-    """C-010: STATUS / sequence / maps / AGENTS / DEVELOPMENT name the arming."""
+    """C-010: STATUS / sequence / maps / AGENTS / DEVELOPMENT name the arming.
+
+    Retargeted by DL-4 (2026-08-25): the STATUS bullet and the slate's PYC appendix moved,
+    verbatim, to PYC's history record when the campaign was filed as closed; the live homes
+    of the fact are AGENTS.md, DEVELOPMENT.md and scripts/map.md, which this test still reads.
+    """
     for relative in (
         "AGENTS.md",
-        "STATUS.md",
+        "docs/history/pyc/status-record.md",
         "DEVELOPMENT.md",
         "scripts/map.md",
-        "briefs/next-sequence.md",
     ):
         text = (_REPO / relative).read_text(encoding="utf-8")
         assert "check_docstring_presence" in text or "check-docstring-presence" in text, relative

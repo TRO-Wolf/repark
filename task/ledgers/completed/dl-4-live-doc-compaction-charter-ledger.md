@@ -1,3 +1,11 @@
+> **Errata 2026-08-25 (CI, after departure):** the Python CD went red on two PYC tree pins that
+> asserted `STATUS.md` (and the slate) name the hook drop and the docstring gate — text the
+> migration moved to `docs/history/pyc/status-record.md`. Retargeted as a declared change (the live
+> homes AGENTS.md / DEVELOPMENT.md / the maps are still asserted). **Process miss, owned:** the
+> manifest's unit gate is `make verify`; this unit ran `make ci` only, which does not run the parity
+> suite where tree pins live — AT-10 sat clean over it. Feed-forward: a docs migration runs the
+> Python suite before departure.
+
 > **Errata 2026-08-25 (departure day):** §6 records `ci.yml` as unwired, an owner action. The owner
 > granted a one-time scoped edit the same evening and the `check_docs_compaction` step is in the
 > `guards` job on this branch. Nothing else in this record changes.
