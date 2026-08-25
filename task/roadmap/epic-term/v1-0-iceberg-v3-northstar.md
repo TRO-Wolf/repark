@@ -69,9 +69,9 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Write/maintain: partitioned v3 | ❌ unmeasured (format-v3-track §7 — every fixture unpartitioned) | DV writes + compaction proven on partitioned and spec-evolved tables | V3-3 / V3-5 |
 | Maintain: `rewrite_data_files` | 🚫 V3-LINEAGE-1 guard | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← fork F-7 |
 | Maintain: DV / delete-file maintenance | 🚫 B-MOR-3 refusal | DV-aware answer, Spark-compared | V3-5 ← fork F-7 |
-| Maintain: expiry / orphans on v3 | ⚠ never exercised with real work (format-v3-track §7) | exercised + Spark-compared | V3-5 |
+| Maintain: expiry / orphans on v3 | ✅ V3E-4 (2026-08-25): expire with expirable snapshots (tag-reachable DV snapshot kept, untagged intermediate gone, MW-1 six-column schema); `remove_orphan_files` 24h floor still refuses and leaves a planted orphan. Engine-compared; live Spark triple is V3E-5 | stays + live leg | evidence (intake) |
 | Maintain: `rewrite_manifests` | ✅ wired on v2 (MW-6, [#230](https://github.com/TRO-Wolf/repark/pull/230); rows MANIFEST-1/2/3) | exercised on v3 | evidence (intake) |
-| Refs + time travel on v3 (rollback, branch/tag DDL, `AS OF` over DVs) | ⚠ never exercised | exercised + Spark-compared | evidence (intake) |
+| Refs + time travel on v3 (rollback, branch/tag DDL, `AS OF` over DVs) | ✅ V3E-4 (2026-08-25): BRANCH/TAG on adopted partitioned-DV v3; `VERSION AS OF` / `FOR VERSION AS OF` over DVs matches V3E-3 Spark live set; `rollback_to_snapshot` restores it. Three doors (native DF N/A) | stays + live leg | evidence (intake) |
 | Adopt: `register_table` | ✅ wired (#203) | stays; Hadoop-pointer writes → fork F-14; S3 Tables → fork F-9 | done + residues |
 | Live: Glue + S3 Tables v3 legs | ❌ nothing measured live (format-v3-track §7) | every green row re-proven live where the service supports it | evidence (intake) (+OD-3b) |
 | Nightly oracle: v3 leg | ❌ none | a v3 fixture leg in the nightly, green | evidence (intake) |

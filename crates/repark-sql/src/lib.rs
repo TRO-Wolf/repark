@@ -62,4 +62,6 @@ mod v3_create;
 #[cfg(test)]
 mod v3_partitioned_equality_deletes;
 #[cfg(test)]
+mod v3_refs_time_travel;
+#[cfg(test)]
 mod v3_types;

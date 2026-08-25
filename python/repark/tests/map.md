@@ -27,6 +27,9 @@ NOT in that file is a defect, not a decision.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`
   copy-on-write MERGE / DELETE / UPDATE on an adopted v3 table raise
   `UnsupportedOperationException` naming `V3-COW-1`; rows untouched.
+- [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
+  branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
+  24h floor on the partitioned-DV fixture after a RePark append.
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2.
