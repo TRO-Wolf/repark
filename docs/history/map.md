@@ -29,6 +29,8 @@ Current state is [STATUS.md](../../STATUS.md); the rules are [AGENTS.md](../../A
   including the parallel G/N corpus units, plus `g4-artifacts/` and the
   [promotion ledger](hardening-h1/promotion-ledger.md). The campaign continues into H-2. Start at
   [hardening-h1/README.md](hardening-h1/README.md).
+- [pyc/](pyc/map.md) — **Python convention conformance (PYC)**: the workstream's STATUS record, cut 2026-08-22 (closed by #216).
+- [lrs/](lrs/map.md) — **Low-risk sweep (LRS)**: the workstream's STATUS record, cut 2026-08-21 (closed by #191).
 
 ## I want to...
 

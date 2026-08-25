@@ -30,11 +30,13 @@ from types import ModuleType
 COMPLETED = "task/ledgers/completed"
 ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
-# Bytes. Interim values until the DL-4 migration measures the compacted files and seeds them;
-# thereafter raised only in the PR that needs it, with the reason.
+# Bytes. Seeded 2026-08-25 from the DL-4 migration's measurement — STATUS.md 30,055 B (from
+# 65,890), briefs/next-sequence.md 5,107 B (from 26,731) — at the next 1,000 B above each.
+# Raised only in the PR that needs it, with the reason in that PR; a departure edit that adds
+# more than the headroom removes something or says why the ceiling moves.
 CEILINGS: dict[str, int] = {
-    "STATUS.md": 70_000,
-    "briefs/next-sequence.md": 28_000,
+    "STATUS.md": 31_000,
+    "briefs/next-sequence.md": 6_000,
 }
 
 

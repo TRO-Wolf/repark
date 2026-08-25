@@ -79,7 +79,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make ci`, `make install-hooks` and `.pre-commit-config.yaml` at n=5 median 0.05 s; the ci.yml
   dual-wire is an owner action, as #223 was for the DL-1/DL-2 gates): no closed campaign still in STATUS, no
   merged unit still on the slate, every workstream bullet inside a `ws` block, and the byte
-  ceilings (`CEILINGS`, seeded from the DL-4 migration; raised only in the PR that needs it —
+  ceilings (`CEILINGS`, seeded 2026-08-25 at 31,000 / 6,000 B from the DL-4 migration's
+  measurement, 30,055 / 5,107 B; raised only in the PR that needs it —
   the load-bearing half, since markers make compaction mechanical but the ceiling makes regrowth
   visible). Test: `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
