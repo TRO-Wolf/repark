@@ -15,13 +15,15 @@ description: >-
 # Rust Code Quality Gate
 
 A review procedure for a Rust diff in this workspace. It records a proven
-review *sequence*; every rule it leans on is a pointer into the spine
-([AGENTS.md](../../../AGENTS.md), [docs/testing.md](../../../docs/testing.md))
-or the engineering method ([../engineering-method/SKILL.md](../engineering-method/SKILL.md)
-"Rust") — on any conflict, those win. The Python counterpart is
-[../code-quality/SKILL.md](../code-quality/SKILL.md); its "how a rule is held"
-tags (linter / purpose-built gate / review) and its §13 arming ratchet apply
-here unchanged.
+review *sequence*; every *invariant* it leans on is a pointer into the spine
+([AGENTS.md](../../../AGENTS.md) "Hard rules", [docs/testing.md](../../../docs/testing.md)).
+How-to that those rules do not carry (unwrap replacements, numeric-cast
+review, lock order) lives in the engineering method
+([../engineering-method/SKILL.md](../engineering-method/SKILL.md)
+"Language-Specific Rules"). On any conflict, the spine wins. The Python
+counterpart is [../code-quality/SKILL.md](../code-quality/SKILL.md); its
+"how a rule is held" tags (linter / purpose-built gate / review) and its §13
+arming ratchet apply here unchanged.
 
 ## What the gates already hold — never re-review it
 

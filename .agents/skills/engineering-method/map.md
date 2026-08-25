@@ -11,8 +11,9 @@ loses on any conflict.
 
 ## Contents
 
-- [SKILL.md](SKILL.md) — the method: Identity & Priority Stack → Non-Negotiables → Mode Handling →
-  Risk-First → Workflow §1–§9 → Navigation (`map.md`) → Naming → Language-Specific Rules →
+- [SKILL.md](SKILL.md) — the method (v1.1): Identity & Priority Stack → Non-Negotiables
+  (locator) → Mode Handling → Risk-First → Workflow §1–§9 → Navigation (`map.md`, pointer at
+  AGENTS.md) → Naming → Language-Specific Rules (commands + how-to; invariants in AGENTS.md) →
   Function Length & Recursion → Pre-Flight → Core Principles (TL;DR).
 
 ## I want to...

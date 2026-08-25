@@ -8,11 +8,12 @@ escape hatches, Spark-visible behavior, ANSI dual-door coverage, float
 semantics, hot-path allocation, the error contract — with a severity scale
 ordered for a query engine (silently wrong results outrank crashes).
 
-It is a review *sequence*, not a second contract: every rule it leans on points
-into [../../../AGENTS.md](../../../AGENTS.md),
-[../../../docs/testing.md](../../../docs/testing.md), or
-[../engineering-method/SKILL.md](../engineering-method/SKILL.md) "Rust", and on
-any conflict those win.
+It is a review *sequence*, not a second contract: invariants point into
+[../../../AGENTS.md](../../../AGENTS.md) "Hard rules" and
+[../../../docs/testing.md](../../../docs/testing.md); how-to that those rules
+do not carry lives in
+[../engineering-method/SKILL.md](../engineering-method/SKILL.md)
+"Language-Specific Rules". On any conflict the spine wins.
 
 ## Contents
 
@@ -34,7 +35,8 @@ any conflict those win.
 
 - Up: [../map.md](../map.md)
 - Related: [../engineering-method/SKILL.md](../engineering-method/SKILL.md) (the
-  working method whose "Rust" sections this skill cites rather than restates).
+  working method whose Language-Specific how-to this skill cites rather than
+  restates).
 
 ## Debug
 
