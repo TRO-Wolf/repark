@@ -32,8 +32,17 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M |
-| 2 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S |
+| 1 | **DL-4** — the live documents carry only live state ([charter](../task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md)) | document lifecycle | — | M |
+| 2 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M |
+| 3 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S |
+
+**Why DL-4 goes ahead of V3E-4 (chartered 2026-08-25).** A faithful walk of the read path
+for a fresh work group costs ~97k tokens before a ledger exists, ~35k of it live signal; the
+deficit is closed-campaign diary on `STATUS.md` (a 36 kB "Active workstreams") and merged-unit
+obituaries in this file, and it is paid by **every Actor and Critic a unit spawns**, not once
+per session. DL-4 moves the diaries to `docs/history/`, makes merged units leave this file with
+no residue, and arms a byte ratchet so the two files cannot regrow unnoticed. Landing it first
+means V3E-4's agents onboard on the compacted files. No engine code; one script, one gate.
 
 **Lane A — the v3 evidence intake (owner-chartered 2026-08-24).** Five measure-first units
 against the north-star matrix
