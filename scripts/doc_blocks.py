@@ -247,7 +247,12 @@ def remove_units(text: str, ids: list[str]) -> tuple[str, int]:
     return "\n".join(_renumber(_collapse(kept))) + "\n", removed
 
 
-def _title(block_text: str) -> str:
+def _continues(line: str) -> bool:
+    """True for a wrapped continuation line of a list row (indented, non-empty)."""
+    return bool(line.strip()) and line[0] in " \t"
+
+
+def title(block_text: str) -> str:
     """The bold name at the head of a workstream bullet, or its first line."""
     match = re.search(r"\*\*(.+?)\*\*", block_text)
     return match.group(1) if match else block_text.splitlines()[0][:60]
@@ -281,10 +286,10 @@ def record_closed(text: str, block: Block, content: str, record_path: str) -> st
     except StopIteration as error:
         raise ValueError(f"{STATUS_PATH} has no `{CLOSED_LIST_MARKER}` line") from error
     end = marker + 1
-    while end < len(lines) and BULLET.match(lines[end]):
+    while end < len(lines) and (BULLET.match(lines[end]) or _continues(lines[end])):
         end += 1
     row = (
-        f"- **{_title(content)}** — closed {block.attrs['closed']} by {block.attrs['by']}; "
+        f"- **{title(content)}** — closed {block.attrs['closed']} by {block.attrs['by']}; "
         f"record: [{record_path}]({record_path})"
     )
     lines.insert(end, row)

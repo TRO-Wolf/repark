@@ -621,8 +621,8 @@ def compact_plan(repo: Path, tracked: list[str]) -> tuple[dict[str, str], list[s
                     )
                     row = (
                         f"- [{Path(directory).name}/]({Path(directory).name}/{MAP_NAME}) — "
-                        f"the {Path(directory).name} campaign's STATUS record, cut "
-                        f"{block.attrs['closed']}.\n"
+                        f"**{BLOCKS.title(content)}**: the workstream's STATUS record, cut "
+                        f"{block.attrs['closed']} (closed by {block.attrs['by']}).\n"
                     )
                     texts[history_map] = append_row(parent, row)
             if bin_map in texts or not any(

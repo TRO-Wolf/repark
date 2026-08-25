@@ -72,7 +72,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the
   slate's rows and reasoning; the parser (every violation a finding with file and line), the
   coverage check, and the two transforms — a merged unit's rows and blocks leave whole, a
-  `state=closed` campaign is cut for `docs/history/`. Pure text; consumed by
+  `state=closed` campaign is cut for `docs/history/` (the closed-campaigns list treats a wrapped
+  row as one row). Pure text; consumed by
   `ledger_lifecycle.py compact` and `check_docs_compaction.py`.
 - `check_docs_compaction.py` — the **live-document gate** (DL-4, `make check-docs-compaction`, in
   `make ci`, `make install-hooks` and `.pre-commit-config.yaml` at n=5 median 0.05 s; the ci.yml
