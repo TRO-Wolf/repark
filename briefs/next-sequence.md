@@ -32,10 +32,11 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **DL-4** — the live documents carry only live state ([charter](../task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md)) | document lifecycle | — | M |
-| 2 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M |
-| 3 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S |
+| 1 | **DL-4** — the live documents carry only live state ([charter](../task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md)) | document lifecycle | — | M <!-- unit id=dl-4 --> |
+| 2 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M <!-- unit id=v3e-4 --> |
+| 3 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S <!-- unit id=v3e-5 --> |
 
+<!-- unit id=dl-4 -->
 **Why DL-4 goes ahead of V3E-4 (chartered 2026-08-25).** A faithful walk of the read path
 for a fresh work group costs ~97k tokens before a ledger exists, ~35k of it live signal; the
 deficit is closed-campaign diary on `STATUS.md` (a 36 kB "Active workstreams") and merged-unit
@@ -43,7 +44,9 @@ obituaries in this file, and it is paid by **every Actor and Critic a unit spawn
 per session. DL-4 moves the diaries to `docs/history/`, makes merged units leave this file with
 no residue, and arms a byte ratchet so the two files cannot regrow unnoticed. Landing it first
 means V3E-4's agents onboard on the compacted files. No engine code; one script, one gate.
+<!-- /unit -->
 
+<!-- unit id=v3e-5 ledger=v3e-5- -->
 **Lane A — the v3 evidence intake (owner-chartered 2026-08-24).** Five measure-first units
 against the north-star matrix
 ([../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
@@ -65,6 +68,7 @@ The **fork lane runs in parallel and is owner-run** via
 — suggested order F-16 (small; repark's C-011 pin flipping red is the acceptance signal) →
 F-13 (the DV write path, gates V3-3) → F-14. Each fork landing returns here as a repin unit
 (RP-2, …). V3-3 and later engine units stay owner-sequenced and are **not** in this queue.
+<!-- /unit -->
 
 **V3-1 merged as [#203](https://github.com/TRO-Wolf/repark/pull/203)** and left this file.
 **PYC-1 merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)** and left this file (the

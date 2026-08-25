@@ -174,6 +174,7 @@ history-rewrite; provenance and the options weighed:
 **The ordered queue across the open tracks is [briefs/next-sequence.md](briefs/next-sequence.md)**
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
+<!-- ws id=dl ledgers=dl- state=open -->
 - **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; **DL-1 merged as
   [#221](https://github.com/TRO-Wolf/repark/pull/221)**). Unit ledgers live in
   [task/ledgers/](task/ledgers/map.md) by state — `staging/` → `completed/` (the unit's last
@@ -209,7 +210,9 @@ history-rewrite; provenance and the options weighed:
   (closed campaign diaries move to `docs/history/<campaign>/`, merged units leave the slate with
   no obituary), a `check-docs-compaction` gate with a byte ratchet, one migration. Charter:
   [task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md](task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md).
+<!-- /ws -->
 
+<!-- ws id=pyc ledgers=pyc- state=open -->
 - **Python convention conformance (PYC)** (chartered 2026-08-21 by the owner; **PYC-1
   merged as [#204](https://github.com/TRO-Wolf/repark/pull/204)**; **PYC-2
   merged as [#207](https://github.com/TRO-Wolf/repark/pull/207)**; **PYC-3
@@ -298,7 +301,9 @@ history-rewrite; provenance and the options weighed:
     it can see; converting a `dataclass` to a `BaseModel` adds validation that was not
     running before and can reject input the old container accepted. The invariant to
     hold is the LRS one: no query that worked before returns a different value.
+<!-- /ws -->
 
+<!-- ws id=lrs ledgers=lrs- state=open -->
 - **Low-risk sweep (LRS)** (chartered 2026-08-20, delivered; branch `fix/low-risk-sweep`,
   eleven commits, **merged as [#191](https://github.com/TRO-Wolf/repark/pull/191)** / `8c660f6`).
   Chartered off `feat/spark-function-parity` @ `8a28057`; rebased onto `main` on 2026-08-21 when
@@ -324,7 +329,9 @@ history-rewrite; provenance and the options weighed:
     the SQL door returns DataFusion's base-10 answer where Spark returns the natural log. Both are
     ordinary calls on common functions. **Both went to the owner, who ruled on 2026-08-21:**
     `RE-1` closes (SEM-1, below), `LOG-1` is **tabled** and keeps its row.
+<!-- /ws -->
 
+<!-- ws id=sem ledgers=sem- state=open -->
 - **The Spark semantics fixes (SEM)** (chartered 2026-08-21, **gate ruled the same day**). First
   four units **MERGED** as [#192](https://github.com/TRO-Wolf/repark/pull/192) / `f3eaa9d`; SEM-6
   followed as [#193](https://github.com/TRO-Wolf/repark/pull/193) / `a547905`. Charter and
@@ -352,7 +359,9 @@ history-rewrite; provenance and the options weighed:
     own answer back as if it were Spark's** and was checked against the oracle before the pin was
     committed — the exact failure `docs/testing.md` names, caught one step before it would have
     been pinned as truth.
+<!-- /ws -->
 
+<!-- ws id=mw ledgers=mw- state=open -->
 - **Iceberg maintenance wave (MW)** (chartered 2026-08-21; **closed by MW-5**). Merge-on-read
   was production-grade as a *write* path and fenced off as an *operational* one: the maintenance
   procedures refused on exactly the catalogs holding production data. Design:
@@ -475,7 +484,9 @@ history-rewrite; provenance and the options weighed:
     remainder, V3E-4 first** (refs + time travel on v3; expiry/orphans
     with real work). V3E-3 merged as [#236](https://github.com/TRO-Wolf/repark/pull/236). V3-3 (deletion-vector writes)
     remains owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
+<!-- /ws -->
 
+<!-- ws id=v3 ledgers=v3-,v3e- state=open -->
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
   2026-08-21; V3-0 audit merged; **V3-1 merged** as
@@ -527,7 +538,9 @@ history-rewrite; provenance and the options weighed:
     real work) on [briefs/next-sequence.md](briefs/next-sequence.md), after
     DL-4 (the live-document compaction, chartered 2026-08-25). V3-3
     (DV writes) remains owner-sequenced, gated on fork F-13.
+<!-- /ws -->
 
+<!-- ws id=perf ledgers=perf- state=open -->
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
   perf note's §8 battery: kernel race, many-symbols scaling, wide serving SELECT, batch-size
@@ -536,7 +549,9 @@ history-rewrite; provenance and the options weighed:
   borrow, single Arrow write, short-partition early-out) are GATED on those numbers; the perf
   note's §7 do-not list (no math reordering, goldens bit-exact) is binding; `unsafe` remains
   workspace-forbidden.
+<!-- /ws -->
 
+<!-- ws id=fnp ledgers=fnp- state=open -->
 - **Spark function parity campaign** (active, chartered 2026-08-20; first tranche **MERGED
   2026-08-21** as [#190](https://github.com/TRO-Wolf/repark/pull/190) / `65bacdf` — thirteen
   commits squashed into one, two adversarial Critic rounds). Close the `pyspark.sql.functions`
@@ -589,7 +604,9 @@ history-rewrite; provenance and the options weighed:
      [BL-8](docs/spark-sql-iceberg-parity.md#bl-8--sql-door-count-like-aggregates-return-uint64),
      which is where its semantics now live. The `approx_count_distinct` door-name gap is
      **closed** (LRS-3).
+<!-- /ws -->
 
+<!-- ws id=h2 ledgers=h-,h2- state=open -->
 - **V2 Engine Hardening** (active; recon complete, design and slate landed; **H-1 phase archived
   mid-campaign 2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md);
   campaign continues into H-2) — the first campaign to touch engine code since the port:
@@ -600,6 +617,7 @@ history-rewrite; provenance and the options weighed:
   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md) (the per-unit definitions and
   acceptance gates). One unit has already merged ahead of it
   (#30, the dead doc-pointer sweep in ported sources).
+<!-- /ws -->
 
 The **Agent-Agnostic Front-Door campaign** closed on 2026-08-10 — five units merged 2026-08-09,
 its two remaining acceptance items discharged at close-out. It is no longer a workstream; its
@@ -610,9 +628,11 @@ Parked lanes: **none.** The `repark.sql` re-home lane closed 2026-08-14 (#95 —
 [docs/release.md](docs/release.md) "RESOLVED"; design ruling
 [docs/design/python-facade.md](docs/design/python-facade.md) §4).
 
-**dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
-insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2
-done until those gates run.
+<!-- ws id=dbt ledgers=dbt- state=open -->
+- **dbt-repark is no longer parked.** M0–M2a merged on the sibling repo (append, delete+insert,
+  insert_overwrite, merge). M0b/M1b/M2b AWS gates are owner-scheduled; do not claim M0/M1/M2
+  done until those gates run.
+<!-- /ws -->
 
 ## Known correctness issues
 
