@@ -13,7 +13,7 @@
 # Charter ledger — DL-4 · the live documents carry only live state
 
 **Date:** 2026-08-25 · **Branch:** `docs/dl-4-charter` (this charter) then `feat/dl-4-live-doc-compaction` (the
-unit) · **Base:** `8083be5` (`main`, #236) · **Policy:** [../../../AGENTS.md](../../../AGENTS.md)
+unit) · **Base:** `8083be5` (`main`, #236) · **Policy:** [../../../AGENTS.md](../../../../AGENTS.md)
 "Markdown document lifecycle" · **Changes:** `scripts/ledger_lifecycle.py` (a DL-1 surface) + one
 new gate + one migration + the lifecycle rule text · **SEPMO path:** LIGHT eligible (docs +
 one script; no engine code) — the orchestrator reads the rubric at pickup · **Size:** M
@@ -32,11 +32,11 @@ found ~97k tokens before a ledger could be written, ~35k of it live signal. Re-m
 | `STATUS.md` | 65,183 | Release, delivered, deferred, blockers, the open tracks (~20 kB) | "Active workstreams" is 35,808 B under **one H2 with no sub-headings**; six of its ten campaign bullets are closed (DL-1..3's diary, PYC, LRS, MW "closed by MW-5" then MW-6..9, H-1's residue, three 2026-08-15 increment H2s). "Known correctness issues" (10,799 B) restates the divergence registry — a single-home violation. |
 | `briefs/next-sequence.md` | 25,842 | Standing rules (1,327 B) + the queue table + Lane A (~5 kB) | 20+ "*X merged as #N and left this file*" paragraphs (the unit left; its obituary stayed) + 9.6 kB of PYC / MW-5 / A13 appendices whose ledgers are archived. |
 
-The cause is the pickup ritual as practised: [compact-context-docs](../../../.agents/skills/compact-context-docs/SKILL.md)
+The cause is the pickup ritual as practised: [compact-context-docs](../../../../.agents/skills/compact-context-docs/SKILL.md)
 says "true up STATUS.md first," but scoped mode is bounded to the just-merged delta, so every
 pickup *appended* a departure line and none removed the closed material — a whole-file
 compaction is never anyone's unit. DL-3 did exactly this for the archive month maps
-([record](../archive/2026-08/2026-08-23-dl-3-archive-map-compaction-charter-ledger.md)); this
+([record](2026-08-23-dl-3-archive-map-compaction-charter-ledger.md)); this
 unit does it for the two live files and makes the mechanism run at pickup so the files cannot
 regrow unnoticed.
 

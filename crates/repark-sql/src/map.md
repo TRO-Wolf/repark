@@ -23,10 +23,11 @@ reach delegation through the ordinary arm.
 - `v3_create.rs` — **V3-2 (test-only):** ANSI CREATE/CTAS `format_version = 3` opt-in pins,
   split out of `tests.rs` so that file stays under its rust-file-size ceiling
   (`Model: Grok 4.6 xHigh` on the module's functions).
-- `v3_cow.rs` — **V3E-1 (test-only):** ANSI adopted-v3 copy-on-write DELETE/UPDATE/MERGE
-  contents pins, MoR refuse control, and `next_row_id` reassignment (`Model: Grok 4.6
-  xHigh`, `CodeQuality:S`). Adoption uses `Catalog::register_table` because this door
-  refuses `CALL`.
+- `v3_cow.rs` — **V3R-1 (test-only, 2026-08-25):** ANSI adopted-v3 copy-on-write DML refuses
+  (`V3-COW-1`; plain-`WHERE` = passthrough seat, subquery-`WHERE` = resolver seat), the CCC
+  regressions (short names, dotted quoted name, padded merge-on-read), a v2 control.
+- `v3_types.rs` — **V3R-1 (test-only):** `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE
+  (`V3-GEO-1`); reuses `v3_cow.rs`'s `Door`.
 - `v3_partitioned_equality_deletes.rs` — **V3E-3 (test-only):** ANSI live-row twins
   of the Spark-written partitioned DV and equality-delete + DV fixtures, plus
   `$delete_files` content 1/2 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
@@ -65,7 +66,8 @@ reach delegation through the ordinary arm.
   `repark-functions` edge the Spark gate uses to read its conf. Same conf key, same grandfather
   rule, same refusal class — read via `ConfigOptions::entries()`.
   **V3-2** reads `repark.sql.allow_create_format_version_3` the same way.
-  Tests: [guards/map.md](guards/map.md).
+  Tests: [guards/map.md](guards/map.md). V3R-1: `refuse_v3_cow_dml`, the `V3-COW-1` passthrough seat (delegated `DELETE | UPDATE`
+  branch); `dml_target_ident` reads the AST and completes short names (SEC-001 / SEC-003).
 - `sniff.rs` — the error-path wrong-door sniff (Q10/G3): on parse/plan FAILURE, name the token,
   the native equivalent, and the Spark door. Tests: [sniff/map.md](sniff/map.md).
 - `scan.rs` — ANSI-quoting-aware SQL text scanning: the one place the door reads raw text.

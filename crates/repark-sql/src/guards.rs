@@ -61,7 +61,10 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext};
-use repark_iceberg::write::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
+use repark_iceberg::write::{
+    MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml,
+    refuse_v3_cow_dml as refuse_v3_cow_dml_in_catalog,
+};
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 
@@ -305,34 +308,78 @@ pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Re
 ///
 /// # Errors
 /// [`DataFusionError::Plan`] from the tier-1 valve, naming the fork hazard and the workarounds.
-pub(crate) async fn refuse_mor_multi_spec_dml(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
-    let scrubbed = blank_out_quoted_and_comments(sql);
-    let Some((verb, target)) = dml_target(&scrubbed) else {
+pub(crate) async fn refuse_mor_multi_spec_dml(
+    cx: &EngineContext<'_>,
+    statement: &Statement,
+) -> Result<()> {
+    let Some((kind, target, catalog_name, ident)) = dml_target_ident(cx, statement) else {
         return Ok(());
     };
-    let kind = match verb {
-        "DELETE" => MorDmlKind::Delete,
-        "UPDATE" => MorDmlKind::Update,
-        // INSERT writes no position deletes; MERGE runs the RePark-owned writer.
-        _ => return Ok(()),
-    };
-    let parts: Vec<String> = target
-        .split('.')
-        .map(|part| part.trim_matches('"').to_string())
-        .collect();
-    // catalog.namespace….table — a shorter name cannot be resolved without a session default
-    // catalog, and the planner's own error is the better one.
-    if parts.len() < 3 {
-        return Ok(());
-    }
-    let Some(catalog) = cx.catalogs.get(&parts[0]) else {
+    let Some(catalog) = cx.catalogs.get(&catalog_name) else {
         return Ok(());
     };
-    let Ok(namespace) = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()) else {
-        return Ok(());
-    };
-    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
     refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
+}
+
+/// V3R-1 valve (`V3-COW-1`) for the delegated plain-`WHERE` DELETE / UPDATE; runs after the
+/// BUG-001 valve.
+pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, statement: &Statement) -> Result<()> {
+    let Some((kind, _target, catalog_name, ident)) = dml_target_ident(cx, statement) else {
+        return Ok(());
+    };
+    let Some(catalog) = cx.catalogs.get(&catalog_name) else {
+        return Ok(());
+    };
+    refuse_v3_cow_dml_in_catalog(catalog.as_ref(), &ident, kind).await
+}
+
+/// Resolve a `DELETE` / `UPDATE` target from the AST as DataFusion will: short names complete
+/// from the session defaults, a quoted identifier is one part (SEC-001 / SEC-003); else `None`.
+fn dml_target_ident(
+    cx: &EngineContext<'_>,
+    statement: &Statement,
+) -> Option<(MorDmlKind, String, String, TableIdent)> {
+    let (kind, name) = match statement {
+        Statement::Delete(delete) => (MorDmlKind::Delete, delete_target_name(delete)?),
+        Statement::Update(update) => (MorDmlKind::Update, object_name_of(&update.table)?),
+        _ => return None,
+    };
+    let mut parts: Vec<String> = name
+        .0
+        .iter()
+        .filter_map(|part| part.as_ident().map(|ident| ident.value.clone()))
+        .collect();
+    if parts.is_empty() {
+        return None;
+    }
+    if parts.len() < 3 {
+        let (default_catalog, default_schema) = {
+            let state = cx.ctx.state();
+            let catalog = &state.config().options().catalog;
+            (
+                catalog.default_catalog.clone(),
+                catalog.default_schema.clone(),
+            )
+        };
+        if parts.len() == 1 {
+            parts.insert(0, default_schema);
+        }
+        parts.insert(0, default_catalog);
+    }
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
+    Some((kind, name.to_string(), parts[0].clone(), ident))
+}
+
+/// A parsed `DELETE`'s target: the multi-delete `tables` form first, else the first FROM relation.
+fn delete_target_name(delete: &Delete) -> Option<&ObjectName> {
+    if let Some(name) = delete.tables.first() {
+        return Some(name);
+    }
+    let tables = match &delete.from {
+        FromTable::WithFromKeyword(tables) | FromTable::WithoutKeyword(tables) => tables,
+    };
+    tables.first().and_then(object_name_of)
 }
 
 // === Guard 5 — SEC-02 local-filesystem plans (runs after planning) ==========================

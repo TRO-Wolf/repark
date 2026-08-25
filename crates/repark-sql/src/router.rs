@@ -189,7 +189,7 @@ async fn execute_time_travelled(
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_delete_in(statement.as_ref())?
             {
-                guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+                guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
                 let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
                 repark_iceberg::write::predicate_dml::execute_predicate_dml(
                     cx.ctx,
@@ -202,7 +202,7 @@ async fn execute_time_travelled(
             if let Some(allowed) =
                 repark_iceberg::write::predicate_dml::try_allowed_update_in(statement.as_ref())?
             {
-                guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+                guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
                 let handle = schema_ddl::catalog_handle(cx.catalogs, &allowed.catalog_name)?;
                 repark_iceberg::write::predicate_dml::execute_predicate_dml(
                     cx.ctx,
@@ -213,7 +213,9 @@ async fn execute_time_travelled(
                 return cx.ctx.read_empty();
             }
             guards::refuse_dml_subquery_predicate(statement.as_ref())?;
-            guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+            guards::refuse_mor_multi_spec_dml(cx, statement.as_ref()).await?;
+            // pins: v3r-1-rulings/C-001, C-002 — the passthrough seat of the V3-COW-1 guard.
+            guards::refuse_v3_cow_dml(cx, statement.as_ref()).await?;
             delegate(cx, sql).await
         }
         _ => delegate(cx, sql).await,

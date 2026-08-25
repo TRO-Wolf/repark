@@ -253,13 +253,19 @@ async fn mor_valve_wrapper_passes_what_it_cannot_or_must_not_gate() {
         // DML the valve deliberately does not cover.
         "INSERT INTO ice.sales.t VALUES (1)",
         "MERGE INTO ice.sales.t USING s ON t.id = s.id WHEN MATCHED THEN DELETE",
-        // Too few name parts to resolve without a session default catalog.
+        // Short names complete from the session defaults, which name no registered catalog.
         "DELETE FROM t WHERE id = 1",
         "UPDATE sales.t SET a = 1",
         // Three-part name, but no such catalog is registered.
         "DELETE FROM nosuch.sales.t WHERE id = 1",
     ] {
-        refuse_mor_multi_spec_dml(&cx, sql)
+        let statement = datafusion::sql::sqlparser::parser::Parser::parse_sql(
+            &datafusion::sql::sqlparser::dialect::GenericDialect {},
+            sql,
+        )
+        .unwrap_or_else(|err| panic!("`{sql}` must parse: {err}"))
+        .remove(0);
+        refuse_mor_multi_spec_dml(&cx, &statement)
             .await
             .unwrap_or_else(|err| panic!("`{sql}` must pass the MoR valve: {err}"));
     }

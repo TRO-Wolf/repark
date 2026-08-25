@@ -80,6 +80,7 @@ pub(crate) async fn execute_passthrough(
                     _ => None,
                 };
                 crate::refuse_mor_unpartitioned_multi_spec_dml(
+                    ctx,
                     catalogs,
                     object_name,
                     crate::MorDmlKind::Delete,
@@ -104,6 +105,7 @@ pub(crate) async fn execute_passthrough(
                     _ => None,
                 };
                 crate::refuse_mor_unpartitioned_multi_spec_dml(
+                    ctx,
                     catalogs,
                     object_name,
                     crate::MorDmlKind::Update,

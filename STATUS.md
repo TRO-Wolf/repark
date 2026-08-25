@@ -88,8 +88,8 @@ What happens next, in order:
    promotion G-9 — ten unit ledgers + `g4-artifacts/` through the H-1 close gate #35–#46; campaign
    continues into **H-2**). **H-2 seed+tail progress (2026-08-12):** landed G1/G16, G2/G13,
    G3 guard-half, G4+G4b, G5+G5b, G6, G7, G12, G17, G18, G9-partial; **TZ-5 closed by #64**.
-   Still open: G8 (deliberately last), G10 (now unblocked by the X-5 comparator), G11/G15
-   (owner rulings), TZ-4 (design pass required), G3-E8 FIX, G5b-R. The engineering items
+   Still open: G8 (deliberately last), G10 (now unblocked by the X-5 comparator), TZ-4
+   (design pass required), G3-E8 FIX, G5b-R. The engineering items
    parked below (spill coverage, the `ReparkSession` decomposition trigger, the
    `ExecutionBackend` seam) are its natural inputs.
    **2026-08-13 — Y wave landed; Z wave in flight.** Y-wave PRs **#66–#72** are on `main`
@@ -189,7 +189,7 @@ history-rewrite; provenance and the options weighed:
   [#225](https://github.com/TRO-Wolf/repark/pull/225)). Records: the DL-1/2/3 charters in
   [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md); DL-4 (delivered
   2026-08-25: STATUS.md 65.9 → 30.1 kB, the slate 26.7 → 5.6 kB):
-  [the DL-4 ledger](task/ledgers/completed/dl-4-live-doc-compaction-charter-ledger.md).
+  [the DL-4 ledger](task/ledgers/archive/2026-08/2026-08-25-dl-4-live-doc-compaction-charter-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=sem ledgers=sem- state=held -->
@@ -219,15 +219,20 @@ history-rewrite; provenance and the options weighed:
   - **Delivered:** V3-1 `register_table` + the checked-in v3 fixture
     ([#203](https://github.com/TRO-Wolf/repark/pull/203)); V3-2 CREATE/CTAS `format-version = 3`
     behind `repark.sql.allowCreateFormatVersion3` (default false), ALTER refused
-    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — adopted-v3 COW DML
-    commits and returns the right rows but **reassigns** lineage (registry `V3-COW-1`, BACKLOG;
-    Spark preserves `_row_id`; guard-or-not is a later owner ruling), `ENC-1` DECLARED, the v3
-    maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0
+    ([#232](https://github.com/TRO-Wolf/repark/pull/232)); V3E-1 + V3E-2 — measured adopted-v3
+    COW DML committing the right rows while **reassigning** lineage (Spark preserves `_row_id`),
+    `ENC-1` DECLARED, the v3 maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0
     ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
     equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
-    `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)). Ledgers in
+    `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
+    **the 2026-08-25 owner rulings:** COW DML on a v3 table is **guarded** (registry `V3-COW-1`
+    refuses on both doors before any write — with MOR refused too, a v3 table is append-only
+    here until fork F-7), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
+    shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live
+    legs are **in** (OD-3b; the scoped IAM statement is in `docs/tier2-aws.md` §2, owner-executed),
+    and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
-  - **Next:** V3E-4 (refs + time travel; expiry/orphans with real work) after DL-4, on
+  - **Next:** V3E-4 (refs + time travel; expiry/orphans with real work), on
     [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes) is owner-sequenced,
     gated on fork F-13.
 <!-- /ws -->

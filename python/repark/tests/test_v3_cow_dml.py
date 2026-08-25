@@ -1,6 +1,6 @@
-"""V3E-1: facade Spark `.sql()` copy-on-write DML on a register_table-adopted v3 table.
+"""V3R-1: facade Spark `.sql()` copy-on-write DML on an adopted v3 table refuses (V3-COW-1).
 
-pins: v3e-1-2-cow-oracle/C-003, C-007
+pins: v3r-1-rulings/C-006
 """
 
 from __future__ import annotations
@@ -53,14 +53,14 @@ def _id_name_rows(table: pa.Table) -> list[tuple[int, str]]:
     return pairs
 
 
-def test_facade_adopted_v3_cow_merge_and_delete_match_spark_door_contents(
+def test_facade_adopted_v3_cow_dml_refuses_and_leaves_the_table_untouched(
     tmp_path: Path,
 ) -> None:
-    """Adopted v3 COW MERGE then DELETE match the Spark-door contents pins."""
+    """Adopted v3 COW MERGE, DELETE and UPDATE raise naming V3-COW-1; rows stay put."""
     from repark import ReparkSession
 
     spark = (
-        ReparkSession.builder.appName("v3e-1-cow")
+        ReparkSession.builder.appName("v3r-1-cow")
         .config(_ALLOW_CREATE_V3_KEY, "true")
         .getOrCreate()
     )
@@ -78,15 +78,17 @@ def test_facade_adopted_v3_cow_merge_and_delete_match_spark_door_contents(
             "CALL ice.system.register_table("
             f"table => 'sales.adopt_mrg', metadata_file => '{metadata_file}')"
         )
-        spark.sql(
-            "MERGE INTO ice.sales.adopt_mrg AS t USING "
-            "(SELECT 2 AS id, 'm' AS name UNION ALL SELECT 4 AS id, 'n' AS name) AS s "
-            "ON t.id = s.id "
-            "WHEN MATCHED THEN UPDATE SET t.name = s.name "
-            "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
-        )
+        seeded = [(1, "a"), (2, "b"), (3, "c")]
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+            spark.sql(
+                "MERGE INTO ice.sales.adopt_mrg AS t USING "
+                "(SELECT 2 AS id, 'm' AS name UNION ALL SELECT 4 AS id, 'n' AS name) AS s "
+                "ON t.id = s.id "
+                "WHEN MATCHED THEN UPDATE SET t.name = s.name "
+                "WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
+            ).collect()
         merged = spark.sql("SELECT id, name FROM ice.sales.adopt_mrg").to_arrow()
-        assert _id_name_rows(merged) == [(1, "a"), (2, "m"), (3, "c"), (4, "n")]
+        assert _id_name_rows(merged) == seeded
         with pytest.raises(UnsupportedOperationException, match="row lineage"):
             spark.sql("CALL ice.system.rewrite_data_files(table => 'sales.adopt_mrg')").collect()
 
@@ -100,8 +102,11 @@ def test_facade_adopted_v3_cow_merge_and_delete_match_spark_door_contents(
             "CALL ice.system.register_table("
             f"table => 'sales.adopt_del', metadata_file => '{delete_metadata}')"
         )
-        spark.sql("DELETE FROM ice.sales.adopt_del WHERE id = 2")
-        deleted = spark.sql("SELECT id, name FROM ice.sales.adopt_del").to_arrow()
-        assert _id_name_rows(deleted) == [(1, "a"), (3, "c")]
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+            spark.sql("DELETE FROM ice.sales.adopt_del WHERE id = 2").collect()
+        with pytest.raises(UnsupportedOperationException, match="V3-COW-1"):
+            spark.sql("UPDATE ice.sales.adopt_del SET name = 'x' WHERE id = 2").collect()
+        untouched = spark.sql("SELECT id, name FROM ice.sales.adopt_del").to_arrow()
+        assert _id_name_rows(untouched) == seeded
     finally:
         spark.stop()

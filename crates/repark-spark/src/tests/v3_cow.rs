@@ -1,21 +1,12 @@
-//! V3E-1 — copy-on-write DML on a `register_table`-adopted format-v3 table.
+//! V3R-1 (2026-08-25): every copy-on-write arm refuses a v3 table before any write (`V3-COW-1`);
+//! merge-on-read refuses too (R113) — append-only until fork F-7. No native `DataFrame` DML (C-012).
 //!
-//! Model: Grok 4.6 xHigh
+//! Model: Claude Fable 5
 //! CodeQuality:S
 //!
-//! The merge-on-read arms refuse v3. The copy-on-write arms never read the format version
-//! (registry `V3-COW-1`). This leaf measures that hole: CREATE v3 (opt-in) + seed, then
-//! `CALL system.register_table` under a second ident (the Glue drop-in shape). Memory-catalog
-//! `DROP TABLE` deletes the metadata pointer (`FileIO::delete`), so the seed ident is left in
-//! place; DML runs against the adopted ident. Lineage columns are not plannable (`V3-ROWID-1`);
-//! the engine-observable half is `next_row_id` + the new snapshot's `first_row_id` /
-//! `added_rows`. Spark `_row_id` numbers live in the unit ledger.
-//!
-//! Native `DataFrame` has no Iceberg DML write surface (C-008).
-//!
 //! V3E-2: [`V3_MAINTENANCE_ORACLE`] is the dated maintenance-oracle pair (charter §5).
-//!
-//! pins: v3e-1-2-cow-oracle/C-001, C-002, C-003, C-004, C-005, C-006, C-008, C-010, C-011
+//! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005, C-012
+//! pins: v3e-1-2-cow-oracle/C-009, C-010
 
 use super::super::*;
 use super::common::*;
@@ -37,6 +28,7 @@ const UNSET_MERGE_V3: &str = "'format-version' = '3'";
 /// Iceberg table property that selects the table master key (spec: table encryption).
 const ENCRYPTION_KEY_ID_PROP: &str = "encryption.key-id";
 
+#[derive(Debug, PartialEq, Eq)]
 struct Lineage {
     next_row_id: u64,
     snapshot_first_row_id: Option<u64>,
@@ -156,74 +148,84 @@ fn v3_maintenance_oracle_is_the_recorded_pair() {
     );
 }
 
-/// pins: v3e-1-2-cow-oracle/C-001, C-005
+/// The refusal names the row, the verb and row lineage; the table is untouched and still v3.
+async fn assert_cow_refused_untouched(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table: &str,
+    sql: &str,
+    verb: &str,
+) {
+    let before_snapshot = current_snapshot_id(catalogs, table).await;
+    let before = lineage(catalogs, table).await;
+    let qualified = format!("ice.sales.{table}");
+    let before_rows = table_rows(ctx, catalogs, &qualified).await;
+    let err = execute(ctx, catalogs, sql)
+        .await
+        .expect_err("copy-on-write DML on a v3 table must refuse")
+        .to_string();
+    assert!(
+        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains(verb),
+        "refusal must name the row, row lineage and `{verb}`: {err}"
+    );
+    assert_eq!(
+        current_snapshot_id(catalogs, table).await,
+        before_snapshot,
+        "a refused {verb} must not commit"
+    );
+    assert_eq!(
+        lineage(catalogs, table).await,
+        before,
+        "a refused {verb} must not touch lineage counters"
+    );
+    assert_eq!(
+        table_rows(ctx, catalogs, &qualified).await,
+        before_rows,
+        "a refused {verb} must not touch rows"
+    );
+    assert_still_v3(&load_sales(catalogs, table).await);
+}
+
+/// pins: v3r-1-rulings/C-001
 #[tokio::test]
-async fn adopted_v3_cow_delete_commits_and_drops_the_matched_row() {
+async fn adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_del", "adopt_del").await;
-    let before_snapshot = current_snapshot_id(&catalogs, "adopt_del").await;
-    let before = lineage(&catalogs, "adopt_del").await;
-    run(
+    assert_eq!(
+        lineage(&catalogs, "adopt_del").await.next_row_id,
+        3,
+        "seed INSERT of 3 rows assigns 0..2 — append stays open"
+    );
+    assert_cow_refused_untouched(
         &ctx,
         &catalogs,
+        "adopt_del",
         "DELETE FROM ice.sales.adopt_del WHERE id = 2",
+        "DELETE",
     )
     .await;
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.adopt_del").await,
-        vec![(1, "a".into()), (3, "c".into())]
-    );
-    let after_snapshot = current_snapshot_id(&catalogs, "adopt_del").await;
-    assert_ne!(
-        before_snapshot, after_snapshot,
-        "COW DELETE must commit a new snapshot"
-    );
-    let after_table = load_sales(&catalogs, "adopt_del").await;
-    assert_still_v3(&after_table);
-    let after = lineage(&catalogs, "adopt_del").await;
-    // C-005 engine-observable half. Exact numbers filled after the first Actor run.
-    assert!(
-        before.next_row_id > 0,
-        "seed INSERT must assign row lineage; next_row_id={}",
-        before.next_row_id
-    );
-    // Reassigns: remaining 2 rows get new ids starting at 3 (V3-LINEAGE-1 class on DML).
-    assert_eq!(before.next_row_id, 3, "seed of 3 rows assigns 0..2");
-    assert_eq!(after.next_row_id, 5, "COW DELETE reassigns the 2 survivors");
-    assert_eq!(after.snapshot_first_row_id, Some(3));
-    assert_eq!(after.snapshot_added_rows, Some(2));
 }
 
-/// pins: v3e-1-2-cow-oracle/C-002, C-005
+/// pins: v3r-1-rulings/C-002
 #[tokio::test]
-async fn adopted_v3_cow_update_commits_and_rewrites_matched_values() {
+async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_upd", "adopt_upd").await;
-    let before = lineage(&catalogs, "adopt_upd").await;
-    run(
+    assert_cow_refused_untouched(
         &ctx,
         &catalogs,
+        "adopt_upd",
         "UPDATE ice.sales.adopt_upd SET name = 'x' WHERE id = 2",
+        "UPDATE",
     )
     .await;
-    assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.adopt_upd").await,
-        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
-    );
-    assert_still_v3(&load_sales(&catalogs, "adopt_upd").await);
-    let after = lineage(&catalogs, "adopt_upd").await;
-    // Reassigns all 3 live rows (V3-LINEAGE-1 class on DML).
-    assert_eq!(before.next_row_id, 3);
-    assert_eq!(after.next_row_id, 6, "COW UPDATE reassigns every live row");
-    assert_eq!(after.snapshot_first_row_id, Some(3));
-    assert_eq!(after.snapshot_added_rows, Some(3));
 }
 
-/// pins: v3e-1-2-cow-oracle/C-003, C-005
+/// pins: v3r-1-rulings/C-003
 #[tokio::test]
-async fn adopted_v3_cow_merge_commits_matched_and_not_matched() {
+async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(&ctx, &catalogs, "seed_mrg", "adopt_mrg", UNSET_MERGE_V3).await;
@@ -234,40 +236,61 @@ async fn adopted_v3_cow_merge_commits_matched_and_not_matched() {
             .properties()
             .get("write.merge.mode")
             .is_none(),
-        "C-003 is the unset write.merge.mode hole, not explicit copy-on-write"
+        "the unset write.merge.mode hole must be covered, not only explicit copy-on-write"
     );
-    let before = lineage(&catalogs, "adopt_mrg").await;
+    adopt_cow_v3(&ctx, &catalogs, "seed_mrg2", "adopt_mrg2").await;
+    for table in ["adopt_mrg", "adopt_mrg2"] {
+        assert_cow_refused_untouched(
+            &ctx,
+            &catalogs,
+            table,
+            &format!(
+                "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, 'm' AS name \
+                 UNION ALL SELECT 4 AS id, 'n' AS name) AS s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET t.name = s.name \
+                 WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
+            ),
+            "MERGE INTO",
+        )
+        .await;
+    }
+}
+
+/// pins: v3r-1-rulings/C-005
+#[tokio::test]
+async fn v2_cow_delete_still_commits_control() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     run(
         &ctx,
         &catalogs,
-        "MERGE INTO ice.sales.adopt_mrg AS t USING (SELECT 2 AS id, 'm' AS name \
-         UNION ALL SELECT 4 AS id, 'n' AS name) AS s ON t.id = s.id \
-         WHEN MATCHED THEN UPDATE SET t.name = s.name \
-         WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
+        "CREATE TABLE ice.sales.v2del (id INT, name STRING) USING iceberg \
+         TBLPROPERTIES ('write.delete.mode' = 'copy-on-write')",
+    )
+    .await;
+    run(
+        &ctx,
+        &catalogs,
+        "INSERT INTO ice.sales.v2del SELECT * FROM src",
     )
     .await;
     assert_eq!(
-        table_rows(&ctx, &catalogs, "ice.sales.adopt_mrg").await,
-        vec![
-            (1, "a".into()),
-            (2, "m".into()),
-            (3, "c".into()),
-            (4, "n".into())
-        ]
+        load_sales(&catalogs, "v2del")
+            .await
+            .metadata()
+            .format_version(),
+        FormatVersion::V2,
+        "the control is a v2 table"
     );
-    assert_still_v3(&load_sales(&catalogs, "adopt_mrg").await);
-    let after = lineage(&catalogs, "adopt_mrg").await;
-    // 3 rewritten + 1 inserted = 4 new ids (V3-LINEAGE-1 class on DML).
-    assert_eq!(before.next_row_id, 3);
+    run(&ctx, &catalogs, "DELETE FROM ice.sales.v2del WHERE id = 2").await;
     assert_eq!(
-        after.next_row_id, 7,
-        "COW MERGE reassigns survivors and assigns the insert"
+        table_rows(&ctx, &catalogs, "ice.sales.v2del").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the guard must not reach v2"
     );
-    assert_eq!(after.snapshot_first_row_id, Some(3));
-    assert_eq!(after.snapshot_added_rows, Some(4));
 }
 
-/// pins: v3e-1-2-cow-oracle/C-004
+/// pins: v3r-1-rulings/C-004
 #[tokio::test]
 async fn adopted_v3_mor_merge_still_refuses() {
     let warehouse = TempDir::new().unwrap();
@@ -364,5 +387,103 @@ async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
             .map(String::as_str),
         Some("not-a-key"),
         "the property is stored; encryption is not performed"
+    );
+}
+
+/// Merge-on-read plain-`WHERE` DELETE on v3 takes the passthrough path; it refuses too.
+/// pins: v3r-1-rulings/C-004
+#[tokio::test]
+async fn adopted_v3_mor_delete_still_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_mordel",
+        "adopt_mordel",
+        "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'",
+    )
+    .await;
+    let before_rows = table_rows(&ctx, &catalogs, "ice.sales.adopt_mordel").await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_mordel WHERE id = 2",
+    )
+    .await
+    .expect_err("MoR DELETE on v3 must refuse")
+    .to_string();
+    assert!(
+        err.contains("V3") || err.contains("v3") || err.contains("deletion vector"),
+        "MoR DELETE refuse must name format v3: {err}"
+    );
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_mordel").await,
+        before_rows
+    );
+}
+
+/// SEC-001: two-part and bare names under a session default catalog / schema refuse.
+/// pins: v3r-1-rulings/C-001, C-002
+#[tokio::test]
+async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_cow_v3(&ctx, &catalogs, "seed_short", "adopt_short").await;
+    ctx.sql("SET datafusion.catalog.default_catalog = 'ice'")
+        .await
+        .expect("set default catalog");
+    ctx.sql("SET datafusion.catalog.default_schema = 'sales'")
+        .await
+        .expect("set default schema");
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_short",
+        "DELETE FROM sales.adopt_short WHERE id = 2",
+        "DELETE",
+    )
+    .await;
+    assert_cow_refused_untouched(
+        &ctx,
+        &catalogs,
+        "adopt_short",
+        "UPDATE adopt_short SET name = 'x' WHERE id = 2",
+        "UPDATE",
+    )
+    .await;
+}
+
+/// SEC-002: a padded `' Merge-On-Read '` (copy-on-write to the fork) still refuses on v3.
+/// pins: v3r-1-rulings/C-004
+#[tokio::test]
+async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
+    let warehouse = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
+    adopt_v3(
+        &ctx,
+        &catalogs,
+        "seed_pad",
+        "adopt_pad",
+        "'format-version' = '3', 'write.delete.mode' = ' Merge-On-Read '",
+    )
+    .await;
+    let before = lineage(&catalogs, "adopt_pad").await;
+    let err = execute(
+        &ctx,
+        &catalogs,
+        "DELETE FROM ice.sales.adopt_pad WHERE id = 2",
+    )
+    .await
+    .expect_err("a padded merge-on-read spelling on v3 must still refuse")
+    .to_string();
+    assert!(
+        err.contains("V3") && err.contains("deletion vectors"),
+        "the merge-on-read arm's reason: {err}"
+    );
+    assert_eq!(lineage(&catalogs, "adopt_pad").await, before, "no commit");
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_pad").await,
+        vec![(1, "a".into()), (2, "b".into()), (3, "c".into())]
     );
 }

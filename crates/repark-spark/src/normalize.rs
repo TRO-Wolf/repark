@@ -7,6 +7,7 @@
 use std::ops::ControlFlow;
 
 use datafusion::error::{DataFusionError, Result};
+use datafusion::prelude::SessionContext;
 use datafusion::sql::sqlparser::ast::{
     Expr, FromTable, ObjectName, Query, Statement, TableFactor, TableWithJoins, Value, Visit,
     Visitor,
@@ -310,6 +311,7 @@ pub(crate) fn delete_target_object_name(
 /// [`DataFusionError::Plan`] naming the fork hazard and copy-on-write / `MERGE` workarounds.
 /// ===========================================================================================
 pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
+    ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     table_name: Option<&ObjectName>,
     kind: MorDmlKind,
@@ -317,23 +319,13 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     let Some(table_name) = table_name else {
         return Ok(());
     };
-    let parts = name_parts(table_name);
-    // Need at least catalog.namespace.table (nested ns: catalog.ns….table).
-    if parts.len() < 3 {
-        // Two-part / bare names: cannot resolve without session default catalog (residual).
-        return Ok(());
-    }
-    let catalog_name = parts[0].as_str();
-    let table_leaf = parts[parts.len() - 1].clone();
-    let namespace_parts = parts[1..parts.len() - 1].to_vec();
-    let Ok(namespace) = NamespaceIdent::from_vec(namespace_parts) else {
+    let Some((catalog_name, ident)) = dml_target_ident(ctx, table_name) else {
         return Ok(());
     };
-    let Some(catalog) = catalogs.get(catalog_name) else {
+    let Some(catalog) = catalogs.get(&catalog_name) else {
         // Unknown catalog handled elsewhere; cannot inspect hazard without a handle.
         return Ok(());
     };
-    let ident = TableIdent::new(namespace, table_leaf);
     repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
         catalog.as_ref(),
         &ident,
@@ -341,6 +333,44 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
         kind,
     )
     .await
+}
+
+/// V3R-1 valve (`V3-COW-1`) for the plain-`WHERE` DELETE / UPDATE; runs after the BUG-001 valve.
+pub(crate) async fn refuse_v3_cow_dml(
+    ctx: &SessionContext,
+    catalogs: &CatalogRegistry,
+    table_name: Option<&ObjectName>,
+    kind: MorDmlKind,
+) -> Result<()> {
+    let Some(table_name) = table_name else {
+        return Ok(());
+    };
+    let Some((catalog_name, ident)) = dml_target_ident(ctx, table_name) else {
+        return Ok(());
+    };
+    let Some(catalog) = catalogs.get(&catalog_name) else {
+        return Ok(());
+    };
+    repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await
+}
+
+/// Resolve a DML target as DataFusion will: short names complete from the session defaults
+/// (SEC-001); `None` when empty or the namespace cannot be built.
+fn dml_target_ident(ctx: &SessionContext, table_name: &ObjectName) -> Option<(String, TableIdent)> {
+    let mut parts = name_parts(table_name);
+    if parts.is_empty() {
+        return None;
+    }
+    if parts.len() < 3 {
+        let (default_catalog, default_schema) = session_defaults(ctx);
+        if parts.len() == 1 {
+            parts.insert(0, default_schema);
+        }
+        parts.insert(0, default_catalog);
+    }
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let table_leaf = parts[parts.len() - 1].clone();
+    Some((parts[0].clone(), TableIdent::new(namespace, table_leaf)))
 }
 
 /// The DML verb a G3-E8 subquery-predicate refusal names.
@@ -1021,4 +1051,14 @@ pub(crate) fn build_partition_spec(
             .map_err(iceberg_err)?;
     }
     Ok(Some(builder.build()))
+}
+
+/// The session's default catalog / schema, cloned out of the (temporary) state snapshot.
+fn session_defaults(ctx: &SessionContext) -> (String, String) {
+    let state = ctx.state();
+    let catalog = &state.config().options().catalog;
+    (
+        catalog.default_catalog.clone(),
+        catalog.default_schema.clone(),
+    )
 }

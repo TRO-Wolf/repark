@@ -18,7 +18,7 @@ wrapper.
   write-to-branch sniff; full v1 arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
-  `return` path of the rewrite — see the `time_travel.rs` row below.
+  `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call `refuse_v3_cow_dml` after the BUG-001 valve.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); 24 in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
@@ -146,7 +146,8 @@ wrapper.
   opens uncorrelated `DELETE … col IN` / `NOT IN (SELECT …)`, `[NOT] EXISTS` ±
   correlation, correlated IN, and identity `UPDATE … IN` onto `execute_predicate_dml`;
   see the module doc and `task/r1-g3e8-pr4-ledger.md`), the MERGE
-  star rewrite call, partition-spec builders.
+  star rewrite call, partition-spec builders. V3R-1: `refuse_v3_cow_dml`, the `V3-COW-1` passthrough seat; `dml_target_ident` (shared
+  with the BUG-001 valve) completes short names from the session defaults (SEC-001).
 - `collation.rs` — **G15 (2026-08-12):** parse-altitude collation refuse. Walks
   `Expr::Collate`, column-def `COLLATE`, `CREATE`/`ALTER COLLATION`, `SET NAMES COLLATE`,
   session `SQLConf` keys containing `collation` (including `ParenthesizedAssignments`),

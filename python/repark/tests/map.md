@@ -24,15 +24,18 @@ NOT in that file is a defect, not a decision.
 
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
-- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3E-1 (2026-08-24):** facade Spark `.sql()`
-  copy-on-write MERGE + DELETE on a `register_table`-adopted v3 table; contents match
-  the Spark-door pins.
+- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`
+  copy-on-write MERGE / DELETE / UPDATE on an adopted v3 table raise
+  `UnsupportedOperationException` naming `V3-COW-1`; rows untouched.
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
-  CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`.
+  CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`. Also the V3R-1
+  (2026-08-25) type pin `test_v3_geometry_geography_variant_columns_refuse_naming_the_type`:
+  `GEOMETRY` / `GEOGRAPHY` / `VARIANT` columns refuse at CREATE, no table left (registry
+  `V3-GEO-1`).
 - [test_mw8_runbook.py](test_mw8_runbook.py) — **MW-8 (2026-08-24):** the maintenance cycle
   `docs/guide/iceberg-guide.md` "The maintenance runbook" documents, run end to end on a local
   catalog at gate scale (6,000 rows, 2 partitions, six MERGEs, 4.4 s). One documented cycle,
