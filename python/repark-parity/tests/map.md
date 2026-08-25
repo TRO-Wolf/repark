@@ -41,7 +41,7 @@ JVM, no repark required). See [../map.md](../map.md).
   Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
   pre-commit hook (conventions stays off).
 - `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
-  record by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
+  record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
   conventions guard is not on the pre-commit hook and stays in `make ci` +
   ci.yml.

@@ -90,8 +90,8 @@ def test_pyc_5_prose_homes_name_the_hook_drop() -> None:
     assert "not** on pre-commit" in development
     scripts_map = (_REPO / "scripts" / "map.md").read_text(encoding="utf-8")
     assert "not on pre-commit" in scripts_map
-    sequence = (_REPO / "briefs" / "next-sequence.md").read_text(encoding="utf-8")
-    assert "dropped from pre-commit" in sequence
+    # The slate's copy of the sentence left with DL-4 (a merged unit leaves the slate whole);
+    # the fact stays pinned in the four homes above.
 
 
 def test_pyc_5_conventions_stays_in_make_ci_and_workflow() -> None:
