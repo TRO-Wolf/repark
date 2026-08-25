@@ -5,9 +5,9 @@ section is never rewritten, only superseded by a dated note. This file is the **
 these numbers — a retrospective narrates them and links here, it does not restate them.
 
 The metric set is fixed at **eight** by the SEPMO retrospective contract
-([../skills/sepmo/references/08-retrospective.md](../skills/sepmo/references/08-retrospective.md)
+([../.agents/skills/sepmo/references/08-retrospective.md](../.agents/skills/sepmo/references/08-retrospective.md)
 §3), and this file is the location the binding manifest's `metrics_ledger_location` row names
-([../skills/sepmo/binding-manifest.md](../skills/sepmo/binding-manifest.md)). No metric is optional
+([../.agents/skills/sepmo/binding-manifest.md](../.agents/skills/sepmo/binding-manifest.md)). No metric is optional
 and none is dropped for having no events: an empty population is recorded as `0` **with its reason**,
 never as an absent row. `status: COMPLETE` on a section asserts exactly that.
 

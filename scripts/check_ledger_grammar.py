@@ -35,7 +35,7 @@ C. **Attestation form.** A `COVERAGE_ATTESTATION:` block (ref 05's shape, in a
    `id`, a severity in S0..S3, a category in AT-1..AT-10, a clause list and a
    disposition from ref 05's enumeration.
 
-The meanings stay in `skills/sepmo/` (SKILL.md "The gate is a ledger, not a
+The meanings stay in `.agents/skills/sepmo/` (SKILL.md "The gate is a ledger, not a
 score"; references/05-critic.md); this script owns only the shape. Exit 0 clean,
 1 findings, 2 usage or environment error.
 """

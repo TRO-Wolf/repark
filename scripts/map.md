@@ -49,7 +49,7 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
 - `check_ledger_grammar.py` — the ledger **grammar** guard (DL-2, 2026-08-23), over the live
   bins `task/ledgers/staging/` and `completed/` (a ledger retires into `completed/` in its own
   departure commit, so CI meets it there; the archive is immutable and read for citations only). Three
-  rules, shape only — the meanings stay in `skills/sepmo/`: **(A)** every clause row (`| C-NNN |`)
+  rules, shape only — the meanings stay in `.agents/skills/sepmo/`: **(A)** every clause row (`| C-NNN |`)
   has a unique id, exactly one verdict cell (`PROVEN` / `OPEN` / `REJECTED`, bold or a
   parenthetical allowed — measured: 12 of 32 live verdict cells are annotated) and an evidence
   cell, and a governed ledger carries a clause table at all; **(B)** a test cites a clause with
