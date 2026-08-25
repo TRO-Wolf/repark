@@ -14,6 +14,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
   v2 control; keeps `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
 - `create_table.rs` — also the V3R-1 type pin: `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at
   CREATE (`V3-GEO-1`).
+- `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
+  real work, orphan 24h floor on the partitioned-DV fixture after a RePark
+  append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse

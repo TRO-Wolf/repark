@@ -9,14 +9,10 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
-- [v3r-1-rulings-ledger.md](v3r-1-rulings-ledger.md) — **V3R-1 (2026-08-25):** the five owner
-  rulings recorded where the gate reads them, and the one that is engine code built and pinned
-  — copy-on-write DML on a format-v3 table refuses (registry `V3-COW-1`, two guard seats),
-  `V3-GEO-1` DECLARED, shredded variant queued, OD-3b in, the upgrade row ruled "build behind
-  the opt-in". Thirteen clauses, all PROVEN. The CCC pass found three S1 bypasses of the guard
-  on novel inputs (short names under a default catalog, a padded merge-on-read spelling, a
-  dotted quoted name) — remediated in cycle 2 with pins proven load-bearing by mutation;
-  `CCC-CONVERGED`.
+- [v3e-4-refs-time-travel-ledger.md](v3e-4-refs-time-travel-ledger.md) —
+  **V3E-4 (2026-08-25):** refs + time travel on v3; expiry/orphans with real work.
+  PR-1 of the Lane A remainder group; V3E-5 (nightly v3 live-oracle leg) is PR-2
+  and does not share this ledger.
 
 ## Pointers
 - Up: [../map.md](../map.md)

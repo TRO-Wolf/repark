@@ -56,6 +56,8 @@ mod delete_granularity;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]
+mod v3_branch_tag_time_travel;
+#[cfg(test)]
 mod v3_cow;
 #[cfg(test)]
 mod v3_create;

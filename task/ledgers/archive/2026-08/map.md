@@ -141,6 +141,7 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-08-24-v3e-1-2-cow-oracle-ledger.md](2026-08-24-v3e-1-2-cow-oracle-ledger.md) — **V3E-1 + V3E-2 (2026-08-24):** adopted v3 copy-on-write DML measurement and the v3 maintenance-oracle decision.
 - [2026-08-25-dl-4-live-doc-compaction-charter-ledger.md](2026-08-25-dl-4-live-doc-compaction-charter-ledger.md) — **DL-4 (chartered 2026-08-25), sequenced ahead of V3E-4:** the live documents carry only live state.
 - [2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md](2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — **V3E-3 (2026-08-24):** partitioned + equality-delete Spark-written format-v3 fixtures.
+- [2026-08-25-v3r-1-rulings-ledger.md](2026-08-25-v3r-1-rulings-ledger.md) — **V3R-1 (2026-08-25):** the five owner rulings recorded where the gate reads them, and the one that is engine code built and pinned — copy-on-write DML on a format-v3 table refuses (registry `V3-COW-1`, two guard seats), `V3-GEO-1` DECLARED, shredded variant queued, OD-3b in, the upgrade row ruled "build behind the opt-in".
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -28,6 +28,9 @@ reach delegation through the ordinary arm.
   regressions (short names, dotted quoted name, padded merge-on-read), a v2 control.
 - `v3_types.rs` — **V3R-1 (test-only):** `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE
   (`V3-GEO-1`); reuses `v3_cow.rs`'s `Door`.
+- `v3_branch_tag_time_travel.rs` — **V3E-4 (test-only):** ANSI branch/tag +
+  `FOR VERSION AS OF` over the Spark-written partitioned v3 DV fixture after
+  an engine append (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
 - `v3_partitioned_equality_deletes.rs` — **V3E-3 (test-only):** ANSI live-row twins
   of the Spark-written partitioned DV and equality-delete + DV fixtures, plus
   `$delete_files` content 1/2 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).

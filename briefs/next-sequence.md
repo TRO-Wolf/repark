@@ -37,8 +37,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M <!-- unit id=v3e-4 --> |
-| 2 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S <!-- unit id=v3e-5 --> |
+| 1 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S <!-- unit id=v3e-5 --> |
 
 <!-- unit id=v3e-5 ledger=v3e-5- -->
 **Lane A — the v3 evidence intake (owner-chartered 2026-08-24).** Five measure-first units
@@ -50,8 +49,8 @@ against the north-star matrix
    [#235](https://github.com/TRO-Wolf/repark/pull/235): COW DML on an adopted v3
    table committed and **reassigned** lineage (registry `V3-COW-1`); Spark preserves
    `_row_id` on DELETE. **Ruled 2026-08-25: guarded** — the row now refuses on both doors. The v3
-   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-4 is Lane A's next unit** and
-   #1 on the queue (DL-4 delivered 2026-08-25).
+   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-5 is Lane A's next unit** and
+   #1 on the queue.
 2. **Table encryption keys are a dated DECLARED exclusion from the v1.0 gate.** Registry
    `ENC-1` ([#235](https://github.com/TRO-Wolf/repark/pull/235)).
 3. **A one-time scoped `.github/` grant** for V3E-5 only: add the v3 fixture leg to the nightly
