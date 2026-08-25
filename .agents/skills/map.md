@@ -43,7 +43,7 @@ See [../../.claude/map.md](../../.claude/map.md).
   tree verification, the annotated tag, the `release.yml` pipeline with its owner approval gate,
   registry verification. Owner merges and approvals stay owner actions.
 - [compact-context-docs/](compact-context-docs/map.md) — the truth-up ritual at both ends of a
-  unit: `make ledger-archive` first (mechanical, DL-1), reconcile STATUS.md, sweep restatements
+  unit: `make ledger-archive` first (mechanical — archive, compact, gate; DL-1 + DL-4), reconcile STATUS.md, sweep restatements
   and stale lifecycle claims, keep `map.md` lockstep, `move` the unit's ledger to `completed/`
   and closed campaigns to `docs/history/`, validate with `make ci` — plus the scoped **pickup**
   mode that opens a unit against the just-merged delta only. Executes

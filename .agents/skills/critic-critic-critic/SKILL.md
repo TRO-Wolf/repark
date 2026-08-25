@@ -116,7 +116,7 @@ Parse from the user message (ask only if ambiguous):
 7. **Repo contracts win** — root + nearest `AGENTS.md` / `CLAUDE.md` / project skills. CCC never overrides a project hard gate.
 8. **Never weaken the gate** — no skip/loosen of checks to force green.
 9. **Every behavior change needs a mutation-proof test** (Standard/High) — Critic-1 test-coverage skeptic enforces this.
-10. **Green verify alone is never convergence** — see [Convergence labels](#convergence-labels).
+10. **Green verify alone is never convergence** — see [Convergence labels](#convergence-labels-hard).
 11. **Load-bearing dependency trees are in Critic scope** when clauses depend on them.
 12. **Critic-1 crates contract** — for any touch under `crates/` (or equivalent library roots), apply the [Crates / library attack contract](#crates--library-attack-contract-critic-1) in Critic-1 (full detail in the Critic-1 reference).
 13. **Spawn contract** — apply the [Spawn contract](#spawn-contract) on every child: the invariants are here, the tool-specific mapping is in the tool's adapter.

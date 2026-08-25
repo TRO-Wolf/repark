@@ -5,7 +5,10 @@ interleave and the order between them is a decision rather than an accident. [..
 stays the SSOT for state; this file states **sequence and reasoning**, and each unit still earns its
 own `task/<unit>-ledger.md` when it starts.
 
-Rolling slate: a unit leaves this file when it merges, and the file closes when the queue empties.
+Rolling slate: a unit leaves this file when it merges — mechanically and whole. Its row and its
+reasoning carry a `<!-- unit id=… -->` marker and `scripts/ledger_lifecycle.py compact` (run by
+`make ledger-archive` and by the departure `move`) removes both once its ledger is filed; nothing
+is written here about a unit that has left. The file closes when the queue empties.
 
 ## Standing rules for every unit below
 
@@ -20,11 +23,13 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 6. **One group at a time**, manual PR, owner merges.
 7. **Pickup ritual first, departure edit last.** First act of a unit: fetch, confirm the prior
    unit's PR merged and that the local base carries its departure edit, `make ledger-archive`
-   (files the prior unit's ledger; zero tokens), run the drift checks (`make check-map-sync`,
-   `make check-ledgers`), and compact the context docs **against the just-merged delta only**,
-   as a docs-only first commit. Last commit of the unit: the departure edit to this file, STATUS
-   trued up for what this unit changed and nothing else, the unit's ledger `move`d from
-   `task/ledgers/staging/` to `completed/`, `map.md` in lockstep.
+   (files the prior unit's ledger, takes it off this file, files any closed campaign, runs the
+   gate; zero tokens), run the drift checks (`make check-map-sync`, `make check-ledgers`), and
+   compact the context docs **against the just-merged delta only**, as a docs-only first commit.
+   Last commit of the unit: STATUS trued up for what this unit changed and nothing else (a
+   campaign the owner ruled closed gets `state=closed` on its marker, no prose), the unit's
+   ledger `move`d from `task/ledgers/staging/` to `completed/` — which removes it from this
+   file — `map.md` in lockstep. No departure line for the unit, here or anywhere.
 
 ---
 

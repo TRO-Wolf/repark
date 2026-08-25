@@ -325,6 +325,12 @@ The rules that bind all six:
 - **Truth moves, it is never deleted.** Compaction is archival, not removal: a closed campaign's
   record goes to `docs/history/`. The only deletable documents are working notes that produced no
   decision.
+- **A live document carries no obituary.** A merged unit's record is its archived ledger and its
+  PR; a closed campaign's record is its `docs/history/` bin. `STATUS.md` "Active workstreams" and
+  the slate carry block markers (`scripts/doc_blocks.py`) so `scripts/ledger_lifecycle.py compact`
+  — run by `archive` at pickup and by a `move` to `completed/` at departure — makes both leave
+  mechanically; closure is declared in the marker under an owner ruling, never inferred (DL-4,
+  2026-08-25).
 - **A claim that can go stale carries its date.** Measurements, counts, timings, "not yet", "planned",
   and phase words are dated where they are written, so a reader can tell rot from truth.
 - **An archived document is corrected only by a dated errata note at its top**, never rewritten. The
@@ -344,6 +350,9 @@ the moves) fails a ledger outside its bin, a dead ledger link in any tracked mar
 live ledger) fails a malformed clause row, a `PROVEN` clause no test cites
 ([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and a malformed or missing
 Critic attestation — the meanings stay in [.agents/skills/sepmo/](.agents/skills/sepmo/map.md).
+The state class has one: `make check-docs-compaction` (`scripts/check_docs_compaction.py`) fails a
+closed campaign still in `STATUS.md`, a merged unit still on the slate, a workstream bullet outside
+any block, and either file above its byte ceiling — the ceiling is what makes regrowth visible.
 
 ## Working style and communication
 
