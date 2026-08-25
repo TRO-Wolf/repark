@@ -625,16 +625,17 @@ def compact_plan(repo: Path, tracked: list[str]) -> tuple[dict[str, str], list[s
                         f"{block.attrs['closed']} (closed by {block.attrs['by']}).\n"
                     )
                     texts[history_map] = append_row(parent, row)
-            if bin_map in texts or not any(
-                STATUS_RECORD in line for line in (repo / bin_map).read_text().splitlines()
-            ):
-                current = texts.get(bin_map) or (repo / bin_map).read_text(encoding="utf-8")
+            current = texts.get(bin_map) or (repo / bin_map).read_text(encoding="utf-8")
+            if f"]({STATUS_RECORD})" not in current:
                 texts[bin_map] = append_row(
                     current,
                     f"- [{STATUS_RECORD}]({STATUS_RECORD}) — the workstream bullet as STATUS.md "
                     f"carried it, cut {block.attrs['closed']}.\n",
                 )
-            new_status = BLOCKS.record_closed(new_status, block, content, record)
+            try:
+                new_status = BLOCKS.record_closed(new_status, block, content, record)
+            except ValueError as error:
+                return {}, [], [str(error)]
             log.append(f"{block.id} left STATUS for {record}")
         if cuts:
             texts[status_path] = new_status

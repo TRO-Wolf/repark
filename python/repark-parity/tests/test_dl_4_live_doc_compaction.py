@@ -176,7 +176,7 @@ def repo(tmp_path: Path) -> Path:
 
 
 def test_archive_makes_a_merged_unit_leave_the_slate_whole(repo: Path) -> None:
-    """pins: dl-4-live-doc-compaction-charter/C-002 — row and prose go; renumbered; idempotent."""
+    """pins: dl-4-live-doc-compaction-charter/C-002, C-007 — row and prose go; idempotent."""
     first = _run(repo, "archive")
     assert first.returncode == 0, first.stderr
     slate = (repo / "briefs/next-sequence.md").read_text()
@@ -244,6 +244,15 @@ def test_compact_touches_only_the_two_live_files_and_the_campaign_bin(repo: Path
         ("<!-- ws state=open -->\n<!-- /ws -->\n", "has no id"),
         ("<!-- ws id=a state=closed -->\n<!-- /ws -->\n", "needs `closed=`"),
         ("<!-- ws id=a state=shut -->\n<!-- /ws -->\n", "state must be one of"),
+        (
+            "<!-- ws id=a state=closed closed=2026-08-01 by=#1 history=../out -->\n<!-- /ws -->\n",
+            "must be a campaign bin",
+        ),
+        (
+            "<!-- ws id=a state=closed closed=2026-08-01 by=#1 history=docs/history -->\n"
+            "<!-- /ws -->\n",
+            "must be a campaign bin",
+        ),
     ],
 )
 def test_the_parser_refuses_a_malformed_document(text: str, phrase: str) -> None:
@@ -296,3 +305,65 @@ def test_the_gate_is_red_on_each_class_and_green_on_the_compacted_tree(repo: Pat
     gate = _load("check_docs_compaction")
     found = gate.findings(repo, {"STATUS.md": 10, "briefs/next-sequence.md": 10})
     assert any("exceeds its ceiling" in line for line in found)  # (d)
+
+
+def test_compact_refuses_cleanly_without_the_closed_campaigns_marker(repo: Path) -> None:
+    """pins: dl-4-live-doc-compaction-charter/C-003 — a refusal names the cause; no traceback."""
+    status = repo / "STATUS.md"
+    status.write_text(status.read_text().replace("<!-- closed-campaigns -->\n", ""))
+    _commit(repo, "drop the marker")
+    result = _run(repo, "compact")
+    assert result.returncode == 1
+    assert "has no `<!-- closed-campaigns -->` line" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert _git(repo, "status", "--porcelain") == ""
+
+
+def test_two_closed_campaigns_sharing_a_bin_get_one_map_row(repo: Path) -> None:
+    """pins: dl-4-live-doc-compaction-charter/C-003 — a second cut appends a record, not a row."""
+    status = repo / "STATUS.md"
+    status.write_text(
+        status.read_text().replace(
+            "<!-- ws id=alpha ledgers=alpha- state=open -->",
+            "<!-- ws id=alpha ledgers=alpha- state=closed closed=2026-08-20 by=#8 "
+            "history=docs/history/beta -->",
+        )
+    )
+    _commit(repo, "close alpha into beta's bin")
+    assert _run(repo, "compact").returncode == 0
+    bin_map = (repo / "docs/history/beta/map.md").read_text()
+    assert bin_map.count("](status-record.md)") == 1
+    assert (repo / _RECORD).read_text().count("## Cut from STATUS.md") == 2
+
+
+def test_the_tree_is_migrated() -> None:
+    """pins: dl-4-live-doc-compaction-charter/C-006 — the real STATUS and slate are compacted."""
+    blocks = _load("doc_blocks")
+    status = (_REPO / "STATUS.md").read_text()
+    parsed = blocks.parse(status, "STATUS.md")
+    assert parsed.findings == []
+    assert not [b for b in parsed.blocks if b.attrs.get("state") == "closed"]
+    assert blocks.uncovered_bullets(status, parsed) == []
+    for campaign in ("pyc", "lrs", "iceberg-maintenance-wave"):
+        assert (_REPO / "docs/history" / campaign / "status-record.md").is_file()
+    assert (_REPO / "docs/history/hardening-h1/increments-2026-08-15.md").is_file()
+    assert "## 2026-08-15" not in status
+    slate = (_REPO / "briefs/next-sequence.md").read_text()
+    assert "and left this file" not in slate and "## PYC" not in slate
+    gate = _load("check_docs_compaction")
+    assert gate.findings(_REPO, gate.CEILINGS) == []
+
+
+def test_the_rule_text_is_in_place() -> None:
+    """pins: dl-4-live-doc-compaction-charter/C-008 — each document states the rule once."""
+    agents = (_REPO / "AGENTS.md").read_text()
+    assert agents.count("**A live document carries no obituary.**") == 1
+    assert "make check-docs-compaction" in agents
+    skill = (_REPO / ".agents/skills/compact-context-docs/SKILL.md").read_text()
+    assert "**Delete,\n   don't narrate:**" in skill or "Delete, don't narrate" in skill.replace(
+        "\n   ", " "
+    )
+    slate = (_REPO / "briefs/next-sequence.md").read_text()
+    assert "No departure line for the unit, here or anywhere." in slate
+    manifest = (_REPO / ".agents/skills/sepmo/binding-manifest.md").read_text()
+    assert manifest.count("`make check-docs-compaction`") == 1

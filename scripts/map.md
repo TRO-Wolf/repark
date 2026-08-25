@@ -68,7 +68,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
-- `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25):
+- `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
+  `history=` must name one bin under `docs/history/`):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the
   slate's rows and reasoning; the parser (every violation a finding with file and line), the
   coverage check, and the two transforms — a merged unit's rows and blocks leave whole, a

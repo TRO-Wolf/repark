@@ -44,6 +44,8 @@ TABLE_ROW = re.compile(r"^\|")
 HEADING = re.compile(r"^## ")
 DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 PR = re.compile(r"^#\d+$")
+# A campaign bin: exactly one directory under docs/history/ — never the root, never outside.
+HISTORY_DIR = re.compile(r"^docs/history/[a-z0-9][a-z0-9-]*$")
 LEDGER_SUFFIX = "-ledger.md"
 ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 FENCE = re.compile(r"^\s*(?:```|~~~)")
@@ -110,6 +112,11 @@ def _validate(kind: str, attrs: dict[str, str], where: str) -> list[str]:
                 findings.append(f"{where}: `closed=` must be yyyy-mm-dd")
             if "by" in attrs and not PR.match(attrs["by"]):
                 findings.append(f"{where}: `by=` must be a PR number like #224")
+            if "history" in attrs and not HISTORY_DIR.match(attrs["history"]):
+                findings.append(
+                    f"{where}: `history=` must be a campaign bin `docs/history/<name>`, "
+                    f"got {attrs['history']!r}"
+                )
     return findings
 
 

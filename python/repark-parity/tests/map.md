@@ -7,7 +7,8 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
-- `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25):** the live-document compaction on
+- `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25; 11 tests, incl. the Critic's three
+  pinned findings and the two tree pins C-006 / C-008):** the live-document compaction on
   a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a
   closed campaign is cut from STATUS into its history bin with links rewritten (C-003), the
   touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
