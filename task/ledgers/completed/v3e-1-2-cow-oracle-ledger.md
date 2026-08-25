@@ -264,3 +264,49 @@ label=pyspark-4.0.1+org.apache.iceberg:iceberg-spark-runtime-4.0_2.13:1.10.0
 ```
 
 Control still works. It is not the named oracle.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: v3e-1-2-cow-oracle
+  cycle: 1
+  risk_tier: high
+  critic_engine: ccc
+  complete: true
+  note: >
+    Actor then CCC quad (claims_critic). Cycle-1 S1s remediating (unset MERGE mode,
+    MoR V3+deletion-vectors needle, facade Arrow types + rewrite refuse + LOCATION glob).
+    Critic-1 re-spot CLEAN. L-004/L-005 WITHDRAWN (charter). make verify 2026-08-24 exit 0.
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3_cow.rs, python/repark/tests/test_v3_cow_dml.py]
+    - id: AT-2
+      status: N/A
+      justification: measure-only unit; no new input domain
+    - id: AT-3
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, crates/repark-sql/src/v3_cow.rs]
+    - id: AT-4
+      status: N/A
+      justification: single-session catalog tests; no concurrency surface
+    - id: AT-5
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, docs/spark-sql-iceberg-parity.md]
+    - id: AT-6
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, docs/spark-sql-iceberg-parity.md]
+    - id: AT-7
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, python/repark/tests/test_v3_cow_dml.py]
+    - id: AT-8
+      status: ATTACKED
+      artifacts: [docs/spark-sql-iceberg-parity.md, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md]
+    - id: AT-9
+      status: N/A
+      justification: test-only measurement; no new operability surface
+    - id: AT-10
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3_cow.rs, python/repark/tests/test_v3_cow_dml.py]
+```
+
+
