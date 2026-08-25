@@ -8,10 +8,9 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [mw-9-delete-granularity-ledger.md](mw-9-delete-granularity-ledger.md) —
-  **MW-9 (2026-08-24):** honor `write.delete.granularity` (`file` / `partition`);
-  Spark default `file`; close registry `MOR-2` for RePark-owned MERGE
-  (fork SQL DELETE/UPDATE still partition-group).
+- [v3e-1-2-cow-oracle-ledger.md](v3e-1-2-cow-oracle-ledger.md) —
+  **V3E-1 + V3E-2 (2026-08-24):** adopted v3 copy-on-write DML measurement and the v3
+  maintenance-oracle decision. Ships in this PR.
 
 ## Pointers
 - Up: [../map.md](../map.md)

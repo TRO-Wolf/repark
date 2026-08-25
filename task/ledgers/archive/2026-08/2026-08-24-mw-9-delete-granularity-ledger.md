@@ -1,8 +1,8 @@
 # MW-9 — honor `write.delete.granularity` (close MOR-2)
 
 **Date:** 2026-08-24 · **Branch:** `feat/mw-9-delete-granularity` · **Base:** `70026af` (`origin/main`, #232) ·
-**Intake:** [task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../../roadmap/mid-term/roadmap-intake-2026-08-23.md) ·
-**Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
+**Intake:** [task/roadmap/mid-term/roadmap-intake-2026-08-23.md](../../../roadmap/mid-term/roadmap-intake-2026-08-23.md) ·
+**Sequence:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, `/sepmo-core`) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (Iceberg write path)
 

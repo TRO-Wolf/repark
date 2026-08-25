@@ -23,6 +23,10 @@ reach delegation through the ordinary arm.
 - `v3_create.rs` — **V3-2 (test-only):** ANSI CREATE/CTAS `format_version = 3` opt-in pins,
   split out of `tests.rs` so that file stays under its rust-file-size ceiling
   (`Model: Grok 4.6 xHigh` on the module's functions).
+- `v3_cow.rs` — **V3E-1 (test-only):** ANSI adopted-v3 copy-on-write DELETE/UPDATE/MERGE
+  contents pins, MoR refuse control, and `next_row_id` reassignment (`Model: Grok 4.6
+  xHigh`, `CodeQuality:S`). Adoption uses `Catalog::register_table` because this door
+  refuses `CALL`.
 - `delete_granularity.rs` — **MW-9 (test-only):** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
   on MERGE (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).

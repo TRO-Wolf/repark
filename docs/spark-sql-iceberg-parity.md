@@ -314,6 +314,22 @@ Supported surface, for reference:
   implementation that listed the wrong set would be worse than a refusal. `SHOW NAMESPACES IN`
   remains the implemented SQL listing form for databases.
 
+#### ENC-1 — Iceberg table encryption keys are stored, never applied
+
+- **repark** — `CREATE TABLE … TBLPROPERTIES ('encryption.key-id' = …)` on a format-v3 table
+  succeeds. The property is stored. `INSERT` writes ordinary Parquet; `SELECT` returns the
+  rows; table-metadata `encryption-keys` stays empty. There is no KMS client and no file
+  encryption. Owner ruling 2026-08-24: dated DECLARED exclusion from the v1.0 gate.
+- **Apache Spark** — with a configured Iceberg KMS, `encryption.key-id` encrypts data,
+  delete, manifest, and manifest-list files (Iceberg table-encryption docs). Without a KMS
+  the Spark session fails to write. *(oracle: documented — Iceberg table property
+  `encryption.key-id`; this engine never talks to a KMS, so there is no value oracle.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/v3_cow.rs::v3_create_with_encryption_key_id_still_scans_without_a_kms`
+- **Rationale** — DECLARED exclusion, owner-dated 2026-08-24. Implementing envelope encryption
+  is fork work (GAP_MATRIX R130) and is not on the v1.0 slate. The pin holds the honest
+  current behavior so a later encryption landing reds it on purpose.
+
 ---
 
 ## 3. Identifier resolution (DECLARED)
@@ -1922,6 +1938,29 @@ the pin rather than obeying it.
   convention, not only the filename. Catalogs that already write version-uuid pointers never
   hit it.
 
+### V3-COW-1 — copy-on-write DML on an adopted v3 table commits and reassigns row lineage
+
+- **repark** — copy-on-write `DELETE` / `UPDATE` / `MERGE` on a `register_table`-adopted
+  format-v3 table **commit** and return the correct live rows. The merge-on-read arms still
+  refuse v3. The copy-on-write arms never read the format version. Engine-observable lineage
+  (`next_row_id` + the new snapshot's `first_row_id` / `added_rows`) **reassigns** on every
+  rewrite: a 3-row seed (`next_row_id = 3`) becomes `5` after deleting one row (2 survivors
+  rewritten), `6` after updating one row (3 rewritten), `7` after a MATCHED UPDATE + NOT
+  MATCHED INSERT (3 rewritten + 1 insert). `_row_id` is still not plannable (`V3-ROWID-1`).
+  Measured 2026-08-24 (V3E-1). Guard-or-not is a later owner ruling on these numbers; this
+  row does not add a refuse.
+- **Apache Spark** — COW `DELETE` on v3 **preserves** `_row_id` /
+  `_last_updated_sequence_number`. Seed `(id,_row_id,seq) = (1,0,1), (2,1,1), (3,2,1)`;
+  after `DELETE WHERE id = 2` the survivors are still `(1,0,1), (3,2,1)`.
+  *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_commits_and_drops_the_matched_row`
+  (UPDATE/MERGE siblings in the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`;
+  facade MERGE+DELETE in `python/repark/tests/test_v3_cow_dml.py`)
+- **Rationale** — BACKLOG. Contents are correct; lineage is the V3-LINEAGE-1 class on the
+  DML path. V3-4 owns row lineage as a whole (fork F-7). Do not silently absorb a preserve
+  later — the pin reds when `next_row_id` stops growing.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued
@@ -1955,13 +1994,7 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   guarantees. Queued for the **V3-4** unit, which owns row lineage as a whole; pinning it here
   would pin half a decision.
 
-- **V3-COW-1** — copy-on-write DML on an adopted v3 table runs unguarded. The merge-on-read
-  arms are v3-guarded (`write/predicate_dml.rs`, `write/merge/mod.rs` — the `!= V2` refusals),
-  but the copy-on-write arms never read the format version, so COW `DELETE` / `UPDATE` /
-  `MERGE` reach a `register_table`-adopted v3 table today. Surfaced by code-read during the
-  2026-08-23 north-star charter review; **unmeasured** — whether a rewritten row keeps its
-  `_row_id` (the V3-LINEAGE-1 class, on the DML path this time) has not been run. Queued for
-  the first v3 evidence unit to measure, then guard or fix; V3-4 owns row lineage as a whole.
+- **V3-COW-1** — measured 2026-08-24 and admitted as a BACKLOG row (see §7). Left this queue.
 
 ---
 

@@ -136,6 +136,7 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-08-24-mw-6-rewrite-manifests-ledger.md](2026-08-24-mw-6-rewrite-manifests-ledger.md) — **MW-6 (2026-08-23):** `CALL system.rewrite_manifests` over the fork's `RewriteManifestsAction`; counts read from the new snapshot's summary; registry rows `MANIFEST-1` / `MANIFEST-2`.
 - [2026-08-24-mw-7-scale-measurement-ledger.md](2026-08-24-mw-7-scale-measurement-ledger.md) — **MW-7 (2026-08-24):** Iceberg scale measurement, measure-only.
 - [2026-08-24-mw-8-maintenance-runbook-ledger.md](2026-08-24-mw-8-maintenance-runbook-ledger.md) — **MW-8 (2026-08-24):** the Airflow-shaped maintenance runbook.
+- [2026-08-24-mw-9-delete-granularity-ledger.md](2026-08-24-mw-9-delete-granularity-ledger.md) — **MW-9 (2026-08-24):** honor `write.delete.granularity` (`file` / `partition`); Spark default `file`; close registry `MOR-2` for RePark-owned MERGE (fork SQL DELETE/UPDATE still partition-group).
 - [2026-08-24-v3-2-create-v3-opt-in-ledger.md](2026-08-24-v3-2-create-v3-opt-in-ledger.md) — **V3-2 (2026-08-24):** CREATE/CTAS `format-version = 3` behind `repark.sql.allowCreateFormatVersion3` (default false).
 
 ## Pointers
