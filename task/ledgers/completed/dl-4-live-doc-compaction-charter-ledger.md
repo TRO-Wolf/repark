@@ -1,3 +1,7 @@
+> **Errata 2026-08-25 (departure day):** §6 records `ci.yml` as unwired, an owner action. The owner
+> granted a one-time scoped edit the same evening and the `check_docs_compaction` step is in the
+> `guards` job on this branch. Nothing else in this record changes.
+
 # Charter ledger — DL-4 · the live documents carry only live state
 
 **Date:** 2026-08-25 · **Branch:** `docs/dl-4-charter` (this charter) then `feat/dl-4-live-doc-compaction` (the
