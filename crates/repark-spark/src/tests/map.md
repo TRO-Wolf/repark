@@ -13,6 +13,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
   pins, MoR refuse control, encryption.key-id does-not-encrypt pin, engine-observable
   lineage (`next_row_id` reassigns — V3-LINEAGE-1 class on DML), and
   `V3_MAINTENANCE_ORACLE` (`Model: Grok 4.6 xHigh`, `CodeQuality:S`; rustdoc cites C-011).
+- `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
+  + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
+  rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse
+  (`Model: Grok 4.6 xHigh`, `CodeQuality:S`; rustdoc cites C-013).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).

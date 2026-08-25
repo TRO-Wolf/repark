@@ -34,4 +34,5 @@ mod service_managed_ctas;
 mod time_travel;
 mod transform_overwrite;
 mod v3_cow;
+mod v3e3;
 mod window_temporal_range;

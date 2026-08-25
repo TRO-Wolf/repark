@@ -56,8 +56,8 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 
 | Surface | Today | v1.0 requires | Owner |
 |---|---|---|---|
-| Read: data + deletion vectors (measured: unpartitioned, DV-only fixtures) | ✅ Spark-exact (format-v3-track §2) | stays green + partitioned + live leg | evidence (intake) |
-| Read: equality deletes alongside DVs; delete-file metadata tables on v3 | ⚠ unmeasured | measured + Spark-compared, or DECLARED | evidence (intake) |
+| Read: data + deletion vectors (unpartitioned + **partitioned**, 2026-08-24 V3E-3) | ✅ Spark-exact (format-v3-track §2; V3E-3 partitioned identity `part`) | stays green + live leg | evidence (intake) |
+| Read: equality deletes alongside DVs; delete-file metadata tables on v3 | ✅ Spark-exact (V3E-3, 2026-08-24) — Puffin DV + equality-delete file; Spark/facade `.delete_files` and ANSI `$delete_files` content 1/2 | stays green + live leg | evidence (intake) |
 | Read: `_row_id` / `_last_updated_sequence_number` | ❌ not plannable (registry V3-ROWID-1) | served as columns, Spark-equal | V3-4 |
 | Read/write: v3 types + default values | ❌ absent — no engine surface reaches one | per-feature support or DECLARED | V3-6 (+H6/H7) ← fork F-15 |
 | Table encryption keys (v3, optional) | ❌ absent — **owner ruled 2026-08-24: DECLARED exclusion**; registry `ENC-1` (V3E-1) | the dated DECLARED registry row | ruled |

@@ -1,8 +1,8 @@
 # V3E-1 + V3E-2 — adopted v3 COW DML measurement + maintenance oracle
 
 **Date:** 2026-08-24 · **Branch:** `feat/v3e-1-2-cow-oracle` · **Base:** `b6d4680` (`origin/main`, #234) ·
-**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ·
-**Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
+**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ·
+**Sequence:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, `/sepmo-core`) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (Iceberg write-path measurement)
 

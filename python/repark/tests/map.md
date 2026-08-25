@@ -27,6 +27,9 @@ NOT in that file is a defect, not a decision.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3E-1 (2026-08-24):** facade Spark `.sql()`
   copy-on-write MERGE + DELETE on a `register_table`-adopted v3 table; contents match
   the Spark-door pins.
+- [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
+  the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
+  live rows, partition prune, `.delete_files` content 1/2.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
   CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`.

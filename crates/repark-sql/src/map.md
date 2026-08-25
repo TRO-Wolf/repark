@@ -27,6 +27,9 @@ reach delegation through the ordinary arm.
   contents pins, MoR refuse control, and `next_row_id` reassignment (`Model: Grok 4.6
   xHigh`, `CodeQuality:S`). Adoption uses `Catalog::register_table` because this door
   refuses `CALL`.
+- `v3_partitioned_equality_deletes.rs` — **V3E-3 (test-only):** ANSI live-row twins
+  of the Spark-written partitioned DV and equality-delete + DV fixtures, plus
+  `$delete_files` content 1/2 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
 - `delete_granularity.rs` — **MW-9 (test-only):** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
   on MERGE (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).

@@ -466,9 +466,9 @@ history-rewrite; provenance and the options weighed:
     ([#233](https://github.com/TRO-Wolf/repark/pull/233) —
     `write.delete.granularity` / `MOR-2` for MERGE) are delivered.
     The queue on [briefs/next-sequence.md](briefs/next-sequence.md) now carries
-    **Lane A remainder: V3E-3 first** (partitioned + equality-delete v3 fixtures).
-    **V3E-1 + V3E-2 ship in this PR.** V3-3 (deletion-vector writes) remains
-    owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
+    **Lane A remainder: V3E-4 first** (refs + time travel on v3; expiry/orphans
+    with real work). **V3E-3 ships in this PR.** V3-3 (deletion-vector writes)
+    remains owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
@@ -501,17 +501,25 @@ history-rewrite; provenance and the options weighed:
     SQL must still request v3; unspecified create stays v2; ALTER stays refused;
     `rewrite_data_files` still hits `V3-LINEAGE-1`. Ledger:
     [task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](task/ledgers/archive/2026-08/2026-08-24-v3-2-create-v3-opt-in-ledger.md).
-    **V3E-1 + V3E-2 (this PR):** copy-on-write DELETE/UPDATE/MERGE on a
+    **V3E-1 + V3E-2 ([#235](https://github.com/TRO-Wolf/repark/pull/235)):**
+    copy-on-write DELETE/UPDATE/MERGE on a
     `register_table`-adopted v3 table commit and return the correct rows;
     lineage is **reassigned** (`next_row_id` 3→5/6/7 — registry `V3-COW-1`,
     BACKLOG). Spark 4.1.2+1.11.0 **preserves** `_row_id` on COW DELETE.
     Guard-or-not is a later owner ruling. Table encryption keys: registry
     `ENC-1` (DECLARED exclusion). The v3 maintenance oracle is
     **PySpark 4.1.2 + Iceberg 1.11.0** (northstar §5). Ledger:
-    [task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md).
-    Next on the track is **V3E-3** (partitioned + equality-delete fixtures)
-    on [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes)
-    remains owner-sequenced, gated on fork F-13.
+    [task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](task/ledgers/archive/2026-08/2026-08-24-v3e-1-2-cow-oracle-ledger.md).
+    **V3E-3 (this PR):** Spark-written partitioned v3 DV fixture and
+    equality-delete + DV fixture are CI-runnable; live rows match Spark
+    4.1.2+1.11.0 on Spark SQL, ANSI, and the facade; `.delete_files` /
+    `$delete_files` name Puffin content=1 and equality-delete content=2
+    (`equality_ids=[1]`). Northstar §3 those two read cells are no longer
+    unmeasured. Ledger:
+    [task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md](task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md).
+    Next on the track is **V3E-4** (refs + time travel; expiry/orphans with
+    real work) on [briefs/next-sequence.md](briefs/next-sequence.md). V3-3
+    (DV writes) remains owner-sequenced, gated on fork F-13.
 
 - **Performance campaign — TA parity with `polars_talib` (chartered 2026-08-15; measure-first).**
   Goal added to [PROJECT.md](PROJECT.md) Goals. Phase 0 is the recorded benchmark baseline (the
