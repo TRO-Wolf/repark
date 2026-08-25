@@ -61,3 +61,5 @@ mod v3_cow;
 mod v3_create;
 #[cfg(test)]
 mod v3_partitioned_equality_deletes;
+#[cfg(test)]
+mod v3_types;

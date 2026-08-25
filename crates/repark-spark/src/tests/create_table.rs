@@ -721,3 +721,42 @@ async fn or_replace_applies_requested_v3_and_alter_still_refuses_with_opt_in() {
         "ALTER must name the reserved key: {alter}"
     );
 }
+
+/// V3R-1 (owner rulings 2026-08-25): `geometry` / `geography` are DECLARED out of v1.0
+/// (registry `V3-GEO-1`); `variant` stays V3-6 work (shredded variant DECLARED out of the gate,
+/// queued `V3-VARIANT-SHRED-1`). Today no engine surface reaches any of the three: CREATE
+/// refuses at the type mapping, naming the type, and leaves no table behind. A later landing
+/// reds this on purpose.
+///
+/// pins: v3r-1-rulings/C-008, C-009
+#[tokio::test]
+async fn v3_type_columns_geometry_geography_variant_refuse_naming_the_type() {
+    let wh = TempDir::new().unwrap();
+    let (ctx, catalogs) = setup_allow_create_format_version_3(&wh).await;
+    for type_name in ["GEOMETRY", "GEOGRAPHY", "VARIANT"] {
+        let table = format!("t_{}", type_name.to_ascii_lowercase());
+        let err = execute(
+            &ctx,
+            &catalogs,
+            &format!(
+                "CREATE TABLE ice.sales.{table} (id INT, v {type_name}) USING iceberg \
+                 TBLPROPERTIES ('format-version' = '3')"
+            ),
+        )
+        .await
+        .unwrap_err()
+        .to_string();
+        assert!(
+            err.to_ascii_uppercase().contains(type_name),
+            "CREATE with a `{type_name}` column must refuse naming the type: {err}"
+        );
+        let exists = catalogs["ice"]
+            .table_exists(&TableIdent::new(
+                NamespaceIdent::new("sales".to_string()),
+                table.clone(),
+            ))
+            .await
+            .unwrap();
+        assert!(!exists, "a refused CREATE must leave no `{table}` behind");
+    }
+}

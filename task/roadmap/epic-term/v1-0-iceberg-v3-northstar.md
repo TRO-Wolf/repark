@@ -59,13 +59,13 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Read: data + deletion vectors (unpartitioned + **partitioned**, 2026-08-24 V3E-3) | ✅ Spark-exact (format-v3-track §2; V3E-3 partitioned identity `part`) | stays green + live leg | evidence (intake) |
 | Read: equality deletes alongside DVs; delete-file metadata tables on v3 | ✅ Spark-exact (V3E-3, 2026-08-24) — Puffin DV + equality-delete file; Spark/facade `.delete_files` and ANSI `$delete_files` content 1/2 | stays green + live leg | evidence (intake) |
 | Read: `_row_id` / `_last_updated_sequence_number` | ❌ not plannable (registry V3-ROWID-1) | served as columns, Spark-equal | V3-4 |
-| Read/write: v3 types + default values | ❌ absent — no engine surface reaches one | per-feature support or DECLARED | V3-6 (+H6/H7) ← fork F-15 |
+| Read/write: v3 types + default values | ❌ absent — no engine surface reaches one. **Ruled 2026-08-25:** `geometry` / `geography` DECLARED out (registry `V3-GEO-1`); shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`); binary variant, `timestamp_ns`, `unknown` and default values stay V3-6 | per-feature support or DECLARED | V3-6 (+H6/H7) ← fork F-15 |
 | Table encryption keys (v3, optional) | ❌ absent — **owner ruled 2026-08-24: DECLARED exclusion**; registry `ENC-1` (V3E-1) | the dated DECLARED registry row | ruled |
 | Write: create v3 | ✅ opt-in CREATE/CTAS (`repark.sql.allowCreateFormatVersion3`, default false; V3-2) | stays opt-in until V3-3; default remains v2 | V3-2 |
-| Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (V3-2 kept ALTER refused; C-008) | in-place upgrade behind the create opt-in, or DECLARED | later |
+| Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (V3-2 kept ALTER refused; C-008) | **owner ruling 2026-08-25: build it, behind `repark.sql.allowCreateFormatVersion3`, after V3-3** | V3-3+ |
 | Write: append incl. row lineage | ✅ Spark-verified (format-v3-track §2) | stays green + live leg | evidence (intake) |
 | Write: MOR DML via deletion vectors | 🚫 refuses (the R113 guard) | full DML, DV-writing, round-tripped | V3-3 ← fork F-13 |
-| Write: COW DML on an adopted v3 table | ⚠ **reachable, unguarded, measured 2026-08-24 (V3E-1)** — contents correct; `next_row_id` reassigns on DELETE/UPDATE/MERGE (registry `V3-COW-1`). Guard-or-not is a later owner ruling | lineage carried per spec, or guarded until it is | V3-4 ← fork F-7 |
+| Write: COW DML on an adopted v3 table | 🚫 refuses (V3R-1 — **owner ruling 2026-08-25: guard**; registry `V3-COW-1`). V3E-1 measured `next_row_id` reassigning on DELETE / UPDATE / MERGE; with MOR refused too, a v3 table is append-only here | lineage carried per spec | V3-4 ← fork F-7 |
 | Write/maintain: partitioned v3 | ❌ unmeasured (format-v3-track §7 — every fixture unpartitioned) | DV writes + compaction proven on partitioned and spec-evolved tables | V3-3 / V3-5 |
 | Maintain: `rewrite_data_files` | 🚫 V3-LINEAGE-1 guard | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← fork F-7 |
 | Maintain: DV / delete-file maintenance | 🚫 B-MOR-3 refusal | DV-aware answer, Spark-compared | V3-5 ← fork F-7 |
@@ -100,9 +100,12 @@ The engine consumes each by rev-pin repin unit (handoff §5); the lanes run in p
 
 ## 5. Owner actions and open dependencies
 
-- **OD-3b** — S3 Tables scratch-bucket `DeleteObject` on the acceptance role, if the S3 Tables
-  live legs are in scope for v1.0 (they are in §3's matrix; the alternative is a dated DECLARED
-  "Glue-only live evidence" ruling).
+- **OD-3b** — **ruled 2026-08-25: the S3 Tables live legs are in v1.0.** The acceptance role
+  needs table-data write + delete on the scratch namespace; the scoped statement lives in
+  [docs/tier2-aws.md](../../../docs/tier2-aws.md) §2 (owner-executed IAM). Whether
+  `DeleteObject` on table storage is authorized by `s3tables:PutTableData` is unverified —
+  the first S3 Tables `expire_snapshots` measurement decides, and a denial is a stop, not a
+  design.
 - **Sequencing vs the other campaigns.** This ruling makes v3 the spine to v1.0; FNP, perf,
   dbt, and the correctness backlog interleave as owner-chartered units, they do not gate the
   tag unless ruled into §3.
@@ -124,8 +127,9 @@ The engine consumes each by rev-pin repin unit (handoff §5); the lanes run in p
 ## 6. What this charter does not decide
 
 Unit scoping, estimates, and order within the lanes — each unit charters and measures per the
-process contract before it builds. Incremental/changelog reads (the row-lineage *consumer*
-surface — `create_changelog_view`, snapshot-range reads) are **out of the v1.0 gate by this
+process contract before it builds. Shredded-Parquet `variant` is out of the v1.0 gate by
+ruling (2026-08-25; §3's types row); binary variant is not. Incremental/changelog reads (the
+row-lineage *consumer* surface — `create_changelog_view`, snapshot-range reads) are **out of the v1.0 gate by this
 ruling (2026-08-23)**: lineage is preserved so other engines' consumers stay correct; serving
 those reads ourselves is a post-v1.0 track unless the owner pulls it in at intake. Capability
 status stays single-homed: the registry and the fork's `GAP_MATRIX.md` say what works;

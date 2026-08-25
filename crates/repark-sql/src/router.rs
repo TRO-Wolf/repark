@@ -214,6 +214,8 @@ async fn execute_time_travelled(
             }
             guards::refuse_dml_subquery_predicate(statement.as_ref())?;
             guards::refuse_mor_multi_spec_dml(cx, sql).await?;
+            // pins: v3r-1-rulings/C-001, C-002 — the passthrough seat of the V3-COW-1 guard.
+            guards::refuse_v3_cow_dml(cx, sql).await?;
             delegate(cx, sql).await
         }
         _ => delegate(cx, sql).await,

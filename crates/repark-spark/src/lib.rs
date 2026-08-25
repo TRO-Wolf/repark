@@ -74,7 +74,8 @@ pub(crate) use normalize::{
     build_transform_field, delete_target_object_name, object_name_from_table_with_joins,
     parse_single_normalized, property_value, refuse_dml_subquery_predicate,
     refuse_dml_subquery_predicate_in_statement, refuse_mor_unpartitioned_multi_spec_dml,
-    refuse_multi_statement_sql, starts_with_branch_or_tag_ddl, starts_with_merge,
+    refuse_multi_statement_sql, refuse_v3_cow_dml, starts_with_branch_or_tag_ddl,
+    starts_with_merge,
 };
 
 mod extension;

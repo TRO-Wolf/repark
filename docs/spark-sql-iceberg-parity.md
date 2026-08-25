@@ -580,6 +580,30 @@ them, and the document is ordered by surface, never by date.
   arrow-rs. That panic is caught at the PyO3 boundary rather than aborting, but a caught panic is
   not a contract (round 2 F-R3-9). Raising either bound is a decision, not a bug fix.
 
+### V3-GEO-1 — the v3 `geometry` / `geography` types are not supported
+
+- **repark** — no engine surface reaches either type. `CREATE TABLE … (g GEOMETRY)` (and
+  `GEOGRAPHY`) refuses on both SQL doors at the column-type mapping, naming the type, and
+  leaves no table behind; there is no fixture to measure a read and none is planned for v1.0.
+  **Owner ruling 2026-08-25: dated DECLARED exclusion from the v1.0 gate** (north star §3,
+  the types row).
+- **Apache Spark** — the ratified v3 spec defines both types and Iceberg-Java models them
+  (fork `GAP_MATRIX` row R89 tracks the fork-side gap); this engine never reaches a value, so
+  there is no value oracle. *(oracle: documented — the v3 spec's type table; no live
+  scenario.)*
+- **Pin** —
+  `crates/repark-spark/src/tests/create_table.rs::v3_type_columns_geometry_geography_variant_refuse_naming_the_type`
+  (ANSI twin of the same name in `crates/repark-sql/src/v3_types.rs`; facade
+  `python/repark/tests/test_v3_create_opt_in.py::test_v3_geometry_geography_variant_columns_refuse_naming_the_type`)
+- **Rationale** — DECLARED, owner-dated 2026-08-25. Spatial types are fork work (F-15 → R89)
+  with no consumer on the v1.0 path; the ruling keeps the gate honest instead of silent.
+  Reversing it needs a new dated decision, and the landing reds the pin on purpose. `variant`
+  is **not** this row: it stays V3-6 work — the same pin holds its CREATE refusal today so
+  V3-6's landing reds it — with **shredded**-Parquet variant DECLARED out of the v1.0 gate by
+  the same ruling (queued as `V3-VARIANT-SHRED-1` in §7 until V3-6 gives it a pin).
+
+---
+
 ## 5. Facade drop-in semantics (DECLARED)
 
 ### FA-1 — lateral column aliases in `withColumns`
@@ -1938,28 +1962,37 @@ the pin rather than obeying it.
   convention, not only the filename. Catalogs that already write version-uuid pointers never
   hit it.
 
-### V3-COW-1 — copy-on-write DML on an adopted v3 table commits and reassigns row lineage
+### V3-COW-1 — copy-on-write DML refuses a format-v3 table rather than reassign row lineage
 
-- **repark** — copy-on-write `DELETE` / `UPDATE` / `MERGE` on a `register_table`-adopted
-  format-v3 table **commit** and return the correct live rows. The merge-on-read arms still
-  refuse v3. The copy-on-write arms never read the format version. Engine-observable lineage
-  (`next_row_id` + the new snapshot's `first_row_id` / `added_rows`) **reassigns** on every
-  rewrite: a 3-row seed (`next_row_id = 3`) becomes `5` after deleting one row (2 survivors
-  rewritten), `6` after updating one row (3 rewritten), `7` after a MATCHED UPDATE + NOT
-  MATCHED INSERT (3 rewritten + 1 insert). `_row_id` is still not plannable (`V3-ROWID-1`).
-  Measured 2026-08-24 (V3E-1). Guard-or-not is a later owner ruling on these numbers; this
-  row does not add a refuse.
+- **repark** — copy-on-write `DELETE` / `UPDATE` / `MERGE INTO` on a format-v3 table refuse
+  outright, before any data write, naming the verb, row lineage and this row; the table keeps
+  its snapshot, its rows and its lineage counters. The guard has two seats, both pinned: the
+  write-mode resolver (`MERGE INTO` and the subquery-`WHERE` `DELETE` / `UPDATE` form) and a
+  passthrough valve beside the BUG-001 valve on each SQL door (the plain-`WHERE` form, which
+  DataFusion plans onto the fork's `TableProvider` without consulting the resolver). The
+  merge-on-read arms refuse v3 independently (R113: v3 mandates deletion vectors), so **a v3
+  table is append-only in this engine** until the fork carries lineage through a row rewrite
+  (handoff F-7). Before the guard (V3E-1, 2026-08-24) the same statements committed the correct
+  live rows while reassigning lineage: a 3-row seed (`next_row_id = 3`) became `5` after
+  deleting one row (2 survivors rewritten), `6` after updating one row (3 rewritten), `7` after
+  a MATCHED UPDATE + NOT MATCHED INSERT (3 rewritten + 1 insert). `_row_id` is still not
+  plannable (`V3-ROWID-1`).
 - **Apache Spark** — COW `DELETE` on v3 **preserves** `_row_id` /
   `_last_updated_sequence_number`. Seed `(id,_row_id,seq) = (1,0,1), (2,1,1), (3,2,1)`;
   after `DELETE WHERE id = 2` the survivors are still `(1,0,1), (3,2,1)`.
   *(oracle: live — PySpark 4.1.2 + Iceberg 1.11.0, Hadoop catalog, 2026-08-24 V3E-2 session.)*
 - **Pin** —
-  `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_commits_and_drops_the_matched_row`
-  (UPDATE/MERGE siblings in the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`;
-  facade MERGE+DELETE in `python/repark/tests/test_v3_cow_dml.py`)
-- **Rationale** — BACKLOG. Contents are correct; lineage is the V3-LINEAGE-1 class on the
-  DML path. V3-4 owns row lineage as a whole (fork F-7). Do not silently absorb a preserve
-  later — the pin reds when `next_row_id` stops growing.
+  `crates/repark-spark/src/tests/v3_cow.rs::adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage`
+  (UPDATE / MERGE siblings, the merge-on-read `DELETE` + `MERGE` refusals and a v2 control in
+  the same leaf; ANSI twins in `crates/repark-sql/src/v3_cow.rs`; facade MERGE + DELETE +
+  UPDATE in `python/repark/tests/test_v3_cow_dml.py`)
+- **Rationale** — BACKLOG, and stricter than Spark on purpose: **owner ruling 2026-08-25** on
+  V3E-1's numbers, the trade V3-LINEAGE-1 took for `rewrite_data_files`. The rows are never
+  wrong, which is what makes the failure quiet — a downstream incremental consumer is told
+  every survivor changed — and an unattended job gets a loud stop rather than a plausible wrong
+  answer. Whole-file deletes would have been lineage-safe and are refused with the rest
+  (fail-closed; the lift is one line). V3-4 owns row lineage as a whole (fork F-7); lifting the
+  guard reds these pins on purpose.
 
 ### Surfaced, awaiting pins — not yet rows
 
@@ -1995,6 +2028,11 @@ observed behavior for each). **B-TZ-4 left this queue as a dated FIXED note (V-3
   would pin half a decision.
 
 - **V3-COW-1** — measured 2026-08-24 and admitted as a BACKLOG row (see §7). Left this queue.
+
+- **V3-VARIANT-SHRED-1** — shredded-Parquet `variant` is **DECLARED out of the v1.0 gate
+  (owner ruling 2026-08-25)**; binary variant stays V3-6 scope. The row lands with V3-6, when
+  a binary-variant pin exists to tell the two apart — today every `variant` column refuses at
+  CREATE, held by `V3-GEO-1`'s pin. Not a row until then.
 
 ---
 

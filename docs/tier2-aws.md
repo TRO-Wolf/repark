@@ -70,7 +70,21 @@ the OD-3 exception on the warehouse scratch prefix only (MW-4 compact + expire):
   statement, so widening the read scope never widens the write scope: creates and updates stay
   scratch-scoped. (The eager enumeration is filed separately as an engine observation; this
   runbook records what the current engine requires and promises no engine change.)
-- S3 Tables (optional leg): create/get on the one table bucket ARN only. **No delete actions.**
+- S3 Tables (the v3 live legs — **OD-3b, owner ruling 2026-08-25: in v1.0**): one statement on
+  the **table** ARN, scratch-scoped by the namespace condition key —
+  `s3tables:GetTable`, `s3tables:GetTableMetadataLocation`,
+  `s3tables:UpdateTableMetadataLocation`, `s3tables:GetTableData`, `s3tables:PutTableData` on
+  `arn:aws:s3tables:<REGION>:<ACCOUNT>:bucket/<TABLE-BUCKET>/table/*` with
+  `"Condition": {"StringEquals": {"s3tables:namespace": "testing_repark_acceptance"}}`, plus
+  `s3tables:GetTableBucket`, `s3tables:CreateNamespace`, `s3tables:GetNamespace`,
+  `s3tables:CreateTable`, `s3tables:ListTables` on the bucket ARN. **Still no `s3tables:DeleteTable` / `DeleteNamespace` / `DeleteTableBucket`.**
+  AWS's published object-API mapping lists `PutObject` + the multipart operations under
+  `PutTableData` and names no action for `DeleteObject` on table storage: whether
+  `expire_snapshots` can remove files there is measured by the first S3 Tables maintenance
+  unit — a denial is a stop, not a design; do not widen pre-emptively. S3 Tables' automatic
+  snapshot management (keep 1 / 120 h, then permanent removal of noncurrent objects) fails for
+  a whole table that carries any user-defined branch or tag or a `history.expire.*` property —
+  the refs leg disables it on its scratch tables or expects that failure.
 
 Never-teardown of **tables** is still a PERMISSIONS FACT: the harness creates into the scratch
 namespace with a scratch table prefix, has no DROP TABLE path, and the role still has no

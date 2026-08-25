@@ -61,7 +61,10 @@ use datafusion::sql::sqlparser::ast::{
 use datafusion::sql::sqlparser::parser::ParserError;
 use iceberg::{NamespaceIdent, TableIdent};
 use repark_core::{CatalogRegistry, EngineContext};
-use repark_iceberg::write::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
+use repark_iceberg::write::{
+    MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml,
+    refuse_v3_cow_dml as refuse_v3_cow_dml_in_catalog,
+};
 
 use crate::scan::{blank_out_quoted_and_comments, leading_keyword};
 
@@ -306,33 +309,56 @@ pub(crate) fn refuse_write_to_branch(ctx: &SessionContext, scrubbed: &str) -> Re
 /// # Errors
 /// [`DataFusionError::Plan`] from the tier-1 valve, naming the fork hazard and the workarounds.
 pub(crate) async fn refuse_mor_multi_spec_dml(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
-    let scrubbed = blank_out_quoted_and_comments(sql);
-    let Some((verb, target)) = dml_target(&scrubbed) else {
+    let Some((kind, target, catalog_name, ident)) = dml_target_ident(sql) else {
         return Ok(());
     };
+    let Some(catalog) = cx.catalogs.get(&catalog_name) else {
+        return Ok(());
+    };
+    refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
+}
+
+/// ===========================================================================================
+/// V3R-1 valve (owner ruling 2026-08-25, registry `V3-COW-1`): the delegated plain-`WHERE`
+/// `DELETE` / `UPDATE` never reaches the `predicate_dml` write-mode resolver, so the format-v3
+/// copy-on-write refusal needs this seat too. Same target resolution as the BUG-001 valve
+/// above; the router calls it right after that valve, before delegation.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] naming row lineage, the verb and `V3-COW-1`.
+pub(crate) async fn refuse_v3_cow_dml(cx: &EngineContext<'_>, sql: &str) -> Result<()> {
+    let Some((kind, _target, catalog_name, ident)) = dml_target_ident(sql) else {
+        return Ok(());
+    };
+    let Some(catalog) = cx.catalogs.get(&catalog_name) else {
+        return Ok(());
+    };
+    refuse_v3_cow_dml_in_catalog(catalog.as_ref(), &ident, kind).await
+}
+
+/// Resolve a `DELETE` / `UPDATE` statement's target into `(verb, display target, catalog name,
+/// table ident)`. `INSERT` writes no position deletes and `MERGE` runs the RePark-owned writer,
+/// so both return `None`; so does anything shorter than `catalog.namespace….table` — it cannot
+/// be resolved without a session default catalog, and the planner's own error is the better one.
+fn dml_target_ident(sql: &str) -> Option<(MorDmlKind, String, String, TableIdent)> {
+    let scrubbed = blank_out_quoted_and_comments(sql);
+    let (verb, target) = dml_target(&scrubbed)?;
     let kind = match verb {
         "DELETE" => MorDmlKind::Delete,
         "UPDATE" => MorDmlKind::Update,
-        // INSERT writes no position deletes; MERGE runs the RePark-owned writer.
-        _ => return Ok(()),
+        _ => return None,
     };
     let parts: Vec<String> = target
         .split('.')
         .map(|part| part.trim_matches('"').to_string())
         .collect();
-    // catalog.namespace….table — a shorter name cannot be resolved without a session default
-    // catalog, and the planner's own error is the better one.
     if parts.len() < 3 {
-        return Ok(());
+        return None;
     }
-    let Some(catalog) = cx.catalogs.get(&parts[0]) else {
-        return Ok(());
-    };
-    let Ok(namespace) = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()) else {
-        return Ok(());
-    };
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
     let ident = TableIdent::new(namespace, parts[parts.len() - 1].clone());
-    refuse_mor_unpartitioned_multi_spec_dml(catalog.as_ref(), &ident, &target, kind).await
+    Some((kind, target, parts[0].clone(), ident))
 }
 
 // === Guard 5 — SEC-02 local-filesystem plans (runs after planning) ==========================

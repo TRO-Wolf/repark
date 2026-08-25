@@ -44,6 +44,7 @@ pub mod overwrite;
 pub(crate) mod position_delete;
 /// Identity DELETE/UPDATE (G3-E8 A1): SELECT over pinned `(_file, _pos)`, MERGE write arms.
 pub mod predicate_dml;
+pub(crate) mod row_lineage_guard;
 pub mod scan_concurrency;
 pub mod scan_prune;
 /// Product snapshot-ref helpers (I5 CREATE/DROP BRANCH|TAG) + test-support seam.
@@ -93,6 +94,7 @@ pub use overwrite::{
 };
 pub use position_delete::{MorDmlKind, refuse_mor_unpartitioned_multi_spec_dml};
 pub use repark_common::{Error, Result};
+pub use row_lineage_guard::refuse_v3_cow_dml;
 pub use writer_props::{
     ACCEPTED_CODECS, COMPRESSION_CODEC_PROP, COMPRESSION_LEVEL_PROP, parse_compression,
     writer_properties_for,

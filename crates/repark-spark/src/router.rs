@@ -63,7 +63,7 @@ use crate::{
     object_name_from_table_with_joins, parse_single_normalized, passthrough_after_p11, ref_ddl,
     refuse_dml_subquery_predicate, refuse_mor_unpartitioned_multi_spec_dml,
     refuse_multi_statement_sql, refuse_read_only_dml_from_delete, refuse_read_only_dml_table_sql,
-    spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
+    refuse_v3_cow_dml, spark_ast, starts_with_branch_or_tag_ddl, starts_with_merge, time_travel,
     try_parse_create_namespace,
 };
 
@@ -328,6 +328,8 @@ async fn execute_delete(
         }
     }
     refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Delete).await?;
+    // pins: v3r-1-rulings/C-001 — the passthrough seat of the V3-COW-1 guard.
+    refuse_v3_cow_dml(catalogs, object_name, MorDmlKind::Delete).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 
@@ -357,6 +359,8 @@ async fn execute_update(
         }
     }
     refuse_mor_unpartitioned_multi_spec_dml(catalogs, object_name, MorDmlKind::Update).await?;
+    // pins: v3r-1-rulings/C-002 — the passthrough seat of the V3-COW-1 guard.
+    refuse_v3_cow_dml(catalogs, object_name, MorDmlKind::Update).await?;
     spark_ast::execute_passthrough(ctx, catalogs, sql).await
 }
 

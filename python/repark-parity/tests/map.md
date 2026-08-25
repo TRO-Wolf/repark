@@ -14,6 +14,11 @@ JVM, no repark required). See [../map.md](../map.md).
   touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
   row is one row; a marker in a code span is prose), and the gate red
   on each of its four classes and green on the compacted tree (C-005).
+- `test_v3r_1_rulings.py` — **V3R-1 (2026-08-25; tree pins):** the five owner rulings are
+  recorded where the gate reads them — registry `V3-COW-1` (refusal row) and `V3-GEO-1`
+  (DECLARED), the queued `V3-VARIANT-SHRED-1`, the north-star matrix rows (COW, types,
+  upgrade) and OD-3b, the tier-2 runbook's scoped S3 Tables statement, and the no-obituary
+  rule for the unit itself.
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`

@@ -317,23 +317,13 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
     let Some(table_name) = table_name else {
         return Ok(());
     };
-    let parts = name_parts(table_name);
-    // Need at least catalog.namespace.table (nested ns: catalog.ns….table).
-    if parts.len() < 3 {
-        // Two-part / bare names: cannot resolve without session default catalog (residual).
-        return Ok(());
-    }
-    let catalog_name = parts[0].as_str();
-    let table_leaf = parts[parts.len() - 1].clone();
-    let namespace_parts = parts[1..parts.len() - 1].to_vec();
-    let Ok(namespace) = NamespaceIdent::from_vec(namespace_parts) else {
+    let Some((catalog_name, ident)) = dml_target_ident(table_name) else {
         return Ok(());
     };
-    let Some(catalog) = catalogs.get(catalog_name) else {
+    let Some(catalog) = catalogs.get(&catalog_name) else {
         // Unknown catalog handled elsewhere; cannot inspect hazard without a handle.
         return Ok(());
     };
-    let ident = TableIdent::new(namespace, table_leaf);
     repark_iceberg::write::refuse_mor_unpartitioned_multi_spec_dml(
         catalog.as_ref(),
         &ident,
@@ -341,6 +331,47 @@ pub(crate) async fn refuse_mor_unpartitioned_multi_spec_dml(
         kind,
     )
     .await
+}
+
+/// ===========================================================================================
+/// V3R-1 valve (owner ruling 2026-08-25, registry `V3-COW-1`): a plain-`WHERE` `DELETE` /
+/// `UPDATE` delegates to DataFusion and the fork's `TableProvider`, never reaching the
+/// `predicate_dml` write-mode resolver that guards the subquery-`WHERE` form — so the format-v3
+/// copy-on-write refusal needs this seat too. Same target resolution as the BUG-001 valve
+/// above; called right after it in the router, before passthrough.
+///
+/// # Errors
+/// [`DataFusionError::NotImplemented`] naming row lineage, the verb and `V3-COW-1`.
+/// ===========================================================================================
+pub(crate) async fn refuse_v3_cow_dml(
+    catalogs: &CatalogRegistry,
+    table_name: Option<&ObjectName>,
+    kind: MorDmlKind,
+) -> Result<()> {
+    let Some(table_name) = table_name else {
+        return Ok(());
+    };
+    let Some((catalog_name, ident)) = dml_target_ident(table_name) else {
+        return Ok(());
+    };
+    let Some(catalog) = catalogs.get(&catalog_name) else {
+        return Ok(());
+    };
+    repark_iceberg::write::refuse_v3_cow_dml(catalog.as_ref(), &ident, kind).await
+}
+
+/// Resolve a DML target [`ObjectName`] into `(catalog name, table ident)`. Needs at least
+/// `catalog.namespace.table` (nested namespaces: `catalog.ns….table`, via
+/// [`NamespaceIdent::from_vec`]); two-part / bare names return `None` — they cannot be resolved
+/// without a session default catalog (residual), and the planner's own error is the better one.
+fn dml_target_ident(table_name: &ObjectName) -> Option<(String, TableIdent)> {
+    let parts = name_parts(table_name);
+    if parts.len() < 3 {
+        return None;
+    }
+    let namespace = NamespaceIdent::from_vec(parts[1..parts.len() - 1].to_vec()).ok()?;
+    let table_leaf = parts[parts.len() - 1].clone();
+    Some((parts[0].clone(), TableIdent::new(namespace, table_leaf)))
 }
 
 /// The DML verb a G3-E8 subquery-predicate refusal names.

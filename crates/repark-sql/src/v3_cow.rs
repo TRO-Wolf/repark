@@ -1,13 +1,14 @@
-//! Model: Grok 4.6 xHigh
+//! Model: Claude Fable 5
 //! CodeQuality:S
 //!
-//! ANSI-door pins for copy-on-write DML on a `register_table`-adopted format-v3 table.
+//! ANSI-door pins: copy-on-write DML on a `register_table`-adopted format-v3 table refuses
+//! (registry `V3-COW-1`, owner ruling 2026-08-25) before any write, and the table is untouched.
 //!
 //! The ANSI door refuses `CALL` (Q7). Adoption uses the same `Catalog::register_table` the
 //! Spark procedure reaches. Memory-catalog `DROP TABLE` deletes the metadata pointer, so the
 //! seed ident stays; DML runs against the adopted ident.
 //!
-//! pins: v3e-1-2-cow-oracle/C-001, C-002, C-003, C-004, C-005, C-008
+//! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -28,10 +29,10 @@ const COW_V3: &str = "format_version = 3, extra_properties = MAP(\
 
 const UNSET_MERGE_V3: &str = "format_version = 3";
 
-struct Door {
+pub(crate) struct Door {
     ctx: SessionContext,
     catalogs: CatalogRegistry,
-    catalog: Arc<dyn Catalog>,
+    pub(crate) catalog: Arc<dyn Catalog>,
     warehouse: String,
     _warehouse_dir: TempDir,
 }
@@ -56,7 +57,7 @@ impl Door {
             .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"));
     }
 
-    async fn err(&self, sql: &str) -> String {
+    pub(crate) async fn err(&self, sql: &str) -> String {
         match self.sql(sql).await {
             Ok(_) => panic!("`{sql}` must fail"),
             Err(err) => err.to_string(),
@@ -145,7 +146,7 @@ impl ExtensionOptions for TestAllowCreateV3Config {
     }
 }
 
-async fn door_with_v3_opt_in() -> Door {
+pub(crate) async fn door_with_v3_opt_in() -> Door {
     let mut config = SessionConfig::new().with_information_schema(true);
     config
         .options_mut()
@@ -231,56 +232,65 @@ async fn adopt_cow_v3(door: &Door, seed: &str, adopted: &str) {
     adopt_v3(door, seed, adopted, COW_V3).await;
 }
 
-/// pins: v3e-1-2-cow-oracle/C-001, C-005
-#[tokio::test]
-async fn adopted_v3_cow_delete_commits_and_drops_the_matched_row() {
-    let door = door_with_v3_opt_in().await;
-    adopt_cow_v3(&door, "seed_del", "adopt_del").await;
-    let before_snapshot = door
-        .table("adopt_del")
-        .await
-        .metadata()
-        .current_snapshot_id();
-    let before = door.lineage("adopt_del").await;
-    door.ok("DELETE FROM ice.sales.adopt_del WHERE id = 2")
-        .await;
-    assert_eq!(
-        door.live_pairs("adopt_del").await,
-        vec![(1, "a".into()), (3, "c".into())]
+/// Every copy-on-write arm refuses the same way, and the table keeps its snapshot, rows and
+/// lineage counters.
+async fn assert_cow_refused_untouched(door: &Door, table: &str, sql: &str, verb: &str) {
+    let before_table = door.table(table).await;
+    let before_snapshot = before_table.metadata().current_snapshot_id();
+    let before = door.lineage(table).await;
+    let before_rows = door.live_pairs(table).await;
+    let err = door.err(sql).await;
+    assert!(
+        err.contains("V3-COW-1") && err.contains("row lineage") && err.contains(verb),
+        "refusal must name the row, row lineage and `{verb}`: {err}"
     );
-    let after_table = door.table("adopt_del").await;
-    assert_ne!(
-        before_snapshot,
+    let after_table = door.table(table).await;
+    assert_eq!(
         after_table.metadata().current_snapshot_id(),
-        "COW DELETE must commit a new snapshot"
+        before_snapshot,
+        "a refused {verb} must not commit"
     );
     assert_eq!(after_table.metadata().format_version(), FormatVersion::V3);
-    let after = door.lineage("adopt_del").await;
-    assert_eq!(before, (3, Some(0), Some(3)));
-    assert_eq!(after, (5, Some(3), Some(2)));
+    assert_eq!(
+        door.lineage(table).await,
+        before,
+        "lineage counters untouched"
+    );
+    assert_eq!(door.live_pairs(table).await, before_rows, "rows untouched");
 }
 
-/// pins: v3e-1-2-cow-oracle/C-002, C-005
+/// pins: v3r-1-rulings/C-001
 #[tokio::test]
-async fn adopted_v3_cow_update_commits_and_rewrites_matched_values() {
+async fn adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage() {
+    let door = door_with_v3_opt_in().await;
+    adopt_cow_v3(&door, "seed_del", "adopt_del").await;
+    assert_eq!(door.lineage("adopt_del").await, (3, Some(0), Some(3)));
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_del",
+        "DELETE FROM ice.sales.adopt_del WHERE id = 2",
+        "DELETE",
+    )
+    .await;
+}
+
+/// pins: v3r-1-rulings/C-002
+#[tokio::test]
+async fn adopted_v3_cow_update_refuses_rather_than_reassign_row_lineage() {
     let door = door_with_v3_opt_in().await;
     adopt_cow_v3(&door, "seed_upd", "adopt_upd").await;
-    door.ok("UPDATE ice.sales.adopt_upd SET name = 'x' WHERE id = 2")
-        .await;
-    assert_eq!(
-        door.live_pairs("adopt_upd").await,
-        vec![(1, "a".into()), (2, "x".into()), (3, "c".into())]
-    );
-    assert_eq!(
-        door.table("adopt_upd").await.metadata().format_version(),
-        FormatVersion::V3
-    );
-    assert_eq!(door.lineage("adopt_upd").await, (6, Some(3), Some(3)));
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_upd",
+        "UPDATE ice.sales.adopt_upd SET name = 'x' WHERE id = 2",
+        "UPDATE",
+    )
+    .await;
 }
 
-/// pins: v3e-1-2-cow-oracle/C-003, C-005
+/// pins: v3r-1-rulings/C-003
 #[tokio::test]
-async fn adopted_v3_cow_merge_commits_matched_and_not_matched() {
+async fn adopted_v3_cow_merge_refuses_with_unset_and_explicit_mode() {
     let door = door_with_v3_opt_in().await;
     adopt_v3(&door, "seed_mrg", "adopt_mrg", UNSET_MERGE_V3).await;
     assert!(
@@ -290,32 +300,48 @@ async fn adopted_v3_cow_merge_commits_matched_and_not_matched() {
             .properties()
             .get("write.merge.mode")
             .is_none(),
-        "C-003 is the unset write.merge.mode hole, not explicit copy-on-write"
+        "the unset write.merge.mode hole must be covered, not only explicit copy-on-write"
     );
-    door.ok(
-        "MERGE INTO ice.sales.adopt_mrg AS t USING (SELECT 2 AS id, CAST('m' AS VARCHAR) AS name \
-         UNION ALL SELECT 4 AS id, CAST('n' AS VARCHAR) AS name) AS s ON t.id = s.id \
-         WHEN MATCHED THEN UPDATE SET name = s.name \
-         WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)",
-    )
-    .await;
-    assert_eq!(
-        door.live_pairs("adopt_mrg").await,
-        vec![
-            (1, "a".into()),
-            (2, "m".into()),
-            (3, "c".into()),
-            (4, "n".into())
-        ]
-    );
-    assert_eq!(
-        door.table("adopt_mrg").await.metadata().format_version(),
-        FormatVersion::V3
-    );
-    assert_eq!(door.lineage("adopt_mrg").await, (7, Some(3), Some(4)));
+    adopt_cow_v3(&door, "seed_mrg2", "adopt_mrg2").await;
+    for table in ["adopt_mrg", "adopt_mrg2"] {
+        assert_cow_refused_untouched(
+            &door,
+            table,
+            &format!(
+                "MERGE INTO ice.sales.{table} AS t USING (SELECT 2 AS id, \
+                 CAST('m' AS VARCHAR) AS name UNION ALL SELECT 4 AS id, \
+                 CAST('n' AS VARCHAR) AS name) AS s ON t.id = s.id \
+                 WHEN MATCHED THEN UPDATE SET name = s.name \
+                 WHEN NOT MATCHED THEN INSERT (id, name) VALUES (s.id, s.name)"
+            ),
+            "MERGE INTO",
+        )
+        .await;
+    }
 }
 
-/// pins: v3e-1-2-cow-oracle/C-004
+/// pins: v3r-1-rulings/C-005
+#[tokio::test]
+async fn v2_cow_delete_still_commits_control() {
+    let door = door_with_v3_opt_in().await;
+    door.ok("CREATE TABLE ice.sales.v2del (id INT, name VARCHAR)")
+        .await;
+    door.ok("INSERT INTO ice.sales.v2del VALUES (1, 'a'), (2, 'b'), (3, 'c')")
+        .await;
+    assert_eq!(
+        door.table("v2del").await.metadata().format_version(),
+        FormatVersion::V2,
+        "the control is a v2 table"
+    );
+    door.ok("DELETE FROM ice.sales.v2del WHERE id = 2").await;
+    assert_eq!(
+        door.live_pairs("v2del").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the guard must not reach v2"
+    );
+}
+
+/// pins: v3r-1-rulings/C-004
 #[tokio::test]
 async fn adopted_v3_mor_merge_still_refuses() {
     let door = door_with_v3_opt_in().await;
@@ -361,4 +387,31 @@ async fn adopted_v3_mor_merge_still_refuses() {
         err.contains("this table is V3") && err.contains("deletion vectors"),
         "MoR refuse must name format V3: {err}"
     );
+}
+
+/// The resolver seat: a subquery-`WHERE` `DELETE` / `UPDATE` takes the `predicate_dml` path on
+/// this door, which never sees the router valve, so the refusal must come from the write-mode
+/// resolver itself. Both verbs, same shape, table untouched.
+///
+/// pins: v3r-1-rulings/C-001, C-002
+#[tokio::test]
+async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
+    let door = door_with_v3_opt_in().await;
+    adopt_cow_v3(&door, "seed_sub", "adopt_sub").await;
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_sub",
+        "DELETE FROM ice.sales.adopt_sub WHERE id IN \
+         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+        "DELETE",
+    )
+    .await;
+    assert_cow_refused_untouched(
+        &door,
+        "adopt_sub",
+        "UPDATE ice.sales.adopt_sub SET name = 'x' WHERE id IN \
+         (SELECT id FROM ice.sales.adopt_sub WHERE id = 2)",
+        "UPDATE",
+    )
+    .await;
 }

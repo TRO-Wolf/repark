@@ -20,6 +20,12 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   for a new dual-arity null-guarded kernel rather than a redirect to `ln`, the ratchet move that
   comes with it, and the two adjacent defects that should ride along. Both units change a computed
   answer, so the gate wants a dated owner ruling before either writes code.
+- [v3r-1-rulings-ledger.md](v3r-1-rulings-ledger.md) — **V3R-1 (2026-08-25), in flight:** the
+  five owner rulings recorded where the gate reads them, and the one that is engine code built
+  and pinned — copy-on-write DML on a format-v3 table refuses (registry `V3-COW-1`, two guard
+  seats), `V3-GEO-1` DECLARED, shredded variant queued, OD-3b in, the upgrade row ruled "build
+  behind the opt-in". Thirteen clauses, all PROVEN; the CCC pass and attestation are filed in §
+  of the ledger.
 - [v3-0-charter-ledger.md](v3-0-charter-ledger.md) —
   **V3-0 (2026-08-21):** the format-v3 scope audit, and the defect it found. Intended as a
   charter with no product change and it does not close that way. **Read §3 first**:
