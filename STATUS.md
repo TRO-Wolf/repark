@@ -175,8 +175,7 @@ history-rewrite; provenance and the options weighed:
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
 <!-- ws id=dl ledgers=dl- state=open -->
-- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; DL-1..DL-3 delivered, DL-4 in
-  flight). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
+- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; DL-1..DL-4 delivered). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
   `completed/` (the unit's last commit) → `archive/yyyy-mm/` (the script's move at pickup,
   immutable) — and `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting
   every link as it goes. Three gates in `make ci` (dual-wired into `ci.yml` by
@@ -188,8 +187,9 @@ history-rewrite; provenance and the options weighed:
   — no closed campaign in this section, no merged unit on the slate, every workstream marked,
   byte ceilings. Archive month maps are one line per ledger (DL-3,
   [#225](https://github.com/TRO-Wolf/repark/pull/225)). Records: the DL-1/2/3 charters in
-  [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md); DL-4:
-  [task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md](task/ledgers/staging/dl-4-live-doc-compaction-charter-ledger.md).
+  [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md); DL-4 (delivered
+  2026-08-25: STATUS.md 65.9 → 30.1 kB, the slate 26.7 → 5.6 kB):
+  [the DL-4 ledger](task/ledgers/completed/dl-4-live-doc-compaction-charter-ledger.md).
 <!-- /ws -->
 
 <!-- ws id=sem ledgers=sem- state=held -->
