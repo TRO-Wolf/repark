@@ -1,8 +1,8 @@
 # V3R-1 — the 2026-08-25 rulings
 
 **Date:** 2026-08-25 · **Branch:** `feat/v3r-1-rulings` · **Base:** `b57d424` (`origin/main`, #240) ·
-**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3 / §5 ·
-**Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
+**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) §3 / §5 ·
+**Sequence:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, procedural context break) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (the Iceberg DML write path)
 
