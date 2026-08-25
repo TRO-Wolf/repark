@@ -8,7 +8,7 @@
 //! deletes with no JVM. Native `DataFrame` has no Iceberg DML write surface and
 //! is not a read entry point for these adopted tables (C-010).
 //!
-//! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012
+//! pins: v3e-3-partitioned-eqdel-fixtures/C-001, C-002, C-003, C-004, C-005, C-006, C-007, C-010, C-011, C-012, C-013
 
 use std::fs;
 use std::io::ErrorKind;

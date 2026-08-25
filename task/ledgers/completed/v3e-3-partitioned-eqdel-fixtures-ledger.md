@@ -83,9 +83,9 @@ None touched. No AWS credentials, no `Cargo.toml [patch]`, no `.github/`.
 | C-010 | Native `DataFrame` is N/A | surface matrix | **PROVEN** | rustdoc on Spark leaf |
 | C-011 | Northstar §3 read cells for partitioned DVs and equality-deletes-alongside-DVs are no longer "unmeasured" | northstar edit | **PROVEN** | `task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md`; rustdoc cites C-011 |
 | C-012 | `rewrite_position_delete_files` on the partitioned-DV fixture still refuses, naming Puffin vectors | B-MOR-3 control | **PROVEN** | `partitioned_v3_dv_rewrite_position_delete_files_still_refuses` |
-| C-013 | Pickup archives V3E-1+2; departure empties V3E-3 from the slate (V3E-4 becomes #1) | standing rule 7 | **OPEN** | Pickup `ae80d79`; departure is the last commit |
+| C-013 | Pickup archives V3E-1+2; departure empties V3E-3 from the slate (V3E-4 becomes #1) | standing rule 7 | **PROVEN** | Pickup `ae80d79`; this departure commit; V3E-4 is #1 on `briefs/next-sequence.md`; rustdoc `pins: …/C-013` |
 
-VERDICT: OPEN=1 (C-013 departure). LOGIC_SCORE = 12/13.
+VERDICT: PASS (OPEN=0, REJECTED=0). LOGIC_SCORE = 13/13.
 
 ```yaml
 KILLED_ASSUMPTIONS:
@@ -228,4 +228,48 @@ FINDING:
   disposition: REMEDIATED
   claim: facade part=1 missing; delete_files Int32/Int64 dual-accept
   evidence: Q-001 for prune; i32_or_i64 remains for inspect drift (flagged with L-002)
+```
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: v3e-3-partitioned-eqdel-fixtures
+  cycle: 1
+  risk_tier: high
+  critic_engine: ccc
+  complete: true
+  note: >
+    Actor then CCC quad (claims_critic). Cycle-1 S1s remediating (lock parent
+    mkdir, no lock steal, facade part=1 prune + Arrow types, ANSI $delete_files).
+    make verify 2026-08-24 exit 0; facade test_v3e3_fixtures.py 2 passed.
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3e3.rs, python/repark/tests/test_v3e3_fixtures.py]
+    - id: AT-2
+      status: N/A
+      justification: measure-only fixtures; no new input domain
+    - id: AT-3
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, crates/repark-sql/src/v3e3.rs]
+    - id: AT-4
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/test_v3e3_fixtures.py]
+    - id: AT-5
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md]
+    - id: AT-6
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs]
+    - id: AT-7
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/test_v3e3_fixtures.py]
+    - id: AT-8
+      status: ATTACKED
+      artifacts: [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md, crates/repark-spark/src/tests/v3e3.rs]
+    - id: AT-9
+      status: N/A
+      justification: test-only measurement; no new operability surface
+    - id: AT-10
+      status: ATTACKED
+      artifacts: [crates/repark-spark/src/tests/v3e3.rs, python/repark/tests/test_v3e3_fixtures.py]
 ```

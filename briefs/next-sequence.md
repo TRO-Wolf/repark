@@ -32,9 +32,8 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
-| 1 | **V3E-3** — partitioned + equality-delete v3 fixtures | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M |
-| 2 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | V3E-3 | M |
-| 3 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | V3E-3; the scoped `.github/` grant (below) | S |
+| 1 | **V3E-4** — refs + time travel on v3; expiry/orphans with real work | v3 evidence | — (oracle named: pyspark-4.1.2+iceberg-1.11.0) | M |
+| 2 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S |
 
 **Lane A — the v3 evidence intake (owner-chartered 2026-08-24).** Five measure-first units
 against the north-star matrix
@@ -45,7 +44,7 @@ against the north-star matrix
    [#235](https://github.com/TRO-Wolf/repark/pull/235): COW DML on an adopted v3
    table commits and **reassigns** lineage (registry `V3-COW-1`, BACKLOG); Spark preserves
    `_row_id` on DELETE. **Guard-or-not is a second owner ruling on those numbers.** The v3
-   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-3 is #1.**
+   maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-4 is #1.**
 2. **Table encryption keys are a dated DECLARED exclusion from the v1.0 gate.** Registry
    `ENC-1` ([#235](https://github.com/TRO-Wolf/repark/pull/235)).
 3. **A one-time scoped `.github/` grant** for V3E-5 only: add the v3 fixture leg to the nightly
@@ -196,6 +195,9 @@ against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 contents correct; lineage reassigned (`next_row_id` 3→5/6/7); Spark DELETE preserves
 `_row_id`; ENC-1 DECLARED; maintenance oracle `pyspark-4.1.2+iceberg-1.11.0`. Ledger:
 [../task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-v3e-1-2-cow-oracle-ledger.md).
+**V3E-3 ships in this PR** and leaves this file: partitioned v3 DV fixture + equality-delete
+alongside DVs; live rows Spark-exact on three doors; `.delete_files` content 1/2. Ledger:
+[../task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md](../task/ledgers/completed/v3e-3-partitioned-eqdel-fixtures-ledger.md).
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
