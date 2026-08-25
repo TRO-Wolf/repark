@@ -125,6 +125,7 @@ def repo(tmp_path: Path) -> Path:
     """A tiny repository on `main`: one completed ledger, a closed campaign, a two-row slate."""
     _git(tmp_path, "init", "-q", "-b", "main")
     _write(tmp_path, "AGENTS.md", "# AGENTS\n")
+    _write(tmp_path, ".agents/skills/engineering-method/SKILL.md", "# method\n")
     _write(tmp_path, "STATUS.md", _STATUS)
     _write(tmp_path, "briefs/next-sequence.md", _SLATE)
     _write(
