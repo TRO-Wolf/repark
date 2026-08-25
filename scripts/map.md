@@ -68,13 +68,34 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
+- `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
+  `history=` must name one bin under `docs/history/`):
+  HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the
+  slate's rows and reasoning; the parser (every violation a finding with file and line), the
+  coverage check, and the two transforms — a merged unit's rows and blocks leave whole, a
+  `state=closed` campaign is cut for `docs/history/` (the closed-campaigns list treats a wrapped
+  row as one row, in the writer and in the coverage check alike; a marker inside a code span or
+  a fence is prose). Pure text; consumed by
+  `ledger_lifecycle.py compact` and `check_docs_compaction.py`.
+- `check_docs_compaction.py` — the **live-document gate** (DL-4, `make check-docs-compaction`, in
+  `make ci`, `make install-hooks`, `.pre-commit-config.yaml` and `ci.yml`'s guards job (wired under a
+  one-time owner grant, 2026-08-25) at n=5 median 0.05 s: no closed campaign still in STATUS, no
+  merged unit still on the slate, every workstream bullet inside a `ws` block, and the byte
+  ceilings (`CEILINGS`, seeded 2026-08-25 at 31,000 / 6,000 B from the unit's final
+  measurement, 30,055 / 5,594 B; raised only in the PR that needs it —
+  the load-bearing half, since markers make compaction mechanical but the ceiling makes regrowth
+  visible). Test: `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
   and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
   `completed/` (or the paths given) under a date read from `main`'s first-parent history — never
   the clock, so any machine produces the same name; a ledger not yet on `main` (the current unit's
   own, retired in its departure commit) is left for the next pickup when unnamed and refused when
-  named (found by the first real pickup, DL-2);
+  named (found by the first real pickup, DL-2); since DL-4, `archive` and a `move` to
+  `completed/` end by running `compact` — merged units leave the slate and closed campaigns
+  leave STATUS for `docs/history/<campaign>/status-record.md` (bin and map created, map rows
+  appended in place — `append_row`, never the archive maps' sort — links rewritten, refused on
+  a dangling one);
   `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions
   (`mid-term` / `epic-term`; `archive` is not a `move` target); `check` is the gate. The rewrite
   is resolution-based — a link changes only if it *resolved* to the moved file — and covers the

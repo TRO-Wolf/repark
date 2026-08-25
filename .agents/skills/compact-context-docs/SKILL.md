@@ -46,8 +46,12 @@ leaves them, not because it disappears.
 
 0. **File the finished ledgers — mechanically, before reading anything.** `make ledger-archive`
    moves every `task/ledgers/completed/` ledger to `archive/yyyy-mm/` under its merge date,
-   rewrites every link to it across the tree and stages the result; it costs no tokens and is
-   idempotent. Nothing in this step needs judgement, so nothing in it should be done by hand.
+   rewrites every link to it across the tree, then **compacts** — the filed units leave the slate
+   whole and any workstream whose marker says `state=closed` leaves STATUS.md for its
+   `docs/history/` bin — and runs `check-docs-compaction`; all staged, no tokens, idempotent.
+   Nothing in this step needs judgement, so nothing in it should be done by hand. **Delete,
+   don't narrate:** a merged unit gets no departure line anywhere; its ledger and PR are the
+   record.
 1. **True up STATUS.md first.** Read what actually landed (the merged PRs, the shipped tag),
    then rewrite the affected STATUS.md sections to the new truth and refresh the last-updated
    stamp. Everything downstream reconciles *to* STATUS.md.
@@ -61,8 +65,10 @@ leaves them, not because it disappears.
    the same commit. New directory → new `map.md` + a Contents row in the parent's map.
 5. **Archive what closed.** The unit's own ledger leaves `staging/` in the departure commit:
    `python3 scripts/ledger_lifecycle.py move task/ledgers/staging/<unit>-ledger.md completed`
-   (a charter stays in `staging/` until the event it names has happened). A finished campaign's
-   brief and design move to `docs/history/` per [docs/history/map.md](../../../docs/history/map.md),
+   (a charter stays in `staging/` until the event it names has happened; the move also takes the
+   unit off the slate). A finished campaign's STATUS bullet leaves by its marker — set
+   `state=closed closed=<date> by=<PR> history=docs/history/<dir>` under the owner's ruling and
+   `compact` files it. Its brief and design move to `docs/history/` per [docs/history/map.md](../../../docs/history/map.md),
    linking to the campaign's ledgers in the monthly archive rather than carrying them; its
    cost/caught/missed row lands in `task/metrics.md`; `briefs/` keeps only running campaigns
    (or only its map).
@@ -80,8 +86,10 @@ one narrow subject:
 1. **Confirm the base.** Fetch, confirm the prior unit's PR actually merged, and confirm the local
    base contains that unit's departure edit (the slate/brief row it removed or rewrote, and its
    ledger in `task/ledgers/completed/`). If either is missing, stop and rebase before anything else.
-2. **File the finished ledgers.** `make ledger-archive` (step 0 above) — the prior unit's ledger
-   takes its archive name from the merge date, so this runs only after the merge is on `main`.
+2. **File the finished ledgers, and let them leave.** `make ledger-archive` (step 0 above) — the
+   prior unit's ledger takes its archive name from the merge date, so this runs only after the
+   merge is on `main`; the same command takes the unit off the slate and files any closed
+   campaign. Do not write a departure line for it anywhere.
 3. **Run the drift checks.** `make check-map-sync` (map links), `make check-ledgers` and `make ci`
    as usual — structural drift is read from a gate, not from memory.
 4. **Scope the compaction to the just-merged delta only.** Steps 1–5 above apply to what that PR
@@ -103,6 +111,10 @@ the ritual's step 7 already forbids.
   prose claims. Step 3 exists for them.
 - "Compacting" STATUS.md by deleting a deferred-work item loses the only record that the
   deferral was deliberate. Move it or keep it; never silently drop it.
+- The opposite failure is the one DL-4 measured: every pickup *appended* a "merged as #N and
+  left" line and none removed anything, and the live files grew to 66 kB and 27 kB. Departure
+  lines are the disease; the markers and `compact` are the cure, and `check-docs-compaction`'s
+  byte ceiling is what tells you the disease is back.
 - Adapter files (this directory included) must stay pointer-thin. If a truth-up is about to
   add a project fact to an adapter, the fact belongs in the spine and the adapter gets a
   pointer.

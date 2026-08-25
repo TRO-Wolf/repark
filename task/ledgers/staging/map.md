@@ -5,14 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [dl-4-live-doc-compaction-charter-ledger.md](dl-4-live-doc-compaction-charter-ledger.md) —
-  **DL-4 (chartered 2026-08-25), sequenced ahead of V3E-4:** the live documents carry only
-  live state. Measured: `STATUS.md` 65 kB with a 36 kB "Active workstreams" whose closed
-  campaign diaries never left, `briefs/next-sequence.md` 26 kB of which ~5 kB is live. Design:
-  HTML-comment block markers on both files, `ledger_lifecycle.py compact` (closed blocks move
-  to `docs/history/<campaign>/`, merged units leave the slate with no obituary), a
-  `check-docs-compaction` gate with a byte ratchet, one migration, and the rule text. Eight
-  clauses, all `OPEN` until the unit runs.
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

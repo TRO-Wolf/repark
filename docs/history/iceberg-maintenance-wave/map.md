@@ -12,6 +12,7 @@ Archived record of the Iceberg write-path maintenance wave (2026-08-21 →
 - [slate.md](slate.md) — the MW-0…MW-5 slate, with the same dated correction.
 
 Unit ledgers are in [task/ledgers/](../../../task/ledgers/map.md), not here.
+- [status-record.md](status-record.md) — the workstream bullet as STATUS.md carried it, cut 2026-08-23.
 
 ## Pointers
 

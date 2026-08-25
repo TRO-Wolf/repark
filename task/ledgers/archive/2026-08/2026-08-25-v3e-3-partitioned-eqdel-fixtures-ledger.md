@@ -1,8 +1,8 @@
 # V3E-3 — partitioned + equality-delete v3 fixtures
 
 **Date:** 2026-08-24 · **Branch:** `feat/v3e-3-partitioned-eqdel-fixtures` · **Base:** `07f5446` (`origin/main`, #235) ·
-**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ·
-**Sequence:** [briefs/next-sequence.md](../../../briefs/next-sequence.md) ·
+**Intake:** [task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../../../roadmap/epic-term/v1-0-iceberg-v3-northstar.md) ·
+**Sequence:** [briefs/next-sequence.md](../../../../briefs/next-sequence.md) ·
 **SEPMO path:** STANDARD (`critic_engine: ccc`, `/sepmo-core`) · **claims_critic:** true ·
 **max_cycles:** 2 · **severity_floor:** S1 · **risk_tier:** high (Iceberg delete-file reads)
 

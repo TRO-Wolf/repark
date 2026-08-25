@@ -7,6 +7,13 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25; 11 tests, incl. the Critic's three
+  pinned findings and the two tree pins C-006 / C-008):** the live-document compaction on
+  a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a
+  closed campaign is cut from STATUS into its history bin with links rewritten (C-003), the
+  touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
+  row is one row; a marker in a code span is prose), and the gate red
+  on each of its four classes and green on the compacted tree (C-005).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;
   a bad verdict cell, a duplicate id and a row without evidence go red; an unpinned `PROVEN`
@@ -27,12 +34,14 @@ JVM, no repark required). See [../map.md](../map.md).
   `check`: a ledger outside the bins, an archive prefix disagreeing with its
   month, a dead ledger link in a non-map document, and the frozen rule (link
   repair and a prepended errata pass; a prose edit and a deletion fail).
-- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22):** five presence
+- `test_pyc_6_docstring_presence.py` — **PYC-6 (2026-08-22; the prose-homes pin retargeted to PYC's
+  history record by DL-4, 2026-08-25):** five presence
   rules only; style `D` not in py-lint select; tests keep the `D` per-file
   ignore; EXCEPTIONS is 39 keys summing to 136, no `/tests/` path, sorted;
   Ruff pin matches the Makefile; dual-wired `make ci` + ci.yml; on the
   pre-commit hook (conventions stays off).
-- `test_pyc_5_close.py` — **PYC-5 (2026-08-22):** nested-def EXCEPTIONS empty;
+- `test_pyc_5_close.py` — **PYC-5 (2026-08-22; the prose-homes pin retargeted to PYC's history
+  record and its slate copy dropped by DL-4, 2026-08-25):** nested-def EXCEPTIONS empty;
   DATACLASS leftover is dual-wire only; facade tests no longer ignore ANN201;
   conventions guard is not on the pre-commit hook and stays in `make ci` +
   ci.yml.

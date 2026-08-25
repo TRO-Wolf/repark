@@ -25,6 +25,7 @@ The lossless audit is [promotion-ledger.md](promotion-ledger.md). Start there.
 - [g7-decimal-ledger.md](g7-decimal-ledger.md) — G-7 decimal128 differential corpus (Python half).
 - [n2-merge-ledger.md](n2-merge-ledger.md) — N-2 / H-2 gap G3 MERGE INTO differential corpus.
 - [g8-file-size-ledger.md](g8-file-size-ledger.md) — G-8 general Rust file-size gate.
+- [increments-2026-08-15.md](increments-2026-08-15.md) — the three 2026-08-15 wave records (conductor-13/14/15 + the Opus work groups), cut from STATUS.md by DL-4 on 2026-08-25.
 
 ## I want to...
 

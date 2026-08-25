@@ -196,6 +196,12 @@ jobs:
       # Dual-wired with `make check-ledger-grammar`. SSOT: scripts/check_ledger_grammar.py (DL-2).
       - name: ledger grammar guard (check_ledger_grammar)
         run: python3 scripts/check_ledger_grammar.py
+      # Live-document guard over STATUS.md + briefs/next-sequence.md: no closed campaign still in
+      # STATUS, no merged unit still on the slate, every workstream inside a `ws` block, byte
+      # ceilings. Dual-wired with `make check-docs-compaction`. SSOT: scripts/check_docs_compaction.py
+      # (DL-4; wired here under a one-time owner grant, 2026-08-25).
+      - name: live-document guard (check_docs_compaction)
+        run: python3 scripts/check_docs_compaction.py
       # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
       # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
       # Mirrors `make workflows-parse`.
