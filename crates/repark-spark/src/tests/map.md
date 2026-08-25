@@ -9,6 +9,10 @@ code is not here — only tests, shared fixtures, and the module manifest.
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `v3_cow.rs` — **V3E-1/V3E-2:** adopted v3 copy-on-write DELETE/UPDATE/MERGE contents
+  pins, MoR refuse control, encryption.key-id does-not-encrypt pin, engine-observable
+  lineage (`next_row_id` reassigns — V3-LINEAGE-1 class on DML), and
+  `V3_MAINTENANCE_ORACLE` (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).

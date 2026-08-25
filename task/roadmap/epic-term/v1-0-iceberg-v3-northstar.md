@@ -60,12 +60,12 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Read: equality deletes alongside DVs; delete-file metadata tables on v3 | ⚠ unmeasured | measured + Spark-compared, or DECLARED | evidence (intake) |
 | Read: `_row_id` / `_last_updated_sequence_number` | ❌ not plannable (registry V3-ROWID-1) | served as columns, Spark-equal | V3-4 |
 | Read/write: v3 types + default values | ❌ absent — no engine surface reaches one | per-feature support or DECLARED | V3-6 (+H6/H7) ← fork F-15 |
-| Table encryption keys (v3, optional) | ❌ absent — **owner ruled 2026-08-24: DECLARED exclusion** | the dated DECLARED registry row (Lane A writes it) | ruled |
+| Table encryption keys (v3, optional) | ❌ absent — **owner ruled 2026-08-24: DECLARED exclusion**; registry `ENC-1` (V3E-1) | the dated DECLARED registry row | ruled |
 | Write: create v3 | ✅ opt-in CREATE/CTAS (`repark.sql.allowCreateFormatVersion3`, default false; V3-2) | stays opt-in until V3-3; default remains v2 | V3-2 |
 | Upgrade: v2 → v3 in place (`ALTER … SET TBLPROPERTIES`, both doors) | 🚫 refuses, pinned (V3-2 kept ALTER refused; C-008) | in-place upgrade behind the create opt-in, or DECLARED | later |
 | Write: append incl. row lineage | ✅ Spark-verified (format-v3-track §2) | stays green + live leg | evidence (intake) |
 | Write: MOR DML via deletion vectors | 🚫 refuses (the R113 guard) | full DML, DV-writing, round-tripped | V3-3 ← fork F-13 |
-| Write: COW DML on an adopted v3 table | ⚠ **reachable and unguarded** — no format-version check, no lineage handling; unmeasured (registry queue V3-COW-1) | measured first; then lineage carried per spec, or guarded until it is | V3-4 ← fork F-7 |
+| Write: COW DML on an adopted v3 table | ⚠ **reachable, unguarded, measured 2026-08-24 (V3E-1)** — contents correct; `next_row_id` reassigns on DELETE/UPDATE/MERGE (registry `V3-COW-1`). Guard-or-not is a later owner ruling | lineage carried per spec, or guarded until it is | V3-4 ← fork F-7 |
 | Write/maintain: partitioned v3 | ❌ unmeasured (format-v3-track §7 — every fixture unpartitioned) | DV writes + compaction proven on partitioned and spec-evolved tables | V3-3 / V3-5 |
 | Maintain: `rewrite_data_files` | 🚫 V3-LINEAGE-1 guard | lineage through rewrite; strands no DVs (V3-DANGLE-1); true `removed_delete_files_count` | V3-5 ← fork F-7 |
 | Maintain: DV / delete-file maintenance | 🚫 B-MOR-3 refusal | DV-aware answer, Spark-compared | V3-5 ← fork F-7 |
@@ -113,12 +113,13 @@ The engine consumes each by rev-pin repin unit (handoff §5); the lanes run in p
   Variant on AWS is S3 Tables-only and region-limited (announced 2026-07-28). Whether S3
   Tables' automatic compaction is deletion-vector-aware is not documented either way; the
   first evidence unit measures it before any v3 table lands there.
-- **The v3 maintenance oracle needs a decision, then a measurement.** V3-0's oracle was
-  PySpark 4.0.1 + Iceberg 1.10.0, because the then-shipping 1.10.0 runtime could not run
-  maintenance procedures under the pinned 4.1.2 (the `DataSourceV2Relation` break recorded
-  under registry MOR-1). The tree now pins the 4.1-matched `iceberg-spark-runtime-4.1` (1.11.0)
-  for the nightly — an untested combination for v3 maintenance. The first evidence unit
-  re-measures which oracle serves v3 and records it.
+- **The v3 maintenance oracle is decided (V3E-2, 2026-08-24).** Live on this machine,
+  **PySpark 4.1.2 + `iceberg-spark-runtime-4.1_2.13:1.11.0`** (zulu-17) **executes** v3
+  `rewrite_data_files` and `expire_snapshots` — the `DataSourceV2Relation` break that
+  blocked 4.1.2+1.10.0 (registry MOR-1) does **not** reproduce on 1.11.0. That pair is
+  the v3 maintenance oracle and matches the nightly pin. CI constant
+  `V3_MAINTENANCE_ORACLE`; verbatim transcript in the V3E-1/2 ledger. V3-0's
+  PySpark 4.0.1 + Iceberg 1.10.0 remains a known-working control, not the named oracle.
 
 ## 6. What this charter does not decide
 

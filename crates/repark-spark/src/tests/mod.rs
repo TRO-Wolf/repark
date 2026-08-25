@@ -33,4 +33,5 @@ mod router;
 mod service_managed_ctas;
 mod time_travel;
 mod transform_overwrite;
+mod v3_cow;
 mod window_temporal_range;
