@@ -317,6 +317,20 @@ def paste_row(text: str, row: str) -> str:
     return "".join(head) + body + "".join(tail)
 
 
+def append_row(text: str, row: str) -> str:
+    """Insert `row` as the last `## Contents` row, keeping the existing order (compaction maps)."""
+    lines = text.splitlines(keepends=True)
+    _start, end = _contents_bounds(lines)
+    if not row.endswith("\n"):
+        row += "\n"
+    head, tail = lines[:end], lines[end:]
+    while head and not head[-1].strip():
+        tail.insert(0, head.pop())
+    if tail and tail[0].strip():
+        tail.insert(0, "\n")
+    return "".join(head) + row + "".join(tail)
+
+
 def _synthesized_row(path: str, text: str) -> str:
     """A map row built from the file's H1 when its old map carried no row for it."""
     title = Path(path).name
@@ -610,12 +624,12 @@ def compact_plan(repo: Path, tracked: list[str]) -> tuple[dict[str, str], list[s
                         f"the {Path(directory).name} campaign's STATUS record, cut "
                         f"{block.attrs['closed']}.\n"
                     )
-                    texts[history_map] = paste_row(parent, row)
+                    texts[history_map] = append_row(parent, row)
             if bin_map in texts or not any(
                 STATUS_RECORD in line for line in (repo / bin_map).read_text().splitlines()
             ):
                 current = texts.get(bin_map) or (repo / bin_map).read_text(encoding="utf-8")
-                texts[bin_map] = paste_row(
+                texts[bin_map] = append_row(
                     current,
                     f"- [{STATUS_RECORD}]({STATUS_RECORD}) — the workstream bullet as STATUS.md "
                     f"carried it, cut {block.attrs['closed']}.\n",

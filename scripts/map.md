@@ -89,8 +89,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   own, retired in its departure commit) is left for the next pickup when unnamed and refused when
   named (found by the first real pickup, DL-2); since DL-4, `archive` and a `move` to
   `completed/` end by running `compact` — merged units leave the slate and closed campaigns
-  leave STATUS for `docs/history/<campaign>/status-record.md` (bin and map created, links
-  rewritten, refused on a dangling one);
+  leave STATUS for `docs/history/<campaign>/status-record.md` (bin and map created, map rows
+  appended in place — `append_row`, never the archive maps' sort — links rewritten, refused on
+  a dangling one);
   `move PATH BIN` is the agent's `staging` → `completed` step and the roadmap promotions
   (`mid-term` / `epic-term`; `archive` is not a `move` target); `check` is the gate. The rewrite
   is resolution-based — a link changes only if it *resolved* to the moved file — and covers the
