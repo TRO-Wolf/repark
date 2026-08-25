@@ -255,6 +255,17 @@ def test_the_parser_refuses_a_malformed_document(text: str, phrase: str) -> None
     ), parsed.findings
 
 
+def test_a_marker_inside_code_is_prose_not_a_marker() -> None:
+    """pins: dl-4-live-doc-compaction-charter/C-001 — code spans and fences are masked."""
+    blocks = _load("doc_blocks")
+    text = (
+        "Rows carry a `<!-- unit id=x -->` marker.\n\n```\n<!-- ws id=y state=open -->\n```\n"
+        "<!-- unit id=z -->\nreal\n<!-- /unit -->\n"
+    )
+    parsed = blocks.parse(text, "briefs/next-sequence.md")
+    assert parsed.findings == [] and [b.id for b in parsed.blocks] == ["z"]
+
+
 def test_a_bullet_outside_any_block_is_found_by_line() -> None:
     """pins: dl-4-live-doc-compaction-charter/C-001 — coverage is a finding, not a convention."""
     blocks = _load("doc_blocks")

@@ -46,6 +46,8 @@ DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 PR = re.compile(r"^#\d+$")
 LEDGER_SUFFIX = "-ledger.md"
 ARCHIVE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
+FENCE = re.compile(r"^\s*(?:```|~~~)")
+CODE_SPAN = re.compile(r"`[^`]*`")
 
 
 class Block:
@@ -62,6 +64,7 @@ class Block:
     def __init__(
         self, kind: str, attrs: dict[str, str], start: int, end: int, inline: bool = False
     ) -> None:
+        """A block of `kind` with its marker attributes over lines [start, end)."""
         self.kind = kind
         self.attrs = attrs
         self.start = start
@@ -80,6 +83,7 @@ class Parsed:
     __slots__ = ("blocks", "findings")
 
     def __init__(self) -> None:
+        """An empty parse: no blocks, no findings."""
         self.blocks: list[Block] = []
         self.findings: list[str] = []
 
@@ -109,14 +113,32 @@ def _validate(kind: str, attrs: dict[str, str], where: str) -> list[str]:
     return findings
 
 
+def _masked(lines: list[str]) -> list[str]:
+    """Each line with its code spans blanked and fenced blocks blanked whole.
+
+    Prose may *talk about* a marker inside backticks (the slate's own rules do);
+    only a marker outside code is a marker.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in lines:
+        if FENCE.match(line):
+            in_fence = not in_fence
+            out.append("")
+            continue
+        out.append("" if in_fence else CODE_SPAN.sub("", line))
+    return out
+
+
 def parse(text: str, path: str) -> Parsed:
     """Parse the markers of one document; every grammar violation is a finding."""
     parsed = Parsed()
     lines = text.splitlines()
     open_block: Block | None = None
-    for index, line in enumerate(lines):
+    for index, masked in enumerate(_masked(lines)):
+        line = lines[index]
         where = f"{path}:{index + 1}"
-        matches = list(MARKER.finditer(line))
+        matches = list(MARKER.finditer(masked))
         if not matches:
             continue
         for match in matches:
