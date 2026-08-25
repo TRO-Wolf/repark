@@ -10,7 +10,8 @@ JVM, no repark required). See [../map.md](../map.md).
 - `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25):** the live-document compaction on
   a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a
   closed campaign is cut from STATUS into its history bin with links rewritten (C-003), the
-  touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001), and the gate red
+  touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
+  row is one row), and the gate red
   on each of its four classes and green on the compacted tree (C-005).
 - `test_dl_2_ledger_grammar.py` — **DL-2 (2026-08-23):** the ledger grammar gate on a scratch
   tree seeded with the script's own `EXCEPTIONS` rows at their ceilings: a clean ledger counts;

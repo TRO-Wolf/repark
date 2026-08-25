@@ -43,7 +43,8 @@ The queue is [the slate](briefs/next-sequence.md).
 
 **Closed campaigns** — records in [docs/history/](docs/history/map.md):
 <!-- closed-campaigns -->
-- **Gamma** — closed 2026-08-01 by #1; record: [other](docs/history/other/README.md)
+- **Gamma** — closed 2026-08-01 by #1; record:
+  [other](docs/history/other/README.md)
 
 ## Known correctness issues
 
@@ -195,16 +196,18 @@ def test_a_closed_campaign_leaves_status_for_its_history_bin(repo: Path) -> None
     assert result.returncode == 0, result.stderr
     status = (repo / "STATUS.md").read_text()
     assert "id=beta" not in status and "Beta wave" in status
-    assert (
-        f"- **Beta wave (B)** — closed 2026-08-19 by #7; record: [{_RECORD}]({_RECORD})" in status
-    )
+    beta_row = f"- **Beta wave (B)** — closed 2026-08-19 by #7; record: [{_RECORD}]({_RECORD})"
+    assert beta_row in status
+    # after the wrapped Gamma row, never inside it: a continuation line belongs to its row
+    assert status.index("  [other](docs/history/other/README.md)") < status.index(beta_row)
     assert "<!-- ws id=alpha" in status  # the open block is untouched
     record = (repo / _RECORD).read_text()
     assert "## Cut from STATUS.md — closed 2026-08-19 by #7" in record
     assert "[design](../../design/beta.md)" in record and "[docs/](../../map.md)" in record
     assert "<!-- ws" not in record
     assert "status-record.md" in (repo / "docs/history/beta/map.md").read_text()
-    assert "[beta/](beta/map.md)" in (repo / "docs/history/map.md").read_text()
+    history_map = (repo / "docs/history/map.md").read_text()
+    assert "[beta/](beta/map.md) — **Beta wave (B)**" in history_map
     sync = subprocess.run(
         [sys.executable, str(_SCRIPTS / "sync_map_md.py"), "--check"],
         capture_output=True,

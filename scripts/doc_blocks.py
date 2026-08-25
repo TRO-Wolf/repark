@@ -171,7 +171,7 @@ def uncovered_bullets(text: str, parsed: Parsed) -> list[int]:
         if line.strip() == CLOSED_LIST_MARKER:
             in_closed_list = True
             continue
-        if in_closed_list and not BULLET.match(line):
+        if in_closed_list and not (BULLET.match(line) or _continues(line)):
             in_closed_list = False
         if inside and BULLET.match(line) and index not in covered and not in_closed_list:
             found.append(index + 1)
