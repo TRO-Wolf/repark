@@ -45,6 +45,28 @@ The SEPMO control plane lives in that same home — [.agents/skills/sepmo/](.age
 moved from a top-level `skills/` tree on 2026-08-25 — so the symlink covers it and `/sepmo` is
 invocable by name. Discoverable is not auto-run: it is invoked deliberately for non-trivial work.
 
+## Claude tool mechanics — process governance is the repo's SEPMO, as bound
+
+A Claude session that governs work runs **the repository's** SEPMO — `/sepmo` from
+[.agents/skills/sepmo/](.agents/skills/sepmo/map.md) under its
+[binding manifest](.agents/skills/sepmo/binding-manifest.md) — and its Critic stage runs the
+engine that manifest binds, `/critic-critic-critic` from
+[.agents/skills/critic-critic-critic/](.agents/skills/critic-critic-critic/map.md). **No user-level
+skill (`~/.claude/skills/`), plugin, or session-local variant of either overrides them:** if one is
+loaded, the repo copy wins and the variant is not consulted. Every Claude session — orchestrator
+or spawned sub-agent — reads the same two skills, so there is one process to follow and one place
+to fix it.
+
+This is the Claude mapping of CCC's tool-neutral spawn contract (the invariants live in the
+skill; only this table is Claude's):
+
+| CCC role shape | Claude mechanic |
+|---|---|
+| read-attack (Critic-1/2/3/4, `git` / verify probes) | an `Explore` agent (reads + shell, no edits) when sub-agent fan-out is opted into per the manifest's `context_break_mechanics`; otherwise the in-thread procedural context break. Each Critic is a **fresh** spawn — never continue a peer Critic's or the Actor's agent. |
+| build (Fixer, `review-and-fix` only) | a `general-purpose` agent; edits only the filed findings. SEPMO units do not use it — remediation is the Actor's cycle. |
+| scratch location | a clone of the unit branch under the session scratch directory — **never the live worktree**. After any fan-out, confirm the live tree's `git status`, stash list and remotes are untouched. |
+| tier | the capability-tier section below applies unchanged (Opus only when the user names Opus). |
+
 ## Claude tool mechanics — capability tiers and sub-agents
 
 These are Claude-family orchestration mechanics, **not** project rules. AGENTS.md "Delegated work"

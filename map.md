@@ -100,7 +100,7 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
 - `.agents/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
   `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc
   truth-up, disk headroom; the portable code-quality convention reasoning; and, since
-  2026-08-25, the SEPMO control plane);
+  2026-08-25, the SEPMO control plane and CCC, the Critic engine it binds);
   each is a thin pointer into the spine, carrying no authoritative facts. See
   [.agents/map.md](.agents/map.md).
 - `.claude/` — one entry, `skills/`, a symlink to `../.agents/skills`. Claude Code only discovers
