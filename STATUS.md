@@ -467,8 +467,9 @@ history-rewrite; provenance and the options weighed:
     `write.delete.granularity` / `MOR-2` for MERGE) are delivered.
     The queue on [briefs/next-sequence.md](briefs/next-sequence.md) now carries
     **Lane A remainder: V3E-3 first** (partitioned + equality-delete v3 fixtures).
-    **V3E-1 + V3E-2 ship in this PR.** V3-3 (deletion-vector writes) remains
-    owner-sequenced. The intake S3 Tables MOR leg stays unsequenced.
+    **V3E-1 + V3E-2 merged as [#235](https://github.com/TRO-Wolf/repark/pull/235).**
+    V3-3 (deletion-vector writes) remains owner-sequenced. The intake S3 Tables
+    MOR leg stays unsequenced.
 
 - **Format-v3 track** (roadmap **A12** in
   [task/roadmap-intake-2026-08-21.md](task/roadmap/mid-term/roadmap-intake-2026-08-21.md), owner-scheduled
@@ -501,14 +502,15 @@ history-rewrite; provenance and the options weighed:
     SQL must still request v3; unspecified create stays v2; ALTER stays refused;
     `rewrite_data_files` still hits `V3-LINEAGE-1`. Ledger:
     [task/ledgers/completed/v3-2-create-v3-opt-in-ledger.md](task/ledgers/archive/2026-08/2026-08-24-v3-2-create-v3-opt-in-ledger.md).
-    **V3E-1 + V3E-2 (this PR):** copy-on-write DELETE/UPDATE/MERGE on a
+    **V3E-1 + V3E-2 ([#235](https://github.com/TRO-Wolf/repark/pull/235)):**
+    copy-on-write DELETE/UPDATE/MERGE on a
     `register_table`-adopted v3 table commit and return the correct rows;
     lineage is **reassigned** (`next_row_id` 3→5/6/7 — registry `V3-COW-1`,
     BACKLOG). Spark 4.1.2+1.11.0 **preserves** `_row_id` on COW DELETE.
     Guard-or-not is a later owner ruling. Table encryption keys: registry
     `ENC-1` (DECLARED exclusion). The v3 maintenance oracle is
     **PySpark 4.1.2 + Iceberg 1.11.0** (northstar §5). Ledger:
-    [task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md).
+    [task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](task/ledgers/archive/2026-08/2026-08-24-v3e-1-2-cow-oracle-ledger.md).
     Next on the track is **V3E-3** (partitioned + equality-delete fixtures)
     on [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes)
     remains owner-sequenced, gated on fork F-13.

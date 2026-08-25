@@ -41,12 +41,13 @@ against the north-star matrix
 ([../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md](../task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md)
 §3); none depends on fork work. The owner's three rulings, all dated 2026-08-24:
 
-1. **Lane A is the next sequence.** V3E-1 + V3E-2 ship in this PR: COW DML on an adopted v3
+1. **Lane A is the next sequence.** V3E-1 + V3E-2 merged as
+   [#235](https://github.com/TRO-Wolf/repark/pull/235): COW DML on an adopted v3
    table commits and **reassigns** lineage (registry `V3-COW-1`, BACKLOG); Spark preserves
    `_row_id` on DELETE. **Guard-or-not is a second owner ruling on those numbers.** The v3
    maintenance oracle is PySpark 4.1.2 + Iceberg 1.11.0. **V3E-3 is #1.**
 2. **Table encryption keys are a dated DECLARED exclusion from the v1.0 gate.** Registry
-   `ENC-1` (this PR).
+   `ENC-1` ([#235](https://github.com/TRO-Wolf/repark/pull/235)).
 3. **A one-time scoped `.github/` grant** for V3E-5 only: add the v3 fixture leg to the nightly
    parity workflow, in its own reviewable PR. No other workflow edit rides it.
 
@@ -191,10 +192,10 @@ against the 24-hour floor, which MW-3's floor pin does not cover. Ledger:
 (`file` / `partition`) on RePark-owned MERGE; Spark default `file`; fork SQL
 `DELETE`/`UPDATE` still partition-group. Ledger:
 [../task/ledgers/completed/mw-9-delete-granularity-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-mw-9-delete-granularity-ledger.md).
-**V3E-1 + V3E-2 ship in this PR** and leave this file: adopted v3 COW DELETE/UPDATE/MERGE
+**V3E-1 + V3E-2 merged as [#235](https://github.com/TRO-Wolf/repark/pull/235)** and leave this file: adopted v3 COW DELETE/UPDATE/MERGE
 contents correct; lineage reassigned (`next_row_id` 3→5/6/7); Spark DELETE preserves
 `_row_id`; ENC-1 DECLARED; maintenance oracle `pyspark-4.1.2+iceberg-1.11.0`. Ledger:
-[../task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](../task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md).
+[../task/ledgers/completed/v3e-1-2-cow-oracle-ledger.md](../task/ledgers/archive/2026-08/2026-08-24-v3e-1-2-cow-oracle-ledger.md).
 
 **Owner-chartered 2026-08-23:** the post-MW remainder is sequenced. RP-1 led
 (the fork batch the intake treated as future had landed). Then **MW-6**
