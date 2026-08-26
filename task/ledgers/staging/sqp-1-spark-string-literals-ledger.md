@@ -196,7 +196,7 @@ All green (revert-red-valid; see above). Pin homes:
 
 ### Module size
 
-`crates/repark-spark/src/spark_literals.rs` = 397 lines (ceiling 1500). `spark_ast.rs` grew by the
+`crates/repark-spark/src/spark_literals.rs` = 415 lines (ceiling 1500). `spark_ast.rs` grew by the
 BINARY-cast section (well under ceiling).
 
 ### SELF_LOGIC_REVIEW
