@@ -235,14 +235,58 @@ async fn adjacent_literals_concatenate() {
     assert_eq!(string_value(&ctx, &catalogs, "'a\\\\' 'b'").await, "a\\b");
     // Three-way, with a control escape in the middle segment.
     assert_eq!(string_value(&ctx, &catalogs, "'x' '\\t' 'y'").await, "x\ty");
-    // COPY is DataFusion-native, not Spark SQL: its `OPTIONS ('k' 'v')` adjacency is a key/value
-    // pair, NOT concatenation, so the whole statement is left Generic (the facade's path writer
-    // runs COPY through this door — merging the pairs would break every CSV/parquet write).
-    let copy = "COPY (SELECT 1) TO '/x' STORED AS CSV OPTIONS ('format.has_header' 'True')";
-    assert!(matches!(
-        crate::spark_literals::canonicalize(copy).unwrap(),
-        Cow::Borrowed(_)
-    ));
+}
+
+/// pins: sqp-1-spark-string-literals/C-001, C-002
+///
+/// A run of single quotes is Spark's escaped-quote-inside-quotes, NOT a triple-quoted string —
+/// Spark has none. BigQuery's lexer read `'''…'''` as a triple-quoted token, so `''''` opened a
+/// triple quote (an unterminated-literal TokenizerError here), `'''a\tb'''` silently dropped a
+/// quote, and a facade value beginning with an apostrophe crashed. [`SparkLexDialect`] keeps
+/// Generic's no-triple-quote rule, so these match the oracle. Reverting to `BigQueryDialect` reds
+/// every line.
+#[tokio::test]
+async fn quote_runs_are_not_triple_quoted_strings() {
+    let (ctx, catalogs) = expr_ctx();
+    // `''''` → `'` (one quote), `''''''` → `''` (two): a doubled `''` is one in-literal quote.
+    assert_eq!(string_value(&ctx, &catalogs, "''''").await, "'");
+    assert_eq!(string_value(&ctx, &catalogs, "''''''").await, "''");
+    // `'''x'` → `'x` (quote, x): an escaped quote then a plain char, not a triple-quote start.
+    assert_eq!(string_value(&ctx, &catalogs, "'''x'").await, "'x");
+    // `'''a\tb'''` → quote, a, TAB, b, quote (length 5) — BigQuery gave `a<TAB>b` (length 4).
+    let atab = string_value(&ctx, &catalogs, "'''a\\tb'''").await;
+    assert_eq!(atab, "'a\tb'");
+    assert_eq!(atab.chars().count(), 5);
+}
+
+/// pins: sqp-1-spark-string-literals/C-003
+///
+/// A DataFusion-native statement (`COPY …`, `CREATE [OR REPLACE] EXTERNAL TABLE …`) keeps Generic
+/// literal semantics: its `OPTIONS ('k' 'v')` pairs are DataFusion's key/value grammar, NOT Spark
+/// concatenation, so the front door leaves the whole statement untouched (`Cow::Borrowed`). The
+/// facade's path writer runs COPY through this door and its readers may issue CREATE EXTERNAL
+/// TABLE; canonicalising either would merge `'k' 'v'` into `'kv'`. Reverting the carve-out reds
+/// each line (the pairs would merge → `Cow::Owned`). The contrast line proves the merge is live in
+/// a NON-native statement, so the carve-out is what protects these two.
+#[test]
+fn datafusion_native_statements_keep_generic_literals() {
+    for sql in [
+        "COPY (SELECT 1) TO '/x' STORED AS CSV OPTIONS ('format.has_header' 'True')",
+        "CREATE EXTERNAL TABLE t STORED AS PARQUET LOCATION '/x' OPTIONS ('k' 'v')",
+        "CREATE OR REPLACE EXTERNAL TABLE t STORED AS PARQUET LOCATION '/x' OPTIONS ('k' 'v')",
+    ] {
+        assert!(
+            matches!(
+                crate::spark_literals::canonicalize(sql).unwrap(),
+                Cow::Borrowed(_)
+            ),
+            "`{sql}` is DataFusion-native and must be left Generic (its OPTIONS pairs must not merge)"
+        );
+    }
+    // Contrast: the same `'k' 'v'` adjacency in a Spark statement DOES concatenate (E7), which is
+    // exactly what the carve-out suppresses for the native statements above.
+    let merged = crate::spark_literals::canonicalize("SELECT 'k' 'v'").unwrap();
+    assert_eq!(merged.as_ref(), "SELECT 'kv'");
 }
 
 /// pins: sqp-1-spark-string-literals/C-004
@@ -524,14 +568,35 @@ async fn table_property(catalogs: &CatalogRegistry, table: &str, key: &str) -> S
 /// pins: sqp-1-spark-string-literals/C-010
 ///
 /// The front-door canonicaliser has exactly one production caller — the grep pin that proves the
-/// pass is applied once per `router::execute` and nowhere else. Scans the crate's top-level
-/// modules (not `tests/`) for the call.
+/// pass is applied once per `router::execute` and nowhere else. Walks `crates/repark-spark/src`
+/// **recursively** (a `pub(crate)` fn can be called from any module, including a subdirectory one),
+/// skipping the `tests/` subtree so the many test call sites here do not count. `python/` is not
+/// walked: the facade cannot call a Rust private fn.
 #[test]
 fn front_door_has_one_caller() {
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut callers = Vec::new();
-    for entry in std::fs::read_dir(&src).expect("read src dir") {
+    collect_canonicalize_callers(&src, &mut callers);
+    assert_eq!(
+        callers.len(),
+        1,
+        "canonicalize must have exactly one caller (the front door); found: {callers:?}"
+    );
+}
+
+/// Recurse `dir`, appending `path:line` for every production line that names
+/// `spark_literals::canonicalize`. Any directory named `tests` (where the test call sites live) is
+/// skipped so only production callers are counted.
+fn collect_canonicalize_callers(dir: &std::path::Path, callers: &mut Vec<String>) {
+    for entry in std::fs::read_dir(dir).expect("read src dir") {
         let path = entry.expect("dir entry").path();
+        if path.is_dir() {
+            if path.file_name().and_then(|name| name.to_str()) == Some("tests") {
+                continue;
+            }
+            collect_canonicalize_callers(&path, callers);
+            continue;
+        }
         if path.extension().and_then(|e| e.to_str()) != Some("rs") {
             continue;
         }
@@ -542,10 +607,22 @@ fn front_door_has_one_caller() {
             }
         }
     }
+}
+
+/// pins: sqp-1-spark-string-literals/C-010
+///
+/// The Spark door's executing parse runs under `Generic` — the truth the module doc rests on when
+/// it argues the canonical output cannot be escape-processed a second time. `extension::
+/// apply_spark_parser_dialect` would set `Databricks` but is dead code (FNP-4b), so the session
+/// keeps DataFusion's default. If it is ever wired, this reds and the module doc must change with
+/// it.
+#[test]
+fn spark_door_executes_with_generic_dialect() {
+    let (ctx, _catalogs) = expr_ctx();
     assert_eq!(
-        callers.len(),
-        1,
-        "canonicalize must have exactly one caller (the front door); found: {callers:?}"
+        ctx.state().config().options().sql_parser.dialect,
+        datafusion::config::Dialect::Generic,
+        "the Spark door parses under Generic; the module doc's re-tokenise argument depends on it"
     );
 }
 

@@ -100,14 +100,19 @@ wrapper.
   unchanged (that it persists an Iceberg table at all predates this branch). **SQP-1:**
   `rewrite_binary_casts` maps `CAST(x AS BINARY)` → `BYTEA` (both cast kinds), and
   `refuse_illegal_binary_cast` refuses a numeric/bool/date/decimal source on the planned tree
-  (Spark `DATATYPE_MISMATCH`) — DataFusion would silently cast an int to bytes otherwise.
+  (Spark `DATATYPE_MISMATCH`) — DataFusion would silently cast an int to bytes otherwise. The
+  refusal threads the **cast kind**: only a plain `CAST` of an integer quotes
+  `CAST_WITH_CONF_SUGGESTION` (the ANSI-off suggestion); `TRY_CAST` of any source, and every
+  non-integer, quote `CAST_WITHOUT_SUGGESTION` (oracle-measured).
 - `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that
   rewrites Spark single-quoted string-literal escapes once (the rule table + oracle live in the
-  module doc). BigQuery-lexed, span-replaced, Generic-canonical output; the sole caller is
-  `router::execute_with_read_only` (grep-pinned). Raw-string and adjacent-literal (Spark
-  concatenation) handling included. **`COPY` is skipped** — it is DataFusion-native, not Spark
-  SQL, and its `OPTIONS ('k' 'v')` adjacency is a key/value pair, not concatenation (the facade's
-  path writer runs COPY through this door).
+  module doc). Lexed with `SparkLexDialect` (Generic + backslash escape, **no** triple-quoted
+  strings — so `''''` is one quote, not a triple-quote start), span-replaced, Generic-canonical
+  output; the sole caller is `router::execute_with_read_only` (grep-pinned, recursive). Raw-string
+  and adjacent-literal (Spark concatenation) handling included. **DataFusion-native statements are
+  skipped** — `COPY` and `CREATE [OR REPLACE] EXTERNAL TABLE` are not Spark SQL, and their
+  `OPTIONS ('k' 'v')` adjacency is a key/value pair, not concatenation (the facade's path writer
+  runs COPY through this door and its readers may issue CREATE EXTERNAL TABLE).
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

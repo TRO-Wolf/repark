@@ -191,6 +191,45 @@ async fn cast_to_binary_refuses_illegal_sources() {
 
 /// pins: sqp-1-spark-string-literals/C-009
 ///
+/// `TRY_CAST(<x> AS BINARY)` over a Spark-illegal source refuses like `CAST` — but always with
+/// `CAST_WITHOUT_SUGGESTION`, never the `CAST_WITH_CONF_SUGGESTION` ("with ANSI mode on") clause
+/// that a **plain `CAST` of an integer** carries: Spark offers the ANSI-off suggestion only for
+/// that one case. Measured `<pyspark-4.1.2-oracle>`: `TRY_CAST(1 AS BINARY)` / `TRY_CAST(1L …)` /
+/// `TRY_CAST(true …)` all report `CAST_WITHOUT_SUGGESTION`. Reverting the cast-kind thread reds the
+/// INT/BIGINT lines (they would regress to `CAST_WITH_CONF_SUGGESTION`).
+#[tokio::test]
+async fn try_cast_to_binary_never_suggests_ansi_off() {
+    let (ctx, catalogs) = binary_expr_ctx();
+    for (expr, source) in [
+        ("TRY_CAST(CAST(1 AS INT) AS BINARY)", "INT"),
+        ("TRY_CAST(1L AS BINARY)", "BIGINT"),
+        ("TRY_CAST(true AS BINARY)", "BOOLEAN"),
+    ] {
+        let error = execute(&ctx, &catalogs, &format!("SELECT {expr}"))
+            .await
+            .expect_err(&format!("`{expr}` must refuse"))
+            .to_string();
+        assert!(
+            error.contains("DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION")
+                && error.contains(source)
+                && !error.contains("CAST_WITH_CONF_SUGGESTION"),
+            "`{expr}` must refuse WITHOUT the ANSI-off suggestion, naming {source}, got: {error}"
+        );
+    }
+    // Control: a plain `CAST` of the SAME integer DOES carry the ANSI-off suggestion — proving the
+    // two arms are distinguished by cast kind, not source type alone.
+    let plain = execute(&ctx, &catalogs, "SELECT CAST(1L AS BINARY)")
+        .await
+        .expect_err("plain CAST must refuse")
+        .to_string();
+    assert!(
+        plain.contains("DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION"),
+        "a plain CAST of BIGINT keeps CAST_WITH_CONF_SUGGESTION, got: {plain}"
+    );
+}
+
+/// pins: sqp-1-spark-string-literals/C-009
+///
 /// The cast rewrite must not touch a `BINARY` **column** in DDL: `CREATE TABLE (b BINARY)` still
 /// creates an Iceberg `binary` column (the rewrite is scoped to `Expr::Cast`, and DDL is
 /// intercepted before the passthrough parse).

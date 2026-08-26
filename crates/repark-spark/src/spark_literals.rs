@@ -15,10 +15,22 @@
 //! it is never re-processed — that is what keeps the pass exactly-once (charter C-005 / C-010).
 //!
 //! **The output is Generic-canonical.** Each rewritten literal is re-quoted as a plain `'…'` with
-//! every embedded `'` doubled and no backslash meaning. The executing parse (DataFusion's session
-//! dialect is `Generic`) and the router's `Databricks` routing parse both keep backslashes literal
-//! and both fold `''`→`'`, so the canonical form re-tokenises to the same value under either —
-//! the value cannot be escape-processed a second time.
+//! every embedded `'` doubled and no backslash meaning. Both parses that follow read backslashes
+//! literally and fold `''`→`'`: the router's routing parse (`repark_sql::router::PARSER_DIALECT`,
+//! `Generic`) and DataFusion's executing parse (the session's `sql_parser.dialect`, which **is**
+//! `Generic` — `extension::apply_spark_parser_dialect` would set `Databricks` but is dead code,
+//! not wired, FNP-4b; `spark_door_executes_with_generic_dialect` pins that the runtime dialect is
+//! Generic). So the canonical form re-tokenises to the same value under either — the value cannot
+//! be escape-processed a second time.
+//!
+//! **The lexing dialect is [`SparkLexDialect`], not `BigQuery`.** The pre-tokenise pass must read
+//! `\'` as an escape (so it does not end the literal) yet must NOT know Spark-absent syntax.
+//! `BigQuery` lexes `\'` correctly but also lexes `'''…'''` as a *triple-quoted* string, which Spark
+//! has no notion of: `''''` (four quotes, Spark's escaped-quote-inside-quotes for one `'`) opened
+//! a triple-quoted token, and `'''a\tb'''` silently dropped a quote while a facade value beginning
+//! with an apostrophe (`sql_string_literal("'tis")` → `'''tis'`) crashed as an unterminated triple
+//! quote. [`SparkLexDialect`] is `Generic` in every tokeniser decision except the backslash rule,
+//! and Generic has no triple-quoted strings.
 //!
 //! **The rules (Spark 4.1.2, `spark.sql.parser.escapedStringLiterals=false`, measured against the
 //! live oracle `<pyspark-4.1.2-oracle>`; the charter ledger holds the full transcript):**
@@ -47,10 +59,13 @@
 //! double-quoted identifiers are never touched (E26; double-quoted string literals stay OUT of
 //! scope — FNP-4b, docs/spark-sql-iceberg-parity.md §7).
 
+use std::any::TypeId;
 use std::borrow::Cow;
+use std::iter::Peekable;
+use std::str::Chars;
 
 use datafusion::error::{DataFusionError, Result};
-use datafusion::sql::sqlparser::dialect::BigQueryDialect;
+use datafusion::sql::sqlparser::dialect::{Dialect, GenericDialect};
 use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Tokenizer};
 
@@ -58,6 +73,99 @@ use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Toke
 /// `\U` value outside the scalar range. Measured `'\ud83d'` → `?` (U+003F), Java's UTF-8 encoder
 /// replacement, never U+FFFD. A single home so the rule and the pins quote the same constant.
 const UNREPRESENTABLE: char = '\u{003F}';
+
+/// The dialect the pre-tokenise pass lexes with: [`GenericDialect`] in every tokeniser decision
+/// **except** that a backslash escapes inside a single-quoted string (`\'` does not end the
+/// literal — E5), which is how Spark's lexer reads it and Generic does not. It is deliberately
+/// NOT `BigQueryDialect`: `BigQuery` would also lex `'''…'''` as a triple-quoted string, a form
+/// Spark has no notion of (see the module doc — `''''` is one quote, not a triple-quote start).
+///
+/// The [`Dialect::dialect`] override returns `GenericDialect`'s `TypeId` so the tokeniser's
+/// concrete-type checks — `dialect_of!(self is … | GenericDialect)`, which gate the `r'…'`/`R'…'`
+/// raw-string and `b'…'` byte-string prefixes and are NOT trait-method-gated — fire exactly as
+/// they do for Generic. Every trait method the tokeniser consults is forwarded to the inner
+/// `GenericDialect`, so no other lexing decision can drift; only the backslash rule differs. This
+/// is the `WrappedDialect` pattern sqlparser's own tests document.
+#[derive(Debug)]
+struct SparkLexDialect(GenericDialect);
+
+impl Dialect for SparkLexDialect {
+    /// Preserve `GenericDialect`'s identity so the raw-/byte-string prefix checks lex as Generic.
+    fn dialect(&self) -> TypeId {
+        self.0.dialect()
+    }
+
+    /// The one behaviour that differs from Generic: `\` escapes inside a single-quoted string, so
+    /// `\'` does not terminate the literal (E5) and `'a\tb'` is one token — Spark's lexer.
+    fn supports_string_literal_backslash_escape(&self) -> bool {
+        true
+    }
+
+    // Every other tokeniser-consulted method forwards to GenericDialect verbatim.
+    fn is_identifier_start(&self, ch: char) -> bool {
+        self.0.is_identifier_start(ch)
+    }
+    fn is_identifier_part(&self, ch: char) -> bool {
+        self.0.is_identifier_part(ch)
+    }
+    fn is_delimited_identifier_start(&self, ch: char) -> bool {
+        self.0.is_delimited_identifier_start(ch)
+    }
+    fn is_nested_delimited_identifier_start(&self, ch: char) -> bool {
+        self.0.is_nested_delimited_identifier_start(ch)
+    }
+    fn peek_nested_delimited_identifier_quotes(
+        &self,
+        chars: Peekable<Chars<'_>>,
+    ) -> Option<(char, Option<char>)> {
+        self.0.peek_nested_delimited_identifier_quotes(chars)
+    }
+    fn is_custom_operator_part(&self, ch: char) -> bool {
+        self.0.is_custom_operator_part(ch)
+    }
+    fn supports_triple_quoted_string(&self) -> bool {
+        self.0.supports_triple_quoted_string()
+    }
+    fn supports_quote_delimited_string(&self) -> bool {
+        self.0.supports_quote_delimited_string()
+    }
+    fn supports_string_escape_constant(&self) -> bool {
+        self.0.supports_string_escape_constant()
+    }
+    fn supports_unicode_string_literal(&self) -> bool {
+        self.0.supports_unicode_string_literal()
+    }
+    fn supports_numeric_literal_underscores(&self) -> bool {
+        self.0.supports_numeric_literal_underscores()
+    }
+    fn supports_numeric_prefix(&self) -> bool {
+        self.0.supports_numeric_prefix()
+    }
+    fn supports_multiline_comment_hints(&self) -> bool {
+        self.0.supports_multiline_comment_hints()
+    }
+    fn supports_nested_comments(&self) -> bool {
+        self.0.supports_nested_comments()
+    }
+    fn requires_single_line_comment_whitespace(&self) -> bool {
+        self.0.requires_single_line_comment_whitespace()
+    }
+    fn supports_geometric_types(&self) -> bool {
+        self.0.supports_geometric_types()
+    }
+    fn supports_pipe_operator(&self) -> bool {
+        self.0.supports_pipe_operator()
+    }
+    fn supports_dollar_placeholder(&self) -> bool {
+        self.0.supports_dollar_placeholder()
+    }
+    fn supports_dollar_as_money_prefix(&self) -> bool {
+        self.0.supports_dollar_as_money_prefix()
+    }
+    fn ignores_wildcard_escapes(&self) -> bool {
+        self.0.ignores_wildcard_escapes()
+    }
+}
 
 /// ===========================================================================================
 /// Rewrite every single-quoted string literal in `sql` to the value Spark 4.1.2's lexer would
@@ -83,21 +191,24 @@ pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     if !sql.as_bytes().contains(&b'\'') && !sql.as_bytes().contains(&b'\\') {
         return Ok(Cow::Borrowed(sql));
     }
-    // BigQuery is the one stock dialect that both lexes `\'` as an escape (so it does not end the
-    // literal) AND recognises `r'…'` raw strings; `with_unescape(false)` keeps the raw between-quote
-    // text so this module — not sqlparser, whose escape rules differ from Spark's — applies Spark's
-    // rules. Only string-literal spans are consumed from this tokenisation; everything else is
-    // copied from the source, so BigQuery's other lexing choices cannot reach the output.
-    let tokens = Tokenizer::new(&BigQueryDialect {}, sql)
+    // [`SparkLexDialect`] lexes `\'` as an escape (so it does not end the literal) and recognises
+    // `r'…'` raw strings while — unlike `BigQuery` — having no triple-quoted strings; `with_unescape
+    // (false)` keeps the raw between-quote text so this module, not sqlparser (whose escape rules
+    // differ from Spark's), applies Spark's rules. Only string-literal spans are consumed from this
+    // tokenisation; everything else is copied from the source, so no other lexing choice reaches
+    // the output.
+    let tokens = Tokenizer::new(&SparkLexDialect(GenericDialect {}), sql)
         .with_unescape(false)
         .tokenize_with_location()
         .map_err(|error| DataFusionError::SQL(Box::new(ParserError::from(error)), None))?;
-    // `COPY … TO … OPTIONS ('key' 'value')` is a DataFusion-native statement, not Spark SQL: its
-    // `OPTIONS` pairs are adjacent quoted words, NOT Spark string concatenation, and its literals
-    // (paths, escape chars) keep Generic semantics. The facade's path writer runs COPY through this
-    // door, so canonicalising it would merge every `'key' 'value'` pair into one literal. Spark has
-    // no COPY statement, so nothing is lost by leaving it Generic.
-    if first_significant_word_is(&tokens, "COPY") {
+    // A DataFusion-native statement (`COPY …`, or `CREATE [OR REPLACE] EXTERNAL TABLE …`) is NOT
+    // Spark SQL: its `OPTIONS ('key' 'value')` pairs are adjacent quoted words in DataFusion's own
+    // grammar — key/value pairs, NOT Spark string concatenation — and its literals (paths, escape
+    // chars) keep Generic semantics. The facade's path writer runs COPY through this door and its
+    // readers may issue CREATE EXTERNAL TABLE, so canonicalising either would merge every
+    // `'key' 'value'` pair into one literal. Spark has neither statement, so nothing is lost by
+    // leaving them Generic.
+    if is_datafusion_native_statement(&tokens) {
         return Ok(Cow::Borrowed(sql));
     }
     let regions = plan_literal_regions(&tokens);
@@ -107,14 +218,49 @@ pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     Ok(Cow::Owned(apply_regions(sql, &regions)))
 }
 
-/// True when the first non-whitespace token is the given keyword word (case-insensitive).
-fn first_significant_word_is(tokens: &[TokenWithSpan], keyword: &str) -> bool {
-    tokens
-        .iter()
-        .find(|token| !matches!(token.token, Token::Whitespace(_)))
-        .is_some_and(|token| {
-            matches!(&token.token, Token::Word(word) if word.value.eq_ignore_ascii_case(keyword))
-        })
+/// The leading significant word tokens (whitespace skipped), up to `max`. Stops at the first
+/// non-word significant token, so a leading `(` or literal yields fewer words than asked.
+fn leading_significant_words(tokens: &[TokenWithSpan], max: usize) -> Vec<&str> {
+    let mut words: Vec<&str> = Vec::new();
+    for token in tokens {
+        match &token.token {
+            Token::Whitespace(_) => {}
+            Token::Word(word) => {
+                words.push(word.value.as_str());
+                if words.len() == max {
+                    break;
+                }
+            }
+            _ => break,
+        }
+    }
+    words
+}
+
+/// True for a statement DataFusion parses natively and Spark has no equivalent of, whose string
+/// literals therefore keep Generic semantics and must NOT be canonicalised: `COPY …`, or
+/// `CREATE [OR REPLACE] EXTERNAL TABLE …` (its `OPTIONS ('k' 'v')` pair grammar is not Spark's).
+fn is_datafusion_native_statement(tokens: &[TokenWithSpan]) -> bool {
+    let words = leading_significant_words(tokens, 5);
+    let eq = |a: &&str, b: &str| a.eq_ignore_ascii_case(b);
+    match words.as_slice() {
+        [copy, ..] if eq(copy, "COPY") => true,
+        [create, external, table, ..]
+            if eq(create, "CREATE") && eq(external, "EXTERNAL") && eq(table, "TABLE") =>
+        {
+            true
+        }
+        [create, or_, replace, external, table]
+            if eq(create, "CREATE")
+                && eq(or_, "OR")
+                && eq(replace, "REPLACE")
+                && eq(external, "EXTERNAL")
+                && eq(table, "TABLE") =>
+        {
+            true
+        }
+        _ => false,
+    }
 }
 
 /// A source span to replace with a canonicalised literal. `start`/`end` are the sqlparser

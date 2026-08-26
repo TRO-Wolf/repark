@@ -374,19 +374,29 @@ impl VisitorMut for BinaryCastToBytea {
 /// `AnalysisException` at the PyO3 boundary, the class Spark raises.
 fn refuse_illegal_binary_cast(plan: &LogicalPlan) -> Result<()> {
     match find_illegal_binary_cast(plan) {
-        Some(source) => Err(illegal_binary_cast_error(&source)),
+        Some(offender) => Err(illegal_binary_cast_error(&offender)),
         None => Ok(()),
     }
 }
 
-/// The input type of the first cast-to-`Binary` in `plan` whose source Spark refuses, or `None`.
-fn find_illegal_binary_cast(plan: &LogicalPlan) -> Option<ArrowDataType> {
+/// An illegal `→ BINARY` cast the walk found: the refused source type, and whether it was a
+/// `TRY_CAST` (`try_cast`) rather than a plain `CAST`. The cast kind changes the message —
+/// Spark's `CAST_WITH_CONF_SUGGESTION` (the "ANSI mode on" clause) is quoted **only** for a plain
+/// `CAST` of an integer; `TRY_CAST` of any source, integer included, quotes `CAST_WITHOUT_SUGGESTION`
+/// (measured B2 / `TRY_CAST` INT/BIGINT/BOOLEAN, `<pyspark-4.1.2-oracle>`).
+struct IllegalBinaryCast {
+    source: ArrowDataType,
+    is_try_cast: bool,
+}
+
+/// The first cast-to-`Binary` in `plan` whose source Spark refuses, or `None`.
+fn find_illegal_binary_cast(plan: &LogicalPlan) -> Option<IllegalBinaryCast> {
     let mut offender = None;
     let _ = plan.apply(|node| {
         let schema = crate::insert_overwrite::expr_typing_schema(node);
         let _ = node.apply_expressions(|expr| {
-            if let Some(source) = expr_illegal_binary_cast_source(expr, schema.as_ref()) {
-                offender = Some(source);
+            if let Some(found) = expr_illegal_binary_cast_source(expr, schema.as_ref()) {
+                offender = Some(found);
                 return Ok(TreeNodeRecursion::Stop);
             }
             Ok(TreeNodeRecursion::Continue)
@@ -399,33 +409,39 @@ fn find_illegal_binary_cast(plan: &LogicalPlan) -> Option<ArrowDataType> {
     offender
 }
 
-/// The source type of an illegal `→ Binary` cast inside `expr` (or a subquery hanging off it), or
-/// `None`. Subquery plans hang off the expression, not off [`LogicalPlan`] children, so they are
-/// recursed into explicitly — the same reason [`crate::insert_overwrite`] does.
+/// The illegal `→ Binary` cast inside `expr` (or a subquery hanging off it), or `None` — carrying
+/// the source type and whether it was a `TRY_CAST`. Subquery plans hang off the expression, not
+/// off [`LogicalPlan`] children, so they are recursed into explicitly — the same reason
+/// [`crate::insert_overwrite`] does.
 fn expr_illegal_binary_cast_source(
     expr: &DataFusionExpr,
     schema: &DFSchema,
-) -> Option<ArrowDataType> {
+) -> Option<IllegalBinaryCast> {
     let mut offender = None;
     let _ = expr.apply(|node| {
         let cast_input = match node {
-            DataFusionExpr::Cast(cast) => Some((cast.expr.as_ref(), cast.field.data_type())),
-            DataFusionExpr::TryCast(cast) => Some((cast.expr.as_ref(), cast.field.data_type())),
+            DataFusionExpr::Cast(cast) => Some((cast.expr.as_ref(), cast.field.data_type(), false)),
+            DataFusionExpr::TryCast(cast) => {
+                Some((cast.expr.as_ref(), cast.field.data_type(), true))
+            }
             _ => None,
         };
-        if let Some((input, &ArrowDataType::Binary)) = cast_input
+        if let Some((input, &ArrowDataType::Binary, is_try_cast)) = cast_input
             && let Ok(source) = input.get_type(schema)
             && !is_binary_castable_source(&source)
         {
-            offender = Some(source);
+            offender = Some(IllegalBinaryCast {
+                source,
+                is_try_cast,
+            });
             return Ok(TreeNodeRecursion::Stop);
         }
         if let DataFusionExpr::ScalarSubquery(subquery)
         | DataFusionExpr::Exists(Exists { subquery, .. })
         | DataFusionExpr::InSubquery(InSubquery { subquery, .. }) = node
-            && let Some(source) = find_illegal_binary_cast(&subquery.subquery)
+            && let Some(found) = find_illegal_binary_cast(&subquery.subquery)
         {
-            offender = Some(source);
+            offender = Some(found);
             return Ok(TreeNodeRecursion::Stop);
         }
         Ok(TreeNodeRecursion::Continue)
@@ -448,13 +464,15 @@ fn is_binary_castable_source(data_type: &ArrowDataType) -> bool {
     )
 }
 
-/// Build Spark's refusal for an illegal `→ BINARY` cast, naming the source type. Integer sources
-/// quote `CAST_WITH_CONF_SUGGESTION` and Spark's "with ANSI mode on" clause (turning ANSI off
-/// would big-endian-encode the int — B11, tabled); every other source quotes
-/// `CAST_WITHOUT_SUGGESTION`. Recorded from the live oracle (B2 / B4 `<pyspark-4.1.2-oracle>`).
-fn illegal_binary_cast_error(source: &ArrowDataType) -> DataFusionError {
-    let source_name = spark_source_type_name(source);
-    if is_spark_integer(source) {
+/// Build Spark's refusal for an illegal `→ BINARY` cast, naming the source type. A **plain `CAST`**
+/// of an integer quotes `CAST_WITH_CONF_SUGGESTION` and Spark's "with ANSI mode on" clause (turning
+/// ANSI off would big-endian-encode the int — B11, tabled). `TRY_CAST` of any source — integer
+/// included — and a plain `CAST` of any non-integer both quote `CAST_WITHOUT_SUGGESTION`: Spark
+/// offers the ANSI-off suggestion only for the plain-`CAST`-of-integer case (measured
+/// `TRY_CAST(1 AS BINARY)` = `CAST_WITHOUT_SUGGESTION`, `<pyspark-4.1.2-oracle>`).
+fn illegal_binary_cast_error(offender: &IllegalBinaryCast) -> DataFusionError {
+    let source_name = spark_source_type_name(&offender.source);
+    if is_spark_integer(&offender.source) && !offender.is_try_cast {
         DataFusionError::Plan(format!(
             "[DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION] due to data type mismatch: cannot cast \
              \"{source_name}\" to \"BINARY\" with ANSI mode on. SQLSTATE: 42K09"
