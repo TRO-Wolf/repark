@@ -1,10 +1,8 @@
-//! **ANSI-door control for SQP-1.** The Spark-door string-literal canonicalisation is Spark-only
-//! (ADR-0002: two honest doors). This native/ANSI door must keep generic literal semantics —
-//! a backslash is a literal character, `\'` does not escape, and raw strings are unsupported —
-//! so a change to the Spark door's lexer cannot silently move this door.
-//!
-//! No production code under `crates/repark-sql/` changes for SQP-1; this is a control-only test
-//! module. AWS-free by construction.
+//! **ANSI-door control for SQP-1.** The Spark door's string-literal canonicalisation is Spark-only
+//! (ADR-0002: two honest doors). This native/ANSI door keeps generic literal semantics — a
+//! backslash is literal, `\'` does not escape, raw strings are unsupported — so a change to the
+//! Spark door's lexer cannot silently move this door. No `crates/repark-sql/` production code
+//! changes for SQP-1; this is a control-only, AWS-free module.
 
 use std::sync::Arc;
 
@@ -40,7 +38,6 @@ async fn string_value(session: &ReparkSession, expr: &str) -> String {
 }
 
 /// The ANSI door keeps generic literal semantics — unchanged by the Spark-door SQP-1 canonicaliser.
-///
 /// pins: sqp-1-spark-string-literals/C-006
 #[tokio::test]
 async fn ansi_door_keeps_generic_literals() {
@@ -54,7 +51,6 @@ async fn ansi_door_keeps_generic_literals() {
         session.sql("SELECT '\\'' AS s").await.is_err(),
         "`'\\''` must be a lexer error on the ANSI door"
     );
-    // Raw strings are unsupported on the ANSI door.
     assert!(
         session.sql("SELECT r'\\d' AS s").await.is_err(),
         "`r'\\d'` must refuse on the ANSI door"

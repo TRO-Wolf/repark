@@ -106,11 +106,9 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    // FRONT DOOR (SQP-1). Canonicalise Spark string-literal escapes exactly once, before any
-    // router tokeniser or the executing parse sees the text — every downstream stage lexes `\'`
-    // wrongly, so `'\d'` must be made the value Spark's lexer produces here, first. This is the
-    // sole caller of `canonicalize` (proven by `front_door_has_one_caller`); internally-generated
-    // SQL never re-enters this function, which is what keeps the pass exactly-once (C-005 / C-010).
+    // FRONT DOOR (SQP-1). Canonicalise Spark string-literal escapes once, before any router
+    // tokeniser or the executing parse — the sole caller of `canonicalize` (see its module doc;
+    // proven by `front_door_has_one_caller`), which keeps the pass exactly-once (C-005 / C-010).
     let canonical = crate::spark_literals::canonicalize(sql)?;
     let sql = canonical.as_ref();
     // Clone + attach on the registry snapshot so P11 survives `.await` thread hops

@@ -22,9 +22,8 @@ JVM, no repark required). See [../map.md](../map.md).
   C-006's lockstep half asserts the departed state (the ledger listed by `completed/` or the
   archive map), the way DL-5's slate pin turned over — CI caught the in-flight spelling.
 - `test_sqp_1_record.py` — **SQP-1 (C-011; tree pins):** the two Known-correctness-issue entries
-  left STATUS; the three out-of-scope divergences are §7 registry rows, each naming its pin; the
-  GT1 residual comments are updated; the new module doc carries the rule table + oracle. Files
-  only, no engine.
+  left STATUS; the three out-of-scope divergences are §7 registry rows (each naming its pin); the
+  GT1 residual comments updated; the new module doc carries the rule table + oracle. Files only.
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method

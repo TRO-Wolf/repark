@@ -69,8 +69,6 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
-  `EXCEPTIONS` is the seeded floor table (measured at DL-2); an Actor-phase deferral row parked
-  there while the Critic's attestation is pending leaves in the same unit's departure (SQP-1).
 - `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
   `history=` must name one bin under `docs/history/`):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the
@@ -243,10 +241,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
   or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
   `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no hand-rolled
-  single-quote-doubling for SQL (SQP-1)** — a text rule (ceiling 0, no exceptions) that forbids the
-  raw idiom outside the one helper file (`SQL_LITERAL_HELPER_FILE` = `python/repark/src/repark/spark/_idents.py`),
-  so every facade embed goes through `sql_string_literal` / `escape_sql_single_quotes` and the Spark
-  door cannot silently escape-process a backslash in a data value. The other Python
+  single-quote-doubling for SQL (SQP-1)** — a ceiling-0 text rule forbidding the raw idiom outside
+  the one helper file (`_idents.py`), so every facade embed goes through its escape helpers. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
   duty. Seeded from the measured tree (2026-08-21): 66 nested

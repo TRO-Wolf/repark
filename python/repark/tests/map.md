@@ -23,14 +23,11 @@ NOT in that file is a defect, not a decision.
 ## Contents
 
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1 (C-007):** facade
-  controls — `regexp_count` is unchanged and the SQL door now agrees; `.cast("binary")` equals the
-  SQL `CAST … AS BINARY` in value and Arrow type; the escape reaches the cast. Also the §7 BL-9 /
-  BL-10 / BL-11 registry-row behaviour pins (double-quoted identifier, no `escapedStringLiterals`
-  carrier, numeric→binary refuse). **Cycle-2 (C-013):** the facade embeds a data value as a
-  Spark-canonical literal through one helper — backslash-bearing pins for `_sql_literal`, the
-  `_lit_sql_expr` aggregate embed, `unpivot`, `StopWordsRemover` (+ apostrophe), and StringIndexer /
-  IndexToString labels (each RED with the helper reverted to quotes-only); plus the BL-12 §7 pin
-  (out-of-range `\U` is one `?`).
+  controls — `regexp_count` unchanged and the SQL door now agrees; `.cast("binary")` equals the SQL
+  cast (value + Arrow type); plus the §7 BL-9/BL-10/BL-11 behaviour pins. **Cycle-2 (C-013):** the
+  facade embeds each data value as a Spark-canonical literal through one helper — backslash pins for
+  `_sql_literal`, the aggregate embed, `unpivot`, `StopWordsRemover` (+ apostrophe) and StringIndexer
+  labels; plus the BL-12 §7 pin (out-of-range `\U` is one `?`).
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`
@@ -148,9 +145,8 @@ NOT in that file is a defect, not a decision.
   string-key map extraction; ``shuffle`` pins type+length; ``array_compact``
   drops NULLs only. Rework: exact interval/bitmap/unix_micros values, regex
   ``str_to_map``, NULL rows, non-UTC session pins, docstring-example execute.
-  **SQP-1:** the SQL-door regex spellings (``str_to_map`` / ``parse_url``, and
-  ``test_fnp6_regexp``'s door-agreement row) double their backslashes now the
-  Spark door processes escapes — the ``_sql_regex`` helper is the single home.
+  **SQP-1:** SQL-door regex spellings (``str_to_map`` / ``parse_url``, ``test_fnp6_regexp``) double
+  their backslashes now the Spark door processes escapes — ``_sql_regex`` is the single home.
   Honesty: W2 MonthDayNano; ``date_diff`` int32; bitmap 0/−1; unix_micros LA
   column.
   **X-round (2026-08-18), repair round** — 30 tests. New pins: ``shuffle(NULL array)`` is NULL

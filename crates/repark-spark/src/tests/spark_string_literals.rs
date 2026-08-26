@@ -1,10 +1,10 @@
 //! SQP-1 pins — Spark string-literal escapes on the Spark SQL door.
 //!
-//! Oracle: PySpark 4.1.2 + Iceberg 1.11.0, `spark.sql.parser.escapedStringLiterals=false`,
-//! `spark.sql.ansi.enabled=true`, measured against the live oracle (`<pyspark-4.1.2-oracle>`);
-//! the charter ledger `task/ledgers/staging/sqp-1-spark-string-literals-ledger.md` holds the
-//! transcript. Every value is the Spark value, on the Arrow collect path (value AND `Utf8` type).
-//! Reverting the front-door `canonicalize` call reds every case here.
+//! Oracle: PySpark 4.1.2 + Iceberg 1.11.0, `escapedStringLiterals=false`, `ansi.enabled=true`,
+//! measured against the live oracle (`<pyspark-4.1.2-oracle>`); the ledger
+//! `task/ledgers/staging/sqp-1-spark-string-literals-ledger.md` holds the transcript. Every value
+//! is the Spark value on the Arrow collect path (value AND `Utf8` type). Reverting the front-door
+//! `canonicalize` call reds every case here.
 use super::super::*;
 use super::common::*;
 
@@ -13,8 +13,7 @@ use std::borrow::Cow;
 use datafusion::arrow::array::BooleanArray;
 
 /// A `SessionContext` wired like production for pure-expression pins: the Spark function registry,
-/// the expression-semantics analyzer rules, ANSI ON and `parse_float_as_decimal` — but no catalog,
-/// which the value-domain literals do not need.
+/// the analyzer rules, ANSI ON and `parse_float_as_decimal`, but no catalog.
 fn expr_ctx() -> (SessionContext, CatalogRegistry) {
     let config =
         crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new());
@@ -28,8 +27,7 @@ fn expr_ctx() -> (SessionContext, CatalogRegistry) {
     (ctx, CatalogRegistry::new())
 }
 
-/// The `Utf8` value of `SELECT <expr> AS s`, asserting the Arrow type is `Utf8` (Spark STRING) —
-/// value AND type, never a display path.
+/// The `Utf8` value of `SELECT <expr> AS s`, asserting the Arrow type is `Utf8` (Spark STRING).
 async fn string_value(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: &str) -> String {
     let batches = execute(ctx, catalogs, &format!("SELECT {expr} AS s"))
         .await
@@ -50,9 +48,8 @@ async fn string_value(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: &s
     column.value(0).to_string()
 }
 
-/// The string value of `SELECT <expr> AS s` for a DERIVED string (a function result, a
-/// `CAST … AS STRING`), read through an Arrow cast to `Utf8` — DataFusion can return `Utf8View`
-/// there, and the incidental type of a control result is not the thing under test.
+/// The string value of `SELECT <expr> AS s` for a DERIVED string, read through an Arrow cast to
+/// `Utf8` — DataFusion can return `Utf8View` there, and that incidental type is not under test.
 async fn derived_string(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: &str) -> String {
     let batches = execute(ctx, catalogs, &format!("SELECT {expr} AS s"))
         .await
@@ -69,8 +66,7 @@ async fn derived_string(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: 
         .to_string()
 }
 
-/// The integer value of `SELECT <expr> AS n`, read through an Arrow cast to `Int64` (a Spark
-/// `regexp_count` is `Int32`).
+/// The integer value of `SELECT <expr> AS n`, read through an Arrow cast to `Int64`.
 async fn int_value(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: &str) -> i64 {
     let batches = execute(ctx, catalogs, &format!("SELECT {expr} AS n"))
         .await
@@ -102,8 +98,7 @@ async fn bool_value(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: &str
         .value(0)
 }
 
-/// The ordered `Utf8` values of a query's first column (NULL rendered as the marker), for the
-/// write-path round-trips.
+/// The ordered `Utf8` values of a query's first column (NULL as `<NULL>`), for write-path round-trips.
 async fn string_column(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &str) -> Vec<String> {
     let batches = execute(ctx, catalogs, sql)
         .await
@@ -129,42 +124,31 @@ async fn string_column(ctx: &SessionContext, catalogs: &CatalogRegistry, sql: &s
     out
 }
 
+/// The whole escape domain, one row `(label, literal, expected)` per element; every mismatch is
+/// collected so one break does not mask another.
 /// pins: sqp-1-spark-string-literals/C-001
-///
-/// The whole escape domain, one row per enumerated element. Each row is `(label, literal,
-/// expected)`; every mismatch is collected so one broken element does not mask another.
 #[tokio::test]
 async fn unescape_covers_the_spark_escape_domain() {
     let (ctx, catalogs) = expr_ctx();
-    // (label, SQL literal as written, Spark value)
     let cases: &[(&str, &str, &str)] = &[
-        // (1) `\\` → `\`
         ("backslash-backslash", "'\\\\'", "\\"),
         ("regex-pattern-spelling", "'\\\\d'", "\\d"),
-        // (2) `\'` → `'`   (3) `\"` → `"`
         ("escaped-single-quote", "'\\''", "'"),
         ("escaped-double-quote", "'\\\"'", "\""),
-        // (4)-(7) control escapes
         ("newline", "'a\\nb'", "a\nb"),
         ("tab", "'\\t'", "\t"),
         ("carriage-return", "'\\r'", "\r"),
         ("backspace", "'\\b'", "\u{8}"),
-        // (8) `\0` → NUL   (9) `\Z` → U+001A
         ("nul", "'\\0'", "\u{0}"),
         ("ctrl-z", "'\\Z'", "\u{1a}"),
-        // (10) `\%` / `\_` keep the backslash (LIKE reads them)
         ("percent-keeps-backslash", "'\\%'", "\\%"),
         ("underscore-keeps-backslash", "'\\_'", "\\_"),
-        // (11) `\uXXXX` exactly four hex; short / non-hex fall to the unknown-escape rule
         ("unicode-16", "'\\u0041'", "A"),
         ("unicode-16-short", "'\\u004'", "u004"),
         ("unicode-16-nonhex", "'\\u00zz'", "u00zz"),
-        // (12) `\UXXXXXXXX` eight hex
         ("unicode-32", "'\\U0001F408'", "\u{1F408}"),
-        // (13) a `\uD8xx\uDCxx` pair → one code point
         ("surrogate-pair", "'\\ud83d\\udc08'", "\u{1F408}"),
         ("lone-surrogate", "'\\ud83d'", "?"),
-        // (14) `\NNN` octal, first digit `0`-`1`; otherwise literal
         ("octal-A", "'\\101'", "A"),
         ("octal-nul", "'\\000'", "\u{0}"),
         ("octal-nul-then-seven", "'\\0007'", "\u{0}7"),
@@ -173,11 +157,9 @@ async fn unescape_covers_the_spark_escape_domain() {
         ("octal-high-777", "'\\777'", "777"),
         ("octal-single-1", "'\\1'", "1"),
         ("octal-short-12x", "'\\12x'", "12x"),
-        // (15) any other `\c` → `c`
         ("unknown-d", "'\\d'", "d"),
         ("unknown-q", "'\\q'", "q"),
         ("no-hex-escape", "'\\x41'", "x41"),
-        // (16) `''` → `'`
         ("doubled-quote", "'it''s'", "it's"),
     ];
     let mut failures = Vec::new();
@@ -188,8 +170,7 @@ async fn unescape_covers_the_spark_escape_domain() {
                 "{label}: {literal} -> {got:?} (expected {expected:?})"
             ));
         }
-        // The oracle also pins code-point length; the exact value subsumes it, but assert it so a
-        // future value edit that keeps the char count is still caught by the value column.
+        // The exact value already subsumes code-point length.
         let _ = got.chars().count();
     }
     assert!(
@@ -199,10 +180,9 @@ async fn unescape_covers_the_spark_escape_domain() {
     );
 }
 
-/// pins: sqp-1-spark-string-literals/C-002
-///
 /// `\'` / `\"` no longer end the literal (E5, E22); an unpaired trailing backslash is a parse
 /// error (E16); `'a\\'` is `a\` (E15).
+/// pins: sqp-1-spark-string-literals/C-002
 #[tokio::test]
 async fn escaped_quotes_lex_and_unpaired_backslash_refuses() {
     let (ctx, catalogs) = expr_ctx();
@@ -224,50 +204,41 @@ async fn escaped_quotes_lex_and_unpaired_backslash_refuses() {
     assert!(doubled.is_err(), "`'a\\''b'` must refuse (U10)");
 }
 
-/// pins: sqp-1-spark-string-literals/C-003
-///
 /// Adjacent single-quoted literals concatenate (E7, U17) where the door used to `ParserError`.
+/// pins: sqp-1-spark-string-literals/C-003
 #[tokio::test]
 async fn adjacent_literals_concatenate() {
     let (ctx, catalogs) = expr_ctx();
     assert_eq!(string_value(&ctx, &catalogs, "'ab' 'cd'").await, "abcd");
     // U17: concatenation runs on the already-unescaped values — `'a\\'` is `a\`, then `b`.
     assert_eq!(string_value(&ctx, &catalogs, "'a\\\\' 'b'").await, "a\\b");
-    // Three-way, with a control escape in the middle segment.
     assert_eq!(string_value(&ctx, &catalogs, "'x' '\\t' 'y'").await, "x\ty");
 }
 
-/// pins: sqp-1-spark-string-literals/C-001, C-002
-///
 /// A run of single quotes is Spark's escaped-quote-inside-quotes, NOT a triple-quoted string —
-/// Spark has none. BigQuery's lexer read `'''…'''` as a triple-quoted token, so `''''` opened a
-/// triple quote (an unterminated-literal TokenizerError here), `'''a\tb'''` silently dropped a
-/// quote, and a facade value beginning with an apostrophe crashed. [`SparkLexDialect`] keeps
-/// Generic's no-triple-quote rule, so these match the oracle. Reverting to `BigQueryDialect` reds
+/// Spark has none. [`SparkLexDialect`] keeps Generic's no-triple-quote rule, so these match the
+/// oracle; reverting to `BigQueryDialect` (which reads `'''…'''` as a triple-quoted token) reds
 /// every line.
+/// pins: sqp-1-spark-string-literals/C-001, C-002
 #[tokio::test]
 async fn quote_runs_are_not_triple_quoted_strings() {
     let (ctx, catalogs) = expr_ctx();
-    // `''''` → `'` (one quote), `''''''` → `''` (two): a doubled `''` is one in-literal quote.
+    // `''''` → `'`, `''''''` → `''`: a doubled `''` is one in-literal quote.
     assert_eq!(string_value(&ctx, &catalogs, "''''").await, "'");
     assert_eq!(string_value(&ctx, &catalogs, "''''''").await, "''");
-    // `'''x'` → `'x` (quote, x): an escaped quote then a plain char, not a triple-quote start.
+    // `'''x'` → `'x`: an escaped quote then a plain char, not a triple-quote start.
     assert_eq!(string_value(&ctx, &catalogs, "'''x'").await, "'x");
-    // `'''a\tb'''` → quote, a, TAB, b, quote (length 5) — BigQuery gave `a<TAB>b` (length 4).
+    // `'''a\tb'''` is quote,a,TAB,b,quote (length 5), not BigQuery's `a<TAB>b` (length 4).
     let atab = string_value(&ctx, &catalogs, "'''a\\tb'''").await;
     assert_eq!(atab, "'a\tb'");
     assert_eq!(atab.chars().count(), 5);
 }
 
-/// pins: sqp-1-spark-string-literals/C-003
-///
 /// A DataFusion-native statement (`COPY …`, `CREATE [OR REPLACE] EXTERNAL TABLE …`) keeps Generic
-/// literal semantics: its `OPTIONS ('k' 'v')` pairs are DataFusion's key/value grammar, NOT Spark
-/// concatenation, so the front door leaves the whole statement untouched (`Cow::Borrowed`). The
-/// facade's path writer runs COPY through this door and its readers may issue CREATE EXTERNAL
-/// TABLE; canonicalising either would merge `'k' 'v'` into `'kv'`. Reverting the carve-out reds
-/// each line (the pairs would merge → `Cow::Owned`). The contrast line proves the merge is live in
-/// a NON-native statement, so the carve-out is what protects these two.
+/// literal semantics: its `OPTIONS ('k' 'v')` pairs are DataFusion's key/value grammar, not Spark
+/// concatenation, so the front door leaves it untouched (`Cow::Borrowed`). The contrast line proves
+/// the merge is live in a non-native statement, so the carve-out is what protects these.
+/// pins: sqp-1-spark-string-literals/C-003
 #[test]
 fn datafusion_native_statements_keep_generic_literals() {
     for sql in [
@@ -283,15 +254,13 @@ fn datafusion_native_statements_keep_generic_literals() {
             "`{sql}` is DataFusion-native and must be left Generic (its OPTIONS pairs must not merge)"
         );
     }
-    // Contrast: the same `'k' 'v'` adjacency in a Spark statement DOES concatenate (E7), which is
-    // exactly what the carve-out suppresses for the native statements above.
+    // Contrast: the same `'k' 'v'` adjacency in a Spark statement concatenates (E7).
     let merged = crate::spark_literals::canonicalize("SELECT 'k' 'v'").unwrap();
     assert_eq!(merged.as_ref(), "SELECT 'kv'");
 }
 
-/// pins: sqp-1-spark-string-literals/C-004
-///
 /// Raw strings keep their content verbatim (E19) where the door used to refuse the token.
+/// pins: sqp-1-spark-string-literals/C-004
 #[tokio::test]
 async fn raw_strings_are_verbatim() {
     let (ctx, catalogs) = expr_ctx();
@@ -300,11 +269,9 @@ async fn raw_strings_are_verbatim() {
     assert_eq!(string_value(&ctx, &catalogs, "r'\\\\'").await, "\\\\");
 }
 
+/// The incidental controls hold at the oracle's values: LIKE wildcard escaping (E13), the `ESCAPE`
+/// clause (U14), RLIKE (U15), backtick identifiers (E26), the doubled-quote value (E6).
 /// pins: sqp-1-spark-string-literals/C-008
-///
-/// The incidental controls hold at the oracle's values — the escape rules must not disturb LIKE
-/// wildcard escaping (E13), the `ESCAPE` clause (U14), RLIKE (U15), backtick identifiers (E26) or
-/// the doubled-quote value (E6).
 #[tokio::test]
 async fn like_rlike_and_identifier_controls() {
     let (ctx, catalogs) = expr_ctx();
@@ -314,10 +281,9 @@ async fn like_rlike_and_identifier_controls() {
     assert!(bool_value(&ctx, &catalogs, "'a_b' LIKE 'a\\_b'").await);
     assert!(!bool_value(&ctx, &catalogs, "'axb' LIKE 'a\\_b'").await);
     assert!(bool_value(&ctx, &catalogs, "'a\\\\b' LIKE 'a\\\\\\\\b'").await);
-    // (A non-backslash `ESCAPE '!'` clause is a pre-existing DataFusion limitation, unrelated to
-    // literal escaping and out of this unit's scope — see the ledger C-008 note.)
-    // U15 RLIKE is the same pattern-escape seat as `regexp_count` below (the door has no RLIKE
-    // operator or `regexp_like` function — a separate gap), so the escape claim is pinned there.
+    // U14: a non-backslash `ESCAPE '!'` clause is a pre-existing DataFusion limit, out of scope (ledger C-008).
+    // U15 RLIKE shares the pattern-escape seat with `regexp_count` below (the door has no RLIKE
+    // operator), so the escape claim is pinned there.
     // E14 the headline silent-wrong-answer: `'\\d'` reaches the regex engine as `\d`.
     assert_eq!(
         int_value(&ctx, &catalogs, "regexp_count('a1b22', '\\\\d')").await,
@@ -340,15 +306,13 @@ async fn like_rlike_and_identifier_controls() {
         .await
         .unwrap();
     assert_eq!(batches[0].schema().field(0).name(), "a\\tb");
-    // E6 doubled quote (already right before the fix — must stay right).
+    // E6 doubled quote.
     assert_eq!(string_value(&ctx, &catalogs, "'it''s'").await, "it's");
 }
 
-/// pins: sqp-1-spark-string-literals/C-005
-///
 /// Exactly-once on every enumerated execution path. Each path carries a user literal (`'\\d'` →
-/// `\d`, `'a\tb'` → a TAB) and is checked by content, not by re-emission surviving untouched.
-/// Every mismatch is collected so a break in one path does not mask another.
+/// `\d`, `'a\tb'` → a TAB) and is checked by content; every mismatch is collected.
+/// pins: sqp-1-spark-string-literals/C-005
 #[tokio::test]
 async fn unescape_is_exactly_once_on_every_path() {
     let mut failures = Vec::new();
@@ -525,10 +489,9 @@ async fn merge_subquery_property_failures() -> Vec<String> {
     .collect()
 }
 
-/// Paths (l) CALL and (n) SET. Their runtime effect is not readable here — a `CALL` argument is
-/// consumed by a maintenance procedure, and a runtime `SET spark.*` is TZ-3's tabled no-op — so
-/// they are pinned at the canonicaliser, the one seat that processes them (C-010 proves nothing
-/// else does).
+/// Paths (l) CALL and (n) SET. Their runtime effect is not readable here (a CALL arg is consumed by
+/// a procedure, a `SET spark.*` is TZ-3's no-op), so they are pinned at the canonicaliser — the one
+/// seat that processes them (C-010).
 fn reemission_path_failures() -> Vec<String> {
     [
         diff(
@@ -565,13 +528,10 @@ async fn table_property(catalogs: &CatalogRegistry, table: &str, key: &str) -> S
         .unwrap_or_else(|| "<missing>".to_string())
 }
 
+/// The front-door canonicaliser has exactly one production caller — the pin that proves the pass is
+/// applied once per `router::execute` and nowhere else. Walks `src` recursively, skipping `tests/`
+/// (a `pub(crate)` fn could be called from any module).
 /// pins: sqp-1-spark-string-literals/C-010
-///
-/// The front-door canonicaliser has exactly one production caller — the grep pin that proves the
-/// pass is applied once per `router::execute` and nowhere else. Walks `crates/repark-spark/src`
-/// **recursively** (a `pub(crate)` fn can be called from any module, including a subdirectory one),
-/// skipping the `tests/` subtree so the many test call sites here do not count. `python/` is not
-/// walked: the facade cannot call a Rust private fn.
 #[test]
 fn front_door_has_one_caller() {
     let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
@@ -584,9 +544,8 @@ fn front_door_has_one_caller() {
     );
 }
 
-/// Recurse `dir`, appending `path:line` for every production line that names
-/// `spark_literals::canonicalize`. Any directory named `tests` (where the test call sites live) is
-/// skipped so only production callers are counted.
+/// Recurse `dir`, appending `path:line` for every production line naming
+/// `spark_literals::canonicalize`; any `tests` directory is skipped.
 fn collect_canonicalize_callers(dir: &std::path::Path, callers: &mut Vec<String>) {
     for entry in std::fs::read_dir(dir).expect("read src dir") {
         let path = entry.expect("dir entry").path();
@@ -609,13 +568,10 @@ fn collect_canonicalize_callers(dir: &std::path::Path, callers: &mut Vec<String>
     }
 }
 
-/// pins: sqp-1-spark-string-literals/C-010
-///
 /// The Spark door's executing parse runs under `Generic` — the truth the module doc rests on when
-/// it argues the canonical output cannot be escape-processed a second time. `extension::
-/// apply_spark_parser_dialect` would set `Databricks` but is dead code (FNP-4b), so the session
-/// keeps DataFusion's default. If it is ever wired, this reds and the module doc must change with
-/// it.
+/// it argues the canonical output cannot be escape-processed twice. `apply_spark_parser_dialect`
+/// would set `Databricks` but is dead (FNP-4b); if ever wired, this reds and the module doc changes.
+/// pins: sqp-1-spark-string-literals/C-010
 #[test]
 fn spark_door_executes_with_generic_dialect() {
     let (ctx, _catalogs) = expr_ctx();
@@ -626,13 +582,11 @@ fn spark_door_executes_with_generic_dialect() {
     );
 }
 
-/// pins: sqp-1-spark-string-literals/C-012
-///
 /// The fast path borrows when there is nothing to do, and a lexer failure surfaces as a parse
 /// error carrying line/column.
+/// pins: sqp-1-spark-string-literals/C-012
 #[test]
 fn fast_path_borrows_and_errors_carry_position() {
-    // No quote, no backslash → borrowed unchanged.
     assert!(matches!(
         crate::spark_literals::canonicalize("SELECT 1 + 2").unwrap(),
         Cow::Borrowed(_)
@@ -642,11 +596,10 @@ fn fast_path_borrows_and_errors_carry_position() {
         crate::spark_literals::canonicalize("SELECT * FROM t WHERE name = 'John'").unwrap(),
         Cow::Borrowed(_)
     ));
-    // A backslash escape → owned, and the canonical text carries the Spark value spelled Generic.
+    // A backslash escape → owned, carrying the Spark value spelled Generic.
     let owned = crate::spark_literals::canonicalize("SELECT '\\d' AS s").unwrap();
     assert!(matches!(owned, Cow::Owned(_)));
     assert_eq!(owned.as_ref(), "SELECT 'd' AS s");
-    // An unpaired trailing backslash is a parse error naming the position.
     let error = crate::spark_literals::canonicalize("SELECT 'a\\'")
         .expect_err("unterminated literal must error")
         .to_string();

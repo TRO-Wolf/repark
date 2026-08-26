@@ -123,8 +123,5 @@ Sail is prior-art only — never a RePark product dependency (no pysail in uv.lo
      the invocation recipes stay accurate; only the report files are absent. -->
 ## SQP-1 (cycle-2)
 
-`datagen.py` (DuckDB `dbgen` COPY) and `runner.py` (DuckDB `read_parquet` views) embed export
-paths through `repark.spark._idents.escape_sql_single_quotes` (quotes-only — DuckDB, like the
-Spark door's DataFusion-native carve-out, keeps backslashes literal). Byte-identical to the
-prior hand-rolled quote-double; it moves the idiom into the one sanctioned home
-(`scripts/check_python_conventions.py`).
+`datagen.py` (DuckDB `dbgen` COPY) and `runner.py` (`read_parquet` views) embed export paths through
+`escape_sql_single_quotes` (quotes-only) — byte-identical to the prior quote-double, in the one home.

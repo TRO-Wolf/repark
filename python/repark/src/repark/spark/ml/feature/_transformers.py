@@ -1743,9 +1743,8 @@ class RegexTokenizer(HasInputCol, HasOutputCol, Transformer):
         quoted = _quote_ident(self.getInputCol())
         out = _quote_ident(self.getOutputCol())
         rid = _quote_ident(rid_col)
-        # Embed the Java/Spark regex as a Spark-door SQL literal via the shared helper: the Spark
-        # door processes backslash escapes (SQP-1), so `\s+` is spelled `'\\s+'` and the lexer
-        # folds it back to `\s+` — exactly as a Spark user writes it (backslashes + quotes doubled).
+        # Embed the Java/Spark regex as a Spark-door SQL literal via the shared helper. The door
+        # processes escapes (SQP-1), so `\s+` doubles to `'\\s+'` and folds back to `\s+`.
         pattern_sql = sql_string_literal(pattern)
         text_expr = f"lower({quoted})" if to_lower else quoted
         # Replace ALL delimiter matches with unit separator (ASCII 31), then split.

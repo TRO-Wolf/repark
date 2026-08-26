@@ -9,10 +9,9 @@ Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`
 ## Contents
 
 - **r23 QI1:** `_transformers.py` uses `repark._idents.quote_ident` (always-quote SSOT).
-- **SQP-1 (cycle-2):** `_transformers.py` embeds StringIndexer / IndexToString labels,
-  CountVectorizer terms, StopWordsRemover stop words and the RegexTokenizer pattern through
-  `repark.spark._idents.sql_string_literal`, so a backslash- or apostrophe-bearing value
-  survives the Spark door (a raw quote-double let the door escape-process it / crash).
+- **SQP-1 (cycle-2):** `_transformers.py` embeds StringIndexer/IndexToString labels, CountVectorizer
+  terms, StopWordsRemover stop words and the RegexTokenizer pattern through
+  `repark.spark._idents.sql_string_literal`, so a backslash/apostrophe value survives the Spark door.
 | Path | Role |
 |---|---|
 | `__init__.py` | Public exports (incl. Q1 quantile + CV/IDF + RegexTokenizer) |

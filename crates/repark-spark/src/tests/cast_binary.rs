@@ -1,17 +1,15 @@
 //! SQP-1 pins — `CAST(x AS BINARY)` on the Spark SQL door.
 //!
-//! Oracle: PySpark 4.1.2 (`<pyspark-4.1.2-oracle>`), ANSI ON. A legal cast plans to Arrow
-//! `Binary` (value AND type on the collect path); an illegal source (INT / BIGINT / DECIMAL /
-//! BOOLEAN / DATE) refuses with Spark's `DATATYPE_MISMATCH` naming the source type; `VARBINARY`
-//! keeps refusing; a `BINARY` DDL column is untouched. Reverting the `BINARY`→`BYTEA` rewrite
-//! reds the legal casts; reverting `refuse_illegal_binary_cast` reds the refusals.
+//! Oracle: PySpark 4.1.2 (`<pyspark-4.1.2-oracle>`), ANSI ON. A legal cast plans to Arrow `Binary`
+//! (value AND type); an illegal source (INT / BIGINT / DECIMAL / BOOLEAN / DATE) refuses with
+//! Spark's `DATATYPE_MISMATCH` naming the source; `VARBINARY` keeps refusing; a `BINARY` DDL column
+//! is untouched. Reverting `BINARY`→`BYTEA` reds the legal casts; reverting the refuse reds the refusals.
 use super::super::*;
 use super::common::*;
 
 use datafusion::arrow::array::BinaryArray;
 
-/// The `Binary` value of `SELECT <expr> AS b` (row 0), asserting the Arrow type is `Binary` —
-/// value AND type. `None` is a NULL row.
+/// The `Binary` value of `SELECT <expr> AS b` (row 0), asserting Arrow type `Binary`; `None` is NULL.
 async fn binary_row0(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
@@ -57,11 +55,10 @@ async fn utf8_row0(ctx: &SessionContext, catalogs: &CatalogRegistry, expr: &str)
         .to_string()
 }
 
+/// A legal `CAST … AS BINARY` plans to Arrow `Binary` with the source's UTF-8 bytes (B1, B8, B9,
+/// B10, B15) — value AND type; `TRY_CAST` is the same. Escape processing composes with the cast
+/// (B15: `hex(CAST('\t' AS BINARY))` = `09`).
 /// pins: sqp-1-spark-string-literals/C-009
-///
-/// A legal `CAST … AS BINARY` plans to Arrow `Binary` with the UTF-8 bytes of the source — B1,
-/// B8, B9, B10, B15 — value AND type. `TRY_CAST` is the same. The escape processing composes with
-/// the cast (B15: `hex(CAST('\t' AS BINARY))` = `09`).
 #[tokio::test]
 async fn cast_string_to_binary_plans_and_round_trips() {
     let (ctx, catalogs) = binary_expr_ctx();
@@ -105,10 +102,9 @@ async fn cast_string_to_binary_plans_and_round_trips() {
     );
 }
 
-/// pins: sqp-1-spark-string-literals/C-009
-///
 /// The column path (B13): `CAST(c AS BINARY)` over a STRING column with a NULL row yields the
 /// bytes and a NULL, at Arrow `Binary`.
+/// pins: sqp-1-spark-string-literals/C-009
 #[tokio::test]
 async fn cast_binary_over_a_string_column() {
     let (ctx, catalogs) = binary_expr_ctx();
@@ -139,11 +135,10 @@ async fn cast_binary_over_a_string_column() {
     assert_eq!(seen, vec![None, Some(b"ab".to_vec())]);
 }
 
+/// A source Spark refuses (INT / BIGINT / DECIMAL / BOOLEAN / DATE) is an analysis error naming the
+/// source type and Spark's `DATATYPE_MISMATCH` — never DataFusion's silent int→bytes cast (B2–B7).
+/// `VARBINARY` keeps refusing (B12).
 /// pins: sqp-1-spark-string-literals/C-009
-///
-/// A source Spark refuses (INT / BIGINT / DECIMAL / BOOLEAN / DATE) is an analysis error naming
-/// the source type and Spark's `DATATYPE_MISMATCH` condition — never DataFusion's silent int→bytes
-/// cast (B2–B7). `VARBINARY` keeps refusing (B12).
 #[tokio::test]
 async fn cast_to_binary_refuses_illegal_sources() {
     let (ctx, catalogs) = binary_expr_ctx();
@@ -189,14 +184,11 @@ async fn cast_to_binary_refuses_illegal_sources() {
     );
 }
 
+/// `TRY_CAST(<x> AS BINARY)` over a Spark-illegal source refuses like `CAST` but always with
+/// `CAST_WITHOUT_SUGGESTION`, never the `CAST_WITH_CONF_SUGGESTION` clause a plain `CAST` of an
+/// integer carries. Measured `<pyspark-4.1.2-oracle>`: `TRY_CAST(1 / 1L / true AS BINARY)` all
+/// report `CAST_WITHOUT_SUGGESTION`. Reverting the cast-kind thread reds the INT/BIGINT lines.
 /// pins: sqp-1-spark-string-literals/C-009
-///
-/// `TRY_CAST(<x> AS BINARY)` over a Spark-illegal source refuses like `CAST` — but always with
-/// `CAST_WITHOUT_SUGGESTION`, never the `CAST_WITH_CONF_SUGGESTION` ("with ANSI mode on") clause
-/// that a **plain `CAST` of an integer** carries: Spark offers the ANSI-off suggestion only for
-/// that one case. Measured `<pyspark-4.1.2-oracle>`: `TRY_CAST(1 AS BINARY)` / `TRY_CAST(1L …)` /
-/// `TRY_CAST(true …)` all report `CAST_WITHOUT_SUGGESTION`. Reverting the cast-kind thread reds the
-/// INT/BIGINT lines (they would regress to `CAST_WITH_CONF_SUGGESTION`).
 #[tokio::test]
 async fn try_cast_to_binary_never_suggests_ansi_off() {
     let (ctx, catalogs) = binary_expr_ctx();
@@ -216,8 +208,7 @@ async fn try_cast_to_binary_never_suggests_ansi_off() {
             "`{expr}` must refuse WITHOUT the ANSI-off suggestion, naming {source}, got: {error}"
         );
     }
-    // Control: a plain `CAST` of the SAME integer DOES carry the ANSI-off suggestion — proving the
-    // two arms are distinguished by cast kind, not source type alone.
+    // Control: a plain `CAST` of the same integer carries the suggestion — the arms split by cast kind.
     let plain = execute(&ctx, &catalogs, "SELECT CAST(1L AS BINARY)")
         .await
         .expect_err("plain CAST must refuse")
@@ -228,11 +219,9 @@ async fn try_cast_to_binary_never_suggests_ansi_off() {
     );
 }
 
-/// pins: sqp-1-spark-string-literals/C-009
-///
 /// The cast rewrite must not touch a `BINARY` **column** in DDL: `CREATE TABLE (b BINARY)` still
-/// creates an Iceberg `binary` column (the rewrite is scoped to `Expr::Cast`, and DDL is
-/// intercepted before the passthrough parse).
+/// creates an Iceberg `binary` column (the rewrite is scoped to `Expr::Cast`; DDL is intercepted first).
+/// pins: sqp-1-spark-string-literals/C-009
 #[tokio::test]
 async fn binary_ddl_column_is_unchanged() {
     let wh = TempDir::new().unwrap();
@@ -259,8 +248,8 @@ async fn binary_ddl_column_is_unchanged() {
     );
 }
 
-/// A `SessionContext` + empty `CatalogRegistry` wired like production (Spark registry + analyzer
-/// rules + ANSI ON + `parse_float_as_decimal`) for the cast pins that need no catalog.
+/// A `SessionContext` + empty `CatalogRegistry` wired like production (Spark registry, analyzer
+/// rules, ANSI ON, `parse_float_as_decimal`) for the cast pins that need no catalog.
 fn binary_expr_ctx() -> (SessionContext, CatalogRegistry) {
     let config =
         crate::extension::apply_spark_float_as_decimal(datafusion::prelude::SessionConfig::new());

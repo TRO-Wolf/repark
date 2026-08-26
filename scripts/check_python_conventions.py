@@ -34,13 +34,11 @@ Rules over every *.py under SCAN_ROOTS (recursive):
    Spark door's front door Spark-unescapes every string literal in the SQL it
    receives — facade-generated SQL included — so a value embedded with only
    quote-doubling has its backslashes escape-processed (a silent wrong answer:
-   `F.lit('p\\q')` would yield `pq`). Every embedded value MUST go through the
-   one shared helper (`repark.spark._idents.sql_string_literal`, or
+   `F.lit('p\\q')` yields `pq`). Every embedded value MUST go through the one
+   shared helper (`repark.spark._idents.sql_string_literal`, or
    `escape_sql_single_quotes` for a DataFusion-native/backslash-literal
-   statement), which is the single home of the escaping rule. The raw
-   single-quote-doubling idiom is therefore forbidden outside that one file
-   (SQL_LITERAL_HELPER_FILE); ceiling 0, no exceptions table (the fix is to
-   call the helper). A text rule, since the idiom is a fixed token sequence.
+   statement); the raw idiom is forbidden outside that one file
+   (SQL_LITERAL_HELPER_FILE), ceiling 0, no exceptions table. A text rule.
 
 Exit 0 on clean; non-zero with path, line, measured count and the sanctioned
 outs. Fail-closed: an unreadable file, a file that will not parse, an empty
@@ -91,15 +89,13 @@ DATACLASS_EXCEPTIONS: dict[str, str] = {
 
 _BANNED_CONTAINER_MODULES = frozenset({"dataclasses", "attr", "attrs"})
 
-# SQP-1: the one file allowed to spell the single-quote-doubling SQL-escape idiom. Every other
-# embed of a value into Spark-door SQL must call its helpers, so the door's Spark-unescape pass
-# does not silently escape-process backslashes in the value. Ceiling 0 everywhere else.
+# SQP-1: the one file allowed to spell the single-quote-doubling SQL-escape idiom; every other
+# embed must call its helpers, so the door's Spark-unescape does not escape-process it. Ceiling 0.
 SQL_LITERAL_HELPER_FILE = "python/repark/src/repark/spark/_idents.py"
 
-# Matches the raw single-quote-doubling call: a `.replace` whose first argument is one apostrophe
-# and whose second is two (any inner whitespace). The pattern text deliberately does NOT contain
-# that literal call spelled out, so this guard never flags its own source; a `.replace` that
-# doubles a backslash does not match — only single-quote doubling does.
+# Matches the raw single-quote-doubling call: a `.replace` of one apostrophe by two (any inner
+# whitespace). The pattern deliberately does not spell that call out, so this guard never flags its
+# own source; a `.replace` that doubles a backslash does not match.
 _SQL_QUOTE_DOUBLING = re.compile(r"""\.replace\(\s*"'"\s*,\s*"''"\s*\)""")
 
 
