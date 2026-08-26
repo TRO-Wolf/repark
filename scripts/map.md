@@ -69,6 +69,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
+  `EXCEPTIONS` is the seeded floor table (measured at DL-2); an Actor-phase deferral row parked
+  there while the Critic's attestation is pending leaves in the same unit's departure (SQP-1).
 - `doc_blocks.py` — the **block grammar** of the two live documents (DL-4, 2026-08-25;
   `history=` must name one bin under `docs/history/`):
   HTML-comment `ws` blocks around every `STATUS.md` workstream bullet and `unit` markers on the

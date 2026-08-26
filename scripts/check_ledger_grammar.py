@@ -64,10 +64,6 @@ EXCEPTIONS: dict[str, tuple[int, bool]] = {
     "fnp-0-charter-ledger.md": (12, False),
     "sem-0-charter-ledger.md": (9, False),
     "v3-0-charter-ledger.md": (0, False),
-    # SQP-1 (2026-08-25): Actor-phase deferral. Every PROVEN clause is pinned (ceiling 0), but the
-    # COVERAGE_ATTESTATION is the Critic's artifact, filed in the SEPMO Critic stage. The Critic
-    # removes this row when it files the block.
-    "sqp-1-spark-string-literals-ledger.md": (0, False),
 }
 
 VERDICTS: frozenset[str] = frozenset({"PROVEN", "OPEN", "REJECTED"})

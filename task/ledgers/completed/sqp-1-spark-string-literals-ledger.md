@@ -329,3 +329,261 @@ its own source (verified: clean run above includes `scripts/`).
 `crates/repark-spark/src/spark_literals.rs` = **561 lines** (ceiling 1500; +146 for `SparkLexDialect`
 and the DataFusion-native carve-out helpers). `spark_ast.rs` grew by the cast-kind thread (well
 under ceiling).
+
+## CCC pass — findings and attestation (repo SEPMO, STANDARD, `critic_engine: ccc`, risk standard)
+
+Cycle 1 attacked the cycle-1 tree (`37b84b0`) with four fresh Opus Critics, each on its own scratch
+clone in its own cargo target (Critic-1 quality + test-coverage skeptic with mutation probes and
+the facade embed sweep; Critic-2 safety over gate ordering, the carve-outs, injection by
+re-quoting and the refusals; Critic-3 logic with novel inputs against the live oracle on every
+escape element and every execution path; Critic-4 every written claim against the tree).
+Thirteen findings — two S0 (the facade's quote-only literal embeds; BigQuery's triple-quoted
+strings at the lexer), one S1/S2 and the record items — all remediated in cycle 2 (`f2ae66c`,
+`5052b0a`, `d3306f5`, `5dc1031`) with pins red under reversion and green on the tree. Cycle 2
+re-attested on a fresh clone of `5dc1031`: every remediation re-verified by command and by an
+isolated mutation, fresh execution on a built wheel against the oracle on twelve novel inputs
+(quote runs, adjacency, a raw string carrying an escaped quote, a 5,000-escape literal,
+backslash + apostrophe facade values, the exactly-once DELETE, TRY_CAST vs CAST over a BIGINT
+column). One S3 residual accepted-flagged (below). **Verdict: CONVERGED.**
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: sqp-1-spark-string-literals
+  cycle: 2
+  risk_tier: standard
+  critic_engine: ccc
+  complete: true
+  note: >
+    SQP-1 (Spark string-literal escapes on the SQL door + CAST AS BINARY). Actor built the twelve
+    clauses on scratch clones; cycle-1's four fresh Critics filed thirteen findings against 37b84b0
+    — two S0 (the facade data-value embeds silently escape-processed by the new front door; the
+    BigQuery triple-quote lexer crashing/mangling apostrophe- and quote-runs) plus S1/S2/S3. The
+    Actor's cycle-2 remediation (f2ae66c..5dc1031) routes all facade Spark-door value embeds through
+    one helper (repark.spark._idents.sql_string_literal, backslash-doubled first) with a
+    quotes-only companion (escape_sql_single_quotes) for the carved-out DataFusion-native COPY /
+    CREATE EXTERNAL TABLE statements; replaces BigQueryDialect with SparkLexDialect (Generic in
+    every tokeniser decision except the backslash rule); extends the carve-out to CREATE EXTERNAL
+    TABLE; threads the cast kind so TRY_CAST never quotes CAST_WITH_CONF_SUGGESTION; makes the
+    one-caller pin recurse; and adds the BL-12 registry row plus doc/Evidence fixes. This Critic
+    re-attested on a fresh scratch clone at 5dc1031: every cycle-1 finding verified by command AND
+    by mutation (five mutations each RED the exact pin, GREEN on restore); fresh execution with
+    novel inputs through the built wheel against the live PySpark 4.1.2 oracle (master local[1], ui
+    disabled) — every probe matches Spark. Nothing open at or above S1; one S3 residual
+    (SQP2-C-01, conventions-gate semantic-evasion, non-blocking) recorded.
+  reattested: [AT-1, AT-2, AT-3, AT-5, AT-6, AT-8, AT-9, AT-10]
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: >
+        Walked C-001..C-013 against behaviour, not paraphrase. The 16-element escape domain and
+        adjacency/raw/exactly-once clauses were checked with novel SQL-door inputs whose Spark
+        values I measured on the live oracle first: '''''''' -> ''' (len 3), 'a''' 'b' -> a'b,
+        '''' '' -> ' (len 1), r'\'' -> parse error, a 5000-escape literal -> 5000. Every repark
+        result equals the oracle. C-009 (BINARY cast) checked against the oracle on both literal
+        and column sources.
+      artifacts: [crates/repark-spark/src/tests/spark_string_literals.rs, crates/repark-spark/src/tests/cast_binary.rs, "task/ledgers/staging/sqp-1-spark-string-literals-ledger.md (Oracle table)", "scratch: oracle_probe.py / repark_probe.py"]
+    - id: AT-2
+      status: ATTACKED
+      evidence: >
+        Adversarial/boundary inputs actually exercised end to end: quote-runs (4/6/8 quotes),
+        adjacency, a facade value with a LEADING apostrophe ('tis), a label carrying BOTH a
+        backslash and an apostrophe (a\b'c), a trailing backslash, backslash-n vs a real newline,
+        a doubled-quote stop word (''), and a 5000-escape literal. All match the oracle; the
+        apostrophe-leading and quote-run cases (which crashed/mangled under the cycle-1 BigQuery
+        lexer) now lex correctly.
+      artifacts: [python/repark/tests/test_sqp_1_string_literals.py, "crates/repark-spark/src/tests/spark_string_literals.rs::quote_runs_are_not_triple_quoted_strings", "python/repark/tests/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_one_replacement"]
+    - id: AT-3
+      status: ATTACKED
+      evidence: >
+        Failure paths refuse LOUDLY and diagnosably. Unpaired trailing backslash 'a\' and raw
+        r'\'' both surface a TokenizerError carrying line/column (Line 1 Column 8 / Column 10),
+        matching Spark's PARSE_SYNTAX_ERROR direction. N'..' national strings give a loud
+        Unsupported-Value refusal (pre-existing, not a canonicalize defect — never silent). BINARY
+        refusals carry the DATATYPE_MISMATCH condition and name the source type.
+      artifacts: ["crates/repark-spark/src/tests/spark_string_literals.rs::fast_path_borrows_and_errors_carry_position", "crates/repark-spark/src/spark_literals.rs::canonicalize (DataFusionError::SQL with Location)", crates/repark-spark/src/tests/cast_binary.rs]
+    - id: AT-4
+      status: N/A
+      justification: >
+        No state/ordering/concurrency surface. canonicalize is a pure function (&str ->
+        Result<Cow<str>>) with no session or shared mutable state; sql_string_literal and
+        escape_sql_single_quotes are pure string functions. Exactly-once is a by-construction
+        property (a single front-door caller, proven by front_door_has_one_caller; predicate_dml
+        and merge build their SQL AFTER router::execute so they never re-enter), not a race — and
+        it is attested under AT-6, not here.
+    - id: AT-5
+      status: ATTACKED
+      evidence: >
+        Injection via re-quoting: the helper doubles the backslash FIRST then the quote, so a
+        value cannot break out of its literal — a value like '; DROP ... becomes '''; DROP ...'
+        (one string), and apostrophe-leading / injection-shaped facade values round-trip without
+        breakout (StopWordsRemover, StringIndexer probes). Gate ordering holds: canonicalize is the
+        first act of router::execute, before any router tokeniser. requote_generic emits real
+        control chars (a literal TAB, not \t) and only doubles ', so the Generic executing parse
+        cannot escape-process the value a second time. Residual: the conventions-gate
+        semantic-evasion (SQP2-C-01, S3, non-blocking) — quote-spelling variants are closed by the
+        mandatory Ruff-format gate, only a semantic reformulation escapes.
+      artifacts: ["crates/repark-spark/src/spark_literals.rs::requote_generic", "python/repark/src/repark/spark/_idents.py::sql_string_literal", scripts/check_python_conventions.py, "python/repark/tests/test_sqp_1_string_literals.py::test_stop_words_remover_backslash_and_apostrophe"]
+    - id: AT-6
+      status: ATTACKED
+      evidence: >
+        Data integrity: exactly-once confirmed on a real write/predicate path — DELETE WHERE c =
+        'a\\d' over {a\d, a<TAB>d_tab, plain} removes ONLY the backslash-d row (the predicate
+        literal was unescaped once, not re-folded). Facade values are verbatim: F.lit('\n')
+        (backslash-n) stays backslash-n, F.lit('x\') stays x\, createDataFrame '\t' (Arrow path
+        control) stays two chars, unpivot surfaces a backslash column name verbatim, StringIndexer
+        round-trips a\b'c. All match the oracle.
+      artifacts: ["crates/repark-spark/src/tests/spark_string_literals.rs::unescape_is_exactly_once_on_every_path", python/repark/tests/test_sqp_1_string_literals.py, "scratch: repark_x1.py (DELETE exactly-once probe)"]
+    - id: AT-7
+      status: N/A
+      justification: >
+        No system-breaking resource behaviour. canonicalize is a single O(n) token pass with a
+        Cow::Borrowed fast path when the text has no quote or backslash; the 5000-escape probe
+        returns length 5000 with no exponential/stack pathology (linear). Nothing here is an
+        outage, OOM, or SLA class; routine performance is the Actor's responsibility.
+    - id: AT-8
+      status: ATTACKED
+      evidence: >
+        sqlparser 0.62 dialect contract: I greped every self.dialect.<method> the tokenizer
+        consults (19 distinct) and confirmed all 18 non-backslash methods are forwarded to the
+        inner GenericDialect verbatim, so SparkLexDialect behaves as Generic in every tokeniser
+        decision except supports_string_literal_backslash_escape. Dialect::is::<T>() resolves via
+        the OVERRIDABLE dialect() method (TypeId::of::<T>() == self.dialect()), and SparkLexDialect
+        returns GenericDialect's TypeId, so every dialect_of! gate (r'..'/R'..'/b'..' prefixes, the
+        # rule) fires as Generic — verified at runtime (unicode ident, nested comment, #-in-backtick,
+        N'', X'41', E'' all behave as Generic). DataFusion type mapping: Expr::Cast{Binary} ->
+        Bytea while DDL BINARY stays BINARY.
+      artifacts: ["crates/repark-spark/src/spark_literals.rs (SparkLexDialect)", "crates/repark-spark/src/spark_ast.rs (BinaryCastToBytea)", "crates/repark-spark/src/tests/cast_binary.rs::binary_column_ddl_is_unchanged", "~/.cargo/registry/src/index.crates.io-*/sqlparser-0.62.0/src/tokenizer.rs (consulted-method enumeration)"]
+    - id: AT-9
+      status: ATTACKED
+      evidence: >
+        Failures are diagnosable. Tokenizer errors carry (line, column) into the DataFusion parse
+        error (measured Line 1 Column 8 and Column 10). BINARY refusals carry the exact Spark
+        condition string (CAST_WITH_CONF_SUGGESTION for plain CAST of an integer with the 'ANSI
+        mode on' clause; CAST_WITHOUT_SUGGESTION otherwise) and name the source type — matched to
+        the live oracle on both literal and column sources.
+      artifacts: ["crates/repark-spark/src/spark_literals.rs::canonicalize", "crates/repark-spark/src/spark_ast.rs::illegal_binary_cast_error", "crates/repark-spark/src/tests/cast_binary.rs::try_cast_to_binary_never_suggests_ansi_off"]
+    - id: AT-10
+      status: ATTACKED
+      evidence: >
+        Mutation-tested every remediation. Five mutations each RED the specific pin and GREEN on
+        restore: (1) helper reverted to quotes-only -> all 5 C-013 facade pins red; (2)
+        supports_triple_quoted_string forced true -> quote_runs_are_not_triple_quoted_strings red;
+        (3) CREATE EXTERNAL TABLE carve-out dropped -> datafusion_native_statements_keep_generic_literals
+        red; (4) !is_try_cast guard dropped -> try_cast_to_binary_never_suggests_ansi_off red; (5)
+        a real fake caller added in src/call/rewrite_manifests.rs -> the recursive
+        front_door_has_one_caller reds (2 callers), and reverting it to non-recursive falsely
+        passes. Branch liveness: the TRY_CAST vs CAST arm changes output (the two oracle-matched
+        conditions), not dead. rust-test 2139 passed / 0 failed; py-test-facade 3733 passed / 0
+        failed.
+      artifacts: [crates/repark-spark/src/tests/spark_string_literals.rs, crates/repark-spark/src/tests/cast_binary.rs, python/repark/tests/test_sqp_1_string_literals.py, python/repark-parity/tests/test_sqp_1_record.py, "scratch: mutation logs b3bqyfgqk/rust-test.log"]
+```
+
+**Attack notes.** AT-1 (spec): Measured the oracle BEFORE reading repark's answers, then compared. The escape domain, adjacency (E7), and quote-run handling all match; no clause is satisfied only in paraphrase. C-013 (the new cycle-2 clause) checked against real facade round-trips, not just the ledger prose.
+
+AT-2 (inputs): Chose inputs that break the SPECIFIC cycle-1 defects — apostrophe-leading facade values and quote-runs (the BigQuery-lexer crash/mangle class), and a label carrying both a backslash and an apostrophe (the S0 double-hazard). Added a 5000-escape literal as a boundary/stress input. All pass; the cycle-1 crash class is closed.
+
+AT-3 (failure): Confirmed the fail path is a LOUD, positioned parse error (not a silent wrong answer or a panic) for unpaired trailing backslash and raw-escaped-quote, matching Spark's refusal direction. N'' is a pre-existing loud refusal, not introduced or worsened here.
+
+AT-4 (state): Genuinely no surface — pure functions, exactly-once is structural. Recorded N/A with the mechanism, not a hand-wave.
+
+AT-5 (security): The backslash-first ordering is the security-load-bearing detail; I reasoned through a break-out attempt and probed apostrophe/injection-shaped values. The conventions gate is defense-in-depth; I empirically characterised its coverage boundary (Ruff-format closes quote-spelling variants; only a semantic reformulation escapes) and filed the residual as S3. Separately noted (not filed): writer_readwriter.py:771/784/801/810 embed COPY-OPTIONS compression/quote_style tokens WITHOUT _sql_option_escape while :752-760 do escape — but these are normalised enum tokens on the carved-out (backslash-literal) COPY path with no quote surface, pre-existing and out of this unit's scope.
+
+AT-6 (integrity): Exactly-once is the sharpest integrity risk (double-unescape would silently delete/keep the wrong row); I proved it on a live DELETE, not only via the Rust pin. Verified createDataFrame's Arrow path stays a true control (verbatim), distinguishing it from the SQL-embed paths.
+
+AT-7 (resource): Confirmed the fast path (Cow::Borrowed) and the linear single pass; the 5000-escape probe rules out pathological blow-up. N/A by the AT-7 system-breaking bar.
+
+AT-8 (contracts): The deepest attack — the sqlparser dialect-forwarding contract. Rather than trust the module doc, I enumerated the tokenizer's consulted methods from the vendored sqlparser-0.62.0 source and confirmed the masquerade mechanism (is::<T>() uses dialect(), not the concrete TypeId), then corroborated at runtime. This is what makes 'Generic in every decision except backslash' a proven contract, not a claim.
+
+AT-9 (observability): Checked that both error classes (tokenizer position; BINARY refusal condition+type) are diagnosable and match the oracle's wording, so a migrated job's failure is explainable.
+
+AT-10 (tests): The mutation battery is the core of this cycle — each cycle-1 finding's pin was shown load-bearing by reverting the fix and reading the pin, and the one-caller pin was shown to be load-bearing SPECIFICALLY for the subdirectory case (recursive reds, non-recursive false-passes). Gate note: make verify failed only at check-ledgers ('no base commit — origin/main or main does not resolve') — a scratch-clone artifact (no remote/main), not a unit defect; the Rust suite and all static gates before it pass, and check-ledger-grammar/py-test-facade/check-python-conventions were run and pass standalone.
+
+FINDING:
+  id: C1-F1
+  severity: S0
+  category: AT-6
+  clause: C-005, C-007, C-013
+  disposition: REMEDIATED
+  claim: the front door canonicalises facade-generated SQL too; nineteen facade sites embedded a Python value with only quote-doubling, so a value carrying a backslash was escape-processed — StopWordsRemover(['a\\b']) removed nothing, F.lit('p\\q') became 'pq', a MERGE value 'a\\tb' stored a TAB (same finding as C2-001 and SQP1-C3-02)
+  evidence: fresh facade execution on a built wheel vs the oracle (cycle 1, Critic-1/2/3); fix 5052b0a — one helper repark.spark._idents.sql_string_literal (backslashes doubled first, then quotes) routed through 26 sites, a check_python_conventions rule forbidding the bare idiom; facade pins per representative site red with the helper reverted, green on the tree
+
+FINDING:
+  id: C1-F2
+  severity: S0
+  category: AT-2
+  clause: C-002, C-012
+  disposition: REMEDIATED
+  claim: lexing with BigQueryDialect brought triple-quoted strings Spark does not have: four quotes was a tokenizer error, a value starting with an apostrophe crashed StopWordsRemover, and a quote-run literal carrying an escape was silently wrong (same finding as SQP1-C3-01)
+  evidence: Spark-door + wheel execution vs the oracle (cycle 1); fix f2ae66c — SparkLexDialect (Generic + backslash escapes, no triple quotes); pin quote_runs_are_not_triple_quoted_strings red with triple quotes forced on
+
+FINDING:
+  id: C2-002
+  severity: S2
+  category: AT-8
+  clause: C-003
+  disposition: REMEDIATED
+  claim: the COPY carve-out missed CREATE EXTERNAL TABLE … OPTIONS ('k' 'v'), DataFusion's pair grammar, which the adjacency merge broke
+  evidence: cycle-1 probe through the door; fix f2ae66c extends the carve-out; pin datafusion_native_statements_keep_generic_literals red without it
+
+FINDING:
+  id: C1-F3
+  severity: S3
+  category: AT-9
+  clause: C-009
+  disposition: REMEDIATED
+  claim: TRY_CAST(<integer> AS BINARY) refused with Spark's CAST_WITH_CONF_SUGGESTION where Spark uses CAST_WITHOUT_SUGGESTION; the TryCast refuse arm was unpinned (same finding as C2-003)
+  evidence: oracle-measured; fix f2ae66c threads the cast kind; pin try_cast_to_binary_never_suggests_ansi_off red with the guard dropped
+
+FINDING:
+  id: C2-004
+  severity: S3
+  category: AT-8
+  clause: C-012
+  disposition: REMEDIATED
+  claim: the module doc named the executing parse dialect; the truth (Generic — apply_spark_parser_dialect is dead code) is now asserted by spark_door_executes_with_generic_dialect
+  evidence: fix f2ae66c
+
+FINDING:
+  id: SQP1-C3-03
+  severity: S3
+  category: AT-10
+  clause: C-010
+  disposition: REMEDIATED
+  claim: front_door_has_one_caller scanned only top-level src files; a second caller in a submodule would have double-processed text unseen
+  evidence: fix f2ae66c — recursive walk
+
+FINDING:
+  id: C4-F1
+  severity: S3
+  category: AT-1
+  clause: C-005
+  disposition: REMEDIATED
+  claim: the C-005 evidence cell cited the facade test that pins C-007
+  evidence: fix d3306f5
+
+FINDING:
+  id: C4-F2
+  severity: S3
+  category: AT-1
+  clause: C-006
+  disposition: REMEDIATED
+  claim: the C-006 evidence path named a repark-sql src/tests module that does not exist; the clause omitted the tests/map.md lockstep edit
+  evidence: fix d3306f5
+
+FINDING:
+  id: C4-F3
+  severity: S3
+  category: AT-6
+  clause: C-011
+  disposition: REMEDIATED
+  claim: the out-of-range \\U divergence (repark '?' vs Spark's two-char artifact) had no registry home
+  evidence: fix d3306f5 — registry §7 BL-12 with the oracle transcript and pin test_out_of_range_unicode_escape_is_one_replacement
+
+FINDING:
+  id: SQP2-C-01
+  severity: S3
+  category: AT-10
+  clause: C-013
+  disposition: ACCEPTED_FLAGGED
+  claim: the check_python_conventions tripwire matches the double-quoted spelling of the quote-doubling idiom; a single-quoted spelling is caught only because the mandatory ruff-format gate rewrites it to the double-quoted form before the rule runs
+  evidence: cycle-2 Critic probe (a scanned file with three spellings); below the S1 floor — the facade pins are the primary proof and py-format-check runs in the same `make ci`; recorded here as the rule's known limit

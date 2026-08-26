@@ -5,10 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [sqp-1-spark-string-literals-ledger.md](sqp-1-spark-string-literals-ledger.md) — **SQP-1
-  (2026-08-25):** Spark string-literal escapes on the SQL door + `CAST … AS BINARY`. Twelve
-  clauses PROVEN and pinned; Actor done, awaiting the Critic (attestation deferred via the
-  grammar gate's EXCEPTIONS).
 - [dl-5-contract-compaction-ledger.md](dl-5-contract-compaction-ledger.md) — **DL-5
   (2026-08-25):** compact the live STATUS remainder and the contributor contract;
   `engineering-method` loses restated project rules; `check_docs_compaction` ceilings
