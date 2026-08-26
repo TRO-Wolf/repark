@@ -1,5 +1,17 @@
 # AGENTS.md — the authoritative contributor contract
 
+# OWNER RULING (2026-08-26) — NO CODE COMMENTS FROM ANTHROPIC MODELS
+
+**EFFECTIVE IMMEDIATELY. ALL ANTHROPIC MODELS ARE HEREBY BANNED FROM MAKING COMMENTS IN THE CODE. THIS INCLUDES, FABLE, OPUS, SONNET AND HAIKU**
+
+**AGAIN, IF YOU ARE FABLE, OPUS, SONNET OR HAIKU, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE FABLE, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE OPUS, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE SONNET, DO NOT WRITE ANY COMMENTS**<br>
+**IF YOU ARE HAIKU, DO NOT WRITE ANY COMMENTS**<br>
+
+**THIS INCLUDES ANY MODEL VERSION, EXAMPLE BEING OPUS 4.8 OR OPUS 5, EITHER ONE IS BANNED, IT DOESN'T MATTER**
+
 This is the **single authoritative project contract** for repark, written for **any contributor —
 human or automated agent**, naming no tool or model. It holds the precedence chain, the
 architectural invariants, the change-location guide, required verification, and the safety

@@ -157,3 +157,5 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 | Pre-commit hook rejects a commit | `bash scripts/check_map_md.sh` — the touched directory's map.md must be staged in the same commit |
 | A gate is unclear | `make help`; [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) are authoritative |
 | `manifest: FAIL …` | `bash scripts/check_manifest.sh` — [repo-manifest.toml](repo-manifest.toml) disagrees with the workspace, a doc, a make target, STATUS.md, or a crate map ([scripts/map.md#debug](scripts/map.md) has the per-message table) |
+
+<!-- 2026-08-26: AGENTS.md and CLAUDE.md open with the owner ruling banning code comments from Anthropic models -->
