@@ -28,8 +28,12 @@ STRING in Spark — E17/U16 — but repark's internal SQL quotes identifiers wit
 FNP-4b's, this unit adds the registry row); `spark.sql.parser.escapedStringLiterals=true`
 (E20/E21 — no config carrier exists for it; registry row); numeric → `BINARY` under
 `spark.sql.ansi.enabled=false` (B11 — Spark returns big-endian bytes; repark refuses loud;
-registry row); `typeof` (absent on the door; not this class); the ANSI door (its own contract);
-the facade (Python strings carry no SQL escapes — a control, not a change).
+registry row); `typeof` (absent on the door; not this class); the ANSI door (its own contract).
+The facade's **DataFrame-API expression** path stays a control (Python strings carry no SQL
+escapes); its **SQL-generation** path is IN scope after cycle-2 — the front door canonicalises
+facade-generated SQL too, so every embedded value must be spelled Spark-canonically (C-013).
+*(Cycle-1 tabled the facade as "a control, not a change"; the Critic found the SQL-generation
+embeds and cycle-2 brings them in — see the Remediation record.)*
 
 ## Oracle — PySpark 4.1.2 + Iceberg 1.11.0, measured 2026-08-25 (`<pyspark-4.1.2-oracle>`)
 
@@ -88,14 +92,16 @@ Default `spark.sql.parser.escapedStringLiterals=false`; `spark.sql.ansi.enabled=
 | C-002 | Spark-valid literals containing `\'` / `\"` lex (E5, E5c, E22, U9, U11); an unpaired trailing backslash (`'a\'`) is a parse error (E16, U10); `'a\\'` is `a\` (E15) | Pin | **PROVEN** | `spark_string_literals.rs::escaped_quotes_lex_and_unpaired_backslash_refuses` |
 | C-003 | Adjacent single-quoted literals concatenate (E7, U17) | Pin | **PROVEN** | `spark_string_literals.rs::adjacent_literals_concatenate` |
 | C-004 | Raw strings `r'…'` / `R'…'` keep their content verbatim (E19) | Pin | **PROVEN** | `spark_string_literals.rs::raw_strings_are_verbatim` |
-| C-005 | Exactly-once across every execution path that re-emits or re-parses user text. Enumerated paths (each pinned with `'\\d'` → `\d` and `'a\tb'` → TAB): (a) direct SELECT; (b) `VALUES`; (c) `INSERT … VALUES`; (d) `INSERT … SELECT`; (e) `DELETE … WHERE col = '…'`; (f) `DELETE … WHERE col IN (SELECT …)` — the predicate_dml identity re-emission; (g) `UPDATE … SET … WHERE`; (h) `UPDATE … WHERE col IN (SELECT …)`; (i) `MERGE` ON / WHEN predicates and SET values; (j) `CREATE TABLE … AS SELECT`; (k) `CREATE TABLE … TBLPROPERTIES ('k' = 'v\tw')` / `COMMENT`; (l) `CALL` procedure string arguments; (m) `ALTER TABLE … SET TBLPROPERTIES`; (n) `SET k = 'v'` | Pin per element (Spark door), the deleted/updated/merged rows compared by content | **PROVEN** | `spark_string_literals.rs::unescape_is_exactly_once_on_every_path` + `python/repark/tests/test_sqp_1_string_literals.py` |
-| C-006 | The ANSI door is untouched: `length('\d')` = 2, `'\''` is a tokenizer error, `r'\d'` refuses as before; no file under `crates/repark-sql/` changes except a test module | Control pins + diff scope | **PROVEN** | `crates/repark-sql/src/tests/…::ansi_door_keeps_generic_literals` |
-| C-007 | Facade controls: `F.regexp_count(F.lit('a1'), F.lit('\\d'))` = 1 before and after; `spark.sql("SELECT regexp_count('a1', '\\\\d')")` now equals it; `F.lit("abc").cast("binary")` equals `spark.sql("SELECT CAST('abc' AS BINARY)")` in value and Arrow type | Facade pins | **PROVEN** | `python/repark/tests/test_sqp_1_string_literals.py` |
+| C-005 | Exactly-once across every execution path that re-emits or re-parses user text. Enumerated paths (each pinned with `'\\d'` → `\d` and `'a\tb'` → TAB): (a) direct SELECT; (b) `VALUES`; (c) `INSERT … VALUES`; (d) `INSERT … SELECT`; (e) `DELETE … WHERE col = '…'`; (f) `DELETE … WHERE col IN (SELECT …)` — the predicate_dml identity re-emission; (g) `UPDATE … SET … WHERE`; (h) `UPDATE … WHERE col IN (SELECT …)`; (i) `MERGE` ON / WHEN predicates and SET values; (j) `CREATE TABLE … AS SELECT`; (k) `CREATE TABLE … TBLPROPERTIES ('k' = 'v\tw')` / `COMMENT`; (l) `CALL` procedure string arguments; (m) `ALTER TABLE … SET TBLPROPERTIES`; (n) `SET k = 'v'`. A DataFusion-native statement (`COPY`, `CREATE [OR REPLACE] EXTERNAL TABLE`) is carved out and left Generic — its `OPTIONS ('k' 'v')` pairs are not Spark concatenation (cycle-2 C2-002) | Pin per element (Spark door), the deleted/updated/merged rows compared by content | **PROVEN** | `spark_string_literals.rs::unescape_is_exactly_once_on_every_path`; the carve-out by `spark_string_literals.rs::datafusion_native_statements_keep_generic_literals` |
+| C-006 | The ANSI door is untouched: `length('\d')` = 2, `'\''` is a tokenizer error, `r'\d'` refuses as before; no file under `crates/repark-sql/` changes except the added integration-test module `tests/ansi_door_string_literals.rs`, whose directory `crates/repark-sql/tests/map.md` is updated in the same commit (lockstep) | Control pins + diff scope | **PROVEN** | `crates/repark-sql/tests/ansi_door_string_literals.rs::ansi_door_keeps_generic_literals` |
+| C-007 | Facade controls: `F.regexp_count(F.lit('a1'), F.lit('\\d'))` = 1 before and after; `spark.sql("SELECT regexp_count('a1', '\\\\d')")` now equals it; `F.lit("abc").cast("binary")` equals `spark.sql("SELECT CAST('abc' AS BINARY)")` in value and Arrow type. **These are controls only for the DataFrame-API expression path** (a Python string carries no SQL-lexer escapes); the facade's *SQL-generation* path is NOT a control — it embeds values into the Spark door and is the subject of C-013 (cycle-2) | Facade pins | **PROVEN** | `python/repark/tests/test_sqp_1_string_literals.py` |
 | C-008 | Incidental controls hold at the oracle's values: E13 LIKE (T F T F T), U14 `LIKE … ESCAPE '!'`, U15 RLIKE (T, F), E26 backtick identifiers verbatim, E6 `''` | Pins | **PROVEN** | `spark_string_literals.rs::like_rlike_and_identifier_controls` |
 | C-009 | `CAST(x AS BINARY)` / `TRY_CAST(x AS BINARY)` on the Spark door plan to Arrow `Binary`: B1, B8, B9, B10, B13, B15 at the oracle's values and types; INT / BIGINT / DECIMAL / BOOLEAN / DATE → BINARY refuse with an error naming the source type and Spark's `DATATYPE_MISMATCH` condition; `VARBINARY` keeps refusing; `CREATE TABLE (b BINARY)` DDL is unchanged; the facade `.cast("binary")` is the equality control | Pins | **PROVEN** | `crates/repark-spark/src/tests/cast_binary.rs` |
 | C-010 | Both AST/statement rewrites are idempotent across DataFusion's double analysis (the existing `passthrough_rewrites_are_idempotent_across_reanalysis` pattern extended to the BINARY cast) and the front-door pass is applied by construction exactly once per `router::execute` call (its output is Generic-canonical text with no backslash semantics; no other caller invokes it) | Pin + grep pin | **PROVEN** | `spark_ast.rs::passthrough_rewrites_are_idempotent_across_reanalysis`, `spark_string_literals.rs::front_door_has_one_caller` |
 | C-011 | Record truth: the two Known-correctness-issue entries leave `STATUS.md`; the registry gains §7 rows for the three measured, not-closed divergences (double-quoted string literals — FNP-4b; `escapedStringLiterals`; numeric → BINARY under ansi=false), each with the oracle transcript; the GT1 test comments that describe the residual (`test_functions_gt1.py:553`, `:617`) are updated; `map.md` lockstep for every touched directory; the new module's doc records the rule table | Tree pin | **PROVEN** | `python/repark-parity/tests/test_sqp_1_record.py` |
 | C-012 | Quality: the lexer pass is one module (`crates/repark-spark/src/spark_literals.rs`, under the 1500-line ceiling) with a module doc stating the rules and their oracle provenance; production code has no `unwrap`/`expect`/`panic` (`make rust-panic-ban`), no `unsafe`; a tokenizer failure surfaces as a DataFusion parse error carrying line/column; the fast path returns the input unchanged (`Cow::Borrowed`) when the text has no backslash, no `r'`/`R'` prefix and no adjacent literals | Pins + gates | **PROVEN** | `spark_string_literals.rs::fast_path_borrows_and_errors_carry_position` |
+
+| C-013 | **The facade spells every embedded value as a Spark-canonical literal through one helper (cycle-2).** The Spark door's front door (`router::execute`) Spark-unescapes *every* statement entering it — facade-generated SQL included — so a facade value carrying a backslash embedded with only `'`-doubling is silently escape-processed (`F.lit('p\q')` → `pq`; a MERGE/createDataFrame `'a\tb'` stored with a TAB), and a value beginning with an apostrophe crashed the door's (cycle-1) BigQuery triple-quote lexer. One shared helper `repark.spark._idents.sql_string_literal` (backslash doubled FIRST, then `'`, then wrapped) is the single home of the escaping rule; a companion `escape_sql_single_quotes` (quotes-only) serves DataFusion-native/backslash-literal statements (`COPY` staging path + options; DuckDB bench). Enumerated embed sites route through one of the two: `functions._lit_sql_expr` (+ date_format/trunc/date_trunc), `session._funcs._sql_literal` + the `SET` builder, `catalog` `LIKE`, `functions_expr`/`functions_collections` `named_struct`, `dataframe.plan_collapse._sql_string_literal` (→ `core.unpivot` + `writer_readwriter` CTAS `TBLPROPERTIES`), `writer_readwriter` COPY staging/options (quotes-only), and `ml/feature/_transformers` (StringIndexer/IndexToString labels, CountVectorizer terms, StopWordsRemover stop words, RegexTokenizer pattern). A `scripts/check_python_conventions.py` text rule (ceiling 0, no exceptions; `_idents.py` the sole allowed site) forbids the raw single-quote-doubling idiom anywhere else | Facade pins (backslash value RED with the helper reverted to quotes-only) + the conventions gate (provocation-proved) | **PROVEN** | `python/repark/tests/test_sqp_1_string_literals.py` (`test_sql_literal_renders_a_backslash_as_a_spark_literal`, `test_lit_backslash_survives_the_aggregate_embed`, `test_unpivot_backslash_column_value`, `test_stop_words_remover_backslash_and_apostrophe`, `test_string_indexer_round_trips_a_backslash_label`); `scripts/check_python_conventions.py` |
 
 **Enumerations.** C-001: the sixteen escape elements above. C-005: the fourteen paths (a)–(n).
 Growth rule (spine R2): a new statement class that carries a user literal joins (a)–(n) in the
@@ -114,8 +120,13 @@ text), apply Spark's rules to each `Token::SingleQuotedString`, map
 `Token::SingleQuotedRawStringLiteral` to a plain literal, merge adjacent literal tokens, and
 re-emit the token stream verbatim (whitespace tokens included) with each literal re-quoted
 in Generic form (`'` doubled, no backslash meaning). Every downstream tokenizer and parser then
-sees the value Spark's lexer would have produced, and nothing generated internally
-(`predicate_dml`, `merge`) ever enters the front door — that is what makes C-005 hold. The
+sees the value Spark's lexer would have produced. The "internal SQL never re-enters the front
+door" claim holds **for the engine's own re-emission only** — `predicate_dml` and `merge` build
+their SQL *after* `router::execute`, so they are never re-canonicalised (that is what keeps C-005
+exactly-once). It does **not** cover the Python facade: the facade calls `spark.sql(...)` for its
+generated statements, which DO enter `router::execute` and ARE canonicalised — so a facade value
+carrying a backslash must be spelled Spark-canonically before it is embedded (cycle-2 C-013; the
+cycle-1 charter under-stated this by tabling the whole facade as a control). The
 BINARY cast is an AST rewrite at `execute_passthrough` (`Expr::Cast { data_type: Binary }` →
 `Bytea`, both cast kinds) because `BINARY` must stay `BINARY` in DDL (`create_table.rs:284`).
 
@@ -230,3 +241,91 @@ exercises. A latent, untested risk remains: other facade SQL-literal embeds (lab
 terms via `.replace("'", "''")`) would mis-handle a **backslash in a data value** — no test covers
 it because such values are backslash-free in practice. Worth a sweep if the owner wants defence in
 depth; out of this unit's narrow scope. PROCEED.
+
+## Remediation — cycle 2
+
+**Actor:** 2026-08-26, Opus. Remediation of the two PR reviews' accepted Critic findings. Every
+finding below is REMEDIATED with a regression proof (a pin RED before the fix on `37b84b0`, GREEN
+after — shown by reverting the fix and re-running — or a one-line justification where no pin
+applies). No live-worktree touch; the ledger stays in `staging/`.
+
+### Per-finding disposition
+
+- **S0 — C1-F1 = C2-001 = SQP1-C3-02 (facade data values through the front door).** REMEDIATED.
+  One shared helper `repark.spark._idents.sql_string_literal` (backslash doubled FIRST, then `'`,
+  wrapped) is the single home of the Spark-door literal-escaping rule; the companion
+  `escape_sql_single_quotes` (quotes-only) serves the DataFusion-native/backslash-literal
+  statements (`COPY` staging path + options, and the DuckDB bench). **19 shipped-facade embed
+  sites** were routed through the two helpers (functions `_lit_sql_expr` + date_format/trunc/
+  date_trunc ×3; session `_sql_literal` + `SET`; catalog `LIKE`; functions_expr /
+  functions_collections `named_struct`; `plan_collapse._sql_string_literal` → unpivot + writer
+  CTAS; writer COPY staging + `_sql_option_escape`; ml/feature labels + terms + stop words +
+  RegexTokenizer pattern), plus **7 repark-parity bench sites**. Proof: five facade pins
+  (`test_sql_literal_renders_a_backslash_as_a_spark_literal`,
+  `test_lit_backslash_survives_the_aggregate_embed`, `test_unpivot_backslash_column_value`,
+  `test_stop_words_remover_backslash_and_apostrophe`, `test_string_indexer_round_trips_a_backslash_label`)
+  each go RED when `sql_string_literal` is reverted to quotes-only, GREEN restored. Defence in
+  depth: `scripts/check_python_conventions.py` rule 3 (see provocation below). Amended clauses:
+  C-007 (facade is a control only on the DataFrame-API path), NEW C-013, the charter out-of-scope
+  line and Design section.
+- **S0/S1 — C1-F2 = SQP1-C3-01 (BigQuery triple-quoted strings).** REMEDIATED. `canonicalize`
+  now lexes with `SparkLexDialect` (Generic + backslash-escape, no triple-quoted strings; `dialect()`
+  returns Generic's `TypeId` so `r'…'`/`b'…'` prefixes still lex). Proof:
+  `quote_runs_are_not_triple_quoted_strings` (`''''`→`'`, `'''a\tb'''`→`'a<TAB>b'` len 5, oracle-
+  measured) is RED when `supports_triple_quoted_string` is forced true, GREEN restored. The
+  apostrophe-leading facade value (`'tis`) is covered by the StopWordsRemover pin above. Module doc
+  lexer claim corrected.
+- **S2 — C2-002 (CREATE EXTERNAL TABLE carve-out).** REMEDIATED. The carve-out now skips both `COPY`
+  and `CREATE [OR REPLACE] EXTERNAL TABLE`. Proof:
+  `datafusion_native_statements_keep_generic_literals` (both statements `Cow::Borrowed`; the
+  contrast line proves the merge is live in a Spark statement) — RED without the carve-out (the
+  `OPTIONS ('k' 'v')` pairs would merge → `Cow::Owned`). The through-the-door read was pinned at the
+  canonicalise level because CREATE EXTERNAL TABLE reads have no in-crate FS-gated precedent and the
+  canonicalise pin is the precise, revert-red-valid regression proof for the carve-out.
+- **S3 — C1-F3 = C2-003 (TRY_CAST BINARY suggestion).** REMEDIATED. The refusal threads the cast
+  kind: only a plain `CAST` of an integer quotes `CAST_WITH_CONF_SUGGESTION`; `TRY_CAST` of any
+  source quotes `CAST_WITHOUT_SUGGESTION` (oracle: `TRY_CAST(1 AS BINARY)` = `CAST_WITHOUT_SUGGESTION`).
+  Proof: `try_cast_to_binary_never_suggests_ansi_off` (INT/BIGINT/BOOLEAN + a plain-CAST control) is
+  RED with the `!is_try_cast` guard dropped, GREEN restored.
+- **S3 — C2-004 (executing-parse dialect honesty).** REMEDIATED. `apply_spark_parser_dialect`
+  (Databricks) is dead code, so the door parses under Generic; the module doc now says so and
+  `spark_door_executes_with_generic_dialect` asserts `sql_parser.dialect == Generic` (reds if the
+  Databricks helper is ever wired without the doc changing).
+- **S3 — SQP1-C3-03 (one-caller walk).** REMEDIATED. `front_door_has_one_caller` walks
+  `crates/repark-spark/src` recursively (skipping `tests/`); `python/` is not walked (the facade
+  cannot call a Rust private fn). Justification (no separate pin): the pin itself IS the recursive
+  walk; it stays at exactly one caller (`router.rs`).
+- **S3 — C4-F1 (C-005 Evidence).** REMEDIATED. C-005 no longer cites
+  `test_sqp_1_string_literals.py` (which pins C-007); its Evidence is the Rust exactly-once test
+  plus the carve-out test.
+- **S3 — C4-F2 (C-006 Evidence).** REMEDIATED. C-006's Evidence is
+  `crates/repark-sql/tests/ansi_door_string_literals.rs::ansi_door_keeps_generic_literals`, and the
+  clause names the `crates/repark-sql/tests/map.md` lockstep edit.
+- **S3 — C4-F3 (out-of-range `\U` home).** REMEDIATED. Registry §7 row **BL-12** added with the
+  oracle transcript (`length('\U00110000')` = 2 / `3F3F`; repark one `?`), RED-on-fix style, pinned
+  by `test_out_of_range_unicode_escape_is_one_replacement`.
+
+### Provocation proof — the `check_python_conventions.py` single-quote-doubling rule (rule 3)
+
+New mechanical gate; provocations captured, never committed (a throwaway comment marker was used
+for the injected line and removed; the tree greps clean of it):
+
+```
+# must-FAIL — the raw idiom injected into a scanned facade file (catalog.py):
+$ python3 scripts/check_python_conventions.py
+ERROR: python/repark/src/repark/spark/catalog.py:690 spells the single-quote-doubling SQL-escape idiom by hand — …
+python-conventions: FAIL — 1 violation(s) across 180 files      # exit 1
+
+# must-PASS — reverted:
+$ python3 scripts/check_python_conventions.py
+python-conventions: 180 files clean (nested-def rows 0, dataclass rows 1, sql-escape helper python/repark/src/repark/spark/_idents.py)   # exit 0
+```
+
+The guard's own regex is written so its pattern text never spells the idiom, so it does not flag
+its own source (verified: clean run above includes `scripts/`).
+
+### Module size (cycle 2)
+
+`crates/repark-spark/src/spark_literals.rs` = **561 lines** (ceiling 1500; +146 for `SparkLexDialect`
+and the DataFusion-native carve-out helpers). `spark_ast.rs` grew by the cast-kind thread (well
+under ceiling).
