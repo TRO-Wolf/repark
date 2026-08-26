@@ -9,6 +9,11 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [dl-5-contract-compaction-ledger.md](dl-5-contract-compaction-ledger.md) — **DL-5
+  (2026-08-25):** compact the live STATUS remainder and the contributor contract;
+  `engineering-method` loses restated project rules; `check_docs_compaction` ceilings
+  extend to `AGENTS.md` and the method skill. Host-injection measurement and
+  `.agents/roles/` are out of scope.
 
 ## Pointers
 - Up: [../map.md](../map.md)
