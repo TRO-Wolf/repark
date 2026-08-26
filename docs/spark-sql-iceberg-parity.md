@@ -367,12 +367,12 @@ them, and the document is ordered by surface, never by date.
 >
 > **F-Y10-1 / F-Y10-2 — routed, not invented as DEC rows (2026-08-13, Z-5).** F-Y10-1
 > (`CAST(2147483647 AS INT) + CAST(1 AS INT)` wraps on **both** doors) is the integer analog
-> of [DEC-6](#dec-6--max-decimal380--1-under-ansi-returns-a-corrupted-value). The 2026-08-13
+> of DEC-6 (a decimal overflow, since FIXED — #99). The 2026-08-13
 > DEC addendum (Q11 = A) puts ANSI overflow on campaign U5 / G13; wrap is not pinned as
 > intended and is not a new DEC row. F-Y10-2 (ANSI float `/ 0` is IEEE `+Inf` rather than a
 > standard-SQL raise) is residual; the door-vs-door Inf-vs-NULL split is already an INTENDED
 > pin (`cross_door_float_div_by_zero_is_infinity_on_ansi_null_on_spark`). It is not
-> [DEC-7](#dec-7--decimal--0-under-ansi-returns-null) (decimal).
+> DEC-7 (decimal `/0`, since FIXED — #99).
 
 ### ID-2 — the case-collision refusal covers the SQL-string form only
 
@@ -846,8 +846,8 @@ the pin rather than obeying it.
 > the remainder, each measured against live Spark 4.1.2 and pinned:
 > [TZ-7](#tz-7--a-zoneless-timestamp-input-is-read-as-utc-not-as-a-session-zone-wall-clock) (a
 > zoneless timestamp INPUT is read as UTC, so its instant is wrong before any extractor sees it)
-> and [TZ-8](#tz-8--timestampdate-outside-this-repos-coercion-path-reads-the-stored-zone)
-> (`to_date` / `CAST(ts AS DATE)` / `datediff` take the date in the stored zone). A reader who
+> and TZ-8 (`to_date` / `CAST(ts AS DATE)` / `datediff` since FIXED — #100, session-zone; only
+> `last_day` / `date_add` over a TIMESTAMP remain). A reader who
 > arrives here from a wrong wall clock is routed to one of the two, never told the class is shut.
 > The remaining state line is in [../STATUS.md](../STATUS.md); the full account, including the
 > adversarial panel that forced this narrowing, is in
@@ -973,36 +973,41 @@ the pin rather than obeying it.
 > `timestamp_cast_to_string_is_spark_utf8`. TZ-8 date-cast stays disclosed. A fixed defect
 > gets this dated note, never a live divergence row.
 
-### TZ-8 — TIMESTAMP→DATE outside this repo's coercion path reads the stored zone
+### TZ-8 — `last_day` / `date_add` over a TIMESTAMP refuse to plan
 
-- **repark** — `to_date(to_timestamp('2024-06-15T03:00:00Z'))` and
-  `CAST(to_timestamp('2024-06-15T03:00:00Z') AS DATE)` both answer `2024-06-15`;
-  `datediff(to_timestamp('2024-06-15T03:00:00Z'), DATE '2024-06-01')` answers `14`. `last_day` and
-  `date_add` over a TIMESTAMP do not plan at all (`coercion from Timestamp(ns) … failed`).
-  As an identity partition key under `America/New_York`, `CAST(ts AS DATE)` / `to_date(ts)`
-  write the **UTC** calendar date (`2024-01-01` for `2024-01-01T04:30Z`).
-- **Apache Spark** — takes the date in `spark.sql.session.timeZone`: `2024-06-14` (the instant is
-  23:00 EDT on the 14th), `13`, and `last_day` / `date_add` accept a TIMESTAMP and answer
-  `2024-05-31` / `2024-06-01`. The same NY session writes partition date `2023-12-31` for
-  `2024-01-01T04:30Z`. *(oracle: recorded — live PySpark 4.1.2, 2026-08-10; V-3 recapture
-  2026-08-13; V-4 partition audit 2026-08-13.)*
-- **Pin** — `crates/repark-spark/tests/session_timezone.rs::timestamp_to_date_paths_outside_this_crate_still_read_the_stored_zone`
-  (NY `2024-06-14` Spark / `2024-06-15` repark) and
-  `python/repark/tests/test_partition_value_audit.py::test_partition_value_row[tz8_cast_ts_as_date_identity_new_york_ctas]`
-  + `…[tz8_to_date_ts_identity_new_york_ctas]` (partition dates). One row, two citations.
-- **Rationale** — BACKLOG, intent to FIX. **Not FIXED.** **Not a regression** — these behaved
-  the same before H-1a split B — but a completeness gap that the class claim would otherwise
-  paper over, and `CAST(ts AS DATE)` is the most common partition-key derivation in a
-  migrated job. The boundary is ownership, not difficulty: this repo's own date-valued shims
-  (`trunc`, `add_months`) reach the date through `repark-functions`' coercion path and were
-  **fixed** in the same rework, while `to_date` / `datediff` come from `datafusion-spark` and
-  `CAST(ts AS DATE)` is arrow's cast kernel, which reads the array's own annotation. UTC
-  annotation (TZ-4 PR-2 / `#85`) did not close date-cast. Registry queue **B-TZ-3** is the
-  `DATE`-argument sibling of the same `date_add` coercion hole.
+- **repark** — `last_day` and `date_add` over a TIMESTAMP do not plan at all
+  (`coercion from Timestamp(ns) … failed` / `No function matches`). The `CAST(ts AS DATE)` /
+  `to_date` / `datediff` half of this row is **FIXED** — see the dated note below; those read the
+  session zone now.
+- **Apache Spark** — `last_day` / `date_add` accept a TIMESTAMP and resolve its date in
+  `spark.sql.session.timeZone`: under `America/New_York` the instant `2024-06-15T03:00:00Z`
+  (23:00 EDT on the 14th) answers `last_day(ts) → 2024-06-30` and `date_add(ts, 1) → 2024-06-15`.
+  *(oracle: recorded — live PySpark 4.1.2, 2026-08-10; V-3 recapture 2026-08-13.)*
+- **Pin** — `crates/repark-spark/tests/session_timezone.rs::last_day_and_date_add_over_a_timestamp_still_refuse`
+  (red-on-purpose: the recorded NY Spark values above are named in it, so adding the overload reds
+  the pin instead of passing unnoticed).
+- **Rationale** — BACKLOG, intent to FIX. The residual is the TIMESTAMP overload of `last_day` /
+  `date_add`; registry queue **B-TZ-3** (`date_add(DATE, int literal)` coercion) is
+  the `DATE`-argument sibling of the same hole. Engine work — a later unit. **Not a regression**:
+  these behaved the same before H-1a split B; the completeness gap is what the class claim would
+  otherwise paper over.
 
-> **Dated 2026-08-14 (V-3 handoff + V-4 / #88).** V-3 captured NY
-> `CAST(to_timestamp('2024-06-15T03:00:00Z') AS DATE)` → Spark DATE `2024-06-14`. V-4's
-> two partition-date diverge rows CROSS-CITE this row; they are not a second TZ-8.
+> **TZ-8 `CAST(ts AS DATE)` / `to_date` / `datediff` — FIXED (2026-08-14, #100).**
+> `CAST(ts AS DATE)`, `to_date(ts)` and `datediff(ts, date)` now take the date in
+> `spark.sql.session.timeZone` through the analyzer rewrite `rewrite_timestamp_to_date_cast`
+> (`crates/repark-functions/src/analyzer.rs`; `datediff` rides the same CAST via
+> `SparkDateDiff::simplify`). Under `America/New_York`, `2024-06-15T03:00:00Z` answers `2024-06-14`
+> (CAST and `to_date`) and `datediff(ts, DATE '2024-06-01')` answers `13` — Spark's values, not the
+> stored UTC date; a UTC control keeps `2024-06-15` and a Tokyo instant crosses forward. As an
+> identity partition key the same class now writes the session-zone date (`2023-12-31` for
+> `2024-01-01T04:30Z`, was `2024-01-01`). Pins:
+> `…session_timezone.rs::timestamp_to_date_paths_read_the_session_zone`,
+> `…::native_dataframe_api_cast_to_date_reads_the_session_zone`,
+> `…::date_valued_shims_take_the_date_in_the_session_zone` (the `trunc` / `add_months` shims that
+> share the kernel);
+> `python/repark/tests/test_partition_value_audit.py::test_partition_value_row[tz8_cast_ts_as_date_identity_new_york_ctas]`
+> + `…[tz8_to_date_ts_identity_new_york_ctas]` (flipped to equality — flip evidence). A fixed
+> defect gets this dated note, never a live divergence row.
 
 > **The DEC family (DEC-1 … DEC-9)** landed on 2026-08-11 from the G-7 decimal128 differential
 > corpus (hardening gaps **G2** and **G13**; unit ledger
@@ -1027,24 +1032,20 @@ the pin rather than obeying it.
 > [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES` union width) stays
 > DECLARED — see its dated 2026-08-13 note.
 
-### DEC-2 — `DECIMAL / DECIMAL` result precision and scale
-
-- **repark** — `CAST(1.23 AS DECIMAL(10,2)) / CAST(4.56 AS DECIMAL(10,2))` yields
-  `decimal128(16,6)` nullable with rounded value `0.269736`; repeating money division
-  `(10.00)/(3.00)` → `(16,6)` `3.333333`; integer-scale `1/3` at `(10,0)` → `(14,4)` `0.3333`;
-  exact half `5.00/2.00` keeps value `2.5` but lands `(16,6)`.
-- **Apache Spark** — `(10,2)/(10,2)` yields `decimal128(23,13)` nullable `0.2697368421053`;
-  repeating money stays `(23,13)`; integer-scale lands `(21,11)` `0.33333333333`; exact half is
-  `(23,13)` `2.5000000000000`. *(oracle: recorded.)*
-- **Pin** — `[div_same_precision_scale]`, `[div_repeating_money]`, `[div_integer_scales]`,
-  `[div_exact_half_type_only]`
-- **Rationale** — BACKLOG, intent to FIX (gap G2 — Spark-compatible division precision/scale
-  rules). Value AND type diverge on three recipes; the fourth is type-only. A unit-price split is
-  silently short under repark's six fractional digits.
-  **Dated 2026-08-14 (V-2 U4a / #91):** U4a shipped add/sub/mul clamp only. `/` is declared
-  **U4b**: CAST-after wrongs the *value* (exact-half agrees on 2.5 and still diverges on
-  `(23,13)` vs `(16,6)`); needs a UDF / scaled division. `%` UNPROBED. Do not fold `/` into
-  DEC-3's FIXED note.
+> **DEC-2 — `DECIMAL / DECIMAL` result precision and scale — FIXED (2026-08-14, V-2 U4b / #99).**
+> `/` now takes Spark's `resultDecimalType` through a `repark-functions` UDF
+> (`crates/repark-functions/src/decimal_spark.rs`; `SparkDecimalRewrite` runs before
+> `SparkExprSemantics` so the rewrite sees a clean `decimal / decimal`) — a CAST-after had wronged
+> the *value*. `(10,2)/(10,2)` → `decimal128(23,13)` `0.2697368421053`; repeating money
+> `(10.00)/(3.00)` stays `(23,13)`; integer-scale `1/3` lands `(21,11)` `0.33333333333`; exact
+> half `5.00/2.00` is `(23,13)` `2.5000000000000` — repark now equals Spark on all four (was
+> `(16,6)` `0.269736` / `3.333333` / `(14,4)` `0.3333` / `(16,6)` `2.5`). The parametrized names
+> `[div_same_precision_scale]`, `[div_repeating_money]`, `[div_integer_scales]`,
+> `[div_exact_half_type_only]` are kept so citations still resolve; the rows are now content
+> equalities (`repark is None`). Pins: those corpus cases; Rust
+> `crates/repark-spark/src/tests/decimal.rs::pin_div_same_precision_scale_repark_i128`. `%`
+> (`resultDecimalType` for modulo) stays closed — UNPROBED, a later unit. A fixed defect gets this
+> dated note, never a live divergence row.
 
 > **DEC-3 — the 38-digit result-type clamp on multiply and add — FIXED (2026-08-13, V-2 U4a / #91).**
 > Spark `adjustPrecisionScale` (`allowPrecisionLoss=true`) via `SparkDecimalPrecision`
@@ -1055,8 +1056,9 @@ the pin rather than obeying it.
 > resolves; the rows are now content equalities (`repark is None`). Pins: those corpus
 > cases; Rust `pin_mul_38_10_clamps_to_38_6_i128` + `pin_add_38_18_clamps_to_38_17_i128`;
 > name-gated budget `test_decimal128_row_set_covers_gap_budgets` (≥ 3 `*clamps_scale_in_spark`).
-> `/` is **EXCEPTED** (U4b — see DEC-2). Registry DEC-8 (plan-refuse at
-> `BinaryExpr::get_type`) is a **different altitude** and stays BACKLOG. A fixed defect
+> `/` has since landed (U4b / #99 — see DEC-2's note). Registry DEC-8 (plan-refuse at
+> `BinaryExpr::get_type`) is a **different altitude** and has since landed too (#99 — see its
+> note). A fixed defect
 > gets this dated note, never a live divergence row.
 
 > **DEC-4 — `avg(DECIMAL)` promotes to `double` — FIXED (2026-08-13, Z-3 U1 / #76;
@@ -1088,43 +1090,40 @@ the pin rather than obeying it.
 > **Name collision.** Campaign DEC-8 is integer-literal min-precision (this width).
 > Registry DEC-8 is `(38,20)*(38,20)` plan-refuse — a different class.
 
-### DEC-6 — max `DECIMAL(38,0) + 1` under ANSI returns a corrupted value
+> **DEC-6 — max `DECIMAL(38,0) + 1` under ANSI raises — FIXED (2026-08-14, DEC U5 / #99 on the
+> ANSI door #94).** A checked `+` / `-` UDF (`crates/repark-functions/src/decimal_spark.rs`) reads
+> the landed ANSI knob (`spark.sql.ansi.enabled`, default TRUE since U5 / #94):
+> `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))` now raises
+> `NUMERIC_VALUE_OUT_OF_RANGE` / `ArithmeticException` — the prior `10^38` wrap is gone;
+> `ansi=false` yields NULL at `decimal128(38,0)`. The names
+> `[overflow_max_decimal38_plus_one_raises_in_spark]` (a shared-raise equality) and
+> `[overflow_max_decimal38_plus_one_null_when_ansi_false]` are kept. Pins: those corpus cases; Rust
+> `crates/repark-spark/src/tests/decimal.rs::pin_overflow_max_decimal38_plus_one_wrong_value_i128`
+> (name kept; now asserts the raise) + `…::pin_overflow_max_decimal38_plus_one_null_when_ansi_false`.
+> A fixed defect gets this dated note, never a live divergence row.
 
-- **repark** — `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))` stores `10^38` at
-  declared `decimal128(38,0)` (no raise). U2 removed the prior float-residue photograph;
-  leftover is wrap-not-residue.
-- **Apache Spark** — under ANSI raises `ArithmeticException` / `NUMERIC_VALUE_OUT_OF_RANGE`.
-  *(oracle: recorded.)*
-- **Pin** — `[overflow_max_decimal38_plus_one_raises_in_spark]`; Rust
-  `crates/repark-spark/src/tests/decimal.rs::pin_overflow_max_decimal38_plus_one_wrong_value_i128`
-- **Rationale** — BACKLOG, intent to FIX (gap G13 — ANSI overflow raise, or honest NULL under
-  non-ANSI). Silently-wrong-result class on the integrity path.
-  **Dated 2026-08-13 (W-2 / #84):** photograph updated to the wrap. ANSI raise is campaign
-  DEC U5 / G13 (not this increment).
+> **DEC-7 — `DECIMAL / 0` under ANSI raises — FIXED (2026-08-14, U5 / #94 + U4b / #99).** Default
+> ANSI ON (#94) plus the U4b division UDF that owns `/0` (#99): `(38,0)/(38,0)` and small
+> `(2,0)/(2,0)` now raise `DIVIDE_BY_ZERO` / `ArithmeticException` on both engines; `ansi=false`
+> restores NULL at Spark's division type (`decimal128(38,6)` / `(8,6)`). The names
+> `[div_by_zero_decimal38_raises_in_spark_null_in_repark]`,
+> `[div_by_zero_small_decimal_raises_in_spark_null_in_repark]` (shared-raise equalities) and the two
+> `…_null_when_ansi_false` twins are kept. Pins: those corpus cases; Rust
+> `crates/repark-spark/src/tests/decimal.rs::pin_div_by_zero_decimal38_raises_under_default_ansi` +
+> `…::pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false`. A fixed defect gets this
+> dated note, never a live divergence row.
 
-### DEC-7 — `DECIMAL / 0` under ANSI returns NULL
-
-- **repark** — returns NULL at a decimal result type: `(38,0)/(38,0)` → NULL at
-  `decimal128(38,4)`; small `(2,0)/(2,0)` → NULL at `decimal128(6,4)`.
-- **Apache Spark** — under ANSI raises `ArithmeticException` / `DIVIDE_BY_ZERO` for both recipes.
-  *(oracle: recorded.)*
-- **Pin** — `[div_by_zero_decimal38_raises_in_spark_null_in_repark]`,
-  `[div_by_zero_small_decimal_raises_in_spark_null_in_repark]`
-- **Rationale** — BACKLOG, intent to FIX (gap G13). NULL-vs-raise is an integrity divergence for
-  any consumer that distinguishes error from missing.
-
-### DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` refuses at plan time
-
-- **repark** — still refuses with `AnalysisException` (`Cannot get result type for decimal
-  operation … 38,20 * 38,20`) at **plan construction** (`BinaryExpr::get_type` / Arrow
-  `s>38`) before any `AnalyzerRule` runs.
-- **Apache Spark** — clamps the product to `decimal128(38,6)` and succeeds. *(oracle: recorded.)*
-- **Pin** — `[mul_38_20_plans_in_spark_refuses_in_repark]` + Rust
-  `pin_mul_38_20_still_refuses_at_plan` +
-  `repark_functions::decimal_precision::tests::mul_38_20_still_refuses_before_any_analyzer_rule`
-- **Rationale** — BACKLOG, intent to FIX via an **ExprPlanner** (U4b-adjacent). V-2 U4a's
-  analyzer cannot see a node that never plans. Do not fold this into DEC-3's FIXED note.
-  Not campaign DEC-8 (U3 integer-literal min-precision — that closed DEC-5 **width**).
+> **DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` — FIXED (2026-08-14, DEC-8 planner / #99).** An
+> `ExprPlanner` (`plan_binary_op`) rewrites the Arrow-refusing `(38,20)*(38,20)` — which used to
+> fail with `AnalysisException` at `BinaryExpr::get_type` before any `AnalyzerRule` ran — into
+> Spark's default-true clamp `decimal128(38,6)` `1.000000`, which now succeeds. The name
+> `[mul_38_20_plans_in_spark_refuses_in_repark]` is kept; the row is now a content equality
+> (`repark is None`). Pins: that corpus case; Rust
+> `crates/repark-spark/src/tests/decimal.rs::pin_mul_38_20_still_refuses_at_plan` (name kept; now
+> asserts the clamp) +
+> `repark_functions::decimal_precision::tests::mul_38_20_plans_via_the_expr_planner`. Not campaign
+> DEC-8 (U3 integer-literal min-precision — that closed DEC-5 **width**). A fixed defect gets this
+> dated note, never a live divergence row.
 
 ### DEC-9 — overflow-capable binary arithmetic is marked non-null
 
@@ -1379,7 +1378,7 @@ the pin rather than obeying it.
 > `python/repark/tests/test_g4b_semi_join.py::test_right_ref_agg_raises_missing_attributes_same_key`
 > (and left / inner / distinct-name / `count_distinct` left-then-right siblings). No
 > remaining D6 divergence to disclose; no `live-mirror`. Conditionless semi/anti refusal
-> remains [G4-3](#g4-3--conditionless-dataframe-semiant-join-refuses). A fixed defect
+> remains [G4-3](#g4-3--conditionless-dataframe-semianti-join-refuses). A fixed defect
 > gets this dated note, never a live divergence row.
 
 ### G4-3 — conditionless DataFrame semi/anti join refuses
@@ -1492,43 +1491,49 @@ the pin rather than obeying it.
 ### G3-E8 — DELETE/UPDATE subquery predicate is refused (valve, not a fix)
 
 - **repark** — `DELETE` / `UPDATE` with a subquery `WHERE` are still **refused** (needle
-  `subquery predicates are silently mis-executed`) **except** uncorrelated
-  `DELETE … WHERE col IN (SELECT col FROM …)`,
-  `DELETE … WHERE col NOT IN (SELECT col FROM …)` (including ANY-NULL-in-subquery
-  matches nothing, empty subquery matches all), and
-  `DELETE … WHERE [NOT] EXISTS (SELECT …)` both uncorrelated (all-or-nothing) and
-  correlated (per-row semi/anti-join, including NULL join keys and duplicate rows).
-  Those execute on both doors via the A1-identity path (`execute_predicate_dml`) and
-  match Spark (FROM and FROM-less). UPDATE IN / NOT IN / EXISTS, correlated IN,
-  ANY/ALL, scalars, nested, mixed AND/OR remain refused. SET-assignment / `INSERT` /
-  `MERGE` source still unaffected.
+  `subquery predicates are silently mis-executed`) **except**: uncorrelated
+  `DELETE … WHERE col IN (SELECT col FROM …)` / `NOT IN (SELECT col FROM …)` (including
+  ANY-NULL-in-subquery matches nothing, empty subquery matches all), `DELETE … WHERE
+  [NOT] EXISTS (SELECT …)` both uncorrelated (all-or-nothing) and correlated (per-row
+  semi/anti-join, including NULL join keys and duplicate rows), **correlated**
+  `DELETE … WHERE col IN (SELECT s.col FROM s WHERE s.k = t.k)`, and identity
+  **uncorrelated** `UPDATE … SET <scalar> WHERE col IN (SELECT …)`. Those execute on both
+  doors via the A1-identity path (`execute_predicate_dml` / `try_allowed_update_in`) and
+  match Spark (FROM and FROM-less). `UPDATE NOT IN` / `[NOT] EXISTS`, **correlated** UPDATE
+  IN, every `ANY` / `ALL` spelling, scalars, nested, mixed AND/OR remain refused.
+  SET-assignment / `INSERT` / `MERGE` source still unaffected.
 - **Apache Spark** — runs all of them, deleting/updating exactly the matching rows.
   *(oracle: recorded — PySpark 4.1.2 + Iceberg 1.11.0.)*
 - **Pin** — `python/repark/tests/test_dml_subquery_parity.py::test_dml_subquery_row[delete_in_subquery]`,
   `…[delete_not_in_subquery]`, `…[delete_not_in_subquery_with_null_key]`,
-  `…[delete_exists_correlated]`, `…[delete_not_exists_correlated]` (now **content**)
+  `…[delete_correlated_in_subquery]`, `…[delete_exists_correlated]`,
+  `…[delete_not_exists_correlated]`, `…[update_in_subquery]` (all now **content**)
   plus the uncorrelated / none / all / empty / NULL-key / duplicate EXISTS content
-  rows; residual splits `delete_correlated_in_subquery`, `update_in_subquery`,
-  `update_not_in_subquery_with_null_key`. Rust:
+  rows and the `update_in_subquery_multi_set` / `_expr` / `_empty` siblings; the one
+  residual split is `…[update_not_in_subquery_with_null_key]`. Rust:
   `crates/repark-spark/src/tests/dml.rs::g3e8_delete_in_subquery_deletes_exactly_the_matching_row`
   (and quoted / temp-view / FROM-less siblings);
   `…::g3e8_delete_not_in_subquery_deletes_non_matching_rows`,
   `…::g3e8_delete_not_in_subquery_with_null_key_deletes_nothing`,
   `…::g3e8_delete_not_in_empty_subquery_deletes_every_row`;
   `…::g3e8_delete_exists_uncorrelated_and_correlated_execute`;
-  `…::g3e8_delete_subquery_family_all_refuse` (IN / NOT IN / EXISTS excluded — residual refuse);
-  `…::g3e8_update_subquery_family_all_refuse`;
+  `…::g3e8_delete_correlated_in_deletes_exactly_the_matching_row`;
+  `…::g3e8_update_in_subquery_rewrites_only_the_matching_row`;
+  `…::g3e8_delete_subquery_family_all_refuse` + `…::g3e8_update_subquery_family_all_refuse`
+  (the residual refuse set: `UPDATE NOT IN` / `[NOT] EXISTS`, correlated UPDATE IN, ANY / ALL);
   ANSI `crates/repark-sql/src/guards/tests.rs::dml_subquery_in_delete_executes_and_deletes_exactly_the_match`,
   `…::dml_subquery_not_in_delete_executes_and_honors_three_valued_logic`,
   `…::dml_subquery_exists_delete_executes_uncorrelated_and_correlated`;
   ROW 9 `crates/repark-sql/tests/cross_door.rs::cross_door_g3e8_refusals_render_identically`
-  restated over correlated IN / UPDATE IN / nested / scalar;
+  restated over nested / scalar / mixed-AND / `ANY` / `UPDATE NOT IN`;
   `…::cross_door_g3e8_not_in_delete_executes_identically`;
   `…::cross_door_g3e8_exists_delete_executes_identically`.
-- **Rationale** — DEFECT, **partial fix**. IN + NOT IN + `[NOT] EXISTS` ± correlation
-  all execute both doors — the dbt-upgrade gate is MET. The family is **not**
-  "fixed" while UPDATE IN + correlated IN / ANY / ALL stay valved. Delete this row
-  only when the claimed surface is actually re-enabled.
+- **Rationale** — DEFECT, **partial fix**. Uncorrelated DELETE IN / NOT IN, `[NOT] EXISTS`
+  ± correlation, correlated DELETE IN, and uncorrelated identity UPDATE IN all execute both
+  doors — the dbt-upgrade gate is MET. The family is **not** "fixed" while `UPDATE NOT IN` /
+  `[NOT] EXISTS`, correlated UPDATE IN and every `ANY` / `ALL` stay valved (`ANY` / `ALL` are a
+  permanent v1 valve — Spark 4.1.2 parse-fails quantified comparisons). Delete this row only when
+  the claimed surface is actually re-enabled.
 
 ### G3-E8-NULL — `NOT IN (SELECT …)` with a NULL key (3VL trap, keep after the fix)
 
