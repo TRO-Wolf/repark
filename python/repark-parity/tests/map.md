@@ -15,6 +15,8 @@ JVM, no repark required). See [../map.md](../map.md).
   true remainder (C-003); the three STATUS bullets match the registry under the ceiling (C-004);
   every cited test resolves and DEC-9 stays BACKLOG (C-005); no row deleted and the maps are in
   lockstep (C-006).
+  Cycle 2 (Critic): the DEC notes date by the fix's landing day (2026-08-14), and the TZ-8
+  residual names only the pinned spellings (`date_sub` refuses too but is unpinned — not claimed).
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method

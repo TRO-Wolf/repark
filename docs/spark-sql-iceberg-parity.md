@@ -847,7 +847,7 @@ the pin rather than obeying it.
 > [TZ-7](#tz-7--a-zoneless-timestamp-input-is-read-as-utc-not-as-a-session-zone-wall-clock) (a
 > zoneless timestamp INPUT is read as UTC, so its instant is wrong before any extractor sees it)
 > and TZ-8 (`to_date` / `CAST(ts AS DATE)` / `datediff` since FIXED — #100, session-zone; only
-> `last_day` / `date_add` / `date_sub` over a TIMESTAMP remain). A reader who
+> `last_day` / `date_add` over a TIMESTAMP remain). A reader who
 > arrives here from a wrong wall clock is routed to one of the two, never told the class is shut.
 > The remaining state line is in [../STATUS.md](../STATUS.md); the full account, including the
 > adversarial panel that forced this narrowing, is in
@@ -973,9 +973,9 @@ the pin rather than obeying it.
 > `timestamp_cast_to_string_is_spark_utf8`. TZ-8 date-cast stays disclosed. A fixed defect
 > gets this dated note, never a live divergence row.
 
-### TZ-8 — `last_day` / `date_add` / `date_sub` over a TIMESTAMP refuse to plan
+### TZ-8 — `last_day` / `date_add` over a TIMESTAMP refuse to plan
 
-- **repark** — `last_day` and `date_add` / `date_sub` over a TIMESTAMP do not plan at all
+- **repark** — `last_day` and `date_add` over a TIMESTAMP do not plan at all
   (`coercion from Timestamp(ns) … failed` / `No function matches`). The `CAST(ts AS DATE)` /
   `to_date` / `datediff` half of this row is **FIXED** — see the dated note below; those read the
   session zone now.
@@ -987,7 +987,7 @@ the pin rather than obeying it.
   (red-on-purpose: the recorded NY Spark values above are named in it, so adding the overload reds
   the pin instead of passing unnoticed).
 - **Rationale** — BACKLOG, intent to FIX. The residual is the TIMESTAMP overload of `last_day` /
-  `date_add` / `date_sub`; registry queue **B-TZ-3** (`date_add(DATE, int literal)` coercion) is
+  `date_add`; registry queue **B-TZ-3** (`date_add(DATE, int literal)` coercion) is
   the `DATE`-argument sibling of the same hole. Engine work — a later unit. **Not a regression**:
   these behaved the same before H-1a split B; the completeness gap is what the class claim would
   otherwise paper over.
@@ -1032,7 +1032,7 @@ the pin rather than obeying it.
 > [TY-3](#ty-3--an-inline-sql-decimal-literal) (inline-`VALUES` union width) stays
 > DECLARED — see its dated 2026-08-13 note.
 
-> **DEC-2 — `DECIMAL / DECIMAL` result precision and scale — FIXED (2026-08-26, V-2 U4b / #99).**
+> **DEC-2 — `DECIMAL / DECIMAL` result precision and scale — FIXED (2026-08-14, V-2 U4b / #99).**
 > `/` now takes Spark's `resultDecimalType` through a `repark-functions` UDF
 > (`crates/repark-functions/src/decimal_spark.rs`; `SparkDecimalRewrite` runs before
 > `SparkExprSemantics` so the rewrite sees a clean `decimal / decimal`) — a CAST-after had wronged
@@ -1090,7 +1090,7 @@ the pin rather than obeying it.
 > **Name collision.** Campaign DEC-8 is integer-literal min-precision (this width).
 > Registry DEC-8 is `(38,20)*(38,20)` plan-refuse — a different class.
 
-> **DEC-6 — max `DECIMAL(38,0) + 1` under ANSI raises — FIXED (2026-08-26, DEC U5 / #99 on the
+> **DEC-6 — max `DECIMAL(38,0) + 1` under ANSI raises — FIXED (2026-08-14, DEC U5 / #99 on the
 > ANSI door #94).** A checked `+` / `-` UDF (`crates/repark-functions/src/decimal_spark.rs`) reads
 > the landed ANSI knob (`spark.sql.ansi.enabled`, default TRUE since U5 / #94):
 > `CAST(999…9 AS DECIMAL(38,0)) + CAST(1 AS DECIMAL(38,0))` now raises
@@ -1102,7 +1102,7 @@ the pin rather than obeying it.
 > (name kept; now asserts the raise) + `…::pin_overflow_max_decimal38_plus_one_null_when_ansi_false`.
 > A fixed defect gets this dated note, never a live divergence row.
 
-> **DEC-7 — `DECIMAL / 0` under ANSI raises — FIXED (2026-08-26, U5 / #94 + U4b / #99).** Default
+> **DEC-7 — `DECIMAL / 0` under ANSI raises — FIXED (2026-08-14, U5 / #94 + U4b / #99).** Default
 > ANSI ON (#94) plus the U4b division UDF that owns `/0` (#99): `(38,0)/(38,0)` and small
 > `(2,0)/(2,0)` now raise `DIVIDE_BY_ZERO` / `ArithmeticException` on both engines; `ansi=false`
 > restores NULL at Spark's division type (`decimal128(38,6)` / `(8,6)`). The names
@@ -1113,7 +1113,7 @@ the pin rather than obeying it.
 > `…::pin_div_by_zero_decimal38_returns_null_at_38_4_when_ansi_false`. A fixed defect gets this
 > dated note, never a live divergence row.
 
-> **DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` — FIXED (2026-08-26, DEC-8 planner / #99).** An
+> **DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` — FIXED (2026-08-14, DEC-8 planner / #99).** An
 > `ExprPlanner` (`plan_binary_op`) rewrites the Arrow-refusing `(38,20)*(38,20)` — which used to
 > fail with `AnalysisException` at `BinaryExpr::get_type` before any `AnalyzerRule` ran — into
 > Spark's default-true clamp `decimal128(38,6)` `1.000000`, which now succeeds. The name

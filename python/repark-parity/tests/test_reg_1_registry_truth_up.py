@@ -36,10 +36,10 @@ def test_dec_rows_carry_dated_fixed_notes() -> None:
     """pins: reg-1-registry-truth-up/C-001 — DEC-2/6/7/8 read FIXED with PRs and pins."""
     text = _registry()
     # Each row is now a dated FIXED note in the DEC-3 / DEC-4 house form.
-    assert "**DEC-2 — `DECIMAL / DECIMAL` result precision and scale — FIXED (2026-08-26" in text
-    assert "**DEC-6 — max `DECIMAL(38,0) + 1` under ANSI raises — FIXED (2026-08-26" in text
-    assert "**DEC-7 — `DECIMAL / 0` under ANSI raises — FIXED (2026-08-26" in text
-    assert "**DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` — FIXED (2026-08-26" in text
+    assert "**DEC-2 — `DECIMAL / DECIMAL` result precision and scale — FIXED (2026-08-14" in text
+    assert "**DEC-6 — max `DECIMAL(38,0) + 1` under ANSI raises — FIXED (2026-08-14" in text
+    assert "**DEC-7 — `DECIMAL / 0` under ANSI raises — FIXED (2026-08-14" in text
+    assert "**DEC-8 — `DECIMAL(38,20) * DECIMAL(38,20)` — FIXED (2026-08-14" in text
     # The landing PRs are named: #99 (U4b / DEC-8 planner / DEC-6 exec) and #94 (ANSI default TRUE).
     assert "#99" in text and "#94" in text
     # The equality / shared-raise pins that prove each note.
@@ -68,7 +68,11 @@ def test_tz8_row_splits_fixed_and_residual() -> None:
     text = _registry()
     assert "**Not FIXED.**" not in text
     # The row is now titled by what actually remains open.
-    assert "### TZ-8 — `last_day` / `date_add` / `date_sub` over a TIMESTAMP refuse to plan" in text
+    assert "### TZ-8 — `last_day` / `date_add` over a TIMESTAMP refuse to plan" in text
+    # `date_sub` was measured to refuse too, but no pin exercises it — the row claims only
+    # what a pin proves (registry §6: an unpinned divergence is prose).
+    tz8 = text.index("### TZ-8")
+    assert "date_sub" not in text[tz8 : tz8 + 2500]
     # The FIXED half: the analyzer rewrite, its pin, and Spark's session-zone answer.
     assert "— FIXED (2026-08-14, #100" in text
     assert "rewrite_timestamp_to_date_cast" in text

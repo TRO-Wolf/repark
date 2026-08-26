@@ -248,12 +248,13 @@ moving it. Nothing is described in both places.
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
 - **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
   FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
-  `last_day` / `date_add` / `date_sub` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress
+  `last_day` / `date_add` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress
   (residue: ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT
   nullability BACKLOG (G6-4; the epoch-seconds class itself FIXED, #64). Semantics + pins: the
   registry's TZ rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
 - **decimal128** — DEC-2 / DEC-6 / DEC-7 / DEC-8 FIXED (#94 / #99); DEC-1 / DEC-3 / DEC-4 / DEC-5
-  width FIXED; DEC-9 (and DEC-5 nullability) stay BACKLOG; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9.
+  width FIXED; DEC-9 (and DEC-5 nullability) stay BACKLOG; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9 in
+  [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
 - **Temporal-RANGE frames** — G5b-R4 OPEN (FOLLOWING-to-FOLLOWING; DF 54.1 range-search); R1 /
   R3 / R5 FIXED; the ANSI-door wrap is a named residual with no pin. Registry G5b rows.
 - **DELETE/UPDATE subquery predicates** — the dbt-upgrade gate is MET (IN / NOT IN / `[NOT]
