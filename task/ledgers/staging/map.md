@@ -5,6 +5,12 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
+- [reg-1-registry-truth-up-ledger.md](reg-1-registry-truth-up-ledger.md) — **REG-1 (2026-08-26):**
+  the docs-only truth-up of the divergence registry and STATUS — DEC-2 / DEC-6 / DEC-7 / DEC-8
+  become dated FIXED notes (#94 / #99), TZ-8 splits its FIXED `CAST(ts AS DATE)` / `to_date` /
+  `datediff` half (#100) from the `last_day` / `date_add` / `date_sub` residual, and G3-E8 states
+  the delivered spellings and the true remainder. Six clauses, each pinned by
+  [../../../python/repark-parity/tests/test_reg_1_registry_truth_up.py](../../../python/repark-parity/tests/test_reg_1_registry_truth_up.py).
 - [dl-5-contract-compaction-ledger.md](dl-5-contract-compaction-ledger.md) — **DL-5
   (2026-08-25):** compact the live STATUS remainder and the contributor contract;
   `engineering-method` loses restated project rules; `check_docs_compaction` ceilings

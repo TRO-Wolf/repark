@@ -246,19 +246,20 @@ moving it. Nothing is described in both places.
   [task/ledgers/staging/sem-0-charter-ledger.md](task/ledgers/staging/sem-0-charter-ledger.md).
 - **Identifier case folding** — **DECLARED (2026-08-10)**: registry
   [ID-1](docs/spark-sql-iceberg-parity.md); revisiting it needs a new dated decision.
-- **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8 open**
-  (`to_date` / `CAST(ts AS DATE)` / `datediff` read the stored zone — a completeness gap, and the
-  commonest partition-key derivation in a migrated job); TZ-4 in progress (residue: ANSI
-  column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT nullability
-  BACKLOG (G6-4; the epoch-seconds class itself FIXED, #64). Semantics + pins: the registry's TZ
-  rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
-- **decimal128** — BACKLOG on DEC-2 / DEC-6 / DEC-7 / DEC-8 / DEC-9 (DEC-5 nullability); DEC-1 /
-  DEC-3 / DEC-4 / DEC-5 width FIXED; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9.
+- **The session-timezone family** — TZ-1 converted; TZ-6 / TZ-7 FIXED (#85); **TZ-8** partially
+  FIXED (#100): `CAST(ts AS DATE)` / `to_date` / `datediff` read the session zone now; only
+  `last_day` / `date_add` / `date_sub` over a TIMESTAMP (+ B-TZ-3) stay BACKLOG; TZ-4 in progress
+  (residue: ANSI column-def `timestamp_ns`); F-V4-1 / F-V4-2 DECLARED, fork-routed; TIMESTAMP→INT
+  nullability BACKLOG (G6-4; the epoch-seconds class itself FIXED, #64). Semantics + pins: the
+  registry's TZ rows, [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md).
+- **decimal128** — DEC-2 / DEC-6 / DEC-7 / DEC-8 FIXED (#94 / #99); DEC-1 / DEC-3 / DEC-4 / DEC-5
+  width FIXED; DEC-9 (and DEC-5 nullability) stay BACKLOG; TY-3 DECLARED. Registry §7 DEC-1 … DEC-9.
 - **Temporal-RANGE frames** — G5b-R4 OPEN (FOLLOWING-to-FOLLOWING; DF 54.1 range-search); R1 /
   R3 / R5 FIXED; the ANSI-door wrap is a named residual with no pin. Registry G5b rows.
 - **DELETE/UPDATE subquery predicates** — the dbt-upgrade gate is MET (IN / NOT IN / `[NOT]
-  EXISTS` ± correlation execute on both doors); UPDATE IN and correlated IN / ANY / ALL stay
-  valved; G3-E8-NULL's UPDATE half stays refused. Registry §7 G3-E8 / G3-E8-NULL.
+  EXISTS` ± correlation execute on both doors, plus uncorrelated identity UPDATE IN); `UPDATE NOT
+  IN` / `[NOT] EXISTS` / correlated UPDATE IN / ANY / ALL stay valved;
+  G3-E8-NULL's UPDATE half stays refused. Registry §7 G3-E8 / G3-E8-NULL.
 - **`bin` / `rint` BOOLEAN over-accept** — **BACKLOG (2026-08-19)**: registry
   [§7 BL-6](docs/spark-sql-iceberg-parity.md).
 - **`bit_length` / `octet_length` DOUBLE stringify (Infinity / E-notation)** — **BACKLOG
