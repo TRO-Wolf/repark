@@ -177,5 +177,13 @@ def test_no_row_deleted_and_maps_in_lockstep() -> None:
     # The maps carry this unit's pin file and ledger in lockstep.
     parity_map = (_REPO / "python/repark-parity/tests/map.md").read_text(encoding="utf-8")
     assert "test_reg_1_registry_truth_up.py" in parity_map
-    staging_map = (_REPO / "task/ledgers/staging/map.md").read_text(encoding="utf-8")
-    assert "reg-1-registry-truth-up" in staging_map
+    # The ledger left staging/ at departure (the pin turns over with it, as DL-5's did): it is
+    # listed by the completed/ map until the next pickup archives it, then by the archive map.
+    completed_map = (_REPO / "task/ledgers/completed/map.md").read_text(encoding="utf-8")
+    archive_maps = [
+        m.read_text(encoding="utf-8") for m in (_REPO / "task/ledgers/archive").glob("*/map.md")
+    ]
+    assert "reg-1-registry-truth-up" in completed_map or any(
+        "reg-1-registry-truth-up" in m for m in archive_maps
+    )
+    assert not (_REPO / "task/ledgers/staging/reg-1-registry-truth-up-ledger.md").exists()
