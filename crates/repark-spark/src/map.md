@@ -18,7 +18,7 @@ wrapper.
   write-to-branch sniff; full v1 arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
-  `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call `refuse_v3_cow_dml` after the BUG-001 valve.
+  `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call `refuse_v3_cow_dml` after the BUG-001 valve. SQP-1: `execute_with_read_only`'s first act is `spark_literals::canonicalize` (front-door string-literal escapes, once).
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); 24 in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
@@ -97,7 +97,15 @@ wrapper.
   cannot persist a required column from a tighten-derived source — including the one- and
   two-part spellings that resolve into an Iceberg catalog via `SET
   datafusion.catalog.default_catalog` (round 5, Z-1). Untightened `CREATE VIEW` behaviour is
-  unchanged (that it persists an Iceberg table at all predates this branch).
+  unchanged (that it persists an Iceberg table at all predates this branch). **SQP-1:**
+  `rewrite_binary_casts` maps `CAST(x AS BINARY)` → `BYTEA` (both cast kinds), and
+  `refuse_illegal_binary_cast` refuses a numeric/bool/date/decimal source on the planned tree
+  (Spark `DATATYPE_MISMATCH`) — DataFusion would silently cast an int to bytes otherwise.
+- `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that
+  rewrites Spark single-quoted string-literal escapes once (the rule table + oracle live in the
+  module doc). BigQuery-lexed, span-replaced, Generic-canonical output; the sole caller is
+  `router::execute_with_read_only` (grep-pinned). `VARBINARY` and raw-string / adjacent-literal
+  handling included.
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

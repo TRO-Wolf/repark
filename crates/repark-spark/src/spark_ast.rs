@@ -12,14 +12,18 @@
 
 use std::ops::ControlFlow;
 
+use datafusion::arrow::datatypes::DataType as ArrowDataType;
+use datafusion::common::DFSchema;
+use datafusion::common::tree_node::{TreeNode, TreeNodeRecursion};
 use datafusion::config::Dialect;
-use datafusion::error::Result;
+use datafusion::error::{DataFusionError, Result};
 use datafusion::execution::SessionState;
-use datafusion::logical_expr::LogicalPlan;
+use datafusion::logical_expr::expr::{Exists, InSubquery};
+use datafusion::logical_expr::{Expr as DataFusionExpr, ExprSchemable, LogicalPlan};
 use datafusion::prelude::{DataFrame, SessionContext};
 use datafusion::sql::parser::{ResetStatement, Statement as DfStatement};
 use datafusion::sql::sqlparser::ast::{
-    Expr, NamedWindowExpr, OrderByExpr, OrderByKind, Query, SetExpr, Statement, VisitMut,
+    DataType, Expr, NamedWindowExpr, OrderByExpr, OrderByKind, Query, SetExpr, Statement, VisitMut,
     VisitorMut, WindowType,
 };
 
@@ -123,6 +127,11 @@ pub(crate) async fn execute_passthrough(
             // G3-E8 — on the EXECUTING parse, before anything else touches the statement.
             crate::refuse_dml_subquery_predicate_in_statement(inner)?;
             apply_spark_order_by_defaults(inner);
+            // SQP-1: `CAST(x AS BINARY)` becomes `CAST(x AS BYTEA)` so DataFusion plans it to
+            // Arrow `Binary` — `BINARY` alone is `Unsupported SQL type` at planning. The DDL path
+            // (`create_table.rs`) is intercepted before this parse, so `b BINARY` columns keep
+            // `BINARY`. Type legality is checked on the planned tree below.
+            rewrite_binary_casts(inner);
             // R1: DataFusion's convert_frame_bound_to_scalar_value accepts only
             // SingleQuotedString inside INTERVAL. Quote `INTERVAL 1 DAY` before first plan.
             window_range::quote_unquoted_interval_range_bounds(inner);
@@ -142,6 +151,14 @@ pub(crate) async fn execute_passthrough(
     } else {
         plan
     };
+    // SQP-1: refuse `CAST(x AS BINARY)` where Spark refuses — a numeric / bool / date / decimal
+    // source. This runs on the planned tree because a bare `CAST(c AS BINARY)` over a STRING
+    // column is legal (B13) and only the resolved input type tells the two apart. DataFusion
+    // would otherwise SILENTLY cast an integer to bytes (a wrong answer Spark analysis-refuses),
+    // or fail decimal/bool/date with an opaque optimizer error — so the refuse is repark's, in
+    // Spark's `DATATYPE_MISMATCH` words. Runs before the eager analyze/optimize so the clean
+    // message wins.
+    refuse_illegal_binary_cast(&plan)?;
     // r24 SB1 / SEC-02: refuse local CREATE EXTERNAL / COPY TO when conf is false (warehouse
     // grandfather still allowed). Must run before eager collect so a blocked COPY never writes.
     local_fs_ddl::refuse_local_filesystem_plan(ctx, catalogs, &plan)?;
@@ -235,6 +252,10 @@ async fn restate_range_frames_and_replan(
     let mut restated = state.sql_to_statement(sql, dialect)?;
     if let DfStatement::Statement(inner) = &mut restated {
         apply_spark_order_by_defaults(inner);
+        // Keep the BINARY→BYTEA rewrite in lockstep with the primary parse: this re-parse starts
+        // from the original SQL text, so a statement carrying both a bare RANGE bound and a
+        // BINARY cast would otherwise reach planning with `BINARY` and fail.
+        rewrite_binary_casts(inner);
         window_range::quote_unquoted_interval_range_bounds(inner);
         rewrite(inner);
     }
@@ -304,11 +325,185 @@ fn apply_default(order_by: &mut OrderByExpr) {
     }
 }
 
+/// ===========================================================================================
+/// Rewrite every `CAST(x AS BINARY)` / `TRY_CAST(x AS BINARY)` / `x::BINARY` target to `BYTEA`
+/// (SQP-1). sqlparser parses `BINARY` to [`DataType::Binary`], which DataFusion's planner rejects
+/// as `Unsupported SQL type BINARY`; `BYTEA` plans to Arrow `Binary`, the type Spark's `BINARY`
+/// is. `VARBINARY` is deliberately left alone — Spark rejects it too (`UNSUPPORTED_DATATYPE`,
+/// B12). The DDL `BINARY` column path is intercepted before this parse, so it never reaches here.
+/// ===========================================================================================
+fn rewrite_binary_casts(statement: &mut Statement) {
+    let mut visitor = BinaryCastToBytea;
+    // The visitor's Break type is uninhabited — traversal always completes.
+    let _ = statement.visit(&mut visitor);
+}
+
+/// Rewrites a cast target of `BINARY` to `BYTEA`, at every cast kind (`CAST`, `TRY_CAST`,
+/// `SAFE_CAST`, `::`) and every nesting depth.
+struct BinaryCastToBytea;
+
+impl VisitorMut for BinaryCastToBytea {
+    type Break = std::convert::Infallible;
+
+    fn post_visit_expr(&mut self, expr: &mut Expr) -> ControlFlow<Self::Break> {
+        if let Expr::Cast { data_type, .. } = expr
+            && matches!(data_type, DataType::Binary(_))
+        {
+            *data_type = DataType::Bytea;
+        }
+        ControlFlow::Continue(())
+    }
+}
+
+/// ===========================================================================================
+/// Refuse a cast to Arrow `Binary` whose input type Spark refuses (SQP-1 / B2–B7).
+///
+/// Spark allows only STRING / BINARY / NULL → BINARY; every other source (INT, BIGINT, DECIMAL,
+/// BOOLEAN, DATE, …) is an analysis error. After [`rewrite_binary_casts`], DataFusion would
+/// otherwise **silently** cast an integer to bytes — a wrong answer, not a refusal — so the check
+/// is repark's. It runs on the planned tree because the input type is only known after name
+/// resolution: `CAST(c AS BINARY)` over a STRING column is legal (B13), over an INT column is not,
+/// and the two are the same parse tree. The walk reuses the `insert_overwrite` cast-walk shape
+/// (every expression position, subqueries included) so no cast hides in a predicate or aggregate.
+/// ===========================================================================================
+///
+/// # Errors
+/// [`DataFusionError::Plan`] carrying Spark's `DATATYPE_MISMATCH` condition and the source type
+/// name — `CAST_WITH_CONF_SUGGESTION` for an integer (ANSI-off would allow it, B11), else
+/// `CAST_WITHOUT_SUGGESTION`. A `Plan` error with a bracketed Spark class folds to
+/// `AnalysisException` at the PyO3 boundary, the class Spark raises.
+fn refuse_illegal_binary_cast(plan: &LogicalPlan) -> Result<()> {
+    match find_illegal_binary_cast(plan) {
+        Some(source) => Err(illegal_binary_cast_error(&source)),
+        None => Ok(()),
+    }
+}
+
+/// The input type of the first cast-to-`Binary` in `plan` whose source Spark refuses, or `None`.
+fn find_illegal_binary_cast(plan: &LogicalPlan) -> Option<ArrowDataType> {
+    let mut offender = None;
+    let _ = plan.apply(|node| {
+        let schema = crate::insert_overwrite::expr_typing_schema(node);
+        let _ = node.apply_expressions(|expr| {
+            if let Some(source) = expr_illegal_binary_cast_source(expr, schema.as_ref()) {
+                offender = Some(source);
+                return Ok(TreeNodeRecursion::Stop);
+            }
+            Ok(TreeNodeRecursion::Continue)
+        });
+        if offender.is_some() {
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    offender
+}
+
+/// The source type of an illegal `→ Binary` cast inside `expr` (or a subquery hanging off it), or
+/// `None`. Subquery plans hang off the expression, not off [`LogicalPlan`] children, so they are
+/// recursed into explicitly — the same reason [`crate::insert_overwrite`] does.
+fn expr_illegal_binary_cast_source(
+    expr: &DataFusionExpr,
+    schema: &DFSchema,
+) -> Option<ArrowDataType> {
+    let mut offender = None;
+    let _ = expr.apply(|node| {
+        let cast_input = match node {
+            DataFusionExpr::Cast(cast) => Some((cast.expr.as_ref(), cast.field.data_type())),
+            DataFusionExpr::TryCast(cast) => Some((cast.expr.as_ref(), cast.field.data_type())),
+            _ => None,
+        };
+        if let Some((input, &ArrowDataType::Binary)) = cast_input
+            && let Ok(source) = input.get_type(schema)
+            && !is_binary_castable_source(&source)
+        {
+            offender = Some(source);
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        if let DataFusionExpr::ScalarSubquery(subquery)
+        | DataFusionExpr::Exists(Exists { subquery, .. })
+        | DataFusionExpr::InSubquery(InSubquery { subquery, .. }) = node
+            && let Some(source) = find_illegal_binary_cast(&subquery.subquery)
+        {
+            offender = Some(source);
+            return Ok(TreeNodeRecursion::Stop);
+        }
+        Ok(TreeNodeRecursion::Continue)
+    });
+    offender
+}
+
+/// True for the source types Spark allows to cast to `BINARY`: the string family, the binary
+/// family (a re-cast of a binary value, B8), and `NULL` (B8). Everything else refuses.
+fn is_binary_castable_source(data_type: &ArrowDataType) -> bool {
+    matches!(
+        data_type,
+        ArrowDataType::Utf8
+            | ArrowDataType::LargeUtf8
+            | ArrowDataType::Utf8View
+            | ArrowDataType::Binary
+            | ArrowDataType::LargeBinary
+            | ArrowDataType::BinaryView
+            | ArrowDataType::Null
+    )
+}
+
+/// Build Spark's refusal for an illegal `→ BINARY` cast, naming the source type. Integer sources
+/// quote `CAST_WITH_CONF_SUGGESTION` and Spark's "with ANSI mode on" clause (turning ANSI off
+/// would big-endian-encode the int — B11, tabled); every other source quotes
+/// `CAST_WITHOUT_SUGGESTION`. Recorded from the live oracle (B2 / B4 `<pyspark-4.1.2-oracle>`).
+fn illegal_binary_cast_error(source: &ArrowDataType) -> DataFusionError {
+    let source_name = spark_source_type_name(source);
+    if is_spark_integer(source) {
+        DataFusionError::Plan(format!(
+            "[DATATYPE_MISMATCH.CAST_WITH_CONF_SUGGESTION] due to data type mismatch: cannot cast \
+             \"{source_name}\" to \"BINARY\" with ANSI mode on. SQLSTATE: 42K09"
+        ))
+    } else {
+        DataFusionError::Plan(format!(
+            "[DATATYPE_MISMATCH.CAST_WITHOUT_SUGGESTION] due to data type mismatch: cannot cast \
+             \"{source_name}\" to \"BINARY\". SQLSTATE: 42K09"
+        ))
+    }
+}
+
+/// True for the Arrow integer types Spark names INT / BIGINT / … — the sources whose refusal
+/// carries `CAST_WITH_CONF_SUGGESTION` (they cast under ANSI OFF).
+fn is_spark_integer(data_type: &ArrowDataType) -> bool {
+    matches!(
+        data_type,
+        ArrowDataType::Int8 | ArrowDataType::Int16 | ArrowDataType::Int32 | ArrowDataType::Int64
+    )
+}
+
+/// The Spark SQL type name a `→ BINARY` refusal quotes for `source`. Covers the types a cast can
+/// realistically carry; an unlisted type falls back to Arrow's own spelling so the message is
+/// never empty.
+fn spark_source_type_name(source: &ArrowDataType) -> String {
+    match source {
+        ArrowDataType::Int8 => "TINYINT".to_string(),
+        ArrowDataType::Int16 => "SMALLINT".to_string(),
+        ArrowDataType::Int32 => "INT".to_string(),
+        ArrowDataType::Int64 => "BIGINT".to_string(),
+        ArrowDataType::Float32 => "FLOAT".to_string(),
+        ArrowDataType::Float64 => "DOUBLE".to_string(),
+        ArrowDataType::Boolean => "BOOLEAN".to_string(),
+        ArrowDataType::Date32 | ArrowDataType::Date64 => "DATE".to_string(),
+        ArrowDataType::Decimal128(precision, scale)
+        | ArrowDataType::Decimal256(precision, scale) => format!("DECIMAL({precision},{scale})"),
+        ArrowDataType::Timestamp(_, None) => "TIMESTAMP_NTZ".to_string(),
+        ArrowDataType::Timestamp(_, Some(_)) => "TIMESTAMP".to_string(),
+        other => other.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
 
-    use datafusion::arrow::array::{Array, Int32Array, Int64Array, RecordBatch, UInt64Array};
+    use datafusion::arrow::array::{
+        Array, BinaryArray, Int32Array, Int64Array, RecordBatch, UInt64Array,
+    };
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
     use datafusion::prelude::SessionContext;
 
@@ -433,14 +628,18 @@ mod tests {
 
     /// The rewrites survive the double analyzer run this path creates (eager analysis here +
     /// physical planning's own) — the idempotency contract: the subscript must not shift
-    /// twice, the divisor must not be double-guarded into a type error.
+    /// twice, the divisor must not be double-guarded into a type error, and the SQP-1
+    /// `BINARY`→`BYTEA` cast rewrite must plan to `Binary` under the same double analysis.
+    ///
+    /// pins: sqp-1-spark-string-literals/C-010
     #[tokio::test]
     async fn passthrough_rewrites_are_idempotent_across_reanalysis() {
         let (ctx, catalogs) = ctx();
         let batches = execute(
             &ctx,
             &catalogs,
-            "SELECT [10, 20, 30][0] AS first, [10, 20, 30][-1] AS neg, 9/3 AS d",
+            "SELECT [10, 20, 30][0] AS first, [10, 20, 30][-1] AS neg, 9/3 AS d, \
+             CAST('ab' AS BINARY) AS b",
         )
         .await
         .unwrap()
@@ -460,6 +659,12 @@ mod tests {
             .downcast_ref::<datafusion::arrow::array::Float64Array>()
             .unwrap();
         assert!((division.value(0) - 3.0).abs() < f64::EPSILON);
+        let binary = batches[0]
+            .column(3)
+            .as_any()
+            .downcast_ref::<BinaryArray>()
+            .expect("CAST(... AS BINARY) must plan to Arrow Binary across the double analysis");
+        assert_eq!(binary.value(0), b"ab");
     }
 
     /// The Spark division semantics ride the passthrough end to end (the audit's S0 through
