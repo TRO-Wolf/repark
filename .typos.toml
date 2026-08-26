@@ -13,6 +13,9 @@ extend-exclude = [
   "task/census/",
   # Spark-written Iceberg fixture (Avro/Parquet/Puffin). Binary; not prose.
   "crates/repark-spark/src/tests/fixtures/",
+  # Recorded MW-6 Critic evidence (oracle logs + disassembly): verbatim, never hand-edited,
+  # same rationale as task/census/ (PROC-1, 2026-08-25).
+  "task/mw-6-critic-evidence/",
 ]
 
 [default.extend-identifiers]

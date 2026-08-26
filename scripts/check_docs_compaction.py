@@ -41,11 +41,14 @@ LEDGER_SUFFIX = "-ledger.md"
 # 34,100 B → 35,000. Raised only in the PR that needs it, with the reason in that
 # PR: a departure edit that adds more than the headroom removes something or
 # says why the ceiling moves.
+# The SEPMO unit-runbook is a pointer-only checklist (PROC-1, 2026-08-25): seeded at 5,000 B so
+# it cannot regrow into a second spine — every rule it names lives elsewhere and it only links.
 CEILINGS: dict[str, int] = {
     "STATUS.md": 25_000,
     "briefs/next-sequence.md": 6_000,
     "AGENTS.md": 31_000,
     ".agents/skills/engineering-method/SKILL.md": 35_000,
+    ".agents/skills/sepmo/unit-runbook.md": 5_000,
 }
 
 

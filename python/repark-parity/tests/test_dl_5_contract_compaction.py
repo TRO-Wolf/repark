@@ -145,9 +145,19 @@ def test_method_keeps_how_to_with_no_agents_home() -> None:
     assert "Validate Python-to-Rust conversions at the FFI boundary" in method
 
 
-def test_dl_5_is_slate_row_two() -> None:
-    """pins: dl-5-contract-compaction/C-012 — DL-5 is slate row 2, marked."""
+def test_dl_5_left_the_slate_at_departure() -> None:
+    """pins: dl-5-contract-compaction/C-012 — the row DL-5 held is gone with its departure.
+
+    C-012 pinned DL-5 at slate row 2 while the unit was in flight. Its departure
+    (run at PROC-1's pickup, 2026-08-25, because #243 merged without it) files the
+    ledger under ``completed/`` and compacts the row and its reasoning block off
+    the slate; the pin turns over with it so the slate cannot be a queue with a
+    merged unit still on it (the DL-4 gate rule).
+    """
     slate = (_REPO / "briefs/next-sequence.md").read_text(encoding="utf-8")
-    assert "| 2 | **DL-5**" in slate
-    assert "<!-- unit id=dl-5" in slate
-    assert "<!-- /unit -->" in slate
+    assert "**DL-5**" not in slate
+    assert "<!-- unit id=dl-5" not in slate
+    assert not (_REPO / "task/ledgers/staging/dl-5-contract-compaction-ledger.md").exists()
+    filed = _REPO / "task/ledgers/completed/dl-5-contract-compaction-ledger.md"
+    archived = list((_REPO / "task/ledgers/archive").glob("*/*dl-5-contract-compaction-ledger.md"))
+    assert filed.exists() or archived

@@ -1,0 +1,25 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/08/23 22:44:18 WARN Utils: Your hostname, <host>, resolves to a loopback address: <ip>; using <ip> instead (on interface <iface>)
+26/08/23 22:44:18 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+26/08/23 22:44:19 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+[Stage 0:>                                                          (0 + 1) / 1]                                                                                MANIFESTS[r1] n=5 total_bytes=35424
+
+--- R1 use_caching => 'no': CALL ice.system.rewrite_manifests(table => 'db.r1', use_caching => 'no')
+ROW {'rewritten_manifests_count': 5, 'added_manifests_count': 1}
+MANIFESTS[r1] n=1 total_bytes=7315
+MANIFESTS[r2] n=5 total_bytes=35435
+
+--- R2 rewrite: CALL ice.system.rewrite_manifests(table => 'db.r2')
+ROW {'rewritten_manifests_count': 5, 'added_manifests_count': 5}
+MANIFESTS[r2] n=5 total_bytes=35443
+MANIFESTS[r3] n=12 total_bytes=85034
+
+--- R3 rewrite: CALL ice.system.rewrite_manifests(table => 'db.r3')
+ROW {'rewritten_manifests_count': 12, 'added_manifests_count': 12}
+MANIFESTS[r3] n=12 total_bytes=85059
+
+DONE

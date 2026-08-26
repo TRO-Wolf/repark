@@ -7,15 +7,23 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_proc_1_tiered_review.py` — **PROC-1 (2026-08-25; 12 tree pins):** the `review_profile`
+  tier tunable, the `light_thresholds` prose-only class and the `critic_engine` HIGH binding
+  (C-001..C-004); the pointer-only `unit-runbook.md` and its 5,000 B ceiling (C-005); the routing
+  homes and the single-home profile table (C-006); CCC's one added sentence (C-007); the lessons
+  entry (C-008); the MW-6 evidence home and its lint/typos exclusion (C-009); the disk skill's
+  2026-08-25 block (C-010); the handoff F-7 B-MOR-3 addendum (C-011).
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
   (C-004, C-005); AGENTS.md keeps the enumerated KEEP set (C-006); no `.agents/roles/`
   (C-007); CEILINGS (d) covers AGENTS.md and the method skill (C-008); DL-4 C-008 still
-  holds (C-009); PYC-5 tokens, method how-to, slate #2 (C-010..C-012).
+  holds (C-009); PYC-5 tokens, method how-to (C-010, C-011); C-012 turned over at
+  DL-5's departure (PROC-1 pickup, 2026-08-25): the slate row is gone, the ledger filed.
 - `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25; 11 tests, incl. the Critic's three
   pinned findings and the two tree pins C-006 / C-008):** the live-document compaction on
-  a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a
+  a scratch repository — its fixture seeds every `CEILINGS` file (PROC-1 added the SEPMO
+  unit-runbook, 2026-08-25) — a merged unit leaves the slate whole and the table renumbers (C-002), a
   closed campaign is cut from STATUS into its history bin with links rewritten (C-003), the
   touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
   row is one row; a marker in a code span is prose), and the gate red

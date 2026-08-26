@@ -69,6 +69,7 @@ See [../../.claude/map.md](../../.claude/map.md).
 | ...do this | go to |
 |---|---|
 | Operate under / understand SEPMO | [sepmo/map.md](sepmo/map.md) → [sepmo/SKILL.md](sepmo/SKILL.md) |
+| Run a SEPMO unit under its tier (the per-tier checklist) | [sepmo/unit-runbook.md](sepmo/unit-runbook.md) |
 | See SEPMO's bindings to this repo | [sepmo/binding-manifest.md](sepmo/binding-manifest.md) |
 | Run the bound Critic engine on a diff | [critic-critic-critic/SKILL.md](critic-critic-critic/SKILL.md) |
 | Read the working method before writing or reviewing code | [engineering-method/SKILL.md](engineering-method/SKILL.md) |

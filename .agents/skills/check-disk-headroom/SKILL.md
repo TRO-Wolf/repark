@@ -58,17 +58,38 @@ each path resolves to before planning a reclaim.
 - **Spark oracle fixtures** are small per fixture (megabytes) but each one is a fresh warehouse
   directory that nothing cleans up. They add up across a session.
 
+### Measured again 2026-08-25 — the machine, not just the repo
+
+A full-disk sweep found the largest consumers sat **outside** the repo's `target/`:
+
+| Path | Size | What it is |
+|---|---:|---|
+| `timeshift` snapshots | **840 G** | rsync snapshots on the **same** partition; its config includes `~` (`/home/<user>/**`), so every `cargo target/` is snapshotted |
+| fork workspace `target/` | 207 G | the second `iceberg-rust` checkout (deps 161 G + incremental 45 G) |
+| per-unit worktree `target/` | 23–51 G each | one debug tree per in-flight SEPMO unit worktree |
+| `Trash` | 12 G | desktop trash |
+| systemd coredumps | 4 G | `/var/lib/systemd/coredump` |
+| 24 stale kernels | ≈ 6.8 G | across `/boot` + `/lib/modules` |
+
+The lesson: `du -sh target` answers the repo's cost; a full disk needs the machine's. Timeshift
+covering `~` means every build tree is counted a second time in its snapshots.
+
 ## 3. Reclaim order — cheapest and safest first
 
 Work down this list, re-checking `df -h /` after each step. Stop as soon as you have room.
 
-1. **`/tmp/repark_ctas`** — free, and it should not exist (§4). Nothing live depends on it.
-2. **Session scratch directories** — the fixture warehouses and logs written under the session's
-   scratchpad. Yours to delete; regenerating them costs a Spark run.
-3. **`cargo clean -p <crate>`** — drops one crate's artifacts and keeps the rest of the
+1. **Merged-unit worktree `target/` trees** — a unit whose PR merged no longer needs its
+   worktree's debug tree; **151 G was freed this way on 2026-08-25**, after a read-only refute
+   pass. Confirm the unit merged first, and never touch a worktree still in flight — its
+   uncommitted state is someone else's unit, not garbage (AGENTS.md "Resource discipline").
+2. **`/tmp/repark_ctas`** — free, and it should not exist (§4). Nothing live depends on it.
+3. **Session scratch directories** — the fixture warehouses and logs written under the session's
+   scratchpad. Yours to delete, but **refute first** (Gotchas): a scratch directory can hold the
+   only copy of ledger-cited evidence. Regenerating fixtures costs a Spark run.
+4. **`cargo clean -p <crate>`** — drops one crate's artifacts and keeps the rest of the
    incremental tree. Far cheaper to recover from than a full clean.
-4. **`target/release`** — 2 G, and only rebuilt when a release or wheel build needs it.
-5. **`cargo clean`** — the whole debug tree. Frees the most, costs a full rebuild. Say so before
+5. **`target/release`** — 2 G, and only rebuilt when a release or wheel build needs it.
+6. **`cargo clean`** — the whole debug tree. Frees the most, costs a full rebuild. Say so before
    doing it, because the next gate run will be slow.
 
 **Not on this list, and not to be deleted casually:** `~/.cargo/registry` (shared with every other
@@ -106,3 +127,10 @@ directory.
   Confirm rather than assume.
 - **A clean tree is not free.** `cargo clean` trades minutes of disk for a long rebuild on the
   next gate run. Prefer `cargo clean -p <crate>` when one crate is the problem.
+- **Refute a scratch directory before `rm -rf`.** A scratch directory can hold the **only** copy
+  of evidence a committed ledger cites — the MW-6 Critic files were in session scratch after their
+  ledger had already archived; a blind delete would have stranded the citations. Their durable
+  home is now `task/mw-6-critic-evidence/`. Read what a scratch tree holds before removing it.
+- **`sudo`-tier reclaim is owner-run.** The kernels, the journal, the coredumps and the timeshift
+  snapshots in §2 need root and touch machine state outside any worktree — hand them to the owner
+  with the measured sizes; do not run them from an agent session.

@@ -38,6 +38,10 @@ not this directory.
 - [census/](census/map.md) — what a gate still reads of the recorded census runs: the
   baseline's facade cohort (`collected.txt`, `facade.xml`), pinned by `test_deferred_ledger.py`.
   The rest was evicted 2026-08-23 and lives at `b13b22c` ([../docs/port/census.md](../docs/port/census.md) §7).
+- [mw-6-critic-evidence/](mw-6-critic-evidence/map.md) — the Critic-round evidence the archived
+  **MW-6** ledger cites by path, given a durable home (PROC-1, 2026-08-25) so a scratch-directory
+  `rm -rf` cannot strand a committed ledger's citations. Verbatim, never hand-edited — excluded
+  from `ruff`/`typos` like `census/`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its

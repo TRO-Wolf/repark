@@ -42,6 +42,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   unannotated returns in `test_compare.py` became visible and annotated). **PYC-5:**
   facade tests dropped ANN201 (isolated count 0); ANN202 stays for private helpers.
   **PYC-6:** both tests globs keep `D` so the presence ratchet cannot flag tests.
+  **PROC-1 (2026-08-25):** `[tool.ruff] extend-exclude` carries the recorded Critic evidence
+  (`task/mw-6-critic-evidence/`), which `.typos.toml` excludes too — verbatim oracle output a
+  linter must not rewrite, the same rationale as `task/census/`.
   Isolated `make py-test` / ci.yml `parity-harness tests` pass `--with pydantic` because
   `--no-project` ignores package metadata.
   `uv.lock` is checked in from phase 3 on and is validated, never rewritten, by `uv lock --locked`.
