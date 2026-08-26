@@ -72,7 +72,8 @@ def test_tz8_row_splits_fixed_and_residual() -> None:
     # `date_sub` was measured to refuse too, but no pin exercises it — the row claims only
     # what a pin proves (registry §6: an unpinned divergence is prose).
     tz8 = text.index("### TZ-8")
-    assert "date_sub" not in text[tz8 : tz8 + 2500]
+    row_end = text.index("\n### ", tz8 + 1)
+    assert "date_sub" not in text[tz8:row_end]
     # The FIXED half: the analyzer rewrite, its pin, and Spark's session-zone answer.
     assert "— FIXED (2026-08-14, #100" in text
     assert "rewrite_timestamp_to_date_cast" in text
@@ -168,7 +169,9 @@ def test_no_row_deleted_and_maps_in_lockstep() -> None:
     text = _registry()
     # Every DEC row id survives (as a FIXED note or a still-open row) — never a silent deletion.
     for dec in range(1, 10):
-        assert f"DEC-{dec}" in text, f"DEC-{dec}"
+        # The row itself, not just its id: an open row keeps its heading, a landed one its
+        # FIXED-note opener — an id surviving inside a range ("DEC-1 … DEC-9") is not a row.
+        assert f"### DEC-{dec} —" in text or f"**DEC-{dec} —" in text, f"DEC-{dec}"
     for row in ("### TZ-8 —", "### G3-E8 —", "### G3-E8-NULL"):
         assert row in text, row
     # The maps carry this unit's pin file and ledger in lockstep.

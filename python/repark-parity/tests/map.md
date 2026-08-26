@@ -17,6 +17,8 @@ JVM, no repark required). See [../map.md](../map.md).
   lockstep (C-006).
   Cycle 2 (Critic): the DEC notes date by the fix's landing day (2026-08-14), and the TZ-8
   residual names only the pinned spellings (`date_sub` refuses too but is unpinned — not claimed).
+  Departure: the `date_sub` window ends at the next heading; DEC rows are asserted by their
+  heading or FIXED-note opener, not by a bare id.
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method

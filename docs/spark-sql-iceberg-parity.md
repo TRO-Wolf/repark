@@ -1378,7 +1378,7 @@ the pin rather than obeying it.
 > `python/repark/tests/test_g4b_semi_join.py::test_right_ref_agg_raises_missing_attributes_same_key`
 > (and left / inner / distinct-name / `count_distinct` left-then-right siblings). No
 > remaining D6 divergence to disclose; no `live-mirror`. Conditionless semi/anti refusal
-> remains [G4-3](#g4-3--conditionless-dataframe-semiant-join-refuses). A fixed defect
+> remains [G4-3](#g4-3--conditionless-dataframe-semianti-join-refuses). A fixed defect
 > gets this dated note, never a live divergence row.
 
 ### G4-3 — conditionless DataFrame semi/anti join refuses
