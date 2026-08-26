@@ -12,6 +12,14 @@
 
 **THIS INCLUDES ANY MODEL VERSION, EXAMPLE BEING OPUS 4.8 OR OPUS 5, EITHER ONE IS BANNED, IT DOESN'T MATTER**
 
+*Adjustment (owner, 2026-08-26, same day):* the ban is on comments **in code** — Rust, Python, shell,
+TOML, YAML and every other source file. **Markdown files may carry comments and explanatory prose**;
+that is where a reason, a design note or a `pins: <unit>/C-NNN` citation now lives — the
+directory's `map.md` (the ledger-grammar gate reads every tracked file under `crates/`,
+`python/`, `scripts/`, so a citation in a `map.md` there counts). Condensation is **enforced**:
+`make check-comment-density` (in `make ci`) holds every code file to a per-file comment ceiling
+seeded from the tree that only ratchets down, and a new file's ceiling is zero.
+
 **STOP — the authoritative contract is [AGENTS.md](AGENTS.md). Read it first.** This file adds
 only Claude-specific tool mechanics; it defines **no project rules**. Every project fact lives in
 the neutral spine, and this adapter only points at it — so it cannot drift, and deleting it would

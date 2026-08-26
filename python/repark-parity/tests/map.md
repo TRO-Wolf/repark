@@ -7,6 +7,9 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_comment_density_gate.py` — **the condensation guard's provocations (2026-08-26):** a new
+  file with one comment is red at ceiling 0, a file at / above its ceiling is green / red, the
+  shebang does not count, `--reseed` only lowers, and the live tree is under its table.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /
