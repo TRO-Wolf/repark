@@ -334,6 +334,9 @@ when storing an inner error. Use `tracing` with structured fields; never log sec
 **Numeric casts.** Do not use `as` for conversions that may truncate or overflow;
 `try_into()` or a domain clamp. Treat every surviving `as` as a review item.
 
+Prefer iterators over manual indexing.
+Validate Python-to-Rust conversions at the FFI boundary, not deep inside Rust logic.
+
 **Concurrency.** Document lock order when a module takes more than one lock; never reverse
 it. Do not hold a tokio write guard across `.await` unless unavoidable and bounded.
 `std::sync::Mutex` in async is only for a brief non-await section. Prefer

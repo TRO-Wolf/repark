@@ -28,20 +28,24 @@ binding invariant and routes to that home.
 | C-007 | No `.agents/roles/` directory exists | Tree pin | **PROVEN** | `test_no_role_packet_directory` |
 | C-008 | `CEILINGS` keys include `AGENTS.md` and the method skill; an over-ceiling `AGENTS.md` is red as (d) and is not reported as (a) or (c); the tree is green at the seeded ceilings | Provocation + green run | **PROVEN** | `test_ceilings_cover_the_contract_files` |
 | C-009 | DL-4 C-008 still holds: the obituary sentence once, `make check-docs-compaction` in `AGENTS.md` | Tree pin | **PROVEN** | `test_dl_4_rule_text_still_holds` |
+| C-010 | `AGENTS.md` still contains the PYC-5 load-bearing tokens (`**Not** on the pre-commit hook as of PYC-5`, `sub-second budget`) | Tree pin | **PROVEN** | `test_pyc_5_load_bearing_tokens_remain_in_agents` |
+| C-011 | `engineering-method` still contains how-to that never had an `AGENTS.md` home: iterators over indexing, Python-to-Rust FFI validation | Tree pin | **PROVEN** | `test_method_keeps_how_to_with_no_agents_home` |
+| C-012 | The slate carries a marked DL-5 unit at #2 (V3E-5 stays #1) | Tree pin | **PROVEN** | `test_dl_5_is_slate_row_two` |
 
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: DL-5
   categories:
     - id: AT-1
-      status: N/A
-      justification: docs and one gate script; no engine surface
+      status: ATTACKED
+      evidence: walked C-001..C-012 against the tree; KEEP invariants still in AGENTS.md (C-006); PYC-5 tokens restored (C-010)
+      artifacts: [python/repark-parity/tests/test_dl_5_contract_compaction.py]
     - id: AT-2
       status: N/A
       justification: no public API or schema change
     - id: AT-3
       status: ATTACKED
-      evidence: C-008 over-ceiling provocation is red; green at seeded ceilings
+      evidence: C-008 over-ceiling provocation is red; green at seeded ceilings; untracked CEILINGS key is a finding
       artifacts: [python/repark-parity/tests/test_dl_5_contract_compaction.py]
     - id: AT-4
       status: N/A
@@ -58,17 +62,74 @@ COVERAGE_ATTESTATION:
       status: N/A
       justification: not system-breaking
     - id: AT-8
-      status: N/A
-      justification: no crate dependency change
+      status: ATTACKED
+      evidence: gate (d) now fails an untracked CEILINGS key; C-008 proves AGENTS.md over-ceiling is red without tripping (a)/(c)
+      artifacts: [python/repark-parity/tests/test_dl_5_contract_compaction.py::test_ceilings_cover_the_contract_files]
     - id: AT-9
       status: N/A
       justification: no failure-path product code
     - id: AT-10
       status: ATTACKED
-      evidence: every PROVEN clause has a pins: citation in the test file
-      artifacts: [python/repark-parity/tests/test_dl_5_contract_compaction.py]
-  reattested: []
+      evidence: every PROVEN clause has a pins citation; PYC-5 suite and C-010 pin the load-bearing tokens make verify does not run
+      artifacts: [python/repark-parity/tests/test_dl_5_contract_compaction.py, python/repark-parity/tests/test_pyc_5_close.py]
+  reattested: [AT-1, AT-3, AT-8, AT-10]
   complete: true
+```
+
+## Critic pass — cycle 1 (procedural, not amnesia)
+
+Context break executed; attacking artifacts, not memory. Inputs: the charter clauses, the
+diff, the PYC-5 tests, this taxonomy. The Actor's build narrative was not the attack basis.
+
+**Cycle-1 input:** two independent reviews of PR #243 — the first named S1 (PYC-5 tokens),
+S2 (self-reported attestation / AT-1 N/A), S3 (dropped Rust how-to), S3 (absent slate row);
+the second confirmed the extra `sub-second budget` pin, ruled restore-tokens-not-retarget,
+AT-1 must be ATTACKED, AT-8 ATTACKED citing C-008, KEEP-as-how-to for the two Rust lines,
+and a slate **row at #2** (not the exclusion list). This section names those reviews as the
+seed; findings below are filed against the tree after remediation.
+
+**Risk tier:** standard. **Mode:** review-only (remediation is the Actor's, already applied
+in this commit). **Break:** procedural in-session, named honestly.
+
+**Lesson (C-011):** a method how-to that never had an `AGENTS.md` home is KEEP, not POINTER.
+POINTER of a restated invariant is correct; POINTER of a unique how-to deletes it.
+
+```yaml
+FINDING:
+  id: F-DL5-1
+  severity: S1
+  category: AT-10
+  clause: C-010
+  claim: AGENTS.md compaction dropped PYC-5 load-bearing tokens; two parity tests red in CI
+  evidence: python/repark-parity/tests/test_pyc_5_close.py:70-71,81; AGENTS.md Python-conventions bullet
+  disposition: REMEDIATED (tokens restored; test_pyc_5_load_bearing_tokens_remain_in_agents; make py-test)
+
+FINDING:
+  id: F-DL5-2
+  severity: S2
+  category: AT-1
+  clause: C-006
+  claim: attestation marked AT-1 N/A (no engine surface) on a unit whose charter is spec conformance of AGENTS.md
+  evidence: prior ledger AT-1 row; C-006 is the clause walk
+  disposition: REMEDIATED (AT-1 re-attested ATTACKED after this pass; complete: true re-derived)
+
+FINDING:
+  id: F-DL5-3
+  severity: S3
+  category: AT-1
+  clause: C-011
+  claim: Prefer iterators over manual indexing and FFI Python-to-Rust validation were dropped with no home
+  evidence: git grep on 5375daf empty; engineering-method Language-Specific now carries both lines
+  disposition: REMEDIATED (test_method_keeps_how_to_with_no_agents_home)
+
+FINDING:
+  id: F-DL5-4
+  severity: S3
+  category: AT-1
+  clause: C-012
+  claim: in-flight DL-5 had no slate unit row, so compact had nothing to remove at departure
+  evidence: briefs/next-sequence.md table row 2 and unit id=dl-5 block
+  disposition: REMEDIATED (test_dl_5_is_slate_row_two)
 ```
 
 ## Byte table (measured 2026-08-25, this branch, before departure)

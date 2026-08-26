@@ -38,6 +38,7 @@ Restated because a mixed queue makes it easy to assume the previous campaign's c
 | # | Unit | Track | Blocked by | Size |
 |---|---|---|---|---|
 | 1 | **V3E-5** — the nightly-oracle v3 leg | v3 evidence | the scoped `.github/` grant (below) | S <!-- unit id=v3e-5 --> |
+| 2 | **DL-5** — compact live STATUS remainder and the contributor contract | docs | — | M <!-- unit id=dl-5 --> |
 
 <!-- unit id=v3e-5 ledger=v3e-5- -->
 **Lane A — the v3 evidence intake (owner-chartered 2026-08-24).** Five measure-first units
@@ -61,6 +62,15 @@ The **fork lane runs in parallel and is owner-run** via
 — suggested order F-16 (small; repark's C-011 pin flipping red is the acceptance signal) →
 F-13 (the DV write path, gates V3-3) → F-14. Each fork landing returns here as a repin unit
 (RP-2, …). V3-3 and later engine units stay owner-sequenced and are **not** in this queue.
+<!-- /unit -->
+
+<!-- unit id=dl-5 ledger=dl-5-contract-compaction -->
+**Document lifecycle — DL-5 (owner-requested 2026-08-25).** Compact the live STATUS remainder
+and the contributor contract; `engineering-method` loses restated project rules; the
+docs-compaction ceiling extends to `AGENTS.md` and the method skill. **#2, not #1** — Lane A
+stays first; this unit runs beside it, not instead of it. Host-injection measurement and
+`.agents/roles/` are out of scope. Ledger:
+[../task/ledgers/staging/dl-5-contract-compaction-ledger.md](../task/ledgers/staging/dl-5-contract-compaction-ledger.md).
 <!-- /unit -->
 
 **Not in this queue (owner-sequenced or owner-gated):** V3-3 (deletion-vector writes; gated on

@@ -129,3 +129,25 @@ def test_dl_4_rule_text_still_holds() -> None:
     agents = _AGENTS.read_text(encoding="utf-8")
     assert agents.count("**A live document carries no obituary.**") == 1
     assert "make check-docs-compaction" in agents
+
+
+def test_pyc_5_load_bearing_tokens_remain_in_agents() -> None:
+    """pins: dl-5-contract-compaction/C-010 — PYC-5 tree pins stay green after compaction."""
+    agents = _AGENTS.read_text(encoding="utf-8")
+    assert "**Not** on the pre-commit hook as of PYC-5" in agents
+    assert "sub-second budget" in agents
+
+
+def test_method_keeps_how_to_with_no_agents_home() -> None:
+    """pins: dl-5-contract-compaction/C-011 — method keeps how-to with no AGENTS.md home."""
+    method = _METHOD.read_text(encoding="utf-8")
+    assert "Prefer iterators over manual indexing" in method
+    assert "Validate Python-to-Rust conversions at the FFI boundary" in method
+
+
+def test_dl_5_is_slate_row_two() -> None:
+    """pins: dl-5-contract-compaction/C-012 — DL-5 is slate row 2, marked."""
+    slate = (_REPO / "briefs/next-sequence.md").read_text(encoding="utf-8")
+    assert "| 2 | **DL-5**" in slate
+    assert "<!-- unit id=dl-5" in slate
+    assert "<!-- /unit -->" in slate

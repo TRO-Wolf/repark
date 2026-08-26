@@ -142,7 +142,8 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   - *Rust file-size* (`scripts/check_rust_file_size.py`) — default ceiling + EXCEPTIONS, ratchet
     DOWN only. Ceilings are never restated here.
   - *Python conventions* (`scripts/check_python_conventions.py`) — nested-`def` ban and
-    `dataclasses`/`attrs` ban. Not on the pre-commit hook (measured over budget). Type coverage
+    `dataclasses`/`attrs` ban. **Not** on the pre-commit hook as of PYC-5 (measured over the
+    sub-second budget). Type coverage
     is Ruff `ANN`; naming is review. Rationale:
     [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md).
   - *Public-docstring presence* (`scripts/check_docstring_presence.py`) — Ruff
