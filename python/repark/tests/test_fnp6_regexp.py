@@ -31,6 +31,9 @@ import pytest
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
 
 PAIRS = r"(\d+)-(\d+)"
+# The same pattern spelled for a Spark-door SQL literal: SQP-1's lexer folds `\\d` → `\d`, so the
+# SQL string doubles the backslashes to reach the engine as the facade's `\d` pattern.
+PAIRS_SQL = r"(\\d+)-(\\d+)"
 
 
 def _session():
@@ -116,10 +119,10 @@ def test_both_agree_with_the_sql_door() -> None:
     frame.createOrReplaceTempView("fnp6_v")
 
     for facade_column, sql in [
-        (F.regexp_extract_all("s", F.lit(PAIRS)), f"regexp_extract_all(s, '{PAIRS}')"),
-        # `[0-9]+` rather than `\d+`: SQL-literal backslash handling is a separate open
-        # residual (STATUS "Known correctness issues"), and this row is about door agreement.
-        (F.regexp_substr("s", F.lit("[0-9]+")), "regexp_substr(s, '[0-9]+')"),
+        (F.regexp_extract_all("s", F.lit(PAIRS)), f"regexp_extract_all(s, '{PAIRS_SQL}')"),
+        # Since SQP-1 the SQL door processes escapes, so `\d+` reaches the engine when the literal
+        # doubles the backslash (`'\\d+'`) — the facade's `\d+` and the SQL door now agree.
+        (F.regexp_substr("s", F.lit(r"\d+")), r"regexp_substr(s, '\\d+')"),
     ]:
         facade = frame.select(facade_column.alias("r")).toArrow()
         door = spark.sql(f"SELECT {sql} AS r FROM fnp6_v").toArrow()

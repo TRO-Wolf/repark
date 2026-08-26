@@ -1740,8 +1740,11 @@ class RegexTokenizer(HasInputCol, HasOutputCol, Transformer):
         quoted = _quote_ident(self.getInputCol())
         out = _quote_ident(self.getOutputCol())
         rid = _quote_ident(rid_col)
-        # Escape single quotes for SQL string literal; pattern is a Java/Spark regex.
-        pattern_sql = pattern.replace("'", "''")
+        # Embed the Java/Spark regex as a Spark-door SQL literal. The Spark door processes
+        # backslash escapes (SQP-1), so a pattern backslash must be doubled — `\s+` becomes the
+        # literal `'\\s+'`, which the lexer folds back to `\s+` — exactly as a Spark user writes it.
+        # Single quotes are doubled as before.
+        pattern_sql = pattern.replace("\\", "\\\\").replace("'", "''")
         text_expr = f"lower({quoted})" if to_lower else quoted
         # Replace ALL delimiter matches with unit separator (ASCII 31), then split.
         # DataFusion regexp_replace is first-match only unless flags include 'g'.

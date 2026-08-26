@@ -144,6 +144,9 @@ NOT in that file is a defect, not a decision.
   string-key map extraction; ``shuffle`` pins type+length; ``array_compact``
   drops NULLs only. Rework: exact interval/bitmap/unix_micros values, regex
   ``str_to_map``, NULL rows, non-UTC session pins, docstring-example execute.
+  **SQP-1:** the SQL-door regex spellings (``str_to_map`` / ``parse_url``, and
+  ``test_fnp6_regexp``'s door-agreement row) double their backslashes now the
+  Spark door processes escapes — the ``_sql_regex`` helper is the single home.
   Honesty: W2 MonthDayNano; ``date_diff`` int32; bitmap 0/−1; unix_micros LA
   column.
   **X-round (2026-08-18), repair round** — 30 tests. New pins: ``shuffle(NULL array)`` is NULL

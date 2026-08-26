@@ -49,6 +49,16 @@ def _table(frame: object) -> pa.Table:
     return frame.to_arrow()  # type: ignore[attr-defined]
 
 
+def _sql_regex(pattern: str) -> str:
+    """Spell a Java/Spark regex as a Spark-door SQL literal.
+
+    Since SQP-1 the SQL door processes backslash escapes, so a pattern backslash must be doubled
+    (`\\d` → `'\\\\d'`, which the lexer folds back to `\\d`) — exactly as a Spark user writes it.
+    Single quotes are doubled too.
+    """
+    return pattern.replace("\\", "\\\\").replace("'", "''")
+
+
 def _is_string(field_type: pa.DataType) -> bool:
     return pa.types.is_string(field_type) or pa.types.is_large_string(field_type)
 
@@ -442,7 +452,8 @@ def test_str_to_map_backslash_s_is_ascii_only(spark: ReparkSession) -> None:
     # The splice works inside a character class too.
     assert _as_dict(table.column("in_class").to_pylist()[0]) == {"a": "1", "b": "2", "c": "3"}
 
-    sql_door = _table(spark.sql(f"SELECT str_to_map('{text}', '\\s', ':') AS m"))
+    ws_pattern = _sql_regex(chr(92) + "s")
+    sql_door = _table(spark.sql(f"SELECT str_to_map('{text}', '{ws_pattern}', ':') AS m"))
     assert _as_dict(sql_door.column("m").to_pylist()[0]) == {"a": "1", "b": f"2{nbsp}c:3"}
 
 
@@ -660,7 +671,7 @@ def test_parse_url_query_key_regex_dialect_residual(spark: ReparkSession) -> Non
             frame.select(F.parse_url(F.lit(url), F.lit("QUERY"), F.lit(key)).alias("v"))
         )
         assert facade.column("v").to_pylist() == [expected], (key, "facade")
-        door = _table(spark.sql(f"SELECT parse_url('{url}', 'QUERY', '{key}') AS v"))
+        door = _table(spark.sql(f"SELECT parse_url('{url}', 'QUERY', '{_sql_regex(key)}') AS v"))
         assert door.column("v").to_pylist() == [expected], (key, "sql door")
 
     # DIVERGE: java.util.regex compiles these and answers `java`; repark raises.
@@ -677,7 +688,8 @@ def test_parse_url_query_key_regex_dialect_residual(spark: ReparkSession) -> Non
             with pytest.raises(PySparkException, match="invalid QUERY key pattern"):
                 frame.select(udf(F.lit(url), F.lit("QUERY"), F.lit(key)).alias("v")).to_arrow()
             with pytest.raises(PySparkException, match="invalid QUERY key pattern"):
-                spark.sql(f"SELECT {sql_name}('{url}', 'QUERY', '{key}') AS v").to_arrow()
+                key_sql = _sql_regex(key)
+                spark.sql(f"SELECT {sql_name}('{url}', 'QUERY', '{key_sql}') AS v").to_arrow()
 
 
 def test_parse_url_is_java_net_uri_not_a_normalizer(spark: ReparkSession) -> None:
