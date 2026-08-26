@@ -71,101 +71,37 @@ share is fixed there and re-ported rather than patched only here.
 
 What happens next, in order:
 
-1. **Finish the Agent-Agnostic Front-Door campaign** — **DONE (2026-08-10).** All five units
-   merged 2026-08-09 (#24, #25, #26, #28, #29); the two acceptance items still unmet at that point
-   were closed at the campaign's close-out. Its whole record — design, slate, unit ledger and
-   retrospective — is archived at
-   [docs/history/frontdoor/](docs/history/frontdoor/README.md), off the normal read path; the
-   process metrics are in [task/metrics.md](task/metrics.md).
-2. **V2 Engine Hardening** — the next campaign, and the active one: full optimization *and* the
-   verification that proves it, across the native door, the Spark facade, and the write path.
-   Reconnaissance is complete, and the campaign's design and slate are in-repo
-   ([docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md),
-   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md)). One preparatory
-   sweep has already landed from it (#30, 2026-08-10 — the dead doc-pointer sweep in ported
-   sources, which closed the deferral of the same name). **H-1 phase record archived
-   2026-08-11** at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md) (mid-campaign
-   promotion G-9 — ten unit ledgers + `g4-artifacts/` through the H-1 close gate #35–#46; campaign
-   continues into **H-2**). **H-2 seed+tail progress (2026-08-12):** landed G1/G16, G2/G13,
-   G3 guard-half, G4+G4b, G5+G5b, G6, G7, G12, G17, G18, G9-partial; **TZ-5 closed by #64**.
-   Still open: G8 (deliberately last), G10 (now unblocked by the X-5 comparator), TZ-4
-   (design pass required), G3-E8 FIX, G5b-R. The engineering items
-   parked below (spill coverage, the `ReparkSession` decomposition trigger, the
-   `ExecutionBackend` seam) are its natural inputs.
-   **2026-08-13 — Y wave landed; Z wave in flight.** Y-wave PRs **#66–#72** are on `main`
-   (kickoff SHA `9b2dce3`). Closed as code: G4b-R1 rename (#66), G11 ANSI-door
-   correctness-not-parity (#67), G10 boundary-shape corpus (#68), `getDatabase` real
-   `locationUri` (#69), G4b-R2 origin-map (#70), G15 collation refuse-loud (#71), G5b-R2
-   and Spark-door G5b-R3 empty-frame (#72). Still OPEN and **not** claimed closed by this
-   increment: G5b-R1 / R4 / R5, G3-E8 FIX, TZ-4 implementation, DEC-1…9, G8, G10 follow-on,
-   F-Y10-1 integer wrap (DEC U5 / G13). Semantics of each landed or still-open class: the
-   divergence registry
-   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md); completeness
-   table: [task/z5-landing-increment-ledger.md](task/ledgers/archive/2026-08/2026-08-13-z5-landing-increment-ledger.md).
-   Z-wave (Z-1…Z-5) is in flight on that frozen SHA.
-   **2026-08-13 — Z wave landed ×5; W wave in flight.** Z-wave PRs **#75–#79** are on
-   `main` (this increment's base `c7e6589` / `#79` tip; `#73` also on `main`). Closed
-   as code: Y-wave §6 landing (#75), facade `avg(DECIMAL)` Spark `(p+4,s+4)` (#76 /
-   registry DEC-4 / campaign DEC-5), `F.abs` after semi/anti origin-thread (#77),
-   uncorrelated `DELETE … IN` both doors (#78), TZ-4 PR-1 instant-producer
-   `timestamp[us, tz=UTC]` + Spark-door Iceberg `timestamptz` (#79). Still OPEN and
-   **not** claimed closed by this increment: G3-E8 residual spellings (W-3 in flight),
-   TZ-6 / TZ-7 (W-1; **not** retired), TZ-4 residues (B-TZ-4, ANSI column-def
-   `timestamp_ns`, Python `TimestampType` mapping), DEC-1 (W-2 in flight) and
-   DEC-2/3/5–9, TY-3 still DECLARED, G5b-R1 / R4 / R5 (W-4 in flight), G8, G10
-   follow-on, F-Y10-1. Completeness table:
-   [task/w5-z-landing-ledger.md](task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md).
-   **2026-08-13 — W wave landed ×5; V wave in flight (night 1 of the 48-hour push).**
-   W-wave PRs **#81–#85** are on `main` (this increment's base `8d325d4` / `#85` tip;
-   `#80` also on `main`). Closed as code: Z-wave §6 landing (#81), G5b-R1/R5 + Q-002
-   origin-thread (#82), uncorrelated `DELETE … NOT IN` + NULL 3VL both doors (#83),
-   Spark-door `parse_float_as_decimal` / DEC-1 (#84), TZ-4 PR-2 zoneless LTZ
-   localization + NTZ distinction; TZ-6/TZ-7 FIXED notes (#85). Still OPEN and **not**
-   claimed closed by this increment: G3-E8 residual EXISTS ± correlation (V-1; dbt
-   gate not met), TZ-4 residues (B-TZ-4, ANSI column-def `timestamp_ns`), DEC-2/3/5–9,
-   TY-3 still DECLARED (U3 revisit rides with V-2), G5b-R4, G8, G10 follow-on,
-   F-Y10-1. Completeness table:
-   [task/v5-w-landing-ledger.md](task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md).
-   **2026-08-14 — V wave landed ×5; S wave in flight (night 2 of the 48-hour push).**
-   V-wave PRs **#87–#91** are on `main` (this increment's base `d9a7391` / `#91` tip;
-   `#86` also on `main`). Closed as code: W-wave §6 landing (#87), write-path
-   partition-value audit (#88), `[NOT] EXISTS` ± correlation both doors (#89; dbt-upgrade
-   gate MET, family not fixed), B-TZ-4 string-cast (#90), U3 fromLiteral + U4a
-   add/sub/mul clamp (#91; `/` EXCEPTED as U4b). Still OPEN and **not** claimed closed
-   by this increment: G3-E8 residual UPDATE IN + correlated IN/ANY/ALL, TZ-8 date-cast,
-   DEC-2 `/` (U4b), registry DEC-8 plan-refuse, DEC-6/7/9, TY-3 still DECLARED,
-   F-V4-1/2 fork-wave, G5b-R4, G8, the `repark.sql` re-home. Completeness table:
-   [task/s5-v-landing-ledger.md](task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md).
+1. **Agent-Agnostic Front-Door** — **DONE (2026-08-10).** Record:
+   [docs/history/frontdoor/](docs/history/frontdoor/README.md); metrics:
+   [task/metrics.md](task/metrics.md).
+2. **V2 Engine Hardening** — the active engine campaign: optimization *and* the verification that
+   proves it, across the native door, the Spark facade, and the write path. H-1 is archived
+   (2026-08-11) at [docs/history/hardening-h1/](docs/history/hardening-h1/README.md); the campaign
+   continues in **H-2**. Design:
+   [docs/design/v2-engine-hardening.md](docs/design/v2-engine-hardening.md); slate:
+   [briefs/v2-engine-hardening.md](briefs/v2-engine-hardening.md). Live open items sit in
+   [Active workstreams](#active-workstreams) and the divergence registry
+   [docs/spark-sql-iceberg-parity.md](docs/spark-sql-iceberg-parity.md). Wave landing records
+   (Y/Z/W/V/S, 2026-08-13/14) are the archived increment ledgers
+   [z5](task/ledgers/archive/2026-08/2026-08-13-z5-landing-increment-ledger.md),
+   [w5](task/ledgers/archive/2026-08/2026-08-13-w5-z-landing-ledger.md),
+   [v5](task/ledgers/archive/2026-08/2026-08-13-v5-w-landing-ledger.md),
+   [s5](task/ledgers/archive/2026-08/2026-08-13-s5-v-landing-ledger.md).
 3. **Production-pipeline cutover inventory** — enumerate which production workloads move, in what
    order, under **single-writer-per-table** (an Iceberg table is written by v1 or by V2, never
    both), with the rollback story for each. Carried from the port
    ([docs/port/PLAN.md](docs/port/PLAN.md) "Open item: cutover").
-4. **The first tagged release** — **DONE**: v0.1.0 shipped 2026-08-15 (v0.5.0 current; see
-   Release state above), unblocked by the `repark.sql` re-home landing 2026-08-14
-   ([docs/release.md](docs/release.md) "RESOLVED", #95). Pre-alpha still means the API can
-   move between tags (the design ruling that the API-forever clock starts at the first tag —
-   [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at the v1.0
-   north-star API review).
+4. **The first tagged release** — **DONE**: see [Release state](#release-state). Pre-alpha still
+   means the API can move between tags (the design ruling that the API-forever clock starts at the
+   first tag — [docs/design/python-facade.md](docs/design/python-facade.md) §4 — is enforced at
+   the v1.0 north-star API review).
 
 Owner-side actions that rode this sequence rather than gating it are **DISCHARGED — no owner-side
-tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) workflow's first dispatch ran
-**green on 2026-08-10**, with **both catalog legs — Glue and S3 Tables — passing** under the
-create-only OIDC role; its AWS-side configuration (OIDC role, variables/secrets per
-[docs/tier2-aws.md](docs/tier2-aws.md)) is in place, and what that bring-up taught is folded back
-into that runbook (the catalog-wide Glue LIST statement that registration's provider walk
-requires, the environment-scoped secret preference, the stale-namespace pre-check). The
-parity-live half was **discharged** on first-run evidence (green on merged `main`
-2026-08-09/10). From 2026-08-14 through 2026-08-22 the armed nightly was red on three
-stale always-PASS Apache smoke pins — G15/Y-7
-[#71](https://github.com/TRO-Wolf/repark/pull/71) collation refuse and FA-4
-[#164](https://github.com/TRO-Wolf/repark/pull/164) nested-dict-as-struct —
-disposed divergences whose pin list was never updated. Those three are now
-known-FAIL meta pins; the nightly is a live signal again. On repository housekeeping, none remains: the stale merged `phase-2/*` branches that
-once carried easy-to-find copies of pre-scrub
-content are already gone from the remote. Per the forward-scrub rule (fix content in a new commit,
-never rewrite published history), pre-scrub content remains reachable in already-published history —
-including `main`'s own — an exposure reviewed and **accepted by explicit decision** rather than by
-history-rewrite; provenance and the options weighed:
+tier-2 action remains.** The aws-acceptance (tier-2, live-AWS) first dispatch ran **green on
+2026-08-10** (Glue and S3 Tables). The parity-live half was **discharged** on first-run evidence
+(green on merged `main` 2026-08-09/10). Three stale always-PASS Apache smoke pins are now
+known-FAIL meta pins; the nightly is a live signal again. Pre-scrub content remains reachable in
+published history — an exposure **accepted by explicit decision**; provenance:
 [docs/history/port-v2/p3e-facade-ledger.md](docs/history/port-v2/p3e-facade-ledger.md)
 ("the B-2 literal is already published").
 
@@ -175,21 +111,11 @@ history-rewrite; provenance and the options weighed:
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
 <!-- ws id=dl ledgers=dl- state=open -->
-- **Document lifecycle (DL)** (chartered 2026-08-23 by the owner; DL-1..DL-4 delivered). Unit ledgers live in [task/ledgers/](task/ledgers/map.md) by state — `staging/` →
-  `completed/` (the unit's last commit) → `archive/yyyy-mm/` (the script's move at pickup,
-  immutable) — and `scripts/ledger_lifecycle.py` is the only thing that moves them, rewriting
-  every link as it goes. Three gates in `make ci` (dual-wired into `ci.yml` by
-  [#223](https://github.com/TRO-Wolf/repark/pull/223)) hold the class: `check-ledgers` — bins,
-  archive names, every ledger link, the frozen rule (DL-1,
-  [#221](https://github.com/TRO-Wolf/repark/pull/221)); `check-ledger-grammar` — clause rows,
-  `pins:` citations, the Critic's attestation (DL-2,
-  [#222](https://github.com/TRO-Wolf/repark/pull/222)); and, since DL-4, `check-docs-compaction`
-  — no closed campaign in this section, no merged unit on the slate, every workstream marked,
-  byte ceilings. Archive month maps are one line per ledger (DL-3,
-  [#225](https://github.com/TRO-Wolf/repark/pull/225)). Records: the DL-1/2/3 charters in
-  [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md); DL-4 (delivered
-  2026-08-25: STATUS.md 65.9 → 30.1 kB, the slate 26.7 → 5.6 kB):
-  [the DL-4 ledger](task/ledgers/archive/2026-08/2026-08-25-dl-4-live-doc-compaction-charter-ledger.md).
+- **Document lifecycle (DL)** (chartered 2026-08-23; DL-1..DL-4 delivered). Unit ledgers live in
+  [task/ledgers/](task/ledgers/map.md) by state; `scripts/ledger_lifecycle.py` is the only mover.
+  Three gates in `make ci` hold the class: `check-ledgers`, `check-ledger-grammar`,
+  `check-docs-compaction`. Policy: [AGENTS.md](AGENTS.md) "Markdown document lifecycle".
+  Records: [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
 <!-- /ws -->
 
 <!-- ws id=sem ledgers=sem- state=held -->

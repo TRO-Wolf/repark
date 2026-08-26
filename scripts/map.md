@@ -81,10 +81,12 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make ci`, `make install-hooks`, `.pre-commit-config.yaml` and `ci.yml`'s guards job (wired under a
   one-time owner grant, 2026-08-25) at n=5 median 0.05 s: no closed campaign still in STATUS, no
   merged unit still on the slate, every workstream bullet inside a `ws` block, and the byte
-  ceilings (`CEILINGS`, seeded 2026-08-25 at 31,000 / 6,000 B from the unit's final
-  measurement, 30,055 / 5,594 B; raised only in the PR that needs it —
-  the load-bearing half, since markers make compaction mechanical but the ceiling makes regrowth
-  visible). Test: `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`.
+  ceilings (`CEILINGS`: STATUS.md, the slate, AGENTS.md, engineering-method;
+  (a)–(c) still only the two live documents; (d) every key). Seeded DL-4
+  2026-08-25 at 31,000 / 6,000 B; ratcheted DL-5 2026-08-25 to 25,000 / 6,000 /
+  31,000 / 35,000 B from the unit's final measurement. Raised only in the PR
+  that needs it. Tests: `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`,
+  `python/repark-parity/tests/test_dl_5_contract_compaction.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
   and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files

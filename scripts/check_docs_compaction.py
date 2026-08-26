@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""The live documents carry only live state — the gate (DL-4, 2026-08-25).
+"""The live documents carry only live state — the gate (DL-4, 2026-08-25;
+ceilings extended DL-5).
 
-Over `STATUS.md` and `briefs/next-sequence.md`, four checks:
+Over `STATUS.md` and `briefs/next-sequence.md`, three block checks:
 
 (a) no `state=closed` ws block is still in STATUS — a closed campaign has left
     for `docs/history/` (the lifecycle script's `compact` moves it);
@@ -9,10 +10,14 @@ Over `STATUS.md` and `briefs/next-sequence.md`, four checks:
     `task/ledgers/completed/` or the archive — a merged unit has left, whole;
 (c) every top-level bullet under STATUS "Active workstreams" is inside a ws
     block, so a new campaign cannot arrive unmarked;
-(d) neither file exceeds its byte ceiling. CEILINGS is seeded from the
-    post-migration measurement and is raised only by an explicit edit in the
-    PR that needs it — the PYC-6 ratchet pattern. Markers make compaction
-    mechanical; this ceiling is what makes regrowth visible.
+
+And over **every** CEILINGS key:
+
+(d) the file exists, is tracked, and does not exceed its byte ceiling.
+    CEILINGS is seeded from the post-trim measurement and is raised only by
+    an explicit edit in the PR that needs it — the PYC-6 ratchet pattern.
+    Markers make compaction mechanical; this ceiling is what makes regrowth
+    visible.
 
 Grammar and meanings: `scripts/doc_blocks.py`. Exit 0 clean, 1 findings, 2
 environment.
@@ -31,12 +36,16 @@ COMPLETED = "task/ledgers/completed"
 ARCHIVE = "task/ledgers/archive"
 LEDGER_SUFFIX = "-ledger.md"
 # Bytes. Seeded 2026-08-25 at the end of DL-4 — STATUS.md 30,055 B (from 65,890),
-# briefs/next-sequence.md 5,594 B (from 26,731), the rule text included — at the
-# next 1,000 B above each. Raised only in the PR that needs it, with the reason in that PR: a
-# departure edit that adds more than the headroom removes something or says why the ceiling moves.
+# briefs/next-sequence.md 5,594 B (from 26,731) — then ratcheted DL-5 (2026-08-25):
+# STATUS.md 24,307 B → 25,000; AGENTS.md 30,341 B → 31,000; engineering-method
+# 34,100 B → 35,000. Raised only in the PR that needs it, with the reason in that
+# PR: a departure edit that adds more than the headroom removes something or
+# says why the ceiling moves.
 CEILINGS: dict[str, int] = {
-    "STATUS.md": 31_000,
+    "STATUS.md": 25_000,
     "briefs/next-sequence.md": 6_000,
+    "AGENTS.md": 31_000,
+    ".agents/skills/engineering-method/SKILL.md": 35_000,
 }
 
 
@@ -96,8 +105,11 @@ def findings(repo: Path, ceilings: dict[str, int]) -> list[str]:
                         f"{path}:{block.start + 1}: unit `{block.id}` merged and is still on the "
                         "slate — run `python3 scripts/ledger_lifecycle.py compact`"
                     )
-        size = len(text.encode("utf-8"))
-        ceiling = ceilings[path]
+    for path, ceiling in ceilings.items():
+        if path not in paths:
+            found.append(f"{path}: not tracked")
+            continue
+        size = len((repo / path).read_text(encoding="utf-8").encode("utf-8"))
         if size > ceiling:
             found.append(
                 f"{path}: {size} B exceeds its ceiling of {ceiling} B — compact it, or raise "

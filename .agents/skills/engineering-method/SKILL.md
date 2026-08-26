@@ -1,6 +1,6 @@
 ---
 name: engineering-method
-version: "1.0"
+version: "1.1"
 description: >-
   The portable working method for any implementation or review session in this
   repo — risk-first design, the reason-plan-verify workflow, naming, the
@@ -256,31 +256,13 @@ Additional rules:
 
 ## Navigation: `map.md` Convention
 
-This codebase uses a guiding-agent navigation pattern. Every source directory carries a single `map.md` that documents what lives there and where to go next. There are no separate `debug.md` files — each directory's failure guidance is the `## Debug` section at the bottom of its own `map.md`.
+Policy (hand-written maps, same-change lockstep, no generator) lives in
+[AGENTS.md](../../../AGENTS.md) "Hard rules". The method:
 
-A `map.md` has two parts, kept in one file:
-- **The map** (top) — `Purpose`, `Contents`, an `I want to... → go to` intent table, and `Pointers` (Up / Related) to neighboring directories
-- **`## Debug`** (bottom) — `Known failure modes` table, `First checks`, and `Escalate to` pointers
-
-### Before editing any file
-
-This step is part of "Reason Before You Act" (§1) and "Read Before Write" (Core Principles) — skipping it is the same class of mistake as editing a file from memory.
-
-1. Read the `map.md` of the directory you are about to touch.
-2. Use its `I want to... → go to` table to choose the file or subdirectory; follow `Pointers` to move between directories.
-3. Read the `map.md` of every directory your task will touch — not just the first.
-4. `map.md` is authoritative for **what lives in its directory** — file roles, entry points, intent. If the code and `map.md` disagree, **the code is truth** and the `map.md` is stale. This repo's contract ([AGENTS.md](../../../AGENTS.md) hard rule "`map.md` in every directory, updated in the same change") makes the fix mandatory: update the touched directory's `map.md` in the same change, always in scope.
-5. When you create a new directory containing source, create its `map.md` in the same change.
-
-### Debug with `map.md#debug`
-
-On any failure, before changing code and ahead of §8 (Debugging Protocol):
-
-1. Open the `## Debug` section of the `map.md` where the failure surfaced. Match the symptom in **Known failure modes**; run the **First checks**.
-2. Follow **Escalate to**. The pointer form `<path>/map.md#debug` means the `## Debug` section of that `map.md` — open it and continue there. [AGENTS.md](../../../AGENTS.md) / "open an issue" is the terminal hop.
-3. Then run §8 steps 1–7 as written.
-
-`map.md#debug` is the first hop that finds the right file and forms an initial hypothesis; §8 is the protocol once you're there. The two are sequential, not alternatives.
+1. Read the `map.md` of every directory the task will touch before editing a file there.
+2. Use `I want to... → go to` and `Pointers` to choose the file.
+3. If code and `map.md` disagree, the code is truth — update the map in the same change.
+4. On failure, open that directory's `## Debug` first, then run §8. They are sequential.
 
 ---
 
@@ -310,94 +292,65 @@ Whenever you feel the pull to abbreviate, write the full name first, then ask: "
 
 ## Language-Specific Rules
 
+Project invariants — panic ban, `unsafe_code`, house-style banners, Python pydantic /
+nested-`def` / `dataclasses`, `cargo test --workspace` — live in [AGENTS.md](../../../AGENTS.md)
+"Hard rules" and the named gate scripts. This section is the method: commands for the done
+gate, and how-to that those rules do not carry.
+
 ### Verification commands (canonical — referenced by §4 and the Pre-Flight checklist)
 
-- **Rust:** `make verify` runs the gate; the underlying commands are `cargo check` · `cargo clippy --all-targets --workspace -- -D warnings` · `cargo fmt --check` · `cargo test --workspace` (**never** `--all-features` — the PyO3 cdylib test binary breaks under it; see [AGENTS.md](../../../AGENTS.md)). Workspace lints in [Cargo.toml](../../../Cargo.toml) `[workspace.lints]`; formatter in [rustfmt.toml](../../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
-- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` · `... pytest`, plus `make check-python-conventions` for the two rules Ruff cannot express (nested `def`; `dataclasses`/`attrs`). Ruff config in repo-root [pyproject.toml](../../../pyproject.toml) `[tool.ruff]`; line length 100. Both are in the `make ci` chain — the conventions guard is the SSOT for its own tables, and the reasoning behind the rules lives in [../code-quality/SKILL.md](../code-quality/SKILL.md).
+- **Rust:** `make verify` runs the gate; the underlying commands are `cargo check` ·
+  `cargo clippy --all-targets --workspace -- -D warnings` · `cargo fmt --check` ·
+  `cargo test --workspace` (**never** `--all-features` — see [AGENTS.md](../../../AGENTS.md)
+  "PyO3 build notes"). Workspace lints in [Cargo.toml](../../../Cargo.toml)
+  `[workspace.lints]`; formatter in [rustfmt.toml](../../../rustfmt.toml).
+- **Python:** `uv run --package <pkg> ruff check .` · `... ruff format --check .` ·
+  `... pytest`, plus `make check-python-conventions`. Ruff config in
+  [pyproject.toml](../../../pyproject.toml); reasoning in
+  [../code-quality/SKILL.md](../code-quality/SKILL.md).
 
-### Rust
+### Rust — how to apply the panic ban
 
-#### No Panics in Production — neither `.unwrap()` nor `.expect()`
+When a fallible call would have been `.unwrap()` / `.expect()`, prefer, in order:
 
-Panic-driven control flow is forbidden in production code paths: **no `.unwrap()`, no `.unwrap_err()`, and no `.expect()` outside tests.** When something fails in production, the operator must recover the cause from logs alone — without re-running under a debugger — and the process must fail loudly and intentionally, not panic-unwind out of a library call.
-
-Use one of these instead, ordered by preference:
-
-1. **Propagate with context** (preferred for fallible functions):
+1. Propagate with context:
    ```rust
    let config = load_config(&path)
        .with_context(|| format!("failed to load config from {}", path.display()))?;
    ```
-2. **Convert `Option` to a contextual error, then propagate** — never `.expect()` it:
+2. Convert `Option` then propagate:
    ```rust
    let warehouse = settings.warehouse
        .ok_or_else(|| anyhow!("REPARK_WAREHOUSE must be set before startup"))?;
    ```
-3. **Log and exit loudly** only when the failure is genuinely unrecoverable *and* there is no caller to propagate to (e.g. startup in `main`) — exit on a logged, structured error rather than panicking:
-   ```rust
-   let snapshot = catalog.load_snapshot(snapshot_id).unwrap_or_else(|error| {
-       tracing::error!(?error, snapshot_id, "snapshot load failed at startup");
-       std::process::exit(1);
-   });
-   ```
+3. Log and exit only in `main` / startup when there is no caller to propagate to.
 
-DO NOT: `.unwrap()`, `.unwrap_err()`, or `.expect(...)` in any production path — including on `Option` (use `.ok_or_else(|| anyhow!("descriptive reason"))?`).
-**Tests are the only place panics are acceptable** — and even there, prefer `.expect("context: what was being tested")` over bare `.unwrap()` so a CI failure three weeks later names the operation and input that failed.
+Tests may panic; prefer `.expect("context: what was being tested")` over bare `.unwrap()`.
 
-#### Error Handling
+Library crates return a typed `thiserror` enum, never `Result<_, String>` or
+`Box<dyn Error>` on a public trait. Binaries use `anyhow`. Implement `Error::source()`
+when storing an inner error. Use `tracing` with structured fields; never log secrets.
 
-- **Treat crate code as reusable library code by default** — design each crate's public surface as if another crate will depend on it (the workspace DAG means they do — see [AGENTS.md](../../../AGENTS.md) for the crate map).
-- Library crates: define error types with `thiserror`; the shared enum lives in `repark-core` (it breaks the session↔sql cycle). **Public API functions return a typed error enum, never `Result<_, String>`.**
-- Application / binary crates and examples: use `anyhow::Result` with `.context(...)` / `.with_context(...)`.
-- Do not mix `Box<dyn Error>` into a codebase that uses `anyhow` or `thiserror` — in particular, **do not use `Box<dyn Error>` in public trait or struct methods**; define a concrete error type with specific variants.
-- **When implementing `std::error::Error`, override `fn source()`** if you store an inner error — breaking the error chain makes debugging impossible.
-- **Internal helpers should return the real error type directly** — don't return `Result<_, String>` only to wrap it via `.map_err(...)` at the call site.
+**Numeric casts.** Do not use `as` for conversions that may truncate or overflow;
+`try_into()` or a domain clamp. Treat every surviving `as` as a review item.
 
-#### Other Rust Defaults
+Prefer iterators over manual indexing.
+Validate Python-to-Rust conversions at the FFI boundary, not deep inside Rust logic.
 
-- Verification commands: see the canonical block above. Workspace lint config in [Cargo.toml](../../../Cargo.toml) `[workspace.lints]` (`unsafe_code = "forbid"` workspace-wide — `crates/repark-python` opts out because PyO3 macro expansion emits `unsafe`; `clippy::all` + `clippy::pedantic` warn-by-default); formatter config in [rustfmt.toml](../../../rustfmt.toml) (`max_width = 100`, `edition = "2024"`).
-- Prefer iterators over manual indexing.
-- Make illegal states unrepresentable at the type level: model a closed set as an `enum` (not a string constant + a catch-all `match` arm), and wrap a domain ID in a newtype so a `TableIdent` can't be passed where a `SnapshotId` is wanted (§9).
-- Use `tracing` for logging, not `println!` or the `log` crate — emit **structured** fields (`?error`, ids, durations, outcomes) at boundaries and decision points, not string-soup. **Never log secrets, tokens, or PII.**
-- For PyO3: validate Python-to-Rust conversions at the FFI boundary, not deep inside Rust logic.
-- **House style — section banners + one blank line between top-level items.** Wrap a section function's `///` doc block in `///` + space + 91-`=` banner lines (closing banner directly above the `fn`, no blank line between); one blank line between top-level items. Banners are hand-authored and `cargo fmt`-compatible. Rule of record: [AGENTS.md](../../../AGENTS.md) "Hard rules" (Rust house style); banner bodies obey "Write for the eventual reader".
+**Concurrency.** Document lock order when a module takes more than one lock; never reverse
+it. Do not hold a tokio write guard across `.await` unless unavoidable and bounded.
+`std::sync::Mutex` in async is only for a brief non-await section. Prefer
+`compare_exchange` for concurrent counters. Move blocking work off the runtime with
+`spawn_blocking`.
 
-#### Numeric Casts (`as`)
+### Python — how-to the contract does not carry
 
-- **Never use `as` for numeric conversions that may truncate or overflow.** Use `try_into()` with explicit error handling, or clamp when the domain is bounded (`value.max(0) as usize`).
-- `f64 as usize` saturates but is fragile — clamp to `[0, usize::MAX as f64]` first. This bites in a data engine: row counts, batch sizes, decimal/float boundaries, and Arrow offset arithmetic all cross integer widths silently.
-- Treat every `as` cast in review as a potential bug; require a justification (a comment or a guard) for each one that survives.
+Invariants (types, pydantic, no nested `def`, no `dataclasses`/`attrs`, pathlib, logging,
+f-strings, no bare `except`) live in [AGENTS.md](../../../AGENTS.md) "Hard rules". Here:
 
-#### Concurrency & Async
-
-- **Document lock acquisition order** when a module takes more than one lock, and never acquire the same set in different orders across paths — that is the classic deadlock. State the canonical order in a doc comment (a session-owned catalog registry behind `Arc<RwLock<…>>` is where this bites first).
-- **Never hold a `tokio::sync::RwLock` / `Mutex` write guard across an `.await`** unless the critical section is unavoidably async and the hold time is bounded — a guard held across `.await` stalls every other waiter.
-- **`std::sync::Mutex` in async is acceptable only for a brief, non-`await` critical section.** If the section spans an `.await`, use `tokio::sync::Mutex`. When in doubt, use `tokio::sync::Mutex`.
-- **Prefer `compare_exchange` loops over load-then-store** for concurrent counters and for the Iceberg optimistic-concurrency commit retry — load-then-store races against other writers.
-- **Keep async paths non-blocking.** Move CPU-heavy or blocking work off the runtime with `tokio::task::spawn_blocking`; never run a long synchronous computation (a large DataFusion collect, a Parquet scan) on a runtime worker thread.
-
-### Python
-
-- **Type everything.** Every parameter, every return, every public attribute and every module-level constant carries an annotation. An untyped signature is not a shortcut; it is a hole in the contract Ruff's `ANN` rules exist to close.
-- Use `pydantic` v2 `BaseModel` for ALL structured data — configs, API payloads, internal records, value objects, function arguments that group fields, anything that holds named fields together.
-- Do NOT use `dataclasses` or `attrs`. Pydantic is the single standard data container in this codebase; it provides validation, serialization, JSON schema generation, and `.model_dump()` / `.model_validate()` round-tripping in addition to plain data-holding.
-- For immutability, set `model_config = ConfigDict(frozen=True)` on the model rather than reaching for a frozen dataclass.
-- Make illegal states unrepresentable: prefer `Literal` types and discriminated Pydantic models over free strings and parallel booleans, and `model_validate(...)` untrusted input at the boundary so the typed model is trusted everywhere inside (§9, Risk-First).
 - Use `polars` for DataFrame work by default; `pandas` only when an external library forces it.
-- **Do not nest function definitions.** A `def` inside another `def` is invisible to tests, to
-  imports and to the reader scanning the module for what it contains, and it is re-created on every
-  call. Lift it to module or class level and pass what it needs as arguments. The exceptions are
-  narrow and each needs a reason on the line: a decorator that must close over its own arguments, a
-  callback whose closure over local state is the point, and `functools.wraps` wrappers.
-- **Name a function for the work it does**, as a verb phrase a reader can check against the body:
-  `resolve_partition_spec`, not `handle` / `process` / `do_work` / `helper` / `_inner`. A name that
-  would fit any function in the module is not a name. See "Naming Conventions" above; it binds
-  Python as much as Rust.
-- Prefer `pathlib.Path` over string paths.
-- Use `logging` (not `print`) for any code that runs in production.
-- Use f-strings; never `%` formatting or old `.format()` style.
-- Never catch bare `Exception` unless you immediately re-raise or log with full traceback.
-- **Lint + format via Ruff** (commands in the canonical block above). Config in repo-root [pyproject.toml](../../../pyproject.toml) `[tool.ruff]`; line length **100** (matches Rust). When a rule must be bypassed, use `# noqa: <RULE>` with an explanatory comment on the same line — e.g. `# noqa: BLE001 — logging only; can't re-raise from a timer thread`. CI gates on both check and format-check; see [.github/workflows/ci.yml](../../../.github/workflows/ci.yml).
+- Frozen models: `model_config = ConfigDict(frozen=True)`.
+- A `# noqa: <RULE>` bypass needs the rule code and a same-line reason.
 
 ---
 

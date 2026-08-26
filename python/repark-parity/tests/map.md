@@ -7,6 +7,12 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
+  the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
+  (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
+  (C-004, C-005); AGENTS.md keeps the enumerated KEEP set (C-006); no `.agents/roles/`
+  (C-007); CEILINGS (d) covers AGENTS.md and the method skill (C-008); DL-4 C-008 still
+  holds (C-009); PYC-5 tokens, method how-to, slate #2 (C-010..C-012).
 - `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25; 11 tests, incl. the Critic's three
   pinned findings and the two tree pins C-006 / C-008):** the live-document compaction on
   a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a

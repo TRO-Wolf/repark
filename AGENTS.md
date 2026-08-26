@@ -46,16 +46,10 @@ wins and the conflict becomes a clarifying question (SEPMO doctrine D1).
 
 ## What repark is
 
-A pure-Rust, no-JVM single-node data engine with first-class Apache Iceberg support — *"Trino's SQL,
-DuckDB's deployment model, deepest Iceberg support."* Two doors: a **native** lazy DataFrame API +
-ANSI/Trino-style `repark.sql()`, and a **near-drop-in PySpark facade** whose `.sql()` keeps the Spark
-dialect. Built on Apache DataFusion + Arrow + our **owned `iceberg-rust` fork** (see the hard rules
-below), with native PyO3 Python bindings. See [README.md](README.md).
-
-**Current state lives in [STATUS.md](STATUS.md)** — the single source of truth for release state,
-delivered crates, active workstreams, and deferred work. The port that stood this repository up
-(copy-then-re-home, four phases) is recorded in [docs/port/PLAN.md](docs/port/PLAN.md). Do not
-restate status here; point at STATUS.md.
+A pure-Rust, no-JVM single-node data engine with first-class Apache Iceberg support — two SQL
+doors (native ANSI/Trino-style `repark.sql()`, Spark-dialect facade), DataFusion + Arrow, and an
+**owned `iceberg-rust` fork**. Product intent: [README.md](README.md) / [PROJECT.md](PROJECT.md).
+Current state: [STATUS.md](STATUS.md) — do not restate it here.
 
 ## Crate map — where a change will go
 
@@ -84,14 +78,8 @@ appears at their path while they are still declared planned.
 | The PySpark facade | `python/repark/spark` | delivered |
 | The dbt adapter | `dbt-repark` (separate package) | deferred (parked lane) |
 
-v1 crates re-home rather than rewrite (catalog + write → `repark-iceberg`; the Spark parts of the v1
-functions/sql crates → `repark-spark`; the smart CSV reader → `repark-io`). DataFusion remains the
-engine under everything.
-
-*Correction (2026-08-06):* `repark-exec` and `repark-io` were originally listed as phase 1. The
-settled phase-1 design ([docs/design/session-api.md](docs/design/session-api.md) §1) deliberately
-does not create them — no v1 code exists for either (execution config is ~40 lines inside the
-Session builder). Each is extracted later, when its code actually arrives.
+DataFusion remains the engine under everything. `repark-exec` / `repark-io` are extracted when
+their code arrives ([docs/design/session-api.md](docs/design/session-api.md) §1).
 
 ## Verify before "done"
 
@@ -135,86 +123,49 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
   items; `max_width=100`, `edition=2024`; clippy `all`+`pedantic`, `-D warnings`; `thiserror`
   (libs) / `anyhow` (bins); `tracing`; no panics in prod — no `unwrap`/`expect`
   (`with_context()?` / `.ok_or_else(…)?`).
-- **Mechanical structure gates** — enforced, not conventions; each has a script/list SSOT that prose
-  must point at, never restate:
+- **Mechanical structure gates** — enforced, not conventions; each has a script/list SSOT that
+  prose must point at, never restate. Dual-wired `make ci` + ci.yml unless a row says otherwise.
   - *Panic + async bans*: `clippy.toml` `disallowed-methods` (unwrap/expect +
     `tokio::spawn`/`spawn_blocking`). Escape = per-call-site
     `#[expect(clippy::disallowed_methods, reason = …)]` stating the lifecycle; never a
     file/crate-wide allow. One recorded module-scoped `#![expect]` exists — the binding's
-    exception-taxonomy module (`crates/repark-python/src/lib.rs`), because a per-call-site
-    `#[expect]` cannot reach inside `pyo3::create_exception!`'s macro expansion (proven both ways —
-    [docs/history/port-v2/p3c-binding-ledger.md](docs/history/port-v2/p3c-binding-ledger.md)
-    P-4/P-5); the lint stays live for the rest of that crate.
-  - *Crate dependency policy* (`scripts/check_crate_dag.py` — the SSOT for the tier map, the
-    crate roles, and the explicit allowed-edge table: every internal edge with the dependency
-    kinds it may take and why it exists; an undeclared edge, a promoted kind, or a forbidden
-    shape — door↔door, anything→bindings, foundation→internal, capability→door — is red, and the
-    rules re-apply to the declaration itself so writing a forbidden edge down cannot legalize it)
-    and *crate-root manifests*
-    (`scripts/check_lib_rs.py` — ceilings + EXCEPTIONS SSOT) are **armed** since phase-1 PR-A,
-    dual-wired Makefile + ci.yml.
-  - *Facade `.py` thinness* (`scripts/check_lib_py.py` — the Python sibling of `check_lib_rs` and
-    the SSOT for facade file size: per-file line ceilings with an EXCEPTIONS-with-reason table that
-    **ratchets DOWN only**, plus the no-stub rule — a re-export-only module must open its docstring
-    with the exact substring `re-export binding`) is **armed** since phase-3 PR-5 over
-    `python/repark/src/repark/**`, dual-wired `make check-lib-py` (in the `make ci` chain) +
-    ci.yml's `python` job, and in both pre-commit paths (`make install-hooks` +
-    `.pre-commit-config.yaml`).
-  - *Rust file-size* (`scripts/check_rust_file_size.py` — the general companion of `check_lib_rs`
-    and the SSOT for per-file `crates/**/*.rs` line ceilings: a default ceiling with an
-    EXCEPTIONS-with-reason table that **ratchets DOWN only**) is **armed** since G-8, dual-wired
-    `make check-rust-file-size` (in the `make ci` chain) + the ci.yml `guards` job, and in both
-    pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`). Prose points at the
-    script; ceilings are never restated here.
-  - *Python conventions* (`scripts/check_python_conventions.py` — the SSOT for the two Python
-    rules Ruff cannot express: the **nested-`def` ban**, with an inline `# nested-def: <reason>`
-    pragma for the three sanctioned cases and a per-file ceiling table that **ratchets DOWN only**,
-    and the **`dataclasses`/`attrs` ban**, with an exceptions table and no inline pragma on
-    purpose) is **armed** since PYC over `python/repark/src`, `python/repark-parity` and
-    `scripts/`, dual-wired `make check-python-conventions` (in the `make ci` chain) + ci.yml's
-    `python` job. **Not** on the pre-commit hook as of PYC-5: n=5 median 0.996 s (max 1.011 s)
-    over 164 files, at the sub-second budget line, with the max already over it. The other two
-    Python rules are held elsewhere and are deliberately not duplicated: type coverage is
-    Ruff's `ANN` rule set, naming is a review
-    duty. Prose points at the script; the tables are never restated here. Rationale and the
-    method for arming a convention: [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md).
-  - *Public-docstring presence* (`scripts/check_docstring_presence.py` — the SSOT for Ruff
-    `D101`/`D102`/`D103`/`D105`/`D107` with a per-file ceiling table that **ratchets DOWN only**)
-    is **armed** since PYC-6 over `python/repark/src`, `python/repark-parity` and `scripts/`
-    excluding `**/tests/**`. Style `D` is declined permanently (facade docstrings mirror
-    PySpark). Dual-wired `make check-docstring-presence` (in the `make ci` chain) + ci.yml's
-    `python` job, and on the pre-commit hook (n=5 median 0.13 s). Ruff is the parser; the
-    wrapper is the ratchet. Prose points at the script; the table is never restated here.
-  - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`): the component
-    inventory, phase, canonical gate commands and documentation index are machine-readable and
-    validated against the workspace, the Makefile, STATUS.md, the declared documents and the
-    crate-root `map.md` files. Adding a Cargo member without declaring it, letting a declared
-    document or `make` target rot, or moving the milestone in STATUS.md alone is a red gate. The
-    manifest is a MIRROR — its `layer` values are checked against the crate-DAG SSOT, never the
-    other way round — and its `map.md` rule **checks** hand-written maps; nothing generates one.
-  - *parity-live dual-wire* (`scripts/check_parity_live_dual_wire.py` — the SSOT): `make parity-live`
-    and `.github/workflows/parity-live.yml` are compared to **each other** on their load-bearing
-    tokens (`uv sync` flag/extra set, `--no-install-package`, maturin pin + `develop`,
-    `uv run --locked --no-sync` + pytest path, `REPARK_PARITY_LIVE` / `SPARK_LOCAL_IP` env pins).
-    There is no third hand-maintained expected-flags list. Fail-closed on a parse miss. Dual-wired
-    `make check-parity-live-dual-wire` (in the `make ci` chain) + the ci.yml `guards` job.
-  - *`map.md` content* (`scripts/sync_map_md.py` — the SSOT for both map rules, companion to
-    `check_map_md.sh`'s lockstep half): **link validity** is armed — every relative link in every
-    tracked `map.md` must resolve, and an absolute target is a finding of its own — dual-wired
-    `make check-map-sync` + `.pre-commit-config.yaml`'s `map-sync-guard`; **coverage** (every
-    mappable file mentioned in its directory's map) is measured but deliberately behind `--strict`,
-    run by hand. The policy it serves is ["Markdown document lifecycle"](#markdown-document-lifecycle)
-    below; this row is the wiring only.
-  - The few v1 helper scripts not yet re-homed are listed in [scripts/map.md](scripts/map.md)
-    "Not re-homed"; each **returns only with a concrete driver** (named per script there). Do not
-    re-invent one ahead of its driver; re-home v1's script.
+    exception-taxonomy module (`crates/repark-python/src/lib.rs`); a per-call-site `#[expect]`
+    cannot reach inside `pyo3::create_exception!`
+    ([docs/history/port-v2/p3c-binding-ledger.md](docs/history/port-v2/p3c-binding-ledger.md)
+    P-4/P-5). The lint stays live for the rest of that crate.
+  - *Crate dependency policy* (`scripts/check_crate_dag.py`) — SSOT for the tier map, crate
+    roles, and allowed-edge table (kind + why). An undeclared edge, a promoted kind, or a
+    forbidden shape is red; writing the edge down cannot legalize it. *Crate-root manifests*
+    (`scripts/check_lib_rs.py`) — ceilings + EXCEPTIONS.
+  - *Facade `.py` thinness* (`scripts/check_lib_py.py`) — per-file line ceilings, EXCEPTIONS
+    ratchet DOWN only; a re-export-only module must open its docstring with `re-export binding`.
+  - *Rust file-size* (`scripts/check_rust_file_size.py`) — default ceiling + EXCEPTIONS, ratchet
+    DOWN only. Ceilings are never restated here.
+  - *Python conventions* (`scripts/check_python_conventions.py`) — nested-`def` ban and
+    `dataclasses`/`attrs` ban. **Not** on the pre-commit hook as of PYC-5 (measured over the
+    sub-second budget). Type coverage
+    is Ruff `ANN`; naming is review. Rationale:
+    [.agents/skills/code-quality/SKILL.md](.agents/skills/code-quality/SKILL.md).
+  - *Public-docstring presence* (`scripts/check_docstring_presence.py`) — Ruff
+    `D101`/`D102`/`D103`/`D105`/`D107`; style `D` declined (facade mirrors PySpark).
+  - *Structural truth* (`repo-manifest.toml` + `scripts/check_manifest.py`) — component
+    inventory, phase, gate commands, documentation index. The manifest is a MIRROR of the
+    crate-DAG SSOT; it checks hand-written maps and never writes one.
+  - *parity-live dual-wire* (`scripts/check_parity_live_dual_wire.py`) — `make parity-live` and
+    `.github/workflows/parity-live.yml` compared to each other on load-bearing tokens.
+    Fail-closed on a parse miss.
+  - *`map.md` content* (`scripts/sync_map_md.py`) — link validity armed
+    (`make check-map-sync`); coverage behind `--strict`. Policy:
+    ["Markdown document lifecycle"](#markdown-document-lifecycle).
+  - v1 helper scripts not yet re-homed: [scripts/map.md](scripts/map.md) "Not re-homed". Each
+    returns only with a concrete driver named there.
 - **Rust module layout is the default one** — `mod foo;` resolved by `foo.rs`, `foo/mod.rs`, or
   `foo/*.rs`. `#[path = "…"]` is not a module-inclusion mechanism here: move the file into the
   canonical tree instead. A generated-code, FFI, or test-fixture case that genuinely cannot sit in
   the tree keeps the attribute local to that one item and states in a comment why the canonical
   layout cannot work.
-- **`unsafe_code = "forbid"` everywhere except `crates/repark-python`** (landed phase-3 PR-3), which sets a
-  local `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
+- **`unsafe_code = "forbid"` everywhere except `crates/repark-python`**, which sets a local
+  `unsafe_code = "allow"` because PyO3 macros expand to `unsafe`. Do not add `unsafe` elsewhere.
 - **Python:** type hints on every parameter, every return and every public attribute; Pydantic v2
   `BaseModel` for all structured data, never `dataclasses` or `attrs`; define functions at module
   or class level rather than nested inside another function; name a function for the work it does,
@@ -296,11 +247,7 @@ Consolidating existing long comments is chartered sweep work, never a passenger 
 ("Fixes stay narrow", above).
 
 **Held by:** review — except docstring **presence**, which
-`scripts/check_docstring_presence.py` holds (`make check-docstring-presence`, in `make ci` and
-the pre-commit hook). Ruff style `D` with `convention = "google"` stays unarmed (declined
-2026-08-22 — the facade mirrors PySpark; the declined-armings record is
-[briefs/next-sequence.md](briefs/next-sequence.md)); re-arming it is a gate decision under
-"Mechanical structure gates", not a drive-by.
+`scripts/check_docstring_presence.py` holds. Style `D` declined (facade mirrors PySpark).
 
 ## Markdown document lifecycle
 
@@ -338,21 +285,10 @@ The rules that bind all six:
 - **Every fact is single-homed**; every other mention is a pointer (the rule in
   [`## Precedence`](#precedence) applied to documents).
 
-The **executor** is the [compact-context-docs](.agents/skills/compact-context-docs/SKILL.md) skill —
-the pickup ritual at the start of a unit and the truth-up after one lands. This section states the
-classes and the rules; the skill states the procedure and is not restated here. The navigation class
-has a mechanical half: `make check-map-sync` (`scripts/sync_map_md.py` — the SSOT) fails a map whose
-relative links no longer resolve, with the coverage rule available behind `--strict`. The ledger
-class has two: `make check-ledgers` (`scripts/ledger_lifecycle.py` — the SSOT for the bins and
-the moves) fails a ledger outside its bin, a dead ledger link in any tracked markdown, and a
-`completed/` or `archive/` ledger edited beyond a link repair or a dated errata note; and
-`make check-ledger-grammar` (`scripts/check_ledger_grammar.py` — the SSOT for the *shape* of a
-live ledger) fails a malformed clause row, a `PROVEN` clause no test cites
-([docs/testing.md](docs/testing.md) "Pinning a charter clause"), and a malformed or missing
-Critic attestation — the meanings stay in [.agents/skills/sepmo/](.agents/skills/sepmo/map.md).
-The state class has one: `make check-docs-compaction` (`scripts/check_docs_compaction.py`) fails a
-closed campaign still in `STATUS.md`, a merged unit still on the slate, a workstream bullet outside
-any block, and either file above its byte ceiling — the ceiling is what makes regrowth visible.
+The **executor** is [.agents/skills/compact-context-docs/SKILL.md](.agents/skills/compact-context-docs/SKILL.md)
+— this section is the policy, the skill is the procedure. Mechanical halves:
+`make check-map-sync`, `make check-ledgers`, `make check-ledger-grammar`,
+`make check-docs-compaction`.
 
 ## Working style and communication
 
@@ -365,9 +301,6 @@ any block, and either file above its byte ceiling — the ceiling is what makes 
   ceremony: say what changed, what it cost, and what is still open.
 
 ## PyO3 build notes
-
-The bindings crate (`crates/repark-python`) is delivered; these rules are recorded here so they are
-never re-litigated.
 
 - The cdylib's `extension-module` feature is **off by default** so `cargo test`/`check` build
   without needing it; it is enabled only when maturin builds the wheel.
@@ -390,19 +323,8 @@ DataFusion/arrow family major — split it.
 
 **Every fork repin also re-verifies what we built on top of the old rev** — a fork fix silently
 makes a local workaround dead code, and a fork trait gaining a defaulted method silently reopens a
-swallowed-override bug:
-
-- Re-check the **metadata-projection shim**'s removal criterion: it goes only when a fork rev's
-  metadata-table `scan` honors `projection`, including the empty-projection case.
-- **Re-enumerate the wrapped catalog's trait surface** — a `Catalog` method that newly falls to a
-  trait default is a new latent gap, not a no-op (the both-sides trait-wrapping audit).
-- **Re-check `IcebergSchemaProvider` name-directory population** — at pin `5e7b2e4` `try_new`
-  does not `list_tables`; first access lists then freezes. Engine snapshot/refresh must
-  populate at snapshot time so ADR-0004 T6 residual stays. A future rev that lists at
-  construction makes the freeze a no-op; a rev that lists on every access (never freezes)
-  makes the T6 pins fail-closed.
-- Those duties, and the defects that motivate them, are recorded against the crate that owns
-  the code: [crates/repark-iceberg/map.md](crates/repark-iceberg/map.md) "Known limitations".
+swallowed-override bug. The duties (and the defects that motivate them) live on the crate that
+owns the code: [crates/repark-iceberg/map.md](crates/repark-iceberg/map.md) "Known limitations".
 
 ## Explicitly out of scope (do not reintroduce without a decision)
 
@@ -440,6 +362,8 @@ disk that fills halts a campaign mid-unit.
   cache, point worktrees at it rather than giving each one its own copy of the same large artifact.
 - **Report it at handoff:** the disk checks you ran, the cleanup you performed, and any worktree or
   artifact you deliberately kept, with the reason it is still needed.
+
+Procedure: [.agents/skills/check-disk-headroom/SKILL.md](.agents/skills/check-disk-headroom/SKILL.md).
 
 ## Safety — destructive / outward-facing operations
 
