@@ -92,11 +92,29 @@ pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
         .with_unescape(false)
         .tokenize_with_location()
         .map_err(|error| DataFusionError::SQL(Box::new(ParserError::from(error)), None))?;
+    // `COPY … TO … OPTIONS ('key' 'value')` is a DataFusion-native statement, not Spark SQL: its
+    // `OPTIONS` pairs are adjacent quoted words, NOT Spark string concatenation, and its literals
+    // (paths, escape chars) keep Generic semantics. The facade's path writer runs COPY through this
+    // door, so canonicalising it would merge every `'key' 'value'` pair into one literal. Spark has
+    // no COPY statement, so nothing is lost by leaving it Generic.
+    if first_significant_word_is(&tokens, "COPY") {
+        return Ok(Cow::Borrowed(sql));
+    }
     let regions = plan_literal_regions(&tokens);
     if regions.is_empty() {
         return Ok(Cow::Borrowed(sql));
     }
     Ok(Cow::Owned(apply_regions(sql, &regions)))
+}
+
+/// True when the first non-whitespace token is the given keyword word (case-insensitive).
+fn first_significant_word_is(tokens: &[TokenWithSpan], keyword: &str) -> bool {
+    tokens
+        .iter()
+        .find(|token| !matches!(token.token, Token::Whitespace(_)))
+        .is_some_and(|token| {
+            matches!(&token.token, Token::Word(word) if word.value.eq_ignore_ascii_case(keyword))
+        })
 }
 
 /// A source span to replace with a canonicalised literal. `start`/`end` are the sqlparser

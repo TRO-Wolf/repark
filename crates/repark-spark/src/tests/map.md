@@ -10,9 +10,9 @@ code is not here — only tests, shared fixtures, and the module manifest.
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
 - `spark_string_literals.rs` — **SQP-1:** the Spark string-literal escape pins (C-001..C-008,
-  C-010, C-012) — the escape domain, `\'`/unpaired-backslash lexing, adjacency, raw strings, the
-  LIKE/RLIKE/backtick controls, the exactly-once-on-every-path table, the one-caller grep pin, and
-  the fast-path/error-position pins.
+  C-010, C-012) — the escape domain, `\'`/unpaired-backslash lexing, adjacency (incl. the `COPY
+  OPTIONS` carve-out), raw strings, the LIKE/RLIKE/backtick controls, the exactly-once-on-every-path
+  table, the one-caller grep pin, and the fast-path/error-position pins.
 - `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8/B9/B10/
   B13/B15), refuses illegal sources with `DATATYPE_MISMATCH` (B2–B7), keeps `VARBINARY` refusing
   (B12), and leaves a `BINARY` DDL column untouched.

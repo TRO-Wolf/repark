@@ -235,6 +235,14 @@ async fn adjacent_literals_concatenate() {
     assert_eq!(string_value(&ctx, &catalogs, "'a\\\\' 'b'").await, "a\\b");
     // Three-way, with a control escape in the middle segment.
     assert_eq!(string_value(&ctx, &catalogs, "'x' '\\t' 'y'").await, "x\ty");
+    // COPY is DataFusion-native, not Spark SQL: its `OPTIONS ('k' 'v')` adjacency is a key/value
+    // pair, NOT concatenation, so the whole statement is left Generic (the facade's path writer
+    // runs COPY through this door — merging the pairs would break every CSV/parquet write).
+    let copy = "COPY (SELECT 1) TO '/x' STORED AS CSV OPTIONS ('format.has_header' 'True')";
+    assert!(matches!(
+        crate::spark_literals::canonicalize(copy).unwrap(),
+        Cow::Borrowed(_)
+    ));
 }
 
 /// pins: sqp-1-spark-string-literals/C-004

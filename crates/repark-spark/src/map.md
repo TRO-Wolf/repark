@@ -104,8 +104,10 @@ wrapper.
 - `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that
   rewrites Spark single-quoted string-literal escapes once (the rule table + oracle live in the
   module doc). BigQuery-lexed, span-replaced, Generic-canonical output; the sole caller is
-  `router::execute_with_read_only` (grep-pinned). `VARBINARY` and raw-string / adjacent-literal
-  handling included.
+  `router::execute_with_read_only` (grep-pinned). Raw-string and adjacent-literal (Spark
+  concatenation) handling included. **`COPY` is skipped** — it is DataFusion-native, not Spark
+  SQL, and its `OPTIONS ('k' 'v')` adjacency is a key/value pair, not concatenation (the facade's
+  path writer runs COPY through this door).
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);
