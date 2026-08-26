@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Enforce the two Python conventions Ruff cannot express.
+"""Enforce the Python conventions Ruff cannot express.
 
-SSOT for the nested-`def` ban and the "Pydantic, never `dataclasses`/`attrs`"
-rule. Prose (AGENTS.md "Python", .agents/skills/code-quality/SKILL.md,
-.agents/skills/engineering-method/SKILL.md) points here and never restates the
-tables. Mirrors the check_rust_file_size dual-wire shape (py = logic + SSOT,
-sh = wrapper).
+SSOT for the nested-`def` ban, the "Pydantic, never `dataclasses`/`attrs`"
+rule, and the SQP-1 SQL-string-literal-escape rule. Prose (AGENTS.md "Python",
+.agents/skills/code-quality/SKILL.md, .agents/skills/engineering-method/SKILL.md)
+points here and never restates the tables. Mirrors the check_rust_file_size
+dual-wire shape (py = logic + SSOT, sh = wrapper).
 
 The other Python conventions are already mechanically enforced and are
 deliberately NOT re-implemented here: type coverage is Ruff's `ANN` rule set
@@ -30,6 +30,18 @@ Rules over every *.py under SCAN_ROOTS (recursive):
    the only out; there is no inline pragma, because the fix is mechanical and a
    per-site escape hatch would make the rule decay.
 
+3. **No hand-rolled single-quote-doubling for SQL (SQP-1).** Since SQP-1 the
+   Spark door's front door Spark-unescapes every string literal in the SQL it
+   receives — facade-generated SQL included — so a value embedded with only
+   quote-doubling has its backslashes escape-processed (a silent wrong answer:
+   `F.lit('p\\q')` would yield `pq`). Every embedded value MUST go through the
+   one shared helper (`repark.spark._idents.sql_string_literal`, or
+   `escape_sql_single_quotes` for a DataFusion-native/backslash-literal
+   statement), which is the single home of the escaping rule. The raw
+   single-quote-doubling idiom is therefore forbidden outside that one file
+   (SQL_LITERAL_HELPER_FILE); ceiling 0, no exceptions table (the fix is to
+   call the helper). A text rule, since the idiom is a fixed token sequence.
+
 Exit 0 on clean; non-zero with path, line, measured count and the sanctioned
 outs. Fail-closed: an unreadable file, a file that will not parse, an empty
 scan set, or an EXCEPTIONS key whose path no longer exists is an error, never
@@ -39,6 +51,7 @@ a skip.
 from __future__ import annotations
 
 import ast
+import re
 import sys
 from pathlib import Path
 
@@ -77,6 +90,17 @@ DATACLASS_EXCEPTIONS: dict[str, str] = {
 }
 
 _BANNED_CONTAINER_MODULES = frozenset({"dataclasses", "attr", "attrs"})
+
+# SQP-1: the one file allowed to spell the single-quote-doubling SQL-escape idiom. Every other
+# embed of a value into Spark-door SQL must call its helpers, so the door's Spark-unescape pass
+# does not silently escape-process backslashes in the value. Ceiling 0 everywhere else.
+SQL_LITERAL_HELPER_FILE = "python/repark/src/repark/spark/_idents.py"
+
+# Matches the raw single-quote-doubling call: a `.replace` whose first argument is one apostrophe
+# and whose second is two (any inner whitespace). The pattern text deliberately does NOT contain
+# that literal call spelled out, so this guard never flags its own source; a `.replace` that
+# doubles a backslash does not match — only single-quote doubling does.
+_SQL_QUOTE_DOUBLING = re.compile(r"""\.replace\(\s*"'"\s*,\s*"''"\s*\)""")
 
 
 def _is_function(node: ast.AST) -> bool:
@@ -141,6 +165,15 @@ def find_banned_container_imports(tree: ast.Module) -> list[tuple[int, str]]:
     return hits
 
 
+def find_sql_quote_doubling(source: str) -> list[int]:
+    """Line numbers (1-indexed) where the raw single-quote-doubling SQL idiom appears."""
+    hits: list[int] = []
+    for number, line in enumerate(source.splitlines(), start=1):
+        if _SQL_QUOTE_DOUBLING.search(line):
+            hits.append(number)
+    return hits
+
+
 def check_file(path: Path, repo: Path) -> list[str]:
     relative = path.relative_to(repo).as_posix()
     try:
@@ -179,6 +212,17 @@ def check_file(path: Path, repo: Path) -> list[str]:
                 f"to a BaseModel (`model_config = ConfigDict(frozen=True)` for the frozen case), "
                 f"or (2) add a row to DATACLASS_EXCEPTIONS in "
                 f"scripts/check_python_conventions.py with a reason."
+            )
+
+    if relative != SQL_LITERAL_HELPER_FILE:
+        for lineno in find_sql_quote_doubling(source):
+            errors.append(
+                f"ERROR: {relative}:{lineno} spells the single-quote-doubling SQL-escape idiom by "
+                f"hand — since SQP-1 the Spark door Spark-unescapes every embedded literal, so a "
+                f"value escaped this way has its backslashes silently escape-processed. Sanctioned "
+                f"out: embed it through `repark.spark._idents.sql_string_literal` (Spark door), or "
+                f"`escape_sql_single_quotes` for a DataFusion-native/backslash-literal statement — "
+                f"the single home of the rule ({SQL_LITERAL_HELPER_FILE}). No exceptions table."
             )
 
     return errors
@@ -233,7 +277,8 @@ def main() -> int:
     print(
         f"python-conventions: {len(paths)} files clean "
         f"(nested-def rows {len(NESTED_DEF_EXCEPTIONS)}, "
-        f"dataclass rows {len(DATACLASS_EXCEPTIONS)})"
+        f"dataclass rows {len(DATACLASS_EXCEPTIONS)}, "
+        f"sql-escape helper {SQL_LITERAL_HELPER_FILE})"
     )
     return 0
 

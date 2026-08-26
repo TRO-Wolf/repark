@@ -102,8 +102,10 @@ def ensure_parquet_sf(
             target = out_dir / f"{table_name}.parquet"
             if target.is_symlink():
                 target.unlink()
-            # Escape path for SQL single-quoted string
-            path_sql = str(target).replace("'", "''")
+            # Escape path for SQL single-quoted string (DuckDB: backslash-literal, quotes only).
+            from repark.spark._idents import escape_sql_single_quotes
+
+            path_sql = escape_sql_single_quotes(str(target))
             connection.execute(f"COPY {table_name} TO '{path_sql}' (FORMAT PARQUET)")
     finally:
         connection.close()

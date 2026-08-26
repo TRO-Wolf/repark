@@ -62,6 +62,40 @@ def is_plain_ident(name: str) -> bool:
     return _PLAIN_IDENT.fullmatch(name) is not None
 
 
+def sql_string_literal(value: str) -> str:
+    r"""Quote a Python string as a Spark-canonical single-quoted SQL literal for the Spark door.
+
+    Since SQP-1 the Spark door's front door (Rust ``router::execute``) Spark-unescapes every string
+    literal in the SQL it receives — **facade-generated SQL included**. A value embedded with only
+    ``'`` doubling would then have its backslashes escape-processed by the door: ``F.lit('p\q')``
+    would reach the engine as ``pq`` where Spark keeps ``p\q``, and a value ``'a\tb'`` (literal
+    backslash-t) would be stored with a TAB. So an embedded value must be spelled the way a Spark
+    user would spell it — backslashes doubled FIRST (the door folds each ``\\`` back to one ``\``),
+    then single quotes doubled — before wrapping in quotes.
+
+    This is the single home of the Spark-door literal-escaping rule;
+    ``scripts/check_python_conventions.py`` forbids the raw single-quote-doubling idiom anywhere
+    else. Use :func:`escape_sql_single_quotes` instead for a DataFusion-native statement (``COPY`` /
+    ``CREATE EXTERNAL TABLE``), whose literals the front door leaves in Generic (backslash-literal)
+    semantics.
+    """
+    escaped = value.replace("\\", "\\\\").replace("'", "''")
+    return f"'{escaped}'"
+
+
+def escape_sql_single_quotes(value: str) -> str:
+    r"""Double the ``'`` in a DataFusion-native (Generic) SQL string body — quotes only, no wrap.
+
+    ``COPY`` and ``CREATE [OR REPLACE] EXTERNAL TABLE`` are DataFusion-native, carved out of the
+    SQP-1 Spark front-door canonicaliser, so their string literals keep Generic semantics:
+    backslashes are LITERAL there and must NOT be doubled (a CSV ``escape`` option of ``\`` would
+    otherwise become ``\\`` and break the write). Only ``'`` is doubled. Returns the escaped body
+    **without** the surrounding quotes (the caller wraps). Lives here so the single-quote-doubling
+    idiom has one sanctioned home alongside :func:`sql_string_literal`.
+    """
+    return value.replace("'", "''")
+
+
 def quote_ident(name: str) -> str:
     """Always double-quote a SQL identifier (Spark/DF column + alias class).
 
@@ -160,6 +194,7 @@ __all__ = [
     "PATH_ESCAPE_PROBES",
     "PATH_ESCAPE_SAFE",
     "assert_spark_injection_probe_is_single_token",
+    "escape_sql_single_quotes",
     "is_plain_ident",
     "path_escape_kind",
     "quote_column_sql_expr",
@@ -167,4 +202,5 @@ __all__ = [
     "quote_ident_if_needed",
     "quote_multipart",
     "reject_path_escape_segment",
+    "sql_string_literal",
 ]

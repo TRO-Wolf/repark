@@ -141,8 +141,10 @@ def run_overwrite_cell(
         spark.register_memory_catalog(CATALOG, str(warehouse))
         namespace_location = (warehouse / NAMESPACE).resolve()
         namespace_location.mkdir(parents=True, exist_ok=True)
-        location_sql = str(namespace_location).replace("'", "''")
-        spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.{NAMESPACE} LOCATION '{location_sql}'")
+        from repark.spark._idents import sql_string_literal
+
+        location_sql = sql_string_literal(str(namespace_location))
+        spark.sql(f"CREATE NAMESPACE IF NOT EXISTS {CATALOG}.{NAMESPACE} LOCATION {location_sql}")
         table_fq = f"{CATALOG}.{NAMESPACE}.t_ow"
         props = (
             f"'format-version' = '2', 'write.target-file-size-bytes' = '{PINNED_TARGET_FILE_SIZE}'"

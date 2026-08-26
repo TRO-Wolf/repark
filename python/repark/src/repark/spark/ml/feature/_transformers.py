@@ -19,6 +19,7 @@ from repark.errors import (
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
+from repark.spark._idents import sql_string_literal
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.ml.base import Estimator, Model, Transformer, _require_repark_dataframe
 from repark.spark.ml.param import (
@@ -431,14 +432,15 @@ class StringIndexerModel(HasInputCol, HasOutputCol, HasHandleInvalid, Model):
         else:
             branches = []
             for index, label in enumerate(self.labels):
-                escaped = label.replace("'", "''")
-                branches.append(f"WHEN {quoted_in} = '{escaped}' THEN CAST({index} AS DOUBLE)")
+                branches.append(
+                    f"WHEN {quoted_in} = {sql_string_literal(label)} THEN CAST({index} AS DOUBLE)"
+                )
             case_body = "CASE " + " ".join(branches) + " ELSE NULL END"
         index_expr = case_body
         if handle == "error":
             # Detect unseen non-null labels.
             if self.labels:
-                known = ", ".join("'" + label.replace("'", "''") + "'" for label in self.labels)
+                known = ", ".join(sql_string_literal(label) for label in self.labels)
                 check_sql = (
                     f"SELECT COUNT(*) AS n FROM {view} WHERE {quoted_in} IS NOT NULL "
                     f"AND {quoted_in} NOT IN ({known})"
@@ -461,7 +463,7 @@ class StringIndexerModel(HasInputCol, HasOutputCol, HasHandleInvalid, Model):
             sql = f"SELECT {view}.*, ({index_expr}) AS {quoted_out} FROM {view}"
         elif handle == "skip":
             if self.labels:
-                known = ", ".join("'" + label.replace("'", "''") + "'" for label in self.labels)
+                known = ", ".join(sql_string_literal(label) for label in self.labels)
                 where = f"{quoted_in} IS NOT NULL AND {quoted_in} IN ({known})"
             else:
                 where = "FALSE"
@@ -544,8 +546,9 @@ class IndexToString(HasInputCol, HasOutputCol, Transformer):
         quoted_out = _quote_ident(self.getOutputCol())
         branches = []
         for index, label in enumerate(labels):
-            escaped = label.replace("'", "''")
-            branches.append(f"WHEN CAST({quoted_in} AS BIGINT) = {index} THEN '{escaped}'")
+            branches.append(
+                f"WHEN CAST({quoted_in} AS BIGINT) = {index} THEN {sql_string_literal(label)}"
+            )
         case_sql = "CASE " + " ".join(branches) + " ELSE NULL END"
         sql = f"SELECT {view}.*, ({case_sql}) AS {quoted_out} FROM {view}"
         try:
@@ -1740,16 +1743,15 @@ class RegexTokenizer(HasInputCol, HasOutputCol, Transformer):
         quoted = _quote_ident(self.getInputCol())
         out = _quote_ident(self.getOutputCol())
         rid = _quote_ident(rid_col)
-        # Embed the Java/Spark regex as a Spark-door SQL literal. The Spark door processes
-        # backslash escapes (SQP-1), so a pattern backslash must be doubled — `\s+` becomes the
-        # literal `'\\s+'`, which the lexer folds back to `\s+` — exactly as a Spark user writes it.
-        # Single quotes are doubled as before.
-        pattern_sql = pattern.replace("\\", "\\\\").replace("'", "''")
+        # Embed the Java/Spark regex as a Spark-door SQL literal via the shared helper: the Spark
+        # door processes backslash escapes (SQP-1), so `\s+` is spelled `'\\s+'` and the lexer
+        # folds it back to `\s+` — exactly as a Spark user writes it (backslashes + quotes doubled).
+        pattern_sql = sql_string_literal(pattern)
         text_expr = f"lower({quoted})" if to_lower else quoted
         # Replace ALL delimiter matches with unit separator (ASCII 31), then split.
         # DataFusion regexp_replace is first-match only unless flags include 'g'.
         split_expr = (
-            f"string_to_array(regexp_replace({text_expr}, '{pattern_sql}', chr(31), 'g'), chr(31))"
+            f"string_to_array(regexp_replace({text_expr}, {pattern_sql}, chr(31), 'g'), chr(31))"
         )
         # Filter empty tokens and min length via unnest + array_agg (no array_filter SQL).
         # rid view is cache-materialized so multi-scan joins keep association (F-Q1-009).
@@ -1849,7 +1851,7 @@ class StopWordsRemover(HasInputCol, HasOutputCol, Transformer):
         quoted = _quote_ident(self.getInputCol())
         out = _quote_ident(self.getOutputCol())
         rid = _quote_ident(rid_col)
-        stop_list = ", ".join("'" + word.replace("'", "''") + "'" for word in stops)
+        stop_list = ", ".join(sql_string_literal(word) for word in stops)
         where = f"x NOT IN ({stop_list})" if stop_list else "TRUE"
         # DataFusion has no array_filter — unnest + array_agg join; rid cache (F-Q1-009).
         sql = f"""
@@ -2528,9 +2530,10 @@ class CountVectorizerModel(HasInputCol, HasOutputCol, Model):
         # Total non-empty tokens per doc (for fractional minTF).
         total_expr = "coalesce(counts.__cv_total, 0.0)"
         for index, term in enumerate(self.vocabulary):
-            escaped = term.replace("'", "''")
             alias = f"__cv_c{index}"
-            sum_parts.append(f"SUM(CASE WHEN __t = '{escaped}' THEN 1.0 ELSE 0.0 END) AS {alias}")
+            sum_parts.append(
+                f"SUM(CASE WHEN __t = {sql_string_literal(term)} THEN 1.0 ELSE 0.0 END) AS {alias}"
+            )
             raw = f"coalesce(counts.{alias}, 0.0)"
             threshold = f"({min_tf} * {total_expr})" if fractional_min_tf else _sql_float(min_tf)
             if self.binary:

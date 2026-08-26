@@ -83,3 +83,10 @@ fork, or knob-default changes. Outputs feed `task/write-bench-report-*.md`.
      they are historical evidence of runs made in the source repository. Re-running a
      bench here writes a fresh report under `task/`. The row text is kept verbatim so
      the invocation recipes stay accurate; only the report files are absent. -->
+## SQP-1 (cycle-2)
+
+The write runners build `CREATE NAMESPACE … LOCATION '<path>'` through the repark facade, so the
+namespace-location path is embedded via `repark.spark._idents.sql_string_literal` (Spark-canonical)
+rather than a hand-rolled quote-double — the single-home rule enforced by
+`scripts/check_python_conventions.py`. Linux paths carry no backslash, so this is a no-op in
+practice; it keeps the one escaping home.

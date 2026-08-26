@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from repark.errors import AnalysisException
 from repark.spark._idents import quote_ident as _quote_ident_sql
+from repark.spark._idents import sql_string_literal
 from repark.spark.column import Column
 
 if TYPE_CHECKING:
@@ -344,8 +345,8 @@ def _reject_non_numeric_range_order(frame: DataFrame, column: Column) -> None:
 
 
 def _sql_string_literal(value: str) -> str:
-    """Single-quote a SQL string literal, doubling embedded quotes."""
-    return "'" + value.replace("'", "''") + "'"
+    """Spark-canonical single-quoted SQL literal (SQP-1). Delegates to the one helper."""
+    return sql_string_literal(value)
 
 
 def _show_grid_row(cells: list[str], widths: list[int]) -> str:

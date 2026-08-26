@@ -81,3 +81,10 @@ no AWS; no product-engine fixes here. Mirrors `../tpch/` shape.
      they are historical evidence of runs made in the source repository. Re-running a
      bench here writes a fresh report under `task/`. The row text is kept verbatim so
      the invocation recipes stay accurate; only the report files are absent. -->
+## SQP-1 (cycle-2)
+
+`datagen.py` (DuckDB `dsdgen` COPY) and `runner.py` (DuckDB `read_parquet` views) embed export
+paths through `repark.spark._idents.escape_sql_single_quotes` (quotes-only — DuckDB, like the
+Spark door's DataFusion-native carve-out, keeps backslashes literal). Byte-identical to the
+prior hand-rolled quote-double; it moves the idiom into the one sanctioned home
+(`scripts/check_python_conventions.py`).

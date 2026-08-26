@@ -21,6 +21,7 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
@@ -488,7 +489,7 @@ class DataFrameWriter:
         staging = destination.parent / (
             f"repark-staging-{uuid.uuid4().hex}-{destination.name or 'out'}"
         )
-        escaped_staging = str(staging).replace("'", "''")
+        escaped_staging = escape_sql_single_quotes(str(staging))
         options_clause = self._copy_options_sql(stored_as)
         # SEC-02: the generated COPY TO runs through the ordinary SQL path, which carries the
         # local-filesystem DDL gate. That gate is scoped to *free* SQL (SECURITY.md "Input
@@ -944,7 +945,7 @@ class DataFrameWriter:
 
 def _sql_option_escape(value: str) -> str:
     """Escape a single-quoted COPY OPTIONS value."""
-    return str(value).replace("'", "''")
+    return escape_sql_single_quotes(str(value))
 
 
 def _normalize_write_compression(raw: str) -> str:

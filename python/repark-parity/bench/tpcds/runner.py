@@ -730,7 +730,9 @@ def _open_duckdb_over_parquet(data_dir: Path) -> Any:
     connection = duckdb.connect(database=":memory:")
     for table_name in TABLES:
         path = data_dir / f"{table_name}.parquet"
-        path_sql = str(path).replace("'", "''")
+        from repark.spark._idents import escape_sql_single_quotes
+
+        path_sql = escape_sql_single_quotes(str(path))
         connection.execute(
             f"CREATE OR REPLACE VIEW {table_name} AS SELECT * FROM read_parquet('{path_sql}')"
         )

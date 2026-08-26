@@ -2047,6 +2047,25 @@ the pin rather than obeying it.
   answer), the ANSI-off default is not repark's, and the big-endian encoding is a narrow legacy
   path. Recorded so the encoding lands behind an ANSI-off carrier with its own pin.
 
+### BL-12 — an out-of-range `\U` escape becomes one `?` where Spark emits a 2-char Java artifact
+
+- **repark** — a `\UXXXXXXXX` escape whose value is not a Unicode scalar (past `U+10FFFF`) becomes
+  a single `?` (`UNREPRESENTABLE`, U+003F): `spark.sql("SELECT '\U00110000'")` is one character and
+  `length('\U00110000')` = 1. The single home of the rule is `push_code_point` in
+  `crates/repark-spark/src/spark_literals.rs`; SQP-1 chose `?` so the result stays sane and
+  single-homed rather than reproducing a Java `char[]` artifact. The in-scope valid-scalar `\U`
+  (U5) and the lone-surrogate → `?` case (`hex('\ud83d')` = `3F`) already match Spark.
+- **Apache Spark** — Spark keeps the raw code units and its Java UTF-8 encoder replaces each
+  unpaired/oversized unit with `?`, so an out-of-range `\U` yields **two** characters:
+  `length('\U00110000')` = 2 and `hex('\U00110000')` = `3F3F` (and `hex('\UFFFFFFFF')` = `ED9EBF3F`,
+  a longer artifact). *(oracle: `<pyspark-4.1.2-oracle>`.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_one_replacement`
+- **Rationale** — BACKLOG, cosmetic-artifact direction. An out-of-range `\U` is a malformed escape
+  a migrated job effectively never writes; both engines produce a replacement, and repark's single
+  `?` is a saner, single-homed choice than a 2-char Java artifact. Recorded so the exact artifact
+  lands with its own pin if a job ever depends on it. This is the single home of the divergence
+  the `spark_literals` module doc previously only mentioned.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

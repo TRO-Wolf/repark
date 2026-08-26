@@ -10,6 +10,9 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 - `_coerce.py` — **PYC-2:** `range_bound_as_int` and `sql_clause_end_after`, lifted
   out of nested defs in `session_core.py` so that file stays under the default
   2500-line `check_lib_py` ceiling.
+- **SQP-1 (cycle-2):** `_funcs.py`'s SQL embeds — `_sql_literal` (VALUES-based
+  createDataFrame cell) and the `SET k = v` builder — route through
+  `repark.spark._idents.sql_string_literal` so an embedded value is spelled Spark-canonically.
 - `_funcs.py` — free functions (shared name binding for class modules); includes
   `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
   widths refuse loud — layout home `repark.ml.linalg`).

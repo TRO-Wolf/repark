@@ -3,10 +3,16 @@
 Live PySpark 4.1.2 oracle (``<pyspark-4.1.2-oracle>``); the charter ledger
 ``task/ledgers/staging/sqp-1-spark-string-literals-ledger.md`` holds the transcript.
 
-The facade is a CONTROL for this unit: a Python string carries no SQL-lexer escapes, so
-``F.lit(r"\\d")`` was already the regex ``\\d`` before the fix and stays so. What the fix changes
-is the SQL door: ``spark.sql("… '\\\\d' …")`` now reaches the engine as ``\\d`` too, so the two
-doors AGREE. The ``.cast("binary")`` facade path is the equality control for the SQL BINARY cast.
+The facade was a CONTROL for this unit's first cycle: a Python string carries no SQL-lexer escapes,
+so ``F.lit(r"\\d")`` was already the regex ``\\d`` before the fix and stays so. What that cycle
+changed is the SQL door: ``spark.sql("… '\\\\d' …")`` now reaches the engine as ``\\d`` too, so the
+two doors AGREE. ``.cast("binary")`` is the equality control for the SQL BINARY cast.
+
+**Cycle-2 (C-013) makes the facade a CHANGE, not only a control.** The Spark door's front door
+Spark-unescapes every statement entering it — facade-generated SQL included — so a facade embed of
+a value carrying a backslash (or a leading apostrophe) is only correct if it is spelled the way a
+Spark user would, through the one helper ``repark.spark._idents.sql_string_literal``. The cycle-2
+pins below carry such values through the enumerated embed paths.
 
 pins: sqp-1-spark-string-literals/C-007
 """
@@ -97,3 +103,90 @@ def test_numeric_to_binary_refuses(spark: ReparkSession) -> None:
     big-endian encoding path — reds when that path lands."""
     with pytest.raises((AnalysisException, PySparkException), match=r"DATATYPE_MISMATCH"):
         spark.sql("SELECT CAST(1 AS BINARY) AS b").to_arrow()
+
+
+# ---------------------------------------------------------------------------
+# SQP-1 cycle-2 (C-013). The facade embeds every data value as a Spark-canonical
+# literal through one helper (`repark.spark._idents.sql_string_literal`). Each
+# pin carries a backslash — or a leading apostrophe — in a Python value: RED on
+# 37b84b0, where the raw quote-doubled embed let the Spark door escape-process
+# the backslash (a silent wrong value) or crash on the apostrophe (BigQuery's
+# triple-quote lexer); GREEN once the value is spelled the way a Spark user
+# would.
+#
+# pins: sqp-1-spark-string-literals/C-013
+# ---------------------------------------------------------------------------
+
+_BACKSLASH = "p\\q"  # the Python string p\q — one literal backslash, NOT an escape
+
+
+def test_sql_literal_renders_a_backslash_as_a_spark_literal() -> None:
+    """C-013: the VALUES-based ``createDataFrame`` cell renderer (``session._funcs._sql_literal``)
+    spells a backslash value the Spark-canonical way — ``'p\\q'`` doubled to ``'p\\\\q'`` so the
+    Spark door folds it back to ``p\\q``, not the escape-processed ``pq``. White-box because the
+    shipped ``createDataFrame`` builds normal data through Arrow, not this VALUES SQL path; the
+    renderer is still a live embed site that must route through the one helper. Reds if the helper
+    stops doubling backslashes or this site stops calling it."""
+    from repark.spark.session._funcs import _sql_literal
+
+    assert _sql_literal(_BACKSLASH) == "'p\\\\q'"
+
+
+def test_lit_backslash_survives_the_aggregate_embed(spark: ReparkSession) -> None:
+    """C-013: ``F.lit('p\\q')`` mixed with an aggregate takes the ``_lit_sql_expr`` embed path; the
+    backslash survives as Spark's ``p\\q``, not ``pq``."""
+    table = _table(
+        spark.range(3).select(F.lit(_BACKSLASH).alias("l"), F.count(F.lit(1)).alias("n"))
+    )
+    assert table.column("l").to_pylist() == [_BACKSLASH]
+    assert table.column("n").to_pylist() == [3]
+
+
+def test_unpivot_backslash_column_value(spark: ReparkSession) -> None:
+    """C-013: ``unpivot`` embeds each source column NAME as a literal (``_sql_string_literal``); a
+    column named with a backslash surfaces in the ``variable`` column verbatim, not
+    escape-processed."""
+    frame = spark.createDataFrame([(1, 10, 20)], ["id", "a\\b", "c"])
+    rows = frame.unpivot("id", ["a\\b", "c"], "variable", "value").to_arrow().to_pylist()
+    variables = {row["variable"] for row in rows}
+    assert variables == {"a\\b", "c"}
+
+
+def test_stop_words_remover_backslash_and_apostrophe(spark: ReparkSession) -> None:
+    """C-013 (+ C1-F2): ``StopWordsRemover`` embeds each stop word as a literal. A backslash stop
+    word matches and is removed (RED before — the door folded ``\\b`` to a backspace, so it matched
+    nothing); a stop word beginning with an apostrophe does not crash (RED before — the door lexed
+    ``'''tis'`` as an unterminated triple-quoted string)."""
+    from repark.spark.ml.feature import StopWordsRemover
+
+    frame = spark.createDataFrame([(["a\\b", "keep", "'tis"],)], ["words"])
+    remover = StopWordsRemover(inputCol="words", outputCol="filtered", stopWords=["a\\b", "'tis"])
+    out = remover.transform(frame).collect()
+    assert list(out[0].asDict()["filtered"]) == ["keep"]
+
+
+def test_string_indexer_round_trips_a_backslash_label(spark: ReparkSession) -> None:
+    """C-013: ``StringIndexer`` / ``IndexToString`` embed each label as a literal; a label with a
+    backslash round-trips (RED before — the label ``a\\d`` reached the engine as ``ad``)."""
+    from repark.spark.ml.feature import IndexToString, StringIndexer
+
+    frame = spark.createDataFrame([("a\\d",), ("b",)], ["cat"])
+    model = StringIndexer(inputCol="cat", outputCol="idx").fit(frame)
+    indexed = model.transform(frame)
+    restored = IndexToString(inputCol="idx", outputCol="orig", labels=model.labels).transform(
+        indexed
+    )
+    origs = set(restored.select("orig").to_arrow().column("orig").to_pylist())
+    assert "a\\d" in origs
+
+
+def test_out_of_range_unicode_escape_is_one_replacement(spark: ReparkSession) -> None:
+    r"""BL-12 (registry §7). An out-of-range ``\U`` (past U+10FFFF) becomes a SINGLE ``?`` here,
+    where Spark's Java UTF-8 encoder emits two (``length('\U00110000')`` = 2, ``3F3F``). Reds when
+    repark reproduces the 2-char Java artifact.
+
+    pins: sqp-1-spark-string-literals/C-011
+    """
+    table = _table(spark.sql(r"SELECT '\U00110000' AS v, length('\U00110000') AS n"))
+    assert table.column("v").to_pylist() == ["?"]
+    assert table.column("n").to_pylist() == [1]

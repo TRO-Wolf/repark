@@ -26,7 +26,11 @@ NOT in that file is a defect, not a decision.
   controls — `regexp_count` is unchanged and the SQL door now agrees; `.cast("binary")` equals the
   SQL `CAST … AS BINARY` in value and Arrow type; the escape reaches the cast. Also the §7 BL-9 /
   BL-10 / BL-11 registry-row behaviour pins (double-quoted identifier, no `escapedStringLiterals`
-  carrier, numeric→binary refuse).
+  carrier, numeric→binary refuse). **Cycle-2 (C-013):** the facade embeds a data value as a
+  Spark-canonical literal through one helper — backslash-bearing pins for `_sql_literal`, the
+  `_lit_sql_expr` aggregate embed, `unpivot`, `StopWordsRemover` (+ apostrophe), and StringIndexer /
+  IndexToString labels (each RED with the helper reverted to quotes-only); plus the BL-12 §7 pin
+  (out-of-range `\U` is one `?`).
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`

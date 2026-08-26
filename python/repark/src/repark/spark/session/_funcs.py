@@ -60,6 +60,7 @@ from repark.spark._idents import is_plain_ident as _is_plain_ident
 from repark.spark._idents import quote_ident as _quote_ident
 
 from repark.spark._idents import quote_ident_if_needed as _quote_ident_if_needed
+from repark.spark._idents import sql_string_literal
 
 from repark.spark._idents import reject_path_escape_segment as _reject_path_escape_segment
 
@@ -535,9 +536,7 @@ def _format_datafusion_set_sql(key: str, value: str) -> str:
 
     """
 
-    escaped = value.replace("'", "''")
-
-    return f"SET {key} = '{escaped}'"
+    return f"SET {key} = {sql_string_literal(value)}"
 
 
 def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> None:
@@ -1416,9 +1415,7 @@ def _sql_literal(value: Any) -> str:
         return repr(value)
 
     if isinstance(value, str):
-        escaped = value.replace("'", "''")
-
-        return f"'{escaped}'"
+        return sql_string_literal(value)
 
     if isinstance(value, dt.datetime):
         # TIMESTAMP literal. Session is UTC; tz-aware values convert to UTC first so absolute

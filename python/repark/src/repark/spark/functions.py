@@ -18,6 +18,7 @@ from repark.errors import PySparkTypeError, PySparkValueError
 
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_column_sql_expr as _quote_column_sql_expr
+from repark.spark._idents import sql_string_literal
 from repark.spark.column import Column, Scalar
 from repark.spark.udtf import UserDefinedTableFunction, udtf
 
@@ -318,8 +319,7 @@ def _lit_sql_expr(value: Scalar) -> str:
             return "CAST('-Infinity' AS DOUBLE)"
         return repr(value)
     if isinstance(value, str):
-        escaped = value.replace("'", "''")
-        return f"'{escaped}'"
+        return sql_string_literal(value)
     return str(value)
 
 
@@ -1069,13 +1069,12 @@ def date_format(date: Column | str, format: str) -> Column:
     # Live PySpark 4.1.2: date_format(d, yyyy-MM) — pattern is unquoted in the name.
     display = f"date_format({argument.spark_wrap_display_part()}, {format})"
     # Escape single quotes in the pattern for structural SQL embeds.
-    escaped = format.replace("'", "''")
     return Column(
         argument._inner.date_format(format),
         spark_display=display,
         projection_name=display,
         stable_name=False,
-        sql_expr=f"date_format({argument.sql_expr_part()}, '{escaped}')",
+        sql_expr=f"date_format({argument.sql_expr_part()}, {sql_string_literal(format)})",
         is_aggregate=argument._is_aggregate,
         is_foldable=argument._is_foldable and not argument._is_aggregate,
         has_free_attribute=argument._has_free_attribute,
@@ -1091,13 +1090,12 @@ def trunc(date: Column | str, format: str) -> Column:
     # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     argument._reject_nested_generator("function trunc")
     display = f"trunc({argument.spark_wrap_display_part()}, {format})"
-    escaped = format.replace("'", "''")
     return Column(
         argument._inner.trunc(format),
         spark_display=display,
         projection_name=display,
         stable_name=False,
-        sql_expr=f"trunc({argument.sql_expr_part()}, '{escaped}')",
+        sql_expr=f"trunc({argument.sql_expr_part()}, {sql_string_literal(format)})",
         is_aggregate=argument._is_aggregate,
         is_foldable=argument._is_foldable and not argument._is_aggregate,
         has_free_attribute=argument._has_free_attribute,
@@ -1116,13 +1114,12 @@ def date_trunc(format: str, timestamp: Column | str) -> Column:
     # Generators strip ``_generator`` and skip unnest (octo C7-Q-001; Spark UNSUPPORTED_GENERATOR).
     argument._reject_nested_generator("function date_trunc")
     display = f"date_trunc({format}, {argument.spark_wrap_display_part()})"
-    escaped = format.replace("'", "''")
     return Column(
         argument._inner.date_trunc(format),
         spark_display=display,
         projection_name=display,
         stable_name=False,
-        sql_expr=f"date_trunc('{escaped}', {argument.sql_expr_part()})",
+        sql_expr=f"date_trunc({sql_string_literal(format)}, {argument.sql_expr_part()})",
         is_aggregate=argument._is_aggregate,
         is_foldable=argument._is_foldable and not argument._is_aggregate,
         has_free_attribute=argument._has_free_attribute,

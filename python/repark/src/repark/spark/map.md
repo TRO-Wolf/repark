@@ -36,6 +36,15 @@ shell over the compiled `repark._native` module; all compute runs in Rust, rows 
   **octo C2:** docstring refs name `_idents.quote_ident` (not session local).
   **octo C3:** session parse + merge ON bare check use `is_plain_ident` SSOT (no local plain-ident regex);
   merge keeps `AnalysisException` import for empty-clause gate.
+  **SQP-1 (cycle-2):** also the single home of the SQL **string-literal** escape rule —
+  `sql_string_literal` (Spark-canonical: backslash doubled FIRST, then `'`, then wrapped, so the
+  Spark door folds it back to the value a Spark user wrote) and `escape_sql_single_quotes`
+  (quotes-only, for DataFusion-native/backslash-literal statements). Every facade embed of a data
+  value routes through one of these; `scripts/check_python_conventions.py` forbids the raw
+  single-quote-doubling idiom anywhere else. Call sites: functions (`_lit_sql_expr`, date/trunc),
+  session (`_sql_literal`, `SET`), catalog (`LIKE`), functions_expr / functions_collections
+  (`named_struct`), dataframe (`plan_collapse._sql_string_literal` → unpivot + writer CTAS;
+  writer COPY option via `escape_sql_single_quotes`), ml/feature (labels, stop words, terms, regex).
 - `dataframe.py` / `column.py` / `functions.py` / `polars.py` — `select()` global-agg
   (R-SELECT-GLOBAL-AGG): pure simple-name AggregateFunction (`_is_aggregate_function`, no
   nested `sql_expr` parens) → `group_by().agg`; composed / scalar / foldable companions

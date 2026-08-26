@@ -240,7 +240,11 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   the point, a `functools.wraps` wrapper — an empty reason does NOT pass) and a
   `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
   or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
-  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other Python
+  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no hand-rolled
+  single-quote-doubling for SQL (SQP-1)** — a text rule (ceiling 0, no exceptions) that forbids the
+  raw idiom outside the one helper file (`SQL_LITERAL_HELPER_FILE` = `python/repark/src/repark/spark/_idents.py`),
+  so every facade embed goes through `sql_string_literal` / `escape_sql_single_quotes` and the Spark
+  door cannot silently escape-process a backslash in a data value. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
   duty. Seeded from the measured tree (2026-08-21): 66 nested
