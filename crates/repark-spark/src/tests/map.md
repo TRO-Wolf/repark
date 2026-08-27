@@ -5,11 +5,18 @@
 Lib-root unit battery for the Spark SQL door (the former `src/tests.rs` monolith, split in
 G-4 as a **declared-rename** unit under `docs/testing.md` "Relocation discipline"). Production
 code is not here — only tests, shared fixtures, and the module manifest.
-Test documentation records oracle meaning and contracts; authorship evidence stays outside code.
+Test documentation may retain model provenance; code-quality grade tags stay outside code.
 
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
+  C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
+  `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
+  exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
+- `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
+  B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
+  leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `v3_cow.rs` — **V3R-1 (2026-08-25):** adopted-v3 copy-on-write DML refuses (`V3-COW-1`, both
   seats), the CCC regressions (short names, padded merge-on-read), merge-on-read still refuses, a
   v2 control; keeps `V3_MAINTENANCE_ORACLE` and ENC-1's pin.
@@ -17,11 +24,11 @@ Test documentation records oracle meaning and contracts; authorship evidence sta
   CREATE (`V3-GEO-1`).
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
-  append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
+  append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`).
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse
-  (`Model: Grok 4.6 xHigh`, `CodeQuality:S`; rustdoc cites C-013).
+  (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).

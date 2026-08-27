@@ -4,6 +4,39 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-08-27 — PR-247 ledger pins
+
+- **DO run the ledger-grammar gate before claiming a completed ledger is pinned.** Evidence prose
+  that names tests is not a citation; every `PROVEN` clause needs a matching `pins:` marker.
+
+## 2026-08-27 — PR-245 post-merge integration
+
+- **DO make lifecycle pins accept staging, completed, and archived ledger homes.** Pickup must
+  archive merged ledgers, so a test that searches only live bins makes the required transition red.
+
+## 2026-08-26 — PR-245 remediation
+
+- **DO preserve original SQL locations across front-door canonicalization.** A value-preserving
+  rewrite can change text length, so downstream parser locations need an explicit source map.
+- **DO express enumerable syntax guards with the AST.** Text patterns miss equivalent constant
+  spellings such as `chr(39)` and invite claims broader than the detector can prove.
+- **DO map copied canonical characters to their exact original locations.** Synthetic literal text
+  can expand or shrink, so later parser coordinates must traverse the canonical source map.
+- **DO define bounded constant-expression syntax explicitly.** A `chr` guard that accepts integer
+  literals but not safe arithmetic leaves equivalent quote spellings outside its stated domain.
+- **DO preserve each error-tree child independently.** An aliased mixed collection must not make a
+  translatable parser sibling depend on whether an unrelated leaf can be cloned.
+- **DO budget constant evaluation before string allocation.** Depth and value limits do not prevent
+  recursive concat or repetition from overflowing the stack or allocating oversized intermediates.
+- **DO prove reachable error shapes before cloning an error enum.** Translate at the typed parser
+  boundary and leave unrelated planning or execution trees unchanged.
+- **DO catch parser resource exhaustion at a file gate's boundary.** Valid hostile source can raise
+  `RecursionError` or `MemoryError`; a gate must fail once without leaking a traceback.
+- **DO exercise every reachable branch of a typed parser boundary.** DataFusion returns direct SQL
+  errors for sqlparser failures and `Diagnostic(SQL)` for its native expected-token failures.
+- **DO compare rewrite bytes, not `Cow` ownership.** An owned buffer can preserve SQL exactly;
+  source-location translation stops only when a secondary rewrite changes the bytes.
+
 ## 2026-08-06 — carried from v1
 
 - **DO land tests in the same commit/PR as the code they test — hard block.** "Tests later"
@@ -209,3 +242,24 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   on a synthetic fixture were green.
 - **DO NOT file ledgers by hand.** `make ledger-archive` at pickup, `ledger_lifecycle.py move`
   at departure; the directory is the status and the script keeps every link true.
+
+## 2026-08-25 — PROC-1 (review effort by tier)
+
+- **DO adjust the amount of process to the risk, never the bar.** Over the last four engine units
+  the defects were caught by exactly two instruments: the Critic's *novel-input fresh execution*
+  through a public entry point (V3R-1's three S1s — SEC-001/002/003) and the *gates* (the DL-5
+  review's two red pins, found by running the parity suite). The four-phase CCC fan-out, the
+  per-pin mutation probe, the separate claims phase and the per-unit retrospective metrics produced
+  record entries, not defects. Meanwhile a STANDARD unit's process read had grown to ~190 kB before
+  the engineering method. Ruling home: the manifest's
+  [`review_profile` and `critic_engine`](../.agents/skills/sepmo/binding-manifest.md) rows.
+- **DO NOT read "more Critic phases" as "more assurance."** The measured signal came from fresh
+  execution through the public door and from the gates, not from the count of Critic spawns or
+  probes. Add a phase when a class of defect escaped it, not by default; the count of phases is a
+  cost to tier, and the escaped-defect record is the only evidence that raises it.
+
+## 2026-08-27 — comment provenance correction
+
+- **DO preserve `Model:` provenance comments during comment compaction.** Remove
+  `CodeQuality:` grade tags independently; model provenance and quality grades are different
+  metadata classes.

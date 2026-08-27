@@ -5,7 +5,7 @@
 Source for the ANSI SQL door. `lib.rs` is a manifest (check_lib_rs); the router body lives in
 `router.rs`. All NEW code — there is no port census here, so every behavior (including every
 refusal) carries its own test in the same change.
-Source documentation records behavior and contracts; authorship evidence stays outside code.
+Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 The router's ORDER is the design's, and each position is load-bearing: text guards run first
 (multi-statement before anything else), then the async BUG-001 MoR valve, then the PRE-PARSE
@@ -31,13 +31,13 @@ reach delegation through the ordinary arm.
   (`V3-GEO-1`); reuses `v3_cow.rs`'s `Door`.
 - `v3_branch_tag_time_travel.rs` — **V3E-4 (test-only):** ANSI branch/tag +
   `FOR VERSION AS OF` over the Spark-written partitioned v3 DV fixture after
-  an engine append (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
+  an engine append (`Model: Grok 4.6 xHigh`).
 - `v3_partitioned_equality_deletes.rs` — **V3E-3 (test-only):** ANSI live-row twins
   of the Spark-written partitioned DV and equality-delete + DV fixtures, plus
-  `$delete_files` content 1/2 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
+  `$delete_files` content 1/2 (`Model: Grok 4.6 xHigh`).
 - `delete_granularity.rs` — **MW-9 (test-only):** ANSI `write.delete.granularity`
   (`file` default / explicit `partition` / refuse unknown / SET PROPERTIES then MERGE)
-  on MERGE (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
+  on MERGE (`Model: Grok 4.6 xHigh`).
 - `a13_fallback.rs` — **A13 (test-only):** `register_memory_catalog` + location-less ANSI
   CREATE lands under `{warehouse}/repark_ansi_ctas/…`, not the process temp dir.
 - `router.rs` — the statement router (text guards → pre-parse stage → parse → G15 collation

@@ -60,6 +60,8 @@ from repark.spark._idents import quote_ident_if_needed as _quote_ident_if_needed
 
 from repark.spark._idents import reject_path_escape_segment as _reject_path_escape_segment
 
+from repark.spark._idents import sql_string_literal as sql_string_literal
+
 from repark.spark.catalog import (
     DEFAULT_CATALOG_NAME as DEFAULT_CATALOG_NAME,
     DEFAULT_DATABASE_NAME as DEFAULT_DATABASE_NAME,

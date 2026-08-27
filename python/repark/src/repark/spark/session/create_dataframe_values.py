@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from repark.errors import PySparkTypeError
+from repark.spark._idents import sql_string_literal
 
 
 if TYPE_CHECKING:
@@ -51,9 +52,7 @@ def _sql_literal(value: Any) -> str:
         return repr(value)
 
     if isinstance(value, str):
-        escaped = value.replace("'", "''")
-
-        return f"'{escaped}'"
+        return sql_string_literal(value)
 
     if isinstance(value, dt.datetime):
         # TIMESTAMP literal. Session is UTC; tz-aware values convert to UTC first so absolute

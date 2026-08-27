@@ -27,6 +27,7 @@ mod normalize;
 mod ref_ddl;
 mod router;
 mod spark_ast;
+mod spark_literals;
 mod time_travel;
 mod window_range;
 

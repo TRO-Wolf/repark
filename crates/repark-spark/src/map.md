@@ -10,7 +10,7 @@ PR-3b restored the DML/ref modules (`merge`, `insert_overwrite`, `ref_ddl`, `cal
 router now matches v1's execute family end-to-end. The MoR BUG-001 valve predicate is hoisted
 to `repark_iceberg::write` (PR-3b declared rename); `normalize.rs` keeps the resolution
 wrapper.
-Source documentation records behavior and contracts; authorship evidence stays outside code.
+Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 ## Contents
 
@@ -19,7 +19,9 @@ Source documentation records behavior and contracts; authorship evidence stays o
   write-to-branch sniff; full v1 arm set ([router/map.md](router/map.md) for the tests).
   `execute_time_travelled` is a **release seam, not a routing step** (H-1b): it exists so
   `execute_with_read_only` can own a `time_travel::PinnedViews` and release it on every `?` /
-  `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call `refuse_v3_cow_dml` after the BUG-001 valve.
+  `return` path of the rewrite — see the `time_travel.rs` row below. V3R-1: DELETE / UPDATE call
+  `refuse_v3_cow_dml` after the BUG-001 valve. SQP-1: the front door canonicalizes escapes once and
+  translates downstream parser locations back to the caller's SQL.
 - `merge.rs` — MERGE INTO lowering (sqlparser AST → `repark_iceberg::write::merge::MergeSpec`,
   star-sentinel rewrite); 24 in-module tests (MG-2: M2 Oracle sub-predicates, M3
   assignment-target qualification, M8 INSERT column list, M10 non-last
@@ -98,7 +100,17 @@ Source documentation records behavior and contracts; authorship evidence stays o
   cannot persist a required column from a tighten-derived source — including the one- and
   two-part spellings that resolve into an Iceberg catalog via `SET
   datafusion.catalog.default_catalog` (round 5, Z-1). Untightened `CREATE VIEW` behaviour is
-  unchanged (that it persists an Iceberg table at all predates this branch).
+  unchanged (that it persists an Iceberg table at all predates this branch). **SQP-1:**
+  `rewrite_binary_casts` maps `CAST(x AS BINARY)` → `BYTEA`; `refuse_illegal_binary_cast` refuses a
+  numeric/bool/date/decimal source on the planned tree (Spark `DATATYPE_MISMATCH`, else silent
+  int→bytes), threading the cast kind (module doc for the message split).
+- `spark_literals.rs` — **SQP-1:** `canonicalize(sql) -> Cow<str>`, the front-door pass that rewrites
+  Spark string-literal escapes once (rule table, dialect, design in the module doc). Sole caller
+  `router::execute_with_read_only` (grep-pinned); DataFusion-native `COPY` / `CREATE EXTERNAL TABLE`
+  are skipped (their `OPTIONS ('k' 'v')` is a key/value pair, not Spark concatenation). PR-245
+  maps the passthrough parser's reachable `SQL` and `Diagnostic(SQL)` errors from canonical text to
+  original source. Planning, execution, shared, and collection errors remain unchanged; a boundary
+  pin holds this contract. Secondary rewrites stop mapping only when their SQL bytes change.
 - `create_table.rs` — column-def `CREATE TABLE` (I5 schema-only staged create) + the
   Spark-SQL→iceberg type mapping; **V3-2:** `iceberg_create_format_version` (session opt-in;
   `Model: Grok 4.6 xHigh`);

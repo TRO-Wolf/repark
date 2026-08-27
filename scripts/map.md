@@ -60,11 +60,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
   `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
-  floor per ledger (31 unpinned `PROVEN` clauses across three charters at arming; rows ratchet
-  away as their ledgers retire — mw-0's went with MW-5; attestation not required
-  of the five ledgers that predate the rule), ratchets down only, and a row naming a ledger in no
-  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
-  `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
+  pre-rule floor per ledger, ratchets down only, and a row naming a ledger in no
+  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a `?`;
+  a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.
@@ -88,12 +86,15 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make ci`, `make install-hooks`, `.pre-commit-config.yaml` and `ci.yml`'s guards job (wired under a
   one-time owner grant, 2026-08-25) at n=5 median 0.05 s: no closed campaign still in STATUS, no
   merged unit still on the slate, every workstream bullet inside a `ws` block, and the byte
-  ceilings (`CEILINGS`: STATUS.md, the slate, AGENTS.md, engineering-method;
-  (a)–(c) still only the two live documents; (d) every key). Seeded DL-4
+  ceilings (`CEILINGS`: STATUS.md, the slate, AGENTS.md, engineering-method, the SEPMO
+  unit-runbook; (a)–(c) still only the two live documents; (d) every key). Seeded DL-4
   2026-08-25 at 31,000 / 6,000 B; ratcheted DL-5 2026-08-25 to 25,000 / 6,000 /
-  31,000 / 35,000 B from the unit's final measurement. Raised only in the PR
-  that needs it. Tests: `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`,
-  `python/repark-parity/tests/test_dl_5_contract_compaction.py`.
+  31,000 / 35,000 B from the unit's final measurement; PROC-1 2026-08-25 added
+  `.agents/skills/sepmo/unit-runbook.md` at 5,000 B (pointer-only, cannot become a second
+  spine). Raised only in the PR that needs it. Tests:
+  `python/repark-parity/tests/test_dl_4_live_doc_compaction.py`,
+  `python/repark-parity/tests/test_dl_5_contract_compaction.py`,
+  `python/repark-parity/tests/test_proc_1_tiered_review.py`.
 - `ledger_lifecycle.py` — the ledger **lifecycle** script (DL-1, 2026-08-23): a ledger's state is
   its directory (`task/ledgers/staging/` → `completed/` → `archive/yyyy-mm/yyyy-mm-dd-<name>.md`),
   and moving one is a repository-wide link rewrite, so the two are one operation. `archive` files
@@ -227,11 +228,10 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `python/repark/src/repark/` must open its docstring with `re-export binding`; package
   `__init__.py` files remain exempt from that syntax rule, not the size rule. Fail-closed on a
   missing scan root, unreadable source, empty scan, or exception outside the scan. Dual-wired by
-  `make check-lib-py` and the ci.yml `python` job. The production file-size refactor retires the
-  former `session/_funcs.py` exception after its compatibility surface moves under the default.
+  `make check-lib-py` and the ci.yml `python` job.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
-  guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
+  guard: the three rules Ruff cannot express, and the SSOT for them (the prose homes that point at
   it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
   [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under
   `python/repark/src`, `python/repark-parity` and `scripts/`: (1) **no function defined inside
@@ -240,7 +240,14 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   the point, a `functools.wraps` wrapper — an empty reason does NOT pass) and a
   `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
   or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
-  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other Python
+  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no direct constant
+  quote-doubling `replace` call for SQL (SQP-1)** — a receiver-blind AST rule evaluates strings,
+  bounded integer `+`/`-`, `chr`, concatenation, and repetition, then forbids the one-quote to
+  two-quote call outside the product `_idents.py` and standalone `repark_parity/sql.py` homes. Its
+  iterative text walk limits depth, nodes, and output before allocation. A PR-245 pin inventories
+  shipped helper calls; the exact whitelist does not claim semantic completeness. File parsing
+  catches syntax and parser-resource failures as one
+  controlled diagnostic, including valid expressions that exhaust AST construction. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
   duty. Seeded from the measured tree (2026-08-21): 66 nested
@@ -276,7 +283,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   (G-8 companion to `check_lib_rs`). The scan covers every `*.rs` under `crates/**`; the default
   and every exact exception baseline live only in the script. Each exception carries its debt
   reason and cohesive split seam. Growth fails, and shrinkage fails until the row ratchets down
-  or retires; comment-only shrinkage has the same ratchet duty. Only generated-test sources under
+  or retires; comment-only shrink or restoration has the same exact-baseline duty. Only
+  generated-test sources under
   `tests/goldens/` or `tests/fixtures/` are excluded.
   Fail-closed on an unreadable file, empty scan, or exception outside the scan. Dual-wired through
   `make check-rust-file-size`, the ci.yml guards job, and both pre-commit surfaces.

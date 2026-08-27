@@ -9,6 +9,10 @@ Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`
 ## Contents
 
 - **r23 QI1:** `_transformers.py` uses `repark._idents.quote_ident` (always-quote SSOT).
+- **SQP-1 (cycle-2):** `_transformers.py` embeds StringIndexer/IndexToString labels, CountVectorizer
+  terms, StopWordsRemover stop words and the RegexTokenizer pattern through
+  `repark.spark._idents.sql_string_literal`, so a backslash/apostrophe value survives the Spark door.
+- **PR-245 revalidation:** `_transformers.py` stays smaller while the helper inventory remains exact.
 | Path | Role |
 |---|---|
 | `__init__.py` | Public exports (incl. Q1 quantile + CV/IDF + RegexTokenizer) |
@@ -23,6 +27,7 @@ Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`
 | Add a transformer | `_transformers.py` + oracle in `tests/test_ml_feature_oracle.py` |
 | Quantile family | `RobustScaler` / `QuantileDiscretizer` / `Imputer(median)` — fit via `approx_percentile_cont` |
 | RegexTokenizer gaps=False | Loud STOP seed until `regexp_extract_all` exists |
+| RegexTokenizer pattern → SQL | **SQP-1:** the pattern doubles its backslashes (`\s+` → `'\\s+'`) so the Spark door's escape processing folds it back to `\s+` |
 
 ## Pointers
 

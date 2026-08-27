@@ -5,9 +5,10 @@
 The **Critic–Critic–Critic (CCC)** review skill: three specialised adversarial Critics (quality
 and crates contracts → security and safety → pure logic) plus a fourth that attacks the change's
 own claims, each with a context break, a coverage attestation and a findings ledger. Review-only
-by default. **It is the Critic engine this repository's SEPMO binds** for STANDARD-and-above units
-(`critic_engine` in [../sepmo/binding-manifest.md](../sepmo/binding-manifest.md)); it can also be
-invoked alone on a diff. Tool-neutral: how a Critic is spawned is each tool adapter's table.
+by default. **It is the Critic engine this repository's SEPMO binds** through the manifest's
+[`critic_engine`](../sepmo/binding-manifest.md) row; it can also run alone on a diff. The manifest
+owns the binding and tier effort. This map does not restate them. Tool-neutral: how a Critic is
+spawned is each tool adapter's table.
 
 ## Contents
 

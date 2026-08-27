@@ -14,13 +14,18 @@ JVM, no repark required). See [../map.md](../map.md).
   to the ruling. The attribution-blind density gate stays absent. CAP-1's exact-baseline Rust and
   Python source gates remain wired. No source-comment sweep belongs to this unit.
   `pins: pr-247-revalidation/C-001, C-002, C-003, C-004, C-005, C-006, C-007`
+- `test_proc_1_tiered_review.py` — **PR-244 revalidation:** current source and map guards, tiered
+  SEPMO `review_profile` and `critic_engine` bindings in `binding-manifest.md`, MW-6 evidence,
+  disk guidance, clause pins, and ledger lifecycle.
+- `test_pr_245_revalidation_record.py` — PR #245 source-size ratchets, frozen SQP-1 artifacts,
+  bounded parser guards, exact literal-helper inventory, and lifecycle-aware navigation.
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
   exception sets and baselines mirrored from the live guard tables; blank-line boundaries;
   growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
-  production file-size refactor removes `session/_funcs.py` from this mirror when its guard row
-  retires.
+  owner correction restores `position_delete.rs` to 1,068 lines with model provenance. The
+  production file-size refactor removes `session/_funcs.py` when its exception retires.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /
