@@ -137,10 +137,12 @@ tools never silently skip locally (uvx provisions the pinned tool on demand).
     roles, and allowed-edge table (kind + why). An undeclared edge, a promoted kind, or a
     forbidden shape is red; writing the edge down cannot legalize it. *Crate-root manifests*
     (`scripts/check_lib_rs.py`) — ceilings + EXCEPTIONS.
-  - *Facade `.py` thinness* (`scripts/check_lib_py.py`) — per-file line ceilings, EXCEPTIONS
-    ratchet DOWN only; a re-export-only module must open its docstring with `re-export binding`.
+  - *Python source file-size + facade thinness* (`scripts/check_lib_py.py`) — exact-baseline
+    ceilings cover Python source under `python/` and `scripts/`; the facade-only no-stub rule
+    requires a re-export-only module to open its docstring with `re-export binding`.
   - *Rust file-size* (`scripts/check_rust_file_size.py`) — default ceiling + EXCEPTIONS, ratchet
-    DOWN only. Ceilings are never restated here.
+    DOWN only. Both source-size gates fail on growth and on an unrecorded shrink so exception
+    baselines remain exact. Ceilings are never restated here.
   - *Python conventions* (`scripts/check_python_conventions.py`) — nested-`def` ban and
     `dataclasses`/`attrs` ban. **Not** on the pre-commit hook as of PYC-5 (measured over the
     sub-second budget). Type coverage

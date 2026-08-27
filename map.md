@@ -62,7 +62,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   the crate-root `map.md` files, and cross-checks each `layer` against the dependency-policy
   SSOT in `scripts/check_crate_dag.py`. Structural drift is a red gate, not a stale sentence.
 - `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
-  tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
+  tooling/config and the mechanical guards (including the exact-baseline Rust and Python source
+  file-size ratchets; `scripts/check_map_md.sh` is the map.md lockstep
   oracle and `scripts/sync_map_md.py` its content companion — every relative link in every map
   must resolve; `make install-hooks` wires both). `.typos.toml`'s `extend-words` carries the domain
   vocabulary the checker would otherwise "correct" — including the TA-Lib indicator names
