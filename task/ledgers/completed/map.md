@@ -15,7 +15,8 @@ else. The next pickup's `make ledger-archive` files everything here under
   the facade no-stub rule.
 - [comment-compaction-ledger.md](comment-compaction-ledger.md) — **repository comment compaction
   (2026-08-27):** full-tree audit of tracked hand-authored source and configuration comments;
-  behavior preservation is proved mechanically before sequential Critic closure.
+  behavior preservation is proved mechanically before sequential Critic closure. Owner correction
+  retains model provenance and removes code-quality grade tags.
 - [pr-247-revalidation-ledger.md](pr-247-revalidation-ledger.md) — **PR #247 revalidation
   (2026-08-27):** preserves the Anthropic-model owner ruling byte-for-byte after CAP-1, removes
   attribution-blind enforcement, and pins compatibility with required documentation, banners,

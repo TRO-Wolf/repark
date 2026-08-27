@@ -209,3 +209,9 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   on a synthetic fixture were green.
 - **DO NOT file ledgers by hand.** `make ledger-archive` at pickup, `ledger_lifecycle.py move`
   at departure; the directory is the status and the script keeps every link true.
+
+## 2026-08-27 — comment provenance correction
+
+- **DO preserve `Model:` provenance comments during comment compaction.** Remove
+  `CodeQuality:` grade tags independently; model provenance and quality grades are different
+  metadata classes.

@@ -219,6 +219,7 @@ async fn the_engine_still_cannot_produce_a_v3_table() {
 
 /// pins: v3-2-create-v3-opt-in/C-005, C-011, C-015
 ///
+/// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn opt_in_create_produces_v3_and_rewrite_still_refuses() {
     let wh = TempDir::new().unwrap();

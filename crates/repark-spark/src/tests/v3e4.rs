@@ -1,5 +1,7 @@
 //! V3E-4 — snapshot refs, time travel over DVs, expire/orphans on format-v3.
 //!
+//! Model: Grok 4.6 xHigh
+//!
 //! Adopts the V3E-3 partitioned-DV Spark-written fixture, then `INSERT`s so the
 //! table has a DV snapshot and a later append snapshot (v3 is append-only here:
 //! `V3-COW-1`). Native `DataFrame` has no Iceberg snapshot-ref / CALL surface

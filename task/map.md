@@ -29,7 +29,8 @@ not this directory.
   unit's working plan is its own ledger. The file keeps its name because live code, docs and one
   runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
-  delete). Seeded 2026-08-06 from the private v1 repository.
+  delete). Seeded 2026-08-06 from the private v1 repository; the 2026-08-27 correction preserves
+  model provenance while removing code-quality grades.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags

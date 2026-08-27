@@ -1,5 +1,11 @@
 # Ledger — repository comment compaction
 
+> **Errata (2026-08-27, owner correction):** The final tree retains all 84 `Model:` comments and
+> removes the eight `CodeQuality:S` comments present at base. This restores 28 model comments
+> across 15 Rust files. It supersedes the attribution-removal claims below. Final inventory is
+> 12,845 blocks, including 3,348 longer than two lines (1,392 ordinary and 1,956 Rust
+> documentation blocks). `position_delete.rs` and its exact exception baseline remain 1,068 lines.
+
 **Retires:** move this ledger to `../completed/` after the sequential Critic closes C-007 and all
 other clauses remain proven on the final staged tree.
 
