@@ -283,7 +283,7 @@ Per compliant-in-Rust function the change is the same three steps:
 3. The Python body collapses to the thin-wrapper shape the facade already uses for the majority
    of its names.
 
-The dispatch table grows past the 1500-line file ceiling in the process and splits into
+The dispatch table grows past the source-line default in the process and splits into
 `crates/repark-python/src/column/dispatch/`, one module per family, plain `mod` declarations — no
 `#[path]`, per AGENTS.md.
 
@@ -358,9 +358,10 @@ divergence-registry section. `dir(repark.spark.functions)` becoming a superset-e
 is a checkable clause, and it converts every remaining gap into a disclosed one.
 
 **D-6 (2026-08-20) — File-size ceilings are met by splitting into the canonical module tree, never
-by raising a ceiling.** `function_dispatch.rs` is at 906 of a 1500-line default and cannot absorb
-the new arms; it becomes `column/dispatch/` with one module per family. Per AGENTS.md the split
-uses plain `mod`/directory layout — no `#[path]`.
+by raising a ceiling.** `function_dispatch.rs` was at 906 lines under the then-current default and
+could not absorb the new arms; it becomes `column/dispatch/` with one module per family. Per
+AGENTS.md the split uses plain `mod`/directory layout — no `#[path]`. CAP-1 (2026-08-26) lowers the
+current default; the required split and its canonical destination stay unchanged.
 
 **D-7 (2026-08-20) — The four sub-project families are declared, collation and crypto are built.**
 Owner ruling; the full text and the reasoning are §8. It closes charter clause C-007 and sets the

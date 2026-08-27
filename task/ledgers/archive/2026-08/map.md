@@ -143,6 +143,7 @@ One line per ledger, and off the normal read path: grep this directory for a uni
 - [2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md](2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — **V3E-3 (2026-08-24):** partitioned + equality-delete Spark-written format-v3 fixtures.
 - [2026-08-25-v3e-4-refs-time-travel-ledger.md](2026-08-25-v3e-4-refs-time-travel-ledger.md) — **V3E-4 (2026-08-25):** refs + time travel on v3; expiry/orphans with real work.
 - [2026-08-25-v3r-1-rulings-ledger.md](2026-08-25-v3r-1-rulings-ledger.md) — **V3R-1 (2026-08-25):** the five owner rulings recorded where the gate reads them, and the one that is engine code built and pinned — copy-on-write DML on a format-v3 table refuses (registry `V3-COW-1`, two guard seats), `V3-GEO-1` DECLARED, shredded variant queued, OD-3b in, the upgrade row ruled "build behind the opt-in".
+- [2026-08-26-reg-1-registry-truth-up-ledger.md](2026-08-26-reg-1-registry-truth-up-ledger.md) — **REG-1 (2026-08-26):** the docs-only truth-up of the divergence registry and STATUS — DEC-2 / DEC-6 / DEC-7 / DEC-8 become dated FIXED notes (#94 / #99), TZ-8 splits its FIXED `CAST(ts AS DATE)` / `to_date` / `datediff` half (#100) from the `last_day` / `date_add` / `date_sub` residual, and G3-E8 states the delivered spellings and the true remainder.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -13,6 +13,24 @@ JVM, no repark required). See [../map.md](../map.md).
   homes and the single-home profile table (C-006); CCC's one added sentence (C-007); the lessons
   entry (C-008); the MW-6 evidence home and its lint/typos exclusion (C-009); the disk skill's
   2026-08-25 block (C-010); the handoff F-7 B-MOR-3 addendum (C-011).
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
+  source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
+  missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
+  facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers.
+- `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
+  says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
+  and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /
+  `datediff` half (#100) and the `last_day` / `date_add` / `date_sub` residual (C-002); G3-E8
+  states the delivered spellings (incl. correlated DELETE IN and uncorrelated UPDATE IN) and the
+  true remainder (C-003); the three STATUS bullets match the registry under the ceiling (C-004);
+  every cited test resolves and DEC-9 stays BACKLOG (C-005); no row deleted and the maps are in
+  lockstep (C-006).
+  Cycle 2 (Critic): the DEC notes date by the fix's landing day (2026-08-14), and the TZ-8
+  residual names only the pinned spellings (`date_sub` refuses too but is unpinned — not claimed).
+  Departure: the `date_sub` window ends at the next heading; DEC rows are asserted by their
+  heading or FIXED-note opener, not by a bare id.
+  C-006's lockstep half asserts the departed state (the ledger listed by `completed/` or the
+  archive map), the way DL-5's slate pin turned over — CI caught the in-flight spelling.
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method

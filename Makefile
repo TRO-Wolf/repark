@@ -132,16 +132,16 @@ check-lib-rs: ## lib.rs thinness guard (no inline tests; line ceilings)
 	@./scripts/check_lib_rs.sh
 
 .PHONY: check-rust-file-size
-check-rust-file-size: ## Per-file crates/**/*.rs line-ceiling guard (default + EXCEPTIONS)
+check-rust-file-size: ## Rust source ceiling with exact-baseline exceptions
 	@# Default ceiling + EXCEPTIONS SSOT: scripts/check_rust_file_size.py — dual-wired with
-	@# ci.yml's guards job. Companion to check-lib-rs (crate-root thinness). Ceilings ratchet
-	@# down only; prose points at the script and never restates the numbers.
+	@# ci.yml's guards job. Companion to check-lib-rs (crate-root thinness). Exception baselines
+	@# stay exact and ratchet down; prose points at the script and never restates the numbers.
 	@./scripts/check_rust_file_size.sh
 
 .PHONY: check-python-conventions
 check-python-conventions: ## The two Python rules Ruff cannot express (nested def; Pydantic not dataclasses)
 	@# Rules + EXCEPTIONS SSOT: scripts/check_python_conventions.py — dual-wired with ci.yml's
-	@# python job. Companion to check-lib-py (facade thinness). Ceilings ratchet down only;
+	@# python job. Companion to check-lib-py (source size + facade thinness). Ceilings ratchet down;
 	@# prose points at the script and never restates the tables.
 	@./scripts/check_python_conventions.sh
 
@@ -207,8 +207,8 @@ census: ## Hermetic Apache-suite census (classic/expand/expand2); local+slate on
 	@./scripts/run_census.sh
 
 .PHONY: check-lib-py
-check-lib-py: ## Python thinness guard (line ceilings + no-stub)
-	@# Ceilings + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.
+check-lib-py: ## Python source ceiling + facade no-stub guard
+	@# Exact baselines + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.
 	@./scripts/check_lib_py.sh
 
 .PHONY: develop

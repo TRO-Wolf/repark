@@ -8,8 +8,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 ## Contents
 
 - `_coerce.py` — **PYC-2:** `range_bound_as_int` and `sql_clause_end_after`, lifted
-  out of nested defs in `session_core.py` so that file stays under the default
-  2500-line `check_lib_py` ceiling.
+  out of nested defs in `session_core.py` so that file can ratchet its exact
+  `check_lib_py` exception baseline.
 - `_funcs.py` — free functions (shared name binding for class modules); includes
   `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
   widths refuse loud — layout home `repark.ml.linalg`).
@@ -50,7 +50,7 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   getOrCreate reuse fold also calls `refuse_collation_session_key` so a planted
   `_config` key cannot silently store (SEC-003).
   **F-3 (2026-08-17):** `probe`, the temp-view existence closure inside `resolve_table_name`,
-  gained a docstring; docstring-only, and the file stays under its 2500-line ceiling.
+  gained a docstring; docstring-only, and the file stayed at its then-current source-size ceiling.
   **PYC-2 (2026-08-22):** `range` / SQL-clause helpers move to `_coerce.py`; `probe`
   lifts to `_temp_view_home_ref` (it sat under `if`, so the gate never counted it).
 - `reader.py` — DataFrameReader (**`smartCsv` method body** — Q7 MOVE MAP destination).
@@ -127,5 +127,5 @@ is named through `repark.spark._temp_views.scratch_view_name`.
 `_expand_from_join_table_refs_in_sql`, and `table`. MEASURED false:
 `_expand_bare_table_names_in_sql("SELECT * FROM tv")` → `SELECT * FROM "datafusion"."public"."tv"`,
 and `_sql_table_ref_resolved("tv", prefer_temp_view=True)` → `"datafusion"."public"."tv"`. All three
-trued (prose only, line-neutral — the file sits exactly at its 2500 ceiling); this paragraph was
+trued (prose only, line-neutral — the file sat exactly at its then-current ceiling); this paragraph was
 already correct and is what they now agree with.

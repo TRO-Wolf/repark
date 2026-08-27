@@ -64,3 +64,10 @@ edit.
 Checked before each spike: 448 GB free of 1.8 TB (75% used), `target/` at 60 GB. Two spikes built
 incrementally against the warm target directory; no worktree created; no artifacts retained. Both
 spikes reverted from backups and `git status` verified clean after each.
+
+## CAP-1 compatibility note (2026-08-26)
+
+C-010's numeric default records the gate at this charter's 2026-08-20 freeze. CAP-1 lowers the live
+default in `scripts/check_rust_file_size.py`; that script remains the SSOT. The clause's structural
+conclusion is unchanged: `function_dispatch.rs` must split into the named canonical module tree,
+and the campaign must not raise a source-size ceiling.
