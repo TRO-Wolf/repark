@@ -1,9 +1,5 @@
-# Fork-sync drift report — read-only observability for the TRO-Wolf/iceberg-rust pin.
-# Weekly (+ dispatch) answers to the three questions nobody should have to remember to ask:
-# how far is the fork's main past the [patch.crates-io] pin, how far has apache/iceberg-rust
-# moved past the fork's merge-base, and is the pinned rev still reachable. The sync contract
-# (who bumps, when, thresholds) is docs/fork-sync.md. No secrets; writes nothing anywhere —
-# the run summary IS the report.
+# Weekly and manual read-only runs report pin reachability and both sides of fork drift.
+# docs/fork-sync.md owns thresholds and bump policy.
 name: fork-sync-drift
 
 on:

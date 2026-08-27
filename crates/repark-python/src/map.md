@@ -124,6 +124,8 @@ non-Spark (DataFusion dialect) session for the Python `repark.sql()` ANSI callab
   `python/repark/src/repark/errors.py` instead (**that package lands phase-3 PR-5**; not in the
   tree yet) — they need MULTIPLE bases, which
   `pyo3::create_exception!` cannot express, and no Rust code raises them.
+  This map owns the taxonomy rationale. The source preamble keeps only identity and placement
+  invariants.
 - `session.rs` — `PyReparkSession`; includes `declare_temp_view_sorted` (SE-1: verified
   sortedness declaration → window `SortExec` elision; GIL released for the scan;
   **PR-D1** `tighten_nulls: bool = false` thin call-through);

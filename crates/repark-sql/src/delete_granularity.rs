@@ -1,5 +1,4 @@
 //! Model: Grok 4.6 xHigh
-//! CodeQuality:S
 //!
 //! ANSI-door pins for Iceberg `write.delete.granularity`.
 //!

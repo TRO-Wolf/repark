@@ -1,5 +1,4 @@
 //! Model: Grok 4.6 xHigh
-//! CodeQuality:S
 //!
 //! ANSI-door twins for V3E-4: branch/tag DDL and `FOR VERSION AS OF` over a
 //! Spark-written partitioned v3 DV fixture after an engine append. This door

@@ -1,7 +1,6 @@
 //! V3E-3 — partitioned + equality-delete Spark-written format-v3 fixtures.
 //!
 //! Model: Grok 4.6 xHigh
-//! CodeQuality:S
 //!
 //! Two Hadoop-catalog tables written by PySpark 4.1.2 + Iceberg 1.11.0, checked
 //! in under `fixtures/` so CI can apply Puffin deletion vectors and equality

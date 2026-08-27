@@ -1,9 +1,4 @@
-# Pre-warms the Swatinem rust-cache OFF the PR critical path: every push to main (and a
-# weekly safety net) builds the workspace under the same prefix-keys ci.yml restores, so PR
-# jobs start from a hot cache even right after a dependency-family bump.
-# Saves live in GitHub's Actions cache (10 GB repo cap, LRU) — zero local disk impact.
-# (Adapted from the private v1 repository: no setup-python step — the PyO3 cdylib does not
-# exist until phase 3.)
+# Push and weekly runs populate the exact cache keys that ci.yml restores outside the PR path.
 name: Cache warm
 
 on:
@@ -42,9 +37,7 @@ jobs:
         with:
           toolchain: "1.96.0"
           components: clippy
-      # prefix-key AND shared-key MUST match ci.yml's rust-lint restore. shared-key is
-      # load-bearing: without it rust-cache mixes the JOB ID (warm-lint vs rust-lint) into the
-      # key and these saves are never restored by the PR jobs.
+      # Both keys must match ci.yml; rust-cache otherwise adds the job ID and misses this cache.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
           prefix-key: "v2-df54"

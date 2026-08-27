@@ -257,3 +257,9 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   execution through the public door and from the gates, not from the count of Critic spawns or
   probes. Add a phase when a class of defect escaped it, not by default; the count of phases is a
   cost to tier, and the escaped-defect record is the only evidence that raises it.
+
+## 2026-08-27 — comment provenance correction
+
+- **DO preserve `Model:` provenance comments during comment compaction.** Remove
+  `CodeQuality:` grade tags independently; model provenance and quality grades are different
+  metadata classes.

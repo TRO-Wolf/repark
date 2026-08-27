@@ -1,5 +1,4 @@
 //! Model: Claude Fable 5
-//! CodeQuality:S
 //!
 //! ANSI-door pins: `geometry` / `geography` DECLARED out (`V3-GEO-1`), `variant` stays V3-6;
 //! all three refuse at CREATE, naming the type.

@@ -404,9 +404,8 @@ def flat_cases() -> dict[str, pl.Expr]:
         # warm-up), bit-exactly as C.
         "flat_mama_mama": mama.struct.field("mama"),
         "flat_mama_fama": mama.struct.field("fama"),
-        # TA-3 volume family on the price plateau: AD `tmp > 0.0` skip, OBV equal-close hold,
-        # MFI zero typical-price delta + `posSumMF+negSumMF < 1.0` → 0.0, ADOSC EMA of a
-        # frozen AD line.
+        # The price plateau pins zero-change branches: AD skip, OBV hold, MFI zero, and ADOSC over
+        # a frozen AD line.
         "flat_ad": plta.ad(h, lo, c, v),
         "flat_adosc_3_10": plta.adosc(h, lo, c, v, fastperiod=3, slowperiod=10),
         "flat_obv": plta.obv(c, v),

@@ -152,8 +152,17 @@ def test_pr247_navigation_names_every_enforcement_artifact() -> None:
         ".github/workflows/map.md": "check_owner_ruling.py",
         "scripts/map.md": "check_owner_ruling.py",
         "python/repark-parity/tests/map.md": "test_pr_247_owner_ruling.py",
-        "task/ledgers/completed/map.md": "pr-247-revalidation-ledger.md",
     }
     for relative_path, artifact in required.items():
         text = (_REPO / relative_path).read_text(encoding="utf-8")
         assert artifact in text, relative_path
+    name = "pr-247-revalidation-ledger.md"
+    live = [
+        _REPO / "task/ledgers/staging" / name,
+        _REPO / "task/ledgers/completed" / name,
+    ]
+    archived = sorted((_REPO / "task/ledgers/archive").glob(f"*/*-{name}"))
+    ledgers = [ledger for ledger in (*live, *archived) if ledger.is_file()]
+    assert len(ledgers) == 1, ledgers
+    ledger_map = ledgers[0].parent / "map.md"
+    assert ledgers[0].name in ledger_map.read_text(encoding="utf-8")

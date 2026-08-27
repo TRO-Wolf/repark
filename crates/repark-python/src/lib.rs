@@ -40,21 +40,8 @@ pub use column::PyColumn;
 pub use dataframe::PyDataFrame;
 pub use session::PyReparkSession;
 
-// The PySpark-shaped exception taxonomy (WG-3; U4 added `UnsupportedOperationException`;
-// Group X added `IllegalArgumentException`). Defined here in the native module so an exception
-// raised by the Rust engine is the SAME class object the Python facade re-exports from
-// `repark.errors` — `except AnalysisException` catches an engine analysis error by identity, not
-// by message-sniffing. All subclass `RuntimeError` (via `PySparkException`), so existing
-// `except RuntimeError` code keeps working after a PySpark → repark migration (near-drop-in).
-//
-// A leaf type lands here ONLY with ≥1 reachable engine raise mapped to it (the Group S rule) —
-// which is why PySpark's `ArithmeticException`, `NumberFormatException`, `DateTimeException`,
-// `ArrayIndexOutOfBoundsException`, `SparkRuntimeException`, … are absent: repark has no error
-// that classifies into them today (see the Group X ledger in `task/todo.md`). The
-// Python-argument-validation leaves (`PySparkValueError`/`PySparkTypeError`/
-// `PySparkAttributeError`) are raised by the pure-Python facade only and are defined in
-// `python/repark/src/repark/errors.py` — they need MULTIPLE bases (`PySparkException` + the
-// builtin), which `pyo3::create_exception!` cannot express.
+// Native and facade exceptions share class identity. Add a native leaf only for a reachable engine
+// class; Python validation leaves need multiple inheritance and stay in `repark.errors`.
 /// The exception taxonomy lives in [`exceptions`] (file-backed; see its module doc for the
 /// module-scoped `disallowed_methods` expectation and the P-4/P-5 provocation record).
 mod exceptions;

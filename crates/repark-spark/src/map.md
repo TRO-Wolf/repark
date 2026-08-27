@@ -10,6 +10,7 @@ PR-3b restored the DML/ref modules (`merge`, `insert_overwrite`, `ref_ddl`, `cal
 router now matches v1's execute family end-to-end. The MoR BUG-001 valve predicate is hoisted
 to `repark_iceberg::write` (PR-3b declared rename); `normalize.rs` keeps the resolution
 wrapper.
+Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 ## Contents
 

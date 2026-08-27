@@ -72,22 +72,7 @@ async fn native_ddl_sink_session() -> (tempfile::TempDir, ReparkSession) {
 
 #[tokio::test]
 async fn qualified_temp_view_name_refuses_and_persists_nothing() {
-    // R6-1 (S1). Kills: `replace_view` forwarding the raw name to
-    // `SessionContext::register_table`, which resolves a qualified name into the target schema
-    // provider — for an Iceberg catalog that PERSISTS a real table.
-    //
-    // MEASURED on BASE (`68e98f4`), same session shape as below:
-    //
-    // | call | BASE result | BASE `table_exists` |
-    // |---|---|---|
-    // | `register_record_batches_as_temp_view("ice.sales.vempty", <tightened schema>, [])` | **Ok** | **true** |
-    // | `create_or_replace_temp_view_from("ice.sales.vlazy", <tightened LIMIT 0 frame>)` | **Ok** | **true** |
-    // | `materialize_dataframe_as_temp_view("ice.sales.vmat", <tightened LIMIT 0 frame>)` | **Ok** | **true** |
-    // | `create_or_replace_temp_view("ice.sales.v3", <non-empty batches>)` | Err (Iceberg "register_table does not support tables with data") | false |
-    //
-    // i.e. the temp-view API was a THIRD write door into an Iceberg catalog, carrying exactly
-    // the `tightenNulls` `required: true` payload the pre-execute belt refuses on the SQL doors
-    // — and it never went near a guard, because no statement was ever planned.
+    // A qualified temp-view name must not bypass the SQL guard and persist into an Iceberg catalog.
     let (_dir, session) = native_ddl_sink_session().await;
     let tightened = session
         .context()
@@ -235,20 +220,7 @@ async fn context_sql_is_a_known_unguarded_hatch() {
 
 #[tokio::test]
 async fn prepare_of_a_tightened_ddl_sink_is_inert_today() {
-    // R6-5 (S3). `PREPARE` STORES a statement; the `sorted_view` guard runs on EXECUTED DDL
-    // (`PreExecute::guard` on the planned statement), so a `CreateView` hidden inside a PREPARE
-    // is never inspected. Is that a leak today? MEASURED on THIS head, native door:
-    //
-    // | step | result | persisted? |
-    // |---|---|---|
-    // | `PREPARE p_sink AS CREATE VIEW ice.sales.v_prepared AS SELECT * FROM tight LIMIT 0` | **Ok** | `table_exists` **false** |
-    // | `.collect()` on that PREPARE | **Ok**, 0 batches | **false** |
-    // | `EXECUTE p_sink` | Ok (plans) | — |
-    // | `.collect()` on the EXECUTE | **Err** — `NotImplemented`: "Unsupported logical plan: CreateView" | **false** |
-    //
-    // So the class is inert TODAY: DataFusion 54.1 cannot execute a prepared DDL at all. Not a
-    // guard, a measured floor — this node pins it, so the day `EXECUTE` starts running the
-    // stored DDL, this test goes red instead of the leak going unnoticed.
+    // DataFusion 54.1 cannot execute prepared DDL. This pin fails if that compatibility floor moves.
     let (_dir, session) = native_ddl_sink_session().await;
     session
         .sql("PREPARE p_sink AS CREATE VIEW ice.sales.v_prepared AS SELECT * FROM tight LIMIT 0")
@@ -286,25 +258,8 @@ async fn prepare_of_a_tightened_ddl_sink_is_inert_today() {
 
 #[tokio::test]
 async fn a_catalog_over_the_build_time_default_is_not_a_temp_view_home() {
-    // R6-1 (S1), the BUILD-time half — the round-6 critic's red. Kills: pinning the temp-view
-    // home to the CONFIGURED default catalog NAME and stopping there. `datafusion.*` builder
-    // keys are first-class (`DATAFUSION_CONFIG_PREFIX`), so `default_catalog = ice` at BUILD
-    // makes the pinned home name `ice.sales` — and `register_memory_catalog("ice")` then
-    // REPLACES the provider that name resolves to with the Iceberg one. The name-pinned fix
-    // therefore pinned the leak IN, not out.
-    //
-    // MEASURED on the name-only fix (this file's tree before the S1 patch), same session shape:
-    //
-    // | call | name-only fix | `table_exists("ice.sales.vempty")` |
-    // |---|---|---|
-    // | `register_record_batches_as_temp_view("vempty", <required schema>, [])` | **Ok** | **true** |
-    // | persisted provider schema | `[("symbol", nullable=false), ("ts", true), ("close", false)]` — the `required: true` tighten payload, PERSISTED | |
-    // | `list_temp_view_names()` | `["vempty"]` — simultaneously reported as a session temp view | |
-    //
-    // MEASURED after the S1 patch (this test): every temp-view entry point refuses
-    // `Error::Analysis`, and the catalog stays empty. The home now snapshots the schema PROVIDER
-    // and re-checks its identity live (`Arc::ptr_eq`) — MEASURED false after the catalog
-    // registration, true for repeated lookups of an untouched home.
+    // A catalog can replace the configured home provider. Identity checks must then refuse every
+    // temp-view entry point before the required-schema payload reaches that catalog.
     let warehouse_dir = tempfile::TempDir::new().unwrap();
     let warehouse = warehouse_dir.path().to_str().unwrap().to_string();
     let session = ReparkSession::builder()
@@ -374,19 +329,8 @@ async fn a_catalog_over_the_build_time_default_is_not_a_temp_view_home() {
 
 #[tokio::test]
 async fn a_quoted_dotted_temp_view_name_round_trips_through_table_exists() {
-    // R6-1 follow-on (round-6 critic S3). Kills: `table_exists`'s one-part arm re-parsing an
-    // ALREADY-parsed segment. `parse_table_identifier_segments` strips the quotes, so `"a.b"`
-    // arrived at the name seam as the bare string `a.b` and was refused as "qualified" — an
-    // allowed spelling that could be created, listed and dropped but never asked about.
-    //
-    // MEASURED before this fix: `create_or_replace_temp_view("\"a.b\"")` = Ok,
-    // `list_temp_view_names()` = `["a.b"]`, `drop_temp_view("\"a.b\"")` = Ok(true), but
-    // `table_exists("\"a.b\"")` = Err(Analysis "… is qualified …"). On BASE it was Ok(false)
-    // (also wrong, and not an error). MEASURED now: all four agree.
-    //
-    // The second half kills dropping BASE's case folding: the segment path must lowercase an
-    // UNQUOTED name exactly like `TableReference::parse_str` does, or `tableExists("MyView")`
-    // would stop finding the view `createOrReplaceTempView("MyView")` registered as `myview`.
+    // Re-parsing a quoted dotted segment makes one identifier look qualified. Use the parsed segment.
+    // Unquoted segments still use the existing case fold.
     let session = ReparkSession::new().unwrap();
     session
         .create_or_replace_temp_view("\"a.b\"", vec![rows()])
@@ -410,33 +354,8 @@ async fn a_quoted_dotted_temp_view_name_round_trips_through_table_exists() {
 
 #[tokio::test]
 async fn set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read() {
-    // R6-1 disclosure, pinned rather than only narrated (round-6 critic S3). The write side is
-    // now immune to `SET datafusion.catalog.default_catalog`; the READ side (DataFusion's own
-    // bare-name resolution inside a SQL body) is untouched. So under a `SET` to ANY other
-    // catalog — including a plain non-Iceberg one — a create-then-read-by-bare-name round trip
-    // that worked on BASE now misses. This is a MEASURED behaviour CHANGE, not "the current
-    // behaviour": it is the price of the write-side pin, and it is disclosed here and in the
-    // round-6 ledger rather than left for a reader to trip over.
-    //
-    // MEASURED, both sides (BASE mechanism = `context().register_table(<raw &str>, provider)`,
-    // the exact call BASE's `replace_view` made):
-    //   BASE mech: register_table("v2") = Ok → landed in `mem.public` (`table_names() == ["v2"]`)
-    //              → `SELECT * FROM v2` = Ok.
-    //   FIXED:     create_or_replace_temp_view("v2") = Ok → landed in `datafusion.public`
-    //              → `SELECT * FROM v2` = Err(Analysis "table 'mem.public.v2' not found")
-    //              → `SELECT * FROM datafusion.public.v2` = Ok, `table_exists("v2")` = true.
-    // Reachability is low: the facade's currentCatalog/setCurrentCatalog is facade-only state and
-    // never issues this SET (`python/repark/src/repark/spark/catalog.py`), so only a raw
-    // `spark.sql("SET datafusion...")` reaches it.
-    //
-    // ROUND 7 (R7-1) narrowed what "the read" means here. This pin is now specifically about a
-    // RAW SQL BODY on the native door: a bare name inside `Session::sql` still resolves against
-    // the live default, and that is the pinned current behaviour. The facade's PRODUCT read
-    // paths no longer emit a bare reference at all — `spark.table`, cache/persist/checkpoint,
-    // `createDataFrame`'s re-scan and every internal scratch view now carry the HOME spelling,
-    // taken from `temp_view_home` / `resolve_temp_view_home_ref` (asserted at the end of this
-    // test) and from `python/repark/src/repark/spark/_temp_views.py` on the Python side. So the
-    // asymmetry that remains is: raw SQL body = DataFusion resolution, product API = home.
+    // Raw SQL reads follow the live default catalog. Product APIs keep the pinned temp-view home.
+    // The write path must never follow `SET datafusion.catalog.default_catalog` into a catalog.
     let session = ReparkSession::new().unwrap();
     session.context().register_catalog(
         "mem",

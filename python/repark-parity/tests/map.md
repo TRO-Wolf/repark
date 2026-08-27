@@ -22,10 +22,13 @@ JVM, no repark required). See [../map.md](../map.md).
   (C-004); every frozen clause has a pin (C-006); exactly one lifecycle ledger and its matching
   map stay current through archival, and the PROC-1 lifecycle map reports its filed attestation
   list item (C-007).
-- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
-  source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
+  exception sets and baselines mirrored from the live guard tables; blank-line boundaries;
+  growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
-  facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers.
+  facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
+  2026-08-27 owner correction restores the `position_delete.rs` baseline to 1,068 lines with its
+  model provenance comments.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

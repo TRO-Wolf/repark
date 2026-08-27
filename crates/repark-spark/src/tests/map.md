@@ -5,6 +5,7 @@
 Lib-root unit battery for the Spark SQL door (the former `src/tests.rs` monolith, split in
 G-4 as a **declared-rename** unit under `docs/testing.md` "Relocation discipline"). Production
 code is not here — only tests, shared fixtures, and the module manifest.
+Test documentation may retain model provenance; code-quality grade tags stay outside code.
 
 ## Contents
 
@@ -23,11 +24,11 @@ code is not here — only tests, shared fixtures, and the module manifest.
   CREATE (`V3-GEO-1`).
 - `v3e4.rs` — **V3E-4:** snapshot refs, `VERSION AS OF` over DVs, expire with
   real work, orphan 24h floor on the partitioned-DV fixture after a RePark
-  append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`, `CodeQuality:S`).
+  append; rustdoc cites C-001..C-016 (`Model: Grok 4.6 xHigh`).
 - `v3e3.rs` — **V3E-3:** Spark-written partitioned v3 DV fixture and equality-delete
   + DV fixture (`fixtures/v3-spark-part-dv/`, `fixtures/v3-spark-eq-dv/`); live
   rows, partition prune, `.delete_files` content 1/2, B-MOR-3 refuse
-  (`Model: Grok 4.6 xHigh`, `CodeQuality:S`; rustdoc cites C-013).
+  (`Model: Grok 4.6 xHigh`; rustdoc cites C-013).
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).

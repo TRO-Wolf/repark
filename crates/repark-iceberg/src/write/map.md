@@ -8,6 +8,7 @@ ported byte-faithful). The heavy table-format machinery (`OverwriteFiles` / `Row
 the fork; this tree only translates Spark write semantics onto the fork's native actions plus an
 OCC retry loop. `DELETE`/`UPDATE`/`INSERT` need no adapter — DataFusion plans them onto the
 fork's `iceberg-datafusion` `TableProvider`.
+Source documentation may retain model provenance; code-quality grade tags stay outside code.
 
 **The gap WI-1 named, closed by WI-2 (2026-08-15):** plain `INSERT` still has no adapter here —
 DataFusion's own `insert_to_plan` injects the `CAST` and hands a schema-conformed plan straight to
