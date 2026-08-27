@@ -24,6 +24,9 @@ else. The next pickup's `make ledger-archive` files everything here under
   refactor: split the 8,390-line session free-function surface into responsibility-named modules,
   preserve `_funcs` compatibility, and retire its Python source-size exception. The sequential
   Critic clause remains open until the staged Actor tree is reviewed.
+- [rust-catalog-registration-ledger.md](rust-catalog-registration-ledger.md) — **Rust catalog
+  registration hardening (2026-08-27):** make same-name publication linearizable while provider
+  construction for distinct names remains concurrent; pin failure atomicity and winner identity.
 
 ## Pointers
 - Up: [../map.md](../map.md)

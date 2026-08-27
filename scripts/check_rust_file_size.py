@@ -48,7 +48,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract one existing responsibility when a charter already changes that region.",
     ),
     "crates/repark-core/src/session/tests.rs": (
-        1485,
+        1461,
         "Session behavior scenarios remain in one file-backed test module.",
         "Split by configuration, planning, and execution scenario families.",
     ),
