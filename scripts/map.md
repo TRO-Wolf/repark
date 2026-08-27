@@ -60,13 +60,9 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   checked — `AT-1`..`AT-10` once each, `ATTACKED` with artifacts or `N/A` with a justification,
   `complete:` consistent — and required once a governed ledger has no `OPEN` clause (it is the
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
-  floor per ledger (31 unpinned `PROVEN` clauses across three charters at arming; rows ratchet
-  away as their ledgers retire — mw-0's went with MW-5; attestation not required
-  of the five ledgers that predate the rule; **SQP-1** carries a ceiling-0 row for the Actor-phase
-  deferral, removed by its Critic when the attestation is filed), ratchets down only, and a row naming a ledger in no
-  live bin is a finding. PR-245 carries its own ceiling-0 Actor-phase row while its revalidation
-  ledger remains in staging. Two sub-rules were measured and **declined** (an `OPEN` row carries a
-  `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
+  pre-rule floor per ledger, ratchets down only, and a row naming a ledger in no
+  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a `?`;
+  a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
   `python/repark-parity/tests/test_dl_2_ledger_grammar.py`.

@@ -6,6 +6,9 @@ Unit tests for the parity comparison core **and the dataset generators** (no Spa
 JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
+- `test_pr_247_owner_ruling.py` — **PR #247 revalidation:** byte-exact owner-ruling and
+  enforcement-boundary preservation, fail-closed mutations, CAP-1 compatibility, narrow gate
+  wiring, clause pins, and complete navigation coverage.
 - `test_pr_245_revalidation_record.py` — PR-245 exact source-size, frozen SQP-1 pin-family,
   depth/node/output-bounded receiver-blind AST guard with constructed-tree stress pins, exact
   helper-call inventory, clean product-blocked TPC runner imports, 10,000-term real-file

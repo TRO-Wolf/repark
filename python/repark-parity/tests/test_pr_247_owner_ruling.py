@@ -29,6 +29,7 @@ def _write_contracts(tree: Path, checker: ModuleType) -> None:
 
 
 def test_live_contract_keeps_the_ruling_and_review_boundary_byte_exact() -> None:
+    """pins: pr-247-revalidation/C-001, C-003, C-004."""
     checker = _load_checker()
     assert checker.findings(_REPO) == []
 
@@ -126,6 +127,7 @@ def test_duplicated_enforcement_boundary_fails_closed(tmp_path: Path) -> None:
 
 
 def test_immediate_gate_is_narrow_and_cap_1_remains_wired() -> None:
+    """pins: pr-247-revalidation/C-002, C-005, C-007."""
     makefile = (_REPO / "Makefile").read_text(encoding="utf-8")
     ci_line = next(line for line in makefile.splitlines() if line.startswith("ci: "))
     workflow = (_REPO / ".github/workflows/ci.yml").read_text(encoding="utf-8")
@@ -141,3 +143,17 @@ def test_immediate_gate_is_narrow_and_cap_1_remains_wired() -> None:
     declaration = r"DEFAULT_CEILING(?:: int)? = 1_?000"
     assert re.search(declaration, rust_gate) is not None
     assert re.search(declaration, python_gate) is not None
+
+
+def test_pr247_navigation_names_every_enforcement_artifact() -> None:
+    """pins: pr-247-revalidation/C-006."""
+    required = {
+        "map.md": "check-owner-ruling",
+        ".github/workflows/map.md": "check_owner_ruling.py",
+        "scripts/map.md": "check_owner_ruling.py",
+        "python/repark-parity/tests/map.md": "test_pr_247_owner_ruling.py",
+        "task/ledgers/completed/map.md": "pr-247-revalidation-ledger.md",
+    }
+    for relative_path, artifact in required.items():
+        text = (_REPO / relative_path).read_text(encoding="utf-8")
+        assert artifact in text, relative_path

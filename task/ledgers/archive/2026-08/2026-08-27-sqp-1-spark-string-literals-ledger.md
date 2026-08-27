@@ -1,7 +1,7 @@
 # Charter ledger — SQP-1 · Spark string-literal escapes on the SQL door, and `CAST … AS BINARY`
 
 **Date:** 2026-08-25 · **Branch:** `feat/sqp-1-spark-string-literals` · **Base:** `5f64254` (`main`,
-#243) · **Policy:** [AGENTS.md](../../../AGENTS.md); [docs/testing.md](../../../docs/testing.md)
+#243) · **Policy:** [AGENTS.md](../../../../AGENTS.md); [docs/testing.md](../../../../docs/testing.md)
 (pin first, oracle-measured, the entry-point matrix); ADR-0002 (two honest doors — this unit
 touches the Spark door only) · **SEPMO path:** STANDARD · **Risk tier:** standard (parser
 front door of the Spark door; no commit path, no on-disk format) · **Size:** M · **Requested
