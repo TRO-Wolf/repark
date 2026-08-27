@@ -24,6 +24,7 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark._idents import sql_string_literal
 from repark.spark.column import Column, Scalar
 from repark.spark.functions import (
     _aggregate_argument,
@@ -672,8 +673,7 @@ def struct(*cols: Column | str) -> Column:
                 },
             )
         columns.append(column)
-        safe_name = str(field_name).replace("'", "''")
-        named_parts.append(f"'{safe_name}', {column.sql_expr_part()}")
+        named_parts.append(f"{sql_string_literal(str(field_name))}, {column.sql_expr_part()}")
         display_parts.append(str(field_name))
     sql = f"named_struct({', '.join(named_parts)})"
     display = f"struct({', '.join(display_parts)})"

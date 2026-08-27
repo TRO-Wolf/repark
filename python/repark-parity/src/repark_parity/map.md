@@ -13,6 +13,7 @@ The `repark_parity` package — the parity comparison core. See [../../map.md](.
   parity case green — closes the residual that nullability was ignored). **G18:** order-insensitive
   path accepts nested list/struct/map columns via total canonical row keys + map entry
   normalization; flat schemas keep the historical `sort_by` path (no golden re-record).
+- `sql.py` — dependency-free, quote-only SQL escaping for standalone parity benchmarks.
 - `__init__.py` — public exports. `py.typed` — typed marker.
 
 ## Pointers

@@ -35,6 +35,7 @@ from repark.errors import AnalysisException, PySparkTypeError
 # === r23 QI1: idents ===
 from repark.spark._idents import quote_ident_if_needed as _quote_ident
 from repark.spark._idents import quote_multipart as _quote_multipart_ssot
+from repark.spark._idents import sql_string_literal
 
 if TYPE_CHECKING:
     from repark.spark.session import ReparkSession
@@ -364,8 +365,7 @@ class Catalog:
         sql = f"SHOW NAMESPACES IN {_quote_ident(catalog)}"
         if pattern is not None:
             pattern = _require_str(pattern, "pattern")
-            escaped = pattern.replace("'", "''")
-            sql = f"{sql} LIKE '{escaped}'"
+            sql = f"{sql} LIKE {sql_string_literal(pattern)}"
         try:
             table = self._session.sql(sql).to_arrow()
         except Exception as exc:

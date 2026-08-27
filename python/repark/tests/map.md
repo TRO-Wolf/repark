@@ -22,10 +22,13 @@ NOT in that file is a defect, not a decision.
 
 ## Contents
 
-- `test_production_file_size.py` — frozen parent-symbol inventory, normalized AST body hashes,
+- `test_pr_245_revalidation.py` — PR #245 public-door revalidation for Spark string literals,
+  binary casts, parser limits, and facade controls.
+- `test_production_file_size.py` — frozen parent-symbol inventory, integrated AST body hashes,
   responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
   smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
-
+- [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1:** facade string values
+  use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`

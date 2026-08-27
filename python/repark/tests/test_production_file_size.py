@@ -179,7 +179,7 @@ EXPECTED_SYMBOL_HASHES = {
     ),
     "_find_matching_paren": ("cf0e124bf16b10dedacbd7819863fcd4ab64fbe9fc878dfbeec574c468047e1d"),
     "_format_datafusion_set_sql": (
-        "8800b816b4e2191132b5c3854d407240541e962203e2b3e47f1305c143b72ccc"
+        "1d2e344dee78ff621e20d878701fd3da50599e3c4879c76485ef9dc93a71f9ff"
     ),
     "_forward_datafusion_conf": (
         "f538f4aa93cd6fff1585c5b200e651cefb86f61097b5264cc45d93a9a79f6026"
@@ -323,7 +323,7 @@ EXPECTED_SYMBOL_HASHES = {
     "_sql_find_registry_udf_calls": (
         "332d5d9c491c9eafd0577da79e5d0299fb878205908cb5646c77d3e08b6bd6d1"
     ),
-    "_sql_literal": ("08b63f80603f7048ac49a13dda03ac9613fd66c56c8027700519cb8ad6399c3b"),
+    "_sql_literal": ("ae3fb5dc6ee78eab83df4f9d6b01153a9dbb0184484230f35324a062244ce70c"),
     "_sql_mask_strings_and_comments": (
         "4b7f0e357d15f9ef25369f7221b95fb7c05a4db373acc03fcc00c860d360d8ed"
     ),
@@ -759,6 +759,7 @@ EXPECTED_RUNTIME_NAMES = (
     "re",
     "resolve_table_name",
     "scratch_view_name",
+    "sql_string_literal",
     "uuid",
     "warnings",
 )
@@ -853,8 +854,15 @@ def test_tree_consumers_keep_their_private_import_contract() -> None:
     assert callable(_funcs._register_cdf_view_cleanup)
 
 
-def test_moved_symbol_bodies_match_the_frozen_parent() -> None:
-    """Formatting and module moves do not change normalized definition bodies."""
+def test_current_main_literal_helper_paths_remain_importable() -> None:
+    """The session package and compatibility router retain PR #245's public helper."""
+    import repark.spark.session as session_package
+
+    assert _funcs.sql_string_literal is session_package.sql_string_literal
+
+
+def test_moved_symbol_bodies_match_the_integrated_baseline() -> None:
+    """Moved bodies match the frozen parent plus current-main behavior changes."""
     measured = _top_level_symbol_hashes()
     assert {name: measured[name] for name in EXPECTED_SYMBOL_HASHES} == EXPECTED_SYMBOL_HASHES
 

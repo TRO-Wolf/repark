@@ -126,6 +126,7 @@ def repo(tmp_path: Path) -> Path:
     _git(tmp_path, "init", "-q", "-b", "main")
     _write(tmp_path, "AGENTS.md", "# AGENTS\n")
     _write(tmp_path, ".agents/skills/engineering-method/SKILL.md", "# method\n")
+    _write(tmp_path, ".agents/skills/sepmo/unit-runbook.md", "# runbook\n")  # PROC-1 CEILINGS key
     _write(tmp_path, "STATUS.md", _STATUS)
     _write(tmp_path, "briefs/next-sequence.md", _SLATE)
     _write(

@@ -7,6 +7,7 @@ import logging
 import re
 
 from repark.errors import IllegalArgumentException
+from repark.spark._idents import sql_string_literal
 
 from repark.spark.session.session_time_zone import DEFAULT_SESSION_TIME_ZONE, SESSION_TIME_ZONE_KEY
 
@@ -105,9 +106,7 @@ def _format_datafusion_set_sql(key: str, value: str) -> str:
 
     """
 
-    escaped = value.replace("'", "''")
-
-    return f"SET {key} = '{escaped}'"
+    return f"SET {key} = {sql_string_literal(value)}"
 
 
 def _forward_datafusion_conf(session: ReparkSession, key: str, value: str) -> None:

@@ -5,19 +5,16 @@ path (``to_arrow()``): value AND type. ``shuffle`` pins type + length, not order
 ``datediff`` was the DISPOSED-STUB here until FNP-3 (2026-08-20) shipped it as the
 same engine arm as ``date_diff``.
 
-Oracle — CORRECTED (this repair round; the previous line claimed "live PySpark
-4.1.2 against the pinned OpenJDK 21" and that is false for this file):
-
+Oracle — CORRECTED: the previous record incorrectly claimed live PySpark with OpenJDK 21.
 - **No Spark and no pyspark run here.** ``pyspark`` is not installed in this
   worktree's ``.venv``, so nothing below was derived from a live Spark.
 - The ``parse_url`` / ``try_parse_url`` family (X8) is **MEASURED-JVM**: a
   ``java.net.URI`` probe on the locally installed **OpenJDK 11.0.31** — not 21 —
   driven through the MEASURED-JAVAP ``ParseUrlEvaluator$`` getter map, replayed
-  through both repark doors. Which getter each part reads is MEASURED-JAVAP
-  (``javap -p -c`` over a ``spark-catalyst_2.13-4.1.2.jar`` in a local package
-  cache; that jar is not vendored here).
-- Everything else is **DOC-SPARK** (the documented PySpark 4.1.2 signature and
-  semantics) plus values measured against *repark* on both doors. Where a claim
+  through both repark doors. Getter mapping uses ``javap -p -c`` over a
+  local ``spark-catalyst_2.13-4.1.2.jar``; that jar is not vendored here.
+- Everything else is **DOC-SPARK**: the documented PySpark 4.1.2 signature and
+  semantics plus values measured against *repark* on both doors. Where a claim
   needs Spark itself to check, it says so at the assertion.
 """
 
@@ -35,6 +32,7 @@ from repark.errors import (
     PySparkException,
 )
 from repark.spark import functions as F  # noqa: N812 — PySpark idiom
+from repark.spark._idents import sql_string_literal
 from repark.spark.session.session_time_zone import SESSION_TIME_ZONE_KEY
 
 
@@ -439,10 +437,10 @@ def test_str_to_map_backslash_s_is_ascii_only(spark: ReparkSession) -> None:
     assert _as_dict(table.column("m").to_pylist()[0]) == {"a": "1", "b": f"2{nbsp}c:3"}
     # ASCII whitespace still splits.
     assert _as_dict(table.column("tabbed").to_pylist()[0]) == {"a": "1", "b": "2"}
-    # The splice works inside a character class too.
     assert _as_dict(table.column("in_class").to_pylist()[0]) == {"a": "1", "b": "2", "c": "3"}
 
-    sql_door = _table(spark.sql(f"SELECT str_to_map('{text}', '\\s', ':') AS m"))
+    ws_pattern = sql_string_literal(chr(92) + "s")
+    sql_door = _table(spark.sql(f"SELECT str_to_map('{text}', {ws_pattern}, ':') AS m"))
     assert _as_dict(sql_door.column("m").to_pylist()[0]) == {"a": "1", "b": f"2{nbsp}c:3"}
 
 
@@ -660,7 +658,8 @@ def test_parse_url_query_key_regex_dialect_residual(spark: ReparkSession) -> Non
             frame.select(F.parse_url(F.lit(url), F.lit("QUERY"), F.lit(key)).alias("v"))
         )
         assert facade.column("v").to_pylist() == [expected], (key, "facade")
-        door = _table(spark.sql(f"SELECT parse_url('{url}', 'QUERY', '{key}') AS v"))
+        key_literal = sql_string_literal(key)
+        door = _table(spark.sql(f"SELECT parse_url('{url}', 'QUERY', {key_literal}) AS v"))
         assert door.column("v").to_pylist() == [expected], (key, "sql door")
 
     # DIVERGE: java.util.regex compiles these and answers `java`; repark raises.
@@ -677,7 +676,8 @@ def test_parse_url_query_key_regex_dialect_residual(spark: ReparkSession) -> Non
             with pytest.raises(PySparkException, match="invalid QUERY key pattern"):
                 frame.select(udf(F.lit(url), F.lit("QUERY"), F.lit(key)).alias("v")).to_arrow()
             with pytest.raises(PySparkException, match="invalid QUERY key pattern"):
-                spark.sql(f"SELECT {sql_name}('{url}', 'QUERY', '{key}') AS v").to_arrow()
+                key_literal = sql_string_literal(key)
+                spark.sql(f"SELECT {sql_name}('{url}', 'QUERY', {key_literal}) AS v").to_arrow()
 
 
 def test_parse_url_is_java_net_uri_not_a_normalizer(spark: ReparkSession) -> None:

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Enforce the two Python conventions Ruff cannot express.
+"""Enforce the Python conventions Ruff cannot express.
 
-SSOT for the nested-`def` ban and the "Pydantic, never `dataclasses`/`attrs`"
-rule. Prose (AGENTS.md "Python", .agents/skills/code-quality/SKILL.md,
-.agents/skills/engineering-method/SKILL.md) points here and never restates the
-tables. Mirrors the check_rust_file_size dual-wire shape (py = logic + SSOT,
-sh = wrapper).
+SSOT for the nested-`def` ban, the "Pydantic, never `dataclasses`/`attrs`"
+rule, and the SQP-1 SQL-string-literal-escape rule. Prose (AGENTS.md "Python",
+.agents/skills/code-quality/SKILL.md, .agents/skills/engineering-method/SKILL.md)
+points here and never restates the tables. Mirrors the check_rust_file_size
+dual-wire shape (py = logic + SSOT, sh = wrapper).
 
 The other Python conventions are already mechanically enforced and are
 deliberately NOT re-implemented here: type coverage is Ruff's `ANN` rule set
@@ -29,6 +29,12 @@ Rules over every *.py under SCAN_ROOTS (recursive):
    structured-data container. A row in DATACLASS_EXCEPTIONS with a reason is
    the only out; there is no inline pragma, because the fix is mechanical and a
    per-site escape hatch would make the rule decay.
+
+3. **No direct constant quote-doubling `replace` call for SQL (SQP-1).** The receiver-blind AST
+   rule evaluates strings, bounded integer `+`/`-`, `chr`, concatenation, and repetition. It
+   rejects the one-quote to two-quote call outside the product and standalone-harness helpers.
+   The shipped helper-call inventory is pinned separately; this syntax rule does not claim
+   semantic completeness.
 
 Exit 0 on clean; non-zero with path, line, measured count and the sanctioned
 outs. Fail-closed: an unreadable file, a file that will not parse, an empty
@@ -77,6 +83,19 @@ DATACLASS_EXCEPTIONS: dict[str, str] = {
 }
 
 _BANNED_CONTAINER_MODULES = frozenset({"dataclasses", "attr", "attrs"})
+_MAX_CONSTANT_INTEGER = 0x10FFFF
+_MAX_CONSTANT_INTEGER_DEPTH = 4
+_MAX_CONSTANT_TEXT_DEPTH = 16
+_MAX_CONSTANT_TEXT_NODES = 64
+_MAX_CONSTANT_TEXT_LENGTH = 2
+
+# Direct constant quote-doubling belongs only in the shared helper.
+SQL_LITERAL_HELPER_FILES: frozenset[str] = frozenset(
+    {
+        "python/repark-parity/src/repark_parity/sql.py",
+        "python/repark/src/repark/spark/_idents.py",
+    }
+)
 
 
 def _is_function(node: ast.AST) -> bool:
@@ -141,6 +160,101 @@ def find_banned_container_imports(tree: ast.Module) -> list[tuple[int, str]]:
     return hits
 
 
+def _constant_integer(node: ast.AST, depth: int = 0) -> int | None:
+    """Evaluate bounded integer literals and unary or binary addition and subtraction."""
+    if depth > _MAX_CONSTANT_INTEGER_DEPTH:
+        return None
+    if (
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, int)
+        and not isinstance(node.value, bool)
+    ):
+        return node.value if abs(node.value) <= _MAX_CONSTANT_INTEGER else None
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.UAdd | ast.USub):
+        operand = _constant_integer(node.operand, depth + 1)
+        if operand is None:
+            return None
+        value = operand if isinstance(node.op, ast.UAdd) else -operand
+        return value if abs(value) <= _MAX_CONSTANT_INTEGER else None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add | ast.Sub):
+        left = _constant_integer(node.left, depth + 1)
+        right = _constant_integer(node.right, depth + 1)
+        if left is None or right is None:
+            return None
+        value = left + right if isinstance(node.op, ast.Add) else left - right
+        return value if abs(value) <= _MAX_CONSTANT_INTEGER else None
+    return None
+
+
+def _constant_text(node: ast.AST) -> str | None:
+    """Evaluate only bounded constant forms used to spell quote arguments."""
+    values: dict[int, str | None] = {}
+    stack: list[tuple[ast.AST, int, bool]] = [(node, 0, False)]
+    visited = 0
+    while stack:
+        current, depth, expanded = stack.pop()
+        if depth > _MAX_CONSTANT_TEXT_DEPTH:
+            return None
+        if not expanded:
+            visited += 1
+            if visited > _MAX_CONSTANT_TEXT_NODES:
+                return None
+            stack.append((current, depth, True))
+            if isinstance(current, ast.BinOp) and isinstance(current.op, ast.Add | ast.Mult):
+                stack.append((current.right, depth + 1, False))
+                stack.append((current.left, depth + 1, False))
+            continue
+        value: str | None = None
+        if isinstance(current, ast.Constant) and type(current.value) is str:
+            if len(current.value) <= _MAX_CONSTANT_TEXT_LENGTH:
+                value = current.value
+        elif (
+            isinstance(current, ast.Call)
+            and isinstance(current.func, ast.Name)
+            and current.func.id == "chr"
+            and len(current.args) == 1
+            and not current.keywords
+        ):
+            integer = _constant_integer(current.args[0])
+            if integer is not None:
+                try:
+                    value = chr(integer)
+                except ValueError:
+                    value = None
+        elif isinstance(current, ast.BinOp) and isinstance(current.op, ast.Add):
+            left = values.get(id(current.left))
+            right = values.get(id(current.right))
+            if left is not None and right is not None:
+                length = len(left) + len(right)
+                if length <= _MAX_CONSTANT_TEXT_LENGTH:
+                    value = left + right
+        elif isinstance(current, ast.BinOp) and isinstance(current.op, ast.Mult):
+            text = values.get(id(current.left))
+            count = _constant_integer(current.right)
+            if text is None:
+                text = values.get(id(current.right))
+                count = _constant_integer(current.left)
+            if text is not None and count is not None and count >= 0:
+                length = len(text) * count
+                if length <= _MAX_CONSTANT_TEXT_LENGTH:
+                    value = text * count
+        values[id(current)] = value
+    return values.get(id(node))
+
+
+def find_sql_quote_doubling(tree: ast.Module) -> list[int]:
+    """Return receiver-blind replace calls with whitelisted constant quote arguments."""
+    hits: list[int] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "replace" or len(node.args) != 2 or node.keywords:
+            continue
+        if _constant_text(node.args[0]) == "'" and _constant_text(node.args[1]) == "''":
+            hits.append(node.lineno)
+    return sorted(hits)
+
+
 def check_file(path: Path, repo: Path) -> list[str]:
     relative = path.relative_to(repo).as_posix()
     try:
@@ -151,6 +265,11 @@ def check_file(path: Path, repo: Path) -> list[str]:
         tree = ast.parse(source)
     except SyntaxError as error:
         return [f"ERROR: {relative} does not parse ({error}) — refuse to pass closed"]
+    except (MemoryError, OverflowError, RecursionError) as error:
+        return [
+            f"ERROR: {relative} exceeds Python parser resource limits "
+            f"({type(error).__name__}) — refuse to pass closed"
+        ]
 
     lines = source.splitlines()
     errors: list[str] = []
@@ -179,6 +298,15 @@ def check_file(path: Path, repo: Path) -> list[str]:
                 f"to a BaseModel (`model_config = ConfigDict(frozen=True)` for the frozen case), "
                 f"or (2) add a row to DATACLASS_EXCEPTIONS in "
                 f"scripts/check_python_conventions.py with a reason."
+            )
+
+    if relative not in SQL_LITERAL_HELPER_FILES:
+        for lineno in find_sql_quote_doubling(tree):
+            errors.append(
+                f"ERROR: {relative}:{lineno} directly calls replace with constant one-quote and "
+                f"two-quote arguments. Use `repark.spark._idents.sql_string_literal` for the "
+                f"Spark door, or `escape_sql_single_quotes` for a DataFusion-native statement. "
+                f"The direct operation belongs only in {sorted(SQL_LITERAL_HELPER_FILES)}."
             )
 
     return errors
@@ -233,7 +361,8 @@ def main() -> int:
     print(
         f"python-conventions: {len(paths)} files clean "
         f"(nested-def rows {len(NESTED_DEF_EXCEPTIONS)}, "
-        f"dataclass rows {len(DATACLASS_EXCEPTIONS)})"
+        f"dataclass rows {len(DATACLASS_EXCEPTIONS)}, "
+        f"sql-escape helpers {sorted(SQL_LITERAL_HELPER_FILES)})"
     )
     return 0
 

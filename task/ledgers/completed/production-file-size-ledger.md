@@ -1,5 +1,10 @@
 # Production file-size refactor ledger
 
+> **Errata (2026-08-27, current-main integration):** PR #245 changed
+> `_format_datafusion_set_sql` and `_sql_literal` to use the canonical Spark string-literal helper.
+> The other 163 moved bodies retain their frozen-parent AST identity. The current test is
+> `test_moved_symbol_bodies_match_the_integrated_baseline`.
+
 This ledger closes when the production file-size refactor merges. It stays in `staging/` through
 the sequential Critic pass.
 

@@ -111,7 +111,7 @@ published history — an exposure **accepted by explicit decision**; provenance:
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
 <!-- ws id=dl ledgers=dl- state=open -->
-- **Document lifecycle (DL)** (chartered 2026-08-23; DL-1..DL-4 delivered). Unit ledgers live in
+- **Document lifecycle (DL)** (chartered 2026-08-23; DL-1..DL-5 delivered). Unit ledgers live in
   [task/ledgers/](task/ledgers/map.md) by state; `scripts/ledger_lifecycle.py` is the only mover.
   Three gates in `make ci` hold the class: `check-ledgers`, `check-ledger-grammar`,
   `check-docs-compaction`. Policy: [AGENTS.md](AGENTS.md) "Markdown document lifecycle".
@@ -283,14 +283,6 @@ moving it. Nothing is described in both places.
   plan-refuses both doors (fail-loud direction, pre-existing class). Also `split_part` with a
   NULL str and a non-foldable `partNum` 0 errors where Spark short-circuits to NULL. Live-verified
   2026-08-19; [task/fn-gt1-ledger.md](task/ledgers/archive/2026-08/2026-08-19-fn-gt1-ledger.md) Residuals.
-- **SQL string literals do not process backslash escapes (no disposition yet)** — the SQL door
-  parses `'\d'` as two characters where Spark's parser processes the escape to one
-  (`length('\d')`: Spark 1, repark 2). Found 2026-08-19 during the GT1-FIX review; affects every
-  SQL-door string literal containing a backslash (regex patterns most visibly — a pattern spelled
-  `'\\d'` reaches the engine as `\d` on Spark but as `\\d` here). Engine parser level, undisposed.
-- **`CAST(x AS BINARY)` unimplemented on the SQL door (no disposition yet)** — plan-time
-  `Unsupported SQL type BINARY`; the facade `.cast("binary")` path is unaffected. Found
-  2026-08-19 during the GT1-FIX review.
 
 **Closed out of this section.** The `$`-metadata introspection rider was fixed in unit H-1c on
 **2026-08-10** — see

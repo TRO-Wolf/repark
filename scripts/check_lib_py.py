@@ -70,7 +70,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split join planning from column projection helpers.",
     ),
     "python/repark/src/repark/spark/dataframe/plan_collapse.py": (
-        1422,
+        1418,
         "Plan-collapse transforms share one planner support module.",
         "Split transform families along their existing plan-node boundaries.",
     ),
@@ -80,7 +80,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split writer and reader bindings into separate cohesive modules.",
     ),
     "python/repark/src/repark/spark/functions.py": (
-        2033,
+        2030,
         "Facade function exports and wrappers remain consolidated.",
         "Split by function family while preserving the public re-export surface.",
     ),
@@ -95,7 +95,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split scalar UDF declarations from pandas UDF batch contracts.",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
-        2763,
+        2762,
         "ML feature transformer facades share one module.",
         "Split transformers by feature family with stable public re-exports.",
     ),

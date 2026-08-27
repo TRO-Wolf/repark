@@ -15,14 +15,16 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 - `session_configuration.py` — SQLConf defaults, DataFusion configuration validation and
   forwarding, and display-style normalization. `_SQLCONF_DEFAULTS` keeps the declared nested-dict
   inference default and the session-timezone and timestamp-type defaults. Runtime temp-directory
-  SET remains refused because the Rust builder already applied it.
+  SET remains refused because the Rust builder already applied it. DataFusion `SET` values route
+  through the shared Spark string-literal helper.
 - `catalog_resolution.py` — catalog selection, aliasing, namespace defaults, and table-name
   resolution. Its relation-parser edge is bound by the compatibility router to avoid a cycle.
 - `session_state.py` — active-session context state and the drop-in warning lifecycle.
 - `reader_support.py` — reader option sets and integer bounds, JDBC integer options, reader paths,
   JSON empty-input checks, CSV promotion, and reader schema-field normalization.
 - `create_dataframe_values.py` — scalar normalization, SQL literals, schema parsing, and Spark-type
-  to SQL-type mapping. Non-binary collated strings still refuse and `NullType` still maps to VOID.
+  to SQL-type mapping. String cells route through the shared Spark literal helper. Non-binary
+  collated strings still refuse and `NullType` still maps to VOID.
 - `create_dataframe_schema.py` — DDL parsing, pandas and Polars null witnesses, and schema-name
   permutation.
 - `create_dataframe_rows.py` — named-row binding, pandas and Polars row extraction, VALUES and
