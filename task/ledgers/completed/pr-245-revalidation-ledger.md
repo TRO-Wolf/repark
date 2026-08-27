@@ -903,7 +903,7 @@ Critic-3 pure logic **PASS**; claims-versus-tree **PASS**. Final delivery-return
 **CONVERGED**.
 
 ```yaml
-COVERAGE_ATTESTATION:
+STALE_COVERAGE_ATTESTATION:
   pr_unit: pr-245-revalidation-delivery-return
   supersedes: prior Critic coverage attestation in this ledger
   categories:
@@ -957,3 +957,103 @@ public PR file 10 passed; location translation 5 passed; Spark-literal pins 11 p
 5 passed; facade 3,743 passed with 71 skips and 44 warnings; frozen hashes and exact ratchets 2
 passed; source, convention, grammar, map, ledger, and `git diff --check main` gates exited 0;
 `make verify` exited 0. Disk was 651 GiB free before and after validation.
+
+## Actor post-push C-009 delivery return — 2026-08-27
+
+**RE-REVIEW REQUIRED.** The replacement Critic attestation above predates this navigation-test
+repair. This Actor note does not amend or renew that attestation.
+
+Delivery moved this ledger from `staging/` to `completed/`, but the navigation pin still required
+the staging map to name it. The pin now requires the completed map entry, retains both test-home
+map checks, and proves the staging map no longer names the delivered ledger. Production code and
+the frozen SQP-1 family are unchanged.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-pr245-actor-post-push-c009
+  agent: Actor
+  action: align the navigation pin with the ledger's completed lifecycle state
+  charter_trace: C-008, C-009
+  preconditions:
+    - ledger lifecycle home is completed: SATISFIED (completed file and map entry exist)
+    - staging navigation no longer names the ledger: SATISFIED
+    - both test-home maps remain required: SATISFIED
+  success_condition: the navigation pin describes the delivered tree without weakening test-family coverage
+  step_risks:
+    - a stale staging reference becomes accepted: HANDLED(explicit absence assertion)
+    - a test-home map check is lost: HANDLED(both original test-map rows retained)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED_TO_REVIEW
+  escalation: "—"
+```
+
+Post-push C-009 evidence:
+
+```text
+pytest exact navigation test: 1 passed, exit 0
+make py-test: 423 passed, exit 0
+make ci: exit 0
+```
+
+## Critic post-push C-009 disposition — 2026-08-27
+
+This section supersedes the preceding active attestation. C-009 is **REMEDIATED** and the
+post-push tree is **CONVERGED** with no open S1-or-higher finding.
+
+The only functional byte change since the merge/revalidation commit is the lifecycle record test.
+It retains both test-home map pins and requires `task/ledgers/completed/map.md` to name this ledger.
+It separately rejects the stale filename in `task/ledgers/staging/map.md`. The touched parity-test map has one
+required lockstep line that describes these navigation assertions. No production byte changed.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: pr-245-revalidation-post-push-c009
+  supersedes: delivery-return Critic coverage attestation in this ledger
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: C-009 was checked against the completed lifecycle state and exact three-file staged diff.
+      artifacts: [test_pr245_navigation_names_the_separate_revalidation_family, parity-test map, completed ledger]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Positive completed-map presence and negative stale staging-map presence were both exercised.
+      artifacts: [exact navigation test]
+    - id: AT-3
+      status: ATTACKED
+      evidence: A missing completed link or retained staging link fails the assertion rather than passing silently.
+      artifacts: [required map dictionary, explicit staging absence assertion]
+    - id: AT-4
+      status: N/A
+      justification: The change is a read-only record assertion with no mutable or concurrent state.
+    - id: AT-5
+      status: N/A
+      justification: The change adds no input, privilege, serialization, path-write, or execution surface.
+    - id: AT-6
+      status: ATTACKED
+      evidence: Both test-home map pins remain required; the touched parity-test map truthfully describes the new navigation assertions.
+      artifacts: [python/repark/tests/map.md, python/repark-parity/tests/map.md]
+    - id: AT-7
+      status: N/A
+      justification: Four fixed file reads add no system-breaking resource behavior.
+    - id: AT-8
+      status: ATTACKED
+      evidence: The assertion follows the repository ledger lifecycle contract after Delivery moved the file.
+      artifacts: [completed map, staging map, ledger lifecycle gate]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Navigation now identifies the ledger's actual completed home and rejects the obsolete home.
+      artifacts: [C-009 exact test, map-sync and ledger lifecycle gates]
+    - id: AT-10
+      status: ATTACKED
+      evidence: The exact test and all 423 record-suite tests pass; the negative assertion catches stale staging navigation.
+      artifacts: [1 exact test, make py-test]
+  reattested: [AT-1, AT-2, AT-3, AT-6, AT-8, AT-9, AT-10]
+  complete: true
+  converged: true
+```
+
+Post-push Critic commands: exact navigation test 1 passed; `make py-test` 423 passed; ledger
+lifecycle, ledger grammar, map sync, and the diff check exited 0. The follow-up contains this
+record test, its required parity-test map update, and this completed ledger.
+Disk remained at 651 GiB free.
