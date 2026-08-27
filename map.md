@@ -99,7 +99,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   names no tool).
   `ARCHITECTURE.md` — component boundaries, the crate DAG, and the three runtime flows.
   `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
-  `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
+  `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts). The owner
+  ruling at the start of `AGENTS.md` and its adapter copy are byte-preserved by
+  `make check-owner-ruling`; the model-family restriction itself is held by compliance and review.
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
 - `.agents/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
   `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc

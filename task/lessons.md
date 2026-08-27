@@ -4,6 +4,11 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-08-27 — PR-247 ledger pins
+
+- **DO run the ledger-grammar gate before claiming a completed ledger is pinned.** Evidence prose
+  that names tests is not a citation; every `PROVEN` clause needs a matching `pins:` marker.
+
 ## 2026-08-27 — PR-245 post-merge integration
 
 - **DO make lifecycle pins accept staging, completed, and archived ledger homes.** Pickup must

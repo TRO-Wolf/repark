@@ -202,6 +202,9 @@ jobs:
       # (DL-4; wired here under a one-time owner grant, 2026-08-25).
       - name: live-document guard (check_docs_compaction)
         run: python3 scripts/check_docs_compaction.py
+
+      - name: owner-ruling preservation guard (check_owner_ruling)
+        run: python3 scripts/check_owner_ruling.py
       # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
       # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
       # Mirrors `make workflows-parse`.

@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -336,6 +336,10 @@ ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy
 	@# campaigns leave STATUS for docs/history/) and the gate reads the result.
 	python3 scripts/ledger_lifecycle.py archive
 	python3 scripts/check_docs_compaction.py
+
+.PHONY: check-owner-ruling
+check-owner-ruling: ## Preserve the owner ruling and its enforcement boundary byte-for-byte
+	python3 scripts/check_owner_ruling.py
 
 .PHONY: check-docs-compaction
 check-docs-compaction: ## Live-document guard: no closed campaign in STATUS, no merged unit on the slate, every workstream marked, byte ceilings (DL-4)

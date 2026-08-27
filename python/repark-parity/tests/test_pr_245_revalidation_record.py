@@ -29,8 +29,8 @@ _PYTHON_MAIN_BASELINES = {
     "python/repark-parity/bench/tpch/runner.py": 1780,
 }
 _FROZEN_SQP_FILES = {
-    "task/ledgers/completed/sqp-1-spark-string-literals-ledger.md": (
-        "b5dc24e4b26e798b77b8375cee3a3960f5a646ea9c27641138930199c5a50df3"
+    "task/ledgers/archive/2026-08/2026-08-27-sqp-1-spark-string-literals-ledger.md": (
+        "e36d503959d904946d444d4ecdc0ab90b2d22387458cac3256fd319e026102fc"
     ),
     "crates/repark-spark/src/tests/spark_string_literals.rs": (
         "58f2910bcde9f82d6b7450c601beb9fcd984300ac5e4be6cd10a40c6bde3b045"
@@ -294,7 +294,7 @@ def test_pr245_router_comment_states_only_the_local_front_door_invariant() -> No
 
 
 def test_pr245_original_sqp_record_and_pin_family_are_byte_frozen() -> None:
-    """The completed ledger and original pin files retain their frozen hashes."""
+    """The archived ledger and original pin files retain their frozen hashes."""
     for relative, expected in _FROZEN_SQP_FILES.items():
         digest = hashlib.sha256((_REPO / relative).read_bytes()).hexdigest()
         assert digest == expected, relative
