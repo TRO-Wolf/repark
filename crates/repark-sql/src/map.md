@@ -5,6 +5,7 @@
 Source for the ANSI SQL door. `lib.rs` is a manifest (check_lib_rs); the router body lives in
 `router.rs`. All NEW code — there is no port census here, so every behavior (including every
 refusal) carries its own test in the same change.
+Source documentation records behavior and contracts; authorship evidence stays outside code.
 
 The router's ORDER is the design's, and each position is load-bearing: text guards run first
 (multi-statement before anything else), then the async BUG-001 MoR valve, then the PRE-PARSE

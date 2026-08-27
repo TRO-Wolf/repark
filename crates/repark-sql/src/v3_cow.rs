@@ -1,6 +1,3 @@
-//! Model: Claude Fable 5
-//! CodeQuality:S
-//!
 //! ANSI-door pins: copy-on-write DML on an adopted v3 table refuses (`V3-COW-1`, 2026-08-25).
 //!
 //! The ANSI door refuses `CALL` (Q7). Adoption uses the same `Catalog::register_table` the

@@ -1,25 +1,5 @@
-# Build the repark wheel and smoke-test that it imports — catches PyO3/ABI/compile breakage early
-# (the main CI Rust jobs do not build the cdylib as a wheel). Two paths, tuned for cost:
-#
-#   - smoke (PRs + main): a fast DEBUG wheel built on the host (no manylinux container), then
-#     `import repark` + the full facade suite against the packaged wheel (the real-artifact rule's
-#     standing home — docs/testing.md). **No Swatinem/rust-cache** here: this workflow is also
-#     tag-triggered, so zizmor treats a restore/write cache step as `cache-poisoning` unless it is
-#     fully disabled. `lookup-only: true` is *not* a restore (existence probe only) and still
-#     defaults `save-if` to true (write on miss) — so it is neither warm nor write-safe; the step
-#     is omitted instead. Smoke proves the cdylib compiles + imports + behaves (not a release LTO
-#     manylinux build).
-#   - release-wheels (tags only): the real optimized manylinux wheel (`--release`), uploaded as an
-#     artifact. Rare, so the heavy build is acceptable there. **No shared build-cache restore** on
-#     this path (zizmor `cache-poisoning`): `sccache: "false"`; no rust-cache step. Published
-#     wheels must not rebuild from prior CI cache state.
-#
-# Ported from the port source at phase-3 PR-5 with two deliberate changes:
-#   1. NO `paths:` filter on the pull_request trigger — the `smoke` job is a REQUIRED check, and a
-#      path-filtered required check deadlocks non-matching PRs (task/lessons.md).
-#   2. Wheels install by EXPLICIT FILE PATH, never `--find-links … repark` by bare name: a PyPI
-#      name-reservation package (`repark==0.0.1`) outversions every local 0.0.0 wheel and silently
-#      shadows it (found live during the phase-3 baseline runs).
+# PR and main builds use a host debug wheel; tags use a cold manylinux release build without cache.
+# Keep this required workflow unfiltered and install explicit wheel paths to prevent PyPI shadowing.
 name: wheels
 
 on:
@@ -52,9 +32,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
         with:
           toolchain: "1.96.0"
-      # No Swatinem/rust-cache: workflow is tag-triggered overall → zizmor `cache-poisoning` on any
-      # restore path; `lookup-only` does not download/restore and still allows save-on-miss. Cold
-      # host debug maturin is acceptable for smoke (import + facade only).
+      # Do not restore or save shared build caches in a tag-triggered workflow. `lookup-only`
+      # still permits a save on miss and does not provide a warm build.
       - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b  # v1
         with:
           maturin-version: "v1.14.1"  # Makefile MATURIN pin
@@ -72,15 +51,8 @@ jobs:
           /tmp/wheeltest/bin/pip install "$WHEEL"
           /tmp/wheeltest/bin/python -c "import repark; print('repark', repark.__version__)"
       - name: facade tests against the built wheel
-        # The wheel is already built above, so the full facade pytest suite (the CI home of
-        # `make py-test-facade` — a facade regression must not pass CI on an import smoke alone)
-        # costs only the test runtime. ALL FOUR extras install (numpy, pandas, polars, ml-ext)
-        # so CI runs the same 2,459-pass surface as the design §6.3 full-extras cohort — a
-        # pandas-only install silently skips 67 acceptance passes (the whole ml-ext delegated
-        # backend + polars interop surface). `python/repark-parity` (pure-Python, pyarrow only)
-        # is the differential-comparison core the parity-style facade tests import — in the uv
-        # workspace it resolves as a member, but this bare wheel-test venv must install it
-        # explicitly. pyspark and duckdb stay ABSENT (their gated tests must skip).
+        # Install all four extras and repark-parity so this bare venv runs the full facade cohort.
+        # Keep PySpark and DuckDB absent so their gated tests skip.
         run: |
           # ABSOLUTE file:// URL — pip rejects a relative-path file URI ("non-local file URIs
           # are not supported"), which would red this required job on every PR.

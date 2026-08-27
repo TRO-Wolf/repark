@@ -114,7 +114,6 @@ pub(crate) fn sort_position_delete_pairs(pairs: &mut [PositionDeletePair]) {
 /// Parse `write.delete.granularity`. Absent → [`DeleteGranularity::File`] (Spark). `'file'` /
 /// `'partition'` accepted case-insensitively. Anything else refuses loud.
 ///
-/// Model: Grok 4.6 xHigh
 /// pins: mw-9-delete-granularity/C-001, C-004
 /// ===========================================================================================
 ///
@@ -266,7 +265,6 @@ async fn data_file_partitions(table: &Table) -> Result<HashMap<String, (i32, Str
 /// ===========================================================================================
 /// Group pairs by [`parse_delete_granularity`], sort each group, and stamp the data-file partition.
 ///
-/// Model: Grok 4.6 xHigh
 /// ===========================================================================================
 async fn prepare_position_delete_groups(
     table: &Table,

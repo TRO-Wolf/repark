@@ -1,6 +1,4 @@
-# License compliance, banned/duplicate crates, and source restrictions (config in deny.toml).
-# Run on the host runner (not the cargo-deny Docker action): that action runs in a musl container
-# that can't honor this repo's pinned rust-toolchain.toml, which fails before any check runs.
+# Run deny.toml on the host because the musl action cannot use the pinned Rust toolchain.
 name: cargo-deny
 
 on:
@@ -8,9 +6,8 @@ on:
     branches: [main]  # PR coverage comes from `pull_request`; this avoids the double run
     paths: ["**/Cargo.toml", "**/Cargo.lock", "deny.toml", ".github/workflows/cargo-deny.yml"]
   pull_request:
-    # No `paths:` filter — required status check; a path-filtered required check never runs on
-    # non-matching PRs, leaving them permanently BLOCKED (task/lessons.md 2026-08-07). The
-    # `push` trigger above stays filtered: main-branch runs are record-keeping, not merge gates.
+    # Required PR checks cannot use path filters; non-matching PRs would wait forever. The filtered
+    # push trigger is only a main-branch record.
 
 permissions:
   contents: read

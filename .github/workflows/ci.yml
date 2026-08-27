@@ -1,15 +1,5 @@
-# Main PR gate (tier 1: every PR, no secrets, GitHub-hosted, read-only token).
-# Rust lint (fmt + clippy + check) + Rust test (workspace) as separate jobs, Python (ruff), and
-# the repo guards (map.md + workflow parse + crate dependency policy + lib.rs thinness +
-# rust file-size + the structural manifest).
-# Note on `cargo test --locked --workspace` (not `--all-features`): `--all-features` would enable
-# the repark-python `extension-module` feature, which tells PyO3 not to link libpython — fine for
-# a wheel, but it breaks linking a standalone test binary. See AGENTS.md "PyO3 build notes"
-# (applies from phase 3; the rule is enforced from day one so it never regresses).
-#
-# Phase-1 shape: the workspace has members and every job is always-on. The v1 diff-classifier
-# (`detect`) that path-filtered the heavy jobs stays deferred — it returns when rust-test
-# exceeds ~3 min (recorded in workflows/map.md).
+# Tier-1 PR gate: always-on, read-only, and secret-free. Use workspace tests without all features
+# because PyO3's `extension-module` feature cannot link a standalone test binary.
 name: CI
 
 on:
@@ -27,11 +17,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Phase-3 arming (docs/design/python-facade.md §7): lint and test are SPLIT into two jobs with
-  # one cache prefix each and a fresh disk each — the combined job restoring both prefixes onto
-  # one runner disk is the exact configuration v1 outgrew (ENOSPC + ld SIGBUS, three incidents).
-  # Both jobs install Python 3.12 (libpython) so the PyO3 cdylib links the day repark-python
-  # lands. No debuginfo, no incremental: CI never reuses it and it ~doubles artifact size.
+  # Separate lint and test caches prevent runner disk exhaustion. Both jobs need Python 3.12 to
+  # link PyO3; discarded CI trees do not need debug data or incremental artifacts.
   rust-lint:
     name: Rust lint (fmt + clippy + check)
     runs-on: ubuntu-latest
@@ -60,17 +47,13 @@ jobs:
         with:
           toolchain: "1.96.0"
           components: rustfmt, clippy
-      # Prefix-keyed per dependency family. `shared-key` is load-bearing: rust-cache otherwise
-      # mixes the JOB ID into the key, so cache-warm.yml's warm-lint saves would land under keys
-      # this job never restores. prefix-key AND shared-key MUST match warm-lint.
+      # Both keys must match cache-warm.yml; rust-cache otherwise adds the job ID and misses the
+      # warm cache.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6  # v2.9.2 (node24)
         with:
           prefix-key: "v2-df54"
           shared-key: "lint"
-      # Dual-wired through the Makefile targets so local == CI by construction: the targets carry
-      # the deliberate clippy split (general gate with -A clippy::disallowed_methods; the
-      # panic-ban target is the only place clippy.toml's disallowed-methods list is live,
-      # --lib --bins).
+      # Use the Makefile targets so local and CI keep the same clippy split and panic ban.
       - name: rustfmt
         run: make rust-fmt-check
       - name: clippy
@@ -116,11 +99,8 @@ jobs:
           shared-key: "test"
       - name: test
         run: make rust-test
-      # Surface-matrix test-name liveness (H-2 G8): every matrix.rs Tested cite must appear
-      # in `cargo test --locked --workspace --lib --tests --bins -- --list`. Dual-wired
-      # with `make check-matrix-test-liveness` / `make ci`. SSOT:
-      # scripts/check_matrix_test_liveness.py. Lives here (not the guards job) because
-      # the check needs the compiled test binaries rust-test just produced.
+      # This gate needs the test binaries from this job. It keeps every matrix.rs test citation
+      # live and mirrors `make check-matrix-test-liveness`.
       - name: matrix test-name liveness
         run: ./scripts/check_matrix_test_liveness.sh
       - name: disk after
@@ -151,17 +131,12 @@ jobs:
           enable-cache: true
       - name: map.md guard
         run: bash scripts/check_map_md.sh
-      # Crate dependency-policy guard: a ~0.07 s `cargo metadata` read with no build, so an
-      # undeclared edge, a wrong dependency kind or a layering inversion fails in seconds rather
-      # than after minutes of compilation. Dual-wired with `make check-crate-dag` (ci.yml runs
-      # raw commands and never invokes `make ci`, so the gate needs wiring in both places).
-      # Tier map + roles + allowed-edge table SSOT: scripts/check_crate_dag.py.
+      # Mirror `make check-crate-dag`; scripts/check_crate_dag.py owns tiers, roles, and allowed
+      # dependency kinds.
       - name: crate-DAG layering guard
         run: ./scripts/check_crate_dag.sh
-      # Structural-manifest guard: repo-manifest.toml must agree with the Cargo workspace, the
-      # declared documents, the canonical make targets, STATUS.md and the crate-root map.md
-      # files. Pure text (no cargo, no network). Dual-wired with `make check-manifest`.
-      # SSOT: repo-manifest.toml + scripts/check_manifest.py.
+      # Mirror `make check-manifest`; repo-manifest.toml and scripts/check_manifest.py own the
+      # structural inventory.
       - name: repo-manifest guard (check_manifest)
         run: ./scripts/check_manifest.sh
       # lib.rs thinness (no inline #[cfg(test)] mod {…}; line ceilings).
@@ -172,42 +147,29 @@ jobs:
       # Dual-wired with `make check-rust-file-size` / `make ci`. SSOT: scripts/check_rust_file_size.py.
       - name: rust file-size guard (check_rust_file_size)
         run: ./scripts/check_rust_file_size.sh
-      # parity-live dual-wire: Makefile `parity-live` ↔ parity-live.yml load-bearing flags must
-      # agree (uv sync extras, --no-install-package, maturin pin, uv run --locked --no-sync,
-      # env pins). Compares the two surfaces to each other — never a third list. Fail-closed.
-      # Dual-wired with `make check-parity-live-dual-wire` / `make ci`.
-      # SSOT: scripts/check_parity_live_dual_wire.py.
+      # Compare parity-live.yml directly with the Makefile target and fail closed on any required
+      # flag mismatch. Mirror `make check-parity-live-dual-wire`.
       - name: parity-live dual-wire guard
         run: ./scripts/check_parity_live_dual_wire.sh
-      # map.md link validity: every relative link in every tracked map resolves (an absolute
-      # target is a finding of its own). Dual-wired with `make check-map-sync` and the pre-commit
-      # `map-sync-guard`. SSOT: scripts/sync_map_md.py.
+      # Every map link must resolve. Mirror `make check-map-sync` and the pre-commit guard.
       - name: map.md link-validity guard (sync_map_md)
         run: python3 scripts/sync_map_md.py --check
-      # Ledger lifecycle guard: a *-ledger.md under task/ outside its bin, an archive name whose
-      # date prefix disagrees with its month, a dead -ledger.md link in ANY tracked markdown, and a
-      # completed/ or archive/ ledger edited beyond a link repair or a prepended errata note.
-      # Needs fetch-depth: 0 above. Dual-wired with `make check-ledgers`.
-      # SSOT: scripts/ledger_lifecycle.py (DL-1).
+      # Full history lets the ledger guard reject wrong bins, dead links, and edits to frozen
+      # records. Mirror `make check-ledgers`.
       - name: ledger lifecycle guard (check_ledgers)
         run: python3 scripts/ledger_lifecycle.py check
-      # Ledger grammar guard over task/ledgers/{staging,completed}/: clause rows, `pins:` citations
-      # binding tests to clauses, the Critic's attestation form; EXCEPTIONS ratchet down only.
-      # Dual-wired with `make check-ledger-grammar`. SSOT: scripts/check_ledger_grammar.py (DL-2).
+      # Keep live ledger clauses, pins, attestations, and exception ratchets valid. Mirror
+      # `make check-ledger-grammar`.
       - name: ledger grammar guard (check_ledger_grammar)
         run: python3 scripts/check_ledger_grammar.py
-      # Live-document guard over STATUS.md + briefs/next-sequence.md: no closed campaign still in
-      # STATUS, no merged unit still on the slate, every workstream inside a `ws` block, byte
-      # ceilings. Dual-wired with `make check-docs-compaction`. SSOT: scripts/check_docs_compaction.py
-      # (DL-4; wired here under a one-time owner grant, 2026-08-25).
+      # Reject stale workstream blocks and size regressions in live state documents. Mirror
+      # `make check-docs-compaction`.
       - name: live-document guard (check_docs_compaction)
         run: python3 scripts/check_docs_compaction.py
 
       - name: owner-ruling preservation guard (check_owner_ruling)
         run: python3 scripts/check_owner_ruling.py
-      # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
-      # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
-      # Mirrors `make workflows-parse`.
+      # Parse first because zizmor exits successfully when broken YAML yields no auditable input.
       - name: workflow parse guard
         run: uv run --no-project --with pyyaml==6.0.3 python scripts/check_workflows_parse.py
 
@@ -242,9 +204,7 @@ jobs:
       # pyproject floors. Validates only — never rewrites the lock.
       - name: uv lock --locked
         run: uv lock --locked
-      # Parity-harness tests (mirrors `make py-test`): the comparison core + census-machinery
-      # unit tests. Cheap enough to run on every event. pydantic is a PYC-4 hard dep of
-      # converted census/fuzz records (`--no-project` does not read pyproject.toml).
+      # Mirror `make py-test`; `--no-project` requires pydantic to be supplied explicitly.
       - name: parity-harness tests
         run: >
           PYTHONPATH=python/repark-parity/src

@@ -113,7 +113,7 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Extract predicate and file-selection logic from commit assembly.",
     ),
     "crates/repark-iceberg/src/write/position_delete.rs": (
-        1068,
+        1066,
         "Position-delete planning and writer mechanics share one module.",
         "Extract row-position selection from delete-file emission.",
     ),

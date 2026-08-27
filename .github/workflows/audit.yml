@@ -1,6 +1,4 @@
-# Rust CVE scanning against the RustSec advisory database. The large aws-sdk + arrow + parquet +
-# iceberg dependency tree makes this the Rust counterpart to pip-audit on the Python side.
-# cargo-audit is version-pinned identically to Makefile CARGO_AUDIT_VERSION (0.22.1).
+# Scan Rust dependencies with the same pinned cargo-audit version as the Makefile.
 name: cargo-audit
 
 on:

@@ -22,7 +22,6 @@ struct Door {
 }
 
 impl Door {
-    /// Model: Grok 4.6 xHigh
     async fn sql(
         &self,
         sql: &str,
@@ -36,14 +35,12 @@ impl Door {
         frame.collect().await
     }
 
-    /// Model: Grok 4.6 xHigh
     async fn ok(&self, sql: &str) {
         self.sql(sql)
             .await
             .unwrap_or_else(|err| panic!("`{sql}` must succeed: {err}"));
     }
 
-    /// Model: Grok 4.6 xHigh
     async fn err(&self, sql: &str) -> String {
         match self.sql(sql).await {
             Ok(_) => panic!("`{sql}` must fail"),
@@ -51,7 +48,6 @@ impl Door {
         }
     }
 
-    /// Model: Grok 4.6 xHigh
     async fn table(&self, namespace: &str, table: &str) -> iceberg::table::Table {
         self.catalog
             .load_table(&TableIdent::new(
@@ -62,7 +58,6 @@ impl Door {
             .unwrap_or_else(|err| panic!("`{namespace}.{table}` must load: {err}"))
     }
 
-    /// Model: Grok 4.6 xHigh
     async fn table_exists(&self, namespace: &str, table: &str) -> bool {
         self.catalog
             .table_exists(&TableIdent::new(
@@ -74,7 +69,6 @@ impl Door {
     }
 }
 
-/// Model: Grok 4.6 xHigh
 async fn door_with_config(config: SessionConfig) -> Door {
     let warehouse_dir = TempDir::new().expect("warehouse tempdir");
     let warehouse = warehouse_dir
@@ -110,7 +104,6 @@ async fn door_with_config(config: SessionConfig) -> Door {
     }
 }
 
-/// Model: Grok 4.6 xHigh
 async fn door_with_schema() -> Door {
     let door = door_with_config(SessionConfig::new().with_information_schema(true)).await;
     let location = format!("{}/sales", door.warehouse);
@@ -156,7 +149,6 @@ impl ExtensionOptions for TestAllowCreateV3Config {
     }
 }
 
-/// Model: Grok 4.6 xHigh
 async fn door_with_v3_opt_in() -> Door {
     let mut config = SessionConfig::new().with_information_schema(true);
     config
@@ -174,7 +166,6 @@ async fn door_with_v3_opt_in() -> Door {
 
 /// pins: v3-2-create-v3-opt-in/C-004
 ///
-/// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn format_version_three_without_opt_in_refuses() {
     let door = door_with_schema().await;
@@ -198,7 +189,6 @@ async fn format_version_three_without_opt_in_refuses() {
 
 /// pins: v3-2-create-v3-opt-in/C-002, C-006, C-013
 ///
-/// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn format_version_three_opt_in_creates_v3() {
     let door = door_with_v3_opt_in().await;
@@ -232,7 +222,6 @@ async fn format_version_three_opt_in_creates_v3() {
 
 /// pins: v3-2-create-v3-opt-in/C-006
 ///
-/// Model: Grok 4.6 xHigh
 #[tokio::test]
 async fn or_replace_applies_requested_v3() {
     let door = door_with_v3_opt_in().await;

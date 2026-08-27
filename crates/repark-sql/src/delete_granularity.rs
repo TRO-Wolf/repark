@@ -1,6 +1,3 @@
-//! Model: Grok 4.6 xHigh
-//! CodeQuality:S
-//!
 //! ANSI-door pins for Iceberg `write.delete.granularity`.
 //!
 //! Split out of `tests.rs` so that crate-root file stays under its rust-file-size ceiling.

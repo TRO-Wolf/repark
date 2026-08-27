@@ -1,19 +1,5 @@
-# Live PySpark oracle tier — the drift detector for the record-then-pin parity discipline. Routine
-# CI is JVM-free and never re-checks the pinned goldens; this workflow spins up real Spark 4.1.2,
-# re-derives every mandated golden, and asserts repark == pinned golden == live Spark (value AND
-# Arrow-path type), catching golden drift (a stale / hand-edited pin) and oracle drift (a Spark bump
-# that changes semantics under a still-green pin). It mirrors `make parity-live` step for step.
-# No secrets, no AWS.
-#
-# Ported from the port source at phase-3 PR-6 and ARMED: nightly cron + manual dispatch. The port
-# source's `pull_request` paths trigger is deliberately DROPPED (not paused): the testing contract
-# runs tier-2 workflows against MERGED CODE ONLY (docs/testing.md "live oracle tier"). NOT a
-# required check.
-#
-# NOTE (honest disclosure): GitHub-Actions runtime behaviour — setup-java on the runner, the cron
-# firing — cannot be exercised locally. The local proof is `make parity-live` running the identical
-# commands + `make workflows-lint` (zizmor); the first `workflow_dispatch` run is the post-merge
-# acceptance step (operator-side, design §11).
+# Nightly and manual runs compare repark, pinned goldens, and live Spark 4.1.2 on merged code only.
+# `make parity-live` proves the commands locally; GitHub scheduling remains a post-merge check.
 name: parity-live
 
 on:
@@ -56,30 +42,16 @@ jobs:
           version: "0.9.5"  # Makefile UV_VERSION
           python-version: "3.12"
           enable-cache: true
-      # `make parity-live`, step for step: provision pyspark 4.1.2 (the `record` extra, pinned in
-      # uv.lock) plus the four facade extras, and build the native module (`maturin` pin ==
-      # Makefile MATURIN). Every sync flag is load-bearing, because `uv sync` is EXACT — it
-      # uninstalls whatever the requested extras do not name:
-      #   --locked : uv.lock is an INPUT, never an output; a bare sync may rewrite it.
-      #   --extra numpy/pandas/polars/ml-ext : the four facade extras (docs/port/census.md §4).
-      #     Without them polars, xgboost, lightgbm and scikit-learn are absent and the facade
-      #     suite silently SKIPs every polars/ML test — a green live tier over a shrunken
-      #     denominator, which is not a gate.
-      #   --no-install-package repark : keeps `maturin develop` AUTHORITATIVE (otherwise uv
-      #     installs repark from source and shadows maturin's build of the cdylib).
-      # The pytest step below uses `uv run --locked --no-sync` for the same two reasons: `uv run`
-      # re-syncs by default, and it has no --no-install-package escape (`--locked` is inert while
-      # --no-sync is present; kept as a guard should --no-sync ever be dropped).
-      # DUAL-WIRED with the Makefile `parity-live` target — change one, change the other.
+      # Keep every sync and run flag identical to `make parity-live`; each prevents lock mutation,
+      # missing optional cohorts, or the source package from shadowing the maturin build.
       - name: sync record + facade extras (pyspark 4.1.2) + build native module
         run: |
           uv sync --locked --extra record \
             --extra numpy --extra pandas --extra polars --extra ml-ext \
             --no-install-package repark
           (cd python/repark && uvx maturin@1.14.1 develop)
-      # The full facade suite AND the live oracle tier. REPARK_PARITY_LIVE=1 arms the live tests;
-      # setup-java put a JVM on PATH, so they run (rather than skip). SPARK_LOCAL_IP keeps the local
-      # driver deterministic on the runner.
+      # REPARK_PARITY_LIVE and the JVM arm the live oracle; SPARK_LOCAL_IP keeps its local driver
+      # deterministic.
       - name: facade suite + live oracle tier (REPARK_PARITY_LIVE=1)
         env:
           REPARK_PARITY_LIVE: "1"

@@ -43,6 +43,7 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
   `ad`/`adosc_3_10`/`obv`/`mfi_14` and `flat_ad`/`flat_adosc_3_10`/`flat_obv`/`flat_mfi_14`
   over the additive `fixture_volume` / `fixture_flat_volume` columns — dedicated RNGs
   seed 4242 / 77, never the OHLC RNGs)
+  (this map inventories the series; source comments state only the generator invariant)
   from C TA-Lib 0.4.0 via `polars-talib` (pinned in its header; asserts the bundled TA-Lib
   version). Run `uv run python/repark-parity/record_ta_goldens.py`; output lands in
   `crates/repark-ta/tests/goldens/`.
@@ -63,6 +64,8 @@ core is pure pyarrow — no Spark, no JVM — so it runs in routine CI.
 
 - Up: [../map.md](../map.md)
 - Related: the testing contract is [../../docs/testing.md](../../docs/testing.md).
+- Audit: [comment compaction ledger](../../task/ledgers/completed/comment-compaction-ledger.md);
+  `pins: comment-compaction/C-001, C-002, C-003, C-004, C-005, C-006, C-007`.
 
 ### PR-6 note
 - The `record` extra is PINNED `pyspark==4.1.2` (was `>=3.5` — the live-oracle drift detector's

@@ -1,41 +1,15 @@
-# Tier-2 live-AWS acceptance — the ONLY workflow that touches real AWS, designed net-new at
-# phase-3 PR-6 (docs/design/python-facade.md §7.4; no port-source template exists — the source
-# repo only ever ran this suite locally behind the gate variable).
-#
-# Contract (AGENTS.md "Tier-2 CI"): nightly on the default branch + manual dispatch, OIDC only,
-# MERGED CODE ONLY, GitHub-hosted runners, no secrets in tier 1, never a required check.
-#
-# Security posture, each line load-bearing (full operator setup: docs/tier2-aws.md):
-#   - `environment: aws-acceptance` — deployment protection: a manual dispatch requires the
-#     environment's human approval before credentials mint, AND the environment's deployment-branch
-#     policy (restricted to `main`, runbook §1) is what makes "merged code only" a PLATFORM fact —
-#     not the in-file ref guard below (which lives in the file an attacker would be editing) and
-#     not the IAM sub (which can only pin the environment, one claim per run).
-#   - CREDENTIALS MINT LAST: the configure-aws-credentials step sits immediately before the pytest
-#     step, AFTER checkout/toolchains/uv-sync/maturin — so no third-party build script, PyPI
-#     download, or restored cache ever runs inside the credentialed window.
-#   - `mask-aws-account-id: true` registers the account id (and thus every ARN printed by a pytest
-#     traceback) as a secret value in the public run log.
-#   - NEVER-TEARDOWN OF TABLES AS A PERMISSIONS FACT: the role still has no glue:DeleteTable /
-#     glue:DeleteDatabase. OD-3 (owner-executed) adds s3:DeleteObject on the warehouse scratch
-#     prefix only so CALL expire_snapshots / rewrite_* can remove expired snapshot files.
-#     Scratch *tables* still accumulate; an S3 lifecycle expiry on the prefix is configured
-#     once by a human (docs/tier2-aws.md).
-#   - The job runs the acceptance MODULE only, never the full facade suite (blast radius + minutes).
-#   - The harness refuses to run against the committed placeholder buckets (assert_real_buckets_
-#     configured): the operator MUST supply their own buckets via REPARK_ACCEPT_BRONZE_BUCKET /
-#     REPARK_ACCEPT_WAREHOUSE, or the job fails loud rather than signing requests to squattable
-#     global names.
-#
-# Inputs (operator-side setup in docs/tier2-aws.md): repository VARIABLES `AWS_ACCEPTANCE_REGION`
-# (= the table bucket's region), `REPARK_ACCEPT_DS`, `REPARK_ACCEPT_ENTITY`,
-# `REPARK_ACCEPT_ID_COL`, `REPARK_ACCEPT_BRONZE_BUCKET`, `REPARK_ACCEPT_WAREHOUSE`; repository
-# SECRETS `AWS_ACCEPTANCE_ROLE_ARN` and `TABLE_BUCKET_ARN` (both account-identifying — this repo is
-# public; absent TABLE_BUCKET_ARN ⇒ the S3 Tables leg SKIPs, exactly as the test module behaves).
-#
-# NOTE (honest disclosure): runner behaviour (OIDC exchange, environment gating, cron) cannot be
-# exercised locally; the local proof is `make workflows-lint` + this file's parse, and the first
-# `workflow_dispatch` run is the operator's post-merge acceptance step (design §11).
+# This is the only live-AWS workflow. It runs merged code nightly or manually through OIDC on a
+# GitHub-hosted runner; it is never a required check and puts no secrets in tier 1.
+# `environment: aws-acceptance` supplies human approval and the main-only deployment policy. The
+# in-file ref guard and IAM subject do not establish that branch boundary.
+# Mint credentials only after checkout, tool setup, dependency sync, and the native build. Mask the
+# account ID so tracebacks cannot expose ARNs in the public log.
+# The role cannot delete Glue tables or databases. It can delete objects only under the warehouse
+# scratch prefix for maintenance; lifecycle policy cleans accumulated scratch tables.
+# Run only the acceptance module. Refuse placeholder buckets before signing requests. A missing
+# TABLE_BUCKET_ARN skips the S3 Tables leg.
+# docs/tier2-aws.md owns operator inputs and setup. Local checks cannot prove environment approval,
+# OIDC exchange, or scheduling; the first manual run is the post-merge acceptance proof.
 name: aws-acceptance
 
 on:
@@ -95,12 +69,8 @@ jobs:
           aws-region: ${{ vars.AWS_ACCEPTANCE_REGION }}
           role-session-name: repark-tier2-acceptance
           mask-aws-account-id: true
-      # The acceptance MODULE only. The harness creates into the scratch namespace with a
-      # scratch table prefix and has no DROP TABLE path (Glue delete stays denied). OD-3 allows
-      # s3:DeleteObject on the warehouse scratch prefix for expire/rewrite. It refuses the
-      # committed placeholder buckets. The S3 Tables leg self-skips when TABLE_BUCKET_ARN is
-      # unset. `--no-project` + VIRTUAL_ENV makes the maturin develop install authoritative
-      # (the py-test-facade pattern).
+      # Run only the scratch-scoped module; Glue deletion stays denied and placeholder buckets
+      # fail loud. `VIRTUAL_ENV` keeps the maturin build authoritative.
       - name: acceptance module (REPARK_AWS_ACCEPTANCE=1)
         env:
           REPARK_AWS_ACCEPTANCE: "1"

@@ -1,18 +1,5 @@
-# Release publishing — tag-triggered, PyPI via trusted publishing (OIDC). Armed at the first
-# tagged release per docs/release.md; runs only on `v*` tags, never on branches or PRs.
-#
-# Design notes (docs/release.md is the runbook):
-#   - `environment: release` binds the publish job to a GitHub environment so the owner can
-#     attach required reviewers / protection before any upload happens.
-#   - `id-token: write` is scoped to the publish job ONLY (OIDC exchange with PyPI); every other
-#     permission stays read. No long-lived registry token exists anywhere.
-#   - The build job mirrors wheels.yml `release-wheels` (maturin pin, manylinux, NO cache
-#     restore — zizmor cache-poisoning: published artifacts never rebuild from prior CI state).
-#   - crates.io publishing is DEFERRED: the `[patch.crates-io]` iceberg-fork rev cannot ship in
-#     a published crate (registry consumers would resolve unpatched iceberg 0.9.1 and lose the
-#     fork surface). See docs/release.md "crates.io — Trusted Publishing" for the unblock path.
-#   - The wheel uploads by explicit dist/ path — never by bare package name (wheels.yml lesson:
-#     the 0.0.1 name-reservation outversions local wheels).
+# Tags build a cold manylinux wheel and publish it through environment-bound PyPI OIDC.
+# crates.io stays deferred while `[patch.crates-io]` supplies the owned Iceberg fork.
 name: release
 
 on:

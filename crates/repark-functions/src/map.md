@@ -4,6 +4,7 @@
 
 Source for `repark-functions` — Spark function registry, the function shims (date / string /
 collection), and the Spark expression-semantics analyzer rule. See [../map.md](../map.md).
+Source documentation records behavior and contracts; authorship evidence stays outside code.
 
 **LRS-5 (2026-08-20):** the four files this directory carried only so a `#[path = "…"]` could
 include them now live under the parent module they belong to —

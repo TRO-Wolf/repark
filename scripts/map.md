@@ -275,7 +275,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   (G-8 companion to `check_lib_rs`). The scan covers every `*.rs` under `crates/**`; the default
   and every exact exception baseline live only in the script. Each exception carries its debt
   reason and cohesive split seam. Growth fails, and shrinkage fails until the row ratchets down
-  or retires. Only generated-test sources under `tests/goldens/` or `tests/fixtures/` are excluded.
+  or retires; comment-only shrinkage has the same ratchet duty. Only generated-test sources under
+  `tests/goldens/` or `tests/fixtures/` are excluded.
   Fail-closed on an unreadable file, empty scan, or exception outside the scan. Dual-wired through
   `make check-rust-file-size`, the ci.yml guards job, and both pre-commit surfaces.
 

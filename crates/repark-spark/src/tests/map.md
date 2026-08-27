@@ -5,6 +5,7 @@
 Lib-root unit battery for the Spark SQL door (the former `src/tests.rs` monolith, split in
 G-4 as a **declared-rename** unit under `docs/testing.md` "Relocation discipline"). Production
 code is not here — only tests, shared fixtures, and the module manifest.
+Test documentation records oracle meaning and contracts; authorship evidence stays outside code.
 
 ## Contents
 

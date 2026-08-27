@@ -72,6 +72,7 @@ behavior only reachable end-to-end.
   `set_to_a_plain_catalog_keeps_the_write_home_and_moves_only_the_read` (the disclosed CHANGE:
   the write is immune to `SET`, the read is still DataFusion's, so a bare-name round trip that
   worked on BASE now misses — measured both sides).
+  This map owns the scenario history. Source comments keep only the invariant each assertion pins.
 
 ## I want to…
 

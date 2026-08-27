@@ -1,9 +1,6 @@
 //! V3R-1 (2026-08-25): every copy-on-write arm refuses a v3 table before any write (`V3-COW-1`);
 //! merge-on-read refuses too (R113) — append-only until fork F-7. No native `DataFrame` DML (C-012).
 //!
-//! Model: Claude Fable 5
-//! CodeQuality:S
-//!
 //! V3E-2: [`V3_MAINTENANCE_ORACLE`] is the dated maintenance-oracle pair (charter §5).
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005, C-012
 //! pins: v3e-1-2-cow-oracle/C-009, C-010

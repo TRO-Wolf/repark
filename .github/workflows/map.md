@@ -6,6 +6,7 @@ The tier-1 CI gates: every PR, no secrets, GitHub-hosted runners, read-only toke
 (`ci.yml`) mirrors `make ci`; the rest are supply-chain and security scans. **Everything here
 runs locally via `make preflight`** — tool versions are pinned identically in the Makefile and
 these workflows (bump both in the same change).
+This map owns workflow rationale. Workflow comments keep only load-bearing operational constraints.
 
 Action-pinning convention (carried from the private v1 repository): **every** third-party action
 is pinned to a **commit SHA** with a trailing `# vX` tag comment (Dependabot can still bump
