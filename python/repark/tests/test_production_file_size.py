@@ -928,7 +928,7 @@ def test_cap_1_funcs_source_size_exception_is_retired() -> None:
 def test_session_package_imports_without_a_cycle() -> None:
     """A fresh interpreter imports the assembled compatibility surface."""
     environment = os.environ.copy()
-    environment["PYTHONPATH"] = str(ROOT / "python/repark/src")
+    environment.pop("PYTHONPATH", None)
     result = subprocess.run(
         [sys.executable, "-c", "import repark.spark.session._funcs"],
         cwd=ROOT,

@@ -23,8 +23,8 @@ NOT in that file is a defect, not a decision.
 ## Contents
 
 - `test_production_file_size.py` — frozen parent-symbol inventory, normalized AST body hashes,
-  responsibility ownership, `_funcs` compatibility namespace, import-cycle smoke, default source
-  ceiling, and retired source-size exception pins for the production/file-size refactor.
+  responsibility ownership, `_funcs` compatibility namespace, isolated source/wheel import-cycle
+  smoke, default source ceiling, and retired exception pins for the production/file-size refactor.
 
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
