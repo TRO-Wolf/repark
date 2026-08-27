@@ -1,6 +1,6 @@
-"""PROC-1: review effort by tier, the MW-6 evidence home, two runbook truth-ups.
+"""PR-244: revalidate the tiered-review process and preserve its evidence corrections.
 
-Tree pins for the PROC-1 charter clauses. Each test reads a document relative to
+Tree pins for the PR-244 revalidation clauses. Each test reads a document relative to
 the repository root and asserts the load-bearing tokens the clause makes true. The
 comment on each test names what silently regresses if the pin is removed — the
 process rule these documents carry has no other mechanical guard.
@@ -22,11 +22,15 @@ _SEPMO_MAP = _REPO / ".agents/skills/sepmo/map.md"
 _SKILLS_MAP = _REPO / ".agents/skills/map.md"
 _CLAUDE = _REPO / "CLAUDE.md"
 _CCC = _REPO / ".agents/skills/critic-critic-critic/SKILL.md"
+_CCC_MAP = _REPO / ".agents/skills/critic-critic-critic/map.md"
 _LESSONS = _REPO / "task/lessons.md"
 _EVIDENCE = _REPO / "task/mw-6-critic-evidence"
 _DISK = _REPO / ".agents/skills/check-disk-headroom/SKILL.md"
 _DISK_MAP = _REPO / ".agents/skills/check-disk-headroom/map.md"
 _HANDOFF = _REPO / "task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md"
+_LEDGER = _REPO / "task/ledgers/staging/pr-244-revalidation-ledger.md"
+_STAGING_MAP = _REPO / "task/ledgers/staging/map.md"
+_TEST_MAP = _REPO / "python/repark-parity/tests/map.md"
 
 
 def _load(name: str) -> ModuleType:
@@ -46,112 +50,146 @@ def _row(text: str, key: str) -> str:
     return text[start : text.index("\n", start)]
 
 
-def test_manifest_carries_the_review_profile_table() -> None:
-    """pins: proc-1-tiered-review/C-001 — the tunable that tiers review effort exists.
+def test_current_main_source_size_and_map_guards_remain_bound() -> None:
+    """pins: pr-244-revalidation/C-001 — source-size and map gates remain in `make ci`."""
+    makefile = (_REPO / "Makefile").read_text(encoding="utf-8")
+    for target in ("check-lib-py", "check-rust-file-size", "check-map-sync"):
+        assert target in makefile, target
+    assert "test_proc_1_tiered_review.py" in _TEST_MAP.read_text(encoding="utf-8")
+    assert "pr-244-revalidation-ledger.md" in _STAGING_MAP.read_text(encoding="utf-8")
 
-    WHY: without the row, a unit has no bound rule for how much Critic effort its
-    risk warrants, and STANDARD silently reverts to full CCC (the bloat this removes).
+
+def test_every_execution_unit_has_one_actor_then_one_critic_stage() -> None:
+    """pins: pr-244-revalidation/C-002
+    pins: proc-1-tiered-review/C-003 — one Actor precedes one canonical Critic stage.
+    """
+    row = _row(_MANIFEST.read_text(encoding="utf-8"), "critic_engine")
+    assert "Every execution unit runs one Actor" in row
+    assert "then one Critic stage" in row
+    assert "sequentially" in row
+    assert "LIGHT" in row and "spine's in-line Critic" in row
+    assert "never selects external" in row
+    assert "STANDARD/HIGH" in row and "one bound CCC engine" in row
+    assert "attack lenses or passes inside that one stage" in row
+    assert "remediation returns to the Actor" in row
+
+
+def test_adjacent_process_roles_stay_outside_the_execution_loop() -> None:
+    """pins: pr-244-revalidation/C-002 — adjacent lanes do not become loop roles."""
+    row = _row(_MANIFEST.read_text(encoding="utf-8"), "critic_engine")
+    assert "Finder and Verifier are not roles in this loop" in row
+    assert "Delivery remains post-convergence readiness verification" in row
+    assert "separate hardening lane outside this loop" in row
+    assert "CCC-CONVERGED` is not Delivery" in row
+
+
+def test_review_tiers_scale_effort_without_relaxing_the_bar() -> None:
+    """pins: pr-244-revalidation/C-003
+    pins: proc-1-tiered-review/C-001 — every tier retains every mandatory invariant.
     """
     row = _row(_MANIFEST.read_text(encoding="utf-8"), "review_profile")
     for tier in ("**LIGHT**", "**STANDARD**", "**HIGH**"):
         assert tier in row, tier
-    assert "risk-tier auto-detect" in row
-    assert "riskiest touched path" in row
-    # LIGHT is the spine's single in-line AC cycle with a filed attestation (PROC-1 cycle 2) —
-    # not "no Critic stage" / "no attestation", which canon forbids (ref 05 constraint 2;
-    # SKILL.md Proportionality). The pin reddens on the old wording.
-    assert "in-line AC cycle" in row
-    assert "no Critic stage" not in row
-    assert "no attestation" not in row
-    # STANDARD's single-pass checklist is the manifest's lighter review under the spine's own
-    # Critic stage — not CCC merging its phases; CCC's absolute rule 1 governs only HIGH.
-    assert "not CCC merging its phases" in row
-    assert "absolute rule 1" in row
+    for effort in ("attack depth", "pass count", "isolation", "mutation probes"):
+        assert effort in row, effort
+    assert "LIGHT" in row and "never selects an external engine" in row
+    assert "STANDARD" in row and "bound CCC engine at standard intensity" in row
+    assert "HIGH" in row and "same engine at high intensity" in row
+    for bar in (
+        "every clause pinned",
+        "full `COVERAGE_ATTESTATION`",
+        "S1",
+        "green_commands",
+        "s0_fresh_execution",
+        "R7",
+    ):
+        assert bar in row, bar
 
 
-def test_light_thresholds_name_the_prose_only_class() -> None:
-    """pins: proc-1-tiered-review/C-002 — a docs-only unit is LIGHT at any line count.
-
-    WHY: if the prose-only class drops, a large but code-free documentation unit is
-    forced onto the STANDARD path against proportionality; if the code default drops,
-    a code change escapes the line/file caps.
+def test_light_thresholds_preserve_the_prose_only_class() -> None:
+    """pins: pr-244-revalidation/C-003
+    pins: proc-1-tiered-review/C-002 — tier selection keeps the prose-only class.
     """
     row = _row(_MANIFEST.read_text(encoding="utf-8"), "light_thresholds")
     for token in ("prose", "map.md", "ledger", "recorded evidence", "tests"):
         assert token in row, token
     assert "whatever its line count" in row
-    assert "six spine criteria" in row
     assert "changes code keeps the spine defaults" in row
-    assert "150" in row and "5 files" in row
 
 
-def test_critic_engine_row_binds_ccc_at_high() -> None:
-    """pins: proc-1-tiered-review/C-003 — CCC binds at HIGH; STANDARD runs one pass.
-
-    WHY: a silent revert to "CCC for STANDARD-and-above" re-imposes the four-phase
-    fan-out on every STANDARD unit; losing the AT mapping or scratch-clone rule loses
-    the engine's contract with the spine.
+def test_manifest_owns_proof_isolation_and_taxonomy_mapping() -> None:
+    """pins: pr-244-revalidation/C-002, C-003
+    pins: proc-1-tiered-review/C-004 — proof and taxonomy duties remain load-bearing.
     """
-    row = _row(_MANIFEST.read_text(encoding="utf-8"), "critic_engine")
-    assert "HIGH" in row
-    assert "STANDARD" in row
-    assert "2026-08-25" in row  # the ruling date (given 2026-08-25, tonight)
-    assert "2026-08-26" not in row  # the tiering ruling was 2026-08-25, not 08-26 (PROC-1 cycle 2)
-    assert "scratch" in row
-    assert "AT-1..AT-10" in row
-    # LIGHT runs the spine's single in-line AC cycle, not "no Critic stage" (ref 05 constraint 2).
-    assert "in-line AC cycle" in row
-    assert "runs no Critic stage" not in row
+    text = _MANIFEST.read_text(encoding="utf-8")
+    profile = _row(text, "review_profile")
+    engine = _row(text, "critic_engine")
+    for proof in ("red before its fix and green after it", "mutation probe per new guard seat"):
+        assert proof in profile, proof
+    for tunable in (
+        "mode=review-only",
+        "max_cycles",
+        "severity_floor",
+        "claims_critic=true",
+        "scratch clone",
+        "context_break_mechanics",
+    ):
+        assert tunable in engine, tunable
+    for mapping in (
+        "Critic-1 → AT-8, AT-10",
+        "Critic-2 → AT-3, AT-4, AT-5",
+        "Critic-3 → AT-1, AT-2, AT-6",
+        "Critic-4 → claims and readiness outside AT-1..AT-10",
+        "AT-7 is attacked only for system-breaking change",
+        "AT-9 is attacked where a failure path exists",
+        "Every attestation lists all ten",
+    ):
+        assert mapping in engine, mapping
 
 
-def test_standard_pass_states_its_two_obligations() -> None:
-    """pins: proc-1-tiered-review/C-004 — the STANDARD pass keeps the two hard duties.
-
-    WHY: drop obligation (a) and a silently-wrong-results change ships with no fresh
-    execution through the public door; drop (b) and a pin that never went red is
-    accepted as proof. The bar-unchanged list is what a tier may never relax.
-    """
-    row = _row(_MANIFEST.read_text(encoding="utf-8"), "review_profile")
-    assert "novel" in row
-    assert "freshly execute" in row or "freshly executed" in row
-    assert "public entry point" in row
-    assert "s0_fresh_execution" in row
-    assert "red before the fix and green after" in row
-    assert "mutation probe" in row
-    assert "per new guard seat" in row
-    for bar in ("green workspace", "every clause pinned", "S1", "R7"):
-        assert bar in row, bar
-
-
-def test_unit_runbook_is_small_and_pointer_only() -> None:
-    """pins: proc-1-tiered-review/C-005 — the runbook is small and links, never restates.
-
-    WHY: a runbook that grows past its ceiling or starts restating rules becomes a
-    second spine that drifts from the manifest — the exact failure this unit prevents.
+def test_process_policy_is_single_homed_and_routes_by_pointer() -> None:
+    """pins: pr-244-revalidation/C-005
+    pins: proc-1-tiered-review/C-005 — bindings are single-homed and routers point.
     """
     text = _RUNBOOK.read_text(encoding="utf-8")
     assert _RUNBOOK.stat().st_size <= 5_000
-    # Pointer-only: every obligation names the home the rule lives in.
-    for home in (
-        "binding-manifest.md",
-        "s0_fresh_execution",
-        "check_ledger_grammar",
-        "unit-runbook",  # self-name in the pickup/departure pointers is fine
-    ):
+    for home in ("review_profile", "critic_engine", "check_ledger_grammar"):
         assert home in text, home
-    # The sections a LIGHT/STANDARD unit reads first.
-    for section in ("pickup", "tier", "STANDARD", "departure"):
-        assert section in text, section
-    # It points at the spine's rules by id rather than restating them.
-    assert "R7" in text and "R2" in text
-    # Names-and-links, not "restates none of them" (PROC-1 cycle 2 — three lines glossed a
-    # threshold/obligation, trimmed; the claim is softened to name-and-link).
-    assert "the home is authoritative" in text
-    assert "restates none of them" not in text
+    binding_sentence = "Every execution unit runs one Actor"
+    assert binding_sentence in _MANIFEST.read_text(encoding="utf-8")
+    for other in (_RUNBOOK, _SEPMO_MAP, _SKILLS_MAP, _CLAUDE, _CCC, _CCC_MAP, _LESSONS):
+        assert binding_sentence not in other.read_text(encoding="utf-8"), other.name
+    assert "The repository-specific binding and effort profile live only in the manifest" in (
+        _CCC.read_text(encoding="utf-8")
+    )
+    lessons = _LESSONS.read_text(encoding="utf-8")
+    lessons_section = lessons[lessons.index("## 2026-08-25 — PROC-1") :]
+    carriers = (
+        _STAGING_MAP.read_text(encoding="utf-8"),
+        _TEST_MAP.read_text(encoding="utf-8"),
+        lessons_section,
+        _SEPMO_MAP.read_text(encoding="utf-8"),
+    )
+    for carrier in carriers:
+        assert "binding-manifest.md" in carrier
+        assert "review_profile" in carrier
+        assert "critic_engine" in carrier
+    forbidden_restatements = (
+        "one Actor",
+        "one bound",
+        "one Critic stage",
+        "spine's in-line Critic",
+        "external engine for",
+        "LIGHT uses",
+        "STANDARD/HIGH",
+    )
+    for carrier in carriers:
+        for restatement in forbidden_restatements:
+            assert restatement not in carrier, restatement
 
 
 def test_ceilings_cover_the_runbook() -> None:
-    """pins: proc-1-tiered-review/C-005 — the CEILINGS gate holds the runbook at 5,000 B.
+    """pins: pr-244-revalidation/C-005 — the CEILINGS gate holds the pointer runbook.
 
     WHY: without the ceiling key the runbook can regrow silently; the gate is what
     makes regrowth into a second spine a red build.
@@ -164,63 +202,63 @@ def test_ceilings_cover_the_runbook() -> None:
 
 
 def test_routing_points_at_the_runbook_once_each() -> None:
-    """pins: proc-1-tiered-review/C-006 — the three routing homes land on the runbook.
-
-    WHY: a LIGHT/STANDARD unit finds the per-tier checklist first only if each entry
-    map points at it; and the profile table stays single-homed only if no router
-    restates it.
+    """pins: pr-244-revalidation/C-005
+    pins: proc-1-tiered-review/C-006 — each routing home points at the runbook.
     """
     assert "unit-runbook.md" in _SEPMO_MAP.read_text(encoding="utf-8")
     assert "run a unit" in _SEPMO_MAP.read_text(encoding="utf-8")
     assert "unit-runbook.md" in _SKILLS_MAP.read_text(encoding="utf-8")
     assert "unit-runbook.md" in _CLAUDE.read_text(encoding="utf-8")
-    # The tier table is single-homed in the manifest: no router restates it.
-    distinctive = "exactly one Critic pass"
-    assert distinctive in _MANIFEST.read_text(encoding="utf-8")
-    for other in (_RUNBOOK, _SEPMO_MAP, _SKILLS_MAP, _CLAUDE):
-        assert distinctive not in other.read_text(encoding="utf-8"), other.name
+    for other in (_SEPMO_MAP, _SKILLS_MAP, _CLAUDE):
+        assert "unit-runbook.md" in other.read_text(encoding="utf-8"), other.name
 
 
-def test_ccc_changes_only_its_binding_sentence() -> None:
-    """pins: proc-1-tiered-review/C-007 — CCC gains one sentence; the rest is intact.
-
-    WHY: this unit re-times WHEN CCC runs, never what it does. If an absolute rule,
-    a risk tier, or a taxonomy changed here, the bound engine's contract drifted.
-    """
+def test_ccc_keeps_its_taxonomies_and_defers_the_binding() -> None:
+    """pins: proc-1-tiered-review/C-007 — CCC keeps canon and points at the manifest."""
     text = _CCC.read_text(encoding="utf-8")
-    # The one added sentence: bound at HIGH; STANDARD walks the taxonomies as a checklist.
-    assert "bound at HIGH" in text
-    assert "single-pass checklist" in text
-    # The absolute rules, tier table and taxonomies are byte-identical anchors.
+    assert "The repository-specific binding and effort profile live only in the manifest" in text
     for anchor in (
         "1. **Distinct Critic phases**",
         "13. **Spawn contract**",
-        "| **High** |",
-        "| **Standard** (default) |",
-        "| 4 | **Critic-4 (Claims / Record)**",
+        "2. **LIGHT units never select this engine**",
+        "3. **Taxonomy mapping onto the spine's AT-1..AT-10**",
     ):
         assert anchor in text, anchor
 
 
-def test_lessons_record_the_ruling() -> None:
-    """pins: proc-1-tiered-review/C-008 — the tiering ruling and its measured reason.
-
-    WHY: a rule with no recorded measurement gets re-litigated; the entry records
-    which instruments caught defects and which produced only record.
-    """
+def test_lessons_keep_the_measurement_and_point_to_the_ruling() -> None:
+    """pins: proc-1-tiered-review/C-008 — the measured lesson points at its policy home."""
     text = _LESSONS.read_text(encoding="utf-8")
-    # The ruling was given 2026-08-25 (tonight), not 08-26 (PROC-1 cycle 2).
-    assert "## 2026-08-25 — PROC-1" in text
-    assert "## 2026-08-26" not in text
     section = text[text.index("## 2026-08-25 — PROC-1") :]
-    assert "V3R-1" in section  # the fresh-execution catches
-    assert "DL-5" in section  # the gate catches
-    assert "190 kB" in section  # the STANDARD read had grown to ~190 kB
-    assert "**DO" in section  # the DO / DO-NOT form
+    for token in (
+        "V3R-1",
+        "DL-5",
+        "190 kB",
+        "binding-manifest.md",
+        "review_profile",
+        "critic_engine",
+    ):
+        assert token in section, token
+
+
+def test_revalidation_scope_has_a_pin_for_every_clause() -> None:
+    """pins: pr-244-revalidation/C-006 — the live ledger cites every frozen clause."""
+    text = _LEDGER.read_text(encoding="utf-8")
+    for number in range(1, 8):
+        assert f"pins: pr-244-revalidation/C-{number:03}" in text
+
+
+def test_revalidation_maps_and_ledger_are_reviewable() -> None:
+    """pins: pr-244-revalidation/C-007 — the live record is linked from both maps."""
+    assert "pr-244-revalidation-ledger.md" in _STAGING_MAP.read_text(encoding="utf-8")
+    tests_map = _TEST_MAP.read_text(encoding="utf-8")
+    assert "test_proc_1_tiered_review.py" in tests_map
+    assert "PR-244" in tests_map
 
 
 def test_mw6_evidence_is_home_and_excluded_from_lint() -> None:
-    """pins: proc-1-tiered-review/C-009 — the cited evidence lives here, un-linted.
+    """pins: pr-244-revalidation/C-004
+    pins: proc-1-tiered-review/C-009 — the cited evidence lives here, un-linted.
 
     WHY: the archived MW-6 ledger cites these files by path; if they are absent or
     a linter rewrites them, the ledger's evidence is lost or no longer verbatim.
@@ -274,7 +312,8 @@ def test_mw6_evidence_is_home_and_excluded_from_lint() -> None:
 
 
 def test_disk_runbook_carries_the_2026_08_25_block() -> None:
-    """pins: proc-1-tiered-review/C-010 — the disk skill records the 2026-08-25 sweep.
+    """pins: pr-244-revalidation/C-004
+    pins: proc-1-tiered-review/C-010 — the disk skill records the 2026-08-25 sweep.
 
     WHY: a scratch directory once held the only copy of ledger-cited evidence; the
     refute-before-rm rule and the merged-unit reclaim order are what keep the next
@@ -288,14 +327,15 @@ def test_disk_runbook_carries_the_2026_08_25_block() -> None:
     assert "refute" in text  # the scratch-directory Gotcha
     assert "owner-run" in text  # the sudo-tier Gotcha
     # The home directory is neutralised, never the literal path or user name.
-    # No real home path and no e-mail in the runbook (classes, not literals — see C-009).
+    # No real home path and no e-mail in the runbook (classes, not literals — see C-004).
     assert re.search(r"/home/(?!<user>)[A-Za-z0-9_-]+", text) is None
     assert re.search(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[a-z]{2,}", text) is None
     assert "2026-08-25" in _DISK_MAP.read_text(encoding="utf-8")
 
 
 def test_handoff_f7_records_the_unit_3_ruling() -> None:
-    """pins: proc-1-tiered-review/C-011 — F-7 carries the B-MOR-3 / V3-DANGLE-1 ruling.
+    """pins: pr-244-revalidation/C-004
+    pins: proc-1-tiered-review/C-011 — F-7 carries the B-MOR-3 / V3-DANGLE-1 ruling.
 
     WHY: the addendum is the fork lane's record of the 2026-08-25 decision — extend
     R136 to v3, no DV-specific action, the retire-at-repin acceptance. Without it the

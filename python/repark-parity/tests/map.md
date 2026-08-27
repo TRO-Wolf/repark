@@ -7,12 +7,12 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
-- `test_proc_1_tiered_review.py` — **PROC-1 (2026-08-25; 12 tree pins):** the `review_profile`
-  tier tunable, the `light_thresholds` prose-only class and the `critic_engine` HIGH binding
-  (C-001..C-004); the pointer-only `unit-runbook.md` and its 5,000 B ceiling (C-005); the routing
-  homes and the single-home profile table (C-006); CCC's one added sentence (C-007); the lessons
-  entry (C-008); the MW-6 evidence home and its lint/typos exclusion (C-009); the disk skill's
-  2026-08-25 block (C-010); the handoff F-7 B-MOR-3 addendum (C-011).
+- `test_proc_1_tiered_review.py` — **PR-244 revalidation (2026-08-26):** current-main source-size
+  and map guards (C-001); process roles and tiers against manifest
+  [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md) (C-002,
+  C-003, C-005); the MW-6 evidence, disk-headroom, and Iceberg handoff corrections stay truthful
+  (C-004); every frozen clause has a pin (C-006); the live ledger and maps remain reviewable
+  (C-007).
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
   source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged

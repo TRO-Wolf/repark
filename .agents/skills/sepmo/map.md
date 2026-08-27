@@ -37,10 +37,10 @@ binds to it. SEPMO governs *lifecycle only*; it cedes every engineering decision
   carries the tunables (`severity_floor`,
   `green_commands` — two named gates + the exception-record rule, `light_thresholds`
   — the prose-only LIGHT class (re-bound 2026-08-25), `context_break_mechanics`,
-  `s0_fresh_execution` — entry-point surface, standing detector, masking surfaces,
-  `review_profile` — the LIGHT / STANDARD / HIGH Critic-effort tier (2026-08-25),
-  `critic_engine` — CCC bound at HIGH, `metrics_ledger_location`, `taxonomy_extensions`).
-- [unit-runbook.md](unit-runbook.md) — the **per-tier running order** a LIGHT/STANDARD unit reads
+  `s0_fresh_execution` — entry-point surface, standing detector, masking surfaces;
+  [`review_profile` and `critic_engine`](binding-manifest.md) — review selection and binding;
+  `metrics_ledger_location`; `taxonomy_extensions`).
+- [unit-runbook.md](unit-runbook.md) — the **unit running order**
   first (PROC-1, 2026-08-25): pickup → tier → build → Critic stage → ledger/pins/attestation →
   departure, every line a pointer into the spine, a manifest row, a reference file or a gate. It
   restates no rule and is held at 5,000 B so it cannot become a second spine.

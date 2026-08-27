@@ -55,7 +55,7 @@ engine that manifest binds, `/critic-critic-critic` from
 skill (`~/.claude/skills/`), plugin, or session-local variant of either overrides them:** if one is
 loaded, the repo copy wins and the variant is not consulted. Every Claude session — orchestrator
 or spawned sub-agent — reads the same two skills, so there is one process to follow and one place
-to fix it. A LIGHT or STANDARD unit starts from the per-tier checklist,
+to fix it. A governed unit starts from the unit checklist,
 [.agents/skills/sepmo/unit-runbook.md](.agents/skills/sepmo/unit-runbook.md), which only points
 back into that manifest and the spine.
 

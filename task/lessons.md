@@ -218,11 +218,8 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   review's two red pins, found by running the parity suite). The four-phase CCC fan-out, the
   per-pin mutation probe, the separate claims phase and the per-unit retrospective metrics produced
   record entries, not defects. Meanwhile a STANDARD unit's process read had grown to ~190 kB before
-  the engineering method. So STANDARD now runs **one** Critic pass that walks CCC's taxonomies as a
-  checklist; HIGH keeps full CCC; LIGHT keeps the spine's single in-line AC cycle (attestation
-  categories `N/A` by the recorded rubric). The bar is unchanged on every tier — a green
-  workspace, every clause pinned, the S1 floor, the R7 audit, and fresh execution for any
-  silently-wrong-results claim. Ruling home: the manifest's `review_profile` row.
+  the engineering method. Ruling home: the manifest's
+  [`review_profile` and `critic_engine`](../.agents/skills/sepmo/binding-manifest.md) rows.
 - **DO NOT read "more Critic phases" as "more assurance."** The measured signal came from fresh
   execution through the public door and from the gates, not from the count of Critic spawns or
   probes. Add a phase when a class of defect escaped it, not by default; the count of phases is a

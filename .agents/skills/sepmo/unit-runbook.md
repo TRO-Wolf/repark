@@ -1,9 +1,8 @@
-# unit-runbook.md — the per-tier checklist a LIGHT/STANDARD unit reads first
+# unit-runbook.md — the unit checklist
 
 A pointer-only running order for one SEPMO unit. **Every line names and links the home of the rule
-it carries; the home is authoritative.** It exists so a LIGHT or STANDARD unit does not have to
-read the whole spine to start — HIGH units run the full control plane and read
-[SKILL.md](SKILL.md) directly. On any conflict the home wins, and above every home is
+it carries; the home is authoritative.** It lets a unit start without reading the whole spine.
+On any conflict the home wins, and above every home is
 [AGENTS.md](../../../AGENTS.md) `## Precedence`.
 
 ## 1. Pickup — the unit's first act
@@ -16,10 +15,8 @@ read the whole spine to start — HIGH units run the full control plane and read
 
 ## 2. Pick the tier
 
-- The [`review_profile`](binding-manifest.md) row is the tier table (**LIGHT / STANDARD / HIGH**),
-  chosen by CCC's risk-tier auto-detect (the riskiest touched path).
-- The [`light_thresholds`](binding-manifest.md) row sets the prose-only LIGHT class and the code
-  line/file caps.
+- Use [`review_profile`](binding-manifest.md) for tier effort and retained obligations.
+- Use [`light_thresholds`](binding-manifest.md) for the tier threshold.
 
 ## 3. Build (Actor)
 
@@ -33,14 +30,11 @@ read the whole spine to start — HIGH units run the full control plane and read
 
 ## 4. The Critic stage
 
-- **LIGHT** — the spine's single in-line AC cycle; the [`review_profile`](binding-manifest.md) row
-  is its home (its attestation, the **R7** audit the Orchestrator may self-run,
-  [references/02-orchestrator.md](references/02-orchestrator.md)).
-- **STANDARD** — one Critic pass under the two hard obligations named in the
-  [`review_profile`](binding-manifest.md) row (fresh execution via
-  [`s0_fresh_execution`](binding-manifest.md)); it walks CCC's taxonomies as one checklist —
+- Use [`critic_engine`](binding-manifest.md) for the role sequence and engine binding.
+- Use [`review_profile`](binding-manifest.md) for effort. The engine's attack procedure lives in
   [critic-critic-critic](../critic-critic-critic/SKILL.md).
-- **HIGH** runs the full CCC engine per the [`critic_engine`](binding-manifest.md) row.
+- Use [`context_break_mechanics`](binding-manifest.md) and
+  [`s0_fresh_execution`](binding-manifest.md) when their conditions apply.
 
 ## 5. Ledger, pins, attestation
 
@@ -55,7 +49,8 @@ read the whole spine to start — HIGH units run the full control plane and read
 - The departure edit and the `move` to `completed/` are rule 7's second half
   ([briefs/next-sequence.md](../../../briefs/next-sequence.md)); the executor is
   [compact-context-docs](../compact-context-docs/SKILL.md) and `ledger_lifecycle.py move`. Delivery
-  runs on **R9** ([references/07-delivery.md](references/07-delivery.md)).
+  follows the readiness audit under **R7** and **R9**
+  ([references/07-delivery.md](references/07-delivery.md)).
 
 ## Pointers
 
