@@ -1,9 +1,9 @@
 # Charter ledger — REG-1 · the registry says what the pins prove (DEC-2/6/7/8, TZ-8, G3-E8)
 
 **Date:** 2026-08-26 · **Branch:** `docs/reg-1-registry-truth-up` · **Base:** `5f64254` (`main`,
-#243) · **Policy:** [docs/spark-sql-iceberg-parity.md](../../../docs/spark-sql-iceberg-parity.md)
+#243) · **Policy:** [docs/spark-sql-iceberg-parity.md](../../../../docs/spark-sql-iceberg-parity.md)
 §6 "How a row is added, mirrored and retired" (dated FIXED notes, never a silent deletion);
-[AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle"; the compact-context-docs pickup
+[AGENTS.md](../../../../AGENTS.md) "Markdown document lifecycle"; the compact-context-docs pickup
 ritual (a stale claim in a document agents trust is fixed against the delta that made it stale) ·
 **SEPMO path:** STANDARD at base (docs-only; CCC risk tier mechanical → Critic-1 + the claims
 Critic) · **Size:** S · **Requested by:** the owner's overnight grant, 2026-08-25 ("get our SQL
