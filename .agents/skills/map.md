@@ -32,8 +32,8 @@ See [../../.claude/map.md](../../.claude/map.md).
 - [critic-critic-critic/](critic-critic-critic/map.md) — **CCC**, the bound Critic engine: three
   specialised adversarial Critics (quality + crates contracts → security/safety → pure logic) plus
   a claims Critic, each with a context break, a coverage attestation and a findings ledger;
-  review-only by default; `CCC-CONVERGED` is never Delivery. Runs as SEPMO's Critic stage on
-  STANDARD-and-above units, or alone on a diff.
+  review-only by default; `CCC-CONVERGED` is never Delivery. Its SEPMO binding and tier effort live
+  in the manifest; it can also run alone on a diff.
 - [engineering-method/](engineering-method/map.md) — the portable, agent-agnostic working method
   for implementation and review sessions: risk-first design, the reason-plan-verify workflow,
   naming, the Rust/Python defaults, the debugging protocol, and the done gate. Generalized from
@@ -69,6 +69,7 @@ See [../../.claude/map.md](../../.claude/map.md).
 | ...do this | go to |
 |---|---|
 | Operate under / understand SEPMO | [sepmo/map.md](sepmo/map.md) → [sepmo/SKILL.md](sepmo/SKILL.md) |
+| Run a SEPMO unit under its tier (the per-tier checklist) | [sepmo/unit-runbook.md](sepmo/unit-runbook.md) |
 | See SEPMO's bindings to this repo | [sepmo/binding-manifest.md](sepmo/binding-manifest.md) |
 | Run the bound Critic engine on a diff | [critic-critic-critic/SKILL.md](critic-critic-critic/SKILL.md) |
 | Read the working method before writing or reviewing code | [engineering-method/SKILL.md](engineering-method/SKILL.md) |

@@ -62,6 +62,35 @@ def is_plain_ident(name: str) -> bool:
     return _PLAIN_IDENT.fullmatch(name) is not None
 
 
+def sql_string_literal(value: str) -> str:
+    r"""Quote a value as a Spark-door single-quoted SQL literal.
+
+    The Spark door processes escapes, so the value must double backslashes before quotes.
+
+    Args:
+        value: The unescaped string value.
+
+    Returns:
+        The quoted Spark SQL literal.
+    """
+    escaped = value.replace("\\", "\\\\").replace("'", "''")
+    return f"'{escaped}'"
+
+
+def escape_sql_single_quotes(value: str) -> str:
+    r"""Escape a value for a Generic SQL string body without adding quotes.
+
+    Generic SQL keeps backslashes literal, so this function changes only single quotes.
+
+    Args:
+        value: The unescaped string value.
+
+    Returns:
+        The escaped string body without surrounding quotes.
+    """
+    return value.replace("'", "''")
+
+
 def quote_ident(name: str) -> str:
     """Always double-quote a SQL identifier (Spark/DF column + alias class).
 
@@ -160,6 +189,7 @@ __all__ = [
     "PATH_ESCAPE_PROBES",
     "PATH_ESCAPE_SAFE",
     "assert_spark_injection_probe_is_single_token",
+    "escape_sql_single_quotes",
     "is_plain_ident",
     "path_escape_kind",
     "quote_column_sql_expr",
@@ -167,4 +197,5 @@ __all__ = [
     "quote_ident_if_needed",
     "quote_multipart",
     "reject_path_escape_segment",
+    "sql_string_literal",
 ]

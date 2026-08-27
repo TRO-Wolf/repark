@@ -13,6 +13,21 @@ fn ctx() -> (SessionContext, CatalogRegistry) {
     (SessionContext::new(), CatalogRegistry::new())
 }
 
+#[test]
+fn source_locations_depend_on_rewrite_bytes_not_buffer_ownership() {
+    let original = "SELECT '\\n' AS shifted, )";
+    let canonical = "SELECT '\n' AS shifted, )";
+    let owned_same_bytes = canonical.to_string();
+    assert_eq!(
+        super::original_sql_for_locations(original, canonical, &owned_same_bytes),
+        Some(original)
+    );
+    assert_eq!(
+        super::original_sql_for_locations(original, canonical, "SELECT 1"),
+        None
+    );
+}
+
 #[tokio::test]
 async fn truncate_refusal_is_verbatim_v1() {
     // TRUNCATE is a v1 targeted refuse (C4-L-001), not a PR-2 temporary arm — its message steers
