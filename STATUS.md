@@ -111,7 +111,7 @@ published history — an exposure **accepted by explicit decision**; provenance:
 (rolling, opened 2026-08-21). It states sequence and reasoning; the per-track state stays here.
 
 <!-- ws id=dl ledgers=dl- state=open -->
-- **Document lifecycle (DL)** (chartered 2026-08-23; DL-1..DL-4 delivered). Unit ledgers live in
+- **Document lifecycle (DL)** (chartered 2026-08-23; DL-1..DL-5 delivered). Unit ledgers live in
   [task/ledgers/](task/ledgers/map.md) by state; `scripts/ledger_lifecycle.py` is the only mover.
   Three gates in `make ci` hold the class: `check-ledgers`, `check-ledger-grammar`,
   `check-docs-compaction`. Policy: [AGENTS.md](AGENTS.md) "Markdown document lifecycle".

@@ -20,6 +20,7 @@ description: >
 through the manifest's `critic_engine` row ([../sepmo/binding-manifest.md](../sepmo/binding-manifest.md)),
 or any tool's own review harness — decide *when* and *how many times* to run; this skill owns
 risk tiers, severity, the finding schema, the crates contract, and the four critic taxonomies.
+The repository-specific binding and effort profile live only in the manifest.
 Binders **load this file and the role references before starting** — they do not restate those
 lists. How a Critic is *spawned* is a tool mechanic and lives in that tool's adapter
 ([../../../CLAUDE.md](../../../CLAUDE.md) for Claude), never here.

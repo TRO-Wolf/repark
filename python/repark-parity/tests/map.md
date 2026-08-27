@@ -7,6 +7,13 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
+- `test_proc_1_tiered_review.py` — **PR-244 revalidation (2026-08-26):** current-main source-size
+  and map guards (C-001); process roles and tiers against manifest
+  [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md) (C-002,
+  C-003, C-005); the MW-6 evidence, disk-headroom, and Iceberg handoff corrections stay truthful
+  (C-004); every frozen clause has a pin (C-006); exactly one lifecycle ledger and its matching
+  map stay current, and the completed PROC-1 map reports its filed attestation even as the final
+  list item (C-007).
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
   source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
@@ -30,10 +37,12 @@ JVM, no repark required). See [../map.md](../map.md).
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
   (C-004, C-005); AGENTS.md keeps the enumerated KEEP set (C-006); no `.agents/roles/`
   (C-007); CEILINGS (d) covers AGENTS.md and the method skill (C-008); DL-4 C-008 still
-  holds (C-009); PYC-5 tokens, method how-to, slate #2 (C-010..C-012).
+  holds (C-009); PYC-5 tokens, method how-to (C-010, C-011); C-012 turned over at
+  DL-5's departure (PROC-1 pickup, 2026-08-25): the slate row is gone, the ledger filed.
 - `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25; 11 tests, incl. the Critic's three
   pinned findings and the two tree pins C-006 / C-008):** the live-document compaction on
-  a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a
+  a scratch repository — its fixture seeds every `CEILINGS` file (PROC-1 added the SEPMO
+  unit-runbook, 2026-08-25) — a merged unit leaves the slate whole and the table renumbers (C-002), a
   closed campaign is cut from STATUS into its history bin with links rewritten (C-003), the
   touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
   row is one row; a marker in a code span is prose), and the gate red
