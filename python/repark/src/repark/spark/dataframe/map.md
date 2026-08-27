@@ -191,10 +191,9 @@ Up: [../map.md](../map.md). Tests: `python/repark/tests/`. MOVE MAP: `task/t0-df
 
 ## Debug
 
-- Live file sizes (PYC-1): `core.py` 6866 of the ratcheted 6880 ceiling (UDF
-  callbacks extracted to `udf_bridge.py`), `plan_collapse.py` under the 2500
-  default (formatters and qcol rewriters lifted in place), `udf_bridge.py`
-  under the 2500 default.
+- **PYC-1 file-size record (2026-08-22):** UDF callbacks moved from `core.py` to
+  `udf_bridge.py`. Under CAP-1, `core.py` and `plan_collapse.py` carry exact exception rows;
+  `udf_bridge.py` remains below the source-size default.
 - Import path breaks → check core re-exports (Q7) and package `__init__` star-bind.
 - Circular import → region modules import `DataFrame`/helpers from `core`; `core` imports
   classes only at file end (after helpers defined).

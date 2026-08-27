@@ -494,9 +494,8 @@ class DataFrameWriter:
         # SEC-02: the generated COPY TO runs through the ordinary SQL path, which carries the
         # local-filesystem DDL gate. That gate is scoped to *free* SQL (SECURITY.md "Input
         # surfaces"); a typed `df.write.<fmt>(path)` is the caller naming their own destination.
-        # Trust the uuid-unique staging target ONLY — never `destination.parent`, which would
-        # trust every sibling path (writing to `/tmp/out` would open all of `/tmp` to free SQL).
-        # The destination itself is reached by plain filesystem ops below, not by SQL.
+        # Trust only the UUID staging target; trusting its parent opens sibling paths to free SQL.
+        # Plain filesystem operations reach the destination below.
         self._dataframe._session.note_local_write_root(escaped_staging)
         try:
             self._run_through_temp_view(

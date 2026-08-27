@@ -16,8 +16,6 @@ from repark.errors import (
     IllegalArgumentException,
     UnsupportedOperationException,
 )
-
-# === r23 QI1: idents ===
 from repark.spark._idents import quote_ident as _quote_ident
 from repark.spark._idents import sql_string_literal
 from repark.spark._temp_views import scratch_view_name
@@ -430,15 +428,13 @@ class StringIndexerModel(HasInputCol, HasOutputCol, HasHandleInvalid, Model):
             # All null / empty fit → everything invalid.
             case_body = "CAST(NULL AS DOUBLE)"
         else:
-            branches = []
-            for index, label in enumerate(self.labels):
-                branches.append(
-                    f"WHEN {quoted_in} = {sql_string_literal(label)} THEN CAST({index} AS DOUBLE)"
-                )
+            branches = [
+                f"WHEN {quoted_in} = {sql_string_literal(label)} THEN CAST({index} AS DOUBLE)"
+                for index, label in enumerate(self.labels)
+            ]
             case_body = "CASE " + " ".join(branches) + " ELSE NULL END"
         index_expr = case_body
         if handle == "error":
-            # Detect unseen non-null labels.
             if self.labels:
                 known = ", ".join(sql_string_literal(label) for label in self.labels)
                 check_sql = (
@@ -544,11 +540,10 @@ class IndexToString(HasInputCol, HasOutputCol, Transformer):
         host, view = _register_temp(frame, "its")
         quoted_in = _quote_ident(self.getInputCol())
         quoted_out = _quote_ident(self.getOutputCol())
-        branches = []
-        for index, label in enumerate(labels):
-            branches.append(
-                f"WHEN CAST({quoted_in} AS BIGINT) = {index} THEN {sql_string_literal(label)}"
-            )
+        branches = [
+            f"WHEN CAST({quoted_in} AS BIGINT) = {index} THEN {sql_string_literal(label)}"
+            for index, label in enumerate(labels)
+        ]
         case_sql = "CASE " + " ".join(branches) + " ELSE NULL END"
         sql = f"SELECT {view}.*, ({case_sql}) AS {quoted_out} FROM {view}"
         try:
@@ -1743,8 +1738,7 @@ class RegexTokenizer(HasInputCol, HasOutputCol, Transformer):
         quoted = _quote_ident(self.getInputCol())
         out = _quote_ident(self.getOutputCol())
         rid = _quote_ident(rid_col)
-        # Embed the Java/Spark regex as a Spark-door SQL literal via the shared helper. The door
-        # processes escapes (SQP-1), so `\s+` doubles to `'\\s+'` and folds back to `\s+`.
+        # The door processes escapes, so the helper preserves regex backslashes.
         pattern_sql = sql_string_literal(pattern)
         text_expr = f"lower({quoted})" if to_lower else quoted
         # Replace ALL delimiter matches with unit separator (ASCII 31), then split.
@@ -2526,12 +2520,12 @@ class CountVectorizerModel(HasInputCol, HasOutputCol, Model):
         # Spark minTF: integer >=1 → absolute count; float in [0,1) → fraction of doc tokens.
         min_tf = float(self.min_tf)
         fractional_min_tf = 0.0 <= min_tf < 1.0
-        # Total non-empty tokens per doc (for fractional minTF).
         total_expr = "coalesce(counts.__cv_total, 0.0)"
         for index, term in enumerate(self.vocabulary):
+            term_literal = sql_string_literal(term)
             alias = f"__cv_c{index}"
             sum_parts.append(
-                f"SUM(CASE WHEN __t = {sql_string_literal(term)} THEN 1.0 ELSE 0.0 END) AS {alias}"
+                f"SUM(CASE WHEN __t = {term_literal} THEN 1.0 ELSE 0.0 END) AS {alias}"
             )
             raw = f"coalesce(counts.{alias}, 0.0)"
             threshold = f"({min_tf} * {total_expr})" if fractional_min_tf else _sql_float(min_tf)

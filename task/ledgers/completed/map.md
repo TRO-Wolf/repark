@@ -8,17 +8,19 @@ else. The next pickup's `make ledger-archive` files everything here under
 [../archive/](../archive/map.md) by the merge date.
 
 ## Contents
-- [reg-1-registry-truth-up-ledger.md](reg-1-registry-truth-up-ledger.md) — **REG-1 (2026-08-26):**
-  the docs-only truth-up of the divergence registry and STATUS — DEC-2 / DEC-6 / DEC-7 / DEC-8
-  become dated FIXED notes (#94 / #99), TZ-8 splits its FIXED `CAST(ts AS DATE)` / `to_date` /
-  `datediff` half (#100) from the `last_day` / `date_add` / `date_sub` residual, and G3-E8 states
-  the delivered spellings and the true remainder. Six clauses, each pinned by
-  [../../../python/repark-parity/tests/test_reg_1_registry_truth_up.py](../../../python/repark-parity/tests/test_reg_1_registry_truth_up.py).
+- [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+- [cap-1-source-file-line-cap-ledger.md](cap-1-source-file-line-cap-ledger.md) — **CAP-1
+  (2026-08-26):** ratchet Rust and Python source files to the new source-line default with exact,
+  no-slack baselines for the measured offenders; keep narrow line-neutral fixes legal and preserve
+  the facade no-stub rule.
+- [pr-245-revalidation-ledger.md](pr-245-revalidation-ledger.md) — **PR-245 revalidation
+  (2026-08-26):** remeasure SQP-1 after current-main integration, preserve both SQL-door and facade
+  controls, preserve original parser locations after canonicalization, pin the enumerable Python
+  helper guard and inventory, and clear exact source-size ratchets. Five Actor–Critic remediation
+  cycles converged on 2026-08-27; the completed SQP-1 ledger remains frozen.
 - [sqp-1-spark-string-literals-ledger.md](sqp-1-spark-string-literals-ledger.md) — **SQP-1
   (2026-08-25):** Spark string-literal escapes on the SQL door + `CAST … AS BINARY`. Twelve
-  clauses PROVEN and pinned; Actor done, awaiting the Critic (attestation deferred via the
-  grammar gate's EXCEPTIONS).
-- [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
+  clauses PROVEN and pinned; the completed ledger carries the filed Critic attestation.
 
 ## Pointers
 - Up: [../map.md](../map.md)

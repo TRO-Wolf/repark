@@ -21,6 +21,9 @@ node ids: the whole `test_excel_reader.py` file plus one node each in `test_pg_c
 NOT in that file is a defect, not a decision.
 
 ## Contents
+- `test_pr_245_revalidation.py` — PR-245 public-door revalidation for Spark literals and parser
+  locations across shrink, expansion, mixed regions, EOF, and an ordered direct-to-diagnostic
+  boundary sequence; binary casts and facade controls.
 
 - [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1 (C-007):** facade
   controls — `regexp_count` unchanged and the SQL door now agrees; `.cast("binary")` equals the SQL

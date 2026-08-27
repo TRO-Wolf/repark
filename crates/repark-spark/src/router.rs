@@ -106,11 +106,10 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     sql: &str,
     read_only_catalogs: &HashSet<String, S>,
 ) -> Result<DataFrame> {
-    // FRONT DOOR (SQP-1). Canonicalise Spark string-literal escapes once, before any router
-    // tokeniser or the executing parse — the sole caller of `canonicalize` (see its module doc;
-    // proven by `front_door_has_one_caller`), which keeps the pass exactly-once (C-005 / C-010).
+    // Canonicalize once at the Spark SQL front door so later tokenizers cannot process escapes again.
+    // Translate downstream parser locations back to the caller's SQL before returning an error.
     let canonical = crate::spark_literals::canonicalize(sql)?;
-    let sql = canonical.as_ref();
+    let canonical_sql = canonical.as_ref();
     // Clone + attach on the registry snapshot so P11 survives `.await` thread hops
     // (thread_local would race under multi-thread Tokio — C1-Q-001).
     let mut catalogs = catalogs.clone();
@@ -121,7 +120,7 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     // refuse only when the full name does not resolve but the prefix does (Spark's
     // `t.branch_<name>` spelling); neither resolving falls through to planning's own
     // "table not found", which is the more informative error.
-    if let Some(sniff) = ref_ddl::sniff_write_to_branch(sql) {
+    if let Some(sniff) = ref_ddl::sniff_write_to_branch(canonical_sql) {
         let refuse = match &sniff {
             ref_ddl::WriteToBranchSniff::MultiPart => true,
             ref_ddl::WriteToBranchSniff::TwoPart { parts } => {
@@ -139,13 +138,13 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     // (iceberg-datafusion schema provider). Real tables named e.g. `files` win; DML + AS OF
     // composition refuse loud. Kept out of `execute_inner` (clippy `too_many_lines`).
     let sql_after_meta: std::borrow::Cow<'_, str> =
-        if metadata_tables::sql_may_have_metadata_table_path(sql) {
-            match metadata_tables::prepare_metadata_table_sql(&catalogs, sql).await? {
+        if metadata_tables::sql_may_have_metadata_table_path(canonical_sql) {
+            match metadata_tables::prepare_metadata_table_sql(&catalogs, canonical_sql).await? {
                 Some(rewritten) => std::borrow::Cow::Owned(rewritten),
-                None => std::borrow::Cow::Borrowed(sql),
+                None => std::borrow::Cow::Borrowed(canonical_sql),
             }
         } else {
-            std::borrow::Cow::Borrowed(sql)
+            std::borrow::Cow::Borrowed(canonical_sql)
         };
     // The time-travel rewrite registers ephemeral pinned relations on the session; they are
     // released again as soon as the statement has been PLANNED, so a long-lived session neither
@@ -156,7 +155,16 @@ pub async fn execute_with_read_only<S: std::hash::BuildHasher>(
     // would have to own a `SessionContext` clone), and neither source exists today (panics banned
     // in prod, PyO3 drives this via `block_on`).
     let mut pinned = time_travel::PinnedViews::default();
-    let result = execute_time_travelled(ctx, &catalogs, sql_after_meta.as_ref(), &mut pinned).await;
+    let original_for_locations =
+        original_sql_for_locations(sql, canonical_sql, sql_after_meta.as_ref());
+    let result = execute_time_travelled(
+        ctx,
+        &catalogs,
+        sql_after_meta.as_ref(),
+        original_for_locations,
+        &mut pinned,
+    )
+    .await;
     pinned.release(ctx);
     result
 }
@@ -168,6 +176,7 @@ async fn execute_time_travelled(
     ctx: &SessionContext,
     catalogs: &CatalogRegistry,
     sql: &str,
+    original_for_locations: Option<&str>,
     pinned: &mut time_travel::PinnedViews,
 ) -> Result<DataFrame> {
     // Iceberg time travel (`VERSION AS OF` / `TIMESTAMP AS OF` / `FOR SYSTEM_* AS OF`) is not
@@ -183,7 +192,20 @@ async fn execute_time_travelled(
     } else {
         std::borrow::Cow::Borrowed(sql)
     };
-    execute_inner(ctx, catalogs, sql_storage.as_ref()).await
+    let result = execute_inner(ctx, catalogs, sql_storage.as_ref()).await;
+    if let Some(original) = original_for_locations
+        .and_then(|original| original_sql_for_locations(original, sql, sql_storage.as_ref()))
+    {
+        result.map_err(|error| {
+            crate::spark_literals::translate_downstream_error(original, sql_storage.as_ref(), error)
+        })
+    } else {
+        result
+    }
+}
+
+fn original_sql_for_locations<'a>(original: &'a str, before: &str, after: &str) -> Option<&'a str> {
+    (before == after).then_some(original)
 }
 
 async fn execute_inner(

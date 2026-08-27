@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Enforce Python package thinness under python/repark/src/repark/**/*.py.
+"""Enforce Python source size and facade module thinness.
 
 SSOT for Python facade file size (r27 T1). Sibling of check_lib_rs. Prose
 (AGENTS.md / CLAUDE.md) points here and never restates the ceilings.
 
-Rules over every *.py under python/repark/src/repark/ (recursive):
-1. Per-file line ceiling: default 2500 (docs count). EXCEPTIONS table overrides
-   with reason + ratchet note. Ceilings ratchet DOWN only.
-2. No-stub rule: a module whose body is only a module docstring + import /
+Rules:
+1. Every *.py under python/ and scripts/ has the DEFAULT_CEILING. Blank lines
+   count. EXCEPTIONS records exact baselines, debt reasons, and split seams.
+2. An excepted file must equal its baseline. Growth fails. Shrinkage also fails
+   until the baseline ratchets down or the row retires at the default.
+3. Sources under tests/goldens/ and tests/fixtures/ are generated-test inputs
+   and are outside the scan.
+4. The facade-only no-stub rule: a module whose body is only a module docstring + import /
    re-export / __all__ / pass statements must start its docstring with the
    exact substring ``re-export binding`` (case-sensitive, first line). Package
    ``__init__.py`` files are EXEMPT from the no-stub rule (still under ceiling).
@@ -21,28 +25,219 @@ import ast
 import sys
 from pathlib import Path
 
-DEFAULT_CEILING = 2500
+DEFAULT_CEILING = 1000
+SCAN_ROOTS: tuple[str, ...] = ("python", "scripts")
+FACADE_ROOT = "python/repark/src/repark"
+EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fixtures"))
 
-# repo-relative posix path -> (ceiling, reason). Keys sorted. Ceilings DOWN only.
-EXCEPTIONS: dict[str, tuple[int, str]] = {
+# repo-relative posix path -> (exact baseline, debt reason, cohesive split seam).
+# Every row retires when its file reaches DEFAULT_CEILING. A baseline increase
+# requires explicit owner approval; ordinary edits only ratchet rows down.
+EXCEPTIONS: dict[str, tuple[int, str, str]] = {
+    "python/repark-parity/bench/tpcds/runner.py": (
+        1263,
+        "TPC-DS orchestration, execution, and reporting share one runner.",
+        "Split query execution from result collection and reporting.",
+    ),
+    "python/repark-parity/bench/tpch/runner.py": (
+        1780,
+        "TPC-H orchestration, execution, and reporting share one runner.",
+        "Split query execution from result collection and reporting.",
+    ),
+    "python/repark-parity/compat/runner.py": (
+        1289,
+        "Compatibility discovery, subprocess execution, and report assembly share one module.",
+        "Extract worker execution from census result classification.",
+    ),
+    "python/repark-parity/tests/test_compat_harness.py": (
+        1026,
+        "Compatibility harness scenarios narrowly exceed the default.",
+        "Split worker isolation from classification and report cases.",
+    ),
+    "python/repark/src/repark/spark/column.py": (
+        1648,
+        "Column expression methods remain on one facade class.",
+        "Extract a cohesive method family behind re-export bindings.",
+    ),
     "python/repark/src/repark/spark/dataframe/core.py": (
-        6880,  # measured 6866 after PYC-1 nested-def lift (udf_bridge + _emit_join_side_columns)
-        "DataFrame class + plan glue after the T0 nested-class and T0b plan-collapse "
-        "extracts and PYC-1 UDF-callback extract; RATCHET: after method-region mixins "
-        "(technique B) if shipped",
+        6866,
+        "The DataFrame facade still combines many plan-building method families.",
+        "Extract one existing method region when a charter changes that responsibility.",
+    ),
+    "python/repark/src/repark/spark/dataframe/joins_columns.py": (
+        1423,
+        "Join and column-selection helpers share one facade region.",
+        "Split join planning from column projection helpers.",
+    ),
+    "python/repark/src/repark/spark/dataframe/plan_collapse.py": (
+        1418,
+        "Plan-collapse transforms share one planner support module.",
+        "Split transform families along their existing plan-node boundaries.",
+    ),
+    "python/repark/src/repark/spark/dataframe/writer_readwriter.py": (
+        1406,
+        "DataFrameWriter and DataFrameReader facade methods share one region.",
+        "Split writer and reader bindings into separate cohesive modules.",
+    ),
+    "python/repark/src/repark/spark/functions.py": (
+        2030,
+        "Facade function exports and wrappers remain consolidated.",
+        "Split by function family while preserving the public re-export surface.",
+    ),
+    "python/repark/src/repark/spark/functions_expr.py": (
+        2299,
+        "Expression-building function families share one module.",
+        "Split string, collection, or predicate expression families.",
+    ),
+    "python/repark/src/repark/spark/functions_udf.py": (
+        1340,
+        "Python UDF and pandas UDF facade paths share one module.",
+        "Split scalar UDF declarations from pandas UDF batch contracts.",
     ),
     "python/repark/src/repark/spark/ml/feature/_transformers.py": (
-        2800,  # measured ~2733
-        "ML feature transformers battery; RATCHET: after per-transformer modules",
+        2762,
+        "ML feature transformer facades share one module.",
+        "Split transformers by feature family with stable public re-exports.",
     ),
     "python/repark/src/repark/spark/session/_funcs.py": (
-        8400,  # measured ~8254
-        "session free-function residual post-r26 package split; "
-        "RATCHET: after further session extract",
+        8387,
+        "Session free-function compatibility surface remains consolidated.",
+        "Extract one cohesive SQL, catalog, or configuration function family.",
+    ),
+    "python/repark/src/repark/spark/session/reader.py": (
+        1042,
+        "DataFrameReader formats and option handling narrowly exceed the default.",
+        "Split format-specific readers from shared option validation.",
+    ),
+    "python/repark/src/repark/spark/session/session_core.py": (
+        2482,
+        "SparkSession lifecycle and query entry points share one facade module.",
+        "Split construction and configuration from query and catalog methods.",
+    ),
+    "python/repark/src/repark/spark/ta.py": (
+        1862,
+        "Technical-analysis facade wrappers share one generated-like public surface.",
+        "Split wrappers by indicator family while preserving exports.",
+    ),
+    "python/repark/src/repark/spark/types.py": (
+        1843,
+        "Spark SQL type definitions and conversion helpers share one module.",
+        "Split type declarations from parsing and conversion helpers.",
+    ),
+    "python/repark/tests/_live_parity.py": (
+        1951,
+        "Live-mirror declarations and oracle helpers share one test support module.",
+        "Split registry declarations from execution and comparison helpers.",
+    ),
+    "python/repark/tests/test_boundary_shapes_parity.py": (
+        1019,
+        "Boundary-shape parity cases narrowly exceed the default.",
+        "Split scalar boundaries from nested and collection boundaries.",
+    ),
+    "python/repark/tests/test_display_styles.py": (
+        1233,
+        "Display-format scenarios share one test module.",
+        "Split text, HTML, and truncation style families.",
+    ),
+    "python/repark/tests/test_dynamic_flatten.py": (
+        1704,
+        "Dynamic-flatten parity and refusal cases share one module.",
+        "Split structural flattening from list and refusal scenarios.",
+    ),
+    "python/repark/tests/test_explode_rewrite.py": (
+        1231,
+        "Explode rewrite shapes share one test battery.",
+        "Split scalar, nested, and multiple-generator scenarios.",
+    ),
+    "python/repark/tests/test_functions_gt2.py": (
+        1050,
+        "Greater-than-two-argument function cases narrowly exceed the default.",
+        "Split by function family while preserving entry-point coverage.",
+    ),
+    "python/repark/tests/test_interchange_parity.py": (
+        1558,
+        "Dataframe-interchange parity scenarios share one module.",
+        "Split protocol export from import and type-conversion cases.",
+    ),
+    "python/repark/tests/test_join_parity.py": (
+        1274,
+        "Join parity modes share one test module.",
+        "Split equi-join, non-equi, and null-semantics scenarios.",
+    ),
+    "python/repark/tests/test_mapinarrow.py": (
+        1616,
+        "Arrow map-type behavior cases share one battery.",
+        "Split construction, conversion, and nested-operation families.",
+    ),
+    "python/repark/tests/test_ml_boost_oracle.py": (
+        2306,
+        "Boosted-model oracle cases and fixtures share one module.",
+        "Split estimator families while retaining the independent oracle boundary.",
+    ),
+    "python/repark/tests/test_pandas_udf.py": (
+        1487,
+        "Pandas UDF modes and failure cases share one module.",
+        "Split scalar, grouped, and iterator UDF scenario families.",
+    ),
+    "python/repark/tests/test_partition_value_audit.py": (
+        1684,
+        "Partition-value audit cases share one broad parity matrix.",
+        "Split partition transforms from temporal and type-conversion cases.",
+    ),
+    "python/repark/tests/test_session_timezone_parity.py": (
+        1398,
+        "Session-timezone parity cases share one module.",
+        "Split casts from date functions and window behavior.",
+    ),
+    "python/repark/tests/test_ta.py": (
+        1029,
+        "Technical-analysis facade cases narrowly exceed the default.",
+        "Split indicator families while keeping oracle comparisons.",
+    ),
+    "python/repark/tests/test_tpch_compare_unit.py": (
+        1561,
+        "TPC-H comparison-unit scenarios share one module.",
+        "Split schema, row, and reporting comparison families.",
+    ),
+    "python/repark/tests/test_udf.py": (
+        1178,
+        "General UDF behavior and error cases share one module.",
+        "Split scalar UDF execution from registration and refusal cases.",
+    ),
+    "python/repark/tests/test_window_parity.py": (
+        1512,
+        "Window parity frames and functions share one module.",
+        "Split frame semantics from ranking and analytic function families.",
     ),
 }
 
 REEXPORT_MARK = "re-export binding"
+
+
+def _is_exempt(path: Path, repo: Path) -> bool:
+    """Return whether a source path is under an approved generated-test directory."""
+    parts = path.relative_to(repo).parts
+    return any(
+        parts[index : index + len(exempt)] == exempt
+        for exempt in EXEMPT_PATHS
+        for index in range(len(parts) - len(exempt) + 1)
+    )
+
+
+def _validate_exception(relative: str, exception: tuple[int, str, str]) -> list[str]:
+    """Validate one exception row as actionable debt above the default."""
+    baseline, reason, split_seam = exception
+    errors: list[str] = []
+    if baseline <= DEFAULT_CEILING:
+        errors.append(
+            f"ERROR: {relative}: exception baseline {baseline} is not above default "
+            f"{DEFAULT_CEILING}; remove the exception row."
+        )
+    if not reason.strip():
+        errors.append(f"ERROR: {relative}: exception debt reason must not be empty.")
+    if not split_seam.strip():
+        errors.append(f"ERROR: {relative}: exception split seam must not be empty.")
+    return errors
 
 
 def _is_reexport_only(tree: ast.Module) -> bool:
@@ -81,18 +276,41 @@ def _is_reexport_only(tree: ast.Module) -> bool:
 def check_file(path: Path, repo: Path) -> list[str]:
     errors: list[str] = []
     rel = path.relative_to(repo).as_posix()
-    text = path.read_text(encoding="utf-8")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [f"ERROR: {rel}: unreadable ({exc})"]
     line_count = len(text.splitlines())
-    ceiling, reason = EXCEPTIONS.get(rel, (DEFAULT_CEILING, "default ceiling"))
-    if line_count > ceiling:
+    exception = EXCEPTIONS.get(rel)
+    if exception is None and line_count > DEFAULT_CEILING:
         errors.append(
-            f"ERROR: {rel} is {line_count} lines (ceiling {ceiling}). "
-            f"Reason on file: {reason}. "
-            f"Sanctioned outs: (1) split the module, or (2) edit EXCEPTIONS in "
-            f"scripts/check_lib_py.py with a reason (ceilings ratchet down only)."
+            f"ERROR: {rel} is {line_count} lines (default {DEFAULT_CEILING}). "
+            "Sanctioned outs: (1) split at a cohesive boundary, or (2) add an "
+            "owner-approved EXCEPTIONS row with the exact baseline, debt reason, and split seam."
         )
+    elif exception is not None:
+        baseline, reason, split_seam = exception
+        errors.extend(_validate_exception(rel, exception))
+        if line_count > baseline:
+            errors.append(
+                f"ERROR: {rel} grew to {line_count} lines (exact baseline {baseline}). "
+                f"Debt: {reason} Split seam: {split_seam} "
+                "Split the file, make the change line-neutral, or obtain explicit owner approval "
+                "for a reviewed baseline amendment."
+            )
+        elif line_count < baseline:
+            action = (
+                "remove the exception row"
+                if line_count <= DEFAULT_CEILING
+                else f"ratchet the baseline down to {line_count}"
+            )
+            errors.append(
+                f"ERROR: {rel} shrank to {line_count} lines below exact baseline {baseline}; "
+                f"{action}."
+            )
 
-    if path.name == "__init__.py":
+    facade_root = repo / FACADE_ROOT
+    if not path.is_relative_to(facade_root) or path.name == "__init__.py":
         return errors
 
     try:
@@ -115,14 +333,32 @@ def check_file(path: Path, repo: Path) -> list[str]:
 
 def main() -> int:
     repo = Path(__file__).resolve().parent.parent
-    root = repo / "python" / "repark" / "src" / "repark"
-    if not root.is_dir():
-        print("ERROR: python/repark/src/repark not found", file=sys.stderr)
-        return 2
-
     all_errors: list[str] = []
+    roots = [repo / root for root in SCAN_ROOTS]
+    for root in roots:
+        if not root.is_dir():
+            all_errors.append(f"ERROR: scan root not found: {root.relative_to(repo).as_posix()}")
+
+    paths = sorted(
+        path
+        for root in roots
+        if root.is_dir()
+        for path in root.rglob("*.py")
+        if path.is_file() and not _is_exempt(path, repo)
+    )
+    scanned = {path.relative_to(repo).as_posix() for path in paths}
+    for rel in sorted(EXCEPTIONS):
+        if rel not in scanned:
+            all_errors.append(
+                f"ERROR: EXCEPTIONS key is outside the scan set: {rel} "
+                "(remove the row or restore the source path)"
+            )
+
+    if not paths:
+        all_errors.append("ERROR: Python source scan set is empty — refuse to pass closed")
+
     checked = 0
-    for path in sorted(root.rglob("*.py")):
+    for path in paths:
         checked += 1
         all_errors.extend(check_file(path, repo))
 
@@ -135,7 +371,10 @@ def main() -> int:
         )
         return 1
 
-    print(f"lib-py: {checked} files clean (ceilings held; no-stub rule held)")
+    print(
+        f"lib-py: {checked} files clean "
+        f"(default ceiling {DEFAULT_CEILING}; {len(EXCEPTIONS)} exceptions; facade no-stub held)"
+    )
     return 0
 
 

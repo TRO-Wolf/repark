@@ -1,25 +1,10 @@
-//! Spark string-literal canonicalisation at the Spark door's **front door**.
+//! Spark string-literal canonicalisation at the Spark SQL front door.
 //!
-//! Spark's lexer processes escape sequences inside a single-quoted literal; the SQL door kept every
-//! backslash verbatim, so `'\d'` reached the engine as two characters where Spark returns one, and
-//! `regexp_count('a1b22', '\\d')` returned 0 where Spark returns 3 — a silent wrong answer on every
-//! migrated regex, and Spark-valid `'it\'s'` did not even tokenise. [`canonicalize`] rewrites each
-//! literal to the value Spark's lexer would produce, **once**, before any router tokeniser sees it.
+//! [`canonicalize`] applies Spark's escapes before router tokenizers parse the text. Its output uses
+//! Generic quoting, so later Generic parses cannot process an escape twice.
 //!
-//! **Why the front door, and only here.** A dozen router tokenisers each lex `\'` wrongly before
-//! `spark_ast::execute_passthrough` re-parses the text, so canonicalising once, first, makes every
-//! stage see the value Spark produced. Internally-generated SQL (`predicate_dml`, `merge`) never
-//! enters `router::execute`, which keeps the pass exactly-once (charter C-005 / C-010).
-//!
-//! **The output is Generic-canonical** — a plain `'…'` with every embedded `'` doubled and no
-//! backslash meaning — so it re-tokenises to the same value under both following `Generic` parses
-//! and cannot be escape-processed twice. The runtime dialect is Generic (pinned by
-//! `spark_door_executes_with_generic_dialect`; the `Databricks` wiring in
-//! `apply_spark_parser_dialect` is dead, FNP-4b).
-//!
-//! **The lexing dialect is [`SparkLexDialect`], not `BigQuery`.** Both read `\'` as an escape, but
-//! `BigQuery` also lexes `'''…'''` as a triple-quoted string Spark has no notion of (so `''''` would
-//! open a triple-quote and `sql_string_literal("'tis")` would crash). Generic has none.
+//! [`SparkLexDialect`] differs from Generic only for backslash escapes. BigQuery is unsuitable
+//! because it accepts triple-quoted strings that Spark rejects.
 //!
 //! **The rules (Spark 4.1.2, `spark.sql.parser.escapedStringLiterals=false`, measured against the
 //! live oracle `<pyspark-4.1.2-oracle>`; the charter ledger holds the full transcript):**
@@ -37,53 +22,40 @@
 //! | any other `c` | `c` (`\d`→d, `\q`→q, `\f`→f, `\1`→1, `\200`→2 then `00`) | E1, E8, E11, E27 |
 //! | `''` (doubled quote) | `'` | E6 |
 //!
-//! An unrepresentable code point — a lone UTF-16 surrogate (`\ud83d`) or a `\U` past the scalar
-//! range — becomes [`UNREPRESENTABLE`] (`?`): measured `hex('\ud83d')` is `3F`, Spark's Java UTF-8
-//! replacement, **not** U+FFFD. Spark's exact out-of-range `\U` output (a Java `char[]` artifact) is
-//! not reproduced and not in the pinned contract; `?` keeps the result sane and single-homed.
-//!
-//! Raw strings (`r'…'` / `R'…'`) keep their content verbatim (E19). An unpaired trailing backslash
-//! (`'a\'`) is a lexer error carrying line/column (E16). Backtick and double-quoted identifiers are
-//! never touched (E26; double-quoted string literals stay out of scope — FNP-4b,
-//! docs/spark-sql-iceberg-parity.md §7).
+//! A lone surrogate or out-of-range scalar becomes `?`, matching Spark's measured surrogate byte.
+//! Raw strings stay verbatim; identifiers stay untouched; an unpaired backslash keeps its position.
 
 use std::any::TypeId;
 use std::borrow::Cow;
 use std::iter::Peekable;
 use std::str::Chars;
 
+use datafusion::common::{Diagnostic, Span as DataFusionSpan};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::sql::sqlparser::dialect::{Dialect, GenericDialect};
 use datafusion::sql::sqlparser::parser::ParserError;
 use datafusion::sql::sqlparser::tokenizer::{Location, Token, TokenWithSpan, Tokenizer};
 
-/// The character Spark emits for a code point it cannot represent (a lone surrogate, or a `\U` past
-/// the scalar range). Measured `'\ud83d'` → `?` (U+003F), Java's UTF-8 replacement, not U+FFFD.
+/// Spark's measured replacement for an unrepresentable code point.
 const UNREPRESENTABLE: char = '\u{003F}';
 
-/// The dialect the pre-tokenise pass lexes with: [`GenericDialect`] in every decision **except**
-/// that a backslash escapes inside a single-quoted string (`\'` does not end the literal — E5), as
-/// Spark's lexer reads it. Deliberately NOT `BigQueryDialect` (module doc). The [`Dialect::dialect`]
-/// override returns `GenericDialect`'s `TypeId` so the tokeniser's concrete-type checks (the raw
-/// `r'…'` and byte `b'…'` prefixes, which are not trait-method-gated) fire as Generic; every trait
-/// method forwards to the inner `GenericDialect`, so only the backslash rule differs (sqlparser's
-/// `WrappedDialect` pattern).
+/// Generic lexing with Spark's single-quoted backslash behavior.
+/// Generic identity keeps sqlparser's raw-string prefix checks active.
 #[derive(Debug)]
 struct SparkLexDialect(GenericDialect);
 
 impl Dialect for SparkLexDialect {
-    /// Preserve `GenericDialect`'s identity so the raw-/byte-string prefix checks lex as Generic.
+    /// Preserve Generic identity for sqlparser's concrete-type prefix checks.
     fn dialect(&self) -> TypeId {
         self.0.dialect()
     }
 
-    /// The one behaviour differing from Generic: `\` escapes inside a single-quoted string, so `\'`
-    /// does not terminate the literal (E5) — Spark's lexer.
+    /// Let a backslash escape the next character inside a single-quoted string.
     fn supports_string_literal_backslash_escape(&self) -> bool {
         true
     }
 
-    // Every other tokeniser-consulted method forwards to GenericDialect verbatim.
+    // All other tokenization decisions stay Generic.
     fn is_identifier_start(&self, ch: char) -> bool {
         self.0.is_identifier_start(ch)
     }
@@ -165,9 +137,85 @@ pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     if !sql.as_bytes().contains(&b'\'') && !sql.as_bytes().contains(&b'\\') {
         return Ok(Cow::Borrowed(sql));
     }
-    // `with_unescape(false)` keeps the raw between-quote text so this module — not sqlparser, whose
-    // escape rules differ from Spark's — applies the rules. Only literal spans are consumed from
-    // this tokenisation; everything else is copied from source.
+    match canonical_rewrite(sql)? {
+        Some(rewrite) => Ok(Cow::Owned(rewrite.sql)),
+        None => Ok(Cow::Borrowed(sql)),
+    }
+}
+
+/// Translate a downstream parser location from canonical text to the caller's SQL.
+/// The passthrough parser returns SQL or Diagnostic(SQL); later error trees stay intact.
+pub(crate) fn translate_downstream_error(
+    original: &str,
+    canonical: &str,
+    error: DataFusionError,
+) -> DataFusionError {
+    let Ok(Some(rewrite)) = canonical_rewrite(original) else {
+        return error;
+    };
+    if rewrite.sql != canonical {
+        return error;
+    }
+    translate_parser_error(error, &rewrite)
+}
+
+fn translate_parser_error(error: DataFusionError, rewrite: &CanonicalRewrite) -> DataFusionError {
+    match error {
+        DataFusionError::SQL(parser_error, backtrace) => match *parser_error {
+            ParserError::ParserError(message) => {
+                let translated = rewrite_parser_location(&message, rewrite).unwrap_or(message);
+                DataFusionError::SQL(Box::new(ParserError::ParserError(translated)), backtrace)
+            }
+            other => DataFusionError::SQL(Box::new(other), backtrace),
+        },
+        DataFusionError::Diagnostic(diagnostic, inner) => match *inner {
+            DataFusionError::SQL(parser_error, backtrace) => DataFusionError::Diagnostic(
+                Box::new(translate_diagnostic(*diagnostic, rewrite)),
+                Box::new(translate_parser_error(
+                    DataFusionError::SQL(parser_error, backtrace),
+                    rewrite,
+                )),
+            ),
+            other => DataFusionError::Diagnostic(diagnostic, Box::new(other)),
+        },
+        other => other,
+    }
+}
+
+fn translate_diagnostic(mut diagnostic: Diagnostic, rewrite: &CanonicalRewrite) -> Diagnostic {
+    diagnostic.span = diagnostic
+        .span
+        .map(|span| translate_datafusion_span(span, rewrite).unwrap_or(span));
+    for note in &mut diagnostic.notes {
+        note.span = note
+            .span
+            .map(|span| translate_datafusion_span(span, rewrite).unwrap_or(span));
+    }
+    for help in &mut diagnostic.helps {
+        help.span = help
+            .span
+            .map(|span| translate_datafusion_span(span, rewrite).unwrap_or(span));
+    }
+    diagnostic
+}
+
+fn translate_datafusion_span(
+    span: DataFusionSpan,
+    rewrite: &CanonicalRewrite,
+) -> Option<DataFusionSpan> {
+    let start = rewrite.original_location(Location {
+        line: span.start.line,
+        column: span.start.column,
+    })?;
+    let end = rewrite.original_location(Location {
+        line: span.end.line,
+        column: span.end.column,
+    })?;
+    Some(DataFusionSpan::new(start.into(), end.into()))
+}
+
+fn canonical_rewrite(sql: &str) -> Result<Option<CanonicalRewrite>> {
+    // `with_unescape(false)` keeps the raw between-quote text so this module applies Spark's rules.
     let tokens = Tokenizer::new(&SparkLexDialect(GenericDialect {}), sql)
         .with_unescape(false)
         .tokenize_with_location()
@@ -176,13 +224,13 @@ pub(crate) fn canonicalize(sql: &str) -> Result<Cow<'_, str>> {
     // `OPTIONS ('key' 'value')` pairs are adjacent quoted words, not Spark concatenation, so
     // canonicalising would merge each pair into one literal. Spark has neither, so leave them Generic.
     if is_datafusion_native_statement(&tokens) {
-        return Ok(Cow::Borrowed(sql));
+        return Ok(None);
     }
     let regions = plan_literal_regions(&tokens);
     if regions.is_empty() {
-        return Ok(Cow::Borrowed(sql));
+        return Ok(None);
     }
-    Ok(Cow::Owned(apply_regions(sql, &regions)))
+    Ok(Some(apply_regions(sql, &regions)))
 }
 
 /// The leading significant word tokens (whitespace skipped), up to `max`; stops at the first
@@ -234,6 +282,29 @@ struct LiteralRegion {
     start: Location,
     end: Location,
     replacement: String,
+}
+
+/// Canonical SQL plus the original location of each output character and the output EOF.
+struct CanonicalRewrite {
+    sql: String,
+    original_locations: Vec<Location>,
+}
+
+impl CanonicalRewrite {
+    fn original_location(&self, target: Location) -> Option<Location> {
+        let mut canonical = Location { line: 1, column: 1 };
+        for (character, original) in self.sql.chars().zip(&self.original_locations) {
+            if canonical == target {
+                return Some(*original);
+            }
+            advance_location(&mut canonical, character);
+        }
+        if canonical == target {
+            self.original_locations.last().copied()
+        } else {
+            None
+        }
+    }
 }
 
 /// Collect the literal spans that must change. A single literal is copied verbatim unless it is a
@@ -324,8 +395,9 @@ fn requote_generic(value: &str) -> String {
 /// Rebuild `sql`, replacing each [`LiteralRegion`] with its canonical text and copying every other
 /// character. The walk tracks sqlparser's `(line, column)` (column counts characters) so region
 /// boundaries match without byte-offset arithmetic. Regions arrive in source order and do not overlap.
-fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> String {
+fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> CanonicalRewrite {
     let mut out = String::with_capacity(sql.len());
+    let mut original_locations = Vec::with_capacity(sql.chars().count() + 1);
     let mut regions = regions.iter().peekable();
     let mut line = 1u64;
     let mut column = 1u64;
@@ -340,12 +412,16 @@ fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> String {
             && let Some(region) = regions.peek()
             && region.start == here
         {
-            out.push_str(&region.replacement);
+            for replacement_character in region.replacement.chars() {
+                out.push(replacement_character);
+                original_locations.push(region.start);
+            }
             skip_until = Some(region.end);
             regions.next();
         }
         if skip_until.is_none() {
             out.push(character);
+            original_locations.push(here);
         }
         if character == '\n' {
             line += 1;
@@ -354,7 +430,61 @@ fn apply_regions(sql: &str, regions: &[LiteralRegion]) -> String {
             column += 1;
         }
     }
-    out
+    original_locations.push(Location { line, column });
+    CanonicalRewrite {
+        sql: out,
+        original_locations,
+    }
+}
+
+fn advance_location(location: &mut Location, character: char) {
+    if character == '\n' {
+        location.line += 1;
+        location.column = 1;
+    } else {
+        location.column += 1;
+    }
+}
+
+fn rewrite_parser_location(message: &str, rewrite: &CanonicalRewrite) -> Option<String> {
+    const LINE_MARKER: &str = " at Line: ";
+    const COLUMN_MARKER: &str = ", Column: ";
+    let Some(marker) = message.rfind(LINE_MARKER) else {
+        return rewrite_unlocated_eof(message, rewrite);
+    };
+    let line_start = marker + LINE_MARKER.len();
+    let line_end = ascii_digit_end(message, line_start);
+    message.get(line_end..)?.strip_prefix(COLUMN_MARKER)?;
+    let column_start = line_end + COLUMN_MARKER.len();
+    let column_end = ascii_digit_end(message, column_start);
+    let canonical = Location {
+        line: message.get(line_start..line_end)?.parse().ok()?,
+        column: message.get(column_start..column_end)?.parse().ok()?,
+    };
+    let original = rewrite.original_location(canonical)?;
+    Some(format!(
+        "{}{}{}{}{}",
+        &message[..line_start],
+        original.line,
+        COLUMN_MARKER,
+        original.column,
+        &message[column_end..]
+    ))
+}
+
+fn rewrite_unlocated_eof(message: &str, rewrite: &CanonicalRewrite) -> Option<String> {
+    if !message.ends_with("found: EOF") {
+        return None;
+    }
+    let original_eof = rewrite.original_locations.last()?;
+    Some(format!("{message}{original_eof}"))
+}
+
+fn ascii_digit_end(text: &str, start: usize) -> usize {
+    text.as_bytes()[start..]
+        .iter()
+        .position(|byte| !byte.is_ascii_digit())
+        .map_or(text.len(), |offset| start + offset)
 }
 
 /// Apply Spark 4.1.2's escape rules to the raw between-quote text `raw` (kept by `unescape(false)`:
@@ -507,5 +637,123 @@ fn push_code_point(code_point: u32, out: &mut String) {
     match char::from_u32(code_point) {
         Some(character) => out.push(character),
         None => out.push(UNREPRESENTABLE),
+    }
+}
+
+#[cfg(test)]
+mod location_translation_tests {
+    use super::*;
+    use std::sync::Arc;
+
+    fn parser_error(message: &str) -> DataFusionError {
+        DataFusionError::SQL(
+            Box::new(ParserError::ParserError(message.to_string())),
+            None,
+        )
+    }
+
+    #[test]
+    fn expansion_and_mixed_regions_map_to_original_locations() {
+        let cases = [
+            (
+                "SELECT '\\n' AS shifted, )",
+                "Expected: end of statement, found: ) at Line: 2, Column: 15",
+                "Line: 1, Column: 25",
+            ),
+            (
+                "SELECT '\\u0027' AS expanded, '\\u0061' AS shrunk, )",
+                "Expected: end of statement, found: ) at Line: 1, Column: 41",
+                "Line: 1, Column: 50",
+            ),
+        ];
+        for (original, message, expected) in cases {
+            let canonical = canonicalize(original).expect("test SQL canonicalizes");
+            let translated =
+                translate_downstream_error(original, canonical.as_ref(), parser_error(message));
+            assert!(translated.to_string().contains(expected), "{translated}");
+        }
+    }
+
+    #[test]
+    fn direct_eof_parser_errors_map_to_original_eof() {
+        let original = "SELECT '\\u0061' +";
+        let canonical = canonicalize(original).expect("test SQL canonicalizes");
+        let error = parser_error("Expected: an expression, found: EOF");
+        let translated = translate_downstream_error(original, canonical.as_ref(), error);
+        assert!(
+            translated.to_string().contains("Line: 1, Column: 18"),
+            "{translated}"
+        );
+    }
+
+    #[test]
+    fn spark_passthrough_parser_boundary_returns_only_reachable_parser_variants() {
+        let context = datafusion::execution::context::SessionContext::new();
+        let state = context.state();
+        let dialect = state.config().options().sql_parser.dialect;
+        let cases = [
+            ("SELECT '\\u0061' + )", false),
+            ("SELECT '\\n' AS shifted, )", true),
+            ("SELECT '\\u0027' AS expanded, '\\u0061' AS shrunk, )", true),
+        ];
+        for (original, has_diagnostic) in cases {
+            let canonical = canonicalize(original).expect("test SQL canonicalizes");
+            let error = state
+                .sql_to_statement(canonical.as_ref(), &dialect)
+                .expect_err("invalid canonical SQL must fail at the parser boundary");
+            match error {
+                DataFusionError::SQL(parser_error, _) if !has_diagnostic => {
+                    assert!(matches!(*parser_error, ParserError::ParserError(_)));
+                }
+                DataFusionError::Diagnostic(_, inner) if has_diagnostic => {
+                    assert!(matches!(*inner, DataFusionError::SQL(_, _)));
+                }
+                other => panic!("unexpected parser boundary variant: {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn unsupported_shared_error_tree_stays_identical() {
+        let original = "SELECT '\\u0061' + )";
+        let canonical = canonicalize(original).expect("test SQL canonicalizes");
+        let shared = Arc::new(DataFusionError::Collection(vec![
+            parser_error("Expected: an expression, found: ) at Line: 1, Column: 14"),
+            DataFusionError::NotImplemented("unsupported sibling".to_string()),
+        ]));
+        let retained = Arc::clone(&shared);
+        let translated = translate_downstream_error(
+            original,
+            canonical.as_ref(),
+            DataFusionError::Shared(Arc::clone(&shared)),
+        );
+        let DataFusionError::Shared(translated) = translated else {
+            panic!("expected shared wrapper");
+        };
+        assert!(Arc::ptr_eq(&translated, &shared));
+        assert!(retained.to_string().contains("Line: 1, Column: 14"));
+    }
+
+    #[test]
+    fn tokenizer_and_unlocated_non_eof_errors_stay_unchanged() {
+        let original = "SELECT '\\u0061' + )";
+        let canonical = canonicalize(original).expect("test SQL canonicalizes");
+        let tokenizer = DataFusionError::SQL(
+            Box::new(ParserError::TokenizerError(
+                "tokenizer location".to_string(),
+            )),
+            None,
+        );
+        let tokenizer = translate_downstream_error(original, canonical.as_ref(), tokenizer);
+        assert_eq!(
+            tokenizer.to_string(),
+            "SQL error: TokenizerError(\"tokenizer location\")"
+        );
+        let parser = parser_error("Expected: an expression");
+        let parser = translate_downstream_error(original, canonical.as_ref(), parser);
+        assert_eq!(
+            parser.to_string(),
+            "SQL error: ParserError(\"Expected: an expression\")"
+        );
     }
 }

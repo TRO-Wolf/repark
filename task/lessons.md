@@ -4,6 +4,29 @@ DO / DO-NOT rules in force. Append date-stamped entries; supersede, don't delete
 2026-08-06 with sanitized lessons carried from the private v1 repository — these were learned
 there the hard way and bind here from day one.
 
+## 2026-08-26 — PR-245 remediation
+
+- **DO preserve original SQL locations across front-door canonicalization.** A value-preserving
+  rewrite can change text length, so downstream parser locations need an explicit source map.
+- **DO express enumerable syntax guards with the AST.** Text patterns miss equivalent constant
+  spellings such as `chr(39)` and invite claims broader than the detector can prove.
+- **DO map copied canonical characters to their exact original locations.** Synthetic literal text
+  can expand or shrink, so later parser coordinates must traverse the canonical source map.
+- **DO define bounded constant-expression syntax explicitly.** A `chr` guard that accepts integer
+  literals but not safe arithmetic leaves equivalent quote spellings outside its stated domain.
+- **DO preserve each error-tree child independently.** An aliased mixed collection must not make a
+  translatable parser sibling depend on whether an unrelated leaf can be cloned.
+- **DO budget constant evaluation before string allocation.** Depth and value limits do not prevent
+  recursive concat or repetition from overflowing the stack or allocating oversized intermediates.
+- **DO prove reachable error shapes before cloning an error enum.** Translate at the typed parser
+  boundary and leave unrelated planning or execution trees unchanged.
+- **DO catch parser resource exhaustion at a file gate's boundary.** Valid hostile source can raise
+  `RecursionError` or `MemoryError`; a gate must fail once without leaking a traceback.
+- **DO exercise every reachable branch of a typed parser boundary.** DataFusion returns direct SQL
+  errors for sqlparser failures and `Diagnostic(SQL)` for its native expected-token failures.
+- **DO compare rewrite bytes, not `Cow` ownership.** An owned buffer can preserve SQL exactly;
+  source-location translation stops only when a secondary rewrite changes the bytes.
+
 ## 2026-08-06 — carried from v1
 
 - **DO land tests in the same commit/PR as the code they test — hard block.** "Tests later"

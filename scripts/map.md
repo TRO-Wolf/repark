@@ -64,7 +64,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   away as their ledgers retire — mw-0's went with MW-5; attestation not required
   of the five ledgers that predate the rule; **SQP-1** carries a ceiling-0 row for the Actor-phase
   deferral, removed by its Critic when the attestation is filed), ratchets down only, and a row naming a ledger in no
-  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
+  live bin is a finding. PR-245 carries its own ceiling-0 Actor-phase row while its revalidation
+  ledger remains in staging. Two sub-rules were measured and **declined** (an `OPEN` row carries a
   `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
@@ -212,23 +213,16 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   PR; the recorded procedure it implements is
   [../docs/port/census.md](../docs/port/census.md).
 
-- `check_lib_py.sh` + `check_lib_py.py` — the **Python** thinness guard, sibling of
-  `check_lib_rs` and the SSOT for facade file size (ported verbatim at phase-3 PR-5 with the
-  facade package it inspects). Over every `*.py` under `python/repark/src/repark/**`: a per-file
-  line ceiling (default 2500) with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN
-  only; three rows after FN-SPLIT — `dataframe/core.py`,
-  `ml/feature/_transformers.py`, `session/_funcs.py`; `functions.py` dropped when the
-  package-split shipped. **SE-1 PR-B (2026-08-17):** the `dataframe/core.py` ceiling ratcheted
-  DOWN after the T0b `plan_collapse.py` extract; the new module is under the default ceiling
-  and needs no row. **DF1 (2026-08-19):** `core.py` ceiling ratcheted DOWN again after
-  the Python `dynamicFlatten` planner loop was deleted; re-measured
-  7196 via `splitlines()` at HEAD. **PYC-1 (2026-08-22):** `core.py` ceiling
-  ratcheted DOWN again after UDF action callbacks moved to `udf_bridge.py`;
-  re-measured 6866 via `splitlines()` at the PYC-1 tip), plus the no-stub rule (a module whose body
-  is only a docstring + imports/re-exports/`__all__`/`pass` must open its docstring with the
-  exact substring `re-export binding`; package `__init__.py` files are exempt from the no-stub
-  rule but not from the ceiling). Pure text — sub-second. Wired by the orchestrator into
-  `make check-lib-py` and the ci.yml `python` job in the same PR.
+- `check_lib_py.sh` + `check_lib_py.py` — the **Python source-size and facade thinness guard**.
+  The line scan covers every `*.py` under `python/` and `scripts/`; the default and every exact
+  exception baseline live only in the script. An exception records its debt reason and cohesive
+  split seam. Growth fails, and shrinkage fails until the baseline ratchets down or the row retires.
+  Only generated-test sources under `tests/goldens/` or `tests/fixtures/` are excluded. The
+  facade-only no-stub rule retains its narrower scope: a re-export-only module under
+  `python/repark/src/repark/` must open its docstring with `re-export binding`; package
+  `__init__.py` files remain exempt from that syntax rule, not the size rule. Fail-closed on a
+  missing scan root, unreadable source, empty scan, or exception outside the scan. Dual-wired by
+  `make check-lib-py` and the ci.yml `python` job.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
   guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
@@ -240,9 +234,13 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   the point, a `functools.wraps` wrapper — an empty reason does NOT pass) and a
   `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
   or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
-  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no hand-rolled
-  single-quote-doubling for SQL (SQP-1)** — a ceiling-0 text rule forbidding the raw idiom outside
-  the one helper file (`_idents.py`), so every facade embed goes through its escape helpers. The other Python
+  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no direct constant
+  quote-doubling `replace` call for SQL (SQP-1)** — a receiver-blind AST rule evaluates strings,
+  bounded integer `+`/`-`, `chr`, concatenation, and repetition, then forbids the one-quote to
+  two-quote call outside `_idents.py`. Its iterative text walk limits depth, nodes, and output
+  before allocation. A PR-245 pin inventories shipped helper calls; the exact whitelist does not
+  claim semantic completeness. File parsing catches syntax and parser-resource failures as one
+  controlled diagnostic, including valid expressions that exhaust AST construction. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
   duty. Seeded from the measured tree (2026-08-21): 66 nested
@@ -275,26 +273,12 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   pre-commit (n=5 median **0.13 s**, inside the sub-second hook budget).
 
 - `check_rust_file_size.sh` + `check_rust_file_size.py` — the **general Rust file-size** guard
-  (G-8 companion to `check_lib_rs`). Over every `*.rs` under `crates/**` (recursive): a per-file
-  line ceiling with an `EXCEPTIONS`-with-reason table in the `.py` (ratchet DOWN only). Default
-  and exception numbers live **only** in the `.py` — prose never restates them. Seeded from the
-  post-G-4 measured tree (the former 14.5-KLOC `tests.rs` monolith is gone and is not
-  grandfathered). Fail-closed: unreadable file, empty scan set, or a stale `EXCEPTIONS` key
-  (path no longer on disk) is an error. **2026-08-15 (UDFX):** the `crates/repark-ta/src/udf.rs`
-  key moved to `crates/repark-ta/src/udf/mod.rs` (per-family UDF module split) and ratcheted
-  DOWN; family siblings use the default ceiling. Pure text — sub-second. Dual-wired:
-  `make check-rust-file-size` (in `make ci`) AND the ci.yml `guards`-job step; also both
-  pre-commit paths (`make install-hooks` + `.pre-commit-config.yaml`).
-  **SQM r6 (2026-08-18):** EXCEPTIONS key `crates/repark-core/src/session.rs` deleted
-  (temp-view family extracted to `session/temp_views.rs`; back under the default ceiling).
-  **SQM r7 (2026-08-18):** that ratchet-out comment's measured count trued — `session.rs` is
-  **1477** lines on the delivered tree, not the 1465 the r6 note wrote; still under the 1500
-  default, so the deletion stands unchanged (R7-3).
-  **COLX (2026-08-15):** EXCEPTIONS key `crates/repark-python/src/column.rs` deleted;
-  replaced by `crates/repark-python/src/column/mod.rs` (ratchet DOWN after helper extract).
-  **FN-GX (2026-08-16):** `column/mod.rs` ceiling ratcheted DOWN after the `call_scalar` /
-  `aggregate` / `aggregate_binary` match tables moved to `column/function_dispatch.rs`
-  (default ceiling; no new EXCEPTIONS row).
+  (G-8 companion to `check_lib_rs`). The scan covers every `*.rs` under `crates/**`; the default
+  and every exact exception baseline live only in the script. Each exception carries its debt
+  reason and cohesive split seam. Growth fails, and shrinkage fails until the row ratchets down
+  or retires. Only generated-test sources under `tests/goldens/` or `tests/fixtures/` are excluded.
+  Fail-closed on an unreadable file, empty scan, or exception outside the scan. Dual-wired through
+  `make check-rust-file-size`, the ci.yml guards job, and both pre-commit surfaces.
 
 - `check_parity_live_dual_wire.sh` + `check_parity_live_dual_wire.py` — the **parity-live dual-wire**
   guard (G-6). Compares `make parity-live` and `.github/workflows/parity-live.yml` to **each
@@ -331,8 +315,8 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | Add / remove an internal crate dependency | `check_crate_dag.py` (`ALLOWED_EDGES` — declare the edge, its kind and a reason) |
 | Declare a new crate, doc, or gate command | [`../repo-manifest.toml`](../repo-manifest.toml), then `bash scripts/check_manifest.sh` |
 | Raise/lower a lib.rs line ceiling | `check_lib_rs.py` (`EXCEPTIONS` — reason required) |
-| Raise/lower a facade `.py` line ceiling | `check_lib_py.py` (`EXCEPTIONS` — reason required, ratchet down only) |
-| Raise/lower a general Rust file line ceiling | `check_rust_file_size.py` (`EXCEPTIONS` — reason required, ratchet down only) |
+| Ratchet a Python source baseline | `check_lib_py.py` (`EXCEPTIONS` — exact count, debt reason, split seam; owner approval for growth) |
+| Ratchet a general Rust source baseline | `check_rust_file_size.py` (`EXCEPTIONS` — exact count, debt reason, split seam; owner approval for growth) |
 | Sanction a nested `def`, or lower a nested-def ceiling | `check_python_conventions.py` (`# nested-def: <reason>` pragma for the three allowed cases; `NESTED_DEF_EXCEPTIONS` for debt — ratchet down only) |
 | Keep a `dataclass` that cannot become a `BaseModel` | `check_python_conventions.py` (`DATACLASS_EXCEPTIONS` — reason required; no inline pragma exists on purpose) |
 | Lower a docstring-presence ceiling, or add a row | `check_docstring_presence.py` (`EXCEPTIONS` — reason required; ceilings ratchet down only; tests are out of scope) |
@@ -370,12 +354,14 @@ Not re-homed (the port is complete — each returns only with a concrete driver)
 | `crate-dag inspected zero internal crates/edges` | `cargo metadata` returned nothing internal — wrong manifest path or a broken workspace (a single-crate workspace with zero edges is fine) |
 | `lib-rs: … inline #[cfg(test)] mod` | Move the test body to a file-backed module (`src/<name>.rs` + `#[cfg(test)] mod <name>;`) |
 | `lib-rs: … lines (ceiling …)` | Extract production code into a named module, or add an `EXCEPTIONS` entry with a reason (ratchet down only) |
-| `lib-py: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_lib_py.py` with a reason (ceilings ratchet down only) |
+| `lib-py: … lines (default …)` / `grew to …` | Split the module, make the edit line-neutral, or obtain owner approval for an exact-baseline exception amendment |
+| `lib-py: … shrank to …` | Lower the exact baseline to the measured count, or remove the row when the file meets the default |
 | `lib-py: … re-export-only module must start its docstring …` | Open the module docstring's FIRST line with the exact substring `re-export binding`, or give the module real content |
-| `lib-py: python/repark/src/repark not found` | The guard runs from the repo root and needs the facade package present |
-| `rust-file-size: … lines (ceiling …)` | Split the module, or add an `EXCEPTIONS` row in `check_rust_file_size.py` with a reason (ceilings ratchet down only) |
+| `lib-py: scan root not found` | Run from the repository tree and restore the named `python/` or `scripts/` root |
+| `rust-file-size: … lines (default …)` / `grew to …` | Split the module, make the edit line-neutral, or obtain owner approval for an exact-baseline exception amendment |
+| `rust-file-size: … shrank to …` | Lower the exact baseline to the measured count, or remove the row when the file meets the default |
 | `rust-file-size: … scan set is empty` | Fail-closed: the guard found zero `crates/**/*.rs` files — fix the tree or the scan root |
-| `rust-file-size: EXCEPTIONS key has no file on disk` | Remove the stale row or restore the path (fail-closed; not a silent skip) |
+| `… EXCEPTIONS key is outside the scan set` | Remove the stale row or restore the source path (fail-closed; not a silent skip) |
 | `python-conventions: … defines N nested function(s)` | Lift the definition to module or class level and pass what it needs as arguments; or add `# nested-def: <reason>` if it is a decorator factory, a state-capturing callback, or a `functools.wraps` wrapper; or raise the `NESTED_DEF_EXCEPTIONS` row with a reason (ratchet down only) |
 | `python-conventions: … imports \`dataclasses\`` | Convert the container to a Pydantic v2 `BaseModel` (`model_config = ConfigDict(frozen=True)` for the frozen case), or add a `DATACLASS_EXCEPTIONS` row with a reason |
 | `python-conventions: … does not parse` / `scan set is empty` | Fail-closed: the guard refuses to report success over a file it could not read or a tree it could not find |

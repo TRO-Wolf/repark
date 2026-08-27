@@ -6,7 +6,15 @@ Unit tests for the parity comparison core **and the dataset generators** (no Spa
 JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
+- `test_pr_245_revalidation_record.py` — PR-245 exact source-size, frozen SQP-1 pin-family,
+  depth/node/output-bounded receiver-blind AST guard with constructed-tree stress pins, exact
+  helper-call inventory, 10,000-term real-file parser-resource refusal, scoped router-comment,
+  and maps.
 
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
+  source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
+  missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
+  facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

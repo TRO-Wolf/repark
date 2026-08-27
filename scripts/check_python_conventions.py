@@ -30,15 +30,10 @@ Rules over every *.py under SCAN_ROOTS (recursive):
    the only out; there is no inline pragma, because the fix is mechanical and a
    per-site escape hatch would make the rule decay.
 
-3. **No hand-rolled single-quote-doubling for SQL (SQP-1).** Since SQP-1 the
-   Spark door's front door Spark-unescapes every string literal in the SQL it
-   receives — facade-generated SQL included — so a value embedded with only
-   quote-doubling has its backslashes escape-processed (a silent wrong answer:
-   `F.lit('p\\q')` yields `pq`). Every embedded value MUST go through the one
-   shared helper (`repark.spark._idents.sql_string_literal`, or
-   `escape_sql_single_quotes` for a DataFusion-native/backslash-literal
-   statement); the raw idiom is forbidden outside that one file
-   (SQL_LITERAL_HELPER_FILE), ceiling 0, no exceptions table. A text rule.
+3. **No direct constant quote-doubling `replace` call for SQL (SQP-1).** The receiver-blind AST
+   rule evaluates strings, bounded integer `+`/`-`, `chr`, concatenation, and repetition. It
+   rejects the one-quote to two-quote call outside the shared helper. The shipped helper-call
+   inventory is pinned separately; this syntax rule does not claim semantic completeness.
 
 Exit 0 on clean; non-zero with path, line, measured count and the sanctioned
 outs. Fail-closed: an unreadable file, a file that will not parse, an empty
@@ -49,7 +44,6 @@ a skip.
 from __future__ import annotations
 
 import ast
-import re
 import sys
 from pathlib import Path
 
@@ -88,15 +82,14 @@ DATACLASS_EXCEPTIONS: dict[str, str] = {
 }
 
 _BANNED_CONTAINER_MODULES = frozenset({"dataclasses", "attr", "attrs"})
+_MAX_CONSTANT_INTEGER = 0x10FFFF
+_MAX_CONSTANT_INTEGER_DEPTH = 4
+_MAX_CONSTANT_TEXT_DEPTH = 16
+_MAX_CONSTANT_TEXT_NODES = 64
+_MAX_CONSTANT_TEXT_LENGTH = 2
 
-# SQP-1: the one file allowed to spell the single-quote-doubling SQL-escape idiom; every other
-# embed must call its helpers, so the door's Spark-unescape does not escape-process it. Ceiling 0.
+# Direct constant quote-doubling belongs only in the shared helper.
 SQL_LITERAL_HELPER_FILE = "python/repark/src/repark/spark/_idents.py"
-
-# Matches the raw single-quote-doubling call: a `.replace` of one apostrophe by two (any inner
-# whitespace). The pattern deliberately does not spell that call out, so this guard never flags its
-# own source; a `.replace` that doubles a backslash does not match.
-_SQL_QUOTE_DOUBLING = re.compile(r"""\.replace\(\s*"'"\s*,\s*"''"\s*\)""")
 
 
 def _is_function(node: ast.AST) -> bool:
@@ -161,13 +154,99 @@ def find_banned_container_imports(tree: ast.Module) -> list[tuple[int, str]]:
     return hits
 
 
-def find_sql_quote_doubling(source: str) -> list[int]:
-    """Line numbers (1-indexed) where the raw single-quote-doubling SQL idiom appears."""
+def _constant_integer(node: ast.AST, depth: int = 0) -> int | None:
+    """Evaluate bounded integer literals and unary or binary addition and subtraction."""
+    if depth > _MAX_CONSTANT_INTEGER_DEPTH:
+        return None
+    if (
+        isinstance(node, ast.Constant)
+        and isinstance(node.value, int)
+        and not isinstance(node.value, bool)
+    ):
+        return node.value if abs(node.value) <= _MAX_CONSTANT_INTEGER else None
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.UAdd | ast.USub):
+        operand = _constant_integer(node.operand, depth + 1)
+        if operand is None:
+            return None
+        value = operand if isinstance(node.op, ast.UAdd) else -operand
+        return value if abs(value) <= _MAX_CONSTANT_INTEGER else None
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add | ast.Sub):
+        left = _constant_integer(node.left, depth + 1)
+        right = _constant_integer(node.right, depth + 1)
+        if left is None or right is None:
+            return None
+        value = left + right if isinstance(node.op, ast.Add) else left - right
+        return value if abs(value) <= _MAX_CONSTANT_INTEGER else None
+    return None
+
+
+def _constant_text(node: ast.AST) -> str | None:
+    """Evaluate only bounded constant forms used to spell quote arguments."""
+    values: dict[int, str | None] = {}
+    stack: list[tuple[ast.AST, int, bool]] = [(node, 0, False)]
+    visited = 0
+    while stack:
+        current, depth, expanded = stack.pop()
+        if depth > _MAX_CONSTANT_TEXT_DEPTH:
+            return None
+        if not expanded:
+            visited += 1
+            if visited > _MAX_CONSTANT_TEXT_NODES:
+                return None
+            stack.append((current, depth, True))
+            if isinstance(current, ast.BinOp) and isinstance(current.op, ast.Add | ast.Mult):
+                stack.append((current.right, depth + 1, False))
+                stack.append((current.left, depth + 1, False))
+            continue
+        value: str | None = None
+        if isinstance(current, ast.Constant) and type(current.value) is str:
+            if len(current.value) <= _MAX_CONSTANT_TEXT_LENGTH:
+                value = current.value
+        elif (
+            isinstance(current, ast.Call)
+            and isinstance(current.func, ast.Name)
+            and current.func.id == "chr"
+            and len(current.args) == 1
+            and not current.keywords
+        ):
+            integer = _constant_integer(current.args[0])
+            if integer is not None:
+                try:
+                    value = chr(integer)
+                except ValueError:
+                    value = None
+        elif isinstance(current, ast.BinOp) and isinstance(current.op, ast.Add):
+            left = values.get(id(current.left))
+            right = values.get(id(current.right))
+            if left is not None and right is not None:
+                length = len(left) + len(right)
+                if length <= _MAX_CONSTANT_TEXT_LENGTH:
+                    value = left + right
+        elif isinstance(current, ast.BinOp) and isinstance(current.op, ast.Mult):
+            text = values.get(id(current.left))
+            count = _constant_integer(current.right)
+            if text is None:
+                text = values.get(id(current.right))
+                count = _constant_integer(current.left)
+            if text is not None and count is not None and count >= 0:
+                length = len(text) * count
+                if length <= _MAX_CONSTANT_TEXT_LENGTH:
+                    value = text * count
+        values[id(current)] = value
+    return values.get(id(node))
+
+
+def find_sql_quote_doubling(tree: ast.Module) -> list[int]:
+    """Return receiver-blind replace calls with whitelisted constant quote arguments."""
     hits: list[int] = []
-    for number, line in enumerate(source.splitlines(), start=1):
-        if _SQL_QUOTE_DOUBLING.search(line):
-            hits.append(number)
-    return hits
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "replace" or len(node.args) != 2 or node.keywords:
+            continue
+        if _constant_text(node.args[0]) == "'" and _constant_text(node.args[1]) == "''":
+            hits.append(node.lineno)
+    return sorted(hits)
 
 
 def check_file(path: Path, repo: Path) -> list[str]:
@@ -180,6 +259,11 @@ def check_file(path: Path, repo: Path) -> list[str]:
         tree = ast.parse(source)
     except SyntaxError as error:
         return [f"ERROR: {relative} does not parse ({error}) — refuse to pass closed"]
+    except (MemoryError, OverflowError, RecursionError) as error:
+        return [
+            f"ERROR: {relative} exceeds Python parser resource limits "
+            f"({type(error).__name__}) — refuse to pass closed"
+        ]
 
     lines = source.splitlines()
     errors: list[str] = []
@@ -211,14 +295,12 @@ def check_file(path: Path, repo: Path) -> list[str]:
             )
 
     if relative != SQL_LITERAL_HELPER_FILE:
-        for lineno in find_sql_quote_doubling(source):
+        for lineno in find_sql_quote_doubling(tree):
             errors.append(
-                f"ERROR: {relative}:{lineno} spells the single-quote-doubling SQL-escape idiom by "
-                f"hand — since SQP-1 the Spark door Spark-unescapes every embedded literal, so a "
-                f"value escaped this way has its backslashes silently escape-processed. Sanctioned "
-                f"out: embed it through `repark.spark._idents.sql_string_literal` (Spark door), or "
-                f"`escape_sql_single_quotes` for a DataFusion-native/backslash-literal statement — "
-                f"the single home of the rule ({SQL_LITERAL_HELPER_FILE}). No exceptions table."
+                f"ERROR: {relative}:{lineno} directly calls replace with constant one-quote and "
+                f"two-quote arguments. Use `repark.spark._idents.sql_string_literal` for the "
+                f"Spark door, or `escape_sql_single_quotes` for a DataFusion-native statement. "
+                f"The direct operation belongs only in {SQL_LITERAL_HELPER_FILE}."
             )
 
     return errors

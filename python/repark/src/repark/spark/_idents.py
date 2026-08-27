@@ -63,35 +63,30 @@ def is_plain_ident(name: str) -> bool:
 
 
 def sql_string_literal(value: str) -> str:
-    r"""Quote a Python string as a Spark-canonical single-quoted SQL literal for the Spark door.
+    r"""Quote a value as a Spark-door single-quoted SQL literal.
 
-    Since SQP-1 the Spark door's front door (Rust ``router::execute``) Spark-unescapes every string
-    literal in the SQL it receives — **facade-generated SQL included**. A value embedded with only
-    ``'`` doubling would then have its backslashes escape-processed by the door: ``F.lit('p\q')``
-    would reach the engine as ``pq`` where Spark keeps ``p\q``, and a value ``'a\tb'`` (literal
-    backslash-t) would be stored with a TAB. So an embedded value must be spelled the way a Spark
-    user would spell it — backslashes doubled FIRST (the door folds each ``\\`` back to one ``\``),
-    then single quotes doubled — before wrapping in quotes.
+    The Spark door processes escapes, so the value must double backslashes before quotes.
 
-    This is the single home of the Spark-door literal-escaping rule;
-    ``scripts/check_python_conventions.py`` forbids the raw single-quote-doubling idiom anywhere
-    else. Use :func:`escape_sql_single_quotes` instead for a DataFusion-native statement (``COPY`` /
-    ``CREATE EXTERNAL TABLE``), whose literals the front door leaves in Generic (backslash-literal)
-    semantics.
+    Args:
+        value: The unescaped string value.
+
+    Returns:
+        The quoted Spark SQL literal.
     """
     escaped = value.replace("\\", "\\\\").replace("'", "''")
     return f"'{escaped}'"
 
 
 def escape_sql_single_quotes(value: str) -> str:
-    r"""Double the ``'`` in a DataFusion-native (Generic) SQL string body — quotes only, no wrap.
+    r"""Escape a value for a Generic SQL string body without adding quotes.
 
-    ``COPY`` and ``CREATE [OR REPLACE] EXTERNAL TABLE`` are DataFusion-native, carved out of the
-    SQP-1 Spark front-door canonicaliser, so their string literals keep Generic semantics:
-    backslashes are LITERAL there and must NOT be doubled (a CSV ``escape`` option of ``\`` would
-    otherwise become ``\\`` and break the write). Only ``'`` is doubled. Returns the escaped body
-    **without** the surrounding quotes (the caller wraps). Lives here so the single-quote-doubling
-    idiom has one sanctioned home alongside :func:`sql_string_literal`.
+    Generic SQL keeps backslashes literal, so this function changes only single quotes.
+
+    Args:
+        value: The unescaped string value.
+
+    Returns:
+        The escaped string body without surrounding quotes.
     """
     return value.replace("'", "''")
 

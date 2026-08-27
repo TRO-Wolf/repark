@@ -12,6 +12,7 @@ Plan-built `pyspark.ml.feature` transformers under `repark.spark.ml.feature`
 - **SQP-1 (cycle-2):** `_transformers.py` embeds StringIndexer/IndexToString labels, CountVectorizer
   terms, StopWordsRemover stop words and the RegexTokenizer pattern through
   `repark.spark._idents.sql_string_literal`, so a backslash/apostrophe value survives the Spark door.
+- **PR-245 revalidation:** `_transformers.py` stays smaller while the helper inventory remains exact.
 | Path | Role |
 |---|---|
 | `__init__.py` | Public exports (incl. Q1 quantile + CV/IDF + RegexTokenizer) |
