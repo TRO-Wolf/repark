@@ -1,7 +1,7 @@
 # Charter ledger — DL-5 · compact the live STATUS remainder and the contributor contract
 
 **Date:** 2026-08-25 · **Branch:** `feat/dl-5-contract-compaction` · **Base:** `b33d2cd`
-(`main`, #242) · **Policy:** [AGENTS.md](../../../AGENTS.md) "Markdown document lifecycle" ·
+(`main`, #242) · **Policy:** [AGENTS.md](../../../../AGENTS.md) "Markdown document lifecycle" ·
 **SEPMO path:** STANDARD (contract amendment + script change; LIGHT fails size and the
 contract-class rule) · **Size:** M
 

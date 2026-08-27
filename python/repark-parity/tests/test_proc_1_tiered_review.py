@@ -31,6 +31,7 @@ _HANDOFF = _REPO / "task/roadmap/mid-term/iceberg-rust-handoff-2026-08-23.md"
 _LEDGER_NAME = "pr-244-revalidation-ledger.md"
 _STAGING_MAP = _REPO / "task/ledgers/staging/map.md"
 _COMPLETED_MAP = _REPO / "task/ledgers/completed/map.md"
+_ARCHIVE = _REPO / "task/ledgers/archive"
 _TEST_MAP = _REPO / "python/repark-parity/tests/map.md"
 
 
@@ -51,17 +52,21 @@ def _row(text: str, key: str) -> str:
     return text[start : text.index("\n", start)]
 
 
-def _revalidation_ledger_and_map() -> tuple[Path, Path]:
-    """Return the one live PR-244 ledger and the map for its lifecycle bin."""
-    directories = (_STAGING_MAP.parent, _COMPLETED_MAP.parent)
-    ledgers = [directory / _LEDGER_NAME for directory in directories]
-    existing = [ledger for ledger in ledgers if ledger.is_file()]
+def _ledger_and_map(name: str) -> tuple[Path, Path]:
+    """Return one ledger and the map for its current lifecycle bin."""
+    live = [_STAGING_MAP.parent / name, _COMPLETED_MAP.parent / name]
+    archived = sorted(_ARCHIVE.glob(f"*/*-{name}"))
+    existing = [ledger for ledger in (*live, *archived) if ledger.is_file()]
     assert len(existing) == 1, existing
-    maps = [directory / "map.md" for directory in directories]
-    linked = [path for path in maps if _LEDGER_NAME in path.read_text(encoding="utf-8")]
-    assert len(linked) == 1, linked
-    assert linked[0].parent == existing[0].parent
-    return existing[0], linked[0]
+    ledger = existing[0]
+    ledger_map = ledger.parent / "map.md"
+    assert ledger.name in ledger_map.read_text(encoding="utf-8")
+    return ledger, ledger_map
+
+
+def _revalidation_ledger_and_map() -> tuple[Path, Path]:
+    """Return the PR-244 ledger and its current lifecycle map."""
+    return _ledger_and_map(_LEDGER_NAME)
 
 
 def test_current_main_source_size_and_map_guards_remain_bound() -> None:
@@ -179,8 +184,10 @@ def test_process_policy_is_single_homed_and_routes_by_pointer() -> None:
     lessons = _LESSONS.read_text(encoding="utf-8")
     lessons_section = lessons[lessons.index("## 2026-08-25 — PROC-1") :]
     _ledger, lifecycle_map = _revalidation_ledger_and_map()
+    lifecycle_navigation = lifecycle_map.read_text(encoding="utf-8")
+    for pointer in ("review_profile", "critic_engine"):
+        assert pointer in lifecycle_navigation
     carriers = (
-        lifecycle_map.read_text(encoding="utf-8"),
         _TEST_MAP.read_text(encoding="utf-8"),
         lessons_section,
         _SEPMO_MAP.read_text(encoding="utf-8"),
@@ -257,7 +264,7 @@ def test_lessons_keep_the_measurement_and_point_to_the_ruling() -> None:
 
 
 def test_revalidation_scope_has_a_pin_for_every_clause() -> None:
-    """pins: pr-244-revalidation/C-006 — the live ledger cites every frozen clause."""
+    """pins: pr-244-revalidation/C-006 — the ledger cites every frozen clause."""
     ledger, _map = _revalidation_ledger_and_map()
     text = ledger.read_text(encoding="utf-8")
     for number in range(1, 8):
@@ -265,7 +272,7 @@ def test_revalidation_scope_has_a_pin_for_every_clause() -> None:
 
 
 def test_revalidation_ledger_turns_over_with_its_map() -> None:
-    """pins: pr-244-revalidation/C-007 — one live record is linked by its lifecycle map."""
+    """pins: pr-244-revalidation/C-007 — one record is linked by its lifecycle map."""
     ledger, ledger_map = _revalidation_ledger_and_map()
     assert ledger.parent == ledger_map.parent
     tests_map = _TEST_MAP.read_text(encoding="utf-8")
@@ -273,12 +280,13 @@ def test_revalidation_ledger_turns_over_with_its_map() -> None:
     assert "PR-244" in tests_map
 
 
-def test_completed_proc1_map_records_the_filed_attestation() -> None:
+def test_proc1_lifecycle_map_records_the_filed_attestation() -> None:
     """pins: proc-1-tiered-review/C-001
-    pins: pr-244-revalidation/C-007 — the completed map does not claim review is pending.
+    pins: pr-244-revalidation/C-007 — the lifecycle map does not claim review is pending.
     """
-    text = _COMPLETED_MAP.read_text(encoding="utf-8")
-    start = text.index("[proc-1-tiered-review-ledger.md]")
+    ledger, ledger_map = _ledger_and_map("proc-1-tiered-review-ledger.md")
+    text = ledger_map.read_text(encoding="utf-8")
+    start = text.index(f"[{ledger.name}]")
     boundaries = [
         position
         for marker in ("\n- [", "\n## Pointers")
@@ -286,8 +294,11 @@ def test_completed_proc1_map_records_the_filed_attestation() -> None:
     ]
     end = min(boundaries)
     row = text[start:end]
-    assert "filed coverage attestation" in row
     assert "attestation is pending" not in row
+    if ledger.parent.parent == _ARCHIVE:
+        assert "COVERAGE_ATTESTATION:" in ledger.read_text(encoding="utf-8")
+    else:
+        assert "filed coverage attestation" in row
 
 
 def test_mw6_evidence_is_home_and_excluded_from_lint() -> None:

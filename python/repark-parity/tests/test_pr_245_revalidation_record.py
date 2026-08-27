@@ -301,13 +301,22 @@ def test_pr245_original_sqp_record_and_pin_family_are_byte_frozen() -> None:
 
 
 def test_pr245_navigation_names_the_separate_revalidation_family() -> None:
-    """Both test homes and completed navigation name this revalidation unit."""
+    """Both test homes and the lifecycle map name this revalidation unit."""
     required = {
         "python/repark/tests/map.md": "test_pr_245_revalidation.py",
         "python/repark-parity/tests/map.md": "test_pr_245_revalidation_record.py",
-        "task/ledgers/completed/map.md": "pr-245-revalidation-ledger.md",
     }
     for relative, name in required.items():
         assert name in (_REPO / relative).read_text(encoding="utf-8"), relative
+    name = "pr-245-revalidation-ledger.md"
+    live = [
+        _REPO / "task/ledgers/staging" / name,
+        _REPO / "task/ledgers/completed" / name,
+    ]
+    archived = sorted((_REPO / "task/ledgers/archive").glob(f"*/*-{name}"))
+    ledgers = [ledger for ledger in (*live, *archived) if ledger.is_file()]
+    assert len(ledgers) == 1, ledgers
+    ledger_map = ledgers[0].parent / "map.md"
+    assert ledgers[0].name in ledger_map.read_text(encoding="utf-8")
     staging_map = (_REPO / "task/ledgers/staging/map.md").read_text(encoding="utf-8")
-    assert "pr-245-revalidation-ledger.md" not in staging_map
+    assert name not in staging_map

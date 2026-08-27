@@ -1,5 +1,8 @@
 # Revalidation ledger — PR-245 · SQP-1 integration with exact source-size ratchets
 
+**Errata 2026-08-27:** After PR #244 merged, pickup archived its completed ledgers. The PR #245
+integration pins now follow staging, completed, and archived lifecycle homes.
+
 **Date:** 2026-08-26 · **Branch:** `feat/sqp-1-spark-string-literals` · **PR:** #245 ·
 **SEPMO path:** STANDARD · **Risk tier:** standard
 

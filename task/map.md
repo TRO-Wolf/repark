@@ -30,7 +30,7 @@ not this directory.
   runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
   delete). Seeded 2026-08-06 from the private v1 repository. PR-245 adds original-source mapping
-  for rewritten SQL locations and AST-based enumerable syntax guards.
+  for rewritten SQL locations, AST-based enumerable syntax guards, and lifecycle-aware ledger pins.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
   convergence, noise ratio, coverage misses, escaped defects by origin, LIGHT-path escapes, flags
