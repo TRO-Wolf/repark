@@ -20,7 +20,8 @@ JVM, no repark required). See [../map.md](../map.md).
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers. The
   production file-size refactor removes `session/_funcs.py` from this mirror when its guard row
-  retires.
+  retires. The catalog-registration test split ratchets the mirrored
+  `crates/repark-core/src/session/tests.rs` baseline from 1,485 to 1,461 with the live guard.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /
