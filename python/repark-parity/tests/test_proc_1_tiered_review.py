@@ -178,8 +178,9 @@ def test_process_policy_is_single_homed_and_routes_by_pointer() -> None:
     )
     lessons = _LESSONS.read_text(encoding="utf-8")
     lessons_section = lessons[lessons.index("## 2026-08-25 — PROC-1") :]
+    _ledger, lifecycle_map = _revalidation_ledger_and_map()
     carriers = (
-        _STAGING_MAP.read_text(encoding="utf-8"),
+        lifecycle_map.read_text(encoding="utf-8"),
         _TEST_MAP.read_text(encoding="utf-8"),
         lessons_section,
         _SEPMO_MAP.read_text(encoding="utf-8"),
@@ -278,7 +279,12 @@ def test_completed_proc1_map_records_the_filed_attestation() -> None:
     """
     text = _COMPLETED_MAP.read_text(encoding="utf-8")
     start = text.index("[proc-1-tiered-review-ledger.md]")
-    end = text.index("\n- [", start + 1)
+    boundaries = [
+        position
+        for marker in ("\n- [", "\n## Pointers")
+        if (position := text.find(marker, start + 1)) >= 0
+    ]
+    end = min(boundaries)
     row = text[start:end]
     assert "filed coverage attestation" in row
     assert "attestation is pending" not in row

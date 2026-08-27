@@ -12,7 +12,8 @@ JVM, no repark required). See [../map.md](../map.md).
   [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md) (C-002,
   C-003, C-005); the MW-6 evidence, disk-headroom, and Iceberg handoff corrections stay truthful
   (C-004); every frozen clause has a pin (C-006); exactly one lifecycle ledger and its matching
-  map stay current, and the completed PROC-1 map reports its filed attestation (C-007).
+  map stay current, and the completed PROC-1 map reports its filed attestation even as the final
+  list item (C-007).
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
   source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged

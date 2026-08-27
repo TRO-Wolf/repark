@@ -5,10 +5,6 @@ Ledgers of units in flight. A ledger here on `main` is a charter whose retiremen
 happened yet; every other ledger leaves for `../completed/` in its unit's last commit.
 
 ## Contents
-- [pr-244-revalidation-ledger.md](pr-244-revalidation-ledger.md) — **PR #244 revalidation
-  (2026-08-26, STANDARD):** seven frozen clauses revalidate tiered review while preserving every
-  gate and evidence home. Review selection and binding:
-  [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md).
 - [fnp-0-charter-ledger.md](fnp-0-charter-ledger.md) — **the Spark function parity campaign's
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on

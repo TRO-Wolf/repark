@@ -3,7 +3,7 @@
 **Date:** 2026-08-26 · **Branch:** `docs/proc-1-tiered-review` · **Base:** `fd8bfc2`
 · **Path:** STANDARD · **Scope:** process documentation, maps, ledger, and focused tree pins only.
 
-**Retires:** this ledger moves to `../completed/` after PR #244 passes its readiness audit.
+**Retired:** moved to `completed/` after the PR #244 readiness audit on 2026-08-26.
 
 ## Proposition ledger
 
@@ -257,7 +257,7 @@ FINDING:
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: pr-244-revalidation
-  cycle: 4
+  cycle: 5
   risk_tier: standard
   critic_engine: ccc
   categories:
@@ -291,7 +291,7 @@ COVERAGE_ATTESTATION:
     - id: AT-10
       status: ATTACKED
       artifacts: [truthful completed map, exact-one lifecycle pin, scope diff]
-  reattested: [AT-1, AT-5, AT-6, AT-8, AT-9, AT-10]
+  reattested: [AT-1, AT-2, AT-5, AT-6, AT-8, AT-9, AT-10]
   complete: true
   convergence: CONVERGED; no open or sustained finding remains at the S1 floor
 ```
@@ -339,11 +339,43 @@ This Actor section does not modify or reinterpret any Critic finding, dispositio
 
 Final readiness evidence: focused suite exit 0 with 17 passed; `check-ledgers`,
 `check-ledger-grammar`, and `check-map-sync` exit 0; `make ci` exit 0. `git diff --check` and the
-overlay-inclusive `git diff --check main` exit 0. The requested committed-only
-`git diff --check main...HEAD` exits 2 on the two historical whitespace defects because this
-no-commit remediation cannot change that range; the working overlay contains both corrections.
+overlay-inclusive `git diff --check main` exit 0. The two whitespace corrections are committed, and `git diff --check main...HEAD` exits 0 at `0c09ab4`.
+
+## Actor departure remediation
+
+The lifecycle move exposed two test assumptions. The C-005 carrier check now reads the map returned
+by the exact-one lifecycle helper. The completed PROC-1 row parser now stops at either the next list
+item or `## Pointers`, so the final list item is valid.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-PR-244-actor-departure-remediation
+  agent: Actor
+  action: make the focused pins survive the staging-to-completed turnover
+  charter_trace: C-005, C-007
+  preconditions:
+    - exactly one PR-244 ledger and matching map exist after the move: SATISFIED
+    - the two failures are parser assumptions, not process-policy changes: SATISFIED
+    - Critic findings and attestation remain unchanged: SATISFIED
+  success_condition: the focused suite passes with the ledger in completed and remains valid in staging
+  step_risks:
+    - C-005 silently reads the wrong bin map: HANDLED by reuse of the exact-one lifecycle helper
+    - a final completed-map row has no next list item: HANDLED by the Pointers boundary fallback
+  contingencies:
+    - a later move breaks ledger or map identity: HANDLED by the existing exact-one assertions
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: null
+```
+
+Departure-remediation verification: focused suite exit 0 with 17 passed; `check-ledgers`,
+`check-ledger-grammar`, `check-map-sync`, `git diff --check`, and
+`git diff --check main...HEAD` exit 0.
+
+This Actor section does not modify any Critic finding, disposition, or attestation.
 
 ## Pointers
 
 - Up: [map.md](map.md)
-- Original PROC-1 record: [../completed/proc-1-tiered-review-ledger.md](../completed/proc-1-tiered-review-ledger.md)
+- Original PROC-1 record: [proc-1-tiered-review-ledger.md](proc-1-tiered-review-ledger.md)
