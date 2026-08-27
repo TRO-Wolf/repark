@@ -13,14 +13,20 @@ else. The next pickup's `make ledger-archive` files everything here under
   (2026-08-26):** ratchet Rust and Python source files to the new source-line default with exact,
   no-slack baselines for the measured offenders; keep narrow line-neutral fixes legal and preserve
   the facade no-stub rule.
-- [pr-245-revalidation-ledger.md](pr-245-revalidation-ledger.md) — **PR-245 revalidation
-  (2026-08-26):** remeasure SQP-1 after current-main integration, preserve both SQL-door and facade
-  controls, preserve original parser locations after canonicalization, pin the enumerable Python
-  helper guard and inventory, and clear exact source-size ratchets. Five Actor–Critic remediation
-  cycles converged on 2026-08-27; the completed SQP-1 ledger remains frozen.
-- [sqp-1-spark-string-literals-ledger.md](sqp-1-spark-string-literals-ledger.md) — **SQP-1
-  (2026-08-25):** Spark string-literal escapes on the SQL door + `CAST … AS BINARY`. Twelve
-  clauses PROVEN and pinned; the completed ledger carries the filed Critic attestation.
+- [dl-5-contract-compaction-ledger.md](dl-5-contract-compaction-ledger.md) — **DL-5
+  (2026-08-25):** compact the live STATUS remainder and the contributor contract;
+  `engineering-method` loses restated project rules; `check_docs_compaction` ceilings
+  extend to `AGENTS.md` and the method skill. Host-injection measurement and
+  `.agents/roles/` are out of scope.
+- [pr-244-revalidation-ledger.md](pr-244-revalidation-ledger.md) — **PR #244 revalidation
+  (2026-08-26, STANDARD):** seven frozen clauses revalidate tiered review while preserving every
+  gate and evidence home. Review selection and binding:
+  [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md).
+- [proc-1-tiered-review-ledger.md](proc-1-tiered-review-ledger.md) — **PROC-1 (2026-08-25):**
+  review effort by tier (the `review_profile` tunable, `light_thresholds` re-bind, `critic_engine`
+  amended to bind CCC at HIGH), the new pointer-only `unit-runbook.md`, the MW-6 Critic-evidence
+  home, and two runbook truth-ups (disk headroom, the iceberg-rust F-7 handoff). Eleven clauses,
+  all pinned by `test_proc_1_tiered_review.py`; the filed coverage attestation is in the ledger.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -232,3 +232,18 @@ one rule its promotion check (§8) had to rescue before the campaign's slate was
   on a synthetic fixture were green.
 - **DO NOT file ledgers by hand.** `make ledger-archive` at pickup, `ledger_lifecycle.py move`
   at departure; the directory is the status and the script keeps every link true.
+
+## 2026-08-25 — PROC-1 (review effort by tier)
+
+- **DO adjust the amount of process to the risk, never the bar.** Over the last four engine units
+  the defects were caught by exactly two instruments: the Critic's *novel-input fresh execution*
+  through a public entry point (V3R-1's three S1s — SEC-001/002/003) and the *gates* (the DL-5
+  review's two red pins, found by running the parity suite). The four-phase CCC fan-out, the
+  per-pin mutation probe, the separate claims phase and the per-unit retrospective metrics produced
+  record entries, not defects. Meanwhile a STANDARD unit's process read had grown to ~190 kB before
+  the engineering method. Ruling home: the manifest's
+  [`review_profile` and `critic_engine`](../.agents/skills/sepmo/binding-manifest.md) rows.
+- **DO NOT read "more Critic phases" as "more assurance."** The measured signal came from fresh
+  execution through the public door and from the gates, not from the count of Critic spawns or
+  probes. Add a phase when a class of defect escaped it, not by default; the count of phases is a
+  cost to tier, and the escaped-defect record is the only evidence that raises it.

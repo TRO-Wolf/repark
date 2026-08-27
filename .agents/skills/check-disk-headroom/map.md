@@ -10,10 +10,13 @@ what each build target produces is [DEVELOPMENT.md](../../../DEVELOPMENT.md)'s.
 ## Contents
 
 - [SKILL.md](SKILL.md) — the runbook: check `df` before `du` and on the right filesystem, the
-  measured consumer table (`target/debug` dominates at 72 G), how to budget for the specific
-  operation rather than the repo at rest, the five-step reclaim order with what is explicitly
-  **not** on it, and why leftover `/tmp/repark_ctas` (pre-A13 and the `CatalogRegistry::from`
-  test helper) is exhaust rather than a cache.
+  measured consumer table (`target/debug` dominates at 72 G), the **2026-08-25 machine-wide sweep**
+  (timeshift 840 G including `~`, the fork/worktree `target/` trees, kernels/coredumps), how to
+  budget for the specific operation rather than the repo at rest, the reclaim order — **merged-unit
+  worktree `target/` trees first** (151 G freed on 2026-08-25) — with what is explicitly **not** on
+  it, and why leftover `/tmp/repark_ctas` (pre-A13 and the `CatalogRegistry::from` test helper) is
+  exhaust rather than a cache. Gotchas: refute a scratch directory before `rm -rf` (it can hold the
+  only copy of ledger-cited evidence); `sudo`-tier reclaim is owner-run.
 
 ## Pointers
 
