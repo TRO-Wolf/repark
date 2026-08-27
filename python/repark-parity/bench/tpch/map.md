@@ -124,5 +124,6 @@ Sail is prior-art only — never a RePark product dependency (no pysail in uv.lo
 ## SQP-1 (cycle-2)
 
 `datagen.py` (DuckDB `dbgen` COPY) and `runner.py` (`read_parquet` views) embed export paths through
-`escape_sql_single_quotes` (quotes-only) — byte-identical to the prior quote-double, in the one home.
+`repark_parity.sql.escape_sql_single_quotes` keeps quote-only path escaping inside the standalone
+parity package; the runner and datagen do not import the RePark product package at module load.
 PR-245 revalidation keeps `runner.py` smaller while preserving that helper boundary.

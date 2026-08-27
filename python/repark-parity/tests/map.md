@@ -8,8 +8,9 @@ JVM, no repark required). See [../map.md](../map.md).
 ## Contents
 - `test_pr_245_revalidation_record.py` — PR-245 exact source-size, frozen SQP-1 pin-family,
   depth/node/output-bounded receiver-blind AST guard with constructed-tree stress pins, exact
-  helper-call inventory, 10,000-term real-file parser-resource refusal, scoped router-comment,
-  and final completed-ledger navigation with stale staging-link refusal.
+  helper-call inventory, clean product-blocked TPC runner imports, 10,000-term real-file
+  parser-resource refusal, scoped router-comment, and final completed-ledger navigation with stale
+  staging-link refusal.
 
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
   source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,

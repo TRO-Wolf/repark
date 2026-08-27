@@ -1007,7 +1007,7 @@ It separately rejects the stale filename in `task/ledgers/staging/map.md`. The t
 required lockstep line that describes these navigation assertions. No production byte changed.
 
 ```yaml
-COVERAGE_ATTESTATION:
+STALE_COVERAGE_ATTESTATION:
   pr_unit: pr-245-revalidation-post-push-c009
   supersedes: delivery-return Critic coverage attestation in this ledger
   categories:
@@ -1057,3 +1057,140 @@ Post-push Critic commands: exact navigation test 1 passed; `make py-test` 423 pa
 lifecycle, ledger grammar, map sync, and the diff check exited 0. The follow-up contains this
 record test, its required parity-test map update, and this completed ledger.
 Disk remained at 651 GiB free.
+
+## Actor second post-push delivery return — 2026-08-27
+
+**RE-REVIEW REQUIRED.** The post-push Critic attestation above predates this standalone-harness
+repair. This Actor section does not amend or renew that attestation.
+
+The parity CI environment intentionally excludes the RePark product package. TPC-H and TPC-DS
+imported the product `_idents` module at runner import time, so clean `make py-test` failed before
+collecting the record test. The dependency-free `repark_parity.sql` module now owns Generic SQL
+quote-only escaping for parity code. Both runners and both datagens use it; no raw call-site
+quote-doubling was added. The convention guard sanctions exactly the product and parity helper
+files, and its shipped helper-call inventory remains exact.
+
+Other parity-bench `repark` imports execute RePark workloads. They do not provide Generic SQL
+escaping, so they remain outside this standalone import seam.
+
+The clean subprocess pin blocks `repark` in `sys.modules`, imports both runners, and checks that
+quotes double while a backslash remains unchanged. TPC-DS and TPC-H runners remain exactly 1,263
+and 1,780 lines, so their source-size baselines stay line-neutral.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-pr245-actor-second-post-push
+  agent: Actor
+  action: restore dependency-free parity runner imports through one parity-local quote helper
+  charter_trace: C-003, C-004, C-006, C-009, C-010
+  preconditions:
+    - clean no-project import failure reproduced: SATISFIED (ModuleNotFoundError for repark)
+    - parity SQL use is quote-only Generic SQL: SATISFIED (DuckDB COPY and read_parquet paths)
+    - all four parity call sites inventoried: SATISFIED (two runners and two datagens)
+    - oversized runners remain line-neutral: SATISFIED (1,263 and 1,780)
+  success_condition: parity CI imports both runners without the product package and all SQL path embeds use a sanctioned helper
+  step_risks:
+    - parity helper changes non-quote bytes: HANDLED(clean subprocess value pin)
+    - a product dependency remains at module import: HANDLED(repark-blocked dual-runner import)
+    - the guard rejects its own helper or permits another home: HANDLED(exact two-file guard pin)
+    - helper inventory silently loses a call site: HANDLED(exact shipped-call inventory)
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED_TO_REVIEW
+  escalation: "—"
+```
+
+Second post-push evidence:
+
+```text
+clean no-project dual-runner import before repair: ModuleNotFoundError: repark, exit 1
+focused product-blocked import, guard, and inventory pins: 3 passed, exit 0
+clean no-project dual-runner import after repair: exit 0
+clean CI-dependency parity suite from /tmp: 424 passed, exit 0
+make py-test: 424 passed, exit 0
+make ci: exit 0
+make verify: exit 0 after one sandbox-only uv cache-lock retry
+```
+
+Disk remained at 651 GiB free. The shared incremental target and uv cache remain for review; no
+cache, worktree, or uncommitted evidence was deleted.
+
+## Critic second post-push parity-isolation disposition — 2026-08-27
+
+This section supersedes the post-push C-009 Critic attestation. The parity-isolation defect is
+**REMEDIATED**. No open S1-or-higher finding remains.
+
+`repark_parity.sql.escape_sql_single_quotes` is the smallest helper that satisfies the Generic SQL
+body contract. It doubles each single quote, adds no surrounding quotes, and leaves every other
+character unchanged. Both TPC runners and both datagens import this standalone helper. Their
+record types import without the RePark product package. The Spark-door helper remains in
+`repark.spark._idents` and keeps its separate product contract.
+
+The bench import census found 40 product-package imports. Thirty-nine are inside functions that
+execute product workloads. The only module-level import is in the MW-7 measurement driver itself;
+it is not a shared record or parity-harness dependency. A clean environment contained neither a
+RePark import spec nor RePark package metadata and ran all 424 parity tests.
+
+Fresh quote pressure covered empty text, one and three quotes, repeated backslashes, and a Unicode
+path. The novel input `雪\\server\\o''clock/路径` produced
+`雪\\server\\o''''clock/路径`. Backslashes and non-quote Unicode characters were byte-stable.
+The product-blocked negative control failed with `ModuleNotFoundError` (exit 1), while the dual
+runner pin passed (exit 0). Thus, the isolation pin fails if a product helper import returns.
+
+Critic-1 quality **PASS**; Critic-2 safety/security **PASS**; Critic-3 pure logic **PASS**;
+Critic-4 claims-versus-tree **PASS**. Final verdict: **CCC-CONVERGED**.
+
+```yaml
+COVERAGE_ATTESTATION:
+  pr_unit: pr-245-revalidation-second-post-push
+  supersedes: post-push C-009 Critic coverage attestation in this ledger
+  categories:
+    - id: AT-1
+      status: ATTACKED
+      evidence: The exact staged helper, four imports, guard whitelist, and call inventory were checked.
+      artifacts: [repark_parity/sql.py, four TPC call sites, exact helper inventory]
+    - id: AT-2
+      status: ATTACKED
+      evidence: Empty, quote, repeated-quote, backslash, Unicode, and path values were executed.
+      artifacts: [clean isolated helper probe, product-blocked runner pin]
+    - id: AT-3
+      status: ATTACKED
+      evidence: Missing-product imports fail loudly; the standalone imports complete without fallback.
+      artifacts: [negative ModuleNotFoundError control, clean dual-runner import]
+    - id: AT-4
+      status: N/A
+      justification: The pure text helper and import relocation add no mutable or concurrent state.
+    - id: AT-5
+      status: ATTACKED
+      evidence: Quote doubling prevents SQL delimiter termination and preserves backslashes as data.
+      artifacts: [four quoted SQL embeddings, hostile quote and path probes]
+    - id: AT-6
+      status: ATTACKED
+      evidence: The product Spark helper stays separate; TPC source ratchets and frozen pins remain exact.
+      artifacts: [two helper homes, 1263-line TPC-DS runner, 1780-line TPC-H runner]
+    - id: AT-7
+      status: ATTACKED
+      evidence: The helper is one bounded string replacement with no recursion, parser, or execution hook.
+      artifacts: [escape_sql_single_quotes, make ci, make verify]
+    - id: AT-8
+      status: ATTACKED
+      evidence: A no-product environment imported both runner graphs and ran the full parity suite.
+      artifacts: [clean Python environment, 424 parity tests]
+    - id: AT-9
+      status: ATTACKED
+      evidence: Maps identify the standalone helper and import seam; guard diagnostics name both homes.
+      artifacts: [four touched maps, convention guard output, ledger and map gates]
+    - id: AT-10
+      status: ATTACKED
+      evidence: Focused pins, clean suite, CI, and verify pass; the negative control proves the pin bites.
+      artifacts: [11 focused tests, 424 clean tests, make ci, make verify]
+  reattested: [AT-1, AT-2, AT-3, AT-4, AT-5, AT-6, AT-7, AT-8, AT-9, AT-10]
+  complete: true
+  converged: true
+```
+
+Second post-push Critic commands: clean dual-runner test 1 passed; focused PR file 11 passed;
+clean no-product parity suite 424 passed; Python conventions, source-size, maps, ledgers, grammar,
+and diff checks exited 0; `make ci` exited 0. The first sandboxed `make verify` attempt exited 2
+at uv cache locking. The permitted replay exited 0 with all workspace tests and doctests passing.
+Disk was 651 GiB free before and after broad validation.

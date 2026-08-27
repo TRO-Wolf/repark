@@ -32,8 +32,9 @@ Rules over every *.py under SCAN_ROOTS (recursive):
 
 3. **No direct constant quote-doubling `replace` call for SQL (SQP-1).** The receiver-blind AST
    rule evaluates strings, bounded integer `+`/`-`, `chr`, concatenation, and repetition. It
-   rejects the one-quote to two-quote call outside the shared helper. The shipped helper-call
-   inventory is pinned separately; this syntax rule does not claim semantic completeness.
+   rejects the one-quote to two-quote call outside the product and standalone-harness helpers.
+   The shipped helper-call inventory is pinned separately; this syntax rule does not claim
+   semantic completeness.
 
 Exit 0 on clean; non-zero with path, line, measured count and the sanctioned
 outs. Fail-closed: an unreadable file, a file that will not parse, an empty
@@ -89,7 +90,12 @@ _MAX_CONSTANT_TEXT_NODES = 64
 _MAX_CONSTANT_TEXT_LENGTH = 2
 
 # Direct constant quote-doubling belongs only in the shared helper.
-SQL_LITERAL_HELPER_FILE = "python/repark/src/repark/spark/_idents.py"
+SQL_LITERAL_HELPER_FILES: frozenset[str] = frozenset(
+    {
+        "python/repark-parity/src/repark_parity/sql.py",
+        "python/repark/src/repark/spark/_idents.py",
+    }
+)
 
 
 def _is_function(node: ast.AST) -> bool:
@@ -294,13 +300,13 @@ def check_file(path: Path, repo: Path) -> list[str]:
                 f"scripts/check_python_conventions.py with a reason."
             )
 
-    if relative != SQL_LITERAL_HELPER_FILE:
+    if relative not in SQL_LITERAL_HELPER_FILES:
         for lineno in find_sql_quote_doubling(tree):
             errors.append(
                 f"ERROR: {relative}:{lineno} directly calls replace with constant one-quote and "
                 f"two-quote arguments. Use `repark.spark._idents.sql_string_literal` for the "
                 f"Spark door, or `escape_sql_single_quotes` for a DataFusion-native statement. "
-                f"The direct operation belongs only in {SQL_LITERAL_HELPER_FILE}."
+                f"The direct operation belongs only in {sorted(SQL_LITERAL_HELPER_FILES)}."
             )
 
     return errors
@@ -356,7 +362,7 @@ def main() -> int:
         f"python-conventions: {len(paths)} files clean "
         f"(nested-def rows {len(NESTED_DEF_EXCEPTIONS)}, "
         f"dataclass rows {len(DATACLASS_EXCEPTIONS)}, "
-        f"sql-escape helper {SQL_LITERAL_HELPER_FILE})"
+        f"sql-escape helpers {sorted(SQL_LITERAL_HELPER_FILES)})"
     )
     return 0
 

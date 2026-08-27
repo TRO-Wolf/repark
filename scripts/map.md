@@ -225,7 +225,7 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make check-lib-py` and the ci.yml `python` job.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
-  guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
+  guard: the three rules Ruff cannot express, and the SSOT for them (the prose homes that point at
   it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
   [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under
   `python/repark/src`, `python/repark-parity` and `scripts/`: (1) **no function defined inside
@@ -237,9 +237,10 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no direct constant
   quote-doubling `replace` call for SQL (SQP-1)** — a receiver-blind AST rule evaluates strings,
   bounded integer `+`/`-`, `chr`, concatenation, and repetition, then forbids the one-quote to
-  two-quote call outside `_idents.py`. Its iterative text walk limits depth, nodes, and output
-  before allocation. A PR-245 pin inventories shipped helper calls; the exact whitelist does not
-  claim semantic completeness. File parsing catches syntax and parser-resource failures as one
+  two-quote call outside the product `_idents.py` and standalone `repark_parity/sql.py` homes. Its
+  iterative text walk limits depth, nodes, and output before allocation. A PR-245 pin inventories
+  shipped helper calls; the exact whitelist does not claim semantic completeness. File parsing
+  catches syntax and parser-resource failures as one
   controlled diagnostic, including valid expressions that exhaust AST construction. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review

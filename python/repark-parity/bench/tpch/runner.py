@@ -30,7 +30,7 @@ from typing import Any, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from repark.spark._idents import escape_sql_single_quotes
+from repark_parity.sql import escape_sql_single_quotes
 
 from .compare import compare_result_sets
 from .datagen import TABLES, default_data_root, ensure_parquet_sf

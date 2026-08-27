@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import os
 import runpy
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
@@ -111,7 +114,42 @@ def test_pr245_sql_embed_guard_detects_a_bypass_and_has_one_home() -> None:
     receiver_blind = "escaped = unrelated.replace(chr(0x28 - 1), chr(0x28 - 1) * 2)\n"
     assert find_bypass(ast.parse(receiver_blind)) == [1]
     assert find_bypass(ast.parse("literal = sql_string_literal(value)\n")) == []
-    assert guard["SQL_LITERAL_HELPER_FILE"] == "python/repark/src/repark/spark/_idents.py"
+    assert guard["SQL_LITERAL_HELPER_FILES"] == {
+        "python/repark-parity/src/repark_parity/sql.py",
+        "python/repark/src/repark/spark/_idents.py",
+    }
+
+
+def test_pr245_parity_runners_import_without_the_product_package(tmp_path: Path) -> None:
+    """Both parity runners import when the standalone environment blocks the product package."""
+    script = """
+import sys
+sys.path[:0] = sys.argv[1:]
+sys.modules["repark"] = None
+import bench.tpcds.runner
+import bench.tpch.runner
+from repark_parity.sql import escape_sql_single_quotes
+assert escape_sql_single_quotes("a'b\\c") == "a''b\\c"
+"""
+    environment = os.environ.copy()
+    environment.pop("PYTHONPATH", None)
+    environment.pop("VIRTUAL_ENV", None)
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            script,
+            str(_REPO / "python/repark-parity/src"),
+            str(_REPO / "python/repark-parity"),
+        ],
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
 
 
 def test_pr245_sql_embed_guard_rejects_unsafe_or_out_of_domain_constants() -> None:
