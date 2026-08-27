@@ -4,6 +4,8 @@ use arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::DataFusionError;
 use iceberg::ErrorKind;
 
+mod catalog_registration;
+
 /// A two-row batch: an id (Int32), a label (Utf8), and a date (Date32, days since epoch).
 fn sample_batch() -> RecordBatch {
     let schema = Arc::new(Schema::new(vec![
@@ -325,32 +327,6 @@ async fn s3_region_override_accepts_both_spellings() {
         !message.contains("us-east-1") && !message.contains("us-west-2"),
         "conflict must not echo raw region values, got: {message}"
     );
-}
-
-/// Re-registering via `register_iceberg_catalog` itself fails loud (not only the memory
-/// convenience's early return).
-#[tokio::test]
-async fn register_iceberg_catalog_rejects_duplicate_name() {
-    let session = ReparkSession::new().unwrap();
-    let warehouse = std::env::temp_dir()
-        .join("repark-dup-wh")
-        .to_string_lossy()
-        .into_owned();
-    let first = repark_iceberg::catalog::memory_catalog(&warehouse)
-        .await
-        .expect("memory catalog");
-    session
-        .register_iceberg_catalog("dup", first)
-        .await
-        .unwrap();
-    let second = repark_iceberg::catalog::memory_catalog(&warehouse)
-        .await
-        .expect("memory catalog");
-    let err = session
-        .register_iceberg_catalog("dup", second)
-        .await
-        .unwrap_err();
-    assert!(err.to_string().contains("already registered"), "got: {err}");
 }
 
 /// R-PERF-VALUES: materialize a VALUES plan into a `MemTable` so a second scan does not

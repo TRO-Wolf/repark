@@ -265,6 +265,8 @@ seam is, honestly"). Catalogs come in two ways: direct builder registration or t
   siblings of `session.rs`) plus file-backed test modules of `session.rs`: `aws_gate_tests.rs`
   (E-2 gate pins incl. the late-config region-signal pin, AWS-free),
   `namespace_create_tests.rs` (R-6 / G-6 Q1: create-new / same / conflicting / no-location),
+  `tests/catalog_registration.rs` (same-name linearization, duplicate rejection before provider
+  build, distinct-name build overlap, and provider-build failure atomicity),
   and `tests.rs` (the ported v1 battery, 38 port-now tests in v1 order; names port
   under the declared-rename map — the 18-test deferred subset is in
   `task/port/deferred-tests.md`; plus the phase-2 PR-2 G8 pin

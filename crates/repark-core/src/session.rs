@@ -31,13 +31,14 @@
 //! registration, against the FINALIZE-resolved AWS SDK config (E-2).
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, OnceLock, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError, RwLock};
 
 use aws_config::{BehaviorVersion, SdkConfig};
 use datafusion::execution::runtime_env::RuntimeEnvBuilder;
 use datafusion::prelude::{DataFrame, ParquetReadOptions, SessionConfig, SessionContext};
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 use repark_common::{Error, Result};
+use repark_iceberg::catalog::build_iceberg_catalog_provider;
 
 use crate::backend::{ExecutionBackend, SingleNodeBackend};
 use crate::catalog_config::{self, CatalogKind, CatalogSpec};
@@ -681,33 +682,32 @@ impl ReparkSession {
         .await
     }
 
-    /// Register an iceberg [`Catalog`] under `name` with an explicit [`LocationPolicy`] — the shared
-    /// seam behind [`Self::register_iceberg_catalog`] and [`Self::register_memory_catalog`]. The
-    /// policy is stored with the handle and governs how a staged CTAS resolves a namespace that has
-    /// no `location` property (fail loud for real warehouses, temp fallback for the memory catalog).
-    ///
+    /// Register an iceberg [`Catalog`] with a staged-CTAS [`LocationPolicy`].
     /// # Errors
-    /// Returns [`Error::DataFusion`] if the name is already registered or the catalog's
-    /// namespaces/schemas cannot be loaded.
+    /// Returns [`Error::DataFusion`] for a duplicate name or a namespace/schema load failure.
     async fn register_iceberg_catalog_with_policy(
         &self,
         name: &str,
         catalog: Arc<dyn Catalog>,
         location_policy: LocationPolicy,
     ) -> Result<()> {
-        if self.catalog_handle(name).is_ok() {
-            return Err(Error::DataFusion(format!(
-                "catalog '{name}' is already registered — pick a different name or reuse the \
-                 existing registration"
-            )));
+        let duplicate = || Error::DataFusion(format!("catalog '{name}' is already registered"));
+        let already_registered = {
+            let catalogs = RwLock::read(&self.catalogs).unwrap_or_else(PoisonError::into_inner);
+            catalogs.get(name).is_some()
+        };
+        if already_registered {
+            return Err(duplicate());
         }
-        repark_iceberg::catalog::register_iceberg_catalog(self.context(), name, catalog.clone())
+        let provider = build_iceberg_catalog_provider(catalog.clone())
             .await
             .map_err(engine_err)?;
-        self.catalogs
-            .write()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .insert(name.to_string(), catalog, location_policy);
+        let mut catalogs = RwLock::write(&self.catalogs).unwrap_or_else(PoisonError::into_inner);
+        if catalogs.get(name).is_some() {
+            return Err(duplicate());
+        }
+        self.context().register_catalog(name, provider);
+        catalogs.insert(name.to_string(), catalog, location_policy);
         Ok(())
     }
 

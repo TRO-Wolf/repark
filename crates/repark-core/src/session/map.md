@@ -3,8 +3,8 @@
 ## Purpose
 
 File-backed modules of `../session.rs` (`ReparkSession`): the behavior modules (`temp_views.rs`,
-`spill.rs`, `df_guards.rs`) plus the test cohorts (`tests.rs`, `df_guard_tests.rs`,
-`aws_gate_tests.rs`, `namespace_create_tests.rs`). Test cohorts are two: the E-2 gate tests
+`spill.rs`, `df_guards.rs`) plus the test cohorts (`tests.rs`, `tests/catalog_registration.rs`,
+`df_guard_tests.rs`, `aws_gate_tests.rs`, `namespace_create_tests.rs`). Test cohorts are two: the E-2 gate tests
 (new, additive) and — landing with the PR-C test-audit commit — the ported v1 session unit-test
 battery (names under the declared-rename map; the not-yet-ported subset is listed in
 `task/port/deferred-tests.md`).
@@ -81,6 +81,8 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
   same location (idempotent), re-create conflicting (Analysis, both paths named,
   stored location unchanged), re-create without request location (idempotent),
   trailing-slash-only difference (idempotent).
+- `tests/` — focused session cohorts split from `tests.rs`; see [tests/map.md](tests/map.md).
+  Registration pins cover `rust-catalog-registration/C-001` through `C-004`.
 - `tests.rs` — the ported v1 session test battery (38 port-now tests, v1 order; the deferred
   subset is in `task/port/deferred-tests.md`), plus the P2G R2 cohort at the tail: the
   builder→`SessionConfig` `datafusion.*` plumbing (key lands / unprefixed key still ignored /
