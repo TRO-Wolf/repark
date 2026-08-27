@@ -14,8 +14,9 @@ JVM, no repark required). See [../map.md](../map.md).
   to the ruling. The attribution-blind density gate stays absent. CAP-1's exact-baseline Rust and
   Python source gates remain wired. No source-comment sweep belongs to this unit.
   `pins: pr-247-revalidation/C-001, C-002, C-003, C-004, C-005, C-006, C-007`
-- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
-  source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
+  exception sets and baselines mirrored from the live guard tables; blank-line boundaries;
+  growth, shrink, retirement,
   missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
   facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
