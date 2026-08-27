@@ -20,6 +20,10 @@ else. The next pickup's `make ledger-archive` files everything here under
   (2026-08-27):** preserves the Anthropic-model owner ruling byte-for-byte after CAP-1, removes
   attribution-blind enforcement, and pins compatibility with required documentation, banners,
   invariant comments, maps, and gates. It retires when PR #247 merges or closes without merge.
+- [production-file-size-ledger.md](production-file-size-ledger.md) — production/file-size
+  refactor: split the 8,390-line session free-function surface into responsibility-named modules,
+  preserve `_funcs` compatibility, and retire its Python source-size exception. The sequential
+  Critic clause remains open until the staged Actor tree is reviewed.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -99,11 +99,6 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "ML feature transformer facades share one module.",
         "Split transformers by feature family with stable public re-exports.",
     ),
-    "python/repark/src/repark/spark/session/_funcs.py": (
-        8390,
-        "Session free-function compatibility surface remains consolidated.",
-        "Extract one cohesive SQL, catalog, or configuration function family.",
-    ),
     "python/repark/src/repark/spark/session/reader.py": (
         1042,
         "DataFrameReader formats and option handling narrowly exceed the default.",

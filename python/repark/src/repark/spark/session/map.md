@@ -10,32 +10,39 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
 - `_coerce.py` — **PYC-2:** `range_bound_as_int` and `sql_clause_end_after`, lifted
   out of nested defs in `session_core.py` so that file can ratchet its exact
   `check_lib_py` exception baseline.
-- `_funcs.py` — free functions (shared name binding for class modules); includes
-  `createDataFrame` Arrow reshape for dense FixedSizeList / sparse ML vectors (mixed dense
-  widths refuse loud — layout home `repark.ml.linalg`).
-  `_SQLCONF_DEFAULTS` sets `spark.sql.pyspark.inferNestedDictAsStruct.enabled` to `"true"`
-  (FA-4 owner flip, 2026-08-16 — declared divergence from PySpark's `false`; registry row
-  in the divergence registry; `"false"` restores byte-identical PySpark inference).
-  **G15:** `_data_type_to_sql_type` refuses a non-binary `StringType` (the silently-wrong-count
-  path: collation was stripped to `STRING`).
-  **G3b D-5 (2026-08-18):** the same mapper now spells `NullType` as `VOID` (was `VARCHAR`) and
-  `_sql_type_to_arrow` maps `VOID`/`NULL` to `pa.null()`. An explicitly requested
-  `NullType()` / `ArrayType(NullType())` used to come back as `string` / `array<string>` with
-  no signal — the only *silent* schema substitution on the ingest path. Void now round-trips:
-  reported schema, Arrow (`null` / `list<item: null>`), the `CAST(NULL AS VOID)` empty-frame
-  seed, and the DF-2 void machinery (`drop_null_lists`, `make_array(NULL)`).
-  **S-1 R2:** `_apply_builder_datafusion_conf` skips `datafusion.runtime.temp_directory`
-  (already applied at Rust `build()`; a runtime SET of it refuses and names `TMPDIR`).
-  **F-3 (2026-08-17):** the last undocumented public name here, `int_size_to_ok` inside
-  `_supported_array_typecodes`, gained a docstring; docstring-only, ceiling unmoved.
-  **PYC-2 (2026-08-22):** that helper is inlined (`bit_width <= 64`); the CDF
-  temp-view cleanup is `weakref.finalize(frame, _drop_cdf_temp_view, session, name)`.
-  **SE-1 PR-B (2026-08-17):** both `__repark_cdf_*` materializers
-  (`_materialize_values_as_memtable_frame`, `_materialize_arrow_as_memtable_frame`) stamp
-  `frame._source_view_name = view_name` on the frame they hand back. That tag is the only
-  thing `DataFrame.declareSorted` will declare against, and no `_spawn` path copies it — so
-  the door reaches exactly the createDataFrame source frames and refuses loud on every
-  transform of one. Ledger: `task/se1-declared-sorted-ledger.md`.
+- `_funcs.py` — compatibility router for the pre-split free-function namespace. It imports each
+  responsibility module, binds the measured cross-module edges, and re-exports every prior name.
+- `session_configuration.py` — SQLConf defaults, DataFusion configuration validation and
+  forwarding, and display-style normalization. `_SQLCONF_DEFAULTS` keeps the declared nested-dict
+  inference default and the session-timezone and timestamp-type defaults. Runtime temp-directory
+  SET remains refused because the Rust builder already applied it.
+- `catalog_resolution.py` — catalog selection, aliasing, namespace defaults, and table-name
+  resolution. Its relation-parser edge is bound by the compatibility router to avoid a cycle.
+- `session_state.py` — active-session context state and the drop-in warning lifecycle.
+- `reader_support.py` — reader option sets and integer bounds, JDBC integer options, reader paths,
+  JSON empty-input checks, CSV promotion, and reader schema-field normalization.
+- `create_dataframe_values.py` — scalar normalization, SQL literals, schema parsing, and Spark-type
+  to SQL-type mapping. Non-binary collated strings still refuse and `NullType` still maps to VOID.
+- `create_dataframe_schema.py` — DDL parsing, pandas and Polars null witnesses, and schema-name
+  permutation.
+- `create_dataframe_rows.py` — named-row binding, pandas and Polars row extraction, VALUES and
+  Arrow memtable materialization, and scratch-view cleanup. Materialized frames retain their
+  `_source_view_name` tag for `declareSorted`.
+- `create_dataframe_inference.py` — nested Arrow inference, struct merging, decimal-envelope
+  checks, and SQL-to-Arrow type conversion. VOID and NULL still map to `pa.null()`.
+- `create_dataframe_arrow.py` — pandas and Polars Arrow-column normalization, timestamp
+  localization, and decimal-column validation.
+- `create_dataframe_tuples.py` — tuple-to-Arrow conversion and scalar/list merge refusal rules,
+  including dense FixedSizeList and sparse ML-vector reshape.
+- `sql_udf_parsing.py` — SQL lexical scanning, comment-safe select-list splitting, and simple UDF
+  call parsing.
+- `sql_udf_discovery.py` — registry-UDF discovery and trailing-clause peeling.
+- `sql_udf_residual.py` — WHERE-residual base-projection planning.
+- `sql_udf_materialization.py` — expression-UDF materialization, ORDER BY alias planning, and
+  public UDF error cleanup.
+- `sql_udf_rewrite.py` — the select-list Python-UDF rewrite assembly.
+- `sql_relations.py` — SQL statement-shape patterns, string/comment masking, CTE discovery,
+  relation scanning, and multipart table-identifier parsing.
 - `builder_conf.py` — SparkContext, RuntimeConfig.
   **G15:** `RuntimeConfig.set` refuses session keys containing `collation` (silent-ignore path).
   **S-1 R1:** RuntimeConfig docs — `datafusion.runtime.memory_limit` swaps a new
@@ -83,7 +90,8 @@ Package split of monolithic `session.py` (r26 T1 MOVE-ONLY). Re-homed under
   `active_session_time_zone`, `localize_naive_datetime_to_utc`,
   `collect_timestamp_as_session_wall`. That paragraph ships in the
   wheel, so it is a lockstep obligation whenever the engine's coverage changes.
-- `__init__.py` — frozen public re-exports
+- `__init__.py` — frozen public re-exports and shared facade-class binding for every extracted
+  free-function module.
 
 ## MOVE MAP (Q7)
 

@@ -227,7 +227,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `python/repark/src/repark/` must open its docstring with `re-export binding`; package
   `__init__.py` files remain exempt from that syntax rule, not the size rule. Fail-closed on a
   missing scan root, unreadable source, empty scan, or exception outside the scan. Dual-wired by
-  `make check-lib-py` and the ci.yml `python` job.
+  `make check-lib-py` and the ci.yml `python` job. The production file-size refactor retires the
+  former `session/_funcs.py` exception after its compatibility surface moves under the default.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
   guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
