@@ -44,6 +44,9 @@ jobs:
           enable-cache: true
       # Keep every sync and run flag identical to `make parity-live`; each prevents lock mutation,
       # missing optional cohorts, or the source package from shadowing the maturin build.
+      # V3E-5 (2026-08-27): verify the Spark-written v3 fixtures that the nightly live tier exercises are present.
+      - name: verify v3 fixtures present for live oracle (V3E-5)
+        run: ls crates/repark-spark/src/tests/fixtures/v3-spark-part-dv/metadata/v3.metadata.json crates/repark-spark/src/tests/fixtures/v3-spark-eq-dv/metadata/v4.metadata.json
       - name: sync record + facade extras (pyspark 4.1.2) + build native module
         run: |
           uv sync --locked --extra record \
