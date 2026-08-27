@@ -257,16 +257,16 @@ FINDING:
 ```yaml
 COVERAGE_ATTESTATION:
   pr_unit: pr-244-revalidation
-  cycle: 3
+  cycle: 4
   risk_tier: standard
   critic_engine: ccc
   categories:
     - id: AT-1
       status: ATTACKED
-      artifacts: [binding-manifest.md, four former semantic carriers, focused tests]
+      artifacts: [tier bindings, four pointer-only carriers, F-PR244-004 red-green probe]
     - id: AT-2
       status: ATTACKED
-      artifacts: [LIGHT, STANDARD, and HIGH boundary pins]
+      artifacts: [LIGHT, STANDARD, and HIGH boundary pins; 17-test focused suite]
     - id: AT-3
       status: N/A
       justification: no runtime operation, retry, transaction, or cleanup path changed
@@ -275,26 +275,73 @@ COVERAGE_ATTESTATION:
       justification: no mutable state, lock, concurrency, or ordering surface changed
     - id: AT-5
       status: ATTACKED
-      artifacts: [MW-6 evidence hygiene pin and 16-test focused suite]
+      artifacts: [MW-6 evidence pin and whitespace-insensitive frozen-artifact comparison]
     - id: AT-6
       status: ATTACKED
-      artifacts: [SEPMO canon, CCC canon, completed ledger, live ledger]
+      artifacts: [SEPMO canon, CCC canon, both clause families, completed ledger semantics]
     - id: AT-7
       status: N/A
       justification: documentation and tree pins add no system-breaking performance path
     - id: AT-8
       status: ATTACKED
-      artifacts: [engine selection, scratch isolation, tunables, and concrete AT mapping]
+      artifacts: [lifecycle pin, completed-map truth pin, F-PR244-001 and F-PR244-004 probes]
     - id: AT-9
       status: ATTACKED
-      artifacts: [Git-backed ledger grammar failure-path execution]
+      artifacts: [focused suite, ledger gates, map sync, overlay-inclusive whitespace checks]
     - id: AT-10
       status: ATTACKED
-      artifacts: [both clause citation families and semantic single-home pins]
-  reattested: [AT-1, AT-2, AT-6, AT-8, AT-10]
+      artifacts: [truthful completed map, exact-one lifecycle pin, scope diff]
+  reattested: [AT-1, AT-5, AT-6, AT-8, AT-9, AT-10]
   complete: true
   convergence: CONVERGED; no open or sustained finding remains at the S1 floor
 ```
+
+## Actor readiness remediation
+
+The owner authorized two byte-only corrections in frozen evidence: remove the completed PROC-1
+ledger's extra EOF blank line and remove the trailing space from `oracle_k2.log` line 21. Neither
+change alters the completed ledger's semantics or the oracle text.
+
+- F-PR244-001 RED: removing only `pins: proc-1-tiered-review/C-011` made
+  `make check-ledger-grammar` exit 2 with exactly one missing-pin finding for C-011.
+- F-PR244-001 GREEN: restoring the citation returned the focused suite and ledger grammar to green.
+- F-PR244-004 RED: adding `Every unit uses one bound engine` to the staging map made
+  `test_process_policy_is_single_homed_and_routes_by_pointer` fail on forbidden `one bound`.
+- F-PR244-004 GREEN: restoring the pointer-only row returned the focused suite to green.
+- The PR-244 lifecycle pin now accepts exactly one ledger in `staging/` or `completed/` and requires
+  exactly the matching bin map to link it.
+- The completed map now points to the filed coverage attestation instead of calling it pending.
+
+```yaml
+SELF_LOGIC_REVIEW:
+  id: SLR-PR-244-actor-readiness-remediation
+  agent: Actor
+  action: clear the four R7 readiness blockers authorized by the owner
+  charter_trace: C-001, C-005, C-006, C-007
+  preconditions:
+    - only two frozen-artifact whitespace bytes are authorized: SATISFIED
+    - completed-ledger semantics and Critic records remain immutable: SATISFIED
+    - both temporary mutations were restored before verification: SATISFIED
+  success_condition: lifecycle turnover stays pinned, the completed map is truthful, the complete PR diff is whitespace-clean, and both regression probes redden
+  step_risks:
+    - the lifecycle pin assumes staging forever: HANDLED by exact-one-bin and matching-map assertions
+    - completed review state is reported as pending: HANDLED by the completed-map pin
+    - a frozen artifact changes semantically: HANDLED by byte-scoped diff review
+  contingencies:
+    - the uncommitted overlay cannot change main...HEAD output: RECORD both the requested range and the overlay-inclusive check
+  tripwire_scan: CLEAN
+  uncertainty: NONE
+  verdict: PROCEED
+  escalation: null
+```
+
+This Actor section does not modify or reinterpret any Critic finding, disposition, or attestation.
+
+Final readiness evidence: focused suite exit 0 with 17 passed; `check-ledgers`,
+`check-ledger-grammar`, and `check-map-sync` exit 0; `make ci` exit 0. `git diff --check` and the
+overlay-inclusive `git diff --check main` exit 0. The requested committed-only
+`git diff --check main...HEAD` exits 2 on the two historical whitespace defects because this
+no-commit remediation cannot change that range; the working overlay contains both corrections.
 
 ## Pointers
 

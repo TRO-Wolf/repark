@@ -484,4 +484,3 @@ FINDING:
   disposition: REMEDIATED
   claim: the ledger's C-010 text carried a literal home path
   evidence: fix the cycle-2 tree — neutralised to /home/<user>
-

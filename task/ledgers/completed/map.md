@@ -18,7 +18,7 @@ else. The next pickup's `make ledger-archive` files everything here under
   review effort by tier (the `review_profile` tunable, `light_thresholds` re-bind, `critic_engine`
   amended to bind CCC at HIGH), the new pointer-only `unit-runbook.md`, the MW-6 Critic-evidence
   home, and two runbook truth-ups (disk headroom, the iceberg-rust F-7 handoff). Eleven clauses,
-  all pinned by `test_proc_1_tiered_review.py`; the Critic's attestation is pending.
+  all pinned by `test_proc_1_tiered_review.py`; the filed coverage attestation is in the ledger.
 - [cap-1-source-file-line-cap-ledger.md](cap-1-source-file-line-cap-ledger.md) — **CAP-1
   (2026-08-26):** ratchet Rust and Python source files to the new source-line default with exact,
   no-slack baselines for the measured offenders; keep narrow line-neutral fixes legal and preserve

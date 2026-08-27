@@ -18,7 +18,7 @@ MANIFESTS[m] n=1 [(0, 7258)]
 ===== N: use_caching => 1 (INT literal) on a fresh table
 
 --- N1 use_caching => 1: CALL ice.system.rewrite_manifests(table => 'db.n', use_caching => 1)
-ERROR AnalysisException [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve CALL due to data type mismatch: The second parameter requires the "BOOLEAN" type, however "1" has the type "INT". SQLSTATE: 42K09; line 1 pos 0; | Call ice.system.rewrite_manifests(db.n, 1, cast(null as int)) | +- ResolvedProcedure org.apache.iceberg.spark.SparkCatalog@2fe63464, system.rewrite_manifests, org.apache.iceberg.spark.procedures.RewriteManifestsProcedure@69a3f8e7 | 
+ERROR AnalysisException [DATATYPE_MISMATCH.UNEXPECTED_INPUT_TYPE] Cannot resolve CALL due to data type mismatch: The second parameter requires the "BOOLEAN" type, however "1" has the type "INT". SQLSTATE: 42K09; line 1 pos 0; | Call ice.system.rewrite_manifests(db.n, 1, cast(null as int)) | +- ResolvedProcedure org.apache.iceberg.spark.SparkCatalog@2fe63464, system.rewrite_manifests, org.apache.iceberg.spark.procedures.RewriteManifestsProcedure@69a3f8e7 |
 MANIFESTS[n] n=4 [(0, 7083), (0, 7080), (0, 7086), (0, 7086)]
 
 ===== O: use_caching => 'true' (STRING) on a fresh table
