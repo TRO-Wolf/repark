@@ -1,0 +1,950 @@
+Compiled from "RewriteManifestsSparkAction.java"
+public class org.apache.iceberg.spark.actions.RewriteManifestsSparkAction extends org.apache.iceberg.spark.actions.BaseSnapshotUpdateSparkAction<org.apache.iceberg.spark.actions.RewriteManifestsSparkAction> implements org.apache.iceberg.actions.RewriteManifests {
+  public static final java.lang.String USE_CACHING;
+
+  public static final boolean USE_CACHING_DEFAULT;
+
+  private static final org.slf4j.Logger LOG;
+
+  private static final org.apache.iceberg.actions.RewriteManifests$Result EMPTY_RESULT;
+
+  private static final java.lang.String DATA_FILE_PARTITION_COLUMN_NAME;
+
+  private final org.apache.iceberg.Table table;
+
+  private final int formatVersion;
+
+  private final long targetManifestSizeBytes;
+
+  private final boolean shouldStageManifests;
+
+  private org.apache.iceberg.PartitionSpec spec;
+
+  private java.util.function.Predicate<org.apache.iceberg.ManifestFile> predicate;
+
+  private java.lang.String outputLocation;
+
+  private java.util.List<java.lang.String> partitionFieldClustering;
+
+  org.apache.iceberg.spark.actions.RewriteManifestsSparkAction(org.apache.spark.sql.SparkSession, org.apache.iceberg.Table);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokespecial #82                 // Method org/apache/iceberg/spark/actions/BaseSnapshotUpdateSparkAction."<init>":(Lorg/apache/spark/sql/SparkSession;)V
+       5: aload_0
+       6: invokedynamic #101,  0            // InvokeDynamic #0:test:()Ljava/util/function/Predicate;
+      11: putfield      #103                // Field predicate:Ljava/util/function/Predicate;
+      14: aload_0
+      15: aconst_null
+      16: putfield      #105                // Field partitionFieldClustering:Ljava/util/List;
+      19: aload_0
+      20: aload_2
+      21: putfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      24: aload_0
+      25: aload_2
+      26: invokeinterface #112,  1          // InterfaceMethod org/apache/iceberg/Table.spec:()Lorg/apache/iceberg/PartitionSpec;
+      31: putfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      34: aload_0
+      35: aload_2
+      36: invokeinterface #118,  1          // InterfaceMethod org/apache/iceberg/Table.properties:()Ljava/util/Map;
+      41: ldc           #120                // String commit.manifest.target-size-bytes
+      43: ldc2_w        #121                // long 8388608l
+      46: invokestatic  #128                // Method org/apache/iceberg/util/PropertyUtil.propertyAsLong:(Ljava/util/Map;Ljava/lang/String;J)J
+      49: putfield      #130                // Field targetManifestSizeBytes:J
+      52: aload_2
+      53: checkcast     #132                // class org/apache/iceberg/HasTableOperations
+      56: invokeinterface #136,  1          // InterfaceMethod org/apache/iceberg/HasTableOperations.operations:()Lorg/apache/iceberg/TableOperations;
+      61: astore_3
+      62: new           #138                // class org/apache/hadoop/fs/Path
+      65: dup
+      66: aload_3
+      67: ldc           #140                // String file
+      69: invokeinterface #146,  2          // InterfaceMethod org/apache/iceberg/TableOperations.metadataFileLocation:(Ljava/lang/String;)Ljava/lang/String;
+      74: invokespecial #149                // Method org/apache/hadoop/fs/Path."<init>":(Ljava/lang/String;)V
+      77: astore        4
+      79: aload_0
+      80: aload         4
+      82: invokevirtual #153                // Method org/apache/hadoop/fs/Path.getParent:()Lorg/apache/hadoop/fs/Path;
+      85: invokevirtual #157                // Method org/apache/hadoop/fs/Path.toString:()Ljava/lang/String;
+      88: putfield      #159                // Field outputLocation:Ljava/lang/String;
+      91: aload_0
+      92: aload_3
+      93: invokeinterface #163,  1          // InterfaceMethod org/apache/iceberg/TableOperations.current:()Lorg/apache/iceberg/TableMetadata;
+      98: invokevirtual #168                // Method org/apache/iceberg/TableMetadata.formatVersion:()I
+     101: putfield      #170                // Field formatVersion:I
+     104: aload_2
+     105: invokeinterface #118,  1          // InterfaceMethod org/apache/iceberg/Table.properties:()Ljava/util/Map;
+     110: ldc           #172                // String compatibility.snapshot-id-inheritance.enabled
+     112: iconst_0
+     113: invokestatic  #176                // Method org/apache/iceberg/util/PropertyUtil.propertyAsBoolean:(Ljava/util/Map;Ljava/lang/String;Z)Z
+     116: istore        5
+     118: aload_0
+     119: aload_0
+     120: getfield      #170                // Field formatVersion:I
+     123: iconst_1
+     124: if_icmpne     136
+     127: iload         5
+     129: ifne          136
+     132: iconst_1
+     133: goto          137
+     136: iconst_0
+     137: putfield      #180                // Field shouldStageManifests:Z
+     140: return
+
+  protected org.apache.iceberg.spark.actions.RewriteManifestsSparkAction self();
+    Code:
+       0: aload_0
+       1: areturn
+
+  public org.apache.iceberg.spark.actions.RewriteManifestsSparkAction specId(int);
+    Code:
+       0: aload_0
+       1: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+       4: invokeinterface #196,  1          // InterfaceMethod org/apache/iceberg/Table.specs:()Ljava/util/Map;
+       9: iload_1
+      10: invokestatic  #202                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      13: invokeinterface #207,  2          // InterfaceMethod java/util/Map.containsKey:(Ljava/lang/Object;)Z
+      18: ldc           #209                // String Invalid spec id %s
+      20: iload_1
+      21: invokestatic  #215                // Method org/apache/iceberg/relocated/com/google/common/base/Preconditions.checkArgument:(ZLjava/lang/String;I)V
+      24: aload_0
+      25: aload_0
+      26: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      29: invokeinterface #196,  1          // InterfaceMethod org/apache/iceberg/Table.specs:()Ljava/util/Map;
+      34: iload_1
+      35: invokestatic  #202                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      38: invokeinterface #219,  2          // InterfaceMethod java/util/Map.get:(Ljava/lang/Object;)Ljava/lang/Object;
+      43: checkcast     #221                // class org/apache/iceberg/PartitionSpec
+      46: putfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      49: aload_0
+      50: areturn
+
+  public org.apache.iceberg.spark.actions.RewriteManifestsSparkAction rewriteIf(java.util.function.Predicate<org.apache.iceberg.ManifestFile>);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: putfield      #103                // Field predicate:Ljava/util/function/Predicate;
+       5: aload_0
+       6: areturn
+
+  public org.apache.iceberg.spark.actions.RewriteManifestsSparkAction stagingLocation(java.lang.String);
+    Code:
+       0: aload_0
+       1: getfield      #180                // Field shouldStageManifests:Z
+       4: ifeq          15
+       7: aload_0
+       8: aload_1
+       9: putfield      #159                // Field outputLocation:Ljava/lang/String;
+      12: goto          25
+      15: getstatic     #229                // Field LOG:Lorg/slf4j/Logger;
+      18: ldc           #231                // String Ignoring provided staging location as new manifests will be committed directly
+      20: invokeinterface #236,  2          // InterfaceMethod org/slf4j/Logger.warn:(Ljava/lang/String;)V
+      25: aload_0
+      26: areturn
+
+  public org.apache.iceberg.actions.RewriteManifests$Result execute();
+    Code:
+       0: ldc           #241                // String Rewriting manifests in %s
+       2: iconst_1
+       3: anewarray     #243                // class java/lang/Object
+       6: dup
+       7: iconst_0
+       8: aload_0
+       9: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      12: invokeinterface #246,  1          // InterfaceMethod org/apache/iceberg/Table.name:()Ljava/lang/String;
+      17: aastore
+      18: invokestatic  #252                // Method java/lang/String.format:(Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/String;
+      21: astore_1
+      22: aload_0
+      23: ldc           #254                // String REWRITE-MANIFESTS
+      25: aload_1
+      26: invokevirtual #258                // Method newJobGroupInfo:(Ljava/lang/String;Ljava/lang/String;)Lorg/apache/iceberg/spark/JobGroupInfo;
+      29: astore_2
+      30: aload_0
+      31: aload_2
+      32: aload_0
+      33: invokedynamic #268,  0            // InvokeDynamic #1:get:(Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;)Ljava/util/function/Supplier;
+      38: invokevirtual #272                // Method withJobGroupInfo:(Lorg/apache/iceberg/spark/JobGroupInfo;Ljava/util/function/Supplier;)Ljava/lang/Object;
+      41: checkcast     #20                 // class org/apache/iceberg/actions/RewriteManifests$Result
+      44: areturn
+
+  public org.apache.iceberg.spark.actions.RewriteManifestsSparkAction sortBy(java.util.List<java.lang.String>);
+    Code:
+       0: aload_0
+       1: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+       4: invokevirtual #282                // Method org/apache/iceberg/PartitionSpec.fields:()Ljava/util/List;
+       7: invokeinterface #288,  1          // InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+      12: invokedynamic #299,  0            // InvokeDynamic #2:apply:()Ljava/util/function/Function;
+      17: invokeinterface #305,  2          // InterfaceMethod java/util/stream/Stream.map:(Ljava/util/function/Function;)Ljava/util/stream/Stream;
+      22: invokestatic  #311                // Method java/util/stream/Collectors.toSet:()Ljava/util/stream/Collector;
+      25: invokeinterface #315,  2          // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+      30: checkcast     #317                // class java/util/Set
+      33: astore_2
+      34: aload_1
+      35: invokeinterface #288,  1          // InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+      40: aload_2
+      41: invokedynamic #327,  0            // InvokeDynamic #3:test:(Ljava/util/Set;)Ljava/util/function/Predicate;
+      46: invokeinterface #331,  2          // InterfaceMethod java/util/stream/Stream.filter:(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;
+      51: invokestatic  #334                // Method java/util/stream/Collectors.toList:()Ljava/util/stream/Collector;
+      54: invokeinterface #315,  2          // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+      59: checkcast     #284                // class java/util/List
+      62: astore_3
+      63: aload_3
+      64: invokeinterface #338,  1          // InterfaceMethod java/util/List.isEmpty:()Z
+      69: ldc_w         #340                // String Cannot set manifest sorting because specified field(s) %s were not found in current partition spec %s. Spec ID %s
+      72: aload_3
+      73: aload_0
+      74: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      77: aload_0
+      78: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      81: invokevirtual #342                // Method org/apache/iceberg/PartitionSpec.specId:()I
+      84: invokestatic  #202                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      87: invokestatic  #345                // Method org/apache/iceberg/relocated/com/google/common/base/Preconditions.checkArgument:(ZLjava/lang/String;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V
+      90: aload_0
+      91: aload_1
+      92: putfield      #105                // Field partitionFieldClustering:Ljava/util/List;
+      95: aload_0
+      96: areturn
+
+  private org.apache.iceberg.actions.RewriteManifests$Result doExecute();
+    Code:
+       0: invokestatic  #356                // Method org/apache/iceberg/relocated/com/google/common/collect/Lists.newArrayList:()Ljava/util/ArrayList;
+       3: astore_1
+       4: invokestatic  #356                // Method org/apache/iceberg/relocated/com/google/common/collect/Lists.newArrayList:()Ljava/util/ArrayList;
+       7: astore_2
+       8: aload_0
+       9: getstatic     #362                // Field org/apache/iceberg/ManifestContent.DATA:Lorg/apache/iceberg/ManifestContent;
+      12: invokevirtual #366                // Method rewriteManifests:(Lorg/apache/iceberg/ManifestContent;)Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      15: astore_3
+      16: aload_1
+      17: aload_3
+      18: invokeinterface #370,  1          // InterfaceMethod org/apache/iceberg/actions/RewriteManifests$Result.rewrittenManifests:()Ljava/lang/Iterable;
+      23: invokestatic  #376                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.addAll:(Ljava/util/Collection;Ljava/lang/Iterable;)Z
+      26: pop
+      27: aload_2
+      28: aload_3
+      29: invokeinterface #379,  1          // InterfaceMethod org/apache/iceberg/actions/RewriteManifests$Result.addedManifests:()Ljava/lang/Iterable;
+      34: invokestatic  #376                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.addAll:(Ljava/util/Collection;Ljava/lang/Iterable;)Z
+      37: pop
+      38: aload_0
+      39: getstatic     #382                // Field org/apache/iceberg/ManifestContent.DELETES:Lorg/apache/iceberg/ManifestContent;
+      42: invokevirtual #366                // Method rewriteManifests:(Lorg/apache/iceberg/ManifestContent;)Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      45: astore        4
+      47: aload_1
+      48: aload         4
+      50: invokeinterface #370,  1          // InterfaceMethod org/apache/iceberg/actions/RewriteManifests$Result.rewrittenManifests:()Ljava/lang/Iterable;
+      55: invokestatic  #376                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.addAll:(Ljava/util/Collection;Ljava/lang/Iterable;)Z
+      58: pop
+      59: aload_2
+      60: aload         4
+      62: invokeinterface #379,  1          // InterfaceMethod org/apache/iceberg/actions/RewriteManifests$Result.addedManifests:()Ljava/lang/Iterable;
+      67: invokestatic  #376                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.addAll:(Ljava/util/Collection;Ljava/lang/Iterable;)Z
+      70: pop
+      71: aload_1
+      72: invokeinterface #338,  1          // InterfaceMethod java/util/List.isEmpty:()Z
+      77: ifeq          84
+      80: getstatic     #384                // Field EMPTY_RESULT:Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      83: areturn
+      84: aload_0
+      85: aload_1
+      86: aload_2
+      87: invokevirtual #388                // Method replaceManifests:(Ljava/lang/Iterable;Ljava/lang/Iterable;)V
+      90: invokestatic  #392                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result.builder:()Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      93: aload_1
+      94: invokevirtual #395                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.rewrittenManifests:(Ljava/lang/Iterable;)Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      97: aload_2
+      98: invokevirtual #397                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.addedManifests:(Ljava/lang/Iterable;)Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+     101: invokevirtual #401                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.build:()Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result;
+     104: areturn
+
+  private org.apache.iceberg.actions.RewriteManifests$Result rewriteManifests(org.apache.iceberg.ManifestContent);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokevirtual #408                // Method findMatchingManifests:(Lorg/apache/iceberg/ManifestContent;)Ljava/util/List;
+       5: astore_2
+       6: aload_2
+       7: invokeinterface #338,  1          // InterfaceMethod java/util/List.isEmpty:()Z
+      12: ifeq          19
+      15: getstatic     #384                // Field EMPTY_RESULT:Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      18: areturn
+      19: aload_0
+      20: aload_0
+      21: aload_2
+      22: invokevirtual #412                // Method totalSizeBytes:(Ljava/lang/Iterable;)J
+      25: invokevirtual #416                // Method targetNumManifests:(J)I
+      28: istore_3
+      29: iload_3
+      30: iconst_1
+      31: if_icmpne     48
+      34: aload_2
+      35: invokeinterface #419,  1          // InterfaceMethod java/util/List.size:()I
+      40: iconst_1
+      41: if_icmpne     48
+      44: getstatic     #384                // Field EMPTY_RESULT:Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      47: areturn
+      48: aload_0
+      49: aload_2
+      50: invokevirtual #423                // Method buildManifestEntryDF:(Ljava/util/List;)Lorg/apache/spark/sql/Dataset;
+      53: astore        4
+      55: aload_0
+      56: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      59: invokevirtual #426                // Method org/apache/iceberg/PartitionSpec.isUnpartitioned:()Z
+      62: ifeq          78
+      65: aload_0
+      66: aload_1
+      67: aload         4
+      69: iload_3
+      70: invokevirtual #430                // Method writeUnpartitionedManifests:(Lorg/apache/iceberg/ManifestContent;Lorg/apache/spark/sql/Dataset;I)Ljava/util/List;
+      73: astore        5
+      75: goto          88
+      78: aload_0
+      79: aload_1
+      80: aload         4
+      82: iload_3
+      83: invokevirtual #435                // Method writePartitionedManifests:(Lorg/apache/iceberg/ManifestContent;Lorg/apache/spark/sql/Dataset;I)Ljava/util/List;
+      86: astore        5
+      88: invokestatic  #392                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result.builder:()Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      91: aload_2
+      92: invokevirtual #395                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.rewrittenManifests:(Ljava/lang/Iterable;)Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      95: aload         5
+      97: invokevirtual #397                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.addedManifests:(Ljava/lang/Iterable;)Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+     100: invokevirtual #401                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.build:()Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result;
+     103: areturn
+
+  private org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> buildManifestEntryDF(java.util.List<org.apache.iceberg.ManifestFile>);
+    Code:
+       0: aload_0
+       1: invokevirtual #445                // Method spark:()Lorg/apache/spark/sql/SparkSession;
+       4: aload_1
+       5: invokedynamic #456,  0            // InvokeDynamic #4:apply:()Lorg/apache/iceberg/relocated/com/google/common/base/Function;
+      10: invokestatic  #460                // Method org/apache/iceberg/relocated/com/google/common/collect/Lists.transform:(Ljava/util/List;Lorg/apache/iceberg/relocated/com/google/common/base/Function;)Ljava/util/List;
+      13: invokestatic  #466                // Method org/apache/spark/sql/Encoders.STRING:()Lorg/apache/spark/sql/Encoder;
+      16: invokevirtual #470                // Method org/apache/spark/sql/SparkSession.createDataset:(Ljava/util/List;Lorg/apache/spark/sql/Encoder;)Lorg/apache/spark/sql/Dataset;
+      19: iconst_1
+      20: anewarray     #248                // class java/lang/String
+      23: dup
+      24: iconst_0
+      25: ldc_w         #472                // String manifest
+      28: aastore
+      29: invokevirtual #476                // Method org/apache/spark/sql/Dataset.toDF:([Ljava/lang/String;)Lorg/apache/spark/sql/Dataset;
+      32: astore_2
+      33: aload_0
+      34: aload_0
+      35: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      38: getstatic     #482                // Field org/apache/iceberg/MetadataTableType.ENTRIES:Lorg/apache/iceberg/MetadataTableType;
+      41: invokevirtual #486                // Method loadMetadataTable:(Lorg/apache/iceberg/Table;Lorg/apache/iceberg/MetadataTableType;)Lorg/apache/spark/sql/Dataset;
+      44: ldc_w         #488                // String status < 2
+      47: invokevirtual #491                // Method org/apache/spark/sql/Dataset.filter:(Ljava/lang/String;)Lorg/apache/spark/sql/Dataset;
+      50: iconst_5
+      51: anewarray     #248                // class java/lang/String
+      54: dup
+      55: iconst_0
+      56: ldc_w         #493                // String input_file_name() as manifest
+      59: aastore
+      60: dup
+      61: iconst_1
+      62: ldc_w         #495                // String snapshot_id
+      65: aastore
+      66: dup
+      67: iconst_2
+      68: ldc_w         #497                // String sequence_number
+      71: aastore
+      72: dup
+      73: iconst_3
+      74: ldc_w         #499                // String file_sequence_number
+      77: aastore
+      78: dup
+      79: iconst_4
+      80: ldc_w         #501                // String data_file
+      83: aastore
+      84: invokevirtual #504                // Method org/apache/spark/sql/Dataset.selectExpr:([Ljava/lang/String;)Lorg/apache/spark/sql/Dataset;
+      87: astore_3
+      88: aload_2
+      89: ldc_w         #472                // String manifest
+      92: invokevirtual #508                // Method org/apache/spark/sql/Dataset.col:(Ljava/lang/String;)Lorg/apache/spark/sql/Column;
+      95: aload_3
+      96: ldc_w         #472                // String manifest
+      99: invokevirtual #508                // Method org/apache/spark/sql/Dataset.col:(Ljava/lang/String;)Lorg/apache/spark/sql/Column;
+     102: invokevirtual #514                // Method org/apache/spark/sql/Column.equalTo:(Ljava/lang/Object;)Lorg/apache/spark/sql/Column;
+     105: astore        4
+     107: aload_3
+     108: aload_2
+     109: aload         4
+     111: ldc_w         #516                // String left_semi
+     114: invokevirtual #520                // Method org/apache/spark/sql/Dataset.join:(Lorg/apache/spark/sql/Dataset;Lorg/apache/spark/sql/Column;Ljava/lang/String;)Lorg/apache/spark/sql/Dataset;
+     117: ldc_w         #495                // String snapshot_id
+     120: iconst_3
+     121: anewarray     #248                // class java/lang/String
+     124: dup
+     125: iconst_0
+     126: ldc_w         #497                // String sequence_number
+     129: aastore
+     130: dup
+     131: iconst_1
+     132: ldc_w         #499                // String file_sequence_number
+     135: aastore
+     136: dup
+     137: iconst_2
+     138: ldc_w         #501                // String data_file
+     141: aastore
+     142: invokevirtual #524                // Method org/apache/spark/sql/Dataset.select:(Ljava/lang/String;[Ljava/lang/String;)Lorg/apache/spark/sql/Dataset;
+     145: areturn
+
+  private java.util.List<org.apache.iceberg.ManifestFile> writeUnpartitionedManifests(org.apache.iceberg.ManifestContent, org.apache.spark.sql.Dataset<org.apache.spark.sql.Row>, int);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: aload_2
+       3: invokevirtual #533                // Method org/apache/spark/sql/Dataset.schema:()Lorg/apache/spark/sql/types/StructType;
+       6: invokevirtual #537                // Method newWriteManifestsFunc:(Lorg/apache/iceberg/ManifestContent;Lorg/apache/spark/sql/types/StructType;)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteManifests;
+       9: astore        4
+      11: aload_2
+      12: iload_3
+      13: invokevirtual #541                // Method org/apache/spark/sql/Dataset.repartition:(I)Lorg/apache/spark/sql/Dataset;
+      16: astore        5
+      18: aload         4
+      20: aload         5
+      22: invokevirtual #544                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteManifests.apply:(Lorg/apache/spark/sql/Dataset;)Lorg/apache/spark/sql/Dataset;
+      25: invokevirtual #547                // Method org/apache/spark/sql/Dataset.collectAsList:()Ljava/util/List;
+      28: areturn
+
+  private java.util.List<org.apache.iceberg.ManifestFile> writePartitionedManifests(org.apache.iceberg.ManifestContent, org.apache.spark.sql.Dataset<org.apache.spark.sql.Row>, int);
+    Code:
+       0: aload_0
+       1: aload_2
+       2: aload_0
+       3: aload_1
+       4: iload_3
+       5: invokedynamic #562,  0            // InvokeDynamic #5:apply:(Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;Lorg/apache/iceberg/ManifestContent;I)Ljava/util/function/Function;
+      10: invokevirtual #566                // Method withReusableDS:(Lorg/apache/spark/sql/Dataset;Ljava/util/function/Function;)Ljava/lang/Object;
+      13: checkcast     #284                // class java/util/List
+      16: areturn
+
+  private org.apache.iceberg.spark.actions.RewriteManifestsSparkAction$WriteManifests<?> newWriteManifestsFunc(org.apache.iceberg.ManifestContent, org.apache.spark.sql.types.StructType);
+    Code:
+       0: aload_0
+       1: invokevirtual #571                // Method manifestWriters:()Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction$ManifestWriterFactory;
+       4: astore_3
+       5: aload_2
+       6: ldc_w         #501                // String data_file
+       9: invokevirtual #576                // Method org/apache/spark/sql/types/StructType.apply:(Ljava/lang/String;)Lorg/apache/spark/sql/types/StructField;
+      12: invokevirtual #582                // Method org/apache/spark/sql/types/StructField.dataType:()Lorg/apache/spark/sql/types/DataType;
+      15: checkcast     #573                // class org/apache/spark/sql/types/StructType
+      18: astore        4
+      20: aload_0
+      21: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      24: invokestatic  #588                // Method org/apache/iceberg/Partitioning.partitionType:(Lorg/apache/iceberg/Table;)Lorg/apache/iceberg/types/Types$StructType;
+      27: invokestatic  #594                // InterfaceMethod org/apache/iceberg/DataFile.getType:(Lorg/apache/iceberg/types/Types$StructType;)Lorg/apache/iceberg/types/Types$StructType;
+      30: astore        5
+      32: aload_0
+      33: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      36: invokevirtual #597                // Method org/apache/iceberg/PartitionSpec.partitionType:()Lorg/apache/iceberg/types/Types$StructType;
+      39: invokestatic  #594                // InterfaceMethod org/apache/iceberg/DataFile.getType:(Lorg/apache/iceberg/types/Types$StructType;)Lorg/apache/iceberg/types/Types$StructType;
+      42: astore        6
+      44: aload_1
+      45: getstatic     #362                // Field org/apache/iceberg/ManifestContent.DATA:Lorg/apache/iceberg/ManifestContent;
+      48: if_acmpne     66
+      51: new           #18                 // class org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteDataManifests
+      54: dup
+      55: aload_3
+      56: aload         5
+      58: aload         6
+      60: aload         4
+      62: invokespecial #600                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteDataManifests."<init>":(Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction$ManifestWriterFactory;Lorg/apache/iceberg/types/Types$StructType;Lorg/apache/iceberg/types/Types$StructType;Lorg/apache/spark/sql/types/StructType;)V
+      65: areturn
+      66: new           #16                 // class org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteDeleteManifests
+      69: dup
+      70: aload_3
+      71: aload         5
+      73: aload         6
+      75: aload         4
+      77: invokespecial #601                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteDeleteManifests."<init>":(Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction$ManifestWriterFactory;Lorg/apache/iceberg/types/Types$StructType;Lorg/apache/iceberg/types/Types$StructType;Lorg/apache/spark/sql/types/StructType;)V
+      80: areturn
+
+  private org.apache.spark.sql.Column sortColumn();
+    Code:
+       0: aload_0
+       1: getfield      #105                // Field partitionFieldClustering:Ljava/util/List;
+       4: ifnull        70
+       7: getstatic     #229                // Field LOG:Lorg/slf4j/Logger;
+      10: ldc_w         #613                // String Clustering manifests for specId {} by partition columns by {}
+      13: aload_0
+      14: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      17: invokevirtual #342                // Method org/apache/iceberg/PartitionSpec.specId:()I
+      20: invokestatic  #202                // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      23: aload_0
+      24: getfield      #105                // Field partitionFieldClustering:Ljava/util/List;
+      27: invokeinterface #616,  4          // InterfaceMethod org/slf4j/Logger.info:(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/Object;)V
+      32: aload_0
+      33: getfield      #105                // Field partitionFieldClustering:Ljava/util/List;
+      36: invokeinterface #288,  1          // InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+      41: invokedynamic #622,  0            // InvokeDynamic #6:apply:()Ljava/util/function/Function;
+      46: invokeinterface #305,  2          // InterfaceMethod java/util/stream/Stream.map:(Ljava/util/function/Function;)Ljava/util/stream/Stream;
+      51: invokedynamic #633,  0            // InvokeDynamic #7:apply:()Ljava/util/function/IntFunction;
+      56: invokeinterface #637,  2          // InterfaceMethod java/util/stream/Stream.toArray:(Ljava/util/function/IntFunction;)[Ljava/lang/Object;
+      61: checkcast     #639                // class "[Lorg/apache/spark/sql/Column;"
+      64: astore_1
+      65: aload_1
+      66: invokestatic  #645                // Method org/apache/spark/sql/functions.struct:([Lorg/apache/spark/sql/Column;)Lorg/apache/spark/sql/Column;
+      69: areturn
+      70: new           #510                // class org/apache/spark/sql/Column
+      73: dup
+      74: ldc           #61                 // String data_file.partition
+      76: invokespecial #646                // Method org/apache/spark/sql/Column."<init>":(Ljava/lang/String;)V
+      79: areturn
+
+  private org.apache.spark.sql.Dataset<org.apache.spark.sql.Row> repartitionAndSort(org.apache.spark.sql.Dataset<org.apache.spark.sql.Row>, org.apache.spark.sql.Column, int);
+    Code:
+       0: aload_1
+       1: iload_3
+       2: iconst_1
+       3: anewarray     #510                // class org/apache/spark/sql/Column
+       6: dup
+       7: iconst_0
+       8: aload_2
+       9: aastore
+      10: invokevirtual #654                // Method org/apache/spark/sql/Dataset.repartitionByRange:(I[Lorg/apache/spark/sql/Column;)Lorg/apache/spark/sql/Dataset;
+      13: iconst_1
+      14: anewarray     #510                // class org/apache/spark/sql/Column
+      17: dup
+      18: iconst_0
+      19: aload_2
+      20: aastore
+      21: invokevirtual #658                // Method org/apache/spark/sql/Dataset.sortWithinPartitions:([Lorg/apache/spark/sql/Column;)Lorg/apache/spark/sql/Dataset;
+      24: areturn
+
+  private <T, U> U withReusableDS(org.apache.spark.sql.Dataset<T>, java.util.function.Function<org.apache.spark.sql.Dataset<T>, U>);
+    Code:
+       0: aload_0
+       1: invokevirtual #664                // Method options:()Ljava/util/Map;
+       4: ldc           #51                 // String use-caching
+       6: iconst_0
+       7: invokestatic  #176                // Method org/apache/iceberg/util/PropertyUtil.propertyAsBoolean:(Ljava/util/Map;Ljava/lang/String;Z)Z
+      10: istore_3
+      11: iload_3
+      12: ifeq          22
+      15: aload_1
+      16: invokevirtual #668                // Method org/apache/spark/sql/Dataset.cache:()Lorg/apache/spark/sql/Dataset;
+      19: goto          23
+      22: aload_1
+      23: astore        4
+      25: aload_2
+      26: aload         4
+      28: invokeinterface #672,  2          // InterfaceMethod java/util/function/Function.apply:(Ljava/lang/Object;)Ljava/lang/Object;
+      33: astore        5
+      35: iload_3
+      36: ifeq          46
+      39: aload         4
+      41: iconst_0
+      42: invokevirtual #676                // Method org/apache/spark/sql/Dataset.unpersist:(Z)Lorg/apache/spark/sql/Dataset;
+      45: pop
+      46: aload         5
+      48: areturn
+      49: astore        6
+      51: iload_3
+      52: ifeq          62
+      55: aload         4
+      57: iconst_0
+      58: invokevirtual #676                // Method org/apache/spark/sql/Dataset.unpersist:(Z)Lorg/apache/spark/sql/Dataset;
+      61: pop
+      62: aload         6
+      64: athrow
+    Exception table:
+       from    to  target type
+          25    35    49   any
+          49    51    49   any
+
+  private java.util.List<org.apache.iceberg.ManifestFile> findMatchingManifests(org.apache.iceberg.ManifestContent);
+    Code:
+       0: aload_0
+       1: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+       4: invokeinterface #690,  1          // InterfaceMethod org/apache/iceberg/Table.currentSnapshot:()Lorg/apache/iceberg/Snapshot;
+       9: astore_2
+      10: aload_2
+      11: ifnonnull     18
+      14: invokestatic  #696                // Method org/apache/iceberg/relocated/com/google/common/collect/ImmutableList.of:()Lorg/apache/iceberg/relocated/com/google/common/collect/ImmutableList;
+      17: areturn
+      18: aload_0
+      19: aload_1
+      20: aload_2
+      21: invokevirtual #702                // Method loadManifests:(Lorg/apache/iceberg/ManifestContent;Lorg/apache/iceberg/Snapshot;)Ljava/util/List;
+      24: astore_3
+      25: aload_3
+      26: invokeinterface #288,  1          // InterfaceMethod java/util/List.stream:()Ljava/util/stream/Stream;
+      31: aload_0
+      32: invokedynamic #709,  0            // InvokeDynamic #8:test:(Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;)Ljava/util/function/Predicate;
+      37: invokeinterface #331,  2          // InterfaceMethod java/util/stream/Stream.filter:(Ljava/util/function/Predicate;)Ljava/util/stream/Stream;
+      42: invokestatic  #334                // Method java/util/stream/Collectors.toList:()Ljava/util/stream/Collector;
+      45: invokeinterface #315,  2          // InterfaceMethod java/util/stream/Stream.collect:(Ljava/util/stream/Collector;)Ljava/lang/Object;
+      50: checkcast     #284                // class java/util/List
+      53: areturn
+
+  private java.util.List<org.apache.iceberg.ManifestFile> loadManifests(org.apache.iceberg.ManifestContent, org.apache.iceberg.Snapshot);
+    Code:
+       0: getstatic     #715                // Field org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$1.$SwitchMap$org$apache$iceberg$ManifestContent:[I
+       3: aload_1
+       4: invokevirtual #718                // Method org/apache/iceberg/ManifestContent.ordinal:()I
+       7: iaload
+       8: lookupswitch  { // 2
+                     1: 36
+                     2: 52
+               default: 68
+          }
+      36: aload_2
+      37: aload_0
+      38: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      41: invokeinterface #722,  1          // InterfaceMethod org/apache/iceberg/Table.io:()Lorg/apache/iceberg/io/FileIO;
+      46: invokeinterface #726,  2          // InterfaceMethod org/apache/iceberg/Snapshot.dataManifests:(Lorg/apache/iceberg/io/FileIO;)Ljava/util/List;
+      51: areturn
+      52: aload_2
+      53: aload_0
+      54: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      57: invokeinterface #722,  1          // InterfaceMethod org/apache/iceberg/Table.io:()Lorg/apache/iceberg/io/FileIO;
+      62: invokeinterface #729,  2          // InterfaceMethod org/apache/iceberg/Snapshot.deleteManifests:(Lorg/apache/iceberg/io/FileIO;)Ljava/util/List;
+      67: areturn
+      68: new           #731                // class java/lang/IllegalArgumentException
+      71: dup
+      72: aload_1
+      73: invokestatic  #734                // Method java/lang/String.valueOf:(Ljava/lang/Object;)Ljava/lang/String;
+      76: invokedynamic #745,  0            // InvokeDynamic #9:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+      81: invokespecial #746                // Method java/lang/IllegalArgumentException."<init>":(Ljava/lang/String;)V
+      84: athrow
+
+  private int targetNumManifests(long);
+    Code:
+       0: lload_1
+       1: aload_0
+       2: getfield      #130                // Field targetManifestSizeBytes:J
+       5: ladd
+       6: lconst_1
+       7: lsub
+       8: aload_0
+       9: getfield      #130                // Field targetManifestSizeBytes:J
+      12: ldiv
+      13: l2i
+      14: ireturn
+
+  private long totalSizeBytes(java.lang.Iterable<org.apache.iceberg.ManifestFile>);
+    Code:
+       0: lconst_0
+       1: lstore_2
+       2: aload_1
+       3: invokeinterface #754,  1          // InterfaceMethod java/lang/Iterable.iterator:()Ljava/util/Iterator;
+       8: astore        4
+      10: aload         4
+      12: invokeinterface #759,  1          // InterfaceMethod java/util/Iterator.hasNext:()Z
+      17: ifeq          71
+      20: aload         4
+      22: invokeinterface #762,  1          // InterfaceMethod java/util/Iterator.next:()Ljava/lang/Object;
+      27: checkcast     #447                // class org/apache/iceberg/ManifestFile
+      30: astore        5
+      32: aload_0
+      33: aload         5
+      35: invokevirtual #765                // Method hasFileCounts:(Lorg/apache/iceberg/ManifestFile;)Z
+      38: ldc_w         #767                // String No file counts in manifest: %s
+      41: iconst_1
+      42: anewarray     #243                // class java/lang/Object
+      45: dup
+      46: iconst_0
+      47: aload         5
+      49: invokeinterface #450,  1          // InterfaceMethod org/apache/iceberg/ManifestFile.path:()Ljava/lang/String;
+      54: aastore
+      55: invokestatic  #773                // Method org/apache/iceberg/exceptions/ValidationException.check:(ZLjava/lang/String;[Ljava/lang/Object;)V
+      58: lload_2
+      59: aload         5
+      61: invokeinterface #777,  1          // InterfaceMethod org/apache/iceberg/ManifestFile.length:()J
+      66: ladd
+      67: lstore_2
+      68: goto          10
+      71: lload_2
+      72: lreturn
+
+  private boolean hasFileCounts(org.apache.iceberg.ManifestFile);
+    Code:
+       0: aload_1
+       1: invokeinterface #784,  1          // InterfaceMethod org/apache/iceberg/ManifestFile.addedFilesCount:()Ljava/lang/Integer;
+       6: ifnull        31
+       9: aload_1
+      10: invokeinterface #787,  1          // InterfaceMethod org/apache/iceberg/ManifestFile.existingFilesCount:()Ljava/lang/Integer;
+      15: ifnull        31
+      18: aload_1
+      19: invokeinterface #790,  1          // InterfaceMethod org/apache/iceberg/ManifestFile.deletedFilesCount:()Ljava/lang/Integer;
+      24: ifnull        31
+      27: iconst_1
+      28: goto          32
+      31: iconst_0
+      32: ireturn
+
+  private void replaceManifests(java.lang.Iterable<org.apache.iceberg.ManifestFile>, java.lang.Iterable<org.apache.iceberg.ManifestFile>);
+    Code:
+       0: aload_0
+       1: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+       4: invokeinterface #798,  1          // InterfaceMethod org/apache/iceberg/Table.rewriteManifests:()Lorg/apache/iceberg/RewriteManifests;
+       9: astore_3
+      10: aload_1
+      11: aload_3
+      12: dup
+      13: invokestatic  #803                // Method java/util/Objects.requireNonNull:(Ljava/lang/Object;)Ljava/lang/Object;
+      16: pop
+      17: invokedynamic #818,  0            // InvokeDynamic #10:accept:(Lorg/apache/iceberg/RewriteManifests;)Ljava/util/function/Consumer;
+      22: invokeinterface #822,  2          // InterfaceMethod java/lang/Iterable.forEach:(Ljava/util/function/Consumer;)V
+      27: aload_2
+      28: aload_3
+      29: dup
+      30: invokestatic  #803                // Method java/util/Objects.requireNonNull:(Ljava/lang/Object;)Ljava/lang/Object;
+      33: pop
+      34: invokedynamic #827,  0            // InvokeDynamic #11:accept:(Lorg/apache/iceberg/RewriteManifests;)Ljava/util/function/Consumer;
+      39: invokeinterface #822,  2          // InterfaceMethod java/lang/Iterable.forEach:(Ljava/util/function/Consumer;)V
+      44: aload_0
+      45: aload_3
+      46: invokevirtual #831                // Method commit:(Lorg/apache/iceberg/SnapshotUpdate;)V
+      49: aload_0
+      50: getfield      #180                // Field shouldStageManifests:Z
+      53: ifeq          69
+      56: aload_0
+      57: aload_2
+      58: invokedynamic #456,  0            // InvokeDynamic #4:apply:()Lorg/apache/iceberg/relocated/com/google/common/base/Function;
+      63: invokestatic  #834                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.transform:(Ljava/lang/Iterable;Lorg/apache/iceberg/relocated/com/google/common/base/Function;)Ljava/lang/Iterable;
+      66: invokevirtual #838                // Method deleteFiles:(Ljava/lang/Iterable;)V
+      69: goto          98
+      72: astore_3
+      73: aload_3
+      74: athrow
+      75: astore_3
+      76: aload_3
+      77: instanceof    #840                // class org/apache/iceberg/exceptions/CleanableFailure
+      80: ifeq          96
+      83: aload_0
+      84: aload_2
+      85: invokedynamic #456,  0            // InvokeDynamic #4:apply:()Lorg/apache/iceberg/relocated/com/google/common/base/Function;
+      90: invokestatic  #834                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.transform:(Ljava/lang/Iterable;Lorg/apache/iceberg/relocated/com/google/common/base/Function;)Ljava/lang/Iterable;
+      93: invokevirtual #838                // Method deleteFiles:(Ljava/lang/Iterable;)V
+      96: aload_3
+      97: athrow
+      98: return
+    Exception table:
+       from    to  target type
+           0    69    72   Class org/apache/iceberg/exceptions/CommitStateUnknownException
+           0    69    75   Class java/lang/Exception
+
+  private void deleteFiles(java.lang.Iterable<java.lang.String>);
+    Code:
+       0: aload_1
+       1: invokedynamic #854,  0            // InvokeDynamic #12:apply:()Lorg/apache/iceberg/relocated/com/google/common/base/Function;
+       6: invokestatic  #834                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.transform:(Ljava/lang/Iterable;Lorg/apache/iceberg/relocated/com/google/common/base/Function;)Ljava/lang/Iterable;
+       9: astore_2
+      10: aload_0
+      11: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      14: invokeinterface #722,  1          // InterfaceMethod org/apache/iceberg/Table.io:()Lorg/apache/iceberg/io/FileIO;
+      19: instanceof    #856                // class org/apache/iceberg/io/SupportsBulkOperations
+      22: ifeq          51
+      25: aload_0
+      26: aload_0
+      27: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      30: invokeinterface #722,  1          // InterfaceMethod org/apache/iceberg/Table.io:()Lorg/apache/iceberg/io/FileIO;
+      35: checkcast     #856                // class org/apache/iceberg/io/SupportsBulkOperations
+      38: aload_2
+      39: invokeinterface #754,  1          // InterfaceMethod java/lang/Iterable.iterator:()Ljava/util/Iterator;
+      44: invokevirtual #859                // Method deleteFiles:(Lorg/apache/iceberg/io/SupportsBulkOperations;Ljava/util/Iterator;)Lorg/apache/iceberg/spark/actions/BaseSparkAction$DeleteSummary;
+      47: pop
+      48: goto          71
+      51: aload_0
+      52: invokestatic  #865                // Method org/apache/iceberg/util/ThreadPools.getWorkerPool:()Ljava/util/concurrent/ExecutorService;
+      55: aload_0
+      56: invokedynamic #873,  0            // InvokeDynamic #13:accept:(Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;)Ljava/util/function/Consumer;
+      61: aload_2
+      62: invokeinterface #754,  1          // InterfaceMethod java/lang/Iterable.iterator:()Ljava/util/Iterator;
+      67: invokevirtual #876                // Method deleteFiles:(Ljava/util/concurrent/ExecutorService;Ljava/util/function/Consumer;Ljava/util/Iterator;)Lorg/apache/iceberg/spark/actions/BaseSparkAction$DeleteSummary;
+      70: pop
+      71: return
+
+  private org.apache.iceberg.spark.actions.RewriteManifestsSparkAction$ManifestWriterFactory manifestWriters();
+    Code:
+       0: new           #12                 // class org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$ManifestWriterFactory
+       3: dup
+       4: aload_0
+       5: invokevirtual #884                // Method sparkContext:()Lorg/apache/spark/api/java/JavaSparkContext;
+       8: aload_0
+       9: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+      12: invokestatic  #890                // Method org/apache/iceberg/spark/source/SerializableTableWithSize.copyOf:(Lorg/apache/iceberg/Table;)Lorg/apache/iceberg/Table;
+      15: invokevirtual #896                // Method org/apache/spark/api/java/JavaSparkContext.broadcast:(Ljava/lang/Object;)Lorg/apache/spark/broadcast/Broadcast;
+      18: aload_0
+      19: getfield      #170                // Field formatVersion:I
+      22: aload_0
+      23: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      26: invokevirtual #342                // Method org/apache/iceberg/PartitionSpec.specId:()I
+      29: aload_0
+      30: getfield      #159                // Field outputLocation:Ljava/lang/String;
+      33: ldc2_w        #897                // double 1.2d
+      36: aload_0
+      37: getfield      #130                // Field targetManifestSizeBytes:J
+      40: l2d
+      41: dmul
+      42: d2l
+      43: invokespecial #901                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$ManifestWriterFactory."<init>":(Lorg/apache/spark/broadcast/Broadcast;IILjava/lang/String;J)V
+      46: areturn
+
+  public java.lang.Object snapshotProperty(java.lang.String, java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: aload_2
+       3: invokespecial #905                // Method org/apache/iceberg/spark/actions/BaseSnapshotUpdateSparkAction.snapshotProperty:(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+       6: areturn
+
+  public java.lang.Object options(java.util.Map);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokespecial #908                // Method org/apache/iceberg/spark/actions/BaseSnapshotUpdateSparkAction.options:(Ljava/util/Map;)Ljava/lang/Object;
+       5: areturn
+
+  public java.lang.Object option(java.lang.String, java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: aload_2
+       3: invokespecial #911                // Method org/apache/iceberg/spark/actions/BaseSnapshotUpdateSparkAction.option:(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+       6: areturn
+
+  protected java.lang.Object self();
+    Code:
+       0: aload_0
+       1: invokevirtual #913                // Method self:()Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+       4: areturn
+
+  public org.apache.iceberg.actions.RewriteManifests stagingLocation(java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokevirtual #916                // Method stagingLocation:(Ljava/lang/String;)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+       5: areturn
+
+  public org.apache.iceberg.actions.RewriteManifests sortBy(java.util.List);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokevirtual #919                // Method sortBy:(Ljava/util/List;)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+       5: areturn
+
+  public org.apache.iceberg.actions.RewriteManifests rewriteIf(java.util.function.Predicate);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokevirtual #922                // Method rewriteIf:(Ljava/util/function/Predicate;)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+       5: areturn
+
+  public org.apache.iceberg.actions.RewriteManifests specId(int);
+    Code:
+       0: aload_0
+       1: iload_1
+       2: invokevirtual #925                // Method specId:(I)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+       5: areturn
+
+  public java.lang.Object execute();
+    Code:
+       0: aload_0
+       1: invokevirtual #927                // Method execute:()Lorg/apache/iceberg/actions/RewriteManifests$Result;
+       4: areturn
+
+  private void lambda$deleteFiles$7(java.lang.String);
+    Code:
+       0: aload_0
+       1: getfield      #107                // Field table:Lorg/apache/iceberg/Table;
+       4: invokeinterface #722,  1          // InterfaceMethod org/apache/iceberg/Table.io:()Lorg/apache/iceberg/io/FileIO;
+       9: aload_1
+      10: invokeinterface #932,  2          // InterfaceMethod org/apache/iceberg/io/FileIO.deleteFile:(Ljava/lang/String;)V
+      15: return
+
+  private static org.apache.iceberg.spark.actions.FileInfo lambda$deleteFiles$6(java.lang.String);
+    Code:
+       0: new           #934                // class org/apache/iceberg/spark/actions/FileInfo
+       3: dup
+       4: aload_0
+       5: ldc_w         #936                // String Manifest
+       8: invokespecial #939                // Method org/apache/iceberg/spark/actions/FileInfo."<init>":(Ljava/lang/String;Ljava/lang/String;)V
+      11: areturn
+
+  private boolean lambda$findMatchingManifests$5(org.apache.iceberg.ManifestFile);
+    Code:
+       0: aload_1
+       1: invokeinterface #943,  1          // InterfaceMethod org/apache/iceberg/ManifestFile.partitionSpecId:()I
+       6: aload_0
+       7: getfield      #114                // Field spec:Lorg/apache/iceberg/PartitionSpec;
+      10: invokevirtual #342                // Method org/apache/iceberg/PartitionSpec.specId:()I
+      13: if_icmpne     33
+      16: aload_0
+      17: getfield      #103                // Field predicate:Ljava/util/function/Predicate;
+      20: aload_1
+      21: invokeinterface #947,  2          // InterfaceMethod java/util/function/Predicate.test:(Ljava/lang/Object;)Z
+      26: ifeq          33
+      29: iconst_1
+      30: goto          34
+      33: iconst_0
+      34: ireturn
+
+  private static org.apache.spark.sql.Column[] lambda$sortColumn$4(int);
+    Code:
+       0: iload_0
+       1: anewarray     #510                // class org/apache/spark/sql/Column
+       4: areturn
+
+  private static org.apache.spark.sql.Column lambda$sortColumn$3(java.lang.String);
+    Code:
+       0: aload_0
+       1: invokedynamic #951,  0            // InvokeDynamic #14:makeConcatWithConstants:(Ljava/lang/String;)Ljava/lang/String;
+       6: invokestatic  #952                // Method org/apache/spark/sql/functions.col:(Ljava/lang/String;)Lorg/apache/spark/sql/Column;
+       9: areturn
+
+  private java.util.List lambda$writePartitionedManifests$2(org.apache.iceberg.ManifestContent, int, org.apache.spark.sql.Dataset);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: aload_3
+       3: invokevirtual #533                // Method org/apache/spark/sql/Dataset.schema:()Lorg/apache/spark/sql/types/StructType;
+       6: invokevirtual #537                // Method newWriteManifestsFunc:(Lorg/apache/iceberg/ManifestContent;Lorg/apache/spark/sql/types/StructType;)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteManifests;
+       9: astore        4
+      11: aload_0
+      12: aload_3
+      13: aload_0
+      14: invokevirtual #955                // Method sortColumn:()Lorg/apache/spark/sql/Column;
+      17: iload_2
+      18: invokevirtual #957                // Method repartitionAndSort:(Lorg/apache/spark/sql/Dataset;Lorg/apache/spark/sql/Column;I)Lorg/apache/spark/sql/Dataset;
+      21: astore        5
+      23: aload         4
+      25: aload         5
+      27: invokevirtual #544                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction$WriteManifests.apply:(Lorg/apache/spark/sql/Dataset;)Lorg/apache/spark/sql/Dataset;
+      30: invokevirtual #547                // Method org/apache/spark/sql/Dataset.collectAsList:()Ljava/util/List;
+      33: areturn
+
+  private static boolean lambda$sortBy$1(java.util.Set, java.lang.String);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokeinterface #961,  2          // InterfaceMethod java/util/Set.contains:(Ljava/lang/Object;)Z
+       7: ifne          14
+      10: iconst_1
+      11: goto          15
+      14: iconst_0
+      15: ireturn
+
+  private static boolean lambda$new$0(org.apache.iceberg.ManifestFile);
+    Code:
+       0: iconst_1
+       1: ireturn
+
+  static {};
+    Code:
+       0: ldc           #2                  // class org/apache/iceberg/spark/actions/RewriteManifestsSparkAction
+       2: invokestatic  #970                // Method org/slf4j/LoggerFactory.getLogger:(Ljava/lang/Class;)Lorg/slf4j/Logger;
+       5: putstatic     #229                // Field LOG:Lorg/slf4j/Logger;
+       8: invokestatic  #392                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result.builder:()Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      11: invokestatic  #696                // Method org/apache/iceberg/relocated/com/google/common/collect/ImmutableList.of:()Lorg/apache/iceberg/relocated/com/google/common/collect/ImmutableList;
+      14: invokevirtual #395                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.rewrittenManifests:(Ljava/lang/Iterable;)Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      17: invokestatic  #696                // Method org/apache/iceberg/relocated/com/google/common/collect/ImmutableList.of:()Lorg/apache/iceberg/relocated/com/google/common/collect/ImmutableList;
+      20: invokevirtual #397                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.addedManifests:(Ljava/lang/Iterable;)Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder;
+      23: invokevirtual #401                // Method org/apache/iceberg/actions/ImmutableRewriteManifests$Result$Builder.build:()Lorg/apache/iceberg/actions/ImmutableRewriteManifests$Result;
+      26: putstatic     #384                // Field EMPTY_RESULT:Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      29: return
+}

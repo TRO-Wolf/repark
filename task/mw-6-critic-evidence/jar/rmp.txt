@@ -1,0 +1,203 @@
+Compiled from "RewriteManifestsProcedure.java"
+class org.apache.iceberg.spark.procedures.RewriteManifestsProcedure extends org.apache.iceberg.spark.procedures.BaseProcedure {
+  static final java.lang.String NAME;
+
+  private static final org.apache.spark.sql.connector.catalog.procedures.ProcedureParameter[] PARAMETERS;
+
+  private static final org.apache.spark.sql.types.StructType OUTPUT_TYPE;
+
+  public static org.apache.iceberg.spark.procedures.SparkProcedures$ProcedureBuilder builder();
+    Code:
+       0: new           #7                  // class org/apache/iceberg/spark/procedures/RewriteManifestsProcedure$1
+       3: dup
+       4: invokespecial #36                 // Method org/apache/iceberg/spark/procedures/RewriteManifestsProcedure$1."<init>":()V
+       7: areturn
+
+  private org.apache.iceberg.spark.procedures.RewriteManifestsProcedure(org.apache.spark.sql.connector.catalog.TableCatalog);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: invokespecial #39                 // Method org/apache/iceberg/spark/procedures/BaseProcedure."<init>":(Lorg/apache/spark/sql/connector/catalog/TableCatalog;)V
+       5: return
+
+  public org.apache.spark.sql.connector.catalog.procedures.BoundProcedure bind(org.apache.spark.sql.types.StructType);
+    Code:
+       0: aload_0
+       1: areturn
+
+  public org.apache.spark.sql.connector.catalog.procedures.ProcedureParameter[] parameters();
+    Code:
+       0: getstatic     #50                 // Field PARAMETERS:[Lorg/apache/spark/sql/connector/catalog/procedures/ProcedureParameter;
+       3: areturn
+
+  public java.util.Iterator<org.apache.spark.sql.connector.read.Scan> call(org.apache.spark.sql.catalyst.InternalRow);
+    Code:
+       0: aload_0
+       1: aload_1
+       2: iconst_0
+       3: invokevirtual #59                 // Method org/apache/spark/sql/catalyst/InternalRow.getString:(I)Ljava/lang/String;
+       6: getstatic     #50                 // Field PARAMETERS:[Lorg/apache/spark/sql/connector/catalog/procedures/ProcedureParameter;
+       9: iconst_0
+      10: aaload
+      11: invokeinterface #65,  1           // InterfaceMethod org/apache/spark/sql/connector/catalog/procedures/ProcedureParameter.name:()Ljava/lang/String;
+      16: invokevirtual #69                 // Method toIdentifier:(Ljava/lang/String;Ljava/lang/String;)Lorg/apache/spark/sql/connector/catalog/Identifier;
+      19: astore_2
+      20: aload_1
+      21: iconst_1
+      22: invokevirtual #73                 // Method org/apache/spark/sql/catalyst/InternalRow.isNullAt:(I)Z
+      25: ifeq          32
+      28: aconst_null
+      29: goto          40
+      32: aload_1
+      33: iconst_1
+      34: invokevirtual #78                 // Method org/apache/spark/sql/catalyst/InternalRow.getBoolean:(I)Z
+      37: invokestatic  #84                 // Method java/lang/Boolean.valueOf:(Z)Ljava/lang/Boolean;
+      40: astore_3
+      41: aload_1
+      42: iconst_2
+      43: invokevirtual #73                 // Method org/apache/spark/sql/catalyst/InternalRow.isNullAt:(I)Z
+      46: ifeq          53
+      49: aconst_null
+      50: goto          61
+      53: aload_1
+      54: iconst_2
+      55: invokevirtual #88                 // Method org/apache/spark/sql/catalyst/InternalRow.getInt:(I)I
+      58: invokestatic  #93                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      61: astore        4
+      63: aload_0
+      64: aload_2
+      65: aload_0
+      66: aload_3
+      67: aload         4
+      69: invokedynamic #113,  0            // InvokeDynamic #0:apply:(Lorg/apache/iceberg/spark/procedures/RewriteManifestsProcedure;Ljava/lang/Boolean;Ljava/lang/Integer;)Ljava/util/function/Function;
+      74: invokevirtual #117                // Method modifyIcebergTable:(Lorg/apache/spark/sql/connector/catalog/Identifier;Ljava/util/function/Function;)Ljava/lang/Object;
+      77: checkcast     #119                // class java/util/Iterator
+      80: areturn
+
+  private org.apache.spark.sql.catalyst.InternalRow[] toOutputRows(org.apache.iceberg.actions.RewriteManifests$Result);
+    Code:
+       0: aload_1
+       1: invokeinterface #133,  1          // InterfaceMethod org/apache/iceberg/actions/RewriteManifests$Result.rewrittenManifests:()Ljava/lang/Iterable;
+       6: invokestatic  #139                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.size:(Ljava/lang/Iterable;)I
+       9: istore_2
+      10: aload_1
+      11: invokeinterface #142,  1          // InterfaceMethod org/apache/iceberg/actions/RewriteManifests$Result.addedManifests:()Ljava/lang/Iterable;
+      16: invokestatic  #139                // Method org/apache/iceberg/relocated/com/google/common/collect/Iterables.size:(Ljava/lang/Iterable;)I
+      19: istore_3
+      20: aload_0
+      21: iconst_2
+      22: anewarray     #144                // class java/lang/Object
+      25: dup
+      26: iconst_0
+      27: iload_2
+      28: invokestatic  #93                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      31: aastore
+      32: dup
+      33: iconst_1
+      34: iload_3
+      35: invokestatic  #93                 // Method java/lang/Integer.valueOf:(I)Ljava/lang/Integer;
+      38: aastore
+      39: invokevirtual #148                // Method newInternalRow:([Ljava/lang/Object;)Lorg/apache/spark/sql/catalyst/InternalRow;
+      42: astore        4
+      44: iconst_1
+      45: anewarray     #55                 // class org/apache/spark/sql/catalyst/InternalRow
+      48: dup
+      49: iconst_0
+      50: aload         4
+      52: aastore
+      53: areturn
+
+  public java.lang.String name();
+    Code:
+       0: ldc           #26                 // String rewrite_manifests
+       2: areturn
+
+  public java.lang.String description();
+    Code:
+       0: ldc           #157                // String RewriteManifestsProcedure
+       2: areturn
+
+  private java.util.Iterator lambda$call$0(java.lang.Boolean, java.lang.Integer, org.apache.iceberg.Table);
+    Code:
+       0: aload_0
+       1: invokevirtual #161                // Method actions:()Lorg/apache/iceberg/spark/actions/SparkActions;
+       4: aload_3
+       5: invokevirtual #167                // Method org/apache/iceberg/spark/actions/SparkActions.rewriteManifests:(Lorg/apache/iceberg/Table;)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+       8: astore        4
+      10: aload_1
+      11: ifnull        26
+      14: aload         4
+      16: ldc           #169                // String use-caching
+      18: aload_1
+      19: invokevirtual #172                // Method java/lang/Boolean.toString:()Ljava/lang/String;
+      22: invokevirtual #178                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction.option:(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+      25: pop
+      26: aload_2
+      27: ifnull        40
+      30: aload         4
+      32: aload_2
+      33: invokevirtual #182                // Method java/lang/Integer.intValue:()I
+      36: invokevirtual #185                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction.specId:(I)Lorg/apache/iceberg/spark/actions/RewriteManifestsSparkAction;
+      39: pop
+      40: aload         4
+      42: invokevirtual #189                // Method org/apache/iceberg/spark/actions/RewriteManifestsSparkAction.execute:()Lorg/apache/iceberg/actions/RewriteManifests$Result;
+      45: astore        5
+      47: aload_0
+      48: getstatic     #191                // Field OUTPUT_TYPE:Lorg/apache/spark/sql/types/StructType;
+      51: aload_0
+      52: aload         5
+      54: invokevirtual #193                // Method toOutputRows:(Lorg/apache/iceberg/actions/RewriteManifests$Result;)[Lorg/apache/spark/sql/catalyst/InternalRow;
+      57: invokevirtual #197                // Method asScanIterator:(Lorg/apache/spark/sql/types/StructType;[Lorg/apache/spark/sql/catalyst/InternalRow;)Ljava/util/Iterator;
+      60: areturn
+
+  static {};
+    Code:
+       0: iconst_3
+       1: anewarray     #61                 // class org/apache/spark/sql/connector/catalog/procedures/ProcedureParameter
+       4: dup
+       5: iconst_0
+       6: ldc           #203                // String table
+       8: getstatic     #209                // Field org/apache/spark/sql/types/DataTypes.StringType:Lorg/apache/spark/sql/types/DataType;
+      11: invokestatic  #213                // Method requiredInParameter:(Ljava/lang/String;Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/connector/catalog/procedures/ProcedureParameter;
+      14: aastore
+      15: dup
+      16: iconst_1
+      17: ldc           #215                // String use_caching
+      19: getstatic     #218                // Field org/apache/spark/sql/types/DataTypes.BooleanType:Lorg/apache/spark/sql/types/DataType;
+      22: invokestatic  #221                // Method optionalInParameter:(Ljava/lang/String;Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/connector/catalog/procedures/ProcedureParameter;
+      25: aastore
+      26: dup
+      27: iconst_2
+      28: ldc           #223                // String spec_id
+      30: getstatic     #226                // Field org/apache/spark/sql/types/DataTypes.IntegerType:Lorg/apache/spark/sql/types/DataType;
+      33: invokestatic  #221                // Method optionalInParameter:(Ljava/lang/String;Lorg/apache/spark/sql/types/DataType;)Lorg/apache/spark/sql/connector/catalog/procedures/ProcedureParameter;
+      36: aastore
+      37: putstatic     #50                 // Field PARAMETERS:[Lorg/apache/spark/sql/connector/catalog/procedures/ProcedureParameter;
+      40: new           #228                // class org/apache/spark/sql/types/StructType
+      43: dup
+      44: iconst_2
+      45: anewarray     #230                // class org/apache/spark/sql/types/StructField
+      48: dup
+      49: iconst_0
+      50: new           #230                // class org/apache/spark/sql/types/StructField
+      53: dup
+      54: ldc           #232                // String rewritten_manifests_count
+      56: getstatic     #226                // Field org/apache/spark/sql/types/DataTypes.IntegerType:Lorg/apache/spark/sql/types/DataType;
+      59: iconst_0
+      60: invokestatic  #238                // Method org/apache/spark/sql/types/Metadata.empty:()Lorg/apache/spark/sql/types/Metadata;
+      63: invokespecial #241                // Method org/apache/spark/sql/types/StructField."<init>":(Ljava/lang/String;Lorg/apache/spark/sql/types/DataType;ZLorg/apache/spark/sql/types/Metadata;)V
+      66: aastore
+      67: dup
+      68: iconst_1
+      69: new           #230                // class org/apache/spark/sql/types/StructField
+      72: dup
+      73: ldc           #243                // String added_manifests_count
+      75: getstatic     #226                // Field org/apache/spark/sql/types/DataTypes.IntegerType:Lorg/apache/spark/sql/types/DataType;
+      78: iconst_0
+      79: invokestatic  #238                // Method org/apache/spark/sql/types/Metadata.empty:()Lorg/apache/spark/sql/types/Metadata;
+      82: invokespecial #241                // Method org/apache/spark/sql/types/StructField."<init>":(Ljava/lang/String;Lorg/apache/spark/sql/types/DataType;ZLorg/apache/spark/sql/types/Metadata;)V
+      85: aastore
+      86: invokespecial #246                // Method org/apache/spark/sql/types/StructType."<init>":([Lorg/apache/spark/sql/types/StructField;)V
+      89: putstatic     #191                // Field OUTPUT_TYPE:Lorg/apache/spark/sql/types/StructType;
+      92: return
+}

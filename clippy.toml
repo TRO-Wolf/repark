@@ -21,6 +21,8 @@ doc-valid-idents = [
   "ExecutionBackend",
   "RecordBatch",
   "MERGE",
+  "BigQuery",
+  "TokenizerError",
 ]
 
 # ===========================================================================================

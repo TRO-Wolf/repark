@@ -1,5 +1,8 @@
 # PR #247 revalidation ledger — owner ruling and sound enforcement
 
+**Errata 2026-08-27:** The initial completed record named its tests but omitted the required
+`pins:` citations. The follow-up binds C-001 through C-007 and restores both missing map rows.
+
 **Retires:** this ledger moves to `../completed/` when PR #247 merges or closes without merge.
 
 **Date:** 2026-08-27 · **Branch:** `docs/owner-ruling-no-comments-from-anthropic-models` ·

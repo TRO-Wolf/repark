@@ -1,0 +1,119 @@
+WARNING: Using incubator modules: jdk.incubator.vector
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+26/08/23 22:21:18 WARN Utils: Your hostname, <host>, resolves to a loopback address: <ip>; using <ip> instead (on interface <iface>)
+26/08/23 22:21:18 WARN Utils: Set SPARK_LOCAL_IP if you need to bind to another address
+26/08/23 22:21:18 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Using Spark's default log4j profile: org/apache/spark/log4j2-defaults.properties
+Setting default log level to "WARN".
+To adjust logging level use sc.setLogLevel(newLevel). For SparkR, use setLogLevel(newLevel).
+[Stage 0:>                                                          (0 + 1) / 1]                                                                                SPARK 4.0.1
+
+===== A: 2 data + 1 delete manifest (control: refusal must NOT fire)
+MANIFESTS[a] n=3 [(0, 0, 7078), (0, 0, 7085), (0, 1, 7131)]
+ROWS[a] 3
+
+--- A1 rewrite_manifests: CALL ice.system.rewrite_manifests(table => 'db.a')
+ROW {'rewritten_manifests_count': 2, 'added_manifests_count': 1}
+MANIFESTS[a] n=2 [(0, 0, 7157), (0, 1, 7131)]
+ROWS[a] 3
+
+===== B: 24 data manifests
+MANIFESTS[b] n=24 [(0, 0, 7086), (0, 0, 7086), (0, 0, 7089), (0, 0, 7088), (0, 0, 7086), (0, 0, 7087), (0, 0, 7086), (0, 0, 7085), (0, 0, 7090), (0, 0, 7087), (0, 0, 7086), (0, 0, 7089), (0, 0, 7087), (0, 0, 7085), (0, 0, 7081), (0, 0, 7085), (0, 0, 7084), (0, 0, 7085), (0, 0, 7084), (0, 0, 7084), (0, 0, 7081), (0, 0, 7085), (0, 0, 7085), (0, 0, 7085)]
+
+--- B1 rewrite_manifests: CALL ice.system.rewrite_manifests(table => 'db.b')
+ROW {'rewritten_manifests_count': 24, 'added_manifests_count': 1}
+MANIFESTS[b] n=1 [(0, 0, 8341)]
+ROWS[b] 24
+
+===== C: rewrite after expire_snapshots
+SNAPSHOTS[c] n=5 ['append', 'append', 'append', 'append', 'append']
+
+--- C1 expire_snapshots: CALL ice.system.expire_snapshots(table => 'db.c', older_than => TIMESTAMP '2099-01-01 00:00:00', retain_last => 1)
+ROW {'deleted_data_files_count': 0, 'deleted_position_delete_files_count': 0, 'deleted_equality_delete_files_count': 0, 'deleted_manifest_files_count': 0, 'deleted_manifest_lists_count': 4, 'deleted_statistics_files_count': 0}
+SNAPSHOTS[c] n=1 ['append']
+MANIFESTS[c] n=5 [(0, 0, 7085), (0, 0, 7083), (0, 0, 7081), (0, 0, 7083), (0, 0, 7085)]
+
+--- C2 rewrite_manifests: CALL ice.system.rewrite_manifests(table => 'db.c')
+ROW {'rewritten_manifests_count': 5, 'added_manifests_count': 1}
+MANIFESTS[c] n=1 [(0, 0, 7312)]
+ROWS[c] 5
+
+===== D: rewrite after ADD COLUMN schema evolution
+MANIFESTS[d] n=5 [(0, 0, 7148), (0, 0, 7148), (0, 0, 7148), (0, 0, 7082), (0, 0, 7083)]
+
+--- D1 rewrite_manifests: CALL ice.system.rewrite_manifests(table => 'db.d')
+ROW {'rewritten_manifests_count': 5, 'added_manifests_count': 1}
+MANIFESTS[d] n=1 [(0, 0, 7393)]
+
+--- D2 rows: SELECT id, v, extra FROM ice.db.d ORDER BY id
+ROW {'id': 1, 'v': 'v1', 'extra': None}
+ROW {'id': 2, 'v': 'v2', 'extra': None}
+ROW {'id': 3, 'v': 'v3', 'extra': 'e3'}
+ROW {'id': 4, 'v': 'v4', 'extra': 'e4'}
+ROW {'id': 5, 'v': 'v5', 'extra': 'e5'}
+
+===== E: 5 manifests, commit.manifest.target-size-bytes = 4096
+MANIFESTS[e] n=5 [(0, 0, 7084), (0, 0, 7080), (0, 0, 7085), (0, 0, 7082), (0, 0, 7082)]
+
+--- E1 rewrite_manifests: CALL ice.system.rewrite_manifests(table => 'db.e')
+ROW {'rewritten_manifests_count': 5, 'added_manifests_count': 5}
+MANIFESTS[e] n=5 [(0, 0, 7087), (0, 0, 7084), (0, 0, 7086), (0, 0, 7082), (0, 0, 7082)]
+ROWS[e] 5
+
+===== F: one manifest, target below its length (no-op boundary)
+MANIFESTS[f] n=1 [(0, 0, 7086)]
+
+--- F1 rewrite_manifests (1 manifest, target 1024): CALL ice.system.rewrite_manifests(table => 'db.f')
+ROW {'rewritten_manifests_count': 1, 'added_manifests_count': 1}
+MANIFESTS[f] n=1 [(0, 0, 7087)]
+ROWS[f] 5
+
+===== G: positional argument form
+
+--- G1 positional table only: CALL ice.system.rewrite_manifests('db.g')
+ROW {'rewritten_manifests_count': 3, 'added_manifests_count': 1}
+MANIFESTS[g] n=1 [(0, 0, 7201)]
+
+===== H: nonexistent table
+
+--- H1: CALL ice.system.rewrite_manifests(table => 'db.does_not_exist')
+ERROR Py4JJavaError An error occurred while calling o45.sql.
+
+===== I: rewrite, MERGE, rewrite again
+MANIFESTS[i] n=2 [(0, 0, 7081), (0, 0, 7088)]
+
+--- I1 first rewrite: CALL ice.system.rewrite_manifests(table => 'db.i')
+ROW {'rewritten_manifests_count': 2, 'added_manifests_count': 1}
+MANIFESTS[i] n=1 [(0, 0, 7160)]
+MANIFESTS[i] n=3 [(0, 0, 7082), (0, 0, 7160), (0, 1, 7135)]
+
+--- I2 second rewrite (after MERGE): CALL ice.system.rewrite_manifests(table => 'db.i')
+ROW {'rewritten_manifests_count': 2, 'added_manifests_count': 1}
+MANIFESTS[i] n=2 [(0, 0, 7229), (0, 1, 7135)]
+
+--- I3 rows: SELECT id, v FROM ice.db.i ORDER BY id
+ROW {'id': 1, 'v': 'a'}
+ROW {'id': 2, 'v': 'm2'}
+ROW {'id': 3, 'v': 'c'}
+ROW {'id': 4, 'v': 'd'}
+
+===== J: partitioned table, 6 appends over 3 partitions
+MANIFESTS[j] n=6 [(0, 0, 7290), (0, 0, 7292), (0, 0, 7290), (0, 0, 7291), (0, 0, 7290), (0, 0, 7288)]
+
+--- J1 rewrite_manifests: CALL ice.system.rewrite_manifests(table => 'db.j')
+ROW {'rewritten_manifests_count': 6, 'added_manifests_count': 1}
+MANIFESTS[j] n=1 [(0, 0, 7585)]
+ROWS[j] 6
+
+===== K: unknown named argument
+
+--- K1 bogus arg: CALL ice.system.rewrite_manifests(table => 'db.g', bogus => 1)
+ERROR AnalysisException [UNRECOGNIZED_PARAMETER_NAME] Cannot invoke routine `rewrite_manifests` because the routine call included a named argument reference for the argument named `bogus`, but this routine does not include any signature containing an argument with this name. Did you mean one of the following? [`table` `spec_id` `use_caching`]. SQLSTATE: 4274K
+
+--- K2 use_caching non-boolean: CALL ice.system.rewrite_manifests(table => 'db.g', use_caching => 'yes')
+ROW {'rewritten_manifests_count': 0, 'added_manifests_count': 0}
+
+--- K3 too many positional: CALL ice.system.rewrite_manifests('db.g', true, 0, 9)
+ERROR AnalysisException [WRONG_NUM_ARGS.WITHOUT_SUGGESTION] The `rewrite_manifests` requires [1, 2, 3] parameters but the actual number is 4. Please, refer to 'https://spark.apache.org/docs/latest/sql-ref-functions.html' for a fix. SQLSTATE: 42605
+
+DONE

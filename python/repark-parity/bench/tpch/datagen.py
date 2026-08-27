@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 from typing import Final
 
+from repark_parity.sql import escape_sql_single_quotes
+
 LOGGER = logging.getLogger(__name__)
 
 # Shared with CLI — library API enforces the same bound (octo C2-SEC-003).
@@ -85,8 +87,8 @@ def ensure_parquet_sf(
             target = out_dir / f"{table_name}.parquet"
             if target.is_symlink():
                 target.unlink()
-            # Escape path for SQL single-quoted string
-            path_sql = str(target).replace("'", "''")
+            # Escape path for SQL single-quoted string (DuckDB: backslash-literal, quotes only).
+            path_sql = escape_sql_single_quotes(str(target))
             connection.execute(f"COPY {table_name} TO '{path_sql}' (FORMAT PARQUET)")
     finally:
         connection.close()

@@ -29,7 +29,9 @@ not this directory.
   unit's working plan is its own ledger. The file keeps its name because live code, docs and one
   runtime error message cite this path.
 - [lessons.md](lessons.md) — DO / DO-NOT rules in force (append date-stamped; supersede, don't
-  delete). Seeded 2026-08-06 from the private v1 repository; the 2026-08-27 correction preserves
+  delete). Seeded 2026-08-06 from the private v1 repository. PR-245 adds original-source mapping
+  for rewritten SQL locations, AST-based enumerable syntax guards, and lifecycle-aware ledger
+  pins; PR-247 adds completed-ledger citation discipline; the 2026-08-27 correction preserves
   model provenance while removing code-quality grades.
 - [metrics.md](metrics.md) — the **process metrics ledger**: one section per retrospective, the
   eight-metric set the SEPMO retrospective contract fixes (findings per cycle, cycles to
@@ -39,6 +41,10 @@ not this directory.
 - [census/](census/map.md) — what a gate still reads of the recorded census runs: the
   baseline's facade cohort (`collected.txt`, `facade.xml`), pinned by `test_deferred_ledger.py`.
   The rest was evicted 2026-08-23 and lives at `b13b22c` ([../docs/port/census.md](../docs/port/census.md) §7).
+- [mw-6-critic-evidence/](mw-6-critic-evidence/map.md) — the Critic-round evidence the archived
+  **MW-6** ledger cites by path, given a durable home (PROC-1, 2026-08-25) so a scratch-directory
+  `rm -rf` cannot strand a committed ledger's citations. Verbatim, never hand-edited — excluded
+  from `ruff`/`typos` like `census/`.
 - [port/](port/map.md) — **live acceptance inputs**: the deferred-test manifest and its
   reconciliation rule ([port/deferred-tests.md](port/deferred-tests.md)), the machine-readable
   deferral allowlist ([port/deferred-python-tests.txt](port/deferred-python-tests.txt)) and its

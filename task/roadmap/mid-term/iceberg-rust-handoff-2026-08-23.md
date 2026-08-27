@@ -222,6 +222,25 @@ closed the same day — the engine-side wait recorded above is over. F-7 plus **
 below (added with that ruling) are the fork lane's v3 spine; their priority now tracks the
 engine's V3-2+ sequencing rather than "when the owner sequences it".
 
+*Addendum 2026-08-25 (PROC-1 unit-3 ruling):* **B-MOR-3 → extend `RewritePositionDeleteFiles`
+(R136) to v3, with no DV-specific action.** Three cases:
+
+- **DV-only tables** return **truthful zeros** — nothing to rewrite — so the engine retires its
+  refusal seat rather than refuse loud.
+- **v3 Parquet position deletes** rewrite into **one DV per data file**, merged with any existing
+  DV for that file.
+- **dangling DVs** are compaction's job, not this action's (R137 / V3-DANGLE-1, below).
+
+**Acceptance:** the result exposes the four counts with DVs counted as delete files; the engine's
+B-MOR-3 refusal pin
+(`crates/repark-spark/src/tests/call_register.rs::call_rewrite_position_delete_files_refuses_spark_written_puffin_vectors`)
+retires at the repin, replaced by a Spark-compared pin. **Sequenced after F-13** — the DV write
+path is its prerequisite.
+
+On **V3-DANGLE-1:** fork **R137** ships dangling-DV removal; the engine seat stays unreachable
+until F-7's lineage half lifts **V3-LINEAGE-1**. Open question to the fork: does R137 also drop DVs
+on the `OverwriteFiles` (COW DML) path?
+
 ### F-8 (P2) — metadata-table `TableProvider` projection and name synthesis — **half corrected**
 
 > **Corrected 2026-08-23.** (a) The synthesized `<base>$<type>` names **do resolve** at `main`

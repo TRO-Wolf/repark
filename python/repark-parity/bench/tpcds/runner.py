@@ -2,8 +2,7 @@
 
 Statuses: OK | WRONG-RESULT | ERROR | TIMEOUT | DIED (subprocess OOM/signal).
 Wall times are median of ``repeats`` (default 3). Default timeout 120s per side;
-on TIMEOUT at 120s, **one** retry at 300s so the census distinguishes Slow vs hung
-(greylight refinement). D1 is parquet temp views only — no Iceberg leg.
+on TIMEOUT, one 300s retry distinguishes slow from hung. D1 has no Iceberg leg.
 """
 
 from __future__ import annotations
@@ -29,6 +28,8 @@ from typing import Any, Final, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from repark_parity.sql import escape_sql_single_quotes
+
 from .compare import compare_result_sets
 from .datagen import TABLES, default_data_root, ensure_parquet_sf
 from .queries import TpcdsQuery, load_queries
@@ -43,7 +44,6 @@ KNOWN_STATUSES: Final[frozenset[str]] = frozenset(
 )
 
 DEFAULT_TIMEOUT_S: Final[float] = 120.0
-# Greylight refinement: one retry after 120s TIMEOUT at this ceiling.
 TIMEOUT_RETRY_S: Final[float] = 300.0
 DEFAULT_REPEATS: Final[int] = 3
 # SF1 TPC-DS parquet is multi-GB; refuse to start when free disk is too low.
@@ -730,7 +730,7 @@ def _open_duckdb_over_parquet(data_dir: Path) -> Any:
     connection = duckdb.connect(database=":memory:")
     for table_name in TABLES:
         path = data_dir / f"{table_name}.parquet"
-        path_sql = str(path).replace("'", "''")
+        path_sql = escape_sql_single_quotes(str(path))
         connection.execute(
             f"CREATE OR REPLACE VIEW {table_name} AS SELECT * FROM read_parquet('{path_sql}')"
         )

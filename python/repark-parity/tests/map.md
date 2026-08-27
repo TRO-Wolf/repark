@@ -6,14 +6,22 @@ Unit tests for the parity comparison core **and the dataset generators** (no Spa
 JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
+- `test_pr_247_owner_ruling.py` — **PR #247 revalidation:** byte-exact owner-ruling and
+  enforcement-boundary preservation, fail-closed mutations, CAP-1 compatibility, narrow gate
+  wiring, clause pins, and complete navigation coverage.
+- `test_pr_245_revalidation_record.py` — PR-245 exact source-size, frozen SQP-1 pin-family,
+  depth/node/output-bounded receiver-blind AST guard with constructed-tree stress pins, exact
+  helper-call inventory, clean product-blocked TPC runner imports, 10,000-term real-file
+  parser-resource refusal, scoped router-comment, and lifecycle-aware ledger navigation with stale
+  staging-link refusal.
 
-- `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
-  in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
-  files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
-  redirection fail closed. The review-held enforcement boundary stays exact, unique, and adjacent
-  to the ruling. The attribution-blind density gate stays absent. CAP-1's exact-baseline Rust and
-  Python source gates remain wired. No source-comment sweep belongs to this unit.
-  `pins: pr-247-revalidation/C-001, C-002, C-003, C-004, C-005, C-006, C-007`
+- `test_proc_1_tiered_review.py` — **PR-244 revalidation (2026-08-26):** current-main source-size
+  and map guards (C-001); process roles and tiers against manifest
+  [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md) (C-002,
+  C-003, C-005); the MW-6 evidence, disk-headroom, and Iceberg handoff corrections stay truthful
+  (C-004); every frozen clause has a pin (C-006); exactly one lifecycle ledger and its matching
+  map stay current through archival, and the PROC-1 lifecycle map reports its filed attestation
+  list item (C-007).
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python source-size
   exception sets and baselines mirrored from the live guard tables; blank-line boundaries;
   growth, shrink, retirement,
@@ -35,15 +43,20 @@ JVM, no repark required). See [../map.md](../map.md).
   heading or FIXED-note opener, not by a bare id.
   C-006's lockstep half asserts the departed state (the ledger listed by `completed/` or the
   archive map), the way DL-5's slate pin turned over — CI caught the in-flight spelling.
+- `test_sqp_1_record.py` — **SQP-1 (C-011; tree pins):** the two Known-correctness-issue entries
+  left STATUS; the three out-of-scope divergences are §7 registry rows (each naming its pin); the
+  GT1 residual comments updated; the new module doc carries the rule table + oracle. Files only.
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
   (C-004, C-005); AGENTS.md keeps the enumerated KEEP set (C-006); no `.agents/roles/`
   (C-007); CEILINGS (d) covers AGENTS.md and the method skill (C-008); DL-4 C-008 still
-  holds (C-009); PYC-5 tokens, method how-to, slate #2 (C-010..C-012).
+  holds (C-009); PYC-5 tokens, method how-to (C-010, C-011); C-012 turned over at
+  DL-5's departure (PROC-1 pickup, 2026-08-25): the slate row is gone, the ledger filed.
 - `test_dl_4_live_doc_compaction.py` — **DL-4 (2026-08-25; 11 tests, incl. the Critic's three
   pinned findings and the two tree pins C-006 / C-008):** the live-document compaction on
-  a scratch repository — a merged unit leaves the slate whole and the table renumbers (C-002), a
+  a scratch repository — its fixture seeds every `CEILINGS` file (PROC-1 added the SEPMO
+  unit-runbook, 2026-08-25) — a merged unit leaves the slate whole and the table renumbers (C-002), a
   closed campaign is cut from STATUS into its history bin with links rewritten (C-003), the
   touched-path set (C-004), the parser's refusals (parametrized) and the coverage check (C-001; a wrapped closed-campaigns
   row is one row; a marker in a code span is prose), and the gate red

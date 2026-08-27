@@ -10,6 +10,13 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 ## Contents
 
 - `mod.rs` — pure module manifest (`mod common;` + one `mod` per leaf).
+- `spark_string_literals.rs` — **SQP-1:** the string-literal escape pins (C-001..C-008, C-010,
+  C-012): the escape domain, `\'`/unpaired-backslash lexing, adjacency + the DataFusion-native
+  `OPTIONS` carve-out, quote-runs-are-not-triple-quotes, raw strings, LIKE/RLIKE/backtick controls,
+  exactly-once-on-every-path, the one-caller grep pin, the Generic-dialect honesty pin.
+- `cast_binary.rs` — **SQP-1 (C-009):** `CAST … AS BINARY` plans to Arrow `Binary` (B1/B8–B10/B13/
+  B15), refuses illegal sources (`DATATYPE_MISMATCH`, B2–B7), keeps `VARBINARY` refusing (B12),
+  leaves a `BINARY` DDL column untouched; `TRY_CAST(<int>)` refuses without the ANSI-off suggestion.
 - `v3_cow.rs` — **V3R-1 (2026-08-25):** adopted-v3 copy-on-write DML refuses (`V3-COW-1`, both
   seats), the CCC regressions (short names, padded merge-on-read), merge-on-read still refuses, a
   v2 control; keeps `V3_MAINTENANCE_ORACLE` and ENC-1's pin.

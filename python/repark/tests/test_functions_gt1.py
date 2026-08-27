@@ -550,8 +550,8 @@ def test_regexp_utf16_and_ascii_digit_both_doors(spark: ReparkSession) -> None:
         spark.sql(
             "SELECT regexp_instr('🐈ab', 'ab') AS i, "
             "regexp_count('🐈', '') AS c, "
-            # SQL-door ``'\\d'`` is two backslash chars in the parser (campaign
-            # residual); coincidence of double-escaping still yields Java ``\d``.
+            # SQP-1 landed: the SQL-door lexer processes escapes, so ``'\d'`` lexes to the
+            # literal pattern ``d`` (Spark's rule) — which ٣ (U+0663) does not contain, so 0.
             "regexp_count('٣', '\\d') AS d"
         )
     )
@@ -613,8 +613,9 @@ def test_regexp_count_start_anchor_skips_mid_surrogate(spark: ReparkSession) -> 
 
     ``is_match("")`` is a context-free proxy: ``^`` is nullable on ``""`` but a
     mid-surrogate index is always > 0. CAT = U+1F408. Live Spark 4.1.2: 1 and 2.
-    The newline case is pinned through F.* — SQL literals do not process
-    backslash escapes.
+    The newline case is pinned through F.* with a real newline; since SQP-1 the SQL
+    door would also accept ``'\n'`` (its own escape pins are in
+    ``test_sqp_1_string_literals.py``).
     """
     cat = "🐈"
     sql = _table(spark.sql("SELECT regexp_count('🐈', '^') AS c"))
