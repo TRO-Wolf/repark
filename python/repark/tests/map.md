@@ -21,7 +21,16 @@ node ids: the whole `test_excel_reader.py` file plus one node each in `test_pg_c
 NOT in that file is a defect, not a decision.
 
 ## Contents
+- `test_pr_245_revalidation.py` — PR-245 public-door revalidation for Spark literals and parser
+  locations across shrink, expansion, mixed regions, EOF, and an ordered direct-to-diagnostic
+  boundary sequence; binary casts and facade controls.
 
+- [test_sqp_1_string_literals.py](test_sqp_1_string_literals.py) — **SQP-1 (C-007):** facade
+  controls — `regexp_count` unchanged and the SQL door now agrees; `.cast("binary")` equals the SQL
+  cast (value + Arrow type); plus the §7 BL-9/BL-10/BL-11 behaviour pins. **Cycle-2 (C-013):** the
+  facade embeds each data value as a Spark-canonical literal through one helper — backslash pins for
+  `_sql_literal`, the aggregate embed, `unpivot`, `StopWordsRemover` (+ apostrophe) and StringIndexer
+  labels; plus the BL-12 §7 pin (out-of-range `\U` is one `?`).
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`
@@ -139,6 +148,8 @@ NOT in that file is a defect, not a decision.
   string-key map extraction; ``shuffle`` pins type+length; ``array_compact``
   drops NULLs only. Rework: exact interval/bitmap/unix_micros values, regex
   ``str_to_map``, NULL rows, non-UTC session pins, docstring-example execute.
+  **SQP-1:** SQL-door regex spellings (``str_to_map`` / ``parse_url``, ``test_fnp6_regexp``) double
+  their backslashes now the Spark door processes escapes — ``_sql_regex`` is the single home.
   Honesty: W2 MonthDayNano; ``date_diff`` int32; bitmap 0/−1; unix_micros LA
   column.
   **X-round (2026-08-18), repair round** — 30 tests. New pins: ``shuffle(NULL array)`` is NULL

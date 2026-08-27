@@ -377,5 +377,5 @@ This Actor section does not modify any Critic finding, disposition, or attestati
 
 ## Pointers
 
-- Up: [map.md](map.md)
-- Original PROC-1 record: [proc-1-tiered-review-ledger.md](proc-1-tiered-review-ledger.md)
+- Up: [map.md](../../completed/map.md)
+- Original PROC-1 record: [proc-1-tiered-review-ledger.md](2026-08-27-proc-1-tiered-review-ledger.md)

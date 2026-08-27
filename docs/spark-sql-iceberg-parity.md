@@ -2006,6 +2006,66 @@ the pin rather than obeying it.
   (fail-closed; the lift is one line). V3-4 owns row lineage as a whole (fork F-7); lifting the
   guard reds these pins on purpose.
 
+### BL-9 — a double-quoted string literal is an identifier on the SQL door
+
+- **repark** — the Spark SQL door reads `"abc"` as a double-quoted **identifier**, so
+  `spark.sql('SELECT "abc"')` fails with `No field named abc`, and `"a\"b"` never becomes the
+  string `a"b`. SQP-1 canonicalises **single**-quoted literals only; double-quoted text is left
+  exactly as written.
+- **Apache Spark** — `"abc"` is a STRING literal (`spark.sql.ansi.doubleQuotedIdentifiers` is off
+  by default): `SELECT "abc"` is `abc`, `length("a\nb")` is 3, `"it\'s"` is `it's`.
+  *(oracle: `<pyspark-4.1.2-oracle>` — E17 / E18 / U16.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_double_quoted_literal_is_an_identifier`
+- **Rationale** — BACKLOG, intent to FIX with **FNP-4b**. The fix is to wire the Spark parser
+  dialect so `"…"` lexes as a STRING, which cannot land until repark's own internally-generated
+  SQL stops quoting identifiers with ANSI double quotes (`extension.rs::apply_spark_parser_dialect`
+  is measured-blocked on exactly this). Not this unit's — SQP-1 touches the single-quoted lexer at
+  the front door, and a double-quoted change belongs to the write path that owns the internal SQL.
+
+### BL-10 — `spark.sql.parser.escapedStringLiterals=true` has no carrier
+
+- **repark** — there is no builder or runtime carrier for the flag, so every session processes
+  escapes (the `false` behavior SQP-1 implements): `spark.sql("SELECT '\\d'")` is `d`, always.
+- **Apache Spark** — with `escapedStringLiterals=true`, the lexer keeps the backslash verbatim:
+  `'\d'` is `\d` (length 2) and `'\''` is `\'`. The default is `false`, which SQP-1 matches.
+  *(oracle: `<pyspark-4.1.2-oracle>` — E20 / E21.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_escaped_string_literals_flag_has_no_carrier`
+- **Rationale** — BACKLOG. The default (`false`) is the migrated-job default and the only measured
+  contract SQP-1 was scoped to; the `true` legacy mode needs a config carrier and a second lexer
+  path. Recorded so the carrier lands with its behavior rather than as a silent surprise.
+
+### BL-11 — numeric → `BINARY` under `spark.sql.ansi.enabled=false` refuses rather than encodes
+
+- **repark** — `CAST(1 AS BINARY)` refuses with `DATATYPE_MISMATCH` in every mode (SQP-1 / C-009);
+  there is no ANSI-off big-endian encoding path.
+- **Apache Spark** — under `spark.sql.ansi.enabled=false`, `CAST(1 AS BINARY)` is the value's
+  big-endian bytes: `hex(CAST(1 AS BINARY))` is `00000001` (4 bytes). Under ANSI on (the default,
+  and repark's) Spark refuses the same cast — which repark matches.
+  *(oracle: `<pyspark-4.1.2-oracle>` — B11.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_numeric_to_binary_refuses`
+- **Rationale** — BACKLOG, fail-loud direction. The refuse is safe (a loud stop, never a wrong
+  answer), the ANSI-off default is not repark's, and the big-endian encoding is a narrow legacy
+  path. Recorded so the encoding lands behind an ANSI-off carrier with its own pin.
+
+### BL-12 — an out-of-range `\U` escape becomes one `?` where Spark emits a 2-char Java artifact
+
+- **repark** — a `\UXXXXXXXX` escape whose value is not a Unicode scalar (past `U+10FFFF`) becomes
+  a single `?` (`UNREPRESENTABLE`, U+003F): `spark.sql("SELECT '\U00110000'")` is one character and
+  `length('\U00110000')` = 1. The single home of the rule is `push_code_point` in
+  `crates/repark-spark/src/spark_literals.rs`; SQP-1 chose `?` so the result stays sane and
+  single-homed rather than reproducing a Java `char[]` artifact. The in-scope valid-scalar `\U`
+  (U5) and the lone-surrogate → `?` case (`hex('\ud83d')` = `3F`) already match Spark.
+- **Apache Spark** — Spark keeps the raw code units and its Java UTF-8 encoder replaces each
+  unpaired/oversized unit with `?`, so an out-of-range `\U` yields **two** characters:
+  `length('\U00110000')` = 2 and `hex('\U00110000')` = `3F3F` (and `hex('\UFFFFFFFF')` = `ED9EBF3F`,
+  a longer artifact). *(oracle: `<pyspark-4.1.2-oracle>`.)*
+- **Pin** — `python/repark/tests/test_sqp_1_string_literals.py::test_out_of_range_unicode_escape_is_one_replacement`
+- **Rationale** — BACKLOG, cosmetic-artifact direction. An out-of-range `\U` is a malformed escape
+  a migrated job effectively never writes; both engines produce a replacement, and repark's single
+  `?` is a saner, single-homed choice than a 2-char Java artifact. Recorded so the exact artifact
+  lands with its own pin if a job ever depends on it. This is the single home of the divergence
+  the `spark_literals` module doc previously only mentioned.
+
 ### Surfaced, awaiting pins — not yet rows
 
 Candidates that carry **no pin yet**, so under §6 they are not admitted as rows; they are queued

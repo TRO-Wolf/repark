@@ -81,6 +81,9 @@ module-level plan-collapse / show-format / qcol-rewrite helper block out to
 - `joins_columns.py` — **PYC-2:** `applyInPandas` and GROUPED_AGG pandas_udf
   callbacks lift to module-level `_apply_in_pandas_arrow_batches` /
   `_grouped_agg_pandas`; the methods wire them with `functools.partial`.
+- **SQP-1 (cycle-2):** `plan_collapse._sql_string_literal` delegates to the shared
+  `repark.spark._idents.sql_string_literal` (`unpivot` variable columns, CTAS `TBLPROPERTIES`); the
+  writer's COPY `staging` / `_sql_option_escape` use `escape_sql_single_quotes` (DataFusion-native).
 - `plan_collapse.py` — module-level helper block moved VERBATIM out of `core.py` (T0b,
   move-only): the r23b N2 plan-collapse helpers (alias-chain squash + adjacent
   same-spec window merge), the G2 range-order gate, the `show` / eager-eval / polars /

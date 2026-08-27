@@ -83,3 +83,7 @@ fork, or knob-default changes. Outputs feed `task/write-bench-report-*.md`.
      they are historical evidence of runs made in the source repository. Re-running a
      bench here writes a fresh report under `task/`. The row text is kept verbatim so
      the invocation recipes stay accurate; only the report files are absent. -->
+## SQP-1 (cycle-2)
+
+The write runners embed the `CREATE NAMESPACE … LOCATION '<path>'` path through
+`sql_string_literal`, not a hand-rolled quote-double — a no-op on backslash-free Linux paths, kept in the one home.

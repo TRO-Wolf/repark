@@ -8,6 +8,8 @@ belongs out here is what must be observed from outside the crate.
 
 ## Contents
 
+- `ansi_door_string_literals.rs` — **SQP-1 control (C-006):** the native/ANSI door keeps generic
+  literal semantics (backslash literal, `\'` does not lex, raw strings refuse) — Spark-only (ADR-0002).
 - `parser_productions.rs` — the R1 spike, kept as assertions. Pins that every production M1
   depends on parses on the stock DataFusion-re-exported sqlparser (Generic dialect), and that the
   three PR-6 productions (`ALTER … SET PROPERTIES`, `ALTER … EXECUTE`, `FOR … AS OF`) still do

@@ -21,6 +21,7 @@ from repark.errors import (
     PySparkValueError,
     UnsupportedOperationException,
 )
+from repark.spark._idents import escape_sql_single_quotes
 from repark.spark._idents import quote_ident as _quote_ident_sql
 from repark.spark._temp_views import scratch_view_name
 from repark.spark.column import Column
@@ -488,14 +489,13 @@ class DataFrameWriter:
         staging = destination.parent / (
             f"repark-staging-{uuid.uuid4().hex}-{destination.name or 'out'}"
         )
-        escaped_staging = str(staging).replace("'", "''")
+        escaped_staging = escape_sql_single_quotes(str(staging))
         options_clause = self._copy_options_sql(stored_as)
         # SEC-02: the generated COPY TO runs through the ordinary SQL path, which carries the
         # local-filesystem DDL gate. That gate is scoped to *free* SQL (SECURITY.md "Input
         # surfaces"); a typed `df.write.<fmt>(path)` is the caller naming their own destination.
-        # Trust the uuid-unique staging target ONLY — never `destination.parent`, which would
-        # trust every sibling path (writing to `/tmp/out` would open all of `/tmp` to free SQL).
-        # The destination itself is reached by plain filesystem ops below, not by SQL.
+        # Trust only the UUID staging target; trusting its parent opens sibling paths to free SQL.
+        # Plain filesystem operations reach the destination below.
         self._dataframe._session.note_local_write_root(escaped_staging)
         try:
             self._run_through_temp_view(
@@ -944,7 +944,7 @@ class DataFrameWriter:
 
 def _sql_option_escape(value: str) -> str:
     """Escape a single-quoted COPY OPTIONS value."""
-    return str(value).replace("'", "''")
+    return escape_sql_single_quotes(str(value))
 
 
 def _normalize_write_compression(raw: str) -> str:

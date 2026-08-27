@@ -62,8 +62,10 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   Critic's artifact); `FINDING:` records carry the ref 05 fields. `EXCEPTIONS` seeds the measured
   floor per ledger (31 unpinned `PROVEN` clauses across three charters at arming; rows ratchet
   away as their ledgers retire — mw-0's went with MW-5; attestation not required
-  of the five ledgers that predate the rule), ratchets down only, and a row naming a ledger in no
-  live bin is a finding. Two sub-rules were measured and **declined** (an `OPEN` row carries a
+  of the five ledgers that predate the rule; **SQP-1** carries a ceiling-0 row for the Actor-phase
+  deferral, removed by its Critic when the attestation is filed), ratchets down only, and a row naming a ledger in no
+  live bin is a finding. PR-245 carries its own ceiling-0 Actor-phase row while its revalidation
+  ledger remains in staging. Two sub-rules were measured and **declined** (an `OPEN` row carries a
   `?`; a quantified clause names its enumeration): they fake a meaning a regex cannot read. Exit
   0 / 1 / 2. Wired as `make check-ledger-grammar` in the `make ci` chain and as ci.yml's `ledger
   grammar guard` step (dual-wired, 2026-08-23). Proofs:
@@ -226,7 +228,7 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   `make check-lib-py` and the ci.yml `python` job.
 
 - `check_python_conventions.sh` + `check_python_conventions.py` — the **Python conventions**
-  guard: the two rules Ruff cannot express, and the SSOT for both (the prose homes that point at
+  guard: the three rules Ruff cannot express, and the SSOT for them (the prose homes that point at
   it: [AGENTS.md](../AGENTS.md) "Python", the code-quality and engineering-method skills under
   [.agents/skills/](../.agents/skills/map.md)). Over every `*.py` under
   `python/repark/src`, `python/repark-parity` and `scripts/`: (1) **no function defined inside
@@ -235,7 +237,14 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   the point, a `functools.wraps` wrapper — an empty reason does NOT pass) and a
   `NESTED_DEF_EXCEPTIONS` per-file ceiling table that ratchets DOWN only; (2) **no `dataclasses`
   or `attrs`** — Pydantic v2 `BaseModel` is the single structured-data container — with a
-  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma. The other Python
+  `DATACLASS_EXCEPTIONS` table and deliberately no inline pragma; (3) **no direct constant
+  quote-doubling `replace` call for SQL (SQP-1)** — a receiver-blind AST rule evaluates strings,
+  bounded integer `+`/`-`, `chr`, concatenation, and repetition, then forbids the one-quote to
+  two-quote call outside the product `_idents.py` and standalone `repark_parity/sql.py` homes. Its
+  iterative text walk limits depth, nodes, and output before allocation. A PR-245 pin inventories
+  shipped helper calls; the exact whitelist does not claim semantic completeness. File parsing
+  catches syntax and parser-resource failures as one
+  controlled diagnostic, including valid expressions that exhaust AST construction. The other Python
   conventions are enforced elsewhere and are not duplicated here: type coverage is Ruff's `ANN`
   rule set, public-docstring presence is `check_docstring_presence.py`, and naming is a review
   duty. Seeded from the measured tree (2026-08-21): 66 nested

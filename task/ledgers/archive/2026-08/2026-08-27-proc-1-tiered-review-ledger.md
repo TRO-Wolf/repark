@@ -1,7 +1,7 @@
 # Charter ledger — PROC-1 · review effort by tier, the MW-6 evidence home, two runbook truth-ups
 
 **Date:** 2026-08-25 · **Branch:** `docs/proc-1-tiered-review` · **Base:** `5f64254` (`main`, #243)
-· **Policy:** [AGENTS.md](../../../AGENTS.md) `## Precedence` (the manifest is the only
+· **Policy:** [AGENTS.md](../../../../AGENTS.md) `## Precedence` (the manifest is the only
 project-specific SEPMO file) · **SEPMO path:** STANDARD under the manifest *as it stands at
 base* (the profile this unit binds would make it LIGHT — the stricter interpretation wins for the
 unit that changes the rule) · **Size:** M · **Requested by:** the owner, 2026-08-25 evening

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from repark import _native
 from repark.errors import PySparkTypeError, PySparkValueError
+from repark.spark._idents import sql_string_literal
 from repark.spark.column import Column
 from repark.spark.functions import (
     _as_column_arg,
@@ -84,8 +85,7 @@ def named_struct(*cols: Column | str | int | float | bool | None) -> Column:
         free = free or bool(value._has_free_attribute) or isinstance(value_argument, str)
         columns.append(value)
         field_names.append(field_name)
-        safe_name = str(field_name).replace("'", "''")
-        named_parts.append(f"'{safe_name}', {value.sql_expr_part()}")
+        named_parts.append(f"{sql_string_literal(str(field_name))}, {value.sql_expr_part()}")
         display_parts.append(str(field_name))
     sql = f"named_struct({', '.join(named_parts)})"
     display = f"named_struct({', '.join(display_parts)})"

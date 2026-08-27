@@ -6,13 +6,18 @@ Unit tests for the parity comparison core **and the dataset generators** (no Spa
 JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
+- `test_pr_245_revalidation_record.py` — PR-245 exact source-size, frozen SQP-1 pin-family,
+  depth/node/output-bounded receiver-blind AST guard with constructed-tree stress pins, exact
+  helper-call inventory, clean product-blocked TPC runner imports, 10,000-term real-file
+  parser-resource refusal, scoped router-comment, and lifecycle-aware ledger navigation with stale
+  staging-link refusal.
 
 - `test_proc_1_tiered_review.py` — **PR-244 revalidation (2026-08-26):** current-main source-size
   and map guards (C-001); process roles and tiers against manifest
   [`review_profile` / `critic_engine`](../../../.agents/skills/sepmo/binding-manifest.md) (C-002,
   C-003, C-005); the MW-6 evidence, disk-headroom, and Iceberg handoff corrections stay truthful
   (C-004); every frozen clause has a pin (C-006); exactly one lifecycle ledger and its matching
-  map stay current, and the completed PROC-1 map reports its filed attestation even as the final
+  map stay current through archival, and the PROC-1 lifecycle map reports its filed attestation
   list item (C-007).
 - `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
   source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
@@ -32,6 +37,9 @@ JVM, no repark required). See [../map.md](../map.md).
   heading or FIXED-note opener, not by a bare id.
   C-006's lockstep half asserts the departed state (the ledger listed by `completed/` or the
   archive map), the way DL-5's slate pin turned over — CI caught the in-flight spelling.
+- `test_sqp_1_record.py` — **SQP-1 (C-011; tree pins):** the two Known-correctness-issue entries
+  left STATUS; the three out-of-scope divergences are §7 registry rows (each naming its pin); the
+  GT1 residual comments updated; the new module doc carries the rule table + oracle. Files only.
 - `test_dl_5_contract_compaction.py` — **DL-5 (2026-08-25):** STATUS Current milestone keeps
   the forward path and drops the H-2 wave paste (C-001, C-002); STATUS ceiling ratchets down
   (C-003); engineering-method points at AGENTS.md for invariants and keeps the method
