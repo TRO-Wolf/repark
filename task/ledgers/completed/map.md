@@ -9,10 +9,13 @@ else. The next pickup's `make ledger-archive` files everything here under
 
 ## Contents
 - [v3e-3-partitioned-eqdel-fixtures-ledger.md](../archive/2026-08/2026-08-25-v3e-3-partitioned-eqdel-fixtures-ledger.md) — V3E-3 — partitioned + equality-delete v3 fixtures
-- [comment-compaction-ledger.md](comment-compaction-ledger.md) — **repository comment compaction
-  (2026-08-27):** full-tree audit of tracked hand-authored source and configuration comments;
-  behavior preservation is proved mechanically before sequential Critic closure. Owner correction
-  retains model provenance and removes code-quality grade tags.
+- [production-file-size-ledger.md](production-file-size-ledger.md) — production/file-size
+  refactor: split the 8,390-line session free-function surface into responsibility-named modules,
+  preserve `_funcs` compatibility, and retire its Python source-size exception. The sequential
+  Critic closed with all charter clauses proven.
+- [rust-catalog-registration-ledger.md](rust-catalog-registration-ledger.md) — **Rust catalog
+  registration hardening (2026-08-27):** make same-name publication linearizable while provider
+  construction for distinct names remains concurrent; pin failure atomicity and winner identity.
 
 ## Pointers
 - Up: [../map.md](../map.md)

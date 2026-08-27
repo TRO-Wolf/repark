@@ -286,6 +286,8 @@ Repository helper scripts wired into the dev workflow. Q1 re-home (2026-08-14):
   or retires; comment-only shrink or restoration has the same exact-baseline duty. Only
   generated-test sources under
   `tests/goldens/` or `tests/fixtures/` are excluded.
+  The catalog-registration test split ratchets `crates/repark-core/src/session/tests.rs` from
+  1,485 to 1,461 lines; the new focused module stays under the default.
   Fail-closed on an unreadable file, empty scan, or exception outside the scan. Dual-wired through
   `make check-rust-file-size`, the ci.yml guards job, and both pre-commit surfaces.
 

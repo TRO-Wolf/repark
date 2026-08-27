@@ -24,7 +24,7 @@ _RUST_BASELINES: tuple[tuple[str, int], ...] = (
     ("crates/repark-core/src/catalog_config.rs", 1159),
     ("crates/repark-core/src/dynamic_flatten/tests.rs", 1469),
     ("crates/repark-core/src/session.rs", 1479),
-    ("crates/repark-core/src/session/tests.rs", 1485),
+    ("crates/repark-core/src/session/tests.rs", 1461),
     ("crates/repark-core/tests/declared_sorted.rs", 1464),
     ("crates/repark-functions/src/analyzer.rs", 1407),
     ("crates/repark-functions/src/datetime.rs", 2053),
@@ -81,7 +81,6 @@ _PYTHON_BASELINES: tuple[tuple[str, int], ...] = (
     ("python/repark/src/repark/spark/functions_expr.py", 2299),
     ("python/repark/src/repark/spark/functions_udf.py", 1340),
     ("python/repark/src/repark/spark/ml/feature/_transformers.py", 2762),
-    ("python/repark/src/repark/spark/session/_funcs.py", 8387),
     ("python/repark/src/repark/spark/session/reader.py", 1042),
     ("python/repark/src/repark/spark/session/session_core.py", 2482),
     ("python/repark/src/repark/spark/ta.py", 1862),
@@ -191,7 +190,7 @@ def test_cap_1_exception_tables_equal_the_measured_debt() -> None:
     assert rust_debt == rust_approved
     assert python_debt == python_approved
     assert len(rust_approved) == 45
-    assert len(python_approved) == 35
+    assert len(python_approved) == 34
 
 
 def test_cap_1_growth_above_exact_baseline_fails(
