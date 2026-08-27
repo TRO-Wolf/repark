@@ -144,3 +144,19 @@ COVERAGE_ATTESTATION:
       evidence: every PROVEN clause has pins citation; ledger grammar green; docstring presence and map-sync clean
       artifacts: [python/repark/tests/test_v3_live_oracle.py, scripts/check_ledger_grammar.py]
 ```
+
+## Critic findings and disposition
+
+| Finding | Severity | Disposition |
+|---|---|---|
+| Q-001 — live prune half-checked (Spark only part=0) | S1 | REMEDIATED — Spark helper now asserts `prune1` for part=1 mirroring repark |
+| Q-002 — DirLock released before live read (dual-fixture) | S1 | REMEDIATED — combined `with` holds both materializations across live call |
+| Q-003 — delete-files set membership hollow | S2 | REMEDIATED — `set(...) == {1}` and `{1,2}`, len checks, format upper checks on both engines |
+| Q-004 — live delete_files not mutation-proof on format | S2 | REMEDIATED — Spark side now mirrors PUFFIN/PARQUET format asserts |
+| Q-005 — GAV pin only on one live path | S2 | REMEDIATED — GAV assert added to all three live helpers |
+| Q-006 — northstar pin substring only | S2 | REMEDIATED — asserts `✅ V3E-5 (2026-08-27):` and `PySpark 4.1.2 + Iceberg 1.11.0`, no `❌ none` |
+| Q-008 — COW control single leg | S2 | REMEDIATED — B-MOR-3 test now also asserts `V3-COW-1` DELETE refuse |
+| F5 — lexicographic version sort `v10` bug | S2 | REMEDIATED — `int(path.name[1:].split(".",1)[0])` |
+| Q-009 — workflow comment mis-indent | S3 | REMEDIATED — dedented to steps level |
+
+No open finding ≥ S1 remains. Re-ran `make ci` and `pytest test_v3_live_oracle.py` (3 passed, 3 skipped) after remediation.

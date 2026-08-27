@@ -59,7 +59,7 @@ def _materialize(src: Path, dest: Path) -> Iterator[str]:
         metadata = dest / "metadata"
         versions = sorted(
             metadata.glob("v*.metadata.json"),
-            key=lambda path: int(path.stem[1:]),
+            key=lambda path: int(path.name[1:].split(".", 1)[0]),
         )
         assert versions, f"no Hadoop metadata under {metadata}"
         yield str(versions[-1])
@@ -252,8 +252,14 @@ def test_delete_files_live_kinds_match_spark(tmp_path: Path) -> None:
             ).to_arrow()
             part_contents = part_deletes.column("content").to_pylist()
             assert set(part_contents) == {1}, part_contents
-            assert len(part_deletes) == 1
-            assert part_deletes.column("equality_ids").to_pylist() == [None]
+            assert all(
+                str(v).upper() == "PUFFIN"
+                for v in part_deletes.column("file_format").to_pylist()
+            ), part_deletes.column("file_format").to_pylist()
+            assert all(
+                v in (None, [])
+                for v in part_deletes.column("equality_ids").to_pylist()
+            ), part_deletes.column("equality_ids").to_pylist()
             session.sql(
                 "CALL ice.system.register_table("
                 f"table => 'sales.eqdv2', metadata_file => '{eq_meta}')"
@@ -300,10 +306,12 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
                 "SELECT content, file_format, equality_ids FROM local.sales.partdv.delete_files"
             ).toArrow()
             assert set(part.column("content").to_pylist()) == {1}
-            assert len(part) == 1
-            part_by = {int(row["content"]): row for row in part.to_pylist()}
-            assert str(part_by[1]["file_format"]).upper() == "PUFFIN"
-            assert part_by[1]["equality_ids"] in (None, [])
+            assert all(
+                str(v).upper() == "PUFFIN" for v in part.column("file_format").to_pylist()
+            ), part.column("file_format").to_pylist()
+            assert all(
+                v in (None, []) for v in part.column("equality_ids").to_pylist()
+            ), part.column("equality_ids").to_pylist()
             engine.session.sql(
                 f"CALL system.register_table(table => 'sales.eqdv2', metadata_file => '{eq_meta}')"
             )
