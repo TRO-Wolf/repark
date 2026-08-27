@@ -62,7 +62,8 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   the crate-root `map.md` files, and cross-checks each `layer` against the dependency-policy
   SSOT in `scripts/check_crate_dag.py`. Structural drift is a red gate, not a stale sentence.
 - `.typos.toml`, `.taplo.toml`, `.pre-commit-config.yaml`, `.gitignore`, `scripts/` —
-  tooling/config and the mechanical guards (`scripts/check_map_md.sh` is the map.md lockstep
+  tooling/config and the mechanical guards (including the exact-baseline Rust and Python source
+  file-size ratchets; `scripts/check_map_md.sh` is the map.md lockstep
   oracle and `scripts/sync_map_md.py` its content companion — every relative link in every map
   must resolve; `make install-hooks` wires both). `.typos.toml`'s `extend-words` carries the domain
   vocabulary the checker would otherwise "correct" — including the TA-Lib indicator names
@@ -95,7 +96,9 @@ comparator) and `python/repark` (the PySpark facade wheel, published to PyPI —
   names no tool).
   `ARCHITECTURE.md` — component boundaries, the crate DAG, and the three runtime flows.
   `DEVELOPMENT.md` — build / test / verify, the `make` targets, the CI surface, troubleshooting.
-  `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts).
+  `CLAUDE.md` — the **Claude adapter** (tool mechanics only; zero authoritative facts). The owner
+  ruling at the start of `AGENTS.md` and its adapter copy are byte-preserved by
+  `make check-owner-ruling`; the model-family restriction itself is held by compliance and review.
   `CONTRIBUTING.md` / `SECURITY.md` — public-repo policy.
 - `.agents/` — tool-neutral + per-tool agent adapters (`common.md` + `claude.md` + `codex.md` /
   `cursor.md` stubs) and `skills/` (agent-facing runbooks: release-to-PyPI, context-doc
@@ -157,5 +160,3 @@ First checks: `make ci`, then `make help` for the full target list. CI mirrors `
 | Pre-commit hook rejects a commit | `bash scripts/check_map_md.sh` — the touched directory's map.md must be staged in the same commit |
 | A gate is unclear | `make help`; [docs/testing.md](docs/testing.md) and [AGENTS.md](AGENTS.md) are authoritative |
 | `manifest: FAIL …` | `bash scripts/check_manifest.sh` — [repo-manifest.toml](repo-manifest.toml) disagrees with the workspace, a doc, a make target, STATUS.md, or a crate map ([scripts/map.md#debug](scripts/map.md) has the per-message table) |
-
-<!-- 2026-08-26: AGENTS.md and CLAUDE.md open with the owner ruling banning code comments from Anthropic models -->

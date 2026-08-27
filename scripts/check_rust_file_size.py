@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Enforce per-file line ceilings over every crates/**/*.rs source file.
+"""Enforce exact per-file line baselines over every crates/**/*.rs source file.
 
 SSOT for general Rust file size (G-8 companion to check_lib_rs). Prose
 (AGENTS.md / CLAUDE.md / scripts/map.md) points here and never restates the
@@ -7,13 +7,13 @@ ceilings. Mirrors the check_lib_rs dual-wire shape (py = logic + SSOT,
 sh = wrapper).
 
 Rules over every *.rs under crates/ (recursive):
-1. Per-file line ceiling: default DEFAULT_CEILING (docs count — what a reader
-   scrolls past). EXCEPTIONS table overrides with reason + ratchet note.
-2. Ceilings ratchet DOWN only. Raising a ceiling needs a stated reason in the
-   commit that raises it — that raise-with-reason duty is a **convention**,
-   not a mechanical check (the table cannot know whether a reason string is
-   real). Deleting an exception row whose file still exceeds the default IS
-   mechanical and fails the gate.
+1. The default is DEFAULT_CEILING. Blank lines count.
+2. EXCEPTIONS records the exact current line count, debt reason, and cohesive
+   split seam for each existing offender.
+3. An excepted file must equal its baseline. Growth fails. Shrinkage also fails
+   until the row ratchets down, or is removed when the file reaches the default.
+4. Sources under tests/goldens/ and tests/fixtures/ are generated-test inputs
+   and are outside the scan.
 
 Exit 0 on clean; non-zero with path, measured count, ceiling, and sanctioned
 outs. Fail-closed: unreadable file, empty scan set, or an EXCEPTIONS key whose
@@ -25,97 +25,265 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Seeded from post-G-4 measured reality (2026-08-11): 181 crates/**/*.rs files,
-# p50≈269 / p75≈630 / p90≈1282 / max=3290. Default 1500 lets ~92% pass unlisted
-# (13 exception rows). The former 14.5-KLOC tests.rs monolith no longer exists
-# and is deliberately not grandfathered.
-DEFAULT_CEILING = 1500
+DEFAULT_CEILING = 1000
+EXEMPT_PATHS: tuple[tuple[str, ...], ...] = (("tests", "goldens"), ("tests", "fixtures"))
 
-# repo-relative posix path -> (ceiling, reason). Keys sorted alphabetically.
-# Ceilings only go DOWN as follow-ups land; never up without a stated reason
-# in the commit that raises them. Measured counts at G-8 seed are noted in
-# each reason; ceilings include small slack so a one-line edit does not force
-# a table churn.
-EXCEPTIONS: dict[str, tuple[int, str]] = {
-    # RATCHETED OUT (SQM round 6): the temp-view family moved to
-    # crates/repark-core/src/session/temp_views.rs, so session.rs passes the DEFAULT ceiling
-    # unlisted. The exception (1650) is deleted rather than lowered — ceilings ratchet down
-    # only, and this one no longer earns a row. MEASURED session.rs: 1477 lines (SQM round 7,
-    # R7-3; the round-6 note said 1465, which was never the count on the delivered tree — the
-    # deletion stands either way, both are under the 1500 default).
+# repo-relative posix path -> (exact baseline, debt reason, cohesive split seam).
+# Every row retires when its file reaches DEFAULT_CEILING. A baseline increase
+# requires explicit owner approval; ordinary edits only ratchet rows down.
+EXCEPTIONS: dict[str, tuple[int, str, str]] = {
+    "crates/repark-core/src/catalog_config.rs": (
+        1159,
+        "Session catalog configuration still owns every backend shape.",
+        "Split backend-specific option parsing from shared session installation.",
+    ),
+    "crates/repark-core/src/dynamic_flatten/tests.rs": (
+        1469,
+        "Dynamic-flatten behavior and refusal scenarios share one test module.",
+        "Split structural cases from list and refusal cases with an identity check.",
+    ),
+    "crates/repark-core/src/session.rs": (
+        1479,
+        "The session root still combines construction, planning, and execution entry points.",
+        "Extract one existing responsibility when a charter already changes that region.",
+    ),
+    "crates/repark-core/src/session/tests.rs": (
+        1485,
+        "Session behavior scenarios remain in one file-backed test module.",
+        "Split by configuration, planning, and execution scenario families.",
+    ),
+    "crates/repark-core/tests/declared_sorted.rs": (
+        1464,
+        "Declared-order integration cases share one end-to-end battery.",
+        "Split by ordering source while preserving public-entry coverage.",
+    ),
+    "crates/repark-functions/src/analyzer.rs": (
+        1407,
+        "Spark analyzer rewrites remain grouped in one rule implementation.",
+        "Extract a cohesive rewrite family when that family next changes.",
+    ),
     "crates/repark-functions/src/datetime.rs": (
-        2100,  # measured 2020
-        "Spark-semantics calendar/datetime family (Time+Timestamp extractors, "
-        "dayofweek/weekofyear shims, TZ-aware path); "
-        "RATCHET: after per-family split",
+        2053,
+        "Calendar and timestamp Spark-semantics functions share one module.",
+        "Split calendar extractors from timezone-aware timestamp functions.",
     ),
     "crates/repark-iceberg/src/catalog/tests.rs": (
-        2000,  # measured 1926
-        "Catalog-adapter unit battery (memory/Glue/S3 Tables builders + "
-        "metadata-projection pins); "
-        "RATCHET: after production-aligned split",
+        1930,
+        "Memory, Glue, and S3 Tables catalog adapter tests share one battery.",
+        "Split tests by catalog backend with shared helpers kept local.",
     ),
     "crates/repark-iceberg/src/write/alter.rs": (
-        1850,  # measured 1769
-        "Iceberg ALTER TABLE adapter over the fork public Transaction API "
-        "(properties, rename, UpdateSchema ADD/DROP/RENAME/widen); "
-        "RATCHET: after per-operation modules",
+        1769,
+        "Iceberg ALTER operations share one transaction adapter.",
+        "Split property, rename, and schema-evolution operation families.",
     ),
     "crates/repark-iceberg/src/write/append.rs": (
-        2300,  # measured 2207
-        "Public append entry point (fast_append commit path, writer props, "
-        "partitioned write); "
-        "RATCHET: after writer/commit extract",
+        2223,
+        "Append planning, file writing, and commit assembly share one entry module.",
+        "Extract writer preparation from transaction commit assembly.",
     ),
     "crates/repark-iceberg/src/write/merge/mod.rs": (
-        2700,  # measured 2616
-        "MERGE INTO executor — RePark-owned COW/MOR (fork ENGINE_CONTRACT §6 "
-        "deliberately carries no MERGE); "
-        "RATCHET: after COW/MOR/plan split out of mod.rs",
+        2691,
+        "The RePark-owned MERGE executor combines plan, COW, and MOR paths.",
+        "Split plan preparation from COW and MOR execution modules.",
+    ),
+    "crates/repark-iceberg/src/write/merge/occ_conflict_tests.rs": (
+        1085,
+        "Optimistic-concurrency conflict cases share one scenario battery.",
+        "Split retryable conflicts from terminal conflict cases.",
+    ),
+    "crates/repark-iceberg/src/write/merge/occ_tests.rs": (
+        1009,
+        "Optimistic-concurrency happy paths narrowly exceed the default.",
+        "Extract shared setup or split by commit-attempt scenario.",
     ),
     "crates/repark-iceberg/src/write/merge/streaming_scan_tests.rs": (
-        3400,  # measured 3290
-        "MERGE streaming-scan unit battery (position-delete + rewrite pins); "
-        "RATCHET: after per-scenario module split",
+        3365,
+        "Streaming MERGE scan and rewrite scenarios share one test battery.",
+        "Split position-delete, rewrite, and scan-shape scenario families.",
+    ),
+    "crates/repark-iceberg/src/write/merge/tests.rs": (
+        1139,
+        "General MERGE behavior cases remain in one file-backed module.",
+        "Split common plan cases from write-mode-specific cases.",
+    ),
+    "crates/repark-iceberg/src/write/overwrite.rs": (
+        1153,
+        "Overwrite planning and commit behavior share one module.",
+        "Extract predicate and file-selection logic from commit assembly.",
+    ),
+    "crates/repark-iceberg/src/write/position_delete.rs": (
+        1068,
+        "Position-delete planning and writer mechanics share one module.",
+        "Extract row-position selection from delete-file emission.",
+    ),
+    "crates/repark-iceberg/src/write/predicate_dml.rs": (
+        1298,
+        "Predicate DELETE and UPDATE planning share one adapter.",
+        "Split predicate validation from operation-specific plan construction.",
+    ),
+    "crates/repark-iceberg/src/write/predicate_dml/predicate_dml_tests.rs": (
+        1448,
+        "Predicate DML scenarios share one consolidated test module.",
+        "Split DELETE and UPDATE scenario families with shared setup retained.",
+    ),
+    "crates/repark-python/src/column/function_dispatch.rs": (
+        1018,
+        "Column function dispatch arms narrowly exceed the default.",
+        "Split a cohesive function family from the dispatch table.",
     ),
     "crates/repark-python/src/column/mod.rs": (
-        1200,  # measured 1112
-        "PyO3 Column #[pymethods] arms only (match tables in "
-        "column/function_dispatch.rs; helpers in column/window.rs + "
-        "column/expr_build.rs; multiple-pymethods stays off); "
-        "RATCHET: after remaining date/window pymethods extract",
+        1197,
+        "PyO3 Column methods remain grouped in one binding module.",
+        "Extract the remaining date or window method family.",
+    ),
+    "crates/repark-python/src/dataframe.rs": (
+        1485,
+        "PyO3 DataFrame methods share one binding surface.",
+        "Split action methods from plan-building methods without moving row work to Python.",
+    ),
+    "crates/repark-python/src/session.rs": (
+        1472,
+        "PyO3 session construction and query entry points share one module.",
+        "Split configuration bindings from query and catalog bindings.",
     ),
     "crates/repark-spark/src/alter.rs": (
-        2000,  # measured 1915
-        "Spark-dialect ALTER TABLE planner (token rewrites sqlparser cannot "
-        "model + dispatch to repark-iceberg write::alter); "
-        "RATCHET: after rewrite/dispatch split",
+        1928,
+        "Spark ALTER token rewrites and dispatch share one planner module.",
+        "Split syntax normalization from Iceberg operation dispatch.",
+    ),
+    "crates/repark-spark/src/call.rs": (
+        1404,
+        "Spark CALL parsing and procedure routing share one module.",
+        "Split argument parsing from procedure-specific lowering.",
+    ),
+    "crates/repark-spark/src/metadata_tables.rs": (
+        1149,
+        "Metadata-table parsing and plan construction share one module.",
+        "Extract identifier resolution from metadata plan assembly.",
+    ),
+    "crates/repark-spark/src/normalize.rs": (
+        1064,
+        "Spark normalization rules narrowly exceed the default.",
+        "Extract one coherent normalization family when its contract changes.",
+    ),
+    "crates/repark-spark/src/ref_ddl.rs": (
+        1099,
+        "Reference DDL parsing and execution routing share one module.",
+        "Split branch and tag statement families.",
+    ),
+    "crates/repark-spark/src/tests/alter.rs": (
+        1448,
+        "Spark ALTER behavior cases share one test module.",
+        "Split property operations from schema-evolution operations.",
+    ),
+    "crates/repark-spark/src/tests/call.rs": (
+        1440,
+        "Spark CALL procedure cases share one test module.",
+        "Split parsing failures from procedure execution scenarios.",
+    ),
+    "crates/repark-spark/src/tests/ctas.rs": (
+        1454,
+        "CTAS behavior and property scenarios share one test module.",
+        "Split format and property cases from query-shape cases.",
+    ),
+    "crates/repark-spark/src/tests/describe_show.rs": (
+        1007,
+        "DESCRIBE and SHOW cases narrowly exceed the default together.",
+        "Split DESCRIBE from SHOW statement scenarios.",
+    ),
+    "crates/repark-spark/src/tests/dml.rs": (
+        1226,
+        "Spark DML door scenarios share one integration module.",
+        "Split DELETE, UPDATE, and shared refusal families.",
+    ),
+    "crates/repark-spark/src/tests/insert_overwrite.rs": (
+        1322,
+        "INSERT OVERWRITE modes share one scenario battery.",
+        "Split partitioned from unpartitioned overwrite cases.",
+    ),
+    "crates/repark-spark/src/tests/merge.rs": (
+        1362,
+        "Spark MERGE syntax and execution cases share one module.",
+        "Split matched-action from not-matched-action scenarios.",
+    ),
+    "crates/repark-spark/src/tests/partitioned_merge.rs": (
+        1187,
+        "Partitioned MERGE cases share one integration battery.",
+        "Split partition transforms from delete-file interaction cases.",
+    ),
+    "crates/repark-spark/src/tests/transform_overwrite.rs": (
+        1282,
+        "Transform-partition overwrite cases share one module.",
+        "Split transform families while keeping door-level coverage.",
+    ),
+    "crates/repark-spark/src/window_range.rs": (
+        1367,
+        "Window RANGE validation and rewrite behavior share one module.",
+        "Split frame validation from expression lowering.",
+    ),
+    "crates/repark-spark/tests/session_timezone.rs": (
+        1045,
+        "Session-timezone integration cases narrowly exceed the default.",
+        "Split cast paths from date-function paths.",
+    ),
+    "crates/repark-sql/src/guards/tests.rs": (
+        1255,
+        "ANSI guard refusal cases share one file-backed module.",
+        "Split guards by statement or expression family.",
     ),
     "crates/repark-sql/src/tests.rs": (
-        1600,  # measured 1556
-        "Native ANSI-door end-to-end unit battery (still monolithic; not yet "
-        "production-aligned split like the Spark door's G-4); "
-        "RATCHET: after production-aligned tests/ split",
+        1594,
+        "Native ANSI-door end-to-end cases remain consolidated.",
+        "Split statement families into production-aligned test modules.",
+    ),
+    "crates/repark-sql/tests/cross_door.rs": (
+        1465,
+        "Cross-door parity cases share one integration battery.",
+        "Split syntax-equivalence from deliberate-divergence cases.",
     ),
     "crates/repark-ta/src/momentum.rs": (
-        2600,  # measured 2508
-        "TA-Lib C 0.4.0 momentum indicators battery (verbatim port: RSI/ADX/"
-        "STOCH family + rate-of-change); "
-        "RATCHET: after per-indicator modules if identity-diff allows",
+        2516,
+        "TA-Lib momentum indicators share one verbatim-port module.",
+        "Split by indicator family only with an identity-diff proof.",
     ),
     "crates/repark-ta/src/overlap.rs": (
-        1900,  # measured 1837
-        "TA-Lib C 0.4.0 overlap studies battery (verbatim port: SMA/EMA/BBANDS "
-        "family); "
-        "RATCHET: after per-indicator modules if identity-diff allows",
+        1852,
+        "TA-Lib overlap indicators share one verbatim-port module.",
+        "Split moving-average and band families only with identity proof.",
     ),
     "crates/repark-ta/src/udf/mod.rs": (
-        2100,  # measured 2020
-        "DataFusion window-UDF wrappers: shared cache/densify/evaluate_all/"
-        "SPECS/TaFn + statistic/math dispatch (feature `datafusion`); "
-        "RATCHET: after statistic/math extract or tests/ split",
+        2020,
+        "Window UDF cache, densification, specs, and dispatch share one module.",
+        "Extract statistic and math dispatch from shared evaluation mechanics.",
     ),
 }
+
+
+def _is_exempt(path: Path, repo: Path) -> bool:
+    """Return whether a source path is under an approved generated-test directory."""
+    parts = path.relative_to(repo).parts
+    return any(
+        parts[index : index + len(exempt)] == exempt
+        for exempt in EXEMPT_PATHS
+        for index in range(len(parts) - len(exempt) + 1)
+    )
+
+
+def _validate_exception(relative: str, exception: tuple[int, str, str]) -> list[str]:
+    """Validate one exception row as actionable debt above the default."""
+    baseline, reason, split_seam = exception
+    errors: list[str] = []
+    if baseline <= DEFAULT_CEILING:
+        errors.append(
+            f"ERROR: {relative}: exception baseline {baseline} is not above default "
+            f"{DEFAULT_CEILING}; remove the exception row."
+        )
+    if not reason.strip():
+        errors.append(f"ERROR: {relative}: exception debt reason must not be empty.")
+    if not split_seam.strip():
+        errors.append(f"ERROR: {relative}: exception split seam must not be empty.")
+    return errors
 
 
 def check_file(path: Path, repo: Path) -> list[str]:
@@ -129,14 +297,34 @@ def check_file(path: Path, repo: Path) -> list[str]:
 
     # wc-style: number of lines as splitlines length (docs count toward ceiling).
     line_count = len(text.splitlines())
-    ceiling, reason = EXCEPTIONS.get(rel, (DEFAULT_CEILING, "default ceiling"))
-    if line_count > ceiling:
+    exception = EXCEPTIONS.get(rel)
+    if exception is None:
+        if line_count <= DEFAULT_CEILING:
+            return errors
         errors.append(
-            f"ERROR: {rel} is {line_count} lines (ceiling {ceiling}). "
-            f"Reason on file: {reason}. "
-            f"Sanctioned outs: (1) split the module, or (2) edit EXCEPTIONS in "
-            f"scripts/check_rust_file_size.py with a reason (ceilings ratchet "
-            f"down only)."
+            f"ERROR: {rel} is {line_count} lines (default {DEFAULT_CEILING}). "
+            "Sanctioned outs: (1) split at a cohesive boundary, or (2) add an "
+            "owner-approved EXCEPTIONS row with the exact baseline, debt reason, and split seam."
+        )
+        return errors
+
+    baseline, reason, split_seam = exception
+    errors.extend(_validate_exception(rel, exception))
+    if line_count > baseline:
+        errors.append(
+            f"ERROR: {rel} grew to {line_count} lines (exact baseline {baseline}). "
+            f"Debt: {reason} Split seam: {split_seam} "
+            "Split the file, make the change line-neutral, or obtain explicit owner approval "
+            "for a reviewed baseline amendment."
+        )
+    elif line_count < baseline:
+        action = (
+            "remove the exception row"
+            if line_count <= DEFAULT_CEILING
+            else f"ratchet the baseline down to {line_count}"
+        )
+        errors.append(
+            f"ERROR: {rel} shrank to {line_count} lines below exact baseline {baseline}; {action}."
         )
     return errors
 
@@ -148,17 +336,9 @@ def main() -> int:
         print("ERROR: crates/ not found", file=sys.stderr)
         return 2
 
-    # Stale EXCEPTIONS rows: a key whose path no longer exists is fail-closed
-    # (exception for a deleted/renamed file would silently grandfather nothing).
-    all_errors: list[str] = []
-    for rel in sorted(EXCEPTIONS):
-        if not (repo / rel).is_file():
-            all_errors.append(
-                f"ERROR: EXCEPTIONS key has no file on disk: {rel} "
-                f"(remove the row or restore the path)"
-            )
-
-    paths = sorted(crates_root.rglob("*.rs"))
+    paths = sorted(
+        path for path in crates_root.rglob("*.rs") if path.is_file() and not _is_exempt(path, repo)
+    )
     if not paths:
         print(
             "ERROR: crates/**/*.rs scan set is empty — refuse to pass closed",
@@ -166,10 +346,17 @@ def main() -> int:
         )
         return 2
 
+    all_errors: list[str] = []
+    scanned = {path.relative_to(repo).as_posix() for path in paths}
+    for rel in sorted(EXCEPTIONS):
+        if rel not in scanned:
+            all_errors.append(
+                f"ERROR: EXCEPTIONS key is outside the scan set: {rel} "
+                "(remove the row or restore the source path)"
+            )
+
     checked = 0
     for path in paths:
-        if not path.is_file():
-            continue
         checked += 1
         all_errors.extend(check_file(path, repo))
 

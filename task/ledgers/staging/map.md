@@ -14,7 +14,8 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   scope audit and approval gate (2026-08-20):** the twelve-clause proposition ledger, the spike
   evidence behind it; C-007 (the four sub-project families) was closed by ruling D-7 on
   2026-08-20 and the gate passed. Design:
-  [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); slate:
+  [../docs/design/spark-function-parity.md](../../../docs/design/spark-function-parity.md); CAP-1
+  appends a compatibility note that points its dated file-size premise at the live guards; slate:
   [../briefs/spark-function-parity.md](../../../briefs/spark-function-parity.md).
 - [sem-0-charter-ledger.md](sem-0-charter-ledger.md) — **SEM-0 (2026-08-21), queued and HELD at
   its approval gate:** the scope audit for closing the two silently wrong answers the low-risk

@@ -44,8 +44,6 @@ LEDGER_SUFFIX = "-ledger.md"
 CEILINGS: dict[str, int] = {
     "STATUS.md": 25_000,
     "briefs/next-sequence.md": 6_000,
-    # 2026-08-26: the owner ruling banning code comments from Anthropic models lands
-    # verbatim at the top of AGENTS.md (+~0.7 kB); ceiling 31,000 → 32,000.
     "AGENTS.md": 32_000,
     ".agents/skills/engineering-method/SKILL.md": 35_000,
 }

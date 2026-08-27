@@ -1,7 +1,7 @@
 """Session helpers lifted out of nested ``def``s (PYC-2).
 
-``session_core.py`` sits on the default ``check_lib_py`` ceiling; these two
-functions would not fit there as module-level helpers. Behaviour is the
+``session_core.py`` carries an exact ``check_lib_py`` exception baseline. These
+two functions would not fit there as module-level helpers. Behaviour is the
 pre-lift bodies, with closed-over locals passed as arguments.
 """
 

@@ -45,7 +45,7 @@ help: ## List available targets
 # ------------------------------------------------------------------------------------------------
 
 .PHONY: ci
-ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-comment-density check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
+ci: rust-fmt-check rust-clippy rust-panic-ban check-crate-dag check-lib-rs check-rust-file-size check-lib-py check-python-conventions check-docstring-presence check-manifest check-ledgers check-ledger-grammar check-docs-compaction check-owner-ruling check-parity-live-dual-wire check-matrix-test-liveness rust-check py-lint py-format-check py-lock-check toml-check spell-check ## Fast gate (lint + format + static checks); see preflight for the full CI surface
 
 # `test` is the Rust workspace suite, and that is the whole of it — deliberately, not pending.
 # The three Python suites are excluded because each needs something `cargo test` cannot give it:
@@ -132,16 +132,16 @@ check-lib-rs: ## lib.rs thinness guard (no inline tests; line ceilings)
 	@./scripts/check_lib_rs.sh
 
 .PHONY: check-rust-file-size
-check-rust-file-size: ## Per-file crates/**/*.rs line-ceiling guard (default + EXCEPTIONS)
+check-rust-file-size: ## Rust source ceiling with exact-baseline exceptions
 	@# Default ceiling + EXCEPTIONS SSOT: scripts/check_rust_file_size.py — dual-wired with
-	@# ci.yml's guards job. Companion to check-lib-rs (crate-root thinness). Ceilings ratchet
-	@# down only; prose points at the script and never restates the numbers.
+	@# ci.yml's guards job. Companion to check-lib-rs (crate-root thinness). Exception baselines
+	@# stay exact and ratchet down; prose points at the script and never restates the numbers.
 	@./scripts/check_rust_file_size.sh
 
 .PHONY: check-python-conventions
 check-python-conventions: ## The two Python rules Ruff cannot express (nested def; Pydantic not dataclasses)
 	@# Rules + EXCEPTIONS SSOT: scripts/check_python_conventions.py — dual-wired with ci.yml's
-	@# python job. Companion to check-lib-py (facade thinness). Ceilings ratchet down only;
+	@# python job. Companion to check-lib-py (source size + facade thinness). Ceilings ratchet down;
 	@# prose points at the script and never restates the tables.
 	@./scripts/check_python_conventions.sh
 
@@ -207,8 +207,8 @@ census: ## Hermetic Apache-suite census (classic/expand/expand2); local+slate on
 	@./scripts/run_census.sh
 
 .PHONY: check-lib-py
-check-lib-py: ## Python thinness guard (line ceilings + no-stub)
-	@# Ceilings + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.
+check-lib-py: ## Python source ceiling + facade no-stub guard
+	@# Exact baselines + EXCEPTIONS SSOT: scripts/check_lib_py.py — dual-wired with ci.yml python job.
 	@./scripts/check_lib_py.sh
 
 .PHONY: develop
@@ -337,11 +337,9 @@ ledger-archive: ## Pickup step 0: file task/ledgers/completed/ into archive/yyyy
 	python3 scripts/ledger_lifecycle.py archive
 	python3 scripts/check_docs_compaction.py
 
-.PHONY: check-comment-density
-check-comment-density: ## Condensation guard: per-file code-comment ceilings ratchet down only; new files carry none (owner ruling 2026-08-26)
-	@# SSOT: scripts/check_comment_density.py + scripts/comment_ceilings.json (reseed with --reseed,
-	@# never upward). CI wiring in ci.yml is the owner's step.
-	python3 scripts/check_comment_density.py
+.PHONY: check-owner-ruling
+check-owner-ruling: ## Preserve the owner ruling and its enforcement boundary byte-for-byte
+	python3 scripts/check_owner_ruling.py
 
 .PHONY: check-docs-compaction
 check-docs-compaction: ## Live-document guard: no closed campaign in STATUS, no merged unit on the slate, every workstream marked, byte ceilings (DL-4)

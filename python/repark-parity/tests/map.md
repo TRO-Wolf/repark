@@ -7,9 +7,17 @@ JVM, no repark required). See [../map.md](../map.md).
 
 ## Contents
 
-- `test_comment_density_gate.py` — **the condensation guard's provocations (2026-08-26):** a new
-  file with one comment is red at ceiling 0, a file at / above its ceiling is green / red, the
-  shebang does not count, `--reseed` only lowers, and the live tree is under its table.
+- `test_pr_247_owner_ruling.py` — **PR #247 revalidation (2026-08-27):** the owner-ruling blocks
+  in `AGENTS.md` and `CLAUDE.md` stay byte-exact, unique, at the document start, and in regular
+  files; one-byte drift, malformed or missing files, relocation, duplication, and symlink
+  redirection fail closed. The review-held enforcement boundary stays exact, unique, and adjacent
+  to the ruling. The attribution-blind density gate stays absent. CAP-1's exact-baseline Rust and
+  Python source gates remain wired. No source-comment sweep belongs to this unit.
+  `pins: pr-247-revalidation/C-001, C-002, C-003, C-004, C-005, C-006, C-007`
+- `test_cap_1_source_file_line_cap.py` — **CAP-1 (2026-08-26):** exact Rust and Python
+  source-size exception sets and baselines; blank-line boundaries; growth, shrink, retirement,
+  missing-path, unreadable-path, and empty-scan provocations; fixture exclusions; unchanged
+  facade no-stub scope; existing Makefile/CI wiring and contract/navigation carriers.
 - `test_reg_1_registry_truth_up.py` — **REG-1 (2026-08-26; tree pins):** the divergence registry
   says what the pins prove — DEC-2 / DEC-6 / DEC-7 / DEC-8 carry dated FIXED notes naming #94 / #99
   and their equality pins (C-001); TZ-8 splits into the FIXED `CAST(ts AS DATE)` / `to_date` /

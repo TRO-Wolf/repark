@@ -202,6 +202,9 @@ jobs:
       # (DL-4; wired here under a one-time owner grant, 2026-08-25).
       - name: live-document guard (check_docs_compaction)
         run: python3 scripts/check_docs_compaction.py
+
+      - name: owner-ruling preservation guard (check_owner_ruling)
+        run: python3 scripts/check_owner_ruling.py
       # zizmor SKIPS files it cannot parse ("collection yielded no auditable inputs", exit 0), so
       # a workflow with broken YAML passes the security gate while GitHub silently never runs it.
       # Mirrors `make workflows-parse`.
@@ -226,9 +229,9 @@ jobs:
         run: uvx ruff@0.15.22 check .
       - name: ruff format --check
         run: uvx ruff@0.15.22 format --check .
-      # Python thinness guard (mirrors `make check-lib-py`; ceilings + EXCEPTIONS SSOT:
-      # scripts/check_lib_py.py). Returned with the facade at phase-3 PR-5.
-      - name: Python thinness guard (check_lib_py)
+      # Python source-size and facade thinness guard (mirrors `make check-lib-py`; exact
+      # baselines + EXCEPTIONS SSOT: scripts/check_lib_py.py).
+      - name: Python source-size and facade thinness guard (check_lib_py)
         run: ./scripts/check_lib_py.sh
 
       - name: Python conventions guard (check_python_conventions)

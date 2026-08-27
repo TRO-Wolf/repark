@@ -12,8 +12,9 @@ battery (names under the declared-rename map; the not-yet-ported subset is liste
 ## Contents
 
 - `temp_views.rs` — **SQM round 6 (R6-1):** the temp-view family, split out of `session.rs` when
-  the choke-point fix pushed that file past its ceiling (the exception row was then ratcheted
-  out — `session.rs` passes the default 1500 unlisted). Holds `create_or_replace_temp_view`
+  the choke-point fix pushed that file past its ceiling. The old exception then retired under the
+  prior default; CAP-1 records the file again at its exact source-size baseline. Holds
+  `create_or_replace_temp_view`
   (batches) / `create_or_replace_temp_view_from` (a plan),
   `register_record_batches_as_temp_view`, `materialize_dataframe_as_temp_view` /
   `materialize_dataframe_as_cache_view` and their shared `register_collected_memtable`,
