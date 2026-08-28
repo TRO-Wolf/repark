@@ -895,7 +895,7 @@ fn assert_rpdf_schema_is_sparks(batch: &datafusion::arrow::array::RecordBatch) {
 
 /// Read an `Int32` or `Int64` result column as `i64`, so one helper serves both rewrite
 /// procedures' mixed int/bigint schemas.
-fn call_count(batch: &datafusion::arrow::array::RecordBatch, name: &str) -> i64 {
+pub(super) fn call_count(batch: &datafusion::arrow::array::RecordBatch, name: &str) -> i64 {
     let index = batch.schema().index_of(name).expect("column present");
     let column = batch.column(index);
     column

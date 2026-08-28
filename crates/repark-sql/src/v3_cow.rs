@@ -1,11 +1,14 @@
 //! Model: Claude Fable 5
 //!
-//! ANSI-door pins: copy-on-write DML on an adopted v3 table refuses (`V3-COW-1`, 2026-08-25).
+//! ANSI-door pins: copy-on-write UPDATE / MERGE and the resolver seat refuse an adopted v3
+//! table (`V3-COW-1`, 2026-08-25); RP-2 (2026-08-27) measured the plain-`WHERE` DELETE
+//! Spark-clean and lifted it on both modes.
 //!
 //! The ANSI door refuses `CALL` (Q7). Adoption uses the same `Catalog::register_table` the
 //! Spark procedure reaches. Memory-catalog `DROP TABLE` deletes the metadata pointer, so the
 //! seed ident stays; DML runs against the adopted ident.
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005
+//! pins: rp-2-fork-repin/C-003, C-005
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -255,19 +258,26 @@ async fn assert_cow_refused_untouched(door: &Door, table: &str, sql: &str, verb:
     assert_eq!(door.live_pairs(table).await, before_rows, "rows untouched");
 }
 
-/// pins: v3r-1-rulings/C-001
+/// RP-2: the plain-`WHERE` COW DELETE on v3 runs; survivors keep their lineage counters.
+/// pins: rp-2-fork-repin/C-005
 #[tokio::test]
-async fn adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage() {
+async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
     let door = door_with_v3_opt_in().await;
     adopt_cow_v3(&door, "seed_del", "adopt_del").await;
     assert_eq!(door.lineage("adopt_del").await, (3, Some(0), Some(3)));
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_del",
-        "DELETE FROM ice.sales.adopt_del WHERE id = 2",
-        "DELETE",
-    )
-    .await;
+    door.ok("DELETE FROM ice.sales.adopt_del WHERE id = 2")
+        .await;
+    assert_eq!(
+        door.live_pairs("adopt_del").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the delete commits the right rows"
+    );
+    assert_eq!(
+        door.lineage("adopt_del").await.0,
+        5,
+        "next_row_id matches Spark's own v3 COW DELETE exactly (live oracle 2026-08-27: \\
+         Spark allocates then suppresses, #226); every survivor's _row_id reads unchanged"
+    );
 }
 
 /// pins: v3r-1-rulings/C-002
@@ -409,8 +419,9 @@ async fn adopted_v3_cow_subquery_where_dml_refuses_at_the_resolver_seat() {
     .await;
 }
 
-/// SEC-001: two-part and bare names under a session default catalog / schema refuse.
-/// pins: v3r-1-rulings/C-001, C-002
+/// SEC-001: two-part and bare names under a session default catalog / schema resolve the same
+/// guard seats: the UPDATE refuses, the DELETE (RP-2 lift) commits the right rows.
+/// pins: rp-2-fork-repin/C-003, C-005
 #[tokio::test]
 async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     let door = door_with_v3_opt_in().await;
@@ -426,41 +437,42 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     assert_cow_refused_untouched(
         &door,
         "adopt_short",
-        "DELETE FROM sales.adopt_short WHERE id = 2",
-        "DELETE",
-    )
-    .await;
-    assert_cow_refused_untouched(
-        &door,
-        "adopt_short",
         "UPDATE adopt_short SET name = 'x' WHERE id = 2",
         "UPDATE",
     )
     .await;
+    door.ok("DELETE FROM sales.adopt_short WHERE id = 2").await;
+    assert_eq!(
+        door.live_pairs("adopt_short").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the short-name DELETE resolves and commits"
+    );
 }
 
-/// SEC-003: a dotted quoted name `ice.sales."a.b"` (creatable here) refuses — target from the AST.
-/// pins: v3r-1-rulings/C-001
+/// SEC-003: a dotted quoted name `ice.sales."a.b"` (creatable here) resolves as ONE table —
+/// the RP-2 DELETE runs on it and commits the right rows (never a silent miss).
+/// pins: rp-2-fork-repin/C-005
 #[tokio::test]
-async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_refuses() {
+async fn adopted_v3_cow_delete_on_a_dotted_quoted_name_resolves() {
     let door = door_with_v3_opt_in().await;
     door.ok("CREATE TABLE ice.sales.\"a.b\" (id INT, name VARCHAR) WITH (format_version = 3)")
         .await;
     door.ok("INSERT INTO ice.sales.\"a.b\" VALUES (1, 'a'), (2, 'b'), (3, 'c')")
         .await;
-    assert_cow_refused_untouched(
-        &door,
-        "a.b",
-        "DELETE FROM ice.sales.\"a.b\" WHERE id = 2",
-        "DELETE",
-    )
-    .await;
+    door.ok("DELETE FROM ice.sales.\"a.b\" WHERE id = 2").await;
+    assert_eq!(
+        door.live_pairs("a.b").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the quoted dotted name resolves; the delete commits the right rows"
+    );
 }
 
-/// SEC-002: a padded merge-on-read spelling still refuses on v3.
+/// SEC-002: a padded merge-on-read spelling still refuses on v3 — the UPDATE refusal never
+/// consults the property (RP-2), so the spelling cannot slip past.
 /// pins: v3r-1-rulings/C-004
+/// pins: rp-2-fork-repin/C-005
 #[tokio::test]
-async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
+async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
     let door = door_with_v3_opt_in().await;
     adopt_v3(
         &door,
@@ -472,11 +484,11 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
     .await;
     let before = door.lineage("adopt_pad").await;
     let err = door
-        .err("DELETE FROM ice.sales.adopt_pad WHERE id = 2")
+        .err("UPDATE ice.sales.adopt_pad SET name = 'x' WHERE id = 2")
         .await;
     assert!(
-        err.contains("V3") && err.contains("deletion vectors"),
-        "the merge-on-read arm's reason: {err}"
+        err.contains("V3-COW-1") && err.contains("row lineage"),
+        "the copy-on-write arm's reason: {err}"
     );
     assert_eq!(door.lineage("adopt_pad").await, before, "no commit");
     assert_eq!(

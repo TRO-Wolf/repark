@@ -33,7 +33,9 @@ NOT in that file is a defect, not a decision.
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
 - [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
   MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
-  `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift).
+  `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift) with Spark-equal
+  survivor lineage — `next_row_id` = 5 on the 3-row recipe, Spark's own allocate-then-suppress
+  counter (live oracle 2026-08-27).
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append.

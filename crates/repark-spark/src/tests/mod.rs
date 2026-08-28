@@ -9,6 +9,7 @@ mod call;
 mod call_manifests;
 mod call_orphan;
 mod call_register;
+mod call_rewrite_dangling;
 mod call_v3;
 mod cast_binary;
 mod catalog_ops;

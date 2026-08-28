@@ -90,7 +90,9 @@ async fn v3_fixture_really_is_format_v3() {
 ///
 /// Refusing is stricter than Spark, which does the rewrite correctly. It is the same trade MW-2
 /// took for deletion vectors: a loud refusal beats a silent, plausible, wrong result on a
-/// procedure an operator runs unattended.
+/// procedure an operator runs unattended. RP-2 (2026-08-27) re-measured the guard at fork
+/// `ce92a7bf` and it stays: the rewrite still reassigns lineage (ledger §2).
+/// pins: rp-2-fork-repin/C-004
 #[tokio::test]
 async fn call_rewrite_data_files_refuses_a_v3_table_rather_than_reassigning_row_lineage() {
     let wh = TempDir::new().unwrap();

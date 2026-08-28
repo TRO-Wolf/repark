@@ -151,18 +151,20 @@ published history — an exposure **accepted by explicit decision**; provenance:
     ([#235](https://github.com/TRO-Wolf/repark/pull/235)); V3E-3 — partitioned-DV and
     equality-delete v3 fixtures CI-runnable, live rows Spark-exact on all three doors,
     `.delete_files` content 1/2 ([#236](https://github.com/TRO-Wolf/repark/pull/236)); V3R-1 —
-    **the 2026-08-25 owner rulings:** COW DML on a v3 table is **guarded** (registry `V3-COW-1`
-    refuses on both doors before any write — with MOR refused too, a v3 table is append-only
-    here until fork F-7), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
+    **the 2026-08-25 owner rulings:** row-DML on v3 **guarded** (registry `V3-COW-1`; RP-2
+    2026-08-27 later lifted its measured DELETE half on DV-free tables), `geometry`/`geography` DECLARED out of v1.0 (`V3-GEO-1`),
     shredded-Parquet `variant` DECLARED out (queued `V3-VARIANT-SHRED-1`), the S3 Tables live
     legs are **in** (OD-3b; the scoped IAM statement is in `docs/tier2-aws.md` §2, owner-executed),
     and the v2→v3 in-place upgrade is built behind the create opt-in after V3-3. Ledgers in
     [task/ledgers/archive/2026-08/](task/ledgers/archive/2026-08/map.md).
     V3E-4 measured refs, `VERSION AS OF` over DVs, expire dual-probe, and the
     orphan 24h floor on adopted v3.
-  - **Next:** V3E-5 (nightly v3 live-oracle leg), on
-    [briefs/next-sequence.md](briefs/next-sequence.md). V3-3 (DV writes) is owner-sequenced,
-    gated on fork F-13.
+  - **Delivered:** V3E-5, the nightly v3 live-oracle leg (#253). RP-2 (2026-08-27) repinned
+    the fork to `ce92a7bf` and measured: the plain-`WHERE` DELETE on a DV-free v3 table runs both
+    modes Spark-clean (`V3-COW-1` rewritten); DV-carrying tables resurrect a row and refuse;
+    `rewrite_data_files` still reassigns lineage (`V3-LINEAGE-1` stays, re-measured); F-3's
+    `'remove-dangling-deletes' => true` taken with a true count.
+  - **Next:** V3-3 (DV writes) is owner-sequenced.
 <!-- /ws -->
 
 <!-- ws id=perf ledgers=perf- state=open -->
