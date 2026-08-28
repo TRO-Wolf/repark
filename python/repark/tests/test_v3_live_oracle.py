@@ -379,7 +379,7 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
     """
     import subprocess
 
-    ledger = _REPO_ROOT / "task/ledgers/staging/v3e-5-nightly-v3-oracle-ledger.md"
+    ledger = _REPO_ROOT / "task/ledgers/completed/v3e-5-nightly-v3-oracle-ledger.md"
     assert ledger.is_file()
     text = ledger.read_text(encoding="utf-8")
     assert "VERDICT: PASS" in text
@@ -400,20 +400,13 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
     )
     assert dual.returncode == 0, dual.stderr
     diff = subprocess.run(
-        ["git", "diff", "--name-only", "origin/main...HEAD"],
+        ["git", "diff", "--name-only", "06a3e42", "ecbd6a4"],
         capture_output=True,
         text=True,
         cwd=str(_REPO_ROOT),
     )
-    if diff.returncode != 0:
-        diff = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
-            capture_output=True,
-            text=True,
-            cwd=str(_REPO_ROOT),
-        )
-        if diff.returncode != 0 or not diff.stdout.strip():
-            pytest.skip("git diff with origin/main not available in wheel test env")
+    if diff.returncode != 0 or not diff.stdout.strip():
+        pytest.skip("the unit's landed diff (06a3e42..ecbd6a4) not available in wheel test env")
     allowed_prefixes = (
         ".github/workflows/",
         "python/repark/tests/",

@@ -31,16 +31,16 @@ NOT in that file is a defect, not a decision.
   use the shared Spark literal helper across SQL, createDataFrame, unpivot, and ML paths.
 - [test_mw9_delete_granularity.py](test_mw9_delete_granularity.py) — **MW-9:** facade Spark
   `.sql()` unset `write.delete.granularity` writes one position-delete file per data file.
-- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25):** facade Spark `.sql()`
-  copy-on-write MERGE / DELETE / UPDATE on an adopted v3 table raise
-  `UnsupportedOperationException` naming `V3-COW-1`; rows untouched.
+- [test_v3_cow_dml.py](test_v3_cow_dml.py) — **V3R-1 (2026-08-25); RP-2 2026-08-27 retarget:** facade Spark `.sql()`
+  MERGE / UPDATE on an adopted v3 table raise `UnsupportedOperationException` naming
+  `V3-COW-1`; the plain-`WHERE` DELETE commits the right rows (RP-2 lift).
 - [test_v3e4_refs_time_travel.py](test_v3e4_refs_time_travel.py) — **V3E-4:** facade
   branch/tag, `VERSION AS OF` over DVs, rollback, expire dual-probe, orphan
   24h floor on the partitioned-DV fixture after a RePark append.
 - [test_v3e3_fixtures.py](test_v3e3_fixtures.py) — **V3E-3 (2026-08-24):** facade adopt of
   the Spark-written partitioned v3 DV fixture and the equality-delete + DV fixture;
   live rows, partition prune, `.delete_files` content 1/2.
-- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds, with `B-MOR-3`/`V3-COW-1` control still refusing; JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked, `thiserror` duplicate `skip`, `git diff` fallback for wheel env.
+- [test_v3_live_oracle.py](test_v3_live_oracle.py) — **V3E-5 (2026-08-27):** nightly live oracle for the two V3E-3 fixtures — `REPARK_PARITY_LIVE=1` repark == Spark on partitioned-DV prune and equality-delete alongside DV, plus `.delete_files` kinds, with `B-MOR-3`/`V3-COW-1` control still refusing; JVM-free twins stay in `test_v3e3_fixtures.py`. Critic remediation (2026-08-27): prune1 on Spark, combined DirLock, exact content sets, mirrored format, GAV full equality, version sort, COW, `py-format` single-line, meta-pin now asserts archive/dual-wire/diff allowlist. Formal CCC + cargo-deny/wheel remediation (2026-08-28): `chacha20` yanked, `thiserror` duplicate `skip`, `git diff` fallback for wheel env. Departure (RP-2 pickup, 2026-08-27): ledger path staging → completed; the diff allowlist now reads the unit's landed diff (06a3e42..ecbd6a4), not the live branch.
 - [test_v3_create_opt_in.py](test_v3_create_opt_in.py) — **V3-2 (2026-08-24):** facade CREATE/CTAS
   `format-version = 3` refuses unless `repark.sql.allowCreateFormatVersion3` is true; opt-in
   CREATE is readable and still hits `V3-LINEAGE-1` on `rewrite_data_files`. Also the V3R-1
