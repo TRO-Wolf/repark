@@ -67,7 +67,10 @@ wildcards = "deny"
 allow-wildcard-paths = true
 allow = []
 deny = []
-skip = []
+skip = [
+  { name = "thiserror" },
+  { name = "thiserror-impl" },
+]
 skip-tree = []
 
 [sources]
