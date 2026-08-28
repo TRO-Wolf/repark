@@ -166,7 +166,7 @@ def _assert_partitioned_dv_live_against_spark(
             engine.session.stop()
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
-    assert ICEBERG_SPARK_RUNTIME_GAV.endswith(":1.11.0")
+    assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
 def test_equality_delete_live_repark_matches_spark(tmp_path: Path) -> None:
@@ -224,7 +224,7 @@ def _assert_equality_delete_live_against_spark(
             engine.session.stop()
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
-    assert ICEBERG_SPARK_RUNTIME_GAV.endswith(":1.11.0")
+    assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
 def test_delete_files_live_kinds_match_spark(tmp_path: Path) -> None:
@@ -253,13 +253,11 @@ def test_delete_files_live_kinds_match_spark(tmp_path: Path) -> None:
             part_contents = part_deletes.column("content").to_pylist()
             assert set(part_contents) == {1}, part_contents
             assert all(
-                str(v).upper() == "PUFFIN"
-                for v in part_deletes.column("file_format").to_pylist()
+                str(v).upper() == "PUFFIN" for v in part_deletes.column("file_format").to_pylist()
             ), part_deletes.column("file_format").to_pylist()
-            assert all(
-                v in (None, [])
-                for v in part_deletes.column("equality_ids").to_pylist()
-            ), part_deletes.column("equality_ids").to_pylist()
+            assert all(v in (None, []) for v in part_deletes.column("equality_ids").to_pylist()), (
+                part_deletes.column("equality_ids").to_pylist()
+            )
             session.sql(
                 "CALL ice.system.register_table("
                 f"table => 'sales.eqdv2', metadata_file => '{eq_meta}')"
@@ -309,9 +307,9 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
             assert all(
                 str(v).upper() == "PUFFIN" for v in part.column("file_format").to_pylist()
             ), part.column("file_format").to_pylist()
-            assert all(
-                v in (None, []) for v in part.column("equality_ids").to_pylist()
-            ), part.column("equality_ids").to_pylist()
+            assert all(v in (None, []) for v in part.column("equality_ids").to_pylist()), (
+                part.column("equality_ids").to_pylist()
+            )
             engine.session.sql(
                 f"CALL system.register_table(table => 'sales.eqdv2', metadata_file => '{eq_meta}')"
             )
@@ -330,7 +328,7 @@ def _assert_delete_files_live_against_spark(part_meta: str, eq_meta: str) -> Non
             engine.session.stop()
     finally:
         shutil.rmtree(warehouse, ignore_errors=True)
-    assert ICEBERG_SPARK_RUNTIME_GAV.endswith(":1.11.0")
+    assert ICEBERG_SPARK_RUNTIME_GAV == "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"
 
 
 def test_partitioned_dv_still_refuses_position_delete_rewrite(tmp_path: Path) -> None:
@@ -379,6 +377,8 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
 
     pins: v3e-5-nightly-v3-oracle/C-001, C-002, C-006, C-009, C-010, C-011, C-012
     """
+    import subprocess
+
     ledger = _REPO_ROOT / "task/ledgers/staging/v3e-5-nightly-v3-oracle-ledger.md"
     assert ledger.is_file()
     text = ledger.read_text(encoding="utf-8")
@@ -386,3 +386,35 @@ def test_v3_live_oracle_pins_cover_all_clauses() -> None:
     assert "Nightly oracle: v3 leg" in (
         _REPO_ROOT / "task/roadmap/epic-term/v1-0-iceberg-v3-northstar.md"
     ).read_text(encoding="utf-8")
+    assert (
+        _REPO_ROOT / "task/ledgers/archive/2026-08/2026-08-27-production-file-size-ledger.md"
+    ).is_file()
+    assert (
+        _REPO_ROOT / "task/ledgers/archive/2026-08/2026-08-27-rust-catalog-registration-ledger.md"
+    ).is_file()
+    dual = subprocess.run(
+        ["python3", "scripts/check_parity_live_dual_wire.py"],
+        capture_output=True,
+        text=True,
+        cwd=str(_REPO_ROOT),
+    )
+    assert dual.returncode == 0, dual.stderr
+    diff = subprocess.run(
+        ["git", "diff", "--name-only", "origin/main...HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=str(_REPO_ROOT),
+    )
+    assert diff.returncode == 0
+    allowed_prefixes = (
+        ".github/workflows/",
+        "python/repark/tests/",
+        "task/ledgers/",
+        "task/roadmap/",
+    )
+    for line in diff.stdout.splitlines():
+        assert line.startswith(allowed_prefixes) or line in (
+            "task/ledgers/archive/2026-08/map.md",
+            "task/ledgers/archive/map.md",
+            "task/ledgers/completed/map.md",
+        ), f"unexpected diff path {line!r} for C-010"

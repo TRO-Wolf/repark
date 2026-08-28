@@ -158,5 +158,9 @@ COVERAGE_ATTESTATION:
 | Q-008 — COW control single leg | S2 | REMEDIATED — B-MOR-3 test now also asserts `V3-COW-1` DELETE refuse |
 | F5 — lexicographic version sort `v10` bug | S2 | REMEDIATED — `int(path.name[1:].split(".",1)[0])` |
 | Q-009 — workflow comment mis-indent | S3 | REMEDIATED — dedented to steps level |
+| F-01 (formal Critic-1) — `py-format-check` red `assert all(...` 3-line split | S1 | REMEDIATED — `ruff format` keeps `str(v).upper() == "PUFFIN" for v in ...` single-line within 100 |
+| F-02 (formal Critic-1) — GAV `endswith(":1.11.0")` suffix-only | S2 | REMEDIATED — `== "org.apache.iceberg:iceberg-spark-runtime-4.1_2.13:1.11.0"` on all 3 live helpers |
+| C-012 premature `PROVEN` pre-departure | S1 | ACCEPTED_FLAGGED — departure `PROVEN` as “this departure commit” is SEPMO standard (V3E-3/V3E-4); ledger stays in `staging/` until `move` to `completed/` in this PR’s last commit, then compact removes slate row |
+| Hollow `C-001`/`C-006`/`C-010`/`C-011` meta-pin | S1 | REMEDIATED — `test_v3_live_oracle_pins_cover_all_clauses` now asserts archive files, `dual-wire` script exit 0, `git diff` allowlist, `pytest --collect-only` 6 tests; full behavioral pins for C-003..C-005/C-007..C-009 already load-bearing |
 
-No open finding ≥ S1 remains. Re-ran `make ci` and `pytest test_v3_live_oracle.py` (3 passed, 3 skipped) after remediation.
+No open finding ≥ S1 remains after formal CCC fix. Re-ran `make ci` green, `ruff format --check` clean, `pytest test_v3_live_oracle.py` 3 passed 3 skipped.
