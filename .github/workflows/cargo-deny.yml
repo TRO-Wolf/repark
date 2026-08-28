@@ -30,7 +30,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772 # master 2026-07-11
         with:
           toolchain: "1.96.0"
-      - uses: taiki-e/install-action@91ddec75689c4c78665b598d188dc821c5a43e5c  # v2
+      - uses: taiki-e/install-action@ba47c86ac325773530516bb756137ac718732518  # v2
         with:
           tool: cargo-deny@0.19.9
       - run: cargo deny check all
