@@ -340,16 +340,16 @@ async fn ansi_for_version_as_of_branch_name_matches_that_snapshot() {
 }
 
 #[tokio::test]
-async fn ansi_cow_delete_still_refuses_on_appended_v3() {
+async fn ansi_cow_delete_on_a_dv_carrying_v3_table_refuses() {
     let fixture = materialize_writable();
     let door = door().await;
     adopt(&door, "partdv", &fixture.metadata_file).await;
     let err = match door.sql("DELETE FROM ice.sales.partdv WHERE id = 1").await {
-        Ok(_) => panic!("DELETE must refuse"),
+        Ok(_) => panic!("DELETE must refuse: the table carries deletion vectors"),
         Err(err) => err.to_string(),
     };
     assert!(
-        err.contains("V3-COW-1"),
-        "ANSI DELETE must still name V3-COW-1, got: {err}"
+        err.contains("V3-COW-1") && err.contains("deletion vector"),
+        "the DV-carrying refusal must name the measured resurrection, got: {err}"
     );
 }

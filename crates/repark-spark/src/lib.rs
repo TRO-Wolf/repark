@@ -12,6 +12,7 @@
 
 mod alter;
 mod call;
+mod call_args;
 mod catalog_ops;
 mod collation;
 mod create_table;

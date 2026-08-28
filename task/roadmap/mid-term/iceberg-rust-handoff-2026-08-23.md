@@ -130,6 +130,12 @@ unblocks a chartered or proposed engine unit; **P3** = real, not urgent.
 
 ### F-3 (P2) — `RewriteDataFiles`: dangling-delete removal and `removed_delete_files_count`
 
+*Taken by RP-2 (2026-08-27):* the CALL accepts `'remove-dangling-deletes' => true` (quoted-name
+CALL grammar) and reports the fork's true count; default stays false; the Java-faithful
+unpartitioned-single-spec early return measured. Pin:
+`call_rewrite_data_files_remove_dangling_deletes_reports_a_true_count`. The v3 half stays
+guarded (V3-LINEAGE-1).
+
 - **Engine observation.** The engine's `rewrite_data_files` result reports
   `removed_delete_files_count` as a constant `0` by construction, because the fork's action
   does not compose dangling-delete removal and the engine refuses the `options` map. On **v3**
@@ -200,6 +206,12 @@ unblocks a chartered or proposed engine unit; **P3** = real, not urgent.
   is written to go red when a commit target exists; the engine then routes branch-targeted DML.
 
 ### F-7 (A12-owned; unblocked 2026-08-23 — see the addendum below) — format v3 compaction
+
+*Partially consumed by RP-2 (2026-08-27, fork `ce92a7bf`):* U2 measured Spark-clean — a COW
+`DELETE` preserves every survivor's `_row_id`/seq and the `next_row_id` counter matches
+Spark's allocate-then-suppress exactly. U1 measured RED: `RewriteDataFiles` still reassigns
+every `_row_id` (0..11 → 12..23, seq → 13) — V3-LINEAGE-1 stays; the lift belongs to V3-5 on
+a fork rev that carries it.
 
 Listed so the fork plans it; as of 2026-08-21 the engine's V3-2+ units deliberately waited
 for the MW campaign to close (that wait is over — the addendum below), and the engine refuses
@@ -317,6 +329,12 @@ the fork can cite, but the fork's own interop for R157 is the fork's to run. Coo
 than duplicate.
 
 ### F-13 (north-star spine, added 2026-08-23) — Puffin deletion-vector write path
+
+*Consumed by RP-2 (2026-08-27, fork `ce92a7bf`):* measured engine-side — a plain-`WHERE`
+MOR `DELETE` on a DV-free v3 table commits Puffin DVs (merge + supersede) that PySpark
+4.1.2 + Iceberg 1.11.0 reads back to the same live set. On DV-carrying tables the same
+statement resurrected a DV-deleted row (measured; guard stays). UPDATE / MERGE / DV-carrying
+tables remain V3-3's measurement surface.
 
 The prerequisite for engine unit **V3-3** (merge-on-read DML on v3), the largest engine unit on
 the v1.0 path.

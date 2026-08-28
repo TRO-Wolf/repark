@@ -33,9 +33,12 @@ repark-core's error map.
 - `merge/` — the RePark-owned `MERGE INTO` executor (copy-on-write AND merge-on-read per
   `write.merge.mode`, fork ENGINE_CONTRACT §6). See [merge/map.md](merge/map.md).
 - `row_lineage_guard.rs` (crate-private; `refuse_v3_cow_dml` re-exported) — **V3R-1
-  (2026-08-25, `V3-COW-1`):** the format-v3 copy-on-write DML guard, two seats — the write-mode
-  resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough valve both doors call beside
-  the BUG-001 valve. Every v3 table refuses; append-only until fork F-7.
+  (2026-08-25, `V3-COW-1`); RP-2 (2026-08-27, fork `ce92a7bf`):** the format-v3 row-DML guard,
+  two seats — the write-mode resolvers (`predicate_dml.rs`, `merge/mod.rs`) and the passthrough
+  valve both doors call beside the BUG-001 valve. The resolvers refuse every v3 table. The
+  passthrough valve lifts the plain-`WHERE` DELETE on a v3 table with **no live deletion
+  vectors** (measured Spark-clean in both modes) and refuses it on DV-carrying tables
+  (measured resurrection) plus every v3 UPDATE.
 - `predicate_dml.rs` — **G3-E8 A1-identity** (`execute_predicate_dml`): evaluate the original
   `WHERE` as a SELECT over the pinned `(_file, _pos)` streaming target, then commit through the
   MERGE COW/MoR write arms honoring `write.delete.mode` / `write.update.mode` / isolation —

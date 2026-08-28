@@ -68,7 +68,6 @@
 //!   holding live Puffin deletion vectors rather than reporting a partial result.
 //! - any other `system.*` procedure.
 
-use std::collections::HashMap;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 
@@ -76,9 +75,7 @@ use datafusion::arrow::array::{Int32Array, Int64Array, RecordBatch, StringArray}
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::error::{DataFusionError, Result};
 use datafusion::prelude::{DataFrame, SessionContext};
-use datafusion::sql::sqlparser::ast::{
-    Expr, Function, FunctionArg, FunctionArgExpr, FunctionArguments, Value, ValueWithSpan,
-};
+use datafusion::sql::sqlparser::ast::Function;
 use iceberg::maintenance::{DeleteOrphanFiles, RewriteDataFiles, RewritePositionDeleteFiles};
 use iceberg::spec::{DataContentType, DataFileFormat, FormatVersion};
 use iceberg::transaction::{
@@ -86,10 +83,9 @@ use iceberg::transaction::{
 };
 use iceberg::{Catalog, NamespaceIdent, TableIdent};
 
-use repark_core::{
-    CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root, parse_timestamp_to_ms,
-};
+use repark_core::{CatalogRegistry, LocationPolicy, memory_warehouse_fallback_root};
 
+use crate::call_args::{CallArgs, expr_as_string};
 use crate::{catalog_handle, iceberg_err, name_parts, reject_path_escape_ident, reregister};
 
 mod rewrite_manifests;
@@ -173,266 +169,6 @@ fn resolve_call_target(
 }
 
 // ===========================================================================================
-// Argument bag
-// ===========================================================================================
-
-/// Parsed CALL arguments — named map + ordered positional list (Spark allows either form,
-/// not mixed).
-#[derive(Debug, Default)]
-struct CallArgs {
-    named: HashMap<String, Expr>,
-    positional: Vec<Expr>,
-}
-
-impl CallArgs {
-    fn parse(args: &FunctionArguments) -> Result<Self> {
-        match args {
-            FunctionArguments::None => Ok(Self::default()),
-            FunctionArguments::Subquery(_) => Err(DataFusionError::Plan(
-                "CALL does not accept a subquery argument list".to_string(),
-            )),
-            FunctionArguments::List(list) => {
-                let mut named = HashMap::new();
-                let mut positional = Vec::new();
-                for arg in &list.args {
-                    match arg {
-                        FunctionArg::Named { name, arg, .. }
-                        | FunctionArg::ExprNamed {
-                            name: Expr::Identifier(name),
-                            arg,
-                            ..
-                        } => {
-                            let key = name.value.to_ascii_lowercase();
-                            let expr = match arg {
-                                FunctionArgExpr::Expr(expr) => expr.clone(),
-                                other => {
-                                    return Err(DataFusionError::Plan(format!(
-                                        "CALL named argument `{key}` must be a scalar \
-                                         expression, got {other}"
-                                    )));
-                                }
-                            };
-                            if named.insert(key.clone(), expr).is_some() {
-                                return Err(DataFusionError::Plan(format!(
-                                    "duplicate CALL argument `{key}`"
-                                )));
-                            }
-                        }
-                        FunctionArg::ExprNamed { name, .. } => {
-                            return Err(DataFusionError::Plan(format!(
-                                "CALL named argument name must be an identifier, got {name}"
-                            )));
-                        }
-                        FunctionArg::Unnamed(FunctionArgExpr::Expr(expr)) => {
-                            positional.push(expr.clone());
-                        }
-                        FunctionArg::Unnamed(other) => {
-                            return Err(DataFusionError::Plan(format!(
-                                "CALL positional argument must be a scalar expression, got {other}"
-                            )));
-                        }
-                    }
-                }
-                if !named.is_empty() && !positional.is_empty() {
-                    return Err(DataFusionError::Plan(
-                        "CALL does not support mixing named and positional arguments \
-                         (Iceberg Spark Procedures — named or positional, not both)"
-                            .to_string(),
-                    ));
-                }
-                Ok(Self { named, positional })
-            }
-        }
-    }
-
-    fn require_string(&self, name: &str, position: usize) -> Result<String> {
-        if let Some(expr) = self.named.get(name) {
-            return expr_as_string(expr, name);
-        }
-        self.positional
-            .get(position)
-            .ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "CALL argument `{name}` is required (named `{name} => …` or positional \
-                     #{position})"
-                ))
-            })
-            .and_then(|expr| expr_as_string(expr, name))
-    }
-
-    fn optional_string(&self, name: &str) -> Result<Option<String>> {
-        self.named
-            .get(name)
-            .map(|expr| expr_as_string(expr, name))
-            .transpose()
-    }
-
-    fn optional_i64(&self, name: &str, position: Option<usize>) -> Result<Option<i64>> {
-        if let Some(expr) = self.named.get(name) {
-            return expr_as_i64(expr, name).map(Some);
-        }
-        if let Some(index) = position
-            && let Some(expr) = self.positional.get(index)
-        {
-            return expr_as_i64(expr, name).map(Some);
-        }
-        Ok(None)
-    }
-
-    fn optional_bool(&self, name: &str, position: Option<usize>) -> Result<Option<bool>> {
-        if let Some(expr) = self.named.get(name) {
-            return expr_as_bool(expr, name).map(Some);
-        }
-        if let Some(index) = position
-            && let Some(expr) = self.positional.get(index)
-        {
-            return expr_as_bool(expr, name).map(Some);
-        }
-        Ok(None)
-    }
-
-    fn optional_i32(&self, name: &str, position: Option<usize>) -> Result<Option<i32>> {
-        match self.optional_i64(name, position)? {
-            None => Ok(None),
-            Some(value) => i32::try_from(value).map(Some).map_err(|_| {
-                DataFusionError::Plan(format!(
-                    "CALL argument `{name}` value {value} does not fit i32"
-                ))
-            }),
-        }
-    }
-
-    fn optional_timestamp_ms(&self, name: &str, position: Option<usize>) -> Result<Option<i64>> {
-        if let Some(expr) = self.named.get(name) {
-            return expr_as_timestamp_ms(expr, name).map(Some);
-        }
-        if let Some(index) = position
-            && let Some(expr) = self.positional.get(index)
-        {
-            return expr_as_timestamp_ms(expr, name).map(Some);
-        }
-        Ok(None)
-    }
-
-    fn has_named(&self, name: &str) -> bool {
-        self.named.contains_key(name)
-    }
-
-    fn reject_unknown_named(&self, allowed: &[&str]) -> Result<()> {
-        for key in self.named.keys() {
-            if !allowed.contains(&key.as_str()) {
-                return Err(DataFusionError::Plan(format!(
-                    "unknown CALL argument `{key}`; allowed: {}",
-                    allowed.join(", ")
-                )));
-            }
-        }
-        Ok(())
-    }
-
-    /// Reject more positional arguments than the procedure arity (C1-L-001 / C1-L-002).
-    ///
-    /// Spark accepts trailing optional positionals omitted; extra *beyond* the max arity must
-    /// not be silently dropped (otherwise positional `strategy` on rewrite binpacks silently).
-    fn reject_excess_positional(&self, max_arity: usize) -> Result<()> {
-        if self.positional.len() > max_arity {
-            return Err(DataFusionError::Plan(format!(
-                "CALL accepts at most {max_arity} positional argument(s); got {}",
-                self.positional.len()
-            )));
-        }
-        Ok(())
-    }
-}
-
-fn expr_as_string(expr: &Expr, arg_name: &str) -> Result<String> {
-    match expr {
-        Expr::Value(ValueWithSpan {
-            value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
-            ..
-        }) => Ok(text.clone()),
-        Expr::Identifier(ident) => Ok(ident.value.clone()),
-        other => Err(DataFusionError::Plan(format!(
-            "CALL argument `{arg_name}` must be a string literal, got {other}"
-        ))),
-    }
-}
-
-fn expr_as_i64(expr: &Expr, arg_name: &str) -> Result<i64> {
-    match expr {
-        Expr::Value(ValueWithSpan {
-            value: Value::Number(raw, _),
-            ..
-        }) => raw.parse::<i64>().map_err(|_| {
-            DataFusionError::Plan(format!(
-                "CALL argument `{arg_name}` is not an integer: {raw}"
-            ))
-        }),
-        Expr::UnaryOp {
-            op: datafusion::sql::sqlparser::ast::UnaryOperator::Minus,
-            expr,
-        } => {
-            let value = expr_as_i64(expr, arg_name)?;
-            value.checked_neg().ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "CALL argument `{arg_name}` integer negation overflows i64: {value}"
-                ))
-            })
-        }
-        Expr::Value(ValueWithSpan {
-            value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
-            ..
-        }) => text.trim().parse::<i64>().map_err(|_| {
-            DataFusionError::Plan(format!(
-                "CALL argument `{arg_name}` string is not an integer: {text}"
-            ))
-        }),
-        other => Err(DataFusionError::Plan(format!(
-            "CALL argument `{arg_name}` must be an integer, got {other}"
-        ))),
-    }
-}
-
-fn value_to_string(value: &Value) -> Option<&str> {
-    match value {
-        Value::SingleQuotedString(text) | Value::DoubleQuotedString(text) => Some(text.as_str()),
-        _ => None,
-    }
-}
-
-fn expr_as_timestamp_ms(expr: &Expr, arg_name: &str) -> Result<i64> {
-    match expr {
-        // TIMESTAMP '…' / DATE '…'
-        Expr::TypedString(typed) => {
-            let raw = value_to_string(&typed.value.value).ok_or_else(|| {
-                DataFusionError::Plan(format!(
-                    "CALL argument `{arg_name}` TIMESTAMP payload must be a string, got {}",
-                    typed.value.value
-                ))
-            })?;
-            parse_timestamp_to_ms(raw)
-        }
-        Expr::Value(ValueWithSpan {
-            value: Value::SingleQuotedString(text) | Value::DoubleQuotedString(text),
-            ..
-        }) => parse_timestamp_to_ms(text),
-        Expr::Value(ValueWithSpan {
-            value: Value::Number(raw, _),
-            ..
-        }) => raw.parse::<i64>().map_err(|_| {
-            DataFusionError::Plan(format!(
-                "CALL argument `{arg_name}` is not a timestamp or epoch-ms integer: {raw}"
-            ))
-        }),
-        Expr::Cast { expr, .. } => expr_as_timestamp_ms(expr, arg_name),
-        other => Err(DataFusionError::Plan(format!(
-            "CALL argument `{arg_name}` must be a TIMESTAMP literal, string, or epoch-ms \
-             integer, got {other}"
-        ))),
-    }
-}
-
-// ===========================================================================================
 // Table identity resolution
 // ===========================================================================================
 
@@ -473,21 +209,6 @@ fn resolve_table_ident(catalog_name: &str, table_arg: &str) -> Result<TableIdent
         ))),
         _ => Err(DataFusionError::Plan(format!(
             "CALL table `{table_arg}` must be `namespace.table` or `catalog.namespace.table`"
-        ))),
-    }
-}
-
-/// A boolean CALL argument. Spark's procedure layer accepts the SQL boolean literals only, so a
-/// quoted `'true'` is refused rather than coerced — on a procedure that deletes files, guessing
-/// what a caller meant by a string is not a service.
-fn expr_as_bool(expr: &Expr, name: &str) -> Result<bool> {
-    match expr {
-        Expr::Value(ValueWithSpan {
-            value: Value::Boolean(value),
-            ..
-        }) => Ok(*value),
-        other => Err(DataFusionError::Plan(format!(
-            "CALL argument `{name}` must be a boolean literal (true / false), got `{other}`"
         ))),
     }
 }
@@ -696,7 +417,14 @@ async fn execute_rewrite_data_files(
     catalog_name: &str,
     args: &CallArgs,
 ) -> Result<DataFrame> {
-    args.reject_unknown_named(&["table", "strategy", "sort_order", "options", "where"])?;
+    args.reject_unknown_named(&[
+        "table",
+        "strategy",
+        "sort_order",
+        "options",
+        "where",
+        "remove-dangling-deletes",
+    ])?;
     // Supported positional arity v1: table + optional strategy only (C2-Q-002). sort_order /
     // options / where are named-only deferred; extra positionals refuse as excess arity (not a
     // misleading sort_order message).
@@ -746,11 +474,16 @@ async fn execute_rewrite_data_files(
     let table = catalog.load_table(&ident).await.map_err(iceberg_err)?;
     refuse_v3_rewrite_that_would_lose_row_lineage(table.metadata().format_version(), &table_arg)?;
 
+    let remove_dangling_deletes = args
+        .optional_bool("remove-dangling-deletes", None)?
+        .unwrap_or(false);
+
     // For multi-small-file fixtures under Spark's default min_input_files=5, pure inserts of a
     // few rows each are always "small". Lower min_input_files only when the caller cannot pass
     // options (options map is deferred) — keep Java default of 5 so empty/no-op plans match
     // Spark. Tests build ≥5 small files.
     let result = RewriteDataFiles::new(table)
+        .remove_dangling_deletes(remove_dangling_deletes)
         .execute(catalog.as_ref())
         .await
         .map_err(iceberg_err)?;
@@ -766,24 +499,14 @@ async fn execute_rewrite_data_files(
     // | `added_data_files_count` | `result.added_data_files_count` |
     // | `rewritten_bytes_count` | `result.rewritten_bytes_count` |
     // | `failed_data_files_count` | always 0 — partial progress is deferred, so nothing can fail |
-    // | `removed_delete_files_count` | always 0 — see below |
+    // | `removed_delete_files_count` | `result.removed_delete_files_count` — 0 unless `'remove-dangling-deletes' => true` |
     //
-    // `removed_delete_files_count` counts what Java's RemoveDanglingDeletes sub-action removed.
-    // That sub-action runs only under the `remove-dangling-deletes` option, whose Java default is
-    // false (`RewriteDataFiles.REMOVE_DANGLING_DELETES_DEFAULT`, javap-verified), and this
-    // procedure refuses the options map above — so the non-default path is unreachable here and
-    // the count of removals is genuinely zero. Measured against a live Spark 4.0.1 + Iceberg
-    // 1.10.0 oracle, which reported 0 on every fixture tried, with the option both off AND
-    // explicitly on. This is an honest count of a real quantity, not a placeholder for a number
-    // the engine could not obtain.
-    //
-    // V3-0 found the one place that reasoning does not reach, and it is why the guard above
-    // exists. On a **v3** table the same oracle reported `removed_delete_files_count = 6` with no
-    // option set at all, because a deletion vector is scoped to one data file and dies when that
-    // file is rewritten — so compaction removes delete files on v3 as an ordinary consequence,
-    // not as an opt-in sub-action. The zero below is therefore correct for every version this
-    // procedure still runs on, and would be wrong the moment v3 is admitted. Whichever unit
-    // lifts the guard owns this column too.
+    // `removed_delete_files_count` counts what the fork's composed RemoveDanglingDeletes
+    // sub-action removed. It runs only under the `remove-dangling-deletes` option, whose Java
+    // default is false, so the default path still reports 0 (RP-2 / C-006 took the option).
+    // On a **v3** table a deletion vector dies when its data file is rewritten, so compaction
+    // removes delete files there as an ordinary consequence — but v3 is still refused above
+    // (`V3-LINEAGE-1`), so this column stays 0 on v3 until that guard lifts.
     let schema = Arc::new(Schema::new(vec![
         Field::new("rewritten_data_files_count", DataType::Int32, false),
         Field::new("added_data_files_count", DataType::Int32, false),
@@ -804,7 +527,9 @@ async fn execute_rewrite_data_files(
                 result.rewritten_bytes_count,
             )?])),
             Arc::new(Int32Array::from(vec![0])),
-            Arc::new(Int32Array::from(vec![0])),
+            Arc::new(Int32Array::from(vec![count_as_i32(
+                result.removed_delete_files_count,
+            )?])),
         ],
     )?;
     ctx.read_batches(vec![batch])
@@ -1382,23 +1107,5 @@ mod tests {
         assert!(resolve_table_ident("ice", "..sales.t").is_err());
         assert!(resolve_table_ident("ice", "../sales.t").is_err());
         assert!(resolve_table_ident("ice", "sales.t/evil").is_err());
-    }
-
-    #[test]
-    fn expr_as_i64_unary_minus_min_refuses_overflow() {
-        use datafusion::sql::sqlparser::ast::{
-            Expr as AstExpr, UnaryOperator, Value as AstValue, ValueWithSpan,
-        };
-        use datafusion::sql::sqlparser::tokenizer::Span;
-        let min = AstExpr::Value(ValueWithSpan {
-            value: AstValue::Number(i64::MIN.to_string(), false),
-            span: Span::empty(),
-        });
-        let negated = AstExpr::UnaryOp {
-            op: UnaryOperator::Minus,
-            expr: Box::new(min),
-        };
-        // -i64::MIN cannot be represented — must Plan-error, not panic/wrap (C1-SAF-001).
-        assert!(expr_as_i64(&negated, "snapshot_id").is_err());
     }
 }

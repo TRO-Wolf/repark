@@ -32,6 +32,9 @@ Test documentation may retain model provenance; code-quality grade tags stay out
 - `delete_granularity.rs` — **MW-9:** Spark-door `write.delete.granularity` (explicit
   file/partition, unknown refuse on MERGE and identity UPDATE, fork DELETE/UPDATE
   residual, ALTER-then-MERGE).
+- `call_rewrite_dangling.rs` — **RP-2 (2026-08-27):** the CALL's
+  `'remove-dangling-deletes' => true` reaches the fork's composed GC and reports a true
+  `removed_delete_files_count` on a partitioned v2 fixture (C-006).
 - `common.rs` — shared fixtures (`setup`, `rows`, `run`, `register_source`, `table_rows`, …)
   and the cross-cutting helpers that more than one leaf needs (`time_travel_id_multiset`,
   `execute_without_collecting`, unsafe-cast walk helpers). **V3-2:**

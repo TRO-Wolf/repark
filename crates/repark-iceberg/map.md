@@ -78,8 +78,9 @@ v1 crate-root re-export lists.
   deliberately, and **both are re-verified at every fork repin**
   ([../../AGENTS.md](../../AGENTS.md) "Version-pin contract"):
   - **`NamespaceScopedCatalog` (in `src/catalog/provider.rs`) both-sides trait-wrapping audit
-    (G17) is CLOSED.** At fork pin `5e7b2e4` (RP-1) the `Catalog` trait has 14 required + **16
-    defaulted** methods — same counts as the previous pin; no new defaulted method landed.
+    (G17) is CLOSED.** At fork pin `ce92a7bf` (RP-2, 2026-08-27; unchanged from RP-1's
+    `5e7b2e4` — the range touched no trait file) the `Catalog` trait has 14 required + **16
+    defaulted** methods; no new defaulted method landed.
     The wrapper explicitly forwards all 14 required methods (with `list_namespaces` filtered
     to one namespace) and **13 of 16** defaulted methods — including the HIGH
     `publish_replace_table` (whose trait default is `FeatureUnsupported` and would swallow

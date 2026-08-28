@@ -153,9 +153,9 @@ EXCEPTIONS: dict[str, tuple[int, str, str]] = {
         "Split syntax normalization from Iceberg operation dispatch.",
     ),
     "crates/repark-spark/src/call.rs": (
-        1404,
-        "Spark CALL parsing and procedure routing share one module.",
-        "Split argument parsing from procedure-specific lowering.",
+        1111,
+        "Spark CALL procedure routing; the argument bag moved to call_args.rs (RP-2, 2026-08-27).",
+        "Split procedure dispatch families when one grows again.",
     ),
     "crates/repark-spark/src/metadata_tables.rs": (
         1149,

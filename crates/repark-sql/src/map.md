@@ -24,7 +24,7 @@ reach delegation through the ordinary arm.
 - `v3_create.rs` — **V3-2 (test-only):** ANSI CREATE/CTAS `format_version = 3` opt-in pins,
   split out of `tests.rs` so that file stays under its rust-file-size ceiling
   (`Model: Grok 4.6 xHigh` on the module's functions).
-- `v3_cow.rs` — **V3R-1 (test-only, 2026-08-25):** ANSI adopted-v3 copy-on-write DML refuses
+- `v3_cow.rs` — **V3R-1 (test-only, 2026-08-25); RP-2 2026-08-27 retarget:** ANSI adopted-v3 UPDATE/MERGE refuse, the plain-`WHERE` DELETE commits (DV-free) and refuses (DV-carrying)
   (`V3-COW-1`; plain-`WHERE` = passthrough seat, subquery-`WHERE` = resolver seat), the CCC
   regressions (short names, dotted quoted name, padded merge-on-read), a v2 control.
 - `v3_types.rs` — **V3R-1 (test-only):** `GEOMETRY` / `GEOGRAPHY` / `VARIANT` refuse at CREATE

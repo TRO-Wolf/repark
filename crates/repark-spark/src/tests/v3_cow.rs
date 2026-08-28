@@ -1,11 +1,15 @@
-//! V3R-1 (2026-08-25): every copy-on-write arm refuses a v3 table before any write (`V3-COW-1`);
-//! merge-on-read refuses too (R113) — append-only until fork F-7. No native `DataFrame` DML (C-012).
+//! V3R-1 (2026-08-25): copy-on-write UPDATE / MERGE and the resolver seat refuse a v3 table
+//! before any write (`V3-COW-1`). RP-2 (2026-08-27, fork `ce92a7bf`) measured the plain-`WHERE`
+//! DELETE on v3 Spark-clean in both modes and lifted it: MOR commits Puffin DVs, COW preserves
+//! survivor lineage. No native `DataFrame` DML (C-012).
 //!
 //! Model: Claude Fable 5
 //!
 //! V3E-2: [`V3_MAINTENANCE_ORACLE`] is the dated maintenance-oracle pair (charter §5).
 //! pins: v3r-1-rulings/C-001, C-002, C-003, C-004, C-005, C-012
 //! pins: v3e-1-2-cow-oracle/C-009, C-010
+//! pins: rp-2-fork-repin/C-002, C-003, C-005
+//! pins: rp-2-fork-repin/C-001, C-004, C-007, C-008
 
 use super::super::*;
 use super::common::*;
@@ -185,9 +189,10 @@ async fn assert_cow_refused_untouched(
     assert_still_v3(&load_sales(catalogs, table).await);
 }
 
-/// pins: v3r-1-rulings/C-001
+/// RP-2: plain-`WHERE` COW DELETE on v3 runs; every survivor keeps its lineage counters.
+/// pins: rp-2-fork-repin/C-005
 #[tokio::test]
-async fn adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage() {
+async fn adopted_v3_cow_delete_carries_survivor_row_lineage() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_cow_v3(&ctx, &catalogs, "seed_del", "adopt_del").await;
@@ -196,14 +201,25 @@ async fn adopted_v3_cow_delete_refuses_rather_than_reassign_row_lineage() {
         3,
         "seed INSERT of 3 rows assigns 0..2 — append stays open"
     );
-    assert_cow_refused_untouched(
+    run(
         &ctx,
         &catalogs,
-        "adopt_del",
         "DELETE FROM ice.sales.adopt_del WHERE id = 2",
-        "DELETE",
     )
     .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_del").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the delete commits the right rows"
+    );
+    assert_eq!(
+        lineage(&catalogs, "adopt_del").await.next_row_id,
+        5,
+        "next_row_id matches Spark's own v3 COW DELETE exactly (live oracle 2026-08-27: \\
+         Spark 4.1.2 + Iceberg 1.11.0 leaves next-row-id = 5 on the same recipe, allocating \\
+         then suppressing — #226); Spark reads every survivor's _row_id unchanged"
+    );
+    assert_still_v3(&load_sales(&catalogs, "adopt_del").await);
 }
 
 /// pins: v3r-1-rulings/C-002
@@ -389,10 +405,10 @@ async fn v3_create_with_encryption_key_id_still_scans_without_a_kms() {
     );
 }
 
-/// Merge-on-read plain-`WHERE` DELETE on v3 takes the passthrough path; it refuses too.
-/// pins: v3r-1-rulings/C-004
+/// RP-2: merge-on-read plain-`WHERE` DELETE on v3 commits a Puffin deletion vector.
+/// pins: rp-2-fork-repin/C-003
 #[tokio::test]
-async fn adopted_v3_mor_delete_still_refuses() {
+async fn adopted_v3_mor_delete_commits_a_puffin_deletion_vector() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(
@@ -403,27 +419,64 @@ async fn adopted_v3_mor_delete_still_refuses() {
         "'format-version' = '3', 'write.delete.mode' = 'merge-on-read'",
     )
     .await;
-    let before_rows = table_rows(&ctx, &catalogs, "ice.sales.adopt_mordel").await;
-    let err = execute(
+    let before_snapshot = current_snapshot_id(&catalogs, "adopt_mordel").await;
+    run(
         &ctx,
         &catalogs,
         "DELETE FROM ice.sales.adopt_mordel WHERE id = 2",
     )
-    .await
-    .expect_err("MoR DELETE on v3 must refuse")
-    .to_string();
-    assert!(
-        err.contains("V3") || err.contains("v3") || err.contains("deletion vector"),
-        "MoR DELETE refuse must name format v3: {err}"
-    );
+    .await;
     assert_eq!(
         table_rows(&ctx, &catalogs, "ice.sales.adopt_mordel").await,
-        before_rows
+        vec![(1, "a".into()), (3, "c".into())],
+        "the delete commits the right rows"
+    );
+    assert_ne!(
+        current_snapshot_id(&catalogs, "adopt_mordel").await,
+        before_snapshot,
+        "the MOR DELETE commits"
+    );
+    let kinds = live_delete_file_kinds(&catalogs, "adopt_mordel").await;
+    assert!(
+        kinds.iter().all(|kind| kind == "Puffin"),
+        "v3 forbids new position-delete files; got {kinds:?}"
+    );
+    assert!(
+        !kinds.is_empty(),
+        "the MOR DELETE must commit a delete file"
     );
 }
 
-/// SEC-001: two-part and bare names under a session default catalog / schema refuse.
-/// pins: v3r-1-rulings/C-001, C-002
+/// Live delete files in the CURRENT snapshot, as debug-formatted file formats.
+async fn live_delete_file_kinds(catalogs: &CatalogRegistry, table: &str) -> Vec<String> {
+    let loaded = load_sales(catalogs, table).await;
+    let mut kinds = Vec::new();
+    if let Some(snapshot) = loaded.metadata().current_snapshot() {
+        let manifest_list = snapshot
+            .load_manifest_list(loaded.file_io(), loaded.metadata())
+            .await
+            .expect("manifest list");
+        for entry in manifest_list.entries() {
+            if entry.content != iceberg::spec::ManifestContentType::Deletes {
+                continue;
+            }
+            let manifest = entry
+                .load_manifest(loaded.file_io())
+                .await
+                .expect("manifest");
+            for entry in manifest.entries() {
+                if entry.is_alive() {
+                    kinds.push(format!("{:?}", entry.data_file().file_format()));
+                }
+            }
+        }
+    }
+    kinds
+}
+
+/// SEC-001: two-part and bare names under a session default catalog / schema resolve the same
+/// guard seats: the UPDATE refuses, the DELETE (RP-2 lift) commits the right rows.
+/// pins: rp-2-fork-repin/C-003, C-005
 #[tokio::test]
 async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
     let warehouse = TempDir::new().unwrap();
@@ -439,24 +492,29 @@ async fn adopted_v3_cow_dml_with_default_catalog_short_names_refuses() {
         &ctx,
         &catalogs,
         "adopt_short",
-        "DELETE FROM sales.adopt_short WHERE id = 2",
-        "DELETE",
-    )
-    .await;
-    assert_cow_refused_untouched(
-        &ctx,
-        &catalogs,
-        "adopt_short",
         "UPDATE adopt_short SET name = 'x' WHERE id = 2",
         "UPDATE",
     )
     .await;
+    run(
+        &ctx,
+        &catalogs,
+        "DELETE FROM sales.adopt_short WHERE id = 2",
+    )
+    .await;
+    assert_eq!(
+        table_rows(&ctx, &catalogs, "ice.sales.adopt_short").await,
+        vec![(1, "a".into()), (3, "c".into())],
+        "the short-name DELETE resolves and commits"
+    );
 }
 
-/// SEC-002: a padded `' Merge-On-Read '` (copy-on-write to the fork) still refuses on v3.
+/// SEC-002: a padded `' Merge-On-Read '` (copy-on-write to the fork) still refuses on v3 —
+/// the UPDATE refusal never consults the property (RP-2), so the spelling cannot slip past.
 /// pins: v3r-1-rulings/C-004
+/// pins: rp-2-fork-repin/C-005
 #[tokio::test]
-async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
+async fn adopted_v3_padded_merge_on_read_spelling_still_refuses_update() {
     let warehouse = TempDir::new().unwrap();
     let (ctx, catalogs) = setup_allow_create_format_version_3(&warehouse).await;
     adopt_v3(
@@ -471,14 +529,14 @@ async fn adopted_v3_padded_merge_on_read_spelling_still_refuses() {
     let err = execute(
         &ctx,
         &catalogs,
-        "DELETE FROM ice.sales.adopt_pad WHERE id = 2",
+        "UPDATE ice.sales.adopt_pad SET name = 'x' WHERE id = 2",
     )
     .await
-    .expect_err("a padded merge-on-read spelling on v3 must still refuse")
+    .expect_err("a padded merge-on-read spelling must not slip past the UPDATE refusal")
     .to_string();
     assert!(
-        err.contains("V3") && err.contains("deletion vectors"),
-        "the merge-on-read arm's reason: {err}"
+        err.contains("V3-COW-1") && err.contains("row lineage"),
+        "the copy-on-write arm's reason: {err}"
     );
     assert_eq!(lineage(&catalogs, "adopt_pad").await, before, "no commit");
     assert_eq!(
