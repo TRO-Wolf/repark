@@ -38,6 +38,7 @@ happened yet; every other ledger leaves for `../completed/` in its unit's last c
   good: v3 reads and v3 appends are already correct, round-tripped through Spark, including the
   row lineage the format mandates. §4 answers A12's stated first question — adoption, through
   `register_table`, whose Spark signature is measured there.
+- [v3e-5-nightly-v3-oracle-ledger.md](v3e-5-nightly-v3-oracle-ledger.md) — **V3E-5 (2026-08-27):** the nightly v3 live-oracle leg — `REPARK_PARITY_LIVE=1` repark == Spark on the V3E-3 fixtures (`v3-spark-part-dv` / `v3-spark-eq-dv`), dual-wired `parity-live` leg green, northstar nightly row dated. Scoped `.github/` grant only.
 
 ## Pointers
 - Up: [../map.md](../map.md)

@@ -74,7 +74,7 @@ Every row means **both SQL doors plus the facade** unless the cell says otherwis
 | Refs + time travel on v3 (rollback, branch/tag DDL, `AS OF` over DVs) | ✅ V3E-4 (2026-08-25): BRANCH/TAG on adopted partitioned-DV v3; `VERSION AS OF` / `FOR VERSION AS OF` over DVs matches V3E-3 Spark live set; `rollback_to_snapshot` restores it. Three doors (native DF N/A) | stays + live leg | evidence (intake) |
 | Adopt: `register_table` | ✅ wired (#203) | stays; Hadoop-pointer writes → fork F-14; S3 Tables → fork F-9 | done + residues |
 | Live: Glue + S3 Tables v3 legs | ❌ nothing measured live (format-v3-track §7) | every green row re-proven live where the service supports it | evidence (intake) (+OD-3b) |
-| Nightly oracle: v3 leg | ❌ none | a v3 fixture leg in the nightly, green | evidence (intake) |
+| Nightly oracle: v3 leg | ✅ V3E-5 (2026-08-27): `v3-spark-part-dv` and `v3-spark-eq-dv` live triple `repark == Spark` (PySpark 4.1.2 + Iceberg 1.11.0) — nightly `parity-live` leg green | a v3 fixture leg in the nightly, green | evidence (intake) |
 | Scale | ⚠ v2 measured at 1e7×50 (MW-7 — driver + census exist; ratios recorded) | the same measurement on a v3 table | evidence (intake) |
 
 **The gate.** v1.0 tags when every row above is ✅ or its residual is a dated DECLARED row —
