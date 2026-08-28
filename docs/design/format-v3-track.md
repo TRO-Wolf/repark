@@ -181,8 +181,8 @@ than its first ledger narrative:
 
 The unit must add a committed second-DELETE refusal pin and remove every claim that re-delete
 already merges and supersedes. The guard is a temporary safety boundary, not the final V3-3
-capability. PR #254 targets a different fork batch and cannot amend this narrowed unit; it is
-superseded when this ruling lands.
+capability. PR #254 (merged 2026-08-28) had widened the charter to the full fork batch at
+`26088bb`; this ruling supersedes it, and its four added clauses transfer to RP-3.
 
 ### Step 2 — repair shared-Puffin DV closure in the fork
 
